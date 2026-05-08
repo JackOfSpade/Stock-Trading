@@ -1,6 +1,6 @@
 # Claude Task Plan
 
-This document is the master reference consumed by Claude routines. Each routine's instruction is the single line:
+This document is the master reference consumed by Claude remote routines. Each routine's instruction is the single line:
 
 > Read Claude_Task_Plan.md. Perform <task ID + name>.
 
@@ -249,6 +249,10 @@ Per new opportunity: ticker, strategy, why the development creates the opportuni
 ANALYSIS — REGIME CHECK
 
 Does any Development plausibly shift any strategy's router activation state enough to warrant an inter-monthly router review, given the shared regime vocabulary and per-strategy activation rules in Strategy.md? High bar; default NO on ambiguity.
+
+ANALYSIS — FRONTIER-LLM CAPABILITY CHECK (light-touch, optional)
+
+Run AT MOST ONE Hugging Face `paper_search` query per day, rotating across the §6.1 query batteries from `HF_Resource_Catalog.md` on a weekly cycle (e.g., Mon: cross-session consistency, Tue: prompt injection, Wed: calibration, Thu: sycophancy/anchoring, Fri: trading/financial, Sat: multi-agent debate, Sun: long-context). Use `concise_only=true` and `results_limit=5`. Skim only the abstracts of papers published in the prior 24–72 hours. If a result materially bears on a documented `AI_Trading_Foundation.md` disadvantage (Tier 1 architectural change, new failure mode, or contradicts a Tier 2 numerical claim per `HF_Resource_Catalog.md` §2 inverse mapping), append a Decision_Log.md entry tagged `[HF Frontier-LLM Capture]` with the arXiv ID, a one-paragraph summary, and the affected `AI_Trading_Foundation.md` item. Reference-only — D1 does NOT act on the finding today; Q3 reads `[HF Frontier-LLM Capture]` entries during its quarterly delta to surface mid-quarter material deltas. Default is silent on ambiguity. No Daily.md output for this check.
 
 RECOMMENDED ACTIONS
 
@@ -1053,6 +1057,15 @@ Read AI_Trading_Foundation.md (Parts 1, 2, 3, 4 in full — pay particular atten
 
 Frame research adversarially: look for evidence that contradicts or updates documented edges and disadvantages, not evidence that confirms them. Offsets self-reference bias (this task evaluates LLM claims while being executed by an LLM).
 
+HF tool orientation. Read `HF_Resource_Catalog.md` once at session start for the authoritative HF tooling map. Apply the following operational rules during PART 1 research:
+- Run Hugging Face `paper_search` on each of the 9 query batteries enumerated in `HF_Resource_Catalog.md` §6.1, scoped to the prior calendar quarter. Use `concise_only=true` and `results_limit=8`. For each battery, record any new papers from the prior quarter that bear on documented disadvantages or surface new failure modes — record arXiv IDs in the form `hf.co/papers/<id>`.
+- For Section 3a benchmark results, iterate `hub_repo_search` over open-weights model authors (`meta-llama`, `Qwen`, `mistralai`, `deepseek-ai`, others) with `repo_types=["model"]` and read recent (prior-quarter) model cards for benchmark trajectory updates on benchmarks mapped per `AI_Trading_Foundation.md` §5.5 (cross-reference the inverse mapping in `HF_Resource_Catalog.md` §2).
+- Do NOT use `space_search` for canonical Spaces — per `HF_Resource_Catalog.md` §8.1, semantic search misses popular Spaces. Use `hub_repo_search` with explicit `author` and `repo_types=["space"]` for known Space lookup.
+- HF is silent on Anthropic/Claude. Section 1 (Claude model capability changes) is `web_search` / `web_fetch` only — query `anthropic.com`, `docs.anthropic.com`, Anthropic research blog, and Anthropic-tagged news. Do NOT attempt to find Claude data on HF.
+- Do NOT pull data from any HF Space (none durable enough per §3) or any HF dataset (offline-only per §4). HF resources for this routine are: papers, model cards, leaderboards-as-references — nothing else.
+- Combine HF and `web_search` / `Tavily` deliberately: HF for academic LLM research and open-weights model evidence; web_search for vendor announcements, regulatory developments, and analyst-bias literature (per `HF_Resource_Catalog.md` §1.11, HF is weak on the classical accounting/finance literature).
+- Read `[HF Frontier-LLM Capture]` entries from `Decision_Log.md` and `Decision_Log_Archive_*.md` covering the prior calendar quarter. These are mid-quarter material findings that D1's light-touch daily HF check captured but did not act on. Treat them as required priors when running the §6.1 query batteries — verify each captured paper is incorporated into the relevant section, and check whether any has been superseded by newer work in the prior quarter.
+
 Produce AI capabilities research for the prior calendar quarter (3 calendar months). Write the complete content directly to `Quarterly_AI_Foundation_Delta.md` (overwrite; first line = prior calendar quarter in YYYY-QN format).
 
 Scope. Section 1 is scoped to Anthropic/Claude only — the workflow's decision-maker is Claude, so capability releases from other providers do not change what this workflow can do. Sections 2–6 stay broad because they describe the reference class (autonomous-AI trading performance baseline), the evidence base for architectural failure modes (which replicate more robustly when observed across model families), or the environment (market structure and regulation) regardless of which model the workflow uses. Non-Claude evidence in Sections 2, 3, 5 is filtered for transferability in PART 2 before triggering foundation-change assessment.
@@ -1158,6 +1171,14 @@ Read access scope: Annual cadence. Read everything, including `Decision_Log.md` 
 Read AI_Trading_Foundation.md (Parts 1, 2, 3, 4 in full — pay particular attention to the Tier framework distinction), Strategy.md, Experiment_Parameters.md, Portfolio_Ledger.md, Regime_State.md, Operating_Protocols.md, all prior Quarterly_AI_Foundation_Delta.md outputs from the past year.
 
 This is a FULL RE-DERIVATION task, not a delta. The scope is last-24-months primary-source research, not last-quarter. The purpose is to catch cumulative slow drift on Tier 2 numerical claims that quarterly deltas can't reliably surface, and to verify Tier 1 architectural items against any affirmative architectural-change evidence over a longer window.
+
+HF tool orientation. Read `HF_Resource_Catalog.md` once at session start for the authoritative HF tooling map. Apply the following operational rules during PART 1 research:
+- Run Hugging Face `paper_search` on each of the 9 query batteries enumerated in `HF_Resource_Catalog.md` §6.1 (Tier 1 architectural failure modes; cross-cutting; trading/financial). Use `concise_only=true` and `results_limit=8`. For each battery, record the 3–5 most-cited / most-recent papers (last 24 months) with arXiv IDs in the form `hf.co/papers/<id>`.
+- Cross-check the durable anchors listed in §6.1 (StockBench `2510.02209`, FinanceBench `PatronusAI/financebench`, ReasonBENCH `2512.07795`, Beacon `2510.16727`, SynAnchors `2505.15392`, WAInjectBench `2510.01354`, BeliefShift `2603.23848`, Open LLM Leaderboard `open-llm-leaderboard/open_llm_leaderboard`) — verify each still exists and capture any successor work cited from them.
+- For Tier 2 benchmark trajectories in §5.5, iterate `hub_repo_search` over open-weights model authors (`meta-llama`, `Qwen`, `mistralai`, `deepseek-ai`, others as relevant) with `repo_types=["model"]` and read benchmark scores from model cards. For benchmarks released or revised in the last 24 months that map to documented disadvantage categories (per §6.1 inverse mapping), capture the new measurements.
+- Do NOT use `space_search` for canonical Spaces — per `HF_Resource_Catalog.md` §8.1, semantic search misses popular Spaces. Use `hub_repo_search` with explicit `author` and `repo_types=["space"]` for known Space lookup.
+- HF is silent on Anthropic/Claude. For Section 1 Claude capability claims and any vendor-claim portion of other sections, use `web_search` and `web_fetch` against `anthropic.com`, `docs.anthropic.com`, and Anthropic's research blog. Do NOT attempt to find Claude data on HF.
+- Do NOT pull data from any HF Space (none durable enough for multi-year experiment per §3) or any HF dataset (offline-only per §4). HF resources for this routine are: papers, model cards, leaderboards-as-references — nothing else.
 
 Write the complete content directly to `Annual_AI_Foundation_Sweep.md` (overwrite; first line = current calendar year in YYYY format).
 
