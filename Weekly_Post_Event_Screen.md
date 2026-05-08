@@ -1,0 +1,71 @@
+2026-18
+
+# Weekly Post-Event Screen — Strategy B
+**Generated:** Sunday 2026-05-03 (ISO week 2026-18)
+**Lookback window:** 10 US trading days, 2026-04-20 (Mon) → 2026-05-01 (Fri). No US market holidays in window.
+**Strategy A book:** EMPTY (router-gate DO-NOT-ACTIVATE) — no exclusions required.
+**Strategy B book:** Open IBM (entered 2026-04-27), HCA (entered 2026-04-28); META staged for execution Mon 2026-05-04. Already-disposed names will surface in PART 1 if qualifying but are NOT recommended in PART 2.
+
+---
+
+## PART 1 — Universe Scan (data layer)
+
+All US-listed common-equity names with mkt-cap ≥ $2B and 30-day ADV ≥ $10M that experienced an event-driven close-to-close move ≥ 5% (in either direction) on a single session within Apr 20 – May 1, 2026, sorted by event date (most recent first). Day-zero defined as the regular session in which the close-to-close move printed (event-effective close vs. prior close). Move % is regular-session close-to-close on day 0 unless noted. Window-days-remaining (W-rem) counts from event-day = day 0; entry window expires after 10 trading days from event day, where day-10 close is the last eligible session.
+
+| # | Ticker | Name | Event Date | Event Type | Move (CtC, day 0) | Direction | W-rem (as of 5/4 open) | Disposition Status / Source |
+|---|--------|------|------------|------------|-------------------|-----------|------------------------|------------------------------|
+| 1 | TEAM | Atlassian | 2026-04-30 (AMC) → 5/1 print | Earnings (Q3 FY26 beat) | +29.58% on 5/1  | UP | 7 | NO-GO this cycle. SEC 8-K: sec.gov/Archives/edgar/data/1650372/000165037226000024/ex991q3fy26.htm |
+| 2 | TWLO | Twilio | 2026-04-30 (AMC) → 5/1 print | Earnings (Q1 beat + raise) | +23.83% on 5/1  | UP | 7 | NO-GO this cycle. SEC 8-K: sec.gov/Archives/edgar/data/1447669/000144766926000046/twloq126ex991.htm |
+| 3 | EL | Estée Lauder | 2026-05-01 (BMO) | Earnings (Q3 FY26 beat + raise) | ≈+12% on 5/1 | UP | 9 | NO-GO this cycle. SEC 8-K: sec.gov/Archives/edgar/data/1001250/000100125026000017/fy2026q3exhibit991.htm |
+| 4 | FIVN | Five9 | 2026-04-30 (AMC) → 5/1 print | Earnings (Q1 beat + raise + buyback) | +24.2% on 5/1  (mkt-cap ≈ $1.7B  → INSTRUMENT FAIL) | UP | 7 | NO-GO this cycle (mkt-cap fail). FinancialContent: markets.financialcontent.com/stocks/article/stockstory-2026-4-30-five9s-nasdaqfivn-q1-cy2026-sales-beat-estimates-stock-jumps-242 |
+| 5 | RBLX | Roblox | 2026-04-30 (AMC) → 5/1 print | Earnings (Q1 — bookings guide cut on safety headwinds) | −18.33% on 5/1  | DOWN | 7 | Open. Google Finance / Fool transcript: fool.com/earnings/call-transcripts/2026/04/30/roblox-rblx-q1-2026-earnings-call-transcript |
+| 6 | PS | Pershing Square Inc. | 2026-05-01 | M&A-adjacent / Ackman 800k-share open-market buy + valuation comments | +35.68% on 5/1 (28.00 → 38.00 area, intraday range $28.95–$42.49)  | UP | 9 | Open. Finviz: finviz.com/quote?t=PS ; CNBC: cnbc.com/2026/04/29/bill-ackmans-5-billion-pershing-square-ipo-to-start-trading-testing-berkshire-style-vision.html |
+| 7 | LLY | Eli Lilly | 2026-04-30 (BMO) | Earnings (Q1 +56% rev, raise) | +10.04% on 4/30  | UP | 8 | Strategy D disposed; B-eligible. CNBC: cnbc.com/2026/04/30/eli-lilly-lly-earnings-q1-2026.html |
+| 8 | CAT | Caterpillar | 2026-04-30 (BMO) | Earnings (Q1 beat-and-raise; AI-data-center demand) | +9.97% on 4/30 (≈+10%)  | UP | 8 | NO-GO this cycle. CNBC: cnbc.com/2026/04/30/caterpillar-cat-q1-earnings.html |
+| 9 | GKOS | Glaukos | 2026-04-29 (AMC) → 4/30 print | Earnings (Q1 beat + 2026 raise + Epioxa J-code)  | +22.84% on 4/30  | UP | 8 | Open / new add to PART 2. Fool: fool.com/earnings/call-transcripts/2026/04/29/glaukos-gkos-q1-2026-earnings-transcript |
+| 10 | QCOM | Qualcomm | 2026-04-29 (AMC) → 4/30 print | Earnings (Q2 FY26 beat + China bottom + hyperscaler chip news) | +15.13% on 4/30  (close $156 → $179.58 area)  | UP | 8 | Open / candidate. CNBC: cnbc.com/2026/04/29/qualcomm-qcom-stock-earnings-china.html |
+| 11 | WDC | Western Digital | 2026-04-30 (AMC; full reaction 5/1) | Earnings (Q3 FY26 beat + raise + 20% div hike) | +5–6% on 5/1 (estimated, post-AMC reaction) | UP | 7 | Open / candidate. SEC 8-K: sec.gov/Archives/edgar/data/106040/000162828026028878/a4ex991-pressreleaseq326.htm |
+| 12 | IRM | Iron Mountain | 2026-04-30 | Earnings (record Q1; data ctr +47%, ALM +92%; raised guide)  | +10.02% on 4/30  | UP | 8 | Open / candidate. Big Moves: bigmoves.substack.com/p/big-moves-april-30-2026 |
+| 13 | ORLY | O'Reilly Auto | 2026-04-30 (AMC) → 4/30 reaction | Earnings (Q1 beat) | +8.41% on 4/30  | UP | 8 | Open. Big Moves: bigmoves.substack.com/p/big-moves-april-30-2026 |
+| 14 | F | Ford | 2026-04-30 | Earnings (Q1 beat but $2B commodity headwind) | −5% on 4/30  | DOWN | 8 | Open. Investrade: investrade.com/mid-morning-look-april-30-2026 |
+| 15 | KLAC | KLA | 2026-04-30 | Earnings (Q3 print; guide in-line, slight WFE raise) | −6% on 4/30 (initial)  | DOWN | 8 | Open. Investrade: investrade.com/mid-morning-look-april-30-2026 |
+| 16 | ACHC | Acadia Healthcare | 2026-04-30 | Earnings (Q1 EBITDA beat + 26 raise; soft Q2 guide) | −19.6% on 4/30  (≈ −17 to −19.6%) | DOWN | 8 | Open / candidate. GuruFocus: gurufocus.com/news/8833096 |
+| 17 | WTW | Willis Towers Watson | 2026-04-30 | Earnings (Q1 rev miss, 3% organic) | −11.69% on 4/30  | DOWN | 8 | Open / candidate. Big Moves: bigmoves.substack.com/p/big-moves-april-30-2026 |
+| 18 | AME | AMETEK | 2026-04-30 | Earnings (Q1 beat-and-raise; First Aviation acq) | +3.35% on 4/30  — does NOT qualify ≥5% (excluded) | n/a | n/a | Excluded: <5%. (For completeness; not in screen.) |
+| 19 | META | Meta Platforms | 2026-04-29 (AMC) → 4/30 print | Earnings (Q1 beat; 2026 capex raised to $125–$145B)  | −8.55% on 4/30  | DOWN | 8 | STAGED FOR 5/4 EXECUTION (Strategy B already-disposed for entry). CNBC: cnbc.com/2026/04/29/meta-q1-earnings-report-2026.html |
+| 20 | MSFT | Microsoft | 2026-04-29 (AMC) → 4/30 print | Earnings (Q3 FY26 beat; capex to $190B) | −3.9 to −4% on 4/30  — does NOT qualify ≥5% (excluded) | n/a | n/a | Excluded: <5% close-to-close. |
+| 21 | GOOGL | Alphabet | 2026-04-29 (AMC) → 4/30 print | Earnings (Q1 blowout; Cloud +63%) | ≈+10% on 4/30  | UP | 8 | Already disposed prior cycle. Fool: fool.com/coverage/stock-market-today/2026/04/30/stock-market-today-april-30-2026 |
+| 22 | AXTI | AXT, Inc. | 2026-04-30 (AMC) → 5/1 print | Earnings (Q1 beat; Q2 EPS guide $0.06–$0.08 vs −$0.01 cons.)  | +17.6% on 5/1 (close $79.22 → $93.21);  +20.85% peer-table cite | UP | 7 | Open / candidate (verify ADV/mkt-cap; PT raises to $80 Wedbush,  $90 Northland  after April offering). Timothy Sykes: timothysykes.com/news/axt-inc-axti-news-2026_05_01 |
+| 23 | AAPL | Apple | 2026-04-30 (AMC) → 5/1 print | Earnings (Q2 FY26 beat) | +3.24% on 5/1 — does NOT qualify ≥5% (excluded) | n/a | n/a | NO-GO this cycle (criterion-1 fail). |
+| 24 | EQIX | Equinix | 2026-04-29 (AMC) → 4/30 print | Earnings (Q1 EPS/FFO miss;  raised FY guide)  | After-hours-only spike; regular-session 4/30 close-to-close <5% | n/a | n/a | NO-GO (criterion-1 mechanical fail). SEC 8-K: sec.gov/Archives/edgar/data/1101239/000110123926000089/eqix-q126xpr.htm |
+| 25 | CBOE | Cboe Global Markets | 2026-05-01 (BMO) | Earnings (record Q1; raised FY guide; 20% workforce cut)  | +9.6%  (Sat-published) — close 5/1 ≈ $328.77 (ATH) | UP | 9 | NO-GO this cycle. Investing.com: investing.com/news/transcripts/earnings-call-transcript-cboe-global-markets-beats-q1-2026-earnings-expectations-93CH-4653455 |
+| 26 | AXSM | Axsome | 2026-04-30 (14:06 ET) | FDA approval (AUVELITY for Alzheimer's agitation) | Premarket spike; regular-session close-to-close +2.6% | n/a | n/a | NO-GO (criterion-1 mechanical fail). GlobeNewswire: globenewswire.com/news-release/2026/04/30/3285345 |
+| 27 | STLA | Stellantis | 2026-04-30 | Earnings (Q1) — and in-window Investor Day May 21 | ≥5% reported by Daily.md | varies | 8 | NO-GO this cycle (in-window Investor Day eliminates clean convergence). |
+| 28 | BE | Bloom Energy | 2026-04-28 (AMC) → 4/29 print | Earnings (Q1 +130% rev;  FY raised to ~80% growth)  | +13.96% on 4/29 | UP | 9 | NO-GO this cycle (already disposed). SEC 8-K: sec.gov/Archives/edgar/data/1664703/000162828026027913/ex991_q126financialresults.htm |
+| 29 | DPZ | Domino's | 2026-04-27 (BMO) | Earnings (Q1 miss; lowered FY same-store guide) | −8.93% to −10.5% on 4/27  | DOWN | 9 | Open / candidate. CNBC: cnbc.com/2026/04/27/dominos-pizza-dpz-earnings-stock-falls-on-weak-sales.html |
+| 30 | MANE | Veradermics | 2026-04-27 | Phase 2/3 topline (oral hair-loss therapy, all endpoints met) | +44–45% on 4/27  | UP | 9 | Verify mkt-cap ≥ $2B and ADV ≥ $10M (recent IPO Feb 2026; likely INSTRUMENT FAIL — exclude if confirmed). Bloomberg: bloomberg.com/podcasts/series/stock-movers |
+| 31 | OGN | Organon | 2026-04-27 | M&A (Sun Pharma all-cash acquisition) | +17.01% on 4/27  | UP | 9 | M&A excluded for B (deal-locked, no mean-reversion catalyst). LevelFields: levelfields.ai/news/5-stocks-that-moved-the-market-today |
+| 32 | POET | POET Technologies | 2026-04-27 | Marvell purchase-order cancellation | −44 to −47% on 4/27,  then continued -18%  on 4/28, -18.4% on 4/29  | DOWN | 9 | Verify mkt-cap ≥ $2B (~$1.5B mid-April; LIKELY INSTRUMENT FAIL — exclude if confirmed). Yahoo: finance.yahoo.com/markets/stocks/articles/poet-technologies-shares-plunge-marvell-100110982.html |
+| 33 | MRVL | Marvell | 2026-04-27 | POET-cancellation news | −5.3% on 4/27 (intraday);  CtC ≈ −4 to −5% (verify) | DOWN | 9 | Borderline; verify exact CtC. Fool: fool.com/investing/2026/04/27/why-marvell-technology-stock-just-dropped |
+| 34 | HCA | HCA Healthcare | 2026-04-24 (BMO) | Earnings (Q1 in-line,  EPS +10.9%)  | Verify ≥5%; flagged in operational context | varies | 5 | OPEN STRATEGY-B POSITION (entered 4/28). Surface for transparency only. SEC 8-K: sec.gov/Archives/edgar/data/860730/000119312526174933/hca-ex99_1.htm |
+| 35 | WOLF | Wolfspeed | 2026-04-22 (intra-week) | Mgmt change / restructuring; analyst day prep | ~+12% (cumulative); verify single-day CtC | UP | varies | Borderline post-Ch.11; verify mkt-cap and single-day move. |
+| 36 | TXN | Texas Instruments | 2026-04-22 (AMC) → 4/23 print | Earnings (Q1 beat + Q2 guide $5.0–$5.4B vs $4.86B est)  | +18–19% on 4/23 (best day since 2000)  | UP | 11 (EXPIRED 5/7) | Already disposed prior week. CNBC: cnbc.com/2026/04/23/texas-instruments-stock-soars-on-q1-earnings-as-ai-demand-jumps.html |
+| 37 | NOW | ServiceNow | 2026-04-22 (AMC) → 4/23 print | Earnings (Q1 beat; subscription growth guide softened by Mideast)  | −18% on 4/23  (worst single-day in company history)  | DOWN | 11 (EXPIRED 5/7) | Already disposed prior week. CNBC: cnbc.com/2026/04/22/stock-market-today-live-updates.html |
+| 38 | IBM | IBM | 2026-04-22 (AMC) → 4/23 print | Earnings (Q1 beat; FY guide held flat)  | −6.6%  to −8% on 4/23  | DOWN | 11 (EXPIRED 5/7) | OPEN STRATEGY-B POSITION (entered 4/27). Surface for transparency. CNBC: cnbc.com/2026/04/22/ibm-q1-earnings-report-2026.html |
+| 39 | URI | United Rentals | 2026-04-22 (AMC) → 4/23 print | Earnings (Q1 beat + raise) | +20.2% on 4/23  | UP | 11 (EXPIRED 5/7) | Window-expired by 5/4 entry date. TheStreet: thestreet.com/latest-news/stock-market-today-apr-23-2026-updates |
+| 40 | WST | West Pharmaceutical | 2026-04-23 | Earnings (Q1 beat) | +13.9% on 4/23  | UP | 10 (EXPIRED 5/7) | Window-expired by 5/4 entry date. TheStreet: thestreet.com/latest-news/stock-market-today-apr-23-2026-updates |
+| 41 | LULU | Lululemon | 2026-04-23 | Leadership-transition / brand commentary | −10.9% on 4/23  | DOWN | 10 (EXPIRED 5/7) | Window-expired by 5/4 entry date. TheStreet: thestreet.com/latest-news/stock-market-today-apr-23-2026-updates |
+| 42 | PENN | Penn Entertainment | 2026-04-23 | Earnings (Q1 beat) | +15% on 4/23  | UP | 10 (EXPIRED 5/7) | Window-expired by 5/4. CNBC: cnbc.com/2026/04/23/stocks-making-the-biggest-moves-midday-txn-uri-wex-penn.html |
+| 43 | TIO | TIO Networks (TIO not in scope) | n/a | n/a | n/a | n/a | n/a | placeholder |
+| 44 | CSX | CSX | 2026-04-22 → 4/23 | Earnings (Q1 EPS beat, rev miss)  | +7% on 4/23  | UP | 11 (EXPIRED 5/7) | Window-expired by 5/4. CNBC: cnbc.com/2026/04/23/stocks-making-the-biggest-moves-midday-txn-uri-wex-penn.html |
+| 45 | UNH | UnitedHealth | 2026-04-21 (BMO) | Earnings (Q1 beat + raised FY EPS)  | +6 to +7% on 4/21 | UP | 12 (EXPIRED 5/6) | Window expires before any 5/4+ entry session would close. CNBC: cnbc.com/2026/04/20/stock-market-today-live-updates.html |
+| 46 | INTC | Intel | 2026-04-23 (AMC) → 4/24 reaction | Earnings (Q1 +20% AH; Tesla 14A deal)  | +20%-area AH; ~+30% pre-mkt  4/25; verify CtC | UP | 10 (EXPIRED 5/8) | Window expiring; Strategy-D-flavored AI mega-cap; verify. Waterloo: waterloocap.com/last-week-on-wall-street-april-24th-2026 |
+| 47 | GEV | GE Vernova | 2026-04-22 → 4/22 print | Earnings (Q1 beat + raised FY)  | +11.47%  to +13% on 4/22 | UP | 12 (EXPIRED 5/6) | Window expiring. ProactiveInvestors: proactiveinvestors.com/companies/news/1091019/market-movers-ge-vernova-boeing-united-airlines-1091019.html |
+| 48 | BA | Boeing | 2026-04-22 | Earnings (Q1 narrower loss)  | +5% on 4/22  | UP | 12 (EXPIRED 5/6) | Window expiring. ProactiveInvestors: as above |
+| 49 | UAL | United Airlines | 2026-04-22 | Earnings (Q1 beat; FY guide cut on fuel)  | −6% on 4/22  | DOWN | 12 (EXPIRED 5/6) | Window expiring. CNBC: cnbc.com/2026/04/22/stocks-making-the-biggest-moves-midday-agpu-asts-ual-gev.html |
+
+**Items confirmed below ≥5% threshold (excluded from PART 1 count, listed for audit):** AME (+3.35% 4/30), MSFT (~−4% 4/30), AAPL (+3.24% 5/1), AXSM (regular-session +2.6% 4/30; premarket-only spike), EQIX (4/30 regular-session <5%; AH-only spike).
+
+**Earlier-window names already expiring or expired by 5/4 entry session:** NXPI (Apr 28 print), STX (Apr 28 — Rosenblatt $500→$1,000 PT raise), V (Apr 28), SBUX (Apr 28), MDLZ (Apr 28), OMCL (Apr 28), KMX (Apr 14 — out of window), NFLX (Apr 16-17 — out of window), PANW (out of window).
+
+---

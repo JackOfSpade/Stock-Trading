@@ -1,0 +1,610 @@
+# Experiment Parameters
+
+**Document date:** 2026-04-23 (revision 15)
+**Purpose:** Defines the boundaries of the AI-directed trading experiment — what is being tested, what counts as success or failure, and when it stops.
+**Relationship to other documents:** `AI_Trading_Foundation.md` defines AI's capabilities and limitations. The strategy document (derived in a separate project) defines the strategies themselves: how many, what they are, what they trade, and how the regime router activates them. This document defines experiment-level rules that are strategy-agnostic — they apply to any strategy composition. It operates at the strategy portfolio and experiment level, not the per-trade level.
+**Immutability:** Every parameter below is committed before trading begins. Revising any parameter during the experiment is equivalent to not having it. If a parameter needs revision, the experiment ends first, and a new experiment with new parameters begins. Continuing the current experiment with revised parameters is prohibited. Enforcement of immutability is behavioral — the document can state the rule but cannot prevent a participant from ignoring it. The rule is load-bearing on the experiment's integrity; breaching it destroys the experiment's value.
+
+---
+
+## Terminology
+
+Precise terminology matters in this document because the multi-strategy architecture introduces multiple financial entities that a casual reader can conflate. The following terms are used consistently throughout; readers should map each term to its precise referent rather than interpreting them loosely.
+
+- **Account.** The single IBKR custodial account holding all capital. Singular. This is the legal/custodial entity. The account is not itself a portfolio in this document's sense — it is the container.
+- **Strategy portfolio.** An externally-tracked sub-allocation of the account assigned to a specific strategy. There is one per strategy; N in total per experiment, where N is defined by the strategy document. Each strategy portfolio is tracked outside IBKR in a ledger maintained by the participant. Each has its own starting value, its own deposit share, its own deployed-capital history, its own SGOV parking allocation, its own TWR, its own drawdown, its own trade count, its own gate, and its own kill triggers.
+- **Deployed capital.** Within a strategy portfolio, the portion currently in active trades (not SGOV parking). Used for TWR measurement.
+- **SGOV parking.** Capital within a strategy portfolio not currently deployed into active trades, held in SGOV (or equivalent short-term Treasury ETF) as the default idle vehicle. SGOV is baseline treasury management, not a strategy decision.
+- **Held-aside pool.** Capital from a terminated strategy's final portfolio, held in SGOV pending an adversarial-review decision on redistribution. See "Strategy termination and capital redistribution" below.
+- **Strategy termination.** The termination of a single strategy's participation in the experiment via that strategy's drawdown kill trigger, mark-to-market underperformance trigger, 30-trade gate failure, runaway-success review, or per-strategy foundation-change assessment. Other strategies continue unaffected.
+- **Experiment termination.** The termination of the entire experiment. Occurs when the foundation-change trigger fires in a way that affects all strategies simultaneously, or when the last active strategy terminates (leaving no active strategies), or by final determination after the last strategy's post-gate run ends.
+
+The word "portfolio" without the "strategy" prefix does not appear in this document. Every occurrence of "portfolio" is "strategy portfolio." This prevents the recurring ambiguity of "is this the main thing or a sub-thing?" — there is no "main portfolio" in this architecture, only the account (custodial container) and the strategy portfolios (N externally-tracked sub-allocations, one per strategy).
+
+---
+
+## Why proceed
+
+This workflow is a bet that future AI models will have a demonstrable edge over the autonomous-AI trading baseline. It is not a bet on beating top professional traders, and not a bet on beating passive index investing during the current-model phase.
+
+The rationale for running the experiment now, before that edge plausibly exists, is infrastructure — building the process, calibration data, mistake catalog, and execution discipline required to deploy quickly when a sufficiently capable model becomes available. Losses during the testing period are acceptable if they are bounded by the drawdown kill criteria and produce usable data.
+
+What transfers forward: process, documentation structure, workflow artifacts, mistake-category taxonomies. What does not transfer: model-specific numerical calibration (observed hit rates, specific bias magnitudes). This distinction matters because the experiment's value hinges on the transferable components compounding over time — not on any assumption that calibration data survives model transitions.
+
+The multi-strategy architecture is a consequence of this "infrastructure first" framing. No single strategy can be known in advance to be the right one for the forward-testing period. Running multiple structurally different strategies in parallel, each evaluated independently, produces more infrastructure — more mistake catalog entries, more pre-mortem templates, more adversarial review evidence, more per-strategy calibration data — than any single-strategy experiment would. The cost is operational complexity. The accepted bet is that the additional infrastructure justifies the additional complexity.
+
+---
+
+## What is being tested
+
+Whether specific AI-directed trading strategies, each explicitly designed to best exploit documented AI edges while compensating for documented AI disadvantages, can each achieve positive real excess returns (relative to SGOV, post-fees, post-taxes, post-inflation) measured in time-weighted return (TWR) terms, with a mechanical + AI-adversarial regime router determining when each strategy is active.
+
+Multiple strategies run in parallel (count defined by the strategy document). Each is evaluated independently. The experiment as a whole produces evidence on each strategy's edge separately, plus evidence on the regime router's function.
+
+Each strategy has a go/no-go evaluation gate at 30 closed positions (trades, not SGOV parking adjustments). If the gate is cleared by a given strategy, that strategy continues indefinitely until one of its kill triggers fires. If a strategy's gate is not cleared, that strategy terminates. There is no calendar cap on any strategy's duration under any circumstances.
+
+### Measurement framework: deployed TWR vs. SGOV benchmark
+
+Strategy evaluation is TWR-based on *deployed capital only* — the periods when a strategy portfolio's capital is in active trades, not during SGOV parking or regime-router deactivation. SGOV is the opportunity-cost benchmark: the return the participant would have earned by leaving the capital idle instead of running the strategy. A strategy that deploys capital and returns less than SGOV over the deployment period has destroyed value regardless of its nominal TWR.
+
+TWR separates the effect of strategy decisions from the effect of capital flows — deposits and withdrawals do not affect the measured performance of the strategy. A 2% gain on deployed capital is a 2% gain whether the strategy portfolio holds $10K or $100K; a 50% drawdown is a 50% drawdown regardless of what capital was deposited when.
+
+**Primary metrics per strategy:**
+
+- **Deployed TWR.** TWR measured only over periods when capital was in active strategy trades, excluding SGOV parking and regime-router deactivation periods.
+- **SGOV benchmark.** What SGOV would have returned over the same calendar periods during which deployed capital existed, for the same capital amounts.
+- **Excess real return.** Deployed TWR minus SGOV benchmark, post-tax, post-inflation. This is the quantity the success threshold is stated on.
+
+**Secondary diagnostic (not used for trigger evaluation):** full-strategy-portfolio TWR including SGOV parking. Useful in post-mortems for understanding what happened holistically. Not the basis for kill triggers or gate evaluation.
+
+All thresholds in this document (drawdown, success) are stated in deployed-TWR or excess-real-return terms as specified per trigger. Reactive capital flows cannot affect the experiment's evaluation because the measurement is invariant to capital flows.
+
+### What the experiment can and cannot deliver
+
+This experiment targets directional signal per strategy, not statistical proof. Research on minimum viable sample sizes for strategy validation shows that proving a 2% per-trade edge with 95% confidence requires 200+ independent trades, and proving smaller edges requires thousands. Reaching that threshold is technically possible per strategy given uncapped duration, but model deprecation (`AI_Trading_Foundation.md` 2.9) will almost certainly occur over the multi-year horizon required at typical catalyst-driven trade frequencies — meaning the test subject changes mid-experiment, which contaminates any attempt at statistical-proof-level conclusions. The per-strategy 30-trade gate is therefore calibrated to directional signal, not statistical proof; continuation past the gate accumulates more data but does not convert directional signal into statistical proof for the reasons above.
+
+What the experiment can deliver:
+
+- Evidence of process discipline per strategy — whether each strategy executes consistently as designed
+- Evidence of catastrophic failure modes per strategy — whether any strategy blows up in ways the design should have anticipated
+- Evidence on regime router function — whether mechanical + adversarial router calls match realized regime behavior
+- Calibration data on AI probability estimates and conviction ratings (directional only; statistical calibration requires larger samples)
+- Infrastructure validation — whether the workflows, packets, pre-mortem templates, adversarial review structures, and review cadences function correctly
+- Directional signal about strategy-type performance — whether specific strategy approaches produced positive or negative excess real returns, conditioned on the regime states they were active in
+
+Success criteria below are calibrated to these achievable outputs, not to statistical proof.
+
+### On the success threshold being hard to hit
+
+The per-strategy success threshold (excess real return ≥ 0%, meaning deployed TWR beats SGOV after taxes and inflation) is a high bar — SGOV at current short-term Treasury yields is a materially positive benchmark, not zero. This is deliberate. The experiment's purpose is wealth-building; a strategy that deploys capital and fails to beat idle-in-SGOV is not contributing to that purpose.
+
+Many autonomous-AI trading approaches do not achieve this. The threshold is set honestly rather than optimistically — a strategy that cannot meet it has not added value over doing nothing with the capital. Expect each strategy's threshold to be difficult to meet; that's the honest calibration.
+
+---
+
+## Architecture overview
+
+The experiment runs N strategies in parallel, where N is defined by the strategy document. Each strategy has its own strategy portfolio. A regime router determines which strategies are active at any time.
+
+**Minimum N.** The multi-strategy architecture applies when N ≥ 2. At N = 1, the multi-strategy machinery (regime router with independent per-strategy rules, cross-strategy redistribution adversarial review, per-strategy gates with independence preserved) is unnecessary overhead — a simpler single-strategy experiment document would be more appropriate. N = 1 experiments are out of scope of this document.
+
+**Maximum N.** Not specified. Larger N carries consequences the strategy document should address consciously: each strategy portfolio starts at 1/N of account total, position sizes are 2% of that, so at larger N individual trades become a small fraction of account and may be fee-dominated. The strategy document's choice of N should consider the participant's account scale.
+
+**Strategy composition.** The identities, theses, instruments, entry/exit rules, and characteristics of the N strategies live in the strategy document, not here. Each strategy is selected because it exploits a distinct combination of AI edges and compensates for a distinct combination of AI disadvantages documented in `AI_Trading_Foundation.md`.
+
+**The regime router** (details in "Regime router" section below):
+
+- N independent activation rules, one per strategy.
+- Each rule combines mechanical technical indicators (updated daily) with AI fundamental analysis (updated monthly).
+- When technicals and fundamentals agree, the activation state updates mechanically.
+- When they disagree, a two-routine adversarial review (Attacker routine + Orchestrator routine, file-handoff per `Claude_Task_Plan.md`) adjudicates the activation state.
+- The router determines which strategies are currently eligible to deploy new capital. Strategies not activated hold their strategy portfolios in SGOV and do not open new positions. Existing open positions in a deactivated strategy run to their normal thesis-invalidation or exit conditions.
+
+**Capital structure:**
+
+- Starting capital is split equally across the N strategy portfolios. Each begins at 1/N of the account's total value.
+- Each strategy's position sizes are computed against its own strategy portfolio value, not the account's total value.
+- No rebalancing occurs between active strategy portfolios during the experiment. Performance drift between strategies is preserved.
+- Deposits to the account are split equally among currently-active strategies (not yet terminated). See "Capital flows" below.
+
+---
+
+## Capital structure and accounting
+
+### Starting capital
+
+At experiment start, the account's total value is split equally across the N strategy portfolios. Each strategy portfolio begins at 1/N of account total. The split is tracked in an external ledger maintained by the participant; IBKR does not natively track sub-portfolios.
+
+### Deposits
+
+Deposits to the account are split equally among currently-active strategies. Active means: not yet terminated. A strategy that has been deactivated by the regime router (but not terminated) is still considered active for deposit-splitting purposes — it remains an eligible recipient because the deactivation is temporary and its strategy portfolio is still being maintained.
+
+Example: a $1,000 deposit with M currently-active strategies (where M ≤ N) means $1,000/M to each active strategy portfolio. Terminated strategies receive no deposit share; the "missing share" does not exist as a separate pool, it is already absorbed into the equal split among survivors.
+
+Separately, any held-aside pool created by a prior strategy termination (from the adversarial-review redistribution decision — see below) remains in SGOV and is not affected by new deposits.
+
+### Withdrawals
+
+The methodology for withdrawals from the account is deliberately not specified in this document. Withdrawals are expected to be rare. When the first withdrawal is required, the methodology will be decided at that point and documented at that point. The absence of a pre-specified rule reflects honest uncertainty — it is better to specify the rule in the context of the actual situation than to pre-commit to a rule that may not fit.
+
+### No inter-strategy rebalancing
+
+Capital in one active strategy portfolio never moves to another active strategy portfolio. If one strategy outperforms another, the outperformer's strategy portfolio grows and the underperformer's shrinks, and this gap persists. This preserves each strategy's independent TWR evaluation — rebalancing would contaminate the diagnostic signal by coupling strategies that are meant to be evaluated independently.
+
+The only time capital moves between strategies is after a strategy terminates, via the adversarial-review mechanism described below.
+
+### Proportional sizing property
+
+Because position size is 2% of the *strategy portfolio's* current value (not 2% of the account), a strategy portfolio mathematically cannot reach zero. Losses compound geometrically but asymptotically. In practice, the per-strategy drawdown kill trigger fires long before asymptotic decay becomes a practical concern. This is the intended behavior: the drawdown trigger terminates strategies before their portfolios become meaninglessly small.
+
+---
+
+## Constraints on strategy design
+
+Each strategy derived from `AI_Trading_Foundation.md` must:
+
+- Exploit edges that actually exist in the current model generation, not aspirational ones.
+- Compensate for the disadvantages documented in `AI_Trading_Foundation.md`.
+- Not maximize return potential at the cost of capital preservation. AI disadvantage 2.18 (instruction adherence over capital preservation) means aggressive edge-maximization produces tail-risk failures. The correct framing is "best use of real edges with hard capital preservation constraints."
+- Declare its expected trade frequency (trades per year, measured over *active periods only* — periods when the regime router has the strategy activated). This declaration is not load-bearing on a kill trigger, but remains required for three reasons: (a) sanity-checking strategy viability; (b) diagnostic signal — if realized frequency over active periods differs materially from declared, the strategy has a process problem that should be reviewed at monthly cadence even though it does not auto-terminate; (c) calibrating participant expectations about time-to-gate.
+
+Each strategy is derived from `AI_Trading_Foundation.md` without reference to this document. Per-trade decisions do not consider the kill criteria or success thresholds — those operate at the strategy portfolio level over the full test period.
+
+---
+
+## Regime router
+
+The router determines, for each strategy, whether that strategy is currently activated (eligible to deploy new capital) or deactivated (capital held in SGOV, no new entries, existing positions run to normal exits).
+
+The activation rules are independent, one per strategy. Activations and deactivations are computed per-strategy based on that strategy's own best-environment criteria. There is no combinatorial logic across strategies — if all strategies' criteria are met simultaneously, all are active; if none are met, none are active. Both extremes are valid states.
+
+### Two-signal cross-check
+
+Each activation rule combines two signals:
+
+- **Mechanical technical indicators.** Computed from price, volume, and volatility data. Updated daily. Specific indicator set is specified in the strategy document, not here, and is immutable once trading begins. Properties the indicator set must satisfy: every indicator is computed from objective data (no AI classification in the computation), the activation threshold for each strategy is specified as a concrete numerical rule, and the indicators collectively produce a binary activate/do-not-activate output per strategy.
+- **AI fundamental analysis.** Produced monthly by a structured Claude session against a fixed template of inputs (macro data, policy environment, earnings aggregate trends, geopolitical risk factors, sector-specific factors relevant to the strategies in use). The template is specified in the strategy document and is immutable once trading begins. The output is a binary activate/do-not-activate call per strategy, with explicit reasoning.
+
+The two-signal structure exists to compensate for `AI_Trading_Foundation.md` 2.7 (AI regime misclassification) without hard-coding permanent distrust of AI fundamental analysis. Technical indicators lag but are unbiased mechanically. AI fundamentals can see structural shifts technicals miss but carry documented biases (2.4, 2.13, 2.14, 2.24). Using both as cross-check exploits the complementary failure modes.
+
+### Resolution on agreement
+
+When technicals and fundamentals agree on activation state for a given strategy, the router's activation state for that strategy matches the agreement. No review required.
+
+### Resolution on disagreement (two-routine adversarial review)
+
+When technicals and fundamentals disagree on activation state for a given strategy, the router cannot update that strategy's activation state until a two-routine adversarial review (Attacker routine + Orchestrator routine per `Claude_Task_Plan.md`, queue-driven via `Pending_Adversarial_Reviews.md`) adjudicates. During the review, the strategy retains its prior activation state.
+
+**Input — Fundamental analysis (already produced).** The monthly fundamental analysis output (M1b) that created the disagreement. This is the input to the review, not a separately-commissioned routine. The triggering routine (typically M5, or D2 if a daily technical flip creates the divergence) writes the queue entry referencing the M1b output file and current technical reading.
+
+**Attacker routine.** Fresh routine context. Given via the queue entry: (a) the fundamental claim (M1b output file path), (b) the current technical indicator readings, (c) instruction to produce the strongest bear case against the fundamental claim, treating disagreement with technicals as potentially signaling an error in the fundamental reasoning. The attacker is not told which direction the disagreement runs — it is asked to attack the fundamental claim on its merits. Attacker prompt explicitly forbids reading other repo files (Decision_Log.md, prior reviews, broader Strategy.md sections) — accepted-risk note: this is prompt-discipline blinding rather than the structural blinding incognito sessions provided. Attacker routine has no chat history and no access to the orchestrator routine's reasoning (orchestrator hasn't run yet). Output: full attack with specific weaknesses identified, plus the attacker's verdict on whether the fundamental claim should survive. Written to `Adversarial_Review_<id>_attacker.md`.
+
+**Orchestrator routine.** Fresh routine context. Reads the attacker output file and the M1b output file. Produces an explicit independent assessment that documents: (a) the validity of each weakness the attacker identified, (b) any theater in the attacker's output (generic-sounding objections without specific anchors), (c) any weaknesses the attacker missed, and (d) a final verdict — final activation state for the strategy (activate or do-not-activate), reasoning, and theater-check flag (explicit judgment on whether the orchestrator's review identified substantive issues or merely ratified the attacker without meaningful independence). The theater-check is self-certified by the orchestrator routine; this is a known reduction in rigor relative to a separate-routine theater auditor pattern, accepted as part of migration scope.
+
+**Default on ambiguity.** If the orchestrator's final verdict is ambiguous or non-committal, the default is do-not-activate. An affirmative activate decision is required for activation to occur.
+
+**Logging.** The M1b output, the attacker output, and the orchestrator's assessment are all recorded as part of the router's decision log. The log is reviewed at monthly cadence alongside other monthly-review items.
+
+**Why this architecture (history).** The original design used a three-session architecture (attacker + judge + adjudicator-on-disagreement) to apply `AI_Trading_Foundation.md` 2.24 (cross-session inconsistency) as a deliberate edge: context-isolated sessions produce genuinely different reasoning. That design was simplified to single-session attacker + in-conversation orchestrator review (rev 3 simplification) on operational-sustainability grounds — the manual incognito-tab + paste-back workflow was operationally too costly to sustain across many reviews. The routine architecture migration translates this into the two-routine pattern: routine boundary serves as session boundary, file handoff replaces paste-back. Operational cost approaches zero (routines fire automatically), but the structural blinding-by-no-project-access of incognito sessions is replaced with prompt-discipline blinding under the two-routine pattern. The original three-session-with-separate-judge rigor is not restored as part of migration scope; it can be added in a future revision (third routine: Theater Auditor) if accumulated theater-check flags suggest self-certification is producing under-detection of CONVERGENT framing.
+
+**Residual limitation (acknowledged).** All routines run on the same underlying model weights. Hard-wired biases (optimism, recency, base-rate neglect) can cut across routine boundaries regardless of context isolation. The theater-check flag in the orchestrator's review is the check against weight-level bias; if reviews consistently converge on similar framing, the monthly review should flag this as drift indicating the adversarial structure is not producing meaningful independence. Accepted as a sustainability trade plus migration-scope simplification.
+
+### Cadence
+
+- Technical indicators: updated daily (mechanical, cheap).
+- Fundamental analysis: produced monthly.
+- Activation state changes: can occur at any time a new signal would cross the activation threshold. A daily technical flip against a stable monthly fundamental triggers a review that day (or at the participant's next daily check, with at most 24-hour lag). The monthly fundamental analysis can itself trigger a review if it flips against stable technicals.
+- Adversarial reviews: triggered only when disagreement would change activation status. Agreement cases require no review.
+
+### Router pre-mortem
+
+The regime router is itself a component subject to pre-mortem with adversarial review before the experiment's first trade. See "Pre-mortems" section below.
+
+---
+
+## Experiment parameters
+
+### Position size
+
+**2% of current strategy portfolio value per trade.**
+
+Measured as: for each trade within a given strategy, position size in dollars equals 2% of *that strategy's strategy portfolio total value* (including SGOV parking and any open positions' current market value) at the moment of trade initiation. Not 2% of the account. Not 2% of the sum of all strategy portfolios. 2% of the specific strategy portfolio taking the trade.
+
+*Derivation.* Standard institutional consensus for discretionary and semi-systematic trading under parameter uncertainty. At 2% risk per trade, a 10-trade consecutive losing streak costs approximately 18% of the strategy portfolio (geometric decay). At 5%, the same streak costs 40%; at 10%, 65%. The 1-2% range falls directly from the constraint "standard variance should not produce drawdowns above 10%." 2% is the upper end of this consensus range.
+
+*Context on account scale and fee-domination.* Position sizes below approximately $100-200 per trade are fee-dominated for equity trades and worse for options, at typical IBKR retail commission structures. With N-way equal capital split, each strategy portfolio starts at 1/N of account total, and each trade is 2% of that — so each trade is (2/N)% of account in absolute terms. At smaller account sizes or larger N, some strategies may operate partly in fee-dominated territory. This is an accepted cost of the multi-strategy breadth decision, not a design flaw to fix. A strategy that cannot clear its excess-return threshold partly because of fee drag is revealing that its edge is insufficient at the operational scale; that is legitimate diagnostic information. Strategies are not terminated for fee-dominated underperformance alone — only if they fail their gate or kill triggers on the normal metrics, which already incorporate fee drag.
+
+*Paired positions.* Strategies that use paired positions per thesis (e.g., long/short pairs) apply the 2% rule per position, not per pair. A paired-position strategy therefore consumes 4% of its strategy portfolio per thesis. This is a strategy-implementation detail specified in the relevant strategy's pre-mortem, not a deviation from the 2% rule — the 2% applies per position, and a pair is two positions.
+
+*Risk management via sizing, not via stop-losses.* The 2% per-trade position size is the primary risk control for individual trades. Positions should be allowed to move to their full thesis conclusion rather than being cut prematurely on adverse price movement. Stop-losses, if used at all, should fire only on thesis invalidation — the specific catalyst did not materialize, the specific event did not happen, the specific structural condition the thesis relied on has changed — not on price action alone.
+
+The rationale is diagnostic integrity: letting theses play out generates clean signal on whether the strategy's theses are correct. Tight price-based stops convert strategy-edge questions into execution-timing questions, muddying the data the experiment is trying to produce. A strategy with 2% sizing and 20% price-based stops is effectively a 0.4% sizing strategy with truncated thesis visibility — diagnostically worse than the 2% sizing the experiment prescribes. This is a strategy-design constraint treated at the experiment level because it is load-bearing on the experiment's diagnostic validity, not just on per-trade outcomes.
+
+### Kill criteria (per-strategy)
+
+A strategy terminates immediately — all its open positions closed at next available daily review, no new entries in that strategy, strategy portfolio moves to fully in SGOV pending adversarial-review redistribution — if any one of the following fires for that strategy:
+
+**1. Drawdown trigger.** Deployed TWR drops 50% below its highest historical value since the strategy's first trade.
+
+*Derivation.* Calibrated to a reference strategy with Sharpe ~0.5 and 15% annualized volatility — this is an assumption, and an important one. For a reference strategy of these characteristics: 43% probability of -30% drawdown over 10 years (1.5-sigma), 10% probability of -45% (3-sigma), 1.5% probability of -60% (4-sigma). A 50% drawdown is approximately 2.5-sigma — beyond normal variance for the reference but not so deep that only catastrophic failures trigger it. If a given strategy has meaningfully worse Sharpe (plausible given cataloged AI disadvantages), a 50% drawdown is closer to normal variance, and the trigger is more likely to fire on unlucky-but-working runs. This is an accepted cost: we cannot calibrate to each strategy individually because the strategies aren't written yet. The Sharpe 0.5 reference is a defensible middle; the trigger is honestly aggressive against weaker strategies.
+
+*Measurement.* Drawdown is peak-to-trough deployed TWR for the specific strategy. Capital flows in or out of the account do not affect this calculation. A deposit after a drawdown does not recover the drawdown; only positive strategy returns do. SGOV parking periods are not included in the TWR measurement — the drawdown trigger operates on deployed TWR only.
+
+The trigger is rigid and context-independent. No intermediate context-aware review. The documented AI disadvantages (narrative over-fit, optimism bias, instruction adherence over capital preservation) make AI-driven "should we continue" assessments most unreliable precisely when they would be invoked — under loss pressure. Rigid thresholds accept higher false-positive cost in exchange for eliminating AI-judgment failure in the highest-risk moment.
+
+**2. Foundation change trigger (per-strategy assessment).** The quarterly review of `AI_Trading_Foundation.md` (Q3 task in `Claude_Task_Plan.md`) or the annual full re-derivation (A1 task) identifies a change that affects the foundation a specific strategy was built on. Prior to 2026-04-25 (rev 3 of the foundation document) this was a monthly review; the cadence change reflects the new quarterly delta + annual sweep architecture.
+
+Foundation changes do not automatically kill all strategies. When a foundation change is identified, each strategy is assessed independently against the change. The assessment produces one of three outcomes per strategy (rev 3 added the constraint-relaxation branch):
+
+**Outcome (a) — Continue.** The change does not materially affect this strategy's foundation. The strategy continues without modification.
+
+**Outcome (b) — Terminate.** The change materially weakens this strategy's foundation. Specifically: a documented edge in Part 1 was removed or materially reduced AND the strategy exploits that edge, OR a documented disadvantage in Part 2 was added or materially increased AND the strategy has not adequately compensated for it. Strategy terminates per the standard termination path (immediate close, SGOV redistribution review).
+
+**Outcome (c) — Constraint-relaxation review (rev 3 added, rev 4 mechanized).** The change is a *reduction* in a disadvantage that the strategy explicitly compensates for, AND the strategy has constraints (entry rules, sizing caps, eligibility restrictions, etc.) that were added to address that disadvantage. The orchestrator session executes a constraint-relaxation review by applying mechanical criteria from `AI_Trading_Foundation.md` Part 5 — no orchestrator discretion. The verdict is determined by the criteria; the orchestrator's role is to execute the criteria and produce the audit-trailed output, not to exercise judgment.
+
+*Mechanical procedure (per `AI_Trading_Foundation.md` §5.3):* (1) parse strategy mechanism + pre-mortem for foundation citations including the rev N annotations linking constraints to specific Tier 2 disadvantages; (2) classify reduction magnitude per §5.4 thresholds (NONE / PARTIAL / MATERIAL) using direct research evidence and benchmark inference per §5.5; (3) apply §5.6 mechanical relaxation lookup based on reduction magnitude and constraint type; (4) apply load-bearing test mechanically — if the constraint is named as mitigation for any other still-in-force disadvantage in the pre-mortem's Section 5 mitigation citations, no relaxation regardless of magnitude on the cited disadvantage; (5) output structured audit trail per §5.7 listing relaxed constraints (with new form), unrelaxed constraints (with mechanical reason), and any out-of-table flags requiring participant resolution.
+
+*Why mechanical, not judgment-based.* The asymmetric default mirrors the termination-side default but inverted: tie goes to NO relaxation (preserve the constraint) when evidence is insufficient. But "tie goes to" was previously a judgment call by the orchestrator session. Rev 4 mechanizes the criteria so the orchestrator applies explicit thresholds rather than exercising discretion: PARTIAL/MATERIAL reduction magnitudes are quantified per §5.4; benchmark inference is bounded by Goodhart guardrails per §5.5 (≥3 sources, transferability, sustained, domain coverage); relaxation forms are looked up per §5.6 based on constraint type. Constraints that don't fit the lookup table generate an out-of-table flag rather than orchestrator-discretion fill-in — the strategy is held in current state and the gap is logged in Decision_Log.md for participant resolution at the next annual cycle. This eliminates the "AI judgment under capability-improvement pressure" failure mode, parallel to how the drawdown trigger eliminates "AI judgment under loss pressure."
+
+*Benchmark inference (rev 4 added per `AI_Trading_Foundation.md` §5.5).* Tier 2 disadvantages can be inferred as reduced from benchmark-result improvements without requiring an explicit "deficiency X is cured" research paper. The benchmark-to-disadvantage mapping is documented in §5.5 with quantitative thresholds. Inference requires Goodhart guardrails: ≥3 independent benchmark sources, replication on Claude family or architectural-generality argument, sustained improvement across ≥2 quarterly cycles, domain coverage matching workflow usage. Single-source benchmark improvements or unsustained spikes do not count. Direct research findings still count regardless of benchmark coverage.
+
+*Constraint relaxation forms (rev 4 added per `AI_Trading_Foundation.md` §5.6).* Per-position sizing caps relax proportionally to reduction magnitude (PARTIAL → cap loosened by reduction%; MATERIAL → cap loosened by 2× current bounded by experiment-level 5% cap, never fully removed because per-position sizing also serves workflow-level capital preservation). Universe restrictions don't admit graded relaxation (PARTIAL → no change; MATERIAL with full elimination → reconsidered for full removal). Concentration limits relax proportionally with caps. Frequency / cadence rules don't auto-relax (require explicit annual A2 review). Hit-rate thresholds and edge-decay metrics relax only if their derivation explicitly cites a Tier 2 magnitude. Constraints outside the lookup table generate out-of-table flags.
+
+*When outcome (c) fires, what does the review produce?* Mechanical output per §5.7: structured audit trail per strategy listing (i) foundation citation graph parsed from mechanism + pre-mortem, (ii) status changes since strategy's foundation revision, (iii) outcome verdict per item, (iv) per-constraint relaxation candidate evaluation with load-bearing test result and applicable relaxation form, (v) out-of-table flags. The output is replicable — running the same orchestrator session on the same inputs produces the same verdict (within 2.24 cross-session inconsistency, which is the residual unavoidable variance).
+
+Foundation changes that trigger per-strategy assessment include: a documented edge in Part 1 is removed or materially reduced; a documented disadvantage in Part 2 is added or materially increased; a documented disadvantage in Part 2 is **reduced or eliminated** (rev 3 — this branch did not previously trigger assessment but is the input to outcome (c)); the quarterly verification questions in `AI_Trading_Foundation.md` Part 4 produce a "yes" that changes the edge map; the annual A1 sweep produces Tier 2 fade-review outcomes affecting strategy-cited claims.
+
+*Bias direction for (b) terminate vs (a) continue.* "Materially affected" is a judgment call. The default is bias toward termination — tie goes to termination when the impact is ambiguous. A strategy running on stale edge assumptions is exactly the failure mode the trigger exists to prevent; permissive interpretation of "not materially affected" would defeat the trigger's purpose.
+
+*Bias direction for (c) constraint-relaxation (rev 4 update).* No "default direction" — outcomes are determined mechanically per `AI_Trading_Foundation.md` §5.3-§5.6. The mechanical thresholds embed conservative defaults: PARTIAL/MATERIAL reduction magnitudes are calibrated so most reduction signals do not trigger constraint relaxation; the load-bearing test rejects relaxation when constraints serve multiple disadvantages; benchmark inference requires ≥3 independent sources plus transferability plus sustained improvement to count as evidence. The conservatism is built into the criteria, not into orchestrator discretion. Where the criteria don't deterministically resolve a case, the constraint stays in force and the gap is flagged for participant resolution — this is the intended exception path, not orchestrator judgment.
+
+*Experiment-level consequence.* If a foundation change simultaneously triggers per-strategy assessment on all strategies and all terminate, the experiment as a whole ends (no active strategies remain). Experiment termination via foundation change is a consequence of aggregated per-strategy assessments, not a blanket trigger. Constraint-relaxation outcomes do not contribute to experiment-level termination — by definition they keep the strategy alive with looser constraints.
+
+*Version-change protocol (rev 3 added).* A new Claude version dropping does NOT trigger a foundation refresh or per-strategy assessment. Per `AI_Trading_Foundation.md` Part 4 §"Version-change protocol": Tier 2 numerical claims flip to "version-pending replication" status, the in-use-version field is updated, and strategies continue with existing foundation. Quarterly delta picks up version-specific research as it emerges; annual sweep does the full re-derivation on its normal schedule. This deliberately avoids the operational waste of refreshing on day 0 of a new version when no version-specific research yet exists.
+
+**3. Runaway-success review trigger.** A strategy's deployed TWR doubles before that strategy reaches its 30-trade gate.
+
+*Derivation.* AI disadvantage 2.18 (instruction adherence over capital preservation) includes reward function exploitation — strategies that look excellent on paper while carrying catastrophic hidden tail risk. Spectacular early returns are a warning sign for this pattern, not just a cause for celebration. The trigger is framed in sample terms rather than calendar terms to stay consistent with the uncapped-duration structure: a doubling before the strategy has had time to generate a meaningful sample is suspicious regardless of whether it occurred in calendar months or years. This trigger doesn't terminate the strategy directly; it forces a structured review to rule out reward exploitation, hidden leverage, or systematic luck. If the review finds legitimate strategy performance, the strategy continues toward its 30-trade gate. If it finds exploitation, the strategy terminates. The trigger applies only before the 30-trade gate for that strategy — post-gate, spectacular performance is no longer early-stage evidence of exploitation and the drawdown trigger is the operative capital-preservation control.
+
+**4. Mark-to-market underperformance trigger.** After a strategy has been active (accumulating deployed-state time, excluding router-deactivation periods) for ≥36 months from its first trade, if that strategy's deployed TWR has trailed the SGOV benchmark by ≥10 percentage points on a cumulative basis measured over any rolling 12-month window, that strategy enters a two-routine adversarial termination review (Attacker routine + Orchestrator routine per `Claude_Task_Plan.md`, queue-driven via `Pending_Adversarial_Reviews.md` with review type `m2m-termination`). The question being: should this strategy be terminated or continue? The orchestrator routine's verdict is the binding decision (terminate or continue), reasoning, and theater-check flag.
+
+*Measurement.* The 36-month active-time threshold accumulates only during deployed periods; router-deactivation periods do not count toward it. The rolling 12-month gap is computed as (deployed TWR over the strategy's deployed sub-periods within the trailing 12 calendar months) minus (SGOV return over those same deployed sub-periods). Periods of router deactivation within the 12-month window are excluded from both sides of the comparison — the trigger asks whether active trading underperforms SGOV, not whether router inactivity does. "Deployed TWR" here is mark-to-market, including unrealized gains and losses on open positions, consistent with the drawdown trigger's measurement.
+
+*Default on ambiguity.* If the orchestrator routine's final verdict is ambiguous or non-committal, the default is termination. An affirmative continue decision is required for the strategy to survive the trigger.
+
+*Interaction with the 30-trade gate.* If this trigger fires for a strategy that has not yet reached its 30-trade gate, an orchestrator decision to continue does not waive the gate requirement — both the structured review outcome and the eventual gate evaluation must be satisfied independently. In practice, this interaction is rare: at typical catalyst-driven frequencies, strategies hit 30 trades well before 36 months of active time. The interaction primarily matters for long-horizon strategies whose low turnover makes 30 trades unreachable within that window.
+
+*Derivation.* The 36-month active-time floor is calibrated to allow long-horizon strategies (held positions of 12+ months) to express their theses across at least two full earnings cycles on initial positions, while being short enough to complete the check within typical model-generation windows — firing too late defeats the trigger's purpose. The 12-month rolling persistence duration is a standard convention for distinguishing trend from noise in monthly-resolution return data; shorter windows fire on normal equity drawdowns, longer windows wait out the entire point of the trigger. The 10-percentage-point gap magnitude is calibrated such that the trigger fires when deployed TWR is meaningfully below SGOV (e.g., SGOV returns +5% while the strategy returns -5% over a 12-month window), not on mild underperformance produced by normal equity volatility. At tighter magnitudes (5 points), the trigger fires during normal variance; at wider magnitudes (20 points), the drawdown trigger fires first and this trigger adds little.
+
+*Rationale.* The 30-trade gate serves as a mid-life filter for strategies with moderate to high trade frequency: silent negative-edge strategies get caught at the gate and terminated before accumulating prolonged underperformance. For strategies whose design produces low turnover — by holding individual positions for long periods, or by being infrequently activated by the regime router — the gate is unreachable within reasonable model-generation windows, and silent underperformance can persist for years without triggering drawdown (which requires catastrophic loss magnitudes, not mild underperformance). This trigger closes that gap uniformly across all strategies, with an active-time floor that prevents firing during normal early-phase variance.
+
+*Why structured review rather than mechanical termination.* Unlike drawdown — where AI judgment under loss pressure is specifically unreliable — underperformance-vs-benchmark is a case where thesis context legitimately matters: a strategy's positions may be unrealized-negative but thesis-intact, pending a catalyst that has not yet materialized. The structured review is the appropriate place to test that claim adversarially. The two-routine architecture (with termination as the ambiguity default) prevents AI narrative over-fit from saving failing strategies: the attacker routine has no commitment to continuation, and the orchestrator routine must produce an affirmative "continue" decision for the strategy to survive the trigger.
+
+Whichever trigger condition is met first for a given strategy initiates its termination path — mechanical termination for #1; structured review or assessment for #2, #3, and #4, any of which may or may not terminate the strategy. Termination of one strategy does not affect the other strategies' continued operation.
+
+### Evaluation gate and termination structure
+
+**Per-strategy 30-trade go/no-go gate.**
+
+When a strategy has recorded 30 closed positions (trades only; SGOV parking adjustments do not count), the success threshold is evaluated against that strategy's cumulative excess real return from its first trade to that point.
+
+- **If the threshold is met:** the strategy continues. No further evaluation-based termination applies to that strategy. The strategy terminates only when one of its kill triggers fires.
+- **If the threshold is not met:** the strategy terminates at that point, declared unsuccessful.
+
+Each strategy has its own gate. A strategy that fails its gate terminates while other strategies continue unaffected, including strategies that have not yet reached their own gates.
+
+**Post-gate phase per strategy.**
+
+After a strategy clears its 30-trade gate, that strategy runs indefinitely until one of its kill triggers fires. There is no ongoing success re-evaluation for that strategy. The design bet is that a strategy that clears its gate against a deliberately-high bar (excess real return ≥ 0% post-tax, post-inflation) has demonstrated enough directional signal to commit the runway to. Severe post-gate degradation is absorbed by the drawdown kill trigger; sustained mild underperformance vs. SGOV is absorbed by the mark-to-market underperformance trigger once the strategy has accumulated 36 months of active time.
+
+**Final determination per strategy.**
+
+Each strategy's success or failure is ultimately determined at that strategy's termination, using cumulative excess real return from first trade to final close. Clearing the 30-trade gate is not a commitment to a "successful" verdict — it is permission to continue running. A strategy that clears its gate at +3% excess real return, runs for five more years, and eventually terminates via drawdown trigger at -12% cumulative excess real return is declared unsuccessful at strategy termination. A strategy that clears its gate and is eventually ended by the foundation-change trigger at +25% excess real return is declared successful.
+
+*Derivation of the 30-trade gate threshold.* Research on minimum viable sample sizes shows significant effect-size sensitivity to variance. For strategies with moderate per-trade variance, ~30 trades permits directional assessment at confidence insufficient for publication but sufficient for operational decisions. The gate is the first point at which any honest directional claim about a strategy can be made; placing it here avoids ending strategies prematurely while refusing to pass strategies that have only a handful of lucky outcomes.
+
+*Implications of the structure.*
+
+- A strategy that clears its 30-trade gate but then degrades slowly could run for an extended period before terminating, but not indefinitely: after 36 months of active time, the mark-to-market underperformance trigger provides a backstop for sustained SGOV underperformance that drawdown alone wouldn't catch. Between gate-clearing and the 36-month active-time floor, degradation is absorbed by the drawdown trigger alone.
+- Model version drift during extended post-gate runs is partially addressed by the per-strategy foundation-change assessment. Gradual drift that falls below the foundation-change threshold is partly addressed by the underperformance trigger, which catches cases where drift produces persistent SGOV underperformance. Drift that neither invalidates a foundation claim nor produces SGOV underperformance is not addressed; that is an accepted cost of uncapped duration.
+- The 30-trade gate is a real hurdle. The success threshold (excess real return ≥ 0%) is high — strategies will fail it at the gate, which is the point.
+- Regime router deactivation periods do not count toward the 30-trade gate. A strategy that is active for only 4 months of a year will accumulate trades toward its gate only during those 4 months. This means a strategy whose ideal regime is rare may take much longer than its nominal trade-frequency implies to reach its gate.
+
+*Regime diversity.* If a strategy reaches its gate in under ~12 months of active trading, the gate evaluation reflects a narrower regime window than ideal; this does not invalidate the gate, but it does weaken the generalizability of any conclusion drawn at evaluation. The post-mortem (whether final or at-gate) should explicitly note what regimes were represented in that strategy's active sample.
+
+### Strategy termination and capital redistribution
+
+When a strategy terminates (by any kill trigger, gate failure, or negative runaway-success review), its strategy portfolio value at termination moves immediately to SGOV, and a three-routine adversarial review (Recommendation routine + Attacker routine + Orchestrator routine per `Claude_Task_Plan.md`, queue-driven via `Pending_Adversarial_Reviews.md` with review type `capital-redistribution`) adjudicates the redistribution of that capital.
+
+**Recommendation routine.** Fresh routine context. Reads via the queue entry: (a) the terminated strategy's final state (final deployed TWR, final drawdown, which kill trigger fired, key findings from the termination post-mortem), (b) current state of surviving active strategies (current strategy portfolio values, current drawdown state for each, current activation status under the regime router, recent trade-level performance), (c) current regime router state across all strategies. Produces a recommendation from the following menu:
+
+- **Full redistribution:** the terminated strategy's capital splits equally among all currently-active surviving strategies.
+- **Full hold:** the terminated strategy's capital remains in SGOV as a held-aside pool, not added to any surviving strategy.
+- **Partial redistribution:** some fraction redistributes equally among active survivors, remainder held in SGOV.
+
+Explicit reasoning required. Output written to `Adversarial_Review_<id>_recommendation.md`.
+
+**Attacker routine.** Fresh routine context. Reads the recommendation file and the same factual state inputs. Instructed to produce the strongest case against the recommendation on its merits. Not told which direction the recommendation ran. Attacker prompt explicitly forbids reading other repo files (Decision_Log.md, prior reviews, broader Strategy.md sections). Output: full attack with specific weaknesses identified. Written to `Adversarial_Review_<id>_attacker.md`.
+
+**Orchestrator routine.** Fresh routine context. Reads the recommendation file and the attacker file. Produces an explicit independent assessment that documents: (a) the validity of each weakness the attacker identified, (b) any theater in the attacker's output, (c) any weaknesses the attacker missed, and (d) a final verdict — one of the three menu options (with specific fractions if partial), reasoning, and theater-check flag.
+
+**Default on ambiguity.** If the orchestrator routine's final verdict is ambiguous or non-committal, the default is full hold (SGOV). An affirmative redistribution decision (full or partial with specified fractions) is required for capital to move into surviving strategies.
+
+**Execution.** Whatever the orchestrator routine decides executes immediately upon output. The orchestrator routine itself updates Portfolio_Ledger.md and stages any required IBKR orders in chat output. No additional approval step between decision and action.
+
+**Logging.** Recommendation routine output, attacker routine output, and orchestrator routine assessment are all recorded as part of the termination record in Decision_Log.md alongside the termination post-mortem.
+
+**Why this architecture (history).** Strategy termination is a high-information moment. The right response is context-dependent: a termination from a specific regime shock might not threaten the other strategies; a termination from a more systemic issue might. A single-routine AI decision on redistribution would run directly into `AI_Trading_Foundation.md` 2.4 (narrative over-fit — plausible "this doesn't threaten the others" stories), 2.18 (instruction adherence over capital preservation — no innate bias toward caution), and 2.17 (algorithm appreciation bias — preference for active deployment over passive SGOV). The original design used a three-session architecture (recommendation + attacker + judge in incognito sessions) for the same reason that motivated three-session pre-mortem and divergence reviews: independent verification of the attacker by a separate session-isolated judge. The rev 3 single-session simplification was driven by manual incognito-tab + paste-back operational cost; under routine architecture that cost is gone, so capital redistribution retains its three-routine pipeline (recommendation routine + attacker routine + orchestrator routine), each separated by file handoff. This preserves the full original architectural intent at zero operational cost, with the routine boundary serving as session boundary and prompt-discipline replacing structural blinding-by-no-project-access.
+
+**Held-aside pool handling.** Capital in a held-aside pool (from a "full hold" or "partial redistribution" decision) remains in SGOV and is not automatically revisited. If the participant later wishes to deploy the held-aside pool into a new strategy experiment or to reactivate a terminated strategy via restart, that is a new-experiment decision subject to the constraints in "After termination" below.
+
+### Pre-mortems (N+1 required before first trade)
+
+Before any capital deploys into any strategy, N+1 pre-mortems must be completed (one per strategy plus one for the regime router). Each with structured adversarial review.
+
+**Strategy pre-mortems (one per strategy, N total).** Each strategy's author (Claude, in the strategy project) is required to articulate in writing:
+
+- The specific scenarios under which this strategy would lose money systematically
+- The specific market conditions in which it would underperform its SGOV benchmark (not just lose money, but fail to beat idle)
+- The specific signs that would indicate the strategy's edge (if any) has decayed
+- The specific failure modes from `AI_Trading_Foundation.md` Part 2 that pose the greatest risk to this strategy
+- The strategy's declared expected trade frequency (measured over active periods only)
+- A dated set of expected failure indicators that can be checked at monthly reviews
+- If the strategy's core edge is materially constrained by a specific disadvantage in `AI_Trading_Foundation.md` Part 2, the pre-mortem must explicitly confront that constraint and specify any exclusions or limitations on the strategy's universe that flow from it
+
+**One router pre-mortem.** The regime router's author is required to articulate:
+
+- The specific regime states the router attempts to classify
+- The specific technical indicators used and their activation thresholds
+- The specific fundamental analysis template and its inputs
+- The specific scenarios under which the router would misclassify regime (2.7 being the primary risk)
+- The specific failure modes from `AI_Trading_Foundation.md` Part 2 that pose the greatest risk to the router's function (2.7, 2.4, 2.14, 2.24 at minimum)
+- A dated set of expected failure indicators that can be checked at monthly reviews
+
+**Self-containment requirement for pre-mortem artifacts.** Each pre-mortem must be a fully self-contained artifact that enumerates every specific item on its requirements list within the pre-mortem document itself. Cross-references to other parts of the strategy document (e.g., "per the shared regime vocabulary," "per the fundamental template section") do not satisfy "the specific X" requirements. The pre-mortem must reproduce the required content in its own text so that a reader with no access to any other document — including the Attacker routine for adversarial review, whose prompt explicitly forbids reading other repo files — can verify requirement satisfaction directly from the pre-mortem. This applies at drafting time (the original pre-mortem), at revision time (any revised pre-mortem), and at the prompt-construction stage (any prompt that embeds the pre-mortem for adversarial review must embed the self-contained version, not a cross-referencing version).
+
+This requirement generalizes to any other artifact entering a structured adversarial review in this experiment: the artifact delivered to the Attacker routine must be self-contained with respect to all definitions, thresholds, rules, and inputs the review requires.
+
+**Adversarial review of each pre-mortem.** For each of the N+1 pre-mortems, structured review runs as a two-routine adversarial review (Attacker routine + Orchestrator routine per `Claude_Task_Plan.md`, queue-driven via `Pending_Adversarial_Reviews.md` with review type `pre-mortem`).
+
+**Two-routine pre-mortem adversarial-review architecture (universal, applies to all pre-mortem reviews going forward).**
+
+- *Attacker routine.* Fresh routine context. Given via the queue entry: the pre-mortem itself and the instruction to attack it. Instructed to identify where the pre-mortem is theater (vague indicators, failure modes that sound concerning but aren't actually checkable, frequency declarations that can't be verified, activation thresholds that can be reinterpreted after the fact). Attacker prompt explicitly forbids reading other repo files. Output: verdict on whether the pre-mortem is sufficient or contains material weakness requiring revision, with specific Tier 1 / Tier 2 / Tier 3 weaknesses identified. Written to `Adversarial_Review_<id>_attacker.md`.
+- *Orchestrator routine.* Fresh routine context. Reads the attacker file and the pre-mortem itself. Produces an explicit independent assessment that documents: (a) for each Tier 1 weakness the attacker identified, valid Tier 1 / valid but Tier 2-3 / invalid; (b) any theater in the attacker's output (generic-sounding objections without specific anchors); (c) any Tier 1 weaknesses the attacker missed; (d) a verdict (SUFFICIENT or TIER 1 DEFECT — REVISION REQUIRED).
+- *No separate judge or theater auditor.* The orchestrator routine's verdict is final for the cycle, and the orchestrator self-certifies the theater-check flag. (See "Architectural simplification — accepted-risk note" below; the original three-session-with-judge architecture is not restored as part of migration scope.)
+
+**Historical note — three-session architecture used for early pre-mortem reviews.** The regime-router pre-mortem (4 cycles) and Strategy A pre-mortem cycles 1–4 used a three-session architecture (Attacker / Judge / Adjudicator-on-disagreement) executed as manual incognito Claude.ai conversations with paste-back. All eight cycles produced CONVERGENT theater-check flags between attacker and judge, with zero adjudicator invocations. This established that the separate judge had been validating rather than challenging the attacker, motivating the simplification to single-session-with-orchestrator-review. Decision_Log.md entries for those reviews record the three-session outputs; they are not to be retroactively modified. The current routine architecture preserves the rev 3 simplification (single-attacker-equivalent + orchestrator-equivalent) translated into the two-routine file-handoff pattern.
+
+**Logging.** The attacker routine output and the orchestrator routine assessment are recorded in `Decision_Log.md` with theater-check flag.
+
+**Completion requirement.** All N+1 pre-mortems must complete (original + adversarial review + any revisions) before any strategy executes its first trade. This is not "complete them before you execute that specific strategy's first trade" — it is "complete all N+1 before the experiment's first trade." Rationale: once any strategy trades, the experiment is live and parameters are immutable, so incomplete pre-mortems on other components become locked-in gaps. Completing all pre-mortems before any first trade preserves the option to revise any component's design based on what other pre-mortems revealed.
+
+**Architectural simplification — accepted-risk note (operational rationale superseded by routine migration; substantive policy preserved).** All structured adversarial reviews in this experiment — pre-mortem reviews, regime-router divergence reviews, mark-to-market termination reviews — use a single-attacker-equivalent followed by orchestrator-routine independent assessment, instead of the three-session Attacker / Judge / Adjudicator architecture originally specified. (Capital-redistribution review preserves a three-routine pipeline — recommendation + attacker + orchestrator — because under routine architecture the operational cost is gone; see that section.) The original three-session design ran the attacker, judge, and adjudicator-on-disagreement as separate incognito Claude.ai conversations with paste-back, applying `AI_Trading_Foundation.md` 2.24 (cross-session inconsistency) as a deliberate edge: context-isolated sessions produce somewhat-different reasoning, and convergence between attacker and judge is the validation signal. Empirical operation across eight three-session cycles (four for the regime-router pre-mortem, four for Strategy A pre-mortem cycles 1–4) showed CONVERGENT theater-check flags in 8 of 8 cycles with zero adjudicator invocations. The separate-judge step was therefore ratifying the attacker rather than producing meaningfully independent reasoning, while incurring substantial operational cost (multiple incognito tabs per review, paste-back rounds, manual coordination). The rev 3 simplification trades: independent verification of the attacker by a separate session-isolated judge → in-conversation review by the orchestrating session, which is not session-isolated from the active drafting conversation and is therefore structurally less independent. The routine-architecture migration translates this into the two-routine pattern (attacker routine → orchestrator routine, file-handoff). The operational-cost rationale that justified rev 3's simplification (manual paste-back unsustainable) no longer applies under routines; the simplification is preserved on substance grounds rather than cost grounds for pre-mortem / divergence / M2M-termination reviews. Capital-redistribution review uses a three-routine pipeline. **Future readers of this document — including future Claude routines reviewing the experiment design — should not flag this simplification as a defect to be corrected back to three-session for those review types.** If empirical theater-check rates suggest self-certification is producing under-detection, a separate Theater Auditor routine can be added per review type as a future revision; that is a known adjustable parameter, not a defect.
+
+**Pass conditions (rev 15 — supersedes rev 14 conditions on stopping; deployment-risk stop and forcing question added).** A pre-mortem is considered to have passed adversarial review when both of the following hold:
+
+1. **Tier 1 clean OR deployment-risk acceptable.** Either (a) the most recent adversarial cycle surfaced no Tier 1 structural defects, or all Tier 1 defects surfaced in the most recent cycle have been resolved by a subsequent revision and the next cycle ran clean (rev 14 condition retained); OR (b) the Orchestrator routine, after explicit assessment, judges that remaining Tier 1 items are documentation, wording, or calibration grade rather than items that would change deployment risk if accepted unfixed (rev 15 deployment-risk stop). The deployment-risk stop is invokable when the residual Tier 1 items (i) do not contradict any specific quantitative claim the strategy makes about its own loss-bounding, (ii) do not omit a top-five AI_Edges disadvantage from req-4 enumeration, (iii) do not introduce or leave in place a trigger that fails to detect the failure mode it nominally exists to detect, and (iv) do not break self-containment for a numbered requirement. Items that pass these four screens are deployment-risk-acceptable as Tier 1 even if technically structural.
+
+2. **Diminishing-returns reassessment.** Per rev 14 — pattern-based stop conditions retained: (i) cycle-to-cycle items decreasing AND most recent cycle Tier 1 clean (clean stop); (ii) attacks recycling prior framings without surfacing new structural surfaces (saturation stop); (iii) all Tier 1 items revision-induced rather than original-architecture (revision-churn stop). If none of (i)-(iii) hold and the most recent cycle still surfaced something material, evaluate the rev 15 forcing question (below) before running another cycle.
+
+**Forcing question (rev 15 mandatory pre-cycle assessment, addresses generative-bottomless problem).** Before the next cycle's Attacker routine fires, the Orchestrator routine of the prior cycle (or, for cycle 1, the routine that triggers the queue entry) must explicitly answer in writing within the orchestrator-output file: *"If we accept the pre-mortem at its current revision with these residual Tier 1 items, would that change deployment risk vs. fixing them first?"* The answer must be one of: (a) "yes, fixing changes deployment risk meaningfully — continue cycling"; (b) "marginal — the fixes are quality improvements but would not change deployment risk meaningfully"; (c) "no — remaining items are documentation/wording/calibration grade." Answers (b) and (c) trigger the deployment-risk stop in pass condition 1(b). Answer (a) requires identifying what specifically would change in deployment risk if the items remained; vague answers ("the document would be more rigorous") do not satisfy (a). The forcing question's purpose is to prevent pattern-matching defaults: pattern-based stop conditions can fail silently (none fires, so cycling continues), but the forcing question requires an explicit substantive answer every cycle.
+
+**Cycle-count soft cap (rev 15).** No hard ceiling on cycles — sometimes a late cycle surfaces something architecturally serious. Soft cap at cycle 5: starting at cycle 5, the Orchestrator routine must explicitly justify continuation in Decision_Log.md rather than defaulting through "stop conditions don't fire." The justification must engage the forcing question's framing — what specific deployment risk would another cycle bound that the current revision does not? If no such risk is identifiable, the soft cap fires acceptance.
+
+**Theoretical-bottomless rationale (rev 15 added).** Adversarial review against an LLM-generated artifact has no theoretical bottom. The attacker can always find another wording inconsistency, calibration looseness, or asymmetric textual treatment somewhere in the document, because the document is generated by the same kind of process the attacker is critiquing. The pattern-based stop conditions in rev 14 were heuristics for when to consider stopping but did not address the substantive question — does the artifact bound deployment risk well enough to deploy? Rev 15 makes that question load-bearing: review continues until additional review would not change deployment risk, regardless of whether the attack pattern has formally saturated. This change was made after Strategy B reached cycle 5 with a similar pattern to Strategy A's accepted-at-cycle-6 saturation pattern, but with the rev 14 conditions reading as "not saturated" because of one revision-induced new surface — strict pattern reading would have continued indefinitely on minor calibration grades.
+
+**Stopping rule (rev 12-14 framing — retained for context).** Adversarial review cycles on a single pre-mortem are bounded. Observed behavior during the initial router pre-mortem and the Strategy A pre-mortem showed that each revision cycle surfaced a roughly constant or growing set of critiques in the early cycles, with theater-check flags consistently CONVERGENT across sessions — evidence that the adversarial architecture saturates (AI_Trading_Foundation.md 2.4 and 2.24 predict this: weight-level biases cut across sessions, and separate sessions on the same weights produce correlated critique sets). A pre-mortem that cannot be reviewed to a clean pass is not necessarily a defective pre-mortem; it may be at the limit of what the adversarial architecture can evaluate on a system of this complexity. The pre-mortem exists to surface limitations before trading, not to eliminate them.
+
+**Floor acknowledgment.** These pass conditions reflect a structural property of LLM-generated adversarial review: the same model weights that produce the artifact produce the revisions and produce the critique. Successive revision can reduce defect severity (the cycle-to-cycle Tier 1 count is the operational measure) but cannot reach a zero-defect artifact, because each revision samples from the same distribution that produced the original. The stopping rule accepts a non-zero residual defect floor as a condition of doing the work at all. The "Known limitations" section of each pre-mortem is the operational expression of this acceptance. A pre-mortem that appears to approach zero defects across many cycles is more likely exhibiting convergent critique saturation (caught by the theater-check flag) than achieving genuine cleanness; the diminishing-returns reassessment in condition 2 is designed to distinguish the two.
+
+**Tier definitions (for the stopping rule):**
+
+- **Tier 1 — Structural defects and internal contradictions.** Items where the pre-mortem contradicts itself textually, specifies a metric that is mathematically incoherent, or describes a mechanism that cannot do what it claims (e.g., blinding that does not blind, counterfactual that is path-dependent on its own subject, immutability clause contradicted by calibration language elsewhere). These MUST be resolved.
+- **Tier 2 — Calibration and measurability gaps.** Items where a threshold, indicator, or protocol is specified but its specific numeric or procedural form is unjustified or may be unfireable under plausible operating conditions. These SHOULD be resolved but may be deferred to known-limitations if resolution would require arbitrary re-specification.
+- **Tier 3 — Completeness and scope gaps.** Items where the pre-mortem does not address a failure scenario or operational detail that a reasonable reader could expect but that is not part of the pre-mortem requirements list. These MAY be resolved or explicitly deferred; a pre-mortem is not a complete operational manual and some completeness demands belong in other documents or in strategy-level specifications.
+
+When a pre-mortem passes via the diminishing-returns reassessment with residual Tier 2/3 items (rather than via clean pass with no residuals), the accepted pre-mortem must contain a "Known limitations" section enumerating every Tier 2 and Tier 3 item surfaced during review, with a note for each on whether it will be addressed by a future revision trigger (monthly review, foundation-change, etc.) or accepted as permanent scope. This section is part of the pre-mortem artifact going forward and is checked at every monthly pre-mortem-indicator review.
+
+**Triage responsibility.** Tier assignment is done by the participant with Claude assistance, using the working definitions above, after each adversarial cycle completes. Tier assignments are recorded in Decision_Log.md as part of the cycle outcome. A different session re-reviewing the same items may disagree on tier; the triage is not itself subject to adversarial review (or the loop regresses infinitely).
+
+**Rationale for the pre-mortem approach.** The pre-mortem replaces a pre-live backtest phase. AI-driven backtesting on historical catalyst trades is contaminated by training-data look-ahead bias (AI disadvantage 2.19) to a degree that makes the output unreliable as a go/no-go signal. The adversarial pre-mortem forces equivalent discipline without the contamination. If a pre-mortem cannot survive adversarial review, the corresponding strategy or the router is not sufficiently well-defined to deploy capital.
+
+### Success threshold
+
+**Excess real return ≥ 0%** — deployed TWR beats SGOV over the same evaluation periods, after taxes and inflation.
+
+Applied per strategy, at two points:
+
+1. **At the strategy's 30-trade gate**, against cumulative excess real return from the strategy's first trade to the 30-trade mark. Failure here terminates that strategy.
+2. **At the strategy's termination**, against cumulative excess real return from first trade to final close. This is the final determination for that strategy.
+
+Measurement specifics:
+
+- Deployed TWR is measured on periods when the strategy's capital was in active trades, excluding SGOV parking periods (both regime-router deactivation periods and between-trade SGOV holding within active periods).
+- SGOV benchmark is the return SGOV would have produced on the same capital amounts over the same calendar periods during which deployed capital existed.
+- Excess return = deployed TWR − SGOV benchmark, both measured over matching periods.
+- Fees include commissions, spread costs on execution, and any subscription costs attributable to the workflow, subtracted from deployed TWR before computing excess.
+- Taxes calculated at actual marginal rates, with short-term capital gains treated as ordinary income. Long-term capital gains rates apply to positions held ≥12 months; strategies that plan to hold positions long enough for LTCG treatment should reflect this in their excess-return calculations.
+- Inflation measured by CPI over the period being evaluated.
+- The evaluation period runs from the strategy's first trade to its evaluation point (gate or termination). Cherry-picking start dates is disallowed.
+- TWR is invariant to capital flows; deposits and withdrawals to the strategy portfolio do not affect the measured return.
+
+---
+
+## Experiment termination vs. strategy termination
+
+**Strategy termination** occurs when a single strategy's kill triggers fire, its gate fails, or its runaway-success review concludes negatively. Other strategies continue unaffected.
+
+**Experiment termination** occurs when either:
+
+- The last active strategy terminates (no active strategies remain — the experiment has nothing left to measure); or
+- A foundation change triggers per-strategy assessments that terminate all strategies simultaneously.
+
+The experiment continues as long as at least one strategy is still active. Individual strategy terminations are expected and survivable; they are part of the multi-strategy architecture's design, not failures of it. The experiment's own termination is a separate event from any single strategy's termination.
+
+**What experiment termination means operationally:**
+
+- All remaining open positions across all still-active strategies close at next available daily review.
+- No new entries across any strategy.
+- Final experiment-level post-mortem is written, covering all strategies' individual histories and the router's function.
+- The new-experiment constraints below apply before any successor experiment begins.
+
+---
+
+## After termination: restart and new-experiment constraints
+
+If a strategy terminates, the participant may decide to restart a similar strategy (same core, revised design) in a future experiment. If the experiment terminates, the participant may decide to start a successor experiment.
+
+Any restart or successor experiment must satisfy the following constraints — otherwise it is the same experiment (or same strategy) with cosmetic changes, not a new one:
+
+- **Material structural difference.** A new experiment or restarted strategy must differ from the prior in more than just threshold numbers. Either the strategy approach changes, the instrument scope changes, the position-sizing methodology changes, the regime-router structure changes, or the kill criteria structure changes. Same strategy implementation with drawdown trigger at 60% instead of 50% is not a new experiment.
+- **Documented post-mortem of the prior.** Restarts and successor experiments may only begin after a written post-mortem of the prior identifies what the prior revealed, what it failed to resolve, and what specifically the new design addresses. For individual strategy restarts, the post-mortem is the terminated strategy's post-mortem, and the restart qualification is part of that post-mortem workflow — specifically, the terminated strategy's post-mortem must explicitly articulate what the material structural difference is in any proposed restart. Restarts that are not articulated in the original termination post-mortem must generate a fresh post-mortem before qualifying.
+- **Parameter re-derivation, not inheritance.** New parameters must be derived fresh, not inherited from the prior. If similar parameters emerge from fresh derivation, that's fine; if they're copied because they felt right, that's continuation.
+
+The purpose is to prevent strategies from continuing under new names when the honest response would be to stop them entirely, and to prevent the experiment as a whole from continuing under a new name when it should stop.
+
+**No cooling-off period between experiments or strategy restarts.** Cooling-off is human-psychology-based (emotional reset between losses and new decisions) and does not apply to an AI-driven workflow where the decisions to restart are themselves subject to adversarial review.
+
+---
+
+## Review cadence and enforcement
+
+The experiment's review cadence is split by component type. Different components have different bias profiles and benefit from different cadences.
+
+### Daily (mechanical)
+
+- Technical indicator updates for the regime router.
+- Account-level position check: what is open, what is closed today.
+- Regime router activation state updates when indicators cross thresholds (triggering adversarial reviews if new state disagrees with current fundamental state).
+
+These are mechanical operations with no AI judgment component. Daily cadence is appropriate because the inputs update daily and the outputs are deterministic.
+
+### Weekly (mechanical strategy-level checks)
+
+Each week, Claude computes per strategy:
+
+- Current deployed TWR and current excess real return vs. SGOV benchmark.
+- Current drawdown state (peak-to-trough deployed TWR).
+- Trade count toward that strategy's 30-trade gate.
+- For strategies with ≥36 months of accumulated active time: current rolling 12-month deployed TWR vs. SGOV gap, flagged if ≥10 percentage points.
+- Whether any kill trigger's firing condition is met.
+
+If any kill trigger's firing condition is met for a strategy, the corresponding termination path is initiated that week — immediate termination for the drawdown trigger; structured review for the runaway-success, foundation-change, and mark-to-market underperformance triggers. When a strategy terminates (whether via mechanical trigger or review conclusion), the adversarial redistribution review runs immediately.
+
+These are mechanical checks against mechanical metrics. Weekly cadence allows faster detection of drawdown or gate events without exposing AI-judgment components to recency bias.
+
+### Monthly (AI-judgment components)
+
+Once per month, on the first trading day of the month:
+
+- **Fundamental analysis refresh.** The regime router's fundamental analysis template is re-run for all strategies. New fundamental activation states are produced. Any resulting disagreements with current technical states trigger adversarial reviews.
+- **Pre-mortem failure indicator check.** Per strategy and for the router, the dated failure indicators from the pre-mortems are checked explicitly.
+- **Realized-frequency diagnostic.** Per strategy, realized trade frequency over active periods only (excluding router-deactivation periods) is compared to declared frequency. Material gaps are flagged for diagnostic review — this does not auto-terminate the strategy but surfaces strategy-level process problems.
+- **Theater-check flag review.** Router disagreement reviews and any termination-redistribution reviews from the month are surveyed for patterns — if the theater-check flags indicate consistent convergence across supposedly-adversarial sessions, this is flagged as architectural drift.
+
+(Rev 3 cadence change, 2026-04-25: the `AI_Trading_Foundation.md` review previously included here at monthly cadence has been moved to quarterly + annual cadence — see Quarterly and Annual sections below.)
+
+Monthly cadence for AI-judgment components partially averages across 4 weeks of input rather than maximizing recency exposure (compensation for `AI_Trading_Foundation.md` 2.14).
+
+### Quarterly (rev 3 added)
+
+Once per quarter, on the first trading day of the new calendar quarter:
+
+- **`AI_Trading_Foundation.md` quarterly delta review (Q3 task).** Verification questions in Part 4 are answered explicitly against last-quarter primary-source research (papers, arXiv preprints, company announcements, regulatory filings). Default bias YES — err toward flagging change. Adversarial framing — look for evidence that contradicts or updates documented edges and disadvantages, not evidence that confirms them. Any material changes trigger per-strategy foundation-change assessments per the Foundation change trigger above (which may produce continue / terminate / constraint-relaxation outcomes per strategy).
+- **Regime retrospective review (Q1 task).** Already in place, unchanged by rev 3.
+- **D long-horizon candidate screen (Q2 task).** Already in place, unchanged by rev 3.
+
+### Annual (rev 3 added)
+
+Once per year, on the first trading day of January (or the experiment's anniversary month if January-anchoring isn't operationally clean for the participant):
+
+- **`AI_Trading_Foundation.md` annual full re-derivation (A1 task).** Full re-pull against last-2-years primary-source research, not delta against prior version. Tier 1 items audited for affirmative architectural-change evidence; Tier 2 items subject to fade review (specific magnitudes absent from last-2-years research are flagged version-pending or replaced with current evidence). Default bias: YES on flagging change; NO on removing items absent affirmative evidence. Updated `AI_Trading_Foundation.md` is published with revision-history entry. Any items materially changed trigger per-strategy foundation-change assessments.
+- **Per-strategy constraint audit (A2 task, rev 3 added).** Inverse of pre-mortem. The reviewer's job is to identify constraints in any strategy mechanism that were added to address a specific disadvantage where current `AI_Trading_Foundation.md` shows the disadvantage has been materially reduced or eliminated. Output: candidate relaxations, each requiring constraint-relaxation review per the Foundation change trigger procedure above. Default outcome on each candidate: NO relaxation unless reviewer affirmatively makes the case. The audit is annual (not quarterly) because the underlying signal (capability improvements through model upgrades and research findings) doesn't warrant tighter cadence and the cognitive load of monthly relaxation reviews would be excessive.
+
+*Why annual not quarterly for A1/A2.* The annual cadence reflects two findings: (a) Tier 2 fade review needs sufficient time-window to distinguish "absent because cured" from "absent because no one wrote a paper this quarter" — 2 years of evidence is the minimum window for the asymmetric publication bias to wash out; (b) constraint-audit costs cognitive load on each per-strategy evaluation, and quarterly cadence would consume excessive review capacity for low-frequency upstream signal.
+
+### Monthly review template
+
+To prevent the monthly review from drifting into whatever feels salient, the following structure is required. Each section is produced per review.
+
+**Per-strategy sections (×N):**
+
+1. Deployed TWR (cumulative since first trade) and excess real return vs. SGOV benchmark
+2. Drawdown state: current peak, current trough since peak, peak-to-trough percentage
+3. Trade count toward 30-trade gate; trades closed this month
+4. Realized frequency over active periods this month vs. declared rate
+5. Pre-mortem failure indicators status (each indicator checked explicitly)
+6. Any kill trigger evaluation results
+7. Regime router history for this strategy this month: activation state changes, any adversarial reviews invoked
+
+**Experiment-level sections:**
+
+8. `AI_Trading_Foundation.md` verification status check: report whether last completed quarterly Q3 task and last completed annual A1 task results have been propagated to per-strategy foundation-change assessments. (The full Part 4 verification is no longer monthly per rev 3 — moved to Q3 quarterly + A1 annual. Monthly review confirms downstream propagation is complete.)
+9. Any per-strategy foundation-change assessments triggered this month
+10. Regime router disagreement log for the month (all adversarial reviews, their outputs, theater-check flags)
+11. Any strategy terminations this month and their redistribution-review outputs
+12. Any new research surfaced that bears on the foundation document
+13. Router counterfactual attribution: actual sum-of-strategy TWR minus the all-active counterfactual TWR (router's capital-preservation contribution) and minus the all-SGOV counterfactual (system-vs-SGOV). Per `Strategy.md` router pre-mortem Section 7. Neither metric is a kill trigger, but sustained negative router-contribution over 12+ months triggers foundation-change reassessment.
+
+### Parameter visibility
+
+The parameters in this document are visible to Claude at the strategy-portfolio and experiment level but not at the per-trade level. Individual trade decisions do not reference these thresholds. Strategy design and per-trade execution operate on strategy-layer documentation only.
+
+---
+
+## Operational requirements
+
+### Routine architecture for all structured adversarial reviews
+
+All structured adversarial reviews in this experiment run as Claude routines with file-handoff per `Claude_Task_Plan.md`, queue-driven via `Pending_Adversarial_Reviews.md`. No exceptions. This applies to:
+
+- Pre-mortem adversarial reviews (Attacker routine + Orchestrator routine; one queue entry per cycle)
+- Regime router divergence reviews (Attacker routine + Orchestrator routine; one queue entry per disagreement)
+- Strategy-termination capital-redistribution reviews (Recommendation routine + Attacker routine + Orchestrator routine; one queue entry per termination)
+- Mark-to-market underperformance termination reviews (Attacker routine + Orchestrator routine; one queue entry per trigger firing)
+- Any future structured adversarial review this experiment's design adds — defaults to the Attacker + Orchestrator two-routine pattern unless the design explicitly specifies a different pipeline
+
+**Rationale.** The adversarial architecture depends on context isolation producing genuinely independent reasoning (`AI_Trading_Foundation.md` 2.24 deliberate-exploitation edge). Each routine run is a fresh session with no chat history, satisfying the context-isolation property. File handoff replaces paste-back: the Attacker routine writes its output to a designated file; the Orchestrator routine reads only that file plus the artifact under review. No cross-routine memory ingestion path exists for routine outputs.
+
+**Residual limitation under routine architecture (acknowledged, accepted).** Routines have full repo read access by default. Structural prevention of cross-file reads (the property incognito Claude.ai sessions provided by virtue of having no project access) is replaced by prompt-discipline blinding: the Attacker routine prompt explicitly forbids reading other repo files (Decision_Log.md, prior reviews, broader sections of the artifact's parent document). This is structurally weaker than incognito blinding because a routine could in principle violate the prompt; the mitigation is auditable via the routine's tool-call log. Per-routine accepted-risk note.
+
+Even under perfect blinding, all routines run on the same underlying model weights. Hard-wired biases (`AI_Trading_Foundation.md` 2.13 optimism, 2.14 recency, 2.15 base-rate neglect) cut across routine boundaries regardless of context isolation. The theater-check flag in the Orchestrator routine's output is the diagnostic check against weight-level bias; the monthly review's theater-check survey is the aggregated diagnostic. This residual limitation is uncorrectable without model improvements; the mitigations specified are the best available.
+
+**Operational procedure.** Adversarial reviews are triggered by other routines (M5 for divergence reviews, A3 / Q4 for foundation-driven pre-mortem refresh, kill-trigger detectors for M2M termination, termination-handler routines for capital redistribution) writing entries to `Pending_Adversarial_Reviews.md`. The Attacker routine and Orchestrator routine fire daily, each processing queue items at their phase. No human action is required for any structured adversarial review under this architecture.
+
+### Prompt construction for adversarial reviews
+
+Prompts for any adversarial review must be drafted so that each routine in the pipeline receives all context it needs from queue entry + designated input file(s), with no requirement for cross-file inference beyond what the prompt explicitly authorizes.
+
+Specifically:
+
+- The Attacker routine prompt is self-contained with all fixed context it needs (rules, vocabulary, requirements, the full self-contained artifact under review per the self-containment requirement above, and any relevant inline definitions of cross-referenced AI_Edges disadvantages or other concepts the review depends on). The artifact under review is referenced via the queue entry's `artifact_path` field; the Attacker routine reads only that path plus its prompt.
+- The Orchestrator routine reads the Attacker output file plus the artifact under review (path from queue entry). No other repo files unless the prompt explicitly authorizes.
+- For three-routine pipelines (capital redistribution): the Recommendation routine reads queue-entry-specified inputs (final state file, surviving-strategy state); the Attacker reads the Recommendation file plus the same factual state; the Orchestrator reads both Recommendation and Attacker files.
+
+**File-handoff rule (universal under routine architecture):**
+
+- Each routine writes its output to a single designated file path (specified by queue entry).
+- Each downstream routine reads only the upstream-output file(s) and the queue entry's authorized inputs.
+- No routine writes to another routine's output file. No routine modifies the queue entry beyond marking its phase complete.
+
+The artifact under review is the single source of truth referenced from the queue entry. Self-containment of that artifact is enforced at drafting time per the self-containment requirement; if the artifact is not self-contained, the Attacker routine flags this as a Tier 1 defect and exits without producing an attack.
+
+This requirement applies at the prompt-construction level: any routine prompt that drafts adversarial-review queue entries (M5, A3, Q4, kill-trigger detectors, termination handlers) must produce queue entries that satisfy this pattern. Queue entries that violate it must be redrafted before the relevant routines fire.
+
+---
+
+## What this document does not contain
+
+- Strategy rules. Those derive from `AI_Trading_Foundation.md` and live in the strategy document.
+- The specific technical indicator set used by the regime router. That lives in the strategy document and is immutable once trading begins.
+- The specific fundamental analysis template used by the regime router. That lives in the strategy document and is immutable once trading begins.
+- Per-trade risk management. Those are strategy-level decisions.
+- Position sizing methodology beyond the 2%-of-strategy-portfolio parameter. Strategy-level detail.
+- Instrument scope, entry criteria, exit rules. Strategy-level.
+- Withdrawal methodology. Deferred until first withdrawal.
+- Any calendar-based termination. Experiment duration is bounded only by per-strategy gates (pass/fail only) and, post-gate, by the per-strategy kill triggers.
+- Any ongoing post-gate re-declaration of success. Clearing a strategy's gate earns that strategy continued runway, not a permanent "successful" verdict — final determination is at strategy termination. Post-gate kill triggers (drawdown, foundation-change, and mark-to-market underperformance per the kill criteria section) continue to operate.
+- Any cooling-off period between experiments or strategy restarts. Human-psychology-based; not applicable.
+
+The separation is intentional. Strategy design and router design should be driven by edges and disadvantages documented in `AI_Trading_Foundation.md`, not shaped to satisfy experiment parameters. Experiment parameters function as external discipline, not as inputs to strategy construction.
