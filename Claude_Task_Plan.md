@@ -576,7 +576,7 @@ M1a, M1b, M3, M4 are deep-research routines; M5 (action conversion) runs after a
 
 ## M1a. Strategy-Blind Regime Scoring — deep research
 
-Schedule: first trading day of month, before M1b. Suggested time: 6:00 AM local.
+Schedule: Monthly, before M1b.
 
 ```
 Read access scope: Monthly cadence. May read Decision_Log.md and Decision_Log_Archive_*.md files for prior months' Monthly_Fundamental_RegimeScore.md outputs only (cross-month regime-trend cross-references). Read Strategy.md "Fundamental analysis template (monthly)" section for the M1a template specification, Experiment_Parameters.md, AI_Trading_Foundation.md.
@@ -647,7 +647,7 @@ CHAT OUTPUT: one-line acknowledgment naming both files written. If fallback_supp
 
 ## M1b. Strategy Mapping and Activation Calls — regular routine
 
-Schedule: first trading day of month, after M1a completes. Suggested time: 7:00 AM local (1 hour after M1a).
+Schedule: Monthly, after M1a completes.
 
 ```
 Read access scope: Monthly cadence. May read Decision_Log.md and Decision_Log_Archive_*.md files. Read Strategy.md (full document — strategy-mapping requires reading per-strategy activation rules), Experiment_Parameters.md, Portfolio_Ledger.md, Regime_State.md, Watchlist.md, Operating_Protocols.md.
@@ -839,7 +839,7 @@ The queue file's header (first line) is `# Pending Adversarial Reviews — queue
 
 ## Adversarial Review Recommendation — regular routine (capital-redistribution only)
 
-Schedule: daily, suggested time 3:30 AM local. The routine wakes, scans the queue, and exits if no entry matches its phase.
+Schedule: daily. The routine wakes, scans the queue, and exits if no entry matches its phase.
 
 ```
 Read access scope: Read Pending_Adversarial_Reviews.md, Strategy.md, Experiment_Parameters.md, Portfolio_Ledger.md, Regime_State.md, AI_Trading_Foundation.md, Decision_Log.md (and Decision_Log_Archive_*.md as needed), the queue entry's artifact_path, and any per-strategy state files referenced by the trigger_context.
@@ -859,7 +859,7 @@ CHAT OUTPUT: one-line acknowledgment naming the entry id and recommendation file
 
 ## Adversarial Review Attacker — regular routine
 
-Schedule: daily, suggested time 4:00 AM local (after Recommendation routine completes if both fire same day). The routine wakes, scans the queue, and exits if no entry matches its phase.
+Schedule: daily (after Recommendation routine completes if both fire same day). The routine wakes, scans the queue, and exits if no entry matches its phase.
 
 ```
 Read access scope — STRICT BLINDING: Read Pending_Adversarial_Reviews.md (to find and process the entry). Read the queue entry's artifact_path (the document under attack). Read its recommendation_output_path if review_type = capital-redistribution AND status = recommendation-complete (the recommendation is the artifact for the attacker in capital-redistribution reviews).
@@ -889,7 +889,7 @@ CHAT OUTPUT: one-line acknowledgment naming the entry id, review_type, and attac
 
 ## Adversarial Review Orchestrator — regular routine
 
-Schedule: daily, suggested time 4:30 AM local (after Attacker routine). The routine wakes, scans the queue, and exits if no entry matches its phase.
+Schedule: daily (after Attacker routine). The routine wakes, scans the queue, and exits if no entry matches its phase.
 
 ```
 Read access scope: Read Pending_Adversarial_Reviews.md, Strategy.md, Experiment_Parameters.md, Portfolio_Ledger.md, Regime_State.md, AI_Trading_Foundation.md, Decision_Log.md (and Decision_Log_Archive_*.md as needed), the queue entry's artifact_path, attacker_output_path, and recommendation_output_path (if applicable).
