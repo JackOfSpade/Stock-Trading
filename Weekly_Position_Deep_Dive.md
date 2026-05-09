@@ -1,181 +1,282 @@
-2026-W18
+2026-W19
 
 # Weekly Position Deep-Dive
 
-**Week:** 2026-W18 (Mon 2026-04-27 → Sun 2026-05-03) | **Compiled:** Sun 2026-05-03
-**Scope:** 2 open positions (Strategy B): IBM, HCA. Strategy A/C/E flat. Strategy D excluded (separate monthly cadence). META limit-order entry staged Mon 2026-05-04 — out of scope this week.
-**Source ledger:** EDGAR (CIK 0000051143 IBM, CIK 0000860730 HCA Healthcare, CIK 0001526688 HCA Inc.); newsroom.ibm.com; investor.hcahealthcare.com; CNBC; Reuters; Bloomberg; WSJ; Yahoo Finance; Investing.com; TipRanks; Benzinga; MarketBeat; Federal Reserve Board (federalreserve.gov); Trading Economics (Brent); Al Jazeera; Wikipedia (2026 Strait of Hormuz crisis); NPR; BlackRock IGV; Robinhood market-data; StockAnalysis.com; The Motley Fool; Investing.com (Brent intraday).
+**Week:** 2026-W19 (Mon 2026-05-04 → Sun 2026-05-10) | **Compiled:** Sat 2026-05-09
+**Scope:** 3 open positions, all Strategy B long: **IBM**, **HCA**, **META**. Strategy A / C / E flat (zero open positions). Strategy D excluded per Claude_Task_Plan.md W3 (D gets the M4 monthly deep-dive).
+**Prior-week framing:** The previous W3 ran 2026-05-03 (W18) covering Apr 27 → May 3 events; this routine therefore concentrates on the May 4 (Mon) → May 9 (Sat) window, with marginal carry-forward from late W18 where material. META was staged in W18 and filled Tue 2026-05-05 — first deep-dive coverage in this report.
+**Source ledger:** Decision_Log.md (live, 2026-04-25 META/IBM/HCA entry-thesis records through 2026-05-09 D2 entry); Daily.md 2026-05-09 (Fri 5/8 close + weekend overnight); Portfolio_Ledger.md (last mark 2026-05-07 ~10:12 MT); Strategy.md (Strategy B section, criteria 1-5, exit rules, criterion 3 closed-list rev 14, pre-mortem rev 7); Experiment_Parameters.md; primary-source filings (META 8-K 2026-04-29; HCA 8-K + FWP 2026-04-30; IBM newsroom 2026-04-28; BLS Empsit 2026-05-08; Federal Reserve Board 2026-04-29); CNBC, Reuters, Bloomberg, NYT, AP, Al Jazeera, NPR, Investing.com, Smartkarma, MarketBeat, Yahoo Finance, Macrotrends, FinanceCharts, Robinhood market data, MediaNama (NM trial), Barron's; CENTCOM official statements; Trading Economics (Brent), CME FedWatch.
 
 ---
 
 ## Summary
 
-Both open Strategy B positions are **HOLD** with thesis intact through 2026-W18. No invalidation criteria have triggered for either name. The only criterion showing any movement is IBM (iv) Brent ≥ $130/bbl — Apr 30 intraday print of $126.41 (per Reuters via Al Jazeera 2026-05-01)  came within $3.59 of the trigger, but May 1 Brent settled $108.17 (Investing.com 2026-05-01 close) and the Iran 14-point counter-proposal delivered Sat May 2 (NPR 2026-05-02) keeps the negotiation track alive. All four IBM criteria and both HCA criteria are functionally "no movement / marginal-only on (iv)." HCA's $3.0B senior-unsecured notes priced cleanly Apr 27 / settled Apr 30 (EDGAR FWP, 8-K 2026-04-30) — a refinancing-of-2026-maturities transaction, not new leverage; market reception orderly. IBM's 2026-W18 newsflow (Bob GA, MIT-IBM lab, FutureNow Chicago, Dallara/Entrust partnerships) is uniformly thesis-supportive and counters AI-displacement narrative. THC Apr 30 BMO print (Tenet 8-K Ex 99.1) was a clean EBITDA-beat with FY26 guide reaffirmed and explicit confirmation of −41% respiratory admissions  — directly corroborative of HCA's mean-reversion thesis even though it does not retire criterion (iii) per the entry decision-log framing.
+All three open Strategy B positions are **HOLD** with thesis intact through 2026-W19. Zero invalidation criteria triggered across IBM (4 criteria), HCA (4 criteria — 2 live + 2 already cleared), or META (3 criteria). The W19 tape was uniformly thesis-supportive: SPX / Nasdaq printed new ATHs Fri 5/8 (sixth straight weekly gain — longest streak since Oct 2024); VIX compressed to 17.05; Brent collapsed to $100.24 (−24% from W18 Apr 30 intraday $126.41 spike) on Iran-de-escalation flow even after a Thu 5/7 / Fri 5/8 US-Iran clash + tanker seizure; April nonfarm payrolls +115K with cooler-than-expected +3.6% YoY AHE supports soft-landing; the broad enterprise-software / AI-platform tape extended W18's strength (DDOG +31.33% Fri / FTNT +20.03% Fri / AKAM ~+15-24% on $1.8B AI infrastructure contract / CRWD +8% / PANW +7% / WDAY +6.7%; XLK new 52-week high; "best six-week stretch since 2000" per Barron's). META criterion (iii) regulatory exposure has one **active** monitor — the New Mexico AG bench trial (Judge Biedscheid, Santa Fe; 5/4-5/22) is in progress with no verdict / no order in the W19 window; daily monitoring remains required through 5/22 but does not currently meet the (iii) "material loss disclosure" trigger. IBM's W18 watch on Brent → $130 has materially de-escalated; HCA's earlier-cleared (iii) THC + (iv) UHS criteria remain cleared with no new peer-print events; META's Q1 capex-overreaction thesis got direct positive corroboration from the W19 enterprise-AI tape. **No close on thesis completion / no close on thesis invalidation / no further research** — all three positions continue to hold per the Strategy B exit rules with their original convergence and time-based-exit machinery undisturbed.
 
-**Out of scope this week:** META Strategy B limit-order entry staged for Mon 2026-05-04 — not yet open, no per-position deep-dive coverage.
+**No IMMEDIATE-ACTION flag set.**
 
 ---
 
 ## POSITION 1 — IBM (Strategy B Long)
 
-**Entry:** 2026-04-27 @ $230.17 | 0.1198 sh | $27.77 cost basis (incl. $0.18 commission)
-**Convergence target:** $245.00 (immutable) | **Time exit:** 2026-06-26
-**Mark Fri 2026-05-01 close:** $232.20 (Yahoo Finance / Macrotrends 2026-05-01);  **Apr 30 close:** $230.98 (FinanceCharts 2026-04-30, +1.71% d/d);  intra-week range traversed both sides of entry. Position +0.88% gross to last close, vs +6.30% required to hit $245.
+**Entry:** 2026-04-27 @ $230.17 | 0.1198 sh | $27.85 cost basis (incl $0.28 commission)
+**Convergence target:** $245.00 (immutable per Strategy.md criterion 3 closed-list rev 14; +6.4% gross from fill)
+**Time-based exit:** Fri 2026-06-26 (entry + 60 calendar days; calendar event `vt43tmemb2u7km29p79i2dga08`)
+**Latest mark (Portfolio_Ledger 2026-05-07 ~10:12 MT):** $229.45 → mark value $27.49, **−0.30% gross to fill** (−$0.36 vs cost basis incl comm; +$0.04 vs cost-pre-comm). Mid-window pulse-check considered and DECLINED 2026-05-06 D3 per Decision_Log line 7210 (high-conviction GO, multi-criterion gates monitored by routine D1 Daily scans).
 
 ### 1. Current Thesis Status
-**Intact and modestly reinforced.** No narrative drift detected. The post-print "AI-displacement victim" framing from Apr 23 has continued to soften, not harden, through W18:
 
-- **Sell-side stance.** HSBC upgraded IBM to Hold from Reduce on Apr 28  with PT raised to $231 from $218  (TipRanks 2026-04-28; GuruFocus 2026-04-28) — meaningfully stale-bear closing out, not an upgrade-to-Buy but the directional move is the signal. Combined with DZ Bank Apr 24 upgrade-to-Buy  at $295, BofA maintained Buy $300, and Goldman maintained $335 (entry-thesis baseline), the sell-side balance has tilted further pro-thesis since entry. Wedbush sits at $320 / Outperform (most-recent rating Apr 23 per Benzinga).  Consensus PT $277.88  (Benzinga 2026-05-02), implying ~20% upside from $232.20.
-- **Narrative-recharacterization read.** TipRanks "International Business Machines: New Buy Recommendation" (Apr 23-24);  StockAnalysis.com aggregator now framing IBM with "Q1 2026 saw 6% revenue growth, 13% higher free cash flow ... AI adoption and strategic acquisitions like Confluent are fueling growth, with guidance reaffirmed for 5%+ revenue and $1B free cash flow growth."  Coverage tone has shifted from Apr 23's "IBM gets chucked into the AI wastebin"  to "Confluent + Bob + Z17 fueling growth." This is exactly the post-event recharacterization Strategy B's mean-reversion hypothesis depends on.
-- **Cross-current.** Atlassian (TEAM) +29.58% intraday May 1 (CNBC 2026-05-01; Motley Fool 2026-05-01) on Q3 cloud +29%  / Rovo AI usage +20% MoM  — TEAM's CEO Cannon-Brookes told CNBC concerns plaguing the broader software sector "may be overblown."  This is the strongest single-name AI-platform-positive print in the cohort since the Apr 23 ServiceNow shock, and it lifts the IGV-cohort sentiment IBM is implicitly long.
+**Intact and modestly reinforced through W19. No narrative drift detected.**
+
+The original thesis (Decision_Log 2026-04-25 IBM GO) was: post-Q1-print mean-reversion of an AI-displacement-tagged sell-off; sector contagion from NOW Apr 23 over-priced an enterprise-software-disruption read into IBM that the Q1 print itself contradicted (Software +6%cc / Red Hat +13%cc / FY26 cc rev guide >5% reaffirmed / FCF +13% / Confluent integration); MEDIUM conviction; 50-62% gap-fill target $245.00. **W19 evidence has continued to soften, not harden, the AI-displacement narrative on IBM**:
+
+- **Bob GA (Apr 28; W18) → continued narrative pickup into W19**: Coverage volume (VentureBeat / The New Stack / Pulse 2.0 / AI News / AppleInsider) carried into W19 via aggregator-tier reframing of IBM as governance/orchestration layer rather than disruption target. No retraction or fact-check that would invalidate the Apr 28 Bob GA framing.
+- **Enterprise-software / AI-platform Q1-print cohort uniformly positive in W19** (see §2 Competitive Landscape): DDOG / FTNT / AKAM / WDAY / PTC all posted Q1 prints or peer-rallied on enterprise-AI demand signals — all thesis-supportive cross-currents for IBM's hybrid-cloud / Software / Red Hat franchise.
+- **Brent crude collapsed −24% from W18 intraday peak**: criterion (iv) trip-line Brent ≥$130 close was the only marginal-toward-trigger criterion in last week's deep-dive (Apr 30 intraday $126.41); W19 close pattern (Brent $100.24 Fri 5/8 / WTI June $94.83) is squarely thesis-favorable, even with a Fri 5/8 US-Iran tanker-clash event that did NOT produce a breakout. This removes the only live risk flagged in W18.
+
+**Narrative posture exiting W19:** the post-Apr 23 NOW-shock "IBM = AI-displacement victim" framing has decisively given way to "IBM = AI-orchestration platform with reaccelerating Software/Red Hat" within the post-event narrative-digestion window. This is exactly the post-event recharacterization Strategy B's mean-reversion mechanism is structured to monetize.
 
 ### 2. Competitive Landscape
-**Mag-7 prints (relevant tape signal even though not direct competitors):**
-- **MSFT Apr 29 AMC** (microsoft.com FY26 Q3 PR; CNBC 2026-04-29): Rev $82.9B (+18%), EPS $4.27 (vs $4.06 est),  **Azure +40% cc** (vs co. guide 37-38%, beat), AI run rate $37B (+123% YoY),  Microsoft Cloud $54.5B (+29%), commercial RPO $627B (+99%).  Capex ~$40B Q4 / ~$190B for CY26.  Decisive thesis-positive read for enterprise software demand and rebuts "AI-replacing-software" macro fear. Stock initially soft on capex but tape-positive into Friday.
-- **GOOGL Apr 29 AMC** (Alphabet 8-K Ex 99.1): Rev $109.9B (+22%), **Google Cloud +63% to $20.0B**, Cloud backlog ~doubled QoQ to $460B, Gemini Enterprise paid MAU +40% QoQ.  Strongest single Mag-7 enterprise-AI demand signal of the week.
-- **META Apr 29 AMC** (Meta 8-K Ex 99.1): Rev $56.31B (+33%),  capex guide raised to **$125-145B** (from $115-135B).  Stock −6-7% AH on capex shock. Marginal cross-current — does not undermine IBM thesis but signals AI-spend-rationalization risk for hyperscale-leveraged names; IBM is largely insulated since its AI book is GenAI consulting/Watsonx + AI-on-Z, not capex-heavy hyperscale.
-- **AMZN Apr 29 AMC** — AWS framed >20% growth  (Motley Fool 2026-04-30). Constructive.
-- **AAPL Apr 30 AMC** (CNBC 2026-04-30; MacRumors 2026-04-30): Rev $111.2B (+17% YoY, March-quarter record),  EPS $2.01.  Cook flagged "significantly higher memory costs" June quarter and beyond  — AI-induced memory squeeze cascading to consumer hardware. Tangential to IBM (mainframe Z17 demand is unaffected; supply-constrained Z is a separate dynamic).
 
-**Direct enterprise-software peers:**
-- **NOW** (ServiceNow): −40% YTD as of Apr 27 (24/7 Wall St 2026-04-27);  analyst-day May 4 upcoming.  Apr 23 AMC shock has fully priced; in W18 NOW base-built around $91-92, no further leg down. **Stale.**
-- **CRM** (Salesforce): Trading $172-182 area in W18 per 24/7 Wall St 2026-04-30 references.  −31% YTD.  Stable in W18 with no new idiosyncratic catalyst.
-- **ADBE**: Mizuho downgrade to Neutral cited "intensifying AI competition eroding prosumer creative advantage" (24/7 Wall St 2026-04-27).  Limited IBM read-through.
-- **TEAM**: +29.58% May 1 (above) — AI-platform-positive print, **strongest IBM-supportive cohort signal of W18.**
-- **HUBS, WDAY, INTU, ORCL**: No idiosyncratic prints in W18; tape behavior tracking IGV.
+**Enterprise-software / AI-platform peer prints in W19 (uniformly thesis-supportive)**:
 
-**Hybrid cloud / Red Hat / OpenShift competitors:**
-- **No material development** in W18 affecting Red Hat / OpenShift competitive positioning. MongoDB / Snowflake / Databricks-adjacent newsflow quiet.
-- **VMware/Broadcom**: No material development.
+- **DDOG (Datadog) Q1 BMO Thu 5/7 + Fri 5/8 continuation +31.33% to $188.73** (Smartkarma 5/8): Rev $1.006B (+32% YoY) vs ~$994M cons; non-GAAP EPS $0.60 vs $0.42 cons; ARR >$4B; FY26 guide raised to $4.30-4.34B rev / $940-980M non-GAAP OI; FedRAMP High certification; Sakana AI partnership; CEO Pomel said "AI drives — rather than cannibalizes — demand for the Datadog platform." This is the W19's strongest single-print demand signal for enterprise observability + AI infrastructure — direct positive read-through to IBM's hybrid-cloud / watsonx / instana franchise.
+- **FTNT (Fortinet) Q1 AMC Thu 5/7 + Fri 5/8 +20.03% to $107.97** (Seeking Alpha / Smartkarma): Adj EPS $0.82, rev +20% YoY to $1.85B; adj OM 35.8%; FY26 rev guide raised to $7.71-7.87B (from $7.5-7.7B); billings guide raised to $8.8-9.1B (from $8.4-8.6B). Cybersecurity demand validated; supports IBM Security franchise read-through.
+- **AKAM (Akamai) Q1 AMC Thu 5/7 + Fri 5/8 ~+15-24%** (AKAM 8-K, Investing.com, Chartmill): Q1 rev $1.07B (+6%); $1.8B 7-yr CIS contract w/ "leading frontier model provider"; CIS rev +40% YoY to $95M; CEO Leighton: "expects total revenue growth to reach double digits in 2027." This is a CONTRACT-DISCLOSURE catalyst sized at ~17% of AKAM's annual revenue base — directly demonstrates that frontier-model providers are buying enterprise-grade CDN / cloud-infra commitments at material scale, reinforcing IBM's hybrid-cloud TAM.
+- **PTC +7.96% / WDAY +6.73% / CRWD +8.04% / PANW +7.00% Fri 5/8 close** (Smartkarma): cybersecurity / enterprise-application-software peer rally on FTNT print + AI-security narrative; broad cohort tape healthy.
+- **AXON +10.63% / VTRS +9.03% / MNST +14.97% / AGL ~+51% Fri 5/8** — Q1 prints across various sub-industries; uniformly beat-and-raise tape signal.
 
-**IGV ETF cohort tape:** IGV close May 1 area (Robinhood 2026-05-03 dataset) ~$86.65,  well above $80 invalidation floor (8.3% buffer). Per stockanalysis.com IGV news feed, "iShares software ETF just had its best week in 25 years"  headline framing earlier in April; W18 tape held the recovery — tech sector posted "best month since start of Covid pandemic in 2020"  per CNBC reference cited in Yahoo IGV history feed.
+**Mag-7 / hyperscaler context (carrying forward from W18 prints)**: MSFT Azure +40%cc, GOOGL Cloud +63% / backlog ~doubled QoQ to $460B, AWS >20% — the Q1 hyperscaler print stack landed pre-W19 but carries durable narrative weight through W19 ($627B MSFT commercial RPO; $460B GOOGL Cloud backlog). Capex shock from META Q1 ($125-145B raised guide) was the sole AI-capex-rationalization signal in the broader cohort, and the W19 capex narrative did NOT broaden — no other Mag-7 capex resets surfaced. **Net: enterprise-software demand signal accelerated through W19; AI-displacement narrative did not.**
+
+**Direct enterprise-software peers (continuation of W18 read)**:
+- **NOW (ServiceNow)**: Analyst-day Mon 5/4 was scheduled in W19 — no public Decision_Log / Daily.md entry surfaces its readout content; per Daily.md 5/9 no NOW-specific 5/8 development. Pre-W19 framing was −40% YTD with W18 base-build around $91-92. **Stale; no new IBM-relevant signal.**
+- **CRM (Salesforce)**: No own-print catalyst in W19. Tape mid $170s area carrying through.
+- **TEAM (Atlassian)**: W18 +29.58% peer print was already recorded in W18 deep-dive as the strongest IBM-supportive cohort signal of that week. No new W19 development — TEAM 2026-05-02 NO-GO (criterion 4 dual-framing) has been recorded in Decision_Log archive context but does NOT signal any deterioration in TEAM's underlying print quality (the NO-GO was mechanism-mismatch, not thesis-quality concerns).
+
+**Hybrid cloud / Red Hat / OpenShift / Confluent cohort**: No material competitor development in W19. Confluent integration narrative continues to be cited in IBM aggregator coverage.
+
+**IGV ETF cohort tape**: IGV cited at ~$88.27 mid-week per Decision_Log 2026-05-06 D2 entry (line 7066), well above $80 invalidation floor (10.3% buffer); XLK at new 52-week high $171.38 Fri 5/8 (Zacks); software cohort posted "best six-week stretch since 2000" (Barron's via Daily.md 5/9). No IGV close ≤$80 surfaces in any W19 source — criterion (iii) decisively unviolated.
 
 ### 3. Fundamental Developments
-**Material company-level events in window (uniformly thesis-supportive):**
-- **2026-04-28: IBM Bob GA launch** (newsroom.ibm.com/2026-04-28-introducing-ibm-bob; The New Stack 2026-05-01). Global availability of IBM's enterprise AI development partner.  Headline metrics: 80,000 IBM employees using; surveyed 45% productivity gain; multi-model orchestration including Anthropic Claude, Mistral, and IBM Granite;  Bob Premium Package for Z mainframes  (ties directly to Z17 cycle thesis); SaaS general availability with on-prem coming.  Coverage volume: VentureBeat, The New Stack, Pulse 2.0, AI News, AppleInsider — broad pickup. Strategic significance: **directly counters AI-displacement narrative** by positioning IBM as governance/orchestration layer rather than disruption target.
-- **2026-04-29: MIT-IBM Computing Research Lab launch + FutureNow Chicago hub** (PRNewswire 2026-04-29; Bloomberg 2026-04-29; Block Club Chicago 2026-04-29). 750 full-time AI/quantum/cybersecurity/data-science jobs at Illinois Quantum and Microelectronics Park (IQMP) by end-2030 in exchange for $19M state tax credits. Signed agreement with Illinois DCEO.  MIT lab succeeds long-running Watson AI Lab partnership.  Quantum System Two on track for launch later this year.  Krishna press conference w/ Pritzker, Mayor Johnson.
-- **2026-04-30: IBM-Dallara AI/quantum collaboration** (PRNewswire 2026-04-30) — physics-based AI foundation models  for high-performance vehicles.
-- **2026-04-30: Entrust collaboration on quantum-safe cryptography** (Business Wire 2026-04-30).
-- **AGM 2026-04-23** transcript released: management proposals all passed; shareholder proposals (director stock ownership, AI bias, charitable giving, shareholder rights) all failed  — clean.
-- **Dividend:** Quarterly dividend $1.69 declared (vs prior $1.68), ex-date 2026-05-08  (Daily Political 2026-04-23), payable June 10.  Annualized $6.76 / yield ~2.9-3.0%.  Mild thesis-supportive (consistency).
-- **No 8-K filings** in W18 reducing FY26 cc revenue guide. **No pre-announcement / negative business update** on Software or Red Hat.
-- **Sell-side actions in W18:** HSBC upgrade Apr 28 (Hold from Reduce, PT $231); no downgrades observed; price-target trims pre-W18 are stale.
+
+**No IBM 8-K filings in W19** (criterion-(i)-(ii) primary watch). Specifically: no FY26 cc revenue guide revision; no Software / Red Hat negative pre-announcement; no in-quarter business update.
+
+**Material company-level events in window:**
+- **2026-04-28 (W18) Bob GA, MIT-IBM Computing Research Lab launch, FutureNow Chicago hub** carry forward as the dominant W18-into-W19 narrative event cluster (covered in detail in W18 deep-dive). No retraction, no follow-on negative correction.
+- **W19 scan: no new IBM-specific press releases** of material weight surfaced in Daily.md 2026-05-09 covering Fri 5/8. No W19 sell-side ratings actions that materially shift consensus PT off the post-W18 ~$278 area.
+- **Dividend ex-date Fri 2026-05-08** (declared $1.69 quarterly Apr 23; payable June 10): mechanical event, mild thesis-supportive (consistency); $0.0202/share dividend allocation pro-rata to 0.1198 sh ≈ $0.0024 — operationally negligible but ledger-recognized.
+- **Apr 23 AGM proposals, Apr 23 Q1 print framework, Apr 28-30 Bob GA / MIT lab / Dallara / Entrust partnership announcements** all remain the canonical dataset; no W19 updates contradict.
 
 ### 4. Sector and Macro Context
-- **FOMC Apr 29** (Federal Reserve Board 2026-04-29 release): Held 3.50-3.75%. **8-4 vote** — Miran dissented for 25bp cut; Hammack/Kashkari/Logan dissented to remove easing bias. First 4-dissent meeting since Oct 1992. Marginally hawkish vs market expectation given the easing-bias removals; CME FedWatch now shows essentially 0% probability of cuts in 2026  (CNBC 2026-04-29). Not directly invalidating for IBM but compresses any rate-tailwind from convergence.
-- **Powell-to-governor / Warsh transition** (Federal Reserve 2026-04-29; CNBC 2026-04-29): Powell announced he will remain on Board after May 15 chair-term expiry "for a period of time to be determined" pending Fed-renovation investigation finality. Senate Banking advanced Warsh nomination same day. Net effect: Warsh takes Miran's seat (not Powell's), so dovish-vs-hawkish balance unchanged near-term  — neutral for IBM.
-- **10Y / VIX / FX:** VIX 16.99 May 1 close  (Yahoo IBM page 2026-05-01); Dollar Index ~98.01.  Risk-on tape into Friday. Tech "best month since 2020" per CNBC framing.
-- **Brent / Iran / Hormuz** (criterion (iv) live watch):
-  - Apr 30 intraday: Brent June futures hit **$126.41** (Reuters/Al Jazeera 2026-05-01)  — within $3.59 of $130 invalidation barrier. Driven by Axios report that Trump would be briefed on expanded military options and "short and intense wave of strikes" reportedly under review (Trading Economics 2026-04-30).
-  - May 1 close: Brent **$108.17** (Investing.com 2026-05-01 -5.12% d/d) on hopes fragile US-Iran ceasefire could lead to lasting peace; Trump told Congress hostilities "have terminated" addressing 60-day War Powers deadline.
-  - Sat May 2 (NPR 2026-05-02): Iran submitted **14-point response** to US proposal via Tasnim/Press TV — demands resolution within 30 days vs US 2-month ceasefire, guarantees against future aggression, end to naval blockade, frozen-asset release, Lebanon-fighting end, new Hormuz mechanism.  Trump said he is reviewing.
-  - CENTCOM (CBS News 2026-05-02): 48 Iranian ships turned back in last 20 days;  UK Royal Navy reports Hormuz shipping >90% below pre-conflict levels.  Strait remains effectively closed to commercial transit; ceasefire holding (no exchange of fire since Apr 7) but blockades on both sides intact.
-  - **Net Brent posture:** Volatile but pricing in negotiation track. $130 was tested but not breached. Two-sided risk — escalation could spike past $130 in single session, but May 2 14-point exchange leans de-escalatory. Continue daily watch; Mon May 4 open is the next data point.
-- **AI-displacement narrative pulse:** TEAM +29.58% May 1, MSFT Azure 40%, GOOGL Cloud +63% — all three reset the AI-platform-positive narrative materially in IBM's favor. AI-disruption-target narrative measurably weaker exiting W18 than entering it.
+
+- **Brent crude / Iran / Hormuz** (criterion (iv) live watch): The W18 watch shifted decisively toward de-escalation through W19. **Apr 30 intraday peak $126.41 → Fri 5/8 close $100.24** (Trading Economics / Investing.com / Daily.md 5/9): −20.7% from W18 intraday peak. Drivers in sequence: May 1 Brent close $108.17 (Iran 14-point response); May 2 Iranian counter-proposal exchange (NPR); CENTCOM 48 Iranian ships turned back; mid-week trough below $100 (per Decision_Log 2026-05-06 D2 entry citing Brent $102.21 and Iran de-escalation drove crude −6.96%). **Thu 5/7 / Fri 5/8 US-Iran clash event**: CENTCOM said three US Navy destroyers (Truxtun / Rafael Peralta / Mason) intercepted Iranian missile/drone/small-boat attack in Strait + executed self-defense strikes on Qeshm Island and Bandar Abbas; IRGC seized Barbados-flagged sanctioned tanker Ocean Koi; US disabled two Iranian-flagged tankers (per NYT / Al Jazeera / NY Post / AP / WHSV). Despite this, Brent settled $100.24 +0.18 vs Thu — **the clash produced NO breakout**. Strait of Hormuz commercial shipping >90% below pre-conflict levels per UK Royal Navy (carry-over from W18 NPR / CBS reporting). **Net Brent posture**: ~$30 of headroom to $130 trip; tape signal is "geopolitical clashes are episodic, not regime-changing." Continue daily watch but materially lower-probability tail-risk vs end-W18.
+- **FOMC Apr 29 hold + Powell-Warsh transition** (Federal Reserve Board / CNBC) carries forward unchanged; CME FedWatch ~0% probability of cuts in 2026; no W19 Fed-speech market-moving content captured (Daily.md 5/9). **Marginally hawkish but not binding for IBM thesis**.
+- **April nonfarm payrolls (Fri 5/8 BMO)**: BLS Empsit reported payrolls +115K (vs +55-62K cons); UR 4.3%; AHE +0.2% MoM / +3.6% YoY (cooler than +0.3% / +3.8% est); March revised up to +185K; Feb revised down 23K to −156K. Healthcare +37K led; transportation/warehousing +30K; retail +22K; Federal government −8K; manufacturing −2K; information employment continuing multi-year decline (−342K / −11.0% from Nov-2022 peak). Treasury yields fell on cooler wage component. Sources: BLS Empsit 5/8, CNBC, Reuters. **Net read for IBM**: soft-landing-favorable (no labor crack); cooler wages = lower risk of input-cost compression on IBM Software/Red Hat margins; soft IT-employment data is ambient (not IBM-specific).
+- **U-Mich preliminary May consumer sentiment**: new record low per Rosenberg Research via Barron's 5/8; Independent confidence record low (42.6 from 47.3); driver attributed to oil/Iran-war confidence shock. Markets rallied through it — paradox-of-returns regime feature, not a contradicting signal.
+- **Index tape**: SPX 7,398.93 +0.84% (record); Nasdaq 26,247.08 +1.71% (record); Dow 49,609.16 +0.02%; Russell 2000 +0.76%; VIX 17.05; Gold $4,733.10. Six consecutive weekly gains S&P / Nasdaq (longest since Oct 2024). XLK +0.99% to 171.38 new 52-wk high. **Risk-on tape supportive of IBM mean-reversion**.
 
 ### 5. Thesis-Invalidation Signals (per criterion)
-| # | Criterion | Status | Notes |
-|---|-----------|--------|-------|
-| (i) | IBM 8-K reducing FY26 cc rev guide below ">5%" floor | **NO MOVEMENT** | No 8-K filed in W18. Guide stands at >5% cc + $1B FCF growth.  |
-| (ii) | Pre-announcement / negative business update on Software or Red Hat | **NO MOVEMENT** | Inverse: Bob GA launch + MIT lab + Chicago hub all positive. No negative pre-announce. |
-| (iii) | IGV close ≤ $80.00 | **NO MOVEMENT** | IGV ~$86.65 (Robinhood 2026-05-03); 8.3% buffer to floor. Tape recovered through W18. |
-| (iv) | Brent close ≥ $130/bbl | **MARGINAL TOWARD TRIGGER** (Apr 30 intraday $126.41 came within $3.59 of trigger, but **close** measure: May 1 close $108.17, no daily close above $115 in W18). 14-point Iranian counter-proposal Sat May 2 leans toward de-escalation. **Watch Mon May 4 open carefully.** |
+
+| # | Criterion | Status | W19 evidence |
+|---|-----------|--------|-------------|
+| (i) | IBM 8-K reducing FY26 cc rev guide below ">5%" floor | **NO MOVEMENT — NOT TRIPPED** | No 8-K filings in W19 (Daily.md 5/9 + Decision_Log 5/6 D2). Guide stands at >5% cc rev + $1B FCF growth. |
+| (ii) | Pre-announcement / negative business update on Software or Red Hat | **NO MOVEMENT — NOT TRIPPED** | Inverse: enterprise-software cohort (DDOG / FTNT / AKAM / PTC / CRWD / PANW / WDAY) all positive; no IBM-specific negative pre-announcement. |
+| (iii) | IGV close ≤ $80.00 | **NO MOVEMENT — NOT TRIPPED** | IGV ~$88.27 mid-week (Decision_Log 2026-05-06 D2 line 7066); XLK new 52-wk high; software cohort "best six-week stretch since 2000." Buffer ~10.3%. |
+| (iv) | Brent close ≥ $130/bbl on any single trading day | **MATERIALLY DE-RISKED VS W18 — NOT TRIPPED** | Fri 5/8 close $100.24; W19 trough below $100; W18 Apr 30 intraday peak $126.41 was the high-water mark. Iran clash 5/7-5/8 produced NO breakout. ~$30 headroom to trip. |
 
 ### 6. Time-to-Thesis-Resolution
-- Calendar days remaining to time exit 2026-06-26: **54 days** (~38 NYSE trading sessions).
-- Within 60-day window: **6 days elapsed / 60** = **10% through window**. Position is in the FIRST third (>40 days remaining). No time-pressure escalation.
-- Convergence math: $245.00 target vs $232.20 last → **+5.51% gross required**, ~$0.36/day for remaining 38 sessions. Achievable within historical post-shock mean-reversion rates for the Apr-2024 same-name analogue cited in entry thesis.
+
+- **Calendar days remaining to time exit Fri 2026-06-26**: **48 days** (~33 NYSE trading sessions, accounting for 5/26 Memorial Day).
+- **Window progression**: 12 calendar days elapsed of 60 (**20% through window**). Position is in the FIRST third (>32 trading days remaining). No time-pressure escalation.
+- **Convergence math**: $245.00 target vs $229.45 last mark → **+6.78% gross required**, ~$0.47/share/day for remaining 33 sessions. Within historical post-shock mean-reversion rates for the Q1 2024 same-name analogue cited in entry thesis. Position has not begun to converge (mark is essentially flat to fill); convergence-trajectory is still loaded entirely into the back two-thirds of the window.
 
 ### 7. Recommendation — IBM
-**HOLD.** Thesis intact, modestly reinforced by W18 newsflow (Bob GA, MIT lab, Chicago expansion, HSBC stale-bear close). Sector tape supportive (TEAM, MSFT Azure, GOOGL Cloud). Only watch is criterion (iv) Brent — monitor Mon May 4 open for any fresh Iran/Hormuz headline-driven gap. No action required.
+
+**HOLD.** Thesis intact and modestly reinforced through W19. All four invalidation criteria not-tripped; criterion (iv) materially de-risked vs W18 watch. No information gap requires further research. No close-on-completion (target $245.00 not reached; $15.55 / +6.78% gap remains). No close-on-invalidation (no criterion breached). Position-specific actionable monitor: continue routine D1 Daily.md scan coverage for IBM 8-Ks, pre-announcements, IGV print level, Brent close. Strategy.md exit rules continue to govern via the canonical convergence-target / time-based-exit / invalidation-criteria triple.
 
 ---
 
 ## POSITION 2 — HCA Healthcare (Strategy B Long)
 
-**Entry:** 2026-04-28 @ $433.46 | 0.0642 sh | $28.11 cost basis (incl. $0.28 commission)
-**Convergence target:** $442.85 (immutable; +2.17% gross) | **Time exit:** 2026-06-27
-**Mark Fri 2026-05-01:** Pre-market $434.84 / prev close $434.78  (Yahoo Finance / CNBC 2026-05-01 quote pages). Apr 28 close: ~$431 area (TradingKey 2026-04-28 noted −3.23% session). Apr 29 ~$431.92 (Investing.com 2026-04-29).  May 1 close ~$434.84. Position **+0.32% gross** to last close, vs +1.85% required to hit target. **Position is essentially at-cost; ~80% of move-to-target would close it.**
+**Entry:** 2026-04-28 @ $433.46 | 0.0642 sh | $28.11 cost basis (incl $0.28 commission)
+**Convergence target:** $442.85 (immutable per Strategy.md criterion 3 closed-list rev 14; +2.17% gross from fill)
+**Time-based exit:** Sat 2026-06-27 (calendar 60-day mark; checkpoint event Fri 2026-06-26 09:25 MT `u9l9544ighc4d9o1l44u7pr0uc`)
+**Latest mark (Portfolio_Ledger 2026-05-07 ~10:12 MT):** $433.49 → mark value $27.83, **+0.01% gross to fill** (+$0.00 vs cost-pre-comm; −$0.28 vs cost basis incl comm). Mid-window pulse-check considered and DECLINED 2026-05-06 D3 per Decision_Log line 7210.
 
 ### 1. Current Thesis Status
-**Intact.** The mean-reversion-on-respiratory-normalization thesis is unchanged and was directly ratified by Tenet's Apr 30 BMO print (see §2). No narrative drift detected against thesis. The countervailing narrative drift to monitor is exchange-attrition / payer-mix structural framing (BofA, Bernstein cuts), but this is a known headwind already priced into Apr 24 reaction and is not a Q1-volume-explanation risk.
 
-- **Sell-side stance W18:** Bernstein PT lowered $541 → $503  (Investing.com 2026-04-28; Daily Political 2026-04-28), Market Perform maintained — Lance Wilkes cited "first-quarter headwinds from weather and flu season"  and explicitly framed the EBITDA miss as "milder respiratory season and a January winter storm that temporarily reduced admissions ... creating an estimated $180 million headwind."  **This is sell-side validating the thesis framing**, not undermining it. BofA cut $540 → $480 (TipRanks Apr 27).  Truist, TD Cowen, Stephens, KeyBanc all trimmed PTs in days following Apr 24 print, all maintaining positive ratings; KeyBanc explicitly cited "temporary flu and weather-related challenges" (Investing.com 2026-04-28). Consensus PT remains $510-515 area (StockAnalysis 2026-05; Public.com 2026-05-02 references $523.68;  MarketBeat $537.73),  implying ~17-23% upside from $434.84 — well above target gap.
-- **Narrative-drift watch:** Bernstein "expects EBITDA growth of 5.1% CAGR from 2026 to 2030" — modest LT trim, not a Q2 thesis impingement.
+**Intact through W19. No narrative drift.**
 
-### 2. Competitive Landscape (Hospital and Managed-Care Cohort)
-- **THC (Tenet) Q1 2026 — Apr 30 BMO** (Tenet 8-K Ex 99.1, 2026-04-30; Motley Fool transcript 2026-04-30; Yahoo Finance 2026-04-30):
-  - Net operating revenues $5.368B (vs $5.39B est, in line; +2.8% YoY)
-  - Adjusted diluted EPS **$4.82** (vs $4.16-4.17 est; **15.7% beat**)
-  - Consolidated Adjusted EBITDA **$1.162B** (vs $1.12B est; **+3.7% beat**), 21.6% margin
-  - **FY26 Adjusted EBITDA outlook reaffirmed $4.485-4.785B; FY26 Adjusted EPS guide RAISED to $17.53 midpoint** (+1.2%)
-  - Hospital segment EBITDA $678M (16.7% margin). USPI EBITDA $484M (+6.1%, 36.7% margin).
-  - **Critical confirmation for HCA thesis:** Management explicitly cited "**41% decline in respiratory admissions, which represented a 90 basis point reduction in admissions growth**"  and characterized this as a temporal volume issue, not structural. Mitigated via two winter storms / vendor cyberattacks "by rescheduling procedures and flexing cost structures in real-time." (Yahoo Finance 2026-04-30).
-  - **Read for HCA:** Direct corroboration of HCA's own −42% respiratory framing. Hospital-segment EBITDA still modest (in line with margin pressure narrative) but FY guide reaffirmed and EPS guide raised → confirms industry-wide framing of Q1 volume softness as mean-reverting. Per the entry decision-log framing, this **does not formally retire criterion (iii)** since that retirement was based on the Apr 30 print explicitly clearing a "clean Q1" bar — Tenet did beat, but Hospital segment EBITDA softness echoes HCA's. Net: thesis-corroborative, not thesis-clearing in a formal-criterion sense, but the corroboration is strong.
-- **CYH (Community Health Systems) Q1 2026 — Apr 21** (CYH 10-Q 2026-04-29; Yahoo Finance call summary; Motley Fool transcript): Rev $2.965B (vs $3.16B PY),  Adj EBITDA $309M (−17.8% YoY),  $25M of negative drag from divested ops,  Q1 GAAP loss $25M.  **FY26 guide of Adj EBITDA $1.34-1.49B reaffirmed.**  Volume softness "broad-based, seen more in commercially insured and health exchange patients ... linked to macroeconomic pressures and increased managed care preauthorization denials."  Different demographic mix from HCA but corroborates broad volume-softness Q1 framing.
-- **UHS** (Apr 27 AMC, per entry-decision-log retirement of HCA criterion (iv)) — no new W18 development.
-- **Managed-care cohort (payer-mix read-through):**
-  - **UNH Apr 21:** Adj EPS $7.23 (beat $6.61),  MCR 83.9%  (90bp YoY improvement), FY26 guide raised to >$18.25  (CNBC 2026-04-21; UNH 8-K). Stock +37% in April month.
-  - **ELV Apr 22:** Adj EPS $12.58,  FY26 adj EPS guide raised to ≥$26.75  (ELV 8-K 2026-04-22).
-  - **HUM Apr 29:** Adj EPS $10.31 vs $10.20 est; rev $39.65B (+23% YoY); FY adj EPS ≥$9 affirmed  (24/7 Wall St 2026-05-01). Stock +36% April.
-  - **Read for HCA:** Managed-care peer prints uniformly improving — implied directional pressure on hospital-side payer mix is **net constructive** (insurers stabilizing margins via repricing, reducing the "permanent payer-mix squeeze on providers" narrative tail).
-- **Direct comparable peers DVA (DaVita), ACHC, ENSG, ARDT** — no material W18 development.
+The original thesis (Decision_Log 2026-04-27 early Sun HCA GO at MEDIUM-LOW conviction) was: post-Q1-print mean-reversion against external-factor-attributable acute-volume softness (Winter Storm Fern) with weather narrative externally-verifiable and CFO Rice transition (A.J. Rice) bridge clean; admissible criterion-3 convergence-target $442.85 via 25% gap-fill from $432.46 reference toward pre-event $474.03; MEDIUM-LOW conviction with three live adversarial weights at entry: (a) volume softness extending beyond storm; (b) THC Apr 30 print risk; (c) UHS Apr 27 print risk. **W19 evidence has held the thesis at-or-better than entry conditions**:
+
+- **Adversarial weight (a) — volume-softness extension**: No 8-K / pre-announcement / management commentary in W19 indicates volume softness extending into Q2. No new contagion signal.
+- **Adversarial weights (b)/(c) — peer-print risks**: BOTH already cleared pre-W19. (iv) UHS CLEARED Mon 2026-04-27 evening (Decision_Log 2026-04-27 evening UHS-print parse — pre-flagged Q1 storm softness in Q4 2025 commentary; peer-level corroboration of weather narrative). (iii) THC Apr 30 BMO CLEARED Thu 2026-04-30 ~08:00 MT (Decision_Log 2026-04-30 THC parse line 3267 — clean EBITDA beat + FY26 guide reaffirmed + −41% respiratory admissions explicit). **These remain cleared in W19; no re-trigger event.**
+
+**Narrative posture exiting W19**: hospital-operator cohort thesis is in its converged-at-fair-value phase post-peer-print confirmation. HCA mark remains flat to fill — convergence trajectory has not yet emerged but is structurally still loaded in the back third of the window.
+
+### 2. Competitive Landscape
+
+- **Hospital-operator peers (UHS / THC / CYH)**: No new W19 own-print events. UHS / THC / CYH all cleared in late W18 / early W18. Sector tape neutral; Healthcare GICS sector ETF (XLV) +0.02% Fri 5/8 (Daily.md 5/9 sector table) — flat-but-not-down.
+- **Insurer cohort (CI / ELV / HUM / UNH)**: No material insurer-specific W19 event affecting hospital reimbursement. UNH carrying its own idiosyncratic tape (separate from HCA thesis).
+- **Other healthcare W19 prints** (per Daily.md 5/9 large-mover table): VTRS (Mylan/Viatris) +9.03% Q1 print (Pharmaceuticals sub-industry — different from HCA Health Care Facilities); AXON +10.63% (Industrials, not Healthcare); MNST +14.97% (Cons Staples / Beverages — not Healthcare); AGL (agilon health) ~+51% on EBITDA guide flip to positive. **AGL is a value-based-Medicare-Advantage operator** — different sub-industry (Healthcare Providers / Services) and different business model from HCA's acute-care hospital franchise; no read-through.
+- **HCA-specific senior-unsecured note refinancing 2026-04-27/30** (W18 capital-markets event): $3.0B priced cleanly Apr 27, settled Apr 30 (EDGAR FWP, 8-K). W19 carry-over: no secondary-market follow-through that suggests credit-quality concern; coverage at IG ratings unchanged (not flagged in any W19 source). **Mild thesis-supportive (capital-markets confidence)**.
 
 ### 3. Fundamental Developments
-- **2026-04-27 (announced) / 2026-04-30 (settled): $3.0B senior unsecured notes offering** (HCA 8-K 2026-04-30; FWP 2026-04-27 EDGAR; 424B5 prospectus supplement; Stocktitan 2026-04-30):
-  - **$1.0B 4.700% senior notes due May 15, 2031**
-  - **$750M 5.000% senior notes due May 15, 2033**
-  - **$1.25B 5.300% senior notes due May 15, 2036**
-  - Issued by HCA Inc., fully and unconditionally guaranteed by HCA Healthcare on a senior unsecured basis.  Joint book-runners Citi, Barclays, BofA, JPMorgan.
-  - **Net proceeds ~$2.975B**.  **Use of proceeds (per 424B5 prospectus supplement):** redemption of all $1.500B 5.250% senior notes due June 2026 and all $1.000B 5.375% senior notes due September 2026 on May 27, 2026 redemption date,  plus general corporate purposes including commercial paper repayment.  **This is a refinancing transaction — not new leverage.** Net debt change ~$500M increase, weighted-average coupon roughly flat to slightly up (4.70-5.30% vs 5.25-5.375% retired). **Market reception orderly.** Trading View / TipRanks both note "use of proceeds expected to enhance liquidity, support refinancing and fund general corporate purposes."  Indenture covenants per 8-K: limits on liens, sale-leasebacks, major restructurings  — standard.
-- **2026-04-28: 8-K** (EDGAR CIK 0000860730, file d25325d8k) — date of report April 23, 2026  (annual meeting): Stockholders reaffirmed board and governance structure (TipRanks 2026-04-28).
-- **2026-04-29: 10-Q filed** (per Stocktitan filing list 2026-05). No surprises vs Q1 release.
-- **2026-04-30: Schedule 13G** (passive >5%) — investor-base-level, not material to thesis.
-- **No 8-K reducing FY26 guide** (revenue $76.5B floor / Adj EBITDA $15.55B floor / EPS $29.10 floor are all reaffirmed in the Q1 release; HCA FY26 EPS guide is 29.10-31.50 per Q1 release).
-- **No pre-announcement / negative business update** changing Q1 narrative.
-- **Operational item — HCA Midwest / Cigna out-of-network as of May 1, 2026** (Live Insurance News 2026-05-01): HCA Midwest (7 hospitals, KC metro, ~$1.3B local economic impact) failed to reach contract with Cigna by Apr 30 deadline. Cigna commercial members now out-of-network at HCA Midwest hospitals.  Single-market commercial dispute; not a thesis-level event but a contributor to the $600-900M FY26 exchange-pressure framing  already cited in entry thesis. Watch for resolution; not invalidation-relevant.
-- **Sell-side W18 actions:** Bernstein $541 → $503 Apr 28 (Market Perform maintained);  BofA cut to $480 Apr 27; Truist/TD Cowen/Stephens/KeyBanc all trimmed PTs in days after Apr 24 print, all positive ratings preserved.
-- **Insider activity W18:** None observed.
-- **Conference appearances:** RBC Global Healthcare Conference May 20, 2026, 11:30am ET  (Stocktitan; Hcahealthcare IR 2026-05). Not in W18 but next visible management commentary — flag for next deep-dive.
-- **Capital return Q1 2026 (per Q1 release reiterated in HCA IR 2026-04-24):** $1.571B share repurchase Q1 (3.157M shares); $9.179B remaining authorization;  $0.78 dividend Jun 30 ex-date Jun 16.  Cash flow from ops $2.014B Q1 (+22% YoY).
+
+**No HCA 8-K filings reducing FY26 guide in W19** (criterion-(i) primary watch). Specifically: no revenue / Adj EBITDA / EPS guide cut.
+
+**No HCA pre-announcement / negative business update in W19** (criterion-(ii) primary watch).
+
+- **Sell-side actions in W19**: No HCA-specific downgrade or PT cut surfaces in Daily.md 5/9 or Decision_Log 5/6-5/9 entries. No upgrade either; sell-side remains in post-Q1-print digestion phase.
+- **No regulatory or operational disclosure** of material weight (no DOJ enforcement, no CMS reimbursement framework change, no major facility closure / acquisition disclosure).
+- **No insider-transaction filings** of material weight surfaced.
 
 ### 4. Sector and Macro Context
-- **XLV Health Care Select Sector SPDR** May 1 close $145.16  (StockAnalysis 2026-05-01; Yahoo Finance 2026-05-01). **+0.34%** d/d May 1  (after-hours quote). XLV closed Apr 30 +0.57% per the quote-page references. Constructive sector tape; no XLV-level dislocation in W18.
-- **Managed-care prints unanimous beat** (UNH +37% April, HUM +36% April, ELV guide-raise) — for HCA, this matters because it reduces the "secular payer-side margin attack" tail risk that lurked behind Apr 24 reaction.
-- **CMS / regulatory:** No new W18 CMS or ACA exchange policy actions affecting HCA materially. Florida supplemental directed payment program remains under CMS review  per HCA Q1 call  (positive optionality, unchanged).
-- **Macro labor / inflation cross-currents:** FOMC hold + 4-dissent + hawkish-tilt (above) is mildly negative for high-leverage names but HCA's net-debt/EBITDA leverage remains in lower half of stated target range  (per Q1 release / Mike Rutherford CFO comments) and the May 27 redemption removes 2026-maturity rollover risk cleanly.
+
+- **Healthcare sector tape**: XLV +0.02% Fri 5/8 (Benzinga sector table); Healthcare led April employment gains (+37K of +115K NFP per BLS) — labor-market signal supportive of hospital-volume thesis (rising healthcare employment is a leading indicator for elective + acute-care utilization). **Mild thesis-supportive**.
+- **CMS / regulatory framework**: No W19 development affecting hospital reimbursement (no new IPPS rule update, no Medicare Advantage payment recalibration of material magnitude, no surprise-billing-related litigation outcome).
+- **Macro**: Same as IBM §4 (FOMC hold + cooler wages + risk-on tape). Hospital-operator thesis is largely insensitive to short-term macro at this window length; the binding sensitivity is patient-volume / payor-mix recovery, both of which are micro-data-driven not macro-data-driven.
+- **Brent / Iran / Hormuz**: Indirect — fuel costs flow to ambulance / supply-chain inputs but are not a primary sensitivity for HCA thesis. Brent collapse to $100 area is mildly thesis-supportive at the margin.
 
 ### 5. Thesis-Invalidation Signals (per criterion)
-| # | Criterion | Status | Notes |
-|---|-----------|--------|-------|
-| (i) | HCA 8-K reducing FY26 guide below revenue $76.5B / Adj EBITDA $15.55B / EPS $29.10 floors | **NO MOVEMENT** | No 8-K filed in W18 affecting FY26 guide. Q1 release reaffirmed all three floors. 10-Q Apr 29 filed without revision. |
-| (ii) | HCA pre-announcement / negative business update materially changing Q1 narrative | **NO MOVEMENT** | $3B notes refinancing is positive/neutral (clean refi, not new leverage). HCA Midwest / Cigna OON dispute is single-market and pre-incorporated into existing $600-900M exchange-pressure framing. THC Apr 30 print **corroborates** Q1 respiratory-driven framing. |
-| (iii) | [RETIRED — THC Apr 30 condition] | RETIRED at entry | THC Apr 30 print was a clean EBITDA beat with FY26 guide reaffirmed and explicit −41% respiratory framing — directly corroborative of HCA thesis. |
-| (iv) | [RETIRED — UHS Apr 27 condition] | RETIRED at entry | UHS pre-flagged volume softness in Q4 2025 commentary, peer-corroborative not refutative. |
+
+| # | Criterion | Status | W19 evidence |
+|---|-----------|--------|-------------|
+| (i) | HCA 8-K reducing FY26 guide below reaffirmed range (revenue $76.5B / Adj EBITDA $15.55B / EPS $29.10 floors) | **NO MOVEMENT — NOT TRIPPED** | No 8-K filings in W19. Guide stands. |
+| (ii) | HCA pre-announcement / negative business update | **NO MOVEMENT — NOT TRIPPED** | No pre-announcement; no management negative update. |
+| (iii) | THC Apr 30 print clean Q1 + FY26 guide reaffirmed at midpoint or higher | **CLEARED (W18) — REMAINS CLEARED** | THC clean print + FY26 reaffirmed + −41% respiratory admissions explicit (Decision_Log 2026-04-30). No re-trigger event. |
+| (iv) | UHS Apr 27 AMC clean Q1 reinforcing (iii) | **CLEARED (W18) — REMAINS CLEARED** | UHS pre-flagged Q1 storm softness; peer-level corroboration (Decision_Log 2026-04-27 evening). No re-trigger event. |
 
 ### 6. Time-to-Thesis-Resolution
-- Calendar days remaining to time exit 2026-06-27: **55 days** (~39 NYSE trading sessions).
-- Within 60-day window: **5 days elapsed / 60** = **8% through window**. Position is in the FIRST third (>40 days remaining). No time-pressure escalation.
-- Convergence math: $442.85 target vs $434.84 last → **+1.85% gross required**, ~$0.20/day across 39 sessions. **Position is meaningfully closer to target than IBM in percentage terms.** A single normalized weekly volume read could carry this position to target inside two weeks given proximity.
+
+- **Calendar days remaining to time exit Fri 2026-06-26 (last trading day before Sat 2026-06-27 60-day mark)**: **48 days** (~33 NYSE trading sessions, accounting for 5/26 Memorial Day).
+- **Window progression**: 11 calendar days elapsed of 60 (**18% through window**). Position is in the FIRST third (>32 trading days remaining). No time-pressure escalation.
+- **Convergence math**: $442.85 target vs $433.49 last mark → **+2.16% gross required**, ~$0.28/share/day for remaining 33 sessions. **Position is essentially at-cost; ~99.6% of the move-to-target remains.** Despite peer-print de-risking, the convergence trajectory has not yet manifested — historical post-shock mean-reversion patterns frequently load the move into the second half of the 60-day window.
+- **Notable**: Q2 2026 print (next earnings) is scheduled late July per HCA IR forward calendar — outside the 60-day window from the 4/28 fill (window expires 6/27 mark, last trading day 6/26). The convergence target therefore depends on **narrative-digestion within the window**, not on a Q2 print event. Storm-narrative externalization + peer-print confirmation are the two structural thesis pillars; no in-window catalyst can further accelerate convergence beyond ambient sell-side digestion.
 
 ### 7. Recommendation — HCA
-**HOLD.** Thesis intact, directly corroborated by THC Apr 30 print (industry-wide respiratory/weather framing confirmed). Refinancing transaction executed cleanly. Sell-side cuts (Bernstein $503, BofA $480) are PT-level not rating-level and explicitly cite the same temporal-volume framing the thesis depends on. Position is +0.32% gross at $434.84 vs $442.85 target — only 1.85% needed for thesis completion. No action required.
+
+**HOLD.** Thesis intact through W19. Two live invalidation criteria not-tripped; two earlier-cleared criteria remain cleared. No information gap requires further research. No close-on-completion (target $442.85 not reached; $9.36 / +2.16% gap remains). No close-on-invalidation (no criterion breached). Position-specific actionable monitor: routine D1 Daily.md scan coverage for HCA 8-Ks, hospital-operator peer prints (none expected in next 30 trading days based on IR calendars), CMS regulatory filings, payor-mix / utilization-rate disclosure events. Strategy.md exit rules continue to govern.
 
 ---
 
-## Recommendations Summary
+## POSITION 3 — META Platforms (Strategy B Long) — FIRST DEEP-DIVE
 
-| Position | Recommendation | Rationale |
-|----------|----------------|-----------|
-| IBM | **HOLD** | Thesis intact and reinforced; Bob GA + MIT lab + Chicago hub thesis-positive; sector tape (TEAM +29.58%, MSFT Azure 40%, GOOGL Cloud +63%) AI-platform-positive. Only watch: Brent (criterion iv) — Apr 30 intraday $126.41 was the high tide; May 1 closed $108.17. |
-| HCA | **HOLD** | Thesis intact and corroborated by THC Apr 30 EBITDA beat / FY26 reaffirmation / explicit −41% respiratory acknowledgment. $3B refi clean. Position only 1.85% from target. |
+**Entry:** 2026-05-05 @ $601.30 GTC (operator-discretion: tighter limit $13.70 + GTC duration vs staged $615.00 Day; HCA Apr 28 $0.04 tighter-limit precedent applied) | 0.0454 sh | $27.57 cost basis (incl $0.27 commission)
+**Convergence target:** $626.21 (immutable per Strategy.md criterion 3 closed-list rev 14; 25% gap-fill from $611.91 reference toward $669.12 pre-event; **does NOT adjust to better-than-reference fill**). Gross return at convergence from $601.30 fill: **+4.14%** (vs +2.34% from staged $611.91 reference = +180bps embedded improvement on operator-discretion tighter limit). Net pre-exit-commission: +3.12%.
+**Time-based exit:** Thu 2026-07-02 (calendar 60-day mark Sat 2026-07-04 = July 4 observed market closure; Thu 7/2 = last trading day on/before since Fri 7/3 also closed). Checkpoint event `jdki2o75a3rhrc77e5sd4h170c` 10:00 MT.
+**Latest mark (Portfolio_Ledger 2026-05-07 ~10:12 MT):** $610.00 → mark value $27.69, **+1.45% gross vs fill** (+$0.40 vs cost-pre-comm; +$0.12 vs cost basis incl comm). **First open B position with positive mark P&L.**
+**Mid-window pulse-check:** Mon 2026-06-01 ~10:00 MT (`2i5gul5m9eiarfm7pkjf8u42u0`) — preserved per 2026-05-06 D3 entry despite the 3-day staging-vs-fill shift (event description references Mon 5/4 staging; actual Tue 5/5 fill; mid-window pulse-check semantic tolerance).
+**KL #12 first computation:** Wed 2026-06-03 ~15:30 MT (`k9vtudr7d40ukto3vfhutcdbls`) — 3-way IBM × HCA × META pairwise correlation at ~20 trading days post-META fill.
+
+### 1. Current Thesis Status
+
+**Intact and modestly reinforced through W19. First deep-dive coverage; thesis continues from Decision_Log 2026-05-01 META GO at MEDIUM conviction.**
+
+The original thesis (Decision_Log 2026-05-01 META GO) had three pillars:
+1. **Q1 2026 ad business at multi-year strength** — rev $56.31B (+33% YoY, fastest growth since 2021), dual-driver (impressions +19% AND price-per-ad +12%), ARPP $15.66, FoA OI $26.9B / 48% segment margin, RL improving to −$4.03B, OCF $32.23B / FCF $12.39B, $81.18B cash.
+2. **2026 financial framework PRESERVED** despite capex bump — total expense guide UNCHANGED at $162-169B; OI guide UNCHANGED at "above 2025 OI"; Q2 rev guide $58-61B (sequential reaccel from $56.31B). Capex bump $115-135B → $125-145B (+$10B / +7.7% incremental on $130B base) attributed to component pricing (memory) plus capacity-extension prep, not scope expansion.
+3. **Asymmetric reaction relative to fundamental quality is sentiment-driven** — largest-surprise-in-6-quarters / worst-reaction-in-6-quarters pattern; mild + asymmetric sell-side reset (Buy ratings universally maintained; Evercore RAISED $900→$930; Goldman published "Buy the Fear" thesis day-of); Polymarket 99.4% close-down skew at extreme.
+
+**W19 evidence on each pillar**:
+
+- **Pillar 1 (ad strength)**: NO new META-specific Q1-extension data filings in W19 (no 8-K, no 10-Q yet). However, the broader enterprise-AI-monetization tape decisively VALIDATED the Pillar 1 thesis: DDOG +31.33% / FTNT +20.03% / AKAM $1.8B 7-yr AI infra contract / MSFT Azure +40%cc carry-forward / GOOGL Cloud +63% carry-forward — every adjacent enterprise-AI-monetization signal in W19 says "AI-driven revenue is real and accelerating," which is the central read META's ad-targeting thesis depends on. **Ad-business read-through is positive**.
+- **Pillar 2 (framework preservation)**: NO META 8-K in W19 reset 2026 framework (criterion (i) not tripped — see §5). No pre-announcement of advertiser pullback (criterion (ii) not tripped). The capex framework remains the W18 revision; no W19 evidence of recurrence (a third raise within <60 days would be the binding (i)(a) trigger).
+- **Pillar 3 (asymmetric-reaction-as-sentiment)**: META mark has begun to reverse the post-print drawdown — entry-day fill $601.30 (Tue 5/5 ~10:54 MT) → 5/7 mark $610.00 = **+1.45% in 2 trading days**. This is the first directional confirmation of the mean-reversion thesis. The W19 broader Mag-7 / enterprise-software cohort closing the week at new ATHs (SPX/Nasdaq ATHs Fri 5/8) provides the macro-tape vehicle for the META mean-reversion to play out within the window.
+
+**Narrative posture exiting W19**: Pillar 1-3 thesis intact; first 2 trading days of holding period have produced +$0.40 gross / +1.45% — one-third of the +4.14%-from-fill convergence return banked in 2 days. **First deep-dive read: thesis is on track**.
+
+### 2. Competitive Landscape
+
+**Direct ad-platform / Comm-Services peers**:
+
+- **GOOGL (Alphabet)** — Q1 2026 print (W18) was the canonical positive-comparator for META: Cloud +63% / capex raise to $185-190B / Cloud backlog ~doubled QoQ to $460B / stock +9.97% same-day. The clean negative-comparator framing (GOOGL rallied on similar-magnitude capex raise; META sold off) was the strongest sentiment-driven-evidence at META entry. **W19 evidence on Cloud / AI demand**: AKAM $1.8B 7-yr CIS contract ("leading frontier model provider") is a NEW direct data point on the willingness of frontier-model providers to commit multi-year billion-dollar infra spend — supports the GOOGL Cloud capex thesis, which by extension supports the META capex-spend-is-rational thesis. **Net: positive read-through to META**.
+- **SNAP / PINS (Pinterest)**: PINS Q1 print Tue 2026-05-05 AMC produced criterion-1-clearing event-day move (+19% AH then faded; full-faded by Day 2 to ~$20.85 = ~80%+ retrace per Decision_Log 2026-05-07 PINS NO-GO line 7413). PINS's faded-by-Day-2 trajectory is itself a specific NEGATIVE signal for the broader social-platform / digital-ad-platform cohort: the post-print mean-reversion mechanism that META's thesis depends on can FAIL when the print quality is borderline + sell-side aggressive ratification + ad-pricing -5% YoY quality-of-revenue concerns. **Cuts both ways on META**: (a) PINS's full-fade demonstrates the post-event mean-reversion mechanism is NOT auto-firing on the entire Comm Services / Interactive Media & Services cohort; (b) PINS's specific failure modes (sub-pattern 1 layered-1+3 variant) are NOT present in META's case (META reset was MILD asymmetric not aggressive ratification; META ad-pricing +12% YoY was the OPPOSITE of PINS −5%; META print was largest-surprise-in-6-quarters not borderline). **Read for META: differential is structurally favorable; PINS is NOT a thesis-undermining comparator. The two names diverged decisively on Q1 print quality; META's mean-reversion has a print-quality anchor PINS lacked.**
+- **TTD (The Trade Desk)** Q1 5/7 AMC: rev $689M (+12% YoY) beat by ~$10M; non-GAAP EPS $0.28 missed $0.32 cons (−13.5% surprise); Q2 rev guide implies ~8% YoY decel; stock −2.17% Thu post-print (per Daily.md 5/9). TTD missed; this introduces a marginal negative ad-spend-trajectory signal (open-internet ad-platform Q2 deceleration). **Read for META**: TTD is a relatively narrow signal — open-internet DSP differentiation from META's owned-and-operated Family of Apps means TTD's deceleration is partly a TTD-specific competitive issue (DV+, AppLovin, Google PMax incursions), not a broad ad-spend-cycle signal. Marginal NEGATIVE cross-current but not invalidating.
+- **NET (Cloudflare)** Q1 5/7 AMC: rev +34% YoY beat; light Q2 guide; 20% workforce reduction announced as "AI-first restructuring." Stock −10%+ AH Thu. **Read for META**: NET is enterprise-infra-adjacent, not direct ad-platform peer. The "AI-first restructuring" framing is a corporate-narrative-shift signal that aligns with META's own "Layoffs driven by AI spending" framing (per Decision_Log 2026-05-01 META GO Pillar 3 note (5)). META's own headcount reduction posture is operationally consistent with the cost-discipline-driven labor-reset trend across the broader cohort.
+
+**Mag-7 hyperscaler context (W18 carry-forward, no new W19 prints)**:
+- MSFT Azure +40%cc, AI run-rate $37B (+123% YoY), $627B commercial RPO (+99%), capex ~$190B for CY26.
+- GOOGL Cloud +63%, $460B backlog, capex $185-190B, Gemini Enterprise paid MAU +40% QoQ.
+- AMZN AWS >20% growth.
+- AAPL Q1: significantly higher memory costs flagged.
+
+The "AI capex is rational" narrative continues to strengthen through W19, with no Mag-7 capex resets or budget pullbacks surfaced.
+
+**Hyperscaler memory pricing** (META Pillar 2 attribution): AAPL flagged "significantly higher memory costs June quarter and beyond" pre-W19; W19 added no new datapoints. The component-pricing-driven capex-raise framing META management used in Q1 commentary remains industry-wide consistent.
+
+### 3. Fundamental Developments
+
+**No META 8-K filings in W19** (criterion (i) primary watch). Specifically: no capex re-raise (third consecutive); no total expense guide revision; no OI guide retraction; no FY26 ad-revenue / DAP material guidance reset.
+
+**No META pre-announcement / advertiser pullback / DAP-engagement reversal disclosed in W19** (criterion (ii) primary watch).
+
+**Material META-specific events in window**:
+- **NM AG v. Meta bench trial — public-nuisance / structural-remedies phase** (Judge Bryan Biedscheid, Santa Fe; began Mon 5/4): Per MediaNama 5/2026, runs through 5/22. AG seeking $3.7B-class damages plus structural remedies (effective age verification, predator removal, encrypted-comms restrictions) plus 15-yr mental-health funding. **NO verdict / NO judge order issued in the W19 window through Fri 5/8 close** per Daily.md 5/9 §3. First-trial liability finding ($375M civil penalty / 75,000 violations / $5,000-each-max penalty) was issued March 2026 (PRE-DATES META entry); Meta filed appeal. **This is the live regulatory monitor for criterion (iii)(a) — material-loss disclosure trigger**. Bench trials of this complexity typically reserve verdict for written ruling weeks-to-months after closing arguments (closing arguments expected late W20 / W21 per the 5/22 trial-end schedule). The risk profile is: (a) judge issues bench ruling against META with material-loss-disclosure-triggering damages or structural-remedy order during W19-W22 window; (b) META 8-K's the development as material adverse impact. **W19 status: trial in progress; no triggering event.** Daily monitoring required through trial-end 5/22 + reasonable verdict-issuance window.
+- **DOJ AdTech remedies**: No final remedy ruling in W19 (Daily.md 5/9 §3). No status change.
+- **EU DMA enforcement against META**: No new W19 enforcement decision (Daily.md 5/9 §3).
+- **NM trial March 2026 first-phase liability ruling appeal status**: Meta filed appeal pre-W19; no W19 appeal-court development.
+
+**Sell-side actions in W19**: No META-specific rating action surfaces in Daily.md 5/9 or Decision_Log 5/4-5/9 entries. Pre-W19 sell-side reset compilation (Goldman $830 / Truist $840 / Stifel $780 / Pivotal $790 / **Evercore RAISED $900→$930**) remains the canonical post-print sell-side dataset; W19 did not produce additional firms moving in either direction (i.e., no aggressive ratification cluster — the criterion-4 sentiment-vs-information test continues to clear).
+
+### 4. Sector and Macro Context
+
+- **Comm Services tape**: XLC −0.32% Fri 5/8 (Daily.md 5/9 sector table) — modest-laggard for the day vs broader index; tape not headline-grabbing but not deteriorating. Mag-7 ATH-driving names this week were less concentrated in Comm Services (more in semis / cybersec / enterprise-software). META mark +1.45% in 2 days through Wed 5/7 mark (latest Portfolio_Ledger snapshot) suggests META outpacing XLC tape — which is structurally consistent with idiosyncratic mean-reversion thesis.
+- **AI-displacement narrative**: Continued softening through W19 (DDOG, FTNT, AKAM, MSFT/GOOGL hyperscaler carry-forward). The "AI capex bombshell" framing that anchored the Apr 30 META reaction has not been vindicated by W19 evidence — the broader cohort continued to validate AI-monetization-is-real, not AI-capex-is-irrational.
+- **Macro**: Same as IBM §4 — soft-landing-favorable NFP / cooler wages / FOMC hawkish-pause / risk-on tape. Indirectly supportive of META mean-reversion via broad equity bid.
+- **Brent / Iran**: Brent collapse to $100 area is mildly thesis-supportive at the margin (consumer-confidence tail-risk reduced; ad-spend cycle stabilizes). Iran clash 5/7-5/8 produced no breakout; structurally indirect for META.
+
+### 5. Thesis-Invalidation Signals (per criterion)
+
+| # | Criterion | Status | W19 evidence |
+|---|-----------|--------|-------------|
+| (i) | META 8-K resetting 2026 framework — capex >$145B (third raise), total expense >$169B, OI guide retracting "above 2025", or material FY26 ad-rev/DAP reset | **NO MOVEMENT — NOT TRIPPED** | No 8-K filings. Capex / total expense / OI / ad-rev framework unchanged. |
+| (ii) | Pre-announcement / material business update indicating advertiser pullback or DAP/engagement reversal | **NO MOVEMENT — NOT TRIPPED** | No pre-announcement; no material business update; no advertiser-disclosure or DAP-reversal signal. |
+| (iii) | META-specific regulatory development with material loss disclosure (US youth-trial verdict / DOJ AdTech remedy ruling against META / EU DMA enforcement against META) | **MONITOR ACTIVE — NOT TRIPPED** | NM AG bench trial Phase II in progress through 5/22 (Judge Biedscheid). No verdict / no judge order. DOJ AdTech: no final ruling. EU DMA: no new enforcement. **Daily monitoring required through trial-end + reasonable verdict-issuance window**. |
+
+### 6. Time-to-Thesis-Resolution
+
+- **Calendar days remaining to time exit Thu 2026-07-02**: **54 days** (~37 NYSE trading sessions, accounting for 5/26 Memorial Day).
+- **Window progression**: 4 calendar days elapsed of 60 (**~7% through window**). Position is in the FIRST third (>35 trading days remaining). **Earliest in-window of all three open B positions; greatest convergence-trajectory headroom**.
+- **Convergence math**: $626.21 target vs $610.00 last mark → **+2.66% gross required**, ~$0.44/share/day for remaining 37 sessions. Position has banked 1/3 of the convergence return in the first 2 trading days; mean-reversion trajectory is on early-stage track.
+- **In-window catalysts**:
+  - **Mid-window pulse-check Mon 2026-06-01 ~10:00 MT** (`2i5gul5m9eiarfm7pkjf8u42u0`).
+  - **JPMorgan TMT conference (mid-May)** and **BofA Tech conference (early-June)**: META management commentary at either could re-narrate the capex-attribution question (per entry-thesis Pillar 1 Q2-print-and-conference framing).
+  - **NM trial-end 5/22** + reasonable verdict-issuance window (e.g., late 5/22 - mid-6/26): primary regulatory-risk window.
+  - **Q2 print late July**: outside the 60-day window; thesis must complete before Q2 print event.
+  - **KL #12 3-way IBM × HCA × META correlation first-computation Wed 2026-06-03 ~15:30 MT**: leading-indicator on concurrent-position correlation residual; not a thesis trigger but operational gate.
+
+### 7. Recommendation — META
+
+**HOLD.** Thesis intact and modestly tracking on early-stage convergence (+1.45% mark in 2 days, ~1/3 of the +4.14%-from-fill convergence return banked). All three invalidation criteria not-tripped; criterion (iii) requires active daily monitoring through NM trial-end 5/22 + reasonable verdict-issuance window. No information gap requires further research at this stage. No close-on-completion (target $626.21 not reached; $16.21 / +2.66% gap remains). No close-on-invalidation (no criterion breached). Position-specific actionable monitor:
+- **Daily**: D1 scan for META 8-Ks (capex re-raise, expense reset, OI retraction, DAP reset); pre-announcements (advertiser pullback); NM trial-court orders; DOJ AdTech remedy filings; EU DMA enforcement filings.
+- **Mid-window**: Jun 1 pulse-check session; if mid-window aggressive sell-side ratification cluster surfaces (multiple Buy→Hold/Sell downgrades), thesis-quality has shifted from sentiment-driven to information-driven — escalate to consideration of pre-time-based exit.
+- **KL #12 gate Jun 3**: 3-way pairwise-correlation computation; if average pairwise correlation > 0.5, leading-indicator triggers per pre-mortem rev 7 (informational; not auto-exit).
+
+Strategy.md exit rules continue to govern via convergence-target $626.21 / time-based-exit Thu 7/2 / invalidation-criteria triple. Operator-discretion fill at $601.30 (vs staged $611.91 reference) embedded +180bps of additional convergence return; the immutable target was fixed at staging time and does not adjust to the better fill, consistent with criterion 3 closed-list rev 14.
 
 ---
 
-## Immediate Action Flag
+## Cross-position observations
 
-**IMMEDIATE ACTION FLAG: NONE.** No invalidation criterion triggered for either position in 2026-W18. IBM criterion (iv) Brent flagged as "marginal toward trigger" on Apr 30 intraday only ($126.41 vs $130 floor); May 1 close $108.17 with Iranian 14-point counter-proposal Sat May 2 leans de-escalatory. **Continue daily Brent watch through Mon May 4 open.** All other criteria show NO MOVEMENT.
+1. **All three positions are Strategy B long, all in their first thirds of the 60-day window, all at-or-modestly-positive vs fill.** The position book is structurally well-loaded for the remainder of the convergence window: ~33 trading sessions remain on IBM/HCA, ~37 on META; only META has begun to converge in mark terms (+1.45%); IBM/HCA are essentially at-cost.
+
+2. **KL #12 concurrent-position correlation residual** (3 long-side concurrent positions) is operationally pending its first computation on Wed 2026-06-03 ~15:30 MT. The 4-week-of-data calibration window starts only when all 3 names are open ≥20 trading days; with META filled 2026-05-05, 20 trading days post-fill = ~Wed 2026-06-03. **No correlation-trigger action this week**; metric becomes binding next month.
+
+3. **Sector cap usage**: IT Services 1/3 (IBM); Health Care Facilities 1/3 (HCA); Comm Services / Interactive Media & Services 1/3 (META); all other sub-industries 0/3. Each B position is in a distinct GICS sub-industry — no within-sub-industry concentration. No A / D / E cross-strategy ticker overlap.
+
+4. **No simultaneous-holding-constraint conflict** with any new-entry candidates queued by W1 / W2: AKAM (B), MNST (B), AXON (B), PTC (B), VTRS (B), AGL (B), DDOG (B/A), FTNT (B), ARM (B), FLEX (B) — all are prospective B candidates in distinct sub-industries from existing IBM/HCA/META holdings and would not trigger sector cap or KL #12 concentration violations on add (some — DDOG/FTNT — would be 0/3 IT Software; AKAM 0/3 IT Services / Internet Services & Infrastructure; MNST 0/3 Cons Staples / Beverages; AXON 0/3 Industrials / Aerospace & Defense; etc.). **W4 sequencing therefore is unconstrained from the W3 side this week.**
+
+5. **No exit triggers, no information gaps requiring research deferrals, no IMMEDIATE-ACTION flag.** W4 input from this report is the simplest possible: 3 × HOLD recommendations with ongoing monitor specifications attached.
 
 ---
 
-*Next scheduled deep-dive: 2026-W19 (Sun 2026-05-10). META entry pending Mon 2026-05-04 limit-order fill — if filled, will enter scope next week.*
+## Aggregate recommendation roll-up (machine-readable for W4 parse)
+
+| Position | Strategy | Direction | Recommendation | Specific cite | Time-to-window-exit |
+|---|---|---|---|---|---|
+| IBM | B | Long | **HOLD** | n/a — no invalidation criterion breached; no information gap | 48 days to Fri 2026-06-26 |
+| HCA | B | Long | **HOLD** | n/a — no invalidation criterion breached; no information gap | 48 days to Fri 2026-06-26 (Sat 6/27 mark) |
+| META | B | Long | **HOLD** | n/a — no invalidation criterion breached; criterion (iii) NM-trial monitor active but not triggered; no information gap | 54 days to Thu 2026-07-02 |
+
+**No exits to stage. No research deferrals to schedule. No IMMEDIATE-ACTION flag.** W4 routine reads this report and applies the standard exit / deferral / scheduling logic — for this week's W3 output, no W4 conversion actions are generated from per-position recommendations (W4 still processes W1 catalyst-calendar shortlist and W2 post-event-screen shortlist independently).
