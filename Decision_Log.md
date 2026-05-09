@@ -8241,3 +8241,100 @@ Wed 5/13 scheduled after existing 08:00 D long-list interim re-screen; slots at 
 
 **D2 2026-05-09 ~06:00 MT**: 10 B-thesis-construction calendar events scheduled (4 rescheduled: ARM Mon 11:00 / FLEX Mon 15:00 / DDOG Tue 14:00 / FTNT Tue 15:00; 6 new: AKAM Wed 09:30 / MNST Wed 11:00 / AXON Wed 13:00 / PTC Thu 09:00 / VTRS Thu 11:00 / AGL Thu 13:00 [mcap-verification note]). 3 Watchlist.md updates (AKAM A-queue add; VST color upgrade to MEDIUM-HIGH lean; DDOG Day-2 note strengthen). 0 exits. 0 orders staged. 0 portfolio-state changes. B totals unchanged at 3 GO + 29 NO-GO.
 
+---
+
+## 2026-05-09 W4 Weekly Action Conversion (~07:50 MT)
+
+### Source
+
+Routine W4 cadence (post W1 / W2 / W3 saves on 2026-05-09). Reads:
+- Weekly_Catalyst_Calendar.md 2026-W19 (W1 — A and C shortlists) — saved 2026-05-09.
+- Weekly_Post_Event_Screen.md 2026-W19 (W2 — B shortlist) — saved 2026-05-09.
+- Weekly_Position_Deep_Dive.md 2026-W19 (W3 — per-position recommendations + IMMEDIATE-ACTION flag) — saved 2026-05-09.
+- Decision_Log.md (live) through 2026-05-09 D2 entry; Strategy.md; Experiment_Parameters.md; Portfolio_Ledger.md last mark 2026-05-07; Operating_Protocols.md; Watchlist.md current; Regime_State.md (last update 2026-04-26); B_Sub_Pattern_Taxonomy.md.
+
+### A. Exits from W3
+
+**None.** W3 returned 3 × HOLD recommendations (IBM, HCA, META) with no IMMEDIATE-ACTION flag, no close-on-thesis-completion, no close-on-thesis-invalidation. All four IBM invalidation criteria not-tripped (criterion (iv) Brent ≥$130 materially de-risked vs W18 watch — Fri 5/8 close $100.24 vs W18 Apr 30 intraday peak $126.41; ~$30 headroom). HCA all four criteria not-tripped (two earlier-cleared THC + UHS criteria remain cleared; no re-trigger). META three criteria not-tripped (criterion (iii) NM AG bench trial Phase II in progress through 5/22 with no verdict / no judge order; daily monitoring active but does NOT meet "material loss disclosure" trigger). No exit orders staged.
+
+### B. Research deferrals from W3
+
+**None.** No "further research" recommendations from W3. No information gaps surfaced that require deferred-research calendar events.
+
+### C. B thesis-construction scheduling from W2 (top-tier)
+
+W2 PART 2 Top-5 (MNST / AKAM / AXON / PTC / VTRS) ALL ALREADY SCHEDULED via 2026-05-09 D2 conversion (event ids: shl17p8gnl9diqbtvnstv6e2lo / i0kssc45pl585qidktrdl5r4ao / g63h3d21r0ael6dkmldluaiho8 / 9l52mc9ie4fd5fjo0cm8fhe2pk / k412j4l9mob3mlfnv6pgpqmlmk). Additional rest-tier candidates already on calendar from D2 (AGL / DDOG / FTNT) and rescheduled from Fri 5/8 PM displacement (ARM / FLEX). W4 cap "up to 5 events per week" satisfied by D2 schedule for top-tier — no additional top-tier events created.
+
+### C2. B thesis-construction scheduling from W2 (rest-tier)
+
+W2 PART 2 rest-tier candidates explicitly flagged "NOT currently on calendar — recommend new schedule":
+
+| Ticker | W-rem | Action | Rationale |
+|--------|-------|--------|-----------|
+| GKOS | 4 (window expires Thu 5/14) | **SCHEDULED Wed 5/13 14:00 MT** (event id `j2ndpjs1so0jqd1bh7cpj73lbo`) | Most urgent rest-tier; W2 explicit "early-week 5/12-13" recommendation; mcap-verification gate noted in description. |
+| IRM | 4 (window expires Thu 5/14) | **SCHEDULED Wed 5/13 15:00 MT** (event id `kclmdkpue084h9mp1ujjg3cg3c`) | Same urgency as GKOS; clean caveat profile (Specialty REIT 0/3 sub-cap). |
+| ACHC | 4 (window expires Thu 5/14) | **SCHEDULED Wed 5/13 12:00 MT** (event id `oi8j9f8veumkd70v7v1ce3ht5g`) | Same urgency. CAVEAT same-sub-industry as HCA (Health Care Facilities 1/3 → 2/3 if added; KL #12 pairwise-correlation concern flagged in event description for thesis-construction session evaluation). |
+| NET | 9 (window expires ~5/21) | **OVERFLOW to Watchlist B-watch** | Lower urgency (W-rem 9). CtC ≥5% verification gate not cleared in W2 (Daily.md 5/9 flagged "Friday close not captured"). Reactivates only on fresh-trigger Daily.md scan with CtC verification. |
+| RBLX | 5 (window expires ~5/15) | **OVERFLOW to Watchlist B-watch** | CAVEAT same-sub-industry as META (Comm Services / Interactive Media & Services 1/3 → 2/3 if added; KL #12 4-long-book pairwise avg likely above 0.50 trigger). Cap-pressure-deferred. |
+
+W4 cap discipline applied: D2 already saturated calendar with 13 B thesis-construction events Mon-Thu 5/11-14 (top-5 W2 + AGL/DDOG/FTNT/ARM/FLEX/GLW/DASH/SMCI/WHR/ZTS/UBER/SHAK). Adding only the 3 W-rem-4 most-time-critical rest-tier candidates (16 total) preserves W4 anti-flood spirit while honoring W2 PART 2 explicit early-week 5/12-13 recommendation. NET/RBLX (W-rem 5+ with caveats) routed to Watchlist B-watch overflow per W4 spec.
+
+### D. A and C thesis-construction scheduling from W1
+
+**Strategy A (W1 PART 2 A TOP-10 = NVDA / CSCO / AMAT / HD / TGT / WMT / AVGO / ORCL / ADBE / MU):** Regime_State.md A router = DO-NOT-ACTIVATE (per most-recent M1 2026-04-23). Per W4 spec: "If A is currently DO-NOT-ACTIVATE, route to Watchlist.md A-queue (with reason 'router gate; queued for next M1 ACTIVATE'); do not schedule thesis-construction." All 10 names ROUTED TO WATCHLIST A-QUEUE. 6 names already queued from prior cycles per Watchlist.md (CAT / LLY / QCOM / AAPL / DDOG / AKAM) — surfaced in W1 with QUEUED flag and not double-queued. **Net A-queue additions this W4: NVDA, CSCO, AMAT, HD, TGT, WMT, AVGO, ORCL, ADBE, MU (10 names).**
+
+**Strategy C (W1 PART 2 C TOP-5 = FOMC June / NVDA / AMAT / CSCO / AVGO):** Regime_State.md C router = HYBRID ACTIVATE — FOMC ONLY (per 2026-04-25 adversarial review). Of the TOP-5, only FOMC June 2026-06-16/17 is router-eligible; NVDA/AMAT/CSCO/AVGO are router-blocked at current state (corporate earnings DO-NOT-ACTIVATE).
+
+| Catalyst | Action | Rationale |
+|----------|--------|-----------|
+| FOMC June 2026-06-16/17 | **SCHEDULED Mon 2026-06-08 09:00–11:00 MT** (event id `7pbkg1kh2pge7midfiqnj6edvk`) | W1 explicit "schedule a thesis-construction event 7-10 days before the catalyst (target Mon-Wed 2026-06-08/06-10)"; Mon 6/8 = 8-9 days before FOMC. Description includes c_options_math.py reference, dual-path verification gate (closed-form + Monte Carlo per Strategy.md), 2% sizing cap ($37.81 at NAV $1,890), conservative-default fallback (defer if dual-path fails or sizing exceeds cap). |
+| NVDA / AMAT / CSCO / AVGO | **NO ACTION** | Router-blocked (earnings DO-NOT-ACTIVATE). W1 PART 2 C #2 explicitly "preserved for re-routing if M2 (2026-06-01) fundamental review extends router scope to earnings (per dispersion-compression M2 follow-up noted in Regime_State.md)." Re-evaluation deferred to next W1 cycle post-M2. |
+
+C cap discipline: W4 spec "up to 3 per week" not exceeded (1 event scheduled).
+
+### E. Cross-strategy deconfliction
+
+**No conflicts identified.** Open positions: IBM (B), HCA (B), META (B), RTX (D), DIS (D). A-queue additions (NVDA, CSCO, AMAT, HD, TGT, WMT, AVGO, ORCL, ADBE, MU): zero overlap with open IBM/HCA/META B positions per Strategy.md A↔B mutual-exclusion. RTX and DIS (open D) flagged for A-vs-D coordination at monthly review per W1 PART 2 #35-36 — this routine does not act on D-vs-A overlap (defers to M5 / monthly cycle). B rest-tier scheduled additions (GKOS, IRM, ACHC) and overflows (NET, RBLX): zero exit-fill-pending tickers from W3, so no W4-spec deconfliction sequencing required (no "schedule new-entry thesis 1 trading day after expected exit fill" cases this cycle). FOMC June C event: not name-overlapping any holding.
+
+### F. Watchlist updates
+
+1. **Strategy A queue: 10 names added** (NVDA / CSCO / AMAT / HD / TGT / WMT / AVGO / ORCL / ADBE / MU; date 2026-05-09; source W4 conversion of W1 PART 2 A TOP-10; reason per-row in Watchlist.md table; resolution trigger: next M1 with A router ACTIVATE). Watchlist.md A-queue grows from 6 to 16 names.
+2. **NEW SECTION CREATED — Strategy B watch overflow (W4-driven; window-bounded):** NET (W-rem 9; CtC ≥5% verification gate; sub-industry IT Services / Internet Services & Infrastructure 0/3) and RBLX (W-rem 5; same-sub-industry-with-META concentration caveat; cap-pressure-deferred) added with window-expiry dates per W4 spec. Section explicitly NOT a re-evaluation queue; reactivates only on fresh-trigger Daily.md scan within open window.
+3. **Strategy B disqualifier-flag, B-short declined, D re-screen pipeline, demotion log sections: NO CHANGES.** No new flags surfaced this routine.
+
+### Deferral discipline
+
+No deferrals chained. The C router-blocked TOP-5 corporate-earnings names (NVDA/AMAT/CSCO/AVGO) are explicitly deferred to next W1 cycle post-M2 (~2026-06-01) per W1 explicit rationale; this is a router-state deferral with a defined next-trigger (M2 fundamental refresh) and conservative-default fallback (remain analytic-only if router still DO-NOT-ACTIVATE).
+
+### Calendar events created
+
+Total: 4 new events.
+
+| Event | Date/Time (MT) | Event ID |
+|-------|----------------|----------|
+| GKOS Strategy B thesis-construction | Wed 2026-05-13 14:00–15:00 | `j2ndpjs1so0jqd1bh7cpj73lbo` |
+| IRM Strategy B thesis-construction | Wed 2026-05-13 15:00–16:00 | `kclmdkpue084h9mp1ujjg3cg3c` |
+| ACHC Strategy B thesis-construction | Wed 2026-05-13 12:00–13:00 | `oi8j9f8veumkd70v7v1ce3ht5g` |
+| FOMC June 2026 Strategy C thesis-construction | Mon 2026-06-08 09:00–11:00 | `7pbkg1kh2pge7midfiqnj6edvk` |
+
+All events tagged with reminder at event-time popup per Calendar MCP usage convention.
+
+### Effect on book
+
+**No order staged. No portfolio-state change.** Strategy B / D router states ACTIVATE unchanged; Strategy A / E DO-NOT-ACTIVATE unchanged; Strategy C HYBRID ACTIVATE — FOMC only unchanged. Sector cap usage at routine-end unchanged from start: IT Services 1/3 (IBM); Health Care Facilities 1/3 (HCA); Comm Services / Interactive Media & Services 1/3 (META). Experiment Strategy B totals unchanged at 3 GO + 29 NO-GO.
+
+### References
+
+- Claude_Task_Plan.md §W4 Weekly Action Conversion (lines 461-510 — A. Exits / B. Research deferrals / C. B thesis-construction / D. A & C thesis-construction / E. Cross-strategy deconfliction / F. Watchlist updates).
+- Strategy.md (Strategy A / B / C entry criteria; criterion 5 cross-strategy holding rules; sector caps; pre-mortem rev 7 KL #12).
+- Regime_State.md (router state matrix at 2026-04-26 last update; A DO-NOT-ACTIVATE; C HYBRID ACTIVATE — FOMC only; B / D ACTIVATE; E DO-NOT-ACTIVATE).
+- Watchlist.md (current state pre-W4 + post-W4 edits this routine).
+- Weekly_Catalyst_Calendar.md 2026-W19 PART 2 (A TOP-10 routing list; C TOP-5 router-eligible filtering).
+- Weekly_Post_Event_Screen.md 2026-W19 PART 2 (B Top-5 already-scheduled; rest-tier #6-15 with explicit "NOT on calendar — recommend new schedule" flags; CAVEAT lines for ACHC / RBLX same-sub-industry concentration).
+- Weekly_Position_Deep_Dive.md 2026-W19 (3 × HOLD; no IMMEDIATE-ACTION flag; aggregate roll-up table).
+- Operating_Protocols.md (HOIP discipline; commission-disregarded staging; calendar-event description conventions).
+
+### Compaction-survival note
+
+**W4 2026-05-09 ~07:50 MT**: 4 calendar events created (3 B thesis-construction: GKOS Wed 5/13 14:00 / IRM Wed 5/13 15:00 / ACHC Wed 5/13 12:00; 1 C thesis-construction: FOMC June Mon 6/8 09:00). 0 exits staged. 0 research deferrals. 10 A-queue additions to Watchlist.md (NVDA/CSCO/AMAT/HD/TGT/WMT/AVGO/ORCL/ADBE/MU per W1 A TOP-10 routed under DO-NOT-ACTIVATE router gate). 1 NEW Watchlist.md section created (Strategy B watch overflow: NET CtC-verify-conditional, RBLX same-sub-industry-with-META caveat). 0 portfolio-state changes. B totals unchanged at 3 GO + 29 NO-GO. Top-5 W2 B candidates (MNST/AKAM/AXON/PTC/VTRS) confirmed already on calendar via 5/9 D2 schedule; no double-scheduling. Cross-strategy deconfliction trivial (no exits this routine to gate against new entries). FOMC June scheduled 8 days pre-catalyst per W1 7-10-day window. Router-blocked C TOP-5 corp-earnings names (NVDA/AMAT/CSCO/AVGO) deferred to next-W1-post-M2 per dispersion-compression follow-up trigger.
+
