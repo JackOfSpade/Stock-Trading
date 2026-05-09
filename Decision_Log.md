@@ -8182,3 +8182,62 @@ Per AMD doctrine 2026-05-07: when post-event move HOLDS at the post-print equili
 
 **Same-week B thesis-construction queue saturation status:** TSN 5/8 10:00 ✓ COMPLETE (this entry). Remaining Fri 5/8: ARM 11:00 / FLEX 13:00 / DDOG 14:00 / FTNT 15:00 = 4 sessions stacked PM. Mon 5/11: GLW / SMCI / DASH / WHR = 4 sessions. Tue 5/12: CEG re-screen / UBER / ZTS / SHAK = 4 sessions. Operator capacity vigilance flagged (per 2026-05-07 D2 conversion compaction note); single-session-day capacity ceiling ~4-5 dispositions per Thu 5/7 4-disposition precedent.
 
+---
+
+## 2026-05-09 D2 Daily Action Conversion (~06:00 MT)
+
+### Source
+
+Daily.md 2026-05-09 RECOMMENDED ACTIONS. Routine D2 cadence.
+
+### Exits triggered
+
+None. All open positions reviewed; no invalidation signals per Daily.md 2026-05-09 exit scan. Current open book: IBM (B, IT Services), HCA (B, HC Facilities), META (B, Interactive Media & Services), RTX (D, A&D), DIS (D, Entertainment). No fill-capture events pending.
+
+### Router reviews
+
+None required. No signal-threshold crossings reported in Daily.md 2026-05-09 regime commentary.
+
+### Portfolio-state changes
+
+None. No orders staged. 2% Strategy B next-trade sizing remains $37.77 (based on NAV $1,888.69 from Portfolio_Ledger.md last mark 2026-05-07).
+
+### Calendar events created
+
+**Rescheduled — ARM/FLEX/DDOG/FTNT (4 sessions not completed Fri 5/8 PM):**
+Confirmed via cross-reference: Portfolio_Ledger.md B activity log last entry = TSN 5/8 ~10:00 MT (no subsequent entries for ARM/FLEX/DDOG/FTNT); Decision_Log.md pending-queue note at TSN entry confirmed 4 sessions outstanding. Daily.md 2026-05-09 operational note explicitly flagged DDOG/FTNT; ARM/FLEX treated equivalently.
+
+| Ticker | Date/Time (MT) | Status |
+|--------|----------------|--------|
+| ARM | Mon 2026-05-11 11:00–11:45 | ✅ Created |
+| FLEX | Mon 2026-05-11 15:00–15:45 | ✅ Created |
+| DDOG | Tue 2026-05-12 14:00–14:45 | ✅ Created |
+| FTNT | Tue 2026-05-12 15:00–15:45 | ✅ Created |
+
+ARM window ~5/20 (Day 4 of 10 on scheduling date); FLEX window ~5/20 (Day 4); DDOG window ~5/21 (Day 5); FTNT window ~5/22 (Day 5). Scheduled into open slots on Mon 5/11 (existing events: 09:00/10:00/13:00/14:00) and Tue 5/12 (existing events: 09:00/10:00/11:00/13:00) without conflicts.
+
+**New B candidates — 6 sessions from Daily.md 2026-05-09 scan:**
+
+| Ticker | Date/Time (MT) | Event ID | Move | Window expires | Instrument note |
+|--------|----------------|----------|------|----------------|-----------------|
+| AKAM | Wed 2026-05-13 09:30–10:15 | `i0kssc45pl585qidktrdl5r4ao` | +15–24% Q1 + $1.8B 7-yr AI contract | ~5/22 | Verify criterion 1 |
+| MNST | Wed 2026-05-13 11:00–11:45 | `shl17p8gnl9diqbtvnstv6e2lo` | +14.97% Q1 rev +26.9% | ~5/22 | Verify criterion 1 |
+| AXON | Wed 2026-05-13 13:00–13:45 | `g63h3d21r0ael6dkmldluaiho8` | +10.63% Q1 | ~5/22 | Verify criterion 1 |
+| PTC | Thu 2026-05-14 09:00–09:45 | `9l52mc9ie4fd5fjo0cm8fhe2pk` | +7.96% to $147.65 Q1 | ~5/21 | ~$18–20B mcap; verify criterion 1 |
+| VTRS | Thu 2026-05-14 11:00–11:45 | `k412j4l9mob3mlfnv6pgpqmlmk` | +9.03% to $17.39 Q1 | ~5/22 | HC/Pharma 0/3; verify criterion 1 |
+| AGL | Thu 2026-05-14 13:00–13:45 | `1c5lqghvirp6hljq0o4o68slc8` | ~+51% EBITDA guide flip to positive | ~5/22 | **Mcap borderline/unverified** — criterion 1 gate first; session terminates NO-GO if below threshold |
+
+Wed 5/13 scheduled after existing 08:00 D long-list interim re-screen; slots at 09:30/11:00/13:00. Thu 5/14 fully open; PTC/VTRS/AGL at 09:00/11:00/13:00.
+
+**Total: 10 calendar events created this D2 session** (4 rescheduled + 6 new).
+
+### Watchlist.md updates
+
+1. **Strategy A queue — AKAM added** (date 2026-05-09; source Daily.md 2026-05-09; reason: Q1 print + $1.8B AI contract; resolution trigger: next M1 with A router ACTIVATE).
+2. **Strategy D re-screen pipeline — VST upgraded color note**: EPS beat $2.87 vs $2.21 consensus (+29.63% surprise) materially stronger than prior "solid-but-flat" framing; pre-M1 lean upgraded to MEDIUM-HIGH GO. "HOLD AT MONITOR" disposition and M1 resolution trigger unchanged.
+3. **Strategy A queue — DDOG note strengthened**: Day 2 (Fri 5/9) close +31.33% to $188.73 added; further elevates valuation-reset concern for A-entry candidacy when router flips; queue disposition unchanged.
+
+### Compaction-survival note
+
+**D2 2026-05-09 ~06:00 MT**: 10 B-thesis-construction calendar events scheduled (4 rescheduled: ARM Mon 11:00 / FLEX Mon 15:00 / DDOG Tue 14:00 / FTNT Tue 15:00; 6 new: AKAM Wed 09:30 / MNST Wed 11:00 / AXON Wed 13:00 / PTC Thu 09:00 / VTRS Thu 11:00 / AGL Thu 13:00 [mcap-verification note]). 3 Watchlist.md updates (AKAM A-queue add; VST color upgrade to MEDIUM-HIGH lean; DDOG Day-2 note strengthen). 0 exits. 0 orders staged. 0 portfolio-state changes. B totals unchanged at 3 GO + 29 NO-GO.
+
