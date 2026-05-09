@@ -1,11 +1,15 @@
 #!/bin/bash
-# SessionStart hook — put every routine session on `main`.
+# SessionStart hook — align the harness-assigned branch to latest origin/main.
 #
-# Per Claude_Task_Plan.md "Branch and state propagation": this project's
-# routines work directly on main, overriding the harness's per-session
-# `claude/<suffix>` feature branch. This hook makes that deterministic by
-# checking out main at session start so subsequent reads see latest state
-# from prior routines.
+# Companion to .github/workflows/auto-merge-claude.yml: routines push their
+# assigned `claude/<suffix>` branch at session end, and the Action merges it
+# into main server-side (and deletes the merged branch). To start each
+# routine from the latest committed state, we hard-reset the assigned branch
+# to origin/main here.
+#
+# We deliberately STAY on the harness-assigned branch (do NOT checkout main)
+# so the harness's end-of-session push targets the assigned branch — the
+# only push target the harness allows.
 #
 # Best-effort: never block session start on git failures.
 
@@ -20,26 +24,23 @@ fi
 # CLAUDE_PROJECT_DIR is set by the harness to the repo root.
 cd "${CLAUDE_PROJECT_DIR:-$(pwd)}" || exit 0
 
-# Need a remote to fetch from. If absent (e.g., local resume of a cached
-# container with no github source), bail.
+# Need a remote to fetch from.
 if [ -z "$(git remote 2>/dev/null)" ]; then
   exit 0
 fi
 
 # Best-effort fetch.
-git fetch origin main >/dev/null 2>&1 || true
-
-# Switch to main. If a stash or in-progress merge prevents it, leave the
-# session on whatever branch the harness chose and let Claude / the routine
-# resolve.
-if ! git checkout main >/dev/null 2>&1; then
-  echo "[session-start] Could not checkout main; staying on current branch" >&2
+if ! git fetch origin main >/dev/null 2>&1; then
+  echo "[session-start] git fetch origin main failed; staying on current state" >&2
   exit 0
 fi
 
-# Fast-forward to origin/main. If main has diverged locally for some reason,
-# do not auto-rebase here — let the routine handle conflicts via the
-# concurrency rule in Claude_Task_Plan.md.
-git pull --ff-only origin main >/dev/null 2>&1 || true
+# Hard-reset the current (harness-assigned) branch to origin/main so the
+# routine starts from the latest committed state. Safe here: the assigned
+# branch is fresh per session and has no work to preserve.
+if ! git reset --hard origin/main >/dev/null 2>&1; then
+  echo "[session-start] git reset --hard origin/main failed" >&2
+  exit 0
+fi
 
 exit 0
