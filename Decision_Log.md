@@ -8338,3 +8338,92 @@ All events tagged with reminder at event-time popup per Calendar MCP usage conve
 
 **W4 2026-05-09 ~07:50 MT**: 4 calendar events created (3 B thesis-construction: GKOS Wed 5/13 14:00 / IRM Wed 5/13 15:00 / ACHC Wed 5/13 12:00; 1 C thesis-construction: FOMC June Mon 6/8 09:00). 0 exits staged. 0 research deferrals. 10 A-queue additions to Watchlist.md (NVDA/CSCO/AMAT/HD/TGT/WMT/AVGO/ORCL/ADBE/MU per W1 A TOP-10 routed under DO-NOT-ACTIVATE router gate). 1 NEW Watchlist.md section created (Strategy B watch overflow: NET CtC-verify-conditional, RBLX same-sub-industry-with-META caveat). 0 portfolio-state changes. B totals unchanged at 3 GO + 29 NO-GO. Top-5 W2 B candidates (MNST/AKAM/AXON/PTC/VTRS) confirmed already on calendar via 5/9 D2 schedule; no double-scheduling. Cross-strategy deconfliction trivial (no exits this routine to gate against new entries). FOMC June scheduled 8 days pre-catalyst per W1 7-10-day window. Router-blocked C TOP-5 corp-earnings names (NVDA/AMAT/CSCO/AVGO) deferred to next-W1-post-M2 per dispersion-compression follow-up trigger.
 
+---
+
+## 2026-05-10 W4 Weekly Action Conversion (~03:10 MT — Sun-refresh delta routine)
+
+### Source
+
+Routine W4 cadence (Sun 2026-05-10 ~03:10 MT) re-running against the Sun 2026-05-10 W1/W2/W3 refreshes that supersede the Sat 2026-05-09 versions read by the prior W4 ~07:50 MT. Reads:
+- Weekly_Catalyst_Calendar.md 2026-W19 (W1 — A and C shortlists) — Sun 5/10 refresh.
+- Weekly_Post_Event_Screen.md 2026-W19 (W2 — B shortlist) — Sun 5/10 refresh.
+- Weekly_Position_Deep_Dive.md 2026-W19 (W3 — per-position recommendations + IMMEDIATE-ACTION flag) — Sun 5/10 refresh.
+- Decision_Log.md (live) through 2026-05-09 W4 entry; Strategy.md; Experiment_Parameters.md; Portfolio_Ledger.md (last mark 2026-05-07); Watchlist.md (current); Regime_State.md (last update 2026-04-26); B_Sub_Pattern_Taxonomy.md.
+
+### Posture
+
+Today's W3 refresh explicitly notes: "today's compilation supersedes the Sat 2026-05-09 W3 that the W4 ~07:50 MT routine read; substantive recommendations unchanged so no W4 re-action is required from the W3 side — the existing W4 5/9 outputs remain valid." Today's W1 refresh likewise notes "all current TOP-10 names in this refresh are already QUEUED — W4 must NOT re-queue any TOP-10 entry this cycle." The substantive delta vs Sat 5/9 W4 is in the W2 PART 2 refresh: re-ordered Top-5 (PTC/VTRS/IRM/MNST/ACHC vs prior AKAM/AXON/PTC/MNST/ACHC ranking) — all 5 already on calendar via 5/9 D2 + W4 — plus NET promotion from B-watch overflow to PART 2 #6 with explicit "NEW SCHEDULING REQUIRED — recommend promoting to thesis-construction calendar event Tue 5/12 or Wed 5/13 morning" recommendation.
+
+### A. Exits from W3
+
+**None.** W3 returned 3 × HOLD (IBM, HCA, META) with no IMMEDIATE-ACTION flag, no close calls. Substantively unchanged from Sat 5/9 W3 read by W4 5/9 (counters advanced one calendar day; weekend Iran/Hezbollah escalation reviewed and judged not thesis-altering). All four IBM invalidation criteria not-tripped (criterion (iv) Brent ≥$130 watch materially de-risked — Fri 5/8 close $100.24, Sat 5/9 weekend electronic trading unchanged despite Trump 14-point-review escalatory rhetoric). HCA all four criteria not-tripped (two earlier-cleared THC + UHS criteria remain cleared). META three criteria not-tripped (criterion (iii) NM AG bench trial Phase II in progress through 5/22; no verdict / no judge order in W19 window; daily monitoring active but does NOT meet "material loss disclosure" trigger). No exit orders staged.
+
+### B. Research deferrals from W3
+
+**None.** No "further research" recommendations from W3. No information gaps surfacing deferred-research events.
+
+### C. B thesis-construction scheduling from W2 (top-tier)
+
+W2 PART 2 Top-5 (PTC / VTRS / IRM / MNST / ACHC; re-ordered this refresh from prior AKAM/AXON/PTC/MNST/ACHC down-weighting AKAM/AXON on Setup A and Setup F PEAD-drift evidence and up-weighting PTC/VTRS on cleanest "no sub-pattern 1, no sub-pattern 3, modest-magnitude beat" B-mechanism setups) ALL ALREADY ON CALENDAR via 5/9 D2 + W4 5/9 (PTC Thu 5/14 09:00 MT `9l52mc9ie4fd5fjo0cm8fhe2pk` / VTRS Thu 5/14 11:00 MT `k412j4l9mob3mlfnv6pgpqmlmk` / IRM Wed 5/13 15:00 MT `kclmdkpue084h9mp1ujjg3cg3c` / MNST Wed 5/13 11:00 MT `shl17p8gnl9diqbtvnstv6e2lo` / ACHC Wed 5/13 12:00 MT `oi8j9f8veumkd70v7v1ce3ht5g`). W4 cap "up to 5 events per week" satisfied; no additional top-tier events created.
+
+### C2. B thesis-construction scheduling from W2 (rest-tier)
+
+W2 PART 2 #6 NET — promoted from prior W4 5/9 B-watch overflow disposition with explicit "NEW SCHEDULING REQUIRED" instruction. Resolution of CtC-verification gate that previously blocked scheduling: today's W2 refresh confirms NET CtC verified at -23.62% (Thu 5/7 close $256.79 → Fri 5/8 close $196.13 / -$60.66 — cross-verified per stockanalysis.com / TradingKey / GuruFocus / Motley Fool, correcting Daily.md 5/9's $124.49 figure as primary-source data error).
+
+| Ticker | W-rem | Action | Rationale |
+|--------|-------|--------|-----------|
+| NET | ~6 (window expires ~Thu 5/21) | **SCHEDULED Wed 5/13 10:15-11:00 MT** (event id `sacpbqqv04nricdksrnt2vtg50`) | W2 explicit "Tue 5/12 or Wed 5/13 morning" routing; Tue 5/12 09:00-15:45 saturated (CEG re-screen / ZTS / UBER / SHAK / DDOG / FTNT); Wed 5/13 morning saturated except 10:15-11:00 slot between AKAM 09:30-10:15 and MNST 11:00-11:45. Description: -23.62% CtC-verified; reframed-this-refresh as LONG-mean-reversion-or-NO-GO direction-test (most likely disposition NO-GO sub-pattern 4 variant 4b extension "structural-strategic-pivot-on-competitive-threat"); Setup E base-rate evidence; Setup H overlap; convergence indicators (i)-(vii) per W2 PART 2 #6; Strategy.md / B_Sub_Pattern_Taxonomy.md / Operating_Protocols.md references; sub-industry IT Services / Internet Services & Infrastructure 0/3 (same as AKAM, sequencing matters); deconfliction clean. |
+
+Other rest-tier candidates: RBLX (#15) remains in B-watch overflow per cap-pressure-deferred + Setup E base-rate compounding (no change). Per W2 explicit "NOT recommended for thesis-construction this cycle" disposition. AKAM/MNST/AXON/AGL/ARM/FLEX/DDOG/FTNT/GKOS already on calendar via D2 5/9 + W4 5/9; no scheduling deltas.
+
+### D. A and C thesis-construction scheduling from W1
+
+**Strategy A (W1 PART 2 A TOP-10 = NVDA / CSCO / AMAT / HD / TGT / WMT / AVGO / ORCL / ADBE / MU):** All 10 already in Watchlist A-queue per W4 5/9 (along with prior CAT / LLY / QCOM / AAPL / DDOG / AKAM = 16 names total). W1 today explicit "all current TOP-10 names in this refresh are already QUEUED — W4 must NOT re-queue any TOP-10 entry this cycle." **NO ACTION.**
+
+**Strategy C (W1 PART 2 C TOP-5 = FOMC June / NVDA / AMAT / CSCO / AVGO):** FOMC June already scheduled per W4 5/9 (Mon 6/8 09:00-11:00 MT `7pbkg1kh2pge7midfiqnj6edvk`). Other TOP-5 (NVDA / AMAT / CSCO / AVGO) router-blocked at current state (corporate earnings DO-NOT-ACTIVATE) per Regime_State.md HYBRID ACTIVATE — FOMC ONLY; preserved for re-routing if M2 (~2026-06-01) extends router scope. **NO ACTION.**
+
+W1 today's incremental window-shift updates (ARGX 5/10 PDUFA removed — resolved POSITIVE 5/8 two days early per argenx press release / GlobeNewswire 3291372; MU 6/24 added to PART 1B as it shifts within 45-day window) do not change W4 routing: ARGX is no longer a forward-looking C/A entry candidate (Friday 5/8 close-to-close move now a B-eligible post-event candidate per W2/D1 routing if magnitude qualifies — defer per W1 explicit instruction); MU stays C analytic-only (router-blocked) and remains in A-queue (already queued per W4 5/9 W1 PART 2 A TOP-10 #10).
+
+### E. Cross-strategy deconfliction
+
+**No conflicts identified.** Open positions: IBM (B), HCA (B), META (B), RTX (D), DIS (D). NET (new B candidate scheduled this routine) does not overlap any open position, A-queue name, or D re-screen pipeline name. No exits from W3 → no exit-fill-pending tickers to gate new-entry thesis sequencing.
+
+### F. Watchlist updates
+
+1. **Strategy B watch overflow: NET REMOVED** (promoted to thesis-construction calendar event Wed 5/13 10:15 MT `sacpbqqv04nricdksrnt2vtg50`). RBLX entry preserved as cap-pressure-deferred. Inline removal note appended documenting promotion rationale (CtC-verification gate cleared this refresh).
+2. **Strategy A queue: NO CHANGES** (all W1 TOP-10 already queued per W4 5/9; no new W1 TOP-10 entries this refresh; ARGX removal does not flow to A-queue since ARGX was not A-queued; MU already A-queued).
+3. **Strategy B disqualifier-flag, B-short declined, D re-screen pipeline, demotion log sections: NO CHANGES.**
+
+### Deferral discipline
+
+No deferrals chained. NET schedule is the only substantive routing delta vs Sat 5/9 W4. Conservative-default fallback (in NET event description): if session evaluation results in disposition ambiguity, NO-GO per pre-mortem rev 7 default-on-ambiguity rule.
+
+### Calendar events created
+
+Total: 1 new event.
+
+| Event | Date/Time (MT) | Event ID |
+|-------|----------------|----------|
+| NET Strategy B thesis-construction | Wed 2026-05-13 10:15-11:00 | `sacpbqqv04nricdksrnt2vtg50` |
+
+Event tagged with reminder at event-time popup per Calendar MCP usage convention.
+
+### Effect on book
+
+**No order staged. No portfolio-state change.** Strategy B / D router states ACTIVATE unchanged; Strategy A / E DO-NOT-ACTIVATE unchanged; Strategy C HYBRID ACTIVATE — FOMC only unchanged. Sector cap usage at routine-end unchanged: IT Services 1/3 (IBM); Health Care Facilities 1/3 (HCA); Comm Services / Interactive Media & Services 1/3 (META). Experiment Strategy B totals unchanged at 3 GO + 29 NO-GO.
+
+### References
+
+- Claude_Task_Plan.md §W4 Weekly Action Conversion (lines 461-510).
+- Strategy.md (Strategy A / B / C entry criteria; criterion 5 cross-strategy holding rules; sector caps; pre-mortem rev 7 KL #12; criterion 3 closed-list rev 14).
+- Regime_State.md (router state matrix at 2026-04-26 last update; A DO-NOT-ACTIVATE; C HYBRID ACTIVATE — FOMC only; B / D ACTIVATE; E DO-NOT-ACTIVATE).
+- Watchlist.md (post-edit this routine: NET removed from B-watch overflow; promotion-rationale note appended).
+- Weekly_Catalyst_Calendar.md 2026-W19 (Sun 5/10 refresh PART 2 A TOP-10 / C TOP-5).
+- Weekly_Post_Event_Screen.md 2026-W19 (Sun 5/10 refresh PART 2 Top-5 reorder + rest-tier #6 NET explicit "NEW SCHEDULING REQUIRED" + #15 RBLX "NOT recommended for thesis-construction this cycle").
+- Weekly_Position_Deep_Dive.md 2026-W19 (Sun 5/10 refresh; 3 × HOLD; no IMMEDIATE-ACTION flag; "no W4 re-action required from the W3 side").
+- Decision_Log.md 2026-05-09 W4 entry (prior cycle outputs preserved as valid).
+
+### Compaction-survival note
+
+**W4 2026-05-10 ~03:10 MT (Sun-refresh delta)**: 1 calendar event created (NET Strategy B thesis-construction Wed 5/13 10:15 MT `sacpbqqv04nricdksrnt2vtg50`); promotion of NET from prior B-watch overflow following CtC-verification gate clearance (-23.62% cross-verified). 0 exits staged. 0 research deferrals. 0 A-queue additions (W1 TOP-10 fully queued per W4 5/9; W4 today must not re-queue per W1 explicit instruction). 0 portfolio-state changes. B totals unchanged at 3 GO + 29 NO-GO. Sat 5/9 W4 outputs remain valid; today's run is a delta routine acting only on the NET re-routing surfaced by W2 refresh. W3 substantively unchanged (3 × HOLD). C TOP-5 corporate-earnings router-blocked names deferred to next-W1-post-M2 unchanged. Sector caps unchanged. Watchlist B-watch overflow now contains RBLX only.
+
