@@ -9551,3 +9551,249 @@ Modulo these eleven considerations, the orchestrator review converges on NO-GO w
 **No order staged. No portfolio-state change.** Window expires Thu 2026-05-21.
 
 **Tue 5/12 same-day post-DDOG queue saturation:** CEG re-screen ✓ + UBER ✓ + ZTS ✓ + SHAK ✓ + **DDOG ✓** + FTNT 15:00 remaining = **5 same-day completions + 1 remaining**; equals Mon 5/11 6-disposition new-high-water-mark precedent if FTNT completes.
+
+---
+
+## 2026-05-12 (Tue, ~15:00 MT, FTNT session per calendar slot rescheduled from Fri 5/8 15:00 per D2 5/9 conversion) Strategy B thesis construction outcome — FTNT (Fortinet) NO-GO via criterion 4 dual-framing decisive failure with **sub-pattern 1 CLEAN single-pattern routing INSTANCE #11 at MODERATE-MAGNITUDE-TIER with BEARISH-DISSENT CAVEAT** — Citi $90→$115 +27.8% + Susquehanna $90→$115 +27.8% (paired raises) BUT Morgan Stanley reiterated Underweight $80 (bearish dissent maintained low PT) + BMO Capital Hold + multiple firms PT raises = MODERATE-magnitude sub-pattern 1 (vs DDOG MEGA-tier Stifel +90.6%); **stock TRADING AT post-raise PT cluster $115 (Fri close $114.07 = ~+0.8% upside to $115)** = canonical FULL SATURATION signature with near-zero remaining sell-side-implied upside. Compounded by criterion 3 closed-list rev 14 absent admissible convergence target; no order staged
+
+**Trigger:** Calendar-event-scheduled Strategy B thesis construction for FTNT, Tue 2026-05-12 15:00–15:45 MT (rescheduled from Fri 2026-05-08 15:00 MT per D2 5/9 conversion). Session run-sequenced after Tue 5/12 CEG re-screen 09:00 / UBER 11:00 / ZTS 11:00 / SHAK 13:00 / DDOG 14:00 five completions. This is the **6TH same-day completion Tue 5/12 if disposed**, equaling Mon 5/11 6-disposition new-high-water-mark precedent. Calendar slot 15:00 MT is final Tue slot.
+
+**Session-prompt date + day-count clarifications (non-binding corrections):** Session prompt cites "FTNT Q1 2026 print 2026-05-07 AMC" and "Day 2 close (5/8 Fri): +20.03% to $107.97". Primary-source verification (stockanalysis.com historical-prices + web-search of earnings call timing):
+- **Earnings call actually held Wed 2026-05-06 at 4:30 PM ET (AMC Wed 5/6, NOT Thu 5/7 AMC)** per Fortinet IR press release + Investing.com earnings transcript + Motley Fool transcript URL `/2026/05/06/`
+- Wed 5/6 close $89.95 = pre-print (regular session ended 4:00 PM ET; AMC print at 4:30 PM ET)
+- **Thu 5/7 close $107.97 = Day-0 first-post-print regular-session close = +20.03% Day-0 canonical AMC-print C/C** (NOT Day 2 or Fri 5/8 as session-prompt stated)
+- Fri 5/8 close $114.07 = Day-1 EXTENSION = +5.65% additional gain
+- Net Wed→Fri = $89.95 → $114.07 = +26.82% cumulative through Day-1 = 133.9% retention vs Day-0 +20.03% gain
+- Day-1 absolute extension beyond Day-0 close = $114.07 - $107.97 = **+$6.10 / +5.65% additional gain beyond Day-0** (NEW DAY-1 reference at moderate magnitude; same-day-count measurement as DDOG +$11.43/+6.06% reference established earlier this session post-DDOG; FTNT slightly less than DDOG)
+- Session-prompt's "Day 2 close (5/8 Fri)" = day-count confusion; primary-source: Thu 5/7 = Day 0, Fri 5/8 = Day 1
+- Magnitude unambiguously clears 5% threshold by 4.01× cushion in POSITIVE direction; today Tue 5/12 = Day 4 of post-event 10-day window (Wed 5/6 = Day 0; window expires Wed 5/20)
+
+**Stock price action (primary-source verified via stockanalysis.com):**
+- Mon 5/4 close $89.24 (+3.42%)
+- Tue 5/5 close $89.92 (+0.76%)
+- Wed 5/6 close $89.95 (+0.03%) — pre-print Wed (print AMC Wed 4:30 PM ET)
+- **Thu 5/7 close $107.97 (+20.03% Day-0 canonical AMC C/C)** — first-post-print regular-session close
+- Fri 5/8 close $114.07 (+5.65% Day-1 EXTENSION beyond Day-0)
+- Pre-print Mon→Wed trajectory: $89.24 → $89.92 → $89.95 = +0.81% mild-stable / no rally; NOT pre-print rally absorption fingerprint
+- **Sub-pattern 3 fingerprint NEGATIVE** (similar to DDOG CLEAN single-pattern routing); fits BE 5/1 / CAT 5/2 CLEAN single-pattern precedent at moderate-magnitude tier
+
+**Print details (Wed 2026-05-06 AMC 4:30 PM ET):** Fortinet Q1 2026 results — non-GAAP EPS $0.82 vs cons $0.62 +32% beat; revenue $1.85B +20% Y/Y vs cons $1.73B = +6.9% above-consensus revenue beat; adj operating margin 35.8%; **FY26 guide raised** revenue $7.71-$7.87B from prior $7.5-$7.7B (= +1.7-2.2% midpoint above prior); billings guide raised $8.8-$9.1B from $8.4-$8.6B (= +4.5% midpoint above prior); **Q2 guide above-consensus** adj EPS $0.72-$0.76 / revenue $1.83-$1.93B (both above Street). Multi-element substantive beat-and-raise with above-consensus print + raised forward guide on multiple metrics.
+
+**Post-print sell-side PT-raise wave (sub-pattern 1 fingerprint at MODERATE-magnitude tier with BEARISH dissent):**
+- **Citi $90 → $115 (+27.8%) on May 8** — bullish-recalibration (specific rating not extracted; likely Buy or Overweight maintained/upgraded)
+- **Susquehanna $90 → $115 (+27.8%) on May 8** — paired raise with Citi (rating not extracted)
+- **Morgan Stanley reiterated Underweight $80** on May 8 (likely Thursday or Friday) — **BEARISH DISSENT** maintained low PT despite multi-element beat-and-raise = canonical bearish-outlier signal within mixed-direction-but-bullish-tilted cluster
+- **BMO Capital Hold** on May 7 (rating maintained; PT not extracted; bearish-Hold dissent)
+- UBS forecasted "strong price appreciation" on May 9 (bullish-rating maintained or upgrade-coverage)
+- Additional firms likely raised (Wedbush, Wells Fargo, JPMorgan likely; specific magnitudes not all extracted in available coverage)
+- **Cluster composition:** 2 firms +27.8% identified raises + 2 firms bearish-dissent (Morgan Stanley Underweight $80 / BMO Hold) + multiple unidentified firms with raises = **MODERATE-magnitude sub-pattern 1 with bearish-dissent caveat**; structurally less extreme than DDOG (Stifel +90.6% MEGA + 5+ firm unified ratification) or FLEX (JPM +90.5% + KeyBanc $180 + Stifel/Citizens/etc. unified) MEGA-tier cases
+- **Cluster mean post-raise:** estimated ~$110-115 ex-MS-outlier ($80); with-MS-outlier ~$105-110. Stock at Fri $114.07 = **AT or ABOVE cluster mean ex-outlier** = canonical FULL SATURATION signature with near-zero remaining sell-side-implied upside
+
+**Inputs:** Strategy.md (B section + criterion 5 cross-strategy-holding constraint); AI_Trading_Foundation.md (2.4 / 2.13 / 2.20); Operating_Protocols.md §1/§2/§3/§8/§9; Portfolio_Ledger.md (state-as-of post-DDOG-NO-GO 2026-05-12 ~14:00 MT: B NAV $1,888.69; 3 longs IBM/HCA/META; sector cap IT Services 1/3, Health Care Facilities 1/3, Comm Services 1/3, **IT / Software / Systems Software 0/3** (FTNT GICS verified — distinct from DDOG Application Software sub-industry), IT / Software / Application Software 0/3 (post-DDOG averted), all others 0/3 modulo prior NO-GOs; 2% sizing $37.77; B router ACTIVATE); Regime_State.md (B router ACTIVATE); Decision_Log.md precedents — **DDOG 5/12 14:00 NO-GO (sub-pattern 1 CLEAN single-pattern INSTANCE #10 at MAXIMUM-MAGNITUDE-TIER with Stifel +90.6% MEGA + 5+ firm unified ratification — direct-template precedent for FTNT CLEAN single-pattern INSTANCE #11 at MODERATE-magnitude tier with bearish-dissent caveat); FLEX 5/11 NO-GO (layered-1+3 SEVENTH at MAX magnitude); BE 5/1 + CAT 5/2 NO-GOs (CLEAN single-pattern 1 at moderate magnitude — direct-template precedent); TEAM 5/2 NO-GO (valuation-reset-but-not-narrative-reset signature shares "split-sell-side" dimension with FTNT bearish-dissent caveat); UBER 5/12 NO-GO (split-sell-side mixed-signal first instance — FTNT shares split-sell-side dimension at higher-magnitude cluster); 19-NO-GO B-short string post-DDOG; "NO-GO records are context, not barriers" §3 (no prior FTNT NO-GO record); Watchlist.md (FTNT NOT listed)**.
+
+**Web-search primary documents (verified this session):**
+- Fortinet Q1 2026 earnings release IR (Wed 2026-05-06 AMC 4:30 PM ET): https://www.fortinet.com/corporate/about-us/newsroom/press-releases/2026/fortinet-to-announce-first-quarter-2026-financial-results
+- Fortinet Q1 2026 earnings transcript Investing.com: https://www.investing.com/news/transcripts/earnings-call-transcript-fortinet-exceeds-q1-2026-forecasts-with-strong-growth-93CH-4665847
+- Fortinet Q1 2026 transcript AOL: https://www.aol.com/articles/fortinet-ftnt-q1-2026-earnings-225852477.html
+- Fortinet Q1 2026 transcript Motley Fool: https://www.fool.com/earnings/call-transcripts/2026/05/06/fortinet-ftnt-q1-2026-earnings-transcript/
+- Fortinet Q1 2026 transcript Globe and Mail: https://www.theglobeandmail.com/investing/markets/stocks/FTNT/pressreleases/1757171/fortinet-ftnt-q1-2026-earnings-transcript/
+- Yahoo Finance "Fortinet Q1 Earnings Call Highlights": https://finance.yahoo.com/markets/stocks/articles/fortinet-q1-earnings-call-highlights-021645786.html
+- StockTitan "Fortinet Q1 revenue rises 20%, lifts 2026 outlook": https://www.stocktitan.net/news/FTNT/fortinet-reports-strong-first-quarter-2026-financial-aiqf1lc64cd7.html
+- One News Page FTNT Q1 transcript: https://www.onenewspage.com/n/Markets/1ztfis3dfa/Fortinet-Inc-FTNT-Q1-2026-Earnings-Call.htm
+- TradingKey "Fortinet Inc Stock (FTNT) Closed Up by 20.34% on May 7": https://www.tradingkey.com/news/market-movers/261870629-market-movers-ftnt-20260507
+- Daily Political "Fortinet Releases Q2 2026 Earnings Guidance": https://www.dailypolitical.com/2026/05/08/fortinet-nasdaqftnt-releases-q2-2026-earnings-guidance.html
+- Daily Political "UBS Group Forecasts Strong Price Appreciation for Fortinet": https://www.dailypolitical.com/2026/05/09/ubs-group-forecasts-strong-price-appreciation-for-fortinet-nasdaqftnt-stock.html
+- TickerReport FTNT Q2 2026 guidance: https://www.tickerreport.com/banking-finance/13432446/fortinet-nasdaqftnt-releases-q2-2026-earnings-guidance.html
+- MarketBeat FTNT earnings: https://www.marketbeat.com/stocks/NASDAQ/FTNT/earnings/
+- MarketBeat FTNT forecast: https://www.marketbeat.com/stocks/NASDAQ/FTNT/forecast/
+- Public.com FTNT forecast: https://public.com/stocks/ftnt/forecast-price-target
+- stockanalysis.com FTNT historical-prices Mon 5/4 - Fri 5/8 (primary verified): https://stockanalysis.com/stocks/ftnt/history/
+- stockanalysis.com FTNT analyst forecast page: https://stockanalysis.com/stocks/ftnt/forecast/
+
+### Decision
+
+**FTNT — NO-GO (DECLINE).** Criterion 4 dual-framing decisive failure with **sub-pattern 1 CLEAN single-pattern routing INSTANCE #11 at MODERATE-MAGNITUDE-TIER with BEARISH-DISSENT CAVEAT** — Citi $90→$115 +27.8% + Susquehanna $90→$115 +27.8% paired raises + multiple additional firms likely raised BUT Morgan Stanley reiterated Underweight $80 + BMO Capital Hold = mixed-but-bullish-tilted cluster with bearish dissent maintained. **Stock TRADING AT post-raise PT cluster $115 (Fri close $114.07 = ~+0.8% remaining sell-side-implied upside ex-MS-outlier; ~-0.8% if including MS $80 outlier)** = canonical FULL SATURATION signature; near-zero remaining mean-reversion edge for LONG framing.
+
+The print delivers genuinely substantial multi-element beat-and-raise (non-GAAP EPS $0.82 +32% beat / revenue $1.85B +20% Y/Y / adj OM 35.8% / FY26 revenue guide raised $7.71-$7.87B / billings guide raised $8.8-$9.1B / Q2 above-consensus on EPS + revenue) — but the +20.03% Day-0 + Day-1 EXTENSION reaction has already FULLY PRICED the substantive print (stock at cluster mean). Sub-pattern 1 saturation signature binds against further sentiment-overshoot LONG framing.
+
+Move HELD AND EXTENDED through Day-1 at +$6.10/+5.65% absolute beyond Day-0 close (NEW DAY-1 reference at moderate magnitude; established this morning by DDOG +$11.43/+6.06% reference — FTNT slightly less; both reference points complementary as Day-1-after-AMC-print extension references).
+
+**CLEAN sub-pattern 1 single-pattern routing (sub-pattern 3 fingerprint NEGATIVE):** Pre-print Mon-Wed trajectory $89.24→$89.92→$89.95 = +0.81% mild-stable / no pre-print rally absorption like AMD/GLW/ARM/FLEX layered-1+3 cases. Joins BE 5/1 / CAT 5/2 / DDOG 5/12 CLEAN single-pattern routing precedent. Distinguishes from layered-1+3 family (AXSM/PINS/AMD/GLW/ARM/FLEX) and layered-1+3+4 (TSN/ARM-second).
+
+Compounded by criterion 3 closed-list rev 14 absent admissible convergence target (numerical PT chase to Citi/Susquehanna $115 = ~+0.8% upside thin/at-cluster — FULL SATURATION signature; cluster mean ex-MS-outlier $110-115 = thin upside; Morgan Stanley $80 outlier = -30% downside SHORT target territory only; Q2 FY26 next earnings ~early-August OUTSIDE 60-day window from Wed 5/6 = Mon 7/6 (60 days; Q2 print typically 8/5-8/7 outside by ~4 weeks); FOMC June 16-17 mismatched against idiosyncratic FTNT cybersecurity thesis; FTNT already in S&P 500 since 2018 + Nasdaq 100 since 2018 + Russell 1000 — no fresh index-inclusion trigger).
+
+Criterion 1 mechanically clears at +20.03% Day-0 C/C in POSITIVE direction (4.01× threshold cushion); criterion 5 sector cap clears (IT / Software / Systems Software 0/3 sub-industry; **distinct from DDOG Application Software sub-industry** per S&P GICS classification — FTNT/PANW/CRWD cybersecurity = Systems Software 45103020; DDOG observability/data-platform = Application Software 45103010; sub-industries DISTINCT, both 0/3; IT-sector 1/3 → 2/3 within per-sector cap had GO disposed).
+
+### Mechanical eligibility detail
+
+- **Instrument rule:** FTNT = Fortinet, Inc., NASDAQ-listed common; US-incorporated Delaware; ~770M shares outstanding (approximate); **mcap ~$87.8B at Fri 5/8 close $114.07** (~$83.1B Thu Day-0 $107.97; ~$69.3B pre-print Wed $89.95). Well above $2B floor by ~35-44× cushion. ADV multi-million-shares/day on S&P 500 + Nasdaq 100 component. Long-or-short permitted; 2% sizing $37.77; no options.
+- **Criterion 1:** Event Wed 2026-05-06 AMC 4:30 PM ET. Pre-event Wed $89.95 → Thu $107.97 = **+20.03% Day-0 canonical AMC-print C/C** (4.01× threshold cushion POSITIVE). Today Tue 5/12 = Day 4 of post-event 10-day window (Wed 5/6 = Day 0 / Thu 5/7 = Day 1 / Fri 5/8 = Day 2 / Mon 5/11 = Day 3 / Tue 5/12 = Day 4 / window expires Wed 5/20).
+- **Criterion 5:** No A position open; FTNT not on A-queue per Watchlist.md. GICS **Information Technology sector / Software industry / Systems Software sub-industry** (S&P GICS 45103020 verified for cybersecurity-software companies like FTNT/PANW/CRWD; DISTINCT from DDOG Application Software 45103010). Currently 0/3 used in Systems Software sub-industry; IT-sector 1/3 (IBM IT Services); DDOG-add-scenario was averted (Application Software 0/3 unchanged). FTNT-add-scenario would yield IT-sector 2/3 within Strategy.md 3-per-sector cap. Within cap on per-sector and per-sub-industry basis. KL #12 LONG-correlation: FTNT-IBM ~0.35-0.50 (both IT-sector / cybersecurity + Software-AI cross-correlation); FTNT-META ~0.30-0.45 (Nasdaq-100 tech mega-cap + AI-narrative); FTNT-HCA ~0.10-0.20 (different sectors, low). 4-long-book pairwise avg ~0.25-0.40 = **KL #12 MODERATELY UNFAVORABLE** (less elevated than DDOG 0.30-0.45 / ARM 0.35-0.45 / GLW 0.40-0.50; comparable to mid-range correlation baselines). Secondary observation; criterion 4 binds via sub-pattern 1 at moderate-magnitude-tier + criterion 3 absent independent.
+
+### Decisive flaw analysis (criterion 4 sub-pattern 1 CLEAN single-pattern at MODERATE-MAGNITUDE-TIER with BEARISH-DISSENT CAVEAT)
+
+**Sub-pattern 1 INSTANCE #11 CLEAN single-pattern routing at MODERATE-MAGNITUDE-TIER distinguishing features:**
+- FTNT CLEAN sub-pattern 1 (no sub-pattern 3 fingerprint; pre-print Mon-Wed mild-stable trajectory)
+- Fits BE 5/1 / CAT 5/2 / DDOG 5/12 CLEAN single-pattern precedent at MODERATE-magnitude tier (between BE/CAT-tier moderate and DDOG-tier MEGA)
+- Sub-pattern 1 instance count: 11 (BE / CAT / AXSM / PINS / AMD / TSN / GLW / ARM / FLEX / DDOG / **FTNT**)
+- DDOG and FTNT are SAME-DAY CLEAN single-pattern instances #10 and #11 — both Tue 5/12 sessions, both IT/Software-sector adjacent, both post-print AI-narrative-adjacent
+
+(α) **Sub-pattern 1 post-event sell-side bull ratification — MODERATE magnitude with BEARISH dissent caveat.** Post-event PT actions Wed 5/6 AMC - Mon 5/11:
+- **Citi $90 → $115 (+27.8%) on May 8** — paired raise with Susquehanna
+- **Susquehanna $90 → $115 (+27.8%) on May 8** — paired raise with Citi
+- **Morgan Stanley reiterated Underweight $80** on May 8 — **BEARISH DISSENT** maintaining low PT despite multi-element beat-and-raise = canonical bearish-outlier within mixed-bullish-tilted cluster
+- **BMO Capital Hold** on May 7 (rating maintained; bearish-Hold dissent)
+- UBS bullish forecast May 9 ("strong price appreciation")
+- Additional firms likely raised (Wedbush, Wells Fargo, JPMorgan likely; not all individually extracted)
+- **Cluster composition:** 2 paired raises +27.8% + 2 dissent (MS Underweight $80 / BMO Hold) + multiple unidentified raises = MODERATE-magnitude sub-pattern 1 fingerprint with bearish-dissent caveat
+- Cluster mean ex-MS-outlier estimated ~$110-115; with-MS-outlier ~$105-110; stock at Fri $114.07 = AT or ABOVE cluster mean
+- Per BE/CAT/STX/MDLZ/AXSM/PINS/AMD/TSN/GLW/ARM/FLEX/DDOG doctrine: post-event PT-cluster movement = information-driven repricing sell-side has executed; chasing this PT-cluster as B convergence target = canonical sub-pattern 1 trap. **FTNT at MODERATE magnitude with bearish-dissent caveat — less extreme than DDOG MEGA-tier; more like BE/CAT-tier with split-sell-side dimension (TEAM/UBER precedent).**
+
+(β) **Sub-pattern 3 fingerprint NEGATIVE; CLEAN single-pattern 1 routing.** Pre-print Mon-Wed mild-stable trajectory +0.81% over 2 days; no pre-print rally absorption. Compared to AMD/GLW/ARM/FLEX layered-1+3 multi-month YTD ~3× / 90% / 100%+ pre-print absorption, FTNT pre-print absorption near-zero. **Sub-pattern 3 fingerprint NEGATIVE; CLEAN sub-pattern 1 single-pattern routing.**
+
+(γ) **Move HELD AND EXTENDED through Day-1 at MODERATE Day-1-absolute-extension magnitude.** Post-event trajectory:
+- Pre-event Wed 5/6 close: $89.95
+- Thu 5/7 close (Day 0): $107.97 (+20.03%)
+- Fri 5/8 close (Day 1): $114.07 (+5.65% from Day 0 — move EXTENDED beyond Day-0)
+- Net Wed→Fri = **+26.82% retention with EXTENSION through Day-1** = 133.9% retention vs Day-0 +20.03% gain
+- **Absolute Day-1 extension beyond Day-0 close = $114.07 - $107.97 = +$6.10 / +5.65% additional gain beyond Day-0** = MODERATE Day-1 reference (less than DDOG +$11.43/+6.06% established earlier this session)
+- Trajectory pattern: SAME-DAY-AFTER-PRINT-POP EXTENSION at moderate absolute magnitude; market actively confirming new $110-115 equilibrium with additional buying at Day-1
+
+Per AMD/GLW/TSN/SMCI/FLEX/DDOG doctrine: when post-event move HOLDS or EXTENDS at the post-event level, market has absorbed the information at that level and is treating the new price as the new equilibrium. **FTNT Day-1 EXTENSION at +$6.10/+5.65% absolute beyond Day-0 close confirms full information-priced status at moderate magnitude.**
+
+(δ) **NEW evidence layer "stock TRADING AT post-raise PT cluster" = canonical FULL SATURATION signature.** Stock at Fri $114.07 vs Citi/Susquehanna PT $115 = +0.8% remaining sell-side-implied upside. New post-raise cluster mean ex-MS-outlier $110-115 = stock essentially AT cluster mean. **This is the cleanest documented FULL SATURATION signature observed in any B candidate this experiment cycle** — stock has already moved to post-raise PT cluster, leaving near-zero remaining mean-reversion edge for LONG framing. Stock-trading-AT-PT-cluster is variant of sub-pattern 1 saturation per AMD/GLW/FLEX/DDOG precedent (those had stock trading WITHIN PT cluster at thin +7-27% remaining upside); FTNT is at the EXTREME-saturation end of this spectrum with ~+0.8% remaining upside.
+
+(ε) **BEARISH dissent caveat (Morgan Stanley Underweight $80 + BMO Hold) = split-sell-side dimension within bullish-tilted cluster.** Morgan Stanley maintaining Underweight $80 despite beat-and-raise + multi-firm raises = bearish-outlier signaling structural valuation/competitive concerns not addressed by Q1 beat. BMO Hold = neutral-dissent. This split-sell-side dimension is similar to UBER 5/12 candidate sub-pattern 9 "split-sell-side-response" and TEAM 5/2 "valuation-reset-but-not-narrative-reset" — but at HIGHER-magnitude cluster (FTNT 2 paired +27.8% raises vs UBER 4 modest avg +5.5%; bearish dissent in both cases). FTNT bridges sub-pattern 1 (post-event raise wave) with split-sell-side dimension. Pattern signal: when sub-pattern 1 ratification occurs but with bearish dissent at low-PT outlier, the cluster cohesion is weakened; LONG framing has less unified ratification floor support.
+
+(ζ) **Cybersecurity-peer-rally same-day-on-5/8 context.** Per session prompt: CRWD +8.04% / PANW +7.00% on 5/8 = cybersecurity-sector-tape rally same day as FTNT Day-1 EXTENSION. This is PEER SYMPATHY (not own print) but confirms cybersecurity-sector-tape risk-on. CRWD/PANW Day-0 reactions could not have been triggered by own earnings; rather by FTNT's print being interpreted as positive read-through for cybersecurity sector demand. This sector-sympathy reaction is information-driven not sentiment-overshoot: it reflects sector-wide spending-environment-resilience confirmation. Information-content cluster ratification across cybersecurity sub-sector adds to broad sell-side full-priced status of FTNT.
+
+(η) **Criterion 3 closed-list rev 14 absent admissible convergence target.**
+- (a) Numerical price level:
+  - Mean-reversion to Citi/Susquehanna $115 = **+0.8% upside from Fri $114.07** = essentially AT PT cluster = FULL SATURATION; structurally near-zero remaining mean-reversion edge
+  - Mean-reversion to cluster mean ex-MS-outlier $110-115 = -0.4% to +0.8% (essentially at-cluster)
+  - Mean-reversion to MS Underweight $80 = -30% (SHORT direction; bearish outlier)
+  - Pre-print Wed $89.95 = -21% from Fri (SHORT direction; full reversal of +26.82% retention)
+- (b) Named-event options:
+  - Next earnings Q2 FY26 print ~early-August 2026 — **OUTSIDE 60-day window from event-day Wed 5/6 = Mon 7/6** (Q2 print typically 8/5-8/7 outside window by ~4 weeks)
+  - Next FDA decision: N/A
+  - Next FOMC June 16-17 = within 60-day window technically, but structurally mismatched against idiosyncratic FTNT cybersecurity thesis
+  - S&P 500 inclusion: FTNT already in S&P 500 since 2018 — NOT fresh trigger
+  - Nasdaq 100: FTNT in Nasdaq 100 since 2018 — already included
+  - Russell 1000: already included
+- **Net:** Numerical PT chase = +0.8% upside FULL SATURATION (canonical extreme sub-pattern 1 trap); no admissible named-event within 60-day window. **Criterion 3 closed-list rev 14 effectively absent admissible target.**
+
+**Steel-manning the affirmative LONG case (engaged seriously, defeated):** Multi-element substantive beat-and-raise + non-GAAP EPS $0.82 +32% beat + revenue +20% Y/Y + adj OM 35.8% + FY26 guide raised on revenue AND billings + Q2 guide above-consensus + cybersecurity-sector-tape favorable backdrop (CRWD/PANW sympathy rally) + Citi/Susquehanna $115 PT + 2-firm paired +27.8% raises + UBS bullish forecast = structurally positive forward narrative. **Counter-counter:** (a) Stock at Fri $114.07 = essentially AT $115 PT cluster = FULL SATURATION signature; ~+0.8% remaining sell-side-implied upside vs threshold-cushion-budget for B mean-reversion thesis ~5-10% = STRUCTURALLY INSUFFICIENT REMAINING EDGE. (b) Morgan Stanley Underweight $80 bearish dissent + BMO Hold neutral-dissent = cluster cohesion weakened; bull-floor support partial not unified. (c) Move EXTENDED Day-1 at +$6.10/+5.65% absolute = market actively confirming new $114 equilibrium; no remaining sentiment-overshoot to LONG. (d) Sub-pattern 1 CLEAN single-pattern routing INSTANCE #11 binds canonical sub-pattern 1 trap doctrine per BE/CAT/STX/MDLZ/AXSM/PINS/AMD/TSN/GLW/ARM/FLEX/DDOG precedent. (e) Criterion 3 closed-list rev 14 absent admissible target (Q2 outside window; FOMC mismatch; already indexed). The steel-man does NOT defeat the criterion-4-binding-constraint at FULL SATURATION + criterion-3-closed-list-absent-target dual lock.
+
+### SHORT framing dismissed (5 axes — SHORT mean-reversion-down from +20.03% / Day-1 EXTENSION)
+
+(η) **Pre-mortem Constraint 2 KL #1 textbook-rational-trap 2.20.** SHORT framing on FTNT faces:
+- **19-NO-GO B-short precedent string in current risk-on regime extends to 20** with FTNT-SHORT dismissal. 2.20-trap canonical against multi-element beat-and-raise + 2-firm paired +27.8% raises + Q2 above-cons + FY guide raised on revenue + billings + cybersecurity-sector-tape risk-on rally.
+- SPY at all-time-high; VIX 17.05 NORMAL; risk-on regime LEAST favorable for B-short entries.
+- **BUT** — Morgan Stanley Underweight $80 dissent provides PARTIAL bearish-thesis-support; if bear-thesis (network-security commoditization / SASE competition / cloud-shift) plays out within 60-day window, SHORT could work. **However** Q1 print + Q2 guide + FY raise structurally REFUTE the bear-thesis for near-term horizon = SHORT thesis requires bear-thesis to re-emerge within window, structurally implausible given just-raised guide.
+
+(θ) **+25% short-side stop binds against PT cluster + KL #7 gap-up risk catastrophic.** Per Strategy.md exit rule, +25% stop from short entry near Fri $114.07 = $142.59 — well above Citi/Susquehanna $115 + cluster mean ex-MS-outlier $110-115. Operational headroom moderate. **KL #7 gap-up execution risk:**
+- CRWD Q1 print ~late May (specific timing not confirmed; if within 60-day window any positive CRWD print could create FTNT-cybersecurity-sector-tape gap-up sympathy)
+- PANW Q3 FY26 print ~mid-May (if within 60-day window similar sector-sympathy risk)
+- NVDA Q1 FQ27 print Wed 5/20 AMC — within 10-day AND 60-day window — broad AI-infrastructure-tape correlation including FTNT cybersecurity-AI exposure
+- AMAT Q2 print Thu 5/14 AMC — within 60-day window — semicap-equipment AI-tape
+- AVGO Q2 print Wed 6/4 AMC — within 60-day window
+- FOMC June 16-17 rate-cut surprise — broad risk-on amplifier
+- JPMorgan TMT conference mid-May / BofA Tech early-June
+- **5-7 potential gap-up reversal vectors over 60-day window**
+
+(ι) **Move EXTENDED Day-1 contradicts mean-reversion-down thesis.** Day-1 absolute extension +$6.10/+5.65% beyond Day-0 close = market did NOT fade, EXTENDED. SHORT mean-reversion-down requires market reverses Day-1 EXTENSION direction; structurally implausible given +26.82% retention through Day-1 + multi-firm bullish ratification + cybersecurity-sector-tape sympathy.
+
+(κ) **PT cluster $110-115 + Q2 guide above-cons + raised FY guide + cybersecurity-sector-tape favorable backdrop creates structural floor.** SHORT mean-reversion target to pre-print Wed $89.95 = -21% from Fri $114.07 (full reversal of +26.82% retention); structurally implausible given multi-firm sell-side bullish-raises + raised forward guide + cybersecurity-peer-sympathy rally. Morgan Stanley $80 outlier is single-firm bear-thesis that hasn't gained consensus traction.
+
+(λ) **SHORT convergence target structurally weak under criterion 3 closed-list rev 14.** Same closed-list constraints apply symmetrically:
+- (a) Numerical SHORT target: pre-event Wed $89.95 = -21% (structurally implausible per above); MS Underweight $80 = -30% (single-firm-outlier basis)
+- (b) Q2 outside 60-day window; FOMC mismatched; no index-inclusion trigger (already indexed)
+- **SHORT mean-reversion target structurally weak with PT cluster floor + raised-guide structural floor + cybersecurity-sector-tape favorable; criterion 3 closed-list absent admissible SHORT target.**
+
+### Effect on book
+
+No effect. No order staged. Strategy B remains in ACTIVATE state with three open positions (IBM, HCA, META) and zero staged orders. Strategy B sector concentration unchanged: IT Services 1/3 (IBM); Health Care Facilities 1/3 (HCA); Comm Services / IMS 1/3 (META); **IT / Software / Systems Software 0/3** (where FTNT would have sat — distinct sub-industry from DDOG Application Software per S&P GICS 45103020 vs 45103010); IT / Software / Application Software 0/3 (post-DDOG averted); Industrials / Passenger Ground Transportation 0/3 (post-UBER); Health Care / Pharmaceuticals / Animal Health 0/3 (post-ZTS); Consumer Discretionary / Restaurants 0/3 (post-DASH/SHAK); IT / Electronic Manufacturing Services 0/3 (post-FLEX); IT / Technology Hardware Storage & Peripherals 0/3 (post-SMCI); IT / Semiconductors 0/3 (post-ARM); IT / Electronic Components 0/3 (post-GLW); Consumer Discretionary / Household Appliances 0/3 (post-WHR); others 0/3.
+
+### Pending queue updated
+
+- ~~FTNT B-thesis construction~~ COMPLETE — NO-GO sub-pattern 1 CLEAN single-pattern routing INSTANCE #11 at MODERATE-MAGNITUDE-TIER with BEARISH-DISSENT CAVEAT + criterion 3 closed-list absent admissible target.
+- 10-day post-event entry window for FTNT expires Wed 2026-05-20 (10 trading days from Wed 5/6 = Day 0; today Tue 5/12 = Day 4 of 10).
+- **6 same-day completions Tue 5/12** (CEG re-screen 09:00 + UBER 11:00 + ZTS 11:00 + SHAK 13:00 + DDOG 14:00 + **FTNT (this session, 15:00) ✓**) = **EQUALS Mon 5/11 6-disposition new-high-water-mark precedent**.
+- No calendar event scheduled to revisit FTNT within window.
+
+### References
+
+- Strategy.md (B section + criterion 5 cross-strategy-holding constraint); AI_Trading_Foundation.md (2.4/2.13/2.20); Operating_Protocols.md §1/§2/§3/§8/§9; Portfolio_Ledger.md; Regime_State.md; Watchlist.md (FTNT NOT listed).
+- Decision_Log.md 2026-05-12 DDOG NO-GO (sub-pattern 1 CLEAN single-pattern INSTANCE #10 at MAXIMUM-MAGNITUDE-TIER — direct-template precedent for FTNT INSTANCE #11 at MODERATE-magnitude tier with bearish-dissent caveat).
+- Decision_Log.md 2026-05-11 FLEX NO-GO (layered-1+3 SEVENTH at MAX magnitude); 2026-05-07 AMD NO-GO (layered-1+3 THIRD); 2026-05-11 GLW NO-GO (layered-1+3 FOURTH).
+- Decision_Log.md 2026-05-01 BE NO-GO + 2026-05-02 CAT NO-GO (CLEAN single-pattern 1 at moderate magnitude — direct-template precedents).
+- Decision_Log.md 2026-05-02 TEAM NO-GO (valuation-reset-but-not-narrative-reset shares split-sell-side dimension with FTNT bearish-dissent caveat).
+- Decision_Log.md 2026-05-12 UBER NO-GO (candidate sub-pattern 9 split-sell-side-response first instance — FTNT shares split-sell-side dimension at higher-magnitude cluster).
+- Fortinet Q1 2026 earnings release IR (Wed 5/6 AMC 4:30 PM ET); Investing.com / AOL / Motley Fool / Globe and Mail / Yahoo / StockTitan / One News Page transcripts + coverage; TradingKey FTNT 5/7 +20.34% move signal; Daily Political Q2 guidance + UBS strong appreciation; TickerReport Q2 guidance; MarketBeat earnings + forecast; Public.com forecast; stockanalysis.com FTNT historical-prices + analyst forecast (primary verified).
+
+### Theater-check on this orchestrator review
+
+(a) **Criterion 1 measurement correct?** Yes — Wed 5/6 $89.95 → Thu 5/7 $107.97 = +20.03% Day-0 canonical AMC-print C/C (primary-source verified); 4.01× threshold cushion = moderate cushion. **Session-prompt's "5/7 AMC" + "Day 2 close (5/8 Fri)" both incorrect non-binding corrections** — actual print Wed 5/6 AMC 4:30 PM ET; Day 0 = Thu 5/7 close.
+
+(b) **Sub-pattern 1 INSTANCE #11 CLEAN single-pattern at MODERATE-magnitude tier with BEARISH-DISSENT caveat justified?** Yes — Citi $90→$115 +27.8% + Susquehanna $90→$115 +27.8% paired raises = MODERATE-magnitude (vs DDOG MEGA-tier Stifel +90.6%); Morgan Stanley Underweight $80 + BMO Hold = bearish dissent caveat; sub-pattern 3 fingerprint NEGATIVE (pre-print mild-stable; no rally absorption). Fits BE/CAT/DDOG CLEAN single-pattern precedent at MODERATE-magnitude tier with split-sell-side caveat (TEAM/UBER precedent dimension).
+
+(c) **NEW evidence layer "stock TRADING AT post-raise PT cluster" as FULL SATURATION signature established correctly?** Yes — Fri $114.07 vs Citi/Susquehanna $115 = +0.8% remaining upside = canonical FULL SATURATION signature; CLEANEST documented stock-at-PT-cluster instance observed in any B candidate this cycle. NEW evidence layer for W5 taxonomy.
+
+(d) **Criterion 3 closed-list analysis exhaustive?** Yes — numerical PT chase = +0.8% FULL SATURATION; Q2 outside window from 5/6 = 7/6; FOMC mismatched; already indexed S&P 500 + Nasdaq 100 + Russell 1000 since 2018. Absent admissible target.
+
+(e) **LONG framing steel-manned?** Yes — multi-element beat-and-raise + raised forward guide + cybersecurity-sector-tape favorable + Citi/Susquehanna $115 PT + UBS bullish + paired +27.8% raises steel-manned. Defeated on FULL SATURATION + Day-1 EXTENSION + sub-pattern 1 trap doctrine + split-sell-side cluster cohesion weakened + criterion 3 absent target.
+
+(f) **SHORT framing dismissed properly?** Yes — 19→20 NO-GO B-short string + 2.20-trap + 5-7 KL #7 gap-up vectors (CRWD/PANW peer prints / NVDA 5/20 / AMAT 5/14 / AVGO 6/4 / FOMC June / JPM TMT / BofA Tech) + Day-1 EXTENSION contradicts mean-reversion + cluster + raised-guide structural floor + criterion 3 absent SHORT target.
+
+(g) **KL #12 assessed?** Yes — 4-long-book pairwise avg ~0.25-0.40 = MODERATELY UNFAVORABLE; less elevated than DDOG/ARM/GLW unfavorable baselines; secondary observation.
+
+(h) **GICS sub-industry verified vs DDOG?** Yes — FTNT GICS Systems Software 45103020 (cybersecurity software per S&P standard for FTNT/PANW/CRWD); DDOG GICS Application Software 45103010 (observability/data-platform). DISTINCT sub-industries per S&P GICS; both 0/3 at session-end; IT-sector 1/3 unchanged.
+
+(i) **Sub-pattern 1 instance count progression correct?** Yes — DDOG was instance #10 earlier this session (5/12 14:00); FTNT is instance #11 (5/12 15:00). Same-day SECOND CLEAN single-pattern instance — both at different magnitude tiers (DDOG MEGA / FTNT MODERATE).
+
+(j) **6-disposition same-day Tue 5/12 ceiling reached?** Yes — CEG re-screen ✓ + UBER ✓ + ZTS ✓ + SHAK ✓ + DDOG ✓ + **FTNT (this session) ✓** = 6 same-day completions = EQUALS Mon 5/11 6-disposition new-high-water-mark precedent.
+
+(k) **Deferral considered?** No — criterion 4 dual-framing decisive failure + criterion 3 closed-list absent target = clean NO-GO.
+
+Modulo these eleven considerations, the orchestrator review converges on NO-GO with HIGH (~80-85%) confidence — between DDOG (~85-95% MAX-tier) and BE/CAT (~75-85% moderate-tier) reference precedents; moderate-range given (a) MODERATE-magnitude sub-pattern 1 (less extreme than DDOG/FLEX/AMD MEGA-tier) + (b) FULL SATURATION signature at PT cluster (cleanest documented; strong NO-GO support) + (c) bearish-dissent caveat partially weakening cluster cohesion (Morgan Stanley $80 single-firm-outlier).
+
+### Compaction-survival note
+
+**Strategy B FTNT Q1-2026-print disposition 2026-05-12 ~15:00 MT (calendar slot Tue 5/12; rescheduled from Fri 5/8 15:00):** **NO-GO (DECLINE) via criterion 4 dual-framing decisive failure with sub-pattern 1 CLEAN single-pattern routing INSTANCE #11 at MODERATE-MAGNITUDE-TIER with BEARISH-DISSENT CAVEAT + NEW evidence layer "stock TRADING AT post-raise PT cluster" FULL SATURATION signature + criterion 3 closed-list rev 14 absent admissible target.**
+
+**Event details (Wed 2026-05-06 AMC 4:30 PM ET — NOT Thu 5/7 AMC as session-prompt stated):** Fortinet Q1 2026 results — non-GAAP EPS $0.82 vs cons $0.62 +32% beat; revenue $1.85B +20% Y/Y vs cons $1.73B +6.9% above-consensus; adj operating margin 35.8%; **FY26 revenue guide raised** $7.71-$7.87B (from prior $7.5-$7.7B = +1.7-2.2% midpoint above prior); **billings guide raised** $8.8-$9.1B (from prior $8.4-$8.6B = +4.5% midpoint above prior); **Q2 above-consensus guide** adj EPS $0.72-$0.76 / revenue $1.83-$1.93B (both above Street). Multi-element substantive beat-and-raise.
+
+**Stock price action (primary-source verified via stockanalysis.com):** Mon 5/4 $89.24 / Tue 5/5 $89.92 / Wed 5/6 $89.95 — pre-print Wed (print AMC Wed 4:30 PM ET) / **Thu 5/7 $107.97 (+20.03% Day-0 canonical AMC-print C/C; 4.01× threshold cushion POSITIVE)** / Fri 5/8 $114.07 (+5.65% Day-1 EXTENSION beyond Day-0). Net Wed→Fri = +26.82% retention with EXTENSION through Day-1 = 133.9% retention vs Day-0 gain. Day-1 absolute extension $114.07 - $107.97 = **+$6.10 / +5.65% additional gain beyond Day-0 = MODERATE Day-1 reference** (less than DDOG +$11.43/+6.06% established earlier this session post-DDOG 14:00).
+
+**Session-prompt date + day-count clarifications (non-binding corrections):** Session prompt incorrectly cited "5/7 AMC" (actual Wed 5/6 AMC 4:30 PM ET per Investing.com earnings transcript + Motley Fool URL `/2026/05/06/` + Fortinet IR press release) and "Day 2 close (5/8 Fri) +20.03%" (actual Thu 5/7 Day-0 +20.03%; Fri 5/8 Day-1 +5.65% additional). Magnitude unambiguously clears 5% threshold either way.
+
+**Post-print sell-side PT-raise wave (sub-pattern 1 MODERATE-magnitude with BEARISH dissent):**
+- Citi $90 → $115 (+27.8%) on May 8 — paired raise
+- Susquehanna $90 → $115 (+27.8%) on May 8 — paired raise
+- **Morgan Stanley reiterated Underweight $80** on May 8 — **BEARISH DISSENT** maintained low PT despite multi-element beat-and-raise
+- BMO Capital Hold May 7 — neutral-dissent
+- UBS bullish forecast May 9
+- Additional firms likely raised (specific magnitudes not all extracted)
+- **2 paired +27.8% raises + 2 dissent firms (Morgan Stanley Underweight $80 + BMO Hold) + multiple unidentified bullish raises = MODERATE-magnitude sub-pattern 1 fingerprint with bearish-dissent caveat**; structurally less extreme than DDOG MEGA-tier (Stifel +90.6%); cluster mean ex-MS-outlier ~$110-115; stock at Fri $114.07 = **AT or ABOVE cluster mean** = canonical FULL SATURATION signature
+
+**NEW evidence layer "stock TRADING AT post-raise PT cluster" = canonical FULL SATURATION signature.** Fri $114.07 vs Citi/Susquehanna $115 = **+0.8% remaining sell-side-implied upside** — cleanest documented stock-at-PT-cluster instance observed in this experiment cycle. NEW evidence layer for W5 taxonomy extraction (FTNT first instance; pending second-instance validation).
+
+**Pre-event rally context check (sub-pattern 3 fingerprint NEGATIVE):** Pre-print Mon-Wed mild-stable trajectory +0.81% (~flat); no pre-print rally absorption like AMD/GLW/ARM/FLEX layered-1+3 cases. **CLEAN sub-pattern 1 single-pattern routing** (joins BE 5/1 / CAT 5/2 / DDOG 5/12 same-day clean-routing precedent).
+
+**Sub-pattern 1 INSTANCE #11 CLEAN single-pattern routing at MODERATE-MAGNITUDE-TIER distinguishing features:**
+- MODERATE magnitude (2 paired +27.8% raises) — between BE/CAT-tier moderate and DDOG-tier MEGA
+- BEARISH-DISSENT CAVEAT (Morgan Stanley Underweight $80 + BMO Hold = split-sell-side dimension within bullish-tilted cluster)
+- FULL SATURATION signature (stock AT PT cluster = +0.8% remaining upside; cleanest documented instance)
+- Same-day SECOND CLEAN single-pattern instance (DDOG #10 at 14:00 MEGA-tier; FTNT #11 at 15:00 MODERATE-tier)
+
+**Conviction in NO-GO: HIGH (~80-85%)** — between DDOG (~85-95% MAX-tier) and BE/CAT (~75-85% moderate-tier) reference precedents; moderate-range given (a) MODERATE-magnitude sub-pattern 1; (b) FULL SATURATION signature at PT cluster (strong NO-GO support); (c) bearish-dissent caveat partially weakening cluster cohesion. Theater-check CONVERGENT across all 11 review axes.
+
+**Sub-pattern routing taxonomy update.** **Sub-pattern 1 advances to 11 instances** (BE/CAT/AXSM/PINS/AMD/TSN/GLW/ARM/FLEX/DDOG/**FTNT**). **Layered-1+3 variant unchanged at 7 instances** (FTNT CLEAN single-pattern). **Sub-pattern 1 most-extreme single-firm PT raise reference UNCHANGED at DDOG-Stifel +90.6%** (FTNT's largest single-firm raise was Citi/Susquehanna +27.8% = moderate-tier). **Sub-pattern 1 most-extreme Day-1-absolute-extension reference UNCHANGED at DDOG +$11.43/+6.06%** (FTNT +$6.10/+5.65% = moderate Day-1 reference). **NEW evidence layer "stock TRADING AT post-raise PT cluster" FULL SATURATION signature** flagged for W5 taxonomy extraction (FTNT first instance; ~+0.8% remaining sell-side-implied upside; cleanest documented stock-at-PT-cluster instance; pending second-instance validation). **AI-narrative cluster ratification advances to 7 instances** (GLW/ARM/SMCI/FLEX/AMD/DDOG/**FTNT**) — cybersecurity-AI exposure cross-confirmed via post-print rally.
+
+**Experiment Strategy B totals advance to 3 GO + 40 NO-GO = 7.0% / 93.0% hit rate** (from 3/39 = 7.1%/92.9% post-DDOG). Long-direction NO-GO breakdown: criterion 1 mechanical 3; instrument-rule 2; **criterion 4 decisive advances to 35 with FTNT** (from 34). **The 19-NO-GO B-short precedent string extends to 20 with FTNT-SHORT formal dismissal.** 20-NO-GO B-short streak duration: 14 trading days (2026-04-23 BE through 2026-05-12 FTNT).
+
+**Strategy B sector cap usage at session-end 2026-05-12 ~15:00 MT post-FTNT:** unchanged from post-DDOG state. IT Services 1/3 (IBM); Health Care Facilities 1/3 (HCA); Comm Services / IMS 1/3 (META); **IT / Software / Systems Software 0/3** (FTNT would have been 1/3 sub-industry; distinct from DDOG Application Software 0/3 / IT-sector 1/3 → 2/3 within per-sector cap had GO disposed); IT / Software / Application Software 0/3 (post-DDOG); other sub-industries 0/3 (post-Mon/Tue NO-GOs). KL #12 MODERATELY UNFAVORABLE for FTNT (4-long-book pairwise avg ~0.25-0.40; less elevated than DDOG/ARM/GLW unfavorable baselines; comparable to mid-range) — secondary.
+
+**No order staged. No portfolio-state change.** 2% next-trade sizing $37.77 unchanged. Window expires Wed 2026-05-20. Cybersecurity-peer prints + AMAT 5/14 + NVDA 5/20 + AVGO 6/4 + AI-infrastructure conferences within 60-day window create FTNT-sympathy gap-up vectors per KL #7.
+
+**Tue 5/12 same-day B thesis-construction queue saturation status post-FTNT (FINAL Tue slot):** CEG re-screen 09:00 ✓ + UBER 11:00 ✓ + ZTS 11:00 ✓ + SHAK 13:00 ✓ + DDOG 14:00 ✓ + **FTNT (this session, 15:00 calendar slot) ✓** = **6 same-day NO-GOs Tue 5/12** = EQUALS Mon 5/11 6-disposition new-high-water-mark precedent. Two consecutive trading days at 6-disposition ceiling = sustained operator capacity at maximum tier. Wed 5/13: AKAM 09:30 / MNST 11:00 / AXON 13:00 / NET 10:15 (per W4 5/9 scheduling) + downstream Thu/Fri continued queue.
