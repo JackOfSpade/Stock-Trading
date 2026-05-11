@@ -8734,3 +8734,208 @@ Theater-check CONVERGENT across all 9 review axes: sub-pattern routing (layered-
 **No order staged. No portfolio-state change.** 2% next-trade sizing $37.77 unchanged. Window expires Wed 2026-05-20. AMAT Q2 print Thu 5/14 + NVDA Q1 FQ27 print Wed 5/20 + AVGO Q2 print Wed 6/4 = AI-infrastructure peer prints WITHIN 60-day window create FLEX-sympathy gap-up vectors per KL #7; routine Daily.md scan picks up fresh ≥5% C/C trigger if FLEX-sympathy move materializes — distinct event evaluated per Operating Protocols §3.
 
 **Same-day B thesis-construction queue saturation status:** GLW 09:00 ✓ + DASH 13:00 ✓ + ARM (post-DASH) ✓ + SMCI (post-ARM 13:00) ✓ + WHR (post-SMCI 14:00) ✓ + **FLEX (post-WHR, calendar 15:00 MT) ✓** = **6 same-day NO-GOs Mon 5/11** = NEW ALL-TIME HIGH-WATER MARK (materially exceeds Thu 5/7 / Fri 5/8 same-day 3+4-NO-GO precedent ceilings). Tue 5/12: CEG re-screen 09:00 + UBER 11:00 + ZTS + SHAK + DDOG 14:00 + FTNT 15:00 = 6 sessions stacked Tue. Operator-capacity vigilance: 6-disposition same-day pace = ALL-TIME HIGH-WATER MARK; downstream sessions should consider deferral if operator capacity binds.
+
+---
+
+## 2026-05-12 (Tue, ~11:00 MT, ZTS session per calendar slot per D2 5/7 conversion) Strategy B thesis construction outcome — ZTS (Zoetis) NO-GO via criterion 4 dual-framing decisive failure with **sub-pattern 4 variant 4a "structural-overhang-persistence" instance** (competitive-erosion-by-generic-competition + macro-consumer-pricing-sensitivity overlay) — fits V/MDLZ regulatory/cocoa-cost/macro 4a family signature; multi-quarter resolution timeline outside 60-day window; compounded by criterion 3 closed-list rev 14 absent admissible convergence target + Day-1 CONTINUED-DOWN trajectory + post-print sell-side PT CUTS (opposite of sub-pattern 1 PT-raise wave); no order staged
+
+**Trigger:** Calendar-event-scheduled Strategy B thesis construction for ZTS, Tue 2026-05-12 11:00–11:45 MT (per Decision_Log 2026-05-07 D2 conversion entry). Calendar prompt explicitly invites qualifying-event sub-test ("verify catalyst is event-driven not commentary-only") given session-prompt-stated magnitude "-7.8%" at "lower-bound of B-eligibility (–5–10% range)" — primary-source verification this session reveals (a) the close-to-close magnitude is materially larger than stated (-21.50% Day-0 vs session-prompt -7.8% = ~3× understatement) AND (b) the catalyst is unambiguously event-driven multi-element earnings + FY guide cut event, NOT commentary-only.
+
+**Session-prompt magnitude discrepancy (corrected inline; non-binding on disposition direction but materially shifts magnitude framing).** Session prompt cites "~−7.8% on Q1 + cautious commentary" and frames magnitude as "lower-bound of B-eligibility (–5–10% range)." Primary-source verification (stockanalysis.com historical-prices Tue 5/5 - Fri 5/8):
+- Tue 5/5 close: $112.54 (-0.12%)
+- Wed 5/6 close: $111.22 (-1.17%) — pre-print Wed (print BMO Thu 5/7 at 8:30 AM ET per Zoetis IR press release)
+- **Thu 5/7 close: $87.31 (-21.50% Day-0 BMO canonical C/C)** — NEGATIVE direction with 4.30× threshold cushion in magnitude
+- Fri 5/8 close: $82.83 (-5.13% Day-1 CONTINUED DOWN move)
+- Net Wed→Fri = $111.22 → $82.83 = **-25.51% cumulative over 2 trading days** (continuation-down through Day-1; opposite of mean-reversion-up signal)
+- Session-prompt's "-7.8%" understates actual -21.50% Day-0 magnitude by **~3×** (one of the largest session-prompt magnitude discrepancies observed this cycle); pattern matches prior session-prompt magnitude-discrepancy corrections (FLEX 5/11 +33%→+39.69%; GLW 5/11 +17%→+12.01%; ARM 5/11 +13%→-10.11% Day-0; DASH 5/11 +9.6%→+2.01% [DASH was opposite-direction discrepancy from intraday peak])
+- Window expires Thu 2026-05-21 (10 trading days from event-day Thu 5/7 = Day 0; today Tue 5/12 = Day 3)
+
+**Qualifying-event sub-test resolution: CLEANLY QUALIFYING as event-driven multi-element Q1 earnings + FY guide cut event.** Session prompt's commentary-vs-event sub-test is explicit invitation to discriminate; primary-source verification shows multi-element event-driven hard information stack:
+1. **Q1 adj EPS $1.53 vs cons $1.63 MISS** (-$0.10 / -6.13% miss; hard backward-looking event-content)
+2. **Q1 revenue $2.3B flat on organic operational basis** (price +2% / volume -2% mix)
+3. **US Companion Animal segment -11% to $865M** (hard segment-level information; large segment with material Y/Y decline)
+4. **International Companion Animal +7% to $654M** (offsetting positive; geographic divergence)
+5. **Livestock segment +15% to $720M** (offsetting positive; strong vaccine demand cattle/swine/poultry/fish)
+6. **Generic competition on Convenia, Cerenia, lower Librela sales** (hard structural competitive information)
+7. **Heightened competitive pressure on Dermatology franchise + Simparica Trio** (hard structural competitive information)
+8. **FY26 guidance CUT** — revenue guide $9.68-$9.96B (organic op +2-5%); adj EPS $6.85-$7.00 (vs prior expectations higher; UBS PT $130→$99 -23.8% post-print confirms guide-cut magnitude in sell-side calibration); adj net income $2.87-$2.95B (+2-6% growth)
+9. **Discretionary spending tightening + driving organizational efficiencies** (cost-cutting capital-allocation signal beyond pure guide-cut)
+10. **Neogen animal genomics business acquisition announcement** (concurrent corporate-action; growth investment with multi-quarter integration timeline)
+
+The -21.50% Day-0 reaction is unambiguously event-driven by multi-element hard information disclosure — NOT commentary-only. Sub-test passes; criterion 1 qualifying-event sub-test routes to QUALIFYING. Disposition routes through criterion 4 dual-framing analysis on substantive grounds.
+
+**Inputs:** Strategy.md Strategy B section (entry criteria 1-5; criterion 1 ≥5% C/C either direction with qualifying-event sub-test; criterion 3 closed-list rev 14 strict enumeration; criterion 4 information-vs-sentiment dual-framing test; criterion 5 sector cap; instrument rule ≥$2B mcap "Long or short"; pre-mortem rev 7); AI_Trading_Foundation.md (2.4 / 2.13 / 2.20); Operating_Protocols.md §1 HOIP / §2 commission-disregarded / §3 NO-GO records context (no prior ZTS NO-GO) / §8 conviction-calibration; **Portfolio_Ledger.md** (state-as-of post-FLEX-NO-GO 2026-05-11: B NAV $1,888.69; 3 longs IBM/HCA/META; sector cap IT Services 1/3, Health Care Facilities 1/3, Comm Services 1/3, **Health Care / Pharmaceuticals / Animal Health 0/3**, all others 0/3 modulo prior NO-GO sub-industries; 2% sizing $37.77; B router ACTIVATE); Regime_State.md (B router ACTIVATE per SPY NEUTRAL + VIX 17.05 NORMAL); Decision_Log.md prior precedents critical:
+- **V 2026-04-29 NO-GO + MDLZ 2026-04-29 NO-GO (sub-pattern 4 variant 4a structural-overhang-persistence — V regulatory / MDLZ cocoa-cost macro overhang) — direct-template precedent for ZTS 4a competitive-erosion + macro-consumer-pricing-sensitivity overlay**
+- TSN 2026-05-08 NO-GO (variant 4a Beef-cycle structural-temporal-overhang within layered-1+3+4 first instance) — ZTS is CLEAN single-pattern 4a routing without layered-1+3 fingerprint
+- UPS 2026-05-05 NO-GO (variant 4b structural-competitive-threat-emergence-at-non-print-catalyst) — ZTS's competitive-pressure is pre-existing not non-print-catalyst-emerging
+- NCLH 2026-05-05 NO-GO (variant 4c guide-cut-on-pre-existing-macro-overhang) — ZTS shares guide-cut dimension but ZTS's underlying driver is competitive-erosion not macro-fuel-cost
+- SMCI 2026-05-11 NO-GO (variant 4d active-securities-litigation-overhang) — distinct dimension
+- ARM 2026-05-11 NO-GO (variant 4e structural-supply-side-constraint-emergence-at-print) — distinct dimension
+- WHR 2026-05-11 NO-GO (variant 4c SECOND instance + dividend-suspension overlay) — recent same-week 4c precedent with cautionary-guide
+- 15-NO-GO B-short precedent string in current risk-on regime post-FLEX
+- "NO-GO records are context, not barriers" §3 (no prior ZTS NO-GO record)
+- Watchlist.md (ZTS NOT listed)
+- DOC 2026-05-07 NO-GO ambiguous-routing first-instance — ZTS does NOT match DOC's "depressed-name pre-print-bearish-positioning-unwind" because ZTS was at $111-113 pre-print (not depressed; near 52-wk-high range; multi-year strong performer pre-print)
+
+**Web-search primary documents (verified this session):**
+- Zoetis Q1 2026 results press release IR (Thu 2026-05-07 BMO 8:30 AM ET): https://news.zoetis.com/press-releases/press-release-details/2026/Zoetis-Announces-First-Quarter-2026-Results/default.aspx
+- Zoetis Q1 2026 transcript Motley Fool: https://www.fool.com/earnings/call-transcripts/2026/05/07/zoetis-zts-q1-2026-earnings-transcript/
+- Zoetis Q1 2026 transcript Globe and Mail: https://www.theglobeandmail.com/investing/markets/stocks/ZTS/pressreleases/1783807/zoetis-zts-q1-2026-earnings-transcript/
+- Zoetis Q1 2026 earnings call presentation Seeking Alpha: https://seekingalpha.com/article/4900207-zoetis-inc-2026-q1-results-earnings-call-presentation
+- StockTitan ZTS 8-K Q1 2026 results mixed trends and new guidance: https://www.stocktitan.net/sec-filings/ZTS/8-k-zoetis-inc-reports-material-event-06288aa1b11d.html
+- Quiver Quantitative ZTS Q1 2026 earnings: https://www.quiverquant.com/news/ZOETIS+($ZTS)+Releases+Q1+2026+Earnings
+- Panabee Zoetis Q1 2026 news & analysis: https://www.panabee.com/news/zoetis-earnings-q1-2026
+- Alphastreet ZTS Q1 2026 earnings results: https://news.alphastreet.com/zoetis-inc-zts-q1-2026-earnings-results/
+- Meyka ZTS earnings preview: https://meyka.com/blog/zts-earnings-preview-zoetis-q1-2026-on-may-7-0605/
+- RTTNews "Zoetis Shares Plunge 12.8% As FY26 Outlook Slashed; Q1 EPS Rises" (post-print coverage): https://www.rttnews.com/3648891/zoetis-shares-plunge-12-8-as-fy26-outlook-slashed-q1-eps-rises.aspx
+- Benzinga "Zoetis, Insmed, And HubSpot Are Among Top 10 Large-Cap Losers Last Week" (May 4-8 week summary): https://www.benzinga.com/markets/market-summary/26/05/52437253/zoetis-insmed-and-hubspot-are-among-top-10-large-cap-losers-last-week-may-4-may-8-are-the-
+- TS2 "Zoetis Stock Plunge: The Pet-Care Slowdown Wall Street Can't Ignore": https://ts2.tech/en/zoetis-stock-plunge-the-pet-care-slowdown-wall-street-cant-ignore/
+- stockanalysis.com ZTS historical-prices (primary verified): https://stockanalysis.com/stocks/zts/history/
+
+### Decision
+
+**ZTS — NO-GO (DECLINE).** Criterion 4 dual-framing decisive failure with **sub-pattern 4 variant 4a "structural-overhang-persistence" instance** (competitive-erosion-by-generic-competition + macro-consumer-pricing-sensitivity overlay) — fits V/MDLZ regulatory/cocoa-cost-macro 4a family signature with ZTS-specific structural drivers (Convenia/Cerenia/Librela generic competition + Dermatology/Simparica Trio competitive pressure + macroeconomic-driven price-sensitivity in pet-spending segment). The -21.50% Day-0 close-to-close drop is overwhelmingly information-driven by multi-element hard structural information disclosure (EPS miss + US Companion Animal -11% segment-level decline + generic competition + FY26 guide CUT + discretionary spending tightening + Neogen acquisition announcement). Multi-quarter resolution timeline for competitive-erosion + macro-consumer-sensitivity drivers (generic-competition stabilization typically 4-8+ quarters; macro consumer-pricing-sensitivity multi-quarter macroeconomic-condition-dependent) — structurally outside Strategy B's 60-day mean-reversion window.
+
+Day-1 continued -5.13% to $82.83 = continuation-down through Day-1; market still pricing information at Day-2 (today Day-3 mid-session). Compounded by criterion 3 closed-list rev 14 absent admissible convergence target (Q2 2026 next earnings ~early-August OUTSIDE 60-day window from event-day 5/7 = 7/6; no FDA; FOMC June 16-17 within window but structurally mismatched against idiosyncratic ZTS competitive-erosion thesis; ZTS already in S&P 500 since 2013 + S&P 100 since 2020 + Russell 1000 — no fresh index-inclusion trigger). Post-print sell-side PT CUTS (UBS $130→$99 -23.8%; multiple firms lowering targets) = OPPOSITE of sub-pattern 1 PT-raise wave; consistent with information-driven repricing-down rather than sentiment-overshoot to fade.
+
+Criterion 1 mechanically clears at -21.50% Day-0 C/C in NEGATIVE direction (4.30× threshold cushion; second-highest magnitude observed in any negative-direction B candidate this cycle after ARM's -10.11%); criterion 5 sector cap clears (Health Care / Pharmaceuticals / Animal Health 0/3 sub-industry; Health Care sector 1/3 post-HCA; clean per-sub-industry-cap addition averted on NO-GO).
+
+### Mechanical eligibility detail
+
+- **Instrument rule:** ZTS = Zoetis Inc., NYSE-listed common (US-listed); US-incorporated Delaware C-corp; ~451M shares outstanding; market cap **~$37.4B at Fri 5/8 close $82.83** (pre-print Wed mcap ~$50.2B at $111.22). Well above $2B floor by ~19-25× cushion. 30-day ADV multi-million-shares/day on S&P 500 + S&P 100 + Russell 1000 component. Long-or-short permitted; 2% sizing $37.77; no options.
+- **Criterion 1:** Event Thu 2026-05-07 BMO (8:30 AM ET conference call). Pre-event reference Wed 5/6 close $111.22 → Thu 5/7 close $87.31 = **-21.50% Day-0 BMO C/C** (canonical BMO-print measurement: pre-print regular-session-close → first post-print regular-session-close = same-trading-day's close for BMO prints; Thu close already reflects full session reaction to BMO print). Cushion 4.30× over 5% floor in NEGATIVE direction. Alternative reference windows: Tue 5/5 → Wed 5/6 = -1.17% (pre-print fail); Tue 5/5 → Thu 5/7 2-day combined = $112.54 → $87.31 = -22.43% (still clears); Tue 5/5 → Fri 5/8 3-day = $112.54 → $82.83 = -26.40% (deeper drop). Canonical Wed→Thu -21.50% is binding reading. Today Tue 5/12 = Day 3 of 10 (event Day 0 Thu 5/7; Day 1 Fri 5/8; Day 2 Mon 5/11; Day 3 Tue 5/12; window expires Thu 5/21).
+- **Criterion 5:** No A position; ZTS not on A queue. GICS **Health Care sector / Pharmaceuticals industry / Pharmaceuticals sub-industry** (S&P GICS classification; Animal Health is sub-segment within Pharmaceuticals; technically Animal Health is GICS sub-industry 35202010 under Pharmaceuticals). Currently 0/3 used in Pharmaceuticals sub-industry; Health Care sector 1/3 (HCA Health Care Facilities). **ZTS-add scenario would yield Health Care sector 2/3 within Strategy.md 3-per-sector cap.** Within cap on per-sector and per-sub-industry basis. KL #12 LONG-correlation: ZTS-HCA ~0.20-0.35 (both Health Care but different sub-industries — Hospitals vs Animal Health pharma); ZTS-IBM ~0.10-0.20 (different sectors, low); ZTS-META ~0.10-0.20 (different sectors, low). 4-long-book pairwise avg ~0.15-0.25 = **KL #12 FAVORABLE** (comparable to WHR/SMCI/TSN-favorable baselines; less correlated than ARM/GLW unfavorable). Secondary observation.
+
+### Decisive flaw analysis (criterion 4 sub-pattern 4 variant 4a binding)
+
+**Sub-pattern 4 variant 4a "structural-overhang-persistence" — ZTS instance distinguishing features within 4a family:**
+- V 4a first: regulatory overhang (DOJ AdTech / FTC; macroeconomic-condition independent)
+- MDLZ 4a second: cocoa-cost macro overhang (commodity-cost pass-through; macroeconomic-condition dependent)
+- TSN 4a third (within layered-1+3+4): Beef-cycle structural-temporal overhang (cattle herd 75-year low + 2025 calf crop smallest since 1941; multi-quarter cyclical)
+- **ZTS 4a fourth (clean single-pattern):** competitive-erosion + macro-consumer-pricing-sensitivity dual-driver overhang
+  - Generic competition on Convenia, Cerenia, Librela = STRUCTURAL competitive overhang (typically 4-8+ quarter erosion timeline before competitive equilibrium reached)
+  - Dermatology franchise + Simparica Trio competitive pressure = STRUCTURAL competitive overhang (multi-product portfolio facing emerging competitors)
+  - Macroeconomic-driven price sensitivity in pet-spending segment (US Companion Animal -11% reflects consumer-discretionary downshift) = MACRO overhang (multi-quarter resolution per macro condition normalization)
+  - **Common 4a signature: structural overhang persisting multi-quarter; resolution requires structural-condition reversal (competitive equilibrium OR macro consumer normalization) NOT earnings recovery within 60-day window**
+
+(α) **Multi-element event-driven hard information stack** — 10 distinct hard-information elements documented (EPS miss + segment-level US Companion -11% + International Companion +7% + Livestock +15% + generic competition multi-product + dermatology/Simparica competitive pressure + FY guide CUT + adj EPS guide $6.85-$7.00 + discretionary spending tightening + Neogen acquisition). The -21.50% Day-0 reaction is multi-factor information-driven repricing, not sentiment-overshoot on single-element noise.
+
+(β) **FY26 guidance CUT confirms structural information.** Adj EPS guide $6.85-$7.00 was reduced from prior expectations (sell-side post-print PT cuts: UBS $130→$99 -23.8% confirms magnitude of guide-cut reset; multiple firms lowering PTs). Guide cut on competitive-erosion + macro-pet-spending downshift = structural-overhang ratification by management.
+
+(γ) **Post-print sell-side PT CUTS — OPPOSITE of sub-pattern 1 PT-raise wave.** Per RTTNews + Benzinga post-print coverage, multiple analysts lowered PTs; UBS $130→$99 example. This is the CANONICAL sell-side ratification of GUIDE CUT — opposite-direction of sub-pattern 1 fingerprint (positive-direction PT raises after beat-and-raise). The PT-cut wave confirms sell-side cluster shifting downward to recalibrate FY26 expectations; chasing this downward-shifted PT cluster as B convergence target would be the SHORT-direction analog of sub-pattern 1 trap (momentum-extension territory not B mean-reversion).
+
+(δ) **Day-1 CONTINUED-DOWN trajectory confirms market still pricing information.** Post-event trajectory: Wed 5/6 pre-print $111.22 → Thu 5/7 Day-0 $87.31 (-21.50%) → Fri 5/8 Day-1 $82.83 (-5.13% additional decline) → cumulative -25.51% over 2 trading days. Approaching multi-month-low territory (52-wk low historical context need to verify but $82 area is below typical $90-110 trading range). Trajectory pattern is OPPOSITE of mean-reversion-up signal; market still pricing information at Day-1 close; today Day-3 mid-session continues this trajectory direction.
+
+(ε) **Macro-consumer-pricing-sensitivity overlay consistent with broader consumer-spending-deceleration signals.** Management commentary: "challenging operating environment experienced in Q1 and the expectations that carries for the remainder of the year more than offset the contribution from fiscal year alignment" + "Aggregate price benefit was 2%; management expects price contribution to moderate to a 1%-2% range given market sensitivity." Pet-spending downshift is consistent with broader consumer-discretionary signal stack: MCD 5/7 "consumer environment may be getting a little bit worse"; WHR 5/6 "war in Iran resulted in recession-level industry decline in the U.S. via consumer-confidence collapse"; ZTS US Companion -11% adds to macro consumer-spending-deceleration evidence cluster. This is multi-quarter macro-condition overhang, not single-quarter sentiment.
+
+(ζ) **Criterion 3 closed-list rev 14 absent admissible convergence target for LONG mean-reversion thesis.**
+- (a) Numerical price level:
+  - Mean-reversion target Wed pre-print $111.22 = **+34.27% gap-fill from Fri $82.83** (massive gap-fill upside; structurally weak given multi-quarter structural overhang)
+  - Mean-reversion to consensus PT cluster post-cuts (estimate ~$95-105 range after UBS $99 / others $90-105) = +15-27% upside from Fri close; PT cluster ratification of guide cut makes this not sub-pattern 1 trap territory but still depends on macro condition reversal
+  - Pre-print Tue $112.54 = +35.86% (similar to Wed gap-fill; same structural concern)
+- (b) Named-event options:
+  - Next earnings Q2 2026 print ~early-August 2026 — **OUTSIDE 60-day window from event-day Thu 5/7 = Mon 7/6 (60 days; Q2 print typically 8/5-8/7 = outside window by ~4 weeks)**
+  - Next FDA decision: N/A (Zoetis has FDA actions on individual products but no near-term binary catalyst on file matching B's "FDA decision date" enumeration which is typically associated with PDUFA dates for new drug approvals)
+  - Next FOMC June 16-17 = within 60-day window technically, but structurally mismatched against idiosyncratic ZTS competitive-erosion + animal-health thesis; FOMC rate decisions are not direct convergence trigger for ZTS guide-cut
+  - S&P 500 inclusion: ZTS already in S&P 500 since 2013 + S&P 100 since 2020 — NOT fresh trigger
+  - Russell 1000: already included
+  - Nasdaq 100: ZTS is NYSE-listed (not Nasdaq) — not applicable
+- **Net:** Numerical price level option faces structural-overhang persistence with multi-quarter resolution; no admissible named-event within 60-day window. **Criterion 3 closed-list rev 14 effectively absent admissible target.**
+
+**Steel-manning the affirmative LONG case (engaged seriously, defeated):** ZTS at Fri $82.83 represents large absolute and percentage drop from pre-print $111-113 baseline; depressed valuation post-guide-cut may reflect over-reaction; Livestock segment +15% strong; International Companion +7% offsetting US Companion -11%; FY26 guide reflects management baseline-resetting that may prove conservative if competitive dynamics stabilize or macro pet-spending normalizes; mean-reversion target to pre-print $111 = +34% upside structurally large; Neogen acquisition may accelerate Livestock-segment value-creation. **Counter-counter:** (a) Generic competition on Convenia/Cerenia/Librela + dermatology/Simparica competitive pressure are STRUCTURAL multi-quarter dynamics not resolved by 60-day window — even if management baseline proves conservative, the structural-overhang doesn't unwind in 60 days. (b) Macro-pet-spending downshift is reflective of broader consumer-discretionary deceleration confirmed by MCD/WHR/SMCI/etc. concurrent signal cluster — macro condition reversal multi-quarter dependent. (c) Sell-side PT cuts (UBS $130→$99 etc.) ratify guide-cut and recalibrate FY26 expectations DOWNWARD; mean-reversion-up against ratified downward-shifted PT cluster faces 2.20-trap-mirror dynamic (sell-side now believes the stock fair-value is lower; chasing pre-print level requires sell-side cluster to reverse upward within window). (d) Day-1 continued-down trajectory confirms market still pricing information; no sentiment-overshoot bottom reached. (e) Criterion 3 closed-list absent admissible target irrespective of LONG framing edge. The steel-man does NOT defeat the criterion-4 sub-pattern 4 variant 4a structural-overhang binding constraint or criterion-3 absent-target dual lock.
+
+### SHORT framing dismissed (5 axes — SHORT continuation-down momentum from -25.51% extreme)
+
+(η) **Pre-mortem Constraint 2 KL #1 textbook-rational-trap 2.20.** SHORT framing on ZTS faces:
+- **15-NO-GO B-short precedent string in current risk-on regime extends to 16** with ZTS-SHORT dismissal. Per BE/CAT/TWLO/UPS/NCLH/CRCL + SHOP/PYPL/CDW + PINS/AMD/DOC/TSN/GLW/ARM/SMCI/WHR/FLEX SHORT-framing dismissals string.
+- BUT: ZTS is a -25.51% cumulative DECLINE — the 2.20-trap typically applies to SHORTING against beat-and-raise + sell-side ratification; here we have a MISS-AND-GUIDE-CUT with sell-side PT cuts; the 2.20-trap dynamics are partial/inverted (sell-side now bearish-recalibrating)
+- However the MEAN-REVERSION MECHANISM MISMATCH binds: B's mean-reversion thesis is exhausted on the negative side already (mean reversion against pre-print baseline ALREADY EXECUTED via -21.50% Day-0); further SHORT-direction is momentum-continuation thesis, NOT B's mechanism per BE/CAT/TWLO/UPS doctrine
+
+(θ) **+25% short-side stop binds against any macro-rebound vector + KL #7 gap-up risk.** Per Strategy.md exit rule, +25% stop from short entry near Fri $82.83 = $103.54 — close to pre-print Wed $111.22 (only $7-8 below pre-print level). KL #7 gap-up reversal risk:
+- FOMC June 16-17 rate-cut surprise — would reverse consumer-confidence collapse macro narrative
+- Iran-de-escalation rhetoric reversal — would reduce macro consumer-pricing-sensitivity headwind
+- IDXX / ELAN peer earnings if positive — would reduce animal-health-sector-deceleration framing
+- Macro consumer prints (Consumer Confidence / PCE / Retail Sales) positive surprise — would reduce macro-pet-spending-downshift signal
+- Animal Health conference circuit + AVMA meetings + competitive product launches deferred / failed — could rebound competitive narrative
+- **5+ potential gap-up reversal vectors over 60-day window**
+
+(ι) **Mean-reversion-already-executed-DOWN; further SHORT = momentum-extension territory not B mechanism.** Stock -25.51% over 2 trading days = mean-reversion mechanism on the negative side largely executed; further continuation-down requires momentum-continuation, not B's mean-reversion-from-sentiment-overshoot mechanism. SHORT thesis structurally incompatible with B mechanism per BE/CAT/TWLO/UPS doctrine.
+
+(κ) **SHORT convergence target structurally weak under criterion 3 closed-list rev 14.** Same closed-list constraints apply symmetrically:
+- (a) Numerical SHORT target: 52-wk low context not yet researched; momentum-extension target below current $82 = unbounded
+- (b) Q2 outside 60-day window; FOMC mismatched; no FDA; no index-inclusion trigger
+- **SHORT mean-reversion target structurally weak with macro-rebound vectors + sell-side now bearish-recalibrated; criterion 3 closed-list absent admissible SHORT target.**
+
+(λ) **Mcap ~$37B at Fri close adequate room against $2B instrument floor** — no mid-trade-instrument-rule-violation risk (unlike WHR's $2.47B tight margin). But the floor-distance ROOM means SHORT continuation needs to push stock substantially lower (e.g., -$30B mcap loss = stock at ~$15-20 = -76% from current) for any meaningful B-magnitude SHORT outcome — structurally implausible without major additional negative catalyst.
+
+### Effect on book
+
+No effect. No order staged. Strategy B remains in ACTIVATE state with three open positions (IBM, HCA, META) and zero staged orders. Strategy B sector concentration unchanged: IT Services 1/3 (IBM); Health Care Facilities 1/3 (HCA); Comm Services / IMS 1/3 (META); **Health Care / Pharmaceuticals / Animal Health 0/3** (where ZTS would have sat); IT / Electronic Manufacturing Services 0/3 (post-FLEX); IT / Technology Hardware Storage & Peripherals 0/3 (post-SMCI); IT / Semiconductors 0/3 (post-ARM); IT / Electronic Components 0/3 (post-GLW); Consumer Discretionary / Restaurants 0/3 (post-DASH); Consumer Discretionary / Household Appliances 0/3 (post-WHR); others 0/3.
+
+### Pending queue updated
+
+- ~~ZTS B-thesis construction~~ COMPLETE — NO-GO sub-pattern 4 variant 4a structural-overhang-persistence (competitive-erosion + macro-consumer-pricing-sensitivity overlay) + criterion 3 closed-list absent admissible target.
+- 10-day post-event entry window for ZTS expires Thu 2026-05-21 (10 trading days from event-day Thu 5/7; today Tue 5/12 = Day 3 of 10).
+- Sequenced sister thesis-construction sessions Tue 5/12: CEG re-screen 09:00 / UBER 11:00 / **ZTS (this session)** / SHAK 13:00 / DDOG 14:00 / FTNT 15:00 — 6 sessions stacked Tue. Operator-capacity vigilance per Mon 5/11 6-disposition new-high-water-mark precedent.
+- No calendar event scheduled to revisit ZTS within window.
+
+### References
+
+- Strategy.md (B section); AI_Trading_Foundation.md (2.4/2.13/2.20); Operating_Protocols.md §1/§2/§3/§8; Portfolio_Ledger.md; Regime_State.md.
+- Decision_Log.md 2026-04-29 V NO-GO + MDLZ NO-GO (variant 4a structural-overhang-persistence — direct precedents for ZTS 4a routing).
+- Decision_Log.md 2026-05-08 TSN NO-GO (variant 4a Beef-cycle within layered-1+3+4 first instance — comparison precedent for clean-single-pattern-4a vs layered routing).
+- Decision_Log.md 2026-05-05 UPS NO-GO (variant 4b competitive-threat-non-print); 2026-05-05 NCLH NO-GO (variant 4c guide-cut-on-macro-overhang); 2026-05-11 SMCI NO-GO (variant 4d active-securities-litigation-overhang); 2026-05-11 ARM NO-GO (variant 4e structural-supply-side-constraint-emergence-at-print); 2026-05-11 WHR NO-GO (variant 4c second instance + dividend-suspension overlay) — establish sub-pattern 4 variant family canonical labels.
+- Decision_Log.md 2026-05-07 DOC NO-GO (depressed-name pre-print-bearish-positioning-unwind ambiguous-routing — ZTS does NOT fit DOC pattern because ZTS was at $111-113 near-52-wk-high pre-print, not depressed).
+- Decision_Log.md 2026-05-11 GLW + DASH + ARM + SMCI + WHR + FLEX NO-GOs (Mon 5/11 6-NO-GO same-day precedent block).
+- Zoetis Q1 2026 earnings release IR (Thu 5/7 BMO 8:30 AM ET); Motley Fool/Globe-and-Mail/Seeking Alpha/Alphastreet transcripts + presentation; StockTitan 8-K + Q1 mixed trends and new guidance; Quiver Quantitative + Panabee + Meyka coverage; RTTNews FY26 outlook slashed coverage; Benzinga large-cap-losers-week coverage; TS2 pet-care-slowdown analysis.
+- stockanalysis.com ZTS historical-prices (primary verified Tue 5/5 - Fri 5/8).
+
+### Theater-check on this orchestrator review
+
+(a) **Criterion 1 qualifying-event sub-test correctly applied?** Yes. Multi-element event-driven hard information stack (10 distinct elements documented) routes sub-test to CLEANLY QUALIFYING. Not commentary-only. Session-prompt explicit invitation to discriminate event-vs-commentary resolved unambiguously on event-driven side.
+
+(b) **Criterion 1 magnitude measurement correct?** Yes — Wed 5/6 $111.22 → Thu 5/7 $87.31 = -21.50% Day-0 BMO C/C (canonical BMO-print measurement); 4.30× threshold cushion in NEGATIVE direction. Session-prompt's "-7.8%" understates by ~3× (one of the largest session-prompt magnitude discrepancies observed this cycle).
+
+(c) **Sub-pattern 4 variant 4a routing justified?** Yes. Multi-quarter structural overhang persisting (generic competition 4-8 quarter erosion timeline; macro consumer-pricing-sensitivity multi-quarter macro-dependent); resolution requires structural-condition reversal NOT earnings recovery within 60-day window. Direct V/MDLZ/TSN family precedent match with ZTS-specific competitive-erosion + macro-consumer-sensitivity drivers.
+
+(d) **Criterion 3 closed-list analysis exhaustive?** Yes — numerical PT chase structurally weak given multi-quarter overhang; Q2 outside 60-day window from 5/7 = 7/6 (Q2 print ~8/5-8/7 = outside by ~4 weeks); no FDA; FOMC mismatched; already indexed S&P 500 + S&P 100 + Russell 1000; not Nasdaq-listed. Absent admissible target.
+
+(e) **LONG framing steel-manned?** Yes — depressed valuation post-guide-cut + Livestock +15% strong segment + International Companion +7% offset + Neogen acquisition + mean-reversion-target +34% upside steel-manned. Defeated on structural-overhang multi-quarter timeline + Day-1 continued-down + sell-side PT cuts ratifying guide-cut + criterion 3 absent target.
+
+(f) **SHORT framing dismissed properly?** Yes — (η) 15→16 NO-GO B-short string + mean-reversion-already-executed-DOWN; (θ) +25% stop with 5+ gap-up reversal vectors (FOMC / Iran-de-escalation / IDXX-ELAN peer / macro consumer prints / animal-health conferences); (ι) momentum-extension territory not B mechanism; (κ) SHORT target structurally weak; (λ) mcap-floor distance adequate but unbounded SHORT target implausible.
+
+(g) **KL #12 assessed?** Yes — 4-long-book pairwise avg ~0.15-0.25 = FAVORABLE LOW correlation (Health Care / Animal Health uncorrelated with current IT-Services/Health Care Facilities/Comm Services book); secondary; does NOT reinforce NO-GO direction.
+
+(h) **Sub-pattern 1 fingerprint check?** Negative — sell-side action POST-PRINT was PT CUTS (UBS $130→$99 -23.8% + multiple firms lowering targets) = OPPOSITE of sub-pattern 1 PT-raise wave. No sub-pattern 1 layered routing applies. ZTS is single-pattern 4a routing.
+
+(i) **Sub-pattern 3 fingerprint check?** Negative — pre-event stock $111-113 was near 52-wk-high range (no pre-print rally absorption; multi-year strong-performer pre-print but not pre-print rally fingerprint). No sub-pattern 3 layered routing applies.
+
+(j) **Deferral considered?** No — criterion 4 dual-framing decisive failure + criterion 3 closed-list absent target = clean NO-GO; no information gap.
+
+Modulo these ten considerations, the orchestrator review converges on NO-GO with HIGH (~80-85%) confidence.
+
+### Compaction-survival note
+
+**Strategy B ZTS Q1-2026-print disposition 2026-05-12 ~11:00 MT (calendar slot Tue 5/12):** **NO-GO (DECLINE) via criterion 4 dual-framing decisive failure with sub-pattern 4 variant 4a "structural-overhang-persistence" instance (competitive-erosion-by-generic-competition + macro-consumer-pricing-sensitivity overlay) + criterion 3 closed-list rev 14 absent admissible target + Day-1 CONTINUED-DOWN trajectory + post-print sell-side PT CUTS opposite of sub-pattern 1.**
+
+**Event details (Thu 2026-05-07 BMO 8:30 AM ET):** Zoetis Q1 2026 results — Q1 adj EPS $1.53 vs $1.63 cons MISS (-$0.10 / -6.13%); Q1 revenue $2.3B flat organic operational (price +2% / volume -2%); **US Companion Animal -11% to $865M** (large segment decline; generic competition on Convenia/Cerenia + lower Librela sales + competitive pressure on dermatology + Simparica Trio + macroeconomic-driven price sensitivity); International Companion +7% to $654M; Livestock +15% to $720M (cattle/swine/poultry/fish strong); **FY26 guidance CUT** revenue $9.68-$9.96B / adj EPS $6.85-$7.00 (sell-side post-print PT cuts confirm magnitude — UBS $130→$99 -23.8%); discretionary spending tightening + driving organizational efficiencies; Neogen animal genomics business acquisition announced. Management: "challenging operating environment ... more than offset the contribution from fiscal year alignment." Multi-element event-driven hard information; NOT commentary-only.
+
+**Qualifying-event sub-test resolution: CLEANLY QUALIFYING** (10-element hard information stack documented: EPS miss + segment-level breakdown + generic competition multi-product + competitive pressure + FY guide CUT + discretionary spending tightening + Neogen acquisition).
+
+**Stock price action (primary-source verified via stockanalysis.com):** Tue 5/5 $112.54 (-0.12%) / Wed 5/6 $111.22 (-1.17%) — pre-print / **Thu 5/7 $87.31 (-21.50% Day-0 canonical BMO C/C NEGATIVE direction; 4.30× threshold cushion)** / Fri 5/8 $82.83 (-5.13% Day-1 CONTINUED DOWN). Net Wed→Fri = -25.51% cumulative over 2 trading days (continuation-down through Day-1; opposite of mean-reversion-up signal). Session-prompt's "-7.8%" understates actual -21.50% by ~3× (one of the largest session-prompt magnitude discrepancies observed this cycle); pattern matches FLEX 5/11 "+33%→+39.69%" and other recent corrections.
+
+**Sub-pattern routing:** ZTS is **sub-pattern 4 variant 4a "structural-overhang-persistence" clean single-pattern instance** within V/MDLZ/TSN 4a family. ZTS-specific distinguishing drivers: competitive-erosion-by-generic-competition (Convenia/Cerenia/Librela) + macro-consumer-pricing-sensitivity (pet-spending downshift consistent with MCD/WHR/SMCI macro consumer-deceleration signal cluster). Multi-quarter resolution timeline (generic-competition 4-8+ quarters; macro consumer 2-4+ quarters) structurally outside 60-day Strategy B window. **Sub-pattern 1 fingerprint check: NEGATIVE** (sell-side PT CUTS post-print = opposite of canonical PT-raise wave). **Sub-pattern 3 fingerprint check: NEGATIVE** (pre-print stock near 52-wk-high range, not pre-print rally absorption fingerprint). Single-pattern 4a clean routing — does NOT exhibit layered-1+3 fingerprint (distinguishes ZTS from AXSM/PINS/AMD/GLW/ARM/FLEX cases).
+
+**Conviction in NO-GO: HIGH (~80-85%)** — consistent with V/MDLZ/TSN 4a precedent conviction range; comparable to WHR 4c second instance (~85-90%). Theater-check CONVERGENT across all 10 review axes.
+
+**Daily.md / session-prompt non-binding corrections persisted:** (1) **Day-0 close-to-close magnitude -21.50% NEGATIVE direction** (session-prompt's "-7.8%" understated by ~3× — one of the largest magnitude discrepancies observed this experiment cycle); (2) qualifying-event sub-test resolution CLEANLY QUALIFYING (session-prompt's commentary-vs-event sub-test invitation resolves on event-driven side with 10-element hard information stack).
+
+**Sub-pattern routing taxonomy update.** Sub-pattern 4 variant 4a "structural-overhang-persistence" advances to **4 instances** (V 4/29 / MDLZ 4/29 / TSN 5/8 within layered-1+3+4 / **ZTS 5/12 clean single-pattern**). Sub-pattern 4 variant family unchanged at 5 variants (4a/4b/4c/4d/4e). **Sub-pattern 4 instance count advances to 9 instances** (V / MDLZ / TSN / UPS / NCLH / SMCI / ARM / WHR / **ZTS**). NEW sub-evidence layer "competitive-erosion-by-generic-competition with macro-consumer-pricing-sensitivity overlay" — ZTS first instance within 4a family; pending second-instance validation per W5 taxonomy bootstrap rules. NEW evidence layer "macro consumer-spending-deceleration cluster" cross-referenced to MCD 5/7 + WHR 5/6 + SMCI 5/5 concurrent signal cluster — multi-name macro overhang ratification.
+
+**Experiment Strategy B totals advance to 3 GO + 36 NO-GO = 7.7% / 92.3% hit rate** (from 3/35 = 7.9%/92.1% post-FLEX). Long-direction NO-GO breakdown: criterion 1 mechanical 3; instrument-rule 2; **criterion 4 decisive advances to 31 with ZTS** (from 30). **The 15-NO-GO B-short precedent string extends to 16 with ZTS-SHORT formal dismissal.**
+
+**Strategy B sector cap usage at session-end 2026-05-12 ~11:00 MT:** unchanged from post-FLEX state. IT Services 1/3 (IBM); Health Care Facilities 1/3 (HCA); Comm Services / IMS 1/3 (META); **Health Care / Pharmaceuticals / Animal Health 0/3** (ZTS would have been 1/3 sub-industry / Health Care sector 1/3 → 2/3 within per-sector cap — averted); other sub-industries 0/3 (post-FLEX). KL #12 FAVORABLE for ZTS (4-long-book pairwise avg ~0.15-0.25; Health Care / Animal Health uncorrelated with current book) — secondary; criterion 4 binds via sub-pattern 4 variant 4a independent.
+
+**No order staged. No portfolio-state change.** Window expires Thu 2026-05-21. Today Tue 5/12 = Day 3 of 10.
+
+**Tue 5/12 same-day B thesis-construction queue saturation:** CEG re-screen 09:00 / UBER 11:00 / **ZTS (this session, 11:00 calendar slot) ✓** / SHAK 13:00 / DDOG 14:00 / FTNT 15:00 — 6 sessions stacked Tue. Per Mon 5/11 6-disposition new-high-water-mark precedent, operator-capacity at hard ceiling.
