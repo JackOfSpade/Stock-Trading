@@ -8342,3 +8342,182 @@ Modulo these eight considerations, the orchestrator review converges on NO-GO wi
 **No order staged. No portfolio-state change.** Window expires Mon 2026-05-18.
 
 **Same-day B thesis-construction queue saturation status:** GLW 09:00 ✓ + DASH 13:00 ✓ + ARM (post-DASH) ✓ + **SMCI (post-ARM, calendar 13:00 MT) ✓** = **4 same-day NO-GOs Mon 5/11** EXCEEDS Thu 5/7 / Fri 5/8 same-day 3+4-NO-GO precedent ceilings. Remaining Mon 5/11: WHR 14:00 + FLEX 15:00. Tue 5/12: 6 sessions stacked. Operator-capacity vigilance: 4-disposition same-day pace = new high-water mark.
+
+---
+
+## 2026-05-11 (Mon, ~post-SMCI-NO-GO MT, WHR session run sequenced after SMCI; calendar slot 14:00 MT per D2 5/7 conversion) Strategy B thesis construction outcome — WHR (Whirlpool) NO-GO via criterion 4 dual-framing decisive failure with **sub-pattern 4 variant 4c "guide-cut-on-pre-existing-macro-overhang" SECOND INSTANCE** (after NCLH 2026-05-05 first instance) **+ NEW sub-evidence layer "dividend-suspension overlay" (capital-allocation override on debt-paydown rationale)** — first observed instance combining 4c with capital-allocation-override signal; pending second-instance validation per W5 sub-pattern taxonomy bootstrap rules; compounded by criterion 3 closed-list rev 14 absent admissible convergence target + Day-1 CONTINUED-DOWN trajectory; no order staged
+
+**Trigger:** Calendar-event-scheduled Strategy B thesis construction for WHR, Mon 2026-05-11 14:00–14:45 MT (event id `ucv3cnp7p8sdvl7n780sj9oqos` per Decision_Log 2026-05-07 D2 conversion entry). Calendar prompt explicitly flags **HIGH-PRIOR NO-GO PROFILE** with parallel to NCLH 2026-05-05 sub-pattern 4c precedent + potential novel variant (D2 5/7 anticipated "4d guide-cut + dividend-suspension stacked" — variant 4d has since been claimed by SMCI per this morning's 13:00 MT thesis-construction session for "active-securities-litigation-overhang"; D2 5/7 anticipated label is now obsolete). Session evaluates sub-pattern routing between (a) NCLH 4c second-instance extension with dividend-suspension sub-evidence overlay OR (b) NEW variant 4f "guide-cut + dividend-suspension + macro-overhang triple-stacked." Disposition routes to (a) — sub-pattern 4 variant 4c SECOND INSTANCE with NEW sub-evidence layer "dividend-suspension overlay" — cleaner classification preserving variant-family parsimony pending second-instance validation of the dividend-suspension dimension.
+
+**Session-prompt magnitude verification.** Session prompt cites "Stock −19.5% premarket 5/7." Primary-source verification (stockanalysis.com historical-prices Mon 5/4 - Fri 5/8): Mon 5/4 $53.07 (-6.19%) / Tue 5/5 $54.19 (+2.11%) / Wed 5/6 $54.73 (+1.00%) — pre-print Wed, print AMC / **Thu 5/7 $48.21 (-11.91% Day-0 canonical AMC post-print C/C)** / Fri 5/8 $44.96 (-6.74% Day-1 CONTINUED DOWN move). Net Wed→Fri = $54.73 → $44.96 = **-17.85% cumulative over 3 trading days** (Day-0 -11.91% + Day-1 -6.74% = continuation-down trajectory; opposite of mean-reversion-up signal). The session-prompt's "−19.5% premarket" is approximately consistent with Thu 5/7 premarket reading per Yahoo/Fortune coverage ("stock plummeted 18.82% to $44.43 in premarket trading"); regular-session Thu close $48.21 was -11.91% (faded from premarket -18.82% spike-down to -11.91% close); Fri 5/8 Day-1 continued lower to $44.96 (-6.74% additional decline from Thu close, approaching premarket peak-down level). Today Mon 5/11 = Day 3 of post-event 10-day window (Wed 5/6 print Day 0; Thu 5/7 = Day 1 trading; Fri 5/8 = Day 2 trading; Mon 5/11 = Day 3 trading; window expires Wed 5/20 = Day 10).
+
+**Inputs:** Strategy.md Strategy B section (entry criteria 1-5; criterion 1 ≥5% C/C either direction; criterion 3 closed-list rev 14 strict enumeration; criterion 4 information-vs-sentiment graded discriminator; criterion 5 sector cap; instrument rule ≥$2B mcap "Long or short"; pre-mortem rev 7); AI_Trading_Foundation.md (2.4 / 2.13 / 2.20); Operating_Protocols.md §1 HOIP / §2 commission-disregarded / §3 NO-GO records context (no prior WHR NO-GO) / §8 conviction-calibration; **Portfolio_Ledger.md** (state-as-of post-SMCI-NO-GO: B NAV $1,888.69; 3 longs IBM/HCA/META; sector cap IT Services 1/3, Health Care Facilities 1/3, Comm Services 1/3, **Consumer Discretionary / Household Durables 0/3**, all others 0/3 modulo prior NO-GO sub-industries; 2% sizing $37.77; B router ACTIVATE); Regime_State.md (B router ACTIVATE per SPY NEUTRAL + VIX 17.05 NORMAL); Decision_Log.md prior precedents critical:
+- **NCLH 2026-05-05 NO-GO (sub-pattern 4 variant 4c "guide-cut-on-pre-existing-macro-overhang" FIRST INSTANCE — FY guide cut on Iran-war fuel-cost + EU bookings macro overhang requires macro condition reversal not earnings recovery within 60-day window; cross-name RCL/CCL sympathy confirmed sector-wide structural-information-driven repricing) — direct-template precedent for WHR's 4c SECOND INSTANCE**
+- UPS 2026-05-05 NO-GO (variant 4b structural-competitive-threat-emergence-at-non-print-catalyst)
+- V 2026-04-29 + MDLZ 2026-04-29 + TSN 2026-05-08 NO-GOs (variant 4a structural-overhang-persistence — variant family origin)
+- ARM 2026-05-11 NO-GO (variant 4e structural-supply-side-constraint-emergence-at-print; renumbered from prior 4d this morning's SMCI session)
+- SMCI 2026-05-11 13:00 NO-GO (variant 4d active-securities-litigation-overhang FIRST INSTANCE this morning) — same-day sister NO-GO
+- GLW 5/11 09:00 + DASH 5/11 13:00 + ARM 5/11 (post-DASH) + SMCI 5/11 (post-ARM) — 4 same-day sister NO-GOs Mon 5/11 same-day precedent
+- 13-NO-GO B-short precedent string post-SMCI (canonical 2.20-trap)
+- "NO-GO records are context, not barriers" §3 (no prior WHR NO-GO)
+- Watchlist.md (WHR NOT listed)
+
+**Web-search primary documents (verified this session):**
+- Whirlpool Q1 2026 earnings release (Wed 2026-05-06 AMC): https://investors.whirlpoolcorp.com/news-and-events/news/news-details/2026/Whirlpool-Corporation-Announces-First-Quarter-Results-Accelerates-Cost-and-Pricing-Actions-to-Restore-Margins/default.aspx
+- Whirlpool Q1 2026 transcript Motley Fool: https://www.fool.com/earnings/call-transcripts/2026/05/07/whirlpool-whr-q1-2026-earnings-transcript/
+- Whirlpool Q1 2026 transcript Globe and Mail: https://www.theglobeandmail.com/investing/markets/stocks/WHR/pressreleases/1782153/whirlpool-whr-q1-2026-earnings-transcript/
+- Yahoo Finance "Whirlpool posts Q1 earnings miss, cuts 2026 guidance, suspends dividend": https://finance.yahoo.com/markets/stocks/articles/whirlpool-q1-earnings-miss-cuts-123916210.html
+- Fortune "Whirlpool has a word for what the Iran War is doing to its industry: recession": https://fortune.com/2026/05/08/whirlpool-recession-warning-iran-war-earnings-suspends-dividend/
+- GuruFocus "Whirlpool Suspends Dividend, Shares Plunge 12%": https://www.gurufocus.com/news/8846796/whirlpool-suspends-dividend-shares-plunge-12
+- Benzinga "Whirlpool Cuts Forecast, Suspends Dividend To Tackle Debt, Stock Tanks": https://www.benzinga.com/markets/earnings/26/05/52364811/whirlpool-cuts-forecast-suspends-dividend-to-tackle-debt
+- MSN "Whirlpool halts 70-year dividend as profit outlook halves": https://www.msn.com/en-us/news/insight/whirlpool-halts-70-year-dividend-as-profit-outlook-halves/gm-GM2123422E
+- Investing.com Q1 2026 slides macro-headwinds historic margin compression: https://www.investing.com/news/company-news/whirlpool-q1-2026-slides-macro-headwinds-drive-historic-margin-compression-93CH-4668858
+- Johnson Fistel shareholder alert (May 8 — securities class action investigation): https://www.globenewswire.com/news-release/2026/05/08/3291222/0/en/Whirlpool-Corporation-Shareholders-Are-Encouraged-to-Reach-Out-to-Johnson-Fistel-for-More-Information-About-Potentially-Recovering-Their-Losses.html
+- stockanalysis.com WHR historical-prices: https://stockanalysis.com/stocks/whr/history/
+
+### Decision
+
+**WHR — NO-GO (DECLINE).** Criterion 4 dual-framing decisive failure with **sub-pattern 4 variant 4c "guide-cut-on-pre-existing-macro-overhang" SECOND INSTANCE** (after NCLH 2026-05-05 first instance) **+ NEW sub-evidence layer "dividend-suspension overlay"** — capital-allocation override on debt-paydown rationale, first observed instance combining 4c with this capital-allocation dimension. The -11.91% Day-0 close-to-close drop is overwhelmingly information-driven: multi-element multi-vector hard structural information disclosure including (a) Q1 ongoing EPS -$0.56 vs +$0.43 cons = $0.99-per-share negative surprise; (b) Q1 GAAP net loss $85M (vs Q1 2025 net earnings $71M); (c) FY26 ongoing EPS guide CUT from prior $5-$6 area to $3.00-$3.50 = ~45% midpoint cut representing structural margin reset; (d) FY26 revenue guide cut $15.45B → $15.0B (-2.9%); (e) **DIVIDEND SUSPENSION** halting 70-year continuous dividend payment to prioritize >$900M debt paydown in 2026 — capital-allocation-override signal beyond pure guide-cut; (f) CEO Marc Bitzer characterization "This level of industry decline is similar to what we have observed during the global financial crisis and even higher than during other recessionary periods" — explicit recession-magnitude framing; (g) Iran-war-attribution as macro driver of US consumer-confidence collapse producing recession-level industry decline.
+
+Day-1 continued -6.74% to $44.96 = **continuation-down trajectory through Day 2 of 3**, opposite of mean-reversion-up signal — confirms market has not yet found bottom and information continues being priced in. Compounded by criterion 3 closed-list rev 14 absent admissible convergence target (Q2 FY26 next earnings ~late-July outside 60-day window from event-day 5/7 = 7/6; no FDA; FOMC June 16-17 within window but structurally mismatched against idiosyncratic WHR macro-overhang + capital-allocation thesis; WHR REMOVED from S&P 500 in 2022 — NOT in S&P 500; in S&P 600 SmallCap + Russell 1000 already; Nasdaq 100 N/A — no fresh index-inclusion trigger).
+
+Criterion 1 mechanically clears at -11.91% Day-0 C/C in NEGATIVE direction (2.38× threshold cushion); criterion 5 sector cap clears (Consumer Discretionary / Household Durables 0/3 sub-industry; Consumer Disc sector 0/3 post-DASH; clean per-sub-industry-cap addition averted on NO-GO).
+
+### Mechanical eligibility detail
+
+- **Instrument rule:** WHR = Whirlpool Corporation, NYSE-listed common (US-listed); US-incorporated Delaware C-corp; ~54-55M shares outstanding; **market cap ~$2.47B at Fri 5/8 close $44.96** (54.85M shares × $44.96) — clears $2B floor by ~24% cushion (TIGHT but mechanically clears at primary-source-verified mcap; pre-print Wed mcap ~$3.00B at $54.73). 30-day ADV well above $10M floor (multi-million-shares/day at $45-55 price level). Long-or-short permitted; 2% sizing $37.77; no options.
+
+- **Criterion 1:** Event Wed 2026-05-06 AMC. Pre-event Wed close $54.73 → Thu close $48.21 = **-11.91% Day-0 C/C** (canonical AMC-print measurement); 2.38× threshold cushion in NEGATIVE direction. Alternative reference windows: Tue 5/5 $54.19 → Wed 5/6 $54.73 = +1.00% (pre-print fail); Tue 5/5 → Thu 5/7 2-day combined = $54.19 → $48.21 = -11.04% (still clears); Tue 5/5 → Fri 5/8 3-day = $54.19 → $44.96 = -17.03% (deeper drop). Canonical Wed→Thu -11.91% is the binding reading. **Window expires Wed 5/20** (10 trading days from Wed 5/6 = Wed 5/20; today Mon 5/11 = Day 3 of 10).
+
+- **Criterion 5:** No A position (A router DO-NOT-ACTIVATE; WHR not on A queue). No D position. **GICS Consumer Discretionary sector / Household Durables industry / Household Appliances sub-industry** (S&P GICS classification verified; WHR is canonical Household Appliances pure-play). Currently 0/3 used in Household Appliances sub-industry; Consumer Disc sector 0/3 (DASH would have been Restaurants sub-industry — averted post-DASH 13:00 MT). **WHR-add scenario would yield Consumer Disc sector 1/3 within Strategy.md 3-per-sector cap.** Within cap on per-sector and per-sub-industry basis. Pre-mortem KL #12 long-side concurrent-position correlation: WHR-IBM ~0.15-0.30 (different sectors, low); WHR-META ~0.15-0.30 (different sectors, low); WHR-HCA ~0.10-0.20 (different sectors, low). 4-long-book pairwise avg ~0.15-0.25 — **KL #12 FAVORABLE LOW correlation profile** (comparable to HCA-DOC-TSN-SMCI favorable baselines; Consumer Disc / Household Appliances is uncorrelated with current IT-Services / Health Care / Comm Services book). Secondary observation; criterion 4 binds via sub-pattern 4 independent of correlation.
+
+### Decisive flaw analysis (criterion 4 sub-pattern 4 variant 4c second-instance + dividend-suspension overlay)
+
+**Sub-pattern 4 variant 4c "guide-cut-on-pre-existing-macro-overhang" SECOND INSTANCE distinguishing features (vs NCLH 5/5 first instance):**
+- NCLH 4c first: FY guide cut on Iran-war fuel-cost + EU bookings macro overhang; cruise-sector macro mismatch with B 60-day window; cross-name RCL/CCL sympathy confirmed sector-wide
+- **WHR 4c second:** FY26 ongoing EPS guide cut ~45% midpoint ($5-6 → $3-$3.50) on Iran-war-recession-level-industry-decline US consumer-confidence collapse; appliance-industry macro mismatch with B 60-day window; CEO explicit "global-financial-crisis-magnitude" framing
+- **Common 4c signature:** FY guide cut directly attributed to pre-existing macro condition; resolution requires macro condition reversal (not earnings recovery); cross-name peer-impact consistent with sector-wide repricing rather than single-name overshoot
+
+**NEW sub-evidence layer "dividend-suspension overlay" (capital-allocation-override on debt-paydown rationale):**
+- WHR halted 70-year continuous dividend payment (per MSN article) to prioritize >$900M debt paydown in 2026
+- Capital-allocation override signals management's view of cash-flow severity beyond pure guide-cut: a sticky shareholder commitment (dividend) is being abandoned to preserve balance-sheet flexibility
+- Structurally distinct from NCLH 4c first instance which did not include dividend-cut as additional layer
+- Sub-evidence layer status: first observed instance combining 4c with dividend-suspension capital-allocation-override; pending second-instance validation per W5 sub-pattern taxonomy bootstrap rules
+- Conservative classification: sub-evidence layer (not variant-promotion) preserves variant-family parsimony; if dividend-suspension dimension recurs in future cases, formal variant promotion to 4f or later is justified
+
+**Day-1 CONTINUED-DOWN trajectory:** Thu 5/7 close $48.21 → Fri 5/8 close $44.96 = -6.74% additional decline = continuation-down through Day 2. Trajectory pattern is OPPOSITE of mean-reversion-up signal:
+- Day-2 continued-down indicates market still pricing in information (not at equilibrium)
+- Approaching 52-wk low $44.87 (Fri close $44.96 = within $0.09 of 52-wk low; intraday Friday likely touched/broke 52-wk low)
+- Sub-evidence: **stock-failing-to-find-bottom-by-Day-2** — first observed combination of 4c + dividend-suspension + Day-2-continued-down trifecta
+- Per AMD/GLW doctrine inverted: when post-event move CONTINUES IN DAY-0 DIRECTION through Day-2, market is still absorbing information at that direction; no remaining mean-reversion edge in OPPOSITE direction (= no LONG mean-reversion edge here)
+
+### LONG framing dismissed (mean-reversion-up structurally invalid on multi-element hard-information print)
+
+LONG thesis: -11.91% Day-0 + -6.74% Day-1 = -17.85% cumulative drop overshoots fundamentals; mean-reversion target toward pre-print Wed $54.73 = +22% gap-fill (+10 points target) over 60 days; depressed valuation absorbing recessionary fears.
+
+**Decisive flaws:**
+(α) Sub-pattern 4 variant 4c structural-overhang persistence — Iran-war + consumer-confidence collapse + recession-magnitude industry decline are macro conditions requiring resolution outside 60-day window; LONG mean-reversion target requires macro condition reversal AND earnings recovery within window — neither plausible
+(β) Dividend-suspension overlay = capital-allocation-override signal indicating management views cash-flow severity as multi-quarter; resolution requires debt-paydown progress over 12+ months
+(γ) Day-1 CONTINUED-DOWN trajectory confirms market still pricing information; no sentiment-overshoot bottom reached
+(δ) Multi-element hard information stack (Q1 EPS miss $0.99/share + FY26 EPS guide -45% + FY26 rev guide -3% + dividend suspension + recession-magnitude framing) is overwhelmingly information-driven not sentiment-overshoot
+(ε) CEO "global-financial-crisis-magnitude" framing = structural information not sentiment; explicit recession-magnitude characterization
+(ζ) Criterion 3 closed-list rev 14 absent admissible target (Q2 FY26 outside 60-day window; FOMC mismatch; WHR not in S&P 500 since 2022; no admissible structure)
+(η) **NEW evidence layer post-Q1**: Johnson Fistel shareholder alert May 8 = securities class action investigation initiated within 24h of print = potential litigation-overhang risk forming (not yet at SMCI 4d severity but emerging litigation-overhang vector)
+
+**LONG framing structurally invalid.**
+
+### SHORT framing dismissed (13→14 NO-GO B-short string + 2.20-trap continuation-momentum mismatch with B mechanism + KL #7 gap-up risk)
+
+SHORT thesis: Day-0 -11.91% + Day-1 -6.74% trajectory continues; SHORT entry targets further drop toward 52-wk low $44.87 (already approached) or below.
+
+**Decisive flaws:**
+(η) **13-NO-GO B-short precedent string in current risk-on regime extends to 14 with WHR-SHORT dismissal**: Pre-mortem Constraint 2 KL #1 textbook-rational-trap 2.20 doctrine canonical against multi-element guide-cut + dividend-suspension event with stock already down -17.85% over 3 days; the move is the mean-reversion thesis ITSELF (in negative direction), already executed; continuation-down SHORT entry is momentum-extension territory NOT B's mean-reversion mechanism per BE/CAT/TWLO/UPS doctrine
+(θ) **+25% short-side stop $44.96 × 1.25 = $56.20** — ABOVE pre-print Wed close $54.73; stop placement is structurally tight against any Iran-de-escalation/consumer-confidence-rebound reversal. KL #7 gap-up risk catastrophic with potential vectors:
+- Iran-de-escalation rhetoric reversal — Iran-war is the explicit macro driver per CEO; any de-escalation news (cease-fire / sanctions easing / Iran-nuclear-deal-progress) would directly reverse the WHR thesis with potential gap-up of $5-10
+- FOMC June 16-17 rate-cut surprise — would reverse consumer-confidence collapse narrative
+- Tariff-de-escalation / trade-war-de-escalation — would reduce consumer-discretionary headwind
+- Home-builder data improvement (HD/LOW peer prints) — would reduce appliance-demand recession signal
+- Macro PCE / CPI / Consumer Confidence prints — any positive surprise could trigger gap-up
+- **5+ potential gap-up reversal vectors over 60-day window**
+(ι) Stock at 52-wk low territory ($44.96 Fri close vs 52-wk low $44.87) — SHORT entry at trough is structurally late
+(κ) SHORT convergence target structurally weak under criterion 3 closed-list rev 14: numerical target below 52-wk low = momentum-extension; no admissible named-event for SHORT
+(λ) Mcap $2.47B tight against $2B instrument floor; if stock declines further to ~$36 = mcap drops below $2B threshold = mid-trade-instrument-rule-violation risk
+
+**SHORT framing dismissed canonically as 2.20-trap with gap-up risk + late-in-move entry + structural mechanism mismatch.**
+
+### Effect on book
+
+No effect. No order staged. Strategy B remains ACTIVATE with 3 open longs (IBM/HCA/META). Sector cap unchanged: IT Services 1/3 + Health Care Facilities 1/3 + Comm Services / IMS 1/3 + IT / Technology Hardware Storage & Peripherals 0/3 (post-SMCI) + IT / Semiconductors 0/3 (post-ARM) + IT / Electronic Components 0/3 (post-GLW) + Consumer Discretionary / Restaurants 0/3 (post-DASH) + **Consumer Discretionary / Household Appliances 0/3** (WHR would have been 1/3 sub-industry; clean addition averted); others 0/3.
+
+### Pending queue updated
+
+- ~~WHR B-thesis construction~~ COMPLETE — NO-GO sub-pattern 4 variant 4c SECOND INSTANCE + NEW sub-evidence layer "dividend-suspension overlay" + criterion 3 closed-list absent target.
+- 10-day post-event entry window for WHR expires Wed 2026-05-20.
+- Sequenced sister thesis-construction sessions today: GLW 09:00 ✓ + DASH 13:00 ✓ + ARM (post-DASH) ✓ + SMCI (post-ARM) ✓ + **WHR (this session, post-SMCI)** ✓ = **5 same-day NO-GOs Mon 5/11** — MATERIALLY EXCEEDS Thu 5/7 / Fri 5/8 same-day 3+4-NO-GO precedent ceilings. Remaining Mon 5/11: FLEX 15:00 (would extend to 6-NO-GO if completed; potential operator capacity binding). Tue 5/12: 6 sessions stacked.
+- No calendar event scheduled to revisit WHR within window. Window expires Wed 5/20.
+
+### References
+
+- Strategy.md (B section); AI_Trading_Foundation.md (2.4/2.13/2.20); Operating_Protocols.md §1/§2/§3/§8; Portfolio_Ledger.md; Regime_State.md.
+- Decision_Log.md 2026-05-05 NCLH NO-GO (variant 4c FIRST INSTANCE — direct precedent for WHR 4c SECOND INSTANCE).
+- Decision_Log.md 2026-04-29 V + MDLZ + 2026-05-08 TSN NO-GOs (variant 4a); 2026-05-05 UPS NO-GO (4b); 2026-05-11 SMCI NO-GO (4d active-securities-litigation-overhang); 2026-05-11 ARM NO-GO (4e supply-side-constraint-print, renumbered).
+- Decision_Log.md 2026-05-11 GLW + DASH + ARM + SMCI NO-GOs (same-day sister sessions).
+- Decision_Log.md 2026-05-07 D2 conversion entry (WHR routing with HIGH-PRIOR NO-GO PROFILE flag + NCLH 4c precedent reference).
+- Whirlpool Q1 2026 earnings release IR (May 6 AMC); Motley Fool/Globe-and-Mail transcripts; Yahoo Finance / Fortune / Benzinga / GuruFocus / MSN / Investing.com coverage; Johnson Fistel shareholder alert (May 8); stockanalysis.com WHR historical-prices (primary verified).
+
+### Theater-check on this orchestrator review
+
+(a) **Criterion 1 measurement correct?** Yes — Wed $54.73 → Thu $48.21 = -11.91% Day-0 C/C (canonical AMC measurement); 2.38× threshold cushion in NEGATIVE direction.
+
+(b) **Sub-pattern 4 variant 4c second-instance routing justified?** Yes — WHR shares NCLH 4c's "guide-cut-on-pre-existing-macro-overhang" canonical signature (FY guide cut directly attributed to macro condition; resolution requires macro reversal not earnings recovery; multi-quarter timeline outside 60-day window). Dividend-suspension overlay treated as NEW sub-evidence layer rather than variant-promotion to preserve variant-family parsimony pending second-instance validation.
+
+(c) **NEW sub-evidence layer "dividend-suspension overlay" first-instance establishment justified?** Yes — capital-allocation-override on debt-paydown rationale is structurally distinct from pure guide-cut signature; halting 70-year continuous dividend payment is a hard structural signal of management's cash-flow-severity assessment. First observed combination with 4c; pending second-instance validation per W5 taxonomy bootstrap rules.
+
+(d) **Was the criterion 3 closed-list rev 14 analysis exhaustive?** Yes — numerical PT chase = sub-pattern 1 trap territory; Q2 FY26 ~late-July outside 60-day window from 5/7 = 7/6; no FDA; FOMC June 16-17 mismatched against idiosyncratic WHR thesis; WHR REMOVED from S&P 500 in 2022 (currently S&P 600 SmallCap); in Russell 1000; no admissible target.
+
+(e) **Was LONG framing steel-manned?** Yes — -17.85% cumulative drop / depressed valuation / consensus PT mean-reversion / mid-cycle entry post-Q1 print. Defeated on multi-element information stack + variant 4c structural overhang + dividend-suspension capital-allocation override + Day-1 continued-down trajectory + criterion 3 absent target.
+
+(f) **Was SHORT framing dismissed properly?** Yes — 13→14 NO-GO B-short string + 2.20-trap doctrine; +25% stop above pre-print level with 5+ gap-up reversal vectors (Iran-de-escalation / FOMC / tariff / housing peers / macro prints); stock at 52-wk low territory = late-in-move entry; mcap $2.47B tight against $2B floor with continued-down trajectory creating mid-trade-instrument-rule-violation risk.
+
+(g) **KL #12 assessed?** Yes — 4-long-book pairwise avg ~0.15-0.25 = **KL #12 FAVORABLE LOW correlation** (Consumer Discretionary / Household Appliances uncorrelated with current IT-Services / Health Care / Comm Services book); secondary; does NOT reinforce NO-GO direction but does NOT block it; criterion 4 binds via sub-pattern 4 independent of correlation.
+
+(h) **Was the Johnson Fistel securities class action investigation (May 8) considered as litigation-overhang vector?** Yes — initiated within 24h of print (May 8 announcement); not yet at SMCI 4d active-class-action severity (Johnson Fistel is investigation-stage, not yet filed complaint or lead-plaintiff phase) but represents emerging litigation-overhang vector that could mature into 4d-like classification within 60-day window. Currently sub-evidence layer to 4c+dividend-suspension routing; would not change disposition (NO-GO already binding); flagged for potential variant-classification upgrade if class action progresses.
+
+(i) **Was deferral considered?** No — criterion 4 dual-framing decisive failure + criterion 3 closed-list absent target = clean NO-GO.
+
+Modulo these nine considerations, the orchestrator review converges on NO-GO with HIGH confidence (~85-90%).
+
+### Compaction-survival note
+
+**Strategy B WHR Q1-FY26-print disposition 2026-05-11 ~post-SMCI (calendar slot 14:00 MT):** **NO-GO (DECLINE) via criterion 4 dual-framing decisive failure with sub-pattern 4 variant 4c "guide-cut-on-pre-existing-macro-overhang" SECOND INSTANCE + NEW sub-evidence layer "dividend-suspension overlay" + criterion 3 closed-list rev 14 absent admissible target.**
+
+**Event details (Wed 2026-05-06 AMC):** Whirlpool Q1 2026 results — Q1 net sales $3.273B vs $3.42B cons MISS (-4.4%) / -9.6% YoY from $3.621B; Q1 GAAP net loss $85M vs Q1 2025 net earnings $71M; Q1 adj loss per share -$1.43; Q1 ongoing EPS -$0.56 vs +$0.43 cons = $0.99 per share negative surprise. **FY26 guidance CUT:** GAAP EPS $2.45-$2.95; ongoing EPS $3.00-$3.50 (vs prior expectations $5-$6 area = ~45% midpoint cut); net sales ~$15.0B (vs ~$15.45B prior). **DIVIDEND SUSPENSION** — halted 70-year continuous dividend payment to prioritize >$900M debt paydown in 2026 (per MSN article + Benzinga). CEO Marc Bitzer: "This level of industry decline is similar to what we have observed during the global financial crisis and even higher than during other recessionary periods." Iran-war-attribution as macro driver of US consumer-confidence collapse producing recession-level industry decline.
+
+**Stock price action (primary-source verified via stockanalysis.com):** Mon 5/4 $53.07 (-6.19%) / Tue 5/5 $54.19 (+2.11%) / Wed 5/6 $54.73 (+1.00%) — pre-print Wed, print AMC / **Thu 5/7 $48.21 (-11.91% Day-0 canonical AMC post-print C/C)** / Fri 5/8 $44.96 (-6.74% Day-1 CONTINUED DOWN). Net Wed→Fri = -17.85% cumulative over 3 trading days (continuation-down trajectory through Day 2 of 3). Session-prompt's "-19.5% premarket" approximately matches Thu 5/7 premarket spike-down ($44.43 = -18.82% from Wed close per Yahoo); regular-session Thu close -11.91% faded slightly from premarket but Fri 5/8 -6.74% additional decline approached/touched 52-wk low $44.87 (Fri close $44.96 within $0.09 of 52-wk low).
+
+**Sub-pattern routing:** WHR is **sub-pattern 4 variant 4c SECOND INSTANCE** (after NCLH 2026-05-05 first) WITH NEW sub-evidence layer "dividend-suspension overlay." Distinguishing features vs NCLH 4c first instance:
+- Common 4c signature: FY guide cut directly attributed to pre-existing macro condition; resolution requires macro reversal not earnings recovery within 60-day window
+- WHR new sub-evidence: 70-year dividend suspension = capital-allocation-override on debt-paydown rationale; structurally distinct from pure guide-cut signature; first observed instance combining 4c with capital-allocation-override; pending second-instance validation
+- Additional new sub-evidence: Day-1 CONTINUED-DOWN trajectory (-6.74% Fri 5/8) opposite of mean-reversion-up signal; market still pricing information; approaching 52-wk low $44.87
+- Additional emerging vector: Johnson Fistel shareholder alert May 8 = securities class action investigation initiated within 24h of print (not yet at SMCI 4d severity but emerging litigation-overhang vector)
+
+**6-vector information stack:** (1) Q1 EPS miss $0.99/share; (2) Q1 GAAP net loss $85M; (3) FY26 EPS guide -45% midpoint; (4) FY26 rev guide -3%; (5) Dividend suspension 70-year continuous payment halted; (6) CEO global-financial-crisis-magnitude framing + Iran-war-recession-attribution. **Overwhelmingly information-driven, not sentiment-overshoot.**
+
+**Conviction in NO-GO: HIGH (~85-90%)** — consistent with D2 5/7 routing anticipation; upper-range conviction given:
+- Multi-element information stack overwhelming sentiment-overshoot LONG framing
+- Day-1 continued-down trajectory confirms market still pricing
+- Dividend suspension capital-allocation-override signal
+- Criterion 3 closed-list absent admissible target
+- 13→14 NO-GO B-short string + 2.20-trap with 5+ gap-up reversal vectors for SHORT
+- Mcap $2.47B tight against $2B floor for SHORT continuation
+- Theater-check CONVERGENT across 9 review axes
+
+**Sub-pattern routing taxonomy update.** Sub-pattern 4 variant 4c "guide-cut-on-pre-existing-macro-overhang" advances to **2 instances** (NCLH 5/5 first / **WHR 5/11 second**). Sub-pattern 4 variant family unchanged at 5 variants (4a/4b/4c/4d/4e). **Sub-pattern 4 instance count advances to 8 instances** (V / MDLZ / TSN / UPS / NCLH / SMCI / ARM / **WHR**). NEW sub-evidence layer "dividend-suspension overlay" flagged for W5 taxonomy extraction (WHR first instance; pending second-instance validation; if recurs could promote to formal variant 4f).
+
+**Experiment Strategy B totals advance to 3 GO + 34 NO-GO = 8.1% / 91.9% hit rate** (from 3/33 = 8.3%/91.7% post-SMCI). Long-direction NO-GO breakdown: criterion 1 mechanical 3; instrument-rule 2; **criterion 4 decisive advances to 29 with WHR**. **The 13-NO-GO B-short precedent string extends to 14 with WHR-SHORT formal dismissal.**
+
+**Strategy B sector cap usage at session-end 2026-05-11 ~post-SMCI (5th same-day NO-GO):** unchanged from post-SMCI. IT Services 1/3 (IBM); Health Care Facilities 1/3 (HCA); Comm Services / IMS 1/3 (META); IT / Technology Hardware Storage & Peripherals 0/3 (post-SMCI); IT / Semiconductors 0/3 (post-ARM); IT / Electronic Components 0/3 (post-GLW); Consumer Discretionary / Restaurants 0/3 (post-DASH); **Consumer Discretionary / Household Appliances 0/3** (WHR would have been 1/3 sub-industry / Consumer Disc sector advance 0/3 → 1/3 within cap — averted); other sub-industries 0/3. KL #12 FAVORABLE for WHR (4-long-book pairwise avg ~0.15-0.25; lowest correlation profile observed across recent B candidates due to Consumer Discretionary / Household Appliances cross-sector independence) — secondary; does NOT reinforce NO-GO direction; criterion 4 binds via sub-pattern 4 independent.
+
+**No order staged. No portfolio-state change.** Window expires Wed 2026-05-20 (today Day 3 of 10).
+
+**Same-day B thesis-construction queue saturation status:** GLW 09:00 ✓ + DASH 13:00 ✓ + ARM (post-DASH) ✓ + SMCI (post-ARM) ✓ + **WHR (post-SMCI, calendar 14:00 MT) ✓** = **5 same-day NO-GOs Mon 5/11** — MATERIALLY EXCEEDS Thu 5/7 / Fri 5/8 same-day 3+4-NO-GO precedent ceilings = NEW HIGH-WATER MARK. Remaining Mon 5/11: FLEX 15:00 (would extend to 6-NO-GO if completed; approaching operator-capacity hard ceiling). Tue 5/12: 6 sessions stacked.
