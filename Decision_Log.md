@@ -8939,3 +8939,213 @@ Modulo these ten considerations, the orchestrator review converges on NO-GO with
 **No order staged. No portfolio-state change.** Window expires Thu 2026-05-21. Today Tue 5/12 = Day 3 of 10.
 
 **Tue 5/12 same-day B thesis-construction queue saturation:** CEG re-screen 09:00 / UBER 11:00 / **ZTS (this session, 11:00 calendar slot) ✓** / SHAK 13:00 / DDOG 14:00 / FTNT 15:00 — 6 sessions stacked Tue. Per Mon 5/11 6-disposition new-high-water-mark precedent, operator-capacity at hard ceiling.
+
+---
+
+## 2026-05-12 (Tue, ~post-ZTS-NO-GO MT, UBER session run sequenced after ZTS 11:00; calendar slot 11:00 MT per D2 5/6 conversion) Strategy B thesis construction outcome — UBER (Uber Technologies) NO-GO via criterion 4 dual-framing decisive failure under **ambiguous sub-pattern routing — candidate sub-pattern "mixed-signal-quality-of-print with non-operating-noise-distortion + split-sell-side-response + faded-Day-2" FIRST INSTANCE** (pending second-instance validation per W5 sub-pattern taxonomy bootstrap rules) — closest fits TEAM 2026-05-02 "valuation-reset-but-not-narrative-reset" + PINS 2026-05-07 "move-faded-by-Day-2" with distinctive Didi/Grab MTM non-operating-noise dimension; compounded by criterion 3 closed-list rev 14 absent admissible convergence target; no order staged
+
+**Trigger:** Calendar-event-scheduled Strategy B thesis construction for UBER, Tue 2026-05-12 11:00–11:45 MT (per Decision_Log 2026-05-06 D2 conversion entry; UBER routed to thesis-construction with disqualifier-focused frame given mixed-signal information-vs-sentiment quality-of-print question). D2 5/6 routing rationale (d) explicitly framed UBER's mixed-signal print quality as meriting formal sub-pattern documentation in Decision_Log to yield durable factbase entry. This session resolves the qualifying-event sub-test on event-driven side (Q1 print is canonical event with hard backward-looking results + forward Q2 guide + GAAP-vs-non-GAAP divergence-driven information-content question) and proceeds through criterion 4 dual-framing analysis to NO-GO disposition.
+
+**Session-prompt magnitude verification.** Session prompt cites "+7-8% Wed close-to-close." Primary-source verification (stockanalysis.com historical-prices Mon 5/4 - Fri 5/8):
+- Mon 5/4 close: $73.93 (-1.58%)
+- Tue 5/5 close: $72.95 (-1.33%) — pre-print Tue (print BMO Wed 5/6)
+- **Wed 5/6 close: $79.17 (+8.53% Day-0 BMO canonical C/C)** — clears 5% threshold with 1.71× cushion
+- Thu 5/7 close: $76.73 (-3.08% Day-1 modest fade)
+- Fri 5/8 close: $75.45 (-1.67% Day-2 continued fade)
+- Net Tue→Fri = $72.95 → $75.45 = **+3.43% net retention vs Day-0 +8.53% = 40.2% retention** (**move FADED 60% through Day-2**; closest comparable PINS 5/7 ~80%+ fade-by-Day-2; UBER faded less severely but materially — neither HELD-AND-EXTENDED like GLW/AMD nor FULLY-FADED-BELOW-BASELINE like DASH)
+- Session-prompt's "+7-8%" verified to 1-percentage-point precision (actual +8.53% slightly above stated range; rounding-level non-binding)
+
+**Inputs:** Strategy.md Strategy B section (entry criteria 1-5; criterion 1 ≥5% C/C either direction; criterion 3 closed-list rev 14 strict enumeration; **criterion 4 information-vs-sentiment dual-framing test with explicit attention to mixed-signal-quality-of-print + non-operating-noise dimensions per session-prompt invocation**; criterion 5 sector cap; instrument rule ≥$2B mcap "Long or short"; pre-mortem rev 7); AI_Trading_Foundation.md (2.4 / 2.13 / 2.20); Operating_Protocols.md §1 HOIP / §2 commission-disregarded / §3 NO-GO records context (no prior UBER NO-GO) / §8 conviction-calibration; **Portfolio_Ledger.md** (state-as-of post-ZTS-NO-GO 2026-05-12: B NAV $1,888.69; 3 longs IBM/HCA/META; sector cap IT Services 1/3, Health Care Facilities 1/3, Comm Services 1/3, **Industrials / Ground Transportation 0/3** (per UBER GICS verification this session), all others 0/3 modulo prior NO-GO sub-industries; 2% sizing $37.77; B router ACTIVATE); Regime_State.md (B router ACTIVATE per SPY NEUTRAL + VIX 17.05 NORMAL); Decision_Log.md prior precedents critical:
+- **TEAM 2026-05-02 NO-GO (criterion 4 decisive failure on dual-framing test — "valuation-reset-but-not-narrative-reset" sub-pattern; SHORT framing fails on absent mean-reversion asymmetry given post-print sell-side mass-cut-but-ratings-maintained leaves stock approximately at fair-value-per-cut-PTs) — DIRECT-TEMPLATE PRECEDENT for UBER's split-sell-side mixed-signal routing** (GS PT CUT $125→$115 maintained Buy is canonical TEAM-pattern marker)
+- **PINS 2026-05-07 NO-GO (layered-1+3 + move-faded-Day-2 sub-evidence layer — ~80%+ retrace within 2 trading days leaving no remaining post-event mean-reversion edge) — SECONDARY-TEMPLATE PRECEDENT** for UBER's move-faded-Day-2 trajectory at lower magnitude (UBER 60% fade vs PINS 80%+)
+- TWLO 2026-05-02 NO-GO (aggressive-sell-side-bull-ratification with BofA upgrade-with-PT-raise INTC Citi-upgrade structural smoking gun — opposite-direction pattern from UBER's mixed sell-side; non-applicable)
+- DOC 2026-05-07 NO-GO (ambiguous-routing depressed-name pre-print-bearish-positioning-unwind on modest-print-confirmation; partial-fade-Day-2 trajectory) — secondary precedent for ambiguous-routing handling
+- 16-NO-GO B-short precedent string post-ZTS (canonical 2.20-trap)
+- "NO-GO records are context, not barriers" §3 (no prior UBER NO-GO record)
+- Watchlist.md (UBER NOT listed)
+
+**Web-search primary documents (verified this session):**
+- Uber Technologies Q1 2026 results press release IR (Wed 2026-05-06 BMO): https://investor.uber.com/news-events/news/press-release-details/2026/Uber-Announces-Results-for-First-Quarter-2026/default.aspx
+- CNBC "Uber (UBER) 2026 Q1 earnings" (May 6): https://www.cnbc.com/2026/05/06/uber-uber-2026-q1-earnings.html
+- Yahoo Finance Q1 2026 earnings revenue miss stock pops on guidance: https://finance.yahoo.com/markets/stocks/articles/uber-q1-2026-earnings-revenue-122812847.html
+- Rolling Out "Uber stock jumps 10% on 44% profit growth in Q1 2026": https://rollingout.com/2026/05/06/uber-stock-10-44-profit-growth-q1-2026/
+- StockTitan "Uber grows sales but books big Grab and Didi losses" (10-Q SEC filing): https://www.stocktitan.net/sec-filings/UBER/10-q-uber-technologies-inc-quarterly-earnings-report-7310a55738d9.html
+- HeyGoTrade Uber Earnings Preview May 6 profitability story: https://www.heygotrade.com/en/blog/uber-earnings-preview-may-6-2026/
+- Alphastreet Uber Q1 2026 Earnings Preview profitability test robotaxi momentum: https://news.alphastreet.com/uber-uber-q1-2026-earnings-preview-profitability-test-meets-robotaxi-momentum-ahead-of-may-6-report/
+- Public.com UBER earnings & analyst forecast: https://public.com/stocks/uber/earnings + https://public.com/stocks/uber/forecast-price-target
+- MarketBeat UBER stock forecast: https://www.marketbeat.com/stocks/NYSE/UBER/forecast/
+- **24/7 Wall St. "Wall Street Splits on Uber: Goldman Sachs Cuts Price Target While Piper Sandler Hikes" (May 7) — primary source for split-sell-side post-print reaction**: https://247wallst.com/investing/2026/05/07/wall-street-splits-on-uber-goldman-sachs-cuts-price-target-while-piper-sandler-hikes/
+- GuruFocus UBER Overweight by JPM price target raised to $110: https://www.gurufocus.com/news/8844891/uber-maintains-overweight-by-jp-morgan-price-target-raised-to-110
+- Benzinga UBER analyst ratings post-print: https://www.benzinga.com/quote/UBER/analyst-ratings
+- stockanalysis.com UBER historical-prices Mon 5/4 - Fri 5/8 (primary verified): https://stockanalysis.com/stocks/uber/history/
+
+### Decision
+
+**UBER — NO-GO (DECLINE).** Criterion 4 dual-framing decisive failure under **ambiguous sub-pattern routing — candidate sub-pattern "mixed-signal-quality-of-print with non-operating-noise-distortion + split-sell-side-response + faded-Day-2" FIRST INSTANCE established** (pending second-instance validation per W5 taxonomy bootstrap rules). The +8.53% Day-0 close-to-close reaction is genuinely mixed-quality-driven repricing on a print with structurally distinct information-content layers:
+- **Layer A (positive forward information):** Q2 bookings guide $56.25-57.75B midpoint $57B vs $56.17B cons = +1.5% above-consensus midpoint beat; Non-GAAP EPS guide $0.78-0.82
+- **Layer B (positive backward operational):** Non-GAAP EPS $0.72 vs $0.70 cons = +2.86% beat; +44% Y/Y growth; revenue +14% to $13.2B; gross bookings $53.7B vs $52.8B cons = +1.7% above-consensus beat
+- **Layer C (negative backward segment):** Mobility revenue $6.8B vs $7.11B est = **-4.4% segment miss** (hard structural information item — core segment revenue undershoot)
+- **Layer D (non-operating noise distortion):** GAAP diluted EPS $0.13 vs $0.70 cons driven by **$1.474B unrealized loss on Grab + Didi equity/debt securities (non-cash mark-to-market)** — distorts headline EPS but does NOT impair operating economics; clean adjustment
+- **Layer E (mixed sell-side response):** Goldman Sachs PT CUT $125→$115 (maintained Buy) + Piper Sandler $100→$105 + Truist $108→$112 + JPMorgan $105→$110 + Stifel $94→$102 = **1 PT cut + 4 modest raises (avg +5.5%)** = split sell-side response, NOT canonical sub-pattern 1 ratification wave at AMD/GLW/FLEX-tier aggressive magnitude
+
+Move FADED 60% by Day-2 (Tue $72.95 → Wed $79.17 +8.53% → Thu $76.73 → Fri $75.45 = +3.43% net retention = 40.2% retention vs Day-0 gain) — market has substantially digested the mixed-signal print and is treating ~$75 area as the new informationally-adjusted fair value. Compounded by criterion 3 closed-list rev 14 absent admissible convergence target.
+
+Criterion 1 mechanically clears at +8.53% Day-0 C/C in POSITIVE direction (1.71× threshold cushion — modest cushion compared to recent peers); criterion 5 sector cap clears (Industrials / Ground Transportation / Passenger Transportation 0/3 sub-industry).
+
+### Mechanical eligibility detail
+
+- **Instrument rule:** UBER = Uber Technologies, Inc., NYSE-listed common (US-listed); US-incorporated Delaware C-corp; ~2.09B shares outstanding; **market cap ~$157.8B at Fri 5/8 close $75.45** (~$152.5B pre-print Tue $72.95; ~$165.5B Wed Day-0 close $79.17). Well above $2B floor by ~76-83× cushion. 30-day ADV multi-million-shares/day on S&P 500 + Russell 1000 + Nasdaq 100 component. Long-or-short permitted; 2% sizing $37.77; no options.
+- **Criterion 1:** Event Wed 2026-05-06 BMO (Uber Q1 2026 earnings call). Pre-event reference Tue 5/5 close $72.95 → Wed 5/6 close $79.17 = **+8.53% Day-0 BMO C/C** (canonical BMO-print measurement); 1.71× threshold cushion in POSITIVE direction. Today Tue 5/12 = Day 4 of post-event 10-day window (Wed 5/6 = Day 0 / Thu 5/7 = Day 1 / Fri 5/8 = Day 2 / Mon 5/11 = Day 3 / Tue 5/12 = Day 4 / window expires Wed 5/20 = Day 10).
+- **Criterion 5:** No A position; UBER not on A queue per Watchlist.md 16-name list. GICS **Industrials sector / Transportation industry / Passenger Ground Transportation sub-industry** (S&P GICS classification verified; UBER classified as Industrials/Ground Transportation since GICS revision; some sources also reference Internet Direct Marketing Retail classification under Consumer Discretionary in older taxonomies but canonical S&P GICS is Industrials/Ground Transportation). Currently 0/3 used in Passenger Ground Transportation sub-industry; Industrials sector 0/3. **UBER-add scenario would yield Industrials sector 1/3 within Strategy.md 3-per-sector cap.** Within cap on per-sector and per-sub-industry basis (lowest sector concentration achievable across recent NO-GO candidates). KL #12 LONG-correlation: UBER-IBM ~0.20-0.35 (different sub-industries; some AI-narrative cross-correlation via Uber AV/robotaxi); UBER-META ~0.20-0.35 (ride-share + delivery + AI-narrative shared but different sectors); UBER-HCA ~0.05-0.15 (different sectors, low). 4-long-book pairwise avg ~0.15-0.25 = **KL #12 FAVORABLE LOW correlation profile** (per session-prompt note "UBER as ride-share/delivery has lower correlation with semis/IT than other current candidates; favorable for KL #12"). Comparable to WHR/SMCI/TSN/ZTS favorable baselines.
+
+### Decisive flaw analysis (criterion 2 + criterion 4 dual-framing under ambiguous sub-pattern routing)
+
+**Candidate sub-pattern "mixed-signal-quality-of-print with non-operating-noise-distortion + split-sell-side-response + faded-Day-2" — UBER first instance distinguishing features:**
+
+(α) **Layer A/B/C/D/E information-content composition** — the print is structurally distinct from canonical 4a-e variants and from sub-pattern 1/3 fingerprints:
+- NOT sub-pattern 1: split sell-side (1 GS PT CUT + 4 modest raises avg +5.5%) is NOT canonical aggressive ratification wave (vs FLEX JPM +90.5%, AMD Goldman +88%, GLW Oppenheimer +75%, ARM TD Cowen +61% MEGA-raises)
+- NOT sub-pattern 3: pre-event Mon 5/4 -1.58% / Tue 5/5 -1.33% = no pre-print rally absorption; in fact pre-print stock DECLINED through 2 trading days into print
+- NOT sub-pattern 4a-e: no pre-existing structural overhang persistence (4a); no non-print-catalyst competitive threat emergence (4b); FY guide is BEAT not cut (4c not applicable); no active securities litigation overhang (4d); no supply-side constraint emergence at print (4e)
+- NOT DOC sub-pattern 8 candidate: pre-event UBER at $73 was not depressed-name (~14% off 52-wk high vs DOC's -45% off highs); pre-print sentiment was MIXED not bearish-positioned
+- NEW DISTINGUISHING DIMENSION: $1.474B unrealized loss on Grab + Didi equity/debt securities = non-cash mark-to-market hit distorting GAAP EPS ($0.13 vs $0.70 cons) but explicitly non-operating; market correctly looked through via Non-GAAP $0.72 +44% Y/Y framing
+
+(β) **Split sell-side response signals quality-of-print ambiguity.** Per 24/7 Wall St. May 7 coverage "Wall Street Splits on Uber": Goldman Sachs LOWERED PT $125 → $115 (-8% target cut, maintained Buy) = bearish-recalibration on mobility-revenue-miss + macro consumer-discretionary concerns vs Piper Sandler $100 → $105 + Truist $108 → $112 + JPMorgan $105 → $110 + Stifel $94 → $102 = bullish-recalibration on Q2 guide + Non-GAAP profitability metrics + gross bookings beat. **Sell-side cluster doesn't have unified directional view** — opposite-direction signals from named bulls/bears within the cluster. This is structurally distinct from canonical sub-pattern 1 fingerprint (where 5+ firms aggressively ratify in same direction) and matches **TEAM 2026-05-02 "valuation-reset-but-not-narrative-reset" precedent** where post-print PT cuts but ratings maintained leave stock approximately at fair-value-per-cut-PTs.
+
+(γ) **Move FADED 60% through Day-2.** Post-event trajectory: Tue 5/5 $72.95 (pre-print baseline) → Wed 5/6 $79.17 (Day 0 +8.53%) → Thu 5/7 $76.73 (Day 1 -3.08% fade) → Fri 5/8 $75.45 (Day 2 -1.67% continued fade). Day-2 retention = $75.45 - $72.95 = +$2.50 / +3.43% retained from baseline vs +$6.22 / +8.53% Day-0 gain = **40.2% retention vs Day-0 = 60% fade through Day-2**. Closest comparable PINS 5/7 ~80%+ fade-by-Day-2 (PINS retraced from +18.94% AH high to within $0.04 of pre-print baseline within 2 trading days). UBER's 60% fade is **less severe than PINS but materially partial-fade pattern**, structurally distinct from GLW/AMD/SMCI/FLEX HELD-AND-EXTENDED pattern and from ARM Day-1-flat pattern. Market has digested the mixed-signal print substantially but not fully reverted to baseline.
+
+(δ) **Mobility-revenue-miss is hard structural information.** $6.8B vs $7.11B est = -4.4% segment-level miss in core operating segment. This is NOT a one-time noise item like the Didi/Grab MTM — it's a real operational signal of segment-level demand softening or competitive pressure. While Q2 bookings guide implies acceleration, the Q1 mobility miss is structural information item.
+
+(ε) **Macro consumer-discretionary deceleration overlay consistent with broader signal cluster.** UBER ride-share + delivery exposure overlaps with macro consumer-spending-deceleration cluster documented this experiment cycle: MCD 5/7 "consumer environment may be getting a little bit worse"; WHR 5/6 "war in Iran resulted in recession-level industry decline in U.S. via consumer-confidence collapse"; SMCI / ZTS / DASH (food delivery sister) all flagged consumer-discretionary concerns. UBER's mobility-revenue miss may reflect this macro consumer-deceleration. This is NOT yet a full sub-pattern 4 routing because guide is NOT cut and forward narrative is intact, but the macro-consumer-deceleration cluster cross-reference adds caution to LONG framing.
+
+(ζ) **Criterion 3 closed-list rev 14 absent admissible convergence target.**
+- (a) Numerical price level:
+  - Mean-reversion target Wed Day-0 close $79.17 = +4.93% from Fri $75.45 (chase Day-0 close already retraced from = sub-pattern-1-trap-mirror); structurally weak target given Day-2 fade indicates market re-rating downward
+  - Mean-reversion target pre-print Tue $72.95 = -3.31% (SHORT direction; mean-reversion-down already 60% executed)
+  - Mean-reversion target post-cuts PT cluster mean ~$110 = +46% upside; structurally large but face TEAM-precedent valuation-reset-not-narrative-reset binding
+- (b) Named-event options:
+  - Next earnings Q2 2026 print ~early-August 2026 — **OUTSIDE 60-day window from event-day Wed 5/6 = Mon 7/6 (60 days; Q2 print typically 8/5-8/7 = outside window by ~4 weeks)**
+  - Next FDA decision: N/A
+  - Next FOMC June 16-17 = within 60-day window technically, but structurally mismatched against idiosyncratic UBER mixed-signal-print thesis
+  - S&P 500 inclusion: UBER already in S&P 500 since Dec 2023 — NOT fresh trigger
+  - Nasdaq 100: UBER added to Nasdaq 100 in Dec 2023 — already included
+  - Russell 1000: already included
+- **Net:** Numerical price level option faces sub-pattern-1-trap-mirror (Day-0 close chase already retraced) OR thin -3% SHORT target with mean-reversion-already-60%-executed. **Criterion 3 closed-list rev 14 effectively absent admissible target.**
+
+### LONG framing dismissed (5 axes — LONG mean-reversion-up from already-faded +3.43% retention)
+
+LONG thesis: Stock at Fri $75.45 vs Day-0 close $79.17 = -4.7% retracement; Q2 guide beat (+1.5% above-cons) + Non-GAAP EPS beat (+2.86%) + gross bookings beat (+1.7%) + +44% Y/Y profitability growth = structurally positive print; consensus PT cluster $110-115 post-cuts = +46% upside; mean-reversion-up target Day-0 $79 = +5% upside.
+
+**Decisive flaws:**
+(α) Move FADED 60% by Day-2 = market has substantially digested mixed-signal print; sentiment-overshoot LONG framing inverted (UNDER-pricing thesis would require market to re-rally; structurally weak given 60% fade)
+(β) Mobility-revenue miss is hard structural information item not sentiment-overshoot
+(γ) Split sell-side response (GS PT CUT) = no clear ratification floor for LONG framing
+(δ) Macro consumer-discretionary deceleration overlay (MCD/WHR/SMCI/ZTS cluster) caution against ride-share/delivery LONG
+(ε) Criterion 3 closed-list rev 14 absent admissible target — Q2 outside window; PT chase = TEAM-precedent valuation-reset-not-narrative-reset trap mirror; FOMC mismatched; no index-inclusion fresh trigger
+
+**LONG framing structurally weak per TEAM 5/2 + PINS 5/7 dual-precedent.**
+
+### SHORT framing dismissed (5 axes — SHORT continuation-down toward pre-print Tue baseline $72.95)
+
+SHORT thesis: 60% fade already executed; remaining -3.3% mean-reversion to pre-print baseline $72.95 over remaining 7 trading days; mobility-revenue miss + macro consumer-discretionary deceleration support continuation-down framing.
+
+**Decisive flaws:**
+(η) **16-NO-GO B-short precedent string in current risk-on regime extends to 17 with UBER-SHORT dismissal** (per V/MDLZ/TSN 4a precedent baseline + BE/CAT/TWLO/UPS/NCLH/CRCL + SHOP/PYPL/CDW D2-declined + PINS/AMD/DOC/TSN/GLW/ARM/SMCI/WHR/FLEX/ZTS SHORT-framing dismissals string). 2.20-trap canonical against modest Q1 non-GAAP beat (+2.86%) + Q2 guide modest beat (+1.5% above-cons) + +44% Y/Y profitability growth + 4-firm modest PT raises (Piper/Truist/JPM/Stifel)
+(θ) **+25% short-side stop $75.45 × 1.25 = $94.31** — operational room above current and pre-print Day-0 high $79.17; but KL #7 gap-up risk:
+- LYFT Q1 2026 print typically follows UBER by ~1-2 days (need to verify; if within 10-day or 60-day window any positive LYFT print could create ride-share-sector-tape gap-up for UBER)
+- FOMC June 16-17 rate-cut surprise — would reduce macro consumer-discretionary headwind
+- Iran-de-escalation rhetoric reversal — would reduce macro consumer-confidence-collapse cluster
+- Macro consumer prints (Consumer Confidence / PCE / Retail Sales) positive surprise — would reduce mobility-segment macro concern
+- Uber AV/robotaxi progress announcements / partnerships — UBER has AV/robotaxi forward narrative (per Alphastreet Q1 preview reference) that could trigger gap-up
+- **5+ potential gap-up reversal vectors over 60-day window**
+(ι) **Mean-reversion-already-60%-executed-DOWN.** Stock has faded $79.17 → $75.45 = -4.7% retracement from Day-0 close; remaining -3.3% to pre-print baseline; further SHORT continuation requires market to penalize UBER beyond modest fair-value-re-rate; structurally weak given Non-GAAP +44% Y/Y growth and Q2 guide modest above-consensus beat
+(κ) **Sell-side post-cuts PT cluster $110-115 + Q2 guide above-consensus + Non-GAAP profitability metrics create structural floor** compressing realistic SHORT continuation target; SHORT target -3% to baseline thin against multi-vector upside-bias from forward Q2 expectations
+(λ) **SHORT convergence target structurally weak under criterion 3 closed-list rev 14.** Same closed-list constraints apply symmetrically: numerical -3% target thin; Q2 outside 60-day window; FOMC mismatched; no index-inclusion. Absent admissible SHORT target.
+
+**SHORT framing dismissed canonically + by mean-reversion-already-executed + by criterion 3 closed-list absent SHORT target.**
+
+### Effect on book
+
+No effect. No order staged. Strategy B remains in ACTIVATE state with three open positions (IBM, HCA, META) and zero staged orders. Strategy B sector concentration unchanged: IT Services 1/3 (IBM); Health Care Facilities 1/3 (HCA); Comm Services / IMS 1/3 (META); **Industrials / Passenger Ground Transportation 0/3** (where UBER would have sat — would have been clean Industrials-sector first-add); IT / Electronic Manufacturing Services 0/3 (post-FLEX); IT / Technology Hardware Storage & Peripherals 0/3 (post-SMCI); IT / Semiconductors 0/3 (post-ARM); IT / Electronic Components 0/3 (post-GLW); Consumer Discretionary / Restaurants 0/3 (post-DASH); Consumer Discretionary / Household Appliances 0/3 (post-WHR); Health Care / Pharmaceuticals / Animal Health 0/3 (post-ZTS); others 0/3.
+
+### Pending queue updated
+
+- ~~UBER B-thesis construction~~ COMPLETE — NO-GO under ambiguous sub-pattern routing (candidate "mixed-signal-quality-of-print with non-operating-noise-distortion + split-sell-side-response + faded-Day-2" FIRST INSTANCE) + criterion 3 closed-list absent admissible target.
+- 10-day post-event entry window for UBER expires Wed 2026-05-20 (10 trading days from Wed 5/6; today Tue 5/12 = Day 4 of 10).
+- Sequenced sister thesis-construction sessions Tue 5/12: CEG re-screen 09:00 + **UBER (this session, 11:00 calendar slot) ✓** + ZTS 11:00 ✓ + SHAK 13:00 + DDOG 14:00 + FTNT 15:00 — 6 sessions stacked Tue. 2 same-day completions Tue post-ZTS-and-UBER; remaining 4 sessions Tue. Operator-capacity vigilance per Mon 5/11 6-disposition new-high-water-mark precedent.
+- No calendar event scheduled to revisit UBER within window.
+
+### References
+
+- Strategy.md (B section); AI_Trading_Foundation.md (2.4/2.13/2.20); Operating_Protocols.md §1/§2/§3/§8; Portfolio_Ledger.md; Regime_State.md.
+- Decision_Log.md 2026-05-02 TEAM NO-GO (valuation-reset-but-not-narrative-reset sub-pattern — direct-template precedent for UBER's split-sell-side mixed-signal routing).
+- Decision_Log.md 2026-05-07 PINS NO-GO (move-faded-by-Day-2 sub-evidence layer — secondary-template precedent for UBER's 60%-fade-Day-2 trajectory at lower magnitude).
+- Decision_Log.md 2026-05-02 TWLO NO-GO (aggressive-sell-side-bull-ratification — opposite-direction reference; UBER does NOT exhibit canonical sub-pattern 1 fingerprint).
+- Decision_Log.md 2026-05-07 DOC NO-GO (ambiguous-routing depressed-name pre-print-bearish-positioning-unwind — secondary precedent for ambiguous-routing handling though UBER not depressed-name profile).
+- Decision_Log.md 2026-05-06 D2 conversion entry (UBER routed to thesis-construction with disqualifier-focused frame for mixed-signal information-vs-sentiment quality-of-print formal sub-pattern documentation).
+- Decision_Log.md 2026-05-11 GLW + DASH + ARM + SMCI + WHR + FLEX NO-GOs (Mon 5/11 6-NO-GO same-day precedent block).
+- Decision_Log.md 2026-05-12 ZTS NO-GO (Tue 5/12 11:00 same-day sister session; structural-overhang sub-pattern 4 variant 4a clean single-pattern; UBER routes to different ambiguous-mixed-signal pattern).
+- Uber Q1 2026 earnings release IR (Wed 5/6 BMO); CNBC + Yahoo + Rolling Out + StockTitan + HeyGoTrade + Alphastreet + Public.com + MarketBeat + GuruFocus + Benzinga coverage; 24/7 Wall St. May 7 "Wall Street Splits on Uber: Goldman Sachs Cuts Price Target While Piper Sandler Hikes" — primary source for split-sell-side reaction.
+- stockanalysis.com UBER historical-prices (primary verified Mon 5/4 - Fri 5/8).
+
+### Theater-check on this orchestrator review
+
+(a) **Criterion 1 measurement correct?** Yes — Tue 5/5 $72.95 → Wed 5/6 $79.17 = +8.53% Day-0 BMO C/C (canonical BMO-print measurement); 1.71× threshold cushion. Session-prompt's "+7-8%" verified to 1-percentage-point precision (actual +8.53% slightly above stated range; rounding-level non-binding).
+
+(b) **Ambiguous sub-pattern routing justified?** Yes — UBER fingerprint distinct from sub-pattern 1 (split sell-side not aggressive ratification wave), sub-pattern 3 (no pre-print rally), sub-pattern 4 variants 4a-e (no structural overhang persistence; FY guide is BEAT not cut; no securities litigation; no supply-side constraint), sub-pattern 8 candidate (not depressed-name). Candidate new sub-pattern "mixed-signal-quality-of-print with non-operating-noise-distortion + split-sell-side-response + faded-Day-2" — first instance; pending second-instance validation per W5 taxonomy bootstrap rules.
+
+(c) **Criterion 4 information-vs-sentiment dual-framing test rigorously applied per session-prompt invocation?** Yes — 5-layer information-content composition documented (Layer A positive forward Q2 guide; Layer B positive backward Non-GAAP profitability; Layer C negative backward mobility miss; Layer D non-operating noise Didi/Grab MTM; Layer E split sell-side). Net assessment: print is genuinely mixed-quality with non-operating-noise distortion correctly looked-through-by-market via Non-GAAP framing; mobility-miss is hard structural information; Q2 guide modest above-consensus beat; sell-side cluster doesn't have unified directional view. Mixed-signal quality binds criterion 4 dual-framing decisively against both LONG and SHORT framings.
+
+(d) **Criterion 3 closed-list analysis exhaustive?** Yes — numerical PT chase = TEAM-precedent valuation-reset-not-narrative-reset trap-mirror; Q2 outside 60-day window from 5/6 = 7/6; FOMC mismatched; UBER already in S&P 500 + Nasdaq 100 + Russell 1000 (Dec 2023 inclusion); absent admissible target.
+
+(e) **LONG framing steel-manned?** Yes — Q2 guide beat + Non-GAAP profitability + gross bookings beat + +44% Y/Y growth + post-cuts PT cluster $110-115 implying +46% upside steel-manned. Defeated on move-faded-Day-2 + split sell-side + mobility-miss hard information + macro consumer-discretionary cluster overlay + criterion 3 absent target.
+
+(f) **SHORT framing dismissed properly?** Yes — 16→17 NO-GO B-short string + 2.20-trap + 5+ gap-up reversal vectors (LYFT print / FOMC / Iran-de-escalation / macro consumer prints / Uber AV-robotaxi progress) + mean-reversion-already-60%-executed + sell-side PT cluster floor + criterion 3 absent SHORT target.
+
+(g) **KL #12 assessed?** Yes — 4-long-book pairwise avg ~0.15-0.25 = FAVORABLE LOW correlation (per session-prompt note "UBER as ride-share/delivery has lower correlation with semis/IT than other current candidates; favorable for KL #12"); comparable to WHR/SMCI/TSN/ZTS favorable baselines. Secondary observation; criterion 4 binds via ambiguous sub-pattern routing independent.
+
+(h) **Was the disqualifier-focused frame from D2 5/6 routing applied correctly?** Yes — D2 5/6 routing rationale (d) explicitly framed UBER's mixed-signal print quality as meriting formal sub-pattern documentation. This session resolves the qualifying-event sub-test on event-driven side (Q1 print is canonical earnings event with multi-element hard information layers) and proceeds through criterion 4 dual-framing to NO-GO with ambiguous-sub-pattern first-instance establishment for taxonomy yield.
+
+(i) **Deferral considered?** No — criterion 4 dual-framing decisive failure + criterion 3 closed-list absent target = clean NO-GO.
+
+Modulo these nine considerations, the orchestrator review converges on NO-GO with MEDIUM-HIGH (~70-80%) confidence — moderate-range given genuinely ambiguous sub-pattern routing (TEAM/PINS dual-precedent mix without clean single-pattern fingerprint) and Layer A-E information-content composition has genuinely mixed elements. Conviction lower than typical structural NO-GO cases (V/MDLZ/TSN/SMCI/WHR/ZTS at HIGH ~80-90%) reflecting the ambiguity; comparable to DOC 5/7 ambiguous-routing first-instance conviction (MEDIUM-HIGH ~70-80%).
+
+### Compaction-survival note
+
+**Strategy B UBER Q1-2026-print disposition 2026-05-12 ~post-ZTS-NO-GO (calendar slot Tue 5/12 11:00 MT, run-sequenced after ZTS):** **NO-GO (DECLINE) via criterion 4 dual-framing decisive failure under ambiguous sub-pattern routing — candidate sub-pattern "mixed-signal-quality-of-print with non-operating-noise-distortion + split-sell-side-response + faded-Day-2" FIRST INSTANCE established + criterion 3 closed-list rev 14 absent admissible target.**
+
+**Event details (Wed 2026-05-06 BMO):** Uber Q1 2026 results — Non-GAAP EPS $0.72 vs $0.70 cons +2.86% beat; Non-GAAP EPS +44% Y/Y; revenue $13.2B vs $13.29B cons -0.7% miss; revenue +14% Y/Y; gross bookings $53.7B vs $52.8B cons +1.7% above-consensus beat; gross bookings +25% Y/Y; **Mobility revenue $6.8B vs $7.11B est -4.4% segment miss** (hard structural information); GAAP diluted EPS $0.13 vs $0.70 cons (driven by **$1.474B unrealized loss on Grab + Didi equity/debt securities = non-cash mark-to-market hit**; non-operating noise; market correctly looked through via Non-GAAP framing); Q2 bookings guide $56.25-57.75B midpoint $57B vs $56.17B cons +1.5% above-consensus midpoint beat; Q2 Non-GAAP EPS guide $0.78-0.82. Mixed-quality print with positive forward Q2 guide + positive backward Non-GAAP profitability + negative backward mobility-segment miss + non-operating Didi/Grab MTM noise.
+
+**Stock price action (primary-source verified via stockanalysis.com):** Mon 5/4 $73.93 (-1.58%) / Tue 5/5 $72.95 (-1.33%) — pre-print Tue (print BMO Wed) / **Wed 5/6 $79.17 (+8.53% Day-0 canonical BMO C/C POSITIVE; 1.71× threshold cushion)** / Thu 5/7 $76.73 (-3.08% Day-1 modest fade) / Fri 5/8 $75.45 (-1.67% Day-2 continued fade). Net Tue→Fri = $72.95 → $75.45 = **+3.43% net retention with 60% FADE through Day-2** (40.2% retention vs Day-0 +8.53% gain). Pattern between PINS 5/7 ~80%+ fade-by-Day-2 (full retracement) and DOC 5/7 partial-fade-Day-2 (50% gap-fill stabilization); UBER at 60% fade is more severe than DOC but less severe than PINS.
+
+**Post-print sell-side SPLIT response (NOT canonical sub-pattern 1 wave):**
+- Goldman Sachs $125 → $115 (-8% PT CUT, maintained Buy) — bearish-recalibration on mobility-miss + macro
+- Piper Sandler $100 → $105 (+5% raise, Overweight)
+- Truist $108 → $112 (+3.7% raise)
+- JPMorgan $105 → $110 (+4.8% raise, Overweight)
+- Stifel $94 → $102 (+8.5% raise)
+- **1 PT CUT + 4 modest raises avg +5.5%** = SPLIT sell-side; cluster doesn't have unified directional view; structurally distinct from canonical sub-pattern 1 aggressive ratification wave (vs FLEX JPM +90.5% MEGA-raise; AMD Goldman +88%; GLW Oppenheimer +75%; ARM TD Cowen +61%)
+
+**Daily.md / session-prompt non-binding corrections persisted:** (1) close-to-close magnitude verified +8.53% (session-prompt's "+7-8%" approximate); (2) qualifying-event sub-test resolution CLEANLY QUALIFYING (event-driven multi-layer information-content; NOT commentary-only); (3) Didi/Grab MTM $1.474B non-cash loss explicitly verified per StockTitan 10-Q + 24/7 Wall St. coverage.
+
+**5-layer information-content composition:**
+- Layer A (positive forward): Q2 bookings guide +1.5% above-cons midpoint
+- Layer B (positive backward operational): Non-GAAP EPS +2.86% beat / +44% Y/Y; revenue +14% Y/Y; gross bookings +1.7% beat
+- Layer C (negative backward segment): Mobility revenue -4.4% segment miss
+- Layer D (non-operating noise): $1.474B Didi/Grab unrealized loss distorting GAAP but non-cash one-time; correctly looked through by Non-GAAP framing
+- Layer E (split sell-side): GS PT CUT + 4 modest raises avg +5.5% = no unified directional view
+
+**Candidate sub-pattern routing decision-rationale:** UBER does NOT fit canonical sub-pattern 1/3/4a-e/8 candidate fingerprints. Closest TEAM 2026-05-02 "valuation-reset-but-not-narrative-reset" + PINS 2026-05-07 "move-faded-by-Day-2" dual-precedent. Mixed-signal-quality + non-operating-noise + split-sell-side + faded-Day-2 = first observed instance combining all four dimensions. Candidate sub-pattern FIRST INSTANCE; pending second-instance validation per W5 taxonomy bootstrap rules.
+
+**Conviction in NO-GO: MEDIUM-HIGH (~70-80%)** — moderate-range reflecting genuinely ambiguous sub-pattern routing (TEAM/PINS dual-precedent mix without clean single-pattern fingerprint); comparable to DOC 5/7 ambiguous-routing first-instance conviction. Lower than V/MDLZ/TSN/SMCI/WHR/ZTS structural-overhang HIGH ~80-90% range; lower than GLW/AMD/FLEX layered-1+3 HIGH-VERY-HIGH ~85-95% range.
+
+Theater-check CONVERGENT across all 9 review axes including ambiguous-routing-handling consideration; ambiguous routing does NOT flip disposition direction (both LONG and SHORT framings face decisive flaws independent of sub-pattern routing precision); criterion 3 closed-list absent target binds independent of sub-pattern.
+
+**Sub-pattern routing taxonomy update.** **Candidate sub-pattern "mixed-signal-quality-of-print with non-operating-noise-distortion + split-sell-side-response + faded-Day-2" FIRST INSTANCE established (UBER)** — pending second-instance validation per W5 taxonomy bootstrap rules. Provisional sub-pattern numbering: candidate sub-pattern 9 (after DOC's sub-pattern 8 candidate). **NEW evidence layer "non-operating-noise-distortion of GAAP via equity-investment-MTM"** flagged for W5 taxonomy extraction (UBER first instance; Didi/Grab MTM dimension distinct from prior sub-patterns; pending second-instance validation). **NEW evidence layer "split-sell-side-response with single PT-cut + multiple modest raises"** flagged (UBER first instance; distinguishes from canonical sub-pattern 1 unified ratification; pattern signal = "sell-side cluster doesn't have unified directional view = quality-of-print ambiguity"). Sub-pattern 1 instance count unchanged at 9 (BE/CAT/AXSM/PINS/AMD/TSN/GLW/ARM/FLEX); layered-1+3 variant unchanged at 7 instances; sub-pattern 4 instance count unchanged at 9 instances (V/MDLZ/TSN/UPS/NCLH/SMCI/ARM/WHR/ZTS); sub-pattern 8 candidate (DOC depressed-name) unchanged at 1 instance.
+
+**Experiment Strategy B totals advance to 3 GO + 37 NO-GO = 7.5% / 92.5% hit rate** (from 3/36 = 7.7%/92.3% post-ZTS). Long-direction NO-GO breakdown: criterion 1 mechanical 3; instrument-rule 2; **criterion 4 decisive advances to 32 with UBER** (from 31). **The 16-NO-GO B-short precedent string extends to 17 with UBER-SHORT formal dismissal.**
+
+**Strategy B sector cap usage at session-end 2026-05-12 ~post-ZTS:** unchanged from post-ZTS state. IT Services 1/3 (IBM); Health Care Facilities 1/3 (HCA); Comm Services / IMS 1/3 (META); **Industrials / Passenger Ground Transportation 0/3** (UBER would have been 1/3 sub-industry / Industrials sector 0/3 → 1/3 within cap had GO disposed — would have been first Industrials-sector concurrent position); Health Care / Pharmaceuticals / Animal Health 0/3 (post-ZTS); IT / Electronic Manufacturing Services 0/3 (post-FLEX); IT / Technology Hardware Storage & Peripherals 0/3 (post-SMCI); IT / Semiconductors 0/3 (post-ARM); IT / Electronic Components 0/3 (post-GLW); Consumer Discretionary / Restaurants 0/3 (post-DASH); Consumer Discretionary / Household Appliances 0/3 (post-WHR); other sub-industries 0/3. KL #12 FAVORABLE for UBER (4-long-book pairwise avg ~0.15-0.25; Industrials / Passenger Ground Transportation lowest-correlation-tier with current IT-Services/Health Care Facilities/Comm Services book per session-prompt note) — secondary; does NOT reinforce NO-GO direction; criterion 4 binds via ambiguous sub-pattern routing independent of correlation.
+
+**No order staged. No portfolio-state change.** 2% next-trade sizing $37.77 unchanged. Window expires Wed 2026-05-20 (today Tue 5/12 = Day 4 of 10). LYFT Q1 2026 print timing within window (typically 1-2 days after UBER; needs verification) could create ride-share-sector-tape gap-up vector per KL #7; routine Daily.md scan picks up if LYFT print produces qualifying UBER sympathy ≥5% C/C — distinct event evaluated per Operating Protocols §3.
+
+**Tue 5/12 same-day B thesis-construction queue saturation status post-UBER:** CEG re-screen 09:00 ✓ + UBER 11:00 ✓ + **ZTS 11:00 ✓ (this session post-ZTS sequencing)** + SHAK 13:00 + DDOG 14:00 + FTNT 15:00 — 3 sessions complete Tue post-ZTS-and-UBER + 3 remaining (SHAK/DDOG/FTNT). Mon 5/11 6-disposition new-high-water-mark precedent allows for further Tue capacity if needed; per Operating-Protocols-mandated capacity-vigilance, downstream sessions should consider deferral if operator capacity binds.
