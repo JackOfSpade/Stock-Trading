@@ -7949,7 +7949,7 @@ Modulo these seven considerations, the orchestrator review converges on NO-GO wi
 
 ---
 
-## 2026-05-11 (Mon, ~post-DASH-NO-GO MT, ARM session run sequenced after DASH 13:00 disposition; calendar slot 11:00 MT rescheduled from Fri 5/8 11:00 per D2 5/9 conversion) Strategy B thesis construction outcome — ARM (ARM Holdings) NO-GO via criterion 4 dual-framing decisive failure compounded by criterion 3 closed-list rev 14 absent admissible convergence target; **layered-1+3+4 variant SECOND INSTANCE** (after TSN 2026-05-08 first instance) **WITH NEW EVIDENCE LAYERS** — (a) **post-event NEGATIVE-direction reaction** (-10.11% Day-0 close-to-close), distinct from prior layered-1+3 instances which were all positive-direction (AXSM/PINS/AMD/TSN/GLW); (b) **stock-failing-to-follow-ratification at greater magnitude than AXSM 5/6 precedent** (-10.11% C/C vs AXSM's -1.85% pre-bell); (c) candidate sub-pattern 4 variant 4d "structural-supply-side-constraint-emergence-at-print" — first instance, distinct from TSN's 4a temporal-Beef-cycle / UPS's 4b competitive-threat-emergence / NCLH's 4c guide-cut-on-macro-overhang dimensions; no order staged
+## 2026-05-11 (Mon, ~post-DASH-NO-GO MT, ARM session run sequenced after DASH 13:00 disposition; calendar slot 11:00 MT rescheduled from Fri 5/8 11:00 per D2 5/9 conversion) Strategy B thesis construction outcome — ARM (ARM Holdings) NO-GO via criterion 4 dual-framing decisive failure compounded by criterion 3 closed-list rev 14 absent admissible convergence target; **layered-1+3+4 variant SECOND INSTANCE** (after TSN 2026-05-08 first instance) **WITH NEW EVIDENCE LAYERS** — (a) **post-event NEGATIVE-direction reaction** (-10.11% Day-0 close-to-close), distinct from prior layered-1+3 instances which were all positive-direction (AXSM/PINS/AMD/TSN/GLW); (b) **stock-failing-to-follow-ratification at greater magnitude than AXSM 5/6 precedent** (-10.11% C/C vs AXSM's -1.85% pre-bell); (c) candidate sub-pattern 4 variant 4e "structural-supply-side-constraint-emergence-at-print" — first instance, distinct from TSN's 4a temporal-Beef-cycle / UPS's 4b competitive-threat-emergence / NCLH's 4c guide-cut-on-macro-overhang dimensions; no order staged
 
 **Trigger:** Calendar-event-scheduled Strategy B thesis construction for ARM, Mon 2026-05-11 11:00–11:45 MT (rescheduled from Fri 2026-05-08 11:00 MT per D2 5/9 conversion entry — original session not completed Fri 5/8 due to operator capacity ceiling). Session run in sequence with same-day B thesis-construction queue: GLW 09:00 ✓ COMPLETE + DASH 13:00 ✓ COMPLETE + **ARM (this session)** + SMCI 13:00 / WHR 14:00 / FLEX 15:00 remaining. Calendar prompt frames the layered-1+3 test as primary discriminator and explicitly invites verification of close-to-close magnitude vs reported "intraday +13% pre-print + +8% AH after print" framing.
 
@@ -7966,7 +7966,7 @@ Modulo these seven considerations, the orchestrator review converges on NO-GO wi
 - AMD 2026-05-07 NO-GO (layered-1+3 THIRD INSTANCE at MOST EXTREME magnitude on layer-1 Goldman $240→$450 +88% mega-raise; move-HELD through Day 2-3 +16.2% net retention)
 - PINS 2026-05-07 NO-GO (layered-1+3 SECOND INSTANCE + move-completely-faded-by-Day-2 evidence)
 - AXSM 2026-05-06 NO-GO (layered-1+3 FIRST INSTANCE; **stock-failing-to-follow-ratification signal at AXSM magnitude -1.85% pre-bell post-ratification — direct precedent for ARM's stock-failing-to-follow at greater magnitude -10.11% C/C**)
-- UPS 2026-05-05 NO-GO (sub-pattern 4 variant 4b "structural-competitive-threat-emergence-at-non-print-catalyst") + NCLH 2026-05-05 NO-GO (variant 4c "guide-cut-on-pre-existing-macro-overhang") — establish sub-pattern 4 variant family; ARM proposes variant 4d "structural-supply-side-constraint-emergence-at-print"
+- UPS 2026-05-05 NO-GO (sub-pattern 4 variant 4b "structural-competitive-threat-emergence-at-non-print-catalyst") + NCLH 2026-05-05 NO-GO (variant 4c "guide-cut-on-pre-existing-macro-overhang") — establish sub-pattern 4 variant family; ARM proposes variant 4e "structural-supply-side-constraint-emergence-at-print"
 - DASH 2026-05-11 13:00 NO-GO (same-day sister precedent; criterion 1 mechanical fail on positive-direction intraday-peak-vs-close-to-close discrepancy; ARM by contrast has criterion 1 clearing in negative direction; both result in NO-GO but via different criterion routing)
 - "NO-GO records are context, not barriers" §3 (no prior ARM NO-GO record; fresh evaluation merits proceeding through formal session)
 - 11-NO-GO B-short precedent string in current risk-on regime (BE / CAT / TWLO / UPS / NCLH / CRCL / SHOP / PYPL / CDW / PINS / AMD / DOC / TSN / GLW SHORT-framing dismissals — DASH-SHORT not counted as direction-agnostic per criterion 1 fail)
@@ -8001,7 +8001,7 @@ Modulo these seven considerations, the orchestrator review converges on NO-GO wi
 
 ### Decision
 
-**ARM — NO-GO (DECLINE).** Criterion 4 dual-framing decisive failure with **layered-1+3+4 variant SECOND INSTANCE** (after TSN 2026-05-08 first instance) plus NEW evidence layers: (a) post-event NEGATIVE-direction Day-0 reaction (-10.11% C/C — first instance among layered-1+3 cases; AXSM/PINS/AMD/TSN/GLW were all positive-direction), (b) stock-failing-to-follow-ratification at GREATER magnitude than AXSM 5/6 precedent (-10.11% C/C vs AXSM's -1.85% pre-bell post-ratification), (c) candidate sub-pattern 4 variant 4d "structural-supply-side-constraint-emergence-at-print" (CEO disclosure of AGI CPU demand $20B vs locked supply $1B + smartphone unit growth turning negative on memory shortage — hard structural information emerging concurrent with print). Compounded by criterion 3 closed-list rev 14 absent admissible convergence target (numerical PT chase = sub-pattern 1 trap per BE/CAT/STX/MDLZ/TSN doctrine; Q1 FY27 next earnings ~late-July/early-August 2026 OUTSIDE 60-day window from 5/7 = 7/6; FOMC June 16-17 within window but structurally mismatched against idiosyncratic supply-constraint thesis; ARM is UK-incorporated and NOT eligible for S&P 500; already in Nasdaq 100 since Dec 2023 + Russell 1000). Criterion 1 mechanically clears in NEGATIVE direction at -10.11% Day-0 C/C (2.02× threshold cushion); criterion 5 sector cap clears (IT/Semiconductors 0/3 sub-industry; IT-sector 1/3 → 2/3 within per-sector cap had GO disposed).
+**ARM — NO-GO (DECLINE).** Criterion 4 dual-framing decisive failure with **layered-1+3+4 variant SECOND INSTANCE** (after TSN 2026-05-08 first instance) plus NEW evidence layers: (a) post-event NEGATIVE-direction Day-0 reaction (-10.11% C/C — first instance among layered-1+3 cases; AXSM/PINS/AMD/TSN/GLW were all positive-direction), (b) stock-failing-to-follow-ratification at GREATER magnitude than AXSM 5/6 precedent (-10.11% C/C vs AXSM's -1.85% pre-bell post-ratification), (c) candidate sub-pattern 4 variant 4e "structural-supply-side-constraint-emergence-at-print" (CEO disclosure of AGI CPU demand $20B vs locked supply $1B + smartphone unit growth turning negative on memory shortage — hard structural information emerging concurrent with print). Compounded by criterion 3 closed-list rev 14 absent admissible convergence target (numerical PT chase = sub-pattern 1 trap per BE/CAT/STX/MDLZ/TSN doctrine; Q1 FY27 next earnings ~late-July/early-August 2026 OUTSIDE 60-day window from 5/7 = 7/6; FOMC June 16-17 within window but structurally mismatched against idiosyncratic supply-constraint thesis; ARM is UK-incorporated and NOT eligible for S&P 500; already in Nasdaq 100 since Dec 2023 + Russell 1000). Criterion 1 mechanically clears in NEGATIVE direction at -10.11% Day-0 C/C (2.02× threshold cushion); criterion 5 sector cap clears (IT/Semiconductors 0/3 sub-industry; IT-sector 1/3 → 2/3 within per-sector cap had GO disposed).
 
 **Criterion 1 qualifying-event sub-test resolved CLEANLY QUALIFYING** via direct explicit-list match on Strategy.md thesis-line 262 illustrative example "earnings ... event." Q4 FY26 print is a canonical corporate earnings release; sub-test not at issue.
 
@@ -8046,7 +8046,7 @@ Modulo these seven considerations, the orchestrator review converges on NO-GO wi
 
 (δ) **NEW evidence layer: stock-failing-to-follow-ratification at GREATER magnitude than AXSM 5/6 precedent.** AXSM 5/6 third NO-GO documented "stock failing-to-follow-ratification" as a sub-evidence layer — Mizuho $228→$310 +36% PT raise + 8 firms aggressive post-event ratification yet stock Mon $227.93 → Tue $227.21 -0.32% on declining volume → Wed open $223.06 -1.85% pre-bell. AXSM's stock-failing-to-follow magnitude was -1.85% pre-bell (1-2 trading sessions after ratification). ARM 5/11 documents stock-failing-to-follow at **-10.11% Day-0 close-to-close** (canonical post-event regular-session measurement) DESPITE 6-firm post-event PT-raise wave with TD Cowen +61% mega-raise. ARM's magnitude is **5.5× greater** than AXSM's reference. This is the cleanest documented case of stock-failing-to-follow-aggressive-ratification observed in the experiment — and reinforces criterion 4 information-content-over-sentiment-direction interpretation: when sell-side raises PTs in 24-72h ratification window but the stock declines ≥5% C/C in the same window, the market is explicitly rejecting the sell-side framing in favor of underlying information content (here: supply-cap + smartphone-weakness disclosures).
 
-(ε) **NEW evidence layer: Sub-pattern 4 candidate variant 4d "structural-supply-side-constraint-emergence-at-print."** Per UPS 2026-05-05 variant 4b "structural-competitive-threat-emergence-at-non-print-catalyst" / NCLH 2026-05-05 variant 4c "guide-cut-on-pre-existing-macro-overhang" / TSN 2026-05-08 variant 4a "structural-temporal-overhang-persistence (Beef-cycle)" — ARM proposes candidate variant 4d distinguished by:
+(ε) **NEW evidence layer: Sub-pattern 4 candidate variant 4e "structural-supply-side-constraint-emergence-at-print."** Per UPS 2026-05-05 variant 4b "structural-competitive-threat-emergence-at-non-print-catalyst" / NCLH 2026-05-05 variant 4c "guide-cut-on-pre-existing-macro-overhang" / TSN 2026-05-08 variant 4a "structural-temporal-overhang-persistence (Beef-cycle)" — ARM proposes candidate variant 4e distinguished by:
 - **Distinguishing feature:** Structural-supply-side-constraint disclosed AT the print event itself (not at non-print catalyst per UPS, not pre-existing per TSN, not guide-cut per NCLH); the supply constraint is a structural near-term limit on revenue capture that has multi-quarter resolution timeline outside Strategy B's 60-day window
 - **ARM specifics:** AGI CPU demand $20B in 6 weeks per CEO Rene Haas; supply locked in only for first $1B = 95% of demand cannot be captured in near-term; management WITHHELD revenue forecast raise despite customer demand signals (would normally support guidance hike); smartphone unit growth turning NEGATIVE on memory chip shortage (cross-industry-supply-side spillover) per management commentary
 - **Resolution timeline:** Multi-quarter — TSMC / OSAT additional capacity allocation typically requires 6-18 months lead time; smartphone memory shortage has been spillover from broader DRAM/NAND tightness multi-quarter
@@ -8123,7 +8123,7 @@ No effect. No order staged for ARM. Strategy B remains in ACTIVATE state with th
 - Decision_Log.md 2026-05-07 AMD NO-GO (layered-1+3 THIRD INSTANCE at MOST EXTREME magnitude on layer-1 Goldman $240→$450 +88%; move-HELD evidence — ARM's TD Cowen $165→$265 +61% mega-raise is comparable PT-raise magnitude, ARM's stock-failing-to-follow is greater magnitude reverse-direction).
 - Decision_Log.md 2026-05-07 PINS NO-GO (layered-1+3 SECOND INSTANCE + move-faded-Day-2 evidence — opposite-direction trajectory from ARM held-Day-1-flat pattern; both produce NO-GO under criterion 4).
 - Decision_Log.md 2026-05-06 AXSM NO-GO (layered-1+3 FIRST INSTANCE; **stock-failing-to-follow-ratification signal -1.85% pre-bell — direct precedent for ARM's stock-failing-to-follow at greater magnitude -10.11% C/C**; ARM is 5.5× the AXSM reference).
-- Decision_Log.md 2026-05-05 UPS NO-GO + NCLH NO-GO (sub-pattern 4 variants 4b/4c — establish variant family; ARM proposes candidate variant 4d "structural-supply-side-constraint-emergence-at-print").
+- Decision_Log.md 2026-05-05 UPS NO-GO + NCLH NO-GO (sub-pattern 4 variants 4b/4c — establish variant family; ARM proposes candidate variant 4e "structural-supply-side-constraint-emergence-at-print").
 - Decision_Log.md 2026-04-29 SBUX NO-GO + Decision_Log.md 2026-05-04 AXSM NO-GO (sub-pattern 3 information-priced-via-pre-print-rally — ARM compounds with sub-pattern 1 + sub-pattern 4 layered).
 - ARM Q4 FYE26 press release Newsroom (Wed 2026-05-06 AMC); Investing.com earnings call transcript; Businesswire Q4 FY26 results; ARM IR quarterly results; Yahoo Q4 Earnings Call Highlights; BigGo Q4 Call coverage; MLQ Q4 record results; Quartz Q4 earnings AI demand; HeyGoTrade record revenue stock slides 7%; Motley Fool stock sliding; AnalyticsInsight stock drops after earnings; FX Leaders post-earnings $218 supply cap analysis; stockanalysis.com ARM historical-prices Mon 4/27 - Fri 5/8 (primary verified); stockanalysis.com ARM stock overview + analyst forecast; companiesmarketcap.com ARM mcap; macrotrends ARM mcap history; Investing.com Jefferies $290 / Wells Fargo $220 pre-print raise; Benzinga ARM ahead-of-earnings; TradingKey ARM May 5 move; Timothy Sykes ARM Wall Street hikes; TIKR.com ARM up 84% YTD pre-print context; Insider Monkey Wells Fargo lifts PT rationale.
 
@@ -8131,9 +8131,9 @@ No effect. No order staged for ARM. Strategy B remains in ACTIVATE state with th
 
 (a) **Was the criterion 1 measurement methodology correct?** Yes. Strategy.md criterion 1 specifies "close-to-close move on event day" — for AMC prints, canonical measurement is pre-print regular-session-close → first-post-print regular-session-close = Wed close → Thu close = $237.30 → $213.31 = -10.11%. Magnitude 10.11% clears 5% threshold by 2.02× cushion in NEGATIVE direction. Per criterion 1 wording "in either direction," negative-magnitude moves qualify. Alternative reference windows (Tue→Wed pre-print = +13.63%; Tue→Thu 2-day = +2.14%; Tue→Fri 3-day = +2.12%) examined for completeness; the Wed→Thu canonical measurement is the binding reading.
 
-(b) **Was the layered-1+3+4 sub-pattern routing applied correctly?** Yes. Sub-pattern 1 fully fingerprinted via 6-firm post-event PT-raise wave with TD Cowen +61% mega-raise (Jefferies / BofA / TD Cowen / Wells Fargo / Deutsche Bank / Barclays). Sub-pattern 3 fully fingerprinted via 4-firm pre-print PT-raise wave (Susquehanna / Wells Fargo / Morgan Stanley / UBS) + Wed +13.63% single-day pre-print rally + +84% YTD pre-print context. Sub-pattern 4 candidate variant 4d "structural-supply-side-constraint-emergence-at-print" — first instance, distinct from existing 4a/4b/4c variants. Layered-1+3 sixth instance; layered-1+3+4 second instance (after TSN first).
+(b) **Was the layered-1+3+4 sub-pattern routing applied correctly?** Yes. Sub-pattern 1 fully fingerprinted via 6-firm post-event PT-raise wave with TD Cowen +61% mega-raise (Jefferies / BofA / TD Cowen / Wells Fargo / Deutsche Bank / Barclays). Sub-pattern 3 fully fingerprinted via 4-firm pre-print PT-raise wave (Susquehanna / Wells Fargo / Morgan Stanley / UBS) + Wed +13.63% single-day pre-print rally + +84% YTD pre-print context. Sub-pattern 4 candidate variant 4e "structural-supply-side-constraint-emergence-at-print" — first instance, distinct from existing 4a/4b/4c variants. Layered-1+3 sixth instance; layered-1+3+4 second instance (after TSN first).
 
-(c) **Were the NEW evidence layers correctly identified?** Three NEW evidence layers documented: (i) post-event NEGATIVE-direction Day-0 reaction (-10.11% C/C — first instance among layered-1+3 cases; all prior were positive-direction); (ii) stock-failing-to-follow-ratification at 5.5× the AXSM 5/6 reference magnitude (-10.11% C/C vs AXSM's -1.85% pre-bell); (iii) sub-pattern 4 variant 4d structural-supply-side-constraint-emergence-at-print candidate. Each contributes independent evidence to the criterion 4 NO-GO routing.
+(c) **Were the NEW evidence layers correctly identified?** Three NEW evidence layers documented: (i) post-event NEGATIVE-direction Day-0 reaction (-10.11% C/C — first instance among layered-1+3 cases; all prior were positive-direction); (ii) stock-failing-to-follow-ratification at 5.5× the AXSM 5/6 reference magnitude (-10.11% C/C vs AXSM's -1.85% pre-bell); (iii) sub-pattern 4 variant 4e structural-supply-side-constraint-emergence-at-print candidate. Each contributes independent evidence to the criterion 4 NO-GO routing.
 
 (d) **Was the criterion 3 closed-list rev 14 analysis exhaustive?** Yes. All admissible options examined: (a) numerical price level — multiple plausible targets analyzed and dismissed (pre-print Wed $237 chases over-extension, PT cluster $260-300 sub-pattern 1 trap, pre-event Tue $208 below current); (b) next earnings Q1 FY27 ~late-July outside 60-day window from 5/7 = 7/6; (b) next FDA decision N/A; (b) next FOMC June 16-17 within window but structurally mismatched; (b) S&P 500 inclusion structurally unavailable (ARM UK-incorporated); (b) Russell 1000 / Nasdaq 100 already included. No admissible target structure within 60-day window for either LONG or SHORT framing.
 
@@ -8164,7 +8164,7 @@ Modulo these eight considerations, the orchestrator review converges on NO-GO wi
 **Conviction in NO-GO: HIGH (~85-90%)** — between PINS / GLW (~85-90%) and AMD (~90-95%); comparable to TSN (~80-85%) layered-1+3+4 first instance. Strong convergence across:
 - Sub-pattern 1 post-event PT-raise wave 6 firms with TD Cowen +61% mega-raise (magnitude tier between PINS-tier and AMD-tier; cleaner than TSN-tier)
 - Sub-pattern 3 pre-print PT-raise wave 4 firms + +13.63% single-day pre-print rally + +84% YTD pre-print rally (most-extreme single-day pre-print rally observed; extreme cumulative pre-print absorption)
-- Sub-pattern 4 candidate variant 4d structural-supply-constraint-emergence-at-print (new variant first instance; pending second-instance validation)
+- Sub-pattern 4 candidate variant 4e structural-supply-constraint-emergence-at-print (new variant first instance; pending second-instance validation)
 - NEW evidence layer (i) post-event NEGATIVE-direction reaction (-10.11% C/C; first instance among layered-1+3 cases)
 - NEW evidence layer (ii) stock-failing-to-follow-ratification at 5.5× AXSM 5/6 reference magnitude
 - Criterion 3 closed-list rev 14 absent admissible target
@@ -8177,7 +8177,7 @@ Theater-check CONVERGENT across sub-pattern routing + dual-framing dismissal + c
 **NEW evidence layers flagged for W5 sub-pattern taxonomy extraction:**
 1. **"layered-1+3 variant with NEGATIVE-direction Day-0 reaction"** — ARM first instance combining layered-1+3 fingerprint + negative post-event direction; direction-agnostic NO-GO routing confirmed. Pending second-instance validation.
 2. **"stock-failing-to-follow-ratification at greater magnitude than AXSM 5/6 reference"** — ARM at -10.11% C/C = 5.5× AXSM's -1.85% pre-bell reference; cleanest documented case of stock-failing-to-follow-aggressive-ratification in the experiment. Pending threshold-codification (e.g., "stock declines ≥5% C/C in 24-72h post-event despite ≥5 firms PT-raising in same window" as canonical signature).
-3. **"sub-pattern 4 variant 4d structural-supply-side-constraint-emergence-at-print"** — distinguishing feature is supply-constraint disclosed at print (vs UPS 4b at non-print-catalyst / NCLH 4c via guide-cut / TSN 4a pre-existing temporal). First instance.
+3. **"sub-pattern 4 variant 4e structural-supply-side-constraint-emergence-at-print"** — distinguishing feature is supply-constraint disclosed at print (vs UPS 4b at non-print-catalyst / NCLH 4c via guide-cut / TSN 4a pre-existing temporal). First instance.
 
 **Experiment Strategy B totals advance to 3 GO + 32 NO-GO = 8.6% / 91.4% hit rate** (from 3/31 = 8.8%/91.2% post-DASH). Long-direction NO-GO breakdown: criterion 1 mechanical 3 (EQIX, AXSM 2026-05-02, DASH); instrument-rule 2 (TDOC, FIVN); **criterion 4 decisive 27 (advances from 26 with ARM)**. **The 11-NO-GO B-short precedent string in current risk-on regime extends to 12 with ARM-SHORT-framing dismissal** (DASH-SHORT was direction-agnostic per criterion 1 fail; ARM-SHORT formally dismissed via criterion 4 dual-framing test). 12-NO-GO B-short streak duration: 13 trading days (2026-04-23 BE through 2026-05-11 ARM).
 
@@ -8186,3 +8186,159 @@ Theater-check CONVERGENT across sub-pattern routing + dual-framing dismissal + c
 **No order staged. No portfolio-state change.** 2% next-trade sizing $37.77 was the ARM-add scenario sizing; doesn't bind since NO-GO. Strategy B router state ACTIVATE unchanged. Window expires ~Wed 2026-05-20 (10 trading days from Wed 5/6 announcement; today Mon 5/11 = Day 3). **NVDA Q1 FQ27 print Wed 5/20 AMC = fresh-trigger event with independent 10-day post-NVDA-print window** if NVDA print produces qualifying ARM sympathy move ≥5% close-to-close — distinct event evaluated per Operating Protocols §3 "NO-GO records are context, not barriers"; routine Daily.md scan picks up qualifying fresh trigger without dedicated calendar event. No calendar event scheduled to revisit ARM directly.
 
 **Same-day B thesis-construction queue saturation status:** GLW 5/11 09:00 ✓ COMPLETE + DASH 5/11 13:00 ✓ COMPLETE + **ARM (calendar slot 11:00 MT, run-sequenced after DASH 13:00) ✓ COMPLETE** (this entry). **3 NO-GOs same day Mon 5/11** matches Thu 5/7 same-day 3-NO-GO precedent ceiling (PINS / AMD / DOC). Remaining Mon 5/11: SMCI 13:00 (parallel slot, separately evaluated) + WHR 14:00 + FLEX 15:00 — would extend single-day disposition count to 4-6 if all completed today, approaching/exceeding Thu 5/7 / Fri 5/8 4-disposition operator capacity ceiling. Tue 5/12: CEG re-screen 09:00 + UBER 11:00 + ZTS + SHAK + DDOG 14:00 + FTNT 15:00 = 6 sessions stacked Tue. Operator capacity vigilance maintained.
+
+---
+
+## 2026-05-11 (Mon, ~post-ARM-NO-GO MT, SMCI session run sequenced after ARM; calendar slot 13:00 MT per D2 5/6 conversion) Strategy B thesis construction outcome — SMCI (Super Micro Computer) NO-GO via criterion 4 dual-framing decisive failure with **sub-pattern 4 variant 4d "active-securities-litigation-overhang" FIRST INSTANCE established** (canonical per D2 5/6 disqualifier-focused-frame routing pre-reservation) compounded by criterion 3 closed-list rev 14 absent admissible convergence target; no order staged
+
+**Trigger:** Calendar-event-scheduled Strategy B thesis construction for SMCI, Mon 2026-05-11 13:00–13:45 MT (event id `q1sigc4ai5juocsea5rk597iis` per Decision_Log 2026-05-06 D2 conversion entry). Calendar prompt frames the session with **disqualifier-focused frame** per D2 5/6 routing — "Anticipated outcome: NO-GO with sub-pattern 4 variant 4d 'active-securities-litigation-overhang' established; conviction in NO-GO outcome HIGH ~80%+ given pre-emptive structural-overhang factor stack." This session formalizes variant 4d per the pre-reserved routing decision.
+
+**ARM-variant-4d → 4e renumbering correction applied this session.** ARM 2026-05-11 entry (calendar slot 11:00 MT run-sequenced after DASH 13:00) claimed "variant 4d structural-supply-side-constraint-emergence-at-print" — this label was pre-reserved for SMCI per D2 5/6 routing entry. Operating practice: sub-pattern variant labels follow D2 pre-routing order when same-day disposition queue established. ARM's variant renumbered **4d → 4e** in Decision_Log.md (12 occurrences) + Portfolio_Ledger.md (2 occurrences) via targeted sed substitution with "structural-supply-side" context anchor (SMCI 4d "active-securities-litigation-overhang" references unaffected). **Canonical sub-pattern 4 variant family as-of-this-session: 4a V/MDLZ/TSN structural-overhang-persistence; 4b UPS structural-competitive-threat-emergence-at-non-print-catalyst; 4c NCLH guide-cut-on-pre-existing-macro-overhang; 4d SMCI active-securities-litigation-overhang (this entry, FIRST INSTANCE); 4e ARM structural-supply-side-constraint-emergence-at-print (renumbered from prior-session 4d).** Forward note: WHR D2 5/7 routing anticipated "potential novel variant 4d (guide-cut + dividend-suspension stacked)" — WHR's variant will be 4f or later at thesis-construction time pending sub-pattern routing review (or alternatively may overlap with NCLH 4c if guide-cut-on-macro-overhang dimension dominates).
+
+**Session-prompt magnitude verification.** Session prompt cites "+24.5% Wed close-to-close (largest single-name move in cohort)." Primary-source verification (stockanalysis.com historical-prices Mon 5/4 - Fri 5/8): Mon 5/4 close $27.92 (+3.06%) / Tue 5/5 close $27.83 (-0.32%) — pre-print Tue / **Wed 5/6 close $34.66 (+24.54%)** — Day-0 post-print canonical AMC measurement / Thu 5/7 close $33.62 (-3.00% Day 1 modest fade) / Fri 5/8 close $35.37 (+5.21% Day 2 RECOVERY + EXTENSION beyond Day-0). Session-prompt's "+24.5%" verified to 2-decimal precision. Net Tue $27.83 → Fri $35.37 = **+27.10% retention with EXTENSION through Day-2** (move HELD AND EXTENDED; stronger than AMD +16.2% and parallel to GLW +15.32% retention magnitudes at HIGHER raw retention). Window expires Mon 5/18 (Day 10 from Wed 5/6 reaction day; session-prompt's "~5/19" 1-day non-binding correction).
+
+**Inputs:** Strategy.md Strategy B section (entry criteria 1-5; criterion 1 ≥5% C/C on event day; **criterion 3 closed-list rev 14 strict enumeration** ["next earnings release," "next FDA decision date," "next FOMC meeting," or "S&P 500 / Russell 1000 / Nasdaq 100 inclusion announcement"]; criterion 4 information-vs-sentiment graded discriminator; criterion 5 sector cap; instrument rule ≥$2B mcap "Long or short"; pre-mortem rev 7); AI_Trading_Foundation.md (2.4 / 2.13 / 2.20); Operating_Protocols.md §1 HOIP / §2 commission-disregarded / §3 NO-GO records are context not barriers (no prior SMCI NO-GO) / §8 conviction-calibration; **Portfolio_Ledger.md** (state-as-of post-ARM-NO-GO: B NAV $1,888.69; 3 longs IBM/HCA/META; sector cap IT Services 1/3, Health Care Facilities 1/3, Comm Services 1/3, **IT/Technology Hardware Storage & Peripherals 0/3**, IT/Semiconductors 0/3 post-ARM, all others 0/3; 2% sizing $37.77; B router ACTIVATE); Regime_State.md (B router ACTIVATE per SPY NEUTRAL + VIX 17.05 NORMAL); Decision_Log.md prior precedents: **V 2026-04-29 + MDLZ 2026-04-29 + TSN 2026-05-08 (sub-pattern 4 variant 4a structural-overhang-persistence)**; **UPS 2026-05-05 (4b structural-competitive-threat-emergence-at-non-print-catalyst)**; **NCLH 2026-05-05 (4c guide-cut-on-pre-existing-macro-overhang)**; **ARM 2026-05-11 (4e structural-supply-side-constraint-emergence-at-print; renumbered this session)**; **D2 5/6 disqualifier-focused-frame routing pre-reserving variant 4d for SMCI**; 12-NO-GO B-short string post-ARM; GLW 5/11 09:00 + DASH 5/11 13:00 + ARM 5/11 (post-DASH) same-day sister NO-GOs; Watchlist.md (SMCI under B disqualifier-flag tracking).
+
+**Web-search primary documents (verified this session):**
+- Super Micro Q3 FY26 earnings release (Tue 2026-05-05 AMC): https://ir.supermicro.com/financials/quarterly-results/default.aspx
+- Super Micro Q3 2026 transcript Motley Fool: https://www.fool.com/earnings/call-transcripts/2026/05/05/super-micro-smci-q3-2026-earnings-transcript/
+- Super Micro Q3 2026 transcript Benzinga: https://www.benzinga.com/insights/news/26/05/52309817/super-micro-computer-q3-2026-earnings-call-complete-transcript
+- CNBC Q3 earnings coverage: https://www.cnbc.com/2026/05/05/super-micro-smci-q3-earnings-report-2026.html
+- 24/7 Wall St. live Q3 coverage: https://247wallst.com/investing/2026/05/05/live-supermicro-reports-q3-earnings-tonight-can-strong-results-spark-a-rebound/
+- Shacknews Q3 FY26 results: https://www.shacknews.com/article/149012/supermicro-smci-q3-2026-earnings-report
+- MarketBeat Q3 2026 report: https://www.marketbeat.com/earnings/reports/2026-5-5-super-micro-computer-inc-stock/
+- Foreign Policy Journal pre-print legal-overhang context: https://www.foreignpolicyjournal.com/2026/05/04/super-micro-computer-nasdaq-smci-eyes-q3-earnings-on-may-5-amid-legal-overhang-and-ai-demand-surge/
+- stockanalysis.com SMCI historical-prices: https://stockanalysis.com/stocks/smci/history/
+- stockanalysis.com SMCI overview: https://stockanalysis.com/stocks/smci/
+- **Securities class action primary sources:**
+  - Rosen Law: https://rosenlegal.com/case/super-micro-computer-inc-2/
+  - Robbins Geller: https://www.rgrdlaw.com/cases-super-micro-computer-class-action-lawsuit-smci.html
+  - ClaimsFiler shareholder alert (May 7): https://www.globenewswire.com/news-release/2026/05/07/3289556/35454/en/Super-Micro-Computer-Shareholder-Alert-ClaimsFiler-Reminds-Investors-With-Losses-In-Excess-Of-100-000-Of-Lead-Plaintiff-Deadline-In-Class-Action-Lawsuits-Against-Super-Micro-Comput.html
+  - Kahn Swick & Foti May 26 deadline notice (May 6): https://www.globenewswire.com/news-release/2026/05/06/3288445/6713/en/Super-Micro-Computer-Inc-Notice-of-May-26-2026-Application-Deadline-for-Class-Action-Lawsuits-Contact-Lewis-Kahn-Esq-at-Kahn-Swick-Foti-LLC-Before-Application-Deadline.html
+  - Robbins Geller PRNewswire: https://www.prnewswire.com/news-releases/smci-investors-have-opportunity-to-lead-super-micro-computer-inc-securities-fraud-lawsuit-302764614.html
+  - Rosen Law Newsfilecorp: https://www.newsfilecorp.com/release/296660/ROSEN-TRUSTED-INVESTOR-COUNSEL-Encourages-Super-Micro-Computer-Inc.-Investors-to-Secure-Counsel-Before-Important-Deadline-in-Securities-Class-Action-SMCI
+  - Faruqi & Faruqi Newsfilecorp: https://www.newsfilecorp.com/release/292229/Faruqi-Faruqi-LLP-Highlights-Class-Action-Against-Super-Micro-Computer-SMCI-and-Upcoming-Lead-Plaintiff-Deadline-of-May-26-2026
+
+### Decision
+
+**SMCI — NO-GO (DECLINE).** Criterion 4 dual-framing decisive failure with **sub-pattern 4 variant 4d "active-securities-litigation-overhang" FIRST INSTANCE established** per D2 5/6 routing pre-reservation. The +24.54% Day-0 close-to-close pop on Wed 5/6 is information-driven repricing on real Q3 EPS BEAT ($0.84 vs $0.61 cons +37.7%) + FY26 guide raised to ≥$40B + CEO Charles Liang validating AI-server-demand durability — BUT this information-positive print does NOT resolve or materially reduce the multi-vector structural overhang stack priced into SMCI for 6-18+ months with multi-year resolution timeline structurally outside Strategy B's 60-day mean-reversion window. **6-vector structural overhang factor stack:**
+1. **Active securities class action** — Bhuva v. Super Micro Computer, Inc., No. 26-cv-02606 (N.D. Cal.) + City of Hialeah Employees Retirement System v. Super Micro Computer, Inc., et al., No. 26-cv-3018 (N.D. Cal.); **lead-plaintiff application deadline May 26, 2026** (15 calendar days from today)
+2. **Underlying federal criminal indictment** of 3 individuals for "scheme to divert massive quantities of servers housing U.S. artificial intelligence technology to customers in China" violating U.S. export control laws
+3. **Class period 2024-04-30 through 2026-03-19** = ~23 months damages exposure
+4. **Hindenburg Research short-seller report August 2024** — extensive allegations (accounting irregularities + related-party transactions + recidivist-violator pattern from prior 2018-2020 SEC enforcement + export-control violations + governance concerns) priced 18+ months
+5. **EY auditor resignation October 2024** — material loss-of-auditor disclosure event ("no longer able to rely on management's representations")
+6. **Material weakness disclosures + 10-K filing delay + ICFR remediation overhang** — 4-8 quarter remediation timeline
+
+Compounded by criterion 3 closed-list rev 14 **absent admissible convergence target**: numerical PT chase = sub-pattern 1 trap; Q4 FY26 next earnings ~early-August 2026 OUTSIDE 60-day window from event day 5/6 = Sun 7/5 / Mon 7/6; no FDA; FOMC June 16-17 structurally mismatched against idiosyncratic SMCI litigation thesis; SMCI already in S&P 500 (Mar 2024) + Nasdaq 100 (Jul 2024) + Russell 1000; **lead-plaintiff deadline May 26 is litigation milestone NOT on strict closed list** per Strategy.md rev 14 "No additional event types are admissible."
+
+Criterion 1 mechanically clears at +24.54% Day-0 C/C (4.91× threshold cushion); criterion 5 sector cap clears (IT/Technology Hardware Storage & Peripherals 0/3 sub-industry; IT-sector 1/3 → 2/3 within per-sector cap had GO disposed).
+
+### Mechanical eligibility detail
+
+- **Instrument rule:** SMCI = Super Micro Computer, Inc., NASDAQ-listed common; US-incorporated Delaware C-corp; ~609M shares outstanding; mcap **~$21.5B at Fri 5/8 close $35.37** (pre-print Tue mcap ~$17B at $27.83) — well above $2B floor by ~10×; 30-day ADV multi-million-shares/day on S&P 500 + Nasdaq 100 component; long-or-short permitted; 2% sizing $37.77; no options.
+- **Criterion 1:** Event Tue 2026-05-05 AMC. Pre-event Tue $27.83 → Wed $34.66 = **+24.54% Day-0 C/C** (canonical AMC-print measurement); 4.91× threshold cushion. Largest single-day post-print move in recent B cohort (vs AMD +17.77% / GLW +12.01% / ARM Wed pre-print +13.63%).
+- **Criterion 5:** No A position; SMCI on Watchlist B disqualifier-flag list per D2 5/6. GICS Information Technology / Technology Hardware Storage & Peripherals sub-industry. Currently 0/3 sub-industry; IT-sector 1/3 (IBM); SMCI-add would yield IT-sector 2/3 within 3-per-sector cap. KL #12 LONG-correlation: SMCI-IBM ~0.30-0.45, SMCI-META ~0.30-0.45, SMCI-HCA ~0.05-0.15; 4-long-book pairwise avg ~0.25-0.35 = **KL #12 FAVORABLE** (vs ARM 0.35-0.45 / GLW 0.40-0.50 unfavorable; comparable to TSN-favorable baseline) — secondary; criterion 4 binds via sub-pattern 4 independent of correlation.
+
+### Decisive flaw analysis (criterion 4 sub-pattern 4 variant 4d binding)
+
+**Sub-pattern 4 variant 4d "active-securities-litigation-overhang" FIRST INSTANCE distinguishing features (vs prior variants):**
+- 4a temporal/macro overhang (V/MDLZ/TSN) — resolves through macro reversal OR earnings recovery
+- 4b competitive-threat-non-print (UPS) — resolves through competitive response
+- 4c guide-cut-macro-overhang (NCLH) — resolves through macro reversal
+- 4e supply-side-constraint-print (ARM) — resolves through capacity expansion multi-quarter
+- **4d active-securities-litigation-overhang (SMCI):** resolves through litigation-process timeline 12-48 months; LITIGATION-DRIVEN dimension
+
+**Litigation process resolution timeline (all multi-quarter to multi-year, structurally outside 60-day window):**
+- Lead plaintiff appointment by court: 30-90 days post-deadline = mid-June through late-August 2026
+- Consolidated amended complaint filing: July-October 2026
+- Motion to dismiss briefing: October 2026 - April 2027
+- Class certification motion: mid-2027 through mid-2028
+- Summary judgment: 18-36 months
+- Trial / settlement: 24-48 months
+- **Minimum 12-24 months, typically 24-48 months.**
+
+**Move HELD AND EXTENDED through Day 2 = no LONG mean-reversion edge.** Post-event trajectory: Tue $27.83 → Wed $34.66 (+24.54% Day 0) → Thu $33.62 (-3.00% Day 1) → Fri $35.37 (+5.21% Day 2 RECOVERY + EXTENSION beyond Day-0) = net +27.10% / 110.4% retention. Trajectory pattern HELD-AND-EXTENDED — stronger than AMD precedent (+16.2% Day-2-3 = 102% retention) and parallel to GLW precedent (+15.32% Day-2 = 127.6% retention); SMCI at HIGHER raw retention magnitude. Per AMD/GLW/TSN doctrine: market settled at $35 level absorbing Q3 print upside AND persisting structural overhang; no sentiment-suppressed mispricing edge for LONG.
+
+### LONG framing dismissed
+
+LONG thesis: Q3 EPS beat + FY26 guide raised + AI-server-demand validation + depressed valuation absorbing accounting overhang + consensus PT cluster $45-55 implying +27-55% upside.
+
+**Decisive flaws:** (α) Sub-pattern 4 variant 4d active-securities-litigation-overhang multi-year resolution outside 60-day window; (β) Move HELD AND EXTENDED Day 2 = no sentiment-overshoot upward; (γ) Criterion 3 closed-list absent admissible target (Q4 outside window; lead-plaintiff deadline NOT on closed list; FOMC mismatch; already indexed); (δ) 2.4 narrative-over-fit self-reference closure on AI-server-demand-durability; (ε) 2.13 systematic-optimism + headline-risk premium for litigation-overhang names.
+
+### SHORT framing dismissed
+
+SHORT thesis: +24.5% pop over-reaction given persisting overhang; mean-reversion-down target to pre-print Tue $27.83 = -21% over 60 days.
+
+**Decisive flaws:** (η) **12-NO-GO B-short string extends to 13** + 2.20-trap canonical against beat-and-raise + risk-on regime; (θ) Move EXTENDED Day 2 contradicts mean-reversion-down (market did NOT fade, RECOVERED + EXTENDED); (ι) +25% stop $44.21 near PT cluster low; KL #7 NVDA Q1 FQ27 Wed 5/20 gap-up risk catastrophic (SMCI top NVDA-AI-server customer); (κ) SHORT target structurally weak — full reversal requires market reverses Day-2 EXTENSION; structurally implausible; (λ) Criterion 3 closed-list absent admissible SHORT target.
+
+### Effect on book
+
+No effect. No order staged. Strategy B remains ACTIVATE with 3 open longs (IBM/HCA/META). Sector cap unchanged: IT Services 1/3 + Health Care Facilities 1/3 + Comm Services / IMS 1/3 + IT/Technology Hardware Storage & Peripherals 0/3 (SMCI would have been 1/3) + IT/Semiconductors 0/3 (post-ARM) + IT/Electronic Components 0/3 (post-GLW) + Consumer Discretionary / Restaurants 0/3 (post-DASH); others 0/3.
+
+### Pending queue updated
+
+- ~~SMCI B-thesis construction~~ COMPLETE — NO-GO sub-pattern 4 variant 4d FIRST INSTANCE.
+- **ARM variant 4d → 4e renumbering correction applied** (12 DL + 2 PL occurrences).
+- WHR thesis-construction Mon 5/11 14:00 — D2 5/7 anticipated "potential novel variant 4d (guide-cut + dividend-suspension stacked)"; WHR's variant will be 4f or later at thesis-construction time.
+- 10-day post-event entry window for SMCI expires Mon 2026-05-18.
+- **4 same-day NO-GOs Mon 5/11** (GLW 09:00 + DASH 13:00 + ARM post-DASH + **SMCI post-ARM**) EXCEEDS prior 3+4-NO-GO same-day precedent ceilings.
+
+### References
+
+- Strategy.md (B section); AI_Trading_Foundation.md (2.4/2.13/2.20); Operating_Protocols.md §1/§2/§3/§8; Portfolio_Ledger.md; Regime_State.md.
+- Decision_Log.md 2026-04-29 V + MDLZ + 2026-05-08 TSN NO-GOs (variant 4a); 2026-05-05 UPS NO-GO (4b); 2026-05-05 NCLH NO-GO (4c); 2026-05-11 ARM NO-GO (4e renumbered); 2026-05-06 D2 disqualifier-focused-frame routing (variant 4d pre-reservation); 2026-05-11 GLW + DASH + ARM NO-GOs (same-day sisters).
+- Super Micro Q3 FY26 earnings release IR + Motley Fool/Benzinga transcripts + CNBC/24-7/Shacknews/MarketBeat + Foreign Policy Journal pre-print legal-overhang context.
+- stockanalysis.com SMCI historical-prices (primary verified Mon 5/4 - Fri 5/8).
+- Securities class action primary sources: Rosen Law / Robbins Geller / Faruqi & Faruqi / Kahn Swick & Foti / ClaimsFiler — case captions Bhuva No. 26-cv-02606 (N.D. Cal.) + City of Hialeah No. 26-cv-3018; lead-plaintiff deadline May 26, 2026; class period 2024-04-30 through 2026-03-19; underlying federal criminal indictment 3 individuals export-control-violation AI-server-diversion-to-China.
+
+### Theater-check on this orchestrator review
+
+(a) **Criterion 1 measurement correct?** Yes — Tue $27.83 → Wed $34.66 = +24.54% Day-0 C/C canonical AMC measurement; 4.91× threshold cushion.
+
+(b) **Sub-pattern 4 variant 4d first-instance establishment justified?** Yes — litigation-process structural-overhang dimension operationally distinct from 4a-c/4e variants; 6-vector overhang stack documented (active class action + criminal indictment + class period damages + Hindenburg + EY resignation + material weakness/ICFR); 12-48 month resolution horizons structurally outside 60-day window.
+
+(c) **Criterion 3 closed-list analysis exhaustive?** Yes — numerical PT chase = sub-pattern 1 trap; Q4 outside window; lead-plaintiff deadline NOT on closed list; FOMC mismatch; S&P 500 + Nasdaq 100 + Russell 1000 already included.
+
+(d) **LONG framing steel-manned?** Yes — Q3 beat + guide raise + AI demand validation + depressed valuation + PT cluster +27-55% upside steel-manned; defeated on 5 axes.
+
+(e) **SHORT framing dismissed properly?** Yes — 5 distinct axes including 12→13 NO-GO B-short string + 2.20-trap + Day-2 EXTENSION contradicting mean-reversion-down + KL #7 NVDA-tape gap-up risk.
+
+(f) **ARM 4d → 4e renumbering correction applied correctly?** Yes — targeted sed with "structural-supply-side" context anchor; SMCI 4d "active-securities-litigation-overhang" references unaffected; ARM 4e renumbering verified post-edit.
+
+(g) **KL #12 assessed?** Yes — 4-long-book pairwise avg ~0.25-0.35 = FAVORABLE; secondary observation; does NOT reinforce NO-GO direction but does NOT block it.
+
+(h) **Deferral considered?** No — criterion 4 dual-framing decisive failure + criterion 3 closed-list absent target = clean NO-GO; no information gap.
+
+Modulo these eight considerations, the orchestrator review converges on NO-GO with HIGH (~85-90%) confidence.
+
+### Compaction-survival note
+
+**Strategy B SMCI Q3-FY26-print disposition 2026-05-11 ~post-ARM (calendar slot 13:00 MT):** **NO-GO (DECLINE) via criterion 4 dual-framing decisive failure with sub-pattern 4 variant 4d "active-securities-litigation-overhang" FIRST INSTANCE established + criterion 3 closed-list rev 14 absent admissible target.**
+
+**Event details (Tue 2026-05-05 AMC):** Q3 revenue $10.24B vs $12.36B cons MISS (-17%); non-GAAP EPS $0.84 vs $0.61 cons BEAT (+37.7%); FY26 revenue guide RAISED to ≥$40B; CEO Charles Liang validation AI-server-demand durability.
+
+**Stock price action (primary-source verified):** Tue $27.83 → **Wed $34.66 (+24.54% Day-0 canonical AMC C/C)** → Thu $33.62 (-3.00%) → Fri $35.37 (+5.21% RECOVERY + EXTENSION beyond Day-0). Net Tue→Fri = **+27.10% retention with EXTENSION through Day-2** (parallel to AMD/GLW held pattern at higher raw retention).
+
+**Sub-pattern 4 variant 4d 6-vector structural overhang stack:**
+1. Active securities class action — Bhuva No. 26-cv-02606 (N.D. Cal.) + City of Hialeah No. 26-cv-3018; lead-plaintiff deadline **May 26, 2026** (15 calendar days)
+2. Underlying federal criminal indictment 3 individuals — "scheme to divert AI servers to China" violating U.S. export controls
+3. Class period 2024-04-30 through 2026-03-19 = ~23 months
+4. Hindenburg Research short report August 2024
+5. EY auditor resignation October 2024
+6. Material weakness disclosures + 10-K filing delay + ICFR remediation
+
+**Resolution horizons multi-quarter to multi-year (litigation 12-48 months; criminal 12-36 months; ICFR 4-8 quarters; auditor look-back 18-36 months) — structurally outside 60-day window.**
+
+**ARM variant 4d → 4e renumbering correction applied this session (retroactive on prior ARM entry):** ARM 2026-05-11 entry claimed "variant 4d structural-supply-side-constraint-emergence-at-print" but D2 5/6 pre-reserved 4d for SMCI active-securities-litigation-overhang. **Correction applied:** ARM's variant renumbered 4d → 4e in DL (12 occurrences) + PL (2 occurrences) via targeted sed with "structural-supply-side" context anchor; SMCI 4d "active-securities-litigation-overhang" labels unaffected. **Canonical sub-pattern 4 variant family: 4a (V/MDLZ/TSN macro-temporal) / 4b (UPS competitive-threat-non-print) / 4c (NCLH guide-cut-macro-overhang) / 4d (SMCI active-securities-litigation-overhang FIRST INSTANCE this session) / 4e (ARM supply-side-constraint-print prior session).**
+
+**Conviction in NO-GO: HIGH (~85-90%)** — consistent with D2 5/6 routing anticipation ~80%+; upper-range conviction given (1) 6-vector multi-modal structural overhang stack; (2) move HELD AND EXTENDED Day-2; (3) 12→13 NO-GO B-short string + 2.20-trap; (4) criterion 3 closed-list absent target; (5) litigation 12-48 month timeline structurally outside 60-day window. Theater-check CONVERGENT across all 8 review axes.
+
+**Sub-pattern routing taxonomy update.** **Sub-pattern 4 variant 4d "active-securities-litigation-overhang" FIRST INSTANCE established (SMCI)** — canonical per D2 5/6 routing pre-reservation. **Sub-pattern 4 variant family advances to 5 variants (4a/4b/4c/4d/4e).** Sub-pattern 4 instance count advances to **7 instances** (V / MDLZ / TSN / UPS / NCLH / **SMCI / ARM**). SMCI does NOT exhibit canonical sub-pattern 1 fingerprint (no documented 5+-firm post-event PT-raise wave at GLW/AMD/ARM magnitudes) and does NOT exhibit canonical sub-pattern 3 fingerprint (pre-event $27.83 DEPRESSED-NAME ~50% below pre-Hindenburg highs $100+, NOT pre-print rally absorption). **SMCI single-pattern sub-pattern 4 routing** — structural-overhang-dominance binds criterion 4 independent of sub-pattern 1/3 fingerprint status. Distinguishes SMCI from layered-1+3 (AXSM/PINS/AMD/GLW/ARM) and layered-1+3+4 (TSN/ARM-second-instance) cases.
+
+**Experiment Strategy B totals advance to 3 GO + 33 NO-GO = 8.3% / 91.7% hit rate** (from 3/32 = 8.6%/91.4% post-ARM). Long-direction NO-GO breakdown: criterion 1 mechanical 3; instrument-rule 2; **criterion 4 decisive advances to 28 with SMCI**. **The 12-NO-GO B-short precedent string extends to 13 with SMCI-SHORT formal dismissal.**
+
+**Strategy B sector cap usage at session-end 2026-05-11 ~post-ARM (4th same-day NO-GO):** unchanged from post-ARM. IT Services 1/3 (IBM); Health Care Facilities 1/3 (HCA); Comm Services / IMS 1/3 (META); **IT / Technology Hardware Storage & Peripherals 0/3** (SMCI would have been 1/3 sub-industry / IT-sector 1/3 → 2/3 within cap — averted); other sub-industries 0/3. KL #12 FAVORABLE for SMCI (4-long-book pairwise avg ~0.25-0.35) — secondary; does NOT reinforce NO-GO direction; criterion 4 binds via sub-pattern 4 independent.
+
+**No order staged. No portfolio-state change.** Window expires Mon 2026-05-18.
+
+**Same-day B thesis-construction queue saturation status:** GLW 09:00 ✓ + DASH 13:00 ✓ + ARM (post-DASH) ✓ + **SMCI (post-ARM, calendar 13:00 MT) ✓** = **4 same-day NO-GOs Mon 5/11** EXCEEDS Thu 5/7 / Fri 5/8 same-day 3+4-NO-GO precedent ceilings. Remaining Mon 5/11: WHR 14:00 + FLEX 15:00. Tue 5/12: 6 sessions stacked. Operator-capacity vigilance: 4-disposition same-day pace = new high-water mark.
