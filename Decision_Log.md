@@ -11965,3 +11965,130 @@ Modulo these nine considerations, orchestrator review converges on NO-GO with HI
 (h) Conviction HIGH ~78-85%; theater-check CONVERGENT across 9 review axes.
 (i) **Experiment B totals advance to 3 GO + 49 NO-GO = 5.8% / 94.2%**; criterion 4 decisive 44; B-short string 29 (16-trading-day streak).
 (j) **DISPOSES W2 PART 2 #2 VTRS TOP-5 rank-#2 LONG-mean-reversion candidate** — combined with PTC 5/14 disposing rank-#1, ALL FIVE W2 TOP-5 priority candidates this cycle now NO-GO disposed (PTC #1 / VTRS #2 / IRM #3 / MNST #4 / ACHC #5); consistent with extremely high prior of criterion-4-decisive in current risk-on regime + sub-pattern 1 information-driven-already-priced-in dominance.
+
+---
+
+## 2026-05-14 (Thu, ~13:00 MT, AGL session per calendar slot per W4 5/9 conversion event id `j2ndpjs1so0jqd1bh7cpj73lbo` [note: shared/aliased event-id with prior GKOS reference — calendar event description explicitly flagged mcap-verification gate as PRECONDITION before thesis construction]) Strategy B thesis construction outcome — AGL (agilon health) NO-GO via **criterion 1 instrument-rule mechanical failure** — mcap $910.60M FAILS Strategy.md hard floor "market cap ≥ $2B at entry" by ~55% (=$1.09B below floor); session terminates at criterion-1 instrument-rule gate per W2 PART 2 #14 explicit "STRONG RECOMMENDATION: terminate session at criterion-1 instrument-rule gate before thesis construction"; no further criterion 2-5 analysis required; no order staged
+
+**Trigger:** Calendar-event-scheduled Strategy B thesis construction for AGL, Thu 2026-05-14 13:00–13:45 MT (per Decision_Log 2026-05-09 W4 conversion entry; W4 5/9 routing C2 rest-tier with explicit "mcap-verification gate flagged in event description" + W2 PART 2 #14 explicit INSTRUMENT-FAIL ROUTING with strong-recommendation-to-terminate-at-gate). **3rd B thesis-construction session of Thu 5/14** after PTC 09:00 ✓ NO-GO + VTRS 11:00 ✓ NO-GO. Note: user-prompt session-context cites stale "B experiment totals as of 2026-05-08: 3 GO + 29 NO-GO" — current state post-VTRS 5/14 is **3 GO + 49 NO-GO**; user-prompt context represents fixed-state at 5/8-5/9 calendar-event-creation time.
+
+**PRECONDITION GATE: Instrument-rule mcap verification (per user-prompt explicit PRIORITY + W2 PART 2 #14 + Strategy.md criterion 1 instrument-eligibility rule).**
+
+Strategy.md Strategy B instrument eligibility rule (lines 268-275): "US-listed common equity / **Market cap ≥ $2B at entry** / 30-day average daily volume ≥ $10M / Long or short (differentiates from A's long-only posture) / Position size: 2% of strategy portfolio at entry / No options."
+
+Primary-source mcap verification this session (stockanalysis.com AGL overview page):
+- **Current last close price: $54.23 (Fri 5/11 12:07 PM EDT snapshot)** [Note: stockanalysis "current" reading may reflect 5/11 mid-day rather than 5/8 close; cross-reference with W2 PART 2 #14 "post-spike mcap unclear — one source cites ~$1.0B post-spike ~16.7M shares × ~$54" consistent with stockanalysis 16.68M × $54.23 = $904M ≈ $910M]
+- **Market cap: $910.60M** (down 42.3% from peak)
+- **Shares outstanding: 16.68M** (resolves W2 PART 2 #14 ambiguity between "16.7M vs ~415M historical" share-count figures — the 16.68M post-restructuring figure is canonical current; the 415M historical figure pre-dates 2025 restructuring/dilution and is OBSOLETE)
+- 30-day Average Daily Volume: 215,136 shares (current volume shown) × ~$54 = **~$11.6M ADV** (JUST BARELY above $10M floor; borderline)
+- 52-week range: $7.48 - $85.00 (+625% from 52-wk low; -36% off 52-wk high; significant volatility)
+- GICS: Healthcare / Medical Care Facilities (Health Care Providers & Services per user-prompt)
+- Analyst consensus: Buy (12 analysts); PT $47.61 = -12.77% downside from current $54.23
+
+**Criterion 1 mcap-floor evaluation: FAIL.** AGL mcap **$910.60M is 54.5% BELOW Strategy.md $2B instrument-rule floor**. Below-floor by $1.09B = nearly half the required floor. No interpretation latitude available — Strategy.md instrument rule is a hard quantitative floor ($2B at entry), and AGL's mcap is materially below. Per W2 PART 2 #14 explicit: "STRONG RECOMMENDATION: terminate session at criterion-1 instrument-rule gate before thesis construction. If post-spike mcap is the ~$1.0B figure (more plausible per data-source consistency), AGL fails the $2B floor and the session is a NO-GO mechanical." Primary-source verification this session **CONFIRMS the ~$1.0B figure** ($910.60M canonical = within rounding band of the ~$1.0B W2 estimate); W2's anticipated INSTRUMENT-FAIL ROUTING **VALIDATED**.
+
+ADV: 215,136 shares × $54 ≈ $11.6M passes $10M floor with thin margin (~16% above floor; tight). However, mcap failure is dispositive — ADV pass-with-margin does not save the disposition.
+
+**Session terminates at criterion-1 instrument-rule gate.** Per Strategy.md instrument rule + W2 explicit terminate-at-gate routing, no further analysis of criteria 2-5 is required. Criterion 2 (mispricing thesis), criterion 3 (closed-list convergence target), criterion 4 (adversarial dual-framing), criterion 5 (cross-strategy holding constraints) are not evaluated because instrument-rule precondition fails.
+
+**Inputs:** Strategy.md (B section + **instrument eligibility rule lines 268-275** — "market cap ≥ $2B at entry" hard floor); Operating_Protocols.md §1 HOIP / §2 commission-disregarded / §3 "NO-GO records are context, not barriers" (no prior AGL NO-GO record — fresh evaluation; criterion-1 mechanical fail is fresh); **Portfolio_Ledger.md** (state-as-of post-VTRS-NO-GO 2026-05-14 ~11:00 MT: B NAV $1,888.69; 3 longs IBM/HCA/META; sector cap usage unchanged; 2% sizing $37.77); Regime_State.md (B router ACTIVATE — irrelevant for instrument-rule-mechanical-fail disposition); Decision_Log.md prior precedents critical:
+- **TDOC 2026-05-01 NO-GO (instrument-rule mcap-floor-failure at ~$1.07B vs $2B floor)** — DIRECT-TEMPLATE PRECEDENT for criterion-1 mechanical fail disposition path
+- **FIVN 2026-05-02 NO-GO (instrument-rule mcap-floor-failure at ~$1.65B vs $2B floor)** — secondary precedent
+- **POET 2026-04-27 INSTRUMENT FAIL VERIFIED (~$0.93-1.46B post-crash mcap)** — tertiary precedent (earlier cycle)
+- **W2 PART 2 #14 AGL explicit INSTRUMENT-FAIL ROUTING strong-recommendation-to-terminate-at-gate** — primary routing pre-judgment, validated this session
+- "NO-GO records are context, not barriers" §3 (no prior AGL NO-GO record; criterion-1 mechanical fail is fresh trigger evaluation; AGL would require subsequent mcap-clearance event to qualify for fresh thesis-construction)
+- Watchlist.md (AGL NOT listed; B uses calendar-event queue mechanism)
+
+**Web-search primary documents (verified this session):**
+- agilon health stockanalysis.com overview (mcap $910.60M / 16.68M shares / consensus PT $47.61 / 12 analysts Buy / 52-wk $7.48-$85.00 / GICS Healthcare / Medical Care Facilities): https://stockanalysis.com/stocks/agl/
+- W2 PART 2 #14 AGL entry referenced multiple primary sources for mcap verification: GuruFocus, StockAnalysis, MacroTrends end-Apr (~$0.45B pre-print); BusinessWire Q1 release; Motley Fool transcript; Yahoo Finance — convergent on ~16.7M post-restructuring share count
+
+### Decision
+
+**AGL — NO-GO (DECLINE) via criterion 1 instrument-rule mechanical failure.** Mcap $910.60M FAILS Strategy.md hard floor "market cap ≥ $2B at entry" by ~$1.09B (=54.5% below floor). Session terminates at criterion-1 instrument-rule gate per W2 PART 2 #14 explicit strong-recommendation; no further criteria 2-5 analysis required. **Criterion 1 mechanical fail count advances to 4** (after AXSM 5/2 / DASH 5/11 / [prior criterion-1 mechanical fails]). **No criterion 4 evaluation = B-short string unchanged at 29** (criterion-1 mechanical fail terminates session before direction-specific analysis; does NOT extend B-short string per established TDOC/FIVN precedent).
+
+### Mechanical eligibility detail (criterion 1 instrument-rule fail)
+
+- **Instrument rule failed component:** Market cap ≥ $2B at entry. AGL mcap **$910.60M** is **54.5% BELOW $2B floor** ($1.09B short of floor). Below-floor by nearly half the required threshold = unambiguous fail.
+- **Instrument rule passed components (not dispositive given mcap fail):**
+  - US-listed common equity: ✓ (NASDAQ:AGL)
+  - 30-day ADV ≥ $10M: ✓ marginal (~$11.6M = ~16% above floor; tight but passes)
+  - Long or short permitted: ✓
+  - 2% sizing $37.77: ✓ (would be calculable if mcap cleared)
+  - No options: ✓
+- **Mcap failure is dispositive.** Strategy.md instrument rule is a CONJUNCTIVE set of requirements — all must clear for instrument-eligibility. Mcap failure breaks conjunction.
+
+### Effect on book
+
+No effect. No order staged. Strategy B remains in ACTIVATE state with three open positions (IBM, HCA, META) and zero staged orders. Strategy B sector concentration unchanged: IT Services 1/3 (IBM); Health Care Facilities 1/3 (HCA); Comm Services 1/3 (META); Health Care / Health Care Providers & Services sub-industry (where AGL would have sat HAD mcap cleared) 0/3 unchanged (AGL-add scenario averted on instrument-rule gate before criterion 5 evaluation). Other sub-industries 0/3.
+
+### Pending queue updated
+
+- ~~AGL B-thesis construction~~ COMPLETE — NO-GO via criterion 1 instrument-rule mechanical failure at mcap $910.60M vs $2B floor.
+- 10-day post-event entry window for AGL expires **Thu 2026-05-21 close** (Day 10 from event Thu 5/7 = first post-print regular session; today Thu 5/14 = Day 5 of 10; 6 trading days remaining post-disposition). **Window does NOT extend on this NO-GO disposition.** Criterion 1 instrument-rule fail is mechanical and structural; only an mcap-clearance event (e.g., further stock-price-rally pushing market cap above $2B within the remaining window) could plausibly re-trigger eligibility, which would require ~+120% price rally from $54.23 to ~$120 to push mcap from $910M to $2B — implausible within 6 trading days absent material catalyst.
+- **Thu 5/14 same-day Strategy B queue post-AGL (3rd session):** PTC 09:00 ✓ + VTRS 11:00 ✓ + **AGL (this session, 13:00 calendar slot) ✓** = 3 same-day completions Thu 5/14; no further B sessions scheduled Thu 5/14.
+- Calendar event for Thu 5/14 13:00 MT is now CONSUMED.
+
+### References
+
+- Strategy.md Strategy B section instrument eligibility rule lines 268-275 ("market cap ≥ $2B at entry" hard floor).
+- Operating_Protocols.md §1 HOIP / §2 commission-disregarded / §3 NO-GO records context.
+- Portfolio_Ledger.md (B state-of-book unchanged post-disposition).
+- Regime_State.md (B router ACTIVATE irrelevant for instrument-rule-fail; ACTIVATE state would only matter if criterion 1 cleared and disposition proceeded to criteria 2-5).
+- Decision_Log.md 2026-05-01 TDOC NO-GO (instrument-rule mcap-floor-failure at ~$1.07B — DIRECT-TEMPLATE PRECEDENT for criterion-1 mechanical fail disposition).
+- Decision_Log.md 2026-05-02 FIVN NO-GO (instrument-rule mcap-floor-failure at ~$1.65B — secondary precedent).
+- Decision_Log.md 2026-04-27 POET INSTRUMENT FAIL VERIFIED at ~$0.93-1.46B (tertiary earlier-cycle precedent).
+- W2 PART 2 #14 AGL entry: "Pre-print mcap ~$0.45B per multiple primary sources... Post-print mcap unclear — one source cites ~$1.0B post-spike (~16.7M shares × ~$54)... STRONG RECOMMENDATION: terminate session at criterion-1 instrument-rule gate before thesis construction" — primary routing pre-judgment validated this session.
+- agilon health stockanalysis.com overview primary verified: mcap $910.60M / 16.68M shares / 52-wk $7.48-$85.00 / consensus PT $47.61 / 12 analysts Buy / GICS Healthcare / Medical Care Facilities.
+
+### Theater-check on this orchestrator review
+
+(a) **Criterion 1 instrument-rule mcap measurement correct?** Yes — primary-source verification (stockanalysis.com) confirms mcap $910.60M = 16.68M shares × $54.23 (5/11 12:07 PM EDT snapshot). Below $2B floor by $1.09B = 54.5% below. W2 PART 2 #14 anticipated INSTRUMENT-FAIL ROUTING at "~$1.0B post-spike" — current measurement $910.60M is within rounding band of W2 estimate; W2 routing pre-judgment validated.
+
+(b) **Was full criterion 2-5 analysis evaluation considered before terminating at gate?** No — per W2 PART 2 #14 explicit terminate-at-gate routing + Strategy.md instrument rule structure (criterion-1-precondition-gate before substantive criterion 2-5 analysis). Comparable to TDOC/FIVN precedents which terminated at criterion-1 instrument-rule fail without proceeding to criteria 2-5. Substantive criterion 4 dual-framing or sub-pattern routing analysis is moot when instrument eligibility precondition fails.
+
+(c) **Was share-count ambiguity from W2 PART 2 #14 resolved?** Yes — W2 cited "16.7M vs ~415M historical" share-count figures with sources conflicting. This session validates the 16.68M figure as canonical post-restructuring shares-outstanding (per stockanalysis.com primary). The 415M historical figure pre-dates 2025 restructuring/dilution and is OBSOLETE. AGL's 16.68M shares × $54.23 = $904M = $910M (rounding) confirms ~$1.0B mcap below $2B floor.
+
+(d) **Was the 10-day post-event entry window expiry implications considered?** Yes — 6 trading days remaining post-disposition (Thu 5/14 = Day 5 of 10; window expires Thu 5/21). Re-eligibility within window would require mcap-clearance event (e.g., ~+120% additional stock rally from $54 to ~$120) which is implausible without material catalyst. Conservative-default fallback per Operating Protocols §9 deferral discipline = NO-GO disposition holds for remaining window.
+
+(e) **Was the W2 instrument-fail-pre-judgment given appropriate weight?** Yes — W2 PART 2 #14 explicit STRONG RECOMMENDATION to terminate at gate was based on multiple primary sources (GuruFocus, StockAnalysis, MacroTrends end-Apr) cross-referenced. This session's primary-source verification confirms W2's anticipated routing. The W2 pre-judgment + this session's verification CONVERGENT on instrument-rule fail disposition.
+
+Modulo these five considerations, orchestrator review converges on NO-GO via criterion-1 instrument-rule mechanical failure. Disposition is mechanical and structural; no analytical-uncertainty bands apply.
+
+### Conviction calibration
+
+**HIGHEST conviction in NO-GO disposition (~99%+)** — criterion-1 instrument-rule mechanical failure is unambiguous and structural per Strategy.md hard floor; primary-source mcap verification confirms below-floor with material margin (~$1.09B below); W2 PART 2 #14 pre-judgment routing validated. Theater-check CONVERGENT. Mechanical disposition not subject to subjective analytical-judgment ambiguity bands typical of criterion-4-decisive NO-GOs.
+
+### Compaction-survival note
+
+**Strategy B AGL FY26-EBITDA-guide-raise disposition 2026-05-14 ~13:00 MT (calendar slot per W4 5/9):** **NO-GO (DECLINE) via criterion 1 instrument-rule mechanical failure** — mcap $910.60M FAILS Strategy.md hard floor "market cap ≥ $2B at entry" by ~$1.09B (=54.5% below floor); session terminates at criterion-1 instrument-rule gate per W2 PART 2 #14 explicit strong-recommendation; no further criteria 2-5 analysis required.
+
+**Event details (Thu 2026-05-07 AMC per W2 PART 2 #14 framing):** AGL Q1 2026 print delivered FY26 adj EBITDA guide RAISED to $10-$40M from breakeven (first positive-EBITDA forward guide vs prior consensus loss); revenue $1.42B / -7.3% YoY on membership decline; adj EBITDA $54M vs $36M cons / +49%; new full-risk MA contract w/ payer (~$200M revenue, modeled at break-even margin Y1); +~115% on 5/7 (Day 1 print-reaction) → -9.3% on 5/8 (Day 2 partial fade) = +~95% two-day net per W2 framing (Daily.md 2026-05-09 D2 had cited "~+51% close-to-close" with magnitude verification gate noted).
+
+**Stock action context (per W2 PART 2 #14):** Pre-print mcap ~$0.45B per multiple primary sources (GuruFocus / StockAnalysis / MacroTrends end-Apr); post-print stock rallied substantially; post-spike mcap unclear with sources conflicting on shares-outstanding figure (16.7M vs ~415M historical). **Primary-source verification this session (stockanalysis.com):** current $54.23 / 16.68M shares / mcap **$910.60M** — confirms ~$1.0B post-spike mcap framing; 16.68M canonical post-restructuring shares-outstanding figure (415M historical OBSOLETE pre-dates 2025 restructuring/dilution).
+
+**Disposition:** Strategy.md instrument-rule "market cap ≥ $2B at entry" hard floor. AGL $910.60M is **54.5% BELOW $2B floor** = unambiguous mechanical fail. No interpretation latitude. **Comparable precedents:** TDOC 2026-05-01 (~$1.07B) / FIVN 2026-05-02 (~$1.65B) / POET 2026-04-27 (~$0.93-1.46B) — all criterion-1 mechanical NO-GO at mcap-floor. ADV ~$11.6M passes $10M floor with thin margin (~16% above) but mcap failure is dispositive.
+
+**Conviction in NO-GO: HIGHEST (~99%+)** — mechanical structural fail; not subject to analytical-judgment ambiguity.
+
+**Experiment Strategy B totals advance to 3 GO + 50 NO-GO = 5.7% / 94.3% hit rate** (from 3/49 = 5.8%/94.2% post-VTRS). Long-direction NO-GO breakdown: **criterion 1 mechanical advances to 4 with AGL** (from 3); instrument-rule 2 (these are sub-categories of criterion 1 mechanical fail with the mcap-floor subcategory now at 4 instances TDOC/FIVN/POET/**AGL**); criterion 4 decisive 44 unchanged. **B-short string unchanged at 29** (criterion-1 mechanical fail terminates before direction-specific analysis; does NOT extend B-short string per established TDOC/FIVN precedent).
+
+**Sector cap usage unchanged** — Health Care / Health Care Providers & Services sub-industry (where AGL would have sat had mcap cleared) 0/3 unchanged in B (AGL-add scenario averted on instrument-rule gate). KL #12 N/A (criterion-1 fail terminates before KL #12 evaluation).
+
+**A-queue status: AGL NOT on A-queue** per Watchlist.md.
+
+**Watchlist update: B/A demotion log line appended** per user-prompt explicit instruction.
+
+**No order staged. No portfolio-state change.** 2% next-trade sizing $37.77 unchanged. Window expires Thu 2026-05-21 close (today Thu 5/14 = Day 5 of 10; 6 trading days remaining post-disposition).
+
+**Thu 5/14 same-day Strategy B queue post-AGL (3rd session of Thu):** PTC 09:00 ✓ + VTRS 11:00 ✓ + **AGL (this session, 13:00 calendar slot) ✓** = 3 same-day completions Thu 5/14; no further B sessions scheduled Thu 5/14.
+
+**Compaction-survival notes:**
+(a) AGL = criterion-1 instrument-rule mechanical fail at mcap $910.60M vs $2B floor; below-floor by ~$1.09B (54.5% below). Session terminates at gate per W2 PART 2 #14 strong-recommendation.
+(b) W2 PART 2 #14 anticipated INSTRUMENT-FAIL ROUTING based on "~$1.0B post-spike" pre-judgment from multiple primary sources cross-referenced; this session's primary-source verification (stockanalysis.com $910.60M) CONFIRMS W2 routing.
+(c) Share-count ambiguity from W2 ("16.7M vs ~415M historical") resolved: 16.68M canonical post-restructuring shares-outstanding; 415M historical is OBSOLETE pre-2025-restructuring/dilution figure.
+(d) Direct-template precedents: TDOC 5/1 (~$1.07B) / FIVN 5/2 (~$1.65B) / POET 4/27 (~$0.93-1.46B) — all criterion-1 mechanical NO-GO at mcap-floor; AGL extends this family to 4 instances.
+(e) **Experiment B totals advance to 3 GO + 50 NO-GO = 5.7% / 94.3%**; criterion 1 mechanical 4 (TDOC/FIVN/[3rd]/**AGL** — earlier 3rd-instance needs ledger reconciliation; user-prompt's count was "3" pre-AGL); criterion 4 decisive 44 unchanged; B-short string 29 unchanged (criterion-1 mechanical fail does NOT extend B-short string).
+(f) Conviction HIGHEST ~99%+ on mechanical structural fail; not analytical-judgment ambiguity-prone.
+(g) **No further analysis required.** Criteria 2-5 not evaluated. ADV passes $10M floor with thin margin (~$11.6M) but mcap failure is dispositive.
+(h) Window expires Thu 5/21 close (6 trading days remaining); mcap-clearance within window implausible (~+120% additional stock rally required to push mcap above $2B); conservative-default NO-GO disposition holds.
