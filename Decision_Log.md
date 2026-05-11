@@ -10853,3 +10853,232 @@ Modulo these ten considerations, the orchestrator review converges on NO-GO with
 (i) Post-print sell-side response MUTED (single-firm RBC PT lift; finviz no-post-earnings-PT-raises-in-table-snapshot 5/8); sub-pattern 1 ratification wave ABSENT; consistent with print's mixed-signal structure (Q1 beat + FY-RAISE vs Q2 cut + CFO commentary + CFO transition + legal-overhang) producing analyst-disagreement; does NOT support LONG case.
 (j) Window expires Thu 5/14 close; 1 trading day remaining post-disposition; criterion 4 + criterion 3 + KL #12 binding constraints structural; no re-evaluation scheduled.
 (k) Disposition basis convergent across LONG and SHORT framings; theater-check passes CONVERGENT; no plausible GO disposition path remains. 23-NO-GO B-short precedent string extends to 24 with ACHC-SHORT formal dismissal. **Experiment B totals advance to 3 GO + 44 NO-GO = 6.4% / 93.6% hit rate; criterion 4 decisive 39.**
+
+---
+
+## 2026-05-13 (Wed, ~13:00 MT, AXON session per calendar slot per D2 5/9 conversion — sequenced after AKAM 09:30 + NET 10:15 + MNST 11:00 + ACHC 12:00 MT) Strategy B thesis construction outcome — AXON (Axon Enterprise) NO-GO via criterion 4 dual-framing decisive failure with **candidate sub-pattern 8 "depressed-name pre-print-bearish-positioning-unwind" SECOND INSTANCE** (after DOC 2026-05-07 first instance — pending second-instance validation per W5 sub-pattern taxonomy bootstrap rules; AXON validates DOC's candidate-sub-pattern-8 framing on depressed-name profile YTD -28.95% / 54% off 52-wk high $885.91 / 4-week pre-print decline trajectory $406 → $385.86) **+ NEW sub-evidence layer "Day-1 PARTIAL-FADE-from-DEPRESSED-PRE-PRINT"** (Day-0 Thu 5/7 close $426.89 +10.63% → Day-1 Fri 5/8 close $403.54 -5.47% = ~57% of Day-0 gap already filled DOWN by Day 1; trajectory INVERSE to W2 PART 2 #13 hypothesized Setup F "drift-continues 3-of-3 prior AXON +10% prints" base rate; distinct from PINS 5/7 "move-completely-faded-by-Day-2" (complete fade) and from ARM/FLEX/DDOG/AKAM "held-Day-1" (full retention) trajectories — first observed instance of PARTIAL-fade-at-Day-1 from-depressed-baseline pattern); compounded by criterion 3 closed-list rev 14 effectively-absent admissible target (numerical SHORT-mean-reversion target $385.86 pre-event = -4.38% downside from current $403.54 = THIN remaining after Day-1 fade already executed ~57%; LONG-continuation-toward-consensus-PT $676.88 (+67.7%) / post-print-cluster-mean $572.67 (+42.1%) = Strategy A territory per BE/CAT/TWLO/UPS/NCLH doctrine; LONG-depressed-name-recovery target ill-defined; Q2 next earnings ~early-Aug 2026 OUTSIDE 60-day window from event Wed 5/6 = 7/5; FOMC Jun 16-17 within window structurally mismatched; AXON already in S&P 500 since Sept 2023 + Russell 1000 + Nasdaq 100 — no fresh index-inclusion trigger); 24→25 NO-GO B-short precedent string + 2.20-trap + +25% stop $504.43 BELOW Barclays $523 PT cluster = stop binds tightly against post-print sell-side anchor; KL #7 gap-up risk on depressed-name sentiment reversal vectors (Wall-Street-says-oversold-opportunity narrative + post-print PT cluster +42-68% upside implied + AI-revenue-700%-growth follow-on catalyst potential); no order staged
+
+**Trigger:** Calendar-event-scheduled Strategy B thesis construction for AXON, Wed 2026-05-13 13:00–13:45 MT (per Decision_Log 2026-05-09 D2 conversion entry referencing event id `g63h3d21r0ael6dkmldluaiho8`). Session run-sequenced after AKAM 09:30 ✓ NO-GO (sub-pattern 1 layered-1+3 variant EIGHTH INSTANCE) + NET 10:15 ✓ NO-GO (sub-pattern 4 variant 4b SECOND INSTANCE) + MNST 11:00 ✓ NO-GO (sub-pattern 1 CLEAN INSTANCE #12) + ACHC 12:00 ✓ NO-GO (sub-pattern 4 variant 4a legal-action-overhang sub-feature FIRST INSTANCE) Wed 5/13 same-day completions. This is the **5th same-day completion Wed 5/13 if disposed**, on path to potentially match Mon 5/11 + Tue 5/12 6-disposition new-high-water-mark precedent with downstream IRM 15:00 remaining.
+
+**Session-prompt event-day verification (non-binding correction).** User-supplied session prompt cites "Q1 2026 print 2026-05-08; +10.63% to $426.89." Primary-source verification:
+- Axon IR press release date: **Wed 2026-05-06 AMC** (per investor.axon.com URL "2026-05-06-Axon-reports-Q1-2026-revenue..."); conference call **Wed 5/6 AMC** per Q1 2026 Earnings Call Transcript PDF; event-day = **Thu 2026-05-07 = first post-print regular session** (canonical AMC-print measurement)
+- stockanalysis.com historical-prices Mon 4/27 – Fri 5/8 primary verified: Mon 4/27 $402.59 / Tue 4/28 $406.31 / Wed 4/29 $400.54 / Thu 4/30 $401.76 / Fri 5/1 $402.31 / Mon 5/4 $393.75 / Tue 5/5 $380.60 / Wed 5/6 $385.86 (+1.38% pre-event) / **Thu 5/7 $426.89 (+10.63% canonical Day-0 C/C from Wed pre-event $385.86)** / Fri 5/8 $403.54 (-5.47% Day-1 FADE)
+- User-prompt's "5/8 +10.63% to $426.89" reading is event-day-of-week off by one (5/7 was Day-0 not 5/8); the +10.63% magnitude and $426.89 close-price match Thu 5/7; non-binding correction (pattern matches AXSM 5/2 / EQIX 5/1 / DASH 5/11 / ARM 5/11 / GLW 5/11 / MNST 5/13 / ACHC 5/13 session-prompt-correction protocol)
+- **Today Wed 5/13 = Day 5 of 10-day post-event window** (Thu 5/7 = Day 0; Fri 5/8 = Day 1; Mon 5/11 = Day 2; Tue 5/12 = Day 3; Wed 5/13 = Day 4; **window expires Wed 2026-05-20 close = Day 10**; user-prompt's "expires ~2026-05-22" is approximately consistent — 2-day non-binding correction)
+
+**Print details (Wed 2026-05-06 AMC per investor.axon.com IR + Investing.com earnings call transcript + PRNewswire + Q1 2026 Earnings Call Transcript PDF):**
+- Q1 revenue **$807.3M (+34% Y/Y)** = ninth consecutive quarter of 30%+ growth; vs consensus ~$778M = +3.8% beat
+- Non-GAAP EPS **$1.61 vs cons ~$1.28** = +25.8% beat (alternative source cites basic EPS $2.11 — primary GAAP $2.11 per Simply Wall St; non-GAAP $1.61 per Investing.com)
+- Software & Services revenue **$355M (+35% Y/Y)** with NRR 125%; ARR **$1.5B (+35% Y/Y)**
+- **AI product revenue +700% Y/Y** — explosive growth
+- **Counter-drone product revenue +300% Y/Y** with rapid adoption at large agencies and major events
+- Platform Solutions revenue **+95% Y/Y** (Dedrone)
+- Net income $169.3M (21% margin); Adj EBITDA $202M (25% margin)
+- **FY26 revenue growth guide RAISED 30-32% (from prior 27-30%)** — citing TASER 10 demand + body cams + AI software + Carbyne / Dedrone acquisitions
+- FY26 adj EBITDA margin maintained at 25.5%; operating cash flow >$600M; FCF ~$450M
+- International expansion + corrections + federal + enterprise markets penetration
+
+**Stock price action (primary-source verified):**
+- 4-week pre-print trajectory: **Apr 28 ATH-recent $406.31 → Tue 5/5 $380.60 (-6.34%) = declining trajectory** absorbing weak forward narrative + sector multiple compression (per W2 PART 2 #13: "Pre-print PT actually CUT $815→$717.68 mid-April for sector multiple compression; no notable ≥+15% pre-print bull raises")
+- **Pre-event Wed 5/6 close: $385.86** (+1.38% modest pre-print recovery)
+- **Day-0 Thu 5/7 close: $426.89 (+10.63% canonical AMC-print C/C; 2.13× threshold cushion)** = first post-print regular session
+- **Day-1 Fri 5/8 close: $403.54 (-5.47% FADE)** = ~57% of Day-0 gain ($41.03 gain / $23.35 fade) given back by Day 1
+- Net Wed pre-event → Fri Day-1 = $385.86 → $403.54 = **+4.58% net retention** (much smaller than Day-0 +10.63%)
+- **Mean-reversion mechanism partially executing on negative side at Day-1** — distinct from W2 PART 2 #13 Setup F hypothesis "AXON post-print +10% prints CONTINUED/EXTENDED 3-of-3 prior instances over 60d"; AXON 5/7-5/8 Day-1 fade INVERSE to historical pattern
+- YTD performance **-28.95%** (per finviz Fri 5/8 close $403.54); 52-wk range high $885.91 / low $339.01 — current price ~54% off 52-wk high / ~19% above 52-wk low = **DEPRESSED-NAME profile** consistent with candidate sub-pattern 8 (DOC 5/7 precedent)
+- Mcap **$32.53B at Fri 5/8 close $403.54** (80.57M shares); ADV 1.13M shares × $400 ≈ **$452M well above $10M floor**; massive cushion above $2B instrument floor (~16×)
+
+**Post-print sell-side response (sub-pattern 1 MODERATE — but anchors well above current):**
+- **Barclays** maintained Overweight, PT $523 (5/8) = +29.77% upside from current $403.54
+- **UBS** post-print action (5/7; specific PT/rating not extracted)
+- **JP Morgan** post-print action (5/7; specific PT/rating not extracted)
+- Per Benzinga: average PT across three most-recent (Barclays/UBS/JPM) = **$572.67** = +42.10% upside implied
+- Consensus 18-analyst PT $676.88 (finviz; stale-pre-print weighted) = +67.7% upside
+- Northcoast upgrade Jan 6 Neutral→Buy $742 (4-month pre-print stale anchor)
+- **No firm at MEGA-tier PT raise observed** (none >+50%; Barclays $523 maintains prior-cluster level); **NOT sub-pattern 1 MAJOR/MEGA-magnitude** (per AKAM 5/13 KeyBanc +62.5% / DDOG-Stifel +90.6% / FLEX-JPM +90.5% MEGA-tier references); MODERATE-magnitude sub-pattern 1 signature with raised-cluster anchors but anchors well ABOVE current price (full mean-reversion target $572-676 = +42-68% upside)
+- Critical observation: post-print PT cluster $523-$676 (mean $572.67) is **structurally ABOVE current price by 42-68%** — sell-side sees AXON as oversold with substantial upside; this is the canonical "Wall Street says depressed-name-undervalued" signature consistent with candidate sub-pattern 8 DOC-precedent (DOC 5/7 had post-print sell-side affirmation of valuation despite modest print)
+
+**Inputs:** Strategy.md (B section + criteria 1-5; criterion 1 ≥5% C/C either direction; criterion 3 closed-list rev 14 strict-enumeration; criterion 4 dual-framing; criterion 5 sector cap 3 per GICS sub-industry within B book + no concurrent A position **NAME-LEVEL ONLY — no explicit B↔D cross-strategy sector constraint in Strategy.md text**; instrument rule ≥$2B mcap ≥$10M ADV); AI_Trading_Foundation.md (2.4/2.13/2.20); Operating_Protocols.md §1 HOIP / §2 commission-disregarded / §3 "NO-GO records are context, not barriers" (no prior AXON NO-GO record) / §8 conviction-calibration 3-trade ladder (HCA MEDIUM-LOW 25% / META MEDIUM 25% / IBM MEDIUM-HIGH 50-62%); **Portfolio_Ledger.md** (state-as-of post-ACHC-NO-GO 2026-05-13 ~12:00 MT: B NAV $1,888.69; 3 longs IBM IT Services / HCA Health Care Facilities / META Comm Services; sector cap usage IT Services 1/3 / Health Care Facilities 1/3 / Comm Services 1/3 / **Industrials / Aerospace & Defense 0/3 in B book — AXON-add scenario yields A&D 1/3 within B per-sub-industry cap (clean)**; cumulative B commissions $1.61; 2% sizing $37.77); Regime_State.md (B router ACTIVATE per SPY NEUTRAL + VIX NORMAL); Decision_Log.md precedents critical:
+- **DOC 2026-05-07 NO-GO (candidate sub-pattern 8 "depressed-name pre-print-bearish-positioning-unwind on modest-print-confirmation + peer-print-tailwind WELL/VTR + risk-on-regime backdrop" FIRST INSTANCE pending second-instance validation) — DIRECT-TEMPLATE PRECEDENT for AXON candidate sub-pattern 8 SECOND INSTANCE validation; both depressed-name profile + positive-direction post-event reaction + sell-side anchors above current price**
+- **PINS 2026-05-07 NO-GO (sub-pattern 1 layered-1+3 SECOND INSTANCE + move-completely-faded-by-Day-2 evidence) — direct precedent for AXON Day-1 partial-fade trajectory, with AXON distinguishing on partial-vs-complete fade magnitude (PINS faded fully; AXON ~57% partial)**
+- **W2 PART 2 #13 anticipated routing "Most likely disposition: NO-GO no-clean-edge — neither LONG mean-reversion (post-print PEAD-drift typically continues per Setup F) AND SHORT framing (drift continues against the short) face empirical headwinds"** — this session refines W2's routing with primary-source Day-1 fade evidence: Setup F hypothesized drift-continues; actual Day-1 fade INVERSE to Setup F (4th instance breaks 3-of-3 historical pattern); candidate sub-pattern 8 second-instance routing supersedes Setup F base-rate analysis
+- **24-NO-GO B-short precedent string post-ACHC 5/13 in current risk-on regime** (BE/CAT/TWLO/UPS/NCLH/CRCL/AXSM/PINS/AMD/DOC/TSN/GLW/ARM/SMCI/WHR/FLEX/ZTS/UBER/SHAK/DDOG/FTNT/AKAM/NET/MNST/ACHC) — extends to 25 with AXON-SHORT formal dismissal
+- AXSM 2026-05-04 NO-GO (sub-pattern 3 information-priced-via-pre-print-rally with FDA-approval overlay) — referenced for sub-pattern 3 family but AXON pre-print INVERSE not classical sub-pattern 3
+- AMD 2026-05-07 NO-GO (sub-pattern 1 layered-1+3 THIRD INSTANCE at MOST EXTREME magnitude; move-HELD through Day 2-3) — contrast precedent (AMD move HELD; AXON move FADED)
+- TSN 2026-05-08 NO-GO (sub-pattern 1+3+4 triple-layered FIRST INSTANCE with structural-Beef-cycle 4a) — different mechanism family
+- "NO-GO records are context, not barriers" §3 (no prior AXON NO-GO record — fresh evaluation)
+- Watchlist.md (AXON NOT listed; B uses calendar-event queue mechanism; no AXON A-queue per Watchlist.md 16-name list)
+
+**Cross-strategy GICS overlap analysis (per user-prompt verification step):**
+- AXON GICS classification per finviz: Industrials sector / Aerospace & Defense industry / Aerospace & Defense sub-industry
+- RTX (Strategy D position open since 2026-04-27) GICS: Industrials / Aerospace & Defense — **same sub-industry as AXON**
+- **Strategy.md B criterion 5 explicit text: "No A position currently open in the same name"** — NAME-LEVEL A↔B mutual exclusion only
+- **Strategy.md B sector cap text: "3 concurrent B positions per GICS sector"** — within-B book only; no explicit B↔D cross-strategy sector constraint
+- **Strategy.md "Coordination with Strategy A is one-directional" Known Limitation #8** — only addresses A↔B coordination, not B↔D
+- **Conclusion: per strict Strategy.md formal text, AXON-add in B does NOT trigger cross-strategy concentration block.** RTX-in-D + AXON-in-B would coexist; B's per-sub-industry cap counts only B positions (currently 0/3 in Industrials/A&D; AXON-add = 1/3 within cap). W2 PART 2 #13 referenced "cross-strategy concentration constraint is the binding check" — this is INTERPRETIVE W2-analysis layer, not Strategy.md hard rule; the formal session applies Strategy.md text strictly. The disposition basis is NOT cross-strategy concentration; it's criterion 4 + criterion 3 binding constraints. (Note for future cross-strategy coordination M5 review per KL #8: A↔B-after-B-open audit is the formal cross-strategy mechanism; B↔D parallel mechanism would require Strategy.md amendment which is out-of-scope for thesis-construction session.)
+
+**Web-search primary documents (verified this session):**
+- AXON Q1 2026 IR press release (Wed 2026-05-06 AMC): https://investor.axon.com/2026-05-06-Axon-reports-Q1-2026-revenue-of-807-million,-up-34-year-over-year
+- AXON Q1 2026 PRNewswire: https://www.prnewswire.com/news-releases/axon-reports-q1-2026-revenue-of-807-million-up-34-year-over-year-302764625.html
+- AXON Q1 2026 earnings call transcript Investing.com: https://www.investing.com/news/transcripts/earnings-call-transcript-axon-enterprises-q1-2026-earnings-beat-expectations-93CH-4665986
+- AXON Q1 2026 Earnings Call Transcript PDF (investor.axon.com): https://investor.axon.com/image/Axon_Q1_2026_Earnings_Call_Transcript.pdf
+- AXON Q1 2026 results Yahoo Finance: https://finance.yahoo.com/markets/stocks/articles/axon-enterprise-inc-q1-2026-123000813.html
+- AXON Q1 2026 Alpha Spread: https://www.alphaspread.com/security/nasdaq/axon/investor-relations/earnings-call/q1-2026
+- AXON Q1 2026 Simply Wall St (EPS rebound $2.11 commentary): https://simplywall.st/stocks/us/capital-goods/nasdaq-axon/axon-enterprise/news/axon-enterprise-axon-q1-eps-rebound-to-us211-tests-volatile
+- AXON Q1 2026 24/7 Wall St live blog: https://247wallst.com/investing/2026/05/06/live-will-axon-deliver-another-blowout-quarter-after-the-bell/
+- AXON Trefis pre-earnings preview: https://www.trefis.com/stock/axon/articles/598304/how-will-axon-enterprise-stock-react-to-its-upcoming-earnings/2026-05-05
+- AXON Q1 2026 ad-hoc news coverage: https://www.ad-hoc-news.de/boerse/news/ueberblick/axon-enterprise-inc-stock-us05464c1018-q1-revenue-up-34-percent-as/69298360
+- AXON MarketScreener guidance raise coverage: https://www.marketscreener.com/news/axon-enterprise-inc-raises-earnings-guidance-for-the-full-year-2026-ce7f5bdbde80ff21
+- AXON post-print Barclays $523 Overweight maintained + UBS + JPM post-print actions per Benzinga: https://www.benzinga.com/quote/AXON/analyst-ratings
+- AXON consensus PT $676.88 / 18 analysts Buy 1.35 / mcap $32.53B / 80.57M shares / 30-day ADV 1.13M / YTD -28.95% / 52-wk $885.91-$339.01 per finviz: https://finviz.com/quote.ashx?t=AXON
+- AXON stock forecast / analyst consensus public.com: https://public.com/stocks/axon/forecast-price-target
+- AXON stockanalysis.com historical-prices Mon 4/27 – Fri 5/8 primary verified: https://stockanalysis.com/stocks/axon/history/
+
+### Decision
+
+**AXON — NO-GO (DECLINE).** Criterion 4 dual-framing decisive failure with **candidate sub-pattern 8 "depressed-name pre-print-bearish-positioning-unwind" SECOND INSTANCE established** (after DOC 2026-05-07 first instance; pending second-instance validation per W5 sub-pattern taxonomy bootstrap rules — AXON validates DOC's candidate-sub-pattern-8 routing on depressed-name profile + positive-direction post-event reaction + sell-side anchors above current price). **NEW sub-evidence layer "Day-1 PARTIAL-FADE-from-DEPRESSED-PRE-PRINT"** — Day-0 +10.63% → Day-1 -5.47% fade = ~57% of Day-0 gap given back by Day-1; distinct from PINS 5/7 complete-fade-by-Day-2 (PINS faded 100%) and from ARM/FLEX/DDOG/AKAM held-Day-1 (full retention); first observed instance of PARTIAL fade-at-Day-1 from depressed-baseline; INVERSE to W2 PART 2 #13 Setup F "drift-continues 3-of-3" base rate (4th instance would break historical pattern; supersedes Setup F evidence with primary-source Day-1 fade). Compounded by criterion 3 closed-list rev 14 effectively-absent admissible target (SHORT-mean-reversion target $385.86 pre-event = -4.38% downside thin; LONG-continuation-target = Strategy A territory; LONG-depressed-recovery-target ill-defined; named-event Q2 outside window / FOMC mismatched / S&P 500 + Russell 1000 + Nasdaq 100 already-member). 24→25 NO-GO B-short string + 2.20-trap + +25% stop $504.43 BELOW Barclays $523 PT cluster = stop binds tightly against post-print sell-side anchor; KL #7 gap-up risk on depressed-name sentiment reversal vectors. Criterion 1 mechanically clears at +10.63% Day-0 C/C in POSITIVE direction (2.13× threshold cushion); session-prompt's "+10.63% on 5/8" event-day-of-week off-by-one correction non-binding. Criterion 5 sector cap clears (Industrials / Aerospace & Defense 0/3 sub-industry in B book; AXON-add scenario yields A&D 1/3 within cap; **cross-strategy GICS overlap with RTX-in-D analyzed and NOT a binding gate per strict Strategy.md formal text** — B criterion 5 is name-level only; B sector cap is within-B only). Instrument rule clears with massive cushion (mcap $32.53B = ~16× $2B floor; ADV ~$452M >>$10M floor). Conviction in NO-GO: **HIGH (~75-82%)** — comparable to ACHC 5/13 75-82% and DOC 5/7 70-80% ranges; below WHR/SHAK/AKAM 85-90% MEGA-tier because candidate sub-pattern 8 SECOND INSTANCE establishment is provisional (formal taxonomy promotion pending second-instance validation; AXON IS the second-instance validator); theater-check CONVERGENT across 9 review axes.
+
+### Mechanical eligibility detail
+
+- **Instrument rule:** AXON = Axon Enterprise Inc., NASDAQ-listed common (US-listed); US-incorporated Delaware C-corp; ~80.57M shares outstanding (finviz); **mcap $32.53B at Fri 5/8 close $403.54** = ~16× $2B instrument floor (massive cushion); ADV 1.13M shares × ~$400 ≈ ~$452M well above $10M floor; long-or-short permitted; 2% sizing $37.77; no options. **Instrument rule clears with MASSIVE CUSHION.**
+
+- **Criterion 1:** Event Wed 2026-05-06 AMC (Q1 2026 print). Pre-event Wed 5/6 close $385.86 → Day-0 Thu 5/7 close $426.89 = **+10.63% canonical Day-0 C/C** (2.13× threshold cushion in POSITIVE direction). User-prompt's "5/8 +10.63%" reading is event-day-of-week off-by-one (5/7 = Day-0; 5/8 = Day-1 fade -5.47%); non-binding correction. Qualifying event = Q1 earnings print (canonical Strategy.md list-match). **Window expires Wed 2026-05-20 close** (Day 10 from Thu 5/7; today Wed 5/13 = Day 4 of 10). Mechanically clears with material cushion in POSITIVE direction.
+
+- **Criterion 5:** No A position open (A router DO-NOT-ACTIVATE; AXON not on A queue per Watchlist.md 16-name list). No D position in AXON (RTX is the D Industrials/A&D position; AXON not in D). **GICS Industrials sector / Aerospace & Defense industry / Aerospace & Defense sub-industry** (per finviz verified; W2 PART 2 #13 alternative "Industrial Conglomerates" possibility resolved to A&D per finviz primary classification). **Currently 0/3 used in A&D sub-industry by B; AXON-add scenario yields A&D 1/3 within Strategy.md 3-per-sub-industry cap.** **Cross-strategy concentration with RTX-in-Strategy-D: per strict Strategy.md formal text, NOT a binding cross-strategy gate** — B criterion 5 is name-level only ("No A position currently open in the same name"); B sector cap is within-B book only ("3 concurrent B positions per GICS sector"); no B↔D cross-strategy concentration rule in Strategy.md formal text; KL #8 cross-strategy coordination is one-directional A↔B audit-trigger only. W2 PART 2 #13 referenced "cross-strategy concentration constraint" but that is INTERPRETIVE W2-analysis-layer flag, not a Strategy.md hard rule; this session applies Strategy.md text strictly. **Criterion 5 mechanically CLEARS** on per-sub-industry-cap-within-B-book basis. **Pre-mortem KL #12 long-side concurrent-position correlation:** AXON-add scenario yields 4-long book (IBM × HCA × META × AXON). Estimated trailing-252-day daily-return pairwise correlations: AXON-IBM ~0.30-0.40 (different sectors but both AI-narrative-correlated tech-adjacent); AXON-META ~0.30-0.40 (AI-narrative shared theme; different sectors); AXON-HCA ~0.10-0.20 (different sectors, low — Industrials-Defense vs Healthcare-Facilities). 4-long-book pairwise avg estimate ~0.25-0.35 — **KL #12 MODERATELY FAVORABLE** (below 0.5 trigger with comfortable margin; comparable to AKAM 5/13 0.20-0.35 / FTNT/mid-range; better than ACHC-HCA same-sub-industry 0.30-0.40 / DDOG-ARM-GLW unfavorable). Secondary observation; criterion 4 binds.
+
+### Decisive flaw analysis (criterion 4 dual-framing)
+
+**Candidate sub-pattern 8 "depressed-name pre-print-bearish-positioning-unwind" SECOND INSTANCE established (DOC 5/7 first; AXON 5/13 second) — pending W5 validation.**
+
+DOC 5/7 first instance distinguishing features per Decision_Log 2026-05-07 DOC entry: REIT / Healthpeak Properties; Q1 FFO modest beat + FY guide raised midpoint $0.01; **depressed-name profile** (prior multi-quarter underperformance + bearish positioning); peer-print-tailwind WELL/VTR within window; risk-on-regime backdrop; **post-print reaction +13-18% positive-direction**; ambiguous dual-framing routing (sub-pattern 1 sentiment + sub-pattern 8 candidate); NO-GO criterion 4 dual-framing under ambiguity disposition.
+
+AXON 5/13 second instance distinguishing features (validating sub-pattern 8 with same family signature + extension):
+- **Depressed-name profile EVEN MORE PRONOUNCED** than DOC: YTD -28.95% (vs DOC's pre-print ~12% off 52-wk high); ~54% off 52-wk high $885.91 (vs DOC's ~30-40% off-high); ~19% above 52-wk low $339.01 (basement-tier depressed profile)
+- **4-week pre-print decline trajectory** $406.31 (4/28) → $380.60 (5/5) = -6.34% over 6 trading days = explicit pre-print bearish positioning absorbing forward-narrative concerns
+- **Print delivered STRONG beat-and-raise**: Q1 rev +34% Y/Y beat / EPS +25.8% beat / FY26 guide RAISED 30-32% from 27-30% / AI rev +700% Y/Y / ARR $1.5B (+35% Y/Y) — substantially STRONGER print than DOC's modest FFO beat
+- **Day-0 +10.63% positive-direction reaction** — smaller magnitude than DOC's +13-18% Day-0 (likely because AXON's pre-print absorption was longer/deeper, lowering the marginal-news-surprise multiplier)
+- **Post-print sell-side anchors WELL ABOVE current** (Barclays $523 OW / UBS / JPM avg $572.67 / consensus $676.88) — same DOC-precedent "Wall Street says depressed-name-undervalued" signature
+- **NEW sub-evidence layer Day-1 PARTIAL-FADE -5.47%** = ~57% of Day-0 gap fades back; distinct from DOC which held Day-1 (DOC's fade was intraday-Thu partial fade not Day-1)
+
+The SECOND INSTANCE confirms the candidate sub-pattern 8 pattern as a recurring depressed-name-with-positive-direction-post-event-reaction template; pending formal W5 sub-pattern taxonomy validation (promotion to "sub-pattern 8" canonical numbering). Both DOC and AXON dispositions = NO-GO criterion 4 dual-framing under ambiguity, suggesting the candidate sub-pattern's primary feature is dual-framing-routing-ambiguity not unidirectional NO-GO mechanism.
+
+**LONG framing decisive flaws (5 axes):**
+
+(α) **LONG mean-reversion at +10.63% Day-0 = CONTINUATION territory (Strategy A not B).** Per BE 5/1 / CAT 5/2 / TWLO 5/2 / UPS 5/5 / NCLH 5/5 / CRCL 5/5 doctrine: "arguing further drift toward higher PT cluster is structurally a momentum-continuation thesis (Strategy A territory, not B)." LONG-mean-reversion-from-positive-direction-event would target HIGHER price than Day-0 close $426.89 — which is post-event continuation, not B's mean-reversion mechanism.
+
+(β) **LONG depressed-name continued-recovery thesis defeated by Day-1 fade.** Sub-pattern 8 candidate LONG framing (depressed-name unwinding bearish positioning toward post-print sell-side $572.67 cluster) is challenged by Day-1 -5.47% fade evidence — Day-0 +10.63% was over-extrapolation; Day-1 partial-fade is sentiment-correction-back-toward-pre-event-level. The Day-1 fade indicates sentiment momentum is FADING not continuing, weakening the LONG-recovery thesis.
+
+(γ) **Setup F historical evidence INVERSE in actual data.** W2 PART 2 #13: "Setup F historical base rate — AXON post-print +10% prints have CONTINUED/EXTENDED in 3-of-3 prior instances." Day-1 fade evidence INVERSE to Setup F base rate; 4th instance would break the historical pattern. Either Setup F base rate is unreliable, or AXON 5/7-5/8 is the first instance breaking the pattern. Either way, Setup F evidence does NOT support a high-conviction LONG continuation thesis.
+
+(δ) **Criterion 3 closed-list absent admissible LONG-direction target.** Numerical target option (a): 100%-gap-fill toward pre-event $385.86 = OPPOSITE direction (downward not upward); post-print PT cluster $572.67 = +42.1% upside target requires Strategy-A-style conviction; consensus PT $676.88 = +67.7% requires even higher conviction. Named-event option (b): Q2 next earnings Aug outside 60-day window; FOMC mismatched; index inclusions already-member. **No admissible LONG-direction convergence target.**
+
+(ε) **Post-print sell-side cluster anchors above current = LONG already-priced-in by sell-side; remaining upside requires breaking through MEGA-tier momentum vector.** Sell-side has already raised PTs to $523-$676; current $403.54 below cluster mean by 42-68%. The "upside-to-PT-cluster" framing for LONG is Strategy A territory continuation thesis, not B mean-reversion.
+
+**SHORT framing decisive flaws (5 axes):**
+
+(η) **24→25 NO-GO B-short string in current risk-on regime.** Extends 24-NO-GO B-short string post-ACHC 5/13 to 25 with AXON-SHORT formal dismissal. SPY at all-time-high; VIX 17.05 NORMAL; risk-on regime LEAST favorable for B-short entries against 2.20-trap. Per BE/CAT/TWLO doctrine: shorting after a positive post-event move is canonical textbook-rational instinct that B's selectivity penalizes.
+
+(θ) **Mean-reversion-already-LARGELY-fired on negative side.** Day-1 fade -5.47% = ~57% of Day-0 gap already filled back DOWN; remaining gap $403.54 → $385.86 = only -4.38% downside to pre-event. SHORT entry today with -4.38% target is thin EV. The mean-reversion mechanism (Day-1 fade) has ALREADY captured most of the available edge.
+
+(ι) **+25% short-side stop $504.43 BELOW Barclays $523 PT cluster + KL #7 gap-up vectors.** Stop at $403.54 × 1.25 = $504.43 is BELOW Barclays $523 OW PT — partial sell-side recovery toward Barclays PT alone (any single firm reiterating bull case at $523) could trigger stop. KL #7 gap-up risk specifically for depressed-name with strong fundamentals + AI-narrative + post-print PT cluster $572-676:
+- AI-narrative follow-on catalysts (NVDA Q1 FQ27 print 5/20 within window; broader AI-infrastructure peer prints)
+- Counter-drone strategic deal announcements (counter-drone +300% growth momentum)
+- Federal / international contract wins (rapid adoption commentary by management)
+- Industry-conference circuit (AI-defense / public-safety expos)
+- Buyback acceleration / capital-return announcements (massive FCF ~$450M)
+- **5+ potential gap-up reversal vectors** specific to AXON growth trajectory
+
+(κ) **Criterion 3 closed-list absent admissible SHORT-direction target.** Numerical SHORT target $385.86 pre-event = -4.38% thin; below pre-event $385.86 = momentum-continuation territory not mean-reversion. Named-event Q2 outside window; FOMC mismatched; no index-inclusion fresh trigger. SHORT-direction convergence target structurally DEGENERATE (thin near-term-mean-reversion target ALREADY captured; below-pre-event = continuation not B mechanism).
+
+(λ) **Depressed-name profile creates structural-asymmetry against SHORT.** AXON at 19% above 52-wk low + 54% off 52-wk high + YTD -28.95% = downside-room-limited / upside-potential-substantial asymmetry. SHORT in this profile faces structurally weak risk-reward even on thin -4.38% target.
+
+### Effect on book
+
+No effect. No order staged. Strategy B remains in ACTIVATE state with three open positions (IBM, HCA, META) and zero staged orders. Strategy B sector concentration unchanged: IT Services 1/3 (IBM); Health Care Facilities 1/3 (HCA); Comm Services 1/3 (META); **Industrials / Aerospace & Defense 0/3 (AXON would have been 1/3 within cap; clean addition averted maintaining 0/3 in A&D sub-industry; cross-strategy-overlap-with-RTX-in-D-noted-but-not-binding-per-Strategy.md)**; other sub-industries 0/3.
+
+### Pending queue updated
+
+- ~~AXON B-thesis construction~~ COMPLETE — NO-GO criterion 4 dual-framing decisive failure with candidate sub-pattern 8 SECOND INSTANCE + NEW sub-evidence layer Day-1 PARTIAL-FADE-from-DEPRESSED-PRE-PRINT + criterion 3 closed-list absent admissible target both directions.
+- 10-day post-event entry window for AXON expires **Wed 2026-05-20 close** (10 trading days from Thu 5/7 = Day 0; today Wed 5/13 = Day 4 of 10). **Window does NOT extend on this NO-GO disposition.** Criterion 4 + criterion 3 binding constraints structural; no re-evaluation scheduled.
+- Sequenced sister thesis-construction sessions Wed 5/13: AKAM 09:30 ✓ + NET 10:15 ✓ + MNST 11:00 ✓ + ACHC 12:00 ✓ + **AXON (this session, 13:00 calendar slot) ✓** + IRM 15:00 — **5 same-day completions Wed 5/13 with 1 remaining (IRM)**; would reach 6/6 ceiling matching Mon 5/11 + Tue 5/12 6-disposition new-high-water-mark precedent.
+- Calendar event `g63h3d21r0ael6dkmldluaiho8` for Wed 5/13 13:00 MT is now CONSUMED.
+
+### References
+
+- Strategy.md (B section + criteria 1-5; criterion 5 name-level A↔B mutual exclusion only; per-sub-industry cap within-B-book; KL #8 cross-strategy coordination one-directional A↔B; pre-mortem rev 7 KL #1/#7/#11/#12).
+- AI_Trading_Foundation.md (2.4 / 2.13 / 2.20).
+- Operating_Protocols.md §1 HOIP / §2 commission-disregarded / §3 NO-GO records context / §8 conviction-calibration.
+- Portfolio_Ledger.md (B state-of-book; Industrials/A&D 0/3 in B; RTX in D Industrials/A&D — separate strategy not within B cap).
+- Regime_State.md (B router ACTIVATE per SPY NEUTRAL + VIX NORMAL).
+- Decision_Log.md 2026-05-07 DOC NO-GO (candidate sub-pattern 8 FIRST INSTANCE — direct-template precedent for AXON SECOND INSTANCE establishment).
+- Decision_Log.md 2026-05-07 PINS NO-GO (move-completely-faded-by-Day-2 — AXON Day-1 partial-fade distinguishes on partial-vs-complete).
+- Decision_Log.md 2026-05-07 AMD NO-GO (move-HELD-Day-2-3 — AXON Day-1 fade INVERSE to AMD trajectory).
+- Decision_Log.md 2026-05-01 BE NO-GO + 2026-05-02 CAT/TWLO NO-GOs (LONG continuation = Strategy A territory doctrine — applicable to AXON LONG framing).
+- Decision_Log.md 2026-05-13 AKAM + NET + MNST + ACHC NO-GOs (Wed 5/13 same-day sister sessions).
+- AXON Q1 2026 IR press release Wed 5/6 / PRNewswire / Investing.com earnings call transcript / Yahoo Q1 2026 / Alpha Spread / Simply Wall St / 24/7 Wall St / Trefis preview / ad-hoc-news / MarketScreener guidance-raise / Benzinga analyst ratings post-print (Barclays $523 + UBS + JPM avg $572.67) / finviz quote (mcap $32.53B / 80.57M shares / 30-day ADV 1.13M / 52-wk $885.91-$339.01 / YTD -28.95% / GICS Industrials A&D / consensus PT $676.88) / stockanalysis.com historical-prices Mon 4/27 – Fri 5/8 primary verified / public.com forecast.
+
+### Theater-check on this orchestrator review
+
+(a) **Criterion 1 measurement correct?** Yes — Wed 5/6 AMC print; canonical Day-0 = Thu 5/7 close $426.89 = +10.63% from pre-event Wed 5/6 close $385.86 (2.13× cushion in POSITIVE direction). Session-prompt's "5/8 +10.63%" event-day-of-week off-by-one (5/8 is Day-1 -5.47% fade); non-binding correction.
+
+(b) **Candidate sub-pattern 8 SECOND INSTANCE routing justified?** Yes — DOC 5/7 first instance and AXON 5/13 second instance share core signature (depressed-name profile + positive-direction post-event reaction + sell-side anchors above current price + NO-GO criterion 4 dual-framing under ambiguity). AXON's depressed profile (YTD -28.95% / 54% off ATH) is more pronounced than DOC's; AXON's print magnitude (rev +34% / FY-raise / AI rev +700%) is stronger than DOC's modest FFO beat; both produce candidate-sub-pattern-8 ambiguous-dual-framing-routing. Pending W5 formal taxonomy promotion (DOC was first-instance pending; AXON validates second-instance pending promotion to canonical sub-pattern 8).
+
+(c) **NEW sub-evidence layer "Day-1 PARTIAL-FADE-from-DEPRESSED-PRE-PRINT" first-instance establishment justified?** Yes — distinct from clean fade-by-Day-2 (PINS 5/7 — faded fully) and from clean held-Day-1 (ARM/FLEX/DDOG/AKAM — full retention). AXON Day-0 +10.63% → Day-1 -5.47% = ~57% partial fade is intermediate between PINS complete-fade and held-Day-1 patterns. First observed instance; pending second-instance validation.
+
+(d) **W2 PART 2 #13 Setup F base rate handled correctly?** Yes — W2 anticipated "AXON post-print +10% prints have CONTINUED/EXTENDED in 3-of-3 prior instances over 60d." Primary-source verification reveals Day-1 fade -5.47% INVERSE to Setup F hypothesis; if held trajectory through 60d, AXON 5/7-5/8 would be 4th instance breaking 3-of-3 pattern. Either Setup F is unreliable n=3 sample or this is first counter-instance. Either way, Setup F evidence does NOT decisively support either LONG or SHORT framing; supersedes by candidate sub-pattern 8 routing.
+
+(e) **Cross-strategy concentration analysis correct?** Yes — Strategy.md formal text reading: B criterion 5 = name-level A↔B only; B sector cap = within-B only; no B↔D cross-strategy concentration rule. AXON-add in B with RTX-in-D = NOT a binding cross-strategy gate per strict formal text. W2 PART 2 #13 referenced "cross-strategy concentration constraint" but that is INTERPRETIVE analysis layer not Strategy.md hard rule. The disposition basis is criterion 4 + criterion 3, NOT cross-strategy concentration. Per KL #8 the one-directional A↔B coordination audit-trigger at M5 monthly review is the formal cross-strategy mechanism; B↔D parallel would require Strategy.md amendment.
+
+(f) **Criterion 3 closed-list analysis exhaustive?** Yes — both LONG and SHORT direction examined; numerical price level / next earnings / FDA / FOMC / S&P 500 / Russell 1000 / Nasdaq 100 all examined; LONG-mean-reversion = continuation territory; LONG-depressed-recovery = ill-defined target; SHORT-mean-reversion target $385.86 = -4.38% thin; SHORT-continuation below pre-event = momentum territory; named-event options all FAIL/MISMATCH.
+
+(g) **LONG framing steel-manned?** Yes — depressed-name continued-recovery thesis at consensus PT $676.88 (+67.7%) / post-print cluster $572.67 (+42.1%) / Barclays $523 (+29.8%); Setup F drift-continues hypothesis. Defeated on 5 axes: LONG-mean-reversion = continuation Strategy A territory; Day-1 fade evidence vs continuation; Setup F INVERSE in actuals; criterion 3 absent admissible target; sell-side already-priced-in.
+
+(h) **SHORT framing dismissed properly?** Yes — 24→25 NO-GO B-short string + 2.20-trap; mean-reversion-already-largely-fired (~57% of gap closed); +25% stop $504.43 below Barclays $523 cluster + 5+ KL #7 gap-up vectors; criterion 3 absent SHORT target; depressed-name profile asymmetry against SHORT.
+
+(i) **Was deferral considered?** No — criterion 4 dual-framing decisive failure + criterion 3 absent target = clean NO-GO; no information gap requires deferral.
+
+Modulo these nine considerations, orchestrator review converges on NO-GO with HIGH confidence (~75-82%).
+
+### Conviction calibration
+
+**HIGH conviction in NO-GO disposition (~75-82%)** — comparable to ACHC 5/13 (~75-82%) and DOC 5/7 (~70-80%) ranges; below WHR/SHAK/AKAM 85-90% MEGA-tier because candidate sub-pattern 8 SECOND INSTANCE establishment is provisional pending W5 formal validation; Day-1 fade trajectory pattern is novel partial-fade-from-depressed signature; below sub-pattern 1 MEGA-tier conviction because AXON's post-print sell-side response is MODERATE-tier with cluster anchors above current price (not the canonical sub-pattern 1 information-driven-already-priced-in signature seen in sub-pattern 1 MEGA-tier cases). Theater-check CONVERGENT across 9 review axes; disposition mechanism-resolved.
+
+### Compaction-survival note
+
+**Strategy B AXON Q1-2026-print disposition 2026-05-13 ~13:00 MT (calendar slot per D2 5/9):** **NO-GO (DECLINE) via criterion 4 dual-framing decisive failure with candidate sub-pattern 8 "depressed-name pre-print-bearish-positioning-unwind" SECOND INSTANCE established (DOC 5/7 first; AXON 5/13 second; pending W5 formal taxonomy promotion to canonical sub-pattern 8) + NEW sub-evidence layer "Day-1 PARTIAL-FADE-from-DEPRESSED-PRE-PRINT" + criterion 3 closed-list rev 14 effectively-absent admissible target both LONG and SHORT directions.**
+
+**Event details (Wed 2026-05-06 AMC):** Q1 rev $807.3M (+34% Y/Y; +3.8% beat) / non-GAAP EPS $1.61 (+25.8% beat); Software & Services $355M (+35% Y/Y) / ARR $1.5B (+35% Y/Y) / NRR 125%; **AI revenue +700% Y/Y**; counter-drone +300%; Platform Solutions +95%; Adj EBITDA $202M (25% margin); **FY26 revenue growth RAISED 30-32% from prior 27-30%**; FCF ~$450M.
+
+**Stock price action (primary-source verified):** Pre-event Wed 5/6 $385.86 (4-week decline trajectory $406.31 → $385.86) / **Day-0 Thu 5/7 $426.89 (+10.63% canonical AMC-print C/C; 2.13× threshold cushion)** / **Day-1 Fri 5/8 $403.54 (-5.47% PARTIAL FADE; ~57% of Day-0 gap given back)**. Net Wed → Fri = +4.58% retention. Mcap $32.53B (80.57M × $403.54); ADV ~$452M; YTD -28.95%; 52-wk $885.91-$339.01 = depressed-name profile.
+
+**Sub-pattern routing:** **Candidate sub-pattern 8 SECOND INSTANCE established** (DOC 5/7 first; AXON 5/13 second) — both share depressed-name profile + positive-direction post-event reaction + sell-side anchors above current price + NO-GO dual-framing under ambiguity; pending W5 formal taxonomy promotion. **NEW sub-evidence layer "Day-1 PARTIAL-FADE-from-DEPRESSED-PRE-PRINT"** — distinct from PINS clean-fade and from ARM/FLEX/DDOG/AKAM held-Day-1; first observed instance; pending second-instance validation. **W2 PART 2 #13 Setup F hypothesis "3-of-3 prior AXON +10% prints CONTINUED" INVERSE to actual Day-1 fade trajectory** — supersedes Setup F base-rate with candidate sub-pattern 8 second-instance routing.
+
+**Post-print sell-side cluster:** Barclays $523 OW maintained (5/8) / UBS (5/7) / JP Morgan (5/7) — avg $572.67 = +42.1% upside from current; consensus 18-analyst PT $676.88 = +67.7% upside; cluster anchors WELL ABOVE current price = sell-side sees depressed-name-undervalued (DOC-precedent signature); MODERATE-magnitude sub-pattern 1 with no MEGA-tier raise observed.
+
+**Cross-strategy GICS overlap analysis:** AXON in Industrials / Aerospace & Defense (same sub-industry as RTX-in-Strategy-D). Per strict Strategy.md formal text: B criterion 5 = name-level A↔B mutual exclusion only; B sector cap = "3 concurrent B positions per GICS sector" within-B book only; no explicit B↔D cross-strategy concentration rule; KL #8 cross-strategy coordination one-directional A↔B audit-trigger only. **AXON-add in B with RTX-in-D NOT a binding cross-strategy gate per Strategy.md.** W2 PART 2 #13 referenced "cross-strategy concentration constraint" as INTERPRETIVE analysis layer not Strategy.md hard rule. Disposition basis is criterion 4 + criterion 3, NOT cross-strategy concentration. AXON-add scenario would yield Industrials/A&D 1/3 within B's 3-per-sub-industry cap (clean).
+
+**Conviction in NO-GO: HIGH (~75-82%)** — comparable to ACHC 5/13 75-82% and DOC 5/7 70-80%; below WHR/SHAK/AKAM 85-90% MEGA-tier because candidate sub-pattern 8 SECOND INSTANCE establishment is provisional pending W5 formal validation. Theater-check CONVERGENT across 9 review axes.
+
+**Sub-pattern routing taxonomy update.** **Candidate sub-pattern 8 advances 1 → 2 instances** (DOC 5/7 first; AXON 5/13 second); SECOND INSTANCE validation milestone reached — pending W5 formal promotion to canonical sub-pattern 8 numbering. **NEW sub-evidence layer "Day-1 PARTIAL-FADE-from-DEPRESSED-PRE-PRINT"** — AXON first observed instance; pending second-instance validation; if recurs could promote to formal trajectory-sub-pattern.
+
+**Experiment Strategy B totals advance to 3 GO + 45 NO-GO = 6.3% / 93.7% hit rate** (from 3/44 = 6.4%/93.6% post-ACHC). Long-direction NO-GO breakdown: criterion 1 mechanical 3; instrument-rule 2; **criterion 4 decisive advances to 40 with AXON** (from 39). **The 24-NO-GO B-short precedent string extends to 25 with AXON-SHORT formal dismissal.** 25-NO-GO B-short streak duration: 15 trading days (2026-04-23 BE through 2026-05-13 AXON inclusive).
+
+**Sector cap usage unchanged** — Industrials / Aerospace & Defense remains 0/3 in B (AXON would have been 1/3 within Strategy.md 3-per-sub-industry cap; clean addition averted). KL #12 first-computation event Wed 2026-06-03 ~15:30 MT operates on IBM × HCA × META 3-way unchanged. KL #12 MODERATELY FAVORABLE for AXON (4-long-book pairwise avg ~0.25-0.35; below 0.5 trigger with comfortable margin).
+
+**A-queue status: AXON NOT on A-queue** per Watchlist.md (no qualifying upcoming-catalyst-within-6-month-horizon for A-style entry; A router DO-NOT-ACTIVATE). Disposition does not affect A-queue state.
+
+**No order staged. No portfolio-state change.** 2% next-trade sizing $37.77 unchanged. Window expires Wed 2026-05-20 close; today Wed 5/13 = Day 4 of 10; 6 trading days remaining post-disposition. No calendar event scheduled to revisit (criterion 4 + criterion 3 binding constraints structural; routine Daily.md scan picks up any fresh trigger).
+
+**Watchlist update: NONE.** Per Decision_Log 2026-05-05 D2 architecture decision, Strategy B does NOT use a static watchlist queue. AXON calendar event `g63h3d21r0ael6dkmldluaiho8` for Wed 5/13 13:00 MT is now CONSUMED. No watchlist add.
+
+**Wed 5/13 same-day B thesis-construction queue saturation status post-AXON (5th session of Wed):** AKAM 09:30 ✓ + NET 10:15 ✓ + MNST 11:00 ✓ + ACHC 12:00 ✓ + **AXON (this session, 13:00 calendar slot) ✓** + IRM 15:00 = **5 of 6 ceiling reached**; IRM 15:00 remaining would reach 6/6 matching Mon 5/11 + Tue 5/12 6-disposition new-high-water-mark precedent.
+
+**Compaction-survival notes:**
+(a) AXON = candidate sub-pattern 8 SECOND INSTANCE "depressed-name pre-print-bearish-positioning-unwind" (DOC 5/7 first; AXON 5/13 second); pending W5 formal taxonomy promotion. **NEW sub-evidence layer "Day-1 PARTIAL-FADE-from-DEPRESSED-PRE-PRINT"** = ~57% of Day-0 gap faded back by Day-1; distinct from PINS clean-fade and ARM/FLEX/DDOG/AKAM held-Day-1.
+(b) W2 PART 2 #13 Setup F hypothesis "3-of-3 AXON +10% prints CONTINUED" INVERSE to actual Day-1 fade evidence; supersedes Setup F base-rate analysis with candidate sub-pattern 8 routing.
+(c) Cross-strategy GICS overlap with RTX-in-D analyzed: per strict Strategy.md formal text, NOT a binding cross-strategy gate; B criterion 5 name-level only; B sector cap within-B only; KL #8 cross-strategy coordination one-directional A↔B. W2 PART 2 #13 referenced "cross-strategy concentration constraint" as INTERPRETIVE analysis layer not hard rule.
+(d) Post-print sell-side cluster Barclays $523 / UBS / JPM avg $572.67 / consensus $676.88 — anchors WELL ABOVE current $403.54; MODERATE-tier sub-pattern 1 with no MEGA-raise; sell-side sees depressed-name-undervalued (DOC-precedent signature).
+(e) Mcap $32.53B massive cushion above $2B floor; ADV ~$452M; no instrument-rule concern.
+(f) Disposition basis criterion 4 dual-framing decisive failure + criterion 3 closed-list absent admissible target both directions; 24→25 NO-GO B-short string + LONG-continuation = Strategy A territory.
+(g) Conviction HIGH ~75-82%; theater-check CONVERGENT across 9 review axes.
+(h) Experiment B totals advance to 3 GO + 45 NO-GO = 6.3% / 93.7%; criterion 4 decisive 40; B-short string 25 (15-trading-day streak).
