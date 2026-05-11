@@ -9797,3 +9797,249 @@ Modulo these eleven considerations, the orchestrator review converges on NO-GO w
 **No order staged. No portfolio-state change.** 2% next-trade sizing $37.77 unchanged. Window expires Wed 2026-05-20. Cybersecurity-peer prints + AMAT 5/14 + NVDA 5/20 + AVGO 6/4 + AI-infrastructure conferences within 60-day window create FTNT-sympathy gap-up vectors per KL #7.
 
 **Tue 5/12 same-day B thesis-construction queue saturation status post-FTNT (FINAL Tue slot):** CEG re-screen 09:00 ✓ + UBER 11:00 ✓ + ZTS 11:00 ✓ + SHAK 13:00 ✓ + DDOG 14:00 ✓ + **FTNT (this session, 15:00 calendar slot) ✓** = **6 same-day NO-GOs Tue 5/12** = EQUALS Mon 5/11 6-disposition new-high-water-mark precedent. Two consecutive trading days at 6-disposition ceiling = sustained operator capacity at maximum tier. Wed 5/13: AKAM 09:30 / MNST 11:00 / AXON 13:00 / NET 10:15 (per W4 5/9 scheduling) + downstream Thu/Fri continued queue.
+
+---
+
+## 2026-05-13 (Wed, ~09:30 MT, AKAM session per calendar slot per D2 5/9 conversion) Strategy B thesis construction outcome — AKAM (Akamai Technologies) NO-GO via criterion 4 dual-framing decisive failure with **sub-pattern 1 layered-1+3 variant EIGHTH INSTANCE** — KeyBanc $120→$195 +62.5% MEGA-raise + Scotiabank →$180 (raise from prior ~$90-100 cluster ≈ +80-100%) + Evercore ISI new coverage Outperform $130 + Goldman Sachs $76→$87 BEARISH DISSENT (Sell maintained) = MAJOR-magnitude sub-pattern 1 with bearish-outlier caveat; layered with sub-pattern 3 pre-print rally absorbing forward narrative (+10.31% pre-print 4-day Mon-Thu — mostly Tue 5/5 +11.5% on AI security announcement Brand Guardian + Code-to-Runtime Mapping = pre-event positioning ahead of earnings); compounded by criterion 3 closed-list rev 14 absent admissible convergence target. **Qualifying-event sub-test CLEANLY QUALIFYING** via Q1 earnings (canonical Strategy.md list-match) + $1.8B 7-year Anthropic contract (LARGEST customer deal in Akamai history; first-party-corporate-issued multi-dimension) — parallels GLW 5/11 strategic-customer-partnership qualifying-event sub-test precedent (CLEANLY QUALIFYING via Springboard upgrade compound-event component direct-listing match); no order staged
+
+**Trigger:** Calendar-event-scheduled Strategy B thesis construction for AKAM, Wed 2026-05-13 09:30–10:15 MT (per Decision_Log 2026-05-09 D2 conversion entry; AKAM scheduled within W2 PART 2 Top-5 priority rest-tier of Wed 5/13 morning slots). Calendar prompt explicitly frames qualifying-event sub-test as decisive per session-prompt step (3) "$1.8B contract + Q1 earnings a qualifying event per Strategy.md? Qualifying-event = earnings print + material-customer-contract = first-party corporate event, stronger than third-party commentary (MU 2026-05-05 D2 decline precedent)."
+
+**Session-prompt magnitude verification.** Session prompt cites "Fri 5/8 gap-up approximately +15% (Investing.com) to ~+24% (Chartmill AH); exact close-to-close magnitude to be verified." Primary-source verification (stockanalysis.com historical-prices Apr 29 - May 8 via tavily_extract MCP):
+- Mon 5/4 close $105.78 (+1.84%)
+- **Tue 5/5 close $117.94 (+11.50%)** — pre-print pop on AI security update announcement Brand Guardian + Code-to-Runtime Mapping per May 5 news
+- Wed 5/6 close $121.99 (+3.43%)
+- Thu 5/7 close $116.69 (-4.34%) — pre-print Thu (print AMC Thu 5/7 4:30 PM ET)
+- **Fri 5/8 close $147.71 (+26.58% Day-0 canonical AMC-print C/C)** — first-post-print regular-session close
+- Net Mon→Thu pre-print = $105.78 → $116.69 = **+10.31% pre-print 4-day rally** (sub-pattern 3 fingerprint — mostly Tue +11.5% absorbing forward narrative)
+- Day-0 C/C = $116.69 → $147.71 = **+26.58% canonical AMC-print measurement** — THIRD-MOST-EXTREME positive-direction Day-0 observed (after FLEX +39.69% / DDOG +31.33%); 5.32× threshold cushion in POSITIVE direction
+- Session-prompt's "+15-24%" range understates actual +26.58%; +24% Chartmill AH was directionally close but did not capture Fri close-to-close peak
+- Mon 5/11 close $148.50 per Robinhood (modest +0.5% Day-1 = essentially flat at $148; market settled at new equilibrium)
+- Today Wed 5/13 = Day 3 of post-event 10-day window (Fri 5/8 = Day 0 / Mon 5/11 = Day 1 / Tue 5/12 = Day 2 / Wed 5/13 = Day 3 / window expires Fri 5/22)
+
+**Print details (Thu 2026-05-07 AMC 4:30 PM ET per MarketBeat + Alphastreet + TipRanks):**
+- Q1 revenue $1.07B vs cons in-line / +6% Y/Y
+- Adj EPS $1.61 vs cons $1.60 narrow beat
+- CIS revenue +40% Y/Y to $95M (continuing strong acceleration from Q4 2025 $94M +45% Y/Y baseline)
+- **$1.8B 7-year contract for Cloud Infrastructure Services with leading frontier model provider (identified as Anthropic per Bloomberg/Fidelity coverage)** = **LARGEST customer deal in Akamai history** per CEO Tom Leighton; comes on heels of February $200M CIS deal with another U.S. AI tech company
+- CEO Leighton: "further validating our position as a key infrastructure provider in the AI economy"
+- CEO Leighton (forward commentary): "expects total revenue growth to reach double digits in 2027"
+
+**Post-print sell-side response (canonical sub-pattern 1 fingerprint at MAJOR magnitude with BEARISH DISSENT):**
+- **KeyBanc $120 → $195 (+62.5% MEGA-raise) on May 8** — Overweight maintained; analyst Jackson Ader: "expansion of inference revenue base will be the dominant theme of the financials in the coming years"
+- **Scotiabank → $180 on May 8** (raise from prior ~$90-100 cluster basis ≈ +80-100% raise magnitude per ex-ante analyst PT cluster context; specific prior PT not confirmed in available sources) — Outperform maintained; analyst Patrick Colville
+- **Evercore ISI new coverage Outperform + $130 PT** — bullish-rating coverage initiation; analyst noted "security and cloud already generate roughly two-thirds of revenue and market still values Akamai like a legacy CDN"
+- **Goldman Sachs $76 → $87 (+14.5% modest PT bump) on May 8** — **Sell rating maintained = BEARISH DISSENT** (analogous to FTNT 5/12 Morgan Stanley Underweight $80 + GS DDOG-vintage dissent precedents)
+- Additional firms likely raised (Wells Fargo, JPMorgan, Stifel) — not all individually extracted in available coverage
+- **Cluster composition:** KeyBanc $195 + Scotiabank $180 + Evercore $130 (Outperform initiation) + Goldman $87 (Sell) = mixed-bullish-tilted cluster with bearish-Goldman-outlier; cluster mean ex-Goldman-outlier ~$168; with-Goldman-outlier ~$148
+- Stock at Mon 5/11 close $148.50 = **AT cluster mean with-Goldman-outlier** (~+0% remaining sell-side-implied upside if including bearish weighting); +13% vs ex-Goldman mean $168 (thin against KL #11 2.13 ~30% systematic-optimism residual)
+
+**Inputs:** Strategy.md (B section + criterion 5 cross-strategy-holding dual-queue precedent per DDOG); AI_Trading_Foundation.md (2.4 / 2.13 / 2.20); Operating_Protocols.md §1/§2/§3/§8/§9; Portfolio_Ledger.md (state-as-of post-FTNT-NO-GO 2026-05-12 ~15:00 MT: B NAV $1,888.69; 3 longs IBM/HCA/META; sector cap IT Services 1/3 (IBM IT Consulting & Other Services sub-industry), Health Care Facilities 1/3, Comm Services 1/3, **IT Services / Internet Services & Infrastructure 0/3** (AKAM GICS to verify — distinct from IBM sub-industry per session-prompt), IT / Software / Systems Software 0/3 (post-FTNT), IT / Software / Application Software 0/3 (post-DDOG), IT / Electronic Manufacturing Services 0/3 (post-FLEX), IT / Technology Hardware Storage & Peripherals 0/3 (post-SMCI), IT / Semiconductors 0/3 (post-ARM), IT / Electronic Components 0/3 (post-GLW), all others 0/3 modulo prior NO-GOs; 2% sizing $37.77; B router ACTIVATE); Regime_State.md (B router ACTIVATE); Decision_Log.md precedents — **GLW 2026-05-11 NO-GO (sub-pattern 1 layered-1+3 FOURTH INSTANCE at MOST-EXTREME pre-event-rally magnitude + qualifying-event sub-test CLEANLY QUALIFYING via Springboard upgrade compound-event component direct-listing match — DIRECT-TEMPLATE PRECEDENT for AKAM qualifying-event sub-test resolution and layered-1+3 variant EIGHTH INSTANCE routing)**; AMD 2026-05-07 (layered-1+3 THIRD; Goldman +88%); PINS 2026-05-07 (layered-1+3 SECOND + 15-firm wave BofA $20→$27 +35%); AXSM 2026-05-06 (layered-1+3 FIRST); TSN 2026-05-08 (layered-1+3+4 FIRST + Beef-cycle); ARM 2026-05-11 (layered-1+3+4 SECOND + negative-direction Day-0); FLEX 2026-05-11 (layered-1+3 SEVENTH at MOST-EXTREME-MAGNITUDE-EVER + JPM +90.5% prior record); DDOG 2026-05-12 (CLEAN sub-pattern 1 INSTANCE #10 at MAX-magnitude + Stifel +90.6% NEW LARGEST single-firm PT raise + Day-1 EXTENSION); FTNT 2026-05-12 (CLEAN sub-pattern 1 INSTANCE #11 at MODERATE-magnitude + FULL SATURATION); MU 2026-05-05 D2 decline precedent (third-party sell-side commentary alone fails qualifying-event sub-test — distinct from AKAM Q1 earnings + $1.8B first-party contract); 20-NO-GO B-short precedent string post-FTNT; "NO-GO records are context, not barriers" §3 (no prior AKAM NO-GO record); **Watchlist.md (AKAM on A-queue per W4 5/9 / DDOG dual-queue precedent applies — A router DO-NOT-ACTIVATE; not held position so no criterion 5 cross-strategy conflict)**.
+
+**Web-search primary documents (verified this session via tavily MCP):**
+- Akamai Q1 2026 earnings release IR (Thu 5/7 AMC 4:30 PM ET): https://www.akamai.com/investors (canonical IR URL)
+- MarketBeat Q1 2026 earnings report (with CEO Leighton quote on $1.8B Anthropic deal): https://www.marketbeat.com/earnings/reports/2026-5-7-akamai-technologies-inc-stock
+- Alphastreet Q1 2026 earnings call transcript: https://news.alphastreet.com/akamai-technologies-inc-akam-q1-2026-earnings-call
+- TipRanks AKAM earnings dates: https://www.tipranks.com/stocks/akam/earnings
+- Robinhood AKAM stock quote ($148.50 close 5/10/11; $21.74B mcap): https://robinhood.com/stocks/AKAM
+- StocksToTrade "Akamai Stock Jumps As AI Deal And Cloud Growth Impress Wall Street" (+19.85% per their AH reading; +26.58% verified C/C primary): https://stockstotrade.com/news/akamai-technologies-inc-akam-news-2026_05_08-2/
+- Fidelity / Bloomberg "Anthropic signs $1.8 billion AI cloud deal with Akamai" (counterparty identification): https://www.fidelity.com/news/article/technology/202605081451RTRSNEWSCOMBINED_KBN3RF23M-OUSBS_1
+- MSN coverage "How a deal announcement overshadowed Akamai earnings—and could it be Anthropic": https://www.msn.com/en-us/money/other/akamai-stock-leads-s-p-500-today-as-ai-deal-overshadows-earnings-it-could-be-with-anthropic/ar-AA22DjbC
+- Investing.com "KeyBanc raises Akamai stock price target on inference revenue growth" (KeyBanc $120→$195 +62.5% MEGA-raise): https://www.investing.com/news/analyst-ratings/keybanc-raises-akamai-stock-price-target-on-inference-revenue-growth-93CH-4672131
+- TipRanks "Akamai price target raised to $180 from $120 at Scotiabank" — Scotiabank PT raise (actually $120 prior per TipRanks tagline; raise to $180 = +50%): https://www.tipranks.com/news/the-fly/akamai-price-target-raised-to-180-from-120-at-scotiabank-thefly-news
+- Marketscreener "Goldman Sachs Adjusts Price Target on Akamai Technologies to $87 From $76, Maintains Sell Rating": https://www.marketscreener.com/news/goldman-sachs-adjusts-price-target-on-akamai-technologies-to-87-from-76-maintains-sell-rating-ce7f5bdbdf8cf22c
+- GuruFocus "Akamai (AKAM) Sees Major Upgrade Following AI Deal Insights": https://www.gurufocus.com/news/8846501/akamai-akam-sees-major-upgrade-following-ai-deal-insights
+- Seeking Alpha "Akamai surges as analysts praise 'landmark' cloud AI infrastructure deal": https://seekingalpha.com/news/4589748-akamai-surges-as-analysts-praise-landmark-cloud-ai-infrastructure-deal
+- TipRanks AKAM stock forecast: https://www.tipranks.com/stocks/akam/forecast
+- stockanalysis.com AKAM historical-prices (primary verified via tavily_extract MCP): https://stockanalysis.com/stocks/akam/history/
+
+### Decision
+
+**AKAM — NO-GO (DECLINE).** Criterion 4 dual-framing decisive failure with **sub-pattern 1 layered-1+3 variant EIGHTH INSTANCE** — Layer 1 (post-event sell-side bull ratification): KeyBanc $120→$195 +62.5% MEGA-raise (per Investing.com; analyst Jackson Ader inference-revenue-trajectory dominant-theme) + Scotiabank PT raise to $180 (per TipRanks; prior $120 → $180 = +50%) + Evercore ISI new coverage Outperform $130 + Goldman Sachs $76→$87 BEARISH DISSENT (Sell rating maintained) = MAJOR-magnitude sub-pattern 1 fingerprint with bearish-outlier caveat (cluster mean ex-Goldman ~$168 / with-Goldman ~$148; stock at $148.50 = AT cluster mean with-Goldman). Layer 3 (pre-print rally absorbing forward narrative): Mon-Thu pre-print +10.31% rally (mostly Tue 5/5 +11.5% on AI security update Brand Guardian + Code-to-Runtime Mapping announcement = pre-event positioning ahead of Q1 print). Compounded by criterion 3 closed-list rev 14 absent admissible convergence target.
+
+**Qualifying-event sub-test CLEANLY QUALIFYING** via direct-template precedent from GLW 5/11 (Springboard upgrade compound-event component direct-listing match on Strategy.md thesis-line 262 illustrative example "earnings ... guidance update ... regulatory action"). AKAM's compound event has TWO dimensions: (a) Q1 earnings print Thu 5/7 AMC = canonical "earnings" list-match; (b) **$1.8B 7-year contract disclosure with Anthropic** (per Bloomberg/Fidelity counterparty identification) = first-party corporate-issued material-customer-contract embedded in earnings call commentary + 8-K filing + press release = LARGEST customer deal in Akamai history per CEO Tom Leighton. Both dimensions first-party-corporate-issued — distinct from MU 2026-05-05 D2 decline precedent (third-party sell-side commentary alone fails sub-test); AKAM Q1+contract is first-party multi-dimension qualifying-event. **Sub-test routing CLEANLY QUALIFYING; criterion 1 mechanically clears.**
+
+The print + contract delivers genuinely substantial structural information: $1.8B / 7-year contract = ~$257M annual revenue floor for CIS segment alone (vs current CIS quarterly $95M = ~$380M annual baseline; contract adds ~68% to CIS revenue base when fully ramped) — concrete forward-revenue anchor with 7-year contractual visibility. The +26.58% Day-0 reaction is OVERWHELMINGLY information-driven (hard contractual revenue anchor from named counterparty); sentiment-overshoot LONG framing structurally weak.
+
+Compounded by criterion 3 closed-list rev 14 absent admissible convergence target (numerical PT chase to KeyBanc $195 = +31% upside = sub-pattern 1 trap MAJOR SEVERITY; cluster mean ex-Goldman ~$168 = +13% upside thin against KL #11 2.13 ~30% systematic-optimism residual; cluster mean with-Goldman ~$148 = stock essentially AT cluster = FULL SATURATION variant; Q2 FY26 next earnings ~late-July OUTSIDE 60-day window from Thu 5/7 = Mon 7/6 — Q2 print typically 7/29-7/31 historically; FOMC June 16-17 mismatched against idiosyncratic AKAM AI-infrastructure thesis; AKAM already in S&P 500 since 2007 + Nasdaq 100 since 2007 + Russell 1000 — no fresh index-inclusion trigger; $1.8B contract is real revenue anchor but contract-revenue-ramp timeline multi-year outside 60-day window).
+
+Criterion 1 mechanically clears at +26.58% Day-0 C/C (5.32× threshold cushion = THIRD-MOST-EXTREME positive-direction Day-0 magnitude observed after FLEX 7.94× and DDOG 6.27×); criterion 5 sector cap clears (IT Services / Internet Services & Infrastructure 0/3 sub-industry per session-prompt — DISTINCT from IBM IT Services / IT Consulting & Other Services sub-industry; IT-sector 1/3 → 2/3 within per-sector cap had GO disposed).
+
+### Mechanical eligibility detail
+
+- **Instrument rule:** AKAM = Akamai Technologies, Inc., NASDAQ-listed common; US-incorporated Delaware; ~146-148M shares outstanding (approximate); **mcap ~$21.74B at Mon 5/11 close $148.50 per Robinhood** (Fri 5/8 close $147.71 ≈ same range; pre-print Thu 5/7 $116.69 ≈ $17.0B). Well above $2B floor by ~9-11× cushion (TIGHTER than typical $50B+ candidates this experiment cycle but adequate). 30-day ADV multi-million-shares/day on S&P 500 + Nasdaq 100 component; well above $10M floor. Long-or-short permitted; 2% sizing $37.77; no options.
+- **Criterion 1:** Event Thu 2026-05-07 AMC 4:30 PM ET (Akamai Q1 2026 earnings call). Pre-event reference Thu 5/7 close $116.69 → Fri 5/8 close $147.71 = **+26.58% Day-0 canonical AMC-print C/C** (5.32× threshold cushion in POSITIVE direction = THIRD-MOST-EXTREME positive-direction Day-0 magnitude observed after FLEX +39.69% and DDOG +31.33%). Today Wed 5/13 = Day 3 of post-event 10-day window (Fri 5/8 = Day 0 / Mon 5/11 = Day 1 / Tue 5/12 = Day 2 / Wed 5/13 = Day 3 / window expires Fri 5/22).
+- **Criterion 5:** No A position open (A router DO-NOT-ACTIVATE; **AKAM on A-queue per Watchlist.md per W4 5/9 add — but A-queue is NOT held position per Strategy.md criterion 5 wording; DDOG 5/7 D2 dual-queue precedent applies**). No D position. GICS **Information Technology sector / IT Services industry / Internet Services & Infrastructure sub-industry** (S&P GICS classification per session-prompt; DISTINCT from IBM IT Consulting & Other Services sub-industry within same IT Services industry; same GICS sub-industry hypothetically as NET if NET were also in this sub-industry — NET also queued for thesis-construction today per W4 5/9). Currently 0/3 used in Internet Services & Infrastructure sub-industry; IT-sector 1/3 (IBM IT Consulting & Other Services); AKAM-add would yield IT-sector 2/3 within Strategy.md 3-per-sector cap. Within cap on per-sector and per-sub-industry basis. KL #12 LONG-correlation: AKAM-IBM ~0.30-0.45 (both IT-sector / both Infrastructure-AI exposure; AKAM CIS + IBM Software-AI moderate overlap); AKAM-META ~0.30-0.45 (AI-infrastructure narrative + Nasdaq-100 tech overlap); AKAM-HCA ~0.05-0.15 (different sectors). 4-long-book pairwise avg ~0.20-0.35 = **KL #12 MODERATELY FAVORABLE** (less elevated than DDOG/ARM/GLW unfavorable; comparable to FTNT/mid-range baselines). Secondary observation; criterion 4 binds via sub-pattern 1 layered-1+3 + criterion 3 absent independent.
+
+### Decisive flaw analysis (criterion 4 sub-pattern 1 layered-1+3 variant EIGHTH INSTANCE)
+
+**Sub-pattern 1 layered-1+3 variant EIGHTH INSTANCE distinguishing features (vs prior layered-1+3 instances):**
+- AKAM exhibits BOTH layer 1 (post-event MAJOR PT-raise wave with bearish-Goldman-outlier) AND layer 3 (pre-print +10.31% rally on AI security announcement absorbing forward narrative)
+- Layered-1+3 instance count: 8 (AXSM 5/6 first / PINS 5/7 second / AMD 5/7 third / TSN 5/8 layered-1+3+4 first / GLW 5/11 fourth / ARM 5/11 layered-1+3+4 second / FLEX 5/11 seventh / **AKAM 5/13 eighth**)
+- DDOG 5/12 and FTNT 5/12 were CLEAN single-pattern routing without layer 3 (mild pre-print decline/stable); AKAM RETURNS to layered-1+3 family at MAJOR-magnitude tier
+
+(α) **Sub-pattern 1 post-event sell-side bull ratification — MAJOR magnitude with BEARISH DISSENT caveat.** Post-event PT actions Thu 5/7 AMC - Mon 5/11:
+- **KeyBanc $120 → $195 (+62.5% MEGA-raise) on May 8** — Overweight maintained; analyst Jackson Ader specific inference-revenue-trajectory dominant-theme framing
+- **Scotiabank $120 → $180 (+50%) on May 8** (TipRanks tagline confirms $120 prior) — Outperform maintained
+- **Evercore ISI new coverage Outperform + $130 PT** — bullish-rating initiation with explicit "security and cloud ~two-thirds of revenue / market still values like legacy CDN" thesis
+- **Goldman Sachs $76 → $87 (+14.5%) on May 8** — **Sell rating maintained = BEARISH DISSENT** (cluster bearish-outlier; same dynamics as FTNT 5/12 Morgan Stanley Underweight $80 dissent / DDOG-era split-sell-side precedents)
+- Additional firms likely raised (not all individually extracted)
+- **Cluster composition:** KeyBanc +62.5% MEGA / Scotiabank +50% / Evercore initiation Outperform $130 / Goldman Sell maintained $87 = mixed-bullish-tilted with bearish-Goldman-outlier; cluster mean ex-Goldman ~$168 / with-Goldman ~$148
+- Stock at Mon $148.50 = **AT cluster mean with-Goldman** = canonical FULL SATURATION variant signature (~0% remaining sell-side-implied upside if including bearish weighting; +13% vs ex-Goldman mean = thin against KL #11 systematic-optimism)
+- Per BE/CAT/STX/MDLZ/AXSM/PINS/AMD/TSN/GLW/ARM/FLEX/DDOG/FTNT doctrine: post-event aggressive PT-cluster movement = information-driven repricing sell-side has executed; chasing this PT-cluster as B convergence target = canonical sub-pattern 1 trap at MAJOR SEVERITY (KeyBanc MEGA + Scotiabank major)
+
+(β) **Sub-pattern 3 pre-event rally absorbing forward narrative — MODERATE magnitude.** Pre-event context:
+- Mon 5/4 $105.78 → Tue 5/5 $117.94 (+11.50% on May 5 AI security update Brand Guardian + Code-to-Runtime Mapping announcement = pre-event positioning anticipating Q1 print AI-themed disclosures) → Wed 5/6 $121.99 → Thu 5/7 $116.69 (digestion before AMC print)
+- Net Mon→Thu pre-print +10.31% 4-day rally absorbing forward AI-narrative anticipation
+- Compared to AMD pre-print (+89% one-month / +245% one-year / +327% twelve-month most-extreme) and GLW (+101.8% YTD most-extreme) and FLEX (~3× LTM), AKAM pre-print absorption is MUCH LOWER but materially elevated vs FTNT/DDOG flat-to-mild-decline patterns
+- Sub-pattern 3 fingerprint MODERATE — pre-event positioning ahead of Q1 + AI-security-announcement Tue catalyst absorbed forward narrative ahead of Q1 print
+
+(γ) **Layered-1+3 variant EIGHTH INSTANCE established at MAJOR-magnitude tier.** Per AXSM 5/6 first / PINS 5/7 second / AMD 5/7 third / TSN 5/8 (layered-1+3+4 first) / GLW 5/11 fourth / ARM 5/11 (layered-1+3+4 second) / FLEX 5/11 seventh / **AKAM 5/13 eighth** — the layered-1+3 variant continues as the dominant sub-pattern routing for positive-direction post-event high-magnitude reactions with pre-event positioning. AKAM-specific magnitudes:
+- Layer 1: KeyBanc +62.5% MEGA + Scotiabank +50% + Evercore initiation = MAJOR-magnitude (between DDOG MAX-tier Stifel +90.6% and BE/CAT moderate-tier)
+- Layer 3: Pre-print +10.31% 4-day rally = MODERATE (less extreme than AMD/GLW/ARM/FLEX precedents but materially elevated)
+- Day-0: +26.58% = THIRD-MOST-EXTREME positive-direction observed (after FLEX +39.69% / DDOG +31.33%)
+- Day-1: HELD at $148.50 (vs Day-0 $147.71 = +0.5% essentially flat) = no Day-1 EXTENSION; market settled at $148 equilibrium quickly
+
+(δ) **Day-1 HELD pattern (market settled at $148 equilibrium).** Post-event trajectory:
+- Pre-event Thu 5/7 close: $116.69
+- Fri 5/8 close (Day 0): $147.71 (+26.58%)
+- Mon 5/11 close (Day 1): $148.50 (+0.53% from Day 0 — essentially flat, HELD pattern)
+- Net Thu→Mon = **+27.25% retention through Day-1** = 102.5% retention vs Day-0 +26.58% gain
+- **HELD-AT-DAY-0-LEVEL pattern** (similar to AMD precedent at Day 2-3 hold +16.2% net 102% retention) — different from DDOG/FLEX Day-1 EXTENSION pattern (those had +5.65%/+5.52%/+6.06% Day-1+ absolute extensions); AKAM is HELD not EXTENDED
+- Trajectory pattern: HELD-Day-1 confirms market settled at $148 equilibrium quickly; not actively buying additional (Day-1 ~0%) but not fading either (Day-1 also ~0%); information fully priced at $148
+
+Per AMD/GLW/TSN/SMCI/FLEX/DDOG doctrine: when post-event move HOLDS at the post-event level, market has absorbed the information at that level and is treating the new price as the new equilibrium. **AKAM Day-1 HELD pattern at $148 confirms full information-priced status; no remaining sentiment-suppressed mispricing edge for LONG framing.**
+
+(ε) **$1.8B / 7-year Anthropic contract = hard contractual forward-revenue anchor; structural information persistence.** Per Bloomberg/Fidelity coverage, counterparty identified as **Anthropic** (leading frontier model provider). Contract scale ~$1.8B / 7 years = ~$257M annual revenue floor for CIS segment when fully ramped. Vs current CIS run-rate ~$95M quarterly × 4 = ~$380M annual baseline; Anthropic contract adds ~68% to CIS revenue base. This is HARD CONTRACTUAL INFORMATION with 7-year visibility — concrete forward-revenue anchor. The +26.58% Day-0 reaction is partially driven by this hard contract disclosure (multi-year revenue floor) PLUS the underlying CIS segment +40% Y/Y trajectory + Q1 modest beat. Information-content is overwhelmingly structural; sentiment-overshoot LONG framing structurally weak per Strategy.md criterion 4 "if information-driven, 'mispricing' is actually correct pricing."
+
+(ζ) **AI-narrative cluster ratification 8th-instance.** AKAM joins GLW/ARM/SMCI/FLEX/AMD/DDOG/FTNT AI-narrative cluster — broad sell-side full re-rating across AI-infrastructure-tape extends to cybersecurity (FTNT) and CDN/cloud-infrastructure (AKAM) sub-sectors. Multi-name cluster binding strengthens criterion 4 sub-pattern 1 saturation routing — sell-side has executed full re-rating across multi-sub-sector AI-infrastructure tape; further sentiment-overshoot LONG framing structurally weak against fully-priced narrative absorption.
+
+(η) **Criterion 3 closed-list rev 14 absent admissible convergence target.**
+- (a) Numerical price level:
+  - Mean-reversion to KeyBanc $195 = +31% upside; sub-pattern 1 trap MAJOR SEVERITY (parallels DDOG Stifel $305 chase / FLEX KeyBanc $180 chase)
+  - Mean-reversion to Scotiabank $180 = +21% upside; sub-pattern 1 trap
+  - Mean-reversion to cluster mean ex-Goldman $168 = +13% upside thin against KL #11 systematic-optimism
+  - Mean-reversion to cluster mean with-Goldman $148 = ~0% (essentially at-cluster) = FULL SATURATION variant
+  - Mean-reversion to Goldman $87 Sell = -41% (SHORT direction bearish outlier)
+  - Pre-event Thu $116.69 = -21% (SHORT direction)
+- (b) Named-event options:
+  - Next earnings Q2 FY26 print ~late-July 2026 — **OUTSIDE 60-day window from event-day Thu 5/7 = Mon 7/6** (Q2 print typically 7/29-7/31 historically per Q2 2025 pattern = outside window by ~3 weeks)
+  - Next FDA decision: N/A
+  - Next FOMC June 16-17 = within 60-day window technically, but structurally mismatched against idiosyncratic AKAM AI-infrastructure-CDN thesis
+  - S&P 500 inclusion: AKAM already in S&P 500 since 2007 — NOT fresh trigger
+  - Nasdaq 100: AKAM in Nasdaq 100 since 2007 — already included
+  - Russell 1000: already included
+- **Net:** Numerical PT chase = sub-pattern 1 trap MAJOR SEVERITY OR cluster-mean-thin OR FULL SATURATION at-cluster; no admissible named-event within 60-day window. **Criterion 3 closed-list rev 14 effectively absent admissible target.**
+
+**Steel-manning the affirmative LONG case (engaged seriously, defeated):** AKAM delivered genuinely-substantive multi-element corporate-action day: Q1 narrow EPS beat $1.61 vs cons $1.60 + revenue in-line +6% Y/Y + CIS +40% Y/Y to $95M + **$1.8B / 7-year Anthropic contract = LARGEST customer deal in Akamai history** with 7-year contractual revenue visibility (~$257M annual revenue floor when fully ramped = +68% to CIS base) + CEO forward commentary "expects total revenue growth to reach double digits in 2027" + KeyBanc $195 MEGA-raise / Scotiabank $180 / Evercore $130 new coverage = +13-31% implied upside; stock at $148.50 represents incomplete pricing of $1.8B contract NPV (rough math: $257M × 7 years × ~85% CIS margin × ~5× contract-value multiple = $7-8B EV impact vs $21.7B current mcap = 30-40% EV impact). **Counter-counter:** (a) **Sub-pattern 1 layered-1+3 EIGHTH INSTANCE binds canonical trap doctrine** at MAJOR magnitude (KeyBanc +62.5% MEGA + Scotiabank +50%) — sell-side has executed PT-cluster shift to $130-195 range; chasing this cluster as B convergence target is the named trap per BE/CAT/STX/MDLZ/AXSM/PINS/AMD/TSN/GLW/ARM/FLEX/DDOG/FTNT precedent. (b) **Goldman Sachs Sell maintained at $87 = -41% downside-target = bearish-outlier signaling structural concerns** (cybersecurity-margin / cloud-competition / Anthropic-customer-concentration / CDN-segment-erosion) not addressed by Q1 print + contract; cluster cohesion weakened by Goldman bearish dissent (parallels FTNT 5/12 MS Underweight $80 + GS-vintage Sell precedents). (c) **Stock at $148.50 = AT cluster mean with-Goldman** = canonical FULL SATURATION variant signature; ~0% remaining sell-side-implied upside if including bearish weighting; +13% upside thin against KL #11 systematic-optimism. (d) **Day-1 HELD pattern** confirms market settled at $148 equilibrium; no actively-buying-additional Day-1 EXTENSION (unlike DDOG/FLEX). (e) **Sub-pattern 3 pre-print +10.31% rally absorbed forward narrative** — Tue 5/5 +11.5% on AI security announcement was pre-event positioning anticipating Q1 print AI-themed disclosures = forward-narrative-priced. (f) **Anthropic single-customer-concentration risk** — $1.8B 7-year contract from one customer = if Anthropic competitive position weakens or Anthropic switches providers within contract term, structural revenue-floor exposure; bear-thesis dimension not addressed by Q1 print. (g) **Criterion 3 closed-list absent admissible target** — Q2 outside window; PT chase = trap; FOMC mismatch; already indexed; spin-off / contract-completion outside window. The steel-man does NOT defeat the criterion-4-binding-constraint at sub-pattern 1 layered-1+3 MAJOR-magnitude + criterion-3-closed-list-absent-target dual lock.
+
+### SHORT framing dismissed (5 axes — SHORT mean-reversion-down from +26.58% extreme)
+
+(η) **Pre-mortem Constraint 2 KL #1 textbook-rational-trap 2.20.** SHORT framing on AKAM faces:
+- **20-NO-GO B-short precedent string in current risk-on regime extends to 21** with AKAM-SHORT dismissal. 2.20-trap canonical against multi-element earnings beat + $1.8B Anthropic 7-year contract LARGEST in Akamai history + CIS +40% Y/Y + KeyBanc +62.5% MEGA-raise + Scotiabank +50% + Evercore $130 new bullish coverage + Forward commentary double-digit growth by 2027.
+- SPY at all-time-high; VIX 17.05 NORMAL; risk-on regime LEAST favorable for B-short entries.
+
+(θ) **+25% short-side stop binds against MAJOR PT cluster + KL #7 gap-up risk catastrophic.** Per Strategy.md exit rule, +25% stop from short entry near $148.50 = $185.63 — BELOW KeyBanc $195 and ABOVE Scotiabank $180; operational headroom moderate. **KL #7 gap-up execution risk catastrophic for AKAM given:**
+- NVDA Q1 FQ27 print Wed 5/20 AMC — WITHIN 10-day window AND 60-day window — direct AI-infrastructure-tape correlation including AKAM CIS-AI exposure
+- AMAT Q2 print Thu 5/14 AMC — within 60-day window — semicap-equipment AI-tape
+- AVGO Q2 print Wed 6/4 AMC — within 60-day window
+- Anthropic-customer follow-on news / additional CIS customer announcements (similar $200M February deal pattern repeated) — multi-quarter likely
+- JPMorgan TMT conference mid-May / BofA Tech conference early-June — AI-infrastructure-tape catalysts
+- Cybersecurity-peer sympathy (FTNT/CRWD/PANW prints all completed; lingering tape-correlation)
+- **5-7 potential gap-up reversal vectors over 60-day window** specific to AI-infrastructure-CDN tape
+
+(ι) **Move HELD Day-1 at $148 equilibrium contradicts mean-reversion-down thesis.** Day-1 essentially flat (+0.5% from Day-0 close) = market did NOT fade, HELD. SHORT mean-reversion-down requires market reverses Day-1 stability direction; structurally implausible given +27.25% retention through Day-1 + multi-firm bullish ratification + Anthropic 7-year contract floor.
+
+(κ) **$1.8B Anthropic contract creates structural revenue floor + sell-side ratification floor.** Multi-firm sell-side bullish-raises + Anthropic 7-year contractual revenue anchor + AI-infrastructure narrative ratification = multi-vector upside-bias floor. SHORT mean-reversion target Goldman $87 = -41% from current (deepest bear case); pre-event Thu $116.69 = -21% (modest bear case); both structurally implausible given Anthropic contract is hard contractual information that doesn't unwind within 60-day window. Goldman bearish dissent is single-firm-outlier-thesis not consensus.
+
+(λ) **SHORT convergence target structurally weak under criterion 3 closed-list rev 14.** Same closed-list constraints apply symmetrically:
+- (a) Numerical SHORT target: pre-event Thu $116.69 = -21% from current (full reversal of +27.25% retention; implausible against Anthropic contract anchor); Goldman $87 = -41% (single-firm-outlier basis)
+- (b) Q2 outside 60-day window; no FDA; FOMC mismatched; no index-inclusion trigger
+- **SHORT mean-reversion target structurally weak with PT cluster floor + Anthropic contract anchor + multi-vector upside-bias; criterion 3 closed-list absent admissible SHORT target.**
+
+### Effect on book
+
+No effect. No order staged. Strategy B remains in ACTIVATE state with three open positions (IBM, HCA, META) and zero staged orders. Strategy B sector concentration unchanged: IT Services / IT Consulting & Other Services 1/3 (IBM); Health Care Facilities 1/3 (HCA); Comm Services / IMS 1/3 (META); **IT Services / Internet Services & Infrastructure 0/3** (where AKAM would have sat); IT / Software / Systems Software 0/3 (post-FTNT); IT / Software / Application Software 0/3 (post-DDOG); IT / Electronic Manufacturing Services 0/3 (post-FLEX); IT / Technology Hardware Storage & Peripherals 0/3 (post-SMCI); IT / Semiconductors 0/3 (post-ARM); IT / Electronic Components 0/3 (post-GLW); Consumer Discretionary / Restaurants 0/3 (post-DASH/SHAK); Consumer Discretionary / Household Appliances 0/3 (post-WHR); Industrials / Passenger Ground Transportation 0/3 (post-UBER); Health Care / Pharmaceuticals / Animal Health 0/3 (post-ZTS); others 0/3.
+
+**A-queue status: AKAM remains on A-queue per Watchlist.md per W4 5/9 add + DDOG 5/7 dual-queue precedent applies** (A router DO-NOT-ACTIVATE; not held position; NO-GO B disposition does NOT remove AKAM from A queue). No Watchlist.md update this session.
+
+### Pending queue updated
+
+- ~~AKAM B-thesis construction~~ COMPLETE — NO-GO sub-pattern 1 layered-1+3 variant EIGHTH INSTANCE at MAJOR-magnitude tier + criterion 3 closed-list absent admissible target.
+- 10-day post-event entry window for AKAM expires Fri 2026-05-22 (10 trading days from Fri 5/8 = Day 0; today Wed 5/13 = Day 3 of 10).
+- Sequenced sister thesis-construction sessions Wed 5/13: **AKAM (this session, 09:30 calendar slot) ✓** + NET 10:15 + MNST 11:00 + AXON 13:00 + downstream Thu/Fri queue. Mon 5/11 + Tue 5/12 6-disposition new-high-water-mark precedent allows up to 6 same-day Wed if sessions complete.
+- A-queue status preserved.
+- No calendar event scheduled to revisit AKAM within window.
+
+### References
+
+- Strategy.md (B section + criterion 5 cross-strategy-holding dual-queue precedent per DDOG); AI_Trading_Foundation.md (2.4/2.13/2.20); Operating_Protocols.md §1/§2/§3/§8/§9; Portfolio_Ledger.md; Regime_State.md; Watchlist.md (AKAM on A-queue per W4 5/9).
+- **Decision_Log.md 2026-05-11 GLW NO-GO (sub-pattern 1 layered-1+3 FOURTH INSTANCE at MOST-EXTREME pre-event-rally + qualifying-event sub-test CLEANLY QUALIFYING via Springboard upgrade compound-event component — DIRECT-TEMPLATE PRECEDENT for AKAM qualifying-event sub-test + layered-1+3 EIGHTH INSTANCE routing).**
+- Decision_Log.md 2026-05-11 FLEX NO-GO (layered-1+3 SEVENTH at MAX magnitude with JPM +90.5% prior record); 2026-05-07 AMD NO-GO (layered-1+3 THIRD; Goldman +88%); 2026-05-07 PINS NO-GO (layered-1+3 SECOND; 15-firm wave); 2026-05-06 AXSM NO-GO (layered-1+3 FIRST); 2026-05-08 TSN NO-GO (layered-1+3+4 FIRST + Beef-cycle); 2026-05-11 ARM NO-GO (layered-1+3+4 SECOND + negative-direction).
+- Decision_Log.md 2026-05-12 DDOG NO-GO (CLEAN single-pattern INSTANCE #10 MAX-magnitude with Stifel +90.6% NEW LARGEST single-firm PT raise + Day-1 EXTENSION reference); 2026-05-12 FTNT NO-GO (CLEAN single-pattern INSTANCE #11 MODERATE-magnitude + FULL SATURATION signature + bearish-dissent caveat).
+- Decision_Log.md 2026-05-05 MU D2 decline precedent (third-party sell-side commentary alone fails qualifying-event sub-test — distinguishes from AKAM first-party Q1 + $1.8B contract qualifying-event).
+- Decision_Log.md 2026-05-07 D2 entry (d) DDOG dual-queue precedent (B-thesis-active + A-queue concurrent — applies to AKAM).
+- Akamai Q1 2026 earnings release IR (Thu 5/7 AMC 4:30 PM ET); MarketBeat Q1 2026 earnings report (CEO Leighton $1.8B Anthropic deal quote); Alphastreet transcript; TipRanks earnings dates + Scotiabank PT raise note ($120→$180 +50%); Robinhood AKAM quote ($148.50 close 5/10/11; $21.74B mcap); StocksToTrade "Akamai Stock Jumps As AI Deal And Cloud Growth Impress Wall Street"; Fidelity/Bloomberg "Anthropic signs $1.8 billion AI cloud deal with Akamai"; MSN "Akamai stock leads S&P 500 today as AI deal overshadows earnings"; Investing.com "KeyBanc raises Akamai stock price target on inference revenue growth" ($120→$195 +62.5%); Marketscreener "Goldman Sachs $76→$87 Sell maintained"; GuruFocus "AKAM Sees Major Upgrade Following AI Deal Insights"; Seeking Alpha "Akamai surges as analysts praise 'landmark' cloud AI infrastructure deal"; stockanalysis.com AKAM historical-prices (primary verified via tavily_extract MCP — Apr 29 - May 8 data).
+
+### Theater-check on this orchestrator review
+
+(a) **Criterion 1 measurement correct?** Yes — Thu 5/7 $116.69 (pre-print Thu AMC) → Fri 5/8 $147.71 = +26.58% Day-0 canonical AMC-print C/C (primary-source verified via stockanalysis.com tavily extract); 5.32× threshold cushion = THIRD-MOST-EXTREME positive-direction Day-0 magnitude observed (after FLEX 7.94× / DDOG 6.27×). Session-prompt's "+15-24%" range understates actual +26.58%; non-binding magnitude correction.
+
+(b) **Qualifying-event sub-test CLEANLY QUALIFYING justified?** Yes — Q1 earnings (canonical Strategy.md thesis-line 262 list-match) + $1.8B 7-year Anthropic contract (first-party-corporate-issued multi-dimension: CEO earnings call commentary + 8-K filing + press release) = first-party multi-dimension qualifying-event per GLW 5/11 direct-template precedent. Distinct from MU 2026-05-05 D2 decline precedent (third-party commentary fails sub-test).
+
+(c) **Sub-pattern 1 layered-1+3 EIGHTH INSTANCE at MAJOR-magnitude tier justified?** Yes — KeyBanc +62.5% MEGA + Scotiabank +50% + Evercore new Outperform $130 + Goldman bearish Sell dissent = MAJOR-magnitude (between DDOG MAX-tier Stifel +90.6% and BE/CAT moderate-tier); layer 3 pre-print +10.31% 4-day rally absorbing forward narrative on Tue +11.5% AI security announcement. Joins layered-1+3 family at 8th-instance (AXSM/PINS/AMD/TSN-1+3+4/GLW/ARM-1+3+4/FLEX/AKAM).
+
+(d) **Day-1 HELD pattern vs DDOG/FLEX Day-1 EXTENSION distinction noted?** Yes — AKAM Day-1 +0.53% essentially flat at $148.50 = HELD-Day-1 (similar to AMD Day-2-3 hold pattern). Distinct from DDOG/FLEX Day-1 EXTENSION reference. Both held-and-extended trajectories produce NO-GO disposition per AMD/GLW/TSN/SMCI doctrine — market settled at new equilibrium either way.
+
+(e) **Criterion 3 closed-list analysis exhaustive?** Yes — numerical PT chase = sub-pattern 1 trap MAJOR SEVERITY (KeyBanc $195 / Scotiabank $180) + KL #11 thin-margin (cluster mean $168 ex-Goldman) + FULL SATURATION variant (stock AT with-Goldman cluster $148); Q2 outside window from 5/7 = 7/6 (Q2 print typically 7/29-7/31 outside by 3 weeks); FOMC mismatched; already indexed S&P 500 + Nasdaq 100 + Russell 1000 since 2007. Absent admissible target.
+
+(f) **LONG framing steel-manned?** Yes — multi-element substantive print + $1.8B Anthropic contract LARGEST in history + CIS +40% Y/Y + KeyBanc $195 MEGA + Scotiabank $180 + Evercore $130 + CEO forward commentary + NPV-impact estimate $7-8B EV-impact upside-rough-math steel-manned. Defeated on 7 axes: layered-1+3 EIGHTH instance MAJOR-magnitude + Goldman bearish dissent cluster cohesion weakening + FULL SATURATION at with-Goldman cluster + Day-1 HELD + sub-pattern 3 pre-print rally absorbed + Anthropic single-customer-concentration bear risk + criterion 3 absent target.
+
+(g) **SHORT framing dismissed properly?** Yes — 20→21 NO-GO B-short string + 2.20-trap + +25% stop within PT cluster + 5-7 KL #7 gap-up vectors (NVDA 5/20 / AMAT 5/14 / AVGO 6/4 / Anthropic follow-on / conferences / cybersecurity-peer sympathy) + Day-1 HELD contradicts mean-reversion-down + Anthropic contract floor + cluster floor + criterion 3 absent SHORT target.
+
+(h) **KL #12 assessed?** Yes — 4-long-book pairwise avg ~0.20-0.35 = MODERATELY FAVORABLE (less elevated than DDOG/ARM/GLW unfavorable; comparable to FTNT/mid-range); secondary; criterion 4 binds via sub-pattern 1 + criterion 3 absent independent.
+
+(i) **A-queue / dual-queue precedent handled correctly?** Yes — AKAM on A-queue per Watchlist.md per W4 5/9 add; A router DO-NOT-ACTIVATE; A-queue is NOT held position per criterion 5 wording; D2 5/7 entry (d) DDOG dual-queue precedent applies; NO-GO B disposition does NOT remove AKAM from A queue.
+
+(j) **AI-narrative cluster ratification 8th-instance noted?** Yes — AKAM joins GLW/ARM/SMCI/FLEX/AMD/DDOG/FTNT AI-narrative cluster = 8 instances; broad sell-side full re-rating across multi-sub-sector AI-infrastructure tape cross-confirmed.
+
+(k) **Deferral considered?** No — criterion 4 dual-framing decisive failure + criterion 3 closed-list absent target = clean NO-GO.
+
+Modulo these eleven considerations, the orchestrator review converges on NO-GO with HIGH (~85-90%) confidence — comparable to GLW (~85-90%) / PINS (~85-90%) layered-1+3 reference precedents; between DDOG MAX-tier (~85-95%) and BE/CAT moderate-tier (~75-85%); upper-mid-range given MAJOR-magnitude layered-1+3 + Goldman bearish-dissent cluster cohesion weakening + Day-1 HELD pattern + $1.8B Anthropic contract structural information anchor + criterion 3 closed-list absent target dual lock.
+
+### Compaction-survival note
+
+**Strategy B AKAM Q1-2026-print disposition 2026-05-13 ~09:30 MT (calendar slot Wed 5/13):** **NO-GO (DECLINE) via criterion 4 dual-framing decisive failure with sub-pattern 1 layered-1+3 variant EIGHTH INSTANCE at MAJOR-magnitude tier + criterion 3 closed-list rev 14 absent admissible target. Qualifying-event sub-test CLEANLY QUALIFYING via Q1 earnings (canonical Strategy.md list-match) + $1.8B 7-year Anthropic contract first-party multi-dimension event per GLW 5/11 precedent.**
+
+**Event details (Thu 2026-05-07 AMC 4:30 PM ET):** Akamai Q1 2026 results — Q1 revenue $1.07B vs cons in-line / +6% Y/Y; adj EPS $1.61 vs cons $1.60 narrow beat; **CIS revenue +40% Y/Y to $95M** (continuing acceleration from Q4 2025 +45% baseline); **$1.8B 7-year contract for Cloud Infrastructure Services with Anthropic** (per Bloomberg/Fidelity counterparty identification) = **LARGEST customer deal in Akamai history** per CEO Tom Leighton; "further validating our position as a key infrastructure provider in the AI economy"; "expects total revenue growth to reach double digits in 2027." Contract scale ~$257M annual revenue floor for CIS when fully ramped = +68% to current CIS base (~$380M annualized).
+
+**Stock price action (primary-source verified via stockanalysis.com tavily_extract MCP):** Mon 5/4 $105.78 / **Tue 5/5 $117.94 (+11.50% pre-print pop on AI security update Brand Guardian + Code-to-Runtime Mapping announcement)** / Wed 5/6 $121.99 / Thu 5/7 $116.69 — pre-print Thu / **Fri 5/8 $147.71 (+26.58% Day-0 canonical AMC-print C/C — THIRD-MOST-EXTREME positive-direction Day-0 observed after FLEX +39.69% / DDOG +31.33%; 5.32× threshold cushion)** / Mon 5/11 $148.50 (+0.53% Day-1 essentially flat = HELD pattern). Net Mon→Thu pre-print = +10.31% 4-day rally (sub-pattern 3 fingerprint moderate-magnitude). Net Thu→Mon = +27.25% retention through Day-1 (102.5% retention vs Day-0).
+
+**Post-print sell-side response (canonical sub-pattern 1 MAJOR-magnitude with BEARISH DISSENT):**
+- **KeyBanc $120 → $195 (+62.5% MEGA-raise) May 8** — Overweight; analyst Jackson Ader inference-revenue-trajectory dominant-theme
+- **Scotiabank $120 → $180 (+50%) May 8** — Outperform; analyst Patrick Colville
+- **Evercore ISI new coverage Outperform + $130 PT** — bullish-rating initiation with "security and cloud ~two-thirds of revenue / market still values like legacy CDN" thesis
+- **Goldman Sachs $76 → $87 (+14.5%) May 8 — Sell rating maintained = BEARISH DISSENT** (cluster bearish-outlier; parallels FTNT 5/12 MS Underweight $80 dissent + GS DDOG-vintage dissent precedents)
+- Cluster mean ex-Goldman ~$168 (+13% upside thin against KL #11 ~30% systematic-optimism); with-Goldman ~$148 (stock AT cluster = FULL SATURATION variant)
+
+**Layered-1+3 variant EIGHTH INSTANCE distinguishing features:**
+- Layer 1 MAJOR: KeyBanc +62.5% MEGA + Scotiabank +50% + Evercore initiation Outperform $130 + Goldman Sell maintained bearish dissent
+- Layer 3 MODERATE: Pre-print +10.31% 4-day rally (mostly Tue 5/5 +11.5% on AI security announcement = pre-event positioning ahead of Q1)
+- Day-0 +26.58% = THIRD-MOST-EXTREME positive-direction
+- Day-1 HELD at $148 essentially flat (~+0.5%) = market settled at $148 equilibrium quickly; no Day-1 EXTENSION (unlike DDOG/FLEX)
+- $1.8B Anthropic contract = hard contractual forward-revenue anchor with 7-year visibility; LARGEST customer deal in history
+
+**Daily.md / session-prompt non-binding corrections persisted:** (1) Day-0 magnitude **+26.58%** (session-prompt's "+15-24%" range understated; both Investing.com $15% and Chartmill AH $24% directionally close but did not capture Fri close-to-close peak); (2) Qualifying-event sub-test resolution CLEANLY QUALIFYING per GLW 5/11 precedent direct match (Q1 earnings + $1.8B Anthropic contract first-party multi-dimension; distinct from MU 5/5 third-party commentary failure).
+
+**Conviction in NO-GO: HIGH (~85-90%)** — comparable to GLW (~85-90%) / PINS (~85-90%) layered-1+3 reference precedents; upper-mid-range given MAJOR-magnitude layered-1+3 + Goldman bearish-dissent cluster cohesion weakening + Day-1 HELD pattern + Anthropic contract structural information anchor + criterion 3 absent target dual lock. Theater-check CONVERGENT across all 11 review axes.
+
+**Sub-pattern routing taxonomy update.** **Sub-pattern 1 advances to 12 instances** (BE/CAT/AXSM/PINS/AMD/TSN/GLW/ARM/FLEX/DDOG/FTNT/**AKAM**). **Layered-1+3 variant advances to 8 instances** (AXSM/PINS/AMD/TSN-1+3+4/GLW/ARM-1+3+4/FLEX/**AKAM**). Sub-pattern 1 most-extreme single-firm PT raise reference UNCHANGED at DDOG-Stifel +90.6% (AKAM KeyBanc +62.5% MEGA = MAJOR-magnitude but less than DDOG/FLEX MAX-tier). Sub-pattern 1 most-extreme positive-direction Day-0 C/C reference UNCHANGED at FLEX +39.69% (AKAM +26.58% = THIRD). **AI-narrative cluster ratification advances to 8 instances** (GLW/ARM/SMCI/FLEX/AMD/DDOG/FTNT/**AKAM** — CDN/cloud-infrastructure-AI sub-sector added).
+
+**Experiment Strategy B totals advance to 3 GO + 41 NO-GO = 6.8% / 93.2% hit rate** (from 3/40 = 7.0%/93.0% post-FTNT). Long-direction NO-GO breakdown: criterion 1 mechanical 3; instrument-rule 2; **criterion 4 decisive advances to 36 with AKAM** (from 35). **The 20-NO-GO B-short precedent string extends to 21 with AKAM-SHORT formal dismissal.**
+
+**Strategy B sector cap usage at session-end 2026-05-13 ~09:30 MT post-AKAM:** unchanged from post-FTNT state. IT Services / IT Consulting & Other Services 1/3 (IBM); Health Care Facilities 1/3 (HCA); Comm Services / IMS 1/3 (META); **IT Services / Internet Services & Infrastructure 0/3** (AKAM would have been 1/3 sub-industry; distinct from IBM sub-industry; IT-sector 1/3 → 2/3 within per-sector cap had GO disposed); IT / Software / Systems Software 0/3 (post-FTNT); IT / Software / Application Software 0/3 (post-DDOG); other sub-industries 0/3 (post-Mon-Tue NO-GOs). KL #12 MODERATELY FAVORABLE for AKAM (4-long-book pairwise avg ~0.20-0.35; less elevated than DDOG/ARM/GLW unfavorable baselines) — secondary; criterion 4 binds via sub-pattern 1 layered-1+3 + criterion 3 absent independent.
+
+**A-queue status: AKAM remains on A-queue** per Watchlist.md per W4 5/9 add + DDOG 5/7 dual-queue precedent (A router DO-NOT-ACTIVATE; not held position; NO-GO B disposition does NOT remove AKAM from A queue). No Watchlist.md update.
+
+**No order staged. No portfolio-state change.** 2% next-trade sizing $37.77 unchanged. Window expires Fri 2026-05-22 (today Wed 5/13 = Day 3 of 10). NVDA Q1 FQ27 print Wed 5/20 + AMAT 5/14 + AVGO 6/4 + Anthropic follow-on / additional CIS customer announcements within 60-day window create AKAM-sympathy gap-up vectors per KL #7.
+
+**Wed 5/13 same-day B thesis-construction queue saturation status post-AKAM (FIRST session of Wed):** **AKAM (this session, 09:30 calendar slot) ✓** + NET 10:15 + MNST 11:00 + AXON 13:00 + downstream Thu/Fri queue. Mon 5/11 + Tue 5/12 6-disposition new-high-water-mark precedent allows up to 6 same-day Wed if sessions complete. Operator-capacity vigilance maintained.
