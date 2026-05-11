@@ -8521,3 +8521,216 @@ Modulo these nine considerations, the orchestrator review converges on NO-GO wit
 **No order staged. No portfolio-state change.** Window expires Wed 2026-05-20 (today Day 3 of 10).
 
 **Same-day B thesis-construction queue saturation status:** GLW 09:00 ✓ + DASH 13:00 ✓ + ARM (post-DASH) ✓ + SMCI (post-ARM) ✓ + **WHR (post-SMCI, calendar 14:00 MT) ✓** = **5 same-day NO-GOs Mon 5/11** — MATERIALLY EXCEEDS Thu 5/7 / Fri 5/8 same-day 3+4-NO-GO precedent ceilings = NEW HIGH-WATER MARK. Remaining Mon 5/11: FLEX 15:00 (would extend to 6-NO-GO if completed; approaching operator-capacity hard ceiling). Tue 5/12: 6 sessions stacked.
+
+---
+
+## 2026-05-11 (Mon, ~post-WHR-NO-GO MT, FLEX session run sequenced after WHR 14:00; calendar slot 15:00 MT rescheduled from Fri 5/8 13:00 per D2 5/9 conversion) Strategy B thesis construction outcome — FLEX (Flex Ltd) NO-GO via criterion 4 dual-framing decisive failure with **sub-pattern 1 layered-1+3 variant SEVENTH INSTANCE at MOST-EXTREME-MAGNITUDE-EVER observed across this experiment cycle on both Day-0 C/C dimension AND single-firm-PT-raise dimension** — Day-0 C/C +39.69% (exceeds SMCI prior most-extreme positive +24.54%) + JPMorgan $84→$160 +90.5% MEGA-raise (exceeds AMD-Goldman prior most-extreme +88%) — plus NEW evidence layers (a) concurrent corporate-action spin-off announcement of CPI segment ~9-12 month resolution timeline; (b) Reliability Solutions segment SOFTNESS bear-case offset to CPI/AI growth; (c) move HELD AND EXTENDED through Day-2 at unprecedented absolute-extension magnitude; compounded by criterion 3 closed-list rev 14 absent admissible convergence target; no order staged
+
+**Trigger:** Calendar-event-scheduled Strategy B thesis construction for FLEX, Mon 2026-05-11 15:00–15:45 MT (rescheduled from Fri 2026-05-08 13:00 MT per D2 5/9 conversion — original session not completed Fri 5/8 due to operator capacity ceiling). Session run-sequenced after WHR 14:00 MT — the **6th same-day session Mon 5/11** following GLW 09:00 + DASH 13:00 + ARM (post-DASH) + SMCI (post-ARM 13:00) + WHR (post-SMCI 14:00). Calendar prompt explicitly flags +33% C/C at $15-20B mcap as extreme post-print magnitude requiring rigorous sub-pattern routing test for (a) informational-repricing AI-data-center-infra-supplier-multiple-expansion vs (b) sentiment-overshoot-exhausting-mean-reversion-window.
+
+**Session-prompt magnitude + market-cap discrepancies (corrected inline; non-binding on disposition).** Session prompt cites "+33% close-to-close" and "Mcap ~$15-20B." Primary-source verification:
+- **Close-to-close magnitude:** Tue 5/5 close $96.45 → **Wed 5/6 close $134.73 = +39.69% Day-0 C/C** (stockanalysis.com historical-prices primary verified; CNBC / Investing.com / Motley Fool cross-corroborate ~40% / "31% surge in premarket trading" reading + post-open continuation to +39.69% close-to-close). Session-prompt's "+33%" understates actual magnitude by ~6.7 percentage points (~17% relative understatement). The +39.69% is the LARGEST positive-direction Day-0 close-to-close magnitude observed in any B candidate this experiment cycle (exceeds prior SMCI 5/11 +24.54% and AMD 5/7 +17.77% records). Cushion on threshold = 7.94× over 5% floor.
+- **Market cap:** ~377M shares outstanding × Wed close $134.73 = **~$50.8B at pre-print Wed close** (FLEX is mid/large-cap, not "$15-20B" — session-prompt understates by ~3×). At Fri 5/8 close $142.17 = ~$53.6B. At pre-print Tue 5/5 $96.45 = ~$36.4B. Clears $2B floor by ~25× minimum cushion. Pattern matches prior GLW 2026-05-11 / ARM 2026-05-11 session-prompt mcap-discrepancy-by-~3× correction protocol; flagged but does not bind.
+- 1-day-or-intraday non-binding figures pattern matches prior GLW 2026-05-11 / TSN 2026-05-08 / AXSM 2026-05-02 / EQIX 2026-05-01 / DASH 2026-05-11 session-prompt magnitude-discrepancy correction protocol.
+
+**Inputs:** Strategy.md Strategy B section (entry criteria 1-5; criterion 1 ≥5% C/C either direction; criterion 3 closed-list rev 14 strict enumeration; criterion 4 information-vs-sentiment dual-framing test with explicit attention to extreme-magnitude-exhausting-mean-reversion-window question; criterion 5 sector cap; instrument rule ≥$2B mcap "Long or short"; pre-mortem rev 7); AI_Trading_Foundation.md (2.4 / 2.13 / 2.20); Operating_Protocols.md §1 HOIP / §2 commission-disregarded / §3 NO-GO records context (no prior FLEX NO-GO) / §8 conviction-calibration; **Portfolio_Ledger.md** (state-as-of post-WHR-NO-GO 2026-05-11: B NAV $1,888.69; 3 longs IBM/HCA/META; sector cap IT Services 1/3, Health Care Facilities 1/3, Comm Services 1/3, **IT/Electronic Manufacturing Services 0/3**, IT/Technology Hardware Storage & Peripherals 0/3 post-SMCI, IT/Semiconductors 0/3 post-ARM, IT/Electronic Components 0/3 post-GLW, Consumer Discretionary / Restaurants 0/3 post-DASH, Consumer Discretionary / Household Appliances 0/3 post-WHR, all others 0/3; 2% sizing $37.77; B router ACTIVATE); Regime_State.md (B router ACTIVATE per SPY NEUTRAL + VIX 17.05 NORMAL); Decision_Log.md prior precedents critical:
+- **AMD 2026-05-07 NO-GO (sub-pattern 1 layered-1+3 THIRD INSTANCE at prior-most-extreme magnitude with Goldman $240→$450 +88% PT raise + upgrade Hold→BUY = prior LARGEST single-firm PT raise; move-HELD Day 2-3 +16.2% net) — direct-template precedent for FLEX SEVENTH INSTANCE at GREATER magnitude on both dimensions**
+- **GLW 2026-05-11 09:00 NO-GO (layered-1+3 variant FOURTH INSTANCE at most-extreme pre-event-rally + Oppenheimer +75% mega-raise + peer-cross-section-DECLINE evidence + move HELD AND EXTENDED Day 2) — direct same-day sister precedent**
+- PINS 2026-05-07 NO-GO (layered-1+3 SECOND INSTANCE + 15-firm PT-raise wave BofA $20→$27 +35% anchor + move-faded-Day-2)
+- TSN 2026-05-08 NO-GO (layered-1+3+4 first instance)
+- ARM 2026-05-11 (post-DASH) NO-GO (layered-1+3+4 second instance + negative-direction reaction)
+- SMCI 2026-05-11 13:00 NO-GO (single-pattern 4 variant 4d first instance + +24.54% Day-0 prior-most-extreme positive-direction reference)
+- WHR 2026-05-11 14:00 NO-GO (variant 4c second instance + dividend-suspension overlay)
+- 14-NO-GO B-short precedent string post-WHR
+- "NO-GO records are context, not barriers" §3 (no prior FLEX NO-GO record)
+- Watchlist.md (FLEX NOT listed)
+
+**Web-search primary documents (verified this session):**
+- Flex Q4 FY26 + Full-Year results press release (Wed 2026-05-06 BMO): https://investors.flex.com/news/news-details/2026/FLEX-REPORTS-FOURTH-QUARTER-AND-FISCAL-2026-RESULTS/default.aspx
+- Flex Q4 FY26 earnings release PRNewswire: https://www.prnewswire.com/news-releases/flex-reports-fourth-quarter-and-fiscal-2026-results-302763098.html
+- Flex Q4 2026 earnings call transcript Motley Fool: https://www.fool.com/earnings/call-transcripts/2026/05/06/flex-flex-q4-2026-earnings-call-transcript/
+- Investing.com earnings transcript Q4 2026 stock surge: https://www.investing.com/news/transcripts/earnings-call-transcript-flex-ltd-q4-2026-sees-stock-surge-after-earnings-beat-93CH-4663890
+- Alpha Spread Q4-2026 Earnings Call: https://www.alphaspread.com/security/nasdaq/flex/investor-relations/earnings-call/q4-2026
+- Investing.com Q4 FY26 slides spin-off announced margins hit targets early: https://www.investing.com/news/company-news/flex-q4-fy26-slides-spinoff-announced-margins-hit-targets-early-93CH-4664189
+- StocksToTrade FLEX AI Spin-Off Plan and Guidance: https://stockstotrade.com/news/flex-ltd-flex-news-2026_05_06-3/
+- StocksToTrade FLEX AI Spin-Off and Guidance Reset Outlook: https://stockstotrade.com/news/flex-ltd-flex-news-2026_05_06-2/
+- Yahoo Finance Q4 Earnings Revenues Beat: https://finance.yahoo.com/markets/stocks/articles/flex-q4-earnings-revenues-beat-135300017.html
+- StockTitan Q4 fiscal 2026 earnings call date announcement: https://www.stocktitan.net/news/FLEX/flex-announces-date-for-fourth-quarter-and-fiscal-2026-earnings-bb81763km1fc.html
+- Benzinga FLEX analyst ratings post-print: https://www.benzinga.com/quote/FLEX/analyst-ratings
+- Public.com FLEX forecast / analyst targets: https://public.com/stocks/flex/forecast-price-target
+- StockScan FLEX forecast: https://stockscan.io/stocks/FLEX/forecast
+- TradingView FLEX forecast price target: https://www.tradingview.com/symbols/NASDAQ-FLEX/forecast/
+- stockanalysis.com FLEX historical-prices: https://stockanalysis.com/stocks/flex/history/
+- stockanalysis.com FLEX forecast analyst price targets: https://stockanalysis.com/stocks/flex/forecast/
+- CNN FLEX stock quote and forecast: https://www.cnn.com/markets/stocks/FLEX
+
+### Decision
+
+**FLEX — NO-GO (DECLINE).** Criterion 4 dual-framing decisive failure with **sub-pattern 1 layered-1+3 variant SEVENTH INSTANCE established at MOST-EXTREME-MAGNITUDE-EVER observed across this experiment cycle on both Day-0 close-to-close dimension (+39.69%, exceeds SMCI prior +24.54% and AMD +17.77%) AND single-firm-PT-raise dimension (JPMorgan $84→$160 +90.5% MEGA-raise, exceeds AMD-Goldman prior +88% record)**. The Wed 5/6 +39.69% Day-0 close-to-close reaction is information-driven repricing on structurally substantial multi-element compound-corporate-action day: (a) Q4 FY26 adj EPS $0.93 vs cons +8.1% beat on revenue $7.5B; (b) full FY26 revenue $27.9B +8% / adj EPS $3.30 +25% / FCF ~$1.1B records; (c) FY27 revenue guide $32.3-33.8B (+18% midpoint above-consensus) / adj EPS $4.21-4.51; (d) **Cloud and Power Infrastructure (CPI) segment grew +38% FY26 and projected +65-75% growth FY27 + 80%+ FY28** with explicit Google + hyperscalers + colos + neoclouds + utilities customer concentration; (e) **CPI spin-off announcement** — Flex announced intent to spin off CPI segment into new publicly traded company targeting Q1 calendar 2027 completion (~9-12 month structural corporate-action timeline). Layer 1 (post-event sell-side bull ratification): JPMorgan $84 → $160 (+90.5%) on May 7 = **NEW LARGEST single-firm PT raise observed in any B candidate this experiment cycle** (exceeds AMD-Goldman $240→$450 +88% Hold→Buy upgrade prior record) + KeyBanc PT $180 issued May 7 (raise from prior) + multiple firms re-rating against prior consensus $69.67 (12-analyst) — canonical sub-pattern 1 fingerprint at NEW MAXIMUM MAGNITUDE. Layer 3 (pre-event positioning + rally): Tue 5/5 +5.02% pre-print pop ($91.84 → $96.45) + multi-month YTD AI-infrastructure-narrative-absorption rally (stock ~$30 a year ago vs ~$96 pre-print = ~3× LTM appreciation absorbing AI-data-center-supplier-multiple-expansion narrative). Plus NEW evidence layers: (a) concurrent CPI spin-off corporate-action announcement with ~9-12 month resolution timeline; (b) Reliability Solutions segment SOFTNESS (anticipated FY26 revenue decline, "ongoing softness in demand") = bear-case offset to CPI/AI growth; (c) move HELD AND EXTENDED through Day-2 ($142.17 Fri close = +5.52% additional beyond Day-0 close $134.73; net Tue $96.45 → Fri $142.17 = +47.40% retention with EXTENSION = 119.4% retention vs Day-0 +39.69% gain). Criterion 3 closed-list rev 14 absent admissible convergence target (numerical PT chase to post-raise cluster $150-180 = sub-pattern 1 trap per BE/CAT/STX/MDLZ/AXSM/PINS/AMD/TSN/GLW/ARM doctrine; Q1 FY27 next earnings ~late-July 2026 likely OUTSIDE 60-day window from Wed 5/6 = Sun 7/5 / Mon 7/6 [Q1 FY27 print likely 7/23-7/25 = outside window by ~3 weeks]; no FDA; FOMC June 16-17 structurally mismatched against idiosyncratic FLEX AI-infrastructure-spin-off thesis; FLEX already in S&P 500 since Aug 2024 + Russell 1000 + Nasdaq 100 — no fresh index-inclusion trigger).
+
+Criterion 1 mechanically clears at +39.69% Day-0 C/C (7.94× threshold cushion — NEW HIGH-WATER MARK for cushion magnitude); criterion 5 sector cap clears (IT/Electronic Manufacturing Services 0/3 sub-industry; IT-sector 1/3 → 2/3 within per-sector cap had GO disposed).
+
+### Mechanical eligibility detail
+
+- **Instrument rule:** FLEX = Flex Ltd, NASDAQ-listed common (US-listed via primary listing); Singapore-incorporated parent (Note: foreign issuer status; S&P 500 inclusion confirmed Aug 2024 per index inclusion records — non-US-incorporated companies are typically excluded from S&P 500 but FLEX was admitted; verify if status affects criterion 5 closed-list). ~377M shares outstanding; **market cap ~$50.8B at pre-print Wed 5/6 close $134.73** (~$53.6B at Fri 5/8 close $142.17; ~$36.4B at pre-print Tue 5/5 close $96.45) — well above $2B floor by ~18-27× cushion. 30-day ADV multi-million-shares/day on S&P 500 + Nasdaq 100 component. Long-or-short permitted; 2% sizing $37.77; no options.
+- **Criterion 1:** Event Wed 2026-05-06 BMO. Pre-event Tue 5/5 close $96.45 → Wed 5/6 close $134.73 = **+39.69% Day-0 C/C** (canonical BMO-print measurement: pre-print regular-session-close → first post-print regular-session-close = same trading day's close for BMO prints; Wed close already reflects full session reaction to BMO print). Cushion 7.94× over 5% floor = NEW HIGH-WATER MARK. Today Mon 5/11 = Day 3 of post-event 10-day window (Wed 5/6 = Day 0 / Thu 5/7 = Day 1 / Fri 5/8 = Day 2 / Mon 5/11 = Day 3 / window expires Wed 5/20 = Day 10).
+- **Criterion 5:** No A position; FLEX not on A queue per Watchlist.md 16-name list. GICS **Information Technology sector / Electronic Equipment, Instruments & Components industry / Electronic Manufacturing Services sub-industry** (S&P GICS classification verified). Currently 0/3 sub-industry; IT-sector 1/3 (IBM); FLEX-add would yield IT-sector 2/3 within 3-per-sector cap. KL #12 LONG-correlation: FLEX-IBM ~0.30-0.45 (both IT-sector, partial AI-narrative overlap); FLEX-META ~0.30-0.45 (AI-infrastructure narrative shared); FLEX-HCA ~0.05-0.15 (different sectors, low); 4-long-book pairwise avg ~0.25-0.35 = **KL #12 FAVORABLE** (comparable to SMCI/TSN-favorable baselines; less correlated than ARM/GLW unfavorable) — secondary; criterion 4 binds via sub-pattern 1 layered-1+3 independent.
+
+### Decisive flaw analysis (criterion 2 + criterion 4 dual-framing — LONG framing)
+
+**Sub-pattern 1 layered-1+3 variant SEVENTH INSTANCE established at MOST-EXTREME-MAGNITUDE-EVER on BOTH dimensions:**
+
+(α) **Sub-pattern 1 post-event sell-side bull ratification — NEW MAXIMUM MAGNITUDE with JPMorgan +90.5% mega-raise.** Post-event PT actions May 7 — May 11:
+- **JPMorgan $84 → $160 (+90.5%) on May 7** = NEW LARGEST single-firm PT raise observed in any B candidate this experiment cycle (exceeds AMD-Goldman $240→$450 +88% Hold→Buy upgrade prior record); near-doubling of PT in a single re-rate event
+- **KeyBanc PT $180 issued May 7** (raise from prior; precise prior PT not documented in public sources but per consensus $69.67 mean, prior likely $90-100 range = +80-100% raise magnitude)
+- Multiple firms re-rating against prior consensus $69.67 (12-analyst mean per Public.com) — full re-rating cycle in motion
+- Pattern fingerprint matches sub-pattern 1 at NEW MAXIMUM MAGNITUDE: post-event PT-cluster shifted upward immediately as sell-side ratified the new fundamentals at the elevated price. Per BE/CAT/STX/MDLZ/AXSM/PINS/AMD/TSN/GLW/ARM doctrine: post-event aggressive PT-cluster movement is information-driven repricing the sell-side has already executed; chasing this PT-cluster as B convergence target is the canonical sub-pattern 1 trap at MAXIMUM SEVERITY here
+
+(β) **Sub-pattern 3 pre-event rally absorbing forward narrative — multi-month YTD AI-infrastructure-narrative-absorption.** Pre-event rally context:
+- Tue 5/5 pre-print pop $91.84 → $96.45 = **+5.02% pre-print rally Day -1** (modest single-day but signals pre-event positioning)
+- Multi-month rally context: stock ~$30 a year ago (~spring 2025) → ~$96 pre-print Tue = **~3× LTM appreciation** absorbing AI-data-center-supplier-multiple-expansion narrative throughout 2025-2026
+- Pre-print stock entered Q4 print materially extended from base levels with significant sell-side bullish positioning absorbed (multi-firm PT-raise wave concurrent with Q4 print suggests pre-event sell-side under-PT'd the stock; the Q4 print + spin-off catalyzed full re-rating)
+- Compared to AMD prior most-extreme pre-event rally (+89% one-month / +245% one-year / +327% twelve-month) and GLW (+257.56% TTM / +140% 6-month / +101.8% YTD): FLEX's ~3× LTM is between AMD and GLW magnitudes; classic sub-pattern 3 fingerprint at elevated pre-event-absorption level
+
+(γ) **Layered-1+3 variant SEVENTH INSTANCE established at MOST-EXTREME-MAGNITUDE-EVER.** Per AXSM 5/6 first / PINS 5/7 second / AMD 5/7 third / TSN 5/8 (layered-1+3+4 first) / GLW 5/11 fifth / ARM 5/11 (layered-1+3+4 second) sixth / **FLEX 5/11 seventh** — the layered-1+3 variant is now confirmed as a structurally-recurring fingerprint across 7 instances in 6 trading days (5/6-5/11 inclusive). FLEX establishes NEW MAXIMUM magnitudes on both layer dimensions (layer 1 PT raise JPM +90.5% > AMD-Goldman +88%; layer 3 LTM rally ~3× = between AMD and GLW). Sub-pattern 3 most-extreme single-day pre-print rally reference remains ARM (+13.63% Wed pure pre-print rally) but FLEX establishes most-extreme cumulative-LTM-rally reference at ~3×. **Layered-1+3 variant SEVENTH INSTANCE confirms pattern's recurrence at unprecedented magnitude tier.**
+
+(δ) **Move HELD AND EXTENDED through Day-2 at NEW ABSOLUTE-EXTENSION MAGNITUDE.** Post-event price trajectory:
+- Pre-event Tue 5/5 close: $96.45
+- Wed 5/6 close (Day 0): $134.73 (+39.69%)
+- Thu 5/7 close (Day 1): $133.01 (-1.28% from Day 0 — modest fade)
+- Fri 5/8 close (Day 2): $142.17 (+6.89% from Day 1 — move EXTENDED beyond Day-0 close)
+- Net Tue→Fri = **+47.40% retention with EXTENSION through Day-2** = 119.4% retention vs Day-0 close-to-close gain
+- Absolute Day-2 extension beyond Day-0 close = $142.17 - $134.73 = **+$7.44 / +5.52% additional gain beyond Day-0** = NEW MAXIMUM ABSOLUTE-EXTENSION MAGNITUDE (exceeds GLW prior $186.94 - $181.57 = +$5.37 / +2.96% additional reference)
+- Trajectory pattern: HELD-Day-1-modest-fade + EXTENDED-Day-2 strong = market actively confirming new $140-142 equilibrium with additional buying
+
+Per AMD/GLW/TSN/SMCI doctrine: when post-event move HOLDS or EXTENDS at the post-event level, market has absorbed the information at that level and is treating the new price as the new equilibrium. **FLEX's Day-2 EXTENSION at +5.52% absolute beyond Day-0 close is the strongest no-remaining-mean-reversion-edge signal observed in this experiment cycle.**
+
+(ε) **NEW evidence layer (a): Concurrent corporate-action spin-off announcement of CPI segment.** Flex announced intent to spin off Cloud and Power Infrastructure segment into new publicly traded company, target completion Q1 calendar 2027 (~9-12 month structural corporate-action timeline). Spin-off announcement is structurally similar to GLW Springboard upgrade compound-event dimension but distinct — GLW's was financial-targets upgrade with NVDA-partnership 8-K; FLEX's is direct corporate-structure separation creating distinct publicly-traded entity. Sub-evidence layer dimension: capital-allocation-restructuring-on-AI-segment-value-realization (CPI segment +38% FY26 → +65-75% FY27 → +80%+ FY28 trajectory + hyperscaler customer concentration makes CPI-standalone-valuation potentially higher than embedded-within-FLEX-valuation). Resolution timeline ~9-12 months structurally relevant to 60-day Strategy B window — the spin-off value-realization process EXTENDS beyond 60 days. Information-content: the +39.69% Day-0 reaction reflects (a) Q4 print beat + FY27 guide raise + (b) spin-off value-realization expectation. The spin-off component is information-driven structural repricing, not sentiment-overshoot.
+
+(ζ) **NEW evidence layer (b): Reliability Solutions segment SOFTNESS bear-case offset.** Per Investing.com Q4 FY26 slides + Yahoo Q4 earnings coverage: "Flex's outlook for its Reliability segment reveals anticipated sequential revenue variability, with management guiding for a projected decline in fiscal year 2026 revenues, indicating ongoing softness in demand." Reliability Solutions is FLEX's non-AI-infrastructure segment serving consumer-discretionary + auto/transport + industrial end markets — the projected FY26 revenue decline is a structural bear-case offset to CPI growth narrative. This NEW evidence layer complicates the pure "AI-data-center-supplier-multiple-expansion" thesis: the +39.69% reaction is dominated by CPI re-rating but Reliability softness is a structural information item that doesn't reverse in 60 days. Sub-evidence dimension: information-content of the print is mixed (CPI +38% growth + spin-off value vs Reliability decline + macro consumer-discretionary softness); the market's +39.69% reaction reflects net-positive information weighting, not pure sentiment-overshoot.
+
+(η) **Stock TRADING WITHIN sell-side post-raise PT cluster after MAXIMUM-MAGNITUDE re-rate wave — canonical saturation signature.** Post-event price action: Wed $134.73 / Thu $133.01 / Fri $142.17 — Fri close $142.17 is BELOW KeyBanc $180 (-21% headroom) and JPMorgan $160 (-11% headroom) but consistent with overall post-raise PT cluster centered $150-180. New raised PT cluster mean (estimate): ~$160-170 = +13-20% remaining sell-side-implied upside from Fri close. Compare to AMD precedent (+9-28% upside to PT cluster) and PINS (+28% to BofA $27 PT) — FLEX's remaining sell-side-implied upside +13-20% is THIN against pre-mortem KL #11 2.13 ~30% systematic-optimism residual on AI-narrative names. Per KL #11 review trigger doctrine: at +13-20% target with 2.13's ~30% systematic-optimism factor, realized expectancy is near-zero on commission-adjusted basis; convergence-target-thin signal against criterion 4 LONG framing.
+
+(θ) **Criterion 3 closed-list rev 14 absent admissible convergence target for LONG mean-reversion thesis.**
+- (a) Numerical price level: technically admissible but:
+  - Mean-reversion to post-raise PT cluster mean ~$160-170 = +13-20% upside; sub-pattern 1 trap per BE/CAT/STX doctrine + KL #11 thin-margin
+  - Mean-reversion to KeyBanc $180 high = +27% upside; large gap-fill but full-cluster-chase = canonical trap
+  - Pre-event Tue $96.45 = -32% (SHORT target territory, not LONG)
+- (b) Named-event options:
+  - Next earnings = Q1 FY27 print ~late-July 2026 (last year Q1 FY26 reported ~July 23-25 timing) — **likely OUTSIDE 60-day window from event-day Wed 5/6** (60 days = Sun 7/5 / Mon 7/6; Q1 FY27 print ~7/23-7/25 = outside window by ~3 weeks)
+  - Next FDA decision: N/A
+  - Next FOMC June 16-17 = within 60-day window technically, but structurally mismatched against idiosyncratic FLEX AI-infrastructure-spin-off thesis
+  - S&P 500 inclusion: FLEX already in S&P 500 since Aug 2024 — NOT fresh trigger
+  - Russell 1000: already included
+  - Nasdaq 100: FLEX added to Nasdaq 100 in Dec 2023 — already included
+  - **Spin-off completion target Q1 calendar 2027 = ~9-12 months OUTSIDE 60-day window** — admissible event-type for criterion 3 would be the spin-off completion itself but timing structurally outside window
+- **Net:** Numerical price level option faces sub-pattern 1 trap + KL #11 thin-margin; no admissible named-event within 60-day window. **Criterion 3 closed-list rev 14 effectively absent admissible target.**
+
+**Steel-manning the affirmative LONG case (engaged seriously, defeated):** FLEX delivered genuinely-substantial structurally-positive multi-element corporate-action day: (a) Q4 beat-and-raise with +8.1% EPS beat + +18% FY27 revenue guide above-consensus; (b) CPI segment +38% FY26 with +65-75% FY27 guide reflecting real AI-data-center-supplier-share-of-wallet capture; (c) spin-off announcement creating value-realization optionality for CPI-standalone-valuation; (d) JPMorgan +90.5% MEGA-raise and KeyBanc $180 reflect genuinely new fundamentals not yet fully priced; (e) stock at Fri $142.17 vs PT cluster $160-180 = +13-27% upside; (f) mean-reversion target Wed pre-print $134.73 = -5% from Fri (downside thin, upside +13-27% to PT cluster = asymmetric LONG setup); (g) pre-event Tue +5.02% pop was modest not extreme; pre-print run-up not catastrophic. **Counter-counter:** (a) The "fraction of NPV" framing assumes prior stock price did not embed AI-data-center-supplier-multiple-expansion narrative — but multi-month YTD ~3× LTM appreciation demonstrates the broad narrative was aggressively priced; sub-pattern 3 binds. (b) JPMorgan +90.5% MEGA-raise + KeyBanc $180 are sell-side immediately ratifying new fundamentals at elevated price = canonical sub-pattern 1 saturation signature per BE/CAT/STX/MDLZ/AXSM/PINS/AMD/TSN/GLW/ARM doctrine at MAXIMUM SEVERITY. (c) Move HELD AND EXTENDED through Day 2 at NEW ABSOLUTE-EXTENSION MAGNITUDE (+5.52% beyond Day-0 close) = market actively confirming new $140-142 equilibrium with additional buying, not consolidating ahead of further upside-discovery; the +47.4% retention through Day 2 is the strongest market-settled-at-new-level signal observed. (d) Reliability Solutions softness = structural bear-case offset not fully captured in PT cluster ratification. (e) Criterion 3 closed-list rev 14 absent admissible target irrespective of LONG framing edge: Q1 FY27 outside window; PT chase = trap; no index-inclusion; spin-off completion 9-12 months out. The steel-man does NOT defeat the criterion-4-binding-constraint or criterion-3-closed-list-absent-target dual lock at MAXIMUM-MAGNITUDE sub-pattern 1 layered-1+3 fingerprint severity.
+
+### SHORT framing dismissed (5 axes — SHORT mean-reversion-down from +39.69% extreme)
+
+(η) **Pre-mortem Constraint 2 KL #1 textbook-rational-trap 2.20 at MAXIMUM severity.** SHORT framing on FLEX faces:
+- **14-NO-GO B-short precedent string in current risk-on regime extends to 15** with FLEX-SHORT dismissal (12 = SMCI post-DASH-not-counted-as-direction-agnostic; 13 = SMCI formal criterion-4 dismissal; 14 = WHR formal criterion-4 dismissal; 15 = FLEX). Pre-mortem Constraint 2 KL #1 2.20 doctrine canonical against beat-and-raise + spin-off + +18% FY27 guide + JPMorgan +90.5% MEGA-raise + KeyBanc $180 ratification + risk-on regime
+- SPY at all-time-high; VIX 17.05 NORMAL; risk-on regime is LEAST favorable for B-short entries against multi-element compound corporate-action day
+
+(θ) **+25% short-side stop binds against sell-side post-event PT cluster + KL #7 gap-up risk catastrophic.** Per Strategy.md exit rule, +25% stop from short entry near Fri $142.17 = $177.71. New raised PT cluster: JPM $160 / KeyBanc $180 = stop $177.71 is BETWEEN PT cluster members. **Operational headroom thin against PT cluster gap-up vectors.** KL #7 gap-up execution risk is CATASTROPHIC for FLEX given:
+- AVGO Q2 print Wed 2026-06-04 AMC — within 60-day window — custom-ASIC + AI-infrastructure peer correlation gap-up risk
+- AMAT Q2 print Thu 2026-05-14 AMC — within 10-day window AND 60-day window — semicap-equipment sector tape correlation
+- NVDA Q1 FQ27 print Wed 2026-05-20 AMC — within ARM/SMCI/GLW window AND 60-day window — direct AI-infrastructure-tape correlation
+- Spin-off progress announcements (Form 10 filing, transaction structure details, IRS Private Letter Ruling, completion target updates) — any positive cadence triggers gap-up
+- JPMorgan TMT conference mid-May / BofA Tech conference early-June — within 60-day window — AI-infrastructure-tape catalysts
+- **5-7 potential gap-up vectors over 60-day window** specific to AI-infrastructure-EMS tape
+
+(ι) **Move EXTENDED through Day-2 at NEW MAXIMUM ABSOLUTE-EXTENSION decisively contradicts mean-reversion-down thesis.** Day-2 absolute extension +$7.44 / +5.52% beyond Day-0 close = new maximum reference. Stock at Fri $142.17 vs Day-0 close $134.73 vs Day-1 close $133.01 = trajectory NOT fading — market is actively buying at higher levels. SHORT mean-reversion-down thesis requires market reverses Day-2 EXTENSION direction; structurally implausible given the +47.4% retention through Day 2 signaling new equilibrium absorbed.
+
+(κ) **JPMorgan $160 + KeyBanc $180 PT cluster creates structural floor compressing realistic SHORT target.** SHORT mean-reversion target to Wed pre-print baseline $134.73 = -5% from Fri $142.17; or to pre-event Tue $96.45 = -32% from Fri (full reversal of +47.4% retention). Both targets are structurally implausible:
+- -5% Wed-baseline target = thin margin within normal trading variability; not a B convergence target
+- -32% Tue-baseline target = requires market reverses both PT cluster shift AND spin-off-value-realization expectation; not within 60-day window given multi-firm sell-side ratification
+- Sell-side mean PT cluster $160-170 vs current $142 = +13-20% IMPLIED UPSIDE creates strong structural floor against SHORT thesis
+
+(λ) **SHORT convergence target structurally weak under criterion 3 closed-list rev 14.** Same closed-list constraints apply symmetrically:
+- (a) Numerical SHORT target: pre-event Tue baseline $96.45 = -32% from Fri (structurally implausible per above); pre-print Wed close $134.73 = -5% (thin, not B-target); 52-wk low not relevant
+- (b) Next earnings Q1 FY27 likely outside 60-day window; no FDA; FOMC mismatch; no index-inclusion (already in S&P 500 + Nasdaq 100 + Russell 1000)
+- **SHORT mean-reversion target structurally weak with PT cluster floor + spin-off-value-realization-pending creating multi-vector upside-bias; criterion 3 closed-list absent admissible SHORT target.**
+
+### Effect on book
+
+No effect. No order staged for FLEX. Strategy B remains in ACTIVATE state with three open positions (IBM, HCA, META) and zero staged orders. Strategy B sector concentration unchanged: IT Services 1/3 (IBM); Health Care Facilities 1/3 (HCA); Comm Services / Interactive Media & Services 1/3 (META); **IT / Electronic Manufacturing Services 0/3** (where FLEX would have sat); IT / Technology Hardware Storage & Peripherals 0/3 (post-SMCI); IT / Semiconductors 0/3 (post-ARM); IT / Electronic Components 0/3 (post-GLW); Consumer Discretionary / Restaurants 0/3 (post-DASH); Consumer Discretionary / Household Appliances 0/3 (post-WHR); others 0/3.
+
+### Pending queue updated
+
+- ~~FLEX B-thesis construction~~ COMPLETE — NO-GO sub-pattern 1 layered-1+3 variant SEVENTH INSTANCE at MOST-EXTREME-MAGNITUDE-EVER + criterion 3 closed-list absent target.
+- 10-day post-event entry window for FLEX expires ~Wed 2026-05-20 (Day 10 from Wed 5/6 reaction day; today Mon 5/11 = Day 3).
+- Sequenced sister thesis-construction sessions today: **6 same-day NO-GOs Mon 5/11** (GLW 09:00 + DASH 13:00 + ARM post-DASH + SMCI post-ARM + WHR post-SMCI + **FLEX post-WHR**) — MATERIALLY EXCEEDS Thu 5/7 / Fri 5/8 same-day 3+4-NO-GO precedent ceilings = NEW ALL-TIME HIGH-WATER MARK. Tue 5/12: CEG re-screen 09:00 + UBER 11:00 + ZTS + SHAK + DDOG 14:00 + FTNT 15:00 = 6 sessions stacked.
+- No calendar event scheduled to revisit FLEX within window.
+
+### References
+
+- Strategy.md (B section); AI_Trading_Foundation.md (2.4/2.13/2.20); Operating_Protocols.md §1/§2/§3/§8; Portfolio_Ledger.md; Regime_State.md.
+- Decision_Log.md 2026-05-07 AMD NO-GO (layered-1+3 THIRD INSTANCE at prior-most-extreme magnitude — direct precedent for FLEX SEVENTH INSTANCE at GREATER magnitude).
+- Decision_Log.md 2026-05-11 09:00 GLW NO-GO (layered-1+3 variant FOURTH INSTANCE + peer-cross-section-DECLINE + move HELD AND EXTENDED Day 2).
+- Decision_Log.md 2026-05-07 PINS NO-GO (layered-1+3 SECOND INSTANCE).
+- Decision_Log.md 2026-05-06 AXSM NO-GO (layered-1+3 FIRST INSTANCE).
+- Decision_Log.md 2026-05-08 TSN NO-GO (layered-1+3+4 first instance).
+- Decision_Log.md 2026-05-11 ARM NO-GO (layered-1+3+4 second instance + negative-direction reaction).
+- Decision_Log.md 2026-05-11 SMCI NO-GO (single-pattern 4 variant 4d + +24.54% prior-most-extreme positive-direction reference).
+- Decision_Log.md 2026-05-11 WHR NO-GO (variant 4c second instance + dividend-suspension overlay).
+- FLEX Q4 FY26 + Full FY26 results press release IR (May 6 BMO); Motley Fool/Alpha Spread transcripts; Investing.com / Yahoo / PRNewswire / StockTitan coverage; StocksToTrade AI Spin-Off coverage; Benzinga / Public.com / TradingView / CNN analyst ratings + price targets; stockanalysis.com FLEX historical-prices (primary verified Mon 5/4 $91.84 / Tue $96.45 / Wed $134.73 / Thu $133.01 / Fri $142.17).
+
+### Theater-check on this orchestrator review
+
+(a) **Criterion 1 measurement correct?** Yes. BMO-print Wed 5/6; canonical Day-0 close-to-close = Tue 5/5 $96.45 → Wed 5/6 $134.73 = +39.69% (primary-source verified). Cushion 7.94× over 5% floor = NEW HIGH-WATER MARK.
+
+(b) **Sub-pattern 1 layered-1+3 SEVENTH INSTANCE at MOST-EXTREME magnitude routing justified?** Yes. Layer 1 JPM +90.5% MEGA-raise (LARGEST single-firm PT raise observed; exceeds AMD-Goldman +88% prior record) + KeyBanc $180 + sub-pattern 1 fingerprint. Layer 3 multi-month YTD ~3× LTM rally + Tue +5.02% pre-print pop = sub-pattern 3 absorbed-narrative fingerprint. Layered-1+3 SEVENTH INSTANCE confirmed.
+
+(c) **Were NEW evidence layers correctly identified?** Yes. Three NEW evidence layers: (i) concurrent CPI spin-off corporate-action announcement (~9-12 month resolution timeline; structural value-realization expectation embedded in +39.69% reaction); (ii) Reliability Solutions segment SOFTNESS (FY26 revenue decline guidance = bear-case offset to CPI growth narrative); (iii) move HELD AND EXTENDED through Day-2 at NEW MAXIMUM ABSOLUTE-EXTENSION magnitude (+$7.44 / +5.52% beyond Day-0 close = exceeds GLW prior $5.37 / +2.96% reference).
+
+(d) **Was criterion 3 closed-list rev 14 analysis exhaustive?** Yes. All options examined: (a) numerical PT chase = sub-pattern 1 trap + KL #11 thin-margin; (b) Q1 FY27 ~late-July likely outside 60-day window from 5/6 = 7/6; FOMC mismatch; FDA N/A; (b) S&P 500 + Nasdaq 100 + Russell 1000 already included; spin-off completion target Q1 calendar 2027 = ~9-12 months outside window. Absent admissible target.
+
+(e) **LONG framing steel-manned?** Yes — 7 distinct rebuttals to the structurally-substantial beat-and-raise + spin-off + AI-data-center-supplier narrative. Defeated on multiple convergent grounds.
+
+(f) **SHORT framing dismissed properly?** Yes — 5 distinct axes (η) 14→15 NO-GO B-short string + 2.20-trap MAXIMUM severity; (θ) +25% stop binds within PT cluster + 5-7 gap-up vectors; (ι) Day-2 EXTENSION contradicts mean-reversion-down; (κ) PT cluster + spin-off-value-realization create structural floor; (λ) criterion 3 absent SHORT target.
+
+(g) **KL #12 assessed?** Yes — 4-long-book pairwise avg ~0.25-0.35 = FAVORABLE; secondary; does NOT reinforce NO-GO direction; criterion 4 binds independent.
+
+(h) **Was the most-extreme-magnitude question rigorously addressed?** Yes — the +39.69% Day-0 + JPM +90.5% mega-raise + Day-2 EXTENSION at +5.52% absolute beyond Day-0 close constitute NEW HIGH-WATER MARKS on three independent magnitude dimensions, all supporting the canonical sub-pattern 1 saturation interpretation (information-driven repricing already executed; no remaining mean-reversion edge LONG; SHORT thesis structurally implausible against multi-vector upside floor). Magnitude alone does NOT flip the disposition direction; it CONFIRMS the sub-pattern routing at maximum severity.
+
+(i) **Deferral considered?** No — criterion 4 dual-framing decisive failure + criterion 3 closed-list absent target = clean NO-GO.
+
+Modulo these nine considerations, the orchestrator review converges on NO-GO with HIGH-VERY-HIGH (~90-95%) confidence — between AMD precedent conviction (~90-95%) and SMCI conviction (~85-90%); upper-range given all-time-high magnitudes on layer 1 + Day-0 + Day-2-extension dimensions.
+
+### Compaction-survival note
+
+**Strategy B FLEX Q4-FY26-print disposition 2026-05-11 ~post-WHR (calendar slot 15:00 MT, rescheduled from Fri 5/8 13:00):** **NO-GO (DECLINE) via criterion 4 dual-framing decisive failure with sub-pattern 1 layered-1+3 variant SEVENTH INSTANCE at MOST-EXTREME-MAGNITUDE-EVER + criterion 3 closed-list rev 14 absent admissible target.**
+
+**Event details (Wed 2026-05-06 BMO):** Flex Q4 FY26 + Full FY26 results — Q4 adj EPS $0.93 vs cons +8.1% beat; Q4 revenue $7.5B; Full FY26 revenue $27.9B (+8% Y/Y); Full FY26 adj EPS $3.30 (+25%) RECORD; FY26 FCF ~$1.1B. **FY27 guide raise:** revenue $32.3-33.8B (+18% midpoint above-consensus); adj EPS $4.21-4.51. **CPI segment +38% FY26; +65-75% expected FY27; +80%+ FY28** with Google + hyperscalers + colos + neoclouds + utilities customer concentration. **CPI Spin-off announcement** — Flex announced intent to spin off CPI segment into new publicly traded company; target completion Q1 calendar 2027 (~9-12 months). **Reliability Solutions softness** — anticipated FY26 revenue decline guidance.
+
+**Stock price action (primary-source verified via stockanalysis.com historical-prices):** Mon 5/4 $91.84 (+0.15%) / Tue 5/5 $96.45 (+5.02% — pre-print pop) / **Wed 5/6 $134.73 (+39.69% Day-0 canonical BMO C/C — NEW HIGH-WATER MARK for positive-direction post-print magnitude; exceeds SMCI prior +24.54% and AMD prior +17.77% records)** / Thu 5/7 $133.01 (-1.28% Day-1 modest fade) / Fri 5/8 $142.17 (+6.89% Day-2 RECOVERY + EXTENSION beyond Day-0 close). Net Tue→Fri = **+47.40% retention with EXTENSION through Day-2 = 119.4% retention vs Day-0 +39.69% gain**; absolute Day-2 extension $142.17 - $134.73 = **+$7.44 / +5.52% additional gain beyond Day-0 = NEW MAXIMUM ABSOLUTE-EXTENSION MAGNITUDE** (exceeds GLW prior $5.37/+2.96% reference).
+
+**Post-print sell-side PT-raise wave (sub-pattern 1 fingerprint at MOST-EXTREME magnitude):**
+- **JPMorgan $84 → $160 (+90.5%) on May 7** = NEW LARGEST single-firm PT raise observed in any B candidate this experiment cycle (exceeds AMD-Goldman $240→$450 +88% Hold→Buy prior record)
+- **KeyBanc PT $180 issued May 7** (raise from prior $90-100 range estimate = +80-100% raise magnitude)
+- Multiple firms re-rating against prior consensus $69.67 (12-analyst mean)
+- Post-raise PT cluster ~$150-180; stock at Fri $142.17 = +13-27% implied upside (thin against 2.13 ~30% systematic-optimism residual)
+
+**Pre-event rally context (sub-pattern 3 fingerprint):** Tue 5/5 +5.02% pre-print pop ($91.84 → $96.45) + multi-month YTD ~3× LTM appreciation (stock ~$30 a year ago → ~$96 pre-print) absorbing AI-data-center-supplier-multiple-expansion narrative throughout 2025-2026. Magnitude between AMD (+89% one-month / +245% one-year / +327% twelve-month) and GLW (+257.56% TTM / +140% 6-month / +101.8% YTD) precedents.
+
+**Daily.md / session-prompt non-binding corrections persisted:** (1) **Day-0 close-to-close magnitude +39.69%** verified primary-source (session-prompt "+33%" understated by ~6.7 percentage points / ~17% relative); (2) **market cap ~$50.8B at pre-print Wed close** / ~$53.6B at Fri close (session-prompt "$15-20B" understated by ~3× — pattern matches GLW/ARM session-prompt mcap-by-~3× non-binding corrections).
+
+**Conviction in NO-GO: HIGH-VERY-HIGH (~90-95%)** — between AMD precedent (~90-95%) and GLW/SMCI conviction (~85-90%); upper-range given NEW HIGH-WATER MARKS on three independent magnitude dimensions:
+- Layer 1 PT raise: JPM +90.5% > AMD-Goldman +88% prior record
+- Day-0 C/C: +39.69% > SMCI +24.54% prior positive-direction record
+- Day-2 absolute extension: +$7.44/+5.52% > GLW +$5.37/+2.96% prior record
+
+Theater-check CONVERGENT across all 9 review axes: sub-pattern routing (layered-1+3 seventh instance) + dual-framing dismissal + criterion 3 closed-list absent target + 3 new evidence layers (spin-off / Reliability softness / Day-2 absolute-extension) + KL #12 secondary observation + most-extreme-magnitude question rigorously addressed.
+
+**Sub-pattern routing taxonomy update.** **Sub-pattern 1 advances to 9 instances** (BE / CAT / AXSM / PINS / AMD / TSN / GLW / ARM / **FLEX**). **Layered-1+3 variant advances to 7 instances** (AXSM / PINS / AMD / TSN-layered-1+3+4 / GLW / ARM-layered-1+3+4 / **FLEX**). **Sub-pattern 1 most-extreme single-firm PT raise reference shifts to FLEX (JPM +90.5%) from prior AMD-Goldman +88% record.** **Sub-pattern 1 most-extreme positive-direction Day-0 C/C reference shifts to FLEX (+39.69%) from prior SMCI +24.54% record.** Sub-pattern 1 most-extreme Day-2 absolute-extension reference shifts to FLEX (+$7.44/+5.52% beyond Day-0 close) from prior GLW reference. Sub-pattern 3 most-extreme single-day pre-print rally reference remains ARM (+13.63% Wed pure pre-print rally); FLEX's Tue +5.02% pop more modest. **3 NEW evidence layers flagged for W5 sub-pattern taxonomy extraction:** (1) concurrent corporate-action-spin-off announcement (~9-12 month resolution timeline; structural value-realization expectation embedded in reaction); (2) segment-level mixed-information (CPI growth + Reliability softness offset = information-driven not pure sentiment); (3) Day-2 absolute-extension magnitude NEW HIGH-WATER MARK signal (+$7.44 absolute beyond Day-0 close). Pending second-instance validation per W5 taxonomy bootstrap rules for each.
+
+**Experiment Strategy B totals advance to 3 GO + 35 NO-GO = 7.9% / 92.1% hit rate** (from 3/34 = 8.1%/91.9% post-WHR). Long-direction NO-GO breakdown: criterion 1 mechanical 3; instrument-rule 2; **criterion 4 decisive advances to 30 with FLEX** (from 29). **The 14-NO-GO B-short precedent string extends to 15 with FLEX-SHORT formal dismissal.** 15-NO-GO B-short streak duration: 14 trading days (2026-04-23 BE through 2026-05-11 FLEX).
+
+**Strategy B sector cap usage at session-end 2026-05-11 ~post-WHR (6th same-day NO-GO):** unchanged from post-WHR. IT Services 1/3 (IBM); Health Care Facilities 1/3 (HCA); Comm Services / IMS 1/3 (META); **IT / Electronic Manufacturing Services 0/3** (FLEX would have been 1/3 sub-industry / IT-sector 1/3 → 2/3 within cap — averted); IT / Technology Hardware Storage & Peripherals 0/3 (post-SMCI); IT / Semiconductors 0/3 (post-ARM); IT / Electronic Components 0/3 (post-GLW); Consumer Discretionary / Restaurants 0/3 (post-DASH); Consumer Discretionary / Household Appliances 0/3 (post-WHR); other sub-industries 0/3. KL #12 FAVORABLE for FLEX (4-long-book pairwise avg ~0.25-0.35; comparable to SMCI/TSN-favorable baselines) — secondary; does NOT reinforce NO-GO direction; criterion 4 binds via sub-pattern 1 layered-1+3 independent.
+
+**No order staged. No portfolio-state change.** 2% next-trade sizing $37.77 unchanged. Window expires Wed 2026-05-20. AMAT Q2 print Thu 5/14 + NVDA Q1 FQ27 print Wed 5/20 + AVGO Q2 print Wed 6/4 = AI-infrastructure peer prints WITHIN 60-day window create FLEX-sympathy gap-up vectors per KL #7; routine Daily.md scan picks up fresh ≥5% C/C trigger if FLEX-sympathy move materializes — distinct event evaluated per Operating Protocols §3.
+
+**Same-day B thesis-construction queue saturation status:** GLW 09:00 ✓ + DASH 13:00 ✓ + ARM (post-DASH) ✓ + SMCI (post-ARM 13:00) ✓ + WHR (post-SMCI 14:00) ✓ + **FLEX (post-WHR, calendar 15:00 MT) ✓** = **6 same-day NO-GOs Mon 5/11** = NEW ALL-TIME HIGH-WATER MARK (materially exceeds Thu 5/7 / Fri 5/8 same-day 3+4-NO-GO precedent ceilings). Tue 5/12: CEG re-screen 09:00 + UBER 11:00 + ZTS + SHAK + DDOG 14:00 + FTNT 15:00 = 6 sessions stacked Tue. Operator-capacity vigilance: 6-disposition same-day pace = ALL-TIME HIGH-WATER MARK; downstream sessions should consider deferral if operator capacity binds.
