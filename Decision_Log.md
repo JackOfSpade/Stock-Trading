@@ -9410,3 +9410,144 @@ Modulo these eleven considerations, the orchestrator review converges on NO-GO w
 **No order staged. No portfolio-state change.** 2% next-trade sizing $37.77 unchanged. Window expires Thu 2026-05-21 (today Tue 5/12 = Day 3 of 10).
 
 **Tue 5/12 same-day B thesis-construction queue saturation status post-SHAK:** CEG re-screen 09:00 ✓ + UBER 11:00 ✓ + ZTS 11:00 ✓ + **SHAK (this session, 13:00 calendar slot) ✓** + DDOG 14:00 + FTNT 15:00 — 4 same-day completions Tue + 2 remaining (DDOG/FTNT). Mon 5/11 6-disposition new-high-water-mark precedent allows for further Tue capacity (up to 6 same-day).
+
+---
+
+## 2026-05-12 (Tue, ~14:00 MT, DDOG session per calendar slot rescheduled from Fri 5/8 14:00 per D2 5/9 conversion) Strategy B thesis construction outcome — DDOG (Datadog) NO-GO via criterion 4 dual-framing decisive failure with **sub-pattern 1 CLEAN single-pattern routing INSTANCE #10 at MAXIMUM-MAGNITUDE-TIER** — **NEW MAXIMUM single-firm PT raise: Stifel $160→$305 +90.6% MEGA-raise** (marginally exceeds FLEX-JPM +90.5% prior record by 0.15pp at rounding-level; effectively TIED but technically NEW HIGH-WATER MARK) + 5+ firm canonical ratification wave + **NEW MAXIMUM Day-1 absolute-extension +$11.43/+6.06% beyond Day-0** (different measurement than FLEX Day-2 reference); CLEAN single-pattern routing (does NOT exhibit sub-pattern 3 pre-print rally fingerprint — Mon-Wed pre-print mild-decline trajectory). Compounded by criterion 3 closed-list rev 14 absent admissible convergence target; no order staged
+
+**Trigger:** Calendar-event-scheduled Strategy B thesis construction for DDOG, Tue 2026-05-12 14:00–14:45 MT (rescheduled from Fri 2026-05-08 14:00 MT per D2 5/9 conversion). Session run-sequenced after Tue 5/12 CEG re-screen 09:00 / UBER 11:00 / ZTS 11:00 / SHAK 13:00 four completions. Per Decision_Log 2026-05-07 D2 routing entry (d) DDOG dual-queue precedent: DDOG on A-queue (A router DO-NOT-ACTIVATE; not held position so no criterion 5 cross-strategy conflict); B thesis-construction proceeds regardless; since NO-GO, no conflict.
+
+**Session-prompt day-count clarification (non-binding correction):** Session prompt referenced "Day 1 (5/7) ~+28-30% intraday; Day 2 (5/8 Fri) close +31.33% to $188.73". Primary-source verification (stockanalysis.com): Thu 5/7 = Day 0 (close $188.73 +31.33% Day-0 BMO C/C); Fri 5/8 = Day 1 (close $200.16 +6.06% additional EXTENSION beyond Day-0). Day-count attribution corrected. Magnitude unambiguously clears 5% threshold by 6.27× cushion in POSITIVE direction (second-largest cushion observed after FLEX 7.94×).
+
+**Stock price action (primary-source verified):** Mon 5/4 $146.69 (+4.38%) / Tue 5/5 $145.73 (-0.65%) / Wed 5/6 $143.71 (-1.39%) — pre-print Wed (print BMO Thu 5/7) / **Thu 5/7 $188.73 (+31.33% Day-0 BMO canonical C/C)** / Fri 5/8 $200.16 (+6.06% Day-1 EXTENSION beyond Day-0). Net Wed→Fri = **+39.27% retention with EXTENSION through Day-1 = 125.4% retention vs Day-0**. Day-1 absolute extension = $200.16 - $188.73 = **+$11.43 / +6.06% additional gain beyond Day-0 = NEW MAXIMUM Day-1-absolute-extension reference** (FLEX Day-2 reference was +$7.44/+5.52% at different day-count measurement).
+
+**Print details (Thu 2026-05-07 BMO):** Q1 revenue $1.006B vs cons $961M-$994M +3.3-4.7% beat / +32% Y/Y; non-GAAP EPS $0.60 vs $0.42-$0.51 cons +18-43% beat; ARR >$4B milestone. **FY26 guide raised:** revenue $4.30-$4.34B (from prior $4.06-$4.10B = +5.9% midpoint above prior); non-GAAP OI $940-$980M; adj EPS $2.36-$2.44 (+14% midpoint above prior). CEO Pomel call: "AI drives rather than cannibalizes demand" (AI-narrative-ratification + bear-case-addressing); FedRAMP High certification (government-vertical TAM expansion); Sakana AI partnership (AI-platform forward-narrative ratification).
+
+**Post-print sell-side PT-raise wave (sub-pattern 1 fingerprint at NEW MAXIMUM single-firm PT raise tier):**
+- **Stifel Nicolaus $160 → $305 (+90.6% MEGA-raise) on May 8** = NEW LARGEST single-firm PT raise observed in any B candidate this experiment cycle (marginally exceeds FLEX-JPM $84→$160 +90.5% prior record by 0.15pp at rounding-level; effectively TIED but technically new high-water mark); Buy maintained
+- Morgan Stanley $180 → $225 (+25%) — Overweight
+- Wedbush $190 → $220 (+15.8%)
+- Citizens JMP UPGRADE Hold → Buy + PT $225 (rating + PT both bullish-recalibrated)
+- TD Cowen → $235 (raise from prior)
+- Wells Fargo $230 mentioned
+- **6+ firms with PTs raised in 24-72h post-event**; cluster mean ex-Stifel ~$227, median $225, with-Stifel-outlier $240; stock at Fri $200.16 vs cluster mean ex-Stifel = +13% implied upside (thin against KL #11 2.13 ~30% systematic-optimism residual); vs Stifel-outlier = +52% implied upside (sub-pattern 1 trap MAXIMUM SEVERITY)
+
+**Pre-event rally context check (sub-pattern 3 fingerprint NEGATIVE):** Pre-print Mon-Wed trajectory: $146.69 → $145.73 → $143.71 = -2.03% over 2 trading days; no pre-print rally absorption. DDOG ~$140-180 throughout 2025; pre-print $143.71 ~80% of 52-wk high. Compared to AMD/GLW/ARM/FLEX layered-1+3 multi-month YTD ~3× / 90% / 100%+ pre-print rally absorption, DDOG pre-print absorption MUCH LOWER. **Sub-pattern 3 fingerprint NEGATIVE; DDOG is CLEAN sub-pattern 1 single-pattern routing.** Fits BE 5/1 / CAT 5/2 CLEAN single-pattern 1 precedent at substantially higher magnitude tier.
+
+**Inputs:** Strategy.md (B section + criterion 5 cross-strategy-holding dual-queue precedent); AI_Trading_Foundation.md (2.4/2.13/2.20); Operating_Protocols.md §1/§2/§3/§8/§9; Portfolio_Ledger.md (state-as-of post-SHAK ~13:00 MT); Regime_State.md (B router ACTIVATE); Watchlist.md (DDOG on A-queue with concurrent-B-thesis-active dual-queue precedent per D2 5/7); Decision_Log.md precedents — **FLEX 5/11 (sub-pattern 1 layered-1+3 SEVENTH INSTANCE; JPM +90.5% prior largest single-firm PT raise record — direct-template precedent for DDOG INSTANCE #10 with Stifel +90.6% marginally-new-record)**; AMD 5/7 (layered-1+3 THIRD INSTANCE; Goldman +88%); GLW 5/11 (layered-1+3 FOURTH; Oppenheimer +75%); **BE 5/1 + CAT 5/2 (sub-pattern 1 CLEAN single-pattern routing — direct-template precedent for DDOG CLEAN single-pattern routing without layered-1+3)**; D2 5/7 entry (d) dual-queue precedent; 18-NO-GO B-short string post-SHAK.
+
+**Web-search primary documents:** Datadog Q1 2026 earnings release IR (Thu 5/7 BMO); Daily Political TD Cowen $235 + Morgan Stanley $180→$225 coverage; Benzinga analyst boost forecasts + analyst ratings; TipRanks DDOG surges 31% post-Q1 beat; TickerReport Q2 2026 guidance + CRO stock sale; Public.com forecast price target; stockanalysis.com DDOG historical-prices Mon 5/4 - Fri 5/8 (primary verified).
+
+### Decision
+
+**DDOG — NO-GO (DECLINE).** Criterion 4 dual-framing decisive failure with **sub-pattern 1 CLEAN single-pattern routing INSTANCE #10 at MAXIMUM-MAGNITUDE-TIER** — Stifel +90.6% MEGA-raise marginally exceeds FLEX-JPM +90.5% prior largest single-firm PT raise record (by 0.15pp = rounding-level effectively-tied but technically NEW HIGH-WATER MARK; LARGEST observed in any B candidate this experiment cycle). 5+ firm canonical post-print PT-raise wave (Stifel + Morgan Stanley + Wedbush + Citizens JMP upgrade + TD Cowen + Wells Fargo). Day-1 absolute extension +$11.43/+6.06% beyond Day-0 close = NEW MAXIMUM Day-1-absolute-extension reference (different measurement than FLEX Day-2 reference). The print itself is genuinely substantial multi-element corporate-action day (Q1 revenue +32% Y/Y beat + non-GAAP EPS +18-43% beat + ARR >$4B + FY26 guide raised +5.9% revenue midpoint + +14% adj EPS midpoint + CEO AI-narrative-ratification + FedRAMP High + Sakana AI partnership). Sub-pattern 3 fingerprint NEGATIVE (pre-print Mon-Wed mild-decline; no pre-print rally absorption like AMD/GLW/ARM/FLEX layered-1+3 cases). DDOG is CLEAN single-pattern 1 routing (fits BE 5/1 / CAT 5/2 precedent at substantially higher magnitude tier).
+
+Compounded by criterion 3 closed-list rev 14 absent admissible convergence target (numerical PT chase to Stifel $305 = +52% upside = sub-pattern 1 trap MAXIMUM SEVERITY; cluster mean $227 = +13% thin against KL #11 2.13 ~30% systematic-optimism; Q2 FY26 ~early-August OUTSIDE 60-day window from 5/7 = 7/6; FOMC mismatched; DDOG already in S&P 500 + Nasdaq 100 + Russell 1000 since 2024 — no fresh index-inclusion trigger).
+
+Criterion 1 mechanically clears at +31.33% Day-0 C/C 6.27× threshold cushion (second-largest after FLEX); criterion 5 sector cap clears (IT / Software / Application Software 0/3; IT-sector 1/3 → 2/3 within per-sector cap had GO disposed).
+
+### Mechanical eligibility detail
+
+- **Instrument rule:** DDOG = Datadog, Inc., NASDAQ-listed Class A common; US-incorporated Delaware; ~351M Class A shares; **mcap ~$70.3B at Fri 5/8 close $200.16** (~$66.3B Thu Day-0 $188.73; ~$50.4B pre-print Wed $143.71). Well above $2B floor by ~25-35× cushion. ADV multi-million-shares/day on S&P 500 + Nasdaq 100 component. Long-or-short permitted; 2% sizing $37.77; no options.
+- **Criterion 1:** Event Thu 5/7 BMO. Pre-event Wed $143.71 → Thu $188.73 = **+31.33% Day-0 BMO C/C** canonical (6.27× threshold cushion POSITIVE). Today Tue 5/12 = Day 3 of 10 (event Day 0 Thu 5/7; window expires Thu 5/21).
+- **Criterion 5:** No A position open (A router DO-NOT-ACTIVATE; DDOG on A-queue per Watchlist.md but A-queue is NOT held position per criterion 5 wording; D2 5/7 entry (d) dual-queue precedent explicit). GICS **Information Technology sector / Software industry / Application Software sub-industry** (verified). Currently 0/3 sub-industry; IT-sector 1/3 (IBM); DDOG-add yields IT-sector 2/3 within cap. KL #12: DDOG-IBM ~0.40-0.55 (both IT/Software-AI ELEVATED); DDOG-META ~0.40-0.55 (AI-narrative ELEVATED); DDOG-HCA ~0.10-0.20. 4-long-book pairwise avg ~0.30-0.45 = **KL #12 MODERATELY UNFAVORABLE** (approaches 0.5 trigger; comparable to ARM 0.35-0.45 / GLW 0.40-0.50 unfavorable baselines). Secondary; criterion 4 binds via sub-pattern 1 MAXIMUM-MAGNITUDE-TIER independent.
+
+### Decisive flaw analysis (criterion 4 sub-pattern 1 CLEAN single-pattern at MAXIMUM-MAGNITUDE-TIER + criterion 3 closed-list absent)
+
+**Sub-pattern 1 INSTANCE #10 CLEAN single-pattern routing distinguishing features:**
+- DDOG CLEAN sub-pattern 1 (no sub-pattern 3 pre-print rally fingerprint; pre-print mild-decline trajectory)
+- Fits BE 5/1 / CAT 5/2 CLEAN single-pattern precedent at substantially HIGHER magnitude tier
+- Sub-pattern 1 instance count: 10 (BE/CAT/AXSM/PINS/AMD/TSN/GLW/ARM/FLEX/**DDOG**)
+
+(α) **Sub-pattern 1 post-event sell-side bull ratification — NEW MAXIMUM MAGNITUDE with Stifel +90.6% MEGA-raise.** 6+ firms with PT raises in 24-72h; Stifel +90.6% NEW LARGEST single-firm PT raise (marginally exceeds FLEX-JPM +90.5%); cluster mean ex-Stifel $227 / median $225 / with-Stifel $240. Per BE/CAT/STX/MDLZ/AXSM/PINS/AMD/TSN/GLW/ARM/FLEX doctrine: post-event aggressive PT-cluster movement = information-driven repricing sell-side has executed; chasing PT-cluster as B convergence target = canonical sub-pattern 1 trap at MAXIMUM SEVERITY here.
+
+(β) **Sub-pattern 3 fingerprint NEGATIVE; CLEAN single-pattern 1 routing.** Pre-print Mon-Wed -2.03% mild-decline; no pre-print rally absorption like AMD/GLW/ARM/FLEX. DDOG distinguishes from layered-1+3 family; joins BE/CAT clean-routing precedent.
+
+(γ) **Move HELD AND EXTENDED through Day-1 at NEW MAXIMUM Day-1-absolute-extension reference.** Day-1 +$11.43/+6.06% beyond Day-0 close = NEW reference (FLEX Day-2 reference was +$7.44/+5.52% at different day-count). Market actively confirming new $200 equilibrium with additional buying at Day-1 = strongest no-remaining-mean-reversion-edge signal at Day-1 horizon observed.
+
+(δ) **Multi-element substantive corporate-action day with AI-narrative-ratification reinforcement.** Revenue +32% beat + EPS +18-43% beat + ARR >$4B + FY26 guide raised +5.9% revenue / +14% EPS midpoint + AI-narrative-ratification CEO commentary + FedRAMP High + Sakana AI partnership. Substantive print fully priced via +31.33% Day-0 + Day-1 EXTENSION.
+
+(ε) **AI-narrative cluster ratification 6th-instance.** DDOG joins GLW/ARM/SMCI/FLEX/AMD AI-narrative cluster; broad sell-side full re-rating across AI-infrastructure-tape cross-confirmed; further LONG framing structurally weak against fully-priced narrative.
+
+(ζ) **Stock TRADING WITHIN sell-side post-raise PT cluster at thin implied upside vs systematic-optimism.** Cluster mean ex-Stifel $227 / Fri $200.16 = +13% implied upside; thin against KL #11 2.13 ~30% systematic-optimism residual on AI-narrative names.
+
+(η) **Criterion 3 closed-list rev 14 absent admissible convergence target.** Numerical PT chase = sub-pattern 1 trap MAXIMUM SEVERITY (Stifel $305 chase); cluster mean $227 thin-margin; Q2 outside 60-day window; FOMC mismatched; already indexed S&P 500 + Nasdaq 100 + Russell 1000. **Absent admissible target.**
+
+**Steel-manning the affirmative LONG case (engaged seriously, defeated):** Substantive multi-element beat-and-raise + ARR milestone + AI-narrative-ratification + FedRAMP High + Sakana partnership + Stifel $305 PT + cluster mean $227 = +13-52% implied upside. **Counter-counter:** Stifel +90.6% MEGA-raise NEW LARGEST PT raise = MAXIMUM-SEVERITY sub-pattern 1 saturation; Day-1 EXTENSION confirms full information-priced; Day-0 +31.33% second-most-extreme magnitude; criterion 3 closed-list absent target; KL #12 MODERATELY UNFAVORABLE; AI-narrative cluster 6th-instance broad sell-side full re-rating. Steel-man does NOT defeat criterion-4-binding-constraint at MAXIMUM-MAGNITUDE-TIER.
+
+### SHORT framing dismissed (5 axes)
+
+(η) **18-NO-GO B-short string extends to 19 with DDOG-SHORT dismissal**; 2.20-trap MAXIMUM severity against multi-element beat-and-raise + 6-firm PT-raise wave + Stifel +90.6% MEGA-raise + AI-narrative cluster broad re-rating + risk-on regime.
+
+(θ) **+25% stop $250.20 within ex-Stifel cluster ($220-235); Stifel-outlier-$305 gap-up tail risk; KL #7 5-7 gap-up vectors** (AMAT 5/14 / NVDA 5/20 / AVGO 6/4 / JPM TMT / BofA Tech / DDOG-specific Sakana AI / FedRAMP wins / AI-platform product announcements).
+
+(ι) **Move EXTENDED through Day-1 at NEW MAXIMUM Day-1-absolute-extension contradicts mean-reversion-down thesis** — market did NOT fade, EXTENDED at higher absolute magnitude than FLEX Day-2 reference.
+
+(κ) **Stifel $305 + cluster $220-235 + AI-narrative-cluster 6th-instance + multi-vector upside-bias creates structural floor** compressing realistic SHORT continuation target; pre-event Wed $143.71 = -28% from Fri (full reversal of +39% retention; structurally implausible).
+
+(λ) **SHORT convergence target structurally weak under criterion 3 closed-list rev 14** — numerical -28% target implausible against multi-firm sell-side ratification; Q2 outside window; FOMC mismatched; no index-inclusion. Absent admissible SHORT target.
+
+### Effect on book
+
+No effect. No order staged. Strategy B remains ACTIVATE with 3 open longs (IBM/HCA/META). Sector cap unchanged: IT / Software / Application Software 0/3 (DDOG would have been 1/3); IT-sector 1/3 → 2/3 within cap had GO disposed; other sub-industries 0/3 modulo post-Mon-NO-GOs.
+
+**A-queue status: DDOG remains on A-queue** per Watchlist.md; A router DO-NOT-ACTIVATE; NO-GO B disposition does NOT remove DDOG from A queue per D2 5/7 entry (d) dual-queue precedent. No Watchlist.md update this session.
+
+### Pending queue updated
+
+- ~~DDOG B-thesis construction~~ COMPLETE — NO-GO sub-pattern 1 CLEAN single-pattern routing INSTANCE #10 at MAXIMUM-MAGNITUDE-TIER + criterion 3 closed-list absent target.
+- Window expires Thu 2026-05-21 (today Tue 5/12 = Day 3 of 10).
+- Tue 5/12 same-day completions: CEG re-screen 09:00 ✓ + UBER 11:00 ✓ + ZTS 11:00 ✓ + SHAK 13:00 ✓ + **DDOG (this session, 14:00) ✓** + FTNT 15:00 remaining = 5 completions + 1 remaining.
+- A-queue status preserved.
+
+### References
+
+- Strategy.md (B section + criterion 5 cross-strategy-holding dual-queue precedent); AI_Trading_Foundation.md; Operating_Protocols.md; Portfolio_Ledger.md; Regime_State.md; Watchlist.md (DDOG on A-queue).
+- Decision_Log.md 2026-05-11 FLEX NO-GO (sub-pattern 1 layered-1+3 SEVENTH INSTANCE; JPM +90.5% prior largest single-firm PT raise — direct-template precedent for DDOG #10).
+- Decision_Log.md 2026-05-07 AMD NO-GO (layered-1+3 THIRD; Goldman +88%).
+- Decision_Log.md 2026-05-11 GLW NO-GO (layered-1+3 FOURTH; Oppenheimer +75%).
+- Decision_Log.md 2026-05-01 BE NO-GO + 2026-05-02 CAT NO-GO (CLEAN single-pattern 1 precedents).
+- Decision_Log.md 2026-05-07 D2 entry (d) dual-queue precedent.
+- Datadog Q1 2026 earnings release IR; Daily Political TD Cowen $235 + Morgan Stanley $180→$225; Benzinga analyst boost forecasts; TipRanks DDOG surges 31%; TickerReport Q2 guidance + CRO stock sale; Public.com forecast price target; stockanalysis.com DDOG historical-prices (primary verified).
+
+### Theater-check on this orchestrator review
+
+(a) **Criterion 1 measurement correct?** Yes — Wed $143.71 → Thu $188.73 = +31.33% Day-0 BMO C/C primary-source verified; 6.27× threshold cushion = second-largest after FLEX 7.94×.
+
+(b) **Sub-pattern 1 INSTANCE #10 CLEAN routing at MAXIMUM-MAGNITUDE-TIER justified?** Yes — Stifel +90.6% MEGA marginally exceeds FLEX-JPM +90.5% prior record (0.15pp rounding-level new high-water mark) + 5+ firm canonical PT-raise wave + sub-pattern 3 fingerprint NEGATIVE (pre-print mild-decline; no rally absorption). Fits BE/CAT CLEAN single-pattern precedent at substantially higher magnitude tier.
+
+(c) **Day-1 absolute extension as NEW MAXIMUM reference?** Yes — Fri $200.16 - Thu $188.73 = +$11.43/+6.06% additional beyond Day-0 close = NEW MAXIMUM Day-1-absolute-extension reference (FLEX Day-2 reference was +$7.44/+5.52% at different day-count measurement).
+
+(d) **Criterion 3 closed-list analysis exhaustive?** Yes — PT chase = sub-pattern 1 trap MAXIMUM SEVERITY (Stifel $305) + KL #11 thin-margin (cluster mean $227); Q2 outside window; FOMC mismatched; already indexed. Absent admissible target.
+
+(e) **LONG framing steel-manned?** Yes — multi-element beat-and-raise + ARR + AI-ratification + FedRAMP + Sakana + +13-52% PT upside. Defeated on MAX-MAG sub-pattern 1 + Day-1 EXTENSION + criterion 3 absent + AI cluster 6th-instance + KL #12 unfavorable.
+
+(f) **SHORT framing dismissed properly?** Yes — 18→19 NO-GO B-short string + 2.20-trap + +25% stop within cluster + Stifel-outlier gap-up tail + 5-7 KL #7 vectors + Day-1 EXTENSION contradicts mean-reversion + cluster floor + criterion 3 absent SHORT target.
+
+(g) **KL #12 assessed?** Yes — 4-long-book pairwise avg ~0.30-0.45 MODERATELY UNFAVORABLE; secondary.
+
+(h) **A-queue / dual-queue precedent handled correctly?** Yes — DDOG on A-queue; A router DO-NOT-ACTIVATE; not held position; no criterion 5 conflict; B thesis-construction proceeded per D2 5/7 entry (d); NO-GO B disposition does not remove DDOG from A queue.
+
+(i) **AI-narrative cluster ratification 6th-instance noted?** Yes — DDOG joins GLW/ARM/SMCI/FLEX/AMD cluster; broad sell-side full re-rating cross-confirmed.
+
+(j) **Most-extreme-magnitude question rigorously addressed?** Yes — Stifel +90.6% NEW HIGH-WATER MARK + Day-1 absolute extension NEW MAXIMUM + Day-0 +31.33% second-most-extreme; three independent magnitude dimensions at maximum-tier; magnitude alone CONFIRMS sub-pattern 1 saturation routing.
+
+(k) **Deferral considered?** No — clean NO-GO; no information gap.
+
+Modulo these eleven considerations, the orchestrator review converges on NO-GO with HIGH-VERY-HIGH (~85-95%) confidence — between FLEX (~90-95%) and AMD (~90-95%); upper-range given NEW MAXIMUM Stifel +90.6% + NEW MAXIMUM Day-1-absolute-extension + second-most-extreme Day-0 + AI-narrative cluster 6th-instance.
+
+### Compaction-survival note
+
+**Strategy B DDOG Q1-2026-print disposition 2026-05-12 ~14:00 MT:** **NO-GO via criterion 4 dual-framing decisive failure with sub-pattern 1 CLEAN single-pattern routing INSTANCE #10 at MAXIMUM-MAGNITUDE-TIER + criterion 3 closed-list absent target.**
+
+**Sub-pattern routing taxonomy update.** **Sub-pattern 1 advances to 10 instances** (BE/CAT/AXSM/PINS/AMD/TSN/GLW/ARM/FLEX/**DDOG**). Layered-1+3 variant unchanged at 7 instances (DDOG CLEAN single-pattern routing). **Sub-pattern 1 most-extreme single-firm PT raise reference shifts to DDOG-Stifel +90.6%** (marginally exceeds FLEX-JPM +90.5% by 0.15pp rounding-level). **Sub-pattern 1 most-extreme Day-1-absolute-extension reference established at DDOG +$11.43/+6.06% beyond Day-0** (complementary to FLEX Day-2 reference). **AI-narrative cluster ratification advances to 6 instances** (GLW/ARM/SMCI/FLEX/AMD/**DDOG**).
+
+**Experiment Strategy B totals advance to 3 GO + 39 NO-GO = 7.1% / 92.9% hit rate** (from 3/38 = 7.3%/92.7% post-SHAK); criterion 4 decisive 34 (from 33); **18-NO-GO B-short string extends to 19** with DDOG formal criterion 4 dismissal.
+
+**Strategy B sector cap usage at session-end post-DDOG:** unchanged. IT / Software / Application Software 0/3 (DDOG would have been 1/3 sub-industry / IT-sector 1/3 → 2/3 within cap had GO disposed). KL #12 MODERATELY UNFAVORABLE (4-long pairwise avg ~0.30-0.45) — secondary.
+
+**A-queue status: DDOG remains on A-queue** per Watchlist.md per D2 5/7 dual-queue precedent.
+
+**No order staged. No portfolio-state change.** Window expires Thu 2026-05-21.
+
+**Tue 5/12 same-day post-DDOG queue saturation:** CEG re-screen ✓ + UBER ✓ + ZTS ✓ + SHAK ✓ + **DDOG ✓** + FTNT 15:00 remaining = **5 same-day completions + 1 remaining**; equals Mon 5/11 6-disposition new-high-water-mark precedent if FTNT completes.
