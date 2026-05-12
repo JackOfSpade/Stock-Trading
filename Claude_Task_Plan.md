@@ -347,8 +347,15 @@ Read access scope: Calendar Hygiene. Read all live project files. Do NOT read or
 
 Reconcile Google Calendar against current state. Recurring cadence work (D1, D2, ..., A3) is handled by routines and is NOT placed on calendar. The calendar is exclusively for one-off `[Claude]` events.
 
+DATE ANCHOR: "Today" is the current system date in America/Denver. Do NOT infer today from file timestamps (Decision_Log entry headers, Portfolio_Ledger "Last updated", etc.) — those may be forward-dated, templated, or recovery-artifact content. If the system date appears to conflict with project-file timestamps, trust the system date and flag the conflict in chat output.
+
 Walk all `[Claude]` events in the next 90 days:
-- Delete events whose triggering condition has passed (e.g., fill-capture events for orders that have already been reconciled into Portfolio_Ledger.md; thesis-construction events for tickers that have been entered, declined, or no longer fit eligibility; research-deferral checkpoints whose underlying position has been exited).
+- DELETE thesis-construction events when ANY of:
+  (a) A Decision_Log GO or NO-GO disposition entry exists for the ticker dated on or after the underlying trigger event-date (handles operator early-execution: session completed before the scheduled calendar slot).
+  (b) The ticker has been entered (now in Portfolio_Ledger open positions) or is otherwise no longer eligible (e.g., A queue promotion, archived).
+  (c) The candidate's entry window has fully closed (Strategy B: 10 trading days from event; Strategy A: 6 months from catalyst date or catalyst passed) AND no GO disposition exists.
+- DELETE other event types when their triggering condition has passed (e.g., fill-capture events for orders already reconciled into Portfolio_Ledger.md; research-deferral checkpoints whose underlying position has been exited).
+- DO NOT delete a thesis-construction event solely because its datetime is in the past. A past unfired event with active window and no Decision_Log disposition is a MISSED session, not a stale one — flag it in chat output for the next D2 to re-route, rather than silently deleting it.
 - Update events whose timing or prompt content is stale (e.g., a thesis-construction event for a Strategy B candidate whose 10-day entry window has shifted; a foundation-change assessment whose strategies-affected list has changed since the underlying Q3/A1 finding).
 - Confirm pending events have correct prompt text in their descriptions — descriptions must be self-contained so the human can paste directly into a fresh Claude chat.
 - Confirm per-event notifications are set to fire at event-time.
