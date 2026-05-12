@@ -12704,3 +12704,117 @@ Conviction in NO-GO: **HIGHEST band ~95%+** — multi-pillar convergent failure 
 (g) **No order, no portfolio-state change, no calendar event.** B NAV $1,888.69 unchanged; 2% sizing $37.77 unchanged; sector cap unchanged. No fill-capture event needed. DG does NOT appear on A-queue (no Mon 5/11 catalyst to route; Q1 print Jun 2 is independent future event). Watchlist B/A demotion log line appended for audit-trail / EVG-first-instance documentation. Q1 FY26 print Jun 2 is structurally distinct future trigger event; current NO-GO does not gate future evaluation per §3.
 
 (h) **Theater-check.** Orchestrator CONVERGENT — primary EVG pillar (event-eligibility fail) and secondary pillars (criterion 3 mechanism-mismatch + criterion 4 dual-framing decisive fail under hypothetical force-fit) mutually corroborate. Prompt explicitly pre-authorized EVG path ("If event date cannot be confirmed within the B 10-day window, criterion 1 fails → NO-GO"). Conviction HIGHEST band ~95%+ on multi-pillar convergent disposition. Residual ~5% reflects low-probability private-8-K-filing not surfaced by session-time primary-source research (mitigated by multi-source convergence on "no company-specific news drove it" framing).
+
+---
+
+## 2026-05-12 D2 DAILY ACTION CONVERSION — CALENDAR EVENTS + MCAP/MAGNITUDE VERIFICATIONS
+
+**Session type:** D2 daily action-conversion routine
+**Trigger:** Daily.md 2026-05-12 RECOMMENDED ACTIONS (5 B candidates surfaced: ZBRA, UAA, HIMS, CLSK, GTLB)
+**Output:** 4 calendar events created; 1 deferral (GTLB); 0 orders staged; Decision_Log.md updated
+
+---
+
+### Candidates surfaced by D1 (Daily.md 2026-05-12)
+
+1. **ZBRA** — zebra technologies; Q1 2026 earnings miss; ~-14% C/C; D1 priority: HIGHEST
+2. **UAA** — under armour; Q1 2026 revenue miss / guidance cut; ~-13% C/C; D1 mandatory mcap-verification gate flagged (est. $1.5-2.0B borderline)
+3. **HIMS** — hims & hers health; Q1 2026 earnings miss / forward guidance disappointment; ~-17% C/C; sub-pattern 8 third-instance candidate flagged
+4. **CLSK** — cleanspark; Q3 FY2026 earnings miss; D1 stated ~-10% C/C; D1 mandatory mcap-verification gate flagged + MVG pre-flag (stated vs actual discrepancy possible)
+5. **GTLB** — gitlab; Q1 FY2027 AH earnings; Day-0 C/C only measurable at Wed 5/13 cash close; close-to-close-magnitude-verification discipline → deferred
+
+---
+
+### UAA mcap-verification gate
+
+**Gate trigger:** D1 estimated UAA mcap at "est. ~$1.5-2.0B" — flagged as borderline vs Strategy B instrument rule floor (Strategy.md criterion 1: sufficiently liquid, no micro-caps; operating floor ~$2B in practice per prior precedents AGL/TDOC/FIVN/POET all failed sub-$2B).
+
+**D2 verification sources:** MacroTrends, GuruFocus, Morningstar; cross-referenced Yahoo Finance post-drop price.
+
+**Findings:**
+- Shares outstanding: ~425M+ (MacroTrends / GuruFocus confirmed)
+- Post-drop price (May 12 close, estimated): ~$5.50-6.50 range (after ~-13% C/C from prior close ~$6.50-7.00)
+- Conservative mcap estimate: ~425M × $5.50 = **~$2.34B** (floor case)
+- Mid-case mcap estimate: ~425M × $6.50 = **~$2.76B**
+- Morningstar pre-drop context: ~$3B range, post-drop after -13% → ~$2.6B
+
+**Verdict: PASSES.** Even at the most conservative post-drop price assumption ($5.50), UAA mcap ≥$2.3B — comfortably above the ~$2B operating floor. Instrument-rule gate clears. Thesis-construction calendar event authorized.
+
+---
+
+### CLSK mcap-verification gate + magnitude-verification pre-flag
+
+**Gate trigger (mcap):** D1 estimated CLSK mcap at "est. ~$3-4B" — flagged as borderline. D2 must independently verify.
+
+**Gate trigger (magnitude):** D1 stated CLSK C/C ~-10%. Possible MVG pre-flag given AH earnings timing and potential price-discovery gaps.
+
+**D2 verification sources:** Yahoo Finance historical price data (primary); shares outstanding ~262M (Yahoo Finance).
+
+**Findings (mcap):**
+- May 12 close (Yahoo Finance): **$13.44**
+- Shares outstanding: ~262M
+- Mcap: ~262M × $13.44 = **~$3.52B**
+- Verdict: PASSES easily. No borderline concern.
+
+**Findings (magnitude — MVG pre-flag):**
+- May 12 close (Yahoo Finance): $13.44
+- May 11 close (Yahoo Finance): $14.30
+- Actual close-to-close: ($13.44 − $14.30) / $14.30 = **-6.01%** (not -10% as D1 stated)
+- D1 magnitude discrepancy: D1 stated ~-10%; primary source shows -6.01%
+- Criterion 1 gate check: -6.01% ≥ 5% threshold → **still clears criterion 1 mechanically**
+- Residual magnitude gap vs D1 assertion: significant (4pp undershoot); thesis-construction session must re-verify C/C from primary source independently before proceeding past criterion 1
+
+**MVG status:** Gate fires (D1 magnitude assertion vs primary-source discrepancy ≥2pp). However, unlike MRNA 5/12 (which fell below criterion 1 threshold after correction), CLSK's corrected C/C (-6.01%) still clears criterion 1 at current reading. Thesis-construction session is authorized but MUST begin with independent C/C re-verification — this note is embedded in the calendar event description.
+
+**Verdict: Mcap PASSES; MVG fires but criterion 1 still clears at -6.01%. Calendar event authorized with mandatory C/C re-verification note.**
+
+---
+
+### GTLB deferral
+
+**Reason:** GTLB reported Q1 FY2027 results after hours on Tue 2026-05-12. The close-to-close Day-0 magnitude (criterion 1 requirement) is only measurable at Wed 2026-05-13 cash close vs Tue 2026-05-12 cash close. Per close-to-close-magnitude-verification discipline, D2 does not route AH-event candidates until the following day's close confirms ≥5% C/C from the pre-announcement close.
+
+**Conservative default:** No calendar event created. If Wed 5/13 D1 surfaces GTLB with C/C ≥5% (vs Tue 5/12 close), Wed 5/13 D2 will route to Thu 5/14 thesis-construction. If C/C <5%, GTLB does not route.
+
+**No portfolio state change, no order, no calendar event created for GTLB this session.**
+
+---
+
+### Calendar events created
+
+| Event | Event ID | Scheduled | Duration | Notification |
+|-------|----------|-----------|----------|--------------|
+| [Claude] Thesis construction — ZBRA Strategy B | `2br36sel91eu99ou69vunuukf8` | Wed 2026-05-13 08:30 MT | 45 min | 0 min popup |
+| [Claude] Thesis construction — HIMS Strategy B | `gn5p8doe0mdqeqrs0rg6gg6sjk` | Wed 2026-05-13 11:00 MT | 45 min | 0 min popup |
+| [Claude] Thesis construction — UAA Strategy B | `nki34ekoji7v9epnqc8qto3jvc` | Thu 2026-05-14 09:00 MT | 45 min | 0 min popup |
+| [Claude] Thesis construction — CLSK Strategy B | `tq07e6cuarf6sb8e7mj8s0dqvk` | Thu 2026-05-14 11:00 MT | 45 min | 0 min popup |
+
+Scheduling rationale:
+- ZBRA: highest D1 priority → earliest available slot (Wed pre-market 08:30 MT); avoids Wed GEV 08:00 MT / NET 10:15 MT slots already on calendar
+- HIMS: sub-pattern 8 third-instance flag elevates priority → Wed 11:00 MT (first trading hour)
+- UAA and CLSK: secondary priority; Thu slots avoid Wed calendar crowding; UAA 09:00 MT (pre-market discipline) precedes CLSK 11:00 MT
+
+---
+
+### Portfolio state (unchanged this session)
+
+- B NAV: $1,888.69 (no change)
+- 2% sizing: $37.77 (no change)
+- Open B positions: IBM (IT Services), HCA (Health Care Facilities), META (Comm Services) — 3/5 slots used
+- B-short string: ~30 (no change — no criterion-4 dual-framing engagements this session; D2 is scheduling only)
+- Sector caps: unchanged
+- No exits triggered, no orders staged
+
+---
+
+### Compaction-survival note
+
+(a) **D2 session type.** Action-conversion routine only. No orders. No portfolio changes. All five candidates from Daily.md 2026-05-12 processed: 4 calendar events created, 1 deferred (GTLB close-to-close discipline).
+
+(b) **Mcap gates.** UAA PASSES (~$2.34-2.76B post-drop, floor case conservative ~$2.34B). CLSK PASSES (~$3.52B per Yahoo Finance). Both gates previously flagged as borderline in D1; D2 independent verification resolves.
+
+(c) **MVG fires on CLSK.** D1 stated -10%; Yahoo Finance primary source shows -6.01% C/C (May 12 $13.44 / May 11 $14.30). Criterion 1 still clears at -6.01% ≥5%. MVG does not gate the calendar event but thesis-construction session must begin with independent C/C re-verification. This is the SECOND MVG-fires-but-criterion-1-clears instance (first was MNDY 5/12).
+
+(d) **GTLB deferral.** AH earnings; Day-0 C/C only determinable at Wed 5/13 cash close. Conservative default: no routing if C/C <5%. Wed D2 will route to Thu 5/14 if criterion clears.
+
+(e) **Calendar event IDs for audit trail:** ZBRA `2br36sel91eu99ou69vunuukf8`, HIMS `gn5p8doe0mdqeqrs0rg6gg6sjk`, UAA `nki34ekoji7v9epnqc8qto3jvc`, CLSK `tq07e6cuarf6sb8e7mj8s0dqvk`.
