@@ -12518,3 +12518,189 @@ Conviction in NO-GO: **HIGHEST band ~95%+** — multi-pillar convergent failure 
 (g) **B-short string and sub-pattern taxonomy.** This NO-GO is a MAGNITUDE-VERIFICATION-GATE primary disposition (cleanest single-axis pillar) — does NOT advance the criterion-4-dual-framing sub-pattern instance counts (sub-pattern 1 CLEAN family remains at 16 instances per VTRS 5/14 count; sub-pattern 8 candidate at 2 instances pending W5 promotion; etc.). Disposition class is magnitude-verification-gate-fail primary — joins DASH/AXSM/EQIX precedent class at 4th instance of c1-mechanical-fail (5th including MNDY 5/12 where gate fired but c1 still cleared post-correction). B-short string unchanged at 30 per primary-disposition-not-criterion-4 convention.
 
 (h) **No order, no portfolio-state change, no calendar event.** B NAV $1,888.69 unchanged; 2% sizing $37.77 unchanged; sector cap unchanged (Health Care / Biotechnology 0/3 unchanged; MRNA-add scenario would have been 1/3 within Strategy.md 3-per-sub-industry cap, with HC-sector advancing from 1/3 [HCA Health Care Facilities] to 2/3 [HCA + MRNA Biotechnology] within per-sector cap — all moot under NO-GO). No fill-capture event needed. MRNA does NOT appear on A-queue (does not fit A horizon). 10-day window remains open through ~Tue 5/26 (prompt) or ~Fri 5/22 (corrected); fresh-trigger re-evaluation reserved per §3 but high prior on multi-pillar decisive disposition. Theater-check CONVERGENT across both pillars; conviction HIGHEST band ~95%+.
+
+## 2026-05-12 (Tue, ~session-time MT, DG session per D2 5/11 conversion calendar slot, sequenced after MRNA NO-GO) Strategy B thesis construction outcome — DG (Dollar General Corp.) NO-GO via NOVEL EVENT-VERIFICATION-GATE FAILURE (FIRST INSTANCE of EVG disposition class) — prompt-asserted Mon 5/11 "soft fiscal 2026 guidance and leadership transition announcement" REFUTED by primary source (fiscal 2026 guidance issued Mar 12 at Q4 FY25 print; leadership transition announced Mar 20 — both OUTSIDE 10-day window); Mon 5/11 had NO DG-specific public event; the -7.64% close-to-close (primary source verified vs prompt-asserted -5.8%) was MACRO-DRIVEN broad-retail-sector sell-off (UMich May preliminary 48.2 ATL since 1952; gas >$4/gal on Iran conflict; broader consumer-stress framing) — structurally OUTSIDE Strategy B eligible event class per Strategy.md thesis paragraph enumerated event types (earnings/FDA/guidance update/regulatory action); no order staged
+
+**Trigger:** Daily.md 2026-05-11 §3 #5 surfaced DG fresh B-SHORT candidate (PROVISIONAL with explicit event-date verification gate per D2 routing) at asserted Mon 5/11 -5.8% Day-0 close-to-close C/C on alleged "soft fiscal 2026 guidance and leadership transition announcement"; mcap ~$20B+; 10-day post-event window per prompt: Day 0 Mon 2026-05-11 → closes Tue 2026-05-26 close. Session prompt explicitly anticipated the event-verification contingency: "If event date cannot be confirmed within the B 10-day window, criterion 1 fails → NO-GO."
+
+**Inputs:** Strategy.md Strategy B section (thesis paragraph **enumerated event class: "earnings, FDA decision, guidance update, regulatory action"** — the four eligible Strategy B trigger event classes; entry criteria 1-5; criterion 1 ≥5% C/C with public-event requirement; criterion 3 closed-list rev 14; criterion 4 dual-framing; pre-mortem rev 7 binding-constraint Constraint 2 2.20-textbook-rational-penalty + KL #4 slow-burn behavioral-regime exposure; short-specific exit rules: borrow-rate >10% / +25% stop-loss); AI_Trading_Foundation.md (2.4 / 2.13 / 2.14 / 2.20); Operating_Protocols.md §1 HOIP / §2 commission-disregarded / §3 NO-GO records context not barriers / §8 conviction-calibration-ladder; Portfolio_Ledger.md (B NAV $1,888.69 / 3 longs IBM IT Services / HCA Health Care Facilities / META Comm Services; cumulative B commissions $1.61; 2% sizing $37.77); Regime_State.md (B router ACTIVATE; A router DO-NOT-ACTIVATE; SPX/Nasdaq ATH Mon 5/11 risk-on regime; VIX NORMAL); Watchlist.md (no prior DG entry; INTC and prior B-short-declined string SHOP/PYPL/CDW context); Daily.md 2026-05-11 §3 #5 + §OPPORTUNITY CHECK #5 (DG provisional surfacing with explicit event-date-verification gate routing). **Decision_Log.md precedents critical:**
+- **MNDY 2026-05-12 NO-GO** — same-day magnitude-verification-gate-fired-but-criterion-1-still-cleared precedent.
+- **MRNA 2026-05-12 NO-GO** — same-day magnitude-verification-gate criterion-1 mechanical fail precedent (prompt-asserted +7.5% / primary-source -2.70%).
+- **DASH 2026-05-11 / AXSM 2026-05-02 / EQIX 2026-05-01 NO-GOs** — magnitude-verification-gate criterion-1 mechanical fail precedent class.
+- **AGL 2026-05-14 NO-GO** — criterion-1 instrument-rule mechanical fail precedent (different mechanical-gate-fail mode; established convention that mechanical-gate fails do NOT extend B-short string).
+- **INTC 2026-05-12 A-QUEUE ROUTING** — same-day structural-thesis-fit-gate precedent (distinct from EVG; INTC had a real WSJ event with structural-A-fit).
+- **B-short-declined string at 30** per MNDY 5/12 entry — recent risk-on-regime / criterion-4 SHORT-dismissal context (SHOP / PYPL / CDW / TWLO / UPS / NCLH / CRCL + multiple subsequent NO-GO instances).
+
+**Primary-source web research conducted at session time:**
+
+(a) **DG daily closing prices (primary source stockanalysis.com /stocks/dg/history/):**
+
+| Date | Close | Daily % Change |
+|------|-------|-----------------|
+| May 8 (Fri) | $113.29 | — |
+| **May 11 (Mon)** | **$104.63** | **-7.64%** |
+| May 12 (Tue) | $103.43 | -1.15% |
+
+(b) **Magnitude correction:** Session prompt + Daily.md 2026-05-11 asserted Mon 5/11 -5.8% C/C / 1.16× cushion / MODERATE-LOW magnitude; primary-source verifies Mon 5/11 **-7.64% C/C / 1.53× cushion / MODERATE-LOW-TO-MODERATE tier**. Note this is the OPPOSITE direction of prior MNDY/MRNA magnitude-verification-gate firings (MNDY/MRNA had prompts OVERSTATING magnitude; DG has prompt UNDERSTATING magnitude). Criterion 1 mechanical magnitude still clears with even more cushion than prompt-asserted — magnitude is NOT the binding gate here. **Event-verification gate** is.
+
+(c) **DG event verification (primary sources Globe and Mail / Business Wire / Motley Fool transcript / Yahoo Finance / TheStreet / tikr.com / DailyPolitical / GuruFocus):**
+
+- **Fiscal 2026 guidance:** Issued **March 12, 2026** at Q4 fiscal 2025 earnings print. Detail: net sales growth 3.7-4.2% / SSS growth 2.2-2.7% / diluted EPS $7.10-$7.35 / revenue $44.3-$44.5B. Importantly, **the FY26 guide is ABOVE consensus** ($7.10-$7.35 EPS vs consensus $6.79 = +4.6-8.2% above; $44.3-$44.5B revenue vs consensus $43.3B = +2.3-2.8% above) — i.e., the FY26 guide was BEAT-RAISE-CONSTRUCTIVE, NOT "soft" as the prompt asserted. Furthermore, the March 12 Q4 print itself was a CLEAN BEAT: $1.93 EPS vs $1.57 cons = +22.9% beat. (Source: Business Wire Q4 FY25 press release; Motley Fool transcript; Globe and Mail.)
+- **Leadership transition (CEO succession):** Announced **March 20, 2026**. JJ Fleeman appointed CEO effective Jan 1, 2027; Todd Vasos remains CEO until then and then serves as senior advisor through April 2, 2027. (Source: Globe and Mail press release.)
+- **Mon 5/11 DG-specific events:** **NONE.** No 8-K filed Mon 5/11. No fresh guidance update. No press release. No leadership change. No PT-cluster wave. Per Daily Political and tikr.com primary-source coverage: "no company-specific news drove [the -8.1% / -7.6% decline]."
+- **Mon 5/11 actual macro drivers (per tikr.com, Daily.md 2026-05-11):**
+  - UMich May 2026 preliminary consumer sentiment **48.2 = ALL-TIME LOW in data going back to 1952** (worst-ever reading)
+  - Gas prices surge **above $4/gal** due to Iran conflict disrupting energy markets (Brent +2.88% to $104.20; WTI intraday +4.96% to $100.20)
+  - **Broad retail-sector sell-off** on consumer-stress framing — "Investors sold the entire retail sector on fears that a squeezed consumer means weaker spending everywhere"
+  - Combined with DG's poor YTD trajectory (-20% YTD pre-Mon 5/11)
+- **Q1 fiscal 2026 print upcoming:** **Tue 2026-06-02 BMO** (per Business Wire announcement 5/5/26; Todd Vasos CEO + Donny Lau CFO hosting). 14 trading days from today Tue 5/12; within 60-day window from Mon 5/11 but OUTSIDE 10-day post-event window from Mon 5/11 (Q1 print itself is a structurally distinct future event with its own future 10-day window).
+
+(d) **Event-eligibility verification under Strategy.md Strategy B thesis paragraph:**
+
+Strategy.md Strategy B thesis paragraph enumerates the eligible Strategy B trigger event classes: *"AI's narrative synthesis (1.1, 1.4) identifies situations where the market's immediate reaction to a public event (earnings, FDA decision, guidance update, regulatory action) has over- or under-shot relative to the information content of the event."*
+
+The four enumerated eligible event classes are:
+1. Earnings (release / pre-announcement / 8-K material)
+2. FDA decision (PDUFA / approval / advisory committee)
+3. Guidance update (fresh 8-K cutting or raising forward guidance)
+4. Regulatory action (DOJ/FTC/SEC/EU/state-AG enforcement, antitrust ruling)
+
+The Mon 5/11 DG -7.64% move is NONE of these:
+- NOT earnings (Q4 FY25 print was Mar 12; Q1 FY26 print is upcoming Jun 2; no fresh print Mon 5/11)
+- NOT FDA decision (DG is consumer-staples retail; no FDA-class events applicable)
+- NOT guidance update (fiscal 2026 guidance was issued Mar 12 at Q4 print; NO fresh guidance update Mon 5/11; prompt's "soft fiscal 2026 guidance announcement" attribution is REFUTED — that guidance is two months old)
+- NOT regulatory action (no DG-specific regulatory event captured for Mon 5/11)
+
+The Mon 5/11 move is a **MACRO-DRIVEN BROAD-RETAIL-SECTOR SELL-OFF** on UMich consumer-sentiment ATL + gas-price spike on Iran conflict + broader consumer-stress framing — this is **NOT in Strategy B's enumerated eligible event class**. Per Strategy B pre-mortem rev 7 Constraint 2: B's mechanism is structurally designed for idiosyncratic post-public-event mispricing exploitation; macro-driven sector-rotation moves are EXCLUDED at the conceptual gate (Strategy B is NOT a sector-rotation strategy; the router's HIGH-VIX exclusion is the regime-level partial mitigation against macro-driven trigger contamination, and current VIX NORMAL state means the conceptual event-class gate remains the upstream filter).
+
+### Decision
+
+**DG — NO-GO (DECLINE) via novel EVENT-VERIFICATION-GATE FAILURE (FIRST INSTANCE of EVG disposition class) on BOTH SHORT and LONG framings.** No order staged.
+
+### Primary pillar — Event-verification-gate failure
+
+Per Strategy.md Strategy B thesis paragraph enumerated event class and criterion 1 requirement ("Public event occurred within the last 10 trading days, producing an immediate price reaction of ≥ 5% in either direction"):
+
+- **Prompt-asserted Mon 5/11 catalyst** (soft fiscal 2026 guidance + leadership transition announcement) is **REFUTED by primary source** — fiscal 2026 guidance was issued Mar 12; leadership transition was announced Mar 20. NEITHER occurred Mon 5/11.
+- **Both Mar 12 and Mar 20 events are LONG OUTSIDE the 10-day post-event window** — Mar 12 window expired ~Mar 26 (40+ trading days closed); Mar 20 window expired ~Apr 3 (29+ trading days closed). Reframing to either actual event date is NOT viable.
+- **Mon 5/11 had NO DG-specific public event** — no 8-K, no press release, no fresh guidance update, no leadership change, no regulatory action.
+- **The Mon 5/11 -7.64% move was MACRO-DRIVEN** — UMich consumer sentiment ATL + gas spike on Iran conflict + broad retail-sector sell-off on consumer-stress framing. This is OUTSIDE Strategy B's enumerated eligible event class (earnings/FDA/guidance update/regulatory action).
+
+Per the prompt's own explicit contingency rule: *"If event date cannot be confirmed within the B 10-day window, criterion 1 fails → NO-GO."*
+
+**Criterion 1 mechanically FAILS** on the event-eligibility axis (the price-action magnitude axis clears at -7.64%, but the underlying public-event requirement fails — no qualifying Strategy B event class within window).
+
+This is a NOVEL disposition class — **EVENT-VERIFICATION-GATE (EVG) FAILURE** — distinct from the established MAGNITUDE-VERIFICATION-GATE (MVG) class (DASH/AXSM/EQIX/MRNA where magnitude fails but event was real). DG 5/12 = **FIRST INSTANCE of EVG disposition class**.
+
+### Secondary pillar — Even if force-fit through criterion 1, criterion 3/4 fail decisively under either direction
+
+Hypothetical: if Strategy B criterion 1 were interpreted in its most permissive form (any ≥5% C/C move qualifies regardless of underlying event class), the analysis still produces NO-GO under criterion 3 and criterion 4:
+
+**Criterion 3 closed-list rev 14 (admissible target both directions analysis):**
+- Next earnings: Q1 FY26 print Jun 2, 2026 — within 60-day window from Mon 5/11 (60-day window closes ~Mon 7/13; Jun 2 is 22 days inside). Q1 print IS a structurally admissible closed-list target. **Criterion 3 mechanically clears** via Q1 print.
+- However, criterion 3 admissibility on the Jun 2 print as convergence target requires the post-Mon-5/11 mispricing thesis to be ANCHORED on Q1 print resolution. The prompt's framing was "soft fiscal 2026 guidance + leadership transition" as the mispricing source — that thesis structure does NOT convergence on Q1 print (Q1 print would reset the framework; it's not the resolution of a prior mispricing). The available admissible target is anchored on a structurally different thesis (Q1 print as fresh-information event, not Mon-5/11-mispricing-resolution event).
+
+**Criterion 4 dual-framing (decisive analysis under hypothetical force-fit):**
+
+(S1) **SHORT continuation thesis (fails decisively).** The Mon 5/11 -7.64% + Tue 5/12 -1.15% trajectory could suggest continued downside; however:
+- The move is **MACRO-DRIVEN** (UMich + gas + Iran) — once the macro driver normalizes (Iran de-escalation OR gas price stabilization OR UMich-revision-upward), DG would likely revert toward fundamental fair value
+- **DG actually has strong fundamentals**: Q4 FY25 beat ($1.93 EPS vs $1.57 cons +22.9%); FY26 guide ABOVE consensus ($7.10-$7.35 EPS vs $6.79 cons +4.6-8.2%; $44.3-$44.5B rev vs $43.3B cons +2.3-2.8%)
+- **DG is structurally consumer-defensive** — historically benefits from consumer-stress regimes (the very macro driver causing Mon 5/11 sell-off is the regime where DG historically OUTPERFORMS, not underperforms)
+- **2.20 textbook-rational-penalty trap on SHORT** — shorting a defensive name on a macro-driven sell-off is the canonical 2.20 mechanism (textbook-rational instinct that prices return to fundamental value applied INVERSELY against a name that's structurally aligned with the macro driver)
+- **B-short string at 30** consecutive NO-GOs in current risk-on regime (per MNDY 5/12 entry advancing 29→30) — fresh SHORT entry would advance string to 31 against well-established criterion-4-decisive pattern
+- **Short-side stop-loss +25% bound** at $130.79 from Mon 5/11 close $104.63 (or $103.43 Tue close × 1.25 = $129.29) — bounds single-trade loss at ~0.5% of B strategy portfolio in non-gap scenarios but exposes to KL #7 gap-up risk on any Iran-de-escalation news / UMich-revision / DG-Q1-print positive surprise within window
+- **Q1 FY26 print Jun 2** within 60-day window creates **gap-up squeeze risk** if Q1 print beats consensus (as Q4 did at +22.9%)
+
+(L1) **LONG mean-reversion thesis (fails decisively).** The Mon 5/11 -7.64% + Tue 5/12 -1.15% trajectory creates an apparent LONG-mean-reversion-toward-pre-event-$113.29 candidate; however:
+- **Day-1 continued -1.15% trajectory provides ZERO mean-reversion bounce evidence** — no under-extrapolation confirmation; the macro driver is sustained
+- **The macro drivers are NOT short-cycle resolvable** — UMich consumer sentiment ATL won't revert in days; Iran conflict / gas prices are structurally elevated; broader consumer-stress narrative is pre-Q1-print backdrop
+- **Q1 FY26 print Jun 2 within 60-day window creates pre-print drift risk** — LONG candidates pre-print typically face quality-of-print and forward-guide uncertainty even when consensus expectations are modest; in risk-off-consumer-stress backdrop the pre-print drift more likely DOWN than UP
+- **DG is at $103.43 vs pre-Mon-5/11 $113.29** — mean-reversion target of +9.5% within 60 days requires either (a) macro normalization (UMich revision + Iran de-escalation + gas drop) OR (b) a Q1 print blowout — both are speculative not anchored
+- **LONG entry in current macro-stress context** faces sector-rotation continuation risk (broad retail sell-off may extend if UMich June revision worsens or Iran kinetic escalation)
+- **Criterion 4 narrative-overfit (2.4)** — "macro-driven sell-off creates mean-reversion candidate in defensive name" is a textbook narrative-overfit pattern that the pre-mortem rev 7 Constraint 1 names as dominant failure mode for B mean-reversion theses
+
+Both LONG and SHORT framings of criterion 4 fail decisively even under hypothetical force-fit through criterion 1.
+
+### Adversarial counter-check on routing
+
+Considered four counter-arguments before locking the EVG NO-GO disposition:
+
+(1) **"The Mon 5/11 move price-magnitude is real and the macro driver is a 'public event' in the loose sense — criterion 1 should clear."** Counter: Strategy.md Strategy B thesis paragraph enumerates the eligible event class with explicit specificity (earnings/FDA/guidance update/regulatory action). The strict-enumeration architecture parallels criterion 3 closed-list rev 14 (which was tightened from rev 13 specifically to prevent operator-extensible event categories). Macro-driven sector rotation is structurally OUTSIDE this enumerated class. Allowing macro-driven moves to count as "events" would re-introduce the rev-12-to-rev-14-closure-history-attacked operator-extensible event-category escape that Strategy B's architecture was specifically designed to prevent (criterion 3 closed-list closure parallels event-class architecture).
+
+(2) **"The leadership transition Mar 20 'continues to overhang' the stock and Mon 5/11 is incremental sentiment on the same underlying narrative — could re-anchor event date to Mar 20 and treat Mon 5/11 as Day-N price-action continuation."** Counter: per Strategy.md criterion 1 "Public event occurred within the last 10 trading days" — the EVENT itself must be within 10 days, not the price-action effect. Mar 20 leadership transition event is 40+ trading days closed. The criterion-1-10-day-window architecture exists specifically to filter for FRESH event reactions, not slow-burn ongoing narratives — slow-burn narratives are Strategy A territory (long-horizon catalysts) or Strategy D territory (multi-year structural), NOT Strategy B.
+
+(3) **"Should route to A queue analogously to INTC 2026-05-12 (structural-thesis-fit-gate routing)."** Counter: INTC was routed to A because there was a REAL event (WSJ Apple-foundry scoop) with structural-narrative-fit to A's "structural narrative marker within 6 months" criterion. DG has NO real Mon 5/11 event to route — the prompt-asserted event doesn't exist. The Mon 5/11 -7.64% is sector-rotation noise from macro drivers, not an A-eligible structural-thesis catalyst. (DG could theoretically be A-queue-eligible on a separate thesis structure — e.g., Q1 FY26 print Jun 2 as forward-catalyst within 6-month A horizon with structural-discount-retail-defensive-positioning thesis — but that would be an independent A-queue evaluation, not a routing of this Mon 5/11 NO-GO disposition.)
+
+(4) **"Q1 FY26 print Jun 2 is within 60-day window from Mon 5/11; could anchor criterion 3 convergence target to Q1 print and proceed."** Counter: criterion 3 closed-list rev 14 admits "next earnings release" as a convergence target, but the convergence-target architecture requires the THESIS to resolve via the named event — i.e., the Mon 5/11 mispricing should be expected to resolve when Q1 print lands Jun 2. Since the Mon 5/11 move is MACRO-driven (not DG-specific), the Q1 print is not the natural resolution mechanism — Q1 print will resolve forward-guide and Q1-actuals questions, not the UMich/Iran/gas macro driver of Mon 5/11. The criterion-3-target-mechanism-match requirement is violated; this is a tertiary check but reinforces the EVG primary disposition.
+
+All four counter-arguments rebutted. NO-GO via EVG locked.
+
+### Effect on book
+
+No effect. No order staged for DG. Strategy B portfolio state unchanged (IBM open from 4/27, HCA open from 4/28, META open from 5/5; sector cap usage IT Services 1/3 / Health Care Facilities 1/3 / Comm Services 1/3). Consumer Staples / Food & Staples Retailing 0/3 sub-industry unchanged (DG-add scenario would have advanced to 1/3 within Strategy.md 3-per-sub-industry cap and Consumer Staples sector to 1/3 within 3-cap, all moot under NO-GO). B NAV $1,888.69 unchanged; cumulative B commissions $1.61 unchanged; 2% sizing $37.77 unchanged. Strategy A router DO-NOT-ACTIVATE; DG does NOT route to A queue (no real Mon 5/11 event to route; Q1 print Jun 2 is a future event with its own future evaluation track).
+
+### Pending queue updated
+
+DG does NOT advance to A queue (no real Mon 5/11 catalyst event to route; the prompt-asserted catalyst is refuted; Q1 FY26 print Jun 2 is a future event for independent evaluation).
+
+DG ADDED to Watchlist.md B/A demotion log as audit-trail entry — first instance of EVG (event-verification-gate) disposition class, distinct from MVG (magnitude-verification-gate) class. The 10-day-window framing is contested (no qualifying B event on Mon 5/11; window opening is itself moot), but per Operating_Protocols §3 fresh-trigger could merit fresh evaluation rule, the Q1 FY26 print Jun 2 is a future structurally-distinct trigger event that would warrant its own Strategy B thesis-construction evaluation (with its own fresh 10-day window starting Jun 2). The current NO-GO does not gate that future Q1-print evaluation per §3.
+
+### Theater-check on this orchestrator review
+
+Orchestrator independently re-evaluated whether the EVG-primary-disposition is overly aggressive (potentially declining a legitimate B thesis on technical event-class strictness when a macro-driven move on a defensive consumer-staples name could be a legitimate B opportunity). Counter: the secondary pillar (criterion 3 target-mechanism-mismatch + criterion 4 dual-framing decisive failure under hypothetical force-fit) confirms the same NO-GO outcome under multiple framings. Additionally, the prompt itself explicitly anticipated and authorized the EVG path: "If event date cannot be confirmed within the B 10-day window, criterion 1 fails → NO-GO." The orchestrator is faithfully executing the prompt's pre-authorized contingency, not making an aggressive interpretive call.
+
+Theater-check verdict: **CONVERGENT.** Primary pillar (EVG criterion 1 event-eligibility fail) and secondary pillar (criterion 3 mechanism-mismatch + criterion 4 dual-framing decisive fail under hypothetical force-fit) mutually corroborate. Conviction HIGHEST band ~95%+.
+
+### Conviction calibration
+
+Conviction in NO-GO: **HIGHEST band ~95%+** — multi-pillar convergent failure on the most upstream gate (event-eligibility) with secondary defense-in-depth on criterion 3 mechanism-mismatch and criterion 4 dual-framing decisive failure. The primary pillar is mechanical-fact-determinate (DG IR + Globe and Mail + Business Wire + tikr.com primary sources unanimously confirm: Mar 12 = Q4/FY25 print + FY26 guidance; Mar 20 = leadership transition; Mon 5/11 = NO DG-specific event; macro-driven only). The residual ~5% reflects the (low) possibility of a private 8-K filing in the few hours immediately before this session that my session-time research didn't surface (low likelihood given the multi-source convergence on "no company-specific news drove it" framing per tikr.com / Daily Political / TheStreet primary sources).
+
+### References
+
+- Strategy.md Strategy B thesis paragraph (enumerated event class: earnings / FDA decision / guidance update / regulatory action).
+- Strategy.md Strategy B entry criteria 1-5 + criterion 3 closed-list rev 14 + criterion 4 dual-framing + pre-mortem rev 7 binding constraints.
+- AI_Trading_Foundation.md 2.4 / 2.13 / 2.14 / 2.20 named risks.
+- Operating_Protocols.md §1 HOIP / §3 NO-GO records context not barriers / §8 conviction-calibration-ladder.
+- Portfolio_Ledger.md (B NAV $1,888.69 / 3 longs IBM/HCA/META; 2% sizing $37.77; Consumer Staples sub-industry 0/3 unchanged).
+- Regime_State.md (B router ACTIVATE; A router DO-NOT-ACTIVATE; SPX/Nasdaq ATH risk-on regime; VIX NORMAL).
+- Watchlist.md (no prior DG entry; INTC same-day A-queue addition; B-short-declined string SHOP/PYPL/CDW for context).
+- Daily.md 2026-05-11 §3 #5 + §OPPORTUNITY CHECK #5 (DG provisional surfacing + explicit event-date-verification gate routing instruction).
+- Decision_Log.md 2026-05-12 MRNA NO-GO (same-day magnitude-verification-gate criterion-1 mechanical fail precedent).
+- Decision_Log.md 2026-05-12 MNDY NO-GO (same-day magnitude-verification-gate-fired-but-c1-cleared precedent).
+- Decision_Log.md 2026-05-12 INTC A-QUEUE ROUTING (same-day structural-thesis-fit-gate routing precedent — distinguished from EVG).
+- Decision_Log.md 2026-05-11 DASH / 2026-05-02 AXSM / 2026-05-01 EQIX NO-GOs (MVG criterion-1 mechanical fail precedent class).
+- Decision_Log.md 2026-05-14 AGL NO-GO (criterion-1 mechanical-gate-fail-does-NOT-extend-B-short-string convention precedent).
+
+**Web-search primary documents verified this session:**
+- TheStreet 5/11 "Stock Market Today (May 11, 2026)" — sector framing context.
+- stockanalysis.com /stocks/dg/history/ — primary daily closing prices May 8-12 2026 (Fri 5/8 $113.29 / Mon 5/11 $104.63 / Tue 5/12 $103.43).
+- Globe and Mail 3/20/26: "Dollar General Announces CEO Succession and Leadership Transition" (Mar 20 leadership transition announcement primary source).
+- Business Wire 3/12/26: "Dollar General Corporation Reports Strong Fourth Quarter and Fiscal Year 2025 Results" (Mar 12 Q4 print + FY26 guidance primary source).
+- Business Wire 5/5/26: "Dollar General Corporation Announces Webcast of its First Quarter 2026 Earnings Conference Call" (Q1 FY26 print Jun 2 confirmation).
+- tikr.com "Dollar General Fell 7% This Week. Here's Why the Selloff May Be Overdone" — confirmation that Mon 5/11 move was MACRO-driven (UMich + gas + Iran), NOT company-specific.
+- Daily Political 5/11/26 "Dollar General (NYSE:DG) Shares Down 8.1% – What's Next?" — confirmation that "no company-specific news drove it."
+- Motley Fool DG Q4 2025 earnings transcript 3/12/26 — FY26 guidance details.
+- TipRanks DG earnings calendar — Q1 FY26 print Jun 2 confirmation.
+
+### Compaction-survival note
+
+(a) **Disposition class.** Strategy B DG Mon 5/11 prompt-asserted soft-fiscal-2026-guidance-and-leadership-transition event → **NO-GO (DECLINE) via NOVEL EVENT-VERIFICATION-GATE (EVG) FAILURE — FIRST INSTANCE of EVG disposition class** — prompt-asserted catalyst REFUTED by primary source (FY26 guidance issued Mar 12 at Q4 print; leadership transition announced Mar 20; both OUTSIDE 10-day window). Mon 5/11 had NO DG-specific public event; the -7.64% C/C was MACRO-driven (UMich May preliminary 48.2 ATL since 1952 + gas >$4/gal on Iran conflict + broad retail sector sell-off) — structurally OUTSIDE Strategy B enumerated eligible event class (earnings/FDA/guidance update/regulatory action per Strategy.md thesis paragraph).
+
+(b) **EVG vs MVG distinction.** This is a NEW disposition class — EVENT-VERIFICATION-GATE (EVG) — distinct from MAGNITUDE-VERIFICATION-GATE (MVG). MVG: prompt-asserted price magnitude is wrong (DASH/AXSM/EQIX/MRNA prior instances; MNDY gate-fired-but-c1-still-cleared). EVG: prompt-asserted event-type/event-date doesn't exist; underlying move is from non-Strategy-B-eligible event class. DG 5/12 = FIRST INSTANCE of EVG. Pending W5 cycle formal taxonomy promotion.
+
+(c) **Magnitude footnote (secondary).** Note that DG also exhibits a MAGNITUDE correction: prompt-asserted -5.8% vs primary-source-verified -7.64%. But this magnitude correction goes in the OPPOSITE direction from prior MVG instances — DG magnitude is LARGER than prompt-asserted, not smaller; criterion 1 still mechanically clears with more cushion (1.53× vs prompt-asserted 1.16×). MVG is NOT the binding gate here; EVG is.
+
+(d) **DG fundamentals context** (informational, not load-bearing for disposition):
+- Q4 FY25 print Mar 12: $1.93 EPS vs $1.57 cons (+22.9% beat) — STRONG
+- FY26 guidance Mar 12: net sales 3.7-4.2% growth / SSS 2.2-2.7% growth / EPS $7.10-$7.35 / rev $44.3-$44.5B — ABOVE consensus on both EPS ($6.79 cons; +4.6-8.2%) and rev ($43.3B cons; +2.3-2.8%)
+- Leadership transition Mar 20: JJ Fleeman (grocery retail veteran) appointed CEO eff Jan 1, 2027; Vasos stays through then + senior advisor through Apr 2, 2027
+- Mon 5/11 -20% YTD pre-event context — broader 2026 underperformance
+- Q1 FY26 print upcoming Jun 2 — within 60-day window from Mon 5/11 but structurally distinct future event
+
+(e) **Counter-arguments rebutted.** (1) macro-event-counts-as-event hypothesis rebutted on Strategy.md enumerated event class architecture; (2) re-anchor-to-Mar-20-leadership-transition rebutted on criterion-1-10-day-window strict-event-date architecture; (3) A-queue routing rebutted on no-real-event-to-route (distinct from INTC where event was real); (4) Q1-Jun-2-as-criterion-3-target rebutted on convergence-mechanism-mismatch.
+
+(f) **B-short string and sub-pattern taxonomy.** This NO-GO is an EVG primary disposition — does NOT advance the criterion-4-dual-framing sub-pattern instance counts (sub-pattern 1 CLEAN family unchanged at 16; sub-pattern 8 candidate unchanged at 2 pending W5; etc.). **B-short string unchanged at 30** per AGL 5/14 precedent + MRNA 5/12 precedent (mechanical-gate fails don't extend criterion-4 SHORT-direction string). Disposition class EVG joins MVG (DASH/AXSM/EQIX/MRNA) and instrument-rule (AGL/TDOC/FIVN/POET) precedent classes as upstream-gate-fail dispositions.
+
+(g) **No order, no portfolio-state change, no calendar event.** B NAV $1,888.69 unchanged; 2% sizing $37.77 unchanged; sector cap unchanged. No fill-capture event needed. DG does NOT appear on A-queue (no Mon 5/11 catalyst to route; Q1 print Jun 2 is independent future event). Watchlist B/A demotion log line appended for audit-trail / EVG-first-instance documentation. Q1 FY26 print Jun 2 is structurally distinct future trigger event; current NO-GO does not gate future evaluation per §3.
+
+(h) **Theater-check.** Orchestrator CONVERGENT — primary EVG pillar (event-eligibility fail) and secondary pillars (criterion 3 mechanism-mismatch + criterion 4 dual-framing decisive fail under hypothetical force-fit) mutually corroborate. Prompt explicitly pre-authorized EVG path ("If event date cannot be confirmed within the B 10-day window, criterion 1 fails → NO-GO"). Conviction HIGHEST band ~95%+ on multi-pillar convergent disposition. Residual ~5% reflects low-probability private-8-K-filing not surfaced by session-time primary-source research (mitigated by multi-source convergence on "no company-specific news drove it" framing).
