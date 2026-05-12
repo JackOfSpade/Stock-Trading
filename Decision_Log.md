@@ -12237,3 +12237,113 @@ Modulo these five considerations, orchestrator review converges on NO-GO via cri
 - Decision_Log.md FTNT 5/12 / PTC 5/14 / VTRS 5/14 NO-GOs (sub-pattern 1 CLEAN MODERATE-LOW-MAGNITUDE-TIER reference; MNDY distinguishes via PT-CUT inversion).
 - Watchlist.md B-short declined-at-D2 string (SHOP/PYPL/CDW/TWLO/UPS/NCLH/CRCL) — LONG-direction inversion mechanism reference for MNDY.
 - Web-search primary documents verified this session: stockanalysis.com MNDY historical-prices / Yahoo Finance MNDY / Motley Fool "Why Monday.com Stock Crushed it Today" / FinancialContent / Daily Political analyst PT list / Benzinga / Bain & Co SaaS sector reference / 24/7 Wall St ServiceNow SaaS-Pocalypse reference.
+
+## 2026-05-12 (Tue, ~session-time MT, INTC session per D2 5/11 conversion calendar slot) Strategy B thesis construction outcome — INTC (Intel Corp) ROUTED TO STRATEGY A QUEUE per MANDATORY THESIS-FIT GATE option (A) (multi-quarter foundry customer ramp narrative + Strategy B criterion 3 closed-list rev 14 mechanically absent admissible target within 60 days); no B thesis construction performed; no order staged
+
+**Trigger:** Daily.md 2026-05-11 §3 #2 surfaced INTC fresh B-LONG candidate at +5.7% Day-0 close-to-close Mon 5/11 on Wall Street Journal scoop reporting preliminary agreement with Apple to manufacture chips used in Apple devices; mcap $100B+; 30-day ADV well above $10M floor (mega-cap semis). 10-day post-event window: Day 0 Mon 2026-05-11 → closes Tue 2026-05-26 close (Memorial Day Mon 5/25 skipped). Session prompt invoked the **MANDATORY THESIS-FIT GATE** inserted explicitly at D2 routing per Daily.md 2026-05-11 §OPPORTUNITY CHECK #2 line 162 ("if thesis converges on multi-quarter foundry-customer ramp, hold for next A router ACTIVATE rather than enter B; if thesis converges on specific 60-day-window catalyst, proceed in B").
+
+**Inputs:** Strategy.md Strategy A section (lines 192-255 — thesis line 194-196 "catalyst within 6 months has narrative underpinnings not yet reflected in sell-side consensus or price...catalyst is structural rather than strictly date-specific"; A-vs-B differentiation line 200-201; entry criteria 1-6 including criterion 1 "Identified catalyst within 6 months: earnings cycle, regulatory timeline, product launch, restructuring event, analyst day, or structural narrative marker"; criterion 6 trailing-30-day momentum-deferral); Strategy.md Strategy B section (lines 258-318 — entry criteria 1-5; criterion 3 closed-list rev 14 strict-enumeration "next earnings release / next FDA decision date / next FOMC meeting / inclusion announcement in one of: S&P 500, Russell 1000, or Nasdaq 100" within 60 days; pre-mortem rev 7 binding-constraint Constraint 2 2.20 textbook-rational-penalty exposure + KL #4 slow-burn behavioral-regime exposure); Strategy B pre-mortem rev 7 forcing question (multi-quarter narrative dressed as 60-day mean-reversion thesis IS the canonical 2.4 / 2.20 escape that strict closure was designed to prevent per rev 13/14 closure history); Regime_State.md (B router ACTIVATE; A router DO-NOT-ACTIVATE since 2026-04-23 M1 — unblocks at next M1 ~2026-06-01 if SPY Trend flips UP from NEUTRAL AND Breadth HEALTHY sustained); Watchlist.md (Strategy A queue 16 names pre-INTC: CAT/LLY/QCOM/AAPL/DDOG/AKAM/NVDA/CSCO/AMAT/HD/TGT/WMT/AVGO/ORCL/ADBE/MU); Quarterly_D_Candidates.md #9 INTC entry (sector IT/Semiconductors, thesis category 1+3 product-cycle + management-execution; "Lip-Bu Tan turnaround; 18A HVM ramping, yields +7-8%/month per CEO disclosure; 14A external customer commitments targeted 2H 2026; Panther Lake ramp; equipment orders +50% YoY" — corroborating multi-quarter / 12-24 month structural-narrative profile); Operating_Protocols.md §1 HOIP / §2 commission-disregarded / §3 NO-GO records context not barriers / §9 deferral discipline; Decision_Log.md 2026-04-27 (Mon, post-close) INTC NO-GO precedent (Q1 2026 print +23.6% 4/24 Day-0; criterion 4 decisive on both LONG and SHORT via sell-side immediate ratification + cross-sectional semi-sector confirmation — structurally distinct event from Mon 5/11 WSJ-foundry scoop); Daily.md 2026-05-11 §3 #2 + §OPPORTUNITY CHECK #2 explicit thesis-fit gate routing.
+
+### Decision
+
+**INTC — ROUTED TO STRATEGY A QUEUE per MANDATORY THESIS-FIT GATE option (A). Full Strategy B thesis construction NOT performed (gate resolves at session open per protocol). No order staged.**
+
+### Thesis-fit gate decision logic
+
+The session-prompt's MANDATORY THESIS-FIT GATE specifies three options. Each evaluated against INTC on the WSJ Apple-foundry-preliminary-agreement event:
+
+**Gate option (B) — SPECIFIC 60-day binary catalyst test.** Fails on all five closed-list rev 14 admissible target classes:
+
+- **Next earnings release (Intel):** Intel Q2 2026 earnings historically reports in late-July (Q2 2025 was 2025-07-24; Q2 2024 was 2024-07-25; consistent late-July cadence). ~75-80 days from 2026-05-11 → **OUTSIDE 60-day window** (60-day window closes ~2026-07-10).
+- **Next earnings release (Apple — relevant counterparty):** Apple FY Q3 (calendar Q3) reports late-July (FY Q3 2025 reported 2025-07-31; consistent cadence). **OUTSIDE 60-day window.**
+- **Next FDA decision date:** N/A (Intel not FDA-regulated for the operative product).
+- **Next FOMC meeting:** 2026-06-16/17 within 60-day window mechanically, but **mechanism mismatch** — FOMC policy decisions do not resolve Intel-Apple foundry-agreement pricing. The closed-list admits FOMC as a convergence event only where rates/macro is the mechanism resolving the mispricing (canonical use: financials, rate-sensitive sectors). Intel/Apple foundry relationship is structurally independent of June FOMC outcome.
+- **Inclusion announcement in S&P 500 / Russell 1000 / Nasdaq 100:** INTC is **already a member of all three indexes** (S&P 500 long-standing constituent; Russell 1000 long-standing; Nasdaq 100 long-standing). No "inclusion announcement" is possible mechanically.
+- **Numerical price level:** any 60-day numerical price target rests substantively on the multi-quarter foundry transformation narrative (Apple-as-anchor-customer for 18A/14A nodes producing meaningful revenue → 12-24 month story). Setting a 60-day numerical target from this narrative IS the rev 13→rev 14 closure-history-attacked degenerate path ("Strategy A thesis pasted under Strategy B label"); the strict closure was specifically designed to prevent this escape (criterion 3 rev arc per Strategy.md line 281).
+
+**Gate option (B) FAILS.** No specific 60-day binary catalyst exists for this event.
+
+**Gate option (A) — multi-quarter foundry customer ramp narrative test.** All elements present:
+
+- **Apple as anchor foundry customer for Intel Foundry 18A/14A node ramp.** Apple historically uses TSMC for its chips (M-series silicon, A-series application processors). A switch (even partial) to Intel Foundry is a multi-year transition — qualification cycles, design-tape-outs, sample production, ramp to volume — typically 12-24+ months from preliminary-agreement to first material revenue.
+- **Intel Foundry structural pivot is 2021-onset multi-year story** (Gelsinger's IDM 2.0 announcement Mar 2021; foundry-customer wins ongoing under Tan continuation — see Quarterly_D_Candidates.md #9 entry: 18A HVM ramping with yields +7-8%/month per CEO disclosure; 14A external customer commitments targeted 2H 2026 ≈ 12-18 months from session date).
+- **No 60-day binary** that resolves the mispricing. Resolution timeline is years.
+- **Matches Strategy A thesis design intent precisely:** Strategy.md A §thesis (line 194-196) explicitly accommodates "structural rather than strictly date-specific" catalysts within 6 months horizon; entry criterion 1 explicitly enumerates "structural narrative marker" as eligible catalyst class; A-vs-B differentiation (line 200-201) places multi-quarter structural narratives in A's territory.
+
+**Gate option (A) FIRES.**
+
+**Gate option (C) conservative-default check:** even if marginal ambiguity were flagged (which is not the case here — the mechanical 60-day-window math is unambiguous and the structural narrative match is exact), option (C) routes identically to A queue. The routing is robust across the gate's three branches.
+
+### Independent corroborating pillar: criterion 3 closed-list rev 14 absent admissible target
+
+Even if the thesis-fit gate were not invoked, the same mechanical analysis would have terminated B thesis construction at criterion 3 (per Strategy.md rev 14 closure architecture). The mechanical-closure pillar (no eligible closed-list target within 60 days) and the structural-narrative pillar (multi-quarter foundry ramp) are mutually-reinforcing independent grounds for the A-queue routing. The thesis-fit gate primarily fires on the mechanical pillar; the structural-fit pillar is corroborative.
+
+### Adversarial counter-check on routing
+
+Considered three counter-arguments before locking the A-queue routing:
+
+(1) **"Multi-quarter framing is 2.4 narrative-over-fit to avoid B work."** Counter: the 60-day-window math is mechanical and external to narrative-framing judgment — Intel's next earnings ~late-July is a calendar fact; Apple's next earnings ~late-July is a calendar fact; FOMC mechanism-match is a category determination per Strategy.md rev 14 enumeration; index-inclusion impossibility is a public-fact verification. The structural multi-quarter framing is corroborated by the pre-existing Quarterly_D_Candidates.md #9 INTC entry (drafted before this session in an unrelated context) which independently characterizes INTC as a 1+3 product-cycle + management-execution multi-year structural-turnaround thesis. The narrative-framing is not generated to justify routing; it is the externally-consistent characterization of Intel's situation.
+
+(2) **"+5.7% Day-0 reaction implies market priced it as a near-term catalyst, not a multi-quarter story."** Counter: +5.7% is at the LOWER END of B magnitude threshold (1.14× the 5% floor) and is consistent with a market reading the WSJ scoop as incrementally-positive-but-uncertain on a long-duration story (preliminary agreement, no signed contract, no 8-K). A near-term-catalyst framing would predict either a much larger Day-0 reaction (the deal is transformational + binary near-term) or a much smaller Day-0 reaction (the deal is fully discounted). +5.7% is consistent with the multi-quarter-thesis-with-execution-uncertainty interpretation — exactly the kind of move that A captures structurally over multi-month holds, not B captures in 60-day mean-reversion.
+
+(3) **"Prior 2026-04-27 INTC B NO-GO on Q1 print should propagate as a barrier."** Counter per Operating_Protocols §3: NO-GO records are context, not barriers. The 4/27 NO-GO is on a structurally distinct event (Q1 earnings print, criterion 4 sell-side immediate ratification — positive-direction L1 information-pricing pattern) with structurally distinct mechanism. The current event (WSJ Apple-foundry scoop) is unrelated to the prior Q1 print and gets fresh evaluation. The 4/27 NO-GO is acknowledged as context (the prior session correctly identified INTC as a structurally-strong multi-quarter story — see 4/27 entry note (b) "INTC LONG is NOT a classical 2.20 trap (LONG-extension thesis is closer to 2.13 overconfidence + 2.4 narrative-over-fit territory)" + note (c) "INTC remains on Strategy D long list per Daily.md 2026-04-26; D's separate evaluation track is not affected by this B NO-GO"). The 4/27 entry already foreshadowed the current routing by noting INTC's structural-multi-year-thesis profile.
+
+All three counter-arguments rebutted. Routing locked.
+
+### Effect on book
+
+No effect. No order staged for INTC. Strategy B portfolio state unchanged (IBM open from 4/27, HCA open from 4/28, META open from 5/5; sector cap usage IT Services 1/3 / Health Care Facilities 1/3 / Comm Services 1/3). The routing decision does NOT advance IT-sector cap to 2/3 in B (no B entry occurred); the IBM IT Services slot remains the sole B IT-sector usage. Strategy A router remains DO-NOT-ACTIVATE; INTC joins existing 16-name A queue (advancing to 17 names) awaiting next M1 with A router ACTIVATE.
+
+### Watchlist update
+
+INTC appended to Watchlist.md Strategy A queue with this entry (2026-05-12 / Daily.md 2026-05-11 source / WSJ Apple-preliminary-agreement event reason / "Next M1 with A router ACTIVATE" resolution trigger). Watchlist Strategy A queue advances from 16 → 17 names.
+
+### Pending queue updated
+
+INTC's prior 2026-04-27 B NO-GO disposition entry in the Watchlist B/A demotion log is NOT applicable here (different event; different disposition class). No demotion-log line added — the current disposition is A-queue routing, not a B NO-GO. The current 10-day post-event window (closing 2026-05-26) does NOT need a "fresh trigger could merit re-evaluation" footnote per §3 because the routing is not based on a defeat-able decisive flaw in B thesis construction; it is based on a structural thesis-fit determination that does not change within the 10-day window (Intel's earnings calendar and the foundry-ramp timeline are not session-time-determinable).
+
+### Theater-check on this orchestrator review
+
+Orchestrator independently re-evaluated whether the routing collapsing the B thesis-construction work at the gate stage is itself a 2.4 / 2.13 escape (avoiding rigorous criterion-1-through-5 analysis by adjudicating at the gate). Counter: the gate is explicitly mandated by the session prompt + Daily.md D2 routing + Strategy.md rev 14 closed-list mechanical architecture. The gate exists precisely BECAUSE certain B-eligible-by-magnitude events have structural-thesis-fit mismatches that pre-empty the criterion 1-5 evaluation (criterion 3 closed-list rev 14 is the proximate mechanical enforcement). Performing full criterion 1-5 analysis after the gate fires would be the redundant work the gate exists to avoid. The gate routing IS the framework working as designed.
+
+Theater-check verdict: **CONVERGENT.** Gate routing is the structurally-appropriate disposition; full B thesis construction would have terminated at criterion 3 closed-list-absent independently. Mechanical and structural pillars mutually corroborate.
+
+### Conviction calibration
+
+Conviction in A-queue routing: **HIGHEST band ~95%+.** The mechanical-closure pillar (60-day window math on Intel earnings + Apple earnings + FOMC + index-inclusion) is fact-determinate, not analytical-judgment-prone. The structural-narrative pillar is independently corroborated by pre-existing Quarterly_D_Candidates.md INTC entry. Per Operating_Protocols §8 conviction ladder, this is structurally distinct from the GO conviction band (IBM/HCA/META) — it is a routing/disposition conviction, not a thesis conviction. The ~5% residual reflects the (low) possibility of an Intel 8-K formalizing the Apple agreement within 60 days, which would create a B-eligible event at that future date with its own fresh thesis construction (per §3 fresh-trigger rule); the current event does not contain that 8-K trigger.
+
+### References
+
+- Strategy.md Strategy A section lines 192-255 (thesis + entry criteria 1-6 + A-vs-B differentiation line 200-201).
+- Strategy.md Strategy B section lines 258-318 (entry criteria 1-5 + criterion 3 closed-list rev 14 line 281 + pre-mortem rev 7 reference).
+- Strategy.md Strategy B pre-mortem rev 7 (Constraint 2 2.20 textbook-rational-penalty exposure; KL #4 slow-burn behavioral-regime exposure).
+- AI_Trading_Foundation.md 2.4 / 2.13 / 2.20 named risks (informing gate rationale).
+- Regime_State.md (A router DO-NOT-ACTIVATE since 2026-04-23 M1; B router ACTIVATE; next M1 ~2026-06-01).
+- Watchlist.md Strategy A queue (16 names pre-INTC; INTC added 2026-05-12 → 17 names).
+- Quarterly_D_Candidates.md #9 INTC entry (corroborating multi-quarter / 12-24 month structural-narrative characterization).
+- Operating_Protocols.md §1 HOIP / §3 NO-GO records context not barriers / §9 deferral discipline.
+- Decision_Log.md 2026-04-27 (Mon, post-close) INTC NO-GO (prior NO-GO context; structurally distinct event; foreshadowed multi-year-thesis-profile in notes (b) + (c)).
+- Daily.md 2026-05-11 §3 #2 (INTC fresh B-LONG candidate identification at +5.7% Day-0 C/C on WSJ Apple-manufacturing scoop) + §OPPORTUNITY CHECK #2 line 162 (explicit thesis-fit gate routing instruction sourced to D2 conversion).
+
+**Primary-source documents for trigger event (cited for audit; full re-verification not required for gate-routing disposition):**
+- TheStreet 5/11: WSJ scoop coverage on Intel-Apple preliminary agreement (referenced in Daily.md).
+- Globe and Mail "Stock Market News for May 11, 2026" (referenced in Daily.md).
+- Wall Street Journal original scoop article (primary source per WSJ paywall; coverage reproduced in TheStreet / Globe and Mail).
+
+### Compaction-survival note
+
+(a) **Disposition class.** Strategy B INTC Mon 5/11 WSJ-Apple-foundry-preliminary-agreement event → **ROUTED TO STRATEGY A QUEUE per MANDATORY THESIS-FIT GATE option (A)**. NOT a B NO-GO; NOT a B GO; a structural routing/disposition that pre-empties B thesis construction at the gate stage.
+
+(b) **Gate primary basis (mechanical closure).** Strategy B criterion 3 closed-list rev 14 mechanically absent admissible target within 60-day window from 5/11 (window closes ~2026-07-10): Intel next earnings ~late-July OUTSIDE window; Apple next earnings late-July OUTSIDE; no FDA mechanism; FOMC 6/16-17 within window but mechanism-mismatched for Intel-Apple foundry-agreement pricing; INTC already in S&P 500 / Russell 1000 / Nasdaq 100 (no inclusion-event possible); any numerical 60-day price target degenerately rests on multi-quarter foundry narrative = rev 13→rev 14 closed-list-attacked degenerate path. Mechanical-pillar conviction HIGHEST band.
+
+(c) **Gate corroborative basis (structural fit).** Apple-as-anchor-foundry-customer for Intel Foundry 18A/14A nodes = canonical multi-quarter (12-24 month) structural narrative. Foundry ramps inherently take 12-24+ months from preliminary-agreement to volume production. Matches Strategy A criterion 1 "structural narrative marker" within 6 months horizon; matches A-vs-B differentiation (line 200-201). Independent corroboration: Quarterly_D_Candidates.md #9 INTC entry (drafted prior to this event in unrelated context) characterizes INTC as 1+3 product-cycle + management-execution profile with "14A external customer commitments targeted 2H 2026" = ~12-18 months from session date.
+
+(d) **Prior NO-GO context (per §3).** INTC has 4/27/26 B NO-GO on Q1 2026 print event (Day-0 4/24 +23.6%; criterion 4 decisive on both directions via sell-side immediate ratification + cross-sectional semi-sector confirmation). That NO-GO is on a structurally distinct event with different mechanism — NOT load-bearing for this 5/11 disposition per Operating_Protocols §3. The 4/27 entry's notes (b) "INTC LONG is NOT a classical 2.20 trap...closer to 2.13 + 2.4 territory" and (c) "INTC remains on Strategy D long list per Daily.md 2026-04-26" already foreshadowed the multi-year-structural-thesis-profile of INTC that the current routing operationalizes for Strategy A.
+
+(e) **B-short string and sub-pattern taxonomy.** This routing is NOT a B-NO-GO criterion-4 dual-framing failure → does NOT extend the B-short string (held at 30 per MNDY 5/12 entry). Does NOT advance any sub-pattern instance count (the disposition class is "thesis-fit gate routing," not "criterion-4 decisive-flaw NO-GO"). Pending W5 cycle: confirm whether thesis-fit-gate-routing-to-A-queue warrants its own disposition-class tracker separate from criterion-4 NO-GO sub-pattern taxonomy; current entry establishes it as a structurally-distinct class with mechanical and structural pillars.
+
+(f) **No order, no portfolio-state change, no calendar event.** B NAV unchanged; 2% sizing $37.77 unchanged; sector cap usage unchanged (IT Services 1/3 unchanged — INTC is GICS Semiconductors & Semiconductor Equipment / Semiconductors sub-industry 45301020, distinct from IBM's IT Services sub-industry 45102020, so even a B entry would have been clean per the IT sector 3-cap; the routing decision pre-empts this consideration). No fill-capture event needed. INTC remains on Watchlist.md Strategy A queue (advancing 16→17 names) awaiting next M1 with A router ACTIVATE (~2026-06-01 if regime flips). No re-evaluation calendar event scheduled within current 10-day post-event window (closes 2026-05-26) because the routing is not based on a defeat-able decisive flaw; gate decision is durable for the event in question.
+
+(g) **Forward context (M1 hand-off).** When A router ACTIVATE fires (next eligible M1 ~2026-06-01 if SPY Trend flips UP + Breadth HEALTHY sustained), INTC re-evaluates with the 17-name A queue under full Strategy A entry criteria 1-6. A criterion 6 trailing-30-day momentum-deferral may bind at that point (INTC trailing-30 from ~5/1 to ~6/1 will include the 5/11 +5.7% spike and prior context; whether the trailing-30 reads as "rallying hard" is a future-session determination, not a current-routing constraint). This is informational for the M1 session, not a constraint on the current routing.
+
+(h) **Theater-check.** Orchestrator CONVERGENT — gate routing is structurally-appropriate; mechanical and structural pillars mutually corroborate; full B thesis construction would have terminated at criterion 3 closed-list-absent independently. Conviction HIGHEST band ~95%+ on the routing; remaining ~5% reflects the (low) probability of an Intel 8-K formalizing the Apple agreement within 60 days creating a fresh future-trigger event with its own thesis construction per §3.
