@@ -12347,3 +12347,174 @@ Conviction in A-queue routing: **HIGHEST band ~95%+.** The mechanical-closure pi
 (g) **Forward context (M1 hand-off).** When A router ACTIVATE fires (next eligible M1 ~2026-06-01 if SPY Trend flips UP + Breadth HEALTHY sustained), INTC re-evaluates with the 17-name A queue under full Strategy A entry criteria 1-6. A criterion 6 trailing-30-day momentum-deferral may bind at that point (INTC trailing-30 from ~5/1 to ~6/1 will include the 5/11 +5.7% spike and prior context; whether the trailing-30 reads as "rallying hard" is a future-session determination, not a current-routing constraint). This is informational for the M1 session, not a constraint on the current routing.
 
 (h) **Theater-check.** Orchestrator CONVERGENT — gate routing is structurally-appropriate; mechanical and structural pillars mutually corroborate; full B thesis construction would have terminated at criterion 3 closed-list-absent independently. Conviction HIGHEST band ~95%+ on the routing; remaining ~5% reflects the (low) probability of an Intel 8-K formalizing the Apple agreement within 60 days creating a fresh future-trigger event with its own thesis construction per §3.
+
+## 2026-05-12 (Tue, ~session-time MT, MRNA session per D2 5/11 conversion calendar slot, sequenced after INTC A-queue routing) Strategy B thesis construction outcome — MRNA (Moderna Inc.) NO-GO via MAGNITUDE-VERIFICATION-GATE criterion 1 mechanical failure (Mon 5/11 actual C/C -2.70%, NOT prompt-asserted +7.5%; Daily.md scan captured intraday-peak +7-9% which "pared all gains" on profit-taking per primary-source verification); secondary pillar under primary-source-corrected event anchoring (Fri 5/8 +11.97% as actual Day-0 Bloomberg hantavirus-research confirmation catalyst) = criterion 3 closed-list rev 14 absent admissible target + criterion 4 dual-framing decisive failure (preclinical hantavirus pipeline status, no human trials yet started, no near-term commercial catalyst); no order staged
+
+**Trigger:** Daily.md 2026-05-11 §3 #3 surfaced MRNA fresh B-LONG candidate (PROVISIONAL with criterion-4 emphasis per D2 routing) at asserted +7.5% Day-0 close-to-close Mon 5/11 on news that "Moderna had already been developing a hantavirus vaccine ahead of cruise-ship Hondius outbreak"; mcap ~$10B+; 10-day post-event window per prompt: Day 0 Mon 2026-05-11 → closes Tue 2026-05-26 close.
+
+**Inputs:** Strategy.md Strategy B section (entry criteria 1-5; criterion 1 ≥5% C/C either direction; criterion 3 closed-list rev 14 strict-enumeration "next earnings release / next FDA decision date / next FOMC meeting / inclusion announcement in one of: S&P 500, Russell 1000, or Nasdaq 100" within 60 days; criterion 4 dual-framing; pre-mortem rev 7 binding-constraint Constraint 1 2.4 narrative-over-fit + Constraint 2 2.20 textbook-rational-penalty); AI_Trading_Foundation.md (2.4 narrative over-fit / 2.13 miscalibration on convergence targets / 2.14 recency bias / 2.20 textbook-rational penalty); Operating_Protocols.md §1 HOIP / §2 commission-disregarded / §3 NO-GO records context not barriers / §8 conviction-calibration-ladder; Portfolio_Ledger.md (B NAV $1,888.69 / 3 longs IBM IT Services / HCA Health Care Facilities / META Comm Services; sector cap usage IT Services 1/3 IBM / Health Care Facilities 1/3 HCA / Comm Services / Interactive Media & Services 1/3 META; cumulative B commissions $1.61; 2% sizing $37.77); Regime_State.md (B router ACTIVATE per SPY NEUTRAL + VIX NORMAL; A router DO-NOT-ACTIVATE — irrelevant for this NO-GO disposition); Watchlist.md (no prior MRNA entry; MRNA not on A queue; INTC just added 2026-05-12 advancing A queue 16→17); Daily.md 2026-05-11 §3 #3 + §OPPORTUNITY CHECK #3 (provisional B-candidate surfacing with criterion-4-emphasis routing note). **Decision_Log.md precedents critical for magnitude-verification gate:**
+- **MNDY 2026-05-12 NO-GO** — same-day-prior session magnitude-verification-gate precedent (session-prompt asserted +26% / 5.2× cushion / upper-tier; primary-source verified +6.72% / 1.34× cushion / MODERATE-LOW; criterion 1 still cleared under correction); ESTABLISHES the gate-mechanic for MRNA verification today.
+- **DASH 2026-05-11 NO-GO** — Daily.md-scan-intraday-peak-vs-regular-session-close precedent (criterion 1 mechanical fail under primary-source verification).
+- **AXSM 2026-05-02 NO-GO** — second magnitude-verification-gate precedent (criterion 1 mechanical fail).
+- **EQIX 2026-05-01 NO-GO** — first magnitude-verification-gate precedent in current cycle (criterion 1 mechanical fail).
+- **AGL 2026-05-14 NO-GO** — criterion-1 instrument-rule mechanical fail precedent (different mechanical-fail mode; same disposition class structure).
+- **INTC 2026-05-12 A-QUEUE ROUTING** — same-day-prior session structural-thesis-fit-gate routing (distinguished from MRNA disposition by structural-narrative-fit-with-A; MRNA's hantavirus pipeline is "years away" per primary source so does NOT fit A either).
+
+**Primary-source web research conducted at session time:**
+- **MRNA daily closing prices May 1-12, 2026 (primary source stockanalysis.com /stocks/mrna/history/):**
+
+| Date | Close | Daily % Change |
+|------|-------|-----------------|
+| May 1 (Fri) | $45.37 | -1.24% |
+| May 4 (Mon) | $47.30 | +4.25% |
+| May 5 (Tue) | $46.71 | -1.25% |
+| May 6 (Wed) | $48.79 | +4.45% |
+| May 7 (Thu) | $48.54 | -0.51% |
+| **May 8 (Fri)** | **$54.35** | **+11.97%** |
+| **May 11 (Mon)** | **$52.88** | **-2.70%** |
+| May 12 (Tue) | $54.46 | +2.99% |
+
+- **Magnitude-verification gate fires:** Session prompt + Daily.md 2026-05-11 asserted Day-0 C/C **+7.5% Mon 5/11**; primary-source verification confirms Mon 5/11 **-2.70% C/C** (close $52.88 vs Fri 5/8 close $54.35); 0.54× threshold cushion vs 1.5× prompt-asserted = **CRITERION 1 MECHANICAL FAIL** under prompt's Mon 5/11 event-date anchoring. Per Stocktwits primary source: "shares rose as much as 7% on Monday before paring all gains...closed down 3% on Monday...likely due to investors taking profits after the stock rising 20% last week." Per ainvest.com: "Moderna shares rose over 9% pre-market" — confirming the intraday spike captured by Daily.md scan rather than C/C close.
+
+- **Primary-source-corrected event anchoring:** The actual Day-0 catalyst was **Fri 5/8** when Bloomberg reported "Moderna confirmed it has been pursuing early-stage research into mRNA-based vaccines against hantaviruses" — Day-0 C/C reaction Thu 5/7 $48.54 → Fri 5/8 $54.35 = **+11.97% / 2.39× cushion = MODERATE-tier magnitude**. The Sun 5/10 US passenger hantavirus confirmation (non-trading day) was an incremental but secondary catalyst; Mon 5/11 was Day 1 of post-event window with -2.70% retracement on profit-taking. Under this primary-source-corrected anchoring, criterion 1 mechanically CLEARS at Fri 5/8 +11.97% Day-0 — but criterion 3 + 4 fail decisively as documented below.
+
+- **MRNA pipeline / catalyst calendar (primary sources):**
+  - **Hantavirus vaccine status (Bloomberg / Boston Globe / NBC News 5/8):** "Early-stage and ongoing" research (Moderna's own framing). **NO human clinical trials yet started.** No Phase 1 data. No FDA filing. No PDUFA date. Per NBC News 5/8: "No hantavirus vaccine has yet entered human clinical trials." Per EnsiliTech (most advanced hantavirus vaccine developer globally): "could take 3 to 4 more years before early-stage clinical trials"; full approval process could "stretch a decade or longer" without Warp-Speed-style emergency funding.
+  - **Next earnings (MarketBeat / Moderna IR):** **Jul 30, 2026** Q2 2026 release — **OUTSIDE 60-day window** under prompt's Mon 5/11 anchoring (60-day window closes ~Mon 7/13, so Jul 30 is 17 days OUTSIDE); also OUTSIDE under corrected Fri 5/8 anchoring (60-day window closes ~Tue 7/7, so Jul 30 is 23 days OUTSIDE).
+  - **Q1 2026 print:** Already landed Fri 2026-05-01 BMO (per Decision_Log 2026-05-01 entry; Daily.md flagged at the time). FY26 guidance maintains 10% revenue growth; first-half combined revenue $440-$490M. Recent print already absorbed; not a near-term catalyst.
+  - **Other pipeline near-term events:** Phase III non-small cell lung cancer trial (oncology); Phase III adjuvant melanoma 5-year data at ASCO (date TBD; ASCO 2026 annual meeting May 29-Jun 2 — within 60-day window IF specific MRNA presentation drives a binary catalyst); flu+COVID combo vaccine EU approved May 2026 (already absorbed); propionic acidemia (PA) study readout "later in 2026" (broad late-2026 timing, not specific 60-day window); MMA trial start deferred until after PA readout. None of these is a hantavirus-tied catalyst; the +11.97% Fri move is unambiguously hantavirus-news-driven per primary sources.
+  - **Index inclusion:** MRNA is already a member of S&P 500 (added 2021), Russell 1000, Nasdaq 100. No inclusion-event possible mechanically.
+
+### Decision
+
+**MRNA — NO-GO (DECLINE) on both LONG-extension and SHORT-mean-reversion framings via MAGNITUDE-VERIFICATION-GATE primary disposition (criterion 1 mechanical fail under prompt's Mon 5/11 anchoring) + multi-pillar secondary disposition (criterion 3 closed-list rev 14 absent + criterion 4 dual-framing decisive failure under corrected Fri 5/8 anchoring).** No order staged.
+
+### Primary pillar — Magnitude-verification-gate criterion 1 mechanical failure
+
+Per the magnitude-verification-gate discipline established by MNDY 5/12 / DASH 5/11 / AXSM 5/2 / EQIX 5/1 precedent class: session-prompt and Daily.md scan figures must be primary-source-verified against close-to-close data before proceeding through criterion 1-5 analysis. Daily.md scans run during US trading hours and can capture intraday peaks or pre-market spikes that retrace by the regular-session close.
+
+**Prompt-asserted Day-0:** Mon 2026-05-11 +7.5% C/C, 1.5× cushion, lower-moderate magnitude.
+
+**Primary-source-verified Day-0:** Mon 2026-05-11 -2.70% C/C ($54.35 → $52.88), 0.54× cushion **BELOW 5% threshold in either direction**. Cross-verified across stockanalysis.com historical-prices + Stocktwits ("closed down 3% on Monday") + Yahoo Finance + Bloomberg context. Intraday peaked +7-9.4% on Mon (per ainvest.com / Yahoo / 24/7 Wall St "up 6% today" intraday) but "pared all gains" on profit-taking after the prior week's +20% rally.
+
+**Under prompt's Mon 5/11 event-date anchoring, criterion 1 MECHANICALLY FAILS at -2.70% Day-0 C/C.** Direct precedent class: DASH 5/11 / AXSM 5/2 / EQIX 5/1 magnitude-verification-gate criterion-1 mechanical fail. Disposition class is structurally identical to those precedents — Daily.md-scan-intraday-peak-vs-regular-session-close discrepancy refutes prompt-asserted magnitude.
+
+This is the cleanest, most-decisive disposition: criterion 1 mechanical NO-GO at session-open under primary-source verification. Conviction HIGHEST band ~95%+ on the mechanical-fact pillar.
+
+### Secondary pillar — Under primary-source-corrected event anchoring (Fri 5/8 +11.97% as actual Day-0), criterion 3 + 4 decisive failure
+
+Acknowledging that the actual catalyst arc anchored on **Fri 5/8 Bloomberg report** (Moderna's confirmation of "early-stage and ongoing" hantavirus research, prior to the cruise-ship Hondius outbreak), with Sun 5/10 US passenger confirmation as incremental secondary catalyst and Mon 5/11 profit-taking retracement — the corrected Day-0 is Fri 5/8 +11.97% C/C (Thu 5/7 close $48.54 → Fri 5/8 close $54.35). Under this corrected anchoring, criterion 1 CLEARS at 2.39× cushion (MODERATE-tier magnitude). Now criteria 2-5 analysis under corrected framing.
+
+**Criterion 3 closed-list rev 14 — ABSENT admissible target both directions:**
+
+- **Next earnings (Q2 2026):** Jul 30, 2026 — OUTSIDE 60-day window from Fri 5/8 (window closes ~Tue 7/7; Jul 30 is 23 days OUTSIDE). FAILS.
+- **Next FDA decision:** N/A for hantavirus-program (NO human trials started; "years away" per primary source NBC News). No other MRNA pipeline candidate has a PDUFA within 60 days captured at session. FAILS.
+- **Next FOMC:** 6/16-17 within window mechanically, but FOMC policy is mechanism-mismatched against hantavirus-pipeline-pricing thesis (FOMC doesn't resolve early-stage research valuations). FAILS.
+- **Index inclusion:** MRNA already in S&P 500 (added 2021), Russell 1000, Nasdaq 100. No inclusion-event mechanically possible. FAILS.
+- **Numerical price level:** Any 60-day numerical target rests on either (a) continued hantavirus-pipeline-momentum on sentiment without information catalyst (degenerate per pre-mortem rev 7 Constraint 2 2.20-trap framing) or (b) some other MRNA narrative not tied to the Fri 5/8 hantavirus catalyst (off-thesis; would require independent thesis construction). FAILS.
+
+**Criterion 3 mechanically ABSENT admissible target both LONG and SHORT directions.** Structurally identical to INTC 2026-05-12 closed-list-absent disposition mechanism — both events lack 60-day-binary catalysts and would degenerate to multi-year-pipeline-narrative under numerical-target framing.
+
+**Criterion 4 dual-framing decisive failure:**
+
+(L1) **LONG-extension thesis fails: sentiment-driven on tangential headline + preclinical pipeline status + no near-term commercial catalyst.** The Fri 5/8 +11.97% reaction was driven by Bloomberg's report of Moderna's "early-stage and ongoing" hantavirus research, contextualized by the cruise-ship Hondius outbreak headlines and Sun 5/10 US passenger confirmation. Per primary sources:
+- Moderna's own framing: "early-stage and ongoing" — NOT a near-term commercial event.
+- Per NBC News 5/8: "No hantavirus vaccine has yet entered human clinical trials." EnsiliTech (most advanced developer globally) estimates "3 to 4 more years before early-stage clinical trials" + 5 additional years for Phase 2/3 = decade-plus to approval.
+- Per Boston Globe 5/8: research is collaborative with US Army Medical Research Institute + Korea University Vaccine Innovation Center (since 2023); "no timeline for advancement is provided."
+- Moderna has NO Phase 1 data, NO FDA filing, NO PDUFA date for any hantavirus candidate.
+- Mon 5/11 close-to-close -2.70% retracement IS the market re-pricing the sentiment overshoot back toward fair value as the news arc absorbed; Tue 5/12 +2.99% partial recovery netted Fri-to-Tue at +0.20% (essentially flat from Day-0 close).
+
+The LONG-extension thesis would require the +11.97% Day-0 to extend further on continued hantavirus-news-momentum within 60 days. With no Phase 1 readout, no FDA action, and no near-term commercial event tied to hantavirus, the only available LONG-extension mechanism is sentiment-rebound — exactly the pattern Strategy B pre-mortem rev 7 Constraint 1 (2.4 narrative over-fit) names as the dominant failure mode. Adversarial counter-argument: the move is sentiment-driven on a tangential cruise-ship outbreak headline, with the hantavirus-vaccine "narrative" being years-away pipeline color rather than near-term commercial-event information. LONG fails decisively.
+
+Additional LONG-side weight: **+20% prior week rally context** (per Stocktwits "the stock rising 20% last week") means the stock entered Fri 5/8 already with substantial momentum-tailwind sentiment absorbed; the hantavirus-news +11.97% incremental was the second layer on an already-extended position. This is structurally analogous to sub-pattern 1+3 layered-momentum-PT-cluster trajectory (AMD 5/7 / AKAM 5/13 / FLEX 5/11) where information-priced-in dominates Day-1+ trajectory. Mon 5/11 -2.70% retracement is consistent with this layered-already-priced-in reading.
+
+(S1) **SHORT-mean-reversion thesis fails: retracement already substantially completed + B-short string at 30 in risk-on regime + +20% weekly rally structural-tailwind.**
+- Mon 5/11 already completed a -2.70% retracement; Tue 5/12 partially recovered +2.99%. Net Fri-to-Tue close = $54.35 → $54.46 = +0.20%. The intraday-spike-fade cycle has substantially completed at the C/C level; further short upside on continued mean-reversion is structurally weak.
+- **B-short string at 30** per MNDY 5/12 entry (B-short string advances 29→30); current risk-on regime hostile to B-short framings (SPX/Nasdaq new ATHs Mon 5/11 per Daily.md). Adding MRNA SHORT would advance string to 31 against established 30-NO-GO precedent in unfavorable regime.
+- **+20% prior week rally context** = MRNA has demonstrated structural momentum-tailwind beyond just the hantavirus narrative; the broader 2026-YTD +71.4% rally and 1-year +105.8% rally (per Stocktwits) implies broader pipeline-narrative sentiment is supporting the stock at structurally elevated levels. SHORT thesis would face squeeze-risk (KL #7 gap-up vector class) on any positive pipeline news through the 60-day window (e.g., ASCO 5/29-6/2 melanoma 5-year data; PA readout; flu+COVID combo commercial momentum).
+- 2.20 textbook-rational-penalty trap: SHORT-mean-reversion on a sentiment-driven retracement-then-bounce is the canonical 2.20 mechanism applied; per pre-mortem rev 7 Constraint 2, no mechanism-level mitigation exists. Operational stop-loss at +25% from short entry would bind at MRNA-current $54.46 + 25% = $68.08, leaving substantial whipsaw-risk room on any positive ASCO/PA-pipeline-news within window.
+
+(S2) **Direction-mismatch with available news flow.** All current news flow on MRNA is pipeline-positive within the 60-day window (Fri 5/8 hantavirus confirmation; ASCO 5/29-6/2 melanoma 5-year data anticipated; flu+COVID combo EU approval already absorbed; PA readout pending later 2026). A SHORT thesis requires anticipating negative-direction news flow that primary sources do not support at the current observation window.
+
+**Both LONG and SHORT framings of criterion 4 fail decisively.**
+
+### Adversarial counter-check on routing
+
+Considered three counter-arguments before locking the NO-GO:
+
+(1) **"Apply the corrected Fri 5/8 anchoring as primary and proceed with full B thesis construction."** Counter: even under corrected anchoring (Fri 5/8 +11.97%), criterion 3 closed-list rev 14 is ABSENT both directions and criterion 4 dual-framing fails decisively as documented above. The same NO-GO disposition obtains; the primary-vs-secondary pillar choice does not change outcome. Primary pillar (criterion 1 mechanical fail under prompt's Mon 5/11 anchoring) is the cleanest single-axis disposition; secondary pillar (multi-vector decisive failure under corrected anchoring) provides defense-in-depth.
+
+(2) **"+11.97% Fri Day-0 with hantavirus-pipeline-momentum could extend further with continued cruise-ship outbreak coverage — under-extrapolation thesis."** Counter: the under-extrapolation thesis requires evidence that the market has under-priced future hantavirus-program value relative to fundamentals. Primary sources unanimously frame MRNA's hantavirus program as "early-stage and ongoing" / "no human trials" / "years away" — there are no fundamental anchors against which to claim under-pricing. The Mon 5/11 -2.70% close-to-close retracement IS the market correcting the intraday sentiment overshoot; the Tue 5/12 +2.99% partial recovery suggests a settled mid-range fair-value rather than continued under-extrapolation. The under-extrapolation thesis cannot be supported by current evidence.
+
+(3) **"Route to A queue analogously to INTC 2026-05-12 (structural-narrative-fit-with-A)."** Counter: INTC was routed to A because Apple-as-foundry-anchor-customer fits A's "structural narrative marker within 6 months" criterion 1 — the foundry-ramp story is a tangible commercial-cycle thesis that A is designed to capture. MRNA's hantavirus pipeline is "years away" (decade-plus per EnsiliTech analog estimates) — far beyond A's 6-month catalyst horizon. MRNA also doesn't have a clear other-thesis structural narrative within A's horizon ready for thesis construction at session-time (Q1 print already absorbed; FY26 framework intact; ASCO data and PA readout are within-window-touchable but require independent thesis construction rather than reactive A-queue addition on this NO-GO event). MRNA does NOT fit A either; the disposition is unambiguous NO-GO without A-queue routing.
+
+All three counter-arguments rebutted. NO-GO locked.
+
+### Effect on book
+
+No effect. No order staged for MRNA. Strategy B portfolio state unchanged (IBM open from 4/27, HCA open from 4/28, META open from 5/5; sector cap usage IT Services 1/3 / Health Care Facilities 1/3 / Comm Services 1/3). Health Care / Biotechnology sub-industry remains 0/3 in B book (MRNA-add scenario would have advanced HC-sector to 2/3 with distinct sub-industries — HCA Health Care Facilities + MRNA Biotechnology — within per-sector 3-cap, but criterion 4 / criterion 3 / criterion 1 all bind before sector-cap consideration matters). Cumulative B commissions $1.61 unchanged; 2% sizing $37.77 unchanged; B NAV $1,888.69 unchanged. Strategy A router DO-NOT-ACTIVATE — MRNA does NOT route to A queue (does not fit A's 6-month catalyst horizon).
+
+### Pending queue updated
+
+MRNA does NOT advance to A queue (unlike INTC same-day-prior session) — A's 6-month catalyst horizon cannot accommodate "years away" hantavirus pipeline timeline; no other near-term-horizon MRNA structural narrative ready for A-queue placement at session-time.
+
+MRNA does NOT need a Watchlist B/A demotion log line — disposition is a magnitude-verification-gate fail (criterion 1 mechanical) + multi-vector criterion 3/4 failure, not a single-axis criterion-4-decline that would warrant follow-up tracking. The 10-day post-event window (Day 0 Mon 5/11 prompt-asserted; or Day 0 Fri 5/8 primary-source-corrected; window closes ~Tue 5/26 or ~Fri 5/22 respectively) remains open per Operating_Protocols §3 fresh-trigger-could-merit-re-evaluation rule, but the multi-pillar decisive disposition establishes HIGH prior for any future evaluation within window absent material new catalyst (e.g., MRNA Phase 1 hantavirus IND filing 8-K, broader FDA Operation-Warp-Speed-style emergency program announcement, or unforeseen positive pipeline catalyst with discrete 60-day-window resolution).
+
+### Theater-check on this orchestrator review
+
+Orchestrator independently re-evaluated whether the magnitude-verification-gate primary disposition is collapsing analysis too aggressively (potentially missing legitimate B thesis structure under corrected Fri 5/8 anchoring). Counter: the secondary pillar (criterion 3 closed-list rev 14 absent + criterion 4 dual-framing decisive failure under corrected anchoring) was independently developed and confirms the same NO-GO outcome. The two pillars are mutually-reinforcing: under prompt anchoring → criterion 1 mechanical fail at -2.70%; under corrected anchoring → criterion 3 + 4 decisive fail. There is no anchoring choice under which a GO disposition obtains. Disposition is robust across both framings.
+
+Theater-check verdict: **CONVERGENT.** Both pillars converge on NO-GO; framing-choice does not affect outcome; mechanical-fact-driven (magnitude-verification-gate) and structural-analytical (criterion 3 + 4) bases mutually corroborate.
+
+### Conviction calibration
+
+Conviction in NO-GO: **HIGHEST band ~95%+** — multi-pillar convergent failure with mechanical-fact-primary basis (magnitude-verification-gate criterion 1 fail under prompt's anchoring is fact-determinate against primary-source closing-price data) + secondary analytical-decisive basis (criterion 3 closed-list-absent + criterion 4 dual-framing fail under corrected anchoring). Per Operating_Protocols §8 conviction-calibration ladder, this is comparable to the magnitude-verification-gate-fail precedent class (DASH 5/11 HIGHEST ~95%+ / AXSM 5/2 HIGHEST / EQIX 5/1 HIGHEST) rather than the dual-framing-judgment-prone band (MNST/GKOS/IRM/PTC/VTRS HIGH ~78-85%). The residual ~5% reflects the (low) possibility of a fresh discrete near-term catalyst within window (e.g., MRNA filing IND for hantavirus Phase 1; FDA emergency-use-pathway announcement; M&A speculation) that would warrant fresh evaluation per §3.
+
+### References
+
+- Strategy.md Strategy B section entry criteria 1-5 + criterion 1 ≥5% C/C either direction + criterion 3 closed-list rev 14 line 281 + criterion 4 dual-framing + pre-mortem rev 7 binding constraints.
+- AI_Trading_Foundation.md 2.4 / 2.13 / 2.14 / 2.20 named risks (informing dual-framing decisive flaw).
+- Operating_Protocols.md §1 HOIP / §2 commission-disregarded / §3 NO-GO records context not barriers / §8 conviction-calibration-ladder.
+- Portfolio_Ledger.md (B NAV $1,888.69 / 3 longs IBM/HCA/META unchanged; 2% sizing $37.77; sector cap IT Services 1/3 / Health Care Facilities 1/3 / Comm Services 1/3; Health Care / Biotechnology 0/3 unchanged).
+- Regime_State.md (B router ACTIVATE; A router DO-NOT-ACTIVATE; SPX/Nasdaq ATH risk-on regime context).
+- Watchlist.md (no MRNA entry; INTC added same-day prior 5/12 to A queue advancing 16→17).
+- Daily.md 2026-05-11 §3 #3 + §OPPORTUNITY CHECK #3 (MRNA surfacing + criterion-4-emphasis routing note; Daily.md-scan-magnitude reading subject to magnitude-verification-gate this session).
+- Decision_Log.md 2026-05-12 MNDY NO-GO (same-day-prior magnitude-verification-gate precedent + sub-pattern 8 + criterion 3 absent).
+- Decision_Log.md 2026-05-12 INTC A-QUEUE ROUTING (same-day-prior structural-thesis-fit-gate precedent — distinguished from MRNA by structural-narrative-fit-with-A; MRNA does NOT fit A either).
+- Decision_Log.md 2026-05-11 DASH NO-GO (criterion-1 magnitude-verification-gate-fail primary precedent).
+- Decision_Log.md 2026-05-02 AXSM NO-GO (criterion-1 magnitude-verification-gate-fail secondary precedent).
+- Decision_Log.md 2026-05-01 EQIX NO-GO (criterion-1 magnitude-verification-gate-fail tertiary precedent).
+- Decision_Log.md 2026-04-25 IBM GO / 2026-04-27 HCA GO / 2026-05-01 META GO (3-trade conviction-calibration ladder reference).
+
+**Web-search primary documents verified this session:**
+- Stocktwits 5/11: "MRNA Stock Closes Down On Profit-Taking Following 20% Weekly Rally And Hantavirus Buzz" — primary close-down -3% statement; "rose as much as 7% on Monday before paring all gains"; "rising 20% last week" context.
+- stockanalysis.com /stocks/mrna/history/ — primary daily closing prices May 1-12 2026 (cross-verifying Fri 5/8 $54.35 / Mon 5/11 $52.88 / Tue 5/12 $54.46).
+- Bloomberg 5/8: "Moderna Hantavirus Efforts Underway Before Cruise Ship Outbreak" (HTTP 403 paywall; primary content accessed via Boston Globe summary + Yahoo / TheStreet coverage).
+- Boston Globe 5/8: "Moderna flags work on hantavirus vaccines before cruise outbreak" — "early-stage and ongoing"; no clinical trial stage specified; no timeline.
+- NBC News 5/8: "Scientists are working on a hantavirus vaccine — but it's likely years away" — "No hantavirus vaccine has yet entered human clinical trials"; EnsiliTech estimates "3 to 4 more years before early-stage clinical trials" + 5 more years for Phase 2/3; "without Warp Speed for hantavirus...could stretch a decade or longer."
+- Yahoo Finance 5/11: "Moderna (MRNA) Shares Surge After U.S. Passenger Tests Positive for Hantavirus" — intraday spike context.
+- CNBC 5/11: "Hantavirus cases spark brief surge in pharma and biotech stocks" — broader-sector sentiment-driven framing.
+- ainvest.com: "Moderna, Inc. shares rise over 9% pre-market" — premarket peak context.
+- 24/7 Wall St 5/11: "Moderna Stock Is Up 6% Today: Is It Outperforming Other Vaccine Stocks Like Pfizer and Novavax?" — intraday +6% framing.
+- MarketBeat / Investing.com: MRNA Q2 2026 earnings scheduled Jul 30, 2026.
+- Moderna IR / Motley Fool transcript: Q1 2026 print landed Fri 2026-05-01 BMO; FY26 guidance 10% revenue growth; first-half combined $440-490M.
+- modernatx.com /research/product-pipeline (referenced).
+- Brussels Signal: "Korea University and Moderna have been working on mRNA hantavirus vaccine since 2023" — research-collaboration timeline.
+
+### Compaction-survival note
+
+(a) **Disposition class.** Strategy B MRNA Mon 5/11-prompt-anchored / Fri 5/8-primary-source-corrected hantavirus-news event → **NO-GO (DECLINE)** via primary magnitude-verification-gate criterion-1 mechanical fail under prompt anchoring + secondary multi-pillar (criterion 3 closed-list rev 14 absent + criterion 4 dual-framing decisive failure) under corrected anchoring. **MAGNITUDE-VERIFICATION-GATE precedent class extends: DASH 5/11 / AXSM 5/2 / EQIX 5/1 / [MNDY 5/12 criterion-1-cleared-under-correction] / MRNA 5/12 = 4th instance of magnitude-verification-gate-fail-decisive (5th if counting MNDY as gate-fired-but-c1-still-cleared)**.
+
+(b) **Magnitude verification specifics.** Prompt+Daily.md asserted Mon 5/11 +7.5% C/C / 1.5× cushion / lower-moderate-tier; primary-source verified Mon 5/11 -2.70% C/C ($54.35 → $52.88) / 0.54× cushion / BELOW threshold in either direction. Intraday peaked +7-9% on Mon ("rose as much as 7%" / "rose over 9% pre-market") but "pared all gains" on profit-taking after prior week's +20% rally. Cross-verified across stockanalysis.com / Stocktwits / Yahoo / CNBC / ainvest / 24-7 Wall St.
+
+(c) **Primary-source-corrected event anchoring.** Actual Day-0 catalyst was Fri 2026-05-08 Bloomberg report on Moderna's "early-stage and ongoing" hantavirus research; Day-0 C/C $48.54 → $54.35 = +11.97% / 2.39× cushion / MODERATE-tier. Sun 5/10 US passenger confirmation = secondary catalyst on non-trading day; Mon 5/11 = Day 1 of post-event window with -2.70% retracement on profit-taking; Tue 5/12 = Day 2 with +2.99% partial recovery (net Fri-to-Tue +0.20%). 10-day post-event window under corrected anchoring: Day 0 Fri 5/8 → closes ~Fri 5/22; today Tue 5/12 = Day 2 of 10; 8 trading days remaining.
+
+(d) **Pipeline / catalyst calendar.** MRNA hantavirus = "early-stage and ongoing" research; NO human trials yet started; NO Phase 1 data; NO FDA filing; NO PDUFA date; "years away" per NBC News / EnsiliTech analog (3-4 years to Phase 1 + 5 years Phase 2/3 + Warp-Speed-absent decade timeline). Q2 2026 earnings Jul 30 OUTSIDE 60-day window (17-23 days depending on anchoring). FOMC 6/16-17 within window but mechanism-mismatched. Already in S&P 500/Russell 1000/Nasdaq 100 (no inclusion event). ASCO 5/29-6/2 melanoma 5-year data within window — but on a structurally separate thesis (oncology pipeline, not hantavirus); not directly tied to this event.
+
+(e) **Criterion 3 + 4 dual-disposition under corrected anchoring.** Criterion 3 ABSENT both directions (no eligible closed-list rev 14 target within 60 days). Criterion 4 dual-framing decisive: LONG fails on sentiment-driven-on-tangential-headline + preclinical pipeline + no-near-term-commercial-catalyst + +20% prior-week rally already-absorbed; SHORT fails on Mon retracement-already-completed + Tue partial-recovery + B-short string at 30 + risk-on regime + 2.20-trap + KL #7 gap-up vectors (ASCO data + ongoing pipeline-news flow).
+
+(f) **MRNA does NOT route to A queue** (unlike INTC same-day-prior). MRNA's hantavirus is "years away" — exceeds A's 6-month catalyst horizon. No other ready A-thesis at session-time (Q1 already absorbed; FY26 framework intact). Disposition is straightforward NO-GO without A-queue placement. B-short string unchanged at 30 (SHORT framing dismissed in criterion 4 analysis but disposition class is magnitude-verification-gate-fail primary, which does NOT advance the B-short string per established convention — same as AGL 5/14 mcap mechanical fail did not advance).
+
+(g) **B-short string and sub-pattern taxonomy.** This NO-GO is a MAGNITUDE-VERIFICATION-GATE primary disposition (cleanest single-axis pillar) — does NOT advance the criterion-4-dual-framing sub-pattern instance counts (sub-pattern 1 CLEAN family remains at 16 instances per VTRS 5/14 count; sub-pattern 8 candidate at 2 instances pending W5 promotion; etc.). Disposition class is magnitude-verification-gate-fail primary — joins DASH/AXSM/EQIX precedent class at 4th instance of c1-mechanical-fail (5th including MNDY 5/12 where gate fired but c1 still cleared post-correction). B-short string unchanged at 30 per primary-disposition-not-criterion-4 convention.
+
+(h) **No order, no portfolio-state change, no calendar event.** B NAV $1,888.69 unchanged; 2% sizing $37.77 unchanged; sector cap unchanged (Health Care / Biotechnology 0/3 unchanged; MRNA-add scenario would have been 1/3 within Strategy.md 3-per-sub-industry cap, with HC-sector advancing from 1/3 [HCA Health Care Facilities] to 2/3 [HCA + MRNA Biotechnology] within per-sector cap — all moot under NO-GO). No fill-capture event needed. MRNA does NOT appear on A-queue (does not fit A horizon). 10-day window remains open through ~Tue 5/26 (prompt) or ~Fri 5/22 (corrected); fresh-trigger re-evaluation reserved per §3 but high prior on multi-pillar decisive disposition. Theater-check CONVERGENT across both pillars; conviction HIGHEST band ~95%+.
