@@ -13455,3 +13455,93 @@ Five considerations were specifically pushed back on during construction:
 **MVG-correction-precedent template accumulating rapidly:** Within ~24 hours: MNDY 5/12 (magnitude discrepancy) → HIMS 5/13 (three-layer correction load-bearing) → UAA 5/13 (two-layer correction load-bearing). W5 hygiene cycle should consider whether this represents D1/D2 data-source noise inflation, session-prompt-construction template drift, or increased frequency of borderline/multi-source-disagreement events in current event-rich market regime.
 
 **Key cross-references for future Claude sessions:** if a future B candidate exhibits "depressed pre-print Cons Discretionary apparel/retail name + multi-year revenue decline + restructuring overhang + Day-0 magnitude ≥5% NEGATIVE direction + forward-guide-reset on EPS at material magnitude (~30%+ guide cut vs cons)", reference back to this UAA entry as candidate sub-pattern 4 variant 4b first-instance precedent. The pattern is structurally distinct from sub-pattern 8 (which requires Q1 BEAT modest-confirmation) and from sub-pattern 4 variant 4a (which has cost-input pressure not demand-side collapse). The FY27-guide-reset layer is generally applicable across forward-guidance event classes when guide cut magnitude is material (~30%+ vs consensus).
+
+---
+
+## 2026-05-13 — D2 Daily Action Conversion
+
+**Session type:** D2 Daily Action Conversion (automated post-D1 routine)
+**Trigger:** Daily.md 2026-05-13 RECOMMENDED ACTIONS section
+**Branch:** claude/brave-fermat-QiGzp
+
+---
+
+### (a) Exits
+
+**None.** IBM-B, HCA-B, META-B, RTX-D, DIS-D: all hold per Daily.md 2026-05-13 exit-trigger check. No stop-loss or time-based exit fired today. No orders staged.
+
+---
+
+### (b) Secondary screen resolutions
+
+Daily.md 2026-05-13 flagged six secondary-screen tickers in the DEVELOPMENTS section (not RECOMMENDED ACTIONS). D2 resolves each:
+
+**GTLB** — D1 deferred pending Wed 5/13 close-to-close verification. D2 research confirmed:
+- Tue 5/12 close: $23.08; Wed 5/13 close: $22.05
+- C/C = ($22.05 − $23.08) / $23.08 = −4.46%
+- **FAILS ≥5% criterion 1 threshold.** No thesis-construction event scheduled. No routing.
+
+**WOLF** — D1 pre-judged "likely sub-$2B mcap." D2 research confirmed:
+- Shares: ~45.09M × $62.60 = mcap ~$2.82B → PASSES $2B floor
+- However, the primary event driver for the +25.91% Wed 5/13 move was NOT confirmed as an eligible B event class (earnings / FDA / guidance revision / regulatory action)
+- Per EVG precedent (DG 5/12): no routing without confirmed B-eligible event class
+- Conservative default: **no thesis-construction.** D1 DEVELOPMENTS note taken; not routed.
+
+**VNET, TSEM, KC, PENG, KRMN, LOAR** — D1 pre-judgments confirmed; no additional D2 routing. Each disqualified on criterion 1 (magnitude), criterion 3 (closed-list target absent), or criterion 4 (information-already-priced) at D1 screen level. No secondary D2 action required.
+
+---
+
+### (c) New entry candidates — calendar events created
+
+**WIX** — Strategy B LONG thesis-construction event scheduled:
+- Event: Q1 2026 AMC Tue 5/12; Day-0 C/C ~−30.31% (MVG verification required at session time)
+- 10-day entry window through ~Tue 2026-05-27
+- D1 pre-conviction: ~70% NO-GO (criterion 3 closed-list absent; criterion 4 EPS-miss structural risk)
+- **Calendar event created:** `s3l11cm65bc798qc8119f33guc` — Fri 2026-05-15 09:00–09:45 MT
+- Rationale for Fri slot (vs Thu 5/14): Thu already crowded (ZBRA order 07:15 + CLSK thesis 11:00); 10-day window through 5/27 leaves ample time; Fri 09:00 MT selected
+
+**ZBRA fill-capture** — Proper fill-capture event created to supplement existing order-placement event `h9ltjcri07at250b2dml92tta4` (07:15 MT Thu 5/14), which embedded post-fill instructions but lacked a self-contained prompt and dedicated alarm:
+- **Calendar event created:** `c6b05hsp1q50lnv85mm414rtq8` — Thu 2026-05-14 14:15–14:45 MT
+- Self-contained prompt: paste IBKR fill screenshot; if filled → update Portfolio_Ledger.md + schedule mid-window pulse-check (Tue 2026-06-09 15:30 MT), time-based exit (Mon 2026-07-13 07:15 MT), KL #12 computation (Wed 2026-06-03 15:30 MT); if unfilled → note expired + re-evaluate re-queue given 3 days remaining in 10-day window (~expires Sat 5/17)
+
+**Total calendar events created this D2 session: 2**
+
+---
+
+### (d) Watchlist.md updates
+
+**NBIS — ADDED to Strategy A queue:**
+- Q1 print Wed 5/13 BMO: revenue $399M vs prior-year $50.9M (~8× growth); +17% Day-0 on AI-infrastructure-hyperscaler-ramp narrative validation
+- Routed to A queue: multi-quarter thesis profile; NOT B mechanism per (i) sub-pattern 1 information-already-priced-in pre-judgment at magnitude +17% with AI-hyperscaler-ramp buy-side widely flagged pre-print, and (ii) criterion 3 closed-list absent admissible target within 60 days
+
+**CSCO — note appended to existing A-queue row:**
+- FQ3'26 AMC print VALIDATED bull thesis: record quarterly revenue $15.84B (+12% YoY); adj EPS $1.06 vs $1.04 cons; FY26 AI-infrastructure orders doubled $5B→$9B; third consecutive guide raise; +15% AH
+- Entry-price re-rated on post-print magnitude realization (DDOG/AKAM precedent); valuation-reset concern elevated but +15% vs DDOG's +30% leaves more thesis-runway headroom
+- No change to queue disposition; resolution trigger unchanged (next M1 with A router ACTIVATE)
+
+---
+
+### (e) Router reviews
+
+**None.** No technical signal thresholds crossed today per Daily.md 2026-05-13. No divergence triggers. No adversarial review initiated.
+
+---
+
+### (f) ZBRA order — already staged and outputted
+
+Per Decision_Log.md 2026-05-13 ZBRA GO entry (line ~12824): order staged and outputted at prior D2 session. Not re-staged here to avoid duplicate.
+
+For reference:
+> **Limit BUY 0.1505 ZBRA @ $251.00 Day (Thu 2026-05-14)**
+
+---
+
+### (g) Pending downstream items confirmed
+
+- ZBRA order placement: Thu 2026-05-14 07:15 MT (existing event `h9ltjcri07at250b2dml92tta4`)
+- ZBRA fill capture: Thu 2026-05-14 14:15 MT (new event `c6b05hsp1q50lnv85mm414rtq8`)
+- CLSK thesis construction: Thu 2026-05-14 11:00 MT (pre-existing event)
+- WIX thesis construction: Fri 2026-05-15 09:00 MT (new event `s3l11cm65bc798qc8119f33guc`)
+- KL #12 pairwise correlation first computation: Wed 2026-06-03 15:30 MT (per ZBRA GO entry)
+- Next M2 fundamental review: 2026-06-01 (first trading day of June)
+
