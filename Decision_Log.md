@@ -13250,3 +13250,208 @@ Five considerations were specifically pushed back on during construction:
 **Sub-pattern taxonomy update for W5 hygiene cycle:** Sub-pattern 8 instance count remains at 2 (DOC 5/7 + MNDY 5/12); HIMS is NOT sub-pattern 8 third instance per mechanism INVERSION (Q1 MISS not BEAT; Day-0 NEGATIVE not POSITIVE). HIMS is a candidate NEW sub-pattern variant ("depressed-name continues-to-deteriorate-on-quality-print + Day-1 continuation"); pending second-instance validation before formal taxonomy entry. The session-prompt's third-instance-candidate flag was premised on incorrect "clean beat" framing — primary-source verification corrects this. W5 should note both: (i) sub-pattern 8 does NOT advance; (ii) candidate new sub-pattern HIMS-style flagged for future-instance validation.
 
 **Key cross-references for future Claude sessions:** if a future B candidate exhibits "depressed pre-print + Q1 actual MISS + Day-0 magnitude ≥5% in NEGATIVE direction + Day-1 continuation-down", reference back to this HIMS entry as candidate-new-sub-pattern first-instance precedent. The pattern is structurally distinct from V/MDLZ structural-overhang-persistence (HIMS has FY26 revenue raise positive structural data point; V/MDLZ had multi-quarter narrative-overhang) and from sub-pattern 8 (HIMS has Q1 MISS not BEAT; sub-pattern 8 requires modest-confirmation). The Day-1 continuation-down evidentiary layer is generally applicable to criterion 4 dual-framing analysis across all B candidates when session is running post-Day-1-close — precedent established.
+
+---
+
+## 2026-05-13 (Wed, ~17:00 MT post-cash-close calendar slot per D2 5/12 conversion) Strategy B thesis construction outcome — UAA (Under Armour Class A) NO-GO via criterion 4 dual-framing decisive failure with TWO MVG-correction layers (session-prompt's "-30% revenue miss vs $1.68B cons" load-bearing error — primary source shows revenue $1.17B vs $1.18B cons = -0.66% miss only; Day-0 C/C -17.00% not -14% intraday) + V/MDLZ-style structural-overhang-persistence sub-pattern routing with FY27-guide-reset layer (FY27 EPS guide $0.08-0.12 vs $0.23 cons = ~50% guide cut is the actual selloff driver) + candidate sub-pattern 4 variant 4b "structural-demand-collapse" first instance + borderline-mcap-clears note ($2.18B Class A only / $2.64B combined vs $2B floor, ~$176-640M cushion) + B-short string advances ~31 → ~32; no order staged
+
+**Trigger:** Calendar-event-scheduled Strategy B thesis construction for UAA, Wed 2026-05-13 evening slot per Decision_Log 2026-05-12 D2 conversion entry. D2 source: Daily.md 2026-05-12 RECOMMENDED ACTIONS flagged UAA as B candidate. Session-prompt premise summary: "UAA Q4/FY26 earnings print Tue 2026-05-12 AM tape; Revenue miss $1.17B vs $1.68B estimate (-30%+ miss); Loss -3¢/share vs -2¢ estimate (in-line/modest); Stock -14% Tue 5/12 intraday; sector Cons Discretionary / Apparel; D2 estimated mcap ~$2.6B post-drop; HIGH PRIOR for criterion-4 SHORT dismissal per current ~30-trade B-short string; possible sub-pattern 4 variant (structural-demand-collapse vs cyclical-pullback)."
+
+**Two MVG-correction layers triggering at primary-source verification:**
+1. **Day-0 C/C magnitude**: session prompt "-14% intraday"; primary source confirms **-17.00% regular-session C/C** (stockanalysis.com Mon 5/11 close $6.06 / Tue 5/12 close $5.03; -$1.03 / -17.00%). Directional class consistent (negative ≥5%); -3pp magnitude understatement in session prompt.
+2. **Revenue miss magnitude — LOAD-BEARING PREMISE INVERSION**: session prompt asserted "Revenue miss: $1.17B vs $1.68B estimate (-30%+ miss)"; primary source confirms **revenue $1.17B vs ~$1.18B consensus ≈ -0.66% MISS** (per multiple sources: Yahoo Finance, ChartMill, Public.com — "missing estimates by approximately $7.8 million"; revenue declined only 1% YoY, NOT 30%). The session-prompt's -30% framing was a factual error of the largest magnitude class this session series has seen — it materially recharacterizes the disposition path: the -17% Day-0 reaction is NOT a "-30% revenue miss" overshoot/info-driven event; it is a **FY27 GUIDANCE CUT-driven event** (adj EPS $0.08-0.12 vs $0.23 cons = ~50% guide cut + restructuring extension by 6 months / $50M additional cost + ongoing margin compression -470bps).
+
+**Inputs:** Strategy.md Strategy B section (entry criteria 1-5, criterion 3 closed-list rev 14, criterion 4 dual-framing information-vs-sentiment test, instrument eligibility rule mcap ≥$2B / ADV ≥$10M); Operating_Protocols.md (§1 HOIP; §3 NO-GO records are context not barriers); AI_Trading_Foundation.md (2.4 narrative over-fit; 2.13 ordinal-tier; 2.20 textbook-rational penalty); Portfolio_Ledger.md (B NAV $1,888.69; IBM/HCA/META open + ZBRA staged Thu 5/14; sector caps IT 1/3 → 2/3 post-ZBRA-fill, Health Care Facilities 1/3 (HCA), Comm Services 1/3 (META), Cons Discretionary 0/3); Decision_Log.md prior precedents — **HIMS 2026-05-13 NO-GO (immediately prior this session; three-layer MVG-correction precedent template; B-short string advanced ~30 → ~31)**, **MNDY 2026-05-12 NO-GO (magnitude-discrepancy-correction template)**, **DOC 2026-05-07 NO-GO (sub-pattern 8 first instance)**, **V/MDLZ structural-overhang-persistence sub-pattern (multi-year resolution timeline mismatch with B 60-day window)**, **TWLO/UPS/SHOP/PYPL/CDW/NCLH/CRCL/MNDY B-short-string forward-guide-reset precedents**, **OMCL 2026-04-29 NO-GO (borderline-mcap-clears at $2.07B precedent template — most relevant prior precedent for UAA $2.18B-$2.64B borderline-clears handling)**, **AGL/TDOC/FIVN/POET instrument-rule mechanical-failure precedents (UAA does NOT fail; documented for full-context contrast)**, **AXSM 2026-05-04 NO-GO (criterion 3 closed-list rev 14 absent admissible convergence target precedent both directions)**; UAA Q4/FY26 earnings press release 2026-05-12 BMO (prnewswire.com/news-releases/under-armour-reports-fourth-quarter-and-full-year-fiscal-2026-results-provides-initial-fiscal-2027-outlook-302768815.html); UAA Q4/FY26 earnings call transcript Motley Fool 2026-05-12 (https://www.fool.com/earnings/call-transcripts/2026/05/12/under-armour-ua-q4-2026-earnings-transcript/); Investing.com Q4 2026 transcript with EPS miss + tariff/cost commentary (https://www.investing.com/news/transcripts/earnings-call-transcript-under-armour-q4-2026-reveals-eps-miss-stock-tumbles-93CH-4681312); Yahoo Finance 2026-05-12 Q4 earnings recap "loss, revenue miss" (https://finance.yahoo.com/markets/stocks/articles/under-armour-q4-fiscal-2026-131019329.html); QZ 2026-05-12 quarterly loss/tariffs/margins coverage (https://qz.com/under-armour-quarterly-loss-revenue-tariffs-margins-051226); ChartMill UAA "Plunges After Q4 Earnings Miss and Weak Fiscal 2027 Guidance" (https://www.chartmill.com/news/UAA/Chartmill-48294-Under-Armour-Inc-CLASS-A-NYSEUAA-Plunges-After-Q4-Earnings-Miss-and-Weak-Fiscal-2027-Guidance); Alphastreet UAA Q4 2026 loss summary (https://news.alphastreet.com/under-armour-q4-2026-loss-deepens-0-03-share-vs-0-02-expected/); Public.com UAA earnings (https://public.com/stocks/uaa/earnings); Citigroup PT cut $6.20 → $4.75 Sell maintained 2026-05-13 (per MarketBeat compilation); Stockanalysis.com UAA history + overview (Mon $6.06 / Tue $5.03 / Wed $5.11; mcap $2.18B Class A or $2.64B combined; shares 425.89M; 52-wk range $4.13-$8.15); Daily.md 2026-05-12 D2 routing + D2 conversion entry 2026-05-12.
+
+### Decision
+
+**UAA — NO-GO (DECLINE) via criterion 4 dual-framing decisive failure with TWO-LAYER MVG-CORRECTION + V/MDLZ-style structural-overhang-persistence sub-pattern routing + FY27-guidance-reset layer + candidate sub-pattern 4 variant 4b "structural-demand-collapse" first instance + borderline-mcap-clears note.**
+
+Criterion 1 mechanical eligibility CLEARS (BORDERLINE on mcap: $2.18B Class A only / $2.64B combined Class A+B+C ≥ $2B floor with ~$176M-$640M cushion ≈ 9-32%; Day-0 C/C **-17.00%** ≥ 5% magnitude; ADV multi-hundred-million-dollar; long-or-short permitted; qualifying Q4/FY26 earnings event class with FY27 forward guidance constituting new forward information). Criterion 5 sector cap CLEARS (UAA = Consumer Discretionary / Apparel, Accessories & Luxury Goods sub-industry; B book Cons Disc currently 0/3; would advance 0/3 → 1/3 within 3/sector cap; no A position in UAA; criterion 5 cap clear if criterion 4 had not decisively failed). Criterion 4 dual-framing DECISIVELY FAILS for BOTH directions:
+
+**LONG framing decisive flaws** (information-driven structural reset, NOT sentiment overshoot):
+- (L1) **FY27 GUIDANCE CUT is the actual selloff driver — NOT Q4 revenue miss**: Primary-source verification overturns session-prompt's "-30% revenue miss" premise. Actual Q4 revenue $1.17B vs ~$1.18B consensus = -0.66% miss / -1% YoY (essentially in-line). The -17.00% Day-0 selloff is driven by **FY27 adj EPS guide $0.08-0.12 vs $0.23 consensus = ~50% EPS guide cut** + restructuring extension through end-2026 ($255M → $305M, +$50M additional cost) + FY27 revenue forecast of "decline slightly year over year" + North America revenue down low-single-digit. This is the canonical **forward-guide-reset information-driven repricing** pattern matching B-short-string precedents (SHOP/PYPL/CDW/TWLO/UPS/NCLH/CRCL/MNDY) — i.e., the LONG case fails because the move is information-driven structural reset, not over-extension.
+- (L2) **Multi-year structural decline trajectory + multi-year restructuring resolution timeline**: FY26 revenue $4.97B (-3.83% YoY); FY27 guide continues decline; restructuring program now extends through end-2026 (additional 6+ months from prior plan); cumulative FY26+FY27 revenue decline trajectory is structural, not cyclical. Resolution timeline (multi-year brand revitalization + restructuring completion + tariff-headwind absorption) is **structurally mismatched with B 60-day window** — direct V/MDLZ structural-overhang-persistence pattern fit.
+- (L3) **Brand erosion in core North America market**: Q4 North America revenue **-7% YoY** to $640.9M; International offset (+10% to $539M) is not sufficient to reverse the structural NA trajectory. NA is UAA's largest and historically highest-margin geographic segment; -7% YoY is structural brand-erosion evidence, not cyclical channel-destocking noise. Brand-revitalization timelines are typically 2-4 years for apparel — far outside B's 60-day window.
+- (L4) **Margin compression structural**: Q4 gross margin **42% vs 46.7% Y/Y = -470bps compression** driven by higher tariffs, elevated product costs, pricing headwinds, unfavorable regional mix. FY27 guide implicitly continues margin pressure given EPS guide $0.08-0.12 on revenue forecast of decline. Margin recovery requires either tariff-regime resolution (uncertain political timeline) or successful brand-pricing-power restoration (multi-year timeline). Both outside 60-day B window.
+- (L5) **Sell-side cluster begins to align with bear thesis**: Citigroup PT cut $6.20 → $4.75 (-23.4%) maintaining Sell rating 2026-05-13. Consensus PT $6.48 (vs current $5.11; ~+27% nominal upside) but Hold consensus rating (53% Hold / 27% Buy / 20% Sell). Sell-side direction-of-change is **bearish** post-print; full repricing wave likely takes 1-3 weeks but Citigroup is the first-mover. This matches **forward-guide-reset sell-side-PT-cut cluster** precedent (TWLO/UPS/MNDY analog).
+- (L6) **Convergence target structurally challenging for LONG framing**: Next UAA earnings (Q1 FY27 print) ~early August 2026, outside 60-day window (May 12 + 60 = July 11); no admissible FOMC mechanism for idiosyncratic apparel name; no FDA / index event; restructuring completion is multi-quarter; potential M&A floor is event-driven and not closed-list admissible per Strategy.md criterion 3 rev 14.
+- (L7) **Stock near 52-wk low ($5.03 close vs $4.13 low = +21.8% above low)**: Distress-narrative risk emerging; if UAA breaks $4.13 multi-year support, sub-pattern routing may flip to "support-breakdown / distress-confirmation" rather than mean-reversion. The depressed pre-print state was correctly priced in, not over-extended.
+
+**LONG framing verdict: 7/7 DECISIVE FLAWS. LONG decisively rejected.**
+
+**SHORT framing decisive flaws** (despite directional alignment with FY27 guide cut):
+- (S1) **B-short string ~31 → ~32 with UAA-SHORT formal dismissal** (HIMS-SHORT dismissed earlier this session 2026-05-13 advanced ~30 → ~31; UAA-SHORT now extends ~31 → ~32). Empirical regime-conditional base rate overwhelmingly hostile to B-SHORT in current risk-on regime. Per Operating_Protocols.md, this is a regime-diagnostic input not an automatic-dismissal trigger, but combined with other flaws is decisive.
+- (S2) **2.20-trap structural exposure** per Strategy.md Strategy B pre-mortem rev 7 Constraint 2 — mechanism-embedded. SHORT direction is structurally hazardous in risk-on regime where bull-thesis correction risk is asymmetric.
+- (S3) **Pre-print depressed state + bounded marginal downside**: UAA closed Tue 5/12 at $5.03, just +21.8% above 52-wk low $4.13. Additional 60-day SHORT-direction conviction requires breakdown below multi-year support $4.13 — but no fresh deteriorating-information beyond FY27 guide expected within 60 days (Q1 FY27 print August outside window). Distress-narrative could accelerate decline but is event-driven (activist / strategic-buyout / liquidity event) — not a clean SHORT thesis.
+- (S4) **+25% short stop binding risk at ~$6.29** within 60-day window: any positive M&A / activist / Kevin-Plank-turnaround / tariff-resolution catalyst could squeeze toward stop trigger. Consensus PT $6.48 (vs current $5.11) is +26.8% nominal upside — close to short-stop trigger. KL #7 gap-up vectors materially binding for low-priced heavily-shorted names.
+- (S5) **Potential M&A / strategic-buyout floor**: At $2.18-2.64B mcap, UAA is in private-equity-takeout-feasible size range. Brand value (Kevin Plank legacy + international franchise + restructuring-near-completion narrative) could attract activist or strategic buyer. Catalyst is binary and not closed-list admissible but supports asymmetric upside-tail risk on SHORT thesis.
+- (S6) **International revenue +10% YoY = positive structural data point**: EMEA + Asia-Pacific +10% offset partial of NA decline; supports "international franchise still working" narrative against pure structural-collapse SHORT thesis. SHORT requires comprehensive decline thesis; UAA has partial structural offset.
+
+**SHORT framing verdict: 6/6 DECISIVE FLAWS. SHORT decisively rejected per B-short string + 2.20-trap + pre-print-near-52wk-low-bounded-downside + bull-catalyst-risk + M&A floor + international-offset.**
+
+**Dual-framing disposition: BOTH LONG AND SHORT FAIL CRITERION 4. NO-GO.**
+
+### Step 1 — MANDATORY instrument rule gate (mcap ≥ $2B verification)
+
+Session prompt explicitly required mandatory instrument rule gate execution before any other analysis. Primary-source verification:
+
+- Stockanalysis.com UAA overview 2026-05-13: shares outstanding **425.89M**; close $5.11; mcap **$2.176B** (425.89M × $5.11 = $2.176B; reported as $2.18B with -12.6% change). Confirmed combined Class A+B+C total per multiple sources (UAA ticker shows aggregate company share count).
+- Web search corroboration: "The market capitalization is $2.64B based on current stock price data" — combined Class A+B+C valuation at UAA price equivalent OR weighted by share-class pricing (UAA Class A typically trades modest premium vs UA Class C; combined valuation ~$2.5-2.7B).
+- Tue 5/12 close mcap (relevant for entry-time gate): $5.03 × 425.89M = **$2.143B**. Still clears $2B floor with ~$143M cushion.
+
+**Mcap CLEARS $2B floor at all relevant timepoints (Tue close $2.14B / Wed close $2.18B / combined ~$2.64B).** Borderline-clears in the same range as OMCL 2026-04-29 ($2.07B borderline-clears; cushion ~$70M / ~3.5%); UAA has larger cushion (~$143-640M / ~7-32%) so disposition path is less stressed than OMCL. **Instrument rule gate PASSES; proceed to criterion 1 magnitude verification.**
+
+### Step 2 — Day-0 close-to-close magnitude verification
+
+Session prompt asserted "-14% Tue 5/12 intraday". Primary-source regular-session C/C verification (stockanalysis.com UAA history):
+- **Mon 2026-05-11 close: $6.06** (open $6.41, high $6.44, low $6.01)
+- **Tue 2026-05-12 close: $5.03** (open $5.18, high $5.18, low $4.81)
+- **Day-0 close-to-close (Mon → Tue): -$1.03 / -17.00%**
+
+Day-0 C/C primary-source verified at **-17.00%** vs session-prompt "-14% intraday" (3pp magnitude understatement; session prompt likely referenced premarket open or partial-day reading; canonical AM-print convention is BMO C/C measured Mon-close→Tue-close per AKAM/MNST precedent for AM-tape prints). Criterion 1 magnitude sub-component CLEARS (-17.00% ≥ 5% threshold; 3.4× cushion). **MVG layer 1 fires** for documentation.
+
+### Step 3 — Criterion 1 mechanical eligibility detail
+
+- **Instrument rule**: US-listed common equity (NYSE:UAA). Mcap $2.143-$2.176B Class A / $2.64B combined at relevant timepoints, clears $2B floor (Step 1). ADV multi-hundred-million-dollar daily — UAA traded 14.93M shares on Wed 5/13 × $5.11 ≈ $76M single-day, well above $10M ADV floor (cushion ~7.6×+); recent 30-day average likely similar.
+- **Criterion 1 close-to-close**: -17.00% Day-0 ≥ 5% threshold ✓ (Step 2).
+- **Event class**: Q4/FY26 earnings release Tue 2026-05-12 BMO (before market open AM tape) — qualifying event class per Strategy.md enumerated events (earnings releases + guidance updates explicitly enumerated; FY27 initial outlook = forward guidance sub-event constituting new forward information).
+- **Window status**: 10-day post-event entry window expires ~Tue 2026-05-26 (Tue 5/12 + 10 trading days through May 26 inclusive). Cushion at staging time Wed 5/13: ~8 trading days remaining.
+
+### Step 4 — Criterion 2 (mispricing thesis + MVG layer 2 LOAD-BEARING)
+
+Session prompt premise: "Revenue miss: $1.17B vs $1.68B estimate (-30%+ miss)." Primary-source verification:
+
+**Q4 FY26 actual results (per primary sources Yahoo Finance / ChartMill / Public.com / Alphastreet)**:
+- Revenue **$1.171B** vs consensus **~$1.179B = -0.66% MISS** (-$7.8M absolute; revenue declined 1% YoY)
+- North America: $640.9M (-7% YoY)
+- International: $539M (+10% YoY)
+- GAAP EPS **-$0.03 vs -$0.02 cons = -$0.01 / $0.01 absolute MISS**
+- Gross margin **42% vs 46.7% Y/Y = -470bps** compression (tariffs + product costs + pricing + regional mix)
+- Restructuring program extended through end-2026; total cost $255M → $305M (+$50M)
+
+**FY27 INITIAL OUTLOOK (the actual selloff driver per ChartMill / Yahoo / Alphastreet)**:
+- Revenue: "decline slightly year over year" (low-single-digit decline)
+- North America: down low-single-digit
+- EMEA + Asia-Pacific: up low-single-digit
+- **Adj EPS $0.08-$0.12 vs $0.23 consensus = ~$0.13 midpoint vs $0.23 = ~43-65% guide cut** (midpoint $0.10 = -56.5% vs cons; high-end $0.12 = -47.8%; low-end $0.08 = -65.2%)
+
+**The -17.00% Day-0 selloff is structurally a FY27-guide-reset event, NOT a -30%-revenue-miss-overshoot event.** Session-prompt premise is factually wrong by the largest absolute magnitude this experiment series has documented — the "$1.68B estimate" appears to have been a typo / data-source confusion (possibly fiscal-year revenue confused for quarterly, or a misread of a forward-looking number).
+
+**MVG layer 2 fires for LOAD-BEARING PREMISE INVERSION.** The disposition path materially shifts:
+- Session-prompt framing would route to "structural-demand-collapse vs cyclical-pullback" routing with -30% revenue-miss as primary information signal.
+- Primary-source framing routes to "FY27-guide-reset forward-information-driven repricing" + multi-year-restructuring-overhang pattern, which is canonical V/MDLZ + B-short-string sub-pattern composite.
+
+**LONG mispricing thesis assessment**: WEAK. The thesis would require believing (a) the FY27 EPS guide is conservative-management-sandbag (no evidence supports this — UAA has had multiple consecutive guide cuts), (b) tariff resolution within 60 days (uncertain political timeline), (c) NA brand revitalization within 60 days (multi-year apparel timeline), (d) M&A/activist catalyst within 60 days (event-driven and not closed-list admissible). LONG mispricing thesis is structurally absent.
+
+**SHORT mispricing thesis assessment**: WEAK in different direction. UAA pre-print was already at -38% from 52-wk high $8.15 to $6.06 (Mon close); post-print at $5.03 = -38.3% from $8.15 high. Much of the bear thesis (FY27 weakness, NA brand erosion, tariff headwinds) has been digested across 12+ months. Additional 60-day SHORT requires fresh deteriorating-information OR breakdown below $4.13 multi-year support — both event-driven and bounded.
+
+### Step 5 — Criterion 4 dual-framing decisive failure (detail above in Decision section)
+
+LONG framing: 7/7 decisive flaws (L1-L7). LONG decisively rejected.
+SHORT framing: 6/6 decisive flaws (S1-S6). SHORT decisively rejected per B-short string + 2.20-trap + pre-print-bounded-downside + bull-catalyst-risk + M&A floor + international-offset.
+
+Theater-check: CONVERGENT. Independent dual-framing decisive failure across both directions. Shared underlying observation: the -17.00% Day-0 is FY27-guide-reset-driven structural information event with multi-year resolution timeline mismatching B 60-day window. LONG fails on information-driven character + structural-timeline-mismatch; SHORT fails on regime-conditional-hostility + bounded-marginal-downside + asymmetric-bull-catalyst-risk.
+
+### Step 6 — Sub-pattern routing: V/MDLZ structural-overhang-persistence + FY27-guide-reset layer + candidate sub-pattern 4 variant 4b "structural-demand-collapse" first instance
+
+**Primary sub-pattern fit**: V/MDLZ-style structural-overhang-persistence (multi-year resolution timeline structurally mismatched with B 60-day window). UAA's overhang components:
+- FY27 revenue decline + multi-year revenue decline trajectory (FY26 -3.83%, FY27 -low-single-digit forecast)
+- Restructuring extension through end-2026 (6+ months additional)
+- NA brand erosion (multi-year revitalization timeline)
+- Tariff macro headwinds (political-timeline uncertainty)
+- Margin compression -470bps (multi-year normalization)
+- All five resolution timelines are >>60 days.
+
+**Forward-guide-reset layer**: FY27 EPS guide $0.08-0.12 vs $0.23 cons = ~50% guide cut. Matches B-short-string forward-guide-reset criterion-4-information-driven-pricing precedents (TWLO/UPS/SHOP/PYPL/CDW/NCLH/CRCL/MNDY).
+
+**Candidate sub-pattern 4 variant 4b "structural-demand-collapse" first instance**: Session prompt explicitly flagged sub-pattern 4 variant 4b/4c routing question. Per W4/W5 sub-pattern taxonomy cadence, sub-pattern 4 has documented variants:
+- 4a: cost-input-margin-compression-forward-guide-multi-quarter-overhang (MNST/MDLZ analog)
+- 4b: candidate-new-variant "structural-demand-collapse" (UAA first instance proposed)
+
+UAA fits 4b candidate definition: multi-year revenue decline + brand erosion + structural NA weakness + restructuring extension = demand-side structural collapse rather than cost-input pressure (4a). Distinguished from V/MDLZ pure overhang (which had earnings stability with overhang-narrative-fade timeline) by the active multi-year revenue contraction. UAA is candidate first instance for 4b; pending second-instance validation per W4/W5 cadence before formal taxonomy entry. Note for W5: 4b candidate definition is "depressed-pre-print apparel/retail/consumer-discretionary name with multi-year revenue decline + brand erosion + restructuring overhang + forward-guide-reset on EPS that confirms structural-demand-side trajectory."
+
+### Step 7 — Criterion 3 closed-list rev 14 check (suppressed downstream of criterion 4 dual failure)
+
+Documented for completeness:
+
+Strict-enumerated admissible targets within 60 days of Tue 2026-05-12 (window closes ~Mon 2026-07-13 trading day; Sat 7/11 calendar = Mon 7/13 trading):
+- (a) Next UAA earnings release: Q1 FY27 print likely early August 2026 — outside 60-day window ✗
+- (b) Next FDA decision date: N/A (UAA is apparel, no FDA exposure) ✗
+- (c) Next FOMC meeting: Jun 16-17 inside window, but mechanism-mismatch (no rate-decision convergence mechanism for idiosyncratic apparel name; Cons Discretionary has broad-rate sensitivity but UAA's idiosyncratic FY27-guide-cut overshadows macro rate convergence) ✗
+- (d) Index inclusion/exclusion announcement: UAA in Russell 1000 (not pending exclusion event). S&P 500 / Nasdaq 100: UAA not currently in either; no pending inclusion. ✗
+- (a-alt) Numerical price level: PERMITTED — but moot given criterion 4 dual-framing decisive failure (no admissible direction).
+
+**Criterion 3 admissible only via numerical price level option, which is moot given criterion 4 disposition.**
+
+### Step 8 — Criterion 5 sector/correlation/A-position check (suppressed downstream)
+
+- No A position in UAA: ✓ (A router DO-NOT-ACTIVATE).
+- Sector cap: UAA = Consumer Discretionary / Apparel, Accessories & Luxury Goods (GICS 25203010). B book Cons Discretionary currently 0/3; would advance 0/3 → 1/3 within 3/sector cap.
+- KL #12 pairwise correlation estimate: UAA vs current B book (IBM/HCA/META + ZBRA staged):
+  - UAA-IBM: ~0.10-0.20 (different sectors; depressed apparel vs hybrid-cloud mature)
+  - UAA-HCA: ~0.05-0.15 (defensive healthcare facilities vs depressed apparel)
+  - UAA-META: ~0.20-0.30 (some consumer-discretionary cyclical overlap with Cons Comm)
+  - UAA-ZBRA: ~0.15-0.30 (industrial-tech vs apparel; some cyclical overlap)
+  - Estimated 5-long-book pairwise average: ~0.15-0.25 — well below 0.5 KL #12 trigger threshold. KL #12 FAVORABLE for UAA but secondary to criterion 4 disposition.
+- Position size $37.77 (2% × $1,888.69) within cap if proceeding to GO.
+
+### Pending queue updated
+
+- ~~UAA B-thesis construction~~ COMPLETE — NO-GO via criterion 4 dual-framing decisive failure with two-layer MVG-correction + V/MDLZ-style structural-overhang-persistence sub-pattern routing + FY27-guidance-reset layer + candidate sub-pattern 4 variant 4b first-instance flag + borderline-mcap-clears note; no order; no follow-on calendar event scheduled.
+- UAA remains within the 10-day post-event window through ~Tue 2026-05-26. No calendar event scheduled to revisit — criterion-4-decisive-failure on forward-guide-reset premise is unlikely to flip on re-examining the same Q4/FY26 print + FY27 guide data; routine Daily.md scan picks up any fresh trigger event (FOMC, M&A, activist).
+- **B-short string advances ~31 → ~32** with UAA-SHORT formal dismissal per 6/6 decisive flaws.
+- Sub-pattern 4 variant 4b candidate (UAA first instance) flagged for W5 hygiene cycle taxonomy review; pending second-instance validation.
+- Existing pending items unchanged (ZBRA Thu 5/14 order placement; CLSK Thu 5/14 thesis construction; IBM/HCA/META invalidation monitoring + time-based exits; KL #12 first-computation Wed 6/3).
+
+### References
+
+- UAA Q4/FY26 earnings press release 2026-05-12 BMO: https://www.prnewswire.com/news-releases/under-armour-reports-fourth-quarter-and-full-year-fiscal-2026-results-provides-initial-fiscal-2027-outlook-302768815.html
+- UAA Q4/FY26 earnings call transcript Motley Fool: https://www.fool.com/earnings/call-transcripts/2026/05/12/under-armour-ua-q4-2026-earnings-transcript/
+- Investing.com Q4 2026 transcript "reveals EPS miss, stock tumbles": https://www.investing.com/news/transcripts/earnings-call-transcript-under-armour-q4-2026-reveals-eps-miss-stock-tumbles-93CH-4681312
+- Yahoo Finance 2026-05-12 Q4 fiscal 2026 earnings: loss, revenue miss: https://finance.yahoo.com/markets/stocks/articles/under-armour-q4-fiscal-2026-131019329.html
+- QZ 2026-05-12 quarterly loss/tariffs/margins: https://qz.com/under-armour-quarterly-loss-revenue-tariffs-margins-051226
+- ChartMill UAA "Plunges After Q4 Earnings Miss and Weak Fiscal 2027 Guidance" 2026-05-13: https://www.chartmill.com/news/UAA/Chartmill-48294-Under-Armour-Inc-CLASS-A-NYSEUAA-Plunges-After-Q4-Earnings-Miss-and-Weak-Fiscal-2027-Guidance
+- Alphastreet UAA Q4 2026 loss summary (-$0.03 vs -$0.02 cons): https://news.alphastreet.com/under-armour-q4-2026-loss-deepens-0-03-share-vs-0-02-expected/
+- Public.com UAA earnings (revenue $1,171,160,000 vs cons -$7.8M miss): https://public.com/stocks/uaa/earnings
+- Stockanalysis.com UAA price history (Mon $6.06 / Tue $5.03 / Wed $5.11; Day-0 C/C -17.00%): https://stockanalysis.com/stocks/uaa/history/
+- Stockanalysis.com UAA overview (mcap $2.18B; shares 425.89M; 52-wk range $4.13-$8.15): https://stockanalysis.com/stocks/uaa/
+- Strategy.md Strategy B section (criteria 1-5; criterion 3 closed-list rev 14; criterion 4 dual-framing; instrument eligibility rule).
+- Operating_Protocols.md §1 HOIP / §3 NO-GO records are context.
+- Portfolio_Ledger.md (B NAV $1,888.69; IBM/HCA/META open + ZBRA staged Thu 5/14; sector caps).
+- Decision_Log.md 2026-05-13 HIMS NO-GO entry (immediately prior; three-layer MVG-correction template precedent; B-short string ~30 → ~31).
+- Decision_Log.md 2026-05-12 MNDY NO-GO entry (magnitude-discrepancy-correction precedent template).
+- Decision_Log.md 2026-04-29 OMCL NO-GO entry (closest borderline-mcap-clears precedent; OMCL at $2.07B with ~3.5% cushion; UAA at $2.14-$2.64B with ~7-32% cushion = larger cushion, less stressed).
+- Decision_Log.md V/MDLZ structural-overhang-persistence sub-pattern entries (multi-year resolution timeline mismatch precedent).
+- Decision_Log.md TWLO/UPS/SHOP/PYPL/CDW/NCLH/CRCL/MNDY B-short-string forward-guide-reset precedents.
+- Daily.md 2026-05-12 / D2 conversion 2026-05-12 calendar event scheduling.
+
+### Theater-check on this orchestrator review
+
+Five considerations were specifically pushed back on during construction:
+
+(a) **Two MVG correction layers (Day-0 magnitude / Revenue miss magnitude LOAD-BEARING premise inversion).** The session-prompt premise contained two primary-source-correctable factual errors: -14% intraday (actual -17.00% regular-session C/C) and "-30% revenue miss vs $1.68B cons" (actual -0.66% miss / -1% YoY revenue vs ~$1.18B cons). The revenue-miss-magnitude correction is the LOAD-BEARING premise inversion — it converts the disposition path from "structural-demand-collapse vs cyclical-pullback on -30% revenue miss" to "FY27-guidance-reset forward-information-driven repricing + multi-year-structural-overhang." This is the second consecutive session (after HIMS earlier today) where session-prompt premises required primary-source correction for load-bearing disposition path elements. Pattern note: the MVG-correction-precedent template (MNDY 5/12 → HIMS 5/13 → UAA 5/13) is rapidly accumulating instances within ~24 hours; W5 should consider whether this represents (i) D1/D2 data-source noise inflation, (ii) session-prompt-construction template drift, or (iii) increased frequency of borderline/multi-source-disagreement events in the current event-rich market regime. Documentary signal for hygiene cycle.
+
+(b) **V/MDLZ structural-overhang-persistence routing + candidate sub-pattern 4 variant 4b "structural-demand-collapse" first instance.** UAA's overhang components (multi-year revenue decline + multi-year restructuring + brand erosion + tariff headwinds + margin compression) are individually V/MDLZ-canonical, but the active multi-year revenue contraction trajectory differentiates UAA from pure V/MDLZ overhang (which had earnings stability with overhang-narrative-fade). Candidate sub-pattern 4 variant 4b "structural-demand-collapse" proposed for UAA as first instance; pending second-instance validation. Future candidates exhibiting "depressed-pre-print apparel/retail/consumer-discretionary name with multi-year revenue decline + brand erosion + restructuring overhang + forward-guide-reset on EPS confirming structural-demand-side trajectory" should reference UAA as 4b first-instance precedent.
+
+(c) **FY27-guide-reset layer as the actual selloff driver.** Distinguishing what is in fact driving the Day-0 reaction is core to criterion 4 information-vs-sentiment analysis. UAA's -17.00% selloff is driven by FY27 adj EPS guide $0.08-0.12 vs $0.23 cons (~50% guide cut), NOT by Q4 revenue miss (which was only -0.66%) and NOT by Q4 EPS miss (which was modest -$0.01). The forward-information character of the selloff is the load-bearing input for "information-driven, NOT sentiment overshoot" → criterion 4 LONG decisive failure. This matches B-short-string precedents (SHOP/PYPL/CDW/TWLO/UPS/NCLH/CRCL/MNDY) where forward-guide-reset is the canonical selloff driver.
+
+(d) **B-short string advances ~31 → ~32.** With HIMS-SHORT formal dismissal earlier today (advancing ~30 → ~31), UAA-SHORT formal dismissal now advances ~31 → ~32. The string represents an empirical regime-conditional base rate that SHORT direction is structurally inadmissible in current risk-on regime. Per Operating_Protocols.md §3, this is regime context not automatic-dismissal trigger — UAA-SHORT analysis confirmed 6 decisive flaws independently. Documentary signal for the 30-trade-gate edge-decay review per Strategy.md Section 4 indicators.
+
+(e) **Borderline-mcap-clears note ($2.14-2.64B vs $2B floor).** UAA's instrument-rule disposition CLEARS the $2B floor mechanically (~7-32% cushion at relevant timepoints). Larger cushion than OMCL precedent (~3.5% cushion at $2.07B); not as borderline as TDOC/FIVN/POET/AGL instrument-rule failures. Proceed-through-instrument-rule is correct disposition; no instrument-rule-mechanical-failure routing applies. If UAA mcap dropped below $2B during 60-day window (e.g., further -10%+ decline), entry would become mechanically blocked at any post-Wed point — flagged for monitoring should disposition reconsideration ever surface (though criterion 4 dual-framing decisive failure makes reconsideration unlikely).
+
+### Compaction-survival note
+
+**Strategy B UAA Q4/FY26-print disposition 2026-05-13 ~12:00 MT calendar slot (running Wed evening post-cash-close):** B-thesis construction COMPLETE for UAA; **NO-GO (DECLINE) via criterion 4 dual-framing decisive failure** with two-layer MVG-correction (Day-0 -17.00% vs -14% intraday; Revenue miss only -0.66% / -$7.8M vs session-prompt's "$1.68B / -30% miss" LOAD-BEARING ERROR) + V/MDLZ-style structural-overhang-persistence sub-pattern routing + FY27-guidance-reset layer (FY27 adj EPS $0.08-0.12 vs $0.23 cons ~50% guide cut is the actual selloff driver) + candidate sub-pattern 4 variant 4b "structural-demand-collapse" first instance proposed + borderline-mcap-clears note ($2.14-2.64B vs $2B floor; 7-32% cushion); no order staged; no portfolio-state change.
+
+**Experiment B totals advance to 4 GO + 34 NO-GO = 10.5% / 89.5% hit rate** (vs prior 4 GO + 33 NO-GO = 10.8% / 89.2% per most-recent Decision_Log entry 2026-05-13 HIMS NO-GO). NO-GO breakdown advances criterion-4-decisive-failure category by 1 (LONG-and-SHORT-both-fail dual-framing instance).
+
+**B-short string advances ~31 → ~32** with UAA-SHORT formal dismissal per 6/6 decisive flaws (B-short string + 2.20-trap + pre-print-near-52wk-low-bounded-downside + bull-catalyst-risk + M&A floor + international-offset).
+
+**Conviction in NO-GO: HIGH (~80-85%).** Theater-check CONVERGENT. Multi-layer convergent disposition: criterion 4 LONG decisive failure (7 flaws) + criterion 4 SHORT decisive failure (6 flaws) + V/MDLZ structural-overhang routing + FY27-guide-reset layer + two-layer MVG correction. Residual ~15-20% reflects (a) possible Day-2-3 bounce on tariff-resolution news / activist disclosure / M&A speculation, (b) possible short-squeeze on heavily-shorted depressed name absorbing positive catalyst, (c) possible bull-thesis reframing on restructuring-completion narrative.
+
+**Sub-pattern taxonomy update for W5 hygiene cycle:** Candidate **sub-pattern 4 variant 4b "structural-demand-collapse"** flagged as proposed first-instance with UAA; pending second-instance validation per W4/W5 cadence. Definition: "depressed-pre-print apparel/retail/consumer-discretionary name with multi-year revenue decline + brand erosion + restructuring overhang + forward-guide-reset on EPS confirming structural-demand-side trajectory." Distinguished from 4a (cost-input pressure MNST/MDLZ) and from pure V/MDLZ overhang (which had earnings stability). W5 should validate definition and tag UAA as candidate first instance.
+
+**MVG-correction-precedent template accumulating rapidly:** Within ~24 hours: MNDY 5/12 (magnitude discrepancy) → HIMS 5/13 (three-layer correction load-bearing) → UAA 5/13 (two-layer correction load-bearing). W5 hygiene cycle should consider whether this represents D1/D2 data-source noise inflation, session-prompt-construction template drift, or increased frequency of borderline/multi-source-disagreement events in current event-rich market regime.
+
+**Key cross-references for future Claude sessions:** if a future B candidate exhibits "depressed pre-print Cons Discretionary apparel/retail name + multi-year revenue decline + restructuring overhang + Day-0 magnitude ≥5% NEGATIVE direction + forward-guide-reset on EPS at material magnitude (~30%+ guide cut vs cons)", reference back to this UAA entry as candidate sub-pattern 4 variant 4b first-instance precedent. The pattern is structurally distinct from sub-pattern 8 (which requires Q1 BEAT modest-confirmation) and from sub-pattern 4 variant 4a (which has cost-input pressure not demand-side collapse). The FY27-guide-reset layer is generally applicable across forward-guidance event classes when guide cut magnitude is material (~30%+ vs consensus).
