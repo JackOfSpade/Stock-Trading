@@ -13043,3 +13043,210 @@ Four considerations were specifically pushed back on during construction:
 **KL #12 first-computation calendar event Wed 2026-06-03 ~15:30 MT** now becomes 4-long-book pairwise-correlation metric if ZBRA fills Thu 5/14 (vs originally 3-long-book IBM/HCA/META).
 
 **Key cross-references for future Claude sessions:** if ZBRA invalidation criterion (i)(a) ever fires (FY26 EPS guide cut below $18.30 midpoint floor during holding window), reference back to this entry's Pillar 1 — that condition is the "clean-beat-clean-raise event class undone" trigger. If mid-window Tue 6/9 pulse surfaces aggressive sub-pattern 1 cluster escalation (3+ additional +10%+ PT raises post-staging), thesis quality has shifted from sentiment-mispricing to information-pricing — escalate to consideration of pre-time-based exit. If tariff-regime updates produce ZBRA-specific 8-K material adverse disclosure, criterion (iii) fires.
+
+---
+
+## 2026-05-13 (Wed, ~11:00 MT calendar slot per D2 5/12 conversion) Strategy B thesis construction outcome — HIMS (Hims & Hers Health) NO-GO via criterion 4 dual-framing decisive failure with THREE MVG correction layers + sub-pattern 8 candidate INVERSION (Q1 actuals MISS not BEAT — mechanism does NOT fit; HIMS is NOT sub-pattern 8 third instance) + Day-1 continuation-down evidence layer + B-short string advances ~30 → ~31; no order staged
+
+**Trigger:** Calendar-event-scheduled Strategy B thesis construction for HIMS, Wed 2026-05-13 ~11:00 MT (event id `gn5p8doe0mdqeqrs0rg6gg6sjk` per Decision_Log 2026-05-12 D2 conversion entry, line 12788). D2 source: Daily.md 2026-05-12 RECOMMENDED ACTIONS flagged HIMS as B candidate with "Q1 2026 earnings miss / forward guidance disappointment; ~-17% C/C; sub-pattern 8 third-instance candidate flagged" (per D2 entry line 12722). Session-prompt premise summary: "HIMS Q1 2026 print Mon 2026-05-11 AMC; Day-0 -12% Tue 5/12 driven by Q2 EBITDA guide-low ($35-55M materially below consensus); Q1 actuals: clean beat on revenue/EPS; mcap ~$11B+; primary routing question B-LONG mean-reversion vs B-SHORT continuation; sub-pattern 8 candidate third-instance check required (prior DOC 2026-05-07 first / MNDY 2026-05-12 second); HIGH PRIOR for criterion-4 SHORT dismissal per B-short string ~30 NO-GOs."
+
+**Three MVG-pre-flag layers triggering at primary-source verification (parallel to MNDY 2026-05-12 magnitude-discrepancy-correction precedent):**
+1. **Day-0 C/C magnitude**: session prompt -12%, D2 entry -17%; primary source confirms **-14.10%** (stockanalysis.com Mon 5/11 close $29.14 / Tue 5/12 close $25.03; -$4.11 / -14.10%). Both directional descriptors clear criterion 1 ≥5% threshold mechanically — disposition not gated by magnitude correction, but the +2pp to +3pp discrepancy is documentary signal of multi-source D1/D2 magnitude transcription noise.
+2. **Q1 actuals direction**: session prompt "Q1 actuals: clean beat on revenue/EPS"; primary source confirms **Q1 MISS on BOTH revenue and EPS** (revenue $608.1M vs $616.85M consensus = -1.4% MISS; GAAP diluted EPS **-$0.40 vs +$0.04 consensus = massive miss with -$0.44 absolute gap**; GuruFocus 2026-05-12 attribution). This is a structural premise inversion — the session prompt's framing of "clean Q1 beat with Q2 guide-cut" is factually incorrect; reality is **Q1 quality-deterioration print + Q2 guide-cut on profitability + FY26 revenue raise + FY26 EBITDA-midpoint revision** (raised top end and midpoint adjusted; reframing per primary-source 8-K).
+3. **Mcap**: session prompt $11B+; primary source **$5.59B** at Wed 5/13 close $24.14 (stockanalysis.com; 231.46M shares outstanding). Still clears $2B floor by ~2.8× cushion; disposition not gated, but $11B+ → $5.59B is a ~50% magnitude correction documentary signal.
+
+**Inputs:** Strategy.md Strategy B section (entry criteria 1-5, criterion 3 closed-list rev 14, criterion 4 dual-framing information-vs-sentiment test, exit rules, pre-mortem rev 7); Operating_Protocols.md (§1 HOIP — Claude resolves all decisions internally; §3 NO-GO records are context not barriers); AI_Trading_Foundation.md (2.4 narrative over-fit; 2.13 ordinal-tier conviction; 2.20 textbook-rational penalty; 2.8 homogenization); Portfolio_Ledger.md (B NAV $1,888.69; 2% sizing $37.77; IBM/HCA/META open + ZBRA staged Thu 5/14; sector caps IT 1/3 → 2/3 post-ZBRA-fill, Health Care Facilities 1/3 (HCA), Comm Services 1/3 (META)); Decision_Log.md prior precedents — **DOC 2026-05-07 NO-GO (sub-pattern 8 first instance: depressed-name pre-print-bearish-positioning-unwind on modest-print-confirmation + peer-print-tailwind + risk-on-regime backdrop)**, **MNDY 2026-05-12 NO-GO (sub-pattern 8 second instance + magnitude-discrepancy-correction precedent: primary-source verification trumps session-prompt asserted magnitude; sub-pattern routing materially shifts from upper-tier to MODERATE-LOW-MAGNITUDE-TIER)**, AXSM 2026-05-04 NO-GO (information-priced-via-pre-print-rally + criterion 3 closed-list rev 14 absent admissible convergence target both directions), DASH 2026-05-11 NO-GO (criterion 1 mechanical magnitude-verification-gate fail precedent), TSN 2026-05-08 NO-GO (layered-1+3+4 sub-pattern fingerprint precedent), B-SHORT string ~30 consecutive NO-GOs in current risk-on regime per Decision_Log 2026-05-11 ARM/DASH session-end totals; HIMS Q1 2026 press release (Hims & Hers IR 2026-05-11 AMC); GuruFocus Q1 2026 print summary (https://www.gurufocus.com/news/8849164/hims-hers-hims-q1-2026-eps-040-vs-004-est-miss-revenue-6081m-vs-61685m-miss-still-211-undervalued-gf-score-80100); CNBC 2026-05-12 "Hims & Hers plummets 13% after first-quarter loss, weak earnings guidance" (https://www.cnbc.com/2026/05/12/hims-hers-plummets-16percent-after-first-quarter-loss-weak-guidance-.html); Yahoo Finance 2026-05-12 (https://finance.yahoo.com/sectors/healthcare/articles/hims-hers-q1-2026-earnings-113325367.html); Investing.com Jefferies PT cut $25.50 → $24.50 + JPMorgan PT cut $35 → $33 + Needham PT raise to $35 (Novo Nordisk partnership outlier bull); Citigroup new PT $28 Neutral 2026-05-12; Simply Wall St "Margins Worsen As Q1 Loss Resurfaces" 2026-05-12; AlphaPilot Q1 2026 summary; Quartr Q1 2026 summary; stockanalysis.com HIMS history/profile (price data + mcap + shares outstanding verification); Daily.md 2026-05-12 / D2 conversion 2026-05-12 calendar event scheduling.
+
+### Decision
+
+**HIMS — NO-GO (DECLINE) via criterion 4 dual-framing decisive failure with THREE-LAYER MVG-CORRECTION + sub-pattern 8 candidate INVERSION + Day-1 continuation-down evidence layer.**
+
+Criterion 1 mechanical eligibility CLEARS (mcap $5.59B ≥ $2B; Day-0 C/C -14.10% ≥ 5% magnitude; ADV multi-hundred-million-dollar; long-or-short permitted; qualifying earnings event class). Criterion 5 sector cap CLEARS (HIMS = Health Care sector / Health Care Technology sub-industry per GICS 35103010; distinct from HCA Health Care Facilities 35102015; Health Care sector would advance 1/3 (HCA) → 2/3 within 3/sector cap, within cap). Criterion 4 dual-framing DECISIVELY FAILS for BOTH directions:
+
+**LONG framing decisive flaws** (information-driven repricing, NOT sentiment overshoot):
+- (L1) **Q1 actuals MISS on both revenue (-1.4%) and EPS (-$0.44 absolute miss)** — the -14.10% Day-0 reaction is directionally-aligned with information-content of the print, not over-extension. Session prompt's "clean beat on revenue/EPS" premise is factually wrong per primary source (GuruFocus / company 8-K reconciliation).
+- (L2) **Day-1 continuation DOWN -4.06%** (Wed 5/13 close $24.02 vs Tue 5/12 close $25.03) confirms information-driven character. The move is NOT mean-reverting up; it is continuing to absorb the new information. Cumulative Mon → Wed = -17.6% (from $29.14 → $24.02). Distinguishes decisively from sub-pattern 8 mechanism (which requires positioning-unwind-RALLY-UP on modest-print-confirmation).
+- (L3) **Margin compression structural**: Adj EBITDA margin collapsed from 16% (Q1 2025) to 7% (Q1 2026); gross margin 65% vs 73% prior-year; net loss $92M vs $50M profit prior-year. This is a structural quality-deterioration print, NOT a one-time anomaly. The pre-print -27% YTD reflected the deteriorating fundamentals thesis, not an irrational selloff — the print confirms the bear case rather than refuting it.
+- (L4) **Q2 guide-cut on profitability + FY26 EBITDA midpoint reduction**: Q2 Adj EBITDA guide $35-55M (5-8% margin) is below the Q1 trajectory, signaling continued margin compression. FY26 revenue raise to $2.8-3.0B is offset by FY26 EBITDA guidance update to $275-350M midpoint (per management commentary on weight-loss program and shipping cadence changes driving margin compression).
+- (L5) **Sell-side mostly cutting PTs**: Jefferies $25.50 → $24.50 (-3.9%); JPMorgan $35 → $33 (-5.7%); Citigroup new PT $28 Neutral. Needham raised PT to $35 (Novo Nordisk partnership bull-thesis outlier) is the only PT raise — a single-firm contrarian rather than a cluster. The cluster directionality (PT-cut wave with one bull outlier) is the **INVERSION** of sub-pattern 1 PT-raise-ratification fingerprint, matching MNDY 5/12 precedent (Cantor / BTIG / Loop / DA Davidson PT-cut wave there).
+- (L6) **Convergence target structurally challenging for LONG framing**: would require HIMS to mean-revert UP from Wed close $24.02 toward pre-print $29.14 (gap-fill toward depressed-baseline target). But the print confirmed the bear thesis, so gap-fill toward pre-event price is structurally improbable absent fresh positive catalyst (no admissible catalyst within 60-day window — Q2 print Aug outside window; Novo Nordisk partnership already-priced).
+
+**LONG framing verdict: 6/6 DECISIVE FLAWS. LONG decisively rejected.**
+
+**SHORT framing decisive flaws** (despite directional alignment with information):
+- (S1) **B-short string ~30 NO-GOs in current risk-on regime** per recent Decision_Log session-end totals — empirical regime-conditional base rate is overwhelmingly hostile to B-SHORT. The B-short string extends ~30 → ~31 with this HIMS-SHORT formal dismissal.
+- (S2) **2.20-trap structural exposure** per Strategy.md Strategy B pre-mortem rev 7 Constraint 2 — mechanism-embedded, not mitigable at strategy level. SHORT direction is structurally hazardous in risk-on regime where bull-thesis correction risk is asymmetric.
+- (S3) **Pre-print -27% YTD reflects already-priced bear thesis**: HIMS was already substantially de-rated before the print, meaning much of the structural bear case has been absorbed. Additional 60-day SHORT-direction conviction requires fresh deteriorating-information beyond Q1, which the print already revealed. The -14% Day-0 + -4% Day-1 absorbed ~17% additional bear-case digestion; marginal remaining downside is bounded.
+- (S4) **Needham PT raise to $35 + Novo Nordisk partnership announced/renewed** is a single-firm bull-catalyst risk — short-squeeze potential if any positive partnership development triggers covering. HIMS has historically been a high-short-interest name (typical 15-25% short interest).
+- (S5) **FY26 revenue raise to $2.8-3.0B is a positive structural data point** even alongside EBITDA compression — implies continued top-line momentum and potential for margin normalization in late-2026/2027. SHORT thesis requires multi-year resolution timeline structurally mismatched with B's 60-day window (V/MDLZ structural-overhang precedent).
+- (S6) **+25% short stop binding risk** per Strategy.md rev 13 short-side stop-loss: at $25.03 Tue close, +25% stop = $31.29. Any positive 60-day-window catalyst (Novo Nordisk partnership update, GLP-1 reimbursement progress, sequential margin stabilization in Q2 print) could squeeze toward stop trigger with single-trade short loss approaching 0.5% of strategy portfolio in non-gap conditions OR uncapped in gap-up conditions per KL #7 gap-execution residual.
+
+**SHORT framing verdict: 6/6 DECISIVE FLAWS. SHORT decisively rejected per B-short string precedent + 2.20-trap + pre-print-already-discounted + bull-catalyst-risk.**
+
+**Dual-framing disposition: BOTH LONG AND SHORT FAIL CRITERION 4. NO-GO.**
+
+### Step 1 — Day-0 close-to-close magnitude verification (criterion 1 sub-component + MVG layer 1)
+
+Session prompt asserted "-12%" Day-0; D2 entry asserted "~-17%". Primary-source verification mandatory per close-to-close discipline and MNDY 2026-05-12 magnitude-discrepancy-correction precedent.
+
+Stockanalysis.com primary source (https://stockanalysis.com/stocks/hims/history/):
+- **Mon 2026-05-11 close: $29.14** (high $30.39, low $28.55)
+- **Tue 2026-05-12 close: $25.03** (open $25.21, high $26.84, low $24.56)
+- **Wed 2026-05-13 close: $24.02** (high $24.88, low $23.27)
+- **Day-0 close-to-close (Mon → Tue): -$4.11 / -14.10%**
+- **Day-1 close-to-close (Tue → Wed): -$1.01 / -4.06%**
+- **Cumulative Day 0-1 (Mon → Wed): -$5.12 / -17.57%**
+
+Day-0 C/C primary-source verified at **-14.10%**, between session-prompt's "-12%" (1.4pp understatement) and D2 entry's "-17%" (2.9pp overstatement) — both directional-class consistent (negative ≥5% magnitude). Criterion 1 magnitude sub-component clears. **MVG layer 1 fires** for documentation; disposition not gated by magnitude correction.
+
+**Day-1 continuation-down -4.06%** is a critical evidentiary layer flagged for criterion 4 LONG framing (information-driven character confirmed; move did NOT mean-revert, continued to absorb).
+
+### Step 2 — Criterion 1 mechanical eligibility detail
+
+- **Instrument rule**: US-listed common equity (NYSE:HIMS). Market cap **$5.59B at Wed 5/13 close $24.14** (stockanalysis.com; 231.46M shares outstanding × $24.14 = $5.59B). Cushion vs $2B floor: ~2.8×. ADV multi-hundred-million-dollar daily (HIMS is a heavily-traded retail-attention name); cushion vs $10M floor: ~20×+. Long-or-short permitted; 2% sizing $37.77; no options.
+- **Criterion 1 close-to-close**: -14.10% Day-0 ≥ 5% threshold ✓ (Step 1).
+- **Event class**: Q1 2026 earnings release Mon 2026-05-11 AMC — qualifying event class per Strategy.md ("guidance update" and earnings releases explicitly enumerated; Q2 guide-cut sub-event constitutes new forward information embedded in the print).
+- **Window status**: 10-day post-event entry window expires ~Tue 2026-05-26 (Mon 5/11 + 10 trading days through May 25 Memorial Day closure). Cushion at staging time Wed 5/13: ~8 trading days remaining.
+- **Criterion 5 (no A in name)**: A router DO-NOT-ACTIVATE; no A position open in HIMS. Cleared.
+
+### Step 3 — Criterion 2 (mispricing thesis: dual-framing premise correction) + MVG layer 2
+
+Session prompt's premise was: "(L1) LONG mean-reversion — HIMS was -27% YTD pre-print on growth-decel fears; Q1 actuals BEAT; the -12% Day-0 is the Q2 guide-cut reaction." This premise is **FACTUALLY INCORRECT** per primary-source verification — Q1 actuals were a **MISS** on both revenue and EPS, not a beat.
+
+**Q1 2026 actual results (per primary source GuruFocus + Hims & Hers IR 8-K)**:
+- Revenue $608.1M vs $616.85M consensus = **-1.4% MISS** (vs +4% YoY growth — sharply decelerated from prior-quarter growth rate)
+- GAAP diluted EPS **-$0.40 vs +$0.04 consensus = massive MISS** (-$0.44 absolute gap)
+- Net loss **$92M** vs Q1 2025 profit **$50M** = swing to loss
+- Adj EBITDA $44.3M (7% margin) DOWN from $91.1M (16% margin) Q1 2025 = -51.4% YoY adj EBITDA decline, -900bps margin compression
+- Gross margin 65% vs 73% prior-year = -800bps gross margin compression
+- Subscribers 2.6M (+9% YoY) — slowest YoY growth in recent quarters
+- Average monthly revenue per subscriber $80 vs $85 prior-year = -5.9% ARPU decline
+
+**Q2 2026 guide**:
+- Revenue $680-700M (+25-28% YoY) — reacceleration top line
+- Adj EBITDA $35-55M (5-8% margin) — continued margin compression vs Q1 7%
+
+**FY26 guide**:
+- Revenue raised to $2.8-3.0B
+- Adj EBITDA updated to $275-350M (midpoint $312.5M)
+
+The Q1 print is a **structural quality-deterioration event**, NOT a "clean beat with Q2 guide-cut" event. The pre-print -27% YTD reflected the market correctly anticipating fundamental deterioration; the Q1 print CONFIRMED the bear thesis rather than refuting it. The -14.10% Day-0 + -4.06% Day-1 = -17.57% cumulative is information-driven repricing, not sentiment overshoot.
+
+**MVG layer 2 fires** for major premise correction; disposition gates on this correction (sub-pattern 8 mechanism becomes inapplicable, see Step 4).
+
+**LONG mispricing thesis assessment**: WEAK. The thesis would require believing (a) the Day-0 reaction is overdone (counter: Day-1 continuation down disconfirms), (b) management is sandbagging Q2 guide (counter: Q1 actuals already missed, suggesting management is NOT being conservative), (c) margin compression is one-time (counter: Q2 guide continues margin compression, structurally implicating weight-loss/shipping changes per management), (d) fresh positive catalyst within 60-day window (counter: no admissible catalyst — Q2 print Aug outside window). LONG mispricing thesis is structurally absent for HIMS.
+
+**SHORT mispricing thesis assessment**: WEAK in a different direction. The thesis would require believing the additional -14% Day-0 + -4% Day-1 still hasn't fully priced the deterioration. But: (a) cumulative -17.6% Mon→Wed PLUS pre-print -27% YTD = much of the bear case digested; (b) FY26 revenue raise provides counter-narrative for late-2026/2027 recovery; (c) Needham/Novo Nordisk partnership is a single-firm bull catalyst-risk for short-squeeze; (d) +25% short stop binds toward $31.29 within window if any positive catalyst surfaces. SHORT thesis has bounded marginal-downside profile structurally mismatched with B's 60-day window vs multi-year fundamental thesis.
+
+### Step 4 — Sub-pattern 8 third-instance candidate routing → INVERSION (mechanism does NOT fit)
+
+D1 surfaced HIMS as "sub-pattern 8 third-instance candidate" (prior DOC 5/7 first instance + MNDY 5/12 second instance). Sub-pattern 8 canonical mechanism (per DOC 5/7 first-instance Decision_Log line 6893):
+
+> "depressed-name pre-print-bearish-positioning-unwind on **modest-print-confirmation** + peer-print-tailwind + risk-on-regime backdrop"
+
+Required mechanism components per first/second instances:
+- (a) Stock meaningfully depressed pre-print (-X% YTD reflecting bearish positioning) ✓ HIMS -27% YTD
+- (b) **Q1 actuals BEAT** (modest-print-confirmation that triggers positioning unwind) — DOC: FFO $0.45 vs $0.43 cons +4.7% beat + FY26 FFO guide raised $0.01; MNDY: Q1 modest revenue/EPS beat per primary source
+- (c) Stock RALLIES UP on print (Day-0 POSITIVE C/C reflecting positioning unwind) — DOC: +13.60-17.93% Day-0; MNDY: +6.72% Day-0
+- (d) Day-1 follow-through stabilizes or fades (Day-2-3 trajectory mix bracket)
+- (e) Peer-print tailwind / sector-rotation-positive backdrop
+
+HIMS attempts at component checklist:
+- (a) HIMS -27% YTD = ✓ depressed
+- (b) **Q1 actuals MISS on both revenue and EPS = ✗ INVERTED** — not modest-confirmation; instead Q1 quality-deterioration print
+- (c) Day-0 -14.10% (NEGATIVE) = ✗ INVERTED — stock did NOT rally; stock CRASHED on print
+- (d) Day-1 -4.06% continuation down = ✗ further INVERTED — move did NOT stabilize; continued to absorb information
+- (e) Peer-print backdrop: no obvious telehealth peer tailwind this week
+
+**Component checklist: 4/5 INVERTED relative to sub-pattern 8 canonical mechanism.** The required mechanism component (b) — modest-print-confirmation — is **decisively absent** (Q1 was a MISS not BEAT per primary source). Components (c) and (d) are decisively inverted (Day-0 + Day-1 both negative). Component (a) shares the "depressed pre-print" surface feature, but this alone is insufficient — sub-pattern 8 requires the WHOLE mechanism (depressed → modest beat → positioning unwind rally), and HIMS has only the first piece.
+
+**Sub-pattern 8 routing verdict: MECHANISM DOES NOT FIT. HIMS is NOT sub-pattern 8 third instance.** The session-prompt's flag for sub-pattern 8 third-instance check was premised on the (incorrect) "clean Q1 beat" framing; primary-source verification (Q1 MISS) invalidates the routing premise.
+
+**Proper sub-pattern classification for HIMS**: Closest fit is V/MDLZ-style **structural-overhang-persistence** (multi-year revenue/margin resolution timeline structurally mismatched with B's 60-day window) with quality-deterioration-confirmation-at-print layer (parallel to but distinct from EL 2026-05-02 TEAM+V/MDLZ-hybrid sub-pattern). Could also be classified under "depressed-name continues-to-deteriorate-on-quality-print confirming bear thesis" as candidate NEW sub-pattern variant (HIMS first instance; pending second-instance validation per W4/W5 taxonomy cadence). For this NO-GO disposition, classification routes through generic criterion-4-information-driven-pricing without requiring new sub-pattern entry.
+
+### Step 5 — Criterion 4 dual-framing decisive failure (detail above in Decision section)
+
+LONG framing: 6/6 decisive flaws (L1-L6). LONG decisively rejected.
+SHORT framing: 6/6 decisive flaws (S1-S6). SHORT decisively rejected per B-short string + 2.20-trap + pre-print-already-discounted + bull-catalyst-risk + 60-day-window structural-thesis mismatch.
+
+Theater-check: CONVERGENT. Independent dual-framing decisive failure across both directions is mutually corroborating — the LONG case fails because the move is information-driven; the SHORT case fails because the regime is hostile to B-short and pre-print de-rating absorbed much of the bear case. The shared underlying observation (Day-1 continuation down + Q1 actual miss + margin compression + mixed sell-side reaction) supports both NO-GO directions independently.
+
+### Step 6 — Criterion 3 closed-list rev 14 check (suppressed downstream of criterion 4 dual failure)
+
+Per Strategy.md Operating procedure: if criterion 4 fails decisively, criterion 3 analysis is structurally unnecessary. Documented for completeness:
+
+Strict-enumerated admissible targets within 60 days of Mon 2026-05-11 (window closes ~Fri 2026-07-10):
+- (a) Next HIMS earnings release: Q2 2026 print likely early August — outside 60-day window ✗
+- (b) Next FDA decision date: N/A (HIMS is telehealth, not FDA-PDUFA-direct exposure; Novo Nordisk partnership is not an FDA event) ✗
+- (c) Next FOMC meeting: Jun 16-17 inside window, but mechanism-mismatch (no rate-decision convergence mechanism for idiosyncratic telehealth name) ✗
+- (d) Index inclusion announcement in S&P 500 / Russell 1000 / Nasdaq 100: HIMS is in Russell 1000 (likely; verify if material). No pending inclusion event in admissible indexes. ✗
+- (a-alt) Numerical price level: PERMITTED — but moot given criterion 4 dual-framing decisive failure (no admissible direction).
+
+**Criterion 3 admissible only via numerical price level option, which is moot given criterion 4 disposition.**
+
+### Step 7 — Criterion 5 sector/correlation/A-position check (suppressed downstream)
+
+- No A position in HIMS: ✓ (A router DO-NOT-ACTIVATE).
+- Sector cap: HIMS = Health Care sector / Health Care Technology sub-industry (GICS 35103010 or adjacent; verify exact sub-industry — TDOC was Health Care Technology). HCA (current B book) = Health Care Facilities sub-industry (GICS 35102015). **Same SECTOR (Health Care), DIFFERENT sub-industries.** Health Care sector counter: HCA 1, HIMS would add 1 → 2/3 within 3/sector cap. Cap clear if criterion 4 hadn't decisively failed.
+- KL #12 pairwise correlation estimate: HIMS vs current B book (IBM/HCA/META + ZBRA staged):
+  - HIMS-IBM: ~0.15-0.25 (different sectors, telehealth high-beta vs hybrid-cloud mature)
+  - HIMS-HCA: ~0.20-0.35 (both Health Care but distinct sub-industries — high-beta telehealth vs defensive healthcare facilities)
+  - HIMS-META: ~0.25-0.40 (consumer-tech-adjacent both; some discretionary-consumer cyclical overlap)
+  - HIMS-ZBRA: ~0.15-0.30 (different sectors entirely)
+  - Estimated 5-long-book pairwise average: ~0.20-0.30 — comfortably below 0.5 KL #12 trigger threshold. KL #12 FAVORABLE for HIMS but secondary to criterion 4 disposition.
+- Position size $37.77 (2% × $1,888.69) within cap if proceeding to GO.
+
+### Pending queue updated
+
+- ~~HIMS B-thesis construction~~ COMPLETE — NO-GO via criterion 4 dual-framing decisive failure with three-layer MVG-correction + sub-pattern 8 candidate INVERSION + Day-1 continuation-down evidence layer; no order; no follow-on calendar event scheduled.
+- HIMS remains within the 10-day post-event window through ~Tue 2026-05-26. No calendar event scheduled to revisit — criterion-4-decisive-failure on quality-deterioration-print premise is unlikely to flip on re-examining the same Q1 print data; routine Daily.md scan picks up any fresh trigger event.
+- B-short string advances **~30 → ~31** with HIMS-SHORT formal dismissal.
+- Existing pending items unchanged (ZBRA Thu 5/14 order placement; UAA/CLSK Thu 5/14 thesis construction; IBM/HCA/META invalidation monitoring + time-based exits; KL #12 first-computation Wed 6/3).
+
+### References
+
+- HIMS Q1 2026 press release (Hims & Hers Investor Relations 2026-05-11 AMC): https://investors.hims.com/news/news-details/2026/Hims--Hers-Health-Inc--Reports-First-Quarter-2026-Financial-Results/default.aspx
+- GuruFocus Q1 2026 print summary (revenue $608.1M vs $616.85M cons MISS; EPS -$0.40 vs +$0.04 cons MISS): https://www.gurufocus.com/news/8849164/hims-hers-hims-q1-2026-eps-040-vs-004-est-miss-revenue-6081m-vs-61685m-miss-still-211-undervalued-gf-score-80100
+- CNBC 2026-05-12 "Hims & Hers plummets 13% after first-quarter loss, weak earnings guidance": https://www.cnbc.com/2026/05/12/hims-hers-plummets-16percent-after-first-quarter-loss-weak-guidance-.html
+- Yahoo Finance 2026-05-12 Q1 2026 earnings recap (net loss, weak guidance): https://finance.yahoo.com/sectors/healthcare/articles/hims-hers-q1-2026-earnings-113325367.html
+- Investing.com Jefferies PT cut $25.50 → $24.50 on guidance cut: https://www.investing.com/news/analyst-ratings/jefferies-lowers-hims-and-hers-stock-price-target-on-guidance-cut-93CH-4681297
+- JPMorgan PT cut $35 → $33 + Citigroup new PT $28 Neutral + Needham PT raise to $35 (Novo Nordisk partnership) — per WebSearch compilation 2026-05-12-13.
+- Simply Wall St "Margins Worsen As Q1 Loss Resurfaces And Tests Bullish Narratives" 2026-05-12: https://simplywall.st/stocks/us/healthcare/nyse-hims/hims-hers-health/news/hims-hers-health-hims-margins-worsen-as-q1-loss-resurfaces-a
+- Stockanalysis.com HIMS price history (Mon $29.14 / Tue $25.03 / Wed $24.02; Day-0 C/C -14.10%; Day-1 -4.06%): https://stockanalysis.com/stocks/hims/history/
+- Stockanalysis.com HIMS overview (mcap $5.59B; shares outstanding 231.46M): https://stockanalysis.com/stocks/hims/
+- Strategy.md Strategy B section (criteria 1-5; criterion 3 closed-list rev 14; criterion 4 dual-framing; pre-mortem rev 7 KL #1-12).
+- Operating_Protocols.md §1 HOIP / §3 NO-GO records are context.
+- Portfolio_Ledger.md (B NAV $1,888.69; IBM/HCA/META open + ZBRA staged Thu 5/14; sector caps).
+- Decision_Log.md 2026-05-07 DOC NO-GO entry (sub-pattern 8 first-instance precedent; depressed-name pre-print-bearish-positioning-unwind on modest-print-confirmation mechanism canonical).
+- Decision_Log.md 2026-05-12 MNDY NO-GO entry (sub-pattern 8 second-instance + magnitude-discrepancy-correction precedent template — directly applicable for HIMS MVG-layer corrections).
+- Decision_Log.md 2026-05-11 ARM/DASH NO-GO entries (B-short string ~30 context).
+- Decision_Log.md 2026-05-12 D2 conversion entry (HIMS calendar event scheduling + sub-pattern 8 third-instance candidate flag from D1).
+- Daily.md 2026-05-12 (D1 HIMS surface flag with -17% C/C / sub-pattern 8 third-instance candidate framing — both magnitude and routing premise corrected to primary source here).
+
+### Theater-check on this orchestrator review
+
+Five considerations were specifically pushed back on during construction:
+
+(a) **Three-layer MVG correction (Day-0 magnitude / Q1 actuals direction / mcap).** The session-prompt premise contained THREE primary-source-correctable factual errors: -12% (actual -14.10%); "clean beat on revenue/EPS" (actual MISS on both); $11B+ mcap (actual $5.59B). The Q1-actuals-direction correction is the LOAD-BEARING premise inversion — it converts the disposition from "candidate sub-pattern 8 third instance check" to "criterion 4 information-driven-repricing decisive failure." Per MNDY 2026-05-12 magnitude-discrepancy-correction precedent and DASH 2026-05-11 magnitude-verification-gate precedent, primary-source verification trumps session-prompt premise. The MVG layers are persisted in this entry for documentary signal to W5 hygiene cycle and for future-session diagnostic reference.
+
+(b) **Sub-pattern 8 candidate INVERSION (HIMS is NOT third instance).** D1/D2 routing flagged HIMS for sub-pattern 8 third-instance check premised on "clean Q1 beat" framing. Primary-source verification reveals the required mechanism component (b) — modest-print-confirmation = Q1 BEAT — is decisively absent. HIMS Q1 was a MISS, and Day-0 was -14.10% (not RALLY UP per sub-pattern 8 mechanism requirement). HIMS is structurally NOT sub-pattern 8; the candidate-third-instance flag is documented as INVERSION-not-instance for the taxonomy. Sub-pattern 8 instance count remains at 2 (DOC + MNDY); HIMS does not advance to 3.
+
+(c) **Day-1 continuation-down as critical criterion-4 LONG-framing evidence.** Wed 5/13 close $24.02 = -4.06% from Tue close $25.03 is an in-window evidentiary layer that LONG-framing-mean-reversion thesis would require to NOT see (i.e., LONG-mean-reversion would require Day-1 stabilization or bounce). The Day-1 -4.06% continuation down decisively confirms information-driven character. This evidentiary layer is now available because the session is running Wed 5/13 evening (post-Wed-close); a Tue-evening staging session would not have had Day-1 data. The Day-1 evidence layer is precedent-establishing for future-session use of "Day-1 trajectory" as a criterion-4 LONG/SHORT decisive-flaw evidentiary input alongside Day-2-3 trajectory bracket (PINS full-fade / DOC partial-fade / AMD full-hold).
+
+(d) **B-short string ~30 → ~31 with HIMS-SHORT formal dismissal.** Per session-prompt note "HIGH PRIOR for criterion-4 SHORT dismissal per B-short string at ~30 consecutive NO-GOs." HIMS-SHORT analysis confirmed 6 decisive flaws (S1-S6); SHORT direction decisively dismissed. The B-short string extends by one instance, reinforcing the empirical regime-conditional base rate that SHORT direction is structurally inadmissible in the current risk-on regime. This is a documentary signal for the 30-trade-gate edge-decay review (per Strategy.md Section 4 indicators) and for the structural reassessment of B's long-short asymmetry per pre-mortem rev 7 KL #6.
+
+(e) **No new sub-pattern entry created for HIMS.** Although HIMS exhibits a distinct pattern (depressed-name continues-to-deteriorate-on-quality-print-with-Day-1-continuation), single-instance observations do not warrant new sub-pattern taxonomy entry per W4/W5 cadence ("pending second-instance validation"). HIMS is classified under generic criterion-4 information-driven-pricing for this NO-GO disposition; W5 may extract a "quality-deterioration-confirmation-at-print" sub-pattern candidate if a second instance emerges.
+
+### Compaction-survival note
+
+**Strategy B HIMS Q1-print disposition 2026-05-13 ~11:00 MT calendar slot (running Wed evening post-cash-close):** B-thesis construction COMPLETE for HIMS; **NO-GO (DECLINE) via criterion 4 dual-framing decisive failure** with three-layer MVG-correction (Day-0 -14.10% vs -12% / -17%; Q1 MISS not BEAT; mcap $5.59B not $11B+) + sub-pattern 8 candidate INVERSION (mechanism does NOT fit; HIMS is NOT third instance — sub-pattern 8 stays at 2 DOC/MNDY) + Day-1 -4.06% continuation-down evidence layer; no order staged; no portfolio-state change.
+
+**Experiment B totals advance to 4 GO + 33 NO-GO = 10.8% / 89.2% hit rate** (vs prior 4 GO + 32 NO-GO = 11.1% / 88.9% per most-recent Decision_Log entry 2026-05-13 ZBRA GO). NO-GO breakdown advances criterion-4-decisive-failure category by 1 (LONG-and-SHORT-both-fail dual-framing instance).
+
+**B-short string advances ~30 → ~31** with HIMS-SHORT formal dismissal per 6/6 decisive flaws (B-short string + 2.20-trap + pre-print -27% YTD already discounted + Needham PT raise / Novo Nordisk partnership bull-catalyst-risk + FY26 revenue raise + +25% stop binding risk + 60-day window structural-thesis-mismatch).
+
+**Conviction in NO-GO: HIGH (~80-85%).** Theater-check CONVERGENT. Multi-layer convergent disposition: criterion 4 LONG decisive failure (6 flaws) + criterion 4 SHORT decisive failure (6 flaws) + sub-pattern 8 INVERSION + Day-1 continuation-down evidence + three-layer MVG correction. Residual ~15-20% reflects (a) possible Day-2-3 bounce on FY26 revenue raise narrative or Needham bull catalyst materialization, (b) possible short-squeeze on high-short-interest name absorbing additional positive Novo Nordisk partnership news, (c) possible bull-thesis reframing on weight-loss-segment investment-cycle absorption.
+
+**Sub-pattern taxonomy update for W5 hygiene cycle:** Sub-pattern 8 instance count remains at 2 (DOC 5/7 + MNDY 5/12); HIMS is NOT sub-pattern 8 third instance per mechanism INVERSION (Q1 MISS not BEAT; Day-0 NEGATIVE not POSITIVE). HIMS is a candidate NEW sub-pattern variant ("depressed-name continues-to-deteriorate-on-quality-print + Day-1 continuation"); pending second-instance validation before formal taxonomy entry. The session-prompt's third-instance-candidate flag was premised on incorrect "clean beat" framing — primary-source verification corrects this. W5 should note both: (i) sub-pattern 8 does NOT advance; (ii) candidate new sub-pattern HIMS-style flagged for future-instance validation.
+
+**Key cross-references for future Claude sessions:** if a future B candidate exhibits "depressed pre-print + Q1 actual MISS + Day-0 magnitude ≥5% in NEGATIVE direction + Day-1 continuation-down", reference back to this HIMS entry as candidate-new-sub-pattern first-instance precedent. The pattern is structurally distinct from V/MDLZ structural-overhang-persistence (HIMS has FY26 revenue raise positive structural data point; V/MDLZ had multi-quarter narrative-overhang) and from sub-pattern 8 (HIMS has Q1 MISS not BEAT; sub-pattern 8 requires modest-confirmation). The Day-1 continuation-down evidentiary layer is generally applicable to criterion 4 dual-framing analysis across all B candidates when session is running post-Day-1-close — precedent established.
