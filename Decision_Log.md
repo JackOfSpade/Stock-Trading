@@ -12818,3 +12818,228 @@ Scheduling rationale:
 (d) **GTLB deferral.** AH earnings; Day-0 C/C only determinable at Wed 5/13 cash close. Conservative default: no routing if C/C <5%. Wed D2 will route to Thu 5/14 if criterion clears.
 
 (e) **Calendar event IDs for audit trail:** ZBRA `2br36sel91eu99ou69vunuukf8`, HIMS `gn5p8doe0mdqeqrs0rg6gg6sjk`, UAA `nki34ekoji7v9epnqc8qto3jvc`, CLSK `tq07e6cuarf6sb8e7mj8s0dqvk`.
+
+---
+
+## 2026-05-13 Strategy B thesis construction outcome — ZBRA GO at MEDIUM conviction; Thu 2026-05-14 limit-order execution plan staged with operator-discretion modification documented
+
+**Trigger:** B-thesis construction requested for ZBRA (Zebra Technologies Corporation, NASDAQ:ZBRA) post-event candidate flagged "HIGHEST priority" in Daily.md 2026-05-12 D1 scan and routed by D2 Daily Action Conversion 2026-05-12 to calendar event `2br36sel91eu99ou69vunuukf8` scheduled Wed 2026-05-13 08:30 MT. Event: Q1 2026 earnings release Tue 2026-05-12 BMO. Daily.md described clean Q1 beat ($4.75 vs ~$4.25 consensus = +11.8% beat) + revenue +14.3% / +4.3% organic + Adj EBITDA margin +90bps YoY + raised FY26 outlook → "+~18% intraday Tue 5/12" (Seeking Alpha 11:00 AM ET). Sector cap pre-flag: IT-sector 1/3 (IBM) + ZBRA Tech Hardware/Storage → 2/3 within 3/sector cap (distinct sub-industry from IBM IT Services). **MVG pre-flag** for this session: D2 entry 2026-05-12 line 12720 transcribed ZBRA as "Q1 2026 earnings miss; ~-14% C/C" — this is a clerical error in the D2 entry; D1 source (Daily.md lines 15/27/119/185) is the authoritative description (clean BEAT + raised guide; +18% intraday). Primary-source C/C verification per close-to-close discipline performed in this session as Step 1.
+
+**Inputs:** Strategy.md Strategy B section (entry criteria 1-5, criterion 3 closed-list rev 14, criterion 4 information-vs-sentiment + dual-framing, exit rules, pre-mortem rev 7); Operating_Protocols.md (§1 HOIP — Claude resolves all decisions internally; §2 commission-disregarded-at-staging; §3 NO-GO records are context not barriers; §8 conviction calibration ladder IBM/HCA/META); AI_Trading_Foundation.md (2.4 narrative over-fit central risk; 2.8 homogenization on commoditized AI strategy; 2.13 ordinal-tier conviction + miscalibration on convergence targets; 2.14 recency bias; 2.20 textbook-rational penalty); Portfolio_Ledger.md (B NAV $1,888.69 as of 2026-05-07 ~10:12 MT DIS-fill-capture-session refresh; 2% sizing = $37.77; current B book IBM/HCA/META all long, IT Services 1/3 + Health Care Facilities 1/3 + Comm Services 1/3; no Funds-on-Hold anomaly active); Decision_Log.md prior precedents — IBM 2026-04-25 GO format (MEDIUM-HIGH conviction, ~50-62% gap-fill, sector-contagion-supported), HCA 2026-04-27 GO format (MEDIUM-LOW conviction, 25% gap-fill, multi-weight adversarial), META 2026-05-01 GO format (MEDIUM conviction, 25% gap-fill, dual-driver ad strength + capex framework preserved); recent NO-GO sub-pattern 1 precedent string (BE 5/1 / CAT 5/2 / AXSM 5/6 / PINS 5/7 / AMD 5/7 / TSN 5/8 / GLW 5/11 / ARM 5/11; 8 instances); ZBRA Q1 2026 8-K and earnings call transcript (Motley Fool 2026-05-12); Seeking Alpha / Investing.com / Benzinga / StockStoryGoTrade / Fool / financialcontent / TipRanks 2026-05-12-13 coverage; Stockanalysis.com primary-source price history (https://stockanalysis.com/stocks/zbra/history/ — verified Mon 5/11 close $216.96 / Tue 5/12 close $241.79); Benzinga post-print analyst-PT-changes compilation (https://www.benzinga.com/analyst-stock-ratings/price-target/26/05/52539000/zebra-technologies-analysts-raise-their-forecasts-after-upbeat-q1-results); KeyBanc upgrade Sector Weight → Overweight PT $305 (GuruFocus / Investing.com); D2 entry 2026-05-12 (calendar event ID + MVG-pre-flag on clerical error).
+
+### Decision
+
+**ZBRA — GO (RECOMMEND ENTER) at MEDIUM conviction.**
+
+Cleared all 5 Strategy B entry criteria. Mechanical eligibility (criterion 1, criterion 5, instrument rule) clears with material cushion. Criterion 2 (mispricing thesis) supported by three pillars detailed below. Criterion 3 (convergence target closed-list rev 14) selected as numerical price level **$264.00**, immutable from entry. Criterion 4 (adversarial counter-argument, dual-framing) addressed below — sub-pattern routing resolved as THIN/BORDERLINE cluster (NOT canonical sub-pattern 1) under magnitude-weighted assessment; LONG framing has no decisive flaw; SHORT framing has multiple decisive flaws (2.20-trap, +25% stop binding toward analyst PT cluster, B-short string ~30 in current risk-on regime). Criterion 5 cleared.
+
+**Conviction rating at entry: MEDIUM.** Pre-discount probability of $264 convergence within 60 days estimated ~55-60%; post-2.13-discount ~50-55%. Same band as IBM (MEDIUM-HIGH per Operating_Protocols.md §8 ladder; ZBRA is slightly below IBM and at META band), above HCA (MEDIUM-LOW). 25% gap-fill choice (from Wed 5/13 close $250.27 toward analyst PT median ~$305) parallels META's 25% calibration. The Daily.md "highest-priority" framing is correct relative to other May 12 watchlist names (UAA / HIMS / CLSK / GTLB) but does not translate to absolute HIGH conviction across all B trades — the sub-pattern 1 cluster fingerprint (5 firms raising PTs within 48h + KeyBanc upgrade) is partially present and creates ~50% pricing-in-already weight on the bull thesis. The thin-cluster magnitude (avg PT raise ~+5%, only 2 firms clearly at ≥+5%) keeps this in non-sub-pattern-1 routing territory.
+
+### Step 1 — Day-0 close-to-close magnitude verification (criterion 1 sub-component)
+
+D2 entry 2026-05-12 line 12720 transcribed ZBRA as "Q1 2026 earnings miss; ~-14% C/C" — clerical error in the D2 candidate-summary line; D1 source (Daily.md 2026-05-12 lines 15/27/119/185) unambiguously describes clean BEAT + raised guide + "+~18% intraday". MVG-pre-flag fires for this session per close-to-close discipline; primary-source C/C verification mandatory.
+
+Primary-source verification (stockanalysis.com/stocks/zbra/history/):
+- **Mon 2026-05-11 close: $216.96**
+- **Tue 2026-05-12 close: $241.79** (open $248.94 gap-up; high $259.34 = +19.5% intraday peak from Mon close; low $238.49)
+- **Close-to-close: +$24.83 / +11.44%**
+
+Cross-corroboration: Wed 2026-05-13 close $250.27 per Benzinga = +3.5% from Tue close → implies Tue close $250.27/1.035 = $241.81 ≈ $241.79 (consistent). Multiple sources: Investing.com "shares surging over 14% in pre-market" / Fool "stock jumped 19.5% this morning" (intraday peak) / financialcontent "stock jumps 14.2%" (rounded close-to-close).
+
+**Verdict:** Day-0 close-to-close = **+11.44%** ≥ 5% threshold ✓. Daily.md / session-prompt "+~18% intraday" represents intraday peak, not regular-session C/C; the C/C is +11.44% with intraday fade of ~6-7pp from peak. The D2 entry "−14%" is clerical error (likely template artifact from negative-direction siblings UAA/HIMS/CLSK), not primary-source.
+
+### Step 2 — Criterion 1 mechanical eligibility detail
+
+- **Instrument rule:** US-listed common (NASDAQ:ZBRA); market cap **~$11.79B** (stockanalysis.com 2026-05-13 ~14:55 EDT mid-session quote) vs $2B floor → **~5.9× cushion**; 30-day ADV ~874k shares × ~$220-245 avg = **~$200M+/day** vs $10M floor → **~20× cushion**; long-or-short permitted; 2% sizing $37.77; no options.
+- **Criterion 1 close-to-close:** +11.44% Day-0 ≥ 5% ✓ (Step 1 above).
+- **Event class:** Q1 2026 earnings release Tue 2026-05-12 BMO — clean BEAT + raised FY26 outlook = qualifying event class per Strategy.md ("guidance update" explicit example).
+- **Direction:** LONG (positive-surprise event; Day-0 +11.44% C/C with Wed +3.5% follow-through).
+- **Window status:** 10-day post-event entry window expires ~Tue 2026-05-26 (10 trading days from Tue 2026-05-12 = Tue 5/26 inclusive of Memorial Day Mon 5/25 closure; window cushion ~9 trading days at staging time Wed 5/13 evening).
+- **Criterion 5 (no A in name):** A router DO-NOT-ACTIVATE per Regime_State; no A position open in ZBRA. Cleared.
+- **A↔B coordination per pre-mortem KL #8:** dormant (A inactive).
+
+### Step 3 — Criterion 2 (mispricing thesis: three pillars)
+
+**Pillar 1 — Q1 2026 print quality is exceptional and direction-aligned with raised forward guide.** Non-GAAP diluted EPS $4.75 = **+11.8% beat** vs $4.25 consensus (Benzinga / Alphastreet / Motley Fool); +18.2% YoY EPS growth. Revenue +14.3% reported / +4.3% organic. Adj EBITDA margin **23.2% (+90bps YoY)** = operational leverage and pricing/cost-discipline confirmation. Connected Frontline segment **+20.6% (+3.8% organic; Elo Touch acquisition contribution)** = secular growth narrative intact. Asia Pacific +11% / Latin America +10% = broad-based regional growth, not single-region-dependent. Management raised FY26 EPS outlook to **$18.30-$18.70** (midpoint $18.50) vs prior consensus avg $17.74 = **+4.3% midpoint raise**; Q2 EPS guide $4.20-$4.50 (midpoint $4.35) tops Q2 consensus. This is a clean clean-beat-clean-raise event class with operational margin expansion as primary surprise vector (the prior-quarter context per Investing.com SWOT had flagged "margin pressures amid industrial sector optimism" — the Q1 print directly answers that bear concern).
+
+**Pillar 2 — Stock structurally depressed at longer horizon (38% off 52-wk high) provides re-rating room despite modest 30-day uptrend.** 52-week range $199.05-$352.66; Mon 5/11 pre-print close $216.96 = 38.5% below 52-wk high $352.66 / 9.0% above 52-wk low $199.05. Trailing-30-day pre-print: April 1 close $207.28 → May 11 close $216.96 = +4.7% modest recovery from April low ~$202.84. This is NOT a classic "depressed stock + clean beat" extreme-mean-reversion setup (stock had already started to recover), but ALSO NOT a sub-pattern 3 "pre-print rally exhausted" setup (no +15%+ pre-print rally; modest +4.7% is well below sub-pattern 3 fingerprint). The stock occupies a middle band: longer-horizon depressed (~38% off peak) with substantial room to re-rate UP without "fully priced in" concern, but short-term modestly recovering rather than acutely oversold. Per Investing.com pre-print: "concerns about decelerating organic growth and cautious Q4 guidance had offset more favorable long-term expectations, with the average analyst price target having decreased by approximately $14 to $358 in late 2025" — the Q1 print directly disconfirms the deceleration narrative (revenue +14.3% / EPS $4.75 / margin +90bps), unwinding the bear thesis.
+
+**Pillar 3 — Asymmetric peak-to-close fade Tue 5/12 + Wed 5/13 follow-through provides direct mispricing signature.** Tue 5/12 intraday peak $259.34 = +19.5% from Mon close; Tue close $241.79 = +11.44% C/C. Peak-to-close fade of ~6.8pp (from +19.5% to +11.44%) suggests end-of-day profit-taking / partial-absorption / momentum-exhaustion rather than information-driven pricing. Wed 5/13 follow-through: close $250.27 = +3.5% from Tue close, +15.4% from Mon close. **Wed +3.5% follow-through CONFIRMS the thesis** that Tue close-fade was over-extended; the move HELD with extension rather than fading to baseline (PINS 5/7 pattern) or failing to follow ratification (ARM 5/11 pattern). Post-print sell-side cluster (Step 4 detail) reinforces the bull case but at modest magnitudes — analyst PT cluster $267-$345 (new) implies +25-43% upside from Wed close $250.27 / +10-43% from Tue close. The gap between current spot (~$250) and the analyst PT cluster median (~$305) is the post-event-mispricing structural signature that B is built to identify.
+
+### Step 4 — Sub-pattern routing (criterion 4 prerequisite)
+
+Post-print sell-side compilation 2026-05-12-13 (24-48h window from Tue BMO print):
+- **KeyBanc (Ken Newman, 2026-05-13)**: **UPGRADE Sector Weight → Overweight; PT $305** (new; prior PT undisclosed in retrieved sources, rating change ratifies bull thesis structurally) — strong bull-ratification signal beyond pure PT raise.
+- **UBS**: $310 → **$335** (Overweight maintained per Daily.md context; **+8.06%** PT raise) — clearly within +5-15% sub-pattern 1 magnitude range.
+- **Barclays (Guy Hardwick)**: $330 → **$345** (Overweight maintained; **+4.55%** PT raise) — just below +5% threshold.
+- **Baird (Richard Eastman)**: $300 → **$310** (Outperform maintained; **+3.33%** PT raise) — below +5%.
+- **Truist (Jamie Cook)**: $256 → **$267** (Hold maintained; **+4.30%** PT raise) — just below +5% threshold; lowest new PT in cluster.
+- **Needham**: reaffirm Buy at $345 (no PT change; affirmation of pre-print bull positioning).
+
+**Cluster fingerprint by count:** 5 firms with PT changes within 24-48h (+ 1 rating upgrade + 1 affirmation = 6 firms touching the name) = meets numerical 3+ count threshold for canonical sub-pattern 1 fingerprint.
+
+**Cluster fingerprint by magnitude (the more diagnostic dimension per BE/CAT/AXSM/PINS/AMD/TSN/GLW/ARM 8-instance NO-GO precedent string):** only 2 firms clearly at ≥+5% (UBS +8.06%, KeyBanc rating upgrade as proxy for ≥+5%); 3 firms at borderline +3-5% (Barclays +4.55%, Truist +4.30%, Baird +3.33%); average cluster PT raise ~+5%. This is **AT THE LOW END** of sub-pattern 1 magnitude territory. Compare to canonical sub-pattern 1 instances: AMD 5/7 had 12+ firms at +20-88% (Goldman +88%); ARM 5/11 had 6 firms at +16-61% post-print + 4 firms at +24-40% pre-print; GLW 5/11 had aggregate cluster at very-extreme magnitude. ZBRA's cluster magnitude (+3.3-8.1% range, avg ~+5%) is **3-10× SMALLER** than canonical sub-pattern 1 magnitudes.
+
+**No layered-1+3 component:** trailing-30-day pre-print +4.7% is well below sub-pattern 3 fingerprint threshold (+15%+ pre-print rally). The layered-1+3 variant (6 instances: AXSM/PINS/AMD/TSN/GLW/ARM) does NOT apply to ZBRA — no pre-print rally exhaustion signature.
+
+**No move-faded-by-Day-2 / failed-to-follow component:** Wed 5/13 +3.5% follow-through means move HELD with extension; distinguishes from PINS full-fade pattern (Day-2 retraced ~80% of Day-0 move) and ARM negative-direction-Day-0 pattern (-10.11% C/C on Day-0 against pre-print PT-raise wave).
+
+**Routing decision: THIN/BORDERLINE cluster.** Per session-prompt Step 4: "If THIN cluster (2-3 firms) or no cluster → non-sub-pattern-1 routing → proceed to full criterion 4 dual-framing." Magnitude-weighted assessment puts ZBRA's cluster at the LOWER END of sub-pattern 1 magnitude territory; precedent for IRM/PTC/VTRS (per Daily.md 2026-05-12 line 119: "if THIN-cluster develops à la IRM 5/13 / PTC 5/14 / VTRS 5/14, MODERATE-LOW-magnitude routing applies") supports non-auto-NO-GO routing. Proceed to full criterion 4 dual-framing.
+
+### Step 5 — Criterion 3 convergence target (closed-list rev 14)
+
+Strict-enumerated admissible targets within 60 days of Tue 2026-05-12 (window closes ~Mon 2026-07-13):
+- (a) **Next earnings release:** ZBRA Q2 2026 print typically late July / early August (Q1 2026 print Tue 5/12; Q2 historical cadence ~13 weeks later = early August). Outside 60-day window from Tue 5/12. ✗
+- (b) **Next FDA decision date:** N/A (ZBRA is enterprise mobility / barcode / RFID hardware, not pharma). ✗
+- (c) **Next FOMC meeting:** Jun 16-17 inside window, but mechanism-mismatch (FOMC does not convergence-mechanism-match an idiosyncratic IT-hardware clean-beat thesis; rate decisions affect ZBRA via broad-market beta only, not via the specific Q1-print mispricing). ✗
+- (d) **Index inclusion announcement:** ZBRA already constituent of S&P 500 / Russell 1000 / Nasdaq 100 — no pending inclusion event. ✗
+- **(a-alt) Numerical price level:** PERMITTED per criterion 3 closed-list rev 14 option (a). ✓
+
+**Only numerical price level is admissible. Target = $264.00** (immutable from entry per Strategy.md criterion 3).
+
+Derivation: 25% gap-fill from Wed 2026-05-13 close $250.27 toward analyst PT median (post-raises) ~$305. Gap = $305.00 - $250.27 = $54.73; 25% fill = $13.68; target = $250.27 + $13.68 = $263.95 → rounded to **$264.00**. Cross-anchor consistency: 25% gap-fill from Tue 2026-05-12 close $241.79 toward analyst PT median ~$305 = $241.79 + $15.80 = $257.59 (lower bound); 25% gap-fill from Wed close toward Truist new-low PT $267 = $250.27 + $4.18 = $254.45 (conservative bound); 100% gap-fill from Wed close toward Tue intraday peak $259.34 = $259.34 (intraday-peak retrace bound). The $264.00 target sits between intraday-peak retrace ($259) and aggressive PT-cluster gap-fill ($266-$268), capturing the central mispricing thesis.
+
+**Conviction calibration vs precedents (per Operating_Protocols.md §8):**
+- IBM (MEDIUM-HIGH, ~50-62% gap-fill): high-conviction-absolute, sector-contagion-supported, clean-undershoot-via-NOW-and-IGV-cascade external suppression. ZBRA does NOT have an external sector-contagion / suppression event of similar magnitude — IT-hardware/AI-narrative is broadly positive, not sector-suppressed; ZBRA's depressed-stock-at-longer-horizon (-38% from 52-wk high) is a slower-burn structural setup, not an acute external cascade.
+- HCA (MEDIUM-LOW, 25% gap-fill): lower-conviction with three live adversarial weights (weather narrative + peer-print dependence + criterion 4 multiple-overhangs). ZBRA does NOT have the equivalent narrative-fragility — clean beat + raised guide + +90bps margin is a fundamentally stronger evidentiary base than HCA's weather-narrative-with-peer-print-dependence.
+- META (MEDIUM, 25% gap-fill): same conviction as IBM but conservative target choice reflects 2.4 narrative-overfit risk on commoditized AI strategy thesis. ZBRA shares the MEDIUM band — clean fundamental quality but borderline sub-pattern 1 cluster fingerprint and modest peak-to-close fade (only ~6.8pp) create ~50% pricing-in-already weight relative to the analyst PT cluster ceiling.
+
+**ZBRA calibration: MEDIUM, 25% gap-fill** (parallel to META). Gross return at convergence from $250.27 Wed-close reference → $264.00 target: **+5.49%**. Conservative quasi-anchor: gross return from Tue-close $241.79 → $264.00 = +9.19% (if order fills at lower limit — see execution plan below).
+
+### Step 6 — Criterion 4 adversarial counter-argument (dual-framing per Strategy.md rev 7)
+
+Five adversarial weights examined under LONG framing and SHORT framing.
+
+**LONG-framing decisive-flaw search:**
+
+(1) **Sub-pattern 1 cluster fingerprint (information-already-priced-in).** Borderline-THIN (Step 4): 5 firms raising PTs + 1 upgrade + 1 affirmation, but only 2 clearly at ≥+5% magnitude. Average PT raise ~+5% is at the LOWER END of sub-pattern 1 territory and 3-10× smaller than canonical NO-GO instances (BE/CAT/AXSM/PINS/AMD/TSN/GLW/ARM). **Not decisive because:** (a) magnitude-weighted assessment is the diagnostic dimension per 8-instance precedent string; (b) cluster magnitude is comparable to META precedent's "mild/asymmetric" sell-side reset (5 firms with measurable trims, one notable RAISE Evercore $930) — META cleared criterion 4 GO at MEDIUM conviction; (c) IRM/PTC/VTRS thin-cluster precedent (per Daily.md context) explicitly allows MODERATE-LOW-magnitude routing not NO-GO.
+
+(2) **Wed +3.5% follow-through means partial pricing-in already complete.** Stock moved from Tue close $241.79 → Wed close $250.27 (+$8.48 / +3.5%); some of the additional bull thesis absorption has occurred. **Not decisive because:** (a) gap from Wed $250.27 to analyst PT median ~$305 remains substantial (+22% upside); (b) the 25% gap-fill target ($264) captures only a portion of the remaining mispricing, leaving plenty of headroom for the convergence trade; (c) META precedent had Wed-similar follow-through after Mon-staging-to-Tue-entry and still converged on thesis (target $626.21 within window).
+
+(3) **Tariff overhang and ongoing component pricing concerns.** Investing.com SWOT noted "ongoing tariff exposure and heavy acquisition spending both capable of pressuring margins." Tue 5/12 management commentary "downplayed direct tariff impact" but residual concern persists. **Not decisive because:** (a) Q1 +90bps margin expansion directly disconfirms margin-pressure thesis; (b) raised FY26 guide internalized any tariff knowable-impact at staging time; (c) ZBRA management explicitly stated "not enough details to speculate on what the impact will be until further clarity provided" — not a binary near-term overhang.
+
+(4) **Mega-cap / multiple-compression risk.** Mcap $11.79B is mid-cap, not mega-cap. **Not decisive** — no AMD/ARM-style mega-cap multiple-compression overhang at $11.79B.
+
+(5) **AI-narrative crowding risk (2.8 homogenization).** ZBRA is GICS 4520 Tech Hardware & Storage / specifically barcode-mobile-computing-RFID — a SECTOR-ADJACENT but NOT primary AI-narrative bucket. Distinct from semiconductors (AMD/ARM/AI-direct), distinct from AI-infrastructure (META/GOOGL hyperscalers), distinct from network optical (GLW/CIEN/AAOI per GLW 5/11 instance). **Not decisive** — ZBRA is enterprise-mobility-hardware, not AI-narrative core.
+
+**LONG-framing verdict: NO DECISIVE FLAW.** The strongest weight is (1) — sub-pattern 1 cluster fingerprint at borderline magnitude — but magnitude-weighted assessment + Wed follow-through + Strategy.md / IRM-PTC-VTRS precedent supports non-auto-NO-GO routing. The convergence target ($264) is set conservatively (25% gap-fill, parallel to META MEDIUM) to acknowledge the partial pricing-in weight.
+
+**SHORT-framing decisive-flaw search** (steel-manning the SHORT case per criterion 4 dual-framing):
+
+(s1) **Reversion thesis (the Tue +11.44% C/C is over-extended; mean-reversion DOWN expected).** **Decisive flaw:** Wed +3.5% follow-through DISCONFIRMS short mean-reversion; the move HELD with extension, not faded. PINS-style full-fade pattern would be required to support SHORT — does not apply to ZBRA.
+
+(s2) **Sell-side ratification creates upside-momentum tailwind making SHORT thesis dangerous.** 5 PT raises + KeyBanc upgrade ratifies bull case; +25% short stop binds toward analyst PT cluster ($267-$345 = potentially +6-37% above current spot). **Decisive flaw:** classic 2.20-trap; recent precedent shows aggressive PT cluster makes SHORT direction structurally hazardous (AMD/ARM SHORT framing decisive-flaw analyses).
+
+(s3) **B-short string ~30 in current risk-on regime per Decision_Log latest entries; 0 SHORT GOs to date.** Empirical regime-conditional base rate is overwhelmingly hostile to B-short. **Decisive flaw:** risk-on regime + clean-beat-clean-raise event class is the structurally worst setup for B-short.
+
+(s4) **2.20-trap canonical against beat-and-raise.** Strategy.md pre-mortem rev 7 Constraint 2 names this as B's structurally exposed failure mode; mechanism-embedded, not mitigable at strategy level. **Decisive flaw.**
+
+(s5) **Convergence target structurally fails on SHORT framing.** Numerical price level below current spot would require ZBRA to fall to e.g. $230 (= ~$20 / -8% from Wed close); within 60 days, with clean-beat-clean-raise tailwind and analyst PT cluster floor $267, this convergence is structurally implausible. **Decisive flaw.**
+
+**SHORT-framing verdict: MULTIPLE DECISIVE FLAWS (5/5 weights).** SHORT direction is decisively rejected.
+
+**Dual-framing disposition:** LONG framing wins criterion 4 with no decisive flaw; SHORT framing has 5/5 decisive flaws. **GO LONG.**
+
+### Step 7 — Criterion 5 sector / correlation / sizing check
+
+- **No A position in ZBRA:** ✓ (A router DO-NOT-ACTIVATE; no A entries).
+- **Sector concentration cap (3 per GICS sector per Strategy.md Constraint 3):** ZBRA is Information Technology sector / Technology Hardware & Equipment industry group / Technology Hardware, Storage & Peripherals sub-industry (GICS 45202030). IBM is Information Technology sector / Software & Services industry group / IT Services sub-industry (GICS 45102010). **Same SECTOR (IT), DIFFERENT sub-industries.** IT-sector counter: IBM 1, ZBRA would add 1 → **2/3 within 3/sector cap. CAP CLEAR.** Sub-industry distinction means the IBM/ZBRA pair does not co-cluster within the most-correlated sub-industry bucket.
+- **KL #12 pairwise correlation estimate** (per pre-mortem rev 6 KL #12 leading indicator: avg pairwise correlation > 0.5 across active long B positions = escalation trigger): ZBRA-IBM (both IT, different sub-industries) estimated ~0.35-0.50 (IT-sector beta common + AI-narrative tangential overlap, but distinct business models: ZBRA enterprise-mobility-hardware vs IBM hybrid-cloud/consulting); ZBRA-HCA (different sectors, IT vs Health Care) estimated ~0.20-0.35; ZBRA-META (different sectors, IT vs Comm Services, but both tech-adjacent) estimated ~0.30-0.45. Estimated 4-long-book pairwise average: ~0.30-0.40 — comfortably below 0.5 trigger threshold. First KL #12 computation calendar event scheduled Wed 2026-06-03 ~15:30 MT (per META staging Decision_Log 2026-05-01 entry); if ZBRA fills Thu 5/14, that 4-long-book pairwise-correlation metric becomes operative within the next 20 trading days.
+- **Position size:** $37.77 = 2.00% of $1,888.69 B NAV.
+- **No simultaneous A-strategy long in ZBRA.** ✓
+- **B-short string:** ZBRA GO LONG does NOT advance the B-short string (~30); SHORT-direction string preserved.
+
+### Execution plan — Thu 2026-05-14 limit buy with operator-discretion modification
+
+| Field | Value |
+|---|---|
+| Ticker | ZBRA |
+| Direction | Long |
+| Position size | $37.77 (2.00% of $1,888.69 strategy NAV) |
+| Reference close (Tue 5/12) | $241.79 (stockanalysis.com primary source) |
+| Reference close (Wed 5/13) | $250.27 (Benzinga; cross-corroborated by Tue × +3.5% follow-through) |
+| Limit price | **$251.00 Day** |
+| Time in force | Day (Thu 2026-05-14) — cancels if unfilled |
+| Shares (fractional) | **0.1505** (= $37.77/$251.00 = $37.78 principal at limit, exact-2% sizing within rounding) |
+| Convergence target | **$264.00** (immutable per Strategy B criterion 3 closed-list rev 14 numerical price level; 25% gap-fill from Wed 5/13 close $250.27 toward analyst PT median ~$305; does NOT adjust to actual fill price) |
+| Convergence return at $251.00 reference → $264.00 target | **+5.18% gross** |
+| Convergence return at $250.27 Wed-close ref → $264.00 target | **+5.49% gross** (alternative anchor if fill at-or-below Wed close) |
+| Time-based exit | **2026-07-13 (Mon)** if filled Thu 2026-05-14 (entry + 60 calendar days = Sun Jul 13 → Mon Jul 13 last trading day on/before). Calendar arithmetic finalized at fill. Mid-window pulse-check ~Tue 2026-06-09 ~10:00 MT (4 weeks post-fill). |
+| Borrow rate | N/A (long) |
+
+**Operator-discretion modification documented:** Session-prompt's literal pricing anchor is "Tue 5/12 close + slight premium (~$0.50-1.00) = $242.29-$242.79". Operator-discretion modification applied: limit shifted to Wed 5/13 close $250.27 + ~$0.73 premium = **$251.00**. Rationale: (a) the staging session is occurring Wed 2026-05-13 evening (current-date context) AFTER Wed cash close; Wed 5/13 close $250.27 is the freshest tradable close at staging time, parallel to IBM Apr 25 Sat-staging-using-Fri-Apr-24-close precedent; (b) literal Tue-close anchor would produce limit $242.79 which is ~$8 below current market — order would be very unlikely to fill Thu 5/14 unless ZBRA gives back ~3.4% gains; (c) operator-discretion modifications at execution time are documented precedent (META Mon 5/4 staged $615 Day → executed $601.30 GTC tighter limit + GTC duration; HCA Tue 4/28 staged $433.50 → filled $433.46 $0.04 tighter; DIS Thu 5/7 staged $107.50 → executed $110.35 looser limit + larger size). The ZBRA looser-limit-modification is in the DIS-precedent direction (looser to honor session's freshest-tradable-close anchor) rather than the META/HCA tighter-limit-precedent direction. Convergence target $264.00 remains immutable per criterion 3 closed-list rev 14 regardless of fill price. **If session is actually running pre-Wed-cash-close** (i.e., Wed pre-market or earlier), the literal $242.79 Day Thu 5/14 anchor would apply with the same convergence target and the operator-discretion-modification rationale is preserved for future-session review.
+
+**Alternative pricing path documented** (not the primary disposition): If subsequent operator review chooses the literal $242.79 Day Thu anchor instead of the operator-discretion $251.00 anchor, the order is **Limit BUY 0.1557 ZBRA @ $242.79 Day Thu 2026-05-14** (shares = $37.77/$242.79 = 0.1556). Order likely will not fill unless Thu open is at or below $242.79 (current Wed close $250.27 = +$7.48 above literal limit). If unfilled Thu 5/14, the 10-day post-event window still has ~7 trading days of cushion for potential pullback fill opportunities; re-evaluate at Daily.md scan cadence.
+
+### Invalidation criteria (per Strategy B exit rules)
+
+(i) **ZBRA 8-K disclosure during holding window resetting FY26 financial framework.** Specifically: (a) FY26 EPS guide cut below midpoint floor $18.30 (any reduction below at-staging-time midpoint $18.50); (b) FY26 organic revenue growth guide cut below 4% floor (current ~+4.3% organic Q1 baseline); (c) FY26 Adj EBITDA margin guide reset below midpoint (current ~23%+); (d) Q2 2026 mid-quarter pre-announcement of demand weakness or margin compression. Source: company 8-K filings via SEC EDGAR; ZBRA IR press releases.
+
+(ii) **Pre-announcement or material business update during holding window indicating customer/end-market weakness.** Examples: major customer cancellation or volume guidance reduction; Connected Frontline segment growth deceleration disclosure; Elo Touch integration material adverse update; component supply disruption with EPS impact.
+
+(iii) **Tariff regime escalation with material disclosed impact.** ZBRA management on Tue 5/12 call explicitly noted "not enough details to speculate on what the impact will be until further clarity provided." Material adverse disclosure (e.g., FY26 EPS or revenue guide cut on tariff-attributed cause) within 60-day window = invalidation. Note: general tariff-news macro-overhang without ZBRA-specific 8-K disclosure does NOT trip this criterion (per Strategy.md exit rules: not exit-triggering "general market moves").
+
+(iv) **Sub-pattern 1 cluster escalation post-staging.** If within 5 trading days of staging (Thu 5/14 → Wed 5/21), additional 3+ firms issue PT raises of +10%+ each (beyond the current cluster), routing reclassifies from THIN-cluster to canonical sub-pattern 1 = thesis quality has shifted from sentiment-mispricing to information-pricing. This is a documentary trigger for re-evaluation, not auto-exit; the in-window pulse-check at Tue 6/9 ~10:00 MT is the resolution mechanism.
+
+**No price-based stop** per Strategy.md Strategy B long-position no-stop design. Worst-case loss bounded mechanically at $37.78 principal + ~$0.28 commission = $38.06 = 100% of position incl commission per strategy design; in practice ZBRA at $11.79B mcap with $4.92B annual revenue / $18.50 EPS is structurally implausible at zero within 60-day horizon.
+
+### Effect on book
+
+If ZBRA fills Thu 2026-05-14: B has 4 open positions (IBM IT Services + HCA Health Care Facilities + META Comm Services + ZBRA Tech Hardware/Storage). Sector concentration cap usage: IT 2/3, Health Care 1/3, Comm Services 1/3 — well within all caps. KL #12 pairwise correlation calibration: 4 concurrent longs is comfortable above 3-concurrent-longs threshold; first computation calendar event scheduled Wed 2026-06-03 ~15:30 MT becomes 4-long-book metric (vs originally scheduled 3-long-book metric). Estimated entry-time pairwise average ~0.30-0.40 below 0.5 trigger. Long-side total exposure at fill ≈ 4 × ~2% = ~8% of strategy portfolio, below 10% lagging-indicator threshold in KL #12.
+
+If ZBRA does not fill Thu 2026-05-14: order expires Thu close. Re-evaluate via Daily.md scan cadence. The 10-day post-event window expires ~Tue 2026-05-26, leaving ~7 trading days of cushion. If market pulls back to limit level within window, re-staging at the same limit captures the pullback opportunity; if market continues higher, the entry opportunity passes (preserved capital).
+
+### Pending queue updated
+
+- ~~ZBRA B-thesis construction~~ COMPLETE — GO at MEDIUM conviction; limit BUY 0.1505 ZBRA @ $251.00 Day Thu May 14 staged with operator-discretion modification from literal Tue-close anchor.
+- **NEXT — Thu 2026-05-14 (pre-market or open):** Place ZBRA limit order per execution plan above. If filled, capture fill in Decision_Log entry + Portfolio_Ledger.md update.
+- **NEXT — Thu 2026-05-14 post-close:** ZBRA fill capture session if filled; otherwise note unfilled, re-evaluate at Fri 5/15 Daily.md scan.
+- **NEXT — Tue 2026-06-09 ~10:00 MT** (4 weeks post-fill if filled): ZBRA mid-window thesis pulse-check per calendar event; Claude reads any in-window ZBRA 8-K filings, sell-side trajectory shift, sector-level XLK / Tech Hardware context, Q2 2026 mid-quarter signals if any, tariff-regime updates if any.
+- **NEXT — Mon 2026-07-13 ~10:00 MT** (60-day mark): ZBRA time-based exit checkpoint per calendar event; if ZBRA has not converged to $264.00 target by Mon Jul 13 close, Claude executes time-based exit via market sell on Mon Jul 13 close OR documents convergence with exit rationale.
+- **NEXT — Wed 2026-06-03 ~15:30 MT:** KL #12 pairwise-correlation first-computation (originally scheduled for 3-long-book IBM/HCA/META; now 4-long-book if ZBRA fills Thu 5/14).
+- Existing pending items (IBM invalidation monitoring, HCA time-based exit Jun 27, META time-based exit Jul 2, etc.) unchanged.
+
+### References
+
+- ZBRA Q1 2026 8-K Ex-99.1 (via stocktitan / stockanalysis.com aggregators; Motley Fool transcript 2026-05-12): clean Q1 beat $4.75 EPS / +14.3% rev / +90bps Adj EBITDA margin / FY26 outlook raised to $18.30-$18.70.
+- Stockanalysis.com ZBRA price history (https://stockanalysis.com/stocks/zbra/history/): Mon 5/11 close $216.96 / Tue 5/12 close $241.79 / Day-0 C/C +11.44% verified.
+- Benzinga 2026-05-13 analyst-PT-changes compilation (https://www.benzinga.com/analyst-stock-ratings/price-target/26/05/52539000/zebra-technologies-analysts-raise-their-forecasts-after-upbeat-q1-results): Baird $300→$310, Barclays $330→$345, Truist $256→$267; Wed 5/13 close $250.27.
+- KeyBanc 2026-05-13 upgrade Sector Weight → Overweight PT $305 (GuruFocus / Investing.com).
+- UBS PT raise $310→$335 (per Daily.md / Investing.com aggregation).
+- Needham reaffirm Buy at PT $345.
+- Seeking Alpha 2026-05-12 11:00 AM ET intraday coverage (https://seekingalpha.com/news/4591073-zebra-technologies-surges-after-q1-beat-raises-2026-outlook).
+- Motley Fool 2026-05-12 "Why Zebra Technologies Stock Jumped 19.5% This Morning" (intraday peak measurement).
+- Investing.com SWOT pre-print context (margin-pressure concerns referenced; Q1 print directly disconfirms).
+- Strategy.md Strategy B section (criteria 1-5; criterion 3 closed-list rev 14; criterion 4 dual-framing; sector concentration Constraint 3; pre-mortem rev 7).
+- Operating_Protocols.md §1 HOIP / §2 commission-disregarded / §3 NO-GO records are context / §8 conviction calibration ladder.
+- Portfolio_Ledger.md B-NAV $1,888.69 / 2% sizing $37.77 / IBM/HCA/META open positions / sector caps usage.
+- Decision_Log.md 2026-04-25 IBM GO entry (MEDIUM-HIGH conviction, 50-62% gap-fill precedent; sector-contagion-supported).
+- Decision_Log.md 2026-04-27 HCA GO entry (MEDIUM-LOW conviction, 25% gap-fill precedent; multi-weight adversarial).
+- Decision_Log.md 2026-05-01 META GO entry (MEDIUM conviction, 25% gap-fill precedent; mild/asymmetric sell-side reset; first GO under commission-disregarded protocol).
+- Decision_Log.md 2026-05-12 D2 entry (calendar event scheduling + MVG-pre-flag on clerical error "-14% C/C").
+- Daily.md 2026-05-12 (D1 source for ZBRA candidate flag; +18% intraday / clean BEAT / sector-cap-IT-2/3 expectation).
+- Sub-pattern 1 NO-GO precedent string: Decision_Log entries 2026-05-01 BE, 2026-05-02 CAT, 2026-05-06 AXSM Q1 follow-on, 2026-05-07 PINS, 2026-05-07 AMD, 2026-05-08 TSN, 2026-05-11 GLW, 2026-05-11 ARM (8 instances total; ZBRA is NOT routed as sub-pattern 1 per magnitude-weighted assessment).
+
+### Theater-check on this orchestrator review
+
+Four considerations were specifically pushed back on during construction:
+
+(a) **MVG clerical-error in D2 entry "-14% C/C miss" framing.** The session prompt and Daily.md both unambiguously describe ZBRA as a clean BEAT + raised guide + "+~18% intraday". The D2 entry line 12720 transcription error ("-14% C/C; miss") was likely a template artifact from sibling negative-direction candidates UAA/HIMS/CLSK in the same D2 batch. The MVG-pre-flag fires per close-to-close discipline; primary-source C/C verification mandatory; verified +11.44% via stockanalysis.com (Mon $216.96 / Tue $241.79). Disposition stands on primary-source verification; D2 entry clerical error noted for W5 hygiene cycle.
+
+(b) **Sub-pattern 1 cluster routing — count vs magnitude.** 5 firms raising PTs within 48h meets numerical threshold for sub-pattern 1 fingerprint; however magnitude-weighted assessment puts cluster at LOWER END of sub-pattern 1 territory (avg PT raise ~+5%; only 2 firms clearly at ≥+5%; 3-10× smaller than canonical sub-pattern 1 magnitudes). Per 8-instance NO-GO precedent string (BE/CAT/AXSM/PINS/AMD/TSN/GLW/ARM) the magnitude-weighted reading is the diagnostic dimension. ZBRA routed as **THIN/BORDERLINE cluster → non-sub-pattern-1 → full criterion 4 dual-framing**, NOT auto-NO-GO. The session-prompt Step 4 explicitly authorizes this routing path.
+
+(c) **Wed +3.5% follow-through — is the mispricing already absorbed?** Wed close $250.27 represents partial absorption of the Tue Day-0 information; remaining gap to analyst PT median ~$305 is +22%, leaving substantial mispricing room. 25% gap-fill target $264 captures a portion of remaining gap (~+5.5% from Wed close), consistent with META MEDIUM 25% calibration. Not a decisive flaw against LONG framing.
+
+(d) **Operator-discretion modification on limit price ($251.00 vs literal $242.79).** Session prompt is literal on staging anchor; modification is documented as operator-discretion in line with IBM/HCA/META/DIS precedent for limit-modification-at-execution-time (in this case staging time = execution time since session is happening Wed 5/13 post-cash-close). Convergence target $264.00 immutable regardless of fill price per criterion 3 closed-list rev 14. Alternative-pricing-path ($242.79 Day Thu) documented for future-session review if subsequent operator review prefers the literal anchor; in that case the order is unlikely to fill at current market $250.27 but preserves capital if it doesn't.
+
+### Compaction-survival note
+
+**Strategy B ZBRA thesis pipeline status as of 2026-05-13 (Wed evening):** B-thesis construction COMPLETE for ZBRA; ZBRA-GO at MEDIUM conviction with limit BUY 0.1505 @ $251.00 Day Thu May 14 staged (operator-discretion modification from literal Tue-close anchor documented; alternative $242.79 Day Thu literal-anchor path also documented). Convergence target $264.00 (25% gap-fill from $250.27 Wed close toward analyst PT median ~$305), immutable per criterion 3 closed-list rev 14. Time-based exit Mon Jul 13 if filled Thu 5/14. Four invalidation criteria specified: (i) FY26 framework reset, (ii) demand/customer weakness business update, (iii) tariff-regime material adverse disclosure, (iv) sub-pattern 1 cluster escalation post-staging documentary trigger.
+
+**Conviction calibration vs precedents (Operating_Protocols.md §8 4-trade ladder):** IBM was MEDIUM-HIGH with 50-62% gap-fill (sector-contagion-supported); HCA was MEDIUM-LOW with 25% gap-fill (multi-weight adversarial); META was MEDIUM with 25% gap-fill (capex narrative-overfit residual); ZBRA is MEDIUM with 25% gap-fill (borderline sub-pattern 1 cluster + Wed follow-through pricing-in weight). Future B GO entries should reference this 4-trade calibration ladder (IBM 50%+ / HCA 25% / META 25% conservative / ZBRA 25% conservative) to anchor target-magnitude choices.
+
+**Experiment B totals advance to 4 GO + 32 NO-GO = 11.1% / 88.9% hit rate** (vs prior 3 GO + 32 NO-GO = 8.6% / 91.4% per most-recent Decision_Log entry 2026-05-11 ARM NO-GO). All 4 GOs (IBM/HCA/META/ZBRA) cleared criterion 4 information-vs-sentiment via mild/asymmetric sell-side reset + dual-framing analysis. Sector cap usage: IT 2/3, Health Care Facilities 1/3, Comm Services 1/3.
+
+**KL #12 first-computation calendar event Wed 2026-06-03 ~15:30 MT** now becomes 4-long-book pairwise-correlation metric if ZBRA fills Thu 5/14 (vs originally 3-long-book IBM/HCA/META).
+
+**Key cross-references for future Claude sessions:** if ZBRA invalidation criterion (i)(a) ever fires (FY26 EPS guide cut below $18.30 midpoint floor during holding window), reference back to this entry's Pillar 1 — that condition is the "clean-beat-clean-raise event class undone" trigger. If mid-window Tue 6/9 pulse surfaces aggressive sub-pattern 1 cluster escalation (3+ additional +10%+ PT raises post-staging), thesis quality has shifted from sentiment-mispricing to information-pricing — escalate to consideration of pre-time-based exit. If tariff-regime updates produce ZBRA-specific 8-K material adverse disclosure, criterion (iii) fires.
