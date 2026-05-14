@@ -13647,6 +13647,192 @@ Five considerations were specifically pushed back on during construction:
 
 ---
 
+## 2026-05-13 (Wed, ~19:00 MT post-cash-close evening session per D2 5/12 conversion) Strategy B thesis construction outcome — WIX (Wix.com Ltd.) NO-GO via criterion 3 absent admissible target + criterion 4 dual-framing decisive failure with **sub-pattern 1 INVERSION SECOND INSTANCE** (5 sell-side firms cutting PTs/downgrading ratings = clean information-driven repricing confirmation: Oppenheimer $130→$115 / BAC $136→$109 / UBS $170→$145 + **JPMorgan Neutral→Underweight rating downgrade** + **Baird Outperform→Neutral rating downgrade**; STRONGER than MNDY 5/12 first-instance due to TWO rating downgrades; **sub-pattern 1 INVERSION can be PROMOTED to formal taxonomy entry at 2 instances per W4/W5 cadence**) + borderline post-print mcap $2.32B (16% cushion above $2B floor; tightest mcap-cushion of session series) + geopolitical-overhang multi-year structural mismatch with B 60-day window + AI-moat-disruption-risk layer + multi-layer MVG corrections (session-prompt event date Tue 5/12 AMC → primary source Q1 earnings call Wed 5/13 dated transcript suggests AMC Tue 5/12 + Wed 5/13 BMO conference call; Day-0 C/C -27.10% Tue $75.88 → Wed $55.32 vs session-prompt -30.31% likely Mon→Wed cumulative; Q1 EPS miss $0.68 vs $1.24-1.26 cons = -45% MISS not -45.6%; mcap $3.6B session-prompt estimate vs $2.32B post-print primary source) + B-short string advances ~33 → ~34; no order staged
+
+**Trigger:** Calendar-event-scheduled Strategy B thesis construction for WIX, Wed 2026-05-13 evening slot per Decision_Log 2026-05-12 D2 conversion entry. Session-prompt premise summary: "WIX Q1 2026 earnings AMC Tue 2026-05-12; Day-0 C/C ~-30.31% REQUIRES MVG primary-source verification; 10-day entry window through Tue 5/27; Sector Application Software (IT); Approx mcap ~$3.6B; Direction pre-signal LONG (extreme sell-off); D1 pre-conviction ~70% NO-GO (criterion 3 closed-list target concern; criterion 4 dual-framing risk); D1 macro context PPI +6% YoY / Brent $107 — note these numbers do not match prevailing risk-on regime context referenced throughout session series and may reflect prompt-template noise."
+
+**Multi-layer MVG corrections (FIFTH instance in ~24 hours after MNDY/HIMS/UAA/CLSK precedents — pattern accelerating):**
+1. **Event date / Day-0 timing clarification**: session prompt asserted "AMC Tue 2026-05-12"; primary source — Motley Fool transcript dated 2026-05-13 / Seeking Alpha presentation 2026-05-13 / Benzinga transcript 2026-05-13. Likely scenario: print release AMC Tue 5/12 with conference call Wed 5/13 BMO; Day-0 reaction Wed 5/13 close. Stock action: Mon 5/11 close $79.31 / Tue 5/12 close $75.88 (-4.32%; pre-print sub-threshold) / **Wed 5/13 close $55.32 (-27.10% from Tue close = Day-0 C/C)**. Session-prompt's "-30.31%" likely reflects Mon→Wed cumulative -30.25% rather than single Day-0 C/C.
+2. **Day-0 C/C magnitude**: primary source **-27.10% C/C** (Tue close → Wed close); clears 5% threshold with 5.4× cushion (STRONG magnitude class).
+3. **Q1 EPS miss magnitude**: session prompt -$0.68 vs $1.25 cons / -45.6% miss; primary source $0.68 vs $1.24-$1.26 FactSet/consensus = -45.2% miss; magnitude class consistent. **Adj EPS DOWN -56% YoY** ($1.55 Q1 2025 → $0.68 Q1 2026) = MASSIVE margin compression despite +14% revenue growth.
+4. **Revenue miss magnitude**: session prompt $541.2M vs $544.2M / -0.6% miss; primary source $541M vs $549.6M cons = -1.5% miss; magnitude class consistent (small miss).
+5. **Mcap correction**: session prompt $3.6B estimate; primary source POST-PRINT $2.32B ($55.32 × 41.85M shares — Dutch Auction reduced share count to 41.85M as of May 11). **Borderline-clears $2B floor with 16% cushion = tightest mcap-cushion of session series** (vs UAA 7-32% / CLSK 76% / OMCL 3.5%). Note: PRE-PRINT mcap $79.31 × 41.85M = $3.32B (closer to session prompt $3.6B estimate).
+6. **D1 macro context implausibility note**: session prompt cited "PPI +6% YoY, Brent $107" as macro pressure on SaaS multiples — these numbers do not match prevailing risk-on regime context (PPI typically ~2-3% YoY current cycle; Brent ~$70-80 range) referenced throughout 30-NO-GO B-short-string regime. Flag for W5 hygiene — possible prompt-template-drift OR external-data-source noise OR macro context confusion. Documentary signal only; not load-bearing for disposition.
+
+**Inputs:** Strategy.md Strategy B section (entry criteria 1-5; criterion 3 closed-list rev 14; criterion 4 dual-framing; pre-mortem rev 7); Operating_Protocols.md (§1 HOIP; §3 NO-GO records context); AI_Trading_Foundation.md (2.4/2.13/2.20); Portfolio_Ledger.md (B NAV $1,888.69; IBM/HCA/META open + ZBRA staged Thu 5/14; sector caps IT 1/3 → 2/3 post-ZBRA-fill, Health Care Facilities 1/3 (HCA), Comm Services 1/3 (META)); Decision_Log.md prior precedents — **CLSK 2026-05-13 NO-GO (immediately prior earlier this session; MVG-correction-template instance #4 in ~24 hours; B-short string advanced ~32 → ~33)**, **UAA 2026-05-13 NO-GO (MVG-correction-template instance #3; FY27-guide-reset precedent)**, **HIMS 2026-05-13 NO-GO (MVG-correction-template instance #2; B-short string ~30 → ~31)**, **MNDY 2026-05-12 NO-GO (MVG-correction-template instance #1; FIRST INSTANCE sub-pattern 1 INVERSION canonical: Cantor $148→$95 / BTIG $210→$135 / Loop $80 / DA Davidson $100 PT-cut wave)**, **V/MDLZ structural-overhang-persistence sub-pattern entries**, **AXSM 2026-05-04 NO-GO (criterion 3 absent admissible convergence target precedent both directions)**, **OMCL 2026-04-29 NO-GO (borderline-mcap-clears precedent at $2.07B / 3.5% cushion)**; WIX Q1 2026 earnings call transcript Motley Fool 2026-05-13 (https://www.fool.com/earnings/call-transcripts/2026/05/13/wixcom-wix-q1-2026-earnings-call-transcript/); WIX Q1 2026 earnings call presentation Seeking Alpha 2026-05-13 (https://seekingalpha.com/article/4903792-wix-com-ltd-2026-q1-results-earnings-call-presentation); Benzinga WIX Q1 2026 transcript 2026-05-13 (https://www.benzinga.com/insights/news/26/05/52523134/transcript-wix-com-q1-2026-earnings-conference-call); Yahoo Finance "WIX Q1 Results Lag Estimates, Earnings Slip Y/Y on Geopolitical Woes" 2026-05-13 (https://finance.yahoo.com/news/wix-q1-results-lag-estimates-132800577.html); GuruFocus WIX Q1 earnings miss 2026-05-13 (https://www.gurufocus.com/news/8854622/wixcom-wix-q1-earnings-miss-expectations-despite-revenue-growth); MarketScreener WIX Q1 adjusted earnings fall 2026-05-13 (https://www.marketscreener.com/news/wix-com-q1-adjusted-earnings-fall-revenue-rises-2026-revenue-growth-outlook-reaffirmed-ce7f5bdfde89f722); WIX SEC Filing 6-K stocktitan (https://www.stocktitan.net/sec-filings/WIX/6-k-wix-com-ltd-current-report-foreign-issuer-d9f15d7aec2d.html); Benzinga "Earnings Disaster: Why Wall Street Is Dumping Wix Stock" 2026-05-13 (https://www.benzinga.com/markets/earnings/26/05/52522500/earnings-disaster-why-wall-street-is-dumping-wix-stock); Oppenheimer / BAC / UBS PT cuts + JPMorgan / Baird rating downgrades 2026-05-13 (per Benzinga + WebSearch compilation); Stockanalysis.com WIX history/profile (Mon $79.31 / Tue $75.88 / Wed $55.32; mcap $2.32B; shares 41.85M post-Dutch-Auction); Daily.md 2026-05-12 / 2026-05-13 surface flags + D2 conversion 2026-05-12.
+
+### Decision
+
+**WIX — NO-GO (DECLINE) via criterion 3 absent admissible convergence target (closed-list rev 14 fails on (a)-(d); only numerical-price-level option moot given criterion 4) + criterion 4 dual-framing decisive failure with sub-pattern 1 INVERSION SECOND INSTANCE confirmation + borderline-mcap-clears note + geopolitical-overhang structural-mismatch + AI-moat-disruption-risk layer.**
+
+Criterion 1 mechanical eligibility CLEARS (mcap $2.32B post-print ≥ $2B with 16% cushion = BORDERLINE; Day-0 C/C **-27.10%** ≥ 5% magnitude with 5.4× cushion = STRONG; ADV multi-hundred-million-dollar; long-or-short permitted; qualifying Q1 2026 earnings event class with margin-compression + EPS miss + revenue miss + reaffirmed FY26 revenue growth outlook). Criterion 5 sector cap CLEARS (WIX = IT / Application Software sub-industry, distinct from IBM IT Services and ZBRA IT/Tech Hardware; IT sector currently 1/3 (IBM) → 2/3 post-ZBRA fill Thu 5/14 → 3/3 with WIX addition = AT-CAP not over-cap; would consume final IT-sector slot; criterion 5 cap-arithmetic clears at 3/3 ceiling if criterion 4 had not decisively failed; no A position in WIX).
+
+**Criterion 3 DECISIVELY FAILS** (absent admissible closed-list target):
+- (a) Next WIX earnings: Q2 2026 print likely early August 2026 — outside 60-day window (May 13 + 60 = July 12) ✗
+- (b) FDA PDUFA: N/A (WIX is SaaS) ✗
+- (c) FOMC Jun 16-17: inside window but mechanism-mismatch (no rate-decision convergence mechanism for idiosyncratic SaaS name with geopolitical exposure) ✗
+- (d) Index inclusion: WIX in Russell 1000 (not pending event) — no admissible index event ✗
+- (e) Numerical price level: PERMITTED but moot given criterion 4 dual-framing decisive failure.
+
+**Criterion 3 fails on closed-list (a)-(d); only numerical-price-level option (e) remains, which is structurally weak and moot given criterion 4 disposition.** Direct AXSM 2026-05-04 NO-GO precedent template applies.
+
+**Criterion 4 dual-framing DECISIVELY FAILS for BOTH directions:**
+
+**LONG framing decisive flaws** (information-driven repricing confirmed by sell-side cluster):
+- (L1) **Sub-pattern 1 INVERSION SECOND INSTANCE confirmed by sell-side response**: Five sell-side actions within 24h of print: Oppenheimer PT $130→$115 (-11.5%); Bank of America $136→$109 (-19.9%); UBS $170→$145 (-14.7%); **JPMorgan Neutral→Underweight rating downgrade**; **Baird Outperform→Neutral rating downgrade**. Two rating downgrades (JPM and Baird) make this **STRONGER** than MNDY 5/12 first-instance sub-pattern 1 INVERSION (which had PT cuts only, no rating downgrades). Sell-side cluster directionality is **decisively bearish** = canonical information-driven repricing confirmation, NOT sentiment overshoot.
+- (L2) **Adj EPS -56% YoY structural margin reset** ($1.55 Q1 2025 → $0.68 Q1 2026 on +14% revenue growth = ~70 percentage-point gap between revenue growth and EPS growth = structural margin compression event, not transient).
+- (L3) **Geopolitical-overhang multi-year structural mismatch**: Yahoo headline "Earnings Slip Y/Y on Geopolitical Woes" attributes EPS decline to geopolitical factors (likely Israel-related given WIX is Israeli HQ). Israel-related geopolitical resolution timeline is multi-year structural, NOT 60-day window resolution. Direct V/MDLZ structural-overhang-persistence pattern fit.
+- (L4) **AI-moat-disruption-risk layer**: Recent analyst moat downgrade over AI risks (per Benzinga/WebSearch); structural concern that web-builder business is vulnerable to AI disruption (chatbot-built websites, AI-driven design tools). Multi-year resolution timeline; not 60-day mean-reversion candidate.
+- (L5) **Convergence target structurally absent** (criterion 3 fails per above).
+- (L6) **Borderline post-print mcap $2.32B with 16% cushion** = tightest mcap-cushion of session series; if stock declines another -16% during 60-day window, mcap drops below $2B floor mid-position which would create instrument-rule-fail mid-window exposure.
+- (L7) **Non-GAAP gross margin -300bps compression** (66% Q1 2026 vs 69% Q1 2025) is structural cost issue not transient.
+
+**LONG framing verdict: 7/7 DECISIVE FLAWS. LONG decisively rejected. Top-line metrics (revenue +14%, bookings +15%, ARR +15%) provide partial structural offset but are OVERWHELMED by margin reset + geopolitical overhang + AI-moat-risk + sell-side cluster ratification of bear thesis.**
+
+**SHORT framing decisive flaws** (despite directional alignment with sell-side bear cluster):
+- (S1) **B-short string ~33 → ~34 with WIX-SHORT formal dismissal** (CLSK-SHORT dismissed earlier this session 2026-05-13 advanced ~32 → ~33; WIX-SHORT now extends ~33 → ~34). Empirical regime-conditional base rate overwhelmingly hostile.
+- (S2) **2.20-trap structural exposure** per Strategy.md Strategy B pre-mortem rev 7 Constraint 2 — mechanism-embedded.
+- (S3) **Post-print -27.10% Day-0 already digests much of bear case** (compound with pre-print -14% Mon→Tue + cumulative Mon→Wed -30.25%); SHORT requires fresh deteriorating-information beyond Q1 print to extend further (Q2 print August outside window).
+- (S4) **Top-line +14-15% structural offset**: revenue +14%, bookings +15%, ARR +15% indicate underlying customer/product momentum intact; SHORT thesis requires comprehensive decline narrative; WIX has structural top-line offset.
+- (S5) **$1.6B Dutch Auction at $92 creates reference-price floor narrative**: ~17.5M shares retired at $92 in recent tender; current $55.32 is -40% below tender price; create activist/strategic-buyout/private-equity-takeout speculation floor.
+- (S6) **Bounded marginal downside**: WIX at $55 with $1.9B ARR = ~1.2× ARR multiple (very low for SaaS); takeout-floor narrative supports asymmetric upside-tail risk on SHORT thesis.
+
+**SHORT framing verdict: 6/6 DECISIVE FLAWS. SHORT decisively rejected per B-short string + 2.20-trap + post-print-already-digested + top-line-offset + Dutch-Auction-floor + bounded-marginal-downside.**
+
+**Dual-framing disposition: BOTH LONG AND SHORT FAIL CRITERION 4 + CRITERION 3 ABSENT TARGET. NO-GO.**
+
+### Step 1 — MVG (Magnitude Verification Gate)
+
+Stockanalysis.com primary source:
+- Mon 2026-05-11 close: $79.31 (high $82.48, low $76.57)
+- Tue 2026-05-12 close: $75.88 (-4.32% from Mon; sub-threshold magnitude)
+- Wed 2026-05-13 close: $55.32 (-27.10% from Tue; STRONG magnitude class)
+
+**Day-0 C/C = -27.10% (Tue close → Wed close)**: print release AMC Tue 5/12 with conference call Wed 5/13 BMO; Day-0 reaction Wed 5/13. Cumulative Mon→Wed -30.25% (approximately matches session prompt's "-30.31%" but spans 2-trading-day period not single Day-0).
+
+**Criterion 1 magnitude PASSES**: -27.10% ≥ 5% threshold with 5.4× cushion. STRONG magnitude class (comparable to AMD 5/7 +20% / UAA 5/12 -17%).
+
+### Step 2 — EVG (Event Verification Gate)
+
+Q1 2026 earnings release primary-source verified:
+- Revenue $541M (+14% YoY) vs $549.6M consensus = -1.5% MISS
+- Adj EPS $0.68 vs FactSet $1.24 / consensus $1.26 = -45.2% MISS (-$0.56 to -$0.58 absolute)
+- Adj EPS down from $1.55 Q1 2025 = -56% YoY EPS decline
+- Bookings $585M (+15% YoY) — top-line momentum intact
+- ARR $1.903B (+15% YoY) — recurring revenue strong
+- Non-GAAP gross margin 66% vs 69% Q1 2025 = -300bps compression
+- Q2 guide: mid-teens revenue growth (in-line)
+- FY26 guide: full-year FCF margin "high-teens excluding acquisition costs" + revenue growth outlook reaffirmed
+- Dutch Auction completion: $1.6B at $92 retired ~17.5M shares → 41.85M shares outstanding as of May 11
+
+**Event class CONFIRMED**: Q1 2026 earnings release (eligible B event class per Strategy.md). Material EPS miss + margin compression + revenue slight miss + reaffirmed top-line guide.
+
+### Step 3 — Criterion 2 Historical Analogue Retrieval (suppressed downstream of criterion 3 failure)
+
+Per Strategy.md operational discipline: when criterion 3 closed-list fails, criterion 4 analysis can still proceed (and did, finding decisive dual-framing failure), but criterion 2 historical analogue retrieval can be abbreviated. Brief analogue context:
+
+**MNDY 2026-05-12 first-instance sub-pattern 1 INVERSION precedent** is the most relevant Application Software analogue — same sector, similar magnitude class (MNDY +6.72% Day-0 was positive direction; WIX -27.10% is negative direction; pattern parallel is in sell-side response signature). MNDY recovered partial Day-2-3 trajectory but did NOT reach pre-print close within 60 days observable so far (entry would have been ~Tue 5/12 at +6.72%; 60-day window through Mon 7/13).
+
+Other negative-direction sub-pattern 1 INVERSION partial analogues:
+- HIMS 5/13 (mixed sell-side: Jefferies/JPM PT cuts vs Needham PT raise; partial inversion); NO-GO disposition
+- UAA 5/13 (single-firm Citigroup PT cut $6.20→$4.75 Sell; weak inversion); NO-GO disposition
+
+**Base rate for Application Software earnings-miss recovery to prior-close within 60 days**: Not formally retrieved but available evidence suggests <50% historical recovery rate when sub-pattern 1 INVERSION is confirmed (TWLO/UPS/MNDY/SHOP precedents support information-driven-repricing-persistence pattern). LONG mean-reversion thesis unsupported by analogue base rate.
+
+### Step 4 — Criterion 3 Convergence Target (DECISIVE FAILURE)
+
+Detail above in Decision section: closed-list (a)-(d) all fail; only numerical-price-level option (e) remains which is structurally weak and moot given criterion 4 disposition. **Criterion 3 decisively fails on closed-list rev 14 strict-enumerated admissibility.**
+
+### Step 5 — Criterion 4 Dual-Framing Adversarial (DECISIVE FAILURE BOTH DIRECTIONS)
+
+Detail above in Decision section: LONG 7/7 decisive flaws; SHORT 6/6 decisive flaws. Theater-check CONVERGENT.
+
+### Step 6 — Disposition (NO-GO)
+
+NO-GO. No order staged. No GO criteria path remains.
+
+### Step 7 — Logging (Decision_Log + Portfolio_Ledger)
+
+This entry serves as the criterion 3 + criterion 4 NO-GO documentation. Portfolio_Ledger activity log updated below.
+
+### Sub-pattern 1 INVERSION FORMAL TAXONOMY PROMOTION
+
+**Sub-pattern 1 INVERSION advances to 2 instances → FORMAL TAXONOMY ENTRY per W4/W5 cadence.**
+
+Definition: "Negative-direction earnings-miss event (Day-0 C/C ≤ -5%) followed by sell-side cluster ratification of bear thesis — post-print PT-cut wave with 3+ firm cluster + at least 1 rating downgrade + EPS miss material magnitude (~30%+ vs consensus). The sell-side cluster directionality is the INVERSION of sub-pattern 1 (which is positive-direction PT-raise wave). The pattern confirms information-driven repricing (NOT sentiment overshoot) and routes to criterion 4 LONG-framing decisive failure."
+
+**Instance 1 — MNDY 2026-05-12**: Cantor $148→$95 (-35.8%); BTIG $210→$135 (-35.7%); Loop $80; DA Davidson $100. PT-cut wave 4+ firms; no rating downgrades observed. Magnitude class: severe PT cuts. Disposition: NO-GO via criterion 4 dual + sub-pattern 8 second-instance routing.
+
+**Instance 2 — WIX 2026-05-13 (this entry)**: Oppenheimer $130→$115 (-11.5%); Bank of America $136→$109 (-19.9%); UBS $170→$145 (-14.7%); **JPMorgan Neutral→Underweight (rating downgrade)**; **Baird Outperform→Neutral (rating downgrade)**. Five sell-side actions within 24h of print; 2 rating downgrades; PT cut magnitudes -11.5% to -19.9% (averaging ~-15%). STRONGER than MNDY first-instance due to 2 rating downgrades. Magnitude class: substantial PT cuts + rating downgrades. Disposition: NO-GO via criterion 3 absent + criterion 4 dual + sub-pattern 1 INVERSION confirmation.
+
+**At 2 instances, sub-pattern 1 INVERSION is now ELIGIBLE for formal taxonomy entry** per W4/W5 cadence "pending second-instance validation" requirement. The pattern is structurally distinct from:
+- Sub-pattern 1 (positive PT-raise wave on positive-direction Day-0)
+- Sub-pattern 4 / 4a / 4b (structural-overhang or cost-input pressure)
+- Sub-pattern 8 (depressed-name positioning-unwind on Q1 beat)
+
+Sub-pattern 1 INVERSION is a NEW pattern entry. Recommended formal naming: **"sub-pattern 1-INV (inverted)" or "sub-pattern 9 — negative-direction sell-side bear-cluster ratification on earnings miss"**. W5 cycle should formally promote and assign canonical numbering.
+
+### Pending queue updated
+
+- ~~WIX B-thesis construction~~ COMPLETE — NO-GO via criterion 3 absent + criterion 4 dual-framing decisive failure with sub-pattern 1 INVERSION SECOND INSTANCE confirmation; no order; no follow-on calendar event scheduled.
+- WIX remains within 10-day post-event window through ~Tue 2026-05-27. No calendar event scheduled to revisit.
+- **B-short string advances ~33 → ~34** with WIX-SHORT formal dismissal per 6/6 decisive flaws.
+- **Sub-pattern 1 INVERSION promoted to 2-instance formal taxonomy candidate** (MNDY 5/12 + WIX 5/13); W5 to assign canonical numbering.
+- Existing pending items unchanged (ZBRA Thu 5/14 order placement; IBM/HCA/META invalidation monitoring + time-based exits; KL #12 first-computation Wed 6/3).
+
+### References
+
+- WIX Q1 2026 earnings call transcript Motley Fool 2026-05-13: https://www.fool.com/earnings/call-transcripts/2026/05/13/wixcom-wix-q1-2026-earnings-call-transcript/
+- WIX Q1 2026 earnings call presentation Seeking Alpha 2026-05-13: https://seekingalpha.com/article/4903792-wix-com-ltd-2026-q1-results-earnings-call-presentation
+- Benzinga WIX Q1 2026 transcript 2026-05-13: https://www.benzinga.com/insights/news/26/05/52523134/transcript-wix-com-q1-2026-earnings-conference-call
+- Yahoo Finance "WIX Q1 Results Lag Estimates, Earnings Slip Y/Y on Geopolitical Woes" 2026-05-13: https://finance.yahoo.com/news/wix-q1-results-lag-estimates-132800577.html
+- GuruFocus WIX Q1 earnings miss expectations: https://www.gurufocus.com/news/8854622/wixcom-wix-q1-earnings-miss-expectations-despite-revenue-growth
+- MarketScreener WIX Q1 adjusted earnings fall: https://www.marketscreener.com/news/wix-com-q1-adjusted-earnings-fall-revenue-rises-2026-revenue-growth-outlook-reaffirmed-ce7f5bdfde89f722
+- WIX SEC Filing 6-K stocktitan: https://www.stocktitan.net/sec-filings/WIX/6-k-wix-com-ltd-current-report-foreign-issuer-d9f15d7aec2d.html
+- Benzinga "Earnings Disaster: Why Wall Street Is Dumping Wix Stock" 2026-05-13: https://www.benzinga.com/markets/earnings/26/05/52522500/earnings-disaster-why-wall-street-is-dumping-wix-stock
+- Stockanalysis.com WIX history (Mon $79.31 / Tue $75.88 / Wed $55.32; Day-0 C/C -27.10%): https://stockanalysis.com/stocks/wix/history/
+- Strategy.md Strategy B section (criteria 1-5; criterion 3 closed-list rev 14; criterion 4 dual-framing).
+- Operating_Protocols.md §1 HOIP / §3 NO-GO records context.
+- Portfolio_Ledger.md (B NAV $1,888.69; IBM/HCA/META open + ZBRA staged Thu 5/14; sector caps).
+- Decision_Log.md 2026-05-13 CLSK NO-GO entry (immediately prior; MVG-correction-template instance #4 in ~24 hours; B-short string ~32 → ~33).
+- Decision_Log.md 2026-05-13 UAA NO-GO entry (FY27-guide-reset precedent template).
+- Decision_Log.md 2026-05-13 HIMS NO-GO entry (Day-1 continuation-down precedent template).
+- Decision_Log.md 2026-05-12 MNDY NO-GO entry (sub-pattern 1 INVERSION FIRST INSTANCE canonical reference).
+- Decision_Log.md 2026-05-04 AXSM NO-GO entry (criterion 3 closed-list absent admissible target precedent both directions).
+- Decision_Log.md 2026-04-29 OMCL NO-GO entry (borderline-mcap-clears precedent).
+
+### Theater-check on this orchestrator review
+
+Five considerations were specifically pushed back on during construction:
+
+(a) **Sub-pattern 1 INVERSION SECOND INSTANCE formal taxonomy promotion.** WIX's sell-side response (5 actions including 2 rating downgrades) is decisively bear-cluster-ratifying, parallel to but STRONGER than MNDY 5/12 first-instance (4 PT cuts, no rating downgrades). At 2 instances within ~24 hours of each other, sub-pattern 1 INVERSION qualifies for formal taxonomy entry per W4/W5 cadence. The pattern is structurally and operationally significant: it provides a clean criterion-4 LONG-decisive-failure marker via primary-source sell-side data, distinguishing information-driven repricing (sub-pattern 1 INVERSION confirmed) from sentiment overshoot (potential LONG GO setup). W5 should formally promote and assign canonical numbering — recommended "sub-pattern 1-INV (inverted)" or "sub-pattern 9" with the operating definition documented in this entry.
+
+(b) **MVG-correction-template instance #5 in ~24 hours (MNDY/HIMS/UAA/CLSK/WIX).** The session-prompt premise contained multiple primary-source-correctable factual elements: event date (Tue 5/12 AMC asserted; primary source suggests AMC Tue 5/12 + conference call Wed 5/13 BMO); Day-0 magnitude (-30.31% asserted; primary source -27.10% Day-0 from Tue close, with -30.25% Mon→Wed cumulative likely conflated); EPS miss reference precision (-45.6% asserted; primary source -45.2%); mcap ($3.6B asserted; primary source $2.32B post-print due to Dutch Auction share count reduction to 41.85M); D1 macro context implausibility (PPI +6% / Brent $107 cited; both inconsistent with prevailing risk-on regime). MVG-correction template now at 5 instances within ~24 hours = ESCALATION beyond prior 4-instance accumulation. **W5 hygiene cycle structured root-cause analysis is now URGENT-priority**: D1/D2 data-source noise vs session-prompt-construction template drift vs external-data-source quality degradation vs high-disposition-volume-saturation correlation. Wed 5/13 hit 11 same-day completions = continuing NEW HIGH-WATER-MARK extension; saturation-correlation hypothesis is increasingly tenable.
+
+(c) **Borderline post-print mcap $2.32B with 16% cushion = tightest mcap-cushion of session series.** WIX post-print mcap is tighter than UAA (7-32% cushion) and OMCL (3.5% cushion at $2.07B). If WIX stock declines further -16%+ during 60-day window, mcap drops below $2B floor mid-position, creating instrument-rule-fail mid-window exposure. This is a structural-risk note for any future B candidate with borderline-mcap-clears + high-volatility + multi-layer LONG decisive flaws — even if criterion 4 had cleared, mid-window mcap monitoring would be required per Strategy.md instrument rule continuous-enforcement (rev 14 clarified entry-time gate; mid-window protection is operational discipline). Documentary signal for future similar borderline-mcap-clears scenarios.
+
+(d) **B-short string advances ~33 → ~34.** With CLSK-SHORT formal dismissal earlier this session (advancing ~32 → ~33), WIX-SHORT formal dismissal now advances ~33 → ~34. The string has extended by 4 dismissals across the current session-day (HIMS → UAA → CLSK → WIX) — fastest 4-instance accumulation observed in the B-short-string history. Per Operating_Protocols.md §3, regime-conditional base rate continues to be overwhelmingly hostile to B-SHORT in current risk-on regime. Strategy.md 30-trade-gate edge-decay review threshold remains far ahead.
+
+(e) **Criterion 3 + Criterion 4 stacked decisive failure with sub-pattern 1 INVERSION confirmation.** The disposition path combines two independent decisive-failure layers: criterion 3 absent admissible target (closed-list rev 14 strict-enumerated; only numerical-price-level option remains which is structurally weak) AND criterion 4 dual-framing decisive failure (LONG 7/7 flaws, SHORT 6/6 flaws, theater-check CONVERGENT). Either layer alone would route to NO-GO; both stacking provides high-conviction disposition. Direct AXSM 2026-05-04 NO-GO precedent template for criterion 3 + criterion 4 stacked failure.
+
+### Compaction-survival note
+
+**Strategy B WIX Q1-2026-print disposition 2026-05-13 ~19:00 MT post-cash-close evening session:** B-thesis construction COMPLETE for WIX; **NO-GO (DECLINE) via criterion 3 absent admissible target + criterion 4 dual-framing decisive failure with sub-pattern 1 INVERSION SECOND INSTANCE confirmation** (Oppenheimer $130→$115 / BAC $136→$109 / UBS $170→$145 PT cuts + JPM Neutral→Underweight + Baird Outperform→Neutral rating downgrades; STRONGER than MNDY 5/12 first-instance due to 2 rating downgrades) + borderline post-print mcap $2.32B (16% cushion above $2B floor; tightest mcap-cushion of session series) + geopolitical-overhang multi-year structural mismatch + AI-moat-disruption-risk + multi-layer MVG corrections (5th instance in ~24 hours); no order staged; no portfolio-state change.
+
+**Experiment B totals advance to 4 GO + 36 NO-GO = 10.0% / 90.0% hit rate** (vs prior 4 GO + 35 NO-GO = 10.3% / 89.7% per most-recent Decision_Log entry 2026-05-13 CLSK NO-GO). NO-GO breakdown advances criterion-3-absent + criterion-4-decisive-failure stacked category (parallel to AXSM 2026-05-04 precedent).
+
+**B-short string advances ~33 → ~34** with WIX-SHORT formal dismissal per 6/6 decisive flaws.
+
+**Conviction in NO-GO: HIGH (~82-87%)** — slightly HIGHER than CLSK (~75-82%) given (i) clean sub-pattern 1 INVERSION SECOND INSTANCE confirmation via 5 sell-side actions including 2 rating downgrades, (ii) stacked criterion 3 + criterion 4 decisive failure, (iii) borderline-mcap structural risk. Theater-check CONVERGENT. Residual ~13-18% reflects (a) possible Day-2-3 mean-reversion bounce on $1.6B Dutch Auction floor narrative, (b) possible activist/strategic-buyout catalyst announcement, (c) possible geopolitical resolution / Israel-related rerating, (d) possible AI-moat-narrative reversal.
+
+**Sub-pattern 1 INVERSION FORMAL TAXONOMY PROMOTION:** At 2 instances (MNDY 5/12 + WIX 5/13), sub-pattern 1 INVERSION is now ELIGIBLE for formal taxonomy entry per W4/W5 cadence. Definition: "Negative-direction earnings-miss event (Day-0 C/C ≤ -5%) followed by sell-side cluster ratification of bear thesis — post-print PT-cut wave with 3+ firm cluster + at least 1 rating downgrade + EPS miss material magnitude (~30%+ vs consensus). Sell-side cluster directionality is INVERSION of sub-pattern 1; confirms information-driven repricing; routes to criterion 4 LONG-framing decisive failure." W5 to formally promote and assign canonical numbering (recommended "sub-pattern 1-INV" or "sub-pattern 9").
+
+**MVG-correction-precedent template now at 5 instances within ~24 hours** (MNDY 5/12 → HIMS 5/13 → UAA 5/13 → CLSK 5/13 → WIX 5/13). W5 URGENT-priority root-cause analysis required. Multiple competing hypotheses: D1/D2 data-source noise inflation vs session-prompt-construction template drift vs external-data-source quality degradation vs high-disposition-volume-saturation correlation (Wed 5/13 hit 11 same-day completions = continuing NEW HIGH-WATER-MARK extension).
+
+**Key cross-references for future Claude sessions:** if a future B candidate is an Application Software / IT name with Day-0 C/C ≤ -5% NEGATIVE direction + post-print sell-side cluster of 3+ PT cuts + at least 1 rating downgrade + EPS miss ≥30% vs consensus, reference back to MNDY 5/12 (first instance) and this WIX 5/13 entry (second instance) for sub-pattern 1 INVERSION routing. The pattern decisively confirms information-driven repricing and routes to criterion 4 LONG-framing decisive failure. The geopolitical-overhang layer (WIX Israel-related) is generally applicable to companies with sovereign / political-risk overhang where resolution timeline is multi-year structural; routes to V/MDLZ-style structural-overhang-persistence sub-pattern. The AI-moat-disruption-risk layer is generally applicable to web-builder / content-generation / design-tool SaaS names where AI substitution risk is structural multi-year concern.
+
+---
+
 ## 2026-05-13 — D2 Daily Action Conversion
 
 **Session type:** D2 Daily Action Conversion (automated post-D1 routine)
