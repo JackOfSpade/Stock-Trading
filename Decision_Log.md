@@ -13966,3 +13966,23 @@ For reference:
 - KL #12 pairwise correlation first computation: Wed 2026-06-03 15:30 MT (per ZBRA GO entry)
 - Next M2 fundamental review: 2026-06-01 (first trading day of June)
 
+---
+
+## 2026-05-14 — D2 Daily Action Conversion
+
+**Trigger:** Daily.md 2026-05-13 RECOMMENDED ACTIONS section (second-pass verification; prior D2 2026-05-13 processed primary actions).
+
+**Decision: No new actions required.** All RECOMMENDED ACTIONS from Daily.md 2026-05-13 confirmed executed by prior sessions:
+
+- **Exits (5 positions):** IBM-B / HCA-B / META-B / RTX-D / DIS-D — all hold per Daily.md 2026-05-13 analysis. No invalidation criteria tripped. No exit orders staged.
+- **WIX thesis construction:** Prior D2 created calendar event `s3l11cm65bc798qc8119f33guc` (Fri 2026-05-15 09:00 MT). WIX B-thesis construction completed NO-GO 2026-05-13 ~19:00 MT (criterion 3 absent + criterion 4 dual-framing decisive failure + sub-pattern 1 INVERSION SECOND INSTANCE). Calendar event now stale — D3 to delete per disposition-exists rule.
+- **NBIS A-queue add:** Confirmed in Watchlist.md (added 2026-05-13 by prior D2).
+- **CSCO A-queue note:** Confirmed in Watchlist.md (NOTE 2026-05-13 FQ3'26 AMC print validation).
+- **Router review:** None triggered per Daily.md 2026-05-13 regime check. Confirmed.
+
+**Pending downstream items resolved:**
+- ZBRA Limit BUY 0.1505 @ $249.52 (operator-discretion tighter from staged $251.00) filled 2026-05-14 07:30:00 ET. Portfolio_Ledger.md updated by fill-capture session ~14:17 MT. B-book now 4/5 open positions (IBM / HCA / META / ZBRA). KL #12 updated to 4-long-book (Wed 2026-06-03 event `k9vtudr7d40ukto3vfhutcdbls`). Mid-window pulse Tue 2026-06-09; time-based exit Mon 2026-07-13 (both events created by fill-capture session).
+- CLSK and UAA thesis constructions completed NO-GO 2026-05-13 (pre-scheduled per prior Decision_Log entries). Pre-existing CLSK Thu 5/14 11:00 MT event now stale — D3 to delete.
+
+**Downstream actions:** None. D3 to clean stale calendar events: WIX `s3l11cm65bc798qc8119f33guc` (Fri 5/15) + pre-existing CLSK Thu 5/14 event.
+
