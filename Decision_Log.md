@@ -13458,6 +13458,195 @@ Five considerations were specifically pushed back on during construction:
 
 ---
 
+## 2026-05-13 (Wed, ~18:00 MT post-cash-close evening session per D2 5/12 conversion) Strategy B thesis construction outcome — CLSK (CleanSpark) NO-GO via criterion 4 dual-framing decisive failure with Day-0 C/C BORDERLINE at -6.01% (1.20× threshold cushion = thinnest this session series) + KL #4 application caveat (EPS misses are BTC mark-to-market accounting non-cash $263M, NOT operational execution failure) + magnitude-discrepancy uncertainty layer (multiple sources disagree: D2 -6.01% vs StocksToTrade -8.08% vs Yahoo intraday-range $12.48 = -12.73%; FOURTH MVG-correction-template instance in ~24 hours after MNDY/HIMS/UAA) + event-date correction (print was Mon 5/11 AMC, NOT Tue 5/12 as session prompt asserted; Day-0 = Tue 5/12 close vs Mon 5/11 close) + bull-catalyst-risk layer (Maxim Group PT raised $18 → $22 +22.22% Buy maintained 5/12 = +63.33% upside vs $13.44 close; sub-pattern 1 single-firm bull-anchor not cluster) + AI/data-center-pivot multi-year structural narrative + B-short string advances ~32 → ~33; no order staged
+
+**Trigger:** Calendar-event-scheduled Strategy B thesis construction for CLSK, Wed 2026-05-13 evening slot per Decision_Log 2026-05-12 D2 conversion entry. Session-prompt premise summary: "CLSK Q2 2026 earnings print Tue 2026-05-12; Q2 loss -$1.52/share vs -$0.56 FactSet estimate (-171% miss / cash-burn 2.7× worse); D1 stated -10% Tue 5/12 intraday; D2 web verification found Yahoo Finance C/C = -6.0% (May 12 $13.44 vs May 11 $14.30); D2 mcap ~$3.52B; bitcoin-miner-with-cash-burn profile; KL #4 management-execution-quality framing prominent; criterion-4 likely decisive."
+
+**MVG-correction layers triggering at primary-source verification (FOURTH instance in ~24 hours after MNDY/HIMS/UAA precedents — pattern accelerating):**
+1. **Event date correction**: session prompt asserted "Tue 2026-05-12" event date; primary source confirms **print was Mon 5/11 AMC** ("Cleanspark last announced its earnings results on Monday, May 11th" per Daily Political; Motley Fool transcript dated 5/11/2026; investing.com Q2 2026 earnings call transcript 2026-05-11). Day-0 close-to-close measurement is Mon 5/11 close $14.30 → Tue 5/12 close $13.44 (or alternate values per source disagreement below). Disposition not gated by event-date correction; documented for documentary signal.
+2. **Day-0 C/C magnitude SOURCE-DISAGREEMENT**: session prompt D2 reported $13.44 May 12 close = **-6.01% C/C** (D2 verification primary). Alternative sources:
+   - StocksToTrade article 2026-05-12: "trending down by -8.08 percent" (intraday at time of publication)
+   - Multiple sources reference May 12 close around **$12.48** (= -12.73% C/C if accurate)
+   - "Latest close near $13.15" (StocksToTrade) implies -8.04% C/C
+   - Maxim Group PT raise to $22 with "63.33% upside vs previous close" implies previous close ≈ $13.47 ≈ $22/1.6333 — corroborates D2 $13.44 reading
+   
+   **Operative reading: D2 $13.44 close → -6.01% C/C** (Maxim PT calculation cross-checks; $12.48 reference likely intraday low not regular-session close). All candidate values clear 5% threshold; criterion 1 magnitude clears regardless of source-disagreement-resolution. **MVG layer fires** for documentary signal — source disagreement on Day-0 close is documentation discipline issue.
+3. **EPS consensus reference**: session prompt asserted "-$0.56 FactSet estimate"; alternative reference "-$0.25 consensus" per Daily Political / Maxim Group. Either way, Q2 EPS -$1.52 is MASSIVE miss (171% worse than -$0.56 OR 508% worse than -$0.25). Magnitude class consistent.
+
+**Inputs:** Strategy.md Strategy B section (entry criteria 1-5; criterion 3 closed-list rev 14; criterion 4 dual-framing; pre-mortem rev 7 KL #4 management-execution-quality); Operating_Protocols.md (§1 HOIP; §3 NO-GO records context); AI_Trading_Foundation.md (2.4/2.13/2.20); Portfolio_Ledger.md (B NAV $1,888.69; IBM/HCA/META open + ZBRA staged Thu 5/14; sector caps); Decision_Log.md prior precedents — **UAA 2026-05-13 NO-GO (immediately prior earlier this session; MVG-correction-template instance #3 in ~24 hours; B-short string advanced ~31 → ~32)**, **HIMS 2026-05-13 NO-GO (MVG-correction template instance #2; B-short string ~30 → ~31)**, **MNDY 2026-05-12 NO-GO (MVG-correction template instance #1; magnitude-discrepancy precedent)**, **OMCL 2026-04-29 NO-GO (borderline-mcap-clears + criterion 4 decisive precedent)**, **EQIX 2026-05-01 / DASH 2026-05-11 / AXSM 2026-05-02 (criterion 1 magnitude-verification-gate precedents — relevant for borderline -6.01% reading)**, **B-short string ~32 consecutive NO-GOs in current risk-on regime per session-end totals**; CLSK Q2 2026 earnings press release stocktitan (https://www.stocktitan.net/news/CLSK/clean-spark-reports-second-fiscal-quarter-2026-uuxm734lx5xe.html); Motley Fool CLSK Q2 2026 transcript 2026-05-11 (https://www.fool.com/earnings/call-transcripts/2026/05/11/cleanspark-clsk-q2-2026-earnings-transcript/); Investing.com CLSK Q2 transcript misses-expectations (https://www.investing.com/news/transcripts/earnings-call-transcript-cleanspark-inc-misses-q2-2026-earnings-expectations-93CH-4678637); StocksToTrade CLSK news 2026-05-12 (https://stockstotrade.com/news/cleanspark-inc-clsk-news-2026_05_12/); Timothy Sykes CLSK news 2026-05-12 (https://www.timothysykes.com/news/cleanspark-inc-clsk-news-2026_05_12/); Daily Political 2026-05-12 Maxim Group PT raise to $22 Buy (https://www.dailypolitical.com/2026/05/12/maxim-group-raises-cleanspark-nasdaqclsk-price-target-to-22-00.html); GuruFocus Maxim PT raise (https://www.gurufocus.com/news/8852809/clsk-maintained-by-maxim-group-price-target-raised-to-22); Q1 2026 earnings press release (CleanSpark IR 2026-02-05 — Q1 EPS -$1.35 vs +$0.09 cons MASSIVE miss precedent); CleanSpark Q1 2026 earnings call Yahoo Finance recap (https://finance.yahoo.com/news/cleanspark-inc-clsk-q1-2026-050448932.html); Yahoo Finance CLSK Q2 2026 highlights (https://finance.yahoo.com/markets/stocks/articles/cleanspark-inc-clsk-q2-2026-070618040.html); Daily.md 2026-05-12 / D2 conversion entry 2026-05-12.
+
+### Decision
+
+**CLSK — NO-GO (DECLINE) via criterion 4 dual-framing decisive failure with multi-layer MVG corrections + KL #4 application caveat + bull-catalyst-risk-on-AI-pivot layer + Day-0 BORDERLINE 1.20× cushion.**
+
+Criterion 1 mechanical eligibility CLEARS (BORDERLINE on Day-0 magnitude: -6.01% ≥ 5% with thin 1.20× cushion = thinnest among all B candidates this session series; mcap $3.52B (262M shares × $13.44) ≥ $2B with comfortable cushion ~$1.5B / ~76% margin; ADV multi-hundred-million-dollar; long-or-short permitted; qualifying Q2 2026 earnings event class with material EPS miss). Criterion 5 sector cap CLEARS (CLSK GICS classification ambiguous across sources: Capital Markets / Application Software / IT — using IT/Application Software per GICS standard for crypto-mining-with-AI-data-center-pivot; B book IT currently 1/3 (IBM IT Services) → 2/3 with CLSK Application Software addition; within 3/sector cap). Criterion 4 dual-framing DECISIVELY FAILS for BOTH directions:
+
+**LONG framing decisive flaws** (despite Maxim PT raise + AI pivot bull narrative):
+- (L1) **Convergence target structurally challenging**: Q3 print likely early August 2026 outside 60-day window (May 11 + 60 = July 10); FOMC Jun 16-17 mechanism-mismatch on idiosyncratic crypto miner; no FDA event; no index inclusion event (CLSK in Russell 2000 / not in S&P 500 or Russell 1000 per closed-list rev 14 admissibility). Numerical price level option only — moot given criterion 4 disposition.
+- (L2) **BTC price dependence makes 60-day forward direction binary commodity exposure**: CLSK's Q2 revenue declined 25% sequentially "due to a decline in Bitcoin prices"; net loss includes $263M noncash mark-to-market BTC fair-value adjustments. Forward 60-day stock direction is dominated by BTC price action, which is binary and unforecastable within window. LONG thesis requires BTC rally OR mark-to-market reversal — both event-driven and not closed-list admissible.
+- (L3) **Single-firm Maxim Group PT raise is NOT sub-pattern 1 cluster**: Maxim Group raised PT $18 → $22 (+22.22%) Buy maintained 2026-05-12 = single-firm bull-anchor only. Sub-pattern 1 (post-print PT-raise wave) requires cluster of 3+ firms typically. Single-firm contrarian-bull is documentary signal but not sub-pattern 1 ratification cluster — analog to AKAM 5/13 Evercore-new-coverage-Outperform sub-evidence layer (single-firm scale, not MEGA-tier upgrade-cascade).
+- (L4) **Day-1 trajectory (Wed 5/13) modest fade -1.04%** (Tue $13.44 → Wed ~$13.30 per available data) does NOT confirm strong bull-thesis-bounce; closer to flat-stabilization than mean-reversion-up. Compare to HIMS 5/13 Day-1 -4.06% continuation-down (decisively bearish) and to sub-pattern 8 instances (DOC +13.6% to +17.93% Day-0 with Day-1 stabilization — RALLY UP). CLSK Day-1 fade is mixed signal, not strongly bullish.
+- (L5) **Multi-year AI/data-center buildout timeline mismatched with B 60-day window**: CLSK's strategic pivot to AI/data-center infrastructure ("nearly 900 megawatts of aggregate development capacity for AI data center infrastructure" per Q1 release) is multi-year capacity-buildout + monetization timeline (2026-2028+). Forward-narrative ratification within 60 days is structurally improbable — analog to V/MDLZ structural-overhang-persistence with bull-narrative-side instead of bear-side overhang.
+- (L6) **Magnitude-discrepancy ambiguity on Day-0 close** ($13.44 D2 / $12.48 alternative / $13.15 alternative) creates measurement uncertainty for criterion 1 1.20× cushion; if true close were $12.48 the disposition routing would shift from BORDERLINE-clears to upper-MODERATE-tier with -12.73% magnitude. Documentation discipline issue but not load-bearing for disposition.
+- (L7) **Q1 2026 EPS miss precedent**: Q1 2026 EPS -$1.35 vs +$0.09 cons (-$1.44 absolute miss) shows pattern of consecutive massive EPS misses regardless of cause (BTC mark-to-market accounting). Even if KL #4 caveat applies (misses are accounting not operational), the pattern of-large-quarterly-volatility-in-reported-EPS undermines forward-EPS-predictability — LONG thesis premised on Q3 normalization is structurally exposed to BTC mark-to-market continuing volatility.
+
+**LONG framing verdict: 7/7 DECISIVE FLAWS. LONG decisively rejected despite Maxim PT raise + AI pivot.**
+
+**SHORT framing decisive flaws** (despite directional alignment with EPS miss + revenue decline):
+- (S1) **B-short string ~32 → ~33 with CLSK-SHORT formal dismissal** (UAA-SHORT dismissed earlier this session 2026-05-13 advanced ~31 → ~32; CLSK-SHORT now extends ~32 → ~33). Empirical regime-conditional base rate overwhelmingly hostile to B-SHORT in current risk-on regime. Per Operating_Protocols.md §3, this is regime context not automatic-dismissal trigger — CLSK-SHORT analysis confirmed multiple decisive flaws independently.
+- (S2) **2.20-trap structural exposure** per Strategy.md Strategy B pre-mortem rev 7 Constraint 2 — mechanism-embedded.
+- (S3) **Maxim Group PT raise $18 → $22 +22.22% Buy maintained** is a bull-catalyst-risk for short squeeze. +63.33% nominal upside to $22 PT vs current $13.44 = significant short-stop-binding territory if any positive BTC rally / AI infrastructure milestone announcement materializes.
+- (S4) **BTC rally risk**: BTC has been historically volatile; multi-day rallies are frequent. Any BTC rally during 60-day window mechanically reverses CLSK's mark-to-market loss + supports operating-margin recovery + triggers crypto-miner bid. SHORT thesis is exposed to commodity-driven asymmetric upside.
+- (S5) **AI/data-center pivot multi-year structural bull narrative**: 900 megawatts of AI infrastructure capacity in development represents structural pivot toward higher-margin / lower-volatility business. Future AI-tenant lease announcements / capacity-deployment milestones could trigger structural re-rating. SHORT requires structural-decline thesis; CLSK has structural-pivot offset.
+- (S6) **+25% short stop binding risk** at ~$16.80 within 60-day window — close to consensus $17.32 cluster (per general analyst data). High-volatility crypto miner with potential gap-up vectors via BTC rally / Maxim-style bull catalyst.
+- (S7) **Bounded marginal SHORT thesis**: CLSK pre-print already reflected miner-margin-pressure + BTC volatility context; additional 60-day SHORT requires fresh deteriorating-information OR breakdown below key support. Q3 print Aug outside window. KL #4 management-execution-quality concern is partially mitigated by mark-to-market accounting caveat.
+
+**SHORT framing verdict: 7/7 DECISIVE FLAWS. SHORT decisively rejected per B-short string + 2.20-trap + Maxim-bull-catalyst-risk + BTC-rally-risk + AI-pivot-structural-bull + bounded-marginal-thesis.**
+
+**Dual-framing disposition: BOTH LONG AND SHORT FAIL CRITERION 4. NO-GO.**
+
+### Step 1 — MANDATORY instrument rule gate (mcap ≥ $2B verification)
+
+Primary-source verification per stockanalysis.com (via WebFetch attempt 503; cross-referenced via search aggregators):
+- Shares outstanding ~262M (per D2 verification + companiesmarketcap.com cross-reference)
+- Tue 5/12 close $13.44 (D2 verification)
+- Computed mcap: 262M × $13.44 = **$3.52B** — clears $2B floor with ~$1.52B / ~76% cushion (MUCH larger than UAA $176-640M / 7-32% cushion or OMCL $70M / 3.5% cushion)
+- ADV multi-hundred-million-dollar daily (CLSK is high-volume retail crypto-attention name)
+
+**Mcap CLEARS $2B floor with comfortable cushion.** No instrument-rule mechanical-failure routing applies.
+
+### Step 2 — Day-0 close-to-close magnitude verification (BORDERLINE)
+
+Multiple-source disagreement on Tue 5/12 close (documented in MVG layer above):
+- D2 $13.44 → -6.01% C/C (Mon $14.30 → Tue $13.44; 1.20× cushion above 5%)
+- StocksToTrade article -8.08% intraday at publication
+- Yahoo Finance close-to-close range alternative $12.48 → -12.73% (likely intraday low not regular-session close)
+- "Latest close near $13.15" StocksToTrade → -8.04% C/C
+- Maxim PT $22 with "63.33% upside vs previous close" implies prev close ≈ $13.47 ≈ D2's $13.44 ✓ (cross-check corroborates D2 reading)
+
+**Operative reading: D2 $13.44 close → -6.01% C/C.** Criterion 1 magnitude clears at thinnest cushion (1.20×) of any B candidate this session series. All candidate alternative values (-6.01% / -8.04% / -8.08% / -12.73%) clear 5% threshold; disposition not gated by source-disagreement-resolution.
+
+### Step 3 — Criterion 1 mechanical eligibility detail
+
+- **Instrument rule**: US-listed common equity (NASDAQ:CLSK). Mcap $3.52B ≥ $2B (Step 1).
+- **ADV**: Multi-hundred-million-dollar daily (high-volume retail crypto-attention name); cushion vs $10M floor: 30×+.
+- **Criterion 1 close-to-close**: -6.01% Day-0 ≥ 5% threshold ✓ (BORDERLINE 1.20× cushion).
+- **Event class**: Q2 2026 earnings release Mon 2026-05-11 AMC (NOT Tue 5/12 as session prompt asserted) — qualifying event class per Strategy.md enumerated events. EPS miss -$1.52 vs -$0.56 cons (or -$0.25 alt cons) = MASSIVE miss; revenue miss -$9M vs $145.4M cons = -6.2%.
+- **Window status**: 10-day post-event entry window expires ~Mon 2026-05-25 (Mon 5/11 + 10 trading days; Memorial Day = May 25 holiday; effective expiration ~Tue 5/26). Cushion at staging time Wed 5/13: ~7-8 trading days remaining.
+
+### Step 4 — GICS sub-industry classification (ambiguous; resolved to IT/Application Software for sector cap)
+
+CLSK GICS classification differs across sources:
+- Simply Wall St / Google Finance: Application Software / Software sector
+- Some sources: Capital Markets / Financial Services
+- Others: Information Technology
+
+For sector-cap arithmetic, using **IT / Application Software** (GICS 45102010 or adjacent) per standard B-strategy practice. Current B book IT 1/3 (IBM IT Services) would advance to 2/3 with CLSK Application Software addition; within 3/sector cap. Documentary note: classification ambiguity flagged for W5 hygiene cycle (CLSK is hybrid crypto-miner / AI-infrastructure / software entity that doesn't fit cleanly into any single GICS sub-industry).
+
+### Step 5 — Criterion 2 (mispricing thesis: BTC mark-to-market accounting + AI/data-center pivot)
+
+**Q2 2026 actual results (per primary sources stocktitan + Motley Fool + Investing.com transcripts)**:
+- Revenue $136.4M vs $145.4M consensus = **-6.2% miss** (-$9M); revenue down 25% sequentially due to BTC price decline
+- GAAP EPS **-$1.52 vs -$0.56 cons (or -$0.25 alt cons) = MASSIVE miss** (171% or 508% worse than cons depending on consensus reference)
+- Net loss $378.3M (includes **$263M noncash mark-to-market BTC fair-value adjustments**)
+- Adjusted operating metrics stable: cost per kWh ~$0.056-$0.059 (Q1→Q2 stable); gross margins ~47% (Q1 2026 reference)
+- Strategic pivot: AI/data-center infrastructure development (~900MW capacity per Q1 2026 release)
+- $800M remaining liquidity post-convertible raise (per Q1 2026 commentary)
+
+**Q1 2026 prior-quarter context** (Feb 5, 2026 print, Q1 EPS -$1.35 vs +$0.09 cons MASSIVE MISS):
+- Q1 revenue $181.2M (+11.6% YoY) actually beat YoY trajectory
+- Q1 EPS miss dominated by BTC mark-to-market ~$379M net loss
+- Same accounting-driven-miss pattern as Q2
+
+**LONG mispricing thesis assessment**: WEAK on multiple grounds (see L1-L7). The thesis would require believing (a) BTC rally within 60 days reversing mark-to-market losses, (b) AI/data-center infrastructure milestone announcement triggering structural re-rating, (c) Maxim Group bull-thesis ratification by additional firms (single-firm currently). All three are event-driven and not closed-list admissible per criterion 3 rev 14.
+
+**SHORT mispricing thesis assessment**: WEAK on multiple grounds (see S1-S7). The thesis requires structural-decline-in-CLSK-fundamentals beyond what's already priced in pre-print. CLSK has been volatile; current $13.44 is near recent trading range; 60-day SHORT thesis is bounded by Maxim-bull-catalyst-risk + BTC-rally-risk + AI-pivot-structural-bull narrative.
+
+### Step 6 — KL #4 management-execution-quality application (CAVEAT applies)
+
+Session prompt flagged KL #4 prominently: "management-execution-quality framing prominent (cash-burn acceleration: -$1.52 vs -$0.56 estimate = 2.7× worse)." However, primary-source review reveals the **EPS misses are dominated by BTC mark-to-market accounting (non-cash $263M of $378M Q2 net loss; similar pattern in Q1 2026 ~$379M net loss "primarily due to mark-to-market adjustments")**. Operating metrics (cost per kWh, gross margins) are stable. **KL #4 caveat applies**: the misses are NOT operational-execution-failure (which KL #4 was designed to capture); they are accounting-driven volatility from BTC fair-value treatment.
+
+**KL #4 application verdict**: Partially applicable but with significant caveat — Q1+Q2 EPS misses do show pattern of forward-EPS-predictability degradation regardless of cause (BTC mark-to-market is a structural exposure that won't go away under current accounting), but this is distinct from operational-execution-quality concerns. KL #4 doesn't decisively flip the SHORT framing in CLSK's case because the misses aren't operationally-disqualifying.
+
+### Step 7 — Criterion 4 dual-framing decisive failure (detail above in Decision section)
+
+LONG framing: 7/7 decisive flaws (L1-L7). LONG decisively rejected.
+SHORT framing: 7/7 decisive flaws (S1-S7). SHORT decisively rejected per B-short string + 2.20-trap + Maxim-bull-catalyst-risk + BTC-rally-risk + AI-pivot-structural-bull + bounded-marginal-thesis.
+
+Theater-check: CONVERGENT. Independent dual-framing decisive failure across both directions. Shared underlying observation: CLSK is a high-volatility BTC-mining-with-AI-pivot name where 60-day forward direction is dominated by binary commodity exposure (BTC price) and event-driven catalyst flow (AI capacity milestones, sell-side cluster expansion, M&A), neither of which is admissible per criterion 3 closed-list rev 14 nor reliably forecastable for criterion 4 thesis construction.
+
+### Step 8 — Criterion 3 closed-list rev 14 check (suppressed downstream of criterion 4 dual failure)
+
+Documented for completeness:
+
+Strict-enumerated admissible targets within 60 days of Mon 2026-05-11 (window closes ~Fri 2026-07-10):
+- (a) Next CLSK earnings release: Q3 FY2026 print likely early August 2026 — outside 60-day window ✗
+- (b) Next FDA decision date: N/A (CLSK is crypto miner / AI infrastructure; no FDA exposure) ✗
+- (c) Next FOMC meeting: Jun 16-17 inside window, but mechanism-mismatch (no rate-decision convergence mechanism for idiosyncratic crypto miner; broad rate-sensitivity exists for crypto exposure but CLSK's idiosyncratic Q2-print/AI-pivot dynamics overshadow macro rate convergence) ✗
+- (d) Index inclusion/exclusion announcement: CLSK in Russell 2000; not in S&P 500 / Russell 1000 / Nasdaq 100 per closed-list admissibility. ✗
+- (a-alt) Numerical price level: PERMITTED — but moot given criterion 4 dual-framing decisive failure.
+
+**Criterion 3 admissible only via numerical price level option, which is moot given criterion 4 disposition.**
+
+### Pending queue updated
+
+- ~~CLSK B-thesis construction~~ COMPLETE — NO-GO via criterion 4 dual-framing decisive failure with multi-layer MVG corrections + KL #4 application caveat + bull-catalyst-risk-on-AI-pivot layer + Day-0 BORDERLINE 1.20× cushion; no order; no follow-on calendar event scheduled.
+- CLSK remains within 10-day post-event window through ~Tue 2026-05-26. No calendar event scheduled to revisit — criterion-4-decisive-failure on dual-framing dual-direction is unlikely to flip absent fresh trigger event (BTC rally, M&A, additional AI capacity milestone).
+- **B-short string advances ~32 → ~33** with CLSK-SHORT formal dismissal per 7/7 decisive flaws.
+- Existing pending items unchanged (ZBRA Thu 5/14 order placement; IBM/HCA/META invalidation monitoring + time-based exits; KL #12 first-computation Wed 6/3).
+
+### References
+
+- CLSK Q2 2026 earnings press release stocktitan: https://www.stocktitan.net/news/CLSK/clean-spark-reports-second-fiscal-quarter-2026-uuxm734lx5xe.html
+- CLSK Q2 2026 earnings call transcript Motley Fool 2026-05-11: https://www.fool.com/earnings/call-transcripts/2026/05/11/cleanspark-clsk-q2-2026-earnings-transcript/
+- Investing.com Q2 2026 earnings call transcript "misses Q2 2026 earnings expectations": https://www.investing.com/news/transcripts/earnings-call-transcript-cleanspark-inc-misses-q2-2026-earnings-expectations-93CH-4678637
+- StocksToTrade CLSK news 2026-05-12: https://stockstotrade.com/news/cleanspark-inc-clsk-news-2026_05_12/
+- Timothy Sykes CLSK news 2026-05-12: https://www.timothysykes.com/news/cleanspark-inc-clsk-news-2026_05_12/
+- Daily Political 2026-05-12 Maxim Group PT raise to $22 Buy: https://www.dailypolitical.com/2026/05/12/maxim-group-raises-cleanspark-nasdaqclsk-price-target-to-22-00.html
+- GuruFocus Maxim PT raise: https://www.gurufocus.com/news/8852809/clsk-maintained-by-maxim-group-price-target-raised-to-22
+- Yahoo Finance CLSK Q2 2026 highlights: https://finance.yahoo.com/markets/stocks/articles/cleanspark-inc-clsk-q2-2026-070618040.html
+- CLSK Q1 2026 earnings press release (CleanSpark IR): https://investors.cleanspark.com/news/news-details/2026/CleanSpark-Delivers-181-Million-in-Q1-Revenue-Strengthens-Balance-Sheet-and-Advances-Multi-Gigawatt-AI-Infrastructure-Platform/default.aspx
+- Strategy.md Strategy B section (criteria 1-5; criterion 3 closed-list rev 14; criterion 4 dual-framing; pre-mortem rev 7 KL #4 management-execution-quality).
+- Operating_Protocols.md §1 HOIP / §3 NO-GO records context.
+- Portfolio_Ledger.md (B NAV $1,888.69; IBM/HCA/META open + ZBRA staged Thu 5/14; sector caps).
+- Decision_Log.md 2026-05-13 UAA NO-GO entry (immediately prior; MVG-correction-template instance #3 in ~24 hours; B-short string ~31 → ~32).
+- Decision_Log.md 2026-05-13 HIMS NO-GO entry (MVG-correction-template instance #2; B-short string ~30 → ~31).
+- Decision_Log.md 2026-05-12 MNDY NO-GO entry (MVG-correction-template instance #1; magnitude-discrepancy precedent).
+- Decision_Log.md 2026-04-29 OMCL NO-GO entry (borderline-mcap-clears + criterion 4 decisive precedent).
+- Decision_Log.md EQIX 2026-05-01 / DASH 2026-05-11 / AXSM 2026-05-02 NO-GO entries (criterion 1 magnitude-verification-gate precedents).
+
+### Theater-check on this orchestrator review
+
+Five considerations were specifically pushed back on during construction:
+
+(a) **MVG-correction-template instance #4 in ~24 hours (MNDY/HIMS/UAA/CLSK).** The session-prompt premise contained multiple primary-source-correctable factual errors / discrepancies: event date (Tue 5/12 asserted, primary source Mon 5/11); Day-0 close source-disagreement ($13.44 D2 / $12.48 alternative / $13.15 alternative); EPS consensus reference (-$0.56 FactSet vs -$0.25 alternative). None are individually load-bearing for disposition (criterion 1 clears under all readings; criterion 4 fails decisively under all readings) but the cumulative count is documentary signal for W5 hygiene cycle. **MVG-correction template now at 4 instances within ~24 hours** — accelerating beyond the 3-instance cluster surfaced after UAA. W5 should now consider whether (i) D1/D2 data-source noise is materially elevated in this market regime, (ii) session-prompt-construction template has drifted, (iii) external-data-source quality is degraded, or (iv) the increased incidence is correlated with high-disposition-volume saturation (Wed 5/13 had 9 same-day completions = NEW HIGH-WATER-MARK). Action item for W5: structured root-cause analysis with comparison to baseline MVG-correction frequency from earlier session series.
+
+(b) **KL #4 application caveat**: Session prompt flagged KL #4 management-execution-quality prominently per "cash-burn 2.7× worse than expected" framing. Primary-source review reveals this framing partially mischaracterizes the EPS miss source — Q2 2026 EPS miss is **dominated by BTC mark-to-market accounting** ($263M noncash of $378M net loss); same pattern in Q1 2026 (~$379M net loss "primarily due to mark-to-market adjustments"). Operating metrics (cost per kWh ~$0.056; gross margins ~47%) are stable. KL #4 was designed to capture operational-execution-failure; CLSK's misses are accounting-driven not operationally-driven. KL #4 caveat applies and partially mitigates SHORT framing. Documentary signal for KL #4 application discipline in future BTC-miner / commodity-exposure / mark-to-market-accounting candidates.
+
+(c) **Day-0 BORDERLINE 1.20× cushion = thinnest of session series.** CLSK's -6.01% Day-0 C/C is the thinnest above-threshold reading observed in this session series — comparable in cushion-thinness to AXSM 2026-05-02 (criterion 1 fail) and EQIX 2026-05-01 (criterion 1 fail) precedents. CLSK clears mechanically but at thinnest margin; if alternative source close ($12.48 → -12.73%) were correct, magnitude routing would shift to upper-MODERATE-tier. Operative D2 reading $13.44/-6.01% adopted with cross-check via Maxim PT $22 calculation (63.33% upside → prev close $13.47 ≈ $13.44). Documentary signal for borderline-magnitude handling: when Day-0 cushion is <1.5×, primary-source verification across 3+ sources is mandatory; conflicting source readings should default to most-conservative-magnitude reading for routing decisions.
+
+(d) **B-short string advances ~32 → ~33.** With UAA-SHORT formal dismissal earlier this session (advancing ~31 → ~32), CLSK-SHORT formal dismissal now advances ~32 → ~33. The string represents an empirical regime-conditional base rate that SHORT direction is structurally inadmissible in current risk-on regime. Per Operating_Protocols.md §3, this is regime context not automatic-dismissal trigger — CLSK-SHORT analysis confirmed 7 decisive flaws independently. Documentary signal for the 30-trade-gate edge-decay review per Strategy.md Section 4 indicators.
+
+(e) **Bull-catalyst-risk asymmetry on AI-pivot multi-year narrative.** CLSK's strategic pivot to AI/data-center infrastructure (900MW capacity in development) creates asymmetric upside exposure on any single capacity-deployment milestone, AI-tenant lease announcement, or sell-side bull-thesis broadening. Maxim Group PT raise to $22 (+22.22%) is single-firm bull-anchor; sub-pattern 1 cluster expansion to 3+ firms could trigger structural re-rating. SHORT framing exposed to gap-up vector via this narrative. LONG framing has structural-bull narrative but timing within 60-day window is event-driven and not closed-list admissible.
+
+### Compaction-survival note
+
+**Strategy B CLSK Q2-2026-print disposition 2026-05-13 ~18:00 MT post-cash-close evening session:** B-thesis construction COMPLETE for CLSK; **NO-GO (DECLINE) via criterion 4 dual-framing decisive failure** with multi-layer MVG corrections (event date Mon 5/11 not Tue 5/12; Day-0 source-disagreement $13.44 D2 operative / $12.48 alternative; EPS consensus -$0.56 vs -$0.25 alternative) + Day-0 BORDERLINE 1.20× cushion thinnest of session series + KL #4 application caveat (EPS misses are BTC mark-to-market accounting non-cash $263M, NOT operational execution failure) + bull-catalyst-risk-on-AI-pivot layer (Maxim Group PT raise $18 → $22 +22.22% Buy maintained = single-firm bull-anchor; 900MW AI capacity in development); no order staged; no portfolio-state change.
+
+**Experiment B totals advance to 4 GO + 35 NO-GO = 10.3% / 89.7% hit rate** (vs prior 4 GO + 34 NO-GO = 10.5% / 89.5% per most-recent Decision_Log entry 2026-05-13 UAA NO-GO). NO-GO breakdown advances criterion-4-decisive-failure category by 1 (LONG-and-SHORT-both-fail dual-framing instance).
+
+**B-short string advances ~32 → ~33** with CLSK-SHORT formal dismissal per 7/7 decisive flaws.
+
+**Conviction in NO-GO: HIGH (~75-82%)** — slightly LOWER than HIMS/UAA (~80-85%) given Maxim PT raise + AI-pivot structural-bull narrative provide partial LONG-side ambiguity; theater-check still CONVERGENT for NO-GO disposition. Residual ~18-25% reflects (a) possible BTC rally during 60-day window reversing mark-to-market losses, (b) possible additional sell-side bull-thesis broadening beyond Maxim, (c) possible AI capacity-deployment milestone announcement triggering structural re-rating, (d) possible activist / strategic-buyout catalyst.
+
+**MVG-correction-precedent template at 4 instances within ~24 hours** (MNDY 5/12 → HIMS 5/13 → UAA 5/13 → CLSK 5/13). W5 hygiene cycle root-cause analysis flagged: D1/D2 data-source noise vs session-prompt-construction template drift vs external-data-source quality degradation vs high-disposition-volume saturation correlation. Structured analysis warranted at next M5 monthly review.
+
+**KL #4 application discipline note for W5:** KL #4 management-execution-quality was designed for operational-execution-failure (cost control, forecasting accuracy, operational metric deterioration). For commodity-exposure / mark-to-market-accounting / volatile-revenue candidates (BTC miners, oil & gas E&P, mining, biotech with milestone payments), the EPS-miss-magnitude framing requires CAVEAT — misses dominated by accounting / commodity / mark-to-market are NOT operational-execution failures. CLSK is the first observed instance of this caveat being load-bearing; future similar candidates should reference back to this entry for KL #4 application discipline.
+
+**Key cross-references for future Claude sessions:** if a future B candidate is a commodity-exposed / mark-to-market-accounting-dominated entity (BTC miner, oil & gas, biotech with milestone payments) with massive headline EPS miss but stable operating metrics, reference this CLSK entry for KL #4 application caveat handling. The bull-catalyst-risk-on-strategic-pivot layer (CLSK AI/data-center pivot) is generally applicable to companies with multi-year structural-pivot narratives — single-firm PT-raise events are bull-anchors not sub-pattern 1 ratification clusters; require 3+ firm cluster for sub-pattern 1 routing.
+
+---
+
 ## 2026-05-13 — D2 Daily Action Conversion
 
 **Session type:** D2 Daily Action Conversion (automated post-D1 routine)
