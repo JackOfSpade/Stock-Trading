@@ -13044,6 +13044,52 @@ Four considerations were specifically pushed back on during construction:
 
 **Key cross-references for future Claude sessions:** if ZBRA invalidation criterion (i)(a) ever fires (FY26 EPS guide cut below $18.30 midpoint floor during holding window), reference back to this entry's Pillar 1 — that condition is the "clean-beat-clean-raise event class undone" trigger. If mid-window Tue 6/9 pulse surfaces aggressive sub-pattern 1 cluster escalation (3+ additional +10%+ PT raises post-staging), thesis quality has shifted from sentiment-mispricing to information-pricing — escalate to consideration of pre-time-based exit. If tariff-regime updates produce ZBRA-specific 8-K material adverse disclosure, criterion (iii) fires.
 
+### Fill confirmation appended 2026-05-14 ~14:17 MT
+
+**ZBRA FILL CAPTURED Thu 2026-05-14 07:30:00 ET (06:30:00 MT? — IBKR market-open execution; user-prompt + IBKR Orders & Trades screenshot capture timestamp 07:30:00 displayed Eastern; user IBKR phone clock confirmation 14:17 MT = ~16:17 ET when capturing screenshot ~6h45min post-fill).**
+
+**Order execution details (per IBKR Orders & Trades screen capture):**
+- ZBRA NASDAQ.NMS — Bought 0.1505 shares
+- **Limit price modified at execution: $249.52 (vs staged $251.00 = -$1.48/-0.59% TIGHTER limit)**; "249.52 Limit, Day" duration confirmed
+- Fill price $249.52 = exact-limit fill (no slippage)
+- Principal: $37.55 (0.1505 × $249.52 = $37.5527 displayed as $37.55)
+- Commission: $0.35
+- **Total cost basis: $37.90**
+- Fill time: 07:30:00 ET (market-open execution)
+
+**Funding cycle:**
+- SGOV NYSE — Sold 0.35 shares @ $100.51 market (07:30:03 ET, 3 seconds post-ZBRA fill)
+- SGOV proceeds: $35.18 principal - $0.35 commission = $34.83 net cash
+- SGOV realized P&L: **-$0.39 (FIRST REALIZED LOSS IN B SERIES — expected SGOV-parking-cycle micro-drag from intra-period mark drift; SGOV cost basis was ~$100.63/share avg vs $100.51 sale = -$0.12/share × 0.35 = -$0.04 P&L; plus $0.35 commission = -$0.39 total)**
+- Net cash effect of cycle: SGOV $34.83 net - ZBRA $37.90 total = **-$3.07 cycle cash drag** (covered by prior cash residual $3.32 → post-cycle residual $0.25)
+
+**Position-level entry-day mark snapshot (per IBKR Portfolio screenshot ~14:17 MT, ~6h45min post-fill):**
+- ZBRA last $258.10 (+$8.58/+3.44% above fill $249.52 same-day intraday)
+- Mark value: 0.1505 × $258.10 = $38.84
+- Unrealized P&L: +$0.94 (= $38.84 mark - $37.90 cost basis incl commission; +2.48% same-day vs cost basis)
+- Day-0-of-position mark drift +3.44% from fill consistent with sub-pattern 1 MODERATE-tier post-staging continuation
+
+**Convergence target unchanged: $264.00 (immutable per Strategy.md criterion 3 closed-list rev 14).** Gross return at convergence from $249.52 fill = +5.80% (vs +5.49% from $250.27 Wed close reference = +31bps improvement on operator-discretion tighter limit). Net return at convergence pre-exit-commission: +4.87%.
+
+**Time-based exit: Mon 2026-07-13** (entry 2026-05-14 + 60 calendar days = Sat 2026-07-11 → adjusted to Mon 2026-07-13 trading day). Mid-window pulse-check Tue 2026-06-09 ~15:30 MT.
+
+**Operator-discretion tighter-limit pattern continues**: META 2026-05-05 (-$13.70 / -2.23% tighter) → HCA 2026-04-28 (-$0.04 / -0.01% tighter) → **ZBRA 2026-05-14 (-$1.48 / -0.59% tighter)** = 3rd instance of operator-discretion-tighter-at-execution pattern within B series; opposite of DIS 2026-05-07 / RTX 2026-04-27 looser-at-execution pattern; documentary signal for W5 hygiene cycle. All three tighter-limit instances preserved thesis (criterion 1-5 unchanged) and improved gross-return-at-convergence from staged reference.
+
+**Calendar events scheduled (post-fill):**
+- Tue 2026-06-09 ~15:30 MT: [Claude] ZBRA mid-window pulse-check — B position (event id `6p9eotfrdd0eae2pvoccrbj95o` CREATED 2026-05-14; mid-window posture review; sub-pattern 1 cluster escalation check per invalidation criterion (iv); fundamental development scan)
+- Mon 2026-07-13 ~07:15 MT: [Claude] ZBRA time-based exit — B position (event id `b2gka8hncerbnfh6m9j2hq4k2g` CREATED 2026-05-14; market-open exit per Strategy.md B exit rules at entry + 60 calendar days)
+- Wed 2026-06-03 ~15:30 MT: [Claude] KL #12 pairwise correlation — B book IBM × HCA × META × **ZBRA NEW** (event id `k9vtudr7d40ukto3vfhutcdbls` UPDATED 2026-05-14 from 3-long-book title to 4-long-book; same event id retained per protocol; 6 pairwise correlations to compute)
+
+**B portfolio state post-fill:**
+- 4/5 concurrent open positions: IBM (Apr 27 entry), HCA (Apr 28 entry), META (May 5 entry), **ZBRA (May 14 entry NEW)**
+- Sector caps: IT 2/3 (IBM IT Services + ZBRA Electronic Equipment Instruments & Components — distinct sub-industries within IT sector); Health Care Facilities 1/3 (HCA); Comm Services 1/3 (META); 4 sub-industries used across 3 sectors
+- Total NAV $1,887.60 post-fill (pre-fill $1,888.69 - $0.39 SGOV realized loss - $0.70 cycle commissions = -$1.09 net drag)
+- Next trade size at 2%: $37.75 (recomputed off updated NAV)
+- Cumulative B commissions paid: $2.31 (prior $1.61 + $0.70 cycle)
+- 1 slot remaining toward 5-concurrent-cap
+
+**Experiment B totals unchanged at 4 GO + 36 NO-GO = 10.0% / 90.0% hit rate** (no new disposition since WIX NO-GO 5/13; this entry is fill-capture-admin only, not a new thesis-construction disposition). All 4 GOs (IBM/HCA/META/ZBRA) are now ACTIVE OPEN POSITIONS.
+
 ---
 
 ## 2026-05-13 (Wed, ~11:00 MT calendar slot per D2 5/12 conversion) Strategy B thesis construction outcome — HIMS (Hims & Hers Health) NO-GO via criterion 4 dual-framing decisive failure with THREE MVG correction layers + sub-pattern 8 candidate INVERSION (Q1 actuals MISS not BEAT — mechanism does NOT fit; HIMS is NOT sub-pattern 8 third instance) + Day-1 continuation-down evidence layer + B-short string advances ~30 → ~31; no order staged
