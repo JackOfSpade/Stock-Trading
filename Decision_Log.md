@@ -13986,3 +13986,109 @@ For reference:
 
 **Downstream actions:** None. D3 to clean stale calendar events: WIX `s3l11cm65bc798qc8119f33guc` (Fri 5/15) + pre-existing CLSK Thu 5/14 event.
 
+---
+
+## 2026-05-15 — D2 Daily Action Conversion
+
+**Session type:** D2 Daily Action Conversion (automated post-D1 routine)
+**Trigger:** Daily.md 2026-05-15 RECOMMENDED ACTIONS section
+**Branch:** claude/brave-fermat-9YT0v
+
+---
+
+### (a) Exits
+
+**None.** All six open positions (IBM-B / HCA-B / META-B / ZBRA-B / RTX-D / DIS-D) hold per Daily.md 2026-05-15 exit-trigger check. No invalidation criterion tripped Thu 5/14 / Fri 5/15. No exit orders staged. IBM (iv) Brent watch relieved Tier-2 → Tier-1 (Brent $105.87 Thu = $24.13 below $130 trip-line; three consecutive sessions of fade). IBM (iii) IGV daily-monitor sustained. ZBRA (iv) sub-pattern 1 cluster-escalation watch active — secondary verification below.
+
+---
+
+### (b) Secondary close-of-session verification (Fri 5/15)
+
+Daily.md 2026-05-15 flagged four Fri 5/15 data-quality items as not-yet-indexed at D1 scan time. D2 researched each:
+
+**AMAT Day-0 C/C (Fri 5/15 cash session):**
+- Thu 5/14 regular-session close primary-source confirmed: **$440.56** (stockanalysis.com; up +0.90% on Thu cash session, consistent with pre-print trading; Daily.md estimate ~$443 close enough).
+- Fri 5/15 Day-0 C/C primary-source confirmed: **~+5%** (Quiverquant "Applied Materials was up 5% after reporting Q2 earnings"; Fri close ~$462).
+- **≥5% threshold MET mechanically**: AMAT qualifies as B-eligible by criterion 1 magnitude.
+- **B routing: NO** — same pre-judgment as Daily.md: (i) sector-cap saturation (IT 2/3 IBM/ZBRA; AMAT Semiconductors & Equipment would saturate at 3/3); (ii) criterion 3 closed-list rev 14 absent admissible 60-day target (next AMAT earnings FQ3 ~mid-Aug = outside window; FOMC mechanism-mismatched; already in S&P 500/R1000/N100); (iii) multi-quarter AI-foundry-capex-acceleration narrative = Strategy A territory not B. No B thesis-construction event created.
+- **A-queue routing confirmed**: AMAT bearish thesis REFUTED (see §d Watchlist updates below). Forward A-entry evaluation deferred to next M1 ACTIVATE.
+- **Sub-pattern 1 SIXTH-INSTANCE-candidate-watch**: PT cluster forming post-print (Citi / RBC Capital / Jefferies targeting $500–$520 per stockanalysis.com; prior PTs ~$450–480 implies +5–15% raise magnitudes — some may reach +10% threshold). Documentary confirmation pending by W5 hygiene cycle.
+
+**CSCO Day-1 (Fri 5/15):**
+- Thu 5/14 close primary-source confirmed: **$101.87** (investing.com / multiple sources).
+- Fri 5/15 Day-1 close primary-source confirmed: **~$115.53** (investing.com; day range $113.97–$119.36; 52-week high hit today at $119.36). Day-1 C/C: +**12.96%** (+$13.66 from $101.87).
+- **Extraordinary Day-1 continuation** (second consecutive +13% session after Thu Day-0 +13.38%): cumulative Day-0+Day-1 ~**+28%** from pre-print close (~$89.84). This is structurally inconsistent with sentiment-overshoot/mean-reversion; suggests the print-information (AI orders doubled $5B→$9B; record revenue; third consecutive guide raise) is driving sustained structural repricing across two sessions.
+- No B routing applicable (CSCO is A-queue; no B routing was ever recommended).
+- Sub-pattern 1 FIFTH-INSTANCE-candidate-watch (CSCO): Day-1 +12.96% continuation REDUCES sub-pattern 1 applicability. Sub-pattern 1 fingerprint = Day-0 PT-raise-cluster + Day-1 hold-or-modest-fade (confirming overshoot-then-consolidation). CSCO Day-1 +12.96% is the opposite of a fade — structural repricing, not sentiment overshoot. **Fifth-instance classification REDUCED-probability**; W5 taxonomy review to assess whether CSCO qualifies under any variant.
+- A-queue note appended to Watchlist.md (see §d). Valuation-reset concern MATERIALLY ELEVATED for A-entry post-router-ACTIVATE.
+
+**ZBRA Day-1 sell-side PT cluster (Fri 5/15 scrape):**
+- Analyst PT raises post Q1 print (May 12 AMC) confirmed via Benzinga/investing.com: **Barclays $330→$345** (+4.5%); **Baird $300→$310** (+3.3%); **BNP Paribas Exane $365→$370** (+1.4%); **KeyBanc $305** (new); **TD Cowen reiterated Buy $400** (unchanged); **Truist $256→$267** (+4.3%).
+- **Sub-pattern 1 cluster-escalation ZBRA (iv) criterion: NOT triggered.** No raise meets +10%+ magnitude threshold. All raises modest (+1–5%). This is normal post-beat analyst update activity, not a sub-pattern 1 PT-raise-wave confirmation. ZBRA (iv) remains Tier-1 active-monitor status.
+- ZBRA hold confirmed; Day-1 fill-close trajectory not yet captured precisely but PT-cluster evidence supports thesis-intact.
+
+**Other Fri 5/15 ≥5% movers (secondary screen):**
+- Secondary screen did not surface any non-AMAT US-listed name ≥$2B mcap with ≥5% C/C + identifiable eligible B event-class on Fri 5/15. Futures were broadly flat going into Fri session per pre-market commentary; session appears to have been contained to AMAT continuation + CSCO Day-1 as primary narratives.
+- **No new B/A/C/D/E candidates from secondary screen.**
+
+**April industrial production / capacity utilization (G.17, released Fri 5/15 9:15 AM ET):**
+- Confirmed released per Fed schedule. Specific April figures not surfaced in secondary research; no market-moving reaction cited in Fri session commentary. March 2026 capacity utilization was 75.7% (3.7pp below long-run average). April data directionally consistent with soft-retail + UMich-record-low macro triangulation; no incremental D2 action warranted.
+
+---
+
+### (c) New entry candidates — calendar events created
+
+**None.** No B, A, C, D, or E candidates requiring thesis-construction calendar events.
+- AMAT: routes to A-queue update (not B) per sector-cap saturation + criterion 3 absent + A-territory thesis.
+- CSCO: A-queue only; no B routing.
+- No other fresh ≥5% Fri 5/15 movers with admissible event-class surfaced.
+
+**Total calendar events created this D2 session: 0**
+
+---
+
+### (d) Watchlist.md updates
+
+Three surgical edits applied:
+
+1. **AMAT A-queue row — NOTE 2026-05-15 appended:**
+   - FQ2'26 AMC print (Thu 5/14) REFUTED queued bearish thesis on all load-bearing axes (EPS +6.7% beat; FY26 WFE industry growth guide +20%→+30%; Q3 outlook above-Street; China-WFE-cliff thesis not materialized).
+   - Day-0 Fri 5/15 C/C ~+5% confirmed (~$462 from $440.56).
+   - Recommended for M1: framing-flip (bearish→bullish on AI-foundry-capex-acceleration narrative) OR demotion. Decision deferred to next M1 ACTIVATE.
+   - Sub-pattern 1 SIXTH-INSTANCE-candidate-watch noted (PT cluster $500–$520 forming; W5 to track).
+
+2. **CSCO A-queue row — NOTE 2026-05-15 (Day-1) appended:**
+   - Fri 5/15 Day-1 +12.96% confirmed ($101.87→~$115.53; 52-week high $119.36 intraday).
+   - Cumulative Day-0+Day-1 ~+28% from pre-print close.
+   - Valuation-reset concern MATERIALLY ELEVATED for A-entry post-router-ACTIVATE.
+   - Sub-pattern 1 FIFTH-INSTANCE-candidate-watch: Day-1 extraordinary continuation inconsistent with sub-pattern 1 sentiment-overshoot fingerprint; fifth-instance classification REDUCED-probability.
+
+3. **RBLX B-watch overflow row — status updated to EXPIRED:**
+   - 10-day window (from Roblox Q1 5/1 print) naturally expired 2026-05-15.
+   - No thesis-construction event was created during the window (cap-pressure-deferred by sector-cap saturation). No re-evaluation queued.
+
+---
+
+### (e) Router reviews
+
+**None.** No technical signal thresholds crossed Fri 5/15. No new divergence triggers. SPX/Nasdaq/Dow ATH regime sustained but SPY Trend technical-signal-flip (NEUTRAL→UP) pending mechanical M1 verification 2026-06-01. No inter-monthly router review warranted per Daily.md 2026-05-15 regime-check verdict (default-NO on ambiguity confirmed; stagflation-footprint macro signal is June M1 question).
+
+---
+
+### (f) Pending downstream items confirmed
+
+- IBM time-based exit: Fri 2026-06-26 ~07:15 MT (per prior IBM GO entry).
+- HCA time-based exit: Sat 2026-06-27 (next trading day Mon 6/29) (per prior HCA GO entry).
+- META time-based exit: Thu 2026-07-02 ~07:15 MT; NM bench trial daily monitor sustained through ~Fri 5/22.
+- ZBRA mid-window pulse-check: Tue 2026-06-09 ~15:30 MT; time-based exit Mon 2026-07-13 ~07:15 MT.
+- KL #12 first computation: Wed 2026-06-03 ~15:30 MT (4-long-book IBM × HCA × META × ZBRA).
+- C-thesis construction: Mon 2026-06-08 09:00 MT (6/16-17 FOMC under HYBRID-ACTIVATE Strategy C).
+- M1 next cycle: Mon 2026-06-01 (A router-flip evaluation + fundamental DNA re-derivation under stagflation-footprint framing + AMAT framing-flip/demotion decision).
+- D3 calendar hygiene (next run): clean stale WIX `s3l11cm65bc798qc8119f33guc` Fri 5/15 event + stale CLSK Thu 5/14 event (carried from 2026-05-14 D2 entry).
+
+---
+
+### Compaction-survival note
+
+**D2 2026-05-15:** No exits. No orders. No calendar events. Three Watchlist.md updates: (1) AMAT A-queue bearish thesis REFUTED at print — NOTE appended; M1 to decide framing-flip vs demotion; (2) CSCO Day-1 +12.96% continuation — NOTE appended; valuation-reset concern materially elevated; sub-pattern 1 fifth-instance REDUCED-probability; (3) RBLX B-overflow window expired naturally. Secondary verification: AMAT Day-0 ~+5% confirmed; CSCO Day-1 +12.96% confirmed; ZBRA PT cluster modest (+1–5%; NOT sub-pattern 1 trigger); no other Fri ≥5% movers. All six positions hold.
+
