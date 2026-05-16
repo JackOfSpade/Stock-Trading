@@ -14092,3 +14092,75 @@ Three surgical edits applied:
 
 **D2 2026-05-15:** No exits. No orders. No calendar events. Three Watchlist.md updates: (1) AMAT A-queue bearish thesis REFUTED at print — NOTE appended; M1 to decide framing-flip vs demotion; (2) CSCO Day-1 +12.96% continuation — NOTE appended; valuation-reset concern materially elevated; sub-pattern 1 fifth-instance REDUCED-probability; (3) RBLX B-overflow window expired naturally. Secondary verification: AMAT Day-0 ~+5% confirmed; CSCO Day-1 +12.96% confirmed; ZBRA PT cluster modest (+1–5%; NOT sub-pattern 1 trigger); no other Fri ≥5% movers. All six positions hold.
 
+---
+
+## 2026-05-15 (Fri, ~21:00 MT post-D2) D3 Calendar Hygiene reconciliation — 2 obsolete ZBRA fill-cycle events deleted; D2 5/15 carry-forward WIX/CLSK already cancelled prior; 15 forward events Fri 5/22 → Mon 7/13 verified current
+
+**Session type:** D3 Calendar Hygiene (regular routine)
+**Date anchor:** Fri 2026-05-15 (America/Denver system date; project files do not conflict)
+**Window:** [Claude] events Fri 2026-05-15 → Thu 2026-08-13 (90-day forward)
+**Branch:** claude/exciting-noether-xhNaA
+
+### Actions
+
+**Deleted (2):**
+- `h9ltjcri07at250b2dml92tta4` — "[Claude] Place ZBRA Strategy B limit buy order (pre-market)" — Thu 2026-05-14 07:15 MT. Triggering condition passed (ZBRA limit BUY 0.1505 @ $249.52 filled Thu 2026-05-14 07:30 ET per Portfolio_Ledger.md §[Strategy B] ZBRA — OPEN 2026-05-14).
+- `c6b05hsp1q50lnv85mm414rtq8` — "[Claude] ZBRA fill capture — Strategy B" — Thu 2026-05-14 14:15 MT. Triggering condition passed (fill captured at IBKR Portfolio screenshot ~14:17 MT Thu 5/14 with mark $258.10; Portfolio_Ledger.md and Decision_Log.md 2026-05-13 ZBRA GO entry fill-confirmation append both completed).
+
+**Pre-cancelled (no action needed, verified state):**
+- `s3l11cm65bc798qc8119f33guc` — WIX Strategy B thesis construction Fri 2026-05-15 09:00 MT — `status: cancelled` (renamed "(already done)" 2026-05-14 06:31Z; WIX disposed Wed 5/13 evening NO-GO per Decision_Log).
+- `tq07e6cuarf6sb8e7mj8s0dqvk` — CLSK Strategy B thesis construction Thu 2026-05-14 11:00 MT — `status: cancelled` (renamed "(already done)" 2026-05-14 03:13Z; CLSK disposed Wed 5/13 evening NO-GO per Decision_Log). D2 5/15 carry-forward item already resolved before this D3 run; no further action.
+
+**Updated (0):** None. META mid-window pulse-check event (`2i5gul5m9eiarfm7pkjf8u42u0`) prompt references "assuming entry Mon 2026-05-04" — actual entry Tue 2026-05-05 per Portfolio_Ledger; self-correcting via embedded "Read first: /mnt/project/Portfolio_Ledger.md §[Strategy B] META" instruction; 30-day mid-window mark Mon 6/1 ~27 days from actual 5/5 entry vs ~28 days from assumed 5/4 entry = 1-day drift; conclusion (Thu 7/2 exit) unchanged; left as-is per minimal-churn discipline. META 60-day exit event (`jdki2o75a3rhrc77e5sd4h170c`) prompt also references "assuming entry Mon 2026-05-04"; conclusion Thu 7/2 unchanged; same self-correcting prompt; left as-is.
+
+**Created (0):** None. All open positions covered:
+- IBM (B, entry 4/27, exit 6/26) — `vt43tmemb2u7km29p79i2dga08` time-based exit ✓
+- HCA (B, entry 4/28, exit 6/26) — `u9l9544ighc4d9o1l44u7pr0uc` time-based exit ✓
+- META (B, entry 5/5, exit 7/2) — `2i5gul5m9eiarfm7pkjf8u42u0` mid-window 6/1 ✓ + `jdki2o75a3rhrc77e5sd4h170c` time-based exit 7/2 ✓
+- ZBRA (B, entry 5/14, exit 7/13) — `6p9eotfrdd0eae2pvoccrbj95o` mid-window 6/9 ✓ + `b2gka8hncerbnfh6m9j2hq4k2g` time-based exit 7/13 ✓
+- RTX (D, no time-based exit; M5 monthly handles per Strategy.md D exit rules) — no D3 event required
+- DIS (D, no time-based exit; M5 monthly + Q3 print ~8/12 monitor) — no D3 event required
+- KL #12 4-long-book first computation Wed 6/3 — `k9vtudr7d40ukto3vfhutcdbls` ✓ (description updated 5/14 to reflect IBM × HCA × META × ZBRA)
+- No exit-pending orders; no research-deferral events required.
+
+### Forward calendar state (15 [Claude] events, Fri 5/22 → Mon 7/13)
+
+| Date / Time MT | Event | ID | Status |
+|----------------|-------|-----|--------|
+| Fri 5/22 07:30 | GEV trailing-30-day re-screen (D defer) | `lvgdk2h2h48bspu45m4rnudces` | current |
+| Mon 6/1 09:00 | Re-screen BA — trailing-30d roll-off | `r9i6u6mnpk9ukoj2bh15m1fr7c` | current |
+| Mon 6/1 10:00 | META mid-window pulse-check (B) | `2i5gul5m9eiarfm7pkjf8u42u0` | current (minor 1-day entry-date drift in prompt; self-correcting) |
+| Wed 6/3 15:30 | KL #12 pairwise correlation B book (4-long) | `k9vtudr7d40ukto3vfhutcdbls` | current |
+| Mon 6/8 09:00 | Thesis construction FOMC June Strategy C | `7pbkg1kh2pge7midfiqnj6edvk` | current |
+| Tue 6/9 15:30 | ZBRA mid-window pulse-check (B) | `6p9eotfrdd0eae2pvoccrbj95o` | current |
+| Fri 6/12 09:30 | LLY Strategy D mechanical re-screen | `fpbueqccja9thjcnuj6ck9l6rs` | current |
+| Fri 6/26 09:25 | IBM time-based exit (B) | `vt43tmemb2u7km29p79i2dga08` | current |
+| Fri 6/26 09:25 | HCA time-based exit (B) | `u9l9544ighc4d9o1l44u7pr0uc` | current |
+| Wed 7/1 09:00 | Q1 Quarterly Regime Retrospective | `qpshtsnmi7lj8q2j02au3creh4_20260701T150000Z` | current (recurring) |
+| Wed 7/1 10:30 | Q2 Quarterly D Long-Horizon Candidates | `ecu5pu90sgoecj1dn2lvt5656s_20260701T163000Z` | current (recurring) |
+| Wed 7/1 12:00 | Q3 Quarterly AI Foundation Delta | `pbacgn2esaiollpdq44ujsj9tk_20260701T180000Z` | current (recurring) |
+| Wed 7/1 14:00 | Q4 Quarterly Action Conversion | `3fma0s1n57bvb4n0gdnbcodtsk_20260701T200000Z` | current (recurring) |
+| Thu 7/2 10:00 | META 60-day time-based exit (B) | `jdki2o75a3rhrc77e5sd4h170c` | current (minor 1-day entry-date drift in prompt; self-correcting) |
+| Mon 7/13 07:15 | ZBRA time-based exit (B) | `b2gka8hncerbnfh6m9j2hq4k2g` | current |
+
+### Missed-session flag check
+
+No past [Claude] events with active windows remain unfired. The two 5/14 ZBRA events were not missed — both ran on schedule and the corresponding state mutations are in Portfolio_Ledger.md / Decision_Log.md.
+
+### Notifications check
+
+All 15 forward events confirmed with either explicit `overrideReminders: [{method: popup, minutes: 0}]` (event-time popup) or no override (inheriting calendar default `popup/0min`). No notification drift.
+
+### Quarterly-recurring cadence note (informational, not D3-actionable)
+
+The 7/1 Q1/Q2/Q3/Q4 recurring events predate the Claude_Task_Plan.md principle "Recurring cadence work (D1, D2, ..., A3) is handled by routines and is NOT placed on calendar." Their triggering conditions (quarter-start cadence) have not passed — D3 rule "DELETE other event types when their triggering condition has passed" does not fire. Left in place as operator-visible cadence reminders; flag for human review whether to remove given the cadence-vs-calendar architectural rule. No D3 action this run.
+
+### Portfolio-state drift flags (informational, not D3-actionable)
+
+(i) D2 2026-05-15 pending downstream items listed "HCA time-based exit: Sat 2026-06-27 (next trading day Mon 6/29)" — contradicts calendar event scheduled Fri 6/26 09:25 MT (per 2026-05-03 HCA off-by-one correction applying META "last trading day on/before" convention; Sat 6/27 → Fri 6/26). Calendar is canonical (matches Portfolio_Ledger §[Strategy B] HCA "Time-based exit: 2026-06-27" parenthetical noting prior staging placeholder 6/26 was the recreated event date). D2 pending-items list has stale 6/29 reference; not a calendar issue.
+(ii) D2 2026-05-15 pending downstream items listed "META time-based exit: Thu 2026-07-02 ~07:15 MT" but actual calendar event fires 10:00 MT. Minor timing reference drift in D2 prose; not a calendar issue.
+
+### Chat output
+
+"Deleted 2 stale events (ZBRA 5/14 order + fill-capture, both reconciled into Portfolio_Ledger.md), 0 updates, 0 creations; 15 forward [Claude] events Fri 5/22 → Mon 7/13 verified current; D2 5/15 carry-forward WIX/CLSK already cancelled prior to this run."
+
