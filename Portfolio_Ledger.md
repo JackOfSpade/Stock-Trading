@@ -476,9 +476,10 @@ Format:
 - **Invalidation criteria status** (per Decision_Log 2026-04-25 staging):
   - (i) IBM 8-K reducing FY26 cc revenue guide below ">5%" floor — NOT-TRIPPED as of 2026-05-05.
   - (ii) Pre-announcement / negative business update on Software or Red Hat — NOT-TRIPPED as of 2026-05-05.
-  - (iii) IGV close ≤ $80.00 — NOT-TRIPPED as of 2026-05-05.
-  - (iv) Brent close ≥ $130/bbl on any single trading day — NOT-TRIPPED as of 2026-05-05.
-- **Mark-to-market**: 2026-05-05 ~10:56 MT — last $228.61, mark value $27.39, unrealized P&L -$0.46 (vs cost basis incl comm).
+  - (iii) IGV close ≤ $80.00 — NOT-TRIPPED. Fri 5/15 close estimated ~$87–89 area (Nasdaq -1.54% backdrop; primary-source close not directly verified at Sat 5/16 scan depth). Headroom ~$7–10 above $80 floor; Tier-1 sustained monitor. Flag for Mon 5/18 D1 verification.
+  - (iv) Brent close ≥ $130/bbl on any single trading day — NOT-TRIPPED. Brent Fri 5/15 close $109.26 (+3.35% from Thu $105.87); $20.74 / 16.0% below $130 trip-line. RE-ELEVATED Tier-1 baseline → Tier-2 elevated-monitor (Thu fade narrative reversed Fri; Hormuz overhang remains binding constraint).
+- **Mark-to-market**: 2026-05-05 ~10:56 MT — last $228.61, mark value $27.39, unrealized P&L -$0.46 (vs cost basis incl comm). **2026-05-16 update**: Fri 5/15 close $219.30 / mark value 0.1198 × $219.30 = $26.27 / unrealized P&L -$1.58 / -5.67% vs cost basis incl comm $27.85. 52-wk LOW set Wed 5/13 intraday $212.34 (+3.28% above floor at Fri close). Week-on-week -4.55% from 5/8 close $229.76. Convergence target $245.00 = +$25.70 / +11.72% runway; 6 weeks to time-exit 6/26.
+- **Holding-period notes**: **ELEVATED-STRESS POSTURE as of 2026-05-16**: mark-to-market -4.72% vs cost basis at Fri 5/15 close; no invalidation-criterion-text trip (criteria (i)/(ii) are 8-K / pre-announcement structural events; (iii) IGV $80 floor ~$7–10 headroom intact; (iv) Brent $130 trip-line $20.74 / 16% headroom intact). (iv) Brent watch RE-ELEVATED Tier-1 baseline → Tier-2 elevated-monitor. (iii) IGV monitor Tier-1 sustained with narrowed headroom. AI-cluster-tailwind narrative of Daily.md 5/15 partially reversed by Fri 5/15 broad AI-winner-pullback session (AMAT round-trip / Nasdaq -1.54%).
 
 ### [Strategy D] RTX — OPEN 2026-04-27
 
