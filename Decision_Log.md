@@ -14248,3 +14248,120 @@ The 7/1 Q1/Q2/Q3/Q4 recurring events predate the Claude_Task_Plan.md principle "
 
 "No-op vs prior D3 (5/15); 15 forward [Claude] events Fri 5/22 → Mon 7/13 unchanged. FOMC 6/8 C-thesis prompt directional hypothesis now stale (Daily 5/16 30Y >5% / FedWatch flip to ~50% odds of HIKE) — left for session-time self-correction via W1/Regime_State reads; flagged for re-evaluation at next D3 / W4 if 2026-W20 W1 substantively re-rights direction."
 
+---
+
+## 2026-05-17 W4 Weekly Action Conversion (~Sun AM MT)
+
+### Source
+
+Routine W4 cadence (Sun 2026-05-17 ~AM MT, sequenced after D3 5/17 calendar hygiene no-op at line 14169). Reads:
+- Weekly_Catalyst_Calendar.md 2026-W20 (W1 — A and C shortlists) — Sat 5/17 generation, supersedes Sun 5/10 W19 generation.
+- Weekly_Post_Event_Screen.md 2026-W20 (W2 — B shortlist) — refresh per Sat 5/17 generation.
+- Weekly_Position_Deep_Dive.md 2026-W20 (W3 — per-position recommendations + IMMEDIATE-ACTION flag check) — Sun 5/17 AM generation.
+- Decision_Log.md (live) through 2026-05-17 D3 no-op entry; Strategy.md; Experiment_Parameters.md; Portfolio_Ledger.md (last marks Fri 5/15 close for IBM / META direct, others pending Mon 5/18 D1 verification); Watchlist.md (current); Regime_State.md (last update 2026-04-26 — A DO-NOT-ACTIVATE / B ACTIVATE / C HYBRID-ACTIVATE FOMC-only / D ACTIVATE / E DO-NOT-ACTIVATE); B_Sub_Pattern_Taxonomy.md (referenced by sub-pattern routing for new candidates).
+
+### Posture
+
+W3 returned 4 × HOLD across the four open Strategy B positions (IBM ELEVATED-STRESS / HCA / META / ZBRA) with explicit "no exit triggers, no information gaps requiring research deferrals, no IMMEDIATE-ACTION flag" — IBM elevated-stress posture is informational, NOT an invalidation-criterion-text trip per Strategy.md B exit rules ("Adverse mark-to-market without news (long positions only)" is explicitly NOT in the exit-trigger list line 295-298). W1 returned top-10 A shortlist with 18 of 20 names already in Watchlist A-queue (CRM and DELL are the only 2 new top-10 promotions this cycle); W1 explicit "W4 may, at its discretion under the standard router-gate-routing rule, add them to Watchlist.md A-queue" instruction applies. W1 C TOP-5 has only FOMC June 16-17 router-eligible (HYBRID ACTIVATE — FOMC only); FOMC 6/8 thesis-construction event already exists per Decision_Log 2026-05-09 W4 entry (`7pbkg1kh2pge7midfiqnj6edvk`). W2 returned 3 Top-tier B candidates (FIG/ONDS/POET) all NEW post-W19-generation events; all 3 distinct sub-industries vs current 4-long book; 1 of 5 B slots remaining (4/5 occupied by IBM/HCA/META/ZBRA).
+
+### A. Exits from W3
+
+**None.** W3 returned 4 × HOLD with explicit "No close on thesis completion / no close on thesis invalidation / no further research deferrals" (Position Deep-Dive Summary line). IBM ELEVATED-STRESS posture is informational only — all four invalidation criteria not-tripped at criterion-text level: (i) no 8-K reducing FY26 cc rev guide; (ii) no Software / Red Hat pre-announcement; (iii) IGV close estimated ~$87-89 vs $80 floor (~9-12% headroom narrowed but not breached); (iv) Brent Fri 5/15 close $109.26 vs $130 trip-line (-16.0% headroom narrowed but not breached). Per Strategy.md B Exit Rules line 295-298, "Adverse mark-to-market without news (long positions only)" and "General market moves" are STRUCTURALLY NOT exit-triggering. HCA/META/ZBRA all 3-4 criteria not-tripped (META criterion (iii) NM trial Phase II monitor active through 5/22 trial-end but no verdict / no judge order in W20; ZBRA criterion (iv) sub-pattern 1 cluster-escalation Tier-1 active-monitor sustained, no fresh +10%+ PT raises). No exit orders staged.
+
+### B. Research deferrals from W3
+
+**None.** No "further research" recommendations from W3 per explicit roll-up table. Per W3 IBM §7 recommendation explicit reasoning: "no information gap requires further research — the criteria-text invalidation menu fully covers the named-at-entry adversarial axes... the W20 mark-to-market decline is the broad-tape macro-regime shift expression; it is not an IBM-specific information gap that calling a 'research deferral' session would resolve." Per Operating_Protocols.md §9 deferral discipline, IBM elevated-stress is a "decide-at-earliest-resolvable-window" disposition resolved via routine D1 daily scans / 6/26 time-based exit / intervening positive print or sell-side re-rating event — none of which resolve via a "research deferral" session.
+
+### C. B thesis-construction scheduling from W2 (top-tier)
+
+W2 PART 2 Top-3 (FIG / ONDS / POET) all NEW post-W19 events Day-0 Thu 5/14-Fri 5/15. W-rem 9-10 days at scheduled session time. All 3 scheduled this cycle per W2 explicit SCHEDULE recommendations (sequenced by priority + W-rem):
+
+| Ticker | Date/Time (MT) | Event ID | W-rem | Sub-industry (provisional) |
+|--------|----------------|----------|-------|----------------------------|
+| FIG | Mon 2026-05-18 09:00-11:00 | `0lvb917f48eja5rl13b4vp5st0` | 10 | Application Software / Internet Software (verify at session) |
+| ONDS | Mon 2026-05-18 11:00-13:00 | `gv6fi8ndmfel4kemh60dt9kke8` | 9 | Aerospace & Defense / Electrical Equipment (verify at session) |
+| POET | Tue 2026-05-19 09:00-11:00 | `ut569pc46r4gobm3q2arpv3130` | 9 | Semiconductors / Communications Equipment (verify at session) |
+
+All 3 events tagged with event-time popup reminder per Calendar MCP convention. All 3 sub-industries distinct from each other and from current B book (IT Services IBM / Health Care Facilities HCA / Comm Services META / Electronic Equipment ZBRA). W4 cap "up to 5 events per week" satisfied (3 ≤ 5); no overflow to Watchlist B-watch section needed.
+
+**SLOT-CAP DISCIPLINE inserted in each event description**: B book 4/5 concurrent with 1 slot remaining; if multiple sessions clear GO this week, defer to highest-conviction + earliest-window-pressure per W2 SLOT-CAP DISCIPLINE note. Each session's chat output will surface this constraint at staging time.
+
+**Pre-conviction probability** of any of FIG/ONDS/POET clearing all 5 criteria with GO disposition: ~15-30% per candidate per W2 explicit assessment (sub-pattern 1 fingerprint risk high for FIG/ONDS at FY-guide-raise structure; POET borderline mcap-cushion + AI-optics sub-pattern 1 ratification risk; regime overlay biases toward NO-GO; prior W2 Top-5 0-for-5 GO rate establishes empirical base rate ~0% with n=5). Conservative-default-on-ambiguity rule applies in each session description.
+
+### C2. B thesis-construction scheduling from W2 (rest-tier)
+
+W2 PART 2 Rest-tier:
+- **SHOP / PYPL / CDW** (B-short carry-over): W2 explicit "NOT recommended for thesis-construction this cycle" per Watchlist 2026-05-06 D2 disposition tracking + 34+ NO-GO B-short precedent string + regime overlay (risk-on regime weakening at Fri 5/15 but not yet flipped). No action; existing Watchlist tracking preserved.
+- **MRNA**: W2 explicit "NO B-thesis-construction scheduling unless fresh trigger emerges" per no new fresh trigger since prior 5/12 NO-GO + criterion 3 closed-list rev 14 structural blocker. No action.
+
+### D. A and C thesis-construction scheduling from W1
+
+**Strategy A (W1 PART 2 A TOP-10 = NVDA / HD / TGT / WMT / AVGO / ORCL / ADBE / MU / CRM / DELL):**
+- 8 of 10 already in Watchlist A-queue per W4 5/9 (NVDA / HD / TGT / WMT / AVGO / ORCL / ADBE / MU; queue-saturation status across the entire prior-W1 TOP-10).
+- CRM and DELL are NEW top-10 promotions this cycle (CRM promoted from prior-W1 #11 replacing CSCO; DELL promoted from prior-W1 #13 replacing AMAT — both replacements following catalysts that printed during W19).
+- Per W1 explicit "W4 may, at its discretion under the standard router-gate-routing rule, add them to Watchlist.md A-queue with reason 'W4 conversion of W1 2026-20 TOP-10 to A-queue per A-router-DO-NOT-ACTIVATE gate' (extending queue 18 → 20)" — exercising discretion: **CRM and DELL ADDED to Watchlist.md A-queue this routine** per standard router-gate-routing rule (consistent with prior cycle's W4 5/9 conversion of NVDA/CSCO/AMAT/etc.).
+- 11-20 tier (SNOW / MRVL / COST / LULU / DE / WDAY / INTU / FDX / TJX / ROST) NOT routed to A-queue this cycle per W1 explicit "await next M1 ACTIVATE for fresh re-evaluation; W4 should NOT route them to thesis-construction events under current router state." Status held for next M1 (~2026-06-01).
+- A queue total extends 18 → 20 names this routine.
+
+**Strategy C (W1 PART 2 C TOP-5 = FOMC June / NVDA / AVGO / CRM / ORCL):**
+- FOMC June 16-17 = the SOLE router-eligible C catalyst (HYBRID ACTIVATE — FOMC only). Thesis-construction event already on calendar Mon 2026-06-08 09:00-11:00 MT (`7pbkg1kh2pge7midfiqnj6edvk` created 2026-05-09 W4). **Confirmed exists; no new scheduling action.**
+- **Event description UPDATED this routine** per D3 2026-05-17 staleness flag (line 14231): prior TLT-bull pre-commitment (rooted in 2026-04-29 presser "incoming data" + ~0% FedWatch cut-prob) is no longer structurally defensible given 30Y >5% / CME FedWatch ~50% odds of HIKE flip / stagflation cluster. W1 2026-W20 explicit posture "directional skew is now CONTESTED... do not pre-commit skew direction here" written into the updated description; session-time evaluation now directed to treat skew as OPEN across (a) bullish-rates TLT-call, (b) bearish-rates TLT-put, (c) range-bound SPX-iron-condor. Also normalized stale "W19" file-reference citation to "CURRENT W1 generation" (file overwrites weekly).
+- Other C TOP-5 (NVDA / AVGO / CRM / ORCL) router-blocked at current state (corporate earnings DO-NOT-ACTIVATE per Regime_State.md). Preserved for re-routing if M2 (~2026-06-01) extends router scope per Regime_State.md M2 follow-up dispersion-compression check. No action.
+
+### E. Cross-strategy deconfliction
+
+**No conflicts identified.** Open positions: IBM (B), HCA (B), META (B), ZBRA (B), RTX (D), DIS (D). New B candidates (FIG / ONDS / POET) do not overlap any open position, A-queue name, or D re-screen pipeline name. No exits from W3 → no exit-fill-pending tickers to gate new-entry thesis sequencing. Per Strategy.md simultaneous-holding constraints (A and B cannot hold same name; A and C cannot hold same name): A and C books are empty, so constraints are vacuously satisfied this week. Per W3 cross-position observations Item 4 explicit "no simultaneous-holding-constraint conflict with any new-entry candidates queued by W1 / W2."
+
+### F. Watchlist updates
+
+1. **Strategy A queue: CRM and DELL ADDED** (extending queue 18 → 20). Rows append at end of Strategy A queue table with date added 2026-05-17, source "W4 (Weekly_Catalyst_Calendar.md 2026-W20 PART 2 A TOP-10 #9/#10)", reason per W1 candidate description + promotion context (CRM replaces CSCO at TOP-10; DELL replaces AMAT at TOP-10; both per W19 catalyst-resolution), router-gate routing per A DO-NOT-ACTIVATE → queue for next M1 ACTIVATE.
+2. **Strategy D re-screen pipeline: STALE CALENDAR EVENT IDs RECONCILED** per D3 2026-05-17 flag (line 14241). CEG row (`90ja09u0qo2vj4ki326oqpkok0` cancelled 2026-05-11) updated to reflect resolved-week-W19 status with "deleted" event-ID notation and resurfacing pointer to 2026-Q3 quarterly D cycle. GEV row updated to point to live `lvgdk2h2h48bspu45m4rnudces` Fri 5/22 07:30 MT trailing-30-day re-screen event (replacing prior pointer to cancelled interim 5/13 event); interim-event cancellation noted in row text.
+3. **Strategy B watch overflow: NO CHANGES** (no overflow this cycle since 3 ≤ 5 top-tier cap; RBLX entry from prior W4 5/9 already noted as naturally expired 5/15 in row text).
+4. **Strategy B disqualifier-flag / B-short declined / demotion log sections: NO CHANGES** (no new disqualifier flags or B-short declines this cycle beyond what Decision_Log entries already capture).
+
+### Deferral discipline
+
+No deferrals chained. The 3 new B thesis-construction events each carry session-time conservative-default-on-ambiguity fallback per pre-mortem rev 7. POET event carries additional mcap re-verification gate at session start (TDOC/FIVN/AGL/STAA instrument-rule-fail precedent chain). FOMC C-thesis event carries dual-path verification gate + 2% NAV sizing cap fallback.
+
+### Calendar events created / updated
+
+Total: 3 new events created, 1 existing event description updated.
+
+| Event | Action | Date/Time (MT) | Event ID |
+|-------|--------|----------------|----------|
+| FIG Strategy B thesis-construction | created | Mon 2026-05-18 09:00-11:00 | `0lvb917f48eja5rl13b4vp5st0` |
+| ONDS Strategy B thesis-construction | created | Mon 2026-05-18 11:00-13:00 | `gv6fi8ndmfel4kemh60dt9kke8` |
+| POET Strategy B thesis-construction | created | Tue 2026-05-19 09:00-11:00 | `ut569pc46r4gobm3q2arpv3130` |
+| FOMC June Strategy C thesis-construction | description updated | Mon 2026-06-08 09:00-11:00 (unchanged) | `7pbkg1kh2pge7midfiqnj6edvk` |
+
+All 3 new events tagged with event-time popup reminder. FOMC event reminder unchanged.
+
+Forward calendar count: 15 events (prior D3 5/17 baseline) + 3 new B thesis-construction = **18 [Claude] events Mon 5/18 → Mon 7/13**.
+
+### Effect on book
+
+**No order staged. No portfolio-state change.** Strategy A router DO-NOT-ACTIVATE unchanged; B ACTIVATE unchanged (4/5 slot capacity); C HYBRID-ACTIVATE FOMC-only unchanged; D ACTIVATE unchanged; E DO-NOT-ACTIVATE unchanged. Sector cap usage at routine-end unchanged: IT Services 1/3 (IBM); Health Care Facilities 1/3 (HCA); Comm Services Interactive Media & Services 1/3 (META); Electronic Equipment Instruments & Components 1/3 (ZBRA). Experiment Strategy B totals unchanged at 5 GO + ~50 NO-GO ≈ 9% hit rate through W20 (per W3 cross-position observations).
+
+### References
+
+- Claude_Task_Plan.md §W4 Weekly Action Conversion (lines 468-517 — A. Exits / B. Research deferrals / C. B thesis-construction / D. A & C thesis-construction / E. Cross-strategy deconfliction / F. Watchlist updates).
+- Strategy.md (Strategy A / B / C entry criteria; criterion 5 cross-strategy holding rules; sector caps; pre-mortem rev 7 KL #12; criterion 3 closed-list rev 14; B exit rules line 285-298).
+- Regime_State.md (router state matrix at 2026-04-26 last update; A DO-NOT-ACTIVATE; C HYBRID ACTIVATE — FOMC only; B / D ACTIVATE; E DO-NOT-ACTIVATE).
+- Operating_Protocols.md (§3 NO-GO records are context, not barriers; §8 conviction ladder; §9 deferral discipline).
+- Watchlist.md (post-edit this routine: CRM + DELL added to A-queue 18 → 20; CEG/GEV D-re-screen-pipeline rows reconciled for stale calendar event IDs).
+- Weekly_Catalyst_Calendar.md 2026-W20 (PART 2 A TOP-10 / 11-20 / rest; PART 2 C TOP-5 / Rest).
+- Weekly_Post_Event_Screen.md 2026-W20 (PART 1 universe; PART 2 Top-3 FIG/ONDS/POET + Rest-tier #4 SHOP/PYPL/CDW / #5 MRNA).
+- Weekly_Position_Deep_Dive.md 2026-W20 (4 × HOLD; IBM ELEVATED-STRESS posture flagged informational; no IMMEDIATE-ACTION flag; cross-position observations Item 5-6 explicit "no exits to stage, no research-deferral events to schedule, no IMMEDIATE-ACTION flag").
+- Decision_Log.md 2026-05-09 W4 entry (FOMC C-thesis event creation; prior W1 conversion of NVDA/CSCO/AMAT precedent); 2026-05-10 W4 entry (NET promotion; CRM precedent for W4 discretion route); 2026-05-15 / 2026-05-17 D3 entries (calendar hygiene baseline; FOMC staleness flag).
+- Calendar MCP: 3 events created via mcp__Google-Calendar__create_event; 1 event updated via mcp__Google-Calendar__update_event. Time zone America/Denver per Experiment_Parameters.md default.
+
+### Compaction-survival note
+
+**W4 2026-05-17 ~Sun AM MT (regular cadence)**: 3 calendar events created (FIG `0lvb917f48eja5rl13b4vp5st0` Mon 5/18 09:00 MT / ONDS `gv6fi8ndmfel4kemh60dt9kke8` Mon 5/18 11:00 MT / POET `ut569pc46r4gobm3q2arpv3130` Tue 5/19 09:00 MT). 1 existing event updated (FOMC `7pbkg1kh2pge7midfiqnj6edvk` description refreshed to remove stale TLT-bull pre-commitment per D3 5/17 staleness flag + W1 W20 CONTESTED-skew posture). Watchlist A-queue extended 18 → 20 (CRM + DELL added per W4 discretion under A-router-DO-NOT-ACTIVATE gate). Watchlist D re-screen pipeline reconciled (CEG/GEV stale event IDs cleaned per D3 5/17 flag). 0 exits staged. 0 research deferrals (W3 4 × HOLD with explicit no-deferral). 0 portfolio-state changes. B totals unchanged at 5 GO + ~50 NO-GO. C router unchanged HYBRID-ACTIVATE FOMC-only. Sector caps unchanged 4-of-5 B-slot capacity (1 remaining). Forward calendar 15 → 18 events.
+
+### Chat output
+
+"No actions required for IBKR (4 × HOLD per W3; no exits to stage). 3 B thesis-construction events scheduled (FIG Mon 5/18 09:00 MT / ONDS Mon 5/18 11:00 MT / POET Tue 5/19 09:00 MT). FOMC 6/8 C-thesis event description refreshed (stale TLT-bull pre-commitment removed; W1 W20 CONTESTED-skew posture written in per D3 5/17 staleness flag). Watchlist.md updated: A-queue 18 → 20 (CRM + DELL added per W4 discretion under A-router-DO-NOT-ACTIVATE gate); D re-screen pipeline stale event IDs reconciled (CEG/GEV)."
+
+
+
