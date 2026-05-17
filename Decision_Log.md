@@ -14164,3 +14164,87 @@ The 7/1 Q1/Q2/Q3/Q4 recurring events predate the Claude_Task_Plan.md principle "
 
 "Deleted 2 stale events (ZBRA 5/14 order + fill-capture, both reconciled into Portfolio_Ledger.md), 0 updates, 0 creations; 15 forward [Claude] events Fri 5/22 → Mon 7/13 verified current; D2 5/15 carry-forward WIX/CLSK already cancelled prior to this run."
 
+---
+
+## 2026-05-17 (Sun, ~AM MT) D3 Calendar Hygiene reconciliation — no-op vs prior D3 (5/15); 15 forward events unchanged; FOMC 6/8 directional-hypothesis prompt staleness considered and left per self-correcting embedded reads
+
+**Session type:** D3 Calendar Hygiene (regular routine)
+**Date anchor:** Sun 2026-05-17 (America/Denver system date; project files do not conflict)
+**Window:** [Claude] events Sun 2026-05-17 → Sat 2026-08-15 (90-day forward)
+**Branch:** claude/exciting-noether-CjfNP
+
+### Actions
+
+**Deleted (0):** None.
+**Updated (0):** None.
+**Created (0):** None.
+
+### State delta since prior D3 (Fri 2026-05-15 ~21:00 MT)
+
+- Sat 2026-05-16 Daily.md scan ran (informational; Saturday rotation including HF multi-agent debate battery); no D2 / W4 / M-cadence routines fired between prior D3 and this run.
+- No Decision_Log entries between prior D3 (line 14097) and this D3.
+- No state-mutating activity on open positions (B: IBM/HCA/META/ZBRA; D: RTX/DIS) or pending orders (none) since prior D3.
+- No new candidates added to Strategy A queue or D re-screen pipeline since prior D3 (Watchlist.md AAPL/INTC monitor notes appended 5/16 are status annotations only, not new queue entries).
+- No calendar events between Tue 5/14 ZBRA fill-cycle (both ran on schedule, deleted in prior D3) and Fri 5/22 GEV re-screen (next forward event).
+
+### Forward calendar state (15 [Claude] events, Fri 5/22 → Mon 7/13 — identical to prior D3)
+
+| Date / Time MT | Event | ID | Status |
+|----------------|-------|-----|--------|
+| Fri 5/22 07:30 | GEV trailing-30-day re-screen (D defer) | `lvgdk2h2h48bspu45m4rnudces` | current |
+| Mon 6/1 09:00 | Re-screen BA — trailing-30d roll-off | `r9i6u6mnpk9ukoj2bh15m1fr7c` | current |
+| Mon 6/1 10:00 | META mid-window pulse-check (B) | `2i5gul5m9eiarfm7pkjf8u42u0` | current (1-day entry-date drift in prompt; self-correcting per prior D3) |
+| Wed 6/3 15:30 | KL #12 pairwise correlation B book (4-long) | `k9vtudr7d40ukto3vfhutcdbls` | current |
+| Mon 6/8 09:00 | Thesis construction FOMC June Strategy C | `7pbkg1kh2pge7midfiqnj6edvk` | current (directional-hypothesis prompt staleness — see below) |
+| Tue 6/9 15:30 | ZBRA mid-window pulse-check (B) | `6p9eotfrdd0eae2pvoccrbj95o` | current |
+| Fri 6/12 09:30 | LLY Strategy D mechanical re-screen | `fpbueqccja9thjcnuj6ck9l6rs` | current |
+| Fri 6/26 09:25 | IBM time-based exit (B) | `vt43tmemb2u7km29p79i2dga08` | current |
+| Fri 6/26 09:25 | HCA time-based exit (B) | `u9l9544ighc4d9o1l44u7pr0uc` | current |
+| Wed 7/1 09:00 | Q1 Quarterly Regime Retrospective | `qpshtsnmi7lj8q2j02au3creh4_20260701T150000Z` | current (recurring) |
+| Wed 7/1 10:30 | Q2 Quarterly D Long-Horizon Candidates | `ecu5pu90sgoecj1dn2lvt5656s_20260701T163000Z` | current (recurring) |
+| Wed 7/1 12:00 | Q3 Quarterly AI Foundation Delta | `pbacgn2esaiollpdq44ujsj9tk_20260701T180000Z` | current (recurring) |
+| Wed 7/1 14:00 | Q4 Quarterly Action Conversion | `3fma0s1n57bvb4n0gdnbcodtsk_20260701T200000Z` | current (recurring) |
+| Thu 7/2 10:00 | META 60-day time-based exit (B) | `jdki2o75a3rhrc77e5sd4h170c` | current (1-day entry-date drift in prompt; self-correcting per prior D3) |
+| Mon 7/13 07:15 | ZBRA time-based exit (B) | `b2gka8hncerbnfh6m9j2hq4k2g` | current |
+
+### Open-position / pending-order coverage check
+
+- IBM (B, entry 4/27, exit 6/26) — `vt43tmemb2u7km29p79i2dga08` ✓
+- HCA (B, entry 4/28, exit 6/26) — `u9l9544ighc4d9o1l44u7pr0uc` ✓
+- META (B, entry 5/5, exit 7/2) — `2i5gul5m9eiarfm7pkjf8u42u0` mid-window 6/1 ✓ + `jdki2o75a3rhrc77e5sd4h170c` time-based exit 7/2 ✓
+- ZBRA (B, entry 5/14, exit 7/13) — `6p9eotfrdd0eae2pvoccrbj95o` mid-window 6/9 ✓ + `b2gka8hncerbnfh6m9j2hq4k2g` time-based exit 7/13 ✓
+- RTX (D, no time-based exit; M5 monthly handles) — no D3 event required
+- DIS (D, no time-based exit; M5 monthly + Q3 print ~8/12 monitor) — no D3 event required
+- KL #12 4-long-book first computation Wed 6/3 — `k9vtudr7d40ukto3vfhutcdbls` ✓
+- No exit-pending orders; no research-deferrals required.
+
+### Missed-session flag check
+
+No past [Claude] events with active windows remain unfired. The two 5/14 ZBRA fill-cycle events were deleted in prior D3 (both fired on schedule and reconciled into Portfolio_Ledger.md / Decision_Log.md 2026-05-13 ZBRA GO entry fill-confirmation append).
+
+### Notifications check
+
+All 15 forward events confirmed with either explicit `overrideReminders: [{method: popup, minutes: 0}]` (event-time popup) or no override (inheriting calendar default `popup/0min`). No notification drift.
+
+### Staleness-but-not-update decisions (with rationale)
+
+(i) **FOMC 6/8 C-thesis event (`7pbkg1kh2pge7midfiqnj6edvk`) directional hypothesis is now stale.** Event description (created 2026-05-09) suggests "Bullish-rates skew (lower-yield / TLT-bull) thesis is structurally cleanest given 2026-04-29 FOMC presser commentary on 'incoming data' guidance and ~0% CME FedWatch implied prob of cuts in 2026." Daily.md 2026-05-16 §1 documents materially-shifted macro state: 30Y Treasury yield broke 5% (5.13% Fri close, highest since ~2007); CPI 3.8% / PPI 6.0% / UMich 48.2 ATL stagflation-anxiety cluster; **CME FedWatch now pricing ~50% odds of a Fed RATE HIKE by year-end** (vs ~50% odds of cuts prior — DIRECTIONAL FLIP). The embedded TLT-bull directional thesis is contraindicated by current tape; a TLT-bear / SPX-iron-condor / vol-directional-narrow-range thesis would be more defensible at session-time. **Decision: NOT updated.** Rationale: (a) session is 22 days away (6/8); (b) prompt explicitly directs "Read first: Regime_State.md … Weekly_Catalyst_Calendar.md 2026-W19 PART 2 Strategy C #1" which W1 will refresh to 2026-W23 between now and 6/8; (c) prompt also includes "Standard Strategy C entry criteria (Strategy.md Section 'Strategy C: Entry criteria' 1-5)" + "Dual-path verification (closed-form + Monte Carlo) per Strategy.md is REQUIRED before staging" + "Conservative-default fallback: if dual-path verification fails or sizing exceeds 2% cap, defer per the deferral mechanism — do not stage" — Claude at session time will re-evaluate against then-current state, not blindly follow the stale TLT-bull hypothesis. Minimal-churn discipline applies (parallel to prior D3 META entry-date-drift left-as-is rationale). **Flag for next D3 / W4 to re-evaluate if 2026-W20 W1 refresh substantively re-rights the directional thesis — at that point a description update may be cleaner than relying on session-time self-correction.**
+
+(ii) **META 1-day entry-date drift in prompts** (`2i5gul5m9eiarfm7pkjf8u42u0` mid-window + `jdki2o75a3rhrc77e5sd4h170c` 60-day exit) — unchanged from prior D3 disposition; self-correcting via embedded `/mnt/project/Portfolio_Ledger.md §[Strategy B] META` read; conclusions (Mon 6/1 / Thu 7/2) unchanged from 1-day shift. Left as-is.
+
+### Watchlist drift flag (informational, not D3-actionable — Watchlist hygiene is W4 territory per Watchlist.md §Maintenance)
+
+Watchlist.md §"Strategy D re-screen pipeline" (lines 83-84) references two calendar event IDs that are STATUS: cancelled on the live calendar:
+- `90ja09u0qo2vj4ki326oqpkok0` (CEG re-screen Tue 5/12 09:00 MT) — cancelled 2026-05-11; references "pending" status that is no longer accurate
+- `r3ko82nat3llflevlc9k0ubqpk` (GEV interim re-screen Wed 5/13 08:00 MT) — cancelled 2026-05-11; references "pending" status that is no longer accurate
+
+Neither shows up in the D3 forward-90-day walk (cancelled events are not enumerated). The Watchlist file references are stale state-index pointers, not live calendar items. **Flag for next W4 (2026-W20 ~Sun 5/17 evening or Mon 5/18) to reconcile Watchlist.md D re-screen pipeline against current calendar state.**
+
+### Quarterly-recurring cadence note (informational, unchanged from prior D3)
+
+The 7/1 Q1/Q2/Q3/Q4 recurring events predate the Claude_Task_Plan.md principle "Recurring cadence work (D1, D2, ..., A3) is handled by routines and is NOT placed on calendar." Triggering conditions (quarter-start cadence) have not passed; D3 rule does not fire. Left in place as operator-visible cadence reminders.
+
+### Chat output
+
+"No-op vs prior D3 (5/15); 15 forward [Claude] events Fri 5/22 → Mon 7/13 unchanged. FOMC 6/8 C-thesis prompt directional hypothesis now stale (Daily 5/16 30Y >5% / FedWatch flip to ~50% odds of HIKE) — left for session-time self-correction via W1/Regime_State reads; flagged for re-evaluation at next D3 / W4 if 2026-W20 W1 substantively re-rights direction."
+
