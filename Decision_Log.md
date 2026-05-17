@@ -11323,3 +11323,209 @@ Scanned updated live Decision_Log.md for cross-references to archived entries. M
 
 Decision_Log.md, Decision_Log_Archive_2026_Q2.md, B_Sub_Pattern_Taxonomy.md (created) updated. Watchlist.md and Operating_Protocols.md unchanged (already current; no new drift). 31 entries archived; 15 B sub-pattern instances extracted across 6 sub-pattern categories + Pattern N; 4 mechanical-failure NO-GOs listed reference-only.
 
+---
+
+## 2026-05-18 Strategy B thesis construction outcome — FIG (Figma) NO-GO at HIGHEST conviction; multi-pillar dispositional convergence on criterion 3 closed-list rev 14 effectively-absent admissible target + criterion 4 dual-framing decisive failure + sub-pattern 5a in-window-binary-catalyst structural mismatch (lockup-release-as-mechanical-supply-binary anchor first instance) + sub-pattern 6 TEAM-pattern partial fit at lower magnitude
+
+**Trigger:** Calendar event `0lvb917f48eja5rl13b4vp5st0` (FIG Strategy B thesis-construction scheduled Mon 2026-05-18 09:00 MT) per W4 2026-05-17 scheduling routing of W2 2026-W20 PART 2 #1 candidate (highest scheduling priority among Top-3 FIG/ONDS/POET; W-rem 10 days at session start with event Thu 5/14 AMC + 10 trading days = ~Thu 5/28).
+
+**Inputs:** Strategy.md Strategy B section (entry criteria 1-5; criterion 1 close-to-close magnitude ≥5% on event day; criterion 3 closed-list rev 14 convergence target — numerical price level OR specific event from "next earnings release / next FDA decision date / next FOMC meeting / inclusion announcement S&P 500 / Russell 1000 / Nasdaq 100"; criterion 4 information-vs-sentiment with dual-framing decisive-flaw search; criterion 5 no-A-position check; instrument eligibility market cap ≥$2B + 30-day ADV ≥$10M; pre-mortem rev 7 Constraint 1 2.20 textbook-rational-trap central exposure; KL #11 short-side gap-up execution risk; KL #12 4-long-book pairwise correlation 0.5 leading-indicator threshold; short-side stop-loss +25%; exit rules; sector cap 3 per GICS sector); B_Sub_Pattern_Taxonomy.md (sub-pattern 1 canonical bull-ratification with THIN-CLUSTER and layered-1+3 variants; sub-pattern 3 information-priced-via-pre-print-rally; sub-pattern 4 structural-overhang-persistence variants 4a-4d; **sub-pattern 5a in-window-binary-catalyst** anchor STLA; sub-pattern 6 TEAM-pattern valuation-reset-but-not-narrative-reset; sub-pattern 7 EL TEAM+V/MDLZ-hybrid; candidate sub-pattern 8 depressed-name pre-print-bearish-positioning-unwind); Operating_Protocols.md (§1 HOIP Claude resolves all decisions internally; §2 commission-disregarded-at-staging; §3 NO-GO records are context not barriers; §8 conviction calibration ladder IBM-MEDIUM-HIGH / HCA-MEDIUM-LOW / META-MEDIUM / ZBRA-MEDIUM; §9 deferral discipline no-re-deferral); AI_Trading_Foundation.md (2.4 narrative-over-fit central B risk; 2.8 homogenization commoditized AI strategy; 2.13 ordinal-tier conviction + miscalibration; 2.14 recency bias; 2.20 textbook-rational penalty); Portfolio_Ledger.md (current B book IBM/HCA/META/ZBRA all long; sector caps IT Services 1/3 [IBM] + Tech Hardware/Storage 1/3 [ZBRA] = IT-sector 2/3 + Health Care Facilities 1/3 [HCA] + Comm Services 1/3 [META]; 4/5 B slots occupied with 1 remaining; FIG entry would push IT-sector to 3/3 AT CAP); Decision_Log.md prior precedents — IBM/HCA/META/ZBRA GO format precedents (4-trade calibration ladder) + sub-pattern 1 NO-GO precedent string (BE 5/1 / CAT 5/2 / FTNT 5/12 / MNST 5/13 / GKOS 5/13 / IRM 5/13 / PTC 5/14 / VTRS 5/14 INSTANCES #11-16 spanning THIN-CLUSTER variant THREE INSTANCES IRM/PTC/VTRS + MODERATE-LOW-MAGNITUDE variant TWO INSTANCES PTC/VTRS + MIXED-CLUSTER-WITH-TRIMS MNST + FULL-SATURATION-OVER-EXTENDED-vs-CONSENSUS VTRS) + STLA 5/1 sub-pattern 5a anchor + TEAM 5/2 sub-pattern 6 anchor + EL 5/2 sub-pattern 7 anchor + MNDY 5/12 candidate sub-pattern 8 with post-print PT-CUT-WAVE FIRST INSTANCE precedent (stale-anchor-on-actively-cutting-cluster doctrine) + ZBRA 5/13 GO precedent (THIN-CLUSTER **UP-ANCHOR** routing distinct from FIG's PT-CUT cluster); Weekly_Post_Event_Screen.md 2026-W20 PART 2 #1 FIG explicit "LONG-or-NO-GO routing" with CRITERION 3 ROUTING RISK FLAG + session checks to resolve (PT-cluster Mon 5/18, lockup expiry, AI credit-purchase durability, Day-2 trajectory, pre-print sub-pattern 3 absorption, GICS sub-industry); Watchlist.md (Strategy B/A demotion log with recent sub-pattern 1 INSTANCE #11-16 entries); Daily.md 2026-05-16 (regime overlay Fri 5/15 broad-tape sell-off SPX -1.24% Nasdaq -1.54% Russell -2.44% worst-day-of-2026 + 30Y UST 5.13% danger-zone + UMich 48.2 ATL-since-1952 + AI-leadership-reversal AMAT round-trip-NEGATIVE); FIG Q1 2026 8-K (businesswire.com 2026-05-14 730702 / investor.figma.com); FIG Q1 2026 earnings call transcript (investing.com 93CH-4690815 / fool.com); BigGo Finance Q1 2026 coverage (2026-05-14); TradingKey 2026-05-15 coverage; Seeking Alpha 4593241 + 4593465; Stocktitan 8-K filing on Extended Lock-Up Agreement (54.1% Class A shares staggered release schedule); Sherwood News lockup-expiry coverage; InvestorPlace 2026-02 "Why Figma Stock Crashed 81%" (-77-81% post-IPO peak-to-trough drawdown context); marketbeat 2026-01-20 lockup; threads.com @jw Nov 7 lockup correction; webull 2025-07 IPO; sec.gov 1579878 fig-20250903 8-K; Goldman Sachs PT cut $35→$30 -14% Neutral (TheStreet 2026-05-15 / Yahoo Finance 213300028); RBC Capital $31→$28 -10% (TradingKey); Morgan Stanley -$6 to $38 Equal Weight (TradingKey); Piper Sandler $44→$38 -14% Equal Weight (stocktwits cZXlw5yRejX); JPM $42 Overweight; stockanalysis.com FIG primary-source quote ($22.92 Day-0 close / $22.56 AH; mcap $12.08B); Wikipedia / 6sense / Contrary Research GICS Application Software classification 45103010 IT sector.
+
+### Decision
+
+**FIG — NO-GO (DO NOT ENTER) at HIGHEST conviction (~95% band).**
+
+**Conviction rating in NO-GO disposition: HIGHEST.** Multi-pillar dispositional convergence with criterion 3 closed-list rev 14 effectively-absent admissible target + criterion 4 dual-framing decisive failure + sub-pattern 5a in-window-binary-catalyst structural mismatch (lockup-release-as-mechanical-supply-binary AT MOMENT OF ENTRY) + sub-pattern 6 TEAM-pattern PARTIAL FIT at lower magnitude. The criterion-3 + criterion-4 + sub-pattern 5a triple-pillar convergence is the most decisive structural-fail signature observed in the B-experiment to date; sub-pattern 5a's "Mon 5/18 entry day = second trading day after Thu 5/14 print = 27.5% extended-lock-up release of ~61.1M Class A shares per Stocktitan 8-K primary source" is an unprecedented temporal-overlap of mechanical-supply-pressure with entry timing. Conviction is in the HIGHEST band (parallel to AGL 5/14 instrument-rule mechanical / DG 5/12 EVG-class / MNDY 5/12 sub-pattern 8 + PT-cut-wave) rather than HIGH band (parallel to PTC 5/14 / VTRS 5/14 / IRM 5/13 thin-cluster routings) because the lockup-release timing-overlap is structurally definitive (mechanical-arithmetic-verifiable from Stocktitan 8-K) rather than analytical-judgment-prone.
+
+### Step 1 — Criterion 1 close-to-close magnitude verification
+
+Day-0 Fri 2026-05-15 close-to-close +13.24% verified per stockanalysis.com primary source (Thu 5/14 close $20.24 → Fri 5/15 close $22.92). Trefis / fool.com / meyka.com / businesswire / investing.com cross-corroborated. MODERATE-tier magnitude (between PTC-low-end +7.96% and AKAM-major / FLEX-extreme); 2.65× threshold cushion (5% floor). **Criterion 1 CLEARS** (≥5% in either direction within last 10 trading days). No MVG / EVG flag fires (event date and magnitude both primary-source-verified; W2 PART 2 #1 cited "+13.24% on Fri 5/15 ($20.24 → $22.92)" stockanalysis.com matches verified primary source).
+
+### Step 2 — Instrument-rule mechanical eligibility
+
+US-listed common (NYSE:FIG); market cap **$12.08B** per stockanalysis.com 2026-05-15 quote vs $2B floor = **6.04× cushion**; 30-day ADV very strong post-Q1-print volume surge (Fri 5/15 single-day volume materially elevated; pre-print ADV per public.com ~$300M+/day at $20+ price → meets $10M floor with extensive cushion); long-or-short permitted; 2% sizing applicable; no options. **Instrument rule CLEARS with extensive cushion.** GICS classification verified: Sector Information Technology (45) / Industry Group Software & Services (4510) / Industry Software (451030) / Sub-Industry Application Software (45103010) per 6sense / Wikipedia / Contrary Research; distinct sub-industry from IBM (IT Services 45102010), ZBRA (Tech Hardware/Storage 45202030), HCA (Health Care Facilities), META (Interactive Media & Services).
+
+### Step 3 — Pre-print sub-pattern 3 absorption check
+
+FIG had -77 to -81% peak-to-trough post-IPO drawdown (Jul 2025 IPO $33 → opened $85 → cratered through Sep 2025 first-print 16% decline → Feb 2026 81% crash per InvestorPlace coverage). Going into the Thu 5/14 print, FIG was a **DEPRESSED NAME** — opposite of sub-pattern 3 fingerprint (which requires trailing-30-day +15-20% pre-print momentum + pre-print PT raises). Sub-pattern 3 NOT applicable. Trailing-30-day FIG action was rangebound near $20 per investor.figma.com / stockanalysis.com history. The depressed-name pre-print-bearish-positioning profile is candidate-sub-pattern-8 territory (DOC/MNDY/AXON family) but this routing is DEFEATED by the lockup-supply-pressure-in-window overlay (see Step 5).
+
+### Step 4 — Post-print sub-pattern 1 cluster fingerprint check
+
+**INVERSION OF SUB-PATTERN 1 FINGERPRINT.** Sub-pattern 1 requires post-print aggressive sell-side PT RAISES; FIG's Day-0 Fri 5/15 sell-side response is **MASS PT CUTS despite raised guide**:
+
+| Firm | Action | Magnitude | Rating |
+|------|--------|-----------|--------|
+| Goldman Sachs | PT cut $35→$30 | -14.3% | Neutral (maintained) |
+| RBC Capital | PT cut $31→$28 | -9.7% | maintained |
+| Morgan Stanley | PT cut by $6 to $38 (prior ~$44) | ~-13.6% | Equal Weight (maintained) |
+| Piper Sandler | PT cut $44→$38 | -13.6% | Equal Weight (maintained); commentary "growth story still intact" |
+| JPMorgan | PT $42 (held / initiated) | 0% | Overweight |
+
+Cluster post-cut: $28-42 range, mean ~$35; **4 cuts vs 1 hold/positive-anchor**. Pre-cut cluster: $31-44 range, mean ~$40. Cluster mean cut ~-12% via post-print PT-trim wave. All ratings broadly maintained at Neutral/Equal Weight; no rating downgrades or upgrades observed.
+
+This **INVERTS** sub-pattern 1's canonical PT-RAISE-wave fingerprint and instead matches **sub-pattern 6 TEAM-pattern** fingerprint (valuation-reset PT cuts with ratings maintained) at LOWER MAGNITUDE (cuts are -10 to -14% vs canonical sub-pattern 6 TEAM 20-44% mass cuts). Goldman's stated rationale ("10x EV/sales multiple, down from 13x — reflects a peer multiple recalibration rather than a deteriorating fundamental view") is the canonical TEAM-pattern signature: valuation reset, not narrative reset.
+
+Stock $22.92 is **35% BELOW post-cut cluster mean ~$35**, distinct from canonical TEAM-pattern (bounce within cluster) and approximating sub-pattern 7 EL diagnostic (bounce BELOW cluster) — but FIG LACKS the EL secular-impairment confirmation (Q1 print delivered +46% YoY growth + raised FY26 guide + AI credit-purchase data point = fundamental positive, not secular-impairment). Mixed sub-pattern 6/7 partial fit at lower magnitude.
+
+**Routing decision: NON-SUB-PATTERN-1 (inverted-direction sell-side response) + SUB-PATTERN 6 TEAM-pattern PARTIAL FIT.** Distinct from ZBRA 5/13 GO precedent where cluster was THIN-RAISES (UP-anchor at +3.3-8.1%) — FIG cluster is mass CUTS (DOWN-anchor at -10 to -14%) which presents a fundamentally different convergence-mechanism problem: PT-target-chase anchors to an ACTIVELY CUTTING cluster = **STALE-ANCHOR RISK** per MNDY 5/12 precedent ("LONG post-cut cluster $95-135 actively repricing DOWNWARD = stale anchor").
+
+### Step 5 — **DECISIVE: Sub-pattern 5a in-window-binary-catalyst structural mismatch — LOCKUP-RELEASE-AS-MECHANICAL-SUPPLY-BINARY ANCHOR FIRST INSTANCE (new variant 5c candidate)**
+
+Per Stocktitan SEC 8-K primary source on FIG Extended Lock-Up Agreement (entered into Aug 30, 2025 with holders of ~54.1% of outstanding Class A Common Stock):
+
+> "Up to an additional 27.5% of the aggregate number of shares of Class A Common Stock held by the Extended Lock-Up Holders (approximately **61.1 million shares**) will be released beginning at the commencement of trading on the **second trading day after the date that the Company announces earnings for the quarter ending March 31, 2026**."
+
+Q1 2026 earnings announcement: **Thu 2026-05-14 AMC**. Second trading day after = **Mon 2026-05-18** (Fri 5/15 = Day 1; Mon 5/18 = Day 2). **Lockup release of ~61.1 million Class A shares occurs at the commencement of trading on Mon 5/18 = EXACTLY THE SESSION-PROMPT ENTRY DAY (Mon 5/18 09:00 MT scheduled entry).** Mechanical-supply-pressure-at-moment-of-entry. The release amount (~61.1M shares) is ~12% of FIG's float — material mechanical pressure within the 60-day Strategy B window from entry.
+
+This is **canonical sub-pattern 5a in-window-binary-catalyst structural mismatch** per STLA 5/1 anchor precedent: "binary catalyst event (Investor Day, FDA decision, regulatory ruling, M&A close, **stacked near-term binaries**) lands INSIDE the 60-day Strategy B post-event window; pending binary catalyst structurally mismatches Strategy B's mean-reversion narrative-digestion mechanism — narrative cannot stably mean-revert while a binary event in-window introduces step-function repricing." A lockup release of 27.5% of extended-lock-up shares is functionally a **mechanical-supply-binary catalyst** introducing step-function supply-pressure at known timestamp, structurally analogous to STLA's Investor Day binary (different event class but same step-function-repricing mechanism).
+
+**This is the FIRST INSTANCE of "lockup-release-as-mechanical-supply-binary" variant** within sub-pattern 5 family. Proposing new variant designation **5c** (5a = single in-window binary STLA anchor; 5b = stacked-near-term-binaries CRCL; **5c = lockup-release-as-mechanical-supply-binary FIG anchor first instance**). Pending second-instance validation for W5 formal taxonomy promotion (would require future IPO-vintage Strategy B candidate with similar in-window lockup-release timing-overlap).
+
+**Additional second-lockup-release** (remainder ~77.7M Class A shares) per Stocktitan 8-K is scheduled for the earlier of: (i) second trading day after Q2 2026 earnings announcement, OR (ii) Aug 31, 2026. Q2 2026 earnings typically reports early August (calendar-fiscal-year FIG; Q2 ends June 30 → reports ~early Aug per 6-week typical cadence; this places the second release at early August = ~Aug 4-8 OUTSIDE 60-day window from 5/14 entry closing ~7/13). Default Aug 31 release also OUTSIDE window. So the SECOND lockup release falls just outside the Strategy B window, but the FIRST release on Mon 5/18 entry day is decisively in-window.
+
+### Step 6 — Criterion 3 convergence target (closed-list rev 14) — EFFECTIVELY-ABSENT ADMISSIBLE TARGET
+
+Strict-enumerated admissible targets within 60 days of Thu 2026-05-14 (window closes ~Mon 2026-07-13 = ~Sun 7/13 → Mon 7/14):
+
+- **(a) Numerical price level:** PERMITTED per criterion 3 closed-list rev 14 option (a). Candidate $25-27 (LONG side, +9-18% from $22.92) per W2 PART 2 #1 framing. **HOWEVER:** PT-CUT-CLUSTER stale-anchor risk is binding — Goldman $30 / RBC $28 / MS $38 / Piper $38 / JPM $42 cluster has ACTIVELY CUT $5-6 per firm post-print = cluster mean drifting DOWN, not stable. MNDY 5/12 precedent directly applies ("LONG post-cut cluster $95-135 actively repricing DOWNWARD = stale anchor; +24-75% implied upside but cluster trajectory adverse"). Plus extensive precedent string of numerical-PT-chase rejection in current cycle: BE 5/1 / CAT 5/2 / STX 4/29 / MDLZ 4/29 / AXSM 5/4-5/6 / PINS 5/7 / AMD 5/7 / TSN 5/8 / PTC 5/14 / VTRS 5/14 (10+ instances). Distinct from ZBRA 5/13 GO precedent where cluster was THIN-RAISES UP-anchor stable; FIG's mass PT-CUT cluster IS the disqualifying anchor-instability signal. **FAILS criterion 3 routing on stale-anchor + precedent string + cluster-direction-inverted vs ZBRA-GO precedent.** ✗
+
+- **(b) Next earnings release:** Q2 2026 print typically early August (Q1 2026 print Thu 5/14; Q2 calendar-fiscal cadence ~12 weeks later = early August; calendar-fiscal-year FIG per Feb 18 2026 Q4 2025 print precedent). **OUTSIDE 60-day window** from Thu 5/14 (window closes ~Mon 7/14). ✗
+
+- **(c) Next FDA decision date:** N/A (FIG is collaborative-design software, not pharma). ✗
+
+- **(d) Next FOMC meeting:** Jun 16-17 inside window, but **mechanism-mismatch** (FOMC does not convergence-mechanism-match an idiosyncratic Application-Software AI-credit-monetization Q1-print mispricing thesis; rate decisions affect FIG via broad-market beta only, not via the specific Q1-print AI-monetization narrative). ✗
+
+- **(e) Index inclusion announcement (S&P 500 / Russell 1000 / Nasdaq 100):** FIG is recent IPO (Jul 2025) with mcap $12.08B; **not currently constituent** of S&P 500 / Russell 1000 / Nasdaq 100 per stockanalysis.com / multiple primary sources. Russell 2026 reconstitution typically late-June (~Jun 26 2026) within 60-day window from 5/14 — FIG mcap $12.08B WOULD qualify for Russell 1000 inclusion criterion (~$4-5B mcap floor) AND FIG was public on Russell rank-day (end-April typically) so Russell 1000 inclusion at June 2026 reconstitution IS structurally plausible. **HOWEVER:** (i) no confirmed pending inclusion announcement at session time — pure speculation; (ii) per Strategy.md criterion 3 closed-list rev 14 strict closure, target must be a "specific event ... named at entry" — naming a speculative June Russell-1000 reconstitution-inclusion event as the convergence target is INADMISSIBLE per the explicit strict-closure doctrine that rev 14 was specifically designed to enforce (rev 12's "or equivalent named at entry" was the closed escape hatch rev 13/14 closed); (iii) Russell inclusion mechanism for FIG would be a supply-positive shock (passive-fund index buying), structurally OPPOSITE direction from the in-window lockup-release supply-negative shock that DOMINATES the in-window mechanical pressure profile (Mon 5/18 lockup release ~61.1M Class A shares vs hypothetical late-June Russell inclusion typical demand ~5-10M shares = lockup supply pressure 6-12× larger than potential Russell demand). Both effects net to supply-overhang, not a clean convergence-mechanism. **FAILS criterion 3 on closed-list strict-enumeration doctrine + mechanism-net-negative arithmetic.** ✗
+
+**CRITERION 3 ROUTING FAILURE: EFFECTIVELY-ABSENT ADMISSIBLE TARGET.** Every option (a)-(e) fails on independent grounds. The closest candidate (a) numerical PT $25-27 is decisively rejected by stale-anchor risk on actively-cutting cluster + 10-instance precedent string + ZBRA-GO-cluster-direction-distinction. Criterion 3 closed-list rev 14 strict closure forecloses any other target type.
+
+### Step 7 — Criterion 4 adversarial counter-argument (dual-framing per Strategy.md rev 7) — DECISIVE FAILURE BOTH DIRECTIONS
+
+**LONG-framing decisive-flaw search** (steel-manning the LONG case at $25-27 PT-chase target):
+
+(L1) **Lockup-release-as-mechanical-supply-binary at moment of entry (Step 5).** **DECISIVE FLAW** — 27.5% extended-lock-up release of ~61.1M Class A shares at Mon 5/18 trading commencement IS the moment of hypothetical entry. Step-function supply pressure structurally mismatches mean-reversion mechanism; canonical sub-pattern 5a in-window-binary-catalyst per STLA precedent. New variant 5c (lockup-release-as-mechanical-supply-binary) first-instance candidate.
+
+(L2) **Mass post-print PT cuts despite raised guide — sub-pattern 6 TEAM-pattern signature (Step 4).** Goldman/RBC/MS/Piper all cut PTs -10 to -14% with ratings maintained; cluster mean cut ~-12%; stock 35% below post-cut cluster mean. Information-driven analyst skepticism on valuation sustainability — sell-side actively pricing-in valuation reset that contradicts the +13.24% Day-0 rally. **DECISIVE FLAW** on stale-anchor + actively-cutting cluster compounded with Step 5 lockup pressure. PT-chase target $25-27 anchors to cluster that's drifting DOWN.
+
+(L3) **Criterion 3 routing failure (Step 6).** No admissible target within 60-day window. **DECISIVE FLAW** independent of LONG/SHORT framing.
+
+(L4) **AI-leadership-reversal regime overlay.** Fri 5/15 broad-tape sell-off (SPX -1.24% / Nasdaq -1.54% / Russell -2.44% worst-day-of-2026) + 30Y UST 5.13% danger-zone + AMAT round-trip-to-NEGATIVE + "AI gone too far" framing + SaaS-application-software peer multiple compression environment (CRM/HUBS/ADBE/WDAY context) = macro headwind on AI-monetization narrative. Goldman's "10x EV/sales multiple, down from 13x" rationale IS the SaaS-peer-multiple-compression signal in action. **DECISIVE FLAW** on regime — under-extrapolation thesis (which LONG framing requires) faces growing macro headwind in stagflation-anxiety-crystallization regime.
+
+(L5) **Information-driven characterization on AI credit-purchase narrative.** Q1 print's "+150% YoY new-user-Pro-Team plan switches" and ">75% of enterprise/org customers purchased additional AI credits post March usage-cap implementation" are STRUCTURAL GROWTH narrative confirmations, not sentiment-overshoot signals. Per Strategy.md criterion 4 attacker check: "if information-driven, 'mispricing' is actually correct pricing" — the +13.24% Day-0 reaction can be characterized as information-driven response to a structural AI-monetization narrative shift, not over-shoot. **DECISIVE FLAW** on criterion 4 information-vs-sentiment test.
+
+**LONG-framing verdict: 5/5 DECISIVE FLAWS.** LONG framing decisively rejected.
+
+**SHORT-framing decisive-flaw search** (steel-manning the SHORT case at sub-PT-cluster level $18-20):
+
+(S1) **+46% YoY revenue growth + raised FY26 guide ($1.422-1.428B from prior +~$55M) + non-GAAP OI guide raise + AI credit-purchase data point = info-driven characterization on the OPPOSITE direction.** The print delivered a structural fundamental positive that bull-side ratifies; SHORTING into +46% growth print is structurally hazardous. **DECISIVE FLAW** on information-driven characterization (mirror of L5 in opposite direction).
+
+(S2) **B-short string at 34+ consecutive NO-GOs through TSN 5/8 + week-2026-20 cycle (34→35 after FIG SHORT dismissal).** Empirical regime-conditional base rate is overwhelmingly hostile to B-short in current risk-on regime. SHORT GOs = 0 in experiment to date. **DECISIVE FLAW** on regime + precedent.
+
+(S3) **+25% short stop-loss tight ($28.65 = $22.92 × 1.25).** Stop level falls WITHIN cut-PT cluster ($28-42) — would trigger on any modest reversion toward cluster mean $35. Stop is structurally too tight to ride out 60-day convergence given mean-PT-cluster overhang. **DECISIVE FLAW** on stop-loss mechanics + 2.20 textbook-rational-trap.
+
+(S4) **AI-credit-monetization narrative durability uncertainty.** One-quarter data point on AI-credit-purchase ">75% of enterprise/org customers post March usage-cap implementation" — could be durable structural shift OR could be one-time-purchase that doesn't repeat. Cuts both ways on direction but compounds 2.13 miscalibration on directional probability for SHORT framing. **NOT decisive standalone but compounds (S1)(S2)(S3).**
+
+(S5) **Sub-pattern 6 TEAM-pattern bounce-within-cluster signature on SHORT side.** Although stock $22.92 is currently BELOW cut-PT cluster ($28-42), the sub-pattern 6 mechanism says "no asymmetric downside for SHORT" — cluster floor provides bid-support; SHORTING below cluster mean creates structurally hazardous payoff. **DECISIVE FLAW** on payoff asymmetry.
+
+**SHORT-framing verdict: 4/5 DECISIVE FLAWS (S4 compounds but is not decisive standalone).** SHORT framing decisively rejected.
+
+**Dual-framing disposition: BOTH FRAMINGS DECISIVELY REJECTED.** Criterion 4 dual-framing decisive failure.
+
+### Step 8 — Sub-pattern routing classification (taxonomy update)
+
+**Multi-pillar sub-pattern routing:**
+
+- **PRIMARY: Sub-pattern 5a in-window-binary-catalyst structural mismatch, NEW VARIANT 5c CANDIDATE FIRST INSTANCE** (lockup-release-as-mechanical-supply-binary; FIG anchor; pending second-instance validation for W5 formal taxonomy promotion). New variant designation 5c proposed under sub-pattern 5 family (5a single in-window binary STLA / 5b stacked-near-term-binaries CRCL / **5c lockup-release-as-mechanical-supply-binary FIG**). Diagnostic signature: scheduled lockup release of material % of float (≥10% of Class A float) lands within 60-day Strategy B post-event window AT or NEAR entry timing.
+
+- **SECONDARY: Sub-pattern 6 TEAM-pattern PARTIAL FIT at lower-magnitude variant** (mass post-print PT cuts -10 to -14% despite raised guide vs canonical 20-44%; ratings broadly maintained at Neutral/Equal Weight; 4 cuts of 5 major firms = MAJORITY-CUT vs canonical >5 firms). Distinguishing feature from canonical TEAM (Atlassian +29.58% with 5+ firms 20-44% cuts): FIG cuts are smaller magnitude and only 4 firms documented; partial fit not full match. Adjacent to candidate variant TEAM-LITE (proposed: mass PT cuts of <20% with ratings maintained on positive-direction print).
+
+- **TERTIARY-CANDIDATE-DISMISSED: Candidate sub-pattern 8 depressed-name pre-print-bearish-positioning-unwind PARTIAL FIT but DEFEATED by Step 5 lockup overlay.** FIG had -77 to -81% post-IPO drawdown = depressed-name profile; +46% beat on bearish-positioned name = pre-print-bearish-unwind candidate (DOC/MNDY family precedent). DISMISSED because sub-pattern 5c lockup-supply-pressure-in-window dominates over sub-pattern 8 depressed-name-unwind dynamic — mechanical supply pressure at known timestamp is the operative mechanism, not narrative-positioning unwind.
+
+- **SUB-PATTERN 1 INVERSION:** FIG's mass PT-cut sell-side response INVERTS the canonical sub-pattern 1 PT-RAISE-wave fingerprint. Does NOT advance the sub-pattern 1 INSTANCE count (currently 16: BE/CAT/DDOG/FTNT/MNST/GKOS/IRM/PTC/VTRS plus older instances). The inversion + below-cluster bounce profile is most-closely a TEAM-pattern lower-magnitude variant per Step 4 / sub-pattern 6 partial fit.
+
+### Step 9 — Criterion 5 sector / correlation / sizing check (informational — criterion 3/4 already fail)
+
+- **No A position in FIG:** ✓ (A router DO-NOT-ACTIVATE; A book empty).
+- **Sector concentration cap (3 per GICS sector):** FIG = IT sector (45) / Application Software (45103010). Current IT-sector B book: IBM (IT Services 45102010) + ZBRA (Tech Hardware/Storage 45202030) = 2/3. FIG entry would push IT-sector to **3/3 AT CAP** — clears cap but at structural ceiling.
+- **KL #12 4-long-book pairwise correlation estimate** (per pre-mortem rev 7 KL #12 leading-indicator threshold avg pairwise correlation > 0.5 across active long B positions = escalation trigger): FIG-IBM (both IT, different sub-industries; AI-narrative tangential overlap) estimated ~0.40-0.55; FIG-ZBRA (both IT, different sub-industries) estimated ~0.35-0.50; FIG-HCA (different sectors) estimated ~0.15-0.30; FIG-META (Comm Services Interactive Media, but both consumer-internet-adjacent + AI-narrative overlap) estimated ~0.40-0.55. Estimated 4-long-book + FIG pairwise average: ~0.30-0.42 — within 0.5 trigger threshold but **CLOSE TO THE LINE**. Recent-IPO limited correlation history compounds 2.13 miscalibration on the estimate. KL #12 risk is REAL but does not breach 0.5 trigger at central estimate.
+- **Slot-cap discipline:** 1/5 B slot remaining; if FIG NO-GO disposes, ONDS Mon 5/18 11:00 MT (sub-industry Industrials A&D — MOST KL-#12-favorable per W2 note) and POET Tue 5/19 09:00 MT (sub-industry IT/Semis or Comm Equipment — borderline mcap-cushion + AI-optics sub-pattern 1 ratification risk) have first claim on the single remaining slot. FIG NO-GO clears the slot-cap-discipline ambiguity for ONDS/POET sessions.
+- **Position size (hypothetical):** ~2% of B NAV per Strategy.md sizing rule (B NAV exact at session time not refreshed but ~$1900 per recent Portfolio_Ledger mark).
+
+**Criterion 5 mechanically CLEARS** but criterion 3 + 4 already fail decisively; sector-cap status is informational context for slot-cap discipline routing on ONDS/POET sessions.
+
+### Step 10 — Conservative-default-on-ambiguity rule firing check
+
+Per pre-mortem rev 7 default-on-ambiguity rule + session-prompt explicit reminder: "if session evaluation results in disposition ambiguity, NO-GO per pre-mortem rev 7 default-on-ambiguity rule." **NOT INVOKED here because disposition is UNAMBIGUOUS at multi-pillar convergence** — criterion 3 closed-list effectively-absent + criterion 4 dual-framing decisive failure + sub-pattern 5a/5c structural mismatch all independently support NO-GO. The fallback rule remains as floor; the substantive multi-pillar analysis exceeds it.
+
+### Step 11 — B-short string advance + experiment totals
+
+- **B-short string advances 34 → 35** (SHORT framing dismissed in Step 7; per established convention SHORT-direction dismissal extends string per AGL/DG precedent that mechanical-gate fails do NOT extend string, BUT FIG fails at criterion 3 + 4 dual-framing decisive failure which DOES extend string per VTRS/PTC/MNDY/MNST precedent). String now 35 consecutive NO-GOs in current risk-on regime.
+- **Experiment B totals: 5 GO + ~50 NO-GO** after this entry (advances from 5 GO + ~49 NO-GO post-W5 2026-05-17 hygiene cycle; FIG NO-GO is the first thesis-construction disposition of week 2026-W21 cycle).
+
+### Step 12 — Order ticket
+
+**NO ORDER.** Per HOIP §1 chat output discipline: NO-GO disposition produces "no order" for the human operator. Calendar event `0lvb917f48eja5rl13b4vp5st0` fulfilled its purpose by triggering this session; no further calendar action required (event will naturally expire). FIG window expires ~Thu 5/28; per "NO-GO records are context not barriers" Operating_Protocols §3, any fresh trigger emerging within the remaining ~7 trading days could merit fresh evaluation but is implausible given multi-pillar convergent disposition + Mon 5/18 lockup-release-as-mechanical-supply-binary is irreversible structural fact.
+
+### Effect on book
+
+**No book impact.** No order placed; no portfolio-state change; no router call. Open positions IBM (B IT Services) / HCA (B Health Care Facilities) / META (B Comm Services Interactive Media) / ZBRA (B Tech Hardware/Storage) / RTX (D Industrials A&D) / DIS (D Comm Services Movies & Entertainment) unchanged. Strategy B/D ACTIVATE; A/E DO-NOT-ACTIVATE; C HYBRID-ACTIVATE FOMC-only. B sector cap unchanged 4/5 slots occupied with 1 remaining for potential ONDS/POET disposition this cycle.
+
+### Pending queue updates
+
+- **NEXT — Mon 2026-05-18 11:00 MT:** ONDS Strategy B thesis-construction calendar event `gv6fi8ndmfel4kemh60dt9kke8` per W4 5/17 scheduling. ONDS is the next-priority Top-tier candidate; with FIG NO-GO disposed, ONDS has first claim on the remaining 1/5 B slot if it passes thesis-construction. Slot-cap discipline framing: "defer to highest-conviction + earliest-window-pressure" — ONDS W-rem 9, POET W-rem 9; ONDS has earlier scheduling slot (Mon 5/18 11:00 MT vs POET Tue 5/19 09:00 MT) so ONDS gets first-clearance attempt.
+- **NEXT — Tue 2026-05-19 09:00 MT:** POET Strategy B thesis-construction calendar event `ut569pc46r4gobm3q2arpv3130` per W4 5/17 scheduling. If ONDS NO-GO, POET inherits the remaining 1/5 B slot opportunity. If ONDS GO + sector cap permits POET (Industrials A&D vs IT/Semis = different sectors), POET would be over-cap on B slot (5/5) regardless — POET session would route NO-GO on slot-cap discipline.
+- **NEXT — Wed 2026-06-03 ~15:30 MT:** KL #12 4-long-book pairwise-correlation first computation (operates on then-current B book; FIG NO-GO disposes FIG from book consideration; ONDS or POET potential additions would update metric scope at then-current state).
+- **W5 taxonomy update pending:** sub-pattern 5c (lockup-release-as-mechanical-supply-binary) candidate FIRST INSTANCE established by this entry; pending second-instance validation for W5 formal taxonomy promotion. Future IPO-vintage Strategy B candidates with similar in-window lockup-release timing-overlap should route against this anchor.
+
+### References
+
+- FIG Q1 2026 8-K press release: https://www.businesswire.com/news/home/20260514730702/en/Figma-Announces-First-Quarter-2026-Financial-Results
+- FIG Q1 2026 earnings call transcript: investing.com 93CH-4690815 / fool.com Q1 2026 transcript
+- FIG investor relations: https://investor.figma.com/news-events/news/news-details/2026/Figma-Announces-First-Quarter-2026-Financial-Results
+- Stocktitan FIG SEC 8-K Extended Lock-Up Agreement: https://www.stocktitan.net/sec-filings/FIG/8-k-figma-inc-reports-material-event-8e2472f3bc44.html
+- BigGo Finance FIG Q1 2026 coverage: https://finance.biggo.com/news/US_FIG_2026-05-14
+- TradingKey FIG 2026-05-15 coverage: https://www.tradingkey.com/analysis/stocks/us-stocks/261899602-figma-earnings-beat-q1-2026-ai-growth-openai-partnership-guidance-raise-valuation-concerns-tradingkey
+- Seeking Alpha 4593241 (revenue surge) + 4593465 (FY26 outlook raise)
+- TheStreet 2026-05-15 Goldman PT cut: https://www.thestreet.com/investing/stocks/goldman-sachs-revamps-downgrades-figma-stock-price-target-for-the-rest-of-2026
+- Stocktwits 2026-05-15 Piper coverage: stocktwits.com cZXlw5yRejX
+- Stockanalysis.com FIG primary-source quote (Day-0 $22.92 +13.24% / AH $22.56 / mcap $12.08B): https://stockanalysis.com/stocks/fig/
+- Sherwood News FIG lockup-expiry coverage: https://sherwood.news/markets/figma-plunges-after-first-earnings-since-ipo-lock-up-expires-some-shareholders/
+- InvestorPlace 2026-02 "Why Figma Stock Crashed 81%": https://investorplace.com/dailylive/2026/02/why-figma-stock-crashed-81-the-ipo-mechanics-retail-never-saw-coming-2/
+- Marketbeat 2026-01-20 lockup: https://www.marketbeat.com/instant-alerts/figma-incs-nysefig-lock-up-period-will-end-on-january-27th-2026-01-20
+- SEC.gov 1579878 fig-20250903 8-K: https://www.sec.gov/Archives/edgar/data/1579878/000157987825000026/fig-20250903.htm
+- GICS classification (Application Software 45103010 IT sector): 6sense / Wikipedia / Contrary Research cross-referenced
+- Strategy.md Strategy B section (criteria 1-5; criterion 3 closed-list rev 14; criterion 4 dual-framing; pre-mortem rev 7 KL #11/KL #12; exit rules; sector cap)
+- B_Sub_Pattern_Taxonomy.md (sub-pattern 1 canonical / sub-pattern 5a STLA anchor / sub-pattern 6 TEAM anchor / sub-pattern 7 EL anchor / candidate sub-pattern 8 DOC/MNDY)
+- Operating_Protocols.md (§1 HOIP / §2 commission-disregarded / §3 NO-GO records are context / §8 conviction calibration / §9 deferral discipline)
+- Portfolio_Ledger.md (B book IBM/HCA/META/ZBRA; sector caps; 4/5 slots occupied)
+- Watchlist.md (Strategy B/A demotion log)
+- Weekly_Post_Event_Screen.md 2026-W20 PART 2 #1 (FIG explicit LONG-or-NO-GO routing + CRITERION 3 ROUTING RISK FLAG + session checks to resolve)
+- Daily.md 2026-05-16 (regime overlay Fri 5/15 broad-tape sell-off + 30Y UST 5.13% + AI-leadership-reversal)
+- Decision_Log.md prior precedents — ZBRA 5/13 GO (THIN-CLUSTER UP-anchor distinct from FIG's PT-CUT DOWN-anchor) / VTRS 5/14 INSTANCE #16 / PTC 5/14 INSTANCE #15 / IRM 5/13 INSTANCE #14 THIN-CLUSTER family / MNDY 5/12 sub-pattern 8 candidate + PT-CUT-WAVE FIRST INSTANCE + stale-anchor-on-actively-cutting-cluster doctrine / STLA 5/1 sub-pattern 5a anchor / TEAM 5/2 sub-pattern 6 anchor / EL 5/2 sub-pattern 7 anchor
+
+### Theater-check on this orchestrator review
+
+Five considerations were specifically pushed back on during construction:
+
+(a) **W2 PART 2 #1 pre-judgment "LONG case alive parallel to ZBRA 5/13 GO" framing.** The W2 pre-judgment hypothesized that FIG's "thin/borderline cluster keeps LONG case alive (parallel to ZBRA 5/13 GO disposition routing)" — but the actual Day-0 cluster turned out to be MASS PT CUTS (4 cuts of 5 major firms at -10 to -14%), not THIN-RAISES like ZBRA. The cluster direction-distinction is the operative dimension: ZBRA had UP-anchor (stable rising); FIG has DOWN-anchor (actively cutting). Routing is reversed accordingly. W2's anticipated framing was structurally invalidated by actual sell-side response.
+
+(b) **"NO-GO sub-pattern 1 most likely IF post-print PT-raise wave develops" alternative routing.** W2 PART 2 #1 hypothesized this as the most-likely NO-GO path. Actual data INVERTED — sell-side cut PTs, not raised. So sub-pattern 1 routing is NOT the dispositional ground; instead the disposition is multi-pillar with PRIMARY sub-pattern 5a/5c lockup-release-binary + SECONDARY sub-pattern 6 TEAM-pattern partial fit + criterion 3 effectively-absent target. W2's hypothesized routing was wrong in mechanism but the same final disposition (NO-GO) is reached via different convergent grounds.
+
+(c) **Criterion 3 (e) Index inclusion — Russell 1000 reconstitution late-June within window.** Considered and rejected on three grounds: (i) no confirmed pending inclusion announcement at session time; (ii) Strategy.md criterion 3 closed-list rev 14 strict-closure doctrine forbids speculative future-event targets; (iii) Russell inclusion mechanical effect (passive demand ~5-10M shares) is 6-12× SMALLER than the Mon 5/18 lockup release mechanical effect (~61.1M shares supply), net = supply overhang. Not a viable convergence target even on speculative-construction.
+
+(d) **Sub-pattern 5c (lockup-release-as-mechanical-supply-binary) variant designation novelty.** Considered whether to claim "anchor first instance" status for this variant vs subsume under existing sub-pattern 5a single-binary or 5b stacked-binary. Concluded: lockup-release-as-mechanical-supply-binary is structurally distinct from STLA Investor Day (corporate-discretionary catalyst) and CRCL stacked-binaries (regulatory + earnings binaries) — lockup mechanics are mechanical-share-supply events with no narrative-discretion component; deserves separate variant designation 5c. Pending second-instance validation for W5 formal taxonomy promotion. If second-instance fails to emerge, variant 5c could fold back into 5a.
+
+(e) **Conviction band assignment HIGHEST vs HIGH.** Considered whether multi-pillar convergence rises to HIGHEST (parallel to AGL 5/14 instrument-rule mechanical / DG 5/12 EVG-class mechanical / MNDY 5/12 sub-pattern 8 + PT-cut-wave) or HIGH (parallel to PTC 5/14 / VTRS 5/14 / IRM 5/13 thin-cluster routings). Concluded HIGHEST because the lockup-release timing-overlap (Mon 5/18 = second trading day after Thu 5/14 print per Stocktitan 8-K primary source) is structurally definitive (mechanical-arithmetic-verifiable from SEC filings) rather than analytical-judgment-prone. The HIGHEST conviction band is reserved for dispositional grounds with mechanical-arithmetic-verifiability; FIG's sub-pattern 5c lockup-binary fits this bar.
+
+### Compaction-survival note
+
+**FIG NO-GO disposition complete at HIGHEST conviction.** Multi-pillar dispositional grounds: criterion 3 closed-list rev 14 effectively-absent admissible target + criterion 4 dual-framing decisive failure (LONG 5/5 flaws, SHORT 4/5 flaws + 1 compounding) + sub-pattern 5a/5c in-window-binary-catalyst structural mismatch (lockup-release-as-mechanical-supply-binary anchor first instance) + sub-pattern 6 TEAM-pattern partial fit at lower magnitude. B-short string advances 34 → 35. Experiment B totals: 5 GO + ~50 NO-GO.
+
+**Sub-pattern 5c (lockup-release-as-mechanical-supply-binary) FIRST INSTANCE established this entry** — pending second-instance validation for W5 formal taxonomy promotion. Future IPO-vintage Strategy B candidates with similar in-window lockup-release timing-overlap should route against FIG anchor; specifically, any candidate with scheduled lockup release of ≥10% of Class A float landing within 60-day Strategy B window AT or NEAR entry timing triggers sub-pattern 5c routing.
+
+**ZBRA GO precedent distinction for taxonomy clarity:** ZBRA 5/13 GO was THIN-CLUSTER **UP-ANCHOR** routing (5 firms raised PTs +3.3-8.1%, stable rising cluster); FIG NO-GO is THIN-CLUSTER **DOWN-ANCHOR-INVERSION** routing (4 firms cut PTs -10 to -14%, actively cutting cluster). Cluster-direction-distinction is the operative dimension for thin-cluster routings going forward; THIN-RAISE-cluster preserves LONG-case-alive routing per ZBRA precedent, THIN-CUT-cluster forecloses LONG-case via stale-anchor-on-actively-cutting-cluster doctrine per MNDY/FIG precedent.
+
+**Slot-cap discipline implication for ONDS/POET this week:** 1/5 B slot remains; ONDS Mon 5/18 11:00 MT next session has first claim on slot (earlier scheduling + W-rem 9 vs POET W-rem 9 tie-broken by scheduling sequence). POET Tue 5/19 09:00 MT would be over-cap (5/5) on slot-cap if ONDS GO regardless of sector cap analysis.
+
+**Operator chat output:** "FIG — NO-GO. No order. ONDS Strategy B thesis-construction session next at Mon 2026-05-18 11:00 MT."
+
