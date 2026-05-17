@@ -11529,3 +11529,208 @@ Five considerations were specifically pushed back on during construction:
 
 **Operator chat output:** "FIG — NO-GO. No order. ONDS Strategy B thesis-construction session next at Mon 2026-05-18 11:00 MT."
 
+---
+
+## 2026-05-18 Strategy B thesis construction outcome — ONDS (Ondas Holdings) NO-GO at HIGH conviction (~80-85%); sub-pattern 1 INTERMEDIATE-INTENSITY SINGLE-FIRM SECOND INSTANCE routing (after OMCL 2026-04-29 first) — Maxim PT raise $16→$22 (+37.5%) on +1,065% YoY rev / +670% YoY FY26 guide raise = canonical sub-pattern 1 information-driven ratification + criterion 4 dual-framing decisive failure + 2.8 homogenization compounding + Day-1 partial-fade signature
+
+**Trigger:** Calendar event `gv6fi8ndmfel4kemh60dt9kke8` (ONDS Strategy B thesis-construction scheduled Mon 2026-05-18 11:00 MT) per W4 2026-05-17 scheduling routing of W2 2026-W20 PART 2 #2 candidate (TOP-tier #2; W-rem 9 days at session start with event Thu 5/14 BMO + 10 trading days = ~Thu 5/28). Session sequenced after Mon 5/18 09:00 MT FIG NO-GO disposition (multi-pillar convergent; W2 PART 2 #1 candidate).
+
+**Inputs:** Strategy.md Strategy B section (entry criteria 1-5; criterion 1 ≥5% close-to-close magnitude; criterion 3 closed-list rev 14 convergence target; criterion 4 information-vs-sentiment dual-framing decisive-flaw search; criterion 5 no-A-position; instrument eligibility mcap ≥$2B + 30-day ADV ≥$10M; pre-mortem rev 7 Constraint 1 2.20 textbook-rational-trap; KL #11 short-side gap-up; KL #12 4-long-book pairwise correlation 0.5 leading-indicator; short-side stop-loss +25%; exit rules; sector cap 3 per GICS sector); B_Sub_Pattern_Taxonomy.md (sub-pattern 1 canonical aggressive-sell-side-bull-ratification + **OMCL 2026-04-29 single-firm intermediate-intensity variant** anchor at KeyBanc $60→$70 +16.7% on +20.94% Day-0 with NTM-EPS-shrinkage overhang + sub-pattern 3 information-priced-via-pre-print-rally + sub-pattern 4 structural-overhang-persistence + sub-pattern 5a in-window-binary-catalyst + sub-pattern 6 TEAM-pattern + sub-pattern 7 EL TEAM+V/MDLZ-hybrid + candidate sub-pattern 8 depressed-name pre-print-bearish-positioning-unwind); Operating_Protocols.md (§1 HOIP / §2 commission-disregarded / §3 NO-GO records are context not barriers / §8 conviction calibration ladder IBM-MEDIUM-HIGH / HCA-MEDIUM-LOW / META-MEDIUM / ZBRA-MEDIUM / §9 deferral discipline); AI_Trading_Foundation.md (2.4 narrative-over-fit central B risk; **2.8 homogenization on commoditized AI strategy thesis** central to ONDS defense-AI-narrative-adjacency; 2.13 ordinal-tier conviction + miscalibration; 2.14 recency bias; 2.20 textbook-rational penalty); Portfolio_Ledger.md (current B book IBM IT Services / HCA Health Care Facilities / META Comm Services / ZBRA Tech Hardware/Storage all long; IT-sector 2/3 + Health Care Facilities 1/3 + Comm Services 1/3 = 4/5 B slots occupied with 1 remaining post-FIG-NO-GO); Decision_Log.md prior precedents — **OMCL 2026-04-29 NO-GO sub-pattern 1 INTERMEDIATE-INTENSITY SINGLE-FIRM variant first instance** (DIRECT-TEMPLATE PRECEDENT for ONDS) + ZBRA 5/13 GO THIN-CLUSTER UP-anchor (DISTINCT from ONDS single-firm-aggressive-raise structure) + GKOS 5/13 INSTANCE #13 MODERATE-MAGNITUDE SUB-FULL-SATURATION with Day-1-onwards multi-day partial-fade (~62% retention) + FTNT 5/12 INSTANCE #11 BEARISH-DISSENT-CAVEAT FULL-SATURATION + MNST 5/13 INSTANCE #12 MIXED-CLUSTER-WITH-TRIMS + IRM 5/13 INSTANCE #14 / PTC 5/14 INSTANCE #15 / VTRS 5/14 INSTANCE #16 THIN-CLUSTER family + FIG 5/18 sub-pattern 5a/5c lockup-binary anchor first instance; Weekly_Post_Event_Screen.md 2026-W20 PART 2 #2 ONDS explicit "LONG-or-NO-GO routing" hypothesis with CRITERION 3 ROUTING RISK FLAG + session checks to resolve (PT-cluster Mon 5/18, FY26 +670% growth-guide credibility, Day-2 trajectory, defense-platform peer print context, customer-concentration vs program-pipeline, Setup A base-rate evidence, GICS sub-industry verification); Watchlist.md (Strategy B/A demotion log with FIG 5/18 sub-pattern 5c FIRST INSTANCE just added); Daily.md 2026-05-16 (regime overlay Fri 5/15 broad-tape sell-off SPX -1.24% Nasdaq -1.54% Russell -2.44% + 30Y UST 5.13% + AI-leadership-reversal AMAT round-trip-NEGATIVE + sustained Hormuz overhang defense-narrative tailwind); ONDS Q1 2026 8-K / press release (ir.ondas.com/press-releases/detail/306; Yahoo Finance 233320722; Sherwood News); ONDS Q1 2026 earnings call transcript (investing.com 93CH-4689045; insidermonkey.com 1762795); Grafa coverage (revenue jump 1,065% YoY); Gurufocus 8858926/8859103; Stocktitan eoqyn9qaf2x6 (earnings call scheduling); Maxim Galinko PT raise $16→$22 (+37.5%) post-print (Yahoo Finance article); HC Wainwright Amit Dayal $25 reaffirm (DailyPolitical 2026-03-30 / Investing.com); Northland Capital $18 reaffirm (pre-print March 26 boost from $16 to $18; Northland post-print Buy maintained per TipRanks); stockanalysis.com ONDS primary-source quote (Day-0 Thu 5/14 $11.21 / Day-1 Fri 5/15 $10.62 -5.26%; mcap $5.23B; shares outstanding 492.87M; sector classification Technology / Communications Equipment); ir.ondas.com Q1 press release explicit "Ondas Networks deconsolidated effective January 16, 2026" — substantive business mix shifted to autonomous-systems / counter-UAS / defense-robotics (functional A&D classification despite formal stockanalysis.com Communications Equipment); Tickeron pre-print coverage; Marketbeat ONDS earnings + analyst-forecast pages.
+
+### Decision
+
+**ONDS — NO-GO (DO NOT ENTER) at HIGH conviction (~80-85%).**
+
+**Conviction rating in NO-GO disposition: HIGH.** Sub-pattern 1 INTERMEDIATE-INTENSITY SINGLE-FIRM SECOND INSTANCE (after OMCL 2026-04-29 first) routing via criterion 4 dual-framing decisive failure + multiple compounding factors (2.8 homogenization on commoditized defense-AI thesis + inorganic-growth dependence + Day-1 partial-fade GKOS-style signature + sector-cap-structural-tightness either GICS classification). Parallel to GKOS 5/13 ~78-83% / MNST 5/13 78-83% / FTNT 5/12 80-85% MODERATE-tier sub-pattern 1 NO-GO conviction range; SLIGHTLY HIGHER than typical thin-cluster routings because Maxim single-firm +37.5% raise magnitude EXCEEDS OMCL precedent (+16.7%) by 2.24×, indicating stronger sub-pattern 1 intermediate-intensity binding than OMCL anchor. Not HIGHEST band (FIG 5/18 / AGL 5/14 / DG 5/12 / MNDY 5/12 mechanical-arithmetic-verifiable) because single-firm-raise sub-pattern 1 routing involves analytical-judgment vs mechanical-arithmetic-verifiable mechanical-supply-binary or instrument-rule mechanical fail. Conservative-default-on-ambiguity rule reinforces NO-GO disposition on multi-factor compounding marginal flaws beyond the primary sub-pattern 1 binding.
+
+### Step 1 — Criterion 1 close-to-close magnitude verification
+
+Day-0 Thu 2026-05-14 close-to-close **+26.52%** verified per stockanalysis.com primary source (Wed 5/13 close $8.86 → Thu 5/14 close $11.21). Day-1 Fri 5/15 close $10.62 = **-5.26% Day-1 fade** (~75% retention of Day-0 magnitude from $8.86 baseline; ~85% retention if measured as $10.62 vs Day-0 close $11.21). MAJOR-tier magnitude (5.30× threshold cushion); between AKAM/AXON partial-fade and FLEX extreme-magnitude. Setup A high-magnitude AI/defense-narrative bucket. **Criterion 1 CLEARS** (≥5% close-to-close in either direction within last 10 trading days). No MVG/EVG flag fires (Day-0 magnitude primary-source-verified; matches W2 PART 2 #2 cited "+26.52% Day-0").
+
+### Step 2 — Instrument-rule mechanical eligibility
+
+US-listed common (NASDAQ:ONDS); market cap **$5.23B** per stockanalysis.com 2026-05-15 quote (492.87M shares × $10.62 = $5.234B) vs $2B floor = **2.62× cushion**; 30-day ADV strong (Fri 5/15 single-day volume 140M shares per session prompt; sustained momentum on Q1 reaction); long-or-short permitted; 2% sizing applicable; no options. **Instrument rule CLEARS** with comfortable cushion (NOT borderline like OMCL precedent $2.07B at 1.04× cushion).
+
+**GICS classification verification:** stockanalysis.com primary source identifies "Technology / Communications Equipment" (formal GICS likely 45201020 IT-sector / Tech Hardware & Equipment / Communications Equipment). **HOWEVER**, ONDS press release explicitly states "deconsolidated Ondas Networks effective January 16, 2026" — substantive business mix shifted entirely to autonomous-systems / counter-UAS / defense-robotics (functional A&D classification). The formal GICS classification at index providers likely lags the business mix change. For sector cap discipline, defer to formal stockanalysis.com classification (Communications Equipment IT-sector) — consistent with ZBRA 5/13 GO precedent's use of stockanalysis.com GICS as the binding source. **Functional A&D classification noted for record but does not override formal classification for sector-cap analysis.**
+
+### Step 3 — Pre-print sub-pattern 3 absorption check
+
+ONDS trailing-30-day pre-print stock action: per stockanalysis.com price history, ONDS traded in $6-9 range pre-print with modest upward momentum into the print (institutional stakes surge per Stocktwits 5/13 pre-print coverage; "wild day expected" framing). Pre-print stock was NOT in a major rally absorption pattern — Q4 2025 print Feb 18 2026 had been positive (EPS $0.08 vs cons -$0.04 +300% beat per earlier search), establishing a recovery trajectory from 2025 lows.
+
+**Sub-pattern 3 absorption: PARTIAL/NEGATIVE.** Pre-print Wed 5/13 close $8.86 was approximately flat-to-modestly-up vs trailing 30-day mean (~$7-8 range). NOT canonical sub-pattern 3 absorption signal (which requires +15-20% pre-print rally + pre-print PT raises absorbing forward narrative). The pre-print analyst PT cluster ($17.50-$25 with HC Wainwright $25 from Jan / Northland $18 boost March 26 +12.5%) WAS already aggressively bullish but predates the print by 4-7 weeks (not immediate pre-print absorption signal). Northland's March 26 boost from $16 → $18 is the closest pre-print PT-cluster activity but at +12.5% magnitude is below sub-pattern 3 PT-raise threshold (+10% required) and timing is 7 weeks pre-print (outside immediate pre-print absorption window).
+
+### Step 4 — Post-print sub-pattern 1 cluster fingerprint check — INTERMEDIATE-INTENSITY SINGLE-FIRM VARIANT MATCH
+
+**Post-print sell-side response Fri 5/15 verified:**
+
+| Firm | Action | Magnitude | Rating |
+|------|--------|-----------|--------|
+| **Maxim (Matthew Galinko)** | **PT raise $16 → $22** | **+37.5% AGGRESSIVE** | Buy (maintained) |
+| HC Wainwright (Amit Dayal) | $25 reaffirm | 0% (held high anchor) | Buy (maintained) |
+| Northland (Buy reaffirm) | $18 reaffirm | 0% (held) | Buy (maintained) |
+| Other firms (6-8 total cluster) | Bullish stances reaffirmed | — | Strong Buy consensus |
+| Post-print cluster | $20.14 mean / $17.50 median / $16-25 range | (~+87% upside from $10.62) | Strong Buy avg |
+
+**Classification: SUB-PATTERN 1 INTERMEDIATE-INTENSITY SINGLE-FIRM VARIANT — SECOND INSTANCE (after OMCL 2026-04-29 first).** Per B_Sub_Pattern_Taxonomy.md OMCL anchor definition: "Single-firm intermediate intensity: only one firm posts an aggressive raise (≥+15% PT) but no multi-firm wave develops. Lower-conviction sub-pattern 1 match but still binding on criterion 4." Maxim +37.5% comfortably exceeds the +15% threshold by 2.5× — stronger than OMCL's KeyBanc +16.7% (2.24× stronger than OMCL anchor).
+
+**Compounding factor: PRE-PRINT BULLISH CLUSTER ALREADY AGGRESSIVE** ($17.50-$25 PTs vs $8.86 pre-print stock = 100-180% upside priced in pre-print). Post-print stock at $10.62 / $11.21 still 46-50% BELOW consensus PT cluster. This pre-print PT-aggressiveness is structurally distinct from ZBRA 5/13 GO precedent where pre-print cluster was modest (~$300 vs $241.79 pre-print = ~24% upside-pre-print) — for ZBRA the THIN-RAISES post-print were the freshly-established UP-anchor, whereas for ONDS the AGGRESSIVE pre-print cluster + Maxim single-firm post-print raise creates a **HYBRID LAYERED setup**: pre-print PT cluster acts as standing bull anchor + post-print Maxim raise adds intermediate-intensity ratification.
+
+**Diagnostic vs ZBRA GO precedent**: ZBRA had THIN-MULTI-FIRM-CLUSTER UP-ANCHOR with 5 firms at +3.3-8.1%, average +5%, no single MEGA raise → routed to THIN/BORDERLINE non-sub-pattern-1 + criterion 4 dual-framing LONG-cleared via 25% gap-fill target $264. ONDS has SINGLE-FIRM INTERMEDIATE-INTENSITY (+37.5%) + AGGRESSIVE pre-print cluster maintained → routed to sub-pattern 1 INTERMEDIATE-INTENSITY (OMCL precedent) + criterion 4 binding NO-GO. **Cluster-structure-distinction is the operative dimension** — multi-firm-thin (ZBRA-style) preserves LONG-case-alive routing, single-firm-aggressive (OMCL/ONDS-style) forecloses LONG-case per sub-pattern 1 doctrine.
+
+**Diagnostic vs GKOS 5/13 INSTANCE #13 precedent**: GKOS had 6+ firms at MODERATE-magnitude raises (Goldman +14.2%, Stifel +6.3%, JPM +16.7%, Needham +7.1%, BTIG +7.6%, Citi cumulative +12%) = multi-firm MODERATE-magnitude with SUB-FULL-SATURATION (stock ~10% below cluster mean) + Day-1-onwards multi-day partial-fade ~62% retention → NO-GO at HIGH conviction ~78-83%. ONDS shares similar Day-1 partial-fade signature (~75-85% retention) + sub-pattern 1 routing → NO-GO conviction range comparable but with INTERMEDIATE-INTENSITY SINGLE-FIRM substructure rather than GKOS's MULTI-FIRM-MODERATE structure.
+
+**Routing decision: SUB-PATTERN 1 INTERMEDIATE-INTENSITY SINGLE-FIRM VARIANT BINDING ON CRITERION 4.** Per OMCL precedent template + Maxim raise magnitude exceeding OMCL anchor + pre-print bullish cluster amplification → criterion 4 LONG framing fails on info-driven characterization + SHORT framing fails on sell-side ratification. NO-GO routing.
+
+### Step 5 — Criterion 3 convergence target (closed-list rev 14) — STALE-ANCHOR LONG-PT-CHASE + EFFECTIVELY-ABSENT ALTERNATIVES
+
+Strict-enumerated admissible targets within 60 days of Thu 2026-05-14 (window closes ~Mon 2026-07-14):
+
+- **(a) Numerical price level:** PERMITTED per criterion 3 closed-list rev 14 option (a). Candidate $12.34 (25% gap-fill from $10.62 toward $17.50 median PT) or $12.92 (25% gap-fill toward $19.83 mean PT). **HOWEVER:** sub-pattern 1 INTERMEDIATE-INTENSITY routing per OMCL precedent forecloses numerical-PT-chase LONG via info-driven characterization (per Strategy.md criterion 4 attacker check: "if information-driven, 'mispricing' is actually correct pricing"). The +1,065% YoY rev + +670% YoY guide raise + Maxim +37.5% PT raise is UNAMBIGUOUSLY info-driven structural-fundamental-shift; market's 46-50% discount to PT cluster reflects RISK-PREMIUM (execution risk + inorganic-growth dependence + 2.8 homogenization + small-cap-defense-momentum-volatility) rather than under-extrapolation. PT-cluster at $20.14 mean essentially restates the bull-thesis-as-target without distinct convergence-mechanism for B mean-reversion timeline. **FAILS** on info-driven characterization + sub-pattern 1 binding doctrine. ✗
+
+- **(b) Next earnings release:** Q2 2026 print typically early August (Q1 print Thu 5/14; calendar-fiscal cadence ~12 weeks later). **OUTSIDE 60-day window** from Thu 5/14 (window closes ~Mon 7/14). ✗
+
+- **(c) Next FDA decision date:** N/A (ONDS is defense/autonomous-systems, not pharma). ✗
+
+- **(d) Next FOMC meeting:** Jun 16-17 inside window, but **mechanism-mismatch** (FOMC does not convergence-mechanism-match an idiosyncratic small-cap defense-AI-narrative Q1-print mispricing thesis; rate decisions affect ONDS via broad-market beta + risk-on/off rotation but not via the specific Q1-print structural narrative). ✗
+
+- **(e) Index inclusion announcement (S&P 500 / Russell 1000 / Nasdaq 100):** ONDS mcap $5.23B may qualify for Russell 1000 inclusion at late-June 2026 reconstitution (typical mcap floor ~$4-5B) — within 60-day window from 5/14. **HOWEVER:** (i) no confirmed pending inclusion announcement at session time — purely speculative future-event target; (ii) Strategy.md criterion 3 closed-list rev 14 strict-closure doctrine forbids speculative future-event targets (rev 13/14 specifically closed the "or equivalent named at entry" escape hatch); (iii) ONDS Q1 strong-print rally may have pushed mcap above prior Russell reconstitution rank-day cut, potentially making inclusion more or less plausible — but rank-day analysis itself is speculative; (iv) speculative Russell inclusion mechanical effect (passive demand ~3-8M shares) is meaningful for small-cap but not a clean Strategy B convergence target on strict-enumeration grounds. **FAILS** on strict-closure doctrine + speculative-future-event inadmissibility. ✗
+
+**CRITERION 3 ROUTING FAILURE: EFFECTIVELY-ABSENT ADMISSIBLE TARGET.** Every option (a)-(e) fails on independent grounds. The closest candidate (a) numerical PT $12.34 is decisively rejected by sub-pattern 1 INTERMEDIATE-INTENSITY binding + OMCL precedent string + info-driven characterization doctrine + market-discount-reflects-risk-premium-not-under-extrapolation argument.
+
+### Step 6 — Criterion 4 adversarial counter-argument (dual-framing per Strategy.md rev 7) — DECISIVE FAILURE BOTH DIRECTIONS
+
+**LONG-framing decisive-flaw search** (steel-manning LONG case at $12.34-$12.92 25% gap-fill PT target):
+
+(L1) **Sub-pattern 1 INTERMEDIATE-INTENSITY SINGLE-FIRM VARIANT SECOND INSTANCE (Maxim +37.5% raise, 2.24× stronger than OMCL anchor +16.7%).** Per OMCL doctrine — sub-pattern 1 binding on criterion 4 via info-driven characterization. Sell-side ratifies bull thesis at higher level; LONG-mean-reversion-of-overshoot fails on no overshoot anchor (move is info-driven); LONG-continuation-toward-PT-cluster fails on PT-cluster-restates-bull-thesis-as-target degeneracy. **DECISIVE FLAW.**
+
+(L2) **Information-driven characterization on +1,065% YoY rev + +670% YoY FY26 guide raise.** Q1 rev $50.1M vs Q1'25 $4.25M = +1,065% YoY explosive structural growth on defense/drone narrative + backlog $457M (pro forma) from WorldView/Mistral acquisitions. FY26 guide RAISED to $390M (+670% YoY) = canonical info-driven event. Per criterion 4 attacker check: "if information-driven, 'mispricing' is actually correct pricing." Market's 46-50% discount to PT cluster reflects risk-premium (execution risk + 2.8 homogenization + inorganic-growth dependence + small-cap-defense-narrative-volatility) NOT under-extrapolation. **DECISIVE FLAW.**
+
+(L3) **2.8 homogenization on commoditized defense-AI strategy thesis.** Counter-UAS / drone-defense narrative is becoming crowded with KTOS / AVAV / Red Cat / multiple small-cap peers. Defense-AI-narrative-adjacency carries 2.8 homogenization risk per AI_Edges + Strategy B pre-mortem rev 7 KL #11. Small-cap-momentum-name structurally vulnerable to peer-sympathy moves. **DECISIVE FLAW** when compounded with L1/L2 (the LONG thesis IS the commoditized defense-AI thesis being homogenized across the sector).
+
+(L4) **Inorganic-growth dependence (WorldView + Mistral acquisitions closed April 2026).** Q1 rev jump partially driven by acquired revenue contributions; FY26 +670% guide depends heavily on M&A-integration execution. Backlog $457M includes recently-acquired contracts. Execution-risk premium is part of the 50% market-vs-consensus discount. **COMPOUNDS L2 — execution risk supports info-driven-characterization-of-discount argument.**
+
+(L5) **Day-1 -5.26% partial-fade matches GKOS/AXON/AKAM partial-fade signature.** Per session prompt explicit "Day-1 partial fade (~62% retention) places trajectory between AKAM/AXON/GKOS partial-fade signatures." GKOS 5/13 INSTANCE #13 NO-GO precedent at MODERATE-MAGNITUDE-TIER SUB-FULL-SATURATION variant with Day-1-onwards multi-day partial-fade ~62% retention. ONDS Day-1 fade signal aligns with GKOS sub-pattern 1 routing. **COMPOUNDS L1.**
+
+(L6) **AI-leadership-reversal regime overlay.** Fri 5/15 broad-tape sell-off (SPX -1.24% / Nasdaq -1.54% / Russell -2.44% worst-day-of-2026) + 30Y UST 5.13% danger-zone + AMAT round-trip-to-NEGATIVE + "AI gone too far" framing. Defense-narrative RELATIVELY INSULATED from AI-leadership-reversal (geopolitical-tailwind-driven via Hormuz overhang) but small-cap-momentum-names face headwind regardless. **MARGINAL — compounds.**
+
+(L7) **Sector cap status — IT 2/3 → 3/3 AT CAP if formal GICS Communications Equipment.** Stockanalysis.com primary classification is Technology / Communications Equipment (IT-sector 45). ONDS entry pushes IT-sector 2/3 (IBM IT Services + ZBRA Tech Hardware/Storage) → 3/3 AT CAP. Mechanically allowed at cap but structurally tight; no future IT-sector B-thesis until exit. Alternative functional A&D classification (Industrials sector 20) would open Industrials 0/3 → 1/3 but formal GICS is the binding source per ZBRA precedent. **MARGINAL — not decisive on its own but compounds structural-tightness.**
+
+(L8) **Criterion 3 closed-list rev 14 effectively-absent admissible target (Step 5).** **DECISIVE FLAW** independent of LONG/SHORT framing. Numerical PT $12.34 stale-anchor risk on cluster restates-bull-thesis-as-target + 10+ instance precedent string + OMCL-template-binding.
+
+**LONG-framing verdict: 4 DECISIVE FLAWS (L1, L2, L3 [compounded], L8) + multiple compounding marginal weights.** LONG framing decisively rejected per OMCL template + info-driven characterization doctrine.
+
+**SHORT-framing decisive-flaw search** (steel-manning SHORT case at sub-cluster level $9 / -15%):
+
+(S1) **+1,065% YoY rev + +670% YoY guide raise = explosive structural fundamental positive.** SHORTING into this magnitude of structural growth is structurally hazardous; info-driven characterization in opposite direction. **DECISIVE FLAW.**
+
+(S2) **B-short string 35→36** in current risk-on regime post-FIG SHORT dismissal earlier today (Mon 5/18 09:00 session). Empirical hostile base rate; 0 SHORT GOs in experiment to date. **DECISIVE FLAW.**
+
+(S3) **+25% short stop $13.28 = $10.62 × 1.25.** Stop falls BELOW consensus PT $20.14 / Maxim $22 / HC Wainwright $25 — would NOT catch initial squeeze on cluster ratification (sell-side ratifying upward floor; Maxim post-print raise specifically reinforces the upward squeeze potential). Tight stop binds vulnerable to defense-narrative-momentum continuation. **DECISIVE FLAW** on stop-mechanics + 2.20 textbook-rational-trap.
+
+(S4) **Post-print Maxim raise + pre-print bullish-cluster intact = sell-side actively bid for LONG support.** Maxim's explicit rationale "Ondas possesses sufficient capital to sustain operations until reaching breakeven (2028)" is concrete bull-thesis defense from sell-side. SHORT mean-reversion thesis structurally undermined by sell-side ratification floor + bull-narrative-active-defense. **DECISIVE FLAW** on payoff asymmetry per OMCL precedent.
+
+**SHORT-framing verdict: 4/4 DECISIVE FLAWS.** SHORT framing decisively rejected.
+
+**Dual-framing disposition: BOTH FRAMINGS DECISIVELY REJECTED.** Criterion 4 dual-framing decisive failure per OMCL precedent template.
+
+### Step 7 — Sub-pattern routing classification (taxonomy update)
+
+**Primary sub-pattern routing:**
+
+- **SUB-PATTERN 1 INTERMEDIATE-INTENSITY SINGLE-FIRM VARIANT SECOND INSTANCE (after OMCL 2026-04-29 first).** Maxim Galinko PT raise $16→$22 (+37.5%) post-print is single-firm aggressive raise exceeding +15% threshold by 2.5× (vs OMCL anchor KeyBanc +16.7% which is +1.1× threshold). Magnitude makes ONDS the STRONGER intermediate-intensity exemplar — 2.24× stronger than OMCL anchor. **Validates intermediate-intensity variant taxonomy with second instance; pending W5 formal taxonomy promotion to canonical sub-pattern 1 variant (similar to THIN-CLUSTER variant promotion path via IRM/PTC/VTRS three-instance validation).**
+
+- **Sub-pattern 1 INSTANCE family advances 16 → 17.** ONDS becomes INSTANCE #17 (after VTRS 5/14 INSTANCE #16). Single-firm subset within CLEAN family: OMCL anchor + ONDS second = 2-instance INTERMEDIATE-INTENSITY SINGLE-FIRM variant.
+
+**Compounding sub-pattern context:**
+
+- **GKOS 5/13 INSTANCE #13 partial-fade signature parallel.** Day-1 partial-fade ~75-85% retention is intermediate between PINS clean-fade (0% retention) and AMD/FLEX/AKAM held-or-extended (100%+ retention); aligns with GKOS multi-day-partial-fade signature. Not a separate sub-pattern variant but compounding evidence layer.
+
+- **Hybrid pre-print-aggressive-cluster + post-print-single-firm-raise (NOVEL SIGNATURE).** ONDS's pre-print PT cluster was already aggressively bullish ($17.50-$25 vs $8.86 pre-print stock = 100-180% upside) BEFORE the print, distinct from OMCL precedent's pre-print cluster (more modest). This is a NOVEL HYBRID signature: pre-print bullish-cluster maintained + post-print single-firm aggressive raise = standing bull anchor + ratification layer. Pending second-instance validation for potential W5 taxonomy capture as "PRE-PRINT-AGGRESSIVE-WITH-POST-PRINT-SINGLE-FIRM-RAISE" sub-variant of sub-pattern 1 intermediate-intensity.
+
+- **Sector cap structural tightness either GICS classification (compounding).** Formal Communications Equipment (IT-sector 3/3 AT CAP) OR functional A&D Industrials (1/3 within cap but small-cap defense-momentum-name volatility); either way the sector cap is operationally tight given current 4-long book + AI-leadership-reversal regime pressure.
+
+### Step 8 — Criterion 5 sector / correlation / sizing check (informational — criterion 3/4 already fail)
+
+- **No A position in ONDS:** ✓ (A router DO-NOT-ACTIVATE; A book empty).
+- **Sector concentration cap (3 per GICS sector):** Per formal stockanalysis.com classification (Communications Equipment, IT-sector 45). Current IT-sector B book: IBM (IT Services 45102010) + ZBRA (Tech Hardware/Storage 45202030) = 2/3. ONDS entry → IT-sector 3/3 **AT CAP** (mechanically clears; structurally tight). Alternative functional A&D classification (Industrials 20) would open Industrials 0/3 → 1/3 with extensive headroom.
+- **KL #12 4-long-book pairwise correlation estimate:** ONDS-IBM (different sectors if A&D classification; both IT if Comm Equipment classification) estimated ~0.20-0.40; ONDS-ZBRA (both IT if Comm Equipment; some hardware-mobility overlap) estimated ~0.30-0.50; ONDS-HCA (different sectors) ~0.10-0.25; ONDS-META (different sectors but both consumer-tech-narrative-adjacent) ~0.20-0.35. Estimated 4-long-book + ONDS pairwise average: ~0.25-0.40 — within 0.5 trigger threshold. Per session prompt "ONDS is most-distinct sector" estimate ~0.20-0.35 was based on A&D classification expectation; revised estimate accounting for formal Comm Equipment classification is somewhat higher but still well below trigger.
+- **Slot-cap discipline:** 1/5 B slot remaining post-FIG-NO-GO; ONDS NO-GO frees slot for POET Tue 5/19 09:00 MT (next-priority claim) or for any subsequent fresh-trigger candidate emerging within window.
+- **Position size (hypothetical):** ~2% of B NAV per Strategy.md sizing rule.
+
+**Criterion 5 mechanically CLEARS** but criterion 3 + 4 already fail decisively; sector-cap status is informational context for POET 5/19 session slot-cap routing.
+
+### Step 9 — Conservative-default-on-ambiguity rule firing check
+
+Per pre-mortem rev 7 default-on-ambiguity rule + session-prompt explicit reminder: "if session evaluation results in disposition ambiguity, NO-GO per pre-mortem rev 7 default-on-ambiguity rule." **NOT INVOKED as primary** (disposition is unambiguous via sub-pattern 1 INTERMEDIATE-INTENSITY OMCL-precedent binding + criterion 3 closed-list effectively-absent + criterion 4 dual-framing decisive failure). However, **rule reinforces** the multi-factor compounding marginal flaws (2.8 homogenization + inorganic-growth dependence + Day-1 partial-fade + sector-cap-tightness + regime overlay) toward NO-GO disposition. Conviction band HIGH (~80-85%) reflects strong-but-not-mechanical-arithmetic-verifiable dispositional grounds.
+
+### Step 10 — B-short string advance + experiment totals
+
+- **B-short string advances 35 → 36** (SHORT framing dismissed in Step 6; per established convention SHORT-direction dismissal extends string per VTRS/PTC/MNDY/MNST/FIG precedent). String now 36 consecutive NO-GOs in current risk-on regime (extends FIG 5/18 35-precedent established earlier today).
+- **Experiment B totals: 5 GO + ~51 NO-GO** after this entry (advances from 5 GO + 50 NO-GO post-FIG 5/18; ONDS NO-GO is second thesis-construction disposition of week 2026-W21 cycle).
+
+### Step 11 — Order ticket
+
+**NO ORDER.** Per HOIP §1 chat output discipline: NO-GO disposition produces "no order" for the human operator. Calendar event `gv6fi8ndmfel4kemh60dt9kke8` fulfilled its purpose by triggering this session; no further calendar action required (event will naturally expire). ONDS window expires ~Thu 5/28; per "NO-GO records are context not barriers" Operating_Protocols §3, any fresh trigger emerging within remaining ~8 trading days could merit fresh evaluation but unlikely given multi-pillar convergent disposition + structural sub-pattern 1 binding.
+
+### Effect on book
+
+**No book impact.** No order placed; no portfolio-state change; no router call. Open positions IBM (B IT Services) / HCA (B Health Care Facilities) / META (B Comm Services Interactive Media) / ZBRA (B Tech Hardware/Storage) / RTX (D Industrials A&D) / DIS (D Comm Services Movies & Entertainment) unchanged. Strategy B/D ACTIVATE; A/E DO-NOT-ACTIVATE; C HYBRID-ACTIVATE FOMC-only. B sector cap unchanged 4/5 slots occupied with 1 remaining for potential POET 5/19 disposition this cycle.
+
+### Pending queue updates
+
+- **NEXT — Tue 2026-05-19 09:00 MT:** POET Strategy B thesis-construction calendar event `ut569pc46r4gobm3q2arpv3130` per W4 5/17 scheduling. POET is the third-priority Top-tier candidate; with FIG NO-GO + ONDS NO-GO both disposed, POET has first claim on the remaining 1/5 B slot if it passes thesis-construction. POET specifics per W2 PART 2 #3: Day-0 Thu 5/14 +27% on Lumilens supply / JD deal; mcap $2.44B (PASSES with thin cushion); AI-optics narrative-adjacency.
+- **NEXT — Wed 2026-06-03 ~15:30 MT:** KL #12 4-long-book pairwise-correlation first computation (operates on then-current B book; ONDS NO-GO disposes ONDS from book consideration; potential POET addition would update metric scope at then-current state).
+- **W5 taxonomy update pending:** sub-pattern 1 INTERMEDIATE-INTENSITY SINGLE-FIRM VARIANT SECOND INSTANCE established this entry (after OMCL 2026-04-29 first); pending W5 formal taxonomy promotion (similar to THIN-CLUSTER variant promotion path via IRM/PTC/VTRS three-instance validation). PRE-PRINT-AGGRESSIVE-WITH-POST-PRINT-SINGLE-FIRM-RAISE sub-variant signature also noted as candidate first instance pending second-instance validation.
+
+### References
+
+- ONDS Q1 2026 8-K / press release: https://ir.ondas.com/press-releases/detail/306/ondas-reports-record-first-quarter-2026-financial-results
+- ONDS Q1 2026 earnings call transcript: https://www.investing.com/news/transcripts/earnings-call-transcript-ondas-holdings-inc-q1-2026-results-show-strong-growth-93CH-4689045
+- Insider Monkey ONDS Q1 2026 transcript: https://www.insidermonkey.com/blog/ondas-holdings-inc-nasdaqonds-q1-2026-earnings-call-transcript-1762795/
+- Yahoo Finance ONDS raises 2026 target: https://finance.yahoo.com/markets/stocks/articles/ondas-raises-2026-target-390-233320722.html
+- Sherwood News ONDS Q1 coverage: https://sherwood.news/markets/ondas-surges-as-q1-revenue-beats-estimates-guidance-raised/
+- Grafa Q1 2026 results: https://grafa.com/en/news/united-states/ondas-onds-q1-2026-earnings-defense-backlog-surge
+- Gurufocus ONDS coverage: https://www.gurufocus.com/news/8858926/ + https://www.gurufocus.com/news/8859103/
+- Stockanalysis.com ONDS primary-source quote (Day-1 $10.62 / mcap $5.23B / shares 492.87M / sector Technology / Communications Equipment): https://stockanalysis.com/stocks/onds/
+- Tickeron pre-print: https://tickeron.com/blogs/ondas-holdings-onds-q1-2026-earnings-preview-amid-explosive-growth-trajectory-13413/
+- Quiver Quantitative ONDS opinions: https://www.quiverquant.com/news/Ondas+Holdings+Stock+(ONDS)+Opinions+on+Record+Earnings+Surge
+- HC Wainwright initiation $12 PT (predates Jan $25 upgrade): https://www.investing.com/news/analyst-ratings/hc-wainwright-initiates-ondas-holdings-stock-with-buy-rating-12-price-target-93CH-4272398
+- DailyPolitical HC Wainwright on Q1: https://www.dailypolitical.com/2026/03/30/hc-wainwright-weighs-in-on-ondas-q1-earnings-nasdaqonds.html
+- Tipranks ONDS analyst reaffirms (403; partial data via search): https://www.tipranks.com/news/ondas-stock-onds-gains-attention-as-analysts-reaffirm-bullish-price-targets-after-earnings
+- Strategy.md Strategy B section (criteria 1-5; criterion 3 closed-list rev 14; criterion 4 dual-framing; pre-mortem rev 7 KL #11/KL #12; exit rules; sector cap; instrument rule)
+- B_Sub_Pattern_Taxonomy.md (sub-pattern 1 canonical + OMCL intermediate-intensity-single-firm variant anchor + sub-pattern 3 + sub-pattern 5a STLA anchor + sub-pattern 6 TEAM anchor + sub-pattern 7 EL anchor + candidate sub-pattern 8 DOC/MNDY)
+- Operating_Protocols.md (§1 HOIP / §2 commission-disregarded / §3 NO-GO records are context / §8 conviction calibration ladder / §9 deferral discipline)
+- Portfolio_Ledger.md (B book 4/5 occupied IBM/HCA/META/ZBRA; sector caps IT-sector 2/3 + HC Facilities 1/3 + Comm Services 1/3; 1 slot remaining; FIG NO-GO 5/18 09:00 MT just appended)
+- Watchlist.md (Strategy B/A demotion log with FIG 5/18 sub-pattern 5c FIRST INSTANCE just added; ONDS to be added with this entry)
+- Weekly_Post_Event_Screen.md 2026-W20 PART 2 #2 (ONDS explicit LONG-or-NO-GO routing + CRITERION 3 ROUTING RISK FLAG + session checks to resolve)
+- Daily.md 2026-05-16 (regime overlay Fri 5/15 broad-tape sell-off + 30Y UST 5.13% + AI-leadership-reversal AMAT round-trip-NEGATIVE + sustained Hormuz overhang)
+- Decision_Log.md prior precedents — OMCL 2026-04-29 NO-GO (sub-pattern 1 INTERMEDIATE-INTENSITY SINGLE-FIRM first instance / DIRECT-TEMPLATE PRECEDENT) + ZBRA 5/13 GO (THIN-CLUSTER UP-anchor — DISTINCT from ONDS single-firm-aggressive structure) + GKOS 5/13 INSTANCE #13 (Day-1 partial-fade parallel) + MNST 5/13 INSTANCE #12 (MIXED-CLUSTER-WITH-TRIMS) + FTNT 5/12 INSTANCE #11 (BEARISH-DISSENT-CAVEAT) + IRM/PTC/VTRS THIN-CLUSTER family + FIG 2026-05-18 sub-pattern 5c lockup-binary anchor (just disposed earlier today)
+
+### Theater-check on this orchestrator review
+
+Five considerations were specifically pushed back on during construction:
+
+(a) **W2 PART 2 #2 sector-cap pre-judgment "ONDS is most-distinct sector"** (assumed Industrials A&D classification per session prompt). Considered and partially invalidated: stockanalysis.com primary source identifies ONDS as Technology / Communications Equipment (IT-sector 45). However, ir.ondas.com press release explicitly states "Ondas Networks deconsolidated effective January 16, 2026" — substantive business mix shifted to autonomous-systems / counter-UAS / defense-robotics (functional A&D). For sector-cap discipline, defer to formal stockanalysis.com GICS classification (Communications Equipment IT-sector) per ZBRA precedent — pushes IT-sector 2/3 → 3/3 AT CAP. Functional A&D nature noted but not binding for formal sector-cap analysis. **W2 sector-cap pre-judgment partially invalidated**; KL #12 pairwise correlation estimate revised upward slightly but still well below 0.5 trigger.
+
+(b) **ZBRA 5/13 GO LONG-case-alive precedent vs OMCL 5/29 NO-GO precedent — which template applies?** Considered carefully. ZBRA was THIN-MULTI-FIRM-CLUSTER (5 firms +3.3-8.1%, no single firm at ≥+15%) → THIN/BORDERLINE non-sub-pattern-1 routing → LONG-case-alive. ONDS is SINGLE-FIRM-AGGRESSIVE (Maxim +37.5% sole MEGA-magnitude post-print raise) → SUB-PATTERN 1 INTERMEDIATE-INTENSITY OMCL-precedent routing → LONG-case-foreclosed. The cluster-structure-distinction is the operative dimension: multi-firm-thin (ZBRA-style preservation) vs single-firm-aggressive (OMCL-style foreclosure). ONDS routes to OMCL template, not ZBRA template.
+
+(c) **Stock 46-50% below consensus PT cluster as LONG-under-extrapolation case.** Pushed back vigorously: this gap reflects RISK-PREMIUM (execution risk on inorganic growth + 2.8 homogenization on commoditized defense-AI thesis + small-cap-defense-narrative-momentum-volatility + capital-structure breakeven-2028 dilution risk), NOT under-extrapolation. The market is pricing in real risks the consensus PT cluster discounts. Per OMCL precedent + sub-pattern 1 doctrine, info-driven characterization on +1,065% YoY rev + +670% YoY guide raise + Maxim +37.5% raise + standing bullish cluster maintains that the +26% Day-0 reaction is correctly pricing in info-driven structural-shift; remaining 46-50% gap is risk-premium-discounted; PT-chase target degenerately restates the bull-thesis-as-target without distinct convergence-mechanism.
+
+(d) **Day-1 -5.26% partial-fade direction — over-shoot evidence vs normal post-major-print volatility?** Considered: ~75-85% retention from Day-0 magnitude is INTERMEDIATE signal (between PINS clean-fade 0% and AMD/FLEX/AKAM held-or-extended 100%+). Per GKOS 5/13 precedent (multi-day partial-fade ~62% retention → NO-GO sub-pattern 1 MODERATE-MAGNITUDE SUB-FULL-SATURATION), partial-fade can be EITHER overshoot-correction (LONG over-extrapolation suspect) OR normal post-major-print volatility absorbing into new fair-value equilibrium. For ONDS the partial-fade direction is more consistent with sub-pattern 1 settle-to-new-fair-value pattern than canonical LONG-mean-reversion overshoot-correction. Compounds L1 sub-pattern 1 routing.
+
+(e) **Conviction band HIGH vs HIGHEST.** Considered. Sub-pattern 1 INTERMEDIATE-INTENSITY routing is analytical-judgment-prone (cluster-structure analysis + magnitude-weighted assessment + comparable-precedent application) vs mechanical-arithmetic-verifiable (lockup-binary timing-arithmetic for FIG / mcap-floor arithmetic for AGL / event-class verification for DG). HIGH band (~78-85%) parallel to GKOS/MNST/FTNT MODERATE-tier sub-pattern 1 routings; not HIGHEST band reserved for mechanical-verifiable dispositional grounds. Within HIGH band, ONDS lands at ~80-85% (HIGHER than typical thin-cluster routings because Maxim raise magnitude exceeds OMCL anchor by 2.24×; LOWER than HIGHEST because analytical-judgment-prone).
+
+### Compaction-survival note
+
+**ONDS NO-GO disposition complete at HIGH conviction (~80-85%).** Sub-pattern 1 INTERMEDIATE-INTENSITY SINGLE-FIRM VARIANT SECOND INSTANCE (after OMCL 2026-04-29 first) routing via Maxim Galinko PT raise $16→$22 (+37.5%) post-print + criterion 4 dual-framing decisive failure (LONG 4 decisive + multiple compounding; SHORT 4/4 decisive) + criterion 3 closed-list rev 14 effectively-absent admissible target. B-short string advances 35 → 36. Experiment B totals: 5 GO + ~51 NO-GO. Sub-pattern 1 INSTANCE family advances 16 → 17 (after VTRS 5/14 INSTANCE #16).
+
+**Sub-pattern 1 INTERMEDIATE-INTENSITY SINGLE-FIRM VARIANT validation milestone reached** with ONDS SECOND INSTANCE (after OMCL 2026-04-29 first); pending W5 formal taxonomy promotion to canonical sub-pattern 1 variant (similar to THIN-CLUSTER variant promotion path via IRM/PTC/VTRS three-instance validation). Diagnostic signature: single firm posts aggressive PT raise ≥+15% within 48h post-print on positive-direction event, WITHOUT multi-firm wave developing; binding on criterion 4 via info-driven characterization.
+
+**Novel HYBRID signature for W5 capture:** "PRE-PRINT-AGGRESSIVE-CLUSTER + POST-PRINT-SINGLE-FIRM-RAISE" sub-variant first instance — ONDS pre-print PT cluster $17.50-$25 (already aggressively bullish) + post-print Maxim $16→$22 raise = standing bull anchor + ratification layer. Pending second-instance validation for potential W5 sub-variant capture.
+
+**ZBRA GO vs OMCL/ONDS NO-GO precedent distinction for taxonomy clarity:** cluster-structure-distinction is the operative dimension for borderline thin-cluster vs single-firm-aggressive routings. ZBRA-style THIN-MULTI-FIRM-CLUSTER (multiple firms at low magnitude, no single firm at ≥+15%) preserves LONG-case-alive routing via THIN/BORDERLINE non-sub-pattern-1 path. OMCL/ONDS-style SINGLE-FIRM-AGGRESSIVE (one firm at ≥+15% PT raise, no multi-firm wave) forecloses LONG-case via sub-pattern 1 INTERMEDIATE-INTENSITY doctrine. Future thesis-construction sessions route accordingly.
+
+**Slot-cap discipline implication for POET 5/19:** 1/5 B slot remains post-FIG/ONDS NO-GO; POET Tue 5/19 09:00 MT inherits next-priority claim on remaining slot. POET specifics per W2 PART 2 #3: Day-0 Thu 5/14 +27% on Lumilens supply / JD deal; mcap $2.44B PASSES with thin cushion (~22% above $2B floor); AI-optics narrative-adjacency carries 2.8 homogenization risk + GLW 5/11 sub-pattern 1 ratification precedent for AI-optics/silicon-photonics sector. POET session must verify: (i) mcap re-check at session start (borderline-cushion risk); (ii) post-deal PT-cluster magnitude; (iii) Day-2 trajectory Mon 5/19; (iv) AI-optics peer print context; (v) deal-execution risk on $500M-over-5-years vs $50M initial-order economics; (vi) sub-pattern 8 FOURTH-INSTANCE-candidate routing (POET pre-print -47% Marvell-cancellation depressed-name profile).
+
+**Operator chat output:** "ONDS — NO-GO. No order. POET Strategy B thesis-construction session next at Tue 2026-05-19 09:00 MT."
+
