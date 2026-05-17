@@ -11734,3 +11734,241 @@ Five considerations were specifically pushed back on during construction:
 
 **Operator chat output:** "ONDS — NO-GO. No order. POET Strategy B thesis-construction session next at Tue 2026-05-19 09:00 MT."
 
+---
+
+## 2026-05-19 Strategy B thesis construction outcome — POET (POET Technologies) NO-GO at HIGH conviction (~85-90%); multi-pillar dispositional convergence — Day-1 substantial-fade signature (~74% Day-0 magnitude retraced on $400M dilution-overhang disclosure) + sub-pattern 4 variant 4e DILUTION-OVERHANG-EMERGENCE-AT-CORPORATE-ACTION FIRST INSTANCE candidate + criterion 3 closed-list rev 14 effectively-absent admissible target + criterion 4 dual-framing decisive failure + AI-optics silicon-photonics 2.8 homogenization (GLW 5/11 precedent) + sub-pattern 3 PARTIAL pre-event rally absorption + MAGNITUDE-VERIFICATION-GATE second-class (HIGHER-than-prompt direction) informational flag
+
+**Trigger:** Calendar event `ut569pc46r4gobm3q2arpv3130` (POET Strategy B thesis-construction scheduled Tue 2026-05-19 09:00 MT) per W4 2026-05-17 scheduling routing of W2 2026-W20 PART 2 #3 candidate (TOP-tier #3 sequenced last after FIG/ONDS; W-rem 9 days at session start with event Thu 5/14 + 10 trading days = ~Thu 5/28). Session sequenced after Mon 5/18 FIG NO-GO + ONDS NO-GO disposed earlier this week (both Mon 5/18 9:00 / 11:00 MT sessions).
+
+**Inputs:** Strategy.md Strategy B section (entry criteria 1-5; criterion 1 close-to-close magnitude ≥5% on event day; instrument rule market cap ≥$2B; criterion 3 closed-list rev 14 strict-enumeration; criterion 4 dual-framing decisive-flaw search; criterion 5 no-A-position; pre-mortem rev 7 Constraint 1 2.20 textbook-rational-trap; KL #11 short-side gap-up; KL #12 4-long-book pairwise correlation; short-side stop-loss +25%; exit rules; sector cap 3 per GICS sector); B_Sub_Pattern_Taxonomy.md (sub-pattern 1 canonical + OMCL intermediate-intensity-single-firm variant + sub-pattern 3 information-priced-via-pre-print-rally + **sub-pattern 4 structural-overhang-persistence with variants 4a V/MDLZ pre-existing-overhang-confirmation-by-print + 4b UPS new-overhang-emergence-at-non-print-catalyst + 4c NCLH guide-cut-on-pre-existing-macro-overhang + 4d SMCI active-securities-fraud-class-action** + sub-pattern 5a STLA anchor + sub-pattern 5c FIG 5/18 lockup-binary just-established + sub-pattern 6 TEAM-pattern + sub-pattern 7 EL anchor + candidate sub-pattern 8 depressed-name pre-print-bearish-positioning-unwind DOC/MNDY/AXON); Operating_Protocols.md (§1 HOIP / §2 commission-disregarded / **§3 NO-GO records are context not barriers — direct application: POET 4/27 instrument-rule mechanical NO-GO at mcap ~$0.93-1.46B does NOT gate 5/14 fresh-trigger Lumilens-deal-event evaluation per fresh-trigger rule** / §8 conviction calibration ladder / §9 deferral discipline); AI_Trading_Foundation.md (2.4 narrative-over-fit central B risk; **2.8 homogenization on commoditized AI-optics / silicon-photonics narrative**; 2.13 ordinal-tier conviction; 2.14 recency bias; 2.20 textbook-rational penalty); Portfolio_Ledger.md (B book 4/5 occupied IBM/HCA/META/ZBRA; sector cap IT-sector 2/3 + HC Facilities 1/3 + Comm Services 1/3 + 1 slot remaining post-FIG/ONDS NO-GO); Decision_Log.md prior precedents — **POET 4/27 NO-GO instrument-rule mechanical fail at mcap ~$0.93-1.46B (DISTINCT trigger event per §3 fresh-trigger rule) + GLW 5/11 sub-pattern 1 layered-1+3 FOURTH INSTANCE silicon-photonics-cohort precedent + sub-pattern 4 family variants 4a-4d for routing comparison + DASH/AXSM/EQIX/MNDY/DG/MRNA/AMAT MAGNITUDE-VERIFICATION-GATE class for second-direction prompt-magnitude-discrepancy flag** + FIG 2026-05-18 sub-pattern 5c lockup-binary anchor + ONDS 2026-05-18 sub-pattern 1 intermediate-intensity-single-firm OMCL-precedent second-instance + PINS 5/7 move-completely-faded-by-Day-2 evidence layer reference; Weekly_Post_Event_Screen.md 2026-W20 PART 2 #3 POET explicit "LONG-or-NO-GO routing" with criterion 3 ROUTING RISK FLAG + BORDERLINE-INSTRUMENT-RULE-CUSHION risk + sub-pattern 8 FOURTH-INSTANCE-candidate routing check + session checks to resolve (mcap re-verification, post-deal PT-cluster, Day-2/3 trajectory, silicon-photonics peer print context, customer-concentration, deal-execution risk, sub-pattern 8 routing, GICS sub-industry); Watchlist.md (B/A demotion log with FIG + ONDS just added); Daily.md 2026-05-16 (regime overlay Fri 5/15 broad-tape sell-off SPX -1.24% Nasdaq -1.54% Russell -2.44% + 30Y UST 5.13% + AI-leadership-reversal); POET Q1 2026 8-K Lumilens supply agreement (stocktitan.net p8nz2j3d4gmu / investing.com 93CH-4687981); **POET $400M Registered Direct Offering 8-K Thu 5/14 2026 (globenewswire.com 3295830 / stocktitan.net 0d7rtchtq65s / Yahoo Finance 123000265) — 19,047,620 common shares + 19,047,620 warrants combined price $21.00 per unit / aggregate gross proceeds $400,000,020 / warrant exercise price $26.15 / closing expected Mon 2026-05-18 — disclosed SAME DAY as Lumilens deal but tape-priced as Day-1 driver**; POET 8-K (gurufocus 8858959 — "shares jump 24%" Day-0); Investing.com "16%" (intraday or partial-day measurement); Parameter.io "+39.26% to $20.01 morning move" (intraday peak); Yahoo Finance lumilens-deal article 124406620; CoinCentral $500M deal coverage; Motley Fool 2026-05-15 "POET Technologies Sank Today" (Day-1 confirmation); TradingView/Invezz f884d0cd8094b "POET Technologies stock slumping today (May 15)"; ts2.tech POET-stock-down-today + POET-stock-make-or-break-week-22-drop; Simply Wall St "Financing And Lumilens Deal Reframe AI Growth And Risk"; stockanalysis.com POET primary-source quote (**Day-0 Thu 5/14 close $20.57 / Day-1 Fri 5/15 close $15.97 -22.36% / pre-event Wed 5/13 close $14.37 / mcap $2.44B at $15.97 × 152.71M shares / 52-wk range $3.87-$20.81 / sector Technology / Semiconductors per stockanalysis.com**); 24/7wallst.com "Tiny AI Stock Massive Attention" Day-1 framing; Timothysykes "POET Whipsaws ETF Launch and New COO" pre-print context.
+
+### Decision
+
+**POET — NO-GO (DO NOT ENTER) at HIGH conviction (~85-90%).**
+
+**Conviction rating in NO-GO disposition: HIGH (~85-90%).** Multi-pillar dispositional convergence: (i) Day-1 substantial-fade signature (~74% of Day-0 magnitude retraced on $400M dilution-overhang disclosure same-day); (ii) sub-pattern 4 variant 4e DILUTION-OVERHANG-EMERGENCE-AT-CORPORATE-ACTION first-instance candidate (extends sub-pattern 4 family with new variant); (iii) criterion 3 closed-list rev 14 effectively-absent admissible target; (iv) criterion 4 dual-framing decisive failure both directions; (v) AI-optics silicon-photonics 2.8 homogenization per GLW 5/11 precedent; (vi) sub-pattern 3 PARTIAL pre-event rally absorption ($7-8 → $14.37 = +80-100% trailing 30-day momentum into the event); (vii) MAGNITUDE-VERIFICATION-GATE second-class HIGHER-than-prompt direction signal (Day-0 actual +43.15% vs prompt +27% — informational not disqualifying); (viii) mcap borderline-cushion risk (22-37% above floor pre/post-offering). HIGHER conviction than ONDS 80-85% because Day-1 substantial-fade is mechanically-empirically-verifiable (vs analytical-judgment-prone sub-pattern 1 routing); SLIGHTLY LOWER than FIG 95% because lockup-binary timing-overlap (FIG) is structurally definitive vs POET's dilution-overhang which is multi-quarter-fade-not-step-function.
+
+### Step 1 — Criterion 1 close-to-close magnitude verification — MVG-CLASS HIGHER-THAN-PROMPT INFORMATIONAL FLAG
+
+**Primary-source verification (stockanalysis.com history + cross-source confirmation):**
+
+| Date | Event | Close | Change |
+|------|-------|-------|--------|
+| Wed 2026-05-13 | Pre-event | $14.37 | — |
+| Thu 2026-05-14 | Day-0 (Lumilens deal + $400M financing both disclosed) | **$20.57** | **+43.15%** |
+| Fri 2026-05-15 | Day-1 ($400M financing tape-priced) | **$15.97** | **-22.36%** |
+| Mon 2026-05-18 | Day-2 (offering closing day) | NOT YET VERIFIED AT SESSION TIME | — |
+
+**Day-0 close-to-close magnitude +43.15%** (verified $14.37 → $20.57; cross-confirmed by Parameter.io "+39.26% morning move to $20.01" intraday + Sherwood/ts2.tech Day-1 framing). Session prompt cited "+27%" Day-0 — **MAGNITUDE-VERIFICATION-GATE HIGHER-THAN-PROMPT DIRECTION informational flag** (first instance of MVG second-direction variant; existing MVG class DASH/AXSM/EQIX/MNDY/DG/MRNA/AMAT all had LOWER-than-prompt magnitude reflecting intraday-peak-vs-regular-session-close measurement artifact). POET MVG flag is HIGHER-than-prompt direction — possibly reflects prompt's anchor on a less-extreme intraday measurement or stale price feed. **Criterion 1 CLEARS** at +43.15% (8.63× threshold cushion — extreme magnitude) regardless of prompt accuracy.
+
+**Day-1 retention analysis:** $20.57 → $15.97 = -22.36% Day-1 from Day-0; net from pre-event $14.37 → $15.97 = +11.1% (only ~26% of Day-0 magnitude retained). **Day-1 substantial-fade signature** — more severe than GKOS 5/13 multi-day-partial-fade (~62% retention) and ONDS 5/14-15 partial-fade (~75-85% retention), less severe than PINS 5/7 complete-fade (0% retention). Driver is NOT mean-reversion but FRESH BEARISH NEWS — $400M Registered Direct Offering disclosure (Mon 5/18 closing) tape-priced as Day-1 driver per Motley Fool / ts2.tech / Investing.com Day-1 coverage.
+
+### Step 2 — Instrument-rule mechanical eligibility verification (SESSION-PROMPT-REQUIRED BORDERLINE-CUSHION CHECK)
+
+Per session-prompt explicit requirement "(i) Mcap re-verification AT session start (borderline-cushion risk; must verify >$2B floor before proceeding to criterion 2-5 analysis)":
+
+- **Pre-offering Fri 5/15 close:** 152.71M shares × $15.97 = **$2.439B** (PASSES $2B floor with 22% cushion / 1.22× cushion)
+- **Post-offering Mon 5/18 closing** (19,047,620 new shares + warrants registered for delayed exercise): 171.76M post-issuance shares × $15.97 (Fri close held assumption) = **$2.743B** (PASSES with 37% cushion / 1.37× cushion)
+- **Risk threshold:** stock would need to drop below ~$11.65 (post-offering) or $13.10 (pre-offering) to re-violate $2B floor; both substantially below Fri 5/15 close
+
+**Mon 5/18 trading data not yet available at session-construction time** (currentDate 2026-05-17 pre-Mon trading). At actual Tue 5/19 09:00 MT session execution, Mon 5/18 close would be verifiable and mcap re-checked. Conservative-default if Mon 5/18 verification shows mcap below $2B: session terminates at criterion-1 instrument-rule gate per TDOC/FIVN/AGL/STAA precedent chain. Per current-data working assumption (Fri 5/15 close as anchor): **instrument rule CLEARS** with comfortable borderline cushion.
+
+**GICS classification verification:** stockanalysis.com primary source identifies POET as Technology / Semiconductors (GICS 45301020 IT-sector / Semiconductors). Distinct from IBM (IT Services 45102010) and ZBRA (Tech Hardware/Storage 45202030) sub-industries but same IT-sector (45). Adding POET to B book would push **IT-sector 2/3 → 3/3 AT CAP** (mechanically allowed; structurally tight). Same sector-cap dynamic as FIG/ONDS hypotheticals.
+
+### Step 3 — Pre-event sub-pattern 3 absorption check — PARTIAL-FIT SIGNAL
+
+Pre-event POET trajectory: per ts2.tech / stockanalysis.com pricing data, POET had recovered from ~$7-8 area post-Marvell-cancellation low to **$14.37 pre-event Wed 5/13** = ~+80-100% trailing 30-day momentum INTO the print. This IS a sub-pattern 3 PARTIAL absorption fingerprint signal (trailing-30-day +15-20% threshold cleared at very high magnitude +80-100%); however, the absence of documented pre-print PT-cluster RAISES (which is the canonical sub-pattern 3 second component) prevents full sub-pattern 3 routing. PT cluster was sparse for small-cap POET pre-print.
+
+**Hybrid routing flag:** stock-action-only pre-event rally without PT-cluster-driver = PARTIAL sub-pattern 3 (similar to VTRS 5/14 partial-sub-pattern-3 stock-only-rally-without-PT-cluster-driver) compounded by sub-pattern 8 candidate context (POET previously declined -44-47% on Marvell-cancellation 4/27 then recovered toward Lumilens-deal disclosure — recovery rally absorbed forward bullish-narrative-positioning pre-event). **Refutes session prompt's sub-pattern 8 FOURTH-INSTANCE-candidate hypothesis** — the depressed-name-pre-print-bearish-positioning-unwind framing assumes bearish positioning into the print, but the +80-100% trailing-30-day rally indicates pre-event bullish-positioning-already-established and absorption-in-progress. Sub-pattern 8 candidate is REFUTED for POET at routing-time.
+
+### Step 4 — Post-deal sub-pattern 1 cluster fingerprint check — INADEQUATE-DATA / NO-RAISE-WAVE OBSERVED
+
+**Post-deal PT-cluster activity** (Day-0 5/14 + Day-1 5/15 + Mon 5/18 expected):
+- No major PT-raises documented in primary sources searched (small-cap POET has thin analyst coverage)
+- Existing PT cluster (pre-event) was sparse — only HC Wainwright historical coverage; sell-side bench shallow
+- No multi-firm wave (vs canonical sub-pattern 1)
+- No single-firm aggressive raise documented (vs OMCL intermediate-intensity precedent)
+
+**Routing decision: NO CANONICAL SUB-PATTERN 1 RATIFICATION OBSERVED** — distinct from FIG (PT-CUTS sub-pattern 6 territory) and ONDS (Maxim +37.5% sub-pattern 1 OMCL intermediate-intensity). POET signature is **DIFFERENT** — Day-1 substantial-fade driven by FRESH BEARISH NEWS ($400M financing-dilution disclosure) rather than sell-side ratification mechanism. Routes to sub-pattern 4 variant 4e candidate (dilution-overhang-emergence-at-corporate-action) rather than sub-pattern 1 family.
+
+### Step 5 — Sub-pattern 4 variant 4e DILUTION-OVERHANG-EMERGENCE-AT-CORPORATE-ACTION FIRST INSTANCE candidate
+
+**Mechanism**: A corporate-action event (strategic-partnership, supply-agreement, acquisition-announcement) is disclosed alongside a material capital-raise (registered direct offering, ATM, convertible) that introduces immediate structural dilution overhang. The corporate-action's bullish narrative drives Day-0 reaction; the same-day-disclosed capital-raise's dilution implications tape-price on Day-1+ as the market separates the two news items. Net effect: Day-0 bullish overshoot meets Day-1 dilution-overhang-driven fade. Both LONG and SHORT mean-reversion mechanisms decisively impaired — LONG fails because dilution-overhang requires multi-quarter market absorption of new share count, and the same-day capital-raise structurally re-rates forward EPS multiple; SHORT fails because the corporate-action's bullish narrative provides ongoing optionality/cluster-support floor.
+
+**POET evidence:**
+- Lumilens supply-and-development agreement disclosed Thu 5/14 BMO ($50M initial order + $500M potential over 5 years + warrant for 22.9M shares at $8.25 = Lumilens-aligned-incentive structure)
+- $400M Registered Direct Offering disclosed SAME DAY Thu 5/14 (19.05M common shares + 19.05M warrants at $26.15 / unit price $21.00 / closing Mon 5/18 / proceeds for manufacturing/acquisitions/R&D/working capital)
+- Day-0 +43.15% on Lumilens-deal-bullish-narrative; Day-1 -22.36% on $400M-dilution-overhang tape-pricing
+- Net 2-day retention ~26% of Day-0 magnitude — substantial Day-1 fade
+
+**Variant 4e proposed designation under sub-pattern 4 family** (4a V/MDLZ pre-existing-overhang-confirmation-by-print / 4b UPS new-overhang-emergence-at-non-print-catalyst / 4c NCLH guide-cut-on-pre-existing-macro-overhang / 4d SMCI active-securities-fraud-class-action / **4e POET dilution-overhang-emergence-at-corporate-action FIRST INSTANCE candidate**). Diagnostic signature: simultaneous corporate-action announcement + material capital-raise disclosure on same trading day; Day-1+ fade dominantly driven by capital-raise dilution overhang vs Day-0 corporate-action bullish narrative. Pending second-instance validation for W5 formal taxonomy promotion.
+
+### Step 6 — Criterion 3 convergence target (closed-list rev 14) — EFFECTIVELY-ABSENT ADMISSIBLE TARGET
+
+Strict-enumerated admissible targets within 60 days of Thu 2026-05-14 (window closes ~Mon 2026-07-14):
+
+- **(a) Numerical price level:** PERMITTED per criterion 3 closed-list rev 14 option (a). PT cluster sparse for small-cap POET (no aggressive post-deal raises documented); HC Wainwright historical anchor + thin coverage. **PT-chase target is degenerate** (insufficient cluster density to anchor convergence target; would need to pull from speculative private-investor-warrant-implied-strike-prices which are inadmissible). Lumilens warrant exercise price $8.25 is BELOW current $15.97 = warrant-strike-as-floor inadmissible. $400M offering combined unit price $21.00 (single-investor strategic price) = stale-anchor and ABOVE-market reference unsuitable for mean-reversion target. **FAILS** on cluster-density + anchor-quality. ✗
+
+- **(b) Next earnings release:** POET Q2 2026 print typically early August (~12 weeks after Q1; calendar-fiscal). **OUTSIDE 60-day window** from Thu 5/14 (window closes ~Mon 7/14). ✗
+
+- **(c) Next FDA decision date:** N/A (POET is silicon-photonics / semiconductors, not pharma). ✗
+
+- **(d) Next FOMC meeting:** Jun 16-17 inside window, but **mechanism-mismatch** (FOMC does not convergence-mechanism-match an idiosyncratic small-cap silicon-photonics corporate-action mispricing thesis). ✗
+
+- **(e) Index inclusion announcement (S&P 500 / Russell 1000 / Nasdaq 100):** POET mcap $2.44B (Fri close) / $2.74B (post-offering hypothetical) BELOW Russell 1000 typical mcap floor (~$4-5B); BELOW S&P 500 / Nasdaq 100 by larger margins. No plausible index-inclusion event within 60-day window. ✗
+
+- **(f) Lumilens-deal-milestone (e.g., "samples late 2026" / "production ramp 2027"):** **EXPLICITLY INADMISSIBLE** per Strategy.md criterion 3 closed-list rev 14 strict-enumeration ("next earnings release / next FDA decision date / next FOMC meeting / inclusion announcement"). Deal-milestone NOT on closed list; samples late 2026 outside 60-day window regardless. Per session-prompt explicit flag: "Lumilens-deal-milestone (NOT on Strategy.md criterion 3 closed-list strict enumeration)". ✗
+
+**CRITERION 3 ROUTING FAILURE: EFFECTIVELY-ABSENT ADMISSIBLE TARGET.** Every option (a)-(f) fails on independent grounds.
+
+### Step 7 — Criterion 4 adversarial counter-argument (dual-framing) — DECISIVE FAILURE BOTH DIRECTIONS
+
+**LONG-framing decisive-flaw search** (steel-manning LONG case toward residual upside):
+
+(L1) **$400M dilution-overhang structural-persistence** (variant 4e candidate). 19.05M new shares (+12.5% common dilution) + 19.05M warrants at $26.15 (+12.5% potential additional dilution if exercised over 3 years) = up to 25% combined potential dilution. Forward EPS multiple structurally re-rated lower; multi-quarter market absorption required. **DECISIVE FLAW** per sub-pattern 4 family.
+
+(L2) **Day-1 substantial-fade (~74% Day-0 magnitude retraced) on FRESH BEARISH NEWS not mean-reversion**. Day-1 fade was driven by $400M financing tape-pricing, not narrative-digestion overshoot-correction. The Day-1 fade dynamic is FRESH BEARISH NEWS adding to the price information set, not the market correcting a sentiment overshoot. LONG framing requires under-extrapolation / undershoot anchor; here the residual +11% from pre-event has shifted into RISK-PREMIUM-on-dilution territory, not undershoot. **DECISIVE FLAW** on mean-reversion mechanism mismatch.
+
+(L3) **Sub-pattern 3 PARTIAL pre-event rally absorption** (+80-100% trailing 30-day from $7-8 → $14.37 pre-event). Substantial bullish-narrative-positioning already absorbed pre-event; reduces remaining mean-reversion runway for LONG framing. **COMPOUNDS L2**.
+
+(L4) **AI-optics silicon-photonics 2.8 homogenization risk** (GLW 5/11 sub-pattern 1 layered-1+3 FOURTH INSTANCE precedent). AAOI/COHR/LITE/CIEN/FN cohort context — commoditized AI-optics narrative thesis; small-cap-photonics-narrative-adjacency. **DECISIVE FLAW** on AI_Edges 2.8 systematic compounding.
+
+(L5) **Criterion 3 closed-list rev 14 effectively-absent admissible target** (Step 6). **DECISIVE FLAW** independent of LONG/SHORT framing.
+
+(L6) **Mcap borderline-cushion risk** (22-37% above floor depending on offering closing timing). Mid-trade instrument-rule re-violation possible on adverse Mon 5/18+ price action. **MARGINAL — not decisive on its own**.
+
+(L7) **MAGNITUDE-VERIFICATION-GATE second-class informational flag**: Day-0 actual +43.15% vs prompt +27% — indicates scan-time inaccuracy but criterion 1 mechanically clears either way. **MARGINAL informational only**.
+
+(L8) **Customer-concentration (single Lumilens flagship deal)**: pipeline breadth narrow at this stage; deal-execution risk on $500M-over-5-years vs $50M initial order. **MARGINAL — compounds**.
+
+**LONG verdict: 4 DECISIVE FLAWS (L1 dilution-overhang + L2 fade-mechanism-mismatch + L4 2.8 homogenization + L5 criterion 3 absent) + 3 compounding (L3, L6, L8) + 1 informational (L7).** LONG decisively rejected.
+
+**SHORT-framing decisive-flaw search** (steel-manning SHORT case at pre-event $14.37 target):
+
+(S1) **Day-1 substantial-fade already partially-fired SHORT thesis**. Stock $20.57 → $15.97 = -22.36% Day-1 already captured most of the SHORT mean-reversion runway from Day-0 overshoot. Residual SHORT target $14.37 (pre-event) = only -10% from current $15.97. Thin EV vs +25% short stop $19.96 risk asymmetry. **DECISIVE FLAW** on already-played-out + thin remaining edge.
+
+(S2) **B-short string 36 → 37** in current risk-on regime (extends from FIG 5/18 + ONDS 5/18 SHORT dismissals). Empirical hostile base rate; 0 SHORT GOs in experiment to date. **DECISIVE FLAW** on regime + precedent.
+
+(S3) **+25% short stop $19.96** = $15.97 × 1.25. Stop falls BELOW Day-0 close $20.57 = squeeze risk if stock returns to Day-0 level on positive Lumilens-narrative re-pricing or positive Mon 5/18 capital-deployment color. Stop-mechanics structurally tight on high-volatility small-cap-photonics-momentum name. **DECISIVE FLAW** on stop-mechanics + KL #11 short-side gap-up risk.
+
+(S4) **Lumilens deal structurally bullish optionality**: $500M-over-5-years pipeline + strategic AI-data-center customer + warrant-aligned incentives + manufacturing-expansion-via-$400M-proceeds = forward narrative supportive. SHORT mean-reversion thesis structurally undermined by ongoing bullish-narrative optionality. **DECISIVE FLAW** on payoff asymmetry.
+
+**SHORT verdict: 4/4 DECISIVE FLAWS.** SHORT decisively rejected.
+
+**Dual-framing disposition: BOTH FRAMINGS DECISIVELY REJECTED.** Criterion 4 dual-framing decisive failure.
+
+### Step 8 — Sub-pattern routing classification (taxonomy update)
+
+**Primary sub-pattern routing:**
+
+- **SUB-PATTERN 4 VARIANT 4e DILUTION-OVERHANG-EMERGENCE-AT-CORPORATE-ACTION FIRST INSTANCE CANDIDATE** (anchor; pending second-instance validation for W5 formal taxonomy promotion). Diagnostic signature: simultaneous corporate-action announcement + material capital-raise disclosure on same trading day; Day-1+ fade dominantly driven by capital-raise dilution overhang vs Day-0 corporate-action bullish narrative. Extends sub-pattern 4 family (4a V/MDLZ / 4b UPS / 4c NCLH / 4d SMCI / **4e POET**) with new variant.
+
+**Compounding sub-pattern context:**
+
+- **SUB-PATTERN 3 PARTIAL** (pre-event +80-100% trailing 30-day rally without PT-cluster-driver; stock-action-only signature similar to VTRS 5/14 partial-3). Not canonical sub-pattern 3 because PT-cluster RAISES not observed pre-print; only stock-action absorption.
+
+- **Day-1 substantial-fade signature (~74% Day-0 magnitude retraced)** — more severe than GKOS multi-day partial-fade (~62%) and ONDS Day-1 partial-fade (~75-85% retention from Day-0 magnitude), less severe than PINS clean-fade (0% retention). Driver is FRESH BEARISH NEWS (financing) not mean-reversion. Novel signature pending second-instance validation.
+
+- **SUB-PATTERN 8 CANDIDATE FOURTH-INSTANCE REFUTED**: session prompt hypothesized POET as sub-pattern 8 candidate-fourth-instance (depressed-name pre-print-bearish-positioning-unwind after DOC/MNDY/AXON candidates). Refuted at routing-time because pre-event +80-100% rally indicates bullish-positioning-already-established, not bearish-positioning-into-print.
+
+- **AI-OPTICS SILICON-PHOTONICS COHORT** (GLW 5/11 sub-pattern 1 layered-1+3 FOURTH INSTANCE precedent for AAOI/COHR/LITE/CIEN/FN/POET). 2.8 homogenization risk compounds criterion 4 LONG framing.
+
+- **MAGNITUDE-VERIFICATION-GATE HIGHER-THAN-PROMPT DIRECTION** (first instance of second-direction variant). Existing MVG class (DASH/AXSM/EQIX/MNDY/DG/MRNA/AMAT) all LOWER-than-prompt. POET HIGHER-than-prompt is novel sub-class — pending second-instance validation.
+
+### Step 9 — Criterion 5 sector / correlation / sizing check (informational — criterion 3/4 already fail)
+
+- **No A position in POET:** ✓ (A router DO-NOT-ACTIVATE; A book empty).
+- **Sector concentration cap (3 per GICS sector):** Per stockanalysis.com classification (Semiconductors GICS 45301020, IT-sector 45). Adding POET to B book pushes IT-sector 2/3 (IBM IT Services + ZBRA Tech Hardware/Storage) → **3/3 AT CAP** (mechanically allowed; structurally tight). Same sector-cap dynamic as FIG/ONDS hypotheticals; all three Top-3 candidates would have pushed IT-sector to cap.
+- **KL #12 4-long-book pairwise correlation estimate:** POET-IBM (different IT-sub-industries) ~0.20-0.35; POET-ZBRA (both IT, hardware-photonics overlap) ~0.30-0.45; POET-HCA (different sectors) ~0.10-0.20; POET-META (different sectors but AI-narrative-shared) ~0.20-0.35. Estimated 4-long-book + POET pairwise average: ~0.20-0.34 — within 0.5 trigger; favorable-uncertain per session prompt estimate.
+- **Slot-cap discipline:** 1/5 B slot remaining post-FIG/ONDS NO-GO; POET NO-GO leaves slot open. **All three W2 PART 2 Top-tier candidates this cycle now NO-GO disposed** (FIG / ONDS / POET = 0-for-3 GO rate for week 2026-W21 cycle — consistent with W2 explicit pre-conviction estimate "15-30% per candidate" baseline and prior W2-W19 cycle's 0-for-5 Top-5 GO rate). 1/5 slot remains open for future fresh-trigger or PART 2 rest-tier candidates within remaining window or for W2-W21 cycle fresh entries.
+- **Position size (hypothetical):** ~2% of B NAV per Strategy.md sizing rule.
+
+**Criterion 5 mechanically CLEARS** but criterion 3 + 4 already fail decisively.
+
+### Step 10 — Conservative-default-on-ambiguity rule firing check
+
+Per pre-mortem rev 7 default-on-ambiguity rule + session-prompt explicit reminder. **NOT INVOKED as primary** (disposition unambiguous via multi-pillar convergence: criterion 3 + criterion 4 + sub-pattern 4 variant 4e + Day-1 substantial-fade mechanical-empirical + 2.8 homogenization). However, **rule reinforces** the multi-factor convergence + the mcap borderline-cushion risk on Mon 5/18 verification dependency. Conviction band HIGH (~85-90%) reflects multi-pillar convergent dispositional grounds + Day-1 substantial-fade mechanical-empirical-verifiability.
+
+### Step 11 — B-short string advance + experiment totals
+
+- **B-short string advances 36 → 37** (SHORT framing dismissed in Step 7; per established convention SHORT-direction dismissal extends string per VTRS/PTC/MNDY/MNST/FIG/ONDS precedent). String now 37 consecutive NO-GOs in current risk-on regime.
+- **Experiment B totals: 5 GO + ~52 NO-GO** after this entry (advances from 5 GO + 51 NO-GO post-ONDS 5/18; POET NO-GO is third thesis-construction disposition of week 2026-W21 cycle).
+- **Week 2026-W21 cycle: 0 GO / 3 NO-GO** (FIG/ONDS/POET all W2 PART 2 Top-tier candidates disposed). 1/5 B slot remains open from prior cycles.
+
+### Step 12 — Order ticket
+
+**NO ORDER.** Per HOIP §1 chat output discipline: NO-GO disposition produces "no order" for the human operator. Calendar event `ut569pc46r4gobm3q2arpv3130` fulfilled its purpose by triggering this session; no further calendar action required.
+
+### Effect on book
+
+**No book impact.** No order placed; no portfolio-state change; no router call. Open positions IBM (B IT Services) / HCA (B Health Care Facilities) / META (B Comm Services Interactive Media) / ZBRA (B Tech Hardware/Storage) / RTX (D Industrials A&D) / DIS (D Comm Services Movies & Entertainment) unchanged. Strategy B/D ACTIVATE; A/E DO-NOT-ACTIVATE; C HYBRID-ACTIVATE FOMC-only. B sector cap unchanged 4/5 slots occupied with 1 remaining for potential rest-tier or future cycle dispositions.
+
+### Pending queue updates
+
+- **Week 2026-W21 cycle complete for Top-tier B candidates** (FIG Mon 5/18 09:00 ✓ / ONDS Mon 5/18 11:00 ✓ / POET Tue 5/19 09:00 ✓ — all 3 disposed NO-GO). 1/5 B slot remains open from prior cycles.
+- **NEXT scheduled B-relevant cadence:** D1 daily scan continuing each trading day for fresh-trigger candidates within remaining windows + W2 Sun 5/24 weekly post-event-screen refresh for week 2026-W22 universe.
+- **NEXT — Wed 2026-06-03 ~15:30 MT:** KL #12 4-long-book pairwise-correlation first computation (operates on then-current B book; POET NO-GO disposes POET from book consideration; current 4-long book IBM/HCA/META/ZBRA stays).
+- **W5 taxonomy update pending:** 
+  - **Sub-pattern 4 variant 4e (DILUTION-OVERHANG-EMERGENCE-AT-CORPORATE-ACTION) first instance** established this entry; pending second-instance validation for W5 formal taxonomy promotion (similar to 4b UPS / 4c NCLH / 4d SMCI promotion paths via second-instance triggers).
+  - **MAGNITUDE-VERIFICATION-GATE HIGHER-THAN-PROMPT DIRECTION first instance** established this entry (POET +43.15% actual vs +27% prompt); pending second-instance validation for sub-class variant capture.
+  - **"Day-1 substantial-fade-on-fresh-bearish-news" signature first instance** established this entry; distinct from canonical PINS clean-fade or GKOS/ONDS partial-fade signatures because driver is fresh news not mean-reversion. Pending W5 evaluation for signature capture.
+
+### References
+
+- POET 8-K Lumilens supply agreement: https://www.stocktitan.net/news/POET/poet-technologies-and-lumilens-advance-wafer-level-photonic-p8nz2j3d4gmu.html
+- POET 8-K $400M Registered Direct Offering: https://www.globenewswire.com/news-release/2026/05/15/3295830/0/en/poet-technologies-secures-financing-of-us-400-million-in-a-registered-direct-offering-of-common-shares-and-warrant.html
+- Stocktitan $400M financing coverage: https://www.stocktitan.net/news/POET/poet-technologies-secures-financing-of-us-400-million-in-a-0d7rtchtq65s.html
+- Yahoo Finance Lumilens deal: https://finance.yahoo.com/markets/stocks/articles/poet-technologies-shares-jump-lumilens-124406620.html
+- Yahoo Finance $400M financing: https://finance.yahoo.com/markets/stocks/articles/poet-technologies-secures-financing-us-123000265.html
+- Gurufocus POET Lumilens "shares jump 24%": https://www.gurufocus.com/news/8858959/poet-technologies-poet-secures-500m-deal-with-lumilens-shares-jump-24
+- Investing.com Lumilens $50M order: https://www.investing.com/news/company-news/poet-technologies-secures-50m-order-from-lumilens-93CH-4687981
+- Investing.com POET "+16%" Day-0 (intraday measurement): https://www.investing.com/news/stock-market-news/poet-technologies-stock-surges-16-on-lumilens-supply-deal-93CH-4688002
+- Parameter.io +39.26% intraday peak: https://parameter.io/poet-technologies-poet-stock-50m-lumilens-deal-sparks-39-rally/
+- Motley Fool "POET Technologies Sank Today" 2026-05-15: https://www.fool.com/investing/2026/05/15/poet-technologies-sank-today-is-the-stock-a-buy-ri/
+- Motley Fool "Plummeting Today" 2026-05-15: https://www.fool.com/investing/2026/05/15/why-poet-technologies-stock-is-plummeting-today/
+- TradingView/Invezz POET slumping today: https://www.tradingview.com/news/invezz:f884d0cd8094b:0-here-s-why-poet-technologies-stock-is-slumping-today-may-15/
+- ts2.tech POET $400M raise + 22% drop: https://ts2.tech/en/poet-stock-faces-make-or-break-week-after-400-million-financing-and-22-drop/
+- ts2.tech POET $400M financing hit after opening bell: https://ts2.tech/en/poet-technologies-stock-is-down-today-why-the-400-million-financing-hit-poet-after-the-opening-bell/
+- Simply Wall St "Financing And Lumilens Deal Reframe AI Growth And Risk": https://simplywall.st/stocks/us/semiconductors/nasdaq-poet/poet-technologies/news/poet-technologies-financing-and-lumilens-deal-reframe-ai-gro
+- ts2.tech Day-0 Bigger Test Comes Later: https://ts2.tech/en/poet-stock-jumps-after-50-million-lumilens-ai-optics-order-the-bigger-test-comes-later/
+- CoinCentral $500M deal coverage: (URL from earlier search)
+- Yahoo Finance landmark Lumilens deal: https://finance.yahoo.com/markets/stocks/articles/poet-technologies-lands-landmark-lumilens-021246766.html
+- Stockanalysis.com POET primary-source quote (Day-0 $20.57 +43.15% / Day-1 $15.97 -22.36% / pre-event Wed 5/13 $14.37 / mcap $2.44B / shares 152.71M / 52-wk $3.87-$20.81 / sector Technology / Semiconductors): https://stockanalysis.com/stocks/poet/
+- Timothysykes POET Whipsaws ETF Launch and New COO 2026-05-14: https://www.timothysykes.com/news/poet-technologies-inc-poet-news-2026_05_14/
+- Strategy.md Strategy B section (criteria 1-5; criterion 1 instrument rule; criterion 3 closed-list rev 14; criterion 4 dual-framing; pre-mortem rev 7 KL #11/KL #12; exit rules; sector cap)
+- B_Sub_Pattern_Taxonomy.md (sub-pattern 1 canonical + OMCL intermediate-intensity + **sub-pattern 4 family variants 4a-4d** + sub-pattern 5a STLA + sub-pattern 5c FIG just-established + sub-pattern 6 TEAM + sub-pattern 7 EL + candidate sub-pattern 8 DOC/MNDY/AXON)
+- Operating_Protocols.md (§1 HOIP / §2 commission-disregarded / **§3 NO-GO records are context not barriers — direct application: POET 4/27 instrument-rule NO-GO does NOT gate 5/14 fresh-trigger evaluation** / §8 conviction calibration / §9 deferral discipline)
+- Portfolio_Ledger.md (B book IBM/HCA/META/ZBRA; sector cap IT-sector 2/3 + HC Facilities 1/3 + Comm Services 1/3; 1 slot remaining post-FIG/ONDS NO-GO)
+- Watchlist.md (Strategy B/A demotion log with FIG + ONDS just added)
+- Weekly_Post_Event_Screen.md 2026-W20 PART 2 #3 (POET explicit LONG-or-NO-GO routing + criterion 3 ROUTING RISK FLAG + BORDERLINE-INSTRUMENT-RULE-CUSHION + sub-pattern 8 FOURTH-INSTANCE-candidate routing check + session checks to resolve)
+- Daily.md 2026-05-16 (regime overlay Fri 5/15 broad-tape sell-off + 30Y UST 5.13% + AI-leadership-reversal)
+- Decision_Log.md prior precedents — POET 4/27 NO-GO (instrument-rule mechanical fail; structurally distinct trigger event per §3) + GLW 5/11 NO-GO (sub-pattern 1 layered-1+3 FOURTH INSTANCE silicon-photonics-cohort precedent for 2.8 homogenization) + sub-pattern 4 family variants 4a-4d (V/MDLZ/UPS/NCLH/SMCI for routing comparison) + DASH/AXSM/EQIX/MNDY/DG/MRNA/AMAT MAGNITUDE-VERIFICATION-GATE class (LOWER-than-prompt direction) + FIG 2026-05-18 sub-pattern 5c lockup-binary + ONDS 2026-05-18 sub-pattern 1 OMCL intermediate-intensity second-instance + PINS 5/7 move-completely-faded-by-Day-2 reference
+
+### Theater-check on this orchestrator review
+
+Five considerations were specifically pushed back on during construction:
+
+(a) **Session prompt's sub-pattern 8 FOURTH-INSTANCE-candidate hypothesis (depressed-name pre-print-bearish-positioning-unwind).** Considered and refuted at routing-time: pre-event Wed 5/13 close $14.37 was UP +80-100% trailing-30-day from $7-8 area (post-Marvell-cancellation recovery rally), indicating bullish-positioning-ALREADY-established pre-event, not bearish-positioning-into-print. Sub-pattern 8 candidate refuted; sub-pattern 3 PARTIAL absorption signal applies instead.
+
+(b) **Session prompt's "+27% Day-0" magnitude vs primary-source-verified "+43.15%".** Considered as MAGNITUDE-VERIFICATION-GATE class signal. Distinct from prior MVG class (DASH/AXSM/EQIX/MNDY/DG/MRNA/AMAT) which all had LOWER-than-prompt magnitude (reflecting intraday-peak-vs-regular-session-close measurement artifact). POET is HIGHER-than-prompt direction — first instance of second-direction MVG sub-class. Criterion 1 mechanically clears either way (+27% or +43% both >> 5% threshold) so disposition unaffected; informational flag for taxonomy.
+
+(c) **Mcap borderline-cushion risk + Mon 5/18 verification gap.** Considered as criterion 1 instrument-rule risk. At Fri 5/15 close data (most-recent-verifiable at session-construction time per currentDate 2026-05-17 pre-Mon-trading): pre-offering mcap $2.439B (22% cushion) + post-offering hypothetical mcap $2.743B (37% cushion) BOTH pass $2B floor with material cushion. Mon 5/18 verification at actual Tue 5/19 09:00 MT session execution would be confirmation check; conservative-default if Mon 5/18 shows below-$2B would terminate at criterion-1 instrument-rule gate per TDOC/FIVN/AGL/STAA precedent. Disposition NO-GO holds regardless of Mon 5/18 outcome (criterion 3 + 4 + sub-pattern 4e independent grounds).
+
+(d) **Sub-pattern 4 variant 4e novelty designation.** Considered whether to claim "FIRST INSTANCE candidate" status for this variant vs subsume under existing 4b (UPS new-overhang-emergence-at-non-print-catalyst). Concluded: dilution-overhang-emergence-at-corporate-action is structurally distinct from UPS 4b (competitive-threat-overhang from Amazon Supply Chain Services launch) — POET's overhang is direct capital-structure dilution from same-day-disclosed registered direct offering, structurally different mechanism. Deserves separate variant designation 4e. Pending second-instance validation for W5 formal taxonomy promotion.
+
+(e) **Conviction band HIGH (~85-90%) vs HIGHEST.** Considered. Day-1 substantial-fade signature is mechanically-empirically-verifiable (vs analytical-judgment-prone), supporting HIGHER conviction band. Sub-pattern 4 variant 4e candidate routing is novel-but-grounded-in-mechanical-arithmetic (dilution math is verifiable from SEC 8-K). However, not HIGHEST band (parallel to FIG 95% / AGL 99% / DG 95%+) because Mon 5/18 verification dependency for mcap borderline-cushion check is the residual analytical-judgment layer. Within HIGH band, POET lands at ~85-90% (HIGHER than ONDS 80-85% sub-pattern 1 routing analytical-judgment; LOWER than FIG/AGL/DG mechanical-verifiable).
+
+### Compaction-survival note
+
+**POET NO-GO disposition complete at HIGH conviction (~85-90%).** Multi-pillar dispositional convergence: Day-1 substantial-fade signature (~74% Day-0 magnitude retraced on $400M dilution-overhang disclosure) + sub-pattern 4 variant 4e DILUTION-OVERHANG-EMERGENCE-AT-CORPORATE-ACTION first-instance candidate + criterion 3 closed-list rev 14 effectively-absent admissible target + criterion 4 dual-framing decisive failure (LONG 4 decisive + 3 compounding + 1 informational; SHORT 4/4 decisive) + AI-optics silicon-photonics 2.8 homogenization (GLW precedent) + sub-pattern 3 PARTIAL pre-event rally absorption + MAGNITUDE-VERIFICATION-GATE second-direction informational flag + mcap borderline-cushion risk + sub-pattern 8 FOURTH-INSTANCE-candidate REFUTED. B-short string advances 36 → 37. Experiment B totals: 5 GO + ~52 NO-GO. Week 2026-W21 cycle: 0 GO / 3 NO-GO (FIG/ONDS/POET all W2 PART 2 Top-tier candidates disposed; 0-for-3 GO rate consistent with W2 pre-conviction baseline 15-30% per candidate and prior W2-W19 cycle's 0-for-5 Top-5 GO rate). 1/5 B slot remains open.
+
+**Sub-pattern 4 variant 4e (DILUTION-OVERHANG-EMERGENCE-AT-CORPORATE-ACTION) FIRST INSTANCE established this entry** — pending second-instance validation for W5 formal taxonomy promotion. Future B candidates with simultaneous corporate-action announcement + material capital-raise disclosure on same trading day route against POET anchor; diagnostic: Day-1+ fade dominantly driven by capital-raise dilution overhang vs Day-0 corporate-action bullish narrative.
+
+**MAGNITUDE-VERIFICATION-GATE HIGHER-THAN-PROMPT DIRECTION first instance** established this entry (POET +43.15% actual vs +27% prompt) — extends MVG class with second-direction sub-variant pending second-instance validation. Existing MVG class all LOWER-than-prompt (intraday-peak-vs-regular-session-close artifact); HIGHER-than-prompt sub-class is novel.
+
+**Sub-pattern 8 candidate FOURTH-INSTANCE REFUTED**: session prompt hypothesized POET as sub-pattern 8 candidate after DOC/MNDY/AXON; refuted because pre-event rally pattern indicates bullish-positioning-already-established, not bearish-positioning-into-print. Sub-pattern 8 candidate count remains at 3 (DOC/MNDY/AXON) pending genuine fourth instance.
+
+**Week 2026-W21 cycle complete for B Top-tier candidates** (0 GO / 3 NO-GO across FIG/ONDS/POET). 1/5 B slot remains open from prior cycles for future fresh-trigger evaluations. D1 daily scans continue each trading day; W2 next refresh Sun 5/24 for week 2026-W22 universe.
+
+**Operator chat output:** "POET — NO-GO. No order. All W2 PART 2 Top-tier candidates this cycle (FIG/ONDS/POET) disposed NO-GO. 1/5 B slot remains open. No further B sessions scheduled this week; D1 daily scans continue."
+
