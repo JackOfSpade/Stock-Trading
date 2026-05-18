@@ -11972,3 +11972,78 @@ Five considerations were specifically pushed back on during construction:
 
 **Operator chat output:** "POET — NO-GO. No order. All W2 PART 2 Top-tier candidates this cycle (FIG/ONDS/POET) disposed NO-GO. 1/5 B slot remains open. No further B sessions scheduled this week; D1 daily scans continue."
 
+
+---
+
+## 2026-05-18 — D2 Daily Action Conversion
+
+**Entry type:** Daily Action Conversion (D2 routine)
+**Title:** D2 2026-05-18 — No exits; BRC B thesis-construction scheduled Wed 5/20; INTC Mon C/C -0.55% B-routing NO confirmed; watchlist notes appended; 1 calendar event created
+
+### Exits
+None. All 6 open positions hold — no invalidation criteria tripped across IBM / HCA / META / ZBRA / RTX / DIS.
+
+- **IBM**: criterion (iii) IGV Mon 5/18 close $92.87 CONFIRMED (Yahoo Finance primary source: 'At close: May 18 at 4:00:01 p.m. EDT'); headroom $12.87/16.1% above $80 floor; Tier-1 monitor status CLEARED with expanded headroom vs prior Fri estimate (~$7-10). No other criteria tripped.
+- **HCA**: Mon 5/18 close $423.00 CONFIRMED (MarketWatch primary source; -$9.70/-2.24% from Fri $432.70). No invalidation criteria (i)-(iv) tripped.
+- **META**: Mon 5/18 close estimated ~$611 area (ECIKS premarket $609 from Fri $614.23; unconfirmed at primary source — Tue D1 to verify). NM bench trial ongoing through Fri 5/22; no criterion (iii) trip. No criteria tripped.
+- **ZBRA**: Mon 5/18 intraday snapshot $253.49 at 09:48 AM EDT (Yahoo Finance; close unconfirmed at market-open snapshot time). No invalidation criteria (i)-(iv) tripped.
+- **RTX**: Mon 5/18 close ~$171.18 (StockTitan 'Last Close'; RTX fell ~2.56% per Tickeron). No criteria tripped.
+- **DIS**: Mon 5/18 close ~$104.80 (MarketBeat reference). No criteria tripped.
+
+### New entries
+
+**BRC (Strategy B) — thesis-construction scheduled.**
+
+Day-0 close-to-close magnitude verification (MVG gate):
+- Session prompt (Daily.md 2026-05-18): "+18.98% intraday per Yahoo Finance Live" — flagged as MVG-pending pending primary-source regular-session close verification.
+- **Primary-source verification result**: Seeking Alpha confirmed BRC close $84.43 from prev close $70.96 = **+18.98% regular-session close-to-close CONFIRMED** (not intraday peak). MVG gate CLEARS.
+- Criterion 1: ≥5% C/C — CLEARS at 3.80× cushion.
+- Mcap: $3.35B — CLEARS $2B floor with $1.35B / 67.5% cushion.
+- Sector: Industrials / Industrial Machinery — CLEAR (0/3 sub-industry cap; Industrials sector: RTX occupies 1/3; adding BRC would be 2/3, within 3/3 cap).
+- B slots: 1/5 remaining after FIG/ONDS/POET NO-GO.
+- 10-day window: Day-0 = Mon 5/18; window expires Mon 2026-06-01 (10 trading days including Day-0).
+- Criteria 2-5 require thesis-construction session.
+
+**Calendar event created:**
+- Event ID: `5dcdjmu0j7fqfsa5k3sdtm688s`
+- Time: Wed 2026-05-20 09:00–11:00 MT (America/Denver)
+- Reminder: popup at 0 minutes
+- Description: Self-contained B thesis-construction prompt for BRC with all required context (Day-0 +18.98% verified, mcap $3.35B, Industrials / Industrial Machinery sector-cap context, 10-day window expiry Mon 2026-06-01, 1/5 B slot open, full criteria 1-5 walk required).
+
+**Scheduling rationale:** Tue 5/19 09:00 MT slot occupied by POET session. NVDA FQ1 27 earnings AMC Wed 5/20 — 09:00-11:00 MT pre-market window avoids conflict. Thu 5/21 would be Day 3 of window; Wed preferred for earlier evaluation.
+
+### INTC magnitude verification (B-routing pre-judgment)
+
+Daily.md 2026-05-18 §3 flagged INTC "+8.04% midday" as unverified Instagram cite with pending Mon C/C confirmation.
+
+**Primary-source verification result**: Motley Fool confirmed Mon close $108.17, down 0.55%. Fri 5/15 close $108.77 → Mon 5/18 close $108.17 = -$0.60 / **-0.55% Mon C/C**.
+
+- Criterion 1 (≥5% Day-0 C/C) FAILS mechanically at -0.55%.
+- B-routing pre-judgment NO confirmed MECHANICALLY (not analytically). No B thesis-construction session warranted.
+- A-queue context noted: Mon Citi PT raise $95→$130 (+36.8%, Buy) + Benchmark Equity Research PT raise $105→$140 (Buy) + Trump CNBC commentary + Tiger Global $180M Q1 fresh position per 5/17 13F = multiple bullish-narrative-ratification signals. A-queue thesis-quality MARGINALLY ELEVATED but compounded by Mon C/C fade, Fri stress, and sub-pattern 1 INTERMEDIATE-INTENSITY SINGLE-FIRM VARIANT THIRD INSTANCE candidate framing on Citi raise. Framing-flip-vs-hold disposition deferred to next M1 ACTIVATE evaluation 2026-06-01.
+
+### Watchlist updates applied
+
+Direct edits to Watchlist.md:
+1. **INTC A-queue row**: NOTE 2026-05-18 Mon C/C -0.55% confirmed; B routing NO mechanical; A-queue thesis-quality marginally elevated; disposition deferred to M1 2026-06-01.
+2. **MU A-queue row**: NOTE 2026-05-18 NEUTRAL — Mon ~-6% Samsung-strike-sympathy; ambiguous directional implication; FQ3 26 print 2026-06-24 AMC unchanged; note for M1 2026-06-01.
+3. **VST D re-screen pipeline row**: NOTE 2026-05-18 utility-AI-power-thesis structural ratification — NEE-Dominion Energy $66.8B all-stock merger confirms AI-electricity-demand narrative; adjacently ratifies VST and CEG theses; material for 2026-Q3 D candidate refresh and M1 2026-06-01.
+4. **CEG D re-screen pipeline row**: NOTE 2026-05-18 utility-AI-power-thesis structural ratification — same NEE-Dominion rationale; adjacently ratifies CEG and VST theses.
+
+### Router review
+
+No router review scheduled. All evidence reviewed per D2 protocol:
+- IGV Mon close $92.87: IBM criterion (iii) informational; no regime-state implication.
+- INTC Mon close -0.55%: Strategy B criterion 1 mechanical failure for INTC specifically; no regime-state implication.
+- NEE-Dominion $66.8B merger: narrative-ratification for D thesis candidates; no regime-measurement change.
+- MU -6% Samsung-strike-sympathy: individual-stock event; no breadth/SPY/VIX regime implication.
+- All regime-measurement inputs (SPY trend, VIX, yield curve, breadth) unchanged from last Regime_State.md update; M1 cadence-appropriate for next scheduled update.
+- Default-NO on ambiguity applied per D2 high-bar standard.
+
+### Orders staged
+
+None. No exits. BRC thesis-construction session required before any BRC entry; session scheduled Wed 5/20 via calendar event.
+
+### Mark-to-market refreshed
+
+All 6 open positions updated with Mon 5/18 data inline in Portfolio_Ledger.md mark-to-market fields (see position detail sections for exact figures).
