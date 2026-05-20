@@ -1,361 +1,202 @@
-2026-05-18
+2026-05-20
 
-# Daily Market Development Scan — 2026-05-18 (Monday; covers Sun 5/17 ~mid-day → Mon 5/18 ~16:00 ET close)
+# Daily Market Development Scan — 2026-05-20 (Wednesday; covers Mon 5/18 ~16:00 ET → Wed 5/20 ~post-close ET)
 
-**Scope note:** First D1 scan since Sat 5/16 (Sun 5/17 D1 omitted). 30-hour window captured here is effectively ~48 hours: Sun 5/17 mid-day weekend developments + 13F filings released over weekend + Mon 5/18 full cash session through close. Primary sources cross-verified for index closes, yields, oil, M&A; position-level marks verified where surfaced; some Mon sector-ETF closes not directly surfaced and flagged for D2.
+**Scope note:** First D1 scan since Mon 5/18 (Tue 5/19 D1 omitted). The ~30-hour window is extended here to ~48 hours to capture the skipped Tue 5/19 full session plus Wed 5/20 cash session through close, plus the NVDA FQ1 27 print released AMC Wed 5/20. Index closes / yields / oil cross-verified from primary-tracking sources for both days; position-level Wed closes verified where surfaced (IBM, IGV confirmed; HCA/META/ZBRA/RTX/DIS estimated from broad-tape and flagged for D2). NVDA print figures captured; NVDA Day-0 close-to-close reaction is Thu 5/21 (AMC print) and is flagged for Thu 5/21 D1.
 
 ## DEVELOPMENTS
 
 ### 1. Market-wide breaking events
 
-- **Trump CALLED OFF Iran attack scheduled for Tuesday at request of US Gulf Arab allies (Mon 5/18) — material de-escalation signal but Hormuz status quo unchanged.** Per CNBC "Oil prices stay in the green even after Trump calls off planned Tuesday attack on Iran" 5/18: Trump stated "serious negotiations are now taking place." Iranian media (cross-cited via CNBC) reported the US has proposed a **temporary waiver on oil sanctions until a final agreement is reached**. Brent intraday spiked above $111/bbl on initial conflict narratives then **eased back below $110 by extended-session trade** as the cancellation news cleared; WTI settled near **$102.50** vs. above $104 earlier session. **However**: per same CNBC source, "Strait of Hormuz remains largely shut" and "Trump administration continues to blockade Iranian ports" — the binding constraint on oil-pricing risk is NOT resolved by attack-cancellation; this is a Tier-2 de-escalation framing signal, not a regime-flip. **Net for IBM (iv) Brent watch**: Brent end-of-day ~$109-110 area roughly flat vs Fri 5/15 close $109.26; (iv) watch status SUSTAINED Tier-2 elevated-monitor; $20+ headroom to $130 trip-line preserved. Sources: CNBC 5/18 oil article, Yahoo Finance market-summary 5/18.
+- **Two-session regime swing: Tue 5/19 RISK-OFF (yields to multi-decade highs) → Wed 5/20 sharp RISK-ON reversal (yields ease, oil −5%, breadth recovers).** Tue 5/19 was the THIRD consecutive down day: SPX −0.67% to 7,353.61, Nasdaq −0.84% to 25,870.71, Dow −322.24/−0.65% to 49,363.88; the 10Y/20Y/30Y all set 52-week highs intraday (10Y 4.687% = highest since Jan 2025; 30Y briefly topped 5.19% = highest in ~19 years; 20Y 5.189%). Wed 5/20 fully reversed: SPX +1.08% to 7,432.97, Dow +1.31% to 50,009.35 (retook 50K), Nasdaq +1.54% to 26,270.36, Russell 2000 +2.56% to 2,817.36 (small-caps LED — breadth recovery reversing prior 2-day Russell underperformance), VIX 17.44 (−3.43%, mid-NORMAL). Wed drivers: 10Y eased to ~4.63% (off Tue's 16-month high), WTI crude −5%+ to below $100/bbl on Iran-deal optimism, Samsung strike averted (see below), and NVDA-anticipation tech bid. Sources: TheStreet 5/19 + 5/20, CNBC 5/19, Yahoo Finance Live 5/20.
 
-- **NextEra Energy (NEE) + Dominion Energy (D) announced $66.8 billion all-stock merger Mon 5/18 BMO — LARGEST POWER-SECTOR M&A ON RECORD; second-largest 2026 deal after SpaceX/xAI $250B.** Per Yahoo Finance / Fox Business / WSJ / NextEra IR press release: definitive all-stock agreement; **Dominion shareholders receive 0.8138 NEE shares per D share + $360M aggregate cash payment**; NEE shareholders ~74.5%, D shareholders ~25.5% of combined; offer-equivalent value ~$76/share based on Fri 5/15 closing prices. Combined entity = **largest US regulated electric utility by market value**; ~10M customers (FL/VA/NC/SC); ~110 GW generation; major Northern Virginia "Data Center Alley" footprint (Loudoun County); $2.25B customer-bill-credit commitment. Expected close 12-18 months pending FED/state regulatory approval. Anti-monopoly criticism already filed (American Economic Liberties Project). **Day-0 reaction**: D +9.4% close (premarket +13-14%); NEE -4.6% close (per Fox Business final quote NEE $89.10 -$4.26 / -4.57%); Yahoo cites NEE -5.25% intraday WSJ source. Reaction-pattern = canonical M&A target-pop / acquirer-economics-fade. Material for AI-power-demand structural narrative (data-center electricity arms race); affects Strategy D long-horizon candidates **VST** and **CEG** (utility-AI-thesis re-rating implications; CEG cited per Yahoo as Constellation's $26.6B Calpine deal benchmark below NEE-D scale). Sources: Yahoo Finance, Fox Business, WSJ, NextEra IR newsroom 5/18.
+- **Iran de-escalation continues — oil down two straight sessions on deal optimism; WTI <$100.** Trump stated the conflict "could end very quickly" while warning Washington could resume strikes if talks fail; he had called off a planned Tuesday strike to advance a potential deal. WTI fell >5% Wed to below $100/bbl (2nd straight decline) on hope Middle East supply could be gradually restored; Brent retreated in tandem (est. ~$104–107 area from prior ~$109). **Net for IBM (iv) Brent watch:** trip-line $130 headroom WIDENING (now ~$23–26 / ~18–20%); (iv) de-escalating from Tier-2 elevated-monitor toward Tier-1 baseline as oil sells off on de-escalation. Sources: Fortune oil 5/19, CME/TradingEconomics, Benzinga 5/20 ("Crude Oil Down 5%").
 
-- **Berkshire Hathaway 13F filed Sun 5/17 (covering Q1 2026) — COMPLETE EXIT of UnitedHealth (UNH) ~5M-share position + major portfolio restructuring (40 → 26 holdings) under new CEO Greg Abel.** Per 247wallst.com 5/17, Markets Today on X (Sun 5/17 evening): first operational 13F under Abel post Buffett step-down. Other notable moves: NEW Alphabet stake; NEW major commercial-aviation position (~39.8M shares / $2.64B); tripled SiriusXM media stake to $1.30B. UNH exit captures ~$2B gain (cost ~$1.6B → exit at ~$394/share). Per Intellectia: UNH **closed down ~3% Mon 5/18** on the disclosure. **Pattern signal**: Berkshire under Abel pivoting away from regulated-healthcare (DOJ antitrust overhang + UnitedHealthcare-CEO-murder-case backdrop) into AI-adjacent / commercial-aviation themes — directionally consistent with the Tier-1 stagflation-anxiety framework from Fri 5/15 D1. Sources: 247wallst, Markets Today X.
+- **Samsung Electronics 18-day memory-fab strike (was to start Thu 5/21) PUT OFF Wed 5/20 after tentative last-minute wage deal — overhang that hit MU/STX/SNDK Monday removed.** ~45,000–47,000 unionized workers had planned an 18-day walkout from May 21 (would have been the largest stoppage in semiconductor history; projected ~$700M/day cost). Talks broke down ~8 days prior, prompting a government-mediated summit; Wed the union agreed to hold off and put a tentative deal to a member vote. A one-day April strike had cut Samsung memory-fab output 18% (night shift) and foundry output 58%, so the averted action removes a material AI-supply-chain disruption tail. **Net:** the directionally-ambiguous Samsung overhang on MU (A-queue) is REMOVED; semis rallied Wed on the relief (MU +4.8%, INTC +4.7%, AMD up). Sources: WaPo / Washington Times / CNBC / Tom's Hardware / Korea Times 5/20.
 
-- **Mon 5/18 broad-tape: MIXED, modest decline at Nasdaq + Russell with Dow positive on M&A spillover (NEE/D + cyclicals).** Primary-source close (Yahoo Finance Live / TheStreet):
-  - **SPX 7,403.05** -5.45 / **-0.07%** (essentially flat vs Fri 7,408.50)
-  - **Nasdaq 26,090.73** -134.41 / **-0.51%** vs Fri 26,225.15 (extending Fri's leadership pullback)
-  - **Dow 49,686.12** +159.95 / **+0.32%** vs Fri 49,526.17 (Dominion-Berkshire-NextEra spillover + cyclical bid; first positive day after Fri sell-off)
-  - **Russell 2000 2,775.10** -18.20 / **-0.65%** vs Fri 2,793.30 (small-cap WEAKNESS continues; second consecutive day Russell underperforms)
-  - **VIX 17.82** -0.61 / **-3.31%** vs Fri 18.43 (back to mid-NORMAL band as Trump-cancel-attack relief absorbed)
-  - Headline framing per TheStreet: "Nasdaq, S&P 500 sink to start week as 10Y Treasury yield hits highest in a year"; per Yahoo: "stocks rising and oil prices easing as investors monitored U.S.-Iran conflict and geared up for earnings from Nvidia"
-  - Sources: TheStreet 5/18, Yahoo Finance Live 5/18.
+- **SpaceX IPO S-1 filed Wed 5/20** (per TheStreet 5/20). Notable market event (largest-ever private-company IPO pipeline; follows the SpaceX/xAI $250B transaction context) but no direct US-listed-position read-through. Reference-only.
 
-- **10Y Treasury yield TOUCHED 15-MONTH HIGH intraday before settling around 4.601%; 30Y settled 5.133% (highest since 2007 — second consecutive trading day above 5%).** Per CNBC "10-year Treasury yield touches highest in a year, Japan's 30-year yield rises to a record" 5/18: Treasury yields "little changed on Monday, taking a breather after a global bond rout that sent them sharply higher last week." Japan 30Y hit fresh RECORD high (extends Fri's 4.0% mark). **Tier-1 macro framing per Morgan Stanley** (cited via Yahoo Finance Live): **4.5% is "noticeable headwind for equity multiples"** — both 10Y (4.6%) and 30Y (5.13%) above this band. Wall Street pricing ~50% odds of Fed rate HIKE by year-end per FedWatch (carried over from Fri). Net: bond-market stress sustained at Tier-1 strength; no relief vs Fri 5/15 framing. Source: CNBC bond article 5/18.
+- **No other Tue 5/19 / Wed 5/20 market-wide breaking events captured** — no ≥$2B US-listed material bankruptcies, no disasters, no unscheduled regulatory enforcement actions, no fresh Russia-Ukraine escalation at scan depth.
 
-- **Elon Musk LOST $150 billion lawsuit against OpenAI Mon 5/18 — jury ruled claim exceeded statute of limitations.** Per Yahoo Finance Live. Mostly headline news; minimal market impact (XAI/SpaceX private). Material for AI-leadership-narrative-context.
+### 2. Scheduled events that resolved (US-listed universe ≥$2B mcap, Tue 5/19 + Wed 5/20)
 
-- **Iranian Nobel laureate Narges Mohammadi released from hospital Mon 5/18** (per AP wire) — humanitarian Tier-3 framing; modest positive for Iran-de-escalation narrative; not market-moving in isolation.
+**NVDA — FQ1 FY27 print Wed 5/20 AMC (THE headline catalyst; A-queue #1):** Reported revenue **$81.62B (+85% YoY** from $44.06B) vs ~$79.2B consensus = BEAT; non-GAAP EPS **$1.87** vs ~$1.77–1.78 consensus = BEAT (~+6%); **Data Center revenue $75.2B (≈doubled YoY), 92% of total**; **added $80B to buyback authorization + raised dividend**; strong Q2 FY27 outlook; management framed the new **Vera CPU as a "$200B new tab"** with "every major hyperscaler and system maker" partnering. Blackwell→Vera Rubin transition cited as on track. **Day-0 close-to-close reaction is Thu 5/21** (AMC print); options had priced an ~5–10% implied move. Print materially RATIFIES the A-queue bullish narrative-misalignment thesis (sovereign AI / Rubin / Blackwell under-modeled). Flag for Thu 5/21 D1 Day-0 capture. Sources: Fortune 5/20, CNBC 5/20, Motley Fool 5/20, public.com.
 
-- **No other Sun 5/17 / Mon 5/18 market-wide breaking events captured.** No US-listed-≥$2B material bankruptcies, no disasters, no unscheduled regulatory enforcement actions, no major weekend escalation in Russia-Ukraine (Trump three-day ceasefire from prior week status unchanged at scan depth).
+**HD — FQ1 26 print Tue 5/19 BMO (A-queue, bearish thesis):** Revenue $41.77B (+4.8% YoY) topping ~$41.59B; comparable sales **+0.6%** (US +0.4%); adj EPS **$3.43** vs $3.41 = slight beat but **−3.7% YoY**; gross margin 33% (−75bps, GMS-acquisition drag), operating margin 11.9% (from 12.9%) = margin compression; **FY26 guide REAFFIRMED**. Stock **−2.49%** Tue (sub-5% / FAILS B criterion-1 floor). A-queue bearish thesis (housing-turnover starvation, pro-segment soft) partially supported (soft comps + margin compression) but not decisively (EPS beat + guide reaffirmed; orderly decline). Note for M1.
 
-### 2. Scheduled events that resolved Mon 5/18 (US-listed universe ≥$2B mcap)
+**Retail-print cluster Wed 5/20 BMO:** **TJX** Q1 FY27 — EPS **$1.19** vs ~$1.02 est (+19% beat), revenue $14.32B vs ~$14.02B, comps **+6%**, **FY26 EPS guide RAISED to $5.08–$5.15**; stock **+4.7%–5.48%** (sources diverge across the 5% line — magnitude-verification needed). **Lowe's (LOW)** Q1 — diluted EPS $2.90 (vs $2.92 PY), comps +0.6%, online +15.5%; "upbeat" beat-raise tone; modest reaction. **Target (TGT)** and **WMT** print Thu 5/21 BMO (A-queue; not yet resolved — flag for Thu 5/21 D1).
 
-**Mon 5/18 BMO earnings (US-listed ≥$2B):**
+**IMVT (Immunovant) Wed 5/20:** Reported Phase 2 difficult-to-treat RA data (IMVT-1402, **72.7% response rate**) alongside a FQ4 earnings MISS (−$0.73 vs −$0.61 est); stock **+35.6%** on the clinical data (data-driven, not earnings-driven). See §3.
 
-- **Brady Corporation (BRC) — Q3 FY26 print BMO Mon 5/18** — Day-0 intraday **+18.98% MOVE per Yahoo Finance Live 5/18** (likely Day-0 close-to-close in similar range pending verification). Mcap pre-print $3.35B per Yahoo earnings calendar (PASSES $2B floor with ~67% cushion). Industrial Components / Industrial Machinery (Industrials sector). Magnitude clears criterion 1 ≥5% by ~3.8× cushion. Cons EPS $1.35 with reported $1.50 (per Yahoo earnings panel — +11.1% beat if those are actuals). **B-eligible event class confirmed (earnings)**. Sub-pattern routing under W5 taxonomy: candidate for sub-pattern 1 INSTANCE family (information-driven post-print PT-raise sub-pattern) IF post-print sell-side cluster materializes within 24-48 hours at ≥+10% magnitude. **NEW B candidate flagged for thesis-construction evaluation; full criteria 1-5 work required in separate session per Strategy.md**. Sources: Yahoo Finance Live, Yahoo Finance earnings calendar 5/18.
+**Other:** BIDU printed Q1 5/18 (EPS $1.75 vs $1.69 beat; AI Cloud +79%; rev −1.2% YoY) — modest reaction, ADR. **TCOM correction:** prior Daily.md 5/18 flagged TCOM as a Mon 5/18 AMC print with Tue 5/19 Day-0 reaction — TCOM actually reports **5/25**; no TCOM Day-0 reaction occurred this window. ZIM scheduled Q2 5/20 (loss expected; small-mid). **No Tue/Wed FDA PDUFA decisions** or **FOMC actions** captured (next FOMC 6/16–17).
 
-- **Other Mon 5/18 BMO reports per Yahoo earnings panel**: RYAAY (Ryanair, $27.77B; ADR / Irish), ReNew Energy Global RNW (small/mid-cap $1.95B — does NOT meet $2B floor), Agilysys AGYS (sub-$2B). Mon BMO list dominated by sub-threshold / international names.
+### 3. Large single-name moves (US-listed ≥$2B mcap, ≥5% C/C, identifiable event)
 
-**Mon 5/18 AMC earnings (US-listed ≥$2B):**
+1. **IMVT (Immunovant) +35.6% Wed 5/20** — Phase 2 RA efficacy readout (72.7% response, IMVT-1402); earnings-miss same day but data drove the move. Event class = **binary clinical-data readout** (not earnings/FDA-decision/guidance/regulatory per Strategy.md B-enumerated class; closest fit "material corporate development," but data-driven efficacy = genuine new-information pricing, not sentiment overshoot; sub-pattern 5 binary-catalyst territory). **Pre-judgment NO B routing** on event-class/mechanism mismatch. Surfaced for completeness; D2 to verify ≥$2B mcap if any routing reconsideration.
 
-- **Trip.com (TCOM) Q1 2026 AMC** — Chinese travel ADR; ~$45B mcap per MarketBeat; AMC release; results / Day-0 reaction will be Tue 5/19 D1 capture. **Flag for D1 Tue verification**.
-- **Bally's (BALY)** — $567M mcap (sub-$2B floor).
-- **Yalla (YALA)** — $996M (sub-$2B floor).
-- Per Algogene Mon 5/18 earnings calendar week scan, broader Tue-Fri pipeline includes BIDU (Tue), AGYS, ZIM, INTU, SNOW, etc. Material peer-print context for NVDA Wed 5/20 AMC.
+2. **SNPS (Synopsys) ≈+7.6% Wed 5/20** (to ~$491.58, +$34.73) — large move but apparent driver is **semiconductor/AI-EDA sympathy ahead of NVDA + Samsung-relief risk-on tape**, not an identified idiosyncratic public event (SNPS earnings later; no fresh 8-K/guidance surfaced). Event-class mismatch per DG 5/12 / STX 5/18 sector-sympathy doctrine (sympathy/sector-rotation ≠ idiosyncratic post-public-event). **Pre-judgment NO B routing**; D2 to flag if a specific SNPS catalyst surfaces.
 
-**Mon 5/18 macro releases:**
+3. **TJX +4.7%–5.48% Wed 5/20** — Q1 FY27 clean **beat-raise** (see §2). Borderline ≥5% at the criterion-1 floor; sources straddle the line = **MAGNITUDE-VERIFICATION-GATE candidate** (intraday-vs-close divergence family: DASH/AXSM/EQIX/MNDY/AMAT precedent). Off-price retail (Consumer Discretionary). Pre-judgment: information-driven beat-raise (comps +6%, guide raised) → likely sub-pattern 1 (information-priced) territory; **D2 must verify Day-0 C/C ≥5% before any thesis-construction commit.** See §Opportunity Check + §Recommended Actions.
 
-- **NAHB Housing Market Index (May)** — typically released ~10:00 AM ET Mon. Specific May 2026 figure not surfaced at this scan depth. April was 40 (well below long-term 50). Consumer-housing-stress sub-theme continues per prior UMich 48.2 / retail-sales-soft / 30Y-above-5% backdrop. Flag for D2 if material divergence captured.
+4. **Semi-sympathy movers Wed 5/20: INTC +4.7%, MU +4.8%, AMD up** — Samsung-strike-relief + NVDA-anticipation + AI-tape risk-on. Sector-sympathy, NOT idiosyncratic B events (DG/STX doctrine). INTC and MU are A-queue (context in §Watchlist). All sub-5% on close anyway.
 
-**Mon 5/18 FDA / regulatory:**
+5. **Microcap/sub-$2B noise (excluded):** HCWB +128% (licensing), PETZ +31%, RKDA +28%, LICN −62%, JEM −32%, SUGP −21%, PPBT −17% — sub-$2B or non-clean-event; no B/A relevance.
 
-- **No new Mon 5/18 PDUFA decisions** captured. Prior Daily.md 5/16 had flagged ENHERTU Mon 5/18 PDUFA but verification per FDA primary source and StockTitan: **AstraZeneca/Daiichi-Sankyo ENHERTU dual-approval (neoadjuvant + adjuvant HER2-positive early breast cancer) was issued Fri 5/15** (not Mon 5/18 as prior daily implied). $155M AZN-to-Daiichi milestone payment triggered. NCCN guideline Category-1 recommendation. **Day-0 reaction already absorbed Fri 5/15** (not captured in 5/16 Daily.md depth); not a fresh Mon trigger. Sources: pharmanow.live, fda.gov, stocktitan AZN 5/16.
+6. **Tue 5/19:** broad yield-driven decline; HD −2.49% (sub-5%). No additional US-listed ≥$2B idiosyncratic ≥5% clean-event movers surfaced at scan depth (Tue tape was macro/yield-dominated, not single-name-event-dominated).
 
-### 3. Large single-name moves Mon 5/18 (US-listed ≥$2B mcap, ≥5% C/C, identifiable event)
+### 4. Sector-level moves
 
-**Confirmed Mon 5/18 ≥5% movers per Yahoo Finance Live + Tavily cross-checks:**
-
-1. **Dominion Energy (D) ~+9.4% close** — NextEra acquisition target (per §1). Event class: M&A definitive agreement (qualifies as "regulatory action / corporate action" under Strategy B framework). **However**: as fixed-exchange-ratio M&A target, D price will trade close to deal-implied value ($76-ish / 0.8138 × NEE close); Strategy B mean-reversion mechanism does NOT apply to acquired-target post-announcement repricing (price-discovery is mechanical, not behavioral). **No B routing**. Strategy A multi-quarter thesis territory IF utility-AI-power narrative warrants A-queue placement (router currently DO-NOT-ACTIVATE so any A-queue add waits to next M1).
-
-2. **NextEra Energy (NEE) ~-4.6% close** (-$4.26 to $89.10 per Fox Business final quote) — acquirer move; magnitude **just below 5% threshold** at -4.6% (FAILS criterion 1 mechanical floor by ~0.4pp). Even if -5% threshold cleared by Day-1, NEE deal-economics-fade is classic acquirer-deal-leak-already-priced-in mechanism = sub-pattern 1 INVERTED-direction (sell-side likely to come out with deal-modeling notes that anchor target rather than reset; analogous to FIG 5/15 PT-cut cluster mechanism but on M&A driver vs earnings). **No B routing pre-judgment**; flag for D2 if magnitude verifies ≥5% Day-0/Day-1 close-to-close.
-
-3. **Brady Corporation (BRC) +18.98%** — see §2; **NEW B candidate for thesis-construction**. Routing detail in §RECOMMENDED ACTIONS.
-
-4. **LiveRamp (RAMP) +27.34% intraday** — **Publicis Groupe announced acquisition Mon 5/18 BMO at $38.50/share cash** (29.8% premium to Fri 5/15 close ~$29.66); deal value ~$2.5B equity + ~$2.546B total per Publicis. Mcap pre-deal ~$2.0-2.2B (borderline at $2B floor — needs verification). Event class: M&A definitive cash agreement. **Fixed-cash-deal target = NO B routing applies** (price anchors to $38.50 deal value mechanically; no mean-reversion mechanism; analogous to D above but more extreme — cash deal eliminates exchange-ratio variability). Sources: stocktitan RAMP 5/18, rttnews Publicis 5/18, businessinsider Publicis 5/18.
-
-5. **Seagate Technology (STX) ~-7% close** — Samsung 50,000-worker strike threat (potential 18-day walkout starting May 21) per techtimes.com 5/16 / korejoongang 5/18 / wccftech / NDTV / Korea Joongang / Facebook Business Today. Court issued PARTIAL injunction against strike per wccftech 5/18 (~partial relief; still material disruption risk on HBM4 / NAND / DRAM supply chain). KB Securities estimate: 30-40% strike participation could cause **3-4% global DRAM supply disruption** and **2-3% NAND disruption**. STX (HDD-storage) is structural beneficiary of memory-shortage substitution (HDD vs SSD/NAND dynamics) but Day-0 -7% suggests market is treating STX as broader storage-sector sympathy weakness, not differentiated beneficiary. Mcap ~$20B PASSES. **Event class ambiguous**: industry-wide Korean labor dispute is structurally similar to "macro-driven sector-rotation" precedent (DG 5/12 EVG-failure doctrine) — NOT idiosyncratic post-public-event mispricing per Strategy.md B paragraph enumerated event class (earnings / FDA / guidance / regulatory). **Pre-judgment NO B routing on event-class structural mismatch** per DG precedent; sympathy-rotation moves are M3/M4-cadence questions for E-pair-or-D-thesis evaluation, not B. Sources: techtimes.com 5/16, koreajoongang 5/18, wccftech 5/18.
-
-6. **Micron (MU) ~-6% close** — same Samsung-strike-fears driver as STX; mcap $100B+ PASSES. MU is on A-queue per Watchlist 5/9 (FQ3 26 earnings 2026-06-24 AMC bullish thesis). Same NO B routing rationale as STX (event class structural mismatch). **A-queue context**: directional uncertainty — Samsung strike COULD benefit MU (rival production disrupted → MU HBM allocation gains) but COULD harm MU (DRAM-cycle disruption hits all suppliers). Net for A queue: **NEUTRAL update; not a re-rating of MU A-thesis**. Note for next M1 ACTIVATE evaluation.
-
-7. **SanDisk (SNDK) >-5% close** — same Samsung-strike-fears driver; SNDK mcap verification needed (post-WDC spinoff; may be borderline $2B). Same NO B routing rationale as STX/MU.
-
-8. **UnitedHealth (UNH) ~-3% close** — Berkshire-13F-exit (per §1); magnitude **BELOW 5% threshold** at -3% (mechanical FAIL). **No B routing**. UNH multi-quarter regulatory + medical-cost-ratio storyline = potential D-territory long-horizon evaluation, but UNH not on Quarterly_D_Candidates.md shortlist; defer to Q3 quarterly D candidate refresh (~July).
-
-9. **Intel (INTC) — fresh Mon 5/18 catalyst layer + bounce.** Per TheStreet 5/18: **Citi (Atif Malik) raised PT $95 → $130 (+36.8%, Buy maintained) Mon 5/18** post Fri's -7-8% selloff. CNBC headline: **"Trump says he should've asked for 'more' of Intel"** (government-stake context). Intraday: Instagram cite "INTC ↑ +8.04% as chipmaker gains ground among market movers" (Mon midday) — implies INTC Day-0 Mon C/C in approximate **+5-8% range** rebound from Fri close ~$108. **Mechanical-criterion-1 magnitude potentially clears ≥5% on Mon Day-0 reactive bounce IF +5% C/C confirmed by D2 verification**. **However**: per Watchlist 5/12 A-queue routing (WSJ-Apple-foundry-scoop multi-quarter thesis) + reinforced by Fri 5/15 Daily.md 5/16 §3 INTC routing analysis, **B-routing pre-judgment remains NO** for following converging reasons:
-   - **(a) Mon move driver is sell-side PT raise (Citi $95→$130 single-firm aggressive +36.8% raise)** — sub-pattern 1 INTERMEDIATE-INTENSITY SINGLE-FIRM VARIANT THIRD INSTANCE candidate (after OMCL 2026-04-29 first / ONDS 2026-05-18 second; Maxim ONDS +37.5% nearly identical magnitude to Citi INTC +36.8%); sub-pattern 1 LONG-foreclosed per established disposition. Pending W5 taxonomy validation that this routing extends across multi-firm-precedent cases (OMCL=KeyBanc; ONDS=Maxim; INTC=Citi — three distinct anchor firms confirm cross-firm structural pattern not firm-specific artifact).
-   - **(b) sector-cap interaction**: IT-sector 2/3 (IBM Services + ZBRA Electronic Equip Instruments & Components) → 3/3 saturation at Semiconductors & Semi Equipment if added.
-   - **(c) sub-pattern 3 dominant backdrop**: INTC YTD +194.77% per AOL 5/17 / 247wallst 5/17 ("Tiger Global $180M Q1 2026 new position; up 404.73% over past year") = canonical pre-event-rally-absorbing-narrative; Mon Citi PT raise is information-ratification on rally, not under-extrapolation correction.
-   - **(d) A-territory thesis already established** per Watchlist 5/12 (multi-quarter Apple-foundry / 14A-customer-ramp / Trump-Intel-government-stake narrative); reinforced Mon by Citi PT raise + Trump "more of Intel" commentary + Tiger Global Q1 fresh $180M position.
-   - **(e) Mon move-driver is reactive bounce from Fri overshoot, not idiosyncratic new event** — even if magnitude clears mechanical floor, the bounce-from-overshoot mechanism is structurally similar to MNDY 5/12 SUB-PATTERN 8 routing (depressed-positioning-unwind on modest-confirmation) but with Mon Citi-PT-raise as ADDITIONAL bullish information layer, making it sub-pattern-1-ratification-on-pullback rather than pure pre-print-positioning-unwind.
-   - **NEW INSTANCE established (pending magnitude verification)**: **sub-pattern 1 INTERMEDIATE-INTENSITY SINGLE-FIRM VARIANT THIRD INSTANCE candidate (INTC Citi 5/18)** — pending W5 formal taxonomy promotion at second-instance-validation milestone reached with ONDS Mon AM. **A-queue context update for next M1**: Mon Citi PT raise + Trump-government-stake-commentary = bullish-narrative-ratification layer; A-queue thesis-quality MARGINALLY ELEVATED but compounded by Fri's valuation-correction stress + sub-pattern 1 LONG-foreclosure mechanism. Sources: TheStreet 5/18, AOL Tiger Global 5/17, CNBC INTC quote page 5/18, Intellectia INTC notes 5/18.
-
-10. **Other Mon ≥5% movers per Yahoo Finance Live**: no additional US-listed-≥$2B mcap names surfaced with clean B-eligible idiosyncratic event-class beyond above. Mon's broader tape was M&A-and-sector-rotation-dominated (NEE-D-deal-vortex pulling utility/AI-power names; Samsung-strike pulling memory/storage names; Berkshire-rebalance pulling UNH; Intel single-name-bounce); broad-tape idiosyncratic clean event-class candidates were thin.
-
-### 4. Sector-level moves Mon 5/18
-
-**Direct Mon close not surfaced for most sector ETFs at this scan depth.** Inferred from index moves + named-stock cluster behavior:
-
-- **XLU (Utilities)** — implied STRONGLY POSITIVE Mon on NEE-D mega-merger; sector-wide AI-power-demand re-rating likely; specific Mon close pending D2 verification.
-- **XLY (Consumer Discretionary)** — directionally weaker per consumer-stress framing + Russell -0.65% backdrop; specific close pending. Disney (DIS) thesis context: no Mon Disney-specific news captured.
-- **XLE (Energy)** — directionally weaker per Brent fade from $112 → $109-110 area; specific close pending. Reverses Fri's XLE strength on Brent +3.35%.
-- **XLK (Technology)** — directionally weaker per Nasdaq -0.51% + AI-leadership-reversal continuing into second session; semis weakness (STX/MU/SNDK 5-7% declines) dominant.
-- **SOXX (Semiconductor)** — likely materially weaker per STX/MU/SNDK -5-7% cluster; specific close pending.
-- **IGV (Software)** — directional pending. **Critical for IBM (iii) live-watch**. Per Tavily depth: no direct Mon IGV close surfaced. If broadly tracking Nasdaq -0.51% pattern, IGV Mon est. -0.5% area; estimated $86-89 range vs $80 floor (~7-10% headroom; modestly narrowed from prior estimate). **(iii) NOT-TRIPPED; Tier-1 sustained monitor; D2 to verify Mon close.**
-- **XLF (Financials)** — directionally mixed: rising-yields-curve-positive for net interest margins offsetting macro-stress concerns; direction pending verification.
-- **XLV (Healthcare)** — UNH -3% pulls XLV down; Berkshire-rotation-narrative compounding; specific close pending.
-
-**No ≥2% sector-ETF moves captured at this scan depth** but utility/memory-storage subsector divergence (XLU up substantively / SOXX down substantively) suggests intra-day dispersion was material despite headline-index near-flat behavior.
+- **Specific sector-ETF closes not directly surfaced for most groups at this scan depth** (flag for D2). Inferred from index + named-cluster behavior:
+  - **Semis (SOXX/SMH)** — STRONGLY POSITIVE Wed on Samsung-strike-relief + NVDA-anticipation + AI-EDA strength (MU/INTC/AMD/SNPS); reverses Mon's memory-storage weakness.
+  - **XLK (Technology)** — positive Wed (Nasdaq +1.54%); AI-leadership bid restored intraday vs the prior 2-session pullback.
+  - **XLE (Energy)** — negative Wed on WTI −5% (Iran-deal optimism); reverses prior strength.
+  - **XLU (Utilities)** — no fresh Wed driver beyond Mon's NEE-Dominion deal context.
+  - **IGV (Software)** — **$92.44 Wed 5/20 close CONFIRMED** (prev close $91.95); CRITICAL for IBM (iii) live-watch → headroom $12.44 / 15.5% above $80 floor; **(iii) NOT-TRIPPED, cleared with expanded headroom.**
+- **No clean ≥2% single-day sector-ETF close captured at scan depth**, but Wed intraday dispersion was material (semis/small-caps up sharply vs energy down) on the risk-on reversal. D2 to refresh sector-ETF close panel.
 
 ### 5. Notable commentary
 
-- **Morgan Stanley 4.5% yield framing as "noticeable headwind for equity multiples"** per Yahoo Finance Live 5/18 — **CRITICAL framing**. Both 10Y (4.6%) and 30Y (5.13%) above this implied band; thesis is that durable yield-above-4.5% structurally compresses P/E multiples on duration-sensitive growth names (mega-cap-tech / SaaS / unprofitable-growth). Reinforces AI-infrastructure-leadership-flipping framing from Fri 5/15 D1 / Daily.md 5/16.
-
-- **KeyBanc raised NVDA PT $275 → $300** per Yahoo Finance Live 5/18 — Buy / Overweight maintained ahead of NVDA FQ1 27 print Wed 5/20 AMC. Expects "strong results and guidance bolstered by increasing shipments of Blackwell GPUs, estimated at 150,000 to 200,000 quarter-over-quarter." Mon NVDA +0.38% premarket / closed approximately flat per CNBC quote page (specific close pending verification). **NVDA pre-print positioning Tier-1 macro for Wed 5/20 AMC**: Polymarket cited at 95% probability of beat per AOL 5/17. Already-priced-in dynamics likely material for Day-0 reaction post-print.
-
-- **CNBC TechCheck Evening Edition 5/18** (per CNBC META quote page): **"Meta layoffs starting this week stress harsh AI reality inside Zuckerberg's company"** — META begins ~8,000 / 10% workforce layoffs Wed 5/20 per NDTV / Blind / Instagram reels social-source convergence (single-public-source verification per CNBC). Materially relevant for META (Strategy B holding) but **does NOT trigger position invalidation criteria** (criterion (i) is 8-K resetting 2026 framework; criterion (ii) is pre-announcement / advertiser pullback; layoffs are operational restructuring not framework reset and not advertiser-side). **HOWEVER**: layoffs ARE a structural-cost-action signal that potentially reinforces AI-capex-pressure-on-near-term-FCF narrative — UBS reportedly cut META PT $908 → $865 per perplexity. This is sell-side opinion adjustment, not thesis trigger. **META hold thesis intact**.
-
-- **30Y above 5% second consecutive trading day**, per CNBC bond article 5/18: framing consistent with Fri 5/15 Tier-1-macro signal package. Coordinated international response messaging (US/Japan/others discussing yield-rout response) continues from Fri framing. **Tier-1 macro signal sustained for June M1 fundamental DNA re-derivation.**
-
-- **Trump CNBC interview Mon 5/18: "should've asked for 'more' of Intel"** — government-stake commentary on Intel deal. Adds Tier-2 positive-framing to INTC A-queue (already-elevated) but is also fodder for "industrial-policy-intervention-on-individual-name" framing concern (governance of single-stock pricing via political-narrative-injection). Material for INTC sub-pattern characterization but not regime-flipping.
-
-- **Pershing Square / Ackman MSFT stake confirmed in 13F (per Reuters 5/15 carried into Mon 5/18 trading)** — MSFT +3.1% Fri / +1.07% Mon per MarketWatch competitor panel; cumulative re-rating on Ackman thesis "compelling valuation" framing.
-
-- **No FDA / regulator / central-bank market-moving speech captured Sun 5/17 / Mon 5/18** beyond Trump Intel comments + Iran-attack-cancellation. Warsh post-confirmation public commentary still not captured at this scan depth.
-
-- **NM AG v. Meta Phase II bench trial (Judge Bryan Biedscheid, Santa Fe)** — no Sun/Mon Judge Biedscheid ruling/order captured at this scan depth. Trial Day 11-12 progressing through Fri 5/22. **META invalidation criterion (iii) NOT triggered.**
-
----
+- **NVDA FQ1 27 blowout print (rev $81.62B +85%, DC $75.2B doubled, +$80B buyback, dividend raise, Vera $200B TAM)** is the dominant Wed-evening signal — a **strong COUNTER-signal to the "AI-infrastructure-leadership-flipping" narrative** carried in prior dailies (Fri 5/15 / Mon 5/18). Materially relevant for June M1 A-queue re-rating across AI/tech names (NVDA/AVGO/ORCL/MU/AMAT/CSCO/INTC/DDOG/AKAM/ADBE/NBIS). Day-0 tape reaction Thu 5/21.
+- **Yields backed off multi-decade highs Wed** (10Y ~4.63% from Tue's 16-month-high 4.687%; 30Y off ~19-yr-high 5.19%). The Tue spike → Wed relief means the "bond-market-stress / stagflation-anxiety" Tier-1 framing is intact but no longer escalating; net flat-to-relieving day-on-day. Tier-1 macro input for June M1 fundamental DNA re-derivation.
+- **Meta layoffs commenced Wed 5/20** — ~8,000 employees notified (10% of workforce; 3 waves; first of additional rounds planned Aug + fall 2026); 6,000 hiring plans canceled; ~7,000 redirected into new AI teams; 16-week severance. Context: record Q revenue $56.31B / net income $26.8B; 2026 capex guide $125–145B. **Operational cost-action funding AI capex — NOT a 2026-framework reset, NOT advertiser-pullback; record revenue reaffirms ad strength.** Material for META position context but does NOT trip invalidation criteria (see §Risk). UBS-style PT-trim chatter from Mon = sell-side opinion, not 8-K.
+- **PANW +~3% Wed** on Stifel PT raise $185→$275 ahead of FQ3 print 6/3 (sub-5%; sell-side action, not a B event).
+- **NM AG v. Meta:** the $375M jury verdict was **March 24** (already known/priced at META 5/5 entry); the **Phase II bench trial** (additional penalties + product-change remedies, Judge Biedscheid) began **May 4** and continues — **no new Tue/Wed ruling captured.** META criterion (iii) NOT triggered.
 
 ## ANALYSIS — RISK TO EXISTING POSITIONS
 
-### 1. IBM (Strategy B, entry $230.17 4/27, time-exit 6/26) — **NO INVALIDATION; modest Mon recovery from Fri 52-week-stress-zone**
+All six open positions (IBM-B / HCA-B / META-B / ZBRA-B / RTX-D / DIS-D) — no invalidation-criterion trip Tue 5/19 / Wed 5/20.
 
-- (i) **IBM 8-K reducing FY26 cc revenue guide — Not triggered.** No Sun/Mon 8-K.
-- (ii) **IBM pre-announcement / negative Software or Red Hat update — Not triggered.** No fresh negative business signal.
-- (iii) **IGV ≤ $80 close — Not triggered.** Mon close not directly verified; est. ~$86-89 area (~7-10% headroom; modestly narrowed). Sustained Tier-1 monitor; D2 to verify Mon close.
-- (iv) **Brent ≥ $130/bbl close — Not triggered.** Brent Mon settled ~$109-110 area (down from intraday $111+ spike on Trump-cancel-attack relief); roughly flat vs Fri 5/15 $109.26. ~$20-21 / ~15-16% headroom to $130 trip-line preserved. (iv) status SUSTAINED Tier-2 elevated-monitor (no improvement to Tier-1-baseline because Hormuz remains shut; not a regime resolution).
-- IBM Mon 5/18 close per MarketWatch (intraday $221.06 +0.80% at 10:28 AM EDT) and Bloomberg (delayed close cite "+1.57%" to 4:00 PM EDT 05/18/26): IBM closed approximately **$222.74 +$3.44 / +1.57%** vs Fri close $219.30. Mark-to-market: 0.1198 × $222.74 = **$26.69 mark value vs $27.85 cost basis = -$1.16 / -4.16% unrealized loss** (improvement of ~+1.5pp from Fri close). Convergence target $245 = +$22.26 / +10.0% remaining runway over 5.5 weeks to time-exit 6/26.
-- **Hold; modest Mon recovery from Fri 52-week-stress-zone (Wed 5/13 intraday $212.34 low); thesis runway intact at ~10% to convergence target over 5.5-week residual; no invalidation-criterion text trip; (iv) Brent Tier-2 sustained; (iii) IGV Tier-1 sustained; flagged for W3 Open-Position Deep-Dive whenever next-scheduled.**
+### 1. IBM (Strategy B; entry $230.17 4/27; convergence $245; time-exit 6/26) — **NO INVALIDATION; stress posture EASING**
+- (i) 8-K cutting FY26 cc revenue guide — **Not triggered.**
+- (ii) Pre-announcement / negative Software or Red Hat update — **Not triggered.**
+- (iii) **IGV ≤ $80 — Not triggered. IGV $92.44 Wed close CONFIRMED** (prev $91.95); $12.44 / 15.5% headroom. Tier-1 monitor remains CLEARED with expanded headroom.
+- (iv) **Brent ≥ $130 — Not triggered.** WTI −5% Wed to <$100 on Iran-deal optimism; Brent retreating (est. ~$104–107); headroom WIDENING to ~$23–26 / ~18–20%. (iv) DE-ESCALATING from Tier-2 elevated-monitor toward Tier-1 baseline (oil selling off on de-escalation; Hormuz status no longer the binding upside-oil risk it was Mon).
+- **Mark:** IBM **$223.89 Wed close CONFIRMED** (vs Mon $222.74); 0.1198 × $223.89 = **$26.82 mark vs $27.85 cost = −$1.03 / −3.70% unrealized** (improving ~+0.5pp from Mon −4.16%). Convergence $245 = +$21.11 / +9.4% runway over ~5 weeks to 6/26.
+- **Hold;** both live-watch criteria (iii) IGV / (iv) Brent moving favorably; elevated-stress posture easing. Flag for W3 deep-dive whenever next-scheduled.
 
-### 2. HCA (Strategy B, entry $433.46 4/28, time-exit 6/27) — **NO INVALIDATION**
+### 2. HCA (Strategy B; entry $433.46 4/28; convergence $442.85; time-exit 6/27) — **NO INVALIDATION**
+- (i) 8-K cutting FY26 guide — **Not triggered.** (ii) Pre-announcement / negative update — **Not triggered.** (iii)/(iv) THC/UHS peer-prints already CLEARED.
+- No HCA-specific news Tue/Wed. Mon close $423.00; Wed risk-on (XLV not surfaced) → estimated ~$425–432 range; D2 to verify Wed close. **Hold.**
 
-- (i) No HCA 8-K cutting FY26 guide. **Not triggered.**
-- (ii) No HCA pre-announcement / negative business update captured Sun/Mon. **Not triggered.**
-- (iii) / (iv) THC / UHS peer-prints already CLEARED.
-- HCA Mon 5/18 close not directly surfaced at this scan depth. Berkshire-rebalance-rotation-out-of-UNH likely DOES NOT drag HCA materially (UNH is health-insurer; HCA is hospital-operator; different sub-industry; pairwise correlation moderate not high); XLV directional pending verification but UNH -3% likely caps XLV upside on the day. HCA Mon close likely in $425-435 range pending verification.
-- **Hold; flag for D2 Mon close verification.**
+### 3. META (Strategy B; entry $601.30 5/5; convergence $626.21; time-exit 7/2) — **NO INVALIDATION; layoffs commenced but not a thesis trigger**
+- (i) **8-K resetting 2026 framework** (capex >$145B third raise / total expense >$169B / OI guide retracting / material ad-DAP reset) — **Not triggered.** Wed layoffs are a cost-reduction action (lowers expense), capex guide unchanged at $125–145B (top of range = at, not above, the $145B trigger); record Q revenue $56.31B reaffirms ad strength.
+- (ii) **Pre-announcement / advertiser pullback / DAP reversal — Not triggered.** Layoffs are operational restructuring, structurally distinct from advertiser-side criterion (ii).
+- (iii) **Material META-specific regulatory loss disclosure — Not triggered.** NM bench trial (Phase II) ongoing; no new ruling Tue/Wed; March $375M jury verdict pre-dates entry.
+- Mon close ~$611 est.; Wed risk-on + AI-name strength → likely up modestly; D2 to verify. **Hold.**
 
-### 3. META (Strategy B, entry $601.30 5/5, time-exit 7/2) — **NO INVALIDATION; layoffs commencement Wed 5/20 noted but not thesis-trigger; NM bench trial daily monitor sustained**
+### 4. ZBRA (Strategy B; entry $249.52 5/14; convergence $264; time-exit 7/13) — **NO INVALIDATION**
+- (i) 8-K resetting FY26 framework — **Not triggered.** (ii) Demand/customer pre-announcement — **Not triggered.** (iii) Tariff-regime adverse disclosure — **Not triggered** (Iran de-escalation + status-quo tariff backdrop mildly constructive).
+- (iv) **Sub-pattern 1 cluster escalation post-staging (3+ additional +10% PT raises) — Not triggered.** No fresh ZBRA PT-cluster activity Tue/Wed captured. (iv) sustained Tier-1 active-monitor.
+- Mon close ~$253–258 range; Wed risk-on → likely sustained/up; D2 to verify. **Hold.**
 
-- (i) **No META 8-K resetting 2026 framework captured Sun/Mon.** Layoffs commencement Wed 5/20 already announced per Apr 23 framing (CNBC ref); not a new 8-K. **Not triggered.**
-- (ii) **No META pre-announcement / advertiser pullback captured.** Layoffs = operational/cost-action signal, NOT advertiser-side pre-announcement; structurally distinct from criterion (ii) trigger. UBS PT cut $908 → $865 = sell-side opinion adjustment, not META-issued framework reset. **Not triggered.**
-- (iii) **NM AG v. Meta Phase II bench trial:** Continuing through Fri 5/22. No Sun/Mon Judge Biedscheid ruling captured. Trial Day 11-12 progressing. **(iii) NOT triggered.** DOJ AdTech remedies / EU DMA: no fresh enforcement captured.
-- META Mon 5/18 close not directly surfaced at primary-source level. Per CNBC TechCheck framing + AI-leadership-pullback context + Mon bond/oil headwinds context (Perplexity perplexity.ai/finance/META cite Mon AM "edging lower, underperforming the broader Communication Services sector (XLC down 0.33%), as rising global bond yields and elevated oil prices above $110/barrel weigh on risk sentiment") + layoffs-commencement-this-week framing: META Mon likely closed in $608-616 area, directionally modest decline from Fri $614.23. Mark-vs-cost estimate: 0.0454 × ~$612 = $27.78 vs $27.57 cost = **+$0.21 / +0.76% unrealized GAIN** (essentially flat vs Fri).
-- **Hold; layoffs commencement Wed 5/20 is operational not framework-reset; UBS PT cut is sell-side opinion not 8-K trigger; NM trial daily monitor sustained.**
+### 5. RTX (Strategy D; entry $175.12 4/27; no time-exit) — **NO INVALIDATION**
+- (i)–(vi) None triggered. Iran de-escalation + oil −5% is mildly neutral-to-soft for the defense-spending narrative but does NOT touch any criterion (Airbus ruling / powder-metal charge / GTF EIS / backlog / FCF floor / defense-procurement cut). No RTX-specific catalyst Tue/Wed.
+- Mon close ~$171.18; Wed risk-on → likely up modestly; D2 to verify. **Hold.**
 
-### 4. ZBRA (Strategy B, entry $249.52 5/14, time-exit 7/13) — **NO INVALIDATION; entry-day-mark sustained per Mon morning quote**
-
-- (i) ZBRA 8-K resetting FY26 framework — **Not triggered.**
-- (ii) Pre-announcement / negative business update — **Not triggered.**
-- (iii) Tariff-regime material adverse disclosure — **Not triggered.** Trump-cancel-Iran-attack + status-quo tariff framework; mildly constructive for ZBRA cost-structure.
-- (iv) **Sub-pattern 1 cluster escalation post-staging — Not triggered.** No fresh ZBRA PT-cluster activity Sun/Mon beyond prior D2 5/15 disposition (modest +1-5% Barclays/Baird/BNP/KeyBanc/Truist/TD Cowen cluster; no raise ≥+10% trigger). **(iv) sustained Tier-1 active-monitor.**
-- ZBRA Mon trading per investing.com (5/17 mid-quote $259.35 / Fri 5/15 close ref $258.10) + stockinvest.us (Mon open expectation $257.61) suggests ZBRA Mon trading in $256-260 range = entry-day-mark range maintained. Mark estimate: 0.1505 × ~$258 = **$38.83 vs $37.55 cost = +$1.28 / +3.4% unrealized GAIN** (~entry-day-mark range maintained).
-- **Hold; entry-day-mark surplus sustained; (iv) post-fill cluster watch active; flag for D2 Mon ZBRA close verification.**
-
-### 5. RTX (Strategy D, entry $175.12 4/27, no time-exit) — **NO INVALIDATION**
-
-- (i)–(vi) None triggered.
-- Brent intraday volatility but settled flat to mildly down; Iran-attack-cancellation neutral for defense-spending narrative; Iran-Lebanon ceasefire ongoing; no RTX-specific catalyst captured.
-- RTX Mon 5/18 close not directly surfaced at this scan depth; given mixed-tape backdrop + Industrials/A&D defensive-cyclical profile + no fresh news, RTX Mon likely in $172-178 range pending verification.
-- **Hold.**
-
-### 6. DIS (Strategy D, entry $110.35 5/7, no time-exit) — **NO INVALIDATION**
-
-- (i)–(v) None triggered.
-- (v) FCC TV-license: ABC early-renewal 30-day filing deadline 5/28 still pending; no Sun/Mon FCC final order captured; no Disney 8-K disclosure captured.
-- Consumer-discretionary sector context unchanged Mon (XLY direction pending; consumer-stress framing intact). NextEra-Dominion-utility-AI-deal does NOT cross to DIS theme. No fresh news.
-- DIS Mon 5/18 close not directly surfaced; Erste Group Bank Mon raised FY27 EPS estimates per MarketBeat 5/18 (sell-side context — modestly constructive); DIS Mon likely in $106-110 range pending verification.
-- **Hold; consumer-discretionary stress remains M5/Q3 question, not D-thesis-trigger.**
+### 6. DIS (Strategy D; entry $110.35 5/7; no time-exit) — **NO INVALIDATION**
+- (i)–(v) None triggered. (v) FCC TV-license: ABC early-renewal 30-day filing deadline 5/28 still pending; no final order, no Disney 8-K material-adverse disclosure Tue/Wed.
+- No DIS-specific news. Mon close ~$104.80; Wed risk-on + consumer-discretionary → likely up; D2 to verify. **Hold;** consumer-discretionary stress remains an M5/Q3 question, not a D-thesis trigger.
 
 ### Watchlist candidate impact
 
-- **Strategy A queue (18 names; NBIS/CRM/DELL most recently added):** A router DO-NOT-ACTIVATE per Regime_State.md.
-  - **INTC** — Mon Citi $95→$130 PT raise (+36.8% single-firm aggressive) + Trump "more of Intel" commentary + Tiger Global $180M Q1 fresh position (per 5/17 13F) layer **MULTIPLE bullish narrative-ratification signals onto A-queue thesis**. A-queue context MARGINALLY ELEVATED but compounded by (a) Fri's valuation-correction stress (Fri -7-8%); (b) sub-pattern 1 INTERMEDIATE-INTENSITY SINGLE-FIRM VARIANT THIRD INSTANCE candidate on Citi raise (mechanically forecloses B-LONG mean-reversion routing on Mon move); (c) 52-week-high backdrop pre-pullback ($129.44 May 11 per Macrotrends). Note for next M1 ACTIVATE evaluation: valuation-reset-vs-bull-narrative-ratification framing remains the active question; framing-flip-vs-hold disposition deferred to 6/1 M1.
-  - **MU** — Mon -6% on Samsung-strike-sympathy; A-queue context NEUTRAL update (Samsung disruption is directionally ambiguous for MU; could benefit on rival-production-loss OR harm on DRAM-cycle-disruption); FQ3 26 print 2026-06-24 AMC unchanged. Note for next M1.
-  - **NVDA** — Mon flat-ish; KeyBanc PT raise $275 → $300 ahead of Wed 5/20 AMC print; Polymarket 95% beat-probability already-priced-in. Material for Tue 5/19 / Wed 5/20 D1 captures.
-  - **AMAT/CSCO/AAPL/DDOG/AKAM/AVGO/ORCL/ADBE/CAT/LLY/QCOM/NBIS/HD/WMT/TGT/CRM/DELL** — no fresh Sun/Mon material captured for any. Queue stable. HD FQ1 26 BMO Tue 5/19 (tomorrow); WMT/TGT FQ1 27/26 prints Thu 5/21; CRM FQ1 27 print 5/27; DELL FQ1 27 print 5/28. **HD imminent (BMO Tue 5/19)**: bearish-thesis-at-print-time; flag for Tue 5/19 D1 capture.
-
-- **Strategy B overflow (RBLX window expired Fri 5/15):** unchanged.
-- **Strategy B disqualified (NVO window expires ~Wed 5/20):** No fresh Sun/Mon NVO development. Unchanged.
-- **Strategy B short-direction declined-at-D2 tracking (SHOP/PYPL/CDW):** 10-day windows expire ~5/19-20 (this week). No fresh material; status unchanged.
-- **Strategy B demotion-log recent additions (AXSM/NCLH/UPS/CRCL/PINS/AMD/DOC/PTC/VTRS/AGL/MNDY/HIMS/UAA/CLSK/WIX/AKAM/NET/MNST/ACHC/AXON/GKOS/IRM/DG/FIG/ONDS/POET 5/02-5/19 NO-GOs):** 10-day windows expire various 5/19-5/28. No fresh material; status unchanged. **POET Tue 5/19 09:00 MT NO-GO session ALREADY COMPLETED with multi-pillar disposition per Decision_Log 2026-05-19 entry** — week 2026-W21 B Top-tier candidates 0 GO / 3 NO-GO (FIG/ONDS/POET) cycle complete.
-- **Strategy D re-screen pipeline:**
-  - **VST**: Monitor; M1 ~6/1 next trigger. NextEra-Dominion deal Mon 5/18 = utility-AI-power structural narrative ratification adjacent to VST data-center-power-customer-base thesis; MARGINALLY POSITIVE A/D context layer; not thesis-trigger.
-  - **CEG**: Re-screen calendar event already fired 5/12; D2 audit pending. CEG-Calpine $26.6B 2025 deal cited per Yahoo as benchmark below NEE-D $66.8B scale; CEG-vs-NEE-D competitive-narrative-context layer but not thesis-trigger.
-  - **GEV**: Fri 5/22 07:30 MT broaden re-screen pending; no fresh material.
-  - **BA**: ~6/1 trigger; unchanged.
-  - **LLY**: ~6/12 mechanical re-screen; unchanged.
-- **Strategy E pairs (M3 cycle / DO-NOT-ACTIVATE router):** No fresh Sun/Mon E-pair-relevant developments captured. Unchanged.
-
----
+- **Strategy A queue (20 names; router DO-NOT-ACTIVATE per Regime_State.md):**
+  - **NVDA** — FQ1 27 **blowout print** Wed 5/20 AMC ($81.62B rev +85%, DC $75.2B doubled, EPS $1.87, +$80B buyback, dividend raise, Vera $200B TAM). **A-queue bullish thesis (sovereign-AI/Rubin/Blackwell under-modeled) materially RATIFIED at print level.** Day-0 C/C reaction Thu 5/21. Valuation-reset caveat: a large Thu gap-up would compress A-entry runway at M1 ACTIVATE (CSCO/DDOG/AMAT precedent). Note for M1 6/1.
+  - **MU** — **Samsung strike AVERTED Wed (tentative deal)** removes the directionally-ambiguous overhang flagged Mon; MU +4.8% Wed relief. HBM/DRAM-tightness A-thesis intact, disruption-tail removed. FQ3 26 print 6/24 unchanged. Note for M1.
+  - **INTC** — +4.7% Wed semi-strength (continuation of Mon Citi/Benchmark PT raises). A-queue context marginally constructive; framing-flip-vs-hold deferred to M1 6/1.
+  - **HD** — FQ1 26 print 5/19: bearish thesis modestly supported (comps +0.6%, margin compression) not decisively (EPS beat, guide reaffirmed; −2.49%). Note for M1.
+  - **WMT / TGT** — FQ1 prints Thu 5/21 BMO (bullish WMT tariff-pass-through / bearish TGT traffic-divergence theses); flag for Thu 5/21 D1 capture.
+  - **CRM (5/27) / DELL (5/28) / AVGO (6/4) / ORCL (6/10) / ADBE (6/11)** — no fresh Tue/Wed material; queue stable. NVDA print = broad AI-tape ratification relevant to all AI/tech A-queue names at M1.
+  - **CAT/LLY/QCOM/AAPL/DDOG/AKAM/CSCO/AMAT/AVGO/NBIS** — no fresh material; stable.
+- **Strategy B tracking:**
+  - **BRC** — thesis-construction event (scheduled from Daily.md 5/18) marked "(already done)" per D3 5/20 but no Decision_Log GO/NO-GO confirmed; window active through Mon 6/1. **D2 to confirm BRC session result and re-route if MISSED** (carried from D3 flag).
+  - **NVO** disqualified-window expires today 5/20 (natural; no fresh trigger).
+  - **SHOP/PYPL/CDW** short-declined windows expired ~5/19–20; **AGL/PTC/VTRS** demotion windows expire 5/21; **MNDY** 5/26; **FIG/ONDS/POET** 5/28; **AXSM/NCLH/UPS/CRCL/PINS/AMD/DOC/HIMS/etc.** various 5/19–28. No fresh material; statuses unchanged.
+- **Strategy D re-screen pipeline:** **GEV** Fri 5/22 07:30 MT broaden re-screen pending (unchanged). **VST/CEG** utility-AI context (NEE-Dominion Mon deal) — no fresh Tue/Wed development; M1 ~6/1 / Q3 ~July. **BA** ~6/1; **LLY** ~6/12.
+- **Strategy E pairs:** router DO-NOT-ACTIVATE; no fresh E-relevant developments.
 
 ## ANALYSIS — OPPORTUNITY CHECK
 
-For each Development above, evaluation against fresh-entry candidacy:
+**§1 macro (yield swing / Iran-oil de-escalation / Samsung-strike-averted / SpaceX S-1):** no direct fresh single-name B/A/C/E candidacy beyond §3 movers. Samsung-strike-averted is a watchlist context update for MU (A-queue), not a fresh entry.
 
-**§1 macro events (Trump-cancel-Iran-attack / NEE-Dominion $66.8B M&A / Berkshire UNH exit / bond yields stickiness / sustained Hormuz overhang):**
+**§2/§3 event-resolved and movers:**
 
-- No direct fresh-name candidacy created at single-name level beyond §3 movers (handled below).
-- **NEE-Dominion-utility-AI-power-deal narrative**: structural Tier-1 ratification of utility-AI-power-demand thesis = material context for Strategy D queue (**VST / CEG / GEV**) at next M1 ACTIVATE evaluation; not actionable Mon (D router currently ACTIVATE but D thesis-construction blocked on pipeline gating per Watchlist).
-- **Berkshire UNH exit + 40→26 portfolio simplification under Abel**: pattern signal for "regulated-healthcare-overhang" framing; not actionable directly but context for future health-insurer evaluation candidates (UNH not on shortlists).
+1. **TJX — borderline NEW B candidate (Strategy B), magnitude-verification-gated.** Q1 FY27 beat-raise (EPS $1.19 vs ~$1.02 +19%; comps +6%; FY26 EPS guide raised); Day-0 reported +4.7%–5.48% (sources straddle the 5% floor). Off-price retail (Consumer Discretionary; B sector cap unaffected — no current B retail position). **Pre-judgment:** information-driven clean beat-raise → likely sub-pattern 1 (information-priced) territory; B mean-reversion mechanism weak on a proportionate +5% beat-raise move. **D2 must verify Day-0 close-to-close magnitude ≥5% (primary source) BEFORE any thesis-construction commit** (MVG family precedent). If ≥5% confirmed → schedule B thesis-construction within 10-day window (expires ~Wed 6/3); if <5% → no action. Full criteria 1–5 in dedicated session decides.
 
-**§2 / §3 event-resolved candidates and large-name movers:**
+2. **IMVT — NO B routing** (Phase 2 RA clinical-data readout; binary-catalyst / data-driven efficacy = information-pricing, not sentiment overshoot; event-class/mechanism mismatch). Surfaced for completeness.
 
-1. **BRC (Brady Corporation) — NEW B candidate for THESIS-CONSTRUCTION evaluation.**
-   - **Magnitude**: Day-0 intraday +18.98% per Yahoo Finance Live; pending Day-0 close-to-close primary-source verification (per MNDY/MRNA/DASH precedent — Yahoo Finance Live intraday cite may differ from regular-session-close magnitude); D2 to verify Day-0 C/C magnitude.
-   - **Mcap**: $3.35B pre-print per Yahoo earnings calendar PASSES $2B floor with ~67% cushion (no MAGNITUDE-VERIFICATION-GATE concern at sub-pattern routing — magnitude is in MODERATE-tier range above 1.5× floor).
-   - **Event class**: Q3 FY26 print BMO Mon 5/18 (clean earnings catalyst per Strategy.md B enumerated event class).
-   - **Sector cap**: Brady = Industrials sector / sub-industry Industrial Machinery / Industrial Components & Diagnostics (operational identification / safety / printing products); Industrials 1/3 (RTX in different sub-industry as A&D); BRC would NOT saturate IT cap (IBM+ZBRA still 2/3); Industrials sub-industry cap unaffected by RTX A&D placement. **Sector-cap clearance favorable.**
-   - **Slot-cap**: 1/5 B slot remaining post-FIG/ONDS/POET NO-GO (per Portfolio_Ledger 5/19 last-updated header); **BRC has cleanest claim to that remaining slot if criteria 1-5 evaluation clears.**
-   - **Sub-pattern routing pre-judgment**: At +18.98% intraday magnitude, BRC is in MODERATE-HIGH magnitude tier; routing depends on post-print sell-side cluster behavior (sub-pattern 1 INSTANCE vs THIN-CLUSTER GO precedent vs INTERMEDIATE-INTENSITY SINGLE-FIRM variant). Day-1 behavior + post-print cluster matter materially. **Pre-judgment NEUTRAL** pending criteria 2 (historical analogue retrieval) + criteria 3-4 work in dedicated session.
-   - **Action**: Schedule **B thesis-construction session within 10-day window**; D2 Mon to create calendar event for Tue-Thu this week 5/19-5/21. Window expires Mon 2026-06-01 (10 trading days from 5/18 print).
+3. **SNPS — NO B routing** (semi/AI-EDA sympathy ahead of NVDA + Samsung relief; no identified idiosyncratic public event; sector-sympathy event-class mismatch per DG/STX doctrine). D2 to flag if a specific SNPS catalyst surfaces.
 
-2. **D (Dominion Energy), RAMP (LiveRamp) — NO B routing (fixed-deal acquisition targets).** Strategy B mean-reversion mechanism does NOT apply to fixed-deal-value targets where price is anchored to deal-implied value. Recorded for §Watchlist context only.
+4. **INTC / MU / AMD semi-movers — NO B routing** (sector-sympathy, sub-5% close, event-class mismatch). INTC/MU are A-queue (context noted).
 
-3. **NEE (NextEra Energy) — NO B routing (sub-5% magnitude + acquirer-deal-fade mechanism).** -4.6% Mon FAILS criterion 1 ≥5% floor by ~0.4pp. Day-1 verification could matter but acquirer-deal-fade mechanism is structurally not B mean-reversion (sell-side comes out with deal-modeling-not-resetting notes).
+5. **NVDA — NO fresh B routing today; A-territory.** AMC print Wed → Day-0 C/C is Thu 5/21. NVDA is established A-queue (multi-quarter mega-cap; criterion-3 closed-list absent 60-day target; information already priced — pre-print Polymarket ~95% beat). If Thu Day-0 ≥5%, pre-judgment remains NO B routing (A-territory + information-priced). Flag for Thu 5/21 D1 to capture Day-0 reaction and confirm NO-B routing.
 
-4. **STX (Seagate), MU (Micron), SNDK (SanDisk) — NO B routing (event class structural mismatch per DG 5/12 EVG-failure doctrine).** Samsung-strike industry-wide labor disruption is structurally similar to macro/sector-rotation events that Strategy.md B paragraph enumerated event class explicitly excludes. MU is already on A-queue. STX/SNDK not on any current shortlist.
+**Strategy C:** no fresh Tue/Wed catalyst within 45 days satisfying HYBRID-FOMC-only routing beyond the 6/16–17 FOMC already on calendar. Wed's oil −5% + yield-relief + Tue's yield-spike = elevated input variability for the 6/16–17 FOMC C-thesis; carry to the 6/8 C thesis-construction prep. No fresh C action today.
 
-5. **INTC (Intel) — B-routing PRE-JUDGMENT NO with multi-vector convergence** (per §3 #9): sub-pattern 1 INTERMEDIATE-INTENSITY SINGLE-FIRM VARIANT THIRD INSTANCE candidate on Citi $95→$130 raise + sector-cap saturation + sub-pattern 3 dominant backdrop + A-territory thesis established + reactive-bounce-from-overshoot mechanism. **No B thesis-construction.** A-queue context update only (incremental positive per Citi raise + Trump commentary + Tiger Global stake, compounded by Fri valuation-correction stress).
+**Strategy A:** router DO-NOT-ACTIVATE; no thesis-construction scheduling. NVDA/MU/INTC/HD context updates only (above).
 
-6. **UNH (UnitedHealth) — NO B routing (sub-5% magnitude + Berkshire-13F-disclosure is not Strategy.md B-enumerated event class).** Berkshire-flow-based-news is not earnings / FDA / guidance / regulatory per Strategy.md B paragraph. -3% Mon FAILS criterion 1.
+**Strategy E:** router DO-NOT-ACTIVATE; no E action regardless of fresh signals.
 
-**Strategy C candidates from §2/§3**: No fresh Sun/Mon catalyst within 45 days satisfying HYBRID-FOMC-only routing beyond 6/16-17 FOMC already on calendar. Mon's bond-market continuation + Trump-cancel-Iran-attack adjustment = elevated input variability for 6/16-17 FOMC C-thesis; consider for 6/8 C thesis-construction session prep. No fresh C action today.
-
-**Strategy E candidates**: E router DO-NOT-ACTIVATE; no E action regardless of fresh signals. NextEra-Dominion-utility-AI-power-deal narrative creates intra-utility-pair candidacy theoretically (NEE/D pair-implications, SO/AEP/DUK/CEG/VST adjacent) but E router blocked; M3 next monthly cycle would assess.
-
-**Strategy A candidates from §5 (commentary)**: No fresh standalone A-queue surface beyond INTC context update (Citi PT raise + Trump commentary + Tiger Global stake) + VST/CEG indirect via NEE-D-utility-AI-power-thesis ratification + MU NEUTRAL (Samsung-strike-ambiguity). A router DO-NOT-ACTIVATE; queue stable at 18 names plus NEE-D-narrative-adjacent VST/CEG already on shortlists.
-
-**Strategy D long-horizon candidates** from Mon developments: **VST/CEG/GEV multi-quarter utility-AI-power thesis materially ratified by NEE-Dominion deal scale** (largest-ever sector M&A confirming structural AI-electricity-demand narrative — second-largest 2026 deal after SpaceX/xAI $250B). Context layer for 2026-Q3 D candidate quarterly refresh (~July); not actionable today.
-
----
+**Strategy D:** no fresh single-day D candidate (D horizons rarely turn on single-day developments); NVDA-print AI-capex ratification + NEE-Dominion utility-AI context are Q3-quarterly-D-refresh / M1 inputs, not actionable today.
 
 ## ANALYSIS — REGIME CHECK
 
-**Question**: Does any Sun 5/17 / Mon 5/18 development plausibly shift any strategy's router activation state enough to warrant an inter-monthly router review?
+**Question:** Does any Tue 5/19 / Wed 5/20 development plausibly shift any strategy's router activation state enough to warrant an inter-monthly router review?
 
-**Analysis**:
+1. **Technical signal state:**
+   - **SPY Trend:** SPX 7,432.97 Wed close, well above 50-/200-day SMAs (both up-trending). Strategy A router-Tech-signal flip DO-NOT-ACTIVATE → ACTIVATE at next M1 (6/1) remains high-probability; the Tue 3-day-pullback was fully reversed Wed.
+   - **VIX 17.44** = NORMAL <20 (−3.43%); B/C/E VIX ≠ HIGH rule passes cleanly.
+   - **Breadth:** Russell 2000 **+2.56%** Wed = small-caps LED, reversing the prior 2-session Russell-underperformance breadth-weakening flag. Breadth recovered sharply; Strategy E "Breadth = HEALTHY" rule no longer at near-term risk on this datapoint (continue monitoring into late-May).
+   - **Yield Curve:** 10Y ~4.63% / 2Y ~est. 4.1–4.2% = NORMAL (positive slope); Sustained-Inversion-Flag NOT-SUSTAINED. Strategy D rule passes. The Tue multi-decade-high yield spike eased Wed — no rule-state change.
 
-1. **Technical signal state**:
-   - **SPY Trend State**: SPX 7,403.05 Mon close = essentially flat from Fri 7,408.50 / WELL above 50-day & 200-day SMAs both up-trending. Strategy A router-Tech-signal flip DO-NOT-ACTIVATE → ACTIVATE at next M1 cycle (6/1) **remains high-probability**; no Mon evidence weakens this assessment (Fri pullback already absorbed Sat scan).
-   - **VIX 17.82** = NORMAL <20 (-3.31% from Fri 18.43, returning to mid-NORMAL band); Strategy B/C/E rule VIX ≠ HIGH continues to pass cleanly.
-   - **Breadth**: Russell 2000 -0.65% Mon vs SPX -0.07% = small-caps continue underperforming day-2. Two consecutive sessions of Russell underperformance is a Tier-2 breadth-weakening signal that bears continued monitoring; insufficient for M1-pre-empting action. Strategy E "Breadth = HEALTHY" rule at risk if persists into end-May; flag for M1 verification 6/1.
-   - **Yield Curve**: 10Y 4.601% / 2Y ~4.10-4.20% area (estimated; not directly captured Mon) = curve remains NORMAL (not inverted); positive slope. Sustained-Inversion-Flag remains NOT-SUSTAINED. Strategy D rule continues to pass.
+2. **Fundamental signal context** (M1 most-recent 2026-04-23; next M1 6/1):
+   - **Stagflation-anxiety / bond-stress framework:** SUSTAINED at Tier-1 strength but no longer escalating — Tue's yield spike to ~19-yr highs relieved Wed; oil DOWN sharply on Iran de-escalation. Net flat-to-relieving day-on-day.
+   - **AI-infrastructure-leadership-FLIPPING signal:** **materially COUNTER-signaled Wed** by NVDA's blowout print + buyback/dividend + Vera $200B TAM + the semi rally (MU/INTC/AMD/SNPS) + Samsung-strike-relief. The prior "leadership-flip" thesis weakens on this evidence; Day-0 NVDA tape Thu 5/21 will further inform. Tier-1 input for June M1 A-queue re-rating across AI/tech names.
+   - **Iran de-escalation / oil −5%:** Tier-2 de-escalation framing strengthening (oil down 2 sessions on deal optimism); supports a softer-oil macro backdrop into M1.
 
-2. **Fundamental signal context** (M1 most-recent cycle 2026-04-23; next M1 cycle 2026-06-01):
-   - **Stagflation-anxiety framework**: SUSTAINED at Tier-1 strength. Mon developments do NOT materially compound or relieve framework: bond yields essentially flat at elevated levels (10Y 4.6% / 30Y 5.13%); Brent fade to $109-110 = neutral; no fresh inflation data; Trump-cancel-Iran-attack provides Tier-2 de-escalation framing but Hormuz binding constraint unchanged.
-   - **AI-infrastructure-leadership-flipping signal** from Fri 5/15 sustained: Nasdaq -0.51% second consecutive session of -1%+ cumulative; AMAT/MU/STX/SNDK continuing weakness on memory-storage Samsung-strike-overhang; NVDA flat ahead of Wed 5/20 print = market-pause posture. CSCO Day-2 trajectory pending verification but Day-1 +12.96% extension was exception not rule. **Sustained signal for June M1 A-queue re-rating across AI/tech queued names.**
-   - **NEE-Dominion-utility-AI-power-deal** = NEW Mon-incremental analytical layer adding STRUCTURAL ratification to utility-AI-power-demand thesis; Tier-1 for D-territory long-horizon analysis (VST/CEG/GEV implications) and Tier-2 for A-territory candidate generation (no NEE/D explicitly on current A-queue). **Material for June M1 fundamental DNA re-derivation considering utility-AI sub-theme weight.**
-   - **Trump-cancel-Iran-attack** = Tier-2 partial de-escalation framing; Hormuz binding constraint unchanged; oil-pricing-inputs essentially flat day-on-day; **does NOT shift macro framework**.
-   - **Berkshire UNH-exit + portfolio-restructure under Abel** = Tier-3 institutional-flow signal; **directional context for regulated-healthcare-overhang sub-theme** but not framework-shifting.
+3. **Plausible router-review trigger?** High-bar default-NO holds. All Tue/Wed evidence is M1-cadence-appropriate: SPY-Trend flip pending mechanical 6/1 verification; VIX NORMAL; yields eased; breadth recovered; AI-leadership counter-signal is an M1 re-rating question, not a mechanical router-rule trip.
 
-3. **Plausible router review trigger?**
-   - **High bar default-NO on ambiguity remains the disposition.** Mon developments are all M1-cadence-appropriate:
-     - SPY Trend technical-signal flip remains high-probability at 6/1 M1.
-     - VIX restored to mid-NORMAL band; no rule-trigger.
-     - Yield Curve remains NORMAL.
-     - Breadth-weakening single-session-extension (Russell day-2 underperform) is incremental signal; insufficient for M1-pre-empting action.
-   - **No router review recommended today.** All evidence is M1-cadence-appropriate.
-
-**Verdict: NO inter-monthly router review recommended.** SPY-Trend technical-signal flip pending mechanical M1 verification 6/1 (still high-confidence flip likely). Stagflation-anxiety macro-signal package sustained at Tier-1 strength (no fresh Mon ratification or relief). NEE-Dominion utility-AI-power-deal is NEW Mon-incremental analytical layer for D-territory thesis ratification. AI-infrastructure-leadership-flipping signal sustained day-2. Russell-2000 breadth-weakening enters day-2 observation (Tier-2 flag for M1 verification). No mechanical-router-rule re-evaluation triggers fire today.
-
----
+**Verdict: NO inter-monthly router review recommended.** SPY-Trend technical-flip to UP still pending mechanical M1 verification 6/1 (high-confidence). Stagflation/bond-stress Tier-1 framing sustained but de-escalating day-on-day (yields eased, oil −5%). **AI-leadership-flipping signal materially COUNTER-signaled by NVDA's blowout print + semi rally** — flag for June M1 enhanced attention (A-queue AI/tech re-rating: NVDA/AVGO/ORCL/MU/AMAT/CSCO/INTC/DDOG/AKAM/ADBE/NBIS). Russell-2000 breadth recovered Wed (+2.56%), reversing the prior 2-day weakening flag. No mechanical-router-rule re-evaluation triggers fire.
 
 ## ANALYSIS — FRONTIER-LLM CAPABILITY CHECK (light-touch, optional)
 
-Mon 5/18 = **cross-session consistency battery** per HF_Resource_Catalog.md §6.1 rotation (Mon: cross-session consistency, Tue: prompt injection, Wed: calibration, Thu: sycophancy/anchoring, Fri: trading/financial, Sat: multi-agent debate, Sun: long-context).
-
-Ran `paper_search` query: "LLM cross-session consistency response stability multiple runs" with `concise_only=true, results_limit=5`. Top 5 results (by relevance):
-
-1. **Firm or Fickle? Evaluating Large Language Models Consistency in Sequential Interactions** (hf.co/papers/2503.22353) — Mar 28, 2025 (~415 days old; outside window).
-2. **Enabling Weak LLMs to Judge Response Reliability via Meta Ranking** (hf.co/papers/2402.12146) — Feb 19, 2024 (older; outside window).
-3. **Semantic Consistency for Assuring Reliability of Large Language Models** (hf.co/papers/2308.09138) — Aug 17, 2023 (older; outside window).
-4. **ReasonBENCH: Benchmarking the (In)Stability of LLM Reasoning** (hf.co/papers/2512.07795) — **Dec 8, 2025 (~162 days old; outside prior-24-72-hours window but NOTABLE NEW SURFACE not in HF_Resource_Catalog seeds**; finding: "high variability in performance and highlighting the need for variance-aware reporting; multi-step problem solving / chain-of-thought stochastic decoding revealing high inter-run variability"). **Directly relevant to AI_Trading_Foundation.md disadvantage on cross-session-consistency limitations** (existing operating-protocol framework relies on quantifying-but-not-eliminating inter-session reasoning variance via conviction-calibration ladder + adversarial review architecture). **Reference-only for Q3 quarterly delta** — D1 does NOT act on this finding today; quarterly review should incorporate ReasonBENCH into HF §1.x for variance-quantification-methodology reference.
-5. **MaP: A Unified Framework for Reliable Evaluation of Pre-training Dynamics** (hf.co/papers/2510.09295) — Oct 10, 2025 (older; outside window).
-
-**Prior-24-72-hours-publish filter**: None of the top 5 results were published in the prior 24-72 hours. The Mon rotation surfaced ReasonBENCH (Dec 2025) as a notable previously-uncatalogued reference but outside the daily-capture window. **Default-silent-on-ambiguity rule fires**: no Decision_Log `[HF Frontier-LLM Capture]` entry appended today. No Q3-quarterly-delta material captured at the daily-publication-recency standard.
-
-**Forward reference (not captured today but noteworthy for Q3 context)**: ReasonBENCH paper (Dec 2025) findings on chain-of-thought stochastic-decoding inter-run variability + Pass@k metric proposals directly relevant to cross-session-consistency disadvantage framework in AI_Trading_Foundation.md. **Reference-only — D1 does NOT act on the finding today; no Daily.md output beyond this note.**
-
----
+Wed 5/20 = **calibration battery** per HF_Resource_Catalog.md §6.1 weekly rotation (Mon: cross-session consistency, Tue: prompt injection, Wed: calibration, Thu: sycophancy/anchoring, Fri: trading/financial, Sat: multi-agent debate, Sun: long-context). The single daily `paper_search` query (LLM confidence calibration / uncertainty quantification / overconfidence; `concise_only=true`, `results_limit=5`) **could not execute this session** — the Hugging Face MCP tool returned an approval-gate error ("MCP tool call requires approval") on both attempts and was not auto-grantable in this routine. Per the light-touch / default-silent-on-ambiguity rule, **no Decision_Log `[HF Frontier-LLM Capture]` entry is appended** (the check is reference-only and conditionally produces a Decision_Log entry only on a material prior-24–72-hour finding). No Daily.md material from this check.
 
 ## RECOMMENDED ACTIONS
 
 The downstream D2 routine reads this section verbatim and converts each bullet into an order / live-file edit / calendar event.
 
 **Exits triggered (with invalidation criterion and strategy):**
-
-- **None.** All six open positions (IBM-B / HCA-B / META-B / ZBRA-B / RTX-D / DIS-D) hold; no invalidation-criterion trip Sun 5/17 / Mon 5/18. **IBM modest Mon recovery $222.74 +1.57% vs Fri $219.30** (mark-to-market -4.16% unrealized vs cost; +1.5pp improvement from Fri); convergence target $245 = +10.0% remaining runway over 5.5 weeks to time-exit 6/26; flagged elevated-stress-posture but no invalidation text trip. **IBM (iv) Brent watch SUSTAINED Tier-2 elevated-monitor** (Mon Brent fade $112+ → $109-110 area on Trump-cancel-Iran-attack but Hormuz still shut = no Tier-1 baseline restoration). **IBM (iii) IGV monitor SUSTAINED Tier-1** — estimated $86-89 area Mon close vs $80 floor (~7-10% headroom; modestly narrowed from prior); D2 to verify Mon close. **ZBRA (iv) sub-pattern 1 cluster-escalation watch SUSTAINED Tier-1 active-monitor** (no fresh PT-cluster activity Sun/Mon).
+- **None.** All six open positions (IBM-B / HCA-B / META-B / ZBRA-B / RTX-D / DIS-D) hold; no invalidation-criterion trip Tue 5/19 / Wed 5/20. **IBM stress posture EASING** — IBM $223.89 Wed close (−3.70% vs cost, improving); (iii) IGV $92.44 cleared with $12.44 headroom; (iv) Brent headroom WIDENING on oil −5% (de-escalating Tier-2 → Tier-1 baseline). **META layoffs Wed = operational cost-action, NOT a framework reset / advertiser pullback** (record Q revenue $56.31B reaffirms ad strength); criteria (i)/(ii)/(iii) not tripped.
 
 **New entry candidates (with strategy) requiring full thesis construction in separate sessions per Strategy.md:**
-
-- **BRC (Brady Corporation) — Strategy B THESIS-CONSTRUCTION CANDIDATE.** Q3 FY26 print BMO Mon 5/18; intraday +18.98% per Yahoo Finance Live; mcap $3.35B pre-print PASSES $2B floor; Industrials sector / Industrial Machinery sub-industry sector-cap clearance favorable; B slot 1/5 remaining post FIG/ONDS/POET NO-GO; **Mon Day-0 C/C magnitude verification pending D2** (per MNDY/AMAT/MRNA precedent, intraday peak may differ materially from regular-session-close magnitude — D2 must verify Day-0 C/C via primary source before any commit). **D2 to schedule B thesis-construction session within 10-day window**: target slot Tue-Thu 5/19-5/21 to preserve full criteria 1-5 cycle time; window expires Mon 2026-06-01.
-
-- **No INTC B thesis-construction** despite Mon reactive bounce + Citi PT raise. Multi-vector pre-judgment NO per §Opportunity Check #5 (sub-pattern 1 INTERMEDIATE-INTENSITY SINGLE-FIRM VARIANT THIRD INSTANCE candidate + sector-cap saturation + sub-pattern 3 backdrop + A-territory thesis established + reactive-bounce mechanism). A-queue context update only (Mon Citi PT raise + Trump commentary + Tiger Global Q1 $180M stake = bullish-ratification-on-pullback layer).
-
-- **No D, RAMP B thesis-construction** (fixed-deal acquisition targets; Strategy B mean-reversion mechanism does not apply).
-
-- **No NEE, STX, MU, SNDK, UNH B thesis-construction** per §Opportunity Check rationales (NEE sub-5% magnitude + acquirer-deal-fade structural mismatch; STX/MU/SNDK Samsung-strike industry-wide event-class structural mismatch per DG 5/12 EVG-failure doctrine; UNH sub-5% magnitude + Berkshire-flow-disclosure not Strategy.md B enumerated event class).
+- **TJX (Strategy B) — MAGNITUDE-VERIFICATION-GATED candidate.** Q1 FY27 clean beat-raise Wed 5/20 BMO (EPS $1.19 vs ~$1.02 +19%; comps +6%; FY26 EPS guide raised $5.08–$5.15); Day-0 reported +4.7%–5.48% (sources straddle 5% floor). **D2 must verify Day-0 close-to-close magnitude via primary source BEFORE committing.** If Day-0 C/C ≥5% confirmed → schedule B thesis-construction within 10-day window (window expires ~Wed 6/3); Consumer Discretionary / off-price retail (B sector cap clear). If <5% → no action. Pre-judgment leans NO (information-driven beat-raise, sub-pattern 1 territory) but full criteria 1–5 in dedicated session decides.
+- **No NVDA B thesis-construction today** — A-territory (established A-queue; information-priced; criterion-3 60-day target absent). AMC print Wed → Day-0 C/C Thu 5/21; flag for Thu 5/21 D1 to capture Day-0 reaction and confirm NO-B routing.
+- **No IMVT / SNPS / INTC / MU / AMD B thesis-construction** per §Opportunity Check (IMVT binary clinical-data event-class mismatch; SNPS/INTC/MU/AMD semi-sympathy event-class mismatch + sub-5% close).
 
 **Watchlist updates (adds / removes / demotions):**
-
-- **No A-queue additions today.** NEE/D not added (M&A-deal-target/acquirer; better-fit Strategy D long-horizon utility-AI-power thesis at next 2026-Q3 D candidate quarterly refresh ~July if narrative persists).
-
-- **INTC A-queue row — NOTE 2026-05-18 incremental positive + structural compound layer**: Mon Citi (Atif Malik) raised PT $95 → $130 (+36.8%, Buy maintained) per TheStreet 5/18; Trump CNBC interview "should've asked for 'more' of Intel" per CNBC 5/18; Tiger Global initiated $180M Q1 2026 new position per AOL/247wallst 5/17 13F disclosure. Mon intraday bounce ~+5-8% per Instagram cite "INTC ↑ +8.04% as chipmaker gains ground" pending Day-0 C/C verification. **Bullish-narrative-ratification-on-pullback context layer**; A-queue thesis-quality marginally elevated. **HOWEVER**: compounded by Fri valuation-correction stress (Fri -7-8%) + sub-pattern 1 INTERMEDIATE-INTENSITY SINGLE-FIRM VARIANT THIRD INSTANCE candidate establishment (mechanically forecloses B-LONG mean-reversion routing on Mon move) + 52-week-high backdrop $129.44 pre-pullback. Net A-queue context: directionally MIXED; framing-flip-vs-hold disposition deferred to next M1 ACTIVATE evaluation 6/1.
-
-- **MU A-queue row — NOTE 2026-05-18 NEUTRAL update**: Mon -6% Samsung-strike-sympathy; ambiguous directional implication for MU thesis (rival-production-disruption potentially benefit vs DRAM-cycle-disruption potentially harm); FQ3 26 print 2026-06-24 AMC unchanged. Note for next M1 ACTIVATE evaluation.
-
-- **VST + CEG A/D-queue context — NOTE 2026-05-18 utility-AI-power-thesis structural ratification**: NEE-Dominion $66.8B all-stock merger Mon 5/18 = largest-ever power-sector M&A confirms structural AI-electricity-demand narrative; VST data-center-power-customer (Meta nuclear PPAs cited per VST Q1 print) and CEG nuclear-fleet-operator long-horizon theses materially ratified. Not thesis-trigger today (D router blocked on thesis-construction pipeline; A router DO-NOT-ACTIVATE). Material for 2026-Q3 quarterly D candidate refresh (~July) and next M1 fundamental DNA re-derivation. Note for next M1 + Q3.
-
-- **No B-queue additions/removals today.** BRC routed to thesis-construction-event (per §New entry candidates); no other ≥5% Mon Day-0 idiosyncratic B-eligible movers surfaced.
-
-- **No D, RAMP A/B/D-queue additions** (acquisition-target dispositions; not actionable B; not on existing D shortlist).
-
-- **No demotions.** All names remain in current Watchlist.md status.
-
-- **Window-naturally-expiring this week (no action needed):**
-  - NVO Strategy B disqualified window expires Wed 5/20.
-  - SHOP / PYPL / CDW B short-direction-declined-at-D2 windows expire ~5/19-20.
-  - AXSM / NCLH / UPS / CRCL / PINS / AMD / DOC / PTC / VTRS / AGL / MNDY / DG / FIG / ONDS / POET / HIMS / UAA / CLSK / WIX / AKAM / NET / MNST / ACHC / AXON / GKOS / IRM B demotion-log windows expire various 5/19-5/28.
-
-- **Pattern-taxonomy advance flag for W5 hygiene cycle**:
-  - **Sub-pattern 1 INTERMEDIATE-INTENSITY SINGLE-FIRM VARIANT THIRD INSTANCE candidate (INTC Citi 5/18)** — pending Day-0 magnitude verification + W5 formal taxonomy promotion. Sequence: OMCL 2026-04-29 (KeyBanc +16.7%) first / ONDS 2026-05-18 (Maxim +37.5%) second / **INTC 2026-05-18 (Citi $95→$130 +36.8%) third candidate**. Cross-firm-precedent diversity established (KeyBanc + Maxim + Citi = three distinct anchor firms) supports cross-firm structural-pattern rather than firm-specific artifact. **Critical W5 attention**: distinguish reactive-bounce-after-overshoot (INTC Mon) vs information-driven-ratification (OMCL post-print Q1 raise / ONDS post-print Q1 raise) sub-class signatures.
-  - **NEW MAGNITUDE-VERIFICATION-GATE class member potential**: BRC Yahoo-Finance-Live intraday +18.98% vs pending Day-0 C/C primary-source verification — sixth member candidate per DASH 5/11 / AXSM 5/2 / EQIX 5/1 / MNDY 5/12 / DG 5/12 EVG variant / AMAT 5/15 precedent chain — IF Day-0 C/C materially differs from intraday peak per Yahoo Finance Live cite. D2 must verify before any sub-pattern routing.
+- **MU A-queue row — NOTE 2026-05-20:** Samsung 18-day memory-fab strike (was to start 5/21) AVERTED Wed via tentative wage deal; removes the directionally-ambiguous overhang flagged Mon 5/18; MU +4.8% Wed relief. HBM/DRAM-tightness A-thesis intact, disruption-tail removed. Note for M1 6/1.
+- **NVDA A-queue row — NOTE 2026-05-20:** FQ1 27 blowout print AMC ($81.62B rev +85%; DC $75.2B doubled; EPS $1.87; +$80B buyback; dividend raise; Vera $200B TAM) materially ratifies the bullish A-thesis at print level; Day-0 C/C Thu 5/21; valuation-reset caveat if large Thu gap-up. Note for M1 6/1.
+- **INTC A-queue row — NOTE 2026-05-20:** +4.7% Wed semi-strength (Citi/Benchmark PT-raise continuation); marginally constructive; framing-flip-vs-hold deferred to M1 6/1.
+- **HD A-queue row — NOTE 2026-05-20:** FQ1 26 print 5/19 — bearish thesis modestly supported (comps +0.6%, margin compression) not decisively (EPS beat $3.43 vs $3.41, guide reaffirmed; −2.49%). Note for M1 6/1.
+- **No B/D-queue adds/removes/demotions today.** NVO disqualified-window expires today 5/20 (natural; no action).
 
 **Router reviews recommended (with justification):**
-
-- **None.** Mon evidence is M1-cadence-appropriate per default-silent-on-ambiguity rule. SPY-Trend technical-signal-flip NEUTRAL → UP at next M1 cycle (2026-06-01) remains high-probability; Mon flat behavior preserves Fri 5/15 framing without further weakening. **Flag for June M1 enhanced attention**:
-  - (a) Verify SPY Trend technical state at 6/1 close vs 50-day/200-day SMAs (UP confirmation high-probability);
-  - (b) Re-derive fundamental DNA under **stagflation-footprint-with-bond-market-confirmation-and-day-2-Russell-breadth-weakening** package (10Y 4.6% / 30Y 5.13% sustained / VIX 17.82 / Russell -0.65% day-2 / Brent ~$110 / Trump-Iran de-escalation + Hormuz-still-shut);
-  - (c) **AI-infrastructure-leadership-FLIPPING signal day-2 sustained** — Mon Nasdaq -0.51% extends Fri -1.54%; A-queue thesis-quality re-rating across all queued AI/tech names (NVDA / AVGO / ORCL / MU / CSCO / AMAT / INTC / DDOG / AKAM / ADBE / NBIS) under valuation-correction-vs-leadership-rotation question; INTC + MU updated context per Mon developments;
-  - (d) **Utility-AI-power-thesis structural ratification** via NEE-Dominion $66.8B deal — material for D-queue (VST/CEG/GEV) thesis-quality re-rating at next M1 + 2026-Q3 quarterly D refresh;
-  - (e) **Russell-2000 day-2 breadth-weakening** — if extends into late-May / early-June, Strategy E "Breadth = HEALTHY" rule risks downgrade.
+- **None.** All Tue/Wed evidence is M1-cadence-appropriate per default-silent-on-ambiguity. **Flag for June M1 6/1 enhanced attention:** (a) confirm SPY Trend technical state UP vs 50-/200-day SMAs (high-probability flip); (b) re-derive fundamental DNA under **de-escalating-stagflation-with-AI-leadership-counter-signal** framing (Tue yield-spike→Wed relief; oil −5% Iran de-escalation; NVDA blowout + semi rally counter-signaling the leadership-flip thesis; Samsung-strike averted); (c) A-queue AI/tech re-rating across NVDA/AVGO/ORCL/MU/AMAT/CSCO/INTC/DDOG/AKAM/ADBE/NBIS post-NVDA-print; (d) Russell-2000 breadth recovered Wed (+2.56%) — prior weakening flag reversed, continue monitoring.
 
 **Pending downstream items (already-queued; not new):**
-
-- D2 Mon/Tue actions: 
-  - Schedule **BRC B thesis-construction event Tue-Thu 5/19-5/21** (top-priority new candidate);
-  - Verify BRC Day-0 close-to-close magnitude vs Yahoo Finance Live +18.98% intraday cite (primary-source close required before thesis-construction commit per MNDY/AMAT precedent);
-  - Verify Mon close primary-source data for: INTC Day-0 C/C magnitude + Mon C/C direction; HCA Mon close; ZBRA Mon close; RTX Mon close; DIS Mon close; META Mon close; IBM Mon close (Bloomberg cite implies ~$222.74 / +1.57%); IGV Mon close (critical for IBM (iii) live-watch); XLE / XLK / XLU / XLF / XLV / SOXX sector ETF Mon closes;
-  - Capture NAHB May Housing Market Index value (Mon 10:00 AM ET release).
-- KL #12 first-computation Wed 6/3 ~15:30 MT (unchanged; 4-long-book IBM × HCA × META × ZBRA).
-- C-thesis-construction Mon 6/8 09:00 MT for 6/16-17 FOMC under HYBRID-ACTIVATE Strategy C with elevated input variability per Fri bond-market repricing + Mon yield-stickiness — flag for 6/8 session prep.
-- ZBRA mid-window pulse-check Tue 6/9 ~15:30 MT.
-- M1 next cycle Mon 6/1 (Strategy A router-flip-evaluation + fundamental-DNA-re-derivation under stagflation-footprint-with-bond-market-confirmation-and-utility-AI-power-deal-ratification framing + AI-infrastructure-leadership-flipping question across all A-queue names + Russell-breadth-weakening monitor + INTC/MU/VST/CEG framing context updates).
-- ZBRA time-based exit Mon 7/13 ~07:15 MT.
-- HD FQ1 26 BMO Tue 5/19 → A-queue context capture (bearish-thesis pre-print); flag for Tue 5/19 D1.
-- NVDA FQ1 27 AMC Wed 5/20 → A-queue context capture (KeyBanc PT raise $275→$300, Polymarket 95% beat); flag for Wed 5/20 D1 / Thu 5/21 D1.
+- D2 Wed/Thu actions: **verify TJX Day-0 C/C magnitude** (primary source) and route per gate above; **confirm BRC thesis-construction session result** (D3-flagged "(already done)" but no Decision_Log GO/NO-GO; window through 6/1) and re-route if MISSED; refresh Portfolio_Ledger marks (HCA/META/ZBRA/RTX/DIS Wed closes; IBM $223.89 / IGV $92.44 confirmed); refresh sector-ETF Wed close panel (SOXX/XLK/XLE/XLU/XLF/XLV).
+- **NVDA Day-0 C/C reaction Thu 5/21** → A-queue context capture + confirm NO-B routing; flag for Thu 5/21 D1.
+- **WMT / TGT FQ1 prints Thu 5/21 BMO** → A-queue context capture (bullish WMT / bearish TGT theses); flag for Thu 5/21 D1.
+- **GEV** broaden re-screen Fri 5/22 07:30 MT.
+- KL #12 first-computation Wed 6/3 ~15:30 MT (4-long-book IBM × HCA × META × ZBRA).
+- META mid-window pulse-check Mon 6/1 ~10:00 MT; ZBRA mid-window pulse-check Tue 6/9 ~15:30 MT; ZBRA time-exit Mon 7/13.
+- C thesis-construction Mon 6/8 09:00 MT for 6/16–17 FOMC (HYBRID-ACTIVATE; elevated input variability per yield/oil volatility).
+- M1 next cycle Mon 6/1 (Strategy A router-flip evaluation + fundamental-DNA re-derivation per §Router-review flags above).
 
 **Data quality notes for D2:**
-
-- BRC +18.98% Mon intraday per Yahoo Finance Live = unverified-magnitude flag; primary-source Day-0 close-to-close magnitude required before B thesis-construction commit (MVG family precedent: 6 prior instances DASH/AXSM/EQIX/MNDY/DG-EVG/AMAT have shown intraday-peak vs regular-session-close magnitude divergence flipping criterion-1 mechanical disposition).
-- INTC Mon Day-0 C/C magnitude not directly surfaced at primary-source level (TheStreet Citi-note cite confirms Mon analyst action; Instagram cite "INTC +8.04% midday" not primary-source; Macrotrends most recent data point is May 12 $120.61; CNBC quote page references "Trump says 'more of Intel'" headline but no close magnitude). D2 must verify Mon Day-0 C/C via primary-source close (stockanalysis.com / Yahoo Finance historical / Bloomberg quote-page).
-- Position-level Mon close marks not directly surfaced for HCA / ZBRA / RTX / DIS / META (only IBM/MarketWatch+Bloomberg verified at Mon scan depth; ZBRA via investing.com 5/17 quote ~$258 area). Flag for D2 Mon to refresh Portfolio_Ledger mark-to-market section using primary-source closes.
-- Sector ETF specific Mon closes not directly surfaced (XLE / XLK / XLU / XLF / XLV / SOXX / IGV all pending). Flag for D2 Mon to refresh sector ETF close panel.
-- NAHB May Housing Market Index Mon-released figure not surfaced; flag for D2 Mon if material divergence from consensus.
-- Brent / WTI specific Mon close levels not directly surfaced (intraday range captured $109-112 / WTI ~$102.50; final settlement-close levels pending verification).
-- SPX 50-day / 200-day SMA values not directly captured Mon; flag for next M1 anticipation.
-- TCOM AMC print Mon 5/18 = Day-0 reaction is Tue 5/19; not a Mon Daily.md capture but flag for Tue 5/19 D1.
+- TJX Day-0 magnitude straddles the 5% floor across sources (gurufocus +4.7% / TradingKey +5.48%) = MVG verification required before any B routing.
+- NVDA Day-0 close-to-close reaction is Thu 5/21 (AMC print); print figures captured here are the report itself, not the tape reaction.
+- HCA / META / ZBRA / RTX / DIS Wed 5/20 closes not directly surfaced (only IBM $223.89 + IGV $92.44 verified); marks above are Mon-close-anchored estimates on a +1–2.5% risk-on Wed — D2 to refresh from primary-source Wed closes.
+- Sector-ETF specific Wed closes not surfaced (SOXX/XLK/XLE/XLU/XLF/XLV pending); IGV $92.44 confirmed.
+- Brent specific Wed settlement not directly surfaced (WTI <$100 / −5% confirmed; Brent retreat inferred); D2 to confirm Brent close for IBM (iv) precise headroom.
+- TCOM correction: TCOM reports 5/25 (not 5/18 as prior Daily.md implied); no TCOM Day-0 reaction this window.
