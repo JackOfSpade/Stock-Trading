@@ -12106,3 +12106,62 @@ No D1/D2/D3/W1-W5/M1-M5 cadence prompts in calendar. Q1-Q4 quarterly recurring i
 ### Result
 
 0 events deleted, 0 events updated, 0 missing events. 16 [Claude] events verified. All open positions covered. No portfolio-state changes.
+
+---
+
+## 2026-05-20 — D3 Calendar Hygiene
+
+**Date/time**: 2026-05-20 ~16:00 MT
+**Title:** D3 2026-05-20 — 0 deleted, 0 updated, 0 missing; 16 [Claude] events verified; 1 flag (BRC past event with "(already done)" marker, no Decision_Log entry)
+
+### Events walked (next 90 days: 2026-05-20 → 2026-08-18, America/Denver)
+
+16 [Claude] events found and verified:
+
+| Date (MT) | Event ID | Summary | Disposition |
+|---|---|---|---|
+| 2026-05-20 09:00 | `5dcdjmu0j7fqfsa5k3sdtm688s` | (already done) Thesis construction — BRC Strategy B | PAST — "(already done)" marker in title (updated 2026-05-19T04:26Z); no Decision_Log GO/NO-GO entry for BRC confirmed; window active through Mon 2026-06-01 (Day 3/10); DO NOT DELETE; see BRC flag |
+| 2026-05-22 07:30 | `lvgdk2h2h48bspu45m4rnudces` | GEV trailing-30-day re-screen | KEEP — deferral checkpoint from 2026-04-29 NO-GO defer; trigger date not reached |
+| 2026-06-01 09:00 | `r9i6u6mnpk9ukoj2bh15m1fr7c` | Re-screen BA — trailing-30d roll-off check | KEEP — deferral checkpoint from 2026-04-26 D batch; trigger date not reached |
+| 2026-06-01 10:00 | `2i5gul5m9eiarfm7pkjf8u42u0` | META mid-window thesis pulse-check (Strategy B) | KEEP — META OPEN 2026-05-05; mid-window appropriate |
+| 2026-06-03 15:30 | `k9vtudr7d40ukto3vfhutcdbls` | KL #12 pairwise correlation — B book (IBM + HCA + META + ZBRA) | KEEP — 4-long book description correct absent confirmed BRC GO; contingent on BRC outcome (see BRC flag) |
+| 2026-06-08 09:00 | `7pbkg1kh2pge7midfiqnj6edvk` | Thesis construction — FOMC June 2026 Strategy C | KEEP — FOMC Jun 16-17 catalyst; directional hypothesis CONTESTED per W4 2026-W20 update; description current |
+| 2026-06-09 15:30 | `6p9eotfrdd0eae2pvoccrbj95o` | ZBRA mid-window pulse-check — B position | KEEP — ZBRA OPEN 2026-05-14; time-based exit 2026-07-13 |
+| 2026-06-12 09:30 | `fpbueqccja9thjcnuj6ck9l6rs` | LLY Strategy D mechanical re-screen | KEEP — deferral checkpoint from 2026-04-30 entry-timing-failure NO-GO |
+| 2026-06-26 09:25 | `vt43tmemb2u7km29p79i2dga08` | IBM time-based exit / convergence check (Strategy B) | KEEP — IBM OPEN 2026-04-27; calendar-day-60 = 2026-06-26 ✓ |
+| 2026-06-26 09:25 | `u9l9544ighc4d9o1l44u7pr0uc` | HCA time-based exit / convergence check (Strategy B) | KEEP — HCA OPEN 2026-04-28; calendar-day-60 = Sat 2026-06-27 → last trading day Fri 2026-06-26 ✓ |
+| 2026-07-01 09:00 | `qpshtsnmi7lj8q2j02au3creh4_20260701T150000Z` | Q1 Quarterly Regime Retrospective | KEEP — recurring quarterly cadence instance; prompt self-contained |
+| 2026-07-01 10:30 | `ecu5pu90sgoecj1dn2lvt5656s_20260701T163000Z` | Q2 Quarterly D Long-Horizon Candidates | KEEP — recurring quarterly cadence instance; prompt self-contained |
+| 2026-07-01 12:00 | `pbacgn2esaiollpdq44ujsj9tk_20260701T180000Z` | Q3 Quarterly AI Foundation Delta | KEEP — recurring quarterly cadence instance; prompt self-contained |
+| 2026-07-01 14:00 | `3fma0s1n57bvb4n0gdnbcodtsk_20260701T200000Z` | Q4 Quarterly Action Conversion | KEEP — recurring quarterly cadence instance; prompt self-contained |
+| 2026-07-02 10:00 | `jdki2o75a3rhrc77e5sd4h170c` | META 60-day time-based exit checkpoint (Strategy B) | KEEP — META OPEN; calendar-day-60 from 2026-05-05 = Fri 2026-07-04 (Independence Day) → last trading day Thu 2026-07-02 ✓ |
+| 2026-07-13 07:15 | `b2gka8hncerbnfh6m9j2hq4k2g` | ZBRA time-based exit — B position | KEEP — ZBRA OPEN; calendar-day-60 from 2026-05-14 = Mon 2026-07-13 ✓ |
+
+### BRC flag
+
+Thesis-construction event `5dcdjmu0j7fqfsa5k3sdtm688s` (scheduled 2026-05-20 09:00–11:00 MT) is now PAST. Title shows "(already done)" marker added at 2026-05-19T04:26Z (10:26 PM MT May 18 — before the session's scheduled time). No Decision_Log GO/NO-GO entry for BRC exists in the live log as of this D3 session. Per D3 protocol: DO NOT delete — window active through Mon 2026-06-01 (Day 3/10 as of today). Action for D2: confirm whether BRC thesis-construction produced a Decision_Log entry (possibly in a not-yet-merged branch). If NO entry exists, treat as MISSED session and re-route for Thu 2026-05-21 (Day 4/10); conservative-default fallback is NO-GO if Mon Jun 1 window-close passes without a Decision_Log entry (per deferral-chain prohibition). Contingent: if BRC received a GO today, KL #12 event `k9vtudr7d40ukto3vfhutcdbls` (Jun 3) needs updating from 4-long book (IBM+HCA+META+ZBRA) to 5-long (add BRC).
+
+### Notification audit
+
+Calendar API response header confirms default `{"method":"popup","minutes":0}`. All 16 events fire at event-time via popup 0 min (explicit overrideReminders or calendar default). No notification gaps.
+
+### Open-position coverage check
+
+Current open positions: IBM (B, OPEN 2026-04-27), HCA (B, OPEN 2026-04-28), META (B, OPEN 2026-05-05), ZBRA (B, OPEN 2026-05-14), RTX (D, OPEN 2026-04-27), DIS (D, OPEN 2026-05-07). Unchanged from D3 2026-05-19.
+
+- IBM: time-based exit 2026-06-26 ✓
+- HCA: time-based exit 2026-06-26 ✓
+- META: mid-window 2026-06-01 + 60-day exit 2026-07-02 ✓
+- ZBRA: mid-window 2026-06-09 + time-based exit 2026-07-13 ✓
+- RTX: Strategy D long-horizon; no time-based exit; no research-deferral flag ✓
+- DIS: Strategy D long-horizon; no time-based exit; no research-deferral flag ✓
+
+No pending exit orders → no missing fill-capture events.
+
+### Cadence-policy compliance
+
+No D1/D2/D3/W1-W5/M1-M5 cadence prompts in calendar. Q1-Q4 quarterly recurring instances present for 2026-07-01. Annual A1-A3 instances outside 90-day window (not walked). Policy compliant.
+
+### Result
+
+0 events deleted, 0 events updated, 0 missing events. 16 [Claude] events verified. 1 flag: BRC thesis-construction event past with "(already done)" marker but no Decision_Log entry confirmed — D2 to resolve.
