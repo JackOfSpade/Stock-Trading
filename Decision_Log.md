@@ -12242,3 +12242,42 @@ Four A-queue row notes appended for Wed 5/20 events (written 2026-05-21 carry-fo
 - 6 Portfolio_Ledger.md marks updated (Wed 5/20 closes).
 - 4 Watchlist.md notes appended (MU/NVDA/INTC/HD).
 - **0 calendar events created (blocked — user must approve Calendar MCP or create manually).**
+
+---
+
+## 2026-05-21 — D2 Action Conversion (carry-forward close-out)
+
+**Date/time**: 2026-05-21
+**Title:** D2 2026-05-21 — BRC conservative-default NO-GO (deferral exhausted); TJX first deferral (Calendar MCP still blocked); no orders; no file changes
+
+---
+
+### BRC — Conservative-default NO-GO (procedural; deferral chain exhausted)
+
+D2 2026-05-20 re-routed the MISSED BRC thesis-construction session to Thu 2026-05-21 and specified: "No further deferral permitted after Thu 5/21 — conservative-default NO-GO if Thu 5/21 session produces no Decision_Log entry (deferral-chain prohibition)." Today (Thu 2026-05-21) no BRC thesis-construction session was triggered: Calendar MCP returned "MCP tool call requires approval" in both D2 2026-05-20 and D2 2026-05-21 (list_events and create_event both blocked); no calendar event was created; no thesis-construction session was conducted; no Decision_Log BRC GO/NO-GO entry was produced.
+
+**Decision: BRC NO-GO — procedural (deferral chain exhausted). Conservative default fires.**
+
+This is a PROCEDURAL NO-GO only — no criterion 1–5 analysis was performed. The B-short string is NOT extended (no criterion-4 SHORT-direction dismissal). Per "NO-GO records are context, not barriers": BRC remains evaluable under a fresh trigger event (new earnings print, new corporate development) generating a new 10-day window. The current 10-day entry window from the May 15 Q4 FY25 earnings event expires Mon 2026-06-01 without an entry staged.
+
+---
+
+### TJX — Thesis-construction pending (first deferral; Calendar MCP blocked)
+
+TJX Q1 FY27 print Wed 2026-05-20 BMO; Day-0 C/C +5.66% confirmed (stockanalysis.com, MVG cleared by D2 2026-05-20). Thesis-construction required within the 10-day window (expires ~Thu 2026-06-05). Calendar MCP blocked in D2 2026-05-20 and D2 2026-05-21; no calendar event created.
+
+Per deferral discipline (first deferral; no chain violation):
+- **Resolution trigger**: user manually creates the `[Claude] Thesis construction — TJX Strategy B` calendar event using the prompt in D2 2026-05-20 Calendar events section, OR enables Calendar MCP auto-approval in session settings for next D2/D3 run.
+- **Conservative-default fallback**: skip TJX thesis-construction (no entry staged) if window expires ~Thu 2026-06-05 without a session.
+
+Full self-contained prompt for manual event creation is in the D2 2026-05-20 Calendar events section (item 2) above.
+
+---
+
+### Summary
+
+- No exits. No orders.
+- **BRC: conservative-default NO-GO (procedural; deferral chain exhausted). Window closes Mon 6/1 without entry.**
+- **TJX: first deferral; calendar event creation pending user action; window ~Thu 6/5.**
+- No Portfolio_Ledger.md or Watchlist.md changes (already applied by D2 2026-05-20).
+- **0 calendar events created (Calendar MCP still blocked).**
