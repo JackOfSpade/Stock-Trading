@@ -12,5 +12,14 @@
         ]
       }
     ]
+  },
+  "permissions": {
+    "allow": [
+      "mcp__Google-Calendar__list_events",
+      "mcp__Google-Calendar__create_event",
+      "mcp__Google-Calendar__delete_event",
+      "mcp__Google-Calendar__update_event",
+      "mcp__Google-Calendar__get_event"
+    ]
   }
 }
