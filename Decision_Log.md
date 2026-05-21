@@ -12165,3 +12165,80 @@ No D1/D2/D3/W1-W5/M1-M5 cadence prompts in calendar. Q1-Q4 quarterly recurring i
 ### Result
 
 0 events deleted, 0 events updated, 0 missing events. 16 [Claude] events verified. 1 flag: BRC thesis-construction event past with "(already done)" marker but no Decision_Log entry confirmed — D2 to resolve.
+
+---
+
+## 2026-05-20 — D2 Action Conversion
+
+**Date/time**: 2026-05-20 (executed 2026-05-21 carry-forward; context-limit interruption mid-session)
+**Title:** D2 2026-05-20 — TJX MVG cleared → thesis-construction pending; BRC MISSED → re-routed Thu 5/21; 6 marks updated; 4 Watchlist notes appended; 0 calendar events (MCP blocked — user action required)
+
+---
+
+### TJX MVG resolution
+
+D1 2026-05-20 flagged TJX as B candidate with conflicting Day-0 sources straddling the ≥5% floor (gurufocus +4.7% vs TradingKey +5.48%). D2 fetched stockanalysis.com directly:
+
+- **Primary-source result**: stockanalysis.com TJX Q1 FY27 earnings Day-0 close confirmed **+5.66%**.
+- **MVG gate**: CLEARED. Criterion 1 ≥5% threshold PASSED.
+- **Routing**: thesis-construction session required; scheduled Thu 2026-05-21 11:00–13:00 MT per calendar event (see Calendar events section below). Entry window expires ~Thu 2026-06-05 (10 trading days from Day-0). No prior deferral consumed.
+
+---
+
+### BRC MISSED-session resolution
+
+D3 2026-05-20 flagged BRC thesis-construction event `5dcdjmu0j7fqfsa5k3sdtm688s` as PAST with "(already done)" title marker but no Decision_Log GO/NO-GO entry. D2 confirmed: searched all 12,167 Decision_Log lines for BRC — no GO/NO-GO entry exists anywhere in the live log.
+
+- **Determination**: MISSED session. The "(already done)" marker was added 2026-05-19T04:26Z (10:26 PM MT May 18) — before the scheduled session time. No thesis-construction output recorded.
+- **Re-routing**: BRC thesis-construction re-routed to Thu 2026-05-21 09:00–11:00 MT. This re-route consumes the one permitted defer (original MISSED session = first defer). No further deferral permitted after Thu 5/21 — conservative-default NO-GO if Thu 5/21 session produces no Decision_Log entry (deferral-chain prohibition).
+- **Window status**: BRC entry window expires Mon 2026-06-01 (Day 3→4 of 10 as of Thu 5/21). Calendar event for re-routed session: see Calendar events section below.
+
+---
+
+### Mark-to-market updates — Wed 2026-05-20 closes
+
+All 6 open positions updated in Portfolio_Ledger.md with Wed 5/20 primary-source closes (stockanalysis.com):
+
+| Position | Wed 5/20 close | Mark value | Unrealized P&L | Notes |
+|---|---|---|---|---|
+| IBM (B) | $223.89 | 0.1198 × $223.89 = $26.82 | -$1.03 / -3.70% vs $27.85 cost | IGV $92.44 confirmed ($12.44 headroom); Brent ~$110 ($20 headroom to $130 trigger); stress posture easing |
+| HCA (B) | $396.67 | 0.0642 × $396.67 = $25.47 | -$2.64 / -9.39% vs $28.11 cost | Adverse MTM without HCA-specific news per D1; no criterion (i)/(ii)/(iii)/(iv) trips; B long no price-stop |
+| META (B) | $605.06 | 0.0454 × $605.06 = $27.47 | -$0.10 / -0.36% vs $27.57 cost | Wed layoffs (8,000 notified) = operational cost-action, not criterion (i)/(ii)/(iii) trip; NM bench trial Phase II ongoing |
+| ZBRA (B) | $243.47 | 0.1505 × $243.47 = $36.64 | -$1.26 / -3.32% vs $37.90 cost | No invalidation criteria (i)-(iv) tripped |
+| RTX (D) | $174.85 | 0.1595 × $174.85 = $27.89 | -$0.32 / -1.13% vs $28.21 cost | No invalidation criteria tripped |
+| DIS (D) | $104.08 | 0.28 × $104.08 = $29.14 | -$2.07 / -6.63% vs $31.21 cost | No invalidation criteria (i)-(v) tripped; FCC TV-license no final order |
+
+No exit orders triggered. All positions hold.
+
+---
+
+### Watchlist.md updates
+
+Four A-queue row notes appended for Wed 5/20 events (written 2026-05-21 carry-forward after Edit tool persistence failure in original session; applied via Python script, confirmed 4× "NOTE 2026-05-20" present):
+
+1. **MU**: Samsung 18-day memory-fab strike (was to start 5/21) AVERTED Wed 5/20 via tentative wage deal; removes directionally-ambiguous overhang flagged 5/18; MU +4.8% Wed relief. HBM/DRAM-tightness A-thesis intact, disruption-tail removed. Note for M1 6/1.
+2. **NVDA**: FQ1 27 blowout print AMC ($81.62B rev +85% YoY; DC $75.2B doubled; EPS $1.87; +$80B buyback; dividend raise; Vera "$200B new tab") materially ratifies bullish A-thesis at print level. Day-0 C/C Thu 5/21. Valuation-reset caveat if large Thu gap-up. Note for M1 6/1.
+3. **INTC**: +4.7% Wed 5/20 semi-strength (Citi/Benchmark PT-raise continuation from Mon 5/18); sector-sympathy character; marginally constructive but sub-5% close; framing-flip-vs-hold deferred to M1 6/1.
+4. **HD**: FQ1 26 print Tue 5/19 BMO — bearish thesis modestly supported (comps +0.6% / gross margin −75bps / OI −100bps) but not decisively (adj EPS $3.43 vs $3.41 beat; FY26 guide REAFFIRMED; stock −2.49%). Note for M1 6/1.
+
+---
+
+### Calendar events
+
+**BLOCKED — user action required.** Both `mcp__Google-Calendar__create_event` calls failed with "MCP tool call requires approval." Two retries attempted; both denied. Calendar MCP is not auto-approved in this session's harness permissions. The following events were NOT created:
+
+1. `[Claude] Thesis construction — BRC Strategy B` — Thu 2026-05-21 09:00–11:00 MT (America/Denver); popup 0 min; re-routed MISSED session; window expires Mon 6/1; deferral chain exhausted after this session.
+2. `[Claude] Thesis construction — TJX Strategy B` — Thu 2026-05-21 11:00–13:00 MT (America/Denver); popup 0 min; new candidate; MVG +5.66% cleared; window expires ~Thu 6/5.
+
+**User must enable Calendar MCP in session settings to allow event creation, then re-run D2 calendar step OR manually create the above two events.**
+
+---
+
+### Summary
+
+- No exits. No orders.
+- TJX MVG CLEARED (+5.66%); thesis-construction pending calendar event creation.
+- BRC MISSED session confirmed; re-routed to Thu 5/21; deferral chain exhausted.
+- 6 Portfolio_Ledger.md marks updated (Wed 5/20 closes).
+- 4 Watchlist.md notes appended (MU/NVDA/INTC/HD).
+- **0 calendar events created (blocked — user must approve Calendar MCP or create manually).**
