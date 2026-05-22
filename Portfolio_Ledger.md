@@ -571,21 +571,21 @@ Format:
 - **Regime state at entry**: SPY Trend = NEUTRAL, VIX = NORMAL, Yield Curve = NORMAL, Breadth = HEALTHY (per Regime_State.md most-recent-call). Strategy D ACTIVATE (technical UP/NEUTRAL + sustained-inversion NOT-SUSTAINED + fundamental ACTIVATE).
 - **Sector / concentration context**: GICS Communication Services / Entertainment ~1.6% of D NAV $1,888.43 mark. RTX (other open D position) is Industrials / Aerospace & Defense ~1.5% of D NAV — different GICS sector, no sector cap interaction; both well within 30% per-sector cap (~28%+ headroom remaining in each).
 
-### [Strategy B] BRC — ORDER-STAGED 2026-05-22 (pending fill)
+### [Strategy B] BRC — OPEN 2026-05-22
 
 - **Source thesis**: → Decision_Log 2026-05-22 "Strategy B thesis construction — BRC GO at MEDIUM-LOW conviction (overturns 5/21 procedural NO-GO)" (full thesis substance: fiscal Q3 2026 print Mon 5/18 BMO record adj EPS $1.50 vs ~$1.35 + rev $435.2M +13.8% + FY26 guide raise $4.95-5.15 → $5.20-5.30; Day-0 C/C ~+14-17% held flat Mon→Thu; stock $84.56 sits ~17% below $101.50 PT cluster = undershoot anchor not matching sub-pattern 1/3 at-cluster diagnostics; mild sell-side reset (Sidoti Strong-Buy upgrade, thin coverage, no aggressive multi-firm wave); ZBRA-precedent parallel; criteria 1-5 walk; convergence-target derivation; conviction calibration). Re-evaluation context: 5/21 procedural NO-GO was a Google-Calendar-MCP-outage artifact with zero criteria analysis — overturned per Operating_Protocols §3.
-- **Order details**: **Limit BUY 0.4415 BRC @ $85.50 Day (Fri 2026-05-22)** — STAGED, not yet filled. Principal target ~$37.75 (2% of B NAV ~$1,888). Limit set at a slight marketable premium to the Thu 5/21 close $84.56, below the $85.95 after-hours print; operator instruction: do NOT chase above ~$86.00 — re-evaluate next session within the window if unfilled on a gap-up open.
+- **Fill details**: **Filled 0.4415 BRC @ $84.97** — Limit BUY, Day order; fill timestamp **07:30:01 MT, Fri 2026-05-22**. Principal: **$37.51**. Commission: **$0.35**. Cost basis (principal + commission): **$37.86**.
 - **Convergence target**: **$88.80** (immutable per Strategy.md criterion 3 rev 14; 25% gap-fill from $84.56 reference toward $101.50 analyst PT median; +5.0% from reference). ZBRA-template methodology.
-- **Time-based exit**: ~2026-07-21 (entry + 60 calendar days; finalized at fill).
+- **Time-based exit**: **2026-07-21** (fill date 2026-05-22 + 60 calendar days).
 - **Invalidation criteria status** (per Decision_Log 2026-05-22 staging):
-  - (i) BRC 8-K cutting FY26 adj-EPS guide below the new $5.20 floor — NOT-TRIPPED at staging.
-  - (ii) Honeywell-PSS deal termination or negative business / demand update — NOT-TRIPPED at staging.
-  - (iii) Sub-pattern-1 escalation (≥3-firm aggressive PT-raise wave re-rating the stock to information-priced equilibrium near $100-102) — NOT-TRIPPED at staging.
-- **No price-based invalidation** (B-long has no price stop per Strategy.md; worst-case loss bounded at ~$37.75 / 2% of B NAV by sizing).
-- **Sector / slot context**: GICS Industrials / Industrial Machinery. B-sector-cap Industrials 0/3 → 1/3 (RTX is Strategy D, not counted in B cap). B concurrent-slot count 4/5 → 5/5 at fill (B at slot cap; no further B entries until a slot frees). KL #12 5-long-book pairwise-correlation first computation Wed 2026-06-03 (event `k9vtudr7d40ukto3vfhutcdbls`; update from 4-long to 5-long).
-- **Mark-to-market**: pending fill capture (operator screenshot end-of-day Fri 5/22; order-execution event `c873h8bq37aincn7ig92vfuq04` 07:00 MT and fill-capture event `9rd4jg12j34b6v4c8bvlonin0o` 14:30 MT active).
-- **Conviction rating at staging**: MEDIUM-LOW (~45-50%). Genuine-ambiguity GO (could defensibly have gone NO-GO on criterion-3-degenerates-to-A-territory); resolves GO on undershoot-anchor + mild-sell-side-reset + ZBRA-consistency. See Decision_Log 2026-05-22.
-- **Claude model at staging**: Claude Opus 4.7
+  - (i) BRC 8-K cutting FY26 adj-EPS guide below the new $5.20 floor — NOT-TRIPPED at entry.
+  - (ii) Honeywell-PSS deal termination or negative business / demand update — NOT-TRIPPED at entry.
+  - (iii) Sub-pattern-1 escalation (≥3-firm aggressive PT-raise wave re-rating the stock to information-priced equilibrium near $100-102) — NOT-TRIPPED at entry.
+- **No price-based invalidation** (B-long has no price stop per Strategy.md; worst-case loss bounded at ~$37.86 cost basis / 2% of B NAV by sizing).
+- **Sector / slot context**: GICS Industrials / Industrial Machinery. B-sector-cap Industrials 0/3 → 1/3 (RTX is Strategy D, not counted in B cap). B concurrent-slot count 4/5 → 5/5 (B at slot cap; no further B entries until a slot frees). KL #12 5-long-book pairwise-correlation first computation Wed 2026-06-03 (event `k9vtudr7d40ukto3vfhutcdbls`; updated to 5-long book IBM + HCA + META + ZBRA + BRC).
+- **Mark-to-market (initial, EOD 2026-05-22)**: BRC ~$87.55 at close; IBKR unrealized P&L $0.93; +3.0% above fill price ($84.97 → $87.55).
+- **Conviction rating at entry**: MEDIUM-LOW (~45-50%). Genuine-ambiguity GO (could defensibly have gone NO-GO on criterion-3-degenerates-to-A-territory); resolves GO on undershoot-anchor + mild-sell-side-reset + ZBRA-consistency. See Decision_Log 2026-05-22.
+- **Claude model at entry**: Claude Opus 4.7
 
 ---
 
