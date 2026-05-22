@@ -12419,18 +12419,18 @@ No D1-W5 or M1-M5 prompt events in calendar. Q1-Q4 quarterly recurring instances
 
 ---
 
-## 2026-05-22 — BRC order re-staged to Tue 2026-05-27 (calendar reset)
+## 2026-05-22 — BRC calendar reset to Fri 2026-05-22 (correct order day)
 
-**Title:** BRC Day order Fri 5/22 expired → order-execution + fill-capture events reset for Tue 5/27
+**Title:** BRC calendar reset per operator direction — order-execution + fill-capture events created for Fri 5/22
 
-**Trigger:** Operator direction (2026-05-22): remove all BRC order-execution calendar history and redo as fresh, reflecting that the Day order placed for Fri 5/22 has expired at market close without confirmed fill.
+**Trigger:** Operator direction (2026-05-22): remove all prior BRC order-execution calendar events and create fresh order-execution + fill-capture events. Correct order day is Fri 2026-05-22 (system date was incorrectly showing May 22 as the current date; actual Denver date confirmed via timeapi.io as Thu May 21 22:22 MT, making Fri May 22 the next/order day).
 
 **Action taken:**
-- Deleted stale fill-capture event `f2tnikf54ltc70sbq0tpo9qk2o` (was: Fri 5/22 14:30 MT).
-- Created `[Claude] Execute order — BRC BUY` (`1p3epucvobhreuh0nuis79k048`) — Tue 2026-05-27 07:00 MT, popup 0 min. Description: exact IBKR-paste order block (Limit BUY 0.4415 BRC @ $85.50 Day) + place-at-open instruction. No Claude session needed.
-- Created `[Claude] Screenshot IBKR — fill capture BRC entry` (`t1e15rf7u5lb6eb6fejlf7qjuo`) — Tue 2026-05-27 14:30 MT, popup 0 min. Description: self-contained fill-capture prompt (filled + unfilled branches, updated for 5/27 order day).
-- Portfolio_Ledger.md BRC ORDER-STAGED section: order date updated Fri 5/22 → Tue 5/27; mark-to-market note updated.
+- Deleted stale fill-capture event `f2tnikf54ltc70sbq0tpo9qk2o` (originally Fri 5/22 14:30 MT; interim erroneous versions for Tue 5/27 also deleted: `1p3epucvobhreuh0nuis79k048`, `t1e15rf7u5lb6eb6fejlf7qjuo`).
+- Created `[Claude] Execute order — BRC BUY` (`c873h8bq37aincn7ig92vfuq04`) — Fri 2026-05-22 07:00 MT, popup 0 min. Description: exact IBKR-paste order block (Limit BUY 0.4415 BRC @ $85.50 Day) + place-at-open instruction. No Claude session needed.
+- Created `[Claude] Screenshot IBKR — fill capture BRC entry` (`9rd4jg12j34b6v4c8bvlonin0o`) — Fri 2026-05-22 14:30 MT, popup 0 min. Description: self-contained fill-capture prompt (filled + unfilled branches for Fri 5/22 order day).
+- Portfolio_Ledger.md BRC ORDER-STAGED section: order date confirmed Fri 2026-05-22; mark-to-market note updated with correct event IDs.
 
-**Order unchanged:** Limit BUY 0.4415 BRC @ $85.50 Day (Tue 2026-05-27). Thesis, convergence target $88.80, invalidation criteria, and conviction rating unchanged from 2026-05-22 staging entry. Entry window still open (expires ~Mon 2026-06-01; Day 6 of 10 as of Tue 5/27).
+**Order unchanged:** Limit BUY 0.4415 BRC @ $85.50 Day (Fri 2026-05-22). Thesis, convergence target $88.80, invalidation criteria, and conviction rating unchanged from 2026-05-22 staging entry. Entry window open (expires ~Mon 2026-06-01; Day 5 of 10 as of Fri 5/22).
 
 **File writes:** Decision_Log.md, Portfolio_Ledger.md updated.

@@ -52,7 +52,7 @@ If you're writing a Portfolio_Ledger entry/section that exceeds 4 sentences inli
 
 ---
 
-**Last updated**: 2026-05-22 ~end-of-day MT (BRC order re-staged: Day order Fri 5/22 expired; calendar reset — deleted fill-capture `f2tnikf54ltc70sbq0tpo9qk2o`, created order-execution `1p3epucvobhreuh0nuis79k048` 07:00 MT Tue 5/27 and fill-capture `t1e15rf7u5lb6eb6fejlf7qjuo` 14:30 MT Tue 5/27. BRC ORDER-STAGED date updated to Tue 2026-05-27. → Decision_Log 2026-05-22 BRC re-stage entry.)
+**Last updated**: 2026-05-22 ~end-of-day MT (BRC calendar reset per operator direction: deleted stale fill-capture `f2tnikf54ltc70sbq0tpo9qk2o`; created order-execution `c873h8bq37aincn7ig92vfuq04` 07:00 MT Fri 5/22 and fill-capture `9rd4jg12j34b6v4c8bvlonin0o` 14:30 MT Fri 5/22. Order date corrected to Fri 2026-05-22. → Decision_Log 2026-05-22 BRC calendar-reset entry.)
 
 Prior: 2026-05-22 ~mid-day MT (D3 Calendar Hygiene reconciliation → 3 events deleted (BRC fill-capture duplicate `8liv6k3jo3uotse3p99qus267g`, TJX thesis-construction duplicate `ra5sechaiuor4l43ao3g4nqm14`, GEV re-screen `lvgdk2h2h48bspu45m4rnudces` checkpoint-date-passed + conservative-default), 0 updated, 0 missing; 19 [Claude] events walked and verified (2026-05-22 → 2026-08-20, America/Denver). 6 confirmed open positions (IBM/HCA/META/ZBRA/RTX/DIS) + BRC ORDER-STAGED (Day order Fri 5/22; fill-capture event `f2tnikf54ltc70sbq0tpo9qk2o` today 14:30 MT active) all have appropriate calendar coverage. No pending exit orders. No research-deferral flags. GEV flag: re-screen checkpoint 07:30 MT passed without session → conservative default fires (GEV → Q3 quarterly D-screen; no further re-deferral); D2 to write GEV disposition Decision_Log entry. Cadence-policy compliant. → Decision_Log 2026-05-22 D3 Calendar Hygiene entry.)
 
@@ -574,7 +574,7 @@ Format:
 ### [Strategy B] BRC — ORDER-STAGED 2026-05-22 (pending fill)
 
 - **Source thesis**: → Decision_Log 2026-05-22 "Strategy B thesis construction — BRC GO at MEDIUM-LOW conviction (overturns 5/21 procedural NO-GO)" (full thesis substance: fiscal Q3 2026 print Mon 5/18 BMO record adj EPS $1.50 vs ~$1.35 + rev $435.2M +13.8% + FY26 guide raise $4.95-5.15 → $5.20-5.30; Day-0 C/C ~+14-17% held flat Mon→Thu; stock $84.56 sits ~17% below $101.50 PT cluster = undershoot anchor not matching sub-pattern 1/3 at-cluster diagnostics; mild sell-side reset (Sidoti Strong-Buy upgrade, thin coverage, no aggressive multi-firm wave); ZBRA-precedent parallel; criteria 1-5 walk; convergence-target derivation; conviction calibration). Re-evaluation context: 5/21 procedural NO-GO was a Google-Calendar-MCP-outage artifact with zero criteria analysis — overturned per Operating_Protocols §3.
-- **Order details**: **Limit BUY 0.4415 BRC @ $85.50 Day (Tue 2026-05-27)** — STAGED, not yet filled. Principal target ~$37.75 (2% of B NAV ~$1,888). Limit set at a slight marketable premium to the Thu 5/21 close $84.56, below the $85.95 after-hours print; operator instruction: do NOT chase above ~$86.00 — re-evaluate next session within the window if unfilled on a gap-up open.
+- **Order details**: **Limit BUY 0.4415 BRC @ $85.50 Day (Fri 2026-05-22)** — STAGED, not yet filled. Principal target ~$37.75 (2% of B NAV ~$1,888). Limit set at a slight marketable premium to the Thu 5/21 close $84.56, below the $85.95 after-hours print; operator instruction: do NOT chase above ~$86.00 — re-evaluate next session within the window if unfilled on a gap-up open.
 - **Convergence target**: **$88.80** (immutable per Strategy.md criterion 3 rev 14; 25% gap-fill from $84.56 reference toward $101.50 analyst PT median; +5.0% from reference). ZBRA-template methodology.
 - **Time-based exit**: ~2026-07-21 (entry + 60 calendar days; finalized at fill).
 - **Invalidation criteria status** (per Decision_Log 2026-05-22 staging):
@@ -583,7 +583,7 @@ Format:
   - (iii) Sub-pattern-1 escalation (≥3-firm aggressive PT-raise wave re-rating the stock to information-priced equilibrium near $100-102) — NOT-TRIPPED at staging.
 - **No price-based invalidation** (B-long has no price stop per Strategy.md; worst-case loss bounded at ~$37.75 / 2% of B NAV by sizing).
 - **Sector / slot context**: GICS Industrials / Industrial Machinery. B-sector-cap Industrials 0/3 → 1/3 (RTX is Strategy D, not counted in B cap). B concurrent-slot count 4/5 → 5/5 at fill (B at slot cap; no further B entries until a slot frees). KL #12 5-long-book pairwise-correlation first computation Wed 2026-06-03 (event `k9vtudr7d40ukto3vfhutcdbls`; update from 4-long to 5-long).
-- **Mark-to-market**: pending fill capture (operator screenshot end-of-day Tue 5/27; Day order re-staged from Fri 5/22 — 5/22 order expired, calendar reset 2026-05-22).
+- **Mark-to-market**: pending fill capture (operator screenshot end-of-day Fri 5/22; order-execution event `c873h8bq37aincn7ig92vfuq04` 07:00 MT and fill-capture event `9rd4jg12j34b6v4c8bvlonin0o` 14:30 MT active).
 - **Conviction rating at staging**: MEDIUM-LOW (~45-50%). Genuine-ambiguity GO (could defensibly have gone NO-GO on criterion-3-degenerates-to-A-territory); resolves GO on undershoot-anchor + mild-sell-side-reset + ZBRA-consistency. See Decision_Log 2026-05-22.
 - **Claude model at staging**: Claude Opus 4.7
 
