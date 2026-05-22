@@ -15,7 +15,7 @@ Claude reads this file at the start of every routine run, locates the matching `
 Claude runs as scheduled routines connected to a GitHub repo (currently `JackOfSpade/Stock-Trading`) and to Google Calendar via MCP. Inside a routine Claude has:
 
 - **Direct read/write access to repo .md files.** Live state files (Decision_Log.md, Portfolio_Ledger.md, Watchlist.md, Operating_Protocols.md, Regime_State.md) are edited in place. Cadence-output files (Daily.md, Weekly_*.md, Monthly_*.md, Quarterly_*.md, Annual_*.md) are overwritten each run. Decision_Log_Archive_<YYYY>_<QN>.md files are append-only quarterly archives written by W5.
-- **Calendar MCP for one-off events.** Used to schedule fill-capture screenshots, thesis-construction sessions, research-deferral checkpoints, foundation-change assessments, constraint-relaxation reviews, and similar one-off work that needs a fresh chat session at a specific future time. Adversarial reviews (pre-mortem, divergence, m2m-termination, capital-redistribution) are NOT scheduled via calendar — they are queue-driven via `Pending_Adversarial_Reviews.md` and processed by the AR routines (see ADVERSARIAL REVIEWS section).
+- **Calendar MCP for one-off events.** Used to schedule order-execution reminders, fill-capture screenshots, thesis-construction sessions, research-deferral checkpoints, foundation-change assessments, constraint-relaxation reviews, and similar one-off work that needs a fresh chat session at a specific future time. Adversarial reviews (pre-mortem, divergence, m2m-termination, capital-redistribution) are NOT scheduled via calendar — they are queue-driven via `Pending_Adversarial_Reviews.md` and processed by the AR routines (see ADVERSARIAL REVIEWS section).
 - **Web research tools** (Tavily, web_search, web_fetch) for deep-research cadences.
 
 Each routine run is a fresh session — there is no cross-run chat memory. State persists only in repo files and calendar events. Every prompt body in this document is therefore self-contained: it specifies which repo files to read, which to write, and which calendar events to create.
@@ -86,8 +86,9 @@ Conventions for one-off events Claude creates:
 
 Canonical one-off-event types and triggers:
 
-- **Fill capture** — scheduled after every staged order's expected fill window (typically end-of-day on the order day). Description instructs the human to screenshot IBKR positions and orders pages and paste both into a fresh Claude chat with the prompt text. The triggered Claude session reads the screenshots, updates Portfolio_Ledger.md directly, and acknowledges in chat.
-- **Thesis construction** — for new-entry candidates that cleared the screening cadence (W4 schedules A/B/C; M5 schedules E pairs; Q4 schedules D candidates). Description includes ticker, strategy, candidate context, and references to Strategy.md / Operating_Protocols.md.
+- **Order execution** — scheduled for every staged order at **07:00 MT pre-market on the order day** (30 minutes before the 07:30 MT market open). Description contains the exact IBKR-paste order block and a one-line reminder to place it at or after market open. No Claude session is needed — the human simply reads the notification and places the order in IBKR. Every staged order (entry or exit, Day or GTC) gets one order-execution event. For GTC orders, the event fires once on the first placement day; subsequent-day monitoring is via D3 daily hygiene until the fill-capture event confirms reconciliation.
+- **Fill capture** — scheduled after every staged order's expected fill window (typically end-of-day on the order day, i.e., ~14:30 MT). Description instructs the human to screenshot IBKR positions and orders pages and paste both into a fresh Claude chat with the prompt text. The triggered Claude session reads the screenshots, updates Portfolio_Ledger.md directly, and acknowledges in chat. Always paired with an order-execution event for the same order.
+- **Thesis construction** — for new-entry candidates that cleared the screening cadence (W4 schedules A/B/C; M5 schedules E pairs; Q4 schedules D candidates). Description includes ticker, strategy, candidate context, and references to Strategy.md / Operating_Protocols.md. The thesis-construction session, if it produces a GO, must itself create both an order-execution event (pre-market on the order day) and a fill-capture event (end-of-day on the order day) before ending.
 - **Research deferral checkpoint** — for positions flagged "further research" by W3/M4. Description includes the specific information gap, reference to Strategy.md exit rules, and the conservative-default fallback (exit on trigger-failure).
 - **Foundation-change assessment** — scheduled by Q4/A3 per strategy, for material AI-foundation revisions affecting that strategy.
 - **Constraint-relaxation review** — scheduled by A3 for out-of-table constraint flags.
@@ -126,6 +127,7 @@ Claude performs the following checklist in thinking blocks before composing ever
 - [ ] Have I included file contents in chat (fenced code blocks, "attached files," etc.) when the file should have been written directly?
 - [ ] Have I deferred a decision to "human's call" that I should have resolved myself?
 - [ ] Have I factored commissions into a staging-time decision?
+- [ ] Have I scheduled an order-execution event (07:00 MT pre-market on order day) for any staged order?
 - [ ] Have I scheduled a fill-capture screenshot event for any staged order?
 - [ ] If I deferred a decision, have I specified its resolution trigger and conservative-default fallback?
 
@@ -305,7 +307,8 @@ For each recommendation type:
    - If confirmed: stage the exit order in IBKR-paste format. Limit-price selection: for stocks, use the most-recent close as starting point and adjust to a marketable limit (sells at slight discount to last, buys at slight premium) unless the invalidation logic favors patient execution; for options legs, use mid of current bid/ask if available. Day duration unless thesis logic requires GTC.
    - Append a Decision_Log entry recording: triggering development, specific invalidation criterion met, position exit decision, conviction-calibration notes per the conviction-calibration ladder.
    - Update Portfolio_Ledger.md to mark the position exit-pending with the staged order details.
-   - Schedule a "[Claude] Screenshot IBKR — fill capture <ticker> exit" calendar event for the order's expected fill window (typically end-of-day on the order day, prior to next trading session).
+   - Schedule a "[Claude] Execute order — <ticker> SELL" calendar event for **07:00 MT pre-market on the order day**. Description: the exact IBKR-paste order block plus "Place this order in IBKR at or after market open."
+   - Schedule a "[Claude] Screenshot IBKR — fill capture <ticker> exit" calendar event for end-of-day on the order day (~14:30 MT).
 
 2. NEW ENTRY CANDIDATES. For each candidate flagged:
    - Determine entry-window urgency from Strategy.md per the candidate's strategy:
@@ -314,7 +317,7 @@ For each recommendation type:
      - Strategy A: catalyst within 6 months — schedule respecting router state. If A is currently DO-NOT-ACTIVATE per Regime_State.md / Decision_Log.md most-recent M1 call, the candidate goes to Watchlist.md A queue rather than thesis-construction; do not schedule a thesis-construction event.
      - Strategy E: pair divergence opening — schedule next-cycle M3 unless divergence is fast-moving (then schedule pair-thesis-construction within 1–2 trading days).
    - For each candidate that should proceed to thesis construction: schedule a "[Claude] Thesis construction — <ticker> <strategy>" calendar event at the appropriate time (Strategy B: next morning pre-market or first hour; Strategy C: same-week if catalyst < 14 days, otherwise next weekend after W1; Strategy A: aligned with W1 weekend session; Strategy E fast-moving: within 2 trading days).
-   - Event description must be a self-contained thesis-construction prompt: (a) ticker, strategy, candidate context (what Daily.md flagged), (b) reference to Strategy.md entry criteria for the strategy, (c) reference to Operating_Protocols.md for the "NO-GO records are context, not barriers" rule and conviction-calibration ladder, (d) instruction to apply commission-disregarded staging, (e) reminder that the session writes Decision_Log.md / Portfolio_Ledger.md directly and emits the order in chat.
+   - Event description must be a self-contained thesis-construction prompt: (a) ticker, strategy, candidate context (what Daily.md flagged), (b) reference to Strategy.md entry criteria for the strategy, (c) reference to Operating_Protocols.md for the "NO-GO records are context, not barriers" rule and conviction-calibration ladder, (d) instruction to apply commission-disregarded staging, (e) reminder that the session writes Decision_Log.md / Portfolio_Ledger.md directly and emits the order in chat, (f) instruction that a GO disposition requires creating both a "[Claude] Execute order — <ticker> BUY" event (07:00 MT pre-market on order day, description = IBKR-paste order block) and a "[Claude] Screenshot IBKR — fill capture <ticker> entry" event (~14:30 MT on order day).
    - For Strategy A candidates that should queue rather than proceed: update Watchlist.md A-queue section with ticker, date-added, reason summary, resolution-trigger condition ("next M1 with A router ACTIVATE").
 
 3. WATCHLIST UPDATES. For each add/remove/demote flagged:
@@ -354,13 +357,14 @@ Walk all `[Claude]` events in the next 90 days:
   (a) A Decision_Log GO or NO-GO disposition entry exists for the ticker dated on or after the underlying trigger event-date (handles operator early-execution: session completed before the scheduled calendar slot).
   (b) The ticker has been entered (now in Portfolio_Ledger open positions) or is otherwise no longer eligible (e.g., A queue promotion, archived).
   (c) The candidate's entry window has fully closed (Strategy B: 10 trading days from event; Strategy A: 6 months from catalyst date or catalyst passed) AND no GO disposition exists.
-- DELETE other event types when their triggering condition has passed (e.g., fill-capture events for orders already reconciled into Portfolio_Ledger.md; research-deferral checkpoints whose underlying position has been exited).
+- DELETE other event types when their triggering condition has passed (e.g., fill-capture events for orders already reconciled into Portfolio_Ledger.md; research-deferral checkpoints whose underlying position has been exited; order-execution events whose order day has passed).
 - DO NOT delete a thesis-construction event solely because its datetime is in the past. A past unfired event with active window and no Decision_Log disposition is a MISSED session, not a stale one — flag it in chat output for the next D2 to re-route, rather than silently deleting it.
 - Update events whose timing or prompt content is stale (e.g., a thesis-construction event for a Strategy B candidate whose 10-day entry window has shifted; a foundation-change assessment whose strategies-affected list has changed since the underlying Q3/A1 finding).
 - Confirm pending events have correct prompt text in their descriptions — descriptions must be self-contained so the human can paste directly into a fresh Claude chat.
 - Confirm per-event notifications are set to fire at event-time.
 
 Walk currently-open positions and pending orders from Portfolio_Ledger.md:
+- Confirm every staged order (entry or exit, ORDER-STAGED or exit-pending) has a corresponding order-execution event scheduled at 07:00 MT pre-market on the order day (if the order day is still in the future). If the order day is today and market is still open, create the missing event immediately. If the order day is past and the order was Day duration, it either filled or expired — no event needed, but flag if fill-capture has not yet reconciled it.
 - Confirm every open exit-pending order has a corresponding fill-capture event scheduled.
 - Confirm every position with a research-deferral has a deferral-checkpoint event scheduled.
 
@@ -484,7 +488,8 @@ A. EXITS FROM W3 — for each position with W3 recommendation "close on thesis c
    - If confirmed: stage the exit order in IBKR-paste format. Limit-price selection per D2 staging rules. Day duration unless thesis logic requires GTC.
    - Append a Decision_Log entry recording: triggering condition (thesis-completion or invalidation criterion), conviction-calibration notes, timing relative to time-based exit windows.
    - Update Portfolio_Ledger.md to mark exit-pending.
-   - Schedule "[Claude] Screenshot IBKR — fill capture <ticker> exit" for end-of-day on order day.
+   - Schedule "[Claude] Execute order — <ticker> SELL" for 07:00 MT pre-market on order day. Description: IBKR-paste order block + "Place this order in IBKR at or after market open."
+   - Schedule "[Claude] Screenshot IBKR — fill capture <ticker> exit" for end-of-day on order day (~14:30 MT).
 
 B. RESEARCH DEFERRALS FROM W3 — for each position with recommendation "further research":
    - Schedule a "[Claude] Research deferral — <ticker> <strategy>" calendar event for next-trading-day pre-market.
@@ -803,7 +808,7 @@ B. DIVERGENCE FLAGS FROM M1b — for each divergence flag (fundamental call vs. 
 C. EXITS FROM M4 — for each D position with M4 recommendation "close on thesis completion" or "close on thesis invalidation" or marked with the immediate-action flag:
    - Confirm the cited invalidation criterion or completion condition is in fact met. Second-look discipline applies. If on review the criterion is not met, record the second-look decision in Decision_Log.md and continue.
    - If confirmed: stage the exit order in IBKR-paste format. Note for D positions: check LTCG status — if within 30 days of 12-month qualification AND the invalidation is not catastrophic, stage exit for the post-LTCG date instead and schedule a "[Claude] D exit window — <ticker>" calendar event at LTCG date. If invalidation is catastrophic, exit immediately regardless of LTCG.
-   - Append Decision_Log entry, update Portfolio_Ledger.md. Schedule fill-capture screenshot event.
+   - Append Decision_Log entry, update Portfolio_Ledger.md. Schedule "[Claude] Execute order — <ticker> SELL" for 07:00 MT pre-market on order day (description: IBKR-paste order block). Schedule "[Claude] Screenshot IBKR — fill capture <ticker> exit" for ~14:30 MT on order day.
 
 D. RESEARCH DEFERRALS FROM M4 — for each D position with recommendation "further research":
    - Schedule a "[Claude] Research deferral — <ticker> D" calendar event for next-trading-day pre-market.
