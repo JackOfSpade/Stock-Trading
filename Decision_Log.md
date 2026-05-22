@@ -12456,3 +12456,63 @@ No D1-W5 or M1-M5 prompt events in calendar. Q1-Q4 quarterly recurring instances
 **Initial mark-to-market (EOD 2026-05-22):** BRC ~$87.55; IBKR unrealized P&L $0.93; +3.0% above fill price.
 
 **File writes:** Portfolio_Ledger.md BRC section updated (ORDER-STAGED → OPEN; fill price $84.97, shares 0.4415, commission $0.35, cost basis $37.86, time-based exit 2026-07-21 recorded). Calendar event `k9vtudr7d40ukto3vfhutcdbls` KL #12 updated from 4-long to 5-long book (IBM + HCA + META + ZBRA + BRC; 10 pairs).
+
+---
+
+## 2026-05-22 GEV (GE Vernova) — conservative-default disposition; routed to 2026-Q3 quarterly D-screen
+
+**Trigger:** D3 Calendar Hygiene 2026-05-22 flagged: "GEV re-screen checkpoint 07:30 MT passed without session → conservative default fires (GEV → Q3 quarterly D-screen; no further re-deferral); D2 to write GEV disposition Decision_Log entry." This entry fulfills that flag.
+
+**Background:** Decision_Log 2026-04-29 GEV NO-GO (DEFER) entry established a resolution trigger: "trailing-30-day rolls off below +15% — mechanically scheduled to occur around 2026-05-22 when the Apr 22 +13.6% print exits the trailing-30-day window." Conservative-default fallback explicitly stated: "if trigger fails to resolve at re-screen, GEV remains deferred to 2026-Q3 quarterly D-screen cycle — same disposition as the original 2026-04-27 batch-2 entry. Defer does not chain past May 22."
+
+**Disposition: conservative default fires.** The 2026-05-22 07:30 MT re-screen session did not execute. Per operating-model deferral discipline: "The default action on trigger-failure is always the conservative branch (skip the trade, decline the GO, exit the position) — never another deferral." No thesis-construction session is staged; no new calendar event created. GEV deferral is now closed.
+
+**GEV → 2026-Q3 quarterly D-screen.** GEV will reappear on the Quarterly_D_Candidates.md shortlist for Q3 2026 evaluation (approximate timing: late July 2026). The trailing-30-day criterion 6 barrier from the Apr 22 +13.6% print has now rolled off; any Q3 re-screen evaluates all D criteria fresh without the entry-timing barrier. No further re-deferral permitted under the deferral-chain prohibition.
+
+**Watchlist.md update:** GEV D re-screen pipeline row updated to reflect conservative-default firing and Q3 routing.
+
+---
+
+## 2026-05-22 Strategy B IBM — convergence exit staged; Tue 2026-05-26 execution
+
+**Trigger:** Daily.md 2026-05-22 RECOMMENDED ACTIONS (full rescan superseding prior degraded scan): "EXIT — IBM (Strategy B): convergence target $245.00 REACHED/EXCEEDED. IBM Thu 5/21 close $252.97 / Fri 5/22 ~$258.81, both above the $245.00 target (driven by the $2B Commerce/NIST quantum grant, +12.4% Thu). Stage a SELL of the full position (0.1198 sh). High-urgency: missed by the prior degraded scan."
+
+**Convergence trigger confirmed:** Per Portfolio_Ledger.md IBM entry: convergence target $245.00, immutable per Strategy.md criterion 3 closed-list rev 14 (set at entry as ~62% gap-fill from $230.17 fill toward pre-event $255.68). IBM Thu 2026-05-21 close: $252.97 — ABOVE $245.00 by $7.97/+3.3%. IBM Fri 2026-05-22 estimated close ~$258.81 — ABOVE $245.00 by $13.81/+5.6%. Strategy.md Strategy B exit rule: "Convergence target reached (price target or narrative-fulfillment marker)" → EXIT. Criterion confirmed mechanically. Second-look: no veto rationale found; the target is numerical and the threshold is unambiguously crossed. The convergence was driven by the $2B NIST/Commerce quantum computing program (IBM receives $1B + matching $1B for "Anderon" standalone quantum wafer foundry) rather than the original thesis mechanic (sector-contagion-from-NOW digestion). The convergence mechanism does not affect the exit trigger. Continued holding for quantum-narrative upside would constitute a strategy switch to A or D territory, outside B's mandate.
+
+**Position summary:**
+- Entry: 0.1198 IBM @ $230.17 fill (2026-04-27 07:33:20 ET); cost basis $27.85 (principal $27.57 + $0.28 commission).
+- Convergence target: $245.00 (immutable).
+- Convergence crossed: Thu 2026-05-21 close $252.97 — $7.97/+3.3% above target.
+- Staged exit: SELL 0.1198 IBM @ $257.50 Day, Tue 2026-05-26 (Mon 2026-05-25 = Memorial Day market holiday; Tue 5/26 is first available trading day).
+- Limit rationale: $257.50 = ~0.5% discount to Fri estimated close ~$258.81 (range $257.50–$264.38 per Daily.md); marketable limit ensuring fill at any open above $257.50; Day duration standard for convergence exit.
+- Gross expected at limit: 0.1198 × $257.50 = $30.85; net pre-exit-commission ~$30.50 (est. $0.35 exit comm). Gross return from fill: ($257.50 − $230.17) / $230.17 ≈ +11.87%. Designed gross at $245.00 target: +6.4%. Outperformance vs design: ~+5.5pp.
+
+**Conviction calibration (post-hoc at exit staging):** Entry conviction: MEDIUM (~55-60% pre-discount; ~50-55% post-2.13-discount). Thesis resolved in ~25 trading days (2026-04-27 → 2026-05-21), well within the 60-day window. Realized return ~+11.87% gross at staged limit, substantially exceeding the +6.4% designed convergence return. The convergence-via-unrelated-catalyst (federal quantum grant, not sector-contagion digestion) is the first instance of "exogenous catalyst accelerates B convergence beyond design target" in the experiment's B series. Calibration note: the Strategy B mandate is agnostic to convergence mechanism — "convergence target reached" is the exit criterion, and it was met cleanly.
+
+**Calendar events created:**
+- `[Claude] Execute order — IBM SELL` — Tue 2026-05-26 07:00–07:30 MT (America/Denver); event id `f36ln1797gucpoqdi6hckhkj6g`; popup 0 min. Description: IBKR-paste order (SELL 0.1198 IBM LMT $257.50 DAY) + place-at-open instruction + Memorial Day skip note.
+- `[Claude] Screenshot IBKR — fill capture IBM exit` — Tue 2026-05-26 14:30–15:00 MT (America/Denver); event id `i7p5qtsks1baa1bo95egsbtpa0`; popup 0 min. Description: self-contained fill-capture prompt (Portfolio_Ledger.md IBM exit recording, B-slot and IT-Services sector-cap update, KL#12 book update 5-long→4-long, fill-capture Decision_Log entry).
+
+**File writes:** Decision_Log.md (this entry + GEV entry above), Portfolio_Ledger.md IBM section updated to EXIT-PENDING with staged order details, Watchlist.md DELL/QCOM A-queue notes + GEV D re-screen row updated.
+
+---
+
+## 2026-05-22 — D2 Daily Action Conversion (second run — full Daily.md IBM convergence exit)
+
+**Title:** D2 2026-05-22 (second run) — IBM convergence exit staged (Tue 5/26); GEV conservative-default written; DELL/QCOM A-queue 2026-05-22 notes appended; 2 calendar events created.
+
+**Context:** Daily.md was overwritten today by D1 with a complete scan superseding the earlier partial scan that drove the first D2 run (which processed only the BRC GO from the degraded scan). The complete scan added the IBM convergence exit recommendation missed by the prior window. This second D2 run processes the delta: IBM exit, GEV disposition, and DELL/QCOM A-queue context notes from today's full scan.
+
+**Actions taken:**
+
+1. **IBM convergence exit staged** — per entry above. SELL 0.1198 IBM @ $257.50 Day, Tue 2026-05-26.
+
+2. **GEV conservative-default written** — per D3 flag; GEV disposition entry written above; Watchlist.md GEV D re-screen row updated.
+
+3. **Watchlist.md updates (A-queue notes):**
+   - DELL: NOTE 2026-05-22 appended — +16.73% Fri 5/22; Dell World 2026 AI-Factory blitz + multi-firm PT-raise cluster ($270–$300); pre-FQ1'27 earnings 2026-05-28 AMC. Note for M1 6/1.
+   - QCOM: NOTE 2026-05-22 appended — +12% Fri 5/22; Stellantis Snapdragon Digital Chassis expansion + aiMotive LOI; Melius PT $170→$220. Note for M1 6/1.
+
+4. **No new entry candidates.** Quantum cohort / DELL / QCOM / HPQ / Ford / WDAY / ZM / EL / TTWO all information-driven / A-territory / risk-on-hostile per Daily.md. A router DO-NOT-ACTIVATE; no C/E candidates.
+
+5. **No router reviews** — no development met the inter-monthly high bar per Daily.md.
