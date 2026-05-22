@@ -12355,3 +12355,64 @@ Full self-contained prompt for manual event creation is in the D2 2026-05-20 Cal
 
 **No A / C / E entries.** A router DO-NOT-ACTIVATE; no qualifying C (FOMC next 6/16-17) or E (pair divergence) signal from Daily.md.
 
+---
+
+## 2026-05-22 — D3 Calendar Hygiene
+
+**Date/time**: 2026-05-22 ~[mid-day] MT
+**Title:** D3 2026-05-22 — 3 deleted (BRC fill-capture duplicate, TJX thesis-construction duplicate, GEV re-screen checkpoint-passed); 0 updated; 0 missing; 16 events verified; GEV conservative-default flag
+
+### Events walked (2026-05-22 → 2026-08-20, America/Denver)
+
+| Scheduled | Event ID | Title | Disposition |
+|---|---|---|---|
+| Fri 5/22 07:30 | `lvgdk2h2h48bspu45m4rnudces` | GEV trailing-30-day re-screen | **DELETED** — checkpoint date (2026-05-22 07:30 MT) passed without session; conservative default fires (GEV → Q3 quarterly D-screen; no further re-deferral per deferral-chain prohibition). See GEV flag below. |
+| Fri 5/22 14:30 | `8liv6k3jo3uotse3p99qus267g` | Screenshot IBKR — fill capture BRC entry | **DELETED** — duplicate fill-capture event; official event is `f2tnikf54ltc70sbq0tpo9qk2o` (documented in D2 2026-05-22 Decision_Log entry); this event was created during D1 2026-05-22 inline thesis-construction before D2 created the documented one. |
+| Fri 5/22 14:30 | `f2tnikf54ltc70sbq0tpo9qk2o` | Screenshot IBKR — fill capture BRC entry | KEEP — official event per D2 2026-05-22; active (Limit BUY 0.4415 BRC @ $85.50 Day order staged; fill window open until market close today). |
+| Tue 5/27 08:00 | `0fb7924g5c0hdvae1jjhp6qphs` | Thesis construction — TJX Strategy B | KEEP — official event per D2 2026-05-22 (event id documented in D2 entry). Window expires ~Thu 6/5. |
+| Tue 5/27 09:00 | `ra5sechaiuor4l43ao3g4nqm14` | Thesis construction — TJX Strategy B | **DELETED** — duplicate TJX thesis-construction event (09:00 MT vs official 08:00 MT); created alongside the official event during D2 2026-05-22. Description self-contained but redundant. |
+| Mon 6/1 09:00 | `r9i6u6mnpk9ukoj2bh15m1fr7c` | Re-screen BA — trailing-30d roll-off check | KEEP — BA D NO-GO reconsideration trigger from 2026-04-26 batch; BA ≤$210 or 737-rate-slip trigger. |
+| Mon 6/1 10:00 | `2i5gul5m9eiarfm7pkjf8u42u0` | META mid-window thesis pulse-check (B) | KEEP — META open B position; entry 2026-05-05; midpoint pulse. |
+| Wed 6/3 15:30 | `k9vtudr7d40ukto3vfhutcdbls` | KL #12 pairwise correlation — B book (IBM+HCA+META+ZBRA) | KEEP — description is technically stale (BRC GO → 5-long book); fill-capture event `f2tnikf54ltc70sbq0tpo9qk2o` description contains instructions to update this to 5-long book at fill confirmation today. Delegating update to fill-capture session per D2 2026-05-22 design. |
+| Sun 6/8 09:00 | `7pbkg1kh2pge7midfiqnj6edvk` | Thesis construction — FOMC June 2026 Strategy C | KEEP — FOMC 6/16-17 catalyst; C HYBRID-ACTIVATE FOMC-only; description refreshed by W4 2026-W20 (per D3 2026-05-17 staleness flag). |
+| Mon 6/9 15:30 | `6p9eotfrdd0eae2pvoccrbj95o` | ZBRA mid-window pulse-check — B position | KEEP — ZBRA open B position; entry 2026-05-14; midpoint ~Jun 9. |
+| Fri 6/12 09:30 | `fpbueqccja9thjcnuj6ck9l6rs` | LLY Strategy D mechanical re-screen | KEEP — LLY D NO-GO defer; mechanical re-screen ~30 trading days post-Q1 print (2026-04-30). |
+| Fri 6/26 09:25 | `u9l9544ighc4d9o1l44u7pr0uc` | HCA time-based exit / convergence check (B) | KEEP — HCA open B position; entry 2026-04-28; 60-day calendar exit. |
+| Fri 6/26 09:25 | `vt43tmemb2u7km29p79i2dga08` | IBM time-based exit / convergence check (B) | KEEP — IBM open B position; entry 2026-04-27; 60-day calendar exit. |
+| Wed 7/1 09:00 | `qpshtsnmi7lj8q2j02au3creh4_20260701T150000Z` | Q1 Quarterly Regime Retrospective | KEEP — cadence-policy compliant quarterly routine instance. |
+| Wed 7/1 10:30 | `ecu5pu90sgoecj1dn2lvt5656s_20260701T163000Z` | Q2 Quarterly D Long-Horizon Candidates | KEEP — cadence-policy compliant quarterly routine instance. |
+| Wed 7/1 12:00 | `pbacgn2esaiollpdq44ujsj9tk_20260701T180000Z` | Q3 Quarterly AI Foundation Delta | KEEP — cadence-policy compliant quarterly routine instance. |
+| Wed 7/1 14:00 | `3fma0s1n57bvb4n0gdnbcodtsk_20260701T200000Z` | Q4 Quarterly Action Conversion | KEEP — cadence-policy compliant quarterly routine instance. |
+| Thu 7/2 10:00 | `jdki2o75a3rhrc77e5sd4h170c` | META 60-day time-based exit checkpoint (B) | KEEP — META open B position; entry 2026-05-05; 60-day calendar exit. |
+| Mon 7/13 07:15 | `b2gka8hncerbnfh6m9j2hq4k2g` | ZBRA time-based exit — B position | KEEP — ZBRA open B position; entry 2026-05-14; 60-day calendar exit. |
+
+### Portfolio coverage check
+
+**Open positions and staged order vs. calendar events:**
+
+| Position | Status | Coverage |
+|---|---|---|
+| IBM (B, entry 2026-04-27) | Open | 60-day exit Jun 26 `vt43tmemb2u7km29p79i2dga08` ✓ |
+| HCA (B, entry 2026-04-28) | Open | 60-day exit Jun 26 `u9l9544ighc4d9o1l44u7pr0uc` ✓ |
+| META (B, entry 2026-05-05) | Open | Mid-window Jun 1 `2i5gul5m9eiarfm7pkjf8u42u0` ✓; 60-day exit Jul 2 `jdki2o75a3rhrc77e5sd4h170c` ✓ |
+| ZBRA (B, entry 2026-05-14) | Open | Mid-window Jun 9 `6p9eotfrdd0eae2pvoccrbj95o` ✓; exit Jul 13 `b2gka8hncerbnfh6m9j2hq4k2g` ✓ |
+| BRC (B, ORDER-STAGED 2026-05-22) | Day order | Fill-capture today 14:30 MT `f2tnikf54ltc70sbq0tpo9qk2o` ✓ |
+| RTX (D, entry 2026-04-27) | Open | Long-horizon (12+ mo); no time-based exit; no research-deferral flag; D1 daily scans auto-detect invalidation; KL #12 Jun 3 (B-book correlation, D position excluded but consistent monitoring) ✓ |
+| DIS (D, entry 2026-05-07) | Open | Long-horizon; Q3 FY26 print ~Aug 12 auto-detected by D1; M5 cycle (~Jun 1) for thesis-pulse; no research-deferral flag ✓ |
+
+No pending exit orders (BRC Day order is entry, not exit). No research-deferral flags on any open position. All positions have appropriate calendar coverage.
+
+### GEV flag
+
+GEV trailing-30-day re-screen event `lvgdk2h2h48bspu45m4rnudces` was scheduled Fri 2026-05-22 07:30 MT — the mechanically-triggered checkpoint date when the Apr 22 +13.6% earnings-day reaction exits the trailing-30-day window. The event time passed before D3 ran today; no GEV thesis-construction session was conducted. Per deferral protocol: "The default action on trigger-failure is always the conservative branch... never another deferral." The GEV event description explicitly stated: "conservative-default fallback fires per protocol — GEV defers to 2026-Q3 quarterly D-screen cycle, NO further re-deferral."
+
+**Disposition: conservative default fires. GEV → 2026-Q3 quarterly D-screen cycle. No further re-deferral.** Event deleted (deferral-checkpoint-type event; trigger date passed). **D2 to write a GEV Decision_Log entry documenting this conservative-default outcome and remove the GEV deferral from the active-deferral tracking in Decision_Log.md.**
+
+### Notifications
+
+New events created by D2 2026-05-22 (BRC fill-capture `f2tnikf54ltc70sbq0tpo9qk2o` and TJX thesis `0fb7924g5c0hdvae1jjhp6qphs`) both documented as "popup 0 min" in D2 entry — confirmed at event-time. Existing events confirmed correct per D3 2026-05-20 (calendar default popup 0 min applies throughout).
+
+### Cadence-policy check
+
+No D1-W5 or M1-M5 prompt events in calendar. Q1-Q4 quarterly recurring instances present. Compliant.
+
