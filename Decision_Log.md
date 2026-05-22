@@ -12329,3 +12329,29 @@ Full self-contained prompt for manual event creation is in the D2 2026-05-20 Cal
 
 **References:** stockanalysis.com/stocks/BRC (Thu 5/21 close $84.56, mcap $3.98B, PT $101.50); StockTitan + GlobeNewswire 8-K (Q3 FY26 financials, guidance raise, Honeywell PSS); gurufocus / Motley Fool ("soared 17%"/"over 12%" May 18); ChartMill / RTTNews (beat + guidance raise + Sidoti Strong-Buy); Strategy.md Strategy B; B_Sub_Pattern_Taxonomy.md; Portfolio_Ledger ZBRA 2026-05-13 GO precedent; D2 2026-05-18 / 2026-05-21 BRC entries.
 
+---
+
+## 2026-05-22 — D2 Daily Action Conversion
+
+**Date/time**: 2026-05-22 (D2 session; runs after D1 BRC GO entry)
+**Title:** D2 2026-05-22 — BRC order staged (D1); fill-capture event created; TJX thesis-construction scheduled Tue 5/27; NVDA/WMT/TGT watchlist notes appended; 2 calendar events created
+
+**Actions taken:**
+
+**No exits.** All six open positions (IBM / HCA / META / ZBRA — Strategy B; RTX / DIS — Strategy D) hold per Daily.md analysis. No invalidation criteria tripped.
+
+**BRC entry confirmed (from D1).** Decision_Log 2026-05-22 BRC GO entry and Portfolio_Ledger.md BRC ORDER-STAGED subsection were written during D1. No duplicate entries needed. D2 confirms: order is Limit BUY 0.4415 BRC @ $85.50 Day (Fri 2026-05-22); fill-capture calendar event now scheduled (see below).
+
+**Calendar events created (Calendar MCP operational this session):**
+- `[Claude] Screenshot IBKR — fill capture BRC entry` — Fri 2026-05-22 14:30–15:00 MT (America/Denver); event id `f2tnikf54ltc70sbq0tpo9qk2o`; popup 0 min. Description contains prompt for filled/unfilled case handling of Portfolio_Ledger.md update and KL #12 event description update from 4-long to 5-long book.
+- `[Claude] Thesis construction — TJX Strategy B` — Tue 2026-05-27 08:00–10:00 MT (America/Denver); event id `0fb7924g5c0hdvae1jjhp6qphs`; popup 0 min. TJX Q1 FY27 print Wed 5/20, Day-0 +5.66% MVG-cleared, window expires ~Thu 6/5. Calendar-MCP outage on 5/19-5/21 blocked prior attempts (D2 5/21 "first deferral"); this event is the resolution session. Description contains self-contained thesis-construction prompt including slot-check gate (B may be at 5/5 cap if BRC fills today), sector-check, full criteria 1-5 walk instructions, sub-pattern routing notes, and slot-gated GO handling if applicable.
+
+**Watchlist.md updates (3 A-queue post-print notes appended):**
+- NVDA: **NOTE 2026-05-22** — Day-0 C/C Thu 5/21 confirmed ~-1.5% to -1.77% (SELL-THE-NEWS despite blowout print). Bull narrative-misalignment ratified at fundamental level but Day-0 NEGATIVE tape reaction is material counter-signal for June M1 AI/tech complex re-rating. Note for M1 6/1.
+- WMT: **NOTE 2026-05-22** — FQ1 27 in line; Q2 guide soft (~0.5% below Street); CFO oil-margin pass-through commentary. Bullish tariff-pass-through thesis NOT decisively supported at print level. Note for M1 6/1.
+- TGT: **NOTE 2026-05-22** — FQ1 26 BEAT-RAISE (comps +6%, adj EPS $1.71 vs $1.46, FY26 guide doubled to 4%) REFUTES queued bearish thesis at print level; selloff was macro-caution/profit-taking. Recommend framing-flip or demotion at M1 6/1.
+
+**No router reviews.** No development met the high bar for inter-monthly router review (NVDA sell-the-news, Dow record, Iran de-escalation, oil down all within existing NEUTRAL/NORMAL regime picture).
+
+**No A / C / E entries.** A router DO-NOT-ACTIVATE; no qualifying C (FOMC next 6/16-17) or E (pair divergence) signal from Daily.md.
+
