@@ -12434,3 +12434,25 @@ No D1-W5 or M1-M5 prompt events in calendar. Q1-Q4 quarterly recurring instances
 **Order unchanged:** Limit BUY 0.4415 BRC @ $85.50 Day (Fri 2026-05-22). Thesis, convergence target $88.80, invalidation criteria, and conviction rating unchanged from 2026-05-22 staging entry. Entry window open (expires ~Mon 2026-06-01; Day 5 of 10 as of Fri 5/22).
 
 **File writes:** Decision_Log.md, Portfolio_Ledger.md updated.
+
+---
+
+## 2026-05-22 — BRC fill capture
+
+**Title:** BRC fill capture — filled $84.97 × 0.4415 shares; cost basis $37.86; time-based exit 2026-07-21; invalidation criteria unchanged from staging.
+
+**Trigger:** Operator fill-capture session (Fri 2026-05-22 ~4:16 PM MT); IBKR screenshots provided (Portfolio Positions page + Orders & Trades → Trades tab).
+
+**Fill details:**
+- Fill price: **$84.97** (Limit BUY order filled at open)
+- Shares: **0.4415**
+- Principal: **$37.51**
+- Commission: **$0.35**
+- Cost basis (principal + commission): **$37.86**
+- Fill timestamp: **07:30:01 MT, Fri 2026-05-22**
+
+**Position status:** OPEN. Time-based exit: **2026-07-21** (fill date + 60 calendar days). Convergence target: **$88.80** (immutable). Invalidation criteria unchanged from staging: (i) 8-K cutting FY26 adj-EPS guide below $5.20; (ii) Honeywell-PSS deal termination or negative business/demand update; (iii) sub-pattern-1 escalation (≥3-firm aggressive PT-raise wave re-rating to ~$100-102).
+
+**Initial mark-to-market (EOD 2026-05-22):** BRC ~$87.55; IBKR unrealized P&L $0.93; +3.0% above fill price.
+
+**File writes:** Portfolio_Ledger.md BRC section updated (ORDER-STAGED → OPEN; fill price $84.97, shares 0.4415, commission $0.35, cost basis $37.86, time-based exit 2026-07-21 recorded). Calendar event `k9vtudr7d40ukto3vfhutcdbls` KL #12 updated from 4-long to 5-long book (IBM + HCA + META + ZBRA + BRC; 10 pairs).
