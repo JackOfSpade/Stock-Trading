@@ -12578,3 +12578,175 @@ No D1-D3/W1-W5/M1-M5 cadence prompts in calendar. Q1-Q4 quarterly recurring inst
 1 deleted (IBM time-based exit `vt43tmemb2u7km29p79i2dga08` — convergence exit supersedes), 1 created (BRC time-based exit `sli3tl3msrhsuq731apqg7s9io` — missing event), 0 updated. 18 [Claude] events in final verified set. All 7 open/exit-pending positions covered. No pending exit orders beyond IBM (covered).
 
 5. **No router reviews** — no development met the inter-monthly high bar per Daily.md.
+
+---
+
+## 2026-05-23 — Strategy B TJX Q1 FY27 thesis construction — GO MEDIUM-LOW conviction (slot-gated)
+
+**Trigger:** D2 thesis-construction session for TJX (The TJX Companies) Q1 FY27 earnings print (Wed 2026-05-20 BMO). Calendar event `0fb7924g5c0hdvae1jjhp6qphs` was scheduled Tue 2026-05-27 08:00 MT; session advanced to Sat 2026-05-23 per Operating_Protocols §3 ("NO-GO records are context, not barriers" / no-barrier-to-fresh-evaluation rule). Calendar-MCP outage note: thesis-construction sessions intended for Wed 5/20 and Thu 5/21 were deferred due to Google Calendar MCP offline 5/19-5/21; this D2-2026-05-21 procedural deferral does NOT pre-empt the criteria-based evaluation. Thesis-construction event `0fb7924g5c0hdvae1jjhp6qphs` deleted (thesis resolved this session; redundant).
+
+**Primary sources used:** BusinessWire / TJX IR 2026-05-20 earnings release; GuruFocus / Benzinga / MarketBeat post-print analyst PT change wires; Investing.com / stockanalysis.com price action cross-check.
+
+---
+
+### STEP 1 — Slot and sector check
+
+**B slot count:** IBM (EXIT-PENDING), HCA, META, ZBRA, BRC = **5/5 AT CAP**.
+
+IBM EXIT-PENDING: SELL 0.1198 IBM @ $257.50 Day staged Tue 2026-05-26. IBM Fri 5/22 close ~$258.81 — limit is in-the-money; fill highly likely at or above limit Tue 5/26 (first trading day post-Memorial Day). Slot expected to free Tue 5/26. Entry window expires ~Thu 2026-06-04 (~8 trading days from Tue 5/27 session context). Conservative-default fallback: if IBM does not sell and no slot frees before window close, TJX entry does not occur.
+
+Per protocol for 5/5 cap: conducted full criteria walk for GO purposes. GO thesis confirmed below → order staged with slot-gate annotation; entry contingent on IBM exit Tue 5/26.
+
+**Sector check:** TJX GICS Consumer Discretionary / Apparel Retail. Current B Consumer Discretionary count: **0/3**. Adding TJX: 0/3 → 1/3. Sector cap does NOT bind. ✓
+
+---
+
+### STEP 2 — Full criteria walk
+
+**Criterion 1 — Public event ≥5% close-to-close within 10 trading days:**
+
+Event: TJX Q1 FY27 earnings, Wed 2026-05-20 BMO (confirmed BusinessWire / TJX IR).
+Day-0 C/C: **+5.66%** ($150.68 pre-event Tue 5/19 close → ~$159.21 Day-0 Wed 5/20 close). Magnitude cushion: 1.13×.
+Instrument eligibility: TJX US-listed common equity NYSE ✓; mcap ~$190B at entry-range price (>>$2B floor) ✓; ADV well above $10M (blue-chip; typical daily dollar volume >$500M) ✓; long eligible ✓.
+**Criterion 1: CLEARS.** ✓
+
+**Criterion 2 — Narrative synthesis:**
+
+Print details (primary source BusinessWire 2026-05-20 / TJX IR):
+- Net sales Q1 FY27: $14.3B, +9% YoY
+- Comps: +6% — "all well above plan"
+- Diluted EPS: $1.19, +29% vs $0.92 Q1 FY26
+- Pretax profit margin: 12.0%
+- FY27 guidance RAISED: comp sales +3-4% (raised); pretax margin 11.9-12.0% (raised); EPS $5.08-5.15 (raised); share buyback $2.75-3.0B (raised)
+
+Price trajectory (primary-source verified):
+- Pre-event (Tue 5/19): $150.68
+- Day-0 (Wed 5/20): ~$159.21 (+5.66%)
+- Day-1 (Thu 5/21): ~$157.06 (-1.4% partial fade)
+- Day-2 (Fri 5/22): ~$160.68 (+2.03% recovery; net +6.63% from pre-event)
+
+Post-print sell-side PT changes (GuruFocus / Benzinga / MarketBeat):
+- JPMorgan (pre-print 5/18): $173→$174 (+0.58%; minimal pre-print nudge — Overweight maintained)
+- JPMorgan (post-print): $174 confirmed (Overweight; no additional change at search depth)
+- Baird (post-print): $172→$175 (Outperform; +1.74%)
+- Telsey Advisory (5/21): $175→$185 (Outperform; +5.71%)
+- BTIG (post-print): $185→$190 (Buy; +2.70%)
+- Pre-print consensus average: $172.37 (19 analysts; 19/20 Buy / 1 Sell)
+- Post-print cluster forming at $174-190 range
+
+Cross-sectional same-day context (Watchlist.md):
+- TGT: comps +6%, beat, guide raised → SOLD OFF on CEO macro-uncertainty commentary
+- WMT: revenue in-line → slid on Q2 guide soft + oil/margin pressure
+- TJX +5.66% while TGT/WMT sold off = structural differentiation signal: market actively rewarding off-price defensive model vs. general merchandise in macro-uncertainty environment
+
+Narrative synthesis: TJX's off-price retail model (TJ Maxx, Marshalls, HomeGoods) structurally benefits from consumer trade-down in uncertain macro environments. The +5.66% Day-0 reaction on a strong EPS +29% / comps +6% / guide-raised print is MODEST relative to print quality. Stock at $159-160 vs sell-side cluster $174-190 represents a 9-19% persistent discount to sell-side fair value — an under-reaction signal. Cross-sectional TJX+/TGT-/WMT- differentiation demonstrates the market is informationally pricing off-price vs. general merchandise in real time; this differentiation SUPPORTS the LONG hypothesis (TJX premium still to accumulate). Day-1 partial fade (-1.4%) and Day-2 recovery (+2.03%) is a "check-and-hold" pattern, not a clean fade. Default assumption (market reaction is correct) is the structural headwind; under-reaction case is modestly supported by persistent discount to PT cluster.
+**Criterion 2: CLEARS (LONG direction; under-reaction hypothesis modestly supported by PT-cluster discount).** ✓
+
+**Criterion 3 — Convergence target (closed list rev 14):**
+
+Named-event check (all inadmissible):
+- Next TJX earnings (Q2 FY27): ~mid-August 2026 → OUTSIDE 60-day window (closes ~Jul 19) → **INADMISSIBLE**
+- FDA: N/A → **INADMISSIBLE**
+- FOMC Jun 16-17: within window but mechanism-mismatch (TJX thesis is idiosyncratic off-price-consumer-trade-down narrative, not FOMC-rate-driven) → **INADMISSIBLE per mechanism-mismatch doctrine**
+- S&P 500 / Russell 1000 / Nasdaq 100: TJX already constituent of all three → **INADMISSIBLE (no fresh inclusion trigger)**
+
+Numerical price level (25% gap-fill methodology, ZBRA/BRC-template):
+- Reference: $159.21 (Day-0 post-print close)
+- Post-print PT cluster: $174 (JPM), $175 (Baird), $185 (Telsey), $190 (BTIG); sorted median = ($175 + $185) / 2 = **$180**
+- 25% gap-fill: $159.21 + ($180 − $159.21) × 0.25 = $159.21 + $5.20 = **$164.41** → **$164.50** (rounded to nearest dime, ZBRA/BRC-template)
+- As % of reference: +3.3% from Day-0 close; +2.4% from Day-2 close
+- Target **$164.50 — IMMUTABLE from entry**
+
+**Criterion 3: CLEARS ($164.50 numerical target admissible).** ✓
+
+**Criterion 4 — Adversarial counter-argument / dual-framing:**
+
+*Sub-pattern routing (B_Sub_Pattern_Taxonomy.md):*
+
+**Sub-pattern 1 (Aggressive Sell-Side Bull-Ratification) check:**
+Pattern signal threshold: ≥3 firms ≥20% PT increase, OR single street-high ≥50%, OR two-notch upgrade ≥50% PT increase.
+Actual post-print raises: JPM +0.58%; Baird +1.74%; Telsey +5.71%; BTIG +2.70%.
+Maximum single-firm raise = Telsey +5.71%. Zero firms breach intermediate-intensity threshold (≥+15%). Zero firms breach multi-firm ≥20% threshold.
+**Sub-pattern 1: DOES NOT APPLY.** Sell-side response is modest beat-raise repricing (1-6% PT raises), categorically below all sub-pattern 1 diagnostic thresholds. This is the operative structural difference from canonical sub-pattern 1 instances (INTC Evercore +146%; STX Rosenblatt +100%; CAT Morgan Stanley +113%; BE Susquehanna +69%).
+
+**Sub-pattern 3 (Information-Priced-via-Pre-Print-Rally) check:**
+Pattern signal: trailing-30-day +15-20% pre-print momentum + ≥2 firms ≥+10% pre-print PT raises + post-print mild response + post-print stock AT pre-print PT cluster mean.
+Pre-print PT raise: JPM $173→$174 (+0.58%) on 5/18 — far below ≥+10% single-firm threshold; no second pre-print raise identified. Diagnostic signature: post-print stock $159.21 vs. pre-print consensus $172.37 — TJX is -7.6% BELOW pre-print consensus PT, NOT at or modestly above it. Sub-pattern 3 requires "post-print stock closes AT or modestly above the pre-print PT cluster mean"; TJX is materially BELOW. Stock-location-below-PT-cluster is the undershoot signature of an under-reaction, which is the OPPOSITE of sub-pattern 3.
+**Sub-pattern 3: DOES NOT APPLY.** Pre-print PT-raise signal absent; post-print stock materially BELOW (not AT) pre-print PT cluster — undershoot anchor present.
+
+*LONG direction — decisive flaw analysis:*
+(L1) 2.20 textbook-rational-trap (structural, always present): default assumption market-correct. Counter: sell-side cluster $174-190 with stock at $160 = 9-19% discount to fair value estimates. Persistent discount despite beat-raise print is a legitimate under-reaction signal. Not decisive.
+(L2) Information-driven characterization: off-price model advantage is well-known; sell-side was already at $172 pre-print. Marginal information content vs. expectations may be modest. Counter: stock STILL 9-19% below PT cluster despite known narrative = market has not fully priced sell-side fair value. Not decisive.
+(L3) Thin convergence target (+3.3% from reference): limits upside capture. Not a criterion-4 decisive flaw per operating protocol (commission-disregarded; thin-EV trades go GO per §2). Addressed via MEDIUM-LOW conviction calibration.
+(L4) Day-1 partial fade (-1.4%): mildly negative signal. Offset by Day-2 recovery (+2.03%); "check-and-hold" pattern not a clean trend reversal. Not decisive.
+(L5) Cross-sectional macro headwind contagion: TGT/WMT macro-uncertainty commentary could eventually weigh on off-price. Counter: off-price IS the trade-down beneficiary in near-term macro uncertainty; this headwind is TJX tailwind, not headwind. Not decisive.
+**No decisive flaw identified in LONG direction. LONG CLEARS.** ✓
+
+*SHORT direction — decisive flaw analysis (dismissed):*
+(S1) Structural information-driven characterization (DECISIVE): Off-price retail's 2026 outperformance vs. general merchandise is an established structural narrative. TJX's +5.66% is informationally warranted. Cross-sectional TJX+/TGT-/WMT- on same comps day demonstrates information-driven differentiation, not sentiment overshoot. Shorting into confirmed structural off-price tailwind violates B SHORT mechanism requirements.
+(S2) B-short string 37 (binding contextual weight): 37 consecutive criterion-4 SHORT-direction dismissals. High prior against SHORT without decisive new SHORT evidence.
+(S3) Fully bullish sell-side (19/20 Buy, 1 Sell; PT cluster $174-190): no meaningful bearish anchoring for SHORT mean-reversion. Stock -7.6% below pre-print consensus — short mean-reversion to pre-event $150.68 requires stock to FALL -6% from Day-2 close with unanimous sell-side above current price.
+(S4) +25% short-side stop would be $160 × 1.25 = $200 — no near-term catalyst to push TJX +25%, but stop is asymmetric; max SHORT return to pre-event level = only -6%, well below the +3.3% LONG convergence target even on identical absolute magnitude.
+**SHORT direction: DISMISSED with HIGH conviction (~95%). Multiple decisive flaws converge.** B-short string: **37 (UNCHANGED — this is a LONG GO, not a SHORT-direction-dismissal NO-GO).**
+**Criterion 4: CLEARS (LONG direction; SHORT dismissed).** ✓
+
+**Criterion 5 — No concurrent A position in TJX:**
+A router = DO-NOT-ACTIVATE (Regime_State.md; SPY Trend NEUTRAL → first clause of A activation fails). No A positions exist. TJX not on A queue (Watchlist.md). **Criterion 5: CLEARS.** ✓
+
+---
+
+### KL #12 pairwise correlation
+
+Adding TJX (Consumer Discretionary / Apparel Retail) to post-IBM-exit 4-long B book (HCA Healthcare / META Comm Services / ZBRA Technology / BRC Industrials):
+- TJX vs HCA: ~0.10-0.15 (different sector/macro driver)
+- TJX vs META: ~0.20-0.30 (shared consumer-facing; different mechanism)
+- TJX vs ZBRA: ~0.10-0.20 (different sector)
+- TJX vs BRC: ~0.10-0.15 (different sector)
+Estimated 4-pair average with TJX: ~0.13-0.20. Well below 0.5 leading-indicator threshold. Consumer Discretionary adds diversification vs existing book (IT/Healthcare/CommServices/Industrial). **KL #12: FAVORABLE.** ✓ KL #12 first-computation event `k9vtudr7d40ukto3vfhutcdbls` (Wed 6/3) to be updated to 5-long book (HCA+META+ZBRA+BRC+TJX) at fill-capture session if IBM exits Tue 5/26 as expected.
+
+---
+
+### Conviction calibration (Operating_Protocols §8 ladder)
+
+Reference ladder: IBM MEDIUM-HIGH (50-62% gap-fill); HCA MEDIUM-LOW (25%); META MEDIUM (25%, conservative-target choice); ZBRA/BRC MEDIUM-LOW (25%).
+
+TJX factors:
+- Strong print quality (EPS +29%, comps +6%, all above plan, guide raised) → positive
+- Sub-pattern 1/3 DO NOT APPLY → removes primary NO-GO mechanism; decisively positive calibration input
+- Thin convergence target (+3.3% from reference) → limits magnitude even if thesis works; negative calibration input
+- Modest sell-side raises (1-6%) → limited near-term repricing catalyst visible; negative calibration input
+- Day-1 partial fade (-1.4%) then Day-2 recovery (+2.03%) → mixed/neutral
+- Cross-sectional off-price differentiation (TJX+/TGT-/WMT-) → positive LONG narrative support
+- Consumer Discretionary 0/3 sector cap; low KL #12 pairwise → diversification positive
+
+**Conviction: MEDIUM-LOW (~45-50%).** 25% gap-fill target per HCA precedent. Genuine-ambiguity GO: LONG supported by under-reaction hypothesis (stock at $160 vs $174-190 PT cluster = 9-19% discount) + sub-pattern 1/3 non-applicable; limited by thin 25% gap-fill target and modest sell-side response magnitude.
+
+---
+
+### Slot-gate note
+
+**B at 5/5 cap.** IBM EXIT-PENDING Tue 2026-05-26 (SELL 0.1198 IBM @ $257.50 Day; in-the-money at $258.81 Fri 5/22 close; high-probability fill). Slot expected to free Tue 5/26 → TJX entry staged Wed 2026-05-27 (1 trading day post-IBM-exit confirmation). Conservative-default: if IBM does not sell by window close (~Thu 2026-06-04), TJX entry does not occur. With IBM in-the-money at staging, slot-gate is expected to clear well within the 8-day remaining window.
+
+---
+
+### GO decision — order staged
+
+**DECISION: GO — MEDIUM-LOW conviction (slot-gated)**
+
+**Order:** Limit BUY **0.2346 TJX @ $162.00 Day, Wed 2026-05-27**
+- Principal: ~$38.00 (2% of B NAV ~$1,895)
+- SLOT-CONTINGENT: Execute ONLY after confirming IBM SELL (Tue 5/26) confirmed fill; B must be at 4/5 at execution time; operator-discretion tighter limit permitted per META/HCA/ZBRA precedent
+- Convergence target (immutable): **$164.50** (25% gap-fill from $159.21 Day-0 ref toward $180 PT median)
+- Expected time-based exit: Fri 2026-07-24 (60 calendar days from Wed 5/27 → Sun 7/26 → last trading day Fri 7/24; calendar event to create at fill-capture session)
+- Invalidation criteria: (i) TJX 8-K cutting FY27 comp guide below 2-3% floor or pretax margin below 11.7% floor; (ii) structural off-price competitive-positioning change (e.g., formal WMT/TGT off-price channel launch adverse to TJX); (iii) sub-pattern 1 escalation post-entry (≥3-firm ≥20% PT-raise wave re-rating stock to ~$185-190 information-priced equilibrium)
+
+**Sector cap update:** Consumer Discretionary / Apparel Retail: 0/3 → 1/3 (staged; takes effect on fill).
+
+**Calendar events:**
+- DELETED: `0fb7924g5c0hdvae1jjhp6qphs` (TJX thesis-construction Tue 5/27 08:00 MT) — thesis resolved this session; event redundant
+- CREATED: `jclrlcsthd1o1u7m7nvm6lkf58` "[Claude] Execute order — TJX BUY" — Wed 2026-05-27 07:00–07:30 MT, popup 0 min; description: slot-gate verification + IBKR-paste order
+- CREATED: `a24018i7bpkkjmprh1heag3uck` "[Claude] Screenshot IBKR — fill capture TJX entry" — Wed 2026-05-27 14:30–15:00 MT, popup 0 min; description: filled/unfilled branches
+
+**B experiment totals (estimated):** ~5 GO + ~48 NO-GO (through BRC 5/22, estimated) → TJX: **~6 GO + ~48 NO-GO ≈ 11.1% / 88.9%**. B-short string: **37 (unchanged — LONG GO)**. Criterion-4 decisive count: ~40 (unchanged).
+
+**File writes:** Decision_Log.md (this entry), Portfolio_Ledger.md (TJX ORDER-STAGED subsection added). Calendar: 1 deleted, 2 created.
