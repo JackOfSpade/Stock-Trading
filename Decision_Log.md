@@ -12515,4 +12515,66 @@ No D1-W5 or M1-M5 prompt events in calendar. Q1-Q4 quarterly recurring instances
 
 4. **No new entry candidates.** Quantum cohort / DELL / QCOM / HPQ / Ford / WDAY / ZM / EL / TTWO all information-driven / A-territory / risk-on-hostile per Daily.md. A router DO-NOT-ACTIVATE; no C/E candidates.
 
+---
+
+## 2026-05-23 — D3 Calendar Hygiene
+
+**Date/time**: 2026-05-23
+**Title:** D3 2026-05-23 — 1 deleted (IBM time-based exit, superseded by convergence exit); 1 created (BRC time-based exit 2026-07-21); 0 updated; 18 events verified
+
+### Events walked (next 90 days: 2026-05-23 → 2026-08-21, America/Denver)
+
+| Scheduled | Event ID | Title | Disposition |
+|---|---|---|---|
+| Tue 5/26 07:00 | `f36ln1797gucpoqdi6hckhkj6g` | Execute order — IBM SELL | KEEP — IBM EXIT-PENDING; order day Tue 5/26 (Mon 5/25 = Memorial Day); 07:00 MT pre-market ✓ |
+| Tue 5/26 14:30 | `i7p5qtsks1baa1bo95egsbtpa0` | Screenshot IBKR — fill capture IBM exit | KEEP — paired fill-capture for IBM SELL Day order ✓ |
+| Tue 5/27 08:00 | `0fb7924g5c0hdvae1jjhp6qphs` | Thesis construction — TJX Strategy B | KEEP — window ~Thu 6/5; description includes slot-gate handling (B at 5/5 cap; IBM fills 5/26 → slot freed 5/26 fill-capture → B at 4/5 by session time); self-contained ✓ |
+| Mon 6/1 09:00 | `r9i6u6mnpk9ukoj2bh15m1fr7c` | Re-screen BA — trailing-30d roll-off check | KEEP — D NO-GO reconsideration trigger; trigger date not reached |
+| Mon 6/1 10:00 | `2i5gul5m9eiarfm7pkjf8u42u0` | META mid-window thesis pulse-check (B) | KEEP — META OPEN 2026-05-05; mid-window appropriate ✓ |
+| Wed 6/3 15:30 | `k9vtudr7d40ukto3vfhutcdbls` | KL #12 pairwise correlation — B book (IBM+HCA+META+ZBRA+BRC) | KEEP — currently reflects 5-long book (updated at BRC fill capture 5/22); IBM fill-capture event (i7p5qtsks1baa1bo95egsbtpa0) carries instructions to update to 4-long (HCA+META+ZBRA+BRC) when IBM exits Tue 5/26; no action today ✓ |
+| Mon 6/8 09:00 | `7pbkg1kh2pge7midfiqnj6edvk` | Thesis construction — FOMC June 2026 Strategy C | KEEP — FOMC Jun 16-17; C HYBRID-ACTIVATE FOMC-only; description refreshed W4 2026-W20 (directional hypothesis CONTESTED; skew open); self-contained ✓ |
+| Mon 6/9 15:30 | `6p9eotfrdd0eae2pvoccrbj95o` | ZBRA mid-window pulse-check — B position | KEEP — ZBRA OPEN 2026-05-14; mid-window ~Jun 9 ✓ |
+| Fri 6/12 09:30 | `fpbueqccja9thjcnuj6ck9l6rs` | LLY Strategy D mechanical re-screen | KEEP — D NO-GO entry-timing defer from 2026-04-30; ~30 trading days post-print trigger ✓ |
+| Fri 6/26 09:25 | `u9l9544ighc4d9o1l44u7pr0uc` | HCA time-based exit / convergence check (B) | KEEP — HCA OPEN 2026-04-28; calendar-day-60 = Sat 6/27 → last trading day Fri 6/26 ✓ |
+| Fri 6/26 09:25 | `vt43tmemb2u7km29p79i2dga08` | IBM time-based exit / convergence check (B) | **DELETED** — IBM convergence target $245.00 exceeded (Thu 5/21 close $252.97; Fri 5/22 ~$258.81); exit staged Tue 5/26 via `f36ln1797gucpoqdi6hckhkj6g`; time-based exit superseded; event description itself states "this event can be cancelled" upon pre-date convergence execution |
+| Wed 7/1 09:00 | `qpshtsnmi7lj8q2j02au3creh4_20260701T150000Z` | Q1 Quarterly Regime Retrospective | KEEP — recurring quarterly cadence instance; prompt self-contained ✓ |
+| Wed 7/1 10:30 | `ecu5pu90sgoecj1dn2lvt5656s_20260701T163000Z` | Q2 Quarterly D Long-Horizon Candidates | KEEP — recurring quarterly cadence instance; prompt self-contained ✓ |
+| Wed 7/1 12:00 | `pbacgn2esaiollpdq44ujsj9tk_20260701T180000Z` | Q3 Quarterly AI Foundation Delta | KEEP — recurring quarterly cadence instance; prompt self-contained ✓ |
+| Wed 7/1 14:00 | `3fma0s1n57bvb4n0gdnbcodtsk_20260701T200000Z` | Q4 Quarterly Action Conversion | KEEP — recurring quarterly cadence instance; prompt self-contained ✓ |
+| Thu 7/2 10:00 | `jdki2o75a3rhrc77e5sd4h170c` | META 60-day time-based exit checkpoint (B) | KEEP — META OPEN; calendar-day-60 from 2026-05-05 = Fri 7/4 (Independence Day) → last trading day Thu 7/2 ✓ |
+| Mon 7/13 07:15 | `b2gka8hncerbnfh6m9j2hq4k2g` | ZBRA time-based exit — B position | KEEP — ZBRA OPEN; calendar-day-60 from 2026-05-14 = Mon 7/13 ✓ |
+| Mon 7/21 07:15 | `sli3tl3msrhsuq731apqg7s9io` | BRC time-based exit — B position | CREATED THIS SESSION — see below |
+
+### IBM time-based exit deleted
+
+IBM convergence target $245.00 was crossed on Thu 2026-05-21 (close $252.97, +3.3% above target) driven by $2B NIST/Commerce quantum grant. Convergence exit staged 2026-05-22 D2: SELL 0.1198 IBM @ $257.50 Day, Tue 2026-05-26. Order-execution event `f36ln1797gucpoqdi6hckhkj6g` (Tue 5/26 07:00 MT) and fill-capture event `i7p5qtsks1baa1bo95egsbtpa0` (Tue 5/26 14:30 MT) both in place. The IBM time-based exit event `vt43tmemb2u7km29p79i2dga08` (Fri 6/26 09:25 MT) is superseded — its own description states to cancel it when convergence fires before the 60-day date. Deleted.
+
+### BRC time-based exit created
+
+BRC filled 2026-05-22 @ $84.97 (0.4415 sh; cost basis $37.86; time-based exit 2026-07-21 = fill date + 60 calendar days; Jul 21 is Mon, trading day). No time-based exit event existed for BRC — MISSING EVENT detected. Created `[Claude] BRC time-based exit — B position` (`sli3tl3msrhsuq731apqg7s9io`) — Mon 2026-07-21 07:15–07:45 MT, popup 0 min. Description contains self-contained prompt with convergence ($88.80) / invalidation (i)-(iii) / window-expiry logic.
+
+### Open-position coverage check
+
+| Position | Status | Coverage |
+|---|---|---|
+| IBM (B, entry 2026-04-27) | EXIT-PENDING (convergence) | Execute 5/26 `f36ln1797gucpoqdi6hckhkj6g` ✓; fill-capture 5/26 `i7p5qtsks1baa1bo95egsbtpa0` ✓ |
+| HCA (B, entry 2026-04-28) | Open | 60-day exit Jun 26 `u9l9544ighc4d9o1l44u7pr0uc` ✓ |
+| META (B, entry 2026-05-05) | Open | Mid-window Jun 1 `2i5gul5m9eiarfm7pkjf8u42u0` ✓; 60-day exit Jul 2 `jdki2o75a3rhrc77e5sd4h170c` ✓ |
+| ZBRA (B, entry 2026-05-14) | Open | Mid-window Jun 9 `6p9eotfrdd0eae2pvoccrbj95o` ✓; exit Jul 13 `b2gka8hncerbnfh6m9j2hq4k2g` ✓ |
+| BRC (B, entry 2026-05-22) | Open | Time-based exit Jul 21 `sli3tl3msrhsuq731apqg7s9io` ✓ (created this session) |
+| RTX (D, entry 2026-04-27) | Open | Long-horizon; no time-based exit; no research-deferral flag; D1 scans auto-detect invalidation ✓ |
+| DIS (D, entry 2026-05-07) | Open | Long-horizon; no time-based exit; no research-deferral flag; Q3 FY26 print ~Aug 12 auto-detected by D1 ✓ |
+
+### Notification audit
+
+IBM time-based exit deleted (no longer present). BRC time-based exit created with popup 0 min explicit override. All remaining events confirmed at popup 0 min (explicit overrideReminders or calendar default) per D3 2026-05-22 audit.
+
+### Cadence-policy check
+
+No D1-D3/W1-W5/M1-M5 cadence prompts in calendar. Q1-Q4 quarterly recurring instances present for 2026-07-01. Compliant.
+
+### Result
+
+1 deleted (IBM time-based exit `vt43tmemb2u7km29p79i2dga08` — convergence exit supersedes), 1 created (BRC time-based exit `sli3tl3msrhsuq731apqg7s9io` — missing event), 0 updated. 18 [Claude] events in final verified set. All 7 open/exit-pending positions covered. No pending exit orders beyond IBM (covered).
+
 5. **No router reviews** — no development met the inter-monthly high bar per Daily.md.
