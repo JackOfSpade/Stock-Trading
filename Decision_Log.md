@@ -12750,3 +12750,20 @@ TJX factors:
 **B experiment totals (estimated):** ~5 GO + ~48 NO-GO (through BRC 5/22, estimated) → TJX: **~6 GO + ~48 NO-GO ≈ 11.1% / 88.9%**. B-short string: **37 (unchanged — LONG GO)**. Criterion-4 decisive count: ~40 (unchanged).
 
 **File writes:** Decision_Log.md (this entry), Portfolio_Ledger.md (TJX ORDER-STAGED subsection added). Calendar: 1 deleted, 2 created.
+
+---
+
+## 2026-05-23 — IBM SELL limit correction
+
+**Type:** Order-parameter correction (no thesis change)
+
+IBM Fri 2026-05-22 actual close confirmed **$254.36**. Prior estimate in the convergence-exit staging session (2026-05-22) used ~$258.81 (likely based on intraday high or stale quote). The $257.50 Day limit set at staging required IBM to rally +1.23% on Tue 5/26 to fill — execution risk on a mandated convergence exit.
+
+**Correction:** Limit updated from **$257.50 → $254.00** (marketable vs. actual Fri close; $0.36 below $254.36; ensures near-certain Day-order fill at Tue open with trivial P&L impact: $0.43 total vs. original staged gross).
+
+**P&L impact at corrected limit:** $30.43 gross / +10.35% vs $230.17 fill (vs. $30.85 / +11.87% at $257.50 — delta $0.42 / ~0.4pp). Convergence target $245.00 remains exceeded at either limit; exit decision unchanged.
+
+**Files updated:**
+- Calendar event `f36ln1797gucpoqdi6hckhkj6g`: limit $257.50 → $254.00; Fri close corrected to $254.36
+- Portfolio_Ledger.md IBM EXIT-PENDING line: same corrections
+- Portfolio_Ledger.md TJX SLOT-CONTINGENT line: IBM reference updated to $254.00
