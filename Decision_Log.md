@@ -9906,7 +9906,7 @@ Four considerations were specifically pushed back on during construction:
 - Total NAV $1,887.60 post-fill (pre-fill $1,888.69 - $0.39 SGOV realized loss - $0.70 cycle commissions = -$1.09 net drag)
 - Next trade size at 2%: $37.75 (recomputed off updated NAV)
 - Cumulative B commissions paid: $2.31 (prior $1.61 + $0.70 cycle)
-- 1 slot remaining toward 5-concurrent-cap
+- B concurrent open positions: 4 (IBM, HCA, META, ZBRA); no total-position cap per Strategy.md; sector caps: IT 2/3, Health Care 1/3, Comm Services 1/3
 
 **Experiment B totals unchanged at 4 GO + 36 NO-GO = 10.0% / 90.0% hit rate** (no new disposition since WIX NO-GO 5/13; this entry is fill-capture-admin only, not a new thesis-construction disposition). All 4 GOs (IBM/HCA/META/ZBRA) are now ACTIVE OPEN POSITIONS.
 
@@ -11160,7 +11160,7 @@ Forward calendar count: 15 events (prior D3 5/17 baseline) + 3 new B thesis-cons
 
 ### Effect on book
 
-**No order staged. No portfolio-state change.** Strategy A router DO-NOT-ACTIVATE unchanged; B ACTIVATE unchanged (4/5 slot capacity); C HYBRID-ACTIVATE FOMC-only unchanged; D ACTIVATE unchanged; E DO-NOT-ACTIVATE unchanged. Sector cap usage at routine-end unchanged: IT Services 1/3 (IBM); Health Care Facilities 1/3 (HCA); Comm Services Interactive Media & Services 1/3 (META); Electronic Equipment Instruments & Components 1/3 (ZBRA). Experiment Strategy B totals unchanged at 5 GO + ~50 NO-GO ≈ 9% hit rate through W20 (per W3 cross-position observations).
+**No order staged. No portfolio-state change.** Strategy A router DO-NOT-ACTIVATE unchanged; B ACTIVATE unchanged (4 concurrent open positions); C HYBRID-ACTIVATE FOMC-only unchanged; D ACTIVATE unchanged; E DO-NOT-ACTIVATE unchanged. Sector cap usage at routine-end unchanged: IT Services 1/3 (IBM); Health Care Facilities 1/3 (HCA); Comm Services Interactive Media & Services 1/3 (META); Electronic Equipment Instruments & Components 1/3 (ZBRA). Experiment Strategy B totals unchanged at 5 GO + ~50 NO-GO ≈ 9% hit rate through W20 (per W3 cross-position observations).
 
 ### References
 
@@ -11177,7 +11177,7 @@ Forward calendar count: 15 events (prior D3 5/17 baseline) + 3 new B thesis-cons
 
 ### Compaction-survival note
 
-**W4 2026-05-17 ~Sun AM MT (regular cadence)**: 3 calendar events created (FIG `0lvb917f48eja5rl13b4vp5st0` Mon 5/18 09:00 MT / ONDS `gv6fi8ndmfel4kemh60dt9kke8` Mon 5/18 11:00 MT / POET `ut569pc46r4gobm3q2arpv3130` Tue 5/19 09:00 MT). 1 existing event updated (FOMC `7pbkg1kh2pge7midfiqnj6edvk` description refreshed to remove stale TLT-bull pre-commitment per D3 5/17 staleness flag + W1 W20 CONTESTED-skew posture). Watchlist A-queue extended 18 → 20 (CRM + DELL added per W4 discretion under A-router-DO-NOT-ACTIVATE gate). Watchlist D re-screen pipeline reconciled (CEG/GEV stale event IDs cleaned per D3 5/17 flag). 0 exits staged. 0 research deferrals (W3 4 × HOLD with explicit no-deferral). 0 portfolio-state changes. B totals unchanged at 5 GO + ~50 NO-GO. C router unchanged HYBRID-ACTIVATE FOMC-only. Sector caps unchanged 4-of-5 B-slot capacity (1 remaining). Forward calendar 15 → 18 events.
+**W4 2026-05-17 ~Sun AM MT (regular cadence)**: 3 calendar events created (FIG `0lvb917f48eja5rl13b4vp5st0` Mon 5/18 09:00 MT / ONDS `gv6fi8ndmfel4kemh60dt9kke8` Mon 5/18 11:00 MT / POET `ut569pc46r4gobm3q2arpv3130` Tue 5/19 09:00 MT). 1 existing event updated (FOMC `7pbkg1kh2pge7midfiqnj6edvk` description refreshed to remove stale TLT-bull pre-commitment per D3 5/17 staleness flag + W1 W20 CONTESTED-skew posture). Watchlist A-queue extended 18 → 20 (CRM + DELL added per W4 discretion under A-router-DO-NOT-ACTIVATE gate). Watchlist D re-screen pipeline reconciled (CEG/GEV stale event IDs cleaned per D3 5/17 flag). 0 exits staged. 0 research deferrals (W3 4 × HOLD with explicit no-deferral). 0 portfolio-state changes. B totals unchanged at 5 GO + ~50 NO-GO. C router unchanged HYBRID-ACTIVATE FOMC-only. Sector caps unchanged (IT 2/3, Health Care 1/3, Comm Services 1/3; 4 concurrent open B positions). Forward calendar 15 → 18 events.
 
 ### Chat output
 
@@ -11448,10 +11448,10 @@ Strict-enumerated admissible targets within 60 days of Thu 2026-05-14 (window cl
 - **No A position in FIG:** ✓ (A router DO-NOT-ACTIVATE; A book empty).
 - **Sector concentration cap (3 per GICS sector):** FIG = IT sector (45) / Application Software (45103010). Current IT-sector B book: IBM (IT Services 45102010) + ZBRA (Tech Hardware/Storage 45202030) = 2/3. FIG entry would push IT-sector to **3/3 AT CAP** — clears cap but at structural ceiling.
 - **KL #12 4-long-book pairwise correlation estimate** (per pre-mortem rev 7 KL #12 leading-indicator threshold avg pairwise correlation > 0.5 across active long B positions = escalation trigger): FIG-IBM (both IT, different sub-industries; AI-narrative tangential overlap) estimated ~0.40-0.55; FIG-ZBRA (both IT, different sub-industries) estimated ~0.35-0.50; FIG-HCA (different sectors) estimated ~0.15-0.30; FIG-META (Comm Services Interactive Media, but both consumer-internet-adjacent + AI-narrative overlap) estimated ~0.40-0.55. Estimated 4-long-book + FIG pairwise average: ~0.30-0.42 — within 0.5 trigger threshold but **CLOSE TO THE LINE**. Recent-IPO limited correlation history compounds 2.13 miscalibration on the estimate. KL #12 risk is REAL but does not breach 0.5 trigger at central estimate.
-- **Slot-cap discipline:** 1/5 B slot remaining; if FIG NO-GO disposes, ONDS Mon 5/18 11:00 MT (sub-industry Industrials A&D — MOST KL-#12-favorable per W2 note) and POET Tue 5/19 09:00 MT (sub-industry IT/Semis or Comm Equipment — borderline mcap-cushion + AI-optics sub-pattern 1 ratification risk) have first claim on the single remaining slot. FIG NO-GO clears the slot-cap-discipline ambiguity for ONDS/POET sessions.
+- **Session sequencing note:** if FIG NO-GO disposes, ONDS Mon 5/18 11:00 MT (sub-industry Industrials A&D — MOST KL-#12-favorable per W2 note) and POET Tue 5/19 09:00 MT (sub-industry IT/Semis or Comm Equipment — borderline mcap-cushion + AI-optics sub-pattern 1 ratification risk) proceed on their own criteria. No total-position cap applies; each is evaluated independently against criteria 1–5 and sector cap.
 - **Position size (hypothetical):** ~2% of B NAV per Strategy.md sizing rule (B NAV exact at session time not refreshed but ~$1900 per recent Portfolio_Ledger mark).
 
-**Criterion 5 mechanically CLEARS** but criterion 3 + 4 already fail decisively; sector-cap status is informational context for slot-cap discipline routing on ONDS/POET sessions.
+**Criterion 5 mechanically CLEARS** but criterion 3 + 4 already fail decisively; sector-cap status is informational context for ONDS/POET session scheduling.
 
 ### Step 10 — Conservative-default-on-ambiguity rule firing check
 
@@ -11472,8 +11472,8 @@ Per pre-mortem rev 7 default-on-ambiguity rule + session-prompt explicit reminde
 
 ### Pending queue updates
 
-- **NEXT — Mon 2026-05-18 11:00 MT:** ONDS Strategy B thesis-construction calendar event `gv6fi8ndmfel4kemh60dt9kke8` per W4 5/17 scheduling. ONDS is the next-priority Top-tier candidate; with FIG NO-GO disposed, ONDS has first claim on the remaining 1/5 B slot if it passes thesis-construction. Slot-cap discipline framing: "defer to highest-conviction + earliest-window-pressure" — ONDS W-rem 9, POET W-rem 9; ONDS has earlier scheduling slot (Mon 5/18 11:00 MT vs POET Tue 5/19 09:00 MT) so ONDS gets first-clearance attempt.
-- **NEXT — Tue 2026-05-19 09:00 MT:** POET Strategy B thesis-construction calendar event `ut569pc46r4gobm3q2arpv3130` per W4 5/17 scheduling. If ONDS NO-GO, POET inherits the remaining 1/5 B slot opportunity. If ONDS GO + sector cap permits POET (Industrials A&D vs IT/Semis = different sectors), POET would be over-cap on B slot (5/5) regardless — POET session would route NO-GO on slot-cap discipline.
+- **NEXT — Mon 2026-05-18 11:00 MT:** ONDS Strategy B thesis-construction calendar event `gv6fi8ndmfel4kemh60dt9kke8` per W4 5/17 scheduling. ONDS is evaluated on its own merits (criteria 1–5 + sector cap: Industrials A&D 0/3). ONDS W-rem 9; ONDS has earlier scheduling slot (Mon 5/18 11:00 MT vs POET Tue 5/19 09:00 MT).
+- **NEXT — Tue 2026-05-19 09:00 MT:** POET Strategy B thesis-construction calendar event `ut569pc46r4gobm3q2arpv3130` per W4 5/17 scheduling. If ONDS GO, POET is evaluated independently on criteria 1–5 and its own sector cap (IT/Semis or Comm Equipment 0/3). Both can be GO simultaneously if both clear criteria and their respective sector caps — no total-position cap applies.
 - **NEXT — Wed 2026-06-03 ~15:30 MT:** KL #12 4-long-book pairwise-correlation first computation (operates on then-current B book; FIG NO-GO disposes FIG from book consideration; ONDS or POET potential additions would update metric scope at then-current state).
 - **W5 taxonomy update pending:** sub-pattern 5c (lockup-release-as-mechanical-supply-binary) candidate FIRST INSTANCE established by this entry; pending second-instance validation for W5 formal taxonomy promotion. Future IPO-vintage Strategy B candidates with similar in-window lockup-release timing-overlap should route against this anchor.
 
@@ -11525,7 +11525,7 @@ Five considerations were specifically pushed back on during construction:
 
 **ZBRA GO precedent distinction for taxonomy clarity:** ZBRA 5/13 GO was THIN-CLUSTER **UP-ANCHOR** routing (5 firms raised PTs +3.3-8.1%, stable rising cluster); FIG NO-GO is THIN-CLUSTER **DOWN-ANCHOR-INVERSION** routing (4 firms cut PTs -10 to -14%, actively cutting cluster). Cluster-direction-distinction is the operative dimension for thin-cluster routings going forward; THIN-RAISE-cluster preserves LONG-case-alive routing per ZBRA precedent, THIN-CUT-cluster forecloses LONG-case via stale-anchor-on-actively-cutting-cluster doctrine per MNDY/FIG precedent.
 
-**Slot-cap discipline implication for ONDS/POET this week:** 1/5 B slot remains; ONDS Mon 5/18 11:00 MT next session has first claim on slot (earlier scheduling + W-rem 9 vs POET W-rem 9 tie-broken by scheduling sequence). POET Tue 5/19 09:00 MT would be over-cap (5/5) on slot-cap if ONDS GO regardless of sector cap analysis.
+**ONDS/POET sequencing this week:** ONDS Mon 5/18 11:00 MT runs first (earlier scheduling). If ONDS GO, POET Tue 5/19 09:00 MT still evaluates on its own merits — ONDS GO does not gate POET. If both GO and both clear their respective sector caps, both entries proceed (no total-position cap per Strategy.md / Operating_Protocols §10).
 
 **Operator chat output:** "FIG — NO-GO. No order. ONDS Strategy B thesis-construction session next at Mon 2026-05-18 11:00 MT."
 
@@ -11654,10 +11654,9 @@ Strict-enumerated admissible targets within 60 days of Thu 2026-05-14 (window cl
 - **No A position in ONDS:** ✓ (A router DO-NOT-ACTIVATE; A book empty).
 - **Sector concentration cap (3 per GICS sector):** Per formal stockanalysis.com classification (Communications Equipment, IT-sector 45). Current IT-sector B book: IBM (IT Services 45102010) + ZBRA (Tech Hardware/Storage 45202030) = 2/3. ONDS entry → IT-sector 3/3 **AT CAP** (mechanically clears; structurally tight). Alternative functional A&D classification (Industrials 20) would open Industrials 0/3 → 1/3 with extensive headroom.
 - **KL #12 4-long-book pairwise correlation estimate:** ONDS-IBM (different sectors if A&D classification; both IT if Comm Equipment classification) estimated ~0.20-0.40; ONDS-ZBRA (both IT if Comm Equipment; some hardware-mobility overlap) estimated ~0.30-0.50; ONDS-HCA (different sectors) ~0.10-0.25; ONDS-META (different sectors but both consumer-tech-narrative-adjacent) ~0.20-0.35. Estimated 4-long-book + ONDS pairwise average: ~0.25-0.40 — within 0.5 trigger threshold. Per session prompt "ONDS is most-distinct sector" estimate ~0.20-0.35 was based on A&D classification expectation; revised estimate accounting for formal Comm Equipment classification is somewhat higher but still well below trigger.
-- **Slot-cap discipline:** 1/5 B slot remaining post-FIG-NO-GO; ONDS NO-GO frees slot for POET Tue 5/19 09:00 MT (next-priority claim) or for any subsequent fresh-trigger candidate emerging within window.
 - **Position size (hypothetical):** ~2% of B NAV per Strategy.md sizing rule.
 
-**Criterion 5 mechanically CLEARS** but criterion 3 + 4 already fail decisively; sector-cap status is informational context for POET 5/19 session slot-cap routing.
+**Criterion 5 mechanically CLEARS** but criterion 3 + 4 already fail decisively. POET 5/19 proceeds on its own criteria regardless of this outcome.
 
 ### Step 9 — Conservative-default-on-ambiguity rule firing check
 
@@ -12309,7 +12308,7 @@ Full self-contained prompt for manual event creation is in the D2 2026-05-20 Cal
    No decisive flaw. Criterion 4 resolves GO.
 5. **No A position in BRC — CLEARS.** No open A position; BRC not on the A queue. (A router DO-NOT-ACTIVATE, so no cross-strategy-holding conflict.)
 
-**Sector / slot / correlation:** GICS Industrials / Industrial Machinery. B-sector-cap: Industrials 0/3 B positions → 1/3 (RTX is Strategy D, does not count toward the B cap). B concurrent-slot count: IBM/HCA/META/ZBRA = 4/5 → BRC = 5/5 (at cap after fill; no further B entries until a slot frees). KL #12 pairwise correlation: adding BRC (Industrials, distinct from IT-Services/Health-Care/Comm-Services/Electronic-Equipment) keeps the 5-long-book pairwise average favorable (well under the 0.5 trigger); first formal computation scheduled Wed 2026-06-03 (event `k9vtudr7d40ukto3vfhutcdbls`) — to be updated from 4-long to 5-long book.
+**Sector / correlation:** GICS Industrials / Industrial Machinery. B-sector-cap: Industrials 0/3 B positions → 1/3 (RTX is Strategy D, does not count toward the B cap). B concurrent open positions at fill: 5 (IBM + HCA + META + ZBRA + BRC; no total-position cap per Strategy.md). KL #12 pairwise correlation: adding BRC (Industrials, distinct from IT-Services/Health-Care/Comm-Services/Electronic-Equipment) keeps the 5-long-book pairwise average favorable (well under the 0.5 trigger); first formal computation scheduled Wed 2026-06-03 (event `k9vtudr7d40ukto3vfhutcdbls`) — to be updated from 4-long to 5-long book.
 
 **Decision: BRC Strategy B — GO (LONG) at MEDIUM-LOW conviction (~45-50%).** Per Operating_Protocols conviction-calibration ladder, a MEDIUM-LOW conviction setup that clears all criteria stages (HCA precedent: MEDIUM-LOW GO). Conviction is a calibration metric, not a gate.
 
@@ -12322,7 +12321,7 @@ Full self-contained prompt for manual event creation is in the D2 2026-05-20 Cal
 **Theater-check flag:** N/A (single-session thesis construction, not an adversarial review). Note the genuine ambiguity: this is a MEDIUM-LOW conviction GO that could defensibly have gone NO-GO on the criterion-3-degenerates-to-A-territory argument; it resolves GO because (a) the undershoot anchor does not match the sub-pattern-1/3 mechanical NO-GO diagnostics, (b) the sell-side reset was mild (not aggressive), and (c) the directly-analogous ZBRA setup cleared 5 trading days earlier — intellectual-consistency with ZBRA absent a decisive distinguishing flaw.
 
 **Downstream actions:**
-- Portfolio_Ledger.md: BRC order-staged subsection added; B slot 4/5 → 5/5 noted; mark-to-market and fill details to be appended at fill capture.
+- Portfolio_Ledger.md: BRC order-staged subsection added; B concurrent positions 4 → 5 at fill; mark-to-market and fill details to be appended at fill capture.
 - Daily.md 2026-05-22 RECOMMENDED ACTIONS carries the order (D1 session).
 - Fill-capture: operator screenshots IBKR positions + orders end-of-day Fri 5/22; a follow-up session updates Portfolio_Ledger.md from the screenshots. (Calendar MCP still degraded this session — fill-capture event creation flagged for the operator rather than auto-scheduled; see chat output.)
 - TJX (the other calendar-glitch-stranded B candidate, +5.66% 5/20, window ~6/5) remains pending a dedicated thesis-construction evaluation; not staged this session.
@@ -12344,7 +12343,7 @@ Full self-contained prompt for manual event creation is in the D2 2026-05-20 Cal
 
 **Calendar events created (Calendar MCP operational this session):**
 - `[Claude] Screenshot IBKR — fill capture BRC entry` — Fri 2026-05-22 14:30–15:00 MT (America/Denver); event id `f2tnikf54ltc70sbq0tpo9qk2o`; popup 0 min. Description contains prompt for filled/unfilled case handling of Portfolio_Ledger.md update and KL #12 event description update from 4-long to 5-long book.
-- `[Claude] Thesis construction — TJX Strategy B` — Tue 2026-05-27 08:00–10:00 MT (America/Denver); event id `0fb7924g5c0hdvae1jjhp6qphs`; popup 0 min. TJX Q1 FY27 print Wed 5/20, Day-0 +5.66% MVG-cleared, window expires ~Thu 6/5. Calendar-MCP outage on 5/19-5/21 blocked prior attempts (D2 5/21 "first deferral"); this event is the resolution session. Description contains self-contained thesis-construction prompt including slot-check gate (B may be at 5/5 cap if BRC fills today), sector-check, full criteria 1-5 walk instructions, sub-pattern routing notes, and slot-gated GO handling if applicable.
+- `[Claude] Thesis construction — TJX Strategy B` — Tue 2026-05-27 08:00–10:00 MT (America/Denver); event id `0fb7924g5c0hdvae1jjhp6qphs`; popup 0 min. TJX Q1 FY27 print Wed 5/20, Day-0 +5.66% MVG-cleared, window expires ~Thu 6/5. Calendar-MCP outage on 5/19-5/21 blocked prior attempts (D2 5/21 "first deferral"); this event is the resolution session. Description contains self-contained thesis-construction prompt including sector-check (Consumer Disc 0/3), full criteria 1-5 walk instructions, and sub-pattern routing notes.
 
 **Watchlist.md updates (3 A-queue post-print notes appended):**
 - NVDA: **NOTE 2026-05-22** — Day-0 C/C Thu 5/21 confirmed ~-1.5% to -1.77% (SELL-THE-NEWS despite blowout print). Bull narrative-misalignment ratified at fundamental level but Day-0 NEGATIVE tape reaction is material counter-signal for June M1 AI/tech complex re-rating. Note for M1 6/1.
@@ -12528,7 +12527,7 @@ No D1-W5 or M1-M5 prompt events in calendar. Q1-Q4 quarterly recurring instances
 |---|---|---|---|
 | Tue 5/26 07:00 | `f36ln1797gucpoqdi6hckhkj6g` | Execute order — IBM SELL | KEEP — IBM EXIT-PENDING; order day Tue 5/26 (Mon 5/25 = Memorial Day); 07:00 MT pre-market ✓ |
 | Tue 5/26 14:30 | `i7p5qtsks1baa1bo95egsbtpa0` | Screenshot IBKR — fill capture IBM exit | KEEP — paired fill-capture for IBM SELL Day order ✓ |
-| Tue 5/27 08:00 | `0fb7924g5c0hdvae1jjhp6qphs` | Thesis construction — TJX Strategy B | KEEP — window ~Thu 6/5; description includes slot-gate handling (B at 5/5 cap; IBM fills 5/26 → slot freed 5/26 fill-capture → B at 4/5 by session time); self-contained ✓ |
+| Tue 5/27 08:00 | `0fb7924g5c0hdvae1jjhp6qphs` | Thesis construction — TJX Strategy B | KEEP — window ~Thu 6/5; description includes sector-check (Consumer Disc 0/3) and full criteria 1-5 walk; self-contained ✓ |
 | Mon 6/1 09:00 | `r9i6u6mnpk9ukoj2bh15m1fr7c` | Re-screen BA — trailing-30d roll-off check | KEEP — D NO-GO reconsideration trigger; trigger date not reached |
 | Mon 6/1 10:00 | `2i5gul5m9eiarfm7pkjf8u42u0` | META mid-window thesis pulse-check (B) | KEEP — META OPEN 2026-05-05; mid-window appropriate ✓ |
 | Wed 6/3 15:30 | `k9vtudr7d40ukto3vfhutcdbls` | KL #12 pairwise correlation — B book (IBM+HCA+META+ZBRA+BRC) | KEEP — currently reflects 5-long book (updated at BRC fill capture 5/22); IBM fill-capture event (i7p5qtsks1baa1bo95egsbtpa0) carries instructions to update to 4-long (HCA+META+ZBRA+BRC) when IBM exits Tue 5/26; no action today ✓ |
@@ -12581,7 +12580,7 @@ No D1-D3/W1-W5/M1-M5 cadence prompts in calendar. Q1-Q4 quarterly recurring inst
 
 ---
 
-## 2026-05-23 — Strategy B TJX Q1 FY27 thesis construction — GO MEDIUM-LOW conviction (slot-gated)
+## 2026-05-23 — Strategy B TJX Q1 FY27 thesis construction — GO MEDIUM-LOW conviction
 
 **Trigger:** D2 thesis-construction session for TJX (The TJX Companies) Q1 FY27 earnings print (Wed 2026-05-20 BMO). Calendar event `0fb7924g5c0hdvae1jjhp6qphs` was scheduled Tue 2026-05-27 08:00 MT; session advanced to Sat 2026-05-23 per Operating_Protocols §3 ("NO-GO records are context, not barriers" / no-barrier-to-fresh-evaluation rule). Calendar-MCP outage note: thesis-construction sessions intended for Wed 5/20 and Thu 5/21 were deferred due to Google Calendar MCP offline 5/19-5/21; this D2-2026-05-21 procedural deferral does NOT pre-empt the criteria-based evaluation. Thesis-construction event `0fb7924g5c0hdvae1jjhp6qphs` deleted (thesis resolved this session; redundant).
 
@@ -12589,15 +12588,11 @@ No D1-D3/W1-W5/M1-M5 cadence prompts in calendar. Q1-Q4 quarterly recurring inst
 
 ---
 
-### STEP 1 — Slot and sector check
-
-**B slot count:** IBM (EXIT-PENDING), HCA, META, ZBRA, BRC = **5/5 AT CAP**.
-
-IBM EXIT-PENDING: SELL 0.1198 IBM @ $257.50 Day staged Tue 2026-05-26. IBM Fri 5/22 close ~$258.81 — limit is in-the-money; fill highly likely at or above limit Tue 5/26 (first trading day post-Memorial Day). Slot expected to free Tue 5/26. Entry window expires ~Thu 2026-06-04 (~8 trading days from Tue 5/27 session context). Conservative-default fallback: if IBM does not sell and no slot frees before window close, TJX entry does not occur.
-
-Per protocol for 5/5 cap: conducted full criteria walk for GO purposes. GO thesis confirmed below → order staged with slot-gate annotation; entry contingent on IBM exit Tue 5/26.
+### STEP 1 — Sector check
 
 **Sector check:** TJX GICS Consumer Discretionary / Apparel Retail. Current B Consumer Discretionary count: **0/3**. Adding TJX: 0/3 → 1/3. Sector cap does NOT bind. ✓
+
+**Open position count at session:** IBM (EXIT-PENDING), HCA, META, ZBRA, BRC = 5 concurrent. No total-position cap applies per Strategy.md (sector cap only). Entry proceeds on criteria 1–5.
 
 ---
 
@@ -12723,19 +12718,15 @@ TJX factors:
 
 ---
 
-### Slot-gate note
-
-**B at 5/5 cap.** IBM EXIT-PENDING Tue 2026-05-26 (SELL 0.1198 IBM @ $257.50 Day; in-the-money at $258.81 Fri 5/22 close; high-probability fill). Slot expected to free Tue 5/26 → TJX entry staged Wed 2026-05-27 (1 trading day post-IBM-exit confirmation). Conservative-default: if IBM does not sell by window close (~Thu 2026-06-04), TJX entry does not occur. With IBM in-the-money at staging, slot-gate is expected to clear well within the 8-day remaining window.
-
 ---
 
 ### GO decision — order staged
 
-**DECISION: GO — MEDIUM-LOW conviction (slot-gated)**
+**DECISION: GO — MEDIUM-LOW conviction**
 
 **Order:** Limit BUY **0.2346 TJX @ $162.00 Day, Wed 2026-05-27**
 - Principal: ~$38.00 (2% of B NAV ~$1,895)
-- SLOT-CONTINGENT: Execute ONLY after confirming IBM SELL (Tue 5/26) confirmed fill; B must be at 4/5 at execution time; operator-discretion tighter limit permitted per META/HCA/ZBRA precedent
+- Operator-discretion tighter limit permitted per META/HCA/ZBRA precedent
 - Convergence target (immutable): **$164.50** (25% gap-fill from $159.21 Day-0 ref toward $180 PT median)
 - Expected time-based exit: Fri 2026-07-24 (60 calendar days from Wed 5/27 → Sun 7/26 → last trading day Fri 7/24; calendar event to create at fill-capture session)
 - Invalidation criteria: (i) TJX 8-K cutting FY27 comp guide below 2-3% floor or pretax margin below 11.7% floor; (ii) structural off-price competitive-positioning change (e.g., formal WMT/TGT off-price channel launch adverse to TJX); (iii) sub-pattern 1 escalation post-entry (≥3-firm ≥20% PT-raise wave re-rating stock to ~$185-190 information-priced equilibrium)
@@ -12744,7 +12735,7 @@ TJX factors:
 
 **Calendar events:**
 - DELETED: `0fb7924g5c0hdvae1jjhp6qphs` (TJX thesis-construction Tue 5/27 08:00 MT) — thesis resolved this session; event redundant
-- CREATED: `jclrlcsthd1o1u7m7nvm6lkf58` "[Claude] Execute order — TJX BUY" — Wed 2026-05-27 07:00–07:30 MT, popup 0 min; description: slot-gate verification + IBKR-paste order
+- CREATED: `jclrlcsthd1o1u7m7nvm6lkf58` "[Claude] Execute order — TJX BUY" — Wed 2026-05-27 07:00–07:30 MT, popup 0 min; description: sector-cap verification + IBKR-paste order
 - CREATED: `a24018i7bpkkjmprh1heag3uck` "[Claude] Screenshot IBKR — fill capture TJX entry" — Wed 2026-05-27 14:30–15:00 MT, popup 0 min; description: filled/unfilled branches
 
 **B experiment totals (estimated):** ~5 GO + ~48 NO-GO (through BRC 5/22, estimated) → TJX: **~6 GO + ~48 NO-GO ≈ 11.1% / 88.9%**. B-short string: **37 (unchanged — LONG GO)**. Criterion-4 decisive count: ~40 (unchanged).
@@ -12766,4 +12757,4 @@ IBM Fri 2026-05-22 actual close confirmed **$254.36**. Prior estimate in the con
 **Files updated:**
 - Calendar event `f36ln1797gucpoqdi6hckhkj6g`: limit $257.50 → $254.00; Fri close corrected to $254.36
 - Portfolio_Ledger.md IBM EXIT-PENDING line: same corrections
-- Portfolio_Ledger.md TJX SLOT-CONTINGENT line: IBM reference updated to $254.00
+- Portfolio_Ledger.md TJX sequencing note: IBM reference updated to $254.00

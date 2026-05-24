@@ -65,7 +65,7 @@ Watchlist candidates: **DELL / QCOM** A-queue rows ratified bullish by Friday's 
 - **HPQ +14% (pre-5/27-earnings AI-PC run) / Ford +8.27% (Ford Energy grid-storage corporate development, 2028 deliveries) / WDAY +12% / ZM +7% / EL +~12% (M&A-talks-ended) / TTWO ~+7% (direction conflicted):** all read information-driven / A-territory / risk-on-hostile. **LEAN NO for B; no thesis-construction.**
 - **TJX (carried from prior scan):** clean Q1 FY27 beat-raise (Day-0 +5.66% on 5/20); dedicated B evaluation still pending (window ~Thu 6/5); pre-judgment info-priced. Not staged tonight.
 - No new **A** (router DO-NOT-ACTIVATE), **C** (no FOMC; next 6/16–17), or **E** (no pair-divergence; router DO-NOT-ACTIVATE) candidates.
-- **B-slot deconfliction note for D2:** BRC fill would put B at 5/5 (cap), but the **IBM convergence exit frees a B slot** → net B back toward 4/5. No B candidate clears the bar tonight regardless.
+- **B position context for D2:** BRC fill brings concurrent B positions to 5 (IBM EXIT-PENDING, HCA, META, ZBRA, BRC). IBM convergence exit pending Tue 5/26 will bring open B positions to 4. No total-position cap; any new B candidate still evaluated on criteria 1–5 and sector cap. No B candidate clears the bar tonight regardless.
 
 ## ANALYSIS — REGIME CHECK
 

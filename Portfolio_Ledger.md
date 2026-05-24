@@ -252,7 +252,7 @@ Per-strategy allocation uses fractional shares split evenly (13.796 shares each)
 - Starting value: $1,389.21 on 2026-04-23 (after $0.16 SGOV parking commission; original allocation $1,389.37).
 - Deposits received cumulative: **$1,889.37** ($1,389.37 initial + $500.00 supplemental allocation 2026-04-28 settlement-released 2026-05-07).
 - Next trade size at 2%: **$37.75** (recomputed off updated total value $1,887.60 × 2%).
-- B open position count: **4/5** (IBM, HCA, META, **ZBRA NEW**); 1 slot remaining toward 5-concurrent-cap.
+- B open position count: **4** concurrent open positions (IBM, HCA, META, **ZBRA NEW**). No total-position cap; sector cap is 3 per GICS sector (per Strategy.md).
 - **Sector cap usage**: IT Services 1/3 (IBM); Health Care Facilities 1/3 (HCA); Comm Services 1/3 (META); **Electronic Equipment Instruments & Components 1/3 (ZBRA NEW)**; total 4 distinct sub-industries across IT/Health Care/Comm Services/IT. IT sector total 2/3 (IBM IT Services + ZBRA Electronic Equipment subindustry per ZBRA GO entry). Remaining capacity within sub-industries.
 
 **Activity log** (chronological state-affecting events; substance lives in linked Decision_Log entries):
@@ -583,16 +583,16 @@ Format:
   - (ii) Honeywell-PSS deal termination or negative business / demand update — NOT-TRIPPED at entry.
   - (iii) Sub-pattern-1 escalation (≥3-firm aggressive PT-raise wave re-rating the stock to information-priced equilibrium near $100-102) — NOT-TRIPPED at entry.
 - **No price-based invalidation** (B-long has no price stop per Strategy.md; worst-case loss bounded at ~$37.86 cost basis / 2% of B NAV by sizing).
-- **Sector / slot context**: GICS Industrials / Industrial Machinery. B-sector-cap Industrials 0/3 → 1/3 (RTX is Strategy D, not counted in B cap). B concurrent-slot count 4/5 → 5/5 (B at slot cap; no further B entries until a slot frees). KL #12 5-long-book pairwise-correlation first computation Wed 2026-06-03 (event `k9vtudr7d40ukto3vfhutcdbls`; updated to 5-long book IBM + HCA + META + ZBRA + BRC).
+- **Sector context**: GICS Industrials / Industrial Machinery. B-sector-cap Industrials 0/3 → 1/3 (RTX is Strategy D, not counted in B cap). B concurrent open positions at fill: 5 (IBM + HCA + META + ZBRA + BRC). KL #12 5-long-book pairwise-correlation first computation Wed 2026-06-03 (event `k9vtudr7d40ukto3vfhutcdbls`; updated to 5-long book IBM + HCA + META + ZBRA + BRC).
 - **Mark-to-market (initial, EOD 2026-05-22)**: BRC ~$87.55 at close; IBKR unrealized P&L $0.93; +3.0% above fill price ($84.97 → $87.55).
 - **Conviction rating at entry**: MEDIUM-LOW (~45-50%). Genuine-ambiguity GO (could defensibly have gone NO-GO on criterion-3-degenerates-to-A-territory); resolves GO on undershoot-anchor + mild-sell-side-reset + ZBRA-consistency. See Decision_Log 2026-05-22.
 - **Claude model at entry**: Claude Opus 4.7
 
-### [Strategy B] TJX — ORDER-STAGED (SLOT-CONTINGENT) 2026-05-27
+### [Strategy B] TJX — ORDER-STAGED 2026-05-27
 
-- **Source thesis**: → Decision_Log 2026-05-23 "Strategy B TJX Q1 FY27 thesis construction — GO MEDIUM-LOW conviction (slot-gated)" (print Wed 5/20 BMO: comps +6%, EPS $1.19 +29% "all well above plan," FY27 guidance raised across all metrics; Day-0 C/C +5.66%; post-print sell-side modest raises 1-6% — JPM/Baird/Telsey/BTIG $174-190 cluster; stock $159-160 vs cluster = under-reaction hypothesis; sub-pattern 1 DOES NOT APPLY — max raise Telsey +5.71%, far below ≥15% intermediate threshold; sub-pattern 3 DOES NOT APPLY — stock BELOW pre-print consensus $172, not AT it; cross-sectional TJX+/TGT-/WMT- on same comps +6% print; criteria 1-5 all clear; convergence $164.50; KL #12 favorable ~0.13-0.20 avg pairwise; MEDIUM-LOW conviction).
+- **Source thesis**: → Decision_Log 2026-05-23 "Strategy B TJX Q1 FY27 thesis construction — GO MEDIUM-LOW conviction" (print Wed 5/20 BMO: comps +6%, EPS $1.19 +29% "all well above plan," FY27 guidance raised across all metrics; Day-0 C/C +5.66%; post-print sell-side modest raises 1-6% — JPM/Baird/Telsey/BTIG $174-190 cluster; stock $159-160 vs cluster = under-reaction hypothesis; sub-pattern 1 DOES NOT APPLY — max raise Telsey +5.71%, far below ≥15% intermediate threshold; sub-pattern 3 DOES NOT APPLY — stock BELOW pre-print consensus $172, not AT it; cross-sectional TJX+/TGT-/WMT- on same comps +6% print; criteria 1-5 all clear; convergence $164.50; KL #12 favorable ~0.13-0.20 avg pairwise; MEDIUM-LOW conviction).
 - **Order**: Limit BUY **0.2346 TJX @ $162.00 Day, Wed 2026-05-27**
-- **SLOT-CONTINGENT**: Execute ONLY after confirming IBM SELL (0.1198 IBM @ $254.00 Day, Tue 5/26) fills; B must be at 4/5 (1 slot open) at execution time Wed 5/27 morning. If IBM SELL does not fill by window close (~Thu 2026-06-04), TJX entry does not occur (conservative-default fallback per slot-gate protocol).
+- **Sequencing note**: TJX order staged Wed 5/27; IBM SELL (0.1198 IBM @ $254.00 Day, Tue 5/26) was also pending. Both are independent GO decisions. If IBM does not sell by window close (~Thu 2026-06-04), TJX entry still proceeds on its own merits (criteria 1–5 cleared independently; no slot-gate dependency).
 - **Principal (estimated)**: ~$38.00 (2% of B NAV ~$1,895)
 - **Convergence target (immutable)**: **$164.50** (25% gap-fill from $159.21 Day-0 reference toward $180 post-print PT median [median of $174/$175/$185/$190 = $180]; +3.3% from reference; set at entry per Strategy.md criterion 3 rev 14; ZBRA/BRC template methodology)
 - **Expected time-based exit**: Fri 2026-07-24 (60 calendar days from Wed 5/27 → Sun 7/26 → last trading day Fri 7/24; calendar event to create at fill-capture session)
@@ -601,8 +601,8 @@ Format:
   - (ii) Structural change in off-price retail competitive positioning (e.g., formal aggressive off-price channel launch by WMT/TGT adverse to TJX)
   - (iii) Sub-pattern 1 escalation post-entry (≥3-firm aggressive PT-raise wave ≥20% multi-firm, re-rating stock to near $185-190 = information-priced equilibrium)
 - **No price-based invalidation** (B-long has no price stop per Strategy.md; worst-case loss bounded at ~$38 / 2% of B NAV by sizing)
-- **Sector / slot context**: GICS Consumer Discretionary / Apparel Retail. B sector cap: Consumer Disc 0/3 → 1/3 (staged; takes effect on fill). B slot count: 5/5 → 4/5 post-IBM-exit Tue 5/26 → 5/5 post-TJX-entry Wed 5/27. KL #12: 5-long book post-IBM-exit (HCA+META+ZBRA+BRC+TJX) estimated avg pairwise ~0.13-0.20 (well below 0.5 trigger; Consumer Disc adds diversification vs existing book). KL #12 first-computation event `k9vtudr7d40ukto3vfhutcdbls` (Wed 6/3) to update description to HCA+META+ZBRA+BRC+TJX at fill-capture session.
-- **Calendar events**: Order-execution `jclrlcsthd1o1u7m7nvm6lkf58` Wed 5/27 07:00 MT (popup 0 min; slot-gate verification + IBKR-paste order); fill-capture `a24018i7bpkkjmprh1heag3uck` Wed 5/27 14:30 MT (popup 0 min; filled/unfilled branches). Thesis-construction event `0fb7924g5c0hdvae1jjhp6qphs` deleted (thesis resolved 2026-05-23).
+- **Sector context**: GICS Consumer Discretionary / Apparel Retail. B sector cap: Consumer Disc 0/3 → 1/3 (staged; takes effect on fill). B concurrent open positions post-fill: 5 (HCA+META+ZBRA+BRC+TJX post-IBM-exit). KL #12: 5-long book estimated avg pairwise ~0.13-0.20 (well below 0.5 trigger; Consumer Disc adds diversification vs existing book). KL #12 first-computation event `k9vtudr7d40ukto3vfhutcdbls` (Wed 6/3) to update description to HCA+META+ZBRA+BRC+TJX at fill-capture session.
+- **Calendar events**: Order-execution `jclrlcsthd1o1u7m7nvm6lkf58` Wed 5/27 07:00 MT (popup 0 min; sector-cap verification + IBKR-paste order); fill-capture `a24018i7bpkkjmprh1heag3uck` Wed 5/27 14:30 MT (popup 0 min; filled/unfilled branches). Thesis-construction event `0fb7924g5c0hdvae1jjhp6qphs` deleted (thesis resolved 2026-05-23).
 - **Conviction rating**: MEDIUM-LOW (~45-50%). See Decision_Log 2026-05-23.
 
 ---

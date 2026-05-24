@@ -208,6 +208,23 @@ When a decision cannot be made because required information is genuinely missing
 
 ---
 
+## 10. No Invented Position Caps — Strategy-Level Concurrent Position Limits
+
+**Canonical-current text:**
+
+Claude must **never invent a total concurrent position cap** for any strategy unless that cap is explicitly stated in Strategy.md for that strategy. Operational habit, portfolio monitoring convenience, or analogy to a different strategy's cap are not sufficient grounds to introduce one.
+
+**Strategy B has no total concurrent position cap.** Strategy.md is explicit (rev 7, multiple locations): *"B permits multiple concurrent longs (sector cap is 3 per GICS sector, no total-position cap)."* The only enforced B position limit is the per-GICS-sector cap of 3 concurrent positions. KL #12 defines an exposure-monitoring flag (>10% long exposure or >0.5 pairwise average correlation → escalation evaluation) — this is a monitoring trigger, not an entry gate or hard cap. A GO thesis that clears criteria 1–5 and the KL #12 correlation check is eligible regardless of how many other B positions are open.
+
+**Do not express concurrent position counts as X/N** (e.g., "4/5", "5/5") when N is not a cap defined in Strategy.md. If tracking the count is useful, write it as an absolute count ("4 concurrent open B positions") against the actual sector caps, not against an invented ceiling.
+
+**Operational impact:** any entry that passes Strategy B's criteria 1–5 and KL #12 monitoring checks is a valid GO regardless of current open position count, as long as the relevant GICS sector is below 3 concurrent B positions. Slot-gate protocols, slot-contingent staging, and slot-saturation language are prohibited unless rooted in a Strategy.md-defined cap.
+
+**Revision history:**
+- 2026-05-24: Protocol established after audit found a false "5-concurrent-cap" had been introduced by Claude in commit 718204a (ZBRA fill capture 2026-05-14) with no Strategy.md basis and no documented rationale. Cap was removed from all operational documents. → User instruction 2026-05-24.
+
+---
+
 ## Maintenance
 
 - W5 (weekly Decision Log Hygiene) appends new protocol revisions to the relevant section here as they emerge from Decision_Log entries.
