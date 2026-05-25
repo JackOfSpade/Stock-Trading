@@ -12757,4 +12757,98 @@ IBM Fri 2026-05-22 actual close confirmed **$254.36**. Prior estimate in the con
 **Files updated:**
 - Calendar event `f36ln1797gucpoqdi6hckhkj6g`: limit $257.50 → $254.00; Fri close corrected to $254.36
 - Portfolio_Ledger.md IBM EXIT-PENDING line: same corrections
+
+---
+
+## 2026-05-25 (Sun) W4 Weekly Action Conversion — 2026-W22 cycle outcome
+
+**Type:** Routine weekly W4 cycle (post W1 + W2 + W3 completion)
+
+**Inputs:** Weekly_Catalyst_Calendar.md (W1 2026-W22), Weekly_Post_Event_Screen.md (W2 2026-W22), Weekly_Position_Deep_Dive.md (W3 2026-W22), Regime_State.md, Watchlist.md, Decision_Log.md, Portfolio_Ledger.md, Experiment_Parameters.md, Claude_Task_Plan.md.
+
+**Regime state at cycle:** A = DO-NOT-ACTIVATE, B = ACTIVATE, C = HYBRID ACTIVATE (FOMC only), D = ACTIVATE, E = DO-NOT-ACTIVATE.
+
+---
+
+### Section A — Exits from W3
+
+**IBM:** EXIT-PENDING confirmed. SELL 0.1198 IBM @ $254.00 Day limit Tue 2026-05-26 (corrected from $257.50 per 2026-05-23 entry). Order-execution calendar event `f36ln1797gucpoqdi6hckhkj6g` already staged. W4 did NOT re-stage or duplicate.
+
+**HCA / META / ZBRA / BRC:** HOLD — no action required.
+
+**TJX:** ORDER-STAGED (thesis valid, SELL 0.2375 TJX BUY @ limit Wed 2026-05-27). Calendar events `jclrlcsthd1o1u7m7nvm6lkf58` (execute) and `a24018i7bpkkjmprh1heag3uck` (fill-capture) confirmed current.
+
+**Section A result:** No new orders staged this cycle. All W3 dispositions confirmed; no duplicates created.
+
+---
+
+### Section B — Research deferrals
+
+None. W3 produced no "further research" deferrals. Deferral chain prohibition not triggered.
+
+---
+
+### Section C — Thesis-construction scheduling from W2 (Strategy B)
+
+W2 2026-W22 top-tier shortlist: WDAY (#1, W-rem 10), INTU (#2, W-rem 9), EL (#3, W-rem 10). Prioritized by W-rem (fewer days first → INTU earliest).
+
+**WDAY:** Confirmed existing calendar event `hltp9bshp3bpkbs3j98e4j3i40` "[Claude] Thesis construction — WDAY Strategy B" Thu 2026-05-28 09:00-10:00 MT (created 2026-05-24). W4 did NOT create duplicate. IT sector: ZBRA (1/3) → INTU (2/3) → WDAY (3/3 if both GO) — cap only binds at 4th IT entry; both individually schedulable. WDAY event description explicitly flags IT cap at 3/3 if WDAY GO.
+
+**INTU:** Created calendar event `q1g2dmbv7ujfoj9mdbgu2qbee8` "[Claude] Thesis construction — INTU Strategy B" Tue 2026-05-26 09:00-10:00 MT (America/Denver). Created 2026-05-25T10:37:03Z. Description: FQ3 print facts (5/22 AMC), LONG vs sub-pattern-4b dual framing, IT sector (1/3→2/3 if GO), criteria 1-6, GO/NO-GO requirements, file references. W-rem 9 (window expires Fri 2026-06-05).
+
+**EL:** Created calendar event `vg47kl6rjpishqglsvecl8ngj4` "[Claude] Thesis construction — EL Strategy B" Fri 2026-05-29 09:00-10:00 MT (America/Denver). Created 2026-05-25T10:40:45Z. Description: Puig merger termination Thu 5/21 PM (+~12% Day-0), prior EL NO-GO 2026-05-02 sub-pattern 7 (§3 fresh-evaluation applies — different catalyst), LONG vs sub-pattern-4a dual framing (structural-overhang-persistence), criterion-3 routing risk (no near-term earnings; numerical PT only ~$95 ≈ +7%), Consumer Staples 0/3→1/3, criteria checklist 1-9, GO/NO-GO requirements, file references. W-rem 10 (window expires Mon 2026-06-09).
+
+**Section C result:** 2 new thesis-construction events created (INTU, EL). 1 existing event confirmed (WDAY). Weekly cap (5/week) not approached.
+
+---
+
+### Section D — A/C thesis-construction scheduling from W1
+
+**Strategy A router = DO-NOT-ACTIVATE** → all W1 TOP-10 candidates route to Watchlist.md A-queue. No thesis-construction events created for A names.
+
+**SNOW (#7) and MRVL (#8):** New W1 2026-W22 TOP-10 names not previously queued. Both added to Watchlist.md A-queue (2026-05-25 entry, source W4 W1 2026-W22). Both have FQ1 27 earnings catalyst 2026-05-27 AMC; post-print results inform June M1 evaluation framing. A-queue: 20→22 names.
+
+**CRM (#9) and DELL (#10):** Already in A-queue from W4 2026-W20 with pre-print notes from 2026-05-22. No duplicate additions.
+
+**FOMC-Jun (C candidate):** Confirmed existing calendar event `7pbkg1kh2pge7midfiqnj6edvk` "[Claude] Thesis construction — FOMC Jun 2026 Strategy C" Mon 2026-06-08 09:00 MT. Last updated 2026-05-17 by W4 2026-W20. W4 2026-W22 did NOT create duplicate. Sole C router-eligible candidate this cycle.
+
+**Section D result:** 0 new calendar events. 2 new Watchlist.md A-queue rows (SNOW, MRVL). 1 existing C event confirmed.
+
+---
+
+### Section E — Cross-strategy deconfliction
+
+No cross-strategy conflicts identified. B book: IBM (exit-pending), HCA/META/ZBRA/BRC (open), TJX (staged). INTU and EL thesis sessions do not conflict with any D positions or staged A/C activity.
+
+**IT sector cap note:** ZBRA (1/3 IT) + INTU thesis session (→ 2/3 if GO) + WDAY thesis session (→ 3/3 if both GO) — cap fills at 3/3. No 4th IT entry possible until one exits. EL is Consumer Staples (0/3 → 1/3 if GO) — no conflict.
+
+**Section E result:** No deconfliction actions required.
+
+---
+
+### Section F — Watchlist updates
+
+Watchlist.md updated: SNOW and MRVL rows appended to Strategy A queue table. Queue grows 20→22 names. Both rows: date 2026-05-25, source W4 (Weekly_Catalyst_Calendar.md 2026-W22 TOP-10 #7 and #8 respectively), resolution trigger = Next M1 with A router ACTIVATE.
+
+**Section F result:** Watchlist.md updated. No other watchlist changes required.
+
+---
+
+### W4 2026-W22 summary
+
+| Section | Action | Count |
+|---------|--------|-------|
+| A — Exits | IBM exit confirmed (pre-staged); TJX staged confirmed; HCA/META/ZBRA/BRC HOLD | 0 new orders |
+| B — Deferrals | None | 0 |
+| C — B thesis scheduling | INTU created, EL created; WDAY confirmed existing | 2 created, 1 confirmed |
+| D — A/C scheduling | SNOW+MRVL → A-queue; FOMC-Jun confirmed existing | 0 calendar events, 2 Watchlist rows |
+| E — Deconfliction | No conflicts | 0 actions |
+| F — Watchlist | SNOW+MRVL added (20→22) | 2 rows added |
+
+**Calendar events created this cycle:** 2 (INTU `q1g2dmbv7ujfoj9mdbgu2qbee8`, EL `vg47kl6rjpishqglsvecl8ngj4`)
+**Calendar events confirmed current:** 4 (WDAY `hltp9bshp3bpkbs3j98e4j3i40`, FOMC-Jun `7pbkg1kh2pge7midfiqnj6edvk`, IBM-exit `f36ln1797gucpoqdi6hckhkj6g`, KL #12 `k9vtudr7d40ukto3vfhutcdbls`)
+**New orders staged:** 0
+**Files modified:** Watchlist.md (2 rows added), Decision_Log.md (this entry)
+
+**References:** Weekly_Catalyst_Calendar.md 2026-W22, Weekly_Post_Event_Screen.md 2026-W22, Weekly_Position_Deep_Dive.md 2026-W22, Claude_Task_Plan.md W4 spec (lines 472-522), Regime_State.md, Watchlist.md, Experiment_Parameters.md.
 - Portfolio_Ledger.md TJX sequencing note: IBM reference updated to $254.00
