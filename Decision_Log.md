@@ -10556,3 +10556,59 @@ No broken cross-references detected in the keep-list: all referenced open-positi
 Decision_Log.md, Decision_Log_Archive_2026_Q2.md, B_Sub_Pattern_Taxonomy.md updated. Watchlist.md, Operating_Protocols.md unchanged (no mirroring drift detected). 23 entries archived; 9 B sub-pattern instances extracted across 4 sub-patterns (new: sub-pattern 8 DOC candidate section created; sub-patterns 1/3/4/5 expanded).
 
 ---
+
+### 2026-05-25 D3 Calendar Hygiene reconciliation
+
+**Date anchor:** System date 2026-05-25 (Sunday; Memorial Day holiday — US market closed Mon 5/25). Consistent with W4/W5 2026-05-25 entries in live Decision_Log. No date conflict.
+
+**Events walked:** 21 [Claude] events, 2026-05-25 → 2026-08-23 MT range, America/Denver.
+
+**Result: 0 deleted, 0 updated, 0 missing.**
+
+| Date MT | Event ID | Title | Status |
+|---------|----------|-------|--------|
+| Tue 5/26 07:00 | `f36ln1797gucpoqdi6hckhkj6g` | (order already set) Execute order — IBM SELL | KEEP — IBM EXIT-PENDING, order day tomorrow; limit $254.00 Day ✓ |
+| Tue 5/26 09:00 | `q1g2dmbv7ujfoj9mdbgu2qbee8` | Thesis construction — INTU Strategy B | KEEP — created W4 2026-W22 today; W-rem 9, window expires Fri 6/5; no Decision_Log disposition ✓ |
+| Tue 5/26 14:30 | `i7p5qtsks1baa1bo95egsbtpa0` | Screenshot IBKR — fill capture IBM exit | KEEP — fill capture for IBM convergence exit; description contains KL #12 → 4-long-book update instruction ✓ |
+| Wed 5/27 07:00 | `jclrlcsthd1o1u7m7nvm6lkf58` | Execute order — TJX BUY | KEEP — TJX ORDER-STAGED, order day Wed 5/27 ✓ |
+| Wed 5/27 14:30 | `a24018i7bpkkjmprh1heag3uck` | Screenshot IBKR — fill capture TJX entry | KEEP — description contains KL #12 → 5-long-book (HCA+META+ZBRA+BRC+TJX) update instruction ✓ |
+| Thu 5/28 09:00 | `hltp9bshp3bpkbs3j98e4j3i40` | Thesis construction — WDAY Strategy B | KEEP — W-rem 7 at session; window active (Mon 6/8); no Decision_Log disposition ✓ |
+| Fri 5/29 09:00 | `vg47kl6rjpishqglsvecl8ngj4` | Thesis construction — EL Strategy B | KEEP — created W4 2026-W22 today; W-rem 10 (Puig merger termination Thu 5/21 PM); window expires ~Mon 6/8-9; no disposition; "confirm exact close-date at session" safeguard present ✓ |
+| Mon 6/1 09:00 | `r9i6u6mnpk9ukoj2bh15m1fr7c` | Re-screen BA — trailing-30d roll-off check | KEEP — trigger-condition check (BA ≤$210 pullback OR 737 rate slip); window still future ✓ |
+| Mon 6/1 10:00 | `2i5gul5m9eiarfm7pkjf8u42u0` | META mid-window thesis pulse-check (Strategy B) | KEEP — META OPEN; mid-window check ✓ |
+| Wed 6/3 15:30 | `k9vtudr7d40ukto3vfhutcdbls` | KL #12 pairwise correlation — B book (IBM + HCA + META + ZBRA + BRC) | KEEP with NOTE — description stale (IBM exit-pending; TJX staged but not yet filled). Update delegated: IBM fill-capture (Tue 5/26 14:30 MT) → 4-long HCA+META+ZBRA+BRC; TJX fill-capture (Wed 5/27 14:30 MT) → 5-long HCA+META+ZBRA+BRC+TJX. Both fill-capture event descriptions contain these update instructions. Calendar default popup 0 min via calendar `defaultReminders` ✓ |
+| Mon 6/8 09:00 | `7pbkg1kh2pge7midfiqnj6edvk` | Thesis construction — FOMC June 2026 Strategy C | KEEP — C HYBRID-ACTIVATE FOMC-only; FOMC Jun 16-17 catalyst; description refreshed 2026-05-17 (directional hypothesis CONTESTED; skew open); self-contained ✓ |
+| Tue 6/9 15:30 | `6p9eotfrdd0eae2pvoccrbj95o` | ZBRA mid-window pulse-check — B position | KEEP — ZBRA OPEN ✓ |
+| Fri 6/12 09:30 | `fpbueqccja9thjcnuj6ck9l6rs` | LLY Strategy D mechanical re-screen | KEEP — D re-screen checkpoint; future date ✓ |
+| Thu 6/26 09:25 | `u9l9544ighc4d9o1l44u7pr0uc` | HCA time-based exit / convergence check (Strategy B) | KEEP — HCA OPEN; 60-day exit date 2026-06-26 ✓ |
+| Wed 7/1 09:00 | `qpshtsnmi7lj8q2j02au3creh4_20260701T150000Z` | Q1 Quarterly Regime Retrospective | KEEP — recurring quarterly ✓ |
+| Wed 7/1 10:30 | `ecu5pu90sgoecj1dn2lvt5656s_20260701T163000Z` | Q2 Quarterly D Long-Horizon Candidates | KEEP — recurring quarterly ✓ |
+| Wed 7/1 12:00 | `pbacgn2esaiollpdq44ujsj9tk_20260701T180000Z` | Q3 Quarterly AI Foundation Delta | KEEP — recurring quarterly ✓ |
+| Wed 7/1 14:00 | `3fma0s1n57bvb4n0gdnbcodtsk_20260701T200000Z` | Q4 Quarterly Action Conversion | KEEP — recurring quarterly ✓ |
+| Thu 7/2 10:00 | `jdki2o75a3rhrc77e5sd4h170c` | META 60-day time-based exit checkpoint (Strategy B) | KEEP — META OPEN; 60-day checkpoint ✓ |
+| Mon 7/13 07:15 | `b2gka8hncerbnfh6m9j2hq4k2g` | ZBRA time-based exit — B position | KEEP — ZBRA OPEN; entry 2026-05-14 + 60 days = Mon 7/13 ✓ |
+| Tue 7/21 07:15 | `sli3tl3msrhsuq731apqg7s9io` | BRC time-based exit — B position | KEEP — BRC OPEN; entry 2026-05-22 + 60 days = Tue 7/21 ✓ |
+
+**Position coverage check:**
+| Position | Status | Coverage |
+|----------|--------|----------|
+| IBM (B, EXIT-PENDING) | Convergence exit staged Tue 5/26 | Order-exec `f36ln1797gucpoqdi6hckhkj6g` ✓; fill-capture `i7p5qtsks1baa1bo95egsbtpa0` ✓ |
+| TJX (B, ORDER-STAGED) | Order Wed 5/27 | Order-exec `jclrlcsthd1o1u7m7nvm6lkf58` ✓; fill-capture `a24018i7bpkkjmprh1heag3uck` ✓ |
+| HCA (B, OPEN) | Entry 2026-04-28 | Time-based exit Jun 26 `u9l9544ighc4d9o1l44u7pr0uc` ✓ |
+| META (B, OPEN) | Entry 2026-05-05 | Mid-window Jun 1 `2i5gul5m9eiarfm7pkjf8u42u0` ✓; 60-day Jul 2 `jdki2o75a3rhrc77e5sd4h170c` ✓ |
+| ZBRA (B, OPEN) | Entry 2026-05-14 | Mid-window Jun 9 `6p9eotfrdd0eae2pvoccrbj95o` ✓; time-based exit Jul 13 `b2gka8hncerbnfh6m9j2hq4k2g` ✓ |
+| BRC (B, OPEN) | Entry 2026-05-22 | Time-based exit Jul 21 `sli3tl3msrhsuq731apqg7s9io` ✓ |
+| RTX (D, OPEN) | Entry 2026-04-27 | Long-horizon; no time-based exit; D1 scans auto-detect invalidation ✓ |
+| DIS (D, OPEN) | Entry 2026-05-07 | Long-horizon; no time-based exit; D1 scans auto-detect invalidation ✓ |
+
+**Notifications:** All 21 events confirmed at popup 0 min (explicit `overrideReminders` on all new events; calendar `defaultReminders: popup 0 min` for KL #12 and older events confirmed in prior D3 audits).
+
+**Cadence-policy compliance:** No D1–W5 / M1–M5 routine prompts in calendar. Q1–Q4 quarterly recurring instances for 2026-07-01 present. Compliant.
+
+**Missed sessions:** None. No past-datetime thesis-construction events with active windows lacking Decision_Log dispositions.
+
+**Minor flag (no action):** EL event description (`vg47kl6rjpishqglsvecl8ngj4`) labels event date as "Wed 2026-05-21" (should be "Thu 2026-05-21") and references "Tue 2026-05-27 entry session" (session fires Fri 5/29). Cosmetic inaccuracies only; description contains "confirm exact close-date at session" safeguard. Left unchanged.
+
+**Summary:** 0 deleted, 0 updated, 0 missing. 21 [Claude] events walked and verified. All 8 open/exit-pending/staged positions covered. KL #12 description update delegated to fill-capture sessions (already in fill-capture descriptions). Cadence-policy compliant.
+
+---
