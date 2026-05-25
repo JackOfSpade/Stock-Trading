@@ -79,7 +79,8 @@ The calendar is exclusively for **one-off [Claude] events** — events that need
 Conventions for one-off events Claude creates:
 
 - **Title:** `[Claude] <task short name>` so events are scannable.
-- **Time:** scheduled to the moment the human needs to act (e.g., end-of-day on order day for a fill-capture screenshot; pre-market for a thesis-construction session; etc.).
+- **Time:** scheduled to the single best moment for the event itself (its best execution / action time), never adjusted for human-operator availability or load — human execution is assumed 100% efficient. Examples: an order-execution event at the order's best execution time (e.g., pre-market just before open); a fill-capture screenshot at end-of-day on the order day; a thesis-construction session as early as possible (see **Throughput** below).
+- **Throughput:** there is no cap on how many events may be scheduled per day, week, or month, and any number of events may share the same time slot when that slot is each one's best time (e.g., ten buy orders all scheduled at market open). Never cap, stagger, space out, or defer events to "spread load," "avoid flooding the calendar," or manage cognitive load. Thesis-construction events are scheduled at the earliest viable slot — the same day the candidate is discovered, not the next business day — unless the analysis must wait for a specific future event (for example: a Strategy C far-dated catalyst, where the session lands 7-10 days before the catalyst as the pre-catalyst entry window; or a cross-strategy deconfliction where a conflicting position must exit first).
 - **Description:** contains a single self-contained prompt the human pastes into a fresh Claude chat. The prompt references the relevant project files Claude will need.
 - **Time zone:** per Experiment_Parameters.md (default America/Denver if silent; note the assumption inline if defaulted).
 - **Notification:** alarm fires at event-time so the human's only job is to respond.
@@ -315,8 +316,8 @@ For each recommendation type:
      - Strategy B: 10 trading days from event — high urgency.
      - Strategy C: catalyst within 45 days — medium urgency, scheduling depends on days-to-catalyst.
      - Strategy A: catalyst within 6 months — schedule respecting router state. If A is currently DO-NOT-ACTIVATE per Regime_State.md / Decision_Log.md most-recent M1 call, the candidate goes to Watchlist.md A queue rather than thesis-construction; do not schedule a thesis-construction event.
-     - Strategy E: pair divergence opening — schedule next-cycle M3 unless divergence is fast-moving (then schedule pair-thesis-construction within 1–2 trading days).
-   - For each candidate that should proceed to thesis construction: schedule a "[Claude] Thesis construction — <ticker> <strategy>" calendar event at the appropriate time (Strategy B: next morning pre-market or first hour; Strategy C: same-week if catalyst < 14 days, otherwise next weekend after W1; Strategy A: aligned with W1 weekend session; Strategy E fast-moving: within 2 trading days).
+     - Strategy E: pair divergence opening — schedule next-cycle M3 unless divergence is fast-moving (then schedule pair-thesis-construction same-day-earliest per the scheduling rule below).
+   - For each candidate that should proceed to thesis construction: schedule a "[Claude] Thesis construction — <ticker> <strategy>" calendar event at the earliest viable slot — the same day the candidate is discovered (this routine's run day), not the next business day. The only reason to schedule later is a specific event the analysis must wait for: Strategy C with a catalyst more than 14 days out lands 7-10 days before the catalyst date (pre-catalyst entry window). Strategy A, Strategy B, Strategy E, and Strategy C with a catalyst within 14 days are all scheduled same-day-earliest. No cap on how many events are scheduled or how many share a slot.
    - Event description must be a self-contained thesis-construction prompt: (a) ticker, strategy, candidate context (what Daily.md flagged), (b) reference to Strategy.md entry criteria for the strategy, (c) reference to Operating_Protocols.md for the "NO-GO records are context, not barriers" rule and conviction-calibration ladder, (d) instruction to apply commission-disregarded staging, (e) reminder that the session writes Decision_Log.md / Portfolio_Ledger.md directly and emits the order in chat, (f) instruction that a GO disposition requires creating both a "[Claude] Execute order — <ticker> BUY" event (07:00 MT pre-market on order day, description = IBKR-paste order block) and a "[Claude] Screenshot IBKR — fill capture <ticker> entry" event (~14:30 MT on order day).
    - For Strategy A candidates that should queue rather than proceed: update Watchlist.md A-queue section with ticker, date-added, reason summary, resolution-trigger condition ("next M1 with A router ACTIVATE").
 
@@ -496,14 +497,13 @@ B. RESEARCH DEFERRALS FROM W3 — for each position with recommendation "further
    - Event description: the specific information gap from W3, reference to Strategy.md exit rules, instruction to resolve gap and either stage exit or continue holding. Conservative-default fallback: if the trigger session fails to resolve, exit the position.
 
 C. THESIS-CONSTRUCTION SCHEDULING FROM W2 (Strategy B) — for the W2 top-tier shortlist:
-   - Schedule one "[Claude] Thesis construction — <ticker> B" calendar event per top-tier candidate, prioritized by days-remaining-in-window (fewer days = earlier scheduling).
-   - Cap: up to 5 events per week (avoid flooding). If more than 5 top-tier candidates, schedule the 5 with shortest remaining window; the rest go to Watchlist.md B-watch section as overflow with their window-expiry dates.
+   - Schedule one "[Claude] Thesis construction — <ticker> B" calendar event per top-tier candidate — every top-tier candidate, with no per-week cap and no overflow to Watchlist.md. Multiple events may share the same day or time slot.
    - Event description: ticker, B context from W2 (event, mispricing direction, days remaining), reference to Strategy.md B entry criteria, B_Sub_Pattern_Taxonomy.md, and Operating_Protocols.md.
-   - Trigger times: same-week if window ≥ 5 days remaining; next-morning otherwise.
+   - Trigger times: the same day this routine runs, at the earliest viable slot. B candidates are post-event — there is no event to wait for, so never defer to the next morning or later in the week. If several share a day, order them by days-remaining-in-window (fewer days first).
 
 D. THESIS-CONSTRUCTION SCHEDULING FROM W1 (Strategy A and C) — for the W1 top-tier shortlists:
-   - Strategy A top-tier (top-10 from W1): check Regime_State.md / most-recent M1 A router state. If A is currently DO-NOT-ACTIVATE, route to Watchlist.md A-queue (with reason "router gate; queued for next M1 ACTIVATE"); do not schedule thesis-construction. If A is ACTIVATE, schedule "[Claude] Thesis construction — <ticker> A" events. Cap: up to 5 per week, prioritized by catalyst-date proximity.
-   - Strategy C top-tier (top-5 from W1): schedule "[Claude] Thesis construction — <ticker> C" events. Trigger time: same-week if catalyst < 14 days; otherwise scheduled to land 7-10 days before catalyst date. Cap: up to 3 per week.
+   - Strategy A top-tier (top-10 from W1): check Regime_State.md / most-recent M1 A router state. If A is currently DO-NOT-ACTIVATE, route to Watchlist.md A-queue (with reason "router gate; queued for next M1 ACTIVATE"); do not schedule thesis-construction. If A is ACTIVATE, schedule "[Claude] Thesis construction — <ticker> A" events for every top-tier name at the earliest viable slot (same-day-earliest; multiple may share a slot), ordered by catalyst-date proximity. No per-week cap. (The DO-NOT-ACTIVATE router gate is a strategy gate, not a load cap, and remains in force.)
+   - Strategy C top-tier (top-5 from W1): schedule "[Claude] Thesis construction — <ticker> C" events for every top-tier name; multiple may share a slot and there is no per-week cap. Trigger time: same-day-earliest if catalyst < 14 days; otherwise land 7-10 days before the catalyst date (pre-catalyst entry window — a genuine event wait, not a load delay).
    - Each event description: ticker, strategy, candidate context from W1, references to Strategy.md / Operating_Protocols.md.
 
 E. CROSS-STRATEGY DECONFLICTION — per Strategy.md simultaneous-holding constraints (A and B cannot hold same name; A and C cannot hold same name): if the same ticker appears as both an exit candidate (W3) and a new-entry candidate (W1/W2), do NOT schedule the new-entry thesis until after the exit fills. Instead, schedule the new-entry thesis-construction event for 1 trading day after expected exit fill, with a check-Portfolio_Ledger gate in the event description.
@@ -797,7 +797,7 @@ A. ROUTER ACTIVATION FLIPS FROM M1b — for each strategy with FLIP TO ACTIVATE 
    - Update Regime_State.md to reflect the new activation state per strategy.
    - Append a Decision_Log entry recording the flip: strategy, prior state, new state, M1 reasoning summary, date.
    - **A FLIP TO ACTIVATE for Strategy A — drain Watchlist.md A-queue.** For each name in the A queue with resolution-trigger "next M1 with A router ACTIVATE":
-     * Schedule a "[Claude] Thesis construction — <ticker> A" calendar event for the next available trading day, prioritizing names with the soonest catalyst dates. Cap: 5 events; remaining names stay queued.
+     * Schedule a "[Claude] Thesis construction — <ticker> A" calendar event for every queued name at the earliest viable slot — the router ACTIVATE flip is the resolving event, so schedule same-day-earliest (multiple may share a slot), ordered by soonest catalyst date. No cap — drain the entire A-queue.
      * Remove processed names from Watchlist.md A-queue (or mark as "scheduled <date>" if Watchlist.md tracks scheduling state).
    - **A FLIP TO DO-NOT-ACTIVATE for any strategy — halt new-position activity.** Cancel any pending thesis-construction calendar events for that strategy via Calendar MCP. Existing positions are unaffected (per Strategy.md exit rules — DO-NOT-ACTIVATE blocks new entries, not existing-position management).
 
@@ -815,7 +815,7 @@ D. RESEARCH DEFERRALS FROM M4 — for each D position with recommendation "furth
    - Event description: information gap from M4, reference to Strategy.md D exit rules. Conservative-default fallback: if trigger fails to resolve, exit the position.
 
 E. THESIS-CONSTRUCTION SCHEDULING FROM M3 (Strategy E) — for the M3 top-tier pair shortlist:
-   - Schedule "[Claude] Pair thesis construction — <L>/<S>" events. Cap: up to 3 events per month, prioritized by reconvergence-indicator proximity.
+   - Schedule "[Claude] Pair thesis construction — <L>/<S>" events for every top-tier pair at the earliest viable slot (same-day-earliest unless a pair's entry must wait for a specific event; multiple may share a slot), ordered by reconvergence-indicator proximity. No per-month cap.
    - Event description: pair specifics from M3 (L, S, divergence thesis, reconvergence indicators, borrow cost estimate, execution path), reference to Strategy.md E entry criteria.
 
 F. CROSS-PROMPT DECONFLICTION — if any ticker appears as both an exit candidate (M4) and a new-entry candidate (M3 leg, or A-queue drain from A), respect simultaneous-holding constraints per Strategy.md. Schedule new-entry thesis for after expected exit fill.
@@ -1161,12 +1161,12 @@ Read the just-saved quarterly research files:
 Convert into operator-actionable outputs per the operating model. Claude resolves all decisions internally; commissions disregarded at staging time.
 
 A. D THESIS-CONSTRUCTION SCHEDULING FROM Q2 — for the Q2 ranked shortlist:
-   - For each candidate marked "ready now": schedule "[Claude] Thesis construction — <ticker> D" calendar event for the next available trading day, prioritized by thesis-strength rating. Cap: up to 4 events in the first week of the quarter; remainder spread over weeks 2–3.
+   - For each candidate marked "ready now": schedule "[Claude] Thesis construction — <ticker> D" calendar event at the earliest viable slot (same-day-earliest; multiple may share a slot), ordered by thesis-strength rating. No cap and no spreading across weeks — schedule every "ready now" candidate as early as possible.
    - For each candidate marked "deferred pending rally pause": add to Watchlist.md D-deferred section with the trailing-30-day momentum reading and resolution-trigger condition ("when 30-day trailing return drops below X%"). Schedule a calendar event in 30 days to re-check.
    - For each candidate marked "blocked by concentration or position count": add to Watchlist.md D-blocked section with the specific blocker and resolution condition ("when GICS <sector> concentration < 30%" or "when D book < 10 positions"). No calendar event — these resolve when an existing D position closes (M5 D-exit handling will trigger re-evaluation).
 
 B. FOUNDATION-CHANGE ASSESSMENT FROM Q3 — for each YES verdict that cleared the transferability filter and warrants foundation-change-assessment:
-   - Per the strategies-affected list in the Q3 entry, schedule a "[Claude] Foundation-change assessment — <strategy>" calendar event per affected strategy, for the next available trading day. Stagger if multiple strategies (one per day to manage cognitive load).
+   - Per the strategies-affected list in the Q3 entry, schedule a "[Claude] Foundation-change assessment — <strategy>" calendar event per affected strategy, all at the earliest viable slot. Multiple assessments may share the same day or slot — do not stagger.
    - Event description: Q3 evidence summary, affected Tier (1 architectural / 2 magnitude), foundation-change-assessment branch warranted (continue / terminate / constraint-relaxation), reference to Experiment_Parameters.md §Foundation change trigger procedure.
    - For NO verdicts and YES verdicts that fail the transferability filter: no scheduling action; these are logged as watch items and reviewed at next Q3 cycle.
 
@@ -1327,7 +1327,7 @@ A. UPDATED AI_TRADING_FOUNDATION.MD FROM A1 — produce a new revision of AI_Tra
    - Increment AI_Trading_Foundation.md revision number; append revision-history entry citing A1 sweep date and summary of changes (counts per category).
 
 B. PER-STRATEGY FOUNDATION-CHANGE ASSESSMENT FROM A1 — for each per-strategy recommendation in A1's aggregate output:
-   - Schedule a "[Claude] Foundation-change assessment — <strategy>" calendar event per affected strategy, for the next available trading day. Stagger one per day across affected strategies.
+   - Schedule a "[Claude] Foundation-change assessment — <strategy>" calendar event per affected strategy, all at the earliest viable slot. Multiple assessments may share the same day or slot — do not stagger.
    - Event description: A1 evidence summary, recommended outcome (continue / terminate / constraint-relaxation review), reference to Experiment_Parameters.md §Foundation change trigger procedure.
 
 C. UPDATED STRATEGY.MD FROM A2 — produce a new revision of Strategy.md applying:
