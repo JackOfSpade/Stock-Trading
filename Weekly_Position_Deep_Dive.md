@@ -1,218 +1,175 @@
 2026-W22
 
 # Weekly Position Deep-Dive — W3
-**ISO Week:** 2026-W22 (Mon 2026-05-25 → Sun 2026-05-31) | **Research as of:** 2026-05-25 (Memorial Day US holiday; last trading session 2026-05-22 Fri)
-**Scope:** Strategy B open positions (IBM EXIT-PENDING, HCA, META, ZBRA, BRC, TJX ORDER-STAGED). Strategy A / C / E flat (zero open positions). Strategy D excluded per W3 spec (D gets monthly M4 deep-dive; RTX and DIS not covered here).
-**Source ledger:** Portfolio_Ledger.md (marks through 2026-05-22 EOD); Decision_Log.md (live); Tavily web research 2026-05-25; Strategy.md; Operating_Protocols.md.
+**ISO Week:** 2026-W22 (Mon 2026-05-25 → Sun 2026-05-31) | **Research as of:** 2026-05-25 (Memorial Day US market holiday; last trading session Fri 2026-05-22; markets reopen Tue 2026-05-26)
+**Scope:** Strategy B open positions — IBM (EXIT-PENDING), HCA, META, ZBRA, BRC — plus TJX (ORDER-STAGED, pre-fill validity check). Strategies A / C / E flat (zero open positions). Strategy D excluded per W3 spec (D reviewed monthly in M4; RTX and DIS not covered here).
+**Sources:** Portfolio_Ledger.md (fills + invalidation-criteria status; marks through 2026-05-22 EOD), Decision_Log.md (live, thesis pointers), Strategy.md (B exit rules), Operating_Protocols.md (§3, §8, §10), Regime_State.md; Tavily web research 2026-05-25 (Yahoo Finance, Trefis, TIKR, Bloomberg/Yahoo, Source NM, CNBC, RTTNews, StockStory, Quiver, tickernerd/tickeron, Zebra IR, TJX IR).
+
+> **Data-integrity note:** This file replaces an earlier 2026-W22 draft whose summary table carried entry prices and one share-size that did not match Portfolio_Ledger.md fills. All figures below are taken from the ledger fill records.
 
 ---
 
 ## IMMEDIATE-ACTION: None
 
-No position shows material thesis invalidation requiring pre-W4 intervention.
+No open position has a tripped thesis-invalidation criterion. Adverse marks (HCA, ZBRA) carry no exit trigger — Strategy.md gives B long positions no price stop. IBM has reached thesis **completion** (convergence), which is a planned exit already staged, not an invalidation.
 
-**W4 operational notes (not IMMEDIATE-ACTION, but W4 must read before firing):**
-1. **IBM exit already staged** — SELL 0.1198 IBM @ $254.00 Day order for Tue 2026-05-26. W4 must NOT re-stage; confirm existing order stands. IBM is EXIT-PENDING, not OPEN.
-2. **BRC approaching convergence target** — $87.55 close 2026-05-22 vs $88.80 convergence target = $1.25 / +1.4% remaining. If BRC opens at or above $88.80 on Tue 2026-05-26, convergence exit triggers per Strategy.md. W4 / D2 to monitor open price and stage SELL if triggered.
+**W4 operational notes (read before firing — these are not IMMEDIATE-ACTION):**
+1. **IBM exit already staged.** SELL 0.1198 IBM @ $254.00 Day, Tue 2026-05-26 (order-execution event `f36ln1797gucpoqdi6hckhkj6g`; fill-capture `i7p5qtsks1baa1bo95egsbtpa0`). IBM is EXIT-PENDING, not OPEN. **W4 must NOT re-stage** — confirm the existing order stands.
+2. **BRC one gap-up from convergence.** Fri 5/22 close $87.55 (intraday high $87.57) vs $88.80 target = $1.25 / +1.4% remaining. If BRC trades at or above $88.80 on Tue 5/26, convergence exit triggers per Strategy.md. Delegated to D2 Tue open watch.
+3. **META — NM bench-trial ruling is the live criterion-(iii) watch.** NM DOJ rested its case 2026-05-13; a final injunction/abatement order with material loss disclosure would be a criterion-(iii) trip. No final order as of 5/22. W4/D2 to assess any ruling against criterion (iii) when it lands.
 
 ---
 
 ## Strategies A, C, E — No Open Positions
 
-**Strategy A (DO-NOT-ACTIVATE):** Zero open positions. Router remains DO-NOT-ACTIVATE (SPY Trend = NEUTRAL, not UP; first clause of A technical rule fails). Nothing to deep-dive.
-
-**Strategy C (HYBRID ACTIVATE — FOMC only):** Zero open positions. Next FOMC catalyst window is Jun 16–17, 2026. C options scaffolding (`c_options_math.py`) built and hardened; 14 self-tests pass. Thesis construction for Jun FOMC has not yet been initiated — that is a pre-trade blocker, not a W3 finding. Nothing to deep-dive.
-
-**Strategy E (DO-NOT-ACTIVATE):** Zero open positions. Router DO-NOT-ACTIVATE per adversarial review 2026-04-25; M2 fundamental signal process tightening underway; earliest re-opening at M2 fundamental cycle. Nothing to deep-dive.
+- **Strategy A (router DO-NOT-ACTIVATE):** Zero open positions. SPY Trend = NEUTRAL (≠ UP) fails A's first technical clause (Regime_State.md). Nothing to deep-dive.
+- **Strategy C (router HYBRID ACTIVATE — FOMC only):** Zero open positions. Next FOMC window Jun 16–17, 2026. No open structure to monitor.
+- **Strategy E (router DO-NOT-ACTIVATE):** Zero open positions. Per 2026-04-25 divergence review. Nothing to deep-dive.
 
 ---
 
 ## Strategy B — Open Position Deep-Dives
 
-**Router state:** ACTIVATE (SPY Trend = NEUTRAL ≠ DOWN; VIX = NORMAL ≠ HIGH; confirmed Regime_State.md).
+**Router state:** ACTIVATE (SPY Trend = NEUTRAL ≠ DOWN; VIX = NORMAL ≠ HIGH — both clauses pass per Regime_State.md). No week-21 regime event flipped either clause.
 
-**B book as of 2026-05-25:**
-| Position | Status | Entry date | Entry price | Convergence target | Close 2026-05-22 | Days held |
-|----------|--------|------------|-------------|-------------------|-----------------|-----------|
-| IBM | EXIT-PENDING | 2026-04-28 | $220.84 | $245.00 | $254.36 | 27 (of 60) |
-| HCA | OPEN | 2026-04-28 | $433.46 | $442.85 | ~$394–423 (range; adverse) | 27 |
-| META | OPEN | 2026-05-05 | $609.17 | $626.21 | $610.26 | 20 |
-| ZBRA | OPEN | 2026-05-14 | $255.17 | $264.00 | $255.55 | 11 |
-| BRC | OPEN | 2026-05-22 | $85.50 | $88.80 | $87.55 (fill-day close) | 3 |
-| TJX | ORDER-STAGED | — | — | ~$171 (est.) | $158.27 | — |
+**B book as of last session (Fri 2026-05-22), from ledger fills:**
 
----
+| Position | Status | Fill date | Fill price | Cost basis (incl comm) | Convergence target | Last mark | Time-based exit |
+|----------|--------|-----------|-----------|------------------------|--------------------|-----------|-----------------|
+| IBM | EXIT-PENDING | 2026-04-27 | $230.17 | $27.85 | $245.00 (exceeded) | $254.36 (5/22 close) | 2026-06-26 (superseded by staged exit) |
+| HCA | OPEN | 2026-04-28 | $433.46 | $28.11 | $442.85 | $396.67 (5/20 close) | 2026-06-27 |
+| META | OPEN | 2026-05-05 | $601.30 | $27.57 | $626.21 | $605.06 (5/20 close) | 2026-07-02 |
+| ZBRA | OPEN | 2026-05-14 | $249.52 | $37.90 | $264.00 | $243.47 (5/20 close) | 2026-07-13 |
+| BRC | OPEN | 2026-05-22 | $84.97 | $37.86 | $88.80 | $87.55 (5/22 close) | 2026-07-21 |
+| TJX | ORDER-STAGED | (Wed 5/27) | $162.00 limit | ~$38 (est.) | $164.50 | ~$157.46 (5/22) | ~2026-07-24 (at fill) |
 
-### B-1: IBM (EXIT-PENDING — Convergence Complete)
-
-**1. Current thesis status**
-IBM was entered as a B post-event mispricing play on 2026-04-28 at $220.84. Convergence target was $245.00 (25% gap-fill per criterion 3 rev 14). The target has been exceeded: IBM closed $252.97 on 2026-05-21 and $254.36 on 2026-05-22, both above the $245.00 target. Per Strategy.md exit rules, convergence-target-hit is an exit trigger. Exit was staged: SELL 0.1198 IBM @ $254.00 Day order for Tue 2026-05-26.
-
-**2. Competitive landscape**
-IBM's catalyst event was the $1B+ CHIPS Act quantum computing research grant announced late May 2026. No competitive event has altered the post-event mispricing thesis — the reversion to analyst-price-target space was the expected mean-reversion path and it occurred. Sub-pattern 1 escalation check: no post-fill analyst PT raises of ≥10% were identified in this research cycle; the move was price convergence, not re-rating. Exit thesis intact regardless.
-
-**3. Fundamental developments**
-IBM Q1 2026 earnings (Apr 23) beat on revenue ($14.54B) and EPS ($1.60 adj vs $1.42 est); software/consulting mix stable; hybrid cloud/AI narrative intact. The CHIPS Act quantum grant (announced ~May 19–21) catalyzed the leg above $245. No negative fundamental development identified.
-
-**4. Sector/macro context**
-IT Services / Technology sector has benefited from AI infrastructure spending narrative. No sector-wide deterioration identified that would change exit decision. VIX remained NORMAL through week 21.
-
-**5. Thesis-invalidation signals**
-N/A — convergence is complete; the thesis resolved as expected. Exit is correct action. IBM invalidation criteria (criterion iv sub-pattern 1 escalation) are irrelevant post-convergence.
-
-**6. Time to thesis resolution**
-Resolved. Convergence target hit 2026-05-21. Exit staged for 2026-05-26.
-
-**Recommendation: CLOSE ON THESIS COMPLETION — ALREADY STAGED. W4: confirm existing SELL 0.1198 IBM @ $254.00 Day order for Tue 2026-05-26. Do not duplicate.**
+GICS sectors are distinct across the book (IT Services / Health Care Facilities / Interactive Media / Comm Equipment / Industrial-Machinery / Apparel Retail) — each ≤1 position, far inside the 3-per-GICS-sector B cap. Per Operating_Protocols §10, Strategy B has no total concurrent-position cap; the meaningful portfolio-risk check is KL #12 metric (d) average pairwise correlation > 0.5, first computed at the scheduled Wed 2026-06-03 review. Marks are last ledger-confirmed primary-source closes; Fri 5/22 closes for HCA/META/ZBRA were not independently re-verified this cycle (flagged below for D2).
 
 ---
 
-### B-2: HCA Healthcare (OPEN — Adverse Mark, No Criterion Tripped)
+### B-1: IBM (EXIT-PENDING — convergence complete)
 
-**1. Current thesis status**
-HCA entered 2026-04-28 at $433.46 (convergence target $442.85). The position is mark-adverse: HCA closed in the $394–423 range as of week 21 (below entry; exact 5/22 close not independently verified in this research cycle but consistent with D1 scan data). Mark-to-market loss does not constitute an exit trigger per Strategy.md — no price-based stop on B long positions.
+**1. Current thesis status.** Post-event mispricing long entered 2026-04-27 at $230.17; immutable convergence target $245.00 (Decision_Log 2026-04-25 GO; ~62% gap-fill, MEDIUM-HIGH conviction per Operating_Protocols §8). Target **exceeded**: IBM closed $252.97 on Thu 5/21 (+12.4%, biggest single-day gain in over a year) and $254.36 on Fri 5/22 (ledger-confirmed). Thesis resolved on the upside.
 
-**2. Competitive landscape**
-HCA's post-event thesis: Q1 2026 earnings-day mispricing; the event-day drop was an overshoot due to elevated Medicare/Medicaid uncertainty. Competitors: THC (Tenet Healthcare) reported Apr 30. Per the HCA GO entry in Decision_Log.md, criterion (iii) for HCA is: "THC Apr 30 print confirms sector-wide volume shortfall exceeding HCA management guidance." The position remains OPEN, which is consistent with criterion (iii) having NOT been tripped. No evidence found in research this cycle that THC Apr 30 print triggered HCA invalidation.
+**2. Competitive landscape.** The leg above $245 was driven by the U.S. Commerce Department's $2.0B CHIPS/Science-Act quantum-computing program (May 21): IBM received the single-largest allocation, a $1B grant matched dollar-for-dollar to build "Anderon," a 300mm quantum-chip foundry in Albany, NY (WSJ, Yahoo Finance/Bloomberg). Peer quantum names (GlobalFoundries +15%, Rigetti +31%, D-Wave +33%) also jumped — a sector-wide grant catalyst, not an IBM-specific competitive threat.
 
-**3. Fundamental developments**
-New information identified in this research cycle: HCA CFO appeared at TD Cowen Healthcare Conference (week of May 19–22) and confirmed 2026 full-year guidance range is intact; no volume guidance reduction. This is a thesis-supporting data point. Counter-factor: HCA's Apr 30 supplemental filing disclosed elevated uninsured-equivalent admissions (~+16% more uninsured-equivalent patients, attributed to immigration enforcement hesitancy reducing utilization among documented patients who fear proximity to undocumented family members). This disclosure was already known at the time of entry screening; it is a known headwind factored into the original thesis, not a new invalidation catalyst.
+**3. Fundamental developments.** Sell-side turned more bullish on the news: Evercore ISI positive; Bank of America reiterated Buy and raised PT to $300, citing free cash flow (Trefis, Yahoo). Gartner-type skepticism on near-term quantum commercialization exists but does not bear on the realized post-event convergence. No negative fundamental development.
 
-**4. Sector/macro context**
-Hospital sector under continued Medicaid uncertainty (federal budget reconciliation; potential Medicaid cuts in congressional proposals). This is the macro headwind that caused the initial event-day overshoot — it remains unresolved. The thesis is that the market overshot the downside; the macro headwind is priced in. No new legislative development that changes the invalidation criterion threshold was identified.
+**4. Sector / macro context.** IT Services / hardware buoyed by AI-infrastructure and now sovereign-quantum-funding narratives. VIX NORMAL through week 21. None of this changes the exit decision.
 
-**5. Thesis-invalidation signals**
-Criterion (iii) — THC Apr 30 print confirms sector-wide volume shortfall exceeding HCA management guidance: NOT-TRIPPED (position remains open; HCA CFO guidance confirmation at TD Cowen is inconsistent with a tripped criterion).
-Other HCA-specific invalidation criteria (per Decision_Log.md GO entry): none newly identified as tripped.
+**5. Thesis-invalidation signals.** N/A post-convergence. None of criteria (i)–(iv) (FY26 cc-revenue guide cut; Software/Red Hat pre-announcement; IGV ≤ $80; Brent ≥ $130) is relevant once the price target is hit; IGV was $92+ and Brent ~$110 at last read (ample headroom).
 
-**6. Time to thesis resolution**
-Entry 2026-04-28; 60-calendar-day holding period expires ~2026-06-27. 33 days remain. Convergence target $442.85 is ~5–12% above current price depending on exact 5/22 close. Resolution requires either convergence (price recovery to $442.85) or a catalyst-driven invalidation. No time pressure yet.
+**6. Time to thesis resolution.** Resolved 2026-05-21, well inside the 60-day window (time-stop was 2026-06-26). Exit staged for Tue 2026-05-26.
 
-**Recommendation: HOLD. No criterion tripped; thesis intact per strategy rules. Adverse mark is not an exit trigger. Monitor Medicaid legislative developments as potential criterion catalyst. Next scheduled fundamental check: M2 (2026-05-01 already passed; next M3 = 2026-06-02 first trading day).**
+**Recommendation: CLOSE ON THESIS COMPLETION — ALREADY STAGED.** Cited rule: Strategy.md Strategy B exit — "convergence target reached" (numerical target $245.00 exceeded; closed $252.97 / $254.36). W4: confirm the existing SELL 0.1198 IBM @ $254.00 Day order for Tue 2026-05-26; do not duplicate. (Note: the $254.00 limit acts as a sell floor — if IBM opens materially higher Tuesday it fills at the better price; if it fades below $254 the limit may not fill and rolls per D3 hygiene.)
 
 ---
 
-### B-3: META Platforms (OPEN — Near Convergence)
+### B-2: HCA Healthcare (OPEN — deepening adverse mark, no criterion tripped)
 
-**1. Current thesis status**
-META entered 2026-05-05 at $609.17 (convergence target $626.21). META closed $610.26 on 2026-05-22 = $15.95 / +2.6% below the convergence target. The position is essentially flat on a mark basis but near-convergence on the thesis path. No exit trigger has been reached.
+**1. Current thesis status.** Post-event mispricing long entered 2026-04-28 at $433.46; convergence target $442.85 (25% gap-fill, MEDIUM-LOW conviction). Thesis: the −8% Q1-print reaction (Apr 24) overshot, since the volume miss (respiratory admissions −42% on a mild flu season + January winter storm) was management-characterized as temporal, not structural, with FY26 guidance reaffirmed (revenue $76.5–80.0B; adj EBITDA $15.55–16.45B; EPS $29.10–31.50). The mark has drifted **further adverse** since entry: ledger-confirmed Wed 5/20 close $396.67 (−9.4% vs entry), and web sources place HCA in the ~$394–405 band through 5/21–5/22 (Tickeron: "sliding three consecutive days on May 21"; Yahoo intraday range $399–417). Strategy.md gives B longs no price stop, so the drawdown is not itself an exit trigger.
 
-**2. Competitive landscape**
-META's B thesis: post-earnings-day mispricing on April print; the event-day drop was an overshoot. Q1 2026 actual beat estimates; the thesis is that the market priced in excessive AI-capex fear. Competitive landscape for META (advertising, social media, AI): no competitor event in weeks 20–21 that altered the relative-value proposition or the mean-reversion path.
+**2. Competitive landscape.** Hospital peers soft in sympathy (Yahoo "people also watch": UHS −1.67%, THC −0.55% at last read). No peer print this week re-priced the group; THC's Apr 30 print (criterion (iii) checkpoint) did not establish a sector-wide volume shortfall exceeding HCA guidance — HCA remained open and reaffirmed.
 
-**3. Fundamental developments**
-- **NM bench trial (antitrust / FTC):** Phase II of the Federal antitrust bench trial in New Mexico was ongoing as of early May. Research this cycle: trial has not produced a final judgment or injunction order as of 2026-05-22. No structural remedy (divestiture, break-up) has been ordered. This remains a pending risk but has not become an invalidation-criterion-tripping event.
-- **Layoffs / workforce restructuring:** Meta announced targeted layoffs in specific AI research and Reality Labs divisions (week of ~May 12–19). These have been characterized as operational efficiency actions, not evidence of fundamental strategy reversal. Per Strategy.md, criterion (iv) for META involves specific invalidation thresholds that have not been tripped.
-- **Texas AG lawsuit:** Texas AG filed a consumer protection/data privacy suit against Meta (announcement ~May 2026). This is a new legal initiation, not a court order, injunction, or material adverse verdict. Litigation risk is ongoing but does not trip an invalidation criterion as of 2026-05-22.
-- **Meta AI Llama 4 / capex:** Meta confirmed continued AI capex investment trajectory consistent with Q1 guidance. No capex reduction announced that would alter the thesis that Q1 fears were overpriced.
+**3. Fundamental developments.** No new HCA 8-K, pre-announcement, or guidance change this week. Q1 detail reaffirmed: Medicaid supplemental-payment net benefit came in ~$200M vs ~$80M expected (Georgia grandfathered approval, Texas ATLAS reinstatement, Tennessee). TD Cowen had already trimmed PT 561→500 (Buy maintained) at the Apr 27 print; consensus remains Buy with mean target ~$510–540 (Yahoo 1y target $510.95). I did **not** find independent confirmation of a mid-May "CFO at TD Cowen conference reaffirming guidance" (that claim in the prior draft is unverified and is not relied on here); the verified support is the Q1-print reaffirmation.
 
-**4. Sector/macro context**
-Ad-tech / social media sector: no major headwind identified week 21. S&P 500 completed 8 consecutive weekly gains through week 21 (Dow +0.3% record; Nasdaq slightly negative due to Nvidia post-earnings drag; Mag-7 broadly resilient). Meta's $610 close is consistent with a sector holding pattern near the convergence target.
+**4. Sector / macro context.** The overhang remains federal budget-reconciliation / Medicaid policy risk (potential supplemental-payment and ACA-subsidy changes — the ~$1B FY-headwind HCA flagged in January). This is the macro fear that drove the print-day overshoot; it is unresolved and is the most likely catalyst for either further drift or a criterion event. No enacted legislative change this week that alters a criterion threshold.
 
-**5. Thesis-invalidation signals**
-Per Decision_Log.md META GO entry, invalidation criteria include: (i) FTC/DOJ structural-remedy injunction ordered; (ii) material earnings-guidance reduction in next print; (iii) platform-threatening regulatory action enacted (not merely filed). None of these tripped as of 2026-05-22.
+**5. Thesis-invalidation signals.** Per ledger entry-record: (i) FY26 guide cut below floors — NOT-TRIPPED; (ii) pre-announcement / negative business update — NOT-TRIPPED; (iii) THC Apr 30 print establishing sector-wide shortfall — NOT-TRIPPED; (iv) UHS Apr 27 corroboration — CLEARED. Cumulative evidence has not moved the position toward any criterion; it is a sentiment/macro-driven drawdown, not an information-driven invalidation.
 
-**6. Time to thesis resolution**
-Entry 2026-05-05; 60-calendar-day holding period expires ~2026-07-04. 40 days remain. Convergence target $626.21 is $15.95 / +2.6% above close. At current trajectory, convergence is achievable within the holding window. Q2 2026 earnings (estimated late July) would be after the 60-day exit window.
+**6. Time to thesis resolution.** 60-day time-stop 2026-06-27 → ~33 days remain. Convergence $442.85 now sits ~+11.6% above ~$396.67 — a wider gap than at entry, so convergence within the remaining window is less likely than at staging. This is a **time-expiry watch** item: absent recovery or a criterion event, HCA most likely closes on the 2026-06-27 time-based exit (the structurally-expected lower-conviction outcome flagged at MEDIUM-LOW entry).
 
-**Recommendation: HOLD. $2.6% to convergence; no criterion tripped; thesis intact. If META closes above $626.21 on any day through 2026-07-04, D2 to stage convergence exit immediately. Continue monitoring NM trial and regulatory pipeline.**
+**Recommendation: HOLD.** No invalidation criterion (i)–(iv) tripped; adverse mark carries no exit trigger for a B long (Strategy.md). Watch federal Medicaid/reconciliation developments as the criterion-(i)/(ii) catalyst path; flag for time-expiry handling approaching 2026-06-27. Next cadenced fundamental touch: M1/M3 first-trading-day-of-June cycle.
 
 ---
 
-### B-4: Zebra Technologies (OPEN — Near Target, 200-Day Cross)
+### B-3: META Platforms (OPEN — near convergence; NM ruling is the live watch)
 
-**1. Current thesis status**
-ZBRA entered 2026-05-14 at $255.17 (convergence target $264.00). ZBRA closed $255.55 on 2026-05-22 (+$0.38 from entry; +5.49% on 2026-05-22 specifically, per D1 scan data). Convergence target $264.00 is $8.45 / +3.3% above 5/22 close. The position is essentially at entry with positive momentum on the week-end session.
+**1. Current thesis status.** Post-event mispricing long entered 2026-05-05 at $601.30; convergence target $626.21 (25% gap-fill, MEDIUM conviction). Thesis: the post-Q1 selloff over the raised $125–145B 2026 AI-capex guide overshot relative to a strong print (revenue +33% YoY to $56.31B; adj EPS beat). Mark essentially flat-to-positive vs entry: ledger Wed 5/20 close $605.06 (−0.4% vs cost basis); Macrotrends shows May 18 close $611.21. Convergence $626.21 sits ~+2.5% to +3.5% above the $605–611 area — on-path within the window.
 
-**2. Competitive landscape**
-ZBRA's B thesis: post-earnings-day mispricing on Q1 2026 print; Zebra beat on revenue/EPS but the forward-guidance tone caused an overshoot. ZBRA's competitive position in barcode/RFID/enterprise mobility (Honeywell, Datalogic, Cognex as secondary competitors) has not materially changed. No competitor event identified this cycle that alters the relative-value thesis.
+**2. Competitive landscape.** No competitor event re-priced the relative-value case this week. META still trades at ~18.7x forward P/E — the lowest in the Magnificent 7 — and has lagged Alphabet over the past month, a setup several analysts frame as mispricing (consistent with the B thesis). JPMorgan's early-May downgrade to Neutral ($725 target) remains the notable bearish marker; consensus PT remains well above spot (~$840 Perplexity aggregate).
 
-**3. Fundamental developments**
-- **200-day MA cross (2026-05-18):** ZBRA's price crossed above its 200-day moving average on May 18. This is a technical milestone but is NOT a B strategy exit trigger per Strategy.md — B exits are driven by convergence target or invalidation criteria, not technical indicators. The 200-day cross is a thesis-supportive signal (price momentum consistent with mean-reversion trajectory) but requires no action.
-- **Analyst PT activity:** Sub-pattern 1 escalation check (criterion iv for B positions): ≥3 post-fill raises of ≥10% required. Research this cycle: no post-fill PT raises of ≥10% were identified for ZBRA. The move is price convergence, not analyst re-rating. Sub-pattern 1 not triggered.
-- **Macro/end-market:** ZBRA's end markets (warehouse automation, retail logistics, healthcare asset tracking) are supported by e-commerce capex normalization. No material demand-destruction event identified.
+**3. Fundamental developments.** (a) **Workforce restructuring:** ~8,000 layoffs (~10% of staff) began ~May 20 with ~7,000 reassigned into AI roles — framed by management as efficiency funding the capex plan, an operational cost action. (b) **Litigation initiations (not orders):** publisher suit over Llama training (Macmillan, Hachette, Cengage, Elsevier, McGraw Hill); a California-county scam-ads suit; ongoing EU child-safety scrutiny. (c) No capex reduction or ad-revenue reset announced.
 
-**4. Sector/macro context**
-Industrial Technology / Automatic Identification & Data Capture sector: no sector-wide negative catalyst identified week 21. VIX = NORMAL; market breadth healthy.
+**4. Sector / macro context.** Ad-tech / large-cap tech stable into week-21 close (S&P near record run; Nasdaq slightly soft on Nvidia post-earnings drag). No IV-regime or rate shock relevant to a single-name long.
 
-**5. Thesis-invalidation signals**
-Per Decision_Log.md ZBRA GO entry, invalidation criteria include company-specific revenue-guidance cut or material competitive-position loss. Neither identified as of 2026-05-22.
+**5. Thesis-invalidation signals.** Per ledger entry-record: (i) 8-K resetting the 2026 framework (capex >$145B, expense >$169B, OI guide retraction, or ad/DAP reset) — NOT-TRIPPED; (ii) pre-announcement of advertiser pullback / DAP reversal — NOT-TRIPPED; (iii) material META-specific regulatory development **with material loss disclosure** (US youth-trial verdict / DOJ AdTech remedy / EU DMA enforcement) — NOT-TRIPPED as of 5/22, but **actively developing**. The New Mexico *public-nuisance* bench trial (Phase II) began May 4 before Chief Judge Biedscheid; NM DOJ **rested its case May 13**; the state seeks ~$3.7B in abatement plus injunctive relief (age verification, algorithm/feature restrictions for minors). The judge has signaled reluctance to "overreach." A **final ruling imposing material abatement/operational injunction would trip criterion (iii)**; what exists today is the state's *request*, not an order. The March jury award ($375M, under appeal) is immaterial to META's scale. Layoffs and the new suits do not meet criteria (i)/(ii)/(iii).
 
-**6. Time to thesis resolution**
-Entry 2026-05-14; 60-calendar-day holding period expires ~2026-07-13. 49 days remain. Convergence target $264.00 is $8.45 / +3.3% above close. Achievable within window.
+**6. Time to thesis resolution.** 60-day time-stop 2026-07-02 → ~38 days remain. Convergence is reachable within the window at current trajectory. The NM bench trial (≈3-week run from May 4) plausibly produces a ruling inside the holding window — the dominant scheduled risk event.
 
-**Recommendation: HOLD. +3.3% to convergence; no criterion tripped; 200-day MA cross is thesis-supportive but not actionable. Continue monitoring for sub-pattern 1 escalation (three post-fill ≥10% raises would elevate to CLOSE watch).**
+**Recommendation: HOLD.** ~+2.5–3.5% to convergence; no criterion tripped. **Live watch:** when the NM bench-trial ruling lands, W4/D2 assess it against criterion (iii) — a final order with material loss/abatement disclosure → stage exit on invalidation; absent that, hold to convergence/time. D2 daily scan to flag any NM ruling and any META 8-K. If META closes ≥ $626.21 any day through 2026-07-02, stage the convergence exit.
 
 ---
 
-### B-5: Brady Corporation (OPEN — Approaching Convergence Target)
+### B-4: Zebra Technologies (OPEN — mid-path; sub-pattern-1 check clears)
 
-**1. Current thesis status**
-BRC entered 2026-05-22 at $85.50 (convergence target $88.80; 25% gap-fill per criterion 3). BRC closed $87.55 on the fill-day (2026-05-22) = $1.25 / +1.4% below the convergence target. This is an unusually fast move toward convergence — the position entered and nearly reached target on day 1. Per Strategy.md, the convergence exit triggers on any intraday touch or close at/above $88.80.
+**1. Current thesis status.** Post-event mispricing long entered 2026-05-14 at $249.52; convergence target $264.00 (25% gap-fill, MEDIUM conviction). Thesis: the Q1-print reaction (Tue 5/12 BMO, Day-0 C/C +11.4%) under-rated a clean beat-and-raise. Mark drifted modestly adverse since entry: ledger Wed 5/20 close $243.47 (−3.3% vs cost basis). Convergence $264.00 sits ~+8.4% above $243.47.
 
-**2. Competitive landscape**
-BRC's B thesis: post-Q3-fiscal-2026 earnings mispricing; Brady beat on earnings but soft revenue guidance caused an overshoot. Brady's competitive position in identification products (labels, signs, printers, software for industrial workplaces) vs. peers (Avery Dennison, CCL Industries, Panduit) has not materially changed. The BRC analyst community is thin (Sidoti & Company is principal coverage; limited Street-wide PT activity).
+**2. Competitive landscape.** No competitor event (Honeywell, Datalogic, Cognex) re-rated the AIDC group this week. Note a portfolio action: **Skild AI acquired Zebra's Robotics Automation business** (Symmetry Fulfillment orchestration) — a divestiture of a small non-core unit, not a demand/guidance event and not an invalidation trigger.
 
-**3. Fundamental developments**
-- **Honeywell PSS deal:** Brady's distribution partnership / product-line relationship with Honeywell Personal Safety and Sensing (PSS) division was confirmed intact in the BRC GO entry (Decision_Log.md 2026-05-22). No disruption identified this cycle.
-- **Analyst PT activity:** Sub-pattern 1 escalation check: thin coverage base (Sidoti primary). No post-fill PT raises of ≥20% (BRC threshold) identified. Sub-pattern 1 not triggered.
-- **Near-term catalyst:** No scheduled BRC catalyst event in the next 30 days that would add volatility to the convergence path. Q4 fiscal 2026 earnings would be scheduled ~late June to July (BRC fiscal year ends July 31); that falls within the 60-day holding window.
+**3. Fundamental developments.** Q1 2026 print confirmed strong: net sales $1,495M (+14.3% YoY; +4.3% organic), adj EPS $4.75 vs $3.49 consensus (large beat), adj gross margin 50.4% (multi-year high), $300M buyback; FY26 sales-growth guide **raised to 10–14%** (≈7pts acquisitions/FX + ~1pt price). Post-print analyst actions (May 13–14) were **split, not a uniform bull wave**: KeyBanc upgrade to Overweight $305; BNP Paribas Outperform raised $365→$370; Barclays OW $345; Needham Buy $345; Baird OP $310 — versus Citigroup Neutral $284 and Truist Hold $267. Memory-cost margin headwind (~2pts) flagged as mitigated via price + supplier co-planning.
 
-**4. Sector/macro context**
-Industrial identification / safety products sector: broadly stable. No macro event identified that specifically impacts BRC's end markets (manufacturing safety compliance, workplace identification) in a material negative direction.
+**4. Sector / macro context.** Warehouse-automation / AIDC end-markets supported by a large under-penetrated served market (mgmt: 75% of warehouses early in automation). No sector-wide negative catalyst week 21. VIX NORMAL.
 
-**5. Thesis-invalidation signals**
-Per Decision_Log.md BRC GO entry, primary invalidation criterion is a material revenue-guidance revision downward or channel-disruption event (e.g., Honeywell PSS relationship dissolution). Neither identified as of 2026-05-22.
+**5. Thesis-invalidation signals.** Per ledger entry-record: (i) FY26 framework reset (EPS guide < $18.30 mid, sales guide retraction, adj-OM < 24.5%) — NOT-TRIPPED (guide was raised); (ii) demand/customer-weakness pre-announcement — NOT-TRIPPED; (iii) ZBRA-specific tariff adverse disclosure — NOT-TRIPPED; (iv) **sub-pattern-1 cluster escalation** (3+ post-fill ≥10% PT raises re-rating the stock to information-priced equilibrium) — **NOT-TRIPPED**: the post-print PT actions are mixed and mostly maintains/modest, with a bull/bear split ($267–284 lows vs $305–370 highs), not a ≥3-firm aggressive +10% re-rating wave. The move remains sentiment-mispricing, not information-priced.
 
-**6. Time to thesis resolution**
-Entry 2026-05-22; 60-calendar-day holding period expires ~2026-07-21. 57 days remain. Convergence target $88.80 is only $1.25 / +1.4% above fill-day close. Very likely to resolve within days rather than weeks if no adverse event occurs.
+**6. Time to thesis resolution.** 60-day time-stop 2026-07-13 → ~49 days remain. +8.4% to convergence is achievable within the window. Mid-window pulse-check scheduled Tue 2026-06-09.
 
-**Recommendation: HOLD — APPROACHING TARGET. If BRC opens at or above $88.80 on Tue 2026-05-26, D2 to stage convergence SELL immediately at market or limit ≥$88.80. W4: flag as near-term completion watch item; BRC is one gap-up away from exit. If open is below $88.80, hold per standard rules.**
+**Recommendation: HOLD.** No criterion (i)–(iv) tripped; thesis intact. The Skild divestiture is non-material; sub-pattern-1 watch remains armed (a future 3+ aggressive ≥10% raise wave would elevate to pre-time-based-exit consideration per the staging-entry W4 protocol). Note: most-recent prints suggest ZBRA softened toward the low-$240s/high-$220s after the ledger's 5/20 mark — **D2 to confirm the Fri 5/22 close** for the running mark.
 
 ---
 
-### B-6: TJX Companies (ORDER-STAGED — Pre-Fill Thesis Validity Check)
+### B-5: Brady Corporation (OPEN — one gap-up from convergence)
 
-**Note:** TJX is ORDER-STAGED (limit BUY 0.0606 @ $162.00 Day, 2026-05-27 Wed). This is not an open position. W3 spec covers ORDER-STAGED positions for pre-fill thesis validity check only (not a full 6-section deep-dive).
+**1. Current thesis status.** Post-event mispricing long entered Fri 2026-05-22 at $84.97 (fill 07:30 MT); convergence target $88.80 (25% gap-fill, MEDIUM-LOW ~45–50% conviction; overturned the 5/21 procedural NO-GO that was a calendar-MCP-outage artifact). Thesis: the fiscal-Q3 print (Mon 5/18 BMO) beat held a ~17% undershoot to the ~$101.50 PT cluster. Fill-day close **$87.55** (+3.5% on the session; intraday high $87.57), $1.25 / +1.4% below target — an unusually fast move toward convergence.
 
-**Pre-fill thesis validity check:**
-- TJX closed $158.27 on 2026-05-22 (still below $162 limit; order has not filled as of last trading session).
-- Thesis: TJX Q1 FY2027 earnings (May 20) produced a post-earnings-day mispricing; the event-day drop was an overshoot relative to fundamentals (comp-store sales +3%; EPS beat; off-price retail thesis intact in softening consumer discretionary macro).
-- Analyst PT activity since GO entry: UBS and Truist issued modest PT raises post-print (both below the 20% sub-pattern-1 threshold; these are consistent with the thesis but do not trigger escalation).
-- No material negative development identified this cycle that would invalidate the pre-fill thesis (no guide-down, no competitive disruption, no channel-model threat).
-- Order validity: confirmed valid for 2026-05-27 Wed open.
+**2. Competitive landscape.** Identification-products peers (Avery Dennison, CCL, Panduit) unmoved relative to BRC this week. The structural item is the **pending Honeywell PSS acquisition** ($1.4B cash, announced Apr 20; mobile computers / scanners / printing; expected close H2 calendar-2026 subject to regulatory approval; management guides double-digit EPS accretion). The deal materially expands BRC's data-capture/automation TAM and is a thesis tailwind, not a risk this week.
 
-**Recommendation for ORDER-STAGED TJX: Thesis valid as of 2026-05-25; order should stand for 2026-05-27 execution. W4: confirm order stands; no modification needed based on W3 research.**
+**3. Fundamental developments.** Fiscal Q3 (qtr ended Apr 30): sales $435.24M (+13.8% YoY), non-GAAP EPS $1.50 (+11.5% vs consensus), net income $57.8M; FY26 GAAP EPS guide narrowed to $4.66–4.76 and adjusted FY EPS outlook raised. Data-center / automation demand cited as a growth driver. Coverage is thin (median PT $101.50 from ~1–2 covering analysts; Sidoti-class boutique coverage) — so a multi-firm aggressive PT wave is structurally unlikely.
+
+**4. Sector / macro context.** Industrial identification / workplace-safety end-markets broadly stable; no macro catalyst specifically adverse to BRC's MRO/OEM exposure week 21.
+
+**5. Thesis-invalidation signals.** Per ledger entry-record: (i) 8-K cutting FY26 adj-EPS below the new $5.20 floor — NOT-TRIPPED; (ii) Honeywell-PSS deal termination or negative business/demand update — NOT-TRIPPED (deal on track per 10-Q); (iii) sub-pattern-1 escalation (≥3-firm aggressive PT-raise wave re-rating toward ~$100–102) — NOT-TRIPPED (thin coverage; no wave). None tripped.
+
+**6. Time to thesis resolution.** 60-day time-stop 2026-07-21 → ~57 days remain. With only +1.4% to target, this position most likely resolves on convergence within days rather than the full window, absent an adverse event. (BRC fiscal Q4 earnings ~late June–July fall inside the window — a volatility source if not yet exited.)
+
+**Recommendation: HOLD — APPROACHING TARGET.** No criterion tripped. **D2 Tue 5/26 convergence watch:** if BRC trades at or above $88.80, stage the convergence SELL immediately (market or limit ≥ $88.80) per Strategy.md "convergence target reached." If the open is below $88.80, hold under standard rules.
 
 ---
 
-## Macro Context Summary (Week 21 Close / 2026-05-22)
+### B-6: TJX Companies (ORDER-STAGED — pre-fill thesis validity check)
 
-**Market tape (week 21 close):**
-- S&P 500: approximately 8 consecutive weekly gains as of week 21; Dow closed at record high; Nasdaq slightly negative week-over-week (Nvidia post-earnings drag pulling tech indices).
-- VIX: NORMAL range (below 25); consistent with Regime_State.md NORMAL classification.
-- Brent crude: approximately $105–$115 range; geopolitical tensions (Middle East) remain elevated but priced.
-- IGV (iShares Expanded Tech-Software ETF): approximately $93–$95 range; tech-software stable.
+**Status note.** TJX is **ORDER-STAGED**, not open: Limit BUY **0.2346 TJX @ $162.00 Day, Wed 2026-05-27** (convergence target $164.50; MEDIUM-LOW conviction; Decision_Log 2026-05-23). W3 covers it as a pre-fill validity check, not a 6-section deep-dive.
 
-**Strategy B router status:** ACTIVATE confirmed. SPY Trend = NEUTRAL (≠ DOWN); VIX = NORMAL (≠ HIGH). Both B activation clauses pass. No regime event in week 21 that would flip either clause.
+**Pre-fill validity check.**
+- **Print holds up:** Q1 FY2027 (Wed 5/20 BMO) beat across the board — net sales $14.32B (+9% YoY), comps +6% ("well above plan"), diluted EPS $1.19 (+29% YoY) vs ~$1.02 Street, pretax margin 12.0% (+170bps). FY27 guidance **raised** (comps +3–4%, EPS $5.08–5.15, sales $63.2–63.7B); buyback range lifted to $2.75–3.0B. Every division grew (Marmaxx +7%, HomeGoods +11%, Canada +12%, International +13%).
+- **Reaction texture supports the under-reaction thesis:** stock popped ~+5.7–7.4% on print day then gave back ~1.1% the next session; last trade ~$157.46 (5/21–5/22), below the $162 limit — so the BUY-limit is marketable and should fill near the open Wed 5/27.
+- **Sub-pattern-1 check (criterion iii) — DOES NOT APPLY:** post-print PT moves are modest — Truist $175→$190 (+8.6%), well below the ≥20% multi-firm aggressive-re-rating threshold; median Street target ~$175. No information-pricing wave.
+- **Cross-sectional corroboration:** off-price peer Ross Stores also beat on the same trade-down/high-gas-prices dynamic — consistent with the off-price thesis, not a competitive-disruption signal.
+- No guide-down, channel-model threat, or competitive-structure change identified this cycle.
 
-**Upcoming macro catalysts relevant to open B positions:**
-- Federal budget reconciliation (Medicaid cuts) — HCA risk factor; no scheduled resolution date
-- NM antitrust bench trial continuation — META risk factor; no verdict date announced
-- BRC Q4 fiscal earnings (~late June–July) — within 60-day window; monitor
-- No FOMC meeting until Jun 16–17 (C strategy relevant, not B)
+**Recommendation (ORDER-STAGED): Thesis valid as of 2026-05-25; order stands for Wed 2026-05-27.** W4: confirm Limit BUY 0.2346 TJX @ $162.00 Day; no modification warranted by this research. Independent of the IBM exit (no slot-gate; Operating_Protocols §10).
+
+---
+
+## Cross-Position & Macro Context (week-21 close / 2026-05-22)
+
+- **Tape:** S&P 500 extended its multi-week advance into a record-area Dow close; Nasdaq slightly soft on Nvidia post-earnings drag. VIX NORMAL (Regime_State.md). Brent ~$110; IGV ~$92 — both well clear of the IBM tail-criterion trip-lines.
+- **B router:** ACTIVATE confirmed; no week-21 event flips SPY-Trend or VIX clauses.
+- **Portfolio correlation (KL #12):** book is sector-diversified (six distinct GICS groups; ≤1 per sector vs 3-per-sector cap). Per Operating_Protocols §10, the binding risk check is metric (d) average pairwise correlation > 0.5 — not a position count; first computation scheduled Wed 2026-06-03 (event `k9vtudr7d40ukto3vfhutcdbls`). No flag pre-computation.
+- **Scheduled catalysts inside open-position windows:** NM Meta bench-trial ruling (META criterion-iii watch; no date set); federal Medicaid/reconciliation developments (HCA criterion path; no date set); BRC fiscal-Q4 earnings ~late June–July (within window). No FOMC until Jun 16–17 (C-relevant, not B).
 
 ---
 
 ## Summary Recommendation Table
 
-| Position | Status | Convergence remaining | Recommendation | Key watch item |
-|----------|--------|----------------------|----------------|----------------|
-| IBM | EXIT-PENDING | N/A (target exceeded) | **Close on thesis completion — ALREADY STAGED** | W4: do not duplicate; confirm existing order |
-| HCA | OPEN | ~5–12% (adverse mark) | **Hold** | Medicaid legislation; THC data points |
-| META | OPEN | +2.6% ($626.21 target) | **Hold** | NM trial final order; $626.21 intraday trigger |
-| ZBRA | OPEN | +3.3% ($264.00 target) | **Hold** | Sub-pattern 1 escalation watch (no triggers yet) |
-| BRC | OPEN | +1.4% ($88.80 target) | **Hold — approaching target; D2 5/26 convergence watch** | Open ≥$88.80 on 5/26 → stage exit immediately |
-| TJX | ORDER-STAGED | N/A (pre-fill) | **Thesis valid; order stands for 2026-05-27** | Confirm limit BUY 0.0606 @ $162.00 for Wed |
+| Position | Status | To convergence | Recommendation | Cited criterion / key watch |
+|----------|--------|----------------|----------------|------------------------------|
+| IBM | EXIT-PENDING | target exceeded | **Close on thesis completion — ALREADY STAGED** | Strategy.md "convergence target reached" ($245 → $252.97/$254.36). W4: confirm existing SELL @ $254.00 Tue 5/26; do not duplicate |
+| HCA | OPEN | +11.6% (adverse, ~$396.67) | **Hold** | Criteria (i)–(iv) NOT-TRIPPED; no B price stop. Time-expiry watch → 2026-06-27; Medicaid/reconciliation catalyst path |
+| META | OPEN | +2.5–3.5% ($626.21) | **Hold** | Criteria (i)–(iii) NOT-TRIPPED; **NM bench-trial ruling = live criterion-(iii) watch**; $626.21 intraday trigger |
+| ZBRA | OPEN | +8.4% ($264.00) | **Hold** | Criteria (i)–(iv) NOT-TRIPPED; sub-pattern-1 clears (split PT wave); D2 confirm 5/22 close |
+| BRC | OPEN | +1.4% ($88.80) | **Hold — approaching target** | Criteria (i)–(iii) NOT-TRIPPED; D2 Tue 5/26: open ≥ $88.80 → stage convergence SELL |
+| TJX | ORDER-STAGED | n/a (pre-fill) | **Thesis valid; order stands Wed 5/27** | Sub-pattern-1 does not apply (Truist +8.6% < 20%); confirm Limit BUY 0.2346 @ $162.00 |
 
-**IMMEDIATE-ACTION:** None. IBM exit staged; BRC convergence watch delegated to D2 Tue 2026-05-26.
+**IMMEDIATE-ACTION:** None. IBM convergence exit already staged (Tue 5/26); BRC convergence watch and META NM-ruling watch delegated to D2/W4.
