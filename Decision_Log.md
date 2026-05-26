@@ -10702,3 +10702,73 @@ Decision_Log.md, Decision_Log_Archive_2026_Q2.md, B_Sub_Pattern_Taxonomy.md upda
 **Inputs:** Strategy.md (B criteria 1-5; criterion 1 ≥5% close-to-close + qualifying-event sub-test [corporate-development catalyst]; criterion 3 closed-list rev 14 numerical-price-level target when next earnings outside window; criterion 5 sector cap 3-per-GICS + no-A; instrument rule mcap ≥$2B / ADV ≥$10M; pre-mortem rev 7 Constraint 1 2.4 narrative-overfit / Constraint 2 2.20 textbook-rational-penalty / KL #7 short-side gap-up / KL #12 correlation); B_Sub_Pattern_Taxonomy.md (sub-pattern 4 structural-overhang-persistence 4a-4d; sub-pattern 7 EL TEAM+V/MDLZ-hybrid anchor; sub-pattern 1 bull-ratification; sub-pattern 6 TEAM); Operating_Protocols.md (§1 HOIP; §2 commission-disregarded; §3 NO-GO-records-are-context-not-barriers / fresh-evaluation on distinct corporate-development trigger; §8 conviction-calibration ladder; §10 no-invented-position-caps + KL #12 monitoring-not-gate); AI_Trading_Foundation.md (2.4 narrative-overfit; 2.13 ordinal-tier conviction; 2.14 recency bias; 2.20 textbook-rational penalty central B risk); Experiment_Parameters.md (2% NAV sizing ~$37.8 off B NAV ~$1,889-1,895; convergence-target immutability — moot on NO-GO); Portfolio_Ledger.md (B NAV ~$1,889-1,895; IBM exit-pending [convergence exit staged Tue 5/26] / HCA / META / ZBRA / BRC open / TJX staged; Consumer Staples 0/3); Decision_Log.md prior precedents — EL 2026-05-02 sub-pattern 7 anchor (distinct Q3-print trigger; $87.88 then ≈ ~$88 now) + V/MDLZ 2026-04-29 sub-pattern 4a anchors + UPS 2026-05-05 4b non-print-catalyst + NCLH 2026-05-05 4c + BE/CAT/TWLO/TEAM positive-direction-LONG-is-Strategy-A-territory doctrine + INTU 2026-05-26 forward-dated cohort entry (tally/ordering reconciliation) + POET 2026-05-18 last clean NO-GO counter; Weekly_Post_Event_Screen.md 2026-W22 PART 2 #3 EL (LONG-relief-vs-sub-pattern-4a routing; CRITERION-3 ROUTING-RISK FLAG; pre-conviction GO ~15-25%). Web primary-source (retrieved this session 2026-05-25): CNBC 2026-05-22 + Bloomberg 2026-05-21 + SEC EDGAR 8-K/A (Puig talks terminated; ~$40B deal; >10% premarket); Invezz/TIKR/StocksToTrade/Timothy Sykes 5/22-5/23 (Day-0 +11.87%, closed ~$88, intraday >$91; Piper assume OW $95; Redburn $65→$70; street ~$93 leans-overweight; "analysts lift targets"); public.com/MarketBeat/TipRanks/stockanalysis.com EL forecast (PT avg ~$96.68-100.61; high $130; low $70-75; Buy consensus ~37% Strong Buy + 21% Buy); Goldman Sachs upgrade (China rebound + travel-retail recovery; Investing.com/Yahoo); ainvest/Moodie Davitt/TIKR/Daily Political (Beauty-Reimagined margin trajectory 8%→11% FY26→12.5-13% FY27 "marathon"; gross margin +310 bps to 75.0%; mainland China double-digit Q2 + 3-quarter prestige outperformance; Hainan resuming growth).
 
 ---
+
+
+## 2026-05-26 D3 Calendar Hygiene
+
+**Date anchor:** 2026-05-26 (Tuesday), America/Denver. System date authoritative; no conflict with file timestamps.
+
+**Scope:** [Claude] events 2026-05-26 → 2026-08-24 (90-day window). 21 total [Claude] events examined: 16 confirmed-active (KEEP), 4 self-cancelled by prior sessions (no D3 action), 1 deleted by D3.
+
+**Events walked:**
+
+| # | Summary | Event ID | Date/Time (MT) | Status | D3 Action |
+|---|---------|----------|----------------|--------|-----------|
+| 1 | TJX fill-capture | `a24018i7bpkkjmprh1heag3uck` | Tue 5/26 14:30 | confirmed | KEEP |
+| 2 | IBM fill-capture | `i7p5qtsks1baa1bo95egsbtpa0` | Tue 5/26 14:30 | confirmed | KEEP |
+| 3 | BA re-screen | `r9i6u6mnpk9ukoj2bh15m1fr7c` | Mon 6/1 07:30 | confirmed | KEEP |
+| 4 | META mid-window | `2i5gul5m9eiarfm7pkjf8u42u0` | Mon 6/1 09:00 | confirmed | KEEP |
+| 5 | KL #12 | `k9vtudr7d40ukto3vfhutcdbls` | Wed 6/3 15:30 | confirmed | KEEP (description stale; update delegated to fill-captures today) |
+| 6 | FOMC Jun monitor | `7pbkg1kh2pge7midfiqnj6edvk` | Mon 6/8 | confirmed | KEEP |
+| 7 | ZBRA mid-window | `6p9eotfrdd0eae2pvoccrbj95o` | Tue 6/9 09:00 | confirmed | KEEP |
+| 8 | LLY re-screen | `fpbueqccja9thjcnuj6ck9l6rs` | Fri 6/12 | confirmed | KEEP |
+| 9 | HCA exit (time-based) | `u9l9544ighc4d9o1l44u7pr0uc` | Fri 6/26 | confirmed | KEEP |
+| 10 | Q1 quarterly | (recurring) | Wed 7/1 | confirmed | KEEP |
+| 11 | Q2 quarterly | (recurring) | Wed 7/1 | confirmed | KEEP |
+| 12 | Q3 quarterly | (recurring) | Wed 7/1 | confirmed | KEEP |
+| 13 | Q4 quarterly | (recurring) | Wed 7/1 | confirmed | KEEP |
+| 14 | META 60-day exit | `jdki2o75a3rhrc77e5sd4h170c` | Thu 7/2 | confirmed | KEEP |
+| 15 | ZBRA exit (time-based) | `b2gka8hncerbnfh6m9j2hq4k2g` | Mon 7/13 | confirmed | KEEP |
+| 16 | BRC exit (time-based) | `sli3tl3msrhsuq731apqg7s9io` | Mon 7/21 | confirmed | KEEP |
+| 17 | IBM execute | `f36ln1797gucpoqdi6hckhkj6g` | Tue 5/26 07:00 | **cancelled** | No action (self-cancelled by prior session) |
+| 18 | TJX execute | `jclrlcsthd1o1u7m7nvm6lkf58` | Tue 5/26 07:00 | **cancelled** | No action (self-cancelled by prior session) |
+| 19 | INTU thesis | `q1g2dmbv7ujfoj9mdbgu2qbee8` | Tue 5/26 09:00 | **cancelled** | No action (self-cancelled by INTU session; NO-GO disposition 2026-05-26 in log) |
+| 20 | WDAY thesis | `hltp9bshp3bpkbs3j98e4j3i40` | Thu 5/28 09:00 | **cancelled** | No action (self-cancelled; see WDAY flag below) |
+| 21 | EL thesis | `vg47kl6rjpishqglsvecl8ngj4` | Mon 5/25 09:00 | confirmed→deleted | **DELETED** — past-fire; EL NO-GO disposition 2026-05-25 in log; EL session noted "leave for D3 reconciliation." Event was in self-cancelled state (updated 2026-05-26T00:47:02Z) at time of D3 delete call; deletion completed. |
+
+**Summary:** 1 deleted, 4 already-cancelled (no D3 action), 16 confirmed-active (KEEP). 0 missed sessions.
+
+---
+
+**Flags:**
+
+**WDAY disposition unconfirmed (flag for W5 tally):** WDAY thesis event `hltp9bshp3bpkbs3j98e4j3i40` (Thu 5/28 09:00 MT) is status="cancelled" with "(already done)" marker; updated 2026-05-25T12:17:52Z. No WDAY Decision_Log entry found in any read segment. No WDAY order-execution or fill-capture events on calendar. Likely outcome: WDAY NO-GO (self-cancelled without a separate log entry, or entry exists in an unread segment). W5 to reconcile: confirm WDAY disposition, add to B tally if absent, verify no execute/fill-capture events were inadvertently skipped. This is NOT a missed-session flag (event shows "(already done)" indicating session fired); it is a log-completeness flag.
+
+**TJX timing correction vs D3 2026-05-25 table:** Prior D3 (2026-05-25) recorded TJX execute as "Wed 5/27" and fill-capture as "Wed 5/27 14:30 MT." Actual event datetimes: TJX execute `jclrlcsthd1o1u7m7nvm6lkf58` = Tue 5/26 07:00 MT; TJX fill-capture `a24018i7bpkkjmprh1heag3uck` = Tue 5/26 14:30 MT. Both moved to Tue 5/26 alongside IBM by the W4 session. The prior D3 table was inaccurate; this D3 confirms correct dates.
+
+**KL #12 description still stale:** Event `k9vtudr7d40ukto3vfhutcdbls` (Wed 6/3 15:30 MT) description references "IBM+HCA+META+ZBRA+BRC" but IBM is exiting today and TJX is being added today. Update delegated to today's fill-capture sessions (IBM fill-capture `i7p5qtsks1baa1bo95egsbtpa0` + TJX fill-capture `a24018i7bpkkjmprh1heag3uck`, both 14:30 MT Tue 5/26) — delegation carries forward from D3 2026-05-25.
+
+---
+
+**Position coverage (all 8 positions):**
+
+| Position | Status | Calendar coverage |
+|----------|--------|-------------------|
+| IBM | EXIT-PENDING | Fill-capture `i7p5qtsks1baa1bo95egsbtpa0` Tue 5/26 14:30 ✓ |
+| TJX | ORDER-STAGED → BUY placed Tue 5/26 | Fill-capture `a24018i7bpkkjmprh1heag3uck` Tue 5/26 14:30 ✓ |
+| HCA | OPEN (B, Strategy B) | Time-based exit `u9l9544ighc4d9o1l44u7pr0uc` Fri 6/26 ✓ |
+| META | OPEN (B, Strategy B) | Mid-window `2i5gul5m9eiarfm7pkjf8u42u0` Mon 6/1 + 60-day `jdki2o75a3rhrc77e5sd4h170c` Thu 7/2 ✓ |
+| ZBRA | OPEN (B, Strategy B) | Mid-window `6p9eotfrdd0eae2pvoccrbj95o` Tue 6/9 + exit `b2gka8hncerbnfh6m9j2hq4k2g` Mon 7/13 ✓ |
+| BRC | OPEN (B, Strategy B) | Time-based exit `sli3tl3msrhsuq731apqg7s9io` Mon 7/21 ✓ |
+| RTX | OPEN (D, long-horizon) | D1 auto-detect invalidation per protocol ✓ |
+| DIS | OPEN (D, long-horizon) | D1 auto-detect invalidation per protocol ✓ |
+
+All 8 positions covered. No coverage gaps.
+
+**Notifications:** All 16 confirmed-active events verified at popup 0 min (explicit override or calendar default). Cadence-policy compliant; no rogue D1/W5/M1-M5 prompts observed.
+
+**Missed sessions:** None. (WDAY shows "(already done)" — session fired; log-completeness flag only, not a missed-session flag.)
+
+**No portfolio-state change.** D3 is a hygiene routine only.
+
+---
