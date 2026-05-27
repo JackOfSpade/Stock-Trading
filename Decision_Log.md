@@ -10830,3 +10830,177 @@ All 8 positions covered. No coverage gaps.
 **File writes:** Portfolio_Ledger.md [Strategy B] IBM EXIT-PENDING disposition line updated to the market-sell-at-open plan; calendar event updated; this entry.
 
 ---
+
+## 2026-05-27 — Strategy B AZO Q3 FY26 thesis construction — GO MEDIUM-LOW conviction
+
+**Trigger:** B-thesis construction for AZO (AutoZone, NYSE:AZO) Q3 FY26 earnings print (Tue 2026-05-26 BMO). Day-0 close-to-close −11.5% to 52-week low (~$3,503 Fri 5/22 pre-event → ~$3,100.11 Tue 5/26 close; intraday low ~$3,008 per Daily.md 2026-05-26 D1). Flagged as Strategy B candidate in Daily.md 2026-05-26 §OPPORTUNITY CHECK — "Full thesis construction required in a separate session"; 10-day entry window closes ~Tue 2026-06-09. D2 scheduling per protocol.
+
+**Primary sources used:** AZO IR / Motley Fool / Globe and Mail Q3 FY26 transcript; Benzinga / AlphaStreet earnings summary; Morningstar / stockanalysis.com price verification; Daily.md 2026-05-26 D1 scan for Day-0 magnitude and narrative context; GuruFocus / MarketBeat for post-print analyst PT wires.
+
+---
+
+### STEP 1 — Sector check
+
+**Sector check:** AZO GICS Consumer Discretionary / Specialty Retail — Automotive Retail (25504020). Current B Consumer Discretionary count: **1/3 (TJX)**. Adding AZO: 1/3 → 2/3. Sector cap does NOT bind (2/3 < 3/3). ✓
+
+**Open position count at session:** IBM (EXIT-PENDING, market sell staged for Wed 5/27 open per 2026-05-26 evening decision), HCA, META, ZBRA, BRC, TJX = 6 concurrent (IBM expected to exit simultaneously at Wed 5/27 open). Net book after entry: 6 (HCA+META+ZBRA+BRC+TJX+AZO). No total-position cap applies per Strategy.md. Entry proceeds on criteria 1–5.
+
+---
+
+### STEP 2 — Full criteria walk
+
+**Criterion 1 — Public event ≥5% close-to-close within 10 trading days:**
+
+Event: AZO Q3 FY26 earnings, Tue 2026-05-26 BMO (confirmed AZO IR / Globe and Mail / Benzinga).
+Pre-event close (Fri 2026-05-22): ~$3,503 (last trading day; Mon 5/25 = Memorial Day, market closed).
+Day-0 close-to-close: **−11.5%** (~$3,503 → ~$3,100.11 Tue close; intraday low ~$3,008). Magnitude cushion: 2.3×.
+Instrument eligibility: AZO US-listed common equity NYSE ✓; mcap ~$37B at entry-range ($3,100 × ~12M shares >> $2B floor) ✓; ADV well above $10M (blue-chip, daily dollar volume ~$1B+ regularly) ✓; long eligible ✓.
+Direction: LONG (negative-surprise event; mean-reversion from oversized downside reaction).
+**Criterion 1: CLEARS.** ✓
+
+**Criterion 2 — Narrative synthesis:**
+
+Q3 FY26 print details (primary sources AZO IR / Benzinga / AlphaStreet):
+- EPS: $38.07 **BEAT** $36.65 consensus (+$1.42/+3.9%)
+- Revenue: $4.841B **MISSED** ~$4.877B consensus (−0.7%)
+- Total sales: +8.4% YoY — largest in 3+ years
+- Domestic SSS: +5.5% (accelerating); DIY +2.2%; **commercial +10.4%** (pro-installer market-share gains)
+- Gross margin: 52.2% (−57bp; +20bp ex-LIFO adjustment = healthy underlying margin)
+- Net income: $641.5M
+- International softness: Mexico/Brazil specifically cited
+
+Market reaction: −11.5% C/C to 52-week low. Investors keyed on top-line miss + international (Mexico/Brazil) weakness, overshadowing the EPS beat + domestic acceleration.
+
+Narrative synthesis: The −11.5% reaction appears oversized relative to the print quality. Key supporting elements:
+- Revenue miss is small (−0.7%) and **geographically specific** (Mexico/Brazil international segment, NOT domestic US) — the core domestic business delivered accelerating comps (+5.5%)
+- EPS beat (+3.9%) confirms pricing power and margin management; cost discipline intact
+- Domestic commercial +10.4% reflects structural pro-installer share gains — a multi-quarter tailwind unaffected by the international miss
+- AZO's fundamental thesis (counter-cyclical auto-maintenance demand: consumers maintain older vehicles during macro stress, driving auto-parts demand) was NOT impaired by the print
+- −11.5% reaction triggered by "consumer stress" macro overlay (Consumer Confidence 93.1; Brent crude spike; Iran re-escalation) + top-line headline anchor — classic sentiment-overshoot pattern on a mixed print for a quality compounder
+
+**Criterion 2: CLEARS (LONG direction; oversized reaction to geographically-specific revenue miss with EPS beat and domestic acceleration).** ✓
+
+**Criterion 3 — Convergence target (closed list rev 14):**
+
+Named-event check (all inadmissible):
+- Next AZO earnings (Q4 FY26): ~September 2026 → OUTSIDE 60-day window (closes ~Fri 2026-07-25) → **INADMISSIBLE**
+- FDA: N/A → **INADMISSIBLE**
+- FOMC Jun 16-17: within window but mechanism-mismatch (AZO thesis is idiosyncratic auto-parts-compounder domestic-mean-reversion narrative; FOMC rate path does not convergence-mechanism-match a 0.7% revenue miss overshoot; rates affect consumer auto-loan origination indirectly, not an admissible named-event mechanism) → **INADMISSIBLE per mechanism-mismatch doctrine**
+- S&P 500 / Russell 1000 / Nasdaq 100: AZO already constituent of S&P 500 → **INADMISSIBLE (no fresh inclusion trigger)**
+
+Numerical price level (25% gap-fill methodology, ZBRA/BRC/TJX template):
+- Reference: ~$3,100.11 (Day-0 Tue 5/26 close; derived from IBKR Wed 5/27 portfolio prior-close $3,061.12 + $38.99 daily change)
+- Post-print PT cluster: AZO sell-side coverage (Baird, Stifel, Deutsche, RBC, Oppenheimer, Wells) maintained PTs near pre-print levels ~$3,400–3,600 on the mixed print; consensus ~$3,500 median (EPS beat offsets small revenue-miss PT cuts; domestic acceleration supportive)
+- 25% gap-fill: $3,100.11 + ($3,500 − $3,100.11) × 0.25 = $3,100.11 + $99.97 = **$3,200.08** → **$3,200** (rounded)
+- As % of reference: +3.2% from Day-0 close; +2.9% from fill price $3,110.69
+- Target **$3,200 — IMMUTABLE from entry**
+
+**Criterion 3: CLEARS ($3,200 numerical target admissible).** ✓
+
+**Criterion 4 — Adversarial counter-argument / dual-framing:**
+
+*Sub-pattern routing (B_Sub_Pattern_Taxonomy.md):*
+
+**Sub-pattern 1 (Aggressive Sell-Side Bull-Ratification) check:**
+AZO is a NEGATIVE-event reaction trade (−11.5% on mixed print). Sub-pattern 1 fires on POSITIVE events via ≥3-firm ≥+20% PT raise OR single ≥+50% PT raise OR two-notch upgrade ≥+50% PT raise. Post-mixed-print sell-side response: PTs maintained or modestly cut (not raised). Structurally inapplicable for a negative-reaction B-long.
+**Sub-pattern 1: DOES NOT APPLY.** ✓
+
+**Sub-pattern 3 (Information-Priced-via-Pre-Print-Rally) check:**
+AZO closed at a 52-week LOW after the print. A 52-week-low stock was NOT rallying +15–20% into the print. No evidence of pre-print momentum run-up whatsoever; stock was at multi-month lows before the print.
+**Sub-pattern 3: DOES NOT APPLY.** Pre-print trajectory directionally opposite to sub-pattern 3 signal (declining, not rallying). ✓
+
+**Sub-pattern 4 (Structural-Overhang-Persistence) check:**
+Key concern: Is the Mexico/Brazil international weakness a persistent structural overhang that invalidates the 60-day mean-reversion thesis?
+- AZO US segment dominates (~93%+ of total revenue); international is a minor segment
+- Mexico/Brazil weakness drivers: peso/real currency pressure + local macro uncertainty + possible tariff spillover; these are real structural headwinds but GEOGRAPHICALLY CONTAINED
+- Core US domestic thesis (SSS +5.5% accelerating; commercial +10.4%) is UNCORRELATED to the international drag
+- The 60-day window is too short for international headwinds to contaminate domestic comps materially
+- Verdict: sub-pattern 4 has a PARTIAL FIT on the international segment, but it is NOT a decisive barrier against the domestic mean-reversion thesis operating independently
+
+**Sub-pattern 4: PARTIAL FIT (international) — assessed as NON-DECISIVE at LOW weight for the 60-day domestic mean-reversion thesis.** Noted as invalidation criterion (iii): international-to-domestic-contagion.
+
+*LONG direction — decisive flaw search:*
+
+(L1) **2.20 textbook-rational-trap (structural):** "Market correctly pricing deceleration via the revenue miss." Counter: (a) EPS beat and domestic comp acceleration are the OPPOSITE of deceleration; (b) −0.7% revenue miss on $4.877B base is noise-level; (c) if structural decline were being priced, domestic comps would also have missed. **Not decisive.**
+
+(L2) **International-weakness-persistence risk:** Mexico/Brazil softness persists or worsens, pressuring full-year revenue estimates. Counter: US domestic thesis independent; international <7% of revenue; 60-day window does not require international recovery. **Not decisive within window.**
+
+(L3) **Consumer macro stress overlay:** Consumer Confidence 93.1 / Brent crude / AZO mis-categorized as consumer-discretionary stress proxy. Counter: AZO is COUNTER-CYCLICAL (people defer new car purchases → maintain older vehicles → buy more auto parts). Consumer stress is actually a BULLISH input for AZO domestic demand, not bearish. **Not decisive; mechanism works for LONG.**
+
+(L4) **Thin convergence target (+2.9–3.2%):** limits upside capture. Inherent in 25% gap-fill methodology; admissible per operating protocol. **Not a decisive criterion-4 flaw.**
+
+(L5) **Day-1 gap-down from fill price ($3,110.69 filled, then $3,061.12 by 07:33 MT):** stock continues to drift lower on Day-1 after fill. Counter: within fill-week noise; thesis is 60-day mean-reversion, not intraday. **Not decisive.**
+
+**LONG-framing verdict: NO DECISIVE FLAW.** ✓ — LONG CLEARS.
+
+*SHORT direction — decisive flaw search:*
+
+(S1) Revenue miss is genuine information (structural international growth slowdown + possible tariff exposure). **DECISIVE FLAW:** even accepting international weakness as structural, the US domestic thesis is decoupled; EPS beat confirms margin management; SHORT bet requires further collapse from a 52-week low on a company with accelerating domestic comps. **No structural short thesis established.**
+
+(S2) **B-short string: ~38 consecutive criterion-4 SHORT-direction dismissals** (through INTU/EL in 2026-05-26 sessions). Very high prior against SHORT GO without overwhelming new evidence. **DECISIVE FLAW for SHORT.**
+
+(S3) AZO essential/counter-cyclical nature: auto-parts maintenance is not purely discretionary; demand is structurally defensive. **Decisive against SHORT mean-reversion thesis.**
+
+(S4) **+25% SHORT stop ($3,110.69 × 1.25 = $3,888):** far above current price; any near-term sentiment recovery approaching even the pre-print price $3,503 would close a SHORT at loss. **DECISIVE FLAW.**
+
+(S5) **No systematic SHORT catalyst in 60-day window** (no AZO print, no structural event): short mean-reversion requires a catalyst to push AZO further below its 52-week low from an already-depressed level. **DECISIVE FLAW.**
+
+**SHORT-framing verdict: MULTIPLE DECISIVE FLAWS (5/5 weights).** SHORT direction is decisively rejected. B-short string **UNCHANGED** (this is a LONG GO, not a SHORT-direction-dismissal NO-GO; parallel to TJX/BRC/META pattern).
+
+**Criterion 4: CLEARS (LONG direction; SHORT dismissed with HIGH conviction ~95%).** ✓
+
+**Criterion 5 — No concurrent A position in AZO:**
+A router = DO-NOT-ACTIVATE (Regime_State.md; SPY Trend NEUTRAL). No A positions open. AZO not on A queue. **Criterion 5: CLEARS.** ✓
+
+---
+
+### KL #12 pairwise correlation
+
+Adding AZO (Consumer Disc / Automotive Retail) to post-IBM-exit 5-long B book (HCA / META / ZBRA / BRC / TJX):
+- AZO vs HCA: ~0.10–0.20 (healthcare vs auto-parts; different sector/macro driver)
+- AZO vs META: ~0.15–0.25 (tech/ad-revenue vs auto-parts; weak linkage via general consumer-spending)
+- AZO vs ZBRA: ~0.10–0.20 (enterprise tech vs auto-parts; different sector)
+- AZO vs BRC: ~0.10–0.20 (industrials vs auto-parts; different sector)
+- AZO vs TJX: ~0.20–0.35 (both Consumer Disc; off-price retail vs automotive retail; both somewhat counter-cyclical / trade-down-defensive; same GICS sector but different sub-industry and mechanism; moderate positive correlation possible)
+
+Estimated 5-pair avg with AZO: ~0.13–0.24. Well below 0.5 leading-indicator threshold. AZO adds Consumer Disc diversification while KL #12 pairwise remains favorable. **KL #12: FAVORABLE.** ✓
+
+---
+
+### Conviction calibration (Operating_Protocols §8 ladder)
+
+Reference ladder: TJX MEDIUM-LOW (25% gap-fill); BRC MEDIUM-LOW (25%); ZBRA MEDIUM (25%); HCA MEDIUM-LOW (25%); META MEDIUM (25%).
+
+AZO factors:
+- EPS beat (+3.9%) and domestic SSS acceleration (+5.5% / commercial +10.4%) → positive
+- Revenue miss small (−0.7%, internationally driven) → mild negative (noise-level)
+- Sub-pattern 1/3 DO NOT APPLY → removes primary NO-GO mechanism; decisively positive calibration input
+- Counter-cyclical domestic demand dynamic → positive (consumer stress = bullish for AZO)
+- Thin convergence target (+2.9–3.2% from fill) → limits magnitude; negative calibration input
+- Sub-pattern 4 partial international fit → mild headwind; not decisive; negative calibration input
+- 52-week low = maximum technical pessimism; mean-reversion from floor; positive setup
+- Consumer Disc 1/3 → 2/3 (same sector as TJX; increases concentration slightly; mild negative)
+- KL #12 pairwise favorable → positive portfolio fit
+
+**Conviction: MEDIUM-LOW (~45–50%).** 25% gap-fill target per TJX/BRC/HCA precedent. Genuine-ambiguity GO: LONG supported by oversized reaction to small miss on quality compounder; not a high-conviction call given thin target and international partial-overhang.
+
+---
+
+### GO decision — order staged
+
+**DECISION: GO — MEDIUM-LOW conviction**
+
+**Order:** Limit BUY **0.0121 AZO @ $3,110.69 Day, Wed 2026-05-27**
+- Principal: ~$37.64 (2% of B NAV ~$1,882; fractional shares via IBKR)
+- Convergence target (immutable): **$3,200** (25% gap-fill from ~$3,100.11 Day-0 ref toward ~$3,500 PT median)
+- Expected time-based exit: Fri 2026-07-24 (60 calendar days from Wed 5/27 → Sun 7/26 → last trading day Fri 7/24; calendar event to create at fill-capture)
+- Funding plan: IBM convergence-exit market-sell proceeds ($30.10 gross) + SGOV partial liquidation (~$8.05) = ~$38.15 gross available
+- Invalidation criteria: (i) AZO 8-K cutting FY26 domestic SSS below 3% floor; (ii) structural US ICE auto-parts demand disruption at scale; (iii) international-to-domestic-contagion in quarterly guidance within 60-day window
+
+**Sector cap update:** Consumer Discretionary: 1/3 (TJX) → 2/3 (TJX + AZO staged; takes effect on fill). Consumer Disc remains below 3/3 cap. ✓
+
+**B experiment totals (estimated):** ~7 GO (IBM/HCA/META/ZBRA/BRC/TJX/AZO) + ~48 NO-GO → approximately 12.7% / 87.3% GO rate. B-short string: **UNCHANGED** (LONG GO). Calendar: time-based exit event to create at fill-capture session.
+
+**File writes:** Decision_Log.md (this entry), Portfolio_Ledger.md ([Strategy B] AZO subsection OPEN). Calendar: time-based exit event `c198nmdf8quptsc4kvt7pvoq58` created at fill-capture session.
+
+---
