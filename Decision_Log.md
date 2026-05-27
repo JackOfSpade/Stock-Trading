@@ -11004,3 +11004,47 @@ AZO factors:
 **File writes:** Decision_Log.md (this entry), Portfolio_Ledger.md ([Strategy B] AZO subsection OPEN). Calendar: time-based exit event `c198nmdf8quptsc4kvt7pvoq58` created at fill-capture session.
 
 ---
+
+## 2026-05-27 — Strategy B META convergence exit — convergence target $626.21 REACHED
+
+**Trigger:** Daily.md 2026-05-27 RECOMMENDED ACTIONS: "EXIT — META (Strategy B): convergence target $626.21 REACHED (5/27 close $635.26, +1.4% above target; first close above target)." D2 second-look discipline applied per protocol.
+
+**Second-look — convergence criterion review:**
+
+META convergence target: **$626.21** (immutable per Strategy.md criterion 3 closed-list rev 14; 25% gap-fill from $611.91 reference toward pre-event $669.12; set at 2026-05-01 thesis construction; confirmed immutable at fill 2026-05-05 at $601.30 — does NOT adjust to fill price). META close 2026-05-27: **$635.26** (+3.74% on Bloomberg report Meta will sell consumer AI-chatbot subscriptions). $635.26 > $626.21 = **FIRST CLOSE ABOVE immutable convergence target. Criterion MET ✓.**
+
+**Second-look — invalidation criteria NOT tripped:**
+- (i) META 8-K resetting 2026 financial framework (capex >$145B / total expense >$169B / OI guide retraction / FY26 ad-revenue/DAP reset) — NOT-TRIPPED: AI-subscription news is a positive development, not a financial-framework reset.
+- (ii) Advertiser pullback or DAP/engagement reversal pre-announcement — NOT-TRIPPED.
+- (iii) META-specific regulatory loss disclosure (US youth-trial / DOJ AdTech / EU DMA) — NOT-TRIPPED.
+
+Exit is mandated by **convergence-target-reached** (thesis completion), not thesis invalidation. The AI-subscription monetization announcement drives additional upside potential outside B's mean-reversion mandate — this is Strategy A/D territory. Exact IBM 2026-05-22 precedent: IBM closed above $245 target on NIST quantum grant; continued holding for quantum-narrative upside was rejected as outside B's mandate. Same pattern applies here.
+
+**Exit disposition: CONFIRMED — convergence exit mandated.**
+
+**Order staged:**
+- Action: SELL
+- Ticker: META
+- Quantity: 0.0454
+- Order Type: LMT
+- Limit Price: 634.00
+- TIF: DAY
+- Execution day: **Thu 2026-05-28**
+
+Limit $634.00 = $1.26/~0.2% discount to 5/27 close $635.26; marketable sell limit per D2 staging rule (sells at slight discount to last close). Day duration — convergence-exit timing mandates execution at next open.
+
+**Expected returns at $634.00:**
+- Gross P&L: 0.0454 × ($634.00 − $601.30) = 0.0454 × $32.70 = **+$1.48**
+- Gross return from fill: +5.44%
+- Estimated net P&L after commissions ($0.27 entry + ~$0.27 exit): **+$0.94**
+- Design return at target $626.21: +4.14% gross; actual limit improves design return by +130bps (benefit of operator-discretion tighter fill $601.30 vs $615.00 staged)
+
+**Conviction calibration:** convergence-exit is mechanical and non-discretionary. Conviction in exit disposition: HIGHEST (~99%) — first close above immutable target, clear criterion fire.
+
+**Calendar events created:**
+- `v5ucicn223muo1bq39f39qie3c` — "[Claude] Execute order — META SELL" Thu 2026-05-28 07:00 MT
+- `j5at3vohgj8d7rffdgqful34h8` — "[Claude] Screenshot IBKR — fill capture META exit" Thu 2026-05-28 14:30 MT
+
+**File writes:** Portfolio_Ledger.md [Strategy B] META section updated: header OPEN → EXIT-PENDING, mark-to-market 5/27 added ($635.26 / +$1.27 unrealized), EXIT-PENDING bullet with staged order and event IDs appended. Watchlist.md CRM/SNOW/MRVL 5/27 print outcome annotations added. Decision_Log.md (this entry). 2 thesis-construction events created: ZS B `hkfqd7n875dtn6f2e9ds5kjpkk` + BSX B `q11247cb4hnvm11i3stodmk8kg` (both Wed 5/27 21:30 MT).
+
+---
