@@ -10816,3 +10816,17 @@ All 8 positions covered. No coverage gaps.
 **Hygiene flags (pre-existing, not introduced this session):** the Strategy B "Portfolio state" MTM composition line, the chronological Activity log (last entry May 14 AGL), and the legacy "Open positions: 3" table (still shows only IBM/HCA/META) all stopped being maintained ~2026-05-14 — the 5/22 BRC fill was never rolled up into them either. Authoritative per-position state lives in the §"Position thesis details" subsections + this log + calendar. Count/sector summary lines refreshed this session; full rollup/MTM refresh flagged for the next W5/D3 hygiene cycle.
 
 ---
+
+## 2026-05-26 (evening) — IBM exit disposition: MARKET SELL at open chosen
+
+**Trigger:** Operator decision following the IBM fill-capture entry above (IBM convergence-exit SELL @ $254.00 GTC unfilled; disposition was flagged for the Wed 5/27 session).
+
+**Decision:** EXECUTE the mandated convergence exit at the Wed 2026-05-27 open via **MARKET order** — CANCEL the working GTC $254.00 SELL first, then place SELL 0.1198 IBM MKT DAY. Operator chose market-at-open over (a) keeping the $254.00 GTC working and over (b) a marketable limit with a $245 floor.
+
+**Reasoning:** Convergence target $245.00 already reached/exceeded; IBM at $249.04 still above target, so the exit is mandated and continuing to chase $254.00 would convert a completed mean-reversion trade into a momentum hold outside B's mandate. For a liquid large-cap and a ~$30 fractional position the market-vs-limit distinction is immaterial; market-at-open matches the Strategy B time-based-exit playbook convention (those exit prompts use `Order Type: MKT / TIF: DAY`) and guarantees the fill. Expected outcome ~+8% gross vs the $230.17 entry (vs +6.4% design at the $245 target; vs +10.35% had the $254 limit filled). On fill: IBM → CLOSED; IT Services B-sector-cap 1/3 → 0/3; B concurrent open positions 6 → 5; KL #12 book 6-long → 5-long (HCA+META+ZBRA+BRC+TJX).
+
+**Calendar:** decision event `52c95nhg55po7n86pct68k0cm0` (Wed 5/27 07:00 MT) updated from "RE-STAGE (recommend marketable limit)" to "MKT SELL at open (cancel $254 GTC first)". The cancelled Jun-26 backstop event `vt43tmemb2u7km29p79i2dga08` stays moot (the market exit fills Wed 5/27).
+
+**File writes:** Portfolio_Ledger.md [Strategy B] IBM EXIT-PENDING disposition line updated to the market-sell-at-open plan; calendar event updated; this entry.
+
+---
