@@ -10772,3 +10772,47 @@ All 8 positions covered. No coverage gaps.
 **No portfolio-state change.** D3 is a hygiene routine only.
 
 ---
+
+## 2026-05-26 — IBM + TJX fill capture (TJX filled; IBM convergence-exit unfilled)
+
+**Title:** Tue 5/26 fill capture — TJX BUY filled $158.50 × 0.2346 (cost basis $37.53; OPEN; time-based exit 2026-07-24); IBM convergence-exit SELL @ $254.00 **GTC did NOT fill** (still open; order is GTC not Day, so it did not expire). B book now **6-long** (IBM did not exit); KL #12 updated 5→6 long (15 pairs); Consumer Disc sector cap 0/3→1/3 confirmed.
+
+**Trigger:** Operator fill-capture session (Tue 2026-05-26 ~18:18 MT; calendar events `a24018i7bpkkjmprh1heag3uck` TJX + `i7p5qtsks1baa1bo95egsbtpa0` IBM, both 14:30 MT). IBKR screenshots provided: Portfolio Positions page + Orders tab (IBM open order) + Trades tab (today's fills).
+
+**Branch reconciliation (both pre-written task branches partially mismatched reality):** The two fill-capture prompts were written assuming IBM would exit first (TJX prompt → "5-long book"; IBM prompt → "4-long book, becomes 5-long after TJX"). Actual outcome: **TJX filled, IBM did NOT**. Both prompts' book math is therefore superseded — the book is **6-long (IBM + HCA + META + ZBRA + BRC + TJX)**. There is no concurrent-position cap (Operating_Protocols 2026-05-24 removed the false 5-cap); only the 3-per-GICS-sector cap applies, and no sector exceeds 3 (IT 2/3 = IBM+ZBRA; all others 1/3) — the 6-long book is compliant.
+
+### TJX — FILLED (FILLED branch)
+
+**Fill details:**
+- Staged: Limit BUY 0.2346 TJX @ $162.00 Day (Wed 2026-05-27).
+- Executed (operator-discretion modification): **Limit BUY 0.2346 TJX @ $158.50 GTC, placed/filled one session early Tue 2026-05-26** — −$3.50/−2.16% TIGHTER limit + GTC-vs-Day + one-day-early. Continues the operator-discretion-tighter-at-execution pattern (META 2026-05-05 −$13.70 / ZBRA 2026-05-14 −$1.48 / TJX −$3.50).
+- Fill price: **$158.50** (exact-limit). Shares: **0.2346**. Principal: **$37.18**. Commission: **$0.35**. Cost basis: **$37.53**. Fill timestamp: **07:30:06 MT, Tue 2026-05-26** (at the open).
+- Funding (same-day SGOV liquidation, Trades tab): 0.1 SGOV @ $100.63 (07:30:04, GTC) + 0.23 SGOV @ $100.63 (09:08:31, Day) = 0.33 SGOV sold, gross $33.21, $0.33 commissions, realized P&L **−$0.33** (parking-cycle micro-loss, expected; the day's only realized P&L per Trades tab). Residual USD cash $0.41.
+
+**Position status:** OPEN. Convergence target **$164.50** (immutable; does not adjust to the better-than-reference $158.50 fill). Gross return at convergence from fill: **+3.79%** (vs +3.32% from the $159.21 reference). Net pre-exit-commission: **+2.83%**. Time-based exit **2026-07-24** (Fri; entry 5/26 + 60 cal days = Sat 7/25 → last trading day Fri 7/24). Invalidation (i)-(iii) NOT-TRIPPED at fill. Entry-day mark: last $159.00 / mark value $37.30 / IBKR unrealized −$0.19 (≈ −$0.23 vs cost basis).
+
+**Sector cap:** Consumer Discretionary / Apparel Retail 0/3 → **1/3 CONFIRMED** at fill. First Consumer Discretionary position in the B book.
+
+**Calendar:** Time-based exit event `0g1smg50pf89jo3or6ompaht4o` created (Fri 2026-07-24 07:15 MT). Order-execution event `jclrlcsthd1o1u7m7nvm6lkf58` (Wed 5/27) now moot (filled early) — left as cancelled.
+
+### IBM — DID NOT FILL (UNFILLED branch, with order-type correction)
+
+**Outcome:** Exit **DID NOT FILL**. Per the IBKR Orders tab: "Sell 0.1198 IBM Limit 254.00, **GTC**; 0 Filled; Last Price 249.04." IBM closed Tue 5/26 at $249.04 (−$1.65 on the day) — the Fri 5/22 $254.36 quantum-grant spike has faded ~$5.32/−2.1% off the high, leaving the stock below the $254.00 SELL limit. Full **0.1198-share position remains OPEN**; Positions tab confirms IBM 0.1198 held.
+
+**Order-type correction (vs the task's UNFILLED-branch premise):** the task prompt said to "confirm Day order expired." That premise is incorrect — the order was placed at execution as **GTC, not the staged Day** (operator-discretion duration modification; parallel to the META 2026-05-05 GTC-vs-staged-Day precedent). A GTC order does **not** expire at session close — it remains **LIVE/working** at $254.00 into subsequent sessions. So nothing "expired"; the mandated exit simply has not executed yet because the stock sits below the limit.
+
+**Convergence exit still MANDATED:** the $245.00 convergence target was reached/exceeded (Thu 5/21 $252.97, Fri 5/22 $254.36) and remains exceeded at $249.04. Per Strategy.md B "convergence target reached" → exit; per the 2026-05-22 staging entry, holding for further quantum-narrative upside would be Strategy A/D territory, outside B's mandate. The exit decision stands; only the execution is pending.
+
+**Coverage gap identified:** the Jun-26 time-based-exit backstop event `vt43tmemb2u7km29p79i2dga08` was cancelled at exit-staging (on the assumption of a Tue 5/26 fill) and is **not currently active** — with IBM still open, it has no live forward exit event.
+
+**Disposition — RECOMMENDATION (flagged for Wed 2026-05-27 session):** cancel/replace the stale GTC $254.00 order and **re-stage the mandated exit at a marketable Day limit near current price** (≈ market, with the $245.00 convergence target as the hard floor — take any fill ≥ ~$245). At ~$249 this still locks in ~+8% gross vs the $230.17 fill, well above the +6.4% design return at the $245 target. Rationale: the convergence signal already fired; the $254.00 limit was an optimization pinned to the post-spike high, which has faded; chasing it converts a completed mean-reversion trade into a momentum bet the strategy explicitly disallows, and risks IBM fading back below $245 unsold. **Alternative (operator's call):** keep the $254.00 GTC working with a re-created Jun-26 backstop, accepting the fade risk. Decision/coverage event `52c95nhg55po7n86pct68k0cm0` created Wed 2026-05-27 07:00 MT. (TJX BUY proceeded regardless — independent GO thesis, as the task noted.)
+
+### Book + calendar + file writes
+
+**KL #12 calendar event (`k9vtudr7d40ukto3vfhutcdbls`, Wed 6/3 15:30 MT):** updated from 5-long (IBM+HCA+META+ZBRA+BRC, 10 pairs) to **6-long (IBM+HCA+META+ZBRA+BRC+TJX, 15 pairs)** — IBM retained (did not exit) + TJX added. Supersedes both task prompts' 4-long/5-long instructions, which assumed IBM exit. Summary + description updated; threshold unchanged (avg pairwise > 0.5 → position review).
+
+**File writes:** Portfolio_Ledger.md — [Strategy B] TJX section ORDER-STAGED → OPEN (full fill record, returns, time-based exit, sector cap, 6-long book, calendar events); [Strategy B] IBM EXIT-PENDING section fill-capture-outcome bullet appended (unfilled, GTC-not-Day correction, coverage gap, disposition); Strategy B "Portfolio state" position-count + sector-cap lines refreshed to 6-long (dated 2026-05-26). Calendar: TJX exit event created, IBM re-stage event created, KL #12 updated.
+
+**Hygiene flags (pre-existing, not introduced this session):** the Strategy B "Portfolio state" MTM composition line, the chronological Activity log (last entry May 14 AGL), and the legacy "Open positions: 3" table (still shows only IBM/HCA/META) all stopped being maintained ~2026-05-14 — the 5/22 BRC fill was never rolled up into them either. Authoritative per-position state lives in the §"Position thesis details" subsections + this log + calendar. Count/sector summary lines refreshed this session; full rollup/MTM refresh flagged for the next W5/D3 hygiene cycle.
+
+---
