@@ -11048,3 +11048,16 @@ Limit $634.00 = $1.26/~0.2% discount to 5/27 close $635.26; marketable sell limi
 **File writes:** Portfolio_Ledger.md [Strategy B] META section updated: header OPEN → EXIT-PENDING, mark-to-market 5/27 added ($635.26 / +$1.27 unrealized), EXIT-PENDING bullet with staged order and event IDs appended. Watchlist.md CRM/SNOW/MRVL 5/27 print outcome annotations added. Decision_Log.md (this entry). 2 thesis-construction events created: ZS B `hkfqd7n875dtn6f2e9ds5kjpkk` + BSX B `q11247cb4hnvm11i3stodmk8kg` (both Wed 5/27 21:30 MT).
 
 ---
+
+## 2026-05-28 D3 Calendar Hygiene — calendar reconciliation
+
+**Trigger:** D3 Calendar Hygiene routine, 2026-05-28 after market close.
+**Events walked:** 18 [Claude] events in range 2026-05-28 → 2026-08-26 America/Denver, plus ZS/BSX retrieved individually (started 5/27 21:30 MT, outside search window).
+**Deleted (3):** META execute-order `v5ucicn223muo1bq39f39qie3c` (order day 5/28 passed); META mid-window `2i5gul5m9eiarfm7pkjf8u42u0` (superseded by convergence exit); META 60-day `jdki2o75a3rhrc77e5sd4h170c` (superseded by convergence exit).
+**Updated (2):** KL #12 `k9vtudr7d40ukto3vfhutcdbls` (title+description updated: IBM CLOSED, META EXIT-PENDING, AZO OPEN, expected 5-long HCA×ZBRA×BRC×TJX×AZO at session time Jun 3); TJX exit `0g1smg50pf89jo3or6ompaht4o` (description corrected: D3 5/27 erroneous "fill did NOT occur on 5/26" retracted; TJX DID fill 5/26 at $158.50 per fill-capture entry Decision_Log line 10776).
+**Kept:** META fill-capture `j5at3vohgj8d7rffdgqful34h8` (today 14:30 MT; META still EXIT-PENDING, reconciliation pending).
+**Missed sessions (2):** ZS `hkfqd7n875dtn6f2e9ds5kjpkk` (started 5/27 21:30 MT; window open ~Jun 9; no Decision_Log disposition) + BSX `q11247cb4hnvm11i3stodmk8kg` (started 5/27 21:30 MT; window open ~Jun 10; no Decision_Log disposition) → both flagged for D2 to re-route.
+**Position coverage confirmed:** HCA (Jun 26) ✓; META fill-capture today ✓; ZBRA (mid-window Jun 9 + exit Jul 13) ✓; BRC (exit Jul 21) ✓; TJX (exit Jul 24) ✓; AZO (exit Jul 24) ✓; IBM CLOSED ✓; RTX/DIS D long-horizon D1 coverage ✓.
+**Downstream actions:** Portfolio_Ledger.md Last updated line updated. No portfolio-state changes.
+
+---
