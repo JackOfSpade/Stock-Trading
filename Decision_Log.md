@@ -11072,3 +11072,45 @@ Limit $634.00 = $1.26/~0.2% discount to 5/27 close $635.26; marketable sell limi
 **No portfolio-state changes.** META still EXIT-PENDING with the same SELL order; the order-execution event now exists again so the operator will receive the 07:00 MT pre-market reminder Thursday morning. Fill-capture at 14:30 MT Thursday unchanged.
 
 ---
+
+## 2026-05-28 — META fill-capture: convergence exit FILLED @ $641.20
+
+**Trigger:** Fill-capture session for META convergence exit staged 2026-05-27 (D2 action; SELL 0.0454 META LMT 634.00 DAY, Thu 2026-05-28). Fill-capture event `j5at3vohgj8d7rffdgqful34h8` fired 14:30 MT; operator-provided IBKR screenshots: Trades tab (fill details) + Orders tab (SGOV reinvest order) + Portfolio (current positions).
+
+**Fill outcome: FILLED — convergence exit completed.**
+
+**Fill details (from IBKR Trades screenshot):**
+- Ticker: META (IBKR)
+- Action: Sold 0.0454 shares
+- Fill price: **$641.20**
+- Fill time: **07:30:02 MT, Thu 2026-05-28** (pre-market open)
+- Order description at fill: "641.2 Limit, Gtc" — **operator-discretion modification**: limit raised from staged $634.00 DAY to $641.20 GTC at execution (+$7.20/+1.14% higher limit for fill assurance; GTC vs Day duration; continuation of operator-discretion-at-execution pattern: META entry 5/5 GTC-vs-Day, TJX 5/26 tighter-GTC precedents).
+- Gross proceeds: $29.11 (= 0.0454 × $641.20 ✓)
+- Exit commission: $0.29
+
+**P&L computation:**
+- Gross P&L: ($641.20 − $601.30) × 0.0454 = $39.90 × 0.0454 = **+$1.81**
+- Total commissions: $0.27 (entry) + $0.29 (exit) = $0.56
+- Net P&L: **+$1.25** (IBKR-displayed P&L $1.25 ✓ — exact match to formula)
+- Net return: +$1.25 / $27.57 cost basis = **+4.53%**
+- Gross return from fill: ($641.20 − $601.30) / $601.30 = **+6.63%**
+- vs. convergence target at staged $634.00: exceeded by +$7.20/share (operator-discretion limit capture)
+- vs. convergence target at immutable $626.21: exceeded by +$14.99/share (+2.36%)
+- Holding period: 23 calendar days (2026-05-05 → 2026-05-28); STCG
+
+**Convergence thesis outcome: Clean completion.** Immutable convergence target $626.21 was first crossed on 5/27 close ($635.26), triggering the mechanical exit per Strategy.md criterion 3 "convergence target reached" rule. The AI-subscription-monetization narrative (+3.74% on 5/27) drove thesis completion 37 calendar days ahead of the 60-day time-based backstop (Jul 2). No invalidation criteria (i)-(iii) tripped during the hold. The operator-discretion limit $641.20 GTC captured an additional +$7.20/share above the staged $634.00 limit (execution was at the pre-market open 07:30:02 MT with the stock gapping higher). P&L of +$1.25 net is the second profitable closed B trade (after IBM +$1.95 net on 2026-05-27).
+
+**Portfolio state changes:**
+- META: OPEN → **CLOSED**
+- Comm Services / Interactive Media B-sector-cap: **1/3 → 0/3**
+- B concurrent open positions: **6 → 5** (HCA, ZBRA, BRC, TJX, AZO)
+- B realized P&L cumulative: IBM +$1.95 + META +$1.25 = **+$3.20 net** (through 2026-05-28)
+
+**SGOV reinvest (from IBKR Orders screenshot, 2:52 PM):** Buy 0.29 SGOV Market Day placed 2:51 PM — "0 Filled, Last Price: 100.65" at screenshot time. Reinvest pending; proceeds ($29.11 gross − $0.29 commission = $28.82 net) sitting as USD Cash. 0.29 SGOV × $100.65 ≈ $29.19 ≈ $28.82 net (close enough; likely rounded to 0.29 shares at ~$100.65 last). No further action required; will fill at next open or be re-placed next session if Day order expires unfilled.
+
+**Calendar events fulfilled/retired:**
+- `j5at3vohgj8d7rffdgqful34h8` — "[Claude] Screenshot IBKR — fill capture META exit" Thu 5/28 14:30 MT → **fulfilled this session**
+- `360n25fgp3pem0ler146l8rc5c` — "[Claude] Execute order — META SELL" Thu 5/28 07:00 MT → **fulfilled/expired** (order executed at 07:30:02 MT)
+- No new calendar events to create per operator instruction.
+
+**File writes:** Portfolio_Ledger.md [Strategy B] META section header updated CLOSED; EXIT-PENDING bullet replaced with CLOSED fill note; closed-trade Trade #2 META detail block added; closed trades at-a-glance table updated (IBM #1 + META #2); Strategy B portfolio state updated (open count 6→5, sector cap Comm Services 1/3→0/3); Last updated header updated. Decision_Log.md (this entry).
