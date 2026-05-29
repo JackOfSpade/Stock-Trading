@@ -11113,4 +11113,37 @@ Limit $634.00 = $1.26/~0.2% discount to 5/27 close $635.26; marketable sell limi
 - `360n25fgp3pem0ler146l8rc5c` — "[Claude] Execute order — META SELL" Thu 5/28 07:00 MT → **fulfilled/expired** (order executed at 07:30:02 MT)
 - No new calendar events to create per operator instruction.
 
+---
+
+## 2026-05-28 D3 Calendar Hygiene — calendar reconciliation (pass 2)
+
+**Trigger:** D3 Calendar Hygiene routine, 2026-05-28 after market close. MT date anchor: 2026-05-28 18:33 MDT (Bash-derived `TZ=America/Denver date`). Note: assistant-context `currentDate` field returned 2026-05-29 UTC — confirmed conflict; MT date used per D3 protocol.
+
+**Events walked:** 19 [Claude] events in range 2026-05-28 → 2026-08-26 America/Denver.
+
+**Deleted (2):**
+- META execute-order `360n25fgp3pem0ler146l8rc5c` (recreation of erroneously-deleted v5ucicn223muo1bq39f39qie3c; order day 5/28 passed; filled 07:30:02 MT at $641.20 GTC per Decision_Log 2026-05-28 META fill-capture entry)
+- META fill-capture `j5at3vohgj8d7rffdgqful34h8` (fill-capture session completed 5/28 ~14:30 MT; META CLOSED per Decision_Log 2026-05-28 META fill-capture entry)
+
+**Updated (1):**
+- KL #12 `k9vtudr7d40ukto3vfhutcdbls`: META status updated EXIT-PENDING → CLOSED ($641.20 GTC 5/28 07:30 MT); expected book confirmed HCA×ZBRA×BRC×TJX×AZO (5-long, 10 pairs); note added that ZS/BSX/BURL/PLAB thesis sessions may add positions before 6/3 session — self-correcting via Portfolio_Ledger read at session time.
+
+**Missed sessions (4) — flagged for D2 re-route; windows active; NOT deleted:**
+- ZS `hkfqd7n875dtn6f2e9ds5kjpkk` (scheduled 17:00 MT today; event date 2026-05-26; window open ~Tue 2026-06-09; no Decision_Log GO/NO-GO disposition)
+- BSX `q11247cb4hnvm11i3stodmk8kg` (scheduled 17:30 MT today; event date 2026-05-27; window open ~Wed 2026-06-10; no disposition)
+- BURL `4c4msin5btl1oto6i81dplsrt0` (scheduled 18:00 MT today; event date 2026-05-28; window open ~Thu 2026-06-11; no disposition)
+- PLAB `7e1ssfst7lv1u33po9rjnb79ok` (scheduled 18:30 MT today; event date 2026-05-28; window open ~Thu 2026-06-11; no disposition; mandatory criterion-1 mcap gate in event description)
+
+**Position coverage confirmed:**
+- HCA (B): time-based exit/convergence-check `u9l9544ighc4d9o1l44u7pr0uc` 2026-06-26 ✓
+- ZBRA (B): mid-window pulse-check `6p9eotfrdd0eae2pvoccrbj95o` 2026-06-09 ✓; time-based exit `b2gka8hncerbnfh6m9j2hq4k2g` 2026-07-13 ✓
+- BRC (B): time-based exit `sli3tl3msrhsuq731apqg7s9io` 2026-07-21 ✓
+- TJX (B): time-based exit `0g1smg50pf89jo3or6ompaht4o` 2026-07-24 ✓
+- AZO (B): time-based exit `c198nmdf8quptsc4kvt7pvoq58` 2026-07-24 ✓
+- RTX/DIS (D long-horizon): D1 daily coverage ✓ (no specific checkpoint events needed)
+- FOMC June C thesis: `7pbkg1kh2pge7midfiqnj6edvk` 2026-06-08 ✓
+No ORDER-STAGED positions. No research-deferral flags.
+
+**File writes:** Portfolio_Ledger.md Last updated line updated. Decision_Log.md (this entry).
+
 **File writes:** Portfolio_Ledger.md [Strategy B] META section header updated CLOSED; EXIT-PENDING bullet replaced with CLOSED fill note; closed-trade Trade #2 META detail block added; closed trades at-a-glance table updated (IBM #1 + META #2); Strategy B portfolio state updated (open count 6→5, sector cap Comm Services 1/3→0/3); Last updated header updated. Decision_Log.md (this entry).
