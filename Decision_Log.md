@@ -11147,3 +11147,98 @@ No ORDER-STAGED positions. No research-deferral flags.
 **File writes:** Portfolio_Ledger.md Last updated line updated. Decision_Log.md (this entry).
 
 **File writes:** Portfolio_Ledger.md [Strategy B] META section header updated CLOSED; EXIT-PENDING bullet replaced with CLOSED fill note; closed-trade Trade #2 META detail block added; closed trades at-a-glance table updated (IBM #1 + META #2); Strategy B portfolio state updated (open count 6→5, sector cap Comm Services 1/3→0/3); Last updated header updated. Decision_Log.md (this entry).
+
+---
+
+## 2026-05-28 — Strategy B BSX investor-presentation guidance-cut thesis construction — NO-GO criterion 4 dual-framing decisive failure (HIGH conviction; Sub-Pattern 4 hybrid 4c+4b + 4a regulatory overlay + Pattern N support)
+
+**Trigger:** B-thesis construction for BSX (Boston Scientific Corp, NYSE:BSX) following the management-initiated FY26/Q2 organic-growth guidance cut delivered Wed 2026-05-27 at Bernstein's 42nd Annual Strategic Decisions Conference. Day-0 close-to-close **−12.5%** to ~$50.2 (worst S&P 500 stock on the day; fresh 52-week low; ~$75B mcap). Day-1 (Thu 2026-05-28) continued **−2.68%** to ~$49.11 (no mean-reversion bounce). This session is the re-routed disposition of the missed thesis-construction event `q11247cb4hnvm11i3stodmk8kg` (originally scheduled Wed 5/27 21:30 MT; flagged for D2 re-route across both 2026-05-28 D3 passes; 10-day entry window open through ~Wed 2026-06-10). Session run evening of 2026-05-28 MT (17:30 MT slot; assistant-context `currentDate` 2026-05-29 UTC is the known D3-documented conflict — MT date 2026-05-28 authoritative).
+
+**Primary sources used (retrieved, not recalled — Strategy.md criterion 2):** Yahoo Finance / CoinCentral / TradingPedia / Motley Fool 2026-05-27 event coverage (Bernstein-conference guidance cut; intraday low $50.75 = 52-wk low); GuruFocus / QuiverQuant (WATCHMAN demand slowdown; EP + Urology weakness); Trefis 2026-05-28 "BSX Stock: Don't Try To Catch The Falling Knife"; Investing.com (Leerink WATCHMAN PT cut); post-event sell-side wires (Daiwa OP→Neutral $83→$60; BofA $105→$68; Citi $87→$70; Stifel $85→$75; Wells $55; Barclays $89 stale-high outlier); retrieved comparable base rate (GE HealthCare −13.2% guidance-cut; Medtronic ~−13%/30d to 52-wk low on FY26 EPS cut; Stryker −6.47% but HELD guidance); Daily.md 2026-05-28 D1/D2 (Day-1 −2.68% structural-overhang reinforcement; lines 44/117); Regime_State.md (router); Portfolio_Ledger.md (book/NAV/sector caps); B_Sub_Pattern_Taxonomy.md (sub-pattern routing).
+
+---
+
+### STEP 1 — Sector check
+
+BSX GICS Health Care / Health Care Equipment & Supplies (351010). Current B Health Care count: **1/3 (HCA — Health Care Providers & Services / Health Care Facilities)**. Adding BSX → 2/3. Sector cap does NOT bind (2/3 < 3/3). ✓ (Non-binding; disposition rests on criterion 4.)
+
+**Open position count at session:** HCA + ZBRA + BRC + TJX + AZO = 5 concurrent (META CLOSED 5/28 @ $641.20; IBM CLOSED 5/27). No total-position cap per Strategy.md / Operating_Protocols §10. B NAV ~$1,882–1,890 (last hard mark $1,888.69 on 5/7; approximately NAV-flat through 2%-sized rotations + META convergence gain). 2% sizing ≈ $37.7 — MOOT (NO-GO).
+
+---
+
+### STEP 2 — Full criteria walk
+
+**Criterion 1 — Public event ≥5% close-to-close within 10 trading days:**
+- Event: management-initiated FY26/Q2 organic-growth guidance cut, Bernstein Strategic Decisions Conference, Wed 2026-05-27. Event-type eligibility: Strategy.md Strategy B thesis explicitly enumerates "**guidance update**" among admissible public events (alongside earnings, FDA decision, regulatory action) → **eligible**. ✓
+- Day-0 C/C: **−12.5%** to ~$50.2 (52-wk low) — 2.5× the 5% floor. ✓
+- Instrument eligibility: US-listed common equity NYSE ✓; mcap ~$75B ≫ $2B floor (37.5× cushion) ✓; blue-chip ADV ≫ $10M ✓; long eligible ✓.
+- Window: Wed 5/27 event → 10 trading days → closes ~Wed 2026-06-10; session 5/28 well inside. ✓
+- **Criterion 1: CLEARS.** ✓
+
+**Criterion 2 — Narrative synthesis (over/under-sized? grounded in retrieved comparables):**
+Event substance (primary sources): FY26 organic-growth guide cut to **6.5–8%** (from ~10–11% organic framework / ~9% working assumption); Q2 organic **5–7%**. Three named weakness areas: **electrophysiology (EP)** — share loss to competitor launches; **WATCHMAN** — standalone procedure volumes declining for the first time, starting February 2026; **Urology** — softness. Overlay: ongoing **FDA Class I recall (ACCOLADE pacemakers)**. Q1 2026 fundamentals were clean (the cut is forward-looking, not a backward miss).
+Prima-facie LONG hypothesis (contrarian): −12.5% to a 52-wk low on a quality $75B med-device compounder may overshoot a "temporary demand normalization."
+Retrieved comparable base rate — **does NOT support an oversized-reaction conclusion**:
+- **GE HealthCare −13.2%** on an FY26 guidance cut — comparable magnitude, no snap-back.
+- **Medtronic ~−13% over 30 days** on an FY26 EPS guide cut + multi-firm PT reductions, drifting to a **52-week low** — i.e., large-cap med-device guidance cuts produce **sustained decline, not 60-day mean-reversion**.
+- **Stryker −6.47%** on a Q1 cyberattack but **HELD** full-year guidance — the contrast case: when guidance is NOT cut, the drop is smaller and categorically different.
+The retrieved analogues align with the taxonomy's CHTR finding ("adjacent-range analogues drift down") and contradict the oversized-reaction hypothesis. → **Criterion 2 NOT-SATISFIED for a LONG (reaction is information-consistent, not demonstrably oversized); binding adjudication deferred to criterion 4.**
+
+**Criterion 3 — Convergence target (closed list rev 14) — walk all 6 named-event types:**
+1. "next earnings release" — BSX Q2 2026 (~late July; last quarter reported Apr 22 → Q2 cadence ~Jul 22–29). 60-day window = 2026-05-27 + 60 cal = 2026-07-26 (last trading day Fri 7/24). Q2 print at/just outside boundary → **INADMISSIBLE** (and a fresh post-event trigger, not a convergence marker).
+2. "next FDA decision date" — the ACCOLADE Class I recall is an ongoing overhang, not a pending approval-decision date with a catalyst → **INADMISSIBLE (N/A)**.
+3. "next FOMC meeting" — Jun 16–17 in-window BUT BSX repricing is idiosyncratic/company-specific (EP/WATCHMAN/Urology + recall); rate path mechanism-mismatched → **INADMISSIBLE per mechanism-mismatch doctrine** (STLA/TSN precedent).
+4. "S&P 500 inclusion" — BSX already a constituent → **INADMISSIBLE**.
+5. "Russell 1000 inclusion" — BSX already a constituent → **INADMISSIBLE**.
+6. "Nasdaq 100 inclusion" — BSX is NYSE-listed (Nasdaq 100 = Nasdaq-listed only) → **INADMISSIBLE**.
+Numerical price level (25% gap-fill, ZBRA/BRC/TJX/AZO template): post-event freshly-cut PT cluster {Wells $55, Daiwa $60, BofA $68, Citi $70, Stifel $75} median **$68**; from Day-0 ref ~$50.2: $50.2 + 0.25×($68−$50.2) = **~$54.65** (indicative $TARGET; ~$53.83 from Day-1 $49.11).
+**Criterion 3: technically SATISFIABLE via the numerical target only (~$54.65); all six named-event targets inadmissible. BUT no in-window convergence catalyst exists and the structural deceleration argues the gap should NOT fill within 60 days → the numerical target lacks a convergence mechanism. Not independently disqualifying, but reinforces criterion 4.** (Derived $TARGET recorded for completeness; MOOT under NO-GO.)
+
+**Criterion 4 — Adversarial dual-framing (LONG and SHORT) — BINDING DISPOSITION:**
+
+*Sub-pattern routing (B_Sub_Pattern_Taxonomy.md):*
+- **Sub-Pattern 4 (Structural-Overhang-Persistence) — FIRES (primary).** Hybrid: **4c (guide-cut mechanism** — hard FY26 organic-growth cut, NCLH-analogue) + **4b (competitive-threat** — EP share loss to competitor launches surfaced/confirmed at a non-print investor-conference catalyst, UPS-analogue) with a **4a-style regulatory overlay** (FDA Class I ACCOLADE recall, V-analogue). Drivers (EP competitive share loss; WATCHMAN demand normalization underway since February; Urology softness; recall) require multi-quarter operating data to refute — definitively outside the 60-day window.
+- **Pattern N (Negative-Direction Information-Confirmed-by-Cross-Section, CHTR-analogue) — SUPPORTS.** EP market-share LOSS to named competitor launches is cross-sectional peer-divergence evidence (competitors gaining where BSX loses) confirming BSX-specific information-driven repricing rather than sentiment overshoot; reinforced by WATCHMAN's first-ever volume decline (company-specific demand inflection).
+- Sub-Patterns 1, 3, 6, 7 (positive-direction / pre-print-rally / sell-side-cut-bounce) DO NOT APPLY (negative-direction guidance-cut event). Sub-Pattern 5 (in-window binary catalyst) DOES NOT APPLY (FOMC mechanism-mismatched; no BSX binary in-window).
+
+*LONG-framing decisive-flaw search (task L1–L5):*
+- **(L1) Structural-overhang-persistence** — WATCHMAN demand slowdown (volumes declining since Feb) + EP competitive share loss are multi-quarter structural, not a 60-day-reverting blip → **DECISIVE** (core Sub-Pattern 4).
+- **(L4) Guidance cut delivers genuine forward information** — a management-initiated FY26+Q2 guidance cut is information-driven by definition; per Strategy.md criterion 4, if information-driven the "mispricing" is correct repricing → **DECISIVE** (co-decisive with L1; this IS the criterion-4 test). Canonical KL #2.20 textbook-rational-trap binding (buying a quality compounder on the dip expecting reversion = the exact instinct the strategy is penalized on).
+- **(L2) FDA Class I ACCOLADE recall** — ongoing regulatory headwind, multi-quarter, not resolving in-window → **COMPOUNDING**.
+- **(L3) Sell-side re-rating in progress** — Daiwa OP→Neutral $83→$60, BofA $105→$68, Citi $87→$70, Stifel $85→$75, Wells $55, Leerink cut: active downward re-rating, no stabilization → removes any near-term convergence catalyst → **COMPOUNDING**.
+- **(L5) Day-1 continuation (−2.68%, fresh 52-wk low, no bounce)** — empirical evidence against LONG mean-reversion; market absorbing as information, not overshooting on sentiment → **COMPOUNDING**.
+- **LONG verdict: DECISIVE FLAW PRESENT (L1 + L4 decisive; L2/L3/L5 compounding). LONG FAILS.**
+
+*SHORT-framing decisive-flaw search (task S1–S3; confirms neither direction is clean = correctly-priced, no asymmetric anchor):*
+- **(S1) 52-week low on still-positive organic growth (6.5–8%)** — shorting after −12.5% to a 52-wk low with still-positive growth lacks downside-overshoot asymmetry; relief-bounce risk on any stabilization → **DECISIVE (against SHORT)**.
+- **(S2) B-short string ~38 consecutive criterion-4 SHORT-direction dismissals** in the current risk-on regime (market at fresh record highs, VIX 15.85) — very high regime prior against a SHORT GO → **COMPOUNDING (against SHORT)**.
+- **(S3) +25% SHORT stop ≈ $61.4** (from ~$49.11) — within reach of a quality-franchise relief bounce; whipsaw/squeeze risk → **COMPOUNDING (against SHORT)**.
+- **SHORT verdict: DECISIVE FLAW PRESENT (S1 decisive; S2/S3 compounding). SHORT FAILS.**
+
+**Criterion 4: FAILS — decisive flaw in BOTH framings. The reaction is information-driven structural-overhang repricing (Sub-Pattern 4 hybrid + Pattern N), not sentiment overshoot; no asymmetric mean-reversion anchor in either direction within the 60-day window.** Binding disposition.
+
+**Criterion 5 — No concurrent A position in BSX:** A router = DO-NOT-ACTIVATE (Regime_State.md; SPY Trend NEUTRAL, first clause "SPY Trend = UP" fails). No A positions open; BSX not on A queue; no BSX D position (D book = RTX + DIS). **Criterion 5: CLEARS.** ✓ (Non-binding given criterion 4.)
+
+---
+
+### Regime context (reinforces information-driven characterization)
+Strategy B router = ACTIVATE (SPY Trend NEUTRAL ≠ DOWN; VIX NORMAL 15.85 ≠ HIGH) — this is a substantive criterion-4 NO-GO, not a router no-trade. Tape: S&P 500 / Nasdaq fresh record closes (3rd straight session), VIX multi-week low. A single name dropping −12.5% to a 52-wk low against record index highs is unambiguously idiosyncratic/information-driven — not a macro selling cascade (the regime carve-out the router screens for). Independently corroborates L1/L4 and S2.
+
+---
+
+### Conviction calibration (Operating_Protocols §8 ladder)
+NO-GO conviction: **HIGH — 75 (coarse-ladder cap) / ~85% uncapped.** Supports: (a) confirmed multi-instance Sub-Pattern 4 match (V/MDLZ/UPS/NCLH/TSN/INTU lineage) — taxonomy assigns confirmed sub-patterns 85–95% NO-GO conviction; (b) independent retrieved comparable base rate (GEHC −13% / MDT −13%-to-52-wk-low, both sustained, no reversion); (c) Day-1 no-bounce empirical confirmation; (d) active downward sell-side re-rating removing convergence catalyst; (e) Pattern N cross-sectional support (EP share loss to competitors). Comparable to CHTR (quadruple-support); marginally stronger than TSN (~80–85%) given the explicit guide-cut + competitive + regulatory triple-overhang plus the clean retrieved analogue base rate. Genuine-disconfirmation discipline: the contrarian "quality compounder overshoot" thesis was entertained at criterion 2 and DEFEATED by retrieved comparables + the structural/forward-guidance nature of the event — not pattern-matched away.
+
+---
+
+### NO-GO decision — no order staged
+**DECISION: NO-GO — criterion 4 dual-framing decisive failure. HIGH conviction (75 / ~85%).**
+- **No order staged. No portfolio-state change.** No convergence target adopted (derived $54.65 indicative only, MOOT). No time-based exit, no invalidation criteria (GO-only).
+- **Distinction from recent B GO undershoot-anchor longs (TJX/BRC/AZO/ZBRA):** those were beat-and-RAISE prints where the stock fell despite GOOD news (under-reaction to positives = undershoot anchor). BSX is the categorical opposite — a guide CUT where the stock fell on genuinely negative forward information (correct reaction to negatives = structural overhang). Not a comparable setup; do NOT route BSX against the TJX/AZO undershoot template. (Note: same-day BURL −7–8% on a beat-and-raise IS a TJX-style undershoot candidate — opposite mechanism to BSX.)
+- Window remains open through ~Wed 2026-06-10; criterion-4 information-driven characterization unlikely to flip on re-examination of the same data within the window (Operating_Protocols §3/§9 — no re-deferral; routine Daily.md scan auto-detects any fresh trigger such as a follow-on 8-K, recall resolution, or a materially different stabilization signal).
+
+**B experiment totals (estimated; exact pending W5 reconciliation):** ~7 GO + ~49 NO-GO (from ~7 GO + ~48 NO-GO post-AZO 2026-05-27) → ~12.5% / ~87.5% GO rate. **B-short string extends ~38 → ~39** (BSX SHORT-framing criterion-4 dismissal; per MNDY-precedent convention a both-framings-dismissed NO-GO extends the string). **Long-direction Sub-Pattern 4 advances to ~7th instance** (V/MDLZ/UPS/NCLH/TSN/INTU/+**BSX**) — flagged for W5 taxonomy extraction as the first 4c+4b+4a triple-overhang non-print-catalyst (investor-conference guidance-cut) instance with Pattern-N cross-sectional support; candidate new variant **4e — investor-conference-guidance-cut-on-competitive+demand+regulatory-triple-overhang** (pending 2nd-instance validation).
+
+**File writes:** Decision_Log.md (this entry) only. No Portfolio_Ledger.md change (NO-GO — no position). Calendar: BSX thesis-construction event `q11247cb4hnvm11i3stodmk8kg` now dispositioned NO-GO (next D3 hygiene pass deletes the fired event on finding this Decision_Log disposition; no execution/screenshot events created — GO-only).
+
+**Compaction-survival note:** BSX 2026-05-27 guidance-cut NO-GO is a clean Sub-Pattern 4 (structural-overhang-persistence) decision — do NOT re-open within the 5/27 window absent a materially new catalyst (follow-on 8-K, recall resolution, or a stabilization print). Decisive basis: criterion 4 information-driven repricing (guide cut + EP competitive share loss + WATCHMAN demand inflection + ACCOLADE recall), corroborated by the GEHC/MDT retrieved comparable base rate showing med-device guidance cuts sustain rather than revert. A future BSX trigger is context (Operating_Protocols §3 NO-GO-is-not-a-barrier), not a barrier.
