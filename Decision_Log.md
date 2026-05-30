@@ -11291,3 +11291,59 @@ NO-GO conviction: **HIGH — 75 (coarse-ladder cap) / ~85% uncapped.** Supports:
 **No missing events** for confirmed-open positions (subject to BURL fill-capture resolution creating the time-based exit event).
 
 **File writes:** Decision_Log.md (this entry). Portfolio_Ledger.md Last updated line updated.
+
+---
+
+## 2026-05-29 — Strategy B AEO Q1 FY26 thesis construction — NO-GO at MANDATORY sector-cap gate (Consumer Discretionary 3/3 AT CAP: TJX + AZO + BURL-staged; AEO would be 4/3 OVER CAP; terminated before criteria 1–5)
+
+**Trigger:** B-thesis construction for AEO (American Eagle Outfitters, NYSE:AEO), LONG direction — disposition of calendar thesis event `uitf6n4porkr76lb56gs0uqgu8` (2026-05-29 17:30–19:00 MT slot; in-window per the 2026-05-29 18:33 MT D3 hygiene pass). Session run evening MT 2026-05-29; assistant-context `currentDate` 2026-05-30 is the standing UTC↔MT date conflict (MT date authoritative, per the BSX 2026-05-28 precedent). Candidate per Daily.md 2026-05-29 D2 conversion: Q1 FY26 print AMC Thu 2026-05-28; Day-0 Fri 2026-05-29 close-to-close ≈ **−11.83%** (D2 figure; Daily.md headline cited −11.97% — minor magnitude discrepancy, MOOT under this disposition) to $15.78–$15.80; 10-trading-day entry window from 2026-05-29, closing ~Thu 2026-06-12; claimed mcap ~$2.7B (~35% cushion above the $2B floor — NOT verified this session; see disposition). Consumer-stress specialty-retail cluster same day: ANF −6.04%, CPRI −7.35%, CTRN −8.81%. Candidate routing flags carried in (sub-pattern-8 third-instance-candidate; sub-pattern-4 SHORT-family) — **NOT reached; MOOT** under a sector-cap-gate termination.
+
+**Sources read (session start; Operating_Protocols §7 Daily/Weekly read scope = live Decision_Log + factbases):** Strategy.md (Strategy B: sector cap = 3 per GICS sector, no total-position cap); Operating_Protocols.md (§3 NO-GO-is-context; §9 deferral discipline; §10 the per-GICS-sector cap of 3 is the *only* B position limit); Portfolio_Ledger.md (open B book; Consumer Disc sector state; BURL integrity anomaly in the 2026-05-29 Last-updated header); Decision_Log.md (live — 2026-05-29 D3 Calendar Hygiene BURL flags #1/#2 + integrity-anomaly note; recent TJX/AZO/BURL/BSX B entries); Daily.md 2026-05-29 (AEO candidate; Consumer Disc dispersion; BKE deconfliction lines 144/178); B_Sub_Pattern_Taxonomy.md (sub-pattern routing — not reached). Regime_State.md not separately re-read (router = B ACTIVATE confirmed; non-binding under a sector-cap gate).
+
+---
+
+### STEP 1 — MANDATORY sector-cap check (FIRST STEP; DISPOSITIVE — terminates session)
+
+AEO GICS = **Consumer Discretionary** (25) / Consumer Discretionary Distribution & Retail / Specialty Retail / **Apparel Retail (25504030)** — same GICS *sector* cap-pool as TJX (Apparel Retail), AZO (Automotive Retail), and BURL (off-price Apparel Retail). Strategy.md cap = **3 concurrent positions per GICS sector** (no total-position cap; Operating_Protocols §10).
+
+**Consumer Discretionary slot census at session:**
+- **TJX** — OPEN (filled 2026-05-26 @ $158.50; Apparel Retail). **Slot 1.**
+- **AZO** — OPEN (filled 2026-05-27 @ $3,110.69; Automotive Retail). **Slot 2.**
+- **BURL** — GO disposition 2026-05-28 (off-price Apparel Retail); **$303.00 limit BUY DAY order placed Fri 2026-05-29** (execute-order event `tct55jmlbjfm0222o7dun67vns` marked "(done)"); convergence target $313.71. **Slot 3** — status determined below.
+
+**BURL status determination (the binding question).** The fill-capture reconciliation that would have resolved BURL (event `re0irs9o1rcrg0c98rh9ranih0`, scheduled 2026-05-29 14:30 MT) was **MISSED** — no operator IBKR screenshot, so the fill is unconfirmed. The 2026-05-28 BURL thesis session also suffered a **partial write/commit failure** (integrity anomaly per 2026-05-29 D3): NO Decision_Log BURL GO entry and NO Portfolio_Ledger BURL ORDER-STAGED section exist; reconstruction parameters live only in the execute-order event description (convergence $313.71, limit $303.00 DAY, order day 2026-05-29). Against the sector-cap-check decision tree:
+- **Branch 1 — OPEN (filled):** the $303.00 DAY limit fills if Fri opened/traded ≤$303.00 (Thu close ≈$300.5; a near-flat open fills at/near the open). → Consumer Disc 3/3 → AEO 4/3 OVER CAP → **NO-GO**.
+- **Branch 2 — ORDER-STAGED (unfilled/pending):** framework's own 2026-05-29 D3 assessment is "**likely no fill**" — BURL gapped to $323.54 (+7.66% Day-1), above the $303.00 limit AND above the $313.71 convergence target. Per the prompt rule, a staged order is an intended entry → **treat as consuming the sector slot** → Consumer Disc 3/3 → AEO 4/3 OVER CAP → **NO-GO**.
+- **Branch 3 — CANCELLED/WITHDRAWN:** would free the slot (Consumer Disc → 2/3) and permit AEO at 3/3. **This state requires an AFFIRMATIVE cancellation/withdrawal that HAS NOT OCCURRED** — the reconciliation was missed, so BURL has not been moved to CANCELLED.
+
+**Determination: BURL is in Branch 1 (OPEN) or Branch 2 (ORDER-STAGED-unfilled); it is NOT in Branch 3 (CANCELLED).** Both live states consume the 3rd Consumer Discretionary slot, so the NO-GO is **robust to the unresolved fill status** (filled→OPEN→slot consumed; or not-filled→staged-unfilled→slot consumed). Only an affirmative cancellation — not yet performed — would free the slot.
+
+**→ Consumer Discretionary = 3/3 AT CAP (TJX + AZO + BURL). AEO entry would be the 4th = 4/3 OVER CAP → VIOLATES Strategy.md sector cap. NO-GO. Session terminates at the sector-cap gate; criteria 1–5 NOT constructed** (parallel to AGL 2026-05-14 terminating at the criterion-1 instrument-rule gate before criteria 2–5).
+
+**Open B book at session:** HCA + ZBRA + BRC + TJX + AZO = 5 confirmed OPEN + BURL (staged, slot-consuming). No total-position cap (Operating_Protocols §10). 2% sizing MOOT (NO-GO; no order).
+
+---
+
+### Disposition — NO-GO on sector cap; no order staged
+
+**DECISION: NO-GO — Consumer Discretionary sector cap binds (3/3 AT CAP; AEO = 4/3 OVER CAP). Terminal for the AEO Q1 FY26 trigger (no re-defer, per the session prompt + Operating_Protocols §9).**
+- **No order staged. No portfolio-state change. No calendar events created** (execute-order / fill-capture / time-based-exit are GO-only). No convergence target adopted. **No mcap verification performed** (the sector-cap gate precedes criterion 1; the ~$2.7B / ~35%-cushion claim is UNVERIFIED and MOOT). No sub-pattern routing resolved (sub-pattern-8 third-instance-candidate + sub-pattern-4 SHORT-family flags NOT reached — MOOT). No SHORT-framing evaluation (terminated before direction analysis).
+- **FIRST sector-cap-gate NO-GO in the Strategy B experiment.** All prior B NO-GOs failed at criterion 1 (mcap-mechanical), criterion 3 (absent target), or criterion 4 (decisive flaw). The Consumer Discretionary cap has never bound before (sectors were ≤2/3); Operating_Protocols §10 (2026-05-24) confirms the per-GICS-sector cap of 3 is the *only* B position limit, now binding for the first time.
+
+**Decisive dependency + flags (documentation, NOT a re-defer):**
+1. **BURL integrity anomaly is the binding input.** This NO-GO rests on BURL occupying the 3rd Consumer Disc slot. The BURL fill-capture reconciliation (operator IBKR screenshot → resolve OPEN vs CANCELLED) remains the outstanding item and must still write the missing BURL Decision_Log GO entry + Portfolio_Ledger ORDER-STAGED section (per 2026-05-29 D3 flag #1). It is owned by the BURL fill-capture session, not this AEO session.
+2. **Daily.md 2/3-vs-3/3 inconsistency.** Daily.md 2026-05-29 (lines 144/178) treated Consumer Disc as **2/3 (TJX + AZO; BURL NOT counted)** and contemplated AEO/BKE competing for the 3rd slot. The AEO thesis prompt's sector-cap check explicitly **counts BURL** (a staged order is an intended entry). I applied the prompt's explicit, more-recent, BURL-aware rule. Root cause of the inconsistency = the unreconciled BURL state; flagged for W5.
+3. **BKE (Strategy B; thesis event `45i9k28aknjk6ameq5rm5veq3c`, 2026-06-01) faces the SAME gate.** BKE is also Consumer Discretionary (Apparel Retail). With Consumer Disc at 3/3 (incl. BURL), BKE is likewise blocked (would be 4/3). The BKE disposition is contingent on the BURL reconciliation: BURL→CANCELLED frees the slot (BKE could take 3/3); BURL OPEN/staged → BKE NO-GOes on the same cap. The BKE session must run STEP 1 sector-cap check and resolve BURL before any criteria work.
+4. **Conditional, NOT a deferral.** The AEO Q1 FY26 trigger is terminally dispositioned NO-GO on present portfolio state — I am deciding now, not holding. IF a subsequent BURL reconciliation frees the slot (BURL → CANCELLED → Consumer Disc 2/3) while AEO is still in-window (≤~2026-06-12), that freed slot is a NEW portfolio-state event a future session could weigh under Operating_Protocols §3 (NO-GO-is-context-not-barrier) — a fresh trigger, not a re-defer of this decision.
+
+### Conviction calibration (Operating_Protocols §8)
+
+**NO-GO conviction: HIGH (~90%).** The sector-cap rule is unambiguous (Strategy.md, 3/GICS sector). The NO-GO is robust to the unresolved BURL fill status because BOTH live BURL states (OPEN, or ORDER-STAGED-unfilled) consume the 3rd Consumer Disc slot under the prompt's decision tree; only an affirmative CANCELLED state (not yet performed) would free it. Residual ~10% reflects the alternative reading that an expired-DAY-order + thesis-invalidation (close $323.54 > convergence $313.71) should be auto-treated as withdrawn absent a formal reconciliation — but the prompt's branch 2 explicitly routes "unfilled" staged orders to slot-consuming, which governs. Not a criterion-4 analytical-uncertainty NO-GO; a structural-gate disposition (cf. AGL ~99% mechanical, here slightly lower owing to the unreconciled-input dependency).
+
+### Compaction-survival note
+
+**Strategy B AEO Q1 FY26 LONG disposition 2026-05-29 (evening MT): NO-GO at the MANDATORY sector-cap gate — Consumer Discretionary 3/3 AT CAP (TJX + AZO + BURL-staged); AEO would be 4/3 OVER CAP.** Terminated before criteria 1–5; no order, no calendar events, no portfolio change. Binding input = BURL occupies the 3rd Consumer Disc slot (it is OPEN or staged-unfilled; NOT affirmatively cancelled). The BURL integrity anomaly (fill-capture missed; GO entry + ORDER-STAGED section never written) is the outstanding item and the root of a Daily.md 2/3-vs-3/3 inconsistency. BKE (2026-06-01) faces the identical gate. A future AEO trigger is context, not a barrier (§3); the current trigger is terminally NO-GO'd, not deferred.
+
+**Experiment Strategy B totals (estimated; standing W5 tally-drift reconciliation flag applies):** AEO advances the NO-GO count by one — from ~7 GO + ~49 NO-GO (post-BSX 2026-05-28) → **~7 GO + ~50 NO-GO** (~12.3% / ~87.7%). GO set unchanged (IBM-closed history + HCA/ZBRA/BRC/TJX/AZO open + BURL-staged). **New NO-GO sub-category: sector-cap structural-gate fail (FIRST instance; distinct from criterion-1 mcap-mechanical and criterion-4-decisive) — flagged for W5 breakdown.** **B-short string UNCHANGED at 38** (this session's prompt figure; ~39 per the BSX 2026-05-28 entry — standing drift) — a sector-cap gate terminates before direction-specific (LONG/SHORT) analysis and does NOT extend the B-short string, exactly parallel to the criterion-1 mechanical-fail precedent (TDOC/FIVN/AGL).
+
+**File writes:** Decision_Log.md (this entry) only. No Portfolio_Ledger.md change (NO-GO — no position, no order, no portfolio-state change; the BURL ORDER-STAGED-section reconstruction remains the BURL fill-capture session's task per 2026-05-29 D3 flag #1). Calendar: AEO thesis event `uitf6n4porkr76lb56gs0uqgu8` now dispositioned NO-GO (next D3 hygiene pass deletes the fired event on finding this disposition; no execution/screenshot events created — GO-only).
