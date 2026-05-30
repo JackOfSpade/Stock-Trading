@@ -11242,3 +11242,52 @@ NO-GO conviction: **HIGH — 75 (coarse-ladder cap) / ~85% uncapped.** Supports:
 **File writes:** Decision_Log.md (this entry) only. No Portfolio_Ledger.md change (NO-GO — no position). Calendar: BSX thesis-construction event `q11247cb4hnvm11i3stodmk8kg` now dispositioned NO-GO (next D3 hygiene pass deletes the fired event on finding this Decision_Log disposition; no execution/screenshot events created — GO-only).
 
 **Compaction-survival note:** BSX 2026-05-27 guidance-cut NO-GO is a clean Sub-Pattern 4 (structural-overhang-persistence) decision — do NOT re-open within the 5/27 window absent a materially new catalyst (follow-on 8-K, recall resolution, or a stabilization print). Decisive basis: criterion 4 information-driven repricing (guide cut + EP competitive share loss + WATCHMAN demand inflection + ACCOLADE recall), corroborated by the GEHC/MDT retrieved comparable base rate showing med-device guidance cuts sustain rather than revert. A future BSX trigger is context (Operating_Protocols §3 NO-GO-is-not-a-barrier), not a barrier.
+
+---
+
+## 2026-05-29 D3 Calendar Hygiene — calendar reconciliation
+
+**Trigger:** D3 Calendar Hygiene routine, 2026-05-29 after market close. MT date anchor: 2026-05-29 18:33 MDT (Bash-derived `TZ=America/Denver date`). Note: assistant-context `currentDate` field returns 2026-05-30 UTC — confirmed conflict (UTC rolled to 5/30 at 18:33 MT 5/29); MT date used per D3 protocol.
+
+**Events walked:** 18 [Claude] events in range 2026-05-29 → 2026-08-28 America/Denver (main query), plus 5 past-fire events checked individually via get_event: ZS `hkfqd7n875dtn6f2e9ds5kjpkk`, BSX `q11247cb4hnvm11i3stodmk8kg`, old-BURL `4c4msin5btl1oto6i81dplsrt0`, PLAB `7e1ssfst7lv1u33po9rjnb79ok`, EL `vg47kl6rjpishqglsvecl8ngj4`. Total: 23 events examined.
+
+**Deleted (1):**
+- BSX thesis `q11247cb4hnvm11i3stodmk8kg` — Decision_Log BSX NO-GO 2026-05-28 exists (criterion-4 dual-framing decisive failure, Sub-Pattern 4 hybrid); disposition confirmed; window 5/27–6/10; event dated 5/27. D3 deletion criterion (a) met.
+
+**EL event already cancelled:** EL thesis `vg47kl6rjpishqglsvecl8ngj4` status = "cancelled" in calendar; no action needed (prior D3 5/26 pass deleted it).
+
+**Missed / flagged events (4) — NOT deleted; windows active or integrity unresolved:**
+
+1. **BURL fill-capture `re0irs9o1rcrg0c98rh9ranih0`** — scheduled 2026-05-29 14:30 MT; now 18:33 MT; PAST-FIRE, NOT reconciled. Portfolio_Ledger last updated 2026-05-28; no BURL fill or cancel entry present. BURL order-execution event is marked "(done)" (title updated to "(done) [Claude] Execute order — BURL BUY" by 22:42 MT 5/28), indicating the order was placed/staged. Human screenshot still needed. **Operator action required: paste IBKR Positions + Trades screenshot into the BURL fill-capture calendar event prompt.** Fill-capture session will resolve: (a) filled → record fill, update Portfolio_Ledger BURL ORDER-STAGED → OPEN, create time-based exit event (~2026-07-27); (b) unfilled/cancelled → update Portfolio_Ledger ORDER-STAGED → CANCELLED per event description instruction (BURL Day-1 gapped to $323.54 above convergence $313.71 — likely no fill).
+
+2. **BURL execute-order `tct55jmlbjfm0222o7dun67vns`** — 2026-05-29 07:00 MT; PAST; "(done)" in title. Order day passed. Per D3 protocol, not deleting until Portfolio_Ledger reconciles fill or cancellation.
+
+3. **ZS thesis `hkfqd7n875dtn6f2e9ds5kjpkk`** — 2026-05-28 17:00–18:00 MT (PAST); "(done)" in title (updated 2026-05-28 20:52 MT); NO Decision_Log ZS GO/NO-GO entry. Window open ~Tue 2026-06-09. Session appears to have run (title marked done) but Decision_Log write appears missing. **Flag for D2 re-route:** D2 to verify via Decision_Log whether a ZS disposition exists (grep/search) and if not, schedule a fresh ZS thesis session before window closes ~Jun 9.
+
+4. **PLAB thesis `7e1ssfst7lv1u33po9rjnb79ok`** — 2026-05-28 18:30–19:30 MT (PAST); "(done)" in title (updated 2026-05-28 20:53 MT); NO Decision_Log PLAB GO/NO-GO entry. Window open ~Thu 2026-06-11. Same situation as ZS. **Flag for D2 re-route:** D2 to verify and schedule fresh PLAB session if no disposition confirmed; PLAB carries mandatory criterion-1 mcap gate (≥$2B post −32% Day-0 — verify before any analysis).
+
+**Integrity anomaly — BURL GO entry missing:**
+- Old BURL thesis session (2026-05-28 ~18:00–21:16 MT): session appears to have run and produced a GO disposition (execute-order `tct55jmlbjfm0222o7dun67vns` + fill-capture `re0irs9o1rcrg0c98rh9ranih0` created at 03:16 UTC = 21:16 MT 5/28; thesis event `4c4msin5btl1oto6i81dplsrt0` marked "(done)" at 20:53 MT). However, Decision_Log has **zero** BURL GO thesis-construction entries, and Portfolio_Ledger has no BURL ORDER-STAGED section. Partial write/commit failure. The fill-capture session (`re0irs9o1rcrg0c98rh9ranih0`) must write both the missing BURL Decision_Log GO entry AND the Portfolio_Ledger ORDER-STAGED section as part of its reconciliation. The execute-order event description contains the thesis parameters (convergence $313.71, limit $303.00 DAY, 2026-05-29 order day) sufficient for the fill-capture session to reconstruct state.
+
+**AEO thesis in-window:**
+- AEO thesis `uitf6n4porkr76lb56gs0uqgu8` — 2026-05-29 17:30–19:00 MT; currently IN WINDOW (18:33 MT). No Decision_Log AEO entry. Session may be in progress. No action; will resolve naturally.
+
+**Position coverage confirmed:**
+- HCA (B): `u9l9544ighc4d9o1l44u7pr0uc` 2026-06-26 ✓
+- ZBRA (B): mid-window `6p9eotfrdd0eae2pvoccrbj95o` 2026-06-09 + exit `b2gka8hncerbnfh6m9j2hq4k2g` 2026-07-13 ✓
+- BRC (B): exit `sli3tl3msrhsuq731apqg7s9io` 2026-07-21 ✓
+- TJX (B): exit `0g1smg50pf89jo3or6ompaht4o` 2026-07-24 ✓
+- AZO (B): exit `c198nmdf8quptsc4kvt7pvoq58` 2026-07-24 ✓
+- BURL (B ORDER-STAGED): execute-order past (fill-capture missed; time-based exit pending fill resolution per above) ← see flag #1
+- RTX/DIS (D long-horizon): D1 daily coverage ✓
+- Strategy C FOMC thesis: `7pbkg1kh2pge7midfiqnj6edvk` 2026-06-08 ✓
+- BKE thesis: `45i9k28aknjk6ameq5rm5veq3c` 2026-06-01 ✓
+- BA re-screen: `r9i6u6mnpk9ukoj2bh15m1fr7c` 2026-06-01 ✓
+- KL #12: `k9vtudr7d40ukto3vfhutcdbls` 2026-06-03 ✓ (self-correcting description)
+- Q1/Q2/Q3/Q4 quarterly events: all 2026-07-01 ✓
+
+**No event descriptions required update** (all content current; KL #12 self-correcting).
+
+**No missing events** for confirmed-open positions (subject to BURL fill-capture resolution creating the time-based exit event).
+
+**File writes:** Decision_Log.md (this entry). Portfolio_Ledger.md Last updated line updated.
