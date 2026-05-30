@@ -3,6 +3,8 @@
 # Weekly Position Deep-Dive — W3
 **ISO Week:** 2026-W22 (Mon 2026-05-25 → Sun 2026-05-31) | **Research as of:** 2026-05-25 (Memorial Day US market holiday; last trading session Fri 2026-05-22; markets reopen Tue 2026-05-26)
 **Scope:** Strategy B open positions — IBM (EXIT-PENDING), HCA, META, ZBRA, BRC — plus TJX (ORDER-STAGED, pre-fill validity check). Strategies A / C / E flat (zero open positions). Strategy D excluded per W3 spec (D reviewed monthly in M4; RTX and DIS not covered here).
+
+> **⚠ Rev 35 cap-removal note (2026-05-30):** Strategy.md rev 35 (owner directive) removes ALL holdings-**count** caps across A/B/C/D, including B's 3-per-GICS-sector cap. References below to the "3-per-GICS-sector B cap" are superseded — concurrent-position correlation is monitored only (KL #12 metric (d)), never capped. Retained: D's 30%-of-NAV sector *exposure* cap, the 2%-per-position size cap, kill triggers. See Decision_Log 2026-05-30 + Operating_Protocols §10.
 **Sources:** Portfolio_Ledger.md (fills + invalidation-criteria status; marks through 2026-05-22 EOD), Decision_Log.md (live, thesis pointers), Strategy.md (B exit rules), Operating_Protocols.md (§3, §8, §10), Regime_State.md; Tavily web research 2026-05-25 (Yahoo Finance, Trefis, TIKR, Bloomberg/Yahoo, Source NM, CNBC, RTTNews, StockStory, Quiver, tickernerd/tickeron, Zebra IR, TJX IR).
 
 > **Data-integrity note:** This file replaces an earlier 2026-W22 draft whose summary table carried entry prices and one share-size that did not match Portfolio_Ledger.md fills. All figures below are taken from the ledger fill records.

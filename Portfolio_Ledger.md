@@ -2,6 +2,8 @@
 
 Per-strategy portfolio state for the AI-directed trading experiment. Tracked externally to IBKR (which does not natively track sub-portfolios). Updated daily (mark-to-market) and on every trade, deposit, termination, or redistribution event per the regular prompts in `Recurring_Claude_Task_Plan.md`.
 
+> **⚠ Rev 35 cap-removal note (2026-05-30):** Per owner directive, Strategy.md rev 35 removes ALL holdings-**count** caps across A/B/C/D — the 3-per-GICS-sector cap (A/B/C) and D's 10-position / max-3-per-theme / max-3-per-correlation-bucket caps. **Any "sector X/3", "N/10", or X-of-N count tracking in this ledger is no longer a cap and must NOT block entries** (e.g., a prior "Consumer Disc 3/3 AT CAP" note is now just a count, not a ceiling). Retained: D's 30%-of-NAV sector *exposure* cap, D's minimum-5 floor, the 2%-per-position size cap, all kill triggers. See Decision_Log 2026-05-30 "Holdings-count caps removed by owner directive" + Operating_Protocols §10.
+
 ---
 
 ## Ledger schema conventions (size-discipline)

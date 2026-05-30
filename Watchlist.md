@@ -2,6 +2,8 @@
 
 State index for AI-directed trading experiment candidates. Complements but does NOT duplicate the calendar-event-based queue used for Strategy B thesis-construction sequencing.
 
+> **⚠ Rev 35 cap-removal note (2026-05-30):** Strategy.md rev 35 (owner directive) removes ALL holdings-**count** caps across A/B/C/D. Dated NO-GO summaries below that cite "IT-sector 3/3 AT CAP", "sector cap", "slot-cap", or "X/N" framing reflect the pre-rev-35 regime — those count caps are removed and are **not active barriers** to re-evaluation (context per Operating_Protocols §3, not a gate). Retained: D's 30%-of-NAV sector *exposure* cap, the 2%-per-position size cap, kill triggers. See Decision_Log 2026-05-30 + Operating_Protocols §10.
+
 **Created**: 2026-05-06 (D2 conversion against Daily.md 2026-05-06).
 
 ---

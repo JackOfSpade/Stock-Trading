@@ -2,6 +2,8 @@
 
 Current regime measurements, per-strategy activation states, and router history for the AI-directed trading experiment. Read by daily scans, weekly research sessions, monthly reviews, and adversarial divergence reviews.
 
+> **⚠ Rev 35 cap-removal note (2026-05-30):** Per owner directive, Strategy.md rev 35 removes ALL holdings-**count** caps across A/B/C/D (3-per-GICS-sector for A/B/C; D's 10-position / theme / correlation-bucket caps). Dated router-history lines below that mention "N/5", "1/3 sector cap", "N/10", etc. are **historical state notes, not active rules** — no count cap applies to any strategy as of rev 35. Retained: D's 30%-of-NAV sector *exposure* cap, D's minimum-5 floor, the 2%-per-position size cap, all kill triggers. See Decision_Log 2026-05-30 + Operating_Protocols §10.
+
 **Last updated:** 2026-04-26 (B and D first trades staged for Mon 2026-04-27 execution; C scaffolding complete; M2 follow-ups for C dispersion-compression and E signal-process tightening initiated this session — see Decision_Log.md 2026-04-26)
 **Next scheduled technical update:** Daily (mechanical, end of each US trading day)
 **Next scheduled fundamental update:** 2026-05-01 (first trading day of May)

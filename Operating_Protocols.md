@@ -214,9 +214,9 @@ When a decision cannot be made because required information is genuinely missing
 
 Claude must **never invent a total concurrent position cap** for any strategy unless that cap is explicitly stated in Strategy.md for that strategy. Operational habit, portfolio monitoring convenience, or analogy to a different strategy's cap are not sufficient grounds to introduce one.
 
-**Strategy B has no total concurrent position cap.** Strategy.md is explicit (rev 7, multiple locations): *"B permits multiple concurrent longs (sector cap is 3 per GICS sector, no total-position cap)."* The only enforced B position limit is the per-GICS-sector cap of 3 concurrent positions. Any entry that passes criteria 1–5 and clears the relevant GICS-sector cap is eligible regardless of how many other B positions are open.
+**Strategy B has no position caps of any kind (Rev 35 update).** As of Strategy.md rev 35 (2026-05-30, owner directive), the per-GICS-sector cap of 3 concurrent B positions is **removed**, on top of the (never-existent) total-position cap. There is now **no holdings-count limit on B at any level** — not total, not per-sector. Any entry that passes criteria 1–5 is eligible regardless of how many other B positions are open or how many are already in the same GICS sector. *(Prior rev 7–34 text — "B permits multiple concurrent longs (sector cap is 3 per GICS sector, no total-position cap)" — is superseded on its sector-cap clause by rev 35.)* Concurrent-position correlation is handled by **monitoring only** (KL #12 metric (d), below), never by a cap.
 
-**Do not express concurrent position counts as X/N** (e.g., "4/5", "5/5") when N is not a cap defined in Strategy.md. If tracking the count is useful, write it as an absolute count ("4 concurrent open B positions") against the actual sector caps, not against an invented ceiling.
+**Do not express concurrent position counts as X/N** (e.g., "4/5", "5/5", or "3/3" for a sector) when N is not a cap defined in Strategy.md. As of rev 35 there is **no** B holdings-count cap at any level, so no X/N framing is valid for B. If tracking the count is useful, write it as an absolute count ("4 concurrent open B positions; 2 in Apparel Retail"), not against any ceiling.
 
 **Slot-gate protocols, slot-contingent staging, and slot-saturation language are prohibited** unless rooted in a Strategy.md-defined cap.
 
@@ -228,10 +228,11 @@ Strategy.md Section 6 defines two monthly monitoring checks (not entry gates):
 
 - **(b) Long exposure > 10% of strategy portfolio** — this is a count-based proxy that fires when ≥6 positions are open at 2% each. It does not independently measure risk. The 2% entry cap already bounds per-trade downside; more *uncorrelated* positions add diversification, not risk. The 10% flag is only meaningful insofar as it prompts checking metric (d). **It is not an entry gate and must not be treated as a position limit.** Claude must not decline or defer a GO entry because open long exposure approaches or exceeds 10%.
 
-The correct operational read: enter every thesis that clears criteria 1–5 and sector cap; check metric (d) at each monthly review; flag only if average pairwise correlation exceeds 0.5.
+The correct operational read: enter every thesis that clears criteria 1–5 (no sector or total count cap applies as of rev 35); check metric (d) at each monthly review; flag only if average pairwise correlation exceeds 0.5.
 
 **Revision history:**
 - 2026-05-24: Protocol established after audit found a false "5-concurrent-cap" had been introduced by Claude in commit 718204a (ZBRA fill capture 2026-05-14) with no Strategy.md basis and no documented rationale. Cap was removed from all operational documents. → User instruction 2026-05-24.
+- 2026-05-30: Per owner directive, Strategy.md rev 35 removes ALL holdings-count caps across A/B/C/D — including B's per-GICS-sector cap of 3 (the one cap the 2026-05-24 cleanup had retained). §10 updated: B now has no count cap at any level; KL #12 metric (d) pairwise-correlation monitoring is the sole concurrent-position-correlation control. D's 10-position/theme/correlation-bucket count caps are likewise removed (D's 30%-of-NAV exposure cap and minimum-5 floor retained). → Decision_Log 2026-05-30 "Holdings-count caps removed by owner directive"; User instruction 2026-05-30.
 
 ---
 

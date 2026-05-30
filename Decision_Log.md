@@ -11408,3 +11408,26 @@ The sector-cap call required resolving BURL's status, which the live files left 
 **File writes:** Decision_Log.md (this entry). Portfolio_Ledger.md (Last updated header; PROVISIONAL BURL OPEN section added; May 29 activity-log line reconciling Consumer Disc → 3/3 and open count → 6) — the BURL writes are the integrity reconciliation, NOT a BKE position. No calendar writes.
 
 **Compaction-survival note:** BKE 2026-05-29 Q1 beat-and-fade = NO-GO on the MANDATORY STEP 2 sector-cap gate (Consumer Disc 3/3 AT CAP: TJX + AZO + BURL; BKE the 4th). Mcap gate PASSED (~$2.33B). The load-bearing finding: **BURL FILLED 5/29 at ≈ $300.60** (open $300.60 < $303 DAY limit; low $297.35) — the D3 "likely no fill" assumption misread the $323.83 close. BURL is OPEN and has already hit convergence ($313.71; closed $323.83) → **BURL convergence exit is DUE**, owed to the fill-capture session on the IBKR screenshot. AEO 5/29 independently NO-GO'd on the same Consumer Disc 3/3 cap (Decision_Log 2026-05-29 AEO entry) — corroborates. Cap rule is GICS-*sector*-level (the 2026-05-02 LLY "sub-industry" phrasing is superseded). Do NOT re-open BKE within the 5/29 window absent a freed Consumer Disc slot (BURL exit) + a fresh Daily-scan trigger.
+
+---
+
+### [2026-05-30] Framework-change / strategy-design — Holdings-count caps removed by owner directive
+
+**Trigger:** Owner instruction (2026-05-30). After the BKE 2026-05-29 NO-GO fired on the Consumer Discretionary 3/3 per-GICS-sector cap, the owner stated the intent was "unlimited holdings per strategy" and directed: *"Alter Strategy.md and any other files that sets a cap on how many holdings per strategy."* Scope confirmed via AskUserQuestion (owner selected the cross-strategy option over B-only).
+
+**Inputs:** Strategy.md rev 34 cap statements across A/B/C/D; Operating_Protocols §10 (B cap interpretation + 2026-05-24 history, where a false 5-cap was removed but the per-sector 3-cap was deliberately retained); the BKE 2026-05-29 and AEO 2026-05-29 NO-GO entries (both fired on the Consumer Disc 3/3 sector cap, mechanical STEP-2 gate, criteria 2–5 never reached); AI_Trading_Foundation 2.8 (homogenization), B KL #12, D KL #13.
+
+**Decision:** Removed ALL holdings-**count** caps across Strategies A, B, C, D, implemented as Strategy.md **rev 35** (owner-directed revision overriding the immutability convention by explicit authorization):
+- (A / B / C) 3-concurrent-positions-per-GICS-sector count cap — **removed**.
+- (D) 10-position hard cap — **removed** (minimum-5 floor **retained**).
+- (D) max-3-positions-per-narrative-theme cap — **removed**.
+- (D) max-3-positions-per-(>0.6 trailing-correlation)-bucket cap — **removed**.
+- **RETAINED** (exposure/size controls or floors, NOT holdings-count caps): the 2%-per-position size cap (all strategies); D's 30%-of-NAV per-GICS-sector **exposure** cap; D's minimum-5-position floor; all per-trade stop/invalidation rules; the experiment-level capital-preservation kill triggers (Experiment_Parameters.md).
+
+**Reasoning:** Owner directive. The removed caps were the at-entry flowing limitations for 2.8 (homogenization) and the concurrent-position-correlation Known Limitations (B KL #12, D KL #13). Their removal converts the correlated-drawdown / crowding risk they partially bounded into an **accepted residual, monitored-only**: B Section 6 KL #12 metric (d) average pairwise daily-return correlation (> 0.5 flag) and D Section 4/6 theme-/correlation-monitoring remain as *detection* signals but no longer block entries; the 2%-per-position magnitude cap and the experiment-level kill triggers remain the residual bounds. Owner has accepted this risk. Design note: D's "deliberately concentrated 5–10 names" identity is relaxed on its **upper** bound only (floor of 5 unchanged; D may now exceed 10 names) — flagged for owner awareness as the most consequential single removal, reversible if undesired.
+
+**Theater-check flag:** N/A — owner directive, not an adversarial review.
+
+**Downstream actions:** Strategy.md rev 35 (changelog + strikethrough/marker edits across A/B/C/D rule lines, classical-method delegation, pre-mortem Constraint 3 / cross-constraint, KL #12/#13, Section 4/6 monitoring). Operating_Protocols §10 updated (B has no count cap at any level; KL #12 metric (d) is the sole concurrent-position-correlation control) + rev-history note. Regime_State.md, Portfolio_Ledger.md, and the periodic-check templates (Quarterly_D_Candidates, Weekly_Post_Event_Screen, Weekly_Position_Deep_Dive, Monthly_D_Position_Deep_Dive) updated to stop applying the removed caps. **Re-evaluation unblocked:** the BKE (2026-05-29) and AEO (2026-05-29) NO-GOs fired solely on the now-removed Consumer Disc 3/3 cap (criteria 2–5 never adjudicated); both are now re-eligible. Those prior NO-GO entries stand as immutable history (context, not barrier per §3); this entry supersedes their gating basis. BKE thesis is re-run this session (criteria 1–5); AEO flagged to its own session for the same re-run.
+
+**References:** User instruction 2026-05-30; Strategy.md rev 35 changelog; Operating_Protocols §10 revision-history 2026-05-30.
