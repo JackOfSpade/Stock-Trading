@@ -11291,3 +11291,64 @@ NO-GO conviction: **HIGH — 75 (coarse-ladder cap) / ~85% uncapped.** Supports:
 **No missing events** for confirmed-open positions (subject to BURL fill-capture resolution creating the time-based exit event).
 
 **File writes:** Decision_Log.md (this entry). Portfolio_Ledger.md Last updated line updated.
+
+---
+
+## 2026-05-29 (Fri ~20:18 MT) — Strategy B BKE Q1 FY26 beat-and-fade thesis construction — NO-GO on MANDATORY STEP 2 SECTOR-CAP GATE (Consumer Discretionary 3/3 AT CAP: TJX + AZO + BURL; BKE would be the 4th → over cap). Mechanical portfolio-construction gate; criteria 2–5 not reached. Load-bearing integrity finding: BURL FILLED 2026-05-29 (corrects the D3 "likely no fill" assumption).
+
+**Trigger:** B-thesis construction for BKE (The Buckle, Inc., NYSE:BKE) following Q1 FY26 print BMO Fri 2026-05-29 (EPS $0.92 vs $0.74 cons = +24% beat; comps +5.1%; total sales +6.1%; stock fell on tariff-cost + store-expansion margin pressure per Benzinga 5/29 3:43 PM ET — beat-and-fade signature in the TJX 5/23 / BURL 5/28 under-reaction family). Disposition of the BKE thesis-construction event `45i9k28aknjk6ameq5rm5veq3c` (calendar-scheduled 2026-06-01; run early Fri evening 2026-05-29 ~20:18 MT after the cash close — same Friday-evening cluster as the missed BURL fill-capture 14:30 MT, the AEO thesis window 17:30–19:00 MT, and D3 hygiene 18:33 MT). MT date authoritative; assistant-context `currentDate` 2026-05-30 = UTC per the standing D3-documented offset. 10-trading-day entry window from 5/29 closes ~Fri 2026-06-12.
+
+**Primary sources used (retrieved, not recalled):**
+- BKE mcap/price (MANDATORY STEP 1): stockanalysis.com ($2.33B; price/5-29-close $45.87; 50.84M sh; prior close $50.48; −9.13% on the day; AH $46.13) — corroborated by Robinhood ($2.36B; 5/29 range $45.58–$53.44; last $45.85), MarketWatch / Motley Fool ($2.54B; 51.52M sh), Kraken ($2.58B), Macrotrends ($2.83B outlier-high). Convergent ≥ $2B across all.
+- BURL fill resolution: stockanalysis.com BURL 2026-05-29 OHLC (open $300.60 / low $297.35 / high $324.69 / close $323.83; prior 5/28 close $300.52).
+- Decision_Log.md 2026-05-29 D3 Calendar Hygiene (BURL integrity-anomaly flag + GO order params convergence $313.71 / limit $303.00 DAY; AEO thesis in-window no-disposition); Decision_Log.md 2026-05-28 BSX NO-GO (B-short string ~39; GICS-sector-level cap application HCA+BSX → Health Care 2/3); Decision_Log.md 2026-05-14 AGL NO-GO (mechanical-gate-NO-GO precedent: terminate pre-criteria, string-unchanged). Portfolio_Ledger.md (open B book HCA/ZBRA/BRC/TJX/AZO; TJX Consumer Disc 1/3, AZO Consumer Disc 2/3; B NAV ~$1,888). Strategy.md Strategy B (criteria 1–5; instrument-rule mcap ≥ $2B; sector cap "3 concurrent B positions per GICS sector" lines 310/966/968; exit rules). Operating_Protocols.md (§3 NO-GO-context-not-barrier; §9 no-re-defer; §10 no-invented-caps / per-GICS-sector cap). B_Sub_Pattern_Taxonomy.md (beat-and-fade routing — NOT reached; gate fired first). Regime_State.md (B router ACTIVATE). Daily.md 2026-05-29 (BKE candidate context; "Consumer Disc 2/3 with TJX + AZO" framing — understated; see below).
+
+---
+
+### MANDATORY STEP 1 — Criterion-1 mcap-verification gate: **PASS (mcap ≥ $2B).**
+
+BKE mcap **~$2.33B–$2.58B** across primary sources (Macrotrends $2.83B outlier-high), all comfortably ≥ the $2B instrument-rule floor even at the post-fade depressed price. Most conservative reading (stockanalysis.com, 5/29 close $45.87 × 50.84M sh) = **$2.33B (~16% cushion)**. The pre-session BORDERLINE estimate (~$2.3B) is confirmed and CLEARS. → **Instrument-rule mcap gate CLEARS.** This is NOT the AGL/TDOC/FIVN/POET/Photronics mcap-floor-FAIL branch — that branch does not fire (mcap ≥ $2B), so no instrument-rule mechanical termination on criterion 1.
+
+(Criterion-1 magnitude, for completeness, MOOT under the STEP-2 gate: 5/29 close $45.87 vs 5/28 close $50.48 = **−9.13% close-to-close**; Robinhood corroborates a genuine beat-and-fade — intraday high $53.44 on the +24% EPS beat, then round-trip to close $45.85 near the low. Clears the ≥5% threshold ~1.8×.)
+
+---
+
+### MANDATORY STEP 2 — Sector-cap check: **FAIL → NO-GO.** Consumer Discretionary 3/3 AT CAP; BKE would be the 4th (4/3, over cap).
+
+**Rule (Strategy.md immutable, lines 310 / 966 / 968; Operating_Protocols §10):** cap = **3 concurrent B positions per GICS *sector*** (not sub-industry). Confirmed by recent application: the AZO entry 2026-05-27 counts TJX (Apparel Retail) + AZO (**Automotive** Retail) — two *different* sub-industries — together as "Consumer Disc 1/3 → 2/3"; BSX 2026-05-28 counts HCA (Health Care Facilities) + BSX (Health Care Equipment) together as Health Care. (One older entry — Decision_Log 2026-05-02 LLY, ~line 1244 — mischaracterized the B cap as "GICS sub-industry level"; that is superseded/erroneous, contradicted by the immutable Strategy.md text + Operating_Protocols §10 + actual practice. The sector-level rule governs. Flagged because it is outcome-determinative here: a sub-industry reading would have admitted BKE as the 3rd Apparel Retail name AT CAP; the correct sector-level reading makes BKE the 4th Consumer Discretionary name, over cap.)
+
+**Consumer Discretionary B positions (OPEN or ORDER-STAGED), all GICS Consumer Discretionary:**
+1. **TJX — OPEN 2026-05-26** (Apparel Retail) → Consumer Disc 1.
+2. **AZO — OPEN 2026-05-27** (Automotive Retail) → Consumer Disc 2.
+3. **BURL — OPEN 2026-05-29** (Apparel Retail, off-price) → Consumer Disc 3. **← resolved this session (see below); the live files had not recorded it (D3 integrity anomaly).**
+
+**Count = 3 (≥ 3). Adding BKE → 4/3 → OVER CAP.** Per MANDATORY STEP 2: **TERMINATE — NO-GO on sector cap.** (AEO is NOT counted: no Decision_Log disposition + no Portfolio_Ledger section → not a position. Even at AEO = 0, the count is already 3 with BURL. AEO non-disposition flagged below.)
+
+This is a **mechanical portfolio-construction gate** firing before the criteria 2–5 thesis walk; **criteria 2–5 NOT evaluated** (per the task gate-ordering — same structural class as the AGL/TDOC/FIVN/POET criterion-1 mechanical NO-GOs, which likewise terminate pre-criteria). Conviction N/A (deterministic rule, not an analytical judgment).
+
+---
+
+### BURL fill resolution — decisive sub-finding that corrects the live record
+
+The sector-cap call required resolving BURL's status, which the live files left ambiguous (D3 2026-05-29 integrity anomaly: the BURL thesis session 2026-05-28 produced a GO [convergence $313.71, limit BUY $303.00 DAY for 5/29] but its Decision_Log GO entry and Portfolio_Ledger ORDER-STAGED section were **never written** — partial-commit failure; the 14:30 MT fill-capture event was missed; D3 *assumed* "likely no fill" from BURL's $323.54 close).
+
+**That assumption was WRONG.** Primary-source OHLC (stockanalysis.com) for BURL 2026-05-29: **open $300.60, low $297.35, high $324.69, close $323.83** (prior close $300.52). The order was a live **buy limit $303.00 DAY**; BURL **opened at $300.60 — BELOW the $303 limit — and traded as low as $297.35.** A buy limit at $303 with the stock opening at $300.60 necessarily fills at the open (price improvement to ≈ $300.60). The D3 note conflated the $323.83 *close* with the fill question; fills are determined by the open/intraday-low, not the close. **BURL FILLED 2026-05-29 at ≈ $300.60** (inferred from the open; exact fill price/qty/commission PENDING the IBKR screenshot via the existing fill-capture event `re0irs9o1rcrg0c98rh9ranih0`). → **BURL is OPEN** — the 3rd Consumer Discretionary B position, and the basis for this NO-GO.
+
+**Further — BURL has already HIT its convergence target.** Convergence $313.71 (immutable); BURL closed 5/29 at **$323.83 > $313.71**. Per Strategy.md B exit rules the position is exit-due at/after convergence → **BURL convergence exit is now DUE** (gross ≈ +4.4% at fill→target $313.71; ≈ +7.7% at the $323.83 close). The convergence-exit order was NOT staged this session (BKE-session scope; needs the screenshot-confirmed fill/size) — OWED to the BURL fill-capture / next session.
+
+**Ledger reconciliation performed this session (necessitated by the NO-GO, to prevent the ledger contradicting it):** Portfolio_Ledger updated to add a PROVISIONAL BURL OPEN section (fill inferred ≈ $300.60, flagged pending IBKR screenshot), Consumer Disc 2/3 → 3/3, B open count 5 → 6, with the convergence-exit-DUE flag. Still OWED to the screenshot-confirmed fill-capture session: exact fill price/qty/commission, the BURL convergence-exit order, the time-based-exit calendar event (~2026-07-28; moot if convergence-exited first), and full reconstruction of the BURL GO thesis-entry rationale (only the order parameters survive — criterion walk / conviction not recoverable).
+
+**Cross-impact:** The BURL-filled correction means Consumer Discretionary was already AT CAP (3/3) as of the 5/29 open, so the Daily.md 2026-05-29 framing ("Consumer Disc 2/3 with TJX + AZO; BKE/AEO → 3/3 AT CAP") understated by one. **BOTH BKE and AEO are therefore over-cap (NO-GO on sector cap), not at-cap.** The AEO thesis session (scheduled 5/29 17:30–19:00 MT) has no recorded disposition (no Decision_Log entry, no Portfolio_Ledger section) as of 20:18 MT — if it ran on the stale "2/3" assumption it may have reached a wrong sector-cap conclusion. **Flagged for D2/D3 re-route** to verify/redispose (parallel to the ZS / PLAB "(done)-but-no-disposition" flags in D3 2026-05-29).
+
+---
+
+### Disposition — NO-GO (sector cap), terminal
+
+**DECISION: NO-GO — MANDATORY STEP 2 sector-cap gate. Consumer Discretionary at 3/3 (TJX + AZO + BURL); BKE would be the 4th (4/3, over cap).** Mechanical portfolio-construction gate; criteria 2–5 not reached.
+- **No order staged. No BKE portfolio-state change. No BKE calendar events** (GO-only; the BKE thesis event `45i9k28aknjk6ameq5rm5veq3c` is left for the next D3 hygiene pass to delete on finding this disposition). 2% sizing (~$37.7 off B NAV ~$1,888) MOOT.
+- **Terminal for this trigger (no re-defer; Operating_Protocols §9).** Context, not barrier (§3): if a Consumer Disc slot frees within BKE's window (closes ~6/12) — most plausibly via the now-DUE BURL convergence exit, which drops Consumer Disc to 2/3 — the routine Daily.md scan can re-surface BKE as a fresh evaluation. This session does NOT create a re-eval/deferral event.
+- **B experiment tally:** records as a NO-GO, but a **mechanical-gate** NO-GO (sector cap) that does not reach criterion 4 → **B-short string UNCHANGED (~39 per BSX 2026-05-28)**; not a criterion-4 dual-framing dismissal (cf. AGL/TDOC/FIVN/POET mechanical-gate NO-GOs, which likewise do not extend the string). The beat-and-fade thesis substance (TJX/BURL under-reaction family; potential off-price/specialty-apparel sub-pattern proliferation; thin-coverage criterion-3 degenerate-to-A risk) was never adjudicated — the gate fired first.
+
+**File writes:** Decision_Log.md (this entry). Portfolio_Ledger.md (Last updated header; PROVISIONAL BURL OPEN section added; May 29 activity-log line reconciling Consumer Disc → 3/3 and open count → 6) — the BURL writes are the integrity reconciliation, NOT a BKE position. No calendar writes.
+
+**Compaction-survival note:** BKE 2026-05-29 Q1 beat-and-fade = NO-GO on the MANDATORY STEP 2 sector-cap gate (Consumer Disc 3/3 AT CAP: TJX + AZO + BURL; BKE the 4th). Mcap gate PASSED (~$2.33B). The load-bearing finding: **BURL FILLED 5/29 at ≈ $300.60** (open $300.60 < $303 DAY limit; low $297.35) — the D3 "likely no fill" assumption misread the $323.83 close. BURL is OPEN and has already hit convergence ($313.71; closed $323.83) → **BURL convergence exit is DUE**, owed to the fill-capture session on the IBKR screenshot. AEO 5/29 has no recorded disposition — flag for D2/D3. Cap rule is GICS-*sector*-level (the 2026-05-02 LLY "sub-industry" phrasing is superseded). Do NOT re-open BKE within the 5/29 window absent a freed Consumer Disc slot (BURL exit) + a fresh Daily-scan trigger.
