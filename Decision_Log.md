@@ -11470,4 +11470,67 @@ The sector-cap call required resolving BURL's status, which the live files left 
 
 **Session outcome:** Both NO-GO; no orders staged; no position changes; no entry calendar events (GO-only). **KL #12 unaffected** (no additions) — though both are Consumer-Disc apparel, so had either gone GO the TJX/AZO/BURL apparel-cluster pairwise correlation would have been the now-primary (post-rev-35) monitoring concern (metric (d) > 0.5 flag at the next monthly review). **B-short string ~39 → ~40** (AEO criterion-4 SHORT-dismissal; BKE mechanical-gate, no extension). **B tally → ~6 GO + ~55–56 NO-GO** (standing W5 tally-drift caveat). The prior BKE/AEO 2026-05-29 sector-cap NO-GO entries stand as immutable history; these supersede them on the merits (criteria 2–5 now adjudicated). **Calendar:** BKE thesis-construction event `45i9k28aknjk6ameq5rm5veq3c` (left pending by the 5/29 session) flagged for deletion (thesis now resolved); no new events.
 
+---
+
+## 2026-05-30 — D3 Calendar Hygiene
+
+**MT date anchor:** 2026-05-30 18:33 MDT (Bash-derived `TZ=America/Denver date`; Saturday). Note: assistant-context `currentDate` field returns 2026-05-31 UTC — confirmed conflict (UTC rolled to 5/31); MT date used per D3 protocol.
+
+**90-day window walked:** 2026-05-30 → 2026-08-28 (America/Denver). **17 [Claude] events found and assessed.**
+
+### Events walk
+
+| Scheduled | Event ID | Summary | Disposition |
+|-----------|----------|---------|-------------|
+| 2026-05-30 17:00 MDT | `nkeqdqgna40n07fpajd7hjqjlc` | Thesis construction — ANF B | ⚠️ PAST-FIRE / MISSED — no Decision_Log disposition; 10-day window still open ~2026-06-12. DO NOT DELETE. Flagged for D2 re-route. |
+| 2026-05-30 17:00 MDT | `sufnvbc8486tlen5nf5aprhshs` | Thesis construction — CPRI B | ⚠️ PAST-FIRE / MISSED — no Decision_Log disposition; 10-day window still open ~2026-06-12. DO NOT DELETE. Flagged for D2 re-route. |
+| 2026-06-01 09:00 MDT | `r9i6u6mnpk9ukoj2bh15m1fr7c` | Re-screen BA — trailing-30d roll-off check | KEEP — future; self-contained prompt; notification popup 0 min via calendar default ✓ |
+| 2026-06-03 15:30 MDT | `k9vtudr7d40ukto3vfhutcdbls` | KL #12 pairwise correlation — B book | KEEP — description self-correcting at session time; updated 2026-05-30 ✓ |
+| 2026-06-08 09:00 MDT | `7pbkg1kh2pge7midfiqnj6edvk` | Thesis construction — FOMC June 2026 Strategy C | KEEP — future; well-formed prompt; popup 0 min ✓ |
+| 2026-06-09 15:30 MDT | `6p9eotfrdd0eae2pvoccrbj95o` | ZBRA mid-window pulse-check — B position | KEEP — ZBRA open; popup 0 min ✓ |
+| 2026-06-12 09:30 MDT | `fpbueqccja9thjcnuj6ck9l6rs` | LLY Strategy D mechanical re-screen | KEEP — trigger date intact; self-contained ✓ |
+| 2026-06-26 09:25 MDT | `u9l9544ighc4d9o1l44u7pr0uc` | HCA time-based exit / convergence check | KEEP — HCA open; popup 0 min ✓ |
+| 2026-07-01 09:00 MDT | `qpshtsnmi7lj8q2j02au3creh4` | Q1 Quarterly Regime Retrospective | KEEP — recurring cadence ✓ |
+| 2026-07-01 10:30 MDT | `ecu5pu90sgoecj1dn2lvt5656s` | Q2 Quarterly D Long-Horizon Candidates | KEEP — recurring cadence ✓ |
+| 2026-07-01 12:00 MDT | `pbacgn2esaiollpdq44ujsj9tk` | Q3 Quarterly AI Foundation Delta | KEEP — recurring cadence ✓ |
+| 2026-07-01 14:00 MDT | `3fma0s1n57bvb4n0gdnbcodtsk` | Q4 Quarterly Action Conversion | KEEP — recurring cadence; popup 0 min ✓ |
+| 2026-07-13 07:15 MDT | `b2gka8hncerbnfh6m9j2hq4k2g` | ZBRA time-based exit — B position | KEEP — ZBRA open ✓ |
+| 2026-07-21 07:15 MDT | `sli3tl3msrhsuq731apqg7s9io` | BRC time-based exit — B position | KEEP — BRC open ✓ |
+| 2026-07-24 07:15 MDT | `0g1smg50pf89jo3or6ompaht4o` | TJX time-based exit — B position | KEEP — TJX open; description corrected 2026-05-28 ✓ |
+| 2026-07-24 07:15 MDT | `c198nmdf8quptsc4kvt7pvoq58` | Time-based exit — AZO (Strategy B) | KEEP — AZO open ✓ |
+| 2026-07-28 07:15 MDT | `91sgtm5com859vib9gu1a0brfs` | Time-based exit — BURL (Strategy B) | KEEP — BURL open (PROVISIONAL; convergence exit overdue but not yet staged pending fill-capture reconciliation); backstop appropriate until exit confirmed ✓ |
+
+**BKE thesis event `45i9k28aknjk6ameq5rm5veq3c`** (2026-06-01, flagged for deletion by 2026-05-30 AEO+BKE re-construction): confirmed `status: cancelled` — already deleted/cancelled. No action needed.
+
+### Deletions, updates, creations
+- **Deleted:** 0
+- **Updated:** 0
+- **Created:** 0
+
+### Position coverage check (Portfolio_Ledger.md open positions)
+
+| Position | Status | Coverage |
+|----------|--------|----------|
+| RTX (D) | OPEN | Monthly cadence (M4/M5) + daily D1 ✓; no time-based exit for D positions |
+| DIS (D) | OPEN | Monthly cadence + daily D1 ✓ |
+| HCA (B) | OPEN | Time-based exit `u9l9544ighc4d9o1l44u7pr0uc` Jun 26 ✓ |
+| ZBRA (B) | OPEN | Mid-window pulse `6p9eotfrdd0eae2pvoccrbj95o` Jun 9 ✓; time-based exit `b2gka8hncerbnfh6m9j2hq4k2g` Jul 13 ✓ |
+| BRC (B) | OPEN | Time-based exit `sli3tl3msrhsuq731apqg7s9io` Jul 21 ✓ |
+| TJX (B) | OPEN | Time-based exit `0g1smg50pf89jo3or6ompaht4o` Jul 24 ✓ |
+| AZO (B) | OPEN | Time-based exit `c198nmdf8quptsc4kvt7pvoq58` Jul 24 ✓ |
+| BURL (B) | OPEN PROVISIONAL | Time-based exit backstop `91sgtm5com859vib9gu1a0brfs` Jul 28 ✓ (backstop); ⚠️ fill-capture `re0irs9o1rcrg0c98rh9ranih0` (2026-05-29 14:30 MDT) is past-fire with erroneous "(done)" marker — fill UNRECONCILED; convergence exit ($313.71 target hit 5/29) NOT staged. |
+
+**No staged orders or exit-pending orders** present in Portfolio_Ledger (BURL convergence exit not formally staged — awaiting fill-capture reconciliation).
+**No research-deferral flags** present for any open position.
+
+### Flags for human review
+
+1. **⚠️ CRITICAL — BURL fill-capture unreconciled.** Event `re0irs9o1rcrg0c98rh9ranih0` (2026-05-29 14:30 MDT) is past-fire with a "(done)" marker in the title, but the fill was NEVER reconciled with an IBKR screenshot (BURL remains PROVISIONAL in Portfolio_Ledger.md; Decision_Log has no BURL GO thesis-construction entry). BURL filled 2026-05-29 at ≈$300.60 (inferred; exact price/qty/commission pending screenshot) and has been above the $313.71 convergence target since the close of 5/29 ($323.83). The convergence exit is overdue and has not been staged. **Operator action required:** paste IBKR Portfolio + Trades screenshot into a fresh Claude session using the prompt text from the fill-capture event (or direct the session to reconstruct BURL fill-capture per the parameters in the event description and 2026-05-29 BKE Decision_Log entry). The fill-capture session must: (a) confirm exact fill/qty/commission; (b) write the missing BURL Decision_Log GO thesis entry; (c) write the Portfolio_Ledger BURL OPEN section; (d) stage the convergence exit SELL order; (e) create the convergence-exit execute-order and fill-capture events.
+
+2. **⚠️ MISSED — ANF B thesis construction** (event `nkeqdqgna40n07fpajd7hjqjlc`, 2026-05-30 17:00–18:00 MDT). Event is past-fire; no Decision_Log disposition for ANF exists. The 10-day entry window from 2026-05-29 remains open through ~2026-06-12 (Thu). Event left on calendar per D3 no-delete rule. **Flag for D2 re-route:** the next D2 session should schedule a fresh ANF thesis-construction event at the earliest viable slot (window active).
+
+3. **⚠️ MISSED — CPRI B thesis construction** (event `sufnvbc8486tlen5nf5aprhshs`, 2026-05-30 17:00–18:00 MDT). Event is past-fire; no Decision_Log disposition for CPRI exists. The 10-day entry window from 2026-05-29 remains open through ~2026-06-12 (Thu). Event left on calendar per D3 no-delete rule. **Flag for D2 re-route:** same as ANF above.
+
+**D3 outcome:** 0 deleted, 0 updated, 0 calendar events created. 17 forward events verified. 3 flags raised (1 critical BURL fill-capture unreconciled; 2 missed thesis sessions ANF/CPRI with active windows).
+
 **References:** Strategy.md B criteria 1–5 + rev 35; B_Sub_Pattern_Taxonomy.md (sub-pattern 4); TJX 2026-05-23 GO template; MNDY 2026-05-12 stale-anchor precedent; 2026-05-30 research fact sheets (SEC 8-Ks, CNBC, Benzinga, Motley Fool transcripts, MarketBeat, stockanalysis, finviz).
