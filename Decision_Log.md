@@ -11534,3 +11534,74 @@ The sector-cap call required resolving BURL's status, which the live files left 
 **D3 outcome:** 0 deleted, 0 updated, 0 calendar events created. 17 forward events verified. 3 flags raised (1 critical BURL fill-capture unreconciled; 2 missed thesis sessions ANF/CPRI with active windows).
 
 **References:** Strategy.md B criteria 1–5 + rev 35; B_Sub_Pattern_Taxonomy.md (sub-pattern 4); TJX 2026-05-23 GO template; MNDY 2026-05-12 stale-anchor precedent; 2026-05-30 research fact sheets (SEC 8-Ks, CNBC, Benzinga, Motley Fool transcripts, MarketBeat, stockanalysis, finviz).
+
+---
+
+## 2026-05-31 — W4 Weekly Action Conversion (2026-W23)
+
+**MT date anchor:** 2026-05-31 ~01:35 MDT (Sunday). ISO week 2026-W23. Inputs: W1 = Weekly_Catalyst_Calendar.md (W23), W2 = Weekly_Post_Event_Screen.md (W23), W3 = Weekly_Position_Deep_Dive.md (W23).
+
+### §A — Exits from W3
+
+No exit orders staged this cycle. W3 recommendations: HCA HOLD, ZBRA HOLD, BRC HOLD, TJX HOLD, AZO HOLD, BURL CLOSE-ON-THESIS-COMPLETION.
+
+**BURL IMMEDIATE-ACTION flag surfaced (chat output only).** W3 flagged BURL convergence exit DUE — $313.71 convergence target exceeded at 2026-05-29 close $323.83 (+3.55% above target). W4 explicitly prohibited from staging the BURL exit: fill-capture session `re0irs9o1rcrg0c98rh9ranih0` is the canonical staging path (fill still PROVISIONAL / unreconciled per D3 flag). No exit order created or staged by W4.
+
+### §B — Research deferrals from W3
+
+None. No W3 "further research required" recommendations.
+
+### §C — Strategy B thesis-construction calendar events
+
+10 events created, all scheduled 2026-05-31 09:00–10:00 MT America/Denver.
+
+**Top-tier (5 — mandatory per W4 spec):**
+
+| Ticker | W-rem | Event ID | A-gate note |
+|--------|-------|----------|-------------|
+| ZS | 8 | `takv2fcb2p6hc6b5kn793q09i4` | No (ZS not in A-queue) |
+| SNOW | 9 | `0imat94mv408l5svsdo063o364` | YES — check A-router at session; if A ACTIVATE, B-thesis inadmissible (criterion 5) |
+| DELL | 10 | `5cn40mlh02s8k4k2srsaorrnpk` | YES — same |
+| NTAP | 10 | `hepdg2ni9q171i0a77648rshkk` | YES — same |
+| OKTA | 10 | `jjglj1894olm0to7u6l8lclk7o` | YES — same |
+
+Scheduling priority applied per W-rem (ZS first; SNOW second; DELL/NTAP/OKTA tied). A-router-state gating note embedded in SNOW/DELL/NTAP/OKTA event descriptions: at session time verify Regime_State.md + Decision_Log.md M1 2026-06-01 outcome; if A ACTIVATE and ticker in A-queue, B-thesis session is inadmissible per criterion 5.
+
+**Rest-tier (5 — W4 discretion; scheduled given rev 35 no-cap governance):**
+
+| Ticker | W-rem | Event ID |
+|--------|-------|----------|
+| DLTR | 8 | `a7ditkq791c2hbr5d1oijj5j0c` |
+| BBY | 8 | `nt2a4hdl40b21ud1nrd4haj5a0` |
+| BBWI | 8 | `pmionmjh4v6efee5vi18nqftnk` |
+| A (Agilent) | 9 | `cov9p1gb4lrl36l0okp3kfpke4` |
+| HRL | 9 | `kk18hcin97et0kii0eafad1ps8` |
+
+**Conditional candidates not scheduled:** MDB, GAP, AMBA, CRM — mechanical gate verification deferred to thesis-construction time per W2 flag. ANF and CPRI already flagged for D2 re-route (events `nkeqdqgna40n07fpajd7hjqjlc` / `sufnvbc8486tlen5nf5aprhshs` live on calendar per D3 no-delete).
+
+**FOMC C event verified:** `7pbkg1kh2pge7midfiqnj6edvk` (Mon 2026-06-08 09:00 MT) confirmed present and current (last updated 2026-05-17 by W4 W20). No update required; no duplicate created.
+
+### §D — Strategy A queue additions (W1 W23 TOP-10 routing)
+
+A router = DO-NOT-ACTIVATE at session time (M1 2026-06-01 has not yet fired). Two new W1 W23 TOP-10 names not previously queued routed to Watchlist.md A-queue:
+
+- **PANW** (#8 in W1 W23 TOP-10): Watchlist.md row added 2026-05-31. First post-CyberArk-close print (FQ3 FY26 2026-06-02 AMC); AI-security platform consolidation narrative. A-queue count 29 → 30.
+- **CRWD** (#9 in W1 W23 TOP-10): Watchlist.md row added 2026-05-31. FQ1 FY27 2026-06-03 AMC; Falcon Flex/Charlotte AI monetization narrative. A-queue count 30 → 31.
+
+No A thesis-construction events created (A router DO-NOT-ACTIVATE; names queue to Watchlist.md, not calendar events, per §D routing rule).
+
+### §E — Cross-strategy deconfliction
+
+No W3 exits staged → no ticker overlap between staged exits and new B entries to deconflict.
+
+### §F — Watchlist maintenance
+
+Watchlist.md A-queue updated: 29 → 31 names (PANW + CRWD added). No other Watchlist.md changes this cycle.
+
+### W4 W23 outcome summary
+
+- **Exits staged:** 0 (BURL exit owed to fill-capture session; all others HOLD)
+- **B thesis-construction events created:** 10 (ZS, SNOW, DELL, NTAP, OKTA top-tier; DLTR, BBY, BBWI, A, HRL rest-tier)
+- **C FOMC event:** verified — no duplicate, no update
+- **A-queue additions:** 2 (PANW, CRWD; 29 → 31)
+- **BURL immediate-action flag:** surfaced in chat; staging not done by W4 (fill-capture session owns)
