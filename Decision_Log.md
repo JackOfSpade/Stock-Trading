@@ -11605,3 +11605,50 @@ Watchlist.md A-queue updated: 29 → 31 names (PANW + CRWD added). No other Watc
 - **C FOMC event:** verified — no duplicate, no update
 - **A-queue additions:** 2 (PANW, CRWD; 29 → 31)
 - **BURL immediate-action flag:** surfaced in chat; staging not done by W4 (fill-capture session owns)
+
+---
+
+## 2026-05-31 — D2 Daily Action Conversion
+
+**MT date anchor:** 2026-05-31 16:37 MDT (Bash-derived `TZ=America/Denver date`; Sunday). Input: Daily.md 2026-05-31 (D1 output).
+
+**RECOMMENDED ACTIONS from Daily.md 2026-05-31:**
+1. No exits triggered — all 8 positions (HCA / ZBRA / BRC / TJX / AZO / BURL Strategy B; RTX / DIS Strategy D) HOLD on thesis-invalidation criteria.
+2. No new entry candidates from today's Sat-Sun scan window.
+3. ANF + CPRI thesis re-route (carry-forward from D3 5/30 missed-event flags). Original events `nkeqdqgna40n07fpajd7hjqjlc` (ANF) and `sufnvbc8486tlen5nf5aprhshs` (CPRI) past-fired 5/30 17:00 MT with no Decision_Log disposition.
+4. No watchlist updates.
+5. No router reviews (M1 6/1 fires tomorrow; no inter-monthly review warranted).
+
+**§1 — EXITS:** None. All 8 positions confirmed HOLD. No exit orders staged today.
+
+**§2 — BURL STATUS (operational carry, not D2 exit-staging):** Calendar inspection revealed that BURL SELL exit and fill-capture events already exist on calendar — created ~01:42 MDT today (2026-05-31T07:42:54Z UTC) by a prior session:
+- `4opbjn59kllg4t62vld49isjt4` — "[Claude] Execute order — BURL SELL (convergence exit)" — Mon 2026-06-01 07:00 MT
+- `5fh8700q24oh13aki1bsgodd9c` — "[Claude] Screenshot IBKR — fill capture BURL exit" — Mon 2026-06-01 14:30 MT
+
+**ANOMALY FLAGGED:** The BURL SELL events reference "Decision_Log 2026-05-31 'BURL fill confirmation + convergence-exit staging'" but no such Decision_Log entry exists as of this D2 session (most recent 2026-05-31 DL section is the W4 W23 entry, which explicitly states "staging not done by W4"). The prior session created the calendar events but did not write a Decision_Log entry. The BURL SELL events are substantively correct (BURL convergence target $313.71 was achieved on Day-0 5/29 with close $323.83; exit is due; SELL 0.1248 @ LMT $315.00 DAY is appropriate and actionable). **D2 accepts these events as valid and does not duplicate them.** The missing Decision_Log entry for BURL convergence-exit staging is an integrity gap that the fill-capture session (Mon 6/1 14:30 MT) will resolve when it records the actual fill.
+
+**§3 — ANF + CPRI THESIS RE-ROUTE:**
+
+**Decision: Re-route elected.** Rationale: (1) 10-day windows from 2026-05-29 remain active through ~2026-06-12 (~8 trading days remaining: 6/1–6/12); (2) 5/30 D2 decision-to-schedule for both names signals prior disposition favored construction; (3) neither ANF nor CPRI has a Decision_Log GO/NO-GO entry on the 5/29 event — per Operating_Protocols §3 fresh evaluation is required; (4) cohort-NO-GO base-rate (AEO/BKE both NO-GO'd 5/30) is contextual input, not pre-foreclosure — BURL GO same day is a material counter-data-point; (5) windows are sufficiently open to justify construction time. Conservative alternative (let expire under cohort base rate) rejected.
+
+**ANOMALIES FLAGGED (state-integrity gaps surfaced during calendar inspection):**
+- ANF event `nkeqdqgna40n07fpajd7hjqjlc` was found with summary renamed to "(done) [Claude] Thesis construction — ANF B" but NO corresponding Decision_Log ANF thesis disposition entry exists anywhere in live Decision_Log.md. The "(done)" marker was added by an unidentified session (time unknown; between D3 5/30 18:33 MT and D2 5/31 16:37 MT). Event has been deleted by this D2 run as part of re-routing.
+- CPRI event `sufnvbc8486tlen5nf5aprhshs` was already absent from calendar when this D2 session called the delete API ("Requested entity was not found"). No Decision_Log CPRI thesis disposition entry exists. Unknown whether a session ran and deleted the event without writing to Decision_Log, or whether the event was deleted by some other mechanism.
+
+**Actions:**
+- Deleted stale ANF event `nkeqdqgna40n07fpajd7hjqjlc` (confirmed deleted; was already marked "(done)" in title).
+- CPRI event `sufnvbc8486tlen5nf5aprhshs` was already absent (entity not found on delete call).
+- Created new **"[Claude] Thesis construction — ANF Strategy B"** event — 2026-05-31 17:30–18:30 MT America/Denver — **event ID `cf8a66777v5hms06ner6786sas`**. Description includes scheduling-context anomaly note instructing the session to check for existing Decision_Log ANF disposition before constructing.
+- Created new **"[Claude] Thesis construction — CPRI Strategy B"** event — 2026-05-31 17:30–18:30 MT America/Denver — **event ID `btq6nk12jmlt2cb1fudrhu8808`**. Description includes scheduling-context anomaly note and CPRI borderline-mcap verification gate.
+
+**§4 — WATCHLIST:** No changes. No new D1-driven candidates.
+
+**§5 — ROUTER REVIEWS:** None. M1 6/1 fires tomorrow; all regime material is implicit input.
+
+**D2 outcome summary:**
+- Exits staged: 0
+- BURL convergence-exit: acknowledged via existing Mon 6/1 events (no duplicate staging)
+- B thesis-construction events created: 2 (ANF `cf8a66777v5hms06ner6786sas`, CPRI `btq6nk12jmlt2cb1fudrhu8808`; both 2026-05-31 17:30 MT)
+- Watchlist updates: 0
+- Router reviews: 0
+- Anomalies flagged: 3 (ANF "(done)" without DL disposition; CPRI event missing without DL disposition; BURL SELL events without corresponding DL staging entry)
