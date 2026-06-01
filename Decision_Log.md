@@ -11652,3 +11652,51 @@ Watchlist.md A-queue updated: 29 → 31 names (PANW + CRWD added). No other Watc
 - Watchlist updates: 0
 - Router reviews: 0
 - Anomalies flagged: 3 (ANF "(done)" without DL disposition; CPRI event missing without DL disposition; BURL SELL events without corresponding DL staging entry)
+
+## 2026-05-31 — D3 Calendar Hygiene
+
+**MT date anchor:** 2026-05-31 18:33 MDT (Bash-derived `TZ=America/Denver date`; Sunday). Note: assistant-context `currentDate` field returns 2026-06-01 UTC — confirmed conflict (UTC rolled to 6/1 during evening MT); MT date used per D3 protocol.
+
+**90-day window walked:** 2026-05-31 → 2026-08-29 MDT. **25 [Claude] events assessed.**
+
+**Deletions: 0.** No events met deletion criteria. No entry-window expirations, no confirmed-completed fill-captures, no thesis events with confirmed dispositions.
+
+**Updates: 0.** All event descriptions are current. KL #12 event `k9vtudr7d40ukto3vfhutcdbls` was already updated 2026-05-30. FOMC C event `7pbkg1kh2pge7midfiqnj6edvk` was updated 2026-05-17. No stale prompt content found.
+
+**Notification check:** All 25 events have popup-at-event-time via calendar default `[popup, 0 min]` or explicit `overrideReminders`. No updates required.
+
+**Portfolio_Ledger reconciliation (6 open B positions):**
+
+| Position | Entry | Time-based exit event | Status |
+|----------|-------|----------------------|--------|
+| HCA | 2026-04-28 $433.46 | `u9l9544ighc4d9o1l44u7pr0uc` 2026-06-26 09:25 MT | ✓ |
+| ZBRA | 2026-05-14 $249.52 | `6p9eotfrdd0eae2pvoccrbj95o` mid-window 2026-06-09 + `b2gka8hncerbnfh6m9j2hq4k2g` exit 2026-07-13 | ✓ |
+| BRC | 2026-05-22 $84.97 | `sli3tl3msrhsuq731apqg7s9io` 2026-07-21 07:15 MT | ✓ |
+| TJX | 2026-05-26 $158.50 | `0g1smg50pf89jo3or6ompaht4o` 2026-07-24 07:15 MT | ✓ |
+| AZO | 2026-05-27 ~$3,110.69 | `c198nmdf8quptsc4kvt7pvoq58` 2026-07-24 07:15 MT | ✓ |
+| BURL | 2026-05-29 $303.00 | Convergence exit: `4opbjn59kllg4t62vld49isjt4` 2026-06-01 07:00 MT + `5fh8700q24oh13aki1bsgodd9c` fill-capture 2026-06-01 14:30 MT; backstop `91sgtm5com859vib9gu1a0brfs` 2026-07-28 retained (BURL not yet confirmed closed) | ✓ |
+
+No staged orders missing events. No research-deferral checkpoints needed (W3 W23 returned all-HOLD, no further-research flags).
+
+**Missed sessions (12) — DO NOT DELETE — windows still active — flagged for D2 re-route Mon 2026-06-01:**
+
+All 12 are B thesis-construction events that fired today without confirmed Decision_Log dispositions:
+
+| # | Ticker | Event ID | Sched. time | Window closes | Notes |
+|---|--------|----------|-------------|---------------|-------|
+| 1 | ZS | `takv2fcb2p6hc6b5kn793q09i4` | 09:00 MT | ~2026-06-06 | W4 W23 top-tier; prior event `hkfqd7n875dtn6f2e9ds5kjpkk` marked "(done)" with no DL entry — same no-disposition pattern |
+| 2 | DLTR | `a7ditkq791c2hbr5d1oijj5j0c` | 09:00 MT | ~2026-06-06 | W4 W23 rest-tier |
+| 3 | BBY | `nt2a4hdl40b21ud1nrd4haj5a0` | 09:00 MT | ~2026-06-06 | W4 W23 rest-tier |
+| 4 | BBWI | `pmionmjh4v6efee5vi18nqftnk` | 09:00 MT | ~2026-06-06 | W4 W23 rest-tier |
+| 5 | SNOW | `0imat94mv408l5svsdo063o364` | 09:00 MT | ~2026-06-08 | A-router gating note in event (check Regime_State.md at session time) |
+| 6 | DELL | `5cn40mlh02s8k4k2srsaorrnpk` | 09:00 MT | ~2026-06-09 | A-router gating note; DELL in A-queue |
+| 7 | NTAP | `hepdg2ni9q171i0a77648rshkk` | 09:00 MT | ~2026-06-09 | A-router gating note; NTAP in A-queue |
+| 8 | OKTA | `jjglj1894olm0to7u6l8lclk7o` | 09:00 MT | ~2026-06-09 | A-router gating note; OKTA in A-queue |
+| 9 | A (Agilent) | `cov9p1gb4lrl36l0okp3kfpke4` | 09:00 MT | ~2026-06-06 | W4 W23 rest-tier |
+| 10 | HRL | `kk18hcin97et0kii0eafad1ps8` | 09:00 MT | ~2026-06-06 | W4 W23 rest-tier |
+| 11 | ANF | `cf8a66777v5hms06ner6786sas` | 17:30 MT | ~2026-06-12 | D2 5/31 re-route; scheduling-context anomaly note in event; criterion-1 gate applies |
+| 12 | CPRI | `btq6nk12jmlt2cb1fudrhu8808` | 17:30 MT | ~2026-06-12 | D2 5/31 re-route; borderline mcap gate in event ($2B floor) |
+
+D2 Mon 6/1 action: for each of the 12, check Decision_Log for a GO/NO-GO disposition dated 2026-05-31; if found, the event can be closed out; if not found, reschedule the thesis construction at the earliest viable slot per operating model (windows still active for all 12 as of 2026-05-31 18:33 MT).
+
+**D3 outcome:** 0 deleted, 0 updated, 0 calendar events created. 25 forward events verified. 12 missed thesis sessions flagged for D2 re-route.
