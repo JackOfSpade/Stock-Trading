@@ -11917,3 +11917,116 @@ Theater-check (M5 self-assessment): the routine produced binding actions (queue 
 **Experiment Strategy D totals: UNCHANGED** — a DEFER advances neither the GO nor the NO-GO count; the 8-name April quarterly D screen result (1 GO [RTX] / 7 NO-GO) is unchanged; BA remains in its 2026-04-26 NO-GO state pending the terminal 6/4 session. Disposition sub-category: procedural STEP-0 router-gate DEFERRAL pending a same-period divergence-review orchestrator verdict (2nd instance of the gate-DEFER class after OKTA 2026-05-31; 1st under a D-divergence-review gate) — flagged for W5.
 
 **File writes:** Decision_Log.md (this entry); calendar events — created `43rb72q0e6mbtlhci5nqovrbs4` (BA re-route, Thu 6/4 09:00 MT, TERMINAL), updated `r9i6u6mnpk9ukoj2bh15m1fr7c` (summary retitled to reflect 6/1 DEFER→6/4). No Portfolio_Ledger.md / Regime_State.md / Pending_Adversarial_Reviews.md / Watchlist.md / Quarterly_D_Candidates.md change.
+
+---
+
+## 2026-06-01 (Mon) — D2 Daily Action Conversion (regular routine)
+
+**Trigger:** D2 per Claude_Task_Plan.md §D2 spec. Daily.md 2026-06-01 RECOMMENDED ACTIONS section processed. MT date anchor confirmed TZ=America/Denver 2026-06-01 (not UTC-skewed; confirmed at session open 16:35 MT). Sources read: Daily.md 2026-06-01, Decision_Log.md, Portfolio_Ledger.md, Watchlist.md, Regime_State.md, Operating_Protocols.md, B_Sub_Pattern_Taxonomy.md, Strategy.md, Experiment_Parameters.md.
+
+---
+
+### §1 — Exit order staging
+
+**No exits staged.** Portfolio_Ledger.md open positions: HCA (B, convergence $442.85, time-exit 6/27), ZBRA (B, convergence $264.00, time-exit 7/13), BRC (B, convergence $88.80, time-exit 7/21), TJX (B, convergence $164.50, time-exit 7/24), AZO (B, convergence $3,200, time-exit 7/24), RTX (D, open 4/27), DIS (D, open 5/7). No convergence-exit, time-exit, or invalidation-criterion-trip triggered today. Daily.md 2026-06-01 confirmed: no exit actions.
+
+---
+
+### §2 — BURL operational note
+
+**BURL closed 2026-06-01 07:32 MT @ $315.59** (fill-capture entry per KL#12 calendar event, confirmed via D3 5/31 flag resolution + Portfolio_Ledger.md BURL CLOSED section). BURL was the subject of existing calendar events (fill-capture, convergence monitoring); D2 6/1 takes no further action on BURL. Strategy B NAV ~$1,888 post-exit.
+
+---
+
+### §3 — 12 missed thesis sessions re-route (D3 5/31 delegation carry-forward)
+
+D3 2026-05-31 flagged 12 missed B thesis sessions from W23 (calendar events past-fired without Decision_Log disposition) and delegated re-routing to D2 6/1.
+
+**Resolution status by item:**
+
+| # | Ticker | Prior status | D2 6/1 action |
+|---|--------|-------------|---------------|
+| 8 | OKTA | DEFERRED 2026-05-31 to Tue 6/2 09:00 MT | Already resolved by 2026-05-31 OKTA DEFER entry; event `jjglj1894olm0to7u6l8lclk7o` updated. No further action. |
+| 9 | Agilent (A) | NO-GO 2026-06-01 (prior session) | Already resolved by 2026-06-01 Agilent B NO-GO entry; event deleted. No further action. |
+| 1 | ZS | "(done)" anomaly — original event cancelled | New replacement event created: `5sir8niocod64k0n5hq66qsl10` (Mon 6/1 17:30 MT) |
+| 2 | BBY | "(done)" anomaly — original event cancelled | New replacement event created: `iu0f9j4dm99aggqrintia8ovp8` (Mon 6/1 17:30 MT) |
+| 3 | BBWI | "(done)" anomaly — original event cancelled | New replacement event created: `l9pgb6sh82456clv50rtbm208o` (Mon 6/1 17:30 MT) |
+| 5 | SNOW | "(done)" anomaly — original `0imat94mv408l5svsdo063o364` cancelled | New replacement event: `gte0sgc0tdv6ude96u3u93t3rs` (Mon 6/1 17:30 MT); A-router gating note RESOLVED (M1b 6/1 A=DNA; DDOG precedent) |
+| 6 | DELL | "(done)" anomaly — original `5cn40mlh02s8k4k2srsaorrnpk` cancelled | New replacement event: `2j7d90a10h4eakhu3a50uhf58c` (Mon 6/1 17:30 MT); A-router gating note RESOLVED |
+| 11 | ANF | "(done)" anomaly — D2 5/31 re-route `cf8a66777v5hms06ner6786sas` cancelled (second anomaly instance for ANF) | New replacement event: `klpuo7nsudcquhi83b9qk63qno` (Mon 6/1 17:30 MT); second re-route; criterion-1 gate + cohort context preserved |
+| 12 | CPRI | "(done)" anomaly — D2 5/31 re-route `btq6nk12jmlt2cb1fudrhu8808` cancelled (second anomaly instance for CPRI) | New replacement event: `tjsv5cdiapr04ekqnad5l7s0ag` (Mon 6/1 17:30 MT); second re-route; mcap verification gate + criterion-1 gate preserved |
+| 4 | DLTR | Past-fired; rescheduled in prior session | Event `a7ditkq791c2hbr5d1oijj5j0c` updated to Mon 6/1 17:30 MT. Confirmed. |
+| 7 | NTAP | Past-fired; rescheduled in prior session | Event `hepdg2ni9q171i0a77648rshkk` updated to Mon 6/1 17:30 MT. Confirmed. |
+| 10 | HRL | Past-fired; rescheduled in prior session | Event `kk18hcin97et0kii0eafad1ps8` updated to Mon 6/1 17:30 MT. Confirmed. |
+
+**"(done)" anomaly summary:** 7 events (ZS, BBY, BBWI, SNOW, DELL, ANF, CPRI) were found with `"status": "cancelled"` in the Google Calendar API — soft-deleted after being marked "(done)" by an unidentified session active 2026-06-01 ~22:40–22:41Z. Zero corresponding Decision_Log GO/NO-GO dispositions exist for any of these 7 names. The anomaly class was first flagged by D3 5/31 (ZS/ANF); this D2 session confirms it extends to BBY/BBWI/SNOW/DELL (and second-instance recurrence for ANF/CPRI). Updating a cancelled event restores no calendar visibility (API returns success but event remains soft-deleted) — all 7 required new creation, confirmed. No pattern-of-cause identified; no operator consultation required at D2 cadence (per HOIP); documented here for audit trail and for future D3 hygiene review.
+
+All 12 D3-delegated re-route items now resolved or superseded.
+
+---
+
+### §4 — New entry candidates (D2 6/1 generation)
+
+**Two new B candidates from Daily.md 2026-06-01 RECOMMENDED ACTIONS:**
+
+**SAIC B — SAIC (Science Applications International Corporation, NASDAQ: SAIC)**
+- Event: Q1 FY27 earnings print Mon 6/1 (AMC or same-day); Day-0 close-to-close approximately +17%.
+- Entry window: 2026-06-01 → ~2026-06-15 (~10 trading days).
+- Sub-pattern context: sub-pattern 1 EXTREME tier per B_Sub_Pattern_Taxonomy.md.
+- SAIC is NOT in Strategy A queue. No criterion-5 gate. No A-router gating note required.
+- Thesis-construction event created: `b3qf9thig74029u3qht1jfgacg` — Mon 2026-06-01 17:30–18:30 MT.
+
+**HPE B — Hewlett Packard Enterprise (NYSE: HPE)**
+- Event: Q2 FY26 earnings AMC Mon 6/1; AH print +29–37%.
+- Day-0 close-to-close: pending Tue 6/2 RTS close vs Mon 6/1 close $47.00. CTC requires Tue 6/2 end-of-day data — this is the one case where same-day scheduling is deferred by a specific information requirement.
+- Entry window: 2026-06-01 → ~2026-06-15. STEP-0 CTC verification gate prepended to event description.
+- HPE is in Strategy A queue (Watchlist.md). A-router = DO-NOT-ACTIVATE (M1b 6/1); DDOG precedent applies (B evaluation proceeds under DNA). Gating note embedded in event description with Regime_State.md re-check instruction.
+- Thesis-construction event created: `79fpldl57m35qm0am4dq3hc13k` — Tue 2026-06-02 09:00–10:00 MT.
+
+**MGM B (short direction) — MGM Resorts International (NYSE: MGM)**
+- Event: People Inc. unsolicited M&A bid $48.30/share (~$18B); +16.2% Mon 6/1.
+- **B DECLINED at D2 (both directions):** Mechanism-mismatch — move is bid-anchored; thesis degenerates to M&A risk-arb. Further upside requires counter-bid or raised offer; downside requires deal-break or rejection. Not a qualifying B post-event-mispricing mechanism. No thesis-construction event. Logged to Watchlist.md Strategy B short-direction declined-at-D2 tracking section.
+
+---
+
+### §5 — Watchlist.md updates
+
+Four A-queue annotation notes appended (2026-06-01 catalysts):
+
+1. **NVDA**: NOTE 2026-06-01 — +6.25% Mon 6/1 on Computex Jensen Huang keynote (NVLink Fusion open interconnect standard; GB300; Rubin acceleration; sovereign AI + AI-platform multi-quarter narrative reinforced). Valuation-reset caveat from prior notes intact.
+
+2. **CRM**: NOTE 2026-06-01 — +9.56% Mon 6/1 on France AI investment commitment (multi-billion AI infrastructure deal; Agentforce international monetization thesis ratified at government-partnership level). Entry-quality uplift vs prior below-midpoint Q2-guide headwind.
+
+3. **HPE**: NOTE 2026-06-01 — FQ2 FY26 BLOWOUT (AH +29–37%); valuation-reset caveat ELEVATED to most-extreme tier (parallel DELL/SNOW/MRVL blowout precedents); B-thesis event `79fpldl57m35qm0am4dq3hc13k` routed.
+
+4. **IBM**: NOTE 2026-06-01 — +7.34% Mon 6/1 quantum-foundry continuation catalyst (ATH proximity; valuation-reset caveat ELEVATED; post-B-exit re-entry price materially above original $232.50 B-entry).
+
+One row added to Strategy B short-direction declined-at-D2 tracking section: **MGM 2026-06-01** per §4 above.
+
+---
+
+### §6 — Router reviews
+
+**No router reviews.** M1b 2026-06-01 processed by M5 this same session cycle. A=DO-NOT-ACTIVATE (UNCHANGED), B=ACTIVATE (UNCHANGED), C=HYBRID-FOMC-only (pending div-C-202605-1), D=ACTIVATE (pending div-D-202605-1), E=DO-NOT-ACTIVATE (pending div-E-202605-1). No D2-triggered router review required.
+
+---
+
+### §7 — Calendar event summary (D2 6/1 total)
+
+| Category | Count | Event IDs |
+|----------|-------|-----------|
+| New replacements (cancelled "(done)" anomaly) | 7 | `5sir8niocod64k0n5hq66qsl10` (ZS), `iu0f9j4dm99aggqrintia8ovp8` (BBY), `l9pgb6sh82456clv50rtbm208o` (BBWI), `gte0sgc0tdv6ude96u3u93t3rs` (SNOW), `2j7d90a10h4eakhu3a50uhf58c` (DELL), `klpuo7nsudcquhi83b9qk63qno` (ANF), `tjsv5cdiapr04ekqnad5l7s0ag` (CPRI) |
+| New D2 6/1 candidate events | 2 | `b3qf9thig74029u3qht1jfgacg` (SAIC, Mon 6/1 17:30 MT), `79fpldl57m35qm0am4dq3hc13k` (HPE, Tue 6/2 09:00 MT) |
+| Rescheduled (time update to Mon 6/1 17:30 MT) | 3 | `a7ditkq791c2hbr5d1oijj5j0c` (DLTR), `hepdg2ni9q171i0a77648rshkk` (NTAP), `kk18hcin97et0kii0eafad1ps8` (HRL) |
+| Pre-resolved (no action) | 2 | OKTA (D2 5/31 entry), Agilent (2026-06-01 NO-GO entry) |
+| **Total new calendar events** | **9** | 7 replacements + 2 new candidates |
+
+---
+
+### §8 — File writes and output
+
+**File writes:** Watchlist.md (4 A-queue annotation notes: NVDA, CRM, HPE, IBM; 1 B short-direction-declined row: MGM). Decision_Log.md (this entry). Portfolio_Ledger.md: no changes (no exits, no new entries; MGM declined at D2). Regime_State.md: no D2 changes (M5 owns router state).
+
+**No IBKR orders.** No exits staged. No entry orders staged (SAIC + HPE pending thesis-construction sessions).
+
+**Compaction-survival note — D2 2026-06-01:** No orders. 9 calendar events created (7 replacements for "(done)"-anomaly cancelled events + 2 new D2 candidates: SAIC Mon 6/1 17:30 MT, HPE Tue 6/2 09:00 MT). Watchlist.md updated: 4 A-queue annotations (NVDA/CRM/HPE/IBM) + MGM B-short-declined row. "(done)" anomaly confirmed for 7 B-thesis events (ZS/BBY/BBWI/SNOW/DELL/ANF/CPRI); all replaced. MGM B declined (mechanism-mismatch; M&A risk-arb). OKTA (#8) and Agilent (#9) from D3 5/31 delegation already resolved by prior entries. All 12 D3-delegated items resolved.
