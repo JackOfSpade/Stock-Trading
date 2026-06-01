@@ -11767,3 +11767,107 @@ OKTA is **dual-queued**: a Strategy A-queue name (multi-quarter AI-identity / ze
 **Experiment Strategy B totals: UNCHANGED** — a DEFER advances NEITHER the GO nor the NO-GO count (disposition pending the re-routed session); GO/NO-GO set unchanged; **B-short string UNCHANGED** (a STEP-0 gate-deferral precedes any direction-specific [LONG/SHORT] analysis, parallel to the criterion-1 / sector-cap gate-terminations that do not extend the string). **New disposition sub-category: owner-consulted procedural gate-DEFERRAL pending a same-period M1 router outcome (FIRST instance; distinct from the AEO/BKE terminal sector-cap NO-GOs and from autonomous criterion-driven dispositions) — flagged for W5.**
 
 **File writes:** Decision_Log.md (this entry) + calendar event `jjglj1894olm0to7u6l8lclk7o` (re-routed Tue 6/2 09:00 MT; retitled; description rewritten). No Portfolio_Ledger.md / Watchlist.md / Regime_State.md change.
+
+---
+
+## 2026-06-01 — M5 Monthly Action Conversion
+
+**MT date anchor:** 2026-06-01 (Mon, first trading day of June; M5 runs after M1, M3, M4 are saved). Inputs read: Monthly_Fundamental.md (M1b — per-strategy ACTIVATE/DO-NOT-ACTIVATE calls; PART 1 echoes M1a May 2026 regime scoring; PART 2 per-strategy calls + divergence flags); Monthly_E_Pairs.md (M3 — 10-pair shortlist with TOP-3 prioritization, every pair flagged ETF-substitution-required); Monthly_D_Position_Deep_Dive.md (M4 — RTX HOLD, DIS HOLD; no IMMEDIATE-ACTION flag). Operational context read: Strategy.md, Experiment_Parameters.md, Portfolio_Ledger.md, Regime_State.md, Operating_Protocols.md, Watchlist.md, Decision_Log.md, Claude_Task_Plan.md (M5 spec).
+
+### §A — Router activation flips from M1b
+
+| Strategy | Technical (M1b) | Fundamental (M1b 2026-06-01) | Divergence | Prior call comparison | M5 downstream action |
+|----------|------------------|-------------------------------|-------------|------------------------|------------------------|
+| A | DO-NOT-ACTIVATE | DO-NOT-ACTIVATE | NO | UNCHANGED (April DNA) | Regime_State.md "confirmed UNCHANGED"; no A-queue drain (no flip TO ACTIVATE) |
+| B | ACTIVATE | ACTIVATE | NO | UNCHANGED (April ACT) | Regime_State.md "confirmed UNCHANGED" |
+| C | ACTIVATE | DO-NOT-ACTIVATE | YES (re-run) | UNCHANGED direction; April resolved HYBRID-ACTIVATE-FOMC-only | Queue `div-C-202605-1`; existing HYBRID state operative pending review |
+| D | ACTIVATE | DO-NOT-ACTIVATE | YES (NEW) | **FLIP TO DO-NOT-ACTIVATE fundamental** (April was ACTIVATE/ACTIVATE, no divergence) | Queue `div-D-202605-1`; new D entries BLOCKED pending review per M1b PART 2; existing RTX + DIS run to thesis-invalidation; STEP-0 D-gate added to BA + LLY re-screen calendar events |
+| E | ACTIVATE | DO-NOT-ACTIVATE | YES (re-run) | UNCHANGED direction; April resolved DO-NOT-ACTIVATE | Queue `div-E-202605-1`; existing DNA state operative pending review |
+
+**Reconciliation overrides applied (per Strategy.md mechanical checklist; M1b §"Reconciliation overrides applied"):** four rules evaluated against M1a axis values; zero materially changed any call. Two preconditions-satisfied rules logged for monthly-review record per Strategy.md "Contradictions logged for monthly review":
+- `growth_momentum=decelerating AND policy_stance=hawkish → A ACTIVATE→DNA`: precondition satisfied; did not fire (A raw M1b call already DNA; rule is directional ACTIVATE→DNA only) — no contradiction.
+- `inflation_trend=reaccelerating AND policy_stance=hawkish → D ACTIVATE→DNA`: precondition satisfied; did not fire (D raw M1b call already DNA; rule is directional ACTIVATE→DNA only) — no contradiction; raw fundamental reasoning and mechanical reconciliation converge on the same DNA call.
+
+The other two rules (`shock_overlay=acute` and `risk_sentiment=stressed`) had preconditions failing (M1a: `shock_overlay=latent`, `risk_sentiment=risk-on`) — not applicable.
+
+### §B — Divergence reviews queued (Pending_Adversarial_Reviews.md)
+
+`Pending_Adversarial_Reviews.md` newly created (file did not exist prior; first queue under the routine architecture). Three `divergence-review` entries appended per Claude_Task_Plan.md M5 rule B + ADVERSARIAL REVIEWS schema:
+
+| Queue id | Strategy | Prior state (operative pending review) | Attacker due | Orchestrator due | Status |
+|----------|----------|-----------------------------------------|--------------|-------------------|--------|
+| `div-C-202605-1` | C | HYBRID ACTIVATE (FOMC-only) | 2026-06-02 | 2026-06-03 | pending |
+| `div-D-202605-1` | D | ACTIVATE (NEW divergence — fundamental FLIP April→May) | 2026-06-02 | 2026-06-03 | pending |
+| `div-E-202605-1` | E | DO-NOT-ACTIVATE | 2026-06-02 | 2026-06-03 | pending |
+
+All three artifacts: `Monthly_Fundamental.md`. Each entry includes technical-reading snapshot (SPY Trend = NEUTRAL, VIX = NORMAL, Yield Curve Sustained Inversion = NOT-SUSTAINED, Equity Breadth = HEALTHY — per Regime_State.md / M1b PART 2 table). The Attacker routine and Orchestrator routine fire daily per the queue-driven architecture; M5 does not invoke any review prompt — only enqueues.
+
+### §C — Exits from M4
+
+None. M4 2026-05-31 recommended **HOLD** on both open D positions:
+- **RTX** (OPEN 2026-04-27 0.1595 sh @ $175.12; cost basis $28.21): all six invalidation criteria NOT-TRIPPED; five driver pillars on-track-or-progressing; two in-window management reaffirmations of FY26 framework (annual meeting + Bernstein); m2m drift −1.13% within long-horizon noise; next structural read = Q2'26 print July 2026.
+- **DIS** (OPEN 2026-05-07 0.28 sh @ $110.35; cost basis $31.21): all five invalidation criteria NOT-TRIPPED; all five driver pillars on-track or progressing; one verification print into 12+ month metric-trajectory regime (Q2 FY26 SVOD margin 10.6% vs Q1 FY26 8.4% baseline = +220bps; FY26 EPS guide tightened upward to ~12%; buyback raised $7B → $8B); next material data point = Q3 FY26 print ~2026-08-12.
+
+No IMMEDIATE-ACTION flag; no second-look invalidation criterion to flag; no LTCG-line coordination operative (both positions ~10–11 months from LTCG eligibility; thesis-completion windows extend past LTCG by design). No exit orders staged. No D2-style RECOMMENDED-ACTION exits surfaced anywhere in the M4 window.
+
+### §D — Research deferrals from M4
+
+None. M4 produced no "further research required" recommendations.
+
+### §E — Thesis-construction scheduling from M3 (Strategy E)
+
+**Skipped.** Two compounding reasons make no E pair thesis-construction scheduling appropriate:
+
+1. **Router state.** E remains DO-NOT-ACTIVATE pending `div-E-202605-1` (existing DNA state operative until orchestrator output). The M5-rule-E scheduling action runs against the affirmative ACTIVATE state; under DNA-pending-review, new E entries are blocked.
+2. **Advisory-only M3 disposition at current book size.** M3 explicitly framed the entire 10-pair shortlist (TOP-3 = NVO/LLY, AMD/NVDA, STX/MU; REST-7 = WFC/C, F/GM, CVX/XOM, ELV/UNH, AMAT/ASML, TGT/WMT, VZ/T) as "divergence-review reference material, not an entry queue." Every pair carries an "ETF-substitution required" flag at the per-leg 2%-of-NAV sizing of $37.81 (per-strategy E book mark-to-market 2026-05-07 close $1,890.44; cheapest individual-stock leg F ~$11–12 is single-share-feasible but the GM short leg ~$75 is not; every other leg-pair structurally infeasible). M3's universal execution disposition: "maintain the list as paper-tracked analytical reference; revisit at next monthly cycle for re-verification of the TOP-3 theses against Q2 2026 prints (late July–mid-August 2026)."
+
+No E pair thesis-construction calendar events created this cycle.
+
+### §F — Cross-prompt deconfliction
+
+No exits staged (M4 all-HOLD); no A-queue drain (A router UNCHANGED DNA → no flip TO ACTIVATE); no E pair thesis-construction scheduled. No ticker overlap to resolve between exit candidates (none) and new-entry candidates (none). The two open D positions (RTX, DIS) are not on the M3 shortlist (RTX is Industrials A&D; DIS is Comm Services Entertainment; neither sector represented in the E top-3 = Pharma/Semis/Memory). No simultaneous-holding constraint surfaces this cycle.
+
+### §G — Watchlist updates
+
+No A-queue drains (A router UNCHANGED DNA). No other M5-routine-driven updates surfaced. Watchlist.md A-queue holds at 31 names from 2026-05-31 W4 W23 (PANW + CRWD added by W4). Standing notes on individual queued names (post-print framings on QCOM/AAPL/DDOG/AKAM/NVDA/CSCO/AMAT/HD/TGT/WMT/AVGO/ORCL/ADBE/MU/INTC/NBIS/CRM/DELL/SNOW/MRVL/NTAP/OKTA/NOW/HPE/SMCI/AMD/IBM/PANW/CRWD) are informational annotations for the next A-router-ACTIVATE evaluation — none requires M5-cycle action under DNA-router-state.
+
+### §H — D thesis-construction calendar events (added STEP-0 D-divergence-review gate)
+
+Per M5 rule A "A FLIP TO DO-NOT-ACTIVATE for any strategy — halt new-position activity. Cancel any pending thesis-construction calendar events for that strategy via Calendar MCP." The D fundamental flip created a pending-review state (not a confirmed router flip — the prior ACTIVATE state remains operative pending `div-D-202605-1`). Two existing D thesis-construction-adjacent calendar events were updated with a STEP-0 D-divergence-review gate rather than deleted, preserving the original reconsideration-trigger logic for the case where the orchestrator verdict resolves ACTIVATE:
+
+| Event id | Summary | Time | M5 update |
+|----------|---------|------|-----------|
+| `r9i6u6mnpk9ukoj2bh15m1fr7c` | [Claude] Re-screen BA — trailing-30d roll-off check | Mon 2026-06-01 09:00 MT | STEP-0 gate prepended: read Pending_Adversarial_Reviews.md (`div-D-202605-1`); if orchestrator verdict ACTIVATE → proceed; if DNA → terminal NO-GO; if pending → DEFER (conservative-default NO entry; re-route to post-orchestrator slot) |
+| `fpbueqccja9thjcnuj6ck9l6rs` | [Claude] LLY Strategy D mechanical re-screen | Fri 2026-06-12 09:30 MT | STEP-0 gate prepended (same logic; orchestrator output expected by 2026-06-03, well before the Fri 6/12 session) |
+
+Rationale for gate-vs-delete: (a) the BA / LLY events check the original reconsideration-trigger conditions independent of router state — the gate-add preserves that check under an ACTIVATE-resolution branch while blocking thesis construction under DNA-resolution; (b) deferrals-do-not-chain (Operating_Protocols §9) is satisfied by the terminal "re-route to next viable slot" branch when the orchestrator output is pending; (c) the OKTA 2026-05-31 STEP-0-A-router-gate-DEFER pattern is the in-house precedent for procedural router-gate deferrals.
+
+No other D thesis-construction calendar events exist (verified via Calendar MCP fullText="Thesis construction" 2026-06-01 → 2026-08-31 walk; the only "Thesis construction" event surfaced is `7pbkg1kh2pge7midfiqnj6edvk` FOMC C Mon 2026-06-08 — Strategy C, unaffected by D divergence — and the OKTA B re-route `jjglj1894olm0to7u6l8lclk7o` — Strategy B, unaffected). Q4 quarterly conversion event recurring on 2026-07-01 is unaffected. Strategy.md "router-deactivation-does-not-force-exits" rule is operative for the existing RTX + DIS positions regardless of divergence-review outcome direction.
+
+### §I — Decision_Log + Regime_State updates
+
+- **Regime_State.md** updated in-place (surgical edits per Operating_Protocols file-write convention): Last-updated marker → 2026-06-01; Strategy A/B/C/D/E activation-state sections all refreshed with M1b 2026-06-01 fundamental calls + pending-review pointers for C/D/E; Pending Adversarial Reviews table refactored to two-routine queue model (referencing `Pending_Adversarial_Reviews.md`); Activation State Change History appended with 5 new 2026-06-01 rows (one per strategy); Trade Eligibility Summary refreshed.
+- **Decision_Log.md** appended (this entry) per M5-routine output convention; no surgical edits to prior entries (append-only immutability).
+- **Pending_Adversarial_Reviews.md** newly created with 3 divergence-review entries and the queue-file schema header.
+- **Portfolio_Ledger.md** unchanged (no order staging this cycle; M4 HOLD on both D positions; mark-to-market values are D2/W2 cadence responsibilities, not M5).
+- **Watchlist.md** unchanged (no A-queue drain; no other updates surfaced).
+- **Calendar events** updated: 2 (BA re-screen + LLY re-screen, both with STEP-0 D-divergence-review gates). Created: 0. Deleted: 0.
+
+### §J — Output discipline + theater-check on this M5 routine
+
+This M5 entry is the routine output per Claude_Task_Plan.md M5 spec; no chat-output orders required (CHAT OUTPUT section of M5 spec: "If no orders, no file changes, no events: 'No actions required.'" — but there ARE file changes and calendar events here, so a one-line acknowledgment was appropriate in chat).
+
+Theater-check (M5 self-assessment): the routine produced binding actions (queue creation, Regime_State.md state-pointer updates, calendar gate-add) without invoking adversarial review verdicts directly — M5 is structurally an action-conversion routine, not an adjudicator. The C / D / E divergence reviews themselves carry the substantive theater-check load and will be self-certified by their respective Orchestrator routines. The forcing-question framing (Experiment_Parameters.md rev 15) does NOT apply at M5 cadence — that's a pre-mortem-review construct. The D FLIP-to-DNA from a single-month M1b cycle is high-impact (blocks new D entries) but follows the queue-driven architecture exactly as Claude_Task_Plan.md M5 + Experiment_Parameters.md ROUTER section prescribe.
+
+### §K — Outcome summary
+
+- **Router flips actioned:** 0 confirmed (no orchestrator outputs yet); 1 NEW divergence created (Strategy D: fundamental FLIP from ACTIVATE → DNA); 2 divergences re-run from April direction (C, E).
+- **Pending_Adversarial_Reviews queue entries created:** 3 (`div-C-202605-1`, `div-D-202605-1`, `div-E-202605-1`).
+- **Exit orders staged:** 0 (M4 all-HOLD).
+- **Thesis-construction events created:** 0 (no E pair scheduling under DNA + advisory-only; no D scheduling under pending divergence review).
+- **Calendar events updated with STEP-0 gates:** 2 (BA re-screen, LLY re-screen).
+- **A-queue drains:** 0 (no router-FLIP-TO-ACTIVATE on A).
+- **Live-state files updated:** Regime_State.md (surgical); Pending_Adversarial_Reviews.md (created); Decision_Log.md (this append).
+- **Live-state files unchanged:** Portfolio_Ledger.md; Watchlist.md.
+
+**References:** Claude_Task_Plan.md §M5 (Monthly Action Conversion) + ADVERSARIAL REVIEWS section; Monthly_Fundamental.md (M1b 2026-06-01) — PART 1 echo of M1a regime scoring + PART 2 per-strategy calls / divergence flags / reconciliation overrides table; Monthly_E_Pairs.md (M3 2026-06-01) — 10-pair shortlist + universal ETF-substitution caveat at $1,890.44 E book; Monthly_D_Position_Deep_Dive.md (M4 2026-05-31) — RTX HOLD + DIS HOLD with all invalidation criteria NOT-TRIPPED; Experiment_Parameters.md "Regime router" + "Routine architecture for all structured adversarial reviews"; Strategy.md per-strategy activation rules + reconciliation overrides + "router-deactivation-does-not-force-exits" rule; Operating_Protocols.md §9 (Deferral Discipline); Decision_Log_Archive_2026_Q2.md (prior-cycle C HYBRID + E DNA verdicts). Calendar events updated: `r9i6u6mnpk9ukoj2bh15m1fr7c` (BA re-screen, STEP-0 gate); `fpbueqccja9thjcnuj6ck9l6rs` (LLY re-screen, STEP-0 gate).
