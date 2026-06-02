@@ -12326,3 +12326,119 @@ Queue is well-formed. No entries past-due. ZBRA is the only open position with a
 - Watchlist.md HPE A-queue note already reflects most-extreme-tier valuation-reset caveat (NOTE 2026-06-01); no additional annotation required.
 
 **Compaction-survival note — HPE B 2026-06-02:** HPE Q2 FY26 (AMC Mon 6/1; Day-0 6/2 close-to-close **+19.47%**, $47.00→$56.15) → **Strategy B NO-GO**. Binding = **criterion-4 dual-framing**: LONG foreclosed (information-driven; post-print 7-firm sell-side PT-raise wave to $65–$80 cluster ratifies the new level — continuation to cluster is momentum, not B mean-reversion; DDOG criterion-5 precedent passes criterion 5 but does not override criterion-4 foreclosure); SHORT dismissed (PT cluster $65–$80 is ABOVE current $56.15, not below it; no overshoot anchor; 7 firms actively ratify the higher level). Canonical **Sub-Pattern 1** at most-extreme-tier PT-raise magnitude: BofA +111%, Morgan Stanley +115%, Raymond James ≥+155%, Citi +79%, WF +~67%, Truist +~123%, UBS +160% (7 confirmed firms; 4 individually exceed +79%; UBS +160% new single-firm percentage benchmark). Corroborated by criterion 3 (next earnings Q3 FY26 ~September outside 60d; no admissible in-window target). Criteria 1 (CTC +19.47%; mcap $57B; ADV $1.11B) + 5 (A=DNA; DDOG precedent) CLEAR. Print: EPS $0.79 vs $0.54 (+46%); Rev $10.68B vs $9.79B (+9%); FY26 EPS guide $3.40 midpoint vs prior $2.40 (+41.7%); Q3 Rev guide $11.8B midpoint vs cons $9.9B (+19%). Elliott Board appointment. Conviction ~78% (highest). **No order; no Portfolio_Ledger / Regime_State change; no entry calendar events. Pending_Analyses.md `thesis-HPE-B-20260602` → complete.** B tally → ~6 GO + ~59 NO-GO; B-short string → ~43 (positive-direction SHORT-dismissal per Sub-Pattern 1 doctrine).
+
+---
+
+### [2026-06-02] Strategy B — OKTA (Okta, NASDAQ: OKTA) Q1 FY27 print B-thesis-construction — NO-GO (criterion-4 dual-framing: SHORT dismissed on sub-pattern 1 sell-side bull-ratification + stock-above-PT-cluster overshoot; LONG foreclosed information-driven + B-vs-A; conviction HIGHEST ~76%)
+
+**Trigger:** D2 drain of Pending_Analyses.md entry `thesis-OKTA-B-20260602` (due 2026-06-02), itself seeded from the 2026-05-31 OKTA Q1 FY27 B-thesis DEFERRAL (Decision_Log 2026-05-31 "Strategy B OKTA Q1 FY27 thesis construction — DEFERRED to a post-M1-2026-06-01 resolution session"). Deferred pending the M1b 2026-06-01 A-router outcome. The M1b 2026-06-01 outcome is now recorded (Decision_Log 2026-06-01 M5/M1b entry; Regime_State.md). This is a TERMINAL decision session per Operating_Protocols §9 (no re-deferral). Day-0 = 2026-05-29 (Q1 FY27 AMC 2026-05-28); entry window closes ~2026-06-10 (10 trading days). Today = Day-4 (6/2); ~6 trading days remain.
+
+**Book context:** B NAV ~$9,462.43 (net liquidation per D3 2026-06-02 connector sweep; 2% ≈ $189.25/position). Open B book (5): HCA, ZBRA, BRC, TJX, AZO (BURL closed 2026-06-01, confirmed 2026-06-02 D3). A router DO-NOT-ACTIVATE (M1b 2026-06-01; confirmed); no A positions (criterion 5 clears per DDOG precedent). B tally ~6 GO + ~59 NO-GO (post-HPE 2026-06-02); B-short string ~43 (standing W5 reconciliation drift caveat). No sector/count caps (Operating_Protocols §10 / Strategy.md rev 35).
+
+**STEP-0 A-ROUTER GATE:** A router = DO-NOT-ACTIVATE (confirmed, Regime_State.md — Strategy A activation state: "DO-NOT-ACTIVATE"; M1b 2026-06-01 both technical and fundamental signals = DNA; no divergence). OKTA is in A-queue (Watchlist.md row: "AI-identity/zero-trust-security platform; Q1 FY27 print context; router-gate routing per A DO-NOT-ACTIVATE; resolution = Next M1 with A router ACTIVATE"). Per DDOG criterion-5 precedent and the 2026-05-31 OKTA deferral entry's own documented gate logic: A = DNA → gate CLEARS → proceed to full 5-criterion thesis. Gate CONFIRMED CLEAR.
+
+**Q1 FY27 print summary (AMC 2026-05-28; sourced from okta.com press release + Yahoo Finance + 247wallst.com):**
+- Revenue: $765M (+11.2% YoY), beat $751.8M consensus by +1.76%
+- Subscription revenue: $750M (+11% YoY, 98% of total)
+- Non-GAAP diluted EPS: $0.91 vs $0.85 consensus (+7.1% beat)
+- GAAP net income: $74M (up from $62M in Q1 FY26); GAAP net margin 10%
+- Non-GAAP operating margin: 22% (non-GAAP net margin)
+- Free cash flow: $252M (FCF margin ~33%); operating cash flow $258M
+- EBITDA: $198M, beat Street by 7.6%
+- Remaining Performance Obligations (RPO): $4.72B, +16% YoY
+- Current RPO (cRPO): +12% YoY
+- Net Revenue Retention (NRR): 107% (inflecting upward from 106%)
+- Large customers (ACV ≥$100K+): 85% of ACV (up from 80%)
+- New product bookings: ~25% of Q1 total bookings (up meaningfully YoY)
+- Share repurchases: 3M+ shares at $241M in Q1 FY27; $680M remaining authorization
+- Q2 FY27 guide: Rev $790–$794M (9% YoY), non-GAAP EPS $0.95–$0.97, non-GAAP op margin 26%, FCF margin 20–21%
+- FY27 guide (raised): Rev $3.185–$3.205B (9–10% growth), non-GAAP EPS $3.79–$3.87, non-GAAP op margin 25–26%, FCF margin 27–28%
+- Key strategic context: AI-agent identity wave narrative; Forrester Wave Leader designation; Google/Amazon/ServiceNow partnerships; $2.6B cash + short-term investments
+
+**Price verification (IBKR connector, contract_id 272356196, authoritative):**
+- Prev close (2026-05-28): $94.72 ✓ (matches prior session data)
+- Day-0 close (2026-05-29): $123.27 ✓ (matches prior session data)
+- Day-0 CTC: ($123.27 − $94.72) / $94.72 = **+30.17%** ✓ confirmed
+- Day-1 (2026-06-01): close $139.79 (+13.4% Day-1 continuation)
+- Day-4 (2026-06-02): last $135.90 (market open, declining from Day-1 peak; prior close $139.79)
+- 52-week range: $62.66 – $142.35 (new 52-week high set on Day-1/Day-2)
+- mcap: ~$21.4B (confirmed via Yahoo Finance Day-0; ~$24B at Day-4 price range) — well above $2B floor
+- 90-day ADV: ~$390M+ (volume avg ~3.9M shares × ~$100 avg price; see price history) — well above $10M floor
+
+**Post-print analyst PT raises (sourced 2026-05-29 from MarketBeat, TheFly, StockAnalysis, YouTube earnings video, Truist MarketBeat instant-alert citing confirmed firms):**
+
+| Firm | Old PT | New PT | % Change | Rating |
+|------|--------|--------|----------|--------|
+| Susquehanna | $80 | $110 | +37.5% | Neutral (maintained) |
+| Canaccord Genuity | $95 | $115 | +21.1% | Buy (maintained) |
+| Citigroup | ~$80 | $105 | ~+31% | Buy/Positive |
+| Macquarie | $100 | $120 | +20.0% | Outperform (maintained) |
+| RBC Capital | $108 | $122 | +13.0% | Outperform (maintained) |
+| JPMorgan | $103→$114 | $114 | +10.7% | Overweight (maintained) |
+| Mizuho | $100 | $110 | +10.0% | Outperform (maintained) |
+| BTIG | $105 | $119 | +13.3% | Buy (maintained) |
+| Needham | prior ~$100 | $120 | ~+20% | Buy (maintained) |
+| BMO | prior | $120 | ~+20% | Buy |
+| Oppenheimer | $110 | $125 | +13.6% | Outperform |
+| Morgan Stanley | prior | $115 | n/a | (Equal-Weight apparent) |
+| Truist Financial | new | $120 | — | Buy |
+| DA Davidson | prior | $130 | — | Neutral |
+| Berenberg | prior | raised | n/a | — |
+
+New PT cluster range: $105 (Citi floor) – $130 (DA Davidson ceiling). Dense interior: $110 (Mizuho/Susquehanna) / $114 (JPM) / $115 (Morgan Stanley/Canaccord) / $119 (BTIG) / $120 (RBC/Macquarie/Needham/BMO/Truist) / $122 (RBC) / $125 (Oppenheimer). Cluster mean approximately $116–$120.
+
+**SP1 trigger check (≥3 firms raising PTs ≥20%):**
+- Susquehanna +37.5% ✓
+- Canaccord Genuity +21.1% ✓
+- Citigroup ~+31% ✓
+- Macquarie +20.0% ✓ (borderline, exactly 20%; meets threshold)
+- Needham ~+20% ✓ (approximate, pending exact prior PT)
+- **Result: ≥3 firms with ≥20% raises CONFIRMED.** SP1 threshold met on the multi-firm ≥20% criterion.
+
+**Critical structural diagnostic — stock vs. new PT cluster:**
+- Day-0 close $123.27 vs new PT cluster $105–$130: stock landed IN the middle of the new PT cluster (above Citi/Susquehanna/Mizuho/JPM floor, below Oppenheimer/DA Davidson/Morgan Stanley ceiling).
+- Day-1 close $139.79: stock EXTENDED ABOVE the new PT cluster ceiling ($130 DA Davidson) — overshot the entire post-print PT consensus range.
+- Day-4 current $135–136: still ABOVE the cluster ceiling. Only the 3-4 most aggressive PTs (DA Davidson $130, Oppenheimer $125) are below current price; the cluster mean ($116–$120) is ~13–17% BELOW current price.
+
+**Criterion 1 — CLEARS.** CTC +30.17% (≥5% ✓ with 6× cushion); event = Q1 FY27 earnings release (qualifying closed-list print event ✓); mcap ~$21.4B (≥$2B ✓ with 10× cushion); ADV ~$390M+ (≥$10M ✓ with 39×+ cushion). Instrument = NASDAQ-listed common equity ✓. All gates pass with material cushion.
+
+**Criterion 2 — Inconclusive / carried to criterion 4.** The core proportionality question: is +30.17% a disproportionate reaction to the Q1 FY27 fundamentals? The print was a genuine beat-and-raise: rev +11.2% YoY, EPS $0.91 vs $0.85, NRR inflecting upward to 107%, RPO +16%, FY27 guide raised on all axes, strong FCF. However, prior to the print, the stock was in the high $80s–$94 range with a PT consensus of approximately $95–$105 across most firms. A +30% single-day move to $123 — and then a further +14% the next day to $140 — represents a reaction that put the stock materially above ALL pre-print analyst PTs and above the post-print raised cluster mean. This trajectory (stock ABOVE the sell-side's post-print fair value) has characteristics of both genuine re-rating (the AI-agent identity wave narrative is new/genuine) and potential overshoot (stock outpaced even the bulls' post-print upgrades). The proportionality question does not cleanly resolve to either direction at criterion 2 depth; carried to criterion 4 for the adversarial dual-framing test.
+
+**Criterion 3 — FAILS (no admissible in-window convergence target).** Named-event target search:
+- Q2 FY27 earnings: Yahoo Finance shows estimated earnings date **Aug 25, 2026** — approximately 84 days from Day-0 (2026-05-29); definitively outside the 60-day window (~2026-07-28 deadline). FAILS.
+- FOMC: mechanism mismatch (idiosyncratic identity-security single-name; not rate thesis). NOT admissible.
+- Index inclusion: OKTA is already an S&P 500 constituent. No inclusion event. NOT applicable.
+- FDA: N/A (software company).
+- Named PT-cluster convergence target (LONG): a LONG thesis targeting convergence to the $116–$120 PT cluster mean is numerically statable. However, the stock is currently ABOVE the cluster mean ($135–136 vs cluster mean $116–$120) and near/above the cluster ceiling ($130 DA Davidson). There is NO PT-cluster undershoot gap to close UPWARD. Any LONG convergence target would require the stock to continue extending BEYOND the highest analyst PT ($130), which is momentum continuation, not mean-reversion. FAILS.
+- Named SHORT convergence target: a SHORT thesis targeting mean-reversion toward the pre-print $94 level has no named in-window catalyst. There is no specific event in the next 60 days that would drive the stock back toward pre-print levels. The stock has already partially pulled back from $142 peak to $135, but without a named catalyst in-window a SHORT mean-reversion target is speculative. FAILS.
+- Criterion 3 fails independently — corroborating NO-GO basis.
+
+**Criterion 4 — DECISIVE NO-GO (dual-framing).** The central determination: is the +30.17% Day-0 move (and subsequent Day-1 +13.4% extension to $140) information-driven or sentiment-driven?
+
+*Sub-Pattern 1 routing:* SP1 threshold is met (≥3 firms with ≥20% PT raises: Susquehanna +37.5%, Citigroup ~+31%, Canaccord +21%, Macquarie +20%). 13–15+ firms raised PTs in the 48h post-print; the cluster is dense ($105–$130) and represents a genuine fundamental re-rating of OKTA's fair value. The sell-side has actively repriced OKTA upward: the pre-print mean PT of approximately $97–$100 shifted to a post-print mean of ~$116–$120 = approximately +19–24% upward shift in sell-side fair value consensus.
+
+*Stock-above-PT-cluster structural diagnostic:* This OKTA case has a critical structural feature that is DISTINCT from the HPE and SNOW cases but is its own variant within the SP1 pattern. At Day-4 ($135–136), OKTA is trading approximately $15–20 ABOVE the post-print sell-side mean PT cluster ($116–$120), and approximately $5–6 above even the most aggressive PT in the cluster (DA Davidson $130). The stock has OUTRUN the sell-side's post-print repricing. This creates a specific structural picture:
+
+*SHORT framing — DECISIVELY DISMISSED:* (S1) The post-print sell-side bull-ratification wave (13–15+ firms) has actively repriced OKTA's fair value to $105–$130; a SHORT thesis would require the stock to revert below the sell-side's post-print fair value consensus — which has 13+ firms actively maintaining Buy/Outperform/Neutral at $105–$130. No overshoot-to-fair-value anchor: the sell-side has ratified $105–$130 as fair value, not ~$65 (pre-print levels). (S2) The "stock above PT cluster" pattern at Day-4 is NOT the classic SHORT-overshoot setup: even at $135, the stock is only ~12–15% above the cluster mean ($116–$120) and ~4% above the most aggressive PT ($130) — this is within normal PT-cluster tracking noise for a momentum-driven re-rating, not a 50–100% above-PT overshoot that characterizes classic SHORT candidates. (S3) B-short string ~43 (extremely high prior against SHORT — 43 consecutive positive-direction SHORT-dismissals). (S4) The AI-agent identity wave narrative (new agentic-AI product bookings at 25% of Q1 bookings; Google/Amazon/ServiceNow partnerships; Forrester Wave Leader) is a genuine structural tailwind that suppresses downward mean-reversion in the near term. (S5) NRR inflection upward to 107% from 106% is a leading indicator of future revenue acceleration — the informational content is pointing forward, not mean-reverting backward. (S6) KL #7 short-side gap-up execution risk: stock already at new 52-week high; any positive AI-security news in the 60-day window could extend further. (S7) Per AMD/PINS/TSN trajectory-agnosticism principle: SHORT framing is dismissed regardless of whether the stock holds/fades — the SP1 sell-side ratification removes the overshoot anchor independent of trajectory.
+
+*LONG framing — FORECLOSED for Strategy B:* The LONG framing faces a structurally severe problem: the stock is trading ~$15 ABOVE the post-print sell-side mean PT cluster. A LONG thesis here would assert that (a) the move was "too small" (undershoot), OR (b) the stock will continue rising from an already-above-cluster position. Neither is a Strategy B mean-reversion premise:
+- (a) Undershoot test: the stock at $135 is ABOVE, not below, the sell-side's post-print fair value repricing ($116–$120 mean). If anything, the stock has OVERSHOOT relative to sell-side repricing — the opposite of an undershoot. A LONG-undershoot thesis requires the stock to be below the new PT cluster, not above it.
+- (b) Continuation LONG: "stock above PT cluster will keep going up" is momentum continuation, not mean-reversion. It asserts the stock will re-rate further beyond even the bulls' repriced PTs, requiring additional new positive information not yet public — which is Strategy A territory (forward-looking fundamental thesis), not Strategy B (post-event reaction-mispricing).
+- Per the differentiation-from-A doctrine: a continuation LONG on a confirmed beat-and-raise with buy-rated analysts is the definition of a Strategy A entry point. A is DNA; no A position permitted. LONG foreclosed via criterion-4 B-vs-A mechanism mismatch + information-driven repricing already priced.
+- The DDOG criterion-5 precedent (A=DNA → B admissible on criterion 5) explicitly does NOT override the criterion-4 LONG foreclosure test; criterion 5 clears the gate, criterion 4 independently adjudicates the framing.
+
+*Trajectory note:* Per AMD/PINS trajectory-agnosticism principle, this NO-GO is not dependent on whether OKTA holds at $135, fades back to $115, or extends to $145. The SP1 routing produces NO-GO regardless of post-Day-0 price trajectory.
+
+*Information-vs-sentiment verdict:* The +30.17% Day-0 move + Day-1 extension is primarily information-driven: the print delivered genuine fundamental beats (NRR inflection, RPO +16%, FCF margins, guide raise on all axes) plus a new AI-agent narrative that is genuinely new information (not a pre-priced expectation). The sell-side's own repricing (13–15 firms raising PTs to $105–$130) confirms the information-driven characterization. The additional Day-1 +13% extension above the PT cluster may contain a sentiment layer (momentum chase, short-squeeze, AI narrative enthusiasm), but the underlying Day-0 move is anchored in hard information. For criterion 4 purposes, the move is information-driven at its core — the standard Constraint 1 / 2.20 textbook-rational-trap applies.
+
+**Criterion 5 — CLEARS.** A router = DO-NOT-ACTIVATE (confirmed at STEP-0 above). OKTA in A-queue. No open A position in OKTA; no A positions open at all. Per DDOG criterion-5 precedent, A-queue + DNA A-router = B admissible on criterion 5. Gate PASSES.
+
+**OKTA disposition: NO-GO — binding on criterion 4 dual-framing (LONG foreclosed: information-driven repricing confirmed by 13–15 firm sell-side PT-raise wave; stock is ABOVE (not below) new PT cluster mean — no undershoot anchor; continuation = B-vs-A mechanism mismatch / Strategy A territory; SHORT dismissed: SP1 sell-side ratification removes overshoot anchor; B-short string ~43 contra-indicator; no PT-cluster-below-stock overshoot for mean-reversion; NRR/RPO/FCF information content suppresses near-term downside). Criterion 3 independently fails (Q2 FY27 earnings Aug 25 outside 60d window; no in-window named catalyst; stock above PT cluster eliminates LONG convergence gap). Criteria 1 and 5 clear. Criterion 2 inconclusive. Conviction HIGHEST ~76%.**
+
+The ~24% residual is the irreducible Constraint 1 / criterion-4 self-reference residual plus one genuine area of ambiguity: the "stock above PT cluster" creates a superficial SHORT-overshoot appearance (stock is above sell-side fair value) that COULD support a SHORT thesis IF the sell-side cluster is taken as the "correct" price target and the stock has overshot it. However, this argument fails because: (a) the SP1 sell-side ratification means the firms have actively repriced upward — any "overshoot" is relative to PTs set to $105–$130, not to pre-print levels; (b) the move from $94 → $135 involves genuine positive information (NRR inflection, AI agent pipeline, guide raise) that the sell-side has priced — the stock being $5 above the most aggressive PT is within normal tracking noise; (c) the B-short string at ~43 represents 43 consecutive prior experiments where positive-direction SHORT-dismissals were the correct call; (d) Operating_Protocols §9 no-re-deferral rule combined with conservative-default = no entry when ambiguity exists. The residual does not move the disposition to GO.
+
+**Session outcome:** NO-GO; no order staged; no calendar events created (GO-only); no Portfolio_Ledger change; no Regime_State / Watchlist modification. **B tally → ~6 GO + ~60 NO-GO** (standing W5 tally-drift caveat). **B-short string ~43 → ~44** (positive-direction SHORT-dismissal per Sub-Pattern 1 doctrine, consistent with SNOW/HPE/Agilent/AMD chain). KL #12 unaffected (no new positions). Pending_Analyses.md `thesis-OKTA-B-20260602` → status complete / outcome NO-GO.
+
+**Compaction-survival note — OKTA B 2026-06-02:** OKTA Q1 FY27 (AMC Thu 5/28; Day-0 5/29 close-to-close **+30.17%**, $94.72→$123.27; extended Day-1 +13.4% to $139.79; Day-4 $135–136) → **Strategy B NO-GO**. Terminal resolution of 2026-05-31 DEFERRAL (pending M1b 2026-06-01 A-router output). STEP-0 A-router gate: A = DO-NOT-ACTIVATE (M1b 2026-06-01 UNCHANGED DNA) → gate CLEARS. Binding = **criterion-4 dual-framing**: LONG foreclosed (information-driven; 13–15 firm sell-side PT-raise wave to $105–$130 cluster = SPl; stock at $135 is ABOVE the new PT cluster mean $116–$120 — no undershoot anchor; continuation-LONG is Strategy A territory; A=DNA → foreclosed); SHORT dismissed (SP1 sell-side ratification removes overshoot anchor; stock above PT cluster means no "below fair-value" mean-reversion driver; B-short string ~43 contra-indicator; NRR/RPO inflection suppresses near-term downside thesis). Print: Rev $765M (+11.2% YoY; beat $751.8M cons); non-GAAP EPS $0.91 (beat $0.85); NRR 107% (inflecting); RPO $4.72B +16%; FCF $252M; FY27 guide raised to $3.185–$3.205B rev + $3.79–$3.87 EPS. SP1 trigger confirmed (≥3 firms ≥20%: Susquehanna +37.5%, Citigroup ~+31%, Canaccord +21%, Macquarie +20%). Corroborated by criterion 3 (Q2 FY27 earnings Aug 25 outside 60d; stock above PT cluster eliminates LONG convergence gap). Criteria 1 (CTC +30.17%; mcap ~$21B; ADV ~$390M) + 5 (A=DNA; DDOG criterion-5 PASS) CLEAR. Conviction ~76% (highest). **No order; no Portfolio_Ledger / Regime_State / Watchlist change; no entry calendar events. Pending_Analyses.md `thesis-OKTA-B-20260602` → complete.** B tally → ~6 GO + ~60 NO-GO; B-short string → ~44.
+
+**References:** Pending_Analyses.md `thesis-OKTA-B-20260602`; Decision_Log 2026-05-31 OKTA DEFER entry; Decision_Log 2026-06-01 M5/M1b (A & B router states); Regime_State.md (A router DNA, B router ACTIVATE); Watchlist.md (OKTA A-queue row); B_Sub_Pattern_Taxonomy.md (Sub-Pattern 1 aggressive-sell-side-bull-ratification; AMD/PINS/SNOW trajectory-agnosticism; layered-1+3 instances); Strategy.md rev 35 (criteria 1–5; instrument rules; Differentiation-from-A; no caps; KL #12 monitoring-only); Operating_Protocols §2 (commissions disregarded), §3 (NO-GO context-not-barrier), §8 (conviction ladder), §9 (no re-deferral), §10 (no count caps). DDOG criterion-5 precedent (A-queue + DNA → B admissible). SNOW NO-GO 2026-06-02 (same-cohort layered-1+3 benchmark; AMD analogue); HPE NO-GO 2026-06-02 (SP1 extreme-tier PT-raise magnitude reference). IBKR connector contract_id 272356196 (NASDAQ OKTA).

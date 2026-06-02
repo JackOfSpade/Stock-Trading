@@ -33,8 +33,8 @@ Mirrors `Pending_Adversarial_Reviews.md`. Established 2026-06-01 (IBKR-connector
     Apply B_Sub_Pattern_Taxonomy.md; Strategy.md rev 35 (no caps; KL #12 metric (d) monitoring-only); live quotes/CTC via connector. See Decision_Log 2026-05-31 OKTA deferral.
     IF GO: connector craft-order flow (§11) — create_order_instruction + one Confirm-order event.
   conservative_default: NO entry if the A-router gate is not confirmable clear (deferrals do not chain).
-  status: pending
-  outcome: (pending)
+  status: complete
+  outcome: NO-GO — criterion-4 dual-framing (LONG foreclosed information-driven + B-vs-A; SHORT dismissed SP1 sell-side bull-ratification + stock-above-PT-cluster; A-router gate clears DNA; conviction ~76%) — 2026-06-02
 
 ---
 
