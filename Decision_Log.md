@@ -12172,3 +12172,41 @@ High-fan-out cadences (W4: A/B/C; M5: E + A-queue drain; Q4/A3: D + foundation/c
 2. *Analysis runs in-session or via `Pending_Analyses.md`.* Discovering routine does it now if data exists, else enqueues with a `due_date`; D2 Step 1 drains due entries daily. Idempotency/no-chaining: conservative_default fires once on the due_date if still unresolvable.
 3. *Human action is now just order confirmation.* No analysis paste. HOIP §1 + Claude_Task_Plan Human-role are authoritative.
 4. *Seven events migrated 1:1 to the queue (6/2–6/12); two time-exit backstops (HCA 6/26, ZBRA 7/13) intentionally left for D3.*
+
+---
+
+### [2026-06-01] Calendar cleanup — removed the last vestigial [Claude] events; calendar is now order-confirmation-only
+
+**Trigger:** Owner directives following the analysis-queue migration: (1) "align [the HCA/ZBRA time-exit events] with new workflow" — don't leave them as legacy backstops; (2) confirmation that **all Claude cadence tasks already fire automatically via Claude Code scheduled remote routines** (run on repeating intervals), so the quarterly/annual cadence calendar events are not triggers — they are vestigial.
+
+**Decision:** Deleted the remaining 12 `[Claude]` calendar events so the calendar holds **only `[Claude] Confirm order` events** (the single human action). Two groups:
+
+1. **Five Strategy-B time-based-exit events** (HCA, ZBRA, BRC, TJX, AZO) — deleted. These are mechanical date/price exits; **D1's daily connector exit-trigger sweep** now fires them. Before deleting, confirmed every open B position carries both mechanical triggers in its `Portfolio_Ledger.md` "Position thesis details" subsection (the sweep's source of truth):
+   - HCA — Convergence $442.85 / Time-based exit **2026-06-27** (ledger date is fill-finalized; the deleted event held the stale 2026-06-26 placeholder — ledger is authoritative)
+   - ZBRA — $264.00 / 2026-07-13
+   - BRC — $88.80 / 2026-07-21
+   - TJX — $164.50 / 2026-07-24
+   - AZO — $3,200 / 2026-07-24
+   The D1 sweep (Claude_Task_Plan.md D1 "MECHANICAL EXIT-TRIGGER SWEEP") reads these fields for every open position every day, so no calendar backstop is needed; deleting the events also removes stale embedded prompts (screenshot / IBKR-paste / fill-capture language).
+
+2. **Quarterly (Q1–Q4) and Annual (A1–A3) recurring cadence-trigger events** — deleted (whole series, by base `recurringEventId`). Per Claude_Task_Plan.md ("Claude runs as scheduled routines connected to a GitHub repo … and to Google Calendar via MCP"), every cadence — daily through annual, including the A1/A2/A3 annual Strategy.md / AI_Trading_Foundation.md re-derivation — fires autonomously on its interval via the Claude Code remote routine harness. The calendar copies were a pre-routine artifact and carried pre-migration prompts (schedule `[Claude] Thesis construction` events, stagger "to manage cognitive load," paste-into-fresh-chat, fill-capture) that contradict the current task plan. The authoritative cadence instructions live in Claude_Task_Plan.md; the routine harness supplies the single-line trigger.
+
+**Net state:** The human-facing calendar now contains only order-confirmation events (currently none pending — all staged orders are reconciled). This completes the "calendar = human-action-only" migration begun in the connector migration and the analysis-queue migration. Nothing on the calendar is analysis or a cadence trigger.
+
+**Reasoning:**
+- *Why delete rather than migrate the time-exit events to Pending_Analyses.md.* A time-based exit is a mechanical date trigger on an open position, not an analysis that waits on external data. Its home is the daily exit-trigger sweep (which already checks every open position's convergence target + time-exit date against the ledger), not the analysis queue. Queuing them would duplicate the sweep and risk double-staging an exit. The queue stays reserved for genuine wait-for-data analysis.
+- *Why deleting the cadence series is safe.* The routines, not the calendar, fire the cadences. The calendar events did nothing functional (a human pasting them would have produced stale-prompt behavior); removing them eliminates that footgun and realizes the owner's end-state (calendar = trade confirmations only).
+
+**Theater-check flag:** N/A — calendar/state cleanup.
+
+**Downstream actions:** None in docs — the D1 sweep and "cadences run as routines, not on the calendar" were already written in Claude_Task_Plan.md (analysis-queue migration). This entry records the live-calendar cleanup that brings the calendar into line with them.
+
+**Accepted-risk / notes:**
+- *Sole reliance on the D1 sweep for time-based exits.* The sweep is connector- and ledger-driven and runs daily, with many runs before the nearest exit (HCA 6/27). If a sweep is ever missed, the exit is delayed (a position overstays its 60-day window) but not lost — the trigger persists in the ledger and fires on the next run. Acceptable for a risk-control exit; no convergence/upside is forfeited (convergence-target hits are caught by the same sweep, sooner than a fixed date).
+- *Stale event-id references in historical ledger blocks.* Some Portfolio_Ledger.md position blocks note the now-deleted time-exit event ids (e.g., ZBRA `b2gka8…`). These are historical activity-log lines; the authoritative trigger is the "Time-based exit:" field, which is unchanged. Not edited (append-only records); the next D2/D3 reconciliation supersedes them.
+
+**Compaction-survival notes:**
+1. *Calendar = `[Claude] Confirm order` events ONLY.* No analysis events, no cadence-trigger events. All deleted 2026-06-01. If any reappear, they are legacy — D3 migrates analysis to Pending_Analyses.md and drops mechanical exit/cadence events.
+2. *Time-based exits + convergence hits fire from D1's daily ledger-driven sweep,* not calendar events. Source of truth = each open position's "Convergence target" + "Time-based exit" fields in Portfolio_Ledger.md.
+3. *All cadences (D/W/M/Q/A) fire via Claude Code scheduled remote routines,* not the calendar. Authoritative instructions = Claude_Task_Plan.md.
+4. *Deleted this session:* 5 B time-exit events (HCA/ZBRA/BRC/TJX/AZO) + Q1–Q4 quarterly series + A1–A3 annual series = 12 events.
