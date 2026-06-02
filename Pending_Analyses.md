@@ -17,8 +17,8 @@ Mirrors `Pending_Adversarial_Reviews.md`. Established 2026-06-01 (IBKR-connector
     A-queue dual-listing: HPE is A-queued (Watchlist.md); A router DNA per M1b 2026-06-01 → criterion-5 PASS (DDOG precedent). Re-verify A-router state at run time (if flipped ACTIVATE, criterion-5 gate applies). Valuation-reset caveat ELEVATED to most-extreme tier (Watchlist.md 2026-06-01): the +29–37% may be a legitimate re-rating, not a temporary mispricing. Apply B_Sub_Pattern_Taxonomy.md; reference DELL/SNOW/MRVL post-print analogues; Operating_Protocols §2 (commissions) + §8 (conviction). Entry window through ~2026-06-15.
     IF GO: connector craft-order flow (Operating_Protocols §11) — create_order_instruction + one [Claude] Confirm order event; no fill-capture event (D2 Step 0 reconciles).
   conservative_default: decline (no entry) if the entry window closes unresolved.
-  status: pending
-  outcome: (pending)
+  status: complete
+  outcome: NO-GO — criterion-4 dual-framing (LONG foreclosed information-driven + B-vs-A; SHORT dismissed aggressive-sell-side-bull-ratification; Sub-Pattern 1 most-extreme PT-raise magnitude; 7 firms $65–$80 PT cluster vs $56.15 close). Decision_Log 2026-06-02 "Strategy B — HPE Q2 FY26 print B-thesis-construction — NO-GO."
 
 ---
 
