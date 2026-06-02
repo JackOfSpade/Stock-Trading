@@ -14,38 +14,42 @@ Canonical reference for active operational protocols governing the AI-directed t
 
 The human operator's role is execution, not decision-making.
 
-The human operator can do exactly four things:
-1. Execute a trade in IBKR (place, modify, cancel orders).
-2. Paste a calendar-triggered Claude prompt (the prompt text lives in the Google Calendar event description).
-3. Screenshot IBKR and paste the image to Claude.
-4. Add, delete, or update files in project sources (the persistence mechanism for Claude's writes).
+The human operator can do exactly two things:
+1. **Confirm a crafted order.** Claude crafts the exact order through the IBKR connector (`create_order_instruction`) and surfaces a tap-to-confirm deep link; the human operator opens the link, reviews the pre-filled order in IBKR, and confirms it (or declines). The human operator never types ticker, side, quantity, price, order type, or duration — Claude crafts all of them. For security types the connector cannot craft (currently anything other than Equity/ETF — e.g. options), Claude falls back to a text order block the human operator enters manually, explicitly labeled as a manual-entry fallback.
+2. **Paste a calendar-triggered Claude prompt** (the prompt text lives in the Google Calendar event description) into a fresh Claude chat.
+
+Two prior actions are retired:
+- **Screenshotting IBKR is obsolete.** Claude reads the human operator's positions, balances, live orders, executed fills (with exact price/commission/realized P&L), and live + historical market data directly through the IBKR connector (§11). Claude never asks for a screenshot.
+- **Persisting Claude-produced files is obsolete.** Claude routines write project files directly.
 
 The human operator does NOT verify commissions, make EV decisions, monitor markets intraday, watch sell-side wires, parse earnings prints in real time, decide execute-vs-skip on staged orders, decide override-vs-honor on NO-GO recommendations, choose convergence targets, position sizes, limit prices, or invalidation criteria, or read project sources to understand context Claude could resolve internally.
 
-If a workflow requires the human operator to do anything beyond the four actions above, that workflow is broken and Claude redesigns it before staging anything.
+If a workflow requires the human operator to do anything beyond the two actions above, that workflow is broken and Claude redesigns it before staging anything.
 
-**Claude resolves all decisions internally.** Claude makes every decision the framework requires — execute or skip, GO or NO-GO, target selection, sizing, timing, invalidation criteria — without human operator input. The human operator's confirmation is not solicited; the human operator sees only the final order. If a decision genuinely cannot be made without information Claude does not have, Claude defers the decision to a future calendar-triggered session where the missing information will be available. Claude documents the deferral logic in Decision_Log.md so the future session can resume.
+**Claude resolves all decisions internally.** Claude makes every decision the framework requires — execute or skip, GO or NO-GO, target selection, sizing, timing, invalidation criteria — without human operator input. The human operator's *judgment* is never solicited: Claude does not ask whether to place a trade; it resolves GO/skip itself and surfaces only the crafted order. The tap that confirms a crafted order to IBKR is the human operator's *execution* role — the physical act of placing the order — not a decision the human operator is being asked to make. If a decision genuinely cannot be made without information Claude does not have, Claude defers the decision to a future calendar-triggered session where the missing information will be available. Claude documents the deferral logic in Decision_Log.md so the future session can resume.
 
 **Sell-side and follow-on data monitoring is Claude's responsibility.** Claude does not stage workflows requiring the human operator to "watch" anything. Where follow-on data (e.g., a peer print landing two days after entry) could affect a position, Claude uses calendar-triggered review sessions to handle it. The calendar event triggers Claude; the human operator's only action is to paste the prompt.
 
 **Chat output discipline.** Claude's chat output to the human operator contains only:
-1. The order(s) to execute, in the exact format the human operator pastes into IBKR (or "no order"), AND
-2. The minimum information the human operator needs to perform action 1, 2, 3, or 4 above.
+1. The order(s) to execute — surfaced as crafted IBKR order instructions (the tap-to-confirm deep link plus a one-line human-readable summary `SIDE QTY TICKER TYPE LIMIT TIF`), or `no order` — AND
+2. The minimum information the human operator needs to confirm a crafted order or paste a calendar prompt.
 
 Claude's chat output does NOT contain: recapitulation of decision reasoning that already exists in Decision_Log.md or Portfolio_Ledger.md, adversarial-review summaries, pillar/criteria walkthroughs, "three things to flag" framings, pending-queue summaries beyond what affects the human operator's next action, theater-checks, compaction-survival notes, explanations of why a NO-GO is a NO-GO, operator-override paths when the recommendation is NO-GO.
 
-**Project sources are for Claude, not for the human operator.** Everything Claude writes to Decision_Log.md, Portfolio_Ledger.md, Daily.md, factbase files, methodology files, and other project sources is written for future Claude sessions. The human operator does not read these files — the human operator's role with project sources is action 4 (add/delete/update as a persistence mechanism). Claude writes for self-comprehension at compaction-survival depth, NOT human-operator-facing summaries.
+**Project sources are for Claude, not for the human operator.** Everything Claude writes to Decision_Log.md, Portfolio_Ledger.md, Daily.md, factbase files, methodology files, and other project sources is written for future Claude sessions. The human operator does not read these files and no longer persists them — Claude routines write project sources directly (the prior "persist Claude-produced files" action is retired). Claude writes for self-comprehension at compaction-survival depth, NOT human-operator-facing summaries.
 
 **Self-check Claude runs before each chat response:**
-- Have I created any new task for the human operator beyond actions 1, 2, 3, 4?
-- Have I asked the human operator to make any decision?
+- Have I created any new task for the human operator beyond the two actions (confirm a crafted order; paste a calendar prompt)?
+- Have I asked the human operator to make any decision, or to take a screenshot (screenshots are obsolete — read the connector instead)?
+- For every staged equity/ETF order, did I craft the order instruction (`create_order_instruction`) and surface its deep link, rather than emitting a raw text block the human must type?
 - Have I included prose in chat that summarizes context already saved to project files?
 - Have I deferred a decision to "human-operator's call" that I should have resolved myself?
 
-If any answer is yes, the response is revised before sending.
+If any answer reveals a violation, the response is revised before sending.
 
 **Revision history:**
-- 2026-04-27 (Sun, late): Adopted in current canonical form. → Decision_Log 2026-04-27 "Human-operator interaction protocol adopted (Decision_Log-internal); commission policy changed; staged orders cleaned of EV-decision hooks".
+- 2026-06-01: Revised to the IBKR-connector execution model. Human-operator actions reduced from four to two (confirm crafted orders via tap-to-confirm deep link; paste calendar prompts). Screenshot-capture and file-persistence actions retired — Claude reads positions/fills/market data directly through the connector and writes files directly. New §11 (IBKR Connector Protocol) added. → Decision_Log 2026-06-01 "IBKR connector integration — click-to-confirm orders + connector-driven reconciliation".
+- 2026-04-27 (Sun, late): Adopted in (then-)current canonical form (four operator actions; orders emitted as IBKR-paste text). → Decision_Log 2026-04-27 "Human-operator interaction protocol adopted (Decision_Log-internal); commission policy changed; staged orders cleaned of EV-decision hooks".
 
 ---
 
@@ -233,6 +237,33 @@ The correct operational read: enter every thesis that clears criteria 1–5 (no 
 **Revision history:**
 - 2026-05-24: Protocol established after audit found a false "5-concurrent-cap" had been introduced by Claude in commit 718204a (ZBRA fill capture 2026-05-14) with no Strategy.md basis and no documented rationale. Cap was removed from all operational documents. → User instruction 2026-05-24.
 - 2026-05-30: Per owner directive, Strategy.md rev 35 removes ALL holdings-count caps across A/B/C/D — including B's per-GICS-sector cap of 3 (the one cap the 2026-05-24 cleanup had retained). §10 updated: B now has no count cap at any level; KL #12 metric (d) pairwise-correlation monitoring is the sole concurrent-position-correlation control. D's 10-position/theme/correlation-bucket count caps are likewise removed (D's 30%-of-NAV exposure cap and minimum-5 floor retained). → Decision_Log 2026-05-30 "Holdings-count caps removed by owner directive"; User instruction 2026-05-30.
+
+---
+
+## 11. IBKR Connector Protocol
+
+**Canonical-current text:**
+
+An IBKR connector (MCP server) gives Claude routines direct, authenticated access to the human operator's live brokerage account and market data. It is identified by its tool names, not by a server ID (the server ID is not stable across sessions). The tools:
+
+- **Order instructions (the click-to-confirm execution path):** `create_order_instruction` (crafts a saved order and returns `{id, url}` where `url` is a deep link the operator taps to review-and-confirm in IBKR), `get_order_instructions` (lists pending crafted instructions), `delete_order_instruction` (cancels a pending instruction). **Equity and ETF only.**
+- **Live account state (replaces screenshots):** `get_account_summary` (net liquidation, buying power, available funds, margin, day-trades-remaining), `get_account_positions` (per-position qty / market price / market value / unrealized P&L / `contract_id`), `get_account_balances` (cash + market value by currency), `get_account_orders` (live working orders + fill status), `get_account_trades` (executed fills with exact price, size, **commission**, **realized P&L**, time, and `order_id`).
+- **Market data (the operator's IBKR subscription):** `get_price_snapshot` (live bid/ask, last, change, volume, IV, etc.), `get_price_history` (OHLCV bars), `search_contracts` (resolve ticker/name → `contract_id`).
+
+**Execution model — Claude crafts, the human confirms.** `create_order_instruction` does NOT execute a trade. It places a *pending instruction* into the operator's IBKR app that the operator must open (via the returned deep link) and confirm before anything reaches the market. Claude therefore has no execute authority; the operator's confirm tap is the single execution gate. This preserves the experiment's invariant — Claude decides, the human executes — while removing the manual data-entry step (and the operator-discretion limit drift it caused). The deep link opens the operator's full pending-instruction queue, so one tap surfaces every instruction Claude has crafted; per-order calendar events exist for *timing* and a human-readable summary, not because each needs a distinct link.
+
+**Order-craft discipline.** When a routine stages an equity/ETF order it: (1) resolves the `contract_id`; (2) pulls a live `get_price_snapshot` and sets a marketable limit (or MARKET when the objective is assured execution); (3) calls `create_order_instruction(contract_id, side, quantity, order_type, limit_price, time_in_force)`; (4) records the returned instruction `id` in Portfolio_Ledger.md alongside the staged-order details; (5) puts the deep link, the `SIDE QTY TICKER TYPE LIMIT TIF` summary, and the instruction `id` into the order-confirmation calendar event. If a staged order is later cancelled/superseded before the operator confirms, Claude calls `delete_order_instruction` to clear it.
+
+**`contract_id` discipline.** `contract_id` is the connector's instrument key. Cache each open position's `contract_id` in Portfolio_Ledger.md. Resolve new tickers via `search_contracts`, selecting the **US primary listing**: `country_code` US, primary exchange (NYSE / NASDAQ / ARCA / BATS), the `STK` (or ETF) section, and an exact symbol match — never a foreign listing, leveraged/inverse derivative, or same-named ETF. When in doubt, confirm against `get_price_snapshot`/`get_price_history` before crafting an order.
+
+**Fill reconciliation is connector-driven, not screenshot-driven.** No fill-capture screenshot events are created. Reconciliation is a daily pull (D2 Step 0; see Claude_Task_Plan.md), idempotent by `trade_id`: read `get_account_trades` over a multi-day window, match fills against the `trade_id`s already recorded in Portfolio_Ledger.md, and for each new fill write the exact price / size / commission / realized P&L / time into the ledger and the position's Decision_Log record — flipping ORDER-STAGED→OPEN or exit-pending→CLOSED. Realized P&L is taken from the connector's `realized_pnl` field, never inferred. Multi-day GTC fills and exchange-split partial fills (aggregate by `order_id`) are caught by the window. The "PROVISIONAL fill / reconciliation owed to a screenshot session" failure mode is structurally eliminated.
+
+**Source-of-truth boundary.** The connector is authoritative for fills, positions, cash, live orders, and quotes. `Portfolio_Ledger.md` remains authoritative for *strategy-bucket cost-basis attribution and per-strategy NAV* — the connector has no concept of the A/B/C/D/E strategy buckets. Reconciliation maps connector fills onto strategy buckets; when the connector's account-level cash/positions drift from the ledger (dividends, fees, reinvestments), the connector is the truth and the ledger is corrected to match, with the strategy attribution preserved at the cost-basis level.
+
+**Live data in analysis.** Thesis-construction, position deep-dives, exit-checks, and daily scans use `get_price_snapshot`/`get_price_history` for quotes and bars (close-to-close verification, convergence-target checks, marketable-limit computation) and `get_account_positions`/`get_account_summary` for exact holdings and 2%-NAV sizing on live net-liquidation. Web quotes are a fallback only when the connector lacks the instrument.
+
+**Revision history:**
+- 2026-06-01: Protocol established on IBKR-connector availability. Order execution moved from operator-typed IBKR-paste blocks to Claude-crafted click-to-confirm order instructions; fill capture moved from operator screenshots to connector reads; live account + market data made available to all routines. → Decision_Log 2026-06-01 "IBKR connector integration — click-to-confirm orders + connector-driven reconciliation".
 
 ---
 

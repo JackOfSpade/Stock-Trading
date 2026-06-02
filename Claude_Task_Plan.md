@@ -15,7 +15,8 @@ Claude reads this file at the start of every routine run, locates the matching `
 Claude runs as scheduled routines connected to a GitHub repo (currently `JackOfSpade/Stock-Trading`) and to Google Calendar via MCP. Inside a routine Claude has:
 
 - **Direct read/write access to repo .md files.** Live state files (Decision_Log.md, Portfolio_Ledger.md, Watchlist.md, Operating_Protocols.md, Regime_State.md) are edited in place. Cadence-output files (Daily.md, Weekly_*.md, Monthly_*.md, Quarterly_*.md, Annual_*.md) are overwritten each run. Decision_Log_Archive_<YYYY>_<QN>.md files are append-only quarterly archives written by W5.
-- **Calendar MCP for one-off events.** Used to schedule order-execution reminders, fill-capture screenshots, thesis-construction sessions, research-deferral checkpoints, foundation-change assessments, constraint-relaxation reviews, and similar one-off work that needs a fresh chat session at a specific future time. Adversarial reviews (pre-mortem, divergence, m2m-termination, capital-redistribution) are NOT scheduled via calendar — they are queue-driven via `Pending_Adversarial_Reviews.md` and processed by the AR routines (see ADVERSARIAL REVIEWS section).
+- **Calendar MCP for one-off events.** Used to schedule order-confirmation reminders, thesis-construction sessions, research-deferral checkpoints, foundation-change assessments, constraint-relaxation reviews, and similar one-off work that needs a fresh chat session at a specific future time. Adversarial reviews (pre-mortem, divergence, m2m-termination, capital-redistribution) are NOT scheduled via calendar — they are queue-driven via `Pending_Adversarial_Reviews.md` and processed by the AR routines (see ADVERSARIAL REVIEWS section).
+- **IBKR connector (MCP)** for direct, authenticated access to the human operator's live brokerage account and market data. Crafts click-to-confirm order instructions (`create_order_instruction` → deep link), reads live account state (`get_account_summary` / `get_account_positions` / `get_account_balances` / `get_account_orders` / `get_account_trades`), and reads market data (`get_price_snapshot` / `get_price_history` / `search_contracts`). This connector replaces operator-typed order blocks (orders are now crafted and tap-confirmed) and operator screenshots (fills/positions/cash are read directly). Full protocol: Operating_Protocols.md §11 and the **IBKR connector usage** subsection below. Equity/ETF only for order-craft; options/other security types fall back to a manual text order block.
 - **Web research tools** (Tavily, web_search, web_fetch) for deep-research cadences.
 
 Each routine run is a fresh session — there is no cross-run chat memory. State persists only in repo files and calendar events. Every prompt body in this document is therefore self-contained: it specifies which repo files to read, which to write, and which calendar events to create.
@@ -38,17 +39,16 @@ Routines run on the harness-assigned `claude/<suffix>` feature branch and never 
 
 ## Human role
 
-The human acts on routine output only. The human:
+The human acts on routine output only. The human does exactly two things:
 
-1. **Executes trades.** Reads order(s) in IBKR-paste format from routine chat output and places them in IBKR.
-2. **Pastes calendar-triggered prompts** into a fresh Claude chat at trigger time. This is the path for one-off events that need a fresh session — most importantly screenshot capture, where the chat session takes screenshots as input and writes Portfolio_Ledger.md from them.
-3. **Pastes IBKR screenshots** when prompted by a calendar event (typically end-of-day on order days, or on-demand when the human wants to reconcile state).
+1. **Confirms crafted orders.** Claude crafts the exact order via the IBKR connector (`create_order_instruction`) and surfaces a tap-to-confirm deep link (in chat and in the order-confirmation calendar event). The human opens the link, reviews the pre-filled order in IBKR, and confirms it. The human never types ticker, side, quantity, price, type, or duration. (For security types the connector cannot craft — currently non-Equity/ETF, e.g. options — Claude emits a manual-entry text order block, explicitly labeled as such.)
+2. **Pastes calendar-triggered prompts** into a fresh Claude chat at trigger time. This is the path for one-off events that need a fresh session — thesis construction, position reviews, research-deferral checkpoints, etc.
 
-The prior protocol's "action 4 — persist Claude-produced files" is **obsolete**. Claude writes files directly. Claude does not present file contents in chat as fenced code blocks; chat output is reserved for orders and brief acknowledgments.
+Two prior actions are **obsolete**: (a) *screenshot capture* — Claude reads positions, balances, live orders, executed fills, and market data directly through the IBKR connector, so no screenshot is ever requested; (b) *persisting Claude-produced files* — Claude writes files directly. Claude does not present file contents in chat as fenced code blocks; chat output is reserved for crafted orders and brief acknowledgments.
 
 The human does NOT perform any analytical or monitoring task. If the framework needs analysis, monitoring, parsing, watching, verification, or calculation, Claude does it — either inline in the current routine or via a calendar-triggered fresh session at the appropriate time. Examples of work the human does NOT perform: verifying commissions; making EV decisions; monitoring markets intraday; parsing earnings prints; deciding execute-vs-skip on staged orders; deciding override-vs-honor on NO-GO recommendations; choosing convergence targets, position sizes, limit prices, or invalidation criteria.
 
-If a workflow would require the human to do anything beyond the three actions above, that workflow is broken and Claude must redesign it before staging anything.
+If a workflow would require the human to do anything beyond the two actions above, that workflow is broken and Claude must redesign it before staging anything.
 
 ## Decision discipline
 
@@ -79,28 +79,45 @@ The calendar is exclusively for **one-off [Claude] events** — events that need
 Conventions for one-off events Claude creates:
 
 - **Title:** `[Claude] <task short name>` so events are scannable.
-- **Time:** scheduled to the single best moment for the event itself (its best execution / action time), never adjusted for human-operator availability or load — human execution is assumed 100% efficient. Examples: an order-execution event at the order's best execution time (e.g., pre-market just before open); a fill-capture screenshot at end-of-day on the order day; a thesis-construction session as early as possible (see **Throughput** below).
-- **Throughput:** there is no cap on how many events may be scheduled per day, week, or month, and any number of events may share the same time slot when that slot is each one's best time (e.g., ten buy orders all scheduled at market open). Never cap, stagger, space out, or defer events to "spread load," "avoid flooding the calendar," or manage cognitive load. Thesis-construction events are scheduled at the earliest viable slot — the same day the candidate is discovered, not the next business day. Crucially, thesis construction is analysis, not order execution: it needs no live market, so it is NOT gated by trading days or market hours. Schedule it at the earliest slot, whatever kind of day that falls on — weekday, weekend, and market holiday are all equally eligible. The rule is earliest-wins: weekends and holidays are simply not excluded (do not skip past them to the next trading day), and they carry no preference — if the earliest slot is a weekday, that is equally fine. (Only order-execution events must land on a trading session, at the order's best execution time; a GO produced by a non-trading-day thesis session simply stages its order for the next market open.) The earliest slot is pushed later only when the analysis must wait for a specific future event (for example: a Strategy C far-dated catalyst, where the session lands 7-10 days before the catalyst as the pre-catalyst entry window; or a cross-strategy deconfliction where a conflicting position must exit first).
+- **Time:** scheduled to the single best moment for the event itself (its best execution / action time), never adjusted for human-operator availability or load — human execution is assumed 100% efficient. Examples: an order-confirmation event at the order's best execution time (e.g., pre-market just before open); a thesis-construction session as early as possible (see **Throughput** below).
+- **Throughput:** there is no cap on how many events may be scheduled per day, week, or month, and any number of events may share the same time slot when that slot is each one's best time (e.g., ten buy orders all scheduled at market open). Never cap, stagger, space out, or defer events to "spread load," "avoid flooding the calendar," or manage cognitive load. Thesis-construction events are scheduled at the earliest viable slot — the same day the candidate is discovered, not the next business day. Crucially, thesis construction is analysis, not order execution: it needs no live market, so it is NOT gated by trading days or market hours. Schedule it at the earliest slot, whatever kind of day that falls on — weekday, weekend, and market holiday are all equally eligible. The rule is earliest-wins: weekends and holidays are simply not excluded (do not skip past them to the next trading day), and they carry no preference — if the earliest slot is a weekday, that is equally fine. (Only order-confirmation events must land on a trading session, at the order's best execution time; a GO produced by a non-trading-day thesis session simply stages its order for the next market open.) The earliest slot is pushed later only when the analysis must wait for a specific future event (for example: a Strategy C far-dated catalyst, where the session lands 7-10 days before the catalyst as the pre-catalyst entry window; or a cross-strategy deconfliction where a conflicting position must exit first).
 - **Description:** contains a single self-contained prompt the human pastes into a fresh Claude chat. The prompt references the relevant project files Claude will need.
-- **Time zone:** per Experiment_Parameters.md (default America/Denver if silent; note the assumption inline if defaulted). Whenever a routine needs to know "today" to schedule, delete, or reconcile a dated event, it MUST anchor on the America/Denver date — run a Bash command equivalent to `TZ=America/Denver date '+%Y-%m-%d %H:%M %Z'` and use that. Do NOT use the assistant-context `currentDate` field for this purpose: it is UTC-based and rolls forward by one calendar day during evening MT, which has already caused a same-day order-execution event to be deleted (META convergence exit, 2026-05-27 evening MT). This rule binds every cadence routine that creates, deletes, or filters calendar events — D2, D3, W4, M5, Q4, A1, A3 — not just D3.
+- **Time zone:** per Experiment_Parameters.md (default America/Denver if silent; note the assumption inline if defaulted). Whenever a routine needs to know "today" to schedule, delete, or reconcile a dated event, it MUST anchor on the America/Denver date — run a Bash command equivalent to `TZ=America/Denver date '+%Y-%m-%d %H:%M %Z'` and use that. Do NOT use the assistant-context `currentDate` field for this purpose: it is UTC-based and rolls forward by one calendar day during evening MT, which has already caused a same-day order-confirmation event to be deleted (META convergence exit, 2026-05-27 evening MT). This rule binds every cadence routine that creates, deletes, or filters calendar events — D2, D3, W4, M5, Q4, A1, A3 — not just D3.
 - **Notification:** alarm fires at event-time so the human's only job is to respond.
 
 Canonical one-off-event types and triggers:
 
-- **Order execution** — scheduled for every staged order at **07:00 MT pre-market on the order day** (30 minutes before the 07:30 MT market open). Description contains the exact IBKR-paste order block and a one-line reminder to place it at or after market open. No Claude session is needed — the human simply reads the notification and places the order in IBKR. Every staged order (entry or exit, Day or GTC) gets one order-execution event. For GTC orders, the event fires once on the first placement day; subsequent-day monitoring is via D3 daily hygiene until the fill-capture event confirms reconciliation.
-- **Fill capture** — scheduled after every staged order's expected fill window (typically end-of-day on the order day, i.e., ~14:30 MT). Description instructs the human to screenshot IBKR positions and orders pages and paste both into a fresh Claude chat with the prompt text. The triggered Claude session reads the screenshots, updates Portfolio_Ledger.md directly, and acknowledges in chat. Always paired with an order-execution event for the same order.
-- **Thesis construction** — for new-entry candidates that cleared the screening cadence (W4 schedules A/B/C; M5 schedules E pairs; Q4 schedules D candidates). Description includes ticker, strategy, candidate context, and references to Strategy.md / Operating_Protocols.md. The thesis-construction session, if it produces a GO, must itself create both an order-execution event (pre-market on the order day) and a fill-capture event (end-of-day on the order day) before ending.
+- **Order confirmation** — scheduled for every staged order at **07:00 MT pre-market on the order day** (30 minutes before the 07:30 MT market open). When the staging routine crafts the order it first calls `create_order_instruction` (after a live `get_price_snapshot` to set the marketable limit) and gets back `{id, url}`; the event description contains the human-readable summary `SIDE QTY TICKER TYPE LIMIT TIF`, the **tap-to-confirm deep link (`url`)**, the instruction `id`, and a one-line reminder ("Tap the link, review the pre-filled order in IBKR, confirm at or after market open"). No Claude session is needed — the human taps the link and confirms. Every staged equity/ETF order (entry or exit, Day or GTC) gets one order-confirmation event. For an order whose security type the connector cannot craft (non-Equity/ETF, e.g. options), the description instead carries a manual-entry text order block, explicitly labeled. For GTC orders the event fires once on the first placement day; subsequent-day fill monitoring is the connector reconciliation step (D2 Step 0), not a screenshot.
+- **Thesis construction** — for new-entry candidates that cleared the screening cadence (W4 schedules A/B/C; M5 schedules E pairs; Q4 schedules D candidates). Description includes ticker, strategy, candidate context, and references to Strategy.md / Operating_Protocols.md. The thesis-construction session, if it produces a GO, crafts the order instruction (`create_order_instruction`) and creates one order-confirmation event (pre-market on the order day) carrying the deep link before ending. It does NOT create a fill-capture event — fills are reconciled by D2 Step 0 from the connector.
+
+(The legacy **fill-capture** event type is retired: fills are no longer captured from operator screenshots. The daily D2 Step 0 broker-reconciliation step reads executed fills directly via `get_account_trades` and writes them into Portfolio_Ledger.md / Decision_Log.md. No per-order fill-capture event is ever created.)
 - **Research deferral checkpoint** — for positions flagged "further research" by W3/M4. Description includes the specific information gap, reference to Strategy.md exit rules, and the conservative-default fallback (exit on trigger-failure).
 - **Foundation-change assessment** — scheduled by Q4/A3 per strategy, for material AI-foundation revisions affecting that strategy.
 - **Constraint-relaxation review** — scheduled by A3 for out-of-table constraint flags.
 - **Router review** — scheduled by D2 for inter-monthly router-state revisits when Daily.md flags a material regime shift.
 
+## IBKR connector usage
+
+Canonical protocol: Operating_Protocols.md §11. Operational summary for routines:
+
+**Crafting an order (equity/ETF).** When a routine stages an order: (1) resolve the `contract_id` (use the cached id from Portfolio_Ledger.md, else `search_contracts` selecting the US primary listing — `country_code` US, primary exchange, exact symbol, STK/ETF section); (2) pull `get_price_snapshot` and set a marketable limit (sell at a slight discount to last / buy at a slight premium; use MARKET when assured execution is the objective, e.g. a convergence exit already through target); (3) call `create_order_instruction(contract_id, side, quantity, order_type, limit_price, time_in_force)` and capture `{id, url}`; (4) record the instruction `id` in the Portfolio_Ledger.md staged-order line; (5) put `url` + summary + `id` into the order-confirmation calendar event. If a staged order is superseded before the operator confirms, call `delete_order_instruction(id)`.
+
+**Order-craft is Equity/ETF only.** For options / futures / other security types, do NOT call `create_order_instruction` — emit a manual-entry text order block in the calendar event, labeled "manual entry — connector cannot craft this security type."
+
+**Reconciling fills (D2 Step 0, daily, idempotent by `trade_id`).** Read `get_account_trades` over a multi-day window (e.g. DAYS_7). For each fill whose `trade_id` is not already recorded in Portfolio_Ledger.md: write exact price / size / `commission` / `realized_pnl` / `trade_time`; flip ORDER-STAGED→OPEN or exit-pending→CLOSED; update strategy sector counts / KL events; append the fill to the position's Decision_Log record. Take realized P&L from the connector's `realized_pnl` field — never infer it. Aggregate exchange-split partial fills by `order_id`. Then refresh live marks/cash from `get_account_positions` + `get_account_summary` + `get_account_balances`, and note still-working orders from `get_account_orders`.
+
+**Source-of-truth boundary.** Connector = authoritative for fills, positions, cash, live orders, quotes. Portfolio_Ledger.md = authoritative for strategy-bucket cost-basis attribution and per-strategy NAV (the connector has no strategy buckets). On account-level drift (dividends/fees/reinvest), the connector is the truth and the ledger is corrected to match while preserving strategy attribution at the cost-basis level.
+
+**Sizing and analysis on live data.** Use `get_account_summary` net-liquidation for 2%-NAV sizing and `get_account_positions` for exact current holdings; use `get_price_snapshot`/`get_price_history` for quotes, close-to-close verification, and convergence-target checks. Web quotes are a fallback only when the connector lacks the instrument.
+
+**Cached `contract_id`s for current holdings** (verify against `get_account_positions` at use; ids are stable per instrument): SGOV 424099317, RTX 415342104, DIS 6459, HCA 85076790, TJX 12814, ZBRA 276304, BRC 6467986, AZO 4750, BURL 135699190. New names resolve via `search_contracts`.
+
 ## Chat output discipline
 
 Routine chat output to the human contains only:
 
-1. The order(s) to execute, in exact IBKR-paste format (or `no order`), grouped by execution day if more than one.
-2. A one-line acknowledgment of file writes performed and calendar events created (e.g., `Decision_Log.md, Portfolio_Ledger.md updated. 2 calendar events scheduled.`).
+1. The order(s) to execute, surfaced as crafted IBKR order instructions — the tap-to-confirm deep link plus a one-line `SIDE QTY TICKER TYPE LIMIT TIF` summary (or `no order`), grouped by execution day if more than one. (Manual-entry text block only for security types the connector cannot craft.)
+2. A one-line acknowledgment of file writes performed and calendar events created (e.g., `Decision_Log.md, Portfolio_Ledger.md updated. 1 order instruction crafted, 1 calendar event scheduled.`).
 3. If applicable, a short flag for any high-urgency item the human should be aware of when checking IBKR (e.g., "Flagged: AAPL exit limit set 1% below last close; reconsider if quote moves").
 
 Routine chat output does NOT contain:
@@ -123,13 +140,13 @@ If a routine has no orders, no file changes, and no events: state `No actions re
 
 Claude performs the following checklist in thinking blocks before composing every routine's chat output:
 
-- [ ] Have I created any task for the human beyond reading an order, pasting a calendar prompt, or pasting a screenshot?
+- [ ] Have I created any task for the human beyond confirming a crafted order or pasting a calendar prompt? (Screenshots are obsolete — never ask for one.)
 - [ ] Have I asked the human to make any decision?
+- [ ] For every staged equity/ETF order, did I craft the order instruction (`create_order_instruction`) and surface its deep link — rather than emit a raw text block the human must type?
 - [ ] Have I included file contents in chat (fenced code blocks, "attached files," etc.) when the file should have been written directly?
 - [ ] Have I deferred a decision to "human's call" that I should have resolved myself?
 - [ ] Have I factored commissions into a staging-time decision?
-- [ ] Have I scheduled an order-execution event (07:00 MT pre-market on order day) for any staged order?
-- [ ] Have I scheduled a fill-capture screenshot event for any staged order?
+- [ ] Have I scheduled an order-confirmation event (07:00 MT pre-market on order day) carrying the deep link for any staged equity/ETF order?
 - [ ] If I deferred a decision, have I specified its resolution trigger and conservative-default fallback?
 
 If any answer reveals a violation, the response gets revised before sending.
@@ -158,7 +175,7 @@ Future sessions looking up specific historical entries find either the entry or 
 
 ## Action-conversion routines (deep research → action)
 
-Deep-research routines produce exactly one output file. A research file with recommendations sitting in it is not an action; the human acts only on chat-output orders, calendar event prompts, and screenshot requests, so any recommendation in a research file evaporates at the next overwrite unless something converts it into an order, an edited live file, or a calendar event.
+Deep-research routines produce exactly one output file. A research file with recommendations sitting in it is not an action; the human acts only on chat-output orders (crafted instructions the human confirms) and calendar event prompts, so any recommendation in a research file evaporates at the next overwrite unless something converts it into an order, an edited live file, or a calendar event.
 
 Each cadence with deep-research routines that produce actionable recommendations therefore carries an **action-conversion** routine that runs after all of that cadence's research files are saved. The action-conversion routine reads the just-saved research file(s) and emits orders / live-file edits / calendar events.
 
@@ -295,21 +312,26 @@ Runs after D1 has written Daily.md. Converts D1's RECOMMENDED ACTIONS into order
 ```
 Read access scope: Daily cadence. Read `Decision_Log.md` (live). Do NOT read or act on content from `Decision_Log_Archive_*.md` files. Read `Strategy.md`, `Experiment_Parameters.md`, `Portfolio_Ledger.md`, `Operating_Protocols.md`, `Watchlist.md`, `Regime_State.md`, `B_Sub_Pattern_Taxonomy.md` as relevant.
 
-Read the just-saved `Daily.md` (today's market development scan; first line = today's date in YYYY-MM-DD format).
+STEP 0 — BROKER RECONCILIATION (run first, every run, before reading Daily.md's actions). Reconcile the live brokerage account against Portfolio_Ledger.md via the IBKR connector. This replaces the retired operator-screenshot fill-capture sessions (Operating_Protocols.md §11):
+- Read `get_account_trades` over a DAYS_7 window. For each fill whose `trade_id` is NOT already recorded in Portfolio_Ledger.md (idempotent match on `trade_id`): write the exact price / size / `commission` / `realized_pnl` / `trade_time`; flip the affected position ORDER-STAGED→OPEN (entries) or exit-pending→CLOSED (exits); update strategy sector counts and any KL #12 event membership; append the fill to the position's Decision_Log record (or write the GO/close entry if staging recorded only the order). Realized P&L comes from the connector's `realized_pnl` field — never inferred. Aggregate exchange-split partial fills by `order_id`.
+- Refresh live marks, cash, and net-liquidation from `get_account_positions` + `get_account_summary` + `get_account_balances`; reconcile account-level drift (dividends, fees, reinvestments) to the connector truth while preserving per-strategy cost-basis attribution.
+- Note still-working / partial orders from `get_account_orders` (e.g. a GTC not yet filled) and leave them exit-pending / ORDER-STAGED.
+- For any crafted instruction in `get_order_instructions` whose order day has passed unconfirmed, or whose position Step 0 just closed, call `delete_order_instruction` to clear it.
+
+Then read the just-saved `Daily.md` (today's market development scan; first line = today's date in YYYY-MM-DD format).
 
 Convert every bullet in Daily.md's "RECOMMENDED ACTIONS" section into operator-actionable outputs per the operating model at the top of this file. Claude resolves all decisions internally; commissions are disregarded at staging time.
 
-If Daily.md "RECOMMENDED ACTIONS" reads "No recommended actions": output "No actions required." and end.
+If Step 0 reconciled no new fills AND Daily.md "RECOMMENDED ACTIONS" reads "No recommended actions": output "No actions required." and end. (If Step 0 reconciled fills but there are no new Daily.md actions, report the reconciliation per chat-output discipline and end.)
 
 For each recommendation type:
 
 1. EXITS TRIGGERED. For each exit flagged:
    - Read Strategy.md exit rules and the position's entry-record invalidation criteria from Decision_Log.md (or Portfolio_Ledger.md entry-record pointer) to confirm the criterion is in fact met. If on review the criterion is NOT met, do not stage the exit; record the second-look decision via a brief Decision_Log entry instead.
-   - If confirmed: stage the exit order in IBKR-paste format. Limit-price selection: for stocks, use the most-recent close as starting point and adjust to a marketable limit (sells at slight discount to last, buys at slight premium) unless the invalidation logic favors patient execution; for options legs, use mid of current bid/ask if available. Day duration unless thesis logic requires GTC.
+   - If confirmed: craft the exit order via the IBKR connector. Resolve `contract_id` (cached in Portfolio_Ledger.md, else `search_contracts`); pull `get_price_snapshot` and set the limit — for stocks a marketable limit (sell at a slight discount to last) unless the invalidation logic favors patient execution, or MARKET when assured exit is the objective; Day duration unless thesis logic requires GTC. Call `create_order_instruction(...)` and capture `{id, url}`. (Options legs: connector cannot craft — fall back to a manual-entry text block at mid of current bid/ask.)
    - Append a Decision_Log entry recording: triggering development, specific invalidation criterion met, position exit decision, conviction-calibration notes per the conviction-calibration ladder.
-   - Update Portfolio_Ledger.md to mark the position exit-pending with the staged order details.
-   - Schedule a "[Claude] Execute order — <ticker> SELL" calendar event for **07:00 MT pre-market on the order day**. Description: the exact IBKR-paste order block plus "Place this order in IBKR at or after market open."
-   - Schedule a "[Claude] Screenshot IBKR — fill capture <ticker> exit" calendar event for end-of-day on the order day (~14:30 MT).
+   - Update Portfolio_Ledger.md to mark the position exit-pending with the staged order details and the crafted instruction `id`.
+   - Schedule a "[Claude] Confirm order — <ticker> SELL" calendar event for **07:00 MT pre-market on the order day**. Description: the `SIDE QTY TICKER TYPE LIMIT TIF` summary, the tap-to-confirm deep link (`url`), the instruction `id`, and "Tap the link, review the pre-filled order in IBKR, confirm at or after market open." No fill-capture event — the fill is reconciled by Step 0 on the next daily run.
 
 2. NEW ENTRY CANDIDATES. For each candidate flagged:
    - Determine entry-window urgency from Strategy.md per the candidate's strategy:
@@ -318,7 +340,7 @@ For each recommendation type:
      - Strategy A: catalyst within 6 months — schedule respecting router state. If A is currently DO-NOT-ACTIVATE per Regime_State.md / Decision_Log.md most-recent M1 call, the candidate goes to Watchlist.md A queue rather than thesis-construction; do not schedule a thesis-construction event.
      - Strategy E: pair divergence opening — schedule next-cycle M3 unless divergence is fast-moving (then schedule pair-thesis-construction same-day-earliest per the scheduling rule below).
    - For each candidate that should proceed to thesis construction: schedule a "[Claude] Thesis construction — <ticker> <strategy>" calendar event at the earliest viable slot — the same day the candidate is discovered (this routine's run day), not the next business day. The only reason to schedule later is a specific event the analysis must wait for: Strategy C with a catalyst more than 14 days out lands 7-10 days before the catalyst date (pre-catalyst entry window). Strategy A, Strategy B, Strategy E, and Strategy C with a catalyst within 14 days are all scheduled same-day-earliest. No cap on how many events are scheduled or how many share a slot.
-   - Event description must be a self-contained thesis-construction prompt: (a) ticker, strategy, candidate context (what Daily.md flagged), (b) reference to Strategy.md entry criteria for the strategy, (c) reference to Operating_Protocols.md for the "NO-GO records are context, not barriers" rule and conviction-calibration ladder, (d) instruction to apply commission-disregarded staging, (e) reminder that the session writes Decision_Log.md / Portfolio_Ledger.md directly and emits the order in chat, (f) instruction that a GO disposition requires creating both a "[Claude] Execute order — <ticker> BUY" event (07:00 MT pre-market on order day, description = IBKR-paste order block) and a "[Claude] Screenshot IBKR — fill capture <ticker> entry" event (~14:30 MT on order day).
+   - Event description must be a self-contained thesis-construction prompt: (a) ticker, strategy, candidate context (what Daily.md flagged), (b) reference to Strategy.md entry criteria for the strategy, (c) reference to Operating_Protocols.md for the "NO-GO records are context, not barriers" rule and conviction-calibration ladder, (d) instruction to apply commission-disregarded staging, (e) reminder that the session writes Decision_Log.md / Portfolio_Ledger.md directly and emits the order in chat, (f) instruction that a GO disposition requires crafting the order instruction via the IBKR connector (`create_order_instruction` for equity/ETF; a manual-entry text block for options) and creating one "[Claude] Confirm order — <ticker> BUY" event (07:00 MT pre-market on order day, description = the tap-to-confirm deep link + `SIDE QTY TICKER TYPE LIMIT TIF` summary + instruction `id`); no fill-capture event is created — the fill is reconciled by D2 Step 0.
    - For Strategy A candidates that should queue rather than proceed: update Watchlist.md A-queue section with ticker, date-added, reason summary, resolution-trigger condition ("next M1 with A router ACTIVATE").
 
 3. WATCHLIST UPDATES. For each add/remove/demote flagged:
@@ -336,8 +358,8 @@ DEFERRAL DISCIPLINE: if a decision genuinely cannot be resolved this routine, sp
 CALENDAR MCP USAGE: Claude calls the Calendar MCP directly. Time zone per Experiment_Parameters.md (default America/Denver if silent). Set per-event notification to fire at event-time.
 
 CHAT OUTPUT (per chat output discipline):
-- Order(s) to execute in IBKR-paste format, grouped by execution day if more than one. Use "no order" if no exits staged.
-- One-line acknowledgment of file edits and calendar events created (e.g., "Decision_Log.md, Portfolio_Ledger.md, Watchlist.md updated. 3 calendar events scheduled.").
+- Order(s) to execute as crafted instructions (tap-to-confirm deep link + `SIDE QTY TICKER TYPE LIMIT TIF` summary), grouped by execution day if more than one. Use "no order" if no exits staged. If Step 0 reconciled fills, state it in one line.
+- One-line acknowledgment of file edits and calendar events created (e.g., "Decision_Log.md, Portfolio_Ledger.md, Watchlist.md updated. 1 order instruction crafted, 1 calendar event scheduled.").
 
 If no orders, no file changes, no events: "No actions required."
 ```
@@ -351,22 +373,22 @@ Read access scope: Calendar Hygiene. Read all live project files. Do NOT read or
 
 Reconcile Google Calendar against current state. Recurring cadence work (D1, D2, ..., A3) is handled by routines and is NOT placed on calendar. The calendar is exclusively for one-off `[Claude]` events.
 
-DATE ANCHOR: "Today" is the current system date **in America/Denver specifically** — not UTC, not the assistant-context `currentDate` field, and not inferred from file timestamps. Do NOT trust the `currentDate` value embedded in the chat context: that field is UTC-based, and during evening MT hours UTC has already rolled to the next calendar day — using it as "today" will cause same-day order-execution events to be misclassified as order-day-passed and deleted (this regression occurred 2026-05-27 evening MT on the META convergence exit). To establish today, ALWAYS run a Bash command equivalent to `TZ=America/Denver date '+%Y-%m-%d %H:%M %Z'` as the first action of the routine and use its date as the anchor. Do NOT infer today from file timestamps (Decision_Log entry headers, Portfolio_Ledger "Last updated", etc.) — those may be forward-dated, templated, or recovery-artifact content. If the Bash-derived MT date conflicts with project-file timestamps or with `currentDate`, trust the Bash MT date and flag the conflict in chat output.
+DATE ANCHOR: "Today" is the current system date **in America/Denver specifically** — not UTC, not the assistant-context `currentDate` field, and not inferred from file timestamps. Do NOT trust the `currentDate` value embedded in the chat context: that field is UTC-based, and during evening MT hours UTC has already rolled to the next calendar day — using it as "today" will cause same-day order-confirmation events to be misclassified as order-day-passed and deleted (this regression occurred 2026-05-27 evening MT on the META convergence exit). To establish today, ALWAYS run a Bash command equivalent to `TZ=America/Denver date '+%Y-%m-%d %H:%M %Z'` as the first action of the routine and use its date as the anchor. Do NOT infer today from file timestamps (Decision_Log entry headers, Portfolio_Ledger "Last updated", etc.) — those may be forward-dated, templated, or recovery-artifact content. If the Bash-derived MT date conflicts with project-file timestamps or with `currentDate`, trust the Bash MT date and flag the conflict in chat output.
 
 Walk all `[Claude]` events in the next 90 days:
 - DELETE thesis-construction events when ANY of:
   (a) A Decision_Log GO or NO-GO disposition entry exists for the ticker dated on or after the underlying trigger event-date (handles operator early-execution: session completed before the scheduled calendar slot).
   (b) The ticker has been entered (now in Portfolio_Ledger open positions) or is otherwise no longer eligible (e.g., A queue promotion, archived).
   (c) The candidate's entry window has fully closed (Strategy B: 10 trading days from event; Strategy A: 6 months from catalyst date or catalyst passed) AND no GO disposition exists.
-- DELETE other event types only when their triggering condition has passed AND the event has been confirmed actioned/completed (e.g., fill-capture events for orders already reconciled into Portfolio_Ledger.md; research-deferral checkpoints whose underlying position has been exited; order-execution events whose order day has passed AND the order has been filled or cancelled per Portfolio_Ledger.md reconciliation).
+- DELETE other event types only when their triggering condition has passed AND the event has been confirmed actioned/completed (e.g., order-confirmation events whose order day has passed AND the order has been filled or cancelled per Step 0 reconciliation; research-deferral checkpoints whose underlying position has been exited). Fill-capture events no longer exist — fills are reconciled by D2 Step 0 from the connector.
 - DO NOT delete ANY event type solely because its datetime is in the past and it has not been confirmed done or reconciled. A past unfired event of any type is a MISSED session that may be awaiting human execution — flag it in chat output for review rather than silently deleting it. (Thesis-construction specifically: flag for D2 re-route if window is still active.)
 - Update events whose timing or prompt content is stale (e.g., a thesis-construction event for a Strategy B candidate whose 10-day entry window has shifted; a foundation-change assessment whose strategies-affected list has changed since the underlying Q3/A1 finding).
 - Confirm pending events have correct prompt text in their descriptions — descriptions must be self-contained so the human can paste directly into a fresh Claude chat.
 - Confirm per-event notifications are set to fire at event-time.
 
-Walk currently-open positions and pending orders from Portfolio_Ledger.md:
-- Confirm every staged order (entry or exit, ORDER-STAGED or exit-pending) has a corresponding order-execution event scheduled at 07:00 MT pre-market on the order day (if the order day is still in the future). If the order day is today and market is still open, create the missing event immediately. If the order day is past and the order was Day duration, it either filled or expired — no event needed, but flag if fill-capture has not yet reconciled it.
-- Confirm every open exit-pending order has a corresponding fill-capture event scheduled.
+Walk currently-open positions and pending orders from Portfolio_Ledger.md, cross-checked against the connector (`get_account_positions`, `get_account_orders`, `get_order_instructions`):
+- Confirm every staged order (entry or exit, ORDER-STAGED or exit-pending) has a corresponding order-confirmation event at 07:00 MT pre-market on the order day (if the order day is still in the future) AND a live crafted instruction in `get_order_instructions`. If the order day is still future and the instruction is missing, re-craft it (`create_order_instruction`) and repair the event. If the order day is today and market is still open, create/repair the event immediately. If the order day is past and the order was Day duration, it either filled or expired — confirm via Step 0 reconciliation / `get_account_trades`; flag if not yet reconciled.
+- Garbage-collect stale crafted instructions: any `get_order_instructions` entry whose order day has passed unconfirmed, or whose position is already closed/opened per reconciliation, is cleared with `delete_order_instruction`.
 - Confirm every position with a research-deferral has a deferral-checkpoint event scheduled.
 
 Time zone America/Denver unless Experiment_Parameters.md specifies otherwise.
@@ -486,11 +508,10 @@ Convert into operator-actionable outputs per the operating model. Claude resolve
 
 A. EXITS FROM W3 — for each position with W3 recommendation "close on thesis completion" or "close on thesis invalidation" or marked with the immediate-action flag:
    - Confirm the cited invalidation criterion or completion condition is in fact met by reviewing the position's entry record (Decision_Log.md or Portfolio_Ledger.md pointer) and Strategy.md exit rules. Second-look discipline: if on review the criterion is NOT met, do not stage the exit; record the second-look decision in a brief Decision_Log entry and continue.
-   - If confirmed: stage the exit order in IBKR-paste format. Limit-price selection per D2 staging rules. Day duration unless thesis logic requires GTC.
+   - If confirmed: craft the exit order via the IBKR connector per D2 staging rules (resolve `contract_id`; `get_price_snapshot` → marketable limit, or MARKET when assured exit is the objective; Day unless thesis logic requires GTC; `create_order_instruction` → `{id, url}`; options fall back to a manual text block).
    - Append a Decision_Log entry recording: triggering condition (thesis-completion or invalidation criterion), conviction-calibration notes, timing relative to time-based exit windows.
-   - Update Portfolio_Ledger.md to mark exit-pending.
-   - Schedule "[Claude] Execute order — <ticker> SELL" for 07:00 MT pre-market on order day. Description: IBKR-paste order block + "Place this order in IBKR at or after market open."
-   - Schedule "[Claude] Screenshot IBKR — fill capture <ticker> exit" for end-of-day on order day (~14:30 MT).
+   - Update Portfolio_Ledger.md to mark exit-pending with the staged order details and the crafted instruction `id`.
+   - Schedule "[Claude] Confirm order — <ticker> SELL" for 07:00 MT pre-market on order day. Description: the `SIDE QTY TICKER TYPE LIMIT TIF` summary, the tap-to-confirm deep link (`url`), the instruction `id`, and "Tap the link, review the pre-filled order in IBKR, confirm at or after market open." No fill-capture event — the fill reconciles via D2 Step 0.
 
 B. RESEARCH DEFERRALS FROM W3 — for each position with recommendation "further research":
    - Schedule a "[Claude] Research deferral — <ticker> <strategy>" calendar event for next-trading-day pre-market.
@@ -515,7 +536,7 @@ DEFERRAL DISCIPLINE: if a recommendation cannot be acted on this routine, specif
 CALENDAR MCP USAGE: Claude calls the Calendar MCP directly. Time zone per Experiment_Parameters.md.
 
 CHAT OUTPUT:
-- Exit order(s) in IBKR-paste format grouped by execution day (or "no order").
+- Exit order(s) as crafted instructions (tap-to-confirm deep link + `SIDE QTY TICKER TYPE LIMIT TIF` summary) grouped by execution day (or "no order").
 - One-line acknowledgment of file edits and calendar events.
 
 If no orders, no file changes, no events: "No actions required."
@@ -807,8 +828,8 @@ B. DIVERGENCE FLAGS FROM M1b — for each divergence flag (fundamental call vs. 
 
 C. EXITS FROM M4 — for each D position with M4 recommendation "close on thesis completion" or "close on thesis invalidation" or marked with the immediate-action flag:
    - Confirm the cited invalidation criterion or completion condition is in fact met. Second-look discipline applies. If on review the criterion is not met, record the second-look decision in Decision_Log.md and continue.
-   - If confirmed: stage the exit order in IBKR-paste format. Note for D positions: check LTCG status — if within 30 days of 12-month qualification AND the invalidation is not catastrophic, stage exit for the post-LTCG date instead and schedule a "[Claude] D exit window — <ticker>" calendar event at LTCG date. If invalidation is catastrophic, exit immediately regardless of LTCG.
-   - Append Decision_Log entry, update Portfolio_Ledger.md. Schedule "[Claude] Execute order — <ticker> SELL" for 07:00 MT pre-market on order day (description: IBKR-paste order block). Schedule "[Claude] Screenshot IBKR — fill capture <ticker> exit" for ~14:30 MT on order day.
+   - If confirmed: craft the exit order via the IBKR connector per D2 staging rules. Note for D positions: check LTCG status — if within 30 days of 12-month qualification AND the invalidation is not catastrophic, stage exit for the post-LTCG date instead and schedule a "[Claude] D exit window — <ticker>" calendar event at LTCG date (that session crafts the instruction on the date — do NOT craft a far-future instruction now). If invalidation is catastrophic, exit immediately regardless of LTCG.
+   - Append Decision_Log entry, update Portfolio_Ledger.md with the crafted instruction `id`. Schedule "[Claude] Confirm order — <ticker> SELL" for 07:00 MT pre-market on order day (description: the deep link + `SIDE QTY TICKER TYPE LIMIT TIF` summary + instruction `id`). No fill-capture event — the fill reconciles via D2 Step 0.
 
 D. RESEARCH DEFERRALS FROM M4 — for each D position with recommendation "further research":
    - Schedule a "[Claude] Research deferral — <ticker> D" calendar event for next-trading-day pre-market.
@@ -827,7 +848,7 @@ DEFERRAL DISCIPLINE: deferrals don't chain. Specify trigger and conservative-def
 CALENDAR MCP USAGE: Claude calls the Calendar MCP directly. Time zone per Experiment_Parameters.md.
 
 CHAT OUTPUT:
-- Exit order(s) in IBKR-paste format grouped by execution day (or "no order").
+- Exit order(s) as crafted instructions (tap-to-confirm deep link + `SIDE QTY TICKER TYPE LIMIT TIF` summary) grouped by execution day (or "no order").
 - One-line acknowledgment of file edits and calendar events.
 
 If no orders, no file changes, no events: "No actions required."
@@ -956,7 +977,7 @@ If found, orchestrate per the review_type's protocol:
 5. Update the queue entry: set orchestrator_output_path, set status = complete.
 
 CHAT OUTPUT:
-- IBKR-paste-format orders if any were staged (otherwise omit).
+- Crafted order instructions (tap-to-confirm deep link + summary) if any were staged (otherwise omit).
 - One-line acknowledgment naming the entry id, review_type, final verdict, theater-check flag, and action taken.
 ```
 
