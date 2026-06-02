@@ -27,7 +27,18 @@
       "mcp__Google_Calendar__get_event",
       "mcp__Google_Calendar__list_calendars",
       "mcp__Google_Calendar__respond_to_event",
-      "mcp__Google_Calendar__suggest_time"
+      "mcp__Google_Calendar__suggest_time",
+      "mcp__d9d4ad11-d734-4c05-8302-9fd84698ef46__search_contracts",
+      "mcp__d9d4ad11-d734-4c05-8302-9fd84698ef46__get_price_snapshot",
+      "mcp__d9d4ad11-d734-4c05-8302-9fd84698ef46__get_price_history",
+      "mcp__d9d4ad11-d734-4c05-8302-9fd84698ef46__get_account_summary",
+      "mcp__d9d4ad11-d734-4c05-8302-9fd84698ef46__get_account_positions",
+      "mcp__d9d4ad11-d734-4c05-8302-9fd84698ef46__get_account_balances",
+      "mcp__d9d4ad11-d734-4c05-8302-9fd84698ef46__get_account_orders",
+      "mcp__d9d4ad11-d734-4c05-8302-9fd84698ef46__get_account_trades",
+      "mcp__d9d4ad11-d734-4c05-8302-9fd84698ef46__get_order_instructions",
+      "mcp__d9d4ad11-d734-4c05-8302-9fd84698ef46__create_order_instruction",
+      "mcp__d9d4ad11-d734-4c05-8302-9fd84698ef46__delete_order_instruction"
     ]
   }
 }
