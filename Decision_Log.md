@@ -12224,3 +12224,52 @@ High-fan-out cadences (W4: A/B/C; M5: E + A-queue drain; Q4/A3: D + foundation/c
 **Downstream actions:** Claude_Task_Plan.md (binding section + Human-role §1 + D2/W4/M5 exit event bullets) and Operating_Protocols.md §1 edited to bind the manual-entry block to the `[Claude] Confirm order` event. No behavioral change to the deep-link path.
 
 **Compaction-survival note:** Options/non-craftable orders (Strategy C, etc.) → the `[Claude] Confirm order` event description carries a labeled manual-entry text block (SIDE QTY TICKER STRIKE/EXPIRY TYPE LIMIT TIF) instead of a `url`. Never deliver an order via chat alone.
+
+---
+
+### [2026-06-02] D3 Calendar Hygiene — calendar clean; BURL convergence exit outstanding; queue healthy
+
+**Date anchor:** 2026-06-02 03:26 MDT (Bash `TZ=America/Denver date` — authoritative; not inferred from file timestamps or `currentDate`).
+
+**Calendar sweep (next 90 days — 2026-06-02 through 2026-09-01):**
+- **0 `[Claude]` events found.** Calendar is fully clean. Per the 2026-06-01 "Calendar cleanup" entry, all legacy time-exit backstops and cadence-trigger events were deleted and the calendar now holds only `[Claude] Confirm order` events. No legacy analysis events to migrate to `Pending_Analyses.md`. No stale confirm-order events to delete. No confirm-order events present at all (no order currently pending confirmation).
+- No action required on the calendar.
+
+**Open positions cross-check against Portfolio_Ledger.md:**
+Open positions (all OPEN status, no ORDER-STAGED or exit-pending entries currently):
+- Strategy D: RTX, DIS
+- Strategy B: HCA, ZBRA, BRC, TJX, AZO, BURL (PROVISIONAL)
+
+No position has a staged order (ORDER-STAGED or exit-pending) and therefore no confirm-order event is missing for a pending staged order. All previously staged and executed orders are reconciled.
+
+**⚠ FLAG — BURL convergence exit outstanding:**
+BURL (Strategy B) is marked OPEN (PROVISIONAL) with convergence target $313.71 hit on 2026-05-29 (close $323.83 >> $313.71). Per Strategy.md B exit rules the convergence exit is MANDATED. The BURL Portfolio_Ledger section explicitly notes: "Convergence exit DUE — OWED to fill-capture / next BURL session." No exit order has been staged; no `[Claude] Confirm order — BURL SELL` event exists. 
+- **Root cause:** BURL fill details are PROVISIONAL (exact qty ~0.1255 shares inferred, not IBKR-confirmed); the IBKR connector is unavailable in this D3 session, so `get_account_positions` cannot confirm the exact size and `create_order_instruction` cannot craft the exit.
+- **Required resolution (D2):** When the connector is available, D2 must: (1) call `get_account_positions` to confirm BURL exact shares; (2) call `create_order_instruction(BURL, SELL, qty, LIMIT, <discount-to-last>, DAY)`; (3) create `[Claude] Confirm order — BURL SELL` at 07:00 MT on next trading day; (4) update Portfolio_Ledger.md BURL section to exit-pending. BURL contract_id: not yet in ledger — `search_contracts` required.
+- **Conservative-default if connector remains unavailable:** Continue flagging each D3 run. Do not defer indefinitely — if connector is still unavailable at the next D2 run, escalate in chat output per HOIP.
+
+**IBKR connector:**
+Not available in this session. The following D3 connector-dependent steps were skipped:
+- `get_account_orders`: comparison of working GTC orders against current quotes (stale/drifted order check)
+- `get_order_instructions`: garbage-collect of stale crafted instructions
+- `get_account_positions`: cross-check of ledger open positions against live account
+These steps are non-critical today (no staged orders exist per ledger), but should be completed by D2 when the connector is next available.
+
+**`Pending_Analyses.md` queue health:**
+7 entries total; all `status: pending`; **0 overdue** (no entry has `due_date` < 2026-06-02 with status pending):
+- thesis-HPE-B-20260602: due TODAY (2026-06-02) — D2 drains
+- thesis-OKTA-B-20260602: due TODAY (2026-06-02) — D2 drains
+- monitor-KL12-B-20260603: due 2026-06-03 — future
+- rescreen-BA-D-20260604: due 2026-06-04 — future
+- thesis-FOMC-C-20260608: due 2026-06-08 — future
+- review-ZBRA-B-20260609: due 2026-06-09 — ZBRA research-deferral checkpoint ✓
+- rescreen-LLY-D-20260612: due 2026-06-12 — future
+
+Queue is well-formed. No entries past-due. ZBRA is the only open position with a research-deferral checkpoint requirement and it is covered. Other open B positions (HCA, BRC, TJX, AZO) have not been flagged for research-deferral; their exits are covered by D1's daily mechanical exit-trigger sweep (convergence targets and time-based-exit dates per Portfolio_Ledger.md).
+
+**Theater-check flag:** N/A — hygiene record.
+
+**Downstream actions:**
+- No calendar changes this session (calendar already clean).
+- No `Pending_Analyses.md` changes this session (no legacy events to migrate; queue healthy).
+- BURL convergence exit flag handed to D2 for connector-dependent resolution.
