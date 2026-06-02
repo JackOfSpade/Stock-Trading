@@ -43,6 +43,19 @@ Each open position gets one subsection under its strategy's "Position-thesis-det
 
 The full thesis substance, adversarial review, criterion-3 list source derivation, regime context, sector-context analysis, and sell-side compilation all live in the Decision_Log staging entry. Position-thesis-details should NEVER reproduce thesis content verbatim from the staging entry — pointer only. Target length per subsection: **8–14 bullet lines**. If a subsection exceeds 20 lines, prune to pointer.
 
+### Per-strategy Performance block (engine-maintained by D2 Step 0)
+
+Each strategy's "Portfolio state" carries a **Performance** block maintained daily by D2 Step 0's PER-STRATEGY PERFORMANCE MAINTENANCE step (the deployed-TWR engine; supersedes the legacy `[n/a]` placeholders). Fields:
+- **Deployed unit value** (deployed-TWR index): base `1.000000` at the strategy's first trade; chain-linked daily over *deployed days* (days holding ≥1 open position). Capital flows (deposits / redistribution) are neutralized via unit accounting — flows change units outstanding, not unit value. SGOV-parking and router-deactivation days are excluded (index pauses). **Deployed TWR = unit value − 1.**
+- **Peak unit value**: running max of the deployed unit value (high-water mark).
+- **Current drawdown**: `unit value ÷ peak − 1` (≤ 0). The −50% drawdown kill trigger fires at ≤ −0.50.
+- **SGOV benchmark index**: base `1.000000`, chain-linked over the SAME deployed days using the daily SGOV total return. Nominal excess = `unit value ÷ SGOV index − 1`; the 30-trade gate additionally applies post-tax + post-inflation haircuts at evaluation.
+- **Deployed days**: count of deployed days since first trade (feeds the M2M trigger's 36-month-active threshold ≈ 756 deployed days).
+- **Closed trades**: count (feeds the 30-trade gate).
+- **Gate status**: `pre-gate | cleared | failed`.
+- **As of**: date of last maintenance (America/Denver).
+- **Monthly snapshots**: a short appended log of `(YYYY-MM, deployed_unit_value, sgov_index, deployed_days)`, one row per month-end maintenance, so rolling-window triggers (the M2M rolling-12-month gap) can read the value ~12 months back. Drawdown (current vs peak) and the 30-trade gate (current indices at the gate) need only the current values above; only M2M needs this history.
+
 ### Activity log lines (under each strategy's "Portfolio state" block)
 
 One sentence per session/event, ending with `→ Decision_Log YYYY-MM-DD <keyword>` pointer. NOT paragraph-length. Cumulative substance lives in Decision_Log entries; activity log is a chronological index for state changes affecting the strategy's portfolio.

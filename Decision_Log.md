@@ -12334,3 +12334,30 @@ Queue is well-formed. No entries past-due. ZBRA is the only open position with a
 - No calendar changes (calendar clean).
 - No `Pending_Analyses.md` changes (no legacy events to migrate; queue healthy).
 - Portfolio_Ledger.md BURL section updated from OPEN (PROVISIONAL) to CLOSED with exact connector-confirmed fills. "Last updated" header updated.
+
+---
+
+### [2026-06-02] Built the per-strategy deployed-TWR engine (the missing data layer under all kill-triggers + the success metric)
+
+**Trigger:** Traced (owner-requested) whether per-strategy deployed TWR is maintained anywhere. Finding: it is **not** — the ledger Performance slots are all `[n/a]`, no routine computes TWR/peak/drawdown, and there is no SGOV-benchmark series. So the drawdown kill trigger has never been operational, the 30-trade gate has nothing to evaluate, and the experiment's primary success metric (deployed TWR vs SGOV) has no pipeline. This is the load-bearing dependency under everything wired in the prior two entries.
+
+**Decision:** Built a **deployed-TWR engine** maintained daily in **D2 Step 0** (it already runs daily, reconciles fills via the connector, and has fresh marks). Method = **fund-accounting unit-value index** (the standard, capital-flow-correct way to do TWR — important now that deposits + redistribution move capital):
+- Per strategy, a **deployed unit value** (base 1.0 at first trade) chain-linked daily over *deployed days* only (≥1 open position); capital flows neutralized via unit accounting; SGOV-parking/router-deactivation days excluded. Deployed TWR = unit value − 1.
+- **Peak unit value** (high-water), **current drawdown** = unit/peak − 1, a parallel **SGOV benchmark index** over the same deployed days, **deployed_days**, **closed_trades**, **gate_status**, and **monthly snapshots** of the indices (for rolling-window math).
+- Daily return `r_t = (deployed P&L today, net commissions) / start-of-day deployed MV` (explicit formula in the routine). **First-run seed** backfills the ~6-week pre-engine history by chain-linking realized closed-trade returns + current unrealized; exact daily thereafter.
+
+The triggers now read real data:
+- **D1 drawdown sweep** reads `deployed_unit_value / peak / current_drawdown` (refreshing drawdown against live marks since D1 precedes D2).
+- **M5 30-trade gate** reads the deployed + SGOV indices at the 30-trade mark, then applies post-tax (short-term cap-gains) + post-inflation (CPI) haircuts → excess real return.
+- **M5 M2M** reads `deployed_days` (≥756 ≈ 36mo) and the monthly snapshots for the rolling-12-month gap.
+
+**Theater-check flag:** N/A — bookkeeping engine.
+
+**Downstream actions:** `Portfolio_Ledger.md` — added the "Per-strategy Performance block" schema (the engine's output contract; supersedes the `[n/a]` placeholders, which D2's first run seeds). `Claude_Task_Plan.md` — D2 Step 0 PER-STRATEGY PERFORMANCE MAINTENANCE step (the engine + first-run seed); repointed the D1 drawdown sweep and M5 gate/M2M reads to the maintained block. **No new remote routine** — the engine folds into D2 Step 0; it populates on the next daily D2 run.
+
+**Accepted-risk / notes:** the first-run seed approximates the ~6 weeks of pre-engine history (chain-linked per-trade returns, not exact daily TWR); immaterial for the drawdown trigger (no strategy is near a 50% drawdown) and small relative to the runway to any 30-trade gate. Daily maintenance is exact from the engine's first run forward. The daily `r_t` is a Modified-Dietz-style position-sleeve return; precise enough for trigger purposes at this book scale.
+
+**Compaction-survival notes:**
+1. *Per-strategy deployed TWR is now maintained daily by D2 Step 0* (unit-value index → deployed_unit_value, peak, current_drawdown, sgov_index, deployed_days, closed_trades, gate_status, monthly snapshots) in each strategy's Portfolio_Ledger Performance block.
+2. *Kill-triggers read this block:* drawdown (D1) = current vs peak; 30-trade gate (M5) = indices at 30-trade mark + tax/inflation haircut; M2M (M5) = deployed_days + monthly snapshots.
+3. *First D2 run seeds the blocks from trade history (they are `[n/a]` until then).* No new remote routine.
