@@ -12261,3 +12261,25 @@ High-fan-out cadences (W4: A/B/C; M5: E + A-queue drain; Q4/A3: D + foundation/c
 3. *New strategy:* frozen until $2,000 booked; all inflows (deposits + sunsets) feed newcomers first until filled, then equal split.
 4. *Removed:* capital-redistribution review type + the Recommendation routine (and its remote routine). Attacker/Orchestrator unaffected.
 5. *Evaluation machinery unchanged; allocation policy is now versioned (immutability relaxed for allocation only).*
+
+---
+
+### [2026-06-01] Wired the kill-trigger detection→terminate→redistribute path into the cadences
+
+**Trigger:** Closing the gap surfaced after the capital-model pivot — the deterministic redistribution + termination *execution* existed (m2m-termination Orchestrator path), but nothing in the cadences *detected* a drawdown kill or a 30-trade-gate failure and *executed* the termination. (Pre-existing hole, not introduced by the pivot — the old design only routed m2m-termination through a routine.)
+
+**Decision (wired into existing routines — no new remote routine needed):**
+- **D1 — per-strategy kill-trigger sweep (daily):** alongside the per-position exit sweep, compute each active strategy's deployed-TWR drawdown and flag **DRAWDOWN termination** (peak-to-trough deployed TWR ≥ 50% below high; mechanical/immediate) and **RUNAWAY-SUCCESS review** (deployed TWR doubled pre-gate → route to review, not direct terminate).
+- **D2 — STRATEGY TERMINATIONS (step 5, daily):** on a DRAWDOWN flag (or a drained foundation-change "terminate", or an Orchestrator m2m TERMINATE), execute the termination per Experiment_Parameters.md — close all positions (connector-crafted Confirm-order events), mark terminated, then deterministic redistribution (fill pending newcomers to the $2,000 floor FIFO, then equal-split among survivors). On a RUNAWAY-SUCCESS flag, enqueue an m2m-termination review.
+- **M5 — KILL-TRIGGER & GATE EVALUATION (section H, monthly):** evaluate the **30-trade gate** (≥30 closed trades → cumulative excess real return vs SGOV; < 0% terminate, ≥ 0% mark cleared) and detect **mark-to-market underperformance** (≥36 months active + ≥10pp trailing-12mo SGOV lag → enqueue m2m-termination review).
+
+All four kill triggers + the gate now have an explicit detector routed to an executor; execution everywhere is the single deterministic procedure in Experiment_Parameters.md "Strategy termination and capital redistribution." Drawdown is daily/immediate (rigid, no review); gate + M2M are monthly; foundation-change is quarterly/annual (already wired via Pending_Analyses). Per-strategy deployed-TWR is read from the ledger's per-strategy tracking (computed from trade history if not materialized).
+
+**Theater-check flag:** N/A — wiring of existing rules.
+
+**Downstream actions:** `Claude_Task_Plan.md` — D1 ANALYSIS (per-strategy kill-trigger sweep), D2 (step 5 STRATEGY TERMINATIONS + calendar-usage note), M5 (section H + calendar-usage note). No `Experiment_Parameters.md` change (the thresholds were already defined there; this wires their detection/execution). No new remote routine — detection lives in the existing D1/D2/M5 routines; the Attacker/Orchestrator routines handle the enqueued reviews.
+
+**Compaction-survival notes:**
+1. *Drawdown kill = daily (D1 detect → D2 execute), immediate, rigid.* Gate eval + M2M = monthly (M5). Foundation-terminate = quarterly/annual (Pending_Analyses → D2). All execute the same deterministic close+redistribute.
+2. *Runaway-success and M2M route to an m2m-termination review (Attacker/Orchestrator), which terminates inline on TERMINATE.*
+3. *No new remote routine was added for this; detection is folded into D1/D2/M5.*
