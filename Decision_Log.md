@@ -12442,3 +12442,113 @@ The ~24% residual is the irreducible Constraint 1 / criterion-4 self-reference r
 **Compaction-survival note — OKTA B 2026-06-02:** OKTA Q1 FY27 (AMC Thu 5/28; Day-0 5/29 close-to-close **+30.17%**, $94.72→$123.27; extended Day-1 +13.4% to $139.79; Day-4 $135–136) → **Strategy B NO-GO**. Terminal resolution of 2026-05-31 DEFERRAL (pending M1b 2026-06-01 A-router output). STEP-0 A-router gate: A = DO-NOT-ACTIVATE (M1b 2026-06-01 UNCHANGED DNA) → gate CLEARS. Binding = **criterion-4 dual-framing**: LONG foreclosed (information-driven; 13–15 firm sell-side PT-raise wave to $105–$130 cluster = SPl; stock at $135 is ABOVE the new PT cluster mean $116–$120 — no undershoot anchor; continuation-LONG is Strategy A territory; A=DNA → foreclosed); SHORT dismissed (SP1 sell-side ratification removes overshoot anchor; stock above PT cluster means no "below fair-value" mean-reversion driver; B-short string ~43 contra-indicator; NRR/RPO inflection suppresses near-term downside thesis). Print: Rev $765M (+11.2% YoY; beat $751.8M cons); non-GAAP EPS $0.91 (beat $0.85); NRR 107% (inflecting); RPO $4.72B +16%; FCF $252M; FY27 guide raised to $3.185–$3.205B rev + $3.79–$3.87 EPS. SP1 trigger confirmed (≥3 firms ≥20%: Susquehanna +37.5%, Citigroup ~+31%, Canaccord +21%, Macquarie +20%). Corroborated by criterion 3 (Q2 FY27 earnings Aug 25 outside 60d; stock above PT cluster eliminates LONG convergence gap). Criteria 1 (CTC +30.17%; mcap ~$21B; ADV ~$390M) + 5 (A=DNA; DDOG criterion-5 PASS) CLEAR. Conviction ~76% (highest). **No order; no Portfolio_Ledger / Regime_State / Watchlist change; no entry calendar events. Pending_Analyses.md `thesis-OKTA-B-20260602` → complete.** B tally → ~6 GO + ~60 NO-GO; B-short string → ~44.
 
 **References:** Pending_Analyses.md `thesis-OKTA-B-20260602`; Decision_Log 2026-05-31 OKTA DEFER entry; Decision_Log 2026-06-01 M5/M1b (A & B router states); Regime_State.md (A router DNA, B router ACTIVATE); Watchlist.md (OKTA A-queue row); B_Sub_Pattern_Taxonomy.md (Sub-Pattern 1 aggressive-sell-side-bull-ratification; AMD/PINS/SNOW trajectory-agnosticism; layered-1+3 instances); Strategy.md rev 35 (criteria 1–5; instrument rules; Differentiation-from-A; no caps; KL #12 monitoring-only); Operating_Protocols §2 (commissions disregarded), §3 (NO-GO context-not-barrier), §8 (conviction ladder), §9 (no re-deferral), §10 (no count caps). DDOG criterion-5 precedent (A-queue + DNA → B admissible). SNOW NO-GO 2026-06-02 (same-cohort layered-1+3 benchmark; AMD analogue); HPE NO-GO 2026-06-02 (SP1 extreme-tier PT-raise magnitude reference). IBKR connector contract_id 272356196 (NASDAQ OKTA).
+
+---
+
+### [2026-06-02] Strategy B — SAIC (Science Applications International Corporation, NASDAQ: SAIC) Q1 FY27 BMO print B-thesis-construction — NO-GO (criterion-4 dual-framing: LONG foreclosed information-driven / stock-at-PT-consensus; SHORT dismissed no-overshoot + B-short string ~44 contra-indicator; criterion 3 independently fails; conviction HIGH ~72%)
+
+**Trigger:** Calendar event `b3qf9thig74029u3qht1jfgacg` ("[Claude] Thesis construction — SAIC B", Mon 6/1 17:30 MT, now past); D2 6/2 in-session resolution. Event delete attempted — not found (already expired/deleted). No prior SAIC B record in Decision_Log (fresh thesis, no precedent to consider per Operating_Protocols §3).
+
+**Book context:** B NAV $9,462.42 (net liquidation per IBKR connector `get_account_summary`; 2% = $189.25/position). Open B book (5): HCA, ZBRA, BRC, TJX, AZO (BURL CLOSED 2026-06-01 confirmed 2026-06-02 D3). B tally ~6 GO + ~60 NO-GO (post-OKTA 2026-06-02); B-short string ~44 (positive-direction consecutive SHORT-dismissal string; standing W5 reconciliation drift caveat). No sector/count caps (Operating_Protocols §10 / Strategy.md rev 35).
+
+**No A-router gate:** SAIC is NOT in the A-queue (per Daily.md: "SAIC does not fit A subtype — defense/govt IT services with no obvious multi-year structural AI/catalyst-driven narrative differentiator; not added"). No criterion-5 gate applies. Criterion 5 PASSES trivially.
+
+**Q1 FY27 print summary (BMO 2026-06-01; sourced from 8-K filing stocktitan.net + Yahoo Finance + GuruFocus + StockStory):**
+- Revenue: $1.91B (+1.6% YoY vs prior-year $1.88B; +4.4% beat vs $1.82–$1.86B consensus)
+- Organic growth: +0.5% (adjusted for SilverEdge acquisition)
+- Adjusted EBITDA: $222M (11.6% margin, record; up from 8.4% in Q1 FY26; +27% above consensus ~$175M; note: includes ~$12M one-time venture investment gain = +60 bps margin; ex-one-time ~11.0% margin)
+- Adjusted diluted EPS: $3.23 (vs $2.28–$2.32 consensus; +40% beat; up from $1.92 in Q1 FY26, +68% YoY)
+- GAAP diluted EPS: $2.61 (+84% YoY from $1.42; driven by margin improvement + lower share count from buybacks)
+- Free cash flow: $118M; operating cash flow: $127M
+- Net bookings: $2.1B; book-to-bill 1.1x (quarterly); trailing-12-month B:B 1.0x
+- Pipeline: ~$85B (more focused; enterprise IT share shrinking)
+- Net leverage: 3.1x (within target range)
+- FY27 guidance (raised): Adj EBITDA $720–730M (vs prior $705–715M); adj EBITDA margin 10.1–10.3% (vs prior 9.9–10.1%); adj diluted EPS $9.90–$10.10 (vs prior $9.50–$9.70; midpoint $10.00 vs pre-print consensus ~$9.63); revenue guidance UNCHANGED at $7.0–7.2B (midpoint $7.1B, slightly below street ~$7.15B); FCF guidance UNCHANGED at >$600M
+
+**Day-0 CTC (authoritative, IBKR connector, contract_id 134306225):**
+- Pre-event close (2026-05-29): $103.70 (confirmed via price history)
+- Day-0 close (2026-06-01): $115.08 (confirmed via prior-close field on Day-1 snapshot)
+- Day-0 intraday high: $123.41 (set on Day-0; new 52-week high); Day-0 open: $120.19
+- Day-0 CTC: ($115.08 − $103.70) / $103.70 = **+10.98%** — HIGH tier (5–15% bucket); the Daily.md "+17%" figure was an intraday-high approximation
+- Day-1 (2026-06-02) current: ~$108.86 (last per snapshot, down −5.40% from Day-0 close; partial fade on Day-1)
+- 52-week range: $81.08–$123.41; YTD change: +8.52%
+- mcap (Yahoo Finance 5/28): ~$4.47–$4.52B (well above $2B floor)
+- 90d ADV: ~$58M (Daily.md); snapshot volume Day-1 ~907K shares × ~$109 ≈ ~$99M (elevated on print day + Day-1); instrument qualifies
+
+**Analyst reactions (post-print, sourced from MarketBeat, Benzinga, Zacks, Tickernerd, StockAnalysis, Yahoo Finance; as of 2026-06-02):**
+
+Pre-print sell-side context (most recent actions all PRE-print, all CUTS or initiations at cautious levels):
+| Firm | Date | Action | Old PT | New PT | % Change | Rating |
+|------|------|--------|--------|--------|----------|--------|
+| BNP Paribas | 5/27/2026 | Initiate | — | $95 | — | Neutral |
+| JPMorgan | 4/13/2026 | Lower | $125 | $110 | −12% | Neutral |
+| Citigroup | 4/2/2026 | Lower | $133 | $120 | −10% | Buy |
+| Truist | 3/17/2026 | Lower | $110 | $95 | −14% | Hold |
+| Stifel | 3/17/2026 | Lower | $128 | $120 | −6% | Buy |
+| Goldman Sachs | 2/12/2026 | Lower | $94 | $82 | −13% | Sell |
+
+Pre-print consensus: ~$108.30 average (10–11 analysts); range $82 (GS Sell) to $130 (Stifel high); 2 Buy / 8 Hold / 1 Sell distribution.
+
+**Post-print PT raises confirmed: ZERO.** No analyst firm has filed a post-print PT revision as of Day-1 (2026-06-02) scan. All data aggregators (MarketBeat, Benzinga, Zacks, ChartMill, TickerNerd, StockAnalysis) still show the most recent action as JPMorgan April 13 $125→$110. This is consistent with SAIC's thin sell-side coverage (~10-12 firms) and the typical 24–72h lag for government IT services post-print analyst updates — updates may arrive Day 2–4. At session time, no post-print reactions are available.
+
+**SP1 trigger check (≥3 firms raising PTs ≥20% post-print): NOT MET.** Zero post-print PT raises confirmed. SP1 does not trigger. The criterion-4 analysis proceeds on merits.
+
+**Key structural diagnostic — stock vs. pre-print PT consensus:**
+- Day-0 close $115.08 vs pre-print consensus $108.30: stock ABOVE the pre-print PT mean by ~$6.78 (+6.3%)
+- Day-1 current $108.86: stock has faded back to WITHIN $0.56 of the pre-print PT consensus ($108.30)
+- The Day-1 landing at essentially the pre-print consensus is the most informative signal: the market processed the Q1 beat and arrived at a price that is the sell-side's pre-print fair value assessment
+
+**Criterion 1 — CLEARS.** CTC +10.98% (≥5% ✓ with 2.20× cushion; HIGH tier); event = Q1 FY27 earnings release BMO (qualifying closed-list event ✓); mcap ~$4.47–4.52B (≥$2B ✓ with 2.25× cushion); ADV ~$58M+ (≥$10M ✓ with 5.8×+ cushion). Instrument = US-listed NASDAQ common equity ✓. GICS sector: Information Technology / IT Services (Yahoo Finance: "Information Technology Services / Technology sector"; Zacks: "Computers - IT Services"; consistent with IT Services 45102010). All criterion-1 gates PASS.
+
+**Criterion 2 — Inconclusive / carried to criterion 4.** The proportionality question: is +10.98% a disproportionate reaction to the Q1 FY27 print?
+
+*Arguments for UNDER-reaction (LONG premise):* A +40% EPS beat and record EBITDA margins might support a larger re-rating. At first look, the stock's +10.98% seems modest vs. the headline beat magnitude.
+
+*Arguments against UNDER-reaction (defeating the LONG premise):* (a) The EPS beat included a ~$12M one-time venture investment gain; ex-one-time, adjusted EBITDA margin was ~11.0% (still strong, but the "record" is partly one-time-driven); (b) Revenue guidance was UNCHANGED at $7.0–7.2B — the market sees no revenue acceleration, only margin efficiency; (c) FY EPS guide raised only ~4% at midpoint ($9.60 → $10.00), not the 40% one-quarter beat — the market rightly discounted replication; (d) Organic revenue growth was only +0.5% — government IT services with flat organic revenue is a structural headwind, not a re-rating catalyst; (e) Day-1 fade to $108.86 (nearly AT the pre-print PT consensus of $108.30) confirms the market found the efficient price quickly. The +10.98% Day-0 CTC looks proportionate given the information content: a one-quarter margin beat with one-time components and unchanged revenue guidance.
+
+*Arguments for OVER-reaction (SHORT premise):* The Day-1 fade of −5.4% from Day-0 high could support a SHORT. However, the print was genuinely strong operationally (record margins even ex-one-time, solid FCF, good B:B ratio), so characterizing the +10.98% as a sentiment overshoot requiring mean-reversion is difficult.
+
+Criterion 2 is inconclusive — the reaction appears proportionate rather than clearly over- or under-sized. Carried to criterion 4.
+
+**Criterion 3 — FAILS (no admissible in-window convergence target).** Named-event analysis:
+- Q2 FY27 earnings: SAIC fiscal year ends January; Q2 ends August → Q2 FY27 print expected approximately September 2026 (~90 days from Day-0). Definitively OUTSIDE the 60-day window (~2026-08-01 deadline). FAILS.
+- FOMC: Mechanism mismatch — SAIC is an idiosyncratic government IT services single-name; not a rate thesis. NOT admissible.
+- Index inclusion: SAIC is already a NASDAQ-listed mid-cap; no S&P 500 / Russell 1000 / Nasdaq-100 inclusion event imminent or identifiable. NOT applicable.
+- Named defense contract announcement: No specific named contract award or budget vote within 60 days is identifiable at session time. The $85B pipeline is a background fact, not a named in-window catalyst.
+- Numerical LONG convergence target: A LONG thesis targeting gap-fill toward $120 (Stifel/Citi pre-print PTs, which are the buy-rated upside anchors) is numerically statable, but: (a) these PTs are pre-print and the sell-side has NOT yet repriced post-print; (b) the stock is already at $108.86, close to the pre-print average PT of $108.30 — the undershoot gap is essentially zero; (c) any further appreciation toward $115–120 requires continuation of information-driven re-rating, which is Strategy A territory. NOT admissible.
+- Numerical SHORT convergence target: A SHORT thesis targeting mean-reversion toward pre-print $103.70 has no named in-window catalyst. The Day-1 fade to $108 may represent partial reversion already substantially complete. NOT admissible.
+- Criterion 3 fails independently — corroborating NO-GO basis.
+
+**Criterion 4 — DECISIVE NO-GO (dual-framing).** Central determination: is the +10.98% Day-0 move information-driven or sentiment-driven?
+
+*Information-vs-sentiment verdict:* The +10.98% Day-0 CTC is information-driven. The Q1 FY27 print was a genuine positive beat (record EBITDA margins, EPS 40% above consensus, FCF solid, book-to-bill 1.1x). The sell-side's pre-print consensus PT of $108.30 (vs prior close $103.70) already implied the stock was modestly undervalued pre-print. The market's Day-0 reaction ($103.70 → $115.08) overshot on enthusiasm (intraday to $123.41) but the Day-1 settlement at $108.86 — essentially AT the pre-print consensus PT — is textbook information-driven efficient pricing: the stock moved from below-consensus ($103.70) to at-consensus ($108.86) as the beat confirmed the sell-side's prior fair-value assessment.
+
+*Sub-pattern routing:* This does NOT cleanly route to Sub-Pattern 1 (SP1 NOT triggered — no post-print PT raise wave). It has PARTIAL characteristics of Sub-Pattern 8 (bearish pre-print sell-side positioning: multiple PT cuts in Q1-Q2 2026; stock depressed near multi-month lows at $103.70; print beat on sentiment-suppressed expectations; Day-1 partial fade). However, the EPS beat magnitude (+40%) is substantively larger than SP8's canonical "modest beat" template (DOC +$0.02 FFO). The print was genuinely strong — not a modest-beat-on-depressed-expectations scenario.
+
+*LONG framing — FORECLOSED:*
+- (L1) The stock at Day-1 $108.86 is AT the pre-print sell-side PT consensus of $108.30. There is no LONG undershoot gap remaining to close — the market has already repriced to the sell-side's fair value. A LONG thesis requires the stock to move ABOVE what the sell-side currently thinks it is worth without any new positive information — which is Strategy A territory (forward-looking re-rating thesis), not Strategy B (post-event-reaction mispricing).
+- (L2) Revenue guidance was unchanged and organic growth was only +0.5%. The EPS beat was margin-driven and partly one-time. There is no revenue re-rating catalyst to anchor a sustained LONG undershoot thesis. Government IT services with flat organic revenue does not support a fundamental re-rating above pre-print PT consensus without a new named contract catalyst (absent).
+- (L3) Criterion 3 fails (no in-window named catalyst; Q2 earnings outside window). A LONG thesis without a named convergence catalyst is speculative within the 60-day B window.
+- LONG FORECLOSED.
+
+*SHORT framing — DISMISSED:*
+- (S1) The print was genuinely strong (record EBITDA margins, book-to-bill 1.1x, FCF solid, raised EPS guide). No decisive flaw in the fundamental print itself that would drive further downside mean-reversion. A SHORT thesis requires the Day-0 move to have been an overshoot relative to the true information content — but at +10.98% (less than the Day-0 intraday extreme of +19%), the RTS close is a moderated, not extreme, reaction.
+- (S2) The Day-1 landing at $108.86 (≈ pre-print sell-side consensus $108.30) suggests the market has efficiently settled at fair value, not in an overshoot zone. For a SHORT, one needs the stock to be materially above fair value — it is not.
+- (S3) B-short string ~44 consecutive positive-direction SHORT-dismissals is a strong empirical contra-indicator for SHORT theses in current regime.
+- (S4) Government IT services with a 3.1x net leverage and $600M+ FCF outlook provides fundamental support against aggressive mean-reversion downward.
+- (S5) No named downside catalyst within 60 days.
+- SHORT DISMISSED.
+
+*Government IT services sector context:* SAIC's business is cost-plus government contracts (defense, intelligence, civilian). EPS beats in government IT often reflect contract mix, timing, and cost efficiency — these factors can persist but are not automatic re-rating catalysts. The +40% EPS beat in Q1 FY27 includes a non-recurring $12M venture gain; ex-one-time, the underlying margin improvement (8.4% → ~11.0% ex-venture) is real but partly reflects cost efficiency that management may not be able to replicate every quarter. The market appears to have correctly priced this at +10.98%: not a one-time anomaly to fade, but not a sustained re-rating either.
+
+**Criterion 5 — PASSES trivially.** SAIC is NOT in the A-queue (confirmed per Daily.md). A router = DO-NOT-ACTIVATE (Regime_State.md confirmed). No criterion-5 gate applies.
+
+**SAIC disposition: NO-GO — binding on criterion 4 dual-framing (LONG foreclosed: information-driven pricing confirmed by Day-1 settlement at pre-print PT consensus $108.30; no undershoot gap remaining; continuation above consensus = Strategy A territory; criterion 3 corroborates — no in-window catalyst; SHORT dismissed: print genuinely strong, no overshoot above fair value, B-short string ~44 contra-indicator, no named downside catalyst). Criterion 3 independently fails (Q2 FY27 earnings September ~90 days out; no admissible in-window named catalyst; numerical targets inadmissible). Criteria 1 and 5 clear. Criterion 2 inconclusive. Conviction HIGH ~72%.**
+
+The ~28% residual reflects three genuine ambiguities: (a) The absence of post-print PT raises at session time (0 confirmed) means the sell-side's post-print repricing is unknown — if firms raise PTs materially post-print (available Day 2–4), the analysis could change, but Operating_Protocols §9 no-re-deferral rule prohibits deferral to await that data; the conservative default applies now. (b) The pre-print bearish sell-side positioning (all recent actions were CUTS) creates a partial SP8-adjacent pattern where the beat-on-depressed-expectations rally is sentiment-partially-driven — but the EPS beat magnitude (+40%) is too large to dismiss as a "modest beat on depressed expectations" narrative, and the Day-1 settlement at consensus PT argues efficiently-priced, not sentiment-overshooting. (c) A LONG thesis targeting the Stifel $120 / Citi $120 upper PT anchors (~+10.2% from Day-1 $108.86) is technically numerically statable — but without a named in-window catalyst, this is a momentum continuation thesis, not a B mean-reversion thesis. None of these residuals moves the disposition to GO.
+
+**Session outcome:** NO-GO; no order staged; no Confirm-order calendar event created; no Portfolio_Ledger change; no Regime_State / Watchlist modification. Calendar event `b3qf9thig74029u3qht1jfgacg` delete attempted — not found (already expired/auto-deleted). **B tally → ~6 GO + ~61 NO-GO** (standing W5 tally-drift caveat; +1 NO-GO from SAIC). **B-short string ~44 → ~45** (positive-direction SHORT-dismissal extends string per established convention). KL #12 unaffected (no new positions).
+
+**Compaction-survival note — SAIC B 2026-06-02:** SAIC Q1 FY27 (BMO Mon 6/1; Day-0 6/1 close-to-close **+10.98%**, $103.70→$115.08; intraday high $123.41; Day-1 6/2 fade to ~$108.86) → **Strategy B NO-GO**. Triggered by calendar event `b3qf9thig74029u3qht1jfgacg` (Mon 6/1 17:30 MT, past); D2 Day-1 in-session terminal resolution. No A-router gate (SAIC not in A-queue). Binding = **criterion-4 dual-framing**: LONG foreclosed (Day-1 settlement at $108.86 essentially AT pre-print sell-side consensus $108.30 — no undershoot gap; continuation above consensus = Strategy A territory; criterion 3 independently fails — Q2 FY27 print ~Sep outside 60d, no named in-window catalyst); SHORT dismissed (genuinely strong print — record EBITDA margins 11.6% incl. $12M one-time venture gain, +40% EPS beat, B:B 1.1x; no overshoot above fair value at Day-1 $108.86; B-short string ~44 contra-indicator; no named downside catalyst). Print: Rev $1.91B (+4.4% beat); adj EPS $3.23 (beat $2.28–$2.32; +40%); adj EBITDA $222M margin 11.6% (record); FY27 adj EPS raised $9.50–9.70→$9.90–10.10; FY revenue guidance UNCHANGED $7.0–7.2B; organic growth only +0.5%. SP1 trigger NOT met (zero post-print PT raises confirmed at session time; pre-print sell-side all-bearish cuts: JPM $125→$110, Citi $133→$120, Truist $110→$95, Stifel $128→$120, GS $82 Sell; initiation BNP Neutral $95; pre-print consensus $108.30). No SP1 routing; criterion 4 on merits → information-driven pricing. Criteria 1 (CTC +10.98%; mcap ~$4.5B; ADV ~$58M; IT Services GICS) + 5 (not in A-queue; A=DNA trivially) CLEAR. Conviction HIGH ~72% (lower than SNOW/HPE/OKTA HIGHEST tier because SP1 not triggered and ambiguity around post-print PT updates pending; higher than DOC SP8-candidate because EPS beat magnitude substantial and criterion-4 verdict is proportionate-pricing not clear-sentiment-overshoot). **No order; no Portfolio_Ledger / Regime_State / Watchlist change; no entry calendar events. Calendar event `b3qf9thig74029u3qht1jfgacg` not found (already expired). B tally → ~6 GO + ~61 NO-GO; B-short string → ~45.**
+
+**References:** Strategy.md rev 35 (criteria 1–5; instrument rules; B mechanism; Differentiation-from-A; no caps; KL #12 monitoring-only); B_Sub_Pattern_Taxonomy.md (SP1 trigger conditions; Sub-Pattern 8 DOC anchor — partial-fit but EPS magnitude too large for clean SP8; no SP1 instance here); Operating_Protocols §2 (commissions disregarded), §3 (NO-GO records context not barriers), §8 (conviction calibration), §9 (no re-deferral; conservative default applied — no deferral to await Day 2–4 post-print PT updates), §10 (no count caps), §11 (IBKR connector); Regime_State.md (B router ACTIVATE; A router DNA); Decision_Log 2026-06-02 HPE NO-GO (SP1 extreme-tier benchmark), 2026-06-02 OKTA NO-GO (SP1 + stock-above-PT-cluster benchmark), 2026-06-02 SNOW NO-GO (layered-1+3 benchmark); IBKR connector contract_id 134306225 (NASDAQ SAIC); stocktitan.net SAIC 8-K Q1 FY27 June 1 2026; Yahoo Finance / MarketBeat / Benzinga / Zacks / StockAnalysis (analyst PT data, pre-print consensus $108.30; no post-print raises confirmed at session time).
