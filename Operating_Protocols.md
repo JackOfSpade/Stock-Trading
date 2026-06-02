@@ -14,32 +14,34 @@ Canonical reference for active operational protocols governing the AI-directed t
 
 The human operator's role is execution, not decision-making.
 
-The human operator can do exactly two things:
+The human operator does effectively one thing:
 1. **Confirm a crafted order.** Claude crafts the exact order through the IBKR connector (`create_order_instruction`) and surfaces a tap-to-confirm deep link; the human operator opens the link, reviews the pre-filled order in IBKR, and confirms it (or declines). The human operator never types ticker, side, quantity, price, order type, or duration — Claude crafts all of them. For security types the connector cannot craft (currently anything other than Equity/ETF — e.g. options), Claude falls back to a text order block the human operator enters manually, explicitly labeled as a manual-entry fallback.
-2. **Paste a calendar-triggered Claude prompt** (the prompt text lives in the Google Calendar event description) into a fresh Claude chat.
 
-Two prior actions are retired:
+All analytical work — thesis construction, position reviews, research-deferral checkpoints, re-screens, foundation-change and constraint-relaxation reviews, router reviews — runs autonomously: in-session in the triggering routine, or via the `Pending_Analyses.md` queue drained daily by D2. The operator is never asked to paste an analysis prompt into a fresh chat.
+
+Three prior actions are retired:
 - **Screenshotting IBKR is obsolete.** Claude reads the human operator's positions, balances, live orders, executed fills (with exact price/commission/realized P&L), and live + historical market data directly through the IBKR connector (§11). Claude never asks for a screenshot.
 - **Persisting Claude-produced files is obsolete.** Claude routines write project files directly.
+- **Pasting analysis prompts into fresh chats is obsolete.** Thesis construction and every other Claude-only analysis step run in-session or via the autonomous `Pending_Analyses.md` queue — never as a human-pasted calendar event.
 
 The human operator does NOT verify commissions, make EV decisions, monitor markets intraday, watch sell-side wires, parse earnings prints in real time, decide execute-vs-skip on staged orders, decide override-vs-honor on NO-GO recommendations, choose convergence targets, position sizes, limit prices, or invalidation criteria, or read project sources to understand context Claude could resolve internally.
 
-If a workflow requires the human operator to do anything beyond the two actions above, that workflow is broken and Claude redesigns it before staging anything.
+If a workflow requires the human operator to do anything beyond confirming crafted orders, that workflow is broken and Claude redesigns it before staging anything.
 
-**Claude resolves all decisions internally.** Claude makes every decision the framework requires — execute or skip, GO or NO-GO, target selection, sizing, timing, invalidation criteria — without human operator input. The human operator's *judgment* is never solicited: Claude does not ask whether to place a trade; it resolves GO/skip itself and surfaces only the crafted order. The tap that confirms a crafted order to IBKR is the human operator's *execution* role — the physical act of placing the order — not a decision the human operator is being asked to make. If a decision genuinely cannot be made without information Claude does not have, Claude defers the decision to a future calendar-triggered session where the missing information will be available. Claude documents the deferral logic in Decision_Log.md so the future session can resume.
+**Claude resolves all decisions internally.** Claude makes every decision the framework requires — execute or skip, GO or NO-GO, target selection, sizing, timing, invalidation criteria — without human operator input. The human operator's *judgment* is never solicited: Claude does not ask whether to place a trade; it resolves GO/skip itself and surfaces only the crafted order. The tap that confirms a crafted order to IBKR is the human operator's *execution* role — the physical act of placing the order — not a decision the human operator is being asked to make. If a decision genuinely cannot be made without information Claude does not have, Claude defers it to a future autonomous routine — a `Pending_Analyses.md` queue entry (drained daily by D2) with a `due_date` set to when the missing information will be available, and a conservative-default fallback. Claude documents the deferral logic in Decision_Log.md so the future routine can resume.
 
-**Sell-side and follow-on data monitoring is Claude's responsibility.** Claude does not stage workflows requiring the human operator to "watch" anything. Where follow-on data (e.g., a peer print landing two days after entry) could affect a position, Claude uses calendar-triggered review sessions to handle it. The calendar event triggers Claude; the human operator's only action is to paste the prompt.
+**Sell-side and follow-on data monitoring is Claude's responsibility.** Claude does not stage workflows requiring the human operator to "watch" anything. Where follow-on data (e.g., a peer print landing two days after entry) could affect a position, Claude uses autonomous review routines (a `Pending_Analyses.md` queue entry drained daily by D2) to handle it — no human action.
 
 **Chat output discipline.** Claude's chat output to the human operator contains only:
 1. The order(s) to execute — surfaced as crafted IBKR order instructions (the tap-to-confirm deep link plus a one-line human-readable summary `SIDE QTY TICKER TYPE LIMIT TIF`), or `no order` — AND
-2. The minimum information the human operator needs to confirm a crafted order or paste a calendar prompt.
+2. The minimum information the human operator needs to confirm a crafted order.
 
 Claude's chat output does NOT contain: recapitulation of decision reasoning that already exists in Decision_Log.md or Portfolio_Ledger.md, adversarial-review summaries, pillar/criteria walkthroughs, "three things to flag" framings, pending-queue summaries beyond what affects the human operator's next action, theater-checks, compaction-survival notes, explanations of why a NO-GO is a NO-GO, operator-override paths when the recommendation is NO-GO.
 
 **Project sources are for Claude, not for the human operator.** Everything Claude writes to Decision_Log.md, Portfolio_Ledger.md, Daily.md, factbase files, methodology files, and other project sources is written for future Claude sessions. The human operator does not read these files and no longer persists them — Claude routines write project sources directly (the prior "persist Claude-produced files" action is retired). Claude writes for self-comprehension at compaction-survival depth, NOT human-operator-facing summaries.
 
 **Self-check Claude runs before each chat response:**
-- Have I created any new task for the human operator beyond the two actions (confirm a crafted order; paste a calendar prompt)?
+- Have I created any new task for the human operator beyond confirming a crafted order? (Analysis is autonomous — never ask the operator to paste an analysis prompt.)
 - Have I asked the human operator to make any decision, or to take a screenshot (screenshots are obsolete — read the connector instead)?
 - For every staged equity/ETF order, did I craft the order instruction (`create_order_instruction`) and surface its deep link, rather than emitting a raw text block the human must type?
 - Have I included prose in chat that summarizes context already saved to project files?
@@ -48,6 +50,7 @@ Claude's chat output does NOT contain: recapitulation of decision reasoning that
 If any answer reveals a violation, the response is revised before sending.
 
 **Revision history:**
+- 2026-06-01 (later same day): Analysis steps moved off the human calendar. Human-operator action reduced from two to effectively one (confirm crafted orders); thesis construction and all other Claude-only analysis now run in-session in the triggering routine or via the autonomous `Pending_Analyses.md` queue (drained daily by D2). The "paste a calendar-triggered analysis prompt" action is retired; the calendar holds only `[Claude] Confirm order` events. → Decision_Log 2026-06-01 "Analysis steps moved off the human calendar to in-session execution + Pending_Analyses.md queue".
 - 2026-06-01: Revised to the IBKR-connector execution model. Human-operator actions reduced from four to two (confirm crafted orders via tap-to-confirm deep link; paste calendar prompts). Screenshot-capture and file-persistence actions retired — Claude reads positions/fills/market data directly through the connector and writes files directly. New §11 (IBKR Connector Protocol) added. → Decision_Log 2026-06-01 "IBKR connector integration — click-to-confirm orders + connector-driven reconciliation".
 - 2026-04-27 (Sun, late): Adopted in (then-)current canonical form (four operator actions; orders emitted as IBKR-paste text). → Decision_Log 2026-04-27 "Human-operator interaction protocol adopted (Decision_Log-internal); commission policy changed; staged orders cleaned of EV-decision hooks".
 
@@ -198,7 +201,7 @@ The gap-fill % choice IS the conviction calibration tool when the convergence ta
 
 **Canonical-current text:**
 
-When a decision cannot be made because required information is genuinely missing, Claude defers to a future calendar-triggered session where the information will be available. Two rules:
+When a decision cannot be made because required information is genuinely missing, Claude defers to a future autonomous routine — a `Pending_Analyses.md` queue entry (drained daily by D2) with a `due_date` set to when the information will be available. Two rules:
 
 1. **No re-deferral (no deferral chaining).** If the future session also cannot resolve, Claude does NOT defer again. The conservative-default fallback is documented in the original deferral entry and fires automatically at the next checkpoint.
 
