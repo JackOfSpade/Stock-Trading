@@ -12210,3 +12210,17 @@ High-fan-out cadences (W4: A/B/C; M5: E + A-queue drain; Q4/A3: D + foundation/c
 2. *Time-based exits + convergence hits fire from D1's daily ledger-driven sweep,* not calendar events. Source of truth = each open position's "Convergence target" + "Time-based exit" fields in Portfolio_Ledger.md.
 3. *All cadences (D/W/M/Q/A) fire via Claude Code scheduled remote routines,* not the calendar. Authoritative instructions = Claude_Task_Plan.md.
 4. *Deleted this session:* 5 B time-exit events (HCA/ZBRA/BRC/TJX/AZO) + Q1–Q4 quarterly series + A1–A3 annual series = 12 events.
+
+---
+
+### [2026-06-01] Clarification — manual-entry (options) orders must ride the [Claude] Confirm order calendar event, never chat-only
+
+**Trigger:** Owner note on the Strategy C options carve-out: "as long as this is notified in calendar events rather than response only, that's fine — chat response not monitored."
+
+**Decision:** Reinforced the binding rule so it covers BOTH order forms. Every staged order that needs the human is carried by a `[Claude] Confirm order` calendar event: an Equity/ETF order carries the tap-to-confirm deep link (`url`); an **options / other non-craftable order carries the explicitly-labeled manual-entry text order block** in the event description in the deep link's place. An order — craftable or manual — left only in chat is a broken workflow (routine chat is unmonitored; the human would never see it). This was already stated for the deep-link case and for options entries (connector-usage subsection; Pending_Analyses FOMC-C entry); this clarification closes the ambiguous spots that could have read as chat-only: the "Routine chat is unmonitored" binding section, the Human-role action-1 parenthetical, Operating_Protocols §1, and the D2/W4/M5 exit-staging event bullets.
+
+**Theater-check flag:** N/A — clarification of an existing invariant.
+
+**Downstream actions:** Claude_Task_Plan.md (binding section + Human-role §1 + D2/W4/M5 exit event bullets) and Operating_Protocols.md §1 edited to bind the manual-entry block to the `[Claude] Confirm order` event. No behavioral change to the deep-link path.
+
+**Compaction-survival note:** Options/non-craftable orders (Strategy C, etc.) → the `[Claude] Confirm order` event description carries a labeled manual-entry text block (SIDE QTY TICKER STRIKE/EXPIRY TYPE LIMIT TIF) instead of a `url`. Never deliver an order via chat alone.
