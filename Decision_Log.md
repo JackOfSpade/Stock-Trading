@@ -12286,33 +12286,35 @@ All four kill triggers + the gate now have an explicit detector routed to an exe
 
 ---
 
-### [2026-06-02] D3 Calendar Hygiene — calendar clean; BURL convergence exit outstanding; queue healthy
+### [2026-06-02] D3 Calendar Hygiene — calendar clean; BURL confirmed CLOSED (connector-verified); queue healthy
 
-**Date anchor:** 2026-06-02 03:26 MDT (Bash `TZ=America/Denver date` — authoritative; not inferred from file timestamps or `currentDate`).
+**Date anchor:** 2026-06-02 03:33 MDT (Bash `TZ=America/Denver date` — authoritative; not inferred from file timestamps or `currentDate`). Note: initial D3 pass at 03:26 MDT lacked connector access; connector became available at 03:33 MDT and this entry reflects the complete run.
 
 **Calendar sweep (next 90 days — 2026-06-02 through 2026-09-01):**
 - **0 `[Claude]` events found.** Calendar is fully clean. Per the 2026-06-01 "Calendar cleanup" entry, all legacy time-exit backstops and cadence-trigger events were deleted and the calendar now holds only `[Claude] Confirm order` events. No legacy analysis events to migrate to `Pending_Analyses.md`. No stale confirm-order events to delete. No confirm-order events present at all (no order currently pending confirmation).
 - No action required on the calendar.
 
+**IBKR connector — full sweep (all steps completed):**
+- `get_order_instructions` → 0 crafted instructions — nothing to garbage-collect ✓
+- `get_account_orders` → 0 live working orders — no stale GTC limits to flag ✓
+- `get_account_positions` → 9 positions returned: AZO, BRC, BURL (0 shares — **CLOSED**), DIS, HCA, RTX, SGOV (cash park), TJX, ZBRA ✓
+- `get_account_trades(DAYS_7)` → 11 trades; BURL round-trip confirmed (details below)
+
 **Open positions cross-check against Portfolio_Ledger.md:**
-Open positions (all OPEN status, no ORDER-STAGED or exit-pending entries currently):
+Open positions per connector (all OPEN, no ORDER-STAGED or exit-pending):
 - Strategy D: RTX, DIS
-- Strategy B: HCA, ZBRA, BRC, TJX, AZO, BURL (PROVISIONAL)
+- Strategy B: HCA, ZBRA, BRC, TJX, AZO (5 open)
 
-No position has a staged order (ORDER-STAGED or exit-pending) and therefore no confirm-order event is missing for a pending staged order. All previously staged and executed orders are reconciled.
+No position has a staged order; no confirm-order event is missing. All connector positions match the expected open B/D book.
 
-**⚠ FLAG — BURL convergence exit outstanding:**
-BURL (Strategy B) is marked OPEN (PROVISIONAL) with convergence target $313.71 hit on 2026-05-29 (close $323.83 >> $313.71). Per Strategy.md B exit rules the convergence exit is MANDATED. The BURL Portfolio_Ledger section explicitly notes: "Convergence exit DUE — OWED to fill-capture / next BURL session." No exit order has been staged; no `[Claude] Confirm order — BURL SELL` event exists. 
-- **Root cause:** BURL fill details are PROVISIONAL (exact qty ~0.1255 shares inferred, not IBKR-confirmed); the IBKR connector is unavailable in this D3 session, so `get_account_positions` cannot confirm the exact size and `create_order_instruction` cannot craft the exit.
-- **Required resolution (D2):** When the connector is available, D2 must: (1) call `get_account_positions` to confirm BURL exact shares; (2) call `create_order_instruction(BURL, SELL, qty, LIMIT, <discount-to-last>, DAY)`; (3) create `[Claude] Confirm order — BURL SELL` at 07:00 MT on next trading day; (4) update Portfolio_Ledger.md BURL section to exit-pending. BURL contract_id: not yet in ledger — `search_contracts` required.
-- **Conservative-default if connector remains unavailable:** Continue flagging each D3 run. Do not defer indefinitely — if connector is still unavailable at the next D2 run, escalate in chat output per HOIP.
-
-**IBKR connector:**
-Not available in this session. The following D3 connector-dependent steps were skipped:
-- `get_account_orders`: comparison of working GTC orders against current quotes (stale/drifted order check)
-- `get_order_instructions`: garbage-collect of stale crafted instructions
-- `get_account_positions`: cross-check of ledger open positions against live account
-These steps are non-critical today (no staged orders exist per ledger), but should be completed by D2 when the connector is next available.
+**BURL — CONFIRMED CLOSED (connector-verified):**
+Prior D3 runs and the Portfolio_Ledger flagged BURL convergence exit as OUTSTANDING / PROVISIONAL. Connector now confirms full round-trip:
+- **Entry:** BUY 0.1248 BURL @ $303.00 LIMIT DAY, 2026-05-29T13:30:07Z (trade_id: 00012968.6a198e4b.01.01), commission $0.350283, net cost $37.8144
+- **Exit:** SELL 0.1248 BURL @ $315.59 LIMIT GTC, 2026-06-01T13:32:48Z (trade_id: 00012968.6a1db382.01.01), commission $0.351118, net proceeds $39.385632, realized_pnl **+$0.869814** (net of both commissions)
+- Connector position: BURL = 0 shares ✓ — position is CLOSED
+- No outstanding BURL orders or instructions ✓
+- Portfolio_Ledger.md BURL section updated to CLOSED this session (see below).
+- B concurrent open positions: 6 → **5** (HCA, ZBRA, BRC, TJX, AZO). Consumer Disc cap: 3/3 → **2/3** (TJX + AZO).
 
 **`Pending_Analyses.md` queue health:**
 7 entries total; all `status: pending`; **0 overdue** (no entry has `due_date` < 2026-06-02 with status pending):
@@ -12324,11 +12326,11 @@ These steps are non-critical today (no staged orders exist per ledger), but shou
 - review-ZBRA-B-20260609: due 2026-06-09 — ZBRA research-deferral checkpoint ✓
 - rescreen-LLY-D-20260612: due 2026-06-12 — future
 
-Queue is well-formed. No entries past-due. ZBRA is the only open position with a research-deferral checkpoint requirement and it is covered. Other open B positions (HCA, BRC, TJX, AZO) have not been flagged for research-deferral; their exits are covered by D1's daily mechanical exit-trigger sweep (convergence targets and time-based-exit dates per Portfolio_Ledger.md).
+Queue is well-formed. No entries past-due. ZBRA is the only open position with a research-deferral checkpoint and it is covered. HCA, BRC, TJX, AZO exits are covered by D1's daily mechanical exit-trigger sweep.
 
 **Theater-check flag:** N/A — hygiene record.
 
 **Downstream actions:**
-- No calendar changes this session (calendar already clean).
-- No `Pending_Analyses.md` changes this session (no legacy events to migrate; queue healthy).
-- BURL convergence exit flag handed to D2 for connector-dependent resolution.
+- No calendar changes (calendar clean).
+- No `Pending_Analyses.md` changes (no legacy events to migrate; queue healthy).
+- Portfolio_Ledger.md BURL section updated from OPEN (PROVISIONAL) to CLOSED with exact connector-confirmed fills. "Last updated" header updated.
