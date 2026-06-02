@@ -888,7 +888,7 @@ If no orders, no file changes, no queue entries: "No actions required."
 
 # ADVERSARIAL REVIEWS (queue-driven, fires daily as needed)
 
-Structured adversarial reviews — pre-mortem reviews, regime-router divergence reviews, mark-to-market termination reviews, capital-redistribution reviews, scope-widening adjudications, and any future structured review the experiment design adds — are executed by a small set of generic routines that read entries from `Pending_Adversarial_Reviews.md` and produce reviews per file handoff. Triggering routines (M5, A3, kill-trigger handlers, termination handlers, etc.) write entries to the queue; they never invoke a review prompt directly.
+Structured adversarial reviews — pre-mortem reviews, regime-router divergence reviews, mark-to-market termination reviews, scope-widening adjudications, and any future structured review the experiment design adds — are executed by a small set of generic routines that read entries from `Pending_Adversarial_Reviews.md` and produce reviews per file handoff. Triggering routines (M5, A3, kill-trigger handlers, etc.) write entries to the queue; they never invoke a review prompt directly. (Capital redistribution after a strategy terminates is NOT an adversarial review — it is a **deterministic equal-split among surviving strategies** handled inline by the termination handler; see Experiment_Parameters.md "Strategy termination and capital redistribution.")
 
 ## Pending_Adversarial_Reviews.md — queue file schema
 
@@ -897,51 +897,29 @@ The queue is a single Markdown file at the repo root. Each pending review is one
 Each entry is a YAML-style block:
 
 ```
-- id: <unique identifier, e.g., div-A-202605-1, premortem-strategyB-cycle3, m2m-D-202609, redist-202707-strategyC, scopewiden-C-202611-1>
-  review_type: <one of: pre-mortem | divergence-review | m2m-termination | capital-redistribution | scope-widening-adjudication>
-  strategy: <A | B | C | D | E | router | n/a (n/a for redistribution which is account-level)>
+- id: <unique identifier, e.g., div-A-202605-1, premortem-strategyB-cycle3, m2m-D-202609, scopewiden-C-202611-1>
+  review_type: <one of: pre-mortem | divergence-review | m2m-termination | scope-widening-adjudication>
+  strategy: <A | B | C | D | E | router>
   trigger_context: <one paragraph of context — what fired the review and any specifics needed by the reviewer beyond the artifact_path>
-  artifact_path: <relative repo path to the artifact under review — for divergence-review, this is Monthly_Fundamental.md (containing M1b output); for pre-mortem, the pre-mortem document; for m2m-termination, a per-trigger termination-context file produced by the kill-trigger handler; for capital-redistribution, a per-termination context file produced by the termination handler; for scope-widening, the post-HYBRID fundamental update document>
+  artifact_path: <relative repo path to the artifact under review — for divergence-review, this is Monthly_Fundamental.md (containing M1b output); for pre-mortem, the pre-mortem document; for m2m-termination, a per-trigger termination-context file produced by the kill-trigger handler; for scope-widening, the post-HYBRID fundamental update document>
   prior_state: <free-form text describing what state the system is in pending review — e.g., for divergence-review: "Strategy A activation state held at DO-NOT-ACTIVATE pending review"; for m2m-termination: "Strategy D continues trading pending review">
   attacker_due_date: <YYYY-MM-DD; the next trading day after queue creation, in the experiment's reference timezone per Experiment_Parameters.md>
   orchestrator_due_date: <YYYY-MM-DD; one trading day after attacker_due_date>
-  recommendation_due_date: <YYYY-MM-DD or n/a; only used for capital-redistribution; if used, set one trading day before attacker_due_date>
-  status: <pending | recommendation-complete | attacker-complete | complete | superseded>
+  status: <pending | attacker-complete | complete | superseded>
   attacker_output_path: <set by attacker routine when it completes; e.g., Adversarial_Review_<id>_attacker.md>
   orchestrator_output_path: <set by orchestrator routine; e.g., Adversarial_Review_<id>_orchestrator.md>
-  recommendation_output_path: <set by recommendation routine if used; e.g., Adversarial_Review_<id>_recommendation.md>
   cycle_number: <integer; 1 for first cycle of a given artifact, incremented per re-review after revision; n/a for non-cycling review types>
   notes: <free-form, optional — e.g., for cycle 5+ pre-mortem, the forcing-question answer; for revision-induced cycles, the prior cycle's id>
 ```
 
 The queue file's header (first line) is `# Pending Adversarial Reviews — queue`, followed by a brief schema reference, then entries.
 
-## Adversarial Review Recommendation — regular routine (capital-redistribution only)
+## Adversarial Review Attacker — regular routine
 
 Schedule: daily. The routine wakes, scans the queue, and exits if no entry matches its phase.
 
 ```
-Read access scope: Read Pending_Adversarial_Reviews.md, Strategy.md, Experiment_Parameters.md, Portfolio_Ledger.md, Regime_State.md, AI_Trading_Foundation.md, Decision_Log.md (and Decision_Log_Archive_*.md as needed), the queue entry's artifact_path, and any per-strategy state files referenced by the trigger_context.
-
-Read Pending_Adversarial_Reviews.md.
-
-Find the next entry where review_type = capital-redistribution AND status = pending AND recommendation_due_date <= today. Process at most one entry per routine fire. If none: write chat output "No capital-redistribution recommendations due today." and exit.
-
-If found:
-1. Read the entry's artifact_path (the per-termination context file). Read Portfolio_Ledger.md and Regime_State.md for current surviving-strategy state.
-2. Produce a recommendation per Experiment_Parameters.md "Strategy termination and capital redistribution" — one of: full redistribution / full hold (SGOV) / partial redistribution (with specified fraction). Explicit reasoning required.
-3. Write the recommendation to Adversarial_Review_<id>_recommendation.md (where <id> is the queue entry id). Format: header (id, review_type, strategy, date, cycle_number), recommendation (one-line verdict), reasoning (free-form, structured under headers), key inputs section listing what was read.
-4. Update the queue entry: set recommendation_output_path, set status = recommendation-complete.
-
-CHAT OUTPUT: one-line acknowledgment naming the entry id and recommendation file written.
-```
-
-## Adversarial Review Attacker — regular routine
-
-Schedule: daily (after Recommendation routine completes if both fire same day). The routine wakes, scans the queue, and exits if no entry matches its phase.
-
-```
-Read access scope — STRICT BLINDING: Read Pending_Adversarial_Reviews.md (to find and process the entry). Read the queue entry's artifact_path (the document under attack). Read its recommendation_output_path if review_type = capital-redistribution AND status = recommendation-complete (the recommendation is the artifact for the attacker in capital-redistribution reviews).
+Read access scope — STRICT BLINDING: Read Pending_Adversarial_Reviews.md (to find and process the entry). Read the queue entry's artifact_path (the document under attack).
 
 EXPLICITLY DO NOT READ for any review processed by this routine: Decision_Log.md, Decision_Log_Archive_*.md, prior Adversarial_Review_*.md files, broader sections of Strategy.md or Experiment_Parameters.md beyond the section directly under review, prior versions of the artifact, or any other repo file. The artifact under review is required to be self-contained per Experiment_Parameters.md "Self-containment requirement for pre-mortem artifacts" (which generalizes to all adversarial-review artifacts). If you need information that is not in the artifact and not in the queue entry's trigger_context field, the artifact has failed self-containment and you flag this as a Tier 1 defect — do not search for the missing context.
 
@@ -949,14 +927,13 @@ This blinding is enforced by prompt discipline. Tool-call logs are auditable; re
 
 Read Pending_Adversarial_Reviews.md.
 
-Find the next entry where attacker_due_date <= today AND status matches the entry's phase: status = pending for review types pre-mortem / divergence-review / m2m-termination / scope-widening-adjudication; status = recommendation-complete for review type capital-redistribution. Process at most one entry per routine fire. If none: write chat output "No adversarial reviews due for attacker today." and exit.
+Find the next entry where attacker_due_date <= today AND status = pending. Process at most one entry per routine fire. If none: write chat output "No adversarial reviews due for attacker today." and exit.
 
 If found, attack the artifact per the review_type's protocol from Experiment_Parameters.md and Strategy.md:
 
 - pre-mortem: identify Tier 1 / Tier 2 / Tier 3 weaknesses (theater indicators, vague failure modes, unverifiable frequency declarations, post-hoc-reinterpretable activation thresholds). Verdict: SUFFICIENT / TIER 1 DEFECT — REVISION REQUIRED.
 - divergence-review: produce strongest bear case against the M1b fundamental claim and argue for the technical call. Specific weaknesses in the fundamental reasoning. Verdict on whether fundamental claim should survive.
 - m2m-termination: produce strongest case for terminating the strategy. Specific weaknesses in any "thesis-still-intact" reasoning visible in the artifact. Verdict on terminate vs continue.
-- capital-redistribution: produce strongest case against the recommendation on its merits. Not told which direction the recommendation runs. Verdict.
 - scope-widening-adjudication: attack whether the fundamental reasoning has adequately addressed the three required topics per Strategy.md Strategy C post-HYBRID adjudication mechanism. Verdict.
 
 Write attack to Adversarial_Review_<id>_attacker.md (where <id> is the queue entry id). Format: header (id, review_type, date, cycle_number), verdict (one-line), specific weaknesses identified (numbered, each with anchor to artifact text), self-imposed scope confirmation ("I read only: <list of files actually read>; I did not read: Decision_Log, prior reviews, broader docs"), reasoning section.
@@ -971,7 +948,7 @@ CHAT OUTPUT: one-line acknowledgment naming the entry id, review_type, and attac
 Schedule: daily (after Attacker routine). The routine wakes, scans the queue, and exits if no entry matches its phase.
 
 ```
-Read access scope: Read Pending_Adversarial_Reviews.md, Strategy.md, Experiment_Parameters.md, Portfolio_Ledger.md, Regime_State.md, AI_Trading_Foundation.md, Decision_Log.md (and Decision_Log_Archive_*.md as needed), the queue entry's artifact_path, attacker_output_path, and recommendation_output_path (if applicable).
+Read access scope: Read Pending_Adversarial_Reviews.md, Strategy.md, Experiment_Parameters.md, Portfolio_Ledger.md, Regime_State.md, AI_Trading_Foundation.md, Decision_Log.md (and Decision_Log_Archive_*.md as needed), the queue entry's artifact_path and attacker_output_path.
 
 Read Pending_Adversarial_Reviews.md.
 
@@ -979,7 +956,7 @@ Find the next entry where status = attacker-complete AND orchestrator_due_date <
 
 If found, orchestrate per the review_type's protocol:
 
-1. Read attacker_output_path. Read artifact_path. Read recommendation_output_path if applicable.
+1. Read attacker_output_path. Read artifact_path.
 2. Produce explicit independent assessment documenting:
    (a) For each weakness the attacker identified, validity assessment (valid Tier 1 / valid but Tier 2-3 / invalid) — for pre-mortem; for other types, equivalent grading per the type's protocol.
    (b) Theater in the attacker's output (generic-sounding objections without specific anchors).
@@ -988,7 +965,6 @@ If found, orchestrate per the review_type's protocol:
        - pre-mortem: SUFFICIENT or TIER 1 DEFECT — REVISION REQUIRED. If REVISION REQUIRED, identify whether to invoke the rev 15 forcing question and answer it in writing per Experiment_Parameters.md (a/b/c). For cycle 5+, justify continuation per the soft cap.
        - divergence-review: final activation state for the strategy (ACTIVATE / DO-NOT-ACTIVATE) with reasoning. Apply the default-on-ambiguity rule and the theater-check tiebreaker: if theater_check = CONVERGENT, default to DO-NOT-ACTIVATE regardless of the verdict.
        - m2m-termination: TERMINATE / CONTINUE with reasoning. Default-on-ambiguity = TERMINATE.
-       - capital-redistribution: full redistribution / full hold / partial redistribution (with fraction) with reasoning. Default-on-ambiguity = full hold (SGOV).
        - scope-widening-adjudication: re-widening AUTHORIZED / NOT AUTHORIZED with reasoning. Apply the four-screen test and the CONVERGENT-theater-check requirement per Strategy.md.
    (e) Theater-check flag: CONVERGENT / DIVERGENT / MIXED with specific rationale referencing concrete claims in the attacker output and the orchestrator's own assessment. The orchestrator self-certifies this flag — accepted-risk note: this is structurally weaker than a separate Theater Auditor routine; if empirical theater-check rates suggest under-detection of CONVERGENT framing, a separate auditor routine can be added in a future revision.
 
@@ -996,9 +972,8 @@ If found, orchestrate per the review_type's protocol:
 
 4. Take resulting action:
    - divergence-review: update Regime_State.md with the binding activation state for the strategy. If the verdict differs from the prior state, append the binding decision to Decision_Log.md.
-   - m2m-termination with verdict TERMINATE: append Decision_Log.md entry recording termination, update Portfolio_Ledger.md to mark strategy terminated, immediately move strategy portfolio value to SGOV (stage IBKR orders in chat output for the participant to execute), and append a new queue entry of review_type = capital-redistribution for the just-terminated strategy (with appropriate due dates).
+   - m2m-termination with verdict TERMINATE: append Decision_Log.md entry recording termination, update Portfolio_Ledger.md to mark strategy terminated, immediately move strategy portfolio value to SGOV (stage IBKR orders in chat output for the participant to execute), and **perform the deterministic capital redistribution inline** — split the terminated strategy's booked allocation equally among active surviving strategies, after first filling any pending newcomer strategies to their probe-stake floor (per Experiment_Parameters.md "Strategy termination and capital redistribution" + "New strategy funding"), updating Portfolio_Ledger.md allocations.
    - m2m-termination with verdict CONTINUE: append Decision_Log.md entry recording the review outcome, no portfolio action.
-   - capital-redistribution: update Portfolio_Ledger.md per the verdict (held-aside pool annotations, redistribution amounts to surviving strategy portfolios), stage any required IBKR orders in chat output for the participant to execute, append Decision_Log.md entry.
    - pre-mortem with verdict REVISION REQUIRED: append Decision_Log.md entry recording the cycle outcome. Subsequent revision is performed by the participant or by a participant-triggered drafting session — orchestrator does not auto-revise the artifact. (Pre-mortem revision is itself an editorial action and is out of scope for an autonomous routine.)
    - pre-mortem with verdict SUFFICIENT: append Decision_Log.md entry, no further action; the pre-mortem is unblocked for first-trade gating purposes.
    - scope-widening-adjudication with verdict AUTHORIZED: append Decision_Log.md entry; downstream Strategy C handlers may re-widen per Strategy.md.

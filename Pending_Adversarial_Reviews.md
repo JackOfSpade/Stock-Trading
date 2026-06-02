@@ -1,21 +1,20 @@
 # Pending Adversarial Reviews — queue
 
-Queue file for structured adversarial reviews (pre-mortem, divergence-review, m2m-termination, capital-redistribution, scope-widening-adjudication) per `Claude_Task_Plan.md` ADVERSARIAL REVIEWS section. Triggering routines (M5, A3, kill-trigger handlers, termination handlers) write entries here; review routines (Recommendation / Attacker / Orchestrator) read entries and produce outputs per file handoff.
+Queue file for structured adversarial reviews (pre-mortem, divergence-review, m2m-termination, scope-widening-adjudication) per `Claude_Task_Plan.md` ADVERSARIAL REVIEWS section. Triggering routines (M5, A3, kill-trigger handlers) write entries here; review routines (Attacker / Orchestrator) read entries and produce outputs per file handoff. (Capital redistribution after a strategy terminates is NOT a review — it is deterministic, handled inline by the termination handler; see Experiment_Parameters.md "Strategy termination and capital redistribution.")
 
 Each entry is a YAML-style block separated by `---`. Entries are appended in order of creation; processed entries are retained for traceability (status marked `complete` rather than deleted).
 
 Schema reference (per `Claude_Task_Plan.md`):
 - `id`: unique identifier (e.g., `div-D-202605-1`, `premortem-strategyB-cycle3`, `m2m-D-202609`).
-- `review_type`: one of `pre-mortem | divergence-review | m2m-termination | capital-redistribution | scope-widening-adjudication`.
-- `strategy`: `A | B | C | D | E | router | n/a` (n/a for account-level redistribution).
+- `review_type`: one of `pre-mortem | divergence-review | m2m-termination | scope-widening-adjudication`.
+- `strategy`: `A | B | C | D | E | router`.
 - `trigger_context`: one paragraph of context.
 - `artifact_path`: relative repo path to the artifact under review.
 - `prior_state`: free-form text describing system state pending review.
 - `attacker_due_date`: next trading day after queue creation (America/Denver).
 - `orchestrator_due_date`: one trading day after `attacker_due_date`.
-- `recommendation_due_date`: `n/a` unless `review_type = capital-redistribution`.
-- `status`: `pending | recommendation-complete | attacker-complete | complete | superseded`.
-- `attacker_output_path` / `orchestrator_output_path` / `recommendation_output_path`: set by the respective routine when it completes.
+- `status`: `pending | attacker-complete | complete | superseded`.
+- `attacker_output_path` / `orchestrator_output_path`: set by the respective routine when it completes.
 - `cycle_number`: integer; `1` for first cycle of a given artifact; `n/a` for non-cycling review types.
 - `notes`: free-form, optional.
 
@@ -29,11 +28,9 @@ Schema reference (per `Claude_Task_Plan.md`):
   prior_state: HYBRID ACTIVATE (FOMC-only) — operative pending this review per the 2026-04-25 divergence-review verdict (FOMC events router-eligible; corporate earnings DO-NOT-ACTIVATE; FDA PDUFA DO-NOT-ACTIVATE; vol-directional theses DO-NOT-ACTIVATE). New C entries permitted ONLY for FOMC catalysts meeting Strategy.md Section "Strategy C: Entry criteria" 1–5; the FOMC June 2026 thesis-construction event (`7pbkg1kh2pge7midfiqnj6edvk`, Mon 2026-06-08 09:00 MT) is unaffected by this queue entry and proceeds under the existing HYBRID state.
   attacker_due_date: 2026-06-02
   orchestrator_due_date: 2026-06-03
-  recommendation_due_date: n/a
   status: pending
   attacker_output_path:
   orchestrator_output_path:
-  recommendation_output_path: n/a
   cycle_number: 1
   notes: Prior-cycle id for traceability — April 2026 divergence resolved HYBRID-ACTIVATE-FOMC-only with theater-check CONVERGENT (Decision_Log_Archive_2026_Q2.md entry "2026-04-25 Strategy C divergence adversarial review — HYBRID ACTIVATE (FOMC only)"). The HYBRID scope decomposition itself is not the artifact under this review — the May M1b fundamental DNA call is.
 
@@ -47,11 +44,9 @@ Schema reference (per `Claude_Task_Plan.md`):
   prior_state: ACTIVATE (April 2026 cycle, no-divergence agreement) — operative pending this review per Strategy.md / Experiment_Parameters.md "During the review, the strategy retains its prior activation state." Existing D positions (RTX OPEN 2026-04-27; DIS OPEN 2026-05-07) run to thesis-invalidation per Strategy.md "router-deactivation-does-not-force-exits" rule; both received M4 HOLD recommendations on 2026-05-31 with all invalidation criteria NOT-TRIPPED. New D entries blocked pending review outcome per M1b PART 2 explicit text. BA D re-screen (event `r9i6u6mnpk9ukoj2bh15m1fr7c`, Mon 2026-06-01 09:00 MT) and LLY D mechanical re-screen (event `fpbueqccja9thjcnuj6ck9l6rs`, Fri 2026-06-12 09:30 MT) have a STEP-0 D-divergence-review gate added to their event descriptions by this M5 cycle.
   attacker_due_date: 2026-06-02
   orchestrator_due_date: 2026-06-03
-  recommendation_due_date: n/a
   status: pending
   attacker_output_path:
   orchestrator_output_path:
-  recommendation_output_path: n/a
   cycle_number: 1
   notes: First divergence-review queued for Strategy D since experiment inception (April was no-divergence ACTIVATE/ACTIVATE). The FLIP-direction is ACTIVATE→DNA fundamentally; if the orchestrator verdict resolves DO-NOT-ACTIVATE, the router state flips and the FLIP-TO-DO-NOT-ACTIVATE M5-rule-A downstream actions (Regime_State.md update + Decision_Log binding entry + cancel any pending D thesis-construction events) execute at orchestrator-output time. If the verdict resolves ACTIVATE, the existing ACTIVATE state continues and the BA/LLY re-screen gates clear.
 
@@ -65,11 +60,9 @@ Schema reference (per `Claude_Task_Plan.md`):
   prior_state: DO-NOT-ACTIVATE — operative pending this review per the 2026-04-25 divergence-review verdict (affirmative case demonstrated stated DNA rationale incomplete on sector-vs-industry-group language but did not defeat the available DNA rationale that regime-break sequence destabilizes trailing-252-day correlation stationarity; procedural moot point — ETF substitution at current book size produces near-zero realized exposure regardless of router state — did not defeat the default-DNA-on-ambiguity rule due to procedural symmetry). No new E entries; existing state is no open E positions (E book at $1,890.44 fully in SGOV). M3 2026-06-01 (`Monthly_E_Pairs.md`) explicitly framed the pair shortlist as "divergence-review reference material, not an entry queue" given the M1b DO-NOT-ACTIVATE call and the universal ETF-substitution-required execution flag at the current per-strategy $1,890.44 book size ($37.81/leg sizing below every individual-stock leg in the shortlist). M5 does NOT schedule any E pair thesis-construction events this cycle (existing DNA state operative + advisory-only M3 disposition).
   attacker_due_date: 2026-06-02
   orchestrator_due_date: 2026-06-03
-  recommendation_due_date: n/a
   status: pending
   attacker_output_path:
   orchestrator_output_path:
-  recommendation_output_path: n/a
   cycle_number: 1
   notes: Prior-cycle id for traceability — April 2026 divergence resolved DO-NOT-ACTIVATE (default-on-ambiguity) with theater-check CONVERGENT (Decision_Log_Archive_2026_Q2.md entry "2026-04-25 Strategy E divergence adversarial review — DO-NOT-ACTIVATE"). The M2 signal-process-tightening follow-up initiated 2026-04-26 is a separate work product (path back to ACTIVATION via signal-process refinement) and not the artifact under this review — the May M1b fundamental DNA call is.
 

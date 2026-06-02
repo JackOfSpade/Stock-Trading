@@ -12224,3 +12224,40 @@ High-fan-out cadences (W4: A/B/C; M5: E + A-queue drain; Q4/A3: D + foundation/c
 **Downstream actions:** Claude_Task_Plan.md (binding section + Human-role §1 + D2/W4/M5 exit event bullets) and Operating_Protocols.md §1 edited to bind the manual-entry block to the `[Claude] Confirm order` event. No behavioral change to the deep-link path.
 
 **Compaction-survival note:** Options/non-craftable orders (Strategy C, etc.) → the `[Claude] Confirm order` event description carries a labeled manual-entry text block (SIDE QTY TICKER STRIKE/EXPIRY TYPE LIMIT TIF) instead of a `url`. Never deliver an order via chat alone.
+
+---
+
+### [2026-06-01] Capital model pivot — deterministic survivorship accretion + new-strategy probe stake
+
+**Trigger:** Owner decision to make the system a live capital-growth engine (not only a frozen forward-test), scaling winners on proven durability. Converged over discussion: scale *capital*, never the 2% risk fraction; reward winners *passively* via survivorship rather than merit-weighting a short, noisy sample.
+
+**Decisions (all implemented this session):**
+
+1. **Deterministic redistribution to survivors.** On any strategy termination, its booked allocation auto-redistributes to active survivors — no adversarial review, no hold option, no held-aside pool. Order: (1) fill any pending newcomer to its probe-stake floor (FIFO, oldest first); (2) split the remainder equally among all active strategies (including router-deactivated ones). Capital sits in SGOV and deploys at each survivor's own 2%/trade pace, so redistribution changes *booked allocation*, not immediate exposure.
+
+2. **Capital-redistribution adversarial review REMOVED.** Once redistribution is deterministic there is nothing to adjudicate. Retired: the `capital-redistribution` review type, the dedicated **Recommendation routine** (it existed only for this review type — the only three-routine pipeline), the `recommendation_due_date` / `recommendation_output_path` fields, the `recommendation-complete` status, and the held-aside-pool concept. The systemic-shock "canary" the review guarded is accepted-loss because (a) redistributed capital deploys slowly at 2%, (b) survivors keep their own drawdown kills + router deactivation, (c) the systemic diagnosis still lives in the foundation-change assessment and M2M-termination review.
+
+3. **Scaling is survivorship-driven (passive).** Equal-per-event splits, but winners survive longer → present for more termination-redistribution and deposit events → accrete more over time. Rewards durability (coarse but robust — a strategy must keep not-dying), not short-sample magnitude. Chosen over merit-weighting precisely because it doesn't over-fund a strategy that merely got lucky over ~30 trades.
+
+4. **Deposits are the magnitude lever.** Redistribution only reallocates the existing pie; meaningful dollars require net new deposits, which (same waterfall) land disproportionately on survivors over time. TWR is invariant to deposits, so this doesn't distort evaluation.
+
+5. **New-strategy funding / probe stake.** A new strategy starts frozen (non-trading, $0 booked) and accumulates to a **$2,000 probe-stake floor** (adjustable param; 2% position ≈ $40, matching current book scale + commission viability; absolute-dollar floor because the binding constraint — IBKR's ~$0.35 min commission — is absolute). While any newcomer is below floor, **all** inflows (deposits AND sunset redistribution) feed pending newcomers first (FIFO) until filled — not a one-time carve — then the remainder splits equally. Launches at ≥ $2,000; no proactive seeding (waits frozen until deposits/sunsets fill it).
+
+6. **Foundation-change termination is a sunset source.** Confirmed: a strategy deleted by the annual A1/A2/A3 AI-edge review (foundation-change → terminate) hands its capital to survivors exactly like a performance death.
+
+**Immutability:** relaxed for the *allocation* policy only — it is now a versioned policy that may evolve. The evaluation machinery (30-trade gates, all kill triggers, deployed-TWR-vs-SGOV, 2%-per-trade risk sizing) is unchanged. Accepted trade: per-strategy TWRs are no longer perfectly independent (capital coupling), so the pristine-experiment framing is relaxed in favor of compounding real capital onto what works.
+
+**Theater-check flag:** N/A — architecture/policy revision.
+
+**Downstream actions:**
+- `Experiment_Parameters.md` — rewrote "Strategy termination and capital redistribution" to deterministic; rewrote "Deposits" to the newcomer-first waterfall; added "New strategy funding (probe stake)"; added "Capital allocation model — 2026-06 revision (live-growth pivot)"; replaced the held-aside-pool definition with "Pending newcomer"; removed redistribution-review references from the kill-trigger paths, the monthly report, the routine-architecture section, and the N=1 note.
+- `Claude_Task_Plan.md` — deleted the Adversarial Review Recommendation routine; removed `capital-redistribution` from the queue schema (review_type, status, recommendation fields); de-capital-redistribution'd the Attacker + Orchestrator routines; the m2m-termination TERMINATE handler now performs deterministic redistribution inline instead of enqueuing a review.
+- `Pending_Adversarial_Reviews.md` — schema header updated; defunct `recommendation_*` fields stripped from the three live divergence entries.
+- A remote routine must be retired (operator action): **"Adversarial Review Recommendation — regular routine (capital-redistribution only)."** The Attacker and Orchestrator routines stay (shared by the surviving review types).
+
+**Compaction-survival notes:**
+1. *Redistribution is deterministic:* terminated allocation → fill pending newcomers to $2,000 floor (FIFO) → split remainder equally among active survivors. No review, no held-aside pool.
+2. *Scaling = survivorship accretion (passive) + deposits (magnitude).* Scale capital, never the 2% risk fraction.
+3. *New strategy:* frozen until $2,000 booked; all inflows (deposits + sunsets) feed newcomers first until filled, then equal split.
+4. *Removed:* capital-redistribution review type + the Recommendation routine (and its remote routine). Attacker/Orchestrator unaffected.
+5. *Evaluation machinery unchanged; allocation policy is now versioned (immutability relaxed for allocation only).*

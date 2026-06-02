@@ -15,7 +15,7 @@ Precise terminology matters in this document because the multi-strategy architec
 - **Strategy portfolio.** An externally-tracked sub-allocation of the account assigned to a specific strategy. There is one per strategy; N in total per experiment, where N is defined by the strategy document. Each strategy portfolio is tracked outside IBKR in a ledger maintained by the participant. Each has its own starting value, its own deposit share, its own deployed-capital history, its own SGOV parking allocation, its own TWR, its own drawdown, its own trade count, its own gate, and its own kill triggers.
 - **Deployed capital.** Within a strategy portfolio, the portion currently in active trades (not SGOV parking). Used for TWR measurement.
 - **SGOV parking.** Capital within a strategy portfolio not currently deployed into active trades, held in SGOV (or equivalent short-term Treasury ETF) as the default idle vehicle. SGOV is baseline treasury management, not a strategy decision.
-- **Held-aside pool.** Capital from a terminated strategy's final portfolio, held in SGOV pending an adversarial-review decision on redistribution. See "Strategy termination and capital redistribution" below.
+- **Pending newcomer.** A newly-added strategy that is frozen (non-trading) until its booked allocation reaches its probe-stake floor ($2,000); it has first claim on incoming deposits and sunset-redistribution capital until filled. See "New strategy funding" below. (There is no "held-aside pool" — terminated capital always redistributes to survivors, never sits unallocated.)
 - **Strategy termination.** The termination of a single strategy's participation in the experiment via that strategy's drawdown kill trigger, mark-to-market underperformance trigger, 30-trade gate failure, runaway-success review, or per-strategy foundation-change assessment. Other strategies continue unaffected.
 - **Experiment termination.** The termination of the entire experiment. Occurs when the foundation-change trigger fires in a way that affects all strategies simultaneously, or when the last active strategy terminates (leaving no active strategies), or by final determination after the last strategy's post-gate run ends.
 
@@ -86,7 +86,7 @@ Many autonomous-AI trading approaches do not achieve this. The threshold is set 
 
 The experiment runs N strategies in parallel, where N is defined by the strategy document. Each strategy has its own strategy portfolio. A regime router determines which strategies are active at any time.
 
-**Minimum N.** The multi-strategy architecture applies when N ≥ 2. At N = 1, the multi-strategy machinery (regime router with independent per-strategy rules, cross-strategy redistribution adversarial review, per-strategy gates with independence preserved) is unnecessary overhead — a simpler single-strategy experiment document would be more appropriate. N = 1 experiments are out of scope of this document.
+**Minimum N.** The multi-strategy architecture applies when N ≥ 2. At N = 1, the multi-strategy machinery (regime router with independent per-strategy rules, cross-strategy capital redistribution, per-strategy gates) is unnecessary overhead — a simpler single-strategy experiment document would be more appropriate. N = 1 experiments are out of scope of this document.
 
 **Maximum N.** Not specified. Larger N carries consequences the strategy document should address consciously: each strategy portfolio starts at 1/N of account total, position sizes are 2% of that, so at larger N individual trades become a small fraction of account and may be fee-dominated. The strategy document's choice of N should consider the participant's account scale.
 
@@ -117,11 +117,21 @@ At experiment start, the account's total value is split equally across the N str
 
 ### Deposits
 
-Deposits to the account are split equally among currently-active strategies. Active means: not yet terminated. A strategy that has been deactivated by the regime router (but not terminated) is still considered active for deposit-splitting purposes — it remains an eligible recipient because the deactivation is temporary and its strategy portfolio is still being maintained.
+Deposits fund the system and are the lever that makes position sizes *meaningful* — redistribution only reallocates the existing pie; deposits grow it. A deposit is allocated in this fixed order:
 
-Example: a $1,000 deposit with M currently-active strategies (where M ≤ N) means $1,000/M to each active strategy portfolio. Terminated strategies receive no deposit share; the "missing share" does not exist as a separate pool, it is already absorbed into the equal split among survivors.
+1. **Fill pending newcomers first.** Any active strategy below its probe-stake floor (see "New strategy funding") is topped up toward the floor — oldest-pending first (FIFO), one filled to the floor before the next — until the deposit is exhausted.
+2. **Split the remainder equally** among all currently-active strategies (including any newcomer just filled, and including regime-router-deactivated strategies — deactivation is temporary and the portfolio is still maintained). Terminated strategies receive nothing.
 
-Separately, any held-aside pool created by a prior strategy termination (from the adversarial-review redistribution decision — see below) remains in SGOV and is not affected by new deposits.
+Example: a $1,000 deposit with no pending newcomers and M currently-active strategies means $1,000/M to each. Because winners survive longer, they are present for more deposit events and accrete disproportionately over time (the same survivorship effect as redistribution). TWR is invariant to deposits — a deposit never flatters or repairs a strategy's measured return — so deposit-driven scaling does not contaminate per-strategy evaluation.
+
+### New strategy funding (probe stake)
+
+New strategies are not guaranteed a 1/N slice. A newly-added strategy starts **frozen** (defined but non-trading, zero booked allocation) and accumulates capital until it reaches its **probe-stake floor of $2,000** (an adjustable parameter; chosen so a 2% position is ~$40 — matching the book's current operating scale and keeping round-trip commission drag near the ~1.5–1.8% the system already accepts. The floor is an absolute dollar amount because the binding constraint, IBKR's ~$0.35 minimum commission, is absolute, not proportional).
+
+- **Funding priority.** While any newcomer is below $2,000, *all* incoming capital — from both deposits and strategy-sunset redistribution — feeds to pending newcomers first (oldest-pending first, FIFO, one filled to the floor before the next); only the remainder splits equally among all active strategies. This is **not a one-time carve** — newcomers have first claim on every inflow until filled.
+- **Launch.** A newcomer begins trading the moment its booked allocation reaches $2,000; below that it stays frozen and never trades at commission-dominated size.
+- **No proactive seeding.** A newcomer is not seeded from idle capital on demand — it waits, frozen, until deposits and/or sunsets bring it to the floor.
+- **Multiple pending newcomers** fill in creation order; each must reach $2,000 before the next receives anything.
 
 ### Withdrawals
 
@@ -131,11 +141,17 @@ The methodology for withdrawals from the account is deliberately not specified i
 
 Capital in one active strategy portfolio never moves to another active strategy portfolio. If one strategy outperforms another, the outperformer's strategy portfolio grows and the underperformer's shrinks, and this gap persists. This preserves each strategy's independent TWR evaluation — rebalancing would contaminate the diagnostic signal by coupling strategies that are meant to be evaluated independently.
 
-The only time capital moves between strategies is after a strategy terminates, via the adversarial-review mechanism described below.
+The only time capital moves between strategies is after a strategy terminates, via the deterministic redistribution described below (winners accrete more by surviving longer; this is the intended scaling mechanism, not contamination to be avoided).
 
 ### Proportional sizing property
 
 Because position size is 2% of the *strategy portfolio's* current value (not 2% of the account), a strategy portfolio mathematically cannot reach zero. Losses compound geometrically but asymptotically. In practice, the per-strategy drawdown kill trigger fires long before asymptotic decay becomes a practical concern. This is the intended behavior: the drawdown trigger terminates strategies before their portfolios become meaninglessly small.
+
+### Capital allocation model — 2026-06 revision (live-growth pivot)
+
+The capital-allocation rules in this section were revised on 2026-06-01 to make the system a **live capital-growth engine**, not only a frozen forward-test. Two original provisions are superseded: (a) equal-split-among-all redistribution gated behind a capital-redistribution adversarial review with a default-hold → replaced by **deterministic redistribution to survivors** (no review, no held-aside pool); (b) the implicit "every parameter is immutable for the experiment's life" treatment of the *allocation* rules → the allocation policy is now an explicitly **versioned policy** that may be revised as the system matures.
+
+What is *not* relaxed: the **evaluation machinery** — per-strategy 30-trade gates, kill triggers (drawdown, mark-to-market, runaway-success, foundation-change), deployed-TWR-vs-SGOV measurement, and **2%-per-trade risk sizing** — all stand unchanged. The system scales *capital* (the dollar base a strategy trades), never the *risk fraction* (2% per position). Winners scale by surviving longer and thus accreting more deposit/redistribution events; losers and edge-obsolete strategies terminate and hand their capital to survivors. Accepted trade: per-strategy TWRs are no longer perfectly independent (capital coupling via redistribution/deposits), so the "clean statistical experiment" framing is relaxed in favor of compounding real capital onto what works. See Decision_Log 2026-06-01 "Capital model pivot — deterministic survivorship accretion + new-strategy probe stake."
 
 ---
 
@@ -222,7 +238,7 @@ The rationale is diagnostic integrity: letting theses play out generates clean s
 
 ### Kill criteria (per-strategy)
 
-A strategy terminates immediately — all its open positions closed at next available daily review, no new entries in that strategy, strategy portfolio moves to fully in SGOV pending adversarial-review redistribution — if any one of the following fires for that strategy:
+A strategy terminates immediately — all its open positions closed at next available daily review, no new entries in that strategy, strategy portfolio moves to fully in SGOV pending deterministic redistribution to survivors — if any one of the following fires for that strategy:
 
 **1. Drawdown trigger.** Deployed TWR drops 50% below its highest historical value since the strategy's first trade.
 
@@ -238,7 +254,7 @@ Foundation changes do not automatically kill all strategies. When a foundation c
 
 **Outcome (a) — Continue.** The change does not materially affect this strategy's foundation. The strategy continues without modification.
 
-**Outcome (b) — Terminate.** The change materially weakens this strategy's foundation. Specifically: a documented edge in Part 1 was removed or materially reduced AND the strategy exploits that edge, OR a documented disadvantage in Part 2 was added or materially increased AND the strategy has not adequately compensated for it. Strategy terminates per the standard termination path (immediate close, SGOV redistribution review).
+**Outcome (b) — Terminate.** The change materially weakens this strategy's foundation. Specifically: a documented edge in Part 1 was removed or materially reduced AND the strategy exploits that edge, OR a documented disadvantage in Part 2 was added or materially increased AND the strategy has not adequately compensated for it. Strategy terminates per the standard termination path (immediate close, SGOV, deterministic redistribution to survivors).
 
 **Outcome (c) — Constraint-relaxation review (rev 3 added, rev 4 mechanized).** The change is a *reduction* in a disadvantage that the strategy explicitly compensates for, AND the strategy has constraints (entry rules, sizing caps, eligibility restrictions, etc.) that were added to address that disadvantage. The orchestrator session executes a constraint-relaxation review by applying mechanical criteria from `AI_Trading_Foundation.md` Part 5 — no orchestrator discretion. The verdict is determined by the criteria; the orchestrator's role is to execute the criteria and produce the audit-trailed output, not to exercise judgment.
 
@@ -314,29 +330,17 @@ Each strategy's success or failure is ultimately determined at that strategy's t
 
 ### Strategy termination and capital redistribution
 
-When a strategy terminates (by any kill trigger, gate failure, or negative runaway-success review), its strategy portfolio value at termination moves immediately to SGOV, and a three-routine adversarial review (Recommendation routine + Attacker routine + Orchestrator routine per `Claude_Task_Plan.md`, queue-driven via `Pending_Adversarial_Reviews.md` with review type `capital-redistribution`) adjudicates the redistribution of that capital.
+When a strategy terminates — by any kill trigger, gate failure, negative runaway-success review, or a **foundation-change-assessment "terminate" verdict** (including the annual A1/A2/A3 AI-edge review deleting a strategy whose edge has decayed) — its strategy portfolio value at termination moves to SGOV and is **redistributed deterministically to surviving strategies, with no adversarial review.**
 
-**Recommendation routine.** Fresh routine context. Reads via the queue entry: (a) the terminated strategy's final state (final deployed TWR, final drawdown, which kill trigger fired, key findings from the termination post-mortem), (b) current state of surviving active strategies (current strategy portfolio values, current drawdown state for each, current activation status under the regime router, recent trade-level performance), (c) current regime router state across all strategies. Produces a recommendation from the following menu:
+**Deterministic redistribution (the termination handler executes this inline).** The terminated strategy's booked allocation is redistributed in this fixed order:
+1. **Fill pending newcomers first.** Any active strategy still below its probe-stake floor (a "pending newcomer," see "New strategy funding") is topped up toward the floor — oldest-pending first (FIFO), one filled to the floor before the next — until the terminated capital is exhausted.
+2. **Split the remainder equally** among all currently-active strategies (including any newcomer just filled to its floor, and including regime-router-deactivated strategies — deactivation is temporary and the portfolio is still maintained).
 
-- **Full redistribution:** the terminated strategy's capital splits equally among all currently-active surviving strategies.
-- **Full hold:** the terminated strategy's capital remains in SGOV as a held-aside pool, not added to any surviving strategy.
-- **Partial redistribution:** some fraction redistributes equally among active survivors, remainder held in SGOV.
+There is **no hold option and no held-aside pool** — every dollar of a terminated strategy's allocation flows to survivors. The capital physically sits in SGOV until each receiving strategy deploys it at its own 2%-per-trade pace; redistribution changes the *booked allocation*, not the immediate market exposure. The termination handler updates Portfolio_Ledger.md allocations and records the redistribution (amounts to each survivor, any newcomer fills) in Decision_Log.md alongside the termination post-mortem.
 
-Explicit reasoning required. Output written to `Adversarial_Review_<id>_recommendation.md`.
+**Why deterministic (history).** Earlier revisions ran a three-routine adversarial review (recommendation + attacker + orchestrator) to adjudicate full / partial / hold, on the theory that a *systemic*-shock termination might mean survivors shouldn't absorb the capital. That review is **removed** as of the 2026-06 capital-model revision: (a) with redistribution always equal-among-survivors there is no decision left to adjudicate; (b) redistributed capital is not immediately exposed — it accretes to the survivor's base and deploys only at 2%/trade, and survivors retain their own drawdown kill triggers and regime-router deactivation, so the systemic-shock risk is bounded without a capital gate; (c) the "was this termination systemic?" diagnosis still occurs in the foundation-change assessment and the M2M-termination review. The `capital-redistribution` review type and its dedicated Recommendation routine are retired (see `Claude_Task_Plan.md`).
 
-**Attacker routine.** Fresh routine context. Reads the recommendation file and the same factual state inputs. Instructed to produce the strongest case against the recommendation on its merits. Not told which direction the recommendation ran. Attacker prompt explicitly forbids reading other repo files (Decision_Log.md, prior reviews, broader Strategy.md sections). Output: full attack with specific weaknesses identified. Written to `Adversarial_Review_<id>_attacker.md`.
-
-**Orchestrator routine.** Fresh routine context. Reads the recommendation file and the attacker file. Produces an explicit independent assessment that documents: (a) the validity of each weakness the attacker identified, (b) any theater in the attacker's output, (c) any weaknesses the attacker missed, and (d) a final verdict — one of the three menu options (with specific fractions if partial), reasoning, and theater-check flag.
-
-**Default on ambiguity.** If the orchestrator routine's final verdict is ambiguous or non-committal, the default is full hold (SGOV). An affirmative redistribution decision (full or partial with specified fractions) is required for capital to move into surviving strategies.
-
-**Execution.** Whatever the orchestrator routine decides executes immediately upon output. The orchestrator routine itself updates Portfolio_Ledger.md and stages any required IBKR orders in chat output. No additional approval step between decision and action.
-
-**Logging.** Recommendation routine output, attacker routine output, and orchestrator routine assessment are all recorded as part of the termination record in Decision_Log.md alongside the termination post-mortem.
-
-**Why this architecture (history).** Strategy termination is a high-information moment. The right response is context-dependent: a termination from a specific regime shock might not threaten the other strategies; a termination from a more systemic issue might. A single-routine AI decision on redistribution would run directly into `AI_Trading_Foundation.md` 2.4 (narrative over-fit — plausible "this doesn't threaten the others" stories), 2.18 (instruction adherence over capital preservation — no innate bias toward caution), and 2.17 (algorithm appreciation bias — preference for active deployment over passive SGOV). The original design used a three-session architecture (recommendation + attacker + judge in incognito sessions) for the same reason that motivated three-session pre-mortem and divergence reviews: independent verification of the attacker by a separate session-isolated judge. The rev 3 single-session simplification was driven by manual incognito-tab + paste-back operational cost; under routine architecture that cost is gone, so capital redistribution retains its three-routine pipeline (recommendation routine + attacker routine + orchestrator routine), each separated by file handoff. This preserves the full original architectural intent at zero operational cost, with the routine boundary serving as session boundary and prompt-discipline replacing structural blinding-by-no-project-access.
-
-**Held-aside pool handling.** Capital in a held-aside pool (from a "full hold" or "partial redistribution" decision) remains in SGOV and is not automatically revisited. If the participant later wishes to deploy the held-aside pool into a new strategy experiment or to reactivate a terminated strategy via restart, that is a new-experiment decision subject to the constraints in "After termination" below.
+**Scaling consequence (intended).** Redistribution is equal-per-event, but winners *survive longer*, so they are present for more termination-redistribution events (and more deposit events) and thus accrete more capital over time — a passive, survivorship-driven scaling of their 2%-of-portfolio position sizes. This rewards durability rather than short-sample magnitude (a coarse but robust selector — a strategy must keep *not dying* to keep accreting). Note this only reallocates the existing pie; net new capital — the lever that makes position sizes *meaningful* — comes from deposits (see "Deposits").
 
 ### Pre-mortems (N+1 required before first trade)
 
@@ -379,7 +383,7 @@ This requirement generalizes to any other artifact entering a structured adversa
 
 **Completion requirement.** All N+1 pre-mortems must complete (original + adversarial review + any revisions) before any strategy executes its first trade. This is not "complete them before you execute that specific strategy's first trade" — it is "complete all N+1 before the experiment's first trade." Rationale: once any strategy trades, the experiment is live and parameters are immutable, so incomplete pre-mortems on other components become locked-in gaps. Completing all pre-mortems before any first trade preserves the option to revise any component's design based on what other pre-mortems revealed.
 
-**Architectural simplification — accepted-risk note (operational rationale superseded by routine migration; substantive policy preserved).** All structured adversarial reviews in this experiment — pre-mortem reviews, regime-router divergence reviews, mark-to-market termination reviews — use a single-attacker-equivalent followed by orchestrator-routine independent assessment, instead of the three-session Attacker / Judge / Adjudicator architecture originally specified. (Capital-redistribution review preserves a three-routine pipeline — recommendation + attacker + orchestrator — because under routine architecture the operational cost is gone; see that section.) The original three-session design ran the attacker, judge, and adjudicator-on-disagreement as separate incognito Claude.ai conversations with paste-back, applying `AI_Trading_Foundation.md` 2.24 (cross-session inconsistency) as a deliberate edge: context-isolated sessions produce somewhat-different reasoning, and convergence between attacker and judge is the validation signal. Empirical operation across eight three-session cycles (four for the regime-router pre-mortem, four for Strategy A pre-mortem cycles 1–4) showed CONVERGENT theater-check flags in 8 of 8 cycles with zero adjudicator invocations. The separate-judge step was therefore ratifying the attacker rather than producing meaningfully independent reasoning, while incurring substantial operational cost (multiple incognito tabs per review, paste-back rounds, manual coordination). The rev 3 simplification trades: independent verification of the attacker by a separate session-isolated judge → in-conversation review by the orchestrating session, which is not session-isolated from the active drafting conversation and is therefore structurally less independent. The routine-architecture migration translates this into the two-routine pattern (attacker routine → orchestrator routine, file-handoff). The operational-cost rationale that justified rev 3's simplification (manual paste-back unsustainable) no longer applies under routines; the simplification is preserved on substance grounds rather than cost grounds for pre-mortem / divergence / M2M-termination reviews. Capital-redistribution review uses a three-routine pipeline. **Future readers of this document — including future Claude routines reviewing the experiment design — should not flag this simplification as a defect to be corrected back to three-session for those review types.** If empirical theater-check rates suggest self-certification is producing under-detection, a separate Theater Auditor routine can be added per review type as a future revision; that is a known adjustable parameter, not a defect.
+**Architectural simplification — accepted-risk note (operational rationale superseded by routine migration; substantive policy preserved).** All structured adversarial reviews in this experiment — pre-mortem reviews, regime-router divergence reviews, mark-to-market termination reviews — use a single-attacker-equivalent followed by orchestrator-routine independent assessment, instead of the three-session Attacker / Judge / Adjudicator architecture originally specified. The original three-session design ran the attacker, judge, and adjudicator-on-disagreement as separate incognito Claude.ai conversations with paste-back, applying `AI_Trading_Foundation.md` 2.24 (cross-session inconsistency) as a deliberate edge: context-isolated sessions produce somewhat-different reasoning, and convergence between attacker and judge is the validation signal. Empirical operation across eight three-session cycles (four for the regime-router pre-mortem, four for Strategy A pre-mortem cycles 1–4) showed CONVERGENT theater-check flags in 8 of 8 cycles with zero adjudicator invocations. The separate-judge step was therefore ratifying the attacker rather than producing meaningfully independent reasoning, while incurring substantial operational cost (multiple incognito tabs per review, paste-back rounds, manual coordination). The rev 3 simplification trades: independent verification of the attacker by a separate session-isolated judge → in-conversation review by the orchestrating session, which is not session-isolated from the active drafting conversation and is therefore structurally less independent. The routine-architecture migration translates this into the two-routine pattern (attacker routine → orchestrator routine, file-handoff). The operational-cost rationale that justified rev 3's simplification (manual paste-back unsustainable) no longer applies under routines; the simplification is preserved on substance grounds rather than cost grounds for pre-mortem / divergence / M2M-termination reviews. **Future readers of this document — including future Claude routines reviewing the experiment design — should not flag this simplification as a defect to be corrected back to three-session for those review types.** If empirical theater-check rates suggest self-certification is producing under-detection, a separate Theater Auditor routine can be added per review type as a future revision; that is a known adjustable parameter, not a defect.
 
 **Pass conditions (rev 15 — supersedes rev 14 conditions on stopping; deployment-risk stop and forcing question added).** A pre-mortem is considered to have passed adversarial review when both of the following hold:
 
@@ -489,7 +493,7 @@ Each week, Claude computes per strategy:
 - For strategies with ≥36 months of accumulated active time: current rolling 12-month deployed TWR vs. SGOV gap, flagged if ≥10 percentage points.
 - Whether any kill trigger's firing condition is met.
 
-If any kill trigger's firing condition is met for a strategy, the corresponding termination path is initiated that week — immediate termination for the drawdown trigger; structured review for the runaway-success, foundation-change, and mark-to-market underperformance triggers. When a strategy terminates (whether via mechanical trigger or review conclusion), the adversarial redistribution review runs immediately.
+If any kill trigger's firing condition is met for a strategy, the corresponding termination path is initiated that week — immediate termination for the drawdown trigger; structured review for the runaway-success, foundation-change, and mark-to-market underperformance triggers. When a strategy terminates (whether via mechanical trigger or review conclusion), deterministic redistribution to surviving strategies runs immediately (handled inline by the termination handler — no separate review).
 
 These are mechanical checks against mechanical metrics. Weekly cadence allows faster detection of drawdown or gate events without exposing AI-judgment components to recency bias.
 
@@ -500,7 +504,7 @@ Once per month, on the first trading day of the month:
 - **Fundamental analysis refresh.** The regime router's fundamental analysis template is re-run for all strategies. New fundamental activation states are produced. Any resulting disagreements with current technical states trigger adversarial reviews.
 - **Pre-mortem failure indicator check.** Per strategy and for the router, the dated failure indicators from the pre-mortems are checked explicitly.
 - **Realized-frequency diagnostic.** Per strategy, realized trade frequency over active periods only (excluding router-deactivation periods) is compared to declared frequency. Material gaps are flagged for diagnostic review — this does not auto-terminate the strategy but surfaces strategy-level process problems.
-- **Theater-check flag review.** Router disagreement reviews and any termination-redistribution reviews from the month are surveyed for patterns — if the theater-check flags indicate consistent convergence across supposedly-adversarial sessions, this is flagged as architectural drift.
+- **Theater-check flag review.** Router disagreement reviews and any M2M-termination reviews from the month are surveyed for patterns — if the theater-check flags indicate consistent convergence across supposedly-adversarial sessions, this is flagged as architectural drift.
 
 (Rev 3 cadence change, 2026-04-25: the `AI_Trading_Foundation.md` review previously included here at monthly cadence has been moved to quarterly + annual cadence — see Quarterly and Annual sections below.)
 
@@ -542,7 +546,7 @@ To prevent the monthly review from drifting into whatever feels salient, the fol
 8. `AI_Trading_Foundation.md` verification status check: report whether last completed quarterly Q3 task and last completed annual A1 task results have been propagated to per-strategy foundation-change assessments. (The full Part 4 verification is no longer monthly per rev 3 — moved to Q3 quarterly + A1 annual. Monthly review confirms downstream propagation is complete.)
 9. Any per-strategy foundation-change assessments triggered this month
 10. Regime router disagreement log for the month (all adversarial reviews, their outputs, theater-check flags)
-11. Any strategy terminations this month and their redistribution-review outputs
+11. Any strategy terminations this month and their deterministic redistribution allocations (amounts to each survivor / newcomer fills)
 12. Any new research surfaced that bears on the foundation document
 13. Router counterfactual attribution: actual sum-of-strategy TWR minus the all-active counterfactual TWR (router's capital-preservation contribution) and minus the all-SGOV counterfactual (system-vs-SGOV). Per `Strategy.md` router pre-mortem Section 7. Neither metric is a kill trigger, but sustained negative router-contribution over 12+ months triggers foundation-change reassessment.
 
@@ -560,7 +564,6 @@ All structured adversarial reviews in this experiment run as Claude routines wit
 
 - Pre-mortem adversarial reviews (Attacker routine + Orchestrator routine; one queue entry per cycle)
 - Regime router divergence reviews (Attacker routine + Orchestrator routine; one queue entry per disagreement)
-- Strategy-termination capital-redistribution reviews (Recommendation routine + Attacker routine + Orchestrator routine; one queue entry per termination)
 - Mark-to-market underperformance termination reviews (Attacker routine + Orchestrator routine; one queue entry per trigger firing)
 - Any future structured adversarial review this experiment's design adds — defaults to the Attacker + Orchestrator two-routine pattern unless the design explicitly specifies a different pipeline
 
@@ -570,7 +573,7 @@ All structured adversarial reviews in this experiment run as Claude routines wit
 
 Even under perfect blinding, all routines run on the same underlying model weights. Hard-wired biases (`AI_Trading_Foundation.md` 2.13 optimism, 2.14 recency, 2.15 base-rate neglect) cut across routine boundaries regardless of context isolation. The theater-check flag in the Orchestrator routine's output is the diagnostic check against weight-level bias; the monthly review's theater-check survey is the aggregated diagnostic. This residual limitation is uncorrectable without model improvements; the mitigations specified are the best available.
 
-**Operational procedure.** Adversarial reviews are triggered by other routines (M5 for divergence reviews, A3 / Q4 for foundation-driven pre-mortem refresh, kill-trigger detectors for M2M termination, termination-handler routines for capital redistribution) writing entries to `Pending_Adversarial_Reviews.md`. The Attacker routine and Orchestrator routine fire daily, each processing queue items at their phase. No human action is required for any structured adversarial review under this architecture.
+**Operational procedure.** Adversarial reviews are triggered by other routines (M5 for divergence reviews, A3 / Q4 for foundation-driven pre-mortem refresh, kill-trigger detectors for M2M termination) writing entries to `Pending_Adversarial_Reviews.md`. (Capital redistribution after a termination is not a review — the termination handler performs it deterministically.) The Attacker routine and Orchestrator routine fire daily, each processing queue items at their phase. No human action is required for any structured adversarial review under this architecture.
 
 ### Prompt construction for adversarial reviews
 
@@ -580,7 +583,6 @@ Specifically:
 
 - The Attacker routine prompt is self-contained with all fixed context it needs (rules, vocabulary, requirements, the full self-contained artifact under review per the self-containment requirement above, and any relevant inline definitions of cross-referenced AI_Edges disadvantages or other concepts the review depends on). The artifact under review is referenced via the queue entry's `artifact_path` field; the Attacker routine reads only that path plus its prompt.
 - The Orchestrator routine reads the Attacker output file plus the artifact under review (path from queue entry). No other repo files unless the prompt explicitly authorizes.
-- For three-routine pipelines (capital redistribution): the Recommendation routine reads queue-entry-specified inputs (final state file, surviving-strategy state); the Attacker reads the Recommendation file plus the same factual state; the Orchestrator reads both Recommendation and Attacker files.
 
 **File-handoff rule (universal under routine architecture):**
 
