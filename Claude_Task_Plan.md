@@ -50,6 +50,8 @@ The human does NOT perform any analytical or monitoring task. If the framework n
 
 If a workflow would require the human to do anything beyond the two actions above, that workflow is broken and Claude must redesign it before staging anything.
 
+**Routine chat is unmonitored — the calendar is the binding human-facing surface.** Scheduled routines (D1, D2, D3, W*, M*, Q*, A*, AR) run unattended; the human does not watch their chat output. Any action that REQUIRES the human (confirming a crafted order; pasting a thesis/review prompt) MUST be surfaced as a `[Claude]` calendar event with an event-time notification — never left only in routine chat. A crafted order instruction is not actionable to the human until its `[Claude] Confirm order` event exists with the deep link in the description; staging an instruction without that event is a broken workflow. Chat output is a courtesy mirror for the rare case a human is present (e.g. a prompt they just pasted), not the delivery mechanism. Self-check: if a routine produced a required human action but no calendar event carries it, fix it before ending.
+
 ## Decision discipline
 
 Claude resolves every decision the framework requires — execute or skip, GO or NO-GO, target selection, sizing, timing, invalidation criteria, marginal-conviction-but-criteria-cleared cases — without human input.
@@ -109,6 +111,10 @@ Canonical protocol: Operating_Protocols.md §11. Operational summary for routine
 **Source-of-truth boundary.** Connector = authoritative for fills, positions, cash, live orders, quotes. Portfolio_Ledger.md = authoritative for strategy-bucket cost-basis attribution and per-strategy NAV (the connector has no strategy buckets). On account-level drift (dividends/fees/reinvest), the connector is the truth and the ledger is corrected to match while preserving strategy attribution at the cost-basis level.
 
 **Sizing and analysis on live data.** Use `get_account_summary` net-liquidation for 2%-NAV sizing and `get_account_positions` for exact current holdings; use `get_price_snapshot`/`get_price_history` for quotes, close-to-close verification, and convergence-target checks. Web quotes are a fallback only when the connector lacks the instrument.
+
+**Day-trade / buying-power guard.** Before staging a same-session round-trip (exit on the same day as entry), check `get_account_summary` `day_trades_remaining` — if 0, defer the exit one session (this is a small margin account where PDT can bind). Before an entry, confirm `available_funds` / `buying_power` cover the staged principal (entries are funded by liquidating the SGOV park).
+
+**Mechanical exit monitoring.** D1's daily connector sweep checks each open position's live price against its convergence target and time-based-exit date and flags hits as EXIT TRIGGERED for D2 — so mechanical exits no longer wait on a per-position scheduled review (see D1).
 
 **Cached `contract_id`s for current holdings** (verify against `get_account_positions` at use; ids are stable per instrument): SGOV 424099317, RTX 415342104, DIS 6459, HCA 85076790, TJX 12814, ZBRA 276304, BRC 6467986, AZO 4750, BURL 135699190. New names resolve via `search_contracts`.
 
@@ -268,7 +274,12 @@ DEVELOPMENTS
 
 ANALYSIS — RISK TO EXISTING POSITIONS
 
-For each open position (from Portfolio_Ledger.md), does any Development above trigger any thesis-invalidation exit criterion in the position's entry record (per Strategy.md exit rules for the relevant strategy)? For each position affected: position (ticker + strategy), triggering development, whether the invalidation criterion is met (YES with specific criterion / NO with reasoning).
+MECHANICAL EXIT-TRIGGER SWEEP (connector-driven; run for EVERY open position regardless of whether any Development fired). Pull the live book via the IBKR connector (`get_account_positions` + `get_price_snapshot` per name; `contract_id` from the Portfolio_Ledger.md cache or `search_contracts`). For each open position, check the two MECHANICAL exit triggers recorded in its Portfolio_Ledger.md subsection:
+- **Convergence target hit** (Strategy B / E price targets): live price at or through the convergence target → flag EXIT TRIGGERED (mechanical — the target IS the exit rule per Strategy.md; no judgment needed).
+- **Time-based exit due**: today (America/Denver) ≥ the position's time-based-exit date → flag EXIT TRIGGERED.
+This catches a target-hit the next morning without waiting for a per-position scheduled review — the lag that left the BURL convergence exit owed for days under the screenshot workflow. Scheduled per-position pulse-check / time-exit events remain as backstops. D2 converts every EXIT TRIGGERED flag into a crafted exit order.
+
+For each open position, does any Development above ALSO trigger a (judgment-laden) thesis-invalidation exit criterion in the position's entry record (per Strategy.md exit rules for the relevant strategy)? For each position affected: position (ticker + strategy), triggering development, whether the invalidation criterion is met (YES with specific criterion / NO with reasoning).
 
 For each watchlist candidate: does any Development materially change candidacy status (closer to entry / invalidated / unchanged)?
 
@@ -314,7 +325,7 @@ Read access scope: Daily cadence. Read `Decision_Log.md` (live). Do NOT read or 
 
 STEP 0 — BROKER RECONCILIATION (run first, every run, before reading Daily.md's actions). Reconcile the live brokerage account against Portfolio_Ledger.md via the IBKR connector. This replaces the retired operator-screenshot fill-capture sessions (Operating_Protocols.md §11):
 - Read `get_account_trades` over a DAYS_7 window. For each fill whose `trade_id` is NOT already recorded in Portfolio_Ledger.md (idempotent match on `trade_id`): write the exact price / size / `commission` / `realized_pnl` / `trade_time`; flip the affected position ORDER-STAGED→OPEN (entries) or exit-pending→CLOSED (exits); update strategy sector counts and any KL #12 event membership; append the fill to the position's Decision_Log record (or write the GO/close entry if staging recorded only the order). Realized P&L comes from the connector's `realized_pnl` field — never inferred. Aggregate exchange-split partial fills by `order_id`.
-- Refresh live marks, cash, and net-liquidation from `get_account_positions` + `get_account_summary` + `get_account_balances`; reconcile account-level drift (dividends, fees, reinvestments) to the connector truth while preserving per-strategy cost-basis attribution.
+- Read (do not transcribe) live positions, cash, and net-liquidation from `get_account_positions` + `get_account_summary` + `get_account_balances` for the reconciliation cross-check; reconcile account-level drift (dividends, fees, reinvestments) to the connector truth while preserving per-strategy cost-basis attribution. Per the ledger's connector-era recording policy, marks/market-values/unrealized-P&L are NOT written into Portfolio_Ledger.md — only cost-basis and strategy allocation are.
 - Note still-working / partial orders from `get_account_orders` (e.g. a GTC not yet filled) and leave them exit-pending / ORDER-STAGED.
 - For any crafted instruction in `get_order_instructions` whose order day has passed unconfirmed, or whose position Step 0 just closed, call `delete_order_instruction` to clear it.
 
@@ -389,6 +400,7 @@ Walk all `[Claude]` events in the next 90 days:
 Walk currently-open positions and pending orders from Portfolio_Ledger.md, cross-checked against the connector (`get_account_positions`, `get_account_orders`, `get_order_instructions`):
 - Confirm every staged order (entry or exit, ORDER-STAGED or exit-pending) has a corresponding order-confirmation event at 07:00 MT pre-market on the order day (if the order day is still in the future) AND a live crafted instruction in `get_order_instructions`. If the order day is still future and the instruction is missing, re-craft it (`create_order_instruction`) and repair the event. If the order day is today and market is still open, create/repair the event immediately. If the order day is past and the order was Day duration, it either filled or expired — confirm via Step 0 reconciliation / `get_account_trades`; flag if not yet reconciled.
 - Garbage-collect stale crafted instructions: any `get_order_instructions` entry whose order day has passed unconfirmed, or whose position is already closed/opened per reconciliation, is cleared with `delete_order_instruction`.
+- Flag stale / drifted working orders: compare `get_account_orders` live working orders against current quotes (`get_price_snapshot`); a GTC limit working far from the market, or sitting unfilled well past its intended window, is flagged for re-pricing (delete + re-craft the instruction and repair the confirm event) rather than left to drift indefinitely.
 - Confirm every position with a research-deferral has a deferral-checkpoint event scheduled.
 
 Time zone America/Denver unless Experiment_Parameters.md specifies otherwise.

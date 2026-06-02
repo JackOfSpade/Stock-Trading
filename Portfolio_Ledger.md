@@ -1,6 +1,6 @@
 # Portfolio Ledger
 
-Per-strategy portfolio state for the AI-directed trading experiment. Tracked externally to IBKR (which does not natively track sub-portfolios). Updated daily (mark-to-market) and on every trade, deposit, termination, or redistribution event per the regular prompts in `Recurring_Claude_Task_Plan.md`.
+Per-strategy portfolio state for the AI-directed trading experiment. Tracked externally to IBKR (which does not natively track sub-portfolios): this file records the **per-strategy capital allocation and the cost-basis / thesis / exit metadata the IBKR connector cannot derive** — it is NOT a mirror of live account state. Live marks, market values, unrealized P&L, cash balances, and share quantities are read on demand from the connector and are no longer transcribed here. Updated on every trade, deposit, termination, or redistribution event (fills reconciled by D2 Step 0 from the connector) per `Claude_Task_Plan.md`.
 
 > **⚠ Rev 35 cap-removal note (2026-05-30):** Per owner directive, Strategy.md rev 35 removes ALL holdings-**count** caps across A/B/C/D — the 3-per-GICS-sector cap (A/B/C) and D's 10-position / max-3-per-theme / max-3-per-correlation-bucket caps. **Any "sector X/3", "N/10", or X-of-N count tracking in this ledger is no longer a cap and must NOT block entries** (e.g., a prior "Consumer Disc 3/3 AT CAP" note is now just a count, not a ceiling). Retained: D's 30%-of-NAV sector *exposure* cap, D's minimum-5 floor, the 2%-per-position size cap, all kill triggers. See Decision_Log 2026-05-30 "Holdings-count caps removed by owner directive" + Operating_Protocols §10.
 
@@ -10,9 +10,18 @@ Per-strategy portfolio state for the AI-directed trading experiment. Tracked ext
 
 These conventions govern how this file is updated. They are read-first by every Claude session that touches the ledger. Substance lives in `Decision_Log.md` entries; this file is a state index with pointers, NOT a re-statement.
 
+### Connector-era recording policy (2026-06-01 IBKR connector migration)
+
+Since the IBKR connector exposes live account state and market data on demand, this file no longer transcribes anything the connector can derive. Record **only what the connector cannot**:
+
+- **KEEP (connector-unknown):** per-strategy capital allocation and per-strategy NAV (the connector has no A/B/C/D/E buckets); cost-basis lots mapped to a strategy/thesis; convergence target, time-based-exit date, LTCG date, and invalidation-criteria status per position; Source-thesis `Decision_Log` pointers; the per-position `contract_id` (connector key) and any open staged-order `instruction id`.
+- **DROP (live-derivable — read on demand, never transcribe):** current mark / last price / market value / unrealized P&L; current cash and SGOV balances; current share quantities; account-level net-liq / buying power. Pull at need via `get_account_positions` / `get_account_summary` / `get_account_balances` / `get_price_snapshot`. No daily mark-to-market refresh, no "IBKR snapshot ~HH:MM confirms…" transcription, no mark-value recomputation.
+
+The authoritative fill record (price, size, commission, realized P&L, time) lives in the connector (`get_account_trades`, keyed by `trade_id` / `order_id`); the ledger records cost basis only to anchor strategy attribution and audit. D2 Step 0 reconciles fills from the connector. Source-of-truth boundary: connector = fills/positions/cash/quotes; this ledger = strategy-bucket cost-basis + thesis/exit metadata (Operating_Protocols.md §11).
+
 ### "Last updated" header
 
-One paragraph capturing the most recent state change with a `→ Decision_Log YYYY-MM-DD <entry-keyword>` pointer. Includes (a) what changed, (b) source pointer, (c) IBKR snapshot reference if applicable, (d) any flagged anomalies. Target length: **3–6 sentences**. NOT a run-on paragraph re-stating thesis substance, sell-side reset details, sub-pattern taxonomy, or sector cap arithmetic — those live in the linked Decision_Log entry. Older "Prior update" / "Prior update earlier" headers follow the same format and may be dropped after 5+ updates have accumulated (the audit trail lives in Decision_Log; the header rotation is a recency cache).
+One paragraph capturing the most recent state change with a `→ Decision_Log YYYY-MM-DD <entry-keyword>` pointer. Includes (a) what changed, (b) source pointer, (c) any flagged anomalies (e.g. connector-vs-ledger drift, partial fills). Target length: **3–6 sentences**. NOT a run-on paragraph re-stating thesis substance, sell-side reset details, sub-pattern taxonomy, or sector cap arithmetic — those live in the linked Decision_Log entry. Older "Prior update" / "Prior update earlier" headers follow the same format and may be dropped after 5+ updates have accumulated (the audit trail lives in Decision_Log; the header rotation is a recency cache).
 
 ### Position-thesis-details subsections
 
@@ -28,7 +37,7 @@ Each open position gets one subsection under its strategy's "Position-thesis-det
 - **Invalidation criteria status** (forward-looking gates per Decision_Log staging, brief abstraction; full criterion text in staging entry):
   - (i) <criterion abstract> — NOT-TRIPPED / TRIPPED / TRIPPED-CLEARED-by-<event> as of <date>
   - (ii) ...
-- **Mark-to-market**: <date/time> snapshot — last $X.XX, mark value $Y.YY, unrealized P&L $Z (vs cost basis incl comm).
+- **contract_id**: <IBKR contract_id> (connector instrument key). Live mark / market value / unrealized P&L are read on demand from the connector (`get_account_positions` / `get_price_snapshot`) and are NOT transcribed here. Open staged order (if any): instruction `id` <id> — the order day's `[Claude] Confirm order` event carries the deep link.
 - **Holding-period notes**: any in-window events that materially changed the thesis posture (criterion clearance, peer-print confirmation, sell-side trajectory shift). Brief; full reasoning in linked Decision_Log entries.
 ```
 
@@ -754,11 +763,13 @@ Every closed trade gets a subsection under its strategy's "Closed trade details"
 
 ## Reconciliation rules (enforced on every ledger update)
 
-1. For each active strategy: Total value = SGOV balance + sum of open position marks
-2. Account-level total = sum of active-strategy totals + held-aside pool
+Source-of-truth: the IBKR connector is authoritative for live positions, cash, fills, and quotes; this ledger is authoritative for per-strategy attribution. Live values below are read from the connector (`get_account_positions` / `get_account_summary` / `get_account_balances` / `get_price_snapshot`), not transcribed; the ledger stores the per-strategy cost-basis allocation that maps them to buckets. Fills are reconciled by D2 Step 0 (idempotent by `trade_id`).
+
+1. For each active strategy: Total value = the strategy's SGOV/cash allocation + sum of its open positions' live market values (positions→strategies via this ledger's cost-basis mapping; market values from the connector).
+2. Account-level total = sum of active-strategy totals + held-aside pool — cross-check against connector net-liquidation (`get_account_summary`); reconcile any drift to the connector while preserving strategy attribution.
 3. Active strategies = (A, B, C, D, E) minus (terminated strategies)
 4. Every deposit creates an equal split among currently-active strategies at the time of deposit
-5. Every trade entry reduces SGOV and increases deployed by equal amount
-6. Every trade exit increases SGOV by exit proceeds and removes the position from deployed; realized P&L flows to the closed trades table + detail subsection and into the performance metrics
-7. SGOV interest accrues to SGOV balance on the daily mechanical update
+5. Every trade entry reduces the strategy's SGOV/cash allocation and increases its deployed cost basis by the fill principal + commission (from the connector fill)
+6. Every trade exit increases the strategy's SGOV/cash allocation by exit proceeds and removes the position from deployed; realized P&L (from the connector `realized_pnl`) flows to the closed trades table + detail subsection and into the performance metrics
+7. SGOV interest / dividends and DRIP reinvestments are captured by D2 Step 0 from the connector (`get_account_trades` / `get_account_balances`), not by a separate daily mechanical mark update (which is retired)
 8. Closed trades never get deleted or modified retroactively — the audit trail is permanent
