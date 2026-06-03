@@ -13868,3 +13868,154 @@ No order staged. No calendar event created or deleted (no GO; no pre-existing CP
 **Compaction-survival note — CPRI B 2026-06-03:** CPRI "Q1 FY27 BMO on 6/3" → **Strategy B NO-GO** via **EVENT VERIFICATION GATE (EVG) FAILURE**. No qualifying Strategy B event (earnings / FDA / guidance update / regulatory action) occurred on 2026-06-03. Primary-source verification: CPRI most-recent-earnings = Q4 FY2026 on May 27, 2026 (adj EPS $0.22 vs $0.11 cons; revenue $796M; FY27 EPS guide $2.15). Next earnings: estimated August 5, 2026 (Q1 FY2027 for quarter ending ~June 28, 2026). Fiscal-year nomenclature error in premise: Capri FY ends late March — "Q1 FY27" = April–June 2026 quarter, not yet reported. IBKR contract_id 347409760 NYSE:CPRI; 6/2 close $18.28; 6/3 snapshot: last=$18.28, volume=0, change=0, is_close=false. Second EVG instance (first: DG 2026-05-12). **B-short string: UNCHANGED at ~52 (EVG = mechanical gate failure; does not extend string). B tally → ~6 GO / ~73 NO-GO.** No order. No calendar events affected. No Portfolio_Ledger / Regime_State / Watchlist change.
 
 **References:** Strategy.md rev 35 (B criteria 1–5; EVG sub-gate within criterion 1; instrument rules); Operating_Protocols.md §3 (NO-GO records are context not barriers; prior NO-GO does not gate fresh trigger evaluations), §9 (no re-deferral), §10 (no caps), §11 (IBKR connector protocol); B_Sub_Pattern_Taxonomy.md (EVG failures = mechanical-failure category; not routed against sub-patterns); Decision_Log 2026-05-12 DG EVG precedent (first EVG instance; same failure mode); Decision_Log 2026-05-14 AGL EVG/mechanical-gate B-short string non-extension precedent; Decision_Log 2026-06-02 CPRI Q4 FY26 / analyst-downgrade NO-GO (fully resolved; independent prior entry); IBKR connector contract_id 347409760 NYSE:CPRI (search_contracts confirmed; price_history ONE_MONTH ONE_DAY; snapshot last=$18.28/volume=0/change=0.0/is_close=false); Tavily research: MarketBeat CPRI earnings page (next estimated August 5, 2026); BusinessWire/StockTitan May 27 2026 Q4 FY26 earnings press release confirmed; no 8-K or press release on June 3, 2026.
+
+---
+
+### [2026-06-03] Strategy B — GTLB Q1 FY2027 print (6/2 AMC) — NO-GO
+
+**Trigger:** D2 2026-06-03 execution. Daily.md 2026-06-01 flagged "Tue 6/2 BMO prints: DG, GTLB." GTLB Q1 FY2027 was reported AMC June 2, 2026 (not BMO as the prompt indicated — at 4:30 PM ET; AMC confirmed per GitLab IR / Yahoo Finance / StockTitan 8-K). Day-0 CTC −5.83% (June 2 regular-session close $31.82 vs June 1 close $33.79) confirmed per IBKR price history and Yahoo Finance (prior-close field = $31.82 on Day-1 June 3 snapshot). This is a qualifying B event (earnings print). Full thesis-construction session.
+
+**Book context at entry:** B NAV $9,462.36 (IBKR get_account_summary; 2% ≈ $189/position). Open B positions: HCA, ZBRA, BRC, TJX, AZO (5 longs). B-short string ~52 (per CPRI EVG NO-GO this session; unchanged from HRL 2026-06-03 positive-direction SHORT-dismissal extension). B tally ~6 GO / ~73 NO-GO (pre-this-entry). A router = DO-NOT-ACTIVATE (Regime_State.md; confirmed 2026-06-01 M1b). GTLB NOT in A-queue (Watchlist.md confirmed — absent from all A-queue entries; criterion-5 A-queue gate CLEAR; B-admissible).
+
+**Step 0 — Event verification, contract, and CTC:**
+
+IBKR search_contracts: GTLB → contract_id 520512263, NASDAQ, "GITLAB INC-CL A", STK section, country_code US. US primary listing confirmed. Prior GTLB context: May 12, 2026 GTLB Day-0 C/C −4.46% failed ≥5% criterion 1 threshold and was never routed to thesis-construction (Decision_Log 2026-05-13 §b secondary screen resolutions).
+
+IBKR price_history (ONE_MONTH, ONE_DAY): June 1 close $33.79; June 2 close $31.82; June 3 snapshot prior_close $31.82 (Day-1 not yet closed; intraday ~$30.03 at session time). CTC = ($31.82 − $33.79) / $33.79 = **−5.83%** confirmed. Per AMC-event convention (same as May 12 GTLB prior): Day-0 = print-day regular-session close vs prior day's regular-session close. Framework precedent IBKR ONE_MONTH price history cross-confirms.
+
+IBKR get_price_snapshot: avg-90d-usd-volume not populated in snapshot; ADV estimate from Yahoo Finance Avg. Volume 6.41M shares × ~$31 = **~$199M/day** >> $10M floor ✓. Mcap ~168M shares × $31.82 = **~$5.35B** >> $2B floor ✓.
+
+**EVG RESULT: QUALIFYING EVENT CONFIRMED.** GitLab Q1 FY2027 earnings print AMC June 2, 2026. Primary sources: ir.gitlab.com press release / StockTitan 8-K / Yahoo Finance / investing.com earnings call transcript / GitLab Q1 FY27 prepared remarks PDF (June 2, 2026 conference call at 4:30 PM ET confirmed). No EVG failure. Full thesis-construction proceeds.
+
+**Step 1 — Print details:**
+
+Q1 FY2027 (quarter ended April 30, 2026):
+- **Revenue:** $264.2M (+23% YoY) vs management guide $253–255M (+4pp beat) and Zacks consensus $253.9M / ChartMill consensus $259.65M (beat)
+- **Non-GAAP EPS:** $0.23 vs guide $0.20–0.21 and consensus $0.21 (beat)
+- **GAAP operating margin:** (6)% vs (16)% prior year (improvement)
+- **Non-GAAP operating margin:** 14% vs 12% prior year (improvement)
+- **GAAP net loss:** $(5.0)M vs $(35.9)M prior year (significant improvement)
+- **Dollar-based net retention:** 117% (stable; >90% gross retention maintained)
+- **Customers >$100K ARR:** 1,519 (+18% YoY)
+- **GitLab Dedicated ARR:** crossed $70M milestone
+- **Cash/investments:** $1.36B; share repurchases 2.4M shares Q1; $350M remaining authorization
+- **Q2 FY27 guide:** Revenue $272–274M (15–16% YoY); non-GAAP EPS $0.17–0.18 (vs Street ~$0.21 = **Q2 EPS guide miss ~−17% midpoint vs consensus**)
+- **FY27 guide RAISED:** Revenue $1.112–1.118B (from $1.099–1.118B initial); non-GAAP EPS $0.79–0.82
+- **Restructuring "Act Two" confirmed at call:** 14% workforce reduction (~350 team members), exit 22 countries (team member footprint −37%), flatten management up to 3 layers, reorganize R&D into ~60 smaller teams; **$30–35M pre-tax charges** ($19M expected in Q2; remainder over following 3 quarters)
+- **JiHu (China JV) expenses: $50M FY27 vs $13M prior year** (+$37M incremental headwind)
+- **Profitability trough: Q3 per management guidance** (timing of investments post-restructuring)
+
+**Character:** Beat-and-raise on Q1 + FY guide, BUT simultaneously announcing major restructuring with Q2 EPS guide materially below consensus, JiHu expense spike, and management-disclosed Q3 profitability trough. Dual-signal: operational Q1 strength offset by forward-execution uncertainty from restructuring-scale disruption.
+
+**Post-print sell-side (Benzinga / MarketBeat; most-recent pre-print cluster):**
+
+Most-recent confirmed analyst actions (pre-print through Benzinga data, as post-print updates not yet available at session time on Day-1):
+- Raymond James: Downgrade Outperform → Market Perform (5/12/2026)
+- Mizuho: Neutral, $30 → $26 (5/12/2026)
+- Cantor Fitzgerald: Neutral, $30 → $27 (5/13/2026)
+- BofA Securities: Downgrade Buy → Neutral, $58 → $27 (4/22/2026)
+- RBC Capital: Downgrade Outperform → Sector Perform, $33 → $25 (4/20/2026)
+- UBS: Neutral, $44 → $24 (4/16/2026)
+- Rosenblatt: Maintains Buy $43 (pre-print 6/1/2026 — sole bull outlier)
+- Morgan Stanley: Hold cautious $29 (per Perplexity data)
+
+**Pre-print PT cluster (most-recently-updated firms): $24–$27 range** (majority of active coverage). Yahoo Finance 1y target average $30.30 (includes stale higher PTs from non-updated firms). Day-0 close $31.82 = **ABOVE the most-recently-updated PT cluster ($24–$27)**. This is the "full-saturation / over-extended-vs-consensus" fingerprint established in VTRS precedent.
+
+**No post-print PT updates confirmed** at session time (Day-1 June 3). Market reaction: overnight Blue Ocean ATS ~$29.51 (−7.26% from Day-0 close $31.82); Day-1 intraday ~$30.03 at session time.
+
+Pre-print sell-side context: concentrated NEGATIVE positioning — 4 downgrades in April–May 2026 (Raymond James / BofA / RBC / UBS), all cutting PTs to $24–$27. NO post-print PT-raise wave emerging at session time. **SP1 (aggressive bull-ratification) gate: NOT triggered.** Pre-print positioning was BEARISH (opposite of sub-pattern 3 pre-print-rally-absorption).
+
+**Step 2 — Pre-print momentum / sub-pattern 3 context:**
+
+IBKR price history: May 7 close $25.92 → June 1 close $33.79 = **+30.4% rally in ~18 trading days** (late April → June 1 pre-print peak). This pre-print rally substantially absorbed the beat expectation. The stock had staged a significant recovery from late-April lows (~$24–26 zone) on restructuring-reposition narrative and sector-wide software recovery. A meaningful component of the Day-0 −5.83% decline represents mean-reversion of this pre-print run-up, not pure post-print information repricing. Sub-pattern 3 partial overlap is present (pre-print rally absorbed beat narrative), but this is secondary to the criterion-4 analysis.
+
+**Step 3 — Full criterion-by-criterion analysis:**
+
+**Criterion 1 — PASS:**
+- CTC: −5.83% ≥ 5% threshold ✓ (1.17× floor; negative direction)
+- Event class: Q1 FY2027 earnings print AMC (qualifying event class) ✓
+- Mcap: ~$5.35B >> $2B floor ✓
+- ADV: ~$199M >> $10M floor ✓
+- Prior GTLB May 12 entry: C/C −4.46% → failed; structurally distinct event per §3 fresh-trigger rule
+- **Criterion 1: PASS** ✓
+
+**Criterion 2 — Entry window:**
+- Day-0: 2026-06-02 (AMC convention: print-day regular-session close)
+- Window: D0 6/2, D1 6/3, D2 6/4, D3 6/5, D4 6/8, D5 6/9, D6 6/10, D7 6/11, D8 6/12, D9 6/16 (10 trading days; Juneteenth 6/19 falls outside window)
+- Today (6/3) = Day-1. **9 trading days remain.**
+- **Criterion 2: CLEARS** ✓ (non-binding given criterion 4 decisive failure)
+
+**Criterion 3 — Admissible convergence target (closed-list rev 14; ≤60 calendar days from Day-0 June 2; on or before August 1, 2026):**
+
+1. **Numerical price target (LONG direction):** Most-recently-updated sell-side PT cluster = $24–$27 (Cantor $27, Mizuho $26, RBC $25, DA Davidson $24). Day-0 close $31.82 is ABOVE this cluster by +17–33%. Stock is already above the sell-side fair-value anchors. Using a LONG convergence target toward $27–$30 would require (a) convergence BELOW current price = not a LONG convergence thesis; (b) relying on stale pre-cut PTs ($38–$43 Rosenblatt outlier) which are degenerate anchors not ratified by majority coverage post-April-2026 downgrades. No admissible LONG numerical target.
+
+2. **Numerical price target (SHORT direction):** Pre-event close $33.79 as SHORT target implies +6.2% move from Day-0 close = directionally wrong (would be LONG). Pre-pre-event close (~$26 late April) implies ~−18% from Day-0 close $31.82; but criterion-3 strict requires a specific catalytic convergence mechanism, not a vague retracement thesis. Degenerate absent catalyst.
+
+3. **Next earnings (Q2 FY2027):** Quarter ends July 31, 2026; print expected ~early September 2026. **OUTSIDE 60-day window. INADMISSIBLE.**
+
+4. **FDA decision:** N/A (DevSecOps software company). INADMISSIBLE.
+
+5. **FOMC meeting:** June 17–18, 2026 (within 60 days). GTLB is not rate-sensitive in a mechanism-admissible way — it is a high-growth software company priced on revenue multiples, not a rate-sensitive REIT or high-debt issuer where FOMC resolution creates a measurable price mechanism. **INADMISSIBLE — mechanism mismatch.**
+
+6. **S&P 500 / Russell 1000 / Nasdaq 100 inclusion:** GTLB mcap ~$5.35B. Not currently in S&P 500. Russell 1000 reconstitution late June 2026 is speculative (GTLB's declining mcap trajectory complicates inclusion probability); even if included, mechanism is net-neutral-to-negative for a stock trading above the sell-side PT cluster. Nasdaq 100 quarterly reconstitution: GTLB not eligible at current valuation relative to existing constituents. **INADMISSIBLE — speculative / mechanism-adverse.**
+
+**Criterion 3: EFFECTIVELY FAILS.** No admissible convergence target from the closed list for either direction. Analysis proceeds to criterion 4 for B-short string determination.
+
+**Criterion 4 — Dual-framing decisive flaw analysis:**
+
+*LONG framing (undershoot; market over-reacted negatively to a beat-and-raise print):*
+
+- **(L1) Restructuring multi-quarter execution overhang (sub-pattern 4 adjacent — 4c variant).** "Act Two" restructuring: 14% headcount reduction, exit 22 countries, up to 3 management layers removed, $30–35M charges concentrated in Q2–Q3 ($19M in Q2). Management explicitly stated "changes of this scale carry some near-term disruption." Q3 profitability trough is management's own forecast. Multi-quarter execution validation required — organizational restructuring of this scale requires 2–3 quarters minimum to demonstrate revenue impact, retention, and cultural execution. Resolution definitively outside 60-day window (Q3 print ~September 2026). Per sub-pattern 4c template (NCLH 2026-05-05): guide deterioration on pre-existing structural driver requiring multi-quarter resolution produces independent NO-GO basis.
+
+- **(L2) Q2 non-GAAP EPS guide materially below consensus.** Q2 guide $0.17–0.18 vs pre-print consensus $0.21 = midpoint $0.175 vs $0.21 = **−17% EPS guide miss**. This is real information (not sentiment overshoot): $19M of restructuring charges in Q2 + $50M JiHu expenses FY27 (concentrated burden) + profitability trough framing = forward EPS deterioration quantified by management. Even with FY guide RAISED on revenue, the near-term EPS deceleration is information-driven and not a sentiment-overshoot.
+
+- **(L3) Stock above most-recently-updated sell-side PT cluster.** Day-0 close $31.82 vs updated PT cluster $24–27. Over-extended-vs-consensus fingerprint: the stock has already "priced in" more bullish sentiment than sell-side's most-current fair-value anchors support. A LONG mean-reversion thesis requires the stock to be BELOW fair-value anchors; here it is above them. No upside asymmetry.
+
+- **(L4) Criterion 3 fails independently** — no admissible in-window convergence target for LONG direction.
+
+- **(L5) Pre-print +30% rally absorbed beat expectation (sub-pattern 3 partial).** Stock rallied +30.4% from late-April lows to June 1 pre-print close $33.79, absorbing the beat narrative. The Day-0 decline partly represents mean-reversion of this pre-print rally, not pure post-print over-selling.
+
+- **LONG: DECISIVELY DISMISSED.** Restructuring multi-quarter execution risk + Q2 EPS guide −17% miss vs consensus + stock above PT cluster + criterion 3 absent + pre-print rally partially absorbed.
+
+*SHORT framing (overshoot; selloff excessive relative to the actual beat-and-raise results):*
+
+- **(S1) Information-driven sell characterization.** The −5.83% Day-0 decline and continuation to ~$29.51 overnight is driven by real information: (a) Q2 EPS guide $0.17–0.18 vs $0.21 consensus = −17% midpoint miss; (b) $19M restructuring charges in Q2; (c) profitability trough Q3 per management guidance; (d) JiHu expenses $50M FY27 = 3.8× prior year ($13M); (e) continued SMB pressure (~20% of ARR under duress); (f) Duo Agent Platform contributing no material FY27 revenue (explicitly stated). These are hard-information inputs to forward EPS models, not sentiment panic on a strong beat. The sell is proportionate to the forward-EPS deterioration revealed.
+
+- **(S2) Pre-print +30% rally already partially absorbed / mean-reverting.** The pre-print rally from ~$24–26 to $33.79 (+30%) has partially mean-reverted (Day-0 −5.83% to $31.82; overnight to $29.51 = cumulative ~−13% from pre-print peak). A SHORT thesis toward pre-event levels (~$25–26) would require ~−18% further decline from Day-0 $31.82, but: (a) the stock has already repriced partially; (b) the sell-side PT cluster at $24–27 provides a partial floor (fair-value anchor prevents convergence to extreme lows); (c) criterion-3 absent.
+
+- **(S3) B-short string ~52.** Fifty-two consecutive positive-direction SHORT-dismissals — hostile structural context for B-short entries per established convention.
+
+- **(S4) No admissible in-window SHORT convergence target.** The natural SHORT target (pre-print baseline ~$33.79) is ABOVE the Day-0 close (= LONG direction). A SHORT-to-pre-April-levels ($24–26) lacks a specific in-window catalytic convergence mechanism (next earnings September 2026 = outside window; FOMC mismatched). Criterion-3 fails for SHORT independently.
+
+- **(S5) +25% short-side stop = ~$39.78.** Materially above even the most bullish pre-downgrade PT ($43 Rosenblatt), creating structurally adverse stop risk for a SHORT thesis.
+
+- **SHORT: DECISIVELY DISMISSED.** Information-driven sell; pre-print rally partially absorbed; B-short string ~52; criterion-3 absent; stop above broadest PT cluster.
+
+**Criterion 4: DECISIVE DUAL-FRAMING FAILURE.** Both LONG (restructuring overhang; Q2 EPS −17% guide miss; stock above PT cluster; criterion 3 absent; pre-print rally absorbed) and SHORT (information-driven sell; pre-print rally already partially mean-reverting; criterion 3 absent; B-short string; stop above cluster) independently dismissed. ✗
+
+**Sub-pattern routing:**
+
+Primary: **Sub-pattern 4c (guide-deterioration-on-pre-existing-structural-overhang; 6th instance).** The "Act Two" restructuring was pre-announced via 8-K in late April/May 2026; the Q1 print operationalized the restructuring (confirmed scope: 14% headcount / 22-country exit / management flattening / $30–35M charges). Management's Q2 EPS guide miss (−17%) and Q3 profitability-trough disclosure are the mechanism's operative signals — crystallizing the forward-EPS disruption impact from a pre-existing structural change. Multi-quarter resolution required to validate execution (Q3 print ~September 2026 = definitively outside 60-day window). Template match: NCLH 4c (pre-existing macro overhang crystallized by guide deterioration at print). Variant: "organizational-restructuring-as-structural-disruption-confirmed-at-print" (distinct from 4c's prior commodity-cost instances but sharing the multi-quarter-resolution mechanism).
+
+Secondary: **Sub-pattern 3 partial** — pre-print +30% rally (May 7 → June 1) absorbed the beat expectation ahead of the print; stock-only-rally-without-PT-cluster-driver from pre-print lows to $33.79 partially absorbed the LONG narrative.
+
+Sub-patterns NOT applicable: SP1 (no post-print PT-raise wave; pre-print positioning was BEARISH with 4 downgrades April–May); SP5 (no in-window binary catalyst scheduled); SP6 (no mass same-day PT cuts post-print — pre-print cuts dominated, not post-print ratification); Pattern N (analysis concludes sub-pattern 4c is the operative mechanism, not negative-direction-cross-section which requires peer-divergence confirmation evidence).
+
+**Step 4 — Decision:**
+
+**GTLB — NO-GO (DECLINE).** Binding on **criterion-4 dual-framing decisive failure** and **criterion-3 effectively failed**:
+
+- **Criterion 4 FAILS (decisive):** LONG dismissed — restructuring multi-quarter execution overhang (Q3 profitability trough outside window; $30–35M charges front-loaded); Q2 EPS guide −17% midpoint miss vs consensus; stock above sell-side PT cluster ($31.82 vs $24–27 most-recent-updated PT range); criterion-3 absent; pre-print +30% rally absorbed. SHORT dismissed — information-driven sell on hard-EPS-forward data (guide miss + charges + JiHu expense spike); pre-print rally partially absorbed already; B-short string ~52; criterion-3 absent; stop above cluster.
+- **Criterion 3 EFFECTIVELY FAILS (independent):** No admissible convergence target from closed list for either direction (Q2 print September OUTSIDE window; FOMC mismatched; S&P/Nasdaq-100 inclusion speculative/mechanism-adverse; numerical targets stale/degenerate).
+
+**Conviction: ~82%.** Multi-pillar convergent evidence: sub-pattern 4c structural-disruption fingerprint + criterion-3 effective-failure + dual-framing decisive dismissal on independent grounds. ~18% residual: LONG steel-man — revenue beat $264M vs $254M consensus (+4%) is real; FY guide raised; NDR 117% stable; buyback $350M authorization intact; the −5.83% may represent over-extrapolation of near-term EPS disruption onto a structurally sound DevSecOps franchise. However: (a) conservative default applies on ambiguity; (b) stock above PT cluster eliminates mean-reversion anchor; (c) criterion-3 absent independently. Residual insufficient to flip to GO.
+
+**Step 5 — Effect on book:**
+
+No order staged. **B-short string advances ~52 → ~53** per established convention: GTLB is a NEGATIVE-direction event (CTC −5.83%); SHORT direction dismissed under criterion 4 → string extends (same mechanism as HRL 2026-06-03 extended ~51→~52 on positive-direction SHORT-dismissal; GTLB negative-direction SHORT-dismissal extends identically). **B tally → ~6 GO / ~74 NO-GO** (+1 NO-GO). No order. No Portfolio_Ledger.md change. No Regime_State / Watchlist / Pending_Analyses modification. No calendar event (NO-GO).
+
+---
+
+**Compaction-survival note — GTLB B 2026-06-03:** GTLB Q1 FY2027 print (AMC June 2, 2026; not BMO) → **Strategy B NO-GO.** Qualifying event CONFIRMED (EVG PASS). Day-0 CTC −5.83% IBKR-verified (June 2 close $31.82 / June 1 close $33.79); mcap ~$5.35B; ADV ~$199M. Contract_id 520512263 NASDAQ:GTLB. Print: rev $264.2M (+23% YoY; +4% beat guide; +4% beat cons) / non-GAAP EPS $0.23 (+beat) / NDR 117% / 1,519 customers >$100K / Dedicated ARR >$70M / Q2 FY27 guide $272–274M (15–16% YoY) **and non-GAAP EPS $0.17–0.18 vs consensus $0.21 = −17% midpoint miss** / FY27 guide RAISED $1.112–1.118B / Restructuring Act Two: 14% headcount (350 ppl), 22 countries exited, $30–35M charges ($19M in Q2), Q3 profitability trough per mgmt / JiHu $50M FY27 vs $13M prior year. Pre-print sell-side: 4 downgrades April–May 2026 (RayJames/BofA/RBC/UBS); PT cluster $24–27 (most-recently-updated); Day-0 close $31.82 ABOVE PT cluster. Pre-print +30% rally May 7 → June 1 ($25.92 → $33.79) absorbed beat narrative. No post-print PT-raise wave (SP1 NOT triggered). Criterion-3 fails: Q2 print Sept OUTSIDE 60d; FOMC mismatch; S&P/N100 speculative; numerical targets stale/degenerate. Criterion-4 decisive dual-framing: LONG dismissed (SP4c restructuring multi-quarter overhang; Q2 EPS −17% guide miss; stock above PT cluster; criterion-3 absent; pre-print rally absorbed); SHORT dismissed (information-driven; pre-print rally partially absorbed; B-short string ~52; criterion-3 absent; stop above cluster). Sub-pattern routing: **SP4c** (guide-deterioration-on-pre-existing-structural-overhang — Act Two restructuring crystallized at print; Q3 profitability trough outside window) + SP3 partial (pre-print +30% rally absorbed beat narrative). Entry window Day-0 6/2 → Day-10 **2026-06-16**. **B-short string advances ~52 → ~53 (negative-direction SHORT-dismissal extends string). B tally → ~6 GO / ~74 NO-GO.** No order. No calendar event (NO-GO; none pre-existing). No Portfolio_Ledger / Regime_State / Watchlist change.
+
+**References:** Strategy.md rev 35 (B criteria 1–5; criterion-3 closed-list rev 14; criterion-4 dual-framing; no caps); B_Sub_Pattern_Taxonomy.md (SP4c anchor NCLH 2026-05-05; SP3 SBUX/CBOE/AXSM instances; SP1 not triggered; SP8 not applicable — pre-print bearish sell-side without modest-beat profile); Operating_Protocols.md §2, §3, §8, §9, §10, §11; Regime_State.md (A router DO-NOT-ACTIVATE 2026-06-01 M1b; B router ACTIVATE); Watchlist.md (GTLB absent from A-queue); Decision_Log 2026-05-13 (GTLB prior Day-0 C/C −4.46% fails criterion 1 — structurally distinct event; not applicable here per §3); IBKR connector contract_id 520512263 NASDAQ:GTLB (search_contracts; price_history ONE_MONTH ONE_DAY — June 1 $33.79 / June 2 $31.82 / June 3 prior-close $31.82 intraday ~$30.03; avg volume 6.41M shares; get_account_summary net_liq $9,462.36); Tavily research: ir.gitlab.com Q1 FY2027 press release (revenue $264.2M, EPS $0.23, restructuring Act Two, Q2 guide $272–274M / EPS $0.17–0.18, FY guide raised); StockTitan 8-K June 2, 2026; investing.com earnings call transcript (CFO Ross Q2/FY guide; CEO Staples Act Two narrative); GitLab Q1 FY27 prepared remarks PDF; 247wallst "GitLab reports Q1 results AMC June 2 after market close ~4:05 PM ET"; Yahoo Finance GTLB (close June 2 $31.82 −5.83%; prior close June 1 $33.79; overnight $29.51 −7.26%; avg vol 6.41M; 1y target $30.30; mcap $5.373B intraday); Benzinga analyst ratings (Raymond James downgrade MP 5/12; Mizuho Neutral $26 5/12; Cantor Neutral $27 5/13; BofA Neutral $27 4/22; RBC Sector Perform $25 4/20; UBS Neutral $24 4/16; Rosenblatt Buy $43 6/1 — sole bull outlier); MarketBeat GTLB (Q2 FY27 guidance release alert 6/2; consensus Hold; avg PT $37.08 includes stale pre-cut PTs); ChartMill GTLB (consensus EPS $0.21 / rev $259.65M pre-print; current stock 31.05 post-session; consensus PT $33.10 stale aggregate); Zacks "GitLab Set to Report Q1 Earnings" 5/29/2026 (pre-print consensus $253.9M rev / $0.20 EPS confirmed beat on both axes); Quiverquant GitLab restructuring article (Act Two 8-K pre-announcement prior to Q1 call; reaffirmed at call); GitLab Q1 FY27 earnings call transcript investing.com (Jessica Ross CFO / Bill Staples CEO prepared remarks).
