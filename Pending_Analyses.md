@@ -106,3 +106,68 @@ Mirrors `Pending_Adversarial_Reviews.md`. Established 2026-06-01 (IBKR-connector
   conservative_default: NO-GO still active (no entry) if the trigger is not met or the gate is not clear.
   status: pending
   outcome: (pending)
+
+---
+
+- id: thesis-AVGO-B-20260604
+  analysis_type: thesis-construction
+  strategy: B
+  ticker_or_pair: AVGO (Broadcom Inc)
+  due_date: 2026-06-04
+  context: |
+    Strategy B thesis for AVGO (Broadcom Inc). Q2 FY26 earnings AMC Wed 2026-06-03; entry window closes ~2026-06-17.
+    STEP-0 CTC VERIFICATION (run first): Day-0 = Thu 6/4. Pull Day-0 close (6/4) and Day(-1) close (6/3 pre-earnings ≈ $479.23 per Daily.md) via connector get_price_history (search_contracts for AVGO contract_id if needed). CTC = (Day-0 close − Day(-1) close) / Day(-1) close. If |CTC| < 5% → NO-GO at criterion-1 magnitude gate. If ≥ 5% → full criteria 1–5 per Strategy.md rev 35 (no sector/count caps).
+    Context from Daily.md 2026-06-03: AVGO pre-earnings close ~$479.23; AI chip demand (custom ASIC, networking) is the key guidance focus. Apply B_Sub_Pattern_Taxonomy.md for sub-pattern routing (esp. sub-pattern 3 pre-print rally check and sub-pattern 1 post-print sell-side ratification).
+    IF GO: connector craft-order flow (Operating_Protocols §11) — create_order_instruction + one [Claude] Confirm order calendar event (07:00 MT next trading day); no fill-capture event (D2 Step 0 reconciles).
+  conservative_default: decline (no entry) if criterion-1 |CTC| < 5% or if entry window closes unresolved.
+  status: pending
+  outcome: (pending)
+
+---
+
+- id: thesis-CRWD-B-20260604
+  analysis_type: thesis-construction
+  strategy: B
+  ticker_or_pair: CRWD (CrowdStrike Holdings)
+  due_date: 2026-06-04
+  context: |
+    Strategy B thesis for CRWD (CrowdStrike Holdings). Q1 FY27 earnings AMC Wed 2026-06-03; 4-for-1 stock split effective; entry window closes ~2026-06-17.
+    STEP-0 A-ROUTER GATE (DISPOSITIVE; check first): CRWD is A-queued (Daily.md 2026-06-03 annotation). If A router = ACTIVATE → INADMISSIBLE per Strategy.md criterion 5 (terminal NO-GO; CRWD proceeds as A-queue name only). If A = DO-NOT-ACTIVATE → gate clears (DDOG/PANW/OKTA criterion-5 precedent) → proceed to CTC verification.
+    STEP-1 CTC VERIFICATION: Day-0 = Thu 6/4. Pull Day-0 close (6/4) and Day(-1) close (6/3 pre-earnings ≈ $768.95 pre-split per Daily.md) via connector (note: use split-adjusted prices consistently). If |CTC| < 5% → NO-GO at criterion-1 gate. Context: "sell-the-news" risk flagged in Daily.md given large pre-print run; sub-pattern 3 check is critical.
+    Full criteria 1–5 per Strategy.md rev 35. Apply B_Sub_Pattern_Taxonomy.md. Operating_Protocols §2 (commissions) + §8 (conviction).
+    IF GO: connector craft-order flow (§11) — create_order_instruction + one [Claude] Confirm order event (07:00 MT next trading day); no fill-capture event (D2 Step 0 reconciles).
+  conservative_default: NO entry if A-router gate = ACTIVATE, criterion-1 |CTC| < 5%, or entry window closes unresolved.
+  status: pending
+  outcome: (pending)
+
+---
+
+- id: thesis-ANF-B-20260604
+  analysis_type: thesis-construction
+  strategy: B
+  ticker_or_pair: ANF (Abercrombie & Fitch Co)
+  due_date: 2026-06-04
+  context: |
+    Strategy B thesis for ANF (Abercrombie & Fitch). Day-0 print 2026-05-29; CTC ≈ −6.04% (criterion-1 clears). Entry window closes ~2026-06-12 (10 trading days from 5/29). Deferred from D2 2026-06-01 (prior session calendar event); Pending_Analyses.md architecture now governs (migrated 2026-06-01).
+    Deferrals do not chain (Operating_Protocols §9) — resolve to GO / NO-GO / conservative-default here; do NOT re-defer.
+    DIRECTION: NEGATIVE (−6.04% Day-0 = SHORT eligible). Full criteria 1–5 evaluation per Strategy.md rev 35. Apply B_Sub_Pattern_Taxonomy.md. Pull current ANF price via connector get_price_snapshot for any convergence target anchoring. Pull Q1 FY26 print context via Tavily search for criterion 2–4 evaluation (sub-pattern 1 sell-side PT raise cluster check; sub-pattern 3/6 pre-print rally / valuation-reset check). Reference Decision_Log 2026-06-01 ANF deferral context.
+    IF GO: connector craft-order flow (§11) — create_order_instruction + one [Claude] Confirm order event (07:00 MT next trading day); no fill-capture event (D2 Step 0 reconciles).
+  conservative_default: NO entry if entry window has closed (~6/12) or criterion-1 cannot be verified via connector.
+  status: pending
+  outcome: (pending)
+
+---
+
+- id: thesis-CPRI-B-20260604
+  analysis_type: thesis-construction
+  strategy: B
+  ticker_or_pair: CPRI (Capri Holdings)
+  due_date: 2026-06-04
+  context: |
+    Strategy B thesis for CPRI (Capri Holdings). Day-0 print 2026-05-29; CTC ≈ −7.35% (criterion-1 clears). Entry window closes ~2026-06-12 (10 trading days from 5/29). Deferred from D2 2026-06-01 (prior session calendar event); Pending_Analyses.md architecture now governs (migrated 2026-06-01).
+    Deferrals do not chain (Operating_Protocols §9) — resolve to GO / NO-GO / conservative-default here; do NOT re-defer.
+    DIRECTION: NEGATIVE (−7.35% Day-0 = SHORT eligible). Full criteria 1–5 evaluation per Strategy.md rev 35. Apply B_Sub_Pattern_Taxonomy.md. Pull current CPRI price via connector. Pull Q4 FY26 / Q1 FY27 print context via Tavily for criterion 2–4 (Capri Holdings = Michael Kors, Versace, Jimmy Choo; check sub-pattern 1 aggressive sell-side ratification, sub-pattern 6 valuation-reset, any strategic/M&A catalyst that could affect short thesis). Reference Decision_Log 2026-06-01 CPRI deferral context.
+    IF GO: connector craft-order flow (§11) — create_order_instruction + one [Claude] Confirm order event (07:00 MT next trading day); no fill-capture event (D2 Step 0 reconciles).
+  conservative_default: NO entry if entry window has closed (~6/12) or criterion-1 cannot be verified via connector.
+  status: pending
+  outcome: (pending)

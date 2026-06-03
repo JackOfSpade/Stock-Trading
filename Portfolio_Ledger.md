@@ -709,6 +709,25 @@ Format:
 
 ---
 
+### [Strategy B] MDT — ORDER-STAGED 2026-06-03
+
+- **Source thesis**: → Decision_Log 2026-06-03 "Strategy B MDT Q4 FY2026 print — GO (LONG 2 shares)" (print BMO 6/3/2026: revenue $9.81B +0.8% beat vs $9.73B cons; EPS $1.55 vs $1.54 Zacks cons (+$0.01, inline); FY27 organic rev guide raised 6.75–7.25%; CAS annualizing >$2B at +78% global / +124% US; dividend raised; Hugo RAS FDA expansion filed; SPR Therapeutics acquisition $650M; **reaction: +5.7% to $77.95**; prior close $73.75 — stock at 52-week support ($73.31); pre-print bearish sell-side: 8+ firms cut PTs April–May, Goldman reinstated Neutral/$84 on 5/21; SP8-partial mispricing (hybrid sentiment/information); criterion 3 target $90.00 — bear-camp floor (UBS $90, Piper Sandler $91, Truist $95 cluster); criteria 1–5 all clear; LONG 2 shares; MEDIUM-LOW conviction 60%).
+- **Order instruction**: IBKR instruction ID 100 created 2026-06-03. BUY 2 shares MDT LIMIT $78.25 GTC (contract_id 181387075, SMART). Calendar confirm-order event `gq5u7j8441cgm329ticjauh5pk` created 2026-06-04 07:00 MT.
+- **Fill details**: PENDING — to be updated at D2 Step 0 fill reconciliation.
+- **Convergence target (immutable)**: **$90.00** (bear-camp's stated valuation floor: UBS $90, Piper Sandler $91, Truist $95 cluster; 15.2% upside from $78.10 Day-0 reference; IMMUTABLE — does NOT adjust for fill price; set at staging per Strategy.md criterion 3 rev 35).
+- **Time-based exit**: **2026-07-31** (Fri) — Day-0 2026-06-03 + 60 calendar days = Sun 2026-08-02 → last trading day Fri 2026-07-31. Time-based exit calendar event to be created at fill reconciliation (D2 Step 0).
+- **Invalidation criteria status** (per Decision_Log 2026-06-03 staging):
+  - (i) Post-print analyst PT raise cluster ≥3 firms at ≥20% raises (Sub-Pattern 1 trigger post-staging) — NOT-TRIPPED at staging.
+  - (ii) FY27 EPS guide confirmed as miss-driven structural downgrade beyond MiniMed dilution — NOT-TRIPPED at staging.
+  - (iii) CAS hypergrowth narrative reversal (regulatory setback or major competitor) within 60-day window — NOT-TRIPPED at staging.
+- **No price-based invalidation** (B-long has no price stop per Strategy.md; worst-case loss bounded at ~$156 cost basis / ~1.65% of B NAV by sizing).
+- **Sector context**: GICS Healthcare / Medical Devices (GICS 35101010). No B sector cap (rev 35). **B concurrent open positions at staging: 6 (HCA + ZBRA + BRC + TJX + AZO + MDT).**
+- **Calendar events**: Confirm-order `gq5u7j8441cgm329ticjauh5pk` 2026-06-04 07:00 MT (created 2026-06-03 D2). Time-based exit event to be created at fill.
+- **Conviction rating at staging**: MEDIUM-LOW (~60%). See Decision_Log 2026-06-03.
+- **Claude model at staging**: Claude Sonnet 4.6
+
+---
+
 ## Closed trade detail template
 
 Every closed trade gets a subsection under its strategy's "Closed trade details" block using this format. The concise table above provides at-a-glance metrics; this detail subsection is the auditable record.

@@ -14141,3 +14141,127 @@ No order staged. **B-short string UNCHANGED at ~52** (GTLB is a NEGATIVE-directi
 **Compaction-survival note:** Strategy E's router state is **ACTIVATE substantively + execution-feasibility-deferred operationally** at current book size $1,890.44. The May divergence review flipped the router-architecture judgment from DNA to ACTIVATE explicitly to break the April CONVERGENT carry-forward pattern (per EP §188/§190 drift-flag mechanism). Future Claude sessions reading this entry: the substantive verdict + the operational state are intentionally decomposed. No new E pair entries are expected at current size; the M2 signal-process-tightening follow-up (first draft 2026-04-26) is the work product that prepares for actual pair-trade enablement when book size grows. The router state ACTIVATE means new E pair theses CAN be evaluated and staged under Strategy.md entry criteria when execution feasibility becomes viable (book size grows enough that per-leg 2%-of-NAV sizing exceeds tradable individual-stock-leg depth). Until then, the router state's effect on realized exposure is zero — but the architecturally-correct state is ACTIVATE, not the convergent-carry-forward DNA.
 
 **References:** `Adversarial_Review_div-E-202605-1_attacker.md` (2026-06-02); `Adversarial_Review_div-E-202605-1_orchestrator.md` (2026-06-03); `Monthly_Fundamental.md` (M1b May 2026 regime); `Monthly_E_Pairs.md` (M3 2026-06-01 advisory pair shortlist + ETF-substitution-required flag); Decision_Log_Archive_2026_Q2.md "2026-04-25 Strategy E divergence adversarial review — DO-NOT-ACTIVATE" (April CONVERGENT precedent); Strategy.md §648 (Strategy E technical activation rule) + §168–186 + §180; Experiment_Parameters.md §188 (saturation-stop) + §190 (residual weight-level-bias).
+
+---
+
+### [2026-06-03] CORRECTION — Strategy B — ULTA Q1 FY2027 print — CTC correction only (criterion-1 gate fail outcome unchanged)
+
+**Ticker:** ULTA (Ulta Beauty Inc) — NASDAQ — contract_id 46970422
+**Correction to entry above (same date, written ~00:15 UTC with is_close=false snapshot):** Day-0 final close per IBKR get_price_history: $471.21. Prior close (Day-1): $494.87. CTC = (471.21 − 494.87) / 494.87 = **−4.78%**. The criterion-1 gate fails on |CTC| (4.78% < 5.00%); outcome (NO-GO, no order, no calendar event) is **unchanged**. The provisional entry's snapshot CTC (+1.33%, $501.44 AH price ~6:15pm MT 6/2) reflected after-hours pricing; the stock sold off from the AH spike to close $471.21 on 6/3. Tally and B-short string unchanged.
+
+---
+
+### [2026-06-03] Strategy B — PANW Q3 FY2026 print — NO-GO (full thesis — criteria 2 and 4 fail) — SUPERSEDES provisional criterion-1 entry
+
+**Ticker:** PANW (Palo Alto Networks Inc) — NASDAQ — contract_id 110619459
+**Day-0:** 2026-06-03 (negative direction, CTC −5.64%)
+**Entry window:** 2026-06-03 through ~2026-06-17 (SHORT direction; not entered)
+**Analysis date:** 2026-06-03
+
+**Supersedes provisional entry above (same date):** The provisional criterion-1 entry was written with is_close=false snapshot data ($291.00, −2.08%). Day-0 final close per IBKR get_price_history: **$280.43**. CTC = (280.43 − 297.18) / 297.18 = **−5.64%**, clearing criterion 1. Full thesis evaluation was conducted.
+
+**Criterion 1:** |CTC| 5.64% ≥ 5.00% → CLEARS. Direction: SHORT (negative Day-0 reaction). **PASS**
+
+**Sub-pattern routing:**
+- **Sub-Pattern 3 (pre-print rally absorbed narrative):** CONFIRMED. PANW +64.1% in 22 trading days pre-print ($181.08 on 5/1 → $297.18 on 6/2). Stock touched 52-week high $302.95 on 6/1, the day before earnings. CyberArk integration, platformization momentum, and AI security tailwinds were explicitly pre-priced by the rally — sell-side raised PTs during the run-up on the basis of the exact information the Q3 print confirmed.
+- **Sub-Pattern 1 (aggressive sell-side bull ratification):** CONFIRMED. 9+ firms raised PTs in the 5/21–6/1 window at ≥20% increases: Wedbush $225→$300 (+33%), Berenberg $215→$290 (+35%), Evercore $250→$320 (+28%), Benchmark $200→$270 (+35%), JP Morgan $200→$300 (+50%), BTIG $216→$268 (+24%), Jefferies $265→$300 (+13%), Wells Fargo, Oppenheimer (street-high $275). PT cluster $270–$320. Per B_Sub_Pattern_Taxonomy.md, Sub-Pattern 1 **forecloses BOTH LONG and SHORT.**
+
+**Criterion 2:** FAIL. Neither direction survives sub-pattern routing.
+- LONG direction: A-territory — recovering from sell-the-news after confirmed AI-security beat is momentum continuation (A-thesis), not B mean-reversion. No structural undervaluation at $280 given sell-side PT cluster $270–$320 (stock near/at consensus fair value).
+- SHORT direction: No fundamental anchor. Every Q3 metric beat, guidance raised on every line, sell-side unanimous at $270–$320. SP1 wave eliminates the "market got it wrong" premise B requires for a SHORT thesis.
+
+**Criterion 3:** MOOT (criterion 2 fail; independently weak — sell-side $270–$320 PT cluster creates upward support bias against SHORT convergence within 60 days).
+
+**Criterion 4:** FAIL. Decisive flaws: (a) LONG is A-territory, not B mean-reversion; (b) SHORT has no fundamental negative anchor — every metric beat, guidance raised; (c) sell-side unanimous ratification eliminates the core B mispricing premise; (d) PANW historical negative-Day-0 prints (−6.8%, −7.4%, −6.8%, −28.4%) show no consistent bounce pattern supporting mechanical LONG re-entry.
+
+**Criterion 5:** A-queue + DO-NOT-ACTIVATE router (DDOG precedent); B router ACTIVATE. **PASS**
+
+**Outcome: NO-GO** — criteria 2 and 4 fail. Sub-patterns 1+3 dual-operative. No order. No calendar event.
+**Conviction on NO-GO: 85%.** Residual 15%: AH decay to $273.55 could indicate early sell-the-news exhaustion, but constructing a B SHORT without a fundamental negative anchor falls outside Strategy B scope.
+**B-short string: ~53** (+1 from the ~52 provisional baseline; full thesis evaluation with criterion 2+4 fail increments the string; criterion-1-gate-fail-only entries do not). B tally: unchanged (provisional criterion-1 entry already counted this event as a NO-GO; no double-count).
+
+---
+
+### [2026-06-03] Strategy B — DG Q1 FY2027 print — NO-GO (criterion-1 gate fail)
+
+**Ticker:** DG (Dollar General Corporation) — NYSE
+**Day-0:** 2026-06-03 (net negative after intraday fade, CTC −3.33%)
+**Entry window:** N/A (criterion-1 gate fail)
+**Analysis date:** 2026-06-03
+
+**Criterion 1:** Day-0 final close per IBKR get_price_history: $106.27. Prior close (Day-1): $109.93. CTC = (106.27 − 109.93) / 109.93 = **−3.33%**. |CTC| 3.33% < 5.00% threshold → GATE FAIL (mechanical NO-GO). No further analysis.
+**Context:** DG surged intraday ~+5.8% to ~$115 on Q1 FY27 beat and FY26 guidance raise vs prior guidance cut. Stock faded to close $106.27, below the prior close $109.93. The intraday magnitude did not hold at the close; final close CTC confirms the criterion-1 gate fail.
+**Size gates:** Mcap ~$23B (>> $2B floor ✓); ADV sufficient (>> $10M floor ✓). Magnitude gate decisive fail.
+
+**Outcome: NO-GO** — criterion-1 magnitude gate fail. No order. No calendar event.
+**B-short string: UNCHANGED at ~53** (criterion-1 gate fails do not extend the string).
+**B tally: ~6 GO / ~79 NO-GO** (+1 NO-GO).
+
+---
+
+### [2026-06-03] Strategy B — MDT Q4 FY2026 print — GO (LONG 2 shares)
+
+**Ticker:** MDT (Medtronic plc) — NYSE — contract_id 181387075
+**Day-0:** 2026-06-03 (positive direction, CTC +5.70%)
+**Entry window:** 2026-06-03 through ~2026-06-17 (10 trading days; LONG direction)
+**Analysis date:** 2026-06-03
+
+**Criterion 1:** Day-0 close per IBKR get_price_history: $77.95. Prior close (Day-1): $73.75. CTC = (77.95 − 73.75) / 73.75 = **+5.70%** ≥ 5.00% → CLEARS. Direction: LONG. **PASS**
+
+**Sub-pattern routing:**
+- **Sub-Pattern 1:** NOT triggered. No post-print PT raise cluster visible at analysis time (BMO print — analyst notes typically lag 24–72h; none indexed as of 2026-06-03). No SP1 foreclosure.
+- **Sub-Pattern 3:** INAPPLICABLE — stock was DOWN ~−8% into print (May 1 $80.00 → June 2 $73.75). Opposite of pre-print rally.
+- **Sub-Pattern 8 (partial):** Pre-print bearish sell-side wave confirmed: 8+ firms cut PTs April–May (UBS −$14→$90, Jefferies −$13→$95, Piper Sandler −$14→$91, Truist −$8→$95, Argus −$10→$115, Citi −$7→$110, Mizuho −$5→$120, Goldman reinstated Neutral/$84 on 5/21). Stock near 52-week support ($73.75 vs 52wk low $73.31). SP8 is PARTIAL only — mitigated by genuine forward catalysts in the print: FY27 organic rev guide raised to 6.75–7.25%, CAS annualizing >$2B at +78%/+124% US, dividend raised, Hugo RAS FDA expansion filed, SPR Therapeutics acquisition ($650M).
+
+**Criterion 2:** CLEARS. Core mispricing signal: at $78.10, MDT trades ~28% below 37-analyst consensus mean PT (~$107). Even Goldman (most bearish active analyst, $84) sees ~8% upside. The +5.7% Day-0 is a hybrid event: partial sentiment normalization from extreme bearish positioning relief at 52-week support, and partial information re-pricing from the FY27 guide uplift. Genuine new information in the print (FY27 guide 6.75–7.25% vs prior ~5% organic expectation; CAS structural >$2B run rate) prevents full SP8 routing. Stock is mispriced relative to sell-side fundamental anchor. **PASS**
+
+**Criterion 3:** Convergence target **$90.00** (the bear-camp's own stated valuation floor: UBS $90, Piper Sandler $91, Truist $95 cluster). 15.2% upside from $78.10 Day-0 reference. Achievable within 60 days via post-print PT revision cascade from the 8+ firms that cut to $90–$95 in April–May; those firms are expected to revise upward after the FY27 guide raise was confirmed. $90 is conservative — broader consensus mean PT is ~$107 (~37% upside). **PASS**
+
+**Criterion 4:** No decisive adversarial flaw identified.
+- SP8 concern: mitigated by FY27 guide raise (6.75–7.25% vs prior ~5%) and CAS structural >$2B run rate with +78% growth — genuine new information anchors.
+- FY27 EPS guide midpoint ($5.95) slightly below prior consensus ($6.08): driven by MiniMed dilution and $250M COGS tariff hit — both already embedded in April–May PT cuts; not a new surprise at print.
+- Post-print analyst notes not yet indexed (BMO timing lag): absence reflects timing, not bearish signal; FY27 guide raise virtually guarantees some upward PT revisions.
+- Primary risk: if post-print notes don't show upward PT revisions, the catalyst weakens. Priced into 60% conviction.
+**PASS**
+
+**Criterion 5:** Not in A-queue; A router = DO-NOT-ACTIVATE. No open A position in MDT. **PASS**
+
+**Sizing:** NAV $9,459.18 × 2% = $189.18. Shares: $189.18 / $78.10 = 2.42 → floor 2 shares. Entry reference $78.10 (Day-0 level). Total notional ~$156.20.
+
+**Order:** BUY 2 shares MDT LIMIT $78.25 GTC (IBKR contract_id 181387075, SMART). **IBKR order instruction ID: 100** (created 2026-06-03 via connector). Calendar confirm-order event **`gq5u7j8441cgm329ticjauh5pk`** created for 2026-06-04 07:00–07:15 MT.
+
+**Convergence target (immutable):** $90.00 (+15.2% from $78.10 Day-0 reference). Does NOT adjust for fill price.
+**Time-based exit:** 2026-07-31 (Fri) — Day-0 2026-06-03 + 60 calendar days = Sun 2026-08-02 → last trading day Fri 2026-07-31. Time-based exit calendar event to be created at fill reconciliation (D2 Step 0).
+**Conviction:** 60% (MEDIUM-LOW)
+
+**Outcome: GO — LONG MDT. Order instruction staged. Confirm-order calendar event created for 2026-06-04 07:00 MT.**
+**B-short string: RESET to 0** (MDT GO breaks the ~53 consecutive-NO-GO run).
+**B tally: ~7 GO / ~79 NO-GO** (+1 GO).
+
+---
+
+### [2026-06-03] D2 Daily Action Conversion — session summary
+
+**D2 run date:** 2026-06-03 (MT). Run completed ~16:48 MT.
+
+**Step 0 — Broker reconciliation:** IBKR get_account_trades (DAYS_7) returned 1 trade: BURL 6/1 sell fill (trade_id `00012968.6a1db382.01.01`) already recorded in Portfolio_Ledger.md. No unreconciled fills. get_order_instructions returned empty (no pending instructions at run time). get_account_positions confirmed 5 open B longs (HCA, ZBRA, BRC, TJX, AZO) + 2 open D longs (RTX, DIS) consistent with Portfolio_Ledger.
+
+**Step 1 — Queue drain:** Pending_Analyses.md checked. No entries due 2026-06-03 (next due entry: `rescreen-BA-D-20260604` on 6/4). Queue drain: no items processed.
+
+**Routine processing — Daily.md RECOMMENDED ACTIONS (2026-06-03):**
+- **Exit sweep:** D1 mechanical sweep clean. No exits triggered. No positions exited.
+- **ULTA Q1 FY27 (AMC 5/29):** Criterion-1 gate fail. Provisional entry CTC (+1.33% AH snapshot) corrected by final close −4.78% ($494.87→$471.21); outcome unchanged, NO-GO. B tally: +1 NO-GO (provisional entry).
+- **DG Q1 FY27 (BMO ~5/27):** Criterion-1 gate fail. CTC −3.33% (intraday +5.8% surge faded; final close $106.27 vs prior $109.93). NO-GO. B tally: +1 NO-GO.
+- **PANW Q3 FY26 (AMC 6/2):** Provisional criterion-1 entry (snapshot −2.08%) superseded by full thesis. Final close CTC −5.64% ($297.18→$280.43) clears criterion 1. Full thesis: NO-GO criteria 2+4. Sub-patterns 1+3 dual-operative. +64% pre-print rally absorbed narrative; 9+ sell-side firms at $270–$320 PT cluster foreclose both LONG (A-territory) and SHORT (no fundamental anchor). B-short string: +1 (full thesis evaluation). B tally: unchanged (provisional entry already counted).
+- **MDT Q4 FY26 (BMO 6/3):** CTC +5.70% ($73.75→$77.95). All 5 criteria pass. **GO — LONG 2 shares, LIMIT $78.25 GTC.** Target $90.00 (UBS $90 floor; +15.2%). Time-exit 2026-07-31. IBKR order instruction ID 100 created. Confirm-order calendar event `gq5u7j8441cgm329ticjauh5pk` 2026-06-04 07:00 MT created. B-short string: RESET to 0. B tally: +1 GO.
+- **ANF/CPRI carry-forward (Day-0 5/29; windows through ~6/12):** No active Pending_Analyses entries existed. Appended thesis-construction entries (thesis-ANF-B-20260604, thesis-CPRI-B-20260604) to Pending_Analyses.md, due 2026-06-04.
+- **AVGO/CRWD (AMC 6/3 — after this session):** Appended thesis-construction entries (thesis-AVGO-B-20260604, thesis-CRWD-B-20260604) to Pending_Analyses.md, due 2026-06-04.
+
+**Portfolio state after session:**
+- B book: 6 positions — HCA (OPEN), ZBRA (OPEN), BRC (OPEN), TJX (OPEN), AZO (OPEN), MDT (ORDER-STAGED 2026-06-03).
+- D book: 2 positions — RTX (OPEN), DIS (OPEN).
+
+**Files modified:** Decision_Log.md (this entry + B thesis entries above), Portfolio_Ledger.md (MDT ORDER-STAGED section appended), Pending_Analyses.md (4 new entries: AVGO, CRWD, ANF, CPRI).
+**IBKR order instruction created:** ID 100 (MDT BUY 2 LIMIT $78.25 GTC, contract_id 181387075).
+**Calendar events created:** `gq5u7j8441cgm329ticjauh5pk` (Confirm order MDT 2026-06-04 07:00 MT).
+**B tally final:** ~7 GO / ~79 NO-GO. B-short string: 0 (RESET on MDT GO).
