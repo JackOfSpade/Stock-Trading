@@ -13485,3 +13485,148 @@ Decisive basis: criterion-4 dual-framing failure (information-driven structural-
 **Compaction-survival note — BSX B 2026-06-03:** BSX Bernstein Conference 2026-05-27 guidance-cut (Day-0 CTC −12.46%; $57.64 → $50.46; 5-day post-event trajectory $50.46 → $47.68 with zero bounce; 52-week low $47.355) → **Strategy B NO-GO**, criterion-4 dual-framing decisive failure (SP4 hybrid 4c+4b+4a: investor-conference guide-cut on WATCHMAN demand plateau + JNJ Varipulse structural EP competitive displacement + ACCOLADE recall overlay; SP7 geometry stock below all analyst PTs $50–$75; Pattern N cross-sectional JNJ/PFA peer confirmation). Criterion-3 independently fails (Q2 July 29 = 3 days outside 60-day window; no admissible closed-list in-window target). Prior session 2026-05-28 reached identical disposition; this session corroborates. No order. B tally → ~6 GO / ~70 NO-GO; B-short string UNCHANGED at ~50 (negative-direction event; string tracks positive-direction SHORT-dismissals only). Calendar `q11247cb4hnvm11i3stodmk8kg` soft-deleted 2026-05-28; no replacement needed.
 
 **References:** Strategy.md rev 35 (B criteria 1–5; criterion-1 event classes including investor-conference guidance update; criterion-3 closed-list rev 14; criterion-4 dual-framing; no sector/count caps); B_Sub_Pattern_Taxonomy.md (SP4 structural-overhang-persistence: 4a regulatory, 4b competitive-threat, 4c guide-cut-on-macro — V/MDLZ/STLA/UPS/NCLH/TSN prior instances; SP7 EL-pattern stock-below-cut-PT-cluster; Pattern N negative-direction cross-section); Operating_Protocols.md §2, §3, §8, §9, §10, §11; Regime_State.md (A router DO-NOT-ACTIVATE confirmed 2026-06-01 M1b; B router ACTIVATE); Watchlist.md (BSX absent from A-queue confirmed); Decision_Log 2026-05-28 BSX NO-GO (prior-session disposition; same routing; criterion-4 decisive dual-framing; SP4 hybrid 4c+4b+4a; B-short string ~38→~39 at that time — now ~50 post-intervening positive-direction extensions); IBKR connector contract_id 5270 NYSE:BSX (price_history ONE_MONTH ONE_DAY — May 26 $57.64 / May 27 $50.46 [Day-0 CTC −12.46%] / May 28 $49.11 / May 29 $48.31 / Jun 1 $47.98 / Jun 2 $47.68; snapshot Jun 3 last $47.73 / prior-close $47.68 / avg-90d-usd-volume $869,764,373 / 52w-low $47.355 / 52w-high $109.50); Tavily research (Bernstein Annual Healthcare Conference May 27, 2026; BSX management guidance commentary; post-event sell-side PT cuts: Daiwa downgrade, BofA $68, Citi $70, Stifel $75, Canaccord $70, Leerink; JNJ Varipulse CARTO competitive displacement; WATCHMAN sequential flat volume Q1–Q3; ACCOLADE recall field-disruption; GEHC/MDT med-device guidance-cut base rate).
+
+---
+
+### [2026-06-03] Strategy B — DLTR (Dollar Tree Inc., NASDAQ: DLTR) Q1 FY2027 print — NO-GO (criterion-4 dual-framing decisive failure; information-driven positive reaction; split sell-side mixed cluster; no SP1 trigger; criterion-3 independently weak)
+
+**Trigger:** D2 2026-06-03 execution. Calendar event `a7ditkq791c2hbr5d1oijj5j0c` was rescheduled from D3 5/31 rest-tier deferral to Mon 2026-06-01 17:30 MT and marked "(done)" without a Decision_Log disposition (confirmed on calendar retrieval). This session is the terminal resolution per Operating_Protocols §9 (no re-deferral; earliest resolvable window; conservative-default fires here). DLTR Q1 FY2027 print (fiscal Q1 ending May 2, 2026) reported BMO Thu 2026-05-28; Day-0 = Thu 2026-05-28.
+
+**Book context:** B NAV ~$9,462 (2% ≈ $189/position). Open B positions: HCA, ZBRA, BRC, TJX, AZO (5 longs). B-short string ~50 (per DELL 2026-06-02 positive-direction SHORT-dismissal extension). B tally ~6 GO / ~70 NO-GO (pre-this-entry, post-BSX 2026-06-03). A router = DO-NOT-ACTIVATE (Regime_State.md; confirmed 2026-06-01 M1b).
+
+**Step 0 — Day-0 verification and CTC (IBKR connector, contract_id 49388062 NASDAQ:DLTR):**
+
+| Date | Close | Volume | Day |
+|------|-------|--------|-----|
+| 2026-05-22 | $94.98 | 346,550 | Day-(4) |
+| 2026-05-26 | $93.70 | 542,598 | Day-(1 pre-print) |
+| 2026-05-27 | **$95.87** | 891,994 | **Day-(-1) pre-print ref** |
+| 2026-05-28 | **$113.00** | **1,651,269** | **Day-0 (BMO print)** |
+| 2026-05-29 | $116.44 | 761,026 | Day-1 |
+| 2026-06-01 | $111.35 | 712,847 | Day-2 |
+| 2026-06-02 | $109.39 | 535,292 | Day-3 |
+| 2026-06-03 | ~$112–$117 (live) | — | Day-4 (today) |
+
+**CTC (Day-0):** ($113.00 − $95.87) / $95.87 = **+17.86%** (IBKR-authoritative). Positive direction. Volume 1.65M on Day-0 = approximately 3× normal (anomalous spike confirming print reaction). Day-1 continued to $116.44 (+3.04%), then partial fade Day-2 $111.35, Day-3 $109.39. Day-4 live range ~$112–$117. Net Day-3 retention: ($109.39 − $95.87) / ($113.00 − $95.87) = ~79% of Day-0 gain — "move-held" trajectory.
+
+**Mcap and ADV:** DLTR mcap ~$21.6B (Yahoo Finance; ~191M shares × ~$113 at Day-0) >> $2B floor; ADV from IBKR volume history ~$300M+/day (avg-90d-usd-volume not directly read this session but consistent with large-cap ~$500–$900M ADV typical for DLTR; criterion 1 passes with large margin). Contract: NASDAQ:DLTR, contract_id 49388062 (US primary listing, STK section; confirmed via search_contracts).
+
+**Step 1 — A-queue gate (Criterion 5):**
+
+DLTR is NOT in the Strategy A queue (Watchlist.md confirmed — A-queue lists CAT/LLY/QCOM/AAPL/DDOG/AKAM/NVDA/CSCO/AMAT/HD/TGT/WMT/AVGO/ORCL/ADBE/MU/INTC/NBIS/CRM/DELL/SNOW/MRVL/NTAP/OKTA/NOW/HPE/SMCI/AMD/IBM/PANW/CRWD; DLTR absent). No A position open in DLTR. A router = DO-NOT-ACTIVATE in any case. **Criterion 5: PASS.** Not a terminal gate.
+
+**Step 2 — Q1 FY2027 print summary (BMO Thu 2026-05-28; Motley Fool transcript + TIKR + AllInvestView + Globe and Mail primary sources):**
+
+- **Net sales:** $5.0B, +7.2% YoY; comparable store sales +3.5% (ticket +4.5%, traffic −1%)
+- **Adjusted diluted EPS:** $1.74, +38% YoY; beat consensus $1.53–$1.54 by +13.7%
+- **Operating income (continuing operations):** $473.3M, +23% YoY; operating margin +120 bps
+- **Adjusted operating margin:** 9.5%, +110 bps YoY; lower freight + improved mark-on + shrink reduction driving expansion
+- **Free cash flow:** $392M, +202% YoY
+- **Share repurchases:** $595M in Q1; ~8% share count reduction over trailing period
+- **FY2026 adjusted EPS guidance RAISED:** $6.70–$7.10 (prior ~$6.50–$6.90; well above consensus)
+- **Net sales guidance:** $20.5B–$20.7B (reiterated)
+- **Q2 FY2027 guidance caution:** EPS expected to fall 45–50% YoY in Q2 as tariff pressures and Family Dollar separation costs weigh; stronger second half expected
+- **Multi-price expansion:** ~5,900 multi-price stores; 85% of assortment at $2 and below; format converting stores outperforming legacy
+- **New DoorDash partnership** spanning 9,000+ stores (value-convenience channel expansion)
+
+This is a positive print: beat-and-raise with operating margin expansion, FCF improvement, and guide lift. Q2 guidance caution (tariff/Family Dollar separation) introduces near-term headwind but management framed it as timing, not structural.
+
+**Step 3 — Sell-side reaction (Day-0 and Day-1, May 28–29, 2026; MarketBeat + Chartmill + Benzinga + GuruFocus primary sources):**
+
+Post-print sell-side response (confirmed):
+
+| Date | Firm | Action | Rating | PT Change |
+|------|------|--------|--------|-----------|
+| 5/29 | Guggenheim (J. Heinbockel) | Boost Target | Buy | $130 → $135 (+3.8%) |
+| 5/29 | Bernstein (Z. Ma) | Boost Target | Market Perform | $115 → $124 (+7.8%) |
+| 5/29 | Morgan Stanley (S. Gutman) | Boost Target | Equal Weight | $126 → $130 (+3.2%) |
+| 5/29 | Goldman Sachs | **Lower Target** | **Sell** | $115 → **$105 (−8.7%)** |
+| 5/29 | BNP Paribas Exane (C. Bottiglieri) | Boost Target | Underperform | $88 → $98 (+11.4%) |
+| 5/29 | Gordon Haskett | Boost Target | — | $90 → $100 (+11.1%) |
+| 5/29 | Jefferies (C. Tarlowe) | Reiterated | Underperform | $85 (unchanged) |
+| 5/29 | Truist Securities | Maintained | Buy | no change listed |
+| 5/28 | Freedom Broker (Vashchenko) | **Downgrade** Buy → Hold | Hold | $92 → $124 (+34.8%) |
+| 5/28 | Bank of America | Reiterated | Underperform | no change |
+| 5/27 | Barclays | Maintained | Overweight | (pre-print; maintained) |
+
+**SP1 assessment (≥3 firms raising PTs ≥20% on positive-direction event):** NOT triggered. The raises are Guggenheim +3.8%, Bernstein +7.8%, Morgan Stanley +3.2%, BNP Paribas +11.4%, Gordon Haskett +11.1%. No firm raising PT by ≥20% with a bullish (Buy/Outperform) rating. Freedom Broker +34.8% is largest magnitude but comes with a DOWNGRADE to Hold — this is NOT SP1 bull-ratification. Goldman Sachs CUT its PT. **SP1 does NOT fire. Sell-side is SPLIT.**
+
+**Sell-side cluster geometry:** Post-print consensus PT range ~$98–$135 (bears ~$85–$105; bulls ~$124–$135); Goldman at $105 (Sell) creates a heterogeneous cluster. Stock at Day-3 $109.39 trades within the mid-range of the cluster — above Goldman ($105) but below bulls ($124–$135). This is NOT a TEAM-pattern (no mass PT cuts; most PT moves are upward). NOT a SP6 (positive-direction mass PT cuts). The geometry is a MIXED/SPLIT sell-side cluster.
+
+**Step 4 — Criterion-by-criterion analysis:**
+
+**Criterion 1 — PASS:**
+- CTC: +17.86% ≥ 5% threshold ✓ (3.57× floor; positive direction)
+- Event class: Q1 FY2027 earnings print BMO (qualifying event class) ✓
+- Mcap: ~$21.6B >> $2B floor ✓ (10.8× floor)
+- ADV: Large-cap DLTR >> $10M floor ✓ (multiple hundreds of millions/day)
+- **Criterion 1: PASS**
+
+**Criterion 2 — Entry window (≤10 trading days from Day-0):**
+- Day-0: 2026-05-28
+- Window count (skip weekends and US holidays; Memorial Day 5/25 already past; Juneteenth 6/19 future and outside this window):
+  - Day-1 = 5/29, Day-2 = 6/1, Day-3 = 6/2, Day-4 = 6/3 (today), Day-5 = 6/4, Day-6 = 6/5, Day-7 = 6/8, Day-8 = 6/9, Day-9 = 6/10, **Day-10 = 6/11**
+- Today (6/3) = Day-4. Window closes **2026-06-11**. 6 trading days remain.
+- **Criterion 2: CLEARS** ✓ (Non-binding given criterion 4 decisive failure.)
+
+**Criterion 3 — Admissible convergence target (closed-list rev 14; ≤60 calendar days from Day-0 May 28; window = on or before July 27, 2026):**
+
+1. **Numerical price target (SHORT or LONG):** SHORT: Goldman PT $105 = only ~4% below Day-3 $109.39; thin EV and the mechanism is Goldman's fundamental disagreement (not a mean-reversion anchor); inadmissible on thin-EV/mechanism-mismatch grounds. LONG: Guggenheim/MS PTs $130–$135 = +19–23% above Day-3 — this is Strategy A multi-quarter continuation territory (management execution / multi-price thesis playing out over 4+ quarters), not a B post-event mispricing convergence. No defensible numerical convergence target for either direction that is NOT degenerate or A-territory.
+2. **Next earnings (Q2 FY2027):** Per guidance, Q2 FY2027 expected reporting ~late August 2026. Day-0 May 28 + 60 days = ~July 27. August ≫ July 27 = **OUTSIDE 60-day window. INADMISSIBLE.**
+3. **FDA decision:** Not applicable (DLTR is a retailer). INADMISSIBLE.
+4. **FOMC meeting:** Next FOMC June 17–18, 2026 (within 60 days). However, DLTR's Day-0 reaction was driven by company-specific EPS/margin/guide information, not rate sensitivity. FOMC as convergence target requires a rate-mechanism that is absent here for DLTR. **INADMISSIBLE — mechanism mismatch.**
+5. **S&P 500 / Russell 1000 / Nasdaq 100 inclusion:** DLTR is already an S&P 500 member and Russell 1000 member. No inclusion event possible. INADMISSIBLE.
+
+**No admissible criterion-3 convergence target for LONG or SHORT from the closed list. Criterion 3: FAILS.** Criterion-4 analysis proceeds for completeness to determine B-short string treatment.
+
+**Criterion 4 — Dual-framing (decisive flaw analysis):**
+
+*SHORT framing (over-reaction hypothesis — did the +17.86% overshoot?):*
+
+- **(S1) No overshoot-above-PT-cluster geometry.** Day-3 close $109.39 is BELOW all bullish analyst PTs ($124 Bernstein / $130 Morgan Stanley / $135 Guggenheim). Stock is roughly in-line with Goldman's $105 bearish PT and slightly above BNP Paribas Exane's $98 Underperform target. For SHORT to work mechanically, stock must be materially ABOVE the analyst consensus cluster. The geometry is the opposite.
+- **(S2) Information-driven Day-0 move.** The +17.86% on Day-0 reflects genuine fundamental beat: EPS +13.7% above consensus, FCF +202% YoY, operating margin +120 bps, FY EPS guide raised above consensus to $6.70–$7.10. Each is a hard information signal. Per criterion-4 framework: information-driven moves are correct pricing, not mispricing.
+- **(S3) Partial fade already occurring.** Day-1 $116.44 → Day-3 $109.39 = −5.2% partial retrace over 3 days. The SHORT thesis would be "entering into a reversion that has already partially occurred" with limited residual — not a clean overshoot-entry geometry.
+- **(S4) B-short string ~50.** Fifty consecutive positive-direction SHORT-dismissals. Context strongly unfavorable for SHORT in current regime; not a binding criterion but consistent background.
+- **(S5) +25% stop risk.** From Day-3 ~$109, +25% stop = ~$136. This is ABOVE the bull analyst PT cluster ($135 Guggenheim high) — stop would trigger before any sell-side convergence anchor is reached.
+- **(S6) Q2 FY2027 guide caution does NOT create a SHORT overshoot anchor.** Management flagged Q2 EPS −45–50% YoY as transient (tariff/separation costs); this is already public and already incorporated in Day-3 price. No incremental bearish information was withheld from the Day-0 price reaction.
+- **SHORT: DECISIVELY DISMISSED.** No overshoot-above-cluster geometry; information-driven move; partial fade already underway; stop above cluster; B-short string ~50 context. **POSITIVE-direction event: B-short string does NOT extend on SHORT-dismissal here (positive-direction SHORT-dismissal extends the string). However — see note below on B-short string convention: string extends on POSITIVE-DIRECTION SHORT-DISMISSALS.**
+
+*LONG framing (under-reaction hypothesis — did the +17.86% undershoot?):*
+
+- **(L1) Information-driven characterization is decisive.** The +17.86% Day-0 reaction is driven by HARD INFORMATION: EPS beat +13.7%, FCF +202%, operating margin +120 bps, FY EPS guide raised. Per criterion-4: if the Day-0 reaction is information-driven, "mispricing" is actually correct pricing. The beat-and-raise narrative fully justifies a +17–18% re-rating for a name that had been trading in the $85–$96 range in May (depressed, low-expectations environment). No overshoot required — this is fundamental repricing.
+- **(L2) Day-1 continuation to $116.44 (+3%).** A LONG under-reaction thesis requires evidence that the market systematically under-priced the print on Day-0. Instead, Day-1 continued upward — consistent with ongoing information absorption, NOT under-extrapolation from a lower base.
+- **(L3) LONG continuation = Strategy A territory.** The multi-price expansion thesis (5,900+ stores converting, outperforming legacy format), DoorDash partnership, FCF-powered buybacks, and guide trajectory are multi-quarter narratives resolving over 4+ fiscal quarters. Per B's A-vs-B differentiation: B is post-event mean-reversion on sentiment overshoot; A is multi-quarter narrative continuation. A LONG B thesis here degenerates to: "buy the winning dollar-store format because multi-price expansion will sustain growth" = Strategy A, not B.
+- **(L4) Split sell-side forecloses a clean LONG convergence anchor.** Goldman at Sell/$105, BofA Underperform, Jefferies Underperform $85, BNP Paribas Underperform $98 = meaningful bear cluster. For LONG, the target cluster ($124–$135 bulls) is above the CURRENT PRICE ($109 Day-3) and requires the bears to be wrong on a multi-quarter basis. No B mechanism produces that convergence within 60 days.
+- **(L5) Criterion 3 fails independently.** No admissible in-window convergence target from the closed list for LONG direction (next earnings outside 60 days; no FOMC mechanism; no index inclusion). LONG is doubly foreclosed.
+- **LONG: DECISIVELY DISMISSED.** Information-driven move; Day-1 extension not under-reaction; continuation = Strategy A; split sell-side no clean bull anchor; criterion 3 absent.
+
+**Criterion 4: DECISIVE DUAL-FRAMING FAILURE.** Both SHORT (no overshoot geometry; information-driven) and LONG (information-driven repricing; continuation = A territory; criterion 3 absent) are independently dismissed. ✗
+
+**Sub-pattern routing:** This case does NOT cleanly map to established sub-patterns:
+- NOT SP1 (no ≥3 firms raising PTs ≥20% on bullish ratings; Goldman cut PT)
+- NOT SP3 (no pre-print PT-raise-driven rally absorbing forward narrative; stock was depressed in $85–$97 range pre-print)
+- NOT SP4 (no structural multi-quarter overhang emerging or confirmed)
+- NOT SP5 (no in-window binary catalyst identified)
+- NOT SP6 (not mass PT cuts with ratings maintained on positive-direction event; majority moves are modestly upward)
+- Closest candidate: **candidate sub-pattern 9 (UBER-style split sell-side)** — positive-direction event with meaningfully split sell-side (Goldman cut PT while others modestly raised; Freedom Broker downgraded while raising PT; bears maintained Underperform ratings). Not yet formally established as a confirmed sub-pattern; routing here is by residual exclusion. The decisive mechanism is criterion-4 information-driven characterization + criterion-3 independent failure. **No formal sub-pattern number assigned.** Recording as: **information-driven-positive-reaction / split-sell-side-mixed-cluster / LONG-degenerate-to-A / SHORT-no-overshoot-geometry.**
+
+**Step 5 — Decision:**
+
+**DLTR — NO-GO (DECLINE).** Binding on **criterion-4 dual-framing decisive failure** and **criterion-3 independent failure**:
+
+- **Criterion 4 FAILS:** SHORT dismissed — no overshoot-above-PT-cluster geometry (Day-3 $109 below all bullish PTs $124–$135); information-driven move (EPS beat, FCF +202%, guide raised); partial fade already underway; +25% stop above cluster; B-short string ~50. LONG dismissed — information-driven positive repricing; Day-1 continuation inconsistent with under-reaction; multi-price-expansion continuation thesis = Strategy A territory; split sell-side (Goldman Sell $105, BofA/Jefferies/BNP Paribas Underperform) creates no clean bull anchor within 60 days; criterion-3 independently absent.
+- **Criterion 3 FAILS independently:** Next earnings Q2 FY2027 ~August 2026 = outside 60-day window; no in-window binary named event from closed list; numerical targets either thin-EV/mechanism-mismatch (SHORT) or degenerate-to-A (LONG); FOMC mechanism mismatch; S&P 500 already a member.
+
+**DLTR disposition: NO-GO — information-driven positive reaction / split sell-side mixed cluster / criterion-3 independent failure. Conviction ~80%.**
+
+The ~20% residual: (a) Day-3 $109.39 is 3.3% above Goldman's $105 Sell PT — a scenario where the bears (Goldman, BofA, Jefferies, BNP Paribas) are directionally correct could produce a modest SHORT; however, at ~4% residual downside to $105 with B-short string ~50, thin EV, no admissible criterion-3 convergence target, and a +25% stop above cluster, this does not clear the GO bar; (b) traffic is still -1%, and Q2 guidance caution (tariff/Family Dollar) could disappoint — but this is speculative and multi-quarter, not a B criterion-2 "market reaction is materially over-sized" basis.
+
+**Step 6 — Effect on book:**
+
+No order staged. **B-short string advances ~50 → ~51** per established convention: DLTR is a POSITIVE-direction event, SHORT direction is dismissed under criterion-4 → B-short string extends. **B tally → ~6 GO / ~71 NO-GO** (+1 NO-GO). No Portfolio_Ledger change (no position). No Regime_State / Watchlist / Pending_Analyses modification.
+
+**Calendar event `a7ditkq791c2hbr5d1oijj5j0c`**: NO-GO disposition → **DELETED** per §6 calendar management protocol (NO-GO: delete the event; calendar event had already been "(done)"-marked on 6/1 without a DL entry; this session resolves and deletes).
+
+**Compaction-survival note — DLTR B 2026-06-03:** DLTR Q1 FY2027 print (BMO Thu 2026-05-28; Day-0 CTC **+17.86%**, IBKR-verified $95.87 → $113.00, volume 1.65M = ~3× normal; Day-1 $116.44 +3%; Day-3 $109.39 partial fade) → **Strategy B NO-GO**. Q1 FY27 print: adj EPS $1.74 vs $1.53 cons (+13.7% beat; +38% YoY); revenue $5.0B +7.2% YoY; adj operating margin +120 bps; FCF $392M +202% YoY; FY2026 adj EPS guide RAISED $6.70–$7.10; Q2 FY27 EPS caution −45–50% YoY (tariff/Family Dollar separation). Contract_id 49388062 NASDAQ:DLTR; mcap ~$21.6B. Sell-side Day-0/Day-1 response SPLIT: Goldman cut PT $115→$105 (Sell); Freedom Broker downgraded Buy→Hold +34.8% PT; Guggenheim Buy $130→$135 (+3.8%); Bernstein MP $115→$124 (+7.8%); Morgan Stanley EW $126→$130 (+3.2%); BNP Paribas Underperform $88→$98; Jefferies reiterated Underperform $85. **SP1 NOT triggered** (no ≥3 firms raising PTs ≥20% on bullish ratings; Goldman cut). Criterion-4 decisive dual-framing: SHORT dismissed (no overshoot-above-cluster; Day-3 $109 below $124–$135 bull PTs; information-driven; partial fade already firing; stop at ~$136 above cluster); LONG dismissed (information-driven repricing; Day-1 extension not under-reaction; continuation = Strategy A multi-price-expansion thesis; split sell-side; criterion-3 absent). Criterion-3 independently fails (Q2 next earnings ~August OUTSIDE 60-day window; no admissible in-window closed-list named event). Entry window Day-0 5/28 → Day-10 **2026-06-11**. Sub-pattern: information-driven-positive / split-sell-side-mixed-cluster / no formal SP assignment. **B-short string advances ~50 → ~51 (positive-direction SHORT-dismissal). B tally → ~6 GO / ~71 NO-GO.** Calendar event `a7ditkq791c2hbr5d1oijj5j0c` DELETED (NO-GO). No order. No Portfolio_Ledger / Regime_State / Watchlist change.
+
+**References:** Strategy.md rev 35 (B criteria 1–5; criterion-3 closed-list rev 14; criterion-4 dual-framing information-vs-sentiment; differentiation-from-A; no caps); B_Sub_Pattern_Taxonomy.md (SP1 aggressive-bull-ratification — NOT triggered; SP3 pre-print-rally-absorption — NOT applicable; candidate sub-pattern 9 UBER-style split-sell-side — residual routing context; criterion-4 information-driven mechanism); Operating_Protocols.md §2, §3, §8, §9, §10, §11; Regime_State.md (A router DO-NOT-ACTIVATE; B router ACTIVATE); Watchlist.md (DLTR absent from A-queue); IBKR connector contract_id 49388062 NASDAQ:DLTR (search_contracts confirmed; price_history ONE_MONTH ONE_DAY — May 27 close $95.87 [Day-(-1)] / May 28 close $113.00 [Day-0 CTC +17.86%] / May 29 $116.44 [Day-1] / Jun 1 $111.35 [Day-2] / Jun 2 $109.39 [Day-3]; volume 1,651,269 on Day-0); get_account_summary (B NAV $9,462.36 confirmed 2026-06-03); Tavily research: TIKR 2026-05-29 "Dollar Tree Stock Surged 17% After Q1 2026 Earnings" (EPS $1.74 vs $1.54 cons; revenue $4.98B +7.2%; adj op margin +110 bps; FCF $392M; FY26 guide $6.70–$7.10); AllInvestView DLTR Q1 2026 Recap (Day-0 +21.5% intraday; +13.7% EPS surprise; comp sales +3.5% ticket +4.5% traffic −1%); Motley Fool DLTR Q1 2026 Earnings Transcript (CFO Glendinning FCF commentary; share repurchase $595M Q1; traffic 2-year stack improved 200 bps); MarketBeat DLTR forecast 2026-05-29 (Guggenheim $130→$135 Buy; Bernstein $115→$124 MP; Morgan Stanley $126→$130 EW; Goldman $115→$105 Sell; BNP Paribas $88→$98 Underperform; Jefferies reiterated Underperform $85; Gordon Haskett $90→$100; BofA Underperform reiterated; Truist maintained Buy; Freedom Broker downgrade Buy→Hold $92→$124); Chartmill DLTR analyst ratings 2026-05-29 (rating actions confirmed; Barclays Overweight maintained pre-print); GuruFocus 2026-05-28 Freedom Broker downgrade Buy→Hold $92→$124 (+34.8%); Benzinga DLTR analyst ratings (pre-print Piper Sandler 5/26 $116→$101 Neutral; UBS 5/22 $138→$132 Buy; consensus PT $115.9 from 21 analysts); Globe and Mail DLTR Q1 2026 press release (net sales $5.0B; operating income $473.3M +23%; adj EPS $1.74 +38% YoY; FY26 adj EPS guide $6.70–$7.10; 113 new stores; 630 multi-price format conversions; $595M buybacks Q1; $1B cash + $1.3B remaining buyback auth); Google Calendar MCP (event `a7ditkq791c2hbr5d1oijj5j0c` confirmed present and DELETED per NO-GO protocol; D3 5/31 deferral annotation "(done)"-marked on 6/1 without DL entry; this session = terminal resolution).
