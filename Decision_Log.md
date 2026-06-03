@@ -13356,3 +13356,132 @@ NO-GO; no order staged; no `[Claude] Confirm order` calendar event created; no P
 **Compaction-survival note — PLAB B 2026-06-02:** PLAB Q2 FY2026 (Day-0 2026-05-28; CTC −36.4%; IBKR-verified $53.51 → $34.02) → **Strategy B NO-GO** — criterion-1 mechanical gate fail (mcap ~$1.946B < $2B floor; current price $33.13 × 58,745K diluted shares). No order. B tally → ~6 GO / ~69 NO-GO; B-short string UNCHANGED at ~50. No calendar event to delete (original event `7e1ssfst7lv1u33po9rjnb79ok` was soft-deleted 2026-05-28 with no DL entry; D3 5/31 and D2 6/1 did not create a replacement; this D2 6/2 session provides the terminal disposition).
 
 **References:** Strategy.md criterion-1 instrument rule (mcap ≥ $2B); Operating_Protocols §10 (criterion-1 mechanical gate precedent); Decision_Log.md AGL/TDOC/FIVN/BSX mechanical-gate NO-GOs (string unchanged); IBKR connector contract_id 273165 NASDAQ:PLAB (search_contracts confirmed; price_history ONE_MONTH ONE_DAY — May 27 $53.51 prior close / May 28 $34.02 Day-0 close / Jun 2 $33.13 current; snapshot last/prior-close/change/avg-90d-usd-volume confirmed); stocktitan.net Q2 FY2026 earnings release (diluted shares 58,745K; Q2 FY2026 = quarter ended ~May 2026; revenue $209.9M; diluted EPS $0.54); SEC 10-Q EDGAR filing 2026-02-01 (common shares issued and outstanding 58,108K as of Feb 1, 2026; cross-reference); Form 144 Mar 2026 EDGAR (58,966,394 shares outstanding — upper-bound cross-check).
+
+---
+
+### [2026-06-03] Strategy B — BSX (Boston Scientific Corp, NYSE:BSX) Bernstein Conference guidance-cut thesis construction — NO-GO (criterion-4 dual-framing decisive failure; Sub-Pattern 4 hybrid 4c+4b+4a; information-driven structural-overhang-persistence; corroborated by 2026-05-28 prior-session disposition)
+
+**Trigger:** D2 2026-06-03 execution. Calendar event `q11247cb4hnvm11i3stodmk8kg` was soft-deleted after the 2026-05-28 prior session (BSX Day-0 was 2026-05-27; the 2026-05-28 session delivered a complete NO-GO disposition). This session is the D2 2026-06-03 closing-of-record entry under Operating_Protocols §9 (deferral discipline — no re-deferral; earliest resolvable window). Today is Day-5 of the 10-trading-day entry window (window: Day-0 May 27 → Day-10 June 11). The prior-session 2026-05-28 analysis is independently corroborated by this session's IBKR price verification and Tavily research; all five criteria yield the same disposition.
+
+**Book context:** B NAV ~$9,462 (2% ≈ $189/position). Open B positions: HCA, ZBRA, BRC, TJX, AZO (5 longs). B-short string ~50 (per DELL 2026-06-02 positive-direction SHORT-dismissal extension). B tally ~6 GO / ~69 NO-GO (pre-this-entry). A router = DO-NOT-ACTIVATE (Regime_State.md; confirmed 2026-06-01 M1b). D book: RTX + DIS (no BSX D position).
+
+**Step 0 — IBKR price verification (contract_id 5270, NYSE:BSX; price_history ONE_MONTH ONE_DAY; snapshot 2026-06-03):**
+
+| Date | Close | Volume | Day |
+|------|-------|--------|-----|
+| 2026-05-22 | $57.78 | 3,525,536 | Day-(5) |
+| 2026-05-26 | $57.64 | 4,067,295 | Day-(-1) |
+| 2026-05-27 | $50.46 | **9,098,716** | **Day-0** |
+| 2026-05-28 | $49.11 | 9,743,797 | Day-1 |
+| 2026-05-29 | $48.31 | 10,949,179 | Day-2 |
+| 2026-06-01 | $47.98 | 6,178,406 | Day-3 |
+| 2026-06-02 | $47.68 | 8,015,090 | Day-4 |
+| 2026-06-03 | ~$47.73 (live) | — | Day-5 |
+
+**CTC (Day-0):** ($50.46 − $57.64) / $57.64 = **−12.46%** (IBKR-authoritative). Negative-direction event. Volume 9.1M = anomalous vs. ADV (avg-90d-usd-volume = $869,764,373; implied average daily shares ~17.2M at ~$50 — volume spike is large but consistent with institutional exit on the conference event). **Zero bounce in 5 trading days** (Day-0 $50.46 → Day-4 $47.68 → Day-5 ~$47.73): stock grinding to new 52-week lows (52w low $47.355 per IBKR misc-statistics; 52w high $109.50; stock −56.6% from 52w high). Qualifies as Strategy B trigger event.
+
+**Step 1 — A-queue gate:** BSX not in the A-queue (Watchlist.md confirmed; A-queue contains CAT/LLY/QCOM/AAPL/DDOG/AKAM/NVDA/CSCO/AMAT/HD/TGT/WMT/AVGO/ORCL/ADBE/MU/INTC/NBIS/CRM/DELL/SNOW/MRVL/NTAP/OKTA/NOW/HPE/SMCI/AMD/IBM/PANW/CRWD — BSX absent). No D position in BSX. Criterion 5 clears; A-router is DO-NOT-ACTIVATE in any case. **A-queue gate: PASS.**
+
+**Step 2 — Catalyst identification and sell-side characterization:**
+
+Qualifying event: **Bernstein Annual Healthcare Conference, May 27, 2026, 8:00 AM ET** (pre-market). BSX management (CEO Mike Mahoney + CFO Dan Brennan) delivered incremental guidance commentary — a qualifying "investor-conference guidance update" under Strategy B criterion-1 event classification. Key disclosures:
+
+- **WATCHMAN (LAA closure device) sequential volume flat Q1→Q3 guidance:** Management indicated WATCHMAN volumes were flat from Q1 through Q3, with no acceleration. This was a surprise given consensus had modeled continued procedure-volume ramp. First-ever confirmation of volume plateau since WATCHMAN's high-growth phase.
+- **JNJ Varipulse competitive threat acknowledged:** BSX explicitly acknowledged Johnson & Johnson's Varipulse pulsed-field ablation (PFA) platform with CARTO integration gaining EP lab share. JNJ Varipulse is being adopted by high-volume EP centers that were formerly loyal BSX (FARAPULSE) accounts. This is a structural competitive displacement rather than a transient share-shift.
+- **Full-year guidance cut:** BSX reduced FY2026 organic revenue growth guidance — the implied CTC of −12.46% on anomalous volume (vs. prior close $57.78 on May 22) confirms the market interpreted the conference as a material negative guidance update.
+- **ACCOLADE pacemaker recall overhang:** Pre-existing FDA-mandated safety communication / recall-level action on ACCOLADE class of devices; incremental negative channel-checks from Stifel referenced field-force disruption.
+
+**Post-event sell-side reaction (Tavily-verified; sources below):**
+- Daiwa Capital Markets: **DOWNGRADE** (Hold → Underperform); PT cut to ~$50–52.
+- Bank of America: PT cut to **$68** (prior $80–85); maintained Buy.
+- Citi: PT cut to **$70** (prior ~$80); maintained Neutral/Buy.
+- Stifel Nicolaus: PT cut to **$75** (prior ~$95); maintained Buy.
+- Canaccord Genuity: PT cut to **$70** (prior ~$85); maintained Buy.
+- Leerink Partners: PT cut (magnitude not confirmed in-session; maintained Outperform).
+- No analysts upgraded or raised PT post-event.
+
+**SP4 routing:** Mass PT cuts with maintained bullish ratings = sell-side acknowledging the negative information while preserving constructive thesis (not a capitulation/downgrade wave). Stock trading BELOW ALL analyst PTs ($47.73 vs. cluster floor $50 Daiwa / $68 BofA / $70 Citi+Canaccord / $75 Stifel) = SP7 geometry (stock below cut-PT-cluster). Negative-direction event (CTC −12.46%) = SP4 structural-overhang-persistence, NOT SP1 (positive-direction) or SP6 (positive-direction mass PT cuts). Sub-pattern routing: **SP4 hybrid 4c+4b+4a** (investor-conference guide-cut on pre-existing triple overhang: 4c = competitive-macro demand guide-cut via conference; 4b = JNJ Varipulse structural competitive threat; 4a = pre-existing WATCHMAN/EP regulatory-class + ACCOLADE recall). SP7 geometry SUPPORTS criterion-4 LONG-foreclosure but does not create a standalone convergence target. Pattern N (negative-direction cross-sectional peer confirmation: competitors GAINING where BSX is LOSING — JNJ benefiting from BSX EP share loss) SUPPORTS structural information-driven repricing; not a sentiment overshoot.
+
+**Step 3 — Five-criterion analysis:**
+
+**Criterion 1 — Instrument eligibility (mcap ≥ $2B, ADV ≥ $10M, CTC ≥ 5% qualifying event):**
+- CTC: −12.46% ≥ 5% threshold ✓
+- Event class: Bernstein Conference investor-conference guidance update = qualifying event ✓
+- Mcap: BSX diluted shares ~1.484B (large-cap medical device; market cap ~$70B even at $47.73 × 1.484B) >> $2B floor ✓
+- ADV: IBKR avg-90d-usd-volume $869,764,373 >> $10M floor ✓
+- **Criterion 1: CLEARS.** ✓
+
+**Criterion 2 — Entry window (≤10 trading days from Day-0):**
+- Day-0: May 27, 2026.
+- Window count: Day-1=May 28, Day-2=May 29, Day-3=June 1, Day-4=June 2, Day-5=June 3 (today), Day-6=June 4, Day-7=June 5, Day-8=June 8, Day-9=June 9, Day-10=June 11.
+- Today (June 3) = Day-5. Window closes June 11. 5 trading days remain.
+- **Criterion 2: CLEARS.** ✓ (Non-binding given criteria 3 and 4 decisive failures.)
+
+**Criterion 3 — Admissible convergence target (closed-list, ≤60 calendar days from Day-0):**
+
+Closed-list check (rev 14; from Day-0 May 27, 2026; 60-day window = on or before July 26, 2026 Saturday → last trading day July 25, 2026 Friday):
+
+1. **Numerical price target:** Under SP4, a numerical PT is NOT admissible as a convergence target — the mechanism is structural-overhang-persistence, not a PT-reversion thesis. The stock is BELOW all analyst PTs, so any PT as target degenerates to a Strategy A multi-quarter price-appreciation thesis (outside B's event-driven convergence framework). **INADMISSIBLE under SP4.**
+2. **Next earnings (Q2 2026):** BSX Q2 2026 earnings scheduled **July 29, 2026**. Day-0 May 27 + 60 calendar days = July 26 (Saturday) → last admissible trading day = **July 25 (Friday)**. July 29 = 3 trading days OUTSIDE the window. **FAILS: 3 days outside 60-day limit. INADMISSIBLE.**
+3. **Next FDA decision:** No BSX product has a PDUFA-style binary FDA decision date within the 60-day window (July 25). The ACCOLADE overhang is a recall/safety-communication action, not a binary decision date. Pre-existing EP/WATCHMAN regulatory posture is structural, not a pending binary approval catalyst. **INADMISSIBLE — no qualifying FDA binary in-window.**
+4. **Next FOMC:** Next FOMC meeting is July 29–30, 2026. This is within 60 days, but BSX's CTC was driven by company-specific EP competitive + WATCHMAN demand information — no mechanism exists by which FOMC convergence resolves BSX's product-specific overhang. FOMC as convergence target requires a rate-sensitive mechanism that is absent here. **INADMISSIBLE — mechanism mismatch.**
+5. **S&P 500 / Russell 1000 / Nasdaq 100 inclusion:** BSX is already a member of the S&P 500 and Russell 1000. No pending inclusion event to serve as convergence catalyst. Nasdaq 100 = Nasdaq-listed only; BSX is NYSE-listed. **INADMISSIBLE.**
+
+**No admissible criterion-3 convergence target exists. Criterion 3: FAILS DECISIVELY.** The analysis proceeds to criterion 4 for completeness and B-short string determination, but the disposition is already NO-GO on criterion 3 alone.
+
+**Criterion 4 — Dual-framing (no decisive flaw in LONG OR SHORT):**
+
+*LONG framing (undershoot / under-reaction to positives):*
+The LONG thesis requires: (a) the Day-0 decline was an over-reaction to transient/misread information, creating a recoverable undershoot; (b) the stock will converge back toward prior price levels within the window.
+
+**Decisive LONG failure — information-driven repricing:**
+- The Bernstein Conference guidance contained specific, incremental, management-confirmed negative information: (i) WATCHMAN sequential flat Q1–Q3 (demand inflection, first-ever; not misread), (ii) JNJ Varipulse EP competitive displacement (structural; not transient), (iii) ACCOLADE recall field-disruption (ongoing; not resolved).
+- IBKR price action confirms zero mean-reversion over 5 trading days: $50.46 → $49.11 → $48.31 → $47.98 → $47.68 → $47.73 today. Stock is at/near 52-week low ($47.355). No bounce. This is the opposite of an undershoot pattern (which shows a V-shape or early stabilization).
+- Sell-side mass PT cuts confirm the fundamental repricing thesis (analysts cut targets $10–$20+ across the board while maintaining ratings). Information was real and material.
+- SP7 geometry (stock BELOW all analyst PT cuts) confirms this is not an overshoot-below-fair-value setup — analysts revised fair value DOWN to $50–$75, and the stock is BELOW even the most bearish cut ($50 Daiwa). This is not a bounce-to-PT convergence; it is a stock seeking a new equilibrium below revised consensus.
+- GEHC/MDT med-device guidance-cut base rate (per 2026-05-28 prior session): guidance cuts in med-device sustain rather than revert within 60 days. Historical base rate supports continued pressure, not mean-reversion.
+- **LONG: DECISIVE FAILURE.** Cannot frame an undershoot / under-reaction thesis.
+
+*SHORT framing (overshoot / over-reaction to negatives):*
+The SHORT thesis requires: (a) the Day-0 decline was an excessive over-reaction to information that will partially reverse; (b) the stock is positioned above a convergence anchor (above PT cluster floor, above fair value), enabling a SHORT-to-convergence trade.
+
+**Decisive SHORT failure — no overshoot structure:**
+- Stock is BELOW all analyst PTs ($47.73 vs. $50 Daiwa floor, $68 BofA, $70 Citi+Canaccord, $75 Stifel). A SHORT overshoot requires the stock to trade ABOVE the PT cluster, creating a reversion target. The opposite geometry applies here: stock is below the most bearish analyst target.
+- No sell-side capitulation / rating-cut wave that would mark a sentiment extreme. Analysts maintained Buy/Outperform ratings while cutting PTs, indicating they believe the stock is already oversold relative to their (reduced) fair value estimates.
+- No short-interest positioning data indicating crowded short (no Tavily-confirmed short-squeeze catalyst).
+- Day-0 move of −12.46% on a LARGE-CAP ($70B) stock is severe but not a textbook overshoot: the information (EP competitive displacement + WATCHMAN demand plateau) was genuinely negative and has structural duration.
+- **SHORT: DECISIVE FAILURE.** Cannot frame an overshoot / over-reaction thesis.
+
+**Criterion 4: DECISIVE DUAL-FRAMING FAILURE** — both LONG and SHORT framings are dismissed by decisive information-driven SP4 structural overhang evidence. ✗
+
+**Criterion 5 — No concurrent A position in BSX:**
+A router = DO-NOT-ACTIVATE; no A positions open; BSX not on A queue. **Criterion 5: CLEARS.** ✓ (Non-binding.)
+
+**Step 4 — Sub-pattern routing summary:**
+
+Primary: **SP4 hybrid 4c+4b+4a** (structural-overhang-persistence):
+- **4c (investor-conference guide-cut on macro+competitive overhang):** Bernstein Conference guidance update = investor-conference catalyst (not a formal print); pre-existing macro/competitive pressures (JNJ/PFA competition + WATCHMAN saturation + ACCOLADE recall) confirmed and incremented.
+- **4b (structural competitive threat):** JNJ Varipulse / CARTO integration = named, acknowledged, EP-lab-adopting competitive displacement. Not a transient share-shift; BSX explicitly confirmed losing high-volume EP accounts.
+- **4a (regulatory/recall class overhang):** ACCOLADE pacemaker recall + WATCHMAN FDA safety communication posture = pre-existing regulatory-class overhang confirmed ongoing.
+
+Supporting: **SP7 geometry** (stock BELOW cut-PT-cluster = secular-impairment overlay; supports LONG foreclosure).
+
+Supporting: **Pattern N** (negative-direction cross-sectional: JNJ gaining EP share where BSX is losing; corroborates company-specific information-driven repricing rather than sector-wide sentiment).
+
+Sub-patterns NOT applicable: SP1 (positive-direction), SP3 (pre-print rally — event is negative-direction conference, no pre-event gap-up), SP5 (no in-window binary catalyst), SP6 (positive-direction sell-side reset), SP8 (bearish-positioning-unwind — stock is at 52w low, no unwind geometry).
+
+**Corroboration from prior session:** Decision_Log 2026-05-28 BSX NO-GO entry reached the identical disposition (criterion-4 dual-framing decisive failure; SP4 hybrid 4c+4b+4a; NO-GO conviction ~high) with the same sub-pattern routing. This D2 2026-06-03 session independently verifies via fresh IBKR data (5 days of continued pressure to 52w low, zero bounce) and confirms the prior disposition is structurally sound. No new information contradicts the 2026-05-28 analysis; the 5-day post-event price action actively corroborates it.
+
+**Decision: NO-GO. Conviction: ~92%.**
+
+Decisive basis: criterion-4 dual-framing failure (information-driven structural-overhang-persistence; SP4 hybrid 4c+4b+4a). Criterion-3 independently fails (Q2 July 29 = 3 days outside 60-day window; no admissible closed-list in-window event). Conservative-default: NO-GO is correct even without the criterion-3 failure.
+
+**Effect on book:**
+- No order staged. No calendar event to create (NO-GO; confirmed disposition; no replacement event needed; original `q11247cb4hnvm11i3stodmk8kg` was soft-deleted after 2026-05-28).
+- **B-short string: UNCHANGED at ~50.** BSX is a NEGATIVE-direction event (CTC −12.46%; criterion-4 LONG-framing also fails). Negative-direction events do NOT extend the B-short string. The B-short string tracks consecutive positive-direction SHORT-dismissals only.
+- **B tally → ~6 GO / ~70 NO-GO** (+1 NO-GO from BSX 2026-06-03).
+- No Portfolio_Ledger.md change (no position). No Regime_State / Watchlist / Pending_Analyses modification.
+
+**Compaction-survival note — BSX B 2026-06-03:** BSX Bernstein Conference 2026-05-27 guidance-cut (Day-0 CTC −12.46%; $57.64 → $50.46; 5-day post-event trajectory $50.46 → $47.68 with zero bounce; 52-week low $47.355) → **Strategy B NO-GO**, criterion-4 dual-framing decisive failure (SP4 hybrid 4c+4b+4a: investor-conference guide-cut on WATCHMAN demand plateau + JNJ Varipulse structural EP competitive displacement + ACCOLADE recall overlay; SP7 geometry stock below all analyst PTs $50–$75; Pattern N cross-sectional JNJ/PFA peer confirmation). Criterion-3 independently fails (Q2 July 29 = 3 days outside 60-day window; no admissible closed-list in-window target). Prior session 2026-05-28 reached identical disposition; this session corroborates. No order. B tally → ~6 GO / ~70 NO-GO; B-short string UNCHANGED at ~50 (negative-direction event; string tracks positive-direction SHORT-dismissals only). Calendar `q11247cb4hnvm11i3stodmk8kg` soft-deleted 2026-05-28; no replacement needed.
+
+**References:** Strategy.md rev 35 (B criteria 1–5; criterion-1 event classes including investor-conference guidance update; criterion-3 closed-list rev 14; criterion-4 dual-framing; no sector/count caps); B_Sub_Pattern_Taxonomy.md (SP4 structural-overhang-persistence: 4a regulatory, 4b competitive-threat, 4c guide-cut-on-macro — V/MDLZ/STLA/UPS/NCLH/TSN prior instances; SP7 EL-pattern stock-below-cut-PT-cluster; Pattern N negative-direction cross-section); Operating_Protocols.md §2, §3, §8, §9, §10, §11; Regime_State.md (A router DO-NOT-ACTIVATE confirmed 2026-06-01 M1b; B router ACTIVATE); Watchlist.md (BSX absent from A-queue confirmed); Decision_Log 2026-05-28 BSX NO-GO (prior-session disposition; same routing; criterion-4 decisive dual-framing; SP4 hybrid 4c+4b+4a; B-short string ~38→~39 at that time — now ~50 post-intervening positive-direction extensions); IBKR connector contract_id 5270 NYSE:BSX (price_history ONE_MONTH ONE_DAY — May 26 $57.64 / May 27 $50.46 [Day-0 CTC −12.46%] / May 28 $49.11 / May 29 $48.31 / Jun 1 $47.98 / Jun 2 $47.68; snapshot Jun 3 last $47.73 / prior-close $47.68 / avg-90d-usd-volume $869,764,373 / 52w-low $47.355 / 52w-high $109.50); Tavily research (Bernstein Annual Healthcare Conference May 27, 2026; BSX management guidance commentary; post-event sell-side PT cuts: Daiwa downgrade, BofA $68, Citi $70, Stifel $75, Canaccord $70, Leerink; JNJ Varipulse CARTO competitive displacement; WATCHMAN sequential flat volume Q1–Q3; ACCOLADE recall field-disruption; GEHC/MDT med-device guidance-cut base rate).
