@@ -13629,4 +13629,172 @@ No order staged. **B-short string advances ~50 → ~51** per established convent
 
 **Compaction-survival note — DLTR B 2026-06-03:** DLTR Q1 FY2027 print (BMO Thu 2026-05-28; Day-0 CTC **+17.86%**, IBKR-verified $95.87 → $113.00, volume 1.65M = ~3× normal; Day-1 $116.44 +3%; Day-3 $109.39 partial fade) → **Strategy B NO-GO**. Q1 FY27 print: adj EPS $1.74 vs $1.53 cons (+13.7% beat; +38% YoY); revenue $5.0B +7.2% YoY; adj operating margin +120 bps; FCF $392M +202% YoY; FY2026 adj EPS guide RAISED $6.70–$7.10; Q2 FY27 EPS caution −45–50% YoY (tariff/Family Dollar separation). Contract_id 49388062 NASDAQ:DLTR; mcap ~$21.6B. Sell-side Day-0/Day-1 response SPLIT: Goldman cut PT $115→$105 (Sell); Freedom Broker downgraded Buy→Hold +34.8% PT; Guggenheim Buy $130→$135 (+3.8%); Bernstein MP $115→$124 (+7.8%); Morgan Stanley EW $126→$130 (+3.2%); BNP Paribas Underperform $88→$98; Jefferies reiterated Underperform $85. **SP1 NOT triggered** (no ≥3 firms raising PTs ≥20% on bullish ratings; Goldman cut). Criterion-4 decisive dual-framing: SHORT dismissed (no overshoot-above-cluster; Day-3 $109 below $124–$135 bull PTs; information-driven; partial fade already firing; stop at ~$136 above cluster); LONG dismissed (information-driven repricing; Day-1 extension not under-reaction; continuation = Strategy A multi-price-expansion thesis; split sell-side; criterion-3 absent). Criterion-3 independently fails (Q2 next earnings ~August OUTSIDE 60-day window; no admissible in-window closed-list named event). Entry window Day-0 5/28 → Day-10 **2026-06-11**. Sub-pattern: information-driven-positive / split-sell-side-mixed-cluster / no formal SP assignment. **B-short string advances ~50 → ~51 (positive-direction SHORT-dismissal). B tally → ~6 GO / ~71 NO-GO.** Calendar event `a7ditkq791c2hbr5d1oijj5j0c` DELETED (NO-GO). No order. No Portfolio_Ledger / Regime_State / Watchlist change.
 
+---
+
+### [2026-06-03] Strategy B — HRL Q2 FY2026 print — NO-GO (criterion-4 dual-framing decisive failure; information-driven positive relief rally; candidate SP8 routing; criterion-3 thin/degenerate)
+
+**Ticker:** HRL (Hormel Foods Corp) — NYSE — contract_id 8153
+**Day-0:** 2026-05-28 (positive direction, CTC +12.55%)
+**Entry window:** 2026-05-28 → 2026-06-11 (Day-10; skip weekends; Juneteenth 6/19 outside window)
+**Sub-pattern:** Candidate SP8 — pre-print-bearish-positioning-unwind on modest-confirmation print (depressed stock, sell-side downgrades pre-print, relief rally sentiment-driven)
+**Analysis date:** 2026-06-03
+
+**Trigger:** D2 2026-06-03 execution. Calendar event `kk18hcin97et0kii0eafad1ps8` (titled "[Claude] Thesis construction — HRL B") was created by D3 5/31 as a rest-tier deferral, rescheduled to Mon 2026-06-01 17:30 MT, and marked "(done)(done)" without a Decision_Log disposition. This session is the terminal resolution per Operating_Protocols §9 (no re-deferral; deferrals do not chain; resolve GO/NO-GO/conservative-default here). HRL Q2 FY2026 print (fiscal Q2 ending April 26, 2026) reported AMC Tue 2026-05-27 (5:41 PM ET per 247wallst/SEC source); Day-0 = Wed 2026-05-28.
+
+**Book context:** B NAV ~$9,462 (2% ≈ $189/position; confirmed via IBKR `get_account_summary` net_liquidation $9,462.36). Open B positions: HCA, ZBRA, BRC, TJX, AZO (5 longs). B-short string ~51 (per DLTR 2026-06-03 positive-direction SHORT-dismissal extension). B tally ~6 GO / ~71 NO-GO (pre-this-entry). A router = DO-NOT-ACTIVATE (Regime_State.md; confirmed 2026-06-01 M1b).
+
+**Step 0 — Day-0 verification and CTC (IBKR connector, contract_id 8153 NYSE:HRL):**
+
+| Date | Close | Volume | Day |
+|------|-------|--------|-----|
+| 2026-05-22 | $21.24 | 1,239,284 | Day-(4) |
+| 2026-05-26 | $20.89 | 1,537,642 | Day-(3) |
+| 2026-05-27 | **$20.96** | 2,047,477 | **Day-(-1) pre-print ref (print AMC)** |
+| 2026-05-28 | **$23.59** | **2,475,790** | **Day-0 (first session post-AMC print)** |
+| 2026-05-29 | $23.23 | **19,403,108** | Day-1 (massive volume anomaly — see note) |
+| 2026-06-01 | $23.35 | 2,130,857 | Day-2 |
+| 2026-06-02 | $23.35 | 1,340,612 | Day-3 |
+| 2026-06-03 | ~$23.35 (live) | — | Day-4 (today) |
+
+**Note on May 29 volume anomaly:** Day-1 volume of 19.4M shares is approximately 10–15× normal (avg daily volume ~1.2–1.5M per IBKR). Despite massive volume, price only moved −1.53% ($23.59 → $23.23). This volume spike on near-flat price is characteristic of index rebalancing or large institutional block (S&P 500 constituent; Russell 1000 rebalancing window or MSCI rebalancing). It does NOT represent a new Day-0 event — there was no qualifying catalyst on 2026-05-29 (no earnings print, no FDA, no guidance update, no regulatory action). Day-0 remains 2026-05-28 per the AMC May 27 print (247wallst "Reported May 27, 2026 at 5:41 PM ET").
+
+**CTC (Day-0):** ($23.59 − $20.96) / $20.96 = **+12.55%** (IBKR-authoritative, positive direction). Volume on Day-0: 2.475M = ~1.7× 30-day avg (~1.4M) — elevated but not extreme. Globe and Mail cross-confirms "HRL closed that day at $23.78, up 13.4%, on volume of 7.3 million shares" (slight discrepancy on close vs IBKR $23.59; IBKR authoritative; ~12.5–13.4% range consistent).
+
+**Mcap and ADV:** HRL mcap ~$12.6B at Day-0 close (534M shares × $23.59 approx; Consumer Staples / Packaged Foods large-cap); >> $2B floor (6.3× floor). ADV IBKR avg-90d-usd-volume at ~$1.2–1.5M shares/day × ~$21–24 = ~$25–36M/day >> $10M floor. **Criterion 1 instrument rule: CLEARS on all metrics.**
+
+**Step 1 — A-queue gate (Criterion 5):**
+
+HRL is NOT in the Strategy A queue (Watchlist.md confirmed — HRL absent from the A-queue list). No A position open in HRL. A router = DO-NOT-ACTIVATE. **Criterion 5: CLEARS** — not a terminal gate; A-queue absent.
+
+**Step 2 — Q2 FY2026 print summary (AMC Tue 2026-05-27; primary sources: Hormel IR press release / prnewswire / 247wallst / grocerytradenews / marketbeat):**
+
+- **Net sales:** $2.97B (+2.6% YoY); organic net sales growth +3%
+- **Adjusted diluted EPS:** $0.40 vs consensus $0.35 — **+14.3% beat** (GAAP EPS $0.29 due to $61M loss on whole-bird turkey divestiture)
+- **Adjusted operating margin:** 9.9%, +80 bps YoY (gross margin 17.4%, +70 bps)
+- **Segment performance:** Foodservice +6% net sales (+7% organic), 11th consecutive quarter organic growth, profit +11%; Retail profit +13% despite slight volume decline; International +high-single-digits organic
+- **Cash flow from operations:** $178.9M (up from $56.4M prior year — +217%)
+- **Portfolio action:** Completed sale of whole-bird turkey business (previously announced); $61M divestiture loss recorded
+- **FY2026 guidance:** Adj EPS REAFFIRMED $1.43–$1.51 (4–10% growth); net sales REAFFIRMED $12.2–$12.5B; GAAP EPS UPDATED $1.28–$1.37 (reflecting turkey-loss one-time charge)
+- **Q3 headwinds flagged:** Cost headwinds expected in Q3/H2 from geopolitical-driven fuel/logistics pressures (though Q2 only saw partial impact; team cited pricing and mix offset capacity)
+- **Dividend:** 391st consecutive quarterly payout ($161M returned); no dividend change announced
+
+**Character of print:** Beat-and-reaffirm. Not beat-and-raise. The EPS beat is real and meaningful (+14.3% adj) but guidance was REAFFIRMED, not raised. The $61M turkey-divestiture loss weighs on GAAP but is one-time and previously announced. Organic growth of +3% is modest. Q3 headwind commentary introduces forward uncertainty. This is a MODEST POSITIVE print — relief relative to a depressed stock/expectations, not a transformational beat.
+
+**Step 3 — Sell-side reaction (Day-0 and Day-1; primary sources: Benzinga / MarketBeat / chartmill):**
+
+| Date | Firm | Action | Rating | PT Change |
+|------|------|--------|--------|-----------|
+| 05/29/2026 | B of A Securities | Maintains | Neutral | $23 → $25 (+8.7%) |
+| 05/29/2026 | Stephens & Co. | Maintains | Equal-Weight | $22 → $25 (+13.6%) |
+| (pre-print 05/21) | Stephens & Co. | Maintains | Equal-Weight | $27 → $22 (−18.5% CUT) |
+| (pre-print 04/09) | JPMorgan | **Downgrade** | Overweight → **Neutral** | $28 → $23 (−17.9%) |
+
+Post-print sell-side response: **Only 2 firms updated post-print (BofA +8.7%; Stephens +13.6%), both modest raises with Neutral/Equal-Weight ratings. No upgrades. No firm raised PT ≥20%.** Broader consensus PT cluster (pre/stale): ChartMill cites 15-analyst mean PT $28.03, median $27.54, high $31.50, low $24.24. TickerNerd cites 3-analyst median PT $26, range $23–$30, with 3 Buy / 7 Hold / 0 Sell. Current HRL stock ~$23.35 trades:
+- ABOVE pre-event close $20.96 (+11.4% from pre-print)
+- AT or modestly BELOW the immediate post-print 2-firm PT cluster ($25 BofA/Stephens = +7.0% above $23.35)
+- WELL BELOW the broader stale consensus ($28.03 mean = +20.1% above $23.35 — but these PTs are stale pre-print and have NOT been updated en masse post-print)
+
+**SP1 gate (≥3 firms raise PTs ≥20% on bullish-rated positive-direction event): NOT triggered.** Only 2 firms raised, at +8.7% and +13.6%. No upgrades. No sell-side bull-ratification wave.
+
+**Pre-print sell-side context:** Stephens cut $27→$22 one week before print (5/21); JPM downgraded Overweight→Neutral in April (4/9). Stock had been in a sustained downtrend from low-$30s to ~$21 over the preceding 12 months. This is a classic SP8 setup: pre-print bearish sell-side positioning (PT cuts, downgrades ahead of print) + depressed stock (trading near multi-year low $20.96) + modest print beat + sentiment-driven relief rally.
+
+**Step 4 — Full criterion-by-criterion analysis:**
+
+**Criterion 1 — PASS:**
+- CTC: +12.55% ≥ 5% threshold ✓ (2.51× floor; positive direction)
+- Event class: Q2 FY2026 earnings print AMC (qualifying event class) ✓
+- Mcap: ~$12.6B >> $2B floor ✓
+- ADV: ~$25–36M/day >> $10M floor ✓
+- **Criterion 1: PASS** ✓
+
+**Criterion 2 — Entry window:**
+- Day-0: 2026-05-28
+- Trading days: 5/28 D0, 5/29 D1, 6/1 D2, 6/2 D3, 6/3 D4 (today), 6/4 D5, 6/5 D6, 6/8 D7, 6/9 D8, 6/10 D9, **6/11 D10** (Juneteenth 6/19 outside window)
+- Today (6/3) = Day-4. Window closes **2026-06-11** (10 trading days from Day-0). 6 trading days remain.
+- **Criterion 2: CLEARS** ✓ (non-binding given criterion 4 decisive failure)
+
+**Criterion 3 — Admissible convergence target (closed-list rev 14; ≤60 calendar days from Day-0 May 28; window on or before July 27, 2026):**
+
+1. **Numerical price target:** LONG: Post-print 2-firm PT cluster = $25 (BofA Neutral / Stephens EW) = only +7.0% above current $23.35. This is below the minimum threshold for a defensible B convergence target (historically "gap-fill" convergence targets in B thesis range from 25%–100% of the Day-0 move; a $25 target = only ~54% gap-fill of the $2.63 Day-0 move from $20.96 → $23.59, and the stock is ALREADY at $23.35 — meaning only $0.65 of the $25 gap-fill remains). Stale broader consensus PTs (~$28) are pre-print and have NOT been confirmed or updated by the full analyst community post-print; using a stale-cluster target that has not been ratified post-print is a degenerate anchor (BKE/VTRS-style). SHORT: Pre-event close $20.96 as convergence target implies −10.2% downside from current $23.35 — but this is post-print equilibrium territory, not a mean-reversion setup (stock has been range-bound $23.23–$23.59 for 4 trading days since the print). No clean numerical target for either direction meets B's criterion-3 specificity requirement without degenerating into a stale anchor or thin-EV.
+
+2. **Next earnings (Q3 FY2026):** ChartMill cites Q3 FY26 estimated EPS period with release date "N/A" — HRL's fiscal Q3 ends July 2026, print expected late August 2026. August >> July 27 window. **OUTSIDE 60-day window. INADMISSIBLE.**
+
+3. **FDA decision:** Not applicable (HRL is a packaged food company). INADMISSIBLE.
+
+4. **FOMC meeting:** Next FOMC June 17–18, 2026 (within 60 days). HRL's print was driven by company-specific EPS/organic-growth information, not rate sensitivity. HRL is not a rate-sensitive REIT or high-debt name where FOMC resolution creates a measurable price mechanism. **INADMISSIBLE — mechanism mismatch.**
+
+5. **S&P 500 / Russell 1000 / Nasdaq 100 inclusion:** HRL is already an S&P 500 member and Russell 1000 member. No inclusion event possible. INADMISSIBLE.
+
+**Criterion 3: EFFECTIVELY FAILS.** No admissible convergence target from the closed list. Numerical targets either thin-EV/stale (LONG) or degenerate-to-pre-print-equilibrium (SHORT). Analysis proceeds to criterion 4 for B-short string determination.
+
+**Criterion 4 — Dual-framing decisive flaw analysis:**
+
+*LONG framing (undershoot / under-reaction to positives):*
+
+- **(L1) Information-driven characterization.** The +12.55% Day-0 reaction reflects REAL INFORMATION: adj EPS +14.3% beat, organic growth +3%, Foodservice margin expansion, FCF +217%. The stock had been in a sustained downtrend from $30s to $21, pricing in multi-quarter deterioration; the beat confirms the deterioration was overstated and triggers a relief repricing. This is information-driven correction of prior bearish over-extrapolation — not a sentiment overshoot above information content. The move is correctly priced relative to the print.
+
+- **(L2) Guidance was REAFFIRMED not raised — no incremental upward catalyst.** The key distinction from a stronger B-LONG setup: if Hormel had RAISED adj EPS guidance above consensus (e.g., to $1.60+), the LONG thesis would have a clear information gap. Instead, guidance REAFFIRMED at $1.43–$1.51 (well-within market expectations). No fresh upward catalyst exists within the 60-day window to drive convergence from $23.35 toward $25–$28.
+
+- **(L3) Q3 cost headwinds flag limits further upside.** Management explicitly called out "cost headwinds as we move into the third quarter and the back half of the year" (fuel/logistics from geopolitical context). This tempers the LONG thesis: investors pricing Q3 EPS caution will not chase the stock toward $25–$28 without confirmation that Q3 handles the headwinds.
+
+- **(L4) Day-1–Day-3 price action shows equilibrium, not sustained under-reaction.** Stock ranged $23.23–$23.59 for 4 trading days post-print (Day-0 $23.59 → Day-1 $23.23 → Day-2 $23.35 → Day-3 $23.35). No continuation in either direction. If the market had systematically under-extrapolated the print, Day-1+ would show continuation toward $25+. Instead, the market has found equilibrium at ~$23.35, consistent with "this is fairly priced at the information available."
+
+- **(L5) Criterion 3 fails independently — no admissible in-window convergence target for LONG direction.** (Per Step 4 analysis above.)
+
+- **LONG: DECISIVELY DISMISSED.** Information-driven repricing of depressed stock to new equilibrium; guidance REAFFIRMED not raised; Q3 headwinds temper further upside; Day-1–3 equilibrium range inconsistent with systematic under-reaction; criterion 3 absent.
+
+*SHORT framing (overshoot / over-reaction to positives):*
+
+- **(S1) No overshoot-above-PT-cluster geometry.** Current stock $23.35 is BELOW the post-print analyst PT cluster ($25 BofA/Stephens), not above it. The fundamental SHORT overshoot geometry requires the stock to trade meaningfully ABOVE fair value anchors. The opposite applies: stock is 7% BELOW the updated 2-firm PT cluster. A SHORT thesis here requires the stock to fall back toward $20.96 (pre-print) or below $23 — but sell-side has raised PTs to $25 (not cut), which creates a ratification floor, not a SHORT anchor.
+
+- **(S2) Information-driven move — beat was real.** The +14.3% adj EPS beat and +217% FCF improvement are hard information signals. Per criterion-4 framework: information-driven moves are correct pricing, not mispricing. SHORT-mean-reversion requires the move to be SENTIMENT-excessive relative to information content. At +12.55% on a +14.3% adj EPS beat, the magnitude is proportionate.
+
+- **(S3) Sell-side raised PTs post-print — ratification floor present.** BofA and Stephens raised PTs to $25, establishing a soft sell-side ratification floor above current price. A SHORT thesis needs to compete against this floor; at $23.35, shorting toward $20.96 means shorting 10% below the sell-side floor. No sub-pattern 1 bull-ratification severity (only 2 firms, modest magnitudes), but the raises do create a structural impediment to aggressive SHORT.
+
+- **(S4) B-short string ~51.** Fifty-one consecutive positive-direction SHORT-dismissals. Regime context strongly unfavorable for B-short entries; not a binding criterion but consistent background.
+
+- **(S5) +25% short-side stop = ~$29.24.** This is ABOVE even the highest stale analyst PT ($31.50 ChartMill high). Structurally wide stop against thin SHORT thesis.
+
+- **SHORT: DECISIVELY DISMISSED.** No overshoot-above-cluster geometry; information-driven beat; sell-side raised PTs (ratification floor); B-short string ~51 context.
+
+**Criterion 4: DECISIVE DUAL-FRAMING FAILURE.** Both LONG (information-driven repricing to equilibrium; guidance reaffirmed not raised; Q3 headwinds; Day-1–3 equilibrium; criterion 3 absent) and SHORT (no overshoot-above-cluster; information-driven beat; sell-side ratification floor; criterion 3 absent) independently dismissed. ✗
+
+**Sub-pattern routing:**
+
+Primary: **Candidate SP8 — pre-print-bearish-positioning-unwind on modest-confirmation print.**
+
+SP8 diagnostic features met:
+1. Pre-print bearish sell-side positioning (JPM downgrade Overweight→Neutral Apr 9; Stephens $27→$22 cut May 21 — one week before print) ✓
+2. Depressed stock near multi-year support (~$21 at print, down from $30s over 12 months) ✓
+3. Modest print confirmation (adj EPS +14.3% beat; guidance REAFFIRMED not raised; GAAP EPS $0.29 below $0.35 on divestiture loss; Q3 headwinds flagged) ✓
+4. Relief rally dominated by sentiment/positioning unwind rather than hard forward-looking information re-rating ✓
+5. Day-1–3 partial fade / equilibrium (Day-0 $23.59 → Day-1 $23.23 / Day-2–3 range $23.35 = ~32% fade from Day-0 peak) — consistent with SP8 "partial-fade ~35–50% retrace" signature ✓
+
+SP8 **not confirmed** (first-instance anchor is DOC 2026-05-07; second instance MNDY 2026-05-12; third AXON [cited in demotion log]; HRL = fourth-instance candidate). SP8 is still a CANDIDATE sub-pattern pending W5 formal taxonomy promotion. Routing here is: SP8 candidate routing via residual exclusion (not SP1 — only 2 modest PT raises; not SP3 — no pre-print PT-raise rally; not SP4 — no structural multi-quarter overhang confirmed by print; not SP5 — no in-window binary; not SP6 — not mass PT cuts; not Pattern N — positive direction). The decisive NO-GO mechanism is criterion-4 information-driven characterization, not the sub-pattern label itself.
+
+Sub-patterns NOT applicable: SP1 (no multi-firm aggressive PT-raise wave; only 2 modest raises), SP3 (no pre-print PT-raise-driven rally; stock was in downtrend, not pre-print momentum), SP4 (no structural overhang confirmed at this print — guidance reaffirmed, not cut; no multi-quarter resolution required beyond what is already priced), SP5 (no in-window binary catalyst identified), SP6 (positive direction; no mass PT cuts), Pattern N (positive direction).
+
+**Step 5 — Decision:**
+
+**HRL — NO-GO (DECLINE).** Binding on **criterion-4 dual-framing decisive failure** and **criterion-3 effectively-failed**:
+
+- **Criterion 4 FAILS:** LONG dismissed — information-driven repricing to fair-value equilibrium; guidance reaffirmed not raised; Q3 headwinds temper; Day-1–3 equilibrium range; criterion 3 absent. SHORT dismissed — no overshoot-above-PT-cluster geometry ($23.35 below $25 2-firm PT cluster); information-driven beat; sell-side raised PTs (ratification floor); B-short string ~51 context; stop above broadest PT cluster.
+- **Criterion 3 EFFECTIVELY FAILS:** No admissible convergence target from closed list for either direction (Q3 earnings August OUTSIDE window; no FOMC mechanism; S&P 500 already member; numerical LONG target stale/thin-EV; numerical SHORT target degenerate-to-pre-print-equilibrium).
+
+**Conservative default reinforces NO-GO:** Even if criterion-3 were charitably interpreted as borderline rather than decisive, criterion-4 would stand alone as a terminal NO-GO. The print is information-driven relief rally, not a sentiment overshoot amenable to B's mean-reversion mechanism. Deferrals do not chain (Operating_Protocols §9); resolve here. **NO-GO.**
+
+**Conviction: ~80%.** This is the SP8 conviction tier (first instance DOC 70–80%; HRL has cleaner SP8 fingerprint than DOC given the pre-print Stephens $27→$22 cut just one week before print being a near-perfect SP8 setup signal). The ~20% residual: LONG could be argued at borderline conviction if the $28 stale consensus cluster is used as a convergence anchor (20% upside potential), but (a) that cluster is pre-print and stale; (b) only BofA/Stephens confirmed it at $25 post-print; (c) criterion 3 strictly requires post-event specificity on the convergence target; (d) conservative default binds on ambiguity. Residual is insufficient to flip to GO.
+
+**Step 6 — Effect on book:**
+
+No order staged. **B-short string advances ~51 → ~52** per established convention: HRL is a POSITIVE-direction event (CTC +12.55%); SHORT direction dismissed under criterion 4 → B-short string extends. **B tally → ~6 GO / ~72 NO-GO** (+1 NO-GO). No Portfolio_Ledger.md change (no position). No Regime_State / Watchlist / Pending_Analyses modification.
+
+**Calendar event `kk18hcin97et0kii0eafad1ps8`**: NO-GO disposition → **DELETED** per §6 calendar management protocol (NO-GO: delete the event). Event had been marked "(done)(done)" on the calendar without a Decision_Log disposition; this session resolves and deletes.
+
+---
+
+**Compaction-survival note — HRL B 2026-06-03:** HRL Q2 FY2026 print (AMC Tue 2026-05-27; Day-0 Wed 2026-05-28; CTC **+12.55%** IBKR-verified $20.96 → $23.59; Day-1 $23.23 −1.52% on massive 19.4M vol anomaly [index-rebalancing]; Day-2–3 equilibrium ~$23.35) → **Strategy B NO-GO**. Q2 FY26 print: adj EPS $0.40 vs $0.35 cons (+14.3% beat; +14.3% YoY); revenue $2.97B +2.6% YoY; organic +3%; Foodservice +6% (11th consecutive organic growth quarter); adj operating margin 9.9% +80 bps; CFO $178.9M +217% YoY; GAAP EPS $0.29 on $61M turkey-divestiture loss; FY26 adj EPS guide REAFFIRMED $1.43–$1.51 (not raised); Q3 cost headwinds flagged. Contract_id 8153 NYSE:HRL; mcap ~$12.6B. Sell-side: only 2 firms updated post-print (BofA $23→$25 Neutral; Stephens $22→$25 EW; modest +8.7–13.6% raises); pre-print bearish positioning (JPM downgrade Overweight→Neutral Apr 9; Stephens $27→$22 cut May 21). SP1 NOT triggered. Day-1–3 equilibrium range $23.23–$23.35 (32% fade from Day-0 $23.59 peak). **Candidate SP8** routing (4th-instance candidate): pre-print bearish sell-side + depressed stock ($21 from $30s over 12 months) + modest print confirmation (beat-and-reaffirm not beat-and-raise) + sentiment-driven relief rally. Criterion-4 decisive dual-framing: LONG dismissed (information-driven relief repricing; guidance reaffirmed; Q3 headwinds; Day-1–3 equilibrium; criterion-3 absent); SHORT dismissed (no overshoot-above-$25-PT-cluster at $23.35; information-driven; sell-side ratification floor; stop above cluster). Criterion-3 independently fails (Q3 earnings August OUTSIDE 60-day window; no admissible closed-list in-window target). Entry window Day-0 5/28 → Day-10 **2026-06-11**. **B-short string advances ~51 → ~52 (positive-direction SHORT-dismissal). B tally → ~6 GO / ~72 NO-GO.** Calendar event `kk18hcin97et0kii0eafad1ps8` DELETED (NO-GO). No order. No Portfolio_Ledger / Regime_State / Watchlist change.
+
+**References:** Strategy.md rev 35 (B criteria 1–5; no sector/count caps); B_Sub_Pattern_Taxonomy.md (SP8 candidate: DOC/MNDY/AXON prior instances; SP1/SP3/SP4/SP5/SP6/Pattern N ruled out); Operating_Protocols.md §2, §8, §9, §10, §11; Regime_State.md (A router DO-NOT-ACTIVATE 2026-06-01 M1b; B router ACTIVATE); Watchlist.md (HRL absent from A-queue); IBKR connector contract_id 8153 NYSE:HRL (price_history ONE_MONTH ONE_DAY; Day-0 5/28 $20.96→$23.59 CTC +12.55%; Day-1 5/29 $23.23; Day-2–3 $23.35; avg volume ~1.2–1.5M/day; get_account_summary net_liq $9,462.36); Tavily research (Hormel IR press release + prnewswire Q2 FY26 results; 247wallst "Reported May 27, 2026 5:41 PM ET"; Benzinga/MarketBeat analyst ratings BofA/Stephens post-print PT raises; chartmill consensus PT $28.03 / 15 analysts; tickernerd 3-analyst median $26; Globe and Mail technical commentary Day-0 +13.4% at 7.3M volume; YouTube Q2 FY26 earnings call transcript).
+
 **References:** Strategy.md rev 35 (B criteria 1–5; criterion-3 closed-list rev 14; criterion-4 dual-framing information-vs-sentiment; differentiation-from-A; no caps); B_Sub_Pattern_Taxonomy.md (SP1 aggressive-bull-ratification — NOT triggered; SP3 pre-print-rally-absorption — NOT applicable; candidate sub-pattern 9 UBER-style split-sell-side — residual routing context; criterion-4 information-driven mechanism); Operating_Protocols.md §2, §3, §8, §9, §10, §11; Regime_State.md (A router DO-NOT-ACTIVATE; B router ACTIVATE); Watchlist.md (DLTR absent from A-queue); IBKR connector contract_id 49388062 NASDAQ:DLTR (search_contracts confirmed; price_history ONE_MONTH ONE_DAY — May 27 close $95.87 [Day-(-1)] / May 28 close $113.00 [Day-0 CTC +17.86%] / May 29 $116.44 [Day-1] / Jun 1 $111.35 [Day-2] / Jun 2 $109.39 [Day-3]; volume 1,651,269 on Day-0); get_account_summary (B NAV $9,462.36 confirmed 2026-06-03); Tavily research: TIKR 2026-05-29 "Dollar Tree Stock Surged 17% After Q1 2026 Earnings" (EPS $1.74 vs $1.54 cons; revenue $4.98B +7.2%; adj op margin +110 bps; FCF $392M; FY26 guide $6.70–$7.10); AllInvestView DLTR Q1 2026 Recap (Day-0 +21.5% intraday; +13.7% EPS surprise; comp sales +3.5% ticket +4.5% traffic −1%); Motley Fool DLTR Q1 2026 Earnings Transcript (CFO Glendinning FCF commentary; share repurchase $595M Q1; traffic 2-year stack improved 200 bps); MarketBeat DLTR forecast 2026-05-29 (Guggenheim $130→$135 Buy; Bernstein $115→$124 MP; Morgan Stanley $126→$130 EW; Goldman $115→$105 Sell; BNP Paribas $88→$98 Underperform; Jefferies reiterated Underperform $85; Gordon Haskett $90→$100; BofA Underperform reiterated; Truist maintained Buy; Freedom Broker downgrade Buy→Hold $92→$124); Chartmill DLTR analyst ratings 2026-05-29 (rating actions confirmed; Barclays Overweight maintained pre-print); GuruFocus 2026-05-28 Freedom Broker downgrade Buy→Hold $92→$124 (+34.8%); Benzinga DLTR analyst ratings (pre-print Piper Sandler 5/26 $116→$101 Neutral; UBS 5/22 $138→$132 Buy; consensus PT $115.9 from 21 analysts); Globe and Mail DLTR Q1 2026 press release (net sales $5.0B; operating income $473.3M +23%; adj EPS $1.74 +38% YoY; FY26 adj EPS guide $6.70–$7.10; 113 new stores; 630 multi-price format conversions; $595M buybacks Q1; $1B cash + $1.3B remaining buyback auth); Google Calendar MCP (event `a7ditkq791c2hbr5d1oijj5j0c` confirmed present and DELETED per NO-GO protocol; D3 5/31 deferral annotation "(done)"-marked on 6/1 without DL entry; this session = terminal resolution).
