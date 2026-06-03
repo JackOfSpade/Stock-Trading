@@ -13798,3 +13798,29 @@ No order staged. **B-short string advances ~51 → ~52** per established convent
 **References:** Strategy.md rev 35 (B criteria 1–5; no sector/count caps); B_Sub_Pattern_Taxonomy.md (SP8 candidate: DOC/MNDY/AXON prior instances; SP1/SP3/SP4/SP5/SP6/Pattern N ruled out); Operating_Protocols.md §2, §8, §9, §10, §11; Regime_State.md (A router DO-NOT-ACTIVATE 2026-06-01 M1b; B router ACTIVATE); Watchlist.md (HRL absent from A-queue); IBKR connector contract_id 8153 NYSE:HRL (price_history ONE_MONTH ONE_DAY; Day-0 5/28 $20.96→$23.59 CTC +12.55%; Day-1 5/29 $23.23; Day-2–3 $23.35; avg volume ~1.2–1.5M/day; get_account_summary net_liq $9,462.36); Tavily research (Hormel IR press release + prnewswire Q2 FY26 results; 247wallst "Reported May 27, 2026 5:41 PM ET"; Benzinga/MarketBeat analyst ratings BofA/Stephens post-print PT raises; chartmill consensus PT $28.03 / 15 analysts; tickernerd 3-analyst median $26; Globe and Mail technical commentary Day-0 +13.4% at 7.3M volume; YouTube Q2 FY26 earnings call transcript).
 
 **References:** Strategy.md rev 35 (B criteria 1–5; criterion-3 closed-list rev 14; criterion-4 dual-framing information-vs-sentiment; differentiation-from-A; no caps); B_Sub_Pattern_Taxonomy.md (SP1 aggressive-bull-ratification — NOT triggered; SP3 pre-print-rally-absorption — NOT applicable; candidate sub-pattern 9 UBER-style split-sell-side — residual routing context; criterion-4 information-driven mechanism); Operating_Protocols.md §2, §3, §8, §9, §10, §11; Regime_State.md (A router DO-NOT-ACTIVATE; B router ACTIVATE); Watchlist.md (DLTR absent from A-queue); IBKR connector contract_id 49388062 NASDAQ:DLTR (search_contracts confirmed; price_history ONE_MONTH ONE_DAY — May 27 close $95.87 [Day-(-1)] / May 28 close $113.00 [Day-0 CTC +17.86%] / May 29 $116.44 [Day-1] / Jun 1 $111.35 [Day-2] / Jun 2 $109.39 [Day-3]; volume 1,651,269 on Day-0); get_account_summary (B NAV $9,462.36 confirmed 2026-06-03); Tavily research: TIKR 2026-05-29 "Dollar Tree Stock Surged 17% After Q1 2026 Earnings" (EPS $1.74 vs $1.54 cons; revenue $4.98B +7.2%; adj op margin +110 bps; FCF $392M; FY26 guide $6.70–$7.10); AllInvestView DLTR Q1 2026 Recap (Day-0 +21.5% intraday; +13.7% EPS surprise; comp sales +3.5% ticket +4.5% traffic −1%); Motley Fool DLTR Q1 2026 Earnings Transcript (CFO Glendinning FCF commentary; share repurchase $595M Q1; traffic 2-year stack improved 200 bps); MarketBeat DLTR forecast 2026-05-29 (Guggenheim $130→$135 Buy; Bernstein $115→$124 MP; Morgan Stanley $126→$130 EW; Goldman $115→$105 Sell; BNP Paribas $88→$98 Underperform; Jefferies reiterated Underperform $85; Gordon Haskett $90→$100; BofA Underperform reiterated; Truist maintained Buy; Freedom Broker downgrade Buy→Hold $92→$124); Chartmill DLTR analyst ratings 2026-05-29 (rating actions confirmed; Barclays Overweight maintained pre-print); GuruFocus 2026-05-28 Freedom Broker downgrade Buy→Hold $92→$124 (+34.8%); Benzinga DLTR analyst ratings (pre-print Piper Sandler 5/26 $116→$101 Neutral; UBS 5/22 $138→$132 Buy; consensus PT $115.9 from 21 analysts); Globe and Mail DLTR Q1 2026 press release (net sales $5.0B; operating income $473.3M +23%; adj EPS $1.74 +38% YoY; FY26 adj EPS guide $6.70–$7.10; 113 new stores; 630 multi-price format conversions; $595M buybacks Q1; $1B cash + $1.3B remaining buyback auth); Google Calendar MCP (event `a7ditkq791c2hbr5d1oijj5j0c` confirmed present and DELETED per NO-GO protocol; D3 5/31 deferral annotation "(done)"-marked on 6/1 without DL entry; this session = terminal resolution).
+
+---
+
+### [2026-06-03] KL #12 B-book pairwise-correlation monitor — NO-FLAG
+
+**Positions monitored:** HCA, ZBRA, BRC, TJX, AZO (5 open; BURL closed 2026-06-01 confirmed)
+**Lookback:** 2026-05-27 → 2026-06-02 (5 trading days; returns computed from 2026-05-26 close through 2026-06-02 close)
+**Pairwise correlations (simple daily returns, Pearson):**
+| Pair | ρ |
+|------|-----|
+| HCA–ZBRA | 0.07 |
+| HCA–BRC | −0.37 |
+| HCA–TJX | 0.17 |
+| HCA–AZO | −0.54 |
+| ZBRA–BRC | 0.78 |
+| ZBRA–TJX | 0.13 |
+| ZBRA–AZO | 0.78 |
+| BRC–TJX | 0.36 |
+| BRC–AZO | 0.77 |
+| TJX–AZO | −0.14 |
+
+**Average pairwise correlation:** 0.20
+**Threshold:** 0.50
+**Result:** NO-FLAG — average 0.20 is well below the 0.50 threshold; no position review triggered.
+**Note:** Window (5/27→6/02) yields exactly 5 return observations (the minimum per task spec). No extension to the 2026-05-14 ZBRA-fill window was required. ZBRA–BRC (0.78), ZBRA–AZO (0.78), BRC–AZO (0.77) show elevated intra-cluster correlation among the industrials/tech-hardware names, but HCA (health care) and TJX (consumer disc) exhibit low or negative correlations with AZO pulling the 10-pair average well below threshold. Monitoring-only per Operating_Protocols §10; no forced exits or entry gates triggered. No calendar event created (NO-FLAG path).
+**Source:** Pending_Analyses.md id `monitor-KL12-B-20260603`; IBKR connector get_price_history THREE_MONTHS ONE_DAY for contract_ids HCA 85076790 (NYSE) / ZBRA 276304 (NASDAQ) / BRC 6467986 (NYSE) / TJX 12814 (NYSE) / AZO 4750 (NYSE).
