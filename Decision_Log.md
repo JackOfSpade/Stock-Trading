@@ -14019,3 +14019,69 @@ No order staged. **B-short string UNCHANGED at ~52** (GTLB is a NEGATIVE-directi
 **Compaction-survival note — GTLB B 2026-06-03:** GTLB Q1 FY2027 print (AMC June 2, 2026; not BMO) → **Strategy B NO-GO.** Qualifying event CONFIRMED (EVG PASS). Day-0 CTC −5.83% IBKR-verified (June 2 close $31.82 / June 1 close $33.79); mcap ~$5.35B; ADV ~$199M. Contract_id 520512263 NASDAQ:GTLB. Print: rev $264.2M (+23% YoY; +4% beat guide; +4% beat cons) / non-GAAP EPS $0.23 (+beat) / NDR 117% / 1,519 customers >$100K / Dedicated ARR >$70M / Q2 FY27 guide $272–274M (15–16% YoY) **and non-GAAP EPS $0.17–0.18 vs consensus $0.21 = −17% midpoint miss** / FY27 guide RAISED $1.112–1.118B / Restructuring Act Two: 14% headcount (350 ppl), 22 countries exited, $30–35M charges ($19M in Q2), Q3 profitability trough per mgmt / JiHu $50M FY27 vs $13M prior year. Pre-print sell-side: 4 downgrades April–May 2026 (RayJames/BofA/RBC/UBS); PT cluster $24–27 (most-recently-updated); Day-0 close $31.82 ABOVE PT cluster. Pre-print +30% rally May 7 → June 1 ($25.92 → $33.79) absorbed beat narrative. No post-print PT-raise wave (SP1 NOT triggered). Criterion-3 fails: Q2 print Sept OUTSIDE 60d; FOMC mismatch; S&P/N100 speculative; numerical targets stale/degenerate. Criterion-4 decisive dual-framing: LONG dismissed (SP4c restructuring multi-quarter overhang; Q2 EPS −17% guide miss; stock above PT cluster; criterion-3 absent; pre-print rally absorbed); SHORT dismissed (information-driven; pre-print rally partially absorbed; B-short string ~52; criterion-3 absent; stop above cluster). Sub-pattern routing: **SP4c** (guide-deterioration-on-pre-existing-structural-overhang — Act Two restructuring crystallized at print; Q3 profitability trough outside window) + SP3 partial (pre-print +30% rally absorbed beat narrative). Entry window Day-0 6/2 → Day-10 **2026-06-16**. **B-short string UNCHANGED at ~52 (negative-direction event; string tracks positive-direction SHORT-dismissals only). B tally → ~6 GO / ~74 NO-GO.** No order. No calendar event (NO-GO; none pre-existing). No Portfolio_Ledger / Regime_State / Watchlist change.
 
 **References:** Strategy.md rev 35 (B criteria 1–5; criterion-3 closed-list rev 14; criterion-4 dual-framing; no caps); B_Sub_Pattern_Taxonomy.md (SP4c anchor NCLH 2026-05-05; SP3 SBUX/CBOE/AXSM instances; SP1 not triggered; SP8 not applicable — pre-print bearish sell-side without modest-beat profile); Operating_Protocols.md §2, §3, §8, §9, §10, §11; Regime_State.md (A router DO-NOT-ACTIVATE 2026-06-01 M1b; B router ACTIVATE); Watchlist.md (GTLB absent from A-queue); Decision_Log 2026-05-13 (GTLB prior Day-0 C/C −4.46% fails criterion 1 — structurally distinct event; not applicable here per §3); IBKR connector contract_id 520512263 NASDAQ:GTLB (search_contracts; price_history ONE_MONTH ONE_DAY — June 1 $33.79 / June 2 $31.82 / June 3 prior-close $31.82 intraday ~$30.03; avg volume 6.41M shares; get_account_summary net_liq $9,462.36); Tavily research: ir.gitlab.com Q1 FY2027 press release (revenue $264.2M, EPS $0.23, restructuring Act Two, Q2 guide $272–274M / EPS $0.17–0.18, FY guide raised); StockTitan 8-K June 2, 2026; investing.com earnings call transcript (CFO Ross Q2/FY guide; CEO Staples Act Two narrative); GitLab Q1 FY27 prepared remarks PDF; 247wallst "GitLab reports Q1 results AMC June 2 after market close ~4:05 PM ET"; Yahoo Finance GTLB (close June 2 $31.82 −5.83%; prior close June 1 $33.79; overnight $29.51 −7.26%; avg vol 6.41M; 1y target $30.30; mcap $5.373B intraday); Benzinga analyst ratings (Raymond James downgrade MP 5/12; Mizuho Neutral $26 5/12; Cantor Neutral $27 5/13; BofA Neutral $27 4/22; RBC Sector Perform $25 4/20; UBS Neutral $24 4/16; Rosenblatt Buy $43 6/1 — sole bull outlier); MarketBeat GTLB (Q2 FY27 guidance release alert 6/2; consensus Hold; avg PT $37.08 includes stale pre-cut PTs); ChartMill GTLB (consensus EPS $0.21 / rev $259.65M pre-print; current stock 31.05 post-session; consensus PT $33.10 stale aggregate); Zacks "GitLab Set to Report Q1 Earnings" 5/29/2026 (pre-print consensus $253.9M rev / $0.20 EPS confirmed beat on both axes); Quiverquant GitLab restructuring article (Act Two 8-K pre-announcement prior to Q1 call; reaffirmed at call); GitLab Q1 FY27 earnings call transcript investing.com (Jessica Ross CFO / Bill Staples CEO prepared remarks).
+
+---
+
+### [2026-06-03] Strategy B — CRDO Q3 FY2026 print — NO-GO (criterion-1 gate fail)
+
+**Ticker:** CRDO (Credo Technology Group Holding) — NASDAQ — contract_id TBD
+**Day-0:** 2026-06-02 (positive direction, CTC +1.28%)
+**Entry window:** N/A (criterion-1 gate fail — |CTC| < 5%)
+**Analysis date:** 2026-06-03
+
+**Criterion 1:** |CTC| 1.28% < 5.00% threshold → GATE FAIL (mechanical NO-GO). No further analysis.
+**Mcap:** ~$17B (>> $2B floor ✓); **ADV:** ~$250M (>> $10M floor ✓). Size gates clear; magnitude gate decisive fail.
+
+**Outcome: NO-GO** — criterion-1 magnitude gate fail. No order. No calendar event.
+**B-short string: UNCHANGED at ~52** (criterion-1 gate fails do not extend the string).
+**B tally: ~6 GO / ~75 NO-GO** (+1 NO-GO).
+
+---
+
+### [2026-06-03] Strategy B — DG Q1 FY2026 print — NO-GO (criterion-1 gate fail)
+
+**Ticker:** DG (Dollar General Corp) — NYSE — contract_id TBD
+**Day-0:** 2026-06-02 (negative direction, CTC −3.33%)
+**Entry window:** N/A (criterion-1 gate fail — |CTC| < 5%)
+**Analysis date:** 2026-06-03
+
+**Criterion 1:** |CTC| 3.33% < 5.00% threshold → GATE FAIL (mechanical NO-GO). No further analysis.
+**Mcap:** ~$23B (>> $2B floor ✓); **ADV:** ~$300M (>> $10M floor ✓). Size gates clear; magnitude gate decisive fail.
+
+**Outcome: NO-GO** — criterion-1 magnitude gate fail. No order. No calendar event.
+**B-short string: UNCHANGED at ~52** (criterion-1 gate fails do not extend the string).
+**B tally: ~6 GO / ~76 NO-GO** (+1 NO-GO).
+
+---
+
+### [2026-06-03] Strategy B — PANW Q3 FY2026 print — NO-GO (criterion-1 gate fail)
+
+**Ticker:** PANW (Palo Alto Networks Inc) — NASDAQ — contract_id 110619459
+**Day-0:** 2026-06-03 (negative direction, CTC −2.08%)
+**Entry window:** N/A (criterion-1 gate fail — |CTC| < 5%)
+**Analysis date:** 2026-06-03
+
+**Criterion 1:** |CTC| 2.08% < 5.00% threshold → GATE FAIL (mechanical NO-GO). No further analysis.
+**Price data:** Day(-1) close $297.18 (IBKR prior-close); Day-0 snapshot $291.00 (is_close=false as of ~01:09 UTC 2026-06-03; not yet final close — CTC based on latest available intraday/overnight price). CTC = (291.00 − 297.18) / 297.18 = −2.08%. Even if final close deviates modestly, |CTC| << 5% threshold; gate fail is robust.
+**Mcap:** ~$94B (>> $2B floor ✓); **ADV:** ~$900M (>> $10M floor ✓). Size gates clear; magnitude gate decisive fail.
+
+**Outcome: NO-GO** — criterion-1 magnitude gate fail. No order. No calendar event.
+**B-short string: UNCHANGED at ~52** (criterion-1 gate fails do not extend the string).
+**B tally: ~6 GO / ~77 NO-GO** (+1 NO-GO).
+
+---
+
+### [2026-06-03] Strategy B — ULTA Q1 FY2027 print — NO-GO (criterion-1 gate fail)
+
+**Ticker:** ULTA (Ulta Beauty Inc) — NASDAQ — contract_id 46970422
+**Day-0:** 2026-06-03 (positive direction, CTC +1.33%)
+**Entry window:** N/A (criterion-1 gate fail — |CTC| < 5%)
+**Analysis date:** 2026-06-03
+
+**Criterion 1:** |CTC| 1.33% < 5.00% threshold → GATE FAIL (mechanical NO-GO). No further analysis.
+**Price data:** Day(-1) close $494.87 (IBKR prior-close); Day-0 snapshot $501.44 (is_close=false as of ~00:15 UTC 2026-06-03; not yet final close — CTC based on latest available intraday/overnight price). CTC = (501.44 − 494.87) / 494.87 = +1.33%. Even if final close deviates modestly, |CTC| << 5% threshold; gate fail is robust.
+**Mcap:** ~$25B (>> $2B floor ✓); **ADV:** ~$350M (>> $10M floor ✓). Size gates clear; magnitude gate decisive fail.
+
+**Outcome: NO-GO** — criterion-1 magnitude gate fail. No order. No calendar event.
+**B-short string: UNCHANGED at ~52** (criterion-1 gate fails do not extend the string).
+**B tally: ~6 GO / ~78 NO-GO** (+1 NO-GO).
