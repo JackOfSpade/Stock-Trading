@@ -13824,3 +13824,47 @@ No order staged. **B-short string advances ~51 → ~52** per established convent
 **Result:** NO-FLAG — average 0.20 is well below the 0.50 threshold; no position review triggered.
 **Note:** Window (5/27→6/02) yields exactly 5 return observations (the minimum per task spec). No extension to the 2026-05-14 ZBRA-fill window was required. ZBRA–BRC (0.78), ZBRA–AZO (0.78), BRC–AZO (0.77) show elevated intra-cluster correlation among the industrials/tech-hardware names, but HCA (health care) and TJX (consumer disc) exhibit low or negative correlations with AZO pulling the 10-pair average well below threshold. Monitoring-only per Operating_Protocols §10; no forced exits or entry gates triggered. No calendar event created (NO-FLAG path).
 **Source:** Pending_Analyses.md id `monitor-KL12-B-20260603`; IBKR connector get_price_history THREE_MONTHS ONE_DAY for contract_ids HCA 85076790 (NYSE) / ZBRA 276304 (NASDAQ) / BRC 6467986 (NYSE) / TJX 12814 (NYSE) / AZO 4750 (NYSE).
+
+---
+
+### [2026-06-03] Strategy B — CPRI Q1 FY27 print (6/3 BMO) — NO-GO (EVENT VERIFICATION GATE FAILURE — no qualifying B event on 2026-06-03)
+
+**Trigger:** D2 2026-06-03 execution. Prior session note: "CPRI Q1 FY27 reports TODAY BMO — potential new B-thesis Day-0 event if CTC ≥ 5%." This session is the formal thesis-construction resolution.
+
+**Book context:** B NAV ~$9,462 (2% ≈ $189/position). Open B positions: HCA, ZBRA, BRC, TJX, AZO (5 longs). B-short string ~52 (per HRL 2026-06-03 positive-direction SHORT-dismissal extension). B tally ~6 GO / ~72 NO-GO (pre-this-entry). A router = DO-NOT-ACTIVATE (Regime_State.md; confirmed 2026-06-01 M1b). CPRI NOT in A queue (Watchlist.md confirmed — absent from all 30 A-queue entries listed). Criterion-5 A-queue gate: CLEAR.
+
+**Step 0 — Event verification and CTC (IBKR connector, contract_id 347409760 NYSE:CPRI):**
+
+IBKR search_contracts: CPRI → contract_id 347409760, NYSE, "CAPRI HOLDINGS LTD", STK section, country_code US. US primary listing confirmed.
+
+IBKR get_price_history (ONE_MONTH, ONE_DAY): Most recent bar = **2026-06-02 close $18.28**. No 2026-06-03 bar present in history. IBKR get_price_snapshot (2026-06-03): last price = $18.28, prior_close = $18.28, change = 0.0, volume = 0, is_close = false. No confirmed close-to-close for today and no trading volume — consistent with no major event.
+
+**EVENT VERIFICATION GATE (EVG) — FAILURE:**
+
+The premise "CPRI Q1 FY27 reports BMO on June 3, 2026" is **factually incorrect**. Primary-source verification via IBKR market data (zero volume, no price move on 6/3) and Tavily web-search (MarketBeat, BusinessWire, StockTitan, Yahoo Finance) confirms:
+
+- CPRI most-recently-reported earnings: **Q4 FY2026, announced May 27, 2026 BMO** (8-K filed May 27; BusinessWire press release; stocktitan.net confirmed; Q4 adj EPS $0.22 vs $0.11 consensus; revenue $796M; FY27 guidance $2.15 EPS / $3.525B revenue / Q1 FY27 guidance EPS ~$0.40 / revenue ~$750M provided at that time).
+- **Next scheduled CPRI earnings: estimated August 5, 2026** (Q1 FY2027 result for fiscal quarter ending late June 2026). MarketBeat: "Capri has not confirmed its next earnings publication date, but the company's estimated earnings date is Wednesday, August 5th, 2026 based off last year's report dates."
+- No CPRI 8-K, press release, or earnings call was filed or held on June 3, 2026. No qualifying Strategy B event (earnings / FDA decision / guidance update / regulatory action) occurred on 2026-06-03.
+
+The prior session note confounded Capri's fiscal-year nomenclature: "Q1 FY27" refers to the quarter ending ~June 28, 2026 (Capri's fiscal year ends late March each year), which will be reported in August, not June. The May 27, 2026 print was Q4 FY26 (the final quarter of fiscal year 2026), not Q1 FY27. This is the same EVG failure mode as DG 2026-05-12 (prompt-asserted catalyst refuted by primary source; no qualifying B event on the alleged event date).
+
+**CTC computation:** Not applicable. No qualifying event on 2026-06-03.
+
+**Criterion 1: FAILS at EVG sub-gate.** No qualifying B event occurred on the stated event date. All further criteria suspended.
+
+**Decision: NO-GO.** Criterion-1 EVG failure. Mechanical termination; no criterion 2–5 analysis required or conducted.
+
+**B-short string: UNCHANGED at ~52.** EVG failure = mechanical gate failure; does not extend or reset the B-short string per DG 2026-05-12 and AGL 2026-05-14 EVG/mechanical-gate precedents. String tracks positive-direction SHORT-dismissals only; EVG failures are not routed against any sub-pattern.
+
+**B tally → ~6 GO / ~73 NO-GO** (+1 NO-GO from this EVG failure). Every NO-GO disposition (including mechanical gate failures) increments the NO-GO tally.
+
+No order staged. No calendar event created or deleted (no GO; no pre-existing CPRI 6/3 event on calendar). No Portfolio_Ledger.md change. No Regime_State / Watchlist / Pending_Analyses modification.
+
+**Forward routing:** CPRI Q1 FY27 actual print (estimated ~August 5, 2026) constitutes a structurally distinct future trigger event per Operating_Protocols §3. If CTC ≥ 5% on that date, a fresh B-thesis evaluation is initiated. The May 27, 2026 Q4 FY26 thesis (Decision_Log 2026-06-02) is already fully resolved (NO-GO; criterion-4 decisive dual-framing). No residual CPRI open items.
+
+---
+
+**Compaction-survival note — CPRI B 2026-06-03:** CPRI "Q1 FY27 BMO on 6/3" → **Strategy B NO-GO** via **EVENT VERIFICATION GATE (EVG) FAILURE**. No qualifying Strategy B event (earnings / FDA / guidance update / regulatory action) occurred on 2026-06-03. Primary-source verification: CPRI most-recent-earnings = Q4 FY2026 on May 27, 2026 (adj EPS $0.22 vs $0.11 cons; revenue $796M; FY27 EPS guide $2.15). Next earnings: estimated August 5, 2026 (Q1 FY2027 for quarter ending ~June 28, 2026). Fiscal-year nomenclature error in premise: Capri FY ends late March — "Q1 FY27" = April–June 2026 quarter, not yet reported. IBKR contract_id 347409760 NYSE:CPRI; 6/2 close $18.28; 6/3 snapshot: last=$18.28, volume=0, change=0, is_close=false. Second EVG instance (first: DG 2026-05-12). **B-short string: UNCHANGED at ~52 (EVG = mechanical gate failure; does not extend string). B tally → ~6 GO / ~73 NO-GO.** No order. No calendar events affected. No Portfolio_Ledger / Regime_State / Watchlist change.
+
+**References:** Strategy.md rev 35 (B criteria 1–5; EVG sub-gate within criterion 1; instrument rules); Operating_Protocols.md §3 (NO-GO records are context not barriers; prior NO-GO does not gate fresh trigger evaluations), §9 (no re-deferral), §10 (no caps), §11 (IBKR connector protocol); B_Sub_Pattern_Taxonomy.md (EVG failures = mechanical-failure category; not routed against sub-patterns); Decision_Log 2026-05-12 DG EVG precedent (first EVG instance; same failure mode); Decision_Log 2026-05-14 AGL EVG/mechanical-gate B-short string non-extension precedent; Decision_Log 2026-06-02 CPRI Q4 FY26 / analyst-downgrade NO-GO (fully resolved; independent prior entry); IBKR connector contract_id 347409760 NYSE:CPRI (search_contracts confirmed; price_history ONE_MONTH ONE_DAY; snapshot last=$18.28/volume=0/change=0.0/is_close=false); Tavily research: MarketBeat CPRI earnings page (next estimated August 5, 2026); BusinessWire/StockTitan May 27 2026 Q4 FY26 earnings press release confirmed; no 8-K or press release on June 3, 2026.
