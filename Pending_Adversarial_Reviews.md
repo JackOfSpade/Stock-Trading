@@ -48,12 +48,12 @@ Schema reference (per `Claude_Task_Plan.md`):
   attacker_due_date: 2026-06-02
   orchestrator_due_date: 2026-06-03
   recommendation_due_date: n/a
-  status: pending
-  attacker_output_path:
+  status: attacker-complete
+  attacker_output_path: Adversarial_Review_div-D-202605-1_attacker.md
   orchestrator_output_path:
   recommendation_output_path: n/a
   cycle_number: 1
-  notes: First divergence-review queued for Strategy D since experiment inception (April was no-divergence ACTIVATE/ACTIVATE). The FLIP-direction is ACTIVATE→DNA fundamentally; if the orchestrator verdict resolves DO-NOT-ACTIVATE, the router state flips and the FLIP-TO-DO-NOT-ACTIVATE M5-rule-A downstream actions (Regime_State.md update + Decision_Log binding entry + cancel any pending D thesis-construction events) execute at orchestrator-output time. If the verdict resolves ACTIVATE, the existing ACTIVATE state continues and the BA/LLY re-screen gates clear.
+  notes: First divergence-review queued for Strategy D since experiment inception (April was no-divergence ACTIVATE/ACTIVATE). The FLIP-direction is ACTIVATE→DNA fundamentally; if the orchestrator verdict resolves DO-NOT-ACTIVATE, the router state flips and the FLIP-TO-DO-NOT-ACTIVATE M5-rule-A downstream actions (Regime_State.md update + Decision_Log binding entry + cancel any pending D thesis-construction events) execute at orchestrator-output time. If the verdict resolves ACTIVATE, the existing ACTIVATE state continues and the BA/LLY re-screen gates clear. Attacker 2026-06-02 verdict: FUNDAMENTAL CLAIM SHOULD NOT SURVIVE (ten weaknesses, six Tier 1, four Tier 2; argues for technical ACTIVATE; identifies that the architectural Sustained-Inversion safeguard for the cited recession-compression channel is CONCEDED NOT-SUSTAINED, that the flip is supported on only 1 of 4 April ACTIVATE criteria, that the pre-mortem-self-referential mechanism is anti-conditioned/unfalsifiable, and that the fundamental call lands at the same destination as a non-firing mechanical reconciliation override — back-fit-to-mechanical pattern).
 
 ---
 
@@ -66,11 +66,11 @@ Schema reference (per `Claude_Task_Plan.md`):
   attacker_due_date: 2026-06-02
   orchestrator_due_date: 2026-06-03
   recommendation_due_date: n/a
-  status: pending
-  attacker_output_path:
+  status: attacker-complete
+  attacker_output_path: Adversarial_Review_div-E-202605-1_attacker.md
   orchestrator_output_path:
   recommendation_output_path: n/a
   cycle_number: 1
-  notes: Prior-cycle id for traceability — April 2026 divergence resolved DO-NOT-ACTIVATE (default-on-ambiguity) with theater-check CONVERGENT (Decision_Log_Archive_2026_Q2.md entry "2026-04-25 Strategy E divergence adversarial review — DO-NOT-ACTIVATE"). The M2 signal-process-tightening follow-up initiated 2026-04-26 is a separate work product (path back to ACTIVATION via signal-process refinement) and not the artifact under this review — the May M1b fundamental DNA call is.
+  notes: Prior-cycle id for traceability — April 2026 divergence resolved DO-NOT-ACTIVATE (default-on-ambiguity) with theater-check CONVERGENT (Decision_Log_Archive_2026_Q2.md entry "2026-04-25 Strategy E divergence adversarial review — DO-NOT-ACTIVATE"). The M2 signal-process-tightening follow-up initiated 2026-04-26 is a separate work product (path back to ACTIVATION via signal-process refinement) and not the artifact under this review — the May M1b fundamental DNA call is. Attacker 2026-06-02 verdict: FUNDAMENTAL CLAIM SHOULD NOT SURVIVE (ten weaknesses, six Tier 1, four Tier 2; argues for technical ACTIVATE; identifies maximum-strength convergent-with-prior pattern on already-CONVERGENT April verdict, load-bearing correlation-stationarity claim unmeasured, cited regime-break sequence actively RESOLVING by artifact's own PART 1 data, anti-conditioned risk-on framing, and that the operative consideration is procedural moot point at current book size — substantive ACTIVATE + execution-feasibility-deferred operational state is the honest decomposition).
 
 ---
