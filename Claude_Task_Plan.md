@@ -925,7 +925,7 @@ Read access scope: Read Pending_Adversarial_Reviews.md, Strategy.md, Experiment_
 
 Read Pending_Adversarial_Reviews.md.
 
-Find the next entry where review_type = capital-redistribution AND status = pending AND recommendation_due_date <= today. Process at most one entry per routine fire. If none: write chat output "No capital-redistribution recommendations due today." and exit.
+Find the next entry where review_type = capital-redistribution AND status = pending AND recommendation_due_date <= today. Process all matching entries this routine fire — each entry as an isolated sub-task (subagent) for fresh per-entry context where available, else inline sequentially with an explicit per-entry scope reset between artifacts (so per-entry read-scope discipline is preserved and prior in-fire artifacts do not bleed into a subsequent entry's output — particularly load-bearing for the Attacker routine's STRICT BLINDING, where each entry's blinding applies to its own artifact_path). If none: write chat output "No capital-redistribution recommendations due today." and exit.
 
 If found:
 1. Read the entry's artifact_path (the per-termination context file). Read Portfolio_Ledger.md and Regime_State.md for current surviving-strategy state.
@@ -933,7 +933,7 @@ If found:
 3. Write the recommendation to Adversarial_Review_<id>_recommendation.md (where <id> is the queue entry id). Format: header (id, review_type, strategy, date, cycle_number), recommendation (one-line verdict), reasoning (free-form, structured under headers), key inputs section listing what was read.
 4. Update the queue entry: set recommendation_output_path, set status = recommendation-complete.
 
-CHAT OUTPUT: one-line acknowledgment naming the entry id and recommendation file written.
+CHAT OUTPUT: one line per processed entry naming the entry id and recommendation file written. If multiple entries were processed this fire, list each on its own line.
 ```
 
 ## Adversarial Review Attacker — regular routine
@@ -949,7 +949,7 @@ This blinding is enforced by prompt discipline. Tool-call logs are auditable; re
 
 Read Pending_Adversarial_Reviews.md.
 
-Find the next entry where attacker_due_date <= today AND status matches the entry's phase: status = pending for review types pre-mortem / divergence-review / m2m-termination / scope-widening-adjudication; status = recommendation-complete for review type capital-redistribution. Process at most one entry per routine fire. If none: write chat output "No adversarial reviews due for attacker today." and exit.
+Find the next entry where attacker_due_date <= today AND status matches the entry's phase: status = pending for review types pre-mortem / divergence-review / m2m-termination / scope-widening-adjudication; status = recommendation-complete for review type capital-redistribution. Process all matching entries this routine fire — each entry as an isolated sub-task (subagent) for fresh per-entry context where available, else inline sequentially with an explicit per-entry scope reset between artifacts (so per-entry read-scope discipline is preserved and prior in-fire artifacts do not bleed into a subsequent entry's output — particularly load-bearing for the Attacker routine's STRICT BLINDING, where each entry's blinding applies to its own artifact_path). If none: write chat output "No adversarial reviews due for attacker today." and exit.
 
 If found, attack the artifact per the review_type's protocol from Experiment_Parameters.md and Strategy.md:
 
@@ -963,7 +963,7 @@ Write attack to Adversarial_Review_<id>_attacker.md (where <id> is the queue ent
 
 Update the queue entry: set attacker_output_path, set status = attacker-complete.
 
-CHAT OUTPUT: one-line acknowledgment naming the entry id, review_type, and attacker verdict.
+CHAT OUTPUT: one line per processed entry naming the entry id, review_type, and attacker verdict. If multiple entries were processed this fire, list each on its own line.
 ```
 
 ## Adversarial Review Orchestrator — regular routine
@@ -975,7 +975,7 @@ Read access scope: Read Pending_Adversarial_Reviews.md, Strategy.md, Experiment_
 
 Read Pending_Adversarial_Reviews.md.
 
-Find the next entry where status = attacker-complete AND orchestrator_due_date <= today. Process at most one entry per routine fire. If none: write chat output "No adversarial reviews due for orchestrator today." and exit.
+Find the next entry where status = attacker-complete AND orchestrator_due_date <= today. Process all matching entries this routine fire — each entry as an isolated sub-task (subagent) for fresh per-entry context where available, else inline sequentially with an explicit per-entry scope reset between artifacts (so per-entry read-scope discipline is preserved and prior in-fire artifacts do not bleed into a subsequent entry's output — particularly load-bearing for the Attacker routine's STRICT BLINDING, where each entry's blinding applies to its own artifact_path). If none: write chat output "No adversarial reviews due for orchestrator today." and exit.
 
 If found, orchestrate per the review_type's protocol:
 
@@ -1008,7 +1008,7 @@ If found, orchestrate per the review_type's protocol:
 
 CHAT OUTPUT:
 - Crafted order instructions (tap-to-confirm deep link + summary) if any were staged (otherwise omit).
-- One-line acknowledgment naming the entry id, review_type, final verdict, theater-check flag, and action taken.
+- One line per processed entry naming the entry id, review_type, final verdict, theater-check flag, and action taken. If multiple entries were processed this fire, list each on its own line.
 ```
 
 ---
