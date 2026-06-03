@@ -46,8 +46,8 @@ Mirrors `Pending_Adversarial_Reviews.md`. Established 2026-06-01 (IBKR-connector
   context: |
     KL #12 (pre-mortem rev 7) pairwise-correlation monitoring for the B book. At run time read Portfolio_Ledger.md §[Strategy B] for the actual open B positions (expected 5-long: HCA, ZBRA, BRC, TJX, AZO — BURL CLOSED 2026-06-01; IBM/META closed earlier). Compute average pairwise correlation across the open names (use connector get_price_history return series). Threshold: average pairwise correlation > 0.5 → flag for position review per pre-mortem rev 7 KL #12 metric (d). Monitoring-only, NOT an entry gate (Operating_Protocols §10). Open-position fills for the lookback: HCA 4/28 @ $433.46; ZBRA 5/14 @ $249.52; BRC 5/22 @ $84.97; TJX 5/26 @ $158.50; AZO 5/27 @ ~$3,110.69.
   conservative_default: skip (no flag) if correlations cannot be computed.
-  status: pending
-  outcome: (pending)
+  status: complete
+  outcome: NO-FLAG — avg pairwise correlation 0.20 (below 0.50 threshold); 10 pairs computed over 5 trading days (2026-05-27 → 2026-06-02) — 2026-06-03
 
 ---
 
