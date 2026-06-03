@@ -30,12 +30,12 @@ Schema reference (per `Claude_Task_Plan.md`):
   attacker_due_date: 2026-06-02
   orchestrator_due_date: 2026-06-03
   recommendation_due_date: n/a
-  status: pending
-  attacker_output_path:
+  status: attacker-complete
+  attacker_output_path: Adversarial_Review_div-C-202605-1_attacker.md
   orchestrator_output_path:
   recommendation_output_path: n/a
   cycle_number: 1
-  notes: Prior-cycle id for traceability — April 2026 divergence resolved HYBRID-ACTIVATE-FOMC-only with theater-check CONVERGENT (Decision_Log_Archive_2026_Q2.md entry "2026-04-25 Strategy C divergence adversarial review — HYBRID ACTIVATE (FOMC only)"). The HYBRID scope decomposition itself is not the artifact under this review — the May M1b fundamental DNA call is.
+  notes: Prior-cycle id for traceability — April 2026 divergence resolved HYBRID-ACTIVATE-FOMC-only with theater-check CONVERGENT (Decision_Log_Archive_2026_Q2.md entry "2026-04-25 Strategy C divergence adversarial review — HYBRID ACTIVATE (FOMC only)"). The HYBRID scope decomposition itself is not the artifact under this review — the May M1b fundamental DNA call is. Attacker 2026-06-02 verdict: FUNDAMENTAL CLAIM SHOULD NOT SURVIVE (nine weaknesses, six Tier 1 / borderline-Tier 1, three Tier 2 supporting; argues for technical ACTIVATE at minimum on FOMC-only scope).
 
 ---
 
