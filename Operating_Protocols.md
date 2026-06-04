@@ -261,7 +261,7 @@ An IBKR connector (MCP server) gives Claude routines direct, authenticated acces
 
 **Fill reconciliation is connector-driven, not screenshot-driven.** No fill-capture screenshot events are created. Reconciliation is a daily pull (D2 Step 0; see Claude_Task_Plan.md), idempotent by `trade_id`: read `get_account_trades` over a multi-day window, match fills against the `trade_id`s already recorded in Portfolio_Ledger.md, and for each new fill write the exact price / size / commission / realized P&L / time into the ledger and the position's Decision_Log record — flipping ORDER-STAGED→OPEN or exit-pending→CLOSED. Realized P&L is taken from the connector's `realized_pnl` field, never inferred. Multi-day GTC fills and exchange-split partial fills (aggregate by `order_id`) are caught by the window. The "PROVISIONAL fill / reconciliation owed to a screenshot session" failure mode is structurally eliminated.
 
-**Source-of-truth boundary.** The connector is authoritative for fills, positions, cash, live orders, and quotes. `Portfolio_Ledger.md` remains authoritative for *strategy-bucket cost-basis attribution and per-strategy NAV* — the connector has no concept of the A/B/C/D/E strategy buckets. Reconciliation maps connector fills onto strategy buckets; when the connector's account-level cash/positions drift from the ledger (dividends, fees, reinvestments), the connector is the truth and the ledger is corrected to match, with the strategy attribution preserved at the cost-basis level.
+**Source-of-truth boundary.** The connector is authoritative for fills, positions, cash, live orders, and quotes. `Portfolio_Ledger.md` remains authoritative for *strategy-bucket cost-basis attribution and per-strategy NAV* — the connector has no concept of the A/B/C/D/E strategy buckets. Reconciliation maps connector fills onto strategy buckets; when the connector's account-level cash/positions drift from the ledger (dividends, fees, reinvestments), the connector is the truth and the ledger is corrected to match, with the strategy attribution preserved at the cost-basis level. (Detection of that drift + the deterministic per-strategy attribution decision-tree are codified in §12.)
 
 **Live data in analysis.** Thesis-construction, position deep-dives, exit-checks, and daily scans use `get_price_snapshot`/`get_price_history` for quotes and bars (close-to-close verification, convergence-target checks, marketable-limit computation) and `get_account_positions`/`get_account_summary` for exact holdings and execution-feasibility checks. **The 2% position-sizing base is the per-strategy sub-portfolio NAV from Portfolio_Ledger.md (Strategy.md "2% of strategy portfolio" — ~$1,880–1,890/strategy, so ~$38/entry), NOT account net-liquidation: the connector has no A/B/C/D/E buckets, so net-liq (~$9,460) is the whole-account figure and oversizes ~5× if used as the base. Sanity tripwire: a computed single-name entry over ~$50 (or >3% of the sub-portfolio) means the wrong base was used — recompute off the sub-portfolio.** Web quotes are a fallback only when the connector lacks the instrument. Beyond last/bid/ask, `get_price_snapshot` supplies dollar ADV (`avg-90d-usd-volume` when populated — else derive from `get_price_history` volume×close — for the B criterion-1 liquidity gate), 13/26/52-week range (`misc-statistics`), momentum / pre-rally context (`year-to-date-change` + the 52-week range + price-history returns, feeding B sub-pattern 3 and criterion-2 disproportion; the `cumulative-perf-*` fields are ETF/fund-oriented and usually empty for single stocks), volatility (`implied-vol-underlying`, `implied-volatility-percentile`, `historical-vol`), and options analytics (`option-midpoint-iv`, `option-open-interest`, `underlying-today/avg-option-volume`) for Strategy A/C options theses — the connector supplies options *data* even though it cannot craft options *orders*. Pull `get_price_history` with `include_corporate_actions: true` so splits / special dividends are flagged and never read as price moves (and to attribute account-level drift during D2 Step 0 reconciliation).
 
@@ -287,6 +287,38 @@ Authoritative procedural details (the D3 sweep step, append-only file-write conv
 
 **Revision history:**
 - 2026-06-04: Policy established. Queues moved from "mark complete + retain indefinitely" to daily full-clear-to-daily-archive via D3; `Archived_Analysis.md` + `Archived_Adversarial_Reviews.md` created; supersedes the deferred "quarterly housekeeping routine (out of scope)" note formerly in Claude_Task_Plan.md's adversarial-queue schema. Initial sweep migrated 3 completed analyses (HPE, OKTA, monitor-KL12) + 3 completed divergence reviews (div-C/-D/-E-202605-1). → Decision_Log 2026-06-04 "Queue lifecycle — daily full-clear-to-daily-archive policy established".
+
+---
+
+## 12. Account-Level Cash/SGOV Reconciliation & Drift Attribution
+
+The five strategy sub-portfolios share one IBKR account; undeployed capital sits in the SGOV park. The connector has no A/B/C/D/E buckets, so per-strategy allocation is tracked in Portfolio_Ledger.md at the cost-basis level (per-strategy SGOV-share allocation + cash residual). Account-level events that are NOT strategy trades — cash dividends, interest, account fees, deposits/withdrawals, and operator-initiated cash operations (e.g. the operator selling SGOV to clear a negative cash balance left by accumulated commissions) — change live cash/SGOV without, by themselves, telling Claude which strategy they belong to. This protocol detects that drift and attributes it deterministically so per-strategy budgets stay correct. It runs as part of D2 Step 0, every daily run, before any sizing or staging.
+
+**A. Detection — the balance tripwire (reconcile SHARES and CASH, both exact from the connector; no mark dependence).**
+1. Expected = Σ the per-strategy SGOV-share allocations + Σ the per-strategy cash residuals recorded in Portfolio_Ledger.md (cost-basis quantities the ledger keeps — NOT the DROP'd live marks).
+2. Live = `get_account_positions` SGOV shares (contract_id 424099317) + `get_account_balances` cash.
+3. Δ = live − expected, netting out commissions / realized-P&L of fills reconciled earlier in this Step 0 (already attributed in the trade loop).
+4. Attribute every non-zero residual per C below. A residual that remains UNEXPLAINED after cause-finding and exceeds ~$1 is a hard STOP — do not size or stage anything until it is explained. Sub-$1 unexplained residue is documented as rounding/fee noise (equal-split), never silently absorbed.
+
+**B. Cause-finding (tools, in order).**
+- `get_account_trades` (DAYS_7+): a not-yet-recorded row — a DRIP/dividend reinvest, or an operator SGOV buy/sell — explains a share/cash move.
+- `get_price_history(include_corporate_actions: true)` on held names + SGOV: cash dividends, special dividends, splits.
+- `get_account_summary` / `get_account_balances` net-liq vs. Deposit History: an NLV jump with no matching trade is a deposit/withdrawal. Confirm against any settlement-hold status — a cleared hold that RAISES NLV is a deposit, not a pending outflow (Apr 28→May 7 $2,500 precedent: the "hold-within-NLV" reading was wrong).
+- No connector evidence + small: account fee / interest noise.
+
+**C. Attribution decision-tree (deterministic — then update the per-strategy allocation in Portfolio_Ledger.md).**
+- Dividend / interest on a strategy-owned holding → that holding's strategy.
+- Dividend / interest on the shared SGOV park → pro-rata across A–E by current SGOV-share allocation.
+- Deposit / withdrawal → equal-split across active strategies (standing deposit methodology) unless the operator states an allocation.
+- Commission / fee tied to a fill → the strategy that traded (already done in the Step 0 trade loop; do not double-count).
+- Standalone account fee / interest, no fill → equal-split across active strategies.
+- Operator SGOV-sale-to-cover-a-negative-cash-balance → the deficit traces to commissions already charged to the strategies that traded; reduce those same strategies' SGOV allocation in proportion to the commissions that created the deficit (converts already-charged cash-drag into an SGOV reduction — no new strategy P&L). Repark / top-up on the next settlement cycle.
+- Genuinely unexplained after B → do NOT absorb into any strategy. Log the open delta + the connector evidence in Decision_Log.md, flag it in chat, hold conservatively, and re-attempt next run (pending dividends / settlements usually resolve within 1–2 sessions). This is the only delta permitted to carry across runs, and it is explicitly tracked.
+
+**D. Recording.** The connector is always the truth; the ledger is corrected to match, attribution preserved at the cost-basis level. Update the per-strategy SGOV/cash allocation, plus SGOV Parking Activity / Deposit History rows as applicable, and a one-line Decision_Log.md note for any non-routine or >~$1 attribution. The per-strategy SGOV-share + cash allocation MUST be kept current (it is the reconciliation basis in A.1) — a stale allocation produces false tripwire deltas.
+
+**Revision history:**
+- 2026-06-04: Section added. Codifies the cash/SGOV balance tripwire + drift-attribution decision-tree previously applied ad hoc in Decision_Log reconciliation narratives (Apr 27/28 SGOV cycles; May 5 fee equal-split; the May 7 $2,500 deposit first mis-read as a settlement hold). → Decision_Log 2026-06-04 "Account-level cash/SGOV reconciliation + drift-attribution protocol added".
 
 ---
 

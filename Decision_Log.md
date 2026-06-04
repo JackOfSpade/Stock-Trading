@@ -14326,6 +14326,22 @@ Both instruct sizing off the **account** net-liq (~$9,460 = all five sub-portfol
 
 ---
 
+### [2026-06-04] Protocol added — Account-level cash/SGOV reconciliation + drift-attribution decision-tree
+
+**Why.** Per-strategy budgets are funded from the shared SGOV park, but the IBKR connector has no A/B/C/D/E buckets. Account-level events that are not strategy trades — cash dividends, interest, account fees, deposits/withdrawals, and operator-initiated cash operations (e.g. the operator selling SGOV to clear a negative cash balance left by accumulated commissions) — move live cash/SGOV without indicating which strategy they belong to. D2 Step 0 already caught trade-based drift (idempotent by trade_id) and §11 stated the principle ("connector is truth; preserve per-strategy attribution"), but there was (a) no explicit balance tripwire and (b) no codified attribution rule — drift was attributed ad hoc in Decision_Log narratives (Apr 27/28 SGOV cycles; May 5 fee equal-split; the May 7 $2,500 deposit first mis-read as a settlement "hold-within-NLV," corrected only when NLV jumped). Same class of risk as the MDT base-NAV bug: correctness depended on getting it right each time, not a guardrail.
+
+**Added.**
+1. **Operating_Protocols.md §12** — canonical protocol: (A) a SHARES+CASH balance tripwire (expected = Σ per-strategy ledger allocations vs live connector, net of this-run commissions; unexplained residual > ~$1 = hard STOP before sizing/staging), (B) cause-finding via `get_account_trades` / `get_price_history(include_corporate_actions)` / net-liq-vs-Deposit-History, (C) a deterministic attribution decision-tree, (D) recording rules.
+2. **Claude_Task_Plan.md D2 Step 0** — an explicit "Cash/SGOV balance reconciliation — tripwire" sub-step that runs every daily run before sizing/staging, pointing to §12.
+3. **Operating_Protocols.md §11** source-of-truth boundary — cross-reference to §12.
+4. **Portfolio_Ledger.md** Operational Notes — standing "Cash/SGOV reconciliation basis" note: the per-strategy SGOV-share + cash allocation is the authoritative reconciliation basis and must be kept current.
+
+**Attribution rules (defaults, from existing precedent).** dividend/interest → owning strategy (strategy-held name) or pro-rata by SGOV share (shared park); deposit/withdrawal → equal-split A–E unless operator specifies; commission/fee on a fill → the trading strategy (already in the Step 0 trade loop; no double-count); standalone fee/interest → equal-split; operator SGOV-sale-to-cover-negative-cash → the strategies whose commissions created the deficit (converts already-charged cash-drag into an SGOV reduction; no new P&L), reparked on next settlement; genuinely unexplained → log + flag + conservative hold, never silently absorbed (the only cross-run delta).
+
+**Dependency flagged.** The tripwire's accuracy requires the per-strategy SGOV-share + cash allocation in Portfolio_Ledger.md to be kept current; some per-strategy state blocks were last fully refreshed 2026-05-07. Made an explicit maintenance requirement in §12.D + the ledger note. A dedicated per-strategy cash/SGOV sub-ledger would harden it further (not built this pass).
+
+---
+
 ### [2026-06-04] Queue lifecycle — daily full-clear-to-daily-archive policy established
 
 **Trigger:** Operator question on `Pending_Adversarial_Reviews.md` — once entries are `complete`, is there a process to clear the queue or do they remain forever? The adversarial-queue schema (Claude_Task_Plan.md) had flagged a "quarterly housekeeping routine" to archive the file but marked it "out of scope for initial implementation," so completed entries accumulated in-place. Operator directed: clear AND archive **all** drain-to-completion queues **daily** (not quarterly), for terminal-status entries only, into a "daily archive" (quarterly-bucket semantics rejected as wrong for a daily-cleared queue).
