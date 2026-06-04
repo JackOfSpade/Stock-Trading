@@ -43,6 +43,19 @@ Each open position gets one subsection under its strategy's "Position-thesis-det
 
 The full thesis substance, adversarial review, criterion-3 list source derivation, regime context, sector-context analysis, and sell-side compilation all live in the Decision_Log staging entry. Position-thesis-details should NEVER reproduce thesis content verbatim from the staging entry — pointer only. Target length per subsection: **8–14 bullet lines**. If a subsection exceeds 20 lines, prune to pointer.
 
+### Per-strategy Performance block (engine-maintained by D2 Step 0)
+
+Each strategy's "Portfolio state" carries a **Performance** block maintained daily by D2 Step 0's PER-STRATEGY PERFORMANCE MAINTENANCE step (the deployed-TWR engine; supersedes the legacy `[n/a]` placeholders). Fields:
+- **Deployed unit value** (deployed-TWR index): base `1.000000` at the strategy's first trade; chain-linked daily over *deployed days* (days holding ≥1 open position). Capital flows (deposits / redistribution) are neutralized via unit accounting — flows change units outstanding, not unit value. SGOV-parking and router-deactivation days are excluded (index pauses). **Deployed TWR = unit value − 1.**
+- **Peak unit value**: running max of the deployed unit value (high-water mark).
+- **Current drawdown**: `unit value ÷ peak − 1` (≤ 0). The −50% drawdown kill trigger fires at ≤ −0.50.
+- **SGOV benchmark index**: base `1.000000`, chain-linked over the SAME deployed days using the daily SGOV total return. Nominal excess = `unit value ÷ SGOV index − 1`; the 30-trade gate additionally applies post-tax + post-inflation haircuts at evaluation.
+- **Deployed days**: count of deployed days since first trade (feeds the M2M trigger's 36-month-active threshold ≈ 756 deployed days).
+- **Closed trades**: count (feeds the 30-trade gate).
+- **Gate status**: `pre-gate | cleared | failed`.
+- **As of**: date of last maintenance (America/Denver).
+- **Monthly snapshots**: a short appended log of `(YYYY-MM, deployed_unit_value, sgov_index, deployed_days)`, one row per month-end maintenance, so rolling-window triggers (the M2M rolling-12-month gap) can read the value ~12 months back. Drawdown (current vs peak) and the 30-trade gate (current indices at the gate) need only the current values above; only M2M needs this history.
+
 ### Activity log lines (under each strategy's "Portfolio state" block)
 
 One sentence per session/event, ending with `→ Decision_Log YYYY-MM-DD <keyword>` pointer. NOT paragraph-length. Cumulative substance lives in Decision_Log entries; activity log is a chronological index for state changes affecting the strategy's portfolio.
@@ -160,7 +173,7 @@ Prior: 2026-05-07 ~09:00 MT (Strategy D DIS post-Q2-FY26-print re-screen → tri
 - **Total account value (IBKR custodial)**: $9,448 (NLV from 2026-05-07 ~10:12 MT IBKR snapshot: SGOV 92.5414 shares + DIS 0.28 + IBM 0.1198 + RTX 0.1595 + HCA 0.0642 + META 0.0454 + USD Cash $8.13; daily P&L +$2 / +0.02% per IBKR display; Unrealized P&L -$15; MKT VAL $9,439.71; Excess Liq $7,087.87; Maint Margin $2,359.91; Buying Power $28,351.46; **Funds-on-Hold field absent = $0** — released Thu 2026-05-07 from settlement-hold status, confirming the corrected interpretation of $2,500 as a SUPPLEMENTAL CAPITAL DEPOSIT (not a pending outgoing transfer; Apr 28 "hold-within-NLV" first-observation hypothesis REFUTED by today's NLV jump of ~+$2,500 on hold-clearance); May 5 $4.51 account-level cash discrepancy CLOSED as accepted-fee-or-timing-noise per per-strategy equal-split attribution -$0.90/strategy; account-level SGOV reparking cycle deployed supplemental into +24.89 SGOV at $100.4763 effective avg cost — see Decision_Log 2026-05-07 DIS fill capture anomaly entry)
 - **Experiment start**: 2026-04-22 with $6,946.86 initial capital, split approximately equally across Strategies A, B, C, D, E (A: $1,389.38; B, C, D, E: $1,389.37 each — A gets the $0.01 rounding residual)
 - **Total deposits since start**: $9,446.86 ($6,946.86 initial 2026-04-22 + $2,500.00 supplemental deposited circa 2026-04-28 with IBKR settlement-hold status through Thu 2026-05-07 release-for-trading; supplemental allocated equal-split +$500.00/strategy per initial-allocation methodology; deployed today via account-level SGOV reparking cycle)
-- **Held-aside pool (terminated strategies, SGOV)**: $0
+- **Held-aside pool**: retired 2026-06-01 (capital-model pivot — terminated-strategy capital now auto-redistributes deterministically to surviving strategies; pending-newcomer frozen allocations book under their own strategy total). Currently $0.
 - **Active strategies**: A, B, C, D, E
 - **Terminated strategies**: (none)
 
@@ -786,7 +799,7 @@ Every closed trade gets a subsection under its strategy's "Closed trade details"
 Source-of-truth: the IBKR connector is authoritative for live positions, cash, fills, and quotes; this ledger is authoritative for per-strategy attribution. Live values below are read from the connector (`get_account_positions` / `get_account_summary` / `get_account_balances` / `get_price_snapshot`), not transcribed; the ledger stores the per-strategy cost-basis allocation that maps them to buckets. Fills are reconciled by D2 Step 0 (idempotent by `trade_id`).
 
 1. For each active strategy: Total value = the strategy's SGOV/cash allocation + sum of its open positions' live market values (positions→strategies via this ledger's cost-basis mapping; market values from the connector).
-2. Account-level total = sum of active-strategy totals + held-aside pool — cross-check against connector net-liquidation (`get_account_summary`); reconcile any drift to the connector while preserving strategy attribution.
+2. Account-level total = sum of active-strategy totals (including any frozen pending-newcomer allocations, which book under their own strategy) — cross-check against connector net-liquidation (`get_account_summary`); reconcile any drift to the connector while preserving strategy attribution. (No separate held-aside pool as of the 2026-06-01 capital-model pivot — terminated capital auto-redistributes to survivors.)
 3. Active strategies = (A, B, C, D, E) minus (terminated strategies)
 4. Every deposit creates an equal split among currently-active strategies at the time of deposit
 5. Every trade entry reduces the strategy's SGOV/cash allocation and increases its deployed cost basis by the fill principal + commission (from the connector fill)

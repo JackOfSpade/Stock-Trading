@@ -210,7 +210,7 @@ Future sessions looking up specific historical entries find either the entry or 
 
 The two drain-to-completion queues — `Pending_Analysis.md` (drained daily by D2) and `Pending_Adversarial_Reviews.md` (drained by the Adversarial Review routines) — are cleared **daily**, not on a retention window. A queue is read **to completion** by its drainer every day to find the entries it must act on, so a completed entry left in place is needlessly re-read each day — the opposite of `Decision_Log.md`, which is append-only, never scanned end-to-end, and therefore tolerates W5's weekly retention-window prune.
 
-Each day **D3 Calendar Hygiene** sweeps every entry at a terminal `status` (`complete` or `superseded`) out of its live queue into the queue's daily archive — `Archived_Analysis.md` / `Archived_Adversarial_Reviews.md`. The full entry block is appended (tagged with an `archived: <YYYY-MM-DD>` field) and then **removed from the live file entirely**: this is a full clear — **no pointer line is left behind** (unlike the Decision_Log archive). The live queue therefore holds only actionable entries — `pending`, plus the adversarial queue's in-flight `recommendation-complete` / `attacker-complete` mid-states — preceded by its unchanged header + schema-reference preamble.
+Each day **D3 Calendar Hygiene** sweeps every entry at a terminal `status` (`complete` or `superseded`) out of its live queue into the queue's daily archive — `Archived_Analysis.md` / `Archived_Adversarial_Reviews.md`. The full entry block is appended (tagged with an `archived: <YYYY-MM-DD>` field) and then **removed from the live file entirely**: this is a full clear — **no pointer line is left behind** (unlike the Decision_Log archive). The live queue therefore holds only actionable entries — `pending`, plus the adversarial queue's in-flight `attacker-complete` mid-state — preceded by its unchanged header + schema-reference preamble.
 
 Lookup convention: an entry id **absent from the live queue is in that queue's archive** (`Archived_Analysis.md` / `Archived_Adversarial_Reviews.md`). The durable record of any verdict/outcome lives independently in the per-review output files (`Adversarial_Review_<id>_*.md`), the `Regime_State.md` router rows, and `Decision_Log.md` — a gate that needs a completed review's result reads those, not the queue entry. The daily archives are append-only cold traceability: Daily/Weekly routines do not read them for decision input (D3's mechanical sweep-append is exempt), while monthly+ cadence may (Q1's regime retrospective reads the adversarial daily-archive for prior-quarter review records).
 
@@ -317,6 +317,11 @@ MECHANICAL EXIT-TRIGGER SWEEP (connector-driven; run for EVERY open position reg
 - **Time-based exit due**: today (America/Denver) ≥ the position's time-based-exit date → flag EXIT TRIGGERED.
 This catches a target-hit the next morning without waiting for a per-position scheduled review — the lag that left the BURL convergence exit owed for days under the screenshot workflow. It retires the per-position pulse-check / time-exit / convergence-check calendar events entirely (this daily sweep replaces them). D2 converts every EXIT TRIGGERED flag into a crafted exit order.
 
+PER-STRATEGY KILL-TRIGGER SWEEP (connector-driven; run for EVERY active strategy, alongside the per-position sweep above). Read each strategy's deployed-TWR engine state — **deployed unit value, peak, current drawdown** — from its Portfolio_Ledger.md **Performance** block, maintained daily by D2 Step 0 (ledger conventions "Per-strategy Performance block"). D1 runs before D2, so use the latest maintained block and refresh `current_drawdown` against today's live marks (`get_price_snapshot`) if a position moved sharply intraday. Check against the thresholds in Experiment_Parameters.md "Kill criteria (per-strategy)":
+- **Drawdown kill (#1, mechanical / immediate):** if peak-to-trough deployed TWR has dropped ≥50% from the strategy's highest historical value since first trade → flag **STRATEGY TERMINATION — DRAWDOWN**. Rigid and context-independent — no judgment, no review.
+- **Runaway-success (#3, pre-gate only):** if deployed TWR has **doubled** AND the strategy has not yet cleared its 30-trade gate → flag **RUNAWAY-SUCCESS REVIEW** (does NOT terminate directly — routes to an m2m-termination review to rule out reward-function exploitation / hidden tail risk).
+D2 converts a DRAWDOWN flag into an immediate strategy termination (close all positions + deterministic redistribution) and a RUNAWAY-SUCCESS flag into an enqueued review. (The mark-to-market #4 and foundation-change #2 triggers are detected on slower cadences — M5 monthly and Q3/A1 respectively — not here.)
+
 For each open position, does any Development above ALSO trigger a (judgment-laden) thesis-invalidation exit criterion in the position's entry record (per Strategy.md exit rules for the relevant strategy)? For each position affected: position (ticker + strategy), triggering development, whether the invalidation criterion is met (YES with specific criterion / NO with reasoning).
 
 For each watchlist candidate: does any Development materially change candidacy status (closer to entry / invalidated / unchanged)?
@@ -368,6 +373,14 @@ STEP 0 — BROKER RECONCILIATION (run first, every run, before reading Daily.md'
 - Note still-working / partial orders from `get_account_orders` (e.g. a GTC not yet filled) and leave them exit-pending / ORDER-STAGED.
 - For any crafted instruction in `get_order_instructions` whose order day has passed unconfirmed, or whose position Step 0 just closed, call `delete_order_instruction` to clear it.
 
+PER-STRATEGY PERFORMANCE MAINTENANCE (deployed-TWR engine; run after fill reconciliation above, daily, while connector marks are fresh). For each active strategy, update its Portfolio_Ledger.md **Performance** block (schema: ledger conventions "Per-strategy Performance block"):
+1. DEPLOYED today? = strategy held ≥1 open position at today's close. If fully in SGOV all day (0 positions) → no index update (deployed TWR + SGOV both pause); just write `As of`.
+2. If deployed, compute the day's position-sleeve return `r_t = (deployed P&L today, net of commissions) / (start-of-day deployed market value)`, where deployed P&L today = Σ_positions[(today_close − prior_close)×shares] + realized P&L on positions closed today − today's commissions (a position opened today uses its fill price as `prior_close`), and start-of-day deployed MV = Σ_positions-held-at-open[prior_close × shares]. Prior close via `get_price_history`, today via `get_price_snapshot`, fills from Step 0.
+3. `deployed_unit_value ×= (1 + r_t)`; `peak = max(peak, deployed_unit_value)`; `current_drawdown = deployed_unit_value/peak − 1`.
+4. `sgov_index ×= (1 + sgov_daily_total_return)` (SGOV close-to-close + any dividend, via connector); increment `deployed_days`.
+5. Refresh `closed_trades` from Step 0; `excess = deployed_unit_value/sgov_index − 1`. Write the block with `As of` = today (MT). On the first maintenance of each calendar month, append a Monthly-snapshots row `(YYYY-MM, deployed_unit_value, sgov_index, deployed_days)`.
+FIRST-RUN SEED (when a block is still `[n/a]`): initialize `deployed_unit_value` by chain-linking the strategy's realized closed-trade returns from inception (per trade `realized_pnl ÷ cost_basis`, from the ledger / Decision_Log) then applying current open positions' unrealized return; set `peak` = max over that path; seed `sgov_index` from inception SGOV total return over the same span; set `deployed_days` + `closed_trades` from trade history; `gate_status = pre-gate`. Best-effort seed of the ~6-week pre-engine history (note "seeded <date>"); daily maintenance is exact thereafter.
+
 STEP 1 — DRAIN PENDING ANALYSES (run after Step 0). Read `Pending_Analysis.md`. For every entry with `status: pending` and `due_date <= today` (America/Denver), perform the analysis in-session — each as an isolated sub-task (subagent) for fresh context where available, else inline sequentially. This is where deferred thesis constructions, scheduled re-screens, research-deferral checkpoints, foundation-change assessments, and constraint-relaxation reviews actually run. For each entry: do the full analysis per its `context` (apply the relevant Strategy.md criteria, Operating_Protocols.md rules, B_Sub_Pattern_Taxonomy.md, connector live data §11); write Decision_Log.md (+ Portfolio_Ledger.md if a position changes); for a GO, craft the order instruction and create the `[Claude] Confirm order` event (per the staging steps below); set the entry `status: complete` with its `outcome`. If the required data is still unavailable on the due_date, apply the entry's `conservative_default` (skip / decline / exit) and mark complete — do NOT re-defer (deferrals do not chain).
 
 Then read the just-saved `Daily.md` (today's market development scan; first line = today's date in YYYY-MM-DD format).
@@ -403,6 +416,10 @@ For each recommendation type:
    - Confirm the threshold for inter-monthly review per Strategy.md (high bar; only material regime shifts qualify). If the threshold is not met, record the second-look decision via Decision_Log.md and stop.
    - If confirmed: perform the router review **in-session** (Claude-only analysis) — assess the Daily.md development against Regime_State.md and Strategy.md activation rules for the affected strategy; if the state changes, update Regime_State.md and append a Decision_Log entry. No calendar event.
 
+5. STRATEGY TERMINATIONS. For each strategy flagged by D1's per-strategy kill-trigger sweep (or by a drained foundation-change assessment with a "terminate" verdict, or an Orchestrator m2m-termination TERMINATE verdict):
+   - **DRAWDOWN termination (immediate, mechanical) / foundation-terminate / m2m-terminate:** execute the termination per Experiment_Parameters.md "Strategy termination and capital redistribution" — stage exit orders to close ALL the strategy's open positions (connector-crafted, each with a `[Claude] Confirm order` event; MARKET or marketable-limit for assured exit), mark the strategy **terminated** in Portfolio_Ledger.md (active→terminated; new entries blocked), and once the closes reconcile (D2 Step 0), perform the **deterministic redistribution**: fill any pending-newcomer strategies to their $2,000 probe-stake floor (FIFO, oldest first), then split the remainder equally among active survivors; update Portfolio_Ledger.md allocations and append Decision_Log.md (termination post-mortem + per-survivor redistribution amounts + any newcomer fills). The drawdown trigger is rigid — do not wait on any review.
+   - **RUNAWAY-SUCCESS flag:** do NOT terminate. Append a `Pending_Adversarial_Reviews.md` entry (review_type m2m-termination; the strategy; trigger_context = "runaway-success — deployed TWR doubled pre-gate; rule out reward-function exploitation / hidden tail risk per Experiment_Parameters.md kill-trigger #3"; attacker_due_date = next trading day; orchestrator_due_date = +1 trading day; status pending). The Attacker/Orchestrator routines adjudicate terminate-vs-continue and, on TERMINATE, execute the same termination + redistribution inline.
+
 DEFERRAL DISCIPLINE: if a decision genuinely cannot be resolved this routine, specify (a) the trigger date and information source that will resolve it, and (b) the conservative-default fallback (skip / decline / exit). Deferrals do not chain. Append a `Pending_Analysis.md` entry (due_date = the resolution date) so D2 drains it then — do not create a calendar event for analysis.
 
 CALENDAR MCP USAGE: Claude calls the Calendar MCP directly. Time zone per Experiment_Parameters.md (default America/Denver if silent). Set per-event notification to fire at event-time.
@@ -425,7 +442,7 @@ Reconcile Google Calendar against current state, and keep the `Pending_Analysis.
 
 DATE ANCHOR: "Today" is the current system date **in America/Denver specifically** — not UTC, not the assistant-context `currentDate` field, and not inferred from file timestamps. Do NOT trust the `currentDate` value embedded in the chat context: that field is UTC-based, and during evening MT hours UTC has already rolled to the next calendar day — using it as "today" will cause same-day order-confirmation events to be misclassified as order-day-passed and deleted (this regression occurred 2026-05-27 evening MT on the META convergence exit). To establish today, ALWAYS run a Bash command equivalent to `TZ=America/Denver date '+%Y-%m-%d %H:%M %Z'` as the first action of the routine and use its date as the anchor. Do NOT infer today from file timestamps (Decision_Log entry headers, Portfolio_Ledger "Last updated", etc.) — those may be forward-dated, templated, or recovery-artifact content. If the Bash-derived MT date conflicts with project-file timestamps or with `currentDate`, trust the Bash MT date and flag the conflict in chat output.
 
-QUEUE ARCHIVE SWEEP (run after D2 has drained `Pending_Analysis.md` and after any Adversarial Review routine has run this cycle): for each of `Pending_Analysis.md` and `Pending_Adversarial_Reviews.md`, move every entry whose `status` is terminal (`complete` or `superseded`) out of the live file — append its full block (with an added `archived: <today, MT>` field) to the queue's daily archive (`Archived_Analysis.md` / `Archived_Adversarial_Reviews.md`; create it with a header line on first use), then delete it from the live queue. Full clear — leave no pointer line. Preserve each live file's header + schema-reference preamble and all non-terminal entries (`pending`, and the adversarial queue's in-flight `recommendation-complete` / `attacker-complete`). See "Queue lifecycle and daily archive policy."
+QUEUE ARCHIVE SWEEP (run after D2 has drained `Pending_Analysis.md` and after any Adversarial Review routine has run this cycle): for each of `Pending_Analysis.md` and `Pending_Adversarial_Reviews.md`, move every entry whose `status` is terminal (`complete` or `superseded`) out of the live file — append its full block (with an added `archived: <today, MT>` field) to the queue's daily archive (`Archived_Analysis.md` / `Archived_Adversarial_Reviews.md`; create it with a header line on first use), then delete it from the live queue. Full clear — leave no pointer line. Preserve each live file's header + schema-reference preamble and all non-terminal entries (`pending`, and the adversarial queue's in-flight `attacker-complete`). See "Queue lifecycle and daily archive policy."
 
 Walk all `[Claude]` events in the next 90 days. The calendar should contain **only `[Claude] Confirm order` events**:
 - If any legacy analysis event is still present (thesis construction, re-screen, research-deferral checkpoint, foundation-change assessment, constraint-relaxation review, router review, pulse-check / time-exit / convergence check), it is OBSOLETE under the in-session/queue model: convert it to a `Pending_Analysis.md` entry with an appropriate `due_date` + self-contained `context` (or, for pulse / time-exit / convergence checks, simply drop it — D1's daily mechanical exit sweep covers those), then delete the calendar event.
@@ -887,9 +904,13 @@ F. CROSS-PROMPT DECONFLICTION — if any ticker appears as both an exit candidat
 
 G. WATCHLIST UPDATES — apply any A-queue drains from A and any other updates surfaced.
 
+H. KILL-TRIGGER & GATE EVALUATION (per active strategy; the slower triggers not covered by D1's daily sweep). Per Experiment_Parameters.md "Kill criteria (per-strategy)" + the success threshold:
+   - **30-trade gate:** for each active strategy whose Performance block shows **closed_trades ≥ 30** and `gate_status = pre-gate`, read the maintained **deployed unit value** and **SGOV index** at the 30-trade mark; nominal excess = `deployed_unit_value ÷ sgov_index − 1`; apply the **post-tax** haircut (short-term cap-gains rate per Experiment_Parameters.md on the realized-gain portion) and **post-inflation** haircut (CPI over the first-trade-to-gate span) → **excess real return**. **If < 0% → terminate** (execute the close + deterministic redistribution per the D2 termination procedure / Experiment_Parameters.md "Strategy termination and capital redistribution"); append the gate post-mortem to Decision_Log.md. **If ≥ 0% → mark the gate CLEARED** in Portfolio_Ledger.md + Decision_Log.md (permission to continue; not a success verdict). Record the evaluation either way. (Strategy D's gate is expected never to be reached — low turnover; documented and fine.)
+   - **Mark-to-market underperformance (#4):** for each strategy whose Performance block shows **`deployed_days` ≥ ~756 (≈ 36 months active)**, compute the rolling-12-month deployed-vs-SGOV gap from the Monthly-snapshots log — `(deployed_unit_value/sgov_index now) ÷ (deployed_unit_value/sgov_index ~12 months ago) − 1`; if it has trailed SGOV by **≥ 10 percentage points over any rolling 12-month window** (router-deactivation periods already excluded, since the indices only advance on deployed days), append a `Pending_Adversarial_Reviews.md` entry (review_type m2m-termination; the strategy; trigger_context = the measured 36-month-active + rolling-12-month gap; attacker_due_date next trading day; orchestrator_due_date +1; status pending). The Attacker/Orchestrator adjudicate; on TERMINATE they execute termination + redistribution inline. (At ~6 weeks of experiment age this cannot fire until ~2029 — a no-op until then.)
+
 DEFERRAL DISCIPLINE: deferrals don't chain. Specify trigger and conservative-default fallback for any deferred decision. Enqueue deferred analyses to `Pending_Analysis.md` (never the calendar).
 
-CALENDAR MCP USAGE: Claude calls the Calendar MCP directly only for `[Claude] Confirm order` events (D exits in section C). Time zone per Experiment_Parameters.md.
+CALENDAR MCP USAGE: Claude calls the Calendar MCP directly only for `[Claude] Confirm order` events (D exits in section C; strategy-termination closes in section H). Time zone per Experiment_Parameters.md.
 
 CHAT OUTPUT:
 - Exit order(s) as crafted instructions (tap-to-confirm deep link + `SIDE QTY TICKER TYPE LIMIT TIF` summary) grouped by execution day (or "no order").
@@ -902,60 +923,38 @@ If no orders, no file changes, no queue entries: "No actions required."
 
 # ADVERSARIAL REVIEWS (queue-driven, fires daily as needed)
 
-Structured adversarial reviews — pre-mortem reviews, regime-router divergence reviews, mark-to-market termination reviews, capital-redistribution reviews, scope-widening adjudications, and any future structured review the experiment design adds — are executed by a small set of generic routines that read entries from `Pending_Adversarial_Reviews.md` and produce reviews per file handoff. Triggering routines (M5, A3, kill-trigger handlers, termination handlers, etc.) write entries to the queue; they never invoke a review prompt directly.
+Structured adversarial reviews — pre-mortem reviews, regime-router divergence reviews, mark-to-market termination reviews, scope-widening adjudications, and any future structured review the experiment design adds — are executed by a small set of generic routines that read entries from `Pending_Adversarial_Reviews.md` and produce reviews per file handoff. Triggering routines (M5, A3, kill-trigger handlers, etc.) write entries to the queue; they never invoke a review prompt directly. (Capital redistribution after a strategy terminates is NOT an adversarial review — it is a **deterministic equal-split among surviving strategies** handled inline by the termination handler; see Experiment_Parameters.md "Strategy termination and capital redistribution.")
 
 ## Pending_Adversarial_Reviews.md — queue file schema
 
-The queue is a single Markdown file at the repo root. Each pending review is one entry, separated by `---`. Entries are appended in order of creation. Once an entry reaches a terminal `status` (`complete` or `superseded`), **D3 Calendar Hygiene** sweeps it daily to `Archived_Adversarial_Reviews.md` and removes it from this live file entirely — full clear, no pointer (see "Queue lifecycle and daily archive policy"). The live file therefore holds only actionable entries (`pending` / `recommendation-complete` / `attacker-complete`); an entry id absent from it is found in the daily archive.
+The queue is a single Markdown file at the repo root. Each pending review is one entry, separated by `---`. Entries are appended in order of creation. Once an entry reaches a terminal `status` (`complete` or `superseded`), **D3 Calendar Hygiene** sweeps it daily to `Archived_Adversarial_Reviews.md` and removes it from this live file entirely — full clear, no pointer (see "Queue lifecycle and daily archive policy"). The live file therefore holds only actionable entries (`pending` / `attacker-complete`); an entry id absent from it is found in the daily archive.
 
 Each entry is a YAML-style block:
 
 ```
-- id: <unique identifier, e.g., div-A-202605-1, premortem-strategyB-cycle3, m2m-D-202609, redist-202707-strategyC, scopewiden-C-202611-1>
-  review_type: <one of: pre-mortem | divergence-review | m2m-termination | capital-redistribution | scope-widening-adjudication>
-  strategy: <A | B | C | D | E | router | n/a (n/a for redistribution which is account-level)>
+- id: <unique identifier, e.g., div-A-202605-1, premortem-strategyB-cycle3, m2m-D-202609, scopewiden-C-202611-1>
+  review_type: <one of: pre-mortem | divergence-review | m2m-termination | scope-widening-adjudication>
+  strategy: <A | B | C | D | E | router>
   trigger_context: <one paragraph of context — what fired the review and any specifics needed by the reviewer beyond the artifact_path>
-  artifact_path: <relative repo path to the artifact under review — for divergence-review, this is Monthly_Fundamental.md (containing M1b output); for pre-mortem, the pre-mortem document; for m2m-termination, a per-trigger termination-context file produced by the kill-trigger handler; for capital-redistribution, a per-termination context file produced by the termination handler; for scope-widening, the post-HYBRID fundamental update document>
+  artifact_path: <relative repo path to the artifact under review — for divergence-review, this is Monthly_Fundamental.md (containing M1b output); for pre-mortem, the pre-mortem document; for m2m-termination, a per-trigger termination-context file produced by the kill-trigger handler; for scope-widening, the post-HYBRID fundamental update document>
   prior_state: <free-form text describing what state the system is in pending review — e.g., for divergence-review: "Strategy A activation state held at DO-NOT-ACTIVATE pending review"; for m2m-termination: "Strategy D continues trading pending review">
   attacker_due_date: <YYYY-MM-DD; the next trading day after queue creation, in the experiment's reference timezone per Experiment_Parameters.md>
   orchestrator_due_date: <YYYY-MM-DD; one trading day after attacker_due_date>
-  recommendation_due_date: <YYYY-MM-DD or n/a; only used for capital-redistribution; if used, set one trading day before attacker_due_date>
-  status: <pending | recommendation-complete | attacker-complete | complete | superseded>
+  status: <pending | attacker-complete | complete | superseded>
   attacker_output_path: <set by attacker routine when it completes; e.g., Adversarial_Review_<id>_attacker.md>
   orchestrator_output_path: <set by orchestrator routine; e.g., Adversarial_Review_<id>_orchestrator.md>
-  recommendation_output_path: <set by recommendation routine if used; e.g., Adversarial_Review_<id>_recommendation.md>
   cycle_number: <integer; 1 for first cycle of a given artifact, incremented per re-review after revision; n/a for non-cycling review types>
   notes: <free-form, optional — e.g., for cycle 5+ pre-mortem, the forcing-question answer; for revision-induced cycles, the prior cycle's id>
 ```
 
 The queue file's header (first line) is `# Pending Adversarial Reviews — queue`, followed by a brief schema reference, then entries.
 
-## Adversarial Review Recommendation — regular routine (capital-redistribution only)
+## Adversarial Review Attacker — regular routine
 
 Schedule: daily. The routine wakes, scans the queue, and exits if no entry matches its phase.
 
 ```
-Read access scope: Read Pending_Adversarial_Reviews.md, Strategy.md, Experiment_Parameters.md, Portfolio_Ledger.md, Regime_State.md, AI_Trading_Foundation.md, Decision_Log.md (and Decision_Log_Archive_*.md as needed), the queue entry's artifact_path, and any per-strategy state files referenced by the trigger_context.
-
-Read Pending_Adversarial_Reviews.md.
-
-Find the next entry where review_type = capital-redistribution AND status = pending AND recommendation_due_date <= today. Process all matching entries this routine fire — each entry as an isolated sub-task (subagent) for fresh per-entry context where available, else inline sequentially with an explicit per-entry scope reset between artifacts (so per-entry read-scope discipline is preserved and prior in-fire artifacts do not bleed into a subsequent entry's output — particularly load-bearing for the Attacker routine's STRICT BLINDING, where each entry's blinding applies to its own artifact_path). If none: write chat output "No capital-redistribution recommendations due today." and exit.
-
-If found:
-1. Read the entry's artifact_path (the per-termination context file). Read Portfolio_Ledger.md and Regime_State.md for current surviving-strategy state.
-2. Produce a recommendation per Experiment_Parameters.md "Strategy termination and capital redistribution" — one of: full redistribution / full hold (SGOV) / partial redistribution (with specified fraction). Explicit reasoning required.
-3. Write the recommendation to Adversarial_Review_<id>_recommendation.md (where <id> is the queue entry id). Format: header (id, review_type, strategy, date, cycle_number), recommendation (one-line verdict), reasoning (free-form, structured under headers), key inputs section listing what was read.
-4. Update the queue entry: set recommendation_output_path, set status = recommendation-complete.
-
-CHAT OUTPUT: one line per processed entry naming the entry id and recommendation file written. If multiple entries were processed this fire, list each on its own line.
-```
-
-## Adversarial Review Attacker — regular routine
-
-Schedule: daily (after Recommendation routine completes if both fire same day). The routine wakes, scans the queue, and exits if no entry matches its phase.
-
-```
-Read access scope — STRICT BLINDING: Read Pending_Adversarial_Reviews.md (to find and process the entry). Read the queue entry's artifact_path (the document under attack). Read its recommendation_output_path if review_type = capital-redistribution AND status = recommendation-complete (the recommendation is the artifact for the attacker in capital-redistribution reviews).
+Read access scope — STRICT BLINDING: Read Pending_Adversarial_Reviews.md (to find and process the entry). Read the queue entry's artifact_path (the document under attack).
 
 EXPLICITLY DO NOT READ for any review processed by this routine: Decision_Log.md, Decision_Log_Archive_*.md, prior Adversarial_Review_*.md files, broader sections of Strategy.md or Experiment_Parameters.md beyond the section directly under review, prior versions of the artifact, or any other repo file. The artifact under review is required to be self-contained per Experiment_Parameters.md "Self-containment requirement for pre-mortem artifacts" (which generalizes to all adversarial-review artifacts). If you need information that is not in the artifact and not in the queue entry's trigger_context field, the artifact has failed self-containment and you flag this as a Tier 1 defect — do not search for the missing context.
 
@@ -963,14 +962,13 @@ This blinding is enforced by prompt discipline. Tool-call logs are auditable; re
 
 Read Pending_Adversarial_Reviews.md.
 
-Find the next entry where attacker_due_date <= today AND status matches the entry's phase: status = pending for review types pre-mortem / divergence-review / m2m-termination / scope-widening-adjudication; status = recommendation-complete for review type capital-redistribution. Process all matching entries this routine fire — each entry as an isolated sub-task (subagent) for fresh per-entry context where available, else inline sequentially with an explicit per-entry scope reset between artifacts (so per-entry read-scope discipline is preserved and prior in-fire artifacts do not bleed into a subsequent entry's output — particularly load-bearing for the Attacker routine's STRICT BLINDING, where each entry's blinding applies to its own artifact_path). If none: write chat output "No adversarial reviews due for attacker today." and exit.
+Find the next entry where attacker_due_date <= today AND status = pending. Process all matching entries this routine fire — each entry as an isolated sub-task (subagent) for fresh per-entry context where available, else inline sequentially with an explicit per-entry scope reset between artifacts (so per-entry read-scope discipline is preserved and prior in-fire artifacts do not bleed into a subsequent entry's output — particularly load-bearing for the Attacker routine's STRICT BLINDING, where each entry's blinding applies to its own artifact_path). If none: write chat output "No adversarial reviews due for attacker today." and exit.
 
 If found, attack the artifact per the review_type's protocol from Experiment_Parameters.md and Strategy.md:
 
 - pre-mortem: identify Tier 1 / Tier 2 / Tier 3 weaknesses (theater indicators, vague failure modes, unverifiable frequency declarations, post-hoc-reinterpretable activation thresholds). Verdict: SUFFICIENT / TIER 1 DEFECT — REVISION REQUIRED.
 - divergence-review: produce strongest bear case against the M1b fundamental claim and argue for the technical call. Specific weaknesses in the fundamental reasoning. Verdict on whether fundamental claim should survive.
 - m2m-termination: produce strongest case for terminating the strategy. Specific weaknesses in any "thesis-still-intact" reasoning visible in the artifact. Verdict on terminate vs continue.
-- capital-redistribution: produce strongest case against the recommendation on its merits. Not told which direction the recommendation runs. Verdict.
 - scope-widening-adjudication: attack whether the fundamental reasoning has adequately addressed the three required topics per Strategy.md Strategy C post-HYBRID adjudication mechanism. Verdict.
 
 Write attack to Adversarial_Review_<id>_attacker.md (where <id> is the queue entry id). Format: header (id, review_type, date, cycle_number), verdict (one-line), specific weaknesses identified (numbered, each with anchor to artifact text), self-imposed scope confirmation ("I read only: <list of files actually read>; I did not read: Decision_Log, prior reviews, broader docs"), reasoning section.
@@ -985,7 +983,7 @@ CHAT OUTPUT: one line per processed entry naming the entry id, review_type, and 
 Schedule: daily (after Attacker routine). The routine wakes, scans the queue, and exits if no entry matches its phase.
 
 ```
-Read access scope: Read Pending_Adversarial_Reviews.md, Strategy.md, Experiment_Parameters.md, Portfolio_Ledger.md, Regime_State.md, AI_Trading_Foundation.md, Decision_Log.md (and Decision_Log_Archive_*.md as needed), the queue entry's artifact_path, attacker_output_path, and recommendation_output_path (if applicable).
+Read access scope: Read Pending_Adversarial_Reviews.md, Strategy.md, Experiment_Parameters.md, Portfolio_Ledger.md, Regime_State.md, AI_Trading_Foundation.md, Decision_Log.md (and Decision_Log_Archive_*.md as needed), the queue entry's artifact_path and attacker_output_path.
 
 Read Pending_Adversarial_Reviews.md.
 
@@ -993,7 +991,7 @@ Find the next entry where status = attacker-complete AND orchestrator_due_date <
 
 If found, orchestrate per the review_type's protocol:
 
-1. Read attacker_output_path. Read artifact_path. Read recommendation_output_path if applicable.
+1. Read attacker_output_path. Read artifact_path.
 2. Produce explicit independent assessment documenting:
    (a) For each weakness the attacker identified, validity assessment (valid Tier 1 / valid but Tier 2-3 / invalid) — for pre-mortem; for other types, equivalent grading per the type's protocol.
    (b) Theater in the attacker's output (generic-sounding objections without specific anchors).
@@ -1002,7 +1000,6 @@ If found, orchestrate per the review_type's protocol:
        - pre-mortem: SUFFICIENT or TIER 1 DEFECT — REVISION REQUIRED. If REVISION REQUIRED, identify whether to invoke the rev 15 forcing question and answer it in writing per Experiment_Parameters.md (a/b/c). For cycle 5+, justify continuation per the soft cap.
        - divergence-review: final activation state for the strategy (ACTIVATE / DO-NOT-ACTIVATE) with reasoning. Apply the default-on-ambiguity rule and the theater-check tiebreaker: if theater_check = CONVERGENT, default to DO-NOT-ACTIVATE regardless of the verdict.
        - m2m-termination: TERMINATE / CONTINUE with reasoning. Default-on-ambiguity = TERMINATE.
-       - capital-redistribution: full redistribution / full hold / partial redistribution (with fraction) with reasoning. Default-on-ambiguity = full hold (SGOV).
        - scope-widening-adjudication: re-widening AUTHORIZED / NOT AUTHORIZED with reasoning. Apply the four-screen test and the CONVERGENT-theater-check requirement per Strategy.md.
    (e) Theater-check flag: CONVERGENT / DIVERGENT / MIXED with specific rationale referencing concrete claims in the attacker output and the orchestrator's own assessment. The orchestrator self-certifies this flag — accepted-risk note: this is structurally weaker than a separate Theater Auditor routine; if empirical theater-check rates suggest under-detection of CONVERGENT framing, a separate auditor routine can be added in a future revision.
 
@@ -1010,9 +1007,8 @@ If found, orchestrate per the review_type's protocol:
 
 4. Take resulting action:
    - divergence-review: update Regime_State.md with the binding activation state for the strategy. If the verdict differs from the prior state, append the binding decision to Decision_Log.md.
-   - m2m-termination with verdict TERMINATE: append Decision_Log.md entry recording termination, update Portfolio_Ledger.md to mark strategy terminated, immediately move strategy portfolio value to SGOV (stage IBKR orders in chat output for the participant to execute), and append a new queue entry of review_type = capital-redistribution for the just-terminated strategy (with appropriate due dates).
+   - m2m-termination with verdict TERMINATE: append Decision_Log.md entry recording termination, update Portfolio_Ledger.md to mark strategy terminated, immediately move strategy portfolio value to SGOV (stage IBKR orders in chat output for the participant to execute), and **perform the deterministic capital redistribution inline** — split the terminated strategy's booked allocation equally among active surviving strategies, after first filling any pending newcomer strategies to their probe-stake floor (per Experiment_Parameters.md "Strategy termination and capital redistribution" + "New strategy funding"), updating Portfolio_Ledger.md allocations.
    - m2m-termination with verdict CONTINUE: append Decision_Log.md entry recording the review outcome, no portfolio action.
-   - capital-redistribution: update Portfolio_Ledger.md per the verdict (held-aside pool annotations, redistribution amounts to surviving strategy portfolios), stage any required IBKR orders in chat output for the participant to execute, append Decision_Log.md entry.
    - pre-mortem with verdict REVISION REQUIRED: append Decision_Log.md entry recording the cycle outcome. Subsequent revision is performed by the participant or by a participant-triggered drafting session — orchestrator does not auto-revise the artifact. (Pre-mortem revision is itself an editorial action and is out of scope for an autonomous routine.)
    - pre-mortem with verdict SUFFICIENT: append Decision_Log.md entry, no further action; the pre-mortem is unblocked for first-trade gating purposes.
    - scope-widening-adjudication with verdict AUTHORIZED: append Decision_Log.md entry; downstream Strategy C handlers may re-widen per Strategy.md.

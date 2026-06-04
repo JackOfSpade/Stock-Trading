@@ -12227,12 +12227,72 @@ High-fan-out cadences (W4: A/B/C; M5: E + A-queue drain; Q4/A3: D + foundation/c
 
 ---
 
+### [2026-06-01] Capital model pivot — deterministic survivorship accretion + new-strategy probe stake
+
+**Trigger:** Owner decision to make the system a live capital-growth engine (not only a frozen forward-test), scaling winners on proven durability. Converged over discussion: scale *capital*, never the 2% risk fraction; reward winners *passively* via survivorship rather than merit-weighting a short, noisy sample.
+
+**Decisions (all implemented this session):**
+
+1. **Deterministic redistribution to survivors.** On any strategy termination, its booked allocation auto-redistributes to active survivors — no adversarial review, no hold option, no held-aside pool. Order: (1) fill any pending newcomer to its probe-stake floor (FIFO, oldest first); (2) split the remainder equally among all active strategies (including router-deactivated ones). Capital sits in SGOV and deploys at each survivor's own 2%/trade pace, so redistribution changes *booked allocation*, not immediate exposure.
+
+2. **Capital-redistribution adversarial review REMOVED.** Once redistribution is deterministic there is nothing to adjudicate. Retired: the `capital-redistribution` review type, the dedicated **Recommendation routine** (it existed only for this review type — the only three-routine pipeline), the `recommendation_due_date` / `recommendation_output_path` fields, the `recommendation-complete` status, and the held-aside-pool concept. The systemic-shock "canary" the review guarded is accepted-loss because (a) redistributed capital deploys slowly at 2%, (b) survivors keep their own drawdown kills + router deactivation, (c) the systemic diagnosis still lives in the foundation-change assessment and M2M-termination review.
+
+3. **Scaling is survivorship-driven (passive).** Equal-per-event splits, but winners survive longer → present for more termination-redistribution and deposit events → accrete more over time. Rewards durability (coarse but robust — a strategy must keep not-dying), not short-sample magnitude. Chosen over merit-weighting precisely because it doesn't over-fund a strategy that merely got lucky over ~30 trades.
+
+4. **Deposits are the magnitude lever.** Redistribution only reallocates the existing pie; meaningful dollars require net new deposits, which (same waterfall) land disproportionately on survivors over time. TWR is invariant to deposits, so this doesn't distort evaluation.
+
+5. **New-strategy funding / probe stake.** A new strategy starts frozen (non-trading, $0 booked) and accumulates to a **$2,000 probe-stake floor** (adjustable param; 2% position ≈ $40, matching current book scale + commission viability; absolute-dollar floor because the binding constraint — IBKR's ~$0.35 min commission — is absolute). While any newcomer is below floor, **all** inflows (deposits AND sunset redistribution) feed pending newcomers first (FIFO) until filled — not a one-time carve — then the remainder splits equally. Launches at ≥ $2,000; no proactive seeding (waits frozen until deposits/sunsets fill it).
+
+6. **Foundation-change termination is a sunset source.** Confirmed: a strategy deleted by the annual A1/A2/A3 AI-edge review (foundation-change → terminate) hands its capital to survivors exactly like a performance death.
+
+**Immutability:** relaxed for the *allocation* policy only — it is now a versioned policy that may evolve. The evaluation machinery (30-trade gates, all kill triggers, deployed-TWR-vs-SGOV, 2%-per-trade risk sizing) is unchanged. Accepted trade: per-strategy TWRs are no longer perfectly independent (capital coupling), so the pristine-experiment framing is relaxed in favor of compounding real capital onto what works.
+
+**Theater-check flag:** N/A — architecture/policy revision.
+
+**Downstream actions:**
+- `Experiment_Parameters.md` — rewrote "Strategy termination and capital redistribution" to deterministic; rewrote "Deposits" to the newcomer-first waterfall; added "New strategy funding (probe stake)"; added "Capital allocation model — 2026-06 revision (live-growth pivot)"; replaced the held-aside-pool definition with "Pending newcomer"; removed redistribution-review references from the kill-trigger paths, the monthly report, the routine-architecture section, and the N=1 note.
+- `Claude_Task_Plan.md` — deleted the Adversarial Review Recommendation routine; removed `capital-redistribution` from the queue schema (review_type, status, recommendation fields); de-capital-redistribution'd the Attacker + Orchestrator routines; the m2m-termination TERMINATE handler now performs deterministic redistribution inline instead of enqueuing a review.
+- `Pending_Adversarial_Reviews.md` — schema header updated; defunct `recommendation_*` fields stripped from the three live divergence entries.
+- A remote routine must be retired (operator action): **"Adversarial Review Recommendation — regular routine (capital-redistribution only)."** The Attacker and Orchestrator routines stay (shared by the surviving review types).
+
+**Compaction-survival notes:**
+1. *Redistribution is deterministic:* terminated allocation → fill pending newcomers to $2,000 floor (FIFO) → split remainder equally among active survivors. No review, no held-aside pool.
+2. *Scaling = survivorship accretion (passive) + deposits (magnitude).* Scale capital, never the 2% risk fraction.
+3. *New strategy:* frozen until $2,000 booked; all inflows (deposits + sunsets) feed newcomers first until filled, then equal split.
+4. *Removed:* capital-redistribution review type + the Recommendation routine (and its remote routine). Attacker/Orchestrator unaffected.
+5. *Evaluation machinery unchanged; allocation policy is now versioned (immutability relaxed for allocation only).*
+
+---
+
+### [2026-06-01] Wired the kill-trigger detection→terminate→redistribute path into the cadences
+
+**Trigger:** Closing the gap surfaced after the capital-model pivot — the deterministic redistribution + termination *execution* existed (m2m-termination Orchestrator path), but nothing in the cadences *detected* a drawdown kill or a 30-trade-gate failure and *executed* the termination. (Pre-existing hole, not introduced by the pivot — the old design only routed m2m-termination through a routine.)
+
+**Decision (wired into existing routines — no new remote routine needed):**
+- **D1 — per-strategy kill-trigger sweep (daily):** alongside the per-position exit sweep, compute each active strategy's deployed-TWR drawdown and flag **DRAWDOWN termination** (peak-to-trough deployed TWR ≥ 50% below high; mechanical/immediate) and **RUNAWAY-SUCCESS review** (deployed TWR doubled pre-gate → route to review, not direct terminate).
+- **D2 — STRATEGY TERMINATIONS (step 5, daily):** on a DRAWDOWN flag (or a drained foundation-change "terminate", or an Orchestrator m2m TERMINATE), execute the termination per Experiment_Parameters.md — close all positions (connector-crafted Confirm-order events), mark terminated, then deterministic redistribution (fill pending newcomers to the $2,000 floor FIFO, then equal-split among survivors). On a RUNAWAY-SUCCESS flag, enqueue an m2m-termination review.
+- **M5 — KILL-TRIGGER & GATE EVALUATION (section H, monthly):** evaluate the **30-trade gate** (≥30 closed trades → cumulative excess real return vs SGOV; < 0% terminate, ≥ 0% mark cleared) and detect **mark-to-market underperformance** (≥36 months active + ≥10pp trailing-12mo SGOV lag → enqueue m2m-termination review).
+
+All four kill triggers + the gate now have an explicit detector routed to an executor; execution everywhere is the single deterministic procedure in Experiment_Parameters.md "Strategy termination and capital redistribution." Drawdown is daily/immediate (rigid, no review); gate + M2M are monthly; foundation-change is quarterly/annual (already wired via Pending_Analyses). Per-strategy deployed-TWR is read from the ledger's per-strategy tracking (computed from trade history if not materialized).
+
+**Theater-check flag:** N/A — wiring of existing rules.
+
+**Downstream actions:** `Claude_Task_Plan.md` — D1 ANALYSIS (per-strategy kill-trigger sweep), D2 (step 5 STRATEGY TERMINATIONS + calendar-usage note), M5 (section H + calendar-usage note). No `Experiment_Parameters.md` change (the thresholds were already defined there; this wires their detection/execution). No new remote routine — detection lives in the existing D1/D2/M5 routines; the Attacker/Orchestrator routines handle the enqueued reviews.
+
+**Compaction-survival notes:**
+1. *Drawdown kill = daily (D1 detect → D2 execute), immediate, rigid.* Gate eval + M2M = monthly (M5). Foundation-terminate = quarterly/annual (Pending_Analyses → D2). All execute the same deterministic close+redistribute.
+2. *Runaway-success and M2M route to an m2m-termination review (Attacker/Orchestrator), which terminates inline on TERMINATE.*
+3. *No new remote routine was added for this; detection is folded into D1/D2/M5.*
+
+---
+
 ### [2026-06-02] D3 Calendar Hygiene — calendar clean; BURL confirmed CLOSED (connector-verified); queue healthy
 
 **Date anchor:** 2026-06-02 03:33 MDT (Bash `TZ=America/Denver date` — authoritative; not inferred from file timestamps or `currentDate`). Note: initial D3 pass at 03:26 MDT lacked connector access; connector became available at 03:33 MDT and this entry reflects the complete run.
 
 **Calendar sweep (next 90 days — 2026-06-02 through 2026-09-01):**
 - **0 `[Claude]` events found.** Calendar is fully clean. Per the 2026-06-01 "Calendar cleanup" entry, all legacy time-exit backstops and cadence-trigger events were deleted and the calendar now holds only `[Claude] Confirm order` events. No legacy analysis events to migrate to `Pending_Analysis.md`. No stale confirm-order events to delete. No confirm-order events present at all (no order currently pending confirmation).
+- **0 `[Claude]` events found.** Calendar is fully clean. Per the 2026-06-01 "Calendar cleanup" entry, all legacy time-exit backstops and cadence-trigger events were deleted and the calendar now holds only `[Claude] Confirm order` events. No legacy analysis events to migrate to `Pending_Analyses.md`. No stale confirm-order events to delete. No confirm-order events present at all (no order currently pending confirmation).
 - No action required on the calendar.
 
 **IBKR connector — full sweep (all steps completed):**
@@ -12258,6 +12318,7 @@ Prior D3 runs and the Portfolio_Ledger flagged BURL convergence exit as OUTSTAND
 - B concurrent open positions: 6 → **5** (HCA, ZBRA, BRC, TJX, AZO). Consumer Disc cap: 3/3 → **2/3** (TJX + AZO).
 
 **`Pending_Analysis.md` queue health:**
+**`Pending_Analyses.md` queue health:**
 7 entries total; all `status: pending`; **0 overdue** (no entry has `due_date` < 2026-06-02 with status pending):
 - thesis-HPE-B-20260602: due TODAY (2026-06-02) — D2 drains
 - thesis-OKTA-B-20260602: due TODAY (2026-06-02) — D2 drains
@@ -12274,6 +12335,7 @@ Queue is well-formed. No entries past-due. ZBRA is the only open position with a
 **Downstream actions:**
 - No calendar changes (calendar clean).
 - No `Pending_Analysis.md` changes (no legacy events to migrate; queue healthy).
+- No `Pending_Analyses.md` changes (no legacy events to migrate; queue healthy).
 - Portfolio_Ledger.md BURL section updated from OPEN (PROVISIONAL) to CLOSED with exact connector-confirmed fills. "Last updated" header updated.
 
 ---
@@ -14361,3 +14423,27 @@ Both instruct sizing off the **account** net-liq (~$9,460 = all five sub-portfol
 - Repointed the two forward-looking gates that referenced the now-archived `div-D-202605-1` (`rescreen-BA-D-20260604`, due today; `rescreen-LLY-D-20260612`) to read the verdict from the durable `Adversarial_Review_div-D-202605-1_orchestrator.md` + `Regime_State.md` D-activation row instead of the live queue.
 
 **References:** Supersedes the "out of scope for initial implementation" quarterly-housekeeping note formerly in the Claude_Task_Plan.md adversarial-queue schema. Related: 2026-05-08 adversarial-queue off-calendar migration; 2026-06-01 `Pending_Analysis.md` queue establishment.
+### [2026-06-02] Built the per-strategy deployed-TWR engine (the missing data layer under all kill-triggers + the success metric)
+
+**Trigger:** Traced (owner-requested) whether per-strategy deployed TWR is maintained anywhere. Finding: it is **not** — the ledger Performance slots are all `[n/a]`, no routine computes TWR/peak/drawdown, and there is no SGOV-benchmark series. So the drawdown kill trigger has never been operational, the 30-trade gate has nothing to evaluate, and the experiment's primary success metric (deployed TWR vs SGOV) has no pipeline. This is the load-bearing dependency under everything wired in the prior two entries.
+
+**Decision:** Built a **deployed-TWR engine** maintained daily in **D2 Step 0** (it already runs daily, reconciles fills via the connector, and has fresh marks). Method = **fund-accounting unit-value index** (the standard, capital-flow-correct way to do TWR — important now that deposits + redistribution move capital):
+- Per strategy, a **deployed unit value** (base 1.0 at first trade) chain-linked daily over *deployed days* only (≥1 open position); capital flows neutralized via unit accounting; SGOV-parking/router-deactivation days excluded. Deployed TWR = unit value − 1.
+- **Peak unit value** (high-water), **current drawdown** = unit/peak − 1, a parallel **SGOV benchmark index** over the same deployed days, **deployed_days**, **closed_trades**, **gate_status**, and **monthly snapshots** of the indices (for rolling-window math).
+- Daily return `r_t = (deployed P&L today, net commissions) / start-of-day deployed MV` (explicit formula in the routine). **First-run seed** backfills the ~6-week pre-engine history by chain-linking realized closed-trade returns + current unrealized; exact daily thereafter.
+
+The triggers now read real data:
+- **D1 drawdown sweep** reads `deployed_unit_value / peak / current_drawdown` (refreshing drawdown against live marks since D1 precedes D2).
+- **M5 30-trade gate** reads the deployed + SGOV indices at the 30-trade mark, then applies post-tax (short-term cap-gains) + post-inflation (CPI) haircuts → excess real return.
+- **M5 M2M** reads `deployed_days` (≥756 ≈ 36mo) and the monthly snapshots for the rolling-12-month gap.
+
+**Theater-check flag:** N/A — bookkeeping engine.
+
+**Downstream actions:** `Portfolio_Ledger.md` — added the "Per-strategy Performance block" schema (the engine's output contract; supersedes the `[n/a]` placeholders, which D2's first run seeds). `Claude_Task_Plan.md` — D2 Step 0 PER-STRATEGY PERFORMANCE MAINTENANCE step (the engine + first-run seed); repointed the D1 drawdown sweep and M5 gate/M2M reads to the maintained block. **No new remote routine** — the engine folds into D2 Step 0; it populates on the next daily D2 run.
+
+**Accepted-risk / notes:** the first-run seed approximates the ~6 weeks of pre-engine history (chain-linked per-trade returns, not exact daily TWR); immaterial for the drawdown trigger (no strategy is near a 50% drawdown) and small relative to the runway to any 30-trade gate. Daily maintenance is exact from the engine's first run forward. The daily `r_t` is a Modified-Dietz-style position-sleeve return; precise enough for trigger purposes at this book scale.
+
+**Compaction-survival notes:**
+1. *Per-strategy deployed TWR is now maintained daily by D2 Step 0* (unit-value index → deployed_unit_value, peak, current_drawdown, sgov_index, deployed_days, closed_trades, gate_status, monthly snapshots) in each strategy's Portfolio_Ledger Performance block.
+2. *Kill-triggers read this block:* drawdown (D1) = current vs peak; 30-trade gate (M5) = indices at 30-trade mark + tax/inflation haircut; M2M (M5) = deployed_days + monthly snapshots.
+3. *First D2 run seeds the blocks from trade history (they are `[n/a]` until then).* No new remote routine.
