@@ -270,6 +270,25 @@ An IBKR connector (MCP server) gives Claude routines direct, authenticated acces
 
 ---
 
+## 12. Queue Lifecycle and Daily Archive Policy
+
+**Canonical-current text:**
+
+The two drain-to-completion queues — `Pending_Analyses.md` (drained daily by D2) and `Pending_Adversarial_Reviews.md` (drained by the Adversarial Review routines) — are cleared **daily**, not on a retention window. Rationale: unlike the append-only `Decision_Log.md` (never read end-to-end by a routine; pruned weekly by W5), a queue is read **to completion** every day by its drainer, so a completed entry left in place is needlessly re-read each day.
+
+Each day **D3 Calendar Hygiene** sweeps every entry at a terminal `status` (`complete`/`superseded`) out of its live queue into the queue's daily archive (`Pending_Analyses_Daily_Archive.md` / `Pending_Adversarial_Reviews_Daily_Archive.md`): the full block is appended (tagged with an `archived:` date) and then removed from the live file entirely — **full clear, no pointer line** (this differs from the Decision_Log archive, which leaves a pointer). The live queue retains only actionable entries (`pending`, plus the adversarial queue's in-flight `recommendation-complete` / `attacker-complete`) plus its header/schema preamble.
+
+Lookup: an id absent from a live queue is in that queue's daily archive. The durable verdict/outcome record lives independently in the per-review output files (`Adversarial_Review_<id>_*.md`), `Regime_State.md`, and `Decision_Log.md` — gates needing a completed review's result read those, not the queue.
+
+Read-access: the daily archives are append-only cold traceability; Daily/Weekly routines do not read them for decision input (D3's mechanical sweep-append is exempt). Monthly+ cadence may read them (Q1 reads the adversarial daily-archive for prior-quarter review records).
+
+Authoritative procedural details (the D3 sweep step, append-only file-write convention): see Claude_Task_Plan.md "Queue lifecycle and daily archive policy" and §D3.
+
+**Revision history:**
+- 2026-06-04: Policy established. Queues moved from "mark complete + retain indefinitely" to daily full-clear-to-daily-archive via D3; `Pending_Analyses_Daily_Archive.md` + `Pending_Adversarial_Reviews_Daily_Archive.md` created; supersedes the deferred "quarterly housekeeping routine (out of scope)" note formerly in Claude_Task_Plan.md's adversarial-queue schema. Initial sweep migrated 3 completed analyses (HPE, OKTA, monitor-KL12) + 3 completed divergence reviews (div-C/-D/-E-202605-1). → Decision_Log 2026-06-04 "Queue lifecycle — daily full-clear-to-daily-archive policy established".
+
+---
+
 ## Maintenance
 
 - W5 (weekly Decision Log Hygiene) appends new protocol revisions to the relevant section here as they emerge from Decision_Log entries.

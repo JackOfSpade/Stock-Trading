@@ -100,7 +100,7 @@ Claude-only analysis steps require no human action, so they never go on the huma
 
 ### Pending_Analyses.md — queue file schema
 
-Single Markdown file at the repo root; first line `# Pending Analyses — queue`. Entries appended in creation order, separated by `---`; processed entries are marked complete and retained (traceability). Each entry is a YAML-style block:
+Single Markdown file at the repo root; first line `# Pending Analyses — queue`. Entries appended in creation order, separated by `---`. Once an entry reaches a terminal `status` (`complete`/`superseded`) it is swept to `Pending_Analyses_Daily_Archive.md` by D3 on its next daily run and removed from this live file (full clear — no pointer; see "Queue lifecycle and daily archive policy"), so the live queue holds only actionable entries. Each entry is a YAML-style block:
 
 ```
 - id: <unique, e.g., thesis-HPE-B-20260602, rescreen-LLY-D-20260612, resdefer-DIS-D-20260615, foundation-A-202607>
@@ -116,7 +116,7 @@ Single Markdown file at the repo root; first line `# Pending Analyses — queue`
 
 ### Draining the queue
 
-D2 (Daily Action Conversion) is the daily drainer. Each run, after Step 0 fill reconciliation, it processes every entry with `status: pending` and `due_date <= today` (America/Denver): perform the analysis, write outputs, and for a GO craft the order + `Confirm order` event; then set `status: complete` with the `outcome`. If an entry's required data is still unavailable on its due_date, apply its `conservative_default` and mark complete — do NOT re-defer (deferrals do not chain). Use isolated sub-tasks (subagents) per analysis where available so fan-out (e.g., ten B candidates) gets fresh context per thesis without context exhaustion.
+D2 (Daily Action Conversion) is the daily drainer. Each run, after Step 0 fill reconciliation, it processes every entry with `status: pending` and `due_date <= today` (America/Denver): perform the analysis, write outputs, and for a GO craft the order + `Confirm order` event; then set `status: complete` with the `outcome`. If an entry's required data is still unavailable on its due_date, apply its `conservative_default` and mark complete — do NOT re-defer (deferrals do not chain). Use isolated sub-tasks (subagents) per analysis where available so fan-out (e.g., ten B candidates) gets fresh context per thesis without context exhaustion. D2 only marks an entry `status: complete` (with its `outcome`); the daily removal of terminal entries to `Pending_Analyses_Daily_Archive.md` is performed by D3 Calendar Hygiene (see "Queue lifecycle and daily archive policy").
 
 ## IBKR connector usage
 
@@ -206,6 +206,14 @@ When an entry is archived, the live Decision_Log.md replaces the moved-out secti
 
 Future sessions looking up specific historical entries find either the entry or the pointer in the live file.
 
+## Queue lifecycle and daily archive policy
+
+The two drain-to-completion queues — `Pending_Analyses.md` (drained daily by D2) and `Pending_Adversarial_Reviews.md` (drained by the Adversarial Review routines) — are cleared **daily**, not on a retention window. A queue is read **to completion** by its drainer every day to find the entries it must act on, so a completed entry left in place is needlessly re-read each day — the opposite of `Decision_Log.md`, which is append-only, never scanned end-to-end, and therefore tolerates W5's weekly retention-window prune.
+
+Each day **D3 Calendar Hygiene** sweeps every entry at a terminal `status` (`complete` or `superseded`) out of its live queue into the queue's daily archive — `Pending_Analyses_Daily_Archive.md` / `Pending_Adversarial_Reviews_Daily_Archive.md`. The full entry block is appended (tagged with an `archived: <YYYY-MM-DD>` field) and then **removed from the live file entirely**: this is a full clear — **no pointer line is left behind** (unlike the Decision_Log archive). The live queue therefore holds only actionable entries — `pending`, plus the adversarial queue's in-flight `recommendation-complete` / `attacker-complete` mid-states — preceded by its unchanged header + schema-reference preamble.
+
+Lookup convention: an entry id **absent from the live queue is in that queue's `_Daily_Archive.md`**. The durable record of any verdict/outcome lives independently in the per-review output files (`Adversarial_Review_<id>_*.md`), the `Regime_State.md` router rows, and `Decision_Log.md` — a gate that needs a completed review's result reads those, not the queue entry. The daily archives are append-only cold traceability: Daily/Weekly routines do not read them for decision input (D3's mechanical sweep-append is exempt), while monthly+ cadence may (Q1's regime retrospective reads the adversarial daily-archive for prior-quarter review records).
+
 ## Action-conversion routines (deep research → action)
 
 Deep-research routines produce exactly one output file. A research file with recommendations sitting in it is not an action; the human acts only on crafted order confirmations, so any recommendation in a research file evaporates at the next overwrite unless something converts it into an order, an edited live file, or a `Pending_Analyses.md` queue entry.
@@ -237,6 +245,8 @@ Live-state files (Decision_Log.md, Portfolio_Ledger.md, Watchlist.md, Operating_
 
 Decision_Log_Archive_<YYYY>_<QN>.md files are append-only — W5 adds matured entries to the current-quarter archive; existing archive entries are not modified.
 
+`Pending_Analyses_Daily_Archive.md` and `Pending_Adversarial_Reviews_Daily_Archive.md` are append-only — D3 appends terminal queue entries (each tagged with its `archived:` date) on the daily sweep; existing archived entries are not modified.
+
 ## Read-access scope by cadence
 
 These rules keep the live-file working set bounded for high-frequency reads while preserving full historical access where the cadence justifies the cost.
@@ -244,6 +254,7 @@ These rules keep the live-file working set bounded for high-frequency reads whil
 **Daily and Weekly routines** (D1, D2, D3, W1, W2, W3, W4, W5):
 - Read `Decision_Log.md` (live) only.
 - DO NOT read or rely on content from `Decision_Log_Archive_*.md` files.
+- DO NOT read the queue daily-archives (`Pending_Analyses_Daily_Archive.md`, `Pending_Adversarial_Reviews_Daily_Archive.md`) for decision input — the live queue carries every actionable entry; the archives are cold traceability. (D3's mechanical sweep that appends to them is exempt. Monthly+ cadence MAY read them — e.g., Q1 reads the adversarial daily-archive for prior-quarter review records.)
 - Cross-strategy factbase files (`B_Sub_Pattern_Taxonomy.md`, `Quarterly_D_Candidates.md`, `Weekly_Catalyst_Calendar.md`, etc.) ARE in scope and should be read as the prompt directs.
 - If the live file's pointer indicates an archived entry that the working set genuinely needs (rare), this is a signal that either (a) the lifecycle rules need revisiting or (b) the relevant content should have been extracted to a factbase. Surface it via a Decision_Log entry rather than fetching from the archive.
 
@@ -413,6 +424,8 @@ Reconcile Google Calendar against current state, and keep the `Pending_Analyses.
 
 DATE ANCHOR: "Today" is the current system date **in America/Denver specifically** — not UTC, not the assistant-context `currentDate` field, and not inferred from file timestamps. Do NOT trust the `currentDate` value embedded in the chat context: that field is UTC-based, and during evening MT hours UTC has already rolled to the next calendar day — using it as "today" will cause same-day order-confirmation events to be misclassified as order-day-passed and deleted (this regression occurred 2026-05-27 evening MT on the META convergence exit). To establish today, ALWAYS run a Bash command equivalent to `TZ=America/Denver date '+%Y-%m-%d %H:%M %Z'` as the first action of the routine and use its date as the anchor. Do NOT infer today from file timestamps (Decision_Log entry headers, Portfolio_Ledger "Last updated", etc.) — those may be forward-dated, templated, or recovery-artifact content. If the Bash-derived MT date conflicts with project-file timestamps or with `currentDate`, trust the Bash MT date and flag the conflict in chat output.
 
+QUEUE ARCHIVE SWEEP (run after D2 has drained `Pending_Analyses.md` and after any Adversarial Review routine has run this cycle): for each of `Pending_Analyses.md` and `Pending_Adversarial_Reviews.md`, move every entry whose `status` is terminal (`complete` or `superseded`) out of the live file — append its full block (with an added `archived: <today, MT>` field) to the queue's daily archive (`Pending_Analyses_Daily_Archive.md` / `Pending_Adversarial_Reviews_Daily_Archive.md`; create it with a header line on first use), then delete it from the live queue. Full clear — leave no pointer line. Preserve each live file's header + schema-reference preamble and all non-terminal entries (`pending`, and the adversarial queue's in-flight `recommendation-complete` / `attacker-complete`). See "Queue lifecycle and daily archive policy."
+
 Walk all `[Claude]` events in the next 90 days. The calendar should contain **only `[Claude] Confirm order` events**:
 - If any legacy analysis event is still present (thesis construction, re-screen, research-deferral checkpoint, foundation-change assessment, constraint-relaxation review, router review, pulse-check / time-exit / convergence check), it is OBSOLETE under the in-session/queue model: convert it to a `Pending_Analyses.md` entry with an appropriate `due_date` + self-contained `context` (or, for pulse / time-exit / convergence checks, simply drop it — D1's daily mechanical exit sweep covers those), then delete the calendar event.
 - DELETE a confirm-order event only when its order day has passed AND the order has filled or been cancelled per Step 0 reconciliation (`get_account_trades` / `get_account_orders`).
@@ -423,11 +436,11 @@ Walk currently-open positions and pending orders from Portfolio_Ledger.md, cross
 - Confirm every staged order (entry or exit, ORDER-STAGED or exit-pending) has a corresponding order-confirmation event at 07:00 MT pre-market on the order day (if the order day is still in the future) AND a live crafted instruction in `get_order_instructions`. If the order day is still future and the instruction is missing, re-craft it (`create_order_instruction`) and repair the event. If the order day is today and market is still open, create/repair the event immediately. If the order day is past and the order was Day duration, it either filled or expired — confirm via Step 0 reconciliation / `get_account_trades`; flag if not yet reconciled.
 - Garbage-collect stale crafted instructions: any `get_order_instructions` entry whose order day has passed unconfirmed, or whose position is already closed/opened per reconciliation, is cleared with `delete_order_instruction`.
 - Flag stale / drifted working orders: compare `get_account_orders` live working orders against current quotes (`get_price_snapshot`); a GTC limit working far from the market, or sitting unfilled well past its intended window, is flagged for re-pricing (delete + re-craft the instruction and repair the confirm event) rather than left to drift indefinitely.
-- `Pending_Analyses.md` queue hygiene: confirm every open position flagged for research-deferral has a queue entry (analysis_type: research-deferral-checkpoint) with its resolution `due_date` + `conservative_default`; flag any queue entry whose `due_date` is in the past but still `status: pending` (D2 should have drained it — surface as a missed analysis).
+- `Pending_Analyses.md` queue hygiene: confirm every open position flagged for research-deferral has a queue entry (analysis_type: research-deferral-checkpoint) with its resolution `due_date` + `conservative_default`; flag any queue entry whose `due_date` is in the past but still `status: pending` (D2 should have drained it — surface as a missed analysis). (Terminal entries were already removed by the QUEUE ARCHIVE SWEEP above; the live queue you check here should contain only actionable entries.)
 
 Time zone America/Denver unless Experiment_Parameters.md specifies otherwise.
 
-CHAT OUTPUT: one-line summary of calendar + queue reconciliation (e.g., "1 legacy thesis event migrated to queue + deleted; 3 confirm-order events verified; queue clean.").
+CHAT OUTPUT: one-line summary of calendar + queue reconciliation (e.g., "1 legacy thesis event migrated to queue + deleted; 3 confirm-order events verified; 2 terminal entries swept to daily archives; queues clean.").
 ```
 
 ---
@@ -892,7 +905,7 @@ Structured adversarial reviews — pre-mortem reviews, regime-router divergence 
 
 ## Pending_Adversarial_Reviews.md — queue file schema
 
-The queue is a single Markdown file at the repo root. Each pending review is one entry, separated by `---`. Entries are appended in order of creation; processed entries are NOT deleted (provides traceability) — they are marked complete and retained. The file may be archived periodically by a quarterly housekeeping routine (out of scope for initial implementation).
+The queue is a single Markdown file at the repo root. Each pending review is one entry, separated by `---`. Entries are appended in order of creation. Once an entry reaches a terminal `status` (`complete` or `superseded`), **D3 Calendar Hygiene** sweeps it daily to `Pending_Adversarial_Reviews_Daily_Archive.md` and removes it from this live file entirely — full clear, no pointer (see "Queue lifecycle and daily archive policy"). The live file therefore holds only actionable entries (`pending` / `recommendation-complete` / `attacker-complete`); an entry id absent from it is found in the daily archive.
 
 Each entry is a YAML-style block:
 
