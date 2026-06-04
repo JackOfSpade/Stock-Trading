@@ -15,7 +15,7 @@ Claude reads this file at the start of every routine run, locates the matching `
 Claude runs as scheduled routines connected to a GitHub repo (currently `JackOfSpade/Stock-Trading`) and to Google Calendar via MCP. Inside a routine Claude has:
 
 - **Direct read/write access to repo .md files.** Live state files (Decision_Log.md, Portfolio_Ledger.md, Watchlist.md, Operating_Protocols.md, Regime_State.md) are edited in place. Cadence-output files (Daily.md, Weekly_*.md, Monthly_*.md, Quarterly_*.md, Annual_*.md) are overwritten each run. Decision_Log_Archive_<YYYY>_<QN>.md files are append-only quarterly archives written by W5.
-- **Calendar MCP** for the human's `[Claude] Confirm order` events only — the one action that needs the human (tap to confirm a crafted order). Claude-only analysis (thesis construction, re-screens, research-deferral checkpoints, foundation-change assessments, constraint-relaxation reviews, router reviews) is NEVER on the calendar: it runs in-session or via the autonomous `Pending_Analyses.md` queue (drained daily by D2). Structured adversarial reviews are likewise queue-driven via `Pending_Adversarial_Reviews.md` (see ADVERSARIAL REVIEWS section).
+- **Calendar MCP** for the human's `[Claude] Confirm order` events only — the one action that needs the human (tap to confirm a crafted order). Claude-only analysis (thesis construction, re-screens, research-deferral checkpoints, foundation-change assessments, constraint-relaxation reviews, router reviews) is NEVER on the calendar: it runs in-session or via the autonomous `Pending_Analysis.md` queue (drained daily by D2). Structured adversarial reviews are likewise queue-driven via `Pending_Adversarial_Reviews.md` (see ADVERSARIAL REVIEWS section).
 - **IBKR connector (MCP)** for direct, authenticated access to the human operator's live brokerage account and market data. Crafts click-to-confirm order instructions (`create_order_instruction` → deep link), reads live account state (`get_account_summary` / `get_account_positions` / `get_account_balances` / `get_account_orders` / `get_account_trades`), and reads market data (`get_price_snapshot` / `get_price_history` / `search_contracts`). This connector replaces operator-typed order blocks (orders are now crafted and tap-confirmed) and operator screenshots (fills/positions/cash are read directly). Full protocol: Operating_Protocols.md §11 and the **IBKR connector usage** subsection below. Equity/ETF only for order-craft; options/other security types fall back to a manual text order block.
 - **Web research tools** (Tavily, web_search, web_fetch) for deep-research cadences.
 
@@ -43,11 +43,11 @@ The human acts on routine output only. The human does effectively one thing:
 
 1. **Confirms crafted orders.** Claude crafts the exact order via the IBKR connector (`create_order_instruction`) and surfaces a tap-to-confirm deep link (in chat and in the `[Claude] Confirm order` calendar event). The human opens the link, reviews the pre-filled order in IBKR, and confirms it. The human never types ticker, side, quantity, price, type, or duration. (For security types the connector cannot craft — currently non-Equity/ETF, e.g. options — Claude emits a manual-entry text order block, explicitly labeled, **carried in the `[Claude] Confirm order` calendar event** exactly as the deep link would be — never chat-only, since routine chat is unmonitored.)
 
-All analytical work — thesis construction, position reviews, research-deferral checkpoints, re-screens, foundation-change assessments, router reviews — runs **autonomously**: in-session in the triggering routine, or via the `Pending_Analyses.md` queue drained daily by D2. The human is never asked to paste an analysis prompt into a fresh chat; that round-trip is retired.
+All analytical work — thesis construction, position reviews, research-deferral checkpoints, re-screens, foundation-change assessments, router reviews — runs **autonomously**: in-session in the triggering routine, or via the `Pending_Analysis.md` queue drained daily by D2. The human is never asked to paste an analysis prompt into a fresh chat; that round-trip is retired.
 
-Three prior actions are **obsolete**: (a) *screenshot capture* — Claude reads positions, balances, live orders, executed fills, and market data directly through the IBKR connector, so no screenshot is ever requested; (b) *persisting Claude-produced files* — Claude writes files directly; (c) *pasting analysis prompts into fresh chats* — analysis runs in-session or via the autonomous `Pending_Analyses.md` queue. Claude does not present file contents in chat as fenced code blocks; chat output is reserved for crafted orders and brief acknowledgments.
+Three prior actions are **obsolete**: (a) *screenshot capture* — Claude reads positions, balances, live orders, executed fills, and market data directly through the IBKR connector, so no screenshot is ever requested; (b) *persisting Claude-produced files* — Claude writes files directly; (c) *pasting analysis prompts into fresh chats* — analysis runs in-session or via the autonomous `Pending_Analysis.md` queue. Claude does not present file contents in chat as fenced code blocks; chat output is reserved for crafted orders and brief acknowledgments.
 
-The human does NOT perform any analytical or monitoring task. If the framework needs analysis, monitoring, parsing, watching, verification, or calculation, Claude does it — either inline in the current routine or via the `Pending_Analyses.md` queue drained daily by D2. Examples of work the human does NOT perform: verifying commissions; making EV decisions; monitoring markets intraday; parsing earnings prints; deciding execute-vs-skip on staged orders; deciding override-vs-honor on NO-GO recommendations; choosing convergence targets, position sizes, limit prices, or invalidation criteria.
+The human does NOT perform any analytical or monitoring task. If the framework needs analysis, monitoring, parsing, watching, verification, or calculation, Claude does it — either inline in the current routine or via the `Pending_Analysis.md` queue drained daily by D2. Examples of work the human does NOT perform: verifying commissions; making EV decisions; monitoring markets intraday; parsing earnings prints; deciding execute-vs-skip on staged orders; deciding override-vs-honor on NO-GO recommendations; choosing convergence targets, position sizes, limit prices, or invalidation criteria.
 
 If a workflow would require the human to do anything beyond confirming crafted orders, that workflow is broken and Claude must redesign it before staging anything.
 
@@ -77,7 +77,7 @@ Commissions are NOT factored into staging-time GO/NO-GO decisions, target select
 
 ## Calendar MCP usage
 
-The calendar holds **only events that require a human action** — currently that is order confirmation. Claude-only analysis is NEVER placed on the calendar: routine chat is unmonitored and these steps need no human, so they run in-session in the triggering routine or via the autonomous `Pending_Analyses.md` queue (next subsection). Recurring cadence work (D1, D2, …, A3) runs as routines and is not on the calendar.
+The calendar holds **only events that require a human action** — currently that is order confirmation. Claude-only analysis is NEVER placed on the calendar: routine chat is unmonitored and these steps need no human, so they run in-session in the triggering routine or via the autonomous `Pending_Analysis.md` queue (next subsection). Recurring cadence work (D1, D2, …, A3) runs as routines and is not on the calendar.
 
 Conventions for the `[Claude] Confirm order` events Claude creates:
 
@@ -90,17 +90,17 @@ Conventions for the `[Claude] Confirm order` events Claude creates:
 
 `Order confirmation` is the only canonical calendar event type. Everything formerly scheduled as a `[Claude]` analysis event — thesis construction, scheduled re-screens, research-deferral checkpoints, foundation-change assessments, constraint-relaxation reviews, router reviews — is now done in-session or queued (next subsection).
 
-## In-session analysis and the Pending_Analyses.md queue
+## In-session analysis and the Pending_Analysis.md queue
 
 Claude-only analysis steps require no human action, so they never go on the human's calendar. They are handled one of two ways:
 
 1. **Doable now → in-session.** If the analysis can run at discovery time (all required data is available), the triggering routine performs it directly in its own run — each thesis/analysis ideally as an isolated sub-task (subagent) for fresh per-analysis context, else inline sequentially. It writes Decision_Log.md / Portfolio_Ledger.md and, for a GO, crafts the order instruction + creates the `[Claude] Confirm order` event — all in the same session. No calendar event, no human paste.
 
-2. **Must wait for future data → `Pending_Analyses.md` queue.** If the analysis needs data that does not yet exist (a Day-0 close that lands next session; a Strategy C pre-catalyst window 7-10 days out; a scheduled re-screen date; a research-deferral resolution date), the triggering routine appends an entry to `Pending_Analyses.md` with a `due_date` = the earliest date the analysis can run. The daily D2 routine drains entries whose `due_date` has arrived and performs them in-session (as in case 1). This is the autonomous analog of the old calendar event — no human involved. (Earliest-wins still applies: `due_date` is the soonest the data exists, never pushed later for load; weekends/holidays are fine for analysis since it needs no live market — only the resulting order-confirmation event must land on a trading session.)
+2. **Must wait for future data → `Pending_Analysis.md` queue.** If the analysis needs data that does not yet exist (a Day-0 close that lands next session; a Strategy C pre-catalyst window 7-10 days out; a scheduled re-screen date; a research-deferral resolution date), the triggering routine appends an entry to `Pending_Analysis.md` with a `due_date` = the earliest date the analysis can run. The daily D2 routine drains entries whose `due_date` has arrived and performs them in-session (as in case 1). This is the autonomous analog of the old calendar event — no human involved. (Earliest-wins still applies: `due_date` is the soonest the data exists, never pushed later for load; weekends/holidays are fine for analysis since it needs no live market — only the resulting order-confirmation event must land on a trading session.)
 
-### Pending_Analyses.md — queue file schema
+### Pending_Analysis.md — queue file schema
 
-Single Markdown file at the repo root; first line `# Pending Analyses — queue`. Entries appended in creation order, separated by `---`; processed entries are marked complete and retained (traceability). Each entry is a YAML-style block:
+Single Markdown file at the repo root; first line `# Pending Analysis — queue`. Entries appended in creation order, separated by `---`. Once an entry reaches a terminal `status` (`complete`/`superseded`) it is swept to `Archived_Analysis.md` by D3 on its next daily run and removed from this live file (full clear — no pointer; see "Queue lifecycle and daily archive policy"), so the live queue holds only actionable entries. Each entry is a YAML-style block:
 
 ```
 - id: <unique, e.g., thesis-HPE-B-20260602, rescreen-LLY-D-20260612, resdefer-DIS-D-20260615, foundation-A-202607>
@@ -116,7 +116,7 @@ Single Markdown file at the repo root; first line `# Pending Analyses — queue`
 
 ### Draining the queue
 
-D2 (Daily Action Conversion) is the daily drainer. Each run, after Step 0 fill reconciliation, it processes every entry with `status: pending` and `due_date <= today` (America/Denver): perform the analysis, write outputs, and for a GO craft the order + `Confirm order` event; then set `status: complete` with the `outcome`. If an entry's required data is still unavailable on its due_date, apply its `conservative_default` and mark complete — do NOT re-defer (deferrals do not chain). Use isolated sub-tasks (subagents) per analysis where available so fan-out (e.g., ten B candidates) gets fresh context per thesis without context exhaustion.
+D2 (Daily Action Conversion) is the daily drainer. Each run, after Step 0 fill reconciliation, it processes every entry with `status: pending` and `due_date <= today` (America/Denver): perform the analysis, write outputs, and for a GO craft the order + `Confirm order` event; then set `status: complete` with the `outcome`. If an entry's required data is still unavailable on its due_date, apply its `conservative_default` and mark complete — do NOT re-defer (deferrals do not chain). Use isolated sub-tasks (subagents) per analysis where available so fan-out (e.g., ten B candidates) gets fresh context per thesis without context exhaustion. D2 only marks an entry `status: complete` (with its `outcome`); the daily removal of terminal entries to `Archived_Analysis.md` is performed by D3 Calendar Hygiene (see "Queue lifecycle and daily archive policy").
 
 ## IBKR connector usage
 
@@ -206,9 +206,17 @@ When an entry is archived, the live Decision_Log.md replaces the moved-out secti
 
 Future sessions looking up specific historical entries find either the entry or the pointer in the live file.
 
+## Queue lifecycle and daily archive policy
+
+The two drain-to-completion queues — `Pending_Analysis.md` (drained daily by D2) and `Pending_Adversarial_Reviews.md` (drained by the Adversarial Review routines) — are cleared **daily**, not on a retention window. A queue is read **to completion** by its drainer every day to find the entries it must act on, so a completed entry left in place is needlessly re-read each day — the opposite of `Decision_Log.md`, which is append-only, never scanned end-to-end, and therefore tolerates W5's weekly retention-window prune.
+
+Each day **D3 Calendar Hygiene** sweeps every entry at a terminal `status` (`complete` or `superseded`) out of its live queue into the queue's daily archive — `Archived_Analysis.md` / `Archived_Adversarial_Reviews.md`. The full entry block is appended (tagged with an `archived: <YYYY-MM-DD>` field) and then **removed from the live file entirely**: this is a full clear — **no pointer line is left behind** (unlike the Decision_Log archive). The live queue therefore holds only actionable entries — `pending`, plus the adversarial queue's in-flight `recommendation-complete` / `attacker-complete` mid-states — preceded by its unchanged header + schema-reference preamble.
+
+Lookup convention: an entry id **absent from the live queue is in that queue's archive** (`Archived_Analysis.md` / `Archived_Adversarial_Reviews.md`). The durable record of any verdict/outcome lives independently in the per-review output files (`Adversarial_Review_<id>_*.md`), the `Regime_State.md` router rows, and `Decision_Log.md` — a gate that needs a completed review's result reads those, not the queue entry. The daily archives are append-only cold traceability: Daily/Weekly routines do not read them for decision input (D3's mechanical sweep-append is exempt), while monthly+ cadence may (Q1's regime retrospective reads the adversarial daily-archive for prior-quarter review records).
+
 ## Action-conversion routines (deep research → action)
 
-Deep-research routines produce exactly one output file. A research file with recommendations sitting in it is not an action; the human acts only on crafted order confirmations, so any recommendation in a research file evaporates at the next overwrite unless something converts it into an order, an edited live file, or a `Pending_Analyses.md` queue entry.
+Deep-research routines produce exactly one output file. A research file with recommendations sitting in it is not an action; the human acts only on crafted order confirmations, so any recommendation in a research file evaporates at the next overwrite unless something converts it into an order, an edited live file, or a `Pending_Analysis.md` queue entry.
 
 Each cadence with deep-research routines that produce actionable recommendations therefore carries an **action-conversion** routine that runs after all of that cadence's research files are saved. The action-conversion routine reads the just-saved research file(s) and emits orders / live-file edits / calendar events.
 
@@ -237,6 +245,8 @@ Live-state files (Decision_Log.md, Portfolio_Ledger.md, Watchlist.md, Operating_
 
 Decision_Log_Archive_<YYYY>_<QN>.md files are append-only — W5 adds matured entries to the current-quarter archive; existing archive entries are not modified.
 
+`Archived_Analysis.md` and `Archived_Adversarial_Reviews.md` are append-only — D3 appends terminal queue entries (each tagged with its `archived:` date) on the daily sweep; existing archived entries are not modified.
+
 ## Read-access scope by cadence
 
 These rules keep the live-file working set bounded for high-frequency reads while preserving full historical access where the cadence justifies the cost.
@@ -244,6 +254,7 @@ These rules keep the live-file working set bounded for high-frequency reads whil
 **Daily and Weekly routines** (D1, D2, D3, W1, W2, W3, W4, W5):
 - Read `Decision_Log.md` (live) only.
 - DO NOT read or rely on content from `Decision_Log_Archive_*.md` files.
+- DO NOT read the queue daily-archives (`Archived_Analysis.md`, `Archived_Adversarial_Reviews.md`) for decision input — the live queue carries every actionable entry; the archives are cold traceability. (D3's mechanical sweep that appends to them is exempt. Monthly+ cadence MAY read them — e.g., Q1 reads the adversarial daily-archive for prior-quarter review records.)
 - Cross-strategy factbase files (`B_Sub_Pattern_Taxonomy.md`, `Quarterly_D_Candidates.md`, `Weekly_Catalyst_Calendar.md`, etc.) ARE in scope and should be read as the prompt directs.
 - If the live file's pointer indicates an archived entry that the working set genuinely needs (rare), this is a signal that either (a) the lifecycle rules need revisiting or (b) the relevant content should have been extracted to a factbase. Surface it via a Decision_Log entry rather than fetching from the archive.
 
@@ -356,7 +367,7 @@ STEP 0 — BROKER RECONCILIATION (run first, every run, before reading Daily.md'
 - Note still-working / partial orders from `get_account_orders` (e.g. a GTC not yet filled) and leave them exit-pending / ORDER-STAGED.
 - For any crafted instruction in `get_order_instructions` whose order day has passed unconfirmed, or whose position Step 0 just closed, call `delete_order_instruction` to clear it.
 
-STEP 1 — DRAIN PENDING ANALYSES (run after Step 0). Read `Pending_Analyses.md`. For every entry with `status: pending` and `due_date <= today` (America/Denver), perform the analysis in-session — each as an isolated sub-task (subagent) for fresh context where available, else inline sequentially. This is where deferred thesis constructions, scheduled re-screens, research-deferral checkpoints, foundation-change assessments, and constraint-relaxation reviews actually run. For each entry: do the full analysis per its `context` (apply the relevant Strategy.md criteria, Operating_Protocols.md rules, B_Sub_Pattern_Taxonomy.md, connector live data §11); write Decision_Log.md (+ Portfolio_Ledger.md if a position changes); for a GO, craft the order instruction and create the `[Claude] Confirm order` event (per the staging steps below); set the entry `status: complete` with its `outcome`. If the required data is still unavailable on the due_date, apply the entry's `conservative_default` (skip / decline / exit) and mark complete — do NOT re-defer (deferrals do not chain).
+STEP 1 — DRAIN PENDING ANALYSES (run after Step 0). Read `Pending_Analysis.md`. For every entry with `status: pending` and `due_date <= today` (America/Denver), perform the analysis in-session — each as an isolated sub-task (subagent) for fresh context where available, else inline sequentially. This is where deferred thesis constructions, scheduled re-screens, research-deferral checkpoints, foundation-change assessments, and constraint-relaxation reviews actually run. For each entry: do the full analysis per its `context` (apply the relevant Strategy.md criteria, Operating_Protocols.md rules, B_Sub_Pattern_Taxonomy.md, connector live data §11); write Decision_Log.md (+ Portfolio_Ledger.md if a position changes); for a GO, craft the order instruction and create the `[Claude] Confirm order` event (per the staging steps below); set the entry `status: complete` with its `outcome`. If the required data is still unavailable on the due_date, apply the entry's `conservative_default` (skip / decline / exit) and mark complete — do NOT re-defer (deferrals do not chain).
 
 Then read the just-saved `Daily.md` (today's market development scan; first line = today's date in YYYY-MM-DD format).
 
@@ -379,7 +390,7 @@ For each recommendation type:
      - Strategy A: catalyst within 6 months — respect router state. If A is DO-NOT-ACTIVATE per Regime_State.md / most-recent M1 call, the candidate goes to Watchlist.md A queue (no thesis now). If ACTIVATE, the thesis is doable now.
      - Strategy E: pair divergence — normally handled by M3/M5; a fast-moving divergence may run now.
    - **If the thesis is doable now** (required data available; router admits it): perform the full thesis construction **in-session** — an isolated sub-task (subagent) per candidate for fresh context where available, else inline sequentially. Apply Strategy.md entry criteria, the Operating_Protocols.md "NO-GO records are context, not barriers" rule + conviction-calibration ladder, B_Sub_Pattern_Taxonomy.md, commission-disregarded staging, and the connector for live quotes / CTC / eligibility (§11). Write Decision_Log.md (GO or NO-GO) + Portfolio_Ledger.md; on a GO, craft the order instruction and create the `[Claude] Confirm order` event per the staging steps above. No calendar thesis event, no human paste.
-   - **If the thesis must wait for future data** (a Day-0 close not yet in; a Strategy C pre-catalyst window): append a `Pending_Analyses.md` entry (analysis_type: thesis-construction; due_date = earliest-doable date; self-contained `context`; `conservative_default` = decline/skip). D2 drains it on its due_date.
+   - **If the thesis must wait for future data** (a Day-0 close not yet in; a Strategy C pre-catalyst window): append a `Pending_Analysis.md` entry (analysis_type: thesis-construction; due_date = earliest-doable date; self-contained `context`; `conservative_default` = decline/skip). D2 drains it on its due_date.
    - For Strategy A candidates that should queue rather than proceed: update Watchlist.md A-queue section with ticker, date-added, reason summary, resolution-trigger ("next M1 with A router ACTIVATE").
 
 3. WATCHLIST UPDATES. For each add/remove/demote flagged:
@@ -391,7 +402,7 @@ For each recommendation type:
    - Confirm the threshold for inter-monthly review per Strategy.md (high bar; only material regime shifts qualify). If the threshold is not met, record the second-look decision via Decision_Log.md and stop.
    - If confirmed: perform the router review **in-session** (Claude-only analysis) — assess the Daily.md development against Regime_State.md and Strategy.md activation rules for the affected strategy; if the state changes, update Regime_State.md and append a Decision_Log entry. No calendar event.
 
-DEFERRAL DISCIPLINE: if a decision genuinely cannot be resolved this routine, specify (a) the trigger date and information source that will resolve it, and (b) the conservative-default fallback (skip / decline / exit). Deferrals do not chain. Append a `Pending_Analyses.md` entry (due_date = the resolution date) so D2 drains it then — do not create a calendar event for analysis.
+DEFERRAL DISCIPLINE: if a decision genuinely cannot be resolved this routine, specify (a) the trigger date and information source that will resolve it, and (b) the conservative-default fallback (skip / decline / exit). Deferrals do not chain. Append a `Pending_Analysis.md` entry (due_date = the resolution date) so D2 drains it then — do not create a calendar event for analysis.
 
 CALENDAR MCP USAGE: Claude calls the Calendar MCP directly. Time zone per Experiment_Parameters.md (default America/Denver if silent). Set per-event notification to fire at event-time.
 
@@ -409,12 +420,14 @@ If no orders, no file changes, no events: "No actions required."
 ```
 Read access scope: Calendar Hygiene. Read all live project files. Do NOT read or act on content from `Decision_Log_Archive_*.md` files.
 
-Reconcile Google Calendar against current state, and keep the `Pending_Analyses.md` queue healthy. Recurring cadence work (D1, D2, …, A3) runs as routines; Claude-only analysis runs in-session or via the `Pending_Analyses.md` queue. The calendar holds **only `[Claude] Confirm order` events** — the sole human action.
+Reconcile Google Calendar against current state, and keep the `Pending_Analysis.md` queue healthy. Recurring cadence work (D1, D2, …, A3) runs as routines; Claude-only analysis runs in-session or via the `Pending_Analysis.md` queue. The calendar holds **only `[Claude] Confirm order` events** — the sole human action.
 
 DATE ANCHOR: "Today" is the current system date **in America/Denver specifically** — not UTC, not the assistant-context `currentDate` field, and not inferred from file timestamps. Do NOT trust the `currentDate` value embedded in the chat context: that field is UTC-based, and during evening MT hours UTC has already rolled to the next calendar day — using it as "today" will cause same-day order-confirmation events to be misclassified as order-day-passed and deleted (this regression occurred 2026-05-27 evening MT on the META convergence exit). To establish today, ALWAYS run a Bash command equivalent to `TZ=America/Denver date '+%Y-%m-%d %H:%M %Z'` as the first action of the routine and use its date as the anchor. Do NOT infer today from file timestamps (Decision_Log entry headers, Portfolio_Ledger "Last updated", etc.) — those may be forward-dated, templated, or recovery-artifact content. If the Bash-derived MT date conflicts with project-file timestamps or with `currentDate`, trust the Bash MT date and flag the conflict in chat output.
 
+QUEUE ARCHIVE SWEEP (run after D2 has drained `Pending_Analysis.md` and after any Adversarial Review routine has run this cycle): for each of `Pending_Analysis.md` and `Pending_Adversarial_Reviews.md`, move every entry whose `status` is terminal (`complete` or `superseded`) out of the live file — append its full block (with an added `archived: <today, MT>` field) to the queue's daily archive (`Archived_Analysis.md` / `Archived_Adversarial_Reviews.md`; create it with a header line on first use), then delete it from the live queue. Full clear — leave no pointer line. Preserve each live file's header + schema-reference preamble and all non-terminal entries (`pending`, and the adversarial queue's in-flight `recommendation-complete` / `attacker-complete`). See "Queue lifecycle and daily archive policy."
+
 Walk all `[Claude]` events in the next 90 days. The calendar should contain **only `[Claude] Confirm order` events**:
-- If any legacy analysis event is still present (thesis construction, re-screen, research-deferral checkpoint, foundation-change assessment, constraint-relaxation review, router review, pulse-check / time-exit / convergence check), it is OBSOLETE under the in-session/queue model: convert it to a `Pending_Analyses.md` entry with an appropriate `due_date` + self-contained `context` (or, for pulse / time-exit / convergence checks, simply drop it — D1's daily mechanical exit sweep covers those), then delete the calendar event.
+- If any legacy analysis event is still present (thesis construction, re-screen, research-deferral checkpoint, foundation-change assessment, constraint-relaxation review, router review, pulse-check / time-exit / convergence check), it is OBSOLETE under the in-session/queue model: convert it to a `Pending_Analysis.md` entry with an appropriate `due_date` + self-contained `context` (or, for pulse / time-exit / convergence checks, simply drop it — D1's daily mechanical exit sweep covers those), then delete the calendar event.
 - DELETE a confirm-order event only when its order day has passed AND the order has filled or been cancelled per Step 0 reconciliation (`get_account_trades` / `get_account_orders`).
 - DO NOT delete a confirm-order event solely because its datetime is past and unconfirmed — a past unconfirmed order is a MISSED confirmation that may still be actionable; flag it in chat for review (verify via the connector whether it actually filled).
 - Confirm each confirm-order event's description carries a valid deep link + `SIDE QTY TICKER TYPE LIMIT TIF` summary + instruction `id`, that a matching live instruction exists in `get_order_instructions` (re-craft + repair if missing), and that the notification fires at event-time.
@@ -423,11 +436,11 @@ Walk currently-open positions and pending orders from Portfolio_Ledger.md, cross
 - Confirm every staged order (entry or exit, ORDER-STAGED or exit-pending) has a corresponding order-confirmation event at 07:00 MT pre-market on the order day (if the order day is still in the future) AND a live crafted instruction in `get_order_instructions`. If the order day is still future and the instruction is missing, re-craft it (`create_order_instruction`) and repair the event. If the order day is today and market is still open, create/repair the event immediately. If the order day is past and the order was Day duration, it either filled or expired — confirm via Step 0 reconciliation / `get_account_trades`; flag if not yet reconciled.
 - Garbage-collect stale crafted instructions: any `get_order_instructions` entry whose order day has passed unconfirmed, or whose position is already closed/opened per reconciliation, is cleared with `delete_order_instruction`.
 - Flag stale / drifted working orders: compare `get_account_orders` live working orders against current quotes (`get_price_snapshot`); a GTC limit working far from the market, or sitting unfilled well past its intended window, is flagged for re-pricing (delete + re-craft the instruction and repair the confirm event) rather than left to drift indefinitely.
-- `Pending_Analyses.md` queue hygiene: confirm every open position flagged for research-deferral has a queue entry (analysis_type: research-deferral-checkpoint) with its resolution `due_date` + `conservative_default`; flag any queue entry whose `due_date` is in the past but still `status: pending` (D2 should have drained it — surface as a missed analysis).
+- `Pending_Analysis.md` queue hygiene: confirm every open position flagged for research-deferral has a queue entry (analysis_type: research-deferral-checkpoint) with its resolution `due_date` + `conservative_default`; flag any queue entry whose `due_date` is in the past but still `status: pending` (D2 should have drained it — surface as a missed analysis). (Terminal entries were already removed by the QUEUE ARCHIVE SWEEP above; the live queue you check here should contain only actionable entries.)
 
 Time zone America/Denver unless Experiment_Parameters.md specifies otherwise.
 
-CHAT OUTPUT: one-line summary of calendar + queue reconciliation (e.g., "1 legacy thesis event migrated to queue + deleted; 3 confirm-order events verified; queue clean.").
+CHAT OUTPUT: one-line summary of calendar + queue reconciliation (e.g., "1 legacy thesis event migrated to queue + deleted; 3 confirm-order events verified; 2 terminal entries swept to daily archives; queues clean.").
 ```
 
 ---
@@ -455,7 +468,7 @@ B. Strategy C universe (45-day window). US-listed companies with qualifying even
 
 Two tables. No interpretation in PART 1.
 
-PART 2 — Ranked shortlists. The downstream W4 routine reads this PART 2 verbatim and enqueues thesis-construction entries to `Pending_Analyses.md` for ranked shortlist names (D2 runs them), so make rankings and date specifics explicit.
+PART 2 — Ranked shortlists. The downstream W4 routine reads this PART 2 verbatim and enqueues thesis-construction entries to `Pending_Analysis.md` for ranked shortlist names (D2 runs them), so make rankings and date specifics explicit.
 
 Strategy A preliminary shortlist of 30–50 candidates where preliminary narrative synthesis suggests potential misalignment between consensus and what public documents (recent earnings transcripts, 10-Q/10-K filings, sector context, policy context) support. Cast deliberately broad. Per candidate: (a) direction of hypothesized mispricing, (b) specific supporting public documents, (c) catalyst date, (d) overlap with open A positions or recent watchlist archives, (e) priority tier (top-10 / 11-20 / rest) based on conviction-strength of the narrative misalignment.
 
@@ -481,7 +494,7 @@ Produce a post-event screen for Strategy B candidates. Write the complete conten
 
 PART 1 — All US-listed equities with market cap ≥ $2B, 30-day ADV ≥ $10M, experiencing a close-to-close price move of ≥5% in either direction on any day in the prior 10 trading days, where the move was attributable to a public event. Event types: earnings, FDA decisions, guidance updates, regulatory actions, material corporate developments (M&A, management), analyst actions with material price impact. Per entry: ticker, name, event date, event type, move magnitude and direction, source. Sort by event date (most recent first).
 
-PART 2 — Ranked shortlist. The downstream W4 routine reads this PART 2 verbatim and enqueues thesis-construction entries to `Pending_Analyses.md` for the ranked shortlist (D2 runs them), so rank explicitly and surface days-remaining-in-window per candidate.
+PART 2 — Ranked shortlist. The downstream W4 routine reads this PART 2 verbatim and enqueues thesis-construction entries to `Pending_Analysis.md` for the ranked shortlist (D2 runs them), so rank explicitly and surface days-remaining-in-window per candidate.
 
 Evaluate each entry for possible over- or under-sized reaction relative to fundamental implications. Ground in: event details, fundamentals from recent filings, comparable historical reactions to similar events at similar companies (retrieved, not recalled), information vs. sentiment distinction. Default assumption: market reaction is correct.
 
@@ -547,29 +560,29 @@ A. EXITS FROM W3 — for each position with W3 recommendation "close on thesis c
    - Update Portfolio_Ledger.md to mark exit-pending with the staged order details and the crafted instruction `id`.
    - Schedule "[Claude] Confirm order — <ticker> SELL" for 07:00 MT pre-market on order day. Description: the `SIDE QTY TICKER TYPE LIMIT TIF` summary, the tap-to-confirm deep link (`url`), the instruction `id`, and "Tap the link, review the pre-filled order in IBKR, confirm at or after market open." (Options / other non-craftable exit: no `url` — carry the explicitly-labeled manual-entry text order block in place of the deep link.) No fill-capture event — the fill reconciles via D2 Step 0.
 
-(Thesis construction and research deferrals are no longer scheduled as human-pasted calendar events. W4 appends them to the `Pending_Analyses.md` queue; the daily D2 routine drains and runs them in-session, each as an isolated sub-task for fresh context. This keeps W4 light at high fan-out and incurs at most ~1 day latency — negligible against B's 10-day window.)
+(Thesis construction and research deferrals are no longer scheduled as human-pasted calendar events. W4 appends them to the `Pending_Analysis.md` queue; the daily D2 routine drains and runs them in-session, each as an isolated sub-task for fresh context. This keeps W4 light at high fan-out and incurs at most ~1 day latency — negligible against B's 10-day window.)
 
 B. RESEARCH DEFERRALS FROM W3 — for each position with recommendation "further research":
-   - Append a `Pending_Analyses.md` entry: analysis_type research-deferral-checkpoint; the position's ticker/strategy; due_date = the date the resolving information becomes available (next trading day if already available); context = the specific information gap from W3 + reference to Strategy.md exit rules + "resolve the gap and either stage an exit or continue holding"; conservative_default = exit the position if unresolved on due_date.
+   - Append a `Pending_Analysis.md` entry: analysis_type research-deferral-checkpoint; the position's ticker/strategy; due_date = the date the resolving information becomes available (next trading day if already available); context = the specific information gap from W3 + reference to Strategy.md exit rules + "resolve the gap and either stage an exit or continue holding"; conservative_default = exit the position if unresolved on due_date.
 
 C. THESIS CONSTRUCTION FROM W2 (Strategy B) — for the W2 top-tier shortlist:
-   - Append one `Pending_Analyses.md` entry per top-tier candidate (no per-week cap, no overflow to Watchlist.md): analysis_type thesis-construction; strategy B; due_date = the earliest date the Day-0 close-to-close is measurable (today if the Day-0 close is already in, else that close's date); context = B context from W2 (event, mispricing direction, days remaining) + Strategy.md B criteria + B_Sub_Pattern_Taxonomy.md + Operating_Protocols.md; conservative_default = decline (no entry) if the entry window closes unresolved. Order by days-remaining-in-window (fewer first) so D2 prioritizes.
+   - Append one `Pending_Analysis.md` entry per top-tier candidate (no per-week cap, no overflow to Watchlist.md): analysis_type thesis-construction; strategy B; due_date = the earliest date the Day-0 close-to-close is measurable (today if the Day-0 close is already in, else that close's date); context = B context from W2 (event, mispricing direction, days remaining) + Strategy.md B criteria + B_Sub_Pattern_Taxonomy.md + Operating_Protocols.md; conservative_default = decline (no entry) if the entry window closes unresolved. Order by days-remaining-in-window (fewer first) so D2 prioritizes.
 
 D. THESIS CONSTRUCTION FROM W1 (Strategy A and C) — for the W1 top-tier shortlists:
-   - Strategy A top-tier (top-10): check Regime_State.md / most-recent M1 A router. If DO-NOT-ACTIVATE → route to Watchlist.md A-queue (reason "router gate; queued for next M1 ACTIVATE"); no thesis. If ACTIVATE → append a `Pending_Analyses.md` entry per top-tier name (analysis_type thesis-construction; strategy A; due_date today; context from W1 + Strategy.md/Operating_Protocols.md refs; conservative_default decline), ordered by catalyst-date proximity. No per-week cap. (The DO-NOT-ACTIVATE gate is a strategy gate, not a load cap.)
-   - Strategy C top-tier (top-5): append a `Pending_Analyses.md` entry per top-tier name (analysis_type thesis-construction; strategy C; due_date = today if catalyst < 14 days, else the pre-catalyst window date 7-10 days before the catalyst; context from W1; conservative_default decline). No per-week cap.
+   - Strategy A top-tier (top-10): check Regime_State.md / most-recent M1 A router. If DO-NOT-ACTIVATE → route to Watchlist.md A-queue (reason "router gate; queued for next M1 ACTIVATE"); no thesis. If ACTIVATE → append a `Pending_Analysis.md` entry per top-tier name (analysis_type thesis-construction; strategy A; due_date today; context from W1 + Strategy.md/Operating_Protocols.md refs; conservative_default decline), ordered by catalyst-date proximity. No per-week cap. (The DO-NOT-ACTIVATE gate is a strategy gate, not a load cap.)
+   - Strategy C top-tier (top-5): append a `Pending_Analysis.md` entry per top-tier name (analysis_type thesis-construction; strategy C; due_date = today if catalyst < 14 days, else the pre-catalyst window date 7-10 days before the catalyst; context from W1; conservative_default decline). No per-week cap.
 
 E. CROSS-STRATEGY DECONFLICTION — per Strategy.md simultaneous-holding constraints (A↔B and A↔C cannot hold the same name): if a ticker is both a W3 exit candidate and a W1/W2 new-entry candidate, set the new-entry queue entry's due_date to 1 trading day after the expected exit fill, and add a context note to verify (via the connector / Portfolio_Ledger) that the exit has filled before the thesis proceeds.
 
 F. WATCHLIST UPDATES — apply A-queue additions from D, B-watch overflow from C, and any other updates surfaced.
 
-DEFERRAL DISCIPLINE: if a recommendation cannot be acted on this routine, specify (a) trigger date and information source, (b) conservative-default fallback. Deferrals do not chain. Enqueue deferred analyses to `Pending_Analyses.md` (never the calendar).
+DEFERRAL DISCIPLINE: if a recommendation cannot be acted on this routine, specify (a) trigger date and information source, (b) conservative-default fallback. Deferrals do not chain. Enqueue deferred analyses to `Pending_Analysis.md` (never the calendar).
 
 CALENDAR MCP USAGE: Claude calls the Calendar MCP directly only for `[Claude] Confirm order` events (exits staged in section A). Time zone per Experiment_Parameters.md.
 
 CHAT OUTPUT:
 - Exit order(s) as crafted instructions (tap-to-confirm deep link + `SIDE QTY TICKER TYPE LIMIT TIF` summary) grouped by execution day (or "no order").
-- One-line acknowledgment of file edits, `Pending_Analyses.md` entries appended, and confirm-order events created.
+- One-line acknowledgment of file edits, `Pending_Analysis.md` entries appended, and confirm-order events created.
 
 If no orders, no file changes, no queue entries: "No actions required."
 ```
@@ -850,9 +863,9 @@ A. ROUTER ACTIVATION FLIPS FROM M1b — for each strategy with FLIP TO ACTIVATE 
    - Update Regime_State.md to reflect the new activation state per strategy.
    - Append a Decision_Log entry recording the flip: strategy, prior state, new state, M1 reasoning summary, date.
    - **A FLIP TO ACTIVATE for Strategy A — drain Watchlist.md A-queue.** For each name in the A queue with resolution-trigger "next M1 with A router ACTIVATE":
-     * Append a `Pending_Analyses.md` entry per queued name (analysis_type thesis-construction; strategy A; due_date today — the router ACTIVATE flip is the resolving event; context from the A-queue row + Strategy.md / Operating_Protocols.md; conservative_default decline), ordered by soonest catalyst date. No cap — drain the entire A-queue. D2 runs them.
+     * Append a `Pending_Analysis.md` entry per queued name (analysis_type thesis-construction; strategy A; due_date today — the router ACTIVATE flip is the resolving event; context from the A-queue row + Strategy.md / Operating_Protocols.md; conservative_default decline), ordered by soonest catalyst date. No cap — drain the entire A-queue. D2 runs them.
      * Remove processed names from Watchlist.md A-queue (or mark "queued <date>").
-   - **A FLIP TO DO-NOT-ACTIVATE for any strategy — halt new-position activity.** Supersede any pending `Pending_Analyses.md` thesis-construction entries for that strategy (set status: superseded). Existing positions are unaffected (per Strategy.md exit rules — DO-NOT-ACTIVATE blocks new entries, not existing-position management).
+   - **A FLIP TO DO-NOT-ACTIVATE for any strategy — halt new-position activity.** Supersede any pending `Pending_Analysis.md` thesis-construction entries for that strategy (set status: superseded). Existing positions are unaffected (per Strategy.md exit rules — DO-NOT-ACTIVATE blocks new entries, not existing-position management).
 
 B. DIVERGENCE FLAGS FROM M1b — for each divergence flag (fundamental call vs. technical signal):
    - Append an entry to `Pending_Adversarial_Reviews.md` with review type `divergence-review`. Schema and field details per the ADVERSARIAL REVIEWS section of this document. Required fields: id (unique, e.g., `div-<strategy>-<YYYYMM>-<seq>`), review_type = divergence-review, strategy, prior_activation_state, m1b_artifact_path = Monthly_Fundamental.md, technical_reading (snapshot of relevant Regime_State.md fields at queue time), attacker_due_date (next trading day), orchestrator_due_date (one trading day after attacker_due_date), status = pending.
@@ -860,26 +873,26 @@ B. DIVERGENCE FLAGS FROM M1b — for each divergence flag (fundamental call vs. 
 
 C. EXITS FROM M4 — for each D position with M4 recommendation "close on thesis completion" or "close on thesis invalidation" or marked with the immediate-action flag:
    - Confirm the cited invalidation criterion or completion condition is in fact met. Second-look discipline applies. If on review the criterion is not met, record the second-look decision in Decision_Log.md and continue.
-   - If confirmed: craft the exit order via the IBKR connector per D2 staging rules. Note for D positions: check LTCG status — if within 30 days of 12-month qualification AND the invalidation is not catastrophic, stage the exit for the post-LTCG date instead by appending a `Pending_Analyses.md` entry (analysis_type re-screen; strategy D; ticker; due_date = the LTCG date; context = "craft and stage the D exit on this date"; conservative_default exit) — do NOT craft a far-future instruction now; D2 crafts it on the due_date. If invalidation is catastrophic, exit immediately regardless of LTCG.
+   - If confirmed: craft the exit order via the IBKR connector per D2 staging rules. Note for D positions: check LTCG status — if within 30 days of 12-month qualification AND the invalidation is not catastrophic, stage the exit for the post-LTCG date instead by appending a `Pending_Analysis.md` entry (analysis_type re-screen; strategy D; ticker; due_date = the LTCG date; context = "craft and stage the D exit on this date"; conservative_default exit) — do NOT craft a far-future instruction now; D2 crafts it on the due_date. If invalidation is catastrophic, exit immediately regardless of LTCG.
    - Append Decision_Log entry, update Portfolio_Ledger.md with the crafted instruction `id`. Schedule "[Claude] Confirm order — <ticker> SELL" for 07:00 MT pre-market on order day (description: the deep link + `SIDE QTY TICKER TYPE LIMIT TIF` summary + instruction `id`; options / non-craftable: the explicitly-labeled manual-entry text block in place of the deep link). No fill-capture event — the fill reconciles via D2 Step 0.
 
 D. RESEARCH DEFERRALS FROM M4 — for each D position with recommendation "further research":
-   - Append a `Pending_Analyses.md` entry: analysis_type research-deferral-checkpoint; strategy D; due_date = when the resolving info is available (next trading day if already available); context = information gap from M4 + Strategy.md D exit rules; conservative_default = exit the position if unresolved.
+   - Append a `Pending_Analysis.md` entry: analysis_type research-deferral-checkpoint; strategy D; due_date = when the resolving info is available (next trading day if already available); context = information gap from M4 + Strategy.md D exit rules; conservative_default = exit the position if unresolved.
 
 E. THESIS CONSTRUCTION FROM M3 (Strategy E) — for the M3 top-tier pair shortlist:
-   - Append a `Pending_Analyses.md` entry per top-tier pair (analysis_type thesis-construction; strategy E; ticker_or_pair = <L>/<S>; due_date = today unless the pair's entry must wait for a specific event; context = pair specifics from M3 [L, S, divergence thesis, reconvergence indicators, borrow cost estimate, execution path] + Strategy.md E criteria; conservative_default decline), ordered by reconvergence-indicator proximity. No per-month cap. D2 drains them.
+   - Append a `Pending_Analysis.md` entry per top-tier pair (analysis_type thesis-construction; strategy E; ticker_or_pair = <L>/<S>; due_date = today unless the pair's entry must wait for a specific event; context = pair specifics from M3 [L, S, divergence thesis, reconvergence indicators, borrow cost estimate, execution path] + Strategy.md E criteria; conservative_default decline), ordered by reconvergence-indicator proximity. No per-month cap. D2 drains them.
 
 F. CROSS-PROMPT DECONFLICTION — if any ticker appears as both an exit candidate (M4) and a new-entry candidate (M3 leg, or A-queue drain), respect simultaneous-holding constraints per Strategy.md: set the new-entry queue entry's due_date to after the expected exit fill, with a context note to verify the exit filled (connector / Portfolio_Ledger) before the thesis proceeds.
 
 G. WATCHLIST UPDATES — apply any A-queue drains from A and any other updates surfaced.
 
-DEFERRAL DISCIPLINE: deferrals don't chain. Specify trigger and conservative-default fallback for any deferred decision. Enqueue deferred analyses to `Pending_Analyses.md` (never the calendar).
+DEFERRAL DISCIPLINE: deferrals don't chain. Specify trigger and conservative-default fallback for any deferred decision. Enqueue deferred analyses to `Pending_Analysis.md` (never the calendar).
 
 CALENDAR MCP USAGE: Claude calls the Calendar MCP directly only for `[Claude] Confirm order` events (D exits in section C). Time zone per Experiment_Parameters.md.
 
 CHAT OUTPUT:
 - Exit order(s) as crafted instructions (tap-to-confirm deep link + `SIDE QTY TICKER TYPE LIMIT TIF` summary) grouped by execution day (or "no order").
-- One-line acknowledgment of file edits, `Pending_Analyses.md` entries appended, and confirm-order events created.
+- One-line acknowledgment of file edits, `Pending_Analysis.md` entries appended, and confirm-order events created.
 
 If no orders, no file changes, no queue entries: "No actions required."
 ```
@@ -892,7 +905,7 @@ Structured adversarial reviews — pre-mortem reviews, regime-router divergence 
 
 ## Pending_Adversarial_Reviews.md — queue file schema
 
-The queue is a single Markdown file at the repo root. Each pending review is one entry, separated by `---`. Entries are appended in order of creation; processed entries are NOT deleted (provides traceability) — they are marked complete and retained. The file may be archived periodically by a quarterly housekeeping routine (out of scope for initial implementation).
+The queue is a single Markdown file at the repo root. Each pending review is one entry, separated by `---`. Entries are appended in order of creation. Once an entry reaches a terminal `status` (`complete` or `superseded`), **D3 Calendar Hygiene** sweeps it daily to `Archived_Adversarial_Reviews.md` and removes it from this live file entirely — full clear, no pointer (see "Queue lifecycle and daily archive policy"). The live file therefore holds only actionable entries (`pending` / `recommendation-complete` / `attacker-complete`); an entry id absent from it is found in the daily archive.
 
 Each entry is a YAML-style block:
 
@@ -1212,12 +1225,12 @@ Read the just-saved quarterly research files:
 Convert into operator-actionable outputs per the operating model. Claude resolves all decisions internally; commissions disregarded at staging time.
 
 A. D THESIS CONSTRUCTION FROM Q2 — for the Q2 ranked shortlist:
-   - For each candidate marked "ready now": append a `Pending_Analyses.md` entry (analysis_type thesis-construction; strategy D; due_date today; context from Q2 + Strategy.md D criteria + Operating_Protocols.md; conservative_default decline), ordered by thesis-strength rating. No cap. D2 drains them.
-   - For each candidate marked "deferred pending rally pause": add to Watchlist.md D-deferred section with the trailing-30-day momentum reading and resolution-trigger ("when 30-day trailing return drops below X%"), AND append a `Pending_Analyses.md` entry (analysis_type re-screen; strategy D; due_date = 30 days out; context = the re-check condition; conservative_default skip) so D2 re-checks then.
+   - For each candidate marked "ready now": append a `Pending_Analysis.md` entry (analysis_type thesis-construction; strategy D; due_date today; context from Q2 + Strategy.md D criteria + Operating_Protocols.md; conservative_default decline), ordered by thesis-strength rating. No cap. D2 drains them.
+   - For each candidate marked "deferred pending rally pause": add to Watchlist.md D-deferred section with the trailing-30-day momentum reading and resolution-trigger ("when 30-day trailing return drops below X%"), AND append a `Pending_Analysis.md` entry (analysis_type re-screen; strategy D; due_date = 30 days out; context = the re-check condition; conservative_default skip) so D2 re-checks then.
    - For each candidate marked "blocked by concentration or position count": add to Watchlist.md D-blocked section with the specific blocker and resolution condition ("when GICS <sector> concentration < 30%" or "when D book < 10 positions"). No queue entry — these resolve when an existing D position closes (M5 D-exit handling triggers re-evaluation).
 
 B. FOUNDATION-CHANGE ASSESSMENT FROM Q3 — for each YES verdict that cleared the transferability filter and warrants foundation-change-assessment:
-   - Per the strategies-affected list in the Q3 entry, append a `Pending_Analyses.md` entry per affected strategy (analysis_type foundation-change-assessment; strategy; due_date today; context = Q3 evidence summary + affected Tier (1 architectural / 2 magnitude) + the branch warranted (continue / terminate / constraint-relaxation) + reference to Experiment_Parameters.md §Foundation change trigger procedure; conservative_default = no change / continue). D2 drains them.
+   - Per the strategies-affected list in the Q3 entry, append a `Pending_Analysis.md` entry per affected strategy (analysis_type foundation-change-assessment; strategy; due_date today; context = Q3 evidence summary + affected Tier (1 architectural / 2 magnitude) + the branch warranted (continue / terminate / constraint-relaxation) + reference to Experiment_Parameters.md §Foundation change trigger procedure; conservative_default = no change / continue). D2 drains them.
    - For NO verdicts and YES verdicts that fail the transferability filter: no action; logged as watch items, reviewed at next Q3 cycle.
 
 C. WATCHLIST UPDATES — apply D-deferred / D-blocked additions from A.
@@ -1226,11 +1239,11 @@ D. DECISION_LOG ENTRIES — append a Q4-cycle outcome entry summarizing: Q2 cand
 
 DEFERRAL DISCIPLINE: deferrals don't chain. Conservative-default fallback per deferred decision.
 
-CALENDAR MCP USAGE: Q4 creates no calendar events — its analyses are enqueued to `Pending_Analyses.md` and run by D2. Anchor dated due_dates on the America/Denver date. Time zone per Experiment_Parameters.md.
+CALENDAR MCP USAGE: Q4 creates no calendar events — its analyses are enqueued to `Pending_Analysis.md` and run by D2. Anchor dated due_dates on the America/Denver date. Time zone per Experiment_Parameters.md.
 
 CHAT OUTPUT:
 - No exit orders are produced by Q4 (D exits flow through M5; A/B/C/E exits flow through D2/W4).
-- One-line acknowledgment of file edits and `Pending_Analyses.md` entries appended.
+- One-line acknowledgment of file edits and `Pending_Analysis.md` entries appended.
 
 If no file changes, no queue entries: "No actions required."
 ```
@@ -1377,7 +1390,7 @@ A. UPDATED AI_TRADING_FOUNDATION.MD FROM A1 — produce a new revision of AI_Tra
    - Increment AI_Trading_Foundation.md revision number; append revision-history entry citing A1 sweep date and summary of changes (counts per category).
 
 B. PER-STRATEGY FOUNDATION-CHANGE ASSESSMENT FROM A1 — for each per-strategy recommendation in A1's aggregate output:
-   - Append a `Pending_Analyses.md` entry per affected strategy (analysis_type foundation-change-assessment; strategy; due_date today; context = A1 evidence summary + recommended outcome (continue / terminate / constraint-relaxation review) + reference to Experiment_Parameters.md §Foundation change trigger procedure; conservative_default = continue at current revision). D2 drains them.
+   - Append a `Pending_Analysis.md` entry per affected strategy (analysis_type foundation-change-assessment; strategy; due_date today; context = A1 evidence summary + recommended outcome (continue / terminate / constraint-relaxation review) + reference to Experiment_Parameters.md §Foundation change trigger procedure; conservative_default = continue at current revision). D2 drains them.
 
 C. UPDATED STRATEGY.MD FROM A2 — produce a new revision of Strategy.md applying:
    - All constraints with §5.6 mechanical relaxation verdicts: replace constraint value with new (relaxed) value per §5.6 formula. Update constraint annotation to cite the A2 audit date and underlying foundation revision.
@@ -1386,7 +1399,7 @@ C. UPDATED STRATEGY.MD FROM A2 — produce a new revision of Strategy.md applyin
    - Increment per-strategy revision numbers as needed; append revision-history entries citing A2 audit and underlying AI_Trading_Foundation.md revision.
 
 D. OUT-OF-TABLE EXPLICIT REVIEW FROM A2 — for each out-of-table flag:
-   - Append a `Pending_Analyses.md` entry (analysis_type constraint-relaxation-review; strategy; ticker_or_pair n/a; due_date = the first trading day after the foundation-change assessments are expected to complete, typically week 2 of the new year; context = §5.7 audit-trail content for the flag (constraint text, why mechanical lookup failed, specific gap) + reference to Experiment_Parameters.md constraint-relaxation review procedure; conservative_default = leave the constraint unchanged). D2 drains it.
+   - Append a `Pending_Analysis.md` entry (analysis_type constraint-relaxation-review; strategy; ticker_or_pair n/a; due_date = the first trading day after the foundation-change assessments are expected to complete, typically week 2 of the new year; context = §5.7 audit-trail content for the flag (constraint text, why mechanical lookup failed, specific gap) + reference to Experiment_Parameters.md constraint-relaxation review procedure; conservative_default = leave the constraint unchanged). D2 drains it.
 
 E. DECISION_LOG ENTRIES — append entries documenting:
    - The A1 cycle outcome: counts per category (KEEP / UPDATE / VERSION-PENDING / REMOVAL / NEW), revision number bumped on AI_Trading_Foundation.md, per-strategy foundation-change assessments scheduled.
@@ -1396,13 +1409,13 @@ F. WATCHLIST AND OPERATING_PROTOCOLS RECONCILIATION — review whether any A1/A2
 
 DEFERRAL DISCIPLINE: deferrals don't chain. Conservative-default fallback: if a foundation-change assessment cannot resolve, the strategy continues at current revision pending next quarterly delta.
 
-CALENDAR MCP USAGE: A3 creates no calendar events — its assessments/reviews are enqueued to `Pending_Analyses.md` and run by D2. Anchor dated due_dates on the America/Denver date. Time zone per Experiment_Parameters.md.
+CALENDAR MCP USAGE: A3 creates no calendar events — its assessments/reviews are enqueued to `Pending_Analysis.md` and run by D2. Anchor dated due_dates on the America/Denver date. Time zone per Experiment_Parameters.md.
 
 CHAT OUTPUT:
 - No exit orders are produced by A3.
-- One-line acknowledgment of file edits and `Pending_Analyses.md` entries appended.
+- One-line acknowledgment of file edits and `Pending_Analysis.md` entries appended.
 
 If no file changes, no queue entries: "No actions required." (rare for A3 — at minimum AI_Trading_Foundation.md will have a revision bump documenting the sweep, even if all items KEEP UNCHANGED.)
 ```
 
-After A3 completes, the per-strategy foundation-change assessments and out-of-table constraint-relaxation reviews run when D2 drains their `Pending_Analyses.md` entries (per the Experiment_Parameters.md §Foundation change trigger procedure).
+After A3 completes, the per-strategy foundation-change assessments and out-of-table constraint-relaxation reviews run when D2 drains their `Pending_Analysis.md` entries (per the Experiment_Parameters.md §Foundation change trigger procedure).

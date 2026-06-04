@@ -72,7 +72,7 @@ The attacker's tone occasionally overreaches (the closing "the fundamental claim
 1. `Regime_State.md` updated: Strategy C activation state confirmed at HYBRID ACTIVATE (FOMC-only); "operative pending `div-C-202605-1`" qualifier removed; activation state change history table appended with the 2026-06-03 review outcome (HYBRID ACTIVATE → HYBRID ACTIVATE, re-derived on May regime).
 2. `Decision_Log.md` entry appended recording the orchestrator review outcome with theater-check flag MIXED. Per Claude_Task_Plan.md §998 "If the verdict differs from the prior state, append the binding decision to Decision_Log.md" — the operative prior state was HYBRID ACTIVATE (FOMC-only) and the binding decision is HYBRID ACTIVATE (FOMC-only) re-derived; the appended entry captures the cycle outcome for traceability even though the state component is unchanged (the re-derivation is itself a load-bearing decision event).
 3. `Pending_Adversarial_Reviews.md` queue entry div-C-202605-1: `orchestrator_output_path` set; `status` set to `complete`.
-4. No portfolio action required (no open C positions; FOMC June 2026 thesis-construction queue entry already in `Pending_Analyses.md` proceeds unchanged under the re-affirmed HYBRID state).
+4. No portfolio action required (no open C positions; FOMC June 2026 thesis-construction queue entry already in `Pending_Analysis.md` proceeds unchanged under the re-affirmed HYBRID state).
 5. No IBKR order action required.
 
 ## Self-imposed scope confirmation

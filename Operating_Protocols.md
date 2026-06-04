@@ -17,20 +17,20 @@ The human operator's role is execution, not decision-making.
 The human operator does effectively one thing:
 1. **Confirm a crafted order.** Claude crafts the exact order through the IBKR connector (`create_order_instruction`) and surfaces a tap-to-confirm deep link; the human operator opens the link, reviews the pre-filled order in IBKR, and confirms it (or declines). The human operator never types ticker, side, quantity, price, order type, or duration — Claude crafts all of them. For security types the connector cannot craft (currently anything other than Equity/ETF — e.g. options), Claude falls back to a text order block the human operator enters manually, explicitly labeled as a manual-entry fallback and **carried in the `[Claude] Confirm order` calendar event** in place of the deep link — never chat-only, since routine chat is unmonitored (Claude_Task_Plan.md "Routine chat is unmonitored — the calendar is the binding human-facing surface").
 
-All analytical work — thesis construction, position reviews, research-deferral checkpoints, re-screens, foundation-change and constraint-relaxation reviews, router reviews — runs autonomously: in-session in the triggering routine, or via the `Pending_Analyses.md` queue drained daily by D2. The operator is never asked to paste an analysis prompt into a fresh chat.
+All analytical work — thesis construction, position reviews, research-deferral checkpoints, re-screens, foundation-change and constraint-relaxation reviews, router reviews — runs autonomously: in-session in the triggering routine, or via the `Pending_Analysis.md` queue drained daily by D2. The operator is never asked to paste an analysis prompt into a fresh chat.
 
 Three prior actions are retired:
 - **Screenshotting IBKR is obsolete.** Claude reads the human operator's positions, balances, live orders, executed fills (with exact price/commission/realized P&L), and live + historical market data directly through the IBKR connector (§11). Claude never asks for a screenshot.
 - **Persisting Claude-produced files is obsolete.** Claude routines write project files directly.
-- **Pasting analysis prompts into fresh chats is obsolete.** Thesis construction and every other Claude-only analysis step run in-session or via the autonomous `Pending_Analyses.md` queue — never as a human-pasted calendar event.
+- **Pasting analysis prompts into fresh chats is obsolete.** Thesis construction and every other Claude-only analysis step run in-session or via the autonomous `Pending_Analysis.md` queue — never as a human-pasted calendar event.
 
 The human operator does NOT verify commissions, make EV decisions, monitor markets intraday, watch sell-side wires, parse earnings prints in real time, decide execute-vs-skip on staged orders, decide override-vs-honor on NO-GO recommendations, choose convergence targets, position sizes, limit prices, or invalidation criteria, or read project sources to understand context Claude could resolve internally.
 
 If a workflow requires the human operator to do anything beyond confirming crafted orders, that workflow is broken and Claude redesigns it before staging anything.
 
-**Claude resolves all decisions internally.** Claude makes every decision the framework requires — execute or skip, GO or NO-GO, target selection, sizing, timing, invalidation criteria — without human operator input. The human operator's *judgment* is never solicited: Claude does not ask whether to place a trade; it resolves GO/skip itself and surfaces only the crafted order. The tap that confirms a crafted order to IBKR is the human operator's *execution* role — the physical act of placing the order — not a decision the human operator is being asked to make. If a decision genuinely cannot be made without information Claude does not have, Claude defers it to a future autonomous routine — a `Pending_Analyses.md` queue entry (drained daily by D2) with a `due_date` set to when the missing information will be available, and a conservative-default fallback. Claude documents the deferral logic in Decision_Log.md so the future routine can resume.
+**Claude resolves all decisions internally.** Claude makes every decision the framework requires — execute or skip, GO or NO-GO, target selection, sizing, timing, invalidation criteria — without human operator input. The human operator's *judgment* is never solicited: Claude does not ask whether to place a trade; it resolves GO/skip itself and surfaces only the crafted order. The tap that confirms a crafted order to IBKR is the human operator's *execution* role — the physical act of placing the order — not a decision the human operator is being asked to make. If a decision genuinely cannot be made without information Claude does not have, Claude defers it to a future autonomous routine — a `Pending_Analysis.md` queue entry (drained daily by D2) with a `due_date` set to when the missing information will be available, and a conservative-default fallback. Claude documents the deferral logic in Decision_Log.md so the future routine can resume.
 
-**Sell-side and follow-on data monitoring is Claude's responsibility.** Claude does not stage workflows requiring the human operator to "watch" anything. Where follow-on data (e.g., a peer print landing two days after entry) could affect a position, Claude uses autonomous review routines (a `Pending_Analyses.md` queue entry drained daily by D2) to handle it — no human action.
+**Sell-side and follow-on data monitoring is Claude's responsibility.** Claude does not stage workflows requiring the human operator to "watch" anything. Where follow-on data (e.g., a peer print landing two days after entry) could affect a position, Claude uses autonomous review routines (a `Pending_Analysis.md` queue entry drained daily by D2) to handle it — no human action.
 
 **Chat output discipline.** Claude's chat output to the human operator contains only:
 1. The order(s) to execute — surfaced as crafted IBKR order instructions (the tap-to-confirm deep link plus a one-line human-readable summary `SIDE QTY TICKER TYPE LIMIT TIF`), or `no order` — AND
@@ -50,7 +50,7 @@ Claude's chat output does NOT contain: recapitulation of decision reasoning that
 If any answer reveals a violation, the response is revised before sending.
 
 **Revision history:**
-- 2026-06-01 (later same day): Analysis steps moved off the human calendar. Human-operator action reduced from two to effectively one (confirm crafted orders); thesis construction and all other Claude-only analysis now run in-session in the triggering routine or via the autonomous `Pending_Analyses.md` queue (drained daily by D2). The "paste a calendar-triggered analysis prompt" action is retired; the calendar holds only `[Claude] Confirm order` events. → Decision_Log 2026-06-01 "Analysis steps moved off the human calendar to in-session execution + Pending_Analyses.md queue".
+- 2026-06-01 (later same day): Analysis steps moved off the human calendar. Human-operator action reduced from two to effectively one (confirm crafted orders); thesis construction and all other Claude-only analysis now run in-session in the triggering routine or via the autonomous `Pending_Analysis.md` queue (drained daily by D2). The "paste a calendar-triggered analysis prompt" action is retired; the calendar holds only `[Claude] Confirm order` events. → Decision_Log 2026-06-01 "Analysis steps moved off the human calendar to in-session execution + Pending_Analysis.md queue".
 - 2026-06-01: Revised to the IBKR-connector execution model. Human-operator actions reduced from four to two (confirm crafted orders via tap-to-confirm deep link; paste calendar prompts). Screenshot-capture and file-persistence actions retired — Claude reads positions/fills/market data directly through the connector and writes files directly. New §11 (IBKR Connector Protocol) added. → Decision_Log 2026-06-01 "IBKR connector integration — click-to-confirm orders + connector-driven reconciliation".
 - 2026-04-27 (Sun, late): Adopted in (then-)current canonical form (four operator actions; orders emitted as IBKR-paste text). → Decision_Log 2026-04-27 "Human-operator interaction protocol adopted (Decision_Log-internal); commission policy changed; staged orders cleaned of EV-decision hooks".
 
@@ -201,7 +201,7 @@ The gap-fill % choice IS the conviction calibration tool when the convergence ta
 
 **Canonical-current text:**
 
-When a decision cannot be made because required information is genuinely missing, Claude defers to a future autonomous routine — a `Pending_Analyses.md` queue entry (drained daily by D2) with a `due_date` set to when the information will be available. Two rules:
+When a decision cannot be made because required information is genuinely missing, Claude defers to a future autonomous routine — a `Pending_Analysis.md` queue entry (drained daily by D2) with a `due_date` set to when the information will be available. Two rules:
 
 1. **No re-deferral (no deferral chaining).** If the future session also cannot resolve, Claude does NOT defer again. The conservative-default fallback is documented in the original deferral entry and fires automatically at the next checkpoint.
 
@@ -268,6 +268,25 @@ An IBKR connector (MCP server) gives Claude routines direct, authenticated acces
 **Revision history:**
 - 2026-06-01: Protocol established on IBKR-connector availability. Order execution moved from operator-typed IBKR-paste blocks to Claude-crafted click-to-confirm order instructions; fill capture moved from operator screenshots to connector reads; live account + market data made available to all routines. → Decision_Log 2026-06-01 "IBKR connector integration — click-to-confirm orders + connector-driven reconciliation".
 - 2026-06-04: Corrected a sizing-base error in "Live data in analysis" (mirrored in Claude_Task_Plan.md §"IBKR connector usage"). Both summaries had said the 2% base was account net-liquidation ("2%-NAV sizing on live net-liquidation"), which contradicts Strategy.md ("2% of strategy portfolio") and the per-strategy-NAV source-of-truth boundary above, and caused the MDT 2-share / ~$156 oversize (2026-06-03; ~5× intended). Base clarified to the per-strategy sub-portfolio NAV; added a >~$50 sanity tripwire; Portfolio_Ledger.md Operational Notes gained a standing "Position-sizing base" note. → Decision_Log 2026-06-04 "MDT B sizing correction + base-NAV doc fix".
+
+---
+
+## 12. Queue Lifecycle and Daily Archive Policy
+
+**Canonical-current text:**
+
+The two drain-to-completion queues — `Pending_Analysis.md` (drained daily by D2) and `Pending_Adversarial_Reviews.md` (drained by the Adversarial Review routines) — are cleared **daily**, not on a retention window. Rationale: unlike the append-only `Decision_Log.md` (never read end-to-end by a routine; pruned weekly by W5), a queue is read **to completion** every day by its drainer, so a completed entry left in place is needlessly re-read each day.
+
+Each day **D3 Calendar Hygiene** sweeps every entry at a terminal `status` (`complete`/`superseded`) out of its live queue into the queue's daily archive (`Archived_Analysis.md` / `Archived_Adversarial_Reviews.md`): the full block is appended (tagged with an `archived:` date) and then removed from the live file entirely — **full clear, no pointer line** (this differs from the Decision_Log archive, which leaves a pointer). The live queue retains only actionable entries (`pending`, plus the adversarial queue's in-flight `recommendation-complete` / `attacker-complete`) plus its header/schema preamble.
+
+Lookup: an id absent from a live queue is in that queue's daily archive. The durable verdict/outcome record lives independently in the per-review output files (`Adversarial_Review_<id>_*.md`), `Regime_State.md`, and `Decision_Log.md` — gates needing a completed review's result read those, not the queue.
+
+Read-access: the daily archives are append-only cold traceability; Daily/Weekly routines do not read them for decision input (D3's mechanical sweep-append is exempt). Monthly+ cadence may read them (Q1 reads the adversarial daily-archive for prior-quarter review records).
+
+Authoritative procedural details (the D3 sweep step, append-only file-write convention): see Claude_Task_Plan.md "Queue lifecycle and daily archive policy" and §D3.
+
+**Revision history:**
+- 2026-06-04: Policy established. Queues moved from "mark complete + retain indefinitely" to daily full-clear-to-daily-archive via D3; `Archived_Analysis.md` + `Archived_Adversarial_Reviews.md` created; supersedes the deferred "quarterly housekeeping routine (out of scope)" note formerly in Claude_Task_Plan.md's adversarial-queue schema. Initial sweep migrated 3 completed analyses (HPE, OKTA, monitor-KL12) + 3 completed divergence reviews (div-C/-D/-E-202605-1). → Decision_Log 2026-06-04 "Queue lifecycle — daily full-clear-to-daily-archive policy established".
 
 ---
 
