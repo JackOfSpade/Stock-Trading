@@ -14228,7 +14228,7 @@ No order staged. **B-short string UNCHANGED at ~52** (GTLB is a NEGATIVE-directi
 
 **Sizing:** NAV $9,459.18 × 2% = $189.18. Shares: $189.18 / $78.10 = 2.42 → floor 2 shares. Entry reference $78.10 (Day-0 level). Total notional ~$156.20.
 
-**Order:** BUY 2 shares MDT LIMIT $78.25 GTC (IBKR contract_id 181387075, SMART). **IBKR order instruction ID: 100** (created 2026-06-03 via connector). Calendar confirm-order event **`gq5u7j8441cgm329ticjauh5pk`** created for 2026-06-04 07:00–07:15 MT.
+**Order:** BUY 2 shares MDT LIMIT $78.25 GTC (IBKR contract_id 181387075, SMART). **IBKR order instruction ID: 101** (re-crafted 2026-06-03 D3; ID 100 deleted — D2 omitted deep link from confirm-order event; ID 101 issued and event repaired with tap-to-confirm URL). Calendar confirm-order event **`gq5u7j8441cgm329ticjauh5pk`** 2026-06-04 07:00–07:15 MT — updated with deep link + ID 101.
 
 **Convergence target (immutable):** $90.00 (+15.2% from $78.10 Day-0 reference). Does NOT adjust for fill price.
 **Time-based exit:** 2026-07-31 (Fri) — Day-0 2026-06-03 + 60 calendar days = Sun 2026-08-02 → last trading day Fri 2026-07-31. Time-based exit calendar event to be created at fill reconciliation (D2 Step 0).
@@ -14262,6 +14262,41 @@ No order staged. **B-short string UNCHANGED at ~52** (GTLB is a NEGATIVE-directi
 - D book: 2 positions — RTX (OPEN), DIS (OPEN).
 
 **Files modified:** Decision_Log.md (this entry + B thesis entries above), Portfolio_Ledger.md (MDT ORDER-STAGED section appended), Pending_Analyses.md (4 new entries: AVGO, CRWD, ANF, CPRI).
-**IBKR order instruction created:** ID 100 (MDT BUY 2 LIMIT $78.25 GTC, contract_id 181387075).
-**Calendar events created:** `gq5u7j8441cgm329ticjauh5pk` (Confirm order MDT 2026-06-04 07:00 MT).
+**IBKR order instruction created:** ID 100 (MDT BUY 2 LIMIT $78.25 GTC, contract_id 181387075). **[Updated by D3 2026-06-03: ID 100 deleted; ID 101 re-crafted; event repaired with deep link.]**
+**Calendar events created:** `gq5u7j8441cgm329ticjauh5pk` (Confirm order MDT 2026-06-04 07:00 MT — description updated by D3 2026-06-03 to include tap-to-confirm deep link + instruction ID 101).
 **B tally final:** ~7 GO / ~79 NO-GO. B-short string: 0 (RESET on MDT GO).
+
+---
+
+### [2026-06-03] D3 Calendar Hygiene
+
+**Date anchor:** 2026-06-03 18:33 MDT (Bash TZ=America/Denver; no conflict with project file timestamps).
+
+**Calendar walk (next 90 days, `[Claude]` events, jacksterwu@gmail.com):**
+- 1 event found: `[Claude] Confirm order — MDT LONG 2sh (Strategy B)` (`gq5u7j8441cgm329ticjauh5pk`) 2026-06-04 07:00 MT.
+- No legacy analysis events (thesis, re-screen, checkpoint, pulse-check, time-exit, convergence-check) found. 3 legacy time-exit events (TJX `0g1smg50pf89jo3or6ompaht4o`, AZO `c198nmdf8quptsc4kvt7pvoq58`, ZBRA `b2gka8hncerbnfh6m9j2hq4k2g`) confirmed cancelled (status: cancelled) by prior D3 2026-06-02. ✓
+
+**MDT confirm-order event repair:**
+- Problem: D2 2026-06-03 created instruction ID 100 and calendar event `gq5u7j8441cgm329ticjauh5pk` but omitted the tap-to-confirm deep link URL and instruction id from the event description; description used manual "place order via IBKR" language instead.
+- Action: Deleted instruction ID 100. Re-crafted: `create_order_instruction(contract_id=181387075, BUY, 2, LIMIT, $78.25, GTC)` → new ID **101**, URL captured. Updated event description with: `BUY 2 MDT LIMIT $78.25 GTC` / tap-to-confirm deep link / `Instruction ID: 101` / "Tap the link, review the pre-filled order in IBKR, confirm at or after market open." Notification fires at event time (popup 0 min). ✓
+- MDT price at re-craft time: last $78.11, bid $77.50 / ask $78.05, prior close $77.95. Limit $78.25 GTC (= $0.20 above ask; marketable for next session; unchanged from D2 staging). ✓
+
+**Order instruction audit:**
+- `get_order_instructions`: ID 101 (MDT BUY 2 LIMIT $78.25 GTC) — valid, confirmed live. ✓
+- `get_account_orders`: empty — no stale GTC working orders. ✓
+
+**Portfolio Ledger vs connector cross-check:**
+- AZO (0.0121), BRC (0.4415), DIS (0.28), HCA (0.0642), RTX (0.1595), TJX (0.2346), ZBRA (0.1505): all present in IBKR positions, consistent with Portfolio_Ledger OPEN records. ✓
+- MDT: ORDER-STAGED, not yet in positions. ✓
+- SGOV: 91.6314 shares (cash park). ✓
+- **IBM reconciliation gap FLAGGED:** Portfolio_Ledger §IBM section header still reads "EXIT-PENDING" but IBM is NOT in `get_account_positions`. AZO fill notes (2026-05-27) explicitly state "IBM SELL 0.1198 @ $251.28 Market GTC — IBM CLOSED." D2 session 2026-06-03 Step 0 also confirmed 5 open B positions (no IBM). IBM section header is stale — requires D2 Step 0 reconciliation to update header to CLOSED and record IBM realized P&L ($1.95) in ledger.
+
+**Pending_Analyses.md queue hygiene:**
+- 11 entries total: 3 complete (HPE, OKTA, monitor-KL12), 8 pending.
+- No entries with `status: pending` and `due_date` ≤ 2026-06-03 (today). Queue is current.
+- ZBRA research-deferral-checkpoint `review-ZBRA-B-20260609` (due 2026-06-09): present and covers the ZBRA mid-window thesis check. ✓
+- All other pending entries have due dates 2026-06-04 through 2026-06-12. ✓
+
+**Files modified:** Decision_Log.md (this entry + inline ID updates on MDT GO entry + D2 session summary), Portfolio_Ledger.md (Last updated header + MDT instruction id 100→101).
+**IBKR actions:** `delete_order_instruction(100)` + `create_order_instruction` → ID 101.
+**Calendar actions:** `update_event(gq5u7j8441cgm329ticjauh5pk)` — deep link + ID 101 added.
