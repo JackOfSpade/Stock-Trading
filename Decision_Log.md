@@ -14447,3 +14447,108 @@ The triggers now read real data:
 1. *Per-strategy deployed TWR is now maintained daily by D2 Step 0* (unit-value index → deployed_unit_value, peak, current_drawdown, sgov_index, deployed_days, closed_trades, gate_status, monthly snapshots) in each strategy's Portfolio_Ledger Performance block.
 2. *Kill-triggers read this block:* drawdown (D1) = current vs peak; 30-trade gate (M5) = indices at 30-trade mark + tax/inflation haircut; M2M (M5) = deployed_days + monthly snapshots.
 3. *First D2 run seeds the blocks from trade history (they are `[n/a]` until then).* No new remote routine.
+
+---
+
+### [2026-06-04] D2 Daily Action Conversion — BRC Strategy B convergence exit staged (mechanical)
+
+**Trigger:** D1 2026-06-04 mechanical exit-trigger sweep flagged BRC EXIT TRIGGERED — convergence target $88.80 reached (BRC closed $89.06 Thu 6/4, traded $88.09–$89.68 all session above target).
+**Inputs:** Daily.md 2026-06-04 RECOMMENDED ACTIONS; Portfolio_Ledger BRC entry record (Decision_Log 2026-05-22 BRC GO; convergence target $88.80 immutable); connector get_account_positions (BRC 0.4415 sh, contract_id 6467986) + get_price_snapshot.
+**Decision:** Confirmed mechanical exit per Strategy.md B "convergence target reached" (no judgment — the target IS the exit rule). Crafted **SELL 0.4415 BRC MARKET DAY** via connector — instruction **id 101**. Used MARKET (not marketable-limit) because (a) this is a convergence exit already through target where assured execution is the objective and (b) the after-hours quote was not live (bid 80.12 × ask 97.50 wide); IBM 2026-05-27 convergence-exit-via-market precedent.
+**Reasoning:** Invalidation criteria (i)–(iii) all NOT-TRIPPED; this is a clean target-reached completion, not an invalidation. Entry $84.97 (5/22) → target $88.80 = +5.0% gross / +2.83% net pre-exit-commission at fill basis; exit above target captures the full move. Commissions disregarded at staging (Operating_Protocols §2).
+**Downstream actions:** Portfolio_Ledger BRC section → EXIT-PENDING with instruction id 101 + confirm event. Confirm-order calendar event `jtk5es18uqi8scdi7fvm0fbdqk` created 2026-06-05 07:00 MT (deep link + summary `SELL 0.4415 BRC MARKET DAY` + id 101). Fill reconciled by D2 Step 0 next run; on fill, B open count 5→4, Industrials cap 1/3→0/3, BRC closed-trade detail written. Will be B closed trade #4.
+**References:** Decision_Log 2026-05-22 BRC GO; Strategy.md B exit rules; Daily.md 2026-06-04.
+
+---
+
+### [2026-06-04] Strategy B — AVGO (Broadcom) Q2 FY26 print thesis construction — NO-GO (criterion 4; Sub-Pattern 3 pre-print-rally information-absorption, negative-direction beat-and-fade)
+
+**Trigger:** Pending_Analysis drain thesis-AVGO-B-20260604 (due 6/4); Q2 FY26 AMC Wed 6/3.
+**Inputs:** connector get_price_history (contract_id 313130367, NASDAQ; include_corporate_actions:true → none) + get_price_snapshot; Tavily post-print sell-side; Strategy.md B criteria 1–5; B_Sub_Pattern_Taxonomy.md; Operating_Protocols §2/§3/§8.
+**Decision:** **NO-GO.** Deciding criterion 4 (decisive flaw — information-driven correct re-rating, not sentiment overshoot). Direction NEGATIVE/short-eligible.
+**Reasoning:** CTC = (418.91 − 479.23)/479.23 = **−12.59%** (6/3 close → 6/4 close); criterion-1 magnitude + liquidity PASS (mega-cap, ADV ~$9.95B/day). C4 binds: stock ran ~+17% (5/19 $411 → 6/2 $481.57, near 52wk-high) into the print on multi-firm pre-print PT raises (HSBC $450→$600, Citi $475→$500, MS) — forward narrative priced IN; the drop is a forward-multiple de-rating on hard new information (>$100B AI-semi target **reiterated not raised**; Q3 AI guide $16B ~$1.2B light; "chips-only" shift; Tan's Google custom-chip-diversification admission attacking the ASIC moat; Infra Software 2nd miss). Post-print sell-side did not capitulate (Jefferies raised $550, Wells Fargo held $545, Macquarie cut to Neutral on Google-in-house-chip risk). SHORT chases a completed information move (no overshoot anchor); LONG fights a genuine de-rating un-refutable inside 60 days (Q3 print 9/3 outside window). Both framings flawed.
+**Sub-pattern:** Primary Sub-Pattern 3 (Information-Priced-via-Pre-Print-Rally), negative-direction inversion; overlay Macquarie single-firm structural downgrade (Pattern-N-adjacent). SP1 N/A (no post-print bull-ratification wave).
+**Downstream actions:** No order. Pending_Analysis thesis-AVGO-B-20260604 → complete (NO-GO). Conviction logged ~88–90% in the NO-GO (not a gate, §8). §3: AVGO re-evaluable on a future structurally-distinct trigger (Q3 9/3).
+**References:** Strategy.md B; B_Sub_Pattern_Taxonomy.md SP3.
+
+---
+
+### [2026-06-04] Strategy B — CRWD (CrowdStrike) Q1 FY27 print thesis construction — NO-GO (criterion 1 mechanical; close-to-close −3.81% < 5%; A-router gate cleared)
+
+**Trigger:** Pending_Analysis drain thesis-CRWD-B-20260604 (due 6/4); Q1 FY27 AMC Wed 6/3; 4-for-1 split July-effective.
+**Inputs:** Regime_State.md (A-router); connector get_price_history (contract_id 370757467, NASDAQ; include_corporate_actions:true → no adjustment, split is July-effective) + snapshot; Tavily; Strategy.md B; taxonomy; Op_Protocols §2/§3/§8/§11.
+**Decision:** **NO-GO.** STEP-0 A-router gate CLEARS (Regime_State A = DO-NOT-ACTIVATE → criterion-5 A/B mutual-exclusion does not bind; DDOG/PANW/OKTA precedent). Then deciding criterion 1 (mechanical): event-day CTC = (719.09 − 747.61)/747.61 = **−3.81% < 5%** → terminal magnitude-gate failure.
+**Reasoning — data correction (load-bearing):** the queue context's "Day(-1) 6/3 ≈ $768.95" was off by one trading day — $768.95 is the **6/2** close; the true pre-print **6/3** close is **$747.61** (earnings landed AMC after the 6/3 close, so the event-day window is 6/3→6/4). The press "−7.2%" figure was an intraday/premarket trough, not the Strategy.md-mandated close-to-close. Mkt cap ~$172–177B and ADV ~$2.48B/day clear; only magnitude fails. Underlying read regardless: beat-and-raise sell-the-news re-rating after a ~+60% YTD / ~+89% trailing-month run into ~100x FCF "priced for perfection" (textbook SP3 pre-print-rally absorption) — no mean-reversion edge even had magnitude cleared.
+**Downstream actions:** No order. Pending_Analysis thesis-CRWD-B-20260604 → complete (NO-GO). CRWD remains an A-queue name (A=DNA, no entry this cycle) and free to re-trigger B on a future qualifying event.
+**References:** Strategy.md B criterion 1; Regime_State.md A-router; EQIX/AXSM/MDLZ mechanical-gate precedents.
+
+---
+
+### [2026-06-04] Strategy B — ANF (Abercrombie & Fitch) Q1 FY26 print thesis construction — NO-GO (criterion 1 event-day measurement artifact + criterion 4 information-driven)
+
+**Trigger:** Pending_Analysis drain thesis-ANF-B-20260604 (due 6/4; deferred-from-6/1; resolved terminally — deferrals do not chain). Re-evaluation of the candidate also NO-GO'd 2026-06-02.
+**Inputs:** connector get_price_history (contract_id 2585399, NYSE; include_corporate_actions:true → none) + snapshot; Tavily; Strategy.md B; taxonomy.
+**Decision:** **NO-GO.** Criterion 1 (event-day identification) + criterion 4.
+**Reasoning — data correction:** the queue's "−6.04% Day-0 2026-05-29 / SHORT-eligible" premise is void. ANF reported Q1 FY26 pre-market **Wed 5/27**; verified daily closes 5/26 74.78 → **5/27 81.42 (+8.88%, the genuine Day-0, POSITIVE, +11–13% intraday EPS-beat rally)** → 5/28 82.18 → 5/29 77.22. The −6.04% the queue cited is the **5/28→5/29 (T+2) give-back** (arithmetically exact but not the event day), no fresh 5/29 catalyst (only Barclays *maintained* Underweight $78). Direct EQIX/AXSM close-to-close measurement-artifact analogue. Even on its merits the fade is information-driven (Q2 EPS guide $1.80–$2.00 vs ~$2.54 consensus, ~25% below; EMEA −10%; ~$90M tariff hit) with sell-side ratifying lower (Barclays EW→Underweight 5/6) — criterion 4 also fails, no asymmetric anchor. Instrument gates pass (mcap $3.64B, ADV ~$100.6M); ANF has 29 >5% sessions in trailing year (router signal-dilution condition). Nearest taxonomy neighbor SP6, actual disposition = mechanical-artifact bucket.
+**Downstream actions:** No order. Pending_Analysis thesis-ANF-B-20260604 → complete (NO-GO).
+**References:** Strategy.md B; prior ANF NO-GO 2026-06-02.
+
+---
+
+### [2026-06-04] Strategy B — CPRI (Capri Holdings) Q4 FY26 print thesis construction — NO-GO (criterion 4; date/direction correction — true Day-0 +8.05%)
+
+**Trigger:** Pending_Analysis drain thesis-CPRI-B-20260604 (due 6/4; deferred-from-6/1; resolved terminally). Candidate also NO-GO'd 2026-06-02.
+**Inputs:** connector get_price_history (contract_id 347409760, NYSE; corp-actions incl. → none) + snapshot; Tavily; Strategy.md B; taxonomy.
+**Decision:** **NO-GO.** Criterion 4 (information-driven), with a load-bearing date/direction correction.
+**Reasoning — data correction:** queue's "−7.35% Day-0 2026-05-29 / SHORT" is wrong on date and sign. Capri reported Q4/FY26 **after close Wed 5/27** (call 5/28 AM) → Day-0 = Thu 5/28. Verified closes: 5/27 18.27 → **5/28 19.74 (+8.05%, POSITIVE)** → 5/29 18.51 (−6.23% Day+1 fade = the mis-dated figure). Verified Day-0 is +8% UP, driven by hard information (EPS $0.22 vs $0.11, +100% surprise; return to GAAP profit; FY27 guide ~$2.15 EPS +40% YoY; net debt $1.4B→$222M post-Versace; $200M buyback). Sell-side reset at maintained ratings (UBS Neutral, PT $22→$20 on print day); bounce landed within/below the ~$24–25.8 cluster → no asymmetric edge either direction. Versace divestiture to Prada ($1.4B) is **already complete** — the deleveraging is the bull driver, not a pending overhang; no in-window binary M&A catalyst.
+**Sub-pattern:** SP6 (valuation-reset/TEAM) primary + SP4 (structural-overhang: Michael Kors rev −5.5%, footwear multi-quarter repositioning, FY27 +10% tariff assumption, EPS flattered by one-time $40M IEEPA refund) overlay. Both LONG and SHORT fail. W5 taxonomy flag: log CPRI 5/28 as 2nd SP6 instance (after TEAM 5/2).
+**Downstream actions:** No order. Pending_Analysis thesis-CPRI-B-20260604 → complete (NO-GO).
+**References:** Strategy.md B; prior CPRI NO-GO 2026-06-02.
+
+---
+
+### [2026-06-04] Strategy B — THO (THOR Industries) fiscal Q3 2026 print thesis construction — NO-GO (criterion 4; Sub-Pattern 6 negative-direction + 4c overlay)
+
+**Trigger:** Daily.md 2026-06-04 NEW B ENTRY CANDIDATE (constructed in-session; not a queue entry). Print released 6/3 pre-market; Day-0 = 6/4 (clean down-day bar).
+**Inputs:** connector get_price_history (contract_id 12786, NYSE; corp-actions incl. → none) + snapshot; Tavily; Strategy.md B; taxonomy; Op_Protocols §3.
+**Decision:** **NO-GO.** Criterion 4 (information-driven fundamentals-confirmed repricing). Direction NEGATIVE/short-eligible.
+**Reasoning:** CTC = (74.85 − 79.76)/79.76 = **−6.16%**; criterion-1 mechanical PASS (mcap ~$3.9–4.1B; ADV ~$56.5M). Criterion 2 FAIL (disproportion): a −6% move against diluted EPS $1.86 vs $2.53 PY (**−26.5%**), NI/EBITDA −28%, operating profit −45%, and an FY26 EPS guide CUT (8-K) is proportionate-to-undersized, not an overshoot — no mean-reversion anchor. Criterion 4 binds: information-driven (real miss + guide cut + multi-quarter RV-cycle/consumer-confidence macro overhang); post-print sell-side = mass PT CUTS, ratings maintained (BofA $120→$96 Buy, BMO $120→$110 Outperform, Loop $90→$96 Buy, Citi $100→$82 Neutral); price $74.85 sits BELOW the cut-PT cluster → no asymmetric edge. Strategy.md textbook-rational-trap binds against LONG. RV peers weak same day (WGO/CWH/LCII/PATK) = sector/cycle structural read.
+**Sub-pattern:** SP6 (valuation-reset/TEAM) negative-direction variant + SP4c (guide-cut-on-macro-overhang, NCLH anchor) overlay + Pattern-N consistency. Daily.md "likely-but-not-certain NO-GO" confirmed.
+**Downstream actions:** No order. Watchlist/queue: none (NO-GO complete in-session).
+**References:** Strategy.md B; B_Sub_Pattern_Taxonomy.md SP6/SP4c.
+
+---
+
+### [2026-06-04] Strategy D — BA (Boeing) terminal re-screen — NO-GO still active (gate ACTIVATE; trigger not met)
+
+**Trigger:** Pending_Analysis drain rescreen-BA-D-20260604 (due 6/4; terminal — deferrals do not chain). Re-screen of the 2026-04-26 D-batch BA NO-GO.
+**Inputs:** Adversarial_Review_div-D-202605-1_orchestrator.md + Regime_State.md (D activation row); connector get_price_snapshot/get_price_history (contract_id 4762, NYSE); Tavily (737 production).
+**Decision:** **NO-GO still active; original NO-GO preserved.** STEP-0 D-divergence-review gate CLEARS (div-D-202605-1 orchestrator verdict = ACTIVATE; M1b flip-to-DNA rejected; Regime_State D = ACTIVATE, M5 new-D-entry block lifted). Re-screen trigger NOT met: BA last **$217.21** (+3.15% on 6/4 off a $210.58 6/3 trough) — never closed ≤ $210 (limb A fail); 737 production is RAMPING not slipping (rate-47 capstone passed, 42→47/mo, targeting 52/mo early-2027; limb B fail, decisively opposite).
+**Reasoning:** Both trigger limbs fail → no fresh Strategy D thesis. Terminal; not re-deferred (Op_Protocols §9). Conservative default (NO entry) honored. §3: NO-GO is context not barrier; re-evaluable on a future qualifying trigger.
+**Downstream actions:** No order. Pending_Analysis rescreen-BA-D-20260604 → complete (NO-GO still active).
+**References:** Decision_Log 2026-04-26 D batch (BA); 2026-06-03 div-D-202605-1 ACTIVATE.
+
+---
+
+### [2026-06-04] Daily verify-and-route — OLLI (new B candidate → queued) + CELH (not B-eligible, regulatory)
+
+**Trigger:** Daily.md 2026-06-04 verify-and-route flag — OLLI −6.6% / CELH −7.5% on 6/4, earnings attribution unconfirmed at scan depth.
+**Inputs:** connector get_price_history (OLLI 199975711, CELH 71364351, NASDAQ) + Tavily.
+**Decision:** **OLLI = NEW Strategy B candidate → QUEUED** (Pending_Analysis olli-thesis, due 2026-06-05). CTC −6.61% (6/3 79.74 → 6/4 74.47). Attributable to a public event: Q1 FY26 earnings 6/3 pre-market (EPS $0.91 adj beat, raised FY EPS guide; stock +7.4% on 6/3) then a 6/4 Gordon Haskett downgrade (Buy→Accumulate) + PT cut reversed it. Day-0 ambiguous (6/3 print vs 6/4 reaction day) — to be resolved at construction; window closes ~6/17 (ample runway). Data exists today but surfaced as a late verification item, so drained next D2. **CELH = NOT a B candidate, no action.** Its 6/4 −7.53% (30.01 → 27.75) was driven by a Texas AG (Paxton) investigation into Alani Nu announced 6/4 — a regulatory/litigation overhang (SP4d-adjacent), NOT an earnings event (CELH Q1 was 5/7). Information-driven open-ended probe, no in-window convergence target → near-certain NO-GO; not worth a construction slot.
+**Downstream actions:** Pending_Analysis: add olli-thesis-B-20260605. No order. No watchlist change (CELH regulatory overhang not a B/watchlist queue item).
+**References:** Strategy.md B; B_Sub_Pattern_Taxonomy.md SP8/SP4d.
+
+---
+
+### [2026-06-04] D2 Step 0 — broker reconciliation, MDT no-fill, SGOV park, cash/SGOV tripwire, deployed-TWR engine seed
+
+**Trigger:** D2 daily Step 0 (connector reconciliation, idempotent by trade_id) + per-strategy performance maintenance.
+**Inputs:** connector get_account_trades(DAYS_7), get_account_positions, get_account_summary, get_account_balances, get_account_orders, get_order_instructions; Portfolio_Ledger.
+**Decision / findings:**
+- **No new equity-position fills.** DAYS_7 trades: META 5/28 sell, BURL 5/29 buy + 6/1 sell already recorded (idempotent match). The remaining rows are SGOV park micro-trades (5/29 reinvest 0.29 buy; 6/1 0.4 sell; 6/2 0.4 buy + 0.01 sell; 6/3 0.05 sell) — net +0.23 SGOV — appended to the SGOV Parking Activity table this run (table had lagged since 5/7).
+- **MDT entry did NOT fill.** GTC BUY 0.481 MDT @ $78.25 (order_id 872374813) remains live/working. MDT **rallied to $81.90** (+5.07% on 6/4), now ~4.7% ABOVE the limit. Held the disciplined limit (no chasing — chasing up to $81.90 would compress the $90 convergence upside from +15% to +10% and change the risk/reward). Stays ORDER-STAGED; window closes ~6/17; D1 daily sweep + D3 monitor. If unfilled by window close it is a missed entry (acceptable, conservative).
+- **Cash/SGOV tripwire (account-level): PASS, no missing funds.** Connector truth: SGOV 91.6314 sh + USD cash $28.61; NLV $9,461.55 reconciles against deposits $9,446.86 + cumulative realized P&L/dividends − unrealized losses (−$28.46). No unexplained account-level residual > $1.
+- **CARRY-FORWARD (flagged, not silently absorbed):** the *per-strategy* SGOV-share + cash-residual allocation table has not been fully re-derived since the 2026-05-07 snapshot (92.5416 SGOV); intervening ZBRA/BRC/TJX/AZO entries + IBM/META/BURL exits + reparking are tracked in position sections but not re-tabulated into per-strategy SGOV buckets. This is attribution debt, NOT missing money. A dedicated per-strategy SGOV catch-up reconciliation is owed (next D2 / D3). Account-level is clean.
+- **Deployed-TWR engine — best-effort seed (per FIRST-RUN SEED; labeled rough; exact daily maintenance hereafter).** B: deployed_unit_value ≈ 1.110 (realized chain-link IBM 1.0700 × META 1.0453 × BURL 1.0230 = 1.1442, then × aggregate open-position unrealized −3.0%), peak ≈ 1.1442, current_drawdown ≈ −3.0%, sgov_index ≈ 1.0045, deployed_days ≈ 27, closed_trades 3, pre-gate. D: deployed_unit_value ≈ 0.951 (open RTX +1.8% / DIS −10.9%, aggregate −4.9%), peak ≈ 1.000, current_drawdown ≈ −4.9%, deployed_days ≈ 27, closed_trades 0, pre-gate. A/C/E: never deployed (fully SGOV) → engine paused, blocks remain not-yet-deployed. **Kill-trigger clearance unambiguous regardless of seed precision: no strategy is within range of the −50% drawdown kill (#1) or has doubled (#3).** Confirms D1 2026-06-04 no-flag.
+**Downstream actions:** Portfolio_Ledger BRC→exit-pending, MDT no-fill note, SGOV table append, B/D Performance blocks seeded, "Last updated" header. Pending_Analysis: 5 due entries → complete; olli-thesis added.
+**References:** Operating_Protocols §11/§12; Daily.md 2026-06-04; D1 2026-06-04 sweep.

@@ -76,7 +76,7 @@ If you're writing a Portfolio_Ledger entry/section that exceeds 4 sentences inli
 
 ---
 
-**Last updated**: 2026-06-04 (MDT B size correction — original 2-share staging (~$156, sized off total-account NLV by error) cancelled and re-placed at 0.481 shares / ~$37.64 ≈ 2% of B sub-portfolio; this section + Decision_Log corrected. → Decision_Log 2026-06-04 correction entry.) / 2026-06-03 (D3 Calendar Hygiene — MDT instruction re-crafted: ID 100 deleted, ID 101 issued; confirm-order event `gq5u7j8441cgm329ticjauh5pk` updated with tap-to-confirm deep link. Legacy time-exit events for TJX/AZO/ZBRA confirmed cancelled (prior D3 2026-06-02). Queue clean. IBM section header still EXIT-PENDING but IBM closed 2026-05-27 per AZO fill notes — reconciliation gap flagged for D2. → Decision_Log 2026-06-03 D3 Calendar Hygiene entry.)
+**Last updated**: 2026-06-04 (D2 Daily Action Conversion — **BRC convergence exit staged** (SELL 0.4415 BRC MARKET DAY, instruction id 101, confirm event 6/5 07:00 MT; BRC→EXIT-PENDING). Step 0: no new equity fills; **MDT entry did NOT fill** (GTC BUY @ $78.25 working; MDT rallied to $81.90, ~4.7% above limit — held, no chasing). SGOV park table reconciled forward (5 micro-trades 5/29→6/3, net +0.23 sh). Cash/SGOV tripwire PASS account-level (no missing funds); per-strategy SGOV bucket re-tabulation owed (attribution debt, flagged). **Deployed-TWR engine best-effort seeded** (B 1.110 / dd −3.0%, D 0.951 / dd −4.9%; A/C/E never deployed) — no kill-trigger near range. Queue drained: 5 due theses → all NO-GO (AVGO, CRWD, ANF, CPRI re criterion 1/4; BA-D re-screen NO-GO-still-active); THO NO-GO; OLLI queued; CELH not B-eligible. → Decision_Log 2026-06-04 D2 entries.) / 2026-06-04 (MDT B size correction — original 2-share staging (~$156, sized off total-account NLV by error) cancelled and re-placed at 0.481 shares / ~$37.64 ≈ 2% of B sub-portfolio; this section + Decision_Log corrected. → Decision_Log 2026-06-04 correction entry.) / 2026-06-03 (D3 Calendar Hygiene — MDT instruction re-crafted: ID 100 deleted, ID 101 issued; confirm-order event `gq5u7j8441cgm329ticjauh5pk` updated with tap-to-confirm deep link. Legacy time-exit events for TJX/AZO/ZBRA confirmed cancelled (prior D3 2026-06-02). Queue clean. IBM section header still EXIT-PENDING but IBM closed 2026-05-27 per AZO fill notes — reconciliation gap flagged for D2. → Decision_Log 2026-06-03 D3 Calendar Hygiene entry.)
 
 Prior: 2026-06-02 (D3 Calendar Hygiene — **BURL CLOSED** confirmed via IBKR connector: SELL 0.1248 @ $315.59 GTC, 2026-06-01T13:32:48Z, realized_pnl +$0.869814 net. BURL section updated from OPEN (PROVISIONAL) to CLOSED. B open count **6 → 5** (HCA, ZBRA, BRC, TJX, AZO); Consumer Disc cap 3/3 → **2/3**. → Decision_Log 2026-06-02 D3 Calendar Hygiene entry.)
 
@@ -216,6 +216,13 @@ Per-strategy allocation uses fractional shares split evenly (13.796 shares each)
 | 2026-05-07 11:30:01 ET | Sell (IBKR) | 0.4 | $100.44 | $0.35 | $40.18 | (capture from screenshot 2026-05-07 ~10:13 MT) |
 | 2026-05-07 13:10:13 ET | Buy (DARK+1) | 28.87 | $100.45 | $0.36 | $2,899.90 | (capture from screenshot 2026-05-07 ~10:13 MT) |
 | 2026-05-07 13:11:11 ET | Sell (IBKR+1) | 3.98 | $100.44 | $0.36 | $399.77 | (capture from screenshot 2026-05-07 ~10:13 MT) |
+| 2026-05-29 07:30:03 MT | Buy (IBKR) | 0.29 | $100.68 | $0.29 | $29.20 | 00012978.6a19a1a2.01.01 (META 5/28 exit-proceeds reinvest, was pending at 5/28 capture) |
+| 2026-06-01 07:30:41 MT | Sell (IBKR) | 0.40 | $100.39 | $0.35 | $40.16 | 00012978.6a1dbcc4.01.01 |
+| 2026-06-02 12:47:46 MT | Buy (IBKR) | 0.40 | $100.41 | $0.35 | $40.16 | 566133426 (BURL 6/1 exit-proceeds repark) |
+| 2026-06-02 12:48:09 MT | Sell (IBKR) | 0.01 | $100.40 | $0.01 | $1.00 | 566133497 |
+| 2026-06-03 07:30:04 MT | Sell (IBKR) | 0.05 | $100.41 | $0.05 | $5.02 | 00012978.6a20c3cc.01.01 |
+
+**2026-06-04 D2 Step 0 SGOV reconciliation (connector-confirmed, idempotent by trade_id):** The five rows above (2026-05-29 → 2026-06-03) are SGOV park micro-trades reconciled this run from `get_account_trades` DAYS_7 (the table had lagged since 5/7; equity trades META 5/28 / BURL 5/29+6/1 were already recorded in their position sections). Net SGOV change across the five = +0.29 − 0.40 + 0.40 − 0.01 − 0.05 = **+0.23 shares**. Account-level cash/SGOV tripwire PASS: live SGOV 91.6314 sh + cash $28.61; NLV $9,461.55 reconciles to deposits $9,446.86 + cumulative realized P&L/dividends − unrealized (−$28.46); **no unexplained residual > $1**. CARRY-FORWARD: the per-strategy SGOV-share + cash-residual allocation has not been fully re-tabulated since the 5/7 snapshot (92.5416) — attribution debt, not missing money; a dedicated per-strategy SGOV catch-up is owed (next D2/D3). → Decision_Log 2026-06-04 D2 Step 0.
 
 **Apr 27 SGOV cycle reconciliation** (per-strategy attribution):
 - B sold ~0.2786 SGOV @ $100.64 (gross $28.04) less $0.18 commission share = $27.86 net proceeds, used $27.85 to buy IBM (principal $27.57 + IBM commission $0.28); residual $0.01 to cash.
@@ -353,32 +360,32 @@ Per-strategy allocation uses fractional shares split evenly (13.796 shares each)
 - **May 27 07:30:02 MT:** IBM convergence exit **FILLED** @ $251.28 Market Day (per 2026-05-26 evening decision; GTC $254.00 cancelled, MKT at open executed); 0.1198 shares; gross proceeds $30.10; commission $0.30; **realized P&L +$1.95**; IBM position **CLOSED**. *[IBM fill-capture ref: Decision_Log 2026-05-26 evening IBM exit disposition.]* — AZO Strategy B entry **FILLED** @ $3,110.69 Limit Day; 0.0121 shares; principal $37.64 + commission $0.35 = cost basis **$37.99**; co-funded with SGOV partial liquidation 0.08 @ $100.64 (07:32:45, proceeds $8.05, comm $0.08, P&L −$0.08). **Sector cap Consumer Disc 1/3 → 2/3 (TJX + AZO)**; IT 1/3 → 1/3 (IBM IT Services exited; ZBRA Electronic Equipment remains). B concurrent open positions: 6 (HCA, META, ZBRA, BRC, TJX, AZO). Time-based exit event `c198nmdf8quptsc4kvt7pvoq58` created Fri 2026-07-24 07:15 MT. → Decision_Log 2026-05-27 AZO GO (thesis construction); no fill-capture DL entry (clean fill per conventions).
 - **May 28 07:30:02 MT:** META convergence exit **FILLED** @ $641.20 GTC (operator-discretion: limit raised from staged $634.00 DAY to $641.20 GTC for fill assurance — parallel to META 2026-05-05 GTC/tighter precedent; +$7.20/+1.14% above staged limit); 0.0454 shares; gross proceeds $29.11; exit commission $0.29; gross P&L +$1.81; **net P&L +$1.25**; META position **CLOSED**. Comm Services / Interactive Media sector cap 1/3 → **0/3**. B concurrent open positions 6 → **5 (HCA, ZBRA, BRC, TJX, AZO)**. SGOV reinvest order 0.29 SGOV MKT Day placed 2:51 PM (fill-capture screenshot), 0 Filled at screenshot; reinvest pending settlement. → Decision_Log 2026-05-28 META fill-capture entry.
 - **May 29 ~20:18 MT (BKE NO-GO session — BURL integrity reconciliation):** BURL Strategy B entry **FILLED 2026-05-29 (INFERRED ≈ $300.60 at the open; exact price/qty/commission PENDING IBKR screenshot)** — the staged buy limit $303.00 DAY opened in-the-money (BURL 5/29 OHLC stockanalysis.com: open $300.60 < $303 limit; low $297.35; high $324.69; close $323.83; prior close $300.52), so a live limit BUY at $303 necessarily filled at the open. Corrects the D3 2026-05-29 "likely no fill" assumption (which misread the $323.83 close, not the open/intraday-low). **Sector cap Consumer Disc 2/3 → 3/3 (TJX + AZO + BURL); B concurrent open positions 5 → 6 (HCA, ZBRA, BRC, TJX, AZO, BURL).** BURL already past convergence $313.71 (closed $323.83) → **convergence exit DUE**; exact fill/size + convergence-exit order + time-based-exit event + full BURL GO-entry reconstruction OWED to the fill-capture session `re0irs9o1rcrg0c98rh9ranih0` on the operator IBKR screenshot. → Decision_Log 2026-05-29 BKE NO-GO entry (BURL fill resolution).
-**Performance**:
-- First trade date: [not yet]
-- Deployed TWR: [n/a]
-- Peak deployed TWR: [n/a]
-- Current drawdown: [n/a]
-- Cumulative active time: 0 days
-- Excess real return vs. SGOV: [n/a]
+**Performance** (deployed-TWR engine — **best-effort seed 2026-06-04 D2 Step 0**; rough pre-engine ~6-week history per FIRST-RUN SEED, exact daily maintenance hereafter):
+- First trade date: 2026-04-27 (IBM)
+- Deployed unit value: **1.1099** (realized chain-link IBM 1.0700 × META 1.0453 × BURL 1.0230 = 1.1442, then × current open-position aggregate unrealized −3.0%)
+- Peak unit value: **1.1442** (post-BURL-close realized high, pre open-position drag)
+- Current drawdown: **−3.0%** (1.1099 / 1.1442 − 1) — far from the −50% kill (#1)
+- SGOV benchmark index: **1.0045** (inception-span SGOV total return, ~27 deployed days)
+- Deployed days: ~27 (continuous ≥1 open B position since 4/27)
+- Closed trades: 3 (IBM, META, BURL); 4 once BRC exit reconciles
+- Gate status: pre-gate (3 / 30)
+- Excess vs SGOV: **+10.5%** (1.1099 / 1.0045 − 1)
+- As of: 2026-06-04 (MT)
+- Monthly snapshots: (2026-06, 1.1099, 1.0045, 27) [seeded 2026-06-04]
 
-**Gate**: 0 / 30 trades (not reached)
+**Gate**: 3 / 30 trades (not reached)
 
 **Router activation state**: [see Regime_State.md]
 
-**Open positions**: 3
+**Open positions**: **5** — HCA, ZBRA, BRC (EXIT-PENDING 6/4 convergence), TJX, AZO (→ 4 once BRC exit reconciles). *The at-a-glance table below is STALE (predates IBM/META exits + ZBRA/BRC/TJX/AZO entries); the authoritative per-position state is the "[Strategy B] <ticker>" Position-thesis-details subsections + MDT ORDER-STAGED. Marks are connector-read (`get_account_positions`), not transcribed. Full at-a-glance rebuild deferred to W5 ledger hygiene.* MDT (B) ORDER-STAGED, working unfilled (see MDT subsection).
 
-| # | Ticker | Entry Date | Entry Price | Position $ | Shares | Side | Mark Price | Mark Value | Unrealized P&L | Borrow Rate (if short) |
-|---|--------|------------|-------------|------------|--------|------|------------|------------|-----------------|--------------------------|
-| 1 | IBM | 2026-04-27 | $230.17 | $27.85 (incl $0.28 comm) | 0.1198 | Long | $229.45 | $27.49 | -$0.36 (mark vs cost basis incl comm) | n/a (long) |
-| 2 | HCA | 2026-04-28 | $433.46 | $28.11 (incl $0.28 comm) | 0.0642 | Long | $433.49 | $27.83 | -$0.28 (mark vs cost basis incl comm; +$0.00 vs cost-pre-comm) | n/a (long) |
-| 3 | META | 2026-05-05 | $601.30 | $27.57 (incl $0.27 comm) | 0.0454 | Long | $610.00 | $27.69 | +$0.12 (mark vs cost basis incl comm; +$0.40 vs cost-pre-comm; first open B position with positive mark P&L) | n/a (long) |
-
-**Closed trades (at-a-glance)**: 2 closed (IBM Trade #1 — see Decision_Log 2026-05-27 for IBM detail; META Trade #2 below)
+**Closed trades (at-a-glance)**: 3 closed — IBM #1, META #2, BURL #3 (BRC #4 pending exit reconcile).
 
 | # | Ticker | Entry | Exit | Days | Position $ | Side | Net P&L | Return % | Exit Reason | Model (Entry / Exit) |
 |---|--------|-------|------|------|------------|------|---------|----------|-------------|-----------------------|
 | 1 | IBM | 2026-04-27 | 2026-05-27 | 30 | $27.85 | Long | +$1.95 | +7.00% | Convergence target reached | Opus 4.7 / Opus 4.7 |
 | 2 | META | 2026-05-05 | 2026-05-28 | 23 | $27.57 | Long | +$1.25 | +4.53% | Convergence target reached | Opus 4.7 / Sonnet 4.6 |
+| 3 | BURL | 2026-05-29 | 2026-06-01 | 3 | $37.81 | Long | +$0.87 | +2.30% | Convergence target reached | Opus 4.7 / connector-reconciled |
 
 **Closed trade details**: IBM Trade #1 — *full closed-trade-detail block pending; IBM closed 2026-05-27, fill-capture documented in Decision_Log 2026-05-26 evening + AZO entry entry; closed-trade-detail to be written at next routine session.*
 
@@ -472,13 +479,18 @@ Per-strategy allocation uses fractional shares split evenly (13.796 shares each)
 - May 7 (~09:36:29 MT): DIS limit BUY FILLED at modified parameters (operator-discretion looser limit + larger size: placed/filled 0.28 DIS @ $110.35 Day vs staged 0.2584 @ $107.50 Day; +$2.85 looser limit / +0.0216 larger shares / principal +$3.12 = +11.2% on staged; thesis disposition unchanged on 12+ month structural Subtype B SVOD-margin-trajectory thesis; criterion 6 still clears at borderline; RTX 2026-04-27 looser-for-fill-assurance precedent continuation). Cost basis $31.21 incl $0.31 comm. D-specific funding cycle: sold 0.4 SGOV @ $100.44 ($40.18 gross, $0.35 comm) → bought 0.28 DIS. D's net cash gain from cycle +$8.62. Sector concentration NEW: Communication Services / Entertainment ~1.6% of new ~$1,888 D NAV. LTCG eligible 2027-05-08. Invalidation criteria (i)-(v) all NOT-TRIPPED at fill. → Decision_Log 2026-05-07 DIS fill capture anomaly entry.
 - May 7 (~14:30 MT): Account-level events allocated to D — May 5 IBKR-fee equal-split allocation -$0.90; SGOV dividend reinvest pro-rata +0.0403 shares @ $100.45; supplemental capital deposit +$500.00 (per Decision_Log 2026-05-07 DIS fill capture Anomaly 3 interpretation correction; total D deposits cumulative $1,389.37 → $1,889.37); supplemental deployed via account-level SGOV reparking +4.978 shares @ $100.4763 effective avg cost. Combined with DIS-funding -0.4 share: net D SGOV +4.6183 shares (13.5204 → 18.1387). RTX mark refreshed $175.99 → $176.24 (+$0.04 unrealized improvement). → Decision_Log 2026-05-07 DIS fill capture anomaly entry.
 
-**Performance**:
+**Performance** (deployed-TWR engine — **best-effort seed 2026-06-04 D2 Step 0**; rough pre-engine history per FIRST-RUN SEED, exact daily maintenance hereafter):
 - First trade date: 2026-04-27 (RTX fill)
-- Deployed TWR: [computed at next M5 cycle]
-- Peak deployed TWR: [n/a]
-- Current drawdown: [n/a]
-- Cumulative active time: ~10 days
-- Excess real return vs. SGOV: [n/a]
+- Deployed unit value: **0.951** (no closed trades; open RTX +1.8% / DIS −10.9% → aggregate open unrealized −4.9% on cost basis)
+- Peak unit value: **1.000** (inception base; book has only drifted down net)
+- Current drawdown: **−4.9%** (0.951 / 1.000 − 1) — far from the −50% kill (#1)
+- SGOV benchmark index: **1.0045** (inception-span SGOV total return, ~27 deployed days)
+- Deployed days: ~27 (continuous ≥1 open D position since 4/27)
+- Closed trades: 0
+- Gate status: pre-gate (0 / 30)
+- Excess vs SGOV: **−5.3%** (0.951 / 1.0045 − 1)
+- As of: 2026-06-04 (MT)
+- Monthly snapshots: (2026-06, 0.951, 1.0045, 27) [seeded 2026-06-04]
 
 **Gate**: 0 / 30 trades (not reached — D's design is unlikely to reach the gate within a stable model-generation window per Strategy.md; final determination at termination)
 
@@ -660,8 +672,9 @@ Format:
 - **Regime state at entry**: SPY Trend = NEUTRAL, VIX = NORMAL, Yield Curve = NORMAL, Breadth = HEALTHY (per Regime_State.md most-recent-call). Strategy D ACTIVATE (technical UP/NEUTRAL + sustained-inversion NOT-SUSTAINED + fundamental ACTIVATE).
 - **Sector / concentration context**: GICS Communication Services / Entertainment ~1.6% of D NAV $1,888.43 mark. RTX (other open D position) is Industrials / Aerospace & Defense ~1.5% of D NAV — different GICS sector, no sector cap interaction; both well within 30% per-sector cap (~28%+ headroom remaining in each).
 
-### [Strategy B] BRC — OPEN 2026-05-22
+### [Strategy B] BRC — EXIT-PENDING 2026-06-04 (convergence exit staged) — opened 2026-05-22
 
+- **EXIT STAGED (2026-06-04 D2)**: convergence target $88.80 reached — BRC closed **$89.06** Thu 2026-06-04 (through target; intraday $88.09–$89.68). Mechanical exit per Strategy.md B "convergence target reached" (no judgment). **SELL 0.4415 BRC MARKET DAY** crafted via connector — instruction **id 101**, deep link in confirm-order event. After-hours quote not live (bid 80.12 × ask 97.50 wide) → MARKET for assured exit (IBM convergence-exit precedent). Confirm-order event `jtk5es18uqi8scdi7fvm0fbdqk` 2026-06-05 07:00 MT. Fill to be reconciled by D2 Step 0 next run. → Decision_Log 2026-06-04 BRC convergence exit.
 - **Source thesis**: → Decision_Log 2026-05-22 "Strategy B thesis construction — BRC GO at MEDIUM-LOW conviction (overturns 5/21 procedural NO-GO)" (full thesis substance: fiscal Q3 2026 print Mon 5/18 BMO record adj EPS $1.50 vs ~$1.35 + rev $435.2M +13.8% + FY26 guide raise $4.95-5.15 → $5.20-5.30; Day-0 C/C ~+14-17% held flat Mon→Thu; stock $84.56 sits ~17% below $101.50 PT cluster = undershoot anchor not matching sub-pattern 1/3 at-cluster diagnostics; mild sell-side reset (Sidoti Strong-Buy upgrade, thin coverage, no aggressive multi-firm wave); ZBRA-precedent parallel; criteria 1-5 walk; convergence-target derivation; conviction calibration). Re-evaluation context: 5/21 procedural NO-GO was a Google-Calendar-MCP-outage artifact with zero criteria analysis — overturned per Operating_Protocols §3.
 - **Fill details**: **Filled 0.4415 BRC @ $84.97** — Limit BUY, Day order; fill timestamp **07:30:01 MT, Fri 2026-05-22**. Principal: **$37.51**. Commission: **$0.35**. Cost basis (principal + commission): **$37.86**.
 - **Convergence target**: **$88.80** (immutable per Strategy.md criterion 3 rev 14; 25% gap-fill from $84.56 reference toward $101.50 analyst PT median; +5.0% from reference). ZBRA-template methodology.
@@ -730,7 +743,7 @@ Format:
 
 - **Source thesis**: → Decision_Log 2026-06-03 "Strategy B MDT Q4 FY2026 print — GO (LONG 0.481 shares)" (print BMO 6/3/2026: revenue $9.81B +0.8% beat vs $9.73B cons; EPS $1.55 vs $1.54 Zacks cons (+$0.01, inline); FY27 organic rev guide raised 6.75–7.25%; CAS annualizing >$2B at +78% global / +124% US; dividend raised; Hugo RAS FDA expansion filed; SPR Therapeutics acquisition $650M; **reaction: +5.7% to $77.95**; prior close $73.75 — stock at 52-week support ($73.31); pre-print bearish sell-side: 8+ firms cut PTs April–May, Goldman reinstated Neutral/$84 on 5/21; SP8-partial mispricing (hybrid sentiment/information); criterion 3 target $90.00 — bear-camp floor (UBS $90, Piper Sandler $91, Truist $95 cluster); criteria 1–5 all clear; LONG 0.481 shares; MEDIUM-LOW conviction 60%).
 - **Order instruction**: IBKR instruction ID **101** (re-crafted 2026-06-03 D3; original ID 100 deleted — D2 omitted deep link from event; ID 101 issued via re-craft + event repaired with tap-to-confirm URL). BUY 0.481 shares MDT LIMIT $78.25 GTC (contract_id 181387075, SMART) — live order_id 872374813, instruction ID 100 (re-created 2026-06-04). **[Size corrected 2026-06-04: original 2-share staging (instruction ID 101 → live order 609220938) was sized off total-account NLV instead of the B sub-portfolio; that order was CANCELLED and re-placed at 0.481 sh / ~$37.64 / 2%-of-B. See Decision_Log 2026-06-04 correction entry.]** Calendar confirm-order event `gq5u7j8441cgm329ticjauh5pk` 2026-06-04 07:00 MT — updated with deep link + ID 101.
-- **Fill details**: PENDING — to be updated at D2 Step 0 fill reconciliation.
+- **Fill details**: **NOT FILLED as of 2026-06-04 D2 Step 0.** GTC BUY 0.481 MDT @ $78.25 (live order_id 872374813) remains working. MDT **rallied to $81.90** (+5.07% on 6/4), ~4.7% ABOVE the $78.25 limit → no fill; will fill only on a pullback to $78.25. Disciplined limit HELD (no chasing — buying up at $81.90 would compress the $90 convergence upside from +15% to +10% and degrade risk/reward). Stays ORDER-STAGED; entry window closes ~6/17; if unfilled by then it is a missed entry (acceptable / conservative). Monitored by D1 daily sweep + D3. → Decision_Log 2026-06-04 D2 Step 0.
 - **Convergence target (immutable)**: **$90.00** (bear-camp's stated valuation floor: UBS $90, Piper Sandler $91, Truist $95 cluster; 15.2% upside from $78.10 Day-0 reference; IMMUTABLE — does NOT adjust for fill price; set at staging per Strategy.md criterion 3 rev 35).
 - **Time-based exit**: **2026-07-31** (Fri) — Day-0 2026-06-03 + 60 calendar days = Sun 2026-08-02 → last trading day Fri 2026-07-31. Time-based exit calendar event to be created at fill reconciliation (D2 Step 0).
 - **Invalidation criteria status** (per Decision_Log 2026-06-03 staging):
