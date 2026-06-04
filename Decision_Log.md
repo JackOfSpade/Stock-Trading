@@ -14199,7 +14199,7 @@ No order staged. **B-short string UNCHANGED at ~52** (GTLB is a NEGATIVE-directi
 
 ---
 
-### [2026-06-03] Strategy B — MDT Q4 FY2026 print — GO (LONG 2 shares)
+### [2026-06-03] Strategy B — MDT Q4 FY2026 print — GO (LONG 0.481 shares)
 
 **Ticker:** MDT (Medtronic plc) — NYSE — contract_id 181387075
 **Day-0:** 2026-06-03 (positive direction, CTC +5.70%)
@@ -14226,9 +14226,9 @@ No order staged. **B-short string UNCHANGED at ~52** (GTLB is a NEGATIVE-directi
 
 **Criterion 5:** Not in A-queue; A router = DO-NOT-ACTIVATE. No open A position in MDT. **PASS**
 
-**Sizing:** NAV $9,459.18 × 2% = $189.18. Shares: $189.18 / $78.10 = 2.42 → floor 2 shares. Entry reference $78.10 (Day-0 level). Total notional ~$156.20.
+**Sizing:** NAV $9,459.18 × 2% = $189.18. Shares: $189.18 / $78.10 = 2.42 → floor 2 shares. Entry reference $78.10 (Day-0 level). Total notional ~$156.20. **[Corrected 2026-06-04 — sizing error: this used total-account NLV ($9,459.18) as the 2% base; Strategy.md:276 requires 2% of the *strategy sub-portfolio* (B ≈ $1,882 → ~$37.64). Whole-share flooring was also spurious — IBKR fractional is supported. Correct size = 0.481 shares ≈ $37.64 ≈ 2% of B; re-staged 2026-06-04. See 2026-06-04 correction entry.]**
 
-**Order:** BUY 2 shares MDT LIMIT $78.25 GTC (IBKR contract_id 181387075, SMART). **IBKR order instruction ID: 101** (re-crafted 2026-06-03 D3; ID 100 deleted — D2 omitted deep link from confirm-order event; ID 101 issued and event repaired with tap-to-confirm URL). Calendar confirm-order event **`gq5u7j8441cgm329ticjauh5pk`** 2026-06-04 07:00–07:15 MT — updated with deep link + ID 101.
+**Order:** BUY 0.481 shares MDT LIMIT $78.25 GTC (IBKR contract_id 181387075, SMART). **[Size corrected 2026-06-04 — originally BUY 2 shares (instruction ID 101 → live order 609220938, now CANCELLED); re-placed at 0.481 shares as live order_id 872374813 (instruction ID 100). See 2026-06-04 correction entry.]** **IBKR order instruction ID: 101** (re-crafted 2026-06-03 D3; ID 100 deleted — D2 omitted deep link from confirm-order event; ID 101 issued and event repaired with tap-to-confirm URL). Calendar confirm-order event **`gq5u7j8441cgm329ticjauh5pk`** 2026-06-04 07:00–07:15 MT — updated with deep link + ID 101.
 
 **Convergence target (immutable):** $90.00 (+15.2% from $78.10 Day-0 reference). Does NOT adjust for fill price.
 **Time-based exit:** 2026-07-31 (Fri) — Day-0 2026-06-03 + 60 calendar days = Sun 2026-08-02 → last trading day Fri 2026-07-31. Time-based exit calendar event to be created at fill reconciliation (D2 Step 0).
@@ -14253,7 +14253,7 @@ No order staged. **B-short string UNCHANGED at ~52** (GTLB is a NEGATIVE-directi
 - **ULTA Q1 FY27 (AMC 5/29):** Criterion-1 gate fail. Provisional entry CTC (+1.33% AH snapshot) corrected by final close −4.78% ($494.87→$471.21); outcome unchanged, NO-GO. B tally: +1 NO-GO (provisional entry).
 - **DG Q1 FY27 (BMO ~5/27):** Criterion-1 gate fail. CTC −3.33% (intraday +5.8% surge faded; final close $106.27 vs prior $109.93). NO-GO. B tally: +1 NO-GO.
 - **PANW Q3 FY26 (AMC 6/2):** Provisional criterion-1 entry (snapshot −2.08%) superseded by full thesis. Final close CTC −5.64% ($297.18→$280.43) clears criterion 1. Full thesis: NO-GO criteria 2+4. Sub-patterns 1+3 dual-operative. +64% pre-print rally absorbed narrative; 9+ sell-side firms at $270–$320 PT cluster foreclose both LONG (A-territory) and SHORT (no fundamental anchor). B-short string: +1 (full thesis evaluation). B tally: unchanged (provisional entry already counted).
-- **MDT Q4 FY26 (BMO 6/3):** CTC +5.70% ($73.75→$77.95). All 5 criteria pass. **GO — LONG 2 shares, LIMIT $78.25 GTC.** Target $90.00 (UBS $90 floor; +15.2%). Time-exit 2026-07-31. IBKR order instruction ID 100 created. Confirm-order calendar event `gq5u7j8441cgm329ticjauh5pk` 2026-06-04 07:00 MT created. B-short string: RESET to 0. B tally: +1 GO.
+- **MDT Q4 FY26 (BMO 6/3):** CTC +5.70% ($73.75→$77.95). All 5 criteria pass. **GO — LONG 0.481 shares (~$37.64 ≈ 2% of B; corrected 2026-06-04 from 2 shares/~$156 — total-account-NLV base error, see 2026-06-04 correction entry), LIMIT $78.25 GTC.** Target $90.00 (UBS $90 floor; +15.2%). Time-exit 2026-07-31. IBKR order instruction ID 100 created. Confirm-order calendar event `gq5u7j8441cgm329ticjauh5pk` 2026-06-04 07:00 MT created. B-short string: RESET to 0. B tally: +1 GO.
 - **ANF/CPRI carry-forward (Day-0 5/29; windows through ~6/12):** No active Pending_Analyses entries existed. Appended thesis-construction entries (thesis-ANF-B-20260604, thesis-CPRI-B-20260604) to Pending_Analyses.md, due 2026-06-04.
 - **AVGO/CRWD (AMC 6/3 — after this session):** Appended thesis-construction entries (thesis-AVGO-B-20260604, thesis-CRWD-B-20260604) to Pending_Analyses.md, due 2026-06-04.
 
@@ -14262,7 +14262,7 @@ No order staged. **B-short string UNCHANGED at ~52** (GTLB is a NEGATIVE-directi
 - D book: 2 positions — RTX (OPEN), DIS (OPEN).
 
 **Files modified:** Decision_Log.md (this entry + B thesis entries above), Portfolio_Ledger.md (MDT ORDER-STAGED section appended), Pending_Analyses.md (4 new entries: AVGO, CRWD, ANF, CPRI).
-**IBKR order instruction created:** ID 100 (MDT BUY 2 LIMIT $78.25 GTC, contract_id 181387075). **[Updated by D3 2026-06-03: ID 100 deleted; ID 101 re-crafted; event repaired with deep link.]**
+**IBKR order instruction created:** ID 100 (MDT BUY 2 LIMIT $78.25 GTC, contract_id 181387075). **[Updated by D3 2026-06-03: ID 100 deleted; ID 101 re-crafted; event repaired with deep link.]** **[Size corrected 2026-06-04: 2-share order 609220938 CANCELLED; re-placed BUY 0.481 → live order_id 872374813 (instruction ID 100). See 2026-06-04 correction entry.]**
 **Calendar events created:** `gq5u7j8441cgm329ticjauh5pk` (Confirm order MDT 2026-06-04 07:00 MT — description updated by D3 2026-06-03 to include tap-to-confirm deep link + instruction ID 101).
 **B tally final:** ~7 GO / ~79 NO-GO. B-short string: 0 (RESET on MDT GO).
 
@@ -14300,3 +14300,26 @@ No order staged. **B-short string UNCHANGED at ~52** (GTLB is a NEGATIVE-directi
 **Files modified:** Decision_Log.md (this entry + inline ID updates on MDT GO entry + D2 session summary), Portfolio_Ledger.md (Last updated header + MDT instruction id 100→101).
 **IBKR actions:** `delete_order_instruction(100)` + `create_order_instruction` → ID 101.
 **Calendar actions:** `update_event(gq5u7j8441cgm329ticjauh5pk)` — deep link + ID 101 added.
+
+---
+
+### [2026-06-04] Correction — MDT B position sizing (base-NAV error) + connector-sizing doc fix
+
+**What was wrong.** The MDT B entry staged 2026-06-03 (D2) was sized **2 shares @ $78.25 ≈ $156.50** — ~8.3% of the Strategy-B sub-portfolio and ~4× the intended size. Strategy.md:276 sizes B at **2% of the strategy sub-portfolio** (B NAV ≈ $1,883–1,889 → **~$37.7**). The D2 entry instead computed `NAV $9,459.18 × 2% = $189.18 → floor 2 shares` — i.e. 2% of the **total-account net-liquidation**, then floored to whole shares (also spurious: IBKR fractional is supported and every prior B entry is fractional).
+
+**Root cause (structural, not a one-off).** The 2026-06-01 IBKR-connector doc rewrite introduced a sizing-base error in two mirrored spots:
+- Claude_Task_Plan.md §"IBKR connector usage": *"Use `get_account_summary` net-liquidation for 2%-NAV sizing."*
+- Operating_Protocols.md §11 "Live data in analysis": *"…`get_account_summary` for exact holdings and 2%-NAV sizing on live net-liquidation."*
+
+Both instruct sizing off the **account** net-liq (~$9,460 = all five sub-portfolios + the SGOV park), contradicting (a) Strategy.md:276, (b) the source-of-truth boundary in the same docs ("Portfolio_Ledger.md authoritative for per-strategy NAV; the connector has no A/B/C/D/E buckets"), and (c) the entire prior trade history (IBM $27.6, BURL $37.8, AZO $37.6; all open positions ~$37). The connector surfaces only account-level NLV; per-strategy NAV requires a ledger lookup. D2 followed the erroneous instruction literally.
+
+**Order fix (done).** Cancelled the working 2-share order (broker order 609220938); re-placed **BUY 0.481 MDT LIMIT $78.25 GTC** (= $37.64 ≈ 2.0% of B; live order_id **872374813**, instruction ID 100). Verified 2026-06-04: old order gone, new order working (0 filled). Thesis, convergence target ($90.00), and time-exit (2026-07-31) unchanged — only the size was wrong.
+
+**Records corrected.** This entry + inline `[Corrected / Size corrected 2026-06-04]` tags on: the MDT GO entry (header / Sizing / Order / D2-summary bullet / instruction-created line) and the Portfolio_Ledger.md MDT ORDER-STAGED section (header / source-thesis / order-instruction / loss-bound / Last-updated). Erroneous figures are annotated, not erased, for audit.
+
+**Prevention (done).**
+1. Fixed both doc spots (Claude_Task_Plan.md §"IBKR connector usage" + Operating_Protocols.md §11) to state the 2% base = **per-strategy sub-portfolio NAV** from Portfolio_Ledger.md; account net-liq / buying-power are for **execution-feasibility only**.
+2. Added a standing **"Position-sizing base"** note to Portfolio_Ledger.md Operational Notes (read at every trade-execution decision) with a numeric **sanity tripwire**: a single A/B/C/D/E entry is ~$38; a computed principal **> ~$50 (or >3% of the sub-portfolio)** means the wrong base was used — STOP and recompute.
+3. Added an Operating_Protocols.md §11 revision-history entry pointing here.
+
+**For next D2 Step 0:** B book = HCA/ZBRA/BRC/TJX/AZO open + MDT order-staged at 0.481 sh; all ~$37–38, consistent. (The separate IBM EXIT-PENDING→CLOSED reconciliation gap flagged by D3 2026-06-03 remains open.)
