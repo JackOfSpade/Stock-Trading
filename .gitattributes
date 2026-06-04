@@ -1,0 +1,19 @@
+# Auto-merge conflict avoidance for the branch -> main workflow
+# (.github/workflows/auto-merge-claude.yml).
+#
+# Append-only logs are written by concurrent sessions that each add dated entries at the
+# tail. When a session branch diverges from main, a plain `git merge --no-ff` conflicts in
+# these files and the auto-merge job fails (exit 1), leaving the branch stranded and un-merged.
+# The built-in `union` merge driver resolves such conflicts by keeping BOTH sides' added lines
+# instead of emitting conflict markers -- correct behaviour for append-only logs.
+#
+# Do NOT add `merge=union` for in-place STATE files (Portfolio_Ledger.md, Regime_State.md,
+# Watchlist.md, Strategy.md, Experiment_Parameters.md, the live Pending_*.md queues) or for
+# full-overwrite cadence files (Daily.md, Weekly_*.md, Monthly_*.md, Quarterly_*.md): union
+# would duplicate edited or whole-file content. Genuine concurrent edits to those are real
+# conflicts that must be resolved, not unioned.
+
+Decision_Log.md                  merge=union
+Decision_Log_Archive_*.md        merge=union
+Archived_Analysis.md             merge=union
+Archived_Adversarial_Reviews.md  merge=union
