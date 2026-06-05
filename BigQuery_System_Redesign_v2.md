@@ -246,8 +246,25 @@ WINDOW w AS (PARTITION BY strategy ORDER BY as_of_date ROWS UNBOUNDED PRECEDING)
 timestamp_col=>'as_of_date', id_cols=>['strategy'], horizon=>21)` projects kill-trigger proximity so
 the briefing can warn *before* a threshold is hit.
 
-This is a convention (value-weighted daily TWR, flows at day boundaries, deployed-days-only chain).
-It's the cleanest flow-immune reading of the spec; flagged as a decision point in §14.
+**Finalized convention (locked 2026-06-05).** Value-weighted daily TWR, deployed-days-only chain —
+the gold-standard, flow-immune reading. Edge cases specified so the engine is deterministic:
+- **Deployed day** = strategy holds ≥ 1 open position at the prior session close; the chain advances
+  only on deployed days (parked/deactivated days don't accrue, matching the 36-month M2M clock rule).
+- **Entry day:** a newly opened lot has zero prior-EOD MV → weight 0 that day (its fill→first-close
+  move is captured implicitly in the *next* session's return). First-trade date = first fill date;
+  the deployed chain's first return is the following session. (Standard daily-valuation TWR.)
+- **Exit day:** the lot's return = exit-fill / prior-EOD-MV − 1, weighted by prior-EOD MV (captures
+  the exit move).
+- **Total return:** dividends / corporate actions added to the numerator via the connector's
+  `include_corporate_actions` flag.
+- **SGOV benchmark:** the same geometric chain over SGOV daily total return, restricted to the
+  strategy's deployed days (answers "what SGOV returned over exactly the periods this strategy was
+  deployed"). `excess_real = deployed_unit_value / sgov_index − 1`, then post-tax + post-inflation
+  haircut for the gate.
+
+This is flow-immune by construction (it averages held-position returns; capital entering/leaving never
+manufactures a return). It will still be **validated against the IBKR connector** on real positions
+during parallel-run before any kill-trigger decision relies on it.
 
 ---
 
@@ -473,9 +490,12 @@ Schemas extend v1's with the *actual* fields found in the data digest. Highlight
   the HF dataset. *(Tighten/loosen on request.)*
 - **#5 Markdown mirror:** **phased** — parallel-run both during validation, then **BigQuery-authoritative
   for data** with the read-only dashboard/snapshot mirror; the constitution stays markdown-in-git.
-- **§5 TWR convention:** value-weighted daily TWR, flows at day boundaries, deployed-days-only chain.
-  *(This is the one genuinely arbitrary modeling choice; flagged for your sign-off before the engine
-  is trusted for kill-trigger decisions.)*
+- **§5 TWR convention → LOCKED** (you delegated the choice): value-weighted daily TWR,
+  deployed-days-only chain, with the entry/exit-day + dividend + SGOV-benchmark edge cases now fully
+  specified in §5. Still validated against the connector during parallel-run before kill-triggers
+  rely on it.
+- **External public datasets → selective adopt** (§16): BLS + SEC for regime-conditioning / base-rate
+  priors (the calibration cold-start), Trends/patents as P3 features; GDELT deprioritized on cost.
 
 ---
 
@@ -489,6 +509,47 @@ Schemas extend v1's with the *actual* fields found in the data digest. Highlight
    forecast + anomaly + theater-independence.
 4. **You (console):** schedule `sp_daily_refresh` / `sp_weekly_refresh`; build the Looker dashboard.
 5. **Parallel-run → cutover →** edit the protocol docs to the BigQuery procedures.
+
+---
+
+## 16. External public datasets (verified against the live catalog)
+
+`bigquery-public-data` is co-located in US multi-region and **queryable in place** (cross-project
+JOINs to our tables, byte-billed under the free tier — no copy needed). The right mental model is a
+hard split:
+
+- **Live signals (today's price / news / event / fundamentals): do NOT use public data.** The IBKR
+  connector (prices/positions) + web search (news/events) are fresher and more precise. Public sets
+  lag (BLS monthly + *revised*, SEC quarterly + filing lag, Census quarterly) or are noisy (GDELT).
+- **Historical / calibration / regime-conditioning / cold-start priors: this is where they beat web
+  search.** Web search can't hand you a clean, queryable, point-in-time panel JOINed to your trades.
+  SQL over multi-year history can. This directly feeds the experiment's stated deliverable
+  ("calibration data") and the conviction model's **cold-start** problem (only ~3 closed trades today —
+  historical base rates can seed priors until the 30-outcome threshold accrues).
+
+> **Point-in-time / look-ahead caveat (non-negotiable for rigor):** use the *release/filing* timestamp,
+> not the period date, and treat revised series (BLS, GDP) as as-released snapshots. Conditioning on
+> data that wasn't knowable at decision time silently invalidates calibration. This is also why public
+> data is *context and priors only* — never a backtest to overfit to (consistent with the foundation's
+> regime-maladaptation / recency warnings). The experiment is a forward test, not a backtest engine.
+
+**Tiered adoption (value ≥ 0, but effort-budgeted):**
+
+| Dataset (verified) | Use here | Tier | Cost note |
+|---|---|---|---|
+| `bls.cpi_u` / `c_cpi_u` / `employment_hours_earnings` / `unemployment_cps` | Ground-truth macro history for **M1a** inflation/growth axes + **regime-conditioning** of outcomes | P2 | tiny, free; snapshot as-released (revisions) |
+| `sec_quarterly_financials` (XBRL `numbers`/`submission`/…) | **D** structural-metric history + fundamentals **base rates** for the conviction cold-start | P2 | moderate, free; key on filing date, XBRL is messy |
+| `google_trends` / `google_trends_hourly` | retail-attention proxy → crowding/homogenization (2.8) feature, catalyst attention | P3 | small, free |
+| `patents` / `google_patents_research` | structural-moat / innovation-trajectory metric for long-horizon **D** theses | P3 | moderate, free |
+| `fda_drug` (`drug_enforcement`, `drug_label`) | pharma **recall/label risk** flag only — **not** a PDUFA calendar, so limited for **C** | P3 | small, free |
+| `gdelt-bq.gdeltv2.*` (narrative tone/themes for A/B/E edge) | semantic narrative-divergence signal | **Defer** | **cost-hostile: one 2-col GKG query = ~343 GiB > the 32 GB/day quota → rejected.** Only viable via the `*_partitioned` tables + tight date windows + a scoped daily extract; web+connector already cover live narrative |
+| crypto / sports / genomics / geo / civic | — | Skip | irrelevant |
+
+**Mechanics:** small sets (BLS, SEC, Trends) are JOINed in place. Anything large gets a **scheduled,
+tightly-scoped extract** into our own small table (never query the giant source per-routine), and
+**every public-data query is dry-run first** (GDELT especially — it's the one place a single query can
+blow the daily quota). Net: a couple of genuine wins for the calibration/attribution layer (BLS
+regime-conditioning, SEC base-rate priors); GDELT parked on cost; live signals stay connector + web.
 
 ---
 
