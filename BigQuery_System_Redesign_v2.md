@@ -1,8 +1,9 @@
 # BigQuery System Redesign v2 — Maximal-Capability Build Spec
 
-**Status:** Design / proposal, ready to build. Supersedes `BigQuery_System_Redesign.md` (v1).
-Nothing is live yet beyond a verified connector smoke test (read + write + DDL confirmed on
-project `stock-trading-498512`, US multi-region; scratch dataset created and dropped).
+**Status:** BUILT — infrastructure phase complete (2026-06-05). Supersedes
+`BigQuery_System_Redesign.md` (v1). The data layer, semantic-precedent layer, deployed-TWR engine,
+and daily briefing are live on project `stock-trading-498512` (US multi-region). See **Build status
+& findings** below for the as-built state, two material findings, and remaining next-phase work.
 
 **What v2 changes vs v1.** v1 was a sound *storage* migration (event-sourced append-only tables,
 state views, a scheduled TWR query) that treated AI/ML as an optional phase-2. v2 keeps that spine
@@ -19,6 +20,46 @@ and redesign the workflow if there's a better way*:
    `AI.FORECAST`, `CONTRIBUTION_ANALYSIS`, anomaly detection), each mapped to a concrete use, value
    tier, and cost bucket — gated by `AI.COUNT_TOKENS` + a billing budget alert so the Vertex-billed
    pieces stay in pennies.
+
+---
+
+## Build status & findings (2026-06-05)
+
+**Live in `stock-trading-498512`** (committed as `bigquery/01–05_*.sql` + parsers + `load_all.py`):
+- **Data layer** — 7 event tables + 4 state views; full migration of every data file incl. all 3
+  archives + the queue archives + monthly fundamental regime scores (~340 rows). `Decision_Log.md` +
+  its archive are ONE `events.decision_log` table (the whole archive workflow is retired).
+- **Semantic precedent** — `analytics.find_precedents('<thesis>')` over 221 embeddings (validated).
+  Replaces grepping the 14.5k-line log.
+- **Theater-independence** — `analytics.theater_independence` (raw full-transcript similarity is
+  topically saturated ~0.95 → P2 refinement: verdict-only / `AI.GENERATE_BOOL` judge).
+- **Deployed-TWR engine** — `perf.strategy_daily` (value-weighted daily **total-return** TWR) +
+  `perf.kill_flags` (all 4 triggers; none firing); `events.daily_marks` (D2-fed, corporate-action
+  aware); `analytics.sgov_daily_return` (actual SGOV total return).
+- **Daily briefing** — `state.daily_briefing` (due queue + kill-flags + time-exits).
+- **Analytics scaffold** — `analytics.thesis_outcomes` (calibration foundation).
+
+**Two material findings (the ground-truth engine working as intended):**
+1. **Deployed-TWR overstatement (§5).** The ledger sequentially chain-linked *concurrent independent*
+   closed trades, overstating **Strategy B (reported +11% / 1.1099; corrected ≈ −0.8% / 0.992)**. D is
+   ~unaffected (0 closed trades → no chaining). **The live `Portfolio_Ledger.md` still shows 1.1099
+   and the experiment reads it for kill/gate decisions → correct it.**
+2. **SGOV / corporate-action handling (`03_twr_engine.sql`).** Five dividend/split gaps found + fixed:
+   SGOV benchmark now uses actual total return (not a proxy); the IBKR DRIP reinvest is reclassified
+   `DIVIDEND_REINVEST` (not a trade buy); held-stock dividends added to the TWR (matters for D's
+   multi-month holds); `daily_marks` captures dividends + splits; D2 must pull
+   `include_corporate_actions=true`.
+
+**Remaining (next phase):**
+- **Cold-start analytics** — conviction/calibration/attribution/forecast/anomaly: plumbing
+  scaffolded, models deferred until ~30 closed trades. Needs `decision_log.ticker` backfill
+  (`AI.GENERATE_TABLE`) + realized P&L (D2-fed) to populate `thesis_outcomes` labels.
+- **Optional** — BLS/SEC public-data wiring (P2); GDELT extract (P3, deferred on value);
+  scheduled-query automation (console/DTS) vs. agent-run.
+- **Cutover** — rewrite `Operating_Protocols.md` + `Claude_Task_Plan.md` to the BigQuery procedures,
+  parallel-run, then retire the data `.md`. Consequential — deserves deliberate work + review.
+- **Operational** — correct the live ledger B TWR; the `bq-loader` SA key is deleted. Cost to date
+  ≈ **$0.12** (Vertex embeddings; all else free-tier).
 
 ---
 
