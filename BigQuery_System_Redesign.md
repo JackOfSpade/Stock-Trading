@@ -1,5 +1,11 @@
 # BigQuery System Redesign
 
+> **⚠️ SUPERSEDED by [`BigQuery_System_Redesign_v2.md`](BigQuery_System_Redesign_v2.md)** (2026-06-05).
+> v2 is the canonical build spec: it keeps this event-sourced spine but adds the maximal-AI/ML layer,
+> the server-side workflow redesign (Daily Briefing + conviction gate), the fully-specified deployed-TWR
+> engine, and resolves the open decisions (project `stock-trading-498512`, US, 32 GB/day quota). This
+> document is retained for history. Read v2 first.
+
 **Status:** Design / proposal. Nothing is live. No GCP project, billing, connector, or data
 exists yet. This document is the blueprint for migrating the experiment's data layer off
 markdown-as-database onto Google BigQuery, using current (2026) BigQuery capabilities and
