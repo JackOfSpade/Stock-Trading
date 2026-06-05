@@ -1,6 +1,8 @@
 -- BigQuery deployed-TWR engine (v2 redesign §5). Project: stock-trading-498512.
--- METHOD: value-weighted daily TOTAL-return TWR on the active-positions book, NET of
--- commissions (NOT a sequential chain-link of closed-trade returns). Flow-immune.
+-- METHOD: value-weighted daily TOTAL-return TWR on the active-positions book, GROSS of
+-- commissions (the PROFITABILITY metric -- commissions are a scale artifact at ~$30 positions,
+-- excluded from "is the strategy profitable?"; tracked exactly + separately in the cash/NAV
+-- accounting). NOT a sequential chain-link of closed-trade returns. Flow-immune.
 -- Benchmark = SGOV's ACTUAL total return (close + dividend) over the same deployed days.
 --
 -- VALIDATED + POPULATED 2026-06-05 by a full rebuild from the IBKR connector's authoritative
@@ -45,22 +47,24 @@ FROM entries e LEFT JOIN exits x USING (ticker);
 -- NOTE: assumes one round-trip per ticker (true to date). A re-traded ticker needs a
 -- buy/sell pairing key (e.g. by order sequence) before this generalises.
 
--- ===== Value-weighted daily deployed TOTAL returns per strategy (NET of commissions) =====
+-- ===== Value-weighted daily deployed TOTAL returns per strategy (GROSS of commissions) =====
+-- This is the PROFITABILITY metric. Commissions are EXCLUDED on purpose: at the experiment's
+-- ~$30-38 (2%-of-sleeve) position size, the fixed ~$0.32/fill commission (~1pct) is a SCALE
+-- artifact, not the strategy's stock-selection edge -- so "is the strategy profitable?" is judged
+-- gross. (Commissions are still tracked EXACTLY in the cash/NAV accounting: trade_fills.commission +
+-- parking_events.commission + realized_pnl, reconciled to the connector to the cent.)
 -- r_deployed = Sum(mv_t + div_t - prev_mv) / Sum(prev_mv) over held positions, where:
---   entry day: prev_mv = shares*entry_price + entry_commission   (baseline at TOTAL COST)
---   exit  day: mv      = shares*exit_price  - exit_commission     (NET PROCEEDS)
+--   entry day: prev_mv = shares*entry_price                       (baseline at MARKET cost, no comm)
+--   exit  day: mv      = shares*exit_price                        (GROSS proceeds, no comm)
 --   interior:  mv = shares*close ; prev_mv = LAG(mv)
--- Dividends (total return) enter the numerator -- material for held-STOCK payouts (IBM, RTX)
--- and decisive for D's multi-month holds. Flow-immune. (Splits via split-adjusted close.)
--- The fill-price boundaries matter: BURL was bought 303.00 but CLOSED 323.83 on entry day;
--- a close-baseline would mis-state it badly. Entry/exit commissions (~$0.32 on ~$30 trades,
--- ~1pct each) are the dominant drag at this position size -- see the finding note.
+-- Dividends (total return) enter the numerator -- material for held-STOCK payouts (IBM, RTX) and
+-- decisive for D's multi-month holds. Fill-price boundaries matter: BURL was bought 303.00 but
+-- CLOSED 323.83 on entry day; a close-baseline would mis-state it badly. Flow-immune. (Splits via
+-- split-adjusted close at ingest.)
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.strategy_daily_returns` AS
 WITH held AS (
-  SELECT m.mark_date, l.strategy, l.position_key, l.shares, l.entry_price, l.entry_commission,
-         CASE WHEN m.mark_date = l.exit_date
-              THEN l.shares*l.exit_price - COALESCE(l.exit_commission,0)   -- exit day: net proceeds
-              ELSE l.shares*m.close END AS mv,                              -- interior: mark at close
+  SELECT m.mark_date, l.strategy, l.position_key, l.shares, l.entry_price,
+         l.shares * IF(m.mark_date = l.exit_date, l.exit_price, m.close) AS mv,  -- gross; exit at fill price
          l.shares * COALESCE(m.dividend,0) AS div_cash
   FROM `stock-trading-498512.analytics.position_lifecycle` l
   JOIN `stock-trading-498512.events.daily_marks` m
@@ -72,7 +76,7 @@ WITH held AS (
 lagged AS (
   SELECT mark_date, strategy, position_key, mv, div_cash,
          COALESCE(LAG(mv) OVER (PARTITION BY position_key ORDER BY mark_date),
-                  shares*entry_price + entry_commission) AS prev_mv   -- entry-day baseline: total cost
+                  shares*entry_price) AS prev_mv   -- entry-day baseline: market cost (no commission)
   FROM held
 )
 SELECT mark_date AS as_of_date, strategy,
@@ -149,8 +153,8 @@ SELECT p.as_of_date, p.strategy,
      WHERE l.strategy=p.strategy AND l.exit_date IS NOT NULL AND l.exit_date<=p.as_of_date),
   (SELECT COUNT(*) FROM `stock-trading-498512.analytics.position_lifecycle` l
      WHERE l.strategy=p.strategy AND l.exit_date IS NOT NULL AND l.exit_date<=p.as_of_date),
-  'value-weighted-daily-TWR-net-v2',
-  'Total-return, net of commissions; SGOV actual total-return benchmark.'
+  'value-weighted-daily-TWR-gross-v3',
+  'PROFITABILITY metric: GROSS of commissions (scale artifact at ~$30 positions), total return, SGOV actual total-return benchmark. Cash/NAV accounting tracks commissions exactly + separately.'
 FROM peaked p;
 
 -- ===== SGOV / corporate-action handling (audited 2026-06-05) =====
@@ -178,12 +182,16 @@ FROM peaked p;
 -- (B) The migrated event tables were INCOMPLETE/WRONG (trade_fills had only the 10 entries, no
 --     exits; position_events had NULL shares + placeholder 2026-04-22 dates). Rebuilt from the
 --     connector's 14 authoritative strategy fills + real daily marks.
--- (C) VALIDATED exact value-weighted, total-return, NET-of-commission deployed-TWR (29 days):
---       B = 0.9663 (-3.37pct), peak 1.000, drawdown -3.37pct, excess vs SGOV -3.77pct, 4 closed.
---       D = 0.9573 (-4.27pct), peak 1.000, drawdown -4.27pct, excess vs SGOV -4.66pct, 0 closed.
---     GROSS (pre-commission) deployed-TWR is B +0.05pct / D -2.81pct -- i.e. B's stock-picking
---     was ~flat and COMMISSIONS (~$0.32 on ~$30 trades, ~1pct/fill) are the dominant drag at
---     this position size. Both strategies trail SGOV (1.0041). No kill/gate trigger is near
---     firing (drawdown -3 to -4pct vs the -50pct kill; gate 4/30 and 0/30).
--- These figures SUPERSEDE the 1.1099 seed AND the interim 0.992 estimate; the live ledger +
+-- (C) PROFITABILITY metric = GROSS (commission-excluded), total-return deployed-TWR (29 days):
+--       B = 1.0005 (+0.05pct), peak 1.0048, drawdown -0.43pct, excess vs SGOV -0.35pct, 4 closed.
+--       D = 0.9719 (-2.81pct), peak 1.0093, drawdown -3.70pct, excess vs SGOV -3.20pct, 0 closed.
+--     B's stock-picking is ~breakeven (tracks cash); D is underwater (DIS). No kill/gate trigger
+--     near firing (drawdown vs the -50pct kill; gate 4/30 and 0/30).
+-- (D) COMMISSION POLICY (2026-06-05 owner directive): the deployed-TWR (profitability) is judged
+--     GROSS, because the fixed ~$0.32/fill commission on ~$30 positions (~1pct) is a SCALE artifact,
+--     not strategy edge -- it does not reflect whether the strategy "works". For reference the
+--     NET-of-commission deployed-TWR is B 0.9663 / D 0.9573 (the commission drag). The CASH/NAV
+--     ACCOUNTING is the opposite: fully exact WITH commissions (trade_fills.commission sums to
+--     $4.4642, reconciled to the connector to the cent; parking_events $3.98; realized_pnl net).
+-- These figures SUPERSEDE the 1.1099 seed AND the interim 0.992/0.966 estimates; the live ledger +
 -- Decision_Log + design doc were updated to match.

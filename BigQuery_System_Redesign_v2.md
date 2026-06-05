@@ -46,18 +46,22 @@ and redesign the workflow if there's a better way*:
 **Material findings:**
 1. **Deployed-TWR overstatement — found, corrected, VALIDATED.** The ledger's seed sequentially
    chain-linked *concurrent independent* closed trades, overstating **Strategy B to +11% / 1.1099**.
-   Validated value-weighted figures: **B 0.9663 (−3.37% net), D 0.9573 (−4.27%)**, both trailing SGOV
-   (1.0041); no kill/gate trigger near firing. The live `Portfolio_Ledger.md` has been corrected to the
-   validated figures (supersedes the interim 0.992 estimate).
+   Validated value-weighted figures (**GROSS of commissions** — the profitability metric, per finding 3):
+   **B 1.0005 (+0.05%, ~breakeven), D 0.9719 (−2.81%)**; B ~tracks SGOV (1.0041), D trails it; no
+   kill/gate trigger near firing. The live `Portfolio_Ledger.md` is corrected to these figures (supersedes
+   the 1.1099 seed + the 0.992/0.966 interim estimates).
 2. **Migrated event data was INCOMPLETE (data-quality).** The v1 migration loaded only the 10 entry
    fills into `events.trade_fills` (no exits) with NULL shares + placeholder dates in
    `position_events` — so the engine could not have been correct until rebuilt. Rebuilt both from the
    connector's 14 authoritative fills; `position_lifecycle` re-sourced from `trade_fills`. (`position_events`
    itself still carries stale rows — the engine no longer reads it; flagged for a follow-up rebuild.)
-3. **Commission drag dominates at this scale.** GROSS (pre-commission) deployed-TWR is B **+0.05%**
-   (flat) — the stock-picking ~broke even — but ~$0.32 commission per ~$30 trade (~1%/fill, 12 fills)
-   drags B to −3.4% net. A structural artifact of ~2%-of-sleeve (~$30–38) position sizing; worth a
-   parameter discussion.
+3. **Commission policy — gross profitability / exact accounting (owner directive 2026-06-05).** The
+   ~$0.32/fill commission on ~$30 (2%-of-sleeve) positions (~1%/fill) is a SCALE artifact, not strategy
+   edge, so the **profitability metric (deployed-TWR + gate + kill triggers) is GROSS of commissions**
+   (B +0.05% gross vs −3.4% net — the whole gap is commission). The **cash/NAV accounting is exact WITH
+   commissions** (connector-supplied per fill; `trade_fills` $4.4642 reconciles to the connector to the
+   cent). The old "disregard commissions" simplification is removed from the accounting, kept only for
+   the profitability metric + forward staging.
 4. **SGOV / corporate-action handling (`03_twr_engine.sql`).** Five dividend/split gaps found + fixed:
    SGOV benchmark uses actual total return (not a proxy); the IBKR DRIP reinvest is reclassified
    `DIVIDEND_REINVEST` (not a trade buy); held-stock dividends added to the TWR (confirmed: IBM $1.69,
