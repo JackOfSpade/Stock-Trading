@@ -90,7 +90,8 @@ def main():
     dl_rows = _decode_rows(dl,
         b64_cols={"title_b64": "title", "body_b64": "body_md"},
         drop_cols=("era",))
-    dl_rows = [{**r, "source_session": r.pop("source")} for r in dl_rows]
+    for r in dl_rows:
+        r["source_session"] = r.pop("source", None)
     dl_schema = [
         bq.SchemaField("entry_date", "DATE", "REQUIRED"),
         bq.SchemaField("entry_type", "STRING", "REQUIRED"),

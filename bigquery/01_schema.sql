@@ -115,6 +115,10 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.events.hf_capability_captures` 
 OPTIONS(description='HF frontier-LLM capability captures (D1 / Q3).');
 
 -- ===== State views (latest-wins) =====
+-- Note: regime_events / queue_events take event_ts from a DEFAULT CURRENT_TIMESTAMP()
+-- at INSERT time, so for those we ORDER BY the natural date column first (as_of_date /
+-- due_date) and use event_ts only as a tiebreaker. position_events sets event_ts
+-- explicitly in the parser, so event_ts DESC alone is correct there.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.current_positions` AS
 SELECT * FROM (
   SELECT * FROM `stock-trading-498512.events.position_events`
@@ -123,12 +127,15 @@ SELECT * FROM (
 
 CREATE OR REPLACE VIEW `stock-trading-498512.state.current_regime` AS
 SELECT * FROM `stock-trading-498512.events.regime_events`
-QUALIFY ROW_NUMBER() OVER (PARTITION BY scope, key ORDER BY event_ts DESC) = 1;
+QUALIFY ROW_NUMBER() OVER (PARTITION BY scope, key ORDER BY as_of_date DESC, event_ts DESC) = 1;
 
 CREATE OR REPLACE VIEW `stock-trading-498512.state.open_queue` AS
 SELECT * FROM (
   SELECT * FROM `stock-trading-498512.events.queue_events`
-  QUALIFY ROW_NUMBER() OVER (PARTITION BY queue, item_key ORDER BY event_ts DESC) = 1
+  QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY queue, item_key
+    ORDER BY COALESCE(due_date, DATE '1900-01-01') DESC, event_ts DESC
+  ) = 1
 ) WHERE status NOT IN ('complete','superseded','COMPLETE','DROPPED');
 
 CREATE OR REPLACE VIEW `stock-trading-498512.state.trade_fills_curated` AS
