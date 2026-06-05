@@ -2,8 +2,9 @@
 
 **Status:** BUILT — infrastructure phase complete (2026-06-05). Supersedes
 `BigQuery_System_Redesign.md` (v1). The data layer, semantic-precedent layer, deployed-TWR engine,
-and daily briefing are live on project `stock-trading-498512` (US multi-region). See **Build status
-& findings** below for the as-built state, two material findings, and remaining next-phase work.
+and daily briefing are live on project `stock-trading-498512` (US multi-region). The deployed-TWR
+engine is **validated** (rebuilt from authoritative connector fills, hand-checked to 0.04%). See **Build
+status & findings** below for the as-built state, the findings, and remaining next-phase work.
 
 **What v2 changes vs v1.** v1 was a sound *storage* migration (event-sourced append-only tables,
 state views, a scheduled TWR query) that treated AI/ML as an optional phase-2. v2 keeps that spine
@@ -33,31 +34,49 @@ and redesign the workflow if there's a better way*:
   Replaces grepping the 14.5k-line log.
 - **Theater-independence** — `analytics.theater_independence` (raw full-transcript similarity is
   topically saturated ~0.95 → P2 refinement: verdict-only / `AI.GENERATE_BOOL` judge).
-- **Deployed-TWR engine** — `perf.strategy_daily` (value-weighted daily **total-return** TWR) +
-  `perf.kill_flags` (all 4 triggers; none firing); `events.daily_marks` (D2-fed, corporate-action
-  aware); `analytics.sgov_daily_return` (actual SGOV total return).
+- **Deployed-TWR engine — LIVE + VALIDATED.** `perf.strategy_daily` (value-weighted daily
+  **total-return, NET-of-commission** TWR) + `perf.kill_flags` (4 triggers; none firing);
+  `events.daily_marks` (D2-fed, corporate-action aware); `analytics.sgov_daily_return` (actual SGOV
+  total return). Populated 2026-06-05 from 385 real daily marks + the 14 authoritative connector fills;
+  full 29-day series computed; independently hand-checked to 0.04% on D. **The legacy markdown
+  hand-method is RETIRED** (engine stands alone with an automated sanity guardrail).
 - **Daily briefing** — `state.daily_briefing` (due queue + kill-flags + time-exits).
 - **Analytics scaffold** — `analytics.thesis_outcomes` (calibration foundation).
 
-**Two material findings (the ground-truth engine working as intended):**
-1. **Deployed-TWR overstatement (§5).** The ledger sequentially chain-linked *concurrent independent*
-   closed trades, overstating **Strategy B (reported +11% / 1.1099; corrected ≈ −0.8% / 0.992)**. D is
-   ~unaffected (0 closed trades → no chaining). **The live `Portfolio_Ledger.md` still shows 1.1099
-   and the experiment reads it for kill/gate decisions → correct it.**
-2. **SGOV / corporate-action handling (`03_twr_engine.sql`).** Five dividend/split gaps found + fixed:
-   SGOV benchmark now uses actual total return (not a proxy); the IBKR DRIP reinvest is reclassified
-   `DIVIDEND_REINVEST` (not a trade buy); held-stock dividends added to the TWR (matters for D's
-   multi-month holds); `daily_marks` captures dividends + splits; D2 must pull
+**Material findings:**
+1. **Deployed-TWR overstatement — found, corrected, VALIDATED.** The ledger's seed sequentially
+   chain-linked *concurrent independent* closed trades, overstating **Strategy B to +11% / 1.1099**.
+   Validated value-weighted figures: **B 0.9663 (−3.37% net), D 0.9573 (−4.27%)**, both trailing SGOV
+   (1.0041); no kill/gate trigger near firing. The live `Portfolio_Ledger.md` has been corrected to the
+   validated figures (supersedes the interim 0.992 estimate).
+2. **Migrated event data was INCOMPLETE (data-quality).** The v1 migration loaded only the 10 entry
+   fills into `events.trade_fills` (no exits) with NULL shares + placeholder dates in
+   `position_events` — so the engine could not have been correct until rebuilt. Rebuilt both from the
+   connector's 14 authoritative fills; `position_lifecycle` re-sourced from `trade_fills`. (`position_events`
+   itself still carries stale rows — the engine no longer reads it; flagged for a follow-up rebuild.)
+3. **Commission drag dominates at this scale.** GROSS (pre-commission) deployed-TWR is B **+0.05%**
+   (flat) — the stock-picking ~broke even — but ~$0.32 commission per ~$30 trade (~1%/fill, 12 fills)
+   drags B to −3.4% net. A structural artifact of ~2%-of-sleeve (~$30–38) position sizing; worth a
+   parameter discussion.
+4. **SGOV / corporate-action handling (`03_twr_engine.sql`).** Five dividend/split gaps found + fixed:
+   SGOV benchmark uses actual total return (not a proxy); the IBKR DRIP reinvest is reclassified
+   `DIVIDEND_REINVEST` (not a trade buy); held-stock dividends added to the TWR (confirmed: IBM $1.69,
+   RTX $0.73 captured); `daily_marks` captures dividends + splits; D2 must pull
    `include_corporate_actions=true`.
 
 **Remaining (next phase):**
 - **Cold-start analytics** — conviction/calibration/attribution/forecast/anomaly: plumbing
   scaffolded, models deferred until ~30 closed trades. Needs `decision_log.ticker` backfill
-  (`AI.GENERATE_TABLE`) + realized P&L (D2-fed) to populate `thesis_outcomes` labels.
-- **Optional** — BLS/SEC public-data wiring (P2); GDELT extract (P3, deferred on value);
-  scheduled-query automation (console/DTS) vs. agent-run.
-- **Cutover** — rewrite `Operating_Protocols.md` + `Claude_Task_Plan.md` to the BigQuery procedures,
-  parallel-run, then retire the data `.md`. Consequential — deserves deliberate work + review.
+  (`AI.GENERATE_TABLE`) + realized P&L (now in `trade_fills`) to populate `thesis_outcomes` labels.
+- **`position_events` rebuild** — fix the stale migrated rows (engine-independent now, but
+  `state.daily_briefing`'s due-exit / convergence-target fields read it).
+- **Historical-data migration (owner-flagged)** — adversarial-review outputs
+  (`Adversarial_Review_*`) + monthly macro/regime docs (`Monthly_Macro_Data_*`) → BigQuery for
+  tracking; additive, low-risk.
+- **Data-`.md` retirement** — the *engine* cutover is DONE (validated, hand-method retired, D1/D2
+  procedures rewired). What remains is retiring the migrated *data* `.md` files as the operational
+  substrate — consequential, owner-gated, deserves deliberate review.
+- **Optional** — BLS/SEC public-data wiring (P2); scheduled-query automation (console/DTS) vs. agent-run.
 - **Operational** — correct the live ledger B TWR; the `bq-loader` SA key is deleted. Cost to date
   ≈ **$0.12** (Vertex embeddings; all else free-tier).
 
