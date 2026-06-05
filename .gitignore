@@ -1,1 +1,4 @@
 .claude/settings.local.json
+
+# BigQuery migration intermediates (derived data, not source)
+bigquery/out/
