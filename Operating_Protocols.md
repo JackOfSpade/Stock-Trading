@@ -340,6 +340,27 @@ The five strategy sub-portfolios share one IBKR account; undeployed capital sits
 
 ---
 
+## 14. BigQuery Analytics Substrate & Deployed-TWR Engine
+
+**Canonical-current text:**
+
+A BigQuery event-sourced analytics substrate (GCP project `stock-trading-498512`, US multi-region) is the authoritative engine for the experiment's quantitative performance accounting and the semantic/analytical layer over its decision history. Routines reach it through the BigQuery MCP connector (`execute_sql` / `execute_sql_readonly`); it complements — does not replace — the IBKR connector (§11, authoritative for live fills/positions/cash/quotes) and Portfolio_Ledger.md (§11/§13, authoritative for per-strategy cost-basis attribution). Design + as-built status live in `BigQuery_System_Redesign_v2.md` ("Build status & findings"); DDL in `bigquery/*.sql`.
+
+**Data model.** Append-only `events.*` tables (fills, position events, daily marks, parking activity, decision log, regime scores, embeddings) → `state.*` / `analytics.*` views → `perf.*` (the deployed-TWR engine). Nothing is destructively updated; corrections are new rows. `events.daily_marks` is the TOTAL-return source: per held ticker + SGOV it carries `close`, `dividend` (ex-div cash/share), and `split_ratio`, pulled daily by D2 Step 0 via `get_price_history(include_corporate_actions: true)`.
+
+**Deployed-TWR method (authoritative).** `perf.strategy_daily` is the value-weighted daily **total-return** TWR on each strategy's active book — `r_deployed = Σ(MV_t + dividends_t − MV_{t-1}) / Σ MV_{t-1}` chain-linked over deployed days, flow-immune. The benchmark `sgov_index` chain-links SGOV's **actual** close+dividend total return (`analytics.sgov_daily_return`), not a risk-free proxy. `perf.kill_flags` derives the kill/gate flags (`drawdown_kill`, `runaway_review`, `m2m_underperf_review`, `gate_reached`) from the latest row. **These are authoritative for deployed-TWR + kill/gate; the Portfolio_Ledger.md Performance block is the human-readable mirror of the latest `perf.strategy_daily` row** (maintenance procedure: Claude_Task_Plan.md D2 "PER-STRATEGY PERFORMANCE MAINTENANCE"; D1 kill-sweep + D2 Step H read `perf.kill_flags`).
+
+**Anti-pattern (do NOT do this).** Never compute or seed a strategy's deployed-TWR by sequentially chain-linking the returns of CONCURRENT, independently-funded closed trades (`Π (1 + realized_pnl/cost_basis)`). They were parallel ~2%-of-sleeve bets, not sequential reinvestments; chaining them manufactures compounding that never occurred and compounds only the winners while open losers enter as a single drag. This is exactly what overstated Strategy B's 2026-06-04 FIRST-RUN seed to 1.1099 (+11%) when the value-weighted truth is ≈ 0.992 (−0.8%). Always use the value-weighted daily method (the engine).
+
+**SGOV / corporate-action handling (audited 2026-06-05).** SGOV pays a monthly dividend reinvested via IBKR DRIP (`IBDRIPUS`) — its price is ~flat and its whole return is income, so it is processed as total return throughout: (1) the SGOV benchmark uses actual close+dividend total return; (2) the DRIP reinvest is classified `DIVIDEND_REINVEST` (not a trade-funded buy) and reconciled as income per §13.C (shares added, NO strategy-cash debit, pro-rata across strategies' SGOV); (3) held-STOCK dividends enter the TWR numerator (material for D's multi-month holds); (4) `daily_marks` carries `dividend` + `split_ratio`; (5) splits are handled via split-adjusted close at ingest.
+
+**Cutover / parallel-run policy.** During cutover, D2 computes the deployed-TWR BOTH ways — the BigQuery engine and the legacy markdown hand-method — and cross-checks them to within ~0.5%, flagging divergence. The data `.md` files remain the operational substrate until the parallel-run is signed off; only then does the hand-method cross-check retire and the engine stand alone (and only then are the migrated data `.md` files candidates for retirement). Retirement of any live `.md` data file requires owner sign-off.
+
+**Revision history:**
+- 2026-06-05: Section established. BigQuery analytics substrate built (data layer; semantic precedent search over decision-history embeddings; value-weighted total-return deployed-TWR engine; daily briefing; thesis-outcomes calibration scaffold). The deployed-TWR engine + `perf.kill_flags` made authoritative for performance and kill/gate flags, with the Portfolio_Ledger.md Performance block as the mirror; D1 kill-sweep, D2 performance-maintenance, and D2 Step H rewired to the engine (parallel-run cross-check against the legacy hand-method). SGOV/corporate-action audit fixed five gaps (SGOV benchmark → actual total return; DRIP reclassified `DIVIDEND_REINVEST`; held-stock dividends in the TWR numerator; `daily_marks` gains `dividend` + `split_ratio`; splits via split-adjusted close). The buggy FIRST-RUN SEED (sequential chain-link of concurrent closed trades) replaced with the value-weighted method + an explicit anti-pattern note; the resulting Strategy B overstatement (1.1099 → 0.992) corrected in the live ledger. → Decision_Log 2026-06-05 + BigQuery_System_Redesign_v2.md "Build status & findings".
+
+---
+
 ## Maintenance
 
 - W5 (weekly Decision Log Hygiene) appends new protocol revisions to the relevant section here as they emerge from Decision_Log entries.
