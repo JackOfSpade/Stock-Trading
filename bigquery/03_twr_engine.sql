@@ -7,11 +7,15 @@
 -- trades -> no chaining artifact). See the finding note at the bottom.
 
 -- ===== Daily marks (fed by D2 Step 0 from the IBKR connector, one day per run) =====
+-- D2 MUST pull get_price_history(include_corporate_actions=true) so dividends + splits are
+-- captured for TOTAL-return TWR. `dividend` = cash dividend per share on its ex-div date;
+-- `split_ratio` = e.g. 4.0 for a 4:1 split (prices should be split-adjusted at ingest).
 CREATE TABLE IF NOT EXISTS `stock-trading-498512.events.daily_marks` (
   mark_date DATE NOT NULL, ticker STRING NOT NULL, close NUMERIC,
+  dividend NUMERIC, split_ratio NUMERIC,
   source STRING DEFAULT 'connector', ingest_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
 ) PARTITION BY mark_date CLUSTER BY ticker
-OPTIONS(description='Daily closes per held ticker (+SGOV). Source for the value-weighted deployed-TWR engine.');
+OPTIONS(description='Daily closes + corporate actions per held ticker (+SGOV). Total-return source for the deployed-TWR engine.');
 
 -- ===== Position lifecycle (entry/exit/shares) — robust to migrated + future events =====
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.position_lifecycle` AS
@@ -23,12 +27,16 @@ SELECT position_key,
 FROM `stock-trading-498512.events.position_events`
 GROUP BY position_key;
 
--- ===== Value-weighted daily deployed returns per strategy =====
--- r_deployed = Sum(MV_t - MV_{t-1}) / Sum(MV_{t-1}) over held positions. New positions have
--- no prev_mv on entry day -> excluded that day (join next session). Flow-immune.
+-- ===== Value-weighted daily deployed TOTAL returns per strategy =====
+-- r_deployed = Sum(MV_t + dividends_t - MV_{t-1}) / Sum(MV_{t-1}) over held positions.
+-- Includes dividends (total return), so held-stock payouts are captured (material for D's
+-- multi-month holds). New positions have no prev_mv on entry day -> excluded (join next
+-- session). Flow-immune. (Splits handled via split-adjusted close at ingest.)
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.strategy_daily_returns` AS
 WITH held AS (
-  SELECT m.mark_date, l.strategy, l.position_key, l.shares * m.close AS mv
+  SELECT m.mark_date, l.strategy, l.position_key,
+         l.shares * m.close AS mv,
+         l.shares * COALESCE(m.dividend, 0) AS div_cash
   FROM `stock-trading-498512.analytics.position_lifecycle` l
   JOIN `stock-trading-498512.events.daily_marks` m
     ON m.ticker = l.ticker
@@ -37,16 +45,30 @@ WITH held AS (
   WHERE l.strategy IS NOT NULL
 ),
 lagged AS (
-  SELECT mark_date, strategy, position_key, mv,
+  SELECT mark_date, strategy, position_key, mv, div_cash,
          LAG(mv) OVER (PARTITION BY position_key ORDER BY mark_date) AS prev_mv
   FROM held
 )
 SELECT mark_date AS as_of_date, strategy,
-       SAFE_DIVIDE(SUM(mv) - SUM(prev_mv), SUM(prev_mv)) AS r_deployed,
+       SAFE_DIVIDE(SUM(mv + div_cash) - SUM(prev_mv), SUM(prev_mv)) AS r_deployed,
        COUNT(*) AS n_positions
 FROM lagged
 WHERE prev_mv IS NOT NULL
 GROUP BY mark_date, strategy;
+
+-- ===== SGOV benchmark = SGOV's ACTUAL total return (close + dividend) =====
+-- Replaces the risk-free-accrual proxy. SGOV price is ~flat because its yield pays out as a
+-- monthly dividend (IBKR DRIP, action='DIVIDEND_REINVEST' in parking_events), so price-only
+-- understates it. Chain-link r_sgov over a strategy's deployed days for its benchmark index.
+CREATE OR REPLACE VIEW `stock-trading-498512.analytics.sgov_daily_return` AS
+WITH s AS (
+  SELECT mark_date, close, COALESCE(dividend, 0) AS dividend,
+         LAG(close) OVER (ORDER BY mark_date) AS prev_close
+  FROM `stock-trading-498512.events.daily_marks`
+  WHERE ticker = 'SGOV'
+)
+SELECT mark_date AS as_of_date, SAFE_DIVIDE(close + dividend - prev_close, prev_close) AS r_sgov
+FROM s WHERE prev_close IS NOT NULL;
 
 -- ===== perf.strategy_daily: authoritative engine state (seeded; extended daily) =====
 CREATE TABLE IF NOT EXISTS `stock-trading-498512.perf.strategy_daily` (
@@ -81,18 +103,33 @@ WHERE rn = 1;
 --            deployed_days AS pdays, closed_trades, gate_n
 --     FROM perf.strategy_daily
 --     QUALIFY ROW_NUMBER() OVER (PARTITION BY strategy ORDER BY as_of_date DESC)=1),
---   today AS (SELECT strategy, r_deployed FROM analytics.strategy_daily_returns WHERE as_of_date=@d)
+--   today AS (SELECT strategy, r_deployed FROM analytics.strategy_daily_returns WHERE as_of_date=@d),
+--   sg    AS (SELECT r_sgov FROM analytics.sgov_daily_return WHERE as_of_date=@d)
 --   SELECT @d, p.strategy,
 --          p.puv*(1+t.r_deployed),
 --          GREATEST(p.ppeak, p.puv*(1+t.r_deployed)),
 --          p.puv*(1+t.r_deployed)/GREATEST(p.ppeak, p.puv*(1+t.r_deployed)) - 1,
---          p.psgov*(1+@rf_daily),          -- @rf_daily = (1.043)^(1/252)-1 risk-free accrual
---          p.puv*(1+t.r_deployed)/(p.psgov*(1+@rf_daily)) - 1,
+--          p.psgov*(1+sg.r_sgov),          -- SGOV ACTUAL total return on this deployed day
+--          p.puv*(1+t.r_deployed)/(p.psgov*(1+sg.r_sgov)) - 1,
 --          p.pdays+1, p.closed_trades, p.gate_n,
 --          'value-weighted-daily-TWR', NULL
---   FROM prev p JOIN today t USING (strategy);
--- (closed_trades / gate_n increment when a CLOSE event lands; @rf_daily refined to SGOV's actual
---  distribution-adjusted daily total return once a dividend series is loaded.)
+--   FROM prev p JOIN today t USING (strategy) CROSS JOIN sg;
+-- (closed_trades / gate_n increment when a CLOSE event lands.)
+
+-- ===== SGOV / corporate-action handling (audited 2026-06-05) =====
+-- SGOV pays a MONTHLY dividend reinvested via IBKR DRIP (IBDRIPUS) -> its price is ~flat and its
+-- whole return is income. Five gaps were found + addressed:
+--   (1) SGOV benchmark: was a risk-free-accrual proxy -> now analytics.sgov_daily_return uses
+--       SGOV's actual close+dividend total return.
+--   (2) parking_events conflated the DRIP reinvest with trade-funded buys -> reclassified to
+--       action='DIVIDEND_REINVEST' (parser updated). Reconciliation (§13) must treat these as
+--       income (shares added, NO strategy-cash debit; allocate pro-rata across strategies' SGOV).
+--   (3) held-STOCK dividends: strategy_daily_returns now adds dividends (total return) -> matters
+--       for D's multi-month holds (DIS ~0.9%/yr, RTX ~2%/yr); negligible for B's week holds.
+--   (4) daily_marks now has dividend + split_ratio; D2 MUST pull include_corporate_actions=true.
+--   (5) splits: assume split-adjusted close at ingest; split_ratio recorded for audit.
+-- The 2026-06-05 SEED row keeps sgov_index=1.0045 (the proxy); the forward engine uses the actual
+-- SGOV total return from daily_marks.
 
 -- ===== FINDING (2026-06-05): ledger deployed-TWR was overstated for Strategy B =====
 -- The ledger computed B's deployed unit value as a SEQUENTIAL chain of 3 closed winners

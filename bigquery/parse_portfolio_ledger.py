@@ -156,8 +156,15 @@ def parse_parking(text, rows_park):
     for pm in PARKING_ROW.finditer(region):
         date, action, shares, price, comm, gross, order_id = pm.groups()
         action_clean = action.strip()
-        side = "BUY" if action_clean.lower().startswith("buy") else (
-            "SELL" if action_clean.lower().startswith("sell") else action_clean[:20])
+        al = action_clean.lower()
+        if "dividend" in al or "dripus" in al or "reinvest" in al:
+            side = "DIVIDEND_REINVEST"   # SGOV income (IBKR DRIP) — not a trade-funded buy
+        elif al.startswith("buy"):
+            side = "BUY"
+        elif al.startswith("sell"):
+            side = "SELL"
+        else:
+            side = action_clean[:20]
         rows_park.append({
             "action_date": date,
             "action": side,
