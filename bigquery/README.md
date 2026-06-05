@@ -8,7 +8,7 @@ State at handoff (2026-06-05):
   - `parse_decision_log.py` — 221 entries validated (3 header eras)
   - `parse_portfolio_ledger.py` — position blocks → `position_events`; order-details → `trade_fills` (synthetic, superseded by connector); SGOV parking table → `parking_events`
   - `parse_regime_state.py` — technical signals + per-strategy activation states + activation-change history
-  - `parse_queues.py` — `Pending_Analysis.md` + `Pending_Adversarial_Reviews.md` + `Watchlist.md`
+  - `parse_queues.py` — `Pending_Analysis.md` + `Pending_Adversarial_Reviews.md` + **`Archived_Analysis.md` + `Archived_Adversarial_Reviews.md`** (completed entries, status='complete') + `Watchlist.md`. All collapse into one `events.queue_events` table — no separate "archive" concept.
   - `parse_adversarial_reviews.py` — paired attacker + orchestrator outputs
 - **Loader written:** `load_all.py` — one-shot, reads `GCP_SA_KEY` env var, uses `google-cloud-bigquery`, idempotency-guarded per table.
 

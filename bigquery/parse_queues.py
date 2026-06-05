@@ -99,6 +99,10 @@ def main():
     rows = []
     rows += parse_yaml_blocks((ROOT / "Pending_Analysis.md").read_text(encoding="utf-8"), "PENDING_ANALYSIS")
     rows += parse_yaml_blocks((ROOT / "Pending_Adversarial_Reviews.md").read_text(encoding="utf-8"), "PENDING_REVIEW")
+    # Completed/superseded entries D3 swept out of the live queues live here — unified into the
+    # same queue_events table with status='complete' (one table, not a separate "archive").
+    rows += parse_yaml_blocks((ROOT / "Archived_Analysis.md").read_text(encoding="utf-8"), "PENDING_ANALYSIS")
+    rows += parse_yaml_blocks((ROOT / "Archived_Adversarial_Reviews.md").read_text(encoding="utf-8"), "PENDING_REVIEW")
     rows += parse_watchlist((ROOT / "Watchlist.md").read_text(encoding="utf-8"))
     with open(OUT / "queue_events.jsonl", "w") as f:
         for r in rows: f.write(json.dumps(r) + "\n")
