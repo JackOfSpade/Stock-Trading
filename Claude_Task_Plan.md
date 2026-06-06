@@ -14,8 +14,9 @@ Claude reads this file at the start of every routine run, locates the matching `
 
 Claude runs as scheduled routines connected to a GitHub repo (currently `JackOfSpade/Stock-Trading`) and to Google Calendar via MCP. Inside a routine Claude has:
 
-- **Direct read/write access to repo .md files.** Live state files (Decision_Log.md, Portfolio_Ledger.md, Watchlist.md, Operating_Protocols.md, Regime_State.md) are edited in place. Cadence-output files (Daily.md, Weekly_*.md, Monthly_*.md, Quarterly_*.md, Annual_*.md) are overwritten each run. Decision_Log_Archive_<YYYY>_<QN>.md files are append-only quarterly archives written by W5.
-- **Calendar MCP** for the human's `[Claude] Confirm order` events only — the one action that needs the human (tap to confirm a crafted order). Claude-only analysis (thesis construction, re-screens, research-deferral checkpoints, foundation-change assessments, constraint-relaxation reviews, router reviews) is NEVER on the calendar: it runs in-session or via the autonomous `Pending_Analysis.md` queue (drained daily by D2). Structured adversarial reviews are likewise queue-driven via `Pending_Adversarial_Reviews.md` (see ADVERSARIAL REVIEWS section).
+- **BigQuery (Google Cloud MCP connector) — the canonical operational data substrate (project `stock-trading-498512`).** As of the 2026-06-06 cutover, all migrated state + history lives in BigQuery, NOT in repo `.md` files: positions/fills/marks (`events.*` → `state.current_positions`, `perf.strategy_daily`, `perf.kill_flags`), decisions (`events.decision_log` + `analytics.find_precedents()`), regime/router (`state.current_regime`), queues (`state.open_queue` / `events.queue_events`), per-strategy NAV + 2%-sizing base (`analytics.strategy_nav`), §13 reconciliation (`analytics.account_reconciliation`), calibration (`analytics.calibration_summary`), macro (`events.macro_series`), and the consolidated `state.daily_briefing`. Routines READ via `execute_sql_readonly` and WRITE via `execute_sql`. **Every routine MUST have the Google Cloud BigQuery connector enabled** — without it the routine cannot read or write state. Full source map + read/write override: Operating_Protocols.md §14 + §15.
+- **Repo `.md` files (read/write) — now SPEC + cadence-working files only.** Spec/rules files (Strategy.md, Experiment_Parameters.md, Operating_Protocols.md, Claude_Task_Plan.md, AI_Trading_Foundation.md, B_Sub_Pattern_Taxonomy.md, the C/E methodology docs, HF_Resource_Catalog.md) are read for rules and edited only when a protocol/spec changes. Cadence-output working files (Daily.md, Weekly_*.md, Monthly_*.md, Quarterly_*.md, Annual_*.md) + the Strategy-A queue (Watchlist.md) are overwritten/edited per run. The former live-state + archive `.md` (Decision_Log, Portfolio_Ledger, Regime_State, the Pending_* queues, all archives) are **RETIRED — read/write BigQuery instead** (§15).
+- **Calendar MCP** for the human's `[Claude] Confirm order` events only — the one action that needs the human (tap to confirm a crafted order). Claude-only analysis (thesis construction, re-screens, research-deferral checkpoints, foundation-change assessments, constraint-relaxation reviews, router reviews) is NEVER on the calendar: it runs in-session or via the autonomous analysis queue (`state.open_queue` over `events.queue_events`, drained daily by D2). Structured adversarial reviews are likewise queue-driven via `events.queue_events` (queue `PENDING_REVIEW`; see ADVERSARIAL REVIEWS section).
 - **IBKR connector (MCP)** for direct, authenticated access to the human operator's live brokerage account and market data. Crafts click-to-confirm order instructions (`create_order_instruction` → deep link), reads live account state (`get_account_summary` / `get_account_positions` / `get_account_balances` / `get_account_orders` / `get_account_trades`), and reads market data (`get_price_snapshot` / `get_price_history` / `search_contracts`). This connector replaces operator-typed order blocks (orders are now crafted and tap-confirmed) and operator screenshots (fills/positions/cash are read directly). Full protocol: Operating_Protocols.md §11 and the **IBKR connector usage** subsection below. Equity/ETF only for order-craft; options/other security types fall back to a manual text order block.
 - **Web research tools** (Tavily, web_search, web_fetch) for deep-research cadences.
 
@@ -190,7 +191,9 @@ If any answer reveals a violation, the response gets revised before sending.
 
 ## Decision-log lifecycle and archive policy
 
-`Decision_Log.md` is the LIVE decision log — entries that are still operationally relevant (open positions, active deferrals, current protocol revisions, recent dispositions within retention windows). Pruned weekly by W5.
+**SUPERSEDED 2026-06-06 (BigQuery cutover — Operating_Protocols.md §15).** The decision log is now `events.decision_log` (queryable; full narrative in `body_md`; semantic lookup via `analytics.find_precedents()`). There is **no live/archive split and no pruning** — BigQuery holds all entries, bounded automatically, so W5's archival lifecycle is retired. Routines write each new decision as an `events.decision_log` row (structured fields + `body_md`) and read via SQL / `find_precedents()`. `B_Sub_Pattern_Taxonomy.md`, `Watchlist.md`, and `Operating_Protocols.md` remain as kept `.md` factbase/spec files. The paragraphs below describe the retired `.md` live-log + per-quarter archive lifecycle and are kept only as historical context.
+
+`Decision_Log.md` was the LIVE decision log — entries that are still operationally relevant (open positions, active deferrals, current protocol revisions, recent dispositions within retention windows). Pruned weekly by W5.
 
 `Decision_Log_Archive_<YYYY>_<QN>.md` files contain matured entries from prior periods, organized by quarter (e.g. `Decision_Log_Archive_2026_Q2.md`). One file per quarter; appended throughout the quarter as W5 archives matured entries; closed at quarter-end.
 
@@ -208,7 +211,9 @@ Future sessions looking up specific historical entries find either the entry or 
 
 ## Queue lifecycle and daily archive policy
 
-The two drain-to-completion queues — `Pending_Analysis.md` (drained daily by D2) and `Pending_Adversarial_Reviews.md` (drained by the Adversarial Review routines) — are cleared **daily**, not on a retention window. A queue is read **to completion** by its drainer every day to find the entries it must act on, so a completed entry left in place is needlessly re-read each day — the opposite of `Decision_Log.md`, which is append-only, never scanned end-to-end, and therefore tolerates W5's weekly retention-window prune.
+**SUPERSEDED 2026-06-06 (BigQuery cutover — §15).** The queues are now `events.queue_events`; **`state.open_queue` is the live view** (latest status per item, filtered to actionable). Enqueue = insert a `queue_events` row; complete/supersede = insert a terminal-status row; there is **no `.md` queue and no `.md` daily-archive** — status filtering in `state.open_queue` replaces the physical archive entirely, so D3's queue-archive sweep is retired. D2 reads due analysis items from `state.open_queue` (queue `PENDING_ANALYSIS`); the Adversarial routines read `PENDING_REVIEW`; the Strategy-A queue stays in `Watchlist.md`. The paragraphs below describe the retired `.md` queues and are historical context.
+
+The two drain-to-completion queues — `Pending_Analysis.md` (drained daily by D2) and `Pending_Adversarial_Reviews.md` (drained by the Adversarial Review routines) — were cleared **daily**, not on a retention window. A queue is read **to completion** by its drainer every day to find the entries it must act on, so a completed entry left in place is needlessly re-read each day — the opposite of `Decision_Log.md`, which is append-only, never scanned end-to-end, and therefore tolerates W5's weekly retention-window prune.
 
 Each day **D3 Calendar Hygiene** sweeps every entry at a terminal `status` (`complete` or `superseded`) out of its live queue into the queue's daily archive — `Archived_Analysis.md` / `Archived_Adversarial_Reviews.md`. The full entry block is appended (tagged with an `archived: <YYYY-MM-DD>` field) and then **removed from the live file entirely**: this is a full clear — **no pointer line is left behind** (unlike the Decision_Log archive). The live queue therefore holds only actionable entries — `pending`, plus the adversarial queue's in-flight `attacker-complete` mid-state — preceded by its unchanged header + schema-reference preamble.
 
@@ -437,13 +442,13 @@ If no orders, no file changes, no events: "No actions required."
 ## D3. Calendar Hygiene — regular routine
 
 ```
-Read access scope: Calendar Hygiene. Read all live project files. Do NOT read or act on content from `Decision_Log_Archive_*.md` files.
+Read access scope: Calendar Hygiene. Read the spec/cadence `.md` files + BigQuery state (`state.open_queue`, `state.current_positions`) as needed. (The Decision_Log/queue archives are retired per §15 — query `events.decision_log` / `events.queue_events` if historical context is needed.)
 
 Reconcile Google Calendar against current state, and keep the `Pending_Analysis.md` queue healthy. Recurring cadence work (D1, D2, …, A3) runs as routines; Claude-only analysis runs in-session or via the `Pending_Analysis.md` queue. The calendar holds **only `[Claude] Confirm order` events** — the sole human action.
 
 DATE ANCHOR: "Today" is the current system date **in America/Denver specifically** — not UTC, not the assistant-context `currentDate` field, and not inferred from file timestamps. Do NOT trust the `currentDate` value embedded in the chat context: that field is UTC-based, and during evening MT hours UTC has already rolled to the next calendar day — using it as "today" will cause same-day order-confirmation events to be misclassified as order-day-passed and deleted (this regression occurred 2026-05-27 evening MT on the META convergence exit). To establish today, ALWAYS run a Bash command equivalent to `TZ=America/Denver date '+%Y-%m-%d %H:%M %Z'` as the first action of the routine and use its date as the anchor. Do NOT infer today from file timestamps (Decision_Log entry headers, Portfolio_Ledger "Last updated", etc.) — those may be forward-dated, templated, or recovery-artifact content. If the Bash-derived MT date conflicts with project-file timestamps or with `currentDate`, trust the Bash MT date and flag the conflict in chat output.
 
-QUEUE ARCHIVE SWEEP (run after D2 has drained `Pending_Analysis.md` and after any Adversarial Review routine has run this cycle): for each of `Pending_Analysis.md` and `Pending_Adversarial_Reviews.md`, move every entry whose `status` is terminal (`complete` or `superseded`) out of the live file — append its full block (with an added `archived: <today, MT>` field) to the queue's daily archive (`Archived_Analysis.md` / `Archived_Adversarial_Reviews.md`; create it with a header line on first use), then delete it from the live queue. Full clear — leave no pointer line. Preserve each live file's header + schema-reference preamble and all non-terminal entries (`pending`, and the adversarial queue's in-flight `attacker-complete`). See "Queue lifecycle and daily archive policy."
+QUEUE HYGIENE (BigQuery — the `.md` queue-archive sweep is RETIRED per §15). The queues are `events.queue_events`; `state.open_queue` already surfaces only actionable items (latest status per item — terminal `complete`/`superseded` entries are filtered out automatically, so there is no physical sweep). Spot-check: confirm any item D2 or the Adversarial routines marked terminal this cycle has its terminal-status row in `events.queue_events` (so it drops out of `state.open_queue`), and flag any `state.open_queue` item whose `due_date` is past but still actionable (a missed drain).
 
 Walk all `[Claude]` events in the next 90 days. The calendar should contain **only `[Claude] Confirm order` events**:
 - If any legacy analysis event is still present (thesis construction, re-screen, research-deferral checkpoint, foundation-change assessment, constraint-relaxation review, router review, pulse-check / time-exit / convergence check), it is OBSOLETE under the in-session/queue model: convert it to a `Pending_Analysis.md` entry with an appropriate `due_date` + self-contained `context` (or, for pulse / time-exit / convergence checks, simply drop it — D1's daily mechanical exit sweep covers those), then delete the calendar event.
@@ -455,11 +460,11 @@ Walk currently-open positions and pending orders from Portfolio_Ledger.md, cross
 - Confirm every staged order (entry or exit, ORDER-STAGED or exit-pending) has a corresponding order-confirmation event at 07:00 MT pre-market on the order day (if the order day is still in the future) AND a live crafted instruction in `get_order_instructions`. If the order day is still future and the instruction is missing, re-craft it (`create_order_instruction`) and repair the event. If the order day is today and market is still open, create/repair the event immediately. If the order day is past and the order was Day duration (now the only duration Claude crafts — Operating_Protocols.md §11), it either filled or expired — confirm via Step 0 reconciliation / `get_account_trades`; flag if not yet reconciled (if it expired unfilled but the thesis still wants the entry/exit, it is re-crafted as a fresh DAY order per the persist-and-wait re-craft step below).
 - Garbage-collect stale crafted instructions: any `get_order_instructions` entry whose order day has passed unconfirmed, or whose position is already closed/opened per reconciliation, is cleared with `delete_order_instruction`.
 - Daily re-craft of persist-and-wait orders (DAY-only policy, Operating_Protocols.md §11): a Claude-crafted DAY order does not rest overnight — it fills or expires at session close — so an order meant to persist is kept alive by re-crafting it fresh each session. Any position still ORDER-STAGED / exit-pending whose prior DAY order expired unfilled but whose thesis still intends the entry/exit (entry window still open / exit still required) is re-crafted as a new DAY instruction for the current session: re-pull `get_price_snapshot`, re-set the limit to the live market (or hold the disciplined non-chasing limit if the thesis dictates a specific rest level), `create_order_instruction`, and create/repair the 07:00 confirm event. Any legacy or operator-placed GTC still working in `get_account_orders` that is drifted far from the market or past its intended window is flagged for delete/cancel + re-craft to a DAY order rather than left to drift indefinitely.
-- `Pending_Analysis.md` queue hygiene: confirm every open position flagged for research-deferral has a queue entry (analysis_type: research-deferral-checkpoint) with its resolution `due_date` + `conservative_default`; flag any queue entry whose `due_date` is in the past but still `status: pending` (D2 should have drained it — surface as a missed analysis). (Terminal entries were already removed by the QUEUE ARCHIVE SWEEP above; the live queue you check here should contain only actionable entries.)
+- Queue hygiene (`state.open_queue` / `events.queue_events`): confirm every open position flagged for research-deferral has a `queue_events` entry (analysis_type: research-deferral-checkpoint) with its resolution `due_date` + `conservative_default`; flag any `state.open_queue` item whose `due_date` is past but still actionable (D2 should have drained it — surface as a missed analysis).
 
 Time zone America/Denver unless Experiment_Parameters.md specifies otherwise.
 
-CHAT OUTPUT: one-line summary of calendar + queue reconciliation (e.g., "1 legacy thesis event migrated to queue + deleted; 3 confirm-order events verified; 2 terminal entries swept to daily archives; queues clean.").
+CHAT OUTPUT: one-line summary of calendar + queue reconciliation (e.g., "1 legacy thesis event migrated to queue + deleted; 3 confirm-order events verified; state.open_queue clean (no past-due actionable items).").
 ```
 
 ---
@@ -610,12 +615,12 @@ If no orders, no file changes, no queue entries: "No actions required."
 
 ## W5. Decision Log Hygiene — regular routine
 
-Runs weekly (Sunday or Monday before market week, alongside or after W4). Mechanical lifecycle bookkeeping, not deep research.
+Runs weekly (Sunday, after W4). **Repurposed 2026-06-06 (BigQuery cutover §15):** the Decision_Log live/archive prune is RETIRED — `events.decision_log` holds everything, queryable + bounded, so there is nothing to archive. W5 is now **weekly knowledge + analytics consolidation**: extract new Strategy-B sub-patterns, capture protocol revisions, reconcile the Watchlist, refresh decision embeddings, and review the calibration + reconciliation health. Not deep research.
 
 ```
-Read access scope: Weekly cadence with factbase WRITE permission. Read `Decision_Log.md` (live), the current-quarter `Decision_Log_Archive_<YYYY>_<QN>.md` if it exists, `B_Sub_Pattern_Taxonomy.md` if it exists, `Watchlist.md` if it exists, `Operating_Protocols.md` if it exists, and `Portfolio_Ledger.md` (for open-position list). Do not read other archive quarters' files unless an entry being archived references them and consistency check is needed.
+Read access scope: Weekly cadence with factbase WRITE permission. Query `events.decision_log` (entries added since the last W5 run, by `entry_date`/`event_ts`), `analytics.calibration_summary`, `analytics.account_reconciliation`, `state.current_positions`. Read the kept factbase/spec files `B_Sub_Pattern_Taxonomy.md`, `Watchlist.md`, `Operating_Protocols.md`.
 
-PRE-ARCHIVAL MIRRORING — before applying lifecycle rules, walk current Decision_Log.md entries and mirror durable signal into factbases. This step preserves operationally-needed context that would otherwise be lost when entries archive.
+FACTBASE MIRRORING — walk the new `events.decision_log` entries since the last W5 run and mirror durable signal into the kept factbase files.
 
 Mirror to `Watchlist.md`:
 - For any entry that adds a name to a strategy queue (e.g., "AAPL added to A-watchlist queue per router-gate-failure pattern"), ensure the name appears in Watchlist.md under the appropriate strategy section. Per-name fields: ticker, date-added, source-DecisionLogEntry-date, reason summary, resolution-trigger condition (e.g., "next M1 with A router ACTIVATE").
@@ -629,22 +634,12 @@ Mirror to `Operating_Protocols.md`:
 - When revising an existing protocol section, replace the canonical text with the new revision and append the prior canonical to revision history.
 - Do NOT mirror NO-GO entries, position entries, calendar-recon entries, or session-end-consolidation entries — those are not protocol entries.
 
-LIFECYCLE RULES — after mirroring, apply the live/archive split:
+ANALYTICS REVIEW (BigQuery) — the Decision_Log live/archive split + weekly prune is RETIRED (`events.decision_log` is queryable + bounded; nothing to archive). Instead:
+- Refresh `analytics.decision_embeddings` for any `events.decision_log` entries not yet embedded (incremental `ML.GENERATE_EMBEDDING` — bigquery/02_ai_layer.sql §"Incremental re-embedding"), so `find_precedents()` covers the week's new theses.
+- Review `analytics.calibration_summary` (per-conviction-tier win-rate / avg realized P&L as closed trades accrue) and note progress toward the ≥30-closed-trade gate that activates the conviction model (bigquery/04_analytics.sql).
+- Sanity-check `analytics.account_reconciliation` (events-side NAV totals) for drift; flag anything material in the W5 outcome.
 
-Keep in live Decision_Log.md any entry meeting one of:
-- (a) ENTRY records for currently-open positions (across A, B, C, D, E)
-- (b) ACTIVE deferrals (deferred decisions not yet resolved)
-- (c) PROTOCOL revisions still canonical (i.e., the revision is in current force)
-- (d) Recent NO-GO entries within retention window per Strategy: 14 days for B; 30 days for C; 60 days for A; 90 days for D and E
-- (e) Recent ROUTER calls within retention window: most-recent M1 call per strategy stays live; older M1 calls archive
-- (f) Recent SESSION-END consolidation entries within 14 days
-- (g) Open ADVERSARIAL REVIEW records (review not yet completed)
-
-Move to current-quarter archive any entry not meeting (a)-(g). For each moved entry:
-1. Append the full entry to `Decision_Log_Archive_<YYYY>_<QN>.md` (current-quarter file), creating the file with first line `# Decision Log Archive <YYYY> <QN>` if it does not exist.
-2. Replace the entry in live Decision_Log.md with the single-line pointer: `# [archived] <YYYY-MM-DD> <title> → Decision_Log_Archive_<YYYY>_<QN>.md`
-
-EXTRACT B sub-pattern instances during archival. For each B NO-GO entry being archived:
+EXTRACT B sub-pattern instances. Query `events.decision_log` for Strategy-B criterion-4 NO-GO entries added since the last W5 run; for each:
 1. Confirm it is a Strategy B criterion-4 NO-GO (narrative-misalignment/sub-pattern-driven) versus a mechanical NO-GO (criterion-1 mechanical, instrument-rule, router-gate). Mechanical NO-GOs go to (4) below.
 2. Confirm sub-pattern classification language is present in the entry. If the entry describes a specific sub-pattern but does not name it explicitly, classify it now per the taxonomy below; if it neither describes nor names a sub-pattern, log a consistency-check anomaly.
 3. For each NO-GO entry being archived: scan for sub-pattern classification language. The Strategy B taxonomy as of this prompt's authoring includes (non-exhaustive list — extract additional categories as they appear in entries):
@@ -668,9 +663,9 @@ ENTRIES THAT POINT BACKWARDS: when archiving an entry that contains "References"
 
 CONSISTENCY CHECK: after archival actions complete, scan the updated live Decision_Log.md for any references to entries that were just archived. Cross-reference text mentioning specific dated entries (e.g. "per Decision_Log 2026-04-29 SBUX NO-GO") is fine — the reader can find the pointer line. Do NOT mass-rewrite cross-references.
 
-FILE EDITS:
-- Apply all live/archive moves directly to `Decision_Log.md` and the current-quarter `Decision_Log_Archive_<YYYY>_<QN>.md`.
-- Apply mirroring edits directly to `B_Sub_Pattern_Taxonomy.md`, `Watchlist.md`, `Operating_Protocols.md`.
+FILE / BIGQUERY EDITS:
+- There is no `.md` log or archive to move entries between (retired) — the W5 outcome entry is written to `events.decision_log`.
+- Apply mirroring edits directly to the kept factbase files `B_Sub_Pattern_Taxonomy.md`, `Watchlist.md`, `Operating_Protocols.md`; refresh `analytics.decision_embeddings` per the Analytics Review above.
 
 Append a brief Decision_Log entry documenting the W5 cycle outcome: count of entries archived, count of new sub-pattern instances extracted, file size deltas if notable, any consistency-check anomalies surfaced.
 
