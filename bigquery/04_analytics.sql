@@ -147,3 +147,34 @@ GROUP BY conviction ORDER BY ord;
 --   (SELECT * FROM `...analytics.conviction_features` WHERE NOT position_closed));
 -- Until then the routine reads analytics.calibration_summary (the empirical running tally). The >=30-
 -- closed gate is enforced in Operating_Protocols.md / Claude_Task_Plan.md before any output is used.
+
+-- ===== Per-strategy NAV / 2%-sizing base (2026-06-06) — the last Portfolio_Ledger data domain =====
+-- NAV_strategy = equal-split deposits ($9,446.86/5) + realized P&L (trade_fills) + unrealized (open
+-- positions marked at the latest daily_marks close) + held-stock dividends. Gives the **2%-sizing base**
+-- (sizing_base_2pct ≈ $37.7/strategy) + available-funds (NAV − deployed MV) — the figures the routines
+-- previously read from Portfolio_Ledger.md. Σ NAV ≈ $9,442 vs connector NLV ≈ $9,461 (~0.2% light: the
+-- shared SGOV park is held at deposit par here). NOTE: the EXACT per-strategy SGOV-share allocation (the
+-- §13 cash-tripwire basis — the long-standing attribution debt) is NOT yet reconciled to the share; until
+-- it is, the §13 tripwire still reads Portfolio_Ledger.md, so Portfolio_Ledger is KEPT.
+CREATE OR REPLACE VIEW `stock-trading-498512.analytics.strategy_nav` AS
+WITH dep AS (SELECT s AS strategy, CAST(1889.372 AS NUMERIC) AS deposits FROM UNNEST(['A','B','C','D','E']) s),
+realized AS (SELECT strategy, SUM(realized_pnl) AS realized_pnl FROM `stock-trading-498512.events.trade_fills` GROUP BY strategy),
+latest_close AS (SELECT ticker, close FROM `stock-trading-498512.events.daily_marks`
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY mark_date DESC)=1),
+open_pos AS (SELECT cp.strategy, SUM(cp.shares*lc.close) AS open_mv, SUM(cp.cost_basis) AS open_cost
+  FROM `stock-trading-498512.state.current_positions` cp JOIN latest_close lc USING (ticker)
+  WHERE cp.status='OPEN' GROUP BY cp.strategy),
+divs AS (SELECT l.strategy, SUM(l.shares*m.dividend) AS dividends
+  FROM `stock-trading-498512.analytics.position_lifecycle` l
+  JOIN `stock-trading-498512.events.daily_marks` m ON m.ticker=l.ticker AND m.dividend IS NOT NULL
+   AND m.mark_date>=l.entry_date AND (l.exit_date IS NULL OR m.mark_date<=l.exit_date)
+  GROUP BY l.strategy)
+SELECT d.strategy, d.deposits,
+  ROUND(COALESCE(r.realized_pnl,0),2) AS realized_pnl,
+  ROUND(COALESCE(o.open_mv-o.open_cost,0),2) AS unrealized_pnl,
+  ROUND(COALESCE(dv.dividends,0),2) AS dividends_held,
+  ROUND(COALESCE(o.open_mv,0),2) AS deployed_mv,
+  ROUND(d.deposits+COALESCE(r.realized_pnl,0)+COALESCE(o.open_mv-o.open_cost,0)+COALESCE(dv.dividends,0),2) AS nav,
+  ROUND(d.deposits+COALESCE(r.realized_pnl,0)+COALESCE(o.open_mv-o.open_cost,0)+COALESCE(dv.dividends,0)-COALESCE(o.open_mv,0),2) AS available_funds,
+  ROUND(0.02*(d.deposits+COALESCE(r.realized_pnl,0)+COALESCE(o.open_mv-o.open_cost,0)+COALESCE(dv.dividends,0)),2) AS sizing_base_2pct
+FROM dep d LEFT JOIN realized r USING(strategy) LEFT JOIN open_pos o USING(strategy) LEFT JOIN divs dv USING(strategy);

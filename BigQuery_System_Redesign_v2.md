@@ -90,8 +90,9 @@ and redesign the workflow if there's a better way*:
   adversarial/archive domains. **Retired 2026-06-06 (13 files):** Monthly_Macro_Data×2, Monthly_Fundamental_RegimeScore,
   Adversarial_Review_*×6, Decision_Log_Archive_2026_Q2, Archived_Analysis/Adversarial, Decision_Log_Migration_Entry.
   **Still kept (staged):** `Regime_State.md` (router-state read by ~15 routines — BQ now faithful after the
-  D/E fix; the read-cutover is the next phase), `Portfolio_Ledger.md` (needs a per-strategy-allocation
-  table in BQ first), `Decision_Log.md` (human audit trail — keep or retire-last), the live queues.
+  D/E fix; the read-cutover is the next phase), `Portfolio_Ledger.md` (2%-sizing base + per-strategy NAV
+  now in `analytics.strategy_nav`; only the exact per-strategy SGOV-share §13 reconciliation remains),
+  `Decision_Log.md` (human audit trail — keep or retire-last), the live queues.
 - **Optional** — BLS/SEC public-data wiring (P2); scheduled-query automation (console/DTS) vs. agent-run.
 - **Operational** — live ledger B/D Performance blocks corrected to the validated gross figures
   (done); the `bq-loader` SA key is deleted (ongoing writes are MCP INSERTs). Cost to date
