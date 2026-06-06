@@ -8,6 +8,7 @@ The experiment's quantitative data substrate. **Built, validated, and self-maint
 - `03_twr_engine.sql` — deployed-TWR engine: `daily_marks` → `strategy_daily_returns` + `sgov_daily_return` → `perf.strategy_daily` → `perf.kill_flags`. **GROSS-of-commission** profitability metric (commissions tracked exactly in the cash/NAV accounting, separately). Includes the recompute query D2 runs daily.
 - `04_analytics.sql` — regime scoring, `theater_independence`, `thesis_outcomes` (calibration), `macro_series`, `decision_log.ticker` backfill.
 - `05_state_briefing.sql` — `state.daily_briefing` (due queue + kill-flags + exits).
+- `06_forecast.sql` — `analytics.deployed_twr_forecast` + `twr_forecast_vs_actual`: zero-shot `AI.FORECAST` (built-in TimesFM, no model to train/host) over the deployed-TWR engine (`perf.strategy_daily`) + macro series (`events.macro_series`), written monthly by **M5**. Advisory/early-warning only — never a trigger (kill/gate stay on realised `perf.kill_flags`).
 
 ## How it stays current
 The one-time `.md`→BigQuery migration is **COMPLETE**; the migration parsers (`parse_*.py` / `load_all.py`) are **RETIRED** (git history retains them). Ongoing maintenance is **connector/agent-driven**: D2 Step 0 event-sources each reconciled fill → `events.trade_fills` + `events.position_events`, ingests `daily_marks` (`get_price_history`, corporate-action aware), recomputes `perf.strategy_daily`, and mirrors new `Decision_Log.md` entries → `events.decision_log` (+ embedding, + ticker). See Claude_Task_Plan.md D2 + Operating_Protocols.md §14.

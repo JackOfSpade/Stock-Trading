@@ -8,6 +8,40 @@ Claude reads this file at the start of every routine run, locates the matching `
 
 ---
 
+# ROUTINE INVENTORY & BIGQUERY RESPONSIBILITIES
+
+Every routine reads and/or writes BigQuery for operational state (positions, regime, decisions, queues, NAV, perf/kill-flags, macro). **Therefore every routine MUST have the Google Cloud BigQuery connector enabled** — without it the routine cannot find the state it needs and fails on restart. This is the single-page map of each routine's BigQuery I/O, derived from each routine's prompt body **plus the Operating_Protocols.md §15 authoritative-source override** (which redirects the retired `.md` reads/writes: Regime_State → `state.current_regime`; Portfolio_Ledger → `state.current_positions` / `perf.strategy_daily` / `analytics.strategy_nav` / `analytics.account_reconciliation`; Decision_Log → `events.decision_log` / `find_precedents()`; the `Pending_*` queues → `state.open_queue` / `events.queue_events`). The action-conversion routines (D2 / W4 / M4 / Q4 / A3) are the primary BigQuery writers; deep-research routines mainly read state and write their cadence `.md` output (last column).
+
+| ID | Routine | Cadence · Type | BigQuery reads | BigQuery writes | Cadence `.md` output |
+|---|---|---|---|---|---|
+| **D1** | Market Development Scan | Daily · research | `state.daily_briefing`, `state.current_positions`, `perf.kill_flags`/`perf.strategy_daily`, `state.current_regime`, `find_precedents()` | `events.decision_log` (dev notes); inline router review → `events.regime_events` | Daily.md |
+| **D2** | Daily Action Conversion | Daily · regular | `state.daily_briefing`, `state.current_positions`, `events.daily_marks` | `events.trade_fills`, `events.position_events`, `events.daily_marks`; recompute `perf.strategy_daily`; `events.decision_log` (+`analytics.decision_embeddings`); `events.regime_events`; `events.queue_events`; Watchlist.md | — (reads Daily.md) |
+| **D3** | Calendar Hygiene | Daily · regular | `state.open_queue`, `state.current_positions`, `events.queue_events`/`events.decision_log` | `events.queue_events` (terminal-entry sweep) | — |
+| **W1** | Catalyst Calendar (A, C) | Weekly · research | `state.current_regime`, `state.current_positions`, `events.decision_log` | — | Weekly_Catalyst_Calendar.md |
+| **W2** | Post-Event Screen (B) | Weekly · research | `events.decision_log`/`find_precedents()`, `state.current_positions` | — | Weekly_Post_Event_Screen.md |
+| **W3** | Open-Position Deep-Dive (A,B,C,E) | Weekly · research | `state.current_positions`, `state.current_regime`, `events.decision_log` | — | Weekly_Position_Deep_Dive.md |
+| **W4** | Weekly Action Conversion | Weekly · regular | W1–W3 `.md`, `state.current_positions`, `state.current_regime`, `events.decision_log` | `events.regime_events`, `events.decision_log`, `events.queue_events`; Watchlist.md | — |
+| **W5** | Factbase & Analytics Consolidation | Weekly · regular | `events.decision_log`, `analytics.calibration_summary`, `analytics.account_reconciliation`, `state.current_positions` | `analytics.decision_embeddings` (incremental); `events.decision_log` (outcome); factbase `.md` mirroring (B_Sub_Pattern, Watchlist, Operating_Protocols) | — |
+| **M1a** | Strategy-Blind Regime Scoring | Monthly · research | prior `events.macro_series` (+ web) | `events.macro_series`; `events.regime_events` (`FUNDAMENTAL_AXIS`) | — |
+| **M1b** | Strategy Mapping & Activation | Monthly · regular | `state.current_regime` / `events.regime_events` (`FUNDAMENTAL_AXIS`) | — | Monthly_Fundamental.md |
+| **M2** | E Pair Divergence Screen | Monthly · research | `state.current_positions`, `events.decision_log` | — | Monthly_E_Pairs.md |
+| **M3** | D Position Deep-Dive | Monthly · research | `state.current_positions`, `events.decision_log` | — | Monthly_D_Position_Deep_Dive.md |
+| **M4** | Monthly Action Conversion | Monthly · regular | M1b/M2/M3 `.md`, `state.current_positions`, `state.current_regime`, `perf.kill_flags`/`perf.strategy_daily` (§H gate/kill) | `events.regime_events`, `events.decision_log`, `events.queue_events`; Watchlist.md | — |
+| **M5** | Deployed-TWR & Macro Forecast | Monthly · regular | `perf.strategy_daily`, `perf.kill_flags`, `events.macro_series`, prior `analytics.deployed_twr_forecast` | `analytics.deployed_twr_forecast`; `events.decision_log` (outcome) | — |
+| **AR·att** | Adversarial Review Attacker | Daily¹ · regular | review queue (`state.open_queue`/`events.queue_events`, `PENDING_REVIEW`); artifact | `events.adversarial_reviews` (attacker) | Adversarial_Review_*_attacker.md |
+| **AR·orc** | Adversarial Review Orchestrator | Daily¹ · regular | `events.adversarial_reviews` (attacker); artifact | `events.adversarial_reviews` (orchestrator); `events.regime_events` (binding activation); `events.decision_log` | Adversarial_Review_*_orchestrator.md |
+| **Q1** | Regime Retrospective | Quarterly · research | `events.regime_events`, `events.decision_log` | — | Quarterly_Regime.md |
+| **Q2** | D Long-Horizon Candidates | Quarterly · research | `state.current_positions`, `events.decision_log` | — | Quarterly_D_Candidates.md |
+| **Q3** | AI Foundation Quarterly Delta | Quarterly · research | `events.hf_capability_captures`, `events.decision_log` | `events.hf_capability_captures` | Quarterly_AI_Foundation_Delta.md |
+| **Q4** | Quarterly Action Conversion | Quarterly · regular | Q2/Q3 `.md`, `state.current_positions` | `events.decision_log`, `events.queue_events`; Watchlist.md | — |
+| **A1** | AI Foundation Annual Re-Derivation | Annual · research | `events.hf_capability_captures`, `events.decision_log` | `events.hf_capability_captures` | Annual_AI_Foundation_Sweep.md |
+| **A2** | Per-Strategy Constraint Audit | Annual · research | `events.decision_log`, `state.current_positions` | — | Annual_Constraint_Audit.md |
+| **A3** | Annual Action Conversion | Annual · regular | A1/A2 `.md`, `state.current_positions` | `events.decision_log`, `events.queue_events` | updates AI_Trading_Foundation.md + Strategy.md |
+
+¹ Adversarial routines are queue-driven: they fire daily but no-op unless the review queue (`PENDING_REVIEW`) has a due entry. The deep-research routines' `.md` outputs are their cadence working files; the **canonical** state always lives in BigQuery per the columns above.
+
+---
+
 # OPERATING MODEL
 
 ## Execution environment
@@ -232,7 +266,7 @@ Pairing:
 - **Q4 Quarterly Action Conversion** — reads Quarterly_D_Candidates.md and Quarterly_AI_Foundation_Delta.md (Q1 Quarterly_Regime.md is a pure backward-looking factbase with no actions).
 - **A3 Annual Action Conversion** — reads Annual_AI_Foundation_Sweep.md and Annual_Constraint_Audit.md; produces updated AI_Trading_Foundation.md and updated Strategy.md.
 
-Cadence-level hygiene routines (D3 Calendar Hygiene, W5 Knowledge and Calibration Consolidation) run after action conversion since they reference state mutated by it.
+Cadence-level hygiene routines (D3 Calendar Hygiene, W5 Factbase & Analytics Consolidation) run after action conversion since they reference state mutated by it.
 
 Because each routine run is a fresh session, deep-research routines must persist EVERYTHING the action-conversion routine will need into the cadence-output file. The legacy "PART 1 saved / PART 2 in-chat" split is obsolete — both parts go into the file.
 
@@ -471,7 +505,7 @@ CHAT OUTPUT: one-line summary of calendar + queue reconciliation (e.g., "1 legac
 
 # WEEKLY (Sunday or Monday before market week)
 
-W1, W2, W3 are deep-research routines run in parallel; W4 (action conversion) runs after all three are saved; W5 (decision-log hygiene) runs alongside or after W4.
+W1, W2, W3 are deep-research routines run in parallel; W4 (action conversion) runs after all three are saved; W5 (factbase & analytics consolidation) runs alongside or after W4.
 
 ## W1. Catalyst Calendar (Strategies A and C) — deep research
 
@@ -613,7 +647,7 @@ If no orders, no file changes, no queue entries: "No actions required."
 
 ---
 
-## W5. Knowledge and Calibration Consolidation — regular routine
+## W5. Factbase & Analytics Consolidation — regular routine
 
 Runs weekly (Sunday, after W4). **Repurposed 2026-06-06 (BigQuery cutover §15):** the Decision_Log live/archive prune is RETIRED — `events.decision_log` holds everything, queryable + bounded, so there is nothing to archive. W5 is now **weekly knowledge + analytics consolidation**: extract new Strategy-B sub-patterns, capture protocol revisions, reconcile the Watchlist, refresh decision embeddings, and review the calibration + reconciliation health. Not deep research.
 
@@ -678,9 +712,9 @@ CHAT OUTPUT: one-line acknowledgment of files edited (e.g., "Decision_Log.md, De
 
 # MONTHLY (first trading day of month)
 
-M1a, M1b, M2, M3 are deep-research routines; M4 (action conversion) runs after all are saved.
+M1a, M1b, M2, M3 are deep-research routines; M4 (action conversion) runs after all are saved; M5 (forecast monitor) runs after M4.
 
-(The "M2" slot is intentionally vacant — the AI Capabilities Research task previously M2 was moved to quarterly cadence as Q3. M4 numbering is retained sequentially with the gap.)
+(Renumbered 2026-06-06 to match the remote routine console: the former vacant "M2" slot was closed — E Pair Divergence Screen → M2, D Position Deep-Dive → M3, Monthly Action Conversion → M4. The AI Capabilities Research task once in the old "M2" slot remains at quarterly cadence as Q3. M5 (Deployed-TWR & Macro Forecast) was added 2026-06-06 as the monthly AI.FORECAST monitor — see its section after M4.)
 
 ## M1a. Strategy-Blind Regime Scoring — deep research
 
@@ -913,6 +947,30 @@ CHAT OUTPUT:
 - One-line acknowledgment of file edits, `Pending_Analysis.md` entries appended, and confirm-order events created.
 
 If no orders, no file changes, no queue entries: "No actions required."
+```
+
+---
+
+## M5. Deployed-TWR & Macro Forecast — regular routine
+
+Runs monthly, after M4 (Monthly Action Conversion). The forward-looking monitoring overlay: a zero-shot `AI.FORECAST` (BigQuery built-in TimesFM — **no model to train or host**) over the deployed-TWR engine and, once it accrues enough history, the macro series. **Advisory / early-warning ONLY — it never stages an exit, termination, or activation change. Kill/gate triggers fire on REALISED values (`perf.kill_flags`), never on a forecast** (Experiment_Parameters.md kill-criteria discipline). Not deep research; pure BigQuery. DDL + query templates: `bigquery/06_forecast.sql`.
+
+```
+Read access scope: Monthly cadence, BigQuery read + write. Read `perf.strategy_daily` (the deployed-TWR series), `perf.kill_flags`, `events.macro_series`, and the prior run's `analytics.deployed_twr_forecast`. No web research or repo factbase reads required.
+
+STEP 0 — ensure the store exists: idempotent `CREATE TABLE IF NOT EXISTS analytics.deployed_twr_forecast` (bigquery/06_forecast.sql §store).
+
+STEP 1 — FORECAST-VS-ACTUAL early-warning (skip on the first-ever run). Query `analytics.twr_forecast_vs_actual` (the most-recent PRIOR run's `deployed_unit_value` forecast vs realised `perf.strategy_daily` for now-elapsed dates). Flag any strategy whose realised deployed-unit-value landed BELOW the prior forecast's `pi_lower` (downside surprise — possible regime shift / unmodeled deterioration) or above `pi_upper`. This is the calibration + early-warning signal.
+
+STEP 2 — NEW deployed-TWR forecast. Run `AI.FORECAST` per active strategy over `perf.strategy_daily`, horizon 21 (~one trading month), `confidence_level => 0.9`, for two series: `deployed_unit_value` (drawdown / profitability path) and `excess_vs_sgov` (relative-perf / mark-to-market path). INSERT every forecast row into `analytics.deployed_twr_forecast` with `run_date = CURRENT_DATE('America/Denver')` (bigquery/06_forecast.sql §A). (29 deployed days at 2026-06 is enough to run — AI.FORECAST handles the business-day spacing; intervals are wide now and tighten as history accrues.)
+
+STEP 3 — KILL/GATE TRAJECTORY check (advisory). From the new forecast, note whether the central path or `pi_lower` of `deployed_unit_value` trends toward a kill threshold over the horizon — drawdown-kill `deployed_unit_value / peak_unit_value − 1 ≤ −0.50` (#1), or `excess_vs_sgov ≤ −0.10` (the mark-to-market #4 proxy, which only becomes a live trigger at `deployed_days ≥ 756`). A heads-up for the next M4 gate/kill review — NOT a trigger. Do NOT stage any exit or termination off the forecast.
+
+STEP 4 — MACRO forecast (GATED on history). For each `events.macro_series` metric with ≥ 8 monthly observations, run `AI.FORECAST` (`data_col => 'value'`, `timestamp_col => 'release_date'`, `id_cols => ['metric']`, horizon 3) and INSERT the rows (`series` = the metric name). Skip metrics with fewer points — record `insufficient history (n=<k>)` per skipped metric. (As of 2026-06 every metric has 1–2 points → AI.FORECAST returns `ai_forecast_status='The time series data is too short.'`, so this step is a coverage no-op until the series accrues history; M1a feeds it forward one release per month. The ≥8 gate is tunable.)
+
+STEP 5 — write a brief `events.decision_log` entry (`entry_type='forecast-monitor'`): per-strategy horizon-end forecast + interval for `deployed_unit_value` and `excess_vs_sgov`; any STEP 1 band breaches; the STEP 3 trajectory note; macro coverage (metrics forecasted vs. gated).
+
+CHAT OUTPUT: one line — e.g. "M5 forecast: B duv(21d) 0.999 [0.97,1.02], excess −0.4% [−2.1%,+1.3%]; D duv 0.96 [0.92,1.00]; no prior-band breach; no kill-trajectory flag; macro 0/12 (insufficient history). Wrote 84 forecast rows + 1 decision_log entry."
 ```
 
 ---

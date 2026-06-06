@@ -11,7 +11,7 @@ Verified May 2026 via direct calls to `paper_search` and `hub_repo_search`. Oper
 
 - HF is **materially valuable** for exactly two things in this experiment: (a) curated ML research literature on LLM failure modes, calibration, prompt injection, financial reasoning, and adversarial debate (paper_search), and (b) a small set of durable benchmarks/leaderboards (FinanceBench, FinanceQA, StockBench, BizFinBench, BBEH, Open LLM Leaderboard archive, FinMTEB) accessible as dataset/space repos.
 - HF is **not materially valuable** for: live financial data, real-time news/sentiment, SEC EDGAR access, time-series forecasting, FinBERT-style sentiment scoring of earnings transcripts inside the routines, or anything Anthropic/Claude-specific. For each of these, web_search/Tavily/web_fetch is equal or better.
-- Connector recommendation: **Add HF only to D1 (light-touch, optional) for AI-capability deltas, in addition to the existing A1 and Q3 designations.** Do not add it to Q2, W2, M3, or M4 — the supposed FinBERT advantage there is illusory once you account for Claude's own zero-shot sentiment quality and the staleness of HF's financial models.
+- Connector recommendation: **Add HF only to D1 (light-touch, optional) for AI-capability deltas, in addition to the existing A1 and Q3 designations.** Do not add it to Q2, W2, M2, or M3 — the supposed FinBERT advantage there is illusory once you account for Claude's own zero-shot sentiment quality and the staleness of HF's financial models.
 - The PRIMARY HF use is paper_search for Tier 1 disadvantage citations (recency, base-rate neglect, sycophancy, anchoring, sandbagging, alignment faking, lost-in-the-middle, multi-agent debate). For these, HF's curated `hf.co/papers` index plus its summary cards is faster and more on-point than web_search-then-arxiv.
 
 ---
@@ -37,7 +37,7 @@ Verified May 2026 via direct calls to `paper_search` and `hub_repo_search`. Oper
   - **Give Me FP32 or Give Me Death? Challenges and Solutions for Reproducible Reasoning** (Yuan et al., Jun 2025, hf.co/papers/2506.09501). Floating-point determinism — relevant context that cross-session inconsistency has hardware roots, not only stochastic decoding.
   - *When Judgment Becomes Noise: How Design Failures in LLM Judge Benchmarks Silently Undermine Validity* (Feuer et al., Sep 2025, hf.co/papers/2509.20293). Direct relevance to using LLM-as-judge in Adversarial Review Orchestrator.
   - *Evaluating Consistency and Reasoning Capabilities of LLMs* (Saxena et al., Apr 2024, hf.co/papers/2404.16478).
-- **Routines that benefit:** A1, Q3, Adversarial Review (Recommendation/Attacker/Orchestrator), W5 Knowledge and Calibration Consolidation.
+- **Routines that benefit:** A1, Q3, Adversarial Review (Recommendation/Attacker/Orchestrator), W5 Factbase & Analytics Consolidation.
 - **Verdict:** **HIGH.** ReasonBENCH, BeliefShift, and the Mehta agent-variance paper are precisely the kind of citations §2.24 needs and are not surfaced cleanly by generic web_search.
 
 ### 1.3 Topic: Prompt injection and adversarial robustness on web-fetched content
@@ -61,13 +61,13 @@ Verified May 2026 via direct calls to `paper_search` and `hub_repo_search`. Oper
   - **Calibrating LLM Judges: Linear Probes for Fast and Reliable Uncertainty Estimation** (Radharapu et al., Dec 2025, hf.co/papers/2512.22245). Useful for Adversarial Review Orchestrator.
   - **Large Language Models Must Be Taught to Know What They Don't Know** (Kapoor et al., Jun 2024, hf.co/papers/2406.08391).
   - *Can LLMs Express Their Uncertainty?* (Xiong et al., 2023, hf.co/papers/2306.13063) — canonical study of verbalized confidence and overconfidence.
-- **Routines that benefit:** A1, Q3, all Action Conversion routines (D2, W4, M5, Q4, A3) where the LLM must produce position-sized recommendations, Adversarial Review.
+- **Routines that benefit:** A1, Q3, all Action Conversion routines (D2, W4, M4, Q4, A3) where the LLM must produce position-sized recommendations, Adversarial Review.
 - **Verdict:** **HIGH.** Calibration is the most underweighted Tier 1 gap in current AI_Trading_Foundation.md; HF surfaces the right mix of recent (2025–2026) and canonical (2023–2024) literature in one place.
 
 ### 1.5 Topic: Long-context degradation
 - **Query used:** "long context LLM degradation lost in the middle"
 - **Best hits:** *Found in the Middle* (Hsieh et al., 2024, hf.co/papers/2406.16008); *Make Your LLM Fully Utilize the Context* (FILM-7B, hf.co/papers/2404.16811); *Pause-Tuning for Long-Context Comprehension* (Begin et al., Feb 2025, hf.co/papers/2502.20405); *Mitigate Position Bias via Scaling a Single Dimension* (Yu et al., Jun 2024, hf.co/papers/2406.02536).
-- **Routines that benefit:** Q3, A1; also informs how D1, W3, M4 should *structure* long context (decision-relevant content first/last, not buried).
+- **Routines that benefit:** Q3, A1; also informs how D1, W3, M3 should *structure* long context (decision-relevant content first/last, not buried).
 - **Verdict:** **MODERATE.** Material from arXiv is also accessible by web_search; HF advantage is the curated cluster — useful for one-shot literature gathering during A1 but not a recurring need.
 
 ### 1.6 Topic: Agentic / tool-use evaluation
@@ -108,8 +108,8 @@ Verified May 2026 via direct calls to `paper_search` and `hub_repo_search`. Oper
 ### 1.10 Topic: FinBERT and successor sentiment
 - **Query used:** "FinBERT financial sentiment analysis"
 - **Best hits:** *FinBERT* (Araci 2019, hf.co/papers/1908.10063); *Transforming Sentiment Analysis in the Financial Domain with ChatGPT* (Fatouros et al., 2023, hf.co/papers/2308.07935) — **finding: ChatGPT 3.5 outperforms FinBERT zero-shot**; *Instruct-FinGPT* (hf.co/papers/2306.12659); *Fine-Tuning Gemma-7B for Sentiment Analysis of Financial News Headlines* (hf.co/papers/2406.13626); *FinEAS* (hf.co/papers/2111.00526).
-- **Routines that benefit:** Conceptually W2, Q2, M3, M4 — but see verdict.
-- **Verdict:** **LOW.** The most important finding from this cluster is that *general-purpose LLMs already beat FinBERT zero-shot* on standard benchmarks (Fatouros 2023; multiple successor papers). This *removes* the case for adding a FinBERT inference call to W2/Q2/M3/M4 — Claude's own reading of the transcript or news already exceeds FinBERT-class performance.
+- **Routines that benefit:** Conceptually W2, Q2, M2, M3 — but see verdict.
+- **Verdict:** **LOW.** The most important finding from this cluster is that *general-purpose LLMs already beat FinBERT zero-shot* on standard benchmarks (Fatouros 2023; multiple successor papers). This *removes* the case for adding a FinBERT inference call to W2/Q2/M2/M3 — Claude's own reading of the transcript or news already exceeds FinBERT-class performance.
 
 ### 1.11 Topic: Sell-side analyst forecast bias (transferable to disadvantage 2.6)
 - **Query used:** "analyst forecast bias optimism herding"
@@ -277,10 +277,10 @@ Beyond the existing **A1** and **Q3** designations:
 - **D1 Market Development Scan — ADD HF (light-touch, optional).** Justification: D1's "AI capability light-touch" line item is currently underspecified. Allow D1 to call `paper_search` *only* under a daily cap (e.g., 1 query) targeted at the previous day's HF Daily Papers (`hf.co/papers` trending) to spot frontier-LLM safety/capability news that should be flagged for the next Q3 rather than acted on directly. **Verdict: MODERATE.** Web_search is sufficient most days; HF adds value about once per month when a major paper drops (StockBench-class).
 - **Q2 D Long-Horizon Candidates — DO NOT add HF.** Q2 is fundamentals-driven; Claude reading 10-Ks / sell-side notes via web_fetch already exceeds FinBERT-class sentiment. HF adds no capability.
 - **W2 Post-Event Screen — DO NOT add HF.** Same reasoning; Claude's zero-shot summarization of an earnings transcript (web_fetched) is at least equivalent to FinBERT/RoBERTa-financial output, and the routine wants a *narrative reading* anyway, not a 3-class polarity score.
-- **M3 E Pair Divergence Screen — DO NOT add HF.** Pair narratives are generated from news/filings analysis; FinBERT-class scoring would *flatten* the very narrative divergence the routine is looking for. Active anti-recommendation.
-- **M4 D Position Deep-Dive — DO NOT add HF.** Same reasoning as Q2.
+- **M2 E Pair Divergence Screen — DO NOT add HF.** Pair narratives are generated from news/filings analysis; FinBERT-class scoring would *flatten* the very narrative divergence the routine is looking for. Active anti-recommendation.
+- **M3 D Position Deep-Dive — DO NOT add HF.** Same reasoning as Q2.
 - **Adversarial Review (Attacker) — CONSIDER adding HF as a targeted reference.** Attacker should at A1/Q3 cadence pull WAInjectBench/BrowseSafe taxonomies via paper_search to build attack templates. Within-cadence Attacker runs do not need HF. **Verdict: LOW-MODERATE for in-loop use; HIGH for design-time use during A1/Q3 only.**
-- **W5 Knowledge and Calibration Consolidation — DO NOT add HF.** No use case.
+- **W5 Factbase & Analytics Consolidation — DO NOT add HF.** No use case.
 
 ### 6.5 What HF cannot do for this experiment
 - Cannot provide live financial data, real-time sentiment, or up-to-the-minute earnings transcripts (use IR sites, EDGAR, or licensed feeds via web_fetch/Tavily).
@@ -294,7 +294,7 @@ Beyond the existing **A1** and **Q3** designations:
 
 > Add to A1 and Q3 prompts: "Run paper_search on hf.co for the queries listed in §6.1 of HF_Resource_Catalog.md; for each, record the 3–5 most relevant arXiv IDs published in the last 12 months and integrate as deltas to AI_Trading_Foundation.md §2 (Tier 1) and §5 (Tier 2 benchmarks)."
 > Add to D1 prompt: "Optionally run one paper_search query against `hf.co/papers` daily-papers if any frontier-model safety or capability finding from the prior 24 hours is flagged in the macro scan; capture for next Q3."
-> Do NOT add HF to W2, Q2, M3, M4, or W5. FinBERT-class models offer no advantage over Claude's own reading of the same text.
+> Do NOT add HF to W2, Q2, M2, M3, or W5. FinBERT-class models offer no advantage over Claude's own reading of the same text.
 > Do NOT depend on any HF Space, Inference API call, or HF dataset for in-loop execution.
 > For Anthropic/Claude specifics use web_search only — HF is silent.
 

@@ -14,7 +14,7 @@ State index for AI-directed trading experiment candidates. Complements but does 
 - **Strategy B** (post-event mispricing): NOT a static queue. B candidates with active 10-day post-event windows track via Google Calendar `[Claude] Thesis construction — <ticker> Strategy B` events; calendar events naturally expire when 10-day windows close. B candidates with disqualifier flags or B-short-direction-declined-at-D2 contextual notes track in this file's "tracking" sections below as a state index for audit purposes (no scheduled action; not a queue for re-evaluation).
 - **Strategy C** (defined-risk options around known events): not a name-queue; catalyst-driven via Weekly_Catalyst_Calendar.md and FOMC schedule.
 - **Strategy D** (long-horizon narrative core): re-screen pipeline tracked via Google Calendar `[Claude] Re-screen <ticker>` events with documented reconsideration triggers in their event descriptions. State-index pointers in this file's "D re-screen pipeline" section. Quarterly cycle update via Quarterly_D_Candidates.md (next: 2026-Q3 ~July).
-- **Strategy E** (market-neutral pairs): pair candidates managed via Monthly_E_Pairs.md and M3 monthly cycle. Currently router = DO-NOT-ACTIVATE.
+- **Strategy E** (market-neutral pairs): pair candidates managed via Monthly_E_Pairs.md and M2 monthly cycle. Currently router = DO-NOT-ACTIVATE.
 
 ---
 

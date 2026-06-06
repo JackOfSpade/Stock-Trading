@@ -87,7 +87,7 @@ and redesign the workflow if there's a better way*:
   Outputs not acted upon until the gate; the substrate accrues signal now.
 - **THE FINISH LINE — operating-procedure cutover (COMPLETE except the final deletions).** §15 makes
   BigQuery **canonical for every data domain** via the read/write-source override + direct write-redirects
-  (M1a→macro_series/regime_events; M5/divergence/D1-router→regime_events; §13 reframed account-level to
+  (M1a→macro_series/regime_events; M4/divergence/D1-router→regime_events; §13 reframed account-level to
   `account_reconciliation` + `strategy_nav`; positions/decisions/queues→events). New BigQuery pieces:
   `analytics.strategy_nav` (per-strategy NAV / 2%-sizing base) + `analytics.account_reconciliation` (§13).
   **Retired (git rm, owner-confirmed): all 18 migrated data files** — the 13 audit/archive set **+ the 5 core
@@ -129,10 +129,10 @@ From the routine digest, work cleaves cleanly:
 - **Mechanical → server-side SQL (no agent tokens):** D1's exit-trigger sweep and kill-trigger
   sweep; *all* of D2 Step 0 (trade_id reconciliation, cash/SGOV §13 drift tripwire, the deployed-TWR
   chain-link arithmetic); D3's queue-archive + calendar hygiene flags; the universe-screening filters
-  inside W1/W2/W3/M3/Q2 (mcap/ADV/≥5%-move/252-day-corr); M5 §H's 30-trade-gate + M2M arithmetic.
+  inside W1/W2/W3/M2/Q2 (mcap/ADV/≥5%-move/252-day-corr); M4 §H's 30-trade-gate + M2M arithmetic.
 - **Judgment → stays the agent:** the open-universe market scan and event interpretation (D1
   categories 1–5), every GO/NO-GO/exit/termination *decision*, M1a regime scoring, the deep-research
-  narrative syntheses (W3/M4/Q1/Q2/Q3), and the adversarial Attacker/Orchestrator reasoning.
+  narrative syntheses (W3/M3/Q1/Q2/Q3), and the adversarial Attacker/Orchestrator reasoning.
 
 > **Rule of thumb that anchors the whole redesign:** *machines compute state, indices, and threshold
 > flags; the agent decides and writes theses.*
@@ -179,7 +179,7 @@ attribution + TWR + analytics layer downstream of it. D2 Step 0 still *writes* t
 Each deep-research routine keeps its judgment core but is *fed* a server-built candidate set: the hard
 screening filters run as scheduled queries into `analytics.screen_*` tables (A/C catalysts, B
 post-event ≥5% movers in-window, D/Q2 eligibility, E pairs with 252-day corr ≥0.5). The agent ranks
-and writes the narrative; it no longer reconstructs the universe by hand. M5 §H reads
+and writes the narrative; it no longer reconstructs the universe by hand. M4 §H reads
 `perf.gate_status` instead of doing haircut arithmetic. Monthly/quarterly rollups become materialized
 views (always current). M1a regime *scoring* stays agent judgment (and stays strategy-blind — see the
 blinding note in §6).

@@ -4,7 +4,7 @@ Canonical reference for Strategy B criterion-4 NO-GO sub-patterns extracted from
 
 **Created**: 2026-05-17 (second scheduled W5 run; first taxonomy bootstrap per Decision_Log 2026-05-10 W5 compaction-survival note (b)).
 
-**Maintained by**: W5 weekly Knowledge and Calibration Consolidation routine — appends new instances as new B criterion-4 NO-GOs are extracted from events.decision_log.
+**Maintained by**: W5 weekly Factbase & Analytics Consolidation routine — appends new instances as new B criterion-4 NO-GOs are extracted from events.decision_log.
 
 **Numbering convention**: Sub-pattern numbers are inherited from live-Decision_Log usage (1, 3, 4, 5, 6, 8, 9 as of bootstrap). The "negative-direction information-confirmed-by-cross-section" pattern (NOW/CHTR) predates the numerical scheme and is recorded as **Pattern N** (negative-direction). Sub-patterns 2 and 7 are historical-placeholder slots not currently in active use.
 
@@ -193,7 +193,7 @@ The following NO-GO archives in this cycle did NOT undergo sub-pattern extractio
 
 ## Maintenance
 
-- **W5 (weekly Knowledge and Calibration Consolidation)** appends new sub-pattern instances as new B criterion-4 NO-GOs are extracted from events.decision_log. Mechanical-failure NO-GOs are listed in the bottom reference table only (no sub-pattern routing).
+- **W5 (weekly Factbase & Analytics Consolidation)** appends new sub-pattern instances as new B criterion-4 NO-GOs are extracted from events.decision_log. Mechanical-failure NO-GOs are listed in the bottom reference table only (no sub-pattern routing).
 - **Thesis-construction sessions** read this file FIRST for sub-pattern routing before scanning archived Decision_Log entries; the instance entries here are dense enough to route a new candidate without reading the original archived NO-GO.
 - **New sub-pattern category emerges** when a NO-GO entry establishes a new sub-pattern label (e.g., TEAM 2026-05-02 established sub-pattern 6; UPS 2026-05-05 established variant 4b). W5 adds new categories or variants as needed.
 - **Pattern-Number Naming**: live Decision_Log uses numerical scheme (1, 3, 4, 5, 6, 8, 9 active; 2 and 7 historical-placeholder). Pattern N (NOW/CHTR negative-direction-cross-section) predates the numerical scheme and retains descriptive naming.
