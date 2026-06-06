@@ -415,7 +415,7 @@ For each recommendation type:
 
 4. ROUTER REVIEWS RECOMMENDED. For each router-review flag:
    - Confirm the threshold for inter-monthly review per Strategy.md (high bar; only material regime shifts qualify). If the threshold is not met, record the second-look decision via Decision_Log.md and stop.
-   - If confirmed: perform the router review **in-session** (Claude-only analysis) — assess the Daily.md development against Regime_State.md and Strategy.md activation rules for the affected strategy; if the state changes, update Regime_State.md and append a Decision_Log entry. No calendar event.
+   - If confirmed: perform the router review **in-session** (Claude-only analysis) — assess the Daily.md development against `state.current_regime` (BigQuery) and Strategy.md activation rules for the affected strategy; if the state changes, write the new activation state to `events.regime_events` (scope `STRATEGY_ACTIVATION`) and write an `events.decision_log` entry (Operating_Protocols §15). No calendar event.
 
 5. STRATEGY TERMINATIONS. For each strategy flagged by D1's per-strategy kill-trigger sweep (or by a drained foundation-change assessment with a "terminate" verdict, or an Orchestrator m2m-termination TERMINATE verdict):
    - **DRAWDOWN termination (immediate, mechanical) / foundation-terminate / m2m-terminate:** execute the termination per Experiment_Parameters.md "Strategy termination and capital redistribution" — stage exit orders to close ALL the strategy's open positions (connector-crafted, each with a `[Claude] Confirm order` event; MARKET or marketable-limit for assured exit), mark the strategy **terminated** in Portfolio_Ledger.md (active→terminated; new entries blocked), and once the closes reconcile (D2 Step 0), perform the **deterministic redistribution**: fill any pending-newcomer strategies to their $2,000 probe-stake floor (FIFO, oldest first), then split the remainder equally among active survivors; update Portfolio_Ledger.md allocations and append Decision_Log.md (termination post-mortem + per-survivor redistribution amounts + any newcomer fills). The drawdown trigger is rigid — do not wait on any review.
@@ -879,7 +879,7 @@ Read the just-saved monthly research files:
 Convert into operator-actionable outputs per the operating model. Claude resolves all decisions internally; commissions disregarded at staging time.
 
 A. ROUTER ACTIVATION FLIPS FROM M1b — for each strategy with FLIP TO ACTIVATE or FLIP TO DO-NOT-ACTIVATE:
-   - Update Regime_State.md to reflect the new activation state per strategy.
+   - Write the new per-strategy activation state to `events.regime_events` (scope `STRATEGY_ACTIVATION`); `state.current_regime` surfaces it (Operating_Protocols §15).
    - Append a Decision_Log entry recording the flip: strategy, prior state, new state, M1 reasoning summary, date.
    - **A FLIP TO ACTIVATE for Strategy A — drain Watchlist.md A-queue.** For each name in the A queue with resolution-trigger "next M1 with A router ACTIVATE":
      * Append a `Pending_Analysis.md` entry per queued name (analysis_type thesis-construction; strategy A; due_date today — the router ACTIVATE flip is the resolving event; context from the A-queue row + Strategy.md / Operating_Protocols.md; conservative_default decline), ordered by soonest catalyst date. No cap — drain the entire A-queue. D2 runs them.
@@ -1007,7 +1007,7 @@ If found, orchestrate per the review_type's protocol:
 3. Write orchestrator output to Adversarial_Review_<id>_orchestrator.md. Format: header (id, review_type, date, cycle_number), final verdict (one-line + binding decision), theater-check flag (one-line), reasoning sections per (a)-(d) above, action taken (if any).
 
 4. Take resulting action:
-   - divergence-review: update Regime_State.md with the binding activation state for the strategy. If the verdict differs from the prior state, append the binding decision to Decision_Log.md.
+   - divergence-review: write the binding activation state to `events.regime_events` (scope `STRATEGY_ACTIVATION`). If the verdict differs from the prior state, write the binding decision to `events.decision_log` (Operating_Protocols §15).
    - m2m-termination with verdict TERMINATE: append Decision_Log.md entry recording termination, update Portfolio_Ledger.md to mark strategy terminated, immediately move strategy portfolio value to SGOV (stage IBKR orders in chat output for the participant to execute), and **perform the deterministic capital redistribution inline** — split the terminated strategy's booked allocation equally among active surviving strategies, after first filling any pending newcomer strategies to their probe-stake floor (per Experiment_Parameters.md "Strategy termination and capital redistribution" + "New strategy funding"), updating Portfolio_Ledger.md allocations.
    - m2m-termination with verdict CONTINUE: append Decision_Log.md entry recording the review outcome, no portfolio action.
    - pre-mortem with verdict REVISION REQUIRED: append Decision_Log.md entry recording the cycle outcome. Subsequent revision is performed by the participant or by a participant-triggered drafting session — orchestrator does not auto-revise the artifact. (Pre-mortem revision is itself an editorial action and is out of scope for an autonomous routine.)
