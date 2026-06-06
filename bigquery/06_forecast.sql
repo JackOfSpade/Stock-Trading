@@ -35,7 +35,8 @@ OPTIONS(description='Monthly AI.FORECAST output (deployed-TWR + macro), written 
 --   FROM AI.FORECAST(
 --     (SELECT as_of_date, strategy, deployed_unit_value FROM `stock-trading-498512.perf.strategy_daily`),
 --     data_col => 'deployed_unit_value', timestamp_col => 'as_of_date',
---     id_cols => ['strategy'], horizon => 21, confidence_level => 0.9);
+--     id_cols => ['strategy'], horizon => 21, confidence_level => 0.9)
+--   WHERE COALESCE(ai_forecast_status,'') = '';   -- drop any strategy AI.FORECAST flags too-short
 --   -- repeat with data_col => 'excess_vs_sgov' and series => 'excess_vs_sgov'.
 
 -- ===== (B) Forecast-vs-actual early-warning: did realised TWR fall outside the PRIOR forecast band? =====
