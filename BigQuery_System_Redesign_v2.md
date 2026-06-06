@@ -41,7 +41,10 @@ and redesign the workflow if there's a better way*:
   full 29-day series computed; independently hand-checked to 0.04% on D. **The legacy markdown
   hand-method is RETIRED** (engine stands alone with an automated sanity guardrail).
 - **Daily briefing** — `state.daily_briefing` (due queue + kill-flags + time-exits).
-- **Analytics scaffold** — `analytics.thesis_outcomes` (calibration foundation).
+- **Calibration foundation — LIVE** — `analytics.thesis_outcomes` links each GO thesis to its
+  realized outcome + regime; `decision_log.ticker` backfilled (all 10 GO theses + clean NO-GO).
+  First signal: the 3 closed B GO theses (IBM/META/BRC) are **3/3 profitable** (gross). The
+  conviction *model* stays deferred until ~30 closed trades.
 
 **Material findings:**
 1. **Deployed-TWR overstatement — found, corrected, VALIDATED.** The ledger's seed sequentially
@@ -69,9 +72,11 @@ and redesign the workflow if there's a better way*:
    `include_corporate_actions=true`.
 
 **Remaining (next phase):**
-- **Cold-start analytics** — conviction/calibration/attribution/forecast/anomaly: plumbing
-  scaffolded, models deferred until ~30 closed trades. Needs `decision_log.ticker` backfill
-  (`AI.GENERATE_TABLE`) + realized P&L (now in `trade_fills`) to populate `thesis_outcomes` labels.
+- **Cold-start analytics** — conviction/calibration/attribution/forecast/anomaly: foundation now
+  LIVE (`thesis_outcomes` populated; `decision_log.ticker` backfilled for GO + clean NO-GO; realized
+  P&L flowing from the rebuilt `trade_fills`). The *models* stay deferred until ~30 closed trades.
+  Follow-ups: AI ticker-extraction for the freeform NO-GO titles + add ticker extraction to the
+  decision-log parser so new entries land populated.
 - **`position_events` rebuild** — fix the stale migrated rows (engine-independent now, but
   `state.daily_briefing`'s due-exit / convergence-target fields read it).
 - **Historical-data migration (owner-flagged)** — adversarial-review outputs

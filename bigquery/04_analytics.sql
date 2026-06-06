@@ -36,3 +36,59 @@ FROM a JOIN o USING (review_id);
 -- detector. P2 refinement: embed only the verdict/reasoning sections, OR add an
 -- AI.GENERATE_BOOL("did the orchestrator surface independent disagreement?") judge over the
 -- paired transcripts and track its rate vs the self-certified theater_check flag.
+
+-- ===== decision_log.ticker backfill (2026-06-06) =====
+-- The decision_log migration left ticker NULL (the parser never extracted it). Backfill from the
+-- title: (1) "Strategy X — TICKER (..." / "EXCHANGE: TICKER" clean formats, plus (2) for GO entries,
+-- match the known traded-ticker set (false-positive-free). This populates ALL 10 GO theses
+-- (IBM/HCA/META/ZBRA/BRC/TJX/AZO/MDT/RTX/DIS) + the clean-format NO-GO subset, which is what
+-- thesis_outcomes needs. The bulk of NO-GO titles use freeform formats ("INTU session",
+-- "outcome — AXSM", ...) that a regex can't safely parse (would false-positive on FY27/MT/GO);
+-- a full backfill should use AI extraction over title+body (a text-gen model on the existing
+-- ops.* Vertex connection -- cf. ops.text_embed). The DECISION-LOG PARSER must add this extraction
+-- going forward so new entries land with a ticker. (NB: BURL's GO was folded into a NO-GO entry,
+-- so it has no thesis row -- a known gap; its +0.87 realized P&L is in trade_fills regardless.)
+UPDATE `stock-trading-498512.events.decision_log`
+SET ticker = COALESCE(
+  REGEXP_EXTRACT(title, r'Strategy [A-E] [—-] ([A-Z]{1,5})\b'),
+  REGEXP_EXTRACT(title, r'(?:NASDAQ|NYSE|NYSEARCA|AMEX|BATS)\s*:\s*([A-Z]{1,5})'),
+  IF(decision='GO', REGEXP_EXTRACT(title, r'\b(IBM|HCA|META|ZBRA|BRC|TJX|AZO|BURL|RTX|DIS)\b'), NULL))
+WHERE ticker IS NULL;
+
+-- ===== analytics.thesis_outcomes — the conviction/calibration foundation =====
+-- One row per thesis-construction decision, joined to its position outcome (realized P&L from the
+-- curated fills) + the prevailing fundamental regime. `was_profitable` is the supervised label for
+-- the future conviction model -- NULL until the position CLOSES (open positions are unknown, not
+-- "unprofitable"; the buy fill's realized_pnl=0 must not be read as a loss). As of 2026-06-06 the
+-- 3 closed B GO theses (IBM/META/BRC) are 3/3 profitable gross -- the first calibration signal;
+-- the conviction model itself stays deferred until ~30 closed trades.
+CREATE OR REPLACE VIEW `stock-trading-498512.analytics.thesis_outcomes` AS
+WITH theses AS (
+  SELECT entry_id, entry_date, strategy, ticker, conviction, sub_pattern, decision, title
+  FROM `stock-trading-498512.events.decision_log`
+  WHERE entry_type = 'thesis-construction'
+),
+fund AS (
+  SELECT key AS axis, value, as_of_date,
+         ROW_NUMBER() OVER (PARTITION BY key ORDER BY as_of_date DESC) rn
+  FROM `stock-trading-498512.events.regime_events` WHERE scope='FUNDAMENTAL_AXIS'
+),
+regime_now AS (SELECT MAX(IF(axis='_integrative', value, NULL)) AS regime_state FROM fund WHERE rn=1),
+outcome AS (
+  SELECT strategy, ticker, SUM(realized_pnl) AS realized_pnl, COUNT(*) AS fills
+  FROM `stock-trading-498512.state.trade_fills_curated`
+  GROUP BY strategy, ticker
+)
+SELECT
+  t.entry_id, t.entry_date, t.strategy, t.ticker, t.decision, t.conviction, t.sub_pattern,
+  (SELECT regime_state FROM regime_now) AS regime_state,
+  pl.exit_date IS NOT NULL AS position_closed,
+  IF(pl.exit_date IS NOT NULL, o.realized_pnl, NULL) AS realized_pnl,
+  CASE WHEN pl.exit_date IS NULL THEN NULL          -- position still open -> outcome unknown (not a loss)
+       WHEN o.realized_pnl IS NULL THEN NULL
+       ELSE o.realized_pnl > 0 END AS was_profitable,
+  t.title
+FROM theses t
+LEFT JOIN `stock-trading-498512.analytics.position_lifecycle` pl
+  ON pl.strategy = t.strategy AND pl.ticker = t.ticker
+LEFT JOIN outcome o ON o.strategy = t.strategy AND o.ticker = t.ticker;
