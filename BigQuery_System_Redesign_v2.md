@@ -1,10 +1,11 @@
 # BigQuery System Redesign v2 — Maximal-Capability Build Spec
 
-**Status:** BUILT — infrastructure phase complete (2026-06-05). Supersedes
-`BigQuery_System_Redesign.md` (v1). The data layer, semantic-precedent layer, deployed-TWR engine,
-and daily briefing are live on project `stock-trading-498512` (US multi-region). The deployed-TWR
-engine is **validated** (rebuilt from authoritative connector fills, hand-checked to 0.04%). See **Build
-status & findings** below for the as-built state, the findings, and remaining next-phase work.
+**Status:** MIGRATION COMPLETE (2026-06-06). Supersedes `BigQuery_System_Redesign.md` (v1). BigQuery is the
+canonical operational substrate on project `stock-trading-498512` (US multi-region): data layer +
+semantic-precedent layer + validated deployed-TWR engine + daily briefing + conviction/calibration substrate
+all live; all 18 migrated data `.md` files retired (routines read/write BigQuery per Operating_Protocols §15).
+The deployed-TWR engine is **validated** (rebuilt from authoritative connector fills, hand-checked to 0.04%).
+The only deferred item is the conviction model (auto-trains at ≥30 closed trades). See **Build status & findings** below.
 
 **What v2 changes vs v1.** v1 was a sound *storage* migration (event-sourced append-only tables,
 state views, a scheduled TWR query) that treated AI/ML as an optional phase-2. v2 keeps that spine
@@ -89,10 +90,10 @@ and redesign the workflow if there's a better way*:
   (M1a→macro_series/regime_events; M5/divergence/D1-router→regime_events; §13 reframed account-level to
   `account_reconciliation` + `strategy_nav`; positions/decisions/queues→events). New BigQuery pieces:
   `analytics.strategy_nav` (per-strategy NAV / 2%-sizing base) + `analytics.account_reconciliation` (§13).
-  **Retired (git rm, done): 13 audit/archive files.** **Cut over but `.md` KEPT pending the operator's explicit
-  `git rm` — 5 core live-state files** (`Portfolio_Ledger`, `Regime_State`, `Decision_Log`, `Pending_*`): BigQuery
-  is canonical for them now (redundant frozen mirrors), but a safety check gated deleting live-state files →
-  the operator runs the final deletion once satisfied. That `git rm` is the only remaining step of the migration.
+  **Retired (git rm, owner-confirmed): all 18 migrated data files** — the 13 audit/archive set **+ the 5 core
+  live-state files** (`Portfolio_Ledger`, `Regime_State`, `Decision_Log`, `Pending_*`). **The `.md` → BigQuery
+  migration is COMPLETE:** no migrated data file remains in the repo (only spec + cadence-working files); BigQuery
+  is the canonical operational substrate. Nothing else remains but the conviction model (auto-trains at ≥30 closed trades).
 - **Optional** — BLS/SEC public-data wiring (P2); scheduled-query automation (console/DTS) vs. agent-run.
 - **Operational** — live ledger B/D Performance blocks corrected to the validated gross figures
   (done); the `bq-loader` SA key is deleted (ongoing writes are MCP INSERTs). Cost to date
