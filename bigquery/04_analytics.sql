@@ -94,3 +94,20 @@ FROM theses t
 LEFT JOIN `stock-trading-498512.analytics.position_lifecycle` pl
   ON pl.strategy = t.strategy AND pl.ticker = t.ticker
 LEFT JOIN outcome o ON o.strategy = t.strategy AND o.ticker = t.ticker;
+
+-- ===== Structured macro series (2026-06-06) =====
+-- Headline macro indicators extracted from Monthly_Macro_Data_*.md (M1a audit inputs; "not read
+-- by M1b"). Gives a queryable/forecastable numeric series alongside the categorical regime axes in
+-- regime_events. M1a writes forward (one row per metric per release). Once this carries enough
+-- history, AI.FORECAST / regime-conditioning can run on actual macro values, not just labels.
+CREATE TABLE IF NOT EXISTS `stock-trading-498512.events.macro_series` (
+  event_id STRING DEFAULT GENERATE_UUID(),
+  ingest_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+  release_date DATE, reference_period STRING, metric STRING,
+  value NUMERIC, unit STRING, source_month STRING, note STRING,
+  PRIMARY KEY (event_id) NOT ENFORCED
+) PARTITION BY release_date CLUSTER BY metric
+OPTIONS(description='Structured macro indicators (from Monthly_Macro_Data_*.md, M1a audit inputs). M1a writes forward.');
+-- Seeded 2026-06-06 from the 2026-04 + 2026-05 macro files (CPI/core, PPI, retail sales, NFP, U-3,
+-- AHE, GDP) — 19 rows / 12 metrics. Trend captured: CPI 3.3->3.8 YoY, PPI 4.0->6.0, GDP +2.0->+1.6
+-- (Q1 second est revised down), retail MoM 1.7->0.5. (Insert literals in the migration commit.)

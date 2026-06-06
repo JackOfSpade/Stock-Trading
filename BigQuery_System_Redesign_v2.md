@@ -73,27 +73,26 @@ and redesign the workflow if there's a better way*:
    `include_corporate_actions=true`.
 
 **Remaining (next phase):**
-- **Cold-start analytics** — conviction/calibration/attribution/forecast/anomaly: foundation now
-  LIVE (`thesis_outcomes` populated; `decision_log.ticker` fully backfilled — regex for clean formats
-  + **AI.GENERATE_TABLE/Gemini** (`ops.gemini`) for the freeform NO-GO titles, 110/221 rows / 97/112
-  theses, 0 false positives; realized P&L flowing from the rebuilt `trade_fills`). The *models* stay
-  deferred until ~30 closed trades. Follow-up: add ticker extraction to the decision-log parser so new
-  entries land populated.
-- **Connector-driven event-sourcing (parser retirement)** — `trade_fills` + `position_events` are
-  now rebuilt correct from the connector (2026-06-05/06); `state.current_positions` /
-  `daily_briefing` exit-detection is live (the 6 open positions carry correct convergence/time-exit).
-  Follow-up: D2 should *write* OPEN/CLOSE position events + fills from the connector reconciliation
-  going forward (the `parse_portfolio_ledger.py` path that produced the buggy migrated rows is
-  legacy/superseded).
-- **Historical-data migration (owner-flagged)** — adversarial-review outputs
-  (`Adversarial_Review_*`) + monthly macro/regime docs (`Monthly_Macro_Data_*`) → BigQuery for
-  tracking; additive, low-risk.
-- **Data-`.md` retirement** — the *engine* cutover is DONE (validated, hand-method retired, D1/D2
-  procedures rewired). What remains is retiring the migrated *data* `.md` files as the operational
-  substrate — consequential, owner-gated, deserves deliberate review.
+- **Data layer — DONE + self-maintaining.** `trade_fills` / `daily_marks` / `position_events` rebuilt
+  correct from the connector + validated; D2 now event-sources each reconciled fill / position /
+  decision into BigQuery going forward; the one-time `parse_*.py` migration tooling is retired.
+  `decision_log.ticker` fully backfilled (regex + Gemini, 110/221). `macro_series` migrated.
+  Adversarial reviews + regime scores already in BQ. `state.current_positions` / `daily_briefing`
+  exit-detection live.
+- **Cold-start analytics** — conviction/calibration/attribution/forecast/anomaly: foundation LIVE
+  (`thesis_outcomes` populated; realized P&L from the rebuilt `trade_fills`; `macro_series` for
+  regime-conditioning). The *models* are **trade-count-gated** — deferred until ~30 closed trades
+  (B is at 4); building now fits noise. The data foundation is ready to feed them when the count grows.
+- **THE FINISH LINE — operating-procedure cutover (the real remaining work).** The `.md` data files
+  (Decision_Log / Portfolio_Ledger / Regime_State / the live queues / `Adversarial_Review_*`) are
+  STILL the live read/write source per Operating_Protocols.md, so they cannot be deleted yet. Retiring
+  them = migrating the daily/weekly/monthly ROUTINES to read/write BigQuery (`state.current_positions`,
+  `events.decision_log`, `perf.*`, `state.current_regime`, `queue_events`), parallel-running to confirm
+  parity, THEN retiring the `.md` data files. Large, consequential, owner-reviewed — a dedicated pass.
 - **Optional** — BLS/SEC public-data wiring (P2); scheduled-query automation (console/DTS) vs. agent-run.
-- **Operational** — correct the live ledger B TWR; the `bq-loader` SA key is deleted. Cost to date
-  ≈ **$0.12** (Vertex embeddings; all else free-tier).
+- **Operational** — live ledger B/D Performance blocks corrected to the validated gross figures
+  (done); the `bq-loader` SA key is deleted (ongoing writes are MCP INSERTs). Cost to date
+  ≈ **$0.12** (Vertex embeddings + a little Gemini; all else free-tier).
 
 ---
 
