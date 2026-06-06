@@ -57,7 +57,8 @@ and redesign the workflow if there's a better way*:
    fills into `events.trade_fills` (no exits) with NULL shares + placeholder dates in
    `position_events` — so the engine could not have been correct until rebuilt. Rebuilt both from the
    connector's 14 authoritative fills; `position_lifecycle` re-sourced from `trade_fills`. (`position_events`
-   itself still carries stale rows — the engine no longer reads it; flagged for a follow-up rebuild.)
+   was likewise rebuilt 2026-06-06 — 10 OPEN + 4 CLOSE events — so `state.current_positions` matches
+   the connector book and `daily_briefing` exit-detection is live.)
 3. **Commission policy — gross profitability / exact accounting (owner directive 2026-06-05).** The
    ~$0.32/fill commission on ~$30 (2%-of-sleeve) positions (~1%/fill) is a SCALE artifact, not strategy
    edge, so the **profitability metric (deployed-TWR + gate + kill triggers) is GROSS of commissions**
@@ -78,8 +79,12 @@ and redesign the workflow if there's a better way*:
   theses, 0 false positives; realized P&L flowing from the rebuilt `trade_fills`). The *models* stay
   deferred until ~30 closed trades. Follow-up: add ticker extraction to the decision-log parser so new
   entries land populated.
-- **`position_events` rebuild** — fix the stale migrated rows (engine-independent now, but
-  `state.daily_briefing`'s due-exit / convergence-target fields read it).
+- **Connector-driven event-sourcing (parser retirement)** — `trade_fills` + `position_events` are
+  now rebuilt correct from the connector (2026-06-05/06); `state.current_positions` /
+  `daily_briefing` exit-detection is live (the 6 open positions carry correct convergence/time-exit).
+  Follow-up: D2 should *write* OPEN/CLOSE position events + fills from the connector reconciliation
+  going forward (the `parse_portfolio_ledger.py` path that produced the buggy migrated rows is
+  legacy/superseded).
 - **Historical-data migration (owner-flagged)** — adversarial-review outputs
   (`Adversarial_Review_*`) + monthly macro/regime docs (`Monthly_Macro_Data_*`) → BigQuery for
   tracking; additive, low-risk.
