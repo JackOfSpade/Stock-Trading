@@ -60,16 +60,21 @@ FROM last_run f
 JOIN `stock-trading-498512.perf.strategy_daily` a
   ON a.strategy = f.entity AND a.as_of_date = f.forecast_date;
 
--- ===== (C) Macro forecast -- GATED on history =====
--- events.macro_series carries only 1-2 monthly points per metric as of 2026-06; AI.FORECAST returns
--- ai_forecast_status='The time series data is too short.' until a metric accrues history. M5 forecasts
--- a metric only once it has >= 8 monthly observations (tunable); otherwise it records
--- 'insufficient history (n=<k>)'. Eligible set + per-metric forecast:
---   SELECT metric, COUNT(*) n FROM `stock-trading-498512.events.macro_series`
---     GROUP BY metric HAVING n >= 8;            -- eligible metrics
---   -- then, per eligible metric @m:
---   SELECT * FROM AI.FORECAST(
---     (SELECT release_date, metric, value
---        FROM `stock-trading-498512.events.macro_series` WHERE metric = @m),
---     data_col => 'value', timestamp_col => 'release_date',
---     id_cols => ['metric'], horizon => 3, confidence_level => 0.8);
+-- ===== (C) Macro forecast -- FRED-backed (state.macro_fred_latest), un-gated =====
+-- events.macro_fred holds 15 FRED-derived monthly regime metrics with deep history (37-54 months;
+-- St. Louis Fed public CSV, no API key -- see 07_fred_macro.sql); state.macro_fred_latest dedups
+-- (metric, ref_month). The >=8-obs gate is satisfied, so AI.FORECAST runs (ai_forecast_status='' on
+-- success). M5 forecasts all metrics 3 months ahead and INSERTs the empty-status rows into
+-- analytics.deployed_twr_forecast (series = metric, entity = 'macro'). Keep the gate as a guard for any
+-- thin/new metric. (The M1a-curated events.macro_series audit table is separate.)
+--   INSERT INTO `stock-trading-498512.analytics.deployed_twr_forecast`
+--     (run_date, series, entity, horizon_index, forecast_date, forecast_value, pi_lower, pi_upper, confidence_level)
+--   SELECT CURRENT_DATE('America/Denver'), metric, 'macro',
+--          ROW_NUMBER() OVER (PARTITION BY metric ORDER BY forecast_timestamp),
+--          DATE(forecast_timestamp), forecast_value,
+--          prediction_interval_lower_bound, prediction_interval_upper_bound, confidence_level
+--   FROM AI.FORECAST(
+--     (SELECT metric, ref_month, value FROM `stock-trading-498512.state.macro_fred_latest`),
+--     data_col => 'value', timestamp_col => 'ref_month',
+--     id_cols => ['metric'], horizon => 3, confidence_level => 0.8)
+--   WHERE COALESCE(ai_forecast_status,'') = '';
