@@ -178,3 +178,17 @@ SELECT d.strategy, d.deposits,
   ROUND(d.deposits+COALESCE(r.realized_pnl,0)+COALESCE(o.open_mv-o.open_cost,0)+COALESCE(dv.dividends,0)-COALESCE(o.open_mv,0),2) AS available_funds,
   ROUND(0.02*(d.deposits+COALESCE(r.realized_pnl,0)+COALESCE(o.open_mv-o.open_cost,0)+COALESCE(dv.dividends,0)),2) AS sizing_base_2pct
 FROM dep d LEFT JOIN realized r USING(strategy) LEFT JOIN open_pos o USING(strategy) LEFT JOIN divs dv USING(strategy);
+
+-- ===== §13 account-integrity (2026-06-06) — replaces Portfolio_Ledger's per-strategy SGOV-share ledger =====
+-- The §13 cash/SGOV reconciliation, reframed ACCOUNT-LEVEL: this view is the events-side expected total;
+-- D2 Step 0 compares it (+ the connector's live SGOV mark) to the connector NLV / SGOV shares / cash and
+-- flags any residual > ~$1 (Operating_Protocols §13). Per-strategy budget = analytics.strategy_nav
+-- (available_funds). No per-strategy SGOV-share hand-ledger — that ledger mechanic (the attribution debt)
+-- is dissolved; account integrity + per-strategy NAV cover §13's two purposes.
+CREATE OR REPLACE VIEW `stock-trading-498512.analytics.account_reconciliation` AS
+SELECT
+  CAST(9446.86 AS NUMERIC) AS total_deposits,
+  (SELECT ROUND(SUM(realized_pnl),2) FROM `stock-trading-498512.events.trade_fills`) AS strategy_realized_pnl,
+  (SELECT ROUND(SUM(nav),2) FROM `stock-trading-498512.analytics.strategy_nav`) AS events_side_nav_total,
+  (SELECT ROUND(SUM(deployed_mv),2) FROM `stock-trading-498512.analytics.strategy_nav`) AS deployed_total,
+  (SELECT ROUND(SUM(available_funds),2) FROM `stock-trading-498512.analytics.strategy_nav`) AS undeployed_total;
