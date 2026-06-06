@@ -83,12 +83,13 @@ and redesign the workflow if there's a better way*:
   (`thesis_outcomes` populated; realized P&L from the rebuilt `trade_fills`; `macro_series` for
   regime-conditioning). The *models* are **trade-count-gated** — deferred until ~30 closed trades
   (B is at 4); building now fits noise. The data foundation is ready to feed them when the count grows.
-- **THE FINISH LINE — operating-procedure cutover (the real remaining work).** The `.md` data files
-  (Decision_Log / Portfolio_Ledger / Regime_State / the live queues / `Adversarial_Review_*`) are
-  STILL the live read/write source per Operating_Protocols.md, so they cannot be deleted yet. Retiring
-  them = migrating the daily/weekly/monthly ROUTINES to read/write BigQuery (`state.current_positions`,
-  `events.decision_log`, `perf.*`, `state.current_regime`, `queue_events`), parallel-running to confirm
-  parity, THEN retiring the `.md` data files. Large, consequential, owner-reviewed — a dedicated pass.
+- **THE FINISH LINE — operating-procedure cutover (in progress, phased parallel-run).** Framework
+  established in Operating_Protocols.md **§15** (authoritative-source map + parallel-run protocol +
+  per-file owner-gated retirement criteria, lowest-risk files first). **Phase 1 done:** deployed-TWR/kill
+  (§14) + the D1 exit-trigger sweep now read BigQuery (`state.current_positions`); D2 dual-writes.
+  **Remaining phases:** migrate the regime / queue / decision / adversarial routine reads to BigQuery
+  under parallel-run, then retire each `.md` data file on N clean cycles + owner sign-off (Decision_Log.md
+  last, or kept indefinitely as the human audit trail). The `.md` files stay live until their readers cut over.
 - **Optional** — BLS/SEC public-data wiring (P2); scheduled-query automation (console/DTS) vs. agent-run.
 - **Operational** — live ledger B/D Performance blocks corrected to the validated gross figures
   (done); the `bq-loader` SA key is deleted (ongoing writes are MCP INSERTs). Cost to date

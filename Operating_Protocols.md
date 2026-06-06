@@ -364,6 +364,35 @@ A BigQuery event-sourced analytics substrate (GCP project `stock-trading-498512`
 
 ---
 
+## 15. Data-substrate cutover (`.md` → BigQuery)
+
+**Canonical-current text:**
+
+The migrated data domains live authoritatively in BigQuery (§14); the corresponding `.md` files are being retired as the operational substrate via a **parallel-run cutover — never a hard flip**, because the routines read/write these files live and a silent divergence would mis-drive trading. Phased: routines READ BigQuery-first with the `.md` as a cross-checked mirror; D2 **dual-writes** (event-sources to BigQuery per §14 + updates the `.md` mirror); after a clean parallel-run window + owner sign-off, each migrated `.md` DATA file is retired (git rm; reversible).
+
+**Authoritative-source map** (source-of-truth NOW vs mirror):
+
+| Domain | Authoritative (BigQuery) | `.md` mirror (retire after parallel-run) | Status |
+|---|---|---|---|
+| Deployed-TWR / kill-gate | `perf.strategy_daily` / `perf.kill_flags` | Portfolio_Ledger Performance blocks | **cut over** (2026-06-05) |
+| Positions / fills / lifecycle | `events.trade_fills`, `state.current_positions` | Portfolio_Ledger position blocks | reads cut over (D1 exit-sweep); D2 dual-writes |
+| Decisions / theses | `events.decision_log` (+ embeddings, `thesis_outcomes`) | Decision_Log.md (human audit record) | dual-write; precedent search via `find_precedents()` |
+| Regime / router state | `state.current_regime` (`regime_events`) | Regime_State.md | parallel-run pending |
+| Queues | `events.queue_events` / `state.*` | Pending_* / Archived_* | parallel-run pending |
+| Adversarial reviews | `events.adversarial_reviews` | Adversarial_Review_*.md | migrated; reads to cut over |
+| Macro / regime scores | `events.macro_series`, `regime_events` | Monthly_Macro_Data_*, Monthly_Fundamental_RegimeScore | migrated (audit-only) → retirable |
+
+**Parallel-run protocol.** A migrated routine reads BigQuery first; where the `.md` mirror still exists it spot-checks parity and flags any divergence in chat (divergence = an un-event-sourced write or a stale mirror → fix before trusting). D2 Step 0 keeps BigQuery current by event-sourcing every reconciled fill / position / decision (§14). Run until N consecutive clean cycles per domain.
+
+**Retirement criteria.** A migrated `.md` DATA file is retired only when: (a) every routine that read it now reads BigQuery; (b) N clean parallel-run cycles, no divergence; (c) owner sign-off. Per-file, owner-gated, git-reversible. Order (lowest-risk first): audit-only files (Monthly_Macro_Data_*, Monthly_Fundamental_RegimeScore, Adversarial_Review_*, the Decision_Log/queue archives) → live-state mirrors (Regime_State, Portfolio_Ledger, the queues) → Decision_Log.md LAST (the human audit trail — retire only once the operator accepts BigQuery as the sole record, or keep it indefinitely).
+
+**What NEVER retires (spec / working files, not migrated data):** Strategy.md, Experiment_Parameters.md, Operating_Protocols.md, Claude_Task_Plan.md, AI_Trading_Foundation.md, B_Sub_Pattern_Taxonomy.md, the C/E methodology docs, HF_Resource_Catalog.md; and the daily/weekly/monthly/quarterly WORKING files (Daily.md, Watchlist.md, Weekly_*, the non-migrated Monthly_*, Quarterly_*) — operating rules + cadence outputs, not the migrated data substrate.
+
+**Revision history:**
+- 2026-06-06: Section established — cutover framework + authoritative-source map + parallel-run protocol + retirement criteria. **Phase 1:** deployed-TWR/kill already cut over (§14); D1 exit-trigger sweep migrated to read `state.current_positions` (convergence/time-exit) with the connector for live prices; precedent lookups use `analytics.find_precedents()`. Remaining domains (regime, queues, decisions, adversarial) staged for parallel-run, then owner-gated per-file retirement. → Decision_Log 2026-06-06 cutover entry.
+
+---
+
 ## Maintenance
 
 - W5 (weekly Decision Log Hygiene) appends new protocol revisions to the relevant section here as they emerge from Decision_Log entries.
