@@ -14632,3 +14632,14 @@ The triggers now read real data:
 **Reasoning:** The calibration layer is the analytical payoff of the BigQuery system; it was inert purely for lack of a join key. Backfilling ticker (and fixing the open-position label) makes it real now, even though the predictive model waits for sample size.
 **Downstream actions:** `UPDATE decision_log.ticker`; `CREATE OR REPLACE VIEW analytics.thesis_outcomes` (corrected `was_profitable`). Both captured in bigquery/04_analytics.sql. Design-doc Build status updated. Follow-ups flagged: AI ticker extraction for the freeform NO-GO entries + decision-log parser ticker extraction going forward.
 **References:** bigquery/04_analytics.sql (ticker backfill + thesis_outcomes); analytics.thesis_outcomes; events.decision_log; Decision_Log 2026-06-05 "Engine validation" (the trade_fills rebuild that made realized P&L correct).
+
+---
+
+### [2026-06-06] AI ticker extraction — freeform decision_log.ticker backfilled via Gemini (coverage 97/112 theses)
+
+**Trigger:** Close the prior entry's flagged follow-up — the freeform NO-GO titles a regex couldn't safely parse (would false-positive on FY27/MT/GO).
+**Inputs:** events.decision_log titles; new remote model `ops.gemini` (Gemini 2.5-flash on the existing `us.vertex` CLOUD_RESOURCE connection — the same one `ops.text_embed` uses); AI.GENERATE_TABLE.
+**Decision / findings:** Created `ops.gemini` and ran `AI.GENERATE_TABLE` over the 83 ticker-NULL thesis entries → **68 valid tickers, all correct** (incl. primary-vs-secondary disambiguation: "post-WHR-NO-GO MT, FLEX session" → FLEX not WHR; "ARM session ... after DASH" → ARM), **15 correctly NONE** (multi-ticker / session-end batches), **0 false positives**. Applied to `decision_log.ticker` + synced `decision_embeddings.ticker`. Coverage now **110/221 rows; 97/112 theses** (the remaining theses are genuinely multi-ticker / non-stock; ~2 conservative misses e.g. AEO). This was the right tool split: deterministic regex for the structured GO/clean subset, AI only for the genuinely fuzzy freeform titles.
+**Reasoning:** Earlier the regex left 73% of theses untickered because titles vary wildly; AI semantic extraction handles the variety with primary-ticker disambiguation a regex can't. Temperature 0 + a strict 1-5-uppercase-or-NONE schema kept it exact.
+**Downstream actions:** `ops.gemini` model + the AI-backfill snippet captured in bigquery/02_ai_layer.sql; 04_analytics.sql note + design-doc Build status updated. **Only remaining ticker follow-up:** add this extraction to the decision-log PARSER so new entries land tickered.
+**References:** bigquery/02_ai_layer.sql (ops.gemini + AI backfill); events.decision_log; analytics.thesis_outcomes; Decision_Log 2026-06-06 "thesis_outcomes wired" (the follow-up closed here).

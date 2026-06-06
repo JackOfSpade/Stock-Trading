@@ -42,12 +42,14 @@ FROM a JOIN o USING (review_id);
 -- title: (1) "Strategy X — TICKER (..." / "EXCHANGE: TICKER" clean formats, plus (2) for GO entries,
 -- match the known traded-ticker set (false-positive-free). This populates ALL 10 GO theses
 -- (IBM/HCA/META/ZBRA/BRC/TJX/AZO/MDT/RTX/DIS) + the clean-format NO-GO subset, which is what
--- thesis_outcomes needs. The bulk of NO-GO titles use freeform formats ("INTU session",
--- "outcome — AXSM", ...) that a regex can't safely parse (would false-positive on FY27/MT/GO);
--- a full backfill should use AI extraction over title+body (a text-gen model on the existing
--- ops.* Vertex connection -- cf. ops.text_embed). The DECISION-LOG PARSER must add this extraction
--- going forward so new entries land with a ticker. (NB: BURL's GO was folded into a NO-GO entry,
--- so it has no thesis row -- a known gap; its +0.87 realized P&L is in trade_fills regardless.)
+-- thesis_outcomes needs. The freeform NO-GO titles ("INTU session", "post-WHR-NO-GO MT, FLEX
+-- session", ...) that a regex can't safely parse (would false-positive on FY27/MT/GO) were then
+-- backfilled via AI.GENERATE_TABLE (Gemini `ops.gemini`; see 02_ai_layer.sql) -- 68/68 valid
+-- extractions correct, 0 false positives, primary-ticker disambiguation correct. Coverage: 97/112
+-- theses (the rest are genuinely multi-ticker / session-end entries -> correctly NULL). The
+-- DECISION-LOG PARSER must add ticker extraction going forward so new entries land tickered.
+-- (NB: BURL's GO was folded into a NO-GO entry, so it has no thesis row -- a known gap; its +0.87
+-- realized P&L is in trade_fills regardless.)
 UPDATE `stock-trading-498512.events.decision_log`
 SET ticker = COALESCE(
   REGEXP_EXTRACT(title, r'Strategy [A-E] [—-] ([A-Z]{1,5})\b'),

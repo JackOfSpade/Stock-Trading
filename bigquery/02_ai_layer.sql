@@ -8,6 +8,29 @@ CREATE OR REPLACE MODEL `stock-trading-498512.ops.text_embed`
   REMOTE WITH CONNECTION `stock-trading-498512.us.vertex`
   OPTIONS (ENDPOINT = 'text-embedding-005');   -- 768-dim; upgrade to gemini-embedding-001 if desired
 
+-- ===== Remote text-generation model (Gemini) — extraction / LLM-judge tasks =====
+CREATE OR REPLACE MODEL `stock-trading-498512.ops.gemini`
+  REMOTE WITH CONNECTION `stock-trading-498512.us.vertex`
+  OPTIONS (ENDPOINT = 'gemini-2.5-flash');
+
+-- decision_log.ticker AI backfill (2026-06-06). The migration left ticker NULL; a regex first caught
+-- the clean "Strategy X — TICKER" / "EXCHANGE: TICKER" / GO traded-ticker formats, then AI.GENERATE_TABLE
+-- (Gemini) extracted the PRIMARY ticker from the freeform NO-GO titles a regex can't safely parse
+-- (e.g. "post-WHR-NO-GO MT, FLEX session" -> FLEX, not WHR). 68/68 valid extractions correct, 0 false
+-- positives; multi-ticker/batch/non-stock titles correctly return NONE. Coverage 97/112 theses (the
+-- rest are genuinely multi-ticker/session-end entries). The decision-log PARSER should call this so
+-- new entries land tickered. Reproduce:
+--   CREATE OR REPLACE TABLE `stock-trading-498512.ops.ticker_backfill` AS
+--   SELECT entry_id, UPPER(TRIM(ticker_out)) AS tk FROM AI.GENERATE_TABLE(
+--     MODEL `stock-trading-498512.ops.gemini`,
+--     (SELECT entry_id, CONCAT('Return the SINGLE primary US stock ticker (1-5 uppercase letters) ',
+--        'this entry is about, or NONE if multi-stock / not about one stock. Title: ', title) AS prompt
+--      FROM `stock-trading-498512.events.decision_log` WHERE ticker IS NULL AND entry_type='thesis-construction'),
+--     STRUCT('ticker_out STRING' AS output_schema, 0.0 AS temperature));
+--   UPDATE `stock-trading-498512.events.decision_log` d SET ticker=b.tk
+--     FROM `stock-trading-498512.ops.ticker_backfill` b
+--    WHERE d.entry_id=b.entry_id AND d.ticker IS NULL AND REGEXP_CONTAINS(b.tk,r'^[A-Z]{1,5}$') AND b.tk!='NONE';
+
 -- ===== Decision embeddings (semantic precedent layer) =====
 -- Embeds title + a token-safe body excerpt (SUBSTR 6000 chars ≈ <2048 tokens).
 -- Bodies up to ~74k chars exist; the embedding model caps input, and the front of each

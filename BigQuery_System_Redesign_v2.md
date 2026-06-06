@@ -73,10 +73,11 @@ and redesign the workflow if there's a better way*:
 
 **Remaining (next phase):**
 - **Cold-start analytics** — conviction/calibration/attribution/forecast/anomaly: foundation now
-  LIVE (`thesis_outcomes` populated; `decision_log.ticker` backfilled for GO + clean NO-GO; realized
-  P&L flowing from the rebuilt `trade_fills`). The *models* stay deferred until ~30 closed trades.
-  Follow-ups: AI ticker-extraction for the freeform NO-GO titles + add ticker extraction to the
-  decision-log parser so new entries land populated.
+  LIVE (`thesis_outcomes` populated; `decision_log.ticker` fully backfilled — regex for clean formats
+  + **AI.GENERATE_TABLE/Gemini** (`ops.gemini`) for the freeform NO-GO titles, 110/221 rows / 97/112
+  theses, 0 false positives; realized P&L flowing from the rebuilt `trade_fills`). The *models* stay
+  deferred until ~30 closed trades. Follow-up: add ticker extraction to the decision-log parser so new
+  entries land populated.
 - **`position_events` rebuild** — fix the stale migrated rows (engine-independent now, but
   `state.daily_briefing`'s due-exit / convergence-target fields read it).
 - **Historical-data migration (owner-flagged)** — adversarial-review outputs
