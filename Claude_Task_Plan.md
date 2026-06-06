@@ -86,7 +86,7 @@ Conventions for the `[Claude] Confirm order` events Claude creates:
 - **Time:** the order's best execution time — **07:00 MT pre-market on the order day** (30 min before the 07:30 MT open). Never adjusted for human availability or load.
 - **Throughput:** no cap on how many order-confirmation events may share a slot (e.g., ten orders all at the open). Never stagger or defer to "spread load."
 - **Description:** the human-readable summary `SIDE QTY TICKER TYPE LIMIT TIF`, the tap-to-confirm deep link (`url` from `create_order_instruction`), the instruction `id`, and "Tap the link, review the pre-filled order in IBKR, confirm at or after market open." (For a security type the connector cannot craft — non-Equity/ETF — carry a manual-entry text order block instead, explicitly labeled.)
-- **Time zone:** per Experiment_Parameters.md (default America/Denver if silent). Whenever a routine needs "today" to create/delete/filter a dated calendar event **or a queue `due_date`**, it MUST anchor on the America/Denver date — run a Bash command equivalent to `TZ=America/Denver date '+%Y-%m-%d %H:%M %Z'`. Do NOT use the assistant-context `currentDate` field: it is UTC-based and rolls forward by one calendar day during evening MT, which previously caused a same-day order-confirmation event to be deleted (META convergence exit, 2026-05-27 evening MT). Binds D2, D3, W4, M5, Q4, A1, A3.
+- **Time zone:** per Experiment_Parameters.md (default America/Denver if silent). Whenever a routine needs "today" to create/delete/filter a dated calendar event **or a queue `due_date`**, it MUST anchor on the America/Denver date — run a Bash command equivalent to `TZ=America/Denver date '+%Y-%m-%d %H:%M %Z'`. Do NOT use the assistant-context `currentDate` field: it is UTC-based and rolls forward by one calendar day during evening MT, which previously caused a same-day order-confirmation event to be deleted (META convergence exit, 2026-05-27 evening MT). Binds D2, D3, W4, M4, Q4, A1, A3.
 - **Notification:** alarm fires at event-time so the human's only job is to tap and confirm.
 
 `Order confirmation` is the only canonical calendar event type. Everything formerly scheduled as a `[Claude]` analysis event — thesis construction, scheduled re-screens, research-deferral checkpoints, foundation-change assessments, constraint-relaxation reviews, router reviews — is now done in-session or queued (next subsection).
@@ -199,7 +199,7 @@ If any answer reveals a violation, the response gets revised before sending.
 
 `B_Sub_Pattern_Taxonomy.md` is the canonical reference for Strategy B criterion-4 NO-GO sub-patterns, extracted from individual Decision_Log NO-GO entries by W5. Thesis-construction sessions read this file rather than scanning scattered NO-GO entries for sub-pattern context. (Analogous per-strategy taxonomy files may be created later if other strategies accumulate enough sub-pattern data to warrant extraction.)
 
-`Watchlist.md` is a factbase tracking names queued for re-evaluation under specific conditions. Living document; read by all cadences; written by D2/W4/M5 (action-conversion routines) and W5 (mirroring). Sections per strategy. Currently the only structurally-needed section is **Strategy A queue** (names awaiting router-activation re-evaluation — populated by router-gate NO-GO sessions, drained by M5 sessions when A router flips ACTIVATE). Strategy D pending re-screens are tracked in calendar events (canonical source); Strategy B prior-NO-GOs are not queued because B operates on event-flow with fresh-evaluation discipline (sub-pattern factbase preserves the durable signal). Sections may be added as other strategies surface persistent queue needs.
+`Watchlist.md` is a factbase tracking names queued for re-evaluation under specific conditions. Living document; read by all cadences; written by D2/W4/M4 (action-conversion routines) and W5 (mirroring). Sections per strategy. Currently the only structurally-needed section is **Strategy A queue** (names awaiting router-activation re-evaluation — populated by router-gate NO-GO sessions, drained by M4 sessions when A router flips ACTIVATE). Strategy D pending re-screens are tracked in calendar events (canonical source); Strategy B prior-NO-GOs are not queued because B operates on event-flow with fresh-evaluation discipline (sub-pattern factbase preserves the durable signal). Sections may be added as other strategies surface persistent queue needs.
 
 `Operating_Protocols.md` is the canonical reference for active operational protocols (the operating-model section of this file in current canonical form, commission-disregarded protocol, "NO-GO records are context, not barriers" rule, conviction-calibration ladder, deferral chaining rules, etc.). Living document; read by all cadences. Each protocol section contains current canonical text plus a revision-history pointer list. When a protocol is revised, the new revision text replaces the canonical section and a new entry is added to revision history pointing to the Decision_Log entry that introduced the revision.
 
@@ -228,11 +228,11 @@ Each cadence with deep-research routines that produce actionable recommendations
 Pairing:
 - **D2 Daily Action Conversion** — reads Daily.md.
 - **W4 Weekly Action Conversion** — reads Weekly_Catalyst_Calendar.md, Weekly_Post_Event_Screen.md, Weekly_Position_Deep_Dive.md.
-- **M5 Monthly Action Conversion** — reads Monthly_Fundamental.md (M1b output, which echoes M1a regime scoring in PART 1), Monthly_E_Pairs.md, Monthly_D_Position_Deep_Dive.md.
+- **M4 Monthly Action Conversion** — reads Monthly_Fundamental.md (M1b output, which echoes M1a regime scoring in PART 1), Monthly_E_Pairs.md, Monthly_D_Position_Deep_Dive.md.
 - **Q4 Quarterly Action Conversion** — reads Quarterly_D_Candidates.md and Quarterly_AI_Foundation_Delta.md (Q1 Quarterly_Regime.md is a pure backward-looking factbase with no actions).
 - **A3 Annual Action Conversion** — reads Annual_AI_Foundation_Sweep.md and Annual_Constraint_Audit.md; produces updated AI_Trading_Foundation.md and updated Strategy.md.
 
-Cadence-level hygiene routines (D3 Calendar Hygiene, W5 Decision Log Hygiene) run after action conversion since they reference state mutated by it.
+Cadence-level hygiene routines (D3 Calendar Hygiene, W5 Knowledge and Calibration Consolidation) run after action conversion since they reference state mutated by it.
 
 Because each routine run is a fresh session, deep-research routines must persist EVERYTHING the action-conversion routine will need into the cadence-output file. The legacy "PART 1 saved / PART 2 in-chat" split is obsolete — both parts go into the file.
 
@@ -263,7 +263,7 @@ These rules keep the live-file working set bounded for high-frequency reads whil
 - Cross-strategy factbase files (`B_Sub_Pattern_Taxonomy.md`, `Quarterly_D_Candidates.md`, `Weekly_Catalyst_Calendar.md`, etc.) ARE in scope and should be read as the prompt directs.
 - If the live file's pointer indicates an archived entry that the working set genuinely needs (rare), this is a signal that either (a) the lifecycle rules need revisiting or (b) the relevant content should have been extracted to a factbase. Surface it via a Decision_Log entry rather than fetching from the archive.
 
-**Monthly routines** (M1a, M1b, M3, M4, M5):
+**Monthly routines** (M1a, M1b, M2, M3, M4):
 - May read `Decision_Log.md` and all `Decision_Log_Archive_*.md` files. **Exception: M1a's read scope is restricted by design — see M1a's prompt body. M1b's read scope is restricted to the M1a regime-scoring file as the regime input — see M1b's prompt body.**
 - In practice most monthly tasks operate on current open-book state and do not require archive reads. Read archives only when the prompt explicitly directs (e.g., per-strategy thesis-invalidation count for the trailing 36-month window).
 
@@ -325,7 +325,7 @@ This catches a target-hit the next morning without waiting for a per-position sc
 PER-STRATEGY KILL-TRIGGER SWEEP (connector-driven; run for EVERY active strategy, alongside the per-position sweep above). Read each strategy's kill/gate state from **`perf.kill_flags`** (BigQuery engine — `drawdown_kill`, `runaway_review`, `m2m_underperf_review`, `gate_reached`, computed from the latest `perf.strategy_daily`; the Portfolio_Ledger.md **Performance** block is the human-readable mirror of the same row, ledger conventions "Per-strategy Performance block"). D1 runs before D2, so the engine row is yesterday's close — refresh `current_drawdown` against today's live marks (`get_price_snapshot`) if a position moved sharply intraday, then evaluate the flags below against the thresholds in Experiment_Parameters.md "Kill criteria (per-strategy)":
 - **Drawdown kill (#1, mechanical / immediate):** if peak-to-trough deployed TWR has dropped ≥50% from the strategy's highest historical value since first trade → flag **STRATEGY TERMINATION — DRAWDOWN**. Rigid and context-independent — no judgment, no review.
 - **Runaway-success (#3, pre-gate only):** if deployed TWR has **doubled** AND the strategy has not yet cleared its 30-trade gate → flag **RUNAWAY-SUCCESS REVIEW** (does NOT terminate directly — routes to an m2m-termination review to rule out reward-function exploitation / hidden tail risk).
-D2 converts a DRAWDOWN flag into an immediate strategy termination (close all positions + deterministic redistribution) and a RUNAWAY-SUCCESS flag into an enqueued review. (The mark-to-market #4 and foundation-change #2 triggers are detected on slower cadences — M5 monthly and Q3/A1 respectively — not here.)
+D2 converts a DRAWDOWN flag into an immediate strategy termination (close all positions + deterministic redistribution) and a RUNAWAY-SUCCESS flag into an enqueued review. (The mark-to-market #4 and foundation-change #2 triggers are detected on slower cadences — M4 monthly and Q3/A1 respectively — not here.)
 
 For each open position, does any Development above ALSO trigger a (judgment-laden) thesis-invalidation exit criterion in the position's entry record (per Strategy.md exit rules for the relevant strategy)? For each position affected: position (ticker + strategy), triggering development, whether the invalidation criterion is met (YES with specific criterion / NO with reasoning).
 
@@ -408,7 +408,7 @@ For each recommendation type:
      - Strategy B: 10 trading days from event — doable as soon as the Day-0 close-to-close is measurable (often the same evening; if the Day-0 close lands a later session, that close is the earliest-doable date).
      - Strategy C: catalyst within 45 days — runs in the pre-catalyst window (7-10 days before the catalyst when it is >14 days out; otherwise now).
      - Strategy A: catalyst within 6 months — respect router state. If A is DO-NOT-ACTIVATE per Regime_State.md / most-recent M1 call, the candidate goes to Watchlist.md A queue (no thesis now). If ACTIVATE, the thesis is doable now.
-     - Strategy E: pair divergence — normally handled by M3/M5; a fast-moving divergence may run now.
+     - Strategy E: pair divergence — normally handled by M2/M4; a fast-moving divergence may run now.
    - **If the thesis is doable now** (required data available; router admits it): perform the full thesis construction **in-session** — an isolated sub-task (subagent) per candidate for fresh context where available, else inline sequentially. Apply Strategy.md entry criteria, the Operating_Protocols.md "NO-GO records are context, not barriers" rule + conviction-calibration ladder, B_Sub_Pattern_Taxonomy.md, commission-disregarded staging, and the connector for live quotes / CTC / eligibility (§11). Write Decision_Log.md (GO or NO-GO) + Portfolio_Ledger.md; on a GO, craft the order instruction and create the `[Claude] Confirm order` event per the staging steps above. No calendar thesis event, no human paste.
    - **If the thesis must wait for future data** (a Day-0 close not yet in; a Strategy C pre-catalyst window): append a `Pending_Analysis.md` entry (analysis_type: thesis-construction; due_date = earliest-doable date; self-contained `context`; `conservative_default` = decline/skip). D2 drains it on its due_date.
    - For Strategy A candidates that should queue rather than proceed: update Watchlist.md A-queue section with ticker, date-added, reason summary, resolution-trigger ("next M1 with A router ACTIVATE").
@@ -538,7 +538,7 @@ Read access scope: Weekly cadence. Read `Decision_Log.md` (live) only. Do NOT re
 
 Read Strategy.md, Experiment_Parameters.md, Portfolio_Ledger.md, Operating_Protocols.md.
 
-For each currently-open position in Strategies A, B, C, and E (not D — D gets a monthly deep-dive in M4), produce thesis-status research. Write the complete content directly to `Weekly_Position_Deep_Dive.md` (overwrite; first line = current ISO week in YYYY-WW format).
+For each currently-open position in Strategies A, B, C, and E (not D — D gets a monthly deep-dive in M3), produce thesis-status research. Write the complete content directly to `Weekly_Position_Deep_Dive.md` (overwrite; first line = current ISO week in YYYY-WW format).
 
 Per position, cover:
 
@@ -613,7 +613,7 @@ If no orders, no file changes, no queue entries: "No actions required."
 
 ---
 
-## W5. Decision Log Hygiene — regular routine
+## W5. Knowledge and Calibration Consolidation — regular routine
 
 Runs weekly (Sunday, after W4). **Repurposed 2026-06-06 (BigQuery cutover §15):** the Decision_Log live/archive prune is RETIRED — `events.decision_log` holds everything, queryable + bounded, so there is nothing to archive. W5 is now **weekly knowledge + analytics consolidation**: extract new Strategy-B sub-patterns, capture protocol revisions, reconcile the Watchlist, refresh decision embeddings, and review the calibration + reconciliation health. Not deep research.
 
@@ -627,7 +627,7 @@ Mirror to `Watchlist.md`:
 - For any entry that resolves a queue item (e.g., a future thesis-construction session that processes a queued name), ensure the resolved name is removed from Watchlist.md.
 - Do NOT add Strategy B prior-NO-GO names to Watchlist.md — B operates on event-flow with fresh evaluation per "NO-GO records are context, not barriers". Sub-pattern factbase preserves the durable signal.
 - Do NOT add Strategy D pending re-screens to Watchlist.md — calendar events are the canonical source.
-- Note: Watchlist.md is also written by D2 / W4 / M5 (action-conversion routines) for in-cycle additions; W5 reconciles any drift between those writes and Decision_Log signal.
+- Note: Watchlist.md is also written by D2 / W4 / M4 (action-conversion routines) for in-cycle additions; W5 reconciles any drift between those writes and Decision_Log signal.
 
 Mirror to `Operating_Protocols.md`:
 - For any entry that introduces or revises an operational protocol (operating-model updates, commission-disregarded protocol, "NO-GO records are context, not barriers" rule, conviction-calibration ladder, deferral chaining rules, file-conventions/read-access-scope policy, decision-log lifecycle policy, etc.), ensure the canonical-current text is reflected in Operating_Protocols.md. Each protocol gets a section with: title, current canonical text, revision-history list (date + Decision_Log entry pointer + brief change description per revision).
@@ -678,9 +678,9 @@ CHAT OUTPUT: one-line acknowledgment of files edited (e.g., "Decision_Log.md, De
 
 # MONTHLY (first trading day of month)
 
-M1a, M1b, M3, M4 are deep-research routines; M5 (action conversion) runs after all are saved.
+M1a, M1b, M2, M3 are deep-research routines; M4 (action conversion) runs after all are saved.
 
-(The "M2" slot is intentionally vacant — the AI Capabilities Research task previously M2 was moved to quarterly cadence as Q3. M5 numbering is retained sequentially with the gap.)
+(The "M2" slot is intentionally vacant — the AI Capabilities Research task previously M2 was moved to quarterly cadence as Q3. M4 numbering is retained sequentially with the gap.)
 
 ## M1a. Strategy-Blind Regime Scoring — deep research
 
@@ -770,9 +770,9 @@ If fallback_suppression = false: produce per-strategy activation calls and diver
 
 PART 1 — Echo M1a regime scoring (read from `state.current_regime` / `events.regime_events` FUNDAMENTAL_AXIS). Reproduce the 5 axis assignments with their brief rationale and the integrative summary. This is the ONLY regime context for downstream consumers and the divergence-review attacker.
 
-PART 2 — Activation calls and divergence flags. The downstream M5 routine reads this PART 2 verbatim and acts on activation flips, divergence flags, and queue-drain triggers, so make calls explicit and structured.
+PART 2 — Activation calls and divergence flags. The downstream M4 routine reads this PART 2 verbatim and acts on activation flips, divergence flags, and queue-drain triggers, so make calls explicit and structured.
 
-1. Per-strategy activation calls. For each of A, B, C, D, E produce binary ACTIVATE / DO-NOT-ACTIVATE with reasoning per Strategy.md's immutable output format. Reasoning must reference M1a regime scoring (max 300 words per strategy). Compare against the prior month's call (read Decision_Log.md or prior-month Monthly_Fundamental.md) and explicitly tag each call as "FLIP TO ACTIVATE" / "FLIP TO DO-NOT-ACTIVATE" / "UNCHANGED" — flips drive M5 actions.
+1. Per-strategy activation calls. For each of A, B, C, D, E produce binary ACTIVATE / DO-NOT-ACTIVATE with reasoning per Strategy.md's immutable output format. Reasoning must reference M1a regime scoring (max 300 words per strategy). Compare against the prior month's call (read Decision_Log.md or prior-month Monthly_Fundamental.md) and explicitly tag each call as "FLIP TO ACTIVATE" / "FLIP TO DO-NOT-ACTIVATE" / "UNCHANGED" — flips drive M4 actions.
 
 2. Reconciliation rules (apply mechanically AFTER step 1; per Strategy.md):
    - shock_overlay = acute → override ACTIVATE → DO-NOT-ACTIVATE for ANY strategy.
@@ -781,14 +781,14 @@ PART 2 — Activation calls and divergence flags. The downstream M5 routine read
    - inflation_trend = reaccelerating AND policy_stance = hawkish → override ACTIVATE → DO-NOT-ACTIVATE for D.
    For each override applied: log the override with the originating regime axis values and the affected strategy, in a "Reconciliation overrides applied" subsection.
 
-3. Divergence flags. For each strategy, compare final activation call (post-reconciliation) against current technical signal from Regime_State.md applied through the per-strategy technical rule. List divergences — each will be queued as a divergence-review by M5.
+3. Divergence flags. For each strategy, compare final activation call (post-reconciliation) against current technical signal from Regime_State.md applied through the per-strategy technical rule. List divergences — each will be queued as a divergence-review by M4.
 
 OUTPUT: write the complete content (PART 1 + PART 2) directly to Monthly_Fundamental.md. First line is the YYYY-MM marker. Chat output: one-line acknowledgment.
 ```
 
 ---
 
-## M3. E Pair Divergence Screen — deep research
+## M2. E Pair Divergence Screen — deep research
 
 ```
 Read access scope: Monthly cadence. May read `Decision_Log.md` and all `Decision_Log_Archive_*.md` files. In practice this routine operates on current open-book state and screening universe; archive reads are usually unnecessary unless explicitly needed.
@@ -806,7 +806,7 @@ PART 1 — Identify GICS industry groups (6-digit) in the US-listed large-cap un
 
 Per pair: provisional L and S (refined in PART 2), industry group, 252-day correlation, most recent earnings/filing dates, approximate short borrow rate per leg if estimable, individual-stock vs. ETF-substitution execution flag. Table organized by industry group.
 
-PART 2 — Ranked shortlist. The downstream M5 routine reads this PART 2 verbatim and schedules pair-thesis-construction events, so rank explicitly with priority tier.
+PART 2 — Ranked shortlist. The downstream M4 routine reads this PART 2 verbatim and schedules pair-thesis-construction events, so rank explicitly with priority tier.
 
 Per pair, preliminary narrative-divergence assessment strictly from public sources: 10-K/10-Q, 8-K, earnings transcripts, public analyst reports (full text), press releases, public news, public industry data. No expert networks, management access, conference-private context, buy-side intelligence, industry contacts, or channel checks. If analysis requires such sources, abandon and note why.
 
@@ -827,7 +827,7 @@ OUTPUT: write the complete content (PART 1 + PART 2) directly to `Monthly_E_Pair
 
 ---
 
-## M4. D Position Deep-Dive — deep research
+## M3. D Position Deep-Dive — deep research
 
 ```
 Read access scope: Monthly cadence. May read `Decision_Log.md` and all `Decision_Log_Archive_*.md` files. Open D positions' entry records remain in live Decision_Log.md by lifecycle rule (a); archive reads are needed only if a multi-month-old context cross-reference is required.
@@ -850,26 +850,26 @@ Per position, cover:
 
 6. Long-term tax treatment. Time to 12-month LTCG qualification; any thesis-completion signals suggesting LTCG timing coordination.
 
-Per position: explicit recommendation (hold / close on thesis completion / close on thesis invalidation / further research). The downstream M5 routine reads these recommendations and stages exits for "close" calls and schedules research-deferral events for "further research" calls, so each recommendation must cite the specific invalidation criterion (for close calls) or the specific information gap (for further research calls).
+Per position: explicit recommendation (hold / close on thesis completion / close on thesis invalidation / further research). The downstream M4 routine reads these recommendations and stages exits for "close" calls and schedules research-deferral events for "further research" calls, so each recommendation must cite the specific invalidation criterion (for close calls) or the specific information gap (for further research calls).
 
-If any position shows material thesis invalidation, set an "IMMEDIATE-ACTION" flag at the top of the file content so M5's read picks it up first.
+If any position shows material thesis invalidation, set an "IMMEDIATE-ACTION" flag at the top of the file content so M4's read picks it up first.
 
 OUTPUT: write the complete content directly to `Monthly_D_Position_Deep_Dive.md`. First line is the YYYY-MM marker. Chat output: one-line acknowledgment, plus the IMMEDIATE-ACTION flag (if any).
 ```
 
 ---
 
-## M5. Monthly Action Conversion — regular routine
+## M4. Monthly Action Conversion — regular routine
 
-Runs after M1, M3, M4 are all saved.
+Runs after M1, M2, M3 are all saved.
 
 ```
 Read access scope: Monthly cadence. May read `Decision_Log.md` and all `Decision_Log_Archive_*.md` files. Read `Strategy.md`, `Experiment_Parameters.md`, `Portfolio_Ledger.md`, `Regime_State.md`, `Operating_Protocols.md`, `Watchlist.md` as relevant.
 
 Read the just-saved monthly research files:
 - `Monthly_Fundamental.md` (M1b — per-strategy ACTIVATE/DO-NOT-ACTIVATE calls + divergence flags; echoes M1a regime scoring in PART 1)
-- `Monthly_E_Pairs.md` (M3 — pair shortlist with priority tier)
-- `Monthly_D_Position_Deep_Dive.md` (M4 — per-position hold/close/research recommendations + immediate-action flag)
+- `Monthly_E_Pairs.md` (M2 — pair shortlist with priority tier)
+- `Monthly_D_Position_Deep_Dive.md` (M3 — per-position hold/close/research recommendations + immediate-action flag)
 
 Convert into operator-actionable outputs per the operating model. Claude resolves all decisions internally; commissions disregarded at staging time.
 
@@ -883,20 +883,20 @@ A. ROUTER ACTIVATION FLIPS FROM M1b — for each strategy with FLIP TO ACTIVATE 
 
 B. DIVERGENCE FLAGS FROM M1b — for each divergence flag (fundamental call vs. technical signal):
    - Append an entry to `Pending_Adversarial_Reviews.md` with review type `divergence-review`. Schema and field details per the ADVERSARIAL REVIEWS section of this document. Required fields: id (unique, e.g., `div-<strategy>-<YYYYMM>-<seq>`), review_type = divergence-review, strategy, prior_activation_state, m1b_artifact_path = Monthly_Fundamental.md, technical_reading (snapshot of relevant Regime_State.md fields at queue time), attacker_due_date (next trading day), orchestrator_due_date (one trading day after attacker_due_date), status = pending.
-   - The Adversarial Review Attacker and Orchestrator routines (defined below) will pick the entry up on their daily fire and produce the assessment + binding decision. M5 itself does not invoke any review prompt — it only enqueues.
+   - The Adversarial Review Attacker and Orchestrator routines (defined below) will pick the entry up on their daily fire and produce the assessment + binding decision. M4 itself does not invoke any review prompt — it only enqueues.
 
-C. EXITS FROM M4 — for each D position with M4 recommendation "close on thesis completion" or "close on thesis invalidation" or marked with the immediate-action flag:
+C. EXITS FROM M3 — for each D position with M3 recommendation "close on thesis completion" or "close on thesis invalidation" or marked with the immediate-action flag:
    - Confirm the cited invalidation criterion or completion condition is in fact met. Second-look discipline applies. If on review the criterion is not met, record the second-look decision in Decision_Log.md and continue.
    - If confirmed: craft the exit order via the IBKR connector per D2 staging rules. Note for D positions: check LTCG status — if within 30 days of 12-month qualification AND the invalidation is not catastrophic, stage the exit for the post-LTCG date instead by appending a `Pending_Analysis.md` entry (analysis_type re-screen; strategy D; ticker; due_date = the LTCG date; context = "craft and stage the D exit on this date"; conservative_default exit) — do NOT craft a far-future instruction now; D2 crafts it on the due_date. If invalidation is catastrophic, exit immediately regardless of LTCG.
    - Append Decision_Log entry, update Portfolio_Ledger.md with the crafted instruction `id`. Schedule "[Claude] Confirm order — <ticker> SELL" for 07:00 MT pre-market on order day (description: the deep link + `SIDE QTY TICKER TYPE LIMIT TIF` summary + instruction `id`; options / non-craftable: the explicitly-labeled manual-entry text block in place of the deep link). No fill-capture event — the fill reconciles via D2 Step 0.
 
-D. RESEARCH DEFERRALS FROM M4 — for each D position with recommendation "further research":
-   - Append a `Pending_Analysis.md` entry: analysis_type research-deferral-checkpoint; strategy D; due_date = when the resolving info is available (next trading day if already available); context = information gap from M4 + Strategy.md D exit rules; conservative_default = exit the position if unresolved.
+D. RESEARCH DEFERRALS FROM M3 — for each D position with recommendation "further research":
+   - Append a `Pending_Analysis.md` entry: analysis_type research-deferral-checkpoint; strategy D; due_date = when the resolving info is available (next trading day if already available); context = information gap from M3 + Strategy.md D exit rules; conservative_default = exit the position if unresolved.
 
-E. THESIS CONSTRUCTION FROM M3 (Strategy E) — for the M3 top-tier pair shortlist:
-   - Append a `Pending_Analysis.md` entry per top-tier pair (analysis_type thesis-construction; strategy E; ticker_or_pair = <L>/<S>; due_date = today unless the pair's entry must wait for a specific event; context = pair specifics from M3 [L, S, divergence thesis, reconvergence indicators, borrow cost estimate, execution path] + Strategy.md E criteria; conservative_default decline), ordered by reconvergence-indicator proximity. No per-month cap. D2 drains them.
+E. THESIS CONSTRUCTION FROM M2 (Strategy E) — for the M2 top-tier pair shortlist:
+   - Append a `Pending_Analysis.md` entry per top-tier pair (analysis_type thesis-construction; strategy E; ticker_or_pair = <L>/<S>; due_date = today unless the pair's entry must wait for a specific event; context = pair specifics from M2 [L, S, divergence thesis, reconvergence indicators, borrow cost estimate, execution path] + Strategy.md E criteria; conservative_default decline), ordered by reconvergence-indicator proximity. No per-month cap. D2 drains them.
 
-F. CROSS-PROMPT DECONFLICTION — if any ticker appears as both an exit candidate (M4) and a new-entry candidate (M3 leg, or A-queue drain), respect simultaneous-holding constraints per Strategy.md: set the new-entry queue entry's due_date to after the expected exit fill, with a context note to verify the exit filled (connector / Portfolio_Ledger) before the thesis proceeds.
+F. CROSS-PROMPT DECONFLICTION — if any ticker appears as both an exit candidate (M3) and a new-entry candidate (M2 leg, or A-queue drain), respect simultaneous-holding constraints per Strategy.md: set the new-entry queue entry's due_date to after the expected exit fill, with a context note to verify the exit filled (connector / Portfolio_Ledger) before the thesis proceeds.
 
 G. WATCHLIST UPDATES — apply any A-queue drains from A and any other updates surfaced.
 
@@ -919,7 +919,7 @@ If no orders, no file changes, no queue entries: "No actions required."
 
 # ADVERSARIAL REVIEWS (queue-driven, fires daily as needed)
 
-Structured adversarial reviews — pre-mortem reviews, regime-router divergence reviews, mark-to-market termination reviews, scope-widening adjudications, and any future structured review the experiment design adds — are executed by a small set of generic routines that read entries from `Pending_Adversarial_Reviews.md` and produce reviews per file handoff. Triggering routines (M5, A3, kill-trigger handlers, etc.) write entries to the queue; they never invoke a review prompt directly. (Capital redistribution after a strategy terminates is NOT an adversarial review — it is a **deterministic equal-split among surviving strategies** handled inline by the termination handler; see Experiment_Parameters.md "Strategy termination and capital redistribution.")
+Structured adversarial reviews — pre-mortem reviews, regime-router divergence reviews, mark-to-market termination reviews, scope-widening adjudications, and any future structured review the experiment design adds — are executed by a small set of generic routines that read entries from `Pending_Adversarial_Reviews.md` and produce reviews per file handoff. Triggering routines (M4, A3, kill-trigger handlers, etc.) write entries to the queue; they never invoke a review prompt directly. (Capital redistribution after a strategy terminates is NOT an adversarial review — it is a **deterministic equal-split among surviving strategies** handled inline by the termination handler; see Experiment_Parameters.md "Strategy termination and capital redistribution.")
 
 ## Pending_Adversarial_Reviews.md — queue file schema
 
@@ -1220,7 +1220,7 @@ Convert into operator-actionable outputs per the operating model. Claude resolve
 A. D THESIS CONSTRUCTION FROM Q2 — for the Q2 ranked shortlist:
    - For each candidate marked "ready now": append a `Pending_Analysis.md` entry (analysis_type thesis-construction; strategy D; due_date today; context from Q2 + Strategy.md D criteria + Operating_Protocols.md; conservative_default decline), ordered by thesis-strength rating. No cap. D2 drains them.
    - For each candidate marked "deferred pending rally pause": add to Watchlist.md D-deferred section with the trailing-30-day momentum reading and resolution-trigger ("when 30-day trailing return drops below X%"), AND append a `Pending_Analysis.md` entry (analysis_type re-screen; strategy D; due_date = 30 days out; context = the re-check condition; conservative_default skip) so D2 re-checks then.
-   - For each candidate marked "blocked by concentration or position count": add to Watchlist.md D-blocked section with the specific blocker and resolution condition ("when GICS <sector> concentration < 30%" or "when D book < 10 positions"). No queue entry — these resolve when an existing D position closes (M5 D-exit handling triggers re-evaluation).
+   - For each candidate marked "blocked by concentration or position count": add to Watchlist.md D-blocked section with the specific blocker and resolution condition ("when GICS <sector> concentration < 30%" or "when D book < 10 positions"). No queue entry — these resolve when an existing D position closes (M4 D-exit handling triggers re-evaluation).
 
 B. FOUNDATION-CHANGE ASSESSMENT FROM Q3 — for each YES verdict that cleared the transferability filter and warrants foundation-change-assessment:
    - Per the strategies-affected list in the Q3 entry, append a `Pending_Analysis.md` entry per affected strategy (analysis_type foundation-change-assessment; strategy; due_date today; context = Q3 evidence summary + affected Tier (1 architectural / 2 magnitude) + the branch warranted (continue / terminate / constraint-relaxation) + reference to Experiment_Parameters.md §Foundation change trigger procedure; conservative_default = no change / continue). D2 drains them.
@@ -1235,7 +1235,7 @@ DEFERRAL DISCIPLINE: deferrals don't chain. Conservative-default fallback per de
 CALENDAR MCP USAGE: Q4 creates no calendar events — its analyses are enqueued to `Pending_Analysis.md` and run by D2. Anchor dated due_dates on the America/Denver date. Time zone per Experiment_Parameters.md.
 
 CHAT OUTPUT:
-- No exit orders are produced by Q4 (D exits flow through M5; A/B/C/E exits flow through D2/W4).
+- No exit orders are produced by Q4 (D exits flow through M4; A/B/C/E exits flow through D2/W4).
 - One-line acknowledgment of file edits and `Pending_Analysis.md` entries appended.
 
 If no file changes, no queue entries: "No actions required."

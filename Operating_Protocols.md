@@ -159,12 +159,12 @@ Authoritative procedural details (sub-pattern extraction, quarter rollover, fact
 
 **Factbases** (extracted durable signal):
 - `B_Sub_Pattern_Taxonomy.md` — Strategy B criterion-4 NO-GO sub-patterns; written by W5 from individual NO-GO entries; read by thesis-construction sessions instead of scanning scattered NO-GO entries.
-- `Watchlist.md` — names queued for re-evaluation under specific conditions; written by D2 / W4 / M5 (action-conversion routines) for in-cycle additions and W5 (mirror reconciliation); read by all cadences.
+- `Watchlist.md` — names queued for re-evaluation under specific conditions; written by D2 / W4 / M4 (action-conversion routines) for in-cycle additions and W5 (mirror reconciliation); read by all cadences.
 - `Operating_Protocols.md` — canonical operational protocols; written by W5 mirror step.
 
 **Per-cadence read-access scope:**
 - **Daily / Weekly (D1, D2, D3, W1, W2, W3, W4, W5)**: live `Decision_Log.md` plus factbases. Do NOT read archive files.
-- **Monthly (M1a, M1b, M3, M4, M5)**: may read live + all archive files. In practice mostly operates on current open-book state.
+- **Monthly (M1a, M1b, M2, M3, M4)**: may read live + all archive files. In practice mostly operates on current open-book state.
 - **Quarterly (Q1, Q2, Q3)**: read live + all archive files.
 - **Annual (A1, A2, A3)**: read everything (full citation graphs across history).
 
@@ -397,13 +397,13 @@ The migrated data domains live authoritatively in BigQuery (§14); the correspon
 | Monthly_Fundamental_RegimeScore.md | `state.current_regime` / `events.regime_events` (scope `FUNDAMENTAL_AXIS`) | M1a → `events.regime_events`; M1b reads it there |
 | Adversarial_Review_*.md | `events.adversarial_reviews` | adversarial routines → `events.adversarial_reviews` |
 | Decision_Log_Archive_*.md / Archived_Analysis / Archived_Adversarial_Reviews | `events.decision_log` / `events.queue_events` | archive workflow RETIRED — durable copy is `events.decision_log` / `events.queue_events` |
-| **Regime_State.md** | `state.current_regime` / `events.regime_events` (scopes `STRATEGY_ACTIVATION` + `TECHNICAL_SIGNAL`) | M5 / divergence-review / D1 router-review → `events.regime_events` (scope `STRATEGY_ACTIVATION`) |
+| **Regime_State.md** | `state.current_regime` / `events.regime_events` (scopes `STRATEGY_ACTIVATION` + `TECHNICAL_SIGNAL`) | M4 / divergence-review / D1 router-review → `events.regime_events` (scope `STRATEGY_ACTIVATION`) |
 | **Portfolio_Ledger.md** (positions / perf / NAV / §13 / parking) | `state.current_positions`, `perf.strategy_daily`, `analytics.strategy_nav` (sizing/NAV), `analytics.account_reconciliation` (§13), `events.parking_events` | D2 → `events.trade_fills` + `events.position_events`; §13 reconciliation is ACCOUNT-LEVEL (account_reconciliation + strategy_nav + connector) |
 | **Decision_Log.md** | `events.decision_log` + `analytics.find_precedents()` | every routine → `events.decision_log` (structured row incl. `body_md`) |
 | **Pending_Analysis.md / Pending_Adversarial_Reviews.md** | `state.open_queue` (over `events.queue_events`) | enqueue / D3 sweep → `events.queue_events` |
 | Decision_Log_Migration_Entry.md | (one-time artifact) | — |
 
-The explicit WRITE instructions that would otherwise recreate one of these files are updated directly in the routines (M1a → macro_series/regime_events; M5 / divergence-review / D1 router-review → regime_events); the pervasive Decision_Log / queue / position writes follow this override. **On restart, routines read/write BigQuery per this map.**
+The explicit WRITE instructions that would otherwise recreate one of these files are updated directly in the routines (M1a → macro_series/regime_events; M4 / divergence-review / D1 router-review → regime_events); the pervasive Decision_Log / queue / position writes follow this override. **On restart, routines read/write BigQuery per this map.**
 
 **Retired 2026-06-06 (git rm; content verified in BigQuery; git-recoverable) — 13 files:** the audit/archive set (Monthly_Macro_Data×2, Monthly_Fundamental_RegimeScore, Adversarial_Review_*×6, Decision_Log_Archive_2026_Q2, Archived_Analysis, Archived_Adversarial_Reviews, Decision_Log_Migration_Entry).
 
@@ -419,7 +419,7 @@ The explicit WRITE instructions that would otherwise recreate one of these files
 
 ## Maintenance
 
-- W5 (weekly Decision Log Hygiene) appends new protocol revisions to the relevant section here as they emerge from Decision_Log entries.
+- W5 (weekly Knowledge and Calibration Consolidation) appends new protocol revisions to the relevant section here as they emerge from Decision_Log entries.
 - When revising an existing protocol section, replace the canonical-current text with the new revision and append the prior canonical to revision history.
 - Do NOT mirror NO-GO entries, position entries, calendar-recon entries, or session-end-consolidation entries — those are not protocol entries.
 - If a new protocol category surfaces that doesn't fit existing sections, create a new numbered section and document it in the W5 outcome entry.

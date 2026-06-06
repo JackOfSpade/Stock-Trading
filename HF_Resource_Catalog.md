@@ -37,7 +37,7 @@ Verified May 2026 via direct calls to `paper_search` and `hub_repo_search`. Oper
   - **Give Me FP32 or Give Me Death? Challenges and Solutions for Reproducible Reasoning** (Yuan et al., Jun 2025, hf.co/papers/2506.09501). Floating-point determinism — relevant context that cross-session inconsistency has hardware roots, not only stochastic decoding.
   - *When Judgment Becomes Noise: How Design Failures in LLM Judge Benchmarks Silently Undermine Validity* (Feuer et al., Sep 2025, hf.co/papers/2509.20293). Direct relevance to using LLM-as-judge in Adversarial Review Orchestrator.
   - *Evaluating Consistency and Reasoning Capabilities of LLMs* (Saxena et al., Apr 2024, hf.co/papers/2404.16478).
-- **Routines that benefit:** A1, Q3, Adversarial Review (Recommendation/Attacker/Orchestrator), W5 Decision Log Hygiene.
+- **Routines that benefit:** A1, Q3, Adversarial Review (Recommendation/Attacker/Orchestrator), W5 Knowledge and Calibration Consolidation.
 - **Verdict:** **HIGH.** ReasonBENCH, BeliefShift, and the Mehta agent-variance paper are precisely the kind of citations §2.24 needs and are not surfaced cleanly by generic web_search.
 
 ### 1.3 Topic: Prompt injection and adversarial robustness on web-fetched content
@@ -280,7 +280,7 @@ Beyond the existing **A1** and **Q3** designations:
 - **M3 E Pair Divergence Screen — DO NOT add HF.** Pair narratives are generated from news/filings analysis; FinBERT-class scoring would *flatten* the very narrative divergence the routine is looking for. Active anti-recommendation.
 - **M4 D Position Deep-Dive — DO NOT add HF.** Same reasoning as Q2.
 - **Adversarial Review (Attacker) — CONSIDER adding HF as a targeted reference.** Attacker should at A1/Q3 cadence pull WAInjectBench/BrowseSafe taxonomies via paper_search to build attack templates. Within-cadence Attacker runs do not need HF. **Verdict: LOW-MODERATE for in-loop use; HIGH for design-time use during A1/Q3 only.**
-- **W5 Decision Log Hygiene — DO NOT add HF.** No use case.
+- **W5 Knowledge and Calibration Consolidation — DO NOT add HF.** No use case.
 
 ### 6.5 What HF cannot do for this experiment
 - Cannot provide live financial data, real-time sentiment, or up-to-the-minute earnings transcripts (use IR sites, EDGAR, or licensed feeds via web_fetch/Tavily).

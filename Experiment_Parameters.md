@@ -191,7 +191,7 @@ When technicals and fundamentals agree on activation state for a given strategy,
 
 When technicals and fundamentals disagree on activation state for a given strategy, the router cannot update that strategy's activation state until a two-routine adversarial review (Attacker routine + Orchestrator routine per `Claude_Task_Plan.md`, queue-driven via `Pending_Adversarial_Reviews.md`) adjudicates. During the review, the strategy retains its prior activation state.
 
-**Input — Fundamental analysis (already produced).** The monthly fundamental analysis output (M1b) that created the disagreement. This is the input to the review, not a separately-commissioned routine. The triggering routine (typically M5, or D2 if a daily technical flip creates the divergence) writes the queue entry referencing the M1b output file and current technical reading.
+**Input — Fundamental analysis (already produced).** The monthly fundamental analysis output (M1b) that created the disagreement. This is the input to the review, not a separately-commissioned routine. The triggering routine (typically M4, or D2 if a daily technical flip creates the divergence) writes the queue entry referencing the M1b output file and current technical reading.
 
 **Attacker routine.** Fresh routine context. Given via the queue entry: (a) the fundamental claim (M1b output file path), (b) the current technical indicator readings, (c) instruction to produce the strongest bear case against the fundamental claim, treating disagreement with technicals as potentially signaling an error in the fundamental reasoning. The attacker is not told which direction the disagreement runs — it is asked to attack the fundamental claim on its merits. Attacker prompt explicitly forbids reading other repo files (Decision_Log.md, prior reviews, broader Strategy.md sections) — accepted-risk note: this is prompt-discipline blinding rather than the structural blinding incognito sessions provided. Attacker routine has no chat history and no access to the orchestrator routine's reasoning (orchestrator hasn't run yet). Output: full attack with specific weaknesses identified, plus the attacker's verdict on whether the fundamental claim should survive. Written to `Adversarial_Review_<id>_attacker.md`.
 
@@ -573,7 +573,7 @@ All structured adversarial reviews in this experiment run as Claude routines wit
 
 Even under perfect blinding, all routines run on the same underlying model weights. Hard-wired biases (`AI_Trading_Foundation.md` 2.13 optimism, 2.14 recency, 2.15 base-rate neglect) cut across routine boundaries regardless of context isolation. The theater-check flag in the Orchestrator routine's output is the diagnostic check against weight-level bias; the monthly review's theater-check survey is the aggregated diagnostic. This residual limitation is uncorrectable without model improvements; the mitigations specified are the best available.
 
-**Operational procedure.** Adversarial reviews are triggered by other routines (M5 for divergence reviews, A3 / Q4 for foundation-driven pre-mortem refresh, kill-trigger detectors for M2M termination) writing entries to `Pending_Adversarial_Reviews.md`. (Capital redistribution after a termination is not a review — the termination handler performs it deterministically.) The Attacker routine and Orchestrator routine fire daily, each processing queue items at their phase. No human action is required for any structured adversarial review under this architecture.
+**Operational procedure.** Adversarial reviews are triggered by other routines (M4 for divergence reviews, A3 / Q4 for foundation-driven pre-mortem refresh, kill-trigger detectors for M2M termination) writing entries to `Pending_Adversarial_Reviews.md`. (Capital redistribution after a termination is not a review — the termination handler performs it deterministically.) The Attacker routine and Orchestrator routine fire daily, each processing queue items at their phase. No human action is required for any structured adversarial review under this architecture.
 
 ### Prompt construction for adversarial reviews
 
@@ -592,7 +592,7 @@ Specifically:
 
 The artifact under review is the single source of truth referenced from the queue entry. Self-containment of that artifact is enforced at drafting time per the self-containment requirement; if the artifact is not self-contained, the Attacker routine flags this as a Tier 1 defect and exits without producing an attack.
 
-This requirement applies at the prompt-construction level: any routine prompt that drafts adversarial-review queue entries (M5, A3, Q4, kill-trigger detectors, termination handlers) must produce queue entries that satisfy this pattern. Queue entries that violate it must be redrafted before the relevant routines fire.
+This requirement applies at the prompt-construction level: any routine prompt that drafts adversarial-review queue entries (M4, A3, Q4, kill-trigger detectors, termination handlers) must produce queue entries that satisfy this pattern. Queue entries that violate it must be redrafted before the relevant routines fire.
 
 ---
 
