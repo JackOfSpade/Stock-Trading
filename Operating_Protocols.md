@@ -388,7 +388,21 @@ The migrated data domains live authoritatively in BigQuery (§14); the correspon
 
 **What NEVER retires (spec / working files, not migrated data):** Strategy.md, Experiment_Parameters.md, Operating_Protocols.md, Claude_Task_Plan.md, AI_Trading_Foundation.md, B_Sub_Pattern_Taxonomy.md, the C/E methodology docs, HF_Resource_Catalog.md; and the daily/weekly/monthly/quarterly WORKING files (Daily.md, Watchlist.md, Weekly_*, the non-migrated Monthly_*, Quarterly_*) — operating rules + cadence outputs, not the migrated data substrate.
 
+**Cutover applied — 2026-06-06 (operator stopped the routines → safe to flip the reads/writes).** For the domains below the BigQuery source is now CANONICAL and **supersedes every `.md` read/write reference to these files throughout this document and Claude_Task_Plan.md** — routines read/write BigQuery, not the retired `.md`:
+
+| Retired `.md` | Read instead | Write instead |
+|---|---|---|
+| Monthly_Macro_Data_*.md | (audit-only; none) | M1a → `events.macro_series` |
+| Monthly_Fundamental_RegimeScore.md | `state.current_regime` / `events.regime_events` (scope `FUNDAMENTAL_AXIS`) | M1a → `events.regime_events`; M1b reads it there |
+| Adversarial_Review_*.md | `events.adversarial_reviews` (verdicts also in Decision_Log.md / Regime_State.md, kept) | adversarial routines → `events.adversarial_reviews` |
+| Decision_Log_Archive_*.md | `events.decision_log` (full history) | the `.md`-archive workflow is RETIRED — W5 prunes matured entries from Decision_Log.md in place; the durable copy is `events.decision_log` |
+| Archived_Analysis.md / Archived_Adversarial_Reviews.md | `events.queue_events` | D3 — terminal queue entries persist in `events.queue_events`; the `.md` daily-archive is retired |
+| Decision_Log_Migration_Entry.md | (one-time migration artifact) | — |
+
+**Retired 2026-06-06 (git rm; content verified in BigQuery; git-recoverable):** the 13 files above (Monthly_Macro_Data×2, Monthly_Fundamental_RegimeScore, Adversarial_Review_*×6, Decision_Log_Archive_2026_Q2, Archived_Analysis, Archived_Adversarial_Reviews, Decision_Log_Migration_Entry). **Kept — NOT yet retirable (rationale):** `Regime_State.md` (live router-state read by ~15 routines; `state.current_regime` now reproduces it faithfully after the 2026-06-06 D/E activation fix, but the multi-routine read-cutover is the staged next phase); `Portfolio_Ledger.md` (per-strategy SGOV allocation / cash residual / NAV — the §13 reconciliation basis + 2%-sizing base — is NOT yet in BigQuery; needs a per-strategy-allocation table first); `Decision_Log.md` (the human-readable audit trail + live working record; `events.decision_log` is the queryable copy — keep indefinitely, or retire once the operator accepts BigQuery as the sole record); the live queues `Pending_Analysis.md` / `Pending_Adversarial_Reviews.md` (actively drained working files).
+
 **Revision history:**
+- 2026-06-06 (cutover applied): retired the 12 migrated/audit `.md` files (Monthly_Macro_Data×2, Monthly_Fundamental_RegimeScore, Adversarial_Review_*×6, Decision_Log_Archive_2026_Q2, Archived_Analysis, Archived_Adversarial_Reviews, Decision_Log_Migration_Entry); reads/writes overridden to BigQuery per the map above; fixed the `regime_events` D/E activation gap so `state.current_regime` is faithful; kept Regime_State / Portfolio_Ledger / Decision_Log / the live queues with documented rationale. → Decision_Log 2026-06-06 retirement entry.
 - 2026-06-06: Section established — cutover framework + authoritative-source map + parallel-run protocol + retirement criteria. **Phase 1:** deployed-TWR/kill already cut over (§14); D1 exit-trigger sweep migrated to read `state.current_positions` (convergence/time-exit) with the connector for live prices; precedent lookups use `analytics.find_precedents()`. Remaining domains (regime, queues, decisions, adversarial) staged for parallel-run, then owner-gated per-file retirement. → Decision_Log 2026-06-06 cutover entry.
 
 ---

@@ -698,7 +698,7 @@ CRITICAL BLINDING REQUIREMENT: This routine must NOT read Strategy.md sections d
 
 Produce strategy-blind regime scoring for the prior calendar month. Two output files:
 
-OUTPUT FILE 1 — Monthly_Macro_Data_<YYYY-MM>.md (audit trail of underlying inputs, NOT read by M1b):
+OUTPUT 1 — **write the structured macro indicators to `events.macro_series`** (one row per metric per release; the `Monthly_Macro_Data_*.md` audit file is RETIRED 2026-06-06 per Operating_Protocols §15 — do NOT recreate it). These are the audit trail of underlying inputs, NOT read by M1b:
 
 PART 1 — Prior calendar month coverage. If a section has no material items, state so.
 
@@ -737,7 +737,7 @@ Section 6 — Cross-asset and risk-sentiment indicators (compensatory)
 
 Close PART 1 with a 3–5 sentence summary of the month's character — strategy-blind language only.
 
-OUTPUT FILE 2 — Monthly_Fundamental_RegimeScore.md (M1b's sole input from M1a):
+OUTPUT 2 — **write the 5-axis regime scores to `events.regime_events` (scope `FUNDAMENTAL_AXIS`)**: one row per axis (growth_momentum / inflation_trend / policy_stance / risk_sentiment / shock_overlay) + the `_integrative` row, each with its categorical value + brief rationale (+ a `fallback_suppression` flag row when applicable). The `Monthly_Fundamental_RegimeScore.md` file is RETIRED 2026-06-06 (Operating_Protocols §15) — do NOT recreate it. This is M1b's sole regime input from M1a, which M1b reads from `state.current_regime` / `events.regime_events`:
 
 First line: YYYY-MM marker.
 Second line: fallback_suppression flag (true / false). If ≥2 of the 5 primary input categories (macro / Fed / earnings / geopolitical / policy — input 6 is compensatory and does not count) were unavailable per the fallback protocol, set true.
@@ -765,15 +765,15 @@ Schedule: Monthly, after M1a completes.
 ```
 Read access scope: Monthly cadence. May read Decision_Log.md and Decision_Log_Archive_*.md files. Read Strategy.md (full document — strategy-mapping requires reading per-strategy activation rules), Experiment_Parameters.md, Portfolio_Ledger.md, Regime_State.md, Watchlist.md, Operating_Protocols.md.
 
-CRITICAL BLINDING REQUIREMENT — file-read scope: Read Monthly_Fundamental_RegimeScore.md (M1a's regime-scoring output) for the regime input. Do NOT read Monthly_Macro_Data_<YYYY-MM>.md or any other macro/policy/earnings source for this month — the underlying inputs M1a consumed are not part of M1b's input set by design. This preserves the architectural blinding between regime scoring and strategy mapping per Strategy.md "Two-routine blinded scoring." M1b's regime view is exactly M1a's regime-scoring file, no more.
+CRITICAL BLINDING REQUIREMENT — read scope: Read M1a's regime scores from `state.current_regime` / `events.regime_events` (scope `FUNDAMENTAL_AXIS`, latest month) for the regime input. Do NOT read `events.macro_series` or any other macro/policy/earnings source for this month — the underlying inputs M1a consumed are not part of M1b's input set by design. This preserves the architectural blinding between regime scoring and strategy mapping per Strategy.md "Two-routine blinded scoring." M1b's regime view is exactly M1a's regime-scoring file, no more.
 
-Read Monthly_Fundamental_RegimeScore.md.
+Read the latest `FUNDAMENTAL_AXIS` regime scores from `state.current_regime` / `events.regime_events`.
 
-If first line indicates fallback_suppression = true: write Monthly_Fundamental.md with header noting fallback suppression for the month, set all 5 strategies to DO-NOT-ACTIVATE with reasoning "fallback suppression — sub-step M1a flagged ≥2 missing primary inputs," do NOT compute divergence flags, exit with chat acknowledgment.
+If the `fallback_suppression` flag is true: write Monthly_Fundamental.md with header noting fallback suppression for the month, set all 5 strategies to DO-NOT-ACTIVATE with reasoning "fallback suppression — sub-step M1a flagged ≥2 missing primary inputs," do NOT compute divergence flags, exit with chat acknowledgment.
 
 If fallback_suppression = false: produce per-strategy activation calls and divergence flags. Write Monthly_Fundamental.md (overwrite; first line = current month YYYY-MM marker).
 
-PART 1 — Echo M1a regime scoring (read from Monthly_Fundamental_RegimeScore.md). Reproduce the 5 axis assignments with their brief rationale and the integrative summary. This is the ONLY regime context for downstream consumers and the divergence-review attacker.
+PART 1 — Echo M1a regime scoring (read from `state.current_regime` / `events.regime_events` FUNDAMENTAL_AXIS). Reproduce the 5 axis assignments with their brief rationale and the integrative summary. This is the ONLY regime context for downstream consumers and the divergence-review attacker.
 
 PART 2 — Activation calls and divergence flags. The downstream M5 routine reads this PART 2 verbatim and acts on activation flips, divergence flags, and queue-drain triggers, so make calls explicit and structured.
 

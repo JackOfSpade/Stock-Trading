@@ -79,17 +79,19 @@ and redesign the workflow if there's a better way*:
   `decision_log.ticker` fully backfilled (regex + Gemini, 110/221). `macro_series` migrated.
   Adversarial reviews + regime scores already in BQ. `state.current_positions` / `daily_briefing`
   exit-detection live.
-- **Cold-start analytics** — conviction/calibration/attribution/forecast/anomaly: foundation LIVE
-  (`thesis_outcomes` populated; realized P&L from the rebuilt `trade_fills`; `macro_series` for
-  regime-conditioning). The *models* are **trade-count-gated** — deferred until ~30 closed trades
-  (B is at 4); building now fits noise. The data foundation is ready to feed them when the count grows.
-- **THE FINISH LINE — operating-procedure cutover (in progress, phased parallel-run).** Framework
-  established in Operating_Protocols.md **§15** (authoritative-source map + parallel-run protocol +
-  per-file owner-gated retirement criteria, lowest-risk files first). **Phase 1 done:** deployed-TWR/kill
-  (§14) + the D1 exit-trigger sweep now read BigQuery (`state.current_positions`); D2 dual-writes.
-  **Remaining phases:** migrate the regime / queue / decision / adversarial routine reads to BigQuery
-  under parallel-run, then retire each `.md` data file on N clean cycles + owner sign-off (Decision_Log.md
-  last, or kept indefinitely as the human audit trail). The `.md` files stay live until their readers cut over.
+- **Cold-start analytics — BUILT + ready (gated).** `analytics.conviction_features` (feature+label per
+  GO thesis) + `analytics.calibration_summary` (per-conviction-tier win-rate/avg-P&L; cold-start-safe,
+  3/3 closed profitable so far) are LIVE; the BQML logistic-regression model DDL is written + ready in
+  04_analytics.sql but **gated** — run only at ≥30 closed GO theses + both classes (single-class now).
+  Outputs not acted upon until the gate; the substrate accrues signal now.
+- **THE FINISH LINE — operating-procedure cutover (most of it done).** §15 established the framework +
+  the **read/write-source override** (routines read/write BigQuery, superseding the `.md`). **Cut over:**
+  deployed-TWR/kill (§14), D1 exit-sweep (`state.current_positions`), and the macro/regime-score/
+  adversarial/archive domains. **Retired 2026-06-06 (13 files):** Monthly_Macro_Data×2, Monthly_Fundamental_RegimeScore,
+  Adversarial_Review_*×6, Decision_Log_Archive_2026_Q2, Archived_Analysis/Adversarial, Decision_Log_Migration_Entry.
+  **Still kept (staged):** `Regime_State.md` (router-state read by ~15 routines — BQ now faithful after the
+  D/E fix; the read-cutover is the next phase), `Portfolio_Ledger.md` (needs a per-strategy-allocation
+  table in BQ first), `Decision_Log.md` (human audit trail — keep or retire-last), the live queues.
 - **Optional** — BLS/SEC public-data wiring (P2); scheduled-query automation (console/DTS) vs. agent-run.
 - **Operational** — live ledger B/D Performance blocks corrected to the validated gross figures
   (done); the `bq-loader` SA key is deleted (ongoing writes are MCP INSERTs). Cost to date

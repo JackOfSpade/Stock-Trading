@@ -111,3 +111,39 @@ OPTIONS(description='Structured macro indicators (from Monthly_Macro_Data_*.md, 
 -- Seeded 2026-06-06 from the 2026-04 + 2026-05 macro files (CPI/core, PPI, retail sales, NFP, U-3,
 -- AHE, GDP) — 19 rows / 12 metrics. Trend captured: CPI 3.3->3.8 YoY, PPI 4.0->6.0, GDP +2.0->+1.6
 -- (Q1 second est revised down), retail MoM 1.7->0.5. (Insert literals in the migration commit.)
+
+-- ===== Conviction / calibration layer (cold-start-ready, 2026-06-06) =====
+-- The supervised layer: does conviction (+ regime / sub-pattern) predict GO-thesis profitability?
+-- BUILT NOW but GATED — its OUTPUTS are not acted upon until >=30 closed GO trades (B is at 4); with a
+-- handful of closed trades any model overfits noise. The substrate is live so it accrues signal now.
+CREATE OR REPLACE VIEW `stock-trading-498512.analytics.conviction_features` AS
+SELECT entry_id, entry_date, strategy, ticker, decision, conviction,
+  CASE UPPER(conviction)
+    WHEN 'LOW' THEN 1 WHEN 'MEDIUM-LOW' THEN 2 WHEN 'MEDIUM' THEN 3
+    WHEN 'MEDIUM-HIGH' THEN 4 WHEN 'HIGH' THEN 5 WHEN 'HIGHEST' THEN 6 ELSE NULL END AS conviction_ordinal,
+  sub_pattern, regime_state, position_closed, realized_pnl, was_profitable
+FROM `stock-trading-498512.analytics.thesis_outcomes`
+WHERE decision = 'GO';
+
+-- Cold-start-SAFE calibration: per conviction tier, closed count / win-rate / avg realized P&L. Works
+-- at any N (sparse now: 3 closed, all wins). This is what the routine reads for conviction-calibration
+-- UNTIL the model below is trustworthy.
+CREATE OR REPLACE VIEW `stock-trading-498512.analytics.calibration_summary` AS
+SELECT COALESCE(conviction,'(unscored)') AS conviction, ANY_VALUE(conviction_ordinal) AS ord,
+  COUNT(*) AS go_theses, COUNTIF(position_closed) AS closed, COUNTIF(was_profitable) AS wins,
+  ROUND(SAFE_DIVIDE(COUNTIF(was_profitable), COUNTIF(position_closed)), 3) AS win_rate,
+  ROUND(AVG(IF(position_closed, realized_pnl, NULL)), 3) AS avg_realized_pnl
+FROM `stock-trading-498512.analytics.conviction_features`
+GROUP BY conviction ORDER BY ord;
+
+-- The BQML model — RUN ONLY WHEN >=30 closed GO theses AND both outcome classes are present
+-- (currently single-class: 3 closed, all profitable, so CREATE MODEL would error). Ready to run:
+--   CREATE OR REPLACE MODEL `stock-trading-498512.ops.conviction_model`
+--     OPTIONS(model_type='LOGISTIC_REG', input_label_cols=['was_profitable'], auto_class_weights=TRUE) AS
+--   SELECT conviction_ordinal, strategy, sub_pattern, regime_state, was_profitable
+--   FROM `stock-trading-498512.analytics.conviction_features`
+--   WHERE position_closed AND was_profitable IS NOT NULL;
+-- Score open theses once trained:  SELECT * FROM ML.PREDICT(MODEL `...ops.conviction_model`,
+--   (SELECT * FROM `...analytics.conviction_features` WHERE NOT position_closed));
+-- Until then the routine reads analytics.calibration_summary (the empirical running tally). The >=30-
+-- closed gate is enforced in Operating_Protocols.md / Claude_Task_Plan.md before any output is used.
