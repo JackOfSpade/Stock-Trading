@@ -418,6 +418,29 @@ The explicit WRITE instructions that would otherwise recreate one of these files
 
 ---
 
+## 16. Strategy Termination, Kill-Trigger Detection & Deterministic Capital Redistribution
+
+**Operational-protocol index for the capital-growth / survivorship model (2026-06-01 owner pivot).** The canonical *capital-model* spec lives in **Experiment_Parameters.md** ("New strategy funding (probe stake)", deposit-allocation order, strategy-termination definitions) and the *cadence wiring* lives in **Claude_Task_Plan.md** (D1/D2/M5 prompt bodies); this section is the single operating-protocol pointer so a routine can find the rules without re-deriving them.
+
+**Capital model (canonical: Experiment_Parameters.md).** The system is a live capital-growth engine, not a frozen forward-test: scale *capital*, never the 2% risk fraction; reward winners *passively* via survivorship, not by merit-weighting a short, noisy sample.
+- **Probe-stake floor $2,000** (adjustable): a newly-added strategy starts frozen (defined, zero booked allocation, non-trading) and accumulates until its booked allocation reaches $2,000 (so a 2% position ≈ $40, matching current book scale and keeping round-trip commission drag near the accepted ~1.5–1.8%). Below the floor it never trades at commission-dominated size.
+- **Inflow priority (deposits AND sunset-redistribution):** fill pending newcomers to the floor FIRST — oldest-pending first (FIFO), one filled before the next — then split the remainder equally among all active strategies (including router-deactivated ones). Not a one-time carve; newcomers have first claim on every inflow until filled. No held-aside pool — terminated capital always redistributes to survivors.
+- **Deterministic redistribution on termination:** a terminated strategy's booked allocation auto-redistributes per the order above — **no adversarial review, no hold option**. Capital sits in SGOV and deploys at each survivor's own 2%/trade pace, so redistribution changes *booked allocation*, not immediate exposure.
+- **Retired by this pivot:** the `capital-redistribution` review type, the dedicated **Recommendation routine** (the only former three-routine pipeline), the `recommendation_due_date`/`recommendation_output_path` fields, the `recommendation-complete` status, and the held-aside pool.
+
+**Kill-trigger detection → terminate → redistribute, wired into the cadences (canonical: Claude_Task_Plan.md D1/D2/M5).** Detection lives in the routines; flags derive from `perf.kill_flags` / `perf.strategy_daily` (the GROSS-of-commissions deployed-TWR engine, §14):
+- **D1 — daily per-strategy kill-trigger sweep** (alongside the per-position exit sweep): flag **DRAWDOWN termination** (peak-to-trough deployed TWR ≥ 50% below high — mechanical/immediate) and **RUNAWAY-SUCCESS review** (deployed TWR doubled pre-gate → route to review, not direct terminate).
+- **D2 — STRATEGY TERMINATIONS (step 5, daily):** on a DRAWDOWN flag (or a drained foundation-change "terminate", or an Orchestrator m2m TERMINATE), execute the termination per Experiment_Parameters.md — close all positions via connector-crafted Confirm-order events, mark terminated, then run the deterministic redistribution (fill pending newcomers to the $2,000 floor FIFO, then equal-split among survivors). On a RUNAWAY-SUCCESS flag, enqueue an m2m-termination review.
+- **M5 — kill/forecast monitor:** carries the kill-trigger context into the monthly deployed-TWR + macro forecast (advisory/early-warning only; triggers fire on realised `perf.kill_flags`, never on a forecast — §14).
+- **30-trade gate** (Experiment_Parameters.md): a strategy clearing the gate continues until a kill trigger fires; failing it terminates. Gate progress is tracked in `analytics.calibration_summary` (also the activation threshold for the conviction model).
+
+**Revision history:**
+- 2026-06-01 (capital-model pivot): deterministic survivorship redistribution + probe-stake floor established; capital-redistribution review + Recommendation routine retired. → events.decision_log 2026-06-01 "Capital model pivot — deterministic survivorship accretion + new-strategy probe stake".
+- 2026-06-01 (cadence wiring): kill-trigger detection→terminate→redistribute wired into D1 (daily sweep), D2 (step-5 terminations), M5 (monitor) — closing the pre-existing hole where execution existed but nothing in the cadences detected a drawdown kill or gate failure. → events.decision_log 2026-06-01 "Wired the kill-trigger detection→terminate→redistribute path into the cadences".
+- 2026-06-07 (W5): section established in Operating_Protocols.md as the operational-protocol index pointing to the canonical Experiment_Parameters.md (capital model) + Claude_Task_Plan.md (cadence wiring) homes. → events.decision_log 2026-06-07 W5 outcome.
+
+---
+
 ## Maintenance
 
 - W5 (weekly Factbase & Analytics Consolidation) appends new protocol revisions to the relevant section here as they emerge from Decision_Log entries.
