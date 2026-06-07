@@ -335,7 +335,17 @@ Apply the shared 'NO-GO records are context, not barriers' rule when any candida
 
 Produce a daily market development scan and write it directly to `Daily.md` (overwrite; first line = today's calendar date in YYYY-MM-DD format).
 
-Scan general market developments from the prior 30 hours. Cast broadly — do not scope the scan to tickers owned or on the watchlist. The purpose is to surface any development that could either threaten an existing position's thesis or create a new entry opportunity for any strategy, including at names not currently on any list. Do not pad; if a category has no material items, state so.
+SCAN WINDOW — dynamic, measured from the last D1 run to now (not a fixed lookback). Set the window start = the timestamp through which the previous D1 scan covered, and scan all developments from there to now (this run's execution time, America/Denver). Resolve the start automatically, in priority order:
+
+1. **Prior Daily.md stamp (primary).** At run start, `Daily.md` on disk is still the previous run's output (this run overwrites it). Read it first and parse the machine-readable marker `<!-- d1_scan_through_utc: <ISO-8601 UTC> -->` written just below the date line by the previous run — that timestamp is the exact hand-off boundary → window start.
+2. **Git commit timestamp (fallback + cross-check).** If the marker is missing or unparseable, use the commit time of the most recent `Daily.md` commit — `git log -1 --format=%cI -- Daily.md` (every D1 run commits Daily.md as "D1 Market Development Scan …"). Also use this to sanity-check (1); the two should agree to within one session's length.
+3. **Conservative fixed lookback (last resort).** If neither is available (e.g. a shallow clone with no Daily.md history, or no prior file at all), fall back to a 30-hour lookback ending now. Never silently narrow coverage below this.
+
+This keeps coverage gap-free across skipped or delayed runs: if a scheduled run was missed, the window automatically stretches back to the *actual* last run instead of dropping a session (e.g. the 2026-06-06 run correctly had to cover the Friday 6/5 session because there was no D1 between Thu 6/4 and Sat 6/6 — a fixed 24-hour lookback would have missed all of Friday). If the resolved start is more than ~50 hours ago (a multi-session gap), state the gap explicitly in the scan-window line; always cover at least the most recent completed trading session even when the elapsed window is short. Throughout DEVELOPMENTS below, "today" means "within this scan window" (≥ today; more when the window spans a missed run).
+
+Record the boundary for the next run: in the Daily.md you write, emit `<!-- d1_scan_through_utc: <this run's execution time, ISO-8601 UTC> -->` on the line directly below the date, and a human-readable `Scan window: <start · America/Denver> → <now · America/Denver>` line in the header.
+
+Cast broadly — do not scope the scan to tickers owned or on the watchlist. The purpose is to surface any development that could either threaten an existing position's thesis or create a new entry opportunity for any strategy, including at names not currently on any list. Do not pad; if a category has no material items, state so.
 
 DEVELOPMENTS
 
@@ -393,7 +403,7 @@ The downstream D2 routine reads this section verbatim and converts each bullet i
 
 If nothing material: "No recommended actions."
 
-OUTPUT: write the complete content above directly to `Daily.md` (overwriting the prior day's file). First line is today's date in YYYY-MM-DD format. No chat output beyond a one-line acknowledgment that Daily.md was written.
+OUTPUT: write the complete content above directly to `Daily.md` (overwriting the prior day's file). First line is today's date in YYYY-MM-DD format; the line directly below it is the machine-readable `<!-- d1_scan_through_utc: <this run's execution time, ISO-8601 UTC> -->` marker (per SCAN WINDOW above — this is what the next run reads to resolve its window start), and the header carries the human-readable `Scan window: <start · America/Denver> → <now · America/Denver>` line. No chat output beyond a one-line acknowledgment that Daily.md was written.
 ```
 
 ---

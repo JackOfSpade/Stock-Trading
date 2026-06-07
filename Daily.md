@@ -1,4 +1,5 @@
 2026-06-06
+<!-- d1_scan_through_utc: 2026-06-06T22:10:15Z -->
 
 # Daily Market Development Scan — 2026-06-06 (Sat, MT)
 
