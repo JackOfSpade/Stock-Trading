@@ -538,13 +538,19 @@ Schemas extend v1's with the *actual* fields found in the data digest. Highlight
 
 ## 13. Orchestration — what runs where
 
-- **`ops.sp_daily_refresh()` (stored procedure, built via MCP):** ingest new fills, refresh
-  `perf.strategy_daily` + `kill_flags` + `state.daily_briefing`, incremental-embed new decision rows,
-  run anomaly scan. Invoked **either** by D2 Step 0 (`CALL …`, zero console setup) **or** by a daily
-  **scheduled query** (§App-E, zero agent tokens, runs even with no session). Recommended: the
-  scheduled query, with the `CALL` as a manual fallback.
-- **`ops.sp_weekly_refresh()`:** retrain `conviction_model` + rebuild `calibration_map`, refresh the
-  `screen_*` candidate sets, rebuild theater-independence + attribution. Scheduled weekly.
+- **`ops.sp_daily_refresh()` — AS-BUILT 2026-06-07** (was specified here but never created until the
+  2026-06-07 substrate-hardening; `ops.INFORMATION_SCHEMA.ROUTINES` had been empty). The built version
+  is scoped to the **SQL-only** daily steps: `CALL ops.sp_recompute_engine()` (wholesale recompute of
+  `perf.strategy_daily` → `kill_flags`) + `CALL ops.sp_embed_pending()` (incremental decision embedding).
+  Fills ingestion stays **agent-side** in D2 Step 0 (it needs the IBKR connector, unreachable from pure
+  SQL); `state.daily_briefing` is a view (always live, no refresh); the anomaly scan is not yet built.
+  Invoked by D2 Step 0 after marks ingest (`CALL ops.sp_daily_refresh()`); can also be a daily
+  **scheduled query** (see `bigquery/README.md` → Scheduled query). Decisions are written via the
+  atomic `ops.sp_log_decision()` (append + embed in one call), so embeddings rarely have a backlog.
+- **`ops.sp_weekly_refresh()`:** NOT YET BUILT — retrain `conviction_model` (auto-activates at ≥30
+  closed trades; currently ~6/30) + rebuild `calibration_map`, refresh the `screen_*` candidate sets,
+  rebuild theater-independence + attribution. Scheduled weekly. (W5 currently does the embedding
+  catch-up + calibration review by hand via `state.embedding_health` / `ops.sp_embed_pending`.)
 - **Materialized views** refresh themselves for the monthly/quarterly rollups.
 - **Snapshots + Parquet export** (audit/DR): daily table snapshots + weekly `EXPORT DATA AS PARQUET`
   to the existing **Hugging Face dataset** (git-versioned, 100 GB free → no GCS bucket to provision).
