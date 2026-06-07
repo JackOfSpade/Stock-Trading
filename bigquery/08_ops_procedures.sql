@@ -43,3 +43,18 @@ BEGIN
     SELECT FORMAT('sp_log_decision: decision persisted; embedding deferred (%s)', @@error.message) AS warning;
   END;
 END;
+
+-- ===== ops.sp_daily_refresh — the v2 design's "D2 Step 0 → one CALL" (recompute + embed) =====
+-- PRECONDITION: D2 must have already ingested the day's marks into events.daily_marks (connector-
+-- dependent, agent-side — a pure SQL procedure can't reach the IBKR connector). This then runs the
+-- SQL-only daily steps: recompute the deployed-TWR engine (ops.sp_recompute_engine, defined in
+-- 03_twr_engine.sql) and catch up any pending decision embeddings (ops.sp_embed_pending). Idempotent;
+-- safe to re-run. Validated 2026-06-07: reproduces the engine state bit-for-bit + leaves embeddings healthy.
+-- Single-writer note: the recompute is a wholesale DELETE+INSERT on perf.strategy_daily; if two
+-- sessions could run it at once, serialize them (BigQuery may abort one with a concurrent-update error
+-- — re-run). The scheduled-query option (see bigquery/README.md) avoids this by running it once daily.
+CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_daily_refresh`()
+BEGIN
+  CALL `stock-trading-498512.ops.sp_recompute_engine`();
+  CALL `stock-trading-498512.ops.sp_embed_pending`();
+END;

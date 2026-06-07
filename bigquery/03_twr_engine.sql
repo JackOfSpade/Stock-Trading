@@ -121,41 +121,46 @@ FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY strategy ORDER BY as_of_date DES
       FROM `stock-trading-498512.perf.strategy_daily`)
 WHERE rn = 1;
 
--- ===== Recompute perf.strategy_daily (the DEPLOYED engine query; run by D2 Step 0) =====
--- After ingesting the day's marks, D2 re-runs this wholesale (idempotent DELETE+INSERT). The
--- full recompute is trivially cheap (~30 deployed days x 2 strategies) and is state-free, so it
--- naturally absorbs any late mark/fill correction -- preferred over an incremental append.
--- deployed_unit_value chains (1+r_deployed); peak = high-water mark vs the 1.000 inception base;
--- sgov_index chains the ACTUAL SGOV total return over the same deployed days.
-DELETE FROM `stock-trading-498512.perf.strategy_daily` WHERE TRUE;
-INSERT INTO `stock-trading-498512.perf.strategy_daily`
-(as_of_date, strategy, deployed_unit_value, peak_unit_value, current_drawdown, sgov_index, excess_vs_sgov, deployed_days, closed_trades, gate_n, method, note)
-WITH r AS (
-  SELECT sdr.as_of_date, sdr.strategy, sdr.r_deployed, COALESCE(sg.r_sgov,0) AS r_sgov
-  FROM `stock-trading-498512.analytics.strategy_daily_returns` sdr
-  LEFT JOIN `stock-trading-498512.analytics.sgov_daily_return` sg USING (as_of_date)
-),
-chained AS (
-  SELECT as_of_date, strategy,
-    EXP(SUM(LN(1+r_deployed)) OVER w) AS duv,
-    EXP(SUM(LN(1+r_sgov)) OVER w) AS sgovidx,
-    ROW_NUMBER() OVER w AS dday
-  FROM r WINDOW w AS (PARTITION BY strategy ORDER BY as_of_date)
-),
-peaked AS (
-  SELECT *, GREATEST(1.0, MAX(duv) OVER (PARTITION BY strategy ORDER BY as_of_date)) AS peak
-  FROM chained
-)
-SELECT p.as_of_date, p.strategy,
-  CAST(p.duv AS NUMERIC), CAST(p.peak AS NUMERIC), CAST(p.duv/p.peak-1 AS NUMERIC),
-  CAST(p.sgovidx AS NUMERIC), CAST(p.duv/p.sgovidx-1 AS NUMERIC), p.dday,
-  (SELECT COUNT(*) FROM `stock-trading-498512.analytics.position_lifecycle` l
-     WHERE l.strategy=p.strategy AND l.exit_date IS NOT NULL AND l.exit_date<=p.as_of_date),
-  (SELECT COUNT(*) FROM `stock-trading-498512.analytics.position_lifecycle` l
-     WHERE l.strategy=p.strategy AND l.exit_date IS NOT NULL AND l.exit_date<=p.as_of_date),
-  'value-weighted-daily-TWR-gross-v3',
-  'PROFITABILITY metric: GROSS of commissions (scale artifact at ~$30 positions), total return, SGOV actual total-return benchmark. Cash/NAV accounting tracks commissions exactly + separately.'
-FROM peaked p;
+-- ===== Recompute perf.strategy_daily — ops.sp_recompute_engine() (run by D2 via sp_daily_refresh) =====
+-- The DEPLOYED engine recompute, now a single-source named procedure (was a bare DELETE+INSERT block
+-- D2 copy-ran each session — drift risk). After D2 ingests the day's marks, the recompute runs
+-- wholesale (idempotent DELETE+INSERT) -- trivially cheap (~30 deployed days x 2 strategies),
+-- state-free, so it naturally absorbs any late mark/fill correction. deployed_unit_value chains
+-- (1+r_deployed); peak = high-water mark vs the 1.000 inception base; sgov_index chains the ACTUAL
+-- SGOV total return. D2 calls ops.sp_daily_refresh() (08_ops_procedures.sql), which CALLs this then
+-- ops.sp_embed_pending(). Validated 2026-06-07: reproduces the prior engine state bit-for-bit.
+CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_recompute_engine`()
+BEGIN
+  DELETE FROM `stock-trading-498512.perf.strategy_daily` WHERE TRUE;
+  INSERT INTO `stock-trading-498512.perf.strategy_daily`
+  (as_of_date, strategy, deployed_unit_value, peak_unit_value, current_drawdown, sgov_index, excess_vs_sgov, deployed_days, closed_trades, gate_n, method, note)
+  WITH r AS (
+    SELECT sdr.as_of_date, sdr.strategy, sdr.r_deployed, COALESCE(sg.r_sgov,0) AS r_sgov
+    FROM `stock-trading-498512.analytics.strategy_daily_returns` sdr
+    LEFT JOIN `stock-trading-498512.analytics.sgov_daily_return` sg USING (as_of_date)
+  ),
+  chained AS (
+    SELECT as_of_date, strategy,
+      EXP(SUM(LN(1+r_deployed)) OVER w) AS duv,
+      EXP(SUM(LN(1+r_sgov)) OVER w) AS sgovidx,
+      ROW_NUMBER() OVER w AS dday
+    FROM r WINDOW w AS (PARTITION BY strategy ORDER BY as_of_date)
+  ),
+  peaked AS (
+    SELECT *, GREATEST(1.0, MAX(duv) OVER (PARTITION BY strategy ORDER BY as_of_date)) AS peak
+    FROM chained
+  )
+  SELECT p.as_of_date, p.strategy,
+    CAST(p.duv AS NUMERIC), CAST(p.peak AS NUMERIC), CAST(p.duv/p.peak-1 AS NUMERIC),
+    CAST(p.sgovidx AS NUMERIC), CAST(p.duv/p.sgovidx-1 AS NUMERIC), p.dday,
+    (SELECT COUNT(*) FROM `stock-trading-498512.analytics.position_lifecycle` l
+       WHERE l.strategy=p.strategy AND l.exit_date IS NOT NULL AND l.exit_date<=p.as_of_date),
+    (SELECT COUNT(*) FROM `stock-trading-498512.analytics.position_lifecycle` l
+       WHERE l.strategy=p.strategy AND l.exit_date IS NOT NULL AND l.exit_date<=p.as_of_date),
+    'value-weighted-daily-TWR-gross-v3',
+    'PROFITABILITY metric: GROSS of commissions (scale artifact at ~$30 positions), total return, SGOV actual total-return benchmark. Cash/NAV accounting tracks commissions exactly + separately.'
+  FROM peaked p;
+END;
 
 -- ===== SGOV / corporate-action handling (audited 2026-06-05) =====
 -- SGOV pays a MONTHLY dividend reinvested via IBKR DRIP (IBDRIPUS) -> its price is ~flat and its
