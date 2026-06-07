@@ -1,11 +1,11 @@
-2026-06-06
-<!-- d1_scan_through_utc: 2026-06-06T22:10:15Z -->
+2026-06-07
+<!-- d1_scan_through_utc: 2026-06-07T22:04:21Z -->
 
-# Daily Market Development Scan — 2026-06-06 (Sat, MT)
+# Daily Market Development Scan — 2026-06-07 (Sun, MT)
 
-Scan window: prior ~30 hours covering the **Friday 2026-06-05 session** (the last trading day; no intervening D1 since Thu 6/4) → Sat 6/6 weekend. Cast broadly across the US-listed ≥$2B universe, not scoped to held/watchlist names. Markets closed Sat/Sun; live book + Friday-close marks read via IBKR connector.
+Scan window: 2026-06-06 16:10 MDT → 2026-06-07 16:04 MDT (~24h). **Weekend window — US markets closed Sat 6/6 and Sun 6/7; no trading session inside the window.** The last completed session (Fri 6/5, the chip-led risk-off day) was already covered by the 2026-06-06 D1 run, so this scan covers weekend developments only. Cast broadly across the US-listed ≥$2B universe, not scoped to held/watchlist names. Live book confirmed via `state.current_positions`; marks carry Fri 6/5 close (connector-sourced in the 6/6 run; unchanged — no trading since).
 
-Open book (connector + `state.current_positions` confirmed): **ZBRA (B), HCA (B), TJX (B), AZO (B), RTX (D), DIS (D)** + SGOV park. **BRC (B) CLOSED** (convergence exit reconciled 6/5: SELL 0.4415 @ $88.81, realized +$0.99; B closed_trades now 4). **MDT (B) GO 6/3 never filled** (D2 6/4 Step 0 "no-fill"; not open, not re-staged — flagged below for D2/D3). Regime (M1b 2026-06-01 + divergence reviews 6/3, `state.current_regime`): **A=DO-NOT-ACTIVATE, B=ACTIVATE, C=HYBRID ACTIVATE (FOMC-only), D=ACTIVATE, E=ACTIVATE**. Fundamental axis: stagflation-tilt + risk-on. Breadth HEALTHY · SPY Trend NEUTRAL · curve NOT-sustained-inverted.
+Open book (`state.current_positions`): **ZBRA (B), HCA (B), TJX (B), AZO (B), RTX (D), DIS (D)** + SGOV park. Regime (`state.current_regime`, M1b 2026-06-01 + divergence reviews 6/3): **A=DO-NOT-ACTIVATE, B=ACTIVATE, C=HYBRID ACTIVATE (FOMC-only), D=ACTIVATE, E=ACTIVATE**. Fundamental axis: stagflation-tilt + risk-on. Breadth HEALTHY · SPY Trend NEUTRAL · curve NOT-sustained-inverted.
 
 ---
 
@@ -13,44 +13,36 @@ Open book (connector + `state.current_positions` confirmed): **ZBRA (B), HCA (B)
 
 ### 1. Market-wide breaking events
 
-- **RISK-OFF — broad equity selloff led by a violent semiconductor rout (a step up from Thu's rotation).** Fri 6/5 close: **Nasdaq −4.18% to 25,709.43 — its worst day since April 2025; S&P 500 −2.64% to 7,383.74; Dow −1.35% / −695.15 pts to 50,866.78; Russell 2000 ~+1.45% intraday** (small-caps relatively resilient). The chip complex shed roughly **$1T of market value over two days** (Micron + Broadcom −~20% across 6/4–6/5). Twin drivers: (a) continuation of the **AVGO AI-networking-revenue miss** ($4.1B vs ~$4.8B expected; CEO blamed slower custom-AI-chip/XPU ramp at two unnamed hyperscalers) cracking the AI-capex trade, and (b) a **hot May jobs report → higher-for-longer yields**. Unlike Thu 6/4 (value-over-growth rotation, Dow record), Fri was a genuine risk-off day. (Sources: [TheStreet 6/5](https://www.thestreet.com/stock-market-today/stock-market-today-dow-jones-sp-500-nasdaq-updates-june-05-2026), [Wolf Street 6/5](https://wolfstreet.com/2026/06/05/semiconductor-stocks-roll-over-micron-broadcom-tank-20-in-2-days-drag-rest-of-market-along/), [Yahoo Finance 6/5](https://finance.yahoo.com/sectors/technology/live/tech-stocks-today-chip-stocks-remain-pressured-as-broadcom-earnings-spook-ai-investors-100000607.html).)
-- **Strong May jobs report (6/5 BLS).** Nonfarm payrolls **+172K vs ~+80K consensus** (well above); **unemployment 4.3% (unchanged)**; AHE +0.3% m/m / +3.4% y/y; March/April revised **up +93K combined**. Reinforces the hawkish-Fed / higher-for-longer fundamental axis (new Chair Warsh). 10Y UST ~**4.48%** (little changed on the day; the upside surprise pressured the long end intraday). (Sources: [BLS Employment Situation M05](https://www.bls.gov/news.release/empsit.nr0.htm), [Bloomberg 6/5](https://www.bloomberg.com/news/articles/2026-06-05/us-adds-172-000-jobs-in-may-beating-all-economists-estimates), [CNBC 6/5](https://www.cnbc.com/2026/06/05/jobs-report-may-2026.html).)
-- **US–Iran still live (latent shock overlay intact).** FM Araghchi said "no meaningful progress" in talks; Hezbollah rejected the US-mediated Israel–Lebanon ceasefire proposal — geopolitical risk premium elevated. Oil drifted off mid-week highs on intermittent ceasefire hopes (Brent ~mid-$90s); no fresh kinetic escalation over the weekend at scan depth. (Source: [CNBC Treasury/Iran 6/1](https://www.cnbc.com/2026/06/01/treasury-yields-us-iran-war-oil.html).)
-- **Bitcoin — worst week since February**, ~$61.9K (−3.5%), record ETF outflows. No equity-book read-through.
+- **US–Iran kinetic friction near the Strait of Hormuz — the shock overlay stepped up over the weekend (still short of collapse).** Late Fri 6/5 into Sat 6/6, US CENTCOM said it downed **seven Iranian ballistic missiles fired toward Kuwait and Bahrain** plus **four attack drones launched toward the Strait of Hormuz**; Iran denounced the US strikes (on Iranian radar sites) as a **violation of the fragile US–Iran truce**. The IRGC claimed it "targeted" a tanker and fired warning shots near Larak Island as it tries to enforce its illegal traffic-separation scheme in the strait; US forces have escorted 100+ commercial vessels through over the past month. IDF–Hezbollah fighting continued in southern Lebanon; Hezbollah's rejection of the US-mediated ceasefire stands. **No kinetic escalation hit US/allied assets directly** (interceptions only) and **President Trump publicly downplayed any breach of his "no new wars" line on Sun 6/7** — so the overlay is more *active* but the kinetic phase remains contained, not a full re-escalation. Read-through for Monday: oil/energy and defense bid, modest risk-premium. (Sources: [Al Jazeera 6/6](https://www.aljazeera.com/news/2026/6/6/us-intercepts-iranian-attacks-as-israel-continues-to-bomb-lebanon), [ISW Iran Update 6/6](https://understandingwar.org/research/middle-east/iran-update-special-report-june-6-2026), [AP via Britannica 6/7](https://www.britannica.com/event/2026-Iran-war).)
+- **No other market-wide weekend shock at scan depth** — no unscheduled regulatory/enforcement action, material bankruptcy, or disaster affecting global risk assets surfaced over Sat–Sun.
 
 ### 2. Scheduled events that resolved (US-listed ≥$2B)
 
-- **May NFP** (above) — the day's macro catalyst.
-- **Lululemon (LULU)** — Q1 FY26 (reported 6/4 AMC; Day-0 reaction 6/5). Rev **$2.5B (+4%)**, EPS **$1.69** beat ($1.68 est) — but **cut FY26 guidance** (sales to **$11.0–11.15B** from $11.35–11.50B; EPS to **$10.95–11.15** from $12.10–12.30) and issued a soft current-quarter outlook. **Americas comps −5% — fifth straight quarter of decline**; interim CEO cited "negative media commentary," underwhelming product launches, and founder/brand drama. Reaction: **−8% to −11%** (−8.14% regular session; ~−11% extended). Day-0 ≈ 6/5. → New B candidate (negative direction). (Sources: [CNBC 6/4](https://www.cnbc.com/2026/06/04/lululemon-lulu-earnings-q1-2026.html), [TheStreet live blog](https://www.thestreet.com/latest-news/lulu-lululemon-earnings-call-updates-q1-2026).)
-- No other ≥$2B scheduled catalyst (FDA PDUFA / FOMC / other earnings) resolved Friday at scan depth. (FOMC June meeting is 6/16–17, not this window.)
+- **None — US markets closed the entire window.** No earnings prints, FDA PDUFA outcomes, FOMC actions, or other resolved catalysts. (FOMC June meeting 6/16–17; Warsh's first as Chair. Next notable prints next week: ORCL FQ4 6/10 AMC, ADBE FQ2 6/11 AMC — both A-queue names — outside this window.)
 
 ### 3. Large single-name moves (≥$2B, ≥5% close-to-close, event-attributable)
 
-- **Semiconductor complex (sympathy + epicenter):** NVDA **−6%** (below a $5T cap), MU **−6.3%**, AMD **−6.3%**, MRVL **−8%**, QCOM **−9%+**, AVGO **−3.8%** (Day+1 continuation). AVGO/MU are the catalyst epicenter; NVDA/AMD/MRVL/QCOM are largely guilt-by-association with no fresh company-specific catalyst — the sector trades as a block. (Source: [Parameter 6/5](https://parameter.io/chip-sector-tumbles-as-broadcom-selloff-hits-amd-nvidia-and-micron/), Yahoo 6/5.)
-- **LULU −8% to −11%** — earnings/guide cut (see #2).
-- No held-name (ZBRA/HCA/TJX/AZO/RTX/DIS) crossed a ≥5% event-attributable single-day move on an identifiable catalyst (ZBRA −5.5% is broad-tech-hardware sympathy, no name catalyst — see invalidation check).
+- **None — markets closed; no close-to-close move is possible inside the window.** (Friday's chip rout — NVDA/MU/AMD/MRVL/QCOM −6% to −9%, LULU −8% to −11% — was captured in the 6/6 scan.)
 
 ### 4. Sector-level moves
 
-- **Information Technology / Semiconductors (SOX) sharply down** — the epicenter; chip names −6% to −9%, SOX off several percent. AI-capex de-rating, not a single-name story.
-- **Broad equity down** (S&P −2.6%) — risk-off, but damage **concentrated in mega-cap tech/semis**: the Dow fell only −1.35% and small-caps (Russell) were firm intraday → a narrow, factor-driven drawdown rather than a broad breadth breakdown.
-- Energy steady on the oil bid / Iran premium; crypto-levered names soft on the Bitcoin slide.
+- **None — markets closed.** Monday's open will test whether Friday's AI-capex de-rating extends or stabilizes (see REGIME CHECK).
 
 ### 5. Notable commentary
 
-- **The load-bearing crack:** AVGO management's custom-XPU-ramp-slowdown at two hyperscalers is the narrative pivot — the first concrete hyperscaler-capex-digestion signal to hit the AI-hardware trade, which had been priced for continuous acceleration.
-- **Macro:** the +172K NFP beat + 4.3% unemployment + upward revisions reinforce higher-for-longer; consistent with M1b's 6/1 hawkish-policy / reaccelerating-inflation read — no new regime input.
-- Iran negotiation stalled (Araghchi); Hezbollah ceasefire rejection keeps the shock overlay latent-not-acute.
+- **"Trump eyes US stake in AI firms"** (Bloomberg This Weekend, 6/6) — weekend reporting that the administration is weighing direct US equity stakes in AI companies, alongside a broad Big-Tech selloff narrative. Policy-optionality signal for the AI complex; directionally ambiguous (support vs. governance/control overhang). Context for the A-queue AI/semi names, not a today action. (Source: Bloomberg Television, 6/6.)
+- **AVGO post-mortem deepening (sell-side, Fri/weekend):** Macquarie framed the AVGO miss as Alphabet **diversifying TPU supply to MediaTek** — Broadcom's TPU revenue share seen falling from ~95% (2026) to ~80% (2027) to ~65% (2028) — i.e. a *company-specific share-loss* story layered on the AI-capex-digestion read, not purely a demand cliff. Bernstein/Morgan Stanley called the ~13% drop an over-reaction to a >50%-grower; median PT ~$500. Reinforces the 6/6 read that Friday was a **sector/factor reset, not an AI-demand break**. (Source: [CNBC 6/4](https://www.cnbc.com/2026/06/04/broadcoms-outlook-sparked-a-selloff-for-chip-stocks-heres-why.html), [Reuters 6/4](https://www.reuters.com/business/broadcom-tumbles-revenue-miss-clouds-ai-boom-bets-2026-06-04).)
+- **Blackstone private-credit fund limited redemptions for the first time** (reported 6/4, carried into weekend commentary) — a private-credit liquidity flag worth monitoring as a higher-for-longer/credit-stress tell; no public-equity-book read-through at scan depth. No held/watchlist name affected.
 
 ---
 
 ## ANALYSIS — RISK TO EXISTING POSITIONS
 
-### MECHANICAL EXIT-TRIGGER SWEEP (connector-driven; every open position; today = 2026-06-06 MT)
+### MECHANICAL EXIT-TRIGGER SWEEP (every open position; today = 2026-06-07 MT)
 
-Live = Friday 6/5 close (markets closed Sat). Targets/time-exits from `state.current_positions`; open set cross-checked against `get_account_positions` (matches — BRC=0 closed; MDT not open).
+Markets closed the entire window → **no price could move; marks = Fri 6/5 close, unchanged from the 6/6 sweep** (connector live-pull not re-run — a weekend OAuth re-auth would yield identical Friday-close data and the next trading-session D1, Mon 6/8, re-runs the live sweep). Targets/time-exits from `state.current_positions`; open set matches `state.current_positions` (AZO/HCA/TJX/ZBRA B; RTX/DIS D; SGOV park).
 
-| Pos (strat) | Live (Fri close) | Convergence target | Time-exit | Trigger? |
+| Pos (strat) | Mark (Fri 6/5 close) | Convergence target | Time-exit | Trigger? |
 |---|---|---|---|---|
 | ZBRA (B) | $232.11 | $264.00 | 2026-07-13 | No (−12% below) |
 | HCA (B) | $377.00 | $442.85 | 2026-06-27 | No (−15% below) |
@@ -59,45 +51,43 @@ Live = Friday 6/5 close (markets closed Sat). Targets/time-exits from `state.cur
 | RTX (D) | $180.50 | none (long-horizon) | 2027-04-27 | No |
 | DIS (D) | $99.62 | none (long-horizon) | 2027-05-07 | No |
 
-**No convergence target hit; no time-based exit due** (earliest = HCA 2026-06-27). **No EXIT TRIGGERED.**
+**No convergence target hit; no time-based exit due** (earliest = HCA 2026-06-27). **No EXIT TRIGGERED.** TJX/AZO sit ~2–3% below target — a constructive Monday open could trip them; Mon 6/8 D1's live sweep will catch it.
 
-### PER-STRATEGY KILL-TRIGGER SWEEP (connector + `perf.kill_flags`; every active strategy)
+### PER-STRATEGY KILL-TRIGGER SWEEP (every active strategy)
 
-Latest engine row (`perf.strategy_daily`, as-of 2026-06-05, already reflects Friday marks): **B** deployed_unit_value 1.0005 / peak 1.0048 / **drawdown −0.43%**; **D** deployed_unit_value 0.9719 / peak 1.0093 / **drawdown −3.70%**. `perf.kill_flags`: all false (drawdown_kill / runaway_review / m2m_underperf_review / gate_reached). Both strategies are deep-single-digit drawdowns, **nowhere near the −50% drawdown kill (#1)**; neither deployed TWR has doubled → **no runaway-success (#3)**. **No kill-trigger flags.**
+Latest engine row (`perf.strategy_daily` / `perf.kill_flags`, as-of 2026-06-05; no new marks over the weekend): **B** deployed_unit_value 1.0005 / peak 1.0048 / **drawdown −0.43%**; **D** deployed_unit_value 0.9719 / peak 1.0093 / **drawdown −3.70%**. All `kill_flags` false (drawdown_kill / runaway_review / m2m_underperf_review / gate_reached). Both strategies are shallow single-digit drawdowns, **nowhere near the −50% drawdown kill (#1)**; neither deployed TWR has doubled → **no runaway-success (#3)**. **No kill-trigger flags.**
 
 ### JUDGMENT-LADEN INVALIDATION CHECK (developments vs entry-record exit criteria)
 
-- **ZBRA (B)** — caught in the broad tech-hardware risk-off (−5.5% on the day, $245.50→$232.11) as enterprise-scanning hardware, but **no name-specific catalyst** and no sub-pattern-1 cluster-escalation (criterion iv). Criteria (i)–(iv) NOT-TRIPPED; B-long has no price stop. Mid-window thesis review already queued (`review-ZBRA-B-20260609`). Convergence $264 now ~12% away; the 2026-07-13 time-exit is the realistic disposition. No action.
-- **HCA (B)** — **rose ~+4% to $377 against the tape** (managed-care/hospital strength persisting from Thu's insurer rally); a tailwind, not a headwind. Criteria (i) FY26-guide-cut 8-K, (ii) pre-announcement, (iii) THC-clean, (iv) UHS-clean all NOT-TRIPPED. 2026-06-27 time-exit remains the realistic disposition. No action.
-- **TJX / AZO (B)** — consumer discretionary; modest moves; no name-specific catalyst; criteria NOT-TRIPPED. AZO/TJX both sit ~2–3% below their convergence targets — a small constructive tape day could trip them; D1's daily sweep will catch it. No action.
-- **RTX (D)** — defense/aero; oil + Iran a mild tailwind; criteria (Airbus / powder-metal / GTF EIS / backlog / FCF / procurement) NOT-TRIPPED. Live $180.50, ~+2% above cost. No action.
-- **DIS (D)** — $99.62; FCC TV-license matter ongoing (items from late May, nothing new Friday); criterion (v) requires a final FCC order materially restricting ownership **AND** a Disney 8-K material-adverse disclosure — neither exists → NOT-TRIPPED, elevated-monitor. Long-horizon, no price stop. No action.
+- **RTX (D)** — the weekend Iran/Hormuz friction is a **mild tailwind** (CENTCOM intercepting Iranian ballistic missiles/drones is squarely RTX's missile-defense/effectors domain; defense bid plus a firmer oil tape). Entry-record criteria (Airbus / powder-metal / GTF EIS / backlog / FCF / procurement) NOT-TRIPPED. No action.
+- **DIS (D)** — no fresh weekend news; FCC TV-license matter unchanged. Criterion (v) requires a final FCC order materially restricting ownership **AND** a Disney 8-K material-adverse disclosure — neither exists → NOT-TRIPPED, elevated-monitor. No action.
+- **ZBRA / HCA / TJX / AZO (B)** — no name-specific weekend catalyst; no sub-pattern cluster-escalation. Criteria NOT-TRIPPED. B-longs carry no price stop; convergence/time-exit remain the disposition. ZBRA mid-window thesis review queued (`review-ZBRA-B-20260609`, due 6/9 → D2). No action.
 
 ### WATCHLIST CANDIDATE STATUS
 
-The chip rout is directly relevant to the large **Strategy A queue** of AI/semi names (NVDA, AVGO, MU, AMD, MRVL, AMAT, DELL, SNOW, HPE, etc.) — all on the **DNA router**, awaiting the next M1 ACTIVATE. The selloff is a **valuation reset**: prior A-queue notes repeatedly flagged "valuation-reset caveat ELEVATED" as a *headwind* to eventual A-entry thesis-runway, so a 2-day correction in these names **relieves** that headwind. This is **context for the next M1 ACTIVATE evaluation, not a today action** (router is DNA → no drain). No watchlist name moves to entry-ready, none is invalidated. Strategy A queue unchanged.
+- **Strategy A queue (AI/semi/tech: NVDA, AVGO, MU, AMD, MRVL, AMAT, DELL, SNOW, HPE, ORCL, CRM, CRWD, PANW, etc.)** — two weekend cross-currents, both **context for the next M1 ACTIVATE evaluation, not a today action** (router is DNA → no drain): (a) the **AVGO share-loss-to-MediaTek** sell-side reframing adds a name-specific risk to AVGO's A-thesis (vs. pure sector beta) — flag for AVGO-specific re-rating at M1; (b) **"Trump eyes US stake in AI firms"** is a new policy-optionality wrinkle across the complex (directionally ambiguous). The Fri 2-day chip correction continues to **relieve the "valuation-reset caveat" headwind** repeatedly flagged against these names. No queue name moves to entry-ready; none invalidated. Strategy A queue unchanged.
+- No other watchlist name (B overflow / D pipeline) materially changed over the weekend.
 
 ---
 
 ## ANALYSIS — OPPORTUNITY CHECK
 
-- **LULU (B candidate, NEW):** −8% to −11% Day-0 (~6/5) on an FY26 guide cut (criterion-1 magnitude clears; Consumer Discretionary; **NEGATIVE direction**). Fundamentals-driven decline (Americas comps −5%, fifth straight quarter; guidance cut) — profile resembles the THO 6/4 NO-GO (Sub-Pattern 6 negative-direction + 4c overlay), so **likely-but-not-certain NO-GO**. Day-0 ≈ 6/5; entry window ~10 trading days (~through 6/19). → D2: construct the B thesis (queue due **2026-06-08**, the next trading day, since 6/6–6/7 is the weekend) per Strategy.md rev 35 + B_Sub_Pattern_Taxonomy.md; resolve the exact Day-0 close-to-close via connector first.
-- **Chip complex (NVDA/MU/AMD/MRVL/QCOM −6% to −9%):** NONE is a fresh scheduled-catalyst print — AVGO's qualifying event was 6/3 (Day-0 6/4, already NO-GO'd 6/4 on Sub-Pattern 3); the rest are sympathy with no own-name qualifying event. **NOT B-eligible** (criterion-1 requires the move attributable to the name's own qualifying event). No new B candidate from the rout.
-- No new **Strategy C** (FOMC June already queued `thesis-FOMC-C-20260608`, due 6/8), **A** (router DNA → AI/semi names already in the A-queue), or **E** (no fresh single-name pair divergence; E is execution-feasibility-deferred at current book size) candidates from Friday's tape.
+- **No new entry candidate from the weekend.** Markets were closed → no qualifying B post-event move, no newly-announced C/A catalyst, and no fresh single-name E divergence originated inside the window.
+- **Iran/Hormuz escalation** is a macro/geopolitical development, not a single-name qualifying event; it does not by itself create a clean B/C/A candidate (defense/energy beta is diffuse). If it escalates into a discrete catalyst (e.g., a named defense award or an oil-spike-driven single-name move on Monday's open), the Mon 6/8 D1 scan picks it up.
+- Already-queued theses (drained by D2, not D1): **thesis-LULU-B**, **thesis-CEG-B**, **thesis-FOMC-C** — all due 2026-06-08 (Monday) in `state.open_queue` (PENDING_ANALYSIS). No D1 action.
 
 ---
 
 ## ANALYSIS — REGIME CHECK
 
-A −4.18% Nasdaq day (worst since April 2025), S&P −2.64%, and ~$1T of chip-sector destruction is the most significant single-day market event in weeks — so the high bar deserves an explicit walk:
-- **SPY Trend:** was NEUTRAL (6/3). S&P 7,383.74 is only ~2.6% off its 5/31 record (~7,580) and well above any 50/200-day MA; a single −2.6% day from a record does not flip a trend-following signal. Trend likely still **NEUTRAL**, not DOWN.
-- **Breadth:** Dow −1.35% (far less than Nasdaq) and Russell +1.45% intraday → the damage is **concentrated in mega-cap tech/semis**, the signature of a narrow factor unwind, not a broad-breadth breakdown. Breadth **HEALTHY** likely intact.
-- **Yield curve:** 10Y ~4.48% / 2Y ~4.08% — still **NORMAL** (not inverted). The strong jobs print reinforces higher-for-longer but introduces no curve-regime change, and is consistent with the existing hawkish-policy axis (M1b 6/1).
-- **Strategy mapping:** the most-exposed strategy (A) is already DNA; B/D/E activation rest on different criteria that a one-day, sector-concentrated tech selloff does not flip.
+Two weekend threads warrant an explicit walk against the high bar:
 
-**Default NO — no inter-monthly router review recommended.** This is a sector/factor event (AI-capex de-rating), not a market-regime breakdown. **Monitor:** if the tech drawdown extends into a sustained move (SPY Trend → DOWN and/or breadth deterioration over multiple sessions), that becomes a genuine M1-level input — re-evaluate on the next D1 if Monday 6/8 confirms follow-through.
+- **Iran/Hormuz kinetic friction:** the kinetic phase stepped up (missiles toward Kuwait/Bahrain, drones toward Hormuz) but was **intercepted, with no direct hit on US/allied assets, the truce not formally collapsed, and Trump publicly downplaying a breach.** This keeps the M1b **shock_overlay = latent** (active transmission persists; acute excluded — kinetic phase contained), consistent with the current `state.current_regime` row. A latent-staying-latent overlay does not flip any strategy's router.
+- **AI-capex de-rate follow-through:** Friday was a sector/factor reset (Dow −1.35% vs Nasdaq −4.18%, Russell firm; AVGO an over-reaction on a >50%-grower with a name-specific TPU-share-loss overlay). SPY Trend was NEUTRAL on 6/3 and S&P 7,383.74 sits only ~2.6% off its record — a single down day from a record does not flip a trend signal. The most-exposed strategy (A) is already DNA. Whether this becomes a genuine M1-level input depends on **Monday's follow-through** (SPY Trend → DOWN and/or multi-session breadth deterioration), which cannot be assessed on a closed-market Sunday.
 
-*(Frontier-LLM capability check — Saturday rotation [multi-agent debate], 1 HF `paper_search` run: results are reference-level reinforcement of multi-agent-debate methodology — relevant to the adversarial-review architecture — with recent results dated Jan 2026 (outside the prior 24–72h) and no Tier-1 architectural delta, new failure mode, or Tier-2 numerical contradiction to AI_Trading_Foundation.md → silent per protocol; no Decision_Log capture.)*
+**Default NO — no inter-monthly router review recommended.** Neither thread clears the high bar today. **Monitor Mon 6/8:** (a) oil/energy + defense reaction to the Hormuz friction; (b) chip-reset follow-through vs. stabilization. Re-evaluate on the Mon 6/8 D1 if either confirms a sustained move.
+
+*(Frontier-LLM capability check — Sunday rotation [long-context], 1 HF `paper_search` run: the long-context-degradation / "lost-in-thought" literature is relevant to AI_Trading_Foundation's context-window/recall disadvantages, but no matching paper was **published inside the scan window** (nearest, RecaLLM 2604.09494, is 2026-04-10 — pre-window; the rest are 2024–2025), and nothing constitutes a Tier-1 architectural delta, new failure mode, or Tier-2 numerical contradiction → silent per protocol; no Decision_Log capture.)*
 
 ---
 
@@ -105,8 +95,7 @@ A −4.18% Nasdaq day (worst since April 2025), S&P −2.64%, and ~$1T of chip-s
 
 The downstream D2 routine reads this section verbatim and converts each bullet into an order / live-file edit / queue entry.
 
-- **Exits triggered:** NONE. No convergence target hit, no time-exit due (earliest HCA 2026-06-27), no judgment-laden invalidation trip, no per-strategy kill-flag.
-- **New entry candidate — LULU (Strategy B):** −8% to −11% Day-0 (~6/5) on an FY26 guidance cut; criterion-1 clears; NEGATIVE direction; Consumer Discretionary. → D2: full B thesis construction (queue `thesis-LULU-B-20260608`, due 2026-06-08 the next trading day; resolve exact Day-0 CTC via connector first; sub-pattern routing per B_Sub_Pattern_Taxonomy.md — SP6 negative-direction / 4c overlay flagged, likely NO-GO). Entry window ~through 2026-06-19. Conservative default: decline/skip if Day-0 |CTC| < 5% on the qualifying event or the window has closed.
-- **Watchlist updates:** none requiring an edit today. Note for next M1 ACTIVATE: the 2-day AI/semi correction relieves the "valuation-reset caveat" headwind repeatedly flagged against the A-queue AI/semi names (NVDA/AVGO/MU/AMD/MRVL/AMAT/DELL/SNOW/HPE/…) — improves eventual A-entry thesis-runway if it persists.
-- **Router reviews:** none (high bar not met). Monitor SPY Trend / breadth for follow-through on Mon 6/8 before any escalation.
-- **Staging-integrity flags (for D2 Step 0 / D3):** (a) **MDT (B)** GO 6/3 never filled (D2 6/4 "no-fill") and is not re-staged — if the B entry window (~through ~6/17) still intends the entry, re-craft per the persist-and-wait DAY-order policy (Operating_Protocols §11), else abandon; (b) **`olli-thesis-B-20260605`** (due 6/5) appears undrained in `state.open_queue` — D2 to drain (apply its conservative default if Day-0 resolves to the positive 6/3 print).
+- **Exits triggered:** NONE. Markets closed the entire window (marks unchanged from Fri 6/5 close); no convergence target hit, no time-exit due (earliest HCA 2026-06-27), no judgment-laden invalidation trip, no per-strategy kill-flag.
+- **New entry candidates:** NONE originated this window (markets closed). Existing pending theses **thesis-LULU-B-20260608, thesis-CEG-B-20260608, thesis-FOMC-C-20260608** are due 2026-06-08 in `state.open_queue` — drained by D2, not actioned here.
+- **Watchlist updates:** none requiring an edit today. Notes for next M1 ACTIVATE evaluation (A-queue AI/semi names): (a) AVGO's TPU-share-loss-to-MediaTek reframing adds a name-specific A-thesis risk distinct from sector beta; (b) "Trump eyes US stake in AI firms" is a new (ambiguous) policy-optionality input across the complex; (c) Friday's 2-day chip correction continues to relieve the standing "valuation-reset caveat" headwind.
+- **Router reviews:** none (high bar not met). **Monitor Mon 6/8 D1** for (i) oil/energy + defense reaction to the US–Iran Hormuz friction and (ii) AI-capex-de-rate follow-through (SPY Trend / breadth) before any escalation.
