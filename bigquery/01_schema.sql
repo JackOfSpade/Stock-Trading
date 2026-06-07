@@ -129,7 +129,13 @@ CREATE OR REPLACE VIEW `stock-trading-498512.state.current_regime` AS
 SELECT * FROM `stock-trading-498512.events.regime_events`
 QUALIFY ROW_NUMBER() OVER (PARTITION BY scope, key ORDER BY as_of_date DESC, event_ts DESC) = 1;
 
-CREATE OR REPLACE VIEW `stock-trading-498512.state.open_queue` AS
+-- Queue current-state, two layers:
+--   * open_queue_detail — full latest-wins projection INCLUDING the bulky payload JSON + note;
+--     read item context here (e.g. SELECT payload, note FROM state.open_queue_detail WHERE item_key=…).
+--   * open_queue — routing/identity scalar columns ONLY (no payload, no note), so `SELECT *` is
+--     always compact and tabular no matter how verbose an item is; has_note/has_payload flag where
+--     the prose lives. This is the view drain routines (D2/D3) and state.daily_briefing read.
+CREATE OR REPLACE VIEW `stock-trading-498512.state.open_queue_detail` AS
 SELECT * FROM (
   SELECT * FROM `stock-trading-498512.events.queue_events`
   QUALIFY ROW_NUMBER() OVER (
@@ -137,6 +143,13 @@ SELECT * FROM (
     ORDER BY COALESCE(due_date, DATE '1900-01-01') DESC, event_ts DESC
   ) = 1
 ) WHERE status NOT IN ('complete','superseded','COMPLETE','DROPPED');
+
+CREATE OR REPLACE VIEW `stock-trading-498512.state.open_queue` AS
+SELECT event_id, event_ts, queue, item_key, item_type, status, strategy, ticker,
+       due_date, conservative_default, artifact_path,
+       note IS NOT NULL AS has_note,
+       payload IS NOT NULL AS has_payload
+FROM `stock-trading-498512.state.open_queue_detail`;
 
 CREATE OR REPLACE VIEW `stock-trading-498512.state.trade_fills_curated` AS
 SELECT * FROM `stock-trading-498512.events.trade_fills`
