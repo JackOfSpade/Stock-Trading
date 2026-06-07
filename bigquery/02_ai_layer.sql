@@ -70,15 +70,56 @@ AS (
     top_k => 10, distance_type => 'COSINE')
 );
 
--- ===== Incremental re-embedding (for the daily refresh procedure) =====
--- Embeds only decision_log rows not yet embedded; cheap (pennies) at one-entry-per-day cadence.
--- INSERT INTO `stock-trading-498512.analytics.decision_embeddings`
--- SELECT entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title,
---        ml_generate_embedding_result, ml_generate_embedding_status
--- FROM ML.GENERATE_EMBEDDING(
---   MODEL `stock-trading-498512.ops.text_embed`,
---   (SELECT entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title,
---           SUBSTR(CONCAT(COALESCE(title,''),'\n',COALESCE(body_md,'')),1,6000) AS content
---    FROM `stock-trading-498512.events.decision_log`
---    WHERE entry_id NOT IN (SELECT entry_id FROM `stock-trading-498512.analytics.decision_embeddings`)),
---   STRUCT(TRUE AS flatten_json_output, 'RETRIEVAL_DOCUMENT' AS task_type));
+-- ===== Incremental re-embedding — ops.sp_embed_pending() =====
+-- The canonical incremental embedder (was a hand-run INSERT; now a real, idempotent procedure so
+-- new decision rows can never be left unembedded — see ops.sp_log_decision in 08_ops_procedures.sql,
+-- which calls this in the same call as the decision INSERT). Embeds only decision_log rows not
+-- already OK-embedded, and RETRIES previously errored/empty rows (the NOT-IN excludes only good
+-- ones). MERGE makes it re-run-safe; a no-op (cheap) when nothing is pending. Pennies at the
+-- one-entry-per-day cadence. ml_generate_embedding_status = '' is BigQuery's success sentinel.
+CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_embed_pending`()
+BEGIN
+  MERGE `stock-trading-498512.analytics.decision_embeddings` T
+  USING (
+    SELECT entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title,
+           ml_generate_embedding_result AS embedding,
+           ml_generate_embedding_status AS embed_status
+    FROM ML.GENERATE_EMBEDDING(
+      MODEL `stock-trading-498512.ops.text_embed`,
+      (SELECT entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title,
+              SUBSTR(CONCAT(COALESCE(title,''),'\n',COALESCE(body_md,'')),1,6000) AS content
+       FROM `stock-trading-498512.events.decision_log`
+       WHERE entry_id NOT IN (
+         SELECT entry_id FROM `stock-trading-498512.analytics.decision_embeddings`
+         WHERE embed_status = '' AND ARRAY_LENGTH(embedding) > 0)),
+      STRUCT(TRUE AS flatten_json_output, 'RETRIEVAL_DOCUMENT' AS task_type))
+  ) S
+  ON T.entry_id = S.entry_id
+  WHEN MATCHED THEN UPDATE SET
+    entry_date = S.entry_date, strategy = S.strategy, entry_type = S.entry_type,
+    sub_pattern = S.sub_pattern, decision = S.decision, conviction = S.conviction,
+    ticker = S.ticker, title = S.title, embedding = S.embedding, embed_status = S.embed_status
+  WHEN NOT MATCHED THEN INSERT
+    (entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title, embedding, embed_status)
+    VALUES (S.entry_id, S.entry_date, S.strategy, S.entry_type, S.sub_pattern, S.decision, S.conviction, S.ticker, S.title, S.embedding, S.embed_status);
+END;
+
+-- ===== Embedding drift monitor — state.embedding_health =====
+-- One SELECT replaces the manual count-compare. is_healthy = every decision_log row has a valid
+-- embedding (none missing, none errored). Interprets the '' = success sentinel for human/agent use.
+--   SELECT * FROM state.embedding_health;   -- expect is_healthy = TRUE, missing_rows = error_rows = 0
+CREATE OR REPLACE VIEW `stock-trading-498512.state.embedding_health` AS
+WITH dl AS (SELECT COUNT(*) AS log_rows FROM `stock-trading-498512.events.decision_log`),
+emb AS (
+  SELECT COUNT(*) AS embedding_rows,
+         COUNTIF(embed_status = '' AND ARRAY_LENGTH(embedding) > 0) AS ok_rows,
+         COUNTIF(NOT (embed_status = '' AND ARRAY_LENGTH(embedding) > 0)) AS error_rows
+  FROM `stock-trading-498512.analytics.decision_embeddings`),
+miss AS (
+  SELECT COUNTIF(e.entry_id IS NULL) AS missing_rows
+  FROM `stock-trading-498512.events.decision_log` dl
+  LEFT JOIN `stock-trading-498512.analytics.decision_embeddings` e USING (entry_id))
+SELECT dl.log_rows, emb.embedding_rows, emb.ok_rows, emb.error_rows, miss.missing_rows,
+       (miss.missing_rows = 0 AND emb.error_rows = 0) AS is_healthy,
+       CURRENT_TIMESTAMP() AS checked_at
+FROM dl, emb, miss;
