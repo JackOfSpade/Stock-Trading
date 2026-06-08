@@ -35,6 +35,11 @@ if ! git fetch origin main >/dev/null 2>&1; then
   exit 0
 fi
 
+unmerged="$(git rev-list --count origin/main..HEAD 2>/dev/null || echo 0)"
+if [ "${unmerged:-0}" != "0" ]; then
+  echo "[session-start] WARNING: ${unmerged} commit(s) on $(git rev-parse --abbrev-ref HEAD 2>/dev/null) not in origin/main; resetting anyway (recoverable via reflog or the origin branch)." >&2
+fi
+
 # Hard-reset the current (harness-assigned) branch to origin/main so the
 # routine starts from the latest committed state. Safe here: the assigned
 # branch is fresh per session and has no work to preserve.
