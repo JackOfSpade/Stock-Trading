@@ -88,10 +88,13 @@ BEGIN
       MODEL `stock-trading-498512.ops.text_embed`,
       (SELECT entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title,
               SUBSTR(CONCAT(COALESCE(title,''),'\n',COALESCE(body_md,'')),1,6000) AS content
-       FROM `stock-trading-498512.events.decision_log`
-       WHERE entry_id NOT IN (
-         SELECT entry_id FROM `stock-trading-498512.analytics.decision_embeddings`
-         WHERE embed_status = '' AND ARRAY_LENGTH(embedding) > 0)),
+       FROM `stock-trading-498512.events.decision_log` dl
+       -- NOT EXISTS anti-join (NULL-safe): a NULL entry_id anywhere in the
+       -- embeddings table would make a NOT IN (...) predicate return zero rows
+       -- and silently embed nothing.
+       WHERE NOT EXISTS (
+         SELECT 1 FROM `stock-trading-498512.analytics.decision_embeddings` e
+         WHERE e.entry_id = dl.entry_id AND e.embed_status = '' AND ARRAY_LENGTH(e.embedding) > 0)),
       STRUCT(TRUE AS flatten_json_output, 'RETRIEVAL_DOCUMENT' AS task_type))
   ) S
   ON T.entry_id = S.entry_id

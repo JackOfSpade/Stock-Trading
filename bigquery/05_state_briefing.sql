@@ -24,7 +24,9 @@ UNION ALL
 SELECT 'TIME_EXIT', position_key, strategy, time_exit_date,
        CONCAT(ticker, ' time-exit ', CAST(time_exit_date AS STRING))
 FROM `stock-trading-498512.state.current_positions`
-WHERE strategy <> 'D' AND time_exit_date <= CURRENT_DATE();
+-- status='OPEN' guard (consistent with analytics.strategy_nav) so a non-CLOSE
+-- but non-open latest event doesn't raise a spurious time-exit alert.
+WHERE strategy <> 'D' AND time_exit_date <= CURRENT_DATE() AND status = 'OPEN';
 
 -- Briefing inputs the agent also reads directly (all built):
 --   state.current_positions, state.current_regime (technical+activation+fundamental axes),

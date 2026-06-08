@@ -193,6 +193,19 @@ def price_bsm(opt: OptionInputs) -> float:
         else:
             return max(opt.strike - opt.underlying_price, 0.0)
 
+    if opt.volatility <= 0:
+        # Zero/negative vol: no time value, so the option is worth its
+        # DISCOUNTED intrinsic (forward vs discounted strike). Without this
+        # guard d1/d2 collapse to 0 and N(0)=0.5 returns 0.5*(S-K) — a ~2x
+        # mispricing for ITM options that silently corrupts net_debit, max-loss
+        # and sizing whenever any leg vol is passed as 0.
+        fwd = opt.underlying_price * math.exp(-opt.dividend_yield * opt.time_to_expiration)
+        kpv = opt.strike * math.exp(-opt.risk_free_rate * opt.time_to_expiration)
+        if opt.option_type == 'call':
+            return max(fwd - kpv, 0.0)
+        else:
+            return max(kpv - fwd, 0.0)
+
     S = opt.underlying_price
     K = opt.strike
     r = opt.risk_free_rate
@@ -222,6 +235,20 @@ def greeks_bsm(opt: OptionInputs) -> Dict[str, float]:
     """
     if opt.time_to_expiration <= 0:
         return {'delta': 0.0, 'gamma': 0.0, 'theta': 0.0, 'vega': 0.0, 'rho': 0.0}
+
+    if opt.volatility <= 0:
+        # Zero/negative vol: gamma/vega/theta divide by sigma → guard against
+        # ZeroDivisionError. Greeks are degenerate; return finite sentinels with
+        # delta from discounted-forward moneyness (price is handled in price_bsm).
+        T0 = opt.time_to_expiration
+        fwd = opt.underlying_price * math.exp(-opt.dividend_yield * T0)
+        kpv = opt.strike * math.exp(-opt.risk_free_rate * T0)
+        dq = math.exp(-opt.dividend_yield * T0)
+        if opt.option_type == 'call':
+            delta = dq if fwd > kpv else 0.0
+        else:
+            delta = -dq if fwd < kpv else 0.0
+        return {'delta': delta, 'gamma': 0.0, 'theta': 0.0, 'vega': 0.0, 'rho': 0.0}
 
     S = opt.underlying_price
     K = opt.strike
@@ -404,8 +431,15 @@ class Structure:
         prices at which P&L crosses zero at expiration.
         """
         S0 = self.underlying_price
-        # Wide grid: 50% below to 200% above current
-        prices = [S0 * (0.5 + 0.0001 * i) for i in range(15001)]  # 0.5 to 2.0
+        # Grid bounds derived from the STRIKES (not just S0): a long put's
+        # breakeven can sit far below 0.5*S0 and a wide structure's breakeven far
+        # above 2.0*S0, so an S0-relative window silently drops them. Span from
+        # near-zero to well above the highest strike (and above S0).
+        strikes = [leg.option.strike for leg in self.legs]
+        hi = max(max(strikes), S0) * 3.0
+        lo = 0.001
+        n = 30000
+        prices = [lo + (hi - lo) * i / n for i in range(n + 1)]
         pnls = [self.pnl_at_expiration(p) for p in prices]
 
         breakevens = []
@@ -467,31 +501,45 @@ class Structure:
         structure's expiration grid — and both must agree to within $1 per
         structure before entry is permitted."
 
-        This MC path samples adverse moves up to adverse_move_stdev sigmas in
-        either direction and returns the worst-case P&L observed.
+        This MC path samples terminal prices UNIFORMLY across a range that is
+        guaranteed to span below the lowest strike and above the highest strike
+        (widened to at least the realistic +/- adverse_move_stdev lognormal
+        cone). For every permitted defined-risk structure the max-loss region is
+        a FLAT zone beyond the outermost strike, so a range that reaches past all
+        strikes will land in it and reproduce the closed-form bound.
 
-        adverse_move_stdev = 4.0 covers ~99.99% of paths under lognormal; for
-        defined-risk structures the worst case is bounded regardless of how
-        far we scan, so this is a sanity check that the closed-form scan
-        agrees with stochastic exploration.
+        Why not the old lognormal +/-4-sigma sampler: for low-IV / short-DTE
+        structures the 4-sigma cone never reaches the protective long strikes
+        (e.g. a 7-DTE, 15%-vol iron condor only spans ~+/-8%), so MC returned $0
+        while closed-form returned the true max loss — a spurious
+        MaxLossDualPathDisagreement (or, if a caller trusted the lower MC value,
+        an UNDER-stated risk and over-sized position). Uniform price-space
+        sampling is an independent computation from the closed-form deterministic
+        grid yet robust across the whole input space (any sigma/T).
         """
         rng = random.Random(seed)
         S0 = self.underlying_price
         T = self.days_to_expiration / 365.0
-        # Use ATM IV from first leg as scan vol (only used for path generation,
-        # not for pricing — the payoff at expiration uses no vol input)
+        # Scan vol from the first leg, used only to widen the range to at least
+        # the realistic adverse cone (the expiration payoff itself uses no vol).
         sigma = self.legs[0].option.volatility
+
+        strikes = sorted({leg.option.strike for leg in self.legs})
+        # Range guaranteed to reach the flat max-loss zones beyond all strikes.
+        lo_target = min(strikes[0], S0) * 0.5
+        hi_target = max(strikes[-1], S0) * 1.5
+        if sigma > 0 and T > 0:
+            move = sigma * math.sqrt(T) * adverse_move_stdev
+            cone_lo = S0 * math.exp(-0.5 * sigma ** 2 * T - move)
+            cone_hi = S0 * math.exp(-0.5 * sigma ** 2 * T + move)
+        else:
+            cone_lo = cone_hi = S0
+        low = max(0.001, min(lo_target, cone_lo))
+        high = max(hi_target, cone_hi)
 
         worst_pnl = float('inf')
         for _ in range(n_paths):
-            # Sample under lognormal (drift not needed for adverse-move scan)
-            z = rng.gauss(0, 1)
-            # Cap z at adverse_move_stdev sigmas
-            if z > adverse_move_stdev:
-                z = adverse_move_stdev
-            elif z < -adverse_move_stdev:
-                z = -adverse_move_stdev
-            S_T = S0 * math.exp(-0.5 * sigma ** 2 * T + sigma * math.sqrt(T) * z)
+            S_T = rng.uniform(low, high)
             pnl = self.pnl_at_expiration(S_T)
             if pnl < worst_pnl:
                 worst_pnl = pnl
@@ -1153,7 +1201,9 @@ def size_position(
         )
 
     nav_cap = strategy_nav * max_pct_nav
-    contracts = int(nav_cap // max_loss_per_contract)
+    # Small epsilon so an exact integer multiple (cap == N * loss) doesn't drop
+    # to N-1 from binary floating-point representation error.
+    contracts = math.floor(nav_cap / max_loss_per_contract + 1e-9)
 
     if contracts < 1:
         return (0, True)  # Defer
@@ -1164,42 +1214,39 @@ def size_position(
 def realized_volatility_30d(
     daily_close_prices: List[float],
 ) -> float:
-    """Compute 30-day realized volatility from a list of trailing 30 daily
-    closing prices. Returns annualized vol (decimal).
+    """Compute 30-day realized volatility from trailing daily closing prices.
+    Returns annualized vol (decimal).
 
-    Uses log returns and **365-day calendar annualization** to match the
-    BSM pricing convention (price_bsm uses T = days_to_expiration / 365).
-    Both inputs to the IV-vs-realized comparison must use the same
-    annualization convention; mixing 365 and 252 produces a systematic
-    bias of factor sqrt(252/365) ≈ 0.831 between IV and realized.
+    Windowing: uses the most recent 31 closes (→ 30 log returns). Earlier
+    behaviour ignored the window entirely and used the whole input series, so a
+    longer history silently produced the wrong realized-vol figure; the trailing
+    slice is now applied here rather than left to the caller. If fewer than 31
+    prices are supplied, all available are used (>= 2 required).
 
-    The input is expected to be a list of *trading-day* closing prices
-    (i.e., consecutive market sessions, not calendar days). The
-    annualization scales the per-trading-day vol by sqrt(365) rather than
-    sqrt(252) to express the result in calendar-day terms compatible with
-    how options markets quote IV.
-
-    Note: this is the convention used by retail options chains and
-    standard BSM calculators. Some institutional desks use 252 throughout
-    (both for T in BSM and for vol annualization); that is internally
-    consistent but different from this code's convention.
+    Annualization: trading-day log-return vol is scaled by sqrt(252) — the
+    number of trading-day RETURNS per year. This is correct even though
+    price_bsm uses T = days/365: a calendar year holds ~252 trading-day returns,
+    so an option's implied vol (annualized) corresponds to daily_vol * sqrt(252),
+    NOT sqrt(365). Annualizing realized vol by sqrt(365) over-states it by
+    sqrt(365/252) ≈ 1.20x and makes IV look cheap vs realized. BSM's day-count
+    governs time-decay discounting, a separate quantity from vol annualization.
     """
     if len(daily_close_prices) < 2:
         raise ValueError("Need at least 2 prices for vol calc")
 
+    # Trailing 30-day window: the last 31 prices yield 30 returns.
+    window = daily_close_prices[-31:]
+
     log_returns = []
-    for i in range(1, len(daily_close_prices)):
-        log_returns.append(math.log(daily_close_prices[i] / daily_close_prices[i - 1]))
+    for i in range(1, len(window)):
+        log_returns.append(math.log(window[i] / window[i - 1]))
 
     n = len(log_returns)
     mean_lr = sum(log_returns) / n
     variance = sum((lr - mean_lr) ** 2 for lr in log_returns) / (n - 1)
     daily_vol = math.sqrt(variance)
-    # Annualize using sqrt(365) to match BSM's calendar-day T convention.
-    # Even though log returns come from trading-day price observations,
-    # the result is expressed in calendar-day terms for direct comparison
-    # with calendar-day IV from price_bsm.
-    annualized_vol = daily_vol * math.sqrt(365)
+    # Annualize trading-day return vol by sqrt(252) (trading-day returns/year).
+    annualized_vol = daily_vol * math.sqrt(252)
     return annualized_vol
 
 
@@ -1215,7 +1262,7 @@ def probability_weighted_payoff(
     price-derived, not Claude-forecasted, per 2.13."
 
     Returns dict with: expected_payoff, expected_pnl, prob_profit, prob_max_loss,
-    expected_payoff_above_strike (etc.).
+    note.
     """
     rng = random.Random(seed)
     S0 = structure.underlying_price
@@ -1240,11 +1287,15 @@ def probability_weighted_payoff(
     expected_payoff = sum(payoffs) / n_paths
     expected_pnl = sum(pnls) / n_paths
     prob_profit = sum(1 for pnl in pnls if pnl > 0) / n_paths
+    # Probability of realizing (within $0.01 of) the structure's defined max loss.
+    max_loss = structure.max_loss_closed_form()
+    prob_max_loss = sum(1 for pnl in pnls if pnl <= -(max_loss - 0.01)) / n_paths
 
     return {
         'expected_payoff': round(expected_payoff, 4),
         'expected_pnl': round(expected_pnl, 4),
         'prob_profit': round(prob_profit, 4),
+        'prob_max_loss': round(prob_max_loss, 4),
         'note': 'Probabilities are market-implied (price-derived), not Claude-forecasted (per 2.13).',
     }
 
@@ -1413,22 +1464,23 @@ if __name__ == '__main__':
         print(f"     PASS: zero max-loss correctly raises: {str(e)[:80]}...")
 
     # Test 11: Realized volatility
-    # Synthesize a price series with a known *calendar* sigma = 0.30,
-    # i.e. daily vol = 0.30 / sqrt(365). The function should recover ~0.30
-    # since both the synthesis and the function use the 365-day calendar
-    # annualization convention (matching BSM's T = days/365).
+    # Synthesize a price series with a known annualized sigma = 0.30 on the
+    # trading-day basis, i.e. daily vol = 0.30 / sqrt(252). The function should
+    # recover ~0.30, since it annualizes trading-day return vol by sqrt(252)
+    # (the count of trading-day returns per year — see the function docstring).
     rng = random.Random(42)
     prices = [100.0]
-    sigma_calendar = 0.30
-    daily_vol_calendar = sigma_calendar / math.sqrt(365)
-    for _ in range(200):  # longer series for tighter sample
+    sigma_annual = 0.30
+    daily_vol = sigma_annual / math.sqrt(252)
+    for _ in range(200):
         z = rng.gauss(0, 1)
-        prices.append(prices[-1] * math.exp(-0.5 * daily_vol_calendar**2 + daily_vol_calendar * z))
+        prices.append(prices[-1] * math.exp(-0.5 * daily_vol**2 + daily_vol * z))
     rv = realized_volatility_30d(prices)
-    print(f"\n[11] Realized vol from synthetic series with calendar sigma=0.30: {rv:.4f}")
-    print(f"    (Should be ~0.30 since both synthesis and function use sqrt(365))")
-    # n=200 gives ~5% sampling error; tolerance 0.05
-    assert abs(rv - sigma_calendar) < 0.05, f"Realized vol off: got {rv}, expected ~{sigma_calendar}"
+    print(f"\n[11] Realized vol from synthetic series with annualized sigma=0.30: {rv:.4f}")
+    print(f"    (Should be ~0.30; realized vol annualizes trading-day vol by sqrt(252))")
+    # Only the trailing 30 returns are used now, so sampling error is wider
+    # (~1/sqrt(2*29) ≈ 13%); tolerance 0.10.
+    assert abs(rv - sigma_annual) < 0.10, f"Realized vol off: got {rv}, expected ~{sigma_annual}"
 
     # Test 12: Multi-expiration rejection
     print(f"\n[12] Multi-expiration rejection test:")

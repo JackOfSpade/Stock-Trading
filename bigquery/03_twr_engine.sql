@@ -31,21 +31,30 @@ OPTIONS(description='Daily closes + corporate actions per held ticker (+SGOV). T
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.position_lifecycle` AS
 WITH entries AS (
   SELECT strategy, ticker, contract_id, DATE(fill_ts) AS entry_date,
-         price AS entry_price, shares, commission AS entry_commission
+         price AS entry_price, shares, commission AS entry_commission,
+         -- sequence the BUYs within a (strategy,ticker) so the Nth buy pairs to
+         -- the Nth sell (handles re-trades + a ticker held by 2 strategies)
+         ROW_NUMBER() OVER (PARTITION BY strategy, ticker ORDER BY fill_ts, trade_id) AS leg_seq
   FROM `stock-trading-498512.events.trade_fills` WHERE side='BUY'
 ),
 exits AS (
-  SELECT ticker, DATE(fill_ts) AS exit_date, price AS exit_price,
-         realized_pnl, commission AS exit_commission
+  SELECT strategy, ticker, DATE(fill_ts) AS exit_date, price AS exit_price,
+         realized_pnl, commission AS exit_commission,
+         ROW_NUMBER() OVER (PARTITION BY strategy, ticker ORDER BY fill_ts, trade_id) AS leg_seq
   FROM `stock-trading-498512.events.trade_fills` WHERE side='SELL'
 )
-SELECT CONCAT(e.strategy,':',e.ticker,':',CAST(e.entry_date AS STRING)) AS position_key,
+-- position_key carries leg_seq so it is unique per round-trip (the LAG window in
+-- strategy_daily_returns partitions on it; a shared key would merge two positions).
+SELECT CONCAT(e.strategy,':',e.ticker,':',CAST(e.entry_date AS STRING),':',CAST(e.leg_seq AS STRING)) AS position_key,
        e.strategy, e.ticker, e.contract_id, e.shares,
        e.entry_date, e.entry_price, e.entry_commission,
        x.exit_date, x.exit_price, x.exit_commission, x.realized_pnl
-FROM entries e LEFT JOIN exits x USING (ticker);
--- NOTE: assumes one round-trip per ticker (true to date). A re-traded ticker needs a
--- buy/sell pairing key (e.g. by order sequence) before this generalises.
+FROM entries e
+LEFT JOIN exits x
+  ON e.strategy = x.strategy AND e.ticker = x.ticker AND e.leg_seq = x.leg_seq;
+-- Entries↔exits are paired by (strategy, ticker, leg_seq) — NOT ticker alone.
+-- A ticker traded by two strategies, or re-traded by one, no longer fans out
+-- (every BUY matching every SELL) and mis-attributes exit price/date/realized_pnl.
 
 -- ===== Value-weighted daily deployed TOTAL returns per strategy (GROSS of commissions) =====
 -- This is the PROFITABILITY metric. Commissions are EXCLUDED on purpose: at the experiment's
@@ -135,7 +144,17 @@ BEGIN
   INSERT INTO `stock-trading-498512.perf.strategy_daily`
   (as_of_date, strategy, deployed_unit_value, peak_unit_value, current_drawdown, sgov_index, excess_vs_sgov, deployed_days, closed_trades, gate_n, method, note)
   WITH r AS (
-    SELECT sdr.as_of_date, sdr.strategy, sdr.r_deployed, COALESCE(sg.r_sgov,0) AS r_sgov
+    SELECT sdr.as_of_date, sdr.strategy, sdr.r_deployed,
+      -- A deployed day with no SGOV mark must NOT contribute 0 to the benchmark:
+      -- 0 silently understates SGOV and OVER-states excess_vs_sgov, which feeds
+      -- the m2m_underperf_review kill check. Forward-fill the last known SGOV
+      -- daily return; fall back to 0 only before the first SGOV observation.
+      COALESCE(
+        sg.r_sgov,
+        LAST_VALUE(sg.r_sgov IGNORE NULLS) OVER (
+          PARTITION BY sdr.strategy ORDER BY sdr.as_of_date
+          ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW),
+        0) AS r_sgov
     FROM `stock-trading-498512.analytics.strategy_daily_returns` sdr
     LEFT JOIN `stock-trading-498512.analytics.sgov_daily_return` sg USING (as_of_date)
   ),
@@ -155,8 +174,10 @@ BEGIN
     CAST(p.sgovidx AS NUMERIC), CAST(p.duv/p.sgovidx-1 AS NUMERIC), p.dday,
     (SELECT COUNT(*) FROM `stock-trading-498512.analytics.position_lifecycle` l
        WHERE l.strategy=p.strategy AND l.exit_date IS NOT NULL AND l.exit_date<=p.as_of_date),
-    (SELECT COUNT(*) FROM `stock-trading-498512.analytics.position_lifecycle` l
-       WHERE l.strategy=p.strategy AND l.exit_date IS NOT NULL AND l.exit_date<=p.as_of_date),
+    -- gate_n = closed trades REMAINING to the 30-trade calibration gate (was a
+    -- byte-identical copy of closed_trades, so it carried no distinct meaning).
+    GREATEST(0, 30 - (SELECT COUNT(*) FROM `stock-trading-498512.analytics.position_lifecycle` l
+       WHERE l.strategy=p.strategy AND l.exit_date IS NOT NULL AND l.exit_date<=p.as_of_date)),
     'value-weighted-daily-TWR-gross-v3',
     'PROFITABILITY metric: GROSS of commissions (scale artifact at ~$30 positions), total return, SGOV actual total-return benchmark. Cash/NAV accounting tracks commissions exactly + separately.'
   FROM peaked p;

@@ -3,6 +3,10 @@
 # BigQuery migration intermediates (derived data, not source)
 bigquery/out/
 
+# Python bytecode
+__pycache__/
+*.pyc
+
 # Credentials (paranoia)
 creds/
 *sa_key*.json

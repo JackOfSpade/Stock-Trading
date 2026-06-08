@@ -115,10 +115,17 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.events.hf_capability_captures` 
 OPTIONS(description='HF frontier-LLM capability captures (D1 / Q3).');
 
 -- ===== State views (latest-wins) =====
--- Note: regime_events / queue_events take event_ts from a DEFAULT CURRENT_TIMESTAMP()
--- at INSERT time, so for those we ORDER BY the natural date column first (as_of_date /
--- due_date) and use event_ts only as a tiebreaker. position_events sets event_ts
--- explicitly in the parser, so event_ts DESC alone is correct there.
+-- Note on latest-wins ordering (the discriminator must be the TRANSITION time):
+--   * regime_events: as_of_date IS the observation date, so a newer as_of_date is
+--     a newer reading -> ORDER BY as_of_date DESC, event_ts DESC (correct).
+--   * queue_events: due_date is a TARGET date, NOT a transition time. Ordering by
+--     it lets an older 'created' event outrank a later 'complete'/'superseded'
+--     event whenever that later event carries a NULL or earlier due_date — so a
+--     closed item wrongly stays in the open queue (or a reopened one hides).
+--     Use event_ts DESC, the actual INSERT-time transition order (event_ts is a
+--     DEFAULT CURRENT_TIMESTAMP() on these rows).
+--   * position_events: event_ts is set explicitly in the parser, so event_ts DESC
+--     alone is correct there.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.current_positions` AS
 SELECT * FROM (
   SELECT * FROM `stock-trading-498512.events.position_events`
@@ -140,7 +147,7 @@ SELECT * FROM (
   SELECT * FROM `stock-trading-498512.events.queue_events`
   QUALIFY ROW_NUMBER() OVER (
     PARTITION BY queue, item_key
-    ORDER BY COALESCE(due_date, DATE '1900-01-01') DESC, event_ts DESC
+    ORDER BY event_ts DESC
   ) = 1
 ) WHERE status NOT IN ('complete','superseded','COMPLETE','DROPPED');
 

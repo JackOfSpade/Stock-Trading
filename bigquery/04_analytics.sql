@@ -75,25 +75,27 @@ fund AS (
          ROW_NUMBER() OVER (PARTITION BY key ORDER BY as_of_date DESC) rn
   FROM `stock-trading-498512.events.regime_events` WHERE scope='FUNDAMENTAL_AXIS'
 ),
-regime_now AS (SELECT MAX(IF(axis='_integrative', value, NULL)) AS regime_state FROM fund WHERE rn=1),
-outcome AS (
-  SELECT strategy, ticker, SUM(realized_pnl) AS realized_pnl, COUNT(*) AS fills
-  FROM `stock-trading-498512.state.trade_fills_curated`
-  GROUP BY strategy, ticker
-)
+regime_now AS (SELECT MAX(IF(axis='_integrative', value, NULL)) AS regime_state FROM fund WHERE rn=1)
 SELECT
   t.entry_id, t.entry_date, t.strategy, t.ticker, t.decision, t.conviction, t.sub_pattern,
   (SELECT regime_state FROM regime_now) AS regime_state,
   pl.exit_date IS NOT NULL AS position_closed,
-  IF(pl.exit_date IS NOT NULL, o.realized_pnl, NULL) AS realized_pnl,
+  IF(pl.exit_date IS NOT NULL, pl.realized_pnl, NULL) AS realized_pnl,
   CASE WHEN pl.exit_date IS NULL THEN NULL          -- position still open -> outcome unknown (not a loss)
-       WHEN o.realized_pnl IS NULL THEN NULL
-       ELSE o.realized_pnl > 0 END AS was_profitable,
+       WHEN pl.realized_pnl IS NULL THEN NULL
+       ELSE pl.realized_pnl > 0 END AS was_profitable,
   t.title
 FROM theses t
 LEFT JOIN `stock-trading-498512.analytics.position_lifecycle` pl
   ON pl.strategy = t.strategy AND pl.ticker = t.ticker
-LEFT JOIN outcome o ON o.strategy = t.strategy AND o.ticker = t.ticker;
+-- Pair each thesis to ITS round-trip: a re-traded ticker has >1 position, so pick
+-- the one whose entry_date is nearest the thesis date and take realized_pnl from
+-- THAT position (the old ticker-wide SUM over all fills conflated round-trips and
+-- fanned the thesis row out once per round-trip).
+QUALIFY ROW_NUMBER() OVER (
+  PARTITION BY t.entry_id
+  ORDER BY ABS(DATE_DIFF(pl.entry_date, t.entry_date, DAY)) NULLS LAST
+) = 1;
 
 -- ===== Structured macro series (2026-06-06) =====
 -- Headline macro indicators extracted from Monthly_Macro_Data_*.md (M1a audit inputs; "not read
