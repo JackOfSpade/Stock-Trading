@@ -1,19 +1,21 @@
 # Auto-merge conflict avoidance for the branch -> main workflow
 # (.github/workflows/auto-merge-claude.yml).
 #
-# Append-only logs are written by concurrent sessions that each add dated entries at the
-# tail. When a session branch diverges from main, a plain `git merge --no-ff` conflicts in
-# these files and the auto-merge job fails (exit 1), leaving the branch stranded and un-merged.
-# The built-in `union` merge driver resolves such conflicts by keeping BOTH sides' added lines
-# instead of emitting conflict markers -- correct behaviour for append-only logs.
+# The built-in `union` merge driver keeps BOTH sides' added lines instead of
+# emitting conflict markers -- correct ONLY for append-only logs where concurrent
+# sessions each add dated entries at the tail.
 #
-# Do NOT add `merge=union` for in-place STATE files (Portfolio_Ledger.md, Regime_State.md,
-# Watchlist.md, Strategy.md, Experiment_Parameters.md, the live Pending_*.md queues) or for
-# full-overwrite cadence files (Daily.md, Weekly_*.md, Monthly_*.md, Quarterly_*.md): union
-# would duplicate edited or whole-file content. Genuine concurrent edits to those are real
-# conflicts that must be resolved, not unioned.
-
-Decision_Log.md                  merge=union
-Decision_Log_Archive_*.md        merge=union
-Archived_Analysis.md             merge=union
-Archived_Adversarial_Reviews.md  merge=union
+# Post-cutover note (2026-06-06, Operating_Protocols.md §15): the append-only
+# logs that previously used union (Decision_Log.md + the Decision_Log/Archived_*
+# archives) were retired to BigQuery (events.decision_log etc.), so NO tracked
+# .md file currently needs a union driver -- the prior per-file entries pointed at
+# files that no longer exist and have been removed.
+#
+# Do NOT add `merge=union` for the remaining live .md files: they are spec /
+# working files edited IN PLACE (Watchlist.md, Strategy.md, Experiment_Parameters.md,
+# Daily.md, the Weekly_*/Monthly_*/Quarterly_* cadence outputs). Union would
+# duplicate edited or whole-file content; genuine concurrent edits to those are
+# REAL conflicts, which the workflow correctly routes to a PR.
+#
+# If a NEW append-only log file is ever added, register it here, e.g.:
+#   New_Append_Only_Log.md   merge=union
