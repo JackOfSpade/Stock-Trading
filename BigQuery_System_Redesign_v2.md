@@ -46,6 +46,15 @@ and redesign the workflow if there's a better way*:
   realized outcome + regime; `decision_log.ticker` backfilled (all 10 GO theses + clean NO-GO).
   First signal: the 3 closed B GO theses (IBM/META/BRC) are **3/3 profitable** (gross). The
   conviction *model* stays deferred until ~30 closed trades.
+- **Staged-order registry — AS-BUILT 2026-06-09.** `events.queue_events` lane `ORDER_STAGED` →
+  `state.open_orders` (durable persist-and-wait intent; payload projected to columns + a computed
+  `reserved_cash`). Closes the 2026-06-08 gap where a GO'd-but-unfilled entry (MDT) was silently
+  de-funded because, under DAY-only TIF (§11), its intent lived only in Decision_Log prose + an expired
+  DAY order + a calendar event — none of them queryable state. D2 Step 0 now reconciles the registry
+  (fill→`filled`; window-open→re-craft DAY; window-closed→`expired` + logged missed-order decision);
+  §13.E `free_cash` reserves `Σ reserved_cash` off it; a row leaves only by a fill or a logged terminal
+  decision. DDL `bigquery/01_schema.sql`; backfilled the live MDT B entry. → decision_log 2026-06-09
+  "Staged-order registry — durable persist-and-wait state".
 
 **Material findings:**
 1. **Deployed-TWR overstatement — found, corrected, VALIDATED.** The ledger's seed sequentially

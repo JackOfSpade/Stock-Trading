@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.events.queue_events` (
   payload JSON, note STRING,
   PRIMARY KEY (event_id) NOT ENFORCED
 ) PARTITION BY DATE(event_ts) CLUSTER BY queue, status
-OPTIONS(description='Queue status-transition events → state.open_queue.');
+OPTIONS(description='Queue status-transition events → state.open_queue. Lanes: WATCHLIST, PENDING_ANALYSIS, PENDING_REVIEW, and ORDER_STAGED (the durable persist-and-wait registry → state.open_orders; statuses pending|filled|expired|abandoned).');
 
 CREATE TABLE IF NOT EXISTS `stock-trading-498512.events.adversarial_reviews` (
   event_id STRING DEFAULT GENERATE_UUID(),
@@ -149,7 +149,9 @@ SELECT * FROM (
     PARTITION BY queue, item_key
     ORDER BY event_ts DESC
   ) = 1
-) WHERE status NOT IN ('complete','superseded','COMPLETE','DROPPED');
+) WHERE status NOT IN ('complete','superseded','COMPLETE','DROPPED',
+                       -- ORDER_STAGED terminal statuses (staged-order registry; see state.open_orders below)
+                       'filled','expired','abandoned');
 
 CREATE OR REPLACE VIEW `stock-trading-498512.state.open_queue` AS
 SELECT event_id, event_ts, queue, item_key, item_type, status, strategy, ticker,
@@ -157,6 +159,53 @@ SELECT event_id, event_ts, queue, item_key, item_type, status, strategy, ticker,
        note IS NOT NULL AS has_note,
        payload IS NOT NULL AS has_payload
 FROM `stock-trading-498512.state.open_queue_detail`;
+
+-- state.open_orders — the durable STAGED-ORDER REGISTRY (persist-and-wait intent).
+-- Problem it closes: under the DAY-only TIF policy (Operating_Protocols §11) a Claude-crafted order
+-- is ephemeral — it expires every session and is re-crafted fresh — so between sessions a GO'd-but-
+-- unfilled entry (or a resting exit) has NO live order/instruction. Before this registry that intent
+-- lived only in Decision_Log prose + an expired DAY order + a calendar event, all of which lapse
+-- independently; on 2026-06-08 an MDT entry was silently de-funded (its earmarked cash swept to SGOV)
+-- because §13's free_cash keyed off live get_order_instructions (empty) and the persist-and-wait
+-- re-craft sweep had no durable list to iterate. This view is that durable list.
+--   * One ORDER_STAGED row per intended order, written when a GO/exit is staged; item_key is stable
+--     across the daily DAY re-crafts (only payload.instruction_id changes). Statuses: pending (live),
+--     filled / expired / abandoned (terminal — and only a logged terminal decision may set them).
+--   * due_date carries the entry-window-close (entries) / exit deadline; D2 detects window expiry off it.
+--   * reserved_cash = cash a still-pending BUY consumes if it fills (resting SELL reserves nothing);
+--     §13.E free_cash subtracts SUM(reserved_cash) so a sweep can never de-fund a staged entry.
+-- Reconciled every D2 Step 0 (Claude_Task_Plan D2): fill -> filled + position_events OPEN;
+-- window open + unfilled -> re-craft DAY + refresh confirm event; window closed -> expired + logged
+-- missed-entry decision. D3 reconciles confirm-order calendar events against this view.
+CREATE OR REPLACE VIEW `stock-trading-498512.state.open_orders` AS
+SELECT
+  item_key,
+  item_type,
+  strategy,
+  ticker,
+  status,
+  due_date AS entry_window_close,
+  CAST(JSON_VALUE(payload,'$.contract_id') AS INT64)         AS contract_id,
+  UPPER(JSON_VALUE(payload,'$.side'))                         AS side,
+  CAST(JSON_VALUE(payload,'$.qty') AS NUMERIC)               AS qty,
+  CAST(JSON_VALUE(payload,'$.limit_price') AS NUMERIC)       AS limit_price,
+  COALESCE(JSON_VALUE(payload,'$.tif'),'DAY')                AS tif,
+  CAST(JSON_VALUE(payload,'$.convergence_target') AS NUMERIC) AS convergence_target,
+  SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(payload,'$.time_exit_date')) AS time_exit_date,
+  JSON_VALUE(payload,'$.instruction_id')                     AS instruction_id,
+  JSON_VALUE(payload,'$.source_decision_ref')                AS source_decision_ref,
+  CASE WHEN UPPER(JSON_VALUE(payload,'$.side')) = 'BUY'
+       THEN ROUND(CAST(JSON_VALUE(payload,'$.qty') AS NUMERIC)
+                  * CAST(JSON_VALUE(payload,'$.limit_price') AS NUMERIC) + 0.35, 2)
+       ELSE 0 END                                            AS reserved_cash,
+  event_ts AS staged_ts,
+  note
+FROM (
+  SELECT * FROM `stock-trading-498512.events.queue_events`
+  WHERE queue = 'ORDER_STAGED'
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY item_key ORDER BY event_ts DESC) = 1
+)
+WHERE status = 'pending';
 
 CREATE OR REPLACE VIEW `stock-trading-498512.state.trade_fills_curated` AS
 SELECT * FROM `stock-trading-498512.events.trade_fills`
