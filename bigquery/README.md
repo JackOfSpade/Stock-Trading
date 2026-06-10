@@ -23,7 +23,7 @@ Cold-query map so you don't have to re-derive names via `INFORMATION_SCHEMA` eac
 |---|---|---|
 | Open queue items | `state.open_queue` | flat & tabular: `queue, item_key, item_type, status, strategy, ticker, due_date, conservative_default, has_note, has_payload`. **No** raw `note`/`payload` here |
 | A queue item's full note / payload | `state.open_queue_detail` | same rows + raw `note` (STRING) + `payload` (JSON); query by `item_key` |
-| Decisions / theses | `events.decision_log` | **date column is `entry_date`** (not `decision_date`); also `entry_type, decision, conviction, sub_pattern, title, body_md, fields(JSON)`. Write via `ops.sp_log_decision` |
+| Decisions / theses | `events.decision_log` | **date column is `entry_date`** (not `decision_date`); also `entry_type, decision, conviction, sub_pattern, title, body_md, fields(JSON)`. Write via `ops.sp_log_decision` — pass text args as triple-quoted `'''…'''` strings (BigQuery rejects `''`-style apostrophe escaping; use `\'` or triple quotes) |
 | Semantic precedent search | `analytics.find_precedents('<text>')` | table function; `ORDER BY distance LIMIT k` |
 | Decision embeddings | `analytics.decision_embeddings` | (in `analytics`, **not** `events`); `embed_status=''` means OK |
 | Embedding sync health | `state.embedding_health` | one row: `log_rows, embedding_rows, missing_rows, error_rows, is_healthy` |
