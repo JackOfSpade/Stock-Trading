@@ -22,12 +22,25 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.events.daily_marks` (
   dividend NUMERIC, split_ratio NUMERIC,
   source STRING DEFAULT 'connector', ingest_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
 ) PARTITION BY mark_date CLUSTER BY ticker
-OPTIONS(description='Daily closes + corporate actions per held ticker (+SGOV). Total-return source for the deployed-TWR engine.');
+OPTIONS(description='Daily closes + corporate actions per held ticker (+SGOV). Total-return source for the deployed-TWR engine. Consumers read state.daily_marks_curated (latest ingest per ticker/day).');
 
--- ===== Position lifecycle -- sourced from the authoritative fills (events.trade_fills) =====
+-- Dedup view (latest ingest wins per ticker/day). D2's ingest contract is
+-- "idempotent on (mark_date, ticker)" (Claude_Task_Plan.md D2 step 1), but an
+-- append-only table cannot enforce that — a re-ingested day (crashed / re-run
+-- session) would otherwise create duplicate mark rows that the engine joins
+-- would DOUBLE-COUNT (mv summed twice, LAG over duplicate dates), silently
+-- corrupting r_deployed / r_sgov. Same pattern as state.trade_fills_curated.
+-- ALL mark consumers read THIS view, never the raw table.
+CREATE OR REPLACE VIEW `stock-trading-498512.state.daily_marks_curated` AS
+SELECT * FROM `stock-trading-498512.events.daily_marks`
+QUALIFY ROW_NUMBER() OVER (PARTITION BY ticker, mark_date ORDER BY ingest_ts DESC) = 1;
+
+-- ===== Position lifecycle -- sourced from the authoritative fills (state.trade_fills_curated) =====
 -- A position = a ticker's BUY (entry) and optional SELL (exit). Carries entry/exit prices +
 -- commissions so the TWR can baseline at TOTAL COST and close at NET PROCEEDS.
 -- (Redefined 2026-06-05 to read trade_fills, not the broken migrated position_events.)
+-- Reads the CURATED dedup view: trade_fills' idempotency-by-trade_id contract is enforced
+-- there, so a re-ingested fill can't shift leg_seq pairing or create phantom positions.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.position_lifecycle` AS
 WITH entries AS (
   SELECT strategy, ticker, contract_id, DATE(fill_ts) AS entry_date,
@@ -35,13 +48,13 @@ WITH entries AS (
          -- sequence the BUYs within a (strategy,ticker) so the Nth buy pairs to
          -- the Nth sell (handles re-trades + a ticker held by 2 strategies)
          ROW_NUMBER() OVER (PARTITION BY strategy, ticker ORDER BY fill_ts, trade_id) AS leg_seq
-  FROM `stock-trading-498512.events.trade_fills` WHERE side='BUY'
+  FROM `stock-trading-498512.state.trade_fills_curated` WHERE side='BUY'
 ),
 exits AS (
   SELECT strategy, ticker, DATE(fill_ts) AS exit_date, price AS exit_price,
          realized_pnl, commission AS exit_commission,
          ROW_NUMBER() OVER (PARTITION BY strategy, ticker ORDER BY fill_ts, trade_id) AS leg_seq
-  FROM `stock-trading-498512.events.trade_fills` WHERE side='SELL'
+  FROM `stock-trading-498512.state.trade_fills_curated` WHERE side='SELL'
 )
 -- position_key carries leg_seq so it is unique per round-trip (the LAG window in
 -- strategy_daily_returns partitions on it; a shared key would merge two positions).
@@ -76,7 +89,7 @@ WITH held AS (
          l.shares * IF(m.mark_date = l.exit_date, l.exit_price, m.close) AS mv,  -- gross; exit at fill price
          l.shares * COALESCE(m.dividend,0) AS div_cash
   FROM `stock-trading-498512.analytics.position_lifecycle` l
-  JOIN `stock-trading-498512.events.daily_marks` m
+  JOIN `stock-trading-498512.state.daily_marks_curated` m
     ON m.ticker = l.ticker
    AND m.mark_date >= l.entry_date
    AND (l.exit_date IS NULL OR m.mark_date <= l.exit_date)
@@ -102,7 +115,7 @@ CREATE OR REPLACE VIEW `stock-trading-498512.analytics.sgov_daily_return` AS
 WITH s AS (
   SELECT mark_date, close, COALESCE(dividend, 0) AS dividend,
          LAG(close) OVER (ORDER BY mark_date) AS prev_close
-  FROM `stock-trading-498512.events.daily_marks`
+  FROM `stock-trading-498512.state.daily_marks_curated`
   WHERE ticker = 'SGOV'
 )
 SELECT mark_date AS as_of_date, SAFE_DIVIDE(close + dividend - prev_close, prev_close) AS r_sgov

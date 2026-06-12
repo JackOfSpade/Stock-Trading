@@ -30,6 +30,11 @@ DESIGN CONSTRAINTS:
   (per Strategy.md rev 19 + rev 20)
 - Multi-expiration structures (calendars, diagonals) raise NotImplementedError
   (per Strategy.md rev 20 — explicitly excluded)
+- Max-loss computation REFUSES net-short-call structures (total call quantity
+  < 0 → loss unbounded as the underlying rises) by raising
+  UnboundedMaxLossError, instead of returning a silently finite — and
+  therefore understated — number into the 2%-NAV sizing. Net-short-put
+  exposure is bounded (worst case at underlying = 0) and is computed exactly.
 - Dual-path agreement enforced with $1 tolerance per structure
 - All Greeks computed analytically (closed-form), not via finite difference
 
@@ -104,7 +109,7 @@ USAGE:
 """
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional, Literal, Dict, Tuple
 import random
 
@@ -386,6 +391,17 @@ class OptionLeg:
         return intrinsic * self.quantity * CONTRACT_MULTIPLIER
 
 
+class UnboundedMaxLossError(Exception):
+    """Raised when a structure's maximum loss is unbounded: net short call
+    exposure (total call quantity < 0) makes the expiration payoff fall without
+    limit as the underlying rises, so no finite max-loss number exists.
+    Returning one anyway would silently understate risk and corrupt the 2%-NAV
+    sizing. Such structures are not Strategy.md-permitted (defined-risk only);
+    the constructors in this module never build one — this guards direct
+    Structure(...) assembly."""
+    pass
+
+
 @dataclass
 class Structure:
     """Multi-leg options structure with shared expiration."""
@@ -411,6 +427,13 @@ class Structure:
     @property
     def underlying_price(self) -> float:
         return self.legs[0].option.underlying_price
+
+    def _net_quantity(self, option_type: str) -> int:
+        """Signed total quantity across legs of one option type. The sign
+        determines the payoff slope beyond the outermost strikes: net calls
+        < 0 → loss unbounded upward; net puts < 0 → loss grows until S = 0."""
+        return sum(leg.quantity for leg in self.legs
+                   if leg.option.option_type == option_type)
 
     def net_debit(self) -> float:
         """Net cost to enter (positive = debit/cost, negative = credit/income)."""
@@ -465,8 +488,21 @@ class Structure:
         expiration), max loss is bounded and occurs at one of the strikes or
         at zero / very large underlying. Scan covers all those cases.
 
+        Raises UnboundedMaxLossError for net-short-call structures (payoff
+        slope above the highest strike is negative, so the loss grows without
+        bound as the underlying rises and no finite scan can represent it).
+        Net-short-put structures ARE handled: their worst case is at S = 0,
+        which the grid evaluates exactly.
+
         Returns positive number = magnitude of max loss in dollars (NOT signed).
         """
+        if self._net_quantity('call') < 0:
+            raise UnboundedMaxLossError(
+                f"{self.name}: net call quantity {self._net_quantity('call')} < 0 — "
+                f"max loss is UNBOUNDED above the highest strike. Not a "
+                f"defined-risk structure; per Strategy.md the thesis must defer."
+            )
+
         S0 = self.underlying_price
 
         # Test prices: zero, all strikes, well-above-highest-strike, and a
@@ -475,7 +511,7 @@ class Structure:
         strikes = sorted({leg.option.strike for leg in self.legs})
         max_strike = max(strikes)
         test_prices = (
-            [0.001]  # near-zero
+            [0.0, 0.001]  # exact zero (worst case for net-short puts) + near-zero
             + strikes
             + [s - 0.01 for s in strikes]  # just below each strike
             + [s + 0.01 for s in strikes]  # just above each strike
@@ -516,7 +552,22 @@ class Structure:
         an UNDER-stated risk and over-sized position). Uniform price-space
         sampling is an independent computation from the closed-form deterministic
         grid yet robust across the whole input space (any sigma/T).
+
+        Raises UnboundedMaxLossError for net-short-call structures (no finite
+        scan range can represent an unbounded loss). For net-short-PUT
+        structures the below-lowest-strike zone is NOT flat — the loss keeps
+        growing to S = 0 — so the range is extended to 0 there. The range
+        endpoints are also evaluated deterministically: every bounded
+        structure's flat-zone worst case sits at an endpoint, so pinning them
+        removes the ~range/n_paths sampling gap against the closed-form path.
         """
+        if self._net_quantity('call') < 0:
+            raise UnboundedMaxLossError(
+                f"{self.name}: net call quantity {self._net_quantity('call')} < 0 — "
+                f"max loss is UNBOUNDED above the highest strike. Not a "
+                f"defined-risk structure; per Strategy.md the thesis must defer."
+            )
+
         rng = random.Random(seed)
         S0 = self.underlying_price
         T = self.days_to_expiration / 365.0
@@ -525,8 +576,9 @@ class Structure:
         sigma = self.legs[0].option.volatility
 
         strikes = sorted({leg.option.strike for leg in self.legs})
-        # Range guaranteed to reach the flat max-loss zones beyond all strikes.
-        lo_target = min(strikes[0], S0) * 0.5
+        # Range guaranteed to reach the flat max-loss zones beyond all strikes —
+        # or, for net-short-put structures (no flat zone below), all the way to 0.
+        lo_target = 0.0 if self._net_quantity('put') < 0 else min(strikes[0], S0) * 0.5
         hi_target = max(strikes[-1], S0) * 1.5
         if sigma > 0 and T > 0:
             move = sigma * math.sqrt(T) * adverse_move_stdev
@@ -534,10 +586,11 @@ class Structure:
             cone_hi = S0 * math.exp(-0.5 * sigma ** 2 * T + move)
         else:
             cone_lo = cone_hi = S0
-        low = max(0.001, min(lo_target, cone_lo))
+        low = max(0.0, min(lo_target, cone_lo))
         high = max(hi_target, cone_hi)
 
-        worst_pnl = float('inf')
+        # Pin the range endpoints exactly (see docstring), then sample.
+        worst_pnl = min(self.pnl_at_expiration(low), self.pnl_at_expiration(high))
         for _ in range(n_paths):
             S_T = rng.uniform(low, high)
             pnl = self.pnl_at_expiration(S_T)
@@ -1506,6 +1559,40 @@ if __name__ == '__main__':
     print(f"\n[14] Scenario PnL grid for 100/105 debit call spread:")
     for k, v in grid.items():
         print(f"     {k}: ${v}")
+
+    # Test 15: Unbounded-max-loss rejection (net short calls). A naked short
+    # call and a 1x2 ratio call spread have UNBOUNDED loss; both max-loss paths
+    # must refuse rather than return a finite, silently understated number.
+    print(f"\n[15] Unbounded-risk rejection (net short calls):")
+    naked_call = Structure(
+        legs=[OptionLeg(option=ATMOption(100, 105, 30, 0.045, 0.30, 'call'), quantity=-1)],
+        name='Naked short call', structure_type='naked_call')
+    ratio_spread = Structure(
+        legs=[OptionLeg(option=ATMOption(100, 100, 30, 0.045, 0.30, 'call'), quantity=1),
+              OptionLeg(option=ATMOption(100, 110, 30, 0.045, 0.30, 'call'), quantity=-2)],
+        name='1x2 ratio call spread', structure_type='ratio_call_spread')
+    for bad in (naked_call, ratio_spread):
+        for method in ('max_loss_closed_form', 'max_loss_monte_carlo'):
+            try:
+                getattr(bad, method)()
+                raise AssertionError(f"{bad.name}.{method} did not raise UnboundedMaxLossError")
+            except UnboundedMaxLossError:
+                pass
+        print(f"    PASS: {bad.name} rejected by both max-loss paths")
+
+    # Test 16: Net-short-PUT structures are bounded (worst case at S=0) and the
+    # two max-loss paths must agree there (MC range extends to 0 for these).
+    naked_put = Structure(
+        legs=[OptionLeg(option=ATMOption(100, 95, 30, 0.045, 0.30, 'put'), quantity=-1)],
+        name='Naked short put', structure_type='naked_put')
+    np_cf = naked_put.max_loss_closed_form()
+    np_mc = naked_put.max_loss_monte_carlo(n_paths=50000)
+    np_expected = 95 * CONTRACT_MULTIPLIER - (-naked_put.net_debit())
+    print(f"\n[16] Naked short put 95: closed-form = {np_cf:.4f}, MC = {np_mc:.4f}, "
+          f"expected (K*100 - credit) = {np_expected:.4f}")
+    assert abs(np_cf - np_expected) < 0.01, f"closed-form missed the S=0 worst case: {np_cf}"
+    verify_max_loss_dual_path(np_cf, np_mc, tolerance=1.00)
+    print(f"    PASS: S=0 worst case captured; dual paths agree within $1")
 
     print("\n" + "=" * 70)
     print("ALL SELF-TESTS PASSED")

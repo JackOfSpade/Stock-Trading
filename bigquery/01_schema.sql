@@ -149,9 +149,14 @@ SELECT * FROM (
     PARTITION BY queue, item_key
     ORDER BY event_ts DESC
   ) = 1
-) WHERE status NOT IN ('complete','superseded','COMPLETE','DROPPED',
-                       -- ORDER_STAGED terminal statuses (staged-order registry; see state.open_orders below)
-                       'filled','expired','abandoned');
+)
+-- Case-normalized terminal-status filter: the agent-written status column has
+-- already drifted case once ('complete' vs 'COMPLETE'), and a mixed-case
+-- terminal row slipping past a case-sensitive list would keep a closed item
+-- in the open queue forever. 'filled','expired','abandoned' are the
+-- ORDER_STAGED terminal statuses (staged-order registry; state.open_orders).
+WHERE UPPER(status) NOT IN ('COMPLETE','SUPERSEDED','DROPPED',
+                            'FILLED','EXPIRED','ABANDONED');
 
 CREATE OR REPLACE VIEW `stock-trading-498512.state.open_queue` AS
 SELECT event_id, event_ts, queue, item_key, item_type, status, strategy, ticker,

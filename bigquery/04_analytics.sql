@@ -37,10 +37,10 @@ FROM a JOIN o USING (review_id);
 -- AI.GENERATE_BOOL("did the orchestrator surface independent disagreement?") judge over the
 -- paired transcripts and track its rate vs the self-certified theater_check flag.
 
--- ===== decision_log.ticker backfill (2026-06-06) =====
--- The decision_log migration left ticker NULL (the parser never extracted it). Backfill from the
+-- ===== decision_log.ticker backfill (2026-06-06) — APPLIED one-time migration, kept as history =====
+-- The decision_log migration left ticker NULL (the parser never extracted it). Backfilled from the
 -- title: (1) "Strategy X — TICKER (..." / "EXCHANGE: TICKER" clean formats, plus (2) for GO entries,
--- match the known traded-ticker set (false-positive-free). This populates ALL 10 GO theses
+-- match the known traded-ticker set (false-positive-free). This populated ALL 10 GO theses
 -- (IBM/HCA/META/ZBRA/BRC/TJX/AZO/MDT/RTX/DIS) + the clean-format NO-GO subset, which is what
 -- thesis_outcomes needs. The freeform NO-GO titles ("INTU session", "post-WHR-NO-GO MT, FLEX
 -- session", ...) that a regex can't safely parse (would false-positive on FY27/MT/GO) were then
@@ -50,12 +50,16 @@ FROM a JOIN o USING (review_id);
 -- DECISION-LOG PARSER must add ticker extraction going forward so new entries land tickered.
 -- (NB: BURL's GO was folded into a NO-GO entry, so it has no thesis row -- a known gap; its +0.87
 -- realized P&L is in trade_fills regardless.)
-UPDATE `stock-trading-498512.events.decision_log`
-SET ticker = COALESCE(
-  REGEXP_EXTRACT(title, r'Strategy [A-E] [—-] ([A-Z]{1,5})\b'),
-  REGEXP_EXTRACT(title, r'(?:NASDAQ|NYSE|NYSEARCA|AMEX|BATS)\s*:\s*([A-Z]{1,5})'),
-  IF(decision='GO', REGEXP_EXTRACT(title, r'\b(IBM|HCA|META|ZBRA|BRC|TJX|AZO|BURL|RTX|DIS)\b'), NULL))
-WHERE ticker IS NULL;
+-- COMMENTED OUT (2026-06-12): this UPDATE was a one-time migration, already applied. Left live, a
+-- re-run of this file would re-execute it against FUTURE NULL-ticker rows (which are legitimately
+-- NULL — multi-ticker / session-end entries) using the stale hardcoded GO-ticker list, silently
+-- mis-tagging any entry whose title merely mentions one of those tickers.
+--   UPDATE `stock-trading-498512.events.decision_log`
+--   SET ticker = COALESCE(
+--     REGEXP_EXTRACT(title, r'Strategy [A-E] [—-] ([A-Z]{1,5})\b'),
+--     REGEXP_EXTRACT(title, r'(?:NASDAQ|NYSE|NYSEARCA|AMEX|BATS)\s*:\s*([A-Z]{1,5})'),
+--     IF(decision='GO', REGEXP_EXTRACT(title, r'\b(IBM|HCA|META|ZBRA|BRC|TJX|AZO|BURL|RTX|DIS)\b'), NULL))
+--   WHERE ticker IS NULL;
 
 -- ===== analytics.thesis_outcomes — the conviction/calibration foundation =====
 -- One row per thesis-construction decision, joined to its position outcome (realized P&L from the
@@ -160,15 +164,15 @@ GROUP BY conviction ORDER BY ord;
 -- it is, the §13 tripwire still reads Portfolio_Ledger.md, so Portfolio_Ledger is KEPT.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.strategy_nav` AS
 WITH dep AS (SELECT s AS strategy, CAST(1889.372 AS NUMERIC) AS deposits FROM UNNEST(['A','B','C','D','E']) s),
-realized AS (SELECT strategy, SUM(realized_pnl) AS realized_pnl FROM `stock-trading-498512.events.trade_fills` GROUP BY strategy),
-latest_close AS (SELECT ticker, close FROM `stock-trading-498512.events.daily_marks`
+realized AS (SELECT strategy, SUM(realized_pnl) AS realized_pnl FROM `stock-trading-498512.state.trade_fills_curated` GROUP BY strategy),
+latest_close AS (SELECT ticker, close FROM `stock-trading-498512.state.daily_marks_curated`
   QUALIFY ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY mark_date DESC)=1),
 open_pos AS (SELECT cp.strategy, SUM(cp.shares*lc.close) AS open_mv, SUM(cp.cost_basis) AS open_cost
   FROM `stock-trading-498512.state.current_positions` cp JOIN latest_close lc USING (ticker)
   WHERE cp.status='OPEN' GROUP BY cp.strategy),
 divs AS (SELECT l.strategy, SUM(l.shares*m.dividend) AS dividends
   FROM `stock-trading-498512.analytics.position_lifecycle` l
-  JOIN `stock-trading-498512.events.daily_marks` m ON m.ticker=l.ticker AND m.dividend IS NOT NULL
+  JOIN `stock-trading-498512.state.daily_marks_curated` m ON m.ticker=l.ticker AND m.dividend IS NOT NULL
    AND m.mark_date>=l.entry_date AND (l.exit_date IS NULL OR m.mark_date<=l.exit_date)
   GROUP BY l.strategy)
 SELECT d.strategy, d.deposits,
@@ -190,7 +194,7 @@ FROM dep d LEFT JOIN realized r USING(strategy) LEFT JOIN open_pos o USING(strat
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.account_reconciliation` AS
 SELECT
   CAST(9446.86 AS NUMERIC) AS total_deposits,
-  (SELECT ROUND(SUM(realized_pnl),2) FROM `stock-trading-498512.events.trade_fills`) AS strategy_realized_pnl,
+  (SELECT ROUND(SUM(realized_pnl),2) FROM `stock-trading-498512.state.trade_fills_curated`) AS strategy_realized_pnl,
   (SELECT ROUND(SUM(nav),2) FROM `stock-trading-498512.analytics.strategy_nav`) AS events_side_nav_total,
   (SELECT ROUND(SUM(deployed_mv),2) FROM `stock-trading-498512.analytics.strategy_nav`) AS deployed_total,
   (SELECT ROUND(SUM(available_funds),2) FROM `stock-trading-498512.analytics.strategy_nav`) AS undeployed_total;

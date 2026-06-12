@@ -1,9 +1,12 @@
-name: Auto-merge any branch to main
+name: Auto-merge claude/* branches to main
 
 on:
   push:
-    branches-ignore:
-      - main
+    # Only claude/* session branches are ever merged (see the drain loop below),
+    # so only they trigger; other branches' pushes would run with write
+    # permissions just to do nothing.
+    branches:
+      - 'claude/**'
 
 permissions:
   contents: write

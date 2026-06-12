@@ -108,21 +108,25 @@ BEGIN
 END;
 
 -- ===== Embedding drift monitor — state.embedding_health =====
--- One SELECT replaces the manual count-compare. is_healthy = every decision_log row has a valid
--- embedding (none missing, none errored). Interprets the '' = success sentinel for human/agent use.
---   SELECT * FROM state.embedding_health;   -- expect is_healthy = TRUE, missing_rows = error_rows = 0
+-- One SELECT replaces the manual count-compare. is_healthy = every decision_log row has EXACTLY ONE
+-- valid embedding (none missing, none errored, none duplicated). dup_rows guards the race where two
+-- concurrent sp_embed_pending() MERGEs both insert the same pending entry_id — duplicate embedding
+-- rows would silently fan out find_precedents results and were previously only caught by hand.
+-- Interprets the '' = success sentinel for human/agent use.
+--   SELECT * FROM state.embedding_health;   -- expect is_healthy = TRUE; missing/error/dup all 0
 CREATE OR REPLACE VIEW `stock-trading-498512.state.embedding_health` AS
 WITH dl AS (SELECT COUNT(*) AS log_rows FROM `stock-trading-498512.events.decision_log`),
 emb AS (
   SELECT COUNT(*) AS embedding_rows,
          COUNTIF(embed_status = '' AND ARRAY_LENGTH(embedding) > 0) AS ok_rows,
-         COUNTIF(NOT (embed_status = '' AND ARRAY_LENGTH(embedding) > 0)) AS error_rows
+         COUNTIF(NOT (embed_status = '' AND ARRAY_LENGTH(embedding) > 0)) AS error_rows,
+         COUNT(*) - COUNT(DISTINCT entry_id) AS dup_rows
   FROM `stock-trading-498512.analytics.decision_embeddings`),
 miss AS (
   SELECT COUNTIF(e.entry_id IS NULL) AS missing_rows
   FROM `stock-trading-498512.events.decision_log` dl
   LEFT JOIN `stock-trading-498512.analytics.decision_embeddings` e USING (entry_id))
-SELECT dl.log_rows, emb.embedding_rows, emb.ok_rows, emb.error_rows, miss.missing_rows,
-       (miss.missing_rows = 0 AND emb.error_rows = 0) AS is_healthy,
+SELECT dl.log_rows, emb.embedding_rows, emb.ok_rows, emb.error_rows, miss.missing_rows, emb.dup_rows,
+       (miss.missing_rows = 0 AND emb.error_rows = 0 AND emb.dup_rows = 0) AS is_healthy,
        CURRENT_TIMESTAMP() AS checked_at
 FROM dl, emb, miss;
