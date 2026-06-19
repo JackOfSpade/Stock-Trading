@@ -3,6 +3,13 @@
 # BigQuery migration intermediates (derived data, not source)
 bigquery/out/
 
+# Generated trading-state dumps — positions / NAV / account_reconciliation /
+# health. Derived from BigQuery, sensitive, and NOT source. Produced by
+# scripts/state_snapshot.sh and ops/dashboard/generate_dashboard.py; must never
+# be committed (would expose live trading data if repo visibility ever changed).
+state_snapshots/
+ops/dashboard/index.html
+
 # Python bytecode
 __pycache__/
 *.pyc
