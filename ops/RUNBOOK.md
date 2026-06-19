@@ -126,22 +126,30 @@ Considered but rejected: re-running the tests inside the merge job (duplicates C
 drain-all loop, would need a per-branch checkout+test), and branch protection + required checks
 (would force PRs, abandoning the direct-push model).
 
-## 6. Enable the CI SQL dry-run + dbt build — keyless WIF *(P2-3, D2)*
-The `sql-validate` job now uses **keyless GitHub→GCP Workload Identity Federation** (no downloadable
-key — the deleted `bq-loader` key is NOT reintroduced). It dry-runs every `bigquery/*.sql` on each
-push **only if** the repo variables `GCP_WIF_PROVIDER` + `GCP_WIF_SERVICE_ACCOUNT` are set; otherwise
-it skips cleanly. The `dbt` job runs `dbt parse` **offline on every push** (no creds), validating the
-modeling layer's structure + that every test/ref resolves; a full `dbt build` against BigQuery reuses
-the same WIF auth when you want it.
+## 6. CI SQL validation — `dbt parse` (always-on) + optional keyless-WIF dry-run *(P2-3, D2)*
+The always-on SQL gate is the **`dbt` job's offline `dbt parse`** (no creds, runs on every push;
+validates the modeling layer + that every ref/source/test resolves). That is the recommended gate.
 
-One-time owner setup (keyless):
-1. Create a Workload Identity Pool + Provider for GitHub Actions on the GCP project and a small SA with
-   `roles/bigquery.jobUser` (+ `roles/bigquery.dataViewer` for dry-run reference resolution); allow the
-   repo to impersonate it. (Standard `google-github-actions/auth` WIF setup.)
-2. Set repo **variables** (not secrets) `GCP_WIF_PROVIDER` (the full provider resource name) and
-   `GCP_WIF_SERVICE_ACCOUNT` (the SA email). The same two variables enable §16's dashboard publish.
-The job has `id-token: write` so no key is ever stored. SQL is also still dry-run via the BigQuery MCP
-during development.
+The separate **`sql-validate`** job (live `bq --dry_run` of every `bigquery/*.sql` under keyless
+GitHub→GCP Workload Identity Federation) is **OPT-IN and OFF by default** — and we recommend leaving
+it off. Why: dry-running the DDL files (`CREATE TABLE/MODEL/VIEW`) requires **CREATE/DDL permissions
+on the production datasets** (events/ops/analytics/state), *even in `--dry_run`*. Granting a
+CI/PR-triggered identity write+DDL on the append-only source of truth over-privileges it for marginal
+value, and a live dry-run does **not** catch the runtime-only bugs we actually hit (e.g. the
+`EXPORT DATA` JSON-serialization error — its own comment notes dry-run misses it). So the CI service
+account (`gh-ci-runner`) is kept **read-only** (`jobUser` + `dataViewer` + `connectionUser`).
+
+WIF itself is set up (provider `github-pool/github-provider`, SA `gh-ci-runner@…`, repo variables
+`GCP_WIF_PROVIDER` + `GCP_WIF_SERVICE_ACCOUNT`) and powers any future keyless need (e.g. a `dbt build`
+or §16's dashboard). To turn the live SQL dry-run ON anyway, the owner must:
+1. Enable the **Cloud Resource Manager API** (`gcloud services enable cloudresourcemanager.googleapis.com`)
+   and the IAM Service Account Credentials API (already enabled).
+2. Grant `gh-ci-runner` the DDL perms the dry-run needs (`roles/bigquery.dataEditor` on
+   events/ops/analytics/state/perf + `bigquery.models.create` on `ops`) — accepting the
+   over-privilege tradeoff above.
+3. Set repo variable **`RUN_SQL_DRYRUN=true`**.
+Until all three are set the job skips cleanly (green). SQL is also dry-run via the BigQuery MCP during
+development, which is the practical safety net.
 
 ---
 

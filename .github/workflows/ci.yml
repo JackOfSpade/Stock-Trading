@@ -86,20 +86,31 @@ jobs:
           dbt parse
 
   sql-validate:
-    name: BigQuery SQL dry-run (keyless WIF)
+    name: BigQuery SQL dry-run (keyless WIF, opt-in)
     runs-on: ubuntu-latest
+    # OPT-IN, default OFF. Dry-running the bigquery/*.sql DDL (CREATE TABLE/MODEL/VIEW) requires
+    # CREATE/DDL permissions on the production datasets — even in --dry_run mode. Granting a
+    # CI/PR-triggered identity write+DDL on events/ops/analytics/state (the append-only source of
+    # truth among them) over-privileges it for marginal value, and a live dry-run does NOT catch the
+    # runtime-only bugs we care about (e.g. the EXPORT DATA JSON-serialization error). So the CI
+    # service account stays READ-ONLY and this job is DISABLED unless the owner explicitly opts in by
+    # setting repo variable RUN_SQL_DRYRUN=true AND granting the SA the needed DDL perms + enabling
+    # the Cloud Resource Manager API (see ops/RUNBOOK.md §6). The always-on SQL gate is the `dbt`
+    # job's offline `dbt parse`; raw SQL is also dry-run via the BigQuery MCP during development.
     permissions:
       contents: read
       id-token: write   # required for Workload Identity Federation (no downloadable key)
     steps:
       - uses: actions/checkout@v4
-      - name: Check for WIF config
+      - name: Check opt-in + WIF config
         id: guard
         run: |
-          if [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ]; then
+          if [ "${{ vars.RUN_SQL_DRYRUN }}" = "true" ] \
+             && [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] \
+             && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ]; then
             echo "skip=false" >> "$GITHUB_OUTPUT"
           else
-            echo "::notice::GCP_WIF_PROVIDER / GCP_WIF_SERVICE_ACCOUNT repo variables not set — skipping SQL dry-run. Keyless setup in ops/RUNBOOK.md §6/§12 (preferred over the deleted SA key)."
+            echo "::notice::SQL dry-run disabled (default). To enable: set vars.RUN_SQL_DRYRUN=true, set the WIF vars, grant the CI SA DDL perms, and enable cloudresourcemanager.googleapis.com — see ops/RUNBOOK.md §6. dbt parse remains the always-on SQL gate."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
       - name: Authenticate to GCP (keyless, WIF)
