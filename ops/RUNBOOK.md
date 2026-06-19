@@ -82,7 +82,10 @@ cleanly (CI stays green).
 ---
 
 ## 7. Adopt `run_log` + `alerts` in the routines *(P1-1, P0-4)*
-Mechanism is live; wire the calls (see `ops/cadence.yaml` `defaults`):
+Mechanism is live and **D2 is already wired as the reference example** (`Claude_Task_Plan.md` D2
+"RUN LOGGING" + the §13 cash-tripwire alert in both `Claude_Task_Plan.md` and
+`Operating_Protocols.md §13.A.4`). Replicate the same two calls across the other routines
+(see `ops/cadence.yaml` `defaults`):
 - **Start/end of every routine:** `CALL ops.sp_log_run('<id>', <run_date>, 'started'|'completed'|'failed'|'halted', <session>, <branch>, <rows>, <error>, <note>)`.
   This populates `state.freshness.d2_ran_last_trading_day` and the audit trail.
 - **On any hard-stop** (cash tripwire > $1, dual-path max-loss disagreement, embedding
