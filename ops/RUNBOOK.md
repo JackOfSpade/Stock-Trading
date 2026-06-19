@@ -245,3 +245,21 @@ setting repo variables `PUBLISH_DASHBOARD=true` **and** the WIF vars (§6), and 
 with access-controlled Pages (Settings → Pages → Private), or accept public exposure. Alternative
 (no Pages): keep running `python ops/dashboard/generate_dashboard.py` locally, or use the Looker
 Studio option in §4.
+
+## 17. Public-exposure guardrail — enforce `iam.disablePublicIamGrants` *(security, deferred)*
+From the 2026-06-19 public-exposure audit. IAM is clean today (no `allUsers` /
+`allAuthenticatedUsers` on the project or any BigQuery dataset, GCS bucket has Public Access
+Prevention enforced), but nothing *prevents* a future accidental public grant. The
+`iam.disablePublicIamGrants` org-policy constraint rejects any such binding outright — turning
+"clean today" into "can't be made public by accident."
+
+**Not actionable yet:** the constraint can only target a resource under a **Google Cloud
+Organization**, and `stock-trading-498512` is a standalone project with no Org (the Org Policies
+page returns "select a resource under an organization"). When/if you attach the project to an Org
+(requires Google Workspace or Cloud Identity + domain verification — owner-only setup):
+1. IAM & Admin → **Organization Policies** → constraint **`iam.disablePublicIamGrants`** ("Disable
+   public IAM grants") → set **Enforced** at the org or project level.
+   CLI: `gcloud resource-manager org-policies enable-enforce iam.disablePublicIamGrants --project=stock-trading-498512`
+   (only succeeds once the project is under an Org where the constraint is available).
+2. Related, optional: enforce `iam.allowedPolicyMemberDomains` (Domain restricted sharing) to
+   confine bindings to your own domain.
