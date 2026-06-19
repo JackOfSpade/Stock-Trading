@@ -28,8 +28,11 @@ BEGIN
   USING (
     SELECT g.review_id, g.strategy, g.review_type, g.review_date, g.self_certified,
            g.independent AS judge_independent, g.reason AS judge_reason,
-           -- self-cert says DIVERGENT and judge says independent -> agree; CONVERGENT and not independent -> agree
-           ( (UPPER(g.self_certified) LIKE '%DIVERGENT%') = g.independent ) AS agrees_with_self_cert
+           -- self-cert "claims independence" = DIVERGENT or MIXED (partial independence); CONVERGENT = theater.
+           -- So agree when that claim matches the judge: (DIVERGENT|MIXED) = independent. (MIXED must count
+           -- as independence-consistent, else a MIXED review the judge finds independent is mis-scored as a
+           -- disagreement.)
+           ((UPPER(g.self_certified) LIKE '%DIVERGENT%' OR UPPER(g.self_certified) LIKE '%MIXED%') = g.independent) AS agrees_with_self_cert
     FROM AI.GENERATE_TABLE(
       MODEL `stock-trading-498512.ops.gemini`,
       (
