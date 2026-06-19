@@ -9,6 +9,7 @@ serve it via GitHub Pages, or open it locally.
 Usage:  python ops/dashboard/generate_dashboard.py            # writes ops/dashboard/index.html
 Schedule it (Cloud Scheduler / cron / a routine) for a continuously fresh page — see ops/RUNBOOK.md.
 """
+import html
 import json
 import os
 import subprocess
@@ -33,8 +34,10 @@ def table(rows, cols=None):
     if not rows:
         return "<p class='muted'>(no rows)</p>"
     cols = cols or list(rows[0].keys())
-    head = "".join(f"<th>{c}</th>" for c in cols)
-    body = "".join("<tr>" + "".join(f"<td>{r.get(c, '')}</td>" for c in cols) + "</tr>" for r in rows)
+    # Escape everything: cell values come from BigQuery (e.g. ops.alerts.message) and could
+    # contain <, >, & — unescaped they'd break or inject into the page.
+    head = "".join(f"<th>{html.escape(str(c))}</th>" for c in cols)
+    body = "".join("<tr>" + "".join(f"<td>{html.escape(str(r.get(c, '')))}</td>" for c in cols) + "</tr>" for r in rows)
     return f"<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
 
 

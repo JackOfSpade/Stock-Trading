@@ -85,8 +85,12 @@ SELECT
   (SELECT v FROM e)  AS engine_through,
   (SELECT v FROM d)  AS last_decision_date,
   (SELECT v FROM d2) AS last_d2_run_date,
-  (SELECT v FROM m)  >= (SELECT last_trading_day FROM ltd) AS marks_fresh,
-  (SELECT v FROM e)  >= (SELECT last_trading_day FROM ltd) AS engine_fresh,
+  -- COALESCE -> FALSE so the dead-man's switch fails LOUD, never silent: if a source table is
+  -- empty, or last_trading_day is NULL (e.g. the market_calendar range is exhausted post-2028),
+  -- a bare `>=` would yield NULL -> all_green NULL -> the freshness check's `IF NOT all_green`
+  -- would NOT fire. FALSE instead makes it alert (and nags to extend the calendar).
+  COALESCE((SELECT v FROM m) >= (SELECT last_trading_day FROM ltd), FALSE) AS marks_fresh,
+  COALESCE((SELECT v FROM e) >= (SELECT last_trading_day FROM ltd), FALSE) AS engine_fresh,
   COALESCE((SELECT v FROM d2) >= (SELECT last_trading_day FROM ltd), FALSE) AS d2_ran_last_trading_day,
   CURRENT_TIMESTAMP() AS checked_at;
 
