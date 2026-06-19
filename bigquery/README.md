@@ -11,6 +11,10 @@ The experiment's quantitative data substrate. **Built, validated, and self-maint
 - `06_forecast.sql` — `analytics.deployed_twr_forecast` + `twr_forecast_vs_actual`: zero-shot `AI.FORECAST` (built-in TimesFM, no model to train/host) over the deployed-TWR engine (`perf.strategy_daily`) + macro (`events.macro_fred`, see `07`), written monthly by **M5**. Advisory/early-warning only — never a trigger (kill/gate stay on realised `perf.kill_flags`).
 - `07_fred_macro.sql` — `events.macro_fred` + `state.macro_fred_latest`: 15 FRED-derived monthly regime metrics (CPI/PCE/PPI/retail/AHE/IP YoY, U-3, fed funds, NFP, 2Y/10Y/curve/HY-OAS/VIX), deep history from the **St. Louis Fed public CSV (no API key)** — the un-gated input to M5's macro `AI.FORECAST`. Separate from M1a's hand-curated `events.macro_series`. Seeded 2026-06-06 (777 rows, checksum-validated).
 - `08_ops_procedures.sql` — ops procedures: `ops.sp_log_decision()` (atomic "append a decision row **and** embed it in one call" — the canonical way to write `events.decision_log`, instead of a raw `INSERT` + separate embed) and `ops.sp_daily_refresh()` (D2's one-call post-marks refresh: `ops.sp_recompute_engine()` + `ops.sp_embed_pending()`).
+- `09_market_calendar.sql` — `events.market_holidays` + `state.market_calendar` + `state.trading_day_today`: ONE authoritative "is today a trading day / what was the last close?" (holiday + weekend aware), replacing per-routine `TZ=America/Denver date` math (closes the date-anchor fragility).
+- `10_observability.sql` — the control plane: `ops.run_log` (+ `ops.sp_log_run`), `ops.alerts` (+ `ops.sp_raise_alert[_once]`), `state.freshness` (dead-man's switch vs the last trading day), `state.system_health` (one-row green/red rollup), `state.gate_watch` (conviction 30-trade gate proximity).
+- `11_theater_judge.sql` — `analytics.theater_judge` + `ops.sp_score_theater()` + `analytics.theater_check_calibration`: an objective Gemini independence judge over paired adversarial reviews, replacing the orchestrator's self-certified theater_check.
+- `scheduled_queries/` — bodies to paste into BigQuery Scheduled Queries: `embed_pending.sql` (daily embedding heal) + `daily_freshness_check.sql` (the dead-man's switch, with email-on-failure). See that folder's README and `ops/RUNBOOK.md`.
 
 ## How it stays current
 The one-time `.md`→BigQuery migration is **COMPLETE**; the migration parsers (`parse_*.py` / `load_all.py`) are **RETIRED** (git history retains them). Ongoing maintenance is **connector/agent-driven**: D2 Step 0 event-sources each reconciled fill → `events.trade_fills` + `events.position_events`, ingests `daily_marks` (`get_price_history`, corporate-action aware), recomputes `perf.strategy_daily`, and writes new decisions via **`CALL ops.sp_log_decision(...)`** — which appends to `events.decision_log` **and embeds in the same call** (no separate embed step, no straggler window). Sync is auditable in one query: `SELECT * FROM state.embedding_health` (expect `is_healthy = TRUE`). See Claude_Task_Plan.md D2 + Operating_Protocols.md §14.
@@ -43,9 +47,15 @@ Cold-query map so you don't have to re-derive names via `INFORMATION_SCHEMA` eac
 - Operator note: the `bq-loader` service-account key was deleted; ongoing writes are tiny MCP INSERTs.
 - **Hardening (2026-06-07):** built the never-built procedures — `ops.sp_log_decision` (atomic decision-log append + embed, one call), `ops.sp_embed_pending` (idempotent self-healing embedder), `ops.sp_recompute_engine` + `ops.sp_daily_refresh` (D2's one-call post-marks recompute + embed, single-sourced from the validated recompute — verified bit-for-bit idempotent); added `state.embedding_health` (one-query drift monitor); split the queue view into compact `state.open_queue` (flat columns + `has_note`/`has_payload`) and `state.open_queue_detail` (raw note/payload) so `SELECT *` is never a JSON wall; added this Schema quick reference. Validated end-to-end: `sp_log_decision` logged 2 hardening entries, embeddings `is_healthy = TRUE` (229/229, 0 missing/0 error/0 dup). See `08_ops_procedures.sql`.
 
-### Scheduled query (recommended — owner console action)
-The procedures exist but nothing yet runs them on a timer; they fire only when a session calls them. To keep embeddings (and optionally the engine) fresh even with no active session — and to avoid two concurrent sessions racing the recompute — schedule a daily BigQuery query (BigQuery Studio → Scheduled queries, or `bq query`):
-```sql
-CALL `stock-trading-498512.ops.sp_embed_pending`();   -- safe any time; embeds stragglers
-```
-The engine recompute (`ops.sp_daily_refresh`) is best left to D2, which runs it right after ingesting the day's marks; schedule it standalone only if marks are loaded by an automated job. Keep an eye on the Vertex budget alert (embeddings are pennies, but a scheduled job runs unattended).
+### Scheduled queries (owner console action — bodies provided)
+The procedures exist but only run when a session calls them — a skipped session = silent drift.
+The fix is shipped as `bigquery/scheduled_queries/` (paste-ready) + the runbook:
+- `embed_pending.sql` — daily `CALL ops.sp_embed_pending()` so embeddings never drift.
+- `daily_freshness_check.sql` — the **dead-man's switch**: alerts (and emails, via the built-in
+  *email-on-failure* toggle, because it RAISEs) if marks/engine are stale vs the last trading day,
+  embeddings are unhealthy, kill flags fire, or critical alerts are open.
+
+Set them up per `bigquery/scheduled_queries/README.md` + `ops/RUNBOOK.md §1`. The engine recompute
+(`ops.sp_daily_refresh`) stays in D2 (it needs the day's connector marks); the freshness check is
+what catches a D2 that didn't run. Keep a Vertex/BigQuery budget alert + `maximum_bytes_billed`
+caps on the scheduled jobs (they run unattended).

@@ -1,0 +1,139 @@
+# Cadence manifest — the version-controlled source of truth for WHAT runs WHEN.
+#
+# WHY THIS EXISTS: each routine is a Claude-Code-on-Web session whose trigger/schedule
+# lives only in the web UI — unversioned, invisible, un-reviewable, a single point of
+# failure. This file makes the cadence reviewable and gives the freshness monitor
+# (state.freshness / ops.run_log) something to check missed runs against.
+#
+# It does NOT execute anything by itself. Keep it in sync with the web-trigger config
+# and with Claude_Task_Plan.md. Times are America/Denver (the experiment's operating tz);
+# "trading_day" means gate on state.trading_day_today.is_trading_day.
+#
+# Every routine should, at start/end, CALL ops.sp_log_run(<id>, <run_date>, <status>, ...)
+# so ops.run_log records it (P1-1). See ops/RUNBOOK.md "Adopt run_log + alerts".
+
+timezone: America/Denver
+
+defaults:
+  log_run: true            # CALL ops.sp_log_run at start ('started') and end ('completed'/'failed'/'halted')
+  on_hard_stop: raise_alert # CALL ops.sp_raise_alert + create a "[Claude] ATTENTION" calendar event
+
+routines:
+  # ---- DAILY (every trading day, after the close) ----
+  - id: D1
+    name: Market Development Scan
+    schedule: "after_close trading_day"   # ~16:10 MT
+    depends_on: []
+    writes: [Daily.md, events.decision_log, events.regime_events]
+  - id: D2
+    name: Daily Action Conversion
+    schedule: "after D1 trading_day"
+    depends_on: [D1]
+    writes: [events.trade_fills, events.position_events, events.daily_marks, perf.strategy_daily,
+             events.decision_log, events.queue_events, calendar:confirm_order]
+    notes: "Step 0 = broker reconcile + cash tripwire + SGOV sweep; then CALL ops.sp_daily_refresh()."
+  - id: D3
+    name: Calendar & Queue Hygiene
+    schedule: "after D2 daily"             # runs daily incl. non-trading days for queue/calendar upkeep
+    depends_on: [D2]
+    writes: [calendar:confirm_order, events.queue_events]
+
+  # ---- ADVERSARIAL REVIEWS (daily, queue-driven; fire only if an entry is due) ----
+  - id: AR-attacker
+    name: Adversarial Review — Attacker
+    schedule: "daily; if events.queue_events PENDING_REVIEW attacker_due<=today"
+    depends_on: []
+    writes: [events.adversarial_reviews]
+  - id: AR-orchestrator
+    name: Adversarial Review — Orchestrator
+    schedule: "daily; if a review is attacker-complete and orchestrator_due<=today"
+    depends_on: [AR-attacker]
+    writes: [events.adversarial_reviews, events.regime_events, events.decision_log, calendar:confirm_order]
+
+  # ---- WEEKLY (Sunday) ----
+  - id: W1
+    name: Catalyst Calendar (A, C)
+    schedule: "weekly Sun"
+    writes: [Weekly_Catalyst_Calendar.md]
+  - id: W2
+    name: Post-Event Screen (B)
+    schedule: "weekly Sun"
+    writes: [Weekly_Post_Event_Screen.md]
+  - id: W3
+    name: Open-Position Deep-Dive (A,B,C,E)
+    schedule: "weekly Sun"
+    writes: [Weekly_Position_Deep_Dive.md]
+  - id: W4
+    name: Weekly Action Conversion
+    schedule: "weekly Sun after W1,W2,W3"
+    depends_on: [W1, W2, W3]
+    writes: [events.queue_events, events.decision_log, calendar:confirm_order]
+  - id: W5
+    name: Factbase & Analytics Consolidation
+    schedule: "weekly Sun after W4"
+    depends_on: [W4]
+    writes: [B_Sub_Pattern_Taxonomy.md, analytics.decision_embeddings, events.decision_log]
+    notes: "Good home for CALL ops.sp_score_theater() (P3-2 independence judge) + embedding health check."
+
+  # ---- MONTHLY (1st trading day) ----
+  - id: M1a
+    name: Strategy-Blind Regime Scoring
+    schedule: "monthly first_trading_day"
+    writes: [events.regime_events, events.macro_series, events.macro_fred]
+  - id: M1b
+    name: Strategy Mapping & Activation Calls
+    schedule: "monthly after M1a"
+    depends_on: [M1a]
+    writes: [Monthly_Fundamental.md]
+  - id: M2
+    name: E Pair Divergence Screen
+    schedule: "monthly first_trading_day"
+    writes: [Monthly_E_Pairs.md]
+  - id: M3
+    name: D Position Deep-Dive
+    schedule: "monthly first_trading_day"
+    writes: [Monthly_D_Position_Deep_Dive.md]
+  - id: M4
+    name: Monthly Action Conversion
+    schedule: "monthly after M1b,M2,M3"
+    depends_on: [M1b, M2, M3]
+    writes: [events.regime_events, events.queue_events, events.decision_log, calendar:confirm_order]
+  - id: M5
+    name: Deployed-TWR & Macro Forecast (advisory)
+    schedule: "monthly after M4"
+    depends_on: [M4]
+    writes: [analytics.deployed_twr_forecast, events.decision_log]
+
+  # ---- QUARTERLY (1st trading day of quarter) ----
+  - id: Q1
+    name: Regime Retrospective
+    schedule: "quarterly first_trading_day"
+    writes: [Quarterly_Regime.md]
+  - id: Q2
+    name: D Long-Horizon Candidates
+    schedule: "quarterly first_trading_day"
+    writes: [Quarterly_D_Candidates.md]
+  - id: Q3
+    name: AI Foundation Quarterly Delta
+    schedule: "quarterly first_trading_day"
+    writes: [Quarterly_AI_Foundation_Delta.md]
+  - id: Q4
+    name: Quarterly Action Conversion
+    schedule: "quarterly after Q2,Q3"
+    depends_on: [Q2, Q3]
+    writes: [Watchlist.md, events.queue_events, events.decision_log]
+
+  # ---- ANNUAL (1st trading day of year / experiment anniversary) ----
+  - id: A1
+    name: AI Foundation Annual Re-Derivation
+    schedule: "annual first_trading_day"
+    writes: [Annual_AI_Foundation_Sweep.md]
+  - id: A2
+    name: Per-Strategy Constraint Audit
+    schedule: "annual first_trading_day"
+    writes: [Annual_Constraint_Audit.md]
+  - id: A3
+    name: Annual Action Conversion
+    schedule: "annual after A1,A2"
+    depends_on: [A1, A2]
+    writes: [AI_Trading_Foundation.md, Strategy.md, events.queue_events, events.decision_log]
