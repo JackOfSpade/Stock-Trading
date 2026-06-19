@@ -1,0 +1,30 @@
+# Example tfvars for the Stock-Trading infra module.
+# Copy to terraform.tfvars and fill in the owner-specific values, then
+# `terraform plan`. terraform.tfvars is git-ignored by convention — do NOT commit
+# real billing ids.
+
+# Project + locations already default correctly in variables.tf; override only if needed.
+# project_id               = "stock-trading-498512"
+# region                   = "US"
+# backup_bucket_name       = "stock-trading-backups"
+
+# --- Budget (ops/RUNBOOK.md §2) ---------------------------------------------
+# REQUIRED to create the budget. Leave commented/"" to skip budget.tf entirely.
+# Find it: gcloud billing projects describe stock-trading-498512 \
+#            --format='value(billingAccountName)'   (strip the "billingAccounts/" prefix)
+# billing_account   = "012345-6789AB-CDEF01"
+# budget_amount_usd = 5
+
+# Emails that receive budget threshold alerts (50% / 90% / 100%).
+# notification_emails = ["jacksterwu@gmail.com"]
+
+# --- Backup export identity (iam.tf) ----------------------------------------
+# Leave unset to use the owner-credentials path (RUNBOOK §3 default). Set only if
+# you run the backup scheduled query under a dedicated SA.
+# backup_transfer_service_account = "events-backup@stock-trading-498512.iam.gserviceaccount.com"
+
+# --- Scheduled-query schedules (UTC) — defaults match RUNBOOK; override if needed.
+# freshness_schedule = "every day 05:00"
+# embed_schedule     = "every day 06:00"
+# backup_schedule    = "every day 05:30"
+# cadence_schedule   = "every day 05:15"

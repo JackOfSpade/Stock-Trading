@@ -159,9 +159,11 @@ GROUP BY conviction ORDER BY ord;
 -- positions marked at the latest daily_marks close) + held-stock dividends. Gives the **2%-sizing base**
 -- (sizing_base_2pct ≈ $37.7/strategy) + available-funds (NAV − deployed MV) — the figures the routines
 -- previously read from Portfolio_Ledger.md. Σ NAV ≈ $9,442 vs connector NLV ≈ $9,461 (~0.2% light: the
--- shared SGOV park is held at deposit par here). NOTE: the EXACT per-strategy SGOV-share allocation (the
--- §13 cash-tripwire basis — the long-standing attribution debt) is NOT yet reconciled to the share; until
--- it is, the §13 tripwire still reads Portfolio_Ledger.md, so Portfolio_Ledger is KEPT.
+-- shared SGOV park is held at deposit par here). NOTE (RESOLVED 2026-06-19): the per-strategy SGOV-share
+-- allocation "attribution debt" is DISSOLVED — the SGOV park is account-level (events.parking_events has
+-- no strategy tag), so there is no per-strategy split to reconcile. The §13 cash-tripwire reads the
+-- event-sourced TOTAL SGOV holding from state.sgov_reconciliation (13_sgov_reconciliation.sql), and
+-- per-strategy budget = this view's available_funds. Portfolio_Ledger.md is retired (not kept).
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.strategy_nav` AS
 WITH dep AS (SELECT s AS strategy, CAST(1889.372 AS NUMERIC) AS deposits FROM UNNEST(['A','B','C','D','E']) s),
 realized AS (SELECT strategy, SUM(realized_pnl) AS realized_pnl FROM `stock-trading-498512.state.trade_fills_curated` GROUP BY strategy),

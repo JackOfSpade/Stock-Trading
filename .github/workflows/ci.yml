@@ -51,28 +51,70 @@ jobs:
       - run: pip install --quiet ruff
       - run: ruff check c_options_math.py tests/ scripts/ ops/ || true
 
-  sql-validate:
-    name: BigQuery SQL dry-run
+  dbt:
+    name: dbt parse (offline model + test validation)
     runs-on: ubuntu-latest
+    # Validates the dbt/ modeling layer's structure + that every ref()/source() and test resolves,
+    # WITHOUT a warehouse (parse does not connect). The full `dbt build` against BigQuery is gated on
+    # WIF creds — see ops/RUNBOOK.md §14. Always runs; offline; no secrets needed.
     steps:
       - uses: actions/checkout@v4
-      - name: Check for GCP credentials
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dbt
+        run: pip install --quiet dbt-core dbt-bigquery
+      - name: Write a CI profile (no creds — parse does not connect)
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml <<'YAML'
+          stock_trading:
+            target: ci
+            outputs:
+              ci:
+                type: bigquery
+                method: oauth
+                project: stock-trading-498512
+                dataset: state
+                location: US
+                threads: 4
+          YAML
+      - name: dbt deps + parse
+        working-directory: dbt
+        run: |
+          dbt deps
+          dbt parse
+
+  sql-validate:
+    name: BigQuery SQL dry-run (keyless WIF)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # required for Workload Identity Federation (no downloadable key)
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for WIF config
         id: guard
         run: |
-          if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
-            echo "::notice::GCP_SA_KEY secret not set — skipping live SQL dry-run. See ops/RUNBOOK.md to enable."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
+          if [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ]; then
             echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::GCP_WIF_PROVIDER / GCP_WIF_SERVICE_ACCOUNT repo variables not set — skipping SQL dry-run. Keyless setup in ops/RUNBOOK.md §6/§12 (preferred over the deleted SA key)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
-      - name: Auth + dry-run every bigquery/*.sql
+      - name: Authenticate to GCP (keyless, WIF)
         if: steps.guard.outputs.skip == 'false'
-        env:
-          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
+      - name: Set up gcloud
+        if: steps.guard.outputs.skip == 'false'
+        uses: google-github-actions/setup-gcloud@v2
+      - name: Dry-run every bigquery/*.sql
+        if: steps.guard.outputs.skip == 'false'
         run: |
           set -euo pipefail
-          echo "$GCP_SA_KEY" > /tmp/sa.json
-          gcloud auth activate-service-account --key-file=/tmp/sa.json
           gcloud config set project stock-trading-498512
           rc=0
           for f in bigquery/*.sql bigquery/scheduled_queries/*.sql; do

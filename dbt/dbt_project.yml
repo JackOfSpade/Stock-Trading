@@ -1,0 +1,48 @@
+# dbt project for the Stock-Trading derived-state / perf / analytics layer.
+#
+# PARALLEL-RUN scaffold (recommendation B2 + B3). This project re-expresses the
+# PURE-SELECT views that today live in bigquery/01_schema.sql / 03_twr_engine.sql /
+# 04_analytics.sql / 05_state_briefing.sql / 10_observability.sql as dbt models, so
+# dbt computes the DAG and runs the data-test layer. It does NOT replace the live SQL:
+# bigquery/*.sql remains canonical until an owner-gated cutover (see README.md).
+#
+# NOTE on BigQuery + dbt schemas: in BigQuery the dbt "schema" IS the dataset. We pin
+# state models to dataset `state`, perf to `perf`, analytics to `analytics` via the
+# per-folder `+schema:` configs below. By default dbt PREFIXES the target schema
+# (e.g. <profile_dataset>_state); the generate_schema_name override in macros/
+# generate_schema_name.sql makes dbt use the BARE dataset names instead, so models
+# land in `state` / `perf` / `analytics` exactly like the live objects.
+
+name: 'stock_trading'
+version: '1.0.0'
+config-version: 2
+
+# This profile must exist in ~/.dbt/profiles.yml — see profiles.example.yml.
+profile: 'stock_trading'
+
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+seed-paths: ["seeds"]
+snapshot-paths: ["snapshots"]
+analysis-paths: ["analyses"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  stock_trading:
+    # Default materialization: every ported object is a pure-SELECT view (matches
+    # the live CREATE OR REPLACE VIEW DDL). Nothing here is a table — the only table
+    # in scope (perf.strategy_daily) is procedure-maintained and modeled as a SOURCE.
+    +materialized: view
+    state:
+      +schema: state
+    perf:
+      +schema: perf
+    analytics:
+      +schema: analytics
+
+# Source-freshness defaults can be set per-source in models/sources.yml.

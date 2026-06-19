@@ -1,0 +1,55 @@
+# Example dbt profile for the Stock-Trading project.
+#
+# Copy the relevant block into ~/.dbt/profiles.yml (do NOT commit a real profile with
+# credentials). The profile name MUST be `stock_trading` to match dbt_project.yml.
+#
+# Project: stock-trading-498512   Location/multi-region: US
+#
+# The `dataset` set here is the DEFAULT dataset dbt would use. Because this project
+# overrides generate_schema_name to emit BARE dataset names, models tagged with a
+# per-folder `+schema:` (state / perf / analytics) land in THOSE datasets regardless
+# of `dataset` below. `dataset` is still the landing spot for any model without an
+# explicit +schema, and for dbt's own artifacts — set it to one you can write to.
+
+stock_trading:
+  target: dev
+  outputs:
+
+    # ---- DEV: OAuth (matches the owner's current interactive gcloud usage) -------
+    dev:
+      type: bigquery
+      method: oauth            # uses your `gcloud auth application-default login` creds
+      project: stock-trading-498512
+      dataset: state           # default dataset; +schema configs route state/perf/analytics
+      location: US
+      threads: 4
+      timeout_seconds: 300
+      priority: interactive
+      # Cost guardrail for ad-hoc runs against the live warehouse:
+      maximum_bytes_billed: 1000000000   # 1 GB
+
+    # ---- CI: service-account / Workload Identity Federation (gated on creds) ------
+    # Used by `dbt build --target ci`. Requires BigQuery access; see README "CI".
+    # Prefer keyless WIF in GitHub Actions over a long-lived JSON key.
+    ci:
+      type: bigquery
+      # method: service-account
+      # keyfile: /tmp/sa.json          # path written from a CI secret (avoid if WIF works)
+      #
+      # --- Workload Identity Federation alternative (keyless, recommended) ---------
+      # method: oauth                   # with google-github-actions/auth providing ADC
+      method: oauth
+      project: stock-trading-498512
+      dataset: dbt_ci                   # isolated CI dataset so CI never writes prod views
+      location: US
+      threads: 4
+      timeout_seconds: 300
+      priority: interactive
+      maximum_bytes_billed: 1000000000
+
+# WIF note (no JSON key): in GitHub Actions use
+#   - uses: google-github-actions/auth@v2
+#     with:
+#       workload_identity_provider: projects/<n>/locations/global/workloadIdentityPools/<pool>/providers/<provider>
+#       service_account: dbt-ci@stock-trading-498512.iam.gserviceaccount.com
+# which writes Application Default Credentials; dbt's method: oauth then picks them up.
