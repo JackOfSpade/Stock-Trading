@@ -1,0 +1,140 @@
+version: 2
+
+# Tests for the state.* layer (B3: the load-bearing view invariants).
+# Generic tests here; subtle invariants live as singular tests in tests/*.sql.
+
+models:
+  - name: current_positions
+    description: Latest non-CLOSE position event per position_key.
+    columns:
+      - name: position_key
+        description: Stable position identity; latest event wins.
+        tests:
+          - not_null
+          # NOTE: NOT unique here intentionally — current_positions can carry >1 OPEN leg
+          # per position_key only if the upstream emits multiple keys; the latest-wins QUALIFY
+          # guarantees one row per position_key, but we assert uniqueness on the round-trip key
+          # in analytics.position_lifecycle (position_key there is the canonical unique key).
+      - name: status
+        description: Latest status (OPEN guards downstream NAV / time-exits).
+
+  - name: current_regime
+    description: Latest regime reading per (scope, key).
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [scope, key]
+    columns:
+      - name: scope
+        tests: [not_null]
+      - name: key
+        tests: [not_null]
+
+  - name: open_queue_detail
+    description: Latest-wins queue projection (incl. payload/note), terminal statuses filtered out.
+    tests:
+      # No surviving row may carry a terminal status (case-normalized). If one does, a closed
+      # item is stuck in the open queue — exactly the case-drift bug 01_schema.sql guards against.
+      - dbt_utils.expression_is_true:
+          expression: "UPPER(status) NOT IN ('COMPLETE','SUPERSEDED','DROPPED','FILLED','EXPIRED','ABANDONED')"
+      # Latest-wins must leave exactly one row per (queue, item_key).
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [queue, item_key]
+    columns:
+      - name: item_key
+        tests: [not_null]
+      - name: status
+        tests: [not_null]
+
+  - name: open_queue
+    description: Compact routing/identity columns over open_queue_detail (no payload/note).
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "UPPER(status) NOT IN ('COMPLETE','SUPERSEDED','DROPPED','FILLED','EXPIRED','ABANDONED')"
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [queue, item_key]
+    columns:
+      - name: item_key
+        tests: [not_null]
+
+  - name: open_orders
+    description: Durable staged-order registry (pending ORDER_STAGED rows). reserved_cash protects §13.
+    columns:
+      - name: item_key
+        description: Stable per intended order; unique among pending rows.
+        tests:
+          - not_null
+          - unique
+      - name: side
+        description: BUY / SELL (uppercased).
+        tests:
+          - accepted_values:
+              values: ['BUY', 'SELL']
+      - name: reserved_cash
+        description: Cash a pending BUY reserves; resting SELL reserves 0. Must be >= 0 (see singular test).
+
+  - name: trade_fills_curated
+    description: Latest ingest per trade_id (the idempotency-by-trade_id guard).
+    columns:
+      - name: trade_id
+        tests:
+          - not_null
+          - unique
+
+  - name: daily_marks_curated
+    description: Latest ingest per (ticker, mark_date) — the TWR double-count guard.
+    tests:
+      # THE dedup invariant that prevents the engine from double-counting a re-ingested day.
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [ticker, mark_date]
+    columns:
+      - name: ticker
+        tests: [not_null]
+      - name: mark_date
+        tests: [not_null]
+
+  - name: daily_briefing
+    description: '"What needs attention today" union (queue due / kill flags / time exits).'
+    columns:
+      - name: category
+        tests:
+          - accepted_values:
+              values: ['QUEUE_DUE', 'KILL_FLAG', 'TIME_EXIT']
+
+  - name: market_calendar
+    description: Computed trading-day calendar (weekday and not a full-close holiday).
+    columns:
+      - name: cal_date
+        tests:
+          - not_null
+          - unique
+
+  - name: trading_day_today
+    description: Single-row "today"/last/next trading day in America/Denver.
+    # Exactly one row — asserted by tests/assert_trading_day_today_single_row.sql.
+
+  - name: freshness
+    description: Dead-man's switch — marks/engine/D2 current vs last trading day.
+    # Single row — asserted by tests/assert_freshness_single_row.sql.
+    columns:
+      - name: marks_fresh
+        tests: [not_null]
+      - name: engine_fresh
+        tests: [not_null]
+
+  - name: system_health
+    description: One-row green/red rollup.
+    # Exactly one row — asserted by tests/assert_system_health_single_row.sql.
+    columns:
+      - name: all_green
+        description: Master health flag (marks+engine+embeddings fresh, 0 critical alerts).
+
+  - name: gate_watch
+    description: Conviction 30-closed-trade gate proximity (advisory).
+    columns:
+      - name: strategy
+        tests: [not_null]
+      - name: closed_to_gate
+        description: Closed trades remaining to the 30-trade gate (>= 0).
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0

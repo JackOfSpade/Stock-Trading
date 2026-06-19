@@ -1,0 +1,327 @@
+version: 2
+
+# Source declarations for the dbt port. These are the OBJECTS dbt does not own but
+# reads from:
+#   - events.*           : the append-only source-of-truth tables (bigquery/01,03,04,09).
+#   - perf.strategy_daily: a TABLE rebuilt wholesale by ops.sp_recompute_engine()
+#                          (bigquery/03_twr_engine.sql). It is PROCEDURE-MAINTAINED, not a
+#                          pure SELECT, so dbt treats it as a source — kill_flags refs it.
+#
+# Column docs below are the load-bearing columns from bigquery/README.md + the schema
+# comments. Freshness is declared where a staleness window is meaningful (the same
+# signal state.freshness / the dead-man's switch watch).
+
+sources:
+  - name: events
+    project: stock-trading-498512
+    dataset: events
+    description: >
+      Append-only source of truth. INSERT / Storage-Write only; never UPDATE/DELETE.
+      Latest-wins projections live in the state.* models.
+    tables:
+      - name: decision_log
+        description: >
+          Append-only decision/thesis audit. Date column is `entry_date` (NOT
+          decision_date). Corrections are new rows with superseded_by; never updated.
+        loaded_at_field: event_ts
+        freshness:
+          warn_after: {count: 7, period: day}
+        columns:
+          - name: entry_id
+            description: Primary key (GENERATE_UUID default).
+            tests:
+              - unique
+              - not_null
+          - name: entry_date
+            description: Operating date of the entry (partition key). NOT decision_date.
+            tests:
+              - not_null
+          - name: entry_type
+            description: e.g. 'thesis-construction' (the rows thesis_outcomes reads).
+          - name: decision
+            description: GO / NO-GO / ... — the thesis verdict.
+          - name: conviction
+            description: Categorical conviction tier (LOW..HIGHEST); ordinal-mapped in conviction_features.
+          - name: conviction_pct
+            description: Numeric conviction percentage (optional).
+          - name: strategy
+            description: Strategy code A-E.
+          - name: ticker
+            description: Backfilled from title (regex + Gemini); legitimately NULL for multi-ticker/session entries.
+          - name: superseded_by
+            description: entry_id of the row that supersedes this one (corrections).
+
+      - name: trade_fills
+        description: >
+          IBKR fills. Idempotent by trade_id — dedup enforced in state.trade_fills_curated
+          (latest ingest_ts per trade_id).
+        loaded_at_field: ingest_ts
+        freshness:
+          warn_after: {count: 7, period: day}
+        columns:
+          - name: trade_id
+            description: Primary key. One curated row per trade_id.
+            tests:
+              - not_null
+              # NOTE: trade_id is NOT unique on the raw append-only table (a re-ingested fill
+              # appends a duplicate by design). Uniqueness is asserted on state.trade_fills_curated.
+          - name: side
+            description: BUY / SELL — pairs entries to exits in position_lifecycle.
+          - name: shares
+            description: Filled share count.
+          - name: price
+            description: Fill price (entry/exit boundary price for the TWR).
+          - name: commission
+            description: Per-fill commission (tracked exactly in cash/NAV; excluded from gross TWR).
+          - name: realized_pnl
+            description: Realized P&L on a SELL; 0 on a BUY (must not be read as a loss).
+          - name: ingest_ts
+            description: Ingest timestamp — the dedup discriminator (latest wins).
+
+      - name: position_events
+        description: Position lifecycle events -> state.current_positions (latest non-CLOSE per position_key).
+        loaded_at_field: event_ts
+        columns:
+          - name: event_id
+            description: Primary key (GENERATE_UUID default).
+            tests:
+              - unique
+              - not_null
+          - name: position_key
+            description: Stable key per position; latest event wins.
+            tests:
+              - not_null
+          - name: event_type
+            description: e.g. OPEN / CLOSE — current_positions drops the latest-is-CLOSE rows.
+          - name: status
+            description: e.g. OPEN — guards strategy_nav / daily_briefing time-exits.
+          - name: event_ts
+            description: Transition time; set explicitly by the parser, so event_ts DESC is correct ordering.
+          - name: time_exit_date
+            description: Time-based exit date (A/B/C/E only; D is long-horizon).
+          - name: cost_basis
+            description: Position cost basis (used in strategy_nav open-position MV/cost).
+          - name: shares
+            description: Open share count.
+
+      - name: regime_events
+        description: Technical signals + per-strategy activation + FUNDAMENTAL_AXIS scores -> state.current_regime.
+        loaded_at_field: event_ts
+        columns:
+          - name: event_id
+            description: Primary key (GENERATE_UUID default).
+            tests:
+              - unique
+              - not_null
+          - name: as_of_date
+            description: Observation date — IS the transition time for regime; primary order key (DESC).
+            tests:
+              - not_null
+          - name: scope
+            description: e.g. FUNDAMENTAL_AXIS (the 5-axis monthly scores) — current_regime partitions on (scope,key).
+          - name: key
+            description: e.g. growth_momentum / _integrative — second partition key.
+          - name: value
+            description: Categorical regime value.
+
+      - name: queue_events
+        description: >
+          Queue status-transition events -> state.open_queue / open_queue_detail.
+          Lanes: WATCHLIST, PENDING_ANALYSIS, PENDING_REVIEW, ORDER_STAGED (the durable
+          persist-and-wait registry -> state.open_orders).
+          TRAP: latest-wins MUST order by event_ts (a transition time), NOT due_date.
+        loaded_at_field: event_ts
+        columns:
+          - name: event_id
+            description: Primary key (GENERATE_UUID default).
+            tests:
+              - unique
+              - not_null
+          - name: queue
+            description: Lane name. ORDER_STAGED is the staged-order registry.
+            tests:
+              - not_null
+          - name: item_key
+            description: Stable identity per queue item; latest event_ts wins.
+          - name: status
+            description: Transition status; terminal set is case-normalized in open_queue_detail.
+          - name: event_ts
+            description: INSERT-time transition order — the CORRECT latest-wins discriminator (DEFAULT CURRENT_TIMESTAMP).
+          - name: due_date
+            description: TARGET date (entry-window-close / deadline). NOT a transition time — do not order by it.
+          - name: payload
+            description: JSON; ORDER_STAGED rows carry side/qty/limit_price/etc. read by state.open_orders.
+          - name: note
+            description: Free-text note (surfaced as has_note in open_queue).
+
+      - name: adversarial_reviews
+        description: Adversarial attacker/orchestrator outputs; feed theater-independence analytics (embeddings stay in 02/11).
+        loaded_at_field: event_ts
+        columns:
+          - name: event_id
+            description: Primary key (GENERATE_UUID default).
+            tests:
+              - unique
+              - not_null
+          - name: review_id
+            description: Pairs attacker and orchestrator rows for the same review.
+            tests:
+              - not_null
+          - name: role
+            description: attacker / orchestrator.
+          - name: theater_check
+            description: Self-certified independence flag (judged objectively in 11_theater_judge.sql).
+
+      - name: parking_events
+        description: SGOV parking activity for per-strategy cash attribution (action='DIVIDEND_REINVEST' for DRIP).
+        loaded_at_field: event_ts
+        columns:
+          - name: event_id
+            description: Primary key (GENERATE_UUID default).
+            tests:
+              - unique
+              - not_null
+          - name: action_date
+            description: Parking action date (partition key).
+            tests:
+              - not_null
+          - name: action
+            description: e.g. DIVIDEND_REINVEST (income, no strategy-cash debit) vs trade-funded buys.
+
+      - name: daily_marks
+        description: >
+          Daily closes + corporate actions per held ticker (+SGOV). Total-return source
+          for the deployed-TWR engine. Consumers read state.daily_marks_curated (latest
+          ingest per ticker/day) — a re-ingested day would otherwise DOUBLE-COUNT.
+        loaded_at_field: ingest_ts
+        freshness:
+          warn_after: {count: 4, period: day}   # ~ a long weekend; the dead-man's-switch window
+        columns:
+          - name: mark_date
+            description: Mark date. (ticker, mark_date) is the dedup key in daily_marks_curated.
+          - name: ticker
+            description: Held ticker (or SGOV). (ticker, mark_date) is the dedup key.
+          - name: close
+            description: Close price (split-adjusted at ingest).
+          - name: dividend
+            description: Cash dividend per share on the ex-div date (enters total-return numerator).
+          - name: split_ratio
+            description: Split ratio (e.g. 4.0 for 4:1); recorded for audit.
+          - name: ingest_ts
+            description: Ingest timestamp — the dedup discriminator (latest wins).
+
+      - name: market_holidays
+        description: US equity-market full-close + early-close exceptions (trading-day calendar source, bigquery/09).
+        columns:
+          - name: holiday_date
+            description: Exception date (primary key, one row per date via MERGE).
+            tests:
+              - unique
+              - not_null
+          - name: full_close
+            description: TRUE = fully closed; FALSE = early close (still a trading day).
+
+      - name: macro_fred
+        description: FRED-derived monthly regime metrics (bigquery/07). Un-gated AI.FORECAST input. dbt does not own it.
+
+      - name: macro_series
+        description: Structured hand-curated macro indicators (bigquery/04). M1a writes forward.
+        loaded_at_field: ingest_ts
+        columns:
+          - name: event_id
+            description: Primary key (GENERATE_UUID default).
+            tests:
+              - unique
+              - not_null
+          - name: metric
+            description: Indicator name (e.g. CPI YoY).
+          - name: value
+            description: Numeric value.
+
+      - name: hf_capability_captures
+        description: HF frontier-LLM capability captures (D1 / Q3).
+        columns:
+          - name: capture_id
+            description: Primary key (GENERATE_UUID default).
+            tests:
+              - unique
+              - not_null
+          - name: capture_date
+            description: Capture date (partition key).
+
+  - name: ops
+    project: stock-trading-498512
+    dataset: ops
+    description: >
+      Procedures + remote models + run/alert control-plane tables (bigquery/08,10).
+      OUT OF SCOPE for dbt to OWN, but state.freshness reads ops.run_log, so it is
+      declared as a source. dbt does NOT create or maintain anything in ops.
+    tables:
+      - name: run_log
+        description: >
+          One row per routine run (started/completed/failed/halted). Maintained by
+          ops.sp_log_run (bigquery/10). state.freshness reads MAX(run_date) for D2.
+        columns:
+          - name: routine
+            description: Routine code (D1, D2, ..., M5). freshness filters routine='D2'.
+          - name: run_date
+            description: Operating day the routine ran for.
+          - name: status
+            description: started / completed / failed / halted. freshness filters status='completed'.
+
+  - name: state_external
+    project: stock-trading-498512
+    dataset: state
+    description: >
+      state.* objects that dbt does NOT own because they depend on remote models /
+      AI.* (bigquery/02_ai_layer.sql). Declared as sources so the ported observability
+      models can reference them without dbt trying to build them.
+    tables:
+      - name: embedding_health
+        description: >
+          Embedding-sync drift monitor (bigquery/02_ai_layer.sql). Built on ML.GENERATE_*
+          / remote models -> NOT dbt-owned. system_health reads its is_healthy flag.
+        columns:
+          - name: is_healthy
+            description: TRUE when decision embeddings are in sync (0 missing / 0 error / 0 dup).
+
+  - name: perf
+    project: stock-trading-498512
+    dataset: perf
+    description: Deployed-TWR engine outputs (procedure-maintained).
+    tables:
+      - name: strategy_daily
+        description: >
+          PROCEDURE-MAINTAINED TABLE. Rebuilt wholesale (idempotent DELETE+INSERT) by
+          ops.sp_recompute_engine() — see bigquery/03_twr_engine.sql. dbt does NOT own
+          this object (it is too procedural to port as a model: chained EXP(SUM(LN(...)))
+          windows + correlated closed-trade subqueries written by the recompute proc).
+          Modeled as a SOURCE; perf.kill_flags refs it.
+        loaded_at_field: computed_ts
+        freshness:
+          warn_after: {count: 4, period: day}
+        columns:
+          - name: as_of_date
+            description: Engine date (partition key). NOT NULL.
+            tests:
+              - not_null
+          - name: strategy
+            description: Strategy code A-E. NOT NULL.
+            tests:
+              - not_null
+          - name: deployed_unit_value
+            description: Chained (1+r_deployed) gross-of-commission deployed-TWR index.
+          - name: peak_unit_value
+            description: High-water mark vs the 1.000 inception base.
+          - name: current_drawdown
+            description: deployed_unit_value/peak - 1; always <= 0 by construction.
+          - name: sgov_index
+            description: Chained SGOV ACTUAL total-return benchmark index.
+          - name: excess_vs_sgov
+            description: deployed_unit_value/sgov_index - 1.
+          - name: deployed_days
+            description: Count of deployed days for the strategy.
+          - name: closed_trades
+            description: Closed round-trips through as_of_date (feeds the 30-trade gate).
+          - name: gate_n
+            description: Closed trades REMAINING to the 30-trade calibration gate.

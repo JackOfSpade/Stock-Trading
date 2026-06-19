@@ -1,0 +1,33 @@
+version: 2
+
+# Tests for the perf.* layer (kill flags off the procedure-maintained engine table).
+
+models:
+  - name: kill_flags
+    description: >
+      Kill-trigger flags off the latest perf.strategy_daily row per strategy.
+      perf.strategy_daily is a SOURCE (procedure-maintained); see sources.yml.
+    tests:
+      # One flag-row per strategy (latest as_of_date).
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [strategy]
+    columns:
+      - name: strategy
+        description: Strategy code A-E.
+        tests:
+          - not_null
+      - name: as_of_date
+        description: Date of the latest engine row.
+        tests:
+          - not_null
+      - name: current_drawdown
+        description: deployed_unit_value/peak - 1; always <= 0 by construction (drawdown_kill at <= -0.50).
+        tests:
+          # current_drawdown can never be positive (peak is a running max >= current).
+          - dbt_utils.accepted_range:
+              max_value: 0
+              inclusive: true
+      - name: drawdown_kill
+        tests: [not_null]
+      - name: gate_reached
+        tests: [not_null]

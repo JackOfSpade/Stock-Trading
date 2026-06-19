@@ -1,0 +1,9 @@
+# dbt build artifacts and installed packages — never commit.
+target/
+dbt_packages/
+logs/
+.user.yml
+
+# A real profiles.yml may carry credentials/paths — keep it out of the repo.
+# (profiles.example.yml IS committed as the template.)
+profiles.yml

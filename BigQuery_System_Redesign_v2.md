@@ -27,6 +27,22 @@ and redesign the workflow if there's a better way*:
 
 ## Build status & findings (2026-06-05)
 
+> **⚠️ DOC-vs-REALITY RECONCILIATION (2026-06-19).** This design doc describes the *intended* system
+> and names several objects that were **NEVER BUILT** — the deployed ground truth is `bigquery/01–13_*.sql`
+> (apply those in order). Treat the following as DESIGN-ONLY / not deployed unless and until built:
+> - `ops.sp_weekly_refresh()` — **not built** (noted in §13 too). W5 does embedding catch-up + calibration review by hand.
+> - `analytics.conviction_model` + `analytics.conviction_model_gbt` — **not built** (correctly gated: single-class until ≥30 closed GO trades). The cold-start substrate that *is* live is `analytics.conviction_features` + `analytics.calibration_summary`.
+> - `analytics.attribution` (CONTRIBUTION_ANALYSIS), `analytics.anomaly_flags` (ML.DETECT_ANOMALIES), `analytics.screen_A..E` — **not built**.
+> - A `VECTOR INDEX` on `decision_embeddings` — **intentionally not built** (BigQuery needs ≥5k rows; brute-force over ~250 rows is instant — see `bigquery/02_ai_layer.sql`).
+> - Some objects use different final names than drafted here (e.g. the Gemini model is `ops.gemini`, not `ops.gemini_flash`; the deployed-TWR profitability metric is **GROSS**-of-commission, superseding the "NET-of-commission" wording below — see §14 of Operating_Protocols.md).
+>
+> **What HAS been added since this doc (deployed, see `ops/RUNBOOK.md`):** `09` market calendar, `10`
+> observability (run_log/alerts/freshness/system_health), `11` theater judge, **`12` cadence monitor +
+> dependency gate**, **`13` event-sourced SGOV reconciliation** (dissolves the per-strategy SGOV-share
+> ledger this doc assumed), structural D2 self-logging in `sp_daily_refresh`, an `infra/terraform/` IaC
+> module, and a parallel-run `dbt/` test layer. The 2026-06-19 stack review also found the scheduled
+> queries + run-logging were coded but not actually operating; those fixes are in `ops/RUNBOOK.md`.
+
 **Live in `stock-trading-498512`** (committed as `bigquery/01–05_*.sql` + parsers + `load_all.py`):
 - **Data layer** — 7 event tables + 4 state views; full migration of every data file incl. all 3
   archives + the queue archives + monthly fundamental regime scores (~340 rows). `Decision_Log.md` +
