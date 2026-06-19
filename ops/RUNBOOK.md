@@ -75,14 +75,16 @@ Two options (pick one):
 
 ---
 
-## 5. Make CI actually gate merges *(P0-1)*
-`auto-merge-claude.yml` merges `claude/*` → `main` via a direct bot push, so a red CI build does
-**not** block it yet. To gate:
-- Easiest: add a step at the **start** of the auto-merge job that runs the tests
-  (`pip install pytest && python c_options_math.py && python -m pytest -q &&
-  python scripts/split_strategy.py --check`) and exits non-zero on failure, *before* it merges.
-- Or: GitHub → Settings → Branches → protect `main` with the **CI** check required, and route
-  merges through PRs (changes the current direct-push model — heavier).
+## 5. Make CI actually gate merges *(P0-1)* — DONE
+`auto-merge-claude.yml` now triggers on the **CI** workflow's completion (`workflow_run`) instead
+of on push, and merges a `claude/*` branch only if the CI run for that branch's **exact tip
+commit** concluded `success`. A red build is skipped (and retried automatically when its CI later
+turns green), so a broken commit no longer reaches `main` — all without human intervention or
+changing the direct-push model. The `lint` job is `continue-on-error` (advisory), so it never
+affects the gate. Fail-closed: in-progress / missing / API-error states are treated as "not green".
+Considered but rejected: re-running the tests inside the merge job (duplicates CI and, in the
+drain-all loop, would need a per-branch checkout+test), and branch protection + required checks
+(would force PRs, abandoning the direct-push model).
 
 ## 6. Enable the CI SQL dry-run *(P2-3)* — optional, low priority
 The `sql-validate` job dry-runs every `bigquery/*.sql` on each push **only if** a `GCP_SA_KEY`

@@ -7,9 +7,10 @@ name: CI
 # c_options_math.py`; nothing tested it on push. Now every change is checked.
 #
 # NOTE on merge-gating: auto-merge-claude.yml merges claude/* -> main via a direct
-# bot push (not a PR), so CI is not yet a *required* status check. To make a red
-# build block the merge, see ops/RUNBOOK.md "Make CI gate merges". CI failures are
-# still visible on the branch/PR today.
+# bot push (not a PR). It now triggers on this workflow's completion (workflow_run)
+# and merges a branch ONLY if the CI run for that branch's exact tip commit
+# concluded "success" — so a red build blocks the merge. The lint job below is
+# continue-on-error (advisory), so it never affects that gate.
 
 on:
   push:
