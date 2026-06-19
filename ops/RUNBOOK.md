@@ -26,12 +26,17 @@ To re-apply or move to a fresh project, run `bigquery/01..11_*.sql` in order via
 Until these exist, the procedures only run when a session calls them (a skipped session =
 silent drift). Bodies are in `bigquery/scheduled_queries/` (see that folder's README).
 
-BigQuery Studio → **Scheduled queries → Create**:
-1. **Embeddings heal** — paste `embed_pending.sql`; daily ~06:00 America/Denver; Location US.
-2. **Freshness check** — paste `daily_freshness_check.sql`; daily ~21:30 America/Denver
-   (after D2). Under **Notifications**, enable *Send email on failure* — the query RAISEs when
-   `system_health` isn't green, so that email IS the alert (no Pub/Sub needed).
-3. On each, set an advanced **`maximum_bytes_billed`** cap (these scans are tiny). *(P2-2)*
+BigQuery Studio → **Scheduled queries → Create**. **BigQuery schedules are UTC** (the UI's
+local-time label is misleading) — use the UTC times below so the check lands in the Denver
+evening *after* D2 year-round:
+1. **Embeddings heal** — paste `embed_pending.sql`; daily ~06:00 UTC; Location US. (Timing is
+   irrelevant — the embedder is idempotent.)
+2. **Freshness check** — paste `daily_freshness_check.sql`; **daily at 05:00 UTC** (≈ 22:30 MDT /
+   21:30 MST — evening, after D2; NOT 21:30 UTC, which is 15:30 MDT = *before* D2 and would
+   false-alarm every trading day). Under **Notifications**, enable *Send email on failure* — the
+   query RAISEs when `system_health` isn't green, so that email IS the alert (no Pub/Sub needed).
+3. The new scheduling UI no longer exposes `maximum_bytes_billed`; don't worry about it — both
+   queries scan < 2 MB. Cost is bounded by the budget alert in §2. *(P2-2)*
 
 ---
 
@@ -39,7 +44,9 @@ BigQuery Studio → **Scheduled queries → Create**:
 - GCP Console → **Billing → Budgets & alerts** → budget on project `stock-trading-498512`
   with email thresholds (Vertex embeddings/Gemini/AI.FORECAST are the only billed pieces;
   they're pennies, but unattended scheduled jobs should be capped).
-- Keep `maximum_bytes_billed` on scheduled queries and prefer `execute_sql_readonly` for agent reads.
+- Prefer `execute_sql_readonly` for agent reads. (`maximum_bytes_billed` isn't settable on
+  scheduled queries in the current UI; the scheduled scans are tiny, so the budget alert is the
+  guardrail.)
 
 ---
 
@@ -74,10 +81,14 @@ Two options (pick one):
 - Or: GitHub → Settings → Branches → protect `main` with the **CI** check required, and route
   merges through PRs (changes the current direct-push model — heavier).
 
-## 6. Enable the CI SQL dry-run *(P2-3)*
-Add a repo secret **`GCP_SA_KEY`** (a least-privilege SA with BigQuery *dry-run*/jobUser). The
-`sql-validate` job then dry-runs every `bigquery/*.sql` on each push; without the secret it skips
-cleanly (CI stays green).
+## 6. Enable the CI SQL dry-run *(P2-3)* — optional, low priority
+The `sql-validate` job dry-runs every `bigquery/*.sql` on each push **only if** a `GCP_SA_KEY`
+secret is present; without it the job skips cleanly (CI stays green). **Recommended: leave it
+skipped.** A downloadable SA JSON key is exactly the long-lived credential this project
+deliberately removed (`bigquery/README.md`: "the bq-loader service-account key was deleted"), and
+SQL is already dry-run via the BigQuery MCP during development. If you do want CI to validate SQL,
+prefer **keyless GitHub→GCP Workload Identity Federation** (no downloadable key) over a JSON
+secret — then point the `sql-validate` job at the WIF auth action.
 
 ---
 
