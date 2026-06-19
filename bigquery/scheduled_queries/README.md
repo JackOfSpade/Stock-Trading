@@ -10,6 +10,7 @@ they fire only when a routine session calls them — so a skipped session = sile
 |---|---|---|---|
 | `embed_pending.sql` | daily ~06:00 UTC | `CALL ops.sp_embed_pending()` — heal any unembedded decisions (P0-3). Timing irrelevant (idempotent). | — |
 | `daily_freshness_check.sql` | **daily 05:00 UTC** | dead-man's switch: alert if marks/engine stale, embeddings unhealthy, kills firing, or open critical alerts (P0-2) | **enable "email on failure"** |
+| `backup_events_export.sql` | daily ~05:30 UTC | `EXPORT DATA` every `events.*` table to `gs://stock-trading-backups` as dated Parquet — no Cloud Run, no key (P2-1). Needs the SA granted `storage.objectAdmin` on the bucket. | — |
 
 > **Why 05:00 UTC for the freshness check:** it must run in the **Denver evening, after D2** has
 > ingested the close. 05:00 UTC ≈ 22:30 MDT / 21:30 MST — same Denver day, after D2, in both DST

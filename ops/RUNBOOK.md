@@ -52,11 +52,14 @@ evening *after* D2 year-round:
 
 ## 3. Backups of the event store *(P2-1)*
 `events.*` is now the irreplaceable source of truth; only 7-day time-travel protects it today.
-1. Create a bucket: `gsutil mb -l US gs://stock-trading-backups`.
-2. Lifecycle (keep 90 daily, then sparse): `gsutil lifecycle set ops/gcs_lifecycle.json gs://stock-trading-backups`
-   *(write the rule you want; example: delete objects > 400 days)*.
-3. Schedule `scripts/backup_events.sh` daily (Cloud Scheduler → Cloud Run job, or cron on a
-   trusted box): `BUCKET=gs://stock-trading-backups scripts/backup_events.sh`.
+Bucket + lifecycle are **DONE** (`gs://stock-trading-backups`, US, delete > 400 days). To automate
+the actual backups with **no Cloud Run job and no key**, use the BigQuery scheduled query
+`bigquery/scheduled_queries/backup_events_export.sql` (it `EXPORT DATA`s every `events.*` table to
+the bucket as dated Parquet, straight from BigQuery):
+1. Grant the scheduled query's service account `roles/storage.objectAdmin` on `gs://stock-trading-backups`.
+2. Create the scheduled query: daily ~05:30 UTC (after the freshness check); Location US; no destination.
+3. *(Alternative, ad-hoc / full export)* run `BUCKET=gs://stock-trading-backups scripts/backup_events.sh`
+   from Cloud Shell — same Parquet layout, uses the `bq` CLI; good for a one-off verification.
 4. (Optional, auditability) have D2 run `scripts/state_snapshot.sh` and commit
    `state_snapshots/` — restores the "git diff shows what changed today" property the
    `.md`→BigQuery cutover gave up, without resurrecting the retired live-state files.
