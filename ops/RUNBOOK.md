@@ -182,8 +182,9 @@ For reference, the calls each routine makes (see also `ops/cadence.yaml` `defaul
 **Alert DELIVERY (A2) — push channel added 2026-06-20.** Beyond the calendar event, a Google
 Apps Script (`ops/monitoring/alert_emailer.gs`) polls `ops.alerts` every ~2h and **emails** you on
 a new unresolved critical/warning (de-duped, self-email, no console wiring) — so an alert reaches
-you between routines without watching the calendar. Deploy: `ops/OWNER_ACTIONS.md` #2. (Cloud
-Monitoring on `ops.alerts` is the heavier alternative — OWNER_ACTIONS #7.)
+you between routines without watching the calendar. Setup: same as the weekly report
+(`ops/weekly_report/README.md`) — paste the script, add the BigQuery service, run `testAlertCheck`
+then `installAlertTrigger`. (A Cloud Monitoring alert policy on `ops.alerts` is the heavier alternative.)
 
 ## 8. Extend the market-holiday calendar — now AUTO-EXTENDED *(P1-3)* — DONE (2026-06-20)
 **No longer a manual yearly task.** The **W5** weekly routine self-extends `events.market_holidays`
