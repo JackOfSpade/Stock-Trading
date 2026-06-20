@@ -23,6 +23,10 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.ops.run_log` (
 ) PARTITION BY run_date CLUSTER BY routine, status
 OPTIONS(description='One row per routine run (started/completed/failed/halted). Source for the freshness dead-man switch + an audit of what ran when. instruction captures the verbatim trigger text.');
 
+-- Idempotent upgrade: CREATE TABLE IF NOT EXISTS will NOT add a new column to an already-existing
+-- run_log, so re-applying this file to a pre-existing table needs the explicit ALTER (no-op once present).
+ALTER TABLE `stock-trading-498512.ops.run_log` ADD COLUMN IF NOT EXISTS instruction STRING;
+
 -- ===== state.routine_last_instruction — the live trigger text each routine last received =====
 -- Verify every routine's web-UI trigger instruction by query instead of screenshotting it. Compare
 -- against the canonical instruction printed by scripts/print_routines.py to catch a drifted/typo'd
