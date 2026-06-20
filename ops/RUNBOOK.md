@@ -318,3 +318,22 @@ page returns "select a resource under an organization"). When/if you attach the 
    (only succeeds once the project is under an Org where the constraint is available).
 2. Related, optional: enforce `iam.allowedPolicyMemberDomains` (Domain restricted sharing) to
    confine bindings to your own domain.
+
+## 18. Weekly performance self-email *(reporting)* — owner deploys the Apps Script
+A weekly HTML digest of how the system is doing (regime, active/inactive strategies, per-strategy
+budget + deployed performance, this week's activity, ops health) emailed to you automatically.
+
+**Why an Apps Script, not a Claude routine:** the official Gmail connector can only *draft*, not
+send. So delivery is owned by a **Google Apps Script** that runs on Google's servers as you, on a
+weekly trigger, reads BigQuery directly, and self-emails (from you, to you — no SMTP, app password,
+or API key needed). Nothing lands in Drafts. Files: `ops/weekly_report/` (`weekly_report.gs`,
+`appsscript.json`, `README.md`, `sample_preview.html`). Data SQL: `bigquery/14_weekly_report.sql`.
+
+**Owner action (one-time, ~3 min):** follow `ops/weekly_report/README.md` — paste `weekly_report.gs`
+into a new script.google.com project, add the **BigQuery** advanced service, run `testReport` (approve
+BigQuery + Gmail scopes), then run `installWeeklyTrigger`. Set the project timezone to America/Denver.
+
+**Claude-side dependency (already wired):** D2 Step 0b writes one `ops.account_snapshot` row/day
+(account NAV + Week/MTD/YTD TWR from the IBKR connector — the only datum the script can't fetch
+itself). Until D2 runs once after this change, the email header falls back to the BigQuery
+reconciliation NAV and shows `—` for account TWR; per-strategy deployed-TWR renders regardless.

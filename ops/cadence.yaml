@@ -35,8 +35,8 @@ routines:
     schedule: "after D1 trading_day"
     depends_on: [D1]
     writes: [events.trade_fills, events.position_events, events.daily_marks, perf.strategy_daily,
-             events.decision_log, events.queue_events, calendar:confirm_order]
-    notes: "Step 0 = broker reconcile + cash tripwire + SGOV sweep; then CALL ops.sp_daily_refresh()."
+             events.decision_log, events.queue_events, ops.account_snapshot, calendar:confirm_order]
+    notes: "Step 0 = broker reconcile + cash tripwire + SGOV sweep; Step 0b = ops.account_snapshot (account NAV/TWR for the weekly self-email); then CALL ops.sp_daily_refresh()."
   - id: D3
     name: Calendar & Queue Hygiene
     schedule: "after D2 daily"             # runs daily incl. non-trading days for queue/calendar upkeep
@@ -142,3 +142,13 @@ routines:
     schedule: "annual after A1,A2"
     depends_on: [A1, A2]
     writes: [AI_Trading_Foundation.md, Strategy.md, events.queue_events, events.decision_log]
+
+# ---- NON-CLAUDE AUTOMATION (documented here for visibility; not run by the harness) ----
+# The weekly performance self-email is NOT a Claude routine. It is a Google Apps Script
+# (ops/weekly_report/weekly_report.gs) on a weekly time-trigger that runs on Google's
+# servers as the owner, reads BigQuery (analytics.strategy_scorecard, state.current_regime,
+# state.system_health, state.account_latest, analytics.weekly_activity) and self-emails the
+# HTML digest. The Gmail connector can only draft (not send), so delivery lives outside
+# Claude. The only Claude-side dependency is D2 Step 0b writing ops.account_snapshot (account
+# NAV/TWR), which the script reads. Setup: ops/weekly_report/README.md.
+#   weekly-self-email   schedule: "weekly Sun ~07:00 America/Denver (Apps Script trigger)"
