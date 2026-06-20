@@ -26,13 +26,15 @@ terraform {
   # State for this module contains references to live trading datasets, so it
   # should live in a private, versioned GCS bucket (NOT in this git repo).
   #
-  # To enable: create a bucket (e.g. gs://stock-trading-tfstate, US, versioned),
-  # uncomment the block below, set `bucket`, then run `terraform init -migrate-state`.
-  #
-  # backend "gcs" {
-  #   bucket = "REPLACE-ME-tfstate-bucket"   # owner decision — must already exist
-  #   prefix = "infra/terraform"
-  # }
+  # Enabled (A3). The bucket gs://stock-trading-tfstate must already exist (US, versioned)
+  # before `terraform init` — create it once with:
+  #   gsutil mb -l US -b on gs://stock-trading-tfstate && gsutil versioning set on gs://stock-trading-tfstate
+  # then run `terraform init -migrate-state`. NOTE: CI does not run terraform, so this block
+  # only affects an owner running terraform locally / in Cloud Shell.
+  backend "gcs" {
+    bucket = "stock-trading-tfstate"
+    prefix = "infra/terraform"
+  }
   # -------------------------------------------------------------------------
 }
 

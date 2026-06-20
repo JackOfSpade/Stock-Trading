@@ -85,6 +85,74 @@ jobs:
           dbt deps
           dbt parse
 
+  dbt-parity:
+    name: dbt↔live row-level parity (keyless WIF, opt-in)
+    runs-on: ubuntu-latest
+    # OPT-IN, default OFF (like sql-validate). Proves each dbt model produces the SAME rows as its
+    # live hand-SQL view (catches logic drift the always-on `dbt parse` can't). Read-only: it
+    # `dbt compile`s (never `dbt build` — that would overwrite the live datasets, since
+    # generate_schema_name pins models to bare dataset names) then runs compiled-vs-live EXCEPT
+    # DISTINCT both ways via the bq CLI (scripts/dbt_parity.py). Enable: set repo vars
+    # RUN_DBT_PARITY=true + the WIF vars (a READ-ONLY SA: roles/bigquery.dataViewer + jobUser).
+    # See ops/RUNBOOK.md §6/§14.
+    permissions:
+      contents: read
+      id-token: write   # Workload Identity Federation (no downloadable key)
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check opt-in + WIF config
+        id: guard
+        run: |
+          if [ "${{ vars.RUN_DBT_PARITY }}" = "true" ] \
+             && [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] \
+             && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::dbt parity disabled (default). Set vars.RUN_DBT_PARITY=true + the WIF vars (read-only SA) to enable — ops/RUNBOOK.md §6/§14. dbt parse remains the always-on structural gate."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-python@v5
+        if: steps.guard.outputs.skip == 'false'
+        with:
+          python-version: '3.11'
+      - name: Authenticate to GCP (keyless, WIF)
+        if: steps.guard.outputs.skip == 'false'
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
+      - name: Set up gcloud (provides the bq CLI)
+        if: steps.guard.outputs.skip == 'false'
+        uses: google-github-actions/setup-gcloud@v2
+      - name: Install dbt
+        if: steps.guard.outputs.skip == 'false'
+        run: pip install --quiet dbt-core dbt-bigquery
+      - name: dbt profile (ADC from WIF via oauth)
+        if: steps.guard.outputs.skip == 'false'
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml <<'YAML'
+          stock_trading:
+            target: ci
+            outputs:
+              ci:
+                type: bigquery
+                method: oauth
+                project: stock-trading-498512
+                dataset: state
+                location: US
+                threads: 4
+          YAML
+      - name: dbt deps + compile (no build — read-only)
+        if: steps.guard.outputs.skip == 'false'
+        working-directory: dbt
+        run: |
+          dbt deps
+          dbt compile
+      - name: Row-level parity (compiled vs live, EXCEPT both ways)
+        if: steps.guard.outputs.skip == 'false'
+        run: python scripts/dbt_parity.py
+
   sql-validate:
     name: BigQuery SQL dry-run (keyless WIF, opt-in)
     runs-on: ubuntu-latest

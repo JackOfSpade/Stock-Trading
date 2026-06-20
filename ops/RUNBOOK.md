@@ -233,8 +233,20 @@ alert, and **all four scheduled queries** (single-sourcing the SQL bodies from
 3. Set `billing_account` + `notification_emails` in `terraform.tfvars` (copy `.example`).
 4. `terraform apply` — this is what actually CREATES the scheduled queries (the dead-man's switch),
    which the 2026-06-19 review found were never running.
-Owner decisions: the `billing_account` id; whether to use a remote GCS state backend (commented in
-`versions.tf`); and whether the backup export runs under owner creds (default) or a dedicated SA.
+Owner decisions: the `billing_account` id; and whether the backup export runs under owner creds
+(default) or a dedicated SA (A1).
+
+**A3 — remote GCS state backend: ENABLED (2026-06-20).** `versions.tf` now declares
+`backend "gcs" { bucket = "stock-trading-tfstate" }`. Create the bucket once before `terraform init`:
+`gsutil mb -l US -b on gs://stock-trading-tfstate && gsutil versioning set on gs://stock-trading-tfstate`,
+then `terraform init -migrate-state`. CI does not run terraform, so this only affects an owner running
+terraform locally / in Cloud Shell.
+
+**D1 — row-level dbt↔live parity: ADDED (opt-in CI).** `.github/workflows`… the `dbt-parity` job in
+`ci.yml` + `scripts/dbt_parity.py` `dbt compile` each model and run compiled-vs-live `EXCEPT DISTINCT`
+both ways (read-only; never `dbt build`, which would overwrite the live datasets). Default OFF; enable
+with repo vars `RUN_DBT_PARITY=true` + the WIF vars (a READ-ONLY SA: `roles/bigquery.dataViewer` +
+`roles/bigquery.jobUser`).
 
 ## 13. Cadence monitor + dependency gate *(A3, C1)* — DONE (deployed)
 `bigquery/12_cadence_monitor.sql` is applied. `state.cadence_watch` shows, per operating day, which
