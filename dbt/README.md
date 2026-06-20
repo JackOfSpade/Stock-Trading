@@ -182,9 +182,23 @@ intended CI commands, in order of credential requirement:
   `unique_combination_of_columns(ticker, mark_date)` test + `assert_sgov_no_double_count.sql`
   guard the dedup contract.
 
-## Cutover plan (owner-gated — do NOT do this in the scaffold)
+## Ownership cutover — DECIDED AGAINST (2026-06-19); dbt stays the TEST layer
 
-When the owner decides to flip ownership of the pure-SELECT views to dbt:
+**This project will NOT transfer view ownership to dbt.** dbt's role here is the continuous
+structure + invariant **test** layer (`dbt parse` in CI; `dbt test` against BigQuery on demand),
+NOT the runtime owner of the views. Why, specifically for this system:
+- Routine sessions run on the BigQuery MCP and have **no dbt runtime** — if dbt owned the views, a
+  session could neither rebuild nor change them.
+- Disaster recovery is "apply `bigquery/01..13_*.sql` in order via the MCP"; removing the view DDL
+  breaks that single-command rebuild path.
+- Byte-parity of `dbt build` vs the live views can't be validated without a dbt runtime, and these
+  are live trading views.
+
+So `bigquery/*.sql` stays the **canonical runtime owner**; this `dbt/` tree is a kept-in-sync parallel
+port used only for tests. (See `ops/RUNBOOK.md §14`.)
+
+### IF a future owner ever reverses this decision (prerequisites first)
+Do NOT just delete the DDL. First wire an operational dbt runner + validate byte-parity, then:
 
 1. Run `dbt build` against the live project (or a staging dataset first) and confirm the
    ported views are **byte-equivalent** to the live ones (`EXCEPT DISTINCT` both ways, or a

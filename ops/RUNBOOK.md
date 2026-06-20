@@ -182,11 +182,20 @@ Each December, append next year's NYSE/Nasdaq full closes (+ any early closes) t
 `events.market_holidays` (MERGE in `bigquery/09_market_calendar.sql` is the template) and extend
 the date range in `state.market_calendar` if needed.
 
-## 9. Strategy slices — staged cutover *(P3-1)*
-`strategy/*.md` are generated from `Strategy.md` (parallel-run; nothing reads them yet). When
-ready, re-point routine read-instructions in `Claude_Task_Plan.md` / `Operating_Protocols.md` at
-the per-strategy slice (+ preamble/router) so blinding becomes a file boundary and context shrinks.
-Regenerate after any `Strategy.md` edit: `python scripts/split_strategy.py` (CI guards drift).
+## 9. Strategy slices — cutover DONE (via authoritative read convention) *(P3-1)*
+`strategy/*.md` are generated from `Strategy.md` (`scripts/split_strategy.py`; CI guards drift).
+The cutover is now done at the instruction layer: `Claude_Task_Plan.md` "Strategy reading — use the
+generated `strategy/` slices" is an **authoritative** routine→slice map that overrides any in-body
+"Read Strategy.md (… section)" — per-strategy routines load only their slice(s) + `01`, so blinding
+is a file boundary and context shrinks. `Strategy.md` stays canonical (fallback + regenerate source).
+
+**Known exception — M1a.** The slices split on top-level `##`, and the "Regime router" slice (`02`)
+bundles M1a's regime-scoring template WITH the M1b strategy-mapping + reconciliation rules that name
+strategies A/D — so no slice gives the strategy-blind M1a a clean file. M1a therefore still reads the
+named `### Fundamental analysis template (monthly)` sub-section of `Strategy.md` (+ `01`), discipline-
+blinded as before. To make M1a's blinding a true file boundary, restructure `Strategy.md` so the M1a
+inputs are a separate top-level section from the M1b mapping, then the splitter can emit an M1a-clean
+slice. Deferred (needs a canonical-spec edit).
 
 ## 10. Theater judge — run it *(P3-2)*
 Add to **W5**: `CALL ops.sp_score_theater();` then read `analytics.theater_check_calibration`
@@ -222,16 +231,25 @@ Routines call `ops.sp_routine_start('<ID>', <denver_today>, <session>, <branch>,
 bootstrapping — a not-yet-logging upstream is treated as satisfied, so it is safe to declare deps now).
 No console action beyond scheduling `cadence_check.sql`.
 
-## 14. dbt modeling + test layer *(B2, B3)* — parallel-run, owner-gated cutover
+## 14. dbt — TEST/VALIDATION layer (view-ownership cutover NOT pursued — decided 2026-06-19) *(B2, B3)*
 `dbt/` ports the pure-SELECT derived views (state/perf/analytics) into dbt models with a dependency
 DAG + data tests, INCLUDING the load-bearing invariants the review flagged (reserved_cash formula,
-queue `event_ts` latest-wins, daily-marks no-double-count, one-row health views). It is **parallel-run**:
-canonical source stays `bigquery/*.sql` until cutover (same pattern as `strategy/` slices). To run it
-against BigQuery you need keyless auth (§6/WIF) or `dbt`'s `oauth` method locally:
-`cd dbt && dbt deps && dbt build` (or `dbt test` to just run the assertions). CI runs `dbt parse`
-offline on every push. **Cutover (when ready):** remove the ported view DDL from
-`bigquery/01/03/04/05/09/10*.sql` and let dbt own those views; keep procedures / remote models /
-`AI.*` / `EXPORT DATA` in the `.sql` files (dbt does not own them). See `dbt/README.md`.
+queue `event_ts` latest-wins, daily-marks no-double-count, one-row health views). CI runs `dbt parse`
+offline on every push; run the assertions against BigQuery on demand with `cd dbt && dbt deps && dbt test`
+(uses your `oauth` profile or WIF). **This is dbt's role here: a continuous structure + invariant
+TEST layer.**
+
+**Decision: do NOT transfer view OWNERSHIP to dbt** (i.e., do not remove the view DDL from
+`bigquery/*.sql`). Reasons specific to this system: (1) routine sessions run on the BigQuery MCP and
+have **no dbt runtime**, so if dbt owned the views, a session could neither rebuild nor change them;
+(2) the disaster-recovery / fresh-project path is "apply `bigquery/01..13_*.sql` in order via the MCP"
+— removing the view DDL breaks that single-command rebuild; (3) it can't be validated here (no dbt in
+this environment) that `dbt build` reproduces every view byte-identically, and these are live trading
+views. So `bigquery/*.sql` stays the **canonical runtime owner** of the views; `dbt/` is the test
+mirror (kept in sync as a parallel-run port; `dbt parse` drift is the guard). If a true ownership
+cutover is ever wanted, it must FIRST wire an operational dbt runner (e.g. a scheduled `dbt build`
+into a scratch dataset, with the CI SA granted dataEditor only on that scratch dataset) and validate
+byte-parity — only then remove the DDL. See `dbt/README.md`.
 
 ## 15. Operational identity & credential resilience *(C3)*
 **Finding (2026-06-19):** 30 days of BigQuery job history ran under a SINGLE principal —

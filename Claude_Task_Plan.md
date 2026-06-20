@@ -58,20 +58,23 @@ Each routine run is a fresh session — there is no cross-run chat memory. State
 
 ## Strategy reading — use the generated `strategy/` slices
 
-`Strategy.md` is large (~339 KB) and loading it whole costs context and makes the architectural **blinding** (e.g. M1a must not see strategy sections; an attacker must not read beyond its artifact) a soft "remember-to" rule. `Strategy.md` stays the **canonical source**, but routines READ from its generated, read-optimized slices in `strategy/` (`scripts/split_strategy.py`; CI guards drift; regenerate after any `Strategy.md` edit). This makes blinding a hard **file boundary** and shrinks context. Common slices: `00_preamble.md`, `01_shared_regime_vocabulary.md`, `02_regime_router.md`. Per-strategy routines load ONLY their slice(s) + those commons:
+`Strategy.md` is large (~339 KB) and loading it whole costs context and makes the architectural **blinding** (e.g. M1a must not see strategy sections; an attacker must not read beyond its artifact) a soft "remember-to" rule. `Strategy.md` stays the **canonical source**, but routines READ from its generated, read-optimized slices in `strategy/` (`scripts/split_strategy.py`; CI guards drift; regenerate after any `Strategy.md` edit). This makes blinding a hard **file boundary** and shrinks context. **This table is AUTHORITATIVE: where a routine's prompt body below says "Read Strategy.md (… section)", load the mapped slice(s) here instead** (`Strategy.md` stays the canonical fallback). Safe common slices: `01_shared_regime_vocabulary.md` (regime vocabulary; safe for all). NOTE: `00_preamble.md` names the strategies and `02_regime_router.md` carries the per-strategy router + M1b mapping — so neither is safe for the strategy-blind M1a (see its row). Per-strategy routines load ONLY their slice(s) + `01`:
 
 | Routine(s) | Load | Must NOT load |
 |---|---|---|
-| **M1a** (strategy-blind regime scoring) | `01_shared_regime_vocabulary.md` only | any `03–07` strategy slice, `02_regime_router` (blinding) |
+| **M1a** (strategy-blind regime scoring) | `01_shared_regime_vocabulary.md` + the **`### Fundamental analysis template (monthly)` sub-section of `Strategy.md`** (M1a's inputs + 5 axes) — read that named sub-section ONLY (see exception note) | `00_preamble`, the rest of `02_regime_router` (it holds the M1b mapping + reconciliation rules naming A/D), any `03–07` |
 | **AR·attacker** | the artifact under review only | any strategy slice / Decision_Log / prior reviews (strict blinding) |
-| **W2** (B) | `04_strategy_b.md` + commons | other strategy slices |
-| **M2** (E) | `07_strategy_e.md` + commons | other strategy slices |
-| **M3 / Q2** (D) | `06_strategy_d.md` + commons | other strategy slices |
-| **W1** (A, C) | `03_strategy_a.md`, `05_strategy_c.md` + commons | B/D/E slices |
+| **W2** (B) | `04_strategy_b.md` + `01` | other strategy slices |
+| **M2** (E) | `07_strategy_e.md` + `01` | other strategy slices |
+| **M3 / Q2** (D) | `06_strategy_d.md` + `01` | other strategy slices |
+| **W1** (A, C) | `03_strategy_a.md`, `05_strategy_c.md` + `01` | B/D/E slices |
 | Strategy C order routines | `05_strategy_c.md` + `c_options_math.py` | — |
-| **W3 / W4 / M1b / M4 / Q4 / A3 / AR·orchestrator** (multi-strategy) | the slices for the strategies in scope (+ `08_pre_mortems.md` for reviews) | — |
+| **M1b** (strategy mapping) | `02_regime_router.md` + `03–07` (mapping needs the activation rules) | — |
+| **W3 / W4 / M4 / Q4 / A3 / D1 / AR·orchestrator** (multi-strategy) | the slices for the strategies in scope (+ `08_pre_mortems.md` for reviews) | — |
 
 When a slice is insufficient (need cross-strategy context the slices don't carry), fall back to `Strategy.md` — but prefer the slice. If `strategy/` is stale vs `Strategy.md` (CI check `scripts/split_strategy.py --check` fails), regenerate before relying on it.
+
+**M1a exception (why it still reads `Strategy.md` directly).** The slices split on top-level `##`, and the "Regime router" slice (`02`) bundles M1a's regime-scoring template WITH the M1b strategy-mapping routine and the reconciliation rules that name strategies A and D — so no current slice gives M1a a blinding-clean file. M1a therefore reads `01` + the named `### Fundamental analysis template (monthly)` sub-section of `Strategy.md` and nothing else; its blinding stays discipline-based (as it always was). A future restructure of `Strategy.md` that separates the M1a inputs from the M1b mapping into distinct top-level sections would let the splitter emit an M1a-clean slice; until then, do not point M1a at the whole `02` slice.
 
 ## Branch and state propagation
 
