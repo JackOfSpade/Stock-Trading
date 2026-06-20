@@ -75,4 +75,7 @@ SELECT
   COALESCE(mark.sgov_mark_date >= (SELECT last_trading_day FROM `stock-trading-498512.state.trading_day_today`),
            FALSE)                                                          AS sgov_mark_fresh,
   CURRENT_TIMESTAMP()                                                      AS checked_at
-FROM p, mark;
+-- LEFT JOIN (not a comma cross-join): if SGOV ever has no daily_marks row, the share count from p must
+-- still surface (sgov_close/market_value NULL, sgov_mark_fresh FALSE) rather than the whole view going
+-- empty — this view feeds the §13 hard-stop, so it must never silently return zero rows.
+FROM p LEFT JOIN mark ON TRUE;

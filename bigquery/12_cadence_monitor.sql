@@ -83,8 +83,10 @@ WHERE CASE r.schedule
       END;
 
 -- ===== state.cadence_watch — expected vs logged for the operating day (observability + alert input) =====
--- needs_attention fires ONLY for routines that are (a) expected today AND (b) already in the monitored
--- set (logged a 'completed' run in the last 14 days) AND (c) have not logged 'completed' today.
+-- needs_attention (the alarm signal) fires ONLY for routines that are (a) a DAILY routine (D1/D2/D3 —
+-- unambiguous run-day) AND (b) expected today AND (c) already in the monitored set (logged a 'completed'
+-- run in the last 14 days) AND (d) have not logged 'completed' today. Non-daily routines are shown for
+-- observation but excluded from the alarm (their predicted day can mismatch the real trigger).
 CREATE OR REPLACE VIEW `stock-trading-498512.state.cadence_watch` AS
 SELECT
   e.routine,
@@ -97,7 +99,14 @@ SELECT
   EXISTS(SELECT 1 FROM `stock-trading-498512.ops.run_log` r
          WHERE r.routine = e.routine AND r.status = 'completed'
            AND r.run_date = e.today) AS ran_completed_today,
-  (EXISTS(SELECT 1 FROM `stock-trading-498512.ops.run_log` r
+  -- needs_attention = the ALARM signal (drives cadence_check.sql + the dashboard panel). Scoped to the
+  -- DAILY routines only (D1/D2/D3): their expected run-day is unambiguous. The weekly/monthly/quarterly/
+  -- annual predictions (Sunday / first-trading-day) are inferred and may not match the real trigger day
+  -- (e.g. weeklies run "Sunday OR Monday"), which would false-alarm once such a routine becomes monitored.
+  -- Those rows stay VISIBLE here (with monitored/ran_completed_today) for manual observation, but do not
+  -- raise — promote them into the alarm set only after confirming their exact trigger day.
+  (e.schedule IN ('daily_trading','daily_all')
+   AND EXISTS(SELECT 1 FROM `stock-trading-498512.ops.run_log` r
           WHERE r.routine = e.routine AND r.status = 'completed'
             AND r.run_date >= DATE_SUB(e.today, INTERVAL 14 DAY))
    AND NOT EXISTS(SELECT 1 FROM `stock-trading-498512.ops.run_log` r

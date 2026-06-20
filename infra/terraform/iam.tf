@@ -16,9 +16,10 @@
 #     We resolve the project number via the google_project data source.
 #   - any other value: that exact "serviceAccount:..."-less email (we prefix it).
 #
-# If you keep the owner-credentials path, set count to 0 by leaving the SA as ""
-# AND commenting this resource out, or simply ignore it — the export still works
-# under owner creds without it.
+# This resource is GUARDED by count: it is created ONLY when a dedicated SA is set
+# (var.backup_transfer_service_account != ""). On the default owner-credentials path
+# (SA = "") count = 0, so no IAM is granted — the export runs under owner creds and
+# needs none. So you can leave everything default and this file is a no-op.
 ###############################################################################
 
 variable "backup_transfer_service_account" {
@@ -46,6 +47,10 @@ locals {
 }
 
 resource "google_storage_bucket_iam_member" "backup_export_object_admin" {
+  # Only grant when a dedicated run SA is configured; the owner-credentials default
+  # path (SA = "") needs no IAM, so count = 0 there. (scheduled_queries.tf's
+  # backup_export depends_on tolerates the empty tuple when count = 0.)
+  count  = var.backup_transfer_service_account != "" ? 1 : 0
   bucket = google_storage_bucket.backups.name
   role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${local.backup_transfer_sa_email}"
