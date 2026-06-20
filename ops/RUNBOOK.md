@@ -228,14 +228,16 @@ Owner decisions: the `billing_account` id; whether to use a remote GCS state bac
 `bigquery/12_cadence_monitor.sql` is applied. `state.cadence_watch` shows, per operating day, which
 routines were expected (per `ops/cadence.yaml`, encoded in `state.cadence_expected_today`) and whether
 they logged `completed`; `cadence_check.sql` (schedule it, §1) alerts on a *monitored* miss.
-Routines call `ops.sp_routine_start('<ID>', <denver_today>, <session>, <branch>, <deps>, <instruction>)` /
-`ops.sp_routine_end(...)`; the `<deps>` array hard-gates the run via `ops.sp_assert_deps` (self-
-bootstrapping — a not-yet-logging upstream is treated as satisfied, so it is safe to declare deps now),
-and `<instruction>` (the verbatim trigger text the session received) is recorded in
-`ops.run_log.instruction` → `state.routine_last_instruction` so the **live web-UI trigger text is
+Run-logging is **best-effort and cannot abort a routine**: routines wrap `ops.sp_routine_start('<ID>',
+<denver_today>, <session>, <branch>, <instruction>)` / `ops.sp_routine_end(...)` in a
+`BEGIN … EXCEPTION WHEN ERROR THEN … END` block (templates in `Claude_Task_Plan.md` "Observability"),
+so a malformed/failed log call is swallowed and the trading work proceeds (verified: a wrong-arity
+call raises but is swallowed). The dependency gate is a **separate, deliberately-fatal** call action
+routines make first — `ops.sp_assert_deps('<ID>', <deps>, <denver_today>)` — which aborts on a missing
+monitored upstream (self-bootstrapping). `<instruction>` (verbatim trigger text) is recorded in
+`ops.run_log.instruction` → `state.routine_last_instruction`, so the **live web-UI trigger text is
 verifiable by query** (no screenshots): `SELECT * FROM state.routine_last_instruction;` and diff
-against `python scripts/print_routines.py` (the canonical). No console action beyond scheduling
-`cadence_check.sql`.
+against `python scripts/print_routines.py`. No console action beyond scheduling `cadence_check.sql`.
 
 ## 14. dbt — TEST/VALIDATION layer (view-ownership cutover NOT pursued — decided 2026-06-19) *(B2, B3)*
 `dbt/` ports the pure-SELECT derived views (state/perf/analytics) into dbt models with a dependency
