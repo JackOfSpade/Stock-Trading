@@ -269,6 +269,24 @@ sources:
           - name: status
             description: started / completed / failed / halted. freshness filters status='completed'.
 
+      - name: account_snapshot
+        description: >
+          Daily account-level NAV/cash/TWR snapshot (bigquery/14). Agent-maintained TABLE —
+          D2 Step 0b INSERTs one row/day from the IBKR connector (Apps Script can't reach IBKR).
+          dbt does NOT own it; state.account_latest reads the latest row.
+        loaded_at_field: ingest_ts
+        freshness:
+          warn_after: {count: 4, period: day}
+        columns:
+          - name: snapshot_date
+            description: Operating day (America/Denver) of the snapshot.
+            tests:
+              - not_null
+          - name: nav
+            description: Account net-liquidation value from the connector.
+          - name: ingest_ts
+            description: Ingest timestamp — the latest-wins discriminator in state.account_latest.
+
   - name: state_external
     project: stock-trading-498512
     dataset: state

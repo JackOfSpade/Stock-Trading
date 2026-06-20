@@ -109,6 +109,26 @@ if the metric is ABSENT for >26 hours. Notification channel: email to me. Also c
 on a log-based metric counting rows in ops.alerts where severity=critical AND not resolved.
 ```
 
+## 9. Re-paste cadence_check.sql — activate W2 trigger-drift detection  ·  [Chrome-able, 1 min]  ·  RUNBOOK §1
+`bigquery/scheduled_queries/cadence_check.sql` was extended to also alert on web-UI trigger drift
+(via `state.instruction_drift` / `ops.routine_catalog`, both already live). The live "cadence-check-daily"
+scheduled query still has the old body, so re-paste the updated file once.
+```
+Open BigQuery → Scheduled queries (project stock-trading-498512) → cadence-check-daily → Edit. Replace
+its query with the current contents of
+github.com/JackOfSpade/Stock-Trading/raw/main/bigquery/scheduled_queries/cadence_check.sql and Save.
+(It gains a warning-level alert when a routine's live trigger text drifts from the canonical catalog.)
+```
+
+## 10. (Optional) dbt row-level parity CI — finish D1  ·  [Terminal/CI]  ·  RUNBOOK §6/§14
+The dbt mirrors for all views (incl. the 4 new ones) are committed and `dbt parse` validates them
+structurally in CI. To add *row-level* parity (catch logic drift between `bigquery/*.sql` and the dbt
+models), add a CI job — gated on the WIF repo vars like the dashboard workflow — that, with **read-only**
+WIF, `dbt compile`s each model and runs `(compiled SELECT) EXCEPT DISTINCT (live view)` **both ways**,
+expecting 0 rows. Use compile+EXCEPT (read-only), NOT `dbt build` to the live datasets — the
+`generate_schema_name` override pins models to the bare `state`/`perf`/`analytics` datasets, so a build
+would overwrite live objects. Owner bit: set `GCP_WIF_PROVIDER` + `GCP_WIF_SERVICE_ACCOUNT` (read-only SA).
+
 ## 8. Disaster-recovery mirror for the event store (D5)  ·  [Terminal/Console]  ·  RUNBOOK §3
 Backups are Parquet to one US-multiregion bucket. Add a second-location mirror + do one restore drill.
 1. Create a bucket in a different location (e.g. `gs://stock-trading-backups-eu`, EU) with versioning.
@@ -121,21 +141,18 @@ is the practical path.)
 
 ---
 
-## Still implementable from a remote Claude session (just ask — repo-only, no console)
-These I can do here; they were scoped out of this pass to keep each commit safe and reviewable:
+## Repo-side fixes — now DONE (committed to the branch)
+All repo-implementable findings are shipped; only the owner micro-actions above remain to fully activate them:
 
-- **W1 + W3 — modernize the routine prompts** (BigQuery-native; retire the `.md` redirect map; one
-  date source = `state.trading_day_today`, drop the `TZ=...date` bash fallback). Largest item — a
-  careful rewrite of the live routine bodies in `Claude_Task_Plan.md`. High value (#3 finding),
-  pure text, but touches every routine — best done as its own reviewed commit.
-- **D1 — dbt↔raw-SQL row-level parity** + add dbt mirrors for the new views (strategy_scorecard,
-  weekly_activity, account_snapshot/latest). Needs a CI job running `dbt build` to a CI dataset +
-  `EXCEPT DISTINCT` vs live; the WIF repo vars (GCP_WIF_PROVIDER / SERVICE_ACCOUNT) are the only
-  owner bit.
-- **W2 — cadence drift alarm**: a `ops.routine_catalog` seeded from `scripts/print_routines.py` +
-  a scheduled query diffing `state.routine_last_instruction` against it. (Apply = owner, §1-style.)
-- **W5 — order-intent invariant** as a standing dbt/SQL test (every pending ORDER_STAGED row ⇔ one
-  live confirm event) + a D3 reconcile step.
+- ✅ **W1 + W3 — routine prompts modernized** (BigQuery-native; redirect map retired; single date
+  source `state.trading_day_today`, bash/`currentDate` fallbacks removed).
+- ✅ **W5 — order-intent invariant** — dbt tests `assert_open_orders_no_stale_pending` +
+  `assert_open_orders_actionable` guard the staged-order registry; D3 already reconciles registry↔calendar.
+- ✅ **W2 — trigger-drift alarm** — `ops.routine_catalog` + `state.instruction_drift` (live);
+  `cadence_check.sql` extended to alert on drift. **Activate via #9 above** (re-paste the body).
+- ✅ **D1 — dbt mirrors** for the 4 new views (`strategy_scorecard`, `weekly_activity`,
+  `account_latest`, `account_snapshot` source) + schema/tests; `dbt parse` validates structure.
+  **Optional #10 above** adds row-level parity.
 
 ## Findings NOT actioned (by design)
 - **D4 (un-ignore `state_snapshots/`)** — REJECTED. The `.gitignore` entry is a deliberate security

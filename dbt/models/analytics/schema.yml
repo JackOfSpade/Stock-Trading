@@ -85,3 +85,24 @@ models:
   - name: account_reconciliation
     description: Account-level §13 events-side expected totals (single row).
     # Single row — asserted by tests/assert_account_reconciliation_single_row.sql.
+
+  - name: strategy_scorecard
+    description: One row per strategy — activation + budget + deployed-TWR (weekly self-email + dashboard).
+    columns:
+      - name: strategy
+        tests:
+          - not_null
+          - unique
+          - accepted_values:
+              values: ['A', 'B', 'C', 'D', 'E']
+      - name: is_active
+        description: TRUE when activation contains ACTIVATE and is not DO-NOT-ACTIVATE.
+        tests: [not_null]
+
+  - name: weekly_activity
+    description: Last-7-day activity counts for the weekly self-email (single row).
+    columns:
+      - name: fills_7d
+        description: Curated fills in the last 7 days (America/Denver).
+      - name: pending_orders
+        description: Count of ORDER_STAGED pending registry rows.
