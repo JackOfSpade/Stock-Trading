@@ -179,10 +179,15 @@ For reference, the calls each routine makes (see also `ops/cadence.yaml` `defaul
   '<category>', '<message>', '<payload_json>')` **and** create a `[Claude] ATTENTION …`
   calendar event so the unmonitored failure reaches the operator.
 
-## 8. Extend the market-holiday calendar yearly *(P1-3)*
-Each December, append next year's NYSE/Nasdaq full closes (+ any early closes) to
-`events.market_holidays` (MERGE in `bigquery/09_market_calendar.sql` is the template) and extend
-the date range in `state.market_calendar` if needed.
+## 8. Extend the market-holiday calendar — now AUTO-EXTENDED *(P1-3)* — DONE (2026-06-20)
+**No longer a manual yearly task.** The **W5** weekly routine self-extends `events.market_holidays`
+from the **FMP connector** (`marketHours` `holidays-by-exchange`, NASDAQ) whenever the calendar's
+horizon falls within ~120 days — see `bigquery/09_market_calendar.sql §auto-extend` + the
+"MARKET-CALENDAR AUTO-EXTEND" step in Claude_Task_Plan.md W5. The seed is hand-verified through
+**2029** and `state.market_calendar` now spans through **2030-12-31**. Manual fallback (if ever
+needed): the MERGE template in `bigquery/09_market_calendar.sql` + bump the `GENERATE_DATE_ARRAY`
+end date. The freshness dead-man's switch (`state.freshness`, COALESCE→FALSE) still backstops a
+silently-exhausted calendar.
 
 ## 9. Strategy slices — cutover DONE (via authoritative read convention) *(P3-1)*
 `strategy/*.md` are generated from `Strategy.md` (`scripts/split_strategy.py`; CI guards drift).

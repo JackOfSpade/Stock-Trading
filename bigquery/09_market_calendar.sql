@@ -66,7 +66,28 @@ USING (
     STRUCT(DATE '2027-07-05', 'Independence Day (observed)'),
     STRUCT(DATE '2027-09-06', 'Labor Day'),
     STRUCT(DATE '2027-11-25', 'Thanksgiving Day'),
-    STRUCT(DATE '2027-12-24', 'Christmas Day (observed)')
+    STRUCT(DATE '2027-12-24', 'Christmas Day (observed)'),
+    -- 2028 (Jan 1 2028 = Saturday → not observed by NYSE/Nasdaq; verified vs FMP holidays-by-exchange).
+    STRUCT(DATE '2028-01-17', 'Martin Luther King Jr. Day'),
+    STRUCT(DATE '2028-02-21', "Washington's Birthday"),
+    STRUCT(DATE '2028-04-14', 'Good Friday'),
+    STRUCT(DATE '2028-05-29', 'Memorial Day'),
+    STRUCT(DATE '2028-06-19', 'Juneteenth'),
+    STRUCT(DATE '2028-07-04', 'Independence Day'),
+    STRUCT(DATE '2028-09-04', 'Labor Day'),
+    STRUCT(DATE '2028-11-23', 'Thanksgiving Day'),
+    STRUCT(DATE '2028-12-25', 'Christmas Day'),
+    -- 2029 (verified vs FMP holidays-by-exchange).
+    STRUCT(DATE '2029-01-01', "New Year's Day"),
+    STRUCT(DATE '2029-01-15', 'Martin Luther King Jr. Day'),
+    STRUCT(DATE '2029-02-19', "Washington's Birthday"),
+    STRUCT(DATE '2029-03-30', 'Good Friday'),
+    STRUCT(DATE '2029-05-28', 'Memorial Day'),
+    STRUCT(DATE '2029-06-19', 'Juneteenth'),
+    STRUCT(DATE '2029-07-04', 'Independence Day'),
+    STRUCT(DATE '2029-09-03', 'Labor Day'),
+    STRUCT(DATE '2029-11-22', 'Thanksgiving Day'),
+    STRUCT(DATE '2029-12-25', 'Christmas Day')
   ])
 ) S
 ON T.holiday_date = S.holiday_date
@@ -74,12 +95,23 @@ WHEN NOT MATCHED THEN
   INSERT (holiday_date, holiday_name, full_close, source, fetched_ts)
   VALUES (S.holiday_date, S.holiday_name, TRUE, 'seed-2024-2027', CURRENT_TIMESTAMP());
 
+-- ===== §auto-extend — keep the calendar from silently expiring (W5, via the FMP connector) =====
+-- The seed above is hand-verified through 2029. Beyond that, the W5 weekly routine self-extends
+-- the calendar from the FMP connector (mcp__FMP__marketHours holidays-by-exchange, exchange=NASDAQ),
+-- so the calendar never silently runs out (which would NULL last_trading_day and — by the COALESCE→
+-- FALSE design in state.freshness — fire the dead-man's switch). W5 pulls the next ~18 months and
+-- MERGEs (idempotent on holiday_date):
+--   full_close = (isClosed = true);  early-close row = (adjCloseTime IS NOT NULL AND NOT isClosed) → full_close=FALSE.
+-- FMP's holiday NAMES are imperfect (it has mislabeled e.g. a year-end New-Year's-observed close as
+-- "Christmas"); only the DATE + isClosed/adjCloseTime drive is_trading_day, so the cosmetic name is
+-- recorded as-is. source='FMP-autoextend'. See Claude_Task_Plan.md W5 + ops/RUNBOOK.md §8.
+
 -- ===== Trading-day calendar (computed) =====
 -- DAYOFWEEK: 1=Sunday .. 7=Saturday. A trading day = weekday AND not a full-close holiday.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.market_calendar` AS
 WITH days AS (
   SELECT d AS cal_date
-  FROM UNNEST(GENERATE_DATE_ARRAY(DATE '2023-01-01', DATE '2028-12-31')) d
+  FROM UNNEST(GENERATE_DATE_ARRAY(DATE '2023-01-01', DATE '2030-12-31')) d
 )
 SELECT
   days.cal_date,

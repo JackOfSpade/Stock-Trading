@@ -41,17 +41,39 @@ QUALIFY ROW_NUMBER() OVER (PARTITION BY metric, ref_month ORDER BY fetched_ts DE
 --   vix                        <- VIXCLS          (daily -> month-end level)
 
 -- ===== §refresh -- run monthly to append new prints =====
--- BigQuery cannot fetch HTTP, so the pull runs OUTSIDE BQ (curl -> transform -> INSERT). M1a (the
--- monthly macro routine) refreshes this each cycle, before M5 forecasts:
---   1. For each FRED series above, fetch the public CSV (no key):
+-- BigQuery cannot fetch HTTP, so the pull runs OUTSIDE BQ (fetch -> transform -> INSERT). M1a (the
+-- monthly macro routine) refreshes this each cycle, before M5 forecasts.
+--
+-- PREFERRED SOURCE = the FMP connector (2026-06-20). The remote routine has the FMP MCP connector
+-- but NOT necessarily outbound `curl` to fredstlouisfed.org, so the FRED CSV path below is the
+-- FALLBACK / cross-check, and the source-of-record for the few series FMP doesn't carry. For each
+-- metric, prefer FMP; if its FMP call returns no data, fall back to the FRED CSV. Tag rows by the
+-- source actually used ('FMP' or 'FRED'). FMP → metric map:
+--   treasury_10y, treasury_2y      <- mcp__FMP__economics 'treasury-rates' (.year10 / .year2),
+--                                      month-end = last trading day in the month; level %.
+--   yield_curve_10y2y              <- treasury-rates (.year10 - .year2), month-end; %.
+--   CPI_headline_yoy               <- mcp__FMP__economics 'economics-indicators' name='CPI' (index),
+--                                      YoY = (v / v_12mo_ago - 1) * 100  (needs >=13 months).
+--   unemployment_u3, fed_funds, nonfarm_payrolls, retail_sales_yoy, industrial_production_yoy,
+--   CPI_core_yoy, PCE_core_yoy, PPI_headline_yoy, avg_hourly_earnings_yoy
+--                                  <- 'economics-indicators' where the FMP indicator name resolves
+--                                      (verify the call returns rows before trusting it); transform
+--                                      per the map's unit (YoY / level / MoM-diff). On a name that
+--                                      FMP does not expose, use the FRED CSV fallback for that metric.
+--   vix                            <- not in FMP economics: use FMP index quote (full-index-quotes
+--                                      / chart, ^VIX) or IBKR get_price_history; else FRED VIXCLS.
+--   hy_oas                         <- not in FMP economics: FRED BAMLH0A0HYM2 (CSV) remains the source.
+--
+-- FALLBACK = FRED public CSV (no key):
+--   1. For each FRED series above, fetch the public CSV:
 --        curl -s "https://fred.stlouisfed.org/graph/fredgraph.csv?id=<SERIES>&cosd=2020-01-01"
 --      Skip rows whose value is '.' or empty; forward-fill any missing month so the series stays
 --      CONTIGUOUS (a single forward-filled month is fine; gaps misalign monthly forecasting).
 --   2. Transform per the map: YoY = (v / v_12mo - 1) * 100 ; MoM-diff = v - v_prev ;
 --      daily -> the last VALID obs in the month (dated first-of-month) ; levels as-is.
---   3. INSERT the new month's rows (idempotent via the dedup view):
---        INSERT INTO `stock-trading-498512.events.macro_fred` (metric, ref_month, value, source, fetched_ts)
---        VALUES ('<metric>', DATE '<YYYY-MM-01>', <value>, 'FRED', CURRENT_TIMESTAMP());
+-- INSERT the new month's rows either way (idempotent via the dedup view):
+--   INSERT INTO `stock-trading-498512.events.macro_fred` (metric, ref_month, value, source, fetched_ts)
+--   VALUES ('<metric>', DATE '<YYYY-MM-01>', <value>, '<FMP|FRED>', CURRENT_TIMESTAMP());
 -- Full reseed = CREATE OR REPLACE TABLE (above) + the array-load used at seed time (contiguous monthly
 -- value arrays per metric, decoded with GENERATE_ARRAY + DATE_ADD; all-FLOAT64 so UNION ALL types match).
 
