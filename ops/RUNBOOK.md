@@ -270,9 +270,28 @@ stall with it (it ran under the same identity).
 `.github/workflows/dashboard.yml` builds `ops/dashboard/index.html` from BigQuery and deploys it to
 GitHub Pages. **OFF by default and double-gated** (the page shows live trading data): enable only by
 setting repo variables `PUBLISH_DASHBOARD=true` **and** the WIF vars (§6), and only on a PRIVATE repo
-with access-controlled Pages (Settings → Pages → Private), or accept public exposure. Alternative
-(no Pages): keep running `python ops/dashboard/generate_dashboard.py` locally, or use the Looker
-Studio option in §4.
+with access-controlled Pages (Settings → Pages → Private), or accept public exposure. **On a personal
+(non-Enterprise) repo, Pages publishes PUBLICLY even for a private repo — so do NOT use the Pages path
+there.**
+
+### Recommended hosted option — Looker Studio (Google-auth gated, no public exposure)
+This is the recommended way to get a continuously-fresh hosted dashboard without exposing live data.
+It stays private to your Google account unless you explicitly share it; viewing requires Google login.
+1. Go to https://lookerstudio.google.com → **Create → Report** → add a **BigQuery** data source.
+2. Authorize, pick project `stock-trading-498512`, and add these as data sources (Custom query or
+   table per view), each in **US**:
+   - `state.system_health` (the green/red rollup — put `all_green` on a scorecard up top)
+   - `perf.kill_flags` (per-strategy drawdown / excess / closed-trades / firing flags)
+   - `analytics.strategy_nav` (NAV / available_funds / sizing_base_2pct)
+   - `state.cadence_watch` (filter `needs_attention = true` — a table that should stay empty)
+   - `ops.alerts` (filter `resolved = false` — open alerts)
+   - `ops.run_log` (recent routine runs)
+3. Build the report (scorecards + tables); set the data-source **freshness** to ~1 hour.
+4. **Keep it private:** do NOT use "Share → Anyone with the link." Share only to your own Google
+   account / specific addresses. (Optional: point the data sources at a dedicated read-only viewer
+   service account instead of "Owner's credentials.")
+This needs no repo/CI changes and no `PUBLISH_DASHBOARD`. The static `ops/dashboard/generate_dashboard.py`
+remains for ad-hoc local viewing (`python ops/dashboard/generate_dashboard.py` → open `index.html`).
 
 ## 17. Public-exposure guardrail — enforce `iam.disablePublicIamGrants` *(security, deferred)*
 From the 2026-06-19 public-exposure audit. IAM is clean today (no `allUsers` /
