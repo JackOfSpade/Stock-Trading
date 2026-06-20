@@ -18,6 +18,12 @@ EXACT CLOCK TIMES live only in the web UI; ops/cadence.yaml carries the cadence-
 (e.g. "after_close trading_day", "weekly Sun", "monthly first_trading_day"). Record exact times in
 cadence.yaml if you want them printed.
 
+VERIFYING THE LIVE TRIGGERS (no screenshots): once routines record the verbatim instruction they
+received (ops.run_log.instruction, set by ops.sp_routine_start), run
+    SELECT * FROM `stock-trading-498512.state.routine_last_instruction`;
+to see the ACTUAL trigger text each routine last received, and diff it against THIS script's canonical
+output — any mismatch is a drifted/typo'd web-UI trigger.
+
 Usage:  python scripts/print_routines.py
 """
 import os

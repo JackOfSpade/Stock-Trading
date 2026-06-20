@@ -153,18 +153,26 @@ END;
 
 -- ===== ops.sp_routine_start / sp_routine_end — one-call run-logging (+ optional dep gate) =====
 -- Ergonomic wrappers so a routine logs with a single CALL each end (less "remember-to" surface than the
--- raw sp_log_run). sp_routine_start optionally hard-gates on upstream deps first (C1). Adopting these
--- in a routine automatically enrolls it into state.cadence_watch monitoring (A3).
---   START: CALL ops.sp_routine_start('D2', <denver_today>, @@session..., <branch>, ['D1']);
+-- raw sp_log_run). sp_routine_start optionally hard-gates on upstream deps first (C1), and captures the
+-- VERBATIM trigger instruction the session received (in_instruction) into ops.run_log.instruction ->
+-- state.routine_last_instruction, so the live web-UI trigger text can be verified by query (no
+-- screenshots) and diffed against scripts/print_routines.py's canonical. Adopting these auto-enrolls the
+-- routine into state.cadence_watch monitoring (A3). Pass NULL for in_instruction if not capturing.
+--   START: CALL ops.sp_routine_start('D2', <denver_today>, <session>, <branch>, ['D1'],
+--            'Read Claude_Task_Plan.md. Perform D2. Daily Action Conversion — regular routine.');
 --   END  : CALL ops.sp_routine_end  ('D2', <denver_today>, 'completed', <session>, <branch>, <rows>, NULL, <note>);
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_routine_start`(
-  in_routine STRING, in_run_date DATE, in_session STRING, in_branch STRING, in_deps ARRAY<STRING>
+  in_routine STRING, in_run_date DATE, in_session STRING, in_branch STRING, in_deps ARRAY<STRING>,
+  in_instruction STRING
 )
 BEGIN
   IF in_deps IS NOT NULL AND ARRAY_LENGTH(in_deps) > 0 THEN
     CALL `stock-trading-498512.ops.sp_assert_deps`(in_routine, in_deps, in_run_date);  -- raises if upstream missing
   END IF;
-  CALL `stock-trading-498512.ops.sp_log_run`(in_routine, in_run_date, 'started', in_session, in_branch, NULL, NULL, NULL);
+  -- Inline the 'started' INSERT (rather than sp_log_run) so it can carry the verbatim trigger instruction.
+  INSERT INTO `stock-trading-498512.ops.run_log`
+    (routine, run_date, status, session_id, branch, instruction)
+  VALUES (in_routine, in_run_date, 'started', in_session, in_branch, in_instruction);
 END;
 
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_routine_end`(

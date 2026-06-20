@@ -41,6 +41,7 @@ Cold-query map so you don't have to re-derive names via `INFORMATION_SCHEMA` eac
 | §13 cash/NAV reconciliation | `analytics.account_reconciliation` | events-side vs connector |
 | §13 SGOV holding (event-sourced) | `state.sgov_reconciliation` | `events_sgov_shares` / `events_sgov_market_value` / `sgov_mark_fresh`; account-level (no per-strategy split) |
 | Did each routine run today? | `state.cadence_watch` | `monitored` / `ran_completed_today` / `needs_attention` per `ops/cadence.yaml` |
+| Live web-UI trigger instruction per routine | `state.routine_last_instruction` | verbatim trigger text each routine last received (via `sp_routine_start`); verify triggers by query, diff vs `scripts/print_routines.py` |
 | "What needs attention today" | `state.daily_briefing` | due queue + firing kill-flags + time-exits |
 | Models / procedures | `ops.text_embed`, `ops.gemini`; `ops.sp_log_decision`, `ops.sp_embed_pending`, `ops.sp_recompute_engine`, `ops.sp_daily_refresh`, `ops.sp_routine_start`/`sp_routine_end`/`sp_assert_deps`, `ops.sp_log_run`, `ops.sp_raise_alert[_once]`, `ops.sp_score_theater` | Vertex-billed models; procedures |
 

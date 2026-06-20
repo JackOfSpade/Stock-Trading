@@ -19,7 +19,7 @@
 timezone: America/Denver
 
 defaults:
-  log_run: true            # CALL ops.sp_routine_start(<id>,<run_date>,<session>,<branch>,<deps>) at start; ops.sp_routine_end(...,'completed'|'failed'|'halted',...) at end
+  log_run: true            # CALL ops.sp_routine_start(<id>,<run_date>,<session>,<branch>,<deps>,<verbatim trigger instruction>) at start; ops.sp_routine_end(...,'completed'|'failed'|'halted',...) at end. The instruction lands in ops.run_log.instruction -> state.routine_last_instruction (verify live triggers by query; diff vs scripts/print_routines.py).
   dep_gate: true           # sp_routine_start hard-gates on <deps> (this file's depends_on) via ops.sp_assert_deps (self-bootstrapping)
   on_hard_stop: raise_alert # CALL ops.sp_raise_alert + create a "[Claude] ATTENTION" calendar event
 

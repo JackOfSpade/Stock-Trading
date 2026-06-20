@@ -16,9 +16,22 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.ops.run_log` (
   run_date DATE NOT NULL,             -- operating day (America/Denver) the routine ran for
   status STRING NOT NULL,             -- 'started' | 'completed' | 'failed' | 'halted'
   session_id STRING, branch STRING,
-  rows_written INT64, error_msg STRING, note STRING
+  rows_written INT64, error_msg STRING, note STRING,
+  instruction STRING                  -- verbatim trigger instruction the session received (set on the
+                                      -- 'started' row via ops.sp_routine_start) — lets you verify the
+                                      -- live web-UI trigger text by query, no screenshots needed
 ) PARTITION BY run_date CLUSTER BY routine, status
-OPTIONS(description='One row per routine run (started/completed/failed/halted). Source for the freshness dead-man switch + an audit of what ran when.');
+OPTIONS(description='One row per routine run (started/completed/failed/halted). Source for the freshness dead-man switch + an audit of what ran when. instruction captures the verbatim trigger text.');
+
+-- ===== state.routine_last_instruction — the live trigger text each routine last received =====
+-- Verify every routine's web-UI trigger instruction by query instead of screenshotting it. Compare
+-- against the canonical instruction printed by scripts/print_routines.py to catch a drifted/typo'd
+-- trigger. (Populated once routines pass their instruction to ops.sp_routine_start.)
+CREATE OR REPLACE VIEW `stock-trading-498512.state.routine_last_instruction` AS
+SELECT routine, instruction, run_date, log_ts
+FROM `stock-trading-498512.ops.run_log`
+WHERE instruction IS NOT NULL
+QUALIFY ROW_NUMBER() OVER (PARTITION BY routine ORDER BY log_ts DESC) = 1;
 
 -- Routines call this at start ('started') and end ('completed'/'failed'/'halted').
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_log_run`(
