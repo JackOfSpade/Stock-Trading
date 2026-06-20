@@ -22,10 +22,16 @@
 --   SELL              -> -shares, account cash +(gross - commission)
 --   DIVIDEND_REINVEST -> +shares, account cash  0  (dividend received and immediately reinvested via
 --                        IBKR DRIP; income, not a trade-funded buy — see 03_twr_engine.sql §SGOV note)
+--   RECON_ADJUST      -> +shares (SIGNED; row carries the +/- delta), account cash 0. A §13.D
+--                        reconciliation correction that aligns the events side to the AUTHORITATIVE
+--                        connector holding when they drift (the connector is always truth). No cash
+--                        impact (gross/commission 0). First used 2026-06-19 to remove a +0.4722 sh
+--                        pre-connector screenshot-era capture drift (events 92.7714 -> connector 92.2992).
 CREATE OR REPLACE VIEW `stock-trading-498512.state.sgov_position` AS
 SELECT
   SUM(CASE action WHEN 'BUY' THEN shares
                   WHEN 'DIVIDEND_REINVEST' THEN shares
+                  WHEN 'RECON_ADJUST' THEN shares  -- signed delta (+/-)
                   WHEN 'SELL' THEN -shares
                   ELSE 0 END)                                              AS events_sgov_shares,
   SUM(IF(action = 'BUY',  shares, 0))                                      AS buy_shares,
