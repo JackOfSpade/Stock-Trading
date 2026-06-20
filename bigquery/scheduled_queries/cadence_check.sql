@@ -27,4 +27,19 @@ BEGIN
       (SELECT STRING_AGG(routine, ', ' ORDER BY routine)
        FROM `stock-trading-498512.state.cadence_watch` WHERE needs_attention));
   END IF;
+
+  -- W2: web-UI trigger drift. The schedule/instruction live only in the web UI; state.instruction_drift
+  -- (bigquery/15_routine_catalog.sql) diffs each routine's LIVE logged trigger text against the canonical
+  -- catalog. drifted = a monitored routine whose live trigger differs from canonical (typo'd/edited
+  -- trigger); unknown_routine = a logged routine missing from the catalog (regenerate it). Warning-level
+  -- + idempotent — a drift is a config bug to fix, not a halt; this does NOT RAISE (a missed run does).
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.instruction_drift` WHERE drifted OR unknown_routine) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'instruction_drift',
+      CONCAT('Trigger drift: routine(s) whose live web-UI trigger differs from the canonical catalog: ',
+             (SELECT STRING_AGG(routine, ', ' ORDER BY routine)
+              FROM `stock-trading-498512.state.instruction_drift` WHERE drifted OR unknown_routine)),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(routine, drifted, unknown_routine, live_instruction, canonical_instruction)))
+       FROM `stock-trading-498512.state.instruction_drift` WHERE drifted OR unknown_routine));
+  END IF;
 END;
