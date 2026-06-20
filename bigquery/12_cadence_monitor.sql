@@ -18,8 +18,8 @@
 -- monitor alerted on every routine that never logs, it would false-alarm constantly. So a routine is
 -- "monitored" ONLY once it has logged >=1 'completed' run in the last 14 days. A routine therefore
 -- enters the watched set automatically the first time it adopts sp_routine_start/end, and a SUBSEQUENT
--- missed run is then detected. (D2 self-logs structurally via ops.sp_daily_refresh as of 2026-06-19,
--- so D2 is monitored immediately.)
+-- missed run is then detected. (As of 2026-06-19 the D1/D2/D3/AR routines have adopted the wrappers and
+-- are logging, so they are monitored.)
 
 -- ===== state.cadence_expected_today — which routine IDs are due on the current operating day =====
 -- Encodes ops/cadence.yaml's schedules. America/Denver operating day via state.trading_day_today.

@@ -11,8 +11,8 @@
 #
 # Every routine should, at start/end, CALL ops.sp_routine_start / ops.sp_routine_end (one-call
 # wrappers over ops.sp_log_run, plus a dependency gate) so ops.run_log records the run and
-# state.cadence_watch can flag a missed one (P1-1 / A3 / C1). D2's engine work ALSO self-logs a
-# 'completed' row structurally inside ops.sp_daily_refresh (A2). See ops/RUNBOOK.md §7/§13 +
+# state.cadence_watch can flag a missed one (P1-1 / A3 / C1). Data currency is also proven
+# independently by state.freshness.marks_fresh/engine_fresh (data tables, not run_log). See ops/RUNBOOK.md §7/§13 +
 # bigquery/12_cadence_monitor.sql. This manifest's `depends_on` (below) is the source for each
 # routine's <deps> argument to sp_routine_start.
 

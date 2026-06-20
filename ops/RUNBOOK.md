@@ -11,9 +11,10 @@ click) plus the staged adoptions. Each item says what it solves (P0–P3 from th
 >   the budget, and **all four scheduled queries** (freshness, embed, backup, **new cadence check**).
 >   This replaces the "click in console" steps in §1–§3 (see **§12**). The scheduled queries are
 >   genuinely live only once `terraform apply` (or the console steps) runs — do that first.
-> - **Structural run-logging** — `ops.sp_daily_refresh` now self-logs a `D2 completed` row, and
->   `ops.sp_routine_start`/`sp_routine_end` + `ops.sp_assert_deps` (`bigquery/12_cadence_monitor.sql`)
->   give every routine one-call logging + a dependency gate (see **§7**, **§13**).
+> - **Run-logging** — `ops.sp_routine_start`/`sp_routine_end` + `ops.sp_assert_deps`
+>   (`bigquery/12_cadence_monitor.sql`) give every routine one-call logging + a dependency gate
+>   (see **§7**, **§13**). Data currency is also proven independently by
+>   `state.freshness.marks_fresh`/`engine_fresh`.
 > - **Cadence monitor** — `state.cadence_watch` + `bigquery/scheduled_queries/cadence_check.sql`
 >   (self-bootstrapping: only alerts on routines that have adopted logging).
 > - **SGOV reconciliation** — `state.sgov_reconciliation` event-sources the SGOV holding; the
@@ -37,7 +38,8 @@ click) plus the staged adoptions. Each item says what it solves (P0–P3 from th
   `bigquery/12_cadence_monitor.sql` → `state.cadence_expected_today`, `state.cadence_watch`,
   `ops.sp_assert_deps`, `ops.sp_routine_start`, `ops.sp_routine_end`;
   `bigquery/13_sgov_reconciliation.sql` → `state.sgov_position`, `state.sgov_reconciliation`;
-  and `ops.sp_daily_refresh` (in `08`) now **self-logs a D2 `completed` run** as a side-effect.
+  and D2's run is logged by the routine via `ops.sp_routine_start`/`sp_routine_end` (not self-logged
+  by `ops.sp_daily_refresh`).
 - Quick check anytime: `SELECT * FROM state.system_health;` (want `all_green = TRUE`);
   `SELECT * FROM state.cadence_watch WHERE needs_attention;` (want zero rows);
   `SELECT * FROM state.sgov_reconciliation;` (events-side SGOV shares to compare to the connector).
@@ -161,10 +163,10 @@ worked example.
 > **FINDING (2026-06-19): `ops.run_log` was EMPTY in production** — the convention is instruction-only
 > and the agent was skipping it, so `state.freshness.d2_ran_last_trading_day` was permanently FALSE
 > (only marks/engine freshness actually worked). **Fixes applied:**
-> - `ops.sp_daily_refresh` (which D2 always calls) now **self-logs a `D2 completed` row structurally**
->   — D2's freshness signal no longer depends on the agent remembering a step.
 > - `ops.sp_routine_start` / `ops.sp_routine_end` collapse start/end logging (+ a dependency gate)
->   into one call each, lowering the "remember-to" surface for the other routines.
+>   into one call each, lowering the "remember-to" surface; now demonstrably adopted in production
+>   (D1/D2/D3/AR routines logging). Data currency is independently proven by
+>   `state.freshness.marks_fresh`/`engine_fresh` (which read the data tables, not `run_log`).
 > - `state.cadence_watch` + `cadence_check.sql` catch a *monitored* routine that skips a scheduled run.
 > A routine becomes monitored automatically the first time it logs, so adoption is incremental and
 > never false-alarms. Verify adoption: `SELECT routine, MAX(run_date) FROM ops.run_log GROUP BY 1`.

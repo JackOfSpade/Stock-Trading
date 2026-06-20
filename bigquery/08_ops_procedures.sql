@@ -54,23 +54,16 @@ END;
 -- sessions could run it at once, serialize them (BigQuery may abort one with a concurrent-update error
 -- — re-run). The scheduled-query option (see bigquery/README.md) avoids this by running it once daily.
 --
--- STRUCTURAL RUN-LOGGING (P0 / fix A2, 2026-06-19): run_log was empty in production because the
--- per-routine "CALL ops.sp_log_run(...)" convention is instruction-only and the D2 agent was skipping
--- it — leaving state.freshness.d2_ran_last_trading_day permanently FALSE. D2 ALWAYS calls this
--- procedure (its post-marks Performance step), so logging a D2 'completed' row HERE makes the
--- dead-man's-switch's run-based signal fire as a side-effect of work that actually happened, instead
--- of depending on the agent remembering a separate step. run_date is America/Denver (matches
--- state.freshness / state.trading_day_today). The INSERT is wrapped so a logging hiccup can never
--- abort the engine refresh that already succeeded.
+-- RUN-LOGGING (A2, revised 2026-06-19): D2's run is logged by the ROUTINE via ops.sp_routine_start /
+-- ops.sp_routine_end (the global Observability convention) — now demonstrably adopted in production.
+-- This procedure does NOT self-log. (It briefly did, as the A2 bootstrap when run_log was empty, but
+-- that duplicated the routine's 'completed' row AND wrote it mid-D2 at the engine-refresh step, so it
+-- meant "data refreshed", not "full D2 done".) Dropping the self-log weakens no alarm: data currency is
+-- proven independently by state.freshness.marks_fresh / engine_fresh, which read events.daily_marks /
+-- perf.strategy_daily directly and are what gate state.system_health.all_green. d2_ran_last_trading_day
+-- (informational; not in all_green) now reflects the routine's true end-of-run completion.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_daily_refresh`()
 BEGIN
   CALL `stock-trading-498512.ops.sp_recompute_engine`();
   CALL `stock-trading-498512.ops.sp_embed_pending`();
-  BEGIN
-    INSERT INTO `stock-trading-498512.ops.run_log` (routine, run_date, status, note)
-    VALUES ('D2', CURRENT_DATE('America/Denver'), 'completed',
-            'sp_daily_refresh: engine recompute + embed (structural self-log)');
-  EXCEPTION WHEN ERROR THEN
-    SELECT FORMAT('sp_daily_refresh: refresh ok; run_log write deferred (%s)', @@error.message) AS warning;
-  END;
 END;

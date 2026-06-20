@@ -39,7 +39,7 @@ and redesign the workflow if there's a better way*:
 > **What HAS been added since this doc (deployed, see `ops/RUNBOOK.md`):** `09` market calendar, `10`
 > observability (run_log/alerts/freshness/system_health), `11` theater judge, **`12` cadence monitor +
 > dependency gate**, **`13` event-sourced SGOV reconciliation** (dissolves the per-strategy SGOV-share
-> ledger this doc assumed), structural D2 self-logging in `sp_daily_refresh`, an `infra/terraform/` IaC
+> ledger this doc assumed), the `ops.sp_routine_start`/`sp_routine_end` run-logging + dependency-gate wrappers, an `infra/terraform/` IaC
 > module, and a parallel-run `dbt/` test layer. The 2026-06-19 stack review also found the scheduled
 > queries + run-logging were coded but not actually operating; those fixes are in `ops/RUNBOOK.md`.
 
