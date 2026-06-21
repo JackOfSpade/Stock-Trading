@@ -19,8 +19,7 @@ Run AFTER `dbt compile` (the CI job does that), from the repo root. Requires the
 Volatile columns evaluated per-query (CURRENT_TIMESTAMP) can never match across two evaluations,
 so they are excluded from the comparison (see VOLATILE_COLS).
 """
-import csv
-import io
+import json
 import os
 import subprocess
 import sys
@@ -33,15 +32,22 @@ VOLATILE_COLS = {"checked_at"}
 
 
 def bq(sql):
-    """Run a read-only query, return list of dict rows (CSV-parsed)."""
+    """Run a read-only query and return a list of dict rows.
+
+    Uses --format=json (unambiguous, unlike CSV header parsing) with global --quiet/--headless so
+    bq emits no 'Waiting on bqjob...' status noise. As a belt-and-suspenders guard we still slice
+    from the first JSON bracket in case any banner leaks to stdout.
+    """
     out = subprocess.run(
-        ["bq", "query", "--use_legacy_sql=false", "--format=csv", "--quiet",
-         "--project_id=" + PROJECT, sql],
+        ["bq", "--project_id=" + PROJECT, "--quiet", "--headless", "--format=json",
+         "query", "--use_legacy_sql=false", "--max_rows=100000", sql],
         capture_output=True, text=True,
     )
     if out.returncode != 0:
         raise RuntimeError(out.stderr.strip() or out.stdout.strip())
-    return list(csv.DictReader(io.StringIO(out.stdout)))
+    s = out.stdout.strip()
+    i = s.find("[")
+    return json.loads(s[i:]) if i != -1 else []
 
 
 def live_columns(dataset, table):
@@ -69,7 +75,7 @@ def main():
         live = f"`{PROJECT}`.{dataset}.{name}"
         try:
             cols = [c for c in live_columns(dataset, name) if c not in VOLATILE_COLS]
-        except RuntimeError as e:
+        except Exception as e:
             skipped.append(f"{dataset}.{name} (no live object? {e})")
             continue
         if not cols:
@@ -83,7 +89,7 @@ def main():
             n_extra = int(bq(
                 f"SELECT COUNT(*) AS n FROM (SELECT {collist} FROM {live} "
                 f"EXCEPT DISTINCT SELECT {collist} FROM ({compiled}))")[0]["n"])
-        except RuntimeError as e:
+        except Exception as e:
             skipped.append(f"{dataset}.{name} (query error: {e})")
             continue
         checked += 1
