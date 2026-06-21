@@ -59,6 +59,8 @@
 # .name is "projects/<p>/locations/<loc>/transferConfigs/<config_id>".
 locals {
   freshness_config_id = regex("[^/]+$", google_bigquery_data_transfer_config.freshness_check.name)
+  backup_config_id    = regex("[^/]+$", google_bigquery_data_transfer_config.backup_export.name)
+  cadence_config_id   = regex("[^/]+$", google_bigquery_data_transfer_config.cadence_check.name)
 }
 
 # --- Heartbeat: count each freshness scheduled-query RUN (success or failure) ----
@@ -141,6 +143,113 @@ resource "google_monitoring_alert_policy" "freshness_scheduler_absent" {
       "— fix the metric, not the scheduler. If NO runs are present, the scheduler is",
       "genuinely down (paused config, lapsed run-SA, or DTS outage)."
     ])
+    mime_type = "text/markdown"
+  }
+}
+
+###############################################################################
+# Same heartbeat coverage for the OTHER two RAISE-ing scheduled queries — the
+# events backup export and the cadence check (added 2026-06-21).
+#
+# Same rationale as freshness above: they email on FAILURE, but a silently-dead
+# scheduler sends nothing — only a metric-absence alert catches it. The BACKUP one
+# is the most consequential: a silent death means the irreplaceable append-only
+# event store stops being backed up, unnoticed. Both run daily, so the same 25h
+# absence window applies. config_ids are carried from the resources (identity- and
+# recreate-agnostic); the filter matches the per-run DTS "Summary:" line, which is
+# emitted on success AND failure (liveness, decoupled from green/red).
+#
+# Live config_ids (verified in the Console 2026-06-21):
+#   backup  events-backup-daily  6a509810-0000-2279-a65e-f4f5e80c4144
+#   cadence cadence-check-daily  6a44a3d9-0000-2837-8b7b-883d24f5c8b8
+#
+# CREATION CAVEAT (no backfill): a new log metric only counts logs arriving after it
+# exists, so an absent_over_time alert built on a brand-new empty metric fires until
+# the next run lands a point. When standing these up live, create the metric, trigger
+# one run to seed a data point, verify it, THEN create the policy. (A terraform apply
+# would hit the same transient — but per RUNBOOK §12 this module is spec-only.)
+###############################################################################
+
+# --- Backup export heartbeat -------------------------------------------------
+resource "google_logging_metric" "backup_scheduled_run" {
+  project = var.project_id
+  name    = "backup_scheduled_run"
+
+  filter = <<-EOT
+    resource.type="bigquery_dts_config"
+    resource.labels.config_id="${local.backup_config_id}"
+    jsonPayload.message=~"^Summary: succeeded"
+  EOT
+
+  metric_descriptor {
+    metric_kind = "DELTA"
+    value_type  = "INT64"
+    unit        = "1"
+  }
+}
+
+resource "google_monitoring_alert_policy" "backup_scheduler_absent" {
+  project      = var.project_id
+  display_name = "Backup scheduler absent >25h"
+  combiner     = "OR"
+
+  conditions {
+    display_name = "No events-backup run in 25h"
+    condition_prometheus_query_language {
+      query               = "absent_over_time(logging_googleapis_com:user_${google_logging_metric.backup_scheduled_run.name}[25h])"
+      duration            = "0s"
+      evaluation_interval = "60s"
+    }
+  }
+
+  notification_channels = [
+    for c in google_monitoring_notification_channel.scheduler_alert_email : c.id
+  ]
+
+  documentation {
+    content   = "The events-backup scheduled query has emitted no run heartbeat in >25h — the append-only event store may be silently un-backed-up. Triage per ops/RUNBOOK.md §19: check region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT for recent scheduled_query% backup runs. Runs present -> the metric drifted (fix the metric). No runs -> the backup scheduler is down (paused config, lapsed run-SA, or DTS outage)."
+    mime_type = "text/markdown"
+  }
+}
+
+# --- Cadence check heartbeat -------------------------------------------------
+resource "google_logging_metric" "cadence_scheduled_run" {
+  project = var.project_id
+  name    = "cadence_scheduled_run"
+
+  filter = <<-EOT
+    resource.type="bigquery_dts_config"
+    resource.labels.config_id="${local.cadence_config_id}"
+    jsonPayload.message=~"^Summary: succeeded"
+  EOT
+
+  metric_descriptor {
+    metric_kind = "DELTA"
+    value_type  = "INT64"
+    unit        = "1"
+  }
+}
+
+resource "google_monitoring_alert_policy" "cadence_scheduler_absent" {
+  project      = var.project_id
+  display_name = "Cadence scheduler absent >25h"
+  combiner     = "OR"
+
+  conditions {
+    display_name = "No cadence-check run in 25h"
+    condition_prometheus_query_language {
+      query               = "absent_over_time(logging_googleapis_com:user_${google_logging_metric.cadence_scheduled_run.name}[25h])"
+      duration            = "0s"
+      evaluation_interval = "60s"
+    }
+  }
+
+  notification_channels = [
+    for c in google_monitoring_notification_channel.scheduler_alert_email : c.id
+  ]
+
+  documentation {
+    content   = "The cadence-check scheduled query has emitted no run heartbeat in >25h — missed-routine detection (state.cadence_watch) may be silently down. Triage per ops/RUNBOOK.md §19; note state.freshness still independently catches data staleness, so this is lower-severity than the freshness/backup absences."
     mime_type = "text/markdown"
   }
 }
