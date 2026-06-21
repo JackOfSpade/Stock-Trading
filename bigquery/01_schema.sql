@@ -134,7 +134,10 @@ SELECT * FROM (
 
 CREATE OR REPLACE VIEW `stock-trading-498512.state.current_regime` AS
 SELECT * FROM `stock-trading-498512.events.regime_events`
-QUALIFY ROW_NUMBER() OVER (PARTITION BY scope, key ORDER BY as_of_date DESC, event_ts DESC) = 1;
+-- event_id DESC is a deterministic tiebreaker: two events can share (as_of_date, event_ts) for the
+-- same (scope, key) (e.g. STRATEGY_ACTIVATION C on 2026-06-03), and without it ROW_NUMBER picks one
+-- arbitrarily, so the resolved regime could flip between query runs.
+QUALIFY ROW_NUMBER() OVER (PARTITION BY scope, key ORDER BY as_of_date DESC, event_ts DESC, event_id DESC) = 1;
 
 -- Queue current-state, two layers:
 --   * open_queue_detail — full latest-wins projection INCLUDING the bulky payload JSON + note;

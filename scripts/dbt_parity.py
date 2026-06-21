@@ -7,17 +7,20 @@ This adds ROW-LEVEL parity: it proves the dbt model and the live view produce th
 catching logic drift between the two definitions.
 
 HOW (read-only — never writes, never `dbt build`): for each compiled dbt model, run
-    SELECT <cols> FROM (<compiled model SQL>) EXCEPT DISTINCT SELECT <cols> FROM `<live view>`
+    SELECT <exprs> FROM (<compiled model SQL>) EXCEPT DISTINCT SELECT <exprs> FROM `<live view>`
 and the reverse. Both must return 0 rows. The compiled SQL already has refs/sources resolved to
 the live `state`/`perf`/`analytics` objects, so this compares the two SELECT logics over identical
 inputs. NOTE: this does NOT `dbt build` — the generate_schema_name override pins models to the bare
 live datasets, so a build would overwrite them; compile+EXCEPT stays read-only.
 
 Run AFTER `dbt compile` (the CI job does that), from the repo root. Requires the `bq` CLI authed
-(WIF in CI). Exit 0 = all parity; exit 1 = any drift (prints the offending model + sample rows).
+(WIF in CI). Exit 0 = all parity; exit 1 = any drift (prints the offending model + row deltas).
 
-Volatile columns evaluated per-query (CURRENT_TIMESTAMP) can never match across two evaluations,
-so they are excluded from the comparison (see VOLATILE_COLS).
+Two column adjustments make the EXCEPT well-defined:
+  * VOLATILE_COLS — columns evaluated fresh each query (CURRENT_TIMESTAMP) can never match across
+    two evaluations, so they are dropped from the compare.
+  * JSON/ARRAY/STRUCT columns don't support set-operation comparison, so they are wrapped in
+    TO_JSON_STRING() (applied identically to both sides) instead of being skipped.
 """
 import json
 import os
@@ -50,12 +53,21 @@ def bq(sql):
     return json.loads(s[i:]) if i != -1 else []
 
 
+def col_expr(col):
+    """SQL expression for one column in the EXCEPT. JSON/ARRAY/STRUCT can't be set-compared, so
+    serialize them deterministically; scalars compare directly."""
+    name, dtype = col["column_name"], col["data_type"]
+    q = f"`{name}`"
+    if dtype == "JSON" or dtype.startswith("ARRAY") or dtype.startswith("STRUCT"):
+        return f"TO_JSON_STRING({q})"
+    return q
+
+
 def live_columns(dataset, table):
-    rows = bq(
-        f"SELECT column_name FROM `{PROJECT}`.{dataset}.INFORMATION_SCHEMA.COLUMNS "
+    return bq(
+        f"SELECT column_name, data_type FROM `{PROJECT}`.{dataset}.INFORMATION_SCHEMA.COLUMNS "
         f"WHERE table_name = '{table}' ORDER BY ordinal_position"
     )
-    return [r["column_name"] for r in rows]
 
 
 def compiled_models():
@@ -74,21 +86,21 @@ def main():
     for dataset, name, compiled in compiled_models():
         live = f"`{PROJECT}`.{dataset}.{name}"
         try:
-            cols = [c for c in live_columns(dataset, name) if c not in VOLATILE_COLS]
+            cols = [c for c in live_columns(dataset, name) if c["column_name"] not in VOLATILE_COLS]
         except Exception as e:
             skipped.append(f"{dataset}.{name} (no live object? {e})")
             continue
         if not cols:
             skipped.append(f"{dataset}.{name} (no comparable columns)")
             continue
-        collist = ", ".join(f"`{c}`" for c in cols)
+        exprs = ", ".join(col_expr(c) for c in cols)
         try:
             n_missing = int(bq(
-                f"SELECT COUNT(*) AS n FROM (SELECT {collist} FROM ({compiled}) "
-                f"EXCEPT DISTINCT SELECT {collist} FROM {live})")[0]["n"])
+                f"SELECT COUNT(*) AS n FROM (SELECT {exprs} FROM ({compiled}) "
+                f"EXCEPT DISTINCT SELECT {exprs} FROM {live})")[0]["n"])
             n_extra = int(bq(
-                f"SELECT COUNT(*) AS n FROM (SELECT {collist} FROM {live} "
-                f"EXCEPT DISTINCT SELECT {collist} FROM ({compiled}))")[0]["n"])
+                f"SELECT COUNT(*) AS n FROM (SELECT {exprs} FROM {live} "
+                f"EXCEPT DISTINCT SELECT {exprs} FROM ({compiled}))")[0]["n"])
         except Exception as e:
             skipped.append(f"{dataset}.{name} (query error: {e})")
             continue

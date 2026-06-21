@@ -7,7 +7,9 @@
 
 WITH days AS (
   SELECT d AS cal_date
-  FROM UNNEST(GENERATE_DATE_ARRAY(DATE '2023-01-01', DATE '2028-12-31')) d
+  -- End date MUST match the live view in bigquery/09_market_calendar.sql (kept in lockstep; the
+  -- dbt↔live parity check enforces it). Bump both together when the calendar horizon is extended.
+  FROM UNNEST(GENERATE_DATE_ARRAY(DATE '2023-01-01', DATE '2030-12-31')) d
 )
 SELECT
   days.cal_date,
