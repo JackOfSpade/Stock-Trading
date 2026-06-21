@@ -63,7 +63,7 @@ def main():
     banner = ("#0a7d28", "ALL GREEN") if green else ("#b00020", "ATTENTION")
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
-    html = f"""<!doctype html><html><head><meta charset="utf-8">
+    page = f"""<!doctype html><html><head><meta charset="utf-8">
 <title>Stock-Trading — health</title>
 <style>
  body{{font:14px -apple-system,Segoe UI,Roboto,sans-serif;margin:24px;color:#1a1a1a;background:#fafafa}}
@@ -85,7 +85,7 @@ def main():
 </body></html>"""
 
     with open(OUT, "w") as f:
-        f.write(html)
+        f.write(page)
     print(f"Wrote {OUT}  ({'GREEN' if green else 'ATTENTION'})")
     return 0
 

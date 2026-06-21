@@ -36,6 +36,13 @@ from c_options_math import (
 # ---------------------------------------------------------------------------
 # Pricing & Greeks
 # ---------------------------------------------------------------------------
+def test_optioninputs_alias_is_intact():
+    # ATMOption is the documented backward-compat alias for OptionInputs; callers
+    # and this suite still use the old name. Pin the alias so a rename can't quietly
+    # break it.
+    assert OptionInputs is ATMOption
+
+
 def test_bsm_call_price_hull_textbook():
     # Hull: S=42, K=40, r=0.10, T=0.5, sigma=0.20 -> Call = 4.7594
     opt = ATMOption(42, 40, int(0.5 * 365), 0.10, 0.20, 'call')
@@ -204,6 +211,19 @@ def test_realized_vol_recovers_known_sigma():
         prices.append(prices[-1] * math.exp(-0.5 * daily_vol ** 2 + daily_vol * z))
     rv = realized_volatility_30d(prices)
     assert rv == pytest.approx(sigma_annual, abs=0.10)
+
+
+def test_realized_vol_rejects_too_few_prices():
+    # A sample variance (ddof=1) needs >= 2 log returns, i.e. >= 3 prices. With
+    # exactly 2 prices the old guard let one return through and divided by (n-1)=0,
+    # raising an opaque ZeroDivisionError. It must raise a clear ValueError instead.
+    with pytest.raises(ValueError):
+        realized_volatility_30d([100.0])
+    with pytest.raises(ValueError):
+        realized_volatility_30d([100.0, 101.0])
+    # 3 prices is the minimum that must succeed (returns a finite number).
+    rv = realized_volatility_30d([100.0, 101.0, 100.5])
+    assert math.isfinite(rv) and rv >= 0
 
 
 def test_probability_weighted_payoff_keys_present():

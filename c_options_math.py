@@ -49,8 +49,9 @@ USAGE:
         verify_max_loss_dual_path,
         cascade_max_loss,
         size_position,
-        scenario_pnl_grid,
     )
+    # P&L grids and per-expiration payoffs are Structure methods:
+    #   structure.scenario_pnl_grid(), structure.pnl_at_expiration(price)
 
     # Example: NVDA Jan 17 2025 expiration, FOMC event 2026-01-28
     inputs = OptionInputs(
@@ -642,6 +643,39 @@ class Structure:
 # Structure constructors (only Strategy.md-permitted variants)
 # =============================================================================
 
+def _leg(
+    underlying_price: float,
+    days_to_expiration: int,
+    risk_free_rate: float,
+    dividend_yield: float,
+    *,
+    strike: float,
+    volatility: float,
+    option_type: Literal['call', 'put'],
+    quantity: int,
+) -> OptionLeg:
+    """Build one OptionLeg, centralizing the ATMOption(...) boilerplate that every
+    structure constructor below repeated verbatim.
+
+    The four shared-across-legs scalars (underlying_price, days_to_expiration,
+    risk_free_rate, dividend_yield) are positional; the four per-leg-varying fields
+    (strike, volatility, option_type, quantity) are keyword-only — those are the
+    ones a transposition bug would silently corrupt, so the call sites must name them.
+    """
+    return OptionLeg(
+        option=ATMOption(
+            underlying_price=underlying_price,
+            strike=strike,
+            days_to_expiration=days_to_expiration,
+            risk_free_rate=risk_free_rate,
+            volatility=volatility,
+            option_type=option_type,
+            dividend_yield=dividend_yield,
+        ),
+        quantity=quantity,
+    )
+
+
 def long_call(
     underlying_price: float,
     *,
@@ -657,18 +691,8 @@ def long_call(
     Keyword-only arguments after underlying_price for consistency with multi-leg
     constructors and prevention of positional-argument bugs.
     """
-    leg = OptionLeg(
-        option=ATMOption(
-            underlying_price=underlying_price,
-            strike=strike,
-            days_to_expiration=days_to_expiration,
-            risk_free_rate=risk_free_rate,
-            volatility=volatility,
-            option_type='call',
-            dividend_yield=dividend_yield,
-        ),
-        quantity=contracts,
-    )
+    leg = _leg(underlying_price, days_to_expiration, risk_free_rate, dividend_yield,
+               strike=strike, volatility=volatility, option_type='call', quantity=contracts)
     return Structure(
         legs=[leg],
         name=f'Long {contracts}x {strike}C {days_to_expiration}DTE',
@@ -691,18 +715,8 @@ def long_put(
     Keyword-only arguments after underlying_price for consistency with multi-leg
     constructors.
     """
-    leg = OptionLeg(
-        option=ATMOption(
-            underlying_price=underlying_price,
-            strike=strike,
-            days_to_expiration=days_to_expiration,
-            risk_free_rate=risk_free_rate,
-            volatility=volatility,
-            option_type='put',
-            dividend_yield=dividend_yield,
-        ),
-        quantity=contracts,
-    )
+    leg = _leg(underlying_price, days_to_expiration, risk_free_rate, dividend_yield,
+               strike=strike, volatility=volatility, option_type='put', quantity=contracts)
     return Structure(
         legs=[leg],
         name=f'Long {contracts}x {strike}P {days_to_expiration}DTE',
@@ -734,25 +748,12 @@ def debit_call_spread(
             f"(got long={long_strike}, short={short_strike}). "
             f"For a bear call spread (long > short), use credit_call_spread."
         )
+    shared = (underlying_price, days_to_expiration, risk_free_rate, dividend_yield)
     legs = [
-        OptionLeg(
-            option=ATMOption(
-                underlying_price=underlying_price, strike=long_strike,
-                days_to_expiration=days_to_expiration, risk_free_rate=risk_free_rate,
-                volatility=volatility_long, option_type='call',
-                dividend_yield=dividend_yield,
-            ),
-            quantity=contracts,
-        ),
-        OptionLeg(
-            option=ATMOption(
-                underlying_price=underlying_price, strike=short_strike,
-                days_to_expiration=days_to_expiration, risk_free_rate=risk_free_rate,
-                volatility=volatility_short, option_type='call',
-                dividend_yield=dividend_yield,
-            ),
-            quantity=-contracts,
-        ),
+        _leg(*shared, strike=long_strike, volatility=volatility_long,
+             option_type='call', quantity=contracts),
+        _leg(*shared, strike=short_strike, volatility=volatility_short,
+             option_type='call', quantity=-contracts),
     ]
     return Structure(
         legs=legs,
@@ -784,25 +785,12 @@ def debit_put_spread(
             f"(got long={long_strike}, short={short_strike}). "
             f"For a bull put spread (short > long), use credit_put_spread."
         )
+    shared = (underlying_price, days_to_expiration, risk_free_rate, dividend_yield)
     legs = [
-        OptionLeg(
-            option=ATMOption(
-                underlying_price=underlying_price, strike=long_strike,
-                days_to_expiration=days_to_expiration, risk_free_rate=risk_free_rate,
-                volatility=volatility_long, option_type='put',
-                dividend_yield=dividend_yield,
-            ),
-            quantity=contracts,
-        ),
-        OptionLeg(
-            option=ATMOption(
-                underlying_price=underlying_price, strike=short_strike,
-                days_to_expiration=days_to_expiration, risk_free_rate=risk_free_rate,
-                volatility=volatility_short, option_type='put',
-                dividend_yield=dividend_yield,
-            ),
-            quantity=-contracts,
-        ),
+        _leg(*shared, strike=long_strike, volatility=volatility_long,
+             option_type='put', quantity=contracts),
+        _leg(*shared, strike=short_strike, volatility=volatility_short,
+             option_type='put', quantity=-contracts),
     ]
     return Structure(
         legs=legs,
@@ -834,25 +822,12 @@ def credit_call_spread(
             f"(got short={short_strike}, long={long_strike}). "
             f"For a bull call spread (long < short), use debit_call_spread."
         )
+    shared = (underlying_price, days_to_expiration, risk_free_rate, dividend_yield)
     legs = [
-        OptionLeg(
-            option=ATMOption(
-                underlying_price=underlying_price, strike=short_strike,
-                days_to_expiration=days_to_expiration, risk_free_rate=risk_free_rate,
-                volatility=volatility_short, option_type='call',
-                dividend_yield=dividend_yield,
-            ),
-            quantity=-contracts,
-        ),
-        OptionLeg(
-            option=ATMOption(
-                underlying_price=underlying_price, strike=long_strike,
-                days_to_expiration=days_to_expiration, risk_free_rate=risk_free_rate,
-                volatility=volatility_long, option_type='call',
-                dividend_yield=dividend_yield,
-            ),
-            quantity=contracts,
-        ),
+        _leg(*shared, strike=short_strike, volatility=volatility_short,
+             option_type='call', quantity=-contracts),
+        _leg(*shared, strike=long_strike, volatility=volatility_long,
+             option_type='call', quantity=contracts),
     ]
     return Structure(
         legs=legs,
@@ -884,25 +859,12 @@ def credit_put_spread(
             f"(got short={short_strike}, long={long_strike}). "
             f"For a bear put spread (long > short), use debit_put_spread."
         )
+    shared = (underlying_price, days_to_expiration, risk_free_rate, dividend_yield)
     legs = [
-        OptionLeg(
-            option=ATMOption(
-                underlying_price=underlying_price, strike=short_strike,
-                days_to_expiration=days_to_expiration, risk_free_rate=risk_free_rate,
-                volatility=volatility_short, option_type='put',
-                dividend_yield=dividend_yield,
-            ),
-            quantity=-contracts,
-        ),
-        OptionLeg(
-            option=ATMOption(
-                underlying_price=underlying_price, strike=long_strike,
-                days_to_expiration=days_to_expiration, risk_free_rate=risk_free_rate,
-                volatility=volatility_long, option_type='put',
-                dividend_yield=dividend_yield,
-            ),
-            quantity=contracts,
-        ),
+        _leg(*shared, strike=short_strike, volatility=volatility_short,
+             option_type='put', quantity=-contracts),
+        _leg(*shared, strike=long_strike, volatility=volatility_long,
+             option_type='put', quantity=contracts),
     ]
     return Structure(
         legs=legs,
@@ -932,50 +894,22 @@ def iron_condor(
 
     Keyword-only arguments after underlying_price prevent silent argument-order bugs.
     """
-    strikes = [long_put_strike, short_put_strike, short_call_strike, long_call_strike]
     if not (long_put_strike < short_put_strike < short_call_strike < long_call_strike):
         raise ValueError(
             f"Iron condor requires strict ordering: "
             f"long_put({long_put_strike}) < short_put({short_put_strike}) "
             f"< short_call({short_call_strike}) < long_call({long_call_strike})"
         )
+    shared = (underlying_price, days_to_expiration, risk_free_rate, dividend_yield)
     legs = [
-        OptionLeg(
-            option=ATMOption(
-                underlying_price=underlying_price, strike=long_put_strike,
-                days_to_expiration=days_to_expiration, risk_free_rate=risk_free_rate,
-                volatility=vol_long_put, option_type='put',
-                dividend_yield=dividend_yield,
-            ),
-            quantity=contracts,
-        ),
-        OptionLeg(
-            option=ATMOption(
-                underlying_price=underlying_price, strike=short_put_strike,
-                days_to_expiration=days_to_expiration, risk_free_rate=risk_free_rate,
-                volatility=vol_short_put, option_type='put',
-                dividend_yield=dividend_yield,
-            ),
-            quantity=-contracts,
-        ),
-        OptionLeg(
-            option=ATMOption(
-                underlying_price=underlying_price, strike=short_call_strike,
-                days_to_expiration=days_to_expiration, risk_free_rate=risk_free_rate,
-                volatility=vol_short_call, option_type='call',
-                dividend_yield=dividend_yield,
-            ),
-            quantity=-contracts,
-        ),
-        OptionLeg(
-            option=ATMOption(
-                underlying_price=underlying_price, strike=long_call_strike,
-                days_to_expiration=days_to_expiration, risk_free_rate=risk_free_rate,
-                volatility=vol_long_call, option_type='call',
-                dividend_yield=dividend_yield,
-            ),
-            quantity=contracts,
-        ),
+        _leg(*shared, strike=long_put_strike, volatility=vol_long_put,
+             option_type='put', quantity=contracts),
+        _leg(*shared, strike=short_put_strike, volatility=vol_short_put,
+             option_type='put', quantity=-contracts),
+        _leg(*shared, strike=short_call_strike, volatility=vol_short_call,
+             option_type='call', quantity=-contracts),
+        _leg(*shared, strike=long_call_strike, volatility=vol_long_call,
+             option_type='call', quantity=contracts),
     ]
     return Structure(
         legs=legs,
@@ -1010,34 +944,14 @@ def long_call_butterfly(
             f"middle - lower ({middle_strike - lower_strike}) "
             f"!= upper - middle ({upper_strike - middle_strike})"
         )
+    shared = (underlying_price, days_to_expiration, risk_free_rate, dividend_yield)
     legs = [
-        OptionLeg(
-            option=ATMOption(
-                underlying_price=underlying_price, strike=lower_strike,
-                days_to_expiration=days_to_expiration, risk_free_rate=risk_free_rate,
-                volatility=vol_lower, option_type='call',
-                dividend_yield=dividend_yield,
-            ),
-            quantity=contracts,
-        ),
-        OptionLeg(
-            option=ATMOption(
-                underlying_price=underlying_price, strike=middle_strike,
-                days_to_expiration=days_to_expiration, risk_free_rate=risk_free_rate,
-                volatility=vol_middle, option_type='call',
-                dividend_yield=dividend_yield,
-            ),
-            quantity=-2 * contracts,
-        ),
-        OptionLeg(
-            option=ATMOption(
-                underlying_price=underlying_price, strike=upper_strike,
-                days_to_expiration=days_to_expiration, risk_free_rate=risk_free_rate,
-                volatility=vol_upper, option_type='call',
-                dividend_yield=dividend_yield,
-            ),
-            quantity=contracts,
-        ),
+        _leg(*shared, strike=lower_strike, volatility=vol_lower,
+             option_type='call', quantity=contracts),
+        _leg(*shared, strike=middle_strike, volatility=vol_middle,
+             option_type='call', quantity=-2 * contracts),
+        _leg(*shared, strike=upper_strike, volatility=vol_upper,
+             option_type='call', quantity=contracts),
     ]
     return Structure(
         legs=legs,
@@ -1068,34 +982,14 @@ def long_put_butterfly(
     """
     if not math.isclose(middle_strike - lower_strike, upper_strike - middle_strike, abs_tol=0.01):
         raise ValueError("Butterfly requires equidistant strikes")
+    shared = (underlying_price, days_to_expiration, risk_free_rate, dividend_yield)
     legs = [
-        OptionLeg(
-            option=ATMOption(
-                underlying_price=underlying_price, strike=lower_strike,
-                days_to_expiration=days_to_expiration, risk_free_rate=risk_free_rate,
-                volatility=vol_lower, option_type='put',
-                dividend_yield=dividend_yield,
-            ),
-            quantity=contracts,
-        ),
-        OptionLeg(
-            option=ATMOption(
-                underlying_price=underlying_price, strike=middle_strike,
-                days_to_expiration=days_to_expiration, risk_free_rate=risk_free_rate,
-                volatility=vol_middle, option_type='put',
-                dividend_yield=dividend_yield,
-            ),
-            quantity=-2 * contracts,
-        ),
-        OptionLeg(
-            option=ATMOption(
-                underlying_price=underlying_price, strike=upper_strike,
-                days_to_expiration=days_to_expiration, risk_free_rate=risk_free_rate,
-                volatility=vol_upper, option_type='put',
-                dividend_yield=dividend_yield,
-            ),
-            quantity=contracts,
-        ),
+        _leg(*shared, strike=lower_strike, volatility=vol_lower,
+             option_type='put', quantity=contracts),
+        _leg(*shared, strike=middle_strike, volatility=vol_middle,
+             option_type='put', quantity=-2 * contracts),
+        _leg(*shared, strike=upper_strike, volatility=vol_upper,
+             option_type='put', quantity=contracts),
     ]
     return Structure(
         legs=legs,
@@ -1274,7 +1168,8 @@ def realized_volatility_30d(
     behaviour ignored the window entirely and used the whole input series, so a
     longer history silently produced the wrong realized-vol figure; the trailing
     slice is now applied here rather than left to the caller. If fewer than 31
-    prices are supplied, all available are used (>= 2 required).
+    prices are supplied, all available are used (>= 3 required: a sample variance
+    needs >= 2 log returns, i.e. >= 3 prices).
 
     Annualization: trading-day log-return vol is scaled by sqrt(252) — the
     number of trading-day RETURNS per year. This is correct even though
@@ -1284,8 +1179,11 @@ def realized_volatility_30d(
     sqrt(365/252) ≈ 1.20x and makes IV look cheap vs realized. BSM's day-count
     governs time-decay discounting, a separate quantity from vol annualization.
     """
-    if len(daily_close_prices) < 2:
-        raise ValueError("Need at least 2 prices for vol calc")
+    # Need >= 3 prices: two log returns are the minimum for a sample variance
+    # (ddof=1). With exactly 2 prices the old guard let one return through and the
+    # variance divided by (n-1)=0 → ZeroDivisionError instead of this clear error.
+    if len(daily_close_prices) < 3:
+        raise ValueError("Need at least 3 prices for vol calc (>= 2 log returns)")
 
     # Trailing 30-day window: the last 31 prices yield 30 returns.
     window = daily_close_prices[-31:]
@@ -1392,7 +1290,7 @@ if __name__ == '__main__':
     # Test 3: Greeks signs
     g_call = greeks_bsm(call_opt)
     g_put = greeks_bsm(put_opt)
-    print(f"\n[3] Greeks signs check:")
+    print("\n[3] Greeks signs check:")
     print(f"    Call delta = {g_call['delta']:.4f} (expected 0..1)")
     print(f"    Put delta = {g_put['delta']:.4f} (expected -1..0)")
     print(f"    Call gamma = {g_call['gamma']:.6f} (expected positive)")
@@ -1430,7 +1328,7 @@ if __name__ == '__main__':
     debit = lc.net_debit()
     max_loss_cf = lc.max_loss_closed_form()
     print(f"\n[5] Long call: net debit = {debit:.4f}, max loss closed-form = {max_loss_cf:.4f}")
-    print(f"    (Max loss should equal net debit for long-only structures)")
+    print("    (Max loss should equal net debit for long-only structures)")
     assert abs(debit - max_loss_cf) < 0.01, f"Max loss mismatch: debit={debit}, max_loss={max_loss_cf}"
 
     # Test 6: Debit call spread max loss = net debit, max profit = (long-short width) - debit
@@ -1478,7 +1376,7 @@ if __name__ == '__main__':
     print(f"\n[8] Dual-path: closed-form = {cf_loss:.4f}, Monte Carlo = {mc_loss:.4f}")
     try:
         verify_max_loss_dual_path(cf_loss, mc_loss, tolerance=1.00)
-        print(f"    PASS: agreed within $1 tolerance")
+        print("    PASS: agreed within $1 tolerance")
     except MaxLossDualPathDisagreement as e:
         print(f"    FAIL: {e}")
         raise
@@ -1511,7 +1409,7 @@ if __name__ == '__main__':
     # Defensive: zero or negative max_loss raises (no real options structure has this)
     try:
         size_position(0, 1389.37, 0.02)
-        print(f"     FAIL: zero max-loss should raise ValueError")
+        print("     FAIL: zero max-loss should raise ValueError")
         raise AssertionError("Zero max-loss did not raise")
     except ValueError as e:
         print(f"     PASS: zero max-loss correctly raises: {str(e)[:80]}...")
@@ -1530,40 +1428,40 @@ if __name__ == '__main__':
         prices.append(prices[-1] * math.exp(-0.5 * daily_vol**2 + daily_vol * z))
     rv = realized_volatility_30d(prices)
     print(f"\n[11] Realized vol from synthetic series with annualized sigma=0.30: {rv:.4f}")
-    print(f"    (Should be ~0.30; realized vol annualizes trading-day vol by sqrt(252))")
+    print("    (Should be ~0.30; realized vol annualizes trading-day vol by sqrt(252))")
     # Only the trailing 30 returns are used now, so sampling error is wider
     # (~1/sqrt(2*29) ≈ 13%); tolerance 0.10.
     assert abs(rv - sigma_annual) < 0.10, f"Realized vol off: got {rv}, expected ~{sigma_annual}"
 
     # Test 12: Multi-expiration rejection
-    print(f"\n[12] Multi-expiration rejection test:")
+    print("\n[12] Multi-expiration rejection test:")
     try:
         bad_legs = [
             OptionLeg(option=ATMOption(100, 100, 30, 0.045, 0.30, 'call'), quantity=1),
             OptionLeg(option=ATMOption(100, 100, 60, 0.045, 0.30, 'call'), quantity=-1),
         ]
         bad_struct = Structure(legs=bad_legs, name='Calendar', structure_type='calendar')
-        print(f"    FAIL: should have raised NotImplementedError")
+        print("    FAIL: should have raised NotImplementedError")
         raise AssertionError("Multi-expiration was not rejected")
     except NotImplementedError as e:
         print(f"    PASS: rejected with: {str(e)[:120]}...")
 
     # Test 13: Probability-weighted payoff
     pwp = probability_weighted_payoff(dcs, n_paths=20000)
-    print(f"\n[13] Probability-weighted payoff for 100/105 debit call spread:")
+    print("\n[13] Probability-weighted payoff for 100/105 debit call spread:")
     for k, v in pwp.items():
         print(f"     {k}: {v}")
 
     # Test 14: Scenario PnL grid
     grid = dcs.scenario_pnl_grid()
-    print(f"\n[14] Scenario PnL grid for 100/105 debit call spread:")
+    print("\n[14] Scenario PnL grid for 100/105 debit call spread:")
     for k, v in grid.items():
         print(f"     {k}: ${v}")
 
     # Test 15: Unbounded-max-loss rejection (net short calls). A naked short
     # call and a 1x2 ratio call spread have UNBOUNDED loss; both max-loss paths
     # must refuse rather than return a finite, silently understated number.
-    print(f"\n[15] Unbounded-risk rejection (net short calls):")
+    print("\n[15] Unbounded-risk rejection (net short calls):")
     naked_call = Structure(
         legs=[OptionLeg(option=ATMOption(100, 105, 30, 0.045, 0.30, 'call'), quantity=-1)],
         name='Naked short call', structure_type='naked_call')
@@ -1592,7 +1490,7 @@ if __name__ == '__main__':
           f"expected (K*100 - credit) = {np_expected:.4f}")
     assert abs(np_cf - np_expected) < 0.01, f"closed-form missed the S=0 worst case: {np_cf}"
     verify_max_loss_dual_path(np_cf, np_mc, tolerance=1.00)
-    print(f"    PASS: S=0 worst case captured; dual paths agree within $1")
+    print("    PASS: S=0 worst case captured; dual paths agree within $1")
 
     print("\n" + "=" * 70)
     print("ALL SELF-TESTS PASSED")

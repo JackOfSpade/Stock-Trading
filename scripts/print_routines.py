@@ -79,7 +79,7 @@ def main():
     tz, cad = load_cadence()
     seen = set()
 
-    print(f"Routine triggers — instruction is `Read Claude_Task_Plan.md. Perform <heading>.`")
+    print("Routine triggers — instruction is `Read Claude_Task_Plan.md. Perform <heading>.`")
     print(f"Cadence timezone: {tz}  (exact clock times are in the web UI only)\n")
     print("=" * 100)
     for h in headings:

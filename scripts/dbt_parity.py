@@ -25,7 +25,6 @@ Two column adjustments make the EXCEPT well-defined:
 import json
 import os
 import subprocess
-import sys
 
 PROJECT = "stock-trading-498512"
 COMPILED_ROOT = os.path.join("dbt", "target", "compiled", "stock_trading", "models")
