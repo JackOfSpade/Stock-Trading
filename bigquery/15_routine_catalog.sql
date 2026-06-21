@@ -29,8 +29,11 @@ FROM UNNEST([
   STRUCT('M3',  'Read Claude_Task_Plan.md. Perform M3. D Position Deep-Dive — deep research.'),
   STRUCT('M4',  'Read Claude_Task_Plan.md. Perform M4. Monthly Action Conversion — regular routine.'),
   STRUCT('M5',  'Read Claude_Task_Plan.md. Perform M5. Deployed-TWR & Macro Forecast — regular routine.'),
-  STRUCT('AR-attacker',     'Read Claude_Task_Plan.md. Perform Adversarial Review Attacker — regular routine.'),
-  STRUCT('AR-orchestrator', 'Read Claude_Task_Plan.md. Perform Adversarial Review Orchestrator — regular routine.'),
+  -- The adversarial routines self-log under the abbreviated ids AR·att / AR·orc (the form
+  -- used in the Claude_Task_Plan.md routine table + ops/cadence.yaml + ops.run_log), so the
+  -- catalog keys MUST use those exact ids or state.instruction_drift flags them unknown_routine.
+  STRUCT('AR·att',  'Read Claude_Task_Plan.md. Perform Adversarial Review Attacker — regular routine.'),
+  STRUCT('AR·orc',  'Read Claude_Task_Plan.md. Perform Adversarial Review Orchestrator — regular routine.'),
   STRUCT('Q1',  'Read Claude_Task_Plan.md. Perform Q1. Regime Retrospective — deep research.'),
   STRUCT('Q2',  'Read Claude_Task_Plan.md. Perform Q2. D Long-Horizon Candidates — deep research.'),
   STRUCT('Q3',  'Read Claude_Task_Plan.md. Perform Q3. AI Foundation Quarterly Delta — deep research.'),

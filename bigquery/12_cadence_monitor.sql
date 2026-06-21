@@ -29,7 +29,7 @@
 --   monthly_ftd    : first TRADING day of the month  (M1a,M1b,M2,M3,M4,M5)
 --   quarterly_ftd  : first TRADING day of the quarter (Q1..Q4)
 --   annual_ftd     : first TRADING day of the year    (A1..A3)
--- The queue-driven adversarial routines (AR-attacker / AR-orchestrator) fire only if a review is due,
+-- The queue-driven adversarial routines (AR·att / AR·orc) fire only if a review is due,
 -- which is NOT derivable from the calendar, so they are intentionally NOT listed as calendar-expected.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.cadence_expected_today` AS
 WITH t AS (
