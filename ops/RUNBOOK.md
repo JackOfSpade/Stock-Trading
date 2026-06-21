@@ -223,6 +223,20 @@ gated conviction model (`bigquery/04_analytics.sql`) when `approaching_gate` fli
 ---
 
 ## 12. Infrastructure as code — Terraform *(A1, A4)*
+
+> **DECISION (2026-06-21): NOT adopted — kept as a declared spec / reference only.** Verified that
+> `terraform state list` against `gs://stock-trading-tfstate` is **empty** — this module has never
+> been imported or applied, and we are deliberately **not** adopting it. The live substrate
+> (datasets, connection, bucket, scheduled queries, the freshness monitor) is created and changed
+> out-of-band via the BigQuery MCP + console; the operating model has **no Terraform runtime** (same
+> logic as the §14 dbt-ownership decision). Adopting would add a clobber risk — a later
+> `terraform apply` reverting a live MCP/console fix on production trading infra — for benefits
+> already covered by the runtime dead-man's switches, the `dbt-parity` CI drift check, and the
+> `bigquery/*.sql` rebuild path. Treat `infra/terraform/` as a **reviewable spec, not a live
+> manager**; do NOT run the import-then-apply flow below unless the project deliberately switches to
+> Terraform-first change control. Also logged in `CLAUDE.md` "Settled decisions". The procedure
+> below remains ONLY as the reference for that hypothetical future adoption.
+
 `infra/terraform/` codifies the GCP substrate that previously lived only as console state: the 5
 datasets, the `us.vertex` connection, the `gs://stock-trading-backups` bucket + lifecycle, the budget
 alert, and **all four scheduled queries** (single-sourcing the SQL bodies from
@@ -231,8 +245,9 @@ alert, and **all four scheduled queries** (single-sourcing the SQL bodies from
 2. `terraform import` each existing resource (datasets, connection, bucket) — exact commands in
    `infra/terraform/README.md`. After import, `terraform plan` should show ~no changes for them.
 3. Set `billing_account` + `notification_emails` in `terraform.tfvars` (copy `.example`).
-4. `terraform apply` — this is what actually CREATES the scheduled queries (the dead-man's switch),
-   which the 2026-06-19 review found were never running.
+4. `terraform apply` — would converge/adopt the resources. NOTE (2026-06-21): the scheduled queries
+   already exist and run (under `bq-scheduler@`, created out-of-band), so this would be *adoption*,
+   not creation — and per the decision banner above it is **not currently pursued**.
 Owner decisions: the `billing_account` id; and whether the backup export runs under owner creds
 (default) or a dedicated SA (A1).
 

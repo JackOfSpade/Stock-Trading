@@ -11,6 +11,13 @@ scheduled queries §1, budget §2, GCS backup bucket §3) and
 **`bigquery/scheduled_queries/README.md`** (the scheduled-query bodies + UTC-timing
 rationale, reproduced below).
 
+> **STATUS (2026-06-21): declared spec / reference only — NOT applied.** This module has
+> never been imported or applied (`terraform state list` against the backend is empty),
+> and per a deliberate decision (**RUNBOOK §12**, **CLAUDE.md "Settled decisions"**) it
+> stays that way — the live infra is managed out-of-band via the BigQuery MCP + console.
+> Read the import/apply instructions below as the reference procedure for a *hypothetical
+> future* adoption, **not** as a recommended next step.
+
 ---
 
 ## What this codifies
