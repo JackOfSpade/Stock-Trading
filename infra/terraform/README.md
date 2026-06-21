@@ -90,10 +90,12 @@ terraform import 'google_monitoring_notification_channel.scheduler_alert_email["
   projects/<PROJECT_NUMBER>/notificationChannels/<channel-id>
 ```
 
-> **Expect a `plan` diff on the metric filter — that diff *is* the bug.** The live
-> metric pins the old run identity (`principalEmail`); applying `monitoring.tf`
-> replaces it with the identity-agnostic, config-id-keyed filter. Reconcile
-> `resource.type`/message wording against a live Logs Explorer entry first.
+> **Expect a `plan` diff on the metric filter.** The live metric is config-id-keyed
+> (no identity pin) but uses a **success-only** message clause
+> (`jsonPayload.message:"completed successfully"`); applying `monitoring.tf` swaps it
+> for the terminal-agnostic `^Summary: succeeded` marker (one heartbeat per run, green
+> or red). The live policy is a PromQL `absent_over_time(...[25h])` condition — codified
+> as such. Verified by console inspection 2026-06-21 (see RUNBOOK §19).
 
 After importing, a clean run shows **~no changes**:
 

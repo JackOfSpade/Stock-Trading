@@ -11,25 +11,38 @@
 #   That heartbeat metric + alert policy were created by hand in the Console and
 #   were NEVER version-controlled. On 2026-06-19 the scheduled queries were moved
 #   off the owner's OAuth onto the dedicated SA (scheduled_queries.tf,
-#   var.scheduled_query_service_account — the §15 fix). The hand-built log metric's
-#   filter was pinned to the OLD identity (principalEmail), so it stopped counting
-#   the SA-run executions, went absent, and on 2026-06-20 23:41 UTC the
-#   "Freshness scheduler absent >25h" policy fired — even though the freshness
-#   check had run & succeeded at 05:00 and 19:29 UTC that day. A FALSE ALARM whose
-#   root cause was an un-versioned monitor pinning a now-stale identity.
+#   var.scheduled_query_service_account — the §15 fix). During that cutover the
+#   heartbeat metric had no matching sample for >25h, so on 2026-06-20 23:41 UTC the
+#   "Freshness scheduler absent >25h" policy fired — even though the freshness check
+#   had run & succeeded at 05:00 and 19:29 UTC that day. A FALSE ALARM.
+#
+#   VERIFIED LIVE CONFIG (Claude-in-Chrome console inspection, 2026-06-21 — this
+#   corrects an earlier guess that the filter pinned principalEmail; it does NOT):
+#     - metric filter (live): resource.type="bigquery_dts_config",
+#       resource.labels.config_id="6a9c1592-0000-2caa-86b1-089e08214038" (the freshness
+#       config, running as bq-scheduler@), jsonPayload.message:"completed successfully".
+#       NO identity label, NO principalEmail pin. The DEFECT is the message clause:
+#       "completed successfully" matches only the per-JOB success line, so it is
+#       SUCCESS-ONLY and missed the cutover window. A red run (RAISE) emits
+#       "...failed with error..." / "Summary: succeeded 0 jobs, failed 1 jobs." and
+#       would ALSO go uncounted — conflating "system red" with "scheduler dead".
+#     - policy (live): a PromQL condition, NOT classic MetricAbsence:
+#         absent_over_time(logging_googleapis_com:user_freshness_scheduled_run[25h])
+#       no group-by, no label selector. The "__missing__" in the alert email was just
+#       the metric having ZERO series during the absence, not an identity label.
+#     - The incident auto-resolved 2026-06-21 06:40 UTC once the 05:00 run was counted.
 #
 # THE FIX (this file):
 #   1. Codify the metric + policy so they are reviewable and survive (the §12 IaC
 #      principle the rest of this module already applies).
-#   2. Make the metric filter IDENTITY-AGNOSTIC: key it on the freshness transfer
-#      config_id (carried straight from the freshness_check resource below), NOT on
-#      principalEmail. An identity migration then can never break it again. It only
-#      needs re-pointing if the config is deleted+recreated (new id) — and because
-#      the id is derived from the resource, Terraform re-points it automatically.
-#   3. Count run COMPLETION (success OR failure), not success-only: liveness is
-#      "did the scheduler fire", which is orthogonal to green/red. Red is already
-#      signalled by the freshness query's failure email; folding red into the
-#      absence alert would double-signal one problem as a different one.
+#   2. Keep the metric filter IDENTITY-AGNOSTIC (config_id, carried straight from the
+#      freshness_check resource below — never principalEmail). A recreate re-points it
+#      automatically; an identity swap can't break it.
+#   3. Count run COMPLETION via the DTS per-run "Summary:" line (emitted on BOTH
+#      success and failure) instead of the success-only "completed successfully" line.
+#      Liveness is "did the scheduler fire", orthogonal to green/red — red is already
+#      signalled by the freshness query's failure email; folding it into the absence
+#      alert would double-signal one problem as a different one.
 #
 # ADOPT, DON'T DUPLICATE — these already exist in the Console. Import them first
 # (see infra/terraform/README.md), then `terraform plan` and reconcile:
@@ -37,10 +50,8 @@
 #   terraform import google_monitoring_alert_policy.freshness_scheduler_absent \
 #     projects/stock-trading-498512/alertPolicies/<POLICY_ID>
 #   # channels: projects/<proj>/notificationChannels/<ID>
-# EXPECT A PLAN DIFF on import — that diff IS the bug: the live metric filter pins
-# the old identity (and the live policy may be a PromQL/MQL condition, per the
-# alert email's "PromQL query"). Reconcile TO this identity-agnostic definition
-# (i.e. let Terraform overwrite the stale filter) — that is what un-breaks the alert.
+# EXPECT A PLAN DIFF on import — the metric-filter diff swaps the success-only
+# "completed successfully" clause for the terminal-agnostic "Summary:" marker.
 ###############################################################################
 
 # Freshness transfer config_id, extracted from the resource so the metric tracks
@@ -58,18 +69,16 @@ resource "google_logging_metric" "freshness_scheduled_run" {
   # BigQuery Data Transfer (scheduled query) run logs. Keyed on the freshness
   # config_id ONLY — deliberately NO principalEmail / authenticationInfo, so the
   # owner-OAuth -> bq-scheduler@ migration (and any future one) keeps matching.
-  # The message regex keeps it to the per-run terminal summary line (both outcomes)
-  # rather than every intermediate log line.
   #
-  # RECONCILE ON IMPORT: resource.type and the exact terminal-message wording were
-  # set out-of-band; verify against a live entry in Logs Explorer
-  #   (resource.type="bigquery_dts_config" resource.labels.config_id="<id>")
-  # and adjust the regex if the DTS summary wording differs in this project.
+  # The DTS emits exactly one "Summary: succeeded N jobs, failed M jobs." line per
+  # run, on BOTH success ("succeeded 1") and failure ("succeeded 0, failed 1") —
+  # verified against live logs (2026-06-21). Matching it gives one terminal heartbeat
+  # per run, independent of green/red. (The live metric used "completed successfully",
+  # which is success-only and missed the migration cutover — see header.)
   filter = <<-EOT
     resource.type="bigquery_dts_config"
     resource.labels.config_id="${local.freshness_config_id}"
-    severity>=INFO
-    jsonPayload.message=~"(?i)(succeeded|completed|failed)"
+    jsonPayload.message=~"^Summary: succeeded"
   EOT
 
   metric_descriptor {
@@ -102,26 +111,19 @@ resource "google_monitoring_alert_policy" "freshness_scheduler_absent" {
   combiner     = "OR"
 
   conditions {
-    display_name = "No freshness run in 26h"
+    display_name = "No successful freshness run in 26h"
 
-    # Metric-absence on the heartbeat: fires when no freshness run has been counted
-    # for the duration window. 86400s = 24h is the API max for a classic
-    # MetricAbsence duration (a fresh apply rejects >24h) — slightly tighter than the
-    # live policy's >25h, which it likely achieves via a PromQL `absent_over_time(...[26h])`
-    # condition (cf. the alert email's "PromQL query"). Reconcile the FORM on import;
-    # the load-bearing fix is the identity-agnostic metric above, not the condition syntax.
-    condition_absent {
-      filter   = "resource.type=\"bigquery_dts_config\" AND metric.type=\"logging.googleapis.com/user/${google_logging_metric.freshness_scheduled_run.name}\""
-      duration = "86400s"
-
-      aggregations {
-        alignment_period   = "3600s"
-        per_series_aligner = "ALIGN_SUM"
-      }
-
-      trigger {
-        count = 1
-      }
+    # VERIFIED LIVE FORM (2026-06-21): a PromQL condition, NOT classic MetricAbsence
+    # (which caps at 24h and so cannot express the >25h window). absent_over_time(...)
+    # returns 1 when the heartbeat metric has had no sample in the lookback, firing the
+    # alert. The PromQL metric name is the Monitoring mapping of the log-metric type
+    # (logging.googleapis.com/user/<name> -> logging_googleapis_com:user_<name>), built
+    # from the resource so the two never drift. duration/evaluation_interval are sane
+    # defaults — reconcile to the live values on import if they differ.
+    condition_prometheus_query_language {
+      query               = "absent_over_time(logging_googleapis_com:user_${google_logging_metric.freshness_scheduled_run.name}[25h])"
+      duration            = "0s"
+      evaluation_interval = "60s"
     }
   }
 
@@ -135,9 +137,9 @@ resource "google_monitoring_alert_policy" "freshness_scheduler_absent" {
       "FIRST verify it is real, not a repeat of the 2026-06-20 false alarm:",
       "check INFORMATION_SCHEMA.JOBS_BY_PROJECT for recent scheduled_query% jobs",
       "running the freshness body (see ops/RUNBOOK.md §19). If runs ARE present, the",
-      "heartbeat metric filter has drifted from the run identity/config — fix the",
-      "metric, not the scheduler. If NO runs are present, the scheduler is genuinely",
-      "down (paused config, lapsed run-SA, or DTS outage)."
+      "heartbeat metric filter has drifted from the live config_id / DTS message wording",
+      "— fix the metric, not the scheduler. If NO runs are present, the scheduler is",
+      "genuinely down (paused config, lapsed run-SA, or DTS outage)."
     ])
     mime_type = "text/markdown"
   }
