@@ -15,13 +15,21 @@
 # billing_account   = "012345-6789AB-CDEF01"
 # budget_amount_usd = 5
 
-# Emails that receive budget threshold alerts (50% / 90% / 100%).
+# Emails that receive budget threshold alerts (50% / 90% / 100%) AND the
+# freshness-scheduler-absence alert (monitoring.tf).
 # notification_emails = ["jacksterwu@gmail.com"]
+
+# --- Scheduled-query run identity (RUNBOOK §15, §19) ------------------------
+# Dedicated SA for the MONITOR queries (freshness, embed, cadence) so the
+# dead-man's switch does not die with the agent's OAuth. This is the live
+# 2026-06-19 state. Set backup_transfer_service_account to the SAME SA to put all
+# four on it (backup also needs the bucket IAM grant the var triggers).
+# scheduled_query_service_account = "bq-scheduler@stock-trading-498512.iam.gserviceaccount.com"
 
 # --- Backup export identity (iam.tf) ----------------------------------------
 # Leave unset to use the owner-credentials path (RUNBOOK §3 default). Set only if
 # you run the backup scheduled query under a dedicated SA.
-# backup_transfer_service_account = "events-backup@stock-trading-498512.iam.gserviceaccount.com"
+# backup_transfer_service_account = "bq-scheduler@stock-trading-498512.iam.gserviceaccount.com"
 
 # --- Scheduled-query schedules (UTC) — defaults match RUNBOOK; override if needed.
 # freshness_schedule = "every day 05:00"

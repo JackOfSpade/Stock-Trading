@@ -48,6 +48,10 @@ resource "google_bigquery_data_transfer_config" "freshness_check" {
   email_preferences {
     enable_failure_email = true
   }
+
+  # Run the dead-man's switch under the dedicated SA, NOT the agent's OAuth, so the
+  # alarm survives an OAuth lapse (RUNBOOK §15). null => config-creator credentials.
+  service_account_name = var.scheduled_query_service_account != "" ? var.scheduled_query_service_account : null
 }
 
 # (b) Embedding heal — idempotent; timing irrelevant; no failure email needed.
@@ -61,6 +65,8 @@ resource "google_bigquery_data_transfer_config" "embed_pending" {
   params = {
     query = file("${path.module}/../../bigquery/scheduled_queries/embed_pending.sql")
   }
+
+  service_account_name = var.scheduled_query_service_account != "" ? var.scheduled_query_service_account : null
 }
 
 # (c) Events backup export — writes Parquet to gs://stock-trading-backups.
@@ -107,4 +113,7 @@ resource "google_bigquery_data_transfer_config" "cadence_check" {
   email_preferences {
     enable_failure_email = true
   }
+
+  # Same dedicated-SA rationale as the freshness check (RUNBOOK §15).
+  service_account_name = var.scheduled_query_service_account != "" ? var.scheduled_query_service_account : null
 }

@@ -296,7 +296,11 @@ stall with it (it ran under the same identity).
 - **Document expiry + rotation.** Record the OAuth grant / MCP-connector token lifetimes for BigQuery,
   IBKR, and Calendar, and a rotation/re-consent procedure, so an expiry is planned, not a silent outage.
 - **Heartbeat.** The freshness email is the liveness signal; if it stops arriving entirely (vs. firing
-  red), that absence is itself the alert — note this so a silent scheduler death is noticed.
+  red), that absence is itself the alert — note this so a silent scheduler death is noticed. The
+  failure email canNOT do this on its own (a query that never runs sends no email), so a Cloud
+  Monitoring **metric-absence** alert on a per-run heartbeat metric is the backstop — now codified in
+  `infra/terraform/monitoring.tf`. **It must be identity-agnostic** (see §19 — pinning the run
+  identity caused a false alarm the day after this very SA migration).
 
 ## 16. Publish the health dashboard *(D1)*
 `.github/workflows/dashboard.yml` builds `ops/dashboard/index.html` from BigQuery and deploys it to
@@ -361,3 +365,54 @@ BigQuery + Gmail scopes), then run `installWeeklyTrigger`. Set the project timez
 (account NAV + Week/MTD/YTD TWR from the IBKR connector — the only datum the script can't fetch
 itself). Until D2 runs once after this change, the email header falls back to the BigQuery
 reconciliation NAV and shows `—` for account TWR; per-strategy deployed-TWR renders regardless.
+
+## 19. "Freshness scheduler absent >25h" — the 2026-06-20 FALSE ALARM *(monitoring)*
+**Symptom.** Cloud Monitoring policy *"Freshness scheduler absent >25h"* (condition *"No successful
+freshness run in 26h"*) fired at **2026-06-20 23:41 UTC** on metric
+`logging.googleapis.com/user/freshness_scheduled_run`, grouped on `__missing__`.
+
+**It was a FALSE alarm — the dead-man's switch was healthy.** Verified at the time:
+- `state.system_health.all_green = TRUE`; `ops.alerts` had zero open rows; D1/D2/D3 logged
+  `completed` through 2026-06-20 in `ops.run_log`.
+- The freshness scheduled query **ran and succeeded** at 2026-06-20 **05:00** and **19:29 UTC**
+  (the latter only ~4h *before* the alert), per `region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
+  (`job_id LIKE 'scheduled_query%'`, freshness body, `state=DONE`, no `error_result`).
+
+**Root cause — an un-versioned monitor pinned a now-stale identity.** On **2026-06-19 ~21:30 UTC**
+the scheduled queries were moved off the owner's OAuth (`jacksterwu@gmail.com`) onto the dedicated
+SA **`bq-scheduler@stock-trading-498512.iam.gserviceaccount.com`** (the §15 "make the monitor
+independent of the agent identity" fix — and the point at which freshness/cadence/backup actually
+began running on a reliable daily schedule). The log-based metric `freshness_scheduled_run` was
+hand-built in the Console and its filter was pinned to the **old principal** (`principalEmail`), so
+it stopped counting the SA-run executions, went absent, and tripped the >25h policy ~26h after the
+last owner-identity run it had matched. The runs never stopped; the *counter watching them* did.
+
+**Immediate fix (owner, Console / gcloud — un-breaks the alert today).** Repoint the metric filter
+off identity and onto the freshness transfer `config_id` (stable across identity swaps). Find the id
+with `bq ls --transfer_config --transfer_location=us`, then in **Logging → Log-based metrics →
+`freshness_scheduled_run` → Edit filter** set (no `principalEmail`):
+
+```
+resource.type="bigquery_dts_config"
+resource.labels.config_id="<FRESHNESS_CONFIG_ID>"
+severity>=INFO
+jsonPayload.message=~"(?i)(succeeded|completed|failed)"
+```
+
+Confirm the field/message wording against a live entry in Logs Explorer, save, and the next run
+(daily 05:00 UTC) clears the alert. Count run *completion* (success **or** failure): liveness is
+"did the scheduler fire", which is orthogonal to green/red — red is already covered by the freshness
+failure email, so folding it into the absence alert would double-signal one problem as another.
+
+**Durable fix (in-repo, this change).** The metric + policy + email channel are now codified in
+`infra/terraform/monitoring.tf` with the identity-agnostic, config-id-keyed filter (the `config_id`
+is derived from the `freshness_check` resource, so Terraform re-points it automatically on any
+recreate). `scheduled_queries.tf` + `var.scheduled_query_service_account` codify the live state that
+all four scheduled queries run under the dedicated SA. Adopt via **import-then-apply**
+(`infra/terraform/README.md`) — the metric-filter `plan` diff on import *is* this bug; let Terraform
+overwrite the stale filter.
+
+**Lesson.** This is the §1/§12/§15 anti-pattern (control-plane config living only in a Console,
+un-reviewable, pinned to one identity) biting the monitoring layer specifically. Any future
+"absent/heartbeat" alert on a scheduled job must key on the **job/config identity-agnostically**, never
+on the run principal — otherwise the next identity rotation re-creates this false alarm.

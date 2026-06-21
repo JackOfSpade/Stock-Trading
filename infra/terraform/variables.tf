@@ -76,6 +76,27 @@ variable "scheduled_query_location" {
   default     = "US"
 }
 
+variable "scheduled_query_service_account" {
+  description = <<-EOT
+    Email (WITHOUT the "serviceAccount:" prefix) of the dedicated service account
+    the MONITOR scheduled queries (freshness, embed, cadence) run as. Leave "" to
+    run them under the config creator's own OAuth credentials.
+
+    WHY THIS EXISTS (ops/RUNBOOK.md §15 + §19): the dead-man's switches must NOT
+    depend on the interactive agent's OAuth identity — if that grant lapses, the
+    monitor would die silently *with* the thing it is supposed to watch. Running
+    them as an autonomous SA (e.g. "bq-scheduler@stock-trading-498512.iam.gserviceaccount.com")
+    keeps the alarm able to fire when the agent identity is the failure.
+
+    NOTE: the backup export has its OWN identity var (var.backup_transfer_service_account)
+    because it also needs roles/storage.objectAdmin on the bucket (iam.tf). To put
+    ALL four scheduled queries on the same SA — the live 2026-06-19 state — set both
+    this and backup_transfer_service_account to the same SA email.
+  EOT
+  type        = string
+  default     = ""
+}
+
 # --- Scheduled-query schedules ------------------------------------------------
 # BigQuery scheduled-query schedules run in UTC (the Console's local-time label is
 # misleading). See bigquery/scheduled_queries/README.md for the UTC-timing

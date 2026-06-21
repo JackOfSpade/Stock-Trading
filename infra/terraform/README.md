@@ -21,9 +21,10 @@ rationale, reproduced below).
 | `variables.tf` | All inputs (project, region, schedules, budget, emails) | Defaults encode the known project facts. |
 | `datasets.tf` | `events`, `state`, `perf`, `analytics`, `ops` BigQuery datasets | **Already exist — import.** `prevent_destroy`. |
 | `connection.tf` | `us.vertex` CLOUD_RESOURCE connection | **Already exists — import.** Outputs its SA. |
-| `scheduled_queries.tf` | 4 scheduled queries (freshness, embed, backup, **new** cadence) | SQL bodies single-sourced via `file()`. |
+| `scheduled_queries.tf` | 4 scheduled queries (freshness, embed, backup, **new** cadence) | SQL bodies single-sourced via `file()`. Run under `var.scheduled_query_service_account` (RUNBOOK §15). |
 | `storage.tf` | `gs://stock-trading-backups` bucket (400-day lifecycle) | **Already exists — import.** `prevent_destroy`. |
 | `budget.tf` | Billing budget + email channels | **Optional** (guarded on `billing_account`). |
+| `monitoring.tf` | `freshness_scheduled_run` log metric + "scheduler absent >25h" alert | **Already exists in Console — import.** Identity-agnostic filter (RUNBOOK §19). |
 | `iam.tf` | `storage.objectAdmin` on the bucket for the backup SA | Only for the dedicated-SA backup path. |
 | `terraform.tfvars.example` | Example values | Copy to `terraform.tfvars`. |
 
@@ -75,6 +76,24 @@ terraform import google_bigquery_data_transfer_config.freshness_check \
   projects/<PROJECT_NUMBER>/locations/us/transferConfigs/<config-id>
 # ...repeat for embed_pending / backup_export / cadence_check
 ```
+
+The Console-built **heartbeat monitor** (`monitoring.tf`) is also pre-existing —
+import it so Terraform owns the fix for the 2026-06-20 false alarm (RUNBOOK §19):
+
+```bash
+terraform import google_logging_metric.freshness_scheduled_run freshness_scheduled_run
+# find the policy id: gcloud alpha monitoring policies list --format='value(name)'
+terraform import google_monitoring_alert_policy.freshness_scheduler_absent \
+  projects/<PROJECT_NUMBER>/alertPolicies/<policy-id>
+# any pre-existing email channel: gcloud alpha monitoring channels list
+terraform import 'google_monitoring_notification_channel.scheduler_alert_email["jacksterwu@gmail.com"]' \
+  projects/<PROJECT_NUMBER>/notificationChannels/<channel-id>
+```
+
+> **Expect a `plan` diff on the metric filter — that diff *is* the bug.** The live
+> metric pins the old run identity (`principalEmail`); applying `monitoring.tf`
+> replaces it with the identity-agnostic, config-id-keyed filter. Reconcile
+> `resource.type`/message wording against a live Logs Explorer entry first.
 
 After importing, a clean run shows **~no changes**:
 
