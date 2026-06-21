@@ -1,0 +1,101 @@
+name: Stranded-branch check
+
+# Closes the monitoring gap behind the 2026-06-14 W5/W2 data loss (ops/RUNBOOK.md §20):
+# a routine can log "completed" in ops.run_log (BigQuery) while its committed .md output
+# NEVER reaches main — a branch whose CI stays red (auto-merge skips it) or an unresolved
+# "Auto-merge conflict:" PR. Every existing monitor (freshness / cadence) watches BigQuery,
+# so it is blind to this git↔BigQuery divergence. This sweep flags it within hours and opens
+# a GitHub issue (which notifies the repo owner) instead of it sitting unnoticed for weeks.
+#
+# Delivery is a GitHub issue, NOT ops.alerts, on purpose: writing ops.alerts from CI would
+# require granting the (deliberately read-only, RUNBOOK §6) CI identity BigQuery write. See
+# §20 for the optional ops.alerts upgrade.
+
+on:
+  schedule:
+    - cron: '23 */6 * * *'   # every 6h (UTC)
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+
+concurrency:
+  group: stranded-branch-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Detect stranded claude/* branches + open conflict PRs
+        id: detect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MAX_AGE_HOURS: '6'   # a healthy branch auto-merges within minutes of green CI; >6h unmerged = stuck
+        run: |
+          set -uo pipefail
+          # Fetch ALL remote branches (checkout only brought main).
+          git fetch origin '+refs/heads/*:refs/remotes/origin/*' --prune --quiet
+          now=$(date -u +%s)
+
+          : > /tmp/stranded.txt
+          for ref in $(git for-each-ref --format='%(refname)' refs/remotes/origin/ \
+                        | grep '^refs/remotes/origin/claude/' || true); do
+            br=${ref#refs/remotes/}
+            # Skip anything already contained in main.
+            if git merge-base --is-ancestor "$ref" origin/main; then continue; fi
+            ct=$(git log -1 --format='%ct' "$ref")
+            age=$(( (now - ct) / 3600 ))
+            if [ "$age" -ge "$MAX_AGE_HOURS" ]; then
+              echo "- \`$br\` — unmerged, ${age}h old (tip $(git rev-parse --short "$ref"))" >> /tmp/stranded.txt
+            fi
+          done
+
+          gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,title,url \
+            --jq '.[] | select(.title|startswith("Auto-merge conflict:")) | "- #\(.number) \(.title) (\(.url))"' \
+            > /tmp/conflicts.txt || true
+
+          if [ -s /tmp/stranded.txt ] || [ -s /tmp/conflicts.txt ]; then
+            echo "problem=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::Stranded routine output detected — see the Alert step / opened issue."
+          else
+            echo "problem=false" >> "$GITHUB_OUTPUT"
+            echo "OK: no stranded claude/* branches (> ${MAX_AGE_HOURS}h), no open conflict PRs."
+          fi
+
+      - name: Open alert issue (dedup) and fail the run
+        if: steps.detect.outputs.problem == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          {
+            echo "A routine may have **completed** (logged to \`ops.run_log\`) while its committed \`.md\` output never reached \`main\`. Every BigQuery monitor (freshness / cadence) is blind to this git↔BigQuery divergence — see \`ops/RUNBOOK.md\` §20."
+            echo
+            if [ -s /tmp/stranded.txt ]; then
+              echo "**Stranded \`claude/*\` branches (unmerged > 6h):**"; echo; cat /tmp/stranded.txt; echo
+            fi
+            if [ -s /tmp/conflicts.txt ]; then
+              echo "**Open auto-merge conflict PRs:**"; echo; cat /tmp/conflicts.txt; echo
+            fi
+            echo "**Resolve:** get the branch's CI green (the auto-merge then drains it), or merge/close the conflict PR. If the branch is obsolete, confirm its outputs are superseded (or back-fill cumulative files like \`B_Sub_Pattern_Taxonomy.md\`) before deleting."
+          } > /tmp/body.md
+
+          # Dedup by title prefix (avoids a new issue every 6h while one incident is open).
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
+            --jq '[.[] | select(.title|startswith("⚠️ Stranded routine branch"))][0].number // empty')
+          if [ -n "$existing" ]; then
+            echo "Alert issue #$existing already open; not duplicating."
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "⚠️ Stranded routine branch / unmerged output detected" \
+              --body-file /tmp/body.md
+          fi
+          exit 1   # surface red in the Actions tab too

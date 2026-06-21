@@ -444,3 +444,40 @@ scheduled queries run under the dedicated SA. Adopt via **import-then-apply** (`
 un-reviewable) biting the monitoring layer. A heartbeat/absence alert on a scheduled job must (a) key on
 the **job/config identity-agnostically** (never the run principal), and (b) count run **completion**, not
 success — otherwise an identity rotation OR a red run re-creates this false alarm.
+
+## 20. Silent loss of a routine's git output — the 2026-06-14 W5/W2 data loss *(durability)*
+**Discovered 2026-06-21** by the W5 routine: the **2026-06-14** W5 cycle's `.md` edits
+(`B_Sub_Pattern_Taxonomy.md`) never reached `main`, even though its `events.decision_log` outcome
+(BigQuery) did. Same for that Sunday's **W2** (`Weekly_Post_Event_Screen.md`). W1 and W3 from the same
+day merged fine.
+
+**Root cause — a fixed concurrency race in the OLD auto-merge.** Before the **2026-06-19** rewrite
+(commit `edcbc22`), `auto-merge-claude.yml` triggered per-push and merged **one branch per run** under
+`concurrency: group=auto-merge-main, cancel-in-progress=false` — which keeps only ONE pending run and
+**drops** the rest. On Sunday 6/14 five weekly sessions (W1–W5) pushed within minutes; the surplus
+auto-merge runs were dropped, stranding W2 and W5, whose branches were later cleaned up. BigQuery writes
+survived because they never go through git. The 6/19 rewrite (drain **all** un-merged `claude/*` branches
+each run, + green-CI gate, + conflict→PR fallback) fixed exactly this; the 6/21 cycle merged W1/W2/W3/W5
+cleanly, confirming it.
+
+**Blast radius.** Only **cumulative** files lose data lastingly: `B_Sub_Pattern_Taxonomy.md` (W5) appends
+instances, so 6/14's were truly missing → **back-filled by the 2026-06-21 W5 run** (recovered via the
+decision_log backstop). Overwritten-each-run files (`Weekly_*`, `Daily.md`) are moot (the current version
+is fresh). BigQuery outputs were never at risk. Earlier cycles (≤ 6/7) may still have un-merged taxonomy
+additions — clear with a one-time **full-history W5 taxonomy reconcile** (walk all `decision_log`
+B-strategy entries vs the taxonomy tables; back-fill misses; dedupe).
+
+**The monitoring gap (now closed).** A routine logs `completed` in `ops.run_log` (BigQuery) the moment it
+finishes, but its committed `.md` output only persists if its branch **merges to main**. A branch whose CI
+stays red (auto-merge skips it) or an unresolved `Auto-merge conflict:` PR strands the output silently —
+and every monitor (freshness/cadence) watches BigQuery, so none see the git↔BigQuery divergence. That is
+why this sat undetected until W5 happened to notice.
+
+**Fix: `.github/workflows/stranded-branch-check.yml`** — a scheduled sweep (every 6h) that flags any
+`claude/*` branch unmerged > 6h, or any open `Auto-merge conflict:` PR, and opens a deduped GitHub issue
+(notifies the owner) + fails the run. Delivery is a GitHub issue, **not `ops.alerts`**, because writing
+`ops.alerts` from CI would require granting the deliberately read-only CI identity (RUNBOOK §6) BigQuery
+write. **Optional `ops.alerts` upgrade:** grant the WIF SA `roles/bigquery.dataEditor` on the `ops`
+dataset (or a custom role with only `bigquery.tables.updateData` on `ops.alerts`) and have the workflow
+`bq query` an `INSERT` via the existing WIF auth — then it flows through the alert-emailer + weekly report
++ `state.system_health` like every other alert. Left off by default to keep CI read-only.
