@@ -49,8 +49,9 @@ for t in "${TABLES[@]}"; do
   restored="$(bqq "SELECT COUNT(*) FROM \`$PROJECT.$SCRATCH.$t\`")"
   live="$(bqq "SELECT COUNT(*) FROM \`$PROJECT.events.$t\`")"
   status="ok"
-  # append-only tables grow, so restored (a past snapshot) must be >0 and never EXCEED live.
-  if [ "${restored:-0}" -eq 0 ]; then status="EMPTY (suspicious)"; rc=1
+  # append-only tables grow, so restored (a past snapshot) must never EXCEED live; and must be non-empty
+  # UNLESS the live table is itself empty (a genuinely-empty table restoring to 0 is fine).
+  if [ "${restored:-0}" -eq 0 ] && [ "${live:-0}" -gt 0 ]; then status="EMPTY (suspicious)"; rc=1
   elif [ "${restored:-0}" -gt "${live:-0}" ]; then status="RESTORED>LIVE (corruption?)"; rc=1; fi
   printf '%-26s %12s %12s   %s\n' "$t" "$restored" "$live" "$status"
 done

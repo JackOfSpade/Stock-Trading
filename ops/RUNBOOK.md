@@ -44,10 +44,12 @@ click) plus the staged adoptions. Each item says what it solves (P0–P3 from th
   `SELECT * FROM state.cadence_watch WHERE needs_attention;` (want zero rows);
   `SELECT * FROM state.sgov_reconciliation;` (events-side SGOV shares to compare to the connector).
 
-To re-apply or move to a fresh project, run `bigquery/01..16_*.sql` in order via the BigQuery MCP
-`execute_sql` (same pattern the existing files use). (`16_automation_health.sql` — backup-freshness +
-Apps Script heartbeat monitors — was added 2026-06-22; apply it before re-pasting `cadence_check.sql`,
-which now references its views. See §3, §7, §24.)
+To re-apply or move to a fresh project, run `bigquery/01..17_*.sql` in order via the BigQuery MCP
+`execute_sql` (same pattern the existing files use). (Added 2026-06-22: `16_automation_health.sql` —
+backup-freshness + Apps Script heartbeat monitors, apply before re-pasting `cadence_check.sql`;
+`17_restore_drill.sql` — the `ops.sp_restore_drill()` DR-verification procedure, apply after 16. **16 +
+17 + the embedding re-build are already applied live** (the agent ran them via the MCP 2026-06-22 and
+verified); they are in the apply list for fresh-project reproducibility. See §3, §7, §23, §24.)
 
 ---
 
@@ -115,12 +117,21 @@ on it (so the DTS failure-email — identity-independent — delivers the alarm)
 `bigquery/16_automation_health.sql` (creates `ops.backup_log` + `state.backup_health`) before re-pasting
 `cadence_check.sql`.
 
-**Backup *restore* drill — ADDED 2026-06-22.** A backup you have never restored is a hope, not a backup.
-`scripts/restore_drill.sh` loads a dated snapshot of every `events.*` table into a throwaway scratch
-dataset and sanity-checks restored row counts against live (each table must load, be non-empty, and not
-exceed live). Run it periodically (e.g. quarterly) from Cloud Shell: `scripts/restore_drill.sh` (latest
-snapshot) or `DATE=YYYY-MM-DD scripts/restore_drill.sh`. This converts "we export Parquet" into "we have
-verified we can recover."
+**Backup *restore* drill — ADDED + VALIDATED + AUTOMATED 2026-06-22.** A backup you have never restored is
+a hope, not a backup. Two equivalent drills exist:
+- **In-warehouse (automated):** `ops.sp_restore_drill()` (`bigquery/17_restore_drill.sql`) loads the latest
+  logged snapshot (`ops.backup_log.run_date`) of every `events.*` table into a throwaway scratch dataset,
+  checks restored row counts vs live (each must load, be non-empty unless live is empty, and not exceed
+  live), drops the scratch, and RAISEs + alerts on failure. Schedule it monthly via
+  `bigquery/scheduled_queries/restore_drill.sql` (a one-time owner/Chrome console action like the other
+  scheduled queries; IAM note in that file + §15). Self-bootstrapping (no-op until the backup logs a marker).
+- **Ad-hoc (shell):** `scripts/restore_drill.sh` (latest snapshot) or `DATE=YYYY-MM-DD scripts/restore_drill.sh`
+  from Cloud Shell — same checks via `bq`/`gsutil`.
+
+**Validated end-to-end 2026-06-22:** ran the drill across all 12 `events.*` tables from the dt=2026-06-21
+snapshot — every table restored at **exact row-count parity to live** (e.g. decision_log 262/262,
+daily_marks 444/444, macro_fred 777/777; `hf_capability_captures` 0/0 = legitimately empty). So the
+backup→restore path is proven, not assumed.
 
 ---
 

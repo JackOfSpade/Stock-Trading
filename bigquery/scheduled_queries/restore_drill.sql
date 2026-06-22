@@ -1,0 +1,20 @@
+-- SCHEDULED QUERY: monthly backup RESTORE drill (DR verification). CALLs ops.sp_restore_drill()
+-- (bigquery/17_restore_drill.sql), which loads the latest logged backup snapshot (ops.backup_log.run_date)
+-- of every events.* table into a throwaway scratch dataset, sanity-checks restored row counts vs live,
+-- drops the scratch, and RAISEs on any table that fails to restore / restores empty (when live is
+-- non-empty) / restores more rows than live. A backup you have never restored is a hope, not a backup;
+-- this turns "we export Parquet" into "we have verified we can recover."
+--
+-- NOTIFICATION: RAISEs on failure so BigQuery's built-in "Send email notifications on failure" emails
+-- the owner, AND writes a durable idempotent ops.alerts row (category 'restore_drill').
+--
+-- SELF-BOOTSTRAPPING: a no-op until the backup has logged its first ops.backup_log success marker.
+--
+-- SCHEDULE: monthly is plenty (e.g. 06:00 UTC on the 1st), Location US, no destination. APPLY ORDER:
+-- bigquery/17_restore_drill.sql (the procedure) must be applied first.
+--
+-- IDENTITY / IAM: runs under the same identity as backup_events_export.sql. If that is the dedicated SA
+-- (not the owner), grant it roles/storage.objectViewer on gs://stock-trading-backups + the ability to
+-- create/load/drop the events_restore_drill scratch dataset (roles/bigquery.dataEditor at project level,
+-- or scoped to that dataset). See ops/RUNBOOK.md §3.
+CALL `stock-trading-498512.ops.sp_restore_drill`();
