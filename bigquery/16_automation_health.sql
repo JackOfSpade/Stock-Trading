@@ -67,7 +67,7 @@ FROM b, td;
 CREATE OR REPLACE VIEW `stock-trading-498512.state.automation_heartbeat` AS
 WITH expected AS (
   SELECT * FROM UNNEST([
-    STRUCT('alert_emailer' AS source, 6   AS max_age_hours),   -- polls every ~2h; stale after ~3 misses
+    STRUCT('alert_emailer' AS source, 8   AS max_age_hours),   -- polls every ~2h; stale after ~4 misses (jitter-tolerant)
     STRUCT('weekly_report' AS source, 216 AS max_age_hours)    -- weekly; stale after ~9 days (1 missed week + slack)
   ])
 ),
