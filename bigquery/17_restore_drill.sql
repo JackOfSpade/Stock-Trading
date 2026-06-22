@@ -2,24 +2,33 @@
 -- A backup you have never restored is a hope, not a backup. scheduled_queries/backup_events_export.sql
 -- writes daily Parquet to gs://stock-trading-backups and logs an ops.backup_log marker (16); this
 -- procedure proves those snapshots actually LOAD BACK: it loads the latest logged snapshot of every
--- events.* base table into a throwaway scratch dataset, sanity-checks restored row counts against live,
--- drops the scratch, and RAISEs (+ alert) on any table that fails to restore / restores empty (when live
--- is non-empty) / restores MORE rows than live (append-only only grows -> corruption signal).
+-- events.* base table into the events_restore_drill scratch dataset, sanity-checks restored row counts
+-- against live, and RAISEs (+ alert) on any table that fails to restore / restores empty (when live is
+-- non-empty) / restores MORE rows than live (append-only only grows -> corruption signal).
 --
--- Depends on 10_observability.sql (ops.sp_raise_alert_once) + 16_automation_health.sql (ops.backup_log).
--- Idempotent (OR REPLACE). Apply after 16 via the BigQuery MCP execute_sql. Validated end-to-end
--- 2026-06-22: all 12 events.* tables restored from the dt=2026-06-21 snapshot at exact row-count parity.
+-- LEAST PRIVILEGE (2026-06-22): the drill loads into a PRE-CREATED scratch dataset and does NOT
+-- create/drop it, so the scheduled-query identity (bq-scheduler@) needs only:
+--   * roles/storage.objectViewer on gs://stock-trading-backups (read the backups), and
+--   * roles/bigquery.dataEditor on the events_restore_drill dataset ONLY (load the scratch tables).
+-- It deliberately does NOT need project-level dataEditor — bq-scheduler@ must never get write on the
+-- append-only events.* source of truth. One-time setup (idempotent; already applied 2026-06-22):
+--   CREATE SCHEMA IF NOT EXISTS `stock-trading-498512.events_restore_drill` OPTIONS(location='US');
+--   GRANT `roles/bigquery.dataEditor` ON SCHEMA `stock-trading-498512.events_restore_drill`
+--     TO "serviceAccount:bq-scheduler@stock-trading-498512.iam.gserviceaccount.com";
+-- The bucket grant is GCS IAM (not SQL) — granted in the console (ops/RUNBOOK.md §3). Scratch tables
+-- persist between runs (overwritten each run) by design, so no dataset-delete permission is needed.
+--
+-- Depends on 10_observability.sql (ops.sp_raise_alert_once) + 16_automation_health.sql (ops.backup_log)
+-- + the pre-created events_restore_drill dataset. Idempotent (OR REPLACE). Apply after 16 via the
+-- BigQuery MCP execute_sql. Validated end-to-end 2026-06-22: all 12 events.* tables restored from the
+-- dt=2026-06-21 snapshot at exact row-count parity.
 --
 -- SELF-BOOTSTRAPPING: the drill date is read from ops.backup_log (the success marker), so before the
 -- updated backup query has logged a marker the procedure RETURNs immediately (a no-op) — it never
--- false-fails on a missing snapshot. Once a marker exists, drill_date is a date whose Parquet is known
--- to have been written.
+-- false-fails on a missing snapshot.
 --
--- SCHEDULE IT: scheduled_queries/restore_drill.sql CALLs this, monthly. It runs under the same identity
--- as backup_events_export.sql; if that is the dedicated SA (not the owner), grant it
--- roles/storage.objectViewer on gs://stock-trading-backups + the ability to create/load/drop the
--- events_restore_drill scratch dataset (roles/bigquery.dataEditor at project level, or on that dataset).
--- See ops/RUNBOOK.md §3. For an ad-hoc run from a shell, scripts/restore_drill.sh is the equivalent.
+-- SCHEDULE IT: scheduled_queries/restore_drill.sql CALLs this, monthly. Ad-hoc shell equivalent:
+-- scripts/restore_drill.sh.
 
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_restore_drill`()
 BEGIN
@@ -34,13 +43,12 @@ BEGIN
     RETURN;  -- self-bootstrapping: no backup marker yet, nothing to verify
   END IF;
 
-  EXECUTE IMMEDIATE "CREATE SCHEMA IF NOT EXISTS `stock-trading-498512.events_restore_drill` OPTIONS(location='US')";
-
   FOR rec IN (
     SELECT table_name FROM `stock-trading-498512.events.INFORMATION_SCHEMA.TABLES`
     WHERE table_type = 'BASE TABLE' ORDER BY table_name
   ) DO
     BEGIN
+      -- LOAD DATA OVERWRITE creates/replaces the scratch table; needs only dataEditor on the scratch dataset.
       EXECUTE IMMEDIATE FORMAT(
         "LOAD DATA OVERWRITE `stock-trading-498512.events_restore_drill.%s` FROM FILES (format='PARQUET', uris=['gs://stock-trading-backups/events/%s/dt=%s/*.parquet'])",
         rec.table_name, rec.table_name, CAST(drill_date AS STRING));
@@ -56,8 +64,6 @@ BEGIN
       SET failed = failed || FORMAT('%s(%s); ', rec.table_name, @@error.message);
     END;
   END FOR;
-
-  EXECUTE IMMEDIATE "DROP SCHEMA IF EXISTS `stock-trading-498512.events_restore_drill` CASCADE";
 
   IF failed != '' THEN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(

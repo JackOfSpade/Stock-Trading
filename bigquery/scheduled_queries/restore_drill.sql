@@ -13,8 +13,10 @@
 -- SCHEDULE: monthly is plenty (e.g. 06:00 UTC on the 1st), Location US, no destination. APPLY ORDER:
 -- bigquery/17_restore_drill.sql (the procedure) must be applied first.
 --
--- IDENTITY / IAM: runs under the same identity as backup_events_export.sql. If that is the dedicated SA
--- (not the owner), grant it roles/storage.objectViewer on gs://stock-trading-backups + the ability to
--- create/load/drop the events_restore_drill scratch dataset (roles/bigquery.dataEditor at project level,
--- or scoped to that dataset). See ops/RUNBOOK.md §3.
+-- IDENTITY / IAM (least privilege): runs as bq-scheduler@. It needs (a) roles/storage.objectViewer on
+-- gs://stock-trading-backups (read the backups) and (b) roles/bigquery.dataEditor on the
+-- events_restore_drill dataset ONLY (load the scratch tables). (b) + the pre-created scratch dataset are
+-- already applied via SQL (see 17_restore_drill.sql one-time setup); (a) is GCS IAM (not SQL) and is the
+-- ONE console grant still required — ops/RUNBOOK.md §3. Deliberately NOT project-level dataEditor:
+-- bq-scheduler@ must never get write on the append-only events.* source of truth.
 CALL `stock-trading-498512.ops.sp_restore_drill`();

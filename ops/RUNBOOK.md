@@ -119,12 +119,17 @@ on it (so the DTS failure-email — identity-independent — delivers the alarm)
 
 **Backup *restore* drill — ADDED + VALIDATED + AUTOMATED 2026-06-22.** A backup you have never restored is
 a hope, not a backup. Two equivalent drills exist:
-- **In-warehouse (automated):** `ops.sp_restore_drill()` (`bigquery/17_restore_drill.sql`) loads the latest
-  logged snapshot (`ops.backup_log.run_date`) of every `events.*` table into a throwaway scratch dataset,
-  checks restored row counts vs live (each must load, be non-empty unless live is empty, and not exceed
-  live), drops the scratch, and RAISEs + alerts on failure. Schedule it monthly via
-  `bigquery/scheduled_queries/restore_drill.sql` (a one-time owner/Chrome console action like the other
-  scheduled queries; IAM note in that file + §15). Self-bootstrapping (no-op until the backup logs a marker).
+- **In-warehouse (automated, least-privilege):** `ops.sp_restore_drill()` (`bigquery/17_restore_drill.sql`)
+  loads the latest logged snapshot (`ops.backup_log.run_date`) of every `events.*` table into the
+  pre-created `events_restore_drill` scratch dataset (overwritten each run), checks restored row counts vs
+  live (each must load, be non-empty unless live is empty, and not exceed live), and RAISEs + alerts on
+  failure. Self-bootstrapping (no-op until the backup logs a marker). **Already applied 2026-06-22 (via the
+  MCP):** the procedure, the pre-created scratch dataset, and a **scoped** `roles/bigquery.dataEditor`
+  grant on *that dataset only* to `bq-scheduler@` (SQL DCL — deliberately NOT project-level, so the
+  scheduler never gets write on the append-only `events.*` truth). **Two console steps remain (owner/Chrome):**
+  (1) grant `bq-scheduler@` `roles/storage.objectViewer` on `gs://stock-trading-backups` (GCS IAM — the
+  drill must READ the backups; the daily backup already has write, so this read grant is drill-only), and
+  (2) create the monthly scheduled query from `bigquery/scheduled_queries/restore_drill.sql`.
 - **Ad-hoc (shell):** `scripts/restore_drill.sh` (latest snapshot) or `DATE=YYYY-MM-DD scripts/restore_drill.sh`
   from Cloud Shell — same checks via `bq`/`gsutil`.
 
