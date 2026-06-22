@@ -17,14 +17,7 @@ One shared monthly template produces per-strategy activation calls. The template
 
 Residual limitation under the routine architecture: a routine has full repo read access by default, and structural prevention of cross-file reads (the property incognito sessions provided) is replaced by prompt-discipline ("M1b reads ONLY the regime-scoring file; do not read macro inputs from any source"). Documented as accepted-risk in the migration entry. The persistence-discipline part is structural — the macro inputs are nowhere in the repo by the time M1b runs — so the residual concern is narrower than full discipline-only blinding.
 
-*M1a routine (strategy-blind regime scoring).* Fresh routine context. Given the 6 input categories below, produces a scored assessment across five regime condition axes without any reference to strategies A–E, their activation rules, or their mechanisms. No mention of the word "strategy" or any of the five strategy letters in this routine's prompt or input material:
-- Growth momentum (accelerating / stable / decelerating)
-- Inflation trend (disinflationary / stable / reaccelerating)
-- Policy stance (dovish / neutral / hawkish)
-- Risk sentiment (complacent / normal / stressed)
-- Shock / overlay (none / contained / acute)
-
-M1a's output is the structured regime scoring — the 5 axis assignments with brief rationale for each, citing the inputs that drove the call. M1a writes ONLY this output to the regime-scoring file (`Monthly_Fundamental_RegimeScore.md` per `Claude_Task_Plan.md`). Underlying inputs and M1a's full reasoning chain are not persisted.
+*M1a routine (strategy-blind regime scoring).* M1a's inputs, the five regime-condition axes, and the unavailable-input fallback are specified in their own strategy-blind top-level section, **`## Regime scoring (strategy-blind, monthly)`** — kept separate so M1a's generated slice carries the scoring WITHOUT this strategy-naming mapping (`Claude_Task_Plan.md` "Strategy reading" + `ops/RUNBOOK.md` §9). M1a writes ONLY the 5-axis scoring to the regime-scoring file; its underlying inputs and full reasoning chain are not persisted.
 
 *M1b routine (strategy-mapping).* Separate routine with fresh context, architecturally blinded from M1a. Given ONLY the regime-scoring file (the 5 axis assignments with rationale) and each strategy's fundamental question, produces per-strategy ACTIVATE / DO-NOT-ACTIVATE calls. M1b does not see the underlying macro/policy/earnings/geopolitical inputs (these were not persisted by M1a) — only the regime scoring. This prevents M1b from re-anchoring on the input data and also prevents the strategy-specific questions from contaminating the regime assessment (strategy-identity leakage per 2.4).
 
@@ -37,42 +30,7 @@ M1a's output is the structured regime scoring — the 5 axis assignments with br
 
 If no reconciliation rule triggers for a strategy, M1b's call stands.
 
-**Inputs to M1a (all must be gathered each month, in this order):**
-
-1. **Macro data releases from the prior month:**
-   - CPI headline and core (BLS, initial prints — not revisions): latest, 3-month trend, 12-month trend, prior-cycle analogue for current level if one exists
-   - PPI headline (BLS, initial): latest, 3-month, 12-month
-   - Non-farm payrolls (BLS establishment survey, initial): latest, 3-month, 12-month
-   - Unemployment rate (BLS household survey): latest, 3-month, 12-month, prior-cycle trough-to-peak
-   - Retail sales (Census Bureau advance): latest, 3-month, 12-month
-   - GDP growth rate (BEA — specify which estimate: advance, second, or third): most recent quarterly print if released during the prior month, 4-quarter trend
-
-2. **Fed/FOMC developments:**
-   - Any FOMC meeting in prior month: decision, statement changes, dot-plot updates
-   - Fed speeches with market-moving content (cited by reference to originating Fed publication or transcript, not news-media summary)
-   - Current fed funds futures implied path (CME FedWatch) vs latest dot plot
-   - Dot-plot drift vs realized path over past 12 months
-
-3. **Earnings aggregate status:**
-   - If in earnings season: percentage of S&P 500 reported, aggregate EPS beat rate, aggregate sales beat rate, aggregate EPS surprise magnitude (source: FactSet Earnings Insight or equivalent named source)
-   - Forward S&P 500 EPS consensus: change over prior month and over prior 12 months
-
-4. **Geopolitical events (structured inclusion criteria):**
-   - Include only events affecting ≥1 of: global trade flows; oil price move > $5/bbl; sovereign credit spreads; major currency > 2% move against USD.
-   - Other events are excluded regardless of narrative salience (per 2.4).
-
-5. **Policy environment:**
-   - Regulatory changes affecting broad sectors (with citation to primary-source regulatory release)
-   - Tariff and trade developments (with citation)
-   - Major legislation passed or imminent (with citation)
-
-6. **Cross-cycle comparison input:**
-   - For current values of unemployment, inflation, fed funds, yield curve, breadth, VIX: identify the closest prior-cycle historical analogue (if any) and summarize what happened in the subsequent 6–18 months in that analogue. If no close analogue exists, state so.
-   - Honest scope note: this input is contextual information only. It is produced by the same model it is meant to partially de-bias and therefore does NOT constitute a mitigation against 2.14 (recency bias). Treated as a contextual prompt to surface comparison data, not as a de-biasing mechanism.
-
-Each input is gathered through explicit tool calls (web search, data fetch) to the specific named public sources above. No input is recalled from memory — per 2.3 (hallucination) and 2.5 (training cutoff), every input is verified by live retrieval.
-
-**Fallback protocol for unavailable inputs.** If a primary data source is unavailable at routine run time, M1a documents the specific miss in its output and does NOT substitute a secondary source silently. The regime assessment proceeds with the remaining inputs and explicitly flags which inputs were absent. If ≥2 of the 5 primary input categories (macro / Fed / earnings / geopolitical / policy) are absent — input 6 is compensatory and does not count toward this threshold — the fundamental call for the affected month is DO-NOT-ACTIVATE across all strategies regardless of the partial assessment, and M1b is not run that month (M1a writes a fallback-suppression flag to the regime-scoring file; M1b reads that flag and exits without producing strategy mappings).
+**Inputs to M1a + fallback protocol for unavailable inputs.** Specified in the strategy-blind top-level section `## Regime scoring (strategy-blind, monthly)` (so they reach M1a's slice without the mapping above).
 
 **Fallback interaction with divergence review (rev 4).** When the fallback protocol fires, M1b is not run, no M1b output exists, and the "Router divergence review" procedure below is suppressed for that month for all strategies. Per-strategy activation states resolve as follows during a fallback month: fundamental call = DO-NOT-ACTIVATE for all strategies (per fallback rule above); therefore if a strategy's technical call is DO-NOT-ACTIVATE, its activation state is DO-NOT-ACTIVATE (agreement); if a strategy's technical call is ACTIVATE, its activation state is DO-NOT-ACTIVATE (fundamental fallback binds without divergence review). This resolution is logged in the monthly fundamental output with explicit flag `fallback_suppression = true` and is tracked separately from orchestrator-ambiguity defaults in indicator 9.4.
 

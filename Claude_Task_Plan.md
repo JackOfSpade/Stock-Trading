@@ -62,7 +62,7 @@ Each routine run is a fresh session — there is no cross-run chat memory. State
 
 | Routine(s) | Load | Must NOT load |
 |---|---|---|
-| **M1a** (strategy-blind regime scoring) | `01_shared_regime_vocabulary.md` + the **`### Fundamental analysis template (monthly)` sub-section of `Strategy.md`** (M1a's inputs + 5 axes) — read that named sub-section ONLY (see exception note) | `00_preamble`, the rest of `02_regime_router` (it holds the M1b mapping + reconciliation rules naming A/D), any `03–07` |
+| **M1a** (strategy-blind regime scoring) | `01_shared_regime_vocabulary.md` + `09_regime_scoring_strategy_blind_monthly.md` (M1a's inputs + 5 axes — its own strategy-blind slice as of the 2026-06-22 restructure; load these two ONLY) | `00_preamble`, `02_regime_router` (the M1b mapping + reconciliation rules naming A/D), any `03–08` |
 | **AR·attacker** | the artifact under review only | any strategy slice / Decision_Log / prior reviews (strict blinding) |
 | **W2** (B) | `04_strategy_b.md` + `01` | other strategy slices |
 | **M2** (E) | `07_strategy_e.md` + `01` | other strategy slices |
@@ -74,7 +74,7 @@ Each routine run is a fresh session — there is no cross-run chat memory. State
 
 When a slice is insufficient (need cross-strategy context the slices don't carry), fall back to `Strategy.md` — but prefer the slice. If `strategy/` is stale vs `Strategy.md` (CI check `scripts/split_strategy.py --check` fails), regenerate before relying on it.
 
-**M1a exception (why it still reads `Strategy.md` directly).** The slices split on top-level `##`, and the "Regime router" slice (`02`) bundles M1a's regime-scoring template WITH the M1b strategy-mapping routine and the reconciliation rules that name strategies A and D — so no current slice gives M1a a blinding-clean file. M1a therefore reads `01` + the named `### Fundamental analysis template (monthly)` sub-section of `Strategy.md` and nothing else; its blinding stays discipline-based (as it always was). A future restructure of `Strategy.md` that separates the M1a inputs from the M1b mapping into distinct top-level sections would let the splitter emit an M1a-clean slice; until then, do not point M1a at the whole `02` slice.
+**M1a blinding is now a hard file boundary (restructured 2026-06-22).** Previously the slicer split only on top-level `##` and the `02_regime_router` slice bundled M1a's regime-scoring template WITH the M1b strategy-mapping + reconciliation rules that name strategies A/D — so M1a had no blinding-clean slice and read a named sub-section of `Strategy.md` under discipline-only blinding. `Strategy.md` was restructured to split that into two top-level sections: `## Regime scoring (strategy-blind, monthly)` (M1a's inputs + 5 axes, no strategy names) and `## Regime router` (the M1b mapping / reconciliation / divergence). The splitter now emits a clean M1a slice, `09_regime_scoring_strategy_blind_monthly.md`. **M1a loads `01` + `09` and nothing else** — its blinding is a file boundary, not a remember-to rule. (See `ops/RUNBOOK.md` §9.)
 
 ## Branch and state propagation
 
@@ -788,7 +788,7 @@ M1a, M1b, M2, M3 are deep-research routines; M4 (action conversion) runs after a
 Schedule: Monthly, before M1b.
 
 ```
-Read access scope: Monthly cadence. May query `events.regime_events` (scope `FUNDAMENTAL_AXIS`, prior months) for prior months' regime scores only (cross-month regime-trend cross-references) — `events.decision_log` holds all decision history, queryable, no live/archive split (§15). Read Strategy.md "Fundamental analysis template (monthly)" section for the M1a template specification, Experiment_Parameters.md, AI_Trading_Foundation.md.
+Read access scope: Monthly cadence. May query `events.regime_events` (scope `FUNDAMENTAL_AXIS`, prior months) for prior months' regime scores only (cross-month regime-trend cross-references) — `events.decision_log` holds all decision history, queryable, no live/archive split (§15). For the M1a template specification read the strategy-blind slice `strategy/09_regime_scoring_strategy_blind_monthly.md` (the `## Regime scoring (strategy-blind, monthly)` section) — load that + `01_shared_regime_vocabulary.md` ONLY; do NOT load `02_regime_router`, `00_preamble`, or any strategy slice (blinding is now a hard file boundary — see the "Strategy reading" table + `ops/RUNBOOK.md` §9). Also read Experiment_Parameters.md, AI_Trading_Foundation.md.
 
 CRITICAL BLINDING REQUIREMENT: This routine must NOT read Strategy.md sections describing individual strategies (Strategy A through Strategy E sections), per-strategy activation rules, or any document referencing strategy letters or mechanisms. M1a is strategy-blind by design. The output produced here feeds M1b (a separate routine) which then applies per-strategy mapping. If you find yourself referencing "Strategy A" or any strategy letter / mechanism in your reasoning, stop and re-scope — that work belongs in M1b, not here.
 

@@ -13,4 +13,5 @@ These are read-optimized slices of the canonical `Strategy.md` (see `strategy/RE
 | Strategy D: Long-horizon narrative-screened equity core | `06_strategy_d.md` |
 | Strategy E: Market-neutral narrative-divergence pairs | `07_strategy_e.md` |
 | Pre-mortems | `08_pre_mortems.md` |
-| Document completion checklist | `09_document_completion_checklist.md` |
+| Regime scoring (strategy-blind, monthly) | `09_regime_scoring_strategy_blind_monthly.md` |
+| Document completion checklist | `10_document_completion_checklist.md` |

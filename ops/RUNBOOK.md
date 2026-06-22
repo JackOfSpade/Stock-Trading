@@ -235,13 +235,20 @@ generated `strategy/` slices" is an **authoritative** routine→slice map that o
 "Read Strategy.md (… section)" — per-strategy routines load only their slice(s) + `01`, so blinding
 is a file boundary and context shrinks. `Strategy.md` stays canonical (fallback + regenerate source).
 
-**Known exception — M1a.** The slices split on top-level `##`, and the "Regime router" slice (`02`)
-bundles M1a's regime-scoring template WITH the M1b strategy-mapping + reconciliation rules that name
-strategies A/D — so no slice gives the strategy-blind M1a a clean file. M1a therefore still reads the
-named `### Fundamental analysis template (monthly)` sub-section of `Strategy.md` (+ `01`), discipline-
-blinded as before. To make M1a's blinding a true file boundary, restructure `Strategy.md` so the M1a
-inputs are a separate top-level section from the M1b mapping, then the splitter can emit an M1a-clean
-slice. Deferred (needs a canonical-spec edit).
+**M1a exception — RESOLVED 2026-06-22.** Previously the slices split on top-level `##` and the
+"Regime router" slice (`02`) bundled M1a's regime-scoring template WITH the M1b strategy-mapping +
+reconciliation rules naming strategies A/D, so no slice gave the strategy-blind M1a a clean file and
+M1a read a named sub-section of `Strategy.md` under discipline-only blinding. `Strategy.md` was
+restructured (content-preserving) to split the old "Regime router" section into two distinct top-level
+sections — **`## Regime scoring (strategy-blind, monthly)`** (M1a inputs + 5 axes, no strategy names)
+and **`## Regime router`** (the M1b mapping / reconciliation / divergence / output format) — placed so
+only the unreferenced document-completion-checklist slice renumbered (`09`→`10`); the referenced strategy
+slices `00`–`08` kept their numbers. The splitter now emits a clean M1a slice
+`09_regime_scoring_strategy_blind_monthly.md`; **M1a loads `01` + `09` only** and its blinding is a hard
+file boundary. Verified: the M1a slice contains the axes + inputs + fallback and the A/D reconciliation
+mapping does NOT appear in it (the one `A–E` mention is the blinding directive itself); the router slice
+retains the M1b reconciliation rules. Routing updated in `Claude_Task_Plan.md` ("Strategy reading" table
++ M1a prompt body).
 
 ## 10. Theater judge — run it *(P3-2)*
 Add to **W5**: `CALL ops.sp_score_theater();` then read `analytics.theater_check_calibration`
