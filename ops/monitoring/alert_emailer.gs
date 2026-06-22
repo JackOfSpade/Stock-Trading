@@ -62,6 +62,21 @@ function checkAlerts_() {
   }
   // Persist the current open set so resolved alerts can re-fire later if reopened.
   props.setProperty('notified_alert_ids', JSON.stringify(currentIds));
+
+  // Liveness beat (ops.heartbeat -> state.automation_heartbeat). Lets cadence_check.sql detect a
+  // SILENTLY-DEAD emailer (revoked token / deleted trigger) via the independent DTS failure-email —
+  // a dead emailer obviously can't email that it is dead. Best-effort: never block the run on it.
+  beat_();
+}
+
+// ===== heartbeat =====
+function beat_() {
+  try {
+    BigQuery.Jobs.query({
+      query: `INSERT INTO \`${ALERT_PROJECT_ID}.ops.heartbeat\` (source, note) VALUES ('alert_emailer', 'poll')`,
+      useLegacySql: false, timeoutMs: 30000
+    }, ALERT_PROJECT_ID);
+  } catch (e) { Logger.log('heartbeat write skipped: ' + e); }
 }
 
 // ===== BigQuery =====

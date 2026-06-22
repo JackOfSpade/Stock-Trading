@@ -26,6 +26,7 @@
 --   -- for tables with JSON cols, re-parse: SELECT * REPLACE(SAFE.PARSE_JSON(<col>) AS <col>) ...
 BEGIN
   DECLARE failed STRING DEFAULT '';
+  DECLARE n_ok INT64 DEFAULT 0;   -- tables exported successfully this run (-> ops.backup_log marker)
 
   FOR rec IN (
     SELECT table_name
@@ -51,6 +52,7 @@ BEGIN
          FROM `stock-trading-498512.events.INFORMATION_SCHEMA.COLUMNS`
          WHERE table_name = rec.table_name),
         rec.table_name);
+      SET n_ok = n_ok + 1;   -- counted only if the EXPORT above succeeded (else we jump to EXCEPTION)
     EXCEPTION WHEN ERROR THEN
       -- isolate the failure; keep backing up the remaining tables
       SET failed = failed || FORMAT('%s (%s); ', rec.table_name, @@error.message);
@@ -64,5 +66,11 @@ BEGIN
       CONCAT('events backup: some tables failed to export: ', failed),
       TO_JSON_STRING(STRUCT(failed AS failed_tables)));
     RAISE USING MESSAGE = CONCAT('events-backup-daily: table export failures: ', failed);
+  ELSE
+    -- Success marker (bigquery/16_automation_health.sql): records that the backup ran, so
+    -- state.backup_health / cadence_check.sql can detect a SILENTLY-STALLED backup (one that simply
+    -- stops running) — which the data-side freshness switch cannot see. Only on a full-success run.
+    INSERT INTO `stock-trading-498512.ops.backup_log` (run_date, tables_exported, note)
+    VALUES (CURRENT_DATE('America/Denver'), n_ok, 'events.* export OK');
   END IF;
 END;

@@ -38,6 +38,10 @@ jobs:
         run: python -m pytest -q
       - name: strategy/ slices in sync with Strategy.md
         run: python scripts/split_strategy.py --check
+      - name: cadence single-source (cadence.yaml ⇄ 12/15 SQL ⇄ plan headings)
+        run: |
+          pip install --quiet pyyaml
+          python scripts/check_cadence_consistency.py
 
   lint:
     name: ruff (informational)
@@ -86,29 +90,42 @@ jobs:
           dbt parse
 
   dbt-parity:
-    name: dbt↔live row-level parity (keyless WIF, opt-in)
+    name: dbt↔live row-level parity (keyless WIF)
     runs-on: ubuntu-latest
-    # OPT-IN, default OFF (like sql-validate). Proves each dbt model produces the SAME rows as its
+    # ADVISORY BY DEFAULT, HARD GATE ON DEMAND: this whole job is continue-on-error UNLESS DBT_PARITY=block,
+    # so a drift (or a transient WIF/compile hiccup) reports without blocking auto-merge until the owner
+    # promotes it to a gate. (The auto-merge gate keys off the CI run conclusion — a continue-on-error job
+    # never fails the run; cf. the lint job. RUNBOOK §5/§12.)
+    continue-on-error: ${{ vars.DBT_PARITY != 'block' }}
+    # RUNS BY DEFAULT whenever the read-only WIF creds exist (changed 2026-06-22 — previously it was
+    # opt-in via RUN_DBT_PARITY and so NEVER actually ran, leaving the two hand-kept copies of each view
+    # (bigquery/*.sql + dbt/) without a drift guard). Proves each dbt model produces the SAME rows as its
     # live hand-SQL view (catches logic drift the always-on `dbt parse` can't). Read-only: it
     # `dbt compile`s (never `dbt build` — that would overwrite the live datasets, since
     # generate_schema_name pins models to bare dataset names) then runs compiled-vs-live EXCEPT
-    # DISTINCT both ways via the bq CLI (scripts/dbt_parity.py). Enable: set repo vars
-    # RUN_DBT_PARITY=true + the WIF vars (a READ-ONLY SA: roles/bigquery.dataViewer + jobUser).
-    # See ops/RUNBOOK.md §6/§14.
+    # DISTINCT both ways via the bq CLI (scripts/dbt_parity.py).
+    #
+    # One var, `DBT_PARITY`, controls it (read-only SA: roles/bigquery.dataViewer + jobUser):
+    #   unset / 'advisory' (default) : RUN when WIF present; a drift prints ::warning:: but does NOT
+    #                                  block the merge (staged rollout — promote once a clean baseline is
+    #                                  confirmed, so a latent drift can't wedge auto-merge).
+    #   'block'                      : RUN and FAIL the build on drift (a hard merge gate).
+    #   'off'                        : skip entirely (escape hatch if WIF misbehaves).
+    # If the WIF vars are unset the job skips cleanly (green). See ops/RUNBOOK.md §6/§14.
     permissions:
       contents: read
       id-token: write   # Workload Identity Federation (no downloadable key)
     steps:
       - uses: actions/checkout@v4
-      - name: Check opt-in + WIF config
+      - name: Check WIF config + enablement
         id: guard
         run: |
-          if [ "${{ vars.RUN_DBT_PARITY }}" = "true" ] \
-             && [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] \
-             && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ]; then
+          if [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] \
+             && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ] \
+             && [ "${{ vars.DBT_PARITY }}" != "off" ]; then
             echo "skip=false" >> "$GITHUB_OUTPUT"
           else
-            echo "::notice::dbt parity disabled (default). Set vars.RUN_DBT_PARITY=true + the WIF vars (read-only SA) to enable — ops/RUNBOOK.md §6/§14. dbt parse remains the always-on structural gate."
+            echo "::notice::dbt parity skipped — set the WIF vars (read-only SA) to run it (it runs by default once they exist; set DBT_PARITY=off to suppress, =block to make drift a hard merge gate). ops/RUNBOOK.md §6/§14. dbt parse remains the always-on structural gate."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
       - uses: actions/setup-python@v5
@@ -151,6 +168,8 @@ jobs:
           dbt compile
       - name: Row-level parity (compiled vs live, EXCEPT both ways)
         if: steps.guard.outputs.skip == 'false'
+        # Drift fails this step; whether that BLOCKS the merge is the job-level continue-on-error above
+        # (advisory by default; a hard gate only when repo var DBT_PARITY=block). ops/RUNBOOK.md §6/§12.
         run: python scripts/dbt_parity.py
 
   sql-validate:

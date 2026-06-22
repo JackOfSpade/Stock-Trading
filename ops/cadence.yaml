@@ -23,16 +23,33 @@ defaults:
   dep_gate: true           # SEPARATE + FATAL (not wrapped): action routines CALL ops.sp_assert_deps(<id>,<depends_on below>,<run_date>) BEFORE the start-log; aborts on a missing monitored upstream (self-bootstrapping)
   on_hard_stop: raise_alert # CALL ops.sp_raise_alert + create a "[Claude] ATTENTION" calendar event
 
+# SINGLE-SOURCE THE CADENCE (added 2026-06-22). Each routine carries an explicit `monitor_class`
+# — the canonical cadence bucket that state.cadence_expected_today (bigquery/12_cadence_monitor.sql)
+# encodes in SQL. This file is the SOURCE OF TRUTH for that mapping; the SQL must agree with it, and
+# scripts/check_cadence_consistency.py (CI) FAILS the build if it drifts — so the hand-kept SQL list,
+# the ops.routine_catalog seed, and this manifest can no longer silently diverge (the recurring
+# RUNBOOK §22-class problem). Allowed monitor_class values:
+#   daily_trading  : every trading day               (alarmed in state.cadence_watch)
+#   daily_all      : every calendar day              (alarmed)
+#   weekly_sun     : Sundays                          (visible, not alarmed — inferred run-day)
+#   monthly_ftd    : first trading day of the month   (visible, not alarmed)
+#   quarterly_ftd  : first trading day of the quarter (visible, not alarmed)
+#   annual_ftd     : first trading day of the year    (visible, not alarmed)
+#   queue_driven   : fires only when a queue entry is due — NOT calendar-predictable, so deliberately
+#                    EXCLUDED from state.cadence_expected_today (the adversarial AR routines).
+
 routines:
   # ---- DAILY (every trading day, after the close) ----
   - id: D1
     name: Market Development Scan
     schedule: "after_close trading_day"   # ~16:10 MT
+    monitor_class: daily_trading
     depends_on: []
     writes: [Daily.md, events.decision_log, events.regime_events]
   - id: D2
     name: Daily Action Conversion
     schedule: "after D1 trading_day"
+    monitor_class: daily_trading
     depends_on: [D1]
     writes: [events.trade_fills, events.position_events, events.daily_marks, perf.strategy_daily,
              events.decision_log, events.queue_events, ops.account_snapshot, calendar:confirm_order]
@@ -40,6 +57,7 @@ routines:
   - id: D3
     name: Calendar & Queue Hygiene
     schedule: "after D2 daily"             # runs daily incl. non-trading days for queue/calendar upkeep
+    monitor_class: daily_all
     depends_on: [D2]
     writes: [calendar:confirm_order, events.queue_events]
 
@@ -47,11 +65,13 @@ routines:
   - id: AR·att   # abbreviated id matches the live ops.run_log + ops.routine_catalog (W2 drift check)
     name: Adversarial Review — Attacker
     schedule: "daily; if events.queue_events PENDING_REVIEW attacker_due<=today"
+    monitor_class: queue_driven           # NOT calendar-predictable -> excluded from cadence_expected_today
     depends_on: []
     writes: [events.adversarial_reviews]
   - id: AR·orc
     name: Adversarial Review — Orchestrator
     schedule: "daily; if a review is attacker-complete and orchestrator_due<=today"
+    monitor_class: queue_driven
     depends_on: [AR·att]
     writes: [events.adversarial_reviews, events.regime_events, events.decision_log, calendar:confirm_order]
 
@@ -59,23 +79,28 @@ routines:
   - id: W1
     name: Catalyst Calendar (A, C)
     schedule: "weekly Sun"
+    monitor_class: weekly_sun
     writes: [Weekly_Catalyst_Calendar.md]
   - id: W2
     name: Post-Event Screen (B)
     schedule: "weekly Sun"
+    monitor_class: weekly_sun
     writes: [Weekly_Post_Event_Screen.md]
   - id: W3
     name: Open-Position Deep-Dive (A,B,C,E)
     schedule: "weekly Sun"
+    monitor_class: weekly_sun
     writes: [Weekly_Position_Deep_Dive.md]
   - id: W4
     name: Weekly Action Conversion
     schedule: "weekly Sun after W1,W2,W3"
+    monitor_class: weekly_sun
     depends_on: [W1, W2, W3]
     writes: [events.queue_events, events.decision_log, calendar:confirm_order]
   - id: W5
     name: Factbase & Analytics Consolidation
     schedule: "weekly Sun after W4"
+    monitor_class: weekly_sun
     depends_on: [W4]
     writes: [B_Sub_Pattern_Taxonomy.md, analytics.decision_embeddings, events.decision_log]
     notes: "Good home for CALL ops.sp_score_theater() (P3-2 independence judge) + embedding health check."
@@ -84,28 +109,34 @@ routines:
   - id: M1a
     name: Strategy-Blind Regime Scoring
     schedule: "monthly first_trading_day"
+    monitor_class: monthly_ftd
     writes: [events.regime_events, events.macro_series, events.macro_fred]
   - id: M1b
     name: Strategy Mapping & Activation Calls
     schedule: "monthly after M1a"
+    monitor_class: monthly_ftd
     depends_on: [M1a]
     writes: [Monthly_Fundamental.md]
   - id: M2
     name: E Pair Divergence Screen
     schedule: "monthly first_trading_day"
+    monitor_class: monthly_ftd
     writes: [Monthly_E_Pairs.md]
   - id: M3
     name: D Position Deep-Dive
     schedule: "monthly first_trading_day"
+    monitor_class: monthly_ftd
     writes: [Monthly_D_Position_Deep_Dive.md]
   - id: M4
     name: Monthly Action Conversion
     schedule: "monthly after M1b,M2,M3"
+    monitor_class: monthly_ftd
     depends_on: [M1b, M2, M3]
     writes: [events.regime_events, events.queue_events, events.decision_log, calendar:confirm_order]
   - id: M5
     name: Deployed-TWR & Macro Forecast (advisory)
     schedule: "monthly after M4"
+    monitor_class: monthly_ftd
     depends_on: [M4]
     writes: [analytics.deployed_twr_forecast, events.decision_log]
 
@@ -113,18 +144,22 @@ routines:
   - id: Q1
     name: Regime Retrospective
     schedule: "quarterly first_trading_day"
+    monitor_class: quarterly_ftd
     writes: [Quarterly_Regime.md]
   - id: Q2
     name: D Long-Horizon Candidates
     schedule: "quarterly first_trading_day"
+    monitor_class: quarterly_ftd
     writes: [Quarterly_D_Candidates.md]
   - id: Q3
     name: AI Foundation Quarterly Delta
     schedule: "quarterly first_trading_day"
+    monitor_class: quarterly_ftd
     writes: [Quarterly_AI_Foundation_Delta.md]
   - id: Q4
     name: Quarterly Action Conversion
     schedule: "quarterly after Q2,Q3"
+    monitor_class: quarterly_ftd
     depends_on: [Q2, Q3]
     writes: [Watchlist.md, events.queue_events, events.decision_log]
 
@@ -132,14 +167,17 @@ routines:
   - id: A1
     name: AI Foundation Annual Re-Derivation
     schedule: "annual first_trading_day"
+    monitor_class: annual_ftd
     writes: [Annual_AI_Foundation_Sweep.md]
   - id: A2
     name: Per-Strategy Constraint Audit
     schedule: "annual first_trading_day"
+    monitor_class: annual_ftd
     writes: [Annual_Constraint_Audit.md]
   - id: A3
     name: Annual Action Conversion
     schedule: "annual after A1,A2"
+    monitor_class: annual_ftd
     depends_on: [A1, A2]
     writes: [AI_Trading_Foundation.md, Strategy.md, events.queue_events, events.decision_log]
 

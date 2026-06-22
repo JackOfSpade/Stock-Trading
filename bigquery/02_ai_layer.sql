@@ -32,9 +32,17 @@ CREATE OR REPLACE MODEL `stock-trading-498512.ops.gemini`
 --    WHERE d.entry_id=b.entry_id AND d.ticker IS NULL AND REGEXP_CONTAINS(b.tk,r'^[A-Z]{1,5}$') AND b.tk!='NONE';
 
 -- ===== Decision embeddings (semantic precedent layer) =====
--- Embeds title + a token-safe body excerpt (SUBSTR 6000 chars ≈ <2048 tokens).
--- Bodies up to ~74k chars exist; the embedding model caps input, and the front of each
--- entry carries the decision + reasoning, so a leading excerpt is the right retrieval key.
+-- Embeds title + a body excerpt sized to the embedding model's input budget (SUBSTR 8000 chars ≈ the
+-- ~2048-token cap of text-embedding-005; raised from 6000 on 2026-06-22 to capture more of each
+-- prose-heavy entry). The front of each entry carries the decision + reasoning, so a leading excerpt is
+-- the right single-vector retrieval key. LIMITATION: bodies up to ~74k chars exist, so any content past
+-- the model's token cap is still NOT embedded — full long-body coverage needs CHUNKING (one embedding
+-- row per (entry_id, chunk_index); find_precedents would dedup to the best chunk per entry, and
+-- state.embedding_health would key on (entry_id, chunk_index)). That upgrade — and the optional move to
+-- gemini-embedding-001 for higher retrieval quality — is specified in ops/RUNBOOK.md §23; it reshapes
+-- this table + the health monitor + find_precedents, so it is staged as a deliberate, separately-applied
+-- change rather than folded in here. KEEP THE TWO `content` EXPRESSIONS BELOW IDENTICAL (this CREATE and
+-- ops.sp_embed_pending) so a full rebuild and an incremental top-up embed the same text.
 CREATE OR REPLACE TABLE `stock-trading-498512.analytics.decision_embeddings` AS
 SELECT
   entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title,
@@ -43,7 +51,7 @@ SELECT
 FROM ML.GENERATE_EMBEDDING(
   MODEL `stock-trading-498512.ops.text_embed`,
   (SELECT entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title,
-          SUBSTR(CONCAT(COALESCE(title,''), '\n', COALESCE(body_md,'')), 1, 6000) AS content
+          SUBSTR(CONCAT(COALESCE(title,''), '\n', COALESCE(body_md,'')), 1, 8000) AS content
    FROM `stock-trading-498512.events.decision_log`),
   STRUCT(TRUE AS flatten_json_output, 'RETRIEVAL_DOCUMENT' AS task_type));
 -- Validated: 221/221 rows, 0 failures, all 768-dim.
@@ -87,7 +95,7 @@ BEGIN
     FROM ML.GENERATE_EMBEDDING(
       MODEL `stock-trading-498512.ops.text_embed`,
       (SELECT entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title,
-              SUBSTR(CONCAT(COALESCE(title,''),'\n',COALESCE(body_md,'')),1,6000) AS content
+              SUBSTR(CONCAT(COALESCE(title,''),'\n',COALESCE(body_md,'')),1,8000) AS content
        FROM `stock-trading-498512.events.decision_log` dl
        -- NOT EXISTS anti-join (NULL-safe): a NULL entry_id anywhere in the
        -- embeddings table would make a NOT IN (...) predicate return zero rows

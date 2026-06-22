@@ -70,6 +70,16 @@ function sendWeeklyReport_() {
         .forEach(t => t.addLabel(label));
     } catch (e) { Logger.log('Label step skipped: ' + e); }
   }
+
+  // Liveness beat (ops.heartbeat -> state.automation_heartbeat): lets cadence_check.sql detect a
+  // silently-dead weekly report (revoked token / deleted trigger). Best-effort — never block the send.
+  try {
+    BigQuery.Jobs.query({
+      query: `INSERT INTO \`${PROJECT_ID}.ops.heartbeat\` (source, note) VALUES ('weekly_report', 'sent')`,
+      useLegacySql: false, timeoutMs: 30000
+    }, PROJECT_ID);
+  } catch (e) { Logger.log('heartbeat write skipped: ' + e); }
+
   Logger.log('Weekly report sent to %s', RECIPIENT);
 }
 

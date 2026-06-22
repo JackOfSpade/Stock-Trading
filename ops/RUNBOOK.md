@@ -44,8 +44,10 @@ click) plus the staged adoptions. Each item says what it solves (P0–P3 from th
   `SELECT * FROM state.cadence_watch WHERE needs_attention;` (want zero rows);
   `SELECT * FROM state.sgov_reconciliation;` (events-side SGOV shares to compare to the connector).
 
-To re-apply or move to a fresh project, run `bigquery/01..11_*.sql` in order via the BigQuery MCP
-`execute_sql` (same pattern the existing files use).
+To re-apply or move to a fresh project, run `bigquery/01..16_*.sql` in order via the BigQuery MCP
+`execute_sql` (same pattern the existing files use). (`16_automation_health.sql` — backup-freshness +
+Apps Script heartbeat monitors — was added 2026-06-22; apply it before re-pasting `cadence_check.sql`,
+which now references its views. See §3, §7, §24.)
 
 ---
 
@@ -104,6 +106,22 @@ the bucket as dated Parquet, straight from BigQuery):
    `state_snapshots/` — restores the "git diff shows what changed today" property the
    `.md`→BigQuery cutover gave up, without resurrecting the retired live-state files.
 
+**Backup *liveness* monitor — DONE 2026-06-22.** The data-side freshness switch (`state.freshness`)
+watches the event TABLES, not the bucket — so a backup that silently stops (expired identity, deleted
+schedule) would go unnoticed until a restore was needed. Now `backup_events_export.sql` logs an
+`ops.backup_log` marker on a full-success run, `state.backup_health` flags a stale backup (no success in
+>2 days; self-bootstrapping so it never alarms before the first marker), and `cadence_check.sql` RAISEs
+on it (so the DTS failure-email — identity-independent — delivers the alarm). Apply
+`bigquery/16_automation_health.sql` (creates `ops.backup_log` + `state.backup_health`) before re-pasting
+`cadence_check.sql`.
+
+**Backup *restore* drill — ADDED 2026-06-22.** A backup you have never restored is a hope, not a backup.
+`scripts/restore_drill.sh` loads a dated snapshot of every `events.*` table into a throwaway scratch
+dataset and sanity-checks restored row counts against live (each table must load, be non-empty, and not
+exceed live). Run it periodically (e.g. quarterly) from Cloud Shell: `scripts/restore_drill.sh` (latest
+snapshot) or `DATE=YYYY-MM-DD scripts/restore_drill.sh`. This converts "we export Parquet" into "we have
+verified we can recover."
+
 ---
 
 ## 4. Dashboard *(P1-4)*
@@ -143,7 +161,10 @@ account (`gh-ci-runner`) is kept **read-only** (`jobUser` + `dataViewer` + `conn
 
 WIF itself is set up (provider `github-pool/github-provider`, SA `gh-ci-runner@…`, repo variables
 `GCP_WIF_PROVIDER` + `GCP_WIF_SERVICE_ACCOUNT`) and powers any future keyless need (e.g. a `dbt build`
-or §16's dashboard). To turn the live SQL dry-run ON anyway, the owner must:
+or §16's dashboard). As of 2026-06-22 it also powers the **`dbt-parity` row-level drift gate, which now
+runs by default whenever those WIF vars are present** (read-only; advisory until promoted to `DBT_PARITY=block`
+— see §12 "D1"). That is the real guard on the two hand-maintained copies of each view; `dbt parse` only
+checks structure. To turn the live SQL dry-run ON anyway, the owner must:
 1. Enable the **Cloud Resource Manager API** (`gcloud services enable cloudresourcemanager.googleapis.com`)
    and the IAM Service Account Credentials API (already enabled).
 2. Grant `gh-ci-runner` the DDL perms the dry-run needs (`roles/bigquery.dataEditor` on
@@ -185,6 +206,17 @@ a new unresolved critical/warning (de-duped, self-email, no console wiring) — 
 you between routines without watching the calendar. Setup: same as the weekly report
 (`ops/weekly_report/README.md`) — paste the script, add the BigQuery service, run `testAlertCheck`
 then `installAlertTrigger`. (A Cloud Monitoring alert policy on `ops.alerts` is the heavier alternative.)
+
+**Apps Script LIVENESS heartbeat — DONE 2026-06-22 (who-watches-the-watchers).** Both Apps Scripts run
+OUTSIDE Claude on Google's servers, so a silent death (revoked OAuth scope / deleted trigger) would stop
+alerts/reports with no signal — and for the alert emailer that is *circular* (a dead emailer can't email
+that it's dead). Both now write an `ops.heartbeat` beat each run (`alert_emailer` per poll, `weekly_report`
+per send — best-effort, never blocks delivery); `state.automation_heartbeat` flags a source whose last beat
+exceeded its expected interval (6h for the emailer, ~9 days for the report; self-bootstrapping so a not-yet-
+deployed script never alarms), and **`cadence_check.sql` RAISEs on it via the independent DTS failure-email**
+— a channel that survives the emailer being the thing that died. Apply `bigquery/16_automation_health.sql`
+(creates `ops.heartbeat` + `state.automation_heartbeat`) before re-pasting `cadence_check.sql`; the heartbeat
+writes are already in the two `.gs` files, so re-paste them into the Apps Script project (no other change).
 
 ## 8. Extend the market-holiday calendar — now AUTO-EXTENDED *(P1-3)* — DONE (2026-06-20)
 **No longer a manual yearly task.** The **W5** weekly routine self-extends `events.market_holidays`
@@ -257,11 +289,21 @@ Owner decisions: the `billing_account` id; and whether the backup export runs un
 then `terraform init -migrate-state`. CI does not run terraform, so this only affects an owner running
 terraform locally / in Cloud Shell.
 
-**D1 — row-level dbt↔live parity: ADDED (opt-in CI).** `.github/workflows`… the `dbt-parity` job in
+**D1 — row-level dbt↔live parity: NOW RUNS BY DEFAULT (changed 2026-06-22).** The `dbt-parity` job in
 `ci.yml` + `scripts/dbt_parity.py` `dbt compile` each model and run compiled-vs-live `EXCEPT DISTINCT`
-both ways (read-only; never `dbt build`, which would overwrite the live datasets). Default OFF; enable
-with repo vars `RUN_DBT_PARITY=true` + the WIF vars (a READ-ONLY SA: `roles/bigquery.dataViewer` +
-`roles/bigquery.jobUser`).
+both ways (read-only; never `dbt build`, which would overwrite the live datasets). This is the ONLY guard
+on the two hand-kept copies of every view (`bigquery/*.sql` + `dbt/`); it was previously opt-in
+(`RUN_DBT_PARITY=true`) and so **never actually ran**, leaving that duplication undefended. It now runs
+on every push **whenever the read-only WIF creds exist** (the same `gh-ci-runner@` SA, `roles/bigquery.dataViewer`
++ `roles/bigquery.jobUser`, already configured per §6). One var, **`DBT_PARITY`**, controls it (replaces
+`RUN_DBT_PARITY`):
+- unset / `advisory` (default): runs; a drift prints a `::warning::` but does NOT block the merge — a
+  staged rollout, so a latent drift can't wedge auto-merge before a clean baseline is confirmed;
+- `block`: runs and FAILS the build on drift (promote to this once parity is green — it becomes a hard merge gate);
+- `off`: skip entirely (escape hatch).
+If the WIF vars are unset the job skips cleanly (green). **Owner action to finish enabling it:** confirm
+`GCP_WIF_PROVIDER` + `GCP_WIF_SERVICE_ACCOUNT` repo vars are set (§6), watch one CI run go green/advisory,
+then set `DBT_PARITY=block` to make drift a hard gate.
 
 ## 13. Cadence monitor + dependency gate *(A3, C1)* — DONE (deployed)
 `bigquery/12_cadence_monitor.sql` is applied. `state.cadence_watch` shows, per operating day, which
@@ -308,8 +350,32 @@ stall with it (it ran under the same identity).
   queries (§1, via Terraform §12) under the **BigQuery Data Transfer service identity** (or a
   dedicated SA), NOT the interactive OAuth session — so the alarm can still fire when the agent's
   identity is the thing that failed. (Email-on-failure is already enabled on them.)
-- **Document expiry + rotation.** Record the OAuth grant / MCP-connector token lifetimes for BigQuery,
-  IBKR, and Calendar, and a rotation/re-consent procedure, so an expiry is planned, not a silent outage.
+- **Document expiry + rotation — FILLED IN 2026-06-22.** The interactive routines all run under the
+  owner's Google OAuth + the MCP connector grants; an unplanned expiry stalls everything, so treat these
+  as scheduled maintenance, not a surprise:
+
+  | Credential | Used by | Typical lifetime | Renew / rotate |
+  |---|---|---|---|
+  | Owner Google OAuth (BigQuery MCP, Calendar, Gmail-draft) | every routine | Refresh token stays valid while used; Google may expire an unused/over-6-month-idle grant, or on password change / scope change | Re-consent in the Claude connector settings (re-auth the Google connector); no code change |
+  | IBKR connector grant | D1/D2 (fills, positions, quotes, order-craft) | Brokerage session/token per IBKR's policy; can require periodic re-auth | Re-auth the IBKR connector in Claude; verify with a `get_account_summary` call |
+  | FMP connector | W5 holiday auto-extend; market data | Per FMP subscription/token | Renew the FMP subscription/key; re-auth the connector |
+  | `bq-scheduler@` SA (freshness/cadence/backup/embed scheduled queries) | the dead-man's switch | Long-lived SA; **GCP-managed, no downloadable key** | None routine; if ever rotated, re-point the 4 scheduled queries' run-as SA (and re-derive `monitoring.tf`'s config-id metric — §19) |
+  | GitHub `GITHUB_TOKEN` (auto-merge / CI) | Actions | Per-run, auto-issued | None (managed by GitHub) |
+
+  **Procedure:** keep a recurring **annual calendar reminder** ("re-verify Stock-Trading connector grants")
+  and, on any connector that starts failing, re-auth it in the Claude connector settings first (most
+  outages are an expired grant, not a code bug). A connector outage during a routine surfaces as a
+  `connector` hard-stop alert (Claude_Task_Plan.md "Observability"); a scheduled-query identity failure
+  surfaces as the §19 metric-absence alert. For any future downloadable secret, prefer **GCP Secret
+  Manager + Workload Identity** over a key file.
+
+- **Web-UI trigger restore (the one un-versioned config).** The routine schedules/triggers live only in
+  the Claude-Code-on-Web UI. If that config is ever lost, **`python scripts/print_routines.py` is the
+  restore script** — it reconstructs every routine's canonical trigger instruction (`Read Claude_Task_Plan.md.
+  Perform <heading>.`) + cadence from `Claude_Task_Plan.md` + `ops/cadence.yaml`, ready to re-create the
+  triggers. `state.instruction_drift` (cadence_check) detects a *drifted* live trigger; `scripts/check_cadence_consistency.py`
+  (CI) keeps the canonical sources + the SQL in lockstep (§24). If/when the platform exposes triggers-as-code
+  or an export, adopt it to remove this last manual-restore step.
 - **Heartbeat.** The freshness email is the liveness signal; if it stops arriving entirely (vs. firing
   red), that absence is itself the alert — note this so a silent scheduler death is noticed. The
   failure email canNOT do this on its own (a query that never runs sends no email), so a Cloud
@@ -544,3 +610,48 @@ dropping the ` — regular routine.` suffix), so even after excluding the ad-hoc
 confirm whether it is a real edited trigger (diff `state.routine_last_instruction` vs `python scripts/print_routines.py`)
 or — as here — an ad-hoc session that logged a non-trigger instruction. Fix the cause, then
 `UPDATE ops.alerts SET resolved=TRUE, resolved_ts=CURRENT_TIMESTAMP(), resolved_note='…' WHERE alert_id='…'`.
+
+## 23. Semantic precedent layer — embedding coverage + the chunking upgrade *(analytics)*
+**Done 2026-06-22 (conservative step):** `bigquery/02_ai_layer.sql` now embeds an 8,000-char excerpt
+(up from 6,000) of `title + body_md`, filling text-embedding-005's ~2,048-token input budget for
+prose-heavy entries. Same one-row-per-entry schema, so `state.embedding_health` (the embedding half of
+`all_green`) and `analytics.find_precedents` are unchanged. **Apply:** re-run `bigquery/02_ai_layer.sql`
+via the MCP — the `CREATE OR REPLACE TABLE … AS SELECT FROM ML.GENERATE_EMBEDDING` rebuilds
+`analytics.decision_embeddings` atomically (Vertex-billed, ~pennies at ~250 rows; `state.embedding_health`
+should stay `is_healthy=TRUE` after). Until re-run, retrieval keeps using the 6,000-char vectors.
+
+**Known residual + the real fix (CHUNKING).** Bodies up to ~74k chars exist, so content past the model's
+token cap is still not embedded — a modest recall gap on long theses (the lead carries the decision +
+reasoning, so single-vector retrieval is usually sufficient, which is why this is staged, not urgent).
+Full coverage needs **one embedding row per `(entry_id, chunk_index)`**:
+- `analytics.decision_embeddings` gains `chunk_index`; split `body_md` into ~6k-char chunks (title on
+  chunk 0); `ops.sp_embed_pending` keys its MERGE on `(entry_id, chunk_index)`.
+- `find_precedents` runs `VECTOR_SEARCH(top_k => 30)` then `QUALIFY ROW_NUMBER() OVER (PARTITION BY
+  entry_id ORDER BY distance)=1` and `LIMIT 10` — best chunk per entry, still 10 distinct precedents.
+- `state.embedding_health` changes its invariant from "exactly one embedding per entry" to "every entry
+  has ≥1 ok chunk AND zero errored chunks" (drop the `dup_rows = COUNT − COUNT(DISTINCT entry_id)` check —
+  multiple chunks per entry become expected; replace with a per-`(entry_id,chunk_index)` uniqueness check).
+  Keep it fail-loud (COALESCE→unhealthy) since `all_green` depends on it.
+This reshapes a live table + the dead-man's-switch input + retrieval, so it is a **deliberate, separately-
+applied + validated change** (re-embed into a scratch table, diff `find_precedents` top-k vs current, then
+cut over). The optional move to **`gemini-embedding-001`** (higher retrieval quality; 3072-dim default,
+or set `output_dimensionality`) rides the same re-embed — change the `ENDPOINT` on `ops.text_embed` and
+re-run `02` (query + doc embeddings both switch, so the space stays consistent). Validate before relying
+on it for live precedent.
+
+## 24. Cadence single-source — `monitor_class` + the CI consistency gate *(maintainability)*
+**Done 2026-06-22.** "What runs when" was hand-kept in THREE places with no automated guard —
+`ops/cadence.yaml`, the hardcoded `state.cadence_expected_today` list (`bigquery/12_cadence_monitor.sql`),
+and the `ops.routine_catalog` seed (`bigquery/15_routine_catalog.sql`) — plus the canonical headings in
+`Claude_Task_Plan.md`. Drift between them is the recurring §22-class problem. Fix:
+- Each `ops/cadence.yaml` routine now carries an explicit **`monitor_class`** (the canonical cadence
+  bucket: `daily_trading` / `daily_all` / `weekly_sun` / `monthly_ftd` / `quarterly_ftd` / `annual_ftd` /
+  `queue_driven`) — this manifest is the SOURCE OF TRUTH for the SQL bucket mapping.
+- **`scripts/check_cadence_consistency.py`** (wired into the CI `test` job) FAILS the build unless: (A)
+  `state.cadence_expected_today`'s `(routine → class)` set equals the calendar-class routines in
+  `cadence.yaml` (queue-driven AR routines excluded), (B) `ops.routine_catalog`'s instructions equal the
+  ones derived from the `Claude_Task_Plan.md` headings, and (C) every cadence.yaml id maps 1:1 to a plan
+  heading. It CHECKS the SQL (does not regenerate it — the `.sql` keep their hand-written comments), so a
+  routine added/renamed/rescheduled in one place but not the others now fails CI with a precise diff
+  instead of surfacing weeks later as a false cadence / `instruction_drift` alert. `scripts/print_routines.py`
+  remains the human-facing printer + the web-UI trigger restore script (§15).

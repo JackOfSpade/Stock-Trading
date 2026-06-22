@@ -10,7 +10,8 @@ they fire only when a routine session calls them — so a skipped session = sile
 |---|---|---|---|
 | `embed_pending.sql` | daily ~06:00 UTC | `CALL ops.sp_embed_pending()` — heal any unembedded decisions (P0-3). Timing irrelevant (idempotent). | — |
 | `daily_freshness_check.sql` | **daily 05:00 UTC** | dead-man's switch: alert if marks/engine stale, embeddings unhealthy, kills firing, or open critical alerts (P0-2) | **enable "email on failure"** |
-| `backup_events_export.sql` | daily ~05:30 UTC | `EXPORT DATA` every `events.*` table to `gs://stock-trading-backups` as dated Parquet — no Cloud Run, no key (P2-1). Needs the SA granted `storage.objectAdmin` on the bucket. | — |
+| `backup_events_export.sql` | daily ~05:30 UTC | `EXPORT DATA` every `events.*` table to `gs://stock-trading-backups` as dated Parquet — no Cloud Run, no key (P2-1). Needs the SA granted `storage.objectAdmin` on the bucket. **On full success it logs an `ops.backup_log` marker** so `state.backup_health` / `cadence_check.sql` can catch a silently-stalled backup. | — |
+| `cadence_check.sql` | **daily ~05:15 UTC** | control-plane dead-man's switch: RAISE if a monitored routine missed today (`state.cadence_watch`), the events backup went silent (`state.backup_health`), or an out-of-band Apps Script went silent (`state.automation_heartbeat`); records (warning, no RAISE) any trigger drift (`state.instruction_drift`). | **enable "email on failure"** |
 
 > **Why 05:00 UTC for the freshness check:** it must run in the **Denver evening, after D2** has
 > ingested the close. 05:00 UTC ≈ 22:30 MDT / 21:30 MST — same Denver day, after D2, in both DST
@@ -31,3 +32,9 @@ they fire only when a routine session calls them — so a skipped session = sile
 The recompute engine (`ops.sp_daily_refresh`) is intentionally **not** scheduled here — it needs
 the day's connector marks that only D2 can ingest. Keep it in D2; the freshness check above is
 what catches a D2 that didn't run.
+
+> **APPLY ORDER (2026-06-22):** `cadence_check.sql` references `state.backup_health` +
+> `state.automation_heartbeat`, so apply **`bigquery/16_automation_health.sql` first**, then (re)create
+> this scheduled query. The new backup/heartbeat checks are **self-bootstrapping** — they only fire once
+> the producers have logged (the backup `ops.backup_log` marker; the Apps Script `ops.heartbeat` beats),
+> so pasting `cadence_check.sql` before wiring those never false-alarms.
