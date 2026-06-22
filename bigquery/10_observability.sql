@@ -31,10 +31,24 @@ ALTER TABLE `stock-trading-498512.ops.run_log` ADD COLUMN IF NOT EXISTS instruct
 -- Verify every routine's web-UI trigger instruction by query instead of screenshotting it. Compare
 -- against the canonical instruction printed by scripts/print_routines.py to catch a drifted/typo'd
 -- trigger. (Populated once routines pass their instruction to ops.sp_routine_start.)
+--
+-- SCHEDULED-TRIGGER-SHAPED ONLY (added 2026-06-22, RUNBOOK §22): a routine's "live trigger" is defined
+-- ONLY by instructions with the canonical web-UI trigger shape `Read Claude_Task_Plan.md. Perform %`.
+-- WHY: an ad-hoc / one-off session that legitimately reuses a routine id (e.g. W5 — the taxonomy owner —
+-- running a one-time §20/§21 remediation) logs a task-specific instruction; without this filter that
+-- free-form note shadows the real trigger (most-recent-wins) and FALSE-trips state.instruction_drift.
+-- That is exactly the 2026-06-22 W5 instruction_drift false alarm. The verbatim web-UI trigger ALWAYS
+-- has the shape below, so a genuinely typo'd/edited trigger (wrong routine #, heading text, or
+-- deep-research/regular tag) still lands INSIDE this shape and is still caught — only non-trigger notes
+-- are excluded. Trade-off: a trigger rewritten to NOT start with this prefix reads as "no live trigger"
+-- (live NULL → not drifted) rather than drift; that is acceptable and visible — a routine that ran today
+-- yet shows a NULL live trigger here is itself a yellow flag. The durable behavioural guard is the
+-- convention (Claude_Task_Plan.md "Observability"): ad-hoc reuses still log the VERBATIM scheduled trigger.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.routine_last_instruction` AS
 SELECT routine, instruction, run_date, log_ts
 FROM `stock-trading-498512.ops.run_log`
 WHERE instruction IS NOT NULL
+  AND instruction LIKE 'Read Claude_Task_Plan.md. Perform %'
 QUALIFY ROW_NUMBER() OVER (PARTITION BY routine ORDER BY log_ts DESC) = 1;
 
 -- Routines call this at start ('started') and end ('completed'/'failed'/'halted').

@@ -508,3 +508,39 @@ description (`bigquery/01_schema.sql`) carries this exception too.
 **Going forward:** the routine that logs B NO-GOs (**D2**) should emit the canonical tokens directly (see
 that vocabulary block); **W5** conforms any drift in its weekly pass. Anything beyond `sub_pattern`
 stays append-only.
+
+## 22. `instruction_drift` false alarm from ad-hoc runs reusing a routine id — the 2026-06-22 W5 alert *(monitoring)*
+**Fired 2026-06-22 05:15 UTC** (`scheduled.cadence` / `instruction_drift`, WARNING): *"Trigger drift: routine(s)
+whose live web-UI trigger differs from the canonical catalog: W5."* **It was a false positive — the scheduled
+W5 web-UI trigger was never edited.**
+
+**Root cause.** `state.routine_last_instruction` took the **most-recent non-null** `ops.run_log.instruction`
+per routine, and `state.instruction_drift` diffs that against `ops.routine_catalog`. On 2026-06-21 the W5 id was
+used by **four** sessions: the genuine scheduled Sunday W5 (which discovered the §20 loss), plus **three one-time
+§20/§21 remediations** (full-history taxonomy reconcile, the 111-row `sub_pattern` normalization, and the
+DLTR/GTLB/CPRI review-item resolution). W5 legitimately owns the taxonomy, so those ad-hoc sessions reused its id —
+but each logged its **task description** as `instruction` instead of the verbatim trigger. The most-recent one
+(`"sub_pattern normalization — review-item resolution…"`) shadowed the real trigger → `live ≠ canonical` → drift.
+A secondary contributor: the scheduled run itself logged a **shorthand** (`…Factbase & Analytics Consolidation`,
+dropping the ` — regular routine.` suffix), so even after excluding the ad-hoc notes the live read still differed.
+
+**Fix (deployed 2026-06-22).**
+1. **`state.routine_last_instruction` now only counts canonical-trigger-shaped instructions** —
+   `instruction LIKE 'Read Claude_Task_Plan.md. Perform %'` (`bigquery/10_observability.sql`). Free-form ad-hoc
+   notes can no longer masquerade as a routine's live trigger; a genuinely typo'd/edited trigger still lands inside
+   that shape and is still caught. Trade-off: a trigger rewritten to *not* start with that prefix reads as "no live
+   trigger" (live NULL → not drifted) rather than drift — acceptable and visible (a routine that ran yet shows a
+   NULL live trigger is itself a yellow flag).
+2. **Behavioural guard (the durable one):** `Claude_Task_Plan.md` "Observability" now states that `<instruction>`
+   is the **trigger-of-record**, not a task note — ad-hoc/one-off sessions that reuse a routine id must still pass
+   the **verbatim scheduled trigger**; what the one-off did goes in `<note>`/`session_id`.
+3. **Data correction:** restored the dropped ` — regular routine.` suffix on the one genuine 2026-06-21 scheduled
+   W5 run (`run_log.instruction`), so the live trigger now matches canonical and the view reads clean. (The next
+   scheduled W5 re-logs the verbatim trigger and self-confirms; if the real web-UI trigger ever *did* lack the
+   suffix, the hardened detector would re-fire then — nothing is permanently masked.)
+4. Resolved the open `ops.alerts` row with a note pointing here.
+
+**General rule.** A drift/`unknown_routine` alert is a **config bug to fix, not a halt** (it does not RAISE). First
+confirm whether it is a real edited trigger (diff `state.routine_last_instruction` vs `python scripts/print_routines.py`)
+or — as here — an ad-hoc session that logged a non-trigger instruction. Fix the cause, then
+`UPDATE ops.alerts SET resolved=TRUE, resolved_ts=CURRENT_TIMESTAMP(), resolved_note='…' WHERE alert_id='…'`.

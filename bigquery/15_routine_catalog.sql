@@ -49,6 +49,10 @@ FROM UNNEST([
 -- drifted — same self-bootstrapping philosophy as state.cadence_watch (no false alarms on routines
 -- that haven't adopted run-logging yet). unknown_routine flags a logged routine absent from the
 -- catalog (a new/renamed routine the catalog hasn't been regenerated for).
+-- NOTE (2026-06-22, RUNBOOK §22): "live" comes from state.routine_last_instruction, which since the W5
+-- false-alarm only counts instructions of the canonical `Read Claude_Task_Plan.md. Perform …` trigger
+-- shape — so an ad-hoc/one-off session that reuses a routine id and logs a free-form task note no longer
+-- shadows the real trigger and false-trips this view. A real typo'd/edited trigger still drifts here.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.instruction_drift` AS
 SELECT
   COALESCE(c.routine, li.routine) AS routine,
