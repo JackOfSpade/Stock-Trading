@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.events.decision_log` (
   superseded_by STRING, source_session STRING,
   PRIMARY KEY (entry_id) NOT ENFORCED
 ) PARTITION BY entry_date CLUSTER BY strategy, entry_type, ticker
-OPTIONS(description='Append-only decision audit. Corrections are new rows with superseded_by; never UPDATE/DELETE.');
+OPTIONS(description='Append-only decision audit. decision/conviction/body_md/title/outcome fields: corrections are NEW rows with superseded_by — never UPDATE/DELETE. EXCEPTION (2026-06-21): the pure-classification metadata column sub_pattern MAY be normalized in place by W5 (taxonomy owner) with an old->new audit trail in B_Sub_Pattern_Taxonomy.md — see ops/RUNBOOK.md §21.');
 
 CREATE TABLE IF NOT EXISTS `stock-trading-498512.events.trade_fills` (
   trade_id STRING NOT NULL,

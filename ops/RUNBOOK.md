@@ -481,3 +481,30 @@ write. **Optional `ops.alerts` upgrade:** grant the WIF SA `roles/bigquery.dataE
 dataset (or a custom role with only `bigquery.tables.updateData` on `ops.alerts`) and have the workflow
 `bq query` an `INSERT` via the existing WIF auth — then it flows through the alert-emailer + weekly report
 + `state.system_health` like every other alert. Left off by default to keep CI read-only.
+
+## 21. `events.*` append-only convention — the `sub_pattern` in-place exception *(data governance)*
+`events.*` is the **append-only source of truth** (schema description: *"INSERT/Storage-Write only; never
+UPDATE/DELETE"*; `decision_log`: *"corrections are new rows with `superseded_by`"*). That invariant is
+deliberate — decisions/outcomes must be immutable and auditable.
+
+**The one sanctioned exception (added 2026-06-21):** the **pure-classification metadata** column
+`events.decision_log.sub_pattern` MAY be normalized **in place** (UPDATE) by **W5** (the taxonomy owner),
+provided an **old→new audit trail** is recorded in `B_Sub_Pattern_Taxonomy.md` (W5 run-log). Rationale:
+`sub_pattern` is a free-text classification tag, not a decision/outcome; using the `superseded_by`
+new-row pattern to fix a tag would duplicate ~120 rows per relabel for zero analytic gain. **All other
+columns — `decision`, `conviction`, `conviction_pct`, `body_md`, `title`, outcomes — remain strictly
+append-only** (corrections via a new row + `superseded_by`; never UPDATE/DELETE). Reversible via 7-day
+time-travel; the documented mapping makes the pre-state recoverable beyond that. The live table
+description (`bigquery/01_schema.sql`) carries this exception too.
+
+**Why this section exists — the two 2026-06-21 normalizations that established it:**
+- **9-row family-level reconcile** — fixed entries whose raw `sub_pattern` *contradicted* the curated
+  taxonomy (e.g. DG/MRNA tagged SP1 but actually Mechanical; HIMS tagged SP8 but SP4); the taxonomy
+  itself had already flagged those tags as stale.
+- **111-row full normalization + canonical vocabulary** — conformed the entire Strategy-B history to the
+  controlled token set (`SP1`/`SP4f`/`PatternN`/`Mechanical (…)`/…, `(candidate)` suffix, `[overlay: …]`),
+  documented in the "Sub_pattern canonical vocabulary" block at the top of `B_Sub_Pattern_Taxonomy.md`.
+
+**Going forward:** the routine that logs B NO-GOs (**D2**) should emit the canonical tokens directly (see
+that vocabulary block); **W5** conforms any drift in its weekly pass. Anything beyond `sub_pattern`
+stays append-only.
