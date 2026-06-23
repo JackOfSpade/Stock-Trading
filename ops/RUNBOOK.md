@@ -596,6 +596,8 @@ or a standalone `scripts/check_stranded_sessions.py` run on a schedule. **Impact
 BigQuery holds all trade-relevant state, and the next successful D1/D2 regenerates the overwrite-each-run
 `Daily.md` fresh — so this is a durability/observability gap, not a trading-correctness bug.
 
+
+Status (2026-06-23): **closed by D2 Step-0 reconciliation**  Operating_Protocols.md 17 codifies the detector; merged to main via claude/never-pushed-reconciliation.
 ## 21. `events.*` append-only convention — the `sub_pattern` in-place exception *(data governance)*
 `events.*` is the **append-only source of truth** (schema description: *"INSERT/Storage-Write only; never
 UPDATE/DELETE"*; `decision_log`: *"corrections are new rows with `superseded_by`"*). That invariant is

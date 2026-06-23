@@ -451,6 +451,52 @@ The explicit WRITE instructions that would otherwise recreate one of these files
 
 ---
 
+
+## 17. D2 Step-0 Stranded-Session Reconciliation (Never-Pushed-Branch Detector)
+
+**Canonical-current text:**
+
+Runs as the first step inside D2 Step-0, before fill reconciliation, sizing, or staging. Purpose: detect sessions that logged `status='completed'` in `ops.run_log` but whose branch was never git-pushed  so neither `auto-merge-claude.yml` nor `stranded-branch-check.yml` can see them (both iterate `refs/remotes/origin/claude/*` and are blind to branches that never reached the remote). On divergence, write one row to `ops.alerts` so the alert flows through the alert-emailer + weekly report + `state.system_health` like every other dead-man's switch. Observability only: NEVER blocks or alters an order/exit/entry decision; on its own error, log and continue.
+
+**Steps:**
+
+1. **Query `ops.run_log` for completed sessions in the last 36h.** Execute (read-only):
+   ```sql
+   SELECT DISTINCT session_id, branch, routine, run_date
+   FROM ops.run_log
+   WHERE status = 'completed'
+     AND log_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 36 HOUR)
+     AND branch IS NOT NULL
+   ```
+   Result = `candidate_sessions`.
+
+2. **Test each candidate for the stranded condition.** For each row in `candidate_sessions`:
+   - (a) Skip the currently-running D2 session itself (its branch is not merged yet by definition).
+   - (b) Skip sessions whose only output is an overwrite-each-run file (`Daily.md`, `Weekly_*`) AND a later completed run of the same routine already exists in `ops.run_log` for a date after this session's `run_date`  no lasting data loss.
+   - (c) For the remaining candidates: **stranded** = the branch is NOT present on the remote (`git ls-remote --exit-code origin <branch>` returns non-zero). Absence from the remote is sufficient; there is no remote ref to test ancestry against.
+
+3. **For each confirmed-stranded session, insert exactly one alert row (dedup on `session_id`).** Call `ops.sp_raise_alert_once` (idempotent  deduplicates on `category + message`, so D2 re-runs don't accumulate duplicate rows):
+   - `severity  = 'warning'`
+   - `source    = 'D2'`
+   - `category  = 'never_pushed_branch'`
+   - `message   = 'Session <session_id> (routine=<routine>, run_date=<run_date>, branch=<branch>) logged completed in ops.run_log but its branch was never pushed  git output is stranded. BigQuery state is intact; .md output (if any) is lost. Next successful run regenerates overwrite-each-run files; cumulative files may need reconciliation.'`
+   - `payload   =` JSON with `session_id, routine, run_date, branch`.
+
+4. **On any error in steps 13:** catch the exception, log via `CALL ops.sp_log_run('D2', <run_date>, 'halted', ..., error=<msg>, note='stranded-session reconciliation step failed  continuing')`, and **CONTINUE** to the rest of D2 Step-0. This step MUST NOT abort D2.
+
+**Constraints:**
+- Write only to `ops.alerts` (deduped via `sp_raise_alert_once`). NEVER write to `events.*` (append-only; not appropriate for this observability alert).
+- Do NOT grant CI BigQuery access; `stranded-branch-check.yml` (remote-but-unmerged detector) and this check (never-pushed detector) are complementary and intentionally independent (RUNBOOK 6).
+- The 6/22 strand self-heals (BigQuery holds all trade state; the next D1/D2 regenerates `Daily.md` fresh)  this detector is forward-looking only.
+
+**Acceptance:**
+- Normal day (all sessions merged): `git ls-remote` finds no absent branches  no alerts written.
+- Synthetic test: inject a completed row on a fake never-pushed branch  exactly one `ops.alerts` row; a second D2 run does not duplicate it (`sp_raise_alert_once` deduplicates on `category + message`).
+
+**Revision history:**
+
+2026-06-23: Section established. Closes RUNBOOK 20's second incident (2026-06-22 never-pushed-branch durability gap). The fix lives in D2 Step-0 because only the routines have both BigQuery write (MCP) and git access (to test whether a branch reached the remote).  RUNBOOK 20 second-incident entry.
+
 ## Maintenance
 
 - W5 (weekly Factbase & Analytics Consolidation) appends new protocol revisions to the relevant section here as they emerge from Decision_Log entries.
