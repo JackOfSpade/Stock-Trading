@@ -16,7 +16,7 @@ Already specified in A's section. Summary: A enters before event; B enters after
 - US-listed common equity
 - Market cap ≥ $2B at entry
 - 30-day average daily volume ≥ $10M
-- Long or short (differentiates from A's long-only posture)
+- Long or short (differentiates from A's long-only posture) — but **long-biased in practice**; see the *Directional posture* note under the Router activation rule below
 - Position size: 2% of strategy portfolio at entry
 - No options
 
@@ -60,6 +60,8 @@ Already specified in A's section. Summary: A enters before event; B enters after
 **Technical:** SPY Trend State ≠ DOWN AND VIX Regime ≠ HIGH
 
 Rationale: In DOWN regimes, post-event moves are dominated by macro selling cascades; "overreaction" indistinguishable from regime change. In HIGH VIX regimes, post-event move sizes are noisy — every event produces 5%+ moves, diluting the signal.
+
+**Directional posture — long-biased in practice (Rev 36, owner directive, per the 2026-06-23 short-bar revisit).** Although B is spec'd long-or-short, it is long-biased *by construction*, not by screen miscalibration. A SHORT requires fading a *positive* overreaction (a pop), but the router activates B only when SPY Trend ≠ DOWN and VIX ≠ HIGH — precisely the risk-on/neutral regimes where fading a pop runs into momentum, squeeze risk, and the 2.20 textbook-rational penalty (B's mechanism *is* that penalty). The regimes where pop-fading would be safer (DOWN / HIGH-VIX) are the ones the router excludes. Empirically, through 2026-06-22, 0 of ~108 B theses produced a short entry, and every declined short held or extended rather than faded (e.g. INTC 6/18 SP5 rumor-pop: declined, then extended +5% to $140.94 by 6/22 vs the ~$121 fade target). This long-bias is intended; the SP1/2.20 short gating is **not** to be loosened (see Section 5 Constraint 2 empirical note). The only lever that would make shorts routinely takeable is a router relaxation — deferred to a future pre-mortem.
 
 **Fundamental question:** Is the current environment one in which event reactions show measurable mean reversion at 2–8 week horizons, or is the market in a regime where reactions are fully informative (no mean reversion to exploit)?
 
