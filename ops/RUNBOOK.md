@@ -571,6 +571,31 @@ dataset (or a custom role with only `bigquery.tables.updateData` on `ops.alerts`
 `bq query` an `INSERT` via the existing WIF auth — then it flows through the alert-emailer + weekly report
 + `state.system_health` like every other alert. Left off by default to keep CI read-only.
 
+**Second incident — 2026-06-22 (a *different*, still-open gap: the never-pushed branch).** The 6/22 daily
+cycle (D1 `fervent-franklin-2cu646`, D2 `kind-thompson-1efmei`, D3 `great-brown-pf7414`) logged `completed`
+in `ops.run_log` with BigQuery outputs intact (queue drained 6/21, GOOGL adjudicated, marks/engine through
+6/22), yet **none of those branches ever reached the remote** (`git branch -r` shows only `main` + the
+active session branch) and `main`'s `Daily.md` stayed frozen at 6/21. This is **not** the pushed-but-unmerged
+race above: the branches were **never `git push`ed** at all — the session containers died before their push
+step (cf. the 6/21 INTC-redo note: *"the d2-20260621 subagent that died on a usage limit and wrote nothing"*),
+then were reclaimed, so those commits are gone.
+
+**Why the existing monitor does NOT catch this.** Both `auto-merge-claude.yml` and `stranded-branch-check.yml`
+iterate `refs/remotes/origin/claude/*` — **remote** branches only. A branch that never pushed has no remote
+ref, so the sweep is structurally blind to it; and CI cannot close the gap (no BigQuery access — §6 — and
+zero git trace on the remote). The *only* signal of a never-pushed completed session is `ops.run_log` (BQ): a
+`status='completed'` row whose `branch` is neither present on the remote nor an ancestor of `main`.
+
+**Effective fix (owner decision — needs BQ + git together, so it cannot live in CI).** A routine-side
+reconciliation (e.g. D2 Step-0, which already reads `run_log` and has BQ via MCP): for each session logging
+`completed` in the last ~36h, assert its `branch` merged to `main` (or its expected `.md` output is present);
+on divergence write `ops.alerts` (routines have BQ write) so it flows through the alert-emailer like every
+other dead-man's switch. Alternatives: grant the CI WIF SA `bigquery.dataViewer` on `ops` so
+`stranded-branch-check.yml` can cross-check `run_log` (re-opens the deliberately-read-only-CI question, §6);
+or a standalone `scripts/check_stranded_sessions.py` run on a schedule. **Impact is low / self-healing** —
+BigQuery holds all trade-relevant state, and the next successful D1/D2 regenerates the overwrite-each-run
+`Daily.md` fresh — so this is a durability/observability gap, not a trading-correctness bug.
+
 ## 21. `events.*` append-only convention — the `sub_pattern` in-place exception *(data governance)*
 `events.*` is the **append-only source of truth** (schema description: *"INSERT/Storage-Write only; never
 UPDATE/DELETE"*; `decision_log`: *"corrections are new rows with `superseded_by`"*). That invariant is
