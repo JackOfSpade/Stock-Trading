@@ -27,6 +27,8 @@
 BEGIN
   DECLARE failed STRING DEFAULT '';
   DECLARE n_ok INT64 DEFAULT 0;   -- tables exported successfully this run (-> ops.backup_log marker)
+  DECLARE row_json STRING DEFAULT '';  -- accumulates {"table": rows, ...} per exported table (B2)
+  DECLARE tbl_rows INT64;
 
   FOR rec IN (
     SELECT table_name
@@ -53,6 +55,14 @@ BEGIN
          WHERE table_name = rec.table_name),
         rec.table_name);
       SET n_ok = n_ok + 1;   -- counted only if the EXPORT above succeeded (else we jump to EXCEPTION)
+      -- B2: record this table's source row count in the backup marker (per_table_rows). EXPORT DATA is
+      -- atomic — a non-empty source either fully exports or RAISEs — so this is the row-count evidence
+      -- the §3 restore drill asserts, captured at WRITE time: auditable day-over-day (an append-only
+      -- table's count only grows; a drop = deletion or a future predicate regression) and a forensic
+      -- anchor for a restore. (hf_capability_captures = 0 is legitimately empty.)
+      EXECUTE IMMEDIATE FORMAT(
+        "SELECT COUNT(*) FROM `stock-trading-498512.events.%s`", rec.table_name) INTO tbl_rows;
+      SET row_json = row_json || FORMAT('%s"%s":%d', IF(row_json = '', '', ','), rec.table_name, tbl_rows);
     EXCEPTION WHEN ERROR THEN
       -- isolate the failure; keep backing up the remaining tables
       SET failed = failed || FORMAT('%s (%s); ', rec.table_name, @@error.message);
@@ -70,7 +80,11 @@ BEGIN
     -- Success marker (bigquery/16_automation_health.sql): records that the backup ran, so
     -- state.backup_health / cadence_check.sql can detect a SILENTLY-STALLED backup (one that simply
     -- stops running) — which the data-side freshness switch cannot see. Only on a full-success run.
-    INSERT INTO `stock-trading-498512.ops.backup_log` (run_date, tables_exported, note)
-    VALUES (CURRENT_DATE('America/Denver'), n_ok, 'events.* export OK');
+    -- per_table_rows carries the B2 per-table source counts (bigquery/18_stack_review_fixes.sql adds
+    -- the column; apply 18 before re-pasting this query). SAFE.PARSE_JSON so a malformed map degrades
+    -- to NULL rather than aborting the marker write.
+    INSERT INTO `stock-trading-498512.ops.backup_log` (run_date, tables_exported, per_table_rows, note)
+    VALUES (CURRENT_DATE('America/Denver'), n_ok,
+            SAFE.PARSE_JSON('{' || row_json || '}'), 'events.* export OK');
   END IF;
 END;

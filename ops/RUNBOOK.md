@@ -44,8 +44,11 @@ click) plus the staged adoptions. Each item says what it solves (P0–P3 from th
   `SELECT * FROM state.cadence_watch WHERE needs_attention;` (want zero rows);
   `SELECT * FROM state.sgov_reconciliation;` (events-side SGOV shares to compare to the connector).
 
-To re-apply or move to a fresh project, run `bigquery/01..17_*.sql` in order via the BigQuery MCP
-`execute_sql` (same pattern the existing files use). (Added 2026-06-22: `16_automation_health.sql` —
+To re-apply or move to a fresh project, run `bigquery/01..18_*.sql` in order via the BigQuery MCP
+`execute_sql` (same pattern the existing files use). (Added 2026-06-24: `18_stack_review_fixes.sql` —
+additive monitor/integrity views + two `ALTER ADD COLUMN IF NOT EXISTS`; apply before re-pasting
+`cadence_check.sql` / `backup_events_export.sql` and before creating `integrity_check.sql`. See §25.)
+(Added 2026-06-22: `16_automation_health.sql` —
 backup-freshness + Apps Script heartbeat monitors, apply before re-pasting `cadence_check.sql`;
 `17_restore_drill.sql` — the `ops.sp_restore_drill()` DR-verification procedure, apply after 16. **16 +
 17 + the embedding re-build are already applied live** (the agent ran them via the MCP 2026-06-22 and
@@ -705,3 +708,112 @@ and the `ops.routine_catalog` seed (`bigquery/15_routine_catalog.sql`) — plus 
   routine added/renamed/rescheduled in one place but not the others now fails CI with a precise diff
   instead of surfacing weeks later as a false cadence / `instruction_drift` alert. `scripts/print_routines.py`
   remains the human-facing printer + the web-UI trigger restore script (§15).
+
+## 25. Stack-review fixes — 2026-06-24 (verified deltas)
+
+A full workflow / storage / automation review (six layers, adversarially verified against the
+already-done + settled record). Only genuine deltas were implemented; the settled decisions (Terraform
+adoption §12, dbt view ownership §14) were respected — the Terraform additions below are **spec-only**,
+never applied. **Repo artifacts are DONE; this section lists the owner/console apply steps.** New code:
+`bigquery/18_stack_review_fixes.sql`, `bigquery/scheduled_queries/integrity_check.sql`,
+`.github/workflows/alert-relay.yml`, `.github/workflows/keyless-sa-audit.yml`, `requirements-ci.txt`,
+`infra/terraform/wif.tf`, `tests/test_cadence_consistency.py`, `tests/test_dbt_parity.py`, plus edits to
+`backup_events_export.sql`, `cadence_check.sql`, `ci.yml`, `storage.tf`, `monitoring.tf`,
+`dbt_project.yml`, `Claude_Task_Plan.md`, `alert_emailer.gs`.
+
+> **APPLY ORDER for the BigQuery pieces:** apply `bigquery/18_stack_review_fixes.sql` via the MCP
+> **first** (additive: new `state.*` views + two `ALTER ADD COLUMN IF NOT EXISTS` — no behaviour change;
+> verified clean against live data 2026-06-24), **then** re-paste the updated `cadence_check.sql` +
+> `backup_events_export.sql` scheduled queries, **then** (optionally) create `integrity_check.sql`.
+
+### Theme A — alert delivery (closes the single-inbox SPOF + the un-versioned poller)
+- **A1 — second, different-class alert channel (live-on-edit spec).** `monitoring.tf` now creates a
+  webhook notification channel (`var.alert_webhook_url`, guarded — empty = email-only) and the three
+  scheduler-absence policies notify it **alongside** email. Every alert path today converges on ONE
+  Gmail inbox / ONE Google account; a non-Google webhook breaks that correlation.
+  **Owner:** set `alert_webhook_url` to a Slack/Discord/ntfy/Pub/Sub-push endpoint (NOT another Gmail
+  address). Spec-only here (per §12); to make it live without Terraform, add the channel in the Console
+  and attach it to the three "… scheduler absent >25h" policies.
+- **A2/A3 — version-controlled relay (`.github/workflows/alert-relay.yml` + `scripts/alert_relay.py`).**
+  A scheduled GHA reads `ops.alerts` via the EXISTING read-only WIF (no new grant) and POSTs to a webhook
+  — a git-reviewable poller whose failure mode is uncorrelated with the owner's Google account, plus a
+  once-daily staged-order reminder (A3) off `state.open_orders` so a silenced 07:00 calendar alarm is not
+  the ONLY notice of an order to confirm. **OFF until** repo **secret `ALERT_WEBHOOK_URL`** + the WIF vars
+  are set. It COMPLEMENTS (does not replace) the reliable ~2h `alert_emailer`; keep the Apps Scripts until
+  the relay is proven. **Do not retire `alert_emailer.gs`/`weekly_report.gs` yet.**
+
+### Theme B — data durability & integrity
+- **B1 — GCS Object Versioning (owner, gsutil).** `storage.tf` now declares `versioning{}` + a
+  noncurrent-version lifecycle (keep 3 / 30 days). To apply live without Terraform:
+  `gsutil versioning set on gs://stock-trading-backups` and add the noncurrent-version lifecycle rule
+  (Console → bucket → Lifecycle). Makes a bad in-place overwrite of a `dt=` snapshot recoverable.
+- **B2 — backup row-count evidence (repo done; re-paste).** `backup_events_export.sql` now records a
+  per-table `{table: rows}` map in `ops.backup_log.per_table_rows` (column added by `18`). Re-paste the
+  scheduled query after applying `18`. Auditable day-over-day; an append-only table's count only grows.
+- **B3 — append-only integrity tripwire (`state.append_only_integrity` + `integrity_check.sql`).**
+  Surfaces any out-of-band UPDATE/DELETE/MERGE on the immutable AUDIT-TRAIL tables (decision_log /
+  position_events / trade_fills / regime_events / queue_events / adversarial_reviews / parking_events /
+  hf_capability_captures), suppressing the one sanctioned W5 `sub_pattern` UPDATE. The reference/market
+  feeds (`market_holidays` MERGE, `daily_marks` re-ingest, `macro_*`) are deliberately OUT of scope — they
+  are maintained in place by design (verified live). **Owner console:** grant the `integrity_check`
+  run-as SA **`roles/bigquery.resourceViewer`** (project-level — reads `JOBS_BY_PROJECT` job METADATA,
+  not data) and create the `integrity_check.sql` scheduled query (daily ~05:20 UTC, email-on-failure ON).
+  **Posture:** staged-rollout WARNING (record-only, delivered by the emailer/relay; does NOT flip
+  `all_green` or RAISE). Baseline verified clean (0 rows). **Promote** to critical+RAISE once a clean
+  baseline holds.
+- **B4 — position-drift guard (`state.position_reconciliation`; `cadence_check` warning + dbt test).**
+  `state.current_positions` (the 2%-sizing path) vs `analytics.position_lifecycle` (the TWR path) can
+  diverge with no monitor; this flags a material per-(strategy,ticker) open-share gap (tolerance ignores
+  sub-cent dividend-reinvest fractions — the live ~$0.20 drift does NOT trip it). Surfaced as a record-only
+  warning in `cadence_check.sql` + the dbt singular test `assert_current_positions_match_lifecycle.sql`.
+
+### Theme C — CI / merge / supply-chain hardening
+- **C1 — `DBT_PARITY=block` fails closed (DONE, live-on-merge).** When `block`, a missing WIF var now
+  FAILS the guard (was: skip-green) so the hard parity gate can't silently become a no-op after promotion.
+- **C2 — drift-defense tests + advisory `dbt test` (DONE).** `tests/test_cadence_consistency.py` +
+  `tests/test_dbt_parity.py` exercise the regex parsers / column-typing so a rotted regex is caught (not a
+  vacuous pass); an advisory `dbt test` step runs the B3 invariant suite vs live each push (`::warning::`,
+  never blocks).
+- **C3 — pinned CI toolchain (DONE).** `requirements-ci.txt` (constraints) + `require-dbt-version` —
+  every CI install is now version-bounded. **Owner (optional):** tighten the ranges to exact `==` from a
+  green run's resolved versions for full reproducibility.
+- **C4 — server-side merge gate (owner console).** Add a GitHub **repository ruleset** on `main` requiring
+  the `options-math tests` check, with the **github-actions bot as a bypass actor** — so "main is CI-green"
+  is server-enforced for every non-bot actor (token compromise / workflow edit / manual drain) WITHOUT
+  forcing PRs for the bot path (the §5 objection no longer applies with bypass actors). **Validate the
+  bypass end-to-end first** — a misconfigured bypass could wedge auto-merge.
+
+### Theme D — workflow observability
+- **D1 — research-feeder freshness gate (DONE, instruction-layer).** W4/M4/Q4/A3 now assert each upstream
+  research `.md`'s first-line **period marker** equals the current period before `sp_routine_start`, so the
+  dependency gate bites NOW (it was inert for the not-yet-monitored research routines). See
+  `Claude_Task_Plan.md` "Observability".
+- **D2 — deleted-trigger attestation (`state.trigger_attestation`; `cadence_check` warning).** Flags a
+  low-frequency routine (the weekly/monthly/quarterly/annual ones the cadence ALARM excludes) that has
+  logged no completed run across its cadence window — a DELETED (vs edited) trigger `instruction_drift`
+  can't see. Self-bootstrapping (only routines that have ever completed).
+- **D3 — GO-without-order check (`state.go_without_order`; D3 instruction).** Anchors on the GO decision
+  to catch a GO whose `ORDER_STAGED` row was never written (session died mid-step) — invisible to the
+  registry-centric reconciliations. D3 adjudicates each candidate.
+
+### Theme E — identity & governance
+- **E1 — WIF trust binding codified + verify (`infra/terraform/wif.tf`, spec-only).** Documents the
+  pool/provider `attribute_condition` + the `workloadIdentityUser` principalSet that scope impersonation
+  to this repo. **Owner (read-only verify):** run the two `gcloud … describe` / `get-iam-policy` commands
+  in `wif.tf`'s header and confirm the live binding pins `assertion.repository` to `JackOfSpade/Stock-Trading`
+  (and is NOT a pool-wide binding). Record the result here. This is the highest-severity item IF the live
+  binding is fork-permissive; pure documentation if it is already scoped (likely).
+- **E2 — keyless-SA audit (`.github/workflows/keyless-sa-audit.yml`, opt-in).** Monthly check that
+  `gh-ci-runner@` / `bq-scheduler@` carry ZERO user-managed keys. **Owner to enable:** grant the WIF SA
+  `iam.serviceAccountKeys.list` on those SAs and set `vars.RUN_SA_KEY_AUDIT=true`. The preventive analog
+  (org policy `iam.disableServiceAccountKeyCreation`) is deferred for the same no-Org reason as §17.
+
+### Marginals (scoped per the review)
+- `ops.alerts.notified_ts` (column in `18`; `alert_emailer.gs` stamps it on send — re-paste the script):
+  makes "was the human told?" queryable. De-dup still via Script Properties; re-fire-on-reopen preserved.
+- `state.stalled_runs` — a DAILY routine `started` but never terminal (>=6h); `cadence_check` warning.
+- `state.market_calendar_horizon` — FMP auto-extend liveness (warns if runway < 100 days; ~1500 today).
+- `state.embedding_scale_watch` — near-free advisory mirroring `gate_watch` for the 5k VECTOR INDEX
+  threshold (~13 years out; revisit the §23 chunking work when it approaches).
+- **Left out deliberately** (review recommended "leave it"): an in-warehouse SNAPSHOT/CLONE layer for
+  `events.*` (the proven daily GCS-Parquet + restore-drill path already covers >7-day recovery).

@@ -57,6 +57,7 @@ function checkAlerts_() {
     GmailApp.sendEmail(ALERT_RECIPIENT, subject, plainAlerts_(fresh, rows.length),
       { htmlBody: htmlAlerts_(fresh, rows.length), name: ALERT_SENDER });
     Logger.log('Emailed %s new alerts', fresh.length);
+    stampNotified_(currentIds.filter(id => fresh.some(f => f.alert_id === id)));
   } else {
     Logger.log('No new alerts (%s open, %s resolved since last run)', rows.length, resolvedCount);
   }
@@ -67,6 +68,24 @@ function checkAlerts_() {
   // SILENTLY-DEAD emailer (revoked token / deleted trigger) via the independent DTS failure-email —
   // a dead emailer obviously can't email that it is dead. Best-effort: never block the run on it.
   beat_();
+}
+
+// ===== notified_ts stamp (stack review 2026-06-24, RUNBOOK §25) =====
+// Make "was the human told?" a queryable fact on ops.alerts instead of state hidden in Script
+// Properties. Best-effort — never blocks delivery. De-dup STILL uses Script Properties (this is purely
+// for auditability + the out-of-band relay). Re-fire-on-reopen is preserved: a reopened condition is a
+// NEW alert_id (sp_raise_alert_once), so its notified_ts starts NULL. Needs the column from
+// bigquery/18_stack_review_fixes.sql (apply 18 before re-pasting this script).
+function stampNotified_(ids) {
+  if (!ids || !ids.length) return;
+  try {
+    const idList = ids.map(id => `'${String(id).replace(/'/g, '')}'`).join(',');
+    BigQuery.Jobs.query({
+      query: `UPDATE \`${ALERT_PROJECT_ID}.ops.alerts\` SET notified_ts = CURRENT_TIMESTAMP() ` +
+             `WHERE alert_id IN (${idList}) AND notified_ts IS NULL`,
+      useLegacySql: false, timeoutMs: 30000
+    }, ALERT_PROJECT_ID);
+  } catch (e) { Logger.log('notified_ts stamp skipped: ' + e); }
 }
 
 // ===== heartbeat =====

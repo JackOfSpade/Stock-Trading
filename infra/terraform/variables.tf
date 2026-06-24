@@ -67,6 +67,25 @@ variable "notification_emails" {
   default     = []
 }
 
+variable "alert_webhook_url" {
+  description = <<-EOT
+    Vendor-neutral webhook URL for a SECOND, DIFFERENT-CLASS alert channel on the
+    scheduler-absence policies (stack review 2026-06-24, RUNBOOK §25 A1). Today every
+    alert path (the three DTS failure-emails + both monitoring absence policies + both
+    Apps Scripts) terminates in ONE Gmail inbox on ONE Google account, so a single
+    inbox/OAuth/account problem can silently black-hole every path at once. Pointing this
+    at a channel whose failure mode is uncorrelated with the owner's Google account (a
+    Slack/Discord incoming webhook, an ntfy topic, or a Pub/Sub-push proxy — NOT another
+    Gmail address) removes that correlation. Sensitive (a webhook is a capability URL).
+    Leave "" to keep email-only (no webhook channel is created). Spec-only — the live
+    apply remains the operating model; the GitHub-Actions relay (.github/workflows/
+    alert-relay.yml) uses its OWN GH secret of the same URL for the ops.alerts push.
+  EOT
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "scheduled_query_location" {
   description = <<-EOT
     Location for the BigQuery Data Transfer (scheduled query) configs. Must match

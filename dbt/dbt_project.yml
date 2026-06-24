@@ -17,6 +17,11 @@ name: 'stock_trading'
 version: '1.0.0'
 config-version: 2
 
+# Pin the dbt runtime to the window the parallel-run port was authored against (stack review
+# 2026-06-24, RUNBOOK §25 C3) — keep in lockstep with requirements-ci.txt's dbt-core/dbt-bigquery pins.
+# A dbt outside this range fails fast with a clear message instead of silently changing compile/parity.
+require-dbt-version: [">=1.8.0", "<1.10.0"]
+
 # This profile must exist in ~/.dbt/profiles.yml — see profiles.example.yml.
 profile: 'stock_trading'
 

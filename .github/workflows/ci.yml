@@ -30,18 +30,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install test deps
-        run: pip install --quiet pytest
+      - name: Install test deps (pinned via constraints — RUNBOOK §25 C3)
+        # pyyaml up front so the new parser tests can import check_cadence_consistency (which imports yaml)
+        # during pytest, not only in the later cadence step.
+        run: pip install --quiet -c requirements-ci.txt pytest pyyaml
       - name: Module self-test (asserts, no deps)
         run: python c_options_math.py
-      - name: pytest regression suite
+      - name: pytest regression suite (options-math + drift-defense parsers — RUNBOOK §25 C2)
         run: python -m pytest -q
       - name: strategy/ slices in sync with Strategy.md
         run: python scripts/split_strategy.py --check
       - name: cadence single-source (cadence.yaml ⇄ 12/15 SQL ⇄ plan headings)
-        run: |
-          pip install --quiet pyyaml
-          python scripts/check_cadence_consistency.py
+        run: python scripts/check_cadence_consistency.py
 
   lint:
     name: ruff (informational)
@@ -52,7 +52,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install --quiet ruff
+      - run: pip install --quiet -c requirements-ci.txt ruff
       - run: ruff check c_options_math.py tests/ scripts/ ops/ || true
 
   dbt:
@@ -66,8 +66,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install dbt
-        run: pip install --quiet dbt-core dbt-bigquery
+      - name: Install dbt (pinned via constraints — RUNBOOK §25 C3)
+        run: pip install --quiet -c requirements-ci.txt dbt-core dbt-bigquery
       - name: Write a CI profile (no creds — parse does not connect)
         run: |
           mkdir -p ~/.dbt
@@ -124,8 +124,16 @@ jobs:
              && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ] \
              && [ "${{ vars.DBT_PARITY }}" != "off" ]; then
             echo "skip=false" >> "$GITHUB_OUTPUT"
+          elif [ "${{ vars.DBT_PARITY }}" = "block" ]; then
+            # FAIL CLOSED (RUNBOOK §25 C1): block mode promises a HARD parity gate, but the old guard
+            # skipped GREEN whenever the WIF vars were absent — silently turning the only view-drift gate
+            # into a no-op right after promotion. In block mode a missing parity result is a failure, not
+            # a pass (matching the §5 auto-merge "missing == not green" posture). The job is NOT
+            # continue-on-error when DBT_PARITY=block, so this exit blocks the merge until it's fixed.
+            echo "::error::DBT_PARITY=block but the WIF vars (GCP_WIF_PROVIDER / GCP_WIF_SERVICE_ACCOUNT) are unset — the hard parity gate has no parity result. Set the WIF vars, or change DBT_PARITY to advisory/off. (ops/RUNBOOK.md §25 C1 / §6.)"
+            exit 1
           else
-            echo "::notice::dbt parity skipped — set the WIF vars (read-only SA) to run it (it runs by default once they exist; set DBT_PARITY=off to suppress, =block to make drift a hard merge gate). ops/RUNBOOK.md §6/§14. dbt parse remains the always-on structural gate."
+            echo "::notice::dbt parity skipped — set the WIF vars (read-only SA) to run it (it runs by default once they exist; set DBT_PARITY=off to suppress, =block to make drift a hard merge gate that fails closed). ops/RUNBOOK.md §6/§14/§25. dbt parse remains the always-on structural gate."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
       - uses: actions/setup-python@v5
@@ -141,9 +149,9 @@ jobs:
       - name: Set up gcloud (provides the bq CLI)
         if: steps.guard.outputs.skip == 'false'
         uses: google-github-actions/setup-gcloud@v2
-      - name: Install dbt
+      - name: Install dbt (pinned via constraints — RUNBOOK §25 C3)
         if: steps.guard.outputs.skip == 'false'
-        run: pip install --quiet dbt-core dbt-bigquery
+        run: pip install --quiet -c requirements-ci.txt dbt-core dbt-bigquery
       - name: dbt profile (ADC from WIF via oauth)
         if: steps.guard.outputs.skip == 'false'
         run: |
@@ -171,6 +179,20 @@ jobs:
         # Drift fails this step; whether that BLOCKS the merge is the job-level continue-on-error above
         # (advisory by default; a hard gate only when repo var DBT_PARITY=block). ops/RUNBOOK.md §6/§12.
         run: python scripts/dbt_parity.py
+      - name: dbt test — B3 invariants vs live data (ADVISORY — RUNBOOK §25 C2)
+        if: steps.guard.outputs.skip == 'false'
+        working-directory: dbt
+        # Runs the B3 invariant suite (reserved_cash formula, queue latest-wins, daily_marks no-double-
+        # count, one-row health views — the exact bugs that have already bitten this system) against the
+        # LIVE views each push, instead of "on demand" only. Read-only: generate_schema_name pins refs to
+        # the bare live datasets, so the tests SELECT against the existing live objects (no dbt build).
+        # ALWAYS ADVISORY — a `::warning::` even in DBT_PARITY=block mode (block gates row-level DRIFT,
+        # not a live-data invariant that may legitimately flex); the `if !` keeps the step green.
+        run: |
+          dbt deps >/dev/null 2>&1 || true
+          if ! dbt test; then
+            echo "::warning::dbt test reported failures (advisory) — a B3 invariant may be violated on live data; see log. ops/RUNBOOK.md §25 C2."
+          fi
 
   sql-validate:
     name: BigQuery SQL dry-run (keyless WIF, opt-in)

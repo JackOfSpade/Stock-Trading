@@ -106,6 +106,35 @@ resource "google_monitoring_notification_channel" "scheduler_alert_email" {
   }
 }
 
+# --- SECOND, DIFFERENT-CLASS channel (stack review 2026-06-24, RUNBOOK §25 A1) ----
+# Every alert path today converges on ONE Gmail inbox / ONE Google account, so a single
+# inbox/OAuth/account failure can black-hole all of them at once. A webhook channel whose
+# failure mode is uncorrelated with that Google account (Slack/Discord/ntfy/Pub/Sub-push)
+# breaks the correlation. GUARDED: created only when var.alert_webhook_url is set; otherwise
+# count = 0 and the policies fall back to email-only (no behaviour change). The receiver must
+# accept Cloud Monitoring's webhook JSON (use a proxy/Cloud Function if pointing at a chat
+# webhook that expects a {text} body).
+resource "google_monitoring_notification_channel" "scheduler_alert_webhook" {
+  count = var.alert_webhook_url != "" ? 1 : 0
+
+  project      = var.project_id
+  display_name = "Scheduler-absence alert: webhook (non-Google channel)"
+  type         = "webhook_tokenauth"
+
+  labels = {
+    url = var.alert_webhook_url
+  }
+}
+
+locals {
+  # Email channels + the optional different-class webhook channel. The absence policies notify
+  # ALL of these, so a single-inbox failure cannot silence the scheduler-death alarm.
+  scheduler_alert_channels = concat(
+    [for c in google_monitoring_notification_channel.scheduler_alert_email : c.id],
+    google_monitoring_notification_channel.scheduler_alert_webhook[*].id,
+  )
+}
+
 # --- Alert: the freshness heartbeat has been ABSENT for >25h (silent scheduler death) ---
 resource "google_monitoring_alert_policy" "freshness_scheduler_absent" {
   project      = var.project_id
@@ -129,9 +158,7 @@ resource "google_monitoring_alert_policy" "freshness_scheduler_absent" {
     }
   }
 
-  notification_channels = [
-    for c in google_monitoring_notification_channel.scheduler_alert_email : c.id
-  ]
+  notification_channels = local.scheduler_alert_channels
 
   documentation {
     content = join(" ", [
@@ -202,9 +229,7 @@ resource "google_monitoring_alert_policy" "backup_scheduler_absent" {
     }
   }
 
-  notification_channels = [
-    for c in google_monitoring_notification_channel.scheduler_alert_email : c.id
-  ]
+  notification_channels = local.scheduler_alert_channels
 
   documentation {
     content   = "The events-backup scheduled query has emitted no run heartbeat in >25h — the append-only event store may be silently un-backed-up. Triage per ops/RUNBOOK.md §19: check region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT for recent scheduled_query% backup runs. Runs present -> the metric drifted (fix the metric). No runs -> the backup scheduler is down (paused config, lapsed run-SA, or DTS outage)."
@@ -244,9 +269,7 @@ resource "google_monitoring_alert_policy" "cadence_scheduler_absent" {
     }
   }
 
-  notification_channels = [
-    for c in google_monitoring_notification_channel.scheduler_alert_email : c.id
-  ]
+  notification_channels = local.scheduler_alert_channels
 
   documentation {
     content   = "The cadence-check scheduled query has emitted no run heartbeat in >25h — missed-routine detection (state.cadence_watch) may be silently down. Triage per ops/RUNBOOK.md §19; note state.freshness still independently catches data staleness, so this is lower-severity than the freshness/backup absences."

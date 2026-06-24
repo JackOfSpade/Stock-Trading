@@ -1,0 +1,80 @@
+name: Alert relay (webhook push)
+
+# Stack review 2026-06-24 (RUNBOOK §25 A1/A2/A3). A version-controlled, scheduled relay that reads
+# BigQuery via the EXISTING read-only WIF SA (gh-ci-runner@ — no new grant, §6) and POSTs to a
+# vendor-neutral webhook (secrets.ALERT_WEBHOOK_URL — a Slack/Discord/ntfy/Pub/Sub-push endpoint).
+# It diversifies alert DELIVERY off the single Google inbox every other path shares, and moves a poller
+# OUT of un-versioned Apps Script into git. It COMPLEMENTS the reliable ~2h alert_emailer + the
+# identity-independent DTS failure-email; this is the FAST, BEST-EFFORT channel (stateless time-window
+# de-dup, so it stays read-only — see scripts/alert_relay.py).
+#
+# DOUBLE-GATED + OFF BY DEFAULT (it pushes live trading alerts): runs only when BOTH the WIF vars
+# (vars.GCP_WIF_PROVIDER + vars.GCP_WIF_SERVICE_ACCOUNT) and the secret ALERT_WEBHOOK_URL are set.
+# Otherwise it skips cleanly (no auth, no post). Do NOT retire the Apps Scripts until this is proven.
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'   # alert relay — recent ops.alerts (fast, best-effort)
+    - cron: '5 13 * * *'     # daily staged-order reminder ~07:05 MT confirm window (A3)
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'alerts | orders'
+        required: false
+        default: 'alerts'
+
+permissions:
+  contents: read
+  id-token: write   # Workload Identity Federation (no downloadable key)
+
+concurrency:
+  group: alert-relay
+  cancel-in-progress: false
+
+jobs:
+  relay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gate on WIF + webhook secret
+        id: guard
+        env:
+          WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+        run: |
+          if [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] \
+             && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ] \
+             && [ -n "$WEBHOOK_URL" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Alert relay disabled — set the WIF vars (read-only SA, §6) + the ALERT_WEBHOOK_URL secret to enable (RUNBOOK §25). The alert_emailer Apps Script remains the reliable channel."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Pick mode from the trigger
+        id: mode
+        if: steps.guard.outputs.skip == 'false'
+        run: |
+          # The daily 13:05 UTC schedule is the staged-order reminder; everything else is alerts.
+          if [ "${{ github.event.schedule }}" = "5 13 * * *" ]; then
+            echo "mode=orders" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=${{ github.event.inputs.mode || 'alerts' }}" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-python@v5
+        if: steps.guard.outputs.skip == 'false'
+        with:
+          python-version: '3.11'
+      - name: Authenticate to GCP (keyless, WIF)
+        if: steps.guard.outputs.skip == 'false'
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
+      - name: Set up gcloud (provides the bq CLI)
+        if: steps.guard.outputs.skip == 'false'
+        uses: google-github-actions/setup-gcloud@v2
+      - name: Relay
+        if: steps.guard.outputs.skip == 'false'
+        env:
+          WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+          RELAY_MODE: ${{ steps.mode.outputs.mode }}
+        run: python scripts/alert_relay.py

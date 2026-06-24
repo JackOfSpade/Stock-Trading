@@ -75,6 +75,65 @@ BEGIN
        FROM `stock-trading-498512.state.instruction_drift` WHERE drifted OR unknown_routine));
   END IF;
 
+  -- ====================================================================================
+  -- 2026-06-24 stack-review additions (all WARNING, record-only — like instruction_drift —
+  -- so they NEVER flip all_green and NEVER add to the DTS RAISE; delivered by the alert
+  -- emailer / out-of-band relay, which both forward 'warning' rows). They reference views in
+  -- bigquery/18_stack_review_fixes.sql — APPLY 18 BEFORE re-pasting this query. All read only
+  -- ops.run_log + state views (no extra IAM); the JOBS-based append-only guard lives in the
+  -- separate integrity_check.sql (it needs roles/bigquery.resourceViewer). RUNBOOK §25.
+  -- ====================================================================================
+
+  -- trigger_missing (D2) — a calendar-predictable routine the cadence ALARM deliberately excludes
+  -- (weekly/monthly/quarterly/annual) has logged NO completed run across its cadence window: a DELETED
+  -- (vs edited) web-UI trigger, which instruction_drift cannot see (it needs a run to log). Self-
+  -- bootstrapping: only flags routines that have completed before (state.trigger_attestation.monitored).
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.trigger_attestation` WHERE overdue) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'trigger_missing',
+      CONCAT('Trigger attestation: routine(s) overdue beyond their cadence window (deleted/disabled web-UI trigger?): ',
+             (SELECT STRING_AGG(CONCAT(routine, ' (', CAST(days_since_completed AS STRING), 'd)'), ', ' ORDER BY routine)
+              FROM `stock-trading-498512.state.trigger_attestation` WHERE overdue)),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(routine, days_since_completed, max_gap_days, last_completed)))
+       FROM `stock-trading-498512.state.trigger_attestation` WHERE overdue));
+  END IF;
+
+  -- routine_stalled (marginal) — a DAILY routine logged 'started' but never a terminal status (>=6h):
+  -- a session that died after sp_routine_start but before sp_routine_end (the run-log-blind slice).
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.stalled_runs`) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'routine_stalled',
+      CONCAT('Stalled run(s): a daily routine started but never logged a terminal status: ',
+             (SELECT STRING_AGG(CONCAT(routine, '/', CAST(run_date AS STRING)), ', ' ORDER BY routine)
+              FROM `stock-trading-498512.state.stalled_runs`)),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(routine, run_date, hours_since_started)))
+       FROM `stock-trading-498512.state.stalled_runs`));
+  END IF;
+
+  -- position_drift (B4) — the two open-position representations (state.current_positions vs
+  -- analytics.position_lifecycle) disagree on open shares beyond tolerance for some (strategy,ticker).
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.position_reconciliation` WHERE drifted) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'position_drift',
+      CONCAT('Position reconciliation: current_positions vs position_lifecycle open-share drift: ',
+             (SELECT STRING_AGG(CONCAT(strategy, ':', ticker), ', ' ORDER BY strategy, ticker)
+              FROM `stock-trading-498512.state.position_reconciliation` WHERE drifted)),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(strategy, ticker, current_positions_shares, lifecycle_open_shares, share_diff)))
+       FROM `stock-trading-498512.state.position_reconciliation` WHERE drifted));
+  END IF;
+
+  -- calendar_runway_low (FMP auto-extend liveness) — the trading-calendar horizon has fallen below the
+  -- W5 FMP auto-extend trigger and stayed there, an EARLY signal the auto-extend (likely the FMP grant)
+  -- is failing, well before the calendar exhausts and the freshness COALESCE→FALSE backstop trips.
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.market_calendar_horizon` WHERE runway_low) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'calendar_runway_low',
+      (SELECT CONCAT('Market-calendar runway low (', CAST(days_of_runway AS STRING),
+                     'd to ', CAST(calendar_through AS STRING), ') — W5 FMP auto-extend may be failing')
+       FROM `stock-trading-498512.state.market_calendar_horizon`),
+      (SELECT TO_JSON_STRING(t) FROM `stock-trading-498512.state.market_calendar_horizon` t));
+  END IF;
+
   -- Single consolidated RAISE so the DTS failure-email fires once, AFTER every condition is recorded.
   IF raise_msg != '' THEN
     RAISE USING MESSAGE = CONCAT('STOCK-TRADING cadence/backup/heartbeat check FAILED — ', raise_msg);

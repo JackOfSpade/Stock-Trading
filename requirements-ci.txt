@@ -1,0 +1,23 @@
+# Pinned CI toolchain (stack review 2026-06-24, RUNBOOK §25 C3).
+#
+# WHY: every pip install in .github/workflows/ci.yml was floating, so the cadence/strategy/dbt drift
+# GATES ran against whatever pip resolved that day — a dbt-bigquery release that changes compile or
+# EXCEPT semantics could flip the parity gate to spurious drift (or mask a real one) with NO repo diff
+# to explain it. This is the single source for all CI installs.
+#
+# Bounded-range pins (NOT exact ==) deliberately: they prevent the silent behaviour-changing MAJOR/MINOR
+# bump the gate must be defended against, without breaking CI on a yanked patch. To make CI fully
+# reproducible, tighten each line to the exact == version a green run resolves (read the run log), and
+# bump only via a deliberate claude/* change that goes green — never silently.
+
+# --- always-on `test` job (offline) ---
+pytest>=8.0,<9.0
+pyyaml>=6.0,<7.0
+
+# --- advisory `lint` job ---
+ruff>=0.6,<0.13
+
+# --- `dbt` parse + `dbt-parity` compile jobs (the drift defenses) ---
+# Keep dbt-core and dbt-bigquery on the SAME minor; mirror require-dbt-version in dbt/dbt_project.yml.
+dbt-core>=1.8,<1.10
+dbt-bigquery>=1.8,<1.10

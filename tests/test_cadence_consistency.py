@@ -1,0 +1,74 @@
+"""Guard the cadence single-source GATE's own parsers (stack review 2026-06-24, RUNBOOK §25 C2).
+
+scripts/check_cadence_consistency.py scrapes routine→class and routine→instruction maps out of the
+hand-formatted bigquery/12 + 15 SQL with regexes. If a benign SQL reformat makes a regex stop matching,
+the check can pass VACUOUSLY for the changed side — exactly the §22-class drift the gate exists to catch.
+These tests feed known-good and deliberately-drifted snippets and assert the parsers behave, so a regex
+that rots is caught by CI instead of silently disarming the gate.
+
+No warehouse, no creds — pure offline parser tests (run in the always-on `test` job).
+"""
+import importlib.util
+import os
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _load():
+    path = os.path.join(ROOT, "scripts", "check_cadence_consistency.py")
+    spec = importlib.util.spec_from_file_location("check_cadence_consistency", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+cc = _load()
+
+
+# ---- heading_to_id: the id-extraction rule the catalog + expected maps key on ----
+def test_heading_to_id_handles_all_id_shapes():
+    assert cc.heading_to_id("D1. Market Development Scan — deep research") == "D1"
+    assert cc.heading_to_id("M1a. Strategy-Blind Regime Scoring — deep research") == "M1a"
+    assert cc.heading_to_id("Adversarial Review Attacker — regular routine") == "AR·att"
+    assert cc.heading_to_id("Adversarial Review Orchestrator — regular routine") == "AR·orc"
+    assert cc.heading_to_id("no leading id here") is None
+
+
+# ---- parse_expected_sql: the STRUCT(... AS routine, ... AS schedule) scraper ----
+def test_parse_expected_sql_matches_known_good(tmp_path, monkeypatch):
+    f = tmp_path / "12.sql"
+    f.write_text(
+        "STRUCT('D1'  AS routine, 'daily_trading' AS schedule),\n"
+        "STRUCT('W1'  AS routine, 'weekly_sun'    AS schedule)\n"
+    )
+    monkeypatch.setattr(cc, "CADENCE_SQL", str(f))
+    assert cc.parse_expected_sql() == {"D1": "daily_trading", "W1": "weekly_sun"}
+
+
+def test_parse_expected_sql_empty_on_reformat_is_caught(tmp_path, monkeypatch):
+    # A reformat that breaks the regex (double quotes / renamed label) must yield {} — main() then flags
+    # "could not parse any STRUCT(... AS schedule) rows", NOT a vacuous pass.
+    f = tmp_path / "12.sql"
+    f.write_text('STRUCT("D1" AS routine, "daily_trading" AS schedule_class)\n')
+    monkeypatch.setattr(cc, "CADENCE_SQL", str(f))
+    assert cc.parse_expected_sql() == {}
+
+
+# ---- parse_catalog_sql: the optional-`AS routine` group the verifier flagged as the real risk ----
+def test_parse_catalog_sql_handles_first_labelled_and_shorthand_rows(tmp_path, monkeypatch):
+    f = tmp_path / "15.sql"
+    f.write_text(
+        "STRUCT('D1'  AS routine, 'Read Claude_Task_Plan.md. Perform D1. Market Development Scan — deep research.' AS canonical_instruction),\n"
+        "STRUCT('D2',  'Read Claude_Task_Plan.md. Perform D2. Daily Action Conversion — regular routine.'),\n"
+    )
+    monkeypatch.setattr(cc, "CATALOG_SQL", str(f))
+    got = cc.parse_catalog_sql()
+    assert got["D1"].startswith("Read Claude_Task_Plan.md. Perform D1.")
+    assert got["D2"] == "Read Claude_Task_Plan.md. Perform D2. Daily Action Conversion — regular routine."
+
+
+def test_parse_catalog_sql_empty_on_reformat_is_caught(tmp_path, monkeypatch):
+    f = tmp_path / "15.sql"
+    f.write_text("STRUCT('D1' AS routine, \"Read Claude_Task_Plan.md. Perform D1.\")\n")  # double-quoted instr
+    monkeypatch.setattr(cc, "CATALOG_SQL", str(f))
+    assert cc.parse_catalog_sql() == {}

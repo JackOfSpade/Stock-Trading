@@ -1,0 +1,85 @@
+name: Keyless-SA audit
+
+# Stack review 2026-06-24 (RUNBOOK §25 E2). The whole CI/automation security model rests on
+# gh-ci-runner@ and bq-scheduler@ having NO downloadable (USER_MANAGED) keys — the keyless-WIF posture
+# (§6) and the deleted bq-loader@ key (§15). But nothing periodically asserts they STAY keyless: a single
+# `gcloud iam service-accounts keys create` (by the owner, a future automation, or a compromised session)
+# would silently reintroduce a long-lived exportable credential and undo the entire WIF investment, with
+# no signal. This turns "keyless today" into "can't silently regain a key without an alarm" — the §17
+# posture-hardening idea, but for the credential-KEY surface (no Org required, unlike §17's org policy).
+#
+# OPT-IN, default OFF + double-gated. Listing keys on the audited SAs needs the WIF SA to hold
+# iam.serviceAccountKeys.list on each (e.g. roles/iam.serviceAccountKeyAdmin, or a custom role with only
+# that permission) — a grant beyond the read-only §6 set, so this stays opt-in. Enable by granting that
+# permission and setting vars.RUN_SA_KEY_AUDIT=true (+ the WIF vars). Otherwise it skips cleanly (green).
+#
+# The strictly-PREVENTIVE analog (org policy iam.disableServiceAccountKeyCreation) is deferred for the
+# same no-Org reason as §17, so this DETECTION check is the actionable-today move.
+
+on:
+  schedule:
+    - cron: '30 6 1 * *'   # monthly, 1st @ 06:30 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: keyless-sa-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    env:
+      AUDITED_SAS: >-
+        gh-ci-runner@stock-trading-498512.iam.gserviceaccount.com
+        bq-scheduler@stock-trading-498512.iam.gserviceaccount.com
+    steps:
+      - name: Gate on opt-in + WIF
+        id: guard
+        run: |
+          if [ "${{ vars.RUN_SA_KEY_AUDIT }}" = "true" ] \
+             && [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] \
+             && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Keyless-SA audit disabled (default). To enable: grant the WIF SA iam.serviceAccountKeys.list on gh-ci-runner@/bq-scheduler@ and set vars.RUN_SA_KEY_AUDIT=true (+ WIF vars). ops/RUNBOOK.md §25 E2."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Authenticate to GCP (keyless, WIF)
+        if: steps.guard.outputs.skip == 'false'
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
+      - name: Set up gcloud
+        if: steps.guard.outputs.skip == 'false'
+        uses: google-github-actions/setup-gcloud@v2
+      - name: Assert zero USER_MANAGED keys
+        if: steps.guard.outputs.skip == 'false'
+        env:
+          WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+        run: |
+          set -uo pipefail
+          offenders=""
+          for sa in $AUDITED_SAS; do
+            # --managed-by=user lists ONLY user-managed (downloadable) keys; GCP-managed signing keys are excluded.
+            n=$(gcloud iam service-accounts keys list --iam-account="$sa" \
+                  --managed-by=user --project=stock-trading-498512 \
+                  --format='value(name)' 2>/dev/null | grep -c . || true)
+            echo "$sa: $n user-managed key(s)"
+            if [ "$n" -ne 0 ]; then offenders="$offenders $sa($n)"; fi
+          done
+          if [ -n "$offenders" ]; then
+            msg="🔑 Stock-Trading keyless-SA audit FAILED — user-managed key(s) found:$offenders. Expected ZERO (WIF/keyless posture, RUNBOOK §6/§15/§25). Delete the key(s) and investigate who created them."
+            echo "::error::$msg"
+            if [ -n "${WEBHOOK_URL:-}" ]; then
+              curl -fsS -X POST -H 'Content-Type: application/json' \
+                --data "$(printf '{"text":%s}' "$(printf '%s' "$msg" | python3 -c 'import json,sys;print(json.dumps(sys.stdin.read()))')")" \
+                "$WEBHOOK_URL" || echo "::warning::webhook post failed (audit still failed the run)."
+            fi
+            exit 1
+          fi
+          echo "OK: all audited SAs are keyless (zero user-managed keys)."
