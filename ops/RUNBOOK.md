@@ -600,7 +600,35 @@ BigQuery holds all trade-relevant state, and the next successful D1/D2 regenerat
 `Daily.md` fresh — so this is a durability/observability gap, not a trading-correctness bug.
 
 
-Status (2026-06-23): **closed by D2 Step-0 reconciliation**  Operating_Protocols.md 17 codifies the detector; merged to main via claude/never-pushed-reconciliation.
+**Third occurrence + recurrence — 2026-06-24 (root cause confirmed; hardened).** D1 `sess-d1-20260624`
+(branch `claude/fervent-franklin-z9oztl`) stranded again: `ops.run_log` shows `completed` with the full scan
+note (MU FQ3 Day-0 6/25, CBRS −19.6% B-long candidate, FDX fails the 5% gate), but the branch has zero
+trace on the remote and `main`'s `Daily.md` stayed at 6/23. The D2 Step-0 detector (§17) **fired correctly**
+— one `never_pushed_branch` `warning` alert — and D2 deferred the MU/CBRS candidates to the next regenerated
+`Daily.md` (well within the 10-day B windows), so no trading-correctness impact. With 6/22 this is **2 strands
+in the last 3 trading days** (6/22 ✗, 6/23 ✓, 6/24 ✗) — a recurrence, not a fluke.
+**Root cause (confirmed).** `Claude_Task_Plan.md` "Branch and state propagation" delegates the `git push` to
+the **harness at session end**; the routine never pushes itself. The `completed` row is written to BigQuery
+*mid-session* (MCP network call), so any abnormal session end (the documented trigger: a usage-limit cutoff,
+then container reclamation) between the work and the harness push strands the local commit while `run_log`
+already reads `completed`. GitHub/CI/auto-merge are not at fault — the branch never reaches the remote at all.
+**Hardening (this branch).** (1) **Eliminate the divergence at the source:** routines now **explicitly push
+their own assigned branch and verify it** (`git ls-remote --exit-code`) *before* logging `completed`, and log
+`'failed'`/`'halted'` if the push can't be confirmed — so `completed` reliably implies "branch on remote"
+(Claude_Task_Plan.md → "Session end" + Observability END template). (2) **Make a real strand un-missable:**
+the §17 detector now escalates `never_pushed_branch` from `warning` to **`critical`** (flips `all_green` →
+fires the freshness DTS email) on data-loss (cumulative-file strand), recurrence (≥2 in 5 trading days), or
+unhealed cases; a lone self-healing `Daily.md` strand stays `warning` to avoid alarm fatigue. (3) **Email the
+self-healing class too:** `ops/monitoring/alert_emailer.gs` was notification-incomplete — it queried
+`WHERE NOT resolved` on a 2h poll, so any alert created-and-resolved inside one poll window (the self-healing
+class: a stranded-session warning, a cadence `missed_run` the next run clears) was **never emailed**, even
+though the relay was alive (heartbeat fresh, but `notified_ts` NULL on those rows). Fixed to key on
+`notified_ts IS NULL` (bounded to 48h) so every raised alert is relayed exactly once — resolved-since-raise
+ones included, tagged AUTO-RESOLVED. **Deploy step:** re-paste `alert_emailer.gs` into the Apps Script
+project (the `notified_ts` column already exists from `bigquery/18_stack_review_fixes.sql`).
+
+Status (2026-06-23): **detector closed RUNBOOK 20's second incident** — Operating_Protocols.md 17 codifies it; merged to main via claude/never-pushed-reconciliation.
+Status (2026-06-24): **root cause confirmed + hardened** (explicit verified push gating the `completed` log; severity escalation on data-loss/recurrence/unhealed) — Claude_Task_Plan.md "Session end"/Observability + Operating_Protocols.md 17.
 ## 21. `events.*` append-only convention — the `sub_pattern` in-place exception *(data governance)*
 `events.*` is the **append-only source of truth** (schema description: *"INSERT/Storage-Write only; never
 UPDATE/DELETE"*; `decision_log`: *"corrections are new rows with `superseded_by`"*). That invariant is

@@ -5,8 +5,16 @@
  * anomaly sink (cash tripwire, dual-path disagreement, embedding unhealthy, stale data, missed
  * order confirmation, ...). Routines also create [Claude] ATTENTION calendar events, but a
  * calendar entry is easy to miss. This Apps Script polls ops.alerts on a short trigger (e.g.
- * every 2 hours) and EMAILS you the moment a new unresolved critical (or warning) appears —
- * a genuine push channel, with no Cloud Monitoring / Pub/Sub console wiring.
+ * every 2 hours) and EMAILS you ONCE for every alert that was ever raised — including a
+ * self-healing one that already auto-resolved between two polls — a genuine push channel, with
+ * no Cloud Monitoring / Pub/Sub console wiring.
+ *
+ * NOTIFICATION-COMPLETE (2026-06-24): the poll selects on `notified_ts IS NULL`, NOT `NOT resolved`.
+ * The old `NOT resolved` filter silently dropped any alert created-and-resolved inside one 2h poll
+ * window (the self-healing class — e.g. a stranded-session warning, a cadence missed_run that the next
+ * run cleared) so the owner was never told it had happened. Keying on `notified_ts` means every alert
+ * is emailed exactly once and then stamped; resolved-since-raise alerts are still sent, tagged
+ * AUTO-RESOLVED so you know it self-healed. (RUNBOOK §20 / §25.)
  *
  * Like the weekly report, it runs on Google's servers as you (from you, to you): no SMTP, app
  * password, or API key. It de-dupes via Script Properties so you're emailed ONCE per alert,
@@ -23,6 +31,7 @@ const ALERT_RECIPIENT  = Session.getActiveUser().getEmail(); // self-email
 const ALERT_SENDER     = 'Stock-Trading Alerts';
 const SEVERITIES       = ['critical', 'warning']; // set to ['critical'] for criticals only
 const POLL_HOURS       = 2;                        // how often to check
+const LOOKBACK_HOURS   = 48;                       // bound the notified_ts IS NULL scan (avoids a historical flood on first deploy)
 
 // ===== ENTRY POINTS =====
 function testAlertCheck()   { checkAlerts_(); }
@@ -39,17 +48,19 @@ function installAlertTrigger() {
 // ===== MAIN =====
 function checkAlerts_() {
   const sevList = SEVERITIES.map(s => `'${s}'`).join(',');
+  // NOTIFICATION-COMPLETE: select un-notified alerts (notified_ts IS NULL), NOT `NOT resolved`, so an
+  // alert that self-healed between polls is still emailed exactly once. notified_ts is the durable
+  // de-dup; Script Properties is a secondary guard so a failed stamp doesn't re-send next poll.
   const rows = bqAlerts_(`
-    SELECT alert_id, CAST(alert_ts AS STRING) AS alert_ts, severity, source, category, message
+    SELECT alert_id, CAST(alert_ts AS STRING) AS alert_ts, severity, source, category, message, resolved
     FROM \`${ALERT_PROJECT_ID}.ops.alerts\`
-    WHERE NOT resolved AND severity IN (${sevList})
+    WHERE notified_ts IS NULL AND severity IN (${sevList})
+      AND alert_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${LOOKBACK_HOURS} HOUR)
     ORDER BY alert_ts DESC`);
 
   const props = PropertiesService.getScriptProperties();
   const seen = new Set(JSON.parse(props.getProperty('notified_alert_ids') || '[]'));
-  const currentIds = rows.map(r => r.alert_id);
   const fresh = rows.filter(r => !seen.has(r.alert_id));
-  const resolvedCount = [...seen].filter(id => !currentIds.includes(id)).length;
 
   if (fresh.length) {
     const crit = fresh.filter(r => r.severity === 'critical').length;
@@ -57,12 +68,13 @@ function checkAlerts_() {
     GmailApp.sendEmail(ALERT_RECIPIENT, subject, plainAlerts_(fresh, rows.length),
       { htmlBody: htmlAlerts_(fresh, rows.length), name: ALERT_SENDER });
     Logger.log('Emailed %s new alerts', fresh.length);
-    stampNotified_(currentIds.filter(id => fresh.some(f => f.alert_id === id)));
+    stampNotified_(fresh.map(r => r.alert_id));
+    // Bounded de-dup guard for ids we just emailed (in case the notified_ts stamp failed).
+    const keep = [...seen, ...fresh.map(r => r.alert_id)].slice(-500);
+    props.setProperty('notified_alert_ids', JSON.stringify(keep));
   } else {
-    Logger.log('No new alerts (%s open, %s resolved since last run)', rows.length, resolvedCount);
+    Logger.log('No un-notified alerts in the last %s h', LOOKBACK_HOURS);
   }
-  // Persist the current open set so resolved alerts can re-fire later if reopened.
-  props.setProperty('notified_alert_ids', JSON.stringify(currentIds));
 
   // Liveness beat (ops.heartbeat -> state.automation_heartbeat). Lets cadence_check.sql detect a
   // SILENTLY-DEAD emailer (revoked token / deleted trigger) via the independent DTS failure-email —
@@ -114,9 +126,10 @@ function htmlAlerts_(fresh, totalOpen) {
   const rowsHtml = fresh.map(a => {
     const isCrit = a.severity === 'critical';
     const bar = isCrit ? '#c0392b' : '#b9770e';
+    const resolvedTag = (String(a.resolved) === 'true') ? ' · <span style="color:#2e7d32;">AUTO-RESOLVED</span>' : '';
     return `<tr><td style="padding:0;">
       <div style="border-left:4px solid ${bar};background-color:${isCrit ? '#fcebea' : '#fdf3e3'};border-radius:6px;padding:10px 12px;margin:6px 0;">
-        <div style="font-size:13px;font-weight:700;color:${bar};">${esc2_(a.severity.toUpperCase())} · ${esc2_(a.source)} · ${esc2_(a.category)}</div>
+        <div style="font-size:13px;font-weight:700;color:${bar};">${esc2_(a.severity.toUpperCase())} · ${esc2_(a.source)} · ${esc2_(a.category)}${resolvedTag}</div>
         <div style="font-size:13px;color:#1f2d3d;margin-top:3px;">${esc2_(a.message)}</div>
         <div style="font-size:11px;color:#8a96a3;margin-top:3px;">${esc2_(a.alert_ts)} UTC</div>
       </div></td></tr>`;
@@ -131,7 +144,7 @@ function htmlAlerts_(fresh, totalOpen) {
 
 function plainAlerts_(fresh, totalOpen) {
   let s = `Stock-Trading — ${fresh.length} new unresolved alert(s) (${totalOpen} open total):\n\n`;
-  fresh.forEach(a => { s += `[${a.severity.toUpperCase()}] ${a.source}/${a.category}: ${a.message}  (${a.alert_ts} UTC)\n`; });
+  fresh.forEach(a => { s += `[${a.severity.toUpperCase()}]${String(a.resolved) === 'true' ? '[AUTO-RESOLVED]' : ''} ${a.source}/${a.category}: ${a.message}  (${a.alert_ts} UTC)\n`; });
   s += `\nResolve via UPDATE ops.alerts SET resolved=TRUE WHERE ... . Complements the [Claude] ATTENTION calendar events.`;
   return s;
 }
