@@ -791,6 +791,15 @@ never applied. **Repo artifacts are DONE; this section lists the owner/console a
   is server-enforced for every non-bot actor (token compromise / workflow edit / manual drain) WITHOUT
   forcing PRs for the bot path (the §5 objection no longer applies with bypass actors). **Validate the
   bypass end-to-end first** — a misconfigured bypass could wedge auto-merge.
+  **STATUS 2026-06-24 — DEFERRED, not actionable on the current GitHub plan (like §17's org policy).**
+  Attempting it found this repo (personal-account PRIVATE) offers only Active/Disabled enforcement — no
+  "Evaluate" (dry-run) mode, which is an org/Team feature — AND the ruleset page warns rulesets "won't be
+  enforced on this private repository until you move to a GitHub Team organization account." So a ruleset
+  here cannot enforce the gate today, and Evaluate-then-flip isn't possible. Enabling it would require
+  GitHub Pro (protected branches on a personal private repo) or moving the repo under a GitHub Team org.
+  Until then the **bash-level per-SHA CI gate in `auto-merge-claude.yml` remains the merge gate** — no
+  regression, that is the status quo. Revisit if/when the repo moves to a Team org (pairs naturally with
+  §17's org adoption).
 
 ### Theme D — workflow observability
 - **D1 — research-feeder freshness gate (DONE, instruction-layer).** W4/M4/Q4/A3 now assert each upstream
