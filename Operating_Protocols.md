@@ -476,11 +476,16 @@ Runs as the first step inside D2 Step-0, before fill reconciliation, sizing, or 
    - (c) For the remaining candidates: **stranded** = the branch is NOT present on the remote (`git ls-remote --exit-code origin <branch>` returns non-zero). Absence from the remote is sufficient; there is no remote ref to test ancestry against.
 
 3. **For each confirmed-stranded session, insert exactly one alert row (dedup on `session_id`).** Call `ops.sp_raise_alert_once` (idempotent  deduplicates on `category + message`, so D2 re-runs don't accumulate duplicate rows):
-   - `severity  = 'warning'`
+   - `severity` = **`'warning'` for a benign, self-healing strand** (the stranded session's only output is an overwrite-each-run file — `Daily.md`/`Weekly_*` — that the next same-routine run regenerates); **escalate to `'critical'` (which flips `state.system_health.all_green` and so fires the freshness dead-man's-switch email via `daily_freshness_check.sql` — a real strand can no longer be missed) when ANY of:**
+     - (a) **data loss** — the stranded session wrote a **cumulative** file (e.g. `B_Sub_Pattern_Taxonomy.md`, taxonomy/embeddings appenders); its output does not self-heal and needs reconciliation;
+     - (b) **recurrence** — this is the ≥2nd `never_pushed_branch` strand within the last 5 trading days (query `ops.run_log` / `ops.alerts`), signalling a *systemic* push failure rather than a fluke (the 2026-06-22 + 2026-06-24 D1 strandings trip this);
+     - (c) **unhealed** — a prior strand's overwrite-each-run output is still absent from `main` after the next same-routine run should already have regenerated it.
+
+     Default to `'warning'`; promote per the established prove-then-promote pattern (`bigquery/18_stack_review_fixes.sql`). Even a benign `'warning'` strand is now **emailed** — `ops/monitoring/alert_emailer.gs` is notification-complete (keys on `notified_ts IS NULL`, not `NOT resolved`), so a self-healing alert that resolves between polls is still relayed once (tagged AUTO-RESOLVED) rather than silently dropped; `'critical'` additionally fires the all_green DTS failure-email. The root cause is the harness's implicit session-end push not firing on an abnormal session end (usage-limit cutoff / container reclamation); the forward fix is the routine's own **explicit verified push gating the `completed` log** (Claude_Task_Plan.md → "Session end" / Observability), which makes this detector a backstop rather than the primary net.
    - `source    = 'D2'`
    - `category  = 'never_pushed_branch'`
-   - `message   = 'Session <session_id> (routine=<routine>, run_date=<run_date>, branch=<branch>) logged completed in ops.run_log but its branch was never pushed  git output is stranded. BigQuery state is intact; .md output (if any) is lost. Next successful run regenerates overwrite-each-run files; cumulative files may need reconciliation.'`
-   - `payload   =` JSON with `session_id, routine, run_date, branch`.
+   - `message   = 'Session <session_id> (routine=<routine>, run_date=<run_date>, branch=<branch>) logged completed in ops.run_log but its branch was never pushed  git output is stranded. BigQuery state is intact; .md output (if any) is lost. Next successful run regenerates overwrite-each-run files; cumulative files may need reconciliation.'` (for an escalated `'critical'` strand, prefix the message with the escalation reason — `RECURRENCE: ` / `DATA-LOSS: ` / `UNHEALED: ` — so it dedups as a distinct row from any benign `'warning'`.)
+   - `payload   =` JSON with `session_id, routine, run_date, branch` (plus `escalation` = `warning`|`recurrence`|`data_loss`|`unhealed`).
 
 4. **On any error in steps 13:** catch the exception, log via `CALL ops.sp_log_run('D2', <run_date>, 'halted', ..., error=<msg>, note='stranded-session reconciliation step failed  continuing')`, and **CONTINUE** to the rest of D2 Step-0. This step MUST NOT abort D2.
 
