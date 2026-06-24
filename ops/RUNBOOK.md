@@ -725,6 +725,15 @@ never applied. **Repo artifacts are DONE; this section lists the owner/console a
 > **first** (additive: new `state.*` views + two `ALTER ADD COLUMN IF NOT EXISTS` — no behaviour change;
 > verified clean against live data 2026-06-24), **then** re-paste the updated `cadence_check.sql` +
 > `backup_events_export.sql` scheduled queries, **then** (optionally) create `integrity_check.sql`.
+>
+> **`18` APPLIED + VERIFIED LIVE via the MCP 2026-06-24.** All 8 new objects clean: `append_only_integrity`
+> 0 rows, `position_reconciliation` 0 drift, `trigger_attestation` 0 overdue, `stalled_runs` 0,
+> `market_calendar_horizon` runway ~1651d, `embedding_scale_watch` 263/5000; both additive columns
+> (`ops.backup_log.per_table_rows`, `ops.alerts.notified_ts`) present. `system_health` is unaffected by
+> `18` (it references none of these); any `all_green=FALSE` seen during a trading day before D2 runs is the
+> normal `marks_fresh` intraday transient (zero open alerts), which the evening-scheduled checks are timed
+> to skip. The remaining scheduled-query re-pastes + `integrity_check.sql` (+ its `resourceViewer` grant)
+> stay owner/console steps.
 
 ### Theme A — alert delivery (closes the single-inbox SPOF + the un-versioned poller)
 - **A1 — second, different-class alert channel (live-on-edit spec).** `monitoring.tf` now creates a
