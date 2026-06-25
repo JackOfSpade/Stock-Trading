@@ -18,6 +18,15 @@
 
 timezone: America/Denver
 
+# Cadence-watch deadline guard (added 2026-06-25, RUNBOOK §1 step 3). state.cadence_watch.needs_attention
+# only alarms a missed DAILY routine (D1/D2/D3) AFTER this America/Denver wall-clock time — past the
+# routines' real after-close completion (D2 ~17:47, D3 ~18:36) yet before the 05:15 UTC / 23:15 MT
+# scheduled cadence_check — so an off-schedule/manual run BEFORE the routines run can't false-fire a
+# missed_run CRITICAL, while a GENUINE miss still fires at the scheduled run. MUST equal the TIME literal
+# in bigquery/12_cadence_monitor.sql (state.cadence_watch); CI enforces it via
+# scripts/check_cadence_consistency.py. QUOTE it — an unquoted 21:00 is parsed by YAML as base-60 (=1260).
+cadence_watch_deadline_local: "21:00"
+
 defaults:
   log_run: true            # BEST-EFFORT, wrapped so it can never abort the routine: CALL ops.sp_routine_start(<id>,<run_date>,<session>,<branch>,<verbatim trigger instruction>) at start; ops.sp_routine_end(...,'completed'|'failed'|'halted',...) at end (templates in Claude_Task_Plan.md "Observability"). instruction -> ops.run_log.instruction -> state.routine_last_instruction (verify live triggers by query; diff vs scripts/print_routines.py).
   dep_gate: true           # SEPARATE + FATAL (not wrapped): action routines CALL ops.sp_assert_deps(<id>,<depends_on below>,<run_date>) BEFORE the start-log; aborts on a missing monitored upstream (self-bootstrapping)

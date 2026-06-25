@@ -72,3 +72,39 @@ def test_parse_catalog_sql_empty_on_reformat_is_caught(tmp_path, monkeypatch):
     f.write_text("STRUCT('D1' AS routine, \"Read Claude_Task_Plan.md. Perform D1.\")\n")  # double-quoted instr
     monkeypatch.setattr(cc, "CATALOG_SQL", str(f))
     assert cc.parse_catalog_sql() == {}
+
+
+# ---- parse_deadline_sql: the cadence_watch deadline-guard TIME literal (check D) ----
+def test_parse_deadline_sql_matches_known_good(tmp_path, monkeypatch):
+    f = tmp_path / "12.sql"
+    f.write_text(
+        "   AND DATETIME(CURRENT_TIMESTAMP(), 'America/Denver') >= DATETIME(e.today, TIME '21:00:00')\n"
+        "  ) AS needs_attention,\n"
+    )
+    monkeypatch.setattr(cc, "CADENCE_SQL", str(f))
+    assert cc.parse_deadline_sql() == ["21:00"]
+
+
+def test_parse_deadline_sql_empty_on_reformat_is_caught(tmp_path, monkeypatch):
+    # If the guard clause is reshaped so the regex stops matching, the parser must yield [] —
+    # main() then flags "could not parse ... deadline-guard literal", NOT a vacuous pass.
+    f = tmp_path / "12.sql"
+    f.write_text("   AND DATETIME(e.today, MAKE_TIME(21,0,0)) <= CURRENT_DATETIME('America/Denver')\n")
+    monkeypatch.setattr(cc, "CADENCE_SQL", str(f))
+    assert cc.parse_deadline_sql() == []
+
+
+def test_cadence_deadline_yaml_reads_quoted_hhmm(tmp_path, monkeypatch):
+    f = tmp_path / "cadence.yaml"
+    f.write_text('timezone: America/Denver\ncadence_watch_deadline_local: "21:00"\nroutines: []\n')
+    monkeypatch.setattr(cc, "CADENCE", str(f))
+    assert cc.cadence_deadline_yaml() == "21:00"
+
+
+def test_cadence_deadline_yaml_unquoted_is_not_a_string(tmp_path, monkeypatch):
+    # An UNquoted 21:00 is YAML 1.1 base-60 (= 1260, an int) — main()'s HHMM/str check rejects it.
+    f = tmp_path / "cadence.yaml"
+    f.write_text("cadence_watch_deadline_local: 21:00\nroutines: []\n")
+    monkeypatch.setattr(cc, "CADENCE", str(f))
+    val = cc.cadence_deadline_yaml()
+    assert not (isinstance(val, str) and cc.HHMM.match(val))

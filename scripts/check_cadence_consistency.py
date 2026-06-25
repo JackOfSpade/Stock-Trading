@@ -17,6 +17,10 @@ ops/cadence.yaml + Claude_Task_Plan.md the SOURCE OF TRUTH and verifies the two 
      Claude_Task_Plan.md routine heading ("Read Claude_Task_Plan.md. Perform <heading>.").
   C. Every cadence.yaml routine id maps 1:1 to a Claude_Task_Plan.md heading and appears in the catalog
      (the scripts/print_routines.py cross-check, extended to the SQL layer).
+  D. cadence.yaml's top-level `cadence_watch_deadline_local` == the TIME literal in the
+     state.cadence_watch deadline guard (bigquery/12_cadence_monitor.sql). The deadline is otherwise a
+     bare SQL constant with no source of truth, so a real cadence shift could silently leave it stale and
+     re-open the pre-deadline false-positive window (RUNBOOK §1 step 3 / §20 follow-up).
 
 This does NOT generate the SQL (the .sql files carry comments + special formatting worth hand-keeping);
 it CHECKS them, so editing cadence.yaml or a plan heading and forgetting the SQL fails the build with a
@@ -48,6 +52,10 @@ ALLOWED_CLASSES = {
 CALENDAR_CLASSES = ALLOWED_CLASSES - {"queue_driven"}
 
 ROUTINE_SUFFIX = re.compile(r"—\s*(deep research|regular routine)\s*$")
+
+# The state.cadence_watch deadline-guard literal: DATETIME(e.today, TIME 'HH:MM:SS'). Capture HH:MM.
+SQL_DEADLINE = re.compile(r"DATETIME\(\s*e\.today\s*,\s*TIME\s*'(\d{2}:\d{2})(?::\d{2})?'\s*\)")
+HHMM = re.compile(r"^\d{2}:\d{2}$")
 
 
 def plan_headings():
@@ -91,6 +99,17 @@ def parse_catalog_sql():
     pat = re.compile(
         r"STRUCT\('([^']+)'(?:\s+AS routine)?,\s*'(Read Claude_Task_Plan\.md\. Perform [^']*)'")
     return dict(pat.findall(txt))
+
+
+def parse_deadline_sql():
+    """['HH:MM', ...] from the DATETIME(e.today, TIME 'HH:MM:SS') deadline guard in 12_*.sql (state.cadence_watch)."""
+    return SQL_DEADLINE.findall(open(CADENCE_SQL, encoding="utf-8").read())
+
+
+def cadence_deadline_yaml():
+    """Top-level cadence_watch_deadline_local from ops/cadence.yaml (raw value, or None)."""
+    doc = yaml.safe_load(open(CADENCE, encoding="utf-8")) or {}
+    return doc.get("cadence_watch_deadline_local")
 
 
 def main():
@@ -162,6 +181,30 @@ def main():
         if rid not in want_catalog:
             errors.append(f"{rid}: in ops.routine_catalog (15_*.sql) but has no Claude_Task_Plan.md heading")
 
+    # ---- D. cadence_watch deadline guard: cadence.yaml constant == bigquery/12 SQL TIME literal ----
+    want_deadline = cadence_deadline_yaml()
+    have_deadlines = parse_deadline_sql()
+    deadline_ok = True
+    if want_deadline is None:
+        errors.append("ops/cadence.yaml: missing top-level 'cadence_watch_deadline_local' "
+                      "(declares the state.cadence_watch deadline-guard time)")
+        deadline_ok = False
+    elif not (isinstance(want_deadline, str) and HHMM.match(want_deadline)):
+        errors.append(f"ops/cadence.yaml: cadence_watch_deadline_local must be a quoted \"HH:MM\" string "
+                      f"(got {want_deadline!r} — an UNquoted 21:00 is YAML base-60 = 1260; always quote it)")
+        deadline_ok = False
+    if not have_deadlines:
+        errors.append("bigquery/12_cadence_monitor.sql: could not parse the DATETIME(e.today, TIME '..') "
+                      "deadline-guard literal from state.cadence_watch (did the clause change shape?)")
+        deadline_ok = False
+    elif len(set(have_deadlines)) > 1:
+        errors.append(f"bigquery/12_cadence_monitor.sql: multiple distinct deadline literals "
+                      f"{sorted(set(have_deadlines))} in state.cadence_watch — expected exactly one")
+        deadline_ok = False
+    if deadline_ok and have_deadlines[0] != want_deadline:
+        errors.append(f"cadence_watch deadline DRIFT — ops/cadence.yaml='{want_deadline}' vs "
+                      f"bigquery/12_cadence_monitor.sql TIME='{have_deadlines[0]}'. Keep them in sync.")
+
     # ---- report ----
     if errors:
         print("CADENCE CONSISTENCY: FAIL\n")
@@ -174,7 +217,8 @@ def main():
 
     print(f"CADENCE CONSISTENCY: OK — {len(cad)} routines; "
           f"{len(want_expected)} calendar-class match state.cadence_expected_today; "
-          f"{len(have_catalog)} catalog entries match the plan headings.")
+          f"{len(have_catalog)} catalog entries match the plan headings; "
+          f"cadence_watch deadline {want_deadline} matches 12_cadence_monitor.sql.")
     return 0
 
 
