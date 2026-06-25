@@ -82,6 +82,15 @@ evening *after* D2 year-round:
    freshness check). Enable *Send email on failure* — it RAISEs when a *monitored* routine
    (one that has logged a `completed` run in the last 14 days) was expected today but did not run.
    Self-bootstrapping, so it never false-alarms on routines that don't yet self-log. *(A3)*
+   **Deadline guard (2026-06-25):** `state.cadence_watch.needs_attention` now also requires Denver-time
+   to be past **21:00** (the daily routines' after-close completion deadline), so an *off-schedule /
+   manual / duplicate* run of this query *before* the routines have run today can no longer raise a
+   spurious `missed_run` CRITICAL (the 2026-06-21 12:00 MT + 2026-06-24 09:37 MT morning false positives,
+   exposed once the notification-complete emailer began relaying self-healed alerts). 21:00 MT clears the
+   latest observed completions (D2 ~17:47, D3 ~18:36) yet sits before this 05:15 UTC (23:15 MT) scheduled
+   run, so a *genuine* miss still fires critical here. Computed in the `America/Denver` named zone
+   (DST-safe) and NOT gated on `is_trading_day`, so D3's daily-all miss-detection still works on
+   weekends/holidays. Logic in `bigquery/12_cadence_monitor.sql`; applied live via the MCP 2026-06-25.
 4. The new scheduling UI no longer exposes `maximum_bytes_billed`; don't worry about it — all
    queries scan < 2 MB. Cost is bounded by the budget alert in §2. *(P2-2)*
 

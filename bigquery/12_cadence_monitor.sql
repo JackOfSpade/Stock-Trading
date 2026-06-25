@@ -85,8 +85,9 @@ WHERE CASE r.schedule
 -- ===== state.cadence_watch — expected vs logged for the operating day (observability + alert input) =====
 -- needs_attention (the alarm signal) fires ONLY for routines that are (a) a DAILY routine (D1/D2/D3 —
 -- unambiguous run-day) AND (b) expected today AND (c) already in the monitored set (logged a 'completed'
--- run in the last 14 days) AND (d) have not logged 'completed' today. Non-daily routines are shown for
--- observation but excluded from the alarm (their predicted day can mismatch the real trigger).
+-- run in the last 14 days) AND (d) have not logged 'completed' today AND (e) Denver-time is past the
+-- routines' after-close completion deadline (the DEADLINE GUARD — see below). Non-daily routines are
+-- shown for observation but excluded from the alarm (their predicted day can mismatch the real trigger).
 CREATE OR REPLACE VIEW `stock-trading-498512.state.cadence_watch` AS
 SELECT
   e.routine,
@@ -111,7 +112,19 @@ SELECT
             AND r.run_date >= DATE_SUB(e.today, INTERVAL 14 DAY))
    AND NOT EXISTS(SELECT 1 FROM `stock-trading-498512.ops.run_log` r
                   WHERE r.routine = e.routine AND r.status = 'completed'
-                    AND r.run_date = e.today)) AS needs_attention,
+                    AND r.run_date = e.today)
+   -- DEADLINE GUARD (2026-06-25): only alarm AFTER the daily routines' real after-close completion
+   -- deadline has passed in America/Denver. Without this, ANY execution of this view / cadence_check.sql
+   -- BEFORE the routines have run today (an off-schedule, manual, or duplicate run) flags D1/D2/D3 as
+   -- "missed" merely because it is not yet their time — the exact 2026-06-21 (12:00 MT) and 2026-06-24
+   -- (09:37 MT) morning false-positive CRITICALs (RUNBOOK §20 follow-up). 21:00 Denver is comfortably
+   -- past the latest observed completion (D2 ~17:47, D3 ~18:36) yet well before the 23:15 Denver
+   -- (05:15 UTC) SCHEDULED cadence_check run, so a GENUINELY missed routine still fires critical at the
+   -- scheduled run. Computed in the America/Denver named zone ⇒ DST-safe (no hardcoded UTC offset). Pure
+   -- wall-clock, NOT gated on is_trading_day, so D3's daily_all miss-detection still works on
+   -- weekends/holidays (D3 runs every calendar day).
+   AND DATETIME(CURRENT_TIMESTAMP(), 'America/Denver') >= DATETIME(e.today, TIME '21:00:00')
+  ) AS needs_attention,
   CURRENT_TIMESTAMP() AS checked_at
 FROM `stock-trading-498512.state.cadence_expected_today` e;
 
