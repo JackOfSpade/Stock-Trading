@@ -934,3 +934,25 @@ DEGRADED-MODE run in `Daily.md`/`ops.run_log`; if present, the alerts are true p
 connector (§15), re-run the skipped action routines, then resolve the rows with a note pointing here. This
 differs from §19 (a monitor whose own heartbeat metric went absent) and §22 (an ad-hoc run that logged a
 non-trigger instruction) — both of which were monitor-side false alarms with nothing red underneath.
+
+**Prevention adopted (2026-06-27).**
+- **Blast-radius (done).** A uniform **connector pre-flight** is now the FIRST cross-cutting call in every
+  routine (`Claude_Task_Plan.md` "Observability", ahead of run-logging / the dependency gate): one trivial
+  BigQuery + IBKR liveness read up front, so a de-auth is caught in seconds and routed to the right handling
+  (BigQuery down → calendar-only `[Claude] ATTENTION — RE-AUTH` + D1-degraded / D2-D3-halt, since the alert
+  sink itself is down; IBKR down → the `connector` hard-stop). D1 already did this ad-hoc on 6/26; this makes
+  it uniform and first-in-run, so a future de-auth surfaces same-minute instead of mid-routine.
+- **Recurrence (operator).** The BigQuery MCP connector is **Anthropic's first-party Google connector**, so
+  its OAuth client is Anthropic-managed and the de-auth is a Google-account-side grant lifecycle event, not a
+  GCP-project setting we can change (verified 2026-06-27: nothing in the project console governs a first-party
+  connector's refresh-token lifetime; the only relevant surface is *Google Account → Security → third-party
+  access*, where the grant lives). Levers: re-consent proactively on a **quarterly** calendar cadence (tighten
+  the §15 annual reminder), and keep the Google password/scopes stable (either revokes the grant).
+- **Structural (deferred — real but not free).** A keyless **service-account / agent identity** for the
+  interactive path would remove refresh-token expiry entirely (as `bq-scheduler@` already does for the
+  scheduled queries). The BigQuery MCP server *does* support non-OAuth Google identities — but only on the
+  **self-hosted / Google-managed remote MCP server**, NOT the first-party Claude connector this project uses
+  (that path is owner-OAuth only). Adopting it means standing up a self-managed BigQuery MCP endpoint the
+  Code-on-Web sessions can reach, with a SA holding the routines' **write** scope (not just read) — net-new
+  runtime that cuts against the CLAUDE.md "MCP + console, no extra runtime" posture. Revisit only if the
+  de-auth becomes frequent enough to justify the operational weight.
