@@ -872,3 +872,65 @@ never applied. **Repo artifacts are DONE; this section lists the owner/console a
   threshold (~13 years out; revisit the §23 chunking work when it approaches).
 - **Left out deliberately** (review recommended "leave it"): an in-warehouse SNAPSHOT/CLONE layer for
   `events.*` (the proven daily GCS-Parquet + restore-drill path already covers >7-day recovery).
+
+## 26. BigQuery-connector outage → cadence + freshness double-critical — the 2026-06-26 incident *(monitoring)*
+**Symptom.** Two `critical` `ops.alerts` rows opened and emailed in one batch the night of 2026-06-26:
+- `scheduled.cadence · missed_run` @ **2026-06-27 05:15 UTC** — *"Cadence check: monitored routine(s)
+  expected today did not complete: D1, D2, D3"*.
+- `scheduled.freshness · staleness` @ **2026-06-27 05:00 UTC** — *"Daily freshness check: system_health
+  not green"*.
+
+**Both are TRUE positives — the dead-man's switches working correctly. NOT a false alarm and NOT a code
+bug** (contrast the §19 and §22 false alarms). They are two downstream symptoms of a single upstream
+outage: on **2026-06-26** (Fri, a trading day) the **owner Google OAuth grant for the BigQuery MCP
+connector expired** ("token expired / re-authorization required" — see the `Daily.md` 2026-06-26 *DEGRADED
+MODE* banner). Consequences:
+- **D1** ran **research-only** (open book + live marks read from the IBKR connector; regime carried forward
+  from the prior `Daily.md`). With BigQuery unreachable it could **not** `ops.sp_routine_start/_end`-log, so
+  no `completed` row landed in `ops.run_log`.
+- **D2/D3 did not run at all** — D2 hard-stops on the connector (`ops.sp_assert_deps` / canonical-state
+  reads), so the 6/26 close was never ingested.
+- → `state.cadence_watch.needs_attention` flagged D1/D2/D3 (no logged run today), and `state.system_health`
+  went not-green (marks/engine stale vs the last trading day). The two scheduled checks then RAISEd, each
+  recording its idempotent `ops.alerts` row and firing the DTS failure-email.
+
+**Why the monitors still fired while the agent was locked out.** The freshness/cadence scheduled queries run
+as the dedicated **`bq-scheduler@` SA** (§15), a GCP-managed identity independent of the owner OAuth that
+expired — exactly the §15/§19 "make the monitor independent of the agent identity" property. The control
+plane kept watching while the data plane was down. The **21:00-MT cadence deadline guard** (§1 step 3) is
+irrelevant here: the scheduled run is 23:15 MT (past the deadline) and the routines *genuinely* did not run,
+so this is the real miss the guard is designed to let through — not a pre-deadline manual-run false positive.
+
+**Resolution procedure** (the alert email's *"Resolve via UPDATE ops.alerts SET resolved=TRUE …"*). Fix the
+**cause first**, then resolve the rows — do not blind-resolve a live red:
+1. **Re-auth the connector (owner, no code change).** Re-consent the Google/BigQuery connector in the Claude
+   connector settings (§15 credential table, row 1: most outages are an expired grant, not a code bug).
+   Verify with any `state.*` read.
+2. **Let the data catch up.** Re-run **D2** (then **D3**) for 2026-06-26 so `events.daily_marks` /
+   `perf.strategy_daily` ingest the close → `state.system_health.all_green` returns TRUE and the **next**
+   05:00 UTC freshness run stops re-raising. (The 6/26 *cadence* miss is historical — re-running won't
+   retroactively un-miss it in `ops.run_log`; that is expected and fine.)
+3. **Resolve the two open rows** once green:
+   ```sql
+   UPDATE `stock-trading-498512.ops.alerts`
+   SET resolved = TRUE,
+       resolved_ts = CURRENT_TIMESTAMP(),
+       resolved_note = '2026-06-26 BigQuery MCP connector OAuth expired (Daily.md DEGRADED MODE): D1 '
+                    || 'research-only, D2/D3 did not run. True-positive cadence missed_run + freshness '
+                    || 'staleness. Connector re-authed; D2/D3 re-run so marks/engine caught up and '
+                    || 'system_health is green. See RUNBOOK §26.'
+   WHERE NOT resolved
+     AND source   IN ('scheduled.cadence', 'scheduled.freshness')
+     AND category IN ('missed_run', 'staleness');
+   ```
+
+A `[Claude] ATTENTION` calendar event was already created during the 6/26 D1 degraded run to surface the
+outage for re-authorization (per `Daily.md`), so the two `ops.alerts` rows are a redundant — and correct —
+second channel, not new information.
+
+**General rule.** An outage-induced **cadence + freshness double-critical fired in the same batch** is the
+expected signature of a connector/credential outage, not two independent bugs. Triage: confirm a same-day
+DEGRADED-MODE run in `Daily.md`/`ops.run_log`; if present, the alerts are true positives → re-auth the
+connector (§15), re-run the skipped action routines, then resolve the rows with a note pointing here. This
+differs from §19 (a monitor whose own heartbeat metric went absent) and §22 (an ad-hoc run that logged a
+non-trigger instruction) — both of which were monitor-side false alarms with nothing red underneath.
