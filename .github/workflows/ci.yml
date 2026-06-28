@@ -55,6 +55,31 @@ jobs:
       - run: pip install --quiet -c requirements-ci.txt ruff
       - run: ruff check c_options_math.py tests/ scripts/ ops/ || true
 
+  shell-lint:
+    name: actionlint + shellcheck (2026-06-28 #8)
+    runs-on: ubuntu-latest
+    # The most CONSEQUENTIAL automation in the repo is the embedded bash that decides whether routine git
+    # output reaches main (auto-merge-claude.yml) and whether a strand is detected (stranded-branch-check.yml)
+    # — yet only the lower-stakes Python parsers had purpose-built tests. actionlint statically checks every
+    # workflow (and runs shellcheck on each `run:` block); shellcheck covers the standalone scripts/*.sh
+    # (backup_events.sh, state_snapshot.sh, restore_drill.sh). A subtle edit to the origin/claude/ filter,
+    # the merge-base ancestry re-check, or the fail-closed default would otherwise regress with no CI signal.
+    #
+    # ADVISORY for now (continue-on-error, like the ruff lint job) so introducing it cannot red-light the
+    # auto-merge gate on any pre-existing finding. PROMOTE to a hard gate (drop continue-on-error) once a
+    # clean baseline is confirmed — the staged-rollout discipline used for dbt-parity (advisory→block) and
+    # integrity_check (warning→critical). shellcheck is pre-installed on the ubuntu runner.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install actionlint
+        run: |
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+      - name: actionlint (workflow YAML + embedded run-block bash via shellcheck)
+        run: ./actionlint -color
+      - name: shellcheck standalone scripts
+        run: shellcheck scripts/*.sh
+
   dbt:
     name: dbt parse (offline model + test validation)
     runs-on: ubuntu-latest

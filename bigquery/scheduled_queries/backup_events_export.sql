@@ -83,8 +83,11 @@ BEGIN
     -- per_table_rows carries the B2 per-table source counts (bigquery/18_stack_review_fixes.sql adds
     -- the column; apply 18 before re-pasting this query). SAFE.PARSE_JSON so a malformed map degrades
     -- to NULL rather than aborting the marker write.
-    INSERT INTO `stock-trading-498512.ops.backup_log` (run_date, tables_exported, per_table_rows, note)
+    -- dataset='events' (2026-06-28): distinguishes this marker from the sibling ops_export.sql's
+    -- dataset='ops' marker so state.backup_health (events) and state.ops_backup_health (ops) watch the two
+    -- backups independently, and the restore drill keeps anchoring its drill-date on the events snapshot.
+    INSERT INTO `stock-trading-498512.ops.backup_log` (run_date, tables_exported, per_table_rows, dataset, note)
     VALUES (CURRENT_DATE('America/Denver'), n_ok,
-            SAFE.PARSE_JSON('{' || row_json || '}'), 'events.* export OK');
+            SAFE.PARSE_JSON('{' || row_json || '}'), 'events', 'events.* export OK');
   END IF;
 END;

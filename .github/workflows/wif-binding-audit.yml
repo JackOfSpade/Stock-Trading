@@ -1,0 +1,107 @@
+name: WIF binding audit
+
+# 2026-06-28 stack review #2 (#1, RUNBOOK §25 E1). The single highest-privilege least-privilege control on
+# keyless CI is the WIF provider's attribute_condition + the gh-ci-runner@ workloadIdentityUser binding —
+# they decide WHICH GitHub repo may impersonate the read-all-trading-data CI SA. infra/terraform/wif.tf
+# DECLARES what that binding should be (assertion.repository == 'JackOfSpade/Stock-Trading' + a repo-scoped
+# principalSet), but it is spec-only and the live binding was never verified+recorded (E1 still reads
+# "Record the result here"). This job asserts the LIVE binding still matches the wif.tf-declared values and
+# fails on divergence — turning a one-time manual check into a standing, reviewable guard. Read-only.
+#
+# OPT-IN, default OFF + double-gated (like keyless-sa-audit.yml). Describing the pool/provider + reading the
+# SA IAM policy needs the WIF SA to hold roles/iam.workloadIdentityPoolViewer (project) AND
+# iam.serviceAccounts.getIamPolicy on gh-ci-runner@ (e.g. roles/iam.serviceAccountViewer on that SA) —
+# grants beyond the read-only §6 set, so this stays opt-in. Enable by adding those grants and setting
+# vars.RUN_WIF_AUDIT=true (+ the WIF vars). Otherwise it skips cleanly (green).
+#
+# This does NOT change the binding (no terraform apply — §12). It only verifies + alarms.
+
+on:
+  schedule:
+    - cron: '45 6 1 * *'   # monthly, 1st @ 06:45 UTC (after keyless-sa-audit at 06:30)
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: wif-binding-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    env:
+      EXPECTED_REPO: JackOfSpade/Stock-Trading
+      POOL_ID: github-pool
+      PROVIDER_ID: github-provider
+      CI_SA: gh-ci-runner@stock-trading-498512.iam.gserviceaccount.com
+      PROJECT: stock-trading-498512
+    steps:
+      - name: Gate on opt-in + WIF
+        id: guard
+        run: |
+          if [ "${{ vars.RUN_WIF_AUDIT }}" = "true" ] \
+             && [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] \
+             && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::WIF binding audit disabled (default). To enable: grant the WIF SA roles/iam.workloadIdentityPoolViewer + iam.serviceAccounts.getIamPolicy on gh-ci-runner@, and set vars.RUN_WIF_AUDIT=true (+ WIF vars). ops/RUNBOOK.md §25 E1."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Authenticate to GCP (keyless, WIF)
+        if: steps.guard.outputs.skip == 'false'
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
+      - name: Set up gcloud
+        if: steps.guard.outputs.skip == 'false'
+        uses: google-github-actions/setup-gcloud@v2
+      - name: Assert the WIF binding is scoped to this repo
+        if: steps.guard.outputs.skip == 'false'
+        env:
+          WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+        run: |
+          set -uo pipefail
+          problems=""
+
+          # 1. Provider attribute_condition must pin assertion.repository to THIS repo. An empty/missing
+          #    condition would accept ANY GitHub repo's OIDC token (the fork-permissive failure mode).
+          cond="$(gcloud iam workload-identity-pools providers describe "$PROVIDER_ID" \
+                    --location=global --workload-identity-pool="$POOL_ID" --project="$PROJECT" \
+                    --format='value(attributeCondition)' 2>/dev/null || echo '')"
+          echo "attributeCondition: ${cond:-<empty>}"
+          case "$cond" in
+            *"assertion.repository"*"$EXPECTED_REPO"*) : ;;  # pins this repo — OK
+            *) problems="$problems [attribute_condition does not pin assertion.repository to $EXPECTED_REPO: '${cond:-<empty>}']" ;;
+          esac
+
+          # 2. The SA's workloadIdentityUser member must be a principalSet SCOPED TO THIS REPO
+          #    (attribute.repository/<repo>), NOT a pool-wide member (which would let any repo impersonate).
+          #    --flatten/--filter extract just the workloadIdentityUser members, one per line (no inline JSON parse).
+          members="$(gcloud iam service-accounts get-iam-policy "$CI_SA" --project="$PROJECT" \
+                       --flatten='bindings[].members' \
+                       --filter='bindings.role=roles/iam.workloadIdentityUser' \
+                       --format='value(bindings.members)' 2>/dev/null || echo '')"
+          echo "workloadIdentityUser members:"; printf '%s\n' "$members"
+          if ! printf '%s' "$members" | grep -q "attribute.repository/$EXPECTED_REPO"; then
+            problems="$problems [no repo-scoped principalSet member (attribute.repository/$EXPECTED_REPO) on workloadIdentityUser]"
+          fi
+          # Flag a pool-wide member (ends at /* or /workloadIdentityPools/<pool>/* with no attribute scope).
+          if printf '%s' "$members" | grep -Eq "workloadIdentityPools/$POOL_ID/\*"; then
+            problems="$problems [POOL-WIDE workloadIdentityUser member present — any repo can impersonate $CI_SA]"
+          fi
+
+          if [ -n "$problems" ]; then
+            msg="🔐 Stock-Trading WIF binding audit FAILED:$problems. The keyless-CI trust boundary may be fork-permissive — see infra/terraform/wif.tf + RUNBOOK §25 E1. Tighten in the Console immediately."
+            echo "::error::$msg"
+            if [ -n "${WEBHOOK_URL:-}" ]; then
+              curl -fsS -X POST -H 'Content-Type: application/json' \
+                --data "$(printf '%s' "$msg" | python3 -c 'import json,sys;print(json.dumps({"text":sys.stdin.read()}))')" \
+                "$WEBHOOK_URL" || echo "::warning::webhook post failed (audit still failed the run)."
+            fi
+            exit 1
+          fi
+          echo "OK: WIF binding is scoped to $EXPECTED_REPO (provider condition + repo-scoped principalSet)."

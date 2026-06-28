@@ -1,0 +1,79 @@
+name: Off-site backup mirror
+
+# 2026-06-28 stack review #2 (#3, RUNBOOK §27). The irreplaceable append-only events.* truth AND its only
+# durable backup (gs://stock-trading-backups) live in the SAME GCP project under ONE Google account —
+# scripts/backup_events.sh's own header names "project loss" as a threat it should survive, yet the backup
+# never leaves the project. A project deletion, billing closure, or single-account compromise destroys live
+# data and backup together. This job mirrors the latest dt= snapshot to a store in a DIFFERENT trust domain
+# (a separate billing-account project's bucket, or any gsutil-addressable destination), closing that
+# blast-radius. The complementary one-time owner controls (project deletion lien + Essential Contacts to a
+# non-Google address) are in RUNBOOK §27 — they cannot live in CI.
+#
+# OPT-IN, default OFF + double-gated (like alert-relay.yml / keyless-sa-audit.yml). Reading the source
+# bucket needs the WIF SA to hold roles/storage.objectViewer on gs://stock-trading-backups (a narrow grant
+# beyond the read-only §6 set); writing the destination needs objectAdmin on the OFF-PROJECT bucket. Enable
+# by adding those grants and setting secret OFFSITE_BACKUP_GCS (e.g. gs://other-project-stock-backups) +
+# the WIF vars. Otherwise it skips cleanly (green). Keep the destination in a DIFFERENT billing account /
+# project (or a non-GCP store reached via a small adapter) — same-project is not off-site.
+
+on:
+  schedule:
+    - cron: '0 6 * * *'    # daily 06:00 UTC, after the in-project events backup (~05:30) + ops backup (~05:35)
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: offsite-backup
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    env:
+      SRC: gs://stock-trading-backups
+      DEST: ${{ secrets.OFFSITE_BACKUP_GCS }}
+    steps:
+      - name: Gate on opt-in + WIF
+        id: guard
+        run: |
+          if [ -n "${{ secrets.OFFSITE_BACKUP_GCS }}" ] \
+             && [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] \
+             && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Off-site backup disabled (default). To enable: set secret OFFSITE_BACKUP_GCS to an OFF-PROJECT gs:// bucket, grant the WIF SA storage.objectViewer on gs://stock-trading-backups + objectAdmin on the destination, and set the WIF vars. ops/RUNBOOK.md §27."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Authenticate to GCP (keyless, WIF)
+        if: steps.guard.outputs.skip == 'false'
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
+      - name: Set up gcloud (provides gsutil)
+        if: steps.guard.outputs.skip == 'false'
+        uses: google-github-actions/setup-gcloud@v2
+      - name: Mirror the latest snapshot off-project
+        if: steps.guard.outputs.skip == 'false'
+        env:
+          WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+        run: |
+          set -uo pipefail
+          # rsync the whole backup tree (events/ + ops/) to the off-project destination. -d would delete
+          # extras at the destination; we OMIT -d so the off-site copy retains history independent of the
+          # source bucket's >400d lifecycle (a deliberate divergence — off-site is the deeper archive).
+          if gsutil -m rsync -r "$SRC" "$DEST"; then
+            echo "off-site mirror OK: $SRC -> $DEST"
+          else
+            msg="🗄 Stock-Trading OFF-SITE backup mirror FAILED ($SRC -> $DEST). The off-project copy is stale — the events/ops truth has no out-of-trust-domain backup until this is fixed. See ops/RUNBOOK.md §27."
+            echo "::error::$msg"
+            if [ -n "${WEBHOOK_URL:-}" ]; then
+              curl -fsS -X POST -H 'Content-Type: application/json' \
+                --data "$(printf '%s' "$msg" | python3 -c 'import json,sys;print(json.dumps({"text":sys.stdin.read()}))')" \
+                "$WEBHOOK_URL" || echo "::warning::webhook post failed (mirror still failed the run)."
+            fi
+            exit 1
+          fi

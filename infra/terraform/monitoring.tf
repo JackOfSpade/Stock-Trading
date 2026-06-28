@@ -276,3 +276,173 @@ resource "google_monitoring_alert_policy" "cadence_scheduler_absent" {
     mime_type = "text/markdown"
   }
 }
+
+###############################################################################
+# 2026-06-28 stack review #2 (#4): scheduler-absence coverage for the TWO newest
+# RAISE-ing scheduled queries — the monthly RESTORE DRILL and the daily INTEGRITY
+# CHECK. Same who-watches-the-watchers gap as §19, re-opened for the checkers added in
+# the 2026-06-24 review: both write nothing on a clean run, so a silently-paused schedule
+# leaves you believing DR/governance is verified when it has not run. The restore drill is
+# the worst place to have it (its value is realized only when you need it).
+#
+# These two were created OUT-OF-BAND (owner console, RUNBOOK §3/§25), not via
+# scheduled_queries.tf, so their config_ids are NOT derivable from a TF resource. Supply
+# them via the variables below; each metric+policy is created only when its config_id is set
+# (count guard) — spec stays inert until the owner records the live ids. Same no-backfill
+# caveat as above: create the metric, seed one run, verify, THEN attach the policy.
+###############################################################################
+
+variable "restore_drill_config_id" {
+  description = "BigQuery Data Transfer config_id of the monthly restore-drill scheduled query (Console → Scheduled queries → the restore_drill job → its transferConfig id). Empty = skip the absence metric/policy."
+  type        = string
+  default     = ""
+}
+
+variable "integrity_check_config_id" {
+  description = "BigQuery Data Transfer config_id of the daily integrity_check scheduled query. Empty = skip the absence metric/policy."
+  type        = string
+  default     = ""
+}
+
+# --- Restore-drill heartbeat (monthly; ~33d absence window, NOT 25h) ----------
+resource "google_logging_metric" "restore_drill_scheduled_run" {
+  count   = var.restore_drill_config_id != "" ? 1 : 0
+  project = var.project_id
+  name    = "restore_drill_scheduled_run"
+
+  filter = <<-EOT
+    resource.type="bigquery_dts_config"
+    resource.labels.config_id="${var.restore_drill_config_id}"
+    jsonPayload.message=~"^Summary: succeeded"
+  EOT
+
+  metric_descriptor {
+    metric_kind = "DELTA"
+    value_type  = "INT64"
+    unit        = "1"
+  }
+}
+
+resource "google_monitoring_alert_policy" "restore_drill_scheduler_absent" {
+  count        = var.restore_drill_config_id != "" ? 1 : 0
+  project      = var.project_id
+  display_name = "Restore-drill scheduler absent >33d"
+  combiner     = "OR"
+
+  conditions {
+    display_name = "No restore-drill run in 33 days"
+    condition_prometheus_query_language {
+      # Monthly cadence + slack. PromQL accepts a long range; 792h = 33d.
+      query               = "absent_over_time(logging_googleapis_com:user_${google_logging_metric.restore_drill_scheduled_run[0].name}[792h])"
+      duration            = "0s"
+      evaluation_interval = "300s"
+    }
+  }
+
+  notification_channels = local.scheduler_alert_channels
+
+  documentation {
+    content   = "The monthly backup RESTORE DRILL (ops.sp_restore_drill) has emitted no run heartbeat in >33 days — DR verification may be silently paused, so 'we can recover' is unproven. state.restore_health (off ops.drill_log) additionally flags a stale/failing drill via cadence_check. Triage per ops/RUNBOOK.md §19."
+    mime_type = "text/markdown"
+  }
+}
+
+# --- Integrity-check heartbeat (daily; 25h window) ----------------------------
+resource "google_logging_metric" "integrity_check_scheduled_run" {
+  count   = var.integrity_check_config_id != "" ? 1 : 0
+  project = var.project_id
+  name    = "integrity_check_scheduled_run"
+
+  filter = <<-EOT
+    resource.type="bigquery_dts_config"
+    resource.labels.config_id="${var.integrity_check_config_id}"
+    jsonPayload.message=~"^Summary: succeeded"
+  EOT
+
+  metric_descriptor {
+    metric_kind = "DELTA"
+    value_type  = "INT64"
+    unit        = "1"
+  }
+}
+
+resource "google_monitoring_alert_policy" "integrity_check_scheduler_absent" {
+  count        = var.integrity_check_config_id != "" ? 1 : 0
+  project      = var.project_id
+  display_name = "Integrity-check scheduler absent >25h"
+  combiner     = "OR"
+
+  conditions {
+    display_name = "No integrity-check run in 25h"
+    condition_prometheus_query_language {
+      query               = "absent_over_time(logging_googleapis_com:user_${google_logging_metric.integrity_check_scheduled_run[0].name}[25h])"
+      duration            = "0s"
+      evaluation_interval = "60s"
+    }
+  }
+
+  notification_channels = local.scheduler_alert_channels
+
+  documentation {
+    content   = "The daily append-only INTEGRITY check (state.append_only_integrity) has emitted no run heartbeat in >25h. It is record-only (writes a warning, never RAISEs), so a DEAD scheduler writes nothing at all — this absence policy is the ONLY thing that catches it. Triage per ops/RUNBOOK.md §19; confirm the resourceViewer grant + that view 18 is applied."
+    mime_type = "text/markdown"
+  }
+}
+
+###############################################################################
+# 2026-06-28 stack review #2 (#6): alert on CreateServiceAccountKey for the two
+# keyless SAs. The whole CI/automation security model rests on gh-ci-runner@ and
+# bq-scheduler@ holding ZERO downloadable keys (§6/§15). keyless-sa-audit.yml is a
+# MONTHLY state assertion AND is OFF by default — so a `gcloud iam service-accounts
+# keys create` could silently reintroduce a long-lived exportable credential and go
+# unnoticed for up to a month. This detects the key-CREATION event itself, in real time,
+# from the Admin Activity audit log (on by default), needing NO serviceAccountKeys.list
+# grant. The preventive org policy (iam.disableServiceAccountKeyCreation) stays deferred
+# for the no-Org reason as §17 — this detection alert is the actionable-today control.
+###############################################################################
+
+resource "google_logging_metric" "sa_key_created" {
+  project = var.project_id
+  name    = "sa_key_created"
+
+  # Admin Activity audit log for a user-initiated key creation on either keyless SA.
+  filter = <<-EOT
+    logName="projects/${var.project_id}/logs/cloudaudit.googleapis.com%2Factivity"
+    protoPayload.methodName="google.iam.admin.v1.CreateServiceAccountKey"
+    (protoPayload.resourceName=~"gh-ci-runner@" OR protoPayload.resourceName=~"bq-scheduler@")
+  EOT
+
+  metric_descriptor {
+    metric_kind = "DELTA"
+    value_type  = "INT64"
+    unit        = "1"
+  }
+}
+
+resource "google_monitoring_alert_policy" "sa_key_created" {
+  project      = var.project_id
+  display_name = "Service-account key created on a keyless SA"
+  combiner     = "OR"
+
+  conditions {
+    display_name = "A user-managed key was created on gh-ci-runner@/bq-scheduler@"
+    condition_threshold {
+      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.sa_key_created.name}\""
+      comparison      = "COMPARISON_GT"
+      threshold_value = 0
+      duration        = "0s"
+      trigger { count = 1 }
+      aggregations {
+        alignment_period   = "600s"
+        per_series_aligner = "ALIGN_DELTA"
+      }
+    }
+  }
+
+  notification_channels = local.scheduler_alert_channels
+
+  documentation {
+    content   = "A user-managed (downloadable) key was just created on gh-ci-runner@ or bq-scheduler@ — both are supposed to be keyless (WIF, RUNBOOK §6/§15/§25). If you did not intend this, DELETE the key immediately (gcloud iam service-accounts keys delete) and investigate who created it. Pairs with the monthly keyless-sa-audit.yml state assertion."
+    mime_type = "text/markdown"
+  }
+}

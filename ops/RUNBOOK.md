@@ -150,6 +150,28 @@ snapshot — every table restored at **exact row-count parity to live** (e.g. de
 daily_marks 444/444, macro_fred 777/777; `hf_capability_captures` 0/0 = legitimately empty). So the
 backup→restore path is proven, not assumed.
 
+**DDL-FIRST restore (the FAITHFUL recovery procedure — added 2026-06-28, §27 #13).** The quick
+`bq load --source_format=PARQUET --replace` shown in `backup_events_export.sql` proves *presence* but
+INFERS the schema, so it yields an **un-partitioned, un-clustered, nullable-everywhere** table with JSON
+degraded to STRING and a NUMERIC→FLOAT64 coercion risk — fine for a spot-check, WRONG for a real recovery
+of a financial system of record. For an actual restore, recreate the schema FIRST, then load into the typed
+table:
+1. **Recreate the canonical schema:** apply `bigquery/01_schema.sql` (+ `03_twr_engine.sql` for
+   `events.daily_marks`, `07_fred_macro.sql` for `events.macro_fred`) to a fresh/empty target — this
+   restores `NOT NULL`, `PARTITION BY` / `CLUSTER BY`, `DEFAULT GENERATE_UUID()/CURRENT_TIMESTAMP()`,
+   NUMERIC types, and the immutability `OPTIONS`/description.
+2. **Load into the pre-created typed table** (NOT `--replace`-from-FILES, which re-infers): `LOAD DATA INTO`
+   a `<table>_staging` table `FROM FILES(format='PARQUET', uris=[…dt=<DATE>/*.parquet])`, then `INSERT INTO`
+   the canonical `events.<table>` `SELECT * REPLACE(SAFE.PARSE_JSON(<jsoncol>) AS <jsoncol>, …)` from the
+   staging table — re-parsing the TO_JSON_STRING'd JSON columns (decision_log.fields,
+   position_events.invalidation_status, queue_events.payload, trade_fills.raw, adversarial_reviews.weaknesses).
+3. **ops.\* restore** is identical, applying `10/14/16/17` for the ops DDL then loading from
+   `gs://stock-trading-backups/ops/<table>/dt=<DATE>/` (the new `ops_export.sql` snapshots, §27 #2).
+The monthly drill now also runs a **typed-restore fidelity check** on one representative table (`trade_fills`
+— NUMERIC + JSON) each run: it `CREATE TABLE LIKE`s the live table and loads the snapshot into that canonical
+schema, so a backup that no longer fits the real types surfaces as a record-only `restore_fidelity` **warning**
+(never the critical RAISE) — `bigquery/17_restore_drill.sql`.
+
 ---
 
 ## 4. Dashboard *(P1-4)*
@@ -956,3 +978,109 @@ non-trigger instruction) — both of which were monitor-side false alarms with n
   Code-on-Web sessions can reach, with a SA holding the routines' **write** scope (not just read) — net-new
   runtime that cuts against the CLAUDE.md "MCP + console, no extra runtime" posture. Revisit only if the
   de-auth becomes frequent enough to justify the operational weight.
+
+## 27. Stack-review fixes #2 — 2026-06-28 (verified deltas)
+
+A third workflow / storage / automation review (six layers, adversarially verified against the already-done
++ settled record). Only genuine deltas were implemented; the settled decisions (Terraform adoption §12, dbt
+view ownership §14) were respected — the Terraform additions below are **spec-only, never applied**, and no
+new connector was added (a Slack/Twilio push channel was evaluated and deferred to the operator's call;
+the already-built A3 relay just needs enabling — §25 A2/A3). **Repo artifacts are DONE; this section lists
+the owner/console apply steps.**
+
+**New code:** `bigquery/19_stack_review_fixes_2.sql` (state.ddl_drift), `bigquery/scheduled_queries/ops_export.sql`,
+`bigquery/scheduled_queries/delivery_canary.sql`, `.github/workflows/wif-binding-audit.yml`,
+`.github/workflows/offsite-backup.yml`, `tests/test_alert_relay.py`,
+`dbt/tests/assert_open_positions_have_marks.sql`; **edits to** `bigquery/16_automation_health.sql` (backup_log.dataset
++ state.ops_backup_health), `bigquery/17_restore_drill.sql` (ops.drill_log + state.restore_health + typed-fidelity
+check + events-pinned drill date), `bigquery/18_stack_review_fixes.sql` (state.stalled_runs generalized),
+`bigquery/scheduled_queries/backup_events_export.sql` (dataset='events' marker),
+`bigquery/scheduled_queries/cadence_check.sql` (ops_backup_stale / restore_stale / ddl_drift warnings +
+warning auto-resolve), `infra/terraform/monitoring.tf` (restore_drill/integrity absence + SA-key alert),
+`.github/workflows/ci.yml` (shell-lint job), `Claude_Task_Plan.md` (Calendar pre-flight + staging atomicity +
+FMP mark fallback).
+
+> **APPLY ORDER for the BigQuery pieces (via the MCP):** `16` → `17` → `18` → `19` (all additive/idempotent:
+> ALTER ADD COLUMN IF NOT EXISTS, CREATE TABLE IF NOT EXISTS, CREATE OR REPLACE VIEW/PROCEDURE — no behaviour
+> change to existing objects), **then** re-paste the scheduled queries `cadence_check.sql` (now reads
+> state.ops_backup_health / state.restore_health / state.ddl_drift) + `backup_events_export.sql` (dataset
+> marker), **then** create the two NEW scheduled queries `ops_export.sql` + `delivery_canary.sql`. **VERIFY**
+> after applying `19`: `SELECT * FROM state.ddl_drift` should return **0 rows** (a clean baseline — if a benign
+> `is_partitioning_column` reporting diff shows up for the `DATE(timestamp)` partitions, adjust the expected
+> spec in `19` before relying on it). `state.ddl_drift` / `state.restore_stale` / fidelity stay **record-only
+> WARNING** (staged rollout, like append_only_integrity); promote to critical+RAISE once a clean baseline holds.
+
+### Theme A — backup / DR completeness (the truth is protected; the audit trail + its trust boundary were not)
+- **#2 — back up the irreplaceable ops.\* audit history (owner console).** `ops.run_log`/`alerts`/`backup_log`/
+  `heartbeat`/`drill_log` are append-only history with NO upstream — yet only `events.*` was ever exported.
+  Create `scheduled_queries/ops_export.sql` as a **daily** scheduled query (~05:35 UTC, after the events
+  export; Location US; run-as `bq-scheduler@`, which already holds objectAdmin on the bucket; enable email-on-
+  failure). It logs a `dataset='ops'` marker; `state.ops_backup_health` + `cadence_check` (`ops_backup_stale`,
+  critical) then catch a stalled ops backup. The restore drill's date is now pinned to the events snapshot
+  (`COALESCE(dataset,'events')='events'`), removing the self-referential fragility.
+- **#3 — get one copy out of the project / trust domain (owner gcloud + optional GHA).** Today live truth AND
+  its only backup share one project + one Google account. Three independent controls:
+  (1) **project deletion lien** — `gcloud resource-manager liens create --project=stock-trading-498512
+  --restrictions=resourcemanager.projects.delete --reason="protect append-only trading truth"`;
+  (2) **Essential Contacts** (IAM & Admin → Essential Contacts) for LEGAL/SECURITY/TECHNICAL/BILLING, ideally a
+  **non-Google** address, so a suspension/billing notice doesn't depend on the at-risk account;
+  (3) **off-site mirror** — enable `.github/workflows/offsite-backup.yml` (set secret `OFFSITE_BACKUP_GCS` to an
+  OFF-PROJECT bucket, grant the WIF SA `storage.objectViewer` on `gs://stock-trading-backups` + `objectAdmin`
+  on the destination). OFF by default (clean no-op). Distinct from the §25-rejected *in-project* snapshot idea.
+- **#13 — DDL-first restore + typed-fidelity drill.** See §3 "DDL-FIRST restore". Repo-done; no console step
+  beyond using the documented procedure on a real recovery.
+
+### Theme B — who-watches-the-watchers (newest monitors + highest-privilege controls)
+- **#1 — verify + RECORD the live WIF trust binding (owner, HIGHEST severity).** The E1 verification (§25 E1)
+  was specified but never done. Run the two read-only `gcloud … describe` / `get-iam-policy` commands in
+  `infra/terraform/wif.tf`'s header and **record the literal result here**, replacing §25 E1's "Record the
+  result here." If the provider has no `attribute_condition` or the `workloadIdentityUser` member is pool-wide
+  (not `attribute.repository/JackOfSpade/Stock-Trading`), TIGHTEN it in the Console (it lets any repo mint a
+  `gh-ci-runner@` token and read all live data). Optional standing guard: enable
+  `.github/workflows/wif-binding-audit.yml` (grant the WIF SA `iam.workloadIdentityPoolViewer` +
+  `iam.serviceAccounts.getIamPolicy` on `gh-ci-runner@`; set `vars.RUN_WIF_AUDIT=true`). **E1 RESULT: _____
+  (fill in).**
+- **#4 — scheduler-absence + liveness for restore_drill & integrity_check (owner console).** `monitoring.tf`
+  (spec) now declares absence metrics+policies for both — supply their live `config_id`s via
+  `var.restore_drill_config_id` / `var.integrity_check_config_id` (Console → the scheduled query → its
+  transferConfig id), or add the metric+policy directly in the Console (same terminal-agnostic `^Summary:`
+  filter + `absent_over_time` PromQL as the existing three; seed one run before attaching the policy — no
+  backfill). The drill also writes an `ops.drill_log` marker every run → `state.restore_health` →
+  `cadence_check` `restore_stale` warning (no console step; rides the BigQuery apply).
+- **#6 — alert on `CreateServiceAccountKey` (owner console).** `monitoring.tf` declares a log-based metric on
+  the Admin Activity `CreateServiceAccountKey` method for `gh-ci-runner@`/`bq-scheduler@` + a threshold alert
+  (fires on any key creation; needs NO `keys.list` grant). Create it in the Console (Logging → Create metric;
+  Monitoring → alert). Keep `keyless-sa-audit.yml` as the monthly state assertion.
+
+### Theme C — test / static-analysis asymmetry
+- **#5 — `shell-lint` CI job (repo-done; advisory).** `ci.yml` now runs actionlint (workflow YAML + embedded
+  `run:` bash) + shellcheck (`scripts/*.sh`), the previously-unguarded high-stakes automation. **Advisory**
+  (continue-on-error) so it can't red-light the merge gate on a pre-existing finding; **promote to a hard gate**
+  (drop `continue-on-error`) once a clean baseline is confirmed.
+- **#8 — `tests/test_alert_relay.py` (repo-done).** Offline tests of the bq-JSON slice helper (the exact
+  regressed bug class) + the row-shape contract for the off-Google delivery channel. Auto-discovered by the
+  always-on `test` job.
+
+### Theme D — drift / per-name coverage
+- **#7 — `state.ddl_drift` (repo-done; verify baseline).** Detects a silent out-of-band ALTER on the immutable
+  `events.*` audit tables (NOT NULL / type / partition / cluster) vs `01_schema.sql` — the structural gap the
+  view-logic (dbt-parity), DML (append_only_integrity), and trigger (instruction_drift) guards left open.
+  Record-only warning; MAINTAIN the expected-spec UNNEST in `19` alongside `01_schema.sql`.
+- **#11 — `state.stalled_runs` generalized (repo-done).** Now covers all run-logged routines (per-class 6h/18h
+  thresholds, 7-day lookback), not just D1/D2/D3 — catches a weekly/monthly/AR session that died after
+  `sp_routine_start`.
+- **#12 — FMP mark fallback + completeness (repo-done; instruction + dbt test).** D2 falls back to the FMP
+  connector when `get_price_history` returns no/stale bar for a held name (`source='FMP-fallback'`), and asserts
+  every open position has a recent mark (`dbt/tests/assert_open_positions_have_marks.sql`, advisory).
+
+### Theme E — alert-sink hygiene
+- **#10 — Calendar pre-flight + staging atomicity (repo-done; instruction).** Order-staging routines now
+  liveness-check the Calendar connector first (the sole human surface) and gate `completed` on the confirm-order
+  event actually being created.
+- **#14 — auto-resolve stale self-healing warnings (repo-done).** `cadence_check.sql` ages out >7-day
+  `stranded_session`/`instruction_drift`/`calendar_runway_low`/`routine_stalled` warnings so the weekly digest's
+  "N open alerts" reflects live issues (all_green keys only on open criticals — digest-quality only).
+- **#15 — delivery canary (owner console).** Create `scheduled_queries/delivery_canary.sql` as a **weekly**
+  scheduled query (e.g. Mon ~05:40 UTC; email-on-failure ON). It asserts the prior week's canary got
+  `notified_ts` stamped (proves the emailer actually DELIVERED) and emits a fresh `[CANARY]` row. Add a Gmail
+  filter to archive `[CANARY]` to keep the inbox clean without defeating the test.

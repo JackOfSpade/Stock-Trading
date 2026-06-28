@@ -214,34 +214,56 @@ AND NOT EXISTS (
 );
 
 -- ============================================================================
--- (marginal) state.stalled_runs — a DAILY routine logged 'started' but never a terminal status.
--- A session that dies AFTER sp_routine_start but BEFORE sp_routine_end leaves a stuck 'started' row
--- that nothing reads. Scoped to D1/D2/D3 only (their run-day is unambiguous; the cadence design
--- deliberately excludes weekly+ from the alarm set to avoid inferred-trigger-day false alarms). The
--- data-side freshness switch already covers D1/D2 missing their data work; this adds the 'started but
--- stuck' signal specifically. Warning, record-only.
+-- (marginal) state.stalled_runs — a routine logged 'started' but never a terminal status.
+-- A session that dies AFTER sp_routine_start but BEFORE sp_routine_end (the documented §20 abnormal-end
+-- mode: usage-limit cutoff / container reclamation) leaves a stuck 'started' row that NOTHING reads — the
+-- §17 stranded-session detector keys on status='completed' and is structurally blind to it.
+--
+-- 2026-06-28 stack review #2 (#11): GENERALIZED beyond D1/D2/D3 to all run-logged routines via a per-class
+-- min_stale_hours table (mirrors trigger_attestation's cls CTE), with the lookback widened from 3→7 days so
+-- a low-frequency 'started' row does not age out before it crosses its threshold. This keys off each
+-- routine's OWN logged 'started' row (no calendar prediction), so it cannot false-fire on an inferred
+-- trigger-day — the concern that originally limited it to the daily set. Previously a weekly/monthly/
+-- quarterly/annual or AR session that died after start could sit unnoticed for up to a full cadence period
+-- (the only backstop was trigger_attestation's coarse 14/70/200/400-day windows). Warning, record-only.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.stalled_runs` AS
-WITH started AS (
+WITH cls AS (
+  -- fast tier (~6h): daily, adversarial, and action-conversion routines (same-day work).
+  -- slow tier (~18h): deep-research weeklies/monthlies/quarterlies/annuals (longer legitimate runtime).
+  -- AR ids carry the middle-dot, matching ops/cadence.yaml + ops.run_log.
+  SELECT * FROM UNNEST([
+    STRUCT('D1' AS routine, 6 AS min_stale_hours), STRUCT('D2', 6), STRUCT('D3', 6),
+    STRUCT('AR·att', 6), STRUCT('AR·orc', 6),
+    STRUCT('W4', 6), STRUCT('M4', 6), STRUCT('Q4', 6), STRUCT('A3', 6),
+    STRUCT('W1', 18), STRUCT('W2', 18), STRUCT('W3', 18), STRUCT('W5', 18),
+    STRUCT('M1a', 18), STRUCT('M1b', 18), STRUCT('M2', 18), STRUCT('M3', 18), STRUCT('M5', 18),
+    STRUCT('Q1', 18), STRUCT('Q2', 18), STRUCT('Q3', 18),
+    STRUCT('A1', 18), STRUCT('A2', 18)
+  ])
+),
+started AS (
   SELECT routine, run_date, MAX(log_ts) AS last_started_ts
   FROM `stock-trading-498512.ops.run_log`
-  WHERE status = 'started' AND routine IN ('D1', 'D2', 'D3')
-    AND run_date >= DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 3 DAY)
+  WHERE status = 'started'
+    AND run_date >= DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 7 DAY)
   GROUP BY routine, run_date
 ),
 terminal AS (
   SELECT DISTINCT routine, run_date
   FROM `stock-trading-498512.ops.run_log`
-  WHERE status IN ('completed', 'failed', 'halted') AND routine IN ('D1', 'D2', 'D3')
-    AND run_date >= DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 3 DAY)
+  WHERE status IN ('completed', 'failed', 'halted')
+    AND run_date >= DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 7 DAY)
 )
 SELECT
   s.routine, s.run_date, s.last_started_ts,
   TIMESTAMP_DIFF(CURRENT_TIMESTAMP(), s.last_started_ts, HOUR) AS hours_since_started,
+  c.min_stale_hours,
   CURRENT_TIMESTAMP() AS checked_at
 FROM started s
+JOIN cls c USING (routine)   -- classify (and bound to) known routines; an unknown id is not flagged
 LEFT JOIN terminal t USING (routine, run_date)
 WHERE t.routine IS NULL
-  AND TIMESTAMP_DIFF(CURRENT_TIMESTAMP(), s.last_started_ts, HOUR) >= 6;
+  AND TIMESTAMP_DIFF(CURRENT_TIMESTAMP(), s.last_started_ts, HOUR) >= c.min_stale_hours;
 
 -- ============================================================================
 -- (marginal) state.market_calendar_horizon — calendar runway + FMP auto-extend liveness.

@@ -22,6 +22,24 @@
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';
 
+  -- Auto-resolve STALE self-healing WARNING rows (2026-06-28, #14) so the weekly digest's "N open alerts"
+  -- reflects live issues, not warnings the owner never manually closed (e.g. a 4-day-old self-healed
+  -- stranded_session warning keeping the digest red). Targets only the self-CLEARING classes, warning
+  -- severity, older than 7 days. A condition that is STILL true is simply re-raised by the checks below
+  -- (sp_raise_alert_once), so this can only durably clear a row whose underlying condition has actually
+  -- healed. Critical rows and the persistent-DRIFT classes (position_drift / ddl_drift /
+  -- append_only_violation / restore_fidelity) are deliberately left untouched. Runs first, before any RAISE
+  -- (which would abort the script). all_green keys only on open CRITICAL alerts, so this is purely a
+  -- digest-quality fix, not a dead-man's-switch change.
+  UPDATE `stock-trading-498512.ops.alerts`
+  SET resolved = TRUE,
+      resolved_ts = CURRENT_TIMESTAMP(),
+      resolved_note = CONCAT('auto-aged (>7d self-healing warning; cadence_check.sql #14). ', COALESCE(resolved_note, ''))
+  WHERE NOT resolved
+    AND severity = 'warning'
+    AND category IN ('stranded_session', 'instruction_drift', 'calendar_runway_low', 'routine_stalled')
+    AND alert_ts < TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY);
+
   -- missed_run (critical) — a monitored routine expected today did not complete.
   IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.cadence_watch` WHERE needs_attention) THEN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
@@ -44,6 +62,18 @@ BEGIN
       (SELECT TO_JSON_STRING(t) FROM `stock-trading-498512.state.backup_health` t));
     SET raise_msg = raise_msg || (SELECT CONCAT('[backup_stale] last_backup_date=',
       CAST(last_backup_date AS STRING), '; ') FROM `stock-trading-498512.state.backup_health`);
+  END IF;
+
+  -- ops_backup_stale (critical, 2026-06-28 #2) — the ops.* (audit/control-plane) GCS backup has gone
+  -- silent (>2 days). ops.* is IRREPLACEABLE append-only history with no upstream, so a stalled ops
+  -- backup is as serious as a stalled events backup. Self-bootstrapping (state.ops_backup_health.monitored).
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.ops_backup_health` WHERE stale) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'critical', 'scheduled.cadence', 'ops_backup_stale',
+      'Backup check: ops.* (audit/control-plane) GCS backup has not logged a successful run in >2 days',
+      (SELECT TO_JSON_STRING(t) FROM `stock-trading-498512.state.ops_backup_health` t));
+    SET raise_msg = raise_msg || (SELECT CONCAT('[ops_backup_stale] last_backup_date=',
+      CAST(last_backup_date AS STRING), '; ') FROM `stock-trading-498512.state.ops_backup_health`);
   END IF;
 
   -- automation_heartbeat (critical) — an out-of-band Apps Script went silent (16_automation_health.sql).
@@ -98,12 +128,13 @@ BEGIN
        FROM `stock-trading-498512.state.trigger_attestation` WHERE overdue));
   END IF;
 
-  -- routine_stalled (marginal) — a DAILY routine logged 'started' but never a terminal status (>=6h):
-  -- a session that died after sp_routine_start but before sp_routine_end (the run-log-blind slice).
+  -- routine_stalled (marginal) — a routine logged 'started' but never a terminal status past its per-class
+  -- threshold (2026-06-28 #11: now ALL run-logged routines, not just D1/D2/D3): a session that died after
+  -- sp_routine_start but before sp_routine_end (the run-log-blind slice).
   IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.stalled_runs`) THEN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'warning', 'scheduled.cadence', 'routine_stalled',
-      CONCAT('Stalled run(s): a daily routine started but never logged a terminal status: ',
+      CONCAT('Stalled run(s): a routine started but never logged a terminal status: ',
              (SELECT STRING_AGG(CONCAT(routine, '/', CAST(run_date AS STRING)), ', ' ORDER BY routine)
               FROM `stock-trading-498512.state.stalled_runs`)),
       (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(routine, run_date, hours_since_started)))
@@ -132,6 +163,40 @@ BEGIN
                      'd to ', CAST(calendar_through AS STRING), ') — W5 FMP auto-extend may be failing')
        FROM `stock-trading-498512.state.market_calendar_horizon`),
       (SELECT TO_JSON_STRING(t) FROM `stock-trading-498512.state.market_calendar_horizon` t));
+  END IF;
+
+  -- ====================================================================================
+  -- 2026-06-28 stack-review #2 additions (all WARNING, record-only — never flip all_green / RAISE).
+  -- Reference views in bigquery/17_restore_drill.sql (state.restore_health) and
+  -- bigquery/19_stack_review_fixes_2.sql (state.ddl_drift) — APPLY 17 + 19 BEFORE re-pasting this query.
+  -- ====================================================================================
+
+  -- restore_stale (warning, #4) — the monthly restore drill has not completed in >40 days OR its last run
+  -- did not pass. A drill that writes nothing on success is otherwise invisible (state.restore_health off
+  -- ops.drill_log). A silently-paused DR drill means "DR verified monthly" is a belief, not a fact. (A dead
+  -- drill SCHEDULER is additionally caught by the Cloud Monitoring absence policy in monitoring.tf.)
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.restore_health` WHERE stale) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'restore_stale',
+      (SELECT CONCAT('Restore-drill health: last drill ', CAST(last_drill_date AS STRING),
+                     ' (passed=', CAST(last_drill_passed AS STRING), ') — stale or failing')
+       FROM `stock-trading-498512.state.restore_health`),
+      (SELECT TO_JSON_STRING(t) FROM `stock-trading-498512.state.restore_health` t));
+  END IF;
+
+  -- ddl_drift (warning, #7) — a live events.* audit table's STRUCTURE (NOT NULL / type / partition /
+  -- cluster) diverged from the canonical bigquery/01_schema.sql spec (a silent out-of-band ALTER the
+  -- idempotent CREATE-IF-NOT-EXISTS spec will not re-assert; invisible to the DML-only append_only_integrity
+  -- and to dbt not_null DATA tests). Staged-rollout record-only until a clean baseline is confirmed.
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.ddl_drift`) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'ddl_drift',
+      CONCAT('DDL drift: events.* base-table structure differs from bigquery/01_schema.sql: ',
+             (SELECT STRING_AGG(CONCAT(table_name, '.', column_name, ' [', drift_reasons, ']'), '; '
+                     ORDER BY table_name, column_name)
+              FROM `stock-trading-498512.state.ddl_drift`)),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(table_name, column_name, drift_reasons, expected_type, live_type)))
+       FROM `stock-trading-498512.state.ddl_drift`));
   END IF;
 
   -- Single consolidated RAISE so the DTS failure-email fires once, AFTER every condition is recorded.
