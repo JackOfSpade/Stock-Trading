@@ -723,6 +723,41 @@ confirm whether it is a real edited trigger (diff `state.routine_last_instructio
 or — as here — an ad-hoc session that logged a non-trigger instruction. Fix the cause, then
 `UPDATE ops.alerts SET resolved=TRUE, resolved_ts=CURRENT_TIMESTAMP(), resolved_note='…' WHERE alert_id='…'`.
 
+**Update 2026-06-29 — re-fire; now a CONFIRMED genuine web-UI trigger drift (NOT a false alarm).** Fired
+again 2026-06-29 05:15 UTC, same routine (W5), same shape: live `…Factbase & Analytics Consolidation` vs
+canonical `…Factbase & Analytics Consolidation — regular routine.` (the dropped ` — regular routine.` suffix).
+This is exactly the re-fire fix #3 above predicted. Diagnosis (decisive):
+- The genuine scheduled **2026-06-28** Sunday run (`w5-20260628-quirky-hopper`) logged its verbatim trigger
+  WITHOUT the suffix. That instruction IS in the canonical `Read Claude_Task_Plan.md. Perform %` shape, so the
+  §22 hardening correctly let it through — this is **not** an ad-hoc-shadow false positive this time.
+- **W5 is the ONLY drifted routine.** Every other run-logged routine — including **W4**, also a "regular
+  routine" — logs the full ` — regular routine.` / ` — deep research.` suffix exactly. So this is a
+  W5-specific web-UI trigger typo, not a systematic operator habit.
+- The in-repo canonical side is **fully consistent**: the W5 plan heading carries the suffix and
+  `python scripts/check_cadence_consistency.py` passes (`ops.routine_catalog` == plan-derived). **There is no
+  repo bug to fix.**
+
+Root cause (now confirmed): the **live W5 web-UI trigger genuinely omits ` — regular routine.`**. The
+2026-06-22 data-correction (#3) only rewrote `ops.run_log`; it cannot change the operator-owned web-UI
+trigger, so the next scheduled run re-logged the drifted text and re-fired — precisely as #3 warned.
+
+**Durable fix is OPERATOR-OWNED (web UI, not repo) — a session cannot edit the trigger.** In
+Claude-Code-on-Web, edit the W5 routine's trigger instruction to read EXACTLY (matching W4 and all 22 other
+routines):
+> `Read Claude_Task_Plan.md. Perform W5. Factbase & Analytics Consolidation — regular routine.`
+
+After that, the next W5 run self-confirms (`state.instruction_drift` reads clean) and the WARNING auto-ages
+(cadence_check.sql #14).
+
+**Do NOT** weaken `state.instruction_drift` to strip the type-suffix — the ` — deep research.` /
+` — regular routine.` tag carries the session-mode signal, so a trigger naming the WRONG type is a real drift
+worth catching. **Do NOT** re-apply the §22 #3 `run_log` band-aid either: now that the trigger is *known* to
+genuinely lack the suffix, rewriting the 2026-06-28 `instruction` to add it would falsify the
+trigger-of-record audit trail to mask a live, unfixed config bug — leave `run_log` honest and fix the trigger.
+The open `ops.alerts` WARNING is non-raising (never blocks `all_green`); leave it as a weekly reminder until
+the trigger is fixed, or resolve-with-note pointing here — either way it auto-ages 7 days after the next W5
+run logs the corrected trigger and the condition heals.
+
 ## 23. Semantic precedent layer — embedding coverage + the chunking upgrade *(analytics)*
 **Done 2026-06-22 (conservative step):** `bigquery/02_ai_layer.sql` now embeds an 8,000-char excerpt
 (up from 6,000) of `title + body_md`, filling text-embedding-005's ~2,048-token input budget for
