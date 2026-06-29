@@ -390,6 +390,63 @@ resource "google_monitoring_alert_policy" "integrity_check_scheduler_absent" {
 }
 
 ###############################################################################
+# 2026-06-28 stack review #2 (ops-export symmetry): scheduler-absence for the NEW
+# ops.* backup export. backup_events_export has a dedicated absence policy above; the
+# sibling ops_export.sql (which backs up the irreplaceable ops.* audit history) deserves
+# the same belt-and-suspenders. A dead ops-export is ALREADY caught transitively
+# (state.ops_backup_health → cadence_check 'ops_backup_stale' → DTS email), so this is
+# additive, not load-bearing. Live config_id recorded 2026-06-29 (RUNBOOK §27). Same
+# terminal-agnostic '^Summary:' filter + daily 25h absence window as the events backup.
+###############################################################################
+
+variable "ops_export_config_id" {
+  description = "BigQuery Data Transfer config_id of the daily ops.* backup export scheduled query (live: ops-export-daily, RUNBOOK §27). Empty = skip this absence metric/policy."
+  type        = string
+  default     = "6a43d4f7-0000-276c-b1fb-7474463ce22d"
+}
+
+resource "google_logging_metric" "ops_export_scheduled_run" {
+  count   = var.ops_export_config_id != "" ? 1 : 0
+  project = var.project_id
+  name    = "ops_export_scheduled_run"
+
+  filter = <<-EOT
+    resource.type="bigquery_dts_config"
+    resource.labels.config_id="${var.ops_export_config_id}"
+    jsonPayload.message=~"^Summary: succeeded"
+  EOT
+
+  metric_descriptor {
+    metric_kind = "DELTA"
+    value_type  = "INT64"
+    unit        = "1"
+  }
+}
+
+resource "google_monitoring_alert_policy" "ops_export_scheduler_absent" {
+  count        = var.ops_export_config_id != "" ? 1 : 0
+  project      = var.project_id
+  display_name = "ops-export scheduler absent >25h"
+  combiner     = "OR"
+
+  conditions {
+    display_name = "No ops.* backup run in 25h"
+    condition_prometheus_query_language {
+      query               = "absent_over_time(logging_googleapis_com:user_${google_logging_metric.ops_export_scheduled_run[0].name}[25h])"
+      duration            = "0s"
+      evaluation_interval = "60s"
+    }
+  }
+
+  notification_channels = local.scheduler_alert_channels
+
+  documentation {
+    content   = "The ops.* backup export (ops-export-daily) has emitted no run heartbeat in >25h — the irreplaceable run_log/alerts/backup_log/heartbeat/drill_log audit history may be silently un-backed-up. state.ops_backup_health additionally flags this via cadence_check. Triage per ops/RUNBOOK.md §19/§27."
+    mime_type = "text/markdown"
+  }
+}
+
+###############################################################################
 # 2026-06-28 stack review #2 (#6): alert on CreateServiceAccountKey for the two
 # keyless SAs. The whole CI/automation security model rests on gh-ci-runner@ and
 # bq-scheduler@ holding ZERO downloadable keys (§6/§15). keyless-sa-audit.yml is a
