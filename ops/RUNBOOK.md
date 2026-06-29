@@ -1097,14 +1097,19 @@ FMP mark fallback).
 >   drop the restore_drill absence spec for this reason.
 > - **keyless-sa-audit — ENABLED + GREEN.** Custom role `SA_KeyList` (`iam.serviceAccountKeys.list`) granted to
 >   `gh-ci-runner@` on both SAs; `vars.RUN_SA_KEY_AUDIT=true`. First run SUCCESS — both SAs keyless, confirmed.
-> - **wif-binding-audit — ENABLED; first run was a FALSE POSITIVE (now fixed).** It reported "fork-permissive
->   (empty attribute_condition)", which CONTRADICTS the authoritative owner-Cloud-Shell E1 check above (concrete
->   SCOPED values incl. the matching project number 191682978805). Root cause: the workflow ran seconds after the
->   Section-C IAM grants (`workloadIdentityPoolViewer`/`serviceAccountViewer`) before they propagated, and the
->   script masked the `gcloud` READ FAILURE as an empty condition → false finding. **Fixed 2026-06-29** in
->   `wif-binding-audit.yml`: a read failure now exits 2 "COULD NOT VERIFY" (distinct from a real exit-1 finding).
->   **Re-confirm:** the live binding is SCOPED per the owner Cloud Shell check (E1 RESULT above stands); re-run the
->   fixed workflow after grants have propagated to get a clean green. Do NOT change the WIF binding — it is correctly scoped.
+> - **wif-binding-audit — ENABLED + GREEN (run #5); the early failures were TWO audit-script bugs, never a real
+>   exposure.** The binding was repo-scoped throughout. Run #1 failed on a read-failure masking bug (it ran
+>   seconds after the Section-C grants, before `workloadIdentityPoolViewer`/`serviceAccountViewer` propagated, and
+>   `2>/dev/null || echo ''` turned the failed `gcloud` read into a false "empty condition") — **fixed**: a read
+>   failure now exits 2 "COULD NOT VERIFY", distinct from a real exit-1 finding. Runs #2–#4 then failed because the
+>   live `attributeCondition` used the **mapped-attribute form** `attribute.repository == "JackOfSpade/Stock-Trading"`,
+>   while the matcher only accepted the literal `assertion.repository` — equivalent (attribute_mapping sets
+>   `attribute.repository = assertion.repository`), so a brittle string match, not a security gap — **fixed**: the
+>   matcher now accepts either form. On 2026-06-29 the live condition was normalized (owner, gcloud) to
+>   `assertion.repository == 'JackOfSpade/Stock-Trading'` to match `wif.tf` line 91 exactly, and run #5 → GREEN.
+>   Net: no fork could ever impersonate `gh-ci-runner@` (provider condition + repo-scoped principalSet both
+>   confirmed); the E1 RESULT above stands. Also done this session: deleted the stray restore-drill policy/metric,
+>   enabled `iam.googleapis.com`.
 > - **dbt-parity hard gate — ALREADY ON.** `vars.DBT_PARITY=block` was already set (owner, prior week); WIF vars
 >   `GCP_WIF_PROVIDER`/`GCP_WIF_SERVICE_ACCOUNT` confirmed present. The §27 ladder item is satisfied.
 > - **DR blast-radius (#3) — DONE.** Project deletion lien created (`p191682978805-103ae3152-…`); Essential

@@ -81,10 +81,17 @@ jobs:
                        --location=global --workload-identity-pool="$POOL_ID" --project="$PROJECT" \
                        --format='value(attributeCondition)' 2>cond_err)"; then
             echo "attributeCondition: ${cond:-<empty>}"
-            case "$cond" in
-              *"assertion.repository"*"$EXPECTED_REPO"*) : ;;  # pins this repo — OK
-              *) problems="$problems [attribute_condition does not pin assertion.repository to $EXPECTED_REPO: '${cond:-<empty>}']" ;;
-            esac
+            # Accept EITHER the raw-claim form (assertion.repository) OR the mapped-attribute form
+            # (attribute.repository) — they are equivalent here, since attribute_mapping sets
+            # attribute.repository = assertion.repository (infra/terraform/wif.tf), so both pin the SAME
+            # repo. Matching only one spelling false-failed runs #2-#4 (live used the mapped form) and would
+            # otherwise pressure someone to mutate live IAM just to satisfy a string match. The trailing
+            # non-word char after "repository" rejects the broader "repository_owner" (owner-level) form.
+            if printf '%s' "$cond" | grep -Eq "(assertion|attribute)\.repository[^[:alnum:]_].*${EXPECTED_REPO}"; then
+              : # scoped to this repo (either claim form) — OK
+            else
+              problems="$problems [attribute_condition does not pin (assertion|attribute).repository to $EXPECTED_REPO: '${cond:-<empty>}']"
+            fi
           else
             verify_error="$verify_error [provider describe failed: $(tr '\n' ' ' < cond_err)]"
           fi
