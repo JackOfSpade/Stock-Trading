@@ -145,19 +145,47 @@ jobs:
       id-token: write   # Workload Identity Federation (no downloadable key)
     steps:
       - uses: actions/checkout@v4
-      - name: Check WIF config + enablement
+        with:
+          fetch-depth: 0   # full history so the path gate below can diff the pushed range
+      - name: Path gate + WIF config + enablement
         id: guard
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+          WIF_SA: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
+          DBT_PARITY: ${{ vars.DBT_PARITY }}
         run: |
-          if [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] \
-             && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ] \
-             && [ "${{ vars.DBT_PARITY }}" != "off" ]; then
+          # PATH GATE (2026-06-29): parity only catches view-LOGIC drift, which is impossible without a
+          # change under bigquery/** or dbt/**. This job dbt-compiles + runs ~30 EXCEPT-DISTINCT parity
+          # queries PER RUN, on EVERY claude/** + main push — ~1k BigQuery jobs/day once the auto-merge
+          # bot is active. That volume tripped the project's BigQuery Data Transfer Service consumer
+          # rate-quota on 2026-06-29 (delayed the 05:00-06:00 scheduled window and FAILED the embed +
+          # integrity scheduled-query runs). Skipping parity on docs-/code-only pushes removes that load
+          # with no loss of coverage. FAIL OPEN: if the base commit is unknown (new branch / force-push)
+          # RUN parity rather than risk skipping a real check. Block-mode fail-closed (below) is kept for
+          # the case that matters — an SQL/model change pushed with the WIF creds missing.
+          relevant=true
+          if [ "$EVENT_NAME" = "pull_request" ]; then base="$PR_BASE"; else base="$PUSH_BEFORE"; fi
+          if [ -n "$base" ] && git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            if git diff --name-only "$base" "$HEAD_SHA" | grep -qE '^(bigquery/|dbt/)'; then
+              relevant=true
+            else
+              relevant=false
+            fi
+          fi
+          if [ "$relevant" = "false" ]; then
+            echo "::notice::dbt parity skipped — no bigquery/** or dbt/** changes in this push (path gate; ops/RUNBOOK.md §6/§12 D1). View-logic drift is impossible without an SQL/model change."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif [ -n "$WIF_PROVIDER" ] && [ -n "$WIF_SA" ] && [ "$DBT_PARITY" != "off" ]; then
             echo "skip=false" >> "$GITHUB_OUTPUT"
-          elif [ "${{ vars.DBT_PARITY }}" = "block" ]; then
-            # FAIL CLOSED (RUNBOOK §25 C1): block mode promises a HARD parity gate, but the old guard
-            # skipped GREEN whenever the WIF vars were absent — silently turning the only view-drift gate
-            # into a no-op right after promotion. In block mode a missing parity result is a failure, not
-            # a pass (matching the §5 auto-merge "missing == not green" posture). The job is NOT
-            # continue-on-error when DBT_PARITY=block, so this exit blocks the merge until it's fixed.
+          elif [ "$DBT_PARITY" = "block" ]; then
+            # FAIL CLOSED (RUNBOOK §25 C1): block mode promises a HARD parity gate; on an SQL-changing
+            # push a missing parity result is a failure, not a pass (matching the §5 auto-merge
+            # "missing == not green" posture). The job is NOT continue-on-error when DBT_PARITY=block,
+            # so this exit blocks the merge until it's fixed.
             echo "::error::DBT_PARITY=block but the WIF vars (GCP_WIF_PROVIDER / GCP_WIF_SERVICE_ACCOUNT) are unset — the hard parity gate has no parity result. Set the WIF vars, or change DBT_PARITY to advisory/off. (ops/RUNBOOK.md §25 C1 / §6.)"
             exit 1
           else

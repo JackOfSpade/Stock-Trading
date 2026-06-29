@@ -352,8 +352,14 @@ both ways (read-only; never `dbt build`, which would overwrite the live datasets
 on the two hand-kept copies of every view (`bigquery/*.sql` + `dbt/`); it was previously opt-in
 (`RUN_DBT_PARITY=true`) and so **never actually ran**, leaving that duplication undefended. It now runs
 on every push **whenever the read-only WIF creds exist** (the same `gh-ci-runner@` SA, `roles/bigquery.dataViewer`
-+ `roles/bigquery.jobUser`, already configured per §6). One var, **`DBT_PARITY`**, controls it (replaces
-`RUN_DBT_PARITY`):
++ `roles/bigquery.jobUser`, already configured per §6). **PATH-GATED (2026-06-29):** the job's guard step now
+skips parity unless the push touched `bigquery/**` or `dbt/**` (view-logic drift is impossible without an
+SQL/model change). This removed the ~1k-BigQuery-job/day load — dbt compile + ~30 `EXCEPT DISTINCT`
+comparisons on *every* `claude/**`/`main` push — that tripped the BigQuery Data Transfer Service **consumer
+rate-quota** on 2026-06-29 (delaying the 05:00–06:00 UTC scheduled window and failing the `embed_pending` +
+`integrity_check` runs). The gate **fails open** (unknown base commit → run) and preserves the block-mode
+fail-closed contract (an SQL change pushed with WIF creds missing still errors). One var, **`DBT_PARITY`**,
+controls it (replaces `RUN_DBT_PARITY`):
 - unset / `advisory` (default): runs; a drift prints a `::warning::` but does NOT block the merge — a
   staged rollout, so a latent drift can't wedge auto-merge before a clean baseline is confirmed;
 - `block`: runs and FAILS the build on drift (promote to this once parity is green — it becomes a hard merge gate);
