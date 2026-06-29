@@ -278,73 +278,27 @@ resource "google_monitoring_alert_policy" "cadence_scheduler_absent" {
 }
 
 ###############################################################################
-# 2026-06-28 stack review #2 (#4): scheduler-absence coverage for the TWO newest
-# RAISE-ing scheduled queries — the monthly RESTORE DRILL and the daily INTEGRITY
-# CHECK. Same who-watches-the-watchers gap as §19, re-opened for the checkers added in
-# the 2026-06-24 review: both write nothing on a clean run, so a silently-paused schedule
-# leaves you believing DR/governance is verified when it has not run. The restore drill is
-# the worst place to have it (its value is realized only when you need it).
+# 2026-06-28 stack review #2 (#4): scheduler-absence coverage for the daily INTEGRITY
+# CHECK. Same who-watches-the-watchers gap as §19 — it writes nothing on a clean run, so a
+# silently-paused schedule leaves you believing governance is verified when it has not run.
 #
-# These two were created OUT-OF-BAND (owner console, RUNBOOK §3/§25), not via
-# scheduled_queries.tf, so their config_ids are NOT derivable from a TF resource. Supply
-# them via the variables below; each metric+policy is created only when its config_id is set
-# (count guard) — spec stays inert until the owner records the live ids. Same no-backfill
-# caveat as above: create the metric, seed one run, verify, THEN attach the policy.
+# RESTORE-DRILL absence is deliberately NOT a Cloud Monitoring metric (corrected 2026-06-29).
+# The drill is MONTHLY, but Cloud Monitoring PromQL alerting caps the absence lookback at ~25h
+# (verified live 2026-06-29 — a >25h window is rejected for log-based metrics in every condition
+# type), and a 25h window on a monthly job would FALSE-FIRE every day. The correct monthly-cadence
+# liveness mechanism is the in-warehouse state.restore_health (40-day window off ops.drill_log),
+# surfaced via cadence_check 'restore_stale' — already applied (RUNBOOK §27). So there is no
+# restore_drill absence policy here, by design.
+#
+# The integrity_check config_id is NOT derivable from a TF resource (created out-of-band, RUNBOOK
+# §25). The metric+policy are created only when it is set (count guard). No-backfill caveat: create
+# the metric, seed one run, verify, THEN attach the policy.
 ###############################################################################
 
-variable "restore_drill_config_id" {
-  description = "BigQuery Data Transfer config_id of the monthly restore-drill scheduled query (Console → Scheduled queries → the restore_drill job → its transferConfig id). Empty = skip the absence metric/policy."
-  type        = string
-  default     = ""
-}
-
 variable "integrity_check_config_id" {
-  description = "BigQuery Data Transfer config_id of the daily integrity_check scheduled query. Empty = skip the absence metric/policy."
+  description = "BigQuery Data Transfer config_id of the daily integrity_check scheduled query (live: integrity-check-daily 6a4d603d-…, RUNBOOK §27). Empty = skip the absence metric/policy."
   type        = string
-  default     = ""
-}
-
-# --- Restore-drill heartbeat (monthly; ~33d absence window, NOT 25h) ----------
-resource "google_logging_metric" "restore_drill_scheduled_run" {
-  count   = var.restore_drill_config_id != "" ? 1 : 0
-  project = var.project_id
-  name    = "restore_drill_scheduled_run"
-
-  filter = <<-EOT
-    resource.type="bigquery_dts_config"
-    resource.labels.config_id="${var.restore_drill_config_id}"
-    jsonPayload.message=~"^Summary: succeeded"
-  EOT
-
-  metric_descriptor {
-    metric_kind = "DELTA"
-    value_type  = "INT64"
-    unit        = "1"
-  }
-}
-
-resource "google_monitoring_alert_policy" "restore_drill_scheduler_absent" {
-  count        = var.restore_drill_config_id != "" ? 1 : 0
-  project      = var.project_id
-  display_name = "Restore-drill scheduler absent >33d"
-  combiner     = "OR"
-
-  conditions {
-    display_name = "No restore-drill run in 33 days"
-    condition_prometheus_query_language {
-      # Monthly cadence + slack. PromQL accepts a long range; 792h = 33d.
-      query               = "absent_over_time(logging_googleapis_com:user_${google_logging_metric.restore_drill_scheduled_run[0].name}[792h])"
-      duration            = "0s"
-      evaluation_interval = "300s"
-    }
-  }
-
-  notification_channels = local.scheduler_alert_channels
-
-  documentation {
-    content   = "The monthly backup RESTORE DRILL (ops.sp_restore_drill) has emitted no run heartbeat in >33 days — DR verification may be silently paused, so 'we can recover' is unproven. state.restore_health (off ops.drill_log) additionally flags a stale/failing drill via cadence_check. Triage per ops/RUNBOOK.md §19."
-    mime_type = "text/markdown"
-  }
+  default     = "6a4d603d-0000-2d5d-b9af-14223bafe266"
 }
 
 # --- Integrity-check heartbeat (daily; 25h window) ----------------------------

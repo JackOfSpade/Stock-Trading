@@ -66,32 +66,51 @@ jobs:
         run: |
           set -uo pipefail
           problems=""
+          verify_error=""
 
-          # 1. Provider attribute_condition must pin assertion.repository to THIS repo. An empty/missing
-          #    condition would accept ANY GitHub repo's OIDC token (the fork-permissive failure mode).
-          cond="$(gcloud iam workload-identity-pools providers describe "$PROVIDER_ID" \
-                    --location=global --workload-identity-pool="$POOL_ID" --project="$PROJECT" \
-                    --format='value(attributeCondition)' 2>/dev/null || echo '')"
-          echo "attributeCondition: ${cond:-<empty>}"
-          case "$cond" in
-            *"assertion.repository"*"$EXPECTED_REPO"*) : ;;  # pins this repo — OK
-            *) problems="$problems [attribute_condition does not pin assertion.repository to $EXPECTED_REPO: '${cond:-<empty>}']" ;;
-          esac
+          # CRITICAL DISTINCTION (fixed 2026-06-29): a gcloud READ FAILURE (missing
+          # iam.workloadIdentityPoolViewer / iam.serviceAccounts.getIamPolicy, or IAM-grant propagation
+          # lag right after enabling this audit) must NOT be reported as a fork-permissive FINDING. The
+          # prior version did `2>/dev/null || echo ''`, so a failed read became an empty string and tripped
+          # the "no condition" branch — a FALSE POSITIVE (it fired on the very first run, seconds after the
+          # grants, before they propagated). Now a read failure → verify_error (exit 2, "could not verify"),
+          # and only a SUCCESSFUL read showing an empty/non-scoped binding → a real finding (exit 1).
+
+          # 1. Provider attribute_condition must pin assertion.repository to THIS repo.
+          if cond="$(gcloud iam workload-identity-pools providers describe "$PROVIDER_ID" \
+                       --location=global --workload-identity-pool="$POOL_ID" --project="$PROJECT" \
+                       --format='value(attributeCondition)' 2>cond_err)"; then
+            echo "attributeCondition: ${cond:-<empty>}"
+            case "$cond" in
+              *"assertion.repository"*"$EXPECTED_REPO"*) : ;;  # pins this repo — OK
+              *) problems="$problems [attribute_condition does not pin assertion.repository to $EXPECTED_REPO: '${cond:-<empty>}']" ;;
+            esac
+          else
+            verify_error="$verify_error [provider describe failed: $(tr '\n' ' ' < cond_err)]"
+          fi
 
           # 2. The SA's workloadIdentityUser member must be a principalSet SCOPED TO THIS REPO
-          #    (attribute.repository/<repo>), NOT a pool-wide member (which would let any repo impersonate).
-          #    --flatten/--filter extract just the workloadIdentityUser members, one per line (no inline JSON parse).
-          members="$(gcloud iam service-accounts get-iam-policy "$CI_SA" --project="$PROJECT" \
-                       --flatten='bindings[].members' \
-                       --filter='bindings.role=roles/iam.workloadIdentityUser' \
-                       --format='value(bindings.members)' 2>/dev/null || echo '')"
-          echo "workloadIdentityUser members:"; printf '%s\n' "$members"
-          if ! printf '%s' "$members" | grep -q "attribute.repository/$EXPECTED_REPO"; then
-            problems="$problems [no repo-scoped principalSet member (attribute.repository/$EXPECTED_REPO) on workloadIdentityUser]"
+          #    (attribute.repository/<repo>), NOT a pool-wide member.
+          if members="$(gcloud iam service-accounts get-iam-policy "$CI_SA" --project="$PROJECT" \
+                          --flatten='bindings[].members' \
+                          --filter='bindings.role=roles/iam.workloadIdentityUser' \
+                          --format='value(bindings.members)' 2>mem_err)"; then
+            echo "workloadIdentityUser members:"; printf '%s\n' "$members"
+            if ! printf '%s' "$members" | grep -q "attribute.repository/$EXPECTED_REPO"; then
+              problems="$problems [no repo-scoped principalSet member (attribute.repository/$EXPECTED_REPO) on workloadIdentityUser]"
+            fi
+            if printf '%s' "$members" | grep -Eq "workloadIdentityPools/$POOL_ID/\*"; then
+              problems="$problems [POOL-WIDE workloadIdentityUser member present — any repo can impersonate $CI_SA]"
+            fi
+          else
+            verify_error="$verify_error [get-iam-policy failed: $(tr '\n' ' ' < mem_err)]"
           fi
-          # Flag a pool-wide member (ends at /* or /workloadIdentityPools/<pool>/* with no attribute scope).
-          if printf '%s' "$members" | grep -Eq "workloadIdentityPools/$POOL_ID/\*"; then
-            problems="$problems [POOL-WIDE workloadIdentityUser member present — any repo can impersonate $CI_SA]"
+
+          # INCONCLUSIVE (read failure) — NOT a security finding. Exit 2 with a distinct message so a
+          # perms/propagation issue can't masquerade as "fork-permissive". Re-run after grants propagate.
+          if [ -n "$verify_error" ]; then
+            echo "::error::WIF binding audit COULD NOT VERIFY (this is NOT a fork-permissive finding):$verify_error  Likely the WIF SA lacks roles/iam.workloadIdentityPoolViewer + iam.serviceAccounts.getIamPolicy on $CI_SA, or the grant has not propagated yet — wait a few minutes and re-run. RUNBOOK §25 E1."
+            exit 2
           fi
 
           if [ -n "$problems" ]; then

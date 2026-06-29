@@ -1081,6 +1081,36 @@ FMP mark fallback).
 > - **`dbt-parity` → block: PENDING (owner repo-setting).** Requires the WIF repo vars set AND one clean parity
 >   run observed; then set `vars.DBT_PARITY=block` (it FAILS CLOSED if the WIF vars are absent — RUNBOOK §25 C1).
 
+> **CONSOLE ENABLEMENT — status 2026-06-29 (Chrome).** Live config_ids: `ops-export-daily`
+> `6a43d4f7-0000-276c-b1fb-7474463ce22d`, `integrity-check-daily` `6a4d603d-0000-2d5d-b9af-14223bafe266`,
+> restore-drill (monthly) `6a4ecee9-0000-2ec0-9c94-24058883b1bc`.
+> - **Cloud Monitoring (#4/#6 + ops-export symmetry) — DONE for the daily jobs.** Log-based metrics created:
+>   `ops_export_scheduled_run`, `integrity_check_scheduled_run`, `sa_key_created` (+ a `restore_drill_scheduled_run`
+>   that should be removed — see next bullet). Alert policies created (channel `jacksterwu@gmail.com`):
+>   "ops-export scheduler absent >25h" (`11665307314393105160`), "Integrity-check scheduler absent >25h"
+>   (`4948636131821978669`), "SA key created on gh-ci-runner or bq-scheduler" (`3307594591438576313`).
+> - **Restore-drill absence policy — REMOVE IT (wrong tool).** A "Restore-drill scheduler absent >33d" policy
+>   (`13125720338366635305`) was created but Cloud Monitoring caps the PromQL absence lookback at ~25h, so it
+>   was forced to `[25h]` — which on a MONTHLY job false-fires every day. **Owner: delete policy
+>   `13125720338366635305` and metric `restore_drill_scheduled_run`.** Monthly drill liveness is covered correctly
+>   by `state.restore_health` (40-day window) via `cadence_check` `restore_stale`. `monitoring.tf` was corrected to
+>   drop the restore_drill absence spec for this reason.
+> - **keyless-sa-audit — ENABLED + GREEN.** Custom role `SA_KeyList` (`iam.serviceAccountKeys.list`) granted to
+>   `gh-ci-runner@` on both SAs; `vars.RUN_SA_KEY_AUDIT=true`. First run SUCCESS — both SAs keyless, confirmed.
+> - **wif-binding-audit — ENABLED; first run was a FALSE POSITIVE (now fixed).** It reported "fork-permissive
+>   (empty attribute_condition)", which CONTRADICTS the authoritative owner-Cloud-Shell E1 check above (concrete
+>   SCOPED values incl. the matching project number 191682978805). Root cause: the workflow ran seconds after the
+>   Section-C IAM grants (`workloadIdentityPoolViewer`/`serviceAccountViewer`) before they propagated, and the
+>   script masked the `gcloud` READ FAILURE as an empty condition → false finding. **Fixed 2026-06-29** in
+>   `wif-binding-audit.yml`: a read failure now exits 2 "COULD NOT VERIFY" (distinct from a real exit-1 finding).
+>   **Re-confirm:** the live binding is SCOPED per the owner Cloud Shell check (E1 RESULT above stands); re-run the
+>   fixed workflow after grants have propagated to get a clean green. Do NOT change the WIF binding — it is correctly scoped.
+> - **dbt-parity hard gate — ALREADY ON.** `vars.DBT_PARITY=block` was already set (owner, prior week); WIF vars
+>   `GCP_WIF_PROVIDER`/`GCP_WIF_SERVICE_ACCOUNT` confirmed present. The §27 ladder item is satisfied.
+> - **DR blast-radius (#3) — DONE.** Project deletion lien created (`p191682978805-103ae3152-…`); Essential
+>   Contacts set for all categories. NOTE: contact is `jacksterwu@gmail.com` (the same at-risk Google account) —
+>   add a non-Google address if you want true resilience against account suspension. Off-site mirror: skipped (optional).
+
 ### Theme A — backup / DR completeness (the truth is protected; the audit trail + its trust boundary were not)
 - **#2 — back up the irreplaceable ops.\* audit history (owner console).** `ops.run_log`/`alerts`/`backup_log`/
   `heartbeat`/`drill_log` are append-only history with NO upstream — yet only `events.*` was ever exported.
