@@ -1067,6 +1067,20 @@ FMP mark fallback).
 > `ops-export-daily` (config_id above) mirroring `backup-scheduler-absent` (today a dead ops-export is still
 > caught transitively via `state.ops_backup_health` → `cadence_check` `ops_backup_stale`).
 
+> **PROMOTION LADDER — status 2026-06-29.** The staged-rollout gates promote only once a clean baseline has
+> *held*; flipping on day one would risk flapping `all_green` / wedging the merge gate on a first-occurrence
+> false positive (the same discipline that took dbt-parity advisory→block and integrity_check warning→critical).
+> - **`shell-lint` → BLOCKING: DONE 2026-06-29.** Confirmed clean on the runner (CI #102, actionlint +
+>   shellcheck all green), so `continue-on-error` was dropped in `ci.yml`. Hardened against tool-drift wedging
+>   a *blocking* linter: actionlint pinned to **v1.7.12** (script + binary), shellcheck floored at `-S warning`.
+> - **`ddl_drift` → critical: PENDING.** One clean read (0 rows, 2026-06-29) validates the encoding, but the
+>   data-monitor baseline should hold ~1–2 weeks of clean daily `cadence_check` runs first. Then in
+>   `cadence_check.sql` change the `ddl_drift` block's `'warning'`→`'critical'` and add it to `raise_msg`.
+> - **`restore_stale` → critical: BLOCKED (no baseline yet).** The monthly drill has not run since the change
+>   (`state.restore_health.monitored=false`); promote only after ≥1 successful drill logs an `ops.drill_log` marker.
+> - **`dbt-parity` → block: PENDING (owner repo-setting).** Requires the WIF repo vars set AND one clean parity
+>   run observed; then set `vars.DBT_PARITY=block` (it FAILS CLOSED if the WIF vars are absent — RUNBOOK §25 C1).
+
 ### Theme A — backup / DR completeness (the truth is protected; the audit trail + its trust boundary were not)
 - **#2 — back up the irreplaceable ops.\* audit history (owner console).** `ops.run_log`/`alerts`/`backup_log`/
   `heartbeat`/`drill_log` are append-only history with NO upstream — yet only `events.*` was ever exported.

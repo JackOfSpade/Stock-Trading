@@ -65,20 +65,23 @@ jobs:
     # (backup_events.sh, state_snapshot.sh, restore_drill.sh). A subtle edit to the origin/claude/ filter,
     # the merge-base ancestry re-check, or the fail-closed default would otherwise regress with no CI signal.
     #
-    # ADVISORY for now (continue-on-error, like the ruff lint job) so introducing it cannot red-light the
-    # auto-merge gate on any pre-existing finding. PROMOTE to a hard gate (drop continue-on-error) once a
-    # clean baseline is confirmed — the staged-rollout discipline used for dbt-parity (advisory→block) and
-    # integrity_check (warning→critical). shellcheck is pre-installed on the ubuntu runner.
-    continue-on-error: true
+    # BLOCKING GATE (promoted 2026-06-29 after a confirmed clean run on the runner — CI #102, all steps
+    # green). NOT continue-on-error: a failure now fails the CI run and blocks auto-merge, the hard gate the
+    # recommendation intended. Two stability guards so a *blocking* linter can't be wedged by tool drift:
+    #   - actionlint is PINNED (script + binary at v1.7.12) — a future release adding a new check cannot
+    #     suddenly red-light merges; bump the pin deliberately.
+    #   - shellcheck (the runner's version, unpinned) is floored at `-S warning`, so only warnings/errors
+    #     block; the scripts pass clean today, this just stops a future shellcheck release's new *style/info*
+    #     nit from wedging the gate.
     steps:
       - uses: actions/checkout@v4
-      - name: Install actionlint
+      - name: Install actionlint (pinned v1.7.12)
         run: |
-          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash) 1.7.12
       - name: actionlint (workflow YAML + embedded run-block bash via shellcheck)
         run: ./actionlint -color
-      - name: shellcheck standalone scripts
-        run: shellcheck scripts/*.sh
+      - name: shellcheck standalone scripts (warning+ blocks)
+        run: shellcheck -S warning scripts/*.sh
 
   dbt:
     name: dbt parse (offline model + test validation)
