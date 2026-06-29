@@ -63,8 +63,20 @@ function checkAlerts_() {
   const fresh = rows.filter(r => !seen.has(r.alert_id));
 
   if (fresh.length) {
-    const crit = fresh.filter(r => r.severity === 'critical').length;
-    const subject = `⚠ Stock-Trading ALERT — ${fresh.length} new${crit ? ` (${crit} critical)` : ''}`;
+    // Split the alert-delivery self-test (canary) from real alerts so a weekly probe is never
+    // disguised as an incident in the subject — and, conversely, a real alert that happens to ride
+    // in the same poll batch is never softened to "[TEST]". (RUNBOOK §15 / delivery_canary.sql.)
+    const realFresh = fresh.filter(r => !isTest_(r));
+    const testCount = fresh.length - realFresh.length;
+    let subject;
+    if (realFresh.length === 0) {
+      // Batch is ONLY the alert-delivery self-test → unmistakable test subject, no ⚠.
+      subject = '🧪 [TEST] Stock-Trading alert-delivery self-test — no action needed';
+    } else {
+      const crit = realFresh.filter(r => r.severity === 'critical').length;
+      subject = `⚠ Stock-Trading ALERT — ${realFresh.length} new${crit ? ` (${crit} critical)` : ''}` +
+                (testCount ? ` (+${testCount} test)` : '');
+    }
     GmailApp.sendEmail(ALERT_RECIPIENT, subject, plainAlerts_(fresh, rows.length),
       { htmlBody: htmlAlerts_(fresh, rows.length), name: ALERT_SENDER });
     Logger.log('Emailed %s new alerts', fresh.length);
@@ -122,29 +134,48 @@ function bqAlerts_(sql) {
 // ===== rendering =====
 function esc2_(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+// A canary row is the weekly alert-delivery self-test (delivery_canary.sql), never a real incident.
+// It is labelled [TEST] in both subject and body so it can't be mistaken for an alert — while still
+// being delivered + notified_ts-stamped, so the canary's step-1 assertion stays valid.
+function isTest_(a) { return a.source === 'scheduled.canary' || a.category === 'delivery_canary'; }
+
 function htmlAlerts_(fresh, totalOpen) {
+  const allTest = fresh.length > 0 && fresh.every(isTest_);
   const rowsHtml = fresh.map(a => {
+    const test = isTest_(a);
     const isCrit = a.severity === 'critical';
-    const bar = isCrit ? '#c0392b' : '#b9770e';
-    const resolvedTag = (String(a.resolved) === 'true') ? ' · <span style="color:#2e7d32;">AUTO-RESOLVED</span>' : '';
+    const bar = test ? '#2c6e9b' : (isCrit ? '#c0392b' : '#b9770e');
+    const bg  = test ? '#eaf2f8' : (isCrit ? '#fcebea' : '#fdf3e3');
+    const tag = test
+      ? ' · <span style="color:#2c6e9b;font-weight:700;">🧪 TEST — no action needed</span>'
+      : ((String(a.resolved) === 'true') ? ' · <span style="color:#2e7d32;">AUTO-RESOLVED</span>' : '');
     return `<tr><td style="padding:0;">
-      <div style="border-left:4px solid ${bar};background-color:${isCrit ? '#fcebea' : '#fdf3e3'};border-radius:6px;padding:10px 12px;margin:6px 0;">
-        <div style="font-size:13px;font-weight:700;color:${bar};">${esc2_(a.severity.toUpperCase())} · ${esc2_(a.source)} · ${esc2_(a.category)}${resolvedTag}</div>
+      <div style="border-left:4px solid ${bar};background-color:${bg};border-radius:6px;padding:10px 12px;margin:6px 0;">
+        <div style="font-size:13px;font-weight:700;color:${bar};">${esc2_(a.severity.toUpperCase())} · ${esc2_(a.source)} · ${esc2_(a.category)}${tag}</div>
         <div style="font-size:13px;color:#1f2d3d;margin-top:3px;">${esc2_(a.message)}</div>
         <div style="font-size:11px;color:#8a96a3;margin-top:3px;">${esc2_(a.alert_ts)} UTC</div>
       </div></td></tr>`;
   }).join('');
+  const header = allTest
+    ? '🧪 Stock-Trading — alert-delivery self-test (TEST · no action needed)'
+    : '⚠ Stock-Trading — unresolved alerts';
   return `<!DOCTYPE html><html><body style="margin:0;padding:18px;background-color:#eef1f5;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:auto;background:#fff;border-radius:12px;padding:18px;">
-      <tr><td style="font-size:16px;font-weight:700;color:#0f2747;padding-bottom:8px;">⚠ Stock-Trading — unresolved alerts</td></tr>
+      <tr><td style="font-size:16px;font-weight:700;color:#0f2747;padding-bottom:8px;">${header}</td></tr>
       ${rowsHtml}
       <tr><td style="font-size:11px;color:#8a96a3;padding-top:10px;">${totalOpen} total open alert(s) in ops.alerts. Resolve via <code>UPDATE ops.alerts SET resolved=TRUE …</code>. This channel complements the [Claude] ATTENTION calendar events.</td></tr>
     </table></body></html>`;
 }
 
 function plainAlerts_(fresh, totalOpen) {
-  let s = `Stock-Trading — ${fresh.length} new unresolved alert(s) (${totalOpen} open total):\n\n`;
-  fresh.forEach(a => { s += `[${a.severity.toUpperCase()}]${String(a.resolved) === 'true' ? '[AUTO-RESOLVED]' : ''} ${a.source}/${a.category}: ${a.message}  (${a.alert_ts} UTC)\n`; });
+  const allTest = fresh.length > 0 && fresh.every(isTest_);
+  let s = allTest
+    ? `[TEST] Stock-Trading — alert-delivery self-test, no action needed:\n\n`
+    : `Stock-Trading — ${fresh.length} new unresolved alert(s) (${totalOpen} open total):\n\n`;
+  fresh.forEach(a => {
+    const tag = isTest_(a) ? '[TEST] ' : (String(a.resolved) === 'true' ? '[AUTO-RESOLVED] ' : '');
+    s += `[${a.severity.toUpperCase()}] ${tag}${a.source}/${a.category}: ${a.message}  (${a.alert_ts} UTC)\n`;
+  });
   s += `\nResolve via UPDATE ops.alerts SET resolved=TRUE WHERE ... . Complements the [Claude] ATTENTION calendar events.`;
   return s;
 }

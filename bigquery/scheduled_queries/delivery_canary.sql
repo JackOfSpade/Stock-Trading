@@ -19,9 +19,12 @@
 --      noise) while the emailer (which keys on notified_ts IS NULL over the last 48h, RUNBOOK §20) still
 --      forwards it and stamps notified_ts. Message is unmistakable self-test text.
 --
--- INBOX HYGIENE: the canary produces one weekly self-email tagged "[CANARY]". To keep the human inbox
--- clean WITHOUT defeating the test, add a Gmail filter to archive/label "[CANARY]" — the Apps Script still
--- stamps notified_ts on the successful send, so the step-1 assertion remains valid.
+-- INBOX / IDENTIFICATION: the canary produces one weekly self-email. alert_emailer.gs renders a
+-- canary-only batch with an unmistakable subject ("🧪 [TEST] Stock-Trading alert-delivery self-test —
+-- no action needed") and a [TEST] body tag, so it is never mistaken for a real alert. Per operator
+-- preference (2026-06-29) the test email is left VISIBLE in the inbox — do NOT add a Gmail auto-filter
+-- to archive it. The Apps Script still stamps notified_ts on the successful send either way, so the
+-- step-1 assertion remains valid.
 --
 -- ONE-TIME SETUP (ops/RUNBOOK.md §18): create as a WEEKLY scheduled query (e.g. Mon ~05:40 UTC; Location
 -- US; no destination), run-as bq-scheduler@ (already writes ops.alerts). Enable "Send email on failure"
