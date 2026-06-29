@@ -1045,6 +1045,28 @@ FMP mark fallback).
 > spec in `19` before relying on it). `state.ddl_drift` / `state.restore_stale` / fidelity stay **record-only
 > WARNING** (staged rollout, like append_only_integrity); promote to critical+RAISE once a clean baseline holds.
 
+> **APPLIED + VERIFIED LIVE 2026-06-29 (Cloud Shell + DTS REST API, owner).** All four schema files ran in
+> order with no errors: `16` (added `ops.backup_log.dataset`, created `state.ops_backup_health`), `17`
+> (replaced `sp_restore_drill`, created `state.restore_health`), `18` (replaced `state.stalled_runs` +
+> peers), `19` (created `state.ddl_drift`). **Baseline clean:** `state.ddl_drift` = **0 rows** (monitor
+> trusted); `state.stalled_runs` = 0; `state.ops_backup_health` / `state.restore_health` self-bootstrapping
+> (`monitored=false` until first marker). `state.system_health.all_green=FALSE` at apply time was the normal
+> pre-D2 `marks_fresh` intraday transient (0 open critical alerts). The two existing scheduled queries were
+> re-pasted (`cadence-check-daily` ← `cadence_check.sql`; `events-backup-daily` ← `backup_events_export.sql`).
+> The two NEW scheduled queries were created, run-as `bq-scheduler@`, email-on-failure ON, Location US:
+> - **`ops-export-daily`** — every day 05:35 UTC; config_id `6a43d4f7-0000-276c-b1fb-7474463ce22d`. First run
+>   auto-fired 2026-06-29 08:04 UTC; `state.ops_backup_health` → `monitored=true, stale=false,
+>   last_backup_date=2026-06-29`; `gs://stock-trading-backups/ops/<table>/dt=2026-06-29/` Parquet confirmed.
+> - **`delivery-canary-weekly`** — every Monday 05:40 UTC (next 2026-07-05); config_id
+>   `6a42a5b5-0000-2c87-aa3f-f4f5e80c48cc`. Prereq confirmed (`state.automation_heartbeat` shows
+>   `alert_emailer monitored=true, stale=false`, so notified_ts stamping is live).
+>
+> Still-optional follow-ups (separate owner tasks, not blocking): the Cloud Monitoring absence policies for
+> restore_drill + integrity_check (#4 — supply their config_ids to `monitoring.tf` vars) and the
+> `CreateServiceAccountKey` alert (#6); and — for full backup-scheduler symmetry — an absence policy on
+> `ops-export-daily` (config_id above) mirroring `backup-scheduler-absent` (today a dead ops-export is still
+> caught transitively via `state.ops_backup_health` → `cadence_check` `ops_backup_stale`).
+
 ### Theme A — backup / DR completeness (the truth is protected; the audit trail + its trust boundary were not)
 - **#2 — back up the irreplaceable ops.\* audit history (owner console).** `ops.run_log`/`alerts`/`backup_log`/
   `heartbeat`/`drill_log` are append-only history with NO upstream — yet only `events.*` was ever exported.
