@@ -1,13 +1,13 @@
-2026-06-28
-<!-- d1_scan_through_utc: 2026-06-28T22:05:32Z -->
+2026-06-29
+<!-- d1_scan_through_utc: 2026-06-29T22:05:33Z -->
 
-# Daily Market Development Scan — 2026-06-28 (Sun, MT)
+# Daily Market Development Scan — 2026-06-29 (Mon, MT)
 
-Scan window: 2026-06-27 16:04 MDT → 2026-06-28 16:05 MDT (~24h). Prior-run hand-off marker (`d1_scan_through_utc: 2026-06-27T22:04:20Z`) resolved the window start; normal daily cadence, no gap. **Today `2026-06-28` is a non-trading day (Sun); `state.trading_day_today`: last_trading_day = Fri `2026-06-26`, next_trading_day = Mon `2026-06-29`.** Fri 6/26's close was already covered by the prior run, so **this window contains NO trading session** — it is a weekend scan of news/geopolitical/commentary developments only; categories 2–4 (resolved scheduled events, single-name moves, sector moves) are necessarily empty (markets closed). Live marks below = Fri 6/26 close (IBKR connector — last completed session).
+Scan window: 2026-06-28 16:05 MDT → 2026-06-29 16:05 MDT (~24h). Prior-run hand-off marker (`d1_scan_through_utc: 2026-06-28T22:05:32Z`) resolved the window start; normal daily cadence, no gap. **Today `2026-06-29` is a trading day; `state.trading_day_today`: last_trading_day = `2026-06-29` (today's regular session has closed), next_trading_day = Tue `2026-06-30`.** This window CONTAINS the **Monday 6/29 regular session — the first trading day after the weekend Strait-of-Hormuz escalation**, i.e. the regime/risk test the prior (6/28 weekend) run explicitly deferred to "Monday's open." Categories 2–4 are populated off the completed 6/29 session.
 
-> **Connectors live this run.** Pre-flight passed: `state.trading_day_today` read OK; IBKR `get_account_summary` OK (net-liq $9,488.75; SGOV park 92.2992 sh / ~$9,291). All `state.*`/`perf.*` reads succeeded; run-logging via `ops.sp_routine_start`/`sp_routine_end` active. (D1 stages no orders → Calendar pre-flight exempt.)
+> **Connectors live this run.** Pre-flight passed: `state.trading_day_today` read OK; IBKR `get_account_summary` OK (net-liq $9,490.44; SGOV park 92.2992 sh / ~$9,291; total cash $25.21; dividends accrued $0.40). All `state.*`/`perf.*` reads succeeded; run-logging via `ops.sp_routine_start`/`sp_routine_end` active. (D1 stages no orders → Calendar pre-flight exempt.)
 
-The defining development of the window is a **decisive intensification of the Strait-of-Hormuz tit-for-tat** that pushes the fragile US–Iran 60-day interim MoU/ceasefire to the brink — but whose **market transmission remains contained** (oil still at pre-war lows; supply still flowing). Weekend sequence, building on the prior run's Fri-night US strike: **Sat 6/27 early** Iran drone-struck the **Panama-flagged tanker *Kiku*** (carrying >2M bbl crude) on the Omani-coast southern route; **Sat night** US CENTCOM struck **10 Iranian military targets** in/near the strait (Sirik, Bandar-e Lengeh, Qeshm Island — surveillance/comms/air-defense/drone-storage/minelayer sites), with one report of strikes on **16 Iranian mine-laying vessels**; **Sat–Sun** Iran's IRGC said it launched **ballistic missiles and drones at named US bases — Ali Al Salem (Kuwait) and the US 5th Fleet at Port Salman (Bahrain)** (US says no assets hit), a **Qatari national was killed by shrapnel**, Iran threatened a **"complete halt" to all diplomacy** on any further "ceasefire violations," and Trump threatened Iran "**will no longer exist**." The fight is now explicitly **about who controls Hormuz** — the US is promoting/expanding a southern Omani-coast lane (now bidirectional) that bypasses Iran's oversight; Iran (MoU Article 5 dispute) wants a northern route through its waters that it ultimately aims to charge fees for. **Crucially the supply/market channel is still contained:** Brent settled Fri **$71.99 (−4.34%)** / WTI **$69.23 (−3.74%, first sub-$70 close since Feb 27, pre-war)**; tankers keep transiting (Windward AI: 70 Wed → 54 Thu → **40 Sat**, falling but flowing); oil ticked only **>+1% after Friday's close** on the fresh US strike. **The full market reaction is pending Monday 6/29's open** — that open, not this weekend tape, is the regime/risk test (see REGIME CHECK).
+**The Monday verdict: the weekend escalation was read as CONTAINED → de-escalation, and the tape went decisively risk-ON.** The defining resolution is that the US and Iran agreed to **"stand down for now"** with talks remaining **"on track"** (CNN, citing two US officials) after the weekend's Hormuz-area exchange (Sat tanker strike + US strikes on ~10 Iranian targets + Iranian missiles/drones at Kuwait/Bahrain bases, no US assets hit). Markets pierced higher: **S&P 500 +1.18% to 7,440.43; Nasdaq Composite +2.07% to 25,820.14; Dow +0.59% to 52,182.74 (first close above 52,000)**; **VIX −4% to 17.65**; **gold −1.4% (~$4,039)** — a clean risk-on signature (cyclicals + tech lead, defensives + gold fade). Crucially, **oil rose only modestly and stayed near pre-war lows** despite the kinetic weekend: **WTI ~$70.4 (+1.7%), Brent ~$73.6 (+2.2%)** — the contained-supply read the 6/28 run leaned on held. Tech leadership was amplified by **Alphabet (GOOGL) joining the Dow** on 6/29 (replacing VZ; +~4% on its first day as a component). **This Monday reaction RESOLVES the prior run's Monday-open contingency to its conservative no-change default and RATIFIES the standing `stagflation-tilt + risk-on` / `shock_overlay = latent` regime** — see REGIME CHECK (default NO on a router review).
 
 ---
 
@@ -15,104 +15,101 @@ The defining development of the window is a **decisive intensification of the St
 
 ### 1. Market-wide breaking events
 
-- **Strait-of-Hormuz escalation — sharp weekend intensification (the window's defining event).** Iran drone-struck the **Kiku** (Panama-flag, >2M bbl crude) on the southern route Sat; US CENTCOM hit **10 Iranian military targets** (and reportedly 16 mine-laying vessels) in/near the strait Sat night; Iran fired **ballistic missiles + drones at the US Ali Al Salem base (Kuwait) and the 5th Fleet at Port Salman (Bahrain)** (no US assets hit per US officials), **a Qatari national was killed by shrapnel**, and Iran threatened to **halt all talks**. Both sides accuse the other of breaching the MoU (US cites continued aggression on shipping; Iran cites Article 1 "permanent termination of operations" incl. Lebanon). Kuwait, Bahrain, Oman, Qatar condemned the attacks / urged restraint. **Still contained at the market level** (oil at pre-war lows, ~40 transits/day continuing on the US-protected Omani lane, no US assets hit). Sources: [Al Jazeera](https://www.aljazeera.com/news/2026/6/28/iran-attacks-kuwait-and-bahrain-in-response-to-us-strikes), [NBC](https://www.nbcnews.com/news/us-news/us-launches-strikes-iran-attack-ship-strait-hormuz-rcna351992), [Guardian](https://www.theguardian.com/world/2026/jun/28/escalating-us-iran-strikes-threaten-interim-peace-agreement), [CNN live](https://www.cnn.com/2026/06/28/world/live-news/iran-war-strikes-trump), [CNBC](https://www.cnbc.com/2026/06/28/trump-threatens-iran-with-annihilation-kuwait-bahrain-report-attacks.html). *Market reaction pending Mon 6/29 open — the key item for the regime/risk watch below.*
-- **Oil holds near pre-war lows despite the escalation — the most important "non-event."** Brent $71.99 / WTI $69.23 (Fri settle); only ~+1% after-hours on the US strike; weekend commentary stresses "**no major disruption to supplies**." The bearish skew rests on: (a) the southern Omani lane keeps flowing under US protection; (b) **China's crude imports are collapsing** — June seaborne arrivals ~6.4M bbl/d (Kpler), lowest since Oct 2016, ~8% below weak May, ~4M bbl/d below pre-war norms — which has structurally offset the Gulf supply shock and kept Brent sub-$100 through the war. Sell-side: Goldman ~$80 Q4 Brent on the deal; J.P. Morgan Q3 ~$86 / Q4 ~$80; Invezz technical case targets ~$65 unless a real supply shock (Hormuz closure / production outage) pushes Brent back >$80. Sources: [CNBC](https://www.cnbc.com/2026/06/28/trump-threatens-iran-with-annihilation-kuwait-bahrain-report-attacks.html), [Invezz](https://invezz.com/news/2026/06/28/crude-oil-price-forecast-as-us-and-iran-intensify-attacks), [Peter Lewis Money Talk](https://peterlewismoneytalk.substack.com/p/peters-asian-business-and-finance-d84).
-- **Israel–Lebanon framework (signed Fri 6/26) already being tested.** Hezbollah (not a party) rejected it as before; CNN/NNA report continued Israeli strikes in southern Lebanon (Deir Seryan, Taybeh, Shebaa-area cluster munition — IDF "not aware"). Marginally de-escalatory framework, but near-daily cross-border strikes persist; no direct US-equity transmission.
-- **Domestic political friction around the campaign.** Rep. Ro Khanna calls the strikes a "blatant violation of the War Powers Resolution" and threatens to take Trump to court; Trump separately directed DOJ to investigate oil companies for gasoline "price gouging" (wants pump prices ~$2.25/gal). Political/headline risk for energy names; no immediate equity transmission. No other market-wide regulatory/enforcement/bankruptcy/disaster shock in the window beyond the Mideast thread.
+- **Strait-of-Hormuz: weekend escalation resolves into "stand down for now" (the window's defining event).** After the Sat–Sun escalation (covered 6/28), both sides agreed to **stand down** with US–Iran talks **"on track"** per two US officials (CNN). Israel–Lebanon framework continues to be tested (sporadic southern-Lebanon strikes) but no fresh equity-market transmission. Net: **de-escalation at the margin; market channel fully contained** — oil near pre-war lows, ship traffic on the US-protected Omani lane continuing, no US assets hit. Sources: [TheStreet 6/29](https://www.thestreet.com/stock-market-today/stock-market-today-dow-jones-sp-500-nasdaq-updates-june-29-2026), [Bloomberg 6/28→29 (peace-talks-resume futures)](https://www.bloomberg.com/news/articles/2026-06-28/us-futures-climb-on-reports-peace-talks-to-resume-markets-wrap), [CNN markets](https://www.cnn.com/markets).
+- **Oil stays contained despite the kinetic weekend — the most important "non-event."** WTI ~$70.41 (+1.7%) / Brent ~$73.60 (+2.2%) — up on the weekend strikes but holding the sub-$75 / near-pre-war-low band (WTI's first sub-$70 close was Fri 6/26). The structural bear anchors are intact (US-protected southern lane flowing; soft China crude demand). A ~+2% bid is a risk-premium tick, NOT a supply-shock repricing; energy equities actually LAGGED on the day (see §4). Source: [TheStreet 6/29](https://www.thestreet.com/stock-market-today/stock-market-today-dow-jones-sp-500-nasdaq-updates-june-29-2026).
 
-### 2. Scheduled events that resolved in-window (US universe, mkt cap ≥ $2B)
+### 2. Scheduled events that resolved today (US universe, mkt cap ≥ $2B)
 
-None — markets closed (non-trading Sat). *(Last completed session Fri 6/26 was covered by the prior run.)* Look-ahead for context (next-session sweep): **no major earnings/data Mon 6/29**; **UMich final consumer sentiment** (~48.9, near historic lows) and **Nike (NKE) + Constellation Brands (STZ)** earnings land **6/30**; **Alphabet (GOOGL) replaces Verizon (VZ) in the Dow** effective before Mon 6/29's open (mechanical index reconstitution — flows, not a thesis trigger).
+- **Index reconstitution: Alphabet (GOOGL) added to the Dow Jones Industrial Average** (replacing Verizon), effective the 6/29 session; +~4% on its first day as a component and a primary contributor to the Dow's first-ever close above 52,000. Mechanism is index-membership flow + narrative, not an earnings/fundamental catalyst. Source: [Yahoo Finance 6/29](https://finance.yahoo.com/markets/stocks/live/stock-market-today-monday-june-29-224230573.html).
+- **No material earnings catalysts.** Quarter-end Monday in a holiday-shortened week (US markets close early 7/3, closed 7/4). The earnings calendar for 6/29 is effectively empty (FMP earnings-calendar 6/29 → no entries); the next prints of note are **Nike (NKE) + Constellation Brands (STZ) on 6/30** with **UMich final sentiment** also 6/30 (per prior run's look-ahead). No FDA PDUFA or FOMC action today; macro was light end-of-month regional data only (Dallas Fed survey), no market-moving surprise. Not padding — there were no resolved scheduled fundamental catalysts of note today.
 
-### 3. Large single-name moves ≥5% close-to-close (mkt cap ≥ $2B, event-attributable)
+### 3. Large single-name moves (≥$2B mcap, ≥5% close-to-close, event-attributable)
 
-None observable — no trading session in the window (weekend). *(Watch for Monday gaps in energy/defense/oil-sensitive names if the war premium re-prices; see OPPORTUNITY CHECK.)*
+- **Satellite / space-comms sector re-rate on M&A — the day's cleanest single-name theme. Rocket Lab (RKLB) agreed to acquire Iridium (IRDM) for ~$8B** (cash-and-stock: **$27 cash + RKLB stock ≈ $54/IRDM share, a ~24.1% premium**; close expected mid-2027). The deal lit up the whole direct-to-device / LEO complex: **IRDM +25.4%** (to ~$54.6, into the bid), **Viasat (VSAT) +23.8%**, **AST SpaceMobile (ASTS) +21.4%**, **Satellogic (SATL) +22%**, RKLB itself +~10% pre-market. Sources: [AInvest (RKLB–IRDM $8B)](https://www.ainvest.com/news/rocket-lab-acquire-iridium-8-billion-deal-expanding-global-satellite-communications-2606), [Stockstoearn/Reuters summary](https://www.facebook.com/Stockstoearnpage/posts/122186992154938282). *(Caveat for the opportunity check below: IRDM is now bid-anchored risk-arb; ASTS/VSAT/SATL moved on sector-sympathy/re-rate, not their own qualifying event.)*
+- **Lidar / autonomy names ripped in sympathy with the risk-on + space/autonomy bid:** **Ouster (OUST) +28.7%, Aeva (AEVA) +22.9%** — thematic momentum, no single clean company-specific catalyst confirmed at scan depth. Source: FMP biggest-gainers 6/29.
+- **TopBuild (BLD) −15.5% (to ~$360) — worst day since March 2020.** Building-products name; the drop tracks building-materials/distribution M&A churn (Martin Marietta–Lhoist $13.5B deal in the space; QXO-related consolidation dynamics). Specific load-bearing driver not cleanly confirmed at scan depth; flagged factually. Not book-relevant. Source: [Intellectia (Martin Marietta / TopBuild)](https://intellectia.ai/news/monitor/martin-marietta-to-acquire-lhoist-north-america-for-135-billion).
+- **StoneX (SNEX) −14.5% (to ~$116).** Commodity/FX brokerage; large move with no clean public catalyst identified at scan depth (possible commodity-vol normalization read). Not book-relevant; flagged for completeness. Source: FMP biggest-losers 6/29.
+- **NOT in this window (excluded):** the **ON Semiconductor–Synaptics** ~$7B all-stock deal (ON −~24%) was announced **Thu 6/25** ([globenewswire 6/25](https://www.globenewswire.com/news-release/2026/06/25/3317941/0/en/onsemi-to-acquire-synaptics-to-enable-the-next-generation-of-intelligent-systems-for-physical-ai.html)) and was already in prior-run coverage; Monday recap articles re-surfacing it are stale relative to this scan window.
 
-### 4. Sector-level moves (≥2% at sector-ETF level / notable dispersion)
+### 4. Sector-level moves (≥2% at sector level or notable dispersion)
 
-None observable — markets closed. *(Energy/commodities were under pressure into the weekend on the oil slide; defense/aerospace is the obvious Monday beneficiary if escalation is read as durable. No observable Sat move to record.)*
+Classic risk-on rotation on the 6/29 session (FMP sector snapshot, NASDAQ-listed avg change):
+- **Consumer Cyclical +3.9%** (leadership — risk appetite + consumer-discretionary bid).
+- **Industrials +2.2%** (cyclical participation; aerospace/defense mixed within).
+- **Technology +1.5%** / **Communication Services +1.3%** (GOOGL-led mega-cap tech).
+- **DOWN:** Basic Materials −1.7%, Utilities −1.5%, Consumer Defensive −1.2%, Real Estate −1.0%, **Energy −0.6%** (energy equities fading even as crude ticked up — confirms the market is treating the oil bid as a transient risk-premium, not a durable supply repricing). Dispersion note: small-caps LAGGED the rally (IWM −0.3%), so breadth was mega-cap/cyclical-led, not broad. Source: [FMP sector-performance-snapshot 6/29].
 
 ### 5. Notable commentary
 
-- **Oil sell-side**: Goldman Q4 Brent ~$80; J.P. Morgan Q3 ~$86 / Q4 ~$80; Invezz technical target ~$65 (bearish unless a real supply shock >$80). Consensus = fade the worst-case war scenario while the southern lane flows.
-- **Market-structure read into the weekend (strategist commentary)**: ongoing **small/mid-cap rotation** vs large-cap; **Mag-7/hyperscaler repricing** as "the AI trade cooled" last week; healthcare/REITs bargain-hunting; energy/commodities pressured. Backdrop, not a same-window catalyst.
-- **Tehran/Washington messaging**: FM Araghchi — any interference in Iran's management of Hormuz "will escalate"; US UN Amb. Waltz — US "will continue to target Iranian military infrastructure" if Tehran threatens shipping. Hardened positions on both sides → elevated headline risk into Monday.
+- Sell-side / desk commentary skewed toward a **continued July rally read on falling oil + benign inflation optics + the Hormuz de-escalation** (e.g. Infrastructure Capital's Jay Hatfield, Yahoo Finance 6/29). Caveat per the standing fundamental axis: the bullish-tape narrative still sits ON TOP of decelerating growth + reaccelerating inflation (the regime's core tension), so risk-on commentary is sentiment, not a fundamentals all-clear. Source: [Yahoo Finance (July-rally call)](https://finance.yahoo.com/video/market-expert-predicts-july-rally-122922274.html).
 
 ---
 
 ## ANALYSIS — RISK TO EXISTING POSITIONS
 
-Open book (BigQuery `state.current_positions`, cross-checked vs IBKR `get_account_positions`): **B = AZO, HCA, MDT, ZBRA; D = DIS, RTX**, plus the **SGOV park (92.2992 sh, ~$9,291)** and an immaterial **IBM dust residual (0.0007 sh, $0.19)** in the connector not in the canonical book (likely a stale fractional; IBM is an A-watchlist name, not an active position) — **flag only, no action.** Live marks = Fri 6/26 close (markets closed all weekend, so the prior-session close is the current mark; re-pulling a snapshot on a non-trading Saturday returns the same close).
+**Open book (canonical `state.current_positions`, B and D only; A/C/E hold no live single-name positions):** B — AZO, HCA*, MDT, ZBRA; D — RTX, DIS. SGOV park = the four-sleeve cash reserve. *(HCA's staged time-exit filled today — see divergence note.)*
 
-### MECHANICAL EXIT-TRIGGER SWEEP (run for every open position)
+### MECHANICAL EXIT-TRIGGER SWEEP (run for every open position; live prices via IBKR `get_price_snapshot`, cross-checked vs `get_account_positions`)
 
-| Pos | Strat | Live (6/26) | Convergence target | Time-exit | Trigger? |
-|-----|-------|-------------|--------------------|-----------|----------|
-| AZO | B | $3,128.70 | $3,200 (sell ≥; not hit) | 2026-07-24 | **No** — below target; time not due |
-| HCA | B | $391.68 | $442.85 (n/a) | **2026-06-27 (passed)** | **Already EXIT-PENDING** — time-exit staged 6/27 (SELL 0.0642 sh LIMIT $385 DAY, instruction 100, order day Mon 6/29). No NEW action; convergence not relevant. |
-| MDT | B | $80.98 | $90 (sell ≥; not hit) | 2026-07-31 | **No** — below target; time not due |
-| ZBRA | B | $250.01 | $264 (sell ≥; not hit) | 2026-07-13 | **No** — below target; time not due |
-| DIS | D | $98.79 | none (D multi-year) | none (LTCG 2027-05-07) | **No** |
-| RTX | D | $187.99 | none (D multi-year) | none (LTCG 2027-04-27) | **No** |
+| Pos | Strat | Live (6/29) | Convergence target | Time-exit date | Mechanical trigger? |
+|---|---|---|---|---|---|
+| AZO | B | $3,160 (+1.0%) | $3,200 (long) | 2026-07-24 | **NO** — 1.3% below target; time-exit ~25d out |
+| HCA | B | $392 | $442.85 (long) | **2026-06-27 (PAST)** | **TIME-EXIT — already executed.** Staged SELL (instr. 100, $385 DAY) filled today; broker position now FLAT (0 sh). → D2 reconciliation, no new order |
+| MDT | B | $80.75 (−0.1%) | $90 (long) | 2026-07-31 | **NO** — well below target; time-exit ~32d out |
+| ZBRA | B | $258.00 (+2.6%) | $264 (long) | 2026-07-13 | **NO** — ~2.3% below target (closest of the book); time-exit ~14d out |
+| RTX | D | $187.70 | none (D long-horizon) | 2027-04-27 | **NO** |
+| DIS | D | $98.86 | none (D long-horizon) | none | **NO** |
 
-**Net: no NEW mechanical exit triggered.** HCA's time-exit (60-day B stale window) already fired and is staged for Mon 6/29 — **D2: confirm/re-craft per persist-and-wait** so the instruction + 07:00-MT `[Claude] Confirm order — HCA SELL` event are live for Monday, re-pricing the marketable limit to Monday's live quote.
+- **No convergence-target hits and no NEW exit to stage.** ZBRA is the closest to a target (258 vs 264) and gained on the risk-on tape but did not reach it; monitor on the daily sweep.
+- **⚠ HCA divergence (for D2 Step 0 — reconciliation, not a new stage):** `state.current_positions` still shows HCA OPEN (0.0642 sh, B, time_exit 2026-06-27), but the **IBKR connector shows HCA position = 0 (flat, market_value $0)**. The prior run's staged time-exit (SELL 0.0642 sh, LIMIT $385 DAY, instruction 100, order day Mon 6/29) **has FILLED**. **D2 must reconcile the realized HCA close** (`get_account_trades` → record fill price/commission/realized_pnl, flip the `ORDER_STAGED` row `filled`, write the CLOSE `events.position_events`, log the close decision via `ops.sp_log_decision`, recompute `perf.strategy_daily`). **No new HCA order is needed** — the position is already flat. (Connector is authoritative for live holdings per Operating_Protocols §11; state is corrected to match.)
+- **⚠ IBM dust (for D2 cleanup):** connector shows **IBM 0.0007 sh ($0.19)**, not in `state.current_positions` — a negligible fractional residual (prior B exit remnant; IBM is an A-watchlist name, not an active position). Flag for D2 to true-up/ignore; immaterial to sizing or sweeps.
 
-### PER-STRATEGY KILL-TRIGGER SWEEP (`perf.kill_flags`, as-of 6/26 close)
+### PER-STRATEGY KILL-TRIGGER SWEEP (`perf.kill_flags`, as-of 2026-06-26 engine row; refreshed against today's live marks)
 
-| Strat | deployed_unit_value | peak | drawdown | doubled? | Flags |
-|-------|---------------------|------|----------|----------|-------|
-| B | 1.0670 | 1.0670 | 0.0% | no (pre-gate 25-trade) | all FALSE |
-| D | 0.9867 | 1.0093 | −2.24% | no | all FALSE |
+| Strat | deployed_unit_value | peak | current_drawdown | Drawdown kill (≥50%)? | Runaway (2× pre-gate)? |
+|---|---|---|---|---|---|
+| B | 1.0670 | 1.0670 | 0.0% | **NO** | NO (1.07×, far from 2×) |
+| D | 0.9867 | 1.0093 | −2.24% | **NO** | NO |
 
-A/C/E not deployed (no positions). No drawdown-kill (≥50% threshold), no runaway-success (TWR-doubled pre-gate). No sharp intraday move to refresh (markets closed). **No strategy termination, no runaway-review.**
+- **No kill or review flags tripped.** Both strategies are well inside thresholds; today's risk-on marks (ZBRA/AZO up) only improve B's intraday read. `drawdown_kill / runaway_review / m2m_underperf_review / gate_reached` all FALSE for B and D. A/C/E not deployed. **No strategy termination or review enqueue.**
 
-### Judgment-laden thesis-invalidation check (weekend developments vs entry-record criteria)
+### THESIS-INVALIDATION CHECK (judgment-laden, per entry-record criteria)
 
-- **D:RTX** (aerospace/defense prime) — the Hormuz escalation is, if anything, **thesis-supportive** (sustained defense demand); no invalidation.
-- **D:DIS** — no exposure to the Mideast/oil thread; no invalidation.
-- **B:HCA, MDT** (hospitals/medtech) — no exposure to the Hormuz/oil thread; no invalidation. (HCA already mechanically exiting on time.)
-- **B:AZO** (auto-parts retail) — higher oil/gas would be a marginal, slow consumer headwind, nowhere near a thesis-invalidation, and oil is at pre-war lows regardless; no invalidation. Convergence thesis ($3,200) intact.
-- **B:ZBRA** (enterprise scanning/RFID hardware) — no exposure to the Mideast thread; no invalidation. Convergence thesis ($264) intact.
+- **No Development triggers a thesis-invalidation exit criterion on any open position.** The 6/29 risk-on rally is neutral-to-supportive across the book: ZBRA/AZO (B) benefited from the cyclical/industrials bid without reaching convergence; MDT (B, healthcare) was flat; **DIS (D)** is supported by Consumer-Cyclical +3.9% leadership (no thesis change); **RTX (D)** — Iran de-escalation marginally softens the acute-defense-demand narrative but RTX's thesis is a multi-year aerospace/defense-cycle hold that does not turn on a single-day geopolitical tick, and the satellite/space-defense M&A backdrop is if anything marginally supportive. No invalidation criterion is met for any name (all **NO**).
 
-**No thesis-invalidation exit criterion is triggered by any weekend development.** A broad Monday risk-off open could pressure all longs but that is not a thesis-invalidation event — B exits are mechanical (convergence/time, swept above).
+### WATCHLIST CANDIDACY IMPACT
 
-### Watchlist candidacy
-
-No weekend Development materially changes any watchlist candidate's status (no observable price moves; markets closed). The Strategy-A queue stays concentrated in AI/tech/chip names (NVDA, MU, AMD, AVGO, MRVL, INTC, DELL, ORCL, CRM, SNOW, etc.) and remains **gated under A = DO-NOT-ACTIVATE**; carry as M1-evaluation context (next M1 ~early July). No add / remove / demotion this run.
-
-For context (no D1 action — these are D2's to drain): the **MU, KMX, GNRC** Strategy-B post-event thesis-construction items are already queued in `PENDING_ANALYSIS` with `due_date 2026-06-28` (windows close 7/9, 7/2, 7/6 respectively). MU's basis — last week's blockbuster Q3 print (rev $41.46B vs ~$36B est, AI-memory demand) — is unchanged by the weekend; the queued theses stand for D2.
-
----
+- No Development materially changes any Strategy-A-queue candidate's status. The A queue stays concentrated in AI/tech/chip names and remains gated (router = DO-NOT-ACTIVATE); the satellite/space-comms re-rate (ASTS/VSAT/IRDM) is **not** on any current A-queue name and does not alter the existing queue. No adds/removes warranted today.
 
 ## ANALYSIS — OPPORTUNITY CHECK
 
-No new entry candidate is actionable **today** — markets are closed, so no Strategy B (≥5% post-event close-to-close move), C (no new qualifying ≤45-day catalyst announced), A (router DO-NOT-ACTIVATE; no catalyst), or E (no observable divergence) signal can be measured this window. **Monday-open watch-items** (for the next D1/D2, not candidates yet):
-- **Energy / oil-sensitive names** — if Monday re-prices a war premium, watch for ≥5% qualifying B over-reaction moves in oilfield/E&P/refiner names.
-- **Defense / aerospace** — escalation could gap names higher; RTX (held, D) benefits; any disproportionate pop could create a B short-side over-reaction candidate (subject to B short-direction discipline).
-These are flagged for the next session's observable tape, not enqueued today.
+Evaluating every Development for a new A/B/C/E entry candidate (not limited to watchlist names):
 
----
+- **Satellite / space-comms (IRDM, ASTS, VSAT, SATL) — NO clean actionable B candidate (mechanism mismatch).** **IRDM** is now **bid-anchored risk-arb** (RKLB's ~$54 cash-and-stock floor structurally prevents convergence to a pre-event level absent a deal-break) — the same mechanism-mismatch that declined MGM 6/1, not a Strategy-B post-event-mispricing setup. **ASTS / VSAT / SATL** moved on **sector-sympathy / M&A re-rate**, not their own qualifying earnings/FDA/guidance event with a 10-day convergence window — info-driven thematic repricing, which is **Strategy A territory (multi-quarter direct-to-device / LEO-consolidation narrative), not B.** With **A router = DO-NOT-ACTIVATE**, no thesis runs now; not worth even an A-queue add absent a name-specific narrative-misalignment thesis (the move is a sector M&A halo). **Decline all.**
+- **Lidar/autonomy (OUST, AEVA):** momentum/sympathy moves with no clean qualifying event — no B mechanism; out of the disciplined universe. **Decline.**
+- **Broad risk-on rally / GOOGL-Dow / oil-contained:** market-level, not a single-name qualifying event — creates no A/B/C/E entry. **Decline.**
+- **BLD / SNEX (the day's large decliners):** moves are M&A-structural (BLD) / unattributed (SNEX), not sentiment-overshoot around a clean public information event amenable to convergence — no B-short mechanism; both outside the book and the disciplined universe. **Decline.**
+- **Strategy C / E:** no newly-announced qualifying catalyst within 45 days surfaced today (C); no clean intra-industry pair divergence opened by the sector tape (E is router-ACTIVATE-but-execution-feasibility-deferred at current book size regardless). **No candidate.**
+
+**Net: no new entry candidate requiring thesis construction.**
 
 ## ANALYSIS — REGIME CHECK
 
-**No inter-monthly router review recommended (default NO; high bar not met).** The shock_overlay is already **`latent`** in the current FUNDAMENTAL_AXIS (M1 2026-06-01 — "Iran war active, kinetic phase paused, Hormuz traffic suppressed but no supply shock"). The weekend escalation raises the *kinetic* intensity (named-base strikes, mine-layers, a fatality, talks-halt threat) but the **market-transmission channel that defines the regime is unchanged or softer**: oil at **pre-war lows**, supply **still flowing** via the US-protected Omani lane, no US assets hit, after-hours oil +1% only. A router activation state turns on transmission, not headline count — so the bar to flip any strategy's activation inter-monthly is not met today.
-
-**Explicit Monday-open contingency (deferral, carried for D2 / next D1):** *if* Mon 6/29 opens hard risk-off with the war premium re-widening — Brent decisively back **>$80**, a VIX spike, IG credit widening, and/or an actual Hormuz-closure / tanker-outage headline — that would be the trigger to reconsider a `shock_overlay` re-intensification (latent → acute) and an A/B/D router review. *Trigger/source:* Mon 6/29 cash open + oil futures (IBKR + web). *Conservative default if it does NOT so resolve:* **no change** — existing ACTIVATE strategies continue to run mechanically, `shock_overlay` stays `latent`, May regime carried forward; the scheduled M1a remains the regime owner. (Does not chain — Monday D1 resolves it or it lapses to the default.)
-
----
+**No inter-monthly router review warranted (default NO; high bar not cleared).** The Monday 6/29 reaction is the explicit test the 6/28 run deferred — and it **resolves that deferral to its conservative no-change default** and **confirms** the standing regime rather than shifting it. The escalation transmitted as a contained, transient risk-premium (oil +~2% but near pre-war lows; energy equities lagged; VIX fell; gold fell; equities rallied to fresh highs) — i.e. exactly the **`shock_overlay = latent`** (active-but-contained Iran transmission) the May fundamental axis already encodes, layered under the **`risk_sentiment = risk-on`** axis (fresh S&P/Dow highs, decompressed VIX). The prior run's stated re-intensification trigger (Brent decisively >$80 / VIX spike / credit widening / Hormuz-closure headline) did **not** fire — Brent ~$73.6, VIX −4%, credit calm — so the conservative default (no change; `shock_overlay` stays `latent`; May regime carried forward; M1a remains the regime owner) is taken. Nothing in the day's tape plausibly flips any strategy's activation state (A stays DNA; B/D/E as set; C hybrid). **No router review recommended.**
 
 ## ANALYSIS — FRONTIER-LLM CAPABILITY CHECK
 
-Saturday rotation = **multi-agent debate**. HF `paper_search` ("multi-agent debate LLM reasoning reliability consensus", `concise_only`, 5 results): top hits — *"Can LLM Agents Really Debate?"* (2511.07784, 2025-11), *DynaDebate* (2601.05746, 2026-01), *OPTAGENT* (2510.18032, 2025-10), *LLM-Consensus* (2410.20140, 2024-10), *Diversity-of-Thought* (2410.12853, 2024-10) — are relevant to the Adversarial-Review (attacker/orchestrator) architecture (majority-pressure / incorrect-consensus failure modes), **but all were published Oct 2024–Jan 2026, none within this scan window** (lower bound 2026-06-27). No paper published since the last D1 run → **no `events.decision_log` `[HF Frontier-LLM Capture]` entry** (silent per spec). Reference-only; Q3 owns the quarterly delta.
+Monday rotation = **cross-session consistency** battery. One HF `paper_search` run (`concise_only`, limit 5); no paper published within the scan window (since 2026-06-28) surfaced — top hits are pre-window (ReasonBENCH 2025-12, TrustJudge 2025-09, "LLMs Often Say One Thing and Do Another" 2025-03). Nothing materially bears on a documented `AI_Trading_Foundation.md` disadvantage. **No `[HF Frontier-LLM Capture]` entry written** (default-silent). *(Reference-only check; Q3 owns the quarterly delta. No Daily.md action.)*
 
 ---
 
 ## RECOMMENDED ACTIONS
 
-- **Exits triggered:** none NEW. **HCA (Strategy B)** time-exit already fired (60-day stale window) and is **staged for Mon 6/29** (SELL 0.0642 sh, LIMIT $385 DAY, instruction 100). **D2: confirm/re-craft per persist-and-wait** so the instruction and the 07:00-MT `[Claude] Confirm order — HCA SELL` event are live for Monday; re-price the marketable limit to Monday's live quote.
-- **New entry candidates:** none (no in-window price event). Energy and defense/aerospace are Monday-open watch-items only. (MU/KMX/GNRC B theses already queued in `PENDING_ANALYSIS` due 6/28 — D2 drains; not new here.)
-- **Watchlist updates:** none (A-queue AI/tech names remain gated under A = DO-NOT-ACTIVATE).
-- **Router reviews recommended:** none. **Watch item for Monday D1:** Strait-of-Hormuz escalation → check Mon 6/29 open for oil/risk-off repricing; conservative default = no router change, `shock_overlay` stays `latent`.
-- **Strategy terminations / runaway flags:** none (B drawdown 0%, D drawdown −2.24%; all kill flags false).
+- **Exits triggered (mechanical):** **None requiring a new order.** **HCA (Strategy B)** time-exit (due 2026-06-27) already executed — the prior run's staged SELL (instruction 100, $385 DAY) **FILLED** and the broker position is flat. **D2 Step 0 to RECONCILE the HCA close** (record fill/commission/realized-P&L, flip `ORDER_STAGED`→`filled`, write CLOSE event + close decision, recompute the engine). No convergence-target hits; no live time-exit to stage.
+- **Reconciliation flags for D2:** (1) **HCA** — broker 0 sh vs `state.current_positions` open; reconcile the closed B position (above). (2) **IBM** — 0.0007 sh ($0.19) connector dust not in state; true-up/ignore (immaterial).
+- **New entry candidates:** None. (Satellite/space-comms re-rate is risk-arb / Strategy-A-territory thematic, not a B-mechanism setup, and A = DO-NOT-ACTIVATE; lidar/large-decliner moves outside the disciplined universe.)
+- **Watchlist updates:** None (adds/removes). A queue unchanged and gated; B/D book unchanged.
+- **Router reviews recommended:** None — the 6/29 risk-on, oil-contained reaction resolves the prior run's Monday-open contingency to its no-change default and ratifies the standing `stagflation-tilt + risk-on` / `latent-shock` regime (high bar not met).
+- **Strategy terminations / reviews:** None — no `perf.kill_flags` tripped for B or D.
 
-No new orders for D2 beyond confirming the already-staged HCA Monday exit. **Net: monitor Monday 6/29's open for the deferred market reaction to the weekend Hormuz escalation.**
+Net for D2: no orders to stage today; the only actionable items are the **HCA close reconciliation** and the **IBM dust true-up** in Step 0.
