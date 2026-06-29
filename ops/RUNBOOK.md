@@ -1073,8 +1073,17 @@ FMP mark fallback).
   (not `attribute.repository/JackOfSpade/Stock-Trading`), TIGHTEN it in the Console (it lets any repo mint a
   `gh-ci-runner@` token and read all live data). Optional standing guard: enable
   `.github/workflows/wif-binding-audit.yml` (grant the WIF SA `iam.workloadIdentityPoolViewer` +
-  `iam.serviceAccounts.getIamPolicy` on `gh-ci-runner@`; set `vars.RUN_WIF_AUDIT=true`). **E1 RESULT: _____
-  (fill in).**
+  `iam.serviceAccounts.getIamPolicy` on `gh-ci-runner@`; set `vars.RUN_WIF_AUDIT=true`).
+
+  **E1 RESULT — VERIFIED ✅ SCOPED (good), 2026-06-28** (Claude-in-Chrome console inspection, read-only; the §19 pattern):
+  - `attribute_condition` (live, literal): `assertion.repository=='JackOfSpade/Stock-Trading'` — the OIDC
+    token exchange is gated at the provider; a fork / any other repo's JWT cannot pass.
+  - `roles/iam.workloadIdentityUser` member on `gh-ci-runner@` (live, literal):
+    `principalSet://iam.googleapis.com/projects/191682978805/locations/global/workloadIdentityPools/github-pool/attribute.repository/JackOfSpade/Stock-Trading`
+    — a repo-scoped `attribute.repository` principalSet, **NOT** a pool-wide `/*` wildcard.
+  Both layers agree, so only `JackOfSpade/Stock-Trading`'s Actions can mint a `gh-ci-runner@` token and reach
+  BigQuery. The highest-severity item is closed; no Console change needed. (The `wif-binding-audit.yml`
+  standing guard remains optional belt-and-suspenders.)
 - **#4 — scheduler-absence + liveness for restore_drill & integrity_check (owner console).** `monitoring.tf`
   (spec) now declares absence metrics+policies for both — supply their live `config_id`s via
   `var.restore_drill_config_id` / `var.integrity_check_config_id` (Console → the scheduled query → its
