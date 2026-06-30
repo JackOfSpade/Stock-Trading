@@ -1203,3 +1203,59 @@ FMP mark fallback).
   `alert_emailer.gs` renders a canary-only batch with a clear `🧪 [TEST]` subject + `[TEST]` body tag; per
   operator preference (2026-06-29) the test email is left VISIBLE in the inbox — no Gmail auto-filter — so
   it is recognisable at a glance without defeating the test (re-paste the emailer for this to take effect).
+
+## 28. `instruction_drift` from an id-separator transcription slip — the 2026-06-29 `AR_att` alert *(monitoring)*
+**Fired 2026-06-30 05:15 UTC** (`scheduled.cadence` / `instruction_drift`, WARNING): *"Trigger drift: routine(s)
+whose live web-UI trigger differs from the canonical catalog: AR_att."*
+
+**Diagnosis — NOT a web-UI trigger edit and NOT an ad-hoc §22 note shadow.** The drifted token was the routine
+**id**, not the trigger text. The catalog keys the adversarial routines under a **non-ASCII middle dot** —
+`AR·att` / `AR·orc` (`·` = U+00B7), the form aligned on 2026-06-21 to match the live sessions + the
+`Claude_Task_Plan.md` routine table. That id is **not part of the trigger text** (`Read Claude_Task_Plan.md.
+Perform Adversarial Review Attacker — regular routine.`); a session hand-transcribes it from the plan's routine
+table into `ops.sp_routine_start`. On 2026-06-29 the AR Attacker run (`sess-arattack-20260629`) transcribed it as
+**`AR_att`** (ASCII underscore U+005F) — byte-identical, correct instruction text, only the separator swapped
+(codepoints confirm: `…183…` middle-dot vs `…95…` underscore). This is the **2nd** time the middle dot has mis-
+fired (cf. the 2026-06-21 AR `unknown_routine` reconcile); a non-ASCII char an agent must reproduce by hand is
+inherently fragile.
+
+**Why it would NOT self-heal (the load-bearing detail).** `state.routine_last_instruction` keeps the **all-time-
+latest** trigger-shaped row **per DISTINCT id** (no time window). `AR_att` is a *distinct* id from `AR·att`, so its
+2026-06-29 row is the permanent latest for that partition → `state.instruction_drift` carries an
+`unknown_routine=TRUE` row for `AR_att` forever → `cadence_check.sql` re-raises the warning **every day**
+(`sp_raise_alert_once` dedups while open; the #14 7-day auto-age only clears it until the next 05:15 run re-raises).
+Simply resolving the `ops.alerts` row is therefore **not** durable.
+
+**Fix (deployed 2026-06-30; repo + live).** Made `state.instruction_drift` match the catalog↔live join on a
+**separator-normalized id** — `REGEXP_REPLACE(id, r'[·._-]', '')` on both sides — so `AR·att` / `AR_att` / `AR.att`
+/ `AR-att` collapse to one routine (verified: every real id `D1…A3` is separator-free, so none collide), and the
+live side is re-deduped to one row per normalized key (latest run). `bigquery/15_routine_catalog.sql` carries the
+new view; applied live via the BigQuery MCP. Post-fix: `state.instruction_drift` has **0** `drifted OR
+unknown_routine` rows, 23 rows total (= the 23 catalog routines), and reports `AR·att` / `AR·orc` under their
+canonical ids with `live_last_seen=2026-06-29`. The open alert was resolved-with-note pointing here.
+
+**Scope of the change — narrow by design.** Only the **cosmetic id-punctuation** false positive is suppressed.
+The instruction-**TEXT** drift check is **unchanged** (`drifted = live text != canonical text`), so a genuinely
+wrong heading / routine number / `— deep research.` vs `— regular routine.` tag still drifts (the §22 2026-06-29 W5
+case would still fire), and a genuinely new/renamed routine with a different alphanumeric stem still flags
+`unknown_routine`. Residual risk: a brand-new routine whose id differs from an existing one ONLY by separator
+punctuation would be absorbed — implausible in this id namespace, and accepted.
+
+**Alternatives considered + deliberately NOT taken.**
+- **Run_log band-aid** (rewrite the 2026-06-29 `AR_att` row → `AR·att`). `ops.run_log` is NOT under the
+  append-only guard (that covers `events.*` only — §25 B3 / `integrity_check.sql`), so it is *technically*
+  possible, and unlike the §22 2026-06-29 W5 case it would mask no live config bug. Still rejected: it rewrites
+  audit history to fix a one-off, and does nothing about recurrence. Left `run_log` honest.
+- **Switch the canonical ids to ASCII `AR_att`/`AR_orc`** everywhere (plan table, `cadence.yaml`, catalog,
+  `print_routines.py`, `check_cadence_consistency.py`, tests). Addresses the root cause (robust, agent-reproducible
+  id) but is a large diff across a deliberately-set convention AND still leaves the historical middle-dot
+  partitions as new `unknown_routine` flags — i.e. it *also* needs the detector change. Deferred as an optional
+  follow-up: the normalization above already defuses the fragility, and this can be layered on later without
+  conflict if the operator wants a clean ASCII id. (The normalization is the prerequisite either way.)
+
+**General rule (reaffirms §22).** An `instruction_drift` / `unknown_routine` alert is a **config bug to fix, not a
+halt** (non-raising; never blocks `all_green`). First classify it: (a) a real edited/typo'd web-UI **trigger**
+(diff `state.routine_last_instruction` vs `python scripts/print_routines.py` — operator-owned fix, §22 W5); (b) an
+ad-hoc note shadow (§22 — already filtered by the trigger-shape guard); or (c) — as here — a cosmetic **id-
+separator** transcription of a known routine (repo-owned fix: the normalized join). Then resolve the `ops.alerts`
+row with a note pointing to the relevant section.

@@ -53,7 +53,31 @@ FROM UNNEST([
 -- false-alarm only counts instructions of the canonical `Read Claude_Task_Plan.md. Perform …` trigger
 -- shape — so an ad-hoc/one-off session that reuses a routine id and logs a free-form task note no longer
 -- shadows the real trigger and false-trips this view. A real typo'd/edited trigger still drifts here.
+-- ID-SEPARATOR NORMALIZATION (2026-06-30, RUNBOOK §28): the catalog↔live join matches on a separator-
+-- NORMALIZED id, so a routine logged with a different id PUNCTUATION than its catalog key is treated as
+-- the SAME routine rather than a spurious unknown_routine. Motivating case: the adversarial routines'
+-- canonical ids embed a non-ASCII middle dot — `AR·att`/`AR·orc` (U+00B7) — that a session must hand-
+-- transcribe from the Claude_Task_Plan.md routine table into ops.sp_routine_start. On 2026-06-29 the AR
+-- Attacker run logged `AR_att` (ASCII underscore) instead — identical, correct instruction text, just the
+-- separator swapped. Because state.routine_last_instruction keeps the all-time-latest row PER DISTINCT id
+-- (no window), that stray `AR_att` partition would otherwise flag unknown_routine FOREVER and re-fire the
+-- warning every day (it does not self-heal). REGEXP_REPLACE(id, r'[·._-]', '') maps the separator set so
+-- `AR·att`/`AR_att`/`AR.att`/`AR-att` all collapse to one key (verified: real ids D1/W5/M1a/… are
+-- separator-free and unaffected — no collisions). This narrowly suppresses the COSMETIC id-punctuation
+-- false positive ONLY: the instruction-TEXT drift check below (drifted = live text != canonical text) is
+-- UNCHANGED, so a genuinely wrong heading/number/type-tag still drifts, and a genuinely new/renamed
+-- routine (different alphanumeric stem) still flags unknown_routine. The live side is re-deduped to one
+-- row per normalized key (latest run) so a routine that logged under two spellings shows a single current
+-- row reported under its canonical (catalog) id. Durable root-cause discussion + alternatives: RUNBOOK §28.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.instruction_drift` AS
+WITH li AS (
+  SELECT routine, instruction, run_date
+  FROM `stock-trading-498512.state.routine_last_instruction`
+  -- collapse id-separator-punctuation variants of the SAME routine to its most recent run
+  QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY REGEXP_REPLACE(routine, r'[·._-]', '')
+    ORDER BY run_date DESC, log_ts DESC) = 1
+)
 SELECT
   COALESCE(c.routine, li.routine) AS routine,
   c.canonical_instruction,
@@ -64,5 +88,5 @@ SELECT
   (c.routine IS NULL) AS unknown_routine,
   CURRENT_TIMESTAMP() AS checked_at
 FROM `stock-trading-498512.ops.routine_catalog` c
-FULL OUTER JOIN `stock-trading-498512.state.routine_last_instruction` li
-  ON li.routine = c.routine;
+FULL OUTER JOIN li
+  ON REGEXP_REPLACE(li.routine, r'[·._-]', '') = REGEXP_REPLACE(c.routine, r'[·._-]', '');
