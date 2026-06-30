@@ -1076,8 +1076,10 @@ FMP mark fallback).
 > - **`ddl_drift` → critical: PENDING.** One clean read (0 rows, 2026-06-29) validates the encoding, but the
 >   data-monitor baseline should hold ~1–2 weeks of clean daily `cadence_check` runs first. Then in
 >   `cadence_check.sql` change the `ddl_drift` block's `'warning'`→`'critical'` and add it to `raise_msg`.
+>   *Reminder set:* `[Claude] Review` calendar event **2026-07-14 09:00 MT** (carries the verify+flip steps).
 > - **`restore_stale` → critical: BLOCKED (no baseline yet).** The monthly drill has not run since the change
 >   (`state.restore_health.monitored=false`); promote only after ≥1 successful drill logs an `ops.drill_log` marker.
+>   *Reminder set:* `[Claude] Review` calendar event **2026-08-04 09:00 MT** (verify `state.restore_health.monitored=true` first).
 > - **`dbt-parity` → block: PENDING (owner repo-setting).** Requires the WIF repo vars set AND one clean parity
 >   run observed; then set `vars.DBT_PARITY=block` (it FAILS CLOSED if the WIF vars are absent — RUNBOOK §25 C1).
 
