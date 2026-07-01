@@ -13,7 +13,7 @@ State index for AI-directed trading experiment candidates. Complements but does 
 - **Strategy A** (catalyst-driven equity long): genuine queue HERE. Names enter on M1 fundamental review or Daily scan with qualifying upcoming catalyst within 6-month horizon. Resolution trigger: next M1 with A router ACTIVATE per Regime_State.md activation rules. Currently router = DO-NOT-ACTIVATE (since 2026-04-23 M1).
 - **Strategy B** (post-event mispricing): NOT a static queue. B candidates with active 10-day post-event windows track via Google Calendar `[Claude] Thesis construction — <ticker> Strategy B` events; calendar events naturally expire when 10-day windows close. B candidates with disqualifier flags or B-short-direction-declined-at-D2 contextual notes track in this file's "tracking" sections below as a state index for audit purposes (no scheduled action; not a queue for re-evaluation).
 - **Strategy C** (defined-risk options around known events): not a name-queue; catalyst-driven via Weekly_Catalyst_Calendar.md and FOMC schedule.
-- **Strategy D** (long-horizon narrative core): re-screen pipeline tracked via Google Calendar `[Claude] Re-screen <ticker>` events with documented reconsideration triggers in their event descriptions. State-index pointers in this file's "D re-screen pipeline" section. Quarterly cycle update via Quarterly_D_Candidates.md (next: 2026-Q3 ~July).
+- **Strategy D** (long-horizon narrative core): re-screen pipeline is now **queue-driven** — deferred/re-screen candidates are `PENDING_ANALYSIS` entries (`events.queue_events`, drained by D2), not calendar events (the calendar holds only order-confirmations). State-index mirror in this file's "D re-screen pipeline" section. Quarterly cycle update via Quarterly_D_Candidates.md (2026-Q3 converted 2026-07-01 by Q4 — see the "2026-Q3 quarterly deferred set" below).
 - **Strategy E** (market-neutral pairs): pair candidates managed via Monthly_E_Pairs.md and M2 monthly cycle. Currently router = DO-NOT-ACTIVATE.
 
 ---
@@ -92,7 +92,24 @@ Rest-tier candidates from Weekly_Post_Event_Screen.md PART 2 that W4 (2026-W19) 
 
 ---
 
-## Strategy D re-screen pipeline (state index; primary tracking via calendar events)
+## Strategy D re-screen pipeline (state index; primary tracking via the `PENDING_ANALYSIS` queue)
+
+### 2026-Q3 quarterly deferred set — D-deferred / D-blocked (Q4 action conversion, 2026-07-01)
+
+Converted from `Quarterly_D_Candidates.md` (2026-Q3). **Ready-now** names (GOOGL, AMZN, CRM, ISRG, UBER, + TSM valuation/regime-cautioned) were enqueued as `PENDING_ANALYSIS` thesis-construction (due today; D2 drains), ordered by thesis strength. **All new D entries remain router-gated by `div-D-202606-1`** (`PENDING_REVIEW`, orchestrator due 2026-07-02) — DNA → terminal NO-GO. Deferrals do not chain; each carries a conservative default.
+
+**D-deferred** (thesis/eligibility intact; entry deferred on a specific trigger):
+
+| Ticker | Deferral reason | Momentum (trailing-30d) | Resolution trigger | Re-screen entry | Conservative default |
+|--------|-----------------|-------------------------|--------------------|-----------------|----------------------|
+| GEV | rally pause (criterion 6) | rallying hard (~+9.7% above 50-DMA; near 52-wk high $1,138/$1,182; precise 30d throttled) | 30-day trailing return < ~15% **OR** ≥10–15% pullback from 52-wk high | `rescreen-GEV-D-20260731` (due 2026-07-31) | skip / NO-GO |
+| LLY | rally pause (criterion 6) + prior entry-timing NO-GO 6/12 | rallying hard (~+13% above 50-DMA $1,183/$1,043; near 52-wk high $1,238) | rally pause / pullback toward 50-DMA (~$1,043); 30-day normalizes < ~15% | existing `rescreen-LLY-D-20260914` (due 2026-09-14) — **not duplicated** | NO-GO still active |
+| BA | catalyst + FCF confirmation; recent terminal NO-GO 6/4 | −2.4% (not rallying) | FAA 737 rate step 42→47/mo **AND/OR** Q2'26 FCF inflects positive (est. late-July print) | `rescreen-BA-D-20260803` (due 2026-08-03) | decline (FCF-negative default) |
+| NKE | company-level trend not yet turned (Subtype-B metric unmet) | −7.7% (deep value; +3.3% on 6/30 print) | total cc revenue → ≥MSD YoY sustained **AND** ex-tariff GM expanding (FY27 Q1/Q2 prints) | `rescreen-NKE-D-20260925` (due 2026-09-25) | decline |
+
+**D-blocked** (blocked by concentration or position count): **none this quarter.** Strategy.md rev 35 removed the 10-position hard cap, the max-3-per-narrative-theme cap, and the max-3-per-correlation-bucket count cap; the 30%-of-NAV per-GICS-sector cap is non-binding at ~2% sizing; the min-5 floor is retained (D book at 2 → adds move *toward* the floor). No shortlist name required an existing D position to close first.
+
+### Historical re-screen rows (pre-2026-Q3; superseded by the queue-driven set above)
 
 | Ticker | Re-screen date | Calendar event id | Trigger conditions / Status |
 |--------|----------------|-------------------|------------------------------|
