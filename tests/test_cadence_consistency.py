@@ -29,8 +29,8 @@ cc = _load()
 def test_heading_to_id_handles_all_id_shapes():
     assert cc.heading_to_id("D1. Market Development Scan — deep research") == "D1"
     assert cc.heading_to_id("M1a. Strategy-Blind Regime Scoring — deep research") == "M1a"
-    assert cc.heading_to_id("Adversarial Review Attacker — regular routine") == "AR·att"
-    assert cc.heading_to_id("Adversarial Review Orchestrator — regular routine") == "AR·orc"
+    assert cc.heading_to_id("Adversarial Review Attacker — regular routine") == "AR_att"
+    assert cc.heading_to_id("Adversarial Review Orchestrator — regular routine") == "AR_orc"
     assert cc.heading_to_id("no leading id here") is None
 
 

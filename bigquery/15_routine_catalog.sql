@@ -29,11 +29,13 @@ FROM UNNEST([
   STRUCT('M3',  'Read Claude_Task_Plan.md. Perform M3. D Position Deep-Dive — deep research.'),
   STRUCT('M4',  'Read Claude_Task_Plan.md. Perform M4. Monthly Action Conversion — regular routine.'),
   STRUCT('M5',  'Read Claude_Task_Plan.md. Perform M5. Deployed-TWR & Macro Forecast — regular routine.'),
-  -- The adversarial routines self-log under the abbreviated ids AR·att / AR·orc (the form
-  -- used in the Claude_Task_Plan.md routine table + ops/cadence.yaml + ops.run_log), so the
-  -- catalog keys MUST use those exact ids or state.instruction_drift flags them unknown_routine.
-  STRUCT('AR·att',  'Read Claude_Task_Plan.md. Perform Adversarial Review Attacker — regular routine.'),
-  STRUCT('AR·orc',  'Read Claude_Task_Plan.md. Perform Adversarial Review Orchestrator — regular routine.'),
+  -- The adversarial routines self-log under the abbreviated ids AR_att / AR_orc (ASCII,
+  -- standardized 2026-07-01 — RUNBOOK §28 — from the earlier non-ASCII middle-dot AR·att/AR·orc an
+  -- agent kept mis-transcribing). Same ids in the Claude_Task_Plan.md routine table + ops/cadence.yaml.
+  -- The separator-normalized join below folds the LEGACY middle-dot ops.run_log rows onto these keys,
+  -- so the historical partitions do NOT resurface as unknown_routine after the id switch.
+  STRUCT('AR_att',  'Read Claude_Task_Plan.md. Perform Adversarial Review Attacker — regular routine.'),
+  STRUCT('AR_orc',  'Read Claude_Task_Plan.md. Perform Adversarial Review Orchestrator — regular routine.'),
   STRUCT('Q1',  'Read Claude_Task_Plan.md. Perform Q1. Regime Retrospective — deep research.'),
   STRUCT('Q2',  'Read Claude_Task_Plan.md. Perform Q2. D Long-Horizon Candidates — deep research.'),
   STRUCT('Q3',  'Read Claude_Task_Plan.md. Perform Q3. AI Foundation Quarterly Delta — deep research.'),
@@ -55,13 +57,17 @@ FROM UNNEST([
 -- shadows the real trigger and false-trips this view. A real typo'd/edited trigger still drifts here.
 -- ID-SEPARATOR NORMALIZATION (2026-06-30, RUNBOOK §28): the catalog↔live join matches on a separator-
 -- NORMALIZED id, so a routine logged with a different id PUNCTUATION than its catalog key is treated as
--- the SAME routine rather than a spurious unknown_routine. Motivating case: the adversarial routines'
--- canonical ids embed a non-ASCII middle dot — `AR·att`/`AR·orc` (U+00B7) — that a session must hand-
--- transcribe from the Claude_Task_Plan.md routine table into ops.sp_routine_start. On 2026-06-29 the AR
--- Attacker run logged `AR_att` (ASCII underscore) instead — identical, correct instruction text, just the
--- separator swapped. Because state.routine_last_instruction keeps the all-time-latest row PER DISTINCT id
--- (no window), that stray `AR_att` partition would otherwise flag unknown_routine FOREVER and re-fire the
--- warning every day (it does not self-heal). REGEXP_REPLACE(id, r'[·._-]', '') maps the separator set so
+-- the SAME routine rather than a spurious unknown_routine. Motivating case: the adversarial routines were
+-- keyed under a non-ASCII middle dot — `AR·att`/`AR·orc` (U+00B7) — that a session had to hand-transcribe
+-- from the Claude_Task_Plan.md routine table into ops.sp_routine_start; on 2026-06-29 the AR Attacker run
+-- logged `AR_att` (ASCII underscore) instead — identical, correct instruction text, just the separator
+-- swapped. On 2026-07-01 the canonical ids were STANDARDIZED to ASCII `AR_att`/`AR_orc` (RUNBOOK §28
+-- follow-up) to remove that fragility at the source; this normalization is KEPT to (1) fold the LEGACY
+-- middle-dot ops.run_log rows (2026-06-20…28) onto the new ASCII keys so the historical partitions do not
+-- resurface as unknown_routine after the switch, and (2) guard against any future punctuation slip. Because
+-- state.routine_last_instruction keeps the all-time-latest row PER DISTINCT id (no window), an un-normalized
+-- stray partition would otherwise flag unknown_routine FOREVER and re-fire the warning every day (it does
+-- not self-heal). REGEXP_REPLACE(id, r'[·._-]', '') maps the separator set so
 -- `AR·att`/`AR_att`/`AR.att`/`AR-att` all collapse to one key (verified: real ids D1/W5/M1a/… are
 -- separator-free and unaffected — no collisions). This narrowly suppresses the COSMETIC id-punctuation
 -- false positive ONLY: the instruction-TEXT drift check below (drifted = live text != canonical text) is

@@ -42,19 +42,26 @@ QUALIFY ROW_NUMBER() OVER (PARTITION BY ticker, mark_date ORDER BY ingest_ts DES
 -- Reads the CURATED dedup view: trade_fills' idempotency-by-trade_id contract is enforced
 -- there, so a re-ingested fill can't shift leg_seq pairing or create phantom positions.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.position_lifecycle` AS
+-- SGOV EXCLUSION (2026-07-01, RUNBOOK §29): SGOV is the shared, ACCOUNT-LEVEL cash-sweep / benchmark
+-- instrument — event-sourced through events.parking_events (strategy is NULL on every row) and reconciled
+-- by state.sgov_position / §13, NOT a per-strategy deployed position (the per-strategy SGOV split is
+-- formally dissolved). A stray SGOV fill that lands in trade_fills must therefore NOT become a deployed
+-- lifecycle lot: it would (a) fabricate a phantom open position that current_positions never carries →
+-- state.position_reconciliation (B4) false-drifts, and (b) contaminate analytics.strategy_daily_returns by
+-- counting the cash-park as a deployed position AND the benchmark. Filtering both legs keeps SGOV out.
 WITH entries AS (
   SELECT strategy, ticker, contract_id, DATE(fill_ts) AS entry_date,
          price AS entry_price, shares, commission AS entry_commission,
          -- sequence the BUYs within a (strategy,ticker) so the Nth buy pairs to
          -- the Nth sell (handles re-trades + a ticker held by 2 strategies)
          ROW_NUMBER() OVER (PARTITION BY strategy, ticker ORDER BY fill_ts, trade_id) AS leg_seq
-  FROM `stock-trading-498512.state.trade_fills_curated` WHERE side='BUY'
+  FROM `stock-trading-498512.state.trade_fills_curated` WHERE side='BUY' AND ticker != 'SGOV'
 ),
 exits AS (
   SELECT strategy, ticker, DATE(fill_ts) AS exit_date, price AS exit_price,
          realized_pnl, commission AS exit_commission,
          ROW_NUMBER() OVER (PARTITION BY strategy, ticker ORDER BY fill_ts, trade_id) AS leg_seq
-  FROM `stock-trading-498512.state.trade_fills_curated` WHERE side='SELL'
+  FROM `stock-trading-498512.state.trade_fills_curated` WHERE side='SELL' AND ticker != 'SGOV'
 )
 -- position_key carries leg_seq so it is unique per round-trip (the LAG window in
 -- strategy_daily_returns partitions on it; a shared key would merge two positions).

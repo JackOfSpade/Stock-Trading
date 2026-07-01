@@ -75,9 +75,9 @@ def heading_to_id(h):
     if m:
         return m.group(1)
     if "Attacker" in h:
-        return "AR·att"
+        return "AR_att"
     if "Orchestrator" in h:
-        return "AR·orc"
+        return "AR_orc"
     return None
 
 

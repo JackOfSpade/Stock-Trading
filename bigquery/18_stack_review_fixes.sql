@@ -149,7 +149,7 @@ CREATE OR REPLACE VIEW `stock-trading-498512.state.trigger_attestation` AS
 WITH cls AS (
   -- max_gap_days ≈ ~2 cadence periods (annual ≈ 1 year + slack). Coarse thresholds, NOT exact
   -- schedules, so they do not need to track ops/cadence.yaml precisely. Daily routines are omitted
-  -- (already alarmed by state.cadence_watch); AR·att/AR·orc are queue-driven (no calendar prediction).
+  -- (already alarmed by state.cadence_watch); AR_att/AR_orc are queue-driven (no calendar prediction).
   SELECT * FROM UNNEST([
     STRUCT('W1'  AS routine,  14 AS max_gap_days), STRUCT('W2', 14), STRUCT('W3', 14),
     STRUCT('W4', 14),                              STRUCT('W5', 14),
@@ -230,10 +230,12 @@ CREATE OR REPLACE VIEW `stock-trading-498512.state.stalled_runs` AS
 WITH cls AS (
   -- fast tier (~6h): daily, adversarial, and action-conversion routines (same-day work).
   -- slow tier (~18h): deep-research weeklies/monthlies/quarterlies/annuals (longer legitimate runtime).
-  -- AR ids carry the middle-dot, matching ops/cadence.yaml + ops.run_log.
+  -- AR ids are ASCII AR_att/AR_orc (2026-07-01, RUNBOOK §28), matching ops/cadence.yaml + the plan table.
+  -- (This threshold table joins ops.run_log by EXACT id — USING(routine) — so future AR runs must self-log
+  -- the ASCII id to be classified here; legacy middle-dot 'started' rows age out of the 7-day window.)
   SELECT * FROM UNNEST([
     STRUCT('D1' AS routine, 6 AS min_stale_hours), STRUCT('D2', 6), STRUCT('D3', 6),
-    STRUCT('AR·att', 6), STRUCT('AR·orc', 6),
+    STRUCT('AR_att', 6), STRUCT('AR_orc', 6),
     STRUCT('W4', 6), STRUCT('M4', 6), STRUCT('Q4', 6), STRUCT('A3', 6),
     STRUCT('W1', 18), STRUCT('W2', 18), STRUCT('W3', 18), STRUCT('W5', 18),
     STRUCT('M1a', 18), STRUCT('M1b', 18), STRUCT('M2', 18), STRUCT('M3', 18), STRUCT('M5', 18),

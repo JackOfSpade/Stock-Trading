@@ -71,17 +71,17 @@ routines:
     writes: [calendar:confirm_order, events.queue_events]
 
   # ---- ADVERSARIAL REVIEWS (daily, queue-driven; fire only if an entry is due) ----
-  - id: AR·att   # abbreviated id matches the live ops.run_log + ops.routine_catalog (W2 drift check)
+  - id: AR_att   # ASCII id standardized 2026-07-01 (RUNBOOK §28); legacy middle-dot ops.run_log rows fold in via instruction_drift's separator-normalized join
     name: Adversarial Review — Attacker
     schedule: "daily; if events.queue_events PENDING_REVIEW attacker_due<=today"
     monitor_class: queue_driven           # NOT calendar-predictable -> excluded from cadence_expected_today
     depends_on: []
     writes: [events.adversarial_reviews]
-  - id: AR·orc
+  - id: AR_orc
     name: Adversarial Review — Orchestrator
     schedule: "daily; if a review is attacker-complete and orchestrator_due<=today"
     monitor_class: queue_driven
-    depends_on: [AR·att]
+    depends_on: [AR_att]
     writes: [events.adversarial_reviews, events.regime_events, events.decision_log, calendar:confirm_order]
 
   # ---- WEEKLY (Sunday) ----

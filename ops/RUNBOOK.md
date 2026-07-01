@@ -1252,6 +1252,25 @@ punctuation would be absorbed — implausible in this id namespace, and accepted
   partitions as new `unknown_routine` flags — i.e. it *also* needs the detector change. Deferred as an optional
   follow-up: the normalization above already defuses the fragility, and this can be layered on later without
   conflict if the operator wants a clean ASCII id. (The normalization is the prerequisite either way.)
+  **→ ADOPTED 2026-07-01; see the follow-up below.**
+
+**Follow-up — ASCII id standardization ADOPTED (2026-07-01; repo + live).** The deferred alternative above was
+taken (operator picked the root-cause route). The canonical adversarial ids are now the robust ASCII **`AR_att`
+/ `AR_orc`** across the source of truth: the `Claude_Task_Plan.md` routine table (and the strategy-blinding
+table's `AR_attacker` / `AR_orchestrator` labels), `ops/cadence.yaml` (ids + `AR_orc`'s `depends_on: [AR_att]`),
+`bigquery/15_routine_catalog.sql` (catalog seed), `scripts/print_routines.py`,
+`scripts/check_cadence_consistency.py` (`heading_to_id`), `tests/test_cadence_consistency.py`, and the
+`state.stalled_runs` per-routine threshold table (`bigquery/18_stack_review_fixes.sql`); the stray `AR-attacker`
+/ `AR·att` mentions in the `10_observability.sql` / `12_cadence_monitor.sql` header comments were corrected too.
+Live: re-applied the `ops.routine_catalog` table (now keyed `AR_att`/`AR_orc`) and the `state.stalled_runs` view
+via the BigQuery MCP. **The 6/30 separator-normalization is deliberately KEPT** — it now folds the *legacy*
+middle-dot `ops.run_log` rows (2026-06-20…28) onto the new ASCII keys, so the historical partitions do NOT
+resurface as `unknown_routine` after the switch, and it remains a guard against any future punctuation slip.
+**No `ops.run_log` history was rewritten** (the middle-dot rows stay as logged; the normalized join reconciles
+them). Post-change verification: `state.instruction_drift` still **0** `drifted OR unknown_routine`, 23 rows, AR
+now reported under `AR_att` / `AR_orc`; `python scripts/check_cadence_consistency.py` OK; test suite green.
+Recurrence-proof: an agent hand-transcribing the id now reads an ASCII underscore from the plan table, and even a
+`.`/`-`/`·` slip still normalizes to the same routine.
 
 **General rule (reaffirms §22).** An `instruction_drift` / `unknown_routine` alert is a **config bug to fix, not a
 halt** (non-raising; never blocks `all_green`). First classify it: (a) a real edited/typo'd web-UI **trigger**
@@ -1259,3 +1278,51 @@ halt** (non-raising; never blocks `all_green`). First classify it: (a) a real ed
 ad-hoc note shadow (§22 — already filtered by the trigger-shape guard); or (c) — as here — a cosmetic **id-
 separator** transcription of a known routine (repo-owned fix: the normalized join). Then resolve the `ops.alerts`
 row with a note pointing to the relevant section.
+
+## 29. `position_drift` from an SGOV cash-sweep fill leaking into the deployed lifecycle — the 2026-07-01 `B:SGOV` alert *(monitoring)*
+**Fired 2026-07-01 05:15 UTC** (`scheduled.cadence` / `position_drift`, WARNING): *"Position reconciliation:
+current_positions vs position_lifecycle open-share drift: B:SGOV."*
+
+**Diagnosis — a phantom, NOT a real position break.** `state.position_reconciliation` (B4,
+`bigquery/18_stack_review_fixes.sql`) FULL-OUTER-JOINs two independent open-position representations per
+`(strategy,ticker)`: `state.current_positions` (← `events.position_events`, hand-written by D2) vs the open lots of
+`analytics.position_lifecycle` (← `state.trade_fills_curated`). For **B:SGOV** they read **0** vs **0.2468** shares
+(Δ −0.2468 > the 0.01-share tolerance). Root cause: **SGOV is the shared, ACCOUNT-LEVEL cash-sweep / benchmark
+instrument** — event-sourced through `events.parking_events` (strategy NULL on every row) and reconciled by
+`state.sgov_position` / D2 Step 0 / §13, with the per-strategy SGOV split **formally dissolved**
+(`13_sgov_reconciliation.sql`). It is deliberately kept OUT of `position_events` / `current_positions`. On
+**2026-06-30** a partial-share SGOV sweep **BUY (0.2468 sh @ $100.68, tagged strategy B)** landed in `trade_fills`
+(→ `trade_fills_curated`), so `analytics.position_lifecycle` — which had NEVER carried SGOV before — minted a
+phantom open lot with no paired SELL, while `current_positions` (correctly) still carried no SGOV → structural drift.
+
+**Two blast radii, not one.** Besides the false B4 alert, `analytics.position_lifecycle` also feeds
+`analytics.strategy_daily_returns` (the deployed-TWR profitability metric) by joining `daily_marks_curated` on
+ticker — and SGOV **is** in daily_marks (it is the benchmark). So from 2026-06-30 the phantom lot was also
+**contaminating strategy B's `r_deployed`**, counting the ~$24.84 cash-park as BOTH a deployed position and the
+benchmark.
+
+**Why it would NOT self-heal.** `sp_raise_alert_once` dedups on `(unresolved, category, message)` so it won't pile
+up duplicates — but the one row stays open while the condition holds, and cadence_check's >7-day auto-age
+**explicitly excludes `position_drift`** (only `stranded_session` / `instruction_drift` / `calendar_runway_low` /
+`routine_stalled` auto-age). SGOV keeps leaving residual fractional lots (monthly DRIP + sweeps), so absent a fix it
+would re-drift indefinitely.
+
+**Fix (deployed 2026-07-01; repo + live).** Exclude SGOV from the deployed lifecycle at the source — `AND ticker !=
+'SGOV'` on BOTH the entries (BUY) and exits (SELL) CTEs of `analytics.position_lifecycle` — in the canonical
+`bigquery/03_twr_engine.sql`, the dbt parity port `dbt/models/analytics/position_lifecycle.sql`, and applied live
+via the BigQuery MCP. One change fixes every consumer at once: B4 (`state.position_reconciliation`) and its dbt
+mirror (`dbt/tests/assert_current_positions_match_lifecycle.sql`) no longer see SGOV, and `strategy_daily_returns`
+stops counting it. Post-fix: `position_lifecycle` has 0 SGOV rows, `state.position_reconciliation` has **0** drifted
+rows (6 real positions reconcile cleanly). The open alert was resolved-with-note pointing here.
+
+**Scope / what was NOT done.** No audit history rewritten — the 2026-06-30 SGOV BUY stays as logged in `trade_fills`
+(and in `parking_events`, where it belongs); the view simply stops treating SGOV as a deployed position. B4's
+0.01-share tolerance is unchanged (still catches a genuine whole-position break on any real ticker and swallows
+sub-cent DRIP fractions). Strategy B's deployed-TWR figures published from 2026-06-30 (e.g. the 2026-07-01 M5
+forecast) were computed with the SGOV contamination and correct themselves forward as the views recompute; the
+committed artifacts remain as historical record.
+
+**Follow-up (source anomaly).** SGOV fills normally route ONLY to `parking_events`; the 6/30 fill also landing in
+`trade_fills` is the trigger. The view-level exclusion is recurrence-proof regardless of source (any SGOV fill in
+`trade_fills` is now filtered from the deployed lifecycle), so no runtime change is required. If SGOV starts
+routinely double-booking into `trade_fills`, investigate the D2 Step-0 fill-ingestion classification separately.

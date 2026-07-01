@@ -12,7 +12,7 @@
 CREATE TABLE IF NOT EXISTS `stock-trading-498512.ops.run_log` (
   run_id STRING DEFAULT GENERATE_UUID(),
   log_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
-  routine STRING NOT NULL,            -- 'D1','D2',...,'M5','Q3','A1','AR-attacker',...
+  routine STRING NOT NULL,            -- 'D1','D2',...,'M5','Q3','A1','AR_att','AR_orc',...
   run_date DATE NOT NULL,             -- operating day (America/Denver) the routine ran for
   status STRING NOT NULL,             -- 'started' | 'completed' | 'failed' | 'halted'
   session_id STRING, branch STRING,
