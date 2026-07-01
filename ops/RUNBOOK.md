@@ -1326,3 +1326,34 @@ committed artifacts remain as historical record.
 `trade_fills` is the trigger. The view-level exclusion is recurrence-proof regardless of source (any SGOV fill in
 `trade_fills` is now filtered from the deployed lifecycle), so no runtime change is required. If SGOV starts
 routinely double-booking into `trade_fills`, investigate the D2 Step-0 fill-ingestion classification separately.
+
+## 30. `instruction_drift` from a genuinely-wrong M5 web-UI trigger — the 2026-07-01 M5 type-tag drop *(monitoring)*
+**Surfaced 2026-07-01** while verifying §28/§29 (not yet an alert — it would have fired at the next 05:15 UTC
+cadence_check). M5's first-ever run (monthly first-trading-day) logged its trigger as `Read Claude_Task_Plan.md.
+Perform M5. Deployed-TWR & Macro Forecast` — **missing the trailing ` — regular routine.` type-tag** → `drifted=TRUE`.
+
+**Classification — §28 case (a) / the §22 W5 precedent, ACTUALLY fixed.** NOT an id-separator slip (§28) and NOT an
+ad-hoc note shadow (§22): the drifted token was the trigger TEXT, and diffing `state.routine_last_instruction`
+against the canonical (`python scripts/print_routines.py`) confirmed the **live web-UI trigger itself genuinely
+lacked the suffix** — a real edited/typo'd trigger, exactly the un-versioned-trigger SPOF §15/§22 warn about. The
+detector worked as designed (§28 scope note: a wrong heading/number/type-tag SHOULD drift); the fix is operator-side,
+NOT a detector change.
+
+**Fix (2026-07-01; both fronts).**
+1. **Recurrence — the web-UI trigger.** The schedule + instruction live ONLY in the Claude-Code-on-Web UI
+   (unversioned, browser-only — §15/§26). Corrected the M5 automation's Instructions field to exactly
+   `Read Claude_Task_Plan.md. Perform M5. Deployed-TWR & Macro Forecast — regular routine.` (spaced em-dash + final
+   period) via a **Claude-in-Chrome** session; schedule/name/connectors untouched, no other routine touched. Future
+   M5 runs now log the canonical text.
+2. **The current row.** `state.routine_last_instruction` keeps the all-time-latest trigger-shaped row PER id, so the
+   truncated 2026-07-01 `started` row (`run_id fb5b80f4…`) would keep `instruction_drift` drifted until M5's NEXT
+   monthly run (~a month) → daily false alert until then. With the trigger now fixed, that row is a **confirmed
+   one-off masking no live config bug**, so corrected its single `ops.run_log.instruction` to the canonical string.
+   `ops.run_log` is NOT under the append-only guard (events.* only — §25 B3). (Contrast §28's AR case, where the
+   separator-normalization made a rewrite unnecessary; here there is no normalization escape — it is a genuine text
+   difference the detector must keep catching — so the bounded row correction is the clean call.)
+
+Post-fix: `state.instruction_drift` = **0** drifted / **0** unknown (23 rows); M5 reports the canonical trigger; no
+alert fired. **General rule (reaffirms §22/§28):** classify first (id-separator → normalized join, §28; ad-hoc note
+→ trigger-shape guard, §22; real wrong trigger → operator fixes the web-UI trigger + optionally correct the one-off
+`run_log` row, as here). Never weaken the text-drift detector to silence a genuinely wrong trigger.
