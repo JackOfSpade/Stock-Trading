@@ -24,6 +24,40 @@ models:
         tests: [not_null]
       - name: strategy
         tests: [not_null]
+      - name: deployed_capital
+        description: Deployed dollars marked that day (Σ prev_mv) — feeds strategy_vs_park_daily.
+
+  - name: strategy_vs_park_daily
+    description: Cumulative $ edge vs the SGOV park per strategy-day (the weekly email's chart series, 2026-07 redesign).
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [as_of_date, strategy]
+    columns:
+      - name: as_of_date
+        tests: [not_null]
+      - name: strategy
+        tests: [not_null]
+        description: Strategy code, restricted to ever-deployed strategies (A-E subset).
+
+  - name: strategy_vs_park
+    description: Latest cumulative $ edge vs the SGOV park per ever-deployed strategy — the weekly email's per-strategy verdict row (2026-07 redesign).
+    columns:
+      - name: strategy
+        tests:
+          - not_null
+          - unique
+          - accepted_values:
+              values: ['A', 'B', 'C', 'D', 'E']
+      - name: edge_dollars_cum
+        description: Cumulative $ edge vs the SGOV park since the strategy's first deployment.
+
+  - name: park_baseline
+    description: Single-row "what would parking everything have earned" scale anchor for the weekly email's hero tile (2026-07 redesign).
+    columns:
+      - name: first_deployed_date
+        description: Earliest as_of_date across all strategies in strategy_vs_park_daily.
+      - name: park_dollars_approx
+        description: Approximate $ the current total sleeve NAV would have earned fully parked in SGOV over the same window.
 
   - name: sgov_daily_return
     description: SGOV actual total-return benchmark per day.
@@ -97,7 +131,7 @@ models:
               values: ['A', 'B', 'C', 'D', 'E']
 
   - name: strategy_scorecard
-    description: One row per strategy — activation + budget + deployed-TWR (weekly self-email + dashboard).
+    description: One row per strategy — activation + budget + deployed-TWR. Read by the weekly self-email only (not the dashboard, despite the name suggesting otherwise — ops/dashboard/generate_dashboard.py reads system_health/kill_flags/strategy_nav/gate_watch/alerts/run_log directly).
     columns:
       - name: strategy
         tests:
@@ -112,7 +146,7 @@ models:
         description: Deployed-TWR change over the trailing 7 days (nullable — no strategy_daily row near that date yet).
 
   - name: weekly_activity
-    description: Last-7-day activity counts for the weekly self-email (single row).
+    description: Last-7-day activity counts. Retained for history — no longer read by the weekly self-email (2026-07 redesign). Single row.
     columns:
       - name: fills_7d
         description: Curated fills in the last 7 days (America/Denver).

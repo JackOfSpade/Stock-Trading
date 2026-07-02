@@ -1,5 +1,6 @@
 -- Parallel-run dbt port of bigquery/14_weekly_report.sql:analytics.weekly_activity — canonical source is that file until owner cutover.
--- Last-7-day activity counts for the weekly self-email. Relative window (America/Denver), so a view.
+-- Last-7-day activity counts. Relative window (America/Denver), so a view. Retained for
+-- history — no longer read by the weekly self-email (2026-07 redesign).
 SELECT
   -- DATE(fill_ts, 'America/Denver') — see bigquery/14_weekly_report.sql for why the bare (UTC-default)
   -- form mis-ages a late-Denver-evening fill by one day against this Denver-anchored window.

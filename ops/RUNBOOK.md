@@ -44,7 +44,7 @@ click) plus the staged adoptions. Each item says what it solves (P0–P3 from th
   `SELECT * FROM state.cadence_watch WHERE needs_attention;` (want zero rows);
   `SELECT * FROM state.sgov_reconciliation;` (events-side SGOV shares to compare to the connector).
 
-To re-apply or move to a fresh project, run `bigquery/01..18_*.sql` in order via the BigQuery MCP
+To re-apply or move to a fresh project, run `bigquery/01..21_*.sql` in order via the BigQuery MCP
 `execute_sql` (same pattern the existing files use). (Added 2026-06-24: `18_stack_review_fixes.sql` —
 additive monitor/integrity views + two `ALTER ADD COLUMN IF NOT EXISTS`; apply before re-pasting
 `cadence_check.sql` / `backup_events_export.sql` and before creating `integrity_check.sql`. See §25.)
@@ -1473,3 +1473,147 @@ live against BigQuery (clean empty results for alerts/kill-flags today; embeddin
 
 **Owner action required:** re-paste the updated `ops/weekly_report/weekly_report.gs` into its Apps
 Script project (script.google.com) — same as §31, this is repo-only until re-pasted.
+
+## 33. Weekly email redesign — "Strategies vs SGOV" *(reporting, owner directive)*
+
+**2026-07-02.** Owner directive: the weekly email should answer exactly one question — "is each
+strategy beating just parking the cash it was allocated (a portion of the overall portfolio value)
+in SGOV?" — with everything that doesn't support that question removed. The owner floated a
+multi-line chart (one line per strategy + one for SGOV) and delegated final visual design.
+
+**Why the question is sleeve-level, not deployed-slice-level.** The owner's clarification —
+"the cash it was allocated" — means "did giving strategy B its $1,889 sleeve beat leaving that
+$1,889 in the SGOV park?", not "did B's currently-deployed ~$117 slice have a good TWR?". Because
+undeployed sleeve cash already sits in the account-level SGOV park (§29 — the per-strategy SGOV
+split is formally dissolved), a sleeve differs from the "park everything" counterfactual **only on
+its deployed slice**, so the sleeve-level answer in dollars is:
+
+```
+edge_dollars_cum = Σ over deployed position-days of  deployed_capital_day × (r_deployed_day − r_sgov_day)
+```
+
+This is a NEW primary metric (`analytics.strategy_vs_park_daily.edge_dollars_cum`,
+`bigquery/21_strategy_vs_park.sql`) — additive on top of the existing sanctioned deployed-TWR engine
+(`perf.strategy_daily` / `Operating_Protocols.md` §14), not a replacement. `excess_vs_sgov` (the
+deployed-TWR percentage) stays in the email as a secondary column tied to the kill/gate machinery;
+it measures intensity on the deployed slice only ($ is capital-weighted, % is time-weighted — they
+can legitimately differ in sign when deployment size varies across good/bad days).
+
+**Chart design (steelmanning the owner's raw-multi-line suggestion, then rejecting it).** A raw
+growth-of-$1 unit-value chart (each strategy's `deployed_unit_value` plus a calendar SGOV line) was
+considered and rejected: it is deployed-slice-only and dollar-unaware, so it would visually re-crown
+B's +9.1% *deployed-slice* return, reinstating exactly the framing the owner's sleeve-level
+clarification corrected. It also stops being any strategy's true benchmark once deployments pause
+(the engine chains `sgov_index` per-strategy and pauses when parked). What the raw chart uniquely
+offers — SGOV's own earning power / absolute trajectory — is instead carried by the hero tile's
+"the SGOV park itself earned ≈$X over this period" scale line. **Final design:** one multi-line
+chart, each strategy plotted as its own cumulative `edge_dollars_cum` line, with SGOV rendered as
+the flat **$0 baseline** (drawn first, gray `#898781`, so strategy lines draw on top of it — the
+near-$0 region is exactly where a noise-band strategy lives and must not be overplotted). "Above the
+gray line = beating the park" reads in one glance; the SGOV line the owner asked for is still
+there — it IS the zero line. A/C/E (never deployed) sit exactly on that line by construction. Built
+server-side via the Apps Script Charts service (`Charts.newLineChart()` → `getAs('image/png')`),
+embedded as an inline `cid:` attachment — Gmail supports no inline SVG and no `data:` URI images, so
+`cid` is the only self-contained image route; a genuine chart-build failure falls back to
+Gmail-safe HTML bar rows (color = verdict) so the email never fails to send over a chart problem.
+
+**Neutral-band verdict rule.** A strategy's edge is classified `BEATING PARK` / `TRAILING PARK` only
+when `|edge_dollars_cum|` exceeds `max($2.00, commissions_to_date)` — otherwise it reads
+`≈ EVEN WITH PARK`. Rationale: at current scale (sub-$150 deployed sleeves), a few-dollar edge is
+inside its own day-to-day noise, and an edge smaller than the commissions paid to earn it shouldn't
+claim green — the 2026-06-05 findings (`bigquery/03_twr_engine.sql` §"FINDINGS") already show
+gross-vs-net flipping B's sign once in this experiment's history. **Note for the owner:** the
+2026-06-05 gross-of-commissions directive was scoped to the profitability/kill metric ("commissions
+are a scale artifact, not stock-selection edge"); this redesign extends gross-of-commissions to the
+new cash-counterfactual question too (a genuinely costless park vs a strategy with real commission
+drag). The neutral band is the interim mitigation — commissions are surfaced per-row in the table
+subtext, not buried in the footer only. If commission drag keeps flipping verdicts as deployed
+capital grows, the gross convention may be worth re-confirming specifically for this question; no
+change was made without an explicit owner ask (settled decisions stay settled).
+
+**What was cut, and where it still lives.** Dropped entirely from the email: the regime section
+(integrative label, 5 axes, technical signals), account NAV/Week/MTD/YTD stat cards (≈98% SGOV
+park — not a strategy-skill signal), the open-positions table, the next-7-days strip, weekly
+activity (fills/GO-NO-GO/pending), and the full ops-health strip (embeddings, backups, automation
+heartbeats, cadence watch, non-critical alerts, the ALL GREEN/ATTENTION badge). In their place: one
+data-trust line, shown only when
+`marks_fresh && engine_fresh && firing_kill_flags == 0 && open_critical_alerts == 0` is false
+(embeddings/backups/automation/cadence deliberately excluded — they already reach the operator via
+the independent DTS failure email, per `ops/weekly_report/README.md` and this RUNBOOK's monitoring
+sections). Positions/activity/regime remain available in `Daily.md` and the health dashboard. **Do
+not re-add any of these sections to the weekly email without a new owner ask** — this is a
+deliberate, requested reduction, not an oversight.
+
+**SQL applied live (additive only — see hard-constraint discipline below):**
+- `bigquery/03_twr_engine.sql`: `analytics.strategy_daily_returns` gained one column,
+  `deployed_capital` (`SUM(prev_mv)`, the deployed dollars marked that day) — byte-identical
+  otherwise; `ops.sp_recompute_engine` selects named columns and is unaffected.
+- `bigquery/21_strategy_vs_park.sql` (new file): `analytics.strategy_vs_park_daily` (the chart's
+  daily $ edge series), `analytics.strategy_vs_park` (latest verdict row per ever-deployed
+  strategy — $ edge, 7d Δ, first-deployed date, commissions to date), `analytics.park_baseline`
+  (one row: what parking everything would have earned — the hero's scale anchor).
+- Live-verified 2026-07-02 (as-of 2026-07-01 close): B `edge_dollars_cum` = **+$10.6737**
+  (excess_vs_sgov +8.42%, commissions $4.83 → BEATING PARK), D = **−$1.4553** (excess_vs_sgov
+  −2.05%, commissions $0.59, band $2.00 → **≈ EVEN WITH PARK**, not TRAILING — the neutral band
+  doing its job on a genuinely noise-level edge). Combined ≈ **+$9.22**; park itself earned
+  ≈**$61.59** over the same 46-deployed-day window (2026-04-27 → 2026-07-01). Signs match
+  `perf.kill_flags.excess_vs_sgov` for both strategies. A, C, E: zero `perf.strategy_daily` rows —
+  render as `NOT DEPLOYED` ($0.00 by construction — router do-not-activate / hybrid FOMC-only /
+  execution-feasibility-deferred respectively), never as losing or red.
+- Fixed a latent nondeterministic-tie bug while porting the 7d-ago pattern: the new
+  `strategy_vs_park`'s week-ago QUALIFY adds `, as_of_date DESC` as a tie-break (matching
+  `state.account_nav_7d_ago`'s existing pattern) — a Monday-holiday week produces genuine two-row
+  distance ties, and an un-tie-broken pick would show up as spurious drift in the dbt-parity CI
+  job (which evaluates the live view and the dbt twin independently).
+  `analytics.strategy_unit_value_7d_ago` (`bigquery/14_weekly_report.sql`) carries the same latent
+  flaw and was NOT fixed here — it now feeds a column the redesigned email no longer displays, so
+  it's a candidate for a follow-up, not urgent.
+
+**dbt parity:** mirrored `deployed_capital` into `dbt/models/analytics/strategy_daily_returns.sql`;
+added `strategy_vs_park_daily.sql` / `strategy_vs_park.sql` / `park_baseline.sql` twins +
+`schema.yml` entries (uniqueness/not-null/accepted-values tests matching the `strategy_nav`-family
+convention). Also corrected four stale "weekly self-email" claims found while touching this area:
+`analytics.strategy_scorecard`'s description (never read by the dashboard — verified against
+`ops/dashboard/generate_dashboard.py`, which reads `system_health`/`kill_flags`/`strategy_nav`/
+`gate_watch`/`alerts`/`run_log` directly), `state.account_latest`, `analytics.weekly_activity`
+(both the dbt model header and its `schema.yml` entry), and the `ops.account_snapshot`
+`OPTIONS(description=...)` + the `weekly_fills`/`weekly_nogos` convention comment in
+`bigquery/14_weekly_report.sql` — all now say "retained; no longer read by the weekly email."
+
+**Backward-compatibility discipline (hard constraint — the deployed `.gs` is manual).** The live
+Apps Script keeps running the pre-redesign code until the owner re-pastes it (Claude cannot reach
+script.google.com); the deployed script's `gatherData_()` selects an explicit column list from
+`analytics.strategy_scorecard` and reads `state.current_regime` / `state.account_latest` /
+`analytics.weekly_activity` / `analytics.weekly_fills` / `analytics.weekly_nogos` /
+`state.open_positions_summary` / `state.next_7_days` / the automation-health views directly. **None
+of that was dropped or renamed** — this redesign is strictly additive on the BigQuery side (one
+new column, three new views); the now-unread-by-email views stay live for the old deployed script,
+RUNBOOK verification, dashboard/history use, and a possible future re-use. Cleaning them up is an
+explicit non-goal, deferred to a later, separate decision.
+
+**Scope fix:** `ops/weekly_report/appsscript.json`'s BigQuery OAuth scope was
+`bigquery.readonly`, which cannot run the heartbeat `INSERT` the script has always performed after
+a successful send — the deployed project evidently holds a broader grant than the checked-in
+manifest (or the heartbeat write has been silently no-op'ing, try/catch-wrapped). Corrected to the
+full `bigquery` scope. **Known-and-accepted residual, not fixed:** the checked-in Gmail scopes
+(`gmail.send` + `gmail.labels`) are also probably insufficient for the label step's
+`GmailApp.search`/`addLabel` on a genuinely fresh deploy — that failure is cosmetic-only (the
+`Trading/Weekly` label just wouldn't get applied), already try/catch-wrapped, and not worth
+broadening to the much broader `mail.google.com` scope for a labeling nicety.
+
+**Deploy order:** BigQuery views applied live first (this section) → code merged to
+`claude/weekly-report-redesign-875a6w` → **owner action required:** re-paste
+`ops/weekly_report/weekly_report.gs`, update the manifest scope, run `testReport()` (re-approve the
+consent screen — the scope changed), confirm the email shows the line-chart PNG (not the bar
+fallback). The old deployed script keeps sending its old-format email, uninterrupted, during the
+window between merge and re-paste.
+
+**Verified functionally** (not just syntactically) via a Node `vm`-sandboxed harness that stubs
+`GmailApp`/`BigQuery`/`Utilities`/`ScriptApp`/`Charts`/`Logger` and feeds `weekly_report.gs` the
+real live-captured BigQuery response shapes: the primary scenario (live B/D data) and four edge
+cases — all-green, all-parked (no strategy ever deployed), a firing kill-flag, and a genuine
+Charts-service failure exercising the HTML bar fallback — all ran end-to-end without throwing, with
+subject/hero/chart-data/table/plain-text all internally consistent. `sample_preview.html` was
+regenerated from the harness's actual `buildHtml_()` output against the live-verified numbers above
+(with the chart's `cid:` image swapped for a static placeholder div, since a preview file can't ship
+a live PNG), then screenshotted — no horizontal overflow at 600px, no label collisions.
