@@ -9,15 +9,18 @@
 -- (parking_events, NULL strategy; reconciled via state.sgov_position / §13), NOT a per-strategy deployed
 -- position. Filter both legs so a stray SGOV fill in trade_fills cannot fabricate a phantom open lot
 -- (position_reconciliation B4 false-drift) or contaminate strategy_daily_returns. Mirrors 03_twr_engine.sql.
+-- entry_date/exit_date use DATE(fill_ts, 'America/New_York') — see bigquery/03_twr_engine.sql for
+-- why the bare (UTC-default) form mis-dates an after-hours/overnight fill against the exchange
+-- trading-date mark join.
 WITH entries AS (
-  SELECT strategy, ticker, contract_id, DATE(fill_ts) AS entry_date,
+  SELECT strategy, ticker, contract_id, DATE(fill_ts, 'America/New_York') AS entry_date,
          price AS entry_price, shares, commission AS entry_commission,
          -- sequence the BUYs within a (strategy,ticker) so the Nth buy pairs to the Nth sell
          ROW_NUMBER() OVER (PARTITION BY strategy, ticker ORDER BY fill_ts, trade_id) AS leg_seq
   FROM {{ ref('trade_fills_curated') }} WHERE side='BUY' AND ticker != 'SGOV'
 ),
 exits AS (
-  SELECT strategy, ticker, DATE(fill_ts) AS exit_date, price AS exit_price,
+  SELECT strategy, ticker, DATE(fill_ts, 'America/New_York') AS exit_date, price AS exit_price,
          realized_pnl, commission AS exit_commission,
          ROW_NUMBER() OVER (PARTITION BY strategy, ticker ORDER BY fill_ts, trade_id) AS leg_seq
   FROM {{ ref('trade_fills_curated') }} WHERE side='SELL' AND ticker != 'SGOV'

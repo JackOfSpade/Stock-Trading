@@ -26,6 +26,12 @@ import os
 import subprocess
 import sys
 import urllib.request
+from datetime import datetime, timezone
+
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:  # pragma: no cover — stdlib since 3.9; CI/runners pin >=3.9
+    ZoneInfo = None
 
 PROJECT = os.environ.get("BQ_PROJECT", "stock-trading-498512")
 MODE = os.environ.get("RELAY_MODE", "alerts")
@@ -46,6 +52,33 @@ def bq(sql):
     return json.loads(s[i:]) if i != -1 else []
 
 
+def get_user_tz():
+    """Detected DISPLAY timezone (state.user_tz — bigquery/20_user_prefs.sql). Cosmetic only — never
+    fails the relay: any error (including a monkeypatched `bq` returning an unrelated row shape in
+    tests) falls back to America/Denver silently."""
+    try:
+        rows = bq(f"SELECT tz FROM `{PROJECT}.state.user_tz`")
+        return rows[0]["tz"]
+    except Exception:
+        return "America/Denver"
+
+
+def fmt_ts(v, tz_name):
+    """Render a BigQuery `CAST(alert_ts AS STRING)` value ("YYYY-MM-DD HH:MM:SS UTC") in tz_name,
+    labeled — previously always rendered as a bare "... UTC" string regardless of where the operator
+    actually is."""
+    if not v or ZoneInfo is None:
+        return f"{v} UTC"
+    try:
+        s = str(v).strip()
+        if s.endswith(" UTC"):
+            s = s[:-4]
+        dt = datetime.fromisoformat(s.replace(" ", "T", 1)).replace(tzinfo=timezone.utc)
+        return dt.astimezone(ZoneInfo(tz_name)).strftime("%Y-%m-%d %H:%M") + f" ({tz_name})"
+    except ValueError:
+        return f"{v} UTC"
+
+
 def post(text):
     """POST {text: ...} — the shape Slack/Discord/mattermost incoming webhooks accept; generic enough
     for ntfy / a Pub/Sub-push proxy too. Never raises into CI noise on a transient webhook error."""
@@ -57,6 +90,7 @@ def post(text):
 
 
 def relay_alerts():
+    tz = get_user_tz()
     rows = bq(f"""
         SELECT CAST(alert_ts AS STRING) AS alert_ts, severity, source, category, message
         FROM `{PROJECT}.ops.alerts`
@@ -70,12 +104,15 @@ def relay_alerts():
     crit = sum(1 for r in rows if r["severity"] == "critical")
     lines = [f"⚠ Stock-Trading — {len(rows)} new alert(s){f' ({crit} critical)' if crit else ''}:"]
     for r in rows:
-        lines.append(f"[{r['severity'].upper()}] {r['source']}/{r['category']}: {r['message']} ({r['alert_ts']} UTC)")
+        lines.append(f"[{r['severity'].upper()}] {r['source']}/{r['category']}: {r['message']} ({fmt_ts(r['alert_ts'], tz)})")
     post("\n".join(lines))
     print(f"alerts: posted {len(rows)}")
 
 
 def relay_orders():
+    # entry_window_close is a DATE (state.open_orders — bigquery/01_schema.sql queue_events.due_date),
+    # not a TIMESTAMP, so it has no time-of-day/timezone component to render — "2026-06-30" is
+    # unambiguous regardless of where the operator is. No tz conversion needed here.
     rows = bq(f"""
         SELECT item_key, strategy, ticker, side, CAST(qty AS STRING) AS qty,
                CAST(limit_price AS STRING) AS limit_price, CAST(entry_window_close AS STRING) AS window_close

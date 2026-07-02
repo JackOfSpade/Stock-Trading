@@ -49,8 +49,14 @@ CREATE OR REPLACE VIEW `stock-trading-498512.analytics.position_lifecycle` AS
 -- lifecycle lot: it would (a) fabricate a phantom open position that current_positions never carries →
 -- state.position_reconciliation (B4) false-drifts, and (b) contaminate analytics.strategy_daily_returns by
 -- counting the cash-park as a deployed position AND the benchmark. Filtering both legs keeps SGOV out.
+-- entry_date/exit_date use DATE(fill_ts, 'America/New_York') — NOT the bare (UTC-default) form —
+-- because this is the EXCHANGE TRADING DATE the mark-join (m.mark_date, an IBKR daily-bar date) and
+-- every downstream DATE_DIFF/window keys on. A bare DATE() is only correct for a regular-session fill
+-- (09:30-16:00 ET, always same UTC/ET calendar date); an after-hours or overnight fill would roll to
+-- the next UTC day and mis-date the entry, shifting the TWR entry-day baseline and mis-naming
+-- position_key (2026-07 report-system fix; latent today — no held fill has crossed this boundary).
 WITH entries AS (
-  SELECT strategy, ticker, contract_id, DATE(fill_ts) AS entry_date,
+  SELECT strategy, ticker, contract_id, DATE(fill_ts, 'America/New_York') AS entry_date,
          price AS entry_price, shares, commission AS entry_commission,
          -- sequence the BUYs within a (strategy,ticker) so the Nth buy pairs to
          -- the Nth sell (handles re-trades + a ticker held by 2 strategies)
@@ -58,7 +64,7 @@ WITH entries AS (
   FROM `stock-trading-498512.state.trade_fills_curated` WHERE side='BUY' AND ticker != 'SGOV'
 ),
 exits AS (
-  SELECT strategy, ticker, DATE(fill_ts) AS exit_date, price AS exit_price,
+  SELECT strategy, ticker, DATE(fill_ts, 'America/New_York') AS exit_date, price AS exit_price,
          realized_pnl, commission AS exit_commission,
          ROW_NUMBER() OVER (PARTITION BY strategy, ticker ORDER BY fill_ts, trade_id) AS leg_seq
   FROM `stock-trading-498512.state.trade_fills_curated` WHERE side='SELL' AND ticker != 'SGOV'

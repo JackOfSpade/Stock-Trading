@@ -1,8 +1,8 @@
-2026-W27
+2026-W26
 
-# Weekly Catalyst Calendar — ISO Week 2026-W27 (W1 routine; generated 2026-06-28 Sun ~evening MT)
+# Weekly Catalyst Calendar — ISO Week 2026-W26 (W1 routine; generated 2026-06-28 Sun ~evening MT)
 
-Generated 2026-06-28 (Sun; markets closed; next trading day Mon 2026-06-29 per `state.trading_day_today`: today=2026-06-28, is_trading_day=false, last_trading_day=2026-06-26 [Fri], next_trading_day=2026-06-29). Windows apply forward from the generation date. (ISO-week marker note: today 2026-06-28 is itself system-ISO-week 2026-W26, but this file series labels a Sunday-generated file by its upcoming trading-Monday's week per the established convention — Mon 2026-06-29 is ISO-week W27 — so the marker is **2026-W27**. This matches the W4 freshness gate, which computes the current ISO week from the trading-Monday.)
+Generated 2026-06-28 (Sun; markets closed; next trading day Mon 2026-06-29 per `state.trading_day_today`: today=2026-06-28, is_trading_day=false, last_trading_day=2026-06-26 [Fri], next_trading_day=2026-06-29). Windows apply forward from the generation date. Covers the week of Monday 2026-06-29 (ISO-week W27) forward. (Marker correction, 2026-07: the marker is the ISO week of TODAY's run date, 2026-W26 — matching `Weekly_Post_Event_Screen.md` / `Weekly_Position_Deep_Dive.md` this same cycle and the plain-current-period check the W4 freshness gate actually runs. An earlier version of this file used an "upcoming trading-Monday" convention not shared by its sibling files, which would have false-halted W4's freshness gate.)
 
 Portfolio context (per `state.current_positions` + `state.current_regime` + Daily.md 2026-06-27): Strategy A NAV ≈ $1,890 (no positions; **router DO-NOT-ACTIVATE — M1b 2026-06-01, reconfirmed; SPY Trend NEUTRAL→deteriorating**; next M1 ~2026-07-01); Strategy B NAV ≈ $1,890 (open: **HCA [EXIT-PENDING], ZBRA, AZO, MDT**; HCA 60-day time-exit staged SELL 0.0642 LIMIT $385 DAY, instruction 100, order day Mon 6/29); Strategy C NAV ≈ $1,890 (no positions; **HYBRID ACTIVATE — FOMC ONLY**; FOMC-June C re-screen resolved NO-GO 6/15); Strategy D NAV ≈ $1,888 (open: RTX, DIS); Strategy E NAV ≈ $1,890 (no positions; ACTIVATE but execution-feasibility-deferred at current book size per M3). 2% sizing cap ≈ $37.8 per strategy.
 
@@ -41,9 +41,7 @@ Strategy A queue from Watchlist.md (**31 names** through 2026-06-27, unchanged f
 
 - **FOMC remaining 2026 (Confirmed, Chicago Fed / federalreserve.gov):** **July 28-29 (no SEP)**, Sep 15-16 (SEP/dots), Oct 27-28, Dec 8-9 (SEP/dots).
 
-==============================
-PART 1A — STRATEGY A UNIVERSE (6-month window: 2026-06-28 → 2026-12-28)
-==============================
+## PART 1A — STRATEGY A UNIVERSE (6-month window: 2026-06-28 → 2026-12-28)
 
 US-listed equities, market cap ≥ $2B, 30-day ADV ≥ $10M, with a scheduled catalyst in the next 6 months. Catalyst types: earnings releases, product launches, restructuring/spin-offs, analyst/investor days, regulatory decisions (incl. FDA PDUFA), structural narrative markers. Sorted by date ascending. "Confirmed" = company IR / FDA / Fed published; "Estimated" = aggregator projection from prior-year cadence; "Tentative" = guidance range / window only. No interpretation in PART 1.
 
@@ -144,9 +142,7 @@ US-listed equities, market cap ≥ $2B, 30-day ADV ≥ $10M, with a scheduled ca
 | 93 | FOMC-Dec | FOMC December Meeting (SEP / dot plot) | Fed Rate Decision | 2026-12-08 / 12-09 | Confirmed | federalreserve.gov |
 | 94 | GILD | Gilead Sciences | PDUFA — anito-cel (anitocabtagene, R/R MM) | ~2026-12-23 | Estimated | aggregator FDA calendar |
 
-==============================
-PART 1B — STRATEGY C UNIVERSE (45-day window: 2026-06-28 → 2026-08-12)
-==============================
+## PART 1B — STRATEGY C UNIVERSE (45-day window: 2026-06-28 → 2026-08-12)
 
 Comprehensive C-eligible event inventory: corporate earnings (US-listed, confirmed by company IR), FDA PDUFA dates, and FOMC meetings ONLY. No analyst/investor days (e.g. REZI/ADI Investor Days 7/13-14 are excluded), product launches, spin-offs (HONA 6/29, SPGI/MBGL 7/1 excluded), M&A, macro data, or other types per Strategy.md C eligibility. Sorted by date ascending. No interpretation in PART 1.
 
@@ -205,9 +201,7 @@ Comprehensive C-eligible event inventory: corporate earnings (US-listed, confirm
 
 (Verified just OUTSIDE the C back-edge — A-eligible only, NOT C: LNTH MK-6240 ~8/13, AMAT ~8/13, CSCO ~8/13, MRK Keytruda Qlex SC ~8/17, BMY iberdomide ~8/17. Verified-EXCLUDED from both: Orca-T 7/6 issuer is PRIVATE; HONA 6/29 / SPGI-MBGL 7/1 spins and REZI/ADI 7/13-14 investor days are not C-eligible event types.)
 
-==============================
-PART 2 — STRATEGY A PRELIMINARY SHORTLIST (target 30–50 candidates)
-==============================
+## PART 2 — STRATEGY A PRELIMINARY SHORTLIST (target 30–50 candidates)
 
 Cast deliberately broad. Per candidate: (a) direction of hypothesized mispricing, (b) supporting public documents, (c) catalyst date, (d) overlap with open positions / watchlist, (e) priority tier. **Strategy A router = DO-NOT-ACTIVATE** (M1b 2026-06-01, reconfirmed; SPY Trend NEUTRAL→deteriorating fails A's "Trend UP + breadth HEALTHY" gate, and this week's break below all SMAs hardens that). The entire shortlist is analytic at generation; the next M1 is ~2026-07-01, so **W4 this cycle routes nothing to thesis-construction — all 31 A-queue names are already in Watchlist.md (resolution at next M1 ACTIVATE). W4 must NOT double-queue.** Names already in the A queue are flagged "QUEUED."
 
@@ -272,9 +266,7 @@ Cast deliberately broad. Per candidate: (a) direction of hypothesized mispricing
 49. **NKE — Nike** — Event-driven (carry-watch): **FQ4 ~2026-06-30 AMC** — turnaround-execution read (Hill-era reset, inventory normalization). Consumer-discretionary; not previously queued. **rest**.
 50. **PDUFA-binary cohort (VRDN/IONS 6/30, VERA 7/7, AZN-Enhertu 7/7, SWTX ~7/10, CELC 7/17, SNY 7/23, OTSKY 7/24, BIIB-Leqembi-SC ~7/25, MNKD 7/26, NVO ~7/29, VTRS 7/30, MRNA ~8/5; large-cap forward MRK-Qlex/BMY-iberdomide ~8/17, JAZZ ~8/25, GILD ~8/27, ALNY ~9/15, BMY-Camzyos ~9/30, REGN ~10/1, CYTK ~10/30, VRTX ~11/30, GILD-anito-cel ~12/23)** — Bullish but BINARY: an A long carries un-hedged binary regulatory downside → better-suited to C defined-risk (router-blocked for the in-window names). An A-overlay requires a durable post-approval-commercialization narrative, not the binary itself — flag at thesis-construction. The large-cap forward PDUFAs are the most-liquid of the set. **rest**.
 
-==============================
-PART 2 — STRATEGY C PRELIMINARY SHORTLIST (target 10–15 candidates)
-==============================
+## PART 2 — STRATEGY C PRELIMINARY SHORTLIST (target 10–15 candidates)
 
 Notation: (a) implied-vs-fundamentals direction, (b) supporting public docs, (c) event date/type from PART 1B, (d) sizing fit at ~$37.8 cap (2% of C NAV ≈ $1,890), (e) overlap with A (none open), (f) router state. Per `state.current_regime`, only **FOMC July 2026-07-28/29** is router-eligible (C = HYBRID ACTIVATE — FOMC ONLY); earnings, PDUFA, and vol-directional theses are DO-NOT-ACTIVATE → all non-FOMC names below are **analytic shortlist only**, and W4 should NOT schedule thesis-construction for them. The FOMC-June C thesis already RESOLVED (re-screen NO-GO 6/15 — no documentable divergence); **FOMC July is the new sole router-live event.** **⚠ ROUTER-DOWN-RISK: C's router gate is SPY Trend ≠ DOWN. This week's break below all SMAs puts the mechanical SPY Trend at risk of flipping to DOWN at the ~7/1 M1 — if it does, C DEACTIVATES entirely (the FOMC-July thesis dies too). W4 must re-check `state.current_regime` at run time before enqueuing the FOMC re-screen.**
 
@@ -299,9 +291,7 @@ Notation: (a) implied-vs-fundamentals direction, (b) supporting public docs, (c)
 14. **MRNA mRNA-1010 PDUFA (~8/5) / VTRS estrogen-patch (7/30) / ARQT-LNTH (6/29) PDUFAs** — Mixed large/mid/small-cap binaries; long-premium feasibility varies with IV/liquidity (MRNA AdCom 9-0 favorable 6/18 lowers binary risk). Router-blocked.
 15. **TSLA Q2 (~7/22 AMC)** — Vol skew: perennially large post-print implied move; deliveries/margin + Robotaxi-deferral read in a multiple-pressuring rate path. Router-blocked.
 
-==============================
-NOTES / CAVEATS
-==============================
+## NOTES / CAVEATS
 
 - **Only FOMC July 28-29 is router-eligible** (C = HYBRID ACTIVATE — FOMC only). All earnings and PDUFA C entries are **router-blocked at current state — analytic shortlist only**, surfaced per task spec; the dispersion-compression M2 follow-up may extend router scope at the next M-cycle re-derivation (~7/1). **The FOMC-June C thesis RESOLVED (re-screen NO-GO 6/15 — no documentable divergence); FOMC July is the new sole router-live event. W4 should enqueue a single `PENDING_ANALYSIS` pre-catalyst C re-screen for FOMC July (due ~7/18-21, conservative_default DO-NOT-STAGE), drained by D2 in-session — AFTER re-checking the SPY-Trend-DOWN router risk below.**
 - **⚠ C ROUTER-DOWN-RISK (new this cycle):** C's router gate is SPY Trend ≠ DOWN. The S&P closed Fri 6/26 BELOW its 50/100/200-day SMAs after a −4.6% Nasdaq week; the mechanical SPY Trend (canonical 2026-06-03 = NEUTRAL) is at risk of flipping to DOWN at the ~7/1 M1. **If SPY Trend = DOWN at M1, C's HYBRID-FOMC routing DEACTIVATES entirely** and the FOMC-July thesis is dead-on-arrival. W4 (and the D2 drain of the FOMC re-screen at ~7/18-21) MUST re-read `state.current_regime` before staging anything C.

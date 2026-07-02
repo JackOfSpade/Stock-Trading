@@ -1,6 +1,6 @@
-# Quarterly_Regime.md
-
 2026-Q2
+
+# Quarterly Regime Retrospective
 
 > **Scope.** Retrospective for the prior calendar quarter, **Q2 2026 (April 1 – June 30, 2026)**. This is the first quarter for which **Part 2** (router activation trace and consistency comparison) is produced: the AI-directed multi-strategy experiment began **2026-04-22**, so the router history covers ~10 weeks (Apr 22 – Jun 30). Part 1 covers the full calendar quarter regardless of the experiment start.
 >

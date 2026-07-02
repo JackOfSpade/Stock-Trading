@@ -16,6 +16,11 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:  # pragma: no cover — stdlib since 3.9; CI/runners pin >=3.9
+    ZoneInfo = None
+
 PROJECT = os.environ.get("PROJECT", "stock-trading-498512")
 OUT = os.path.join(os.path.dirname(__file__), "index.html")
 
@@ -28,6 +33,35 @@ def q(sql: str):
         capture_output=True, text=True, check=True,
     ).stdout
     return json.loads(out) if out.strip() else []
+
+
+def get_user_tz():
+    """Detected DISPLAY timezone (state.user_tz — bigquery/20_user_prefs.sql). Purely cosmetic:
+    changes how timestamps are RENDERED to the operator, never any query logic. Falls back to
+    America/Denver (never bare UTC) so a missing view or a fresh deploy still reads sensibly."""
+    try:
+        rows = q(f"SELECT tz FROM `{PROJECT}.state.user_tz`")
+        return rows[0]["tz"] if rows else "America/Denver"
+    except Exception:
+        return "America/Denver"
+
+
+def fmt_ts(v, tz_name):
+    """Render a BigQuery TIMESTAMP string (UTC) in tz_name, labeled — never a bare unlabeled UTC
+    string (the prior dashboard behavior: alert_ts/log_ts rendered raw, unlike the alert emailer
+    which at least appended ' UTC')."""
+    if not v or ZoneInfo is None:
+        return v
+    try:
+        s = str(v).strip()
+        if s.endswith("Z"):
+            s = s[:-1] + "+00:00"
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(ZoneInfo(tz_name)).strftime("%Y-%m-%d %H:%M") + f" ({tz_name})"
+    except (ValueError, KeyError):
+        return f"{v} (UTC)"
 
 
 def table(rows, cols=None):
@@ -61,7 +95,15 @@ def main():
     h = health[0] if health else {}
     green = str(h.get("all_green", "")).lower() == "true"
     banner = ("#0a7d28", "ALL GREEN") if green else ("#b00020", "ATTENTION")
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+    user_tz = get_user_tz()
+    now = fmt_ts(datetime.now(timezone.utc).isoformat(), user_tz)
+    for r in alerts:
+        if "alert_ts" in r:
+            r["alert_ts"] = fmt_ts(r["alert_ts"], user_tz)
+    for r in runs:
+        if "log_ts" in r:
+            r["log_ts"] = fmt_ts(r["log_ts"], user_tz)
 
     page = f"""<!doctype html><html><head><meta charset="utf-8">
 <title>Stock-Trading — health</title>

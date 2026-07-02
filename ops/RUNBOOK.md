@@ -1357,3 +1357,90 @@ Post-fix: `state.instruction_drift` = **0** drifted / **0** unknown (23 rows); M
 alert fired. **General rule (reaffirms §22/§28):** classify first (id-separator → normalized join, §28; ad-hoc note
 → trigger-shape guard, §22; real wrong trigger → operator fixes the web-UI trigger + optionally correct the one-off
 `run_log` row, as here). Never weaken the text-drift detector to silence a genuinely wrong trigger.
+
+## 31. Report-system redesign — weekly email fixes, display-timezone plane, mixed-tz SQL bugs, markdown conventions *(reporting, verified deltas)*
+
+**2026-07-02.** A dedicated analysis pass (12 adversarially-verified findings in the weekly self-email, a 6-area
+154-item timezone sweep, a review of the routine markdown-report corpus) drove a report-system-wide fix batch.
+APPLIED + VERIFIED LIVE via the BigQuery MCP; `.gs` files are repo-only until the operator re-pastes them
+(script.google.com — see the Chrome checklist below).
+
+**A. Weekly self-email (`ops/weekly_report/weekly_report.gs` + `14_weekly_report.sql`).** Fixed: NULL MTD/YTD TWR
+rendering as green "+0.00%" instead of `—`; the NAV weekly-delta arrow/sign/format (was always ▲ even on a down
+week, and derived from TWR which strips cash flows — now an exact dollar delta from `state.account_nav_7d_ago`,
+a new 7-days-back snapshot lookup); a `bq_()` silent-failure path that could send an email with empty data instead
+of failing; the header ALL-GREEN badge recomputed from the same component signals the ops strip renders (was
+`state.system_health.all_green`, which excludes firing kill-flags / non-critical alerts and could contradict the
+strip); the subject-line performance tag (was the single best-deployed-sleeve TWR — survivorship-biased — now the
+account week TWR); NAV staleness (a days-old snapshot rendered identically to a fresh one — now flags `STALE` +
+shows the as-of date); the fill-row glyph (was a hardcoded ▲ for both BUY and SELL); regime-rationale truncation
+(now appends `…`); the computed-but-never-rendered `go_7d` count (now shown as "GO · NO-GO"); the plain-text part
+(had drifted from the HTML — omitted MTD/YTD/excess/gate/regime/fills and could emit literal `undefined` — rebuilt
+to mirror every HTML section from the same data object); the ACTIVE-vs-ACTIVE-idle badge ambiguity (two colors,
+identical label, and the amber branch's `activation_note` check was dead code — the SELECT never fetched that
+column — removed, amber state relabeled `ACTIVE · idle`). Content additions: `state.open_positions_summary` (the
+current book — the single biggest prior gap) and `state.next_7_days` (queue/time-exit/order-window items due
+soon) are new sections; the scorecard gained a `Δ Wk` column (`analytics.strategy_unit_value_7d_ago`); the ops
+strip gained backups/automation/cadence rollup items (previously reached the operator only via the independent
+DTS failure-email); the inline fills/NO-GO queries moved into named views (`analytics.weekly_fills` /
+`analytics.weekly_nogos`) matching the rest of the file's convention. `alert_emailer.gs`: `LOOKBACK_HOURS` 48→168 —
+an emailer dead >48h would otherwise never send an early-outage alert to ANY channel on recovery (`notified_ts`
+stays NULL past the scan window; the relay/canary don't backfill).
+
+**B. Display-timezone plane (`bigquery/20_user_prefs.sql`, new).** Operator asked for timezone auto-detection
+instead of a hardcoded MT/UTC pin. Two-plane design: the OPERATING plane (trading-day/cadence/dead-man's-switch
+timing — §everything else in this doc) stays pinned to America/Denver, unconditionally, forever — re-anchoring it
+to wherever the operator is would reintroduce the 2026-05-27 UTC/Denver confirm-event deletion bug. The DISPLAY
+plane (how a timestamp is RENDERED in an email/alert/dashboard) now follows a detected timezone: `ops.user_prefs`
+(append-only) + `state.user_tz` (latest `display_tz`, self-bootstrapping fallback `America/Denver`). **D3** (Calendar
+Hygiene, which already calls the Calendar connector daily) is the writer — it reads the primary calendar's
+`timeZone` field (Google keeps this current with the phone's location when "update primary time zone" is enabled)
+and inserts a row only on change (`Claude_Task_Plan.md` §D3). Consumers updated to read `state.user_tz` and label
+their output: `alert_emailer.gs` (was raw unlabeled-as-such UTC — now `MMM d, h:mm a (tz)`), `generate_dashboard.py`
+(alert_ts/log_ts/generated-at, via `zoneinfo`), `scripts/alert_relay.py` (alert timestamps; `entry_window_close` is
+a DATE with no time-of-day component, so it was left alone — documented, not silently skipped). No trading-day
+logic reads `state.user_tz` anywhere.
+
+**C. Mixed-timezone SQL bugs — 11 verified findings, all latent (0/21 historical fills affected; the fix is a
+no-op today, structural for tomorrow).** Root-cause fix: `analytics.position_lifecycle`'s `entry_date`/`exit_date`
+(`bigquery/03_twr_engine.sql` + `dbt/models/analytics/position_lifecycle.sql`) now use
+`DATE(fill_ts, 'America/New_York')` — the exchange trading date the mark-join keys on — instead of the bare
+(UTC-default) form, which would mis-date an after-hours/overnight fill to the next day and shift the TWR
+entry-day baseline. Six downstream consumers (`thesis_outcomes`, `strategy_nav`'s dividend-accrual join, and their
+dbt mirrors, plus `strategy_daily_returns`) inherit the fix automatically — they consume `position_lifecycle`'s
+columns rather than calling `DATE(fill_ts)` themselves. Two independent Denver-operating-day sites fixed directly:
+`analytics.weekly_activity` / `analytics.weekly_fills` (`fills_7d` was comparing a UTC-derived fill date against a
+Denver-anchored 7-day window) and `state.go_without_order` (`bigquery/18_stack_review_fixes.sql` — a bare-UTC
+comparison against `decision_log.entry_date` could produce a false negative, suppressing a genuine
+go-without-order candidate). New dbt model `strategy_unit_value_7d_ago.sql` added (parity pair for the
+`analytics.strategy_scorecard` Δ Wk column above); `strategy_scorecard.sql`'s dbt mirror updated to match.
+
+**D. Markdown-report conventions (`Claude_Task_Plan.md`, `Daily.md`, `Weekly_Catalyst_Calendar.md`,
+`Quarterly_Regime.md`).** `Weekly_Catalyst_Calendar.md` had stamped `2026-W27` (an improvised "upcoming
+trading-Monday" convention) while `Weekly_Post_Event_Screen.md`/`Weekly_Position_Deep_Dive.md` correctly stamped
+`2026-W26` (the run day's ISO week) the SAME cycle — since the W4 upstream-freshness gate computes "current
+period" as the plain ISO week of today, the mismatched marker would have false-halted W4. Corrected the live file
+and added an explicit guard to the W1 prompt body against recurrence; also converted its ASCII `====` banners to
+`##` headings, matching its sibling files. `Quarterly_Regime.md` had a title on line 1 and its `2026-Q2` marker on
+line 3 (violates "first line is the marker" — every other cadence file gets this right); corrected, and the Q1
+prompt body now says so explicitly. Added a per-routine table to "File-write conventions" disambiguating monthly/
+quarterly marker semantics (retrospective vs forward-looking) instead of a single prose rule. Added a required
+≤5-line TL;DR to Daily.md (applied to the live file) and a machine-readable fenced `d1_actions` YAML block
+mirroring the prose RECOMMENDED ACTIONS bullets — D2 now cross-checks the prose bullet count against the block's
+entry count and halts (`missing_dependency`) on a mismatch, closing a prose-only-parse blind spot where a missed
+or double-counted bullet could become a missed exit or a fabricated order.
+
+**Verification.** All 14 weekly-email findings independently confirmed by 2 adversarial reviewers each (12/14
+confirmed 2-0, 2 confirmed-with-refinement, 0 refuted) before implementation. Post-apply: `SELECT` smoke tests on
+every new/changed view returned sane data (`state.user_tz` → `America/Denver` fallback as expected pre-D3;
+`state.account_nav_7d_ago` → correct 7-days-back snapshot; `state.open_positions_summary` → 5 rows matching the
+live book; `analytics.strategy_scorecard.twr_7d` → B +4.5%/D +0.7% over 7d, A/C/E null as expected). `pytest
+tests/` (52 tests), `scripts/check_cadence_consistency.py`, and a live `analytics.position_lifecycle` row-count
+check (14, unchanged pre/post) all pass.
+
+**Owner action required (Claude-in-Chrome or manual, script.google.com — NOT a BigQuery/console step):** re-paste
+the updated `ops/weekly_report/weekly_report.gs` and `ops/monitoring/alert_emailer.gs` into their Apps Script
+projects (Claude cannot reach script.google.com) — the repo and BigQuery sides are live now, but the deployed
+scripts will keep running the pre-fix code until re-pasted. Also confirm both projects' timezone (Project
+Settings) is still `America/Denver` (governs trigger hour only — unrelated to the new `state.user_tz` display
+plane, which the scripts read from BigQuery at send/poll time).

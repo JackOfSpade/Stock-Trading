@@ -9,6 +9,12 @@ Scan window: 2026-06-30 16:04 MDT → 2026-07-01 16:09 MDT (~24h). Prior-run han
 
 **Tape summary.** Tech's two-day relief rally reversed on Q3's first session. The Nasdaq (−0.5% to −0.7%) and S&P 500 (−0.2% to −0.3%) slipped while the **Dow held roughly flat** (≈ −0.03% to +0.06%) on a rotation into financials, consumer names, and select mega-cap software (Nike +5.1%, Salesforce +4.6%, Microsoft +3.0%). The epicenter of the decline was the **AI-hardware / GPU-neocloud complex**: **Meta (+8.9%) signaling expanded in-house cloud/AI-infrastructure ambitions** was framed as a fresh competitive threat to GPU-cloud providers, gutting **CoreWeave (−14.2%) and Nebius (−15.9%)**, alongside a broad memory/semi-equipment rotation (Micron ~−10%, Teradyne ~−12%, Corning ~−13%, ASML ~−7%, Intel ~−9%, Marvell ~−9%). Cooling U.S. data (ADP +98k miss; ISM Manufacturing 53.3 miss with ISM prices sharply lower to 73.0) and Fed Chair Warsh's "inflation risks have eased" remark at Sintra gave a dovish/disinflationary tilt that lowered market-implied rate-hike odds. Levels: **S&P 500 ~7,475; Nasdaq Comp ~26,080; Dow ~52,305–52,350; Russell 2000 ~3,013 (−0.4%); VIX ~16.2 (−1.3%); WTI ~$68.1 (−2.0%); gold ~$4,070 (+0.8%); BTC ~$60,150 (+2.5%)** (index figures vary slightly by data feed/timing).
 
+**TL;DR**
+- Exits triggered: **2** — AZO, ZBRA (mechanical convergence, Strategy B)
+- New candidates: **1** — NKE (Strategy B thesis, doable at D2's next run)
+- Watchlist changes: none (A-queue note only, no adds/removes/demotes)
+- Regime review: no review (dovish 7/1 tilt is a watch item for the next M1, not an inter-monthly flip)
+
 ---
 
 ## DEVELOPMENTS
@@ -102,3 +108,22 @@ Ran (Wed = calibration battery; `paper_search` "LLM confidence calibration uncer
 - A-queue notes: NBIS −15.9%, MU ~−10%, INTC ~−9%, MRVL ~−9% pulled back in the 7/1 semis/neocloud selloff → marginally eases the valuation-reset caveat on these A-queue names (A router DO-NOT-ACTIVATE; no entry). No adds/removes/demotions.
 
 **Router reviews recommended:** None. (Dovish/disinflationary 7/1 data + Warsh is a watch item for next M1, not an inter-monthly review — VIX NORMAL, SPY NEUTRAL, one data day ahead of Thu payrolls.)
+
+```yaml d1_actions
+- action: exit
+  ticker: AZO
+  strategy: B
+  detail: Convergence target $3,200 reached (live ~$3,219) — mechanical convergence exit per Strategy.md B exit rule; D2 to craft SELL (full ~0.0121 sh).
+- action: exit
+  ticker: ZBRA
+  strategy: B
+  detail: Convergence target $264 reached (live ~$267.85) — mechanical convergence exit; D2 to craft SELL (full ~0.1505 sh).
+- action: thesis
+  ticker: NKE
+  strategy: B
+  detail: 6/30 AMC earnings beat, Day-0 (7/1) CTC +5.07% >=5% on a qualifying event -> B thesis construction doable at D2's next run; beat magnitude suggests criterion-2 disproportion likely fails, direction unresolved -- D2 to adjudicate.
+- action: watchlist
+  ticker: n/a
+  strategy: A
+  detail: A-queue notes (NBIS -15.9%, MU ~-10%, INTC ~-9%, MRVL ~-9%) pulled back in the 7/1 selloff, marginally easing the valuation-reset caveat; A router DO-NOT-ACTIVATE, no adds/removes/demotes — context only, no action.
+```

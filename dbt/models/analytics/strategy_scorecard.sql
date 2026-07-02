@@ -15,6 +15,7 @@ SELECT
   n.realized_pnl, n.unrealized_pnl, n.dividends_held,
   k.deployed_unit_value, k.peak_unit_value, k.current_drawdown,
   k.excess_vs_sgov, k.deployed_days, k.closed_trades,
+  SAFE_DIVIDE(k.deployed_unit_value, u.deployed_unit_value_7d_ago) - 1 AS twr_7d,
   GREATEST(0, 30 - COALESCE(k.closed_trades, 0)) AS closed_to_gate,
   COALESCE(k.drawdown_kill, FALSE) OR COALESCE(k.runaway_review, FALSE)
     OR COALESCE(k.m2m_underperf_review, FALSE) AS any_kill_flag,
@@ -22,4 +23,5 @@ SELECT
 FROM {{ ref('strategy_nav') }} n
 LEFT JOIN act a ON a.strategy = n.strategy
 LEFT JOIN {{ ref('kill_flags') }} k ON k.strategy = n.strategy
+LEFT JOIN {{ ref('strategy_unit_value_7d_ago') }} u ON u.strategy = n.strategy
 ORDER BY n.strategy

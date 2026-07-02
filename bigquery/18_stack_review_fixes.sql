@@ -199,18 +199,23 @@ SELECT
   g.entry_id, g.entry_date, g.strategy, g.ticker, g.entry_type, g.title,
   CURRENT_TIMESTAMP() AS checked_at
 FROM go_decisions g
--- no staged order references this decision (by ref, else by ticker+strategy on/after the decision day)
+-- no staged order references this decision (by ref, else by ticker+strategy on/after the decision day).
+-- DATE(..., 'America/Denver') — NOT the bare (UTC-default) form — because g.entry_date is the
+-- Denver OPERATING day decision_log stamps; a bare UTC date is always >= the Denver date, so an
+-- order/fill actually staged the PRIOR Denver evening (>=~17:00 MT = already the next UTC day) could
+-- wrongly satisfy this match and suppress a genuine go-without-order candidate (false negative only;
+-- 2026-07 report-system fix).
 WHERE NOT EXISTS (
   SELECT 1 FROM `stock-trading-498512.events.queue_events` q
   WHERE q.queue = 'ORDER_STAGED'
     AND (JSON_VALUE(q.payload, '$.source_decision_ref') = g.entry_id
-         OR (q.ticker = g.ticker AND q.strategy = g.strategy AND DATE(q.event_ts) >= g.entry_date))
+         OR (q.ticker = g.ticker AND q.strategy = g.strategy AND DATE(q.event_ts, 'America/Denver') >= g.entry_date))
 )
 -- and no fill recorded for that strategy/ticker on/after the decision day
 AND NOT EXISTS (
   SELECT 1 FROM `stock-trading-498512.events.trade_fills` f
   WHERE f.ticker = g.ticker AND f.strategy = g.strategy
-    AND DATE(f.fill_ts) >= g.entry_date
+    AND DATE(f.fill_ts, 'America/Denver') >= g.entry_date
 );
 
 -- ============================================================================

@@ -332,12 +332,20 @@ Because each routine run is a fresh session, deep-research routines must persist
 
 ## File-write conventions for routine outputs
 
-Cadence-output files (Daily.md, Weekly_Catalyst_Calendar.md, etc.) are overwritten in full each run. The first line is always a date marker:
+Cadence-output files (Daily.md, Weekly_Catalyst_Calendar.md, etc.) are overwritten in full each run. The first line is ALWAYS the bare marker, literally first — before any `#` title or blockquote (a 2026-06/07 Q1 run put a title on line 1 and the marker on line 3; corrected — see Quarterly_Regime.md):
 
 - Daily files: `YYYY-MM-DD` (today's calendar date).
-- Weekly files: `YYYY-WW` (current ISO week).
-- Monthly files: `YYYY-MM` (the month identified by the prompt — typically prior calendar month for retrospective tasks, current month for forward-looking tasks).
-- Quarterly files: `YYYY-QN` (the quarter identified by the prompt — prior for Q1/Q3 retrospectives, current for Q2 forward).
+- Weekly files: `YYYY-WW` — the ISO week of TODAY's run date (`state.trading_day_today.today`), the SAME week every weekly file stamps this cycle. Never the upcoming trading-Monday's week or any other look-ahead convention (a 2026-06-28 W1 run once did this and mismatched its own W2/W3 siblings — corrected, see the W1 prompt body's explicit guard).
+- Monthly/Quarterly files: **per-routine, not a single rule** — the exact semantics differ by whether the routine is retrospective (looks backward) or forward-looking (stages what's ahead), so check the table below rather than assume:
+
+  | Routine | File | Marker = |
+  |---|---|---|
+  | M1b | Monthly_Fundamental.md | current month (forward-looking activation calls) |
+  | M2 | Monthly_E_Pairs.md | current month |
+  | M3 | Monthly_D_Position_Deep_Dive.md | current month |
+  | Q1 | Quarterly_Regime.md | **prior** quarter (retrospective) |
+  | Q2 | Quarterly_D_Candidates.md | current quarter (forward-looking) |
+  | Q3 | Quarterly_AI_Foundation_Delta.md | **prior** quarter (retrospective) |
 - Annual files: `YYYY` (calendar year).
 
 The kept living spec/factbase files (Watchlist.md, Operating_Protocols.md) are edited surgically. Routines apply minimal in-place edits via str_replace or the equivalent; they do not rewrite these files in full unless the prompt explicitly calls for a full rewrite. (The former live-state `.md` files — Decision_Log, Portfolio_Ledger, Regime_State — are retired: decisions/positions/regime are now appended to `events.*` and read via `state.*`, not edited in place.)
@@ -406,6 +414,8 @@ Record the boundary for the next run: in the Daily.md you write, emit `<!-- d1_s
 
 Cast broadly — do not scope the scan to tickers owned or on the watchlist. The purpose is to surface any development that could either threaten an existing position's thesis or create a new entry opportunity for any strategy, including at names not currently on any list. Do not pad; if a category has no material items, state so.
 
+TL;DR (readability — added 2026-07). Immediately after the header (scan-window line + tape summary), before DEVELOPMENTS, write a ≤5-line plain-bullet TL;DR: exits triggered (count + tickers, or "none"), new entry candidates (count + tickers, or "none"), watchlist changes (or "none"), and a one-line regime-review flag (or "no review"). This is a summary of the RECOMMENDED ACTIONS section computed below, placed at the top for a human skimming top-down (D2 still reads the full file bottom-up as today; this changes nothing D2 parses).
+
 DEVELOPMENTS
 
 1. Market-wide breaking events. Geopolitical shocks, unscheduled regulatory or enforcement actions, material bankruptcies, disasters, or events materially affecting global risk assets. Per event: what happened, source, observable reaction across equities / rates / commodities / FX.
@@ -462,7 +472,16 @@ The downstream D2 routine reads this section verbatim and converts each bullet i
 
 If nothing material: "No recommended actions."
 
-OUTPUT: write the complete content above directly to `Daily.md` (overwriting the prior day's file). First line is today's date in YYYY-MM-DD format; the line directly below it is the machine-readable `<!-- d1_scan_through_utc: <this run's execution time, ISO-8601 UTC> -->` marker (per SCAN WINDOW above — this is what the next run reads to resolve its window start), and the header carries the human-readable `Scan window: <start · America/Denver> → <now · America/Denver>` line. No chat output beyond a one-line acknowledgment that Daily.md was written.
+MACHINE-READABLE ACTION BLOCK (added 2026-07, robustness). Immediately after the prose RECOMMENDED ACTIONS section, append a fenced ```yaml d1_actions``` block with ONE list entry per bullet above (empty list `[]` if "No recommended actions"), same order, mirroring the same content structurally rather than restating it in prose:
+```yaml d1_actions
+- action: exit | thesis | watchlist | router_review
+  ticker: <ticker, or n/a for a watchlist-only / router_review item>
+  strategy: <A|B|C|D|E, or n/a>
+  detail: <one line — invalidation criterion / candidate rationale / add-remove-demote / review justification>
+```
+This gives D2 a structural cross-check independent of prose-parsing: D2 counts the prose bullets against this block's entry count and HALTS (per the observability "Failure alerts" convention — `missing_dependency` category, since converting an under- or over-counted action set risks a missed exit or a fabricated order) on a mismatch, instead of silently mis-converting a bullet a prose-only parse missed or double-counted. The block is a structural mirror, not a new source of truth — the prose above remains authoritative for WHY; this block only has to agree on WHAT and HOW MANY.
+
+OUTPUT: write the complete content above directly to `Daily.md` (overwriting the prior day's file). First line is today's date in YYYY-MM-DD format; the line directly below it is the machine-readable `<!-- d1_scan_through_utc: <this run's execution time, ISO-8601 UTC> -->` marker (per SCAN WINDOW above — this is what the next run reads to resolve its window start), and the header carries the human-readable `Scan window: <start · America/Denver> → <now · America/Denver>` line, followed by the TL;DR block. No chat output beyond a one-line acknowledgment that Daily.md was written.
 ```
 
 ---
@@ -500,6 +519,8 @@ PER-STRATEGY PERFORMANCE MAINTENANCE (deployed-TWR engine; run after fill reconc
 STEP 1 — DRAIN PENDING ANALYSES (run after Step 0). Read due items from `state.open_queue` / `state.open_queue_detail` (queue `PENDING_ANALYSIS`). For every entry with `status: pending` and `due_date <= today` (America/Denver), perform the analysis in-session — each as an isolated sub-task (subagent) for fresh context where available, else inline sequentially. This is where deferred thesis constructions, scheduled re-screens, research-deferral checkpoints, foundation-change assessments, and constraint-relaxation reviews actually run. For each entry: do the full analysis per its `context` (apply the relevant Strategy.md criteria, Operating_Protocols.md rules, B_Sub_Pattern_Taxonomy.md, connector live data §11); write the decision via `CALL ops.sp_log_decision(...)` (`events.decision_log`) and, if a position changes, the lifecycle event to `events.position_events`; for a GO, craft the order instruction and create the `[Claude] Confirm order` event (per the staging steps below); set the entry `complete` with its `outcome` (insert a terminal-status row to `events.queue_events`). If the required data is still unavailable on the due_date, apply the entry's `conservative_default` (skip / decline / exit) and mark complete — do NOT re-defer (deferrals do not chain).
 
 Then read the just-saved `Daily.md` (today's market development scan; first line = today's date in YYYY-MM-DD format).
+
+**Cross-check the machine-readable action block (added 2026-07, robustness).** Parse the fenced ```yaml d1_actions``` block Daily.md carries after its prose RECOMMENDED ACTIONS section. Count the prose bullets (by category: exits / new candidates / watchlist updates / router reviews) and compare to the block's entry count. On a mismatch (or a missing/unparseable block on a Daily.md that isn't the pre-2026-07 format): treat it as a corrupted upstream, same handling as the upstream-freshness gate — `CALL ops.sp_raise_alert('critical','D2','missing_dependency','D1 prose/d1_actions count mismatch — <N prose vs M block entries>','<JSON>')`, create a `[Claude] ATTENTION` event, log the run `'halted'`, and ABORT before converting anything. This catches a bullet a prose-only parse would have missed or double-counted BEFORE it becomes a missed exit or a fabricated order. When they agree, use the block's structured fields (ticker/strategy/action) to drive the conversion below — the prose stays the reference for WHY (rationale, criteria) but the block is what removes ambiguity on WHAT and HOW MANY.
 
 Convert every bullet in Daily.md's "RECOMMENDED ACTIONS" section into operator-actionable outputs per the operating model at the top of this file. Claude resolves all decisions internally; commissions are disregarded at staging time.
 
@@ -557,7 +578,9 @@ Read access scope: Calendar Hygiene. Read the spec/cadence `.md` files + BigQuer
 
 Reconcile Google Calendar against current state, and keep the `PENDING_ANALYSIS` queue (`events.queue_events` / `state.open_queue`) healthy. Recurring cadence work (D1, D2, …, A3) runs as routines; Claude-only analysis runs in-session or via the `PENDING_ANALYSIS` queue. The calendar holds **only `[Claude] Confirm order` events** — the sole human action.
 
-DATE ANCHOR: "Today" comes from **`state.trading_day_today`** (`SELECT today, is_trading_day, last_trading_day, next_trading_day FROM state.trading_day_today`) — the single authoritative America/Denver trading-day source (holiday/weekend-aware). Do NOT use the assistant-context `currentDate` field (UTC-based; during evening MT it has already rolled to the next calendar day — using it as "today" mis-classified a same-day order-confirmation event as order-day-passed and deleted it, 2026-05-27 evening MT on the META convergence exit), do NOT compute the date with local Bash (`date`), and do NOT infer it from file timestamps (Decision_Log entry headers, "Last updated" lines — may be forward-dated/templated/recovery-artifact). If `state.trading_day_today` ever conflicts with `currentDate` or a file timestamp, trust `state.trading_day_today` and flag the conflict in chat output.
+DATE ANCHOR: "Today" comes from **`state.trading_day_today`** (`SELECT today, is_trading_day, last_trading_day, next_trading_day FROM state.trading_day_today`) — the single authoritative America/Denver trading-day source (holiday/weekend-aware). Do NOT use the assistant-context `currentDate` field (UTC-based; during evening MT it has already rolled to the next calendar day — using it as "today" mis-classified a same-day order-confirmation event as order-day-passed and deleted it, 2026-05-27 evening MT on the META convergence exit), do NOT compute the date with local Bash (`date`), and do NOT infer it from file timestamps (Decision_Log entry headers, "Last updated" lines — may be forward-dated/templated/recovery-artifact). If `state.trading_day_today` ever conflicts with `currentDate` or a file timestamp, trust `state.trading_day_today` and flag the conflict in chat output. **This operating-day anchor is NEVER affected by the display-timezone step below** — it stays pinned to America/Denver regardless of where the operator physically is.
+
+DISPLAY-TIMEZONE DETECTION (best-effort, run once per D3 session; `bigquery/20_user_prefs.sql`). Human-facing timestamp RENDERING (weekly email, alert emailer, dashboard, alert relay) should follow wherever the operator actually is, distinct from the operating plane above which never moves. Call the Calendar connector's `list_calendars` (already required for this routine's pre-flight) and read the primary calendar's (the operator's own email address) `timeZone` field — Google keeps it current with the phone's location when "update primary time zone" is enabled, or the operator's last manual change. Compare it to the current `state.user_tz.tz`; if different, `INSERT INTO ops.user_prefs (pref_key, pref_value, source) VALUES ('display_tz', '<the calendar timeZone>', 'D3-calendar')`. Wrap best-effort — never abort D3 on this (it feeds report rendering, not trading).
 
 QUEUE HYGIENE (BigQuery — the `.md` queue-archive sweep is RETIRED per §15). The queues are `events.queue_events`; `state.open_queue` already surfaces only actionable items (latest status per item — terminal `complete`/`superseded` entries are filtered out automatically, so there is no physical sweep). Spot-check: confirm any item D2 or the Adversarial routines marked terminal this cycle has its terminal-status row in `events.queue_events` (so it drops out of `state.open_queue`), and flag any `state.open_queue` item whose `due_date` is past but still actionable (a missed drain).
 
@@ -594,7 +617,9 @@ Read Strategy.md (Strategy A and Strategy C sections for entry criteria, instrum
 
 Apply the shared 'NO-GO records are context, not barriers' rule when any candidate has a prior `events.decision_log` NO-GO entry.
 
-Produce a catalyst calendar across the Strategy A universe (6-month window) and the Strategy C universe (45-day window). Write the complete content directly to `Weekly_Catalyst_Calendar.md` (overwrite; first line = current ISO week in YYYY-WW format).
+Produce a catalyst calendar across the Strategy A universe (6-month window) and the Strategy C universe (45-day window). Write the complete content directly to `Weekly_Catalyst_Calendar.md` (overwrite; first line = current ISO week in YYYY-WW format — the ISO week of TODAY's run date per `state.trading_day_today.today`, the SAME week W2/W3 stamp this cycle. Do **not** use the upcoming trading-Monday's ISO week instead — a 2026-06-28 run mislabeled itself `2026-W27` on that improvised convention while W2/W3 correctly stamped `2026-W26`, and the W4 upstream-freshness gate computes "current period" as the plain ISO week of today, so the mismatched marker would false-halt W4. If the upcoming trading week matters for context, say so in prose in the header line, not in the marker.).
+
+Use `##` Markdown headings for the PART labels below (`## PART 1A — ...`), not ASCII banner lines (`====`) — keeps this file's structure consistent with `Weekly_Post_Event_Screen.md` / `Weekly_Position_Deep_Dive.md`.
 
 PART 1 — Two calendars.
 
@@ -1171,7 +1196,7 @@ Read access scope: Quarterly cadence. Query all of `events.decision_log` (no liv
 
 Read Strategy.md (shared regime vocabulary and regime router sections), Experiment_Parameters.md, Operating_Protocols.md (positions from `state.current_positions`; regime/router history from `state.current_regime` / `events.regime_events`; router history and adversarial review records for the prior quarter from `events.decision_log` / `events.adversarial_reviews`).
 
-Produce a regime retrospective for the prior calendar quarter. Write the complete content directly to `Quarterly_Regime.md` (overwrite; first line = prior calendar quarter in YYYY-QN format).
+Produce a regime retrospective for the prior calendar quarter. Write the complete content directly to `Quarterly_Regime.md` (overwrite; first line, literally — before any title heading — is the bare prior calendar quarter marker in YYYY-QN format, matching every other cadence file's convention; do not put a `# Quarterly_Regime.md` title or the scope blockquote before it).
 
 PART 1 — Retrospective characterization of the prior calendar quarter. Seven dimensions:
 

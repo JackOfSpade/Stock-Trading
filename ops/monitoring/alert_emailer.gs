@@ -31,7 +31,13 @@ const ALERT_RECIPIENT  = Session.getActiveUser().getEmail(); // self-email
 const ALERT_SENDER     = 'Stock-Trading Alerts';
 const SEVERITIES       = ['critical', 'warning']; // set to ['critical'] for criticals only
 const POLL_HOURS       = 2;                        // how often to check
-const LOOKBACK_HOURS   = 48;                       // bound the notified_ts IS NULL scan (avoids a historical flood on first deploy)
+// LOOKBACK_HOURS bounds the notified_ts IS NULL scan. Was 48h — if the emailer itself is dead longer
+// than the lookback (revoked token / deleted trigger), alerts raised early in the outage permanently
+// keep notified_ts NULL and are never emailed by ANY code path on recovery (the webhook relay's window
+// is only ~35min and non-email; the delivery canary only proves the channel, it doesn't backfill).
+// The automation_heartbeat dead-man's switch fires at 8h of silence, so 168h (1 week) gives ample
+// margin for any realistic recovery lag at negligible extra query cost (2026-07 report-system fix).
+const LOOKBACK_HOURS   = 168;
 
 // ===== ENTRY POINTS =====
 function testAlertCheck()   { checkAlerts_(); }
@@ -51,8 +57,11 @@ function checkAlerts_() {
   // NOTIFICATION-COMPLETE: select un-notified alerts (notified_ts IS NULL), NOT `NOT resolved`, so an
   // alert that self-healed between polls is still emailed exactly once. notified_ts is the durable
   // de-dup; Script Properties is a secondary guard so a failed stamp doesn't re-send next poll.
+  // alert_ms (UNIX_MILLIS) lets the renderer format alert_ts in the DETECTED display timezone
+  // (state.user_tz) instead of raw unlabeled UTC — alert_ts (STRING) is kept too as a UTC fallback.
   const rows = bqAlerts_(`
-    SELECT alert_id, CAST(alert_ts AS STRING) AS alert_ts, severity, source, category, message, resolved
+    SELECT alert_id, CAST(alert_ts AS STRING) AS alert_ts, UNIX_MILLIS(alert_ts) AS alert_ms,
+           severity, source, category, message, resolved
     FROM \`${ALERT_PROJECT_ID}.ops.alerts\`
     WHERE notified_ts IS NULL AND severity IN (${sevList})
       AND alert_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${LOOKBACK_HOURS} HOUR)
@@ -131,6 +140,28 @@ function bqAlerts_(sql) {
   return (res.rows || []).map(r => { const o = {}; r.f.forEach((c, i) => o[fields[i]] = c.v); return o; });
 }
 
+// Detected DISPLAY timezone (state.user_tz — bigquery/20_user_prefs.sql). Purely cosmetic: it changes
+// how a timestamp is RENDERED to the operator, never any alert logic. Falls back to America/Denver on
+// any error so a BigQuery hiccup on this read can never block delivery.
+let _alertTzCache = null;
+function getUserTz_() {
+  if (_alertTzCache) return _alertTzCache;
+  try {
+    _alertTzCache = (bqAlerts_(`SELECT tz FROM \`${ALERT_PROJECT_ID}.state.user_tz\``)[0] || {}).tz || 'America/Denver';
+  } catch (e) {
+    _alertTzCache = 'America/Denver';
+  }
+  return _alertTzCache;
+}
+
+function fmtAlertTs_(a) {
+  const tz = getUserTz_();
+  if (a.alert_ms != null) {
+    return Utilities.formatDate(new Date(Number(a.alert_ms)), tz, 'MMM d, h:mm a') + ` (${tz})`;
+  }
+  return a.alert_ts + ' UTC';  // fallback if UNIX_MILLIS was unavailable
+}
+
 // ===== rendering =====
 function esc2_(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -153,7 +184,7 @@ function htmlAlerts_(fresh, totalOpen) {
       <div style="border-left:4px solid ${bar};background-color:${bg};border-radius:6px;padding:10px 12px;margin:6px 0;">
         <div style="font-size:13px;font-weight:700;color:${bar};">${esc2_(a.severity.toUpperCase())} · ${esc2_(a.source)} · ${esc2_(a.category)}${tag}</div>
         <div style="font-size:13px;color:#1f2d3d;margin-top:3px;">${esc2_(a.message)}</div>
-        <div style="font-size:11px;color:#8a96a3;margin-top:3px;">${esc2_(a.alert_ts)} UTC</div>
+        <div style="font-size:11px;color:#8a96a3;margin-top:3px;">${esc2_(fmtAlertTs_(a))}</div>
       </div></td></tr>`;
   }).join('');
   const header = allTest
@@ -174,7 +205,7 @@ function plainAlerts_(fresh, totalOpen) {
     : `Stock-Trading — ${fresh.length} new unresolved alert(s) (${totalOpen} open total):\n\n`;
   fresh.forEach(a => {
     const tag = isTest_(a) ? '[TEST] ' : (String(a.resolved) === 'true' ? '[AUTO-RESOLVED] ' : '');
-    s += `[${a.severity.toUpperCase()}] ${tag}${a.source}/${a.category}: ${a.message}  (${a.alert_ts} UTC)\n`;
+    s += `[${a.severity.toUpperCase()}] ${tag}${a.source}/${a.category}: ${a.message}  (${fmtAlertTs_(a)})\n`;
   });
   s += `\nResolve via UPDATE ops.alerts SET resolved=TRUE WHERE ... . Complements the [Claude] ATTENTION calendar events.`;
   return s;
