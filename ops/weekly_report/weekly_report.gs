@@ -149,6 +149,12 @@ function gatherData_() {
     ? { text: 'ALL GREEN', bg: '#13402e', fg: '#54e0a3', dot: '●' }
     : { text: 'ATTENTION', bg: '#4a1f1a', fg: '#ff9b8a', dot: '▲' };
 
+  // "Why is the badge red?" (previously the strip only showed raw ✓/✕ glyphs with static labels —
+  // a same-day-lag freshness check and a genuinely stalled pipeline looked identical, and open
+  // alerts/kill-flags rendered as a bare count with no way to tell what fired without a BigQuery
+  // detour). Only queried when something actually failed.
+  const healthReasons = allGreen ? [] : buildHealthReasons_(health, marksFresh, engineFresh, embOK, openAlerts, kills);
+
   const dateLabel = Utilities.formatDate(new Date(), tz, 'MMM d, yyyy');
 
   // NAV staleness (F6): the header must never silently show a days-old NAV as if it were current.
@@ -161,7 +167,54 @@ function gatherData_() {
   return { scorecard, fund, tech, integrative, health, activity, acct, nav, navDelta, navStale,
            twr7, fills, nogos, positions, next7, automation, backups, opsBackups, cadenceAttn,
            marksFresh, engineFresh, embOK, openAlerts, kills,
-           allGreen, healthBadge, dateLabel, subjectPerf, tz };
+           allGreen, healthBadge, healthReasons, dateLabel, subjectPerf, tz };
+}
+
+// ===== "Why is the badge red?" — only called when the health strip isn't all-green =====
+function buildHealthReasons_(health, marksFresh, engineFresh, embOK, openAlerts, kills) {
+  const reasons = [];
+
+  // marks_fresh/engine_fresh only compare dates (see bigquery/10_observability.sql), so a report
+  // generated before the evening batch (D2, normally completes ~22:30 MT) will ALWAYS read stale —
+  // that's expected same-day lag, not a fault. d2_ran_last_trading_day tells them apart:
+  // if D2 hasn't logged 'completed' for last_trading_day yet, it's just pending; if it HAS and
+  // marks/engine are still stale, that's a genuine inconsistency worth a direct look.
+  if (!marksFresh || !engineFresh) {
+    const d2Ran = String(health.d2_ran_last_trading_day) === 'true';
+    reasons.push(d2Ran
+      ? `marks/engine still stale even though D2 logged complete for ${health.last_trading_day} — check state.freshness directly`
+      : `today's evening data batch (D2) hasn't completed yet for ${health.last_trading_day} — normal before ~22:30 MT, not a fault by itself`);
+  }
+
+  if (!embOK) {
+    const eh = bq_(`SELECT missing_rows, error_rows, dup_rows FROM \`${PROJECT_ID}.state.embedding_health\``)[0] || {};
+    reasons.push(`embeddings: ${eh.missing_rows || 0} missing, ${eh.error_rows || 0} errored, ${eh.dup_rows || 0} duplicate rows`);
+  }
+
+  if (openAlerts > 0) {
+    const alerts = bq_(`
+      SELECT severity, category, message FROM \`${PROJECT_ID}.ops.alerts\`
+      WHERE NOT resolved
+      ORDER BY CASE severity WHEN 'critical' THEN 0 WHEN 'warning' THEN 1 ELSE 2 END, alert_ts DESC
+      LIMIT 3`);
+    const shown = alerts.map(a => `[${a.severity}/${a.category}] ${a.message}`).join('; ');
+    const more = openAlerts > alerts.length ? ` (+${openAlerts - alerts.length} more)` : '';
+    reasons.push(`${openAlerts} open alert(s): ${shown}${more}`);
+  }
+
+  if (kills > 0) {
+    const flags = bq_(`
+      SELECT strategy, drawdown_kill, runaway_review, m2m_underperf_review
+      FROM \`${PROJECT_ID}.perf.kill_flags\`
+      WHERE drawdown_kill OR runaway_review OR m2m_underperf_review`);
+    const shown = flags.map(f => {
+      const names = ['drawdown_kill', 'runaway_review', 'm2m_underperf_review'].filter(n => String(f[n]) === 'true');
+      return `${f.strategy} (${names.join(', ')})`;
+    }).join('; ');
+    reasons.push(`${kills} firing kill-flag(s): ${shown}`);
+  }
+
+  return reasons;
 }
 
 // ===== BigQuery helper =====
@@ -405,6 +458,7 @@ ${next7Section}
       <span style="margin-right:14px;">${hk(automationOk)} Automation</span>
       <span>${hk(cadenceOk)} Cadence</span>
     </div>
+    ${d.healthReasons.length ? `<div style="margin-top:8px;font-size:11px;color:#b9770e;line-height:1.5;"><b>Why:</b> ${d.healthReasons.map(esc_).join(' &middot; ')}</div>` : ''}
   </td></tr>
 
   <tr><td style="padding:16px 22px 22px 22px;">
@@ -505,5 +559,8 @@ function buildPlain_(d) {
   s += `\nOPS: marks ${okFail_(d.marksFresh)}, engine ${okFail_(d.engineFresh)}, embeddings ${okFail_(d.embOK)}, ` +
        `${d.openAlerts} alerts, ${d.kills} kill-flags, backups ${okFail_(!(String(d.backups.stale) === 'true' || String(d.opsBackups.stale) === 'true'))}, ` +
        `automation ${okFail_(d.automation.every(a => String(a.stale) !== 'true'))}, cadence ${okFail_((num_(d.cadenceAttn.n) || 0) === 0)}.\n`;
+  if (d.healthReasons.length) {
+    s += `WHY: ${d.healthReasons.join(' | ')}\n`;
+  }
   return s;
 }

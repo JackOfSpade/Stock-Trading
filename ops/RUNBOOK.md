@@ -1444,3 +1444,32 @@ projects (Claude cannot reach script.google.com) — the repo and BigQuery sides
 scripts will keep running the pre-fix code until re-pasted. Also confirm both projects' timezone (Project
 Settings) is still `America/Denver` (governs trigger hour only — unrelated to the new `state.user_tz` display
 plane, which the scripts read from BigQuery at send/poll time).
+
+## 32. Weekly email — "why" line under Operational Health *(reporting)*
+
+**2026-07-02.** Triggered by the operator questioning a `SYSTEM ATTENTION` badge on a manually-sent
+test copy of the report (the 2026-07-02 14:09 MT send — see §31; a one-off `testReport()` verification
+run, not the real `SUNDAY @ 07:00` cadence). Investigation: the badge/strip glyphs (`✓`/`✕`) never
+carried an explanation, so a same-day freshness lag (report generated before the evening D2 batch,
+which normally completes ~22:30 MT) was visually indistinguishable from a genuinely stalled pipeline —
+confirmed via live query that today's `marks_fresh`/`engine_fresh = false` was solely because D2 for
+2026-07-02 hadn't run yet (0 `run_log` rows), with `open_alerts = 0`, `firing_kill_flags = 0`,
+`embeddings_healthy = true` otherwise clean. Also confirmed the real Sunday 07:00 send is unaffected
+(`state.trading_day_today` resolves `last_trading_day` to the prior Friday on a Sunday query, and
+Friday evening's batch is long complete by Sunday morning — verified against the clean 2026-06-28
+Sunday heartbeat).
+
+**Fix, not a schedule change.** Rather than move the trigger (the real cadence was never broken), added
+`buildHealthReasons_()` to `ops/weekly_report/weekly_report.gs`: only runs when the badge isn't
+`ALL GREEN`, and renders a `Why:` line under the Operational Health strip (HTML) / a `WHY:` line in the
+plain-text part. Distinguishes "D2 hasn't completed yet for `last_trading_day`" (expected, pending —
+via `state.system_health.d2_ran_last_trading_day`) from "D2 completed but marks/engine are still
+stale" (a genuine inconsistency to investigate directly). For open alerts, pulls the actual
+`ops.alerts.message` (top 3, critical-first) instead of a bare count. For kill-flags, names the
+firing strategy + flag(s) from `perf.kill_flags` instead of a bare count. For unhealthy embeddings,
+surfaces `state.embedding_health`'s missing/error/dup row counts. All three new queries smoke-tested
+live against BigQuery (clean empty results for alerts/kill-flags today; embedding_health returned
+0/0/0 as expected).
+
+**Owner action required:** re-paste the updated `ops/weekly_report/weekly_report.gs` into its Apps
+Script project (script.google.com) — same as §31, this is repo-only until re-pasted.
