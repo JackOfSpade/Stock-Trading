@@ -27,6 +27,8 @@ lagged AS (
 )
 SELECT mark_date AS as_of_date, strategy,
        SAFE_DIVIDE(SUM(mv + div_cash) - SUM(prev_mv), SUM(prev_mv)) AS r_deployed,
+       -- deployed dollars marked that day (Σ prev_mv); feeds analytics.strategy_vs_park_daily
+       SUM(prev_mv) AS deployed_capital,
        COUNT(*) AS n_positions
 FROM lagged
 GROUP BY mark_date, strategy

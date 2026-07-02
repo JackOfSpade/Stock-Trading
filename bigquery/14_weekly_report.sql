@@ -5,6 +5,16 @@
 -- can only draft, not send). The Apps Script reads the objects below straight from
 -- BigQuery and self-emails. See ops/weekly_report/README.md.
 --
+-- 2026-07 REDESIGN: the email was rebuilt around a single question ("is each strategy
+-- beating just parking its allocated cash in SGOV?") and now reads only
+-- analytics.strategy_scorecard from THIS file, plus the new analytics.strategy_vs_park /
+-- strategy_vs_park_daily / park_baseline views in bigquery/21_strategy_vs_park.sql. The
+-- other objects below (ops.account_snapshot, state.account_latest/account_nav_7d_ago,
+-- analytics.weekly_activity/weekly_fills/weekly_nogos, state.open_positions_summary,
+-- state.next_7_days) are RETAINED for RUNBOOK verification, history, and possible future
+-- use — dropping/cleaning them up is a separate, later decision, out of scope for the
+-- redesign. See ops/RUNBOOK.md §33.
+--
 -- Objects:
 --   * analytics.strategy_scorecard  — one row per strategy: activation + budget + profitability
 --   * ops.account_snapshot          — daily account-level NAV/cash/TWR (written by D2 Step 0b)
@@ -18,7 +28,9 @@
 --   * activation (state.current_regime, scope=STRATEGY_ACTIVATION) — "what's active/inactive"
 --   * budget     (analytics.strategy_nav)                          — NAV + 2%-sizing base + deployed/available
 --   * profitability (perf.kill_flags = latest perf.strategy_daily) — deployed-TWR, excess vs SGOV, drawdown, gate
--- Reused beyond the email as a clean one-row-per-strategy feed for the health dashboard.
+-- Read by the weekly self-email only (NOT the health dashboard, despite the name below —
+-- ops/dashboard/generate_dashboard.py reads system_health/kill_flags/strategy_nav/gate_watch/
+-- alerts/run_log directly, never this view).
 -- unit_value_7d_ago — nearest perf.strategy_daily row to "7 days ago" per strategy (handles
 -- weekends/holidays where there is no exact 7-day-back trading day). Feeds the scorecard's
 -- week-over-week Δ column so the weekly digest shows movement, not just since-inception TWR.
@@ -78,7 +90,7 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.ops.account_snapshot` (
   source STRING DEFAULT 'D2-connector',
   ingest_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
 ) PARTITION BY snapshot_date
-OPTIONS(description='Daily account-level NAV/cash/TWR snapshot from the IBKR connector (D2 Step 0b). Account-level NAV history; read by the weekly Apps Script emailer + dashboard. Per-strategy deployed-TWR is perf.strategy_daily.');
+OPTIONS(description='Daily account-level NAV/cash/TWR snapshot from the IBKR connector (D2 Step 0b). Account-level NAV history; retained for the dashboard and history — no longer read by the weekly Apps Script emailer (2026-07 redesign). Per-strategy deployed-TWR is perf.strategy_daily.');
 
 -- Latest snapshot (dedup: newest snapshot_date, newest ingest within the day).
 CREATE OR REPLACE VIEW `stock-trading-498512.state.account_latest` AS
@@ -120,8 +132,8 @@ SELECT
 
 -- ===== analytics.weekly_fills / analytics.weekly_nogos — single-source the email's detail lists =====
 -- Previously the fills/NO-GO SELECTs lived only inline in weekly_report.gs (the one email query not
--- backed by a view here). Moved so every email query is a named, version-controlled BigQuery object
--- and the .gs file does SELECT * — same convention as strategy_scorecard / weekly_activity.
+-- backed by a view here). Moved so every email query is a named, version-controlled BigQuery object.
+-- Retained; no longer read by the weekly email (2026-07 redesign — see the file header above).
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.weekly_fills` AS
 SELECT ticker, side, shares, price, strategy,
        CAST(DATE(fill_ts, 'America/Denver') AS STRING) AS fill_date,

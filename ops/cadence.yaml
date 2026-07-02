@@ -193,11 +193,15 @@ routines:
 # ---- NON-CLAUDE AUTOMATION (documented here for visibility; not run by the harness) ----
 # The weekly performance self-email is NOT a Claude routine. It is a Google Apps Script
 # (ops/weekly_report/weekly_report.gs) on a weekly time-trigger that runs on Google's
-# servers as the owner, reads BigQuery (analytics.strategy_scorecard, state.current_regime,
-# state.system_health, state.account_latest, analytics.weekly_activity) and self-emails the
-# HTML digest. The Gmail connector can only draft (not send), so delivery lives outside
-# Claude. The only Claude-side dependency is D2 Step 0b writing ops.account_snapshot (account
-# NAV/TWR), which the script reads. Setup: ops/weekly_report/README.md.
+# servers as the owner. The Gmail connector can only draft (not send), so delivery lives
+# outside Claude. 2026-07 redesign (ops/RUNBOOK.md §33): the email now answers one question
+# ("is each strategy beating just parking its allocated cash in SGOV?") and reads BigQuery
+# (analytics.strategy_scorecard, analytics.strategy_vs_park, analytics.strategy_vs_park_daily,
+# analytics.park_baseline, state.system_health, state.user_tz) and self-emails the HTML
+# digest + an inline chart PNG. D2 Step 0b still writes ops.account_snapshot daily
+# (account NAV/TWR — kept for the dashboard and history), but the weekly email no longer
+# reads it; its data dependencies are the D2-maintained marks/engine views only. Setup:
+# ops/weekly_report/README.md.
 #   weekly-self-email   schedule: "weekly Sun ~07:00 America/Denver (Apps Script trigger)"
 #
 # Two version-controlled scheduled GitHub Actions added 2026-06-24 (ops/RUNBOOK.md §25), run on GitHub's

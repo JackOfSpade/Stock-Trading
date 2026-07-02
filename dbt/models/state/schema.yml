@@ -140,7 +140,7 @@ models:
               min_value: 0
 
   - name: account_latest
-    description: Latest account-level NAV/cash/TWR snapshot (from ops.account_snapshot; weekly self-email).
+    description: Latest account-level NAV/cash/TWR snapshot (from ops.account_snapshot). Retained for the dashboard and history — no longer read by the weekly self-email (2026-07 redesign).
     columns:
       - name: snapshot_date
         description: Operating day of the latest snapshot.
