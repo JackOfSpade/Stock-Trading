@@ -1806,3 +1806,44 @@ mis-described as low-urgency.
 requires no new grant; `alert-relay.yml`'s new schedule is covered by the same double-gate as its other
 modes). No new files to re-paste (BigQuery objects applied live 2026-07-03; `Claude_Task_Plan.md`'s D3
 section is read fresh each run, no separate re-paste needed there either).
+
+## 36. D2a's first run asked chat a question nobody would ever answer — the 2026-07-03 dead-end escalation
+
+**What happened.** The owner created D2a's web-UI trigger and, at the owner's request, fired it manually
+to verify it works. It ran cleanly (a market holiday — no new fills, a well-reasoned $4.50 month-start-fee
+attribution instead of a false tripwire halt, snapshot + engine refresh all correct) and correctly
+reasoned that performing the D2/D2a dependency cutover unilaterally, on one non-trading-day run, was too
+risky to do without confirmation. It then ended its chat output with "Reply if you'd like me to complete
+the cutover." The owner caught the problem: **routine chat is unmonitored** — stated throughout
+`Claude_Task_Plan.md` as the reason every other consequential signal in this system goes through
+`ops.alerts` + a calendar event instead. That chat question would never be seen, so the cutover would
+simply never happen — a dead-end, not a real escalation. The routine's risk judgment was correct; only
+its communication channel was wrong, and that was a gap in this section's own instructions (which never
+specified an escalation mechanism at all), not a one-off mistake by that run.
+
+**Fix — make the cutover decision itself autonomous, not just re-route the question.** Re-routing "should
+I cut over?" through `ops.alerts` would still require a human to eventually read and act on it — better,
+but not the "minimal human intervention" the owner is building toward, and this decision has an
+objective evidence bar rather than a genuine judgment call. `state.d2a_cutover_readiness`
+(`bigquery/32_d2a_cutover_readiness.sql`) requires **3 DISTINCT TRADING-DAY** completed D2a runs before
+`ready_for_cutover` — the 2026-07-03 holiday run does not count, since it never exercised real fill
+reconciliation, SGOV sweep/cover crafting under `analytics.fn_order_guard`, or TWR-engine ingest from
+freshly-pulled marks (the paths the cutover actually needs confidence in). `ops.d2a_cutover_log` is the
+durable idempotency marker (a BigQuery row, not a prose/grep read of `Claude_Task_Plan.md`, so it can
+never mis-detect whether the cutover already happened). Once ready, D2a performs the full cutover itself
+in the same session — repo edits, commit, push — and records an `info`-severity `ops.alerts` row purely
+for the audit trail. No chat question, before or after, on any future run.
+
+**Why 3 trading-day runs, not fewer/more/an alert-based ask.** Matches this system's existing
+self-bootstrapping convention (a routine/signal only becomes "acted on" after demonstrated evidence, e.g.
+`state.cadence_watch`'s 1-completed-run monitored bar, `analytics.nogo_counterfactual_summary`'s
+`min_n_met >= 5`) scaled to a narrow, mechanical, easily-verified routine — not a full trading strategy,
+so a lower bar than a strategy-level gate is appropriate, but not zero: a single lucky/atypical run should
+not flip a structural dependency change. Verified live 2026-07-03:
+`state.d2a_cutover_readiness.qualifying_trading_day_runs = 0`, `ready_for_cutover = FALSE` — correctly
+does NOT fire on today's holiday run.
+
+**Owner action required:** none. D2a will cut over itself once the threshold clears, with no further
+chat or reply needed — check `state.d2a_cutover_readiness` / `ops.d2a_cutover_log` any time to see
+progress, or just watch for the `info`-severity `auto_cutover` row in `ops.alerts` (and the resulting
+commit) once it happens.

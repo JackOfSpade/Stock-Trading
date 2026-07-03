@@ -488,36 +488,43 @@ OUTPUT: write the complete content above directly to `Daily.md` (overwriting the
 
 ## D2a. Broker Reconcile & Snapshot — regular routine
 
-> **NOT YET ACTIVE (self-improvement audit WO-3, 2026-07-03).** This section specifies a NEW routine
-> that splits D2's mechanical, dependency-light broker-reconcile/cash-safety/TWR-engine work out of the
-> analysis-heavy action-conversion work, so a halt in the latter (Step 1 onward) can never stall fills
-> reconciliation, cash-tripwire safety, the SGOV sweep, or the deployed-TWR engine simultaneously (the
-> D2 mega-SPOF the audit flagged). **This routine has NO live web-UI trigger yet** — creating one
-> requires the Claude-Code-on-Web UI (duplicate an existing routine's trigger, e.g. D2's, to correctly
-> carry over its environment/model/MCP-connector configuration, which the trigger-management API this
-> repo's agents have access to cannot set — confirmed 2026-07-03 by inspecting the live trigger config).
-> **Until that trigger exists AND this section is cut over, D2 continues to run its OWN Step 0/Step 0b/
-> TWR-maintenance exactly as documented in the "## D2." section below — nothing changes operationally.**
-> Cutover checklist (do all of these together, not just one):
-> 1. Create the D2a trigger (web UI): duplicate D2's trigger, change the cron to fire ~5-15 minutes
->    BEFORE D2's (D2a has no dependency on D1 and should complete first), rename it
->    "D2a. Broker Reconcile & Snapshot — regular routine", and set its prompt to
->    `Read Claude_Task_Plan.md. Perform D2a. Broker Reconcile & Snapshot — regular routine.`
-> 2. In `ops/cadence.yaml`, uncomment/confirm the `D2a` entry below is present with `depends_on: []`
->    (it must run even if D1 failed) and change `D2`'s `depends_on` to `[D1, D2a]`.
-> 3. Delete Step 0 / Step 0b / "PER-STRATEGY PERFORMANCE MAINTENANCE" / "SEEDING A NEW STRATEGY" from
->    the "## D2." section below (they are reproduced verbatim here) and replace the deleted block with
->    a one-line pointer: "Step 0/0b/TWR-maintenance now run in D2a; see state.current_positions /
->    analytics.strategy_nav / perf.strategy_daily / analytics.account_reconciliation for its output."
->    Fix the "If Step 0 reconciled no new fills..." check in D2's RECOMMENDED ACTIONS section to read
->    D2a's reconciliation output instead (e.g. compare `ops.run_log` fill-count for D2a's run today).
-> 4. Regenerate `ops/triggers.json` (`python scripts/print_routines.py --write`) and re-run
->    `scripts/check_cadence_consistency.py` to confirm all surfaces agree before relying on it.
-> The BigQuery-side scaffolding (cadence_expected_today, routine_catalog, stalled_runs tier) is ALREADY
-> applied live as of this audit — see `bigquery/12_cadence_monitor.sql` / `15_routine_catalog.sql` /
-> `18_stack_review_fixes.sql`. It is safe pre-cutover: `state.cadence_watch`/`state.stalled_runs` are
-> self-bootstrapping (a routine only becomes alarm-eligible after it logs its first `completed` run), so
-> D2a sitting with zero log rows generates zero false alarms until the trigger exists and actually fires.
+> **PARTIALLY CUT OVER (self-improvement audit WO-3, 2026-07-03; trigger created 2026-07-03).** This
+> routine splits D2's mechanical, dependency-light broker-reconcile/cash-safety/TWR-engine work out of
+> the analysis-heavy action-conversion work, so a halt in the latter (Step 1 onward) can never stall
+> fills reconciliation, cash-tripwire safety, the SGOV sweep, or the deployed-TWR engine simultaneously
+> (the D2 mega-SPOF the audit flagged). The web-UI trigger now exists and ran once (2026-07-03, a market
+> holiday — see `ops.run_log`). **Until the CUTOVER AUTO-CHECK below actually performs the cutover, D2
+> continues to run its OWN Step 0/Step 0b/TWR-maintenance exactly as documented in the "## D2." section —
+> nothing changes operationally, and the current split-brain state (both routines doing Step 0's work) is
+> safe: D2a runs first, and D2 redoing the same reconciliation is idempotent.**
+>
+> **The cutover is now FULLY AUTONOMOUS — no chat question, no human reply, ever.** (Correction,
+> 2026-07-03: D2a's first run ended by asking the operator in chat "Reply if you'd like me to complete
+> the cutover" — but routine chat is unmonitored, documented throughout this file; that question would
+> never be seen, so the cutover would simply never happen. That is a bug in this section's original
+> instructions, not a one-off mistake by that run — fixed here.) The CUTOVER AUTO-CHECK step at the end
+> of this routine's steps below queries `state.d2a_cutover_readiness` — `ready_for_cutover` requires
+> **3 DISTINCT TRADING-DAY** completed D2a runs (a holiday run does not count: it never exercises real
+> fill reconciliation, SGOV sweep/cover crafting under `analytics.fn_order_guard`, or TWR-engine ingest
+> from freshly-pulled marks — the paths this cutover actually needs confidence in) AND no prior cutover
+> (`ops.d2a_cutover_log` empty, the durable idempotency marker — a BigQuery row, not a prose/grep read of
+> this file). When ready, D2a performs the cutover ITSELF, in the same session, with full repo write
+> access (exactly as this file's own edits are made): edit `ops/cadence.yaml` (`D2`'s `depends_on` →
+> `[D1, D2a]`), delete Step 0 / Step 0b / "PER-STRATEGY PERFORMANCE MAINTENANCE" / "SEEDING A NEW
+> STRATEGY" from the "## D2." section below (replace with a one-line pointer: "Step 0/0b/TWR-maintenance
+> now run in D2a; see `state.current_positions` / `analytics.strategy_nav` / `perf.strategy_daily` /
+> `analytics.account_reconciliation` for its output" and fix D2's "If Step 0 reconciled no new fills..."
+> check to read D2a's `ops.run_log` fill-count instead), regenerate `ops/triggers.json`
+> (`python scripts/print_routines.py --write`), run `scripts/check_cadence_consistency.py` to confirm all
+> surfaces agree, commit, and push. Then `INSERT INTO ops.d2a_cutover_log` (the idempotency marker) and
+> `CALL ops.sp_raise_alert('info','D2a','auto_cutover', 'D2/D2a cutover performed autonomously after N
+> qualifying trading-day runs', <JSON: qualifying_trading_day_runs, git_commit>)` — an INFO-severity row
+> purely for the audit trail, since no action is needed from anyone; do NOT ask in chat, before or after.
+> The BigQuery-side scaffolding (cadence_expected_today, routine_catalog, stalled_runs tier,
+> `state.d2a_cutover_readiness`) is already applied live — see `bigquery/12_cadence_monitor.sql` /
+> `15_routine_catalog.sql` / `18_stack_review_fixes.sql` / `32_d2a_cutover_readiness.sql`. Self-
+> bootstrapping throughout: `state.cadence_watch`/`state.stalled_runs` only become alarm-eligible after
+> a routine's first `completed` run, so D2a's adoption has generated zero false alarms.
 
 Runs first, every operating day (including non-trading days, so the account stays reconciled even when
 D1/D2 don't fire) — independent of D1. Reconciles the live brokerage account, runs the cash/SGOV safety
@@ -550,6 +557,16 @@ STEP 0b — ACCOUNT SNAPSHOT. Same procedure as "## D2." Step 0b below.
 PER-STRATEGY PERFORMANCE MAINTENANCE (deployed-TWR engine). Same procedure as "## D2." below: ingest
 daily marks (with the FMP fallback), the per-name completeness check, `CALL ops.sp_daily_refresh()`, and
 the engine-verification sanity check.
+
+CUTOVER AUTO-CHECK (run last, after everything above — self-improvement audit follow-up, 2026-07-03).
+`SELECT * FROM state.d2a_cutover_readiness`. If `ready_for_cutover = FALSE`, do nothing and proceed to
+chat output — this is the expected state on every run until the threshold clears; it is NOT a finding
+and never needs mentioning in chat output. If `ready_for_cutover = TRUE`, perform the full cutover
+described in this section's banner above (edit `ops/cadence.yaml` + the "## D2." section + regenerate
+`ops/triggers.json` + `check_cadence_consistency.py` + commit + push), then `INSERT INTO
+ops.d2a_cutover_log` and `CALL ops.sp_raise_alert('info','D2a','auto_cutover', ...)` — no chat question,
+before or after; a one-line mention in this run's chat output that the cutover happened is sufficient
+(chat is unmonitored, so the alert row above is the record that matters, not the chat line).
 
 CHAT OUTPUT: one-line acknowledgment of reconciliation (fills captured, cash tripwire status, sweep/
 cover crafted or not, engine recompute status). If nothing to report: "Reconciliation complete, no
