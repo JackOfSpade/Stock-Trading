@@ -1,0 +1,104 @@
+# Autonomy-level register (2026-07-03, self-improvement audit — cross-cutting guard shared by all
+# Phase-4/5 self-improvement loops per the adversarial-critique sequencing in the audit report).
+#
+# WHY THIS EXISTS: several loops proposed by the audit (the run_log process-reliability loop, the
+# append-only strategy playbook, execution-quality rule tuning, the single-parameter calibration
+# carve-out) each independently said "record-only first, then promote" — but a scattered, per-loop
+# promotion decision is invisible drift. This file is the ONE checked-in register of every such loop's
+# current stage, so "who turned this on and on what evidence" is a first-class, reviewable fact instead
+# of a decision buried in a commit message or a routine's memory.
+#
+# STAGES (strictly increasing; a loop may only be promoted by editing this file in a commit whose
+# message cites the evidence — e.g. "N clean weeks observed, see decision_log entry <id>"):
+#   dormant        — scaffolding exists (tables/views/spec sections) but NOTHING reads or writes
+#                    through it as part of normal routine operation. Safe to build ahead of activation.
+#   shadow         — a routine computes what the loop WOULD do, logs it, but the result never changes
+#                    live behavior (a "what if" burn-in).
+#   record_only    — the loop's measurement view is read and reported (e.g. in a weekly digest) but no
+#                    routine acts on it.
+#   active_pr_gated — the loop's LLM-authored change flows through a GitHub PR requiring human review
+#                    (never auto-merge-claude) before it affects behavior. This is the ceiling for any
+#                    loop that touches strategy/process constants per the audit's own "no autonomy-
+#                    increasing loop turns on until its compensating control is live and drilled"
+#                    sequencing.
+#   active_auto    — reserved. No loop in this register is authorized at this stage. Only a fail-SAFE
+#                    direction (e.g. an auto-REVERT of a previously human-approved change, never an
+#                    auto-CHANGE) may ever reach this stage, and only by an explicit future owner
+#                    decision recorded here with its own dated rationale.
+#
+# PROMOTION RULE: no routine may treat a loop as being at a stage higher than what this file declares.
+# If a routine's instructions (Claude_Task_Plan.md / Operating_Protocols.md) describe a behavior that
+# would require a HIGHER stage than declared here, THIS FILE is wrong or stale — fix it before acting.
+
+loops:
+  - id: process_reliability          # WO-6: ops.run_log metrics -> W5-authored spec PR
+    stage: dormant
+    ceiling: active_pr_gated
+    artifact: analytics.routine_health_scorecard (bigquery/27_process_reliability.sql)
+    gate_to_next_stage: >
+      Promote to shadow once analytics.routine_health_scorecard has >=3 consecutive weeks of data
+      for at least one routine (the loop's own natural N>=20 / 3-week floor, per its spec in
+      Claude_Task_Plan.md W5). Promote shadow -> record_only -> active_pr_gated only after a human
+      reviews the shadow output and confirms it does not fire on noise.
+    added: "2026-07-03"
+
+  - id: strategy_playbook             # B-4-data: append-only LLM-authored playbook deltas
+    stage: dormant
+    ceiling: active_pr_gated
+    artifact: events.playbook_updates / state.active_playbook (NOT YET CREATED — spec only, see
+      bigquery/25_calibration_shrinkage.sql header for the calibration input it would consume)
+    gate_to_next_stage: >
+      Do NOT create the playbook tables or wire any routine to read/write them until (a)
+      analytics.calibration_shrunk shows trustworthy_edge=TRUE for at least one conviction tier
+      (currently FALSE for all tiers, see analytics.calibration_shrunk), (b) analytics.process_
+      scorecard has min_n_met=TRUE on at least 2 of its 3 metrics, and (c) this loop's evidence-
+      generating session and delta-writing session are independent (or the delta passes the S-5
+      theater-judge review) per the audit's risk-officer critique. This is explicitly the LAST loop
+      to activate, not the first.
+    added: "2026-07-03"
+
+  - id: execution_quality_tuning      # B-3/B-8-exec: slippage + fill-vs-expire rule tuning
+    stage: dormant
+    ceiling: active_pr_gated
+    artifact: analytics.execution_quality (NOT YET CREATED — spec only)
+    gate_to_next_stage: >
+      Not actionable at today's fill volume (~23 fills, mostly SGOV). Requires >=8 single-name
+      (non-SGOV) fills with a consistent-sign slippage signal before any rule-tuning proposal, per
+      the audit. Build the measurement view first; do not build the tuning-proposal step until the
+      volume gate is met.
+    added: "2026-07-03"
+
+  - id: calibration_parameter_carveout  # unified S-8 + B-8-obs: the ONE whitelisted self-updating parameter
+    stage: dormant
+    ceiling: active_pr_gated
+    artifact: state.param_change_provenance / state.param_oos_degradation (NOT YET CREATED — spec only)
+    gate_to_next_stage: >
+      Ship the provenance + OOS-degradation MONITOR views first and prove them on a shadow (paper)
+      change before any real parameter write. The trigger to act is "the calibration_shrunk credible
+      interval EXCLUDES the current ladder anchor's implied rate" — NOT a periodic re-match to the
+      posterior, which would ratchet on noise while the interval is this wide. Auto-REVERT may
+      eventually be autonomous (fail-safe direction); auto-CHANGE requires a human-merged PR, always.
+      This is the single largest strategy-side autonomy step in the audit and must be pre-mortem-
+      reviewed by the owner before any table here is even created.
+    added: "2026-07-03"
+
+cross_cutting_guards:
+  - id: no_auto_merge_self_improvement
+    status: documented_not_enforced
+    note: >
+      Any GitHub PR authored by a self-improvement loop (process_reliability, strategy_playbook, etc.)
+      must carry an explicit human-review requirement and must NOT be eligible for
+      .github/workflows/auto-merge-claude.yml's automatic merge — auto-merge-claude is designed for
+      Claude's own ROUTINE commits, not for a loop proposing a change to production trading constants.
+      NOT YET ENFORCED IN CI (would require editing auto-merge-claude.yml to detect a label/marker and
+      exclude it — deferred pending a specific loop reaching active_pr_gated, since there is nothing
+      to gate yet). When the FIRST loop (process_reliability) is promoted past dormant, this guard
+      must be implemented before that loop opens its first real PR.
+  - id: meta_monitoring_heartbeat
+    status: documented_not_enforced
+    note: >
+      Every loop above dormant should write an "evaluated this cycle" heartbeat (or an explicit
+      decision_log "no change" entry) on every firing, with a scheduled-query dead-man's-switch
+      alerting if the expected evaluation is missing — the same pattern ops.heartbeat already uses
+      for the Apps Scripts (bigquery/16_automation_health.sql). Not yet built: no loop has reached a
+      stage where it fires on a schedule.
