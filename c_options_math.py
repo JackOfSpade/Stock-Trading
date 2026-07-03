@@ -590,11 +590,15 @@ class Structure:
         low = max(0.0, min(lo_target, cone_lo))
         high = max(hi_target, cone_hi)
 
-        # Pin the range endpoints exactly (see docstring), then sample.
-        worst_pnl = min(self.pnl_at_expiration(low), self.pnl_at_expiration(high))
+        # Pin the range endpoints exactly (see docstring), then sample. Uses the INDEPENDENT payoff
+        # path (_independent_structure_pnl, defined below), not self.pnl_at_expiration — see that
+        # function's docstring for why (2026-07-03 self-improvement audit C-1: the two dual-path
+        # verification methods must not share the payoff computation itself, or a bug in it passes
+        # verification silently on both paths).
+        worst_pnl = min(_independent_structure_pnl(self, low), _independent_structure_pnl(self, high))
         for _ in range(n_paths):
             S_T = rng.uniform(low, high)
-            pnl = self.pnl_at_expiration(S_T)
+            pnl = _independent_structure_pnl(self, S_T)
             if pnl < worst_pnl:
                 worst_pnl = pnl
 
@@ -1007,6 +1011,50 @@ class MaxLossDualPathDisagreement(Exception):
     """Raised when closed-form and Monte Carlo max-loss disagree by more than
     the tolerance. Per Strategy.md rev 19, this defers the thesis."""
     pass
+
+
+def _independent_intrinsic(option_type: str, strike: float, price: float) -> float:
+    """Intrinsic value at expiration, via a code path independent of
+    OptionLeg.payoff_at_expiration.
+
+    FIX (2026-07-03, self-improvement audit C-1). Before this fix,
+    max_loss_closed_form and max_loss_monte_carlo BOTH computed P&L by calling
+    Structure.pnl_at_expiration -> Structure.payoff_at_expiration ->
+    OptionLeg.payoff_at_expiration, and Monte Carlo additionally pinned the
+    SAME deterministic worst-case endpoints the closed-form scan uses. So for
+    every bounded structure, the two "independent" verification paths
+    evaluated the identical payoff function at the identical point and were
+    mathematically guaranteed to agree — a bug in that one shared method would
+    make both paths agree on the same wrong number and pass Strategy.md rev
+    19's dual-path verification silently. This function (and
+    _independent_structure_pnl below) is a from-scratch reimplementation used
+    ONLY by max_loss_monte_carlo, so the two paths now use genuinely different
+    code for the core payoff math and an arithmetic bug in either
+    implementation surfaces as a verify_max_loss_dual_path disagreement
+    instead of ceremony.
+    """
+    if option_type == 'call':
+        return price - strike if price > strike else 0.0
+    elif option_type == 'put':
+        return strike - price if price < strike else 0.0
+    raise ValueError(f"Unknown option_type: {option_type!r}")
+
+
+def _independent_structure_pnl(structure: 'Structure', price: float) -> float:
+    """P&L at expiration via the independent payoff path — see
+    _independent_intrinsic. Sums each leg's intrinsic value independently
+    rather than delegating to OptionLeg.payoff_at_expiration, then subtracts
+    the structure's net debit. structure.net_debit() IS shared with the
+    closed-form path deliberately: it is a simple, non-branching summation
+    (sum of leg.price() * quantity) with its own independent BSM-vs-Hull-
+    textbook + put-call-parity test coverage, not the error-prone
+    branching intrinsic-value logic this fix targets.
+    """
+    total = 0.0
+    for leg in structure.legs:
+        intrinsic = _independent_intrinsic(leg.option.option_type, leg.option.strike, price)
+        total += intrinsic * leg.quantity * CONTRACT_MULTIPLIER
+    return total - structure.net_debit()
 
 
 def verify_max_loss_dual_path(

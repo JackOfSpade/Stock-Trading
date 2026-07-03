@@ -1,12 +1,22 @@
--- Parallel-run dbt port of bigquery/04_analytics.sql:analytics.strategy_nav — canonical source is that file until owner cutover.
--- Per-strategy NAV / 2%-sizing base. NAV = equal-split deposits ($1889.372/strategy = $9446.86/5)
--- + realized P&L (curated fills) + unrealized (open positions at latest close) + held-stock
--- dividends. Gives sizing_base_2pct (~$37.7/strategy) + available-funds (NAV - deployed MV).
+-- Parallel-run dbt port of bigquery/22_cash_flows.sql:analytics.strategy_nav (redefined there,
+-- supersedes the earlier hardcoded-literal version) — canonical source is that file until owner cutover.
+-- Per-strategy NAV / 2%-sizing base. NAV = equal-split deposits (events.cash_flows, self-improvement
+-- audit B-1-exec — a strategy-tagged flow attributes to that strategy only) + realized P&L (curated
+-- fills) + unrealized (open positions at latest close) + held-stock dividends. Gives sizing_base_2pct
+-- (~$37.7/strategy) + available-funds (NAV - deployed MV).
 -- NOTE: the shared SGOV park is held at deposit par here (Σ NAV ~0.2% light vs connector NLV);
 -- the SGOV park is account-level (no per-strategy split — see state.sgov_reconciliation / §13);
 -- per-strategy budget = available_funds below.
 
-WITH dep AS (SELECT s AS strategy, CAST(1889.372 AS NUMERIC) AS deposits FROM UNNEST(['A','B','C','D','E']) s),
+WITH dep AS (
+  SELECT s AS strategy,
+    SUM(CASE WHEN cf.strategy = s THEN cf.amount
+             WHEN cf.strategy IS NULL THEN cf.amount / 5
+             ELSE 0 END) AS deposits
+  FROM UNNEST(['A','B','C','D','E']) s
+  CROSS JOIN {{ source('events', 'cash_flows') }} cf
+  GROUP BY s
+),
 realized AS (SELECT strategy, SUM(realized_pnl) AS realized_pnl FROM {{ ref('trade_fills_curated') }} GROUP BY strategy),
 latest_close AS (SELECT ticker, close FROM {{ ref('daily_marks_curated') }}
   QUALIFY ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY mark_date DESC)=1),

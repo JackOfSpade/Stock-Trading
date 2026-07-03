@@ -249,6 +249,28 @@ sources:
           - name: capture_date
             description: Capture date (partition key).
 
+      - name: cash_flows
+        description: >
+          Append-only deposit/withdrawal ledger (bigquery/22_cash_flows.sql, self-improvement audit
+          B-1-exec). Source of truth for total NAV deposits / the §13 cash-tripwire baseline —
+          replaces the hardcoded literals formerly in analytics.strategy_nav / account_reconciliation.
+        columns:
+          - name: event_id
+            description: Primary key (GENERATE_UUID default).
+            tests:
+              - unique
+              - not_null
+          - name: flow_date
+            description: Date of the deposit/withdrawal (partition key).
+            tests:
+              - not_null
+          - name: amount
+            description: Signed amount — positive deposit, negative withdrawal.
+            tests:
+              - not_null
+          - name: strategy
+            description: NULL = equal-split across active strategies (standing methodology); non-NULL only for an operator-stated allocation.
+
   - name: ops
     project: stock-trading-498512
     dataset: ops

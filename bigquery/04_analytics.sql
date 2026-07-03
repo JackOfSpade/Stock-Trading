@@ -68,21 +68,35 @@ FROM a JOIN o USING (review_id);
 -- "unprofitable"; the buy fill's realized_pnl=0 must not be read as a loss). As of 2026-06-06 the
 -- 3 closed B GO theses (IBM/META/BRC) are 3/3 profitable gross -- the first calibration signal;
 -- the conviction model itself stays deferred until ~30 closed trades.
+--
+-- REGIME-AS-OF FIX (2026-07-03, self-improvement audit S-1/B-1). Was: `regime_now` selected the
+-- single LATEST `_integrative` regime value and back-stamped it onto EVERY historical thesis
+-- (`MAX(...)` with no entry_date correlation) -- look-ahead label leakage that silently re-labels
+-- every past thesis each time the regime flips, and non-reproducible month over month. Fixed to an
+-- as-of lookup: the regime in effect ON OR BEFORE the thesis's entry_date. A thesis predating any
+-- regime_events row now correctly gets NULL (unknown), not a fabricated future value. Implemented
+-- as a DECORRELATED join + QUALIFY (same pattern as state.account_nav_7d_ago) -- BigQuery views do
+-- not support a same-row correlated subquery against another table.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.thesis_outcomes` AS
 WITH theses AS (
   SELECT entry_id, entry_date, strategy, ticker, conviction, sub_pattern, decision, title
   FROM `stock-trading-498512.events.decision_log`
   WHERE entry_type = 'thesis-construction'
 ),
-fund AS (
-  SELECT key AS axis, value, as_of_date,
-         ROW_NUMBER() OVER (PARTITION BY key ORDER BY as_of_date DESC) rn
-  FROM `stock-trading-498512.events.regime_events` WHERE scope='FUNDAMENTAL_AXIS'
+regime_axis AS (
+  SELECT value AS regime_state, as_of_date
+  FROM `stock-trading-498512.events.regime_events`
+  WHERE scope='FUNDAMENTAL_AXIS' AND key='_integrative'
 ),
-regime_now AS (SELECT MAX(IF(axis='_integrative', value, NULL)) AS regime_state FROM fund WHERE rn=1)
+thesis_regime AS (
+  SELECT t.entry_id, ra.regime_state
+  FROM theses t
+  LEFT JOIN regime_axis ra ON ra.as_of_date <= t.entry_date
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY t.entry_id ORDER BY ra.as_of_date DESC) = 1
+)
 SELECT
   t.entry_id, t.entry_date, t.strategy, t.ticker, t.decision, t.conviction, t.sub_pattern,
-  (SELECT regime_state FROM regime_now) AS regime_state,
+  tr.regime_state,
   pl.exit_date IS NOT NULL AS position_closed,
   IF(pl.exit_date IS NOT NULL, pl.realized_pnl, NULL) AS realized_pnl,
   CASE WHEN pl.exit_date IS NULL THEN NULL          -- position still open -> outcome unknown (not a loss)
@@ -90,6 +104,7 @@ SELECT
        ELSE pl.realized_pnl > 0 END AS was_profitable,
   t.title
 FROM theses t
+LEFT JOIN thesis_regime tr ON tr.entry_id = t.entry_id
 LEFT JOIN `stock-trading-498512.analytics.position_lifecycle` pl
   ON pl.strategy = t.strategy AND pl.ticker = t.ticker
 -- Pair each thesis to ITS round-trip: a re-traded ticker has >1 position, so pick

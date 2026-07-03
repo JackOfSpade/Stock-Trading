@@ -5,6 +5,10 @@
 -- state.account_nav_7d_ago) — a Monday-holiday week produces real two-row ties, and this
 -- view is independently evaluated by dbt-parity against the live view, so a
 -- nondeterministic pick would show up as spurious drift.
+--
+-- NET-OF-COMMISSION VISIBILITY (2026-07-03, self-improvement audit S-4): edge_dollars_cum_net is
+-- additive-only (gross stays the kill-gate headline per the owner's documented commission policy,
+-- 03_twr_engine.sql) so the commission drag is visible on an ongoing basis.
 
 WITH latest AS (
   SELECT strategy, as_of_date, edge_dollars_cum
@@ -35,7 +39,8 @@ SELECT
   l.strategy, l.as_of_date, l.edge_dollars_cum,
   l.edge_dollars_cum - w.edge_dollars_cum_7d_ago AS edge_dollars_wk,
   f.first_deployed_date,
-  c.commissions_to_date
+  c.commissions_to_date,
+  l.edge_dollars_cum - COALESCE(c.commissions_to_date, 0) AS edge_dollars_cum_net
 FROM latest l
 JOIN wk_ago w USING (strategy)
 JOIN firsts f USING (strategy)

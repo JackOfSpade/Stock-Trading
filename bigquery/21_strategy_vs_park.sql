@@ -50,6 +50,13 @@ LEFT JOIN `stock-trading-498512.perf.strategy_daily` pd
   ON pd.as_of_date = j.as_of_date AND pd.strategy = j.strategy;
 
 -- ===== analytics.strategy_vs_park — latest verdict row per ever-deployed strategy =====
+-- NET-OF-COMMISSION VISIBILITY (2026-07-03, self-improvement audit S-4). The deployed-TWR engine
+-- judges profitability GROSS of commission by deliberate owner directive (03_twr_engine.sql: the
+-- ~$0.32/fill commission on ~$30 positions is a scale artifact, not stock-selection edge -- see the
+-- 2026-06-05 finding note there for the one-time hand-computed net figures, B 0.9663 / D 0.9573).
+-- That policy is UNCHANGED here -- edge_dollars_cum (gross) stays the headline / kill-gate input.
+-- This adds edge_dollars_cum_net purely so the commission drag is visible on an ONGOING basis
+-- (not just a one-time hand note) alongside the gross figure, wherever this view is read.
 -- 7d-ago anchor: nearest row to CURRENT_DATE−7 (America/Denver — the operating plane; display tz
 -- never leaks into SQL windows), deterministic tie-break toward the NEWER row (', as_of_date DESC'
 -- — same pattern as state.account_nav_7d_ago; a Monday-holiday week produces real two-row ties,
@@ -87,7 +94,10 @@ SELECT
   l.strategy, l.as_of_date, l.edge_dollars_cum,
   l.edge_dollars_cum - w.edge_dollars_cum_7d_ago AS edge_dollars_wk,
   f.first_deployed_date,
-  c.commissions_to_date
+  c.commissions_to_date,
+  -- Additive net-of-commission dollar edge -- see note above. Does NOT change what any kill/gate
+  -- trigger reads; purely a visibility column.
+  l.edge_dollars_cum - COALESCE(c.commissions_to_date, 0) AS edge_dollars_cum_net
 FROM latest l
 JOIN wk_ago w USING (strategy)
 JOIN firsts f USING (strategy)

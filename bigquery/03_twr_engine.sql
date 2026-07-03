@@ -167,23 +167,59 @@ WHERE rn = 1;
 -- (1+r_deployed); peak = high-water mark vs the 1.000 inception base; sgov_index chains the ACTUAL
 -- SGOV total return. D2 calls ops.sp_daily_refresh() (08_ops_procedures.sql), which CALLs this then
 -- ops.sp_embed_pending(). Validated 2026-06-07: reproduces the prior engine state bit-for-bit.
+--
+-- RELIABILITY FIX (2026-07-03, self-improvement audit B-3-data). Two production-truth defects:
+-- (1) ATOMICITY: the bare DELETE-then-INSERT left perf.strategy_daily transiently EMPTY between the
+--     two statements. state.system_health / perf.kill_flags read this table directly — a concurrent
+--     read mid-rebuild could see 0 rows and mis-fire (health looks dead) or mis-CLEAR (kill_flags
+--     looks all-false) a safety signal. Wrapped in BEGIN TRANSACTION / COMMIT so readers see the OLD
+--     complete table right up until the new one commits atomically (BigQuery snapshot isolation).
+-- (2) LN(1+r) DOMAIN: a daily r_deployed or r_sgov <= -1 (a bad ~0 mark) makes LN(1+r) undefined ->
+--     NULL -> EXP(SUM(...)) NULLs the ENTIRE downstream chain for that strategy, silently erasing its
+--     whole history rather than surfacing one bad day. Clamped to GREATEST(r, -0.9999) before the LN
+--     (a real >99.99% single-day loss is indistinguishable from a bad mark and should be caught by a
+--     human via the alert below, not allowed to null the engine) and a critical alert raised whenever
+--     the clamp actually engages so the underlying mark gets corrected.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_recompute_engine`()
 BEGIN
+  DECLARE bad_mark_count INT64;
+
+  -- Detect (before mutating anything) any day/strategy where a raw return would have hit the
+  -- LN(1+r) domain floor, so a bad mark is flagged even though the clamp below keeps the chain alive.
+  SET bad_mark_count = (
+    SELECT COUNT(*)
+    FROM `stock-trading-498512.analytics.strategy_daily_returns` sdr
+    LEFT JOIN `stock-trading-498512.analytics.sgov_daily_return` sg USING (as_of_date)
+    WHERE sdr.r_deployed <= -0.9999 OR sg.r_sgov <= -0.9999
+  );
+  IF bad_mark_count > 0 THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'critical', 'ops.sp_recompute_engine', 'twr_bad_mark',
+      'A strategy-day had r_deployed or r_sgov <= -99.99% -- clamped to avoid NULL-corrupting the TWR chain; underlying mark likely bad, needs correction.',
+      TO_JSON_STRING(STRUCT(bad_mark_count AS bad_mark_count, CURRENT_TIMESTAMP() AS detected_ts)));
+  END IF;
+
+  BEGIN TRANSACTION;
+
   DELETE FROM `stock-trading-498512.perf.strategy_daily` WHERE TRUE;
   INSERT INTO `stock-trading-498512.perf.strategy_daily`
   (as_of_date, strategy, deployed_unit_value, peak_unit_value, current_drawdown, sgov_index, excess_vs_sgov, deployed_days, closed_trades, gate_n, method, note)
   WITH r AS (
-    SELECT sdr.as_of_date, sdr.strategy, sdr.r_deployed,
+    SELECT sdr.as_of_date, sdr.strategy,
+      -- Clamp against the LN(1+r) domain floor -- see fix note above. GREATEST(r,-0.9999) leaves
+      -- any normal return untouched; only a <=-99.99% day (almost certainly a bad ~0 mark, already
+      -- flagged above) is floored instead of NULLing the whole chain.
+      GREATEST(sdr.r_deployed, -0.9999) AS r_deployed,
       -- A deployed day with no SGOV mark must NOT contribute 0 to the benchmark:
       -- 0 silently understates SGOV and OVER-states excess_vs_sgov, which feeds
       -- the m2m_underperf_review kill check. Forward-fill the last known SGOV
       -- daily return; fall back to 0 only before the first SGOV observation.
-      COALESCE(
+      GREATEST(COALESCE(
         sg.r_sgov,
         LAST_VALUE(sg.r_sgov IGNORE NULLS) OVER (
           PARTITION BY sdr.strategy ORDER BY sdr.as_of_date
           ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW),
-        0) AS r_sgov
+        0), -0.9999) AS r_sgov
     FROM `stock-trading-498512.analytics.strategy_daily_returns` sdr
     LEFT JOIN `stock-trading-498512.analytics.sgov_daily_return` sg USING (as_of_date)
   ),
@@ -210,6 +246,8 @@ BEGIN
     'value-weighted-daily-TWR-gross-v3',
     'PROFITABILITY metric: GROSS of commissions (scale artifact at ~$30 positions), total return, SGOV actual total-return benchmark. Cash/NAV accounting tracks commissions exactly + separately.'
   FROM peaked p;
+
+  COMMIT TRANSACTION;
 END;
 
 -- ===== SGOV / corporate-action handling (audited 2026-06-05) =====

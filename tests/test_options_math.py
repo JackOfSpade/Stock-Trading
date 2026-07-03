@@ -186,6 +186,79 @@ def test_cascade_max_loss_is_finite_for_credit_put_spread():
     assert math.isfinite(cascade) and cascade >= 0
 
 
+# ---------------------------------------------------------------------------
+# Golden / worked-example tests for cascade_max_loss (2026-07-03 self-improvement
+# audit finding: the existing suite only asserted isfinite()/>=0, so a sign-flip
+# or wrong-leg-selected bug in cascade_max_loss's control flow — the load-bearing
+# bound for Strategy C's 2% sizing on short-leg structures — would pass silently.
+# These hand-compute the rev-20 formula independently (not by calling
+# cascade_max_loss's internals) and assert equality, catching that class of bug.
+# ---------------------------------------------------------------------------
+def test_cascade_max_loss_golden_credit_call_spread_call_side_assigned():
+    ccs = credit_call_spread(100, short_strike=100, long_strike=105,
+                              days_to_expiration=30, risk_free_rate=0.045,
+                              volatility_short=0.30, volatility_long=0.30, contracts=1)
+    implied_move = 0.05
+    cascade = cascade_max_loss(ccs, underlying_price=100, days_to_expiration=30,
+                                implied_move_full_horizon=implied_move)
+    # Rev 20: adverse move = 2x implied move; call side adverse direction is UP.
+    adverse_mark = 100 * (1 + 2 * implied_move)
+    assert adverse_mark == pytest.approx(110.0)
+    assignment_loss = max(adverse_mark - 100, 0.0) * CONTRACT_MULTIPLIER   # short call K=100
+    long_payoff = max(adverse_mark - 105, 0.0) * CONTRACT_MULTIPLIER      # long call K=105
+    expected = max(0.0, assignment_loss - long_payoff + ccs.net_debit())
+    assert expected > 100.0  # sanity: not a vacuous near-zero golden value
+    assert cascade == pytest.approx(expected, abs=0.01)
+
+
+def test_cascade_max_loss_golden_credit_put_spread_put_side_assigned():
+    cps = credit_put_spread(100, short_strike=95, long_strike=90,
+                             days_to_expiration=30, risk_free_rate=0.045,
+                             volatility_short=0.30, volatility_long=0.30, contracts=1)
+    implied_move = 0.05
+    cascade = cascade_max_loss(cps, underlying_price=100, days_to_expiration=30,
+                                implied_move_full_horizon=implied_move)
+    # Put side adverse direction is DOWN.
+    adverse_mark = 100 * (1 - 2 * implied_move)
+    assert adverse_mark == pytest.approx(90.0)
+    assignment_loss = max(95 - adverse_mark, 0.0) * CONTRACT_MULTIPLIER   # short put K=95
+    long_payoff = max(90 - adverse_mark, 0.0) * CONTRACT_MULTIPLIER       # long put K=90 -> 0 at S=90
+    expected = max(0.0, assignment_loss - long_payoff + cps.net_debit())
+    assert expected > 100.0  # sanity: not a vacuous near-zero golden value
+    assert cascade == pytest.approx(expected, abs=0.01)
+
+
+def test_cascade_max_loss_golden_iron_condor_picks_worse_side_not_last_leg():
+    # Constructed so the PUT side's cascade loss is materially larger than the CALL
+    # side's (short_call is far OTM and never gets reached by the adverse move) —
+    # while iron_condor's leg order always places the short CALL leg last in
+    # structure.legs. A "pick whichever short leg is iterated last" bug would
+    # therefore return the smaller (near-zero) call-side loss; correct behavior
+    # (max across short legs) must return the larger put-side loss.
+    ic = iron_condor(100, long_put_strike=80, short_put_strike=95,
+                      short_call_strike=130, long_call_strike=150,
+                      days_to_expiration=30, risk_free_rate=0.045,
+                      vol_long_put=0.30, vol_short_put=0.30,
+                      vol_short_call=0.30, vol_long_call=0.30, contracts=1)
+    implied_move = 0.05
+    cascade = cascade_max_loss(ic, underlying_price=100, days_to_expiration=30,
+                                implied_move_full_horizon=implied_move)
+
+    adverse_mark_up = 100 * (1 + 2 * implied_move)     # 110
+    adverse_mark_dn = 100 * (1 - 2 * implied_move)     # 90
+    cascade_call_side = max(0.0,
+        max(adverse_mark_up - 130, 0.0) * CONTRACT_MULTIPLIER    # short call K=130 -> 0 (110<130)
+        - max(adverse_mark_up - 150, 0.0) * CONTRACT_MULTIPLIER  # long call K=150 -> 0
+        + ic.net_debit())
+    cascade_put_side = max(0.0,
+        max(95 - adverse_mark_dn, 0.0) * CONTRACT_MULTIPLIER     # short put K=95 -> 500
+        - max(80 - adverse_mark_dn, 0.0) * CONTRACT_MULTIPLIER   # long put K=80 -> 0
+        + ic.net_debit())
+    expected = max(cascade_call_side, cascade_put_side)
+    assert cascade_put_side > cascade_call_side + 1.0  # confirms the test actually discriminates
+    assert cascade == pytest.approx(expected, abs=0.01)
+
+
 def test_size_position_defers_when_no_integer_fits():
     contracts, defer = size_position(50.0, 1389.37, 0.02)  # 2% of 1389 = ~27.8 < 50
     assert contracts == 0 and defer is True
