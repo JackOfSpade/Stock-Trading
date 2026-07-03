@@ -39,12 +39,12 @@ models:
         tests: [not_null]
         description: Strategy code, restricted to ever-deployed strategies (A-E subset).
       - name: excess_vs_sgov
-        description: Cumulative deployed-slice excess return vs SGOV for that day — from perf.strategy_daily; the email derives trailing week/month/year vs-SGOV from this.
+        description: Cumulative deployed-slice excess return vs SGOV for that day — from perf.strategy_daily; the email turns the latest value into an average vs-SGOV return per week/month/year over the strategy's deployed days.
       - name: deployed_unit_value
         description: The strategy's own chained cumulative total-return unit value for that day (the returns chart plots this − 1).
 
   - name: sgov_cumulative
-    description: SGOV's own cumulative total return per deployed trading day (the returns chart's SGOV line + its trailing-window returns). 2026-07-03.
+    description: SGOV's own cumulative total return per deployed trading day (the returns chart's SGOV line + its own average return per week/month/year). 2026-07-03.
     columns:
       - name: as_of_date
         tests:

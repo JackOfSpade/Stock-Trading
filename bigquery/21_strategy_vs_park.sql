@@ -3,13 +3,14 @@
 -- there in this same redesign) and after 04_analytics.sql (analytics.strategy_nav, state.trade_fills_curated).
 --
 -- WHY THIS EXISTS: the weekly email answers a single question — "is each strategy beating SGOV?" —
--- as percentages. It iterated (full history in ops/RUNBOOK.md §33); the CURRENT (2026-07-03 #2)
+-- as percentages. It iterated (full history in ops/RUNBOOK.md §33); the CURRENT (2026-07-03 #3)
 -- email reads exactly two views from this file:
 --   * analytics.strategy_vs_park_daily — per strategy-day: deployed_unit_value (the chart's ACTUAL
---     cumulative-return lines) + cumulative excess_vs_sgov (the .gs derives the trailing
---     1-week / 1-month / 1-year return vs SGOV from this series).
+--     cumulative-return lines) + cumulative excess_vs_sgov (the .gs turns this into an AVERAGE return
+--     vs SGOV per week / month / year — a geometric per-period rate over the strategy's ACTIVE
+--     (deployed) days; rows exist only for deployed days, so idle time never dilutes the average).
 --   * analytics.sgov_cumulative — SGOV's OWN cumulative total return (the chart's SGOV line + its
---     trailing-window returns). Defined at the bottom of this file.
+--     own average return per period). Defined at the bottom of this file.
 -- The other views here (strategy_vs_park $ edge + commissions, deployed_book_vs_sgov combined
 -- excess %, park_baseline) fed earlier iterations and are RETAINED but no longer read by the email.
 -- Everything derives from perf.strategy_daily (the deployed-TWR engine); excess_vs_sgov =
@@ -17,7 +18,7 @@
 
 -- ===== analytics.strategy_vs_park_daily — per strategy-day: unit value, cumulative excess, $ edge =====
 -- deployed_unit_value + excess_vs_sgov come straight from the engine (perf.strategy_daily) so the
--- chart, the trailing-window figures, and the kill/gate metric are one source. edge_dollars_* are the
+-- chart, the per-period-average figures, and the kill/gate metric are one source. edge_dollars_* are the
 -- earlier dollar-edge columns, retained for parity/history (no longer read by the email).
 -- r_sgov forward-fill mirrors ops.sp_recompute_engine (a missing SGOV mark must not read as 0).
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.strategy_vs_park_daily` AS
@@ -37,8 +38,8 @@ SELECT
   j.as_of_date, j.strategy, j.deployed_capital,
   -- the strategy's own chained cumulative total return (unit value) — the chart plots (this − 1).
   pd.deployed_unit_value,
-  -- the engine's chained deployed-vs-SGOV cumulative excess for this strategy-day; the .gs derives
-  -- trailing week/month/year vs-SGOV figures from this series.
+  -- the engine's chained deployed-vs-SGOV cumulative excess for this strategy-day; the .gs turns the
+  -- latest value into an average vs-SGOV return per week/month/year over the strategy's deployed days.
   pd.excess_vs_sgov,
   -- $ (unused by the 2026-07 email; retained for any other consumer / historical parity).
   j.deployed_capital * (j.r_deployed - j.r_sgov) AS edge_dollars_day,
@@ -151,9 +152,9 @@ FROM j;
 -- ===== analytics.sgov_cumulative — SGOV's OWN cumulative total return, aligned to the deployed axis =====
 -- One row per deployed trading day: SGOV's cumulative total return (close + dividends) chained from
 -- the first deployed date forward. The weekly email plots this as the SGOV line on the returns chart
--- (so SGOV's actual return is visible, not a flat 0), and derives SGOV's own trailing week/month/year
--- return from it. Built over the union of dates in strategy_vs_park_daily so it shares the strategy
--- lines' x-axis exactly. r_sgov forward-fill mirrors the engine.
+-- (so SGOV's actual return is visible, not a flat 0), and derives SGOV's own average return per
+-- week/month/year over those days. Built over the union of dates in strategy_vs_park_daily so it
+-- shares the strategy lines' x-axis exactly. r_sgov forward-fill mirrors the engine.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.sgov_cumulative` AS
 WITH days AS (
   SELECT DISTINCT as_of_date FROM `stock-trading-498512.analytics.strategy_vs_park_daily`

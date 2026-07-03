@@ -195,8 +195,9 @@ routines:
 # (ops/weekly_report/weekly_report.gs) on a weekly time-trigger that runs on Google's
 # servers as the owner. The Gmail connector can only draft (not send), so delivery lives
 # outside Claude. 2026-07 redesign (ops/RUNBOOK.md §33): the email now answers one question
-# ("is each strategy beating SGOV?", answered as percentages — actual returns + trailing
-# 1wk/1mo/1yr vs SGOV, since 2026-07-03) and reads BigQuery (analytics.strategy_scorecard,
+# ("is each strategy beating SGOV?", answered as percentages — actual returns + an average
+# vs-SGOV return per week/month/year over deployed days, since 2026-07-03) and reads BigQuery
+# (analytics.strategy_scorecard,
 # analytics.strategy_vs_park_daily, analytics.sgov_cumulative, state.system_health,
 # state.user_tz) and self-emails the HTML digest + an inline returns-chart PNG. D2 Step 0b still writes ops.account_snapshot daily
 # (account NAV/TWR — kept for the dashboard and history), but the weekly email no longer

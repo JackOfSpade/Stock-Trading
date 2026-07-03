@@ -5,10 +5,11 @@ A weekly HTML email that answers exactly one question: **is each strategy beatin
 history.) Everything that didn't support that question — regime, account NAV/MTD/YTD, open
 positions, next-7-days, weekly activity, the full ops-health strip — was cut. What's left:
 a **returns chart** (each deployed strategy's cumulative total return + a gray SGOV line),
-a **table** of each strategy's return vs SGOV over the trailing **1 week / 1 month / 1
-year** ("Not enough data" until that much history exists) with an SGOV own-return row, and
-a one-line data-trust warning that only appears when something is actually stale. No
-combined aggregate, no verdict labels, no dollar figures.
+a **table** of each strategy's **average return vs SGOV per week / month / year** — a
+geometric per-period rate measured over **active (deployed) time only**, so idle stretches
+never dilute it ("Not enough data" until that much deployed history exists) with an SGOV
+own-return row, and a one-line data-trust warning that only appears when something is
+actually stale. No combined aggregate, no verdict labels, no dollar figures.
 
 ## Why it's an Apps Script and not a Claude routine
 
@@ -81,8 +82,8 @@ again. To stop, delete the trigger (clock icon in the editor) or the project.
 | View / table | Feeds |
 |---|---|
 | `analytics.strategy_scorecard` | the A–E list + activation string (for the "not deployed" reason) |
-| `analytics.strategy_vs_park_daily` | per strategy-day: `deployed_unit_value` (the chart's return lines) + cumulative `excess_vs_sgov` (the `.gs` derives the trailing 1wk/1mo/1yr vs-SGOV from it) |
-| `analytics.sgov_cumulative` | SGOV's own cumulative total return per day (the chart's SGOV line + its trailing-window returns) |
+| `analytics.strategy_vs_park_daily` | per strategy-day: `deployed_unit_value` (the chart's return lines) + cumulative `excess_vs_sgov` (the `.gs` turns the latest value into an average vs-SGOV return per week/month/year over the strategy's deployed days) |
+| `analytics.sgov_cumulative` | SGOV's own cumulative total return per day (the chart's SGOV line + its own average return per week/month/year) |
 | `state.system_health` | marks/engine freshness + firing kill-flags + critical alerts — the one surviving data-trust signal |
 | `state.user_tz` | detected DISPLAY timezone (never the operating/trading-day timezone) |
 | `perf.kill_flags` / `ops.alerts` | queried lazily, only when `state.system_health` flags something |
@@ -98,13 +99,15 @@ Everything is an **actual total return** or a **return vs SGOV**, both as percen
 - **Chart** — each deployed strategy's cumulative total return since its first deployment
   (`deployed_unit_value − 1`) and SGOV's own cumulative total return (`sgov_cumulative`),
   each a line. SGOV is a real gray line, not a flat baseline.
-- **Table** — per strategy, the return *above SGOV* over the trailing **1 week / 1 month /
-  1 year**, derived from the cumulative excess series
-  (`(1+excess_latest)/(1+excess_{≤latest−window}) − 1`; `excess_vs_sgov` =
-  deployed-TWR unit value ÷ SGOV index − 1, the sanctioned kill/gate metric). "Not enough
-  data" shows when the strategy's history is shorter than the window (so 1-year reads
-  "Not enough data" until ~a year of deployment exists). A separate **SGOV row** shows
-  SGOV's *own* return over the same windows.
+- **Table** — per strategy, the **average return *above SGOV* per week / month / year** — a
+  geometric per-period rate over the strategy's **active (deployed) days only**:
+  `(1 + excess_latest) ^ (tradingDaysPerPeriod / deployedDays) − 1`, with
+  `TRADING_DAYS_PER = {week:5, month:21, year:252}` and `excess_vs_sgov` = deployed-TWR unit
+  value ÷ SGOV index − 1 (the sanctioned kill/gate metric). `strategy_vs_park_daily` has a row
+  only for deployed days, so idle days are absent and never dilute the average toward 0.
+  "Not enough data" shows when the strategy has fewer deployed days than the period (so 1-year
+  reads "Not enough data" until ~252 deployed days exist). A separate **SGOV row** shows
+  SGOV's *own* average return per period over the same active window.
 
 Returns are gross of commissions (the sanctioned profitability convention); SGOV is its
 actual total return including its monthly dividends. Strategies with no deployed history

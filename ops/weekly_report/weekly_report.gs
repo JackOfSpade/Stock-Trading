@@ -7,8 +7,9 @@
  *
  * PURPOSE: answer one question per strategy — is it beating SGOV? — as a percentage.
  *   * A returns chart: each deployed strategy's cumulative total return + SGOV's own return line.
- *   * A per-strategy table: return vs SGOV over the trailing 1 week / 1 month / 1 year
- *     ("Not enough data" until that much history exists), plus SGOV's own return row.
+ *   * A per-strategy table: AVERAGE return vs SGOV per week / month / year — a geometric per-period
+ *     rate over ACTIVE (deployed) time only, so idle stretches never dilute it ("Not enough data"
+ *     until that much deployed history exists), plus SGOV's own average-return row.
  * Everything else (combined aggregate, verdict labels, dollar figures, weekly-Δ, gate counts,
  * regime, account NAV, positions, activity, ops strip) is intentionally omitted.
  *
@@ -38,6 +39,10 @@ const SEND_WEEKDAY = ScriptApp.WeekDay.SUNDAY;
 // Fixed per-strategy identity colors (CVD-validated) — never reassigned by rank/presence. SGOV is gray.
 const CHART_COLORS = { A: '#1baf7a', B: '#2a78d6', C: '#4a3aa7', D: '#eb6834', E: '#e87ba4' };
 const SGOV_GRAY = '#898781';
+
+// Trading days per period — the denominator basis for the per-period average return (week=5,
+// month=21, year=252 trading days). Also the min deployed history required to state each average.
+const TRADING_DAYS_PER = { week: 5, month: 21, year: 252 };
 
 // ===== ENTRY POINTS =====
 function testReport()      { sendWeeklyReport_(); }
@@ -151,27 +156,31 @@ function gatherData_() {
   const rows = scorecard.map(s => {
     const pts = dailyByStrategy[s.strategy] || [];
     const deployed = pts.length > 0;
-    const lastExcess = deployed ? pts[pts.length - 1].excess : null;   // cumulative excess series
+    const lastExcess = deployed ? pts[pts.length - 1].excess : null;   // cumulative excess vs SGOV
     const lastDuv = deployed ? pts[pts.length - 1].duv : null;
-    const excessSeries = pts.map(p => ({ as_of_date: p.as_of_date, cum: p.excess }));
+    // strategy_vs_park_daily has a row ONLY for days the sleeve was deployed, so this count is
+    // active-time — idle days are absent and never dilute the average.
+    const deployedDays = pts.length;
     return {
       strategy: s.strategy, deployed,
       returnPct: (deployed && lastDuv != null) ? lastDuv - 1 : null,   // cumulative actual return (chart/subject)
       excessCum: lastExcess,                                            // cumulative vs SGOV
-      // trailing-window return vs SGOV (excess); null = not enough history for that window.
-      w1: deployed ? windowReturn_(excessSeries, 7) : null,
-      w1m: deployed ? windowReturn_(excessSeries, 30) : null,
-      w1y: deployed ? windowReturn_(excessSeries, 365) : null,
+      // average return vs SGOV per week/month/year — geometric per-period rate over active days only;
+      // null = fewer deployed days than the period (not enough history to state that average).
+      w1: periodAvg_(lastExcess, deployedDays, TRADING_DAYS_PER.week),
+      w1m: periodAvg_(lastExcess, deployedDays, TRADING_DAYS_PER.month),
+      w1y: periodAvg_(lastExcess, deployedDays, TRADING_DAYS_PER.year),
       notDeployedReason: deployed ? null : notDeployedReason_(s.activation)
     };
   });
 
   const sgovLast = sgovSeries.length ? sgovSeries[sgovSeries.length - 1].cum : null;
+  const sgovDays = sgovSeries.length;   // SGOV axis = union of deployed days (same active window)
   const sgov = {
     returnPct: sgovLast,
-    w1: windowReturn_(sgovSeries, 7),
-    w1m: windowReturn_(sgovSeries, 30),
-    w1y: windowReturn_(sgovSeries, 365)
+    w1: periodAvg_(sgovLast, sgovDays, TRADING_DAYS_PER.week),
+    w1m: periodAvg_(sgovLast, sgovDays, TRADING_DAYS_PER.month),
+    w1y: periodAvg_(sgovLast, sgovDays, TRADING_DAYS_PER.year)
   };
 
   const deployedStrategies = rows.filter(r => r.deployed).map(r => r.strategy);
@@ -188,20 +197,15 @@ function notDeployedReason_(activation) {
   return 'not deployed — awaiting first deployment';
 }
 
-// Return over the trailing `days`-day window from a cumulative series [{as_of_date, cum}] (cum a
-// fraction). null = not enough history (no row on/before latest−days). Ties/holidays: takes the last
-// row on-or-before the target date.
-function windowReturn_(points, days) {
-  if (!points.length) return null;
-  const latest = points[points.length - 1];
-  if (latest.cum == null) return null;
-  const targetMs = parseIsoDateLocal_(latest.as_of_date).getTime() - days * 86400000;
-  let prior = null;
-  for (let i = 0; i < points.length; i++) {
-    if (parseIsoDateLocal_(points[i].as_of_date).getTime() <= targetMs) prior = points[i]; else break;
-  }
-  if (prior == null || prior.cum == null) return null; // history shorter than the window
-  return (1 + latest.cum) / (1 + prior.cum) - 1;
+// Geometric AVERAGE return per period, over ACTIVE (deployed) days only. `cum` is the cumulative
+// return fraction accrued across `deployedDays` deployed observations; idle days are absent from the
+// series so they never enter the denominator (they don't dilute the rate toward 0). Converts that
+// whole-window return into an equivalent constant per-period rate:
+//   (1 + cum) ^ (tradingDaysPerPeriod / deployedDays) − 1.
+// null when deployedDays < the period — not enough deployed history to state that average.
+function periodAvg_(cum, deployedDays, tradingDaysPerPeriod) {
+  if (cum == null || !deployedDays || deployedDays < tradingDaysPerPeriod) return null;
+  return Math.pow(1 + cum, tradingDaysPerPeriod / deployedDays) - 1;
 }
 
 // ===== "Why might these numbers be stale?" — only when the data-trust predicate fails =====
@@ -383,7 +387,7 @@ function buildHtml_(d, chartResult) {
     ${chartInner}
   </td></tr>`;
 
-  // Table: per strategy, return vs SGOV over trailing 1 week / 1 month / 1 year; SGOV's own return row.
+  // Table: per strategy, average return vs SGOV per week / month / year (active days only); SGOV's own row.
   const strategyRows = d.rows.map(r => {
     const chip = `<span style="display:inline-block;width:10px;height:10px;background-color:${CHART_COLORS[r.strategy] || '#8a96a3'};border-radius:2px;"></span>`;
     if (!r.deployed) {
@@ -415,17 +419,17 @@ function buildHtml_(d, chartResult) {
 
   const tableSection = `
   <tr><td style="padding:16px 22px 6px 22px;">
-    <div style="font-size:12px;color:#8a96a3;text-transform:uppercase;letter-spacing:0.6px;font-weight:700;">Return vs SGOV</div>
+    <div style="font-size:12px;color:#8a96a3;text-transform:uppercase;letter-spacing:0.6px;font-weight:700;">Average Return vs SGOV</div>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:10px;border-collapse:collapse;font-size:12px;">
       <tr style="background-color:#0f2747;color:#ffffff;">
         <td style="padding:8px;"></td>
         <td style="padding:8px;">Strategy</td>
-        <td style="padding:8px;text-align:right;">1 week</td>
-        <td style="padding:8px;text-align:right;">1 month</td>
-        <td style="padding:8px;text-align:right;">1 year</td>
+        <td style="padding:8px;text-align:right;">avg&nbsp;/&nbsp;week</td>
+        <td style="padding:8px;text-align:right;">avg&nbsp;/&nbsp;month</td>
+        <td style="padding:8px;text-align:right;">avg&nbsp;/&nbsp;year</td>
       </tr>${strategyRows}${sgovRow}
     </table>
-    <div style="font-size:11px;color:#8a96a3;margin-top:6px;">Strategy rows: return above SGOV over each trailing period. SGOV row: its own return.</div>
+    <div style="font-size:11px;color:#8a96a3;margin-top:6px;">Strategy rows: average return above SGOV per period, measured over active (deployed) time only. SGOV row: its own average return.</div>
   </td></tr>`;
 
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -466,14 +470,14 @@ function buildPlain_(d) {
     s += `  SGOV  ${signPct_(d.sgov.returnPct * 100)}\n`;
   }
 
-  s += `\nRETURN VS SGOV (trailing 1 week / 1 month / 1 year):\n`;
+  s += `\nAVERAGE RETURN VS SGOV (per active week / month / year):\n`;
   const fmt = v => (v == null ? 'Not enough data' : signPct_(v * 100));
   d.rows.forEach(r => {
     if (!r.deployed) { s += `  ${r.strategy}  ${r.notDeployedReason}\n`; return; }
-    s += `  ${r.strategy}  1wk ${fmt(r.w1)}  1mo ${fmt(r.w1m)}  1yr ${fmt(r.w1y)}\n`;
+    s += `  ${r.strategy}  avg/wk ${fmt(r.w1)}  avg/mo ${fmt(r.w1m)}  avg/yr ${fmt(r.w1y)}\n`;
   });
-  s += `  SGOV (own return)  1wk ${fmt(d.sgov.w1)}  1mo ${fmt(d.sgov.w1m)}  1yr ${fmt(d.sgov.w1y)}\n`;
+  s += `  SGOV (own return)  avg/wk ${fmt(d.sgov.w1)}  avg/mo ${fmt(d.sgov.w1m)}  avg/yr ${fmt(d.sgov.w1y)}\n`;
 
-  s += `\nStrategy rows are return above SGOV over each trailing period; SGOV row is its own return. Total return, gross of commissions; SGOV incl. dividends. Times in ${d.tz}.\n`;
+  s += `\nStrategy rows are the average return above SGOV per period, over active (deployed) time only; SGOV row is its own average return. Total return, gross of commissions; SGOV incl. dividends. Times in ${d.tz}.\n`;
   return s;
 }

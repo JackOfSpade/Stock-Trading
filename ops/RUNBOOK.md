@@ -1683,13 +1683,35 @@ figures, with "Not enough data" until that much history exists. Result:
   column, the gate column, and the multi-sentence methodology footnotes (replaced by one short line:
   "Total return, gross of commissions; SGOV includes dividends"). Subject line now shows each deployed
   strategy's cumulative actual return + SGOV's (e.g. `B +10.64% · D +2.46% · SGOV +0.69%`).
-- **Interpretation note (flagged to owner):** "weekly/monthly/yearly average" was implemented as the
-  return vs SGOV over the **trailing** 1 week / 1 month / 1 year (fund-fact-sheet style) — this is what
-  makes "Not enough data until we have a year" precise. If a per-period *average rate* was intended
-  instead, it's a one-line `.gs` change. Live-verified 2026-07-03: B 1wk +5.81% / 1mo +10.35%; D 1wk
-  +4.52% / 1mo +6.18%; SGOV own 1wk +0.11% / 1mo +0.33%; 1yr "Not enough data" for all.
+- **Interpretation note (RESOLVED in follow-up #3 below):** this build implemented "weekly/monthly/yearly"
+  as the return vs SGOV over the **trailing** 1 week / 1 month / 1 year (fund-fact-sheet style). The
+  owner then confirmed they wanted a per-period **average rate** over active days instead — see
+  follow-up #3. Trailing-window figures this build showed (superseded): B 1wk +5.81% / 1mo +10.35%;
+  D 1wk +4.52% / 1mo +6.18%; SGOV own 1wk +0.11% / 1mo +0.33%; 1yr "Not enough data" for all.
 - `deployed_book_vs_sgov`, `strategy_vs_park`, `park_baseline` are no longer read by the email
   (retained in BigQuery). dbt twin + `schema.yml` updated (`deployed_unit_value` col, new
   `sgov_cumulative`). Additive/backward-compatible; re-verified via the Node harness (primary +
   all-parked + chart-failure) + preview screenshot. **Owner action required:** re-paste
   `weekly_report.gs` (no scope change).
+
+**2026-07-03 follow-up #3 — per-period AVERAGE over ACTIVE days (resolves the #2 interpretation
+note).** Owner confirmed the table should show a per-period **average rate** ("average +X% per week
+across all history"), NOT a trailing-window return; and it must **disregard inactive time** —
+idle days must not default to 0 return and drag the average down. Result:
+- **Table** header is now **"Average Return vs SGOV"** with columns **avg / week · avg / month ·
+  avg / year**. Each cell is a geometric per-period average of the strategy's cumulative return
+  *above SGOV*, computed over its **active (deployed) days only**:
+  `(1 + excess_latest) ^ (tradingDaysPerPeriod / deployedDays) − 1`, with
+  `TRADING_DAYS_PER = {week:5, month:21, year:252}`. Because `strategy_vs_park_daily` has a row
+  **only** for deployed days, `deployedDays = points.length` naturally excludes idle stretches — no
+  zero-return calendar days ever enter the denominator. "Not enough data" when `deployedDays` is
+  fewer than the period's trading days (so 1-year stays "Not enough data" until 252 deployed days,
+  ~2027-04). The SGOV row shows SGOV's own average per period over the same active window.
+- No SQL/view change — this is a pure `.gs` recomputation off the existing `excess_vs_sgov` /
+  `sgov_cum_return` series (the old `windowReturn_` trailing-window helper was replaced by
+  `periodAvg_`). dbt/SQL/README comments refreshed to say "average per period over deployed days".
+  Live-verified 2026-07-03 (47 deployed days): B avg/wk **+1.01%** / avg/mo **+4.30%**; D avg/wk
+  **+0.19%** / avg/mo **+0.78%**; SGOV own avg/wk **+0.07%** / avg/mo **+0.31%**; avg/yr "Not enough
+  data" for all. Re-verified via the Node harness (primary + all-parked + chart-failure) + preview
+  screenshot. **Owner action required:** re-paste `weekly_report.gs` (no scope change) — this
+  supersedes the follow-up #2 build that was deployed to Apps Script.
