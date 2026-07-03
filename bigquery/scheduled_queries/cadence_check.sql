@@ -128,6 +128,24 @@ BEGIN
        FROM `stock-trading-498512.state.trigger_attestation` WHERE overdue));
   END IF;
 
+  -- period_missed (warning, 2026-07-03 self-improvement audit WO-1/B-6-obs) — a weekly/monthly/quarterly/
+  -- annual routine has not logged 'completed' anywhere in the CURRENT period (ISO week / month / quarter /
+  -- year) and Denver wall-clock is past that period's grace deadline (bigquery/24_cadence_period_watch.sql
+  -- — placed strictly after the documented Sun-or-Mon weekly tolerance / the 3rd-or-5th trading day for
+  -- longer periods). Closes the gap where trigger_missing's coarse 14/70/200/400-day window could leave a
+  -- single missed weekly routine unflagged for up to ~2 weeks. Self-bootstrapping (state.cadence_period_
+  -- watch.monitored) and WARNING-only (a missed weekly is not a same-night trading halt) — promote to a
+  -- RAISE-contributing critical only after a clean period confirms no false fire.
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.cadence_period_watch` WHERE period_missed) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'period_missed',
+      CONCAT('Cadence period check: routine(s) have not completed in the current period past their grace deadline: ',
+             (SELECT STRING_AGG(CONCAT(routine, ' (', monitor_class, ', period ', CAST(period_start AS STRING), ')'), ', ' ORDER BY routine)
+              FROM `stock-trading-498512.state.cadence_period_watch` WHERE period_missed)),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(routine, monitor_class, period_start, grace_deadline)))
+       FROM `stock-trading-498512.state.cadence_period_watch` WHERE period_missed));
+  END IF;
+
   -- routine_stalled (marginal) — a routine logged 'started' but never a terminal status past its per-class
   -- threshold (2026-06-28 #11: now ALL run-logged routines, not just D1/D2/D3): a session that died after
   -- sp_routine_start but before sp_routine_end (the run-log-blind slice).

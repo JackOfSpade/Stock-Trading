@@ -27,6 +27,20 @@ timezone: America/Denver
 # scripts/check_cadence_consistency.py. QUOTE it — an unquoted 21:00 is parsed by YAML as base-60 (=1260).
 cadence_watch_deadline_local: "21:00"
 
+# Period-miss grace windows (added 2026-07-03, self-improvement audit WO-1/B-6-obs). Declares WHEN a
+# weekly/monthly/quarterly/annual routine counts as "missed for the current period" in
+# state.cadence_period_watch (bigquery/24_cadence_period_watch.sql) — a grace deadline placed strictly
+# AFTER the documented tolerance so a routine that ran on its normal day never false-alarms. Value is
+# the Nth TRADING DAY of the period by which the routine must have completed (weekly_sun is calendar
+# days from that week's Sunday, since weeklies tolerate "Sunday OR Monday", not a trading-day count).
+# MUST match the OFFSET/day-count literals in bigquery/24_cadence_period_watch.sql; CI enforces it via
+# scripts/check_cadence_consistency.py (check E).
+period_grace_days:
+  weekly_sun: 1      # Monday (1 calendar day after the period's Sunday)
+  monthly_ftd: 3     # 3rd trading day of the month
+  quarterly_ftd: 3   # 3rd trading day of the quarter
+  annual_ftd: 5      # 5th trading day of the year
+
 defaults:
   log_run: true            # BEST-EFFORT, wrapped so it can never abort the routine: CALL ops.sp_routine_start(<id>,<run_date>,<session>,<branch>,<verbatim trigger instruction>) at start; ops.sp_routine_end(...,'completed'|'failed'|'halted',...) at end (templates in Claude_Task_Plan.md "Observability"). instruction -> ops.run_log.instruction -> state.routine_last_instruction (verify live triggers by query; diff vs scripts/print_routines.py).
   dep_gate: true           # SEPARATE + FATAL (not wrapped): action routines CALL ops.sp_assert_deps(<id>,<depends_on below>,<run_date>) BEFORE the start-log; aborts on a missing monitored upstream (self-bootstrapping)
