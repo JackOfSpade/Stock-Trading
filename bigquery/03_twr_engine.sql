@@ -148,13 +148,23 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.perf.strategy_daily` (
 OPTIONS(description='Deployed-TWR engine output. Full series computed 2026-06-05 from events.daily_marks; recomputed daily by D2.');
 
 -- ===== Kill-trigger flags (latest row per strategy) =====
+-- MIN-SAMPLE FLOOR + INTERIM WARNING (2026-07-03, self-improvement audit strategy-risk findings
+-- 4 & 5). Two gaps found: (1) runaway_review could fire on a strategy that is days old and merely
+-- had a lucky early run (deployed_unit_value>=2 with 0 closed trades is statistically empty, not a
+-- real runaway-success signal) — added a deployed_days>=30 floor so early noise cannot produce a
+-- terminal verdict. (2) D (and any long-horizon strategy) has NO operative kill before m2m_underperf
+-- _review's 756-day / 36-month threshold — it can silently underperform for ~3 years unguarded. Added
+-- interim_underperf_warning: a WARNING-ONLY signal (deployed_days>=90 AND excess_vs_sgov<=-15%) that
+-- does NOT feed all_green or any kill action — purely an earlier human-visible heads-up, so a
+-- structurally underwater long-horizon strategy is flagged in months, not years.
 CREATE OR REPLACE VIEW `stock-trading-498512.perf.kill_flags` AS
 SELECT strategy, as_of_date, deployed_unit_value, peak_unit_value, current_drawdown,
        excess_vs_sgov, deployed_days, closed_trades, gate_n,
-       current_drawdown <= -0.50                          AS drawdown_kill,        -- kill #1
-       (deployed_unit_value >= 2 AND closed_trades < 30)  AS runaway_review,       -- kill #3
-       (deployed_days >= 756 AND excess_vs_sgov <= -0.10) AS m2m_underperf_review, -- kill #4
-       (closed_trades >= 30)                              AS gate_reached          -- 30-trade gate
+       current_drawdown <= -0.50                                                AS drawdown_kill,        -- kill #1
+       (deployed_unit_value >= 2 AND closed_trades < 30 AND deployed_days >= 30) AS runaway_review,       -- kill #3
+       (deployed_days >= 756 AND excess_vs_sgov <= -0.10)                       AS m2m_underperf_review, -- kill #4
+       (closed_trades >= 30)                                                    AS gate_reached,         -- 30-trade gate
+       (deployed_days >= 90 AND excess_vs_sgov <= -0.15)                        AS interim_underperf_warning
 FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY strategy ORDER BY as_of_date DESC) rn
       FROM `stock-trading-498512.perf.strategy_daily`)
 WHERE rn = 1;

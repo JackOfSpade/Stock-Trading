@@ -1,5 +1,7 @@
--- Parallel-run dbt port of bigquery/10_observability.sql:state.system_health — canonical source is that file until owner cutover.
--- One-row green/red rollup (freshness + embeddings + kills + open critical alerts).
+-- Parallel-run dbt port of bigquery/10_observability.sql + bigquery/23_trading_control.sql (position
+-- drift promoted to blocking there, self-improvement audit B-5-exec/B-6-data):state.system_health —
+-- canonical source is those files until owner cutover.
+-- One-row green/red rollup (freshness + embeddings + kills + open critical alerts + position drift).
 --
 -- Caveats vs the live view:
 --   * embedding_health is a SOURCE here (it depends on remote models / AI.* — not dbt-owned).
@@ -8,6 +10,8 @@
 --     as in 10_observability.sql. This is the one place the ported view reaches outside the
 --     dbt DAG (ops.* is procedure/DML-maintained, intentionally out of scope). The singular
 --     test assert_system_health_single_row.sql guards the one-row invariant.
+--   * state.position_reconciliation (18_stack_review_fixes.sql) is likewise not yet dbt-ported —
+--     referenced inline by project-qualified name, same as ops.alerts above.
 
 SELECT
   f.last_trading_day, f.last_mark_date, f.engine_through,
@@ -16,8 +20,10 @@ SELECT
   (SELECT COUNTIF(NOT resolved AND severity = 'critical') FROM `stock-trading-498512.ops.alerts`) AS open_critical_alerts,
   (SELECT COUNTIF(NOT resolved) FROM `stock-trading-498512.ops.alerts`) AS open_alerts,
   (SELECT COUNTIF(drawdown_kill OR runaway_review OR m2m_underperf_review) FROM {{ ref('kill_flags') }}) AS firing_kill_flags,
+  COALESCE((SELECT LOGICAL_OR(drifted) FROM `stock-trading-498512.state.position_reconciliation`), FALSE) AS position_drift_detected,
   (f.marks_fresh AND f.engine_fresh AND eh.is_healthy
      AND (SELECT COUNTIF(NOT resolved AND severity = 'critical') FROM `stock-trading-498512.ops.alerts`) = 0
+     AND NOT COALESCE((SELECT LOGICAL_OR(drifted) FROM `stock-trading-498512.state.position_reconciliation`), FALSE)
   ) AS all_green,
   CURRENT_TIMESTAMP() AS checked_at
 FROM {{ ref('freshness') }} f, {{ source('state_external', 'embedding_health') }} eh
