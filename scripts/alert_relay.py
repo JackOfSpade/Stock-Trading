@@ -14,9 +14,17 @@ DE-DUP is stateless: alerts mode posts only ops.alerts raised in the last RELAY_
 2h emailer, so no durable cursor is needed (which keeps this read-only — no notified_ts write).
 
 Modes (env RELAY_MODE):
-  * alerts  — recent unresolved critical/warning ops.alerts rows (default).
-  * orders  — pending staged orders (state.open_orders): the A3 same-day confirm reminder, run once
-              daily so a silenced 07:00 calendar alarm is not the ONLY notice of an order to confirm.
+  * alerts    — recent unresolved critical/warning ops.alerts rows (default).
+  * orders    — pending staged orders (state.open_orders): the A3 same-day confirm reminder, run once
+                daily so a silenced 07:00 calendar alarm is not the ONLY notice of an order to confirm.
+  * heartbeat — weekly liveness canary (self-improvement audit 2026-07-03, guard-config-audit companion).
+                alerts/orders are best-effort BY DESIGN (main() swallows a POST failure so a transient
+                webhook hiccup never adds CI noise on top of the reliable emailer) — but that same design
+                means a permanently DEAD webhook (revoked, URL typo'd, endpoint decommissioned) would
+                never surface: it only has to fire when there happens to be an alert or a staged order.
+                heartbeat is the one mode that does NOT swallow the POST failure, specifically so a dead
+                diversification channel is caught by its own weekly run rather than discovered the day a
+                real alert silently fails to arrive.
 
 Env: WEBHOOK_URL (required — else clean no-op), RELAY_MODE, RELAY_WINDOW_MIN (default 35),
      BQ_PROJECT (default stock-trading-498512). Stdlib only.
@@ -129,9 +137,21 @@ def relay_orders():
     print(f"orders: posted {len(rows)}")
 
 
+def relay_heartbeat():
+    """Weekly canary POST. Deliberately NOT wrapped in the best-effort try/except main() uses for
+    alerts/orders — here a POST failure IS the finding (channel diversity is only real if the second
+    channel is actually alive), so it must propagate to a non-zero exit / red CI run."""
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    status = post(f"✅ Stock-Trading alert-relay heartbeat — channel alive, no action needed ({now}).")
+    print(f"heartbeat: posted (HTTP {status})")
+
+
 def main():
     if not WEBHOOK_URL:
         print("WEBHOOK_URL not set — relay is a clean no-op.")
+        return 0
+    if MODE == "heartbeat":
+        relay_heartbeat()
         return 0
     try:
         if MODE == "orders":

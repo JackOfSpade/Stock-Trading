@@ -110,3 +110,42 @@ def test_relay_orders_missing_column_raises_not_silent(monkeypatch):
     monkeypatch.setattr(ar, "post", lambda text: None)
     with pytest.raises(KeyError):
         ar.relay_orders()
+
+
+# ---- relay_heartbeat(): the ONE mode that must NOT swallow a POST failure ------------------
+
+def test_relay_heartbeat_posts_once(monkeypatch):
+    posted = []
+    monkeypatch.setattr(ar, "post", lambda text: posted.append(text) or 200)
+    ar.relay_heartbeat()
+    assert len(posted) == 1
+    assert "heartbeat" in posted[0].lower()
+
+
+def test_relay_heartbeat_propagates_post_failure(monkeypatch):
+    # Unlike relay_alerts/relay_orders, a broken heartbeat webhook must raise — it is the only
+    # mode guaranteed to run even when there is nothing else to say, so it is the sole mechanism
+    # that can ever catch a dead channel (main()'s best-effort except only wraps alerts/orders).
+    def _boom(text):
+        raise OSError("connection refused")
+    monkeypatch.setattr(ar, "post", _boom)
+    with pytest.raises(OSError):
+        ar.relay_heartbeat()
+
+
+def test_main_heartbeat_mode_failure_is_not_swallowed(monkeypatch):
+    monkeypatch.setattr(ar, "WEBHOOK_URL", "https://example.invalid/hook")
+    monkeypatch.setattr(ar, "MODE", "heartbeat")
+
+    def _boom(text):
+        raise OSError("connection refused")
+    monkeypatch.setattr(ar, "post", _boom)
+    with pytest.raises(OSError):
+        ar.main()
+
+
+def test_main_heartbeat_mode_success_returns_zero(monkeypatch):
+    monkeypatch.setattr(ar, "WEBHOOK_URL", "https://example.invalid/hook")
+    monkeypatch.setattr(ar, "MODE", "heartbeat")
+    monkeypatch.setattr(ar, "post", lambda text: 200)
+    assert ar.main() == 0

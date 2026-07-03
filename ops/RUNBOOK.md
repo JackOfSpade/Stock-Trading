@@ -1728,3 +1728,40 @@ send). No new scope required (`markUnread()` uses the same `gmail.modify` scope 
 already needs). Node harness updated with a tracked fake-thread stub asserting exactly one
 `markUnread()` + one `addLabel()` call on the just-sent thread. **Owner action required:**
 re-paste `weekly_report.gs` (no scope change).
+
+## 34. Guard config visibility + alert-channel liveness — 2026-07-03 (self-improvement audit)
+
+**Problem.** By §25/§27, five-plus CI jobs (`alert-relay`, `offsite-backup`, `keyless-sa-audit`,
+`wif-binding-audit`, `dashboard`) plus two `ci.yml` opt-ins (`DBT_PARITY`, `RUN_SQL_DRYRUN`) are all
+double-gated and default OFF, each printing its own `::notice::` when disabled. That notice only
+lives inside that one workflow's own run log — there was no single place showing the aggregate
+picture, so a guard could sit dormant indefinitely simply because nobody thought to check five
+separate Actions histories. Separately, `alert-relay`'s alerts/orders modes are deliberately
+best-effort (a POST failure is swallowed so a transient webhook hiccup never adds noise on top of
+the reliable emailer) — but that same design meant a *permanently dead* webhook (revoked, URL
+typo'd) would never surface, since it only has to fire when there happens to be something to relay.
+
+**Fix — `guard-config-audit.yml` (new, monthly).** Reads the same `vars`/`secrets` every gated
+workflow already reads (read-only, no new grants). Distinguishes LOAD-BEARING guards
+(`ALERT_WEBHOOK_URL`, `OFFSITE_BACKUP_GCS` — the two this self-improvement audit specifically
+flagged as closing a real redundancy gap) from OPTIONAL ones (`RUN_SA_KEY_AUDIT`, `RUN_WIF_AUDIT`,
+`PUBLISH_DASHBOARD`, `DBT_PARITY`, `RUN_SQL_DRYRUN` — genuinely opt-in nice-to-haves per their own
+workflow headers). Only the load-bearing pair — and only once their sole prerequisite (the WIF
+vars) is already live, so the pre-bootstrap state is never itself a "finding" — opens a deduped
+GitHub issue and fails the run (same pattern as `stranded-branch-check.yml`); the issue is
+commented + auto-closed once resolved. Optional guards are `::notice::`-only, deliberately never a
+"problem" — treating an intentional, self-documented default-off state as a recurring failure would
+be exactly the alert-fatigue/cry-wolf pattern §19 exists to avoid.
+
+**Fix — `alert-relay.yml` heartbeat mode.** Added a third schedule (`15 13 * * 1`, weekly Monday)
+that runs `RELAY_MODE=heartbeat`. Unlike alerts/orders, `relay_heartbeat()`
+(`scripts/alert_relay.py`) does **not** swallow a POST failure — it is the one mode guaranteed to
+run even with nothing to relay, so it is the only mechanism that can ever catch a dead channel
+before a real alert silently fails to arrive. A failed heartbeat fails the scheduled run (red in the
+Actions tab; GitHub's own default failure-notification email is a channel independent of the
+webhook it's testing).
+
+**Owner action required:** none to keep current behavior — both additions are pure guard/observability
+layers on top of existing (already double-gated, already-off-by-default) mechanisms; nothing changes
+until `ALERT_WEBHOOK_URL` / `OFFSITE_BACKUP_GCS` are actually set. No new files to re-paste elsewhere
+(GitHub Actions only).

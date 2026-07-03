@@ -1,0 +1,131 @@
+name: Guard config audit
+
+# Self-improvement audit 2026-07-03 (B-4-obs follow-up). Five+ workflows in this repo are DOUBLE-GATED
+# and default OFF — alert-relay, offsite-backup, keyless-sa-audit, wif-binding-audit, dashboard — plus
+# two CI-time opt-ins in ci.yml (DBT_PARITY, RUN_SQL_DRYRUN). Each one's own `guard` step already prints
+# a `::notice::` explaining how to enable it, but that notice only exists inside that ONE workflow's own
+# run log — there is no single place that shows the aggregate picture, so a guard can sit dormant
+# indefinitely simply because nobody thought to go check five separate Actions histories.
+#
+# This job does NOT treat "guard is off" as a failure — most of these are deliberately opt-in, and
+# flagging an intentional, self-documented default-off state as a recurring problem would be exactly the
+# kind of alert-fatigue/cry-wolf this project's monitoring elsewhere is built to avoid (see ops/RUNBOOK.md
+# §19). Instead it distinguishes:
+#   * LOAD-BEARING (alert-relay's ALERT_WEBHOOK_URL, offsite-backup's OFFSITE_BACKUP_GCS) — the two the
+#     self-improvement audit specifically flagged as closing a real redundancy gap (alert-channel
+#     diversity off the single Gmail inbox; backup off the single GCP project/billing account). These are
+#     the only ones that open/keep-open a GitHub issue and fail the run, and ONLY once their sole
+#     prerequisite (the WIF vars) is already live — before that, of course everything downstream is off
+#     by cascade, which is the expected pre-bootstrap state, not a finding.
+#   * OPTIONAL (keyless-sa-audit, wif-binding-audit, dashboard, DBT_PARITY=off, RUN_SQL_DRYRUN) — genuine
+#     nice-to-haves the workflows' own headers already document as opt-in. Reported via `::notice::` only.
+#
+# Read-only: never touches BigQuery, IAM, or Pages. GH issue only (see stranded-branch-check.yml for the
+# same read-only + issue-dedup pattern, and its comment on why CI can't write ops.alerts — RUNBOOK §6).
+
+on:
+  schedule:
+    - cron: '0 7 1 * *'   # monthly, 1st @ 07:00 UTC (after keyless-sa-audit 06:30 + wif-binding-audit 06:45)
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: guard-config-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate guard config
+        id: eval
+        env:
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+          OFFSITE_BACKUP_GCS: ${{ secrets.OFFSITE_BACKUP_GCS }}
+        run: |
+          set -uo pipefail
+          wif_live=false
+          if [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ]; then
+            wif_live=true
+          fi
+
+          if [ "$wif_live" = "false" ]; then
+            echo "::notice::WIF vars (GCP_WIF_PROVIDER / GCP_WIF_SERVICE_ACCOUNT) are not set — every keyless guard (alert-relay, offsite-backup, keyless-sa-audit, wif-binding-audit, dashboard, dbt-parity, sql-validate) is dormant by cascade. Expected pre-bootstrap state, not itself a finding (ops/RUNBOOK.md §6/§25)."
+            echo "problem=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          : > /tmp/loadbearing.txt
+          if [ -z "${ALERT_WEBHOOK_URL:-}" ]; then
+            echo "- **alert-relay** (\`.github/workflows/alert-relay.yml\`): WIF is live but secret \`ALERT_WEBHOOK_URL\` is unset — the fast, off-Gmail alert channel is still dormant. Single-inbox delivery risk persists (RUNBOOK §25 Theme A / B-4-obs)." >> /tmp/loadbearing.txt
+          fi
+          if [ -z "${OFFSITE_BACKUP_GCS:-}" ]; then
+            echo "- **offsite-backup** (\`.github/workflows/offsite-backup.yml\`): WIF is live but secret \`OFFSITE_BACKUP_GCS\` is unset — the events/ops truth still has no out-of-project backup copy. Single-project blast-radius risk persists (RUNBOOK §27)." >> /tmp/loadbearing.txt
+          fi
+
+          # Optional guards — notice only, never a "problem". Plain `if` blocks throughout (not bare
+          # `[ ... ] && echo`): GitHub Actions runs `bash -e` by default, and a one-liner whose `[ ]` test
+          # is false would make the whole `&&` chain exit non-zero and abort the script under errexit.
+          if [ "${{ vars.RUN_SA_KEY_AUDIT }}" != "true" ]; then
+            echo "::notice::keyless-sa-audit disabled (opt-in). See its own guard step for the grant needed. RUNBOOK §25 E2."
+          fi
+          if [ "${{ vars.RUN_WIF_AUDIT }}" != "true" ]; then
+            echo "::notice::wif-binding-audit disabled (opt-in). RUNBOOK §25 E1."
+          fi
+          if [ "${{ vars.PUBLISH_DASHBOARD }}" != "true" ]; then
+            echo "::notice::dashboard publish disabled (opt-in). RUNBOOK §16."
+          fi
+          if [ "${{ vars.DBT_PARITY }}" = "off" ]; then
+            echo "::notice::dbt-parity explicitly disabled (DBT_PARITY=off) — the dbt/BigQuery drift check is not running. RUNBOOK §14/§25 C1."
+          fi
+          if [ "${{ vars.RUN_SQL_DRYRUN }}" != "true" ]; then
+            echo "::notice::sql-validate dry-run disabled (opt-in) — dbt parse remains the always-on SQL gate. RUNBOOK §6."
+          fi
+
+          if [ -s /tmp/loadbearing.txt ]; then
+            echo "problem=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "problem=false" >> "$GITHUB_OUTPUT"
+            echo "OK: all load-bearing guards (alert-relay, offsite-backup) are configured."
+          fi
+
+      - name: Open/refresh alert issue (dedup)
+        if: steps.eval.outputs.problem == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          {
+            echo "The WIF bootstrap (\`vars.GCP_WIF_PROVIDER\` / \`vars.GCP_WIF_SERVICE_ACCOUNT\`) is live, but at least one **load-bearing** guard that depends only on it is still unconfigured:"
+            echo
+            cat /tmp/loadbearing.txt
+            echo
+            echo "These two are singled out (vs. the several genuinely-optional guards this same audit checks) because the self-improvement review specifically identified them as closing a real redundancy gap — not a nice-to-have. Set the missing secret(s) to resolve; this issue auto-closes on the next monthly run once configured."
+          } > /tmp/body.md
+
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
+            --jq '[.[] | select(.title|startswith("⚠️ Guard config:"))][0].number // empty')
+          if [ -n "$existing" ]; then
+            echo "Alert issue #$existing already open; not duplicating."
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "⚠️ Guard config: load-bearing alert/backup channel still dormant" \
+              --body-file /tmp/body.md
+          fi
+          exit 1   # surface red in the Actions tab too
+
+      - name: Close stale alert issue if resolved
+        if: steps.eval.outputs.problem == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
+            --jq '[.[] | select(.title|startswith("⚠️ Guard config:"))][0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Resolved — all load-bearing guards are now configured (or WIF was removed, resetting to the pre-bootstrap state). Closing."
+            gh issue close "$existing" --repo "$GITHUB_REPOSITORY"
+          fi

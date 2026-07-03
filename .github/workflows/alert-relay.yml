@@ -11,15 +11,23 @@ name: Alert relay (webhook push)
 # DOUBLE-GATED + OFF BY DEFAULT (it pushes live trading alerts): runs only when BOTH the WIF vars
 # (vars.GCP_WIF_PROVIDER + vars.GCP_WIF_SERVICE_ACCOUNT) and the secret ALERT_WEBHOOK_URL are set.
 # Otherwise it skips cleanly (no auth, no post). Do NOT retire the Apps Scripts until this is proven.
+#
+# Self-improvement audit 2026-07-03 (guard-config-audit companion): also runs a weekly `heartbeat` —
+# alerts/orders are best-effort by design (a POST failure never fails the run, so it never adds noise
+# on top of the reliable emailer), which means a permanently dead webhook would otherwise go unnoticed
+# for months — it only has to fire when there happens to be something to relay. heartbeat POSTS a fixed
+# canary line and, uniquely, FAILS THE RUN on a POST error, so channel diversity is actively verified,
+# not just assumed from the secret being set. See scripts/alert_relay.py::relay_heartbeat.
 
 on:
   schedule:
     - cron: '*/30 * * * *'   # alert relay — recent ops.alerts (fast, best-effort)
     - cron: '5 13 * * *'     # daily staged-order reminder ~07:05 MT confirm window (A3)
+    - cron: '15 13 * * 1'    # weekly (Monday) webhook liveness heartbeat
   workflow_dispatch:
     inputs:
       mode:
-        description: 'alerts | orders'
+        description: 'alerts | orders | heartbeat'
         required: false
         default: 'alerts'
 
@@ -53,9 +61,12 @@ jobs:
         id: mode
         if: steps.guard.outputs.skip == 'false'
         run: |
-          # The daily 13:05 UTC schedule is the staged-order reminder; everything else is alerts.
+          # The daily 13:05 UTC schedule is the staged-order reminder; the weekly Monday 13:15 UTC
+          # schedule is the webhook liveness heartbeat; everything else is alerts.
           if [ "${{ github.event.schedule }}" = "5 13 * * *" ]; then
             echo "mode=orders" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "15 13 * * 1" ]; then
+            echo "mode=heartbeat" >> "$GITHUB_OUTPUT"
           else
             echo "mode=${{ github.event.inputs.mode || 'alerts' }}" >> "$GITHUB_OUTPUT"
           fi

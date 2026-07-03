@@ -238,9 +238,13 @@ routines:
 # Two version-controlled scheduled GitHub Actions added 2026-06-24 (ops/RUNBOOK.md §25), run on GitHub's
 # runners via the read-only WIF SA — OFF until their gating secret/vars are set, so they never affect the
 # trading cadence:
-#   alert-relay         schedule: "every 30 min + daily 13:05 UTC" — POSTs ops.alerts / staged-order
-#                       reminders to a vendor-neutral webhook (A1/A2/A3). Complements the alert_emailer.
+#   alert-relay         schedule: "every 30 min + daily 13:05 UTC + weekly Mon 13:15 UTC" — POSTs
+#                       ops.alerts / staged-order reminders to a vendor-neutral webhook (A1/A2/A3); the
+#                       weekly run is a heartbeat canary that fails loud on a dead webhook (RUNBOOK §34).
 #   keyless-sa-audit    schedule: "monthly 1st 06:30 UTC" — asserts gh-ci-runner@/bq-scheduler@ stay
 #                       keyless (E2; opt-in via vars.RUN_SA_KEY_AUDIT).
+#   guard-config-audit  schedule: "monthly 1st 07:00 UTC" — consolidated view of which of the above
+#                       opt-in guards are configured; only alerts (GH issue) on the load-bearing pair
+#                       (RUNBOOK §34).
 # Also a new daily BigQuery scheduled query (owner-created, needs roles/bigquery.resourceViewer):
 #   integrity-check     schedule: "every day ~05:20 UTC" — state.append_only_integrity (B3).
