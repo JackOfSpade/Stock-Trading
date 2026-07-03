@@ -47,8 +47,10 @@ Because you are **both sender and recipient** (from you, to you), this is the op
    **BigQuery API** → **Add** (the identifier must be `BigQuery`).
 4. **Project Settings** → tick *Show "appsscript.json"* and paste in the manifest from
    `appsscript.json` here (V8 runtime + the OAuth scopes — the BigQuery scope is the
-   read/write `bigquery` scope, not `bigquery.readonly`; the script writes a heartbeat row).
-   The Charts service needs no manifest entry — it's a built-in service, not an advanced one.
+   read/write `bigquery` scope, not `bigquery.readonly`, since the script writes a heartbeat
+   row; the Gmail scope is `gmail.modify` + `gmail.send`, since the label step reads/searches
+   threads, not just `gmail.labels`, which only covers label CRUD). The Charts service needs
+   no manifest entry — it's a built-in service, not an advanced one.
 5. Edit the `CONFIG` block at the top of the script:
    - `RECIPIENT` defaults to your own address (`Session.getActiveUser().getEmail()`); hardcode
      `jacksterwu@gmail.com` if you prefer.
@@ -61,11 +63,13 @@ Because you are **both sender and recipient** (from you, to you), this is the op
 
 **Owner actions to deploy this redesign onto an already-installed script:** re-paste
 `weekly_report.gs` over the existing project; update the manifest scope (step 4 above —
-`bigquery.readonly` → `bigquery`); run `testReport()` and re-approve the consent screen
-(the scope changed, so Google will re-prompt); **confirm the email contains the line-chart
-PNG, not the HTML bar fallback** (a bars-only email means the chart build is failing — check
-the Apps Script execution log, `View → Executions`). The weekly trigger itself is unchanged,
-so `installWeeklyTrigger` does not need to be re-run.
+`bigquery.readonly` → `bigquery`, `gmail.labels` → `gmail.modify`); run `testReport()` and
+re-approve the consent screen (the scope changed, so Google will re-prompt); **confirm the
+email contains the line-chart PNG, not the HTML bar fallback** (a bars-only email means the
+chart build is failing — check the Apps Script execution log, `View → Executions`). The
+weekly trigger itself is unchanged, so `installWeeklyTrigger` does not need to be re-run.
+Deployed 2026-07-02/03 — see `ops/RUNBOOK.md` §33 for the live verification notes and the
+follow-up `gmail.modify` scope fix.
 
 To change the schedule later, edit `SEND_HOUR`/`SEND_WEEKDAY` and run `installWeeklyTrigger`
 again. To stop, delete the trigger (clock icon in the editor) or the project.
