@@ -1659,3 +1659,37 @@ diluted ~0.7% and useless for judging a strategy). Changes:
   until re-pasted. Re-verified via the same Node harness (all five scenarios) + preview screenshot.
   **Owner action required:** re-paste `weekly_report.gs` (no manifest/scope change this time — the
   `gmail.modify` + `bigquery` scopes from the prior deploys already cover it).
+
+**2026-07-03 follow-up #2 — actual returns + trailing week/month/year.** Owner feedback on the
+percentage version: (a) the combined/aggregate figure is not useful — show each strategy
+individually; (b) show SGOV's own return, not a flat 0% "excess" baseline; (c) drop the "BEATING
+PARK"/verdict labels, the dollar figures, the Δ-wk percentage-points column, and the
+"Closed trades / 30" column; (d) say "SGOV", not "SGOV park"; (e) the long explanatory footnotes
+signal the visual design isn't clean — cut them; (f) show vs-SGOV as **weekly / monthly / yearly**
+figures, with "Not enough data" until that much history exists. Result:
+- **Chart** now plots each deployed strategy's **actual cumulative total return** (deployed_unit_value
+  − 1) plus a real **SGOV line** (its own cumulative total return) — not the excess-with-flat-0
+  framing. New view `analytics.sgov_cumulative` supplies the SGOV line + its trailing-window returns;
+  `analytics.strategy_vs_park_daily` gained a `deployed_unit_value` column for the strategy lines.
+  Both additive, applied live 2026-07-03.
+- **Table** ("Return vs SGOV"): one row per strategy, columns **1 week / 1 month / 1 year** = the
+  strategy's return *above SGOV* over each trailing window (derived in the `.gs` from the cumulative
+  `excess_vs_sgov` series: `(1+e_latest)/(1+e_{≤latest−W})−1`), "Not enough data" when the strategy's
+  history is shorter than the window (1-year is "Not enough data" until ~2027-04). Plus a distinct
+  **SGOV row** showing SGOV's *own* return over the same windows (satisfies "show SGOV %"). Not-deployed
+  strategies (A/C/E) show a "not deployed — …" reason. Colour: strategy cells green/red by sign; SGOV
+  row and not-deployed muted.
+- **Removed**: the combined-hero tile, all verdict chips/labels, every dollar figure, the Δ-wk pp
+  column, the gate column, and the multi-sentence methodology footnotes (replaced by one short line:
+  "Total return, gross of commissions; SGOV includes dividends"). Subject line now shows each deployed
+  strategy's cumulative actual return + SGOV's (e.g. `B +10.64% · D +2.46% · SGOV +0.69%`).
+- **Interpretation note (flagged to owner):** "weekly/monthly/yearly average" was implemented as the
+  return vs SGOV over the **trailing** 1 week / 1 month / 1 year (fund-fact-sheet style) — this is what
+  makes "Not enough data until we have a year" precise. If a per-period *average rate* was intended
+  instead, it's a one-line `.gs` change. Live-verified 2026-07-03: B 1wk +5.81% / 1mo +10.35%; D 1wk
+  +4.52% / 1mo +6.18%; SGOV own 1wk +0.11% / 1mo +0.33%; 1yr "Not enough data" for all.
+- `deployed_book_vs_sgov`, `strategy_vs_park`, `park_baseline` are no longer read by the email
+  (retained in BigQuery). dbt twin + `schema.yml` updated (`deployed_unit_value` col, new
+  `sgov_cumulative`). Additive/backward-compatible; re-verified via the Node harness (primary +
+  all-parked + chart-failure) + preview screenshot. **Owner action required:** re-paste
+  `weekly_report.gs` (no scope change).

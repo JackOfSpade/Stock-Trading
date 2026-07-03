@@ -1,12 +1,14 @@
 # Weekly performance self-email — "Strategies vs SGOV"
 
-A weekly HTML email that answers exactly one question: **is each strategy beating just
-parking the cash it was allocated in SGOV?** (2026-07 redesign — see `ops/RUNBOOK.md` §33
-for the full rationale.) Everything that didn't support that question — regime, account
-NAV/MTD/YTD, open positions, next-7-days, weekly activity, the full ops-health strip — was
-cut. What's left: a hero combined-edge figure, a line chart (one series per ever-deployed
-strategy, plotted as cumulative $ vs the SGOV park baseline), a 5-row verdict table, and a
-one-line data-trust warning that only appears when something is actually stale.
+A weekly HTML email that answers exactly one question: **is each strategy beating SGOV?**
+(2026-07 redesign — see `ops/RUNBOOK.md` §33 for the full rationale and the iteration
+history.) Everything that didn't support that question — regime, account NAV/MTD/YTD, open
+positions, next-7-days, weekly activity, the full ops-health strip — was cut. What's left:
+a **returns chart** (each deployed strategy's cumulative total return + a gray SGOV line),
+a **table** of each strategy's return vs SGOV over the trailing **1 week / 1 month / 1
+year** ("Not enough data" until that much history exists) with an SGOV own-return row, and
+a one-line data-trust warning that only appears when something is actually stale. No
+combined aggregate, no verdict labels, no dollar figures.
 
 ## Why it's an Apps Script and not a Claude routine
 
@@ -78,38 +80,36 @@ again. To stop, delete the trigger (clock icon in the editor) or the project.
 
 | View / table | Feeds |
 |---|---|
-| `analytics.strategy_scorecard` | activation string (for the NOT-DEPLOYED reason + kill-flag flag), NAV (alloc), deployed MV, **deployed-slice excess-vs-SGOV %** (the primary per-strategy number), closed trades |
-| `analytics.deployed_book_vs_sgov` | the hero headline: combined **value-weighted** deployed-book excess % (+ book/SGOV return legs) |
-| `analytics.strategy_vs_park_daily` | the chart's daily series — **excess %** (primary, the y-axis) + cumulative $ edge (secondary/for-scale) |
-| `analytics.strategy_vs_park` | latest $ edge + commissions + first-deployed date per ever-deployed strategy (the secondary "$ for scale" figures) |
+| `analytics.strategy_scorecard` | the A–E list + activation string (for the "not deployed" reason) |
+| `analytics.strategy_vs_park_daily` | per strategy-day: `deployed_unit_value` (the chart's return lines) + cumulative `excess_vs_sgov` (the `.gs` derives the trailing 1wk/1mo/1yr vs-SGOV from it) |
+| `analytics.sgov_cumulative` | SGOV's own cumulative total return per day (the chart's SGOV line + its trailing-window returns) |
 | `state.system_health` | marks/engine freshness + firing kill-flags + critical alerts — the one surviving data-trust signal |
 | `state.user_tz` | detected DISPLAY timezone (never the operating/trading-day timezone) |
 | `perf.kill_flags` / `ops.alerts` | queried lazily, only when `state.system_health` flags something |
 
 The SQL for these views lives in `bigquery/21_strategy_vs_park.sql` (single-sourced,
-version-controlled); `analytics.strategy_scorecard` and the `deployed_capital` column it
-was extended with live in `bigquery/03_twr_engine.sql` and `bigquery/14_weekly_report.sql`.
+version-controlled); the `deployed_unit_value` / `excess_vs_sgov` columns come from
+`perf.strategy_daily` (the deployed-TWR engine, `bigquery/03_twr_engine.sql`).
 
-### What the numbers mean (percentage primary, 2026-07-03)
+### What the numbers mean (2026-07-03)
 
-The headline and chart are **percentages** — the deployed-slice excess return vs SGOV
-(`perf.strategy_daily.excess_vs_sgov` = deployed-TWR unit value ÷ SGOV index − 1, over the
-strategy's own deployed days; the sanctioned kill/gate metric). This is the return on the
-capital actually put to work — the honest "is this strategy any good" number — not a
-sleeve-level % (which, with ~98% of the sleeve parked, would dilute to ~0.7% and hide the
-signal). The hero's combined figure (`deployed_book_vs_sgov`) value-weights every deployed
-strategy into one book, because percentages don't sum.
+Everything is an **actual total return** or a **return vs SGOV**, both as percentages:
 
-The **dollar** edge (`strategy_vs_park_daily.edge_dollars_cum` = deployed dollars × (deployed
-return − SGOV total return), summed over deployed days) is kept as a small **secondary
-"for scale"** figure under each row and in the hero subline. It answers the same question at
-sleeve level: undeployed sleeve cash already sits in the account-level SGOV park (the
-per-strategy SGOV split is formally dissolved — see `ops/RUNBOOK.md` §29), so a strategy
-that has never deployed sits at 0% / $0 — `NOT DEPLOYED`, not a loss, because its allocation
-IS the park.
-`analytics.strategy_scorecard.excess_vs_sgov` is that same deployed-slice percentage as of
-the latest close — the per-strategy verdict number and the metric the kill/gate machinery
-already runs on.
+- **Chart** — each deployed strategy's cumulative total return since its first deployment
+  (`deployed_unit_value − 1`) and SGOV's own cumulative total return (`sgov_cumulative`),
+  each a line. SGOV is a real gray line, not a flat baseline.
+- **Table** — per strategy, the return *above SGOV* over the trailing **1 week / 1 month /
+  1 year**, derived from the cumulative excess series
+  (`(1+excess_latest)/(1+excess_{≤latest−window}) − 1`; `excess_vs_sgov` =
+  deployed-TWR unit value ÷ SGOV index − 1, the sanctioned kill/gate metric). "Not enough
+  data" shows when the strategy's history is shorter than the window (so 1-year reads
+  "Not enough data" until ~a year of deployment exists). A separate **SGOV row** shows
+  SGOV's *own* return over the same windows.
+
+Returns are gross of commissions (the sanctioned profitability convention); SGOV is its
+actual total return including its monthly dividends. Strategies with no deployed history
+(A/C/E currently) show "not deployed" — their cash is held in SGOV, so there is no
+strategy return to compare.
 
 ### Views retained but no longer read by the email
 
@@ -118,7 +118,10 @@ already runs on.
 `state.account_nav_7d_ago`, and the `ops.account_snapshot` table (+ D2 Step 0b, which still
 writes it daily) are kept in BigQuery for RUNBOOK verification, dashboard/history use, and
 possible future use — dropping them is a separate, later decision. See the header comment
-in `bigquery/14_weekly_report.sql`.
+in `bigquery/14_weekly_report.sql`. Also retained but no longer read by the email after the
+2026-07-03 iterations: `analytics.strategy_vs_park` (dollar edge + commissions),
+`analytics.deployed_book_vs_sgov` (the short-lived combined-% hero), and
+`analytics.park_baseline` (the dollar-era hero scale anchor).
 
 ## Notes
 

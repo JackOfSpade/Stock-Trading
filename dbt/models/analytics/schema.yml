@@ -39,7 +39,19 @@ models:
         tests: [not_null]
         description: Strategy code, restricted to ever-deployed strategies (A-E subset).
       - name: excess_vs_sgov
-        description: Deployed-slice excess return vs SGOV for that day (the chart's y-axis) — from perf.strategy_daily.
+        description: Cumulative deployed-slice excess return vs SGOV for that day — from perf.strategy_daily; the email derives trailing week/month/year vs-SGOV from this.
+      - name: deployed_unit_value
+        description: The strategy's own chained cumulative total-return unit value for that day (the returns chart plots this − 1).
+
+  - name: sgov_cumulative
+    description: SGOV's own cumulative total return per deployed trading day (the returns chart's SGOV line + its trailing-window returns). 2026-07-03.
+    columns:
+      - name: as_of_date
+        tests:
+          - not_null
+          - unique
+      - name: sgov_cum_return
+        description: SGOV's cumulative total return (close + dividends) since the first deployed date.
 
   - name: deployed_book_vs_sgov
     description: Single-row combined deployed-book excess % — the weekly email's hero headline (value-weighted across all deployed strategies, not a sum of per-strategy percentages). 2026-07-03.

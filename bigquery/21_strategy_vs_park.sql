@@ -2,28 +2,23 @@
 -- Apply after 03_twr_engine.sql (reads analytics.strategy_daily_returns.deployed_capital, added
 -- there in this same redesign) and after 04_analytics.sql (analytics.strategy_nav, state.trade_fills_curated).
 --
--- WHY THIS EXISTS: the weekly email answers a single question — "is each strategy beating just
--- parking the cash it was allocated in SGOV?"
---   * PRIMARY (2026-07-03 owner directive): as a PERCENTAGE — the deployed-slice excess return
---     vs SGOV (perf.strategy_daily.excess_vs_sgov = deployed_unit_value / sgov_index − 1, chained
---     over the strategy's own deployed days). This is how the owner evaluates "performance of a
---     strategy"; it's the return on the capital actually put to work, and it's the sanctioned
---     kill/gate metric. Surfaced per-strategy (excess_vs_sgov, carried on strategy_vs_park_daily
---     for the chart) + aggregated across the deployed book (analytics.deployed_book_vs_sgov).
---   * SECONDARY (kept for scale): the DOLLAR edge — deployed_capital × (r_deployed − r_sgov),
---     summed over deployed days. Answers the same question at SLEEVE level (undeployed sleeve cash
---     already sits in the account-level SGOV park — RUNBOOK §29 — so the sleeve differs from the
---     "park everything" counterfactual only on its deployed slice). Shown small in the email as a
---     "$ for scale" note, not the headline.
--- Read by ops/weekly_report/weekly_report.gs (2026-07 redesign) — see ops/weekly_report/README.md
--- and ops/RUNBOOK.md §33.
+-- WHY THIS EXISTS: the weekly email answers a single question — "is each strategy beating SGOV?" —
+-- as percentages. It iterated (full history in ops/RUNBOOK.md §33); the CURRENT (2026-07-03 #2)
+-- email reads exactly two views from this file:
+--   * analytics.strategy_vs_park_daily — per strategy-day: deployed_unit_value (the chart's ACTUAL
+--     cumulative-return lines) + cumulative excess_vs_sgov (the .gs derives the trailing
+--     1-week / 1-month / 1-year return vs SGOV from this series).
+--   * analytics.sgov_cumulative — SGOV's OWN cumulative total return (the chart's SGOV line + its
+--     trailing-window returns). Defined at the bottom of this file.
+-- The other views here (strategy_vs_park $ edge + commissions, deployed_book_vs_sgov combined
+-- excess %, park_baseline) fed earlier iterations and are RETAINED but no longer read by the email.
+-- Everything derives from perf.strategy_daily (the deployed-TWR engine); excess_vs_sgov =
+-- deployed_unit_value / sgov_index − 1, the sanctioned kill/gate metric.
 
--- ===== analytics.strategy_vs_park_daily — daily excess-% + cumulative $ edge vs the SGOV park =====
--- The weekly email's chart series (excess_vs_sgov, the % primary) plus the dollar edge (secondary).
--- excess_vs_sgov comes straight from the engine (perf.strategy_daily) so the chart, the scorecard %,
--- and the kill/gate metric are one number. edge_dollars_day = deployed_capital × (r_deployed −
--- r_sgov); cumulative sum is the sleeve-level dollar edge. Simple (non-compounded) daily $ sum:
--- second-order compounding of the counterfactual is < $0.01 at current scale/horizon.
+-- ===== analytics.strategy_vs_park_daily — per strategy-day: unit value, cumulative excess, $ edge =====
+-- deployed_unit_value + excess_vs_sgov come straight from the engine (perf.strategy_daily) so the
+-- chart, the trailing-window figures, and the kill/gate metric are one source. edge_dollars_* are the
+-- earlier dollar-edge columns, retained for parity/history (no longer read by the email).
 -- r_sgov forward-fill mirrors ops.sp_recompute_engine (a missing SGOV mark must not read as 0).
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.strategy_vs_park_daily` AS
 WITH j AS (
@@ -40,9 +35,12 @@ WITH j AS (
 )
 SELECT
   j.as_of_date, j.strategy, j.deployed_capital,
-  -- % primary: the engine's chained deployed-vs-SGOV excess for this strategy-day (the chart's y).
+  -- the strategy's own chained cumulative total return (unit value) — the chart plots (this − 1).
+  pd.deployed_unit_value,
+  -- the engine's chained deployed-vs-SGOV cumulative excess for this strategy-day; the .gs derives
+  -- trailing week/month/year vs-SGOV figures from this series.
   pd.excess_vs_sgov,
-  -- $ secondary: sleeve-level dollar edge (kept for the "for scale" note).
+  -- $ (unused by the 2026-07 email; retained for any other consumer / historical parity).
   j.deployed_capital * (j.r_deployed - j.r_sgov) AS edge_dollars_day,
   SUM(j.deployed_capital * (j.r_deployed - j.r_sgov)) OVER (
     PARTITION BY j.strategy ORDER BY j.as_of_date) AS edge_dollars_cum
@@ -148,4 +146,29 @@ SELECT
   EXP(SUM(LN(1 + r_agg))) - 1 AS book_return,
   EXP(SUM(LN(1 + r_sgov))) - 1 AS sgov_return,
   EXP(SUM(LN(1 + r_agg))) / EXP(SUM(LN(1 + r_sgov))) - 1 AS combined_excess_pct
+FROM j;
+
+-- ===== analytics.sgov_cumulative — SGOV's OWN cumulative total return, aligned to the deployed axis =====
+-- One row per deployed trading day: SGOV's cumulative total return (close + dividends) chained from
+-- the first deployed date forward. The weekly email plots this as the SGOV line on the returns chart
+-- (so SGOV's actual return is visible, not a flat 0), and derives SGOV's own trailing week/month/year
+-- return from it. Built over the union of dates in strategy_vs_park_daily so it shares the strategy
+-- lines' x-axis exactly. r_sgov forward-fill mirrors the engine.
+CREATE OR REPLACE VIEW `stock-trading-498512.analytics.sgov_cumulative` AS
+WITH days AS (
+  SELECT DISTINCT as_of_date FROM `stock-trading-498512.analytics.strategy_vs_park_daily`
+),
+j AS (
+  SELECT d.as_of_date,
+    COALESCE(
+      sg.r_sgov,
+      LAST_VALUE(sg.r_sgov IGNORE NULLS) OVER (
+        ORDER BY d.as_of_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW),
+      0) AS r_sgov
+  FROM days d
+  LEFT JOIN `stock-trading-498512.analytics.sgov_daily_return` sg USING (as_of_date)
+)
+SELECT
+  as_of_date,
+  EXP(SUM(LN(1 + r_sgov)) OVER (ORDER BY as_of_date)) - 1 AS sgov_cum_return
 FROM j;

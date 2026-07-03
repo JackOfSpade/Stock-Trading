@@ -21,6 +21,7 @@ WITH j AS (
 )
 SELECT
   j.as_of_date, j.strategy, j.deployed_capital,
+  pd.deployed_unit_value,
   pd.excess_vs_sgov,
   j.deployed_capital * (j.r_deployed - j.r_sgov) AS edge_dollars_day,
   SUM(j.deployed_capital * (j.r_deployed - j.r_sgov)) OVER (
