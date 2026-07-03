@@ -1,108 +1,101 @@
-2026-07-02
-<!-- d1_scan_through_utc: 2026-07-02T23:22:00Z -->
+2026-07-03
+<!-- d1_scan_through_utc: 2026-07-03T22:08:43Z -->
 
-# Daily Market Development Scan — 2026-07-02 (Thu, MT)
+# Daily Market Development Scan — 2026-07-03 (Fri, MT)
 
-Scan window: 2026-07-01 16:09 MDT → 2026-07-02 17:22 MDT (~25h). Prior-run hand-off marker (`d1_scan_through_utc: 2026-07-01T22:09:10Z`) resolved the window start; normal daily cadence, no gap. **Today `2026-07-02` is a trading day; `state.trading_day_today`: last_trading_day = `2026-07-02` (today's regular session has closed at 17:22 MDT scan time), next_trading_day = Mon `2026-07-06`.** The window CONTAINS the **Thursday 7/2 regular session**, whose dominant event was the **June jobs report pulled forward to today** (from Friday, ahead of the Independence Day holiday). **Markets are CLOSED Fri 7/3** (Independence Day observed; 7/4 is Saturday) — so this is the last session until Mon 7/6. Categories 2–4 are populated off the completed 7/2 session.
+Scan window: 2026-07-02 17:22 MDT → 2026-07-03 16:08 MDT (~23h). Prior-run hand-off marker (`d1_scan_through_utc: 2026-07-02T23:22:00Z`) resolved the window start; normal daily cadence, no gap. **Today `2026-07-03` is NOT a trading day** (`state.trading_day_today`: `is_trading_day = false` — **NYSE/Nasdaq + bond market CLOSED for Independence Day (observed)**; last_trading_day = `2026-07-02`, next_trading_day = Mon `2026-07-06`). The window therefore contains **no US trading session** — the 7/2 regular-session close was already scanned by the prior run, so in-window developments are limited to **after-hours 7/2, the overnight tape, and the 7/3 global (ex-US) session**. Categories 2–4 (US-market-hours events) are structurally empty today; the material developments are international.
 
-> **Connectors live this run.** Pre-flight passed: `state.trading_day_today` read OK; IBKR `get_account_summary` OK (net-liq $9,501.34; SGOV park 92.546 sh / ~$9,295; total cash $78.38; dividends accrued $27.93; available funds $7,124.65). All `state.*`/`perf.*` reads succeeded; run-logging via `ops.sp_routine_start`/`sp_routine_end` active. (D1 stages no orders → Calendar pre-flight exempt.) HF frontier-LLM check ran (Thu = sycophancy/anchoring battery); no in-window papers → silent.
+> **Connectors live this run.** Pre-flight passed: `state.trading_day_today` read OK; IBKR `get_account_summary` OK (net-liq $9,496.45; SGOV park 92.546 sh / ~$9,295; total cash $73.88; dividends accrued $27.93; available funds $7,119.86). All `state.*`/`perf.*` reads succeeded; run-logging via `ops.sp_routine_start`/`sp_routine_end` active. (D1 stages no orders → Calendar pre-flight exempt.) **Holiday-data note:** with US markets closed, `get_price_snapshot` returned stale/frozen `is_close` marks (e.g. MDT 79.2) that disagree with the correct 7/2 closes; the authoritative marks are taken from `get_account_positions` (MDT 83.19, DIS 99.40, RTX 199.25 = the 7/2 regular-session closes). HF frontier-LLM check ran (Fri = trading/financial battery); no in-window papers → silent.
 
-**Tape summary.** A second straight **rotation** session, amplified by the soft June payrolls. The **Dow closed at a fresh all-time high (+1.14% to ≈52,900)** on a cyclical/defensive rotation (financials, healthcare, consumer), while the **Nasdaq Composite fell ~0.8% (to ≈25,833) and the Nasdaq-100 dropped ~1.6%** as **semiconductors sold off for a second consecutive day** (SMH ETF −4.5%: Teradyne −13.6%, KLA −11.5%, Micron −5.5%, Nvidia −1.4%; Asia memory Samsung −7%, SK Hynix −9%, Kioxia −10%). The **S&P 500 finished roughly flat** (~7,470) as the two forces offset. The **June jobs report** (pulled to today) badly missed — **+57k vs ≈+115k est** — taking a **September Fed hike off the table** and repricing the front end dovishly; small-caps firmed. Levels (vary by feed/timing): **Dow ≈52,900 (record); S&P 500 ~7,470 (~flat); Nasdaq Comp ~25,833 (−0.8%); UST 2yr ~4.13–4.17% (−~3.5bps post-jobs); 10yr ~4.49%; VIX ~16.5–16.6 (NORMAL); WTI ~$67 / Brent toward $70 (−, Strait of Hormuz flows recovering); gold ~$4,070–4,100 (+); BTC ~$60,900 (+1.7%).**
+**Tape summary.** A quiet, US-closed holiday session dominated by an **international rebound in the AI-chip complex** that had sold off for two straight days into 7/2. **South Korea led the snap-back — KOSPI +5.8%** (SK Hynix **+10.9%**, Samsung **+8.2%**), **Japan's Kioxia +14%**, Nikkei **+1.5%**, TOPIX +1.2%; **Hang Seng +1.3%**, ASX +1.4%, Jakarta +2.3%, Shanghai +0.4%. **Europe's Stoxx 600 +0.5% to a fresh 52-week high** (+2.3% on the week — its 4th straight weekly gain; utilities led on residual safety-seeking even as tech recovered). **US equity futures firmed modestly** (ES ≈+0.4%) in the holiday-thinned session. The **June jobs miss (+57k, 7/2)** continued to reverberate: the **dollar is set for its biggest weekly drop since April**, **gold rebounded** (~$4,150–4,170, positive on the week) as September-hike odds were pared, and **oil slipped into contango** (Brent ~$72 / WTI ~$68.6; a near-term "mini-glut" as Strait-of-Hormuz flows surged past 10 mb/d). Levels (vary by feed/timing; US cash is 7/2 close, frozen through the holiday): **Dow 52,900 (7/2 record); S&P 500 ~7,470; Nasdaq Comp ~25,833; UST 2yr ~4.13% / 10yr ~4.49% (bond market closed 7/3); VIX 16.59 (7/2 close, NORMAL); WTI ~$68.6 / Brent ~$72; gold ~$4,150–4,170 (+); BTC ~$62,150.**
 
 **TL;DR**
-- Exits triggered: **none new** — AZO & ZBRA (the 7/1-staged B convergence exits) **FILLED today**; connector shows both at position 0. D2 Step-0 reconciles the CLOSEs. Genuinely-open book (MDT/DIS/RTX): no new mechanical triggers.
-- New entry candidates: **none** — 7/2 movers are macro-rotation, not clean single-name post-earnings B mispricings (NKE was already adjudicated **NO-GO 7/1**).
-- Watchlist changes: **none** (A-queue context note only — semis pullback extended a 2nd day, marginally easing the valuation-reset caveat; A router DO-NOT-ACTIVATE).
-- Regime review: **no review** — the dovish jobs-miss strengthens a soft-labor/disinflation *watch item* for the next M1, but does not clear the inter-monthly bar (VIX NORMAL, SPY NEUTRAL, Dow at record high).
+- Exits triggered: **none** — mechanical sweep on the open book (MDT/DIS/RTX) found no target-hit or time-exit due; US closed, marks unchanged from 7/2. Kill-trigger sweep: no flags (B/D).
+- New entry candidates: **none** — no US trading session; the sole material move is a foreign-market chip rebound (no US single-name post-earnings B/C/A/E setup in-window).
+- Watchlist changes: **none** (A-queue context note only — the 7/3 chip rebound partially reverses the 2-day valuation-reset easing; A router DO-NOT-ACTIVATE).
+- Regime review: **no review** — the dovish soft-jobs/weak-dollar cluster stays a watch item for the next M1; inter-monthly bar not met (VIX NORMAL, SPY NEUTRAL, Dow at record, M4 re-confirmed 7/1).
 
 ---
 
 ## DEVELOPMENTS
 
 ### 1. Market-wide breaking events
-- **No new acute geopolitical shock.** The Iran overlay continued to normalize — **Strait of Hormuz flows kept recovering**, Brent extended its slide toward ~$70 (pre-war levels), WTI ~$67. Consistent with the regime `shock_overlay = latent` (residual tail risk, kinetic phase paused). Source: Saxo Market Quick Take 7/2; CNBC.
-- **June jobs report — big downside miss (the day's macro pivot).** Nonfarm payrolls **+57k vs ≈+115k Dow Jones consensus** (May revised down to +129k). Unemployment **fell to 4.2%** — but *for the wrong reason*: the labor-force participation rate dropped 0.3pp to **61.5%, the lowest since March 2021**. Average hourly earnings **+0.3% MoM** to $37.64. Industry mix: leisure/hospitality **−61k** (weak seasonal hiring), prof/business services +36k, social assistance +25k, healthcare +22k. **Market reaction:** futures rose, 2-yr yield fell ~3.5bps to ~4.13%, and traders **took a September rate hike off the table** (October still priced as possible). Source: BLS Employment Situation; CNBC; Yahoo Finance. (Also §2, §Regime.)
+- **No new acute geopolitical shock.** The Iran overlay kept normalizing — **Strait of Hormuz flows surged past 10 mb/d** (UAE restored >3.9 mb/d of exports; Saudi ramped spot sales to Asia), pushing the crude curve into **contango** ("mini-glut" / near-term surplus). Brent ~$72, WTI ~$68.6 — near the lowest since late February (pre-war). Consistent with regime `shock_overlay = latent`. Source: Duncan Oil market note 7/3; TradingEconomics; Investing.com.
+- **US Independence Day (observed) — markets closed.** NYSE, Nasdaq, and the US bond market were **fully closed Friday 7/3**; the bond market closed early (2pm ET) on 7/2. Structurally removes any US market-hours catalyst from the window. Next US session Mon 7/6. Source: NYSE/Nasdaq holiday calendars; Yahoo Finance.
 
 ### 2. Scheduled events that resolved today
-**Economic:**
-- **June nonfarm payrolls +57k** (est ≈+115k) — large MISS; U-3 4.2% (participation-driven, 61.5%); AHE +0.3% MoM. Dovish, September-hike-off-the-table (§1).
-- No other tier-1 US macro prints in-window (holiday-shortened week; ISM Services / other data not due until post-holiday).
+**Economic:** No US macro prints — US closed for the holiday (the week's tier-1 event, June payrolls, resolved 7/2 and was covered by the prior run). No material ex-US tier-1 data in-window.
 
-**Earnings — lull (holiday-shortened week):**
-- **No material S&P-universe (≥$2B) earnings prints resolved in-window on 7/2.** (NKE's FQ4 was 6/30 AMC — a prior-window event already adjudicated **NO-GO** by D2/decision_log on 7/1; not re-surfaced here.) Pre-July-earnings-season quiet.
+**Earnings:** **No S&P-universe (≥$2B) US earnings prints in-window** — US market closed; pre-July-earnings-season lull. (NKE FQ4 6/30 was adjudicated **NO-GO 7/1**; not re-surfaced.)
 
 ### 3. Large single-name moves (≥$2B, ≥5% close-to-close, identifiable driver)
-- **Semiconductor / AI-hardware selloff, day 2:** **TER (Teradyne) −13.6%**, **KLAC (KLA) −11.5%**, **MU (Micron) −5.5%** *[A-queue]*, NVDA −1.4%; Asia memory **Samsung −7%, SK Hynix −9%, Kioxia −10%** (foreign-listed, context). Driver: continuation of the Meta in-house-cloud / neocloud-competitive-threat narrative (CoreWeave/Nebius) + AI-capex-return concerns + memory profit-taking; JPMorgan cautioned against over-reading the Meta move. Source: Yahoo Finance / CNBC / CBS.
-- **MDT (Medtronic) +5.0%** *(HELD — Strategy B)* — defensive/healthcare rotation on the dovish tape, compounding its own FQ4 beat + raised FY26 guidance (organic +7%, cardiac/acute double-digit growth). Advancing toward its $90 B convergence target (live 83.18). Source: connector snapshot; Yahoo/SimplyWallSt.
-- **CCL (Carnival) higher** — cruise names lifted by falling oil / Strait-of-Hormuz reopening. **SOFI higher** — continued CEO insider buying + risk-on financials. **TGTX (TG Therapeutics) higher** — traders leaning into recent BRIUMVI clinical updates. Source: Benzinga movers, 7/2.
-- **Micro-cap noise excluded** (< $2B / no confirmed catalyst): CLRO +109%, SAGT +75% (pre-market) — not actionable, not in scope.
+**No US single-name moves — US market closed 7/3** (so no close-to-close US move exists in-window). Foreign-listed context (not in the US-equity actionable universe, recorded for the AI-hardware narrative only):
+- **AI-chip rebound (Asia), reversing the 2-day selloff:** **SK Hynix +10.9%**, **Samsung Electronics +8.2%**, **Kioxia +14%** (Tokyo), plus Japanese chip-equipment names bouncing. Driver: bargain-hunting / short-covering after Kospi and Nikkei chip complexes were oversold on the Meta-neocloud / AI-capex-return scare; JPMorgan's 7/2 caution against over-reading Meta's cloud move helped stabilize sentiment. Source: Investing.com; US News/AP; Euronews.
+- These are **foreign listings** — no bearing on any held US position (none is a semiconductor) and not a US-equity entry candidate. Relevant only as context for the A-queue (§Watchlist) and the AI-hardware thread.
 
 ### 4. Sector-level moves
-Textbook **rotation**: **Financials led (≈+2%)** on the steeper curve / dovish-repricing beneficiary read; **Consumer Discretionary and Health Care positive**; **Information Technology worst (≈−1.8%)** as semis dragged; **Energy lower** with oil down (~−0.6%); **Utilities soft (~−1.3%)**. The tech-vs-cyclical dispersion — not index direction — was the day's real signal (Dow record high while NDX −1.6%). Source: sector dashboards (Schwab / S&P DJI-derived); directional reads are the confident signal.
+No US sector-ETF moves — US market closed. Internationally, the **technology/semiconductor** sub-sector led the global rebound (Asia chip names +8–14%), while **European utilities** led Stoxx 600 gains on continued safety rotation — a mixed "recovery-in-tech but keep-the-hedges" tape. No actionable US GICS-sector signal in-window.
 
 ### 5. Notable commentary
-- **June payrolls miss** reframed the rate path: sell-side broadly moved a September hike off the table, front-end lower (§1).
-- **JPMorgan** cautioned against over-extrapolating Meta's cloud-rental move as a structural threat to CoreWeave/Nebius — a partial counter to the 7/1 neocloud-threat narrative.
-- Continued "rotation trade" framing (chips → financials/healthcare/defensives); some desks flag AI-hardware valuations as the funding source.
+- **Dovish-repricing follow-through:** desks broadly kept a September Fed hike off the table after the +57k payrolls miss; the **dollar headed for its worst week since April** and gold rebounded. FedWatch-implied September-hike odds pared further. Source: CNBC 7/3 live; Investing.com.
+- **"Fed's nightmare scenario" framing** (weak jobs + still-high inflation = stagflation-lite) circulated alongside **Barclays' call for an "extended" Fed hold** — a softer read of the policy path than June's hawkish dot-plot. Watch item for M1, not an action.
+- **"Diversification / Europe back in the game"** (Barclays): the rotation out of richly-valued US mega-cap tech toward Europe (Stoxx at a 52-wk high, 4th weekly gain) and cyclicals continued — the same rotation theme flagged 7/1–7/2, now with an international leg.
 
 ---
 
 ## ANALYSIS — RISK TO EXISTING POSITIONS
 
 ### MECHANICAL EXIT-TRIGGER SWEEP (all open positions)
-Open book (`state.current_positions`, 5 rows) cross-checked vs `get_account_positions`. **Divergence flagged (expected):** the two 7/1-staged B convergence exits **AZO and ZBRA both now show position 0 at the connector → they FILLED today (7/2).** `state.current_positions` still carries them EXIT-PENDING; **D2 Step-0 will reconcile the fills into CLOSE** (queue rows `exit-AZO-B-20260701` / `exit-ZBRA-B-20260701` remain `pending` pending that reconciliation). Connector also shows immaterial dust (HCA 0.0001 ≈ $0.04, IBM 0.0007 ≈ $0.20) not in the canonical book — sub-$0.25, untracked, no action.
+Open book (`state.current_positions`, 3 rows) cross-checked vs `get_account_positions`. **Book is clean — no divergence:** the two 7/1-staged B convergence exits (AZO/ZBRA) have already been reconciled to CLOSE (both position 0 at the connector; no longer in the canonical open book). Connector also shows immaterial dust (HCA 0.0001 ≈ $0.04, IBM 0.0007 ≈ $0.20) not in the canonical book — sub-$0.25, untracked, no action. Marks below are the 7/2 regular-session closes (frozen through the holiday; from `get_account_positions`).
 
-| Pos | Strat | Conv. target | Live (7/2) | Δ vs prior | Time-exit | Trigger |
-|-----|-------|--------------|-----------|-----------|-----------|---------|
-| MDT | B | 90 | **83.18** | +5.0% | 2026-07-31 | none (target not reached; time-exit not due) |
-| DIS | D | — | 99.08 | +3.5% | 2027-05-07 | none (D runs to thesis-invalidation) |
-| RTX | D | — | 198.72 | +3.6% | 2027-04-27 | none (time-exit far off) |
-| AZO | B | 3,200 | **FILLED (pos 0)** | — | 2026-07-24 | exit **executed today** — 7/1 convergence stage filled; D2 Step-0 → CLOSE |
-| ZBRA | B | 264 | **FILLED (pos 0)** | — | 2026-07-13 | exit **executed today** — 7/1 convergence stage filled; D2 Step-0 → CLOSE |
+| Pos | Strat | Conv. target | Mark (7/2 close) | Time-exit | Trigger |
+|-----|-------|--------------|------------------|-----------|---------|
+| MDT | B | 90 | **83.19** | 2026-07-31 | none (target not reached; time-exit not due) |
+| DIS | D | — | 99.40 | 2027-05-07 | none (D runs to thesis-invalidation) |
+| RTX | D | — | 199.25 | 2027-04-27 | none (time-exit far off) |
 
-- **No NEW mechanical exit triggers** on the genuinely-open book (MDT/DIS/RTX). MDT rose toward but has not reached its $90 target (83.18); no time-exits due (earliest is now MDT 2026-07-31 after AZO/ZBRA close).
-- AZO & ZBRA required no new D1 action — their exits were already staged 7/1 and have now filled; the fill capture is D2 Step-0's job.
+- **No mechanical exit triggers.** MDT is $6.81 below its $90 target; earliest time-exit is MDT 2026-07-31. US closed today, so no mark moved — the sweep is unchanged from 7/2's genuinely-open book.
 
-### PER-STRATEGY KILL-TRIGGER SWEEP (`perf.kill_flags`, as of 7/1 close; refreshed vs 7/2 live marks)
-- **B:** deployed_unit_value 1.0913, peak 1.0913, drawdown **0.0%**, gate 24/30 (pre-gate); all flags false. 7/2 live: MDT +5.0% (a tailwind); AZO/ZBRA closing at/through target locks in gains. No drawdown kill (needs −50%); no runaway-success (needs 2×; at 1.091). **No flag.**
-- **D:** deployed_unit_value 0.9859, peak 1.0093, drawdown **−2.3%**, closed_trades 0; all flags false. 7/2: DIS +3.5%, RTX +3.6% → drawdown *improves* intraday. No drawdown kill. **No flag.**
+### PER-STRATEGY KILL-TRIGGER SWEEP (`perf.kill_flags`, as of 7/2 close)
+- **B:** deployed_unit_value 1.1064, peak 1.1064, drawdown **0.0%**, gate 22/30 (pre-gate), closed_trades 8; all flags false. AZO/ZBRA convergence exits locked in gains (deployed value rose 1.091→1.106 vs the prior run). No drawdown kill (needs −50%); no runaway-success (needs 2×; at 1.106). **No flag.**
+- **D:** deployed_unit_value 1.0246, peak 1.0246, drawdown **0.0%**, closed_trades 0, gate 30; all flags false. No drawdown kill. **No flag.**
 - **A/C/E:** not deployed; no kill state.
-- **No strategy-termination or runaway-success flags.**
+- US closed → no intraday marks to refresh against; the 7/2 engine row stands. **No strategy-termination or runaway-success flags.**
 
 ### Judgment-laden thesis-invalidation check
-None of the 7/2 developments touch the held theses. The semis/AI-hardware selloff hits **no held position** (none is a semiconductor). The dovish-rotation tape was a **tailwind** to all three genuinely-open names — **MDT** (+5%, healthcare/defensive rotation + its own beat, moving toward target), **DIS** (+3.5%, comm-services/consumer rotation), **RTX** (+3.6%, industrial/defense cyclical) — none breaches an invalidation criterion. **No thesis-invalidation exits.**
+No in-window development touches any held thesis. The only material move is a **foreign-listed AI-chip rebound**, which hits **no held position** (none is a semiconductor) and is not a US catalyst. The continued dovish/weak-dollar tape is neutral-to-mildly-supportive for MDT (healthcare/defensive), DIS (comm-services/consumer), and RTX (industrial/defense) — none breaches an invalidation criterion. **No thesis-invalidation exits.**
 
 ### Watchlist candidacy changes
-The 7/2 semis selloff (day 2) again pulled back **Strategy A queue** names — **MU −5.5%**, plus the broader complex (TER/KLAC not on the A-queue; NBIS/INTC/MRVL/AMAT are). With A router **DO-NOT-ACTIVATE (confirmed M4 2026-07)** this triggers **no entry action**; it marginally **eases the valuation-reset caveat** on these A-queue notes a second day (entry runway improves modestly). **Not a candidacy flip.** Noted for the next M1 ACTIVATE evaluation.
+The 7/3 global chip rebound (**SK Hynix +10.9%, Samsung +8.2%, Kioxia +14%**) **partially reverses** the 2-day valuation-reset easing that the 7/1–7/2 selloff had produced for the **Strategy A queue** (MU/NBIS/INTC/MRVL/AMAT). With **A router DO-NOT-ACTIVATE (confirmed M4 2026-07)** this is **no candidacy flip and no entry action** — the A-queue's valuation-reset caveat is now marginally *less* eased than after 7/2. Context only; noted for the next M1 ACTIVATE evaluation.
 
 ## ANALYSIS — OPPORTUNITY CHECK
-- **Strategy B — no new candidate.** The 7/2 large moves are **macro-rotation** (soft jobs → chips down / cyclicals-defensives up), not clean single-name **post-earnings mispricing on qualifying events** → mechanism-mismatch for B. **MDT +5%** is a *held* B position (rotation + its prior FQ4 beat), not a fresh Day-0 earnings event today. **NKE** (6/30 event) was already screened **NO-GO on 7/1** (criterion-2 disproportion; C1 marginal) — resolved, not re-surfaced. No qualifying B post-earnings setup in-window.
-- **Strategy C:** no newly-announced qualifying catalyst (FDA/FOMC/earnings) within 45 days surfaced today; C remains parked (HYBRID ACTIVATE FOMC-only, pending div-C-202606-1). Next C touchpoint is the queued FOMC re-screen (`rescreen-FOMC-C-20260720`).
-- **Strategy A:** DO-NOT-ACTIVATE. The chip pullback further eases the A-queue valuation-reset caveat — **context only, no entry**.
-- **Strategy E:** the financials/healthcare-vs-semiconductors split is intra-market **rotation**, not an actionable intra-industry pair at current book size (E remains ACTIVATE-substantive but execution-feasibility-deferred / ETF-substitution-required per M4 2026-07, pending div-E-202606-1). **No E action.**
+- **Strategy B — no new candidate.** No US trading session and no US post-earnings single-name event in-window → no qualifying B mispricing. The foreign chip rebound is a market-structure move on ex-US listings, mechanism-mismatch for B (which needs a US-listed post-catalyst mispricing).
+- **Strategy C — no new catalyst.** No newly-announced qualifying FDA/FOMC/earnings catalyst within 45 days surfaced in-window. C remains parked (HYBRID ACTIVATE FOMC-only, pending div-C-202606-1); next C touchpoint is the queued FOMC re-screen (`rescreen-FOMC-C-20260720`).
+- **Strategy A — DO-NOT-ACTIVATE.** Chip rebound is context only, no entry.
+- **Strategy E — no actionable pair.** The tech-recovery-vs-utilities-safety split is broad rotation, not an actionable intra-industry-group pair at current book size (E remains ACTIVATE-substantive but execution-feasibility-deferred / ETF-substitution-required per M4 2026-07, pending div-E-202606-1). **No E action.**
 
 ## ANALYSIS — REGIME CHECK
-**No inter-monthly router review recommended (default NO on ambiguity — high bar).** Today's **June payrolls miss (+57k)** is now the *second consecutive* dovish/disinflationary session (following 7/1's soft ADP/ISM + Warsh "inflation risks eased"), and it took a September Fed hike off the table — cutting against June's confirmed **"reaccelerating inflation + hawkish policy"** fundamental DNA. But the bar for an inter-monthly flip is not met: (1) the unemployment *drop* to 4.2% was **participation-driven** (a mixed, not clean-cooling signal) and **wages still rose +0.3%** — this is soft-labor + rate-repricing, not confirmed disinflation; (2) **VIX ~16.5 NORMAL** — B's HIGH-VIX exclusion is not triggered and its mean-reversion mechanism is intact; (3) **SPY Trend NEUTRAL** and the **Dow closed at a record high** — not a risk-off regime; (4) **M4 2026-07 just re-confirmed** all router states on 7/1. One payroll print does not reverse a month's DNA. **Flagged as a strengthened watch item for the next M1** — whether the soft-labor/dovish-repricing cluster (ADP/ISM + payrolls miss + Sep-hike-off) marks the start of a fundamental-axis shift (policy_stance hawkish→neutral, inflation reaccelerating→moderating). The monthly M1 owns the fundamental axis; **no router flip now.**
+**No inter-monthly router review recommended (default NO on ambiguity — high bar).** The in-window developments extend the **soft-labor / dovish-repricing cluster** already flagged 7/1–7/2 (soft ADP/ISM + Warsh + the +57k payrolls miss): the dollar is set for its worst week since April, gold rebounded, September-hike odds pared, and oil slid into contango (a forward-disinflation signal). This continues to cut against June's confirmed **"reaccelerating inflation + hawkish policy"** fundamental DNA. But the inter-monthly flip bar is not met: (1) it is a *rate-path/dollar repricing* off one payroll print, not confirmed disinflation (May's every-gauge-accelerated print + +0.3% AHE still stand); (2) **VIX 16.59 NORMAL** — B's HIGH-VIX exclusion untriggered, mean-reversion intact; (3) **SPY Trend NEUTRAL** and the **Dow at a record high** — not risk-off; (4) **M4 2026-07 re-confirmed** all router states on 7/1. **Flagged as a strengthened watch item for the next M1** — whether the soft-labor + weak-dollar + oil-disinflation cluster marks the start of a fundamental-axis shift (policy_stance hawkish→neutral, inflation reaccelerating→moderating). The monthly M1 owns the fundamental axis; **no router flip now.**
 
 ## ANALYSIS — FRONTIER-LLM CAPABILITY CHECK
-Ran (Thu = sycophancy/anchoring battery; `paper_search` "LLM sycophancy anchoring bias user pressure agreement", concise, limit 5). Newest returned result was published **2026-06-15** (sycophancy material-failure characterization) — **outside the scan window** (7/1→7/2; ~25h, cap 72h). No papers published within the window; nothing materially bears on an `AI_Trading_Foundation.md` disadvantage in-window. **Silent — no `events.decision_log` capture, no output.**
+Ran (Fri = trading/financial battery; `paper_search` "large language model trading financial decision making agent markets", concise, limit 5). Newest returned result was published **2026-04-18** (cognitive fine-tuning for financial reasoning) — **outside the scan window** (7/2→7/3; ~23h, cap 72h). No papers published within the window; nothing materially bears on an `AI_Trading_Foundation.md` disadvantage in-window. **Silent — no `events.decision_log` capture, no output.**
 
 ---
 
 ## RECOMMENDED ACTIONS
 
-**Exits triggered:** **None new.** The two 7/1-staged Strategy B convergence exits (AZO $3,200, ZBRA $264) **filled today** (connector position 0 for both) — D2 Step-0 reconciles the fills into CLOSE and marks the `exit-AZO-B-20260701` / `exit-ZBRA-B-20260701` queue rows terminal. The mechanical sweep on the genuinely-open book (MDT/DIS/RTX) found **no new triggers**.
+**Exits triggered:** **None.** US markets closed 7/3, so no mark moved; the mechanical sweep on the open book (MDT/DIS/RTX) found no target-hit or time-exit due, and the kill-trigger sweep (B/D) found no flags.
 
-**New entry candidates:** **None.** 7/2 movers are macro-rotation, not qualifying single-name post-earnings B setups; NKE already NO-GO (7/1).
+**New entry candidates:** **None.** No US trading session in-window; the only material move is a foreign-listed AI-chip rebound, which is not a US-equity entry candidate for any strategy.
 
 **Watchlist updates (context only — no action):**
-- A-queue notes: the 7/2 semis selloff (day 2; MU −5.5% among A-queue names, plus NBIS/INTC/MRVL/AMAT) further eases the valuation-reset caveat on these A-queue names → entry runway modestly improves. **A router DO-NOT-ACTIVATE; no adds/removes/demotions.**
+- A-queue notes: the 7/3 global chip rebound (SK Hynix +10.9%, Samsung +8.2%, Kioxia +14%) **partially reverses** the 2-day valuation-reset easing on the A-queue names (MU/NBIS/INTC/MRVL/AMAT). **A router DO-NOT-ACTIVATE; no adds/removes/demotions.**
 
-**Router reviews recommended:** None. (Dovish June-payrolls miss is a strengthened watch item for the next M1, not an inter-monthly review — VIX NORMAL, SPY NEUTRAL, Dow at a record high, M4 just re-confirmed states 7/1.)
+**Router reviews recommended:** None. (The soft-jobs/weak-dollar/oil-disinflation cluster is a strengthened watch item for the next M1, not an inter-monthly review — VIX NORMAL, SPY NEUTRAL, Dow at a record high, M4 re-confirmed states 7/1.)
 
 ```yaml d1_actions
 - action: watchlist
   ticker: n/a
   strategy: A
-  detail: 7/2 semis selloff (day 2; MU -5.5% among A-queue names, plus NBIS/INTC/MRVL/AMAT) further eases the valuation-reset caveat on the A-queue; A router DO-NOT-ACTIVATE, no adds/removes/demotes — context only, no action.
+  detail: 7/3 global chip rebound (SK Hynix +10.9%, Samsung +8.2%, Kioxia +14%) partially reverses the 2-day valuation-reset easing on the A-queue (MU/NBIS/INTC/MRVL/AMAT); A router DO-NOT-ACTIVATE, no adds/removes/demotes — context only, no action.
 ```
