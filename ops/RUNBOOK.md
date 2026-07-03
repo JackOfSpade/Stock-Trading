@@ -1630,3 +1630,32 @@ subject/hero/chart-data/table/plain-text all internally consistent. `sample_prev
 regenerated from the harness's actual `buildHtml_()` output against the live-verified numbers above
 (with the chart's `cid:` image swapped for a static placeholder div, since a preview file can't ship
 a live PNG), then screenshotted — no horizontal overflow at 600px, no label collisions.
+
+**2026-07-03 follow-up — percentage-primary.** After seeing the first live send, the owner asked for
+the headline + chart to compare **percentages, not absolute dollars** ("I evaluate performance of a
+strategy better with percentage comparison"). The percentage that measures strategy performance is
+the **deployed-slice excess return** — `perf.strategy_daily.excess_vs_sgov` (deployed-TWR unit value
+÷ SGOV index − 1, over the strategy's own deployed days; the sanctioned kill/gate metric) — i.e. the
+return on the capital actually put to work, NOT a sleeve-level % (which at ~98% parked would be a
+diluted ~0.7% and useless for judging a strategy). Changes:
+- `bigquery/21_strategy_vs_park.sql`: `analytics.strategy_vs_park_daily` gained an `excess_vs_sgov`
+  column (LEFT JOIN `perf.strategy_daily`, so the chart, the scorecard %, and the kill/gate metric
+  are one number); new view `analytics.deployed_book_vs_sgov` — the combined **value-weighted**
+  deployed-book excess % (percentages don't sum, so the hero can't be a sum of per-strategy %; it's
+  the aggregate book's own excess). Both additive, applied live 2026-07-03. Verified: combined
+  **+7.18%** (book +7.92% vs SGOV +0.69% over 47 deployed days); B **+9.88%**, D **+1.76%**.
+- `ops/weekly_report/weekly_report.gs`: hero now leads with the combined excess % + a book-vs-SGOV
+  scale line (keeping the ≈$ dollar edge as a small "for scale" figure — honouring the earlier
+  sleeve-level dollar request as secondary, not headline); the chart plots cumulative **excess %**
+  per strategy against the flat **0%** SGOV baseline (y-axis "% vs SGOV"); the verdict table leads
+  with **vs SGOV %** (the $ edge muted beneath), Δ wk is the trailing-7-day change in **percentage
+  points**; the subject line is percentages. Neutral band is now **±1.0 percentage point** of excess
+  (was the dollar `max($2, commissions)` band) — earliness is carried by the gate column + the
+  "provisional before the 30-trade gate" caption, not by masking the number, since the owner wants
+  to read the real %. `analytics.park_baseline` is no longer read by the email (its park-$ scale
+  role is replaced by the book/SGOV %); retained in BigQuery.
+- dbt twins + `schema.yml` updated (`excess_vs_sgov` on `strategy_vs_park_daily`, new
+  `deployed_book_vs_sgov`); still additive, backward-compatible with the deployed pre-change script
+  until re-pasted. Re-verified via the same Node harness (all five scenarios) + preview screenshot.
+  **Owner action required:** re-paste `weekly_report.gs` (no manifest/scope change this time — the
+  `gmail.modify` + `bigquery` scopes from the prior deploys already cover it).

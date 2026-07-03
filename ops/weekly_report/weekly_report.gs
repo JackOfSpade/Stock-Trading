@@ -16,10 +16,10 @@
  *
  * DATA: read straight from BigQuery (project stock-trading-498512) — the same views the
  * trading routines maintain. No Claude involvement at send time.
- *   - analytics.strategy_scorecard     (per-strategy activation + budget + closed-trade gate)
- *   - analytics.strategy_vs_park       (latest cumulative $ edge vs the SGOV park, per strategy)
- *   - analytics.strategy_vs_park_daily (the chart's daily $ edge series)
- *   - analytics.park_baseline          (what parking everything would have earned — hero scale)
+ *   - analytics.strategy_scorecard     (per-strategy activation + budget + deployed-slice excess % + gate)
+ *   - analytics.strategy_vs_park       (latest $ edge + commissions per strategy — the secondary scale figure)
+ *   - analytics.strategy_vs_park_daily (the chart's daily series: excess % PRIMARY + $ edge secondary)
+ *   - analytics.deployed_book_vs_sgov  (combined value-weighted excess % — the hero headline)
  *   - state.system_health              (marks/engine freshness + kill-flags + critical alerts —
  *                                        the one surviving data-trust signal)
  *   - state.user_tz                    (detected DISPLAY timezone — never the operating/trading-day tz)
@@ -111,7 +111,7 @@ function buildSubject_(d) {
   const deployedRows = d.rows.filter(r => r.deployed);
   const tag = !deployedRows.length
     ? 'all parked'
-    : deployedRows.map(r => r.verdict.key === 'NEUTRAL' ? `${r.strategy} ≈even` : `${r.strategy} ${signedMoney2_(r.edge)}`).join(' · ');
+    : deployedRows.map(r => r.verdict.key === 'NEUTRAL' ? `${r.strategy} ≈even` : `${r.strategy} ${signPct_(r.excessPct * 100)}`).join(' · ');
   const warn = d.green ? '' : ' · ⚠ check data';
   return `Stock-Trading · Strategies vs SGOV — ${d.dateLabel} · ${tag}${warn}`;
 }
@@ -127,10 +127,12 @@ function gatherData_() {
 
   const vsPark = bq_(`SELECT * FROM \`${PROJECT_ID}.analytics.strategy_vs_park\` ORDER BY strategy`);
   const dailyRows = bq_(`
-    SELECT as_of_date, strategy, edge_dollars_cum
+    SELECT as_of_date, strategy, excess_vs_sgov, edge_dollars_cum
     FROM \`${PROJECT_ID}.analytics.strategy_vs_park_daily\`
     ORDER BY strategy, as_of_date`);
-  const park = bq_(`SELECT * FROM \`${PROJECT_ID}.analytics.park_baseline\``)[0] || {};
+  // Combined deployed-book excess % — the hero's headline (percentages don't sum, so this is the
+  // value-weighted aggregate book's own excess, not a sum of per-strategy percentages).
+  const book = bq_(`SELECT * FROM \`${PROJECT_ID}.analytics.deployed_book_vs_sgov\``)[0] || {};
   const health = bq_(`SELECT * FROM \`${PROJECT_ID}.state.system_health\``)[0] || {};
 
   const dateLabel = Utilities.formatDate(new Date(), tz, 'MMM d, yyyy');
@@ -160,21 +162,23 @@ function gatherData_() {
   const vsParkByStrategy = {};
   vsPark.forEach(r => { vsParkByStrategy[r.strategy] = r; });
 
+  // Per-strategy daily series: excess % (the chart's y-axis, PRIMARY) + cumulative $ edge (for the
+  // secondary "for scale" note). Both keyed on as_of_date so the .gs can also derive the wk-Δ in pp.
   const dailyByStrategy = {};
   dailyRows.forEach(r => {
     const s = r.strategy;
     if (!dailyByStrategy[s]) dailyByStrategy[s] = [];
-    dailyByStrategy[s].push({ as_of_date: r.as_of_date, edge: num_(r.edge_dollars_cum) });
+    dailyByStrategy[s].push({ as_of_date: r.as_of_date, excess: num_(r.excess_vs_sgov), edge: num_(r.edge_dollars_cum) });
   });
 
   // One row per strategy, always all five, fixed A→E order (scorecard is already ordered).
   const rows = scorecard.map(s => {
     const vp = vsParkByStrategy[s.strategy];
     const deployed = !!vp;
-    const edge = deployed ? num_(vp.edge_dollars_cum) : null;
-    const edgeWk = deployed ? num_(vp.edge_dollars_wk) : null;
+    const edge = deployed ? num_(vp.edge_dollars_cum) : null;       // $ edge, secondary/for-scale
     const commissions = deployed ? (num_(vp.commissions_to_date) || 0) : 0;
-    const excessPct = num_(s.excess_vs_sgov);
+    const excessPct = num_(s.excess_vs_sgov);                        // deployed-slice excess %, PRIMARY
+    const excessWkPp = deployed ? excessWkDelta_(dailyByStrategy[s.strategy] || []) : null; // Δ over 7d, fraction
     const closedTrades = num_(s.closed_trades);
     const anyKillFlag = String(s.any_kill_flag) === 'true';
     // Gate-reached derived in JS from closed_trades — do NOT add gate_reached to the
@@ -182,40 +186,58 @@ function gatherData_() {
     const gateReached = closedTrades != null && closedTrades >= 30;
     return {
       strategy: s.strategy, activation: s.activation, nav: num_(s.nav), deployedMv: num_(s.deployed_mv) || 0,
-      deployed, edge, edgeWk, commissions, excessPct, closedTrades, gateReached, anyKillFlag,
+      deployed, edge, excessPct, excessWkPp, commissions, closedTrades, gateReached, anyKillFlag,
       killNames: anyKillFlag ? killFlagNamesFor_(killFlagDetails, s.strategy) : [],
-      verdict: verdictFor_(edge, commissions),
+      verdict: verdictFor_(excessPct),
       notDeployedReason: deployed ? null : notDeployedReason_(s.activation)
     };
   });
 
   const deployedRows = rows.filter(r => r.deployed);
   const deployedStrategies = deployedRows.map(r => r.strategy);
-  const combinedEdge = deployedRows.reduce((sum, r) => sum + r.edge, 0);
+  const combinedEdge = deployedRows.reduce((sum, r) => sum + r.edge, 0);           // $ sum, for scale
   const combinedCommissions = deployedRows.reduce((sum, r) => sum + r.commissions, 0);
 
   return {
     rows, deployedStrategies, dailyByStrategy,
-    combinedEdge, combinedCommissions,
-    firstDeployedDate: park.first_deployed_date || null,
-    parkDollarsApprox: num_(park.park_dollars_approx),
+    combinedExcessPct: num_(book.combined_excess_pct),   // the hero headline %
+    bookReturn: num_(book.book_return),
+    sgovReturn: num_(book.sgov_return),
+    combinedEdge, combinedCommissions,                   // $ sum, kept for the "for scale" note
+    firstDeployedDate: book.first_deployed_date || null,
     health, green, healthReasons, dateLabel, tz
   };
 }
 
 // ===== per-strategy verdict / classification helpers =====
 
-// Materiality band: below ~$2 (or the commissions paid to earn the edge, if larger) the
-// edge is inside its own day-to-day noise at current scale and shouldn't claim a categorical
-// green/red — an edge smaller than its own commissions is the exact case that has already
-// flipped gross-vs-net sign once in this experiment's history (2026-06-05 findings).
-function verdictFor_(edge, commissions) {
-  if (edge == null) return { key: 'NOT_DEPLOYED', label: 'NOT DEPLOYED', bg: '#edf0f3', fg: '#8a96a3' };
-  const band = Math.max(2.00, commissions || 0);
-  const rounded = Math.round(edge * 100) / 100;
-  if (rounded >= band) return { key: 'BEATING', label: 'BEATING PARK', bg: '#e6f4ee', fg: '#1a7f5a' };
-  if (rounded <= -band) return { key: 'TRAILING', label: 'TRAILING PARK', bg: '#fdecea', fg: '#c0392b' };
+// Neutral band on the excess RETURN %: within ±1.0 percentage point of SGOV, an edge is too small
+// to call "beating"/"trailing" at this sample size, so it reads "≈ even". Beyond the band, colour
+// by sign. Earliness (a 0-closed-trade strategy that happens to be ahead) is conveyed separately by
+// the gate column + the "provisional before the 30-trade gate" caption, not by masking the number.
+const NEUTRAL_BAND_PP = 0.01; // 1.0 percentage point, expressed as a return fraction
+function verdictFor_(excessPct) {
+  if (excessPct == null) return { key: 'NOT_DEPLOYED', label: 'NOT DEPLOYED', bg: '#edf0f3', fg: '#8a96a3' };
+  const rounded = Math.round(excessPct * 10000) / 10000; // to 2dp of a percent, matching the display
+  if (rounded >= NEUTRAL_BAND_PP) return { key: 'BEATING', label: 'BEATING PARK', bg: '#e6f4ee', fg: '#1a7f5a' };
+  if (rounded <= -NEUTRAL_BAND_PP) return { key: 'TRAILING', label: 'TRAILING PARK', bg: '#fdecea', fg: '#c0392b' };
   return { key: 'NEUTRAL', label: '≈ EVEN WITH PARK', bg: '#fdf3e3', fg: '#b9770e' };
+}
+
+// Δ over the trailing ~7 days, in return-fraction terms: latest excess minus the excess at the row
+// nearest to (latest date − 7d), ties resolved toward the newer row (points arrive ascending, so a
+// <= comparison keeps the later one — matching the SQL 7d-ago tie-break).
+function excessWkDelta_(points) {
+  if (!points.length) return null;
+  const latest = points[points.length - 1];
+  if (latest.excess == null) return null;
+  const targetMs = parseIsoDateLocal_(latest.as_of_date).getTime() - 7 * 86400000;
+  let best = null, bestDiff = Infinity;
+  points.forEach(p => {
+    const diff = Math.abs(parseIsoDateLocal_(p.as_of_date).getTime() - targetMs);
+    if (diff <= bestDiff) { bestDiff = diff; best = p; }
+  });
+  return (best && best.excess != null) ? latest.excess - best.excess : null;
 }
 
 function notDeployedReason_(activation) {
@@ -304,6 +326,7 @@ function money0_(v){ return v == null ? '—' : (v < 0 ? '−$' : '$') + Math.ro
 function money2_(v){ return v == null ? '—' : (v < 0 ? '−$' : '$') + Math.abs(Number(v)).toFixed(2); }
 function signedMoney2_(v){ return (v >= 0 ? '+' : '−') + '$' + Math.abs(v).toFixed(2); }
 function signPct_(p){ return (p >= 0 ? '+' : '−') + Math.abs(p).toFixed(2) + '%'; }      // unicode minus
+function signedPp_(frac){ return (frac >= 0 ? '+' : '−') + Math.abs(frac * 100).toFixed(2) + 'pp'; } // Δ in percentage points
 function clr_(p)  { return p >= 0 ? '#1a7f5a' : '#c0392b'; }
 function esc_(s)  { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -330,7 +353,7 @@ function downsampleDates_(sortedDates) {
 
 function altTextFor_(rows) {
   const deployed = rows.filter(r => r.deployed);
-  return 'Cumulative dollar edge vs SGOV park: ' + deployed.map(r => `${r.strategy} ${signedMoney2_(r.edge)}`).join(', ');
+  return 'Cumulative return vs SGOV park: ' + deployed.map(r => `${r.strategy} ${signPct_(r.excessPct * 100)}`).join(', ');
 }
 
 // Returns {blob} or null (caller falls back to HTML bars). Never throws out — a bad chart
@@ -346,13 +369,14 @@ function buildParkChart_(dailyByStrategy, deployedStrategies) {
     const allDates = Object.keys(dateSet).sort();
     const keptDates = downsampleDates_(allDates);
 
-    // Forward-fill each strategy's cumulative edge onto the kept dates; 0 before its first
-    // as_of_date (fully parked — edge $0 by construction), so every line spans the full axis.
+    // Forward-fill each strategy's cumulative excess RETURN (%) onto the kept dates; 0 before its
+    // first as_of_date (fully parked — no deployed slice, so excess vs the park is 0% by
+    // construction), so every line spans the full axis. Value plotted is percentage points.
     const filled = {};
     deployedStrategies.forEach(s => {
       const pts = dailyByStrategy[s] || [];
       const map = {};
-      pts.forEach(pt => { map[pt.as_of_date] = pt.edge; });
+      pts.forEach(pt => { if (pt.excess != null) map[pt.as_of_date] = pt.excess * 100; });
       const firstDate = pts.length ? pts[0].as_of_date : null;
       let lastVal = 0;
       filled[s] = {};
@@ -364,7 +388,7 @@ function buildParkChart_(dailyByStrategy, deployedStrategies) {
     });
 
     // SGOV park is the FIRST data column (and first setColors entry) so strategy lines draw
-    // on top of the baseline — the near-$0 region is where a noise-band strategy lives.
+    // on top of the baseline — the near-0% region is where a noise-band strategy lives.
     const dt = Charts.newDataTable().addColumn(Charts.ColumnType.DATE, 'Date');
     dt.addColumn(Charts.ColumnType.NUMBER, 'SGOV park');
     deployedStrategies.forEach(s => dt.addColumn(Charts.ColumnType.NUMBER, 'Strategy ' + s));
@@ -381,7 +405,7 @@ function buildParkChart_(dailyByStrategy, deployedStrategies) {
       .setBackgroundColor('#fffffe') // baked opaque near-white; never transparent (dark axis
                                       // text vanishes on dark backgrounds); PNG pixels are
                                       // never inverted by Gmail's dark mode, only CSS colors.
-      .setYAxisTitle('$ vs park')
+      .setYAxisTitle('% vs SGOV')
       .build();
 
     return { blob: chart.getAs('image/png').setName('strategies_vs_park.png') };
@@ -391,18 +415,19 @@ function buildParkChart_(dailyByStrategy, deployedStrategies) {
   }
 }
 
-// Gmail-safe fallback when the chart build throws: left-anchored magnitude bars, sign/verdict
-// carried by color (legitimate here — the color MEANS the verdict), signed value printed beside.
+// Gmail-safe fallback when the chart build throws: left-anchored magnitude bars sized by |excess %|,
+// sign/verdict carried by color (legitimate here — the color MEANS the verdict), signed % beside.
 function fallbackBarsHtml_(rows) {
   const deployed = rows.filter(r => r.deployed);
-  const maxAbs = Math.max.apply(null, deployed.map(r => Math.abs(r.edge)).concat([1.00]));
+  const maxAbs = Math.max.apply(null, deployed.map(r => Math.abs((r.excessPct || 0) * 100)).concat([1.0]));
   return deployed.map(r => {
-    const widthPx = Math.max(2, Math.round(Math.abs(r.edge) / maxAbs * 240));
+    const pctVal = (r.excessPct || 0) * 100;
+    const widthPx = Math.max(2, Math.round(Math.abs(pctVal) / maxAbs * 240));
     const color = r.verdict.key === 'BEATING' ? '#1a7f5a' : r.verdict.key === 'TRAILING' ? '#c0392b' : '#b9770e';
     return `<div style="padding:4px 0;font-size:12px;color:#1f2d3d;">` +
       `<span style="display:inline-block;width:16px;font-weight:700;">${esc_(r.strategy)}</span>` +
       `<span style="display:inline-block;background-color:${color};width:${widthPx}px;height:12px;vertical-align:middle;"></span>` +
-      `<span style="margin-left:8px;color:${color};font-weight:700;">${signedMoney2_(r.edge)}</span>` +
+      `<span style="margin-left:8px;color:${color};font-weight:700;">${signPct_(pctVal)}</span>` +
       `</div>`;
   }).join('');
 }
@@ -415,7 +440,7 @@ function chipHtml_(v) {
 function buildHtml_(d, chartResult) {
   const notDeployedLetters = d.rows.filter(r => !r.deployed).map(r => r.strategy);
   const notAllDeployedCaption = (notDeployedLetters.length && d.deployedStrategies.length)
-    ? ` ${notDeployedLetters.join(', ')} — never deployed; edge sits on the $0 line.`
+    ? ` ${notDeployedLetters.join(', ')} — never deployed; they sit on the 0% line.`
     : '';
 
   const trustBlock = d.green ? '' : `
@@ -427,39 +452,39 @@ function buildHtml_(d, chartResult) {
 
   let heroLabel, heroBig, heroSub, heroColor;
   if (!d.deployedStrategies.length) {
-    heroLabel = 'ALL STRATEGIES COMBINED';
+    heroLabel = 'ALL DEPLOYED CAPITAL COMBINED';
     heroBig = 'all sleeves parked in SGOV — no deployments yet';
     heroSub = '';
     heroColor = '#0f2747';
   } else {
     const firstLabel = d.firstDeployedDate ? Utilities.formatDate(parseIsoDateLocal_(d.firstDeployedDate), d.tz, 'MMM d') : '—';
-    heroLabel = `ALL STRATEGIES COMBINED · SINCE FIRST DEPLOYMENT (${firstLabel})`;
-    heroBig = `${signedMoney2_(d.combinedEdge)} vs SGOV park`;
-    heroSub = `for scale: the SGOV park itself earned ≈${money0_(d.parkDollarsApprox)} over this period — the figure above is what deploying added on top of that, gross of ${money2_(d.combinedCommissions)} commissions.`;
-    const combinedVerdict = verdictFor_(d.combinedEdge, d.combinedCommissions);
+    heroLabel = `ALL DEPLOYED CAPITAL COMBINED · SINCE FIRST DEPLOYMENT (${firstLabel})`;
+    heroBig = d.combinedExcessPct != null ? `${signPct_(d.combinedExcessPct * 100)} vs SGOV` : '—';
+    heroSub = `deployed capital returned ${d.bookReturn != null ? signPct_(d.bookReturn * 100) : '—'} vs the SGOV park's ${d.sgovReturn != null ? signPct_(d.sgovReturn * 100) : '—'} over this period (≈${signedMoney2_(d.combinedEdge)} in dollars, gross of ${money2_(d.combinedCommissions)} commissions).`;
+    const combinedVerdict = verdictFor_(d.combinedExcessPct);
     heroColor = combinedVerdict.key === 'BEATING' ? '#1a7f5a' : combinedVerdict.key === 'TRAILING' ? '#c0392b' : '#0f2747';
   }
 
-  const chartSectionHeader = `<div style="font-size:12px;color:#8a96a3;text-transform:uppercase;letter-spacing:0.6px;font-weight:700;">Cumulative Edge vs SGOV Park ($ per sleeve)</div>`;
+  const chartSectionHeader = `<div style="font-size:12px;color:#8a96a3;text-transform:uppercase;letter-spacing:0.6px;font-weight:700;">Cumulative Return vs SGOV Park (%, deployed capital)</div>`;
   let chartSection;
   if (!d.deployedStrategies.length) {
     chartSection = `
   <tr><td style="padding:16px 22px 6px 22px;">
     ${chartSectionHeader}
-    <div style="margin-top:8px;font-size:12px;color:#8a96a3;">Nothing has ever deployed — all sleeves fully parked (edge $0 by construction).</div>
+    <div style="margin-top:8px;font-size:12px;color:#8a96a3;">Nothing has ever deployed — all sleeves fully parked (0% excess by construction).</div>
   </td></tr>`;
   } else if (chartResult) {
     chartSection = `
   <tr><td style="padding:16px 22px 6px 22px;">
     ${chartSectionHeader}
-    <div style="margin-top:8px;font-size:11px;color:#8a96a3;">SGOV park = the gray $0 line. Above it = beating the park; flat = parked/idle.${notAllDeployedCaption}</div>
+    <div style="margin-top:8px;font-size:11px;color:#8a96a3;">SGOV park = the gray 0% line. Above it = beating the park; flat = parked/idle.${notAllDeployedCaption}</div>
     <img src="cid:parkchart" width="560" alt="${esc_(altTextFor_(d.rows))}" style="width:100%;max-width:560px;height:auto;display:block;margin-top:8px;">
   </td></tr>`;
   } else {
     chartSection = `
   <tr><td style="padding:16px 22px 6px 22px;">
     ${chartSectionHeader}
-    <div style="margin-top:8px;font-size:11px;color:#8a96a3;">SGOV park = the gray $0 line. Above it = beating the park; flat = parked/idle.${notAllDeployedCaption}</div>
+    <div style="margin-top:8px;font-size:11px;color:#8a96a3;">SGOV park = the gray 0% line. Above it = beating the park; flat = parked/idle.${notAllDeployedCaption}</div>
     <div style="margin-top:10px;">${fallbackBarsHtml_(d.rows)}</div>
   </td></tr>`;
   }
@@ -475,13 +500,15 @@ function buildHtml_(d, chartResult) {
     if (r.deployedMv > 0) subtextParts.push(`deployed ${money2_(r.deployedMv)}`);
     if (r.commissions > 0) subtextParts.push(`comm. ${money2_(r.commissions)}`);
 
-    const edgeCell = r.deployed
-      ? `<span style="color:${r.verdict.key === 'NEUTRAL' ? '#8a96a3' : (r.edge >= 0 ? '#1a7f5a' : '#c0392b')};font-weight:700;">${signedMoney2_(r.edge)}</span>`
-      : `<span style="color:#8a96a3;">$0.00</span>`;
-    const wkCell = (r.deployed && r.edgeWk != null)
-      ? `<span style="color:${r.edgeWk >= 0 ? '#1a7f5a' : '#c0392b'};">${signedMoney2_(r.edgeWk)}</span>` : '—';
-    const pctCell = r.excessPct != null
-      ? `<span style="color:${clr_(r.excessPct)};">${signPct_(r.excessPct * 100)}</span>` : '—';
+    // PRIMARY numeric: the deployed-slice excess % (big), with the sleeve $ edge muted underneath
+    // as the secondary "for scale" figure.
+    const pctColor = r.verdict.key === 'NEUTRAL' ? '#8a96a3' : (r.excessPct >= 0 ? '#1a7f5a' : '#c0392b');
+    const pctCell = r.deployed && r.excessPct != null
+      ? `<div style="color:${pctColor};font-weight:700;">${signPct_(r.excessPct * 100)}</div>` +
+        `<div style="font-size:10px;color:#8a96a3;">${signedMoney2_(r.edge)} vs park</div>`
+      : `<span style="color:#8a96a3;">—</span>`;
+    const wkCell = (r.deployed && r.excessWkPp != null)
+      ? `<span style="color:${r.excessWkPp >= 0 ? '#1a7f5a' : '#c0392b'};">${signedPp_(r.excessWkPp)}</span>` : '—';
     const gateCell = r.deployed
       ? `${r.closedTrades != null ? r.closedTrades : '—'}/30${r.gateReached ? ' ✓' : ''}` : '—';
     const rowTextColor = r.deployed ? '#0f2747' : '#8a96a3';
@@ -495,9 +522,8 @@ function buildHtml_(d, chartResult) {
           ${!r.deployed ? `<div style="font-size:10px;color:#8a96a3;font-style:italic;">${esc_(r.notDeployedReason)}</div>` : ''}
         </td>
         <td style="padding:9px 8px;">${chipHtml_(r.verdict)}${r.anyKillFlag ? KILL_REVIEW_CHIP : ''}</td>
-        <td style="padding:9px 8px;text-align:right;">${edgeCell}</td>
-        <td style="padding:9px 8px;text-align:right;">${wkCell}</td>
         <td style="padding:9px 8px;text-align:right;">${pctCell}</td>
+        <td style="padding:9px 8px;text-align:right;">${wkCell}</td>
         <td style="padding:9px 8px;text-align:right;color:${rowTextColor};">${gateCell}</td>
       </tr>`;
   }).join('');
@@ -534,20 +560,19 @@ ${chartSection}
         <td style="padding:8px;"></td>
         <td style="padding:8px;">Strategy</td>
         <td style="padding:8px;">Verdict</td>
-        <td style="padding:8px;text-align:right;">vs park $</td>
+        <td style="padding:8px;text-align:right;">vs SGOV %</td>
         <td style="padding:8px;text-align:right;">Δ wk</td>
-        <td style="padding:8px;text-align:right;">TWR edge, deployed slice</td>
         <td style="padding:8px;text-align:right;">Closed trades / 30</td>
       </tr>${tableRows}
     </table>
     ${killDetailHtml}
-    <div style="font-size:11px;color:#8a96a3;margin-top:6px;">Verdicts are provisional before a strategy's 30-trade gate (spec: ~30 closed trades is the first point an honest directional claim can be made). The $ edge is capital-weighted and the % edge time-weighted — they can differ in sign when deployment size varies.</div>
+    <div style="font-size:11px;color:#8a96a3;margin-top:6px;">"vs SGOV %" is the deployed-slice excess return (the return on capital actually put to work, over SGOV); the small $ figure is the sleeve-level dollar edge for scale. Δ wk is the change in that excess over the trailing 7 days, in percentage points. Verdicts are provisional before a strategy's 30-trade gate (spec: ~30 closed trades is the first point an honest directional claim can be made).</div>
   </td></tr>
 
   <tr><td style="padding:16px 22px 22px 22px;">
     <hr style="border:none;border-top:1px solid #e3e8ee;margin:0 0 12px 0;">
     <div style="font-size:11px;color:#9aa6b2;line-height:1.5;">
-      Edge $ = deployed dollars × (deployed return − SGOV total return), summed over each strategy's deployed days; undeployed sleeve cash sits in the SGOV park (edge $0 by construction). Edge % = deployed-TWR unit value vs SGOV index over the strategy's own deployed days (<code>perf.strategy_daily</code> — the kill/gate metric). Figures are nominal, pre-tax/pre-inflation, and GROSS of commissions (owner directive 2026-06-05; per-sleeve commissions shown above). Benchmark = SGOV actual total return incl. monthly dividends. Auto-generated weekly from BigQuery; times in ${esc_(d.tz)} (detected).
+      vs SGOV % = deployed-TWR unit value ÷ SGOV index − 1, over the strategy's own deployed days (<code>perf.strategy_daily</code> — the kill/gate metric); the combined hero figure value-weights all deployed strategies into one book. The $ figures are the sleeve-level dollar edge = deployed dollars × (deployed return − SGOV total return), summed over deployed days (undeployed sleeve cash sits in the SGOV park, so its edge is 0 by construction). Figures are nominal, pre-tax/pre-inflation, and GROSS of commissions (owner directive 2026-06-05; per-sleeve commissions shown above). Benchmark = SGOV actual total return incl. monthly dividends. Auto-generated weekly from BigQuery; times in ${esc_(d.tz)} (detected).
     </div>
   </td></tr>
 
@@ -568,12 +593,15 @@ function buildPlain_(d) {
   s += '\n';
 
   if (!d.deployedStrategies.length) {
-    s += `ALL STRATEGIES COMBINED: all sleeves parked in SGOV — no deployments yet.\n\n`;
+    s += `ALL DEPLOYED CAPITAL COMBINED: all sleeves parked in SGOV — no deployments yet.\n\n`;
   } else {
     const firstLabel = d.firstDeployedDate ? Utilities.formatDate(parseIsoDateLocal_(d.firstDeployedDate), d.tz, 'MMM d') : '—';
-    s += `ALL STRATEGIES COMBINED (since first deployment ${firstLabel}): ${signedMoney2_(d.combinedEdge)} vs SGOV park\n`;
-    s += `  for scale: the SGOV park itself earned ≈${money0_(d.parkDollarsApprox)} over this period — the figure above is what deploying added on top of that, gross of ${money2_(d.combinedCommissions)} commissions.\n\n`;
-    s += `CHART DATA (cumulative $ edge vs SGOV park): ${altTextFor_(d.rows).replace('Cumulative dollar edge vs SGOV park: ', '')}\n\n`;
+    const combPct = d.combinedExcessPct != null ? signPct_(d.combinedExcessPct * 100) : '—';
+    const bookR = d.bookReturn != null ? signPct_(d.bookReturn * 100) : '—';
+    const sgovR = d.sgovReturn != null ? signPct_(d.sgovReturn * 100) : '—';
+    s += `ALL DEPLOYED CAPITAL COMBINED (since first deployment ${firstLabel}): ${combPct} vs SGOV\n`;
+    s += `  deployed capital returned ${bookR} vs the SGOV park's ${sgovR} over this period (≈${signedMoney2_(d.combinedEdge)} in dollars, gross of ${money2_(d.combinedCommissions)} commissions).\n\n`;
+    s += `CHART DATA (cumulative % vs SGOV park): ${altTextFor_(d.rows).replace('Cumulative return vs SGOV park: ', '')}\n\n`;
   }
 
   s += `STRATEGY VERDICTS:\n`;
@@ -581,17 +609,17 @@ function buildPlain_(d) {
     if (!r.deployed) {
       s += `  ${r.strategy}  NOT DEPLOYED (${r.notDeployedReason})  alloc ${money0_(r.nav)}\n`;
     } else {
-      const wk = r.edgeWk != null ? signedMoney2_(r.edgeWk) : '—';
       const pct = r.excessPct != null ? signPct_(r.excessPct * 100) : '—';
+      const wk = r.excessWkPp != null ? signedPp_(r.excessWkPp) : '—';
       const gate = `${r.closedTrades != null ? r.closedTrades : '—'}/30${r.gateReached ? ' (gate reached)' : ''}`;
-      s += `  ${r.strategy}  ${r.verdict.label}  vs park ${signedMoney2_(r.edge)}  Δwk ${wk}  TWR edge ${pct}  gate ${gate}` +
+      s += `  ${r.strategy}  ${r.verdict.label}  vs SGOV ${pct} (${signedMoney2_(r.edge)} $)  Δwk ${wk}  gate ${gate}` +
            `  alloc ${money0_(r.nav)} · deployed ${money2_(r.deployedMv)} · comm. ${money2_(r.commissions)}` +
            `${r.anyKillFlag ? '  [KILL REVIEW: ' + r.killNames.join(', ') + ']' : ''}\n`;
     }
   });
-  s += `\nVerdicts are provisional before a strategy's 30-trade gate. The $ edge is capital-weighted and the % edge time-weighted — they can differ in sign when deployment size varies.\n`;
+  s += `\nVerdicts are provisional before a strategy's 30-trade gate. "vs SGOV %" is the deployed-slice excess return; the $ figure is the sleeve-level dollar edge.\n`;
 
-  s += `\nMETHODOLOGY: Edge $ = deployed dollars x (deployed return - SGOV total return), summed over each strategy's deployed days; undeployed sleeve cash sits in the SGOV park (edge $0 by construction). Edge % = deployed-TWR unit value vs SGOV index over the strategy's own deployed days (perf.strategy_daily). Figures are nominal, pre-tax/pre-inflation, and GROSS of commissions. Benchmark = SGOV actual total return incl. monthly dividends. Times in ${d.tz} (detected).\n`;
+  s += `\nMETHODOLOGY: vs SGOV % = deployed-TWR unit value / SGOV index - 1, over the strategy's own deployed days (perf.strategy_daily); the combined figure value-weights all deployed strategies into one book. $ edge = deployed dollars x (deployed return - SGOV total return), summed over deployed days (undeployed sleeve cash sits in the SGOV park, edge 0 by construction). Figures are nominal, pre-tax/pre-inflation, and GROSS of commissions. Benchmark = SGOV actual total return incl. monthly dividends. Times in ${d.tz} (detected).\n`;
 
   return s;
 }

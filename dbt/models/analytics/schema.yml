@@ -28,7 +28,7 @@ models:
         description: Deployed dollars marked that day (Σ prev_mv) — feeds strategy_vs_park_daily.
 
   - name: strategy_vs_park_daily
-    description: Cumulative $ edge vs the SGOV park per strategy-day (the weekly email's chart series, 2026-07 redesign).
+    description: Per strategy-day, the weekly email's chart series — deployed-slice excess % (PRIMARY, from perf.strategy_daily) + cumulative $ edge vs the SGOV park (secondary). 2026-07 redesign.
     tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns: [as_of_date, strategy]
@@ -38,6 +38,16 @@ models:
       - name: strategy
         tests: [not_null]
         description: Strategy code, restricted to ever-deployed strategies (A-E subset).
+      - name: excess_vs_sgov
+        description: Deployed-slice excess return vs SGOV for that day (the chart's y-axis) — from perf.strategy_daily.
+
+  - name: deployed_book_vs_sgov
+    description: Single-row combined deployed-book excess % — the weekly email's hero headline (value-weighted across all deployed strategies, not a sum of per-strategy percentages). 2026-07-03.
+    columns:
+      - name: combined_excess_pct
+        description: The aggregate deployed book's return vs SGOV over its deployed days.
+      - name: first_deployed_date
+        description: Earliest deployed day across all strategies.
 
   - name: strategy_vs_park
     description: Latest cumulative $ edge vs the SGOV park per ever-deployed strategy — the weekly email's per-strategy verdict row (2026-07 redesign).

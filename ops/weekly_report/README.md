@@ -78,30 +78,38 @@ again. To stop, delete the trigger (clock icon in the editor) or the project.
 
 | View / table | Feeds |
 |---|---|
-| `analytics.strategy_scorecard` | activation string (for the NOT-DEPLOYED reason + kill-flag flag), NAV (alloc), deployed MV, excess-vs-SGOV %, closed trades |
-| `analytics.strategy_vs_park` | latest cumulative $ edge vs the SGOV park per ever-deployed strategy, its 7-day change, first-deployed date, commissions to date |
-| `analytics.strategy_vs_park_daily` | the chart's daily $ edge series |
-| `analytics.park_baseline` | what parking everything would have earned over the same window — the hero tile's scale anchor |
+| `analytics.strategy_scorecard` | activation string (for the NOT-DEPLOYED reason + kill-flag flag), NAV (alloc), deployed MV, **deployed-slice excess-vs-SGOV %** (the primary per-strategy number), closed trades |
+| `analytics.deployed_book_vs_sgov` | the hero headline: combined **value-weighted** deployed-book excess % (+ book/SGOV return legs) |
+| `analytics.strategy_vs_park_daily` | the chart's daily series — **excess %** (primary, the y-axis) + cumulative $ edge (secondary/for-scale) |
+| `analytics.strategy_vs_park` | latest $ edge + commissions + first-deployed date per ever-deployed strategy (the secondary "$ for scale" figures) |
 | `state.system_health` | marks/engine freshness + firing kill-flags + critical alerts — the one surviving data-trust signal |
 | `state.user_tz` | detected DISPLAY timezone (never the operating/trading-day timezone) |
 | `perf.kill_flags` / `ops.alerts` | queried lazily, only when `state.system_health` flags something |
 
-The SQL for the new views lives in `bigquery/21_strategy_vs_park.sql` (single-sourced,
+The SQL for these views lives in `bigquery/21_strategy_vs_park.sql` (single-sourced,
 version-controlled); `analytics.strategy_scorecard` and the `deployed_capital` column it
 was extended with live in `bigquery/03_twr_engine.sql` and `bigquery/14_weekly_report.sql`.
 
-### What the $ edge means
+### What the numbers mean (percentage primary, 2026-07-03)
 
-`analytics.strategy_vs_park_daily.edge_dollars_cum` is the cumulative dollar difference
-between what a strategy's deployed capital actually earned and what those same dollars
-would have earned sitting in the SGOV park instead — summed over the strategy's own
-deployed days. Because undeployed sleeve cash already sits in the account-level SGOV park
-(the per-strategy SGOV split is formally dissolved — see `ops/RUNBOOK.md` §29), this
-dollar figure answers the sleeve-level question directly: a strategy that has never
-deployed shows `$0.00 — NOT DEPLOYED`, not a loss, because its allocation IS the park.
-`analytics.strategy_scorecard.excess_vs_sgov` (the deployed-TWR percentage) is shown too,
-as a secondary column tied to the kill/gate machinery — it measures intensity on the
-deployed slice only, not the sleeve-level dollar answer.
+The headline and chart are **percentages** — the deployed-slice excess return vs SGOV
+(`perf.strategy_daily.excess_vs_sgov` = deployed-TWR unit value ÷ SGOV index − 1, over the
+strategy's own deployed days; the sanctioned kill/gate metric). This is the return on the
+capital actually put to work — the honest "is this strategy any good" number — not a
+sleeve-level % (which, with ~98% of the sleeve parked, would dilute to ~0.7% and hide the
+signal). The hero's combined figure (`deployed_book_vs_sgov`) value-weights every deployed
+strategy into one book, because percentages don't sum.
+
+The **dollar** edge (`strategy_vs_park_daily.edge_dollars_cum` = deployed dollars × (deployed
+return − SGOV total return), summed over deployed days) is kept as a small **secondary
+"for scale"** figure under each row and in the hero subline. It answers the same question at
+sleeve level: undeployed sleeve cash already sits in the account-level SGOV park (the
+per-strategy SGOV split is formally dissolved — see `ops/RUNBOOK.md` §29), so a strategy
+that has never deployed sits at 0% / $0 — `NOT DEPLOYED`, not a loss, because its allocation
+IS the park.
+`analytics.strategy_scorecard.excess_vs_sgov` is that same deployed-slice percentage as of
+the latest close — the per-strategy verdict number and the metric the kill/gate machinery
+already runs on.
 
 ### Views retained but no longer read by the email
 
