@@ -1765,3 +1765,44 @@ webhook it's testing).
 layers on top of existing (already double-gated, already-off-by-default) mechanisms; nothing changes
 until `ALERT_WEBHOOK_URL` / `OFFSITE_BACKUP_GCS` are actually set. No new files to re-paste elsewhere
 (GitHub Actions only).
+
+## 35. Confirm-event attestation + catch-up-available notice — 2026-07-03 (self-improvement audit WO-5 / WO-8 part 1)
+
+**WO-5 — confirm-event attestation.** `Claude_Task_Plan.md`'s D3 already walked `state.open_orders` and
+repaired a missing `[Claude] Confirm order` calendar event in-session, but wrote no durable record that
+the check happened or what it found — the one reconciliation loop in this system without a BigQuery
+attestation (contrast `state.embedding_health` / `state.cadence_watch` / `state.go_without_order`, all of
+which make "the check ran and found X" independently queryable). A D3 session that crashed before
+reaching that bullet, or a Calendar-connector write that silently failed, was invisible until the
+existing missed-confirmation hard-stop fired — potentially days later, on an order that never got
+confirmed. Fix: `ops.confirm_event_snapshot` (new table, `bigquery/30_confirm_attestation.sql`) — D3 now
+inserts one attestation row per still-pending `state.open_orders` item every run (found/missing,
+matched calendar event id, whether this run had to repair it). `state.staged_without_confirm` flags a
+pending order that is either never attested, attested-missing, or whose attestation is stale (>30h,
+covering a skipped D3 run) — self-bootstrapping like every other watch view in this system: a row staged
+within the grace window is never flagged even with zero history, since a D3 cycle simply hasn't reached
+it yet. D3's prose now inserts the attestation immediately after its existing repair check and raises
+`ops.alerts` (`warning`, `confirm_event_gap`) if `state.staged_without_confirm` shows a stale/missing row
+from a PRIOR run. Verified live 2026-07-03: the one live pending order (`sweep-SGOV-20260702`, 17h old)
+correctly does NOT appear in `state.staged_without_confirm` (within the 30h grace window) — no day-one
+false alarm.
+
+**WO-8 part 1 — catch-up-available notification.** `state.cadence_watch.needs_attention` already alarms
+(critical, `missed_run`, `bigquery/scheduled_queries/cadence_check.sql`) on ANY missed D1/D2/D3, but
+treats every miss identically. D1 (market scan) and D3 (calendar/queue hygiene) have no live
+order-crafting or intraday-price dependency — firing the trigger late recovers full same-day value. D2
+(and D2a once cut over) is deliberately excluded: it crafts orders off live quotes, so a late run is
+harmless to execute but does not recover the value a same-day run would have had. Fix:
+`state.catchup_available` (new view, `bigquery/31_catchup_notify.sql`) — a short, hand-maintained
+`catchup_safe` list (currently `['D1','D3']`; update if D2a is cut over, since its reconciliation-only
+scope carries no discretionary order crafting either) joined against `state.cadence_watch`. `alert-relay.
+yml` gained a fourth schedule (daily `30 4 * * *`, safely after the 21:00 MT deadline in both DST states
+and before the 05:15 UTC main `cadence_check.sql`) running a new `RELAY_MODE=catchup`
+(`scripts/alert_relay.py::relay_catchup`) — worded as an opportunity ("no rush, fire the trigger
+whenever"), delivered separately from the existing `missed_run` critical so a D2 miss is never
+mis-described as low-urgency.
+
+**Owner action required:** none — both are additive to already-gated mechanisms (D3's attestation write
+requires no new grant; `alert-relay.yml`'s new schedule is covered by the same double-gate as its other
+modes). No new files to re-paste (BigQuery objects applied live 2026-07-03; `Claude_Task_Plan.md`'s D3
+section is read fresh each run, no separate re-paste needed there either).

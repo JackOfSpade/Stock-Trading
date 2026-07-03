@@ -112,6 +112,34 @@ def test_relay_orders_missing_column_raises_not_silent(monkeypatch):
         ar.relay_orders()
 
 
+# ---- relay_catchup(): WO-8 part 1, distinct "no-rush" notice --------------------------------
+
+def test_relay_catchup_empty_does_not_post(monkeypatch):
+    monkeypatch.setattr(ar, "bq", lambda sql: [])
+    posted = []
+    monkeypatch.setattr(ar, "post", lambda text: posted.append(text))
+    ar.relay_catchup()
+    assert posted == []
+
+
+def test_relay_catchup_posts_and_formats(monkeypatch):
+    monkeypatch.setattr(ar, "bq", lambda sql: [
+        {"routine": "D1", "today": "2026-07-03"},
+    ])
+    posted = []
+    monkeypatch.setattr(ar, "post", lambda text: posted.append(text))
+    ar.relay_catchup()
+    assert len(posted) == 1
+    assert "D1" in posted[0] and "safe to catch up" in posted[0]
+
+
+def test_relay_catchup_missing_column_raises_not_silent(monkeypatch):
+    monkeypatch.setattr(ar, "bq", lambda sql: [{"routine": "D1"}])  # missing "today"
+    monkeypatch.setattr(ar, "post", lambda text: None)
+    with pytest.raises(KeyError):
+        ar.relay_catchup()
+
+
 # ---- relay_heartbeat(): the ONE mode that must NOT swallow a POST failure ------------------
 
 def test_relay_heartbeat_posts_once(monkeypatch):

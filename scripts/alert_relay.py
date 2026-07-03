@@ -25,6 +25,13 @@ Modes (env RELAY_MODE):
                 heartbeat is the one mode that does NOT swallow the POST failure, specifically so a dead
                 diversification channel is caught by its own weekly run rather than discovered the day a
                 real alert silently fails to arrive.
+  * catchup   — daily "no-rush" notice (self-improvement audit WO-8 part 1, 2026-07-03) for
+                state.catchup_available: routines that missed today's cadence deadline but carry no
+                intraday-price dependency (currently D1/D3 only — see bigquery/31_catchup_notify.sql),
+                so firing the trigger late recovers full same-day value. Deliberately worded and delivered
+                separately from the existing missed_run CRITICAL (relay_alerts, via ops.alerts) — that one
+                still fires for every miss including D2, where a late catch-up does NOT recover full value;
+                conflating the two would wrongly tell the operator "no rush" about a D2 miss too.
 
 Env: WEBHOOK_URL (required — else clean no-op), RELAY_MODE, RELAY_WINDOW_MIN (default 35),
      BQ_PROJECT (default stock-trading-498512). Stdlib only.
@@ -137,6 +144,24 @@ def relay_orders():
     print(f"orders: posted {len(rows)}")
 
 
+def relay_catchup():
+    """Daily "no-rush" notice for state.catchup_available (WO-8 part 1) — best-effort like
+    relay_alerts/relay_orders (a transient bq/webhook hiccup here should not fail CI; the existing
+    missed_run CRITICAL via relay_alerts already covers the underlying miss regardless)."""
+    rows = bq(f"""
+        SELECT routine, CAST(today AS STRING) AS today
+        FROM `{PROJECT}.state.catchup_available`
+    """)
+    if not rows:
+        print("catchup: none available")
+        return
+    lines = [f"🔁 Stock-Trading — {len(rows)} routine(s) missed today's window but are safe to catch up now (no live-price dependency):"]
+    for r in rows:
+        lines.append(f"{r['routine']} ({r['today']}) — fire its trigger whenever convenient; a late run recovers full value.")
+    post("\n".join(lines))
+    print(f"catchup: posted {len(rows)}")
+
+
 def relay_heartbeat():
     """Weekly canary POST. Deliberately NOT wrapped in the best-effort try/except main() uses for
     alerts/orders — here a POST failure IS the finding (channel diversity is only real if the second
@@ -156,6 +181,8 @@ def main():
     try:
         if MODE == "orders":
             relay_orders()
+        elif MODE == "catchup":
+            relay_catchup()
         else:
             relay_alerts()
     except Exception as e:  # best-effort: never fail CI on a transient bq/webhook hiccup

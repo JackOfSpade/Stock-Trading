@@ -18,16 +18,25 @@ name: Alert relay (webhook push)
 # for months — it only has to fire when there happens to be something to relay. heartbeat POSTS a fixed
 # canary line and, uniquely, FAILS THE RUN on a POST error, so channel diversity is actively verified,
 # not just assumed from the secret being set. See scripts/alert_relay.py::relay_heartbeat.
+#
+# Self-improvement audit WO-8 part 1 (2026-07-03): also runs a daily `catchup` check
+# (state.catchup_available, bigquery/31_catchup_notify.sql) — a distinct, lower-alarm "no rush, fire the
+# trigger whenever" notice for the subset of missed daily routines (currently D1/D3) that carry no
+# intraday-price dependency, so a late catch-up run recovers full value. This is separate from — not a
+# replacement for — the existing missed_run CRITICAL relayed via the `alerts` mode, which still fires for
+# every miss including D2 (where late catch-up does NOT recover full value).
 
 on:
   schedule:
     - cron: '*/30 * * * *'   # alert relay — recent ops.alerts (fast, best-effort)
     - cron: '5 13 * * *'     # daily staged-order reminder ~07:05 MT confirm window (A3)
     - cron: '15 13 * * 1'    # weekly (Monday) webhook liveness heartbeat
+    - cron: '30 4 * * *'     # daily ~21:30-22:30 MT (DST-dependent) catch-up-available check — after
+                              # the 21:00 MT daily-routine deadline, before the 05:15 UTC main cadence_check
   workflow_dispatch:
     inputs:
       mode:
-        description: 'alerts | orders | heartbeat'
+        description: 'alerts | orders | heartbeat | catchup'
         required: false
         default: 'alerts'
 
@@ -62,11 +71,14 @@ jobs:
         if: steps.guard.outputs.skip == 'false'
         run: |
           # The daily 13:05 UTC schedule is the staged-order reminder; the weekly Monday 13:15 UTC
-          # schedule is the webhook liveness heartbeat; everything else is alerts.
+          # schedule is the webhook liveness heartbeat; the daily 04:30 UTC schedule is the
+          # catch-up-available check; everything else is alerts.
           if [ "${{ github.event.schedule }}" = "5 13 * * *" ]; then
             echo "mode=orders" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event.schedule }}" = "15 13 * * 1" ]; then
             echo "mode=heartbeat" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "30 4 * * *" ]; then
+            echo "mode=catchup" >> "$GITHUB_OUTPUT"
           else
             echo "mode=${{ github.event.inputs.mode || 'alerts' }}" >> "$GITHUB_OUTPUT"
           fi
