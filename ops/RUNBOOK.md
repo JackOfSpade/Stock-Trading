@@ -1595,11 +1595,7 @@ explicit non-goal, deferred to a later, separate decision.
 `bigquery.readonly`, which cannot run the heartbeat `INSERT` the script has always performed after
 a successful send — the deployed project evidently holds a broader grant than the checked-in
 manifest (or the heartbeat write has been silently no-op'ing, try/catch-wrapped). Corrected to the
-full `bigquery` scope. **Known-and-accepted residual, not fixed:** the checked-in Gmail scopes
-(`gmail.send` + `gmail.labels`) are also probably insufficient for the label step's
-`GmailApp.search`/`addLabel` on a genuinely fresh deploy — that failure is cosmetic-only (the
-`Trading/Weekly` label just wouldn't get applied), already try/catch-wrapped, and not worth
-broadening to the much broader `mail.google.com` scope for a labeling nicety.
+full `bigquery` scope.
 
 **Deploy order:** BigQuery views applied live first (this section) → code merged to
 `claude/weekly-report-redesign-875a6w` → **owner action required:** re-paste
@@ -1607,6 +1603,23 @@ broadening to the much broader `mail.google.com` scope for a labeling nicety.
 consent screen — the scope changed), confirm the email shows the line-chart PNG (not the bar
 fallback). The old deployed script keeps sending its old-format email, uninterrupted, during the
 window between merge and re-paste.
+
+**Deployed 2026-07-02/03 (Claude-in-Chrome, owner-directed).** Re-pasted `weekly_report.gs` +
+the updated `appsscript.json`, re-approved the OAuth consent screen, ran `testReport()`. Confirmed
+live: real line-chart PNG (not the bar fallback), correct 5-row verdict table, subject line
+`Stock-Trading · Strategies vs SGOV — Jul 2, 2026 · B +$12.25 · D ≈even` (B `BEATING PARK`, D
+correctly reading `≈ EVEN WITH PARK` rather than a false red on a noise-level edge, A/C/E
+`NOT DEPLOYED`). One caught-and-logged exception as anticipated: the label step (`GmailApp.search`
++ `thread.addLabel`, only ever meant to tag the received copy `Trading/Weekly`) threw under
+`gmail.labels` alone — that scope covers label CRUD only, not searching/modifying threads. This
+was flagged above as a "known-and-accepted residual, not worth fixing" on the theory that the only
+fix was `https://mail.google.com/` (full mailbox access incl. permanent delete) for a labeling
+nicety — revisited after live confirmation: `https://www.googleapis.com/auth/gmail.modify`
+("all read/write operations except immediate, permanent deletion") is the correctly-scoped middle
+ground, missed in the original writeup. Manifest updated (`gmail.labels` → `gmail.modify`,
+`gmail.send` kept alongside it); owner action required again: re-paste `appsscript.json` and
+re-approve consent once more. Low urgency — cosmetic-only (inbox organization), send/report content
+unaffected either way.
 
 **Verified functionally** (not just syntactically) via a Node `vm`-sandboxed harness that stubs
 `GmailApp`/`BigQuery`/`Utilities`/`ScriptApp`/`Charts`/`Logger` and feeds `weekly_report.gs` the
