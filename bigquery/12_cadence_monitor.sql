@@ -46,8 +46,12 @@ WITH t AS (
   FROM `stock-trading-498512.state.trading_day_today` td
 ),
 routines AS (
+  -- D2a (added 2026-07-03, self-improvement audit WO-3): NOT YET ACTIVE, no live web-UI trigger yet
+  -- (see the Claude_Task_Plan.md "## D2a." banner). Safe to list here pre-cutover -- self-bootstrapping
+  -- means it can never alarm until it logs a first completed run.
   SELECT * FROM UNNEST([
     STRUCT('D1'  AS routine, 'daily_trading' AS schedule),
+    STRUCT('D2a' AS routine, 'daily_trading' AS schedule),
     STRUCT('D2'  AS routine, 'daily_trading' AS schedule),
     STRUCT('D3'  AS routine, 'daily_all'     AS schedule),
     STRUCT('W1'  AS routine, 'weekly_sun'    AS schedule),

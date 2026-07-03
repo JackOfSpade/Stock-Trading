@@ -486,6 +486,78 @@ OUTPUT: write the complete content above directly to `Daily.md` (overwriting the
 
 ---
 
+## D2a. Broker Reconcile & Snapshot — regular routine
+
+> **NOT YET ACTIVE (self-improvement audit WO-3, 2026-07-03).** This section specifies a NEW routine
+> that splits D2's mechanical, dependency-light broker-reconcile/cash-safety/TWR-engine work out of the
+> analysis-heavy action-conversion work, so a halt in the latter (Step 1 onward) can never stall fills
+> reconciliation, cash-tripwire safety, the SGOV sweep, or the deployed-TWR engine simultaneously (the
+> D2 mega-SPOF the audit flagged). **This routine has NO live web-UI trigger yet** — creating one
+> requires the Claude-Code-on-Web UI (duplicate an existing routine's trigger, e.g. D2's, to correctly
+> carry over its environment/model/MCP-connector configuration, which the trigger-management API this
+> repo's agents have access to cannot set — confirmed 2026-07-03 by inspecting the live trigger config).
+> **Until that trigger exists AND this section is cut over, D2 continues to run its OWN Step 0/Step 0b/
+> TWR-maintenance exactly as documented in the "## D2." section below — nothing changes operationally.**
+> Cutover checklist (do all of these together, not just one):
+> 1. Create the D2a trigger (web UI): duplicate D2's trigger, change the cron to fire ~5-15 minutes
+>    BEFORE D2's (D2a has no dependency on D1 and should complete first), rename it
+>    "D2a. Broker Reconcile & Snapshot — regular routine", and set its prompt to
+>    `Read Claude_Task_Plan.md. Perform D2a. Broker Reconcile & Snapshot — regular routine.`
+> 2. In `ops/cadence.yaml`, uncomment/confirm the `D2a` entry below is present with `depends_on: []`
+>    (it must run even if D1 failed) and change `D2`'s `depends_on` to `[D1, D2a]`.
+> 3. Delete Step 0 / Step 0b / "PER-STRATEGY PERFORMANCE MAINTENANCE" / "SEEDING A NEW STRATEGY" from
+>    the "## D2." section below (they are reproduced verbatim here) and replace the deleted block with
+>    a one-line pointer: "Step 0/0b/TWR-maintenance now run in D2a; see state.current_positions /
+>    analytics.strategy_nav / perf.strategy_daily / analytics.account_reconciliation for its output."
+>    Fix the "If Step 0 reconciled no new fills..." check in D2's RECOMMENDED ACTIONS section to read
+>    D2a's reconciliation output instead (e.g. compare `ops.run_log` fill-count for D2a's run today).
+> 4. Regenerate `ops/triggers.json` (`python scripts/print_routines.py --write`) and re-run
+>    `scripts/check_cadence_consistency.py` to confirm all surfaces agree before relying on it.
+> The BigQuery-side scaffolding (cadence_expected_today, routine_catalog, stalled_runs tier) is ALREADY
+> applied live as of this audit — see `bigquery/12_cadence_monitor.sql` / `15_routine_catalog.sql` /
+> `18_stack_review_fixes.sql`. It is safe pre-cutover: `state.cadence_watch`/`state.stalled_runs` are
+> self-bootstrapping (a routine only becomes alarm-eligible after it logs its first `completed` run), so
+> D2a sitting with zero log rows generates zero false alarms until the trigger exists and actually fires.
+
+Runs first, every operating day (including non-trading days, so the account stays reconciled even when
+D1/D2 don't fire) — independent of D1. Reconciles the live brokerage account, runs the cash/SGOV safety
+tripwire, sweeps/covers to SGOV, snapshots the account, and maintains the deployed-TWR engine. Carries
+NO analysis and stages NO discretionary orders (only the mechanical SGOV sweep/cover) — D2 (below)
+depends on this routine's output for its own Step 1 onward.
+
+```
+Read access scope: Daily cadence. Read positions/perf/NAV from `state.current_positions` /
+`perf.strategy_daily` / `analytics.strategy_nav` / `analytics.account_reconciliation`. Read
+`Operating_Protocols.md` §11/§13/§14 as relevant. No Strategy.md / Watchlist.md / decision_log access
+needed — this routine does no thesis work.
+
+RUN LOGGING (every run). At the very START of this routine, `CALL ops.sp_log_run('D2a', <today,
+America/Denver from state.trading_day_today>, 'started', <session_id>, <branch>, NULL, NULL, NULL)`. At
+the END, call it again with `'completed'` (or `'failed'`/`'halted'` + `error_msg`), passing
+`rows_written` = fills + marks ingested.
+
+**TRADING-ENABLE GATE (self-improvement audit B-1-obs, 2026-07-03) — `CALL ops.sp_assert_trading_enabled('D2a')` before anything else.** FATAL (mirrors `ops.sp_assert_deps`) — aborts if `state.trading_enabled.trading_enabled = FALSE`. Reads/reconciliation are safe regardless; do not size or stage the SGOV sweep past this point if it raises.
+
+STEP 0 — BROKER RECONCILIATION. Reconcile the live brokerage account against the BigQuery events-side
+state (`state.current_positions` / `analytics.account_reconciliation`) via the IBKR connector — verbatim
+the same procedure as "## D2." Step 0 below (reproduced there; this routine performs it, D2 no longer
+does once cut over): fill reconciliation + event-sourcing mirror, staged-order registry reconciliation,
+cash/SGOV tripwire, cash flattening sweep/cover (with the `analytics.fn_order_guard` check per
+self-improvement audit B-2-exec), noting still-working orders, and clearing stale instructions.
+
+STEP 0b — ACCOUNT SNAPSHOT. Same procedure as "## D2." Step 0b below.
+
+PER-STRATEGY PERFORMANCE MAINTENANCE (deployed-TWR engine). Same procedure as "## D2." below: ingest
+daily marks (with the FMP fallback), the per-name completeness check, `CALL ops.sp_daily_refresh()`, and
+the engine-verification sanity check.
+
+CHAT OUTPUT: one-line acknowledgment of reconciliation (fills captured, cash tripwire status, sweep/
+cover crafted or not, engine recompute status). If nothing to report: "Reconciliation complete, no
+action needed."
+```
+
+---
+
 ## D2. Daily Action Conversion — regular routine
 
 Runs after D1 has written Daily.md. Reconciles fills, drains the analysis queue, and converts D1's RECOMMENDED ACTIONS into orders and live-file edits — running thesis construction and other analyses in-session (no human-pasted thesis events).
@@ -541,7 +613,7 @@ For each recommendation type:
      - Strategy C: catalyst within 45 days — runs in the pre-catalyst window (7-10 days before the catalyst when it is >14 days out; otherwise now).
      - Strategy A: catalyst within 6 months — respect router state. If A is DO-NOT-ACTIVATE per `state.current_regime` / most-recent M1 call, the candidate goes to Watchlist.md A queue (no thesis now). If ACTIVATE, the thesis is doable now.
      - Strategy E: pair divergence — normally handled by M2/M4; a fast-moving divergence may run now.
-   - **If the thesis is doable now** (required data available; router admits it): perform the full thesis construction **in-session** — an isolated sub-task (subagent) per candidate for fresh context where available, else inline sequentially. Apply Strategy.md entry criteria, the Operating_Protocols.md "NO-GO records are context, not barriers" rule + conviction-calibration ladder, B_Sub_Pattern_Taxonomy.md, commission-disregarded staging, and the connector for live quotes / CTC / eligibility (§11). Write the decision (GO or NO-GO) via `CALL ops.sp_log_decision(...)` (`events.decision_log`) and, on a GO, the OPEN lifecycle event to `events.position_events`; craft the order instruction — **ORDER-GUARD CHECK (self-improvement audit B-2-exec) first: `SELECT * FROM analytics.fn_order_guard(<strategy>, 'BUY', <qty>, <limit_price>, <last_price>, FALSE)`. If `passed = FALSE`, do NOT craft — `CALL ops.sp_raise_alert_once('critical','D2','order_guard_block', <reasons joined>, <JSON>)`, record the GO decision as staged-but-blocked in `events.decision_log`, and do not write an `ORDER_STAGED` row this session (re-evaluate next run — a guard block on a GO thesis is itself signal worth a second look, not just a retry).** **write the `pending` `ORDER_STAGED` row to `state.open_orders`** (Operating_Protocols.md §11 staged-order registry — payload: `side`/`qty`/`limit_price`/`contract_id`/`convergence_target`/`time_exit_date`/`instruction_id`/`source_decision_ref`; `due_date` = entry-window close), and create the `[Claude] Confirm order` event per the staging steps above. The registry row is what makes the entry a durable, daily-re-crafted persist-and-wait order whose earmarked cash §13 reserves until it fills or is terminally resolved. No calendar thesis event, no human paste.
+   - **If the thesis is doable now** (required data available; router admits it): perform the full thesis construction **in-session** — an isolated sub-task (subagent) per candidate for fresh context where available, else inline sequentially. Apply Strategy.md entry criteria, the Operating_Protocols.md "NO-GO records are context, not barriers" rule + conviction-calibration ladder, B_Sub_Pattern_Taxonomy.md, commission-disregarded staging, and the connector for live quotes / CTC / eligibility (§11). **OUTCOME-ANNOTATED PRECEDENT REVIEW (self-improvement audit S-6, 2026-07-03) — mandatory before the GO/NO-GO call:** call `analytics.find_precedents(<candidate context text>)`; each returned row now carries the precedent's realized outcome (`position_closed`, `was_profitable`, `thesis_realized_pnl` for a prior thesis; `nogo_excess_return_vs_sgov` / `nogo_was_correct_long_framing` for a prior NO-GO) alongside its conviction tier's shrunk posterior + Wilson interval (`tier_win_rate_shrunk`, `tier_wilson_low/high`, `tier_trustworthy_edge`). Explicitly reason, in the thesis write-up, about whether this candidate resembles precedents that WON or LOST net — and ALWAYS state the tier's interval width alongside any precedent outcome cited, so a handful of salient wins (or losses) cannot be read as more informative than the honest-wide estimate permits (`tier_trustworthy_edge=FALSE`, which is true for every tier today, means: weight the precedent evidence as directional, not decisive). Write the decision (GO or NO-GO) via `CALL ops.sp_log_decision(...)` (`events.decision_log`) and, on a GO, the OPEN lifecycle event to `events.position_events`; craft the order instruction — **ORDER-GUARD CHECK (self-improvement audit B-2-exec) first: `SELECT * FROM analytics.fn_order_guard(<strategy>, 'BUY', <qty>, <limit_price>, <last_price>, FALSE)`. If `passed = FALSE`, do NOT craft — `CALL ops.sp_raise_alert_once('critical','D2','order_guard_block', <reasons joined>, <JSON>)`, record the GO decision as staged-but-blocked in `events.decision_log`, and do not write an `ORDER_STAGED` row this session (re-evaluate next run — a guard block on a GO thesis is itself signal worth a second look, not just a retry).** **write the `pending` `ORDER_STAGED` row to `state.open_orders`** (Operating_Protocols.md §11 staged-order registry — payload: `side`/`qty`/`limit_price`/`contract_id`/`convergence_target`/`time_exit_date`/`instruction_id`/`source_decision_ref`; `due_date` = entry-window close), and create the `[Claude] Confirm order` event per the staging steps above. The registry row is what makes the entry a durable, daily-re-crafted persist-and-wait order whose earmarked cash §13 reserves until it fills or is terminally resolved. No calendar thesis event, no human paste.
    - **If the thesis must wait for future data** (a Day-0 close not yet in; a Strategy C pre-catalyst window): enqueue a `PENDING_ANALYSIS` entry (`INSERT INTO events.queue_events`; analysis_type: thesis-construction; due_date = earliest-doable date; self-contained `context`; `conservative_default` = decline/skip). D2 drains it on its due_date.
    - For Strategy A candidates that should queue rather than proceed: update Watchlist.md A-queue section with ticker, date-added, reason summary, resolution-trigger ("next M1 with A router ACTIVATE").
 
@@ -801,6 +873,11 @@ EXTRACT B sub-pattern instances. Query `events.decision_log` for Strategy-B crit
    If B_Sub_Pattern_Taxonomy.md does not exist, create it. First line: `# Strategy B Criterion-4 NO-GO Sub-Pattern Taxonomy`. Organize by sub-pattern category with each instance under its category.
 
 4. Mechanical-failure NO-GOs (criterion-1 mechanical, instrument-rule, router-gate failures): no sub-pattern extraction needed.
+
+**NO-GO COUNTERFACTUAL SHADOW-TRACKING (self-improvement audit S-3, 2026-07-03) — makes step 3 above bidirectional.** The taxonomy above records only avoided trades; it never checks whether the avoided name actually underperformed, which is pure survivorship/confirmation-bias exposure. Two sub-steps, both best-effort (an FMP hiccup must never abort W5):
+   a. **Log new shadow rows.** For each new criterion-4 NO-GO extracted in step 3 above (a genuine sub-pattern classification, not a mechanical NO-GO): fetch the ticker's current price via `mcp__FMP__quote`, then `INSERT INTO events.nogo_shadow (decision_log_entry_id, ticker, sub_pattern, nogo_date, entry_ref_price)` (`horizon_days` defaults to 21 — leave it unless the thesis window implies otherwise). `bigquery/28_nogo_shadow.sql`.
+   b. **Close out elapsed shadow rows.** Query `SELECT * FROM events.nogo_shadow WHERE forward_price IS NULL AND DATE_ADD(nogo_date, INTERVAL horizon_days DAY) <= CURRENT_DATE('America/Denver')`. For each: fetch the ticker's current price via `mcp__FMP__quote` and `UPDATE events.nogo_shadow SET forward_price = <price>, forward_price_date = CURRENT_DATE('America/Denver') WHERE event_id = <id>` (a `SELECT`-then-`INSERT`-corrected-row pattern is fine too since this table is a low-volume shadow log, not the append-only trading truth — it is explicitly a mutable tracking table, not one of the audit-trail tables `state.append_only_integrity` watches).
+   c. **Read the tally, update the taxonomy.** Read `analytics.nogo_counterfactual_summary` (per-sub-pattern `n_correct`/`n_incorrect`/`min_n_met` — excess return vs SGOV, never raw price, so a rising-market false "wrong NO-GO" reading is avoided). For any sub-pattern with `min_n_met = TRUE` (>=5 closed-out) and `n_incorrect > n_correct`, append a note to that sub-pattern's B_Sub_Pattern_Taxonomy.md section: "counterfactual tally: X/Y NO-GOs where the avoided name subsequently underperformed SGOV — below-chance, candidate for taxonomy review" — a human-visible flag only, never an automatic demotion (a below-chance tally at N<15-20 can still be noise; do not down-weight routing off this alone).
 
 QUARTER ROLLOVER: RETIRED — the per-quarter Decision_Log archive files are gone (`events.decision_log` holds all history, queryable + bounded by `event_ts`), so there is no archive file to close out or start at quarter rollover.
 

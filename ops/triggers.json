@@ -27,6 +27,10 @@
     "instruction": "Read Claude_Task_Plan.md. Perform D2. Daily Action Conversion \u2014 regular routine.",
     "monitor_class": "daily_trading"
   },
+  "D2a": {
+    "instruction": "Read Claude_Task_Plan.md. Perform D2a. Broker Reconcile & Snapshot \u2014 regular routine.",
+    "monitor_class": "daily_trading"
+  },
   "D3": {
     "instruction": "Read Claude_Task_Plan.md. Perform D3. Calendar Hygiene \u2014 regular routine.",
     "monitor_class": "daily_all"

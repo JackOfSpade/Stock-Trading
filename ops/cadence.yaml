@@ -69,6 +69,22 @@ routines:
     monitor_class: daily_trading
     depends_on: []
     writes: [Daily.md, events.decision_log, events.regime_events]
+  - id: D2a
+    name: Broker Reconcile & Snapshot
+    schedule: "after_close trading_day, before D2"
+    monitor_class: daily_trading
+    depends_on: []   # deliberately independent of D1 -- the book must reconcile even if D1 failed
+    writes: [events.trade_fills, events.position_events, events.daily_marks, perf.strategy_daily,
+             ops.account_snapshot]
+    notes: >
+      NOT YET ACTIVE (self-improvement audit WO-3, 2026-07-03) -- no live web-UI trigger exists yet;
+      see the "## D2a." banner in Claude_Task_Plan.md for the cutover checklist. Safe to declare here
+      pre-cutover: state.cadence_watch / state.stalled_runs are self-bootstrapping (alarm-eligible only
+      after a routine logs its first completed run), so this row generates zero false alarms until the
+      trigger exists and fires. Splits D2's mechanical broker-reconcile/cash-tripwire/SGOV-sweep/TWR-
+      engine-maintenance out of D2's analysis-heavy action-conversion, so a D2 halt can never also stall
+      fills reconciliation, cash safety, or the engine. Once cut over, change D2's depends_on to
+      [D1, D2a] (see the Claude_Task_Plan.md checklist item 2 -- deliberately NOT changed here yet).
   - id: D2
     name: Daily Action Conversion
     schedule: "after D1 trading_day"
@@ -76,7 +92,7 @@ routines:
     depends_on: [D1]
     writes: [events.trade_fills, events.position_events, events.daily_marks, perf.strategy_daily,
              events.decision_log, events.queue_events, ops.account_snapshot, calendar:confirm_order]
-    notes: "Step 0 = broker reconcile + cash tripwire + SGOV sweep; Step 0b = ops.account_snapshot (account NAV/TWR for the weekly self-email); then CALL ops.sp_daily_refresh()."
+    notes: "Step 0 = broker reconcile + cash tripwire + SGOV sweep; Step 0b = ops.account_snapshot (account NAV/TWR for the weekly self-email); then CALL ops.sp_daily_refresh(). PENDING split into D2a (see that entry) -- unchanged/still performs this work directly until D2a's trigger is created and cutover happens."
   - id: D3
     name: Calendar & Queue Hygiene
     schedule: "after D2 daily"             # runs daily incl. non-trading days for queue/calendar upkeep

@@ -16,6 +16,8 @@ CREATE OR REPLACE TABLE `stock-trading-498512.ops.routine_catalog` AS
 SELECT routine, canonical_instruction
 FROM UNNEST([
   STRUCT('D1'  AS routine, 'Read Claude_Task_Plan.md. Perform D1. Market Development Scan — deep research.' AS canonical_instruction),
+  -- D2a (added 2026-07-03, self-improvement audit WO-3): NOT YET ACTIVE, no live web-UI trigger yet.
+  STRUCT('D2a', 'Read Claude_Task_Plan.md. Perform D2a. Broker Reconcile & Snapshot — regular routine.'),
   STRUCT('D2',  'Read Claude_Task_Plan.md. Perform D2. Daily Action Conversion — regular routine.'),
   STRUCT('D3',  'Read Claude_Task_Plan.md. Perform D3. Calendar Hygiene — regular routine.'),
   STRUCT('W1',  'Read Claude_Task_Plan.md. Perform W1. Catalyst Calendar (Strategies A and C) — deep research.'),

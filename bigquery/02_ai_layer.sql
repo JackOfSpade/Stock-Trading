@@ -43,83 +43,119 @@ CREATE OR REPLACE MODEL `stock-trading-498512.ops.gemini`
 -- this table + the health monitor + find_precedents, so it is staged as a deliberate, separately-applied
 -- change rather than folded in here. KEEP THE TWO `content` EXPRESSIONS BELOW IDENTICAL (this CREATE and
 -- ops.sp_embed_pending) so a full rebuild and an incremental top-up embed the same text.
+-- CHUNKED (2026-07-03, self-improvement audit B-8-data — implements the ops/RUNBOOK.md §23 plan).
+-- One embedding row per (entry_id, chunk_index): the full title+body content is split into ~6,000-char
+-- chunks (title lands in chunk 0 since it is prepended to the content before chunking); previously only
+-- the first 8,000 chars were embedded, silently degrading retrieval on exactly the richest, most
+-- detailed theses (bodies up to ~74k chars exist). Cut over 2026-07-03 via a scratch-table rebuild,
+-- diffed against the live table, then swapped in (RUNBOOK's own recommended validation procedure) —
+-- 289 decision_log rows -> 825 embedding rows, 0 errors.
 CREATE OR REPLACE TABLE `stock-trading-498512.analytics.decision_embeddings` AS
-SELECT
-  entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title,
-  ml_generate_embedding_result AS embedding,
-  ml_generate_embedding_status AS embed_status
+WITH src AS (
+  SELECT entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title,
+         CONCAT(COALESCE(title,''), '\n', COALESCE(body_md,'')) AS full_content
+  FROM `stock-trading-498512.events.decision_log`
+),
+chunked AS (
+  SELECT entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title,
+         chunk_index,
+         SUBSTR(full_content, chunk_index * 6000 + 1, 6000) AS content
+  FROM src, UNNEST(GENERATE_ARRAY(0, GREATEST(0, CAST(CEIL(LENGTH(full_content) / 6000.0) AS INT64) - 1))) AS chunk_index
+)
+SELECT entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title,
+       chunk_index,
+       ml_generate_embedding_result AS embedding,
+       ml_generate_embedding_status AS embed_status
 FROM ML.GENERATE_EMBEDDING(
   MODEL `stock-trading-498512.ops.text_embed`,
-  (SELECT entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title,
-          SUBSTR(CONCAT(COALESCE(title,''), '\n', COALESCE(body_md,'')), 1, 8000) AS content
-   FROM `stock-trading-498512.events.decision_log`),
+  (SELECT entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title, chunk_index, content FROM chunked),
   STRUCT(TRUE AS flatten_json_output, 'RETRIEVAL_DOCUMENT' AS task_type));
--- Validated: 221/221 rows, 0 failures, all 768-dim.
+-- Validated 2026-07-03: 825/825 chunk rows, 0 failures, all entries have a chunk_index=0 row.
 
--- NOTE: no VECTOR INDEX is created — BigQuery requires >= 5,000 rows to build/use one,
--- and brute-force VECTOR_SEARCH over 221 rows scans ~KB and is instant. Add an IVF/COSINE
--- index once events.decision_log passes ~5k rows:
+-- NOTE: no VECTOR INDEX is created — BigQuery requires >= 5,000 rows to build/use one; brute-force
+-- VECTOR_SEARCH over 825 rows is instant. state.embedding_scale_watch tracks analytics.
+-- decision_embeddings' row count (not events.decision_log's) against the 5,000-row threshold, since
+-- chunking means the embeddings table now grows faster than the source log. Add an IVF/COSINE index
+-- once it approaches 5k:
 --   CREATE VECTOR INDEX decision_idx ON analytics.decision_embeddings(embedding)
 --     OPTIONS(index_type='IVF', distance_type='COSINE');
 
--- ===== Reusable precedent search (table function) =====
--- top_k must be a literal inside VECTOR_SEARCH, so this returns a fixed top-10;
--- callers LIMIT further:  SELECT * FROM analytics.find_precedents('…') ORDER BY distance LIMIT 5
+-- ===== Reusable precedent search (table function) — CHUNKED base version =====
+-- Searches top_k=>30 CHUNKS, keeps the single best (lowest-distance) chunk per entry_id, returns the
+-- best 10 distinct entries (RUNBOOK §23's dedup-to-best-chunk plan; self-improvement audit B-8-data).
+-- OUTCOME ANNOTATION (self-improvement audit S-6) is layered on top of THIS definition in
+-- bigquery/29_precedent_outcomes.sql, not here — that redefinition LEFT JOINs analytics.thesis_
+-- outcomes / nogo_counterfactual / calibration_shrunk, which are defined in files 04/25/28 (later in
+-- DR-rebuild order than this file); defining the outcome-annotated version here would make a fresh
+-- rebuild fail (file 02 would reference tables that don't exist until files 04/25/28 run). Callers
+-- always get the outcome-annotated version once 29 has applied — this base definition only exists so
+-- 02 is self-contained and DR-rebuildable on its own.
 CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.find_precedents`(query_text STRING)
 AS (
   SELECT base.entry_id, base.entry_date, base.strategy, base.entry_type, base.sub_pattern,
-         base.decision, base.conviction, base.ticker, base.title, ROUND(distance, 4) AS distance
+         base.decision, base.conviction, base.ticker, base.title, distance
   FROM VECTOR_SEARCH(
     TABLE `stock-trading-498512.analytics.decision_embeddings`, 'embedding',
     (SELECT ml_generate_embedding_result AS embedding FROM ML.GENERATE_EMBEDDING(
        MODEL `stock-trading-498512.ops.text_embed`,
        (SELECT query_text AS content),
        STRUCT(TRUE AS flatten_json_output, 'RETRIEVAL_QUERY' AS task_type))),
-    top_k => 10, distance_type => 'COSINE')
+    top_k => 30, distance_type => 'COSINE')
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY base.entry_id ORDER BY distance) = 1
+  ORDER BY distance
+  LIMIT 10
 );
 
 -- ===== Incremental re-embedding — ops.sp_embed_pending() =====
 -- The canonical incremental embedder (was a hand-run INSERT; now a real, idempotent procedure so
 -- new decision rows can never be left unembedded — see ops.sp_log_decision in 08_ops_procedures.sql,
--- which calls this in the same call as the decision INSERT). Embeds only decision_log rows not
--- already OK-embedded, and RETRIES previously errored/empty rows (the NOT-IN excludes only good
--- ones). MERGE makes it re-run-safe; a no-op (cheap) when nothing is pending. Pennies at the
--- one-entry-per-day cadence. ml_generate_embedding_status = '' is BigQuery's success sentinel.
+-- which calls this in the same call as the decision INSERT). CHUNKED (self-improvement audit B-8-data):
+-- an entry is "pending" if its chunk_index=0 row is missing/errored (a cheap proxy for "never chunked
+-- at all" or "chunk 0 itself failed"); MERGE keys on (entry_id, chunk_index) so re-running never
+-- duplicates a chunk. Re-run safe; a no-op (cheap) when nothing is pending.
+-- ml_generate_embedding_status = '' is BigQuery's success sentinel.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_embed_pending`()
 BEGIN
   MERGE `stock-trading-498512.analytics.decision_embeddings` T
   USING (
+    WITH src AS (
+      SELECT entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title,
+             CONCAT(COALESCE(title,''), '\n', COALESCE(body_md,'')) AS full_content
+      FROM `stock-trading-498512.events.decision_log` dl
+      WHERE NOT EXISTS (
+        SELECT 1 FROM `stock-trading-498512.analytics.decision_embeddings` e
+        WHERE e.entry_id = dl.entry_id AND e.chunk_index = 0 AND e.embed_status = '' AND ARRAY_LENGTH(e.embedding) > 0)
+    ),
+    chunked AS (
+      SELECT entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title,
+             chunk_index,
+             SUBSTR(full_content, chunk_index * 6000 + 1, 6000) AS content
+      FROM src, UNNEST(GENERATE_ARRAY(0, GREATEST(0, CAST(CEIL(LENGTH(full_content) / 6000.0) AS INT64) - 1))) AS chunk_index
+    )
     SELECT entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title,
+           chunk_index,
            ml_generate_embedding_result AS embedding,
            ml_generate_embedding_status AS embed_status
     FROM ML.GENERATE_EMBEDDING(
       MODEL `stock-trading-498512.ops.text_embed`,
-      (SELECT entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title,
-              SUBSTR(CONCAT(COALESCE(title,''),'\n',COALESCE(body_md,'')),1,8000) AS content
-       FROM `stock-trading-498512.events.decision_log` dl
-       -- NOT EXISTS anti-join (NULL-safe): a NULL entry_id anywhere in the
-       -- embeddings table would make a NOT IN (...) predicate return zero rows
-       -- and silently embed nothing.
-       WHERE NOT EXISTS (
-         SELECT 1 FROM `stock-trading-498512.analytics.decision_embeddings` e
-         WHERE e.entry_id = dl.entry_id AND e.embed_status = '' AND ARRAY_LENGTH(e.embedding) > 0)),
+      (SELECT entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title, chunk_index, content FROM chunked),
       STRUCT(TRUE AS flatten_json_output, 'RETRIEVAL_DOCUMENT' AS task_type))
   ) S
-  ON T.entry_id = S.entry_id
+  ON T.entry_id = S.entry_id AND T.chunk_index = S.chunk_index
   WHEN MATCHED THEN UPDATE SET
     entry_date = S.entry_date, strategy = S.strategy, entry_type = S.entry_type,
     sub_pattern = S.sub_pattern, decision = S.decision, conviction = S.conviction,
     ticker = S.ticker, title = S.title, embedding = S.embedding, embed_status = S.embed_status
   WHEN NOT MATCHED THEN INSERT
-    (entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title, embedding, embed_status)
-    VALUES (S.entry_id, S.entry_date, S.strategy, S.entry_type, S.sub_pattern, S.decision, S.conviction, S.ticker, S.title, S.embedding, S.embed_status);
+    (entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title, chunk_index, embedding, embed_status)
+    VALUES (S.entry_id, S.entry_date, S.strategy, S.entry_type, S.sub_pattern, S.decision, S.conviction, S.ticker, S.title, S.chunk_index, S.embedding, S.embed_status);
 END;
 
 -- ===== Embedding drift monitor — state.embedding_health =====
--- One SELECT replaces the manual count-compare. is_healthy = every decision_log row has EXACTLY ONE
--- valid embedding (none missing, none errored, none duplicated). dup_rows guards the race where two
--- concurrent sp_embed_pending() MERGEs both insert the same pending entry_id — duplicate embedding
--- rows would silently fan out find_precedents results and were previously only caught by hand.
+-- CHUNKED (self-improvement audit B-8-data): is_healthy = every decision_log entry has >=1 ok chunk AND
+-- zero errored chunks (a partially-failed entry must not silently read healthy via its surviving chunk
+-- 0), plus per-(entry_id,chunk_index) uniqueness (multiple chunks per entry are now EXPECTED, so the
+-- old "exactly one row per entry_id" dup check would misfire on every multi-chunk entry).
 -- Interprets the '' = success sentinel for human/agent use.
 --   SELECT * FROM state.embedding_health;   -- expect is_healthy = TRUE; missing/error/dup all 0
 CREATE OR REPLACE VIEW `stock-trading-498512.state.embedding_health` AS
@@ -128,12 +164,19 @@ emb AS (
   SELECT COUNT(*) AS embedding_rows,
          COUNTIF(embed_status = '' AND ARRAY_LENGTH(embedding) > 0) AS ok_rows,
          COUNTIF(NOT (embed_status = '' AND ARRAY_LENGTH(embedding) > 0)) AS error_rows,
-         COUNT(*) - COUNT(DISTINCT entry_id) AS dup_rows
+         COUNT(*) - COUNT(DISTINCT CONCAT(entry_id, ':', CAST(chunk_index AS STRING))) AS dup_rows
   FROM `stock-trading-498512.analytics.decision_embeddings`),
+per_entry AS (
+  SELECT entry_id,
+    COUNTIF(embed_status = '' AND ARRAY_LENGTH(embedding) > 0) AS ok_chunks,
+    COUNTIF(NOT (embed_status = '' AND ARRAY_LENGTH(embedding) > 0)) AS bad_chunks
+  FROM `stock-trading-498512.analytics.decision_embeddings`
+  GROUP BY entry_id
+),
 miss AS (
-  SELECT COUNTIF(e.entry_id IS NULL) AS missing_rows
+  SELECT COUNTIF(pe.entry_id IS NULL OR pe.ok_chunks = 0 OR pe.bad_chunks > 0) AS missing_rows
   FROM `stock-trading-498512.events.decision_log` dl
-  LEFT JOIN `stock-trading-498512.analytics.decision_embeddings` e USING (entry_id))
+  LEFT JOIN per_entry pe USING (entry_id))
 SELECT dl.log_rows, emb.embedding_rows, emb.ok_rows, emb.error_rows, miss.missing_rows, emb.dup_rows,
        (miss.missing_rows = 0 AND emb.error_rows = 0 AND emb.dup_rows = 0) AS is_healthy,
        CURRENT_TIMESTAMP() AS checked_at

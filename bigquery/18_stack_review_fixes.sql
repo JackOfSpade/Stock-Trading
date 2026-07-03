@@ -238,8 +238,10 @@ WITH cls AS (
   -- AR ids are ASCII AR_att/AR_orc (2026-07-01, RUNBOOK §28), matching ops/cadence.yaml + the plan table.
   -- (This threshold table joins ops.run_log by EXACT id — USING(routine) — so future AR runs must self-log
   -- the ASCII id to be classified here; legacy middle-dot 'started' rows age out of the 7-day window.)
+  -- D2a (added 2026-07-03, self-improvement audit WO-3): NOT YET ACTIVE, no live web-UI trigger yet;
+  -- listed here so once it starts logging it is already correctly classified fast-tier.
   SELECT * FROM UNNEST([
-    STRUCT('D1' AS routine, 6 AS min_stale_hours), STRUCT('D2', 6), STRUCT('D3', 6),
+    STRUCT('D1' AS routine, 6 AS min_stale_hours), STRUCT('D2a', 6), STRUCT('D2', 6), STRUCT('D3', 6),
     STRUCT('AR_att', 6), STRUCT('AR_orc', 6),
     STRUCT('W4', 6), STRUCT('M4', 6), STRUCT('Q4', 6), STRUCT('A3', 6),
     STRUCT('W1', 18), STRUCT('W2', 18), STRUCT('W3', 18), STRUCT('W5', 18),
@@ -301,12 +303,19 @@ FROM h, td;
 -- force over ~250 rows is instant — 02_ai_layer.sql). At ~1 entry/day the threshold is ~13 years out,
 -- so this is a near-free advisory mirroring state.gate_watch — a SIGNAL to revisit the index + the §23
 -- chunking work rather than relying on memory. Watch-only, NOT part of all_green.
+-- CHUNKING FIX (self-improvement audit B-8-data, 2026-07-03): the 5,000-row VECTOR INDEX threshold
+-- applies to analytics.decision_embeddings (the table VECTOR_SEARCH scans), which now holds MULTIPLE
+-- chunk rows per decision_log entry (RUNBOOK §23) -- tracking decision_log's row count alone
+-- understated how close the searched table is to the threshold (825 embedding rows vs 289 decision_log
+-- rows at the 2026-07-03 cutover, a ~2.85x ratio). Track the embeddings table directly.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.embedding_scale_watch` AS
-WITH n AS (SELECT COUNT(*) AS decision_log_rows FROM `stock-trading-498512.events.decision_log`)
+WITH n AS (SELECT COUNT(*) AS decision_log_rows FROM `stock-trading-498512.events.decision_log`),
+e AS (SELECT COUNT(*) AS embedding_rows FROM `stock-trading-498512.analytics.decision_embeddings`)
 SELECT
-  decision_log_rows,
+  n.decision_log_rows,
+  e.embedding_rows,
   5000 AS vector_index_threshold,
-  GREATEST(0, 5000 - decision_log_rows) AS rows_to_index_threshold,
-  decision_log_rows >= 4000 AS approaching_index_threshold,
+  GREATEST(0, 5000 - e.embedding_rows) AS rows_to_index_threshold,
+  e.embedding_rows >= 4000 AS approaching_index_threshold,
   CURRENT_TIMESTAMP() AS checked_at
-FROM n;
+FROM n, e;
