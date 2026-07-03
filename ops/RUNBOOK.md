@@ -1713,5 +1713,18 @@ idle days must not default to 0 return and drag the average down. Result:
   Live-verified 2026-07-03 (47 deployed days): B avg/wk **+1.01%** / avg/mo **+4.30%**; D avg/wk
   **+0.19%** / avg/mo **+0.78%**; SGOV own avg/wk **+0.07%** / avg/mo **+0.31%**; avg/yr "Not enough
   data" for all. Re-verified via the Node harness (primary + all-parked + chart-failure) + preview
-  screenshot. **Owner action required:** re-paste `weekly_report.gs` (no scope change) — this
-  supersedes the follow-up #2 build that was deployed to Apps Script.
+  screenshot. **Deployed 2026-07-03 via Claude-in-Chrome** (re-pasted `Code.gs` from `main`@`d69d099`,
+  ran `testReport`, confirmed table header + B avg/wk +1.01% / avg/mo +4.30% in the actual sent
+  email) — supersedes the follow-up #2 build.
+
+**2026-07-03 follow-up #4 — self-sent mail was landing pre-marked READ.** Owner reported the
+weekly email always arrives already read (no unread/bold indicator) — a known Gmail quirk for
+self-addressed mail: because sender and recipient are the same account, the send action itself
+registers as the read event, so the Inbox copy never gets the normal "new mail" unread flag.
+Fix: `sendWeeklyReport_()`'s post-send Gmail lookup (previously label-only) now also calls
+`GmailThread.markUnread()` on the just-sent thread, in the same `GmailApp.search(...)` lookup
+used for the `Trading/Weekly` label — one search, both operations, best-effort (never blocks the
+send). No new scope required (`markUnread()` uses the same `gmail.modify` scope `addLabel()`
+already needs). Node harness updated with a tracked fake-thread stub asserting exactly one
+`markUnread()` + one `addLabel()` call on the just-sent thread. **Owner action required:**
+re-paste `weekly_report.gs` (no scope change).

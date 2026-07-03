@@ -39,8 +39,14 @@ Because you are **both sender and recipient** (from you, to you), this is the op
   Apps Script  weekly_report.gs   ── on Google's servers, weekly trigger
         │  GmailApp.sendEmail(you → you), chart as inline cid PNG
         ▼
-  Your inbox   (labelled "Trading/Weekly")
+  Your inbox   (labelled "Trading/Weekly", forced unread — see below)
 ```
+
+**Note — self-sent mail lands pre-marked read.** Because sender and recipient are the same
+account, Gmail treats the send action itself as the read event, so the message would
+otherwise appear in the inbox already read (no bold/unread indicator). The script forces it
+back to unread (`GmailThread.markUnread()`) in the same post-send lookup that applies the
+label — best-effort, so it never blocks the send if it fails.
 
 ## One-time setup (~3 minutes)
 

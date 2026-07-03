@@ -69,15 +69,19 @@ function sendWeeklyReport_() {
   if (chartResult) opts.inlineImages = { returnchart: chartResult.blob };
   GmailApp.sendEmail(RECIPIENT, subject, plain, opts);
 
-  if (LABEL_NAME) {
-    try {
+  // Self-addressed mail (RECIPIENT === the sender) lands in the Inbox already marked READ — a Gmail
+  // quirk where sending IS the read event when From/To are the same account. Force the just-sent
+  // thread back to unread, and apply the label, in one lookup. Best-effort — must never fail the send.
+  try {
+    Utilities.sleep(3000);
+    // NOTE: search string coupled to the subject format in buildSubject_ — update both together.
+    const threads = GmailApp.search(`subject:"Strategies vs SGOV — ${d.dateLabel}" newer_than:1d`, 0, 5);
+    threads.forEach(t => t.markUnread());
+    if (LABEL_NAME) {
       const label = GmailApp.getUserLabelByName(LABEL_NAME) || GmailApp.createLabel(LABEL_NAME);
-      Utilities.sleep(3000);
-      // NOTE: search string coupled to the subject format in buildSubject_ — update both together.
-      GmailApp.search(`subject:"Strategies vs SGOV — ${d.dateLabel}" newer_than:1d`, 0, 5)
-        .forEach(t => t.addLabel(label));
-    } catch (e) { Logger.log('Label step skipped: ' + e); }
-  }
+      threads.forEach(t => t.addLabel(label));
+    }
+  } catch (e) { Logger.log('Post-send thread housekeeping (unread/label) skipped: ' + e); }
 
   // Liveness beat — lets cadence_check.sql detect a silently-dead weekly report. Best-effort.
   try {
