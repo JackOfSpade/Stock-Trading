@@ -157,17 +157,21 @@ SELECT COALESCE(conviction,'(unscored)') AS conviction, ANY_VALUE(conviction_ord
 FROM `stock-trading-498512.analytics.conviction_features`
 GROUP BY conviction ORDER BY ord;
 
--- The BQML model — RUN ONLY WHEN >=30 closed GO theses AND both outcome classes are present
--- (currently single-class: 3 closed, all profitable, so CREATE MODEL would error). Ready to run:
+-- DEPRECATED (2026-07-03, self-improvement audit S-2/B-2) — do NOT build this model, even once >=30
+-- closed GO theses accrue. A LOGISTIC_REG fit on ~30 fee-dominated, single-class-until-recently,
+-- non-independent (one market regime, correlated names/timing) binary outcomes with 4 categorical
+-- features and no cross-validation / walk-forward would overfit -- the exact hazard this project's own
+-- foundation doc warns against. analytics.calibration_shrunk (bigquery/25_calibration_shrinkage.sql) is
+-- the replacement: a Beta-Binomial shrinkage estimate + Wilson interval that is honest from trade 1,
+-- needs no both-classes precondition, and dominates a fitted logistic model at this sample size. Left
+-- here (commented) as a historical record of what was considered and rejected, not a TODO:
 --   CREATE OR REPLACE MODEL `stock-trading-498512.ops.conviction_model`
 --     OPTIONS(model_type='LOGISTIC_REG', input_label_cols=['was_profitable'], auto_class_weights=TRUE) AS
 --   SELECT conviction_ordinal, strategy, sub_pattern, regime_state, was_profitable
 --   FROM `stock-trading-498512.analytics.conviction_features`
 --   WHERE position_closed AND was_profitable IS NOT NULL;
--- Score open theses once trained:  SELECT * FROM ML.PREDICT(MODEL `...ops.conviction_model`,
---   (SELECT * FROM `...analytics.conviction_features` WHERE NOT position_closed));
--- Until then the routine reads analytics.calibration_summary (the empirical running tally). The >=30-
--- closed gate is enforced in Operating_Protocols.md / Claude_Task_Plan.md before any output is used.
+-- The routine reads analytics.calibration_shrunk (per-tier posterior + interval + trustworthy_edge),
+-- never analytics.calibration_summary.win_rate alone and never a fitted model's output.
 
 -- ===== Per-strategy NAV / 2%-sizing base (2026-06-06) — the last Portfolio_Ledger data domain =====
 -- NAV_strategy = equal-split deposits ($9,446.86/5) + realized P&L (trade_fills) + unrealized (open

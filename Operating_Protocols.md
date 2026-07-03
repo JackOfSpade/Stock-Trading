@@ -188,6 +188,8 @@ Strategy B GO entries calibrate target-magnitude (gap-fill %) against per-trade 
 
 The gap-fill % choice IS the conviction calibration tool when the convergence target is numerical-price-level rather than event-named. Future B GO entries reference this 3-trade ladder to anchor target-magnitude choices and document where on the ladder the new entry sits with explicit reasoning.
 
+**Read alongside `analytics.calibration_shrunk` (self-improvement audit S-2/B-2, 2026-07-03).** This 3-trade ladder is a narrative precedent set, not a statistical estimate — it can read as more settled than 3 anecdotes support (the exact narrative-overfit risk 2.13/2.4 flag). Before anchoring a new entry's target-magnitude to a conviction tier, also check `SELECT * FROM analytics.calibration_shrunk WHERE conviction = '<tier>'`: a wide `wilson_high - wilson_low` for that tier is a signal to lean MORE conservative on target-magnitude (narrower gap-fill %), not to treat the ladder's precedent as settled; `trustworthy_edge = TRUE` (currently false for every tier — see the view) is the only condition under which a tier's calibration should be read as more than directional. This does not replace the ladder's qualitative reasoning — it is a cross-check against over-updating on 3 correlated data points.
+
 **Daily.md scan labels** (e.g., "highest conviction" within a watchlist) are local to the scan's relative ordering and do NOT translate to absolute conviction; thesis-construction sessions apply Strategy B's actual entry criteria with absolute-scale calibration.
 
 **Underlying framework anchor**: AI_Trading_Foundation.md 2.13 (ordinal-tier conviction calibration) + Strategy.md Strategy B pre-mortem rev 7.
