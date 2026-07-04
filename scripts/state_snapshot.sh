@@ -18,7 +18,7 @@ command -v bq >/dev/null || { echo "bq CLI not found (install Google Cloud SDK)"
 
 dump () {  # dump <name> <sql>
   echo "  $1.csv"
-  bq --project_id="$PROJECT" query --use_legacy_sql=false --format=csv --max_rows=100000 "$2" > "$OUT/$1.csv"
+  bq --project_id="$PROJECT" query --use_legacy_sql=false --format=csv --quiet --headless --max_rows=100000 "$2" > "$OUT/$1.csv"
 }
 
 echo "Snapshotting state -> $OUT/"

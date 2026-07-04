@@ -53,6 +53,21 @@ def test_bq_raises_on_nonzero_returncode(monkeypatch):
         ar.bq("SELECT 1")
 
 
+# ---- fmt_ts(): bad-timezone fallback must never raise (ZoneInfoNotFoundError is a KeyError, not a
+#      ValueError) — a bogus state.user_tz (no upstream validation from the Calendar connector) must
+#      degrade to a bare "... UTC" string, never escape into main()'s outer except and drop the batch.
+def test_fmt_ts_bogus_timezone_falls_back_gracefully():
+    v = "2026-06-28 05:00:00 UTC"
+    assert ar.fmt_ts(v, "Not/A_Real_Zone") == f"{v} UTC"
+
+
+def test_fmt_ts_valid_timezone_still_formats():
+    # Regression guard: the widened except must not swallow the happy path.
+    out = ar.fmt_ts("2026-06-28 05:00:00 UTC", "America/Denver")
+    assert "(America/Denver)" in out
+    assert out != "2026-06-28 05:00:00 UTC UTC"
+
+
 # ---- relay_alerts() / relay_orders(): row-shape contract + no-spurious-post ----------------
 
 def test_relay_alerts_empty_does_not_post(monkeypatch):

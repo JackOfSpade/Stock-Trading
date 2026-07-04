@@ -44,9 +44,10 @@ import urllib.request
 from datetime import datetime, timezone
 
 try:
-    from zoneinfo import ZoneInfo
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 except ImportError:  # pragma: no cover — stdlib since 3.9; CI/runners pin >=3.9
     ZoneInfo = None
+    ZoneInfoNotFoundError = KeyError
 
 PROJECT = os.environ.get("BQ_PROJECT", "stock-trading-498512")
 MODE = os.environ.get("RELAY_MODE", "alerts")
@@ -90,7 +91,12 @@ def fmt_ts(v, tz_name):
             s = s[:-4]
         dt = datetime.fromisoformat(s.replace(" ", "T", 1)).replace(tzinfo=timezone.utc)
         return dt.astimezone(ZoneInfo(tz_name)).strftime("%Y-%m-%d %H:%M") + f" ({tz_name})"
-    except ValueError:
+    except (ValueError, ZoneInfoNotFoundError):
+        # ZoneInfoNotFoundError (a KeyError subclass, NOT a ValueError) is raised by ZoneInfo(tz_name)
+        # for a bad/unsupported IANA tz string — e.g. state.user_tz populated from the Google Calendar
+        # connector with no upstream validation. tz problems are cosmetic only (get_user_tz()'s own
+        # contract) — never let one raise uncaught and drop the whole alert batch (main()'s outer
+        # `except Exception` would otherwise be the only thing stopping it).
         return f"{v} UTC"
 
 

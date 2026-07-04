@@ -28,6 +28,8 @@ SRC = os.path.join(ROOT, "Strategy.md")
 OUTDIR = os.path.join(ROOT, "strategy")
 HEADER = ("<!-- GENERATED from Strategy.md by scripts/split_strategy.py — DO NOT EDIT.\n"
           "     Strategy.md is canonical; regenerate after editing it. -->\n\n")
+# Hand-maintained files in strategy/ that this script does not generate and must never flag as orphans.
+HAND_MAINTAINED = {"README.md"}
 
 
 def slug(title: str) -> str:
@@ -72,6 +74,21 @@ def build():
     return files
 
 
+def find_orphans(files):
+    """.md files that exist in OUTDIR but do not correspond to any CURRENT Strategy.md heading (or the
+    preamble/index) and are not hand-maintained. A section renamed/removed in Strategy.md leaves its
+    old numbered slice behind forever otherwise — build()'s loop only ever visits keys freshly derived
+    from Strategy.md's CURRENT headings, so it never notices a stale file it no longer intends to
+    (re)write. Returns [] if OUTDIR doesn't exist yet (nothing to be stale)."""
+    if not os.path.isdir(OUTDIR):
+        return []
+    expected = set(files) | HAND_MAINTAINED
+    return sorted(
+        fn for fn in os.listdir(OUTDIR)
+        if fn.endswith(".md") and fn not in expected
+    )
+
+
 def main(argv):
     check = "--check" in argv
     files = build()
@@ -86,12 +103,21 @@ def main(argv):
         else:
             with open(path, "w") as f:
                 f.write(content)
+    orphans = find_orphans(files)
     if check:
         if drift:
             print("STALE slices (run scripts/split_strategy.py): " + ", ".join(sorted(drift)), file=sys.stderr)
+        if orphans:
+            print("ORPHANED slice file(s) — no longer produced by any current Strategy.md heading "
+                  "(a section was likely renamed/removed; delete these or the check will keep failing): "
+                  + ", ".join(orphans), file=sys.stderr)
+        if drift or orphans:
             return 1
         print("strategy/ slices are in sync with Strategy.md")
         return 0
+    if orphans:
+        print("WARNING: orphaned slice file(s) present (not written by this run, not hand-maintained): "
+              + ", ".join(orphans))
     print(f"Wrote {len(files)} files to strategy/")
     return 0
 

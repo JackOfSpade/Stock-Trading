@@ -15,8 +15,7 @@ set -euo pipefail
 
 PROJECT="${PROJECT:-stock-trading-498512}"
 BUCKET="${BUCKET:?Set BUCKET, e.g. BUCKET=gs://stock-trading-backups}"
-STAMP="$(date -u +%Y%m%d)"
-DEST="${BUCKET%/}/events/${STAMP}"
+STAMP="$(date -u +%Y-%m-%d)"
 
 command -v bq >/dev/null || { echo "bq CLI not found (install Google Cloud SDK)"; exit 1; }
 
@@ -24,15 +23,20 @@ command -v bq >/dev/null || { echo "bq CLI not found (install Google Cloud SDK)"
 TABLES="$(bq --project_id="$PROJECT" ls --max_results=1000 "${PROJECT}:events" \
           | awk 'NR>2 && $2=="TABLE"{print $1}')"
 
-echo "Backing up events.* -> ${DEST}/"
+# Per-table dt=<date> layout — SAME as the production scheduled export
+# (bigquery/scheduled_queries/backup_events_export.sql) and scripts/restore_drill.sh, so an ad-hoc
+# snapshot from this script is discoverable/loadable by restore_drill.sh without any translation.
+echo "Backing up events.* -> ${BUCKET%/}/events/<table>/dt=${STAMP}/"
 for t in $TABLES; do
-  echo "  extract events.${t}"
+  DEST="${BUCKET%/}/events/${t}/dt=${STAMP}"
+  echo "  extract events.${t} -> ${DEST}/"
   bq --project_id="$PROJECT" extract \
      --destination_format=PARQUET \
      --compression=SNAPPY \
      "${PROJECT}:events.${t}" \
-     "${DEST}/${t}-*.parquet"
+     "${DEST}/*.parquet"
 done
 
-echo "Done. Restore with: bq load --source_format=PARQUET events.<table> '${DEST}/<table>-*.parquet'"
+echo "Done. Restore one table with: bq load --source_format=PARQUET events.<table> '${BUCKET%/}/events/<table>/dt=${STAMP}/*.parquet'"
+echo "Or verify + load every table at once: DATE=${STAMP} BUCKET=${BUCKET} scripts/restore_drill.sh"
 echo "TIP: set a GCS lifecycle rule (e.g. keep 90 daily, then monthly) — see ops/RUNBOOK.md."

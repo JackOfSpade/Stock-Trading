@@ -108,3 +108,100 @@ def test_cadence_deadline_yaml_unquoted_is_not_a_string(tmp_path, monkeypatch):
     monkeypatch.setattr(cc, "CADENCE", str(f))
     val = cc.cadence_deadline_yaml()
     assert not (isinstance(val, str) and cc.HHMM.match(val))
+
+
+# ---- E. parse_period_grace_sql / cadence_period_grace_yaml: the period-miss grace-day scrapers ----
+def test_parse_period_grace_sql_matches_known_good(tmp_path, monkeypatch):
+    # Mirrors the real shape in bigquery/24_cadence_period_watch.sql (comments/whitespace trimmed).
+    f = tmp_path / "24.sql"
+    f.write_text(
+        "    (SELECT cal_date FROM `p.d.market_calendar`\n"
+        "       WHERE is_trading_day AND DATE_TRUNC(cal_date, MONTH) = p.month_start\n"
+        "       ORDER BY cal_date LIMIT 1 OFFSET 2) AS month_grace_day,\n"
+        "    (SELECT cal_date FROM `p.d.market_calendar`\n"
+        "       WHERE is_trading_day AND DATE_TRUNC(cal_date, QUARTER) = p.quarter_start\n"
+        "       ORDER BY cal_date LIMIT 1 OFFSET 2) AS quarter_grace_day,\n"
+        "    (SELECT cal_date FROM `p.d.market_calendar`\n"
+        "       WHERE is_trading_day AND DATE_TRUNC(cal_date, YEAR) = p.year_start\n"
+        "       ORDER BY cal_date LIMIT 1 OFFSET 4) AS year_grace_day\n"
+        "      WHEN 'weekly_sun'    THEN DATETIME(DATE_ADD(n.week_start, INTERVAL 1 DAY), TIME '21:00:00')\n"
+    )
+    monkeypatch.setattr(cc, "PERIOD_WATCH_SQL", str(f))
+    assert cc.parse_period_grace_sql() == {
+        "monthly_ftd": 3, "quarterly_ftd": 3, "annual_ftd": 5, "weekly_sun": 1,
+    }
+
+
+def test_parse_period_grace_sql_empty_on_reformat_is_caught(tmp_path, monkeypatch):
+    # A reformat that breaks the OFFSET/label regex (extra space before the closing paren, and a
+    # renamed alias) must yield {} for the broken rows, NOT silently keep matching — main()'s check E
+    # then flags a per-class parse failure instead of vacuously passing.
+    f = tmp_path / "24.sql"
+    f.write_text(
+        "       ORDER BY cal_date LIMIT 1 OFFSET 2 ) AS month_graceday,\n"
+        "      WHEN 'weekly_sun'    THEN DATETIME(DATE_ADD(n.week_start, INTERVAL 1, DAY), TIME '21:00:00')\n"
+    )
+    monkeypatch.setattr(cc, "PERIOD_WATCH_SQL", str(f))
+    assert cc.parse_period_grace_sql() == {}
+
+
+def test_parse_period_grace_sql_returns_none_when_file_absent(tmp_path, monkeypatch):
+    # Pre-2026-07-03 checkouts don't have bigquery/24_cadence_period_watch.sql yet — main() must skip
+    # check E silently (None), not treat a missing file as "zero grace values configured" (which would
+    # be indistinguishable from a broken regex — see the reformat test above).
+    monkeypatch.setattr(cc, "PERIOD_WATCH_SQL", str(tmp_path / "does_not_exist.sql"))
+    assert cc.parse_period_grace_sql() is None
+
+
+def test_cadence_period_grace_yaml_matches_known_good(tmp_path, monkeypatch):
+    f = tmp_path / "cadence.yaml"
+    f.write_text(
+        "timezone: America/Denver\n"
+        "period_grace_days:\n"
+        "  weekly_sun: 1\n"
+        "  monthly_ftd: 3\n"
+        "  quarterly_ftd: 3\n"
+        "  annual_ftd: 5\n"
+        "routines: []\n"
+    )
+    monkeypatch.setattr(cc, "CADENCE", str(f))
+    assert cc.cadence_period_grace_yaml() == {
+        "weekly_sun": 1, "monthly_ftd": 3, "quarterly_ftd": 3, "annual_ftd": 5,
+    }
+
+
+def test_cadence_period_grace_yaml_missing_key_is_none(tmp_path, monkeypatch):
+    f = tmp_path / "cadence.yaml"
+    f.write_text("timezone: America/Denver\nroutines: []\n")
+    monkeypatch.setattr(cc, "CADENCE", str(f))
+    assert cc.cadence_period_grace_yaml() is None
+
+
+# ---- F. generate_triggers_manifest: the ops/triggers.json canonical-map generator -------------------
+def test_generate_triggers_manifest_matches_known_good_shape():
+    head_by_id = {
+        "D1": "D1. Market Development Scan — deep research",
+        "W1": "W1. Catalyst Calendar (A, C) — deep research",
+    }
+    cad = {
+        "D1": {"monitor_class": "daily_trading"},
+        "W1": {"monitor_class": "weekly_sun"},
+    }
+    assert cc.generate_triggers_manifest(head_by_id, cad) == {
+        "D1": {"monitor_class": "daily_trading",
+               "instruction": "Read Claude_Task_Plan.md. Perform D1. Market Development Scan — deep research."},
+        "W1": {"monitor_class": "weekly_sun",
+               "instruction": "Read Claude_Task_Plan.md. Perform W1. Catalyst Calendar (A, C) — deep research."},
+    }
+
+
+def test_generate_triggers_manifest_excludes_ids_not_in_cadence():
+    # A plan heading whose id has no (or no longer has a) matching ops/cadence.yaml routine must NOT
+    # silently appear in the generated manifest — regression guard for the "if rid in cad" filter that
+    # keeps ops/triggers.json from ever citing a routine cadence.yaml doesn't know about.
+    head_by_id = {"D1": "D1. Market Development Scan — deep research",
+                  "ZZ": "ZZ. Ghost Routine — deep research"}
+    cad = {"D1": {"monitor_class": "daily_trading"}}
+    got = cc.generate_triggers_manifest(head_by_id, cad)
+    assert set(got) == {"D1"}
+    assert got["D1"]["monitor_class"] == "daily_trading"

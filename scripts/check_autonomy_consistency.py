@@ -1,0 +1,144 @@
+#!/usr/bin/env python3
+"""Guard ops/autonomy_levels.yaml stage citations against prose/SQL drift (self-improvement audit,
+built ahead of the first stage promotion, 2026-07-04).
+
+WHY THIS EXISTS. ops/cadence.yaml has scripts/check_cadence_consistency.py to catch drift between the
+YAML source of truth and the hand-kept SQL/prose that cites it. ops/autonomy_levels.yaml — the register
+of each self-improvement loop's current autonomy `stage` (dormant / shadow / record_only /
+active_pr_gated / active_auto) — has NO equivalent guard. Prose (Claude_Task_Plan.md) and SQL headers
+(bigquery/27_process_reliability.sql) both cite a loop's stage inline, e.g.:
+
+    "... DORMANT per `ops/autonomy_levels.yaml`, loop `process_reliability` ..."      (Claude_Task_Plan.md)
+    "-- STATUS: DORMANT per ops/autonomy_levels.yaml (loop id `process_reliability`)" (bigquery/27_*.sql)
+
+Nothing today would catch a citation going stale after a loop is promoted (or a copy-pasted-then-
+forgotten citation). Every loop is `dormant` as of 2026-07-04 — nothing has drifted yet — but the ask is
+to build this BEFORE the first promotion, not after the first silent drift, reusing
+check_cadence_consistency.py's proven regex-scrape-and-diff pattern (kept as a separate small script,
+matching that file's own multi-check CLI convention, since this guards an unrelated YAML register).
+
+HOW: ops/autonomy_levels.yaml is the source of truth ({loop id: stage}). KNOWN_CITATION_FILES are the
+files grepped (2026-07-04) to currently contain a stage citation — each MUST yield >=1 citation, so a
+regex that rots (a reformat that silently stops matching) fails loud instead of vacuously passing (the
+exact class of bug tests/test_cadence_consistency.py guards check_cadence_consistency.py's own parsers
+against). EXTRA_SCAN_GLOBS is scanned too, best-effort, so a NEW citation added elsewhere later is still
+validated even though it isn't required. Every citation found (required or extra) must have its stage
+match ops/autonomy_levels.yaml's current value for that loop id (case-insensitive), and must name a loop
+id that still exists in the register.
+
+Usage:  python scripts/check_autonomy_consistency.py     # exit 0 if consistent, 1 + diff if not
+"""
+import glob
+import os
+import re
+import sys
+
+try:
+    import yaml
+except ImportError:
+    print("PyYAML required: pip install pyyaml", file=sys.stderr)
+    raise SystemExit(2)
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+AUTONOMY = os.path.join(ROOT, "ops", "autonomy_levels.yaml")
+
+# Files grepped (2026-07-04) to currently contain a "<STAGE> per ops/autonomy_levels.yaml" citation.
+# Each of these MUST produce >=1 citation match — an empty result here means the regex rotted (a
+# reformat of the citation text), not that the citation was legitimately removed (see main()).
+KNOWN_CITATION_FILES = [
+    os.path.join(ROOT, "Claude_Task_Plan.md"),
+    os.path.join(ROOT, "bigquery", "27_process_reliability.sql"),
+]
+
+# Best-effort extra scan for citations that might appear elsewhere in the future — validated the same
+# way, but a zero-match file here is not itself an error (unlike KNOWN_CITATION_FILES above).
+EXTRA_SCAN_GLOBS = [
+    os.path.join(ROOT, "*.md"),
+    os.path.join(ROOT, "ops", "*.md"),
+    os.path.join(ROOT, "bigquery", "*.sql"),
+    os.path.join(ROOT, "bigquery", "scheduled_queries", "*.sql"),
+]
+
+# Matches both citation styles already in the repo:
+#   "DORMANT per `ops/autonomy_levels.yaml`, loop `process_reliability`"           (Claude_Task_Plan.md)
+#   "STATUS: DORMANT per ops/autonomy_levels.yaml (loop id `process_reliability`)" (bigquery/27_*.sql)
+# Tolerant of optional backticks around the filename and either "loop `id`" or "loop id `id`" phrasing,
+# so a small punctuation reformat doesn't rot the regex, but a genuine restructure (see
+# tests/test_autonomy_consistency.py) still correctly yields no match.
+CITATION_RE = re.compile(
+    r"(?P<stage>[A-Za-z][A-Za-z_]*)\s+per\s+`?ops/autonomy_levels\.yaml`?"
+    r"[^\n]{0,40}?loop(?:\s+id)?\s+`(?P<id>[a-z_]+)`"
+)
+
+
+def load_stages():
+    """{loop id: current stage} from ops/autonomy_levels.yaml."""
+    doc = yaml.safe_load(open(AUTONOMY, encoding="utf-8")) or {}
+    return {loop["id"]: loop.get("stage") for loop in doc.get("loops", []) if "id" in loop}
+
+
+def find_citations(path):
+    """[(cited_stage, loop_id), ...] in one file. [] if the file doesn't exist or has no citations."""
+    if not os.path.exists(path):
+        return []
+    txt = open(path, encoding="utf-8").read()
+    return [(m.group("stage"), m.group("id")) for m in CITATION_RE.finditer(txt)]
+
+
+def _check_citations(path, stages, errors):
+    rel = os.path.relpath(path, ROOT)
+    found = find_citations(path)
+    for cited_stage, loop_id in found:
+        if loop_id not in stages:
+            errors.append(f"{rel}: cites unknown loop id '{loop_id}' (not in ops/autonomy_levels.yaml "
+                          f"— renamed/removed loop with a stale citation?)")
+            continue
+        actual = stages[loop_id]
+        if actual is None:
+            errors.append(f"{rel}: loop '{loop_id}' has no 'stage' set in ops/autonomy_levels.yaml")
+        elif cited_stage.lower() != actual.lower():
+            errors.append(f"{rel}: cites stage '{cited_stage}' for loop '{loop_id}' but "
+                          f"ops/autonomy_levels.yaml says stage='{actual}' — DRIFT (fix the stale "
+                          f"citation, or if the loop was genuinely promoted, this citation is exactly "
+                          f"what should have been updated in the same commit)")
+    return found
+
+
+def main():
+    stages = load_stages()
+    errors = []
+    total_citations = 0
+
+    for path in KNOWN_CITATION_FILES:
+        rel = os.path.relpath(path, ROOT)
+        found = _check_citations(path, stages, errors)
+        if not found:
+            errors.append(f"{rel}: expected >=1 autonomy-stage citation (seen 2026-07-04) but found "
+                          f"none — either the citation text was reformatted (regex rotted; fix "
+                          f"CITATION_RE) or it was removed (then drop this file from "
+                          f"KNOWN_CITATION_FILES in scripts/check_autonomy_consistency.py)")
+        total_citations += len(found)
+
+    known_set = {os.path.normpath(p) for p in KNOWN_CITATION_FILES}
+    extra_files = sorted(
+        p for pattern in EXTRA_SCAN_GLOBS for p in glob.glob(pattern)
+        if os.path.normpath(p) not in known_set
+    )
+    for path in extra_files:
+        total_citations += len(_check_citations(path, stages, errors))
+
+    if errors:
+        print("AUTONOMY CONSISTENCY: FAIL\n")
+        for e in errors:
+            print(" - " + e)
+        print("\nFix the stale prose/SQL citation OR ops/autonomy_levels.yaml so they agree. A loop's "
+              "cited stage must never claim MORE autonomy than the register currently grants.")
+        return 1
+
+    print(f"AUTONOMY CONSISTENCY: OK — {total_citations} stage citation(s) match "
+          f"ops/autonomy_levels.yaml ({len(stages)} registered loop(s)).")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

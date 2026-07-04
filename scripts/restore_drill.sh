@@ -23,7 +23,7 @@ BUCKET="${BUCKET:-gs://stock-trading-backups}"
 SCRATCH="${SCRATCH:-events_restore_drill}"
 KEEP="${KEEP:-0}"
 
-bqq() { bq --project_id="$PROJECT" query --use_legacy_sql=false --format=csv --quiet "$1" | tail -n +2; }
+bqq() { bq --project_id="$PROJECT" query --use_legacy_sql=false --format=csv --quiet --headless --max_rows=100000 "$1" | tail -n +2; }
 
 # Tables to restore = every base table in the live events dataset.
 mapfile -t TABLES < <(bqq "SELECT table_name FROM \`$PROJECT.events.INFORMATION_SCHEMA.TABLES\` WHERE table_type='BASE TABLE' ORDER BY table_name")
