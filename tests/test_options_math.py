@@ -43,6 +43,49 @@ def test_optioninputs_alias_is_intact():
     assert OptionInputs is ATMOption
 
 
+# ---------------------------------------------------------------------------
+# OptionInputs.__post_init__ validation (2026-07-04 audit finding: a negative
+# days_to_expiration used to be silently priced as "already expired" instead
+# of rejected as invalid input).
+# ---------------------------------------------------------------------------
+def test_optioninputs_rejects_negative_days_to_expiration():
+    with pytest.raises(ValueError):
+        ATMOption(100.0, 100.0, -5, 0.045, 0.30, 'call')
+
+
+def test_optioninputs_rejects_nonpositive_underlying_price():
+    with pytest.raises(ValueError):
+        ATMOption(0.0, 100.0, 30, 0.045, 0.30, 'call')
+    with pytest.raises(ValueError):
+        ATMOption(-10.0, 100.0, 30, 0.045, 0.30, 'call')
+
+
+def test_optioninputs_rejects_nonpositive_strike():
+    with pytest.raises(ValueError):
+        ATMOption(100.0, 0.0, 30, 0.045, 0.30, 'call')
+    with pytest.raises(ValueError):
+        ATMOption(100.0, -50.0, 30, 0.045, 0.30, 'call')
+
+
+def test_optioninputs_rejects_negative_volatility():
+    with pytest.raises(ValueError):
+        ATMOption(100.0, 100.0, 30, 0.045, -0.1, 'call')
+
+
+def test_optioninputs_allows_zero_volatility():
+    # Zero vol is a legitimate degenerate input, handled explicitly by price_bsm/
+    # greeks_bsm's own volatility<=0 branch — must NOT be rejected by the guard.
+    opt = ATMOption(100.0, 100.0, 30, 0.045, 0.0, 'call')
+    assert opt.volatility == 0.0
+
+
+def test_optioninputs_allows_zero_days_to_expiration():
+    # Exactly-expired is a legitimate input (the intrinsic-value branch) — must
+    # NOT be rejected.
+    opt = ATMOption(100.0, 100.0, 0, 0.045, 0.30, 'call')
+    assert opt.days_to_expiration == 0
+
+
 def test_bsm_call_price_hull_textbook():
     # Hull: S=42, K=40, r=0.10, T=0.5, sigma=0.20 -> Call = 4.7594
     opt = ATMOption(42, 40, int(0.5 * 365), 0.10, 0.20, 'call')
@@ -84,6 +127,65 @@ def test_implied_vol_returns_none_on_unsolvable():
     # The solver must return None rather than a bogus number that flows into sizing.
     deep_itm_below_intrinsic = 0.01
     assert implied_vol(deep_itm_below_intrinsic, 200, 100, 30, 0.045, 'call') is None
+
+
+# ---------------------------------------------------------------------------
+# Zero-volatility branch (2026-07-04 audit finding: this branch was added to
+# fix a real, previously-shipped ~2x mispricing for ITM options — see the
+# comment in price_bsm — but had zero test coverage pinning it).
+# ---------------------------------------------------------------------------
+def test_price_bsm_zero_volatility_matches_discounted_forward():
+    S, K, r, q, days = 105.0, 100.0, 0.045, 0.02, 30
+    T = days / 365.0
+    call = ATMOption(S, K, days, r, 0.0, 'call', dividend_yield=q)
+    fwd = S * math.exp(-q * T)
+    kpv = K * math.exp(-r * T)
+    assert price_bsm(call) == pytest.approx(max(fwd - kpv, 0.0), abs=1e-9)
+
+    # OTM put at the same inputs: intrinsic is 0 on the losing side.
+    otm_put = ATMOption(S, K, days, r, 0.0, 'put', dividend_yield=q)
+    assert price_bsm(otm_put) == pytest.approx(max(kpv - fwd, 0.0), abs=1e-9)
+
+    # ITM put (S below K): non-zero discounted intrinsic.
+    itm_put = ATMOption(90.0, K, days, r, 0.0, 'put', dividend_yield=q)
+    fwd2 = 90.0 * math.exp(-q * T)
+    assert price_bsm(itm_put) == pytest.approx(max(kpv - fwd2, 0.0), abs=1e-9)
+    assert price_bsm(itm_put) > 0.0
+
+
+def test_greeks_bsm_zero_volatility_is_finite_and_correctly_signed():
+    itm_call = ATMOption(105.0, 100.0, 30, 0.045, 0.0, 'call')
+    itm_put = ATMOption(95.0, 100.0, 30, 0.045, 0.0, 'put')
+    gc = greeks_bsm(itm_call)
+    gp = greeks_bsm(itm_put)
+
+    assert math.isfinite(gc['delta']) and 0 <= gc['delta'] <= 1 and gc['delta'] > 0
+    assert math.isfinite(gp['delta']) and -1 <= gp['delta'] <= 0 and gp['delta'] < 0
+    for greeks in (gc, gp):
+        assert greeks['gamma'] == 0.0
+        assert greeks['vega'] == 0.0
+        assert greeks['theta'] == 0.0
+
+
+# ---------------------------------------------------------------------------
+# dividend_yield (2026-07-04 audit finding: every pre-existing test relied on
+# the default dividend_yield=0.0, so the exp(-qT) term used throughout pricing
+# and Greeks had zero regression coverage).
+# ---------------------------------------------------------------------------
+def test_put_call_parity_with_dividend_yield():
+    S, K, r, q, days = 100.0, 100.0, 0.045, 0.02, 30
+    T = days / 365.0
+    call = ATMOption(S, K, days, r, 0.30, 'call', dividend_yield=q)
+    put = ATMOption(S, K, days, r, 0.30, 'put', dividend_yield=q)
+    lhs = price_bsm(call) - price_bsm(put)
+    rhs = S * math.exp(-q * T) - K * math.exp(-r * T)
+    assert lhs == pytest.approx(rhs, abs=1e-3)
+
+
+def test_greeks_bsm_call_delta_decreases_with_dividend_yield():
+    no_div = ATMOption(100.0, 100.0, 30, 0.045, 0.30, 'call', dividend_yield=0.0)
+    with_div = ATMOption(100.0, 100.0, 30, 0.045, 0.30, 'call', dividend_yield=0.03)
+    assert greeks_bsm(with_div)['delta'] < greeks_bsm(no_div)['delta']
 
 
 # ---------------------------------------------------------------------------
@@ -168,6 +270,50 @@ def test_multi_expiration_rejected():
     ]
     with pytest.raises(NotImplementedError):
         Structure(legs=legs, name='Calendar', structure_type='calendar')
+
+
+# ---------------------------------------------------------------------------
+# Structure cross-leg quote consistency (2026-07-04 audit finding: legs quoted
+# at different underlying_price/risk_free_rate/dividend_yield used to silently
+# corrupt net_debit()/max_loss_closed_form() with no error, since only shared
+# expiration was enforced).
+# ---------------------------------------------------------------------------
+def test_structure_rejects_mismatched_underlying_price_across_legs():
+    legs = [
+        OptionLeg(option=ATMOption(100.0, 100, 30, 0.045, 0.30, 'call'), quantity=1),
+        OptionLeg(option=ATMOption(100.5, 105, 30, 0.045, 0.30, 'call'), quantity=-1),
+    ]
+    with pytest.raises(ValueError):
+        Structure(legs=legs, name='mismatched_dcs', structure_type='debit_call_spread')
+
+
+def test_structure_rejects_mismatched_risk_free_rate_across_legs():
+    legs = [
+        OptionLeg(option=ATMOption(100.0, 100, 30, 0.045, 0.30, 'call'), quantity=1),
+        OptionLeg(option=ATMOption(100.0, 105, 30, 0.05, 0.30, 'call'), quantity=-1),
+    ]
+    with pytest.raises(ValueError):
+        Structure(legs=legs, name='mismatched_rate', structure_type='debit_call_spread')
+
+
+def test_structure_rejects_mismatched_dividend_yield_across_legs():
+    legs = [
+        OptionLeg(option=ATMOption(100.0, 100, 30, 0.045, 0.30, 'call', dividend_yield=0.0), quantity=1),
+        OptionLeg(option=ATMOption(100.0, 105, 30, 0.045, 0.30, 'call', dividend_yield=0.02), quantity=-1),
+    ]
+    with pytest.raises(ValueError):
+        Structure(legs=legs, name='mismatched_div', structure_type='debit_call_spread')
+
+
+def test_structure_accepts_matched_legs_across_all_shared_fields():
+    # Sanity check the new guard doesn't false-positive on a normal, correctly
+    # quoted multi-leg structure (every sanctioned constructor already does this).
+    legs = [
+        OptionLeg(option=ATMOption(100.0, 100, 30, 0.045, 0.30, 'call', dividend_yield=0.01), quantity=1),
+        OptionLeg(option=ATMOption(100.0, 105, 30, 0.045, 0.28, 'call', dividend_yield=0.01), quantity=-1),
+    ]
+    struct = Structure(legs=legs, name='ok_dcs', structure_type='debit_call_spread')
+    assert struct.underlying_price == 100.0
 
 
 def test_dual_path_disagreement_raises():

@@ -163,6 +163,25 @@ class OptionInputs:
     option_type: Literal['call', 'put']
     dividend_yield: float = 0.0  # continuous, annualized
 
+    def __post_init__(self):
+        # A negative days_to_expiration is NOT "already expired" (that's exactly 0)
+        # — it indicates an upstream date-arithmetic bug. Without this guard, .d1
+        # silently returns 0.0 (T<=0 branch) while .d2 raises on the same input, and
+        # price_bsm/greeks_bsm's own `time_to_expiration <= 0` guard would instead
+        # silently treat the bad data as "expired" and return an intrinsic-value
+        # price rather than rejecting it (2026-07-04 audit finding).
+        if self.days_to_expiration < 0:
+            raise ValueError(
+                f"days_to_expiration = {self.days_to_expiration} (must be >= 0). "
+                f"A negative value is invalid input, not a valid 'expired' state."
+            )
+        if self.underlying_price <= 0:
+            raise ValueError(f"underlying_price = {self.underlying_price} (must be > 0).")
+        if self.strike <= 0:
+            raise ValueError(f"strike = {self.strike} (must be > 0).")
+        if self.volatility < 0:
+            raise ValueError(f"volatility = {self.volatility} (must be >= 0).")
+
     @property
     def time_to_expiration(self) -> float:
         """Years to expiration (using 365 calendar days; matches the IV
@@ -421,6 +440,36 @@ class Structure:
                 f"iron condors, butterflies, single-expiration variants only."
             )
 
+        # Enforce a single shared underlying_price/risk_free_rate/dividend_yield
+        # across legs, mirroring the expiration check above. Every constructor below
+        # (long_call, debit_call_spread, iron_condor, ...) already quotes all legs off
+        # one shared (S, r, q) tuple, so this only guards direct Structure(...)
+        # assembly — a legitimate, already-used path (see e.g.
+        # test_naked_short_put_captures_s0_worst_case) — against a per-leg quote
+        # mismatch that would otherwise silently corrupt net_debit()/
+        # max_loss_closed_form() with no error (2026-07-04 audit finding).
+        underlying_prices = {leg.option.underlying_price for leg in self.legs}
+        if len(underlying_prices) > 1:
+            raise ValueError(
+                f"{self.name}: legs quote {len(underlying_prices)} distinct "
+                f"underlying_price values ({sorted(underlying_prices)}) — all legs of "
+                f"one structure must share the same underlying quote."
+            )
+        risk_free_rates = {leg.option.risk_free_rate for leg in self.legs}
+        if len(risk_free_rates) > 1:
+            raise ValueError(
+                f"{self.name}: legs use {len(risk_free_rates)} distinct risk_free_rate "
+                f"values ({sorted(risk_free_rates)}) — all legs of one structure must "
+                f"share the same rate."
+            )
+        dividend_yields = {leg.option.dividend_yield for leg in self.legs}
+        if len(dividend_yields) > 1:
+            raise ValueError(
+                f"{self.name}: legs use {len(dividend_yields)} distinct dividend_yield "
+                f"values ({sorted(dividend_yields)}) — all legs of one structure must "
+                f"share the same dividend yield."
+            )
+
     @property
     def days_to_expiration(self) -> int:
         return self.legs[0].option.days_to_expiration
@@ -575,6 +624,13 @@ class Structure:
         # Scan vol from the first leg, used only to widen the range to at least
         # the realistic adverse cone (the expiration payoff itself uses no vol).
         sigma = self.legs[0].option.volatility
+        # net_debit() is invariant across every path sampled below (it depends only
+        # on the structure, not the sampled terminal price) — hoist it once instead
+        # of re-pricing every leg via BSM on each of n_paths draws (2026-07-04 perf
+        # fix; ~10x faster, byte-identical output). See _independent_structure_pnl's
+        # docstring for why net_debit() (unlike the branching intrinsic-value logic)
+        # is safe to share this way between the closed-form and MC dual paths.
+        net_debit = self.net_debit()
 
         strikes = sorted({leg.option.strike for leg in self.legs})
         # Range guaranteed to reach the flat max-loss zones beyond all strikes —
@@ -595,10 +651,11 @@ class Structure:
         # function's docstring for why (2026-07-03 self-improvement audit C-1: the two dual-path
         # verification methods must not share the payoff computation itself, or a bug in it passes
         # verification silently on both paths).
-        worst_pnl = min(_independent_structure_pnl(self, low), _independent_structure_pnl(self, high))
+        worst_pnl = min(_independent_structure_pnl(self, low, net_debit),
+                        _independent_structure_pnl(self, high, net_debit))
         for _ in range(n_paths):
             S_T = rng.uniform(low, high)
-            pnl = _independent_structure_pnl(self, S_T)
+            pnl = _independent_structure_pnl(self, S_T, net_debit)
             if pnl < worst_pnl:
                 worst_pnl = pnl
 
@@ -1040,7 +1097,9 @@ def _independent_intrinsic(option_type: str, strike: float, price: float) -> flo
     raise ValueError(f"Unknown option_type: {option_type!r}")
 
 
-def _independent_structure_pnl(structure: 'Structure', price: float) -> float:
+def _independent_structure_pnl(
+    structure: 'Structure', price: float, net_debit: Optional[float] = None
+) -> float:
     """P&L at expiration via the independent payoff path — see
     _independent_intrinsic. Sums each leg's intrinsic value independently
     rather than delegating to OptionLeg.payoff_at_expiration, then subtracts
@@ -1049,12 +1108,20 @@ def _independent_structure_pnl(structure: 'Structure', price: float) -> float:
     (sum of leg.price() * quantity) with its own independent BSM-vs-Hull-
     textbook + put-call-parity test coverage, not the error-prone
     branching intrinsic-value logic this fix targets.
+
+    net_debit: optional precomputed structure.net_debit(). It is invariant
+    across every price evaluated for a fixed structure, so callers that
+    invoke this in a tight loop (e.g. max_loss_monte_carlo's n_paths draws)
+    should compute it once and pass it in rather than re-pricing every leg
+    via BSM on every call (2026-07-04 perf fix). Pass None (default) to
+    compute it fresh, for any caller that doesn't already have it.
     """
     total = 0.0
     for leg in structure.legs:
         intrinsic = _independent_intrinsic(leg.option.option_type, leg.option.strike, price)
         total += intrinsic * leg.quantity * CONTRACT_MULTIPLIER
-    return total - structure.net_debit()
+    nd = structure.net_debit() if net_debit is None else net_debit
+    return total - nd
 
 
 def verify_max_loss_dual_path(
@@ -1269,6 +1336,10 @@ def probability_weighted_payoff(
     sigma = structure.legs[0].option.volatility
     r = structure.legs[0].option.risk_free_rate
     q = structure.legs[0].option.dividend_yield
+    # net_debit() is invariant across every path sampled below — hoist it once
+    # instead of re-pricing every leg via BSM on each of n_paths draws
+    # (2026-07-04 perf fix; byte-identical output, ~10x faster).
+    net_debit = structure.net_debit()
 
     # Risk-neutral drift = r - q
     drift = r - q
@@ -1279,7 +1350,7 @@ def probability_weighted_payoff(
         z = rng.gauss(0, 1)
         S_T = S0 * math.exp((drift - 0.5 * sigma ** 2) * T + sigma * math.sqrt(T) * z)
         payoff = structure.payoff_at_expiration(S_T)
-        pnl = payoff - structure.net_debit()
+        pnl = payoff - net_debit
         payoffs.append(payoff)
         pnls.append(pnl)
 
