@@ -15,7 +15,7 @@ BEGIN
   IF (SELECT daily_cap_breach FROM `stock-trading-498512.state.daily_staging_totals`) THEN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'warning', 'scheduled.staging_cap', 'staging_cap_breach',
-      'Daily staging cap check: today''s staged orders exceed the daily notional/order-count cap.',
+      'Daily staging cap check: today\'s staged orders exceed the daily notional/order-count cap.',
       (SELECT TO_JSON_STRING(t) FROM `stock-trading-498512.state.daily_staging_totals` t));
   END IF;
 END;
