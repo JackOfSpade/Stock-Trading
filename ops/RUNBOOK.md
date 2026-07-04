@@ -1847,3 +1847,37 @@ does NOT fire on today's holiday run.
 chat or reply needed — check `state.d2a_cutover_readiness` / `ops.d2a_cutover_log` any time to see
 progress, or just watch for the `info`-severity `auto_cutover` row in `ops.alerts` (and the resulting
 commit) once it happens.
+
+## 37. `queue_drain_stale` false alarm on the two-phase adversarial-review due date — the 2026-07-04 div-C/D/E-202606 alert *(monitoring)*
+
+**What happened.** D3's 2026-07-03 run raised `ops.sp_raise_alert('warning','D3','queue_drain_stale', ...)`
+(alert_id `a3311f51-3399-4c93-847c-2511dbb642b2`), claiming the three June divergence-review items
+(div-C/D/E-202606-1, all `PENDING_REVIEW`/`attacker-complete`) were stuck past `orchestrator_due_date
+2026-07-02` despite AR_orc completing (no-op) on both 7/2 and 7/3.
+
+**It was a FALSE ALARM.** The real `orchestrator_due_date` for all three items is **2026-07-06**
+(`events.queue_events.payload.orchestrator_due_date`, set by AR_att when it advanced each item to
+`attacker-complete` on 2026-07-02) — not 2026-07-02. AR_orc's own 7/2 and 7/3 run-log notes independently
+read the correct field both days ("orchestrator_due_date=2026-07-06 > today ... none due for orchestrator
+phase") and correctly no-op'd; it never missed a due drain. 2026-07-06 had not yet arrived when the alert
+fired (or when this was triaged, 2026-07-04), so nothing was actually stale.
+
+**Root cause.** `state.open_queue`/`events.queue_events.due_date` is set once at row creation and, for a
+`PENDING_REVIEW` divergence-review item, holds the **attacker** due date only — it is never advanced when
+the item flips to `attacker-complete`. The item's second, later due date (`orchestrator_due_date`) exists
+solely inside `payload` JSON. `Claude_Task_Plan.md`'s D3 "QUEUE HYGIENE" instruction ("flag any
+`state.open_queue` item whose `due_date` is past but still actionable") was written for the
+single-due-date `PENDING_ANALYSIS` queue; applied verbatim to `PENDING_REVIEW` it compares today against
+the stale attacker `due_date` instead of the real `payload.orchestrator_due_date` — so it misfires
+"stuck adversarial drain" on every attacker-complete divergence-review item for the entire gap between
+`attacker_due_date` and `orchestrator_due_date` (here, 2026-07-02 through 2026-07-06), which recurs every
+monthly M4 divergence cycle for however many of C/D/E diverge that month.
+
+**Fix (this change).** `Claude_Task_Plan.md` D3 QUEUE HYGIENE now explicitly branches on status for
+`PENDING_REVIEW` items: `pending` → compare `due_date` (attacker_due_date); `attacker-complete` → compare
+`payload.orchestrator_due_date`, never the row's `due_date` column. No BigQuery schema change — the JSON
+field already carried the right value; the bug was purely in what D3 was told to read.
+
+**Owner action:** none. Resolved `ops.alerts` row `a3311f51-...` with a note pointing here; the fixed
+instruction takes effect on the next D3 run. div-C/D/E-202606-1 need no rework — AR_orc will correctly
+pick them up on 2026-07-06 as it was already on track to do.
