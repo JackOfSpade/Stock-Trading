@@ -37,6 +37,7 @@ jobs:
         gh-ci-runner@stock-trading-498512.iam.gserviceaccount.com
         bq-scheduler@stock-trading-498512.iam.gserviceaccount.com
     steps:
+      - uses: actions/checkout@v4  # required for the local ./.github/actions/gcp-wif-auth composite action below
       - name: Gate on opt-in + WIF
         id: guard
         run: |
@@ -48,15 +49,12 @@ jobs:
             echo "::notice::Keyless-SA audit disabled (default). To enable: grant the WIF SA iam.serviceAccountKeys.list on gh-ci-runner@/bq-scheduler@ and set vars.RUN_SA_KEY_AUDIT=true (+ WIF vars). ops/RUNBOOK.md §25 E2."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
-      - name: Authenticate to GCP (keyless, WIF)
+      - name: GCP WIF auth + gcloud setup
         if: steps.guard.outputs.skip == 'false'
-        uses: google-github-actions/auth@v2
+        uses: ./.github/actions/gcp-wif-auth
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
-      - name: Set up gcloud
-        if: steps.guard.outputs.skip == 'false'
-        uses: google-github-actions/setup-gcloud@v2
       - name: Assert zero USER_MANAGED keys
         if: steps.guard.outputs.skip == 'false'
         env:
@@ -75,11 +73,7 @@ jobs:
           if [ -n "$offenders" ]; then
             msg="🔑 Stock-Trading keyless-SA audit FAILED — user-managed key(s) found:$offenders. Expected ZERO (WIF/keyless posture, RUNBOOK §6/§15/§25). Delete the key(s) and investigate who created them."
             echo "::error::$msg"
-            if [ -n "${WEBHOOK_URL:-}" ]; then
-              curl -fsS -X POST -H 'Content-Type: application/json' \
-                --data "$(printf '{"text":%s}' "$(printf '%s' "$msg" | python3 -c 'import json,sys;print(json.dumps(sys.stdin.read()))')")" \
-                "$WEBHOOK_URL" || echo "::warning::webhook post failed (audit still failed the run)."
-            fi
+            scripts/notify_webhook.sh "$msg"
             exit 1
           fi
           echo "OK: all audited SAs are keyless (zero user-managed keys)."

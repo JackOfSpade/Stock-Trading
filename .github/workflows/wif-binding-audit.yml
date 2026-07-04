@@ -39,6 +39,7 @@ jobs:
       CI_SA: gh-ci-runner@stock-trading-498512.iam.gserviceaccount.com
       PROJECT: stock-trading-498512
     steps:
+      - uses: actions/checkout@v4  # required for the local ./.github/actions/gcp-wif-auth composite action below
       - name: Gate on opt-in + WIF
         id: guard
         run: |
@@ -50,15 +51,12 @@ jobs:
             echo "::notice::WIF binding audit disabled (default). To enable: grant the WIF SA roles/iam.workloadIdentityPoolViewer + iam.serviceAccounts.getIamPolicy on gh-ci-runner@, and set vars.RUN_WIF_AUDIT=true (+ WIF vars). ops/RUNBOOK.md §25 E1."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
-      - name: Authenticate to GCP (keyless, WIF)
+      - name: GCP WIF auth + gcloud setup
         if: steps.guard.outputs.skip == 'false'
-        uses: google-github-actions/auth@v2
+        uses: ./.github/actions/gcp-wif-auth
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
-      - name: Set up gcloud
-        if: steps.guard.outputs.skip == 'false'
-        uses: google-github-actions/setup-gcloud@v2
       - name: Assert the WIF binding is scoped to this repo
         if: steps.guard.outputs.skip == 'false'
         env:
@@ -123,11 +121,7 @@ jobs:
           if [ -n "$problems" ]; then
             msg="🔐 Stock-Trading WIF binding audit FAILED:$problems. The keyless-CI trust boundary may be fork-permissive — see infra/terraform/wif.tf + RUNBOOK §25 E1. Tighten in the Console immediately."
             echo "::error::$msg"
-            if [ -n "${WEBHOOK_URL:-}" ]; then
-              curl -fsS -X POST -H 'Content-Type: application/json' \
-                --data "$(printf '%s' "$msg" | python3 -c 'import json,sys;print(json.dumps({"text":sys.stdin.read()}))')" \
-                "$WEBHOOK_URL" || echo "::warning::webhook post failed (audit still failed the run)."
-            fi
+            scripts/notify_webhook.sh "$msg"
             exit 1
           fi
           echo "OK: WIF binding is scoped to $EXPECTED_REPO (provider condition + repo-scoped principalSet)."

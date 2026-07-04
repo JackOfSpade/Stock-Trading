@@ -36,6 +36,7 @@ jobs:
       SRC: gs://stock-trading-backups
       DEST: ${{ secrets.OFFSITE_BACKUP_GCS }}
     steps:
+      - uses: actions/checkout@v4  # required for the local ./.github/actions/gcp-wif-auth composite action below
       - name: Gate on opt-in + WIF
         id: guard
         run: |
@@ -47,15 +48,12 @@ jobs:
             echo "::notice::Off-site backup disabled (default). To enable: set secret OFFSITE_BACKUP_GCS to an OFF-PROJECT gs:// bucket, grant the WIF SA storage.objectViewer on gs://stock-trading-backups + objectAdmin on the destination, and set the WIF vars. ops/RUNBOOK.md §27."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
-      - name: Authenticate to GCP (keyless, WIF)
+      - name: GCP WIF auth + gcloud setup (provides gsutil)
         if: steps.guard.outputs.skip == 'false'
-        uses: google-github-actions/auth@v2
+        uses: ./.github/actions/gcp-wif-auth
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
-      - name: Set up gcloud (provides gsutil)
-        if: steps.guard.outputs.skip == 'false'
-        uses: google-github-actions/setup-gcloud@v2
       - name: Mirror the latest snapshot off-project
         if: steps.guard.outputs.skip == 'false'
         env:
@@ -70,10 +68,6 @@ jobs:
           else
             msg="🗄 Stock-Trading OFF-SITE backup mirror FAILED ($SRC -> $DEST). The off-project copy is stale — the events/ops truth has no out-of-trust-domain backup until this is fixed. See ops/RUNBOOK.md §27."
             echo "::error::$msg"
-            if [ -n "${WEBHOOK_URL:-}" ]; then
-              curl -fsS -X POST -H 'Content-Type: application/json' \
-                --data "$(printf '%s' "$msg" | python3 -c 'import json,sys;print(json.dumps({"text":sys.stdin.read()}))')" \
-                "$WEBHOOK_URL" || echo "::warning::webhook post failed (mirror still failed the run)."
-            fi
+            scripts/notify_webhook.sh "$msg"
             exit 1
           fi

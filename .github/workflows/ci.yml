@@ -42,6 +42,10 @@ jobs:
         run: python scripts/split_strategy.py --check
       - name: cadence single-source (cadence.yaml ⇄ 12/15 SQL ⇄ plan headings)
         run: python scripts/check_cadence_consistency.py
+      - name: autonomy-stage single-source (autonomy_levels.yaml ⇄ prose/SQL citations)
+        run: python scripts/check_autonomy_consistency.py
+      - name: auto-merge decision logic (CI-gate + delete-safety fixtures — 2026-07-04 code-quality audit)
+        run: bash tests/test_auto_merge_logic.sh
 
   lint:
     name: ruff (informational)
@@ -97,20 +101,12 @@ jobs:
       - name: Install dbt (pinned via constraints — RUNBOOK §25 C3)
         run: pip install --quiet -c requirements-ci.txt dbt-core dbt-bigquery
       - name: Write a CI profile (no creds — parse does not connect)
+        # dbt/profiles.ci.yml is the single checked-in source for this profile (2026-07-04 code-quality
+        # audit — this job and dbt-parity's equivalent step previously each wrote the same content via
+        # an inline heredoc, byte-for-byte duplicated with no single source of truth).
         run: |
           mkdir -p ~/.dbt
-          cat > ~/.dbt/profiles.yml <<'YAML'
-          stock_trading:
-            target: ci
-            outputs:
-              ci:
-                type: bigquery
-                method: oauth
-                project: stock-trading-498512
-                dataset: state
-                location: US
-                threads: 4
-          YAML
+          cp dbt/profiles.ci.yml ~/.dbt/profiles.yml
       - name: dbt deps + parse
         working-directory: dbt
         run: |
@@ -168,34 +164,22 @@ jobs:
         if: steps.guard.outputs.skip == 'false'
         with:
           python-version: '3.11'
-      - name: Authenticate to GCP (keyless, WIF)
+      - name: GCP WIF auth + gcloud setup (provides the bq CLI)
         if: steps.guard.outputs.skip == 'false'
-        uses: google-github-actions/auth@v2
+        uses: ./.github/actions/gcp-wif-auth
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
-      - name: Set up gcloud (provides the bq CLI)
-        if: steps.guard.outputs.skip == 'false'
-        uses: google-github-actions/setup-gcloud@v2
       - name: Install dbt (pinned via constraints — RUNBOOK §25 C3)
         if: steps.guard.outputs.skip == 'false'
         run: pip install --quiet -c requirements-ci.txt dbt-core dbt-bigquery
       - name: dbt profile (ADC from WIF via oauth)
         if: steps.guard.outputs.skip == 'false'
+        # dbt/profiles.ci.yml is the single checked-in source for this profile (2026-07-04
+        # code-quality audit — see the `dbt` job's equivalent step above).
         run: |
           mkdir -p ~/.dbt
-          cat > ~/.dbt/profiles.yml <<'YAML'
-          stock_trading:
-            target: ci
-            outputs:
-              ci:
-                type: bigquery
-                method: oauth
-                project: stock-trading-498512
-                dataset: state
-                location: US
-                threads: 4
-          YAML
+          cp dbt/profiles.ci.yml ~/.dbt/profiles.yml
       - name: dbt deps + compile (no build — read-only)
         if: steps.guard.outputs.skip == 'false'
         working-directory: dbt
@@ -250,15 +234,12 @@ jobs:
             echo "::notice::SQL dry-run disabled (default). To enable: set vars.RUN_SQL_DRYRUN=true, set the WIF vars, grant the CI SA DDL perms, and enable cloudresourcemanager.googleapis.com — see ops/RUNBOOK.md §6. dbt parse remains the always-on SQL gate."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
-      - name: Authenticate to GCP (keyless, WIF)
+      - name: GCP WIF auth + gcloud setup
         if: steps.guard.outputs.skip == 'false'
-        uses: google-github-actions/auth@v2
+        uses: ./.github/actions/gcp-wif-auth
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
-      - name: Set up gcloud
-        if: steps.guard.outputs.skip == 'false'
-        uses: google-github-actions/setup-gcloud@v2
       - name: Dry-run every bigquery/*.sql
         if: steps.guard.outputs.skip == 'false'
         run: |

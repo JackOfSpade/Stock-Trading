@@ -1,0 +1,60 @@
+name: 'GCP WIF auth + gcloud setup'
+description: >-
+  Keyless Workload Identity Federation auth (google-github-actions/auth@v2) followed by gcloud CLI
+  setup (google-github-actions/setup-gcloud@v2) — the boilerplate shared by every workflow that talks
+  to GCP as the read-only WIF CI identity (ops/RUNBOOK.md §6). Extracted 2026-07-04 (code-quality
+  audit): this exact "gate on WIF vars -> auth -> setup-gcloud" triptych was duplicated near-verbatim
+  across 7 workflow occurrences (alert-relay.yml; ci.yml's dbt-parity + sql-validate jobs;
+  dashboard.yml; keyless-sa-audit.yml; offsite-backup.yml; wif-binding-audit.yml).
+#
+# CALLER CONTRACT: each of the 7 call sites has its OWN distinct extra gating condition (an opt-in
+# repo var, a secret, a mode) beyond "are the WIF vars set" — those stay in the calling workflow's own
+# guard step, unchanged. A composite action cannot set a job-level `if:` from inside itself, so the
+# caller should keep gating the step that `uses:` this action (e.g.
+# `if: steps.guard.outputs.skip == 'false'`), exactly as it already gated its own inline auth/gcloud
+# steps before this extraction. As a defense-in-depth no-op, this action ALSO checks its own
+# `workload_identity_provider` / `service_account` inputs are non-empty before running auth/gcloud, and
+# exposes that as `configured` / `skip` outputs — so it is also safe to invoke unconditionally.
+
+inputs:
+  workload_identity_provider:
+    description: 'vars.GCP_WIF_PROVIDER. Empty means "not configured" — this action no-ops.'
+    required: false
+    default: ''
+  service_account:
+    description: 'vars.GCP_WIF_SERVICE_ACCOUNT. Empty means "not configured" — this action no-ops.'
+    required: false
+    default: ''
+
+outputs:
+  configured:
+    description: '"true" if both WIF inputs were non-empty and auth + gcloud setup ran; "false" if this action no-op''d.'
+    value: ${{ steps.check.outputs.configured }}
+  skip:
+    description: 'Inverse of `configured` — matches the `steps.guard.outputs.skip` naming convention already used by every calling workflow.'
+    value: ${{ steps.check.outputs.skip }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Check WIF inputs are non-empty
+      id: check
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.workload_identity_provider }}" ] && [ -n "${{ inputs.service_account }}" ]; then
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "::notice::gcp-wif-auth: workload_identity_provider/service_account not both set — no-op (no auth, no gcloud setup)."
+          echo "configured=false" >> "$GITHUB_OUTPUT"
+          echo "skip=true" >> "$GITHUB_OUTPUT"
+        fi
+    - name: Authenticate to GCP (keyless, WIF)
+      if: steps.check.outputs.configured == 'true'
+      uses: google-github-actions/auth@v2
+      with:
+        workload_identity_provider: ${{ inputs.workload_identity_provider }}
+        service_account: ${{ inputs.service_account }}
+    - name: Set up gcloud
+      if: steps.check.outputs.configured == 'true'
+      uses: google-github-actions/setup-gcloud@v2

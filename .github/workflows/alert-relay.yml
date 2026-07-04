@@ -39,6 +39,12 @@ on:
         description: 'alerts | orders | heartbeat | catchup'
         required: false
         default: 'alerts'
+        type: choice
+        options:
+          - alerts
+          - orders
+          - heartbeat
+          - catchup
 
 permissions:
   contents: read
@@ -53,6 +59,65 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Self-check — on.schedule crons stay in sync with the mode-dispatch step
+        # The 4 cron literals in `on.schedule` above are re-typed as string comparisons in the "Pick
+        # mode from the trigger" step below — GitHub Actions `on:` triggers are static YAML (no
+        # expressions allowed), so that duplication can't be removed outright. Nothing else kept the
+        # two lists in sync, so a cron edited in one place and not the other could silently misroute a
+        # run (e.g. reclassify the weekly heartbeat canary as best-effort "alerts" via the mode-dispatch
+        # step's `else` branch). Runs on EVERY trigger, before the mode-pick step, unconditionally (not
+        # gated behind the WIF/webhook guard) — it only reads this file, no secrets/creds needed — and
+        # fails loud on drift instead of relying on someone to notice a wrong `::notice::` in a log.
+        run: |
+          set -euo pipefail
+          FILE=".github/workflows/alert-relay.yml"
+
+          # 1. Every cron literal actually declared in on.schedule (ground truth — what
+          #    github.event.schedule is set to at runtime). Anchored on the YAML list-item form
+          #    (optional indent, then "- cron: '...'") so this doesn't also match the grep pattern's
+          #    OWN source text a few lines below (which contains the substring "cron: '" too).
+          mapfile -t schedule_crons < <(grep -oP "^\s*-\s*cron:\s*'\K[^']+" "$FILE")
+          echo "on.schedule crons: ${schedule_crons[*]}"
+
+          # 2. Every cron literal the mode-dispatch step actually compares github.event.schedule
+          #    against.
+          mapfile -t dispatch_crons < <(grep -oP 'github\.event\.schedule \}\}"\s*=\s*"\K[^"]+' "$FILE")
+          echo "mode-dispatch compared crons: ${dispatch_crons[*]}"
+
+          # Check A: every compared cron must be a real on.schedule cron. An orphaned/stale comparison
+          # means on.schedule changed (or a typo crept in) and the dispatch step's case wasn't updated
+          # to match — that branch can now never fire.
+          stale=""
+          for c in "${dispatch_crons[@]}"; do
+            found=0
+            for s in "${schedule_crons[@]}"; do [ "$c" = "$s" ] && found=1 && break; done
+            [ "$found" -eq 0 ] && stale="$stale [$c]"
+          done
+
+          # Check B: at most ONE on.schedule cron may lack an explicit comparison — that's the
+          # documented implicit-default case (the fast */30 alerts cron falls through to the `else`
+          # branch). More than one uncompared cron means some OTHER schedule was added without a
+          # matching mode branch, so it too would silently default to mode=alerts.
+          unhandled=""
+          unhandled_count=0
+          for s in "${schedule_crons[@]}"; do
+            found=0
+            for c in "${dispatch_crons[@]}"; do [ "$c" = "$s" ] && found=1 && break; done
+            if [ "$found" -eq 0 ]; then
+              unhandled="$unhandled [$s]"
+              unhandled_count=$((unhandled_count + 1))
+            fi
+          done
+
+          if [ -n "$stale" ]; then
+            echo "::error::mode-dispatch step compares github.event.schedule against cron(s) not present in on.schedule (stale/drifted):$stale — update the case in alert-relay.yml to match the current on.schedule crons."
+            exit 1
+          fi
+          if [ "$unhandled_count" -gt 1 ]; then
+            echo "::error::on.schedule has $unhandled_count cron(s) with no explicit mode-dispatch branch (only the single fast/alerts cron should be implicit):$unhandled — a drifted or newly-added cron would silently default to mode=alerts. Add an explicit branch in the mode-dispatch step."
+            exit 1
+          fi
+          echo "OK: on.schedule <-> mode-dispatch crons are in sync (${#schedule_crons[@]} scheduled, ${#dispatch_crons[@]} explicit branch(es), $unhandled_count implicit default)."
       - name: Gate on WIF + webhook secret
         id: guard
         env:
@@ -69,6 +134,12 @@ jobs:
       - name: Pick mode from the trigger
         id: mode
         if: steps.guard.outputs.skip == 'false'
+        env:
+          # Passed through env, not spliced inline into the run: body, to avoid the GitHub Actions
+          # script-injection anti-pattern of substituting an untyped workflow_dispatch string directly
+          # into a shell command via ${{ }} — the same correct pattern the later `Relay` step already
+          # uses for RELAY_MODE.
+          MODE_INPUT: ${{ github.event.inputs.mode }}
         run: |
           # The daily 13:05 UTC schedule is the staged-order reminder; the weekly Monday 13:15 UTC
           # schedule is the webhook liveness heartbeat; the daily 04:30 UTC schedule is the
@@ -80,21 +151,18 @@ jobs:
           elif [ "${{ github.event.schedule }}" = "30 4 * * *" ]; then
             echo "mode=catchup" >> "$GITHUB_OUTPUT"
           else
-            echo "mode=${{ github.event.inputs.mode || 'alerts' }}" >> "$GITHUB_OUTPUT"
+            echo "mode=${MODE_INPUT:-alerts}" >> "$GITHUB_OUTPUT"
           fi
       - uses: actions/setup-python@v5
         if: steps.guard.outputs.skip == 'false'
         with:
           python-version: '3.11'
-      - name: Authenticate to GCP (keyless, WIF)
+      - name: GCP WIF auth + gcloud setup (provides the bq CLI)
         if: steps.guard.outputs.skip == 'false'
-        uses: google-github-actions/auth@v2
+        uses: ./.github/actions/gcp-wif-auth
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
-      - name: Set up gcloud (provides the bq CLI)
-        if: steps.guard.outputs.skip == 'false'
-        uses: google-github-actions/setup-gcloud@v2
       - name: Relay
         if: steps.guard.outputs.skip == 'false'
         env:

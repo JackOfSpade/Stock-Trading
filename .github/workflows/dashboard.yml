@@ -48,15 +48,12 @@ jobs:
         if: steps.guard.outputs.skip == 'false'
         with:
           python-version: '3.11'
-      - name: Authenticate to GCP (keyless, WIF)
+      - name: GCP WIF auth + gcloud setup (provides the bq CLI)
         if: steps.guard.outputs.skip == 'false'
-        uses: google-github-actions/auth@v2
+        uses: ./.github/actions/gcp-wif-auth
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
-      - name: Set up gcloud (provides the bq CLI)
-        if: steps.guard.outputs.skip == 'false'
-        uses: google-github-actions/setup-gcloud@v2
       - name: Generate dashboard
         if: steps.guard.outputs.skip == 'false'
         run: python ops/dashboard/generate_dashboard.py

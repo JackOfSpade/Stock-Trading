@@ -47,6 +47,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
+          # shellcheck source=../../scripts/auto_merge_decision.sh
+          source scripts/auto_merge_decision.sh
 
           # Drain EVERY un-merged claude/* branch, not just the one whose CI just
           # finished. The concurrency group (auto-merge-main) keeps only ONE run
@@ -66,7 +68,7 @@ jobs:
             br="${ref#origin/}"
 
             # Already contained in main (e.g. a prior run merged it): just clean up.
-            if git merge-base --is-ancestor "$ref" main; then
+            if is_ancestor_of "$ref" main; then
               merged_branches="$merged_branches $br"
               continue
             fi
@@ -78,12 +80,16 @@ jobs:
             # own CI completes green. The lint job is continue-on-error (advisory), so
             # the *run* conclusion is "success" whenever the required test job passes —
             # exactly the gate we want. Fail closed: any non-success (in-progress,
-            # failure, missing, or API error) skips the branch.
+            # failure, missing, or API error) skips the branch. ci_conclusion_from_json /
+            # is_ci_green (scripts/auto_merge_decision.sh, sourced above) hold this
+            # fail-closed logic and are exercised by tests/test_auto_merge_logic.sh — not
+            # just actionlint/shellcheck syntax checks.
             sha="$(git rev-parse "$ref")"
-            ci_conclusion="$(gh api \
+            runs_json="$(gh api \
               "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$sha&per_page=1" \
-              --jq '.workflow_runs[0].conclusion // "none"' 2>/dev/null || echo "error")"
-            if [ "$ci_conclusion" != "success" ]; then
+              2>/dev/null || echo "")"
+            ci_conclusion="$(ci_conclusion_from_json "$runs_json")"
+            if ! is_ci_green "$ci_conclusion"; then
               echo "::notice::Skipping $br — CI for ${sha:0:7} is '$ci_conclusion', not success. It merges once its CI run completes green."
               continue
             fi
@@ -94,6 +100,10 @@ jobs:
               merged_branches="$merged_branches $br"
             else
               git merge --abort || true
+              if git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1; then
+                echo "::error::merge abort failed for $br — repo still mid-merge (MERGE_HEAD present); stopping the drain now to avoid cascading false conflicts on subsequent branches in this loop." >&2
+                exit 1
+              fi
               echo "::warning::Unresolved conflict merging $br (likely an in-place state file)."
               gh pr create --base main --head "$br" \
                 --title "Auto-merge conflict: $br" \
@@ -117,7 +127,7 @@ jobs:
           # merge window is never deleted unmerged — it's left for the next run.
           for br in $merged_branches; do
             git fetch origin "$br" >/dev/null 2>&1 || continue
-            if git merge-base --is-ancestor "origin/$br" main; then
+            if is_ancestor_of "origin/$br" main; then
               git push origin --delete "$br" || true
             else
               echo "::warning::$br advanced during the merge; not deleting (next run merges it)."
