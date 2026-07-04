@@ -6,4 +6,7 @@
 -- carry no limit, and options/other non-craftable orders carry a manual block with no instruction_id.
 SELECT item_key, ticker, side, qty
 FROM {{ ref('open_orders') }}
-WHERE side NOT IN ('BUY', 'SELL') OR qty IS NULL OR qty <= 0
+-- `side NOT IN (...)` alone is NULL (not TRUE) when side IS NULL, per SQL three-valued
+-- logic, so a staged order with a missing/malformed side would silently pass this test
+-- (2026-07-04 audit finding). The explicit `side IS NULL` disjunct closes that gap.
+WHERE side IS NULL OR side NOT IN ('BUY', 'SELL') OR qty IS NULL OR qty <= 0

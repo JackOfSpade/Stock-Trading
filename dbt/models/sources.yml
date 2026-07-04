@@ -309,6 +309,28 @@ sources:
           - name: ingest_ts
             description: Ingest timestamp — the latest-wins discriminator in state.account_latest.
 
+      - name: trading_control
+        description: >
+          Append-only halt-all control (bigquery/23_trading_control.sql). Seeded exactly once so it
+          is never empty; latest row by control_ts wins (state.trading_control_latest). dbt does NOT
+          own it — mutated by operator INSERT (manual halt/resume) or an auto-breaker's INSERT.
+          Added 2026-07-04 (audit finding): feeds the trading-halt gate models below.
+        columns:
+          - name: control_id
+            description: Primary key (GENERATE_UUID default).
+            tests:
+              - not_null
+          - name: control_ts
+            description: Insert time — the latest-wins discriminator.
+            tests:
+              - not_null
+          - name: halt_all
+            description: TRUE = trading halted. Manual override clears an auto-halt via a new manual-mode row.
+            tests:
+              - not_null
+          - name: mode
+            description: "'manual' (operator-set) or 'auto' (a monitor/breaker set it)."
+
   - name: state_external
     project: stock-trading-498512
     dataset: state

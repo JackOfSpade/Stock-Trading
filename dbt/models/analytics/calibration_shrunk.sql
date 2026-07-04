@@ -5,20 +5,28 @@
 -- calibration_summary.win_rate alone; deprecates the gated BQML conviction_model entirely.
 
 WITH base AS (
-  SELECT COALESCE(conviction, '(unscored)') AS conviction, ANY_VALUE(conviction_ordinal) AS ord,
-    COUNT(*) AS go_theses, COUNTIF(position_closed) AS closed, COUNTIF(was_profitable) AS wins
-  FROM {{ ref('conviction_features') }}
-  GROUP BY conviction
+  -- ref() calibration_summary instead of recomputing the identical per-conviction-tier aggregation
+  -- (2026-07-04 audit finding, dbt-internal only): calibration_summary already exposes
+  -- conviction/ord/go_theses/closed/wins from the same {{ ref('conviction_features') }} source.
+  SELECT conviction, ord, go_theses, closed, wins
+  FROM {{ ref('calibration_summary') }}
 ),
 prior AS (SELECT 2.0 AS prior_a, 2.0 AS prior_b),
 wilson AS (
   SELECT b.*, p.prior_a, p.prior_b,
     SAFE_DIVIDE(b.wins, b.closed) AS p_hat,
-    SAFE_DIVIDE(SAFE_DIVIDE(b.wins, b.closed) + (1.96*1.96)/(2*b.closed), 1 + (1.96*1.96)/b.closed) AS wilson_center,
+    -- 2026-07-04 audit finding (HIGH, mirrored live in bigquery/25_calibration_shrinkage.sql): every
+    -- division by b.closed below is now SAFE_DIVIDE, not just the outermost one. BigQuery evaluates a
+    -- SAFE_DIVIDE call's ARGUMENTS before the call itself guards anything, so a raw `/closed` nested
+    -- inside an outer SAFE_DIVIDE still hard-errors the whole query when closed=0 (a fresh/'(unscored)'
+    -- conviction tier) — defeating the "closed=0 has no Wilson interval; return NULL" intent documented
+    -- below and breaking every consumer, including the dbt-parity CI job's SELECT over this model.
+    SAFE_DIVIDE(SAFE_DIVIDE(b.wins, b.closed) + SAFE_DIVIDE(1.96*1.96, 2*b.closed),
+                1 + SAFE_DIVIDE(1.96*1.96, b.closed)) AS wilson_center,
     SAFE_DIVIDE(
       1.96 * SQRT(SAFE_DIVIDE(SAFE_DIVIDE(b.wins, b.closed) * (1 - SAFE_DIVIDE(b.wins, b.closed)), b.closed)
-                  + (1.96*1.96)/(4*b.closed*b.closed)),
-      1 + (1.96*1.96)/b.closed
+                  + SAFE_DIVIDE(1.96*1.96, 4*b.closed*b.closed)),
+      1 + SAFE_DIVIDE(1.96*1.96, b.closed)
     ) AS wilson_margin
   FROM base b, prior p
 )

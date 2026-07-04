@@ -122,9 +122,19 @@ BEGIN
       SELECT entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title,
              CONCAT(COALESCE(title,''), '\n', COALESCE(body_md,'')) AS full_content
       FROM `stock-trading-498512.events.decision_log` dl
-      WHERE NOT EXISTS (
-        SELECT 1 FROM `stock-trading-498512.analytics.decision_embeddings` e
-        WHERE e.entry_id = dl.entry_id AND e.chunk_index = 0 AND e.embed_status = '' AND ARRAY_LENGTH(e.embedding) > 0)
+      WHERE (
+        -- Missing/errored chunk 0 (never fully chunked, or chunk 0 itself failed).
+        NOT EXISTS (
+          SELECT 1 FROM `stock-trading-498512.analytics.decision_embeddings` e
+          WHERE e.entry_id = dl.entry_id AND e.chunk_index = 0 AND e.embed_status = '' AND ARRAY_LENGTH(e.embedding) > 0)
+        -- Broadened 2026-07-04 (audit finding): chunk 0 succeeding used to permanently mask a LATER
+        -- chunk (index >= 1) that errored — that entry was never re-selected here even though
+        -- state.embedding_health's per_entry logic below already flags it unhealthy (bad_chunks > 0)
+        -- forever. Catch any entry with at least one non-ok chunk, not just a bad/missing chunk 0.
+        OR EXISTS (
+          SELECT 1 FROM `stock-trading-498512.analytics.decision_embeddings` e
+          WHERE e.entry_id = dl.entry_id AND NOT (e.embed_status = '' AND ARRAY_LENGTH(e.embedding) > 0))
+      )
     ),
     chunked AS (
       SELECT entry_id, entry_date, strategy, entry_type, sub_pattern, decision, conviction, ticker, title,

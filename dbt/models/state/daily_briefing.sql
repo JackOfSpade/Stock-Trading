@@ -18,9 +18,11 @@ UNION ALL
 SELECT 'KILL_FLAG', strategy, strategy, as_of_date,
        CONCAT('drawdown_kill=', CAST(drawdown_kill AS STRING),
               ' runaway=', CAST(runaway_review AS STRING),
-              ' m2m=', CAST(m2m_underperf_review AS STRING))
+              ' m2m=', CAST(m2m_underperf_review AS STRING),
+              ' interim_underperf=', CAST(interim_underperf_warning AS STRING))
 FROM {{ ref('kill_flags') }}
-WHERE drawdown_kill OR runaway_review OR m2m_underperf_review
+-- interim_underperf_warning added 2026-07-04 (audit finding) — see bigquery/05_state_briefing.sql.
+WHERE drawdown_kill OR runaway_review OR m2m_underperf_review OR interim_underperf_warning
 
 UNION ALL
 

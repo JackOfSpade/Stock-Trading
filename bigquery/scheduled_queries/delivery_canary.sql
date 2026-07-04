@@ -31,7 +31,21 @@
 -- (that IS the step-1 delivery-failure alarm). Depends on bigquery/18_stack_review_fixes.sql
 -- (ops.alerts.notified_ts) + a deployed alert_emailer.gs that stamps notified_ts.
 BEGIN
-  -- 1. Assert the prior week's canary was delivered (notified_ts stamped).
+  -- 1. Emit this week's canary FIRST (resolved + unnotified so it is forwarded-and-stamped but never
+  -- an open alert). Reordered ahead of the assertion below (2026-07-04 audit finding): the assertion's
+  -- RAISE previously ran first and — RAISE terminating the script — aborted before this INSERT ran,
+  -- so a SUSTAINED delivery outage skipped emitting a fresh canary every other week, halving the
+  -- canary's effective detection cadence. This INSERT is independent of the assertion below, so
+  -- running it unconditionally first means it always happens, RAISE or not.
+  INSERT INTO `stock-trading-498512.ops.alerts`
+    (severity, source, category, message, payload, resolved, resolved_ts, notified_ts)
+  VALUES (
+    'warning', 'scheduled.canary', 'delivery_canary',
+    CONCAT('[CANARY] Weekly alert-delivery self-test — no action needed (', CAST(CURRENT_DATE('America/Denver') AS STRING), ').'),
+    SAFE.PARSE_JSON('{"canary":true}'),
+    TRUE, CURRENT_TIMESTAMP(), NULL);
+
+  -- 2. Assert the prior week's canary was delivered (notified_ts stamped).
   IF EXISTS (
     SELECT 1 FROM `stock-trading-498512.ops.alerts`
     WHERE source = 'scheduled.canary' AND category = 'delivery_canary'
@@ -50,13 +64,4 @@ BEGIN
          AND alert_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 9 DAY)));
     RAISE USING MESSAGE = 'STOCK-TRADING delivery canary FAILED — prior weekly canary undelivered (notified_ts NULL).';
   END IF;
-
-  -- 2. Emit this week's canary (resolved + unnotified so it is forwarded-and-stamped but never an open alert).
-  INSERT INTO `stock-trading-498512.ops.alerts`
-    (severity, source, category, message, payload, resolved, resolved_ts, notified_ts)
-  VALUES (
-    'warning', 'scheduled.canary', 'delivery_canary',
-    CONCAT('[CANARY] Weekly alert-delivery self-test — no action needed (', CAST(CURRENT_DATE('America/Denver') AS STRING), ').'),
-    SAFE.PARSE_JSON('{"canary":true}'),
-    TRUE, CURRENT_TIMESTAMP(), NULL);
 END;

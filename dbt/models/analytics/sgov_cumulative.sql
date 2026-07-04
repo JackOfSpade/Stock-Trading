@@ -8,11 +8,7 @@ WITH days AS (
 ),
 j AS (
   SELECT d.as_of_date,
-    COALESCE(
-      sg.r_sgov,
-      LAST_VALUE(sg.r_sgov IGNORE NULLS) OVER (
-        ORDER BY d.as_of_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW),
-      0) AS r_sgov
+    {{ sgov_forward_fill('sg.r_sgov', 'd.as_of_date') }} AS r_sgov
   FROM days d
   LEFT JOIN {{ ref('sgov_daily_return') }} sg USING (as_of_date)
 )

@@ -93,17 +93,29 @@ WHERE CASE r.schedule
 -- routines' after-close completion deadline (the DEADLINE GUARD — see below). Non-daily routines are
 -- shown for observation but excluded from the alarm (their predicted day can mismatch the real trigger).
 CREATE OR REPLACE VIEW `stock-trading-498512.state.cadence_watch` AS
+WITH watch AS (
+  -- monitored/ran_completed_today computed ONCE per row here and reused below (2026-07-04 audit
+  -- finding: needs_attention used to re-embed byte-identical copies of both EXISTS subqueries,
+  -- requiring 4 copies of essentially 2 checks to be kept in sync by hand).
+  SELECT
+    e.routine,
+    e.schedule,
+    e.today,
+    -- monitored = the routine has demonstrably adopted run-logging recently, so a gap is meaningful
+    EXISTS(SELECT 1 FROM `stock-trading-498512.ops.run_log` r
+           WHERE r.routine = e.routine AND r.status = 'completed'
+             AND r.run_date >= DATE_SUB(e.today, INTERVAL 14 DAY)) AS monitored,
+    EXISTS(SELECT 1 FROM `stock-trading-498512.ops.run_log` r
+           WHERE r.routine = e.routine AND r.status = 'completed'
+             AND r.run_date = e.today) AS ran_completed_today
+  FROM `stock-trading-498512.state.cadence_expected_today` e
+)
 SELECT
   e.routine,
   e.schedule,
   e.today,
-  -- monitored = the routine has demonstrably adopted run-logging recently, so a gap is meaningful
-  EXISTS(SELECT 1 FROM `stock-trading-498512.ops.run_log` r
-         WHERE r.routine = e.routine AND r.status = 'completed'
-           AND r.run_date >= DATE_SUB(e.today, INTERVAL 14 DAY)) AS monitored,
-  EXISTS(SELECT 1 FROM `stock-trading-498512.ops.run_log` r
-         WHERE r.routine = e.routine AND r.status = 'completed'
-           AND r.run_date = e.today) AS ran_completed_today,
+  e.monitored,
+  e.ran_completed_today,
   -- needs_attention = the ALARM signal (drives cadence_check.sql + the dashboard panel). Scoped to the
   -- DAILY routines only (D1/D2/D3): their expected run-day is unambiguous. The weekly/monthly/quarterly/
   -- annual predictions (Sunday / first-trading-day) are inferred and may not match the real trigger day
@@ -111,12 +123,8 @@ SELECT
   -- Those rows stay VISIBLE here (with monitored/ran_completed_today) for manual observation, but do not
   -- raise — promote them into the alarm set only after confirming their exact trigger day.
   (e.schedule IN ('daily_trading','daily_all')
-   AND EXISTS(SELECT 1 FROM `stock-trading-498512.ops.run_log` r
-          WHERE r.routine = e.routine AND r.status = 'completed'
-            AND r.run_date >= DATE_SUB(e.today, INTERVAL 14 DAY))
-   AND NOT EXISTS(SELECT 1 FROM `stock-trading-498512.ops.run_log` r
-                  WHERE r.routine = e.routine AND r.status = 'completed'
-                    AND r.run_date = e.today)
+   AND e.monitored
+   AND NOT e.ran_completed_today
    -- DEADLINE GUARD (2026-06-25): only alarm AFTER the daily routines' real after-close completion
    -- deadline has passed in America/Denver. Without this, ANY execution of this view / cadence_check.sql
    -- BEFORE the routines have run today (an off-schedule, manual, or duplicate run) flags D1/D2/D3 as
@@ -127,10 +135,16 @@ SELECT
    -- scheduled run. Computed in the America/Denver named zone ⇒ DST-safe (no hardcoded UTC offset). Pure
    -- wall-clock, NOT gated on is_trading_day, so D3's daily_all miss-detection still works on
    -- weekends/holidays (D3 runs every calendar day).
+   --
+   -- NOTE: this must stay literally `DATETIME(e.today, TIME 'HH:MM:SS')` — scripts/check_cadence_
+   -- consistency.py's SQL_DEADLINE regex parses this exact shape to cross-check ops/cadence.yaml's
+   -- cadence_watch_deadline_local against this literal (check D). The `watch` CTE is aliased `e` below
+   -- specifically to preserve this after the 2026-07-04 dedup refactor (it used to be the outer
+   -- state.cadence_expected_today alias directly).
    AND DATETIME(CURRENT_TIMESTAMP(), 'America/Denver') >= DATETIME(e.today, TIME '21:00:00')
   ) AS needs_attention,
   CURRENT_TIMESTAMP() AS checked_at
-FROM `stock-trading-498512.state.cadence_expected_today` e;
+FROM watch e;
 
 -- ===== ops.sp_assert_deps — hard dependency gate for action routines (C1) =====
 -- An action routine calls this at START with its upstream routine IDs. If a MONITORED upstream (one that

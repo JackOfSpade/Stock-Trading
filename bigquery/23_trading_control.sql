@@ -125,9 +125,16 @@ BEGIN
     SELECT AS STRUCT trading_enabled, halt_reason FROM `stock-trading-498512.state.trading_enabled`
   );
   IF NOT v_enabled THEN
+    -- Message kept STABLE, not folding in in_routine or v_reason (2026-07-04 audit finding, cross-
+    -- cutting): v_reason embeds a daily-changing drawdown % and in_routine differs per caller
+    -- (D2/D2a/W4/M4/Q4/A3) — either one varying the `message` text defeats sp_raise_alert_once's
+    -- exact-match (category, message) dedup, so a SUSTAINED halt on this single highest-stakes gate
+    -- would accumulate a fresh unresolved critical alert per day/routine instead of deduping to one,
+    -- with no auto-resolve path. The dynamic detail still reaches the operator via the payload (and
+    -- via the RAISE message below, which is per-call and not subject to alert dedup).
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'critical', in_routine, 'trading_halted',
-      FORMAT('%s blocked from staging orders: trading is HALTED (%s).', in_routine, COALESCE(v_reason, 'unspecified')),
+      'Order staging blocked: trading is HALTED. See payload for the triggering routine and reason.',
       TO_JSON_STRING(STRUCT(in_routine AS routine, v_reason AS halt_reason)));
     RAISE USING MESSAGE = FORMAT(
       '%s: trading_enabled=FALSE (%s) — order staging aborted. Investigate state.trading_enabled / state.trading_control_latest before retrying.',
@@ -150,6 +157,12 @@ CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_order_guard`
     SELECT
       p_qty * p_limit_price AS notional,
       (SELECT sizing_base_2pct FROM `stock-trading-498512.analytics.strategy_nav` WHERE strategy = p_strategy) AS sizing_base,
+      -- Latest known account-level NAV (2026-07-04 audit finding): SGOV sweep/cover orders are sized
+      -- by hand (floor_to_4dp/ceil_to_4dp arithmetic, Operating_Protocols.md §13.E) against the WHOLE
+      -- book, not one strategy's 2%-sizing sleeve, so the strategy-scoped notional/sizing_base check
+      -- below is deliberately excluded for SGOV — but that left SGOV orders with NO magnitude bound at
+      -- all besides the 0.2% price-band check. account_nav gives SGOV a real (if generous) backstop.
+      (SELECT nav FROM `stock-trading-498512.state.account_latest`) AS account_nav,
       SAFE_DIVIDE(ABS(p_limit_price - p_last_price), NULLIF(p_last_price, 0)) AS pct_off_last
   ),
   checks AS (
@@ -164,7 +177,15 @@ CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_order_guard`
         IF(NOT p_is_sgov AND base.pct_off_last IS NOT NULL AND base.pct_off_last > 0.005,
            [FORMAT('limit %.4f is %.2f%% off last %.4f (equity band is 0.5%%)', p_limit_price, base.pct_off_last * 100, p_last_price)], []),
         IF(p_is_sgov AND base.pct_off_last IS NOT NULL AND base.pct_off_last > 0.002,
-           [FORMAT('SGOV limit %.4f is %.2f%% off last %.4f (SGOV band is 0.2%%)', p_limit_price, base.pct_off_last * 100, p_last_price)], [])
+           [FORMAT('SGOV limit %.4f is %.2f%% off last %.4f (SGOV band is 0.2%%)', p_limit_price, base.pct_off_last * 100, p_last_price)], []),
+        -- SGOV notional magnitude backstop (2026-07-04 audit finding, HIGH): a decimal/quantity slip in
+        -- the hand-computed sweep/cover math had no automated check besides the 0.2% price band. 1.10x
+        -- the latest known account NAV gives ample room for a genuine full-book sweep (SGOV can
+        -- legitimately hold ~100% of NAV) while still catching an order sized to buy/sell materially
+        -- more SGOV than the entire account is worth. Skips cleanly (no check) if account_latest has no
+        -- row yet, same defensive style as the sizing_base check above.
+        IF(p_is_sgov AND base.account_nav IS NOT NULL AND base.notional > 1.10 * base.account_nav,
+           [FORMAT('SGOV notional %.2f exceeds 1.10x the latest known account NAV (%.2f) — implausible magnitude for a sweep/cover', base.notional, 1.10 * base.account_nav)], [])
       ) AS reasons
     FROM base
   )
@@ -237,17 +258,26 @@ END;
 -- applied AFTER 10 in the DR-rebuild order — same "fix in a later file" pattern as 22_cash_flows.sql.
 -- Verified live (2026-07-03): zero drifted rows before this promotion, so it does not flip all_green.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.system_health` AS
+WITH alerts_summary AS (
+  -- Computed once and reused below (2026-07-04 audit finding: open_critical_alerts and the
+  -- identical subquery embedded in all_green were two hand-kept copies of the same COUNTIF,
+  -- requiring them to be kept in sync by hand in this load-bearing one-row health rollup).
+  SELECT
+    COUNTIF(NOT resolved AND severity = 'critical') AS open_critical_alerts,
+    COUNTIF(NOT resolved) AS open_alerts
+  FROM `stock-trading-498512.ops.alerts`
+)
 SELECT
   f.last_trading_day, f.last_mark_date, f.engine_through,
   f.marks_fresh, f.engine_fresh, f.d2_ran_last_trading_day,
   eh.is_healthy AS embeddings_healthy,
-  (SELECT COUNTIF(NOT resolved AND severity = 'critical') FROM `stock-trading-498512.ops.alerts`) AS open_critical_alerts,
-  (SELECT COUNTIF(NOT resolved) FROM `stock-trading-498512.ops.alerts`) AS open_alerts,
+  a.open_critical_alerts,
+  a.open_alerts,
   (SELECT COUNTIF(drawdown_kill OR runaway_review OR m2m_underperf_review) FROM `stock-trading-498512.perf.kill_flags`) AS firing_kill_flags,
   COALESCE((SELECT LOGICAL_OR(drifted) FROM `stock-trading-498512.state.position_reconciliation`), FALSE) AS position_drift_detected,
   (f.marks_fresh AND f.engine_fresh AND eh.is_healthy
-     AND (SELECT COUNTIF(NOT resolved AND severity = 'critical') FROM `stock-trading-498512.ops.alerts`) = 0
+     AND a.open_critical_alerts = 0
      AND NOT COALESCE((SELECT LOGICAL_OR(drifted) FROM `stock-trading-498512.state.position_reconciliation`), FALSE)
   ) AS all_green,
   CURRENT_TIMESTAMP() AS checked_at
-FROM `stock-trading-498512.state.freshness` f, `stock-trading-498512.state.embedding_health` eh;
+FROM `stock-trading-498512.state.freshness` f, `stock-trading-498512.state.embedding_health` eh, alerts_summary a;

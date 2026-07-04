@@ -1,0 +1,27 @@
+# CI dbt profile — checked in on purpose (2026-07-04, code-quality audit).
+#
+# Consumed by ci.yml's `dbt` (offline parse) and `dbt-parity` (compile, keyless WIF) jobs, which
+# previously each wrote this SAME content inline via a `cat > ~/.dbt/profiles.yml <<'YAML'` heredoc —
+# a byte-for-byte duplicate with no single source of truth. Both jobs now do:
+#   mkdir -p ~/.dbt && cp dbt/profiles.ci.yml ~/.dbt/profiles.yml
+#
+# NOT a duplicate of profiles.example.yml: that file is a human-facing TEMPLATE covering both the
+# owner's local `dev` (oauth, interactive) target and a documented `ci` target, with prose explaining
+# WIF vs. keyfile options — it is meant to be copied and edited by a person setting up
+# ~/.dbt/profiles.yml locally. This file is the single, minimal, CI-only profile actually consumed
+# byte-for-byte by automation; keeping it separate means a future edit to the local dev-setup template
+# (e.g. more explanatory comments, a different local `dataset`) can't accidentally change what CI runs
+# against, and vice versa.
+#
+# No credentials here: `method: oauth` picks up the Application Default Credentials that
+# google-github-actions/auth@v2 (keyless WIF) writes — see profiles.example.yml's "WIF note".
+stock_trading:
+  target: ci
+  outputs:
+    ci:
+      type: bigquery
+      method: oauth
+      project: stock-trading-498512
+      dataset: state
+      location: US
+      threads: 4

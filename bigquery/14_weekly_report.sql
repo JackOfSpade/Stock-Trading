@@ -39,7 +39,12 @@ SELECT strategy, deployed_unit_value AS deployed_unit_value_7d_ago
 FROM `stock-trading-498512.perf.strategy_daily`
 QUALIFY ROW_NUMBER() OVER (
   PARTITION BY strategy
-  ORDER BY ABS(DATE_DIFF(as_of_date, DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 7 DAY), DAY))
+  -- Secondary sort key added 2026-07-04 (audit finding): without it, a trading day exactly
+  -- equidistant before/after the 7-days-ago target (plausible around a midweek holiday) makes
+  -- BigQuery's row-order resolution non-deterministic, flipping twr_7d between identical runs.
+  -- Mirrors the tiebreaker already present in the sibling state.account_nav_7d_ago below.
+  ORDER BY ABS(DATE_DIFF(as_of_date, DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 7 DAY), DAY)),
+    as_of_date DESC
 ) = 1;
 
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.strategy_scorecard` AS

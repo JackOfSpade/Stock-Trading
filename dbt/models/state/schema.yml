@@ -67,8 +67,33 @@ models:
       - name: side
         description: BUY / SELL (uppercased).
         tests:
+          - not_null
+          # NOTE: accepted_values' `NOT IN (...)` is NULL (not TRUE/FALSE) for a NULL
+          # side under SQL three-valued logic, so it alone would silently pass a NULL
+          # side through undetected — the paired `not_null` test above closes that gap
+          # (2026-07-04 audit finding; see also tests/assert_open_orders_actionable.sql).
           - accepted_values:
               values: ['BUY', 'SELL']
+      - name: qty
+        description: Order quantity parsed from the staged payload. Required whenever
+          side = BUY, since a missing/NULL value here silently collapses reserved_cash
+          to NULL (and NULL rows are dropped, not counted as 0, by any SUM(reserved_cash)
+          — 2026-07-04 audit finding; the 2026-06-08 MDT de-funding incident was this
+          same failure class).
+        tests:
+          - not_null:
+              config:
+                where: "side = 'BUY'"
+      - name: limit_price
+        description: Limit price parsed from the staged payload. Required whenever
+          side = BUY (all entry orders in this system are crafted LIMIT per
+          Operating_Protocols.md; MARKET is only ever used for an assured SELL/exit
+          flatten) — a missing/NULL value on a BUY row silently collapses reserved_cash
+          to NULL the same way a missing qty does (2026-07-04 audit finding).
+        tests:
+          - not_null:
+              config:
+                where: "side = 'BUY'"
       - name: reserved_cash
         description: Cash a pending BUY reserves; resting SELL reserves 0. Must be >= 0 (see singular test).
 
@@ -144,4 +169,30 @@ models:
     columns:
       - name: snapshot_date
         description: Operating day of the latest snapshot.
+        tests: [not_null]
+
+  - name: trading_control_latest
+    description: Human/dashboard-facing latest row of ops.trading_control (halt-all control). Added
+      2026-07-04 (audit finding, HIGH) — the trading-halt gate previously had zero dbt coverage.
+    # Single row — asserted by tests/assert_trading_control_latest_single_row.sql.
+    columns:
+      - name: halt_all
+        tests: [not_null]
+
+  - name: book_drawdown_watch
+    description: Book-level NAV drawdown breaker input (self-bootstrapping — always exactly one row).
+      Added 2026-07-04 (audit finding, HIGH).
+    # Single row — asserted by tests/assert_book_drawdown_watch_single_row.sql.
+    columns:
+      - name: n_snapshots
+        tests: [not_null]
+      - name: drawdown_breach
+        tests: [not_null]
+
+  - name: trading_enabled
+    description: The machine-readable trading-enable gate — sp_assert_trading_enabled reads this
+      before every order-staging step. Added 2026-07-04 (audit finding, HIGH).
+    # Single row — asserted by tests/assert_trading_enabled_single_row.sql.
+    columns:
+      - name: trading_enabled
         tests: [not_null]

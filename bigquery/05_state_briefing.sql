@@ -18,9 +18,13 @@ UNION ALL
 SELECT 'KILL_FLAG', strategy, strategy, as_of_date,
        CONCAT('drawdown_kill=', CAST(drawdown_kill AS STRING),
               ' runaway=', CAST(runaway_review AS STRING),
-              ' m2m=', CAST(m2m_underperf_review AS STRING))
+              ' m2m=', CAST(m2m_underperf_review AS STRING),
+              ' interim_underperf=', CAST(interim_underperf_warning AS STRING))
 FROM `stock-trading-498512.perf.kill_flags`
-WHERE drawdown_kill OR runaway_review OR m2m_underperf_review
+-- interim_underperf_warning added 2026-07-04 (audit finding): omitted here, it was
+-- surfaced NOWHERE in the operational surface despite existing specifically to flag
+-- a structurally underwater long-horizon strategy "in months, not years."
+WHERE drawdown_kill OR runaway_review OR m2m_underperf_review OR interim_underperf_warning
 UNION ALL
 -- Time-based exits apply only to A/B/C/E (D is long-horizon, no time exit per Strategy.md).
 -- (This rule-based filter is also robust to a migration parse artifact where a D position

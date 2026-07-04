@@ -13,11 +13,7 @@ WITH agg AS (
 ),
 j AS (
   SELECT a.as_of_date, a.r_agg,
-    COALESCE(
-      sg.r_sgov,
-      LAST_VALUE(sg.r_sgov IGNORE NULLS) OVER (
-        ORDER BY a.as_of_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW),
-      0) AS r_sgov
+    {{ sgov_forward_fill('sg.r_sgov', 'a.as_of_date') }} AS r_sgov
   FROM agg a
   LEFT JOIN {{ ref('sgov_daily_return') }} sg USING (as_of_date)
 )

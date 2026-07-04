@@ -5,5 +5,7 @@ SELECT strategy, deployed_unit_value AS deployed_unit_value_7d_ago
 FROM {{ source('perf', 'strategy_daily') }}
 QUALIFY ROW_NUMBER() OVER (
   PARTITION BY strategy
-  ORDER BY ABS(DATE_DIFF(as_of_date, DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 7 DAY), DAY))
+  -- Secondary sort key added 2026-07-04 (audit finding) — see bigquery/14_weekly_report.sql.
+  ORDER BY ABS(DATE_DIFF(as_of_date, DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 7 DAY), DAY)),
+    as_of_date DESC
 ) = 1

@@ -37,7 +37,11 @@ BEGIN
       resolved_note = CONCAT('auto-aged (>7d self-healing warning; cadence_check.sql #14). ', COALESCE(resolved_note, ''))
   WHERE NOT resolved
     AND severity = 'warning'
-    AND category IN ('stranded_session', 'instruction_drift', 'calendar_runway_low', 'routine_stalled')
+    -- trigger_missing added 2026-07-04 (audit finding): its message used to embed a daily-changing
+    -- day-count, defeating sp_raise_alert_once's dedup and letting undeduped rows accumulate
+    -- indefinitely since it was the one self-healing class missing from this auto-age list. The
+    -- message fix below (stable text) restores real dedup; this stays as defense-in-depth.
+    AND category IN ('stranded_session', 'instruction_drift', 'calendar_runway_low', 'routine_stalled', 'trigger_missing')
     AND alert_ts < TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY);
 
   -- missed_run (critical) — a monitored routine expected today did not complete.
@@ -119,11 +123,16 @@ BEGIN
   -- (vs edited) web-UI trigger, which instruction_drift cannot see (it needs a run to log). Self-
   -- bootstrapping: only flags routines that have completed before (state.trigger_attestation.monitored).
   IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.trigger_attestation` WHERE overdue) THEN
+    -- Message kept STABLE (2026-07-04 audit finding): embedding days_since_completed (which changes
+    -- daily while a routine stays overdue) defeated sp_raise_alert_once's exact-match dedup, creating
+    -- a fresh open alert row every day the condition persisted. Per-routine day counts are still fully
+    -- visible in the payload below.
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'warning', 'scheduled.cadence', 'trigger_missing',
       CONCAT('Trigger attestation: routine(s) overdue beyond their cadence window (deleted/disabled web-UI trigger?): ',
-             (SELECT STRING_AGG(CONCAT(routine, ' (', CAST(days_since_completed AS STRING), 'd)'), ', ' ORDER BY routine)
-              FROM `stock-trading-498512.state.trigger_attestation` WHERE overdue)),
+             (SELECT STRING_AGG(routine, ', ' ORDER BY routine)
+              FROM `stock-trading-498512.state.trigger_attestation` WHERE overdue),
+             '. See payload for per-routine day counts.'),
       (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(routine, days_since_completed, max_gap_days, last_completed)))
        FROM `stock-trading-498512.state.trigger_attestation` WHERE overdue));
   END IF;
@@ -175,11 +184,13 @@ BEGIN
   -- W5 FMP auto-extend trigger and stayed there, an EARLY signal the auto-extend (likely the FMP grant)
   -- is failing, well before the calendar exhausts and the freshness COALESCE→FALSE backstop trips.
   IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.market_calendar_horizon` WHERE runway_low) THEN
+    -- Message kept STABLE (2026-07-04 audit finding): embedding days_of_runway/calendar_through (both
+    -- change daily while the condition persists) defeated sp_raise_alert_once's exact-match dedup,
+    -- creating a fresh open alert row every day the runway stayed low. Full detail is still in the
+    -- payload below.
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'warning', 'scheduled.cadence', 'calendar_runway_low',
-      (SELECT CONCAT('Market-calendar runway low (', CAST(days_of_runway AS STRING),
-                     'd to ', CAST(calendar_through AS STRING), ') — W5 FMP auto-extend may be failing')
-       FROM `stock-trading-498512.state.market_calendar_horizon`),
+      'Market-calendar runway low — W5 FMP auto-extend may be failing. See payload for runway/through-date detail.',
       (SELECT TO_JSON_STRING(t) FROM `stock-trading-498512.state.market_calendar_horizon` t));
   END IF;
 

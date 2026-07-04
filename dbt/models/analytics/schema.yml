@@ -128,6 +128,20 @@ models:
           - not_null
           - unique
 
+  - name: calibration_shrunk
+    description: >-
+      Beta-Binomial-shrunk per-conviction-tier win rate + Wilson 95% interval + the
+      trustworthy_edge hard gate — supersedes reading calibration_summary.win_rate alone. Added
+      2026-07-04 (audit finding): this model previously had zero test/doc coverage here, unlike every
+      sibling analytics model, despite trustworthy_edge being documented as "the ONLY gate that may
+      change behavior" off this view. See tests/assert_calibration_shrunk_wilson_bounds.sql for the
+      Wilson-interval well-formedness invariant (also pins the 2026-07-04 SAFE_DIVIDE fix).
+    columns:
+      - name: conviction
+        tests:
+          - not_null
+          - unique
+
   - name: strategy_nav
     description: Per-strategy NAV / sizing base; one row per strategy A-E.
     columns:

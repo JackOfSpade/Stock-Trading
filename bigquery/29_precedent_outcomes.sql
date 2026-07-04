@@ -52,6 +52,11 @@ AS (
   ) p
   LEFT JOIN `stock-trading-498512.analytics.thesis_outcomes` outc ON outc.entry_id = p.entry_id
   LEFT JOIN `stock-trading-498512.analytics.nogo_counterfactual` ngo ON ngo.decision_log_entry_id = p.entry_id
-  LEFT JOIN `stock-trading-498512.analytics.calibration_shrunk` cal ON cal.conviction = p.conviction
+  -- COALESCE to '(unscored)' (2026-07-04 audit finding): NULL = NULL is never TRUE in SQL, so a raw
+  -- `cal.conviction = p.conviction` equality join silently drops the mandated calibration interval for
+  -- any precedent with NULL conviction — calibration_shrunk buckets those under the literal string
+  -- '(unscored)' (bigquery/25_calibration_shrinkage.sql), never under NULL itself.
+  LEFT JOIN `stock-trading-498512.analytics.calibration_shrunk` cal
+    ON cal.conviction = COALESCE(p.conviction, '(unscored)')
   ORDER BY p.distance
 );

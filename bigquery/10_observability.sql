@@ -126,19 +126,29 @@ SELECT
   CURRENT_TIMESTAMP() AS checked_at;
 
 -- ===== state.system_health — one-row green/red rollup =====
+-- NOTE: this definition is immediately superseded live by bigquery/23_trading_control.sql's
+-- later CREATE OR REPLACE VIEW of the same object (which adds position_drift_detected to
+-- all_green) — kept here, in numeric-apply order, for the DR-rebuild/reference sequence.
+-- Kept structurally in sync with that later definition where they overlap.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.system_health` AS
+WITH alerts_summary AS (
+  -- Computed once and reused below (2026-07-04 audit finding: open_critical_alerts and the
+  -- identical subquery embedded in all_green were two hand-kept copies of the same COUNTIF).
+  SELECT
+    COUNTIF(NOT resolved AND severity = 'critical') AS open_critical_alerts,
+    COUNTIF(NOT resolved) AS open_alerts
+  FROM `stock-trading-498512.ops.alerts`
+)
 SELECT
   f.last_trading_day, f.last_mark_date, f.engine_through,
   f.marks_fresh, f.engine_fresh, f.d2_ran_last_trading_day,
   eh.is_healthy AS embeddings_healthy,
-  (SELECT COUNTIF(NOT resolved AND severity = 'critical') FROM `stock-trading-498512.ops.alerts`) AS open_critical_alerts,
-  (SELECT COUNTIF(NOT resolved) FROM `stock-trading-498512.ops.alerts`) AS open_alerts,
+  a.open_critical_alerts,
+  a.open_alerts,
   (SELECT COUNTIF(drawdown_kill OR runaway_review OR m2m_underperf_review) FROM `stock-trading-498512.perf.kill_flags`) AS firing_kill_flags,
-  (f.marks_fresh AND f.engine_fresh AND eh.is_healthy
-     AND (SELECT COUNTIF(NOT resolved AND severity = 'critical') FROM `stock-trading-498512.ops.alerts`) = 0
-  ) AS all_green,
+  (f.marks_fresh AND f.engine_fresh AND eh.is_healthy AND a.open_critical_alerts = 0) AS all_green,
   CURRENT_TIMESTAMP() AS checked_at
-FROM `stock-trading-498512.state.freshness` f, `stock-trading-498512.state.embedding_health` eh;
+FROM `stock-trading-498512.state.freshness` f, `stock-trading-498512.state.embedding_health` eh, alerts_summary a;
 
 -- ===== state.gate_watch — conviction-model 30-closed-trade gate proximity (P3-3) =====
 -- The conviction model auto-trains at >=30 closed GO trades (currently far below). This is the

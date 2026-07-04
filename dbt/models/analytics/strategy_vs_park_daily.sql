@@ -11,12 +11,7 @@
 WITH j AS (
   SELECT
     sdr.as_of_date, sdr.strategy, sdr.deployed_capital, sdr.r_deployed,
-    COALESCE(
-      sg.r_sgov,
-      LAST_VALUE(sg.r_sgov IGNORE NULLS) OVER (
-        PARTITION BY sdr.strategy ORDER BY sdr.as_of_date
-        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW),
-      0) AS r_sgov
+    {{ sgov_forward_fill('sg.r_sgov', 'sdr.as_of_date', 'sdr.strategy') }} AS r_sgov
   FROM {{ ref('strategy_daily_returns') }} sdr
   LEFT JOIN {{ ref('sgov_daily_return') }} sg USING (as_of_date)
 )
