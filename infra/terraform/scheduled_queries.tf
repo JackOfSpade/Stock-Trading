@@ -1,11 +1,22 @@
 ###############################################################################
 # BigQuery scheduled queries (Data Transfer configs, data_source_id="scheduled_query")
 #
-# Four configs:
+# This file models 4 of the (currently 8) live scheduled queries in
+# bigquery/scheduled_queries/:
 #   (a) freshness check  — the dead-man's switch (daily_freshness_check.sql)
 #   (b) embed pending    — embedding heal        (embed_pending.sql)
 #   (c) events backup    — EXPORT DATA to GCS    (backup_events_export.sql)
 #   (d) cadence check    — NEW; missed-run guard (cadence_check.sql)
+#
+# The other 4 live scheduled queries — integrity_check.sql, ops_export.sql,
+# restore_drill.sql, delivery_canary.sql (live names: integrity-check-daily,
+# ops-export-daily, restore-drill, delivery-canary-weekly) — were created
+# OUT-OF-BAND (RUNBOOK §25/§27) and are DELIBERATELY NOT modeled here as
+# google_bigquery_data_transfer_config resources, matching the same
+# out-of-band-and-intentionally-so pattern monitoring.tf already documents for
+# integrity_check_config_id/ops_export_config_id (this module is a never-applied
+# spec, so "not modeled" does not mean "forgotten" — see CLAUDE.md "Settled
+# decisions" / RUNBOOK §12). This is a doc-accuracy note, not a TODO to add them.
 #
 # SINGLE-SOURCING: every SQL body is read with file() straight from
 # bigquery/scheduled_queries/ so the scheduled-query text in BigQuery and the

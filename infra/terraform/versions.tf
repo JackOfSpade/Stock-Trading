@@ -20,17 +20,26 @@ terraform {
   }
 
   # -------------------------------------------------------------------------
-  # REMOTE STATE BACKEND — intentionally left COMMENTED OUT.
+  # REMOTE STATE BACKEND — configured (NOT commented out); enabled per A3.
   #
-  # The owner picks the GCS bucket that holds this module's Terraform state.
   # State for this module contains references to live trading datasets, so it
-  # should live in a private, versioned GCS bucket (NOT in this git repo).
+  # lives in a private, versioned GCS bucket (NOT in this git repo) rather than
+  # the default local `terraform.tfstate`.
   #
-  # Enabled (A3). The bucket gs://stock-trading-tfstate must already exist (US, versioned)
-  # before `terraform init` — create it once with:
+  # The bucket gs://stock-trading-tfstate must already exist (US, versioned)
+  # before `terraform init` — it was created once with:
   #   gsutil mb -l US -b on gs://stock-trading-tfstate && gsutil versioning set on gs://stock-trading-tfstate
-  # then run `terraform init -migrate-state`. NOTE: CI does not run terraform, so this block
+  # then `terraform init -migrate-state` (or a plain `terraform init` against an
+  # already-initialized backend). NOTE: CI does not run terraform, so this block
   # only affects an owner running terraform locally / in Cloud Shell.
+  #
+  # IMPORTANT: "backend configured" is orthogonal to "module applied". Per the
+  # project's settled decision (CLAUDE.md "Settled decisions", ops/RUNBOOK.md §12),
+  # this module is deliberately never imported/applied — `terraform state list`
+  # against this backend is verified EMPTY. Live infra stays managed out-of-band
+  # via the BigQuery MCP + console; this backend block only makes a *hypothetical*
+  # future `terraform init`/`plan` point somewhere sane, it is not an invitation to
+  # apply.
   backend "gcs" {
     bucket = "stock-trading-tfstate"
     prefix = "infra/terraform"

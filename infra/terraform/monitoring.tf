@@ -46,51 +46,157 @@
 #
 # ADOPT, DON'T DUPLICATE — these already exist in the Console. Import them first
 # (see infra/terraform/README.md), then `terraform plan` and reconcile:
-#   terraform import google_logging_metric.freshness_scheduled_run freshness_scheduled_run
-#   terraform import google_monitoring_alert_policy.freshness_scheduler_absent \
+#   terraform import 'google_logging_metric.scheduler_run["freshness"]' freshness_scheduled_run
+#   terraform import 'google_monitoring_alert_policy.scheduler_absent["freshness"]' \
 #     projects/stock-trading-498512/alertPolicies/<POLICY_ID>
 #   # channels: projects/<proj>/notificationChannels/<ID>
+# (The freshness/backup/cadence/integrity_check/ops_export log metric + alert policy
+# resources below are generated via a single `for_each` over `local.scheduler_absence_monitors`
+# — see "REFACTOR (2026-07-04)" further down — so their addresses are now
+# `google_logging_metric.scheduler_run["<key>"]` / `google_monitoring_alert_policy.scheduler_absent["<key>"]`,
+# NOT the old per-monitor resource names. import_monitoring.sh reflects this.)
 # EXPECT A PLAN DIFF on import — the metric-filter diff swaps the success-only
 # "completed successfully" clause for the terminal-agnostic "Summary:" marker.
 ###############################################################################
 
-# Freshness transfer config_id, extracted from the resource so the metric tracks
-# whatever config Terraform manages (survives a recreate; immune to identity swaps).
-# .name is "projects/<p>/locations/<loc>/transferConfigs/<config_id>".
+# Freshness/backup/cadence transfer config_ids, extracted from their resources so the
+# metrics track whatever config Terraform manages (survives a recreate; immune to
+# identity swaps). .name is "projects/<p>/locations/<loc>/transferConfigs/<config_id>".
 locals {
   freshness_config_id = regex("[^/]+$", google_bigquery_data_transfer_config.freshness_check.name)
   backup_config_id    = regex("[^/]+$", google_bigquery_data_transfer_config.backup_export.name)
   cadence_config_id   = regex("[^/]+$", google_bigquery_data_transfer_config.cadence_check.name)
 }
 
-# --- Heartbeat: count each freshness scheduled-query RUN (success or failure) ----
-resource "google_logging_metric" "freshness_scheduled_run" {
-  project = var.project_id
-  name    = "freshness_scheduled_run" # -> metric.type logging.googleapis.com/user/freshness_scheduled_run
+###############################################################################
+# 2026-06-28 stack review #2 (#4): scheduler-absence coverage extended to the OTHER
+# RAISE-ing / record-only scheduled queries — the events backup export, the cadence
+# check, the daily INTEGRITY CHECK, and (2026-06-28 ops-export symmetry) the ops.*
+# backup export. Same who-watches-the-watchers gap as freshness above: some of these
+# (backup, cadence) email on FAILURE but a silently-dead scheduler sends nothing;
+# integrity_check is record-only (writes a warning, never RAISEs) so a dead scheduler
+# writes NOTHING at all — its absence policy is the ONLY thing that catches it. All
+# four run daily, so the same 25h absence window applies. config_ids are either
+# derived from a Terraform-managed resource's .name (freshness/backup/cadence — see
+# the locals above) or a hardcoded var (integrity_check/ops_export — see the two
+# variable blocks below, and finding context there for why). The filter matches the
+# per-run DTS "Summary:" line, which is emitted on success AND failure (liveness,
+# decoupled from green/red).
+#
+# Live config_ids (verified in the Console 2026-06-21 / 2026-06-29):
+#   backup           events-backup-daily    6a509810-0000-2279-a65e-f4f5e80c4144
+#   cadence          cadence-check-daily    6a44a3d9-0000-2837-8b7b-883d24f5c8b8
+#   integrity_check  integrity-check-daily  6a4d603d-0000-2d5d-b9af-14223bafe266
+#   ops_export       ops-export-daily       6a43d4f7-0000-276c-b1fb-7474463ce22d
+#
+# CREATION CAVEAT (no backfill): a new log metric only counts logs arriving after it
+# exists, so an absent_over_time alert built on a brand-new empty metric fires until
+# the next run lands a point. When standing these up live, create the metric, trigger
+# one run to seed a data point, verify it, THEN create the policy. (A terraform apply
+# would hit the same transient — but per RUNBOOK §12 this module is spec-only.)
+#
+# RESTORE-DRILL absence is deliberately NOT a Cloud Monitoring metric (corrected
+# 2026-06-29) and so has NO entry in the map below. The drill is MONTHLY, but Cloud
+# Monitoring PromQL alerting caps the absence lookback at ~25h (verified live
+# 2026-06-29 — a >25h window is rejected for log-based metrics in every condition
+# type), and a 25h window on a monthly job would FALSE-FIRE every day. The correct
+# monthly-cadence liveness mechanism is the in-warehouse state.restore_health (40-day
+# window off ops.drill_log), surfaced via cadence_check 'restore_stale' — already
+# applied (RUNBOOK §27). So there is no restore_drill absence policy here, by design.
+###############################################################################
 
-  # BigQuery Data Transfer (scheduled query) run logs. Keyed on the freshness
-  # config_id ONLY — deliberately NO principalEmail / authenticationInfo, so the
-  # owner-OAuth -> bq-scheduler@ migration (and any future one) keeps matching.
-  #
-  # The DTS emits exactly one "Summary: succeeded N jobs, failed M jobs." line per
-  # run, on BOTH success ("succeeded 1") and failure ("succeeded 0, failed 1") —
-  # verified against live logs (2026-06-21). Matching it gives one terminal heartbeat
-  # per run, independent of green/red. (The live metric used "completed successfully",
-  # which is success-only and missed the migration cutover — see header.)
-  filter = <<-EOT
-    resource.type="bigquery_dts_config"
-    resource.labels.config_id="${local.freshness_config_id}"
-    jsonPayload.message=~"^Summary: succeeded"
-  EOT
+# The integrity_check and ops_export config_ids below are HARDCODED DEFAULTS rather
+# than `regex(...)`-derived from a resource's `.name` like freshness_config_id /
+# backup_config_id / cadence_config_id above. That is intentional, not an
+# inconsistency to "fix": both scheduled queries were created OUT-OF-BAND (RUNBOOK
+# §25/§27) and have no corresponding `google_bigquery_data_transfer_config` resource
+# in this module for either one, so there is no resource `.name` to derive from. Do
+# not change these to the derived pattern without first adding real transfer-config
+# resources for these two queries — a separate, deliberate scope decision this
+# comment does not make.
+variable "integrity_check_config_id" {
+  description = "BigQuery Data Transfer config_id of the daily integrity_check scheduled query (live: integrity-check-daily 6a4d603d-…, RUNBOOK §27). Empty = skip the absence metric/policy. Hardcoded (not regex-derived) — see comment above."
+  type        = string
+  default     = "6a4d603d-0000-2d5d-b9af-14223bafe266"
+}
 
-  metric_descriptor {
-    metric_kind = "DELTA"
-    value_type  = "INT64"
-    unit        = "1"
+variable "ops_export_config_id" {
+  description = "BigQuery Data Transfer config_id of the daily ops.* backup export scheduled query (live: ops-export-daily, RUNBOOK §27). Empty = skip this absence metric/policy. Hardcoded (not regex-derived) — see comment above."
+  type        = string
+  default     = "6a43d4f7-0000-276c-b1fb-7474463ce22d"
+}
+
+###############################################################################
+# REFACTOR (2026-07-04): the five scheduler-absence monitors above (freshness,
+# backup, cadence, integrity_check, ops_export) were previously five near-identical
+# copy-pasted `google_logging_metric` + `google_monitoring_alert_policy` resource
+# pairs (~340 lines), differing only in config_id / metric name / display text /
+# documentation body. Collapsed into one `for_each` over this map — SAME metric
+# filters, SAME alert conditions/thresholds, SAME documentation text as before; only
+# the resource addressing changed (now `google_logging_metric.scheduler_run["<key>"]`
+# / `google_monitoring_alert_policy.scheduler_absent["<key>"]` instead of five
+# separate resource names — see import_monitoring.sh and README.md for the updated
+# import addresses). The separate `sa_key_created` metric/policy pair at the bottom
+# of this file is structurally different (condition_threshold, not
+# condition_prometheus_query_language) and is deliberately NOT part of this map.
+#
+# A map entry is active (produces a metric + policy) iff its `config_id` is
+# non-empty — freshness/backup/cadence always are (derived from real resources);
+# integrity_check/ops_export are only when their var is set, preserving the original
+# per-resource `count = var.X_config_id != "" ? 1 : 0` guards.
+###############################################################################
+
+locals {
+  scheduler_absence_monitors = {
+    for key, monitor in {
+      freshness = {
+        config_id             = local.freshness_config_id
+        metric_name           = "freshness_scheduled_run"
+        alert_display_name    = "Freshness scheduler absent >25h"
+        condition_display_name = "No successful freshness run in 26h"
+        documentation = join(" ", [
+          "The freshness dead-man's switch has not emitted a run heartbeat in >25h.",
+          "FIRST verify it is real, not a repeat of the 2026-06-20 false alarm:",
+          "check INFORMATION_SCHEMA.JOBS_BY_PROJECT for recent scheduled_query% jobs",
+          "running the freshness body (see ops/RUNBOOK.md §19). If runs ARE present, the",
+          "heartbeat metric filter has drifted from the live config_id / DTS message wording",
+          "— fix the metric, not the scheduler. If NO runs are present, the scheduler is",
+          "genuinely down (paused config, lapsed run-SA, or DTS outage)."
+        ])
+      }
+      backup = {
+        config_id             = local.backup_config_id
+        metric_name           = "backup_scheduled_run"
+        alert_display_name    = "Backup scheduler absent >25h"
+        condition_display_name = "No events-backup run in 25h"
+        documentation         = "The events-backup scheduled query has emitted no run heartbeat in >25h — the append-only event store may be silently un-backed-up. Triage per ops/RUNBOOK.md §19: check region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT for recent scheduled_query% backup runs. Runs present -> the metric drifted (fix the metric). No runs -> the backup scheduler is down (paused config, lapsed run-SA, or DTS outage)."
+      }
+      cadence = {
+        config_id             = local.cadence_config_id
+        metric_name           = "cadence_scheduled_run"
+        alert_display_name    = "Cadence scheduler absent >25h"
+        condition_display_name = "No cadence-check run in 25h"
+        documentation         = "The cadence-check scheduled query has emitted no run heartbeat in >25h — missed-routine detection (state.cadence_watch) may be silently down. Triage per ops/RUNBOOK.md §19; note state.freshness still independently catches data staleness, so this is lower-severity than the freshness/backup absences."
+      }
+      integrity_check = {
+        config_id             = var.integrity_check_config_id
+        metric_name           = "integrity_check_scheduled_run"
+        alert_display_name    = "Integrity-check scheduler absent >25h"
+        condition_display_name = "No integrity-check run in 25h"
+        documentation         = "The daily append-only INTEGRITY check (state.append_only_integrity) has emitted no run heartbeat in >25h. It is record-only (writes a warning, never RAISEs), so a DEAD scheduler writes nothing at all — this absence policy is the ONLY thing that catches it. Triage per ops/RUNBOOK.md §19; confirm the resourceViewer grant + that view 18 is applied."
+      }
+      ops_export = {
+        config_id             = var.ops_export_config_id
+        metric_name           = "ops_export_scheduled_run"
+        alert_display_name    = "ops-export scheduler absent >25h"
+        condition_display_name = "No ops.* backup run in 25h"
+        documentation         = "The ops.* backup export (ops-export-daily) has emitted no run heartbeat in >25h — the irreplaceable run_log/alerts/backup_log/heartbeat/drill_log audit history may be silently un-backed-up. state.ops_backup_health additionally flags this via cadence_check. Triage per ops/RUNBOOK.md §19/§27."
+      }
+    } : key => monitor if monitor.config_id != ""
   }
 }
 
-# --- Email channels for the absence alert (independent of the budget channels) ---
+# --- Email channels for the absence alerts (independent of the budget channels) ---
 # Separate from budget.tf's channels (those are guarded on var.billing_account; a
 # scheduler-death alert must work with or without a billing account). Reuses the
 # same var.notification_emails address list.
@@ -135,76 +241,28 @@ locals {
   )
 }
 
-# --- Alert: the freshness heartbeat has been ABSENT for >25h (silent scheduler death) ---
-resource "google_monitoring_alert_policy" "freshness_scheduler_absent" {
-  project      = var.project_id
-  display_name = "Freshness scheduler absent >25h"
-  combiner     = "OR"
+# --- Heartbeat: count each monitored scheduled-query RUN (success or failure) ----
+# One log-based metric per active entry in local.scheduler_absence_monitors (see the
+# REFACTOR comment above for what this replaces).
+resource "google_logging_metric" "scheduler_run" {
+  for_each = local.scheduler_absence_monitors
 
-  conditions {
-    display_name = "No successful freshness run in 26h"
-
-    # VERIFIED LIVE FORM (2026-06-21): a PromQL condition, NOT classic MetricAbsence
-    # (which caps at 24h and so cannot express the >25h window). absent_over_time(...)
-    # returns 1 when the heartbeat metric has had no sample in the lookback, firing the
-    # alert. The PromQL metric name is the Monitoring mapping of the log-metric type
-    # (logging.googleapis.com/user/<name> -> logging_googleapis_com:user_<name>), built
-    # from the resource so the two never drift. duration/evaluation_interval are sane
-    # defaults — reconcile to the live values on import if they differ.
-    condition_prometheus_query_language {
-      query               = "absent_over_time(logging_googleapis_com:user_${google_logging_metric.freshness_scheduled_run.name}[25h])"
-      duration            = "0s"
-      evaluation_interval = "60s"
-    }
-  }
-
-  notification_channels = local.scheduler_alert_channels
-
-  documentation {
-    content = join(" ", [
-      "The freshness dead-man's switch has not emitted a run heartbeat in >25h.",
-      "FIRST verify it is real, not a repeat of the 2026-06-20 false alarm:",
-      "check INFORMATION_SCHEMA.JOBS_BY_PROJECT for recent scheduled_query% jobs",
-      "running the freshness body (see ops/RUNBOOK.md §19). If runs ARE present, the",
-      "heartbeat metric filter has drifted from the live config_id / DTS message wording",
-      "— fix the metric, not the scheduler. If NO runs are present, the scheduler is",
-      "genuinely down (paused config, lapsed run-SA, or DTS outage)."
-    ])
-    mime_type = "text/markdown"
-  }
-}
-
-###############################################################################
-# Same heartbeat coverage for the OTHER two RAISE-ing scheduled queries — the
-# events backup export and the cadence check (added 2026-06-21).
-#
-# Same rationale as freshness above: they email on FAILURE, but a silently-dead
-# scheduler sends nothing — only a metric-absence alert catches it. The BACKUP one
-# is the most consequential: a silent death means the irreplaceable append-only
-# event store stops being backed up, unnoticed. Both run daily, so the same 25h
-# absence window applies. config_ids are carried from the resources (identity- and
-# recreate-agnostic); the filter matches the per-run DTS "Summary:" line, which is
-# emitted on success AND failure (liveness, decoupled from green/red).
-#
-# Live config_ids (verified in the Console 2026-06-21):
-#   backup  events-backup-daily  6a509810-0000-2279-a65e-f4f5e80c4144
-#   cadence cadence-check-daily  6a44a3d9-0000-2837-8b7b-883d24f5c8b8
-#
-# CREATION CAVEAT (no backfill): a new log metric only counts logs arriving after it
-# exists, so an absent_over_time alert built on a brand-new empty metric fires until
-# the next run lands a point. When standing these up live, create the metric, trigger
-# one run to seed a data point, verify it, THEN create the policy. (A terraform apply
-# would hit the same transient — but per RUNBOOK §12 this module is spec-only.)
-###############################################################################
-
-# --- Backup export heartbeat -------------------------------------------------
-resource "google_logging_metric" "backup_scheduled_run" {
   project = var.project_id
-  name    = "backup_scheduled_run"
+  name    = each.value.metric_name # -> metric.type logging.googleapis.com/user/<metric_name>
 
+  # BigQuery Data Transfer (scheduled query) run logs. Keyed on the monitor's
+  # config_id ONLY — deliberately NO principalEmail / authenticationInfo, so an
+  # owner-OAuth -> bq-scheduler@ migration (and any future one) keeps matching.
+  #
+  # The DTS emits exactly one "Summary: succeeded N jobs, failed M jobs." line per
+  # run, on BOTH success ("succeeded 1") and failure ("succeeded 0, failed 1") —
+  # verified against live logs (2026-06-21). Matching it gives one terminal heartbeat
+  # per run, independent of green/red. (The live freshness metric originally used
+  # "completed successfully", which is success-only and missed the migration
+  # cutover — see the file header.)
   filter = <<-EOT
     resource.type="bigquery_dts_config"
-    resource.labels.config_id="${local.backup_config_id}"
+    resource.labels.config_id="${each.value.config_id}"
     jsonPayload.message=~"^Summary: succeeded"
   EOT
 
@@ -215,15 +273,27 @@ resource "google_logging_metric" "backup_scheduled_run" {
   }
 }
 
-resource "google_monitoring_alert_policy" "backup_scheduler_absent" {
+# --- Alert: a monitored heartbeat has been ABSENT for >25h (silent scheduler death) ---
+resource "google_monitoring_alert_policy" "scheduler_absent" {
+  for_each = local.scheduler_absence_monitors
+
   project      = var.project_id
-  display_name = "Backup scheduler absent >25h"
+  display_name = each.value.alert_display_name
   combiner     = "OR"
 
   conditions {
-    display_name = "No events-backup run in 25h"
+    display_name = each.value.condition_display_name
+
+    # VERIFIED LIVE FORM (2026-06-21, freshness): a PromQL condition, NOT classic
+    # MetricAbsence (which caps at 24h and so cannot express the >25h window).
+    # absent_over_time(...) returns 1 when the heartbeat metric has had no sample in
+    # the lookback, firing the alert. The PromQL metric name is the Monitoring
+    # mapping of the log-metric type (logging.googleapis.com/user/<name> ->
+    # logging_googleapis_com:user_<name>), built from the resource so the two never
+    # drift. duration/evaluation_interval are sane defaults — reconcile to the live
+    # values on import if they differ.
     condition_prometheus_query_language {
-      query               = "absent_over_time(logging_googleapis_com:user_${google_logging_metric.backup_scheduled_run.name}[25h])"
+      query               = "absent_over_time(logging_googleapis_com:user_${google_logging_metric.scheduler_run[each.key].name}[25h])"
       duration            = "0s"
       evaluation_interval = "60s"
     }
@@ -232,170 +302,7 @@ resource "google_monitoring_alert_policy" "backup_scheduler_absent" {
   notification_channels = local.scheduler_alert_channels
 
   documentation {
-    content   = "The events-backup scheduled query has emitted no run heartbeat in >25h — the append-only event store may be silently un-backed-up. Triage per ops/RUNBOOK.md §19: check region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT for recent scheduled_query% backup runs. Runs present -> the metric drifted (fix the metric). No runs -> the backup scheduler is down (paused config, lapsed run-SA, or DTS outage)."
-    mime_type = "text/markdown"
-  }
-}
-
-# --- Cadence check heartbeat -------------------------------------------------
-resource "google_logging_metric" "cadence_scheduled_run" {
-  project = var.project_id
-  name    = "cadence_scheduled_run"
-
-  filter = <<-EOT
-    resource.type="bigquery_dts_config"
-    resource.labels.config_id="${local.cadence_config_id}"
-    jsonPayload.message=~"^Summary: succeeded"
-  EOT
-
-  metric_descriptor {
-    metric_kind = "DELTA"
-    value_type  = "INT64"
-    unit        = "1"
-  }
-}
-
-resource "google_monitoring_alert_policy" "cadence_scheduler_absent" {
-  project      = var.project_id
-  display_name = "Cadence scheduler absent >25h"
-  combiner     = "OR"
-
-  conditions {
-    display_name = "No cadence-check run in 25h"
-    condition_prometheus_query_language {
-      query               = "absent_over_time(logging_googleapis_com:user_${google_logging_metric.cadence_scheduled_run.name}[25h])"
-      duration            = "0s"
-      evaluation_interval = "60s"
-    }
-  }
-
-  notification_channels = local.scheduler_alert_channels
-
-  documentation {
-    content   = "The cadence-check scheduled query has emitted no run heartbeat in >25h — missed-routine detection (state.cadence_watch) may be silently down. Triage per ops/RUNBOOK.md §19; note state.freshness still independently catches data staleness, so this is lower-severity than the freshness/backup absences."
-    mime_type = "text/markdown"
-  }
-}
-
-###############################################################################
-# 2026-06-28 stack review #2 (#4): scheduler-absence coverage for the daily INTEGRITY
-# CHECK. Same who-watches-the-watchers gap as §19 — it writes nothing on a clean run, so a
-# silently-paused schedule leaves you believing governance is verified when it has not run.
-#
-# RESTORE-DRILL absence is deliberately NOT a Cloud Monitoring metric (corrected 2026-06-29).
-# The drill is MONTHLY, but Cloud Monitoring PromQL alerting caps the absence lookback at ~25h
-# (verified live 2026-06-29 — a >25h window is rejected for log-based metrics in every condition
-# type), and a 25h window on a monthly job would FALSE-FIRE every day. The correct monthly-cadence
-# liveness mechanism is the in-warehouse state.restore_health (40-day window off ops.drill_log),
-# surfaced via cadence_check 'restore_stale' — already applied (RUNBOOK §27). So there is no
-# restore_drill absence policy here, by design.
-#
-# The integrity_check config_id is NOT derivable from a TF resource (created out-of-band, RUNBOOK
-# §25). The metric+policy are created only when it is set (count guard). No-backfill caveat: create
-# the metric, seed one run, verify, THEN attach the policy.
-###############################################################################
-
-variable "integrity_check_config_id" {
-  description = "BigQuery Data Transfer config_id of the daily integrity_check scheduled query (live: integrity-check-daily 6a4d603d-…, RUNBOOK §27). Empty = skip the absence metric/policy."
-  type        = string
-  default     = "6a4d603d-0000-2d5d-b9af-14223bafe266"
-}
-
-# --- Integrity-check heartbeat (daily; 25h window) ----------------------------
-resource "google_logging_metric" "integrity_check_scheduled_run" {
-  count   = var.integrity_check_config_id != "" ? 1 : 0
-  project = var.project_id
-  name    = "integrity_check_scheduled_run"
-
-  filter = <<-EOT
-    resource.type="bigquery_dts_config"
-    resource.labels.config_id="${var.integrity_check_config_id}"
-    jsonPayload.message=~"^Summary: succeeded"
-  EOT
-
-  metric_descriptor {
-    metric_kind = "DELTA"
-    value_type  = "INT64"
-    unit        = "1"
-  }
-}
-
-resource "google_monitoring_alert_policy" "integrity_check_scheduler_absent" {
-  count        = var.integrity_check_config_id != "" ? 1 : 0
-  project      = var.project_id
-  display_name = "Integrity-check scheduler absent >25h"
-  combiner     = "OR"
-
-  conditions {
-    display_name = "No integrity-check run in 25h"
-    condition_prometheus_query_language {
-      query               = "absent_over_time(logging_googleapis_com:user_${google_logging_metric.integrity_check_scheduled_run[0].name}[25h])"
-      duration            = "0s"
-      evaluation_interval = "60s"
-    }
-  }
-
-  notification_channels = local.scheduler_alert_channels
-
-  documentation {
-    content   = "The daily append-only INTEGRITY check (state.append_only_integrity) has emitted no run heartbeat in >25h. It is record-only (writes a warning, never RAISEs), so a DEAD scheduler writes nothing at all — this absence policy is the ONLY thing that catches it. Triage per ops/RUNBOOK.md §19; confirm the resourceViewer grant + that view 18 is applied."
-    mime_type = "text/markdown"
-  }
-}
-
-###############################################################################
-# 2026-06-28 stack review #2 (ops-export symmetry): scheduler-absence for the NEW
-# ops.* backup export. backup_events_export has a dedicated absence policy above; the
-# sibling ops_export.sql (which backs up the irreplaceable ops.* audit history) deserves
-# the same belt-and-suspenders. A dead ops-export is ALREADY caught transitively
-# (state.ops_backup_health → cadence_check 'ops_backup_stale' → DTS email), so this is
-# additive, not load-bearing. Live config_id recorded 2026-06-29 (RUNBOOK §27). Same
-# terminal-agnostic '^Summary:' filter + daily 25h absence window as the events backup.
-###############################################################################
-
-variable "ops_export_config_id" {
-  description = "BigQuery Data Transfer config_id of the daily ops.* backup export scheduled query (live: ops-export-daily, RUNBOOK §27). Empty = skip this absence metric/policy."
-  type        = string
-  default     = "6a43d4f7-0000-276c-b1fb-7474463ce22d"
-}
-
-resource "google_logging_metric" "ops_export_scheduled_run" {
-  count   = var.ops_export_config_id != "" ? 1 : 0
-  project = var.project_id
-  name    = "ops_export_scheduled_run"
-
-  filter = <<-EOT
-    resource.type="bigquery_dts_config"
-    resource.labels.config_id="${var.ops_export_config_id}"
-    jsonPayload.message=~"^Summary: succeeded"
-  EOT
-
-  metric_descriptor {
-    metric_kind = "DELTA"
-    value_type  = "INT64"
-    unit        = "1"
-  }
-}
-
-resource "google_monitoring_alert_policy" "ops_export_scheduler_absent" {
-  count        = var.ops_export_config_id != "" ? 1 : 0
-  project      = var.project_id
-  display_name = "ops-export scheduler absent >25h"
-  combiner     = "OR"
-
-  conditions {
-    display_name = "No ops.* backup run in 25h"
-    condition_prometheus_query_language {
-      query               = "absent_over_time(logging_googleapis_com:user_${google_logging_metric.ops_export_scheduled_run[0].name}[25h])"
-      duration            = "0s"
-      evaluation_interval = "60s"
-    }
-  }
-
-  notification_channels = local.scheduler_alert_channels
-
-  documentation {
-    content   = "The ops.* backup export (ops-export-daily) has emitted no run heartbeat in >25h — the irreplaceable run_log/alerts/backup_log/heartbeat/drill_log audit history may be silently un-backed-up. state.ops_backup_health additionally flags this via cadence_check. Triage per ops/RUNBOOK.md §19/§27."
+    content   = each.value.documentation
     mime_type = "text/markdown"
   }
 }
@@ -410,6 +317,10 @@ resource "google_monitoring_alert_policy" "ops_export_scheduler_absent" {
 # from the Admin Activity audit log (on by default), needing NO serviceAccountKeys.list
 # grant. The preventive org policy (iam.disableServiceAccountKeyCreation) stays deferred
 # for the no-Org reason as §17 — this detection alert is the actionable-today control.
+#
+# NOTE: structurally different from the five monitors above (condition_threshold, not
+# condition_prometheus_query_language) — deliberately left OUT of the
+# scheduler_absence_monitors for_each/map refactor.
 ###############################################################################
 
 resource "google_logging_metric" "sa_key_created" {

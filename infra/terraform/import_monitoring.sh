@@ -50,14 +50,19 @@ import_policy() { # $1 = terraform address, $2 = policy display_name
 }
 
 # 1) Log-based metrics — import id is just the metric name.
-import_if_absent google_logging_metric.freshness_scheduled_run freshness_scheduled_run
-import_if_absent google_logging_metric.backup_scheduled_run    backup_scheduled_run
-import_if_absent google_logging_metric.cadence_scheduled_run   cadence_scheduled_run
+# NOTE (2026-07-04 refactor): monitoring.tf collapsed the five per-monitor
+# google_logging_metric/google_monitoring_alert_policy resource pairs into a single
+# for_each over local.scheduler_absence_monitors, so the addresses below are now
+# indexed by map key ("freshness"/"backup"/"cadence") instead of separate resource
+# names.
+import_if_absent 'google_logging_metric.scheduler_run["freshness"]' freshness_scheduled_run
+import_if_absent 'google_logging_metric.scheduler_run["backup"]'    backup_scheduled_run
+import_if_absent 'google_logging_metric.scheduler_run["cadence"]'   cadence_scheduled_run
 
 # 2) Alert policies — resolved to projects/<num>/alertPolicies/<id> by display name.
-import_policy google_monitoring_alert_policy.freshness_scheduler_absent "Freshness scheduler absent >25h"
-import_policy google_monitoring_alert_policy.backup_scheduler_absent    "Backup scheduler absent >25h"
-import_policy google_monitoring_alert_policy.cadence_scheduler_absent   "Cadence scheduler absent >25h"
+import_policy 'google_monitoring_alert_policy.scheduler_absent["freshness"]' "Freshness scheduler absent >25h"
+import_policy 'google_monitoring_alert_policy.scheduler_absent["backup"]'    "Backup scheduler absent >25h"
+import_policy 'google_monitoring_alert_policy.scheduler_absent["cadence"]'   "Cadence scheduler absent >25h"
 
 # 3) Email notification channel — resolved by email label, shared by all three policies.
 channel_name="$(gcloud alpha monitoring channels list \

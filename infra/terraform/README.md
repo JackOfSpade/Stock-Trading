@@ -24,11 +24,11 @@ rationale, reproduced below).
 
 | File | Resource(s) | Notes |
 |---|---|---|
-| `versions.tf` | Terraform `>= 1.5`, `google` + `google-beta` `~> 5.0`, providers; **backend commented out** | Owner picks the GCS state bucket. |
-| `variables.tf` | All inputs (project, region, schedules, budget, emails) | Defaults encode the known project facts. |
+| `versions.tf` | Terraform `>= 1.5`, `google` + `google-beta` `~> 5.0`, providers; **backend configured** (`gs://stock-trading-tfstate`) | Backend is live/uncommented; the module itself stays un-applied (`terraform state list` against it is empty — see status banner above). |
+| `variables.tf` | Most inputs (project, region, schedules, budget, emails) | Defaults encode the known project facts. A few security/identity-scoped variables (`backup_transfer_service_account`, `integrity_check_config_id`, `ops_export_config_id`, `github_repository`, `wif_pool_id`, `wif_provider_id`, `ci_service_account_email`) live beside their resources in `iam.tf`/`monitoring.tf`/`wif.tf` by convention instead — this table is not an exhaustive variable index. |
 | `datasets.tf` | `events`, `state`, `perf`, `analytics`, `ops` BigQuery datasets | **Already exist — import.** `prevent_destroy`. |
 | `connection.tf` | `us.vertex` CLOUD_RESOURCE connection | **Already exists — import.** Outputs its SA. |
-| `scheduled_queries.tf` | 4 scheduled queries (freshness, embed, backup, **new** cadence) | SQL bodies single-sourced via `file()`. Run under `var.scheduled_query_service_account` (RUNBOOK §15). |
+| `scheduled_queries.tf` | 4 of the 8 live scheduled queries (freshness, embed, backup, **new** cadence) | SQL bodies single-sourced via `file()`. Run under `var.scheduled_query_service_account` (RUNBOOK §15). The other 4 live queries (integrity_check, ops_export, restore_drill, delivery_canary) are intentionally managed out-of-band and not modeled here — see the file header and `monitoring.tf`'s `integrity_check_config_id`/`ops_export_config_id` comments. |
 | `storage.tf` | `gs://stock-trading-backups` bucket (400-day lifecycle) | **Already exists — import.** `prevent_destroy`. |
 | `budget.tf` | Billing budget + email channels | **Optional** (guarded on `billing_account`). |
 | `monitoring.tf` | `freshness_scheduled_run` log metric + "scheduler absent >25h" alert | **Already exists in Console — import.** Identity-agnostic filter (RUNBOOK §19). |
@@ -98,9 +98,13 @@ Easiest path is the helper (idempotent; discovers the policy/channel ids via
 Or import the three resources by hand:
 
 ```bash
-terraform import google_logging_metric.freshness_scheduled_run freshness_scheduled_run
+# monitoring.tf (2026-07-04 refactor) collapsed the five per-monitor log-metric /
+# alert-policy resource pairs into one for_each over local.scheduler_absence_monitors,
+# so addresses are indexed by map key ("freshness" shown; same pattern for "backup",
+# "cadence", "integrity_check", "ops_export").
+terraform import 'google_logging_metric.scheduler_run["freshness"]' freshness_scheduled_run
 # find the policy id: gcloud alpha monitoring policies list --format='value(name)'
-terraform import google_monitoring_alert_policy.freshness_scheduler_absent \
+terraform import 'google_monitoring_alert_policy.scheduler_absent["freshness"]' \
   projects/<PROJECT_NUMBER>/alertPolicies/<policy-id>
 # find the channel id: gcloud alpha monitoring channels list --format='value(name)'
 terraform import 'google_monitoring_notification_channel.scheduler_alert_email["jacksterwu@gmail.com"]' \
@@ -176,8 +180,11 @@ two, same evening-after-D2 logic — it no-ops on non-trading days).
 
 - **`billing_account`** has no default — supply it (or leave `""` to skip the
   budget). The budget is otherwise fully optional.
-- **State backend** (`versions.tf`) is commented out — pick a private, versioned
-  GCS bucket; module state references live trading datasets, keep it out of git.
+- **State backend** (`versions.tf`) is configured (not commented out) against
+  `gs://stock-trading-tfstate` — a private, versioned GCS bucket, since module
+  state references live trading datasets and must stay out of git. Configured
+  is not the same as applied: `terraform state list` against it is empty (see
+  status banner above).
 - **Backup identity** (`iam.tf`): the default/simplest path runs the backup under
   the **owner's own credentials** (no IAM needed). The `storage.objectAdmin`
   member is only for a dedicated-SA path; set `backup_transfer_service_account` to
