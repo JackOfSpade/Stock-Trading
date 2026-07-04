@@ -26,13 +26,21 @@ OUT = os.path.join(os.path.dirname(__file__), "index.html")
 
 
 def q(sql: str):
-    """Run a read-only query via the bq CLI and return a list of dict rows."""
+    """Run a read-only query via the bq CLI and return a list of dict rows.
+
+    Uses --quiet/--headless so bq emits no 'Waiting on bqjob...' status noise; as a
+    belt-and-suspenders guard we still slice from the first JSON bracket in case any
+    banner leaks to stdout anyway (this exact failure class already hit production in
+    scripts/dbt_parity.py and scripts/alert_relay.py — see their bq()/bq helpers).
+    """
     out = subprocess.run(
-        ["bq", "--project_id", PROJECT, "query", "--use_legacy_sql=false",
-         "--format=json", "--max_rows=1000", sql],
+        ["bq", "--project_id", PROJECT, "--quiet", "--headless", "query",
+         "--use_legacy_sql=false", "--format=json", "--max_rows=1000", sql],
         capture_output=True, text=True, check=True,
     ).stdout
-    return json.loads(out) if out.strip() else []
+    s = out.strip()
+    i = s.find("[")
+    return json.loads(s[i:]) if i != -1 else []
 
 
 def get_user_tz():
@@ -88,7 +96,7 @@ def main():
                    f"WHERE NOT resolved ORDER BY alert_ts DESC LIMIT 20")
         runs = q(f"SELECT routine,run_date,status,log_ts FROM `{PROJECT}.ops.run_log` "
                  f"ORDER BY log_ts DESC LIMIT 20")
-    except (subprocess.CalledProcessError, FileNotFoundError) as e:
+    except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as e:
         print(f"Query failed (is the bq CLI installed & authenticated?): {e}", file=sys.stderr)
         return 1
 

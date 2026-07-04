@@ -53,53 +53,69 @@ function installAlertTrigger() {
 
 // ===== MAIN =====
 function checkAlerts_() {
-  const sevList = SEVERITIES.map(s => `'${s}'`).join(',');
-  // NOTIFICATION-COMPLETE: select un-notified alerts (notified_ts IS NULL), NOT `NOT resolved`, so an
-  // alert that self-healed between polls is still emailed exactly once. notified_ts is the durable
-  // de-dup; Script Properties is a secondary guard so a failed stamp doesn't re-send next poll.
-  // alert_ms (UNIX_MILLIS) lets the renderer format alert_ts in the DETECTED display timezone
-  // (state.user_tz) instead of raw unlabeled UTC — alert_ts (STRING) is kept too as a UTC fallback.
-  const rows = bqAlerts_(`
-    SELECT alert_id, CAST(alert_ts AS STRING) AS alert_ts, UNIX_MILLIS(alert_ts) AS alert_ms,
-           severity, source, category, message, resolved
-    FROM \`${ALERT_PROJECT_ID}.ops.alerts\`
-    WHERE notified_ts IS NULL AND severity IN (${sevList})
-      AND alert_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${LOOKBACK_HOURS} HOUR)
-    ORDER BY alert_ts DESC`);
+  // 2026-07-04: the query below (and everything that depends on its result) is wrapped so a
+  // BigQuery-side failure — observed live on 2026-07-03 as a GoogleJsonResponseException /
+  // "QueryUsagePerDay ... custom quota exceeded" — is logged distinctly and skips only THIS poll's
+  // alert check, rather than throwing uncaught and also skipping beat_() below. A quota error is
+  // usually transient (next poll ~2h later typically succeeds), but if it recurred every poll for
+  // long enough to also suppress the heartbeat, cadence_check.sql's automation_heartbeat dead-man's
+  // switch could misdiagnose a live, working emailer as dead.
+  try {
+    const sevList = SEVERITIES.map(s => `'${s}'`).join(',');
+    // NOTIFICATION-COMPLETE: select un-notified alerts (notified_ts IS NULL), NOT `NOT resolved`, so an
+    // alert that self-healed between polls is still emailed exactly once. notified_ts is the durable
+    // de-dup; Script Properties is a secondary guard so a failed stamp doesn't re-send next poll.
+    // alert_ms (UNIX_MILLIS) lets the renderer format alert_ts in the DETECTED display timezone
+    // (state.user_tz) instead of raw unlabeled UTC — alert_ts (STRING) is kept too as a UTC fallback.
+    const rows = bqAlerts_(`
+      SELECT alert_id, CAST(alert_ts AS STRING) AS alert_ts, UNIX_MILLIS(alert_ts) AS alert_ms,
+             severity, source, category, message, resolved
+      FROM \`${ALERT_PROJECT_ID}.ops.alerts\`
+      WHERE notified_ts IS NULL AND severity IN (${sevList})
+        AND alert_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${LOOKBACK_HOURS} HOUR)
+      ORDER BY alert_ts DESC
+      LIMIT 500`);
 
-  const props = PropertiesService.getScriptProperties();
-  const seen = new Set(JSON.parse(props.getProperty('notified_alert_ids') || '[]'));
-  const fresh = rows.filter(r => !seen.has(r.alert_id));
+    const props = PropertiesService.getScriptProperties();
+    const seen = new Set(JSON.parse(props.getProperty('notified_alert_ids') || '[]'));
+    const fresh = rows.filter(r => !seen.has(r.alert_id));
 
-  if (fresh.length) {
-    // Split the alert-delivery self-test (canary) from real alerts so a weekly probe is never
-    // disguised as an incident in the subject — and, conversely, a real alert that happens to ride
-    // in the same poll batch is never softened to "[TEST]". (RUNBOOK §15 / delivery_canary.sql.)
-    const realFresh = fresh.filter(r => !isTest_(r));
-    const testCount = fresh.length - realFresh.length;
-    let subject;
-    if (realFresh.length === 0) {
-      // Batch is ONLY the alert-delivery self-test → unmistakable test subject, no ⚠.
-      subject = '🧪 [TEST] Stock-Trading alert-delivery self-test — no action needed';
+    if (fresh.length) {
+      // Split the alert-delivery self-test (canary) from real alerts so a weekly probe is never
+      // disguised as an incident in the subject — and, conversely, a real alert that happens to ride
+      // in the same poll batch is never softened to "[TEST]". (RUNBOOK §15 / delivery_canary.sql.)
+      const realFresh = fresh.filter(r => !isTest_(r));
+      const testCount = fresh.length - realFresh.length;
+      let subject;
+      if (realFresh.length === 0) {
+        // Batch is ONLY the alert-delivery self-test → unmistakable test subject, no ⚠.
+        subject = '🧪 [TEST] Stock-Trading alert-delivery self-test — no action needed';
+      } else {
+        const crit = realFresh.filter(r => r.severity === 'critical').length;
+        subject = `⚠ Stock-Trading ALERT — ${realFresh.length} new${crit ? ` (${crit} critical)` : ''}` +
+                  (testCount ? ` (+${testCount} test)` : '');
+      }
+      GmailApp.sendEmail(ALERT_RECIPIENT, subject, plainAlerts_(fresh, rows.length),
+        { htmlBody: htmlAlerts_(fresh, rows.length), name: ALERT_SENDER });
+      Logger.log('Emailed %s new alerts', fresh.length);
+      stampNotified_(fresh.map(r => r.alert_id));
+      // Bounded de-dup guard for ids we just emailed (in case the notified_ts stamp failed).
+      const keep = [...seen, ...fresh.map(r => r.alert_id)].slice(-500);
+      try {
+        props.setProperty('notified_alert_ids', JSON.stringify(keep));
+      } catch (e) { Logger.log('notified_alert_ids property write skipped: ' + e); }
     } else {
-      const crit = realFresh.filter(r => r.severity === 'critical').length;
-      subject = `⚠ Stock-Trading ALERT — ${realFresh.length} new${crit ? ` (${crit} critical)` : ''}` +
-                (testCount ? ` (+${testCount} test)` : '');
+      Logger.log('No un-notified alerts in the last %s h', LOOKBACK_HOURS);
     }
-    GmailApp.sendEmail(ALERT_RECIPIENT, subject, plainAlerts_(fresh, rows.length),
-      { htmlBody: htmlAlerts_(fresh, rows.length), name: ALERT_SENDER });
-    Logger.log('Emailed %s new alerts', fresh.length);
-    stampNotified_(fresh.map(r => r.alert_id));
-    // Bounded de-dup guard for ids we just emailed (in case the notified_ts stamp failed).
-    const keep = [...seen, ...fresh.map(r => r.alert_id)].slice(-500);
-    props.setProperty('notified_alert_ids', JSON.stringify(keep));
-  } else {
-    Logger.log('No un-notified alerts in the last %s h', LOOKBACK_HOURS);
+  } catch (e) {
+    Logger.log('checkAlerts_ query failed (BigQuery quota or transient error?) — skipping this cycle: ' + e);
   }
 
   // Liveness beat (ops.heartbeat -> state.automation_heartbeat). Lets cadence_check.sql detect a
   // SILENTLY-DEAD emailer (revoked token / deleted trigger) via the independent DTS failure-email —
   // a dead emailer obviously can't email that it is dead. Best-effort: never block the run on it.
+  // Runs regardless of the try/catch above (outside it) so a query-level failure never also
+  // suppresses the heartbeat.
   beat_();
 }
 
@@ -144,7 +160,7 @@ function bqAlerts_(sql) {
 // how a timestamp is RENDERED to the operator, never any alert logic. Falls back to America/Denver on
 // any error so a BigQuery hiccup on this read can never block delivery.
 let _alertTzCache = null;
-function getUserTz_() {
+function getUserTzAlerts_() {
   if (_alertTzCache) return _alertTzCache;
   try {
     _alertTzCache = (bqAlerts_(`SELECT tz FROM \`${ALERT_PROJECT_ID}.state.user_tz\``)[0] || {}).tz || 'America/Denver';
@@ -155,7 +171,7 @@ function getUserTz_() {
 }
 
 function fmtAlertTs_(a) {
-  const tz = getUserTz_();
+  const tz = getUserTzAlerts_();
   if (a.alert_ms != null) {
     return Utilities.formatDate(new Date(Number(a.alert_ms)), tz, 'MMM d, h:mm a') + ` (${tz})`;
   }
@@ -194,7 +210,7 @@ function htmlAlerts_(fresh, totalOpen) {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:auto;background:#fff;border-radius:12px;padding:18px;">
       <tr><td style="font-size:16px;font-weight:700;color:#0f2747;padding-bottom:8px;">${header}</td></tr>
       ${rowsHtml}
-      <tr><td style="font-size:11px;color:#8a96a3;padding-top:10px;">${totalOpen} total open alert(s) in ops.alerts. Resolve via <code>UPDATE ops.alerts SET resolved=TRUE …</code>. This channel complements the [Claude] ATTENTION calendar events.</td></tr>
+      <tr><td style="font-size:11px;color:#8a96a3;padding-top:10px;">${totalOpen} un-notified alert(s) in the last week. Resolve via <code>UPDATE ops.alerts SET resolved=TRUE …</code>. This channel complements the [Claude] ATTENTION calendar events.</td></tr>
     </table></body></html>`;
 }
 
@@ -202,7 +218,7 @@ function plainAlerts_(fresh, totalOpen) {
   const allTest = fresh.length > 0 && fresh.every(isTest_);
   let s = allTest
     ? `[TEST] Stock-Trading — alert-delivery self-test, no action needed:\n\n`
-    : `Stock-Trading — ${fresh.length} new unresolved alert(s) (${totalOpen} open total):\n\n`;
+    : `Stock-Trading — ${fresh.length} new unresolved alert(s) (${totalOpen} un-notified in the last week):\n\n`;
   fresh.forEach(a => {
     const tag = isTest_(a) ? '[TEST] ' : (String(a.resolved) === 'true' ? '[AUTO-RESOLVED] ' : '');
     s += `[${a.severity.toUpperCase()}] ${tag}${a.source}/${a.category}: ${a.message}  (${fmtAlertTs_(a)})\n`;

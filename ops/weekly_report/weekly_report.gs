@@ -106,7 +106,7 @@ function buildSubject_(d) {
 
 // ===== DATA =====
 function gatherData_() {
-  const tz = getUserTz_();
+  const tz = getUserTzWeekly_();
 
   const scorecard = bq_(`
     SELECT strategy, activation
@@ -255,7 +255,7 @@ function bq_(sql) {
 }
 
 let _tzCache = null;
-function getUserTz_() {
+function getUserTzWeekly_() {
   if (_tzCache) return _tzCache;
   try {
     _tzCache = (bq_(`SELECT tz FROM \`${PROJECT_ID}.state.user_tz\``)[0] || {}).tz || 'America/Denver';
