@@ -1,309 +1,236 @@
-2026-W26
+2026-W27
+# Weekly Catalyst Calendar — Strategies A & C (deep research)
 
-# Weekly Catalyst Calendar — ISO Week 2026-W26 (W1 routine; generated 2026-06-28 Sun ~evening MT)
+**Run date:** 2026-07-05 (America/Denver; `state.trading_day_today.today`). ISO week **2026-W27** (same marker W2/W3 stamp this cycle). Windows measured from today: **A = 6 months (through ~2027-01-05)**, **C = 45 days (through 2026-08-19)**.
 
-Generated 2026-06-28 (Sun; markets closed; next trading day Mon 2026-06-29 per `state.trading_day_today`: today=2026-06-28, is_trading_day=false, last_trading_day=2026-06-26 [Fri], next_trading_day=2026-06-29). Windows apply forward from the generation date. Covers the week of Monday 2026-06-29 (ISO-week W27) forward. (Marker correction, 2026-07: the marker is the ISO week of TODAY's run date, 2026-W26 — matching `Weekly_Post_Event_Screen.md` / `Weekly_Position_Deep_Dive.md` this same cycle and the plain-current-period check the W4 freshness gate actually runs. An earlier version of this file used an "upcoming trading-Monday" convention not shared by its sibling files, which would have false-halted W4's freshness gate.)
+**Regime context (read at run, not look-ahead):**
+- **SPY Trend = NEUTRAL**, **Equity Breadth = HEALTHY**, **VIX 16.45 (NORMAL)**, Yield-curve inversion NOT-SUSTAINED (technical signals 2026-06-03).
+- **Fundamental DNA (M1b June / M4 2026-07):** reflation tilt — growth *stable* (re-firmed), inflation *reaccelerating* (core PCE 3.4%), policy *hawkish* (dot-plot flipped to no-cuts/hike-bias, DXY 15-mo high), risk *neutral*, shock *latent* (Iran ceasefire fragile). Tape is **Fed-reaction-function-dominated** (macro overwhelms idiosyncratic narrative).
+- **Strategy A router = DO-NOT-ACTIVATE (confirmed, M4 2026-07).** Shortlist is still produced (cast broad, per prompt), but downstream **W4 routes the A top-tier to the Watchlist.md A-queue (no thesis construction) until the next M1 with A router ACTIVATE.** SPY Trend NEUTRAL fails the A `UP + HEALTHY` clause.
+- **Strategy C router = HYBRID ACTIVATE (FOMC-only) — PENDING `div-C-202606-1`.** C's technical clause (SPY Trend ≠ DOWN) passes, but the operative state restricts C to **FOMC events only** pending the divergence review. **The only currently-routable C catalyst in the 45-day window is the FOMC decision on 2026-07-29.** All earnings/PDUFA C candidates below are ranked for completeness but are **deferred on the router** (HYBRID-FOMC-only) in addition to the sizing constraint noted per candidate.
+- **Open positions:** B:MDT, D:DIS, D:RTX. **No open A or C positions** → no A↔C or A↔B simultaneous-holding conflicts to deconflict this cycle (DIS/RTX are D, MDT is B; none block an A or C entry). *(RTX is a D holding, so it is excluded from the A universe here to avoid a same-name A/D thesis overlap.)*
 
-Portfolio context (per `state.current_positions` + `state.current_regime` + Daily.md 2026-06-27): Strategy A NAV ≈ $1,890 (no positions; **router DO-NOT-ACTIVATE — M1b 2026-06-01, reconfirmed; SPY Trend NEUTRAL→deteriorating**; next M1 ~2026-07-01); Strategy B NAV ≈ $1,890 (open: **HCA [EXIT-PENDING], ZBRA, AZO, MDT**; HCA 60-day time-exit staged SELL 0.0642 LIMIT $385 DAY, instruction 100, order day Mon 6/29); Strategy C NAV ≈ $1,890 (no positions; **HYBRID ACTIVATE — FOMC ONLY**; FOMC-June C re-screen resolved NO-GO 6/15); Strategy D NAV ≈ $1,888 (open: RTX, DIS); Strategy E NAV ≈ $1,890 (no positions; ACTIVATE but execution-feasibility-deferred at current book size per M3). 2% sizing cap ≈ $37.8 per strategy.
+Data sources: FMP earnings-calendar + economics-calendar (confirmed dates), dansfera / assyro FDA PDUFA calendars, IBKR/FMP quotes for current levels. Off-cycle report dates without a filed announcement are marked **est** (historical cadence) and must be re-verified at thesis construction.
 
-Cross-strategy holdings constraint per Strategy.md: A↔B mutually exclude same name (**HCA / ZBRA / AZO / MDT excluded from A shortlist**); A↔C mutually exclude same name (no current C positions → no binding effect this cycle); D↔A coordination at monthly review (RTX/DIS flagged, not hard-excluded — defer any A entry until the D disposition is known).
+---
 
-Strategy A queue from Watchlist.md (**31 names** through 2026-06-27, unchanged from W26 — A router DNA → no adds/drains this week): CAT, LLY, QCOM, AAPL, DDOG, AKAM, NVDA, CSCO, AMAT, HD, TGT, WMT, AVGO, ORCL, ADBE, MU, INTC, NBIS, CRM, DELL, SNOW, MRVL, NTAP, OKTA, NOW, HPE, SMCI, AMD, IBM, PANW, CRWD. Surfaced here for W4 awareness, NOT double-queued.
+## PART 1A — Strategy A universe catalyst calendar (6-month window)
 
-> **⚠ Rev 35 cap-removal note carry-forward (per Operating_Protocols §10, 2026-05-30):** ALL holdings-**count** caps removed across A/B/C/D. PART 2 shortlists below do NOT apply any per-GICS-sector or total-position cap to candidacy. Retained controls: D's 30%-of-NAV sector *exposure* cap, the 2%-per-position size cap, all kill triggers, and KL #12 (d) average-pairwise-correlation monitoring (>0.5 trigger).
+US-listed common equity, market cap ≥ $2B, 30-day ADV ≥ $10M, scheduled catalyst within 6 months. No interpretation in this table (see PART 2A for hypotheses). Catalyst types: E=earnings, P=product/launch/analyst-day, R=regulatory/PDUFA, X=restructuring/corporate-action.
 
-**This-run verification / refresh notes (2026-06-28 W1 routine; dates re-verified via web research this run):**
+| Ticker | Name | Catalyst | Date | Status | Source |
+|--------|------|----------|------|--------|--------|
+| GOOGL | Alphabet | Q2 earnings (E) | 2026-07-22 | confirmed | FMP |
+| MSFT | Microsoft | FQ4 earnings (E) | 2026-07-29 | confirmed | FMP |
+| META | Meta Platforms | Q2 earnings (E) | 2026-07-29 | confirmed | FMP |
+| AMZN | Amazon | Q2 earnings (E) | 2026-07-30 | confirmed | FMP |
+| AAPL | Apple | FQ3 earnings (E) | 2026-07-30 | confirmed | FMP |
+| NVDA | NVIDIA | FQ2'27 earnings (E) | 2026-08-26 | confirmed | FMP |
+| AMD | Adv. Micro Devices | Q2 earnings (E) | 2026-08-04 | confirmed | FMP |
+| PLTR | Palantir | Q2 earnings (E) | 2026-08-03 | confirmed | FMP |
+| TSM | Taiwan Semi (ADR) | Q2 earnings (E) | 2026-07-16 | confirmed | FMP |
+| INTC | Intel | Q2 earnings (E) + 18A/14A foundry ramp (X) | 2026-07-23 | confirmed | FMP |
+| CSCO | Cisco | FQ4 earnings (E) | 2026-08-12 | confirmed | FMP |
+| QCOM | Qualcomm | FQ3 earnings (E) | ~2026-07-29 | est | cadence |
+| AVGO | Broadcom | FQ3 earnings (E) | ~2026-09-04 | est | cadence |
+| ORCL | Oracle | FQ1'27 earnings (E) | ~2026-09-10 | est | cadence |
+| CRM | Salesforce | FQ2'27 earnings (E) | ~2026-08-26 | est | cadence |
+| MRVL | Marvell | FQ2 earnings (E) | ~2026-08-27 | est | cadence |
+| MU | Micron | FQ4 earnings (E) | ~2026-09-24 | est | cadence |
+| ADBE | Adobe | FQ3 earnings (E) | 2026-09-10 | confirmed | FMP |
+| NOW | ServiceNow | Q2 earnings (E) | ~2026-07-22 | est | cadence |
+| PANW | Palo Alto Networks | FQ4 earnings (E) | ~2026-08-18 | est | cadence |
+| CRWD | CrowdStrike | FQ2 earnings (E) | ~2026-08-26 | est | cadence |
+| SNOW | Snowflake | FQ2 earnings (E) | ~2026-08-26 | est | cadence |
+| DELL | Dell Technologies | FQ2 earnings (E) | ~2026-08-28 | est | cadence |
+| HPE | HP Enterprise | FQ3 earnings (E) | ~2026-09-02 | est | cadence |
+| SMCI | Super Micro | FQ4 earnings (E) | ~2026-08-05 | est | cadence |
+| ANET | Arista Networks | Q2 earnings (E) | ~2026-08-05 | est | cadence |
+| VRT | Vertiv | Q2 earnings (E) | ~2026-07-22 | est | cadence |
+| DDOG | Datadog | Q2 earnings (E) | ~2026-08-07 | est | cadence |
+| NTAP | NetApp | FQ1 earnings (E) | ~2026-08-26 | est | cadence |
+| OKTA | Okta | FQ2 earnings (E) | ~2026-08-26 | est | cadence |
+| AKAM | Akamai | Q2 earnings (E) | ~2026-08-07 | est | cadence |
+| NBIS | Nebius Group | Q2 earnings (E) | ~2026-08-12 | est | cadence |
+| UBER | Uber | Q2 earnings (E) | 2026-08-05 | confirmed | FMP |
+| NFLX | Netflix | Q2 earnings (E) | 2026-07-16 | confirmed | FMP |
+| GE | GE Aerospace | Q2 earnings (E) | 2026-07-16 | confirmed | FMP |
+| BA | Boeing | Q2 earnings (E) | 2026-07-28 | confirmed | FMP |
+| LMT | Lockheed Martin | Q2 earnings (E) | 2026-07-23 | confirmed | FMP |
+| JPM | JPMorgan | Q2 earnings (E) | 2026-07-14 | confirmed | FMP |
+| GS | Goldman Sachs | Q2 earnings (E) | 2026-07-14 | confirmed | FMP |
+| V | Visa | FQ3 earnings (E) | 2026-07-28 | confirmed | FMP |
+| UNH | UnitedHealth | Q2 earnings (E) | 2026-07-16 | confirmed | FMP |
+| HCA | HCA Healthcare | Q2 earnings (E) | 2026-07-24 | confirmed | FMP |
+| JNJ | Johnson & Johnson | Q2 earnings (E) | 2026-07-15 | confirmed | FMP |
+| ABBV | AbbVie | Q2 earnings (E) | 2026-07-31 | confirmed | FMP |
+| LLY | Eli Lilly | Q2 earnings (E) + oral GLP-1 (Foundayo) ramp (P) | ~2026-08-06 | est | cadence |
+| VRTX | Vertex Pharma | Journavx (suzetrigine) chronic low-back-pain sNDA PDUFA (R) | 2026-12-05 | confirmed | dansfera |
+| VRTX | Vertex Pharma | Q2 earnings (E) | ~2026-08-03 | est | cadence |
+| ALNY | Alnylam | zilebesiran (HTN) PDUFA (R) | 2026-09-15 | confirmed | dansfera |
+| ALNY | Alnylam | elebsiran (HBV) PDUFA (R) | 2026-11-10 | confirmed | dansfera |
+| REGN | Regeneron | pozelimab (VEXAS) PDUFA (R) | 2026-10-01 | confirmed | dansfera |
+| CYTK | Cytokinetics | aficamten MAPLE-HCM sNDA PDUFA (R) | 2026-10-30 | confirmed | dansfera |
+| KO | Coca-Cola | Q2 earnings (E) | 2026-07-28 | confirmed | FMP |
+| SBUX | Starbucks | FQ3 earnings (E) — turnaround (X) | 2026-08-04 | confirmed | FMP |
+| CVX | Chevron | Q2 earnings (E) | 2026-07-31 | confirmed | FMP |
+| XOM | Exxon Mobil | Q2 earnings (E) | 2026-08-07 | confirmed | FMP |
+| WMT | Walmart | FQ2 earnings (E) | 2026-08-20 | confirmed | FMP |
+| TGT | Target | FQ2 earnings (E) | 2026-08-19 | confirmed | FMP |
+| DIS | Disney *(D holding)* | FQ3 earnings (E) | 2026-08-05 | confirmed | FMP |
 
-- **REGIME SHIFT THIS WEEK — the AI-hardware bid that defined W26 CRACKED (reverses last week's "re-bid" framing).** A semiconductor/AI-led selloff dominated 6/22–6/26: **Nasdaq −4.6% on the week (5th straight down session into Friday); S&P 500 −~2%; Dow +~0.6%** (money rotated OUT of AI/tech into value). **S&P 500 closed Fri 6/26 at 7,354.02 — BELOW its 50-day (~7,449), 100-day (~7,432) AND 200-day (~7,466) SMAs** (per Investing.com technicals; "Strong Sell" MA summary, RSI ~42) — a material deterioration vs the prior weeks' records. The 50>200 longer-term structure is borderline (50-day now ~at/just-below the 200-day). **VIX rose to a 6/23 close of 19.49 (+12.8% that day) on the chip rout, eased to 18.41 by 6/26** — elevated but not yet in the >25 stress zone. Triggers: AI valuation/capex-sustainability fear (Tue 6/23 global chip rout, Kospi −10% from record on Samsung/SK Hynix selling) + Fri 6/26 NYT report that **OpenAI may delay its IPO to 2027** (Altman targeting ~$1T; SoftBank −9% to −14%) + **Apple price hikes citing chip/memory shortages**. (Sources: TheStreet/CNBC 6/25–6/26; Guardian 6/23; Investing.com technicals; Cboe.) **Net for A: SPY Trend NEUTRAL→deteriorating — A router stays DNA, now MORE firmly (NEUTRAL or DOWN both fail the "Trend UP + breadth HEALTHY" gate). For C: SPY Trend ≠ DOWN is C's router gate — if the mechanical engine flips SPY Trend to DOWN at the ~7/1 M1, C's HYBRID-FOMC routing DEACTIVATES entirely (kills even the FOMC-July thesis). This is the single most important M1-input development this cycle.** (W1 reports the canonical state — `events.regime_events` most-recent TECHNICAL_SIGNAL rows are 2026-06-03 SPY_TREND NEUTRAL / BREADTH HEALTHY, A=DNA, C=HYBRID-ACTIVATE-FOMC-only — and flags the deterioration; the mechanical trend re-derivation is the M1b/engine's call, not W1's.)
+Later structural markers inside the 6-month window (retrieved-not-recalled where dated): **Apple fall product event** (~Sep, iPhone/Apple-Intelligence — tentative), **Q3 earnings season** (mid-Oct → mid-Nov — the second earnings catalyst for every name above), **NVDA FQ3'27** (~late-Nov — est), **FOMC meetings** 2026-09-16, 2026-10-28, 2026-12-09 (Fed calendar; the last three fall inside A's 6-mo window and are C events too — see PART 1B for the in-45-day one).
 
-- **Core PCE (May) = 3.4% YoY — highest since Oct 2023 (released Thu 6/25); headline PCE 4.1% YoY.** +0.3% MoM core; consumer spending hot (PCE +0.7% MoM nominal). Confirms sticky/re-accelerating inflation; partly oil-driven (the May spike reflects *prior* oil — the late-June crude collapse should help the June print). **Hardens the higher-for-longer / stagflation-tilt backdrop (key M1 input ~7/1).** CME FedWatch: **July 28-29 ~89% HOLD; ~1 hike priced by year-end** — consistent with the 6/17 hawkish hold (median 2026 dot ~3.8%) and 6/26 Kashkari "expects a rate hike this year." (Sources: CNBC/BEA/CBS PCE 6/25; FedWatch.)
+---
 
-- **Crude COLLAPSED — forward-disinflationary offset REINFORCED.** **Brent settled Fri 6/26 at $71.99 (−4.34%, >−10% on the week, lowest since Feb 27 / pre-war); WTI $69.23.** Hormuz transits accelerated toward ~75% of prewar levels on US–Iran peace-deal progress. **BUT weekend escalation (post-Fri-close, 3rd consecutive day):** Iranian drone struck the *Ever Lovely* (6/25), US retaliatory airstrikes on Iranian missile/drone/radar sites Fri night, Iran counter-strikes + Bahrain drones + a 2nd tanker hit Sat 6/27 — **contained so far** (no US assets hit, ships transiting, oil at pre-war lows), market reaction **pending Mon 6/29 open**. `shock_overlay` watch: latent→testing. (Sources: CNBC oil 6/26; Daily.md 2026-06-27 §1.)
+## PART 1B — Strategy C universe (45-day window, through 2026-08-19)
 
-- **A-QUEUE CATALYSTS THAT RESOLVED THIS WEEK (6/23–6/25) — removed from forward tables; outcomes feed the next M1 ~7/1, NOT W27 W1 actions:**
-  - **MU FQ3 26 (2026-06-24 AMC) — BLOWOUT.** Rev ~$41.46B vs ~$35.84B est (DRAM $31.3B +343% YoY; NAND $9.9B +361% YoY); non-GAAP EPS **$25.11 vs $20.20** est (+24% beat); **FQ4 guide $50B ±$1B / GM ~86% / EPS ~$31** (massive sequential guide-up); **16 Strategic Customer Agreements lock in ~20% of DRAM and up to ~1/3 of NAND volume** (ratifies "sold out of HBM"). **Day-0 +~15%** (6/25 close $1,213.56 = ATH), then **−6.69% Fri 6/26 to $1,132.33** in the broad AI selloff. MU **~+260% YTD**. **The bullish A-thesis is RATIFIED at the fundamental level (most extreme of the cycle), but the valuation/positioning bear-tail is now acute — +260% YTD into a cracking AI tape; the Day-0 +15% gave back nearly half by the next close.** (Sources: CNBC/SEC 8-K 6/24; stockanalysis.com.)
-  - **QCOM Investor Day (2026-06-24) — aggressive data-center pivot, anchor hyperscaler wins.** Targets **>$15B DC AI-chip revenue by FY2029** (from ~$5B FY27); **~$40B non-handset revenue by FY29** (auto $10B / industrial-robotics $8B / personal-AI-XR $6B); unveiled the **"Dragonfly" DC portfolio incl. DC-CPU C1000 (production 2028)**; **$3.92B acquisition of AI-software firm Modular**; **anchor hyperscaler agreements with Meta and Microsoft.** Closed $204.90 (6/25); analyst PT hikes (Benchmark→$300, Morgan Stanley upgrade w/ $231, RBC $250, Bernstein $235). **A-thesis (handset→DC diversification) ratified at strategy-roadmap level. Next catalyst FQ3 ~8/5.** (Sources: CNBC/Qualcomm IR 6/24.)
-  - **FDX FQ4 26 (2026-06-23 AMC) — beat, sold off on transition-year outlook.** Adj EPS **$6.31 vs ~$5.92**; rev **$25.0B vs ~$24.18B** (beat both); first report as slimmer parent post-Freight-spin; market focused on transition-year guidance + TSA/transformation costs. Day-0 ~−0.1% cash close (bulk of the negative move in 6/23 after-hours). Not an A-queue name (freight-cycle read-through only).
-  - **FDXF FQ4 26 (2026-06-25 AMC) — first standalone LTL report.** Rev ~$2.4B (+4.8% YoY segment); ~15% adj OM; guide adj OI **$605–645M** on 4–6% rev growth through 12/31/26; TSA/transformation costs up to $700–750M. Clean Day-0 % not reliably verified (very new ticker).
+C qualifying events ONLY: earnings (US-listed, company IR), FDA PDUFA (FDA calendar / company disclosure), FOMC (Fed calendar). No interpretation here (see PART 2B).
 
-- **PDUFA CHANGES this run (durable corrections):**
-  - **UNCY oxylanthanum carbonate PDUFA is 6/27 (not 6/29)** per Unicycive's own release (Class II resubmission) — **now at/past goal date as of 6/28; resolving/decided, feeds M1.** Removed from forward tables.
-  - **ARQT ZORYVE cream 0.3% sNDA 6/29 / LNTH-2501 6/29 / VRDN veligrotug 6/30 / IONS olezarsen 6/30 STAND** — none landed early during 6/22–6/26 (verified pending).
-  - **NEW in-window PDUFAs surfaced this run (small/mid-cap; C-eligible / router-blocked, A-eligible as regulatory decisions):** **SWTX mirdametinib ~7/10**; **BIIB/Eisai Leqembi SC (IQLIK) ~7/25**; **NVO denecimig/Mim8 ~7/29**. (Orca-T 7/6 remains EXCLUDED — issuer private, no US-listed equity.)
-  - **Enhertu 7/7 (AZN/Daiichi, post-neoadjuvant HER2+ early breast cancer sBLA) carries a date discrepancy** — Daiichi's US release says PDUFA 7/7; AstraZeneca's release says "anticipated during Q3 2026." Carried at 7/7 with a FLAG; verify at thesis-construction.
-  - **STANDING (large-cap, in A window):** LNTH MK-6240 ~8/13, MRK Keytruda Qlex SC ~8/17, **BMY iberdomide (MM) ~8/17 (NEW)**, JAZZ Ziihera ~8/25, GILD bictegravir/lenacapavir ~8/27. **NEW Sept–Dec large-cap cluster (A window, out of C 45-day):** **ALNY zilebesiran ~9/15, BMY Camzyos sNDA ~9/30, REGN pozelimab (VEXAS) ~10/1, MRK/Daiichi I-DXd (ES-SCLC) ~10/10, CYTK aficamten ~10/30, SNY venglustat ~11/25, VRTX povetacicept (IgAN) ~11/30, GILD anito-cel ~12/23.**
+| Ticker / event | Name | Event type | Date | Source |
+|----------------|------|------------|------|--------|
+| **FOMC** | Federal Reserve | **FOMC rate decision + presser** | **2026-07-29** | FMP economics / Fed calendar |
+| DAL | Delta Air Lines | Earnings | 2026-07-09 | FMP |
+| PEP | PepsiCo | Earnings | 2026-07-09 | FMP |
+| JPM | JPMorgan | Earnings | 2026-07-14 | FMP |
+| WFC | Wells Fargo | Earnings | 2026-07-14 | FMP |
+| C | Citigroup | Earnings | 2026-07-14 | FMP |
+| GS | Goldman Sachs | Earnings | 2026-07-14 | FMP |
+| BAC | Bank of America | Earnings | 2026-07-14 | FMP |
+| JNJ | Johnson & Johnson | Earnings | 2026-07-15 | FMP |
+| UAL | United Airlines | Earnings | 2026-07-15 | FMP |
+| GE | GE Aerospace | Earnings | 2026-07-16 | FMP |
+| NFLX | Netflix | Earnings | 2026-07-16 | FMP |
+| UNH | UnitedHealth | Earnings | 2026-07-16 | FMP |
+| TSM | Taiwan Semi (ADR) | Earnings | 2026-07-16 | FMP |
+| GM | General Motors | Earnings | 2026-07-21 | FMP |
+| GOOGL | Alphabet | Earnings | 2026-07-22 | FMP |
+| TSLA | Tesla | Earnings | 2026-07-22 | FMP |
+| T | AT&T | Earnings | 2026-07-22 | FMP |
+| INTC | Intel | Earnings | 2026-07-23 | FMP |
+| LMT | Lockheed Martin | Earnings | 2026-07-23 | FMP |
+| VZ | Verizon | Earnings | 2026-07-24 | FMP |
+| HCA | HCA Healthcare | Earnings | 2026-07-24 | FMP |
+| BA | Boeing | Earnings | 2026-07-28 | FMP |
+| KO | Coca-Cola | Earnings | 2026-07-28 | FMP |
+| PYPL | PayPal | Earnings | 2026-07-28 | FMP |
+| F | Ford | Earnings | 2026-07-28 | FMP |
+| V | Visa | Earnings | 2026-07-28 | FMP |
+| MSFT | Microsoft | Earnings | 2026-07-29 | FMP |
+| META | Meta Platforms | Earnings | 2026-07-29 | FMP |
+| HOOD | Robinhood | Earnings | 2026-07-29 | FMP |
+| AMZN | Amazon | Earnings | 2026-07-30 | FMP |
+| AAPL | Apple | Earnings | 2026-07-30 | FMP |
+| COIN | Coinbase | Earnings | 2026-07-30 | FMP |
+| ABBV | AbbVie | Earnings | 2026-07-31 | FMP |
+| CVX | Chevron | Earnings | 2026-07-31 | FMP |
+| MRNA | Moderna | Earnings | 2026-07-31 | FMP |
+| PLTR | Palantir | Earnings | 2026-08-03 | FMP |
+| AMD | Adv. Micro Devices | Earnings | 2026-08-04 | FMP |
+| SBUX | Starbucks | Earnings | 2026-08-04 | FMP |
+| PFE | Pfizer | Earnings | 2026-08-04 | FMP |
+| DIS | Disney | Earnings | 2026-08-05 | FMP |
+| UBER | Uber | Earnings | 2026-08-05 | FMP |
+| SHOP | Shopify | Earnings | 2026-08-05 | FMP |
+| XOM | Exxon Mobil | Earnings | 2026-08-07 | FMP |
+| CSCO | Cisco | Earnings | 2026-08-12 | FMP |
+| TGT | Target | Earnings | 2026-08-19 | FMP |
+| VERA | Vera Therapeutics | FDA PDUFA — atacicept (IgA nephropathy) | 2026-07-07 | dansfera |
+| SWTX | SpringWorks Therap. | FDA PDUFA — mirdametinib (NF1-PN) | 2026-07-10 | dansfera |
+| CELC | Celcuity | FDA PDUFA — gedatolisib (HR+/HER2− breast) | 2026-07-14 | dansfera |
+| BIIB | Biogen / Eisai | FDA PDUFA — Leqembi subcutaneous (Alzheimer's) | 2026-07-25 | dansfera |
+| NVO | Novo Nordisk (ADR) | FDA PDUFA — denecimig/Mim8 (Hemophilia A) | 2026-07-29 | dansfera |
+| PRAX | Praxis Precision | FDA PDUFA — ulixacaltamide (essential tremor) | 2026-08-17 | dansfera |
 
-- **EARNINGS-DATE CORRECTIONS this run (durable):** **ABBV Q2 = 2026-07-31 BMO (IR-CONFIRMED; corrected from ~7/24)**; **MSFT FQ4 ≈ 2026-07-29 AMC (refined from ~7/28)**; **PLTR Q2 ≈ 2026-08-03 AMC (corrected from ~8/10 — now back INSIDE the C 45-day window)**; **NBIS Q2 ≈ 2026-08-06 (corrected from ~8/12 — now INSIDE the C window)**; **PG ≈ 2026-07-29 per aggregator (flag vs prior ~8/4 — re-verify)**. **NEW IR-CONFIRMED dates this run:** WFC/JPM 7/14, NFLX 7/16 (1:01pm PT), UNH 7/16, GE Aerospace 7/16, LLY 8/5. **NKE FQ4 = 2026-06-30 (Tue) AMC** (FactSet: only 4 S&P 500 cos report all of next week — Q2'26 season ramps with banks 7/14). All other late-July/early-Aug earnings remain aggregator-estimated → re-verify mid-July.
+*Excluded PDUFA (outside window / non-C-viable):* Orca Bio (Orca-T) 7/6 — no liquid listed options; Landos/Ji Xing (omilancor) 8/20, KalVista AdCom 8/20 — outside the 45-day window.
 
-- **NEW non-earnings A-eligible catalysts this run:** **HON→HONA Aerospace spin COMPLETES 6/29** (HONA joins S&P 500/100; HON does a 1-for-2 reverse split, renamed Honeywell Technologies); **SPGI→Mobility Global (MBGL) spin distribution 7/1** (record 6/15; when-issued from ~6/26); **REZI→ADI Global Distribution spin H2 2026 + NEW REZI Investor Day 7/13 / ADI Investor Day 7/14 (NYC)** — analyst-day catalysts, A-eligible; **TTWO GTA VI 11/19 CONFIRMED** (pre-orders opened 6/25); AAPL iPhone 18 event ~early/mid-Sept (Tentative).
+---
 
-- **A 6-month window now 2026-06-28 → 2026-12-28** (W26 was 6/21 → 12/21). **C 45-day window now 2026-06-28 → 2026-08-12** (W26 was 6/21 → 8/05) — newly in C window: PLTR (8/3), DDOG/AKAM/DIS/NBIS (8/6). LNTH MK-6240 (8/13) and MRK Keytruda Qlex (8/17) just OUTSIDE the C back-edge.
+## PART 2A — Strategy A preliminary shortlist (ranked; 42 candidates)
 
-- **FOMC remaining 2026 (Confirmed, Chicago Fed / federalreserve.gov):** **July 28-29 (no SEP)**, Sep 15-16 (SEP/dots), Oct 27-28, Dec 8-9 (SEP/dots).
+Broad narrative-misalignment shortlist. Per candidate: **(a)** hypothesized-mispricing direction, **(b)** supporting public documents, **(c)** catalyst date, **(d)** overlap with open A / watchlist, **(e)** priority tier. Shortlist only — full thesis per Strategy.md happens in W4-scheduled sessions.
 
-## PART 1A — STRATEGY A UNIVERSE (6-month window: 2026-06-28 → 2026-12-28)
+**Gate reminder for W4:** A router = DO-NOT-ACTIVATE → top-10 route to Watchlist.md A-queue (no thesis) until next M1 ACTIVATE. Rankings + directions preserved here so the queue carries the current read. **Pervasive caveat across the AI/semis complex:** after a multi-quarter melt-up (MU ~$976, AMD ~$518, NVDA ~$195 post-split, AAPL ~$309), most bullish-continuation theses carry a **valuation-reset / compressed-thesis-runway** risk — the recurring watchlist caveat. This is an A-entry-quality flag, not a thesis refutation.
 
-US-listed equities, market cap ≥ $2B, 30-day ADV ≥ $10M, with a scheduled catalyst in the next 6 months. Catalyst types: earnings releases, product launches, restructuring/spin-offs, analyst/investor days, regulatory decisions (incl. FDA PDUFA), structural narrative markers. Sorted by date ascending. "Confirmed" = company IR / FDA / Fed published; "Estimated" = aggregator projection from prior-year cadence; "Tentative" = guidance range / window only. No interpretation in PART 1.
+### TOP-10
 
-| # | Ticker | Name | Catalyst Type | Date | Confidence | Source |
-|---|---|---|---|---|---|---|
-| 1 | ARQT | Arcutis Biotherapeutics | PDUFA — ZORYVE cream 0.3% (sNDA, peds psoriasis 2–5) | 2026-06-29 | Confirmed | Arcutis IR |
-| 2 | LNTH | Lantheus Holdings | PDUFA — LNTH-2501 (Ga-68 edotreotide; 3-mo extension) | 2026-06-29 | Confirmed | Lantheus 8-K |
-| 3 | HON→HONA | Honeywell — Aerospace spin (HONA distribution; 1-for-2 reverse split) | Spin-off (restructuring) | 2026-06-29 | Confirmed | Honeywell IR / SEC |
-| 4 | NKE | Nike | Earnings (FQ4 26) | 2026-06-30 AMC | Estimated | aggregator / FactSet |
-| 5 | VRDN | Viridian Therapeutics | PDUFA — veligrotug (TED; Priority + BTD) | 2026-06-30 | Confirmed | Viridian IR |
-| 6 | IONS | Ionis Pharmaceuticals | PDUFA — olezarsen (severe hyperTG sNDA; Priority) | 2026-06-30 | Confirmed | Ionis IR |
-| 7 | SPGI→MBGL | S&P Global → Mobility Global | Spin-off (distribution; WI from ~6/26) | 2026-07-01 | Confirmed | S&P Global IR / 8-K |
-| 8 | VERA | Vera Therapeutics | PDUFA — atacicept (IgA nephropathy; Priority + BTD) | 2026-07-07 | Confirmed | Vera IR |
-| 9 | AZN | AstraZeneca / Daiichi (ADR) | PDUFA — Enhertu post-neoadjuvant HER2+ early breast cancer (sBLA) | 2026-07-07 ⚑ | Confirmed (Daiichi); AZN says "Q3 2026" | Daiichi US / AstraZeneca PR |
-| 10 | SWTX | SpringWorks Therapeutics | PDUFA — mirdametinib (NF1-PN; est) | ~2026-07-10 | Estimated | aggregator FDA calendar |
-| 11 | REZI | Resideo | Investor Day (pre-ADI spin) | 2026-07-13 | Confirmed | Resideo IR |
-| 12 | ADI-Global | ADI Global Distribution (Resideo spin) | Investor Day | 2026-07-14 | Confirmed | Resideo / ADI IR |
-| 13 | JPM | JPMorgan Chase | Earnings (Q2 26) | 2026-07-14 BMO | Confirmed | JPM IR / WSH |
-| 14 | WFC | Wells Fargo | Earnings (Q2 26) | 2026-07-14 BMO | Confirmed | WF newsroom |
-| 15 | C | Citigroup | Earnings (Q2 26) | ~2026-07-14 BMO | Estimated | Citi IR cadence |
-| 16 | BAC | Bank of America | Earnings (Q2 26) | ~2026-07-14 BMO | Estimated | aggregator |
-| 17 | GS | Goldman Sachs | Earnings (Q2 26) | ~2026-07-14 BMO (call 7/15) | Estimated | GS IR / WSH |
-| 18 | BLK | BlackRock | Earnings (Q2 26) | ~2026-07-15 BMO | Estimated | aggregator |
-| 19 | UNH | UnitedHealth Group | Earnings (Q2 26) | 2026-07-16 BMO | Confirmed | UNH newsroom |
-| 20 | GE | GE Aerospace | Earnings (Q2 26) | 2026-07-16 (~7:30am) | Confirmed | GE Aerospace IR |
-| 21 | NFLX | Netflix | Earnings (Q2 26) | 2026-07-16 AMC | Confirmed | Netflix IR PR 6/15 |
-| 22 | CELC | Celcuity | PDUFA — gedatolisib (HR+/HER2-/PIK3CA-WT breast; Priority/RTOR) | 2026-07-17 | Confirmed | Celcuity IR |
-| 23 | ISRG | Intuitive Surgical | Earnings (Q2 26) | ~2026-07-21 AMC | Estimated | aggregator |
-| 24 | TXN | Texas Instruments | Earnings (Q2 26) | ~2026-07-21 AMC | Estimated | aggregator |
-| 25 | LMT | Lockheed Martin | Earnings (Q2 26) | ~2026-07-21 BMO | Estimated | aggregator |
-| 26 | NOC | Northrop Grumman | Earnings (Q2 26) | ~2026-07-21 BMO | Estimated | aggregator |
-| 27 | TSLA | Tesla | Earnings (Q2 26) | ~2026-07-22 AMC | Estimated | WSH |
-| 28 | GOOGL | Alphabet | Earnings (Q2 26) | ~2026-07-23 AMC | Estimated | WSH |
-| 29 | INTC | Intel | Earnings (Q2 26) | ~2026-07-23 AMC | Estimated | Intel IR cadence |
-| 30 | SNY | Sanofi (ADR) | PDUFA — Sarclisa SC (isatuximab subcutaneous, MM; extended once) | 2026-07-23 | Confirmed | Sanofi PR |
-| 31 | HON | Honeywell Technologies (post-spin) | Earnings (Q2 26) | ~2026-07-24 BMO | Estimated | aggregator |
-| 32 | OTSKY | Otsuka (ADR) | PDUFA — centanafadine (ADHD; Priority) | 2026-07-24 | Confirmed | Otsuka US |
-| 33 | BIIB | Biogen / Eisai | PDUFA — Leqembi SC autoinjector (IQLIK) | ~2026-07-25 | Confirmed | Biogen/Eisai PR |
-| 34 | MNKD | MannKind (acq. scPharma) | PDUFA — FUROSCIX ReadyFlow autoinjector (sNDA) | 2026-07-26 | Confirmed | MannKind IR |
-| 35 | RTX | RTX Corp | Earnings (Q2 26) | ~2026-07-28 BMO | Estimated | aggregator |
-| 36 | KO | Coca-Cola | Earnings (Q2 26) | ~2026-07-28 BMO | Estimated | aggregator |
-| 37 | FOMC-Jul | FOMC July Meeting (no SEP) | Fed Rate Decision | 2026-07-28 / 07-29 | Confirmed | federalreserve.gov |
-| 38 | MSFT | Microsoft | Earnings (FQ4 26) | ~2026-07-29 AMC | Estimated | MSFT IR cadence |
-| 39 | META | Meta Platforms | Earnings (Q2 26) | ~2026-07-29 AMC | Estimated | WSH |
-| 40 | BA | Boeing | Earnings (Q2 26) | ~2026-07-29 BMO | Estimated | aggregator |
-| 41 | PG | Procter & Gamble | Earnings (FQ4 26) | ~2026-07-29 BMO ⚑ | Estimated | aggregator (vs prior ~8/4) |
-| 42 | NVO | Novo Nordisk (ADR) | PDUFA — denecimig (Mim8, hemophilia A) | ~2026-07-29 | Estimated | aggregator FDA calendar |
-| 43 | AAPL | Apple | Earnings (FQ3 26) | ~2026-07-30 AMC | Estimated | aggregator |
-| 44 | AMZN | Amazon | Earnings (Q2 26) | ~2026-07-30 AMC | Estimated | WSH |
-| 45 | VTRS | Viatris | PDUFA — low-dose estrogen weekly patch (contraception; 505(b)(2)) | 2026-07-30 | Confirmed | Viatris newsroom |
-| 46 | XOM | ExxonMobil | Earnings (Q2 26) | ~2026-07-31 BMO | Estimated | aggregator |
-| 47 | CVX | Chevron | Earnings (Q2 26) | ~2026-07-31 BMO | Estimated | aggregator |
-| 48 | ABBV | AbbVie | Earnings (Q2 26) | 2026-07-31 BMO | Confirmed | AbbVie PR 6/26 |
-| 49 | PLTR | Palantir Technologies | Earnings (Q2 26) | ~2026-08-03 AMC | Estimated | Zacks/WSH (corrected) |
-| 50 | MRK | Merck & Co | Earnings (Q2 26) | 2026-08-04 BMO | Confirmed | Merck IR |
-| 51 | AMD | Advanced Micro Devices | Earnings (Q2 26) | ~2026-08-04 AMC | Estimated | aggregator |
-| 52 | CAT | Caterpillar | Earnings (Q2 26) | ~2026-08-04 BMO | Estimated | aggregator |
-| 53 | QCOM | Qualcomm | Earnings (FQ3 26) | ~2026-08-05 AMC | Estimated | aggregator (Sept FY) |
-| 54 | LLY | Eli Lilly | Earnings (Q2 26) | 2026-08-05 (10am) | Confirmed | Lilly IR |
-| 55 | MRNA | Moderna | PDUFA — mRNA-1010 (mFLUSIVA), seasonal flu 50+ (AdCom 9-0 favorable 6/18) | 2026-08-05 | Confirmed | Moderna PR / FDA AdCom |
-| 56 | DDOG | Datadog | Earnings (Q2 26) | ~2026-08-06 AMC | Estimated | aggregator |
-| 57 | AKAM | Akamai Technologies | Earnings (Q2 26) | ~2026-08-06 AMC | Estimated | aggregator |
-| 58 | DIS | Walt Disney | Earnings (FQ3 26) | ~2026-08-06 BMO | Estimated | aggregator |
-| 59 | NBIS | Nebius Group | Earnings (Q2 26) | ~2026-08-06 | Estimated | Public.com (corrected) |
-| 60 | LNTH | Lantheus Holdings | PDUFA — MK-6240 (tau PET imaging) | ~2026-08-13 | Estimated | aggregator FDA calendar |
-| 61 | AMAT | Applied Materials | Earnings (FQ3 26) | ~2026-08-13 AMC | Estimated | aggregator |
-| 62 | CSCO | Cisco Systems | Earnings (FQ4 26) | ~2026-08-13 AMC | Estimated | aggregator |
-| 63 | MRK | Merck & Co | PDUFA — Keytruda Qlex SC (subcutaneous pembrolizumab) | ~2026-08-17 | Confirmed | Merck / MarketBeat |
-| 64 | BMY | Bristol Myers Squibb | PDUFA — iberdomide (multiple myeloma) | ~2026-08-17 | Confirmed | BMS PR |
-| 65 | HD | Home Depot | Earnings (FQ2 26) | ~2026-08-18 BMO | Estimated | aggregator |
-| 66 | TGT | Target | Earnings (FQ2 26) | ~2026-08-19 BMO | Estimated | aggregator |
-| 67 | LOW | Lowe's | Earnings (FQ2 26) | ~2026-08-19 BMO | Estimated | aggregator |
-| 68 | TJX | TJX Companies | Earnings (FQ2 26) | ~2026-08-19 BMO | Estimated | aggregator |
-| 69 | WMT | Walmart | Earnings (FQ2 27) | 2026-08-20 BMO | Confirmed | Walmart IR |
-| 70 | JAZZ | Jazz Pharmaceuticals | PDUFA — Ziihera (zanidatamab) 1L HER2+ GEA | ~2026-08-25 | Estimated | aggregator FDA calendar |
-| 71 | NVDA | NVIDIA | Earnings (FQ2 27) | 2026-08-26 AMC | Confirmed | NVIDIA IR / WSH |
-| 72 | CRM | Salesforce | Earnings (FQ2 27) | ~2026-08-26 AMC | Estimated | aggregator |
-| 73 | GILD | Gilead Sciences | PDUFA — bictegravir/lenacapavir (HIV; Priority) | ~2026-08-27 | Confirmed | Gilead IR |
-| 74 | AVGO | Broadcom | Earnings (FQ3 26) | ~2026-09-03 AMC | Estimated | aggregator |
-| 75 | AAPL | Apple | iPhone (18) Launch Event | ~2026-09-08 / 09 | Tentative | MacRumors |
-| 76 | ALNY | Alnylam | PDUFA — zilebesiran (hypertension) | ~2026-09-15 | Estimated | aggregator FDA calendar |
-| 77 | FOMC-Sep | FOMC September Meeting (SEP / dot plot) | Fed Rate Decision | 2026-09-15 / 09-16 | Confirmed | federalreserve.gov |
-| 78 | BMY | Bristol Myers Squibb | PDUFA — Camzyos (mavacamten) sNDA | ~2026-09-30 | Estimated | aggregator FDA calendar |
-| 79 | REGN | Regeneron | PDUFA — pozelimab (VEXAS; Priority) | ~2026-10-01 | Estimated | aggregator FDA calendar |
-| 80 | MRK | Merck / Daiichi | PDUFA — I-DXd (ifinatamab deruxtecan, ES-SCLC) | ~2026-10-10 | Estimated | aggregator FDA calendar |
-| 81 | JPM | JPMorgan Chase | Earnings (Q3 26) | ~2026-10-13 BMO | Estimated | aggregator |
-| 82 | NFLX | Netflix | Earnings (Q3 26) | ~2026-10-15 AMC | Estimated | aggregator |
-| 83 | TSLA | Tesla | Earnings (Q3 26) | ~2026-10-21 AMC | Estimated | aggregator |
-| 84 | FOMC-Oct | FOMC October Meeting (no SEP) | Fed Rate Decision | 2026-10-27 / 10-28 | Confirmed | federalreserve.gov |
-| 85 | GOOGL/META/MSFT | Alphabet / Meta / Microsoft | Earnings (Q3 / FQ1) | ~2026-10-28 AMC | Estimated | aggregator |
-| 86 | AMZN | Amazon | Earnings (Q3 26) | ~2026-10-29 AMC | Estimated | aggregator |
-| 87 | CYTK | Cytokinetics | PDUFA — aficamten (oHCM, MYQORZO sNDA) | ~2026-10-30 | Estimated | aggregator FDA calendar |
-| 88 | NVDA | NVIDIA | Earnings (FQ3 27) | ~2026-11 (mid) AMC | Estimated | WSH |
-| 89 | TTWO | Take-Two Interactive | Product Launch — Grand Theft Auto VI (pre-orders live 6/25) | 2026-11-19 | Confirmed | Rockstar / Take-Two IR |
-| 90 | SNY | Sanofi (ADR) | PDUFA — venglustat (GM2 gangliosidosis / Fabry) | ~2026-11-25 | Estimated | aggregator FDA calendar |
-| 91 | VRTX | Vertex | PDUFA — povetacicept (IgA nephropathy) | ~2026-11-30 | Estimated | aggregator FDA calendar |
-| 92 | REZI | Resideo | Spin-off completion (ADI Global Distribution) | 2H 2026 | Tentative | Resideo IR |
-| 93 | FOMC-Dec | FOMC December Meeting (SEP / dot plot) | Fed Rate Decision | 2026-12-08 / 12-09 | Confirmed | federalreserve.gov |
-| 94 | GILD | Gilead Sciences | PDUFA — anito-cel (anitocabtagene, R/R MM) | ~2026-12-23 | Estimated | aggregator FDA calendar |
+1. **NVDA — bullish.** (a) Consensus FQ2'27 ~$91.7B rev still under-models Blackwell-Ultra + Rubin transition + sovereign-AI pipeline. (b) FQ1 blowout ($81.6B rev, DC doubled, +$80B buyback), Computex Rubin roadmap acceleration, hyperscaler capex guides. (c) 2026-08-26. (d) In A-queue (2026-05-09); valuation-reset caveat cumulative. (e) TOP-10.
+2. **MSFT — bullish.** (a) Consensus models Azure decel; AI-capacity-constrained Azure + Copilot seat monetization under-modeled. (b) Prior-Q Azure AI contribution, capex guide, MSFT ~$390 near highs. (c) 2026-07-29. (d) New this cycle (not yet in A-queue). (e) TOP-10.
+3. **GOOGL — bullish.** (a) Gemini-3 + Cloud RPO backlog + external TPU demand (Intel-foundry 3M-TPU order, Reuters/The Information) under-priced vs search-cannibalization fear. (b) Cloud backlog disclosures, TPU foundry order, ad resilience. (c) 2026-07-22. (d) New. (e) TOP-10.
+4. **AVGO — bullish (valuation-reset caveat).** (a) $100B FY AI-chip target framed conservative; 6 core custom-ASIC customers (incl. OpenAI, Anthropic, Google, Meta) + VMware software margin. (b) FQ2 AI rev $10.8B (doubled YoY), Hock Tan call; note Jun -15% on *unraised* target = the reset risk. (c) ~2026-09-04. (d) In A-queue (2026-05-09). (e) TOP-10.
+5. **META — bullish (entry-timing).** (a) AI-capex → ad-ranking/engagement ROI under-credited; consensus ~$60B rev. (b) Reels/AI ad-tools monetization, capex guide; META pulled back ~-5% last session (~$583) = better entry. (c) 2026-07-29. (d) New. (e) TOP-10.
+6. **VRTX — bullish.** (a) Journavx (suzetrigine) chronic-low-back-pain sNDA (NaV1.8, non-opioid) — consensus under-models label expansion beyond acute pain into a very large chronic-pain TAM; structural catalyst > 45d = A not C. (b) sNDA PDUFA 2026-12-05 (dansfera), Journavx acute-pain launch metrics, CF franchise base. (c) PDUFA 2026-12-05 (+ Q2 ~Aug 3). (d) New; non-AI diversifier. (e) TOP-10.
+7. **AMD — bullish (valuation-reset EXTREME).** (a) MI350/MI400 ramp + OpenAI/hyperscaler commitments; consensus DC-GPU share still conservative. (b) Prior guides, MI-series roadmap; but AMD ~$518 after an extreme run = most-extreme reset tier. (c) 2026-08-04. (d) In A-queue (2026-05-29). (e) TOP-10.
+8. **ORCL — bullish.** (a) OCI capacity-driven revenue + multi-year RPO accumulation under-modeled vs legacy-decel framing. (b) RPO trajectory, OCI bookings, capex-for-AI-cloud disclosures. (c) ~2026-09-10. (d) In A-queue (2026-05-09). (e) TOP-10.
+9. **LLY — bullish.** (a) Oral GLP-1 orforglipron (Foundayo, approved 2026-04-01) opens a retail/telehealth TAM consensus under-models; Zepbound/Mounjaro share. (b) FDA approval (fastest NME since 2002), LillyDirect rollout, prior injectable-GLP-1 trajectory. (c) Q2 ~2026-08-06. (d) In A-queue (2026-05-01); non-AI diversifier. (e) TOP-10.
+10. **CRM — bullish.** (a) Agentforce monetization + cRPO inflection; consensus prices legacy-SaaS decel, not agentic-AI re-rate. (b) FQ1 beat + FY guide raise, Agentforce ARR commentary, France AI commitment. (c) ~2026-08-26. (d) In A-queue (2026-05-17). (e) TOP-10.
 
-## PART 1B — STRATEGY C UNIVERSE (45-day window: 2026-06-28 → 2026-08-12)
+### 11–20
 
-Comprehensive C-eligible event inventory: corporate earnings (US-listed, confirmed by company IR), FDA PDUFA dates, and FOMC meetings ONLY. No analyst/investor days (e.g. REZI/ADI Investor Days 7/13-14 are excluded), product launches, spin-offs (HONA 6/29, SPGI/MBGL 7/1 excluded), M&A, macro data, or other types per Strategy.md C eligibility. Sorted by date ascending. No interpretation in PART 1.
+11. **AMZN — bullish.** AWS reaccel (AI backlog) + retail-margin expansion vs consensus caution. Docs: AWS backlog, ad rev, prior margin trajectory. 2026-07-30. New. Tier 11-20.
+12. **MU — bullish (valuation-reset EXTREME).** HBM4 contracted "infrastructure economics" + DRAM tightness; but MU ~$976 (>$1T mcap, +204% UBS PT precedent) = runway heavily compressed. Docs: HBM4 sold-out commentary, LTAs. ~2026-09-24. In A-queue (2026-05-09). Tier 11-20 (demotion-watch on valuation).
+13. **QCOM — bullish/mixed.** Auto+IoT diversification & Snapdragon vs Apple-modem-loss overhang. Docs: auto design-win pipeline, Snapdragon/Stellantis expansion. ~2026-07-29. In A-queue (2026-05-01). Tier 11-20.
+14. **MRVL — bullish.** Custom-silicon (Google TPU / Amazon Trainium) ASIC ramp under-modeled. Docs: FQ1 record rev + accelerating Q2 guide, ASIC design-win pipeline. ~2026-08-27. In A-queue (2026-05-25). Tier 11-20.
+15. **NOW — bullish.** Agentic-AI workflow (Now Assist) monetization + Pro-Plus seat step-up. Docs: prior cRPO, Now Assist ACV disclosures. ~2026-07-22. In A-queue (2026-05-29). Tier 11-20.
+16. **PANW — bullish.** Platformization + CyberArk cross-sell (XSIAM/SASE/Cortex). Docs: platformization ARR, CyberArk close. ~2026-08-18. In A-queue (2026-05-31). Tier 11-20.
+17. **CRWD — bullish.** Falcon Flex + Charlotte-AI adoption → net-new-ARR reaccel consensus under-models. Docs: Flex module-attach, prior NNARR. ~2026-08-26. In A-queue (2026-05-31). Tier 11-20.
+18. **ANET — bullish.** AI back-end Ethernet (vs InfiniBand) share + hyperscaler 800G ramp. Docs: prior AI-networking guide, Ethernet-consortium momentum. ~2026-08-05. New. Tier 11-20.
+19. **PLTR — bullish (valuation-caution).** Commercial AIP/bootcamp land-and-expand; but extreme multiple (~$129) is the reset risk. Docs: US-commercial rev accel, RPO. 2026-08-03. New. Tier 11-20.
+20. **AAPL — mixed/neutral.** Apple-Intelligence lag vs services + iPhone install-base durability; direction genuinely two-sided. AAPL ~$309 (+4.8% last session). Docs: services rev, AI-roadmap commentary. 2026-07-30. In A-queue (2026-05-02). Tier 11-20 (framing-undecided — resolve at thesis).
 
-| # | Ticker / Event | Name | Event Type | Date | Confidence | Source |
-|---|---|---|---|---|---|---|
-| 1 | ARQT | Arcutis | PDUFA — ZORYVE cream 0.3% sNDA | 2026-06-29 | Confirmed | Arcutis IR |
-| 2 | LNTH | Lantheus | PDUFA — LNTH-2501 | 2026-06-29 | Confirmed | Lantheus 8-K |
-| 3 | NKE | Nike | Earnings (FQ4 26) | 2026-06-30 AMC | Estimated | aggregator / FactSet |
-| 4 | VRDN | Viridian | PDUFA — veligrotug (TED; Priority) | 2026-06-30 | Confirmed | Viridian IR |
-| 5 | IONS | Ionis | PDUFA — olezarsen sNDA (Priority) | 2026-06-30 | Confirmed | Ionis IR |
-| 6 | VERA | Vera Therapeutics | PDUFA — atacicept IgAN (Priority) | 2026-07-07 | Confirmed | Vera IR |
-| 7 | AZN | AstraZeneca / Daiichi (ADR) | PDUFA — Enhertu post-neoadj HER2+ eBC | 2026-07-07 ⚑ | Confirmed (Daiichi); AZN "Q3" | Daiichi / AZN PR |
-| 8 | SWTX | SpringWorks | PDUFA — mirdametinib (est) | ~2026-07-10 | Estimated | aggregator |
-| 9 | JPM | JPMorgan Chase | Earnings (Q2 26) | 2026-07-14 BMO | Confirmed | JPM IR |
-| 10 | WFC | Wells Fargo | Earnings (Q2 26) | 2026-07-14 BMO | Confirmed | WF newsroom |
-| 11 | C / BAC / GS | (large-cap Q2 banks) | Earnings (Q2 26) | ~2026-07-14 BMO | Estimated | IR cadence |
-| 12 | BLK | BlackRock | Earnings (Q2 26) | ~2026-07-15 BMO | Estimated | aggregator |
-| 13 | UNH | UnitedHealth | Earnings (Q2 26) | 2026-07-16 BMO | Confirmed | UNH newsroom |
-| 14 | GE | GE Aerospace | Earnings (Q2 26) | 2026-07-16 | Confirmed | GE IR |
-| 15 | NFLX | Netflix | Earnings (Q2 26) | 2026-07-16 AMC | Confirmed | Netflix IR |
-| 16 | CELC | Celcuity | PDUFA — gedatolisib (breast; Priority) | 2026-07-17 | Confirmed | Celcuity IR |
-| 17 | ISRG / TXN | (Q2 cluster) | Earnings (Q2 26) | ~2026-07-21 AMC | Estimated | aggregator |
-| 18 | LMT / NOC | (Q2 defense cluster) | Earnings (Q2 26) | ~2026-07-21 BMO | Estimated | aggregator |
-| 19 | TSLA | Tesla | Earnings (Q2 26) | ~2026-07-22 AMC | Estimated | WSH |
-| 20 | GOOGL | Alphabet | Earnings (Q2 26) | ~2026-07-23 AMC | Estimated | WSH |
-| 21 | INTC | Intel | Earnings (Q2 26) | ~2026-07-23 AMC | Estimated | Intel IR cadence |
-| 22 | SNY | Sanofi (ADR) | PDUFA — Sarclisa SC | 2026-07-23 | Confirmed | Sanofi PR |
-| 23 | HON | Honeywell Technologies | Earnings (Q2 26) | ~2026-07-24 BMO | Estimated | aggregator |
-| 24 | OTSKY | Otsuka (ADR) | PDUFA — centanafadine (ADHD; Priority) | 2026-07-24 | Confirmed | Otsuka US |
-| 25 | BIIB | Biogen / Eisai | PDUFA — Leqembi SC (IQLIK) | ~2026-07-25 | Confirmed | Biogen/Eisai PR |
-| 26 | MNKD | MannKind | PDUFA — FUROSCIX ReadyFlow sNDA | 2026-07-26 | Confirmed | MannKind IR |
-| 27 | RTX | RTX Corp | Earnings (Q2 26) | ~2026-07-28 BMO | Estimated | aggregator |
-| 28 | KO | Coca-Cola | Earnings (Q2 26) | ~2026-07-28 BMO | Estimated | aggregator |
-| 29 | FOMC | FOMC July Meeting (no SEP) | FOMC | 2026-07-28 / 07-29 | Confirmed | federalreserve.gov |
-| 30 | MSFT | Microsoft | Earnings (FQ4 26) | ~2026-07-29 AMC | Estimated | MSFT IR |
-| 31 | META | Meta Platforms | Earnings (Q2 26) | ~2026-07-29 AMC | Estimated | WSH |
-| 32 | BA | Boeing | Earnings (Q2 26) | ~2026-07-29 BMO | Estimated | aggregator |
-| 33 | PG | Procter & Gamble | Earnings (FQ4 26) | ~2026-07-29 BMO ⚑ | Estimated | aggregator |
-| 34 | NVO | Novo Nordisk (ADR) | PDUFA — denecimig (Mim8) | ~2026-07-29 | Estimated | aggregator |
-| 35 | AAPL | Apple | Earnings (FQ3 26) | ~2026-07-30 AMC | Estimated | aggregator |
-| 36 | AMZN | Amazon | Earnings (Q2 26) | ~2026-07-30 AMC | Estimated | WSH |
-| 37 | VTRS | Viatris | PDUFA — estrogen-patch contraception | 2026-07-30 | Confirmed | Viatris newsroom |
-| 38 | XOM / CVX | Exxon / Chevron | Earnings (Q2 26) | ~2026-07-31 BMO | Estimated | aggregator |
-| 39 | ABBV | AbbVie | Earnings (Q2 26) | 2026-07-31 BMO | Confirmed | AbbVie PR 6/26 |
-| 40 | PLTR | Palantir | Earnings (Q2 26) | ~2026-08-03 AMC | Estimated | Zacks/WSH (corrected — newly in window) |
-| 41 | MRK | Merck & Co | Earnings (Q2 26) | 2026-08-04 BMO | Confirmed | Merck IR |
-| 42 | AMD | Advanced Micro Devices | Earnings (Q2 26) | ~2026-08-04 AMC | Estimated | aggregator |
-| 43 | CAT | Caterpillar | Earnings (Q2 26) | ~2026-08-04 BMO | Estimated | aggregator |
-| 44 | QCOM | Qualcomm | Earnings (FQ3 26) | ~2026-08-05 AMC | Estimated | aggregator |
-| 45 | LLY | Eli Lilly | Earnings (Q2 26) | 2026-08-05 | Confirmed | Lilly IR |
-| 46 | MRNA | Moderna | PDUFA — mRNA-1010 (mFLUSIVA), flu 50+ | 2026-08-05 | Confirmed | Moderna PR / FDA AdCom |
-| 47 | DDOG | Datadog | Earnings (Q2 26) | ~2026-08-06 AMC | Estimated | aggregator (newly in window) |
-| 48 | AKAM | Akamai | Earnings (Q2 26) | ~2026-08-06 AMC | Estimated | aggregator (newly in window) |
-| 49 | DIS | Walt Disney | Earnings (FQ3 26) | ~2026-08-06 BMO | Estimated | aggregator (newly in window) |
-| 50 | NBIS | Nebius | Earnings (Q2 26) | ~2026-08-06 | Estimated | Public.com (corrected — newly in window) |
+### 21–42 (rest tier — cast broad)
 
-(Verified just OUTSIDE the C back-edge — A-eligible only, NOT C: LNTH MK-6240 ~8/13, AMAT ~8/13, CSCO ~8/13, MRK Keytruda Qlex SC ~8/17, BMY iberdomide ~8/17. Verified-EXCLUDED from both: Orca-T 7/6 issuer is PRIVATE; HONA 6/29 / SPGI-MBGL 7/1 spins and REZI/ADI 7/13-14 investor days are not C-eligible event types.)
+21. **TSM (ADR) — bullish.** AI-foundry leading-edge (N2/CoWoS) demand; ADR/foreign caveat. Docs: monthly sales, capex guide. 2026-07-16. New.
+22. **INTC — bullish.** 18A/14A foundry ramp with Apple + Google-TPU external anchors. Docs: WSJ Apple-foundry scoop (materialized ~6/18), Google 3M-TPU order. 2026-07-23. In A-queue (2026-05-12). Valuation-reset layered on ~+10% single-day move.
+23. **CSCO — bullish.** AI-infrastructure orders doubled ($5B→$9B) + Splunk synergy vs legacy-networking-decel tape. Docs: order guide, FQ3 record rev. 2026-08-12. In A-queue (2026-05-09).
+24. **DELL — bullish (valuation-reset most-extreme tier).** AI-server backlog ($60B FY guide) conversion; but cumulative run ~50%+ compresses runway. Docs: FQ1 blowout + guide raise. ~2026-08-28. In A-queue (2026-05-17).
+25. **HPE — bullish (valuation-reset most-extreme tier).** AI-server + GreenLake; +29-37% AH last print = compressed runway. Docs: FQ2 print. ~2026-09-02. In A-queue (2026-05-29).
+26. **SMCI — bullish (governance-risk).** AI-server OEM direct beneficiary; accounting-remediation risk monitored. Docs: prior guides, remediation status. ~2026-08-05. In A-queue (2026-05-29).
+27. **SNOW — bullish (valuation-reset).** Cortex-AI/NativeApp attach; +33-36% last print. Docs: FQ1 beat, $6B AWS commitment. ~2026-08-26. In A-queue (2026-05-25).
+28. **DDOG — bullish (valuation-reset).** Observability + AI-monitoring attach; prior +30% print. Docs: ARR>$4B, FY guide raise. ~2026-08-07. In A-queue (2026-05-07).
+29. **NTAP — bullish.** AI-driven flash/unified-data-management enterprise demand. Docs: prior all-flash ARR, AI-storage commentary. ~2026-08-26. In A-queue (2026-05-29).
+30. **OKTA — bullish.** AI-identity/zero-trust demand accel. Docs: prior RPO, identity-security TAM. ~2026-08-26. In A-queue (2026-05-29).
+31. **AKAM — bullish/neutral.** Security + AI-cloud-infrastructure ($1.8B contract) offsetting CDN decel. Docs: Q1 beat, AI-infra contract. ~2026-08-07. In A-queue (2026-05-09).
+32. **NBIS — bullish.** AI-infrastructure/neocloud hyperscaler ramp (~8× rev growth). Docs: Q1 rev $399M, GPU-capacity build-out. ~2026-08-12. In A-queue (2026-05-13).
+33. **VRT — bullish.** AI-datacenter power/cooling (thermal + power) attach to hyperscaler capex. Docs: prior orders/backlog, capex-cycle read-through. ~2026-07-22. New.
+34. **GE — bullish.** Aerospace aftermarket + LEAP shop-visit cycle; commercial-services margin. Docs: prior orders/RPO, departures data. 2026-07-16. New (non-AI diversifier).
+35. **JPM — bullish.** NII resilience + trading/IB fee rebound in a firm-economy tape. Docs: prior NII guide, markets rev. 2026-07-14. New.
+36. **GS — bullish.** Capital-markets (M&A/ECM) reacceleration + trading. Docs: backlog commentary, prior markets rev. 2026-07-14. New.
+37. **UNH — bearish.** Medical-cost-ratio/utilization pressure + Medicare-Advantage/regulatory overhang vs consensus recovery hopes. Docs: prior MCR prints, MA-rate notices. 2026-07-16. New. *(A is long-only; a confirmed bearish read is a decline/skip, not an A entry — carried for regime/sector read, not as a long candidate.)*
+38. **ABBV — bullish.** Skyrizi+Rinvoq immunology ramp fully offsetting Humira erosion, under-credited. Docs: prior immunology guide, Humira-cliff trajectory. 2026-07-31. New.
+39. **REGN — bullish.** Dupixent expansion + Eylea-HD + pozelimab (VEXAS) PDUFA 2026-10-01. Docs: Dupixent label breadth, PDUFA filing. E ~Aug / R 2026-10-01. New.
+40. **ALNY — bullish.** RNAi platform: zilebesiran (HTN) PDUFA 2026-09-15 + elebsiran (HBV) 2026-11-10; consensus under-models RNAi TAM. Docs: Phase-3 data, PDUFA filings. R 2026-09-15 / 2026-11-10. New.
+41. **NFLX — bullish.** Ad-tier scaling + paid-sharing monetization; post-split ~$78. Docs: prior ad-tier MAU, engagement. 2026-07-16. New.
+42. **BA — bullish (turnaround).** 737 MAX + 787 rate ramp & FCF inflection vs execution-risk discount. Docs: delivery cadence, cash-flow guide. 2026-07-28. New.
 
-## PART 2 — STRATEGY A PRELIMINARY SHORTLIST (target 30–50 candidates)
+*(Additional Watchlist.md A-queue names not re-ranked into the top-42 this cycle but carried pending next M1 ACTIVATE: CAT, AMAT (bearish thesis refuted — demotion-watch), HD/TGT/WMT (mixed prints), ADBE (bearish AI-monetization-lag), IBM (quantum/AIOps), NBIS/AKAM/DDOG already listed. W5 reconciles queue drift.)*
 
-Cast deliberately broad. Per candidate: (a) direction of hypothesized mispricing, (b) supporting public documents, (c) catalyst date, (d) overlap with open positions / watchlist, (e) priority tier. **Strategy A router = DO-NOT-ACTIVATE** (M1b 2026-06-01, reconfirmed; SPY Trend NEUTRAL→deteriorating fails A's "Trend UP + breadth HEALTHY" gate, and this week's break below all SMAs hardens that). The entire shortlist is analytic at generation; the next M1 is ~2026-07-01, so **W4 this cycle routes nothing to thesis-construction — all 31 A-queue names are already in Watchlist.md (resolution at next M1 ACTIVATE). W4 must NOT double-queue.** Names already in the A queue are flagged "QUEUED."
+---
 
-**Regime-context overlay for this cycle (as of 2026-06-28):** Two threads dominate, and BOTH shifted vs W26. (1) **The AI-hardware bid that defined W26 CRACKED this week** — Nasdaq −4.6% (5th straight down day), a chip-led rout (Kospi −10% from record), capped Friday by the OpenAI-IPO-delay report (SoftBank −9 to −14%) and Apple chip/memory-shortage price hikes. **The W26 "is AI-capex living up to expectations" question is now the CONTROLLING near-term narrative again, and the verdict flipped from bid back to fade.** Critically, the core *demand* signal stayed strong — **MU's FQ3 blowout (6/24: $50B FQ4 guide, 16 customer agreements locking ~20% DRAM/~1/3 NAND) and QCOM's data-center pivot (>$15B DC AI rev by FY29, Meta/Microsoft anchors)** both ratified the bull AI-infrastructure thesis at the fundamental level — but the TAPE punished the complex anyway (MU gave back nearly half its +15% Day-0 by the next close; +260% YTD positioning is the bear-tail). **Net for A-theses: demand is ratified, valuation/positioning/capex-funding is the unresolved controlling risk, and the near-term tape is now hostile to the high-multiple AI tier.** (2) **The hawkish-Fed / stagflation tilt HARDENED** — core PCE 3.4% (2.5-yr high, 6/25), July ~89% hold but ~1 hike priced by year-end, Kashkari "expects a rate hike this year." Pressures the highest-multiple AI/software names; supports value/defensive/financials. Partly offset by **crude collapsing (Brent ~$72, >−10%/wk, lowest since Feb 27)** — a forward-disinflationary impulse — though a 3rd-day weekend Hormuz escalation (US airstrikes, Bahrain drones, 2nd tanker) is a re-widening tail-risk pending Mon 6/29's open. **All of this is M1-input context (next M1 ~7/1), not a W1/W4 action** — A router stays DNA and may move toward a firmer DNA / SPY-Trend-DOWN read at M1.
+## PART 2B — Strategy C preliminary shortlist (ranked; 12 event candidates)
 
-**TOP-10 (priority tier 1 — strongest narrative-misalignment conviction + near-term catalyst this cycle)**
+Per candidate: **(a)** hypothesized options-market-vs-documents divergence direction, **(b)** supporting public documents, **(c)** event date, **(d)** executable defined-risk structure at 2% sizing? (flag deferrals), **(e)** overlap with open A (none open this cycle), **(f)** priority tier.
 
-1. **MU — Micron** — (a) **Bullish-RATIFIED-at-print-but-tape-rejected (the cleanest test of the week's thesis-vs-tape split):** FQ3 (6/24) was a most-extreme-of-cycle blowout — rev ~$41.46B vs ~$35.84B; EPS $25.11 vs $20.20; **FQ4 guide $50B / GM ~86% / EPS ~$31**; 16 SCAs lock ~20% DRAM/~1/3 NAND ("sold out of HBM"). Day-0 +15% to an ATH $1,213.56 (6/25), then **−6.69% to $1,132.33 (6/26)** in the AI selloff. **MU ~+260% YTD → the demand thesis is fully ratified, but the valuation/positioning bear-tail is now ACUTE and the tape rejected even a perfect print.** Catalyst now SPENT (next FQ4 ~late Sept). (b) FQ3 26 8-K/transcript (6/24); FY25 10-K; UBS 5/26 note. (c) FQ3 done 6/24; next ~Sept FQ4. (d) **QUEUED A-queue 2026-05-09; surfaced only.** (e) **TOP-10 #1** (highest-information print of the cycle; valuation-reset caveat now most-extreme tier).
-2. **QCOM — Qualcomm** — (a) **Bullish-RATIFIED-at-Investor-Day (6/24):** data-center pivot quantified — **>$15B DC AI-chip rev by FY29** (from ~$5B FY27), ~$40B non-handset FY29, Dragonfly C1000 DC-CPU (prod 2028), $3.92B Modular acquisition, **anchor hyperscaler wins Meta + Microsoft**; multi-firm PT hikes (Benchmark→$300, MS upgrade $231, RBC $250). The handset→DC/auto/IoT diversification thesis is ratified at strategy-roadmap level. **FQ3 ≈ 2026-08-05 AMC.** (b) Investor-Day materials (6/24); FQ2 26 transcript; FY25 10-K; Stellantis/aiMotive disclosures. (c) Investor Day done 6/24 + ~8/05 FQ3. (d) **QUEUED A-queue 2026-05-01; surfaced only.** (e) **TOP-10 #2** (Investor-Day catalyst ratified; near-month FQ3 follows).
-3. **INTC — Intel** — (a) **Bullish-RATIFIED-at-corporate-action (carry from 6/18):** the 5/11 WSJ Apple-foundry scoop materialized (INTC to a record ~$133.99 on the Apple-18A-P deal commentary); multi-quarter 18A/14A-with-Apple-as-anchor turnaround narrative ratified at corporate-development level. **But INTC −2% Fri 6/26 in the chip rout — the valuation-reset caveat layered on a 52-week-high stock now compounded by a hostile AI tape.** Next earnings Q2 ~7/23. (b) WSJ 5/11; CNBC/Bloomberg 6/18; Intel Q1 26 release; FY25 10-K. (c) ~2026-07-23 Q2. (d) **QUEUED A-queue 2026-05-12; surfaced only.** (e) **TOP-10**.
-4. **ORCL — Oracle** — (a) **Bullish-but-contested (unchanged):** FQ4 (6/10) ratified AI-cloud demand (OCI $5.8B +93%; RPO $638B +363%) but the stock fell −9-10% on a capex blow-up (FY26 capex +162% to $55.7B; ~$40B debt+equity raise) + ~$300B single-customer (OpenAI) RPO concentration — **the exact "capex-funding/dilution/concentration" bear case that the week's AI selloff (OpenAI-IPO-delay) re-foregrounds.** Next catalyst FQ1 27 ~Sept. (b) FQ4 26 8-K (6/10); Oracle IR; FY26 10-K (pending). (c) ~Sept FQ1. (d) **QUEUED A-queue 2026-05-09; surfaced only.** (e) **TOP-10** (re-underwrite capex-financing at next M1; the bear-tail is now the controlling narrative).
-5. **AAPL — Apple** — (a) Bullish (event-driven, multi-leg) **with a NEW near-term negative:** the 6/26 "Apple raising prices citing chip/memory shortages" headline ties Apple to the same AI-cost-inflation thread pressuring the complex; offset by WWDC26 Gemini-Siri overhaul, the Intel-foundry supply-chain leg, FQ3 ~7/30, and the iPhone 18 cycle ~Sep 8-9. Apple is a compute BUYER (insulated from the capex-funding question, exposed to component-cost inflation). (b) Apple newsroom WWDC26; CNBC/Bloomberg 6/18+6/26; FQ2 26 transcript. (c) ~7/30 FQ3 + ~9/08 iPhone. (d) **QUEUED A-queue 2026-05-02; surfaced only.** (e) **TOP-10**.
-6. **HPE — Hewlett Packard Enterprise** — (a) Bullish-RATIFIED-at-print (6/1): FQ2 blowout (rev $10.7B +40%; EPS $0.79 vs $0.51-0.55 guide; FY26 EPS raised $3.35-$3.45; Juniper+AI-server+GreenLake "durable"). Strongest counter-tape AI-infra print of the cycle — but as an AI-server OEM it is squarely in the cohort the week's tape faded. Next ~Sept FQ3. (b) HPE IR FQ2 6/1; transcript; FY25 10-K. (c) ~Sept. (d) **QUEUED A-queue 2026-05-29; surfaced only.** (e) **TOP-10** (print-validated; tape-exposed).
-7. **PANW — Palo Alto Networks** — (a) Bullish-RATIFIED-at-print (6/2): FQ3 beat, accelerating ORGANIC bookings, AI-cybersecurity urgency, first post-CyberArk-close print; cybersecurity has been the most tape-resilient AI-adjacent cohort (software-up dispersion held through the chip rout). Forward-P/E ~83 → hawkish-Fed multiple pressure is the caveat. Next ~Aug FQ4. (b) PANW IR FQ3 6/2; FY25 10-K. (c) ~Aug. (d) **QUEUED A-queue 2026-05-31; surfaced only.** (e) **TOP-10** (relative-strength cohort).
-8. **CRWD — CrowdStrike** — (a) Bullish-RATIFIED-at-print (6/3): FQ1 beat (EPS $1.12; ARR ~$5.5B); Falcon Flex consolidation + Charlotte AI; cybersecurity cohort resilience. P/S ~36× → most-exposed to the hawkish-Fed/AI-multiple compression of the week. Next ~Aug FQ2. (b) CRWD FQ1 FY27 release 6/3; FY26 10-K. (c) ~Aug. (d) **QUEUED A-queue 2026-05-31; surfaced only.** (e) **TOP-10**.
-9. **NVDA — NVIDIA** — (a) Bullish demand, **tape-rejected:** FQ1 27 (5/20) blowout/Day-0 sell-the-news; the AVGO/ORCL/OpenAI-IPO-delay capex-funding question is the controlling bear-tail to the demand-acceleration thesis, and the week's chip rout hit NVDA-complex hardest. Computex (6/1) Rubin roadmap intact. Next FQ2 ~8/26 (Confirmed). (b) FQ1 27 8-K; transcript; FY26 10-K; Computex 6/1. (c) 2026-08-26 AMC. (d) **QUEUED A-queue 2026-05-09; surfaced only.** (e) **TOP-10** (confirmed near-month catalyst; demand-vs-funding tension is the cleanest A-debate).
-10. **LLY — Eli Lilly** — (a) Bullish **+ defensive-rotation beneficiary:** orforglipron oral GLP-1 (TRIUMPH-4 H2 2026); obesity TAM; ZERO AI-capex/AI-multiple exposure → a port in the week's AI-storm and a beneficiary of the value/healthcare rotation (JPM favoring healthcare on the rotation; LLY in the 6/26 healthcare bid). **Q2 = 2026-08-05 (IR-CONFIRMED)** + Investment Community Meeting TBD. (b) Q1 26 transcript; FY25 10-K; Lilly IR. (c) 2026-08-05. (d) **QUEUED A-queue 2026-05-01 + D re-screen pipeline (D re-screen NO-GO 6/12; next ~2026-09-14).** (e) **TOP-10** (promoted vs W26 #31 — rotation-defensive profile fits the regime shift; IR-confirmed near-month catalyst).
+**BINDING ROUTER CONSTRAINT:** C = **HYBRID ACTIVATE (FOMC-only)** pending `div-C-202606-1`. **Only the FOMC 2026-07-29 event is currently routable.** Every earnings/PDUFA candidate below is **DEFERRED on the router** regardless of thesis quality until the divergence review resolves — ranked here so the read is preserved for W4 and for the next router state.
 
-**11-20 (priority tier 2)**
+**BINDING SIZING CONSTRAINT:** C sub-portfolio NAV ≈ $1,880 → **2% max-loss budget ≈ $38 per structure**. A single option contract = 100×premium, so any structure whose net debit (or bounded early-assignment loss) exceeds ~$0.38/share breaches the cap. On the high-priced names below, **almost every single-name defined-risk structure defers at current book size** — the eligibility rule's documented deferral behavior (C stays in SGOV; deferrals not logged as missed). Flagged per candidate; final structure eligibility (incl. dual-path max-loss + early-assignment cascade agreement to within $1) is verified at thesis construction.
 
-11. **AVGO — Broadcom** — (a) FRAMING-PIVOT (bullish→contested): FQ2 (6/3) record rev $22.19B (+48%); AI-semi $10.8B (+143%); custom-silicon wins reportedly incl OpenAI+Anthropic — but the Q3 AI-semi guide vs unraised $100B FY26 target was the original capex-digestion epicenter, and the week's selloff re-foregrounds it (AVGO was among the hardest-hit in the earlier-June semi rout). Next ~Sept FQ3. (b) Broadcom IR FQ2 6/3; FY25 10-K. (c) ~Sept. (d) **QUEUED 2026-05-09; surfaced only.** (e) **11-20**.
-12. **CRM — Salesforce** — (a) Bullish (post-print 5/27 muted): FQ1 27 beat; Agentforce ARR $800M +169%; +9.56% 6/1 on France AI commitment; software-up dispersion (CRM was in the 6/26 software rotation bid). ACN −18% IT-services read is an adjacent caution. Next ~Aug 26 FQ2. (b) CRM Q1 FY27 release; transcript; FY26 10-K. (c) ~2026-08-26. (d) **QUEUED 2026-05-17; surfaced only.** (e) **11-20**.
-13. **DELL — Dell Technologies** — (a) Bullish-RATIFIED + valuation-extension carry: FQ1 FY27 blowout (rev $43.8B +88%; AI-server $16.1B +757%; FY27 AI-server $60B). Most-capex-exposed OEM → most-exposed to the week's funding-question fade. Next ~Aug FQ2. (b) Dell Q1 FY27 release 5/28; FY26 10-K. (c) ~2026-08-28. (d) **QUEUED 2026-05-17; surfaced only.** (e) **11-20**.
-14. **SNOW — Snowflake** — (a) Bullish-RATIFIED + valuation-extension carry: FQ1 FY27 blowout (product rev $1.33B +34%; Cortex inflection; $6B AWS commitment); Day-1 +36.5%. Data-cloud software one step removed from hardware but exposed to hawkish-Fed multiple pressure. Next ~Aug FQ2. (b) SNOW Q1 FY27 release 5/27; AWS PR; FY26 10-K. (c) ~2026-08-27. (d) **QUEUED 2026-05-25; surfaced only.** (e) **11-20**.
-15. **MRVL — Marvell** — (a) Bullish-RATIFIED, custom-ASIC-exposed: FQ1 FY27 record rev $2.418B +28%; Q2 guide $2.7B accelerating; custom silicon (Trainium2/Maia/TPU). Sits directly in the custom-XPU path — among the hardest-hit (−17% in the earlier-June semi rout) → high tape-beta to the AI-capex narrative. Next ~Aug FQ2. (b) MRVL Q1 FY27 release 5/27; FY26 10-K. (c) ~2026-08-27. (d) **QUEUED 2026-05-25; surfaced only.** (e) **11-20**.
-16. **CSCO — Cisco** — (a) Bullish-RATIFIED (carry 5/13): AI orders doubled $5B→$9B; record rev $15.84B; third consecutive guide raise; enterprise-diversified networking-infra (lower tape-beta than pure-play semis). Next ~Aug 13 FQ4. (b) Cisco IR 5/13; FY26 10-K. (c) ~2026-08-13. (d) **QUEUED 2026-05-09; surfaced only.** (e) **11-20**.
-17. **DDOG — Datadog** — (a) Bullish (carry): Q1 26 beat-raise (rev $1.006B +32%; ARR >$4B); AI/LLM-observability TAM; software cohort. **Q2 ~Aug 6 — newly INSIDE the C 45-day window.** Hawkish-Fed multiple caveat. (b) Q1 26 8-K; FY25 10-K. (c) ~2026-08-06. (d) **QUEUED 2026-05-07; surfaced only.** (e) **11-20**.
-18. **AKAM — Akamai** — (a) Bullish (carry): Q1 26 ~+15-24% C/C (revenue beat + $1.8B 7-yr AI-cloud-infra contract); CDN+security+compute convergence. **Q2 ~Aug 6 — newly INSIDE C window.** (b) Q1 26 8-K; FY25 10-K. (c) ~2026-08-06. (d) **QUEUED 2026-05-09; surfaced only.** (e) **11-20**.
-19. **AMD — Advanced Micro Devices** — (a) Bullish (with caveat): multi-quarter MI300X/MI350 + EPYC share capture; AMD −2.6% Fri 6/26 in the rout; capex-funding + hawkish-Fed multiple pressure on the high-multiple AI tier. Q2 ~Aug 4. (b) Q1 26 transcript; FY25 10-K. (c) ~2026-08-04. (d) **QUEUED 2026-05-29; surfaced only.** (e) **11-20**.
-20. **AMAT — Applied Materials** — (a) FRAMING-FLIP-PENDING-M1: bearish queued thesis REFUTED at print 5/14 (FY26 WFE guide LIFTED >20%→>30%); WFE-equipment is a SECOND-ORDER read on whether hyperscaler-XPU ramps slow — the week's fade cuts the other way (slowdown-fear is net-bearish for WFE). Next ~Aug 13 FQ3. (b) FQ2 26 release; FY25 10-K. (c) ~2026-08-13. (d) **QUEUED 2026-05-09; surfaced only.** (e) **11-20**.
+### TOP-5
 
-**21-50+ (priority tier 3 — surfaced for breadth; lower conviction, longer-dated, post-event carry-forward, or regime-rotation candidates)**
+1. **FOMC 2026-07-29 — hawkish-hold vs market-implied.** (a) Divergence: options/rates market may under-price the *hawkish-hold-with-hike-tilt* path given the dot-plot flip (2026 median 3.8%, 9/18 projecting ≥1 hike) against a still-reaccelerating-inflation, firm-labor backdrop. (b) June FOMC statement (easing-bias language removed), dot plot, core PCE 3.4%, DXY 15-mo high. (c) 2026-07-29. (d) **ROUTER-ACTIVE (the only one).** Sizing: an index/rate defined-risk structure (e.g., tight SPY/TLT debit or credit vertical) can be scaled to ≤$38 max loss more readily than a single high-priced equity — **candidate for the only executable C structure this cycle**; verify at thesis. (e) none. (f) **TOP-5 #1 — the sole routable event.**
+2. **AAPL 2026-07-30 earnings — bearish/vol divergence.** (a) IV likely rich; Apple-Intelligence-lag + China risk could disappoint vs an options market pricing a benign move. (b) services rev, iPhone-cycle data, AI-roadmap commentary. (c) 2026-07-30. (d) DEFER (router) + likely DEFER (sizing: AAPL ~$309 options premiums >$0.38). (e) none. (f) TOP-5.
+3. **NVDA 2026-08-26 earnings — vol/direction divergence.** (a) Post-print realized move historically large vs implied; two-sided given valuation-reset risk on a beat-and-fade. (b) FQ1 sell-the-news precedent, guide-vs-whisper gap. (c) 2026-08-26. (d) DEFER (router) + DEFER (sizing: NVDA premiums far exceed $38 budget). (e) none. (f) TOP-5.
+4. **META 2026-07-29 earnings — direction divergence.** (a) Capex-driven margin fear may over-price downside vs ad-ROI upside. (b) Reels/AI-ad monetization, capex guide. (c) 2026-07-29. (d) DEFER (router) + DEFER (sizing). (e) none. (f) TOP-5.
+5. **GOOGL 2026-07-22 earnings — direction divergence.** (a) Search-cannibalization fear may over-price downside vs Cloud/TPU upside. (b) Cloud backlog, TPU external demand. (c) 2026-07-22. (d) DEFER (router) + DEFER (sizing). (e) none. (f) TOP-5.
 
-21. **NBIS — Nebius** — Bullish multi-quarter (Q1 26 rev $399M ~8× YoY; European GPU-cloud; NVIDIA partnership); neo-cloud — most-exposed to the ORCL/OpenAI backlog-quality read-through that drove the week's fade. **Q2 ~Aug 6 — newly in C window.** QUEUED 2026-05-13. **rest**.
-22. **NTAP — NetApp** — Bullish (AI flash-storage / ONTAP-for-AI). Next ~Aug FQ1 27. QUEUED 2026-05-29. **rest**.
-23. **OKTA — Okta** — Bullish (AI-identity / zero-trust; cybersecurity cohort relative-strength). QUEUED 2026-05-29. **rest**.
-24. **NOW — ServiceNow** — Bullish (enterprise-AI-workflow); NOW was in the 6/26 software rotation bid; ACN IT-services caution is an adjacent flag. QUEUED 2026-05-29. **rest**.
-25. **SMCI — Super Micro** — Bullish (AI-server OEM, direct buildout beneficiary; most-capex-exposed OEM; governance/remediation risk monitored); high tape-beta to the week's fade. QUEUED 2026-05-29. **rest**.
-26. **IBM — IBM** — Bullish multi-year (quantum + AIOps/hybrid-cloud; +7.34% 6/1 quantum-foundry; IBM in 6/26 software rotation bid); services-mix means the ACN −18% IT-services read is a direct caution for IBM Consulting. Next ~Jul Q2. QUEUED 2026-05-29. **rest**.
-27. **HD — Home Depot** — Bearish (post-event carry): print 5/19 modestly supported (comps +0.6%/GM −75bps); the hawkish hike-bias (no 2026 cut) reinforces the housing-turnover bear case. ~Aug 18. QUEUED 2026-05-09. **rest**.
-28. **TGT — Target** — Bearish-REFUTED (carry): 5/20 BEAT-RAISE; framing-flip-or-demote at M1. ~Aug 19. QUEUED 2026-05-09. **rest**.
-29. **WMT — Walmart** — Bullish-not-decisively-supported (carry): 5/21 in-line + soft Q2 guide; defensive-retail bid if the stagflation tape pressures discretionary. FQ2 27 CONFIRMED 2026-08-20 BMO. QUEUED 2026-05-09. **rest**.
-30. **CAT — Caterpillar** — Bearish: dealer inventory + 2H26 mining-downcycle; stagflation footprint; AI-datacenter-construction a limited offset. ~Aug 4 BMO. QUEUED 2026-05-01. **rest**.
-31. **GOOGL — Alphabet** — Bullish: Cloud AI demand > supply; Gemini-on-iOS validated at WWDC 6/8; capex-SPENDER — the hawkish Fed + week's capex-fear pressure the multiple but the cloud-demand bid is intact. ~Jul 23 Q2. Prior NO-GO context (not barrier). **rest**.
-32. **MSFT — Microsoft** — Bullish: Azure capacity-constrained; Copilot ARR inflecting; capex-SPENDER (most-watched for the "is the capex producing returns" question). ~Jul 29 FQ4 (date refined). MSFT in 6/26 software rotation bid. **rest**.
-33. **AMZN — Amazon** — Bullish: AWS reaccel on AI-workload migration; advertising; capex-SPENDER. ~Jul 30 Q2. **rest**.
-34. **META — Meta** — Bullish: ad-engine AI monetization + Llama; capex-SPENDER. ~Jul 29 Q2. NM bench-trial backdrop monitored. **rest**.
-35. **NFLX — Netflix** — Bullish: ad-tier ramp; live sports; non-AI-capex, risk-off-resilient subscription model — a defensive-growth port in a hawkish-Fed/AI-fade tape. **Q2 CONFIRMED 2026-07-16 AMC.** **rest**.
-36. **TSLA — Tesla** — Bearish: capex raised; Robotaxi monetization deferred to 2027; deliveries/margin pressure; the no-2026-cut Fed path pressures the multiple. **Q2 ~2026-07-22 AMC.** **rest**.
-37. **BA — Boeing** — Bullish: 737 MAX 7/10 cert path 2H26 + 47/mo ramp; FCF inflection; Spirit integration; non-AI idiosyncratic. ~Jul 29 BMO. Watchlist D re-screen pipeline. **rest**.
-38. **HON / HONA / REZI / ADI / SPGI / MBGL spin complex** — Bullish value-unlock cluster: **HON→HONA Aerospace spin 6/29 (HONA joins S&P 500/100; HON 1-for-2 reverse split, renamed Honeywell Technologies); SPGI→Mobility Global (MBGL) spin 7/1; REZI→ADI spin H2 2026 with REZI Investor Day 7/13 / ADI Investor Day 7/14 (NEW).** Structural-narrative/restructuring markers; idiosyncratic, AI-insulated. **rest**.
-39. **ABBV — AbbVie** — Bullish: Skyrizi/Rinvoq run-rate surpassing HUMIRA peak; immunology durability; defensive pharma in the rotation. **Q2 CONFIRMED 2026-07-31 BMO (corrected from 7/24).** **rest**.
-40. **GE — GE Aerospace** — Bullish: services backlog (~$170B) + LEAP shop-visit ramp; defense engines. **Q2 CONFIRMED 2026-07-16.** **rest**.
-41. **CVX / XOM — Chevron / Exxon** — Bullish/event-driven: Hess close + Permian guidance (CVX); the crude collapse (WTI ~$69) is a near-term headwind but the supply-floor narrative + a weekend-Hormuz re-widening tail persist. **Q2 ~2026-07-31 BMO.** **rest**.
-42. **JPM / WFC / GS / C / BAC banks (Q2 7/14)** — Bullish (rate-curve + value-rotation beneficiary): the hawkish hike-bias supports NIM; capital-markets recovery; THE value-rotation beneficiary as mega-cap-tech de-rates on the Fed + AI-fade (the week's Dow-outperformance/rotation directly favors this cohort). **JPM/WFC CONFIRMED 2026-07-14 BMO.** **rest**.
-43. **KO — Coca-Cola** — Bullish (defensive): pricing power + global volume; defensive-rotation beneficiary under the stagflation tilt + AI-fade. ~Jul 28 BMO. **rest**.
-44. **PLTR — Palantir** — Bullish: commercial-AIP + gov backlog; **most-extreme software multiple → most-exposed to the hawkish-Fed + AI-fade multiple compression. Q2 ~2026-08-03 AMC (corrected — now IN the C window).** **rest**.
-45. **MRK — Merck** — Bullish (dual catalyst, defensive): Q2 2026-08-04 BMO (Confirmed) + **Keytruda Qlex SC PDUFA ~8/17** + I-DXd PDUFA ~10/10 (lifecycle/pipeline layers). Defensive pharma in the rotation. **rest**.
-46. **RTX — RTX Corp** — Bullish (continuation): Q1 26 raised guide; defense backlog + P&W ramp; the weekend-Hormuz escalation is a mild near-term demand-narrative tailwind. Q2 ~7/28 BMO. **Strategy D long RTX since 2026-04-27 — A entry creates cross-book concentration; defer per A-vs-D coordination.** **rest**.
-47. **DIS — Walt Disney** — Bullish (continuation): SVOD-margin inflection; parks pricing. **FQ3 ~Aug 6 — newly in C window.** **Strategy D long DIS since 2026-05-07 — defer per A-vs-D coordination.** **rest**.
-48. **TTWO — Take-Two** — Bullish (product-launch event): **GTA VI CONFIRMED 2026-11-19** (pre-orders opened 6/25) = largest entertainment launch of the cycle / structural narrative marker; FY27 net-bookings inflection. Non-AI, idiosyncratic — an AI-fade hedge. **rest**.
-49. **NKE — Nike** — Event-driven (carry-watch): **FQ4 ~2026-06-30 AMC** — turnaround-execution read (Hill-era reset, inventory normalization). Consumer-discretionary; not previously queued. **rest**.
-50. **PDUFA-binary cohort (VRDN/IONS 6/30, VERA 7/7, AZN-Enhertu 7/7, SWTX ~7/10, CELC 7/17, SNY 7/23, OTSKY 7/24, BIIB-Leqembi-SC ~7/25, MNKD 7/26, NVO ~7/29, VTRS 7/30, MRNA ~8/5; large-cap forward MRK-Qlex/BMY-iberdomide ~8/17, JAZZ ~8/25, GILD ~8/27, ALNY ~9/15, BMY-Camzyos ~9/30, REGN ~10/1, CYTK ~10/30, VRTX ~11/30, GILD-anito-cel ~12/23)** — Bullish but BINARY: an A long carries un-hedged binary regulatory downside → better-suited to C defined-risk (router-blocked for the in-window names). An A-overlay requires a durable post-approval-commercialization narrative, not the binary itself — flag at thesis-construction. The large-cap forward PDUFAs are the most-liquid of the set. **rest**.
+### Rest
 
-## PART 2 — STRATEGY C PRELIMINARY SHORTLIST (target 10–15 candidates)
+6. **TSLA 2026-07-22 earnings — vol divergence.** Highest single-name IV in the window; deliveries/robotaxi narrative two-sided. Docs: delivery data, FSD/robotaxi timeline. DEFER (router) + DEFER (sizing, ~$393). none.
+7. **AMD 2026-08-04 earnings — direction divergence.** DC-GPU guide vs an extended stock (~$518). Docs: MI-series roadmap. DEFER (router) + DEFER (sizing). none.
+8. **MSFT 2026-07-29 earnings — vol divergence.** Azure-print binary. Docs: Azure AI contribution. DEFER (router) + DEFER (sizing, ~$390). none.
+9. **BIIB 2026-07-25 PDUFA (Leqembi subQ) — binary-catalyst vol.** (a) Options may under/over-price a standard-review sub-cutaneous-formulation approval. (b) Leqembi subQ sNDA (dansfera, ~92% PoA). (c) 2026-07-25. (d) DEFER (router) + sizing likely feasible only via a tight spread (BIIB moderate price) — verify. Note in-window-binary-catalyst sub-pattern caution. none.
+10. **PFE 2026-08-04 earnings — direction divergence.** Low-priced (~$25) → a defined-risk structure could *fit* the $38 budget (rare). Docs: pipeline/guidance. DEFER (router) but **sizing potentially executable** — hold for the post-router-widening state. none.
+11. **VERA 2026-07-07 PDUFA (atacicept, IgAN) — binary biotech.** ~88% PoA; small-cap, high implied move. Docs: dansfera, Phase-3 IgAN data. DEFER (router) + sizing (single long option may fit given lower share price — verify liquidity/spread). none.
+12. **PRAX 2026-08-17 PDUFA (ulixacaltamide, essential tremor) — binary biotech.** ~90% PoA; first ET-specific therapy. Docs: dansfera, Phase-3 ET data. DEFER (router) + sizing/liquidity verify. none.
 
-Notation: (a) implied-vs-fundamentals direction, (b) supporting public docs, (c) event date/type from PART 1B, (d) sizing fit at ~$37.8 cap (2% of C NAV ≈ $1,890), (e) overlap with A (none open), (f) router state. Per `state.current_regime`, only **FOMC July 2026-07-28/29** is router-eligible (C = HYBRID ACTIVATE — FOMC ONLY); earnings, PDUFA, and vol-directional theses are DO-NOT-ACTIVATE → all non-FOMC names below are **analytic shortlist only**, and W4 should NOT schedule thesis-construction for them. The FOMC-June C thesis already RESOLVED (re-screen NO-GO 6/15 — no documentable divergence); **FOMC July is the new sole router-live event.** **⚠ ROUTER-DOWN-RISK: C's router gate is SPY Trend ≠ DOWN. This week's break below all SMAs puts the mechanical SPY Trend at risk of flipping to DOWN at the ~7/1 M1 — if it does, C DEACTIVATES entirely (the FOMC-July thesis dies too). W4 must re-check `state.current_regime` at run time before enqueuing the FOMC re-screen.**
-
-**TOP-5 (priority tier 1)**
-
-1. **FOMC July Meeting (2026-07-28/29, no SEP) — the only router-live thesis (pending the SPY-Trend-DOWN risk above).** (a) **Post-June-hawkish-pivot AND post-hot-PCE, the obvious bearish-rates expression is STILL bet-with-consensus = no Strategy-C edge.** The June dot-plot flipped to a hike base case (median 2026 dot ~3.8%; October-hike priced; ~1 hike by year-end), and the 6/25 core-PCE 3.4% (2.5-yr high) HARDENED that consensus further. A TLT bear-put-spread bets WITH that repriced path — the documented June-cycle edge-failure. **The only edge-bearing expression remains CONTRARIAN — a dovish-look-through read:** crude collapsing (Brent ~$72, >−10%/wk; the energy impulse that drove the hot PCE is now reversing), Iran de-escalation (offset by the weekend re-escalation tail), decelerating growth (Q1 GDP +1.6%, UMich weak), and an AI-driven equity drawdown that could pull forward growth-scare pricing → the market may be OVER-pricing the hawkish path into a no-SEP July meeting, and a Warsh data-dependent / no-fresh-hawkish-signal presser could pop TLT. Genuine divergence candidate but LOWER-conviction (no SEP/dot-plot in July to anchor a surprise; the contrarian view fights a 6/17 dot-plot + a 6/25 hot PCE only weeks old). (b) FOMC 2026-06-17 statement + dot plot; May core-PCE 3.4% (BEA 6/25); June CPI (7/14, pre-event input); crude/Hormuz data (CNBC 6/26); CME FedWatch. (c) FOMC 2026-07-28/29. (d) Defined-risk single-expiration TLT debit spread feasible at ~$37.8 cap on a near-ATM ~1-week tenor — re-price against the live mid-/late-July chain; deeper-OTM/low-POP structures may be all that fit at cap. **Dual-path (closed-form + Monte Carlo, agree within $1) + single-expiration required per Strategy.md rev 19/20.** (e) No A overlap. (f) **Router-eligible (FOMC HYBRID ACTIVATE) — CONTINGENT on SPY Trend ≠ DOWN at the ~7/1 M1.** **W4 should enqueue a `PENDING_ANALYSIS` pre-catalyst C re-screen** (analysis_type thesis-construction; strategy C; **due_date ≈ 2026-07-18 to 07-21**, the 7-10-day pre-catalyst window since the catalyst is >14 days out; context = this divergence framing + June FOMC outcome + June CPI 7/14 read + the SPY-Trend-DOWN router-recheck instruction; conservative_default = DO-NOT-STAGE, C remains in SGOV). Single non-chaining defer.
-2. **AMZN Q2 / META Q2 / AAPL FQ3 / MSFT FQ4 (~2026-07-29/30 AMC)** — (a) Directional/vol reads on the mega-cap-tech complex into a hawkish-Fed + AI-fade tape: the capex-SPENDERS (AMZN/META/MSFT) are the cleanest expression of the "is AI capex producing returns" question the week's selloff foregrounded; AAPL adds the Gemini-Siri monetization + Intel-foundry + component-cost-inflation legs. Large historical post-print implied moves. (b) FQ2/Q1 transcripts; FY 10-Ks; WWDC/Intel-deal disclosures. (c) ~7/29-7/30. (d) High IV; tight-strike at cap edge. (e) No A overlap. (f) **Router-blocked (earnings DO-NOT-ACTIVATE)** — analytic only. **TOP-5** (highest-relevance to the live macro debate).
-3. **GOOGL / INTC Q2 (~2026-07-23 AMC)** — (a) GOOGL directional/bullish skew (Cloud AI demand > supply; Gemini-on-iOS validation) vs INTC vol skew (foundry-turnaround binary, post-Apple-deal elevated IV at a 52-week high, now in a hostile chip tape). Both large historical post-print moves; tight-strike debit spreads feasible. (b) Q1 26 transcripts; FY25 10-Ks; Intel 18A/14A roadmap + Apple-deal reports. (c) ~2026-07-23. (d) Moderate-high IV; fits cap. (e) No A overlap (both QUEUED in A). (f) **Router-blocked** — analytic only. **TOP-5.**
-4. **NFLX Q2 (2026-07-16 AMC, IR-CONFIRMED)** — (a) Vol skew: large historical post-print move; ad-tier + content-slate read; non-AI-capex subscription model → a relatively macro-insulated single-name vol play. High IV; tight-strike at cap edge. (b) Q1 26 transcript; FY25 10-K; Netflix IR. (c) 2026-07-16. (d) High IV; cap-edge. (e) No A overlap. (f) **Router-blocked** — analytic only. **TOP-5** (date IR-confirmed; cleanest single-name vol event).
-5. **JPM / banks Q2 (2026-07-14 BMO, JPM/WFC IR-CONFIRMED)** — (a) Directional/bullish skew: hawkish hike-bias supports NIM + capital-markets recovery + the value-rotation tailwind the week's tape directly favored (Dow-outperformance); modest implied moves → tight debit-spread feasible. (b) Q1 26 transcripts; FY25 10-Ks; bank IR. (c) 2026-07-14. (d) Modest IV; tight debit-spread. (e) No A overlap. (f) **Router-blocked** — analytic only. **TOP-5.**
-
-**Rest (priority tier 2 — analytic only, all router-blocked)**
-
-6. **MU FQ4 (~late Sept, OUT of window) / TXN / AMD / QCOM FQ3 (~8/4-8/5)** — Directional/vol semis reads: post-MU-print AI-memory vol regime + QCOM data-center pivot (post-6/24 Investor Day) + AMD AI-GPU ramp; the week's AI-fade cuts toward vol/bearish skew. Router-blocked. (MU's own FQ4 is past the 8/12 back-edge.)
-7. **MRK Q2 (2026-08-04 BMO)** — Directional/defensive: Keytruda LOE-runway + Q2 oncology print, with the Keytruda Qlex SC PDUFA (~8/17) as a near-dated lifecycle overhang; defensive-rotation relevance. Modest IV. Router-blocked.
-8. **LLY Q2 (2026-08-05, IR-CONFIRMED)** — Directional/bullish: orforglipron oral-GLP-1 + obesity-TAM; defensive-growth rotation beneficiary; large single-name moves on pipeline read-throughs. Router-blocked.
-9. **PLTR Q2 (~2026-08-03 AMC) / DDOG, AKAM (~8/6)** — Newly IN-window software/AI names: highest-multiple software (PLTR) → largest implied moves + most hawkish-Fed/AI-fade vol; DDOG/AKAM AI-observability/cloud-infra reads. Router-blocked.
-10. **VRDN veligrotug PDUFA (2026-06-30)** — Vol-directional/bullish binary (TED; THRIVE/THRIVE-2 positive); high single-event IV; defined-risk long-premium captures the binary without un-hedged-equity downside. Small-cap options-liquidity flag. Router-blocked.
-11. **IONS olezarsen PDUFA (2026-06-30)** — Bullish/vol skew: sHTG label-expansion (lower binary risk than de-novo; base drug Tryngolza already approved for FCS); low-IV large-cap → long-premium feasible. Router-blocked.
-12. **VERA atacicept (7/7) / SWTX mirdametinib (~7/10) / CELC gedatolisib (7/17) PDUFAs** — Vol-directional/bullish small-cap binaries; defined-risk long-premium; options-liquidity / wide-spread flags. Router-blocked.
-13. **SNY (Sarclisa SC 7/23) / OTSKY (centanafadine 7/24) / BIIB-Eisai (Leqembi SC ~7/25) / MNKD (FUROSCIX 7/26) / NVO (Mim8 ~7/29) PDUFAs** — Most-liquid large-cap-pharma binaries of the cluster (SNY date extended once → sensitive; Enhertu 7/7 date-flagged AZN-vs-Daiichi). Long-premium feasibility varies with IV and options liquidity; verify executable structures at thesis-construction. Router-blocked.
-14. **MRNA mRNA-1010 PDUFA (~8/5) / VTRS estrogen-patch (7/30) / ARQT-LNTH (6/29) PDUFAs** — Mixed large/mid/small-cap binaries; long-premium feasibility varies with IV/liquidity (MRNA AdCom 9-0 favorable 6/18 lowers binary risk). Router-blocked.
-15. **TSLA Q2 (~7/22 AMC)** — Vol skew: perennially large post-print implied move; deliveries/margin + Robotaxi-deferral read in a multiple-pressuring rate path. Router-blocked.
-
-## NOTES / CAVEATS
-
-- **Only FOMC July 28-29 is router-eligible** (C = HYBRID ACTIVATE — FOMC only). All earnings and PDUFA C entries are **router-blocked at current state — analytic shortlist only**, surfaced per task spec; the dispersion-compression M2 follow-up may extend router scope at the next M-cycle re-derivation (~7/1). **The FOMC-June C thesis RESOLVED (re-screen NO-GO 6/15 — no documentable divergence); FOMC July is the new sole router-live event. W4 should enqueue a single `PENDING_ANALYSIS` pre-catalyst C re-screen for FOMC July (due ~7/18-21, conservative_default DO-NOT-STAGE), drained by D2 in-session — AFTER re-checking the SPY-Trend-DOWN router risk below.**
-- **⚠ C ROUTER-DOWN-RISK (new this cycle):** C's router gate is SPY Trend ≠ DOWN. The S&P closed Fri 6/26 BELOW its 50/100/200-day SMAs after a −4.6% Nasdaq week; the mechanical SPY Trend (canonical 2026-06-03 = NEUTRAL) is at risk of flipping to DOWN at the ~7/1 M1. **If SPY Trend = DOWN at M1, C's HYBRID-FOMC routing DEACTIVATES entirely** and the FOMC-July thesis is dead-on-arrival. W4 (and the D2 drain of the FOMC re-screen at ~7/18-21) MUST re-read `state.current_regime` before staging anything C.
-- **C FOMC-July edge framing:** the June cycle deferred/NO-GO'd precisely because the bearish-rates view was full consensus / no edge — and the 6/17 hawkish dot-plot + 6/25 hot core-PCE (3.4%, 2.5-yr high) HARDENED that consensus. So a TLT bear-put-spread (bet-with-consensus) remains edge-less. Any GO at the ~7/18-21 re-screen needs EITHER (i) a defensible *contrarian* dovish-look-through read vs the then-current futures/dot-anchored pricing (leaning on the energy-CPI roll-over + crude/Iran de-escalation + decelerating growth + a possible AI-drawdown growth-scare), with a cap-fitting single-expiration structure and a non-lottery POP, OR (ii) the conservative default (DO-NOT-STAGE; remain SGOV). The no-SEP July meeting gives less dot-plot surface for a surprise than June did. Options are NOT craftable by the IBKR connector → any GO is a MANUAL-ENTRY order block carried in the `[Claude] Confirm order` calendar event. Single-expiration only (rev 20); dual-path max-loss verification (within $1) required.
-- **Strategy A router is DO-NOT-ACTIVATE** (M1b 2026-06-01, reconfirmed; SPY Trend NEUTRAL→deteriorating fails the "Trend UP + breadth HEALTHY" gate, and this week's break below all SMAs hardens it). PART 2 A shortlist is analytic at generation; the next M1 is ~2026-07-01. **All 31 A-queue names are already in Watchlist.md (resolution: next M1 with A router ACTIVATE). W4 must NOT re-queue any**: CAT, LLY, QCOM, AAPL, DDOG, AKAM, NVDA, CSCO, AMAT, HD, TGT, WMT, AVGO, ORCL, ADBE, MU, INTC, NBIS, CRM, DELL, SNOW, MRVL, NTAP, OKTA, NOW, HPE, SMCI, AMD, IBM, PANW, CRWD. **No genuinely-new non-queued near-term-catalyst A candidate surfaced this cycle that warrants queuing** (NKE FQ4 6/30 and the HON/SPGI/REZI spin complex + REZI/ADI Investor Days are new CATALYSTS but are breadth/structural names, not near-term narrative-misalignment A entries; MU/QCOM catalysts resolved this week on already-queued names). **If a future M1 ACTIVATES the A router, W4 routing changes from queue-acknowledgment to thesis-construction-event scheduling per Task Plan W4 §D.**
-- **Dominant M1 input shift this cycle (key for ~7/1):** (1) **The AI-hardware bid CRACKED** — Nasdaq −4.6% (5th straight down day), a chip-led rout + OpenAI-IPO-delay (SoftBank −9 to −14%) + Apple chip-shortage price hikes; the "is AI capex producing returns / AI-bubble" question is the controlling near-term narrative again, verdict flipped bid→fade. **Crucially, demand stayed RATIFIED (MU blowout + 16 customer agreements; QCOM >$15B DC AI by FY29 w/ Meta+Microsoft) while the TAPE faded the complex** — the demand-vs-valuation/funding split is the cleanest M1 frame. (2) **Hawkish-Fed/stagflation HARDENED** — core PCE 3.4% (2.5-yr high), July ~89% hold but ~1 hike priced by year-end; pressures the high-multiple AI/software tier, supports financials/value/defensives (the week's Dow-outperformance/rotation). (3) **Crude COLLAPSED (Brent ~$72, >−10%/wk)** — a forward-disinflationary offset — with a weekend-Hormuz re-escalation (US airstrikes, Bahrain drones, 2nd tanker) a re-widening tail-risk pending Mon 6/29's open (`shock_overlay` latent→testing). (4) **SPY Trend deterioration (below all SMAs)** — A stays DNA, C's router at DOWN-risk. **All M1-input context, not a W1/W4 action** (A router DNA).
-- **PDUFA changes (durable; apply to all future uses of this file):** CORRECTED — **UNCY oxylanthanum carbonate is 6/27 (not 6/29)**, now at/past goal date (resolving, feeds M1). NEW in-window (this run) — **SWTX mirdametinib ~7/10, BIIB/Eisai Leqembi SC (IQLIK) ~7/25, NVO denecimig/Mim8 ~7/29**. DATE-FLAGGED — **AZN/Daiichi Enhertu post-neoadjuvant HER2+ eBC 7/7** (Daiichi date; AZN PR says "Q3 2026" — verify). STANDING in-window — ARQT/LNTH 6/29, VRDN/IONS 6/30, VERA 7/7, CELC 7/17, SNY 7/23, OTSKY 7/24, MNKD 7/26, VTRS 7/30, MRNA ~8/5. FORWARD large-cap (in A window, out of C 45-day) — LNTH MK-6240 ~8/13, MRK Keytruda Qlex SC ~8/17, **BMY iberdomide ~8/17 (NEW)**, JAZZ Ziihera ~8/25, GILD BIC/LEN ~8/27, **ALNY zilebesiran ~9/15, BMY Camzyos sNDA ~9/30, REGN pozelimab ~10/1, MRK/Daiichi I-DXd ~10/10, CYTK aficamten ~10/30, SNY venglustat ~11/25, VRTX povetacicept ~11/30, GILD anito-cel ~12/23 (all NEW Sept–Dec)**. EXCLUDED — Orca-T 7/6 (issuer private). (CORT relacorilant approved early 3/25 and CORT's erroneous "7/11" remain removed from prior cycles.)
-- **Earnings-date corrections (durable):** **ABBV Q2 7/24→7/31 BMO (IR-CONFIRMED).** MSFT FQ4 ~7/28→~7/29. **PLTR Q2 ~8/10→~8/3 AMC (now IN the C window).** **NBIS Q2 ~8/12→~8/6 (now IN the C window).** PG ~8/4→~7/29 per aggregator (re-verify). NEW IR-CONFIRMED — JPM/WFC 7/14, UNH 7/16, GE 7/16, NFLX 7/16, LLY 8/5. NKE FQ4 6/30 AMC. MU 6/24 / QCOM Investor Day 6/24 / FDX 6/23 / FDXF 6/25 all RESOLVED this week (removed from forward tables). All other late-July/early-Aug earnings remain aggregator-estimated → re-verify mid-July. FOMC remaining 2026: **Jul 28-29 (no SEP)**, Sep 15-16 (SEP), Oct 27-28, Dec 8-9 (SEP).
-- **NEW non-earnings A-eligible catalysts (durable):** HON→HONA Aerospace spin 6/29 (HONA joins S&P 500/100; HON 1-for-2 reverse split, renamed Honeywell Technologies); SPGI→Mobility Global (MBGL) spin 7/1; REZI→ADI spin H2 2026 + REZI Investor Day 7/13 / ADI Investor Day 7/14; TTWO GTA VI 11/19 (pre-orders opened 6/25); AAPL iPhone 18 event ~early/mid-Sept (Tentative).
-- **Cross-strategy holdings constraints applied:** HCA, ZBRA, AZO, MDT (open Strategy B) excluded from the A shortlist. RTX, DIS (open Strategy D) flagged as A-overlay deferral candidates (#46/#47). No current A or C positions → A↔C exclusion has no binding effect.
-- **"NO-GO records are context, not barriers"** (Operating_Protocols §3) applied: GOOGL/LLY/CAT/AMD prior NO-GOs surfaced as context only; recent B-NO-GO names within the demotion-log retention window are NOT surfaced as A candidates absent a fresh near-term catalyst materially changing the prior disqualifying condition.
-- **Binary-PDUFA-on-A caveat:** A is long-only equity with no defined-risk floor; equity held into a binary PDUFA (VRDN/IONS 6/30, VERA 7/7, CELC 7/17, MRNA ~8/5, GILD ~8/27, etc.) carries un-hedged binary downside — better-suited to C defined-risk (router-blocked for the in-window names). An A-overlay requires a durable post-approval-commercialization narrative (12-month horizon), not the binary itself.
-- **Cross-strategy deconfliction reminder for W4:** No A position open in any name in the W1/W2 entry lists (A router DNA, A book empty). **HCA is EXIT-PENDING (60-day time-exit staged SELL 0.0642 LIMIT $385 DAY, instruction 100, order day Mon 6/29)**; ZBRA 7/13, AZO 7/24, MDT 7/31 time-exits follow — D2's daily mechanical sweep handles convergence/time-exit, not W4.
-- **Strategy C portfolio sizing: ~$1,890 NAV; 2% cap ≈ $37.8.** Most non-FOMC C theses defer per the deferral mechanism even if router scope expands. Small-cap-biotech PDUFA structures (VRDN, VERA, CELC, SWTX) carry options-liquidity / wide-spread risk — verify an executable defined-risk structure at thesis-construction. FOMC structure must be single-expiration only (rev 20); dual-path verification (within $1) required before staging any C structure.
-- **Rev 35 cap-removal impact on routing:** PART 2 A shortlist applies no sector or total-position cap; routing is criteria-based only. KL #12 (d) pairwise-correlation monitoring (>0.5 trigger flags for review, not gating) is the sole concurrent-position-correlation control.
+**Net C read this cycle:** with the HYBRID-FOMC-only router state, **FOMC 2026-07-29 is the single actionable C event**, and even it must clear the ~$38 defined-risk sizing budget (an index/rate vertical is the most plausible fit). All earnings/PDUFA C candidates are router-deferred pending `div-C-202606-1`; low-priced names (PFE, and biotech single-long-option structures) are flagged as the ones most likely to *fit* the sizing budget once/if the router widens.
