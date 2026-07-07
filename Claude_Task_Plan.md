@@ -297,3 +297,304 @@ If any answer reveals a violation, the response gets revised before sending.
 **SUPERSEDED 2026-06-06 (BigQuery cutover — Operating_Protocols.md §15).** The decision log is now `events.decision_log` (queryable; full narrative in `body_md`; semantic lookup via `analytics.find_precedents()`). There is **no live/archive split and no pruning** — BigQuery holds all entries, bounded automatically, so W5's archival lifecycle is retired. Routines write each new decision as an `events.decision_log` row (structured fields + `body_md`) and read via SQL / `find_precedents()`. `B_Sub_Pattern_Taxonomy.md`, `Watchlist.md`, and `Operating_Protocols.md` remain as kept `.md` factbase/spec files. The paragraphs below describe the retired `.md` live-log + per-quarter archive lifecycle and are kept only as historical context.
 
 `Decision_Log.md` was the LIVE decision log — entries that are still operationally relevant (open positions, active deferrals, current protocol revisions, recent dispositions within retention windows). Pruned weekly by W5.
+
+`Decision_Log_Archive_<YYYY>_<QN>.md` files contain matured entries from prior periods, organized by quarter (e.g. `Decision_Log_Archive_2026_Q2.md`). One file per quarter; appended throughout the quarter as W5 archives matured entries; closed at quarter-end.
+
+`B_Sub_Pattern_Taxonomy.md` is the canonical reference for Strategy B criterion-4 NO-GO sub-patterns, extracted from individual `events.decision_log` NO-GO rows by W5. Thesis-construction sessions read this file rather than scanning scattered NO-GO entries for sub-pattern context. (Analogous per-strategy taxonomy files may be created later if other strategies accumulate enough sub-pattern data to warrant extraction.)
+
+`Watchlist.md` is a factbase tracking names queued for re-evaluation under specific conditions. Living document; read by all cadences; written by D2/W4/M4 (action-conversion routines) and W5 (mirroring). Sections per strategy. Currently the only structurally-needed section is **Strategy A queue** (names awaiting router-activation re-evaluation — populated by router-gate NO-GO sessions, drained by M4 sessions when A router flips ACTIVATE). Strategy D pending re-screens are tracked in calendar events (canonical source); Strategy B prior-NO-GOs are not queued because B operates on event-flow with fresh-evaluation discipline (sub-pattern factbase preserves the durable signal). Sections may be added as other strategies surface persistent queue needs.
+
+`Operating_Protocols.md` is the canonical reference for active operational protocols (the operating-model section of this file in current canonical form, commission-disregarded protocol, "NO-GO records are context, not barriers" rule, conviction-calibration ladder, deferral chaining rules, etc.). Living document; read by all cadences. Each protocol section contains current canonical text plus a revision-history pointer list. When a protocol is revised, the new revision text replaces the canonical section and a new entry is added to revision history pointing to the `events.decision_log` row that introduced the revision.
+
+When an entry is archived, the live Decision_Log.md replaces the moved-out section with a single-line pointer:
+
+`# [archived] <YYYY-MM-DD> <title> → Decision_Log_Archive_<YYYY>_<QN>.md`
+
+Future sessions looking up specific historical entries find either the entry or the pointer in the live file.
+
+## Queue lifecycle and daily archive policy
+
+**SUPERSEDED 2026-06-06 (BigQuery cutover — §15).** The queues are now `events.queue_events`; **`state.open_queue` is the live view** (latest status per item, filtered to actionable). Enqueue = insert a `queue_events` row; complete/supersede = insert a terminal-status row; there is **no `.md` queue and no `.md` daily-archive** — status filtering in `state.open_queue` replaces the physical archive entirely, so D3's queue-archive sweep is retired. D2 reads due analysis items from `state.open_queue` (queue `PENDING_ANALYSIS`); the Adversarial routines read `PENDING_REVIEW`; the Strategy-A queue stays in `Watchlist.md`. The paragraphs below describe the retired `.md` queues and are historical context.
+
+The two drain-to-completion queues — `Pending_Analysis.md` (drained daily by D2) and `Pending_Adversarial_Reviews.md` (drained by the Adversarial Review routines) — were cleared **daily**, not on a retention window. A queue is read **to completion** by its drainer every day to find the entries it must act on, so a completed entry left in place is needlessly re-read each day — the opposite of `Decision_Log.md`, which is append-only, never scanned end-to-end, and therefore tolerates W5's weekly retention-window prune.
+
+Each day **D3 Calendar Hygiene** sweeps every entry at a terminal `status` (`complete` or `superseded`) out of its live queue into the queue's daily archive — `Archived_Analysis.md` / `Archived_Adversarial_Reviews.md`. The full entry block is appended (tagged with an `archived: <YYYY-MM-DD>` field) and then **removed from the live file entirely**: this is a full clear — **no pointer line is left behind** (unlike the Decision_Log archive). The live queue therefore holds only actionable entries — `pending`, plus the adversarial queue's in-flight `attacker-complete` mid-state — preceded by its unchanged header + schema-reference preamble.
+
+Lookup convention (BigQuery era): a queue item id **absent from `state.open_queue` has a terminal-status row in `events.queue_events`** (no archive file). The durable record of any verdict/outcome lives independently in the per-review output files (`Adversarial_Review_<id>_*.md`) and `events.adversarial_reviews`, the router rows in `events.regime_events` (`state.current_regime`), and `events.decision_log` — a gate that needs a completed review's result reads those, not the queue entry. (Historically the terminal entries were swept to `Archived_Analysis.md` / `Archived_Adversarial_Reviews.md`; both archive files are retired — `events.queue_events` holds all history, queryable, and Q1's regime retrospective queries `events.adversarial_reviews` / `events.queue_events` for prior-quarter review records.)
+
+## Action-conversion routines (deep research → action)
+
+Deep-research routines produce exactly one output file. A research file with recommendations sitting in it is not an action; the human acts only on crafted order confirmations, so any recommendation in a research file evaporates at the next overwrite unless something converts it into an order, an edited live file, or a `PENDING_ANALYSIS` queue entry (`events.queue_events`).
+
+Each cadence with deep-research routines that produce actionable recommendations therefore carries an **action-conversion** routine that runs after all of that cadence's research files are saved. The action-conversion routine reads the just-saved research file(s) and emits orders / live-file edits / calendar events.
+
+Pairing:
+- **D2 Daily Action Conversion** — reads Daily.md.
+- **W4 Weekly Action Conversion** — reads Weekly_Catalyst_Calendar.md, Weekly_Post_Event_Screen.md, Weekly_Position_Deep_Dive.md.
+- **M4 Monthly Action Conversion** — reads Monthly_Fundamental.md (M1b output, which echoes M1a regime scoring in PART 1), Monthly_E_Pairs.md, Monthly_D_Position_Deep_Dive.md.
+- **Q4 Quarterly Action Conversion** — reads Quarterly_D_Candidates.md and Quarterly_AI_Foundation_Delta.md (Q1 Quarterly_Regime.md is a pure backward-looking factbase with no actions).
+- **A3 Annual Action Conversion** — reads Annual_AI_Foundation_Sweep.md and Annual_Constraint_Audit.md; produces updated AI_Trading_Foundation.md and updated Strategy.md.
+
+Cadence-level hygiene routines (D3 Calendar Hygiene, W5 Factbase & Analytics Consolidation) run after action conversion since they reference state mutated by it.
+
+Because each routine run is a fresh session, deep-research routines must persist EVERYTHING the action-conversion routine will need into the cadence-output file. The legacy "PART 1 saved / PART 2 in-chat" split is obsolete — both parts go into the file.
+
+## File-write conventions for routine outputs
+
+Cadence-output files (Daily.md, Weekly_Catalyst_Calendar.md, etc.) are overwritten in full each run. The first line is ALWAYS the bare marker, literally first — before any `#` title or blockquote (a 2026-06/07 Q1 run put a title on line 1 and the marker on line 3; corrected — see Quarterly_Regime.md):
+
+- Daily files: `YYYY-MM-DD` (today's calendar date).
+- Weekly files: `YYYY-WW` — the ISO week of TODAY's run date (`state.trading_day_today.today`), the SAME week every weekly file stamps this cycle. Never the upcoming trading-Monday's week or any other look-ahead convention (a 2026-06-28 W1 run once did this and mismatched its own W2/W3 siblings — corrected, see the W1 prompt body's explicit guard).
+- Monthly/Quarterly files: **per-routine, not a single rule** — the exact semantics differ by whether the routine is retrospective (looks backward) or forward-looking (stages what's ahead), so check the table below rather than assume:
+
+  | Routine | File | Marker = |
+  |---|---|---|
+  | M1b | Monthly_Fundamental.md | current month (forward-looking activation calls) |
+  | M2 | Monthly_E_Pairs.md | current month |
+  | M3 | Monthly_D_Position_Deep_Dive.md | current month |
+  | Q1 | Quarterly_Regime.md | **prior** quarter (retrospective) |
+  | Q2 | Quarterly_D_Candidates.md | current quarter (forward-looking) |
+  | Q3 | Quarterly_AI_Foundation_Delta.md | **prior** quarter (retrospective) |
+- Annual files: `YYYY` (calendar year).
+
+The kept living spec/factbase files (Watchlist.md, Operating_Protocols.md) are edited surgically. Routines apply minimal in-place edits via str_replace or the equivalent; they do not rewrite these files in full unless the prompt explicitly calls for a full rewrite. (The former live-state `.md` files — Decision_Log, Portfolio_Ledger, Regime_State — are retired: decisions/positions/regime are now appended to `events.*` and read via `state.*`, not edited in place.)
+
+The Decision_Log per-quarter archive files (`Decision_Log_Archive_*`) are retired — `events.decision_log` holds all history (queryable, bounded), so there is no archive file to append to.
+
+The queue archives (`Archived_Analysis` / `Archived_Adversarial_Reviews`) are retired — terminal-status rows drop out of `state.open_queue` automatically and all history lives in `events.queue_events`, so there is no daily archive sweep.
+
+## Read-access scope by cadence
+
+**BigQuery cutover note (§15):** `events.decision_log` holds ALL decision history — queryable and bounded automatically. There is **no live/archive split** anymore: routines query `events.decision_log` (+ `analytics.find_precedents()` for semantic lookup) and let the WHERE clause bound the window, rather than choosing between a "live" file and per-quarter archive files (both retired). Likewise queue history is all in `events.queue_events` (live view `state.open_queue`); there is no `.md` queue archive. The per-cadence rules below now express *how much history a cadence queries*, not which files it opens.
+
+**Daily and Weekly routines** (D1, D2, D3, W1, W2, W3, W4, W5):
+- Query `events.decision_log` bounded to the operationally-relevant recent window (open positions, active deferrals, recent dispositions) — do not pull full multi-year history.
+- Do not query the queue history for decision input beyond `state.open_queue` — the live view carries every actionable entry; older `events.queue_events` rows are cold traceability. (Monthly+ cadence MAY query deeper — e.g., Q1 queries `events.adversarial_reviews` / `events.queue_events` for prior-quarter review records.)
+- Cross-strategy factbase files (`B_Sub_Pattern_Taxonomy.md`, `Quarterly_D_Candidates.md`, `Weekly_Catalyst_Calendar.md`, etc.) ARE in scope and should be read as the prompt directs.
+- If a daily/weekly routine genuinely needs a decision older than its recent window (rare), this is a signal that the relevant content should have been extracted to a factbase. Surface it via an `events.decision_log` entry rather than widening the routine's habitual query window.
+
+**Monthly routines** (M1a, M1b, M2, M3, M4):
+- May query all of `events.decision_log`. **Exception: M1a's read scope is restricted by design — see M1a's prompt body. M1b's read scope is restricted to the M1a regime-scoring input (`state.current_regime` / `events.regime_events`) — see M1b's prompt body.**
+- In practice most monthly tasks operate on current open-book state and do not require deep-history queries. Query the full log only when the prompt explicitly directs (e.g., per-strategy thesis-invalidation count for the trailing 36-month window).
+
+**Quarterly routines** (Q1, Q2, Q3, Q4):
+- May query all of `events.decision_log` (and `events.queue_events` / `events.adversarial_reviews` / `events.regime_events` as needed).
+- Q1 (Regime Retrospective) explicitly queries prior-quarter router history (`events.regime_events`) and adversarial review records (`events.adversarial_reviews`).
+- Q2 (D Long-Horizon Candidates) and Q3 (AI Foundation Delta) reference historical dispositions and prior-cycle outcomes.
+- Q4 (Action Conversion) reads only the just-saved Q2/Q3 research files plus live state; deep-history queries not required.
+
+**Annual routines** (A1, A2, A3):
+- Query everything, including full `events.decision_log` history.
+- A2 (Per-Strategy Constraint Audit) explicitly traces foundation-citation graphs across full `events.decision_log` history.
+- A3 (Action Conversion) reads only the just-saved A1/A2 outputs plus live state; deep-history queries not required.
+
+## Shared rules referenced across prompts
+
+**"NO-GO records are context, not barriers."** A prior NO-GO entry on a candidate informs current evaluation but does not pre-empt it. New evidence, new context, new structural conditions can flip a prior NO-GO to GO. The `events.decision_log` NO-GO row tells future Claude what to look at, not what to conclude. For Strategy B, sub-pattern taxonomy entries are particularly informative — a candidate matching a documented sub-pattern faces a high bar but is not auto-rejected.
+
+**Conviction-calibration ladder.** Conviction is logged in `events.decision_log` rows on a coarse scale (e.g., 30%, 45%, 60%, 75%) for after-the-fact calibration analysis. It is not a gate. A 45%-conviction setup that clears all criteria stages; a 75%-conviction setup that fails any criterion declines.
+
+---
+
+# DAILY (after market close)
+
+## D1. Market Development Scan — deep research
+
+```
+Read access scope: Daily cadence. Query `events.decision_log` (+ `analytics.find_precedents()`) bounded to the recent operationally-relevant window — `events.decision_log` holds all history, queryable, no live/archive split (§15). Read factbase files (`B_Sub_Pattern_Taxonomy.md`, `Watchlist.md`, `Operating_Protocols.md`) per prompt direction.
+
+Read Strategy.md, Experiment_Parameters.md, AI_Trading_Foundation.md, Watchlist.md, Operating_Protocols.md (positions from `state.current_positions`, regime from `state.current_regime`, decisions from `events.decision_log`).
+
+Read `state.current_positions` to identify currently-open positions across Strategies A, B, C, D, E with their entry-record thesis-invalidation criteria. Read Watchlist.md for queued names.
+
+Apply the shared 'NO-GO records are context, not barriers' rule when any candidate has a prior `events.decision_log` NO-GO entry.
+
+Produce a daily market development scan and write it directly to `Daily.md` (overwrite; first line = today's calendar date in YYYY-MM-DD format).
+
+SCAN WINDOW — dynamic, measured from the last D1 run to now (not a fixed lookback). Set the window start = the timestamp through which the previous D1 scan covered, and scan all developments from there to now (this run's execution time, America/Denver). Resolve the start automatically, in priority order:
+
+1. **Prior Daily.md stamp (primary).** At run start, `Daily.md` on disk is still the previous run's output (this run overwrites it). Read it first and parse the machine-readable marker `<!-- d1_scan_through_utc: <ISO-8601 UTC> -->` written just below the date line by the previous run — that timestamp is the exact hand-off boundary → window start.
+2. **Git commit timestamp (fallback + cross-check).** If the marker is missing or unparseable, use the commit time of the most recent `Daily.md` commit — `git log -1 --format=%cI -- Daily.md` (every D1 run commits Daily.md as "D1 Market Development Scan …"). Also use this to sanity-check (1); the two should agree to within one session's length.
+3. **Conservative fixed lookback (last resort).** If neither is available (e.g. a shallow clone with no Daily.md history, or no prior file at all), fall back to a 30-hour lookback ending now. Never silently narrow coverage below this.
+
+This keeps coverage gap-free across skipped or delayed runs: if a scheduled run was missed, the window automatically stretches back to the *actual* last run instead of dropping a session (e.g. the 2026-06-06 run correctly had to cover the Friday 6/5 session because there was no D1 between Thu 6/4 and Sat 6/6 — a fixed 24-hour lookback would have missed all of Friday). If the resolved start is more than ~50 hours ago (a multi-session gap), state the gap explicitly in the scan-window line; always cover at least the most recent completed trading session even when the elapsed window is short. Throughout DEVELOPMENTS below, "today" means "within this scan window" (≥ today; more when the window spans a missed run).
+
+Record the boundary for the next run: in the Daily.md you write, emit `<!-- d1_scan_through_utc: <this run's execution time, ISO-8601 UTC> -->` on the line directly below the date, and a human-readable `Scan window: <start · America/Denver> → <now · America/Denver>` line in the header.
+
+Cast broadly — do not scope the scan to tickers owned or on the watchlist. The purpose is to surface any development that could either threaten an existing position's thesis or create a new entry opportunity for any strategy, including at names not currently on any list. Do not pad; if a category has no material items, state so.
+
+TL;DR (readability — added 2026-07). Immediately after the header (scan-window line + tape summary), before DEVELOPMENTS, write a ≤5-line plain-bullet TL;DR: exits triggered (count + tickers, or "none"), new entry candidates (count + tickers, or "none"), watchlist changes (or "none"), and a one-line regime-review flag (or "no review"). This is a summary of the RECOMMENDED ACTIONS section computed below, placed at the top for a human skimming top-down (D2 still reads the full file bottom-up as today; this changes nothing D2 parses).
+
+DEVELOPMENTS
+
+1. Market-wide breaking events. Geopolitical shocks, unscheduled regulatory or enforcement actions, material bankruptcies, disasters, or events materially affecting global risk assets. Per event: what happened, source, observable reaction across equities / rates / commodities / FX.
+
+2. Scheduled events that resolved today (across the US-listed universe with market cap ≥ $2B, not limited to watchlist). Earnings prints (EPS/revenue vs. consensus), FDA PDUFA outcomes, FOMC actions, other resolved catalysts. Per event: outcome, price reaction if observable, source.
+
+3. Large single-name moves. US-listed equities with market cap ≥ $2B that moved ≥5% close-to-close today attributable to identifiable public events. Per name: ticker, move magnitude and direction, event type, source.
+
+4. Sector-level moves. Any GICS sector with a move of ≥2% at sector-ETF level or notable intraday dispersion. Per sector: magnitude, apparent driver, source.
+
+5. Notable commentary. Major sell-side reports issued, regulator or central-bank speeches with market-moving content, senior corporate commentary worth noting.
+
+ANALYSIS — RISK TO EXISTING POSITIONS
+
+MECHANICAL EXIT-TRIGGER SWEEP (run for EVERY open position regardless of whether any Development fired). Read the open book + its two MECHANICAL exit triggers (`convergence_target`, `time_exit_date`, with `contract_id`) from **`state.current_positions`** (BigQuery — authoritative per Operating_Protocols.md §15, D2-maintained), and pull live prices from the IBKR connector (`get_price_snapshot` per name). Parallel-run cross-check: confirm the open set matches `get_account_positions` and flag any divergence (`state.current_positions` is the canonical open book; the connector is authoritative for live holdings). For each open position, check the two MECHANICAL exit triggers:
+- **Convergence target hit** (Strategy B / E price targets): live price at or through the convergence target → flag EXIT TRIGGERED (mechanical — the target IS the exit rule per Strategy.md; no judgment needed).
+- **Time-based exit due**: today (America/Denver) ≥ the position's time-based-exit date → flag EXIT TRIGGERED.
+This catches a target-hit the next morning without waiting for a per-position scheduled review — the lag that left the BURL convergence exit owed for days under the screenshot workflow. It retires the per-position pulse-check / time-exit / convergence-check calendar events entirely (this daily sweep replaces them). D2 converts every EXIT TRIGGERED flag into a crafted exit order.
+
+PER-STRATEGY KILL-TRIGGER SWEEP (connector-driven; run for EVERY active strategy, alongside the per-position sweep above). Read each strategy's kill/gate state from **`perf.kill_flags`** (BigQuery engine — `drawdown_kill`, `runaway_review`, `m2m_underperf_review`, `gate_reached`, computed from the latest `perf.strategy_daily`). D1 runs before D2, so the engine row is yesterday's close — refresh `current_drawdown` against today's live marks (`get_price_snapshot`) if a position moved sharply intraday, then evaluate the flags below against the thresholds in Experiment_Parameters.md "Kill criteria (per-strategy)":
+- **Drawdown kill (#1, mechanical / immediate):** if peak-to-trough deployed TWR has dropped ≥50% from the strategy's highest historical value since first trade → flag **STRATEGY TERMINATION — DRAWDOWN**. Rigid and context-independent — no judgment, no review.
+- **Runaway-success (#3, pre-gate only):** if deployed TWR has **doubled** AND the strategy has not yet cleared its 30-trade gate → flag **RUNAWAY-SUCCESS REVIEW** (does NOT terminate directly — routes to an m2m-termination review to rule out reward-function exploitation / hidden tail risk).
+D2 converts a DRAWDOWN flag into an immediate strategy termination (close all positions + deterministic redistribution) and a RUNAWAY-SUCCESS flag into an enqueued review. (The mark-to-market #4 and foundation-change #2 triggers are detected on slower cadences — M4 monthly and Q3/A1 respectively — not here.)
+
+For each open position, does any Development above ALSO trigger a (judgment-laden) thesis-invalidation exit criterion in the position's entry record (per Strategy.md exit rules for the relevant strategy)? For each position affected: position (ticker + strategy), triggering development, whether the invalidation criterion is met (YES with specific criterion / NO with reasoning).
+
+For each watchlist candidate: does any Development materially change candidacy status (closer to entry / invalidated / unchanged)?
+
+ANALYSIS — OPPORTUNITY CHECK
+
+For every Development above, evaluate whether it creates a new entry candidate for any of Strategies A, B, C, or E (D's multi-year horizons rarely turn on single-day developments). Do not limit evaluation to existing watchlist names — names currently unwatchlisted can become candidates, and names currently held in one strategy can incidentally create candidacy in another (with the simultaneous-holding constraints from Strategy.md respected). Examples of signals to surface:
+- ≥5% post-event move on a name fitting Strategy B's eligibility → B candidate (10-day entry window)
+- Newly announced qualifying catalyst within 45 days on a name fitting Strategy C's eligibility → C candidate
+- Catalyst announcement within 6 months on a name fitting Strategy A's eligibility → A candidate
+- Sector-level divergence that opens intra-industry-group pair opportunities → E candidate
+
+Per new opportunity: ticker, strategy, why the development creates the opportunity, next step (full thesis construction required in a separate session per Strategy.md entry criteria).
+
+ANALYSIS — REGIME CHECK
+
+Does any Development plausibly shift any strategy's router activation state enough to warrant an inter-monthly router review, given the shared regime vocabulary and per-strategy activation rules in Strategy.md? High bar; default NO on ambiguity.
+
+ANALYSIS — FRONTIER-LLM CAPABILITY CHECK (light-touch, optional)
+
+Run AT MOST ONE Hugging Face `paper_search` query per day, rotating across the §6.1 query batteries from `HF_Resource_Catalog.md` on a weekly cycle (e.g., Mon: cross-session consistency, Tue: prompt injection, Wed: calibration, Thu: sycophancy/anchoring, Fri: trading/financial, Sat: multi-agent debate, Sun: long-context). Use `concise_only=true` and `results_limit=5`. Skim only the abstracts of papers published since the last D1 run — use the SCAN WINDOW start resolved above as the lower bound (capped at ~72 hours so a multi-day gap stays light-touch; on the normal daily cadence this is ~24 hours), so a skipped run does not silently drop a day's papers. If a result materially bears on a documented `AI_Trading_Foundation.md` disadvantage (Tier 1 architectural change, new failure mode, or contradicts a Tier 2 numerical claim per `HF_Resource_Catalog.md` §2 inverse mapping), write an `events.decision_log` entry via `CALL ops.sp_log_decision(...)` tagged `[HF Frontier-LLM Capture]` with the arXiv ID, a one-paragraph summary, and the affected `AI_Trading_Foundation.md` item. Reference-only — D1 does NOT act on the finding today; Q3 queries `[HF Frontier-LLM Capture]` entries in `events.decision_log` during its quarterly delta to surface mid-quarter material deltas. Default is silent on ambiguity. No Daily.md output for this check.
+
+RECOMMENDED ACTIONS
+
+The downstream D2 routine reads this section verbatim and converts each bullet into an order / live-file edit / calendar event, so be specific (ticker, strategy, criterion-cited where applicable):
+- Exits triggered (with invalidation criterion and strategy)
+- New entry candidates (with strategy) requiring full thesis construction in separate sessions per Strategy.md
+- Watchlist updates (adds / removes / demotions)
+- Router reviews recommended (with justification)
+
+If nothing material: "No recommended actions."
+
+MACHINE-READABLE ACTION BLOCK (added 2026-07, robustness). Immediately after the prose RECOMMENDED ACTIONS section, append a fenced ```yaml d1_actions``` block with ONE list entry per bullet above (empty list `[]` if "No recommended actions"), same order, mirroring the same content structurally rather than restating it in prose:
+```yaml d1_actions
+- action: exit | thesis | watchlist | router_review
+  ticker: <ticker, or n/a for a watchlist-only / router_review item>
+  strategy: <A|B|C|D|E, or n/a>
+  detail: <one line — invalidation criterion / candidate rationale / add-remove-demote / review justification>
+```
+This gives D2 a structural cross-check independent of prose-parsing: D2 counts the prose bullets against this block's entry count and HALTS (per the observability "Failure alerts" convention — `missing_dependency` category, since converting an under- or over-counted action set risks a missed exit or a fabricated order) on a mismatch, instead of silently mis-converting a bullet a prose-only parse missed or double-counted. The block is a structural mirror, not a new source of truth — the prose above remains authoritative for WHY; this block only has to agree on WHAT and HOW MANY.
+
+OUTPUT: write the complete content above directly to `Daily.md` (overwriting the prior day's file). First line is today's date in YYYY-MM-DD format; the line directly below it is the machine-readable `<!-- d1_scan_through_utc: <this run's execution time, ISO-8601 UTC> -->` marker (per SCAN WINDOW above — this is what the next run reads to resolve its window start), and the header carries the human-readable `Scan window: <start · America/Denver> → <now · America/Denver>` line, followed by the TL;DR block. No chat output beyond a one-line acknowledgment that Daily.md was written.
+```
+
+---
+
+## D2a. Broker Reconcile & Snapshot — regular routine
+
+> **PARTIALLY CUT OVER (self-improvement audit WO-3, 2026-07-03; trigger created 2026-07-03).** This
+> routine splits D2's mechanical, dependency-light broker-reconcile/cash-safety/TWR-engine work out of
+> the analysis-heavy action-conversion work, so a halt in the latter (Step 1 onward) can never stall
+> fills reconciliation, cash-tripwire safety, the SGOV sweep, or the deployed-TWR engine simultaneously
+> (the D2 mega-SPOF the audit flagged). The web-UI trigger now exists and ran once (2026-07-03, a market
+> holiday — see `ops.run_log`). **Until the CUTOVER AUTO-CHECK below actually performs the cutover, D2
+> continues to run its OWN Step 0/Step 0b/TWR-maintenance exactly as documented in the "## D2." section —
+> nothing changes operationally, and the current split-brain state (both routines doing Step 0's work) is
+> safe: D2a runs first, and D2 redoing the same reconciliation is idempotent.**
+>
+> **The cutover is now FULLY AUTONOMOUS — no chat question, no human reply, ever.** (Correction,
+> 2026-07-03: D2a's first run ended by asking the operator in chat "Reply if you'd like me to complete
+> the cutover" — but routine chat is unmonitored, documented throughout this file; that question would
+> never be seen, so the cutover would simply never happen. That is a bug in this section's original
+> instructions, not a one-off mistake by that run — fixed here.) The CUTOVER AUTO-CHECK step at the end
+> of this routine's steps below queries `state.d2a_cutover_readiness` — `ready_for_cutover` requires
+> **3 DISTINCT TRADING-DAY** completed D2a runs (a holiday run does not count: it never exercises real
+> fill reconciliation, SGOV sweep/cover crafting under `analytics.fn_order_guard`, or TWR-engine ingest
+> from freshly-pulled marks — the paths this cutover actually needs confidence in) AND no prior cutover
+> (`ops.d2a_cutover_log` empty, the durable idempotency marker — a BigQuery row, not a prose/grep read of
+> this file). When ready, D2a performs the cutover ITSELF, in the same session, with full repo write
+> access (exactly as this file's own edits are made): edit `ops/cadence.yaml` (`D2`'s `depends_on` →
+> `[D1, D2a]`), delete Step 0 / Step 0b / "PER-STRATEGY PERFORMANCE MAINTENANCE" / "SEEDING A NEW
+> STRATEGY" from the "## D2." section below (replace with a one-line pointer: "Step 0/0b/TWR-maintenance
+> now run in D2a; see `state.current_positions` / `analytics.strategy_nav` / `perf.strategy_daily` /
+> `analytics.account_reconciliation` for its output" and fix D2's "If Step 0 reconciled no new fills..."
+> check to read D2a's `ops.run_log` fill-count instead), regenerate `ops/triggers.json`
+> (`python scripts/print_routines.py --write`), run `scripts/check_cadence_consistency.py` to confirm all
+> surfaces agree, commit, and push. Then `INSERT INTO ops.d2a_cutover_log` (the idempotency marker) and
+> `CALL ops.sp_raise_alert('info','D2a','auto_cutover', 'D2/D2a cutover performed autonomously after N
+> qualifying trading-day runs', <JSON: qualifying_trading_day_runs, git_commit>)` — an INFO-severity row
+> purely for the audit trail, since no action is needed from anyone; do NOT ask in chat, before or after.
+> The BigQuery-side scaffolding (cadence_expected_today, routine_catalog, stalled_runs tier,
+> `state.d2a_cutover_readiness`) is already applied live — see `bigquery/12_cadence_monitor.sql` /
+> `15_routine_catalog.sql` / `18_stack_review_fixes.sql` / `32_d2a_cutover_readiness.sql`. Self-
+> bootstrapping throughout: `state.cadence_watch`/`state.stalled_runs` only become alarm-eligible after
+> a routine's first `completed` run, so D2a's adoption has generated zero false alarms.
+
+Runs first, every operating day (including non-trading days, so the account stays reconciled even when
+D1/D2 don't fire) — independent of D1. Reconciles the live brokerage account, runs the cash/SGOV safety
+tripwire, sweeps/covers to SGOV, snapshots the account, and maintains the deployed-TWR engine. Carries
+NO analysis and stages NO discretionary orders (only the mechanical SGOV sweep/cover) — D2 (below)
+depends on this routine's output for its own Step 1 onward.
+
+```
+Read access scope: Daily cadence. Read positions/perf/NAV from `state.current_positions` /
+`perf.strategy_daily` / `analytics.strategy_nav` / `analytics.account_reconciliation`. Read
+`Operating_Protocols.md` §11/§13/§14 as relevant. No Strategy.md / Watchlist.md / decision_log access
+needed — this routine does no thesis work.
+
+RUN LOGGING (every run). At the very START of this routine, `CALL ops.sp_log_run('D2a', <today,
+America/Denver from state.trading_day_today>, 'started', <session_id>, <branch>, NULL, NULL, NULL)`. At
+the END, call it again with `'completed'` (or `'failed'`/`'halted'` + `error_msg`), passing
+`rows_written` = fills + marks ingested.
+
+**TRADING-ENABLE GATE (self-improvement audit B-1-obs, 2026-07-03; gate-ordering fix 2026-07-07, `bigquery/33_gate_ordering_fix.sql`) — `CALL ops.sp_assert_trading_enabled_mechanical('D2a')` before anything else.** FATAL (mirrors `ops.sp_assert_deps`) — aborts if `state.trading_enabled_mechanical.trading_enabled = FALSE` (a manual/auto halt, a NAV drawdown breach, unhealthy embeddings, an open critical alert, or position-reconciliation drift). Deliberately NOT `ops.sp_assert_trading_enabled` (the D2/W4/M4/Q4/A1/A3 gate) — that one also requires `marks_fresh`/`engine_fresh`, which THIS routine's own PER-STRATEGY PERFORMANCE MAINTENANCE step (below) is what makes true each morning; calling the freshness-inclusive gate before that ingest RAISEs on every trading-day run (see `33_gate_ordering_fix.sql`'s header for the full self-diagnosed deadlock this replaced). Reads/reconciliation are safe regardless; do not size or stage the SGOV sweep past this point if it raises.
+
+STEP 0 — BROKER RECONCILIATION. Reconcile the live brokerage account against the BigQuery events-side
+state (`state.current_positions` / `analytics.account_reconciliation`) via the IBKR connector — verbatim
+the same procedure as "## D2." Step 0 below (reproduced there; this routine performs it, D2 no longer
+does once cut over): fill reconciliation + event-sourcing mirror, staged-order registry reconciliation,
+cash/SGOV tripwire, cash flattening sweep/cover (with the `analytics.fn_order_guard` check per
+self-improvement audit B-2-exec), noting still-working orders, and clearing stale instructions.
+
+STEP 0b — ACCOUNT SNAPSHOT. Same procedure as "## D2." Step 0b below.
+
+PER-STRATEGY PERFORMANCE MAINTENANCE (deployed-TWR engine). Same procedure as "## D2." below: ingest
+daily marks (with the FMP fallback), the per-name completeness check, `CALL ops.sp_daily_refresh()`, and
+the engine-verification sanity check.
+
+CUTOVER AUTO-CHECK (run last, after everything above — self-improvement audit follow-up, 2026-07-03).
+`SELECT * FROM state.d2a_cutover_readiness`. If `ready_for_cutover = FALSE`, do nothing and proceed to
+chat output — this is the expected state on every run until the threshold clears; it is NOT a finding
+and never needs mentioning in chat output. If `ready_for_cutover = TRUE`, perform the full cutover
+described in this section's banner above (edit `ops/cadence.yaml` + the "## D2." section + regenerate
+`ops/triggers.json` + `check_cadence_consistency.py` + commit + push), then `INSERT INTO
+ops.d2a_cutover_log` and `CALL ops.sp_raise_alert('info','D2a','auto_cutover', ...)` — no chat question,
+before or after; a one-line mention in this run's chat output that the cutover happened is sufficient
+(chat is unmonitored, so the alert row above is the record that matters, not the chat line).
+
+CHAT OUTPUT: one-line acknowledgment of reconciliation (fills captured, cash tripwire status, sweep/
+cover crafted or not, engine recompute status). If nothing to report: "Reconciliation complete, no
+action needed."
+```
+
+---
+
+## D2. Daily Action Conversion — regular routine
+
+Runs after D1 has written Daily.md. Reconciles fills, drains the analysis queue, and converts D1's RECOMMENDED ACTIONS into orders and live-file edits — running thesis construction and other analyses in-session (no human-pasted thesis events).
+
+```
+Read access scope: Daily cadence. Read decisions from `events.decision_log` + `analytics.find_precedents()` (the retired `Decision_Log*.md` are git history only). Read positions/perf/NAV from `state.current_positions` / `perf.strategy_daily` / `analytics.strategy_nav` (retired Portfolio_Ledger.md) and regime from `state.current_regime` (retired Regime_State.md). Read the spec/working files `Strategy.md`, `Experiment_Parameters.md`, `Operating_Protocols.md`, `Watchlist.md`, `B_Sub_Pattern_Taxonomy.md` as relevant.
+
+RUN LOGGING (every run — observability, `bigquery/10_observability.sql`). At the very START of this routine, `CALL ops.sp_log_run('D2', <today, America/Denver from state.trading_day_today>, 'started', <session_id>, <branch>, NULL, NULL, NULL)`. At the END, call it again with `'completed'` (or `'failed'`/`'halted'` + an `error_msg` if it stopped), passing `rows_written` = fills + marks ingested. This populates `state.freshness.d2_ran_last_trading_day` and arms the dead-man's switch (`bigquery/scheduled_queries/daily_freshness_check.sql`), so a silently-skipped or crashed D2 is detected instead of failing silent.
+
+STEP 0 — BROKER RECONCILIATION (run first, every run, before reading Daily.md's actions). **TRADING-ENABLE GATE (self-improvement audit B-1-obs, 2026-07-03) — `CALL ops.sp_assert_trading_enabled('D2')` before anything else in this step.** This is FATAL (mirrors `ops.sp_assert_deps`): it RAISEs and aborts the routine if `state.trading_enabled.trading_enabled = FALSE` (a manual/auto halt, `state.system_health.all_green = FALSE`, or a book-level NAV drawdown breach — see `bigquery/23_trading_control.sql`). Reconciliation/reads are safe regardless of the gate, but do NOT size or stage anything past this point if it raises — the alert + `RAISE` already record why. Then reconcile the live brokerage account against the BigQuery events-side state (`state.current_positions` / `analytics.account_reconciliation`; Portfolio_Ledger.md is retired, §15) via the IBKR connector. This replaces the retired operator-screenshot fill-capture sessions (Operating_Protocols.md §11):
+- Read `get_account_trades` over a DAYS_7 window. For each fill whose `trade_id` is NOT already in `events.trade_fills` (idempotent match on `trade_id`): record the exact price / size / `commission` / `realized_pnl` / `trade_time` (via the BigQuery event-sourcing step below); flip the affected position ORDER-STAGED→OPEN (entries) or exit-pending→CLOSED (exits) with an `events.position_events` row, and set the matching `state.open_orders` staged-order row terminal `filled` (Operating_Protocols.md §11 staged-order registry); update strategy sector counts and any KL #12 event membership; write the GO/close decision via `CALL ops.sp_log_decision(...)` if staging recorded only the order. Realized P&L comes from the connector's `realized_pnl` field — never inferred. Aggregate exchange-split partial fills by `order_id`.
+- **Mirror the reconciliation to the BigQuery event tables (connector-driven event-sourcing).** For each new fill: `INSERT INTO events.trade_fills` (trade_id, order_id, contract_id, fill_ts, strategy, ticker, side, shares, price, commission, realized_pnl) — idempotent by `trade_id`; and write the position lifecycle event to `events.position_events` — an `OPEN` event on an entry (`cost_basis = shares×price + commission`, contract_id, shares, plus convergence_target / time_exit_date / conviction / source_thesis_ref from the staging entry) or a `CLOSE` event on an exit. This keeps `state.current_positions`, the deployed-TWR engine, and `state.daily_briefing` current. Also write the day's new decision via **`CALL ops.sp_log_decision(...)`** (bigquery/08_ops_procedures.sql) — this appends the structured `events.decision_log` row (incl. `body_md`) **and embeds it in the same call**, so a decision is never left unembedded (no separate `ML.GENERATE_EMBEDDING` step). Populate `ticker` (regex for the clean "Strategy X — TICKER" title format, else `ops.gemini` AI extraction per bigquery/02_ai_layer.sql). Sync is verifiable any time via `SELECT * FROM state.embedding_health` (expect `is_healthy = TRUE`); if a raw `INSERT` was ever used instead, `CALL ops.sp_embed_pending()` to catch up. **This connector/agent-driven event-sourcing SUPERSEDES the one-time `parse_*.py` migration path** (which produced the buggy initial rows, since rebuilt from the connector 2026-06-05/06); the parsers are kept for reference only.
+- Read (do not transcribe) live positions, cash, and net-liquidation from `get_account_positions` + `get_account_summary` + `get_account_balances` for the reconciliation cross-check; reconcile account-level drift (dividends, fees, reinvestments, splits) to the connector truth while preserving per-strategy cost-basis attribution — use `get_price_history` with `include_corporate_actions: true` (plus the `get_account_trades` DRIP/dividend rows) to attribute the drift precisely. Per the connector-era recording policy, marks/market-values/unrealized-P&L are NOT written into the events-side state — only cost-basis and strategy allocation are (`events.position_events` / `state.current_positions`; live marks flow through `events.daily_marks` into the TWR engine instead).
+- **Connector-sanity band on net-liquidation (self-improvement audit, 2026-07-03) — before treating this session's `get_account_summary` net-liquidation as ground truth for anything downstream.** Compare it to `state.account_latest.nav` (yesterday's Step 0b snapshot — today's row does not exist yet at this point in the run, so this is a clean prior-day baseline with no new table needed). If the day-over-day change exceeds **±15%**, do not proceed past this bullet — do not sweep, size, stage, or let Step 0b write today's snapshot — unless the move is fully explained by what THIS session already reconciled (a fill's realized P&L, a dividend, a deposit/withdrawal from the cash tripwire below, a confirmed split). An unexplained jump halts exactly like the cash tripwire: `CALL ops.sp_raise_alert('critical','D2','connector_sanity', <one-line message with prior_nav/today_nlv/pct_change>, <JSON>)`, create a `[Claude] ATTENTION — D2 halted (connector sanity)` calendar event, and `CALL ops.sp_log_run('D2', <today>, 'halted', …, error_msg=<message>)`. **Why this exists:** the cash tripwire below catches a small unreconciled residual; it does not catch a connector returning a wholesale-wrong NLV (stale snapshot, misplaced decimal, a corporate action the connector mis-marked) whose sheer size would otherwise sail through the ~$1 residual check and cascade silently into `ops.account_snapshot`, the weekly email's TWR figures, and — per PER-STRATEGY PERFORMANCE MAINTENANCE below — the deployed-TWR engine's drawdown gate. Trust the connector's day-to-day story, not any single number, unverified.
