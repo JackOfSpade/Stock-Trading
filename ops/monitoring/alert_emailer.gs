@@ -89,7 +89,7 @@ function checkAlerts_() {
       let subject;
       if (realFresh.length === 0) {
         // Batch is ONLY the alert-delivery self-test → unmistakable test subject, no ⚠.
-        subject = '🧪 [TEST] Stock-Trading alert-delivery self-test — no action needed';
+        subject = '⚗ [TEST] Stock-Trading alert-delivery self-test — no action needed';
       } else {
         const crit = realFresh.filter(r => r.severity === 'critical').length;
         subject = `⚠ Stock-Trading ALERT — ${realFresh.length} new${crit ? ` (${crit} critical)` : ''}` +
@@ -194,7 +194,7 @@ function htmlAlerts_(fresh, totalOpen) {
     const bar = test ? '#2c6e9b' : (isCrit ? '#c0392b' : '#b9770e');
     const bg  = test ? '#eaf2f8' : (isCrit ? '#fcebea' : '#fdf3e3');
     const tag = test
-      ? ' · <span style="color:#2c6e9b;font-weight:700;">🧪 TEST — no action needed</span>'
+      ? ' · <span style="color:#2c6e9b;font-weight:700;">⚗ TEST — no action needed</span>'
       : ((String(a.resolved) === 'true') ? ' · <span style="color:#2e7d32;">AUTO-RESOLVED</span>' : '');
     return `<tr><td style="padding:0;">
       <div style="border-left:4px solid ${bar};background-color:${bg};border-radius:6px;padding:10px 12px;margin:6px 0;">
@@ -204,7 +204,7 @@ function htmlAlerts_(fresh, totalOpen) {
       </div></td></tr>`;
   }).join('');
   const header = allTest
-    ? '🧪 Stock-Trading — alert-delivery self-test (TEST · no action needed)'
+    ? '⚗ Stock-Trading — alert-delivery self-test (TEST · no action needed)'
     : '⚠ Stock-Trading — unresolved alerts';
   return `<!DOCTYPE html><html><body style="margin:0;padding:18px;background-color:#eef1f5;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:auto;background:#fff;border-radius:12px;padding:18px;">

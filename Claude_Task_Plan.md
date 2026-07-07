@@ -543,7 +543,7 @@ America/Denver from state.trading_day_today>, 'started', <session_id>, <branch>,
 the END, call it again with `'completed'` (or `'failed'`/`'halted'` + `error_msg`), passing
 `rows_written` = fills + marks ingested.
 
-**TRADING-ENABLE GATE (self-improvement audit B-1-obs, 2026-07-03) — `CALL ops.sp_assert_trading_enabled('D2a')` before anything else.** FATAL (mirrors `ops.sp_assert_deps`) — aborts if `state.trading_enabled.trading_enabled = FALSE`. Reads/reconciliation are safe regardless; do not size or stage the SGOV sweep past this point if it raises.
+**TRADING-ENABLE GATE (self-improvement audit B-1-obs, 2026-07-03; gate-ordering fix 2026-07-07, `bigquery/33_gate_ordering_fix.sql`) — `CALL ops.sp_assert_trading_enabled_mechanical('D2a')` before anything else.** FATAL (mirrors `ops.sp_assert_deps`) — aborts if `state.trading_enabled_mechanical.trading_enabled = FALSE` (a manual/auto halt, a NAV drawdown breach, unhealthy embeddings, an open critical alert, or position-reconciliation drift). Deliberately NOT `ops.sp_assert_trading_enabled` (the D2/W4/M4/Q4/A1/A3 gate) — that one also requires `marks_fresh`/`engine_fresh`, which THIS routine's own PER-STRATEGY PERFORMANCE MAINTENANCE step (below) is what makes true each morning; calling the freshness-inclusive gate before that ingest RAISEs on every trading-day run (see `33_gate_ordering_fix.sql`'s header for the full self-diagnosed deadlock this replaced). Reads/reconciliation are safe regardless; do not size or stage the SGOV sweep past this point if it raises.
 
 STEP 0 — BROKER RECONCILIATION. Reconcile the live brokerage account against the BigQuery events-side
 state (`state.current_positions` / `analytics.account_reconciliation`) via the IBKR connector — verbatim

@@ -143,7 +143,7 @@ def relay_orders():
     if not rows:
         print("orders: none pending")
         return
-    lines = [f"📋 Stock-Trading — {len(rows)} staged order(s) awaiting confirmation (tap the [Claude] Confirm order event):"]
+    lines = [f"☑ Stock-Trading — {len(rows)} staged order(s) awaiting confirmation (tap the [Claude] Confirm order event):"]
     for r in rows:
         lines.append(f"{r['side']} {r['qty']} {r['ticker']} ({r['strategy']}) @ {r['limit_price']} — window to {r['window_close']}")
     post("\n".join(lines))
@@ -161,7 +161,7 @@ def relay_catchup():
     if not rows:
         print("catchup: none available")
         return
-    lines = [f"🔁 Stock-Trading — {len(rows)} routine(s) missed today's window but are safe to catch up now (no live-price dependency):"]
+    lines = [f"↻ Stock-Trading — {len(rows)} routine(s) missed today's window but are safe to catch up now (no live-price dependency):"]
     for r in rows:
         lines.append(f"{r['routine']} ({r['today']}) — fire its trigger whenever convenient; a late run recovers full value.")
     post("\n".join(lines))
@@ -173,7 +173,7 @@ def relay_heartbeat():
     alerts/orders — here a POST failure IS the finding (channel diversity is only real if the second
     channel is actually alive), so it must propagate to a non-zero exit / red CI run."""
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    status = post(f"✅ Stock-Trading alert-relay heartbeat — channel alive, no action needed ({now}).")
+    status = post(f"✓ Stock-Trading alert-relay heartbeat — channel alive, no action needed ({now}).")
     print(f"heartbeat: posted (HTTP {status})")
 
 

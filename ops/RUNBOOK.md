@@ -1200,7 +1200,7 @@ FMP mark fallback).
 - **#15 — delivery canary (owner console).** Create `scheduled_queries/delivery_canary.sql` as a **weekly**
   scheduled query (e.g. Mon ~05:40 UTC; email-on-failure ON). It asserts the prior week's canary got
   `notified_ts` stamped (proves the emailer actually DELIVERED) and emits a fresh `[CANARY]` row. The
-  `alert_emailer.gs` renders a canary-only batch with a clear `🧪 [TEST]` subject + `[TEST]` body tag; per
+  `alert_emailer.gs` renders a canary-only batch with a clear `⚗ [TEST]` subject + `[TEST]` body tag; per
   operator preference (2026-06-29) the test email is left VISIBLE in the inbox — no Gmail auto-filter — so
   it is recognisable at a glance without defeating the test (re-paste the emailer for this to take effect).
 
