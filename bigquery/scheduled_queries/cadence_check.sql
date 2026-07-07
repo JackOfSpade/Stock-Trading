@@ -18,11 +18,25 @@
 -- TIMING: BigQuery schedules are UTC. Run ~05:15 UTC (≈ 22:45 MDT / 21:45 MST) — same Denver evening,
 -- after D2/D3, like the freshness check. APPLY ORDER: bigquery/16_automation_health.sql must be applied
 -- BEFORE re-pasting this query (it references state.backup_health + state.automation_heartbeat). See
--- ops/RUNBOOK.md "Scheduled queries".
+-- ops/RUNBOOK.md "Scheduled queries". Also apply bigquery/34_alert_lifecycle.sql before re-pasting
+-- (it defines ops.sp_auto_resolve_alerts, called first below — self-improvement audit WP2, 2026-07-07).
+--
+-- NOTE (repo vs live): this query's LIVE scheduled-query body still ran without the
+-- sp_auto_resolve_alerts call as of this file's edit — the repo copy needs a console re-paste
+-- (RUNBOOK "Scheduled queries" console procedure) to take effect. The routine-level wiring in
+-- Claude_Task_Plan.md's Observability preamble CALL ops.sp_auto_resolve_alerts() at the top of
+-- every routine run) is the primary, already-live path; this scheduled-query call is defense in
+-- depth for days with zero routine runs.
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';
 
-  -- Auto-resolve STALE self-healing WARNING rows (2026-06-28, #14) so the weekly digest's "N open alerts"
+  -- Mechanized alert auto-resolve (WP2, defense-in-depth alongside the routine-level call above).
+  -- Best-effort: never let a resolver bug break the cadence dead-man's switch itself.
+  BEGIN
+    CALL stock-trading-498512.ops.sp_auto_resolve_alerts();
+  EXCEPTION WHEN ERROR THEN SELECT @@error.message;
+  END;
+-- Auto-resolve STALE self-healing WARNING rows (2026-06-28, #14) so the weekly digest's "N open alerts"
   -- reflects live issues, not warnings the owner never manually closed (e.g. a 4-day-old self-healed
   -- stranded_session warning keeping the digest red). Targets only the self-CLEARING classes, warning
   -- severity, older than 7 days. A condition that is STILL true is simply re-raised by the checks below
