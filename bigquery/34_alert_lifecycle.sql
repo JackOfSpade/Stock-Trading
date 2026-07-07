@@ -4,7 +4,6 @@
 -- 33_gate_ordering_fix.sql.
 --
 -- WHY THIS EXISTS. Every critical alert in this system is deliberately never auto-resolved
-
 -- (cadence_check.sql's #14 auto-age only ever touched WARNING self-healing classes) -- on the
 -- theory that a human should review a critical before clearing it. That discipline is correct for
 -- capital-affecting classes (cash_tripwire, order_guard_block, connector, twr_bad_mark) but wrong
@@ -30,7 +29,7 @@
 -- 23_trading_control.sql).
 --
 -- SEPARATELY, this file also fixes the "gate self-latches" defect: ops.sp_assert_trading_enabled(
--- mechanical) raises its OWN critical alert (category='trading_halted') when the gate trips -- and
+-- _mechanical) raises its OWN critical alert (category='trading_halted') when the gate trips -- and
 -- both state.trading_enabled and state.trading_enabled_mechanical then count THAT alert against
 -- their own open-critical-alert check, so a transient trip can never self-clear even once its root
 -- cause heals; it takes a human UPDATE every time. The fix: both gate views now count blocking
@@ -40,7 +39,7 @@
 -- UNCHANGED by this file.
 
 -- ===== ops.alert_policy — fail-closed auto-resolution allowlist =====
-CREATE TABLE IF NOT EXISTS stock-trading-498512.ops.alert_policy (
+CREATE TABLE IF NOT EXISTS `stock-trading-498512.ops.alert_policy` (
   category STRING NOT NULL,
   latching BOOL NOT NULL,        -- TRUE = human-only clear (default posture for anything not seeded FALSE)
   resolve_rule STRING,           -- human-readable description of the mechanical condition, if latching=FALSE
@@ -53,28 +52,28 @@ CREATE TABLE IF NOT EXISTS stock-trading-498512.ops.alert_policy (
 -- order_guard_fire_drill_failed, twr_bad_mark, connector, dual_path, embedding, merge_conflict,
 -- missed_confirmation, staging, trading_halted, kill_flag_firing, gate_ordering, instruction_drift,
 -- trigger_missing, period_missed, position_drift, calendar_runway_low, restore_stale, ddl_drift,
--- backup_stale, ops_backup_stale, automation_heartbeat) stays latching=TRUE by simple ABSENCE -- no
+-- backup_stale, ops_backup_stale, automation_heartbeat) stays latching=TRUE by simple ABSENCE — no
 -- need to enumerate them here; the allowlist shape makes silence the safe default.
-INSERT INTO stock-trading-498512.ops.alert_policy (category, latching, resolve_rule, note)
+INSERT INTO `stock-trading-498512.ops.alert_policy` (category, latching, resolve_rule, note)
 SELECT * FROM UNNEST([
   STRUCT('missing_dependency' AS category, FALSE AS latching,
-    'every routine named in the alert payload has a completed ops.run_log row with run_date >= the blocked run_date, OR the blocked run_date is >1 calendar day stale (America/Denver) -- recovery for a closed operating day is owned by missed_run/catch-up, not a standing freeze on future days' AS resolve_rule,
+    'every routine named in the alert payload has a completed ops.run_log row with run_date >= the blocked run_date, OR the blocked run_date is >1 calendar day stale (America/Denver) — recovery for a closed operating day is owned by missed_run/catch-up, not a standing freeze on future days' AS resolve_rule,
     'seeded 2026-07-07, self-improvement audit WP2' AS note),
   STRUCT('missed_run', FALSE,
     'every routine named in the alert payload array has a completed ops.run_log row with run_date >= that routine''s payload date, OR the alert is >1 calendar day stale',
     'seeded 2026-07-07, self-improvement audit WP2'),
   STRUCT('routine_stalled', FALSE,
-    'the stalled routine has since logged ANY terminal status (completed/failed/halted) for the same run_date, OR the alert is >1 calendar day stale -- mirrors the existing 7-day auto-age in cadence_check.sql #14 but resolves faster once the system has demonstrably moved on',
+    'the stalled routine has since logged ANY terminal status (completed/failed/halted) for the same run_date, OR the alert is >1 calendar day stale — mirrors the existing 7-day auto-age in cadence_check.sql #14 but resolves faster once the system has demonstrably moved on',
     'seeded 2026-07-07, self-improvement audit WP2; routine_stalled is warning-severity and does not gate trading_enabled on its own, but resolving it promptly keeps the alert digest honest'),
   STRUCT('staleness', FALSE,
-    'state.freshness.marks_fresh AND engine_fresh, state.embedding_health.is_healthy, NOT state.position_reconciliation drift, and zero OTHER open criticals (excluding this alert''s own category) are all currently true -- i.e. all_green would read TRUE right now if this alert did not count against itself',
+    'state.freshness.marks_fresh AND engine_fresh, state.embedding_health.is_healthy, NOT state.position_reconciliation drift, and zero OTHER open criticals (excluding this alert''s own category) are all currently true — i.e. all_green would read TRUE right now if this alert did not count against itself',
     'seeded 2026-07-07, self-improvement audit WP2; self-referential like the trading_halted gate-exclusion below, so it is resolved by live re-check, not by an ops.run_log lookback')
 ])
-WHERE NOT EXISTS (SELECT 1 FROM stock-trading-498512.ops.alert_policy);
+WHERE NOT EXISTS (SELECT 1 FROM `stock-trading-498512.ops.alert_policy`);
 
 -- ===== ops.sp_auto_resolve_alerts — mechanized, evidence-based clearing of whitelisted classes =====
 -- Call this BEST-EFFORT at the start of every routine's Observability preamble (alongside the
--- existing best-effort run-logging calls) and/or from a scheduled query -- see Claude_Task_Plan.md
+-- existing best-effort run-logging calls) and/or from a scheduled query — see Claude_Task_Plan.md
 -- "Observability" for the wiring. Never gates, never aborts a routine; purely a cleanup pass.
 --
 -- IMPLEMENTATION NOTE (confirmed live 2026-07-07): BigQuery rejects a subquery that is DOUBLY
@@ -91,7 +90,7 @@ WHERE NOT EXISTS (SELECT 1 FROM stock-trading-498512.ops.alert_policy);
 -- subquery anywhere. A subquery that merely SELF-references ops.alerts (Rule 4's own
 -- open-critical-count) hits the same restriction even with no row correlation at all, so that
 -- count is computed as an independent scripting variable FIRST, then used as a plain boolean.
-CREATE OR REPLACE PROCEDURE stock-trading-498512.ops.sp_auto_resolve_alerts()
+CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_auto_resolve_alerts`()
 BEGIN
   DECLARE eligible_dep, eligible_run, eligible_stalled, eligible_stale ARRAY<STRING>;
   DECLARE staleness_would_clear BOOL;
@@ -99,18 +98,18 @@ BEGIN
   -- Rule 1: missing_dependency.
   SET eligible_dep = (
     SELECT ARRAY_AGG(a.alert_id)
-    FROM stock-trading-498512.ops.alerts a
+    FROM `stock-trading-498512.ops.alerts` a
     CROSS JOIN UNNEST(SPLIT(JSON_VALUE(a.payload, '$.missing_deps'), ', ')) AS dep
-    LEFT JOIN stock-trading-498512.ops.run_log r
+    LEFT JOIN `stock-trading-498512.ops.run_log` r
       ON r.routine = dep AND r.status = 'completed'
          AND r.run_date >= SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(a.payload, '$.run_date'))
     WHERE NOT a.resolved AND a.category = 'missing_dependency'
-      AND a.category IN (SELECT category FROM stock-trading-498512.ops.alert_policy WHERE NOT latching)
+      AND a.category IN (SELECT category FROM `stock-trading-498512.ops.alert_policy` WHERE NOT latching)
     GROUP BY a.alert_id
     HAVING LOGICAL_AND(r.routine IS NOT NULL)
         OR SAFE.PARSE_DATE('%Y-%m-%d', ANY_VALUE(JSON_VALUE(a.payload, '$.run_date'))) < DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 1 DAY)
   );
-  UPDATE stock-trading-498512.ops.alerts
+  UPDATE `stock-trading-498512.ops.alerts`
   SET resolved = TRUE, resolved_ts = CURRENT_TIMESTAMP(),
       resolved_note = CONCAT('auto-resolved: dependency satisfied or window closed (ops.sp_auto_resolve_alerts). ', COALESCE(resolved_note, ''))
   WHERE alert_id IN UNNEST(COALESCE(eligible_dep, []));
@@ -118,20 +117,20 @@ BEGIN
   -- Rule 2: missed_run (payload is a JSON array of {routine, schedule, today}).
   SET eligible_run = (
     SELECT ARRAY_AGG(a.alert_id)
-    FROM stock-trading-498512.ops.alerts a
+    FROM `stock-trading-498512.ops.alerts` a
     CROSS JOIN UNNEST(JSON_QUERY_ARRAY(a.payload)) AS item
-    LEFT JOIN stock-trading-498512.ops.run_log r
+    LEFT JOIN `stock-trading-498512.ops.run_log` r
       ON r.routine = JSON_VALUE(item, '$.routine') AND r.status = 'completed'
          AND r.run_date >= SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(item, '$.today'))
     WHERE NOT a.resolved AND a.category = 'missed_run'
-      AND a.category IN (SELECT category FROM stock-trading-498512.ops.alert_policy WHERE NOT latching)
+      AND a.category IN (SELECT category FROM `stock-trading-498512.ops.alert_policy` WHERE NOT latching)
     GROUP BY a.alert_id
     HAVING LOGICAL_AND(
       r.routine IS NOT NULL
       OR SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(item, '$.today')) < DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 1 DAY)
     )
   );
-  UPDATE stock-trading-498512.ops.alerts
+  UPDATE `stock-trading-498512.ops.alerts`
   SET resolved = TRUE, resolved_ts = CURRENT_TIMESTAMP(),
       resolved_note = CONCAT('auto-resolved: named routine(s) since completed or window closed (ops.sp_auto_resolve_alerts). ', COALESCE(resolved_note, ''))
   WHERE alert_id IN UNNEST(COALESCE(eligible_run, []));
@@ -139,21 +138,21 @@ BEGIN
   -- Rule 3: routine_stalled (payload is a JSON array of {routine, run_date, hours_since_started}).
   SET eligible_stalled = (
     SELECT ARRAY_AGG(a.alert_id)
-    FROM stock-trading-498512.ops.alerts a
+    FROM `stock-trading-498512.ops.alerts` a
     CROSS JOIN UNNEST(JSON_QUERY_ARRAY(a.payload)) AS item
-    LEFT JOIN stock-trading-498512.ops.run_log r
+    LEFT JOIN `stock-trading-498512.ops.run_log` r
       ON r.routine = JSON_VALUE(item, '$.routine')
          AND r.run_date = SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(item, '$.run_date'))
          AND r.status IN ('completed', 'failed', 'halted')
     WHERE NOT a.resolved AND a.category = 'routine_stalled'
-      AND a.category IN (SELECT category FROM stock-trading-498512.ops.alert_policy WHERE NOT latching)
+      AND a.category IN (SELECT category FROM `stock-trading-498512.ops.alert_policy` WHERE NOT latching)
     GROUP BY a.alert_id
     HAVING LOGICAL_AND(
       r.routine IS NOT NULL
       OR SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(item, '$.run_date')) < DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 1 DAY)
     )
   );
-  UPDATE stock-trading-498512.ops.alerts
+  UPDATE `stock-trading-498512.ops.alerts`
   SET resolved = TRUE, resolved_ts = CURRENT_TIMESTAMP(),
       resolved_note = CONCAT('auto-resolved: stalled run(s) since reached a terminal status, or window closed (ops.sp_auto_resolve_alerts). ', COALESCE(resolved_note, ''))
   WHERE alert_id IN UNNEST(COALESCE(eligible_stalled, []));
@@ -166,18 +165,18 @@ BEGIN
   -- ops.alerts hits the same de-correlation restriction, even with zero row-level correlation.
   SET staleness_would_clear = (
     SELECT f.marks_fresh AND f.engine_fresh AND eh.is_healthy
-      AND NOT COALESCE((SELECT LOGICAL_OR(drifted) FROM stock-trading-498512.state.position_reconciliation), FALSE)
-      AND (SELECT COUNTIF(NOT resolved AND severity = 'critical' AND category != 'staleness') FROM stock-trading-498512.ops.alerts) = 0
-    FROM stock-trading-498512.state.freshness f, stock-trading-498512.state.embedding_health eh
+      AND NOT COALESCE((SELECT LOGICAL_OR(drifted) FROM `stock-trading-498512.state.position_reconciliation`), FALSE)
+      AND (SELECT COUNTIF(NOT resolved AND severity = 'critical' AND category != 'staleness') FROM `stock-trading-498512.ops.alerts`) = 0
+    FROM `stock-trading-498512.state.freshness` f, `stock-trading-498512.state.embedding_health` eh
   );
   SET eligible_stale = (
     SELECT ARRAY_AGG(alert_id)
-    FROM stock-trading-498512.ops.alerts
+    FROM `stock-trading-498512.ops.alerts`
     WHERE NOT resolved AND category = 'staleness'
-      AND category IN (SELECT category FROM stock-trading-498512.ops.alert_policy WHERE NOT latching)
+      AND category IN (SELECT category FROM `stock-trading-498512.ops.alert_policy` WHERE NOT latching)
       AND COALESCE(staleness_would_clear, FALSE)
   );
-  UPDATE stock-trading-498512.ops.alerts
+  UPDATE `stock-trading-498512.ops.alerts`
   SET resolved = TRUE, resolved_ts = CURRENT_TIMESTAMP(),
       resolved_note = CONCAT('auto-resolved: underlying freshness/health conditions verified green, no other open critical (ops.sp_auto_resolve_alerts). ', COALESCE(resolved_note, ''))
   WHERE alert_id IN UNNEST(COALESCE(eligible_stale, []));
@@ -189,32 +188,32 @@ END;
 -- calls the resolver, asserts it is still unresolved, then ALWAYS cleans up the synthetic row
 -- (never leaves a fake critical open, whichever way the assertion goes). Call periodically (e.g.
 -- monthly, alongside the order-guard drill) or ad hoc after any edit to this file.
-CREATE OR REPLACE PROCEDURE stock-trading-498512.ops.sp_fire_drill_alert_latch()
+CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_fire_drill_alert_latch`()
 BEGIN
   DECLARE test_id STRING DEFAULT GENERATE_UUID();
   DECLARE still_unresolved BOOL;
 
-  INSERT INTO stock-trading-498512.ops.alerts (alert_id, severity, source, category, message, payload)
+  INSERT INTO `stock-trading-498512.ops.alerts` (alert_id, severity, source, category, message, payload)
   VALUES (test_id, 'critical', 'ops.sp_fire_drill_alert_latch', 'cash_tripwire',
     CONCAT('FIRE DRILL — latch test (synthetic, auto-cleaned) id=', test_id),
     PARSE_JSON(TO_JSON_STRING(STRUCT(TRUE AS synthetic, test_id AS drill_id))));
 
-  CALL stock-trading-498512.ops.sp_auto_resolve_alerts();
+  CALL `stock-trading-498512.ops.sp_auto_resolve_alerts`();
 
-  SET still_unresolved = (SELECT NOT resolved FROM stock-trading-498512.ops.alerts WHERE alert_id = test_id);
+  SET still_unresolved = (SELECT NOT resolved FROM `stock-trading-498512.ops.alerts` WHERE alert_id = test_id);
 
-  UPDATE stock-trading-498512.ops.alerts
+  UPDATE `stock-trading-498512.ops.alerts`
   SET resolved = TRUE, resolved_ts = CURRENT_TIMESTAMP(),
       resolved_note = CONCAT('fire-drill cleanup (synthetic test row; latch_held=', CAST(still_unresolved AS STRING), ')')
   WHERE alert_id = test_id;
 
   IF NOT still_unresolved THEN
-    CALL stock-trading-498512.ops.sp_raise_alert(
+    CALL `stock-trading-498512.ops.sp_raise_alert`(
       'critical', 'ops.sp_fire_drill_alert_latch', 'alert_latch_fire_drill_failed',
       'The alert-latch fire drill found ops.sp_auto_resolve_alerts clearing a category it MUST NEVER touch (cash_tripwire) — the fail-closed allowlist is not load-bearing. Investigate ops.alert_policy / ops.sp_auto_resolve_alerts immediately before trusting it.',
       TO_JSON_STRING(STRUCT(test_id AS drill_id)));
   ELSE
-    CALL stock-trading-498512.ops.sp_log_run('FIRE_DRILL_ALERT_LATCH', CURRENT_DATE('America/Denver'), 'completed', NULL, NULL, 1, NULL, 'cash_tripwire correctly stayed latched through ops.sp_auto_resolve_alerts.');
+    CALL `stock-trading-498512.ops.sp_log_run`('FIRE_DRILL_ALERT_LATCH', CURRENT_DATE('America/Denver'), 'completed', NULL, NULL, 1, NULL, 'cash_tripwire correctly stayed latched through ops.sp_auto_resolve_alerts.');
   END IF;
 END;
 
@@ -226,19 +225,19 @@ END;
 -- for honest diagnostics/dashboards — only this gate's OWN decision changes). Without this, a
 -- transient trip's own alert would keep the gate closed forever after the root cause heals, since
 -- critical alerts are (correctly, for every other class) never auto-resolved.
-CREATE OR REPLACE VIEW stock-trading-498512.state.trading_enabled AS
+CREATE OR REPLACE VIEW `stock-trading-498512.state.trading_enabled` AS
 WITH ctrl AS (
   SELECT ARRAY_AGG(STRUCT(halt_all, reason, mode) ORDER BY control_ts DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest
-  FROM stock-trading-498512.ops.trading_control
+  FROM `stock-trading-498512.ops.trading_control`
 ),
-f AS (SELECT marks_fresh, engine_fresh FROM stock-trading-498512.state.freshness),
-eh AS (SELECT is_healthy FROM stock-trading-498512.state.embedding_health),
+f AS (SELECT marks_fresh, engine_fresh FROM `stock-trading-498512.state.freshness`),
+eh AS (SELECT is_healthy FROM `stock-trading-498512.state.embedding_health`),
 al AS (
   SELECT COUNTIF(NOT resolved AND severity = 'critical' AND category != 'trading_halted') AS blocking_criticals
-  FROM stock-trading-498512.ops.alerts
+  FROM `stock-trading-498512.ops.alerts`
 ),
-pr AS (SELECT COALESCE(LOGICAL_OR(drifted), FALSE) AS drift FROM stock-trading-498512.state.position_reconciliation),
-dd AS (SELECT drawdown_breach, drawdown_from_peak FROM stock-trading-498512.state.book_drawdown_watch)
+pr AS (SELECT COALESCE(LOGICAL_OR(drifted), FALSE) AS drift FROM `stock-trading-498512.state.position_reconciliation`),
+dd AS (SELECT drawdown_breach, drawdown_from_peak FROM `stock-trading-498512.state.book_drawdown_watch`)
 SELECT
   NOT COALESCE(ctrl.latest.halt_all, FALSE)
   AND COALESCE(f.marks_fresh, FALSE)
@@ -268,20 +267,20 @@ FROM ctrl, f, eh, al, pr, dd;
 -- Mirrors 33_gate_ordering_fix.sql's original composition (halt_all / embeddings_healthy / zero
 -- open criticals / no position drift / no drawdown breach — deliberately still excludes marks_fresh/
 -- engine_fresh, D2a's own same-run-circular term) but with the same blocking-criticals fix as above.
-CREATE OR REPLACE VIEW stock-trading-498512.state.trading_enabled_mechanical AS
+CREATE OR REPLACE VIEW `stock-trading-498512.state.trading_enabled_mechanical` AS
 WITH ctrl AS (
   SELECT ARRAY_AGG(STRUCT(halt_all, reason, mode) ORDER BY control_ts DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest
-  FROM stock-trading-498512.ops.trading_control
+  FROM `stock-trading-498512.ops.trading_control`
 ),
 health AS (
   SELECT embeddings_healthy, position_drift_detected
-  FROM stock-trading-498512.state.system_health
+  FROM `stock-trading-498512.state.system_health`
 ),
 al AS (
   SELECT COUNTIF(NOT resolved AND severity = 'critical' AND category != 'trading_halted') AS blocking_criticals
-  FROM stock-trading-498512.ops.alerts
+  FROM `stock-trading-498512.ops.alerts`
 ),
-dd AS (SELECT drawdown_breach, drawdown_from_peak FROM stock-trading-498512.state.book_drawdown_watch)
+dd AS (SELECT drawdown_breach, drawdown_from_peak FROM `stock-trading-498512.state.book_drawdown_watch`)
 SELECT
   NOT COALESCE(ctrl.latest.halt_all, FALSE)
   AND COALESCE(health.embeddings_healthy, FALSE)
