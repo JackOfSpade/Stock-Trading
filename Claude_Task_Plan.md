@@ -156,14 +156,14 @@ Cross-cutting calls every routine makes against the observability layer (`bigque
 
   This makes a connector de-auth a seconds-to-detect, single-channel-surfaced event for **every** routine rather than a mid-run partial failure — the RUNBOOK §26 blast-radius mitigation. (D1 already did exactly this ad-hoc on 2026-06-26; this makes it uniform and first.)
 
-- **Alert auto-resolve (every run, right after connector pre-flight) — BEST-EFFORT, never gates.** CALL ops.sp_auto_resolve_alerts() bigquery/34_alert_lifecycle.sql, self-improvement audit WP2, 2026-07-07), wrapped so a failure here can never abort the routine:
+- **Alert auto-resolve (every run, right after connector pre-flight) — BEST-EFFORT, never gates.** `CALL ops.sp_auto_resolve_alerts()` (`bigquery/34_alert_lifecycle.sql`, self-improvement audit WP2, 2026-07-07), wrapped so a failure here can never abort the routine:
 
 BEGIN
 CALL stock-trading-498512.ops.sp_auto_resolve_alerts();
 EXCEPTION WHEN ERROR THEN SELECT @@error.message; -- swallow: cleanup must not abort the routine
 END;
 
-This mechanically clears a small, explicit allowlist of critical/warning alerts whose truth is a re-checkable fact missing_dependency, missed_run, routine_stalled, the staleness echo — see ops.alert_policy, fail-closed: every other category, including every capital-affecting class like cash_tripwireorder_guard_blocktrading_halted, is untouched and stays human-only, drilled monthly via ops.sp_fire_drill_alert_latch). Running it here — before state.trading_enabled_mechanical is ever read by a staging routine, and before this routine's own dependency gate below — means a stale alert from a prior day's transient (e.g. a stranded upstream that has since caught up) self-clears on the very next routine to run, instead of requiring a human UPDATE ops.alerts. Live incident this closes (verified 2026-07-06/07): a stranded D1 left missing_dependencymissed_runstaleness criticals open that would otherwise have kept state.trading_enabled = FALSE forever after D1/D2 caught up.
+This mechanically clears a small, explicit allowlist of critical/warning alerts whose truth is a re-checkable fact (`missing_dependency`, `missed_run`, `routine_stalled`, the `staleness` echo — see `ops.alert_policy`, fail-closed: every other category, including every capital-affecting class like `cash_tripwire`/`order_guard_block`/`trading_halted`, is untouched and stays human-only, drilled monthly via `ops.sp_fire_drill_alert_latch`). Running it here — before `state.trading_enabled`/`_mechanical` is ever read by a staging routine, and before this routine's own dependency gate below — means a stale alert from a prior day's transient (e.g. a stranded upstream that has since caught up) self-clears on the very next routine to run, instead of requiring a human `UPDATE ops.alerts`. Live incident this closes (verified 2026-07-06/07): a stranded D1 left `missing_dependency`/`missed_run`/`staleness` criticals open that would otherwise have kept `state.trading_enabled = FALSE` forever after D1/D2 caught up.
 
 - **Run logging (every run) — BEST-EFFORT, copy the template.** Run-logging is observability and **must never be able to break the routine**, so wrap each logging CALL in a best-effort block and copy the template verbatim (don't hand-assemble the argument list). At the START:
   ```
