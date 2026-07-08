@@ -798,4 +798,3 @@ Per position: explicit recommendation (hold / close on thesis completion / close
 If any position shows material thesis invalidation, set an "IMMEDIATE-ACTION" flag at the top of the file content so W4's read picks it up first.
 
 OUTPUT: write the complete content directly to `Weekly_Position_Deep_Dive.md`. First line is the YYYY-WW marker. Chat output: one-line acknowledgment that the file was written, plus the IMMEDIATE-ACTION flag (if any) so the human sees it before W4 fires.
-```
