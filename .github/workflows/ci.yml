@@ -6,15 +6,18 @@ name: CI
 # workflow, the module's own self-test only ran if a human typed `python
 # c_options_math.py`; nothing tested it on push. Now every change is checked.
 #
-# NOTE on merge-gating: auto-merge-claude.yml merges claude/* -> main via a direct
-# bot push (not a PR). It now triggers on this workflow's completion (workflow_run)
-# and merges a branch ONLY if the CI run for that branch's exact tip commit
-# concluded "success" — so a red build blocks the merge. The lint job below is
-# continue-on-error (advisory), so it never affects that gate.
+# NOTE on merge-gating: auto-merge-claude.yml merges ANY branch -> main via a
+# direct bot push (not a PR). It now triggers on this workflow's completion
+# (workflow_run) and merges a branch ONLY if the CI run for that branch's exact
+# tip commit concluded "success" — so a red build blocks the merge. The lint job
+# below is continue-on-error (advisory), so it never affects that gate.
+#
+# `push:` has no `branches:` filter (was `['claude/**', main]`) — CI must run on
+# every branch, not just claude/*, or the auto-merge CI-gate lookup finds no run
+# for a non-claude branch's SHA and fails closed forever (skips it every drain).
 
 on:
   push:
-    branches: ['claude/**', main]
   pull_request:
   workflow_dispatch:
 
@@ -66,7 +69,7 @@ jobs:
     # output reaches main (auto-merge-claude.yml) and whether a strand is detected (stranded-branch-check.yml)
     # — yet only the lower-stakes Python parsers had purpose-built tests. actionlint statically checks every
     # workflow (and runs shellcheck on each `run:` block); shellcheck covers the standalone scripts/*.sh
-    # (backup_events.sh, state_snapshot.sh, restore_drill.sh). A subtle edit to the origin/claude/ filter,
+    # (backup_events.sh, state_snapshot.sh, restore_drill.sh). A subtle edit to the branch-selection filter,
     # the merge-base ancestry re-check, or the fail-closed default would otherwise regress with no CI signal.
     #
     # BLOCKING GATE (promoted 2026-06-29 after a confirmed clean run on the runner — CI #102, all steps
@@ -156,8 +159,9 @@ jobs:
         run: |
           # PATH GATE (2026-06-29): parity only catches view-LOGIC drift, which is impossible without a
           # change under bigquery/** or dbt/**. This job dbt-compiles + runs ~30 EXCEPT-DISTINCT parity
-          # queries PER RUN, on EVERY claude/** + main push — ~1k BigQuery jobs/day once the auto-merge
-          # bot is active. That volume tripped the project's BigQuery Data Transfer Service consumer
+          # queries PER RUN, on EVERY push to EVERY branch (widened from claude/**+main once auto-merge
+          # covers all branches) — the ~1k BigQuery jobs/day estimate below grows with total branch
+          # count. That volume already tripped the project's BigQuery Data Transfer Service consumer
           # rate-quota on 2026-06-29 (delayed the 05:00-06:00 scheduled window and FAILED the embed +
           # integrity scheduled-query runs). Skipping parity on docs-/code-only pushes removes that load
           # with no loss of coverage. FAIL OPEN: if the base commit is unknown (new branch / force-push)

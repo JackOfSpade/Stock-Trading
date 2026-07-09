@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Functional tests for scripts/auto_merge_decision.sh — the CI-gate + delete-safety predicates that
-# .github/workflows/auto-merge-claude.yml sources to decide whether a claude/* branch merges to main
+# .github/workflows/auto-merge-claude.yml sources to decide whether a branch merges to main
 # and whether a merged branch is safe to delete (2026-07-04, code-quality audit).
 #
 # This sources the SAME functions the production workflow sources (not a reimplementation) and

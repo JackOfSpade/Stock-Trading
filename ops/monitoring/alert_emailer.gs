@@ -210,7 +210,7 @@ function htmlAlerts_(fresh, totalOpen) {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:auto;background:#fff;border-radius:12px;padding:18px;">
       <tr><td style="font-size:16px;font-weight:700;color:#0f2747;padding-bottom:8px;">${header}</td></tr>
       ${rowsHtml}
-      <tr><td style="font-size:11px;color:#8a96a3;padding-top:10px;">${totalOpen} un-notified alert(s) in the last week. Resolve via <code>UPDATE ops.alerts SET resolved=TRUE …</code>. This channel complements the [Claude] ATTENTION calendar events.</td></tr>
+      <tr><td style="font-size:11px;color:#8a96a3;padding-top:10px;">${totalOpen} un-notified alert(s) in the last week. Resolve via <code>UPDATE ops.alerts SET resolved=TRUE WHERE alert_id='...'</code> — always scope by alert_id, never run this unfiltered. This channel complements the [Claude] ATTENTION calendar events.</td></tr>
     </table></body></html>`;
 }
 
@@ -223,6 +223,6 @@ function plainAlerts_(fresh, totalOpen) {
     const tag = isTest_(a) ? '[TEST] ' : (String(a.resolved) === 'true' ? '[AUTO-RESOLVED] ' : '');
     s += `[${a.severity.toUpperCase()}] ${tag}${a.source}/${a.category}: ${a.message}  (${fmtAlertTs_(a)})\n`;
   });
-  s += `\nResolve via UPDATE ops.alerts SET resolved=TRUE WHERE ... . Complements the [Claude] ATTENTION calendar events.`;
+  s += `\nResolve via UPDATE ops.alerts SET resolved=TRUE WHERE alert_id='...' — always scope by alert_id, never run this unfiltered. Complements the [Claude] ATTENTION calendar events.`;
   return s;
 }

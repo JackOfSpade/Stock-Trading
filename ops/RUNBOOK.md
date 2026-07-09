@@ -1887,3 +1887,73 @@ field already carried the right value; the bug was purely in what D3 was told to
 **Owner action:** none. Resolved `ops.alerts` row `a3311f51-...` with a note pointing here; the fixed
 instruction takes effect on the next D3 run. div-C/D/E-202606-1 need no rework — AR_orc will correctly
 pick them up on 2026-07-06 as it was already on track to do.
+
+## 38. `ops.run_log` completion write silently skipped despite real output landing — the 2026-07-06..08 D1/D3 stranding *(durability, new incident class)*
+
+**Symptom.** D1 stranded 3 consecutive trading days. 2026-07-06 and 2026-07-07 each logged only `started`
+at the time, with the session producing no output and no terminal status of its own (branch never reached
+origin either day — a genuine no-output strand); 07-07 has since been given an honest backfilled `failed`
+terminal row (see below) precisely *because* it produced nothing, which is a different backfill outcome
+than 07-08 got — don't read the two dates as identically "untouched." 2026-07-08 was different and is the
+new case this section documents: **D1's real output landed** (`Daily.md` pushed to
+`origin/main`, commit `07716c04`, scan_through ~23:22–23:30Z) **but `ops.run_log` got zero rows for it —
+not `started`, not `completed`, nothing.** The same evening a D3 session independently re-crafted the
+halt-exempt SGOV park-sweep for real (`state.open_orders`/`events.queue_events` rows landed, timestamped)
+and *also* wrote no `ops.run_log` row. Both were caught only because an operator-directed session cross-
+checked git/BigQuery evidence directly and backfilled the missing rows by hand.
+
+**This is a different failure mode than §20, not a recurrence of it.** §20's 2026-06-24 hardening made
+routines push their branch and verify it (`git ls-remote --exit-code`) **before** logging `completed`,
+specifically so a `completed` row can never lie about the push having happened — it closes the case where
+`run_log` says done but the branch never made it out. 2026-07-08 is the mirror image: the branch/output
+genuinely made it out, yet the `run_log` write — which happens as a separate, later BigQuery MCP call —
+never happened at all, so there is no row to be honest or dishonest about. The §20 hardening does not (and
+structurally cannot) catch this, because it only ever checks the push, never the log call's own success.
+
+**Consequence, mechanically.** This is exactly the class `state.cadence_watch`/`cadence_check.sql` exists to
+catch, and it did: `missing_dependency` → `missed_run` → `routine_stalled` fired in cascade, correctly
+holding `state.trading_enabled = FALSE` for two downstream sessions (D2 halted cleanly twice, 2026-07-08,
+exactly as designed — no order ever staged on stale/ungated state). Unwinding it took an operator-directed
+session: (1) backfill honest `ops.run_log` terminal rows for every run whose true outcome could be verified
+— `completed` for D1 07-08 and D3 07-08 (real output confirmed via git/BigQuery), `failed` for D1 07-07
+(confirmed via git that it genuinely produced nothing — a terminal row, just not a `completed` one), and
+no backfill at all for 07-06 (same genuine no-output outcome as 07-07, simply not yet backfilled) — (2)
+manually resolve the resulting
+`trading_halted` and `missed_run` alerts once their root cause was confirmed benign (no drawdown breach, no
+order-guard block, no cash tripwire behind any of them), because the `staleness` auto-resolve rule's own
+gap (fixed same day — see below) meant it could not unwind mechanically. See `ops.run_log` notes for
+2026-07-08 (routine `D2`, all three attempts) and `ops.alerts` `resolved_note`s dated 2026-07-08/09 for the
+full evidence trail.
+
+**Root cause — open.** Why the session dies specifically in the window after the real work (and possibly
+after the push) but before/during the `ops.run_log` completion write is a harness session-lifecycle
+question (timing of a usage-limit cutoff or container reclamation relative to the routine's own remaining
+steps), not something diagnosable from repo state alone — this repo has no visibility into harness-side
+session timing. Recorded here as a new, distinct incident class (rather than folded into §20) so a 4th
+occurrence is recognized immediately instead of re-investigated from scratch. Now observed 3x for D1
+(2026-07-06, 07-07 as classic no-output strands; 07-08 as this new landed-but-unlogged variant) and 1x for
+D3 (2026-07-08).
+
+**Mitigating hardening applied (2026-07-09, same-day self-improvement audit).** While the session-timing
+root cause stays open, the *blast radius* of a recurrence is now smaller: `bigquery/34_alert_lifecycle.sql`
+Rule 4 (`staleness` auto-resolve) was missing the `category != 'trading_halted'` exclusion that
+`state.trading_enabled`/`trading_enabled_mechanical` already carry — so a lingering `trading_halted` echo
+kept `staleness` (and therefore the trading-enable gate) latched even after `missing_dependency`/
+`missed_run` legitimately cleared, turning this incident's cleanup into three manual `ops.alerts` UPDATEs
+instead of one. Fixed live and in-repo 2026-07-09 (`34_alert_lifecycle.sql`, Rule 4 now excludes
+`trading_halted` too, matching the two gate views). Next recurrence: **the honest `ops.run_log` backfill
+alone should be sufficient — no manual `ops.alerts` UPDATE needed at all, not even for `trading_halted`.**
+`missed_run`'s own resolve rule (`ops.alert_policy`) depends only on `ops.run_log` evidence, not on
+`trading_halted`, so Rules 1-3 clear `missing_dependency`/`missed_run`/`routine_stalled` directly from the
+backfilled rows in one `sp_auto_resolve_alerts` call; Rule 4 then finds zero *other* open criticals
+(`trading_halted` no longer counts) and clears `staleness` in the same pass, reopening the gate.
+`trading_halted` itself can be left open for a human to review on their own time — it no longer blocks
+anything mechanically.
+
+**Watch-trigger for the open root cause.** A 4th D1/D3 (or any monitored routine) landed-but-unlogged strand
+within a similar session-length/timing profile would be strong evidence of a systematic harness-side cutoff
+rather than incidental — worth escalating past repo-side mitigation at that point. Harness internals aren't
+configurable from this repo — CLAUDE.md establishes that directly for the stop-hook script specifically
+("harness-managed, re-provisioned fresh each session"); it doesn't say so for session-lifecycle/timeout
+behavior in general, but the same constraint plausibly applies, which is why this section stops at
+"documented and mitigated" rather than promising a repo-side fix for the root cause.
