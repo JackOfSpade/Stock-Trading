@@ -62,18 +62,47 @@ jobs:
         run: |
           set -uo pipefail
           offenders=""
+          verify_error=""
           for sa in $AUDITED_SAS; do
             # --managed-by=user lists ONLY user-managed (downloadable) keys; GCP-managed signing keys are excluded.
-            n=$(gcloud iam service-accounts keys list --iam-account="$sa" \
-                  --managed-by=user --project=stock-trading-498512 \
-                  --format='value(name)' 2>/dev/null | grep -c . || true)
-            echo "$sa: $n user-managed key(s)"
-            if [ "$n" -ne 0 ]; then offenders="$offenders $sa($n)"; fi
+            #
+            # CRITICAL DISTINCTION (2026-07-09 fix, mirrors wif-binding-audit.yml's verify_error pattern):
+            # a gcloud READ FAILURE (missing/not-yet-propagated iam.serviceAccountKeys.list grant, wrong
+            # SA, transient API error) must NOT be reported as "zero keys". The prior version piped
+            # straight into `grep -c . || true`, so a failed gcloud call produced empty stdout —
+            # indistinguishable from a genuine zero-key result — and printed a false "OK: all audited SAs
+            # are keyless" (the exact bug class wif-binding-audit.yml fixed 2026-06-29). Now a read failure
+            # -> verify_error (exit 2, "could not verify"); only a SUCCESSFUL read counting a non-zero key
+            # -> a real finding (exit 1).
+            if out="$(gcloud iam service-accounts keys list --iam-account="$sa" \
+                        --managed-by=user --project=stock-trading-498512 \
+                        --format='value(name)' 2>err)"; then
+              n=$(printf '%s' "$out" | grep -c . || true)
+              echo "$sa: $n user-managed key(s)"
+              if [ "$n" -ne 0 ]; then offenders="$offenders $sa($n)"; fi
+            else
+              verify_error="$verify_error [keys list failed for $sa: $(tr '\n' ' ' < err)]"
+            fi
           done
+          # A genuine finding on an SA that DID read successfully must never be masked by an unrelated read
+          # failure on a DIFFERENT SA (2026-07-09 fix, code-review catch) — check offenders FIRST, always. A
+          # loop over 2+ SAs can have one succeed-with-a-key and one fail-to-read at the same time; taking the
+          # verify_error branch first would report "COULD NOT VERIFY (not a finding)" and skip the webhook
+          # even though a real user-managed key was found on the other SA.
           if [ -n "$offenders" ]; then
             msg="🔑 Stock-Trading keyless-SA audit FAILED — user-managed key(s) found:$offenders. Expected ZERO (WIF/keyless posture, RUNBOOK §6/§15/§25). Delete the key(s) and investigate who created them."
+            if [ -n "$verify_error" ]; then
+              msg="$msg  (Also could not verify:$verify_error — re-run once resolved for a complete picture.)"
+            fi
             echo "::error::$msg"
             scripts/notify_webhook.sh "$msg"
             exit 1
+          fi
+          # INCONCLUSIVE (read failure, no offenders found on the SAs that DID read) — NOT a security finding
+          # on its own. Exit 2 with a distinct message so a perms/propagation issue can't masquerade as
+          # "keyless". Re-run after grants propagate.
+          if [ -n "$verify_error" ]; then
+            echo "::error::Keyless-SA audit COULD NOT VERIFY (this is NOT a keyless-posture finding):$verify_error  Likely the WIF SA lacks iam.serviceAccountKeys.list on the audited SA(s), or the grant has not propagated yet — wait a few minutes and re-run. RUNBOOK §25 E2."
+            exit 2
           fi
           echo "OK: all audited SAs are keyless (zero user-managed keys)."

@@ -25,9 +25,9 @@ Each model file carries a header:
 
 | dbt **owns** (pure-SELECT views, ported as models) | stays in `bigquery/*.sql` (dbt only NOTEs / sources it) |
 |---|---|
-| `state.current_positions`, `current_regime`, `open_queue`, `open_queue_detail`, `open_orders`, `trade_fills_curated`, `daily_marks_curated`, `daily_briefing`, `market_calendar`, `trading_day_today`, `freshness`, `system_health`, `gate_watch` | All **DDL** (`CREATE SCHEMA`, `CREATE TABLE`, table OPTIONS/partitioning/clustering) |
+| `state.current_positions`, `current_regime`, `open_queue`, `open_queue_detail`, `open_orders`, `trade_fills_curated`, `daily_marks_curated`, `daily_briefing`, `market_calendar`, `trading_day_today`, `freshness`, `system_health`, `gate_watch`, `account_latest`, `book_drawdown_watch`, `trading_control_latest`, `trading_enabled` | All **DDL** (`CREATE SCHEMA`, `CREATE TABLE`, table OPTIONS/partitioning/clustering) |
 | `perf.kill_flags` | **Procedures** (`ops.sp_recompute_engine`, `sp_daily_refresh`, `sp_log_decision`, `sp_embed_pending`, `sp_log_run`, `sp_raise_alert*`, `sp_score_theater`) |
-| `analytics.position_lifecycle`, `strategy_daily_returns`, `sgov_daily_return`, `thesis_outcomes`, `conviction_features`, `calibration_summary`, `strategy_nav`, `account_reconciliation` | **Remote models / AI.\*** (`ops.text_embed`, `ops.gemini`, `ML.GENERATE_EMBEDDING`, `AI.GENERATE_TABLE`, `AI.FORECAST`, `VECTOR_SEARCH`, `find_precedents`), **EXPORT DATA**, scheduled-query bodies |
+| `analytics.position_lifecycle`, `strategy_daily_returns`, `sgov_daily_return`, `thesis_outcomes`, `conviction_features`, `calibration_summary`, `strategy_nav`, `account_reconciliation`, `calibration_shrunk`, `deployed_book_vs_sgov`, `park_baseline`, `sgov_cumulative`, `strategy_scorecard`, `strategy_unit_value_7d_ago`, `strategy_vs_park`, `strategy_vs_park_daily`, `weekly_activity` | **Remote models / AI.\*** (`ops.text_embed`, `ops.gemini`, `ML.GENERATE_EMBEDDING`, `AI.GENERATE_TABLE`, `AI.FORECAST`, `VECTOR_SEARCH`, `find_precedents`), **EXPORT DATA**, scheduled-query bodies |
 
 ### Intentional source-vs-model decisions (things too procedural to port)
 
@@ -158,14 +158,25 @@ intended CI commands, in order of credential requirement:
 
 | File | Invariant + rationale |
 |---|---|
-| `assert_open_orders_reserved_cash_nonneg.sql` | `reserved_cash >= 0` for all `open_orders`. A negative reservation would *add* free cash and re-open the de-fund hole. |
+| `assert_account_reconciliation_single_row.sql` | `account_reconciliation` returns exactly **1 row** (scalar §13 rollup D2 diffs). |
+| `assert_book_drawdown_watch_single_row.sql` | `state.book_drawdown_watch` returns exactly **1 row**. Added 2026-07-04 (audit finding, HIGH) — the model is deliberately self-bootstrapping via `ARRAY_AGG` aggregates (not a QUALIFY-filtered row) specifically so it can never silently vanish and break the `state.trading_enabled` join it feeds. |
+| `assert_calibration_shrunk_wilson_bounds.sql` | `analytics.calibration_shrunk`'s Wilson interval must always be well-formed — `wilson_low`/`wilson_high` in [0,1] and `wilson_low <= wilson_high` — including the closed=0 "maximal uncertainty" [0,1] case the view's own comment documents. Added 2026-07-04 (audit finding: zero test coverage); also pins the accompanying `SAFE_DIVIDE` fix in the wilson CTE. |
+| `assert_cash_flows_reconcile.sql` | `SUM(events.cash_flows.amount)` must equal `SUM(analytics.strategy_nav.deposits)` — the equal-split/attributed allocation in `strategy_nav` never drops or double-counts a flow. Self-improvement audit B-1-exec. Also guards the "exactly 5 strategies" assumption baked into the equal-split (`amount/5`): if that ever changes, this test catches the resulting reconciliation drift immediately rather than a silent NAV mis-split. |
+| `assert_current_positions_match_lifecycle.sql` | The two open-position representations — `state.current_positions` (← `events.position_events`, the path `strategy_nav` reads for the 2%-sizing base) and `analytics.position_lifecycle` (← `state.trade_fills_curated`, the path the TWR engine / §13 read) — must agree on open shares per (strategy, ticker) within tolerance (stack review 2026-06-24, RUNBOOK §25 B4). They are independently derived and can otherwise diverge with no existing monitor. |
+| `assert_fn_order_guard_fire_drill.sql` | `analytics.fn_order_guard` must reject 3 known-bad orders — an oversized notional, an off-band limit price, and a non-positive qty. Added 2026-07-04 (audit finding, HIGH-severity test-gap): `fn_order_guard` is a PARAMETERIZED BigQuery table function, so it cannot be added to the standard row-parity mechanism (`scripts/dbt_parity.py` diffs one dbt model against one live view by name). |
+| `assert_freshness_single_row.sql` | `freshness` returns exactly **1 row** (dead-man's-switch input). |
+| `assert_open_orders_actionable.sql` | Every pending staged order is well-formed enough to become a real, confirmable order — a valid side (BUY/SELL) and a positive quantity. A malformed registry row can never be crafted/confirmed yet still occupies the slot and (for a BUY) reserves cash, silently breaking the order-intent invariant (pending staged order ⇔ exactly one live confirm event). `limit_price`/`instruction_id` are intentionally NOT required: MARKET orders carry no limit, and options/other non-craftable orders carry a manual block with no `instruction_id`. |
+| `assert_open_orders_no_stale_pending.sql` | No `ORDER_STAGED` row stays `pending` past its entry-window close. `state.open_orders` already filters to `status='pending'`; a pending row whose `entry_window_close` is in the past is an ORPHAN — the D2/D3 persist-and-wait sweep must either re-craft it (window still open) or set it terminal (expired/filled). A stale pending row keeps cash reserved (§13.E `reserved_cash`) and shadows the confirm-order slot — the same order-intent invariant the 2026-06-08 MDT near-miss motivated. |
 | `assert_open_orders_reserved_cash_formula.sql` | For BUY rows, `reserved_cash == ROUND(qty*limit_price + 0.35, 2)` — the documented `+0.35` commission pad. Drift here could under-reserve and de-fund a staged entry. |
+| `assert_open_orders_reserved_cash_nonneg.sql` | `reserved_cash >= 0` for all `open_orders`. A negative reservation would *add* free cash and re-open the de-fund hole. |
+| `assert_open_positions_have_marks.sql` | Every OPEN non-SGOV position has a RECENT curated daily mark. 2026-06-28 stack review #2 (#12) — `state.freshness` only checks `MAX(mark_date)` over the WHOLE `daily_marks` table, so a single held name silently missing its mark (an IBKR empty/stale bar with no FMP fallback) understates that strategy's `r_deployed` with no per-name visibility, while the SGOV benchmark side already has a forward-fill completeness guard. Flags an open position with no `state.daily_marks_curated` row in the last ~5 trading days (a name gone dark). |
 | `assert_queue_latest_wins_by_event_ts.sql` | An open-queue `item_key` must **not** have a strictly-later `event_ts` row carrying a terminal status — proves latest-wins uses `event_ts`, not `due_date`. |
 | `assert_sgov_no_double_count.sql` | `COUNT(DISTINCT ticker, mark_date)` in raw `events.daily_marks` equals the curated row count — the curated view fully collapses re-ingested days. |
 | `assert_system_health_single_row.sql` | `system_health` returns exactly **1 row** (consumed as a one-row rollup). |
-| `assert_freshness_single_row.sql` | `freshness` returns exactly **1 row** (dead-man's-switch input). |
+| `assert_thesis_outcomes_regime_asof.sql` | `analytics.thesis_outcomes.regime_state` must be the `FUNDAMENTAL_AXIS` `_integrative` regime value as-of (on or before) each thesis's `entry_date`, never a later value. Guards the 2026-07-03 self-improvement audit finding (S-1/B-1): the prior view back-stamped the single LATEST regime onto every historical thesis, a look-ahead label leak. Recomputes the same decorrelated as-of lookup independently and flags any mismatch. |
+| `assert_trading_control_latest_single_row.sql` | `state.trading_control_latest` returns exactly **1 row**. Added 2026-07-04 (audit finding, HIGH): `ops.trading_control` is seeded exactly once and is never expected to be empty; a 0-or->1-row result here would make `sp_assert_trading_enabled`'s `SELECT INTO` fail in the wrong direction for a safety gate. |
 | `assert_trading_day_today_single_row.sql` | `trading_day_today` returns exactly **1 row** (authoritative "today"). |
-| `assert_account_reconciliation_single_row.sql` | `account_reconciliation` returns exactly **1 row** (scalar §13 rollup D2 diffs). |
+| `assert_trading_enabled_single_row.sql` | `state.trading_enabled` returns exactly **1 row**. Added 2026-07-04 (audit finding, HIGH): a `CROSS JOIN` of ctrl x health x dd that ever fans out to 0 or >1 rows would make `sp_assert_trading_enabled`'s `SELECT INTO` fail in the wrong direction for the pre-order-staging safety gate. |
 
 ### The real incidents these protect (from the schema comments)
 
@@ -204,9 +215,10 @@ Do NOT just delete the DDL. First wire an operational dbt runner + validate byte
    ported views are **byte-equivalent** to the live ones (`EXCEPT DISTINCT` both ways, or a
    schema+row diff) and the full test suite is green.
 2. **Remove the view DDL** for the ported objects from `bigquery/01_schema.sql`,
-   `03_twr_engine.sql`, `04_analytics.sql`, `05_state_briefing.sql`, `10_observability.sql`
-   (and the `09` calendar views) — leaving the `CREATE TABLE` DDL, procedures, remote
-   models, AI.\*, and EXPORT DATA in those files. dbt then owns those views.
+   `03_twr_engine.sql`, `04_analytics.sql`, `05_state_briefing.sql`, `10_observability.sql`,
+   `22_cash_flows.sql`, `23_trading_control.sql` (and the `09` calendar views) — leaving the
+   `CREATE TABLE` DDL, procedures, remote models, AI.\*, and EXPORT DATA in those files. dbt
+   then owns those views.
 3. Keep `perf.strategy_daily` as the procedure-maintained table + source; keep the AI /
    remote-model objects in the `.sql` files (dbt never owns them).
 4. Make `dbt build --target ci` a **required** status check (and schedule a daily `dbt build`

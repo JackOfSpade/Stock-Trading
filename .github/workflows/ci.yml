@@ -68,9 +68,10 @@ jobs:
     # The most CONSEQUENTIAL automation in the repo is the embedded bash that decides whether routine git
     # output reaches main (auto-merge-claude.yml) and whether a strand is detected (stranded-branch-check.yml)
     # — yet only the lower-stakes Python parsers had purpose-built tests. actionlint statically checks every
-    # workflow (and runs shellcheck on each `run:` block); shellcheck covers the standalone scripts/*.sh
-    # (backup_events.sh, state_snapshot.sh, restore_drill.sh). A subtle edit to the branch-selection filter,
-    # the merge-base ancestry re-check, or the fail-closed default would otherwise regress with no CI signal.
+    # workflow (and runs shellcheck on each `run:` block); shellcheck covers every standalone script matched
+    # by scripts/*.sh (glob — new scripts are covered automatically, no list to maintain here). A subtle edit
+    # to the branch-selection filter, the merge-base ancestry re-check, or the fail-closed default would
+    # otherwise regress with no CI signal.
     #
     # BLOCKING GATE (promoted 2026-06-29 after a confirmed clean run on the runner — CI #102, all steps
     # green). NOT continue-on-error: a failure now fails the CI run and blocks auto-merge, the hard gate the

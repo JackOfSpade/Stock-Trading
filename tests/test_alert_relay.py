@@ -68,6 +68,15 @@ def test_fmt_ts_valid_timezone_still_formats():
     assert out != "2026-06-28 05:00:00 UTC UTC"
 
 
+def test_fmt_ts_real_bigquery_wire_format():
+    # The REAL `CAST(alert_ts AS STRING)` shape (verified against live BigQuery, 2026-07-09):
+    # "YYYY-MM-DD HH:MM:SS[.ffffff]+00" — no literal "UTC" suffix at all. The " UTC"-suffixed
+    # fixtures used elsewhere in this file are not what BigQuery actually emits; this pins the
+    # real contract.
+    out = ar.fmt_ts("2026-07-09 18:26:21.157141+00", "America/Denver")
+    assert out == "2026-07-09 12:26 (America/Denver)"
+
+
 # ---- relay_alerts() / relay_orders(): row-shape contract + no-spurious-post ----------------
 
 def test_relay_alerts_empty_does_not_post(monkeypatch):
