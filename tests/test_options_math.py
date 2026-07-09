@@ -328,8 +328,25 @@ def test_cascade_max_loss_is_finite_for_credit_put_spread():
     cps = credit_put_spread(100, short_strike=95, long_strike=90,
                             days_to_expiration=30, risk_free_rate=0.045,
                             volatility_short=0.30, volatility_long=0.30, contracts=1)
-    cascade = cascade_max_loss(cps, 100, 30, implied_move_full_horizon=0.05)
+    cascade = cascade_max_loss(cps, implied_move_full_horizon=0.05)
     assert math.isfinite(cascade) and cascade >= 0
+
+
+def test_cascade_max_loss_rejects_a_separate_underlying_price_argument():
+    # Regression guard (2026-07-09 fix): cascade_max_loss used to accept a
+    # separate underlying_price/days_to_expiration that could silently diverge
+    # from the structure's own entry price/expiration with no error — e.g.
+    # passing a live/current quote instead of the entry price used to build
+    # the structure produced a silently wrong (sometimes silently ZERO)
+    # cascade figure. Pinning the signature to (structure,
+    # implied_move_full_horizon) — sourcing the price from
+    # structure.underlying_price — closes that footgun by construction; this
+    # test fails loudly if the parameter is ever reintroduced.
+    cps = credit_put_spread(100, short_strike=95, long_strike=90,
+                             days_to_expiration=30, risk_free_rate=0.045,
+                             volatility_short=0.30, volatility_long=0.30, contracts=1)
+    with pytest.raises(TypeError):
+        cascade_max_loss(cps, underlying_price=150, implied_move_full_horizon=0.05)
 
 
 # ---------------------------------------------------------------------------
@@ -345,8 +362,7 @@ def test_cascade_max_loss_golden_credit_call_spread_call_side_assigned():
                               days_to_expiration=30, risk_free_rate=0.045,
                               volatility_short=0.30, volatility_long=0.30, contracts=1)
     implied_move = 0.05
-    cascade = cascade_max_loss(ccs, underlying_price=100, days_to_expiration=30,
-                                implied_move_full_horizon=implied_move)
+    cascade = cascade_max_loss(ccs, implied_move_full_horizon=implied_move)
     # Rev 20: adverse move = 2x implied move; call side adverse direction is UP.
     adverse_mark = 100 * (1 + 2 * implied_move)
     assert adverse_mark == pytest.approx(110.0)
@@ -362,8 +378,7 @@ def test_cascade_max_loss_golden_credit_put_spread_put_side_assigned():
                              days_to_expiration=30, risk_free_rate=0.045,
                              volatility_short=0.30, volatility_long=0.30, contracts=1)
     implied_move = 0.05
-    cascade = cascade_max_loss(cps, underlying_price=100, days_to_expiration=30,
-                                implied_move_full_horizon=implied_move)
+    cascade = cascade_max_loss(cps, implied_move_full_horizon=implied_move)
     # Put side adverse direction is DOWN.
     adverse_mark = 100 * (1 - 2 * implied_move)
     assert adverse_mark == pytest.approx(90.0)
@@ -387,8 +402,7 @@ def test_cascade_max_loss_golden_iron_condor_picks_worse_side_not_last_leg():
                       vol_long_put=0.30, vol_short_put=0.30,
                       vol_short_call=0.30, vol_long_call=0.30, contracts=1)
     implied_move = 0.05
-    cascade = cascade_max_loss(ic, underlying_price=100, days_to_expiration=30,
-                                implied_move_full_horizon=implied_move)
+    cascade = cascade_max_loss(ic, implied_move_full_horizon=implied_move)
 
     adverse_mark_up = 100 * (1 + 2 * implied_move)     # 110
     adverse_mark_dn = 100 * (1 - 2 * implied_move)     # 90

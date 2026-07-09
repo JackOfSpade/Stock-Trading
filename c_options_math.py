@@ -85,11 +85,10 @@ USAGE:
     mc_loss = structure.max_loss_monte_carlo(n_paths=100000)
     verify_max_loss_dual_path(closed_form_loss, mc_loss, tolerance=1.00)
 
-    # Compute early-assignment cascade max loss
+    # Compute early-assignment cascade max loss (underlying_price and
+    # days_to_expiration are read from `structure` itself, not passed here)
     cascade_loss = cascade_max_loss(
         structure,
-        underlying_price=120.00,
-        days_to_expiration=21,
         implied_move_full_horizon=0.07,  # +/- 7% implied through expiration
     )
 
@@ -980,6 +979,54 @@ def iron_condor(
     )
 
 
+def _butterfly(
+    underlying_price: float,
+    days_to_expiration: int,
+    risk_free_rate: float,
+    dividend_yield: float,
+    *,
+    option_type: Literal['call', 'put'],
+    lower_strike: float,
+    middle_strike: float,
+    upper_strike: float,
+    vol_lower: float,
+    vol_middle: float,
+    vol_upper: float,
+    contracts: int,
+) -> Structure:
+    """Shared long-butterfly assembly: long 1 lower, short 2 middle, long 1
+    upper, all the same option_type. Strikes must be equidistant:
+    middle - lower = upper - middle. Factored out of long_call_butterfly and
+    long_put_butterfly, which differ only in option_type — the structure's
+    name/structure_type are derived from option_type here (not passed as
+    separate params) so they can't drift out of sync with the legs actually
+    built (2026-07-09 code-review fix: a prior version took label/
+    structure_type as redundant caller-supplied strings).
+    """
+    if not math.isclose(middle_strike - lower_strike, upper_strike - middle_strike, abs_tol=0.01):
+        raise ValueError(
+            f"Butterfly requires equidistant strikes: "
+            f"middle - lower ({middle_strike - lower_strike}) "
+            f"!= upper - middle ({upper_strike - middle_strike})"
+        )
+    shared = (underlying_price, days_to_expiration, risk_free_rate, dividend_yield)
+    legs = [
+        _leg(*shared, strike=lower_strike, volatility=vol_lower,
+             option_type=option_type, quantity=contracts),
+        _leg(*shared, strike=middle_strike, volatility=vol_middle,
+             option_type=option_type, quantity=-2 * contracts),
+        _leg(*shared, strike=upper_strike, volatility=vol_upper,
+             option_type=option_type, quantity=contracts),
+    ]
+    label = f'Long {option_type.capitalize()} Butterfly'
+    return Structure(
+        legs=legs,
+        name=f'{label} {lower_strike}/{middle_strike}/{upper_strike} '
+             f'{days_to_expiration}DTE x{contracts}',
+        structure_type=f'long_{option_type}_butterfly',
+    )
+
+
 def long_call_butterfly(
     underlying_price: float,
     *,
@@ -999,26 +1046,12 @@ def long_call_butterfly(
 
     Keyword-only arguments after underlying_price prevent silent argument-order bugs.
     """
-    if not math.isclose(middle_strike - lower_strike, upper_strike - middle_strike, abs_tol=0.01):
-        raise ValueError(
-            f"Butterfly requires equidistant strikes: "
-            f"middle - lower ({middle_strike - lower_strike}) "
-            f"!= upper - middle ({upper_strike - middle_strike})"
-        )
-    shared = (underlying_price, days_to_expiration, risk_free_rate, dividend_yield)
-    legs = [
-        _leg(*shared, strike=lower_strike, volatility=vol_lower,
-             option_type='call', quantity=contracts),
-        _leg(*shared, strike=middle_strike, volatility=vol_middle,
-             option_type='call', quantity=-2 * contracts),
-        _leg(*shared, strike=upper_strike, volatility=vol_upper,
-             option_type='call', quantity=contracts),
-    ]
-    return Structure(
-        legs=legs,
-        name=f'Long Call Butterfly {lower_strike}/{middle_strike}/{upper_strike} '
-             f'{days_to_expiration}DTE x{contracts}',
-        structure_type='long_call_butterfly',
+    return _butterfly(
+        underlying_price, days_to_expiration, risk_free_rate, dividend_yield,
+        option_type='call',
+        lower_strike=lower_strike, middle_strike=middle_strike, upper_strike=upper_strike,
+        vol_lower=vol_lower, vol_middle=vol_middle, vol_upper=vol_upper,
+        contracts=contracts,
     )
 
 
@@ -1041,22 +1074,12 @@ def long_put_butterfly(
 
     Keyword-only arguments after underlying_price prevent silent argument-order bugs.
     """
-    if not math.isclose(middle_strike - lower_strike, upper_strike - middle_strike, abs_tol=0.01):
-        raise ValueError("Butterfly requires equidistant strikes")
-    shared = (underlying_price, days_to_expiration, risk_free_rate, dividend_yield)
-    legs = [
-        _leg(*shared, strike=lower_strike, volatility=vol_lower,
-             option_type='put', quantity=contracts),
-        _leg(*shared, strike=middle_strike, volatility=vol_middle,
-             option_type='put', quantity=-2 * contracts),
-        _leg(*shared, strike=upper_strike, volatility=vol_upper,
-             option_type='put', quantity=contracts),
-    ]
-    return Structure(
-        legs=legs,
-        name=f'Long Put Butterfly {lower_strike}/{middle_strike}/{upper_strike} '
-             f'{days_to_expiration}DTE x{contracts}',
-        structure_type='long_put_butterfly',
+    return _butterfly(
+        underlying_price, days_to_expiration, risk_free_rate, dividend_yield,
+        option_type='put',
+        lower_strike=lower_strike, middle_strike=middle_strike, upper_strike=upper_strike,
+        vol_lower=vol_lower, vol_middle=vol_middle, vol_upper=vol_upper,
+        contracts=contracts,
     )
 
 
@@ -1143,10 +1166,55 @@ def verify_max_loss_dual_path(
         )
 
 
+def _cascade_loss_for_short_leg(
+    short_leg: OptionLeg,
+    long_legs: List[OptionLeg],
+    underlying_price: float,
+    adverse_move_pct: float,
+    net_debit: float,
+) -> float:
+    """Cascade-loss contribution from one short leg, per cascade_max_loss's
+    early-assignment convention (rev 20). Shared by the call and put cases
+    below — they differ only in which direction is adverse and which side of
+    the strike bounds the assignment loss:
+
+    - call (assigned ITM as the underlying rises): operator delivers
+      100*|Q| shares at K_short, buying at adverse-up-mark =
+      S0*(1+adverse_move_pct). Loss per contract = (adverse_mark - K_short)*100
+      [if positive].
+    - put (assigned ITM as the underlying falls): operator buys 100*|Q|
+      shares at K_short, selling at adverse-down-mark = S0*(1-adverse_move_pct).
+      Loss per contract = (K_short - adverse_mark)*100 [if positive].
+
+    The long leg is assumed held to expiration (per rev 20 convention); its
+    payoff at the adverse mark partially offsets the assignment loss.
+    """
+    K_short = short_leg.option.strike
+    n_short = abs(short_leg.quantity)
+
+    if short_leg.option.option_type == 'call':
+        adverse_mark = underlying_price * (1.0 + adverse_move_pct)
+        assignment_loss_per_contract = max(adverse_mark - K_short, 0.0) * CONTRACT_MULTIPLIER
+    else:  # put
+        adverse_mark = underlying_price * (1.0 - adverse_move_pct)
+        adverse_mark = max(adverse_mark, 0.001)  # underlying floored at near-zero
+        assignment_loss_per_contract = max(K_short - adverse_mark, 0.0) * CONTRACT_MULTIPLIER
+
+    long_payoff_at_adverse = sum(
+        leg.payoff_at_expiration(adverse_mark) for leg in long_legs
+    )
+    # Net cascade loss = assignment loss - long leg gains - net debit paid
+    # (debit paid was already used for entry; we count it as part of total loss;
+    # add back debit if positive, since we paid it)
+    return (
+        assignment_loss_per_contract * n_short
+        - long_payoff_at_adverse
+        + net_debit
+    )
+
+
 def cascade_max_loss(
     structure: Structure,
-    underlying_price: float,
-    days_to_expiration: int,
     implied_move_full_horizon: float,
 ) -> float:
     """Compute early-assignment cascade max loss per Strategy.md rev 20.
@@ -1162,9 +1230,23 @@ def cascade_max_loss(
     short leg is assigned at the worst-plausible-adverse mark and the operator
     closes the resulting equity exposure immediately at that mark.
 
+    underlying_price is read from structure.underlying_price (not a separate
+    parameter): Structure.__post_init__ already guarantees every leg quotes
+    the same underlying_price, and every legitimate call computes the cascade
+    for the structure's OWN entry price, never an independently-supplied one.
+    FIX (2026-07-09, code-quality audit): this used to take underlying_price
+    and days_to_expiration as separate arguments. days_to_expiration was dead
+    code (never read in the body); underlying_price was live but unchecked
+    against structure.underlying_price, so a caller that accidentally passed
+    a different price (e.g. a live/current quote instead of the entry price)
+    got a silently wrong — sometimes silently ZERO — cascade figure with no
+    error, understating total_max_loss = max(closed_form, cascade) for
+    exactly the structures where the true risk is unbounded-looking. Removing
+    the parameter closes that footgun by construction instead of validating
+    against it.
+
     Returns positive number = magnitude of cascade max loss in dollars.
     """
-    # Identify short legs
     short_legs = [leg for leg in structure.legs if leg.quantity < 0]
     long_legs = [leg for leg in structure.legs if leg.quantity > 0]
 
@@ -1174,62 +1256,13 @@ def cascade_max_loss(
 
     # 2x implied-move scaled to full structure expiration
     adverse_move_pct = 2.0 * implied_move_full_horizon
-
-    # Compute worst-case loss: at the assignment instant, the underlying has
-    # moved adversely by 2x the implied move, the short leg is assigned, the
-    # operator closes the resulting equity exposure at that adverse mark.
-    # The long leg is assumed held to expiration (per rev 20 convention).
-    #
-    # For a short leg of quantity Q (Q<0) at strike K_short, type T_short:
-    # - If T_short = call and assigned: operator delivers 100*|Q| shares at K_short,
-    #   buying at adverse-up-mark = S0*(1+adverse_move_pct).
-    #   Loss per contract = (S0*(1+adverse_move_pct) - K_short) * 100  [if positive]
-    # - If T_short = put and assigned: operator buys 100*|Q| shares at K_short,
-    #   selling at adverse-down-mark = S0*(1-adverse_move_pct).
-    #   Loss per contract = (K_short - S0*(1-adverse_move_pct)) * 100  [if positive]
-    #
-    # The long leg is held to expiration. At expiration, with the underlying
-    # having moved adversely (still at S0*(1+/-adverse_move_pct)), the long
-    # leg's payoff at expiration partially offsets.
+    net_debit = structure.net_debit()
 
     worst_cascade_loss = 0.0
-
     for short_leg in short_legs:
-        K_short = short_leg.option.strike
-        n_short = abs(short_leg.quantity)
-
-        if short_leg.option.option_type == 'call':
-            # Adverse direction is UP (short call gets assigned ITM)
-            adverse_mark = underlying_price * (1.0 + adverse_move_pct)
-            # Cost to deliver shares: buy at adverse_mark, sell at K_short
-            assignment_loss_per_contract = max(adverse_mark - K_short, 0.0) * CONTRACT_MULTIPLIER
-            # Long-leg payoff at expiration assuming underlying stays at adverse_mark
-            long_payoff_at_adverse = sum(
-                leg.payoff_at_expiration(adverse_mark) for leg in long_legs
-            )
-            # Net cascade loss = assignment loss - long leg gains - net debit paid
-            # (debit paid was already used for entry; we count it as part of total loss)
-            # Per the convention: long leg is "held to expiration" so gains are realized
-            cascade_loss = (
-                assignment_loss_per_contract * n_short
-                - long_payoff_at_adverse
-                + structure.net_debit()  # add back debit if positive (we paid it)
-            )
-
-        else:  # put
-            # Adverse direction is DOWN (short put gets assigned ITM)
-            adverse_mark = underlying_price * (1.0 - adverse_move_pct)
-            adverse_mark = max(adverse_mark, 0.001)  # underlying floored at near-zero
-            assignment_loss_per_contract = max(K_short - adverse_mark, 0.0) * CONTRACT_MULTIPLIER
-            long_payoff_at_adverse = sum(
-                leg.payoff_at_expiration(adverse_mark) for leg in long_legs
-            )
-            cascade_loss = (
-                assignment_loss_per_contract * n_short
-                - long_payoff_at_adverse
-                + structure.net_debit()
-            )
-
+        cascade_loss = _cascade_loss_for_short_leg(
+            short_leg, long_legs, structure.underlying_price, adverse_move_pct, net_debit
+        )
         if cascade_loss > worst_cascade_loss:
             worst_cascade_loss = cascade_loss
 
@@ -1509,7 +1542,7 @@ if __name__ == '__main__':
     )
     cps_credit = -cps.net_debit()
     cps_cf_loss = cps.max_loss_closed_form()
-    cps_cascade = cascade_max_loss(cps, 100, 30, implied_move_full_horizon=0.05)
+    cps_cascade = cascade_max_loss(cps, implied_move_full_horizon=0.05)
     print(f"\n[9] Credit put spread 95/90: net credit = {cps_credit:.4f}, "
           f"closed-form max loss = {cps_cf_loss:.4f}, cascade max loss = {cps_cascade:.4f}")
     print(f"    Total bound max loss = max of two = {max(cps_cf_loss, cps_cascade):.4f}")

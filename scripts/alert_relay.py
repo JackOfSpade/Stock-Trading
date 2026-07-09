@@ -80,9 +80,13 @@ def get_user_tz():
 
 
 def fmt_ts(v, tz_name):
-    """Render a BigQuery `CAST(alert_ts AS STRING)` value ("YYYY-MM-DD HH:MM:SS UTC") in tz_name,
-    labeled — previously always rendered as a bare "... UTC" string regardless of where the operator
-    actually is."""
+    """Render a BigQuery `CAST(alert_ts AS STRING)` value in tz_name, labeled — previously always
+    rendered as a bare "... UTC" string regardless of where the operator actually is.
+
+    Real wire format (verified against live BigQuery, 2026-07-09): "YYYY-MM-DD HH:MM:SS[.ffffff]+00"
+    — it never contains the literal string "UTC". The `endswith(" UTC")` strip below is harmless
+    defense-in-depth (e.g. hand-constructed test fixtures or a future BigQuery format change), not a
+    reflection of what CAST(... AS STRING) actually emits today."""
     if not v or ZoneInfo is None:
         return f"{v} UTC"
     try:

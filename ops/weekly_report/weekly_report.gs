@@ -267,7 +267,12 @@ function getUserTzWeekly_() {
 function num_(v)  { return (v === null || v === undefined || v === '') ? null : Number(v); }
 function signPct_(p){ return (p >= 0 ? '+' : '−') + Math.abs(p).toFixed(2) + '%'; } // unicode minus
 function clr_(p)  { return p >= 0 ? '#1a7f5a' : '#c0392b'; }
-function esc_(s)  { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// KEEP IN SYNC MANUALLY with esc2_() in ops/monitoring/alert_emailer.gs — byte-for-byte identical on
+// purpose (separate Apps Script projects can't share a module), also copied verbatim into
+// ops/weekly_report/test_pure_helpers.js. A future escaping fix (e.g. backticks for a template-literal
+// context) applied to one twin must be applied to both, or one of the two operator-facing HTML emails
+// silently stops getting it (2026-07-09 code-review finding).
+function esc_(s)  { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // 'YYYY-MM-DD' -> local-midnight Date (never new Date('YYYY-MM-DD'), which is UTC midnight and
 // renders as the previous day in a US-behind-UTC display timezone).
@@ -374,7 +379,7 @@ function buildHtml_(d, chartResult) {
   </td></tr>`;
 
   // Chart section.
-  const notDeployed = d.rows.filter(r => !r.deployed).map(r => r.strategy);
+  const notDeployed = d.rows.filter(r => !r.deployed).map(r => esc_(r.strategy));
   const notDeployedNote = notDeployed.length ? ` ${notDeployed.join(', ')} not deployed.` : '';
   let chartInner;
   if (!d.deployedStrategies.length) {

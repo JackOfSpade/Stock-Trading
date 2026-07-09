@@ -1,26 +1,33 @@
 #!/usr/bin/env node
 /**
- * Plain-Node tests for the pure (no Apps-Script-service) helpers in weekly_report.gs
- * (code-quality audit 2026-07). This repo has no JS test runner configured, so this is a
- * minimal, self-contained, `assert`-based Node script — no npm install required.
+ * Plain-Node tests for the pure (no Apps-Script-service) helpers in weekly_report.gs and
+ * ops/monitoring/alert_emailer.gs (code-quality audit 2026-07). This repo has no JS test runner
+ * configured, so this is a minimal, self-contained, `assert`-based Node script — no npm install
+ * required.
  *
- * WHY COPIED, NOT require()'d: weekly_report.gs's CONFIG section calls
- * `Session.getActiveUser().getEmail()` at top-level module-load time (the RECIPIENT const),
- * which is an Apps Script global that doesn't exist under plain Node — requiring the file
- * as-is throws a ReferenceError before any function could be exported. Guarding that (or the
- * other Apps-Script-service globals the rest of the file touches) to make the whole file
- * require()-able would mean editing config/wiring outside the five pure helpers this fix
- * targets, on a live operational script — more risk than this test-coverage fix is scoped for.
- * So instead: the five function bodies below are copied VERBATIM from weekly_report.gs and
+ * WHY COPIED, NOT require()'d: both source files' CONFIG sections call
+ * `Session.getActiveUser().getEmail()` at top-level module-load time (the RECIPIENT /
+ * ALERT_RECIPIENT consts), which is an Apps Script global that doesn't exist under plain Node —
+ * requiring either file as-is throws a ReferenceError before any function could be exported.
+ * Guarding that (or the other Apps-Script-service globals the rest of the files touch) to make
+ * the whole files require()-able would mean editing config/wiring outside the pure helpers this
+ * fix targets, on live operational scripts — more risk than this test-coverage fix is scoped for.
+ * So instead: the function bodies below are copied VERBATIM from their source files and
  * exercised standalone.
  *
- * KEEP IN SYNC MANUALLY with ops/weekly_report/weekly_report.gs — if you change any of these
- * functions there, update the copies below in the same commit:
+ * KEEP IN SYNC MANUALLY with ops/weekly_report/weekly_report.gs and
+ * ops/monitoring/alert_emailer.gs — if you change any of these functions there, update the
+ * copies below in the same commit:
  *   - notDeployedReason_   (weekly_report.gs lines 197-202)
  *   - periodAvg_           (weekly_report.gs lines 210-213)
  *   - signPct_             (weekly_report.gs line 268)
  *   - parseIsoDateLocal_   (weekly_report.gs lines 274-277)
  *   - downsampleDates_     (weekly_report.gs lines 280-287)
+ *   - buildHealthReasons_  (weekly_report.gs lines 216-237)
+ *   - buildSubject_        (weekly_report.gs lines 97-105)
+ *   - esc_                 (weekly_report.gs line 270)
+ *   - isTest_              (alert_emailer.gs line 192)
+ *   - esc2_                (alert_emailer.gs line 187)
  *
  * Run: node ops/weekly_report/test_pure_helpers.js   (exits 0 iff every assertion passes)
  */
@@ -64,6 +71,51 @@ function downsampleDates_(sortedDates) {
   if (kept[kept.length - 1] !== last) kept.push(last);
   return kept;
 }
+
+function esc_(s)  { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ===== "Why might these numbers be stale?" — only when the data-trust predicate fails =====
+function buildHealthReasons_(health, marksFresh, engineFresh, firingKillFlags, killFlagDetails, openCriticalAlerts, criticalAlerts) {
+  const reasons = [];
+  if (!marksFresh || !engineFresh) {
+    const d2Ran = String(health.d2_ran_last_trading_day) === 'true';
+    reasons.push(d2Ran
+      ? `marks/engine still stale even though D2 logged complete for ${health.last_trading_day} — check state.freshness directly`
+      : `today's evening data batch (D2) hasn't completed yet for ${health.last_trading_day} — normal before ~22:30 MT, not a fault by itself`);
+  }
+  if (firingKillFlags > 0) {
+    const shown = killFlagDetails.map(f => {
+      const names = ['drawdown_kill', 'runaway_review', 'm2m_underperf_review'].filter(n => String(f[n]) === 'true');
+      return `${f.strategy} (${names.join(', ')})`;
+    }).join('; ');
+    reasons.push(`${firingKillFlags} firing kill-flag(s): ${shown}`);
+  }
+  if (openCriticalAlerts > 0) {
+    const shown = criticalAlerts.map(a => `[${a.category}] ${a.message}`).join('; ');
+    const more = openCriticalAlerts > criticalAlerts.length ? ` (+${openCriticalAlerts - criticalAlerts.length} more)` : '';
+    reasons.push(`${openCriticalAlerts} critical alert(s): ${shown}${more}`);
+  }
+  return reasons;
+}
+
+function buildSubject_(d) {
+  const deployed = d.rows.filter(r => r.deployed);
+  const tag = !deployed.length
+    ? 'all parked'
+    : deployed.map(r => `${r.strategy} ${signPct_(r.returnPct * 100)}`).join(' · ')
+        + ` · SGOV ${signPct_(d.sgov.returnPct * 100)}`;
+  const warn = d.green ? '' : ' · ⚠ check data';
+  return `Stock-Trading · Strategies vs SGOV — ${d.dateLabel} · ${tag}${warn}`;
+}
+
+// ===== copied verbatim from ops/monitoring/alert_emailer.gs ==================================
+
+function esc2_(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// A canary row is the weekly alert-delivery self-test (delivery_canary.sql), never a real incident.
+// It is labelled [TEST] in both subject and body so it can't be mistaken for an alert — while still
+// being delivered + notified_ts-stamped, so the canary's step-1 assertion stays valid.
+function isTest_(a) { return a.source === 'scheduled.canary' || a.category === 'delivery_canary'; }
 
 // ===== tests ==================================================================================
 
@@ -142,6 +194,106 @@ t('downsampleDates_ downsamples above 130 entries and always keeps the last date
   const kept = downsampleDates_(dates);
   assert.ok(kept.length < dates.length, `expected fewer than ${dates.length}, got ${kept.length}`);
   assert.strictEqual(kept[kept.length - 1], dates[dates.length - 1]);
+});
+
+// ---- esc_ ----
+t('esc_ escapes &, <, >, and " (quote-escaping fix)', () => {
+  assert.strictEqual(esc_('<b>&"'), '&lt;b&gt;&amp;&quot;');
+});
+t('esc_ handles null/undefined without throwing, returning the empty string', () => {
+  assert.strictEqual(esc_(null), '');
+  assert.strictEqual(esc_(undefined), '');
+});
+
+// ---- buildHealthReasons_ ----
+t('buildHealthReasons_ returns no reasons when marks/engine are fresh and there are no flags/alerts (green case)', () => {
+  const reasons = buildHealthReasons_({}, true, true, 0, [], 0, []);
+  assert.deepStrictEqual(reasons, []);
+});
+t('buildHealthReasons_ flags stale marks with the "D2 not run yet" message when D2 has not completed', () => {
+  const health = { d2_ran_last_trading_day: 'false', last_trading_day: '2026-07-08' };
+  const reasons = buildHealthReasons_(health, false, true, 0, [], 0, []);
+  assert.strictEqual(reasons.length, 1);
+  assert.ok(reasons[0].includes("today's evening data batch (D2) hasn't completed yet for 2026-07-08"),
+    `unexpected message: ${reasons[0]}`);
+});
+t('buildHealthReasons_ flags stale marks/engine with the "D2 ran but still stale" message when D2 already completed', () => {
+  const health = { d2_ran_last_trading_day: 'true', last_trading_day: '2026-07-08' };
+  const reasons = buildHealthReasons_(health, true, false, 0, [], 0, []);
+  assert.strictEqual(reasons.length, 1);
+  assert.ok(reasons[0].includes('marks/engine still stale even though D2 logged complete for 2026-07-08'),
+    `unexpected message: ${reasons[0]}`);
+});
+t('buildHealthReasons_ lists firing kill-flags with strategy + the specific flag names', () => {
+  const killFlagDetails = [{ strategy: 'B', drawdown_kill: 'true', runaway_review: 'false', m2m_underperf_review: 'true' }];
+  const reasons = buildHealthReasons_({}, true, true, 1, killFlagDetails, 0, []);
+  assert.strictEqual(reasons.length, 1);
+  assert.strictEqual(reasons[0], '1 firing kill-flag(s): B (drawdown_kill, m2m_underperf_review)');
+});
+t('buildHealthReasons_ lists open critical alerts by category/message', () => {
+  const criticalAlerts = [{ category: 'cash', message: 'tripwire breached' }];
+  const reasons = buildHealthReasons_({}, true, true, 0, [], 1, criticalAlerts);
+  assert.strictEqual(reasons.length, 1);
+  assert.strictEqual(reasons[0], '1 critical alert(s): [cash] tripwire breached');
+});
+t('buildHealthReasons_ appends a "+N more" suffix when openCriticalAlerts exceeds the fetched sample', () => {
+  const criticalAlerts = [{ category: 'cash', message: 'tripwire breached' }];
+  const reasons = buildHealthReasons_({}, true, true, 0, [], 5, criticalAlerts);
+  assert.strictEqual(reasons[0], '5 critical alert(s): [cash] tripwire breached (+4 more)');
+});
+t('buildHealthReasons_ can report all three reasons at once (stale + kill-flag + critical alert)', () => {
+  const health = { d2_ran_last_trading_day: 'true', last_trading_day: '2026-07-08' };
+  const killFlagDetails = [{ strategy: 'D', drawdown_kill: 'true', runaway_review: 'false', m2m_underperf_review: 'false' }];
+  const criticalAlerts = [{ category: 'router', message: 'dual-path disagreement' }];
+  const reasons = buildHealthReasons_(health, false, false, 1, killFlagDetails, 1, criticalAlerts);
+  assert.strictEqual(reasons.length, 3);
+});
+
+// ---- buildSubject_ ----
+t('buildSubject_ shows "all parked" when nothing is deployed', () => {
+  const d = { rows: [{ strategy: 'A', deployed: false }, { strategy: 'B', deployed: false }],
+    sgov: { returnPct: 0.01 }, green: true, dateLabel: 'Jul 6, 2026' };
+  assert.strictEqual(buildSubject_(d), 'Stock-Trading · Strategies vs SGOV — Jul 6, 2026 · all parked');
+});
+t('buildSubject_ lists only deployed strategies plus SGOV when strategies are mixed parked/deployed', () => {
+  const d = {
+    rows: [
+      { strategy: 'A', deployed: true, returnPct: 0.0123 },
+      { strategy: 'B', deployed: false },
+      { strategy: 'C', deployed: true, returnPct: -0.005 }
+    ],
+    sgov: { returnPct: 0.002 }, green: true, dateLabel: 'Jul 6, 2026'
+  };
+  assert.strictEqual(buildSubject_(d), 'Stock-Trading · Strategies vs SGOV — Jul 6, 2026 · A +1.23% · C −0.50% · SGOV +0.20%');
+});
+t('buildSubject_ omits the warning suffix when green is true', () => {
+  const d = { rows: [{ strategy: 'A', deployed: true, returnPct: 0.01 }],
+    sgov: { returnPct: 0 }, green: true, dateLabel: 'Jul 6, 2026' };
+  assert.ok(!buildSubject_(d).includes('check data'));
+});
+t('buildSubject_ appends the "⚠ check data" warning suffix when green is false', () => {
+  const d = { rows: [{ strategy: 'A', deployed: false }], sgov: { returnPct: 0 }, green: false, dateLabel: 'Jul 6, 2026' };
+  assert.strictEqual(buildSubject_(d), 'Stock-Trading · Strategies vs SGOV — Jul 6, 2026 · all parked · ⚠ check data');
+});
+
+// ---- isTest_ (alert_emailer.gs) ----
+t('isTest_ returns true for the canary source', () => {
+  assert.strictEqual(isTest_({ source: 'scheduled.canary', category: 'other' }), true);
+});
+t('isTest_ returns true for the delivery_canary category', () => {
+  assert.strictEqual(isTest_({ source: 'other', category: 'delivery_canary' }), true);
+});
+t('isTest_ returns false for a real (non-canary) alert', () => {
+  assert.strictEqual(isTest_({ source: 'router', category: 'cash_tripwire' }), false);
+});
+
+// ---- esc2_ (alert_emailer.gs) ----
+t('esc2_ escapes &, <, >, and " (quote-escaping fix)', () => {
+  assert.strictEqual(esc2_('<b>&"'), '&lt;b&gt;&amp;&quot;');
+});
+t('esc2_ handles null/undefined without throwing, returning the empty string', () => {
+  assert.strictEqual(esc2_(null), '');
+  assert.strictEqual(esc2_(undefined), '');
 });
 
 console.log(`\n${passed} assertions passed.`);

@@ -58,11 +58,26 @@ jobs:
             fi
           done
 
-          gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,title,url \
-            --jq '.[] | select(.title|startswith("Auto-merge conflict:")) | "- #\(.number) \(.title) (\(.url))"' \
-            > /tmp/conflicts.txt || true
+          # READ FAILURE (API rate limit, token/permission hiccup, transient GH outage) is NOT the same as
+          # "zero open conflict PRs" — the prior version's `|| true` made a failed `gh pr list` call
+          # indistinguishable from a clean empty result, so the check never having run could silently
+          # report "OK: no ... open conflict PRs" (2026-07-09 fix, same bug class as keyless-sa-audit.yml).
+          # (No separate pre-truncation of /tmp/conflicts.txt needed here — the `>` redirect below already
+          # truncates it before `gh` runs, on both the success and failure path; the `then`-branch
+          # re-truncation is what actually guards against partial output surviving a failed read, since
+          # that runs AFTER gh may have already written partial stdout through the redirect.)
+          if ! gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,title,url \
+                --jq '.[] | select(.title|startswith("Auto-merge conflict:")) | "- #\(.number) \(.title) (\(.url))"' \
+                > /tmp/conflicts.txt 2>/tmp/gh_pr_list_error.txt; then
+            : > /tmp/conflicts.txt   # a failed read must not carry over partial/stale output
+          else
+            : > /tmp/gh_pr_list_error.txt   # successful read — no error to report
+          fi
 
-          if [ -s /tmp/stranded.txt ] || [ -s /tmp/conflicts.txt ]; then
+          if [ -s /tmp/gh_pr_list_error.txt ]; then
+            echo "problem=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::Could not check for open 'Auto-merge conflict:' PRs ($(tr '\n' ' ' < /tmp/gh_pr_list_error.txt)) — treating as a problem so a gh/API failure surfaces instead of silently reporting OK."
+          elif [ -s /tmp/stranded.txt ] || [ -s /tmp/conflicts.txt ]; then
             echo "problem=true" >> "$GITHUB_OUTPUT"
             echo "::warning::Stranded routine output detected — see the Alert step / opened issue."
           else
@@ -84,6 +99,9 @@ jobs:
             fi
             if [ -s /tmp/conflicts.txt ]; then
               echo "**Open auto-merge conflict PRs:**"; echo; cat /tmp/conflicts.txt; echo
+            fi
+            if [ -s /tmp/gh_pr_list_error.txt ]; then
+              echo "**Could not check for open 'Auto-merge conflict:' PRs** (\`gh pr list\` failed — this is a monitoring gap, not necessarily a stranded branch): $(cat /tmp/gh_pr_list_error.txt)"; echo
             fi
             echo "**Resolve:** get the branch's CI green (the auto-merge then drains it), or merge/close the conflict PR. If the branch is obsolete, confirm its outputs are superseded (or back-fill cumulative files like \`B_Sub_Pattern_Taxonomy.md\`) before deleting."
           } > /tmp/body.md

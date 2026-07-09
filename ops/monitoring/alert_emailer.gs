@@ -38,6 +38,9 @@ const POLL_HOURS       = 2;                        // how often to check
 // The automation_heartbeat dead-man's switch fires at 8h of silence, so 168h (1 week) gives ample
 // margin for any realistic recovery lag at negligible extra query cost (2026-07 report-system fix).
 const LOOKBACK_HOURS   = 168;
+// Human-readable label derived from LOOKBACK_HOURS, used by htmlAlerts_/plainAlerts_ so the copy never
+// drifts out of sync with the actual window (days when evenly divisible, else "Nh").
+const LOOKBACK_LABEL   = (LOOKBACK_HOURS % 24 === 0) ? `${LOOKBACK_HOURS / 24}d` : `${LOOKBACK_HOURS}h`;
 
 // ===== ENTRY POINTS =====
 function testAlertCheck()   { checkAlerts_(); }
@@ -152,6 +155,8 @@ function bqAlerts_(sql) {
   let res = BigQuery.Jobs.query({ query: sql, useLegacySql: false, timeoutMs: 30000 }, ALERT_PROJECT_ID);
   let g = 0;
   while (!res.jobComplete && g++ < 10) { Utilities.sleep(1000); res = BigQuery.Jobs.getQueryResults(ALERT_PROJECT_ID, res.jobReference.jobId); }
+  // A query that never completes must FAIL the send (no heartbeat -> dead-man's switch), not render empty.
+  if (!res.jobComplete) throw new Error('BigQuery job did not complete after 10s poll: ' + sql.slice(0, 120));
   const fields = (res.schema && res.schema.fields) ? res.schema.fields.map(f => f.name) : [];
   return (res.rows || []).map(r => { const o = {}; r.f.forEach((c, i) => o[fields[i]] = c.v); return o; });
 }
@@ -179,7 +184,12 @@ function fmtAlertTs_(a) {
 }
 
 // ===== rendering =====
-function esc2_(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// KEEP IN SYNC MANUALLY with esc_() in ops/weekly_report/weekly_report.gs — byte-for-byte identical on
+// purpose (separate Apps Script projects can't share a module), also copied verbatim into
+// ops/weekly_report/test_pure_helpers.js. A future escaping fix (e.g. backticks for a template-literal
+// context) applied to one twin must be applied to both, or one of the two operator-facing HTML emails
+// silently stops getting it (2026-07-09 code-review finding).
+function esc2_(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // A canary row is the weekly alert-delivery self-test (delivery_canary.sql), never a real incident.
 // It is labelled [TEST] in both subject and body so it can't be mistaken for an alert — while still
@@ -210,7 +220,7 @@ function htmlAlerts_(fresh, totalOpen) {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:auto;background:#fff;border-radius:12px;padding:18px;">
       <tr><td style="font-size:16px;font-weight:700;color:#0f2747;padding-bottom:8px;">${header}</td></tr>
       ${rowsHtml}
-      <tr><td style="font-size:11px;color:#8a96a3;padding-top:10px;">${totalOpen} un-notified alert(s) in the last week. Resolve via <code>UPDATE ops.alerts SET resolved=TRUE WHERE alert_id='...'</code> — always scope by alert_id, never run this unfiltered. This channel complements the [Claude] ATTENTION calendar events.</td></tr>
+      <tr><td style="font-size:11px;color:#8a96a3;padding-top:10px;">${totalOpen} un-notified alert(s) in the last ${LOOKBACK_LABEL}. Resolve via <code>UPDATE ops.alerts SET resolved=TRUE WHERE alert_id='...'</code> — always scope by alert_id, never run this unfiltered. This channel complements the [Claude] ATTENTION calendar events.</td></tr>
     </table></body></html>`;
 }
 
@@ -218,7 +228,7 @@ function plainAlerts_(fresh, totalOpen) {
   const allTest = fresh.length > 0 && fresh.every(isTest_);
   let s = allTest
     ? `[TEST] Stock-Trading — alert-delivery self-test, no action needed:\n\n`
-    : `Stock-Trading — ${fresh.length} new unresolved alert(s) (${totalOpen} un-notified in the last week):\n\n`;
+    : `Stock-Trading — ${fresh.length} new unresolved alert(s) (${totalOpen} un-notified in the last ${LOOKBACK_LABEL}):\n\n`;
   fresh.forEach(a => {
     const tag = isTest_(a) ? '[TEST] ' : (String(a.resolved) === 'true' ? '[AUTO-RESOLVED] ' : '');
     s += `[${a.severity.toUpperCase()}] ${tag}${a.source}/${a.category}: ${a.message}  (${fmtAlertTs_(a)})\n`;
