@@ -1935,9 +1935,14 @@ Rule 4 (`staleness` auto-resolve) was missing the `category != 'trading_halted'`
 kept `staleness` (and therefore the trading-enable gate) latched even after `missing_dependency`/
 `missed_run` legitimately cleared, turning this incident's cleanup into three manual `ops.alerts` UPDATEs
 instead of one. Fixed live and in-repo 2026-07-09 (`34_alert_lifecycle.sql`, Rule 4 now excludes
-`trading_halted` too, matching the two gate views). Next recurrence: resolving `trading_halted` alone
-should be sufficient for `staleness`/`missed_run`/the gate to clear mechanically on the routine's own next
-`sp_auto_resolve_alerts` call, once a D1/D3 run actually completes and logs it.
+`trading_halted` too, matching the two gate views). Next recurrence: **the honest `ops.run_log` backfill
+alone should be sufficient — no manual `ops.alerts` UPDATE needed at all, not even for `trading_halted`.**
+`missed_run`'s own resolve rule (`ops.alert_policy`) depends only on `ops.run_log` evidence, not on
+`trading_halted`, so Rules 1-3 clear `missing_dependency`/`missed_run`/`routine_stalled` directly from the
+backfilled rows in one `sp_auto_resolve_alerts` call; Rule 4 then finds zero *other* open criticals
+(`trading_halted` no longer counts) and clears `staleness` in the same pass, reopening the gate.
+`trading_halted` itself can be left open for a human to review on their own time — it no longer blocks
+anything mechanically.
 
 **Watch-trigger for the open root cause.** A 4th D1/D3 (or any monitored routine) landed-but-unlogged strand
 within a similar session-length/timing profile would be strong evidence of a systematic harness-side cutoff
