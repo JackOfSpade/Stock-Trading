@@ -1,8 +1,8 @@
-name: Auto-merge claude/* branches to main
+name: Auto-merge branches to main
 
-# Merges claude/* session branches into main automatically — but ONLY once their
-# CI run is green. This keeps full hands-off automation while ensuring a red build
-# never lands on main.
+# Merges ALL branches (any prefix — claude/*, jack/*, etc.) into main automatically
+# — but ONLY once their CI run is green. This keeps full hands-off automation while
+# ensuring a red build never lands on main.
 #
 # Why trigger on `workflow_run` (CI completed) instead of `push`:
 #   The old version triggered on push and merged immediately, *before* CI had even
@@ -42,7 +42,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Merge all CI-green claude/* branches into main
+      - name: Merge all CI-green branches into main
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -50,12 +50,12 @@ jobs:
           # shellcheck source=../../scripts/auto_merge_decision.sh
           source scripts/auto_merge_decision.sh
 
-          # Drain EVERY un-merged claude/* branch, not just the one whose CI just
-          # finished. The concurrency group (auto-merge-main) keeps only ONE run
-          # pending, so rapid CI completions from several sessions can drop a queued
-          # run (GitHub keeps one pending per group). Processing all branches here
-          # means whichever run does execute also picks up any stranded stragglers —
-          # a dropped queued run can no longer lose a branch's work.
+          # Drain EVERY un-merged branch (any prefix), not just the one whose CI
+          # just finished. The concurrency group (auto-merge-main) keeps only ONE
+          # run pending, so rapid CI completions from several sessions can drop a
+          # queued run (GitHub keeps one pending per group). Processing all branches
+          # here means whichever run does execute also picks up any stranded
+          # stragglers — a dropped queued run can no longer lose a branch's work.
           if ! git fetch origin --prune; then
             echo "::warning::git fetch failed; the next CI completion re-triggers and drains."
             exit 0
@@ -63,8 +63,10 @@ jobs:
 
           git checkout -B main origin/main
 
+          # Every remote branch is a candidate EXCEPT main itself (nothing to merge
+          # main into) and the origin/HEAD symbolic ref (not a real branch).
           merged_branches=""
-          for ref in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin/ | grep '^origin/claude/' || true); do
+          for ref in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin/ | grep -v -E '^origin/(main|HEAD)$' || true); do
             br="${ref#origin/}"
 
             # Already contained in main (e.g. a prior run merged it): just clean up.

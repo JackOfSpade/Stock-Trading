@@ -34,7 +34,7 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Detect stranded claude/* branches + open conflict PRs
+      - name: Detect stranded branches + open conflict PRs
         id: detect
         env:
           GH_TOKEN: ${{ github.token }}
@@ -47,7 +47,7 @@ jobs:
 
           : > /tmp/stranded.txt
           for ref in $(git for-each-ref --format='%(refname)' refs/remotes/origin/ \
-                        | grep '^refs/remotes/origin/claude/' || true); do
+                        | grep -v -E '^refs/remotes/origin/(main|HEAD)$' || true); do
             br=${ref#refs/remotes/}
             # Skip anything already contained in main.
             if git merge-base --is-ancestor "$ref" origin/main; then continue; fi
@@ -67,7 +67,7 @@ jobs:
             echo "::warning::Stranded routine output detected — see the Alert step / opened issue."
           else
             echo "problem=false" >> "$GITHUB_OUTPUT"
-            echo "OK: no stranded claude/* branches (> ${MAX_AGE_HOURS}h), no open conflict PRs."
+            echo "OK: no stranded branches (> ${MAX_AGE_HOURS}h), no open conflict PRs."
           fi
 
       - name: Open alert issue (dedup) and fail the run
@@ -80,7 +80,7 @@ jobs:
             echo "A routine may have **completed** (logged to \`ops.run_log\`) while its committed \`.md\` output never reached \`main\`. Every BigQuery monitor (freshness / cadence) is blind to this git↔BigQuery divergence — see \`ops/RUNBOOK.md\` §20."
             echo
             if [ -s /tmp/stranded.txt ]; then
-              echo "**Stranded \`claude/*\` branches (unmerged > 6h):**"; echo; cat /tmp/stranded.txt; echo
+              echo "**Stranded branches (unmerged > 6h):**"; echo; cat /tmp/stranded.txt; echo
             fi
             if [ -s /tmp/conflicts.txt ]; then
               echo "**Open auto-merge conflict PRs:**"; echo; cat /tmp/conflicts.txt; echo
