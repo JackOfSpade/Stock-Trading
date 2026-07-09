@@ -163,10 +163,19 @@ BEGIN
   -- The open-critical count is computed FIRST as its own variable (a bare SELECT with no correlation)
   -- because a subquery that self-references ops.alerts from within a query that also filters
   -- ops.alerts hits the same de-correlation restriction, even with zero row-level correlation.
+  -- EXCLUDES category='trading_halted', mirroring state.trading_enabled/trading_enabled_mechanical's own
+  -- exclusion above -- gap found 2026-07-09 (self-improvement audit): without it, a lingering trading_halted
+  -- echo (itself just a symptom of the SAME criticals this procedure already resolves) kept staleness
+  -- latched even after missing_dependency/missed_run legitimately cleared, which in turn kept
+  -- state.trading_enabled FALSE forever -- staleness IS counted by the gates' own blocking-critical query,
+  -- unlike trading_halted -- the identical self-latch this file's header already describes fixing for the
+  -- two gate views, just missed in this rule. Live incident: the 2026-07-06/07 D1-stranding cascade needed
+  -- three separate manual ops.alerts UPDATEs (trading_halted, then missed_run x2) to unwind on 2026-07-08/09,
+  -- when resolving trading_halted alone should have let this rule finish the job mechanically.
   SET staleness_would_clear = (
     SELECT f.marks_fresh AND f.engine_fresh AND eh.is_healthy
       AND NOT COALESCE((SELECT LOGICAL_OR(drifted) FROM `stock-trading-498512.state.position_reconciliation`), FALSE)
-      AND (SELECT COUNTIF(NOT resolved AND severity = 'critical' AND category != 'staleness') FROM `stock-trading-498512.ops.alerts`) = 0
+      AND (SELECT COUNTIF(NOT resolved AND severity = 'critical' AND category NOT IN ('staleness', 'trading_halted')) FROM `stock-trading-498512.ops.alerts`) = 0
     FROM `stock-trading-498512.state.freshness` f, `stock-trading-498512.state.embedding_health` eh
   );
   SET eligible_stale = (
