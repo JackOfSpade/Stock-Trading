@@ -77,23 +77,20 @@ routines:
     writes: [events.trade_fills, events.position_events, events.daily_marks, perf.strategy_daily,
              ops.account_snapshot]
     notes: >
-      PARTIALLY CUT OVER (trigger created 2026-07-03, first run same day on a market holiday -- does not
-      count toward the cutover threshold). See the "## D2a." banner in Claude_Task_Plan.md: the cutover
-      is now FULLY AUTONOMOUS -- D2a itself checks state.d2a_cutover_readiness every run and performs the
-      cutover (including flipping D2's depends_on below to [D1, D2a]) once it has 3 distinct trading-day
-      completed runs and no prior cutover logged (ops.d2a_cutover_log). No chat question is ever raised;
-      a completed cutover is recorded via an INFO-severity ops.alerts row, not a human reply. Splits D2's
-      mechanical broker-reconcile/cash-tripwire/SGOV-sweep/TWR-engine-maintenance out of D2's
-      analysis-heavy action-conversion, so a D2 halt can never also stall fills reconciliation, cash
-      safety, or the engine. Do NOT hand-edit D2's depends_on here -- D2a's own cutover step does it.
+      CUT OVER 2026-07-09 (autonomous, performed by D2a itself after 3 distinct trading-day completed runs
+      with no prior cutover logged; ops.d2a_cutover_log + an INFO-severity ops.alerts 'auto_cutover' row are
+      the record -- no chat question was raised). D2a now solely owns the mechanical broker-reconcile /
+      cash-tripwire / SGOV-sweep / TWR-engine-maintenance (Step 0/0b/PER-STRATEGY PERFORMANCE MAINTENANCE),
+      split out of D2's analysis-heavy action-conversion so a D2 halt can never also stall fills
+      reconciliation, cash safety, or the engine. D2 now depends_on [D1, D2a] (flipped by that cutover).
+      Runs every trading day, before D2, independent of D1.
   - id: D2
     name: Daily Action Conversion
     schedule: "after D1 trading_day"
     monitor_class: daily_trading
-    depends_on: [D1]
-    writes: [events.trade_fills, events.position_events, events.daily_marks, perf.strategy_daily,
-             events.decision_log, events.queue_events, ops.account_snapshot, calendar:confirm_order]
-    notes: "Step 0 = broker reconcile + cash tripwire + SGOV sweep; Step 0b = ops.account_snapshot (account NAV/TWR for the weekly self-email); then CALL ops.sp_daily_refresh(). PENDING split into D2a (see that entry) -- unchanged/still performs this work directly until D2a's autonomous cutover check (state.d2a_cutover_readiness) fires it (no human step)."
+    depends_on: [D1, D2a]
+    writes: [events.decision_log, events.queue_events, events.position_events, calendar:confirm_order]
+    notes: "CUT OVER 2026-07-09 (autonomous, by D2a; ops.d2a_cutover_log). D2 no longer runs Step 0/0b/TWR-maintenance -- those (broker reconcile + cash tripwire + SGOV sweep, ops.account_snapshot, CALL ops.sp_daily_refresh()) now run in D2a, on which D2 now depends. D2 keeps its own ops.sp_assert_trading_enabled('D2') gate (freshness-inclusive; safe now that D2a made marks/engine fresh) before it drains the queue and converts Daily.md's RECOMMENDED ACTIONS into orders."
   - id: D3
     name: Calendar & Queue Hygiene
     schedule: "after D2 daily"             # runs daily incl. non-trading days for queue/calendar upkeep
