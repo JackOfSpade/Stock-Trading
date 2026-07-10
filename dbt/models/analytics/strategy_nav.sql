@@ -8,14 +8,24 @@
 -- the SGOV park is account-level (no per-strategy split — see state.sgov_reconciliation / §13);
 -- per-strategy budget = available_funds below.
 
-WITH dep AS (
-  SELECT s AS strategy,
-    SUM(CASE WHEN cf.strategy = s THEN cf.amount
-             WHEN cf.strategy IS NULL THEN cf.amount / 5
-             ELSE 0 END) AS deposits
-  FROM UNNEST(['A','B','C','D','E']) s
+-- (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner directive.) Roster-derived enumeration +
+-- as-of-flow-date equal-split divisor, mirroring bigquery/22_cash_flows.sql exactly so dbt-parity's
+-- EXCEPT-DISTINCT still matches the live analytics.strategy_nav (both read the same state.strategy_roster).
+WITH active AS (
+  SELECT strategy_code AS s, adopted_date
+  FROM {{ source('state_external', 'strategy_roster') }}
+  WHERE is_active
+),
+dep AS (
+  SELECT a.s AS strategy,
+    SUM(CASE
+          WHEN cf.strategy = a.s THEN cf.amount
+          WHEN cf.strategy IS NULL AND a.adopted_date <= cf.flow_date
+            THEN cf.amount / (SELECT COUNT(*) FROM active a2 WHERE a2.adopted_date <= cf.flow_date)
+          ELSE 0 END) AS deposits
+  FROM active a
   CROSS JOIN {{ source('events', 'cash_flows') }} cf
-  GROUP BY s
+  GROUP BY a.s
 ),
 realized AS (SELECT strategy, SUM(realized_pnl) AS realized_pnl FROM {{ ref('trade_fills_curated') }} GROUP BY strategy),
 latest_close AS (SELECT ticker, close FROM {{ ref('daily_marks_curated') }}

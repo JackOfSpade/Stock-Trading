@@ -183,6 +183,12 @@ GROUP BY conviction ORDER BY ord;
 -- no strategy tag), so there is no per-strategy split to reconcile. The §13 cash-tripwire reads the
 -- event-sourced TOTAL SGOV holding from state.sgov_reconciliation (13_sgov_reconciliation.sql), and
 -- per-strategy budget = this view's available_funds. Portfolio_Ledger.md is retired (not kept).
+-- (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner directive.) DEAD / SUPERSEDED: this
+-- strategy_nav is redefined downstream by bigquery/22_cash_flows.sql (CREATE OR REPLACE, applied later),
+-- which reads events.cash_flows and the ROSTER-DERIVED active set + as-of-flow-date divisor. The bare
+-- ['A'..'E'] literal and CAST(1889.372) deposits below are the pre-cash_flows / pre-roster artifact and
+-- are deliberately left unchanged — they are never the live definition. scripts/check_roster_consistency.py
+-- scopes its no-bare-literal / no-/5 assertion to the LIVE files (bigquery/22, 26, dbt strategy_nav), NOT this one.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.strategy_nav` AS
 WITH dep AS (SELECT s AS strategy, CAST(1889.372 AS NUMERIC) AS deposits FROM UNNEST(['A','B','C','D','E']) s),
 realized AS (SELECT strategy, SUM(realized_pnl) AS realized_pnl FROM `stock-trading-498512.state.trade_fills_curated` GROUP BY strategy),

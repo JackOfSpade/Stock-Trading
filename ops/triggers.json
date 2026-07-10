@@ -75,6 +75,26 @@
     "instruction": "Read Claude_Task_Plan.md. Perform Q4. Quarterly Action Conversion \u2014 regular routine.",
     "monitor_class": "quarterly_ftd"
   },
+  "SL1": {
+    "instruction": "Read Claude_Task_Plan.md. Perform SL1. Strategy Candidate Synthesis & Qualification \u2014 deep research.",
+    "monitor_class": "quarterly_ftd"
+  },
+  "SL2": {
+    "instruction": "Read Claude_Task_Plan.md. Perform SL2. Strategy Draft, Revise & Post-mortem \u2014 regular routine.",
+    "monitor_class": "queue_driven"
+  },
+  "SL3": {
+    "instruction": "Read Claude_Task_Plan.md. Perform SL3. Incubation Monitor & Graduation \u2014 regular routine.",
+    "monitor_class": "daily_trading"
+  },
+  "SL4": {
+    "instruction": "Read Claude_Task_Plan.md. Perform SL4. Discretionary Retirement Proposer \u2014 regular routine.",
+    "monitor_class": "monthly_ftd"
+  },
+  "SL5": {
+    "instruction": "Read Claude_Task_Plan.md. Perform SL5. Strategy Register & Roster Sync \u2014 regular routine.",
+    "monitor_class": "queue_driven"
+  },
   "W1": {
     "instruction": "Read Claude_Task_Plan.md. Perform W1. Catalyst Calendar (Strategies A and C) \u2014 deep research.",
     "monitor_class": "weekly_sun"

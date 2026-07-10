@@ -1,8 +1,14 @@
 -- Singular test (passes when ZERO rows): SUM(events.cash_flows.amount) must equal
--- SUM(analytics.strategy_nav.deposits) — i.e. the equal-split/attributed allocation in strategy_nav
--- never drops or double-counts a flow. Self-improvement audit B-1-exec. Also guards the "exactly 5
--- strategies" assumption baked into the equal-split (amount/5): if that ever changes, this test
--- catches the resulting reconciliation drift immediately rather than a silent NAV mis-split.
+-- SUM(analytics.strategy_nav.deposits) — i.e. strategy_nav's attributed allocation never drops or
+-- double-counts a flow. Self-improvement audit B-1-exec. COUNT-AGNOSTIC (rev 2026-07-10 — Strategy
+-- Arsenal autonomy conversion, owner directive): strategy_nav now enumerates the roster-derived active
+-- set and splits each NULL-strategy (equal-split) flow by the AS-OF-FLOW-DATE active count, so this
+-- aggregate identity holds for ANY roster size — a NULL flow allocatable to k active-on-that-date
+-- strategies contributes k*(amount/k)=amount, and a strategy-tagged flow contributes its full amount.
+-- The reconciliation therefore no longer depends on a fixed strategy count; it catches a genuine
+-- mis-split or dropped flow under any add/retire. (A flow tagged to a since-terminated strategy is out
+-- of scope — deposits are NULL-tagged equal-split by standing methodology, Operating_Protocols §13.C.)
+-- scripts/check_roster_consistency.py asserts this file hardcodes no strategy count.
 
 SELECT
   (SELECT ROUND(SUM(amount), 2) FROM {{ source('events', 'cash_flows') }}) AS cash_flows_total,

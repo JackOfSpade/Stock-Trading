@@ -44,7 +44,18 @@ FROM UNNEST([
   STRUCT('Q4',  'Read Claude_Task_Plan.md. Perform Q4. Quarterly Action Conversion — regular routine.'),
   STRUCT('A1',  'Read Claude_Task_Plan.md. Perform A1. AI Foundation Annual Full Re-Derivation — deep research.'),
   STRUCT('A2',  'Read Claude_Task_Plan.md. Perform A2. Per-Strategy Constraint Audit — deep research.'),
-  STRUCT('A3',  'Read Claude_Task_Plan.md. Perform A3. Annual Action Conversion — regular routine.')
+  STRUCT('A3',  'Read Claude_Task_Plan.md. Perform A3. Annual Action Conversion — regular routine.'),
+  -- SISA strategy-lifecycle routines (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner
+  -- directive). canonical_instruction MUST be byte-identical to the Claude_Task_Plan.md SL headings
+  -- that scripts/print_routines.py reconstructs (shape 'Read Claude_Task_Plan.md. Perform SL<n>. <name>
+  -- — <type>.') — coordinate with the Claude_Task_Plan.md routine-table edits (same names/em-dash/type
+  -- tag). All five register here (the catalog is id-keyed, not schedule-keyed) so instruction_drift
+  -- covers the queue-driven SL2/SL5 as well as SL1/SL3/SL4.
+  STRUCT('SL1', 'Read Claude_Task_Plan.md. Perform SL1. Strategy Candidate Synthesis & Qualification — deep research.'),
+  STRUCT('SL2', 'Read Claude_Task_Plan.md. Perform SL2. Strategy Draft, Revise & Post-mortem — regular routine.'),
+  STRUCT('SL3', 'Read Claude_Task_Plan.md. Perform SL3. Incubation Monitor & Graduation — regular routine.'),
+  STRUCT('SL4', 'Read Claude_Task_Plan.md. Perform SL4. Discretionary Retirement Proposer — regular routine.'),
+  STRUCT('SL5', 'Read Claude_Task_Plan.md. Perform SL5. Strategy Register & Roster Sync — regular routine.')
 ]);
 
 -- state.instruction_drift — canonical vs live trigger text per routine.

@@ -1854,6 +1854,15 @@ chat or reply needed — check `state.d2a_cutover_readiness` / `ops.d2a_cutover_
 progress, or just watch for the `info`-severity `auto_cutover` row in `ops.alerts` (and the resulting
 commit) once it happens.
 
+**Cross-reference (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner directive).** This exact
+skeleton — an objective BigQuery readiness view (`state.d2a_cutover_readiness`) + a durable BQ idempotency
+marker (`ops.d2a_cutover_log`) + self-execute in-session + an `info`-severity `ops.alerts` audit row, and
+never a chat question — is reused verbatim by the fully-autonomous Strategy Arsenal lifecycle that makes
+strategy add/delete autonomous. The "strategy-level gate" this narrow routine's lower 3-run bar is
+contrasted against above is defined there as the multi-scrutiny graduation pipeline: adversarial pre-mortem
++ multi-regime SHADOW/PAPER forward-test + the live $2,000 PROBE + the existing 30-trade gate. See §39 and
+`bigquery/35_strategy_arsenal.sql`.
+
 ## 37. `queue_drain_stale` false alarm on the two-phase adversarial-review due date — the 2026-07-04 div-C/D/E-202606 alert *(monitoring)*
 
 **What happened.** D3's 2026-07-03 run raised `ops.sp_raise_alert('warning','D3','queue_drain_stale', ...)`
@@ -1957,3 +1966,78 @@ configurable from this repo — CLAUDE.md establishes that directly for the stop
 ("harness-managed, re-provisioned fresh each session"); it doesn't say so for session-lifecycle/timeout
 behavior in general, but the same constraint plausibly applies, which is why this section stops at
 "documented and mitigated" rather than promising a repo-side fix for the root cause.
+
+
+## 39. Strategy add/delete made fully autonomous — the 2026-07-10 SISA conversion *(autonomy, owner directive)*
+
+**Owner directive (2026-07-10).** Strategy addition and deletion become COMPLETELY AUTONOMOUS: no human
+review, approval, or chat anywhere in the path. The only residual human touches are the system-wide IBKR
+order-confirm tap (execution layer — it gates every trade equally, including a newcomer's first probe order
+and a terminated strategy's liquidation) and deposits. This retires the last cluster of human gates in the
+experiment — Experiment_Parameters.md:460 ("the participant may decide to restart"), :412 (participant tier
+triage), :261/:263/:275 (out-of-table participant resolution), and Operating_Protocols.md:97 (the
+strategy-design-change confirmation) — under the authority of Operating_Protocols.md:29 ("any workflow that
+needs human action beyond an order-confirm is broken and Claude redesigns it").
+
+**What changed conceptually — immutability splits into two tiers.** Roster MEMBERSHIP (which strategies
+exist, and in what phase) becomes VERSIONED POLICY, mirroring the 2026-06 capital-allocation pivot
+(Experiment_Parameters.md:150-154) that already carved allocation out of blanket immutability. Each
+strategy's OWN machinery stays immutable for its life, frozen at SHADOW entry (`spec_locked_since`, so the
+forward-test measures a fixed ruleset), with its official edge-measurement clock starting at first PROBE
+trade (`immutable_since`). Adding or retiring a strategy no longer "ends the experiment"; the immutable,
+load-bearing thing is now the measurement-and-selection MACHINERY, not the roster's size. Recorded as
+active_auto per `ops/autonomy_levels.yaml`, loop `strategy_arsenal` (owner decision, 2026-07-10).
+
+**The loop (SISA — Self-Improving Strategy Arsenal), five routines.** SL1 (quarterly, after Q1/Q3)
+synthesizes + mechanically qualifies candidates (default-REJECT on ambiguity); SL2 (queue-driven) authors
+the draft + 7-section pre-mortem and auto-revises on an AR verdict, in independent context; AR_att/AR_orc
+adversarially review the three new review types (`strategy-adoption` default-REJECT, `strategy-retirement`
+default-KEEP, `out-of-table-resolution` default-HOLD), with AR_orc doing MECHANICAL tier triage (absorbs the
+EP:412 human step without infinite regress); SL3 (daily, after D2a) runs the SHADOW->PAPER forward-test and
+judges graduation; SL5 (queue-driven) is the SOLE writer of roster membership + the self-executing fanout
+engine; SL4 (monthly, after M4) is a REMOVE-ONLY discretionary-retirement proposer. The graduation pipeline
+— adversarial pre-mortem -> zero-capital SHADOW signals -> simulated-fill PAPER vs SGOV (>= ~60 days, >= ~10
+sim trades, excess >= 0, regime coverage) -> live $2,000 PROBE at 2% sizing -> existing 30-trade gate — is
+the compensating control that REPLACES human PR review. The mechanical kill triggers (drawdown / 30-trade /
+m2m) are UNCHANGED; SL4 only ever moves in the fail-safe (retire) direction and never below the N>=2 floor.
+
+**Same D2a skeleton (§36) per transition.** Every state advance is fired by exactly one routine against
+exactly one OBJECTIVE readiness view — `state.strategy_shadow_readiness`, `strategy_paper_readiness`,
+`strategy_adoption_readiness`, `strategy_retirement_candidacy` (each the `state.d2a_cutover_readiness`
+analog: a boolean `ready` + its component signals + a NOT-EXISTS-later-state idempotency guard) — never on
+judgment and never on a chat question (§36's precedent: make the DECISION autonomous, do not re-route the
+question; the chat-is-unmonitored constraint is fully honored). The durable idempotency marker is
+`ops.roster_change_log` (the `ops.d2a_cutover_log` analog — a BigQuery row keyed by `change_key`, so SL5 can
+never double-apply a fanout). Every transition writes `events.strategy_lifecycle` + `events.decision_log`;
+consequential ones also write an `info`-severity `ops.alerts` row (delivered by alert_emailer.gs) purely for
+the audit trail.
+
+**Kill switch.** `ops.arsenal_control` (enabled / incubation_frozen) is the owner analog of
+`ops.trading_control`; `ops.sp_assert_arsenal_enabled(<routine>)` gates the top of SL1-SL5 and RAISEs + a
+critical alert if disabled. A single out-of-band INSERT freezes ALL candidate generation / graduation /
+retirement WITHOUT disturbing live trading. An account-wide `ops.trading_control` halt additionally defers a
+PROBE launch (the capital step) but not incubation.
+
+**Where the record lives.** Single source of truth = the checked-in `strategy/roster.yaml` (the roster
+analog of `ops/cadence.yaml`), mirrored to `events.strategy_lifecycle` -> `state.strategy_roster` ->
+`state.active_strategy_codes`; all BQ objects are declared in `bigquery/35_strategy_arsenal.sql` (applied
+live via the BigQuery MCP, the out-of-band operating model). `scripts/check_roster_consistency.py` (wired
+into ci.yml's test job) FAILS the build if roster.yaml, the state seed, the Strategy.md `## Strategy`
+sections, the strategy/ slices, the Claude_Task_Plan.md slice-map, and the roster-derived SQL ever disagree
+— an inconsistent roster can never merge (auto-merge only merges on green CI). The four `['A'..'E']` UNNEST
+literals and the `/5` deposit divisor now read the roster view (the divisor an as-of-flow-date active-count
+that still returns 5 for the founding flows, so no historical attribution moves). Dead-man coverage: SL1/
+SL3/SL4 register in cadence.yaml + bigquery/12/15/18/24; the queue_driven SL2/SL5 in bigquery/15 +
+ops/triggers.json + bigquery/18 stalled_runs only.
+
+**Self-bootstrapping order (per SL5 + the D2a discipline).** ON ADD, land the repo + SQL FIRST — upsert the
+lifecycle/roster row, finalize Strategy.md + regenerate slices + the slice-map row, run the three CI checks
+locally, commit/push (auto-merge on green), re-apply the roster-derived views live via the MCP — and create
+any per-strategy web-UI trigger LAST. ON DELETE, reverse it: delete the web-UI trigger FIRST, then remove
+the cadence/plan/SQL rows, letting the `instruction_drift` completed-run windows age so the non-self-healing
+`unknown_routine` alarm (§28/§30) never fires. The SL1-SL5 routines themselves are permanent.
+
+**Owner action required:** none, ever. Add/delete runs itself; watch for the `info`-severity
+`strategy_adopted` / retirement rows in `ops.alerts`, the weekly W5 lifecycle digest, or query
+`state.strategy_roster` / `ops.roster_change_log` any time. To PAUSE the whole loop, INSERT an
+`enabled = FALSE` row into `ops.arsenal_control` — live trading is unaffected.

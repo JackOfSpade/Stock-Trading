@@ -17,7 +17,14 @@
 -- order crafting, so it would qualify) or if a routine's scope changes.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.catchup_available` AS
 WITH catchup_safe_routines AS (
-  SELECT routine FROM UNNEST(['D1', 'D3']) AS routine
+  -- SL3 (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner directive): the daily incubation
+  -- monitor carries NO live order-crafting or intraday-price dependency — it computes end-of-day
+  -- forward-test signals / simulated fills off the same daily marks D2a ingests and hands the only
+  -- capital step (the PROBE launch) to SL5, so a late catch-up run reproduces exactly what a same-day
+  -- run would have produced (identical rationale to D1/D3). It is the only SL routine eligible here:
+  -- SL1/SL2/SL4/SL5 are not daily, so they never enter state.cadence_watch's alarm set (they are
+  -- covered by state.cadence_period_watch / state.stalled_runs instead) and cannot appear on this join.
+  SELECT routine FROM UNNEST(['D1', 'D3', 'SL3']) AS routine
 )
 SELECT w.routine, w.schedule, w.today
 FROM `stock-trading-498512.state.cadence_watch` w

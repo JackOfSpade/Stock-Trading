@@ -346,6 +346,32 @@ sources:
         columns:
           - name: is_healthy
             description: TRUE when decision embeddings are in sync (0 missing / 0 error / 0 dup).
+      # Strategy Arsenal roster views (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner
+      # directive). Created by bigquery/35_strategy_arsenal.sql (event-sourced from
+      # events.strategy_lifecycle); dbt does NOT own them, but the strategy_nav model reads them for the
+      # roster-derived enumeration + as-of-flow-date deposit split.
+      - name: strategy_roster
+        description: >
+          Latest-row-per-code roster state (bigquery/35). is_active = current_state IN (PROBE, ADOPTED);
+          adopted_date is the first-ADOPTED date used for the as-of-flow-date equal-split divisor.
+        columns:
+          - name: strategy_code
+            description: Strategy code (A-E today; grows/shrinks via the lifecycle).
+            tests:
+              - not_null
+          - name: is_active
+            description: TRUE when current_state IN (PROBE, ADOPTED) — the enumerated live set.
+          - name: adopted_date
+            description: First-ADOPTED date; NULL until adopted. Drives the as-of-flow-date deposit split.
+      - name: active_strategy_codes
+        description: >
+          Thin view of state.strategy_roster WHERE is_active (bigquery/35) — the roster-derived
+          enumeration site analytics.process_scorecard and other former UNNEST literals now read.
+        columns:
+          - name: strategy_code
+            description: Active strategy code.
+            tests:
+              - not_null
 
   - name: perf
     project: stock-trading-498512

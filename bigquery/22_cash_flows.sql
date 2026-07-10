@@ -62,18 +62,35 @@ SELECT
   (SELECT ROUND(SUM(amount), 2) FROM `stock-trading-498512.events.cash_flows`) = CAST(9446.86 AS NUMERIC) AS reconciled;
 
 -- ===== analytics.strategy_nav — redefined to read events.cash_flows, not the hardcoded literal =====
--- Identical logic to bigquery/04_analytics.sql's version except the `dep` CTE. Equal-split deposits
--- across the 5 strategies A-E (Operating_Protocols §13.C standing methodology); a strategy-tagged flow
--- attributes to that strategy only. Assumes exactly 5 strategies -- see the dbt test guarding that.
+-- (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner directive.) The per-strategy set + the
+-- equal-split divisor are now ROSTER-DERIVED, not the bare ['A'..'E'] / 5 literals: the strategies are
+-- enumerated from state.strategy_roster (is_active), and a NULL-strategy (equal-split) flow divides by
+-- the AS-OF-FLOW-DATE active count — the strategies active AND adopted on/before that flow's date. This
+-- is both a de-hardcode (roster membership is now versioned policy) AND a latent-correctness fix (the
+-- old /5 kept splitting into 5 even after a termination). It NATURALLY returns 5 for the founding flows
+-- (all five were adopted 2026-04-23), so no historical per-strategy attribution or 2%-sizing base moves.
+-- A strategy-tagged flow still attributes to that strategy only. scripts/check_roster_consistency.py
+-- asserts no bare ['A'..'E'] literal / no /5 divisor remains here. NOTE (apply order): this view now
+-- reads state.strategy_roster (bigquery/35_strategy_arsenal.sql), so 35 must be applied BEFORE this file.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.strategy_nav` AS
-WITH dep AS (
-  SELECT s AS strategy,
-    SUM(CASE WHEN cf.strategy = s THEN cf.amount
-             WHEN cf.strategy IS NULL THEN cf.amount / 5
-             ELSE 0 END) AS deposits
-  FROM UNNEST(['A','B','C','D','E']) s
+WITH active AS (
+  -- roster-derived enumeration + each active strategy's adopted_date (rev 2026-07-10 — SISA).
+  SELECT strategy_code AS s, adopted_date
+  FROM `stock-trading-498512.state.strategy_roster`
+  WHERE is_active
+),
+dep AS (
+  SELECT a.s AS strategy,
+    SUM(CASE
+          WHEN cf.strategy = a.s THEN cf.amount
+          -- NULL-strategy (equal-split) flow: allocate only to strategies active AND adopted on/before
+          -- the flow date, divided by the count of exactly those (the as-of-flow-date active count).
+          WHEN cf.strategy IS NULL AND a.adopted_date <= cf.flow_date
+            THEN cf.amount / (SELECT COUNT(*) FROM active a2 WHERE a2.adopted_date <= cf.flow_date)
+          ELSE 0 END) AS deposits
+  FROM active a
   CROSS JOIN `stock-trading-498512.events.cash_flows` cf
-  GROUP BY s
+  GROUP BY a.s
 ),
 realized AS (SELECT strategy, SUM(realized_pnl) AS realized_pnl FROM `stock-trading-498512.state.trade_fills_curated` GROUP BY strategy),
 latest_close AS (SELECT ticker, close FROM `stock-trading-498512.state.daily_marks_curated`

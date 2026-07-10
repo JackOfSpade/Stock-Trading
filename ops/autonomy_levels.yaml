@@ -21,84 +21,197 @@
 #                    loop that touches strategy/process constants per the audit's own "no autonomy-
 #                    increasing loop turns on until its compensating control is live and drilled"
 #                    sequencing.
-#   active_auto    — reserved. No loop in this register is authorized at this stage. Only a fail-SAFE
-#                    direction (e.g. an auto-REVERT of a previously human-approved change, never an
-#                    auto-CHANGE) may ever reach this stage, and only by an explicit future owner
-#                    decision recorded here with its own dated rationale.
+#                    SUPERSEDED AS A CEILING (rev 2026-07-10 — round-2 self-improvement autonomy conversion,
+#                    owner directive + explicit confirmation): active_pr_gated is NO LONGER the terminal
+#                    ceiling of any loop. It remains a describable pass-through STAGE (a loop may still be
+#                    observed here transiently), but every loop's ceiling is now active_auto (see that stage's
+#                    definition below and each loop's gate_to_next_stage). No self-improvement change requires
+#                    a human-merged PR anymore; the compensating control is the loop's own data-sufficiency
+#                    gate + audit trail, not human review.
+#   active_auto    — the loop's change reaches live behavior WITHOUT a human PR review, gated instead
+#                    by an in-band compensating control drilled to be at least as strong. AUTHORIZED for
+#                    exactly one loop today — `strategy_arsenal` (autonomous strategy roster add/delete),
+#                    by the owner's 2026-07-10 directive (rev 2026-07-10 — Strategy Arsenal autonomy
+#                    conversion, owner directive; see ops/RUNBOOK.md §39). Its compensating control is NOT
+#                    human PR review but the multi-scrutiny GRADUATION pipeline — a two-routine adversarial
+#                    pre-mortem (AR_att/AR_orc) + a zero-capital SHADOW signals phase + a simulated-fill
+#                    PAPER forward-test vs SGOV + the live $2,000 PROBE + the existing 30-trade gate —
+#                    bounded by caps / rate-limits / default-no / default-KEEP / N-floor and the
+#                    ops.arsenal_control owner kill switch, exactly the "compensating control is live and
+#                    drilled" bar this register's own sequencing demands (the D2a auto-cutover precedent,
+#                    RUNBOOK §36). GENERALIZED TO EVERY LOOP (rev 2026-07-10 — round-2 self-improvement
+#                    autonomy conversion, owner directive + explicit confirmation): the owner's 2026-07-10
+#                    directive — "there should be no more 'give results and wait for human review'; all
+#                    remote routines should have a pathway to take action autonomously by AI without human
+#                    intervention (except final order execution)" — together with the owner's explicit
+#                    confirmation, when asked directly, that this INCLUDES removing the
+#                    no_auto_merge_self_improvement guard for ALL self-improvement loops
+#                    (calibration_parameter_carveout included), AUTHORIZE active_auto as the ceiling for
+#                    EVERY loop in this register, not just strategy_arsenal. The prior RESERVED /
+#                    "fail-SAFE-direction-only" restriction and the calibration_parameter_carveout
+#                    active_pr_gated carve-out are SUPERSEDED by this rev. The compensating control that
+#                    replaces human PR review is, for each loop, its OWN objective data-sufficiency readiness
+#                    view (UNCHANGED — the evidence gate is preserved verbatim) + a durable idempotency
+#                    marker + a self-executed commit/push (or live write) + an events.decision_log entry + an
+#                    info-severity ops.alerts audit row + the meta_monitoring_heartbeat dead-man's switch —
+#                    the D2a / strategy_arsenal skeleton (bigquery/37_self_improvement_autonomy.sql). A loop
+#                    still may NOT self-apply until ITS OWN data gate clears; autonomy removes the human
+#                    step, never the evidence bar. What is NOT relaxed: the mechanical kill triggers, the
+#                    $2,000 probe-stake floor, 2% sizing, and the IBKR order-confirm execution tap — all stand.
 #
 # PROMOTION RULE: no routine may treat a loop as being at a stage higher than what this file declares.
 # If a routine's instructions (Claude_Task_Plan.md / Operating_Protocols.md) describe a behavior that
 # would require a HIGHER stage than declared here, THIS FILE is wrong or stale — fix it before acting.
 
 loops:
-  - id: process_reliability          # WO-6: ops.run_log metrics -> W5-authored spec PR
+  - id: process_reliability          # WO-6: ops.run_log metrics -> W5 self-applied process-constant change
     stage: dormant
-    ceiling: active_pr_gated
-    artifact: analytics.routine_health_scorecard (bigquery/27_process_reliability.sql)
+    ceiling: active_auto
+    artifact: analytics.routine_health_scorecard (bigquery/27_process_reliability.sql) +
+      state.process_reliability_readiness / ops.process_reliability_observations /
+      ops.process_constant_change_log (bigquery/37_self_improvement_autonomy.sql)
     gate_to_next_stage: >
-      Promote to shadow once analytics.routine_health_scorecard has >=3 consecutive weeks of data
-      for at least one routine (the loop's own natural N>=20 / 3-week floor, per its spec in
-      Claude_Task_Plan.md W5). Promote shadow -> record_only -> active_pr_gated only after a human
-      reviews the shadow output and confirms it does not fire on noise.
+      DATA-SUFFICIENCY GATE (UNCHANGED, preserved): analytics.routine_health_scorecard must have >=3
+      consecutive weeks of data for at least one routine (the loop's own natural N>=20 / 3-week floor, per
+      its spec in Claude_Task_Plan.md W5), AND that routine's deadline-threat pattern (min_n_met=TRUE AND
+      p90_completion_minute_of_day within ~90 min of a version-controlled deadline) must persist for 3+
+      consecutive W5 cycles. AUTONOMOUS SELF-APPLY (rev 2026-07-10 — round-2 conversion, owner directive +
+      explicit confirmation): once state.process_reliability_readiness.ready_for_change = TRUE, W5
+      SELF-APPLIES the bounded process-constant change (edit the version-controlled deadline/threshold +
+      check_cadence_consistency.py + commit + push, auto-merge on green CI), writes an
+      ops.process_constant_change_log idempotency row, logs an events.decision_log entry, and raises an
+      info-severity ops.alerts audit row — NO human-merged PR. The does-not-fire-on-noise check a human used
+      to perform is now the objective 3-consecutive-cycle persistence assertion baked into the readiness
+      view. Automated noise-check replaces human eyeballing; the evidence bar is unchanged.
     added: "2026-07-03"
 
-  - id: strategy_playbook             # B-4-data: append-only LLM-authored playbook deltas
+  - id: strategy_playbook             # B-4-data: append-only self-authored playbook deltas
     stage: dormant
-    ceiling: active_pr_gated
-    artifact: events.playbook_updates / state.active_playbook (NOT YET CREATED — spec only, see
-      bigquery/25_calibration_shrinkage.sql header for the calibration input it would consume)
+    ceiling: active_auto
+    artifact: events.playbook_updates / state.active_playbook / state.strategy_playbook_readiness
+      (bigquery/37_self_improvement_autonomy.sql; consumes analytics.calibration_shrunk +
+      analytics.process_scorecard)
     gate_to_next_stage: >
-      Do NOT create the playbook tables or wire any routine to read/write them until (a)
-      analytics.calibration_shrunk shows trustworthy_edge=TRUE for at least one conviction tier
-      (currently FALSE for all tiers, see analytics.calibration_shrunk), (b) analytics.process_
-      scorecard has min_n_met=TRUE on at least 2 of its 3 metrics, and (c) this loop's evidence-
-      generating session and delta-writing session are independent (or the delta passes the S-5
-      theater-judge review) per the audit's risk-officer critique. This is explicitly the LAST loop
-      to activate, not the first.
+      DATA-SUFFICIENCY GATE (UNCHANGED, preserved): do NOT write a playbook delta until (a)
+      analytics.calibration_shrunk shows trustworthy_edge=TRUE for at least one conviction tier (currently
+      FALSE for all tiers) AND (b) analytics.process_scorecard has min_n_met=TRUE on at least 2 of its 3
+      metrics (state.strategy_playbook_readiness encodes both). SEPARATION-OF-DUTIES CONTROL (UNCHANGED,
+      in-band, NOT human review): the delta's evidence-generating session and delta-writing session must be
+      independent, OR the delta must pass the S-5 theater-judge review (bigquery/11_theater_judge.sql,
+      judge_independent=TRUE) — an automated adversarial check recorded on the events.playbook_updates row,
+      not a human sign-off. AUTONOMOUS SELF-APPLY (rev 2026-07-10 — round-2 conversion, owner directive +
+      explicit confirmation): once state.strategy_playbook_readiness.ready_for_change = TRUE, the loop
+      APPENDS the delta to events.playbook_updates (append-only = its own idempotency substrate), refreshes
+      state.active_playbook, logs events.decision_log, and raises an info ops.alerts row — NO human-merged
+      PR. Still explicitly the LAST loop to activate (its data gate is the strictest and is currently unmet);
+      its ceiling is active_auto, not active_pr_gated.
     added: "2026-07-03"
 
   - id: execution_quality_tuning      # B-3/B-8-exec: slippage + fill-vs-expire rule tuning
     stage: dormant
-    ceiling: active_pr_gated
-    artifact: analytics.execution_quality (NOT YET CREATED — spec only)
+    ceiling: active_auto
+    artifact: analytics.execution_quality / state.execution_quality_readiness /
+      ops.exec_rule_change_log (bigquery/37_self_improvement_autonomy.sql)
     gate_to_next_stage: >
-      Not actionable at today's fill volume (~23 fills, mostly SGOV). Requires >=8 single-name
-      (non-SGOV) fills with a consistent-sign slippage signal before any rule-tuning proposal, per
-      the audit. Build the measurement view first; do not build the tuning-proposal step until the
-      volume gate is met.
+      DATA-SUFFICIENCY GATE (UNCHANGED, preserved): not actionable at today's fill volume (~23 fills, mostly
+      SGOV). Requires >=8 single-name (non-SGOV) fills with a consistent-sign slippage signal before any
+      rule-tuning change (state.execution_quality_readiness enforces both the >=8-non-SGOV-fill floor and the
+      sign-consistency test). Build order preserved: analytics.execution_quality (the measurement view)
+      exists first; the tuning step only fires once the volume gate is met. AUTONOMOUS SELF-APPLY (rev
+      2026-07-10 — round-2 conversion, owner directive + explicit confirmation): once
+      state.execution_quality_readiness.ready_for_change = TRUE, the loop SELF-APPLIES the bounded
+      execution-rule change (edit the version-controlled slippage / fill-vs-expire constant + commit + push,
+      auto-merge on green CI), writes an ops.exec_rule_change_log idempotency row, logs events.decision_log,
+      and raises an info ops.alerts row — NO human-merged PR.
     added: "2026-07-03"
 
   - id: calibration_parameter_carveout  # unified S-8 + B-8-obs: the ONE whitelisted self-updating parameter
     stage: dormant
-    ceiling: active_pr_gated
-    artifact: state.param_change_provenance / state.param_oos_degradation (NOT YET CREATED — spec only)
+    ceiling: active_auto
+    artifact: state.calibration_param_registry / state.param_change_provenance /
+      state.param_oos_degradation / state.calibration_param_readiness
+      (bigquery/37_self_improvement_autonomy.sql)
     gate_to_next_stage: >
-      Ship the provenance + OOS-degradation MONITOR views first and prove them on a shadow (paper)
-      change before any real parameter write. The trigger to act is "the calibration_shrunk credible
-      interval EXCLUDES the current ladder anchor's implied rate" — NOT a periodic re-match to the
-      posterior, which would ratchet on noise while the interval is this wide. Auto-REVERT may
-      eventually be autonomous (fail-safe direction); auto-CHANGE requires a human-merged PR, always.
-      This is the single largest strategy-side autonomy step in the audit and must be pre-mortem-
-      reviewed by the owner before any table here is even created.
+      DATA-SUFFICIENCY GATE (UNCHANGED, preserved): ship the provenance + OOS-degradation MONITOR views
+      first and prove them on a shadow (paper) change before any real parameter write. The act-trigger is
+      "the calibration_shrunk credible interval EXCLUDES the current ladder anchor's implied rate" — NOT a
+      periodic re-match to the posterior (which would ratchet on noise while the interval is this wide);
+      state.calibration_param_readiness encodes exactly this exclusion test plus the shadow-proven
+      precondition. AUTONOMOUS SELF-APPLY (rev 2026-07-10 — round-2 conversion, owner directive + EXPLICIT
+      confirmation that this loop is INCLUDED and that the no_auto_merge_self_improvement guard is removed
+      for it): the prior "auto-CHANGE requires a human-merged PR, always" and "must be pre-mortem-reviewed
+      by the owner before any table is even created" gates are REMOVED. Auto-REVERT stays autonomous
+      (fail-safe direction, always allowed). Auto-CHANGE is now ALSO autonomous once
+      state.calibration_param_readiness.ready_for_change = TRUE: the loop writes the parameter change with a
+      state.param_change_provenance row (idempotency + provenance), commits+pushes the version-controlled
+      constant (auto-merge on green CI), logs events.decision_log, and raises an info ops.alerts row. The
+      compensating control replacing the owner pre-mortem / human-merged PR is the OOS-degradation kill
+      (state.param_oos_degradation) — an automatic auto-REVERT if the changed parameter degrades
+      out-of-sample (the fail-safe direction already blessed autonomous) — plus the shadow-prove
+      precondition and the credible-interval-exclusion trigger. Still the highest-scrutiny loop with the
+      narrowest data gate; its ceiling is active_auto.
     added: "2026-07-03"
+  - id: strategy_arsenal              # SISA: autonomous strategy roster add/delete (ops/RUNBOOK.md §39)
+    stage: active_auto
+    ceiling: active_auto
+    artifact: strategy/roster.yaml + events.strategy_lifecycle -> state.strategy_roster ->
+      state.active_strategy_codes (bigquery/35_strategy_arsenal.sql); routines SL1-SL5
+    gate_to_next_stage: >
+      n/a — this loop is authorized AT its ceiling (active_auto) by the owner's 2026-07-10 directive:
+      strategy addition/deletion is COMPLETELY AUTONOMOUS, with no human review / approval / chat anywhere
+      in the path (the only residual human touches are the system-wide IBKR order-confirm tap and deposits,
+      which apply to every trade equally). Unlike the four constant-tuning loops above, roster MEMBERSHIP is
+      VERSIONED POLICY — not a frozen experiment parameter (each strategy's own machinery stays immutable,
+      frozen at SHADOW entry / spec_locked_since) — mirroring the 2026-06 capital-allocation pivot
+      (Experiment_Parameters.md:150-154). So an SL1-SL5 commit is a ROUTINE commit gated by the adversarial
+      + shadow + paper + probe + 30-trade graduation pipeline, exactly like D2a's autonomous cutover (§36),
+      NOT a PR-gated change to a production trading CONSTANT. The compensating control replacing human PR
+      review is that graduation pipeline plus the anti-churn/anti-runaway rails (concurrent-incubation cap
+      k_incubate=2, one adoption per rolling quarter, roster floor N>=2 / ceiling N_max=8, cooldowns,
+      default-REJECT adoption / default-KEEP retirement / default-HOLD out-of-table) and the
+      ops.arsenal_control owner kill switch. CI consistency gate: scripts/check_roster_consistency.py.
+    added: "2026-07-10"
 
 cross_cutting_guards:
   - id: no_auto_merge_self_improvement
-    status: documented_not_enforced
+    status: superseded_2026-07-10   # was documented_not_enforced; retired as a blocking guard (see note)
     note: >
-      Any GitHub PR authored by a self-improvement loop (process_reliability, strategy_playbook, etc.)
-      must carry an explicit human-review requirement and must NOT be eligible for
-      .github/workflows/auto-merge-claude.yml's automatic merge — auto-merge-claude is designed for
-      Claude's own ROUTINE commits, not for a loop proposing a change to production trading constants.
-      NOT YET ENFORCED IN CI (would require editing auto-merge-claude.yml to detect a label/marker and
-      exclude it — deferred pending a specific loop reaching active_pr_gated, since there is nothing
-      to gate yet). When the FIRST loop (process_reliability) is promoted past dormant, this guard
-      must be implemented before that loop opens its first real PR.
+      SUPERSEDED / RETIRED (rev 2026-07-10 — round-2 self-improvement autonomy conversion, owner directive +
+      EXPLICIT confirmation). This guard NO LONGER requires human-merged-PR review for ANY self-improvement
+      loop. The owner's 2026-07-10 directive ("there should be no more 'give results and wait for human
+      review'; all remote routines should have a pathway to take action autonomously by AI without human
+      intervention except final order execution") and the owner's explicit confirmation, when asked directly,
+      that this INCLUDES removing THIS guard for ALL loops (calibration_parameter_carveout included) mean
+      self-improvement commits are now auto-merge-eligible via .github/workflows/auto-merge-claude.yml on
+      green CI, EXACTLY like Claude's routine commits. The sole compensating control is now each loop's own
+      objective data-sufficiency readiness view (bigquery/37_self_improvement_autonomy.sql) + a durable
+      idempotency marker + the audit trail (events.decision_log entry + info-severity ops.alerts row) + the
+      meta_monitoring_heartbeat dead-man's switch — the D2a / strategy_arsenal precedent. There is no per-loop
+      human-review label to enforce and nothing to exclude from auto-merge; the guard is RETIRED, not merely
+      unenforced. What is NOT relaxed: the mechanical kill triggers, the $2,000 probe-stake floor, 2% sizing,
+      and the IBKR order-confirm execution tap all remain fully in force (they are execution/capital gates,
+      not review gates).
+      --- HISTORICAL RATIONALE (2026-07-03 .. 2026-07-10, preserved per the Experiment_Parameters.md
+      prior-revision convention; NO LONGER IN FORCE) ---
+      Originally (documented_not_enforced): any GitHub PR authored by a self-improvement loop
+      (process_reliability, strategy_playbook, etc.) must carry an explicit human-review requirement and must
+      NOT be eligible for auto-merge-claude.yml — designed for Claude's own ROUTINE commits, not for a loop
+      proposing a change to production trading constants; not yet enforced in CI; to be implemented before the
+      first loop opened its first real PR. The 2026-07-10 Strategy Arsenal carve-out then exempted
+      strategy_arsenal's SL1-SL5 routine commits (eligible for auto-merge on green CI incl.
+      scripts/check_roster_consistency.py) while holding the four constant-tuning loops subject to the guard.
+      Round-2 (this rev) extends that exemption to ALL loops, retiring the guard entirely.
   - id: meta_monitoring_heartbeat
     status: documented_not_enforced
     note: >
       Every loop above dormant should write an "evaluated this cycle" heartbeat (or an explicit
       decision_log "no change" entry) on every firing, with a scheduled-query dead-man's-switch
       alerting if the expected evaluation is missing — the same pattern ops.heartbeat already uses
-      for the Apps Scripts (bigquery/16_automation_health.sql). Not yet built: no loop has reached a
-      stage where it fires on a schedule.
+      for the Apps Scripts (bigquery/16_automation_health.sql). LIVE for the strategy_arsenal loop (rev
+      2026-07-10 — Strategy Arsenal autonomy conversion): SL1 (quarterly), SL4 (monthly), and SL3 (daily)
+      each write a decision_log 'evaluated, no change' heartbeat every firing, and a scheduled-query
+      dead-man's switch alerts if the expected quarterly / monthly / daily arsenal evaluation is missing.
+      SL1/SL3/SL4 also register in the cadence dead-man views (bigquery/12 + 24) and the stalled-run guard
+      (bigquery/18); the queue_driven SL2/SL5 register in bigquery/18 stalled_runs only (NOT 12/24, per the
+      queue_driven rule). The four constant-tuning loops above remain dormant, so no heartbeat is expected
+      from them yet.

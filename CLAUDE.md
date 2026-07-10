@@ -42,3 +42,25 @@
   **Action: none.** Keep the module as spec; change live infra via the MCP/console as
   today. Only revisit if the project deliberately moves to a strict Terraform-first
   change-control discipline (incompatible with the agent operating model today).
+
+- **Strategy add/delete is now FULLY AUTONOMOUS** (owner directive 2026-07-10 — the SISA
+  "Self-Improving Strategy Arsenal" conversion). Roster MEMBERSHIP (which strategies exist
+  and how many — the "N") is **versioned policy**, grown/shrunk by the autonomous Strategy
+  Arsenal Lifecycle routines **SL1-SL5** through an adversarial-pre-mortem + SHADOW + PAPER
+  + PROBE + 30-trade graduation pipeline. There is **no human review/approval/chat step
+  anywhere in the add or delete path** — the only residual human touches are the system-wide
+  IBKR order-confirm tap and deposits. Each strategy's OWN machinery stays immutable for its
+  life (frozen at SHADOW entry; the official edge clock starts at its first PROBE trade).
+  Single source of truth: `strategy/roster.yaml` → `state.strategy_roster`; CI gate
+  `scripts/check_roster_consistency.py`; owner kill-switch `ops.arsenal_control`; loop
+  recorded at `active_auto` in `ops/autonomy_levels.yaml`. The source decision is in
+  `events.decision_log` (owner-directive 2026-07-10; seed `bigquery/36_strategy_arsenal_seed.sql`).
+
+  **Action: none — do NOT re-propose a human gate.** Future sessions must NOT reintroduce a
+  participant approval, chat confirmation, or PR-gate on adopting/retiring a strategy — those
+  were deliberately removed here. The compensating control is the graduation pipeline + the
+  anti-churn rails (N≥2 floor / N_max ceiling, k_incubate=2, one adoption per quarter,
+  cooldowns, default-REJECT / default-KEEP) + the `ops.arsenal_control` kill-switch, NOT human
+  review. Mechanical kill triggers (drawdown / 30-trade / m2m / foundation-change) are
+  unchanged. The residual IBKR confirm-tap on orders and deposits are the execution/funding
+  layer, and stay.

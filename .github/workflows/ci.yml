@@ -45,6 +45,8 @@ jobs:
         run: python scripts/split_strategy.py --check
       - name: cadence single-source (cadence.yaml ⇄ 12/15 SQL ⇄ plan headings)
         run: python scripts/check_cadence_consistency.py
+      - name: roster single-source (roster.yaml ⇄ state seed ⇄ Strategy.md ⇄ slices ⇄ slice-map ⇄ derived SQL)
+        run: python scripts/check_roster_consistency.py
       - name: autonomy-stage single-source (autonomy_levels.yaml ⇄ prose/SQL citations)
         run: python scripts/check_autonomy_consistency.py
       - name: auto-merge decision logic (CI-gate + delete-safety fixtures — 2026-07-04 code-quality audit)

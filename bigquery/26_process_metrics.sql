@@ -81,4 +81,8 @@ SELECT
   (SELECT go_minus_opened FROM `stock-trading-498512.analytics.declared_vs_realized` d WHERE d.strategy = s) AS go_minus_opened,
   (SELECT pct_below_band FROM `stock-trading-498512.analytics.forecast_bias` f WHERE f.strategy = s) AS forecast_pct_below_band,
   (SELECT COALESCE(min_n_met, FALSE) FROM `stock-trading-498512.analytics.forecast_bias` f WHERE f.strategy = s) AS forecast_min_n_met
-FROM UNNEST(['A', 'B', 'C', 'D', 'E']) s;
+-- roster-derived enumeration (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner directive):
+-- the scorecard rolls up the currently-active strategies, not the bare ['A'..'E'] literal.
+-- check_roster_consistency.py asserts no bare literal remains here; state.active_strategy_codes is
+-- defined in bigquery/35_strategy_arsenal.sql, which must be applied before this file.
+FROM UNNEST(ARRAY(SELECT strategy_code FROM `stock-trading-498512.state.active_strategy_codes`)) s;

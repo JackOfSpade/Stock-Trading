@@ -1,0 +1,170 @@
+# Strategy roster manifest — the version-controlled single source of truth for WHICH
+# strategies exist and in WHAT lifecycle phase (the roster analog of ops/cadence.yaml).
+#
+# WHY THIS EXISTS: roster MEMBERSHIP (which strategies are live, incubating, or retired,
+# and how many — the "N") became VERSIONED POLICY on 2026-07-10 (owner directive; the SISA
+# "Self-Improving Strategy Arsenal" autonomy conversion), exactly as the 2026-06 capital-
+# allocation pivot carved allocation rules out of blanket immutability. Membership is now
+# grown/shrunk AUTONOMOUSLY by the Strategy Arsenal Lifecycle routines SL1-SL5 through an
+# adversarial-pre-mortem + SHADOW + PAPER + PROBE + 30-trade graduation pipeline — no human
+# review/approval/chat step anywhere in the add or delete path (the only residual human
+# touches are the system-wide IBKR order-confirm tap and deposits). Each strategy's OWN
+# machinery (entry/exit rules, thresholds, indicators, 2%-of-sub-portfolio sizing, kill-
+# criteria structure, cited edges/disadvantages, its pre-mortem) stays IMMUTABLE for that
+# strategy's entire life: it FREEZES AT SHADOW ENTRY (spec_locked_since) so the forward-test
+# measures a fixed ruleset, and the official edge-measurement clock (immutable_since) starts
+# at the strategy's first PROBE trade. See Experiment_Parameters.md, Strategy.md, and the
+# SISA sections of Operating_Protocols.md / ops/RUNBOOK.md.
+#
+# SINGLE-SOURCE RULE: this file is THE checked-in source of roster truth. It is mirrored at
+# runtime to events.strategy_lifecycle (append-only transition log) -> state.strategy_roster
+# (latest-row-per-code view) -> state.active_strategy_codes (the thin view the derived SQL
+# reads). Every enumeration site (the four UNNEST literals + the deposit-split divisor in
+# bigquery/22_cash_flows.sql, bigquery/26_process_metrics.sql, and
+# dbt/models/analytics/strategy_nav.sql) derives from that view, never from a hard-coded
+# ['A'..'E'] list or a '/5' divisor.
+#
+# NOT GENERATED: unlike every other file in strategy/ (which scripts/split_strategy.py
+# GENERATES from the canonical Strategy.md, and which carries the README "Do NOT edit" rule),
+# THIS file is hand/routine-maintained. split_strategy.py neither writes nor reads it. It is
+# edited only by the arsenal routines: SL5 (the sole roster-membership writer) flips
+# roster_state and stamps the dates on each transition; SL2 never touches it; W5 mirrors the
+# events.decision_log roster changes into each entry's revision_history (its existing
+# Operating_Protocols.md mirroring pattern).
+#
+# CI GATE: scripts/check_roster_consistency.py (wired into ci.yml's test job — the roster
+# analog of scripts/check_cadence_consistency.py) FAILS THE BUILD if this file, the
+# state.strategy_roster seed, Strategy.md's '## Strategy' sections, the strategy/ slices, and
+# the Claude_Task_Plan.md slice-map rows ever disagree, or if any bare ['A'..'E'] literal or
+# '/5' divisor survives in the derived SQL. An internally-inconsistent roster can never merge
+# (auto-merge only merges on green CI).
+#
+# EDIT DISCIPLINE: do NOT hand-edit roster_state or the lifecycle dates to add/remove a
+# strategy — that is what the lifecycle does, autonomously and idempotently (guarded by
+# ops.roster_change_log). A manual membership edit would desync this file from
+# state.strategy_roster and fail the CI gate. The rails block below IS the owner/governance
+# tuning surface (it is policy, not per-strategy machinery); change a rail deliberately and
+# record the reason in a rails-level comment.
+
+# ---- Anti-churn / anti-runaway RAILS (the arsenal's safety envelope) ----
+# Consumed by state.arsenal_rails + the readiness views (bigquery/35_strategy_arsenal.sql).
+# These are the loop's governance knobs; the SL routines default-REJECT / default-KEEP
+# whenever a rail is not clearly satisfied.
+rails:
+  n_min: 2                       # roster FLOOR: SL4 never proposes retirement below this; a hit
+                                 #   force-generates SL1 candidates + raises an INFO 'roster_below_floor'
+                                 #   alert (the successor-experiment safety valve). N=1 is out of scope.
+  n_max: 8                       # roster CEILING: SL1 will not qualify a new candidate at/above this
+                                 #   (cost discipline for a ~$10k account at the $2,000 probe floor).
+  k_incubate: 2                  # concurrent-incubation CAP: at most 2 strategies in SHADOW+PAPER combined;
+                                 #   SL1 will not promote QUALIFYING -> AUTHORING beyond this.
+  k_regime: 3                    # regime-coverage target: SL1 biases candidate synthesis toward zero/
+                                 #   under-covered regime cells in state.arsenal_regime_coverage.
+  adoption_rate_window_days: 90  # rate LIMIT: at most ONE strategy reaches PROBE (live capital) per
+                                 #   rolling 90 days / per calendar quarter (paper_readiness checks the
+                                 #   most recent PROBE lifecycle timestamp).
+  cooldown_days:                 # per-edge cooldown stamps enforced by SL1/SL4 to prevent oscillation,
+                                 #   churn, and relabeled-continuation (dead-strategy laundering); paired
+                                 #   with the material-structural-difference + fresh-derivation restart tests.
+    post_rejection: 90           #   a REJECTED candidate / SHADOW-or-PAPER cull cannot re-enter (same
+                                 #     archetype) for 90 days.
+    post_termination: 180        #   a TERMINATED edge can only restart via a fresh SL1 CANDIDATE after 180
+                                 #     days (and only with a post-mortem that articulates the structural diff).
+    post_keep: 90                #   an SL4 KEEP verdict blocks re-proposing that strategy for retirement for
+                                 #     90 days.
+
+# ---- STRATEGIES (one entry per code; roster_state is authoritative for membership) ----
+# roster_state domain mirrors state.strategy_roster.current_state:
+#   candidate|qualifying|authoring|under_review|shadow|paper|probe|adopted|
+#   retirement_proposed|terminated|post_mortem|rejected.
+# Derived flags: is_active = roster_state IN (probe, adopted); is_incubating = IN (shadow, paper).
+# Version numbers (edges 1.x / disadvantages 2.x) are QUOTED so YAML keeps "1.10" distinct from "1.1".
+#
+# The five below are the FOUNDING batch, seeded at experiment inception (2026-04-23, rev-15
+# document date) BEFORE the arsenal machinery existed. They never passed through
+# SHADOW/PAPER/PROBE, so their spec_locked_since and immutable_since are pinned to the
+# experiment start — their clean before/after boundary vs SGOV — per the bootstrap in
+# bigquery/35_strategy_arsenal.sql. Seeding them here (and in state.strategy_roster) so the
+# derived views return the identical A-E set on first apply is what makes the UNNEST-literal
+# refactor a no-op for historical per-strategy attribution and the 2%-sizing base.
+# Citations parsed from Quarterly_AI_Foundation_Delta.md PART 2 per-strategy foundation-
+# citation graph + strategy/ mechanism slices.
+strategies:
+  - code: A
+    name: "Catalyst-driven equity long positions (pre-event, directional)"
+    archetype: catalyst-driven-long-equity
+    roster_state: adopted
+    edges_exploited: ["1.1", "1.4", "1.10"]
+    disadvantages_compensated: ["2.4", "2.13", "2.15", "2.17", "2.19"]
+    per_strategy_routine: null
+    adopted_date: 2026-04-23
+    spec_locked_since: 2026-04-23
+    immutable_since: 2026-04-23
+    retired_date: null
+    is_restart_of: null
+    revision_history:
+      - date: 2026-07-10
+        note: "Seeded as a founding-batch adopted member (SISA autonomy conversion, owner directive). Bootstrap of a pre-existing live strategy — no machinery change; dates pinned to experiment inception."
+  - code: B
+    name: "Post-event mispricing exploitation"
+    archetype: post-event-mispricing-long-bias
+    roster_state: adopted
+    edges_exploited: ["1.1", "1.4"]
+    disadvantages_compensated: []   # B does NOT compensate 2.20 (rev-2 retraction); it is structurally
+                                    #   EXPOSED to 2.20, partially mitigated (not compensated) by the router
+                                    #   HIGH-VIX entry exclusion. Long-bias by construction (0 shorts).
+    per_strategy_routine: null
+    adopted_date: 2026-04-23
+    spec_locked_since: 2026-04-23
+    immutable_since: 2026-04-23
+    retired_date: null
+    is_restart_of: null
+    revision_history:
+      - date: 2026-07-10
+        note: "Seeded as a founding-batch adopted member (SISA autonomy conversion, owner directive). Bootstrap of a pre-existing live strategy — no machinery change; dates pinned to experiment inception."
+  - code: C
+    name: "Defined-risk options structures around known events"
+    archetype: defined-risk-options-on-catalysts
+    roster_state: adopted
+    edges_exploited: ["1.1"]        # 1.4 used as a technique, not a primary exploited edge.
+    disadvantages_compensated: ["2.1", "2.18"]   # defined-risk caps loss (2.18); numerical work delegated (2.11).
+    per_strategy_routine: null
+    adopted_date: 2026-04-23
+    spec_locked_since: 2026-04-23
+    immutable_since: 2026-04-23
+    retired_date: null
+    is_restart_of: null
+    revision_history:
+      - date: 2026-07-10
+        note: "Seeded as a founding-batch adopted member (SISA autonomy conversion, owner directive). Bootstrap of a pre-existing live strategy — no machinery change; dates pinned to experiment inception."
+  - code: D
+    name: "Long-horizon narrative-screened equity core"
+    archetype: long-horizon-concentrated-equity
+    roster_state: adopted
+    edges_exploited: ["1.1", "1.4", "1.10"]
+    disadvantages_compensated: ["2.23"]   # LTCG / long-horizon-holding compensation.
+    per_strategy_routine: null      # D's long-horizon candidate screen runs inside the Q2 quarterly routine,
+                                    #   not a dedicated per-strategy routine.
+    adopted_date: 2026-04-23
+    spec_locked_since: 2026-04-23
+    immutable_since: 2026-04-23
+    retired_date: null
+    is_restart_of: null
+    revision_history:
+      - date: 2026-07-10
+        note: "Seeded as a founding-batch adopted member (SISA autonomy conversion, owner directive). Bootstrap of a pre-existing live strategy — no machinery change; dates pinned to experiment inception."
+  - code: E
+    name: "Market-neutral narrative-divergence pairs"
+    archetype: market-neutral-pairs
+    roster_state: adopted
+    edges_exploited: ["1.1", "1.4", "1.10"]
+    disadvantages_compensated: ["2.7", "2.20"]   # regime-misclassification (2.7) + crowded-unwind (2.20).
+    per_strategy_routine: null
+    adopted_date: 2026-04-23
+    spec_locked_since: 2026-04-23
+    immutable_since: 2026-04-23
+    retired_date: null
+    is_restart_of: null
+    revision_history:
+      - date: 2026-07-10
+        note: "Seeded as a founding-batch adopted member (SISA autonomy conversion, owner directive). Bootstrap of a pre-existing live strategy — no machinery change; dates pinned to experiment inception."

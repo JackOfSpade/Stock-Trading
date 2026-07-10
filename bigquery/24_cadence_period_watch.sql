@@ -47,8 +47,8 @@ routines AS (
     STRUCT('W1' AS routine, 'weekly_sun' AS monitor_class), STRUCT('W2','weekly_sun'),
     STRUCT('W3','weekly_sun'), STRUCT('W4','weekly_sun'), STRUCT('W5','weekly_sun'),
     STRUCT('M1a','monthly_ftd'), STRUCT('M1b','monthly_ftd'), STRUCT('M2','monthly_ftd'),
-    STRUCT('M3','monthly_ftd'), STRUCT('M4','monthly_ftd'), STRUCT('M5','monthly_ftd'),
-    STRUCT('Q1','quarterly_ftd'), STRUCT('Q2','quarterly_ftd'), STRUCT('Q3','quarterly_ftd'), STRUCT('Q4','quarterly_ftd'),
+    STRUCT('M3','monthly_ftd'), STRUCT('M4','monthly_ftd'), STRUCT('M5','monthly_ftd'), STRUCT('SL4','monthly_ftd'),   -- SL4 (rev 2026-07-10 — SISA)
+    STRUCT('Q1','quarterly_ftd'), STRUCT('Q2','quarterly_ftd'), STRUCT('Q3','quarterly_ftd'), STRUCT('Q4','quarterly_ftd'), STRUCT('SL1','quarterly_ftd'),   -- SL1 (rev 2026-07-10 — SISA); SL3 daily + SL2/SL5 queue-driven are not period-tracked here
     STRUCT('A1','annual_ftd'), STRUCT('A2','annual_ftd'), STRUCT('A3','annual_ftd')
   ])
 ),

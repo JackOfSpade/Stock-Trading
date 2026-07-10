@@ -97,6 +97,20 @@ routines:
     monitor_class: daily_all
     depends_on: [D2]
     writes: [calendar:confirm_order, events.queue_events]
+  - id: SL3
+    name: Incubation Monitor & Graduation
+    schedule: "after D2a trading_day"     # SISA arsenal loop; needs D2a's fresh marks
+    monitor_class: daily_trading
+    depends_on: [D2a]
+    writes: [analytics.strategy_incubation_perf, events.strategy_lifecycle, state.arsenal_regime_coverage,
+             events.queue_events, events.decision_log, ops.alerts]
+    notes: >
+      SISA strategy-arsenal lifecycle (ops/RUNBOOK.md §39; ops/autonomy_levels.yaml loop strategy_arsenal).
+      Daily forward-test monitor for SHADOW/PAPER strategies: updates analytics.strategy_incubation_perf,
+      SELF-EXECUTES the light SHADOW->PAPER transition (the D2a self-execute pattern), and on PAPER->PROBE
+      readiness ENQUEUES SL5 (the roster-mutation registrar) -- SL3 never edits the repo/roster or touches
+      capital itself. Gated by ops.sp_assert_arsenal_enabled('SL3'); FATAL sp_assert_deps(['D2a']). Writes a
+      decision_log 'evaluated, no change' meta-heartbeat every firing.
 
   # ---- ADVERSARIAL REVIEWS (daily, queue-driven; fire only if an entry is due) ----
   - id: AR_att   # ASCII id standardized 2026-07-01 (RUNBOOK §28); legacy middle-dot ops.run_log rows fold in via instruction_drift's separator-normalized join
@@ -111,6 +125,40 @@ routines:
     monitor_class: queue_driven
     depends_on: [AR_att]
     writes: [events.adversarial_reviews, events.regime_events, events.decision_log, calendar:confirm_order]
+  # ---- STRATEGY ARSENAL — QUEUE-DRIVEN (SISA lifecycle, added 2026-07-10; fire only if a queue entry is due) ----
+  - id: SL2
+    name: Strategy Draft, Revise & Post-mortem
+    schedule: "daily; if events.queue_events PENDING_DRAFT (strategy-draft/strategy-revise/post-mortem) due<=today"
+    monitor_class: queue_driven           # NOT calendar-predictable -> excluded from cadence_expected_today (like AR)
+    depends_on: []
+    writes: [Strategy.md, strategy/slices, events.queue_events, events.strategy_postmortems,
+             events.strategy_lifecycle, events.decision_log, ops.alerts]
+    notes: >
+      SISA arsenal loop (ops/RUNBOOK.md §39). Autonomous EDITORIAL routine that overturns the
+      'revision reserved to the participant' gate: drafts the '## Strategy <code> [CANDIDATE]' section +
+      a self-contained 7-section pre-mortem (all parameters derived FRESH + a derivation-provenance record),
+      redrafts ONLY the flagged Tier-1 defects on an AR_orc REVISION REQUIRED verdict (cycle_number++,
+      cycle-5 soft cap), and authors events.strategy_postmortems on a TERMINATED transition. INDEPENDENT
+      context from SL1 and the AR reviewers. Gated by ops.sp_assert_arsenal_enabled('SL2'). NEVER stages
+      orders, NEVER touches capital, NEVER edits the live roster (SL5 does that). queue_driven: registers in
+      bigquery/15 + ops/triggers.json + bigquery/18 stalled_runs only (NOT 12/24).
+  - id: SL5
+    name: Strategy Register & Roster Sync
+    schedule: "daily; if a SUFFICIENT strategy-adoption verdict, an SL3 PAPER->PROBE enqueue, or a TERMINATED transition is due"
+    monitor_class: queue_driven
+    depends_on: [AR_orc]
+    writes: [strategy/roster.yaml, Strategy.md, strategy/slices, Claude_Task_Plan.md, ops.roster_change_log,
+             events.strategy_lifecycle, events.decision_log, ops.alerts]
+    notes: >
+      SISA arsenal loop (ops/RUNBOOK.md §39). The D2a self-executing transition + fanout engine and the ONLY
+      writer of roster MEMBERSHIP: SHADOW register (roster.yaml entry + lifecycle row, spec-locks the
+      strategy), PROBE register (finalize Strategy.md candidate->roster-active, scripts/split_strategy.py,
+      roster fanout, run scripts/check_roster_consistency.py + check_cadence_consistency.py + split_strategy
+      --check locally, commit+push on auto-merge, re-apply the roster-derived views live via the BigQuery MCP,
+      register into the existing probe-stake funding queue), TERMINATED deregister (the reverse). Idempotent
+      via ops.roster_change_log (the ops.d2a_cutover_log analog, keyed by change_key). Gated by
+      ops.sp_assert_arsenal_enabled('SL5'); FATAL sp_assert_deps(['AR_orc']). Never a chat question, ever.
+      queue_driven: registers in bigquery/15 + ops/triggers.json + bigquery/18 stalled_runs only (NOT 12/24).
 
   # ---- WEEKLY (Sunday) ----
   - id: W1
@@ -176,6 +224,21 @@ routines:
     monitor_class: monthly_ftd
     depends_on: [M4]
     writes: [analytics.deployed_twr_forecast, events.decision_log]
+  - id: SL4
+    name: Discretionary Retirement Proposer
+    schedule: "monthly after M4"
+    monitor_class: monthly_ftd
+    depends_on: [M4]
+    writes: [events.queue_events, events.strategy_lifecycle, events.decision_log, ops.alerts]
+    notes: >
+      SISA arsenal loop (ops/RUNBOOK.md §39). Monthly REMOVE-ONLY discretionary-retirement scanner,
+      default-KEEP: reads the objective state.strategy_retirement_candidacy signal (edge-decay / redundancy /
+      dominated-by-newcomer), enqueues review_type='strategy-retirement' (conservative_default=KEEP) + writes
+      RETIREMENT_PROPOSED; only an affirmative AR RETIRE verdict routes to the existing D2 step-5 termination
+      handler. Enforces the N>=2 floor (never proposes below it) + a per-strategy post-KEEP re-proposal
+      cooldown. Adds NO new autonomy to the mechanical kill path (drawdown/30-trade/m2m stay immediate) and
+      can never spare a strategy a mechanical trigger flagged. Gated by ops.sp_assert_arsenal_enabled('SL4');
+      FATAL sp_assert_deps(['M4']). decision_log 'evaluated, no change' meta-heartbeat every firing.
 
   # ---- QUARTERLY (1st trading day of quarter) ----
   - id: Q1
@@ -199,6 +262,23 @@ routines:
     monitor_class: quarterly_ftd
     depends_on: [Q2, Q3]
     writes: [Watchlist.md, events.queue_events, events.decision_log]
+  - id: SL1
+    name: Strategy Candidate Synthesis & Qualification
+    schedule: "quarterly after Q1,Q3"
+    monitor_class: quarterly_ftd
+    depends_on: [Q1, Q3]
+    writes: [state.strategy_candidates, events.strategy_lifecycle, events.queue_events,
+             events.decision_log, ops.alerts]
+    notes: >
+      SISA arsenal loop (ops/RUNBOOK.md §39; ops/autonomy_levels.yaml loop strategy_arsenal). Quarterly
+      deep-research candidate synthesis + mechanical qualifier (DEFAULT-REJECT on ambiguity): reads the
+      candidate feed (events.strategy_candidates from D1/Q1/Q3/A1) + the regime/foundation factbase +
+      state.arsenal_regime_coverage + terminated-strategy post-mortems, synthesizes 0-2 candidates biased
+      toward zero/under-covered regime cells, and promotes to QUALIFYING->AUTHORING only when the
+      concurrent-incubation cap + adoption-rate window are open (else waits FIFO). A roster at the N>=2 floor
+      force-generates candidates + raises an INFO 'roster_below_floor' alert. Gated by
+      ops.sp_assert_arsenal_enabled('SL1'); FATAL sp_assert_deps(['Q1','Q3']). decision_log 'evaluated, no
+      change' meta-heartbeat every firing.
 
   # ---- ANNUAL (1st trading day of year / experiment anniversary) ----
   - id: A1

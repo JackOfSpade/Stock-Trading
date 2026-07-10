@@ -71,7 +71,14 @@ routines AS (
     STRUCT('Q4'  AS routine, 'quarterly_ftd' AS schedule),
     STRUCT('A1'  AS routine, 'annual_ftd'    AS schedule),
     STRUCT('A2'  AS routine, 'annual_ftd'    AS schedule),
-    STRUCT('A3'  AS routine, 'annual_ftd'    AS schedule)
+    STRUCT('A3'  AS routine, 'annual_ftd'    AS schedule),
+    -- SISA strategy-lifecycle routines (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner
+    -- directive). Only the calendar-scheduled SL routines register here (self-bootstrapping, so none can
+    -- alarm until it logs a first completed run); the queue-driven SL2/SL5 are intentionally NOT listed
+    -- (same rule as AR_att/AR_orc — their firing day is not calendar-derivable).
+    STRUCT('SL1' AS routine, 'quarterly_ftd' AS schedule),
+    STRUCT('SL3' AS routine, 'daily_trading' AS schedule),
+    STRUCT('SL4' AS routine, 'monthly_ftd'   AS schedule)
   ])
 )
 SELECT r.routine, r.schedule, t.today
