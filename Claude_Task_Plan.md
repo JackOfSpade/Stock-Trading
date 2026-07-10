@@ -702,7 +702,9 @@ Read access scope: Daily cadence. Read decisions from `events.decision_log` + `a
 
 RUN LOGGING (every run — observability, `bigquery/10_observability.sql`). At the very START of this routine, `CALL ops.sp_log_run('D2', <today, America/Denver from state.trading_day_today>, 'started', <session_id>, <branch>, NULL, NULL, NULL)`. At the END, call it again with `'completed'` (or `'failed'`/`'halted'` + an `error_msg` if it stopped), passing `rows_written` = fills + marks ingested. This populates `state.freshness.d2_ran_last_trading_day` and arms the dead-man's switch (`bigquery/scheduled_queries/daily_freshness_check.sql`), so a silently-skipped or crashed D2 is detected instead of failing silent.
 
-STEP 0 / STEP 0b / PER-STRATEGY PERFORMANCE MAINTENANCE / SEEDING now run in **D2a** (cut over 2026-07-09, autonomously by D2a; `ops.d2a_cutover_log` + an INFO `ops.alerts` `auto_cutover` row are the record). D2 no longer reconciles fills, snapshots the account, or maintains the deployed-TWR engine — those run in D2a, on which D2 now `depends_on: [D1, D2a]` (`ops/cadence.yaml`). See `state.current_positions` / `analytics.strategy_nav` / `perf.strategy_daily` / `analytics.account_reconciliation` for its output. `ops.sp_assert_deps('D2', ['D1','D2a'], <today>)` (the dep gate) already guarantees D2a reconciled the book and made marks/engine fresh before D2 runs.
+**DEPENDENCY GATE — SEPARATE and FATAL, do NOT wrap, do NOT substitute the TRADING-ENABLE gate below for this (root-caused 2026-07-09: a D2 session followed the TRADING-ENABLE gate but never invoked this one, so D2 ran on a stale D1/D2a with no hard-stop) — `CALL ops.sp_assert_deps('D2', ['D1', 'D2a'], <today>)` BEFORE the start-log, before anything else in this routine.** Aborts (RAISE) + raises a `missing_dependency` critical if D1 or D2a have not logged `completed` for today; self-bootstrapping (an upstream that hasn't adopted run-logging yet is treated as satisfied). This is the general rule from Observability § above, restated here because it is the one call in this routine that must never be skipped.
+
+STEP 0 / STEP 0b / PER-STRATEGY PERFORMANCE MAINTENANCE / SEEDING now run in **D2a** (cut over 2026-07-09, autonomously by D2a; `ops.d2a_cutover_log` + an INFO `ops.alerts` `auto_cutover` row are the record). D2 no longer reconciles fills, snapshots the account, or maintains the deployed-TWR engine — those run in D2a, on which D2 now `depends_on: [D1, D2a]` (`ops/cadence.yaml`). See `state.current_positions` / `analytics.strategy_nav` / `perf.strategy_daily` / `analytics.account_reconciliation` for its output. The dependency gate above is what actually guarantees D2a reconciled the book and made marks/engine fresh before D2 runs — it is a real CALL, not just a design assumption.
 
 **TRADING-ENABLE GATE (retained on the D2 side — D2 still stages discretionary orders; self-improvement audit B-1-obs, 2026-07-03) — `CALL ops.sp_assert_trading_enabled('D2')` before reading Daily.md's actions or sizing/staging anything below.** FATAL (mirrors `ops.sp_assert_deps`): RAISEs and aborts if `state.trading_enabled.trading_enabled = FALSE` (a manual/auto halt, `state.system_health.all_green = FALSE`, or a book-level NAV drawdown breach — see `bigquery/23_trading_control.sql`). This is the freshness-inclusive gate (unlike D2a's mechanical gate), and it is safe to call here because D2a — which now runs first and on which D2 depends — has already ingested today's marks and recomputed the engine (the gate-ordering deadlock `bigquery/33_gate_ordering_fix.sql` fixed for the pre-cutover single-routine case no longer applies). Reads are safe regardless, but do NOT size or stage anything past this point if it raises.
 
@@ -765,6 +767,8 @@ If no orders, no file changes, no events: "No actions required."
 
 ```
 Read access scope: Calendar Hygiene. Read the spec/cadence `.md` files + BigQuery state (`state.open_queue`, `state.current_positions`) as needed. (The Decision_Log/queue archives are retired per §15 — query `events.decision_log` / `events.queue_events` if historical context is needed.)
+
+**DEPENDENCY GATE — SEPARATE and FATAL, do NOT wrap — `CALL ops.sp_assert_deps('D3', ['D2'], <today>)` BEFORE the start-log, before anything else in this routine.** Aborts (RAISE) + raises a `missing_dependency` critical if D2 has not logged `completed` for today; self-bootstrapping (an upstream that hasn't adopted run-logging yet is treated as satisfied). This is the general rule from Observability § above, restated here because it is the one call in this routine that must never be skipped (a 2026-07-09 audit found a D2 session skip the analogous call for its own D1/D2a dependency, so this is now inlined per-routine rather than left to a shared preamble alone).
 
 Reconcile the staged-order registry (`state.open_orders`) against the live IBKR connector, reconcile Google Calendar against current state, and keep the `PENDING_ANALYSIS` queue (`events.queue_events` / `state.open_queue`) healthy. Recurring cadence work (D1, D2, …, A3) runs as routines; Claude-only analysis runs in-session or via the `PENDING_ANALYSIS` queue. The calendar holds **only two event types** (2026-07-09 — see Claude_Task_Plan.md § Calendar MCP usage): a non-craftable order's `[Claude] Confirm order` manual-entry event, and a BigQuery-unreachable `[Claude] ATTENTION — RE-AUTH BigQuery connector` event. Every craftable order and every ordinary hard-stop now relies on IBKR's own notification / `alert_emailer.gs` instead, so most `state.open_orders` reconciliation below is calendar-independent.
 
@@ -901,6 +905,8 @@ Runs after W1, W2, W3 are all saved. Converts ranked shortlists and per-position
 ```
 Read access scope: Weekly cadence. Query `events.decision_log` (+ `analytics.find_precedents()`) bounded to the recent operationally-relevant window — all history, queryable, no live/archive split (§15). Read `Strategy.md`, `Experiment_Parameters.md`, `Operating_Protocols.md`, `Watchlist.md`, `B_Sub_Pattern_Taxonomy.md` as relevant (positions from `state.current_positions`, regime from `state.current_regime`, decisions from `events.decision_log`).
 
+**DEPENDENCY GATE — SEPARATE and FATAL, do NOT wrap, do NOT substitute the TRADING-ENABLE gate below for this — `CALL ops.sp_assert_deps('W4', ['W1', 'W2', 'W3'], <today>)` BEFORE the start-log, before anything else in this routine.** Aborts (RAISE) + raises a `missing_dependency` critical if W1, W2, or W3 have not logged `completed` for today; self-bootstrapping. This is the general rule from Observability § above, restated here because it is the one call in this routine that must never be skipped (a 2026-07-09 audit found an analogous D2 session skip this exact call for its own dependency, so it is now inlined per-routine rather than left to a shared preamble alone).
+
 **TRADING-ENABLE GATE (self-improvement audit B-1-obs, 2026-07-03) — `CALL ops.sp_assert_trading_enabled('W4')` before any staging below.** FATAL (mirrors `ops.sp_assert_deps`) — aborts if `state.trading_enabled.trading_enabled = FALSE`.
 
 Read the just-saved weekly research files:
@@ -953,6 +959,8 @@ Runs weekly (Sunday, after W4). **Repurposed 2026-06-06 (BigQuery cutover §15):
 
 ```
 Read access scope: Weekly cadence with factbase WRITE permission. Query `events.decision_log` (entries added since the last W5 run, by `entry_date`/`event_ts`), `analytics.calibration_summary`, `analytics.account_reconciliation`, `state.current_positions`. Read the kept factbase/spec files `B_Sub_Pattern_Taxonomy.md`, `Watchlist.md`, `Operating_Protocols.md`.
+
+**DEPENDENCY GATE — SEPARATE and FATAL, do NOT wrap — `CALL ops.sp_assert_deps('W5', ['W4'], <today>)` BEFORE the start-log, before anything else in this routine.** Aborts (RAISE) + raises a `missing_dependency` critical if W4 has not logged `completed` for today; self-bootstrapping. This is the general rule from Observability § above, restated here because it is the one call in this routine that must never be skipped (a 2026-07-09 audit found an analogous D2 session skip this exact call for its own dependency, so it is now inlined per-routine rather than left to a shared preamble alone).
 
 FACTBASE MIRRORING — walk the new `events.decision_log` entries since the last W5 run and mirror durable signal into the kept factbase files.
 
@@ -1104,6 +1112,8 @@ Schedule: Monthly, after M1a completes.
 ```
 Read access scope: Monthly cadence. May query all of `events.decision_log` (no live/archive split, §15). Read Strategy.md (full document — strategy-mapping requires reading per-strategy activation rules), Experiment_Parameters.md, Watchlist.md, Operating_Protocols.md (positions from `state.current_positions`; regime from `state.current_regime`).
 
+**DEPENDENCY GATE — SEPARATE and FATAL, do NOT wrap — `CALL ops.sp_assert_deps('M1b', ['M1a'], <today>)` BEFORE the start-log, before anything else in this routine.** Aborts (RAISE) + raises a `missing_dependency` critical if M1a has not logged `completed` for today; self-bootstrapping. This is the general rule from Observability § above, restated here because it is the one call in this routine that must never be skipped (a 2026-07-09 audit found an analogous D2 session skip this exact call for its own dependency, so it is now inlined per-routine rather than left to a shared preamble alone).
+
 CRITICAL BLINDING REQUIREMENT — read scope: Read M1a's regime scores from `state.current_regime` / `events.regime_events` (scope `FUNDAMENTAL_AXIS`, latest month) for the regime input. Do NOT read `events.macro_series` or any other macro/policy/earnings source for this month — the underlying inputs M1a consumed are not part of M1b's input set by design. This preserves the architectural blinding between regime scoring and strategy mapping per Strategy.md "Two-routine blinded scoring." M1b's regime view is exactly M1a's `FUNDAMENTAL_AXIS` regime scores in `events.regime_events`, no more.
 
 Read the latest `FUNDAMENTAL_AXIS` regime scores from `state.current_regime` / `events.regime_events`.
@@ -1210,6 +1220,8 @@ Runs after M1, M2, M3 are all saved.
 ```
 Read access scope: Monthly cadence. May query all of `events.decision_log` (no live/archive split, §15). Read `Strategy.md`, `Experiment_Parameters.md`, `Operating_Protocols.md`, `Watchlist.md` as relevant (positions from `state.current_positions`, regime from `state.current_regime`, perf/kill from `perf.strategy_daily` / `perf.kill_flags`).
 
+**DEPENDENCY GATE — SEPARATE and FATAL, do NOT wrap, do NOT substitute the TRADING-ENABLE gate below for this — `CALL ops.sp_assert_deps('M4', ['M1b', 'M2', 'M3'], <today>)` BEFORE the start-log, before anything else in this routine.** Aborts (RAISE) + raises a `missing_dependency` critical if M1b, M2, or M3 have not logged `completed` for today; self-bootstrapping. This is the general rule from Observability § above, restated here because it is the one call in this routine that must never be skipped (a 2026-07-09 audit found an analogous D2 session skip this exact call for its own dependency, so it is now inlined per-routine rather than left to a shared preamble alone).
+
 **TRADING-ENABLE GATE (self-improvement audit B-1-obs, 2026-07-03) — `CALL ops.sp_assert_trading_enabled('M4')` before any staging below.** FATAL (mirrors `ops.sp_assert_deps`) — aborts if `state.trading_enabled.trading_enabled = FALSE`.
 
 Read the just-saved monthly research files:
@@ -1269,6 +1281,8 @@ Runs monthly, after M4 (Monthly Action Conversion). The forward-looking monitori
 
 ```
 Read access scope: Monthly cadence, BigQuery read + write. Read `perf.strategy_daily` (the deployed-TWR series), `perf.kill_flags`, `events.macro_series`, and the prior run's `analytics.deployed_twr_forecast`. No web research or repo factbase reads required.
+
+**DEPENDENCY GATE — SEPARATE and FATAL, do NOT wrap — `CALL ops.sp_assert_deps('M5', ['M4'], <today>)` BEFORE the start-log, before anything else in this routine.** Aborts (RAISE) + raises a `missing_dependency` critical if M4 has not logged `completed` for today; self-bootstrapping. This is the general rule from Observability § above, restated here because it is the one call in this routine that must never be skipped (a 2026-07-09 audit found an analogous D2 session skip this exact call for its own dependency, so it is now inlined per-routine rather than left to a shared preamble alone).
 
 STEP 0 — ensure the store + early-warning view exist: idempotently run `CREATE TABLE IF NOT EXISTS analytics.deployed_twr_forecast` **and** `CREATE OR REPLACE VIEW analytics.twr_forecast_vs_actual` (bigquery/06_forecast.sql §store + §B). The view reads the table + `perf.strategy_daily`, so it is safe to (re)create even when the table is empty — STEP 1 needs it to exist on the next run.
 
@@ -1352,6 +1366,8 @@ Schedule: daily (after Attacker routine). The routine wakes, scans the queue, an
 
 ```
 Read access scope: Read the review queue from `state.open_queue` / `state.open_queue_detail` (queue `PENDING_REVIEW`), Strategy.md, Experiment_Parameters.md, AI_Trading_Foundation.md, and BigQuery state as needed (positions from `state.current_positions`, regime from `state.current_regime`, decisions from `events.decision_log` — all history, queryable, no live/archive split, §15), the queue entry's artifact_path and attacker_output_path.
+
+**DEPENDENCY GATE — SEPARATE and FATAL, do NOT wrap — `CALL ops.sp_assert_deps('AR_orc', ['AR_att'], <today>)` BEFORE the start-log, before anything else in this routine.** Aborts (RAISE) + raises a `missing_dependency` critical if AR_att has not logged `completed` for the entry's cycle; self-bootstrapping. This is the general rule from Observability § above, restated here because it is the one call in this routine that must never be skipped (a 2026-07-09 audit found an analogous D2 session skip this exact call for its own dependency, so it is now inlined per-routine rather than left to a shared preamble alone).
 
 Read the review queue from `state.open_queue` (queue `PENDING_REVIEW`).
 
@@ -1583,6 +1599,8 @@ Runs after Q2 and Q3 are saved. Q1 has no actionable outputs and does not gate Q
 ```
 Read access scope: Quarterly cadence. Query `events.decision_log` for any cross-references needed (all history queryable, no live/archive split, §15). Read `Strategy.md`, `Experiment_Parameters.md`, `AI_Trading_Foundation.md`, `Operating_Protocols.md`, `Watchlist.md` as relevant (positions from `state.current_positions`, regime from `state.current_regime`, decisions from `events.decision_log`).
 
+**DEPENDENCY GATE — SEPARATE and FATAL, do NOT wrap, do NOT substitute the TRADING-ENABLE gate below for this — `CALL ops.sp_assert_deps('Q4', ['Q2', 'Q3'], <today>)` BEFORE the start-log, before anything else in this routine.** Aborts (RAISE) + raises a `missing_dependency` critical if Q2 or Q3 have not logged `completed` for today; self-bootstrapping. This is the general rule from Observability § above, restated here because it is the one call in this routine that must never be skipped (a 2026-07-09 audit found an analogous D2 session skip this exact call for its own dependency, so it is now inlined per-routine rather than left to a shared preamble alone).
+
 **TRADING-ENABLE GATE (self-improvement audit B-1-obs, 2026-07-03) — `CALL ops.sp_assert_trading_enabled('Q4')` before any staging below.** FATAL (mirrors `ops.sp_assert_deps`) — aborts if `state.trading_enabled.trading_enabled = FALSE`.
 
 Read the just-saved quarterly research files:
@@ -1741,6 +1759,8 @@ Runs after A1 and A2 are saved. Produces the updated AI_Trading_Foundation.md fr
 
 ```
 Read access scope: Annual cadence. Read everything (full `events.decision_log` history, queryable, no live/archive split, §15). Read `AI_Trading_Foundation.md` (current revision), `Strategy.md` (current revisions for all strategies), `Experiment_Parameters.md`, `Operating_Protocols.md`, `Watchlist.md` (positions from `state.current_positions`, decisions from `events.decision_log`).
+
+**DEPENDENCY GATE — SEPARATE and FATAL, do NOT wrap, do NOT substitute the TRADING-ENABLE gate below for this — `CALL ops.sp_assert_deps('A3', ['A1', 'A2'], <today>)` BEFORE the start-log, before anything else in this routine.** Aborts (RAISE) + raises a `missing_dependency` critical if A1 or A2 have not logged `completed` for today; self-bootstrapping. This is the general rule from Observability § above, restated here because it is the one call in this routine that must never be skipped (a 2026-07-09 audit found an analogous D2 session skip this exact call for its own dependency, so it is now inlined per-routine rather than left to a shared preamble alone).
 
 **TRADING-ENABLE GATE (self-improvement audit B-1-obs, 2026-07-03) — `CALL ops.sp_assert_trading_enabled('A3')` before any staging below.** FATAL (mirrors `ops.sp_assert_deps`) — aborts if `state.trading_enabled.trading_enabled = FALSE`.
 
