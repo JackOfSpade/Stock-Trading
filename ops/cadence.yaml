@@ -298,6 +298,42 @@ routines:
     depends_on: [A1, A2]
     writes: [AI_Trading_Foundation.md, Strategy.md, events.queue_events, events.decision_log]
 
+# ---- WEB-UI TRIGGER AUDIT — 2026-07-10 (Claude-in-Chrome, cross-checked against ops.run_log) ----
+# Exact clock times below are NOT enforced anywhere (per the file header, exact times live only in
+# the web UI) — recorded purely as the human-readable reference scripts/print_routines.py invites
+# ("Record exact times in cadence.yaml if you want them printed"). Read directly from each trigger's
+# editor and, where history existed, cross-checked against real ops.run_log execution timestamps.
+#
+# DAILY (the platform's native Daily/Weekdays picker IS genuinely DST-aware — shows "MDT"/"MST"):
+#   D1 4:00 PM MT · D2a 4:20 PM MT · D2 5:15 PM MT (widened from 4:30 PM 2026-07-10 — D2a's real
+#     completion time varies 6-17+ min in ops.run_log; the old 10-min gap was too thin) · D3 6:30 PM MT ·
+#     SL3 8:00 PM MT · AR_att 5:30 PM MT · AR_orc 6:00 PM MT · SL2 7:00 PM MT · SL5 7:15 PM MT
+#   W1 12:00 AM MT Sun · W2 12:30 AM MT Sun · W3 1:00 AM MT Sun · W4 1:30 AM MT Sun · W5 2:00 AM MT Sun
+#   D1/D2a/D2/SL3 intentionally still fire on weekends/holidays (recurrence type "Daily", not
+#   "Weekdays") — confirmed via real weekend runs (2026-06-20/21, 2026-07-04/05) that they self-detect
+#   the non-trading day and complete cheap, safe, idempotent work (D1 catches weekend geopolitical
+#   news relevant to Monday's open; D2/D2a run harmless broker/cash reconciliation). Do NOT switch
+#   these to "Weekdays" — that would remove working, valuable behavior, not fix a bug.
+#
+# MONTHLY/QUARTERLY/ANNUAL (forced onto raw "Custom" cron — confirmed 2026-07-10 the platform's
+# recurrence-type options are ONLY Once/Hourly/Daily/Weekdays/Weekly/Custom, no month-of-year option
+# exists — so these have NO timezone concept, just a fixed UTC hour. PERMANENT PLATFORM LIMITATION,
+# not a bug to keep re-investigating; revisit only if the platform ever adds a DST-aware monthly type):
+#   M1a 5:00 AM MT · M1b 6:00 AM MT · M2 7:00 AM MT · M3 8:00 AM MT · M4 9:00 AM MT · M5 10:00 AM MT ·
+#     SL4 10:05 AM MT (re-staggered off M5's collision 2026-07-10) — all tuned for MDT (UTC-6); fire
+#     ~1hr EARLY every MST month (~Nov-Mar). Accepted; no fix available.
+#   Q1 6:00 PM MT · Q2 7:00 PM MT · Q3 8:00 PM MT · Q4 9:00 PM MT · SL1 10:00 PM MT — FIXED 2026-07-10
+#     (were firing ~6h early: entered as an MT wall-clock hour but evaluated as UTC). Same MDT-only
+#     caveat as the monthly cohort above (fires ~1hr early every January).
+#   A1 7:30 PM MT · A2 8:30 PM MT · A3 9:30 PM MT — FIXED 2026-07-10 (same root cause as Q1-4/SL1);
+#     no seasonal caveat, these only ever fire in January (MST) so the fix is exact year-round.
+#
+# Also confirmed correct and left untouched: M4's instruction text (a prior audit pass misread it as
+# missing its "Read Claude_Task_Plan.md. Perform " prefix; ops.run_log's actual last-received
+# instruction is fully canonical). W5's Instructions field was already correct; only its Name/title
+# field was missing the " — regular routine" suffix (fixed 2026-07-10). A2's Instructions had a
+# trailing newline (stripped 2026-07-10).
+
 # ---- NON-CLAUDE AUTOMATION (documented here for visibility; not run by the harness) ----
 # The weekly performance self-email is NOT a Claude routine. It is a Google Apps Script
 # (ops/weekly_report/weekly_report.gs) on a weekly time-trigger that runs on Google's
