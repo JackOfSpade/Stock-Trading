@@ -1,0 +1,352 @@
+# Golden-scenario prose regression fixtures (ITEM 20, 2026-07-11).
+#
+# WHY THIS EXISTS. This system's real source code is prose (Strategy.md, Operating_Protocols.md,
+# Claude_Task_Plan.md routine bodies) read fresh by an LLM every routine run — not the handful of
+# Python modules CI otherwise guards. Every existing CI check (check_cadence_consistency.py,
+# check_roster_consistency.py, check_autonomy_consistency.py, split_strategy.py --check) is a
+# STRUCTURAL fact scraper: it confirms a routine id, a schedule string, or a threshold NUMBER appears
+# consistently across files. None of them evaluate what a routine would DECIDE when it reads the
+# prose. Since the 2026-07-10 Strategy Arsenal (SISA) autonomy conversion, a prose edit to any of the
+# three files above reaches LIVE decision-making behavior via auto-merge with zero behavioral test in
+# between — a wording change that silently flips a GO to a NO-GO, or an ACTIVATE to a DO-NOT-ACTIVATE,
+# would sail through every existing gate.
+#
+# This file is the pinned fixture set: each entry is a concrete decision scenario, DRAWN from the rules
+# actually stated in Strategy.md / Experiment_Parameters.md / Operating_Protocols.md / Claude_Task_Plan.md
+# as read on 2026-07-11, with an EXPECTED decision + the specific rule/threshold that produces it. The
+# runner (tests/golden_scenarios/run_golden.py) diffs a live model's read of CURRENT prose against these
+# pinned expectations. A flip is a candidate prose regression, surfaced for mechanical follow-up — never
+# a human review/approval/chat/PR gate (CLAUDE.md "Settled decisions" — SISA autonomy is not to be
+# re-gated by this or any other check).
+#
+# SCHEMA (validated offline, no network, by run_golden.py --offline — the CI HARD GATE):
+#   id                 — short stable identifier, unique across this file (e.g. RR-01, KT-05, SB-02).
+#   situation          — self-contained prose description of the facts a routine session would be given.
+#     Concrete numbers only (no "roughly", no ambiguous qualifiers) so the expected_decision is the
+#     single correct mechanical read of current prose, not a judgment call the fixture itself is fuzzy on.
+#   governing_files    — repo-relative paths whose CURRENT wording determines the answer. Must exist
+#     (existence is part of the offline hard gate — a renamed/moved governing file must be caught here,
+#     not discovered only when the workflow that reads it 404s).
+#   expected_decision  — one of: GO | NO-GO | CONTINUE | TERMINATE | ACTIVATE | DO-NOT-ACTIVATE, optionally
+#     followed by free-text qualifying detail in parentheses (e.g. "CONTINUE (routes to review, not
+#     direct terminate)"). The offline gate checks the LEADING token only; the parenthetical is for a
+#     human/model reading the diff, not machine-graded.
+#   rationale          — one or two sentences citing the exact rule, section, and threshold applied.
+#
+# Categories represented (per the ITEM 20 brief): regime-router edge cases (RR-*, including a wash-VIX
+# boundary pair), kill-trigger / gate mechanics (KT-*, including a -50% drawdown kill and the
+# runaway-success / mark-to-market REVIEW-not-terminate distinction), and Strategy B post-event entry
+# criteria including an ambiguous-adjacent setup and the "NO-GO records are context, not barriers" rule
+# (SB-*). 20 cases total (brief calls for 12-20).
+#
+# MAINTENANCE: a scenario is pinned to the prose as read on 2026-07-11. If a strategy's machinery is
+# legitimately revised pre-launch, or a NEW strategy is added (additive, per Strategy.md rev 37), add
+# NEW scenarios rather than editing an existing one's expected_decision in place — the point of a golden
+# set is that a silent expected-value edit defeats the regression check it exists to run. A genuine,
+# deliberate threshold change (which for an in-force strategy's own machinery is otherwise prohibited —
+# see Strategy.md "Threshold immutability") is the one case where updating an existing fixture's
+# expected_decision is legitimate, and it should cite the Decision_Log entry that authorized the change.
+
+scenarios:
+
+  # ---- Regime router edge cases (RR-*) ---------------------------------------------------------------
+
+  - id: RR-01
+    category: regime_router
+    situation: >
+      Regime router technical read for today: SPY closes above its 50-day SMA, and the 50-day SMA is
+      above its 200-day SMA (SPY Trend = UP). 62% of S&P 500 constituents close above their own 200-day
+      SMA (Breadth = HEALTHY). VIX closes at 14.20 (VIX Regime = LOW). The 10-year Treasury yield is
+      above the 2-year yield (Yield Curve = NORMAL). This month's fundamental (M1b) call agrees with the
+      technical read for every strategy — no divergence review is triggered for any strategy. What is
+      Strategy A's router activation state today?
+    governing_files: [Strategy.md]
+    expected_decision: "ACTIVATE"
+    rationale: >
+      Strategy A's technical activation rule (Strategy.md "Per-strategy technical activation rules"):
+      ACTIVATE if SPY Trend = UP AND Breadth = HEALTHY. Both hold (archetype 1, clean bull); the
+      fundamental call agrees, so activation state resolves without a divergence review.
+
+  - id: RR-02
+    category: regime_router
+    situation: >
+      Same day as RR-01 except Equity Breadth reads 38% of S&P 500 constituents above their 200-day SMA
+      (Breadth = WEAK). SPY Trend is still UP (archetype 2, narrow bull). Fundamental call agrees with
+      technical for every strategy. What is Strategy A's router activation state today?
+    governing_files: [Strategy.md]
+    expected_decision: "DO-NOT-ACTIVATE"
+    rationale: >
+      Strategy A requires SPY Trend = UP AND Breadth = HEALTHY. Breadth is WEAK (38% < 50% cutoff), so A
+      deactivates even though the trend is UP — Strategy.md archetype 2 explicitly deactivates A in a
+      narrow bull (a rally not broadly participated in is fragile to rotation, per the rationale under
+      Strategy A's activation rule).
+
+  - id: RR-03
+    category: regime_router
+    situation: >
+      Same regime as RR-02 (SPY Trend = UP, Breadth = WEAK at 38%, VIX = 18.0 / NORMAL). What is Strategy
+      B's router activation state today?
+    governing_files: [Strategy.md]
+    expected_decision: "ACTIVATE"
+    rationale: >
+      Strategy B's technical rule is SPY Trend != DOWN AND VIX Regime != HIGH — it does not reference
+      Breadth at all. SPY Trend = UP (!= DOWN) and VIX = NORMAL (!= HIGH), so B activates regardless of
+      the WEAK breadth that deactivates A (Strategy.md archetype 2: "B, C, D activate").
+
+  - id: RR-04
+    category: regime_router
+    situation: >
+      Same regime as RR-02/RR-03 (SPY Trend = UP, Breadth = WEAK at 38%, VIX = 18.0 / NORMAL). What is
+      Strategy E's router activation state today?
+    governing_files: [Strategy.md]
+    expected_decision: "DO-NOT-ACTIVATE"
+    rationale: >
+      Strategy E's technical rule is SPY Trend != DOWN AND VIX Regime != HIGH AND Breadth = HEALTHY — the
+      tightened rule (vs. B) explicitly adds the Breadth requirement because E runs market-neutral
+      within-industry pairs that need cross-sectional dispersion; Breadth is WEAK, so E deactivates even
+      though B (same trend/VIX reading) activates. Strategy.md archetype 2 explicitly notes "E
+      deactivates (tightened rule also needs HEALTHY breadth)."
+
+  - id: RR-05
+    category: regime_router
+    situation: >
+      SPY closes above its 50-day SMA and the 50-day SMA is above its 200-day SMA (SPY Trend = UP). VIX
+      closes at 28.40 (VIX Regime = HIGH, > 25). What is Strategy C's router activation state today?
+    governing_files: [Strategy.md]
+    expected_decision: "ACTIVATE"
+    rationale: >
+      Strategy C's technical rule is ACTIVATE if SPY Trend != DOWN — it has no VIX term at all. SPY Trend
+      is UP (!= DOWN), so C activates despite VIX HIGH. Strategy.md archetype 5 ("Volatility shock on
+      otherwise benign trend"): "C activates (only needs SPY != DOWN)."
+
+  - id: RR-06
+    category: regime_router
+    situation: >
+      Same regime as RR-05 (SPY Trend = UP, VIX = 28.40 / HIGH). What is Strategy B's router activation
+      state today?
+    governing_files: [Strategy.md]
+    expected_decision: "DO-NOT-ACTIVATE"
+    rationale: >
+      Strategy B's technical rule requires VIX Regime != HIGH. VIX is HIGH (28.40 > 25), so B deactivates
+      even though SPY Trend = UP would otherwise pass the SPY-Trend half of the rule. Strategy.md
+      archetype 5: "B and E deactivate" on a VIX-HIGH shock; rationale section for B: "In HIGH VIX
+      regimes, post-event move sizes are noisy... diluting the signal."
+
+  - id: RR-07
+    category: regime_router
+    situation: >
+      SPY closes above its 50-day SMA, but the 50-day SMA is BELOW the 200-day SMA — exactly one of the
+      two SPY-Trend sub-conditions holds, so SPY Trend = NEUTRAL (neither UP nor DOWN). VIX closes at
+      EXACTLY 25.00. What is Strategy B's router activation state today (the wash-VIX boundary case)?
+    governing_files: [Strategy.md]
+    expected_decision: "ACTIVATE"
+    rationale: >
+      VIX Regime bands (Strategy.md "Shared regime vocabulary"): LOW < 15, NORMAL is 15 <= VIX <= 25
+      (inclusive at both ends), HIGH is strictly > 25. A close of exactly 25.00 is NORMAL, not HIGH, by
+      the stated inclusive upper bound. SPY Trend is NEUTRAL, which is != DOWN. Strategy B's rule (SPY
+      Trend != DOWN AND VIX Regime != HIGH) is satisfied on both terms, so B activates. Any read that
+      classifies 25.00 as HIGH is a prose-regression flip on this exact boundary.
+
+  - id: RR-08
+    category: regime_router
+    situation: >
+      Same SPY Trend as RR-07 (NEUTRAL) but VIX closes at 25.01. What is Strategy B's router activation
+      state today?
+    governing_files: [Strategy.md]
+    expected_decision: "DO-NOT-ACTIVATE"
+    rationale: >
+      25.01 is strictly greater than the 25 upper bound of the NORMAL band, so VIX Regime = HIGH. Strategy
+      B's rule requires VIX Regime != HIGH; that fails, so B deactivates — a one-cent flip from RR-07's
+      ACTIVATE, which is exactly the boundary precision this pair is pinned to catch.
+
+  - id: RR-09
+    category: regime_router
+    situation: >
+      SPY Trend = UP. The Yield Curve State (10Y yield vs. 2Y yield) has been INVERTED continuously for
+      20 consecutive months, so the Yield Curve Sustained Inversion Flag = SUSTAINED (the 18-consecutive-
+      month bar was crossed 2 months ago and has not since reverted). What is Strategy D's router
+      activation state today?
+    governing_files: [Strategy.md]
+    expected_decision: "DO-NOT-ACTIVATE"
+    rationale: >
+      Strategy D's rule is ACTIVATE if (SPY Trend = UP OR NEUTRAL) AND Sustained Inversion Flag =
+      NOT-SUSTAINED. The trend condition is satisfied but the flag is SUSTAINED, so D deactivates
+      regardless of trend — Strategy.md archetype 4 ("Late-cycle"): "D deactivates; others may activate."
+
+  - id: RR-11
+    category: regime_router
+    situation: >
+      SPY closes below its 50-day SMA, and the 50-day SMA is below its 200-day SMA (SPY Trend = DOWN).
+      Breadth is HEALTHY at 55%. VIX closes at 17.0 (NORMAL). What is Strategy E's router activation
+      state today?
+    governing_files: [Strategy.md]
+    expected_decision: "DO-NOT-ACTIVATE"
+    rationale: >
+      Strategy E's rule requires SPY Trend != DOWN as one of its three AND-ed conditions. SPY Trend =
+      DOWN fails that term outright, so E deactivates regardless of the otherwise-favorable Breadth and
+      VIX readings — Strategy.md archetype 6 ("Confirmed bear"): "All five strategies technically
+      deactivate."
+
+  - id: RR-12
+    category: regime_router
+    situation: >
+      This month, 3 of the 5 primary fundamental-template input categories (macro releases, Fed/FOMC
+      materials, earnings aggregate) were unavailable at M1a session time due to a data-vendor outage.
+      Strategy A's TECHNICAL read today is ACTIVATE (SPY Trend = UP, Breadth = HEALTHY). What is Strategy
+      A's resulting activation state this month?
+    governing_files: [Strategy.md]
+    expected_decision: "DO-NOT-ACTIVATE"
+    rationale: >
+      Fallback protocol (Strategy.md fundamental-template section): if >= 2 of the 5 primary input
+      categories are absent at session time, the fundamental call defaults to DO-NOT-ACTIVATE across ALL
+      strategies and M1b (strategy-mapping) is not run that month; divergence review is also suppressed
+      for the month. 3 of 5 categories are missing here, so the fallback fires. A's ACTIVATE technical
+      call does not override the fundamental-fallback default — resulting activation state is
+      DO-NOT-ACTIVATE ("fundamental fallback binds without divergence review").
+
+  # ---- Kill-trigger / gate mechanics (KT-*) ----------------------------------------------------------
+
+  - id: KT-01
+    category: kill_trigger
+    situation: >
+      A strategy's deployed TWR (deployed capital only, capital-flow-invariant, per Experiment_
+      Parameters.md's TWR measurement convention) peaked at +34% since its first trade and has since
+      fallen to a current deployed TWR that is a 52% peak-to-trough drawdown from that peak. The strategy
+      has already cleared its 30-trade gate. What should happen to this strategy?
+    governing_files: [Experiment_Parameters.md, Claude_Task_Plan.md]
+    expected_decision: "TERMINATE"
+    rationale: >
+      Experiment_Parameters.md kill trigger #1 (Drawdown): deployed TWR drops >= 50% below its highest
+      historical value since first trade -> immediate, mechanical, context-independent termination — "no
+      judgment, no review." 52% clears the >=50% threshold. Claude_Task_Plan.md D1's per-strategy
+      kill-trigger sweep flags this as "STRATEGY TERMINATION — DRAWDOWN," and D2 executes the close-all +
+      deterministic-redistribution termination path immediately, with no review step.
+
+  - id: KT-02
+    category: kill_trigger
+    situation: >
+      Same facts as KT-01 except the peak-to-trough drawdown is 46% rather than 52%. What should happen
+      to this strategy?
+    governing_files: [Experiment_Parameters.md]
+    expected_decision: "CONTINUE"
+    rationale: >
+      46% is below the 50% drawdown-kill threshold, so the drawdown trigger does not fire. No other kill
+      trigger is described as active in this scenario, so the strategy continues unaffected — a strategy
+      that has cleared its 30-trade gate "continues indefinitely until one of its kill triggers fires."
+
+  - id: KT-04
+    category: kill_trigger
+    situation: >
+      A strategy has closed 18 of the 30 trades required for its go/no-go gate (has NOT yet reached the
+      gate). Its deployed TWR, measured from its first trade, has reached +104% (more than doubled).
+      What should happen to this strategy?
+    governing_files: [Experiment_Parameters.md, Claude_Task_Plan.md]
+    expected_decision: "CONTINUE (routes to an m2m-termination structured review, not direct terminate)"
+    rationale: >
+      Experiment_Parameters.md kill trigger #3 (Runaway-success): deployed TWR doubles before the
+      strategy reaches its 30-trade gate -> flags a RUNAWAY-SUCCESS REVIEW, which "doesn't terminate the
+      strategy directly; it forces a structured review to rule out reward exploitation, hidden leverage,
+      or systematic luck." Claude_Task_Plan.md D2 step 5: "RUNAWAY-SUCCESS flag: do NOT terminate.
+      Enqueue a PENDING_REVIEW entry... The Attacker/Orchestrator routines adjudicate terminate-vs-
+      continue." The strategy keeps running pending that review's outcome.
+
+  - id: KT-05
+    category: kill_trigger
+    situation: >
+      A strategy closes its 30th trade today. Cumulative excess real return (post-tax, post-inflation,
+      vs. SGOV) from the strategy's first trade to this 30-trade mark is -2.3%. What should happen to this
+      strategy?
+    governing_files: [Experiment_Parameters.md]
+    expected_decision: "TERMINATE"
+    rationale: >
+      The per-strategy 30-trade go/no-go gate requires cumulative excess real return >= 0% to pass ("the
+      gate is a real hurdle... strategies will fail it at the gate, which is the point"). -2.3% is
+      negative, so the gate fails and the strategy terminates ("if the threshold is not met, the strategy
+      terminates").
+
+  - id: KT-06
+    category: kill_trigger
+    situation: >
+      Same facts as KT-05 except the cumulative excess real return at the 30-trade mark is +0.4% rather
+      than -2.3%. What should happen to this strategy?
+    governing_files: [Experiment_Parameters.md]
+    expected_decision: "CONTINUE"
+    rationale: >
+      +0.4% is >= 0%, so the 30-trade gate is cleared. "If the threshold is met: the strategy continues.
+      No further evaluation-based termination applies to that strategy. The strategy terminates only when
+      one of its kill triggers fires" — the strategy runs on, subject only to the ongoing mechanical
+      kill triggers, not to any further gate-style evaluation.
+
+  - id: KT-07
+    category: kill_trigger
+    situation: >
+      A strategy has accumulated 40 months of ACTIVE (router-deployed) time since its first trade — past
+      the 36-month active-time floor. Over the trailing 12 calendar months, restricted to the strategy's
+      deployed sub-periods, its deployed TWR is -9% while SGOV's return over those SAME deployed
+      sub-periods was +7% — a gap of 16 percentage points below SGOV. What should happen to this strategy?
+    governing_files: [Experiment_Parameters.md]
+    expected_decision: "CONTINUE (routes to an m2m-underperformance structured review, not direct terminate)"
+    rationale: >
+      Kill trigger #4 (mark-to-market underperformance): fires once the 36-month active-time floor is met
+      AND the rolling-12-month gap vs. SGOV (over deployed sub-periods) exceeds 10 percentage points. Both
+      conditions hold here (40 >= 36 months; 16pp gap > 10pp). Like runaway-success, this trigger forces a
+      structured attacker/orchestrator review rather than terminating directly — "unlike drawdown... this
+      trigger closes that gap" via review, and termination only follows an affirmative TERMINATE verdict.
+
+  # ---- Strategy B post-event entry criteria (SB-*) ----------------------------------------------------
+
+  - id: SB-01
+    category: strategy_b_entry
+    situation: >
+      Ticker ZQX reported an earnings miss producing a -6.4% close-to-close move 12 trading days ago. No
+      Strategy A position is currently open in ZQX. Narrative synthesis concludes the reaction was an
+      overreaction relative to the miss's fundamental implications. Proposed convergence target: "next
+      earnings release" (on Strategy B's closed enumerated list). What is the Strategy B GO/NO-GO call on
+      ZQX today?
+    governing_files: [Strategy.md]
+    expected_decision: "NO-GO"
+    rationale: >
+      Strategy B entry criterion 1 requires the triggering public event to have occurred "within the last
+      10 trading days." 12 trading days exceeds that window, so the thesis fails criterion 1 outright —
+      the otherwise-clean narrative, convergence target, and lack of a competing A position do not cure a
+      stale entry window. NO-GO.
+
+  - id: SB-02
+    category: strategy_b_entry
+    situation: >
+      Ticker WVN received an FDA Complete Response Letter producing a -8% close-to-close move 4 trading
+      days ago. No Strategy A position is open in WVN. Narrative synthesis concludes overreaction.
+      Proposed convergence target: "the company's next scheduled sell-side analyst day" (a specific,
+      knowable future date). What is the Strategy B GO/NO-GO call on WVN today?
+    governing_files: [Strategy.md]
+    expected_decision: "NO-GO"
+    rationale: >
+      Strategy B entry criterion 3 requires the convergence target be EITHER a numerical price level OR
+      one drawn from the strictly enumerated closed list: "next earnings release," "next FDA decision
+      date," "next FOMC meeting," or an inclusion announcement in S&P 500 / Russell 1000 / Nasdaq 100.
+      "Next analyst day" is not on that list and no numerical price level is given, so criterion 3 fails
+      even though the event-recency and narrative criteria are otherwise clean. Rev 14 of Strategy.md
+      deliberately closed the "or equivalent named at entry" escape hatch that would have let an
+      analyst-day target qualify. NO-GO.
+
+  - id: SB-04
+    category: strategy_b_entry
+    situation: >
+      On 2026-04-30 a Strategy D thesis on ticker MRQ received a NO-GO (a thesis-invalidation criterion
+      specific to that D thesis was not met; unrelated to any near-term public event). On 2026-06-15, a
+      fresh and unrelated qualifying event occurs on MRQ (a 6.1% post-earnings-print close-to-close move,
+      3 trading days ago). A Strategy B thesis is constructed against this new event and cleanly meets
+      every Strategy B entry criterion (event within the 10-trading-day window; narrative synthesis finds
+      overreaction; convergence target = "next earnings release," on the closed list; no decisive
+      adversarial flaw; no Strategy A position open in MRQ). Does the 2026-04-30 Strategy D NO-GO on MRQ
+      auto-fail this new Strategy B thesis?
+    governing_files: [Operating_Protocols.md, Strategy.md]
+    expected_decision: "GO"
+    rationale: >
+      Operating_Protocols.md §3 "NO-GO Records Are Context, Not Barriers": a prior NO-GO for a name does
+      NOT auto-fail a future thesis on the same name, and this "applies symmetrically across strategies: a
+      prior Strategy D NO-GO does not propagate as a barrier for a Strategy C or B entry on the same
+      name (the strategies have different mechanisms)." Each fresh trigger event merits fresh evaluation
+      against the relevant strategy's own entry criteria; the prior record is context, not a barrier. The
+      new Strategy B thesis clears every one of Strategy B's own entry criteria on its own merits, so it
+      is a GO — the earlier, unrelated Strategy D NO-GO has no bearing.

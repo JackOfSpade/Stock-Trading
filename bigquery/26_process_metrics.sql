@@ -1,6 +1,7 @@
 -- Process-metrics scorecard — decision-quality signals valid at N=8 (2026-07-03, self-improvement
 -- audit S-7/B-9). Project: stock-trading-498512. Apply after 04_analytics.sql (conviction_features) +
--- 06_forecast.sql (twr_forecast_vs_actual).
+-- 06_forecast.sql (twr_forecast_vs_actual_all_vintages -- forecast_bias reads the all-vintages view,
+-- ITEM 21 fix 2026-07-11).
 --
 -- WHY: the only active learning signal is P&L on rare closes (8 B, 0 D), so any parameter fit is years
 -- out and would overfit. But PROCESS signals accrue much faster (per decision / per forecast point, not
@@ -56,10 +57,15 @@ FROM go_theses g
 FULL OUTER JOIN opened o USING (strategy);
 
 -- ===== analytics.forecast_bias — is the monthly TWR AI.FORECAST systematically biased? =====
--- Rolling tally of realized-vs-forecast-band outcomes (bigquery/06_forecast.sql). A sustained skew
--- toward below_band (realized consistently worse than forecast) or above_band flags the forecast itself
--- as biased -- advisory, per its own design (06_forecast.sql: "never a trigger"). Self-bootstrapping:
+-- Rolling tally of realized-vs-forecast-band outcomes, accumulated across ALL forecast vintages
+-- (bigquery/06_forecast.sql analytics.twr_forecast_vs_actual_all_vintages). A sustained skew toward
+-- below_band (realized consistently worse than forecast) or above_band flags the forecast itself as
+-- biased -- advisory, per its own design (06_forecast.sql: "never a trigger"). Self-bootstrapping:
 -- zero rows until M5 has run at least twice (one run to forecast, one elapsed period to compare).
+-- FIX (ITEM 21, 2026-07-11): previously read the single-latest-vintage twr_forecast_vs_actual, so this
+-- tally reset to ~zero on every M5 run and could never accumulate enough evidence to catch a
+-- persistently biased forecaster. Now reads the all-vintages view -- append-only, so the tally only
+-- grows across M5 runs, same fail-closed min_n_met>=8 floor as before.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.forecast_bias` AS
 SELECT
   strategy,
@@ -69,7 +75,7 @@ SELECT
   COUNTIF(NOT below_band AND NOT above_band) AS n_in_band,
   ROUND(SAFE_DIVIDE(COUNTIF(below_band), COUNT(*)), 3) AS pct_below_band,
   (COUNT(*) >= 8) AS min_n_met
-FROM `stock-trading-498512.analytics.twr_forecast_vs_actual`
+FROM `stock-trading-498512.analytics.twr_forecast_vs_actual_all_vintages`
 GROUP BY strategy;
 
 -- ===== analytics.process_scorecard — one-row-per-strategy rollup for the weekly/monthly read =====

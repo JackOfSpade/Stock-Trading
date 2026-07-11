@@ -1,0 +1,109 @@
+name: Golden Scenarios (prose regression)
+
+# ITEM 20 (2026-07-11) — golden-scenario prose regression harness.
+#
+# WHY: this system's real source code is prose (Strategy.md, Operating_Protocols.md,
+# Claude_Task_Plan.md routine bodies) read fresh by an LLM every routine run. Every existing CI check
+# in ci.yml is a STRUCTURAL fact scraper (cadence.yaml <-> SQL <-> plan headings, roster.yaml <-> seed
+# <-> Strategy.md, etc.) — none of them evaluate what a routine would DECIDE when it reads the prose.
+# Since the 2026-07-10 Strategy Arsenal (SISA) autonomy conversion, a prose edit reaches live
+# decision-making behavior via auto-merge with zero behavioral test in between. This workflow adds one:
+# tests/golden_scenarios/scenarios.yaml pins 20 decision scenarios with an expected call (GO/NO-GO,
+# CONTINUE/TERMINATE, ACTIVATE/DO-NOT-ACTIVATE) and the runner (run_golden.py) diffs a live model's read
+# of CURRENT prose against those pins.
+#
+# PATH-GATED (only Strategy.md / Operating_Protocols.md / Claude_Task_Plan.md / the golden fixtures
+# themselves) — mirrors ci.yml's dbt-parity path gate: a prose-regression check is meaningless without a
+# prose change, and the live job below calls a paid model per push, so it should not run on every
+# unrelated commit.
+#
+# TWO JOBS, two different postures (mirrors ci.yml's advisory/hard-gate split, e.g. lint vs. shell-lint,
+# dbt-parity's advisory-by-default vs. sql-validate's opt-in):
+#
+#   schema-validate — HARD GATE, always runs when the path filter matches, NO network. Validates
+#     tests/golden_scenarios/scenarios.yaml itself: every scenario has the required fields, ids are
+#     unique, every governing_file exists, expected_decision uses a recognized vocabulary token. This can
+#     never be allowed to silently rot, or the whole harness is decorative — see
+#     tests/test_cadence_consistency.py for why the OTHER structural checks in this repo guard their own
+#     parsers the same way (a check that vacuously passes on a broken fixture is worse than no check).
+#
+#   prose-regression — ADVISORY ONLY, continue-on-error: true. NEVER hard-blocks a merge on a decision
+#     flip — that would be a human review/approval/chat/PR gate on prose, which is explicitly forbidden
+#     for this system's self-improvement surface (CLAUDE.md "Settled decisions" — the SISA autonomy
+#     conversion; a prose-regression flip is not a strategy-add/delete decision, but the same
+#     no-human-gate posture applies to any check that could otherwise be used to re-introduce one).
+#     Requires the ANTHROPIC_API_KEY secret; skips cleanly (green, with a ::notice::) if it is not
+#     configured — opt-in, exactly like ci.yml's sql-validate / dbt-parity WIF-gated jobs. On a decision
+#     flip, run_golden.py itself prints a `::warning::` annotation naming the scenario + the expected vs.
+#     actual call, and echoes the exact (never-executed) events.queue_events INSERT a routine with write
+#     access COULD run to file it as review_type='prose-regression' for later mechanical follow-up. This
+#     workflow does not execute that INSERT — it has no BigQuery write credentials (same posture as every
+#     other CI job here; the CI service account, where one is configured at all, stays read-only), and
+#     the compensating control for a flip is mechanical follow-up by an autonomous routine, never a human
+#     gate.
+
+on:
+  push:
+    paths:
+      - 'Strategy.md'
+      - 'Operating_Protocols.md'
+      - 'Claude_Task_Plan.md'
+      - 'tests/golden_scenarios/**'
+  pull_request:
+    paths:
+      - 'Strategy.md'
+      - 'Operating_Protocols.md'
+      - 'Claude_Task_Plan.md'
+      - 'tests/golden_scenarios/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  schema-validate:
+    name: golden scenarios — offline schema gate (HARD GATE)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install deps (pinned via constraints — RUNBOOK §25 C3)
+        run: pip install --quiet -c requirements-ci.txt pyyaml
+      - name: Validate scenarios.yaml schema + governing_files existence (no network)
+        run: python tests/golden_scenarios/run_golden.py --offline
+
+  prose-regression:
+    name: golden scenarios — live decision diff (ADVISORY — never blocks)
+    runs-on: ubuntu-latest
+    needs: schema-validate
+    continue-on-error: true   # advisory; a decision flip must never block a merge — see header above
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check ANTHROPIC_API_KEY present (opt-in)
+        id: guard
+        env:
+          HAVE_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+        run: |
+          if [ "$HAVE_KEY" = "true" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::golden-scenarios live run skipped — ANTHROPIC_API_KEY secret not set (opt-in, default state). The offline schema gate in the other job still ran and is the hard gate. Set the secret to enable live prose-regression diffing."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-python@v5
+        if: steps.guard.outputs.skip == 'false'
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        if: steps.guard.outputs.skip == 'false'
+        # anthropic is not in requirements-ci.txt (that file pins the shared CI toolchain used by
+        # every job in ci.yml; this is the one job in the repo that needs an LLM client, so it is
+        # pinned here rather than growing the shared constraints file for a single advisory job).
+        run: pip install --quiet pyyaml 'anthropic>=0.40,<1.0'
+      - name: Live decision diff vs. pinned expectations (advisory — never fails the build)
+        if: steps.guard.outputs.skip == 'false'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python tests/golden_scenarios/run_golden.py --live

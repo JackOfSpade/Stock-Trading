@@ -43,6 +43,11 @@ OPTIONS(description='Monthly AI.FORECAST output (deployed-TWR + macro), written 
 -- The monitoring payoff of storing forecasts: compare the most-recent PRIOR run's forecast for
 -- now-elapsed dates against realised perf.strategy_daily. A realised value below pi_lower is a
 -- downside surprise (possible regime shift / unmodeled deterioration) M5 flags for the operator.
+-- Single-vintage BY DESIGN -- this is the STEP 1 early-warning read (Claude_Task_Plan.md M5), which
+-- wants only the most-recent PRIOR run compared to what has since elapsed. Do NOT use this view as an
+-- accumulating bias tally -- see twr_forecast_vs_actual_all_vintages below (ITEM 21 fix, 2026-07-11:
+-- this view's MAX(run_date) filter previously fed analytics.forecast_bias directly, so the bias tally
+-- reset to ~zero every M5 run and could never detect a persistently-biased forecaster).
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.twr_forecast_vs_actual` AS
 WITH last_run AS (
   SELECT * FROM `stock-trading-498512.analytics.deployed_twr_forecast`
@@ -59,6 +64,25 @@ SELECT f.run_date AS forecast_run_date, f.entity AS strategy, f.forecast_date,
 FROM last_run f
 JOIN `stock-trading-498512.perf.strategy_daily` a
   ON a.strategy = f.entity AND a.as_of_date = f.forecast_date;
+
+-- ===== (B2) Forecast-vs-actual, ALL vintages -- the rolling calibration tally (ITEM 21 fix, 2026-07-11) =====
+-- Same join as (B) but over EVERY forecast run_date, not just the latest -- every past vintage's
+-- now-elapsed forecast_date rows stay in the comparison permanently (deployed_twr_forecast is
+-- append-only, so this view only grows). analytics.forecast_bias (bigquery/26_process_metrics.sql)
+-- is repointed to this view so a systematically biased forecaster accumulates evidence across M5 runs
+-- instead of the tally resetting to ~zero each run. A given forecast_date can appear multiple times
+-- (once per vintage that forecast it) -- that is intentional: each vintage's forecast is judged
+-- independently against the one realised outcome. Advisory only, same as (B) -- never a trigger.
+CREATE OR REPLACE VIEW `stock-trading-498512.analytics.twr_forecast_vs_actual_all_vintages` AS
+SELECT f.run_date AS forecast_run_date, f.entity AS strategy, f.forecast_date,
+       f.forecast_value, f.pi_lower, f.pi_upper,
+       a.deployed_unit_value AS actual,
+       a.deployed_unit_value < f.pi_lower AS below_band,
+       a.deployed_unit_value > f.pi_upper AS above_band
+FROM `stock-trading-498512.analytics.deployed_twr_forecast` f
+JOIN `stock-trading-498512.perf.strategy_daily` a
+  ON a.strategy = f.entity AND a.as_of_date = f.forecast_date
+WHERE f.series = 'deployed_unit_value';
 
 -- ===== (C) Macro forecast -- FRED-backed (state.macro_fred_latest), un-gated =====
 -- events.macro_fred holds 15 FRED-derived monthly regime metrics with deep history (37-54 months;
