@@ -39,11 +39,19 @@ artifact — see part (e) for how it's used and why it doesn't change this spike
   ~6h-early bug fixed by hand 2026-07-10). `ops.sp_assert_deps` stays exactly as-is, called by the harness
   before it even starts the agent — defense-in-depth, cheaper (fails before spending any tokens), and
   unchanged in its fail-closed semantics.
-- **(c)** Marginal infra cost is **near-zero** (Cloud Scheduler + Cloud Run job compute both sit inside
-  free tiers at this system's run volume). Model-token cost does not change — these routines already run
-  as headless Claude-Code-on-Web sessions, already billed on the separate Agent SDK/API-rate credit since
-  the 2026-06-15 billing change, not on interactive chat limits. The real cost is one-time **engineering
-  + credential-provisioning effort**, concentrated entirely in the IBKR leg.
+- **(c) CORRECTED 2026-07-11 (owner fact-check).** Cloud Scheduler + Cloud Run infra cost is genuinely
+  near-zero. But the model-token cost claim below was **wrong**: today's routines run under the owner's
+  Claude **subscription** (Pro/Max/Team), not a separate metered pool — Anthropic's planned 2026-06-15
+  Agent-SDK-credit change was **paused before it took effect** ("nothing has changed... Claude Agent SDK,
+  `claude -p`, and third-party app usage still draw from your subscription's usage limits" — Anthropic
+  Help Center, confirmed live 2026-07-11). Separately, and regardless of that pause: the GCP harness in
+  (b) calls Claude via the **Managed Agents API**, a DIFFERENT product surface from the subscription
+  login, billed through the Anthropic API/console at standard per-token rates with no subscription
+  discount. So migrating a routine off claude.ai onto this harness moves its token cost from the flat
+  subscription (one source estimates subscription pricing subsidizes agent usage ~15-30x vs. raw API
+  rates) to metered API billing — **a real, likely-material new recurring cost**, not a wash. This is the
+  dominant cost line for any pilot, larger than the one-time **engineering + credential-provisioning
+  effort** below and larger than the Cloud Scheduler/Cloud Run infra cost. See the corrected (c) section.
 - **(d) GO** (conditional) for a **D1-only** pilot, web-UI D1 trigger **paused, not deleted**, as fallback.
   D1 is read/judgment-heavy and places no IBKR orders, so it fully exercises the run_log/cadence fix and
   the non-IBKR credential-provisioning question while completely sidestepping the IBKR headless-auth
@@ -230,6 +238,23 @@ inside `stock-trading-498512`'s existing operating model (BigQuery MCP + console
 
 ## (c) Rough cost
 
+> **CORRECTION (2026-07-11, owner fact-check).** This section originally claimed model-token cost
+> "does not change" because headless/Agent-SDK usage was "already billed on the separate Agent-SDK
+> credit since the 2026-06-15 billing change." That premise is **wrong**: Anthropic announced that
+> change for 2026-06-15 but **paused it before it took effect**. Per Anthropic's own Help Center
+> (confirmed live 2026-07-11, superseding the buildthisnow.com secondary source originally cited here):
+> *"We're pausing the changes to Claude Agent SDK usage... For now, nothing has changed: Claude Agent
+> SDK, `claude -p`, and third-party app usage still draw from your subscription's usage limits."*
+> Today's routines run as subscription-authenticated Claude-Code-on-Web sessions — i.e. still on the
+> flat-rate Pro/Max/Team plan, not a metered pool. Separately, and independent of whether that paused
+> change is ever revived: the harness sketched in (b) calls Claude via the **Managed Agents API**, a
+> distinct product surface from the subscription login, billed through the Anthropic API/console at
+> standard per-token rates with **no subscription discount**. So moving a routine onto this harness is
+> not "the same tokens at the same rate" — it is a move from a flat-rate subscription (one industry
+> estimate: subscription pricing subsidizes agent usage roughly 15-30x vs. raw API pricing) to metered
+> API billing. Treat the bullet below as **struck through / superseded**; the real bottom line is in the
+> corrected total beneath it.
+
 - **Cloud Scheduler:** $0.10/job/month after 3 free jobs/month per project. A D1-only pilot = 1 job = free.
   Full 20-routine migration (D1,D2a,D2,D3,SL3,AR_att,AR_orc,SL2,SL5,W1-5,M1a-5,SL4,Q1-4,SL1,A1-3) ≈ 17
   billable jobs × $0.10 ≈ **$1.70/month** — noise.
@@ -238,26 +263,38 @@ inside `stock-trading-498512`'s existing operating model (BigQuery MCP + console
   minutes/day (the wrapper itself, excluding whatever the Agent SDK call streams for) stays inside the free
   tier by a wide margin even summed across all routines. **Effectively $0/month** at this system's run
   volume.
-- **Model/token cost — unchanged, not a new cost line.** These routines already run as headless
+- ~~**Model/token cost — unchanged, not a new cost line.** These routines already run as headless
   Claude-Code-on-Web sessions. Per Anthropic's 2026-06-15 billing change, headless Claude Code / Agent SDK
   usage already runs on a separate Agent-SDK credit billed at standard API per-token rates, not on
   interactive chat limits — so moving the *same* work into a Cloud Run-invoked Agent SDK call bills the
   same tokens at the same rate; it does not add a new cost, and could plausibly reduce token spend for
-  routines whose mechanical steps move further into deterministic harness code. [Claude Code billing change](https://www.buildthisnow.com/blog/guide/mechanics/claude-billing-change-june-2026)
-- **The real cost is one-time engineering + credential-provisioning effort**, not recurring infra spend:
-  building/testing the harness container, and — per (a) — provisioning fresh Vault credentials for
-  Tavily/FMP (cheap) and Calendar/Gmail (a bounded OAuth-app setup). IBKR headless auth is explicitly
-  **not** costed here because this spike does not recommend attempting it yet (see (a), (d)).
-- **Rough total for the D1-only pilot: under $5/month in infra, dominated by rounding — not a material
-  new cost line.** The Calendar/Gmail OAuth-app setup (if D1 needs them) is a few hours of one-time work,
-  not a recurring cost.
+  routines whose mechanical steps move further into deterministic harness code.~~ **SUPERSEDED, see the
+  correction box above — this claim was wrong.**
+- **Model/token cost — the ACTUAL new cost line, not costed precisely here.** Moving a routine off the
+  subscription-backed web-UI session onto the Managed-Agents-API harness converts its token spend from
+  flat-rate-subscription to metered-API-rate. This spike does not have per-routine token-usage figures
+  to size the dollar impact; before piloting even D1, get an actual estimate (e.g. from typical D1 session
+  transcript length x current Claude API per-token pricing) rather than assuming it's free.
+- **The one-time engineering + credential-provisioning effort** (building/testing the harness container,
+  provisioning fresh Vault credentials for Tavily/FMP (cheap) and Calendar/Gmail (a bounded OAuth-app
+  setup); IBKR headless auth explicitly **not** costed here since this spike doesn't recommend attempting
+  it yet, see (a)/(d)) is real but is very likely NOT the dominant cost line anymore — the recurring
+  per-token API cost above is.
+- **Rough total for the D1-only pilot: infra stays under $5/month (Cloud Scheduler + Cloud Run alone), but
+  the recurring token cost is a real, unquantified-here add — do not treat this pilot as cost-neutral.**
+  Get a token-cost estimate before piloting, not just an infra-cost estimate.
 
 ---
 
 ## (d) GO/NO-GO recommendation
 
 **CONDITIONAL GO — pilot D1 only, on this harness shape, with the existing web-UI D1 trigger PAUSED
-(not deleted) as same-day fallback.**
+(not deleted) as same-day fallback.** **Weakened by the 2026-07-11 cost correction in (c):** this was
+originally framed as a near-free way to fix a real durability gap. With §38 now self-healing without any
+migration (RUNBOOK §38, Item 3, landed 2026-07-11) and the token-cost premise in (c) corrected to "likely
+a real new recurring cost, not a wash," there is no longer an urgent problem this pilot uniquely solves —
+proceed only if the owner independently wants headless/non-interactive operation as a goal in itself, not
+because this report found something broken that needs it.
 
 Why D1 specifically:
 - D1 is judgment + read-mostly (market scan → `INSERT`s into `events.decision_log` /
@@ -286,6 +323,9 @@ Conditions before flipping D1's primary execution to the harness:
    harness misbehaves.
 4. **Do not** extend this pattern to D2/D2a or any order-touching routine until IBKR headless auth is
    separately resolved in its own spike — this report deliberately does not attempt that design, per (a).
+5. **(Added 2026-07-11.)** Get an actual per-token cost estimate for a typical D1 run under Managed-Agents-API
+   metered pricing (session transcript length x current Claude API rate) BEFORE piloting — per the (c)
+   correction, this is not a cost-neutral move, and the pilot shouldn't start on an assumption it's free.
 
 **NO-GO, unconditionally, for any routine that calls the IBKR connector until a follow-up spike closes the
 gap identified in (a).** Building a Cloud Run job that runs an unofficial, "local-execution-only" IBKR MCP
@@ -339,7 +379,15 @@ lifecycle entirely), which is worth recording, but:
 - [What's new in Claude Managed Agents (scheduled deployments + vaults), Anthropic blog](https://claude.com/blog/whats-new-in-claude-managed-agents)
 - [Claude Managed Agents Add Cron Schedules and Credential Vaults — TechTimes](https://www.techtimes.com/articles/318163/20260610/claude-managed-agents-add-cron-schedules-credential-vaultsanthropic-beta-puts-agents-autopilot.htm)
 - [Interactive Brokers MCP Server (unofficial, headless-mode caveats)](https://github.com/code-rabi/interactive-brokers-mcp)
-- [Claude Code Billing Change June 15, 2026](https://www.buildthisnow.com/blog/guide/mechanics/claude-billing-change-june-2026)
+- ~~[Claude Code Billing Change June 15, 2026 — Build This Now](https://www.buildthisnow.com/blog/guide/mechanics/claude-billing-change-june-2026)~~
+  **SUPERSEDED (2026-07-11) — this secondary source described the change as already in effect; it was
+  paused before taking effect. Do not rely on this source for current billing behavior; see the two
+  corrective sources below instead.**
+- **[Use the Claude Agent SDK with your Claude plan — Claude Help Center (official, 2026-07-11)](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan)**
+  — authoritative source for the (c) correction: confirms the 2026-06-15 change was paused and Agent
+  SDK/headless/`claude -p` usage still draws from the subscription plan's usage limits.
+- [Claude Credit Overhaul 2026: Anthropic Pauses the June 15 Change — Digital Applied](https://www.digitalapplied.com/blog/anthropic-claude-credit-overhaul-june-15-2026)
+  — secondary corroboration of the pause, with the ~15-30x subscription-vs-API subsidy estimate cited in (c).
 - In-repo: `ops/RUNBOOK.md` §15, §38; `ops/cadence.yaml` (header + 2026-07-10 web-UI trigger audit block);
   `bigquery/12_cadence_monitor.sql` (`ops.sp_assert_deps`, `ops.sp_routine_start/end`);
   `bigquery/32_d2a_cutover_readiness.sql` (readiness-view/idempotency-marker convention referenced by
