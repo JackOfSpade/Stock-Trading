@@ -257,6 +257,29 @@ BEGIN
        FROM `stock-trading-498512.state.ddl_drift`));
   END IF;
 
+  -- script_version_drift (warning, item 23 -- Apps Script drift detection). A deployed .gs (alert_emailer
+  -- / weekly_report) is running a version other than the repo's expected one, or has stopped reporting a
+  -- version at all after previously doing so -- almost always a Claude-side .gs fix that was never re-
+  -- pasted by the owner (script.google.com is unreachable from Claude). Self-bootstrapping
+  -- (state.script_version_drift.monitored) so this never fires before the owner has pasted the version-
+  -- emitting .gs diff at least once. Delivered via THIS query's DTS failure-email path is deliberately
+  -- NOT used for delivery (kept WARNING, record-only, like instruction_drift/ddl_drift) since alert_emailer
+  -- itself is one of the two monitored scripts -- routing this alarm through it would be circular; the
+  -- warning still reaches the owner via the alert emailer's own periodic poll of ops.alerts, which is a
+  -- SEPARATE mechanism from "this script being the delivery channel for its own drift" (see 43_script_
+  -- version_registry.sql header). Staged-rollout WARNING until a clean baseline confirms no false fire,
+  -- matching the ddl_drift / restore_stale precedent above.
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.script_version_drift` WHERE drift) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'script_version_drift',
+      CONCAT('Script version drift: deployed Apps Script(s) running an unexpected/missing version: ',
+             (SELECT STRING_AGG(CONCAT(script_name, ' (expected ', expected_version, ', reported ',
+                     COALESCE(last_reported_version, 'NONE'), ')'), ', ' ORDER BY script_name)
+              FROM `stock-trading-498512.state.script_version_drift` WHERE drift)),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(script_name, expected_version, last_reported_version, last_beat_ts)))
+       FROM `stock-trading-498512.state.script_version_drift` WHERE drift));
+  END IF;
+
   -- Single consolidated RAISE so the DTS failure-email fires once, AFTER every condition is recorded.
   IF raise_msg != '' THEN
     RAISE USING MESSAGE = CONCAT('STOCK-TRADING cadence/backup/heartbeat check FAILED — ', raise_msg);

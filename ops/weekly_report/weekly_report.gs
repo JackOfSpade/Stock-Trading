@@ -35,6 +35,7 @@ const SENDER_NAME  = 'Stock-Trading Bot';
 const LABEL_NAME   = 'Trading/Weekly';
 const SEND_HOUR    = 7;
 const SEND_WEEKDAY = ScriptApp.WeekDay.SUNDAY;
+const SCRIPT_VERSION = 'v1';                       // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep
 
 // Fixed per-strategy identity colors (CVD-validated) — never reassigned by rank/presence. SGOV is gray.
 const CHART_COLORS = { A: '#1baf7a', B: '#2a78d6', C: '#4a3aa7', D: '#eb6834', E: '#e87ba4' };
@@ -86,7 +87,7 @@ function sendWeeklyReport_() {
   // Liveness beat — lets cadence_check.sql detect a silently-dead weekly report. Best-effort.
   try {
     BigQuery.Jobs.query({
-      query: `INSERT INTO \`${PROJECT_ID}.ops.heartbeat\` (source, note) VALUES ('weekly_report', 'sent')`,
+      query: `INSERT INTO \`${PROJECT_ID}.ops.heartbeat\` (source, note, version) VALUES ('weekly_report', 'sent', '${SCRIPT_VERSION}')`,
       useLegacySql: false, timeoutMs: 30000
     }, PROJECT_ID);
   } catch (e) { Logger.log('heartbeat write skipped: ' + e); }
