@@ -60,11 +60,24 @@ OPTIONS(description='Durable monitor-promotion idempotency markers (ITEM 24, 202
 -- Fail-closed: fewer than 14 logged days, or any non-clean day in the trailing 14, reads FALSE.
 -- ============================================================================
 CREATE OR REPLACE VIEW `stock-trading-498512.state.ddl_drift_promotion_readiness` AS
-WITH ranked AS (
-  SELECT check_date, clean,
-    ROW_NUMBER() OVER (ORDER BY check_date DESC) AS rn
+WITH by_day AS (
+  -- BUG FIX (rev 2026-07-11, adversarial self-audit): dedupe to ONE row per check_date BEFORE ranking.
+  -- cadence_check.sql now upserts (MERGE) so a same-day re-run should never create a second row for one
+  -- day going forward, but this view defends independently against any duplicate already in the table
+  -- (or any future write path that regresses to a plain INSERT) -- ranking raw, non-deduplicated ROWS
+  -- would let a trailing-14-ROW window span FEWER than 14 actual distinct calendar days, promoting a day
+  -- or more early than the "14 consecutive DISTINCT logged days" bar this view's own header states.
+  -- Fail-closed on the (should-be-impossible-post-upsert) same-day-multi-row case: a day counts clean
+  -- only if EVERY logged row that day was clean.
+  SELECT check_date, LOGICAL_AND(clean) AS clean
   FROM `stock-trading-498512.ops.monitor_health_history`
   WHERE check_id = 'ddl_drift'
+  GROUP BY check_date
+),
+ranked AS (
+  SELECT check_date, clean,
+    ROW_NUMBER() OVER (ORDER BY check_date DESC) AS rn
+  FROM by_day
 ),
 trailing14 AS (
   SELECT COUNT(*) AS n_recent, COUNTIF(clean) AS n_recent_clean

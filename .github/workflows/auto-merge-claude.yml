@@ -13,7 +13,13 @@ name: Auto-merge branches to main
 
 on:
   workflow_run:
-    workflows: ["CI"]      # matches ci.yml's `name: CI`; fires on success AND failure
+    # BUG FIX (rev 2026-07-11, adversarial self-audit): added "Golden Scenarios (prose regression)"
+    # (matches golden-scenarios.yml's `name:`) so a branch whose golden-scenarios run completes AFTER
+    # its CI run (the path-gated job can legitimately finish later) still gets re-evaluated and drained
+    # once both verdicts are in — previously this workflow never even woke up on that completion, so a
+    # branch could sit un-merged (or worse, get merged on a stale drain before schema-validate's result
+    # existed) until some unrelated later push happened to re-trigger it.
+    workflows: ["CI", "Golden Scenarios (prose regression)"]
     types: [completed]
   workflow_dispatch: {}     # manual drain escape hatch
 
@@ -57,6 +63,19 @@ jobs:
           fi
 
       - name: GCP WIF auth + gcloud setup (provides bq, RUNBOOK §38 commit markers)
+        # BUG FIX (rev 2026-07-11, adversarial self-audit): without continue-on-error, ANY failure of
+        # this step (a transient GCP outage, network blip, IAM propagation delay -- not just the vars
+        # being unset) aborts the whole job by GitHub Actions' default behavior, skipping the "Merge all
+        # CI-green branches into main" step entirely -- for every branch pending in this run, not just
+        # the specific commit whose marker-write this auth is for. That is a MUCH larger blast radius
+        # than intended: this file's own later comment already documents the marker-write as "best-
+        # effort: a marker-insert failure must never fail the merge/push" -- the auth step upstream of
+        # it must honor that same contract, or the best-effort feature can take down the actual merge
+        # pipeline. continue-on-error: true here means a failed auth simply leaves WIF_CONFIGURED
+        # effectively unusable for this run (the downstream bq marker-insert call is already wrapped in
+        # its own `|| echo "::warning"` at the bottom of the merge step, so it degrades gracefully too)
+        # while the merge itself proceeds unaffected.
+        continue-on-error: true
         if: steps.wif_guard.outputs.skip == 'false'
         uses: ./.github/actions/gcp-wif-auth
         with:
@@ -116,6 +135,26 @@ jobs:
             ci_conclusion="$(ci_conclusion_from_json "$runs_json")"
             if ! is_ci_green "$ci_conclusion"; then
               echo "::notice::Skipping $br — CI for ${sha:0:7} is '$ci_conclusion', not success. It merges once its CI run completes green."
+              continue
+            fi
+
+            # --- Golden Scenarios schema-validate gate ------------------------------
+            # BUG FIX (rev 2026-07-11, adversarial self-audit): golden-scenarios.yml's schema-validate
+            # job is documented as a HARD GATE ("this can never be allowed to silently rot") but nothing
+            # here ever checked it — a failing schema-validate run had zero effect on whether a commit
+            # merged. This workflow is path-gated (only runs when Strategy.md/Operating_Protocols.md/
+            # Claude_Task_Plan.md/the golden fixtures change), so most commits will have NO matching run
+            # at all — is_secondary_gate_satisfied treats that as satisfied (not a block), and only an
+            # explicit non-success conclusion (the workflow DID run for this SHA and schema-validate
+            # failed) blocks the merge. prose-regression (the OTHER job in that workflow) is
+            # continue-on-error: true, so it can never make the overall run conclusion "failure" on its
+            # own — checking the run's overall conclusion here still only reflects schema-validate.
+            gs_runs_json="$(gh api \
+              "repos/$GITHUB_REPOSITORY/actions/workflows/golden-scenarios.yml/runs?head_sha=$sha&per_page=1" \
+              2>/dev/null || echo "")"
+            gs_conclusion="$(ci_conclusion_from_json "$gs_runs_json")"
+            if ! is_secondary_gate_satisfied "$gs_conclusion"; then
+              echo "::notice::Skipping $br — Golden Scenarios schema-validate for ${sha:0:7} is '$gs_conclusion', not success/none. It merges once that run completes green (or is re-triggered)."
               continue
             fi
 

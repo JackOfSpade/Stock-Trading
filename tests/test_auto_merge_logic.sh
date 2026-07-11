@@ -78,6 +78,31 @@ assert_false "gh api failure: is_ci_green must SKIP, fail-closed" is_ci_green "$
 conclusion="$(ci_conclusion_from_json '{"workflow_runs":[{"conclusion":"in_progress"}]}')"
 assert_false "in-progress CI: is_ci_green must SKIP until it completes" is_ci_green "$conclusion"
 
+# ---- is_secondary_gate_satisfied: the path-gated Golden Scenarios schema-validate gate (BUG FIX,
+# rev 2026-07-11 adversarial self-audit — this workflow used to never check golden-scenarios.yml at
+# all, so a failing HARD GATE job had zero effect on whether a commit merged) ------------------------
+
+conclusion="$(ci_conclusion_from_json '{"workflow_runs":[{"conclusion":"success"}]}')"
+assert_true "green golden-scenarios run: is_secondary_gate_satisfied must allow the merge" \
+  is_secondary_gate_satisfied "$conclusion"
+
+conclusion="$(ci_conclusion_from_json '{"workflow_runs":[{"conclusion":"failure"}]}')"
+assert_false "red golden-scenarios run (schema-validate failed): is_secondary_gate_satisfied must SKIP the merge" \
+  is_secondary_gate_satisfied "$conclusion"
+
+conclusion="$(ci_conclusion_from_json '{"workflow_runs":[]}')"
+assert_eq "no matching golden-scenarios run parses to 'none'" "$conclusion" "none"
+assert_true "no golden-scenarios run at all (path filter excluded this commit): is_secondary_gate_satisfied must NOT block — most commits never touch the gated paths" \
+  is_secondary_gate_satisfied "$conclusion"
+
+conclusion="$(ci_conclusion_from_json '')"
+assert_false "gh api failure querying golden-scenarios: is_secondary_gate_satisfied must SKIP, fail-closed (an API error is not the same fact as 'legitimately did not run')" \
+  is_secondary_gate_satisfied "$conclusion"
+
+conclusion="$(ci_conclusion_from_json '{"workflow_runs":[{"conclusion":"in_progress"}]}')"
+assert_false "in-progress golden-scenarios run: is_secondary_gate_satisfied must SKIP until it completes" \
+  is_secondary_gate_satisfied "$conclusion"
+
 # ---- is_ancestor_of: already-merged + re-confirm-before-delete, against a scratch git repo --
 
 SCRATCH="$(mktemp -d)"

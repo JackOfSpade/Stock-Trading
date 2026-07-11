@@ -195,6 +195,28 @@ def test_d_beta_adjusted_alpha_does_not_fire_on_positive_alpha():
     assert result.fires is False
 
 
+def test_d_beta_adjusted_alpha_ci_gate_blocks_a_noisy_point_estimate():
+    # Regression guard (adversarial self-audit, rev 2026-07-11): the two tests above both use
+    # near-zero-noise series, so alpha_se is always tiny there and `fires` tracks the point estimate
+    # alone -- neither test can tell whether the CI-gate (upper_ci_95 <= 0) is doing anything beyond a
+    # bare "alpha <= -3pp" check, which is the ENTIRE point of making this trigger CI-gated. This test
+    # constructs a genuinely noisy series where the point estimate crosses -3pp but the confidence
+    # interval is too wide to be statistically confident alpha is actually negative -- fires must be
+    # False despite the point estimate alone "passing".
+    n = 24
+    spy = [0.01 * i - 0.1 for i in range(n)]
+    d = [-0.05 + 1.0 * spy[i] + (0.20 if i % 2 == 0 else -0.20) for i in range(n)]
+    result = strategy_d.beta_adjusted_alpha_test(d, spy)
+    assert result.regression.alpha <= strategy_d.BETA_ADJUSTED_ALPHA_FIRE_THRESHOLD, (
+        "test fixture assumption broken: point estimate must cross -3pp for this test to be meaningful"
+    )
+    assert result.upper_ci_95 > 0, (
+        "test fixture assumption broken: upper CI must be positive (statistically uncertain) for this "
+        "test to actually exercise the CI-gate rather than the point-estimate check alone"
+    )
+    assert result.fires is False  # point estimate alone would fire; the CI-gate correctly blocks it
+
+
 def test_d_metric_structural_change_boundary():
     assert strategy_d.metric_structural_change_invalidated(1) is False
     assert strategy_d.metric_structural_change_invalidated(2) is True
@@ -207,18 +229,42 @@ def test_d_subtype_for_dual_signal():
     assert strategy_d.subtype_for_dual_signal(366, trend_metric_independently_evaluable=True) == "B"
 
 
+def test_d_subtype_for_dual_signal_requires_the_fact_when_it_matters():
+    # Regression guard (adversarial self-audit, rev 2026-07-11): omitting
+    # trend_metric_independently_evaluable must RAISE, not silently resolve to 'A', whenever the
+    # catalyst is within the 365-day window (the one case where this fact actually changes the
+    # outcome) — it used to default to False, indistinguishable from an explicit False.
+    with pytest.raises(ValueError):
+        strategy_d.subtype_for_dual_signal(365)
+    with pytest.raises(ValueError):
+        strategy_d.subtype_for_dual_signal(1)
+    # Outside that window (or no catalyst at all), the fact is genuinely irrelevant — omitting it
+    # must NOT raise, so a caller isn't burdened with a fact that doesn't change the outcome.
+    assert strategy_d.subtype_for_dual_signal(None) == "B"
+    assert strategy_d.subtype_for_dual_signal(366) == "B"
+
+
 # ===== strategy_e.py =====
 
 def test_e_pair_correlation_boundary():
     x = [1.0, 2.0, 3.0, 4.0, 5.0]
-    # Construct an exact-0.5-correlation-ish case is fiddly; instead verify the
-    # threshold logic directly against a known perfect-correlation case (>= 0.5 True)
-    # and a known near-zero case (< 0.5 False).
-    assert strategy_e.pair_correlation_qualifies(x, x) is True  # corr=1.0
-    uncorrelated = [3.0, 1.0, 4.0, 1.0, 5.0]
-    # not asserting a specific direction here, just exercising the function
-    result = strategy_e.pair_correlation_qualifies(x, uncorrelated)
-    assert isinstance(result, bool)
+    assert strategy_e.pair_correlation_qualifies(x, x) is True  # corr=1.0, well above threshold
+
+    # Regression guard (adversarial self-audit, rev 2026-07-11): the two series below are
+    # constructed (via Gram-Schmidt against x's own deviation vector, cos_theta=0.5 / 0.4999) to sit
+    # RIGHT at the >= 0.5 entry threshold, not merely "clearly correlated" vs "clearly not" — this is
+    # what actually exercises the boundary the >= comparison implements, unlike a perfect-correlation
+    # case which would pass even with a bug that used > instead of >=.
+    at_threshold = [2.163118, 1.154275, 3.815591, 5.253520, 2.613496]      # corr ~= 0.500000133
+    just_under = [2.163329, 1.154285, 3.815645, 5.253537, 2.613203]       # corr ~= 0.499900002
+    assert common.pearson_correlation(x, at_threshold) >= strategy_e.MIN_PAIR_CORRELATION_ENTRY, (
+        "test fixture assumption broken: at_threshold must be >= 0.5 for this test to be meaningful"
+    )
+    assert common.pearson_correlation(x, just_under) < strategy_e.MIN_PAIR_CORRELATION_ENTRY, (
+        "test fixture assumption broken: just_under must be < 0.5 for this test to be meaningful"
+    )
+    assert strategy_e.pair_correlation_qualifies(x, at_threshold) is True
+    assert strategy_e.pair_correlation_qualifies(x, just_under) is False
 
 
 def test_e_correlation_breakdown():

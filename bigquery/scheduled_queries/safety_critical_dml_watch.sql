@@ -15,9 +15,10 @@
 -- not cover ops.trading_control / ops.arsenal_control / perf.strategy_daily at all. This query is that
 -- missing, narrow, CRITICAL, FAIL-LOUD watcher for exactly those four tables.
 --
--- THIS IS A DETECTIVE CONTROL, NOT PREVENTION. It catches a bypass AFTER THE FACT (next run, <=24h
--- later) and fails loud (RAISE + a durable critical ops.alerts row) — it cannot stop the mutation from
--- happening. A full IAM re-scope (per-routine service accounts, column/row-level security, or a
+-- THIS IS A DETECTIVE CONTROL, NOT PREVENTION. It catches a bypass AFTER THE FACT (next run, <=6h
+-- later at this file's own registered cadence — see the WINDOW note below) and fails loud (RAISE + a
+-- durable critical ops.alerts row) — it cannot stop the mutation from happening. A full IAM re-scope
+-- (per-routine service accounts, column/row-level security, or a
 -- write-mediating API in front of these four tables) is the real fix and is DEFERRED — it needs a
 -- self-hosted MCP (the managed BigQuery MCP connector runs as the single owner OAuth grant by
 -- construction; see the RUNBOOK §15 credential table). Do NOT re-propose an IAM re-scope here without
@@ -72,9 +73,13 @@
 -- trigger_missing / calendar_runway_low / trading_halted / arsenal_disabled).
 --
 -- WINDOW: last 24h, successful DML jobs only (state='DONE', error_result IS NULL — a FAILED UPDATE/
--- DELETE/MERGE/TRUNCATE never mutated anything and is not a violation). Every scheduled query in this
--- directory runs at most once/day (bigquery/scheduled_queries/README.md), so a 24h lookback has no
--- detection gap at daily cadence.
+-- DELETE/MERGE/TRUNCATE never mutated anything and is not a violation). CORRECTED (rev 2026-07-11,
+-- adversarial self-audit) — this previously claimed "every scheduled query in this directory runs at
+-- most once/day," which is false (this SAME file is registered every 6h per bigquery/scheduled_queries/
+-- README.md's own row for it, and ops/RUNBOOK.md §15's DML-watch subsection agrees). This file's OWN
+-- cadence is every 6h — a 24h lookback is a comfortable 4x safety margin over that cadence, with no
+-- detection gap either way (a shorter actual cadence than the lookback window only means MORE overlap
+-- between consecutive runs, never a gap).
 --
 -- IAM: reads INFORMATION_SCHEMA.JOBS_BY_PROJECT (ALL identities' job METADATA, never table data) —
 -- needs bigquery.jobs.listAll, granted via roles/bigquery.resourceViewer on the run-as SA, the SAME

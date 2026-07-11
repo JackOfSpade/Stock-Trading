@@ -256,8 +256,13 @@ inside `stock-trading-498512`'s existing operating model (BigQuery MCP + console
 > corrected total beneath it.
 
 - **Cloud Scheduler:** $0.10/job/month after 3 free jobs/month per project. A D1-only pilot = 1 job = free.
-  Full 20-routine migration (D1,D2a,D2,D3,SL3,AR_att,AR_orc,SL2,SL5,W1-5,M1a-5,SL4,Q1-4,SL1,A1-3) ≈ 17
-  billable jobs × $0.10 ≈ **$1.70/month** — noise.
+  Full migration of every routine currently registered (`ops/cadence.yaml`, confirmed 29 total, 2026-07-11:
+  D1,D2,D2a,D3,W1-5,M1a,M1b,M2,M3,M4,M5,Q1-4,SL1-5,AR_att,AR_orc,A1-3) ≈ 26 billable jobs (29 minus the 3
+  free) × $0.10 ≈ **$2.60/month** — still noise. **CORRECTED (2026-07-11, adversarial self-audit):** this
+  previously said "Full 20-routine migration... ≈ 17 billable jobs ≈ $1.70/month" — the enumerated list
+  was already every routine in the system but both summed to 20 (an arithmetic slip: the listed routine
+  IDs actually expand to 29, not 20) and omitted M1b from the explicit list. The conclusion (infra cost is
+  noise either way) is unchanged; only the precise figures were wrong.
 - **Cloud Run job compute:** billed per vCPU-second/GiB-second only while the container executes,
   against a monthly free tier of 180,000 vCPU-seconds + 360,000 GiB-seconds. A harness that runs a few
   minutes/day (the wrapper itself, excluding whatever the Agent SDK call streams for) stays inside the free

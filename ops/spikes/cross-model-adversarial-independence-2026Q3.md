@@ -1,9 +1,19 @@
 # SPIKE — Cross-model adversarial independence for irreversible SISA decisions (2026 Q3)
 
-STATUS: **SPEC ONLY — not applied.** No live BigQuery object described here exists yet. This file is a
-design reference, mirroring the `infra/terraform/` "declared spec, not adopted" convention (see
-`CLAUDE.md` "Settled decisions"). Nothing in this document authorizes a human review/approval/chat gate
-on strategy add/delete or any self-improvement loop — see "Hard constraint compliance" at the bottom.
+STATUS: **CORRECTED 2026-07-11 (adversarial self-audit) — APPLIED LIVE, DORMANT.** This banner
+previously claimed "SPEC ONLY — not applied. No live BigQuery object described here exists yet," which
+was true when this spike was first written but went stale: the three objects sketched in §4
+(`ops.sp_score_cross_model_referee`, `state.strategy_retirement_readiness`,
+`state.foundation_change_termination_readiness`) WERE later applied live, in
+`bigquery/44_cross_model_referee.sql` (commit `685f0b6`, "Add cross-model-independence referee
+substrate — dormant"), and confirmed to exist in production BigQuery via `INFORMATION_SCHEMA` on
+2026-07-11. **"Applied" and "dormant" are different facts, not synonyms** — the objects exist, but
+nothing calls the procedure on a schedule and no readiness view's `ready` column reads `referee_verdict`
+yet (`ops/autonomy_levels.yaml` registers this loop at `stage: dormant`), so it has ZERO effect on any
+live decision today; the design reference below (staged rollout, credential requirements, CI impact) is
+still what governs whether/how it is ever activated. Nothing in this document authorizes a human
+review/approval/chat gate on strategy add/delete or any self-improvement loop — see "Hard constraint
+compliance" at the bottom.
 
 Author context: item 27 of the 2026-07 adversarial pass over the Strategy Arsenal (SISA) conversion.
 Read first (unchanged by this spike): `bigquery/11_theater_judge.sql`, `bigquery/35_strategy_arsenal.sql`,
@@ -97,6 +107,11 @@ is unaffected because they filter ON role, not against an enum.
   from any other readiness gate that hasn't cleared yet.
 
 ## 4. What is implementable TODAY (existing `ops.gemini` / Vertex substrate, zero new credentials)
+
+> **CORRECTED 2026-07-11:** every "SPEC SKETCH... not applied" comment in this section's SQL blocks is
+> now stale — all three objects sketched below were later applied live verbatim in
+> `bigquery/44_cross_model_referee.sql` (commit `685f0b6`). Read the SQL below as "this is what's live
+> today," not "this is only a proposal."
 
 ### 4.1 `ops.sp_score_cross_model_referee()` — the referee procedure
 
@@ -385,16 +400,18 @@ readiness views (§4.3/4.4) are adopted and SL5 is repointed to read them, a sma
 `check_roster_consistency.py` asserting those views exist and default-FALSE-safe (the same style of check
 the D2a cutover readiness view got) would be a reasonable, non-blocking follow-on — not scoped here.
 
-## 8. `shared_edits` this spike proposes (spec only — see structured output; not applied by this agent)
+## 8. `shared_edits` this spike proposes — CORRECTED 2026-07-11: both were later applied
 
 - `ops/RUNBOOK.md` §39: an addendum paragraph after "Same D2a skeleton (§36) per transition" describing
   the cross-model referee as a planned (not yet live) hardening of the `strategy-adoption` /
-  `strategy-retirement` / foundation-change TERMINATE gates, citing this spike file.
+  `strategy-retirement` / foundation-change TERMINATE gates, citing this spike file. **Applied** — see
+  RUNBOOK §39's "Cross-model referee hardening" subsection.
 - `ops/autonomy_levels.yaml`: a new registered loop `cross_model_referee_independence`, `stage: dormant`,
   `ceiling: active_auto`, pointing at this spike file and `bigquery/11_theater_judge.sql` /
   `bigquery/35_strategy_arsenal.sql` as the objects it would extend, with a `gate_to_next_stage` describing
   the §6 burn-in criterion (one full quarterly concurrence-rate observation before the readiness-view
-  AND-condition goes live).
+  AND-condition goes live). **Applied** — confirmed registered in `ops/autonomy_levels.yaml` at
+  `stage: dormant`.
 
 ## Hard constraint compliance
 
@@ -410,7 +427,10 @@ the D2a cutover readiness view got) would be a reasonable, non-blocking follow-o
    remains append-only (`INSERT`/`MERGE ... WHEN NOT MATCHED THEN INSERT` only, matching
    `ops.sp_score_theater()`'s existing pattern — no `UPDATE`/`DELETE` anywhere in §4.1).
 4. All sketched objects are idempotent (`CREATE OR REPLACE PROCEDURE` / `CREATE OR REPLACE VIEW`), scoped
-   to `stock-trading-498512`, and this file itself carries a WHY/apply-order/idempotency header. (This file
-   is SPEC ONLY, per its top banner — no live object was created by writing it.)
+   to `stock-trading-498512`, and this file itself carries a WHY/apply-order/idempotency header. (Writing
+   THIS FILE itself created no live object — that claim was, and remains, true of the act of authoring
+   this spike. The objects it sketches were separately applied later, in `bigquery/44_cross_model_referee.sql`
+   — see the corrected top banner. The two facts don't contradict: this document didn't self-apply, but
+   it also isn't purely hypothetical anymore.)
 5. Fail-closed / default-not-advance semantics preserved throughout — see §4c and the `COALESCE(...,
    'MISSING')` pattern used in every new AND-term.

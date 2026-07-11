@@ -237,9 +237,23 @@ BEGIN
   -- whether the WARNING below fires -- state.ddl_drift_promotion_readiness / state.restore_stale_
   -- promotion_readiness (bigquery/45_monitor_promotion.sql) need this history to evaluate "N consecutive
   -- clean runs", which the plain live views above cannot provide on their own.
-  INSERT INTO `stock-trading-498512.ops.monitor_health_history` (check_id, check_date, clean)
-  SELECT 'restore_stale', CURRENT_DATE('America/Denver'), NOT COALESCE(stale, TRUE)
-  FROM `stock-trading-498512.state.restore_health`;
+  -- BUG FIX (rev 2026-07-11, adversarial self-audit): MERGE upsert, not plain INSERT -- a plain INSERT
+  -- let a same-day re-run of this query (off-schedule/manual/duplicate, the exact class the 2026-06-25
+  -- cadence deadline-guard fix already had to account for) write a second row for the same (check_id,
+  -- check_date), which the NOT-ENFORCED primary key does not prevent -- breaking the "14 consecutive
+  -- DISTINCT logged days" promotion bar this history table exists to support (bigquery/45's readiness
+  -- views also defend against any pre-existing duplicate independently).
+  MERGE `stock-trading-498512.ops.monitor_health_history` T
+  USING (
+    SELECT 'restore_stale' AS check_id, CURRENT_DATE('America/Denver') AS check_date,
+           NOT COALESCE(stale, TRUE) AS clean
+    FROM `stock-trading-498512.state.restore_health`
+  ) S
+  ON T.check_id = S.check_id AND T.check_date = S.check_date
+  WHEN MATCHED THEN
+    UPDATE SET clean = S.clean, logged_ts = CURRENT_TIMESTAMP()
+  WHEN NOT MATCHED THEN
+    INSERT (check_id, check_date, clean) VALUES (S.check_id, S.check_date, S.clean);
 
   IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.restore_health` WHERE stale) THEN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
@@ -254,8 +268,18 @@ BEGIN
   -- cluster) diverged from the canonical bigquery/01_schema.sql spec (a silent out-of-band ALTER the
   -- idempotent CREATE-IF-NOT-EXISTS spec will not re-assert; invisible to the DML-only append_only_integrity
   -- and to dbt not_null DATA tests). Staged-rollout record-only until a clean baseline is confirmed.
-  INSERT INTO `stock-trading-498512.ops.monitor_health_history` (check_id, check_date, clean)
-  SELECT 'ddl_drift', CURRENT_DATE('America/Denver'), NOT EXISTS (SELECT 1 FROM `stock-trading-498512.state.ddl_drift`);
+  -- BUG FIX (rev 2026-07-11, adversarial self-audit): MERGE upsert, same rationale as the restore_stale
+  -- write above.
+  MERGE `stock-trading-498512.ops.monitor_health_history` T
+  USING (
+    SELECT 'ddl_drift' AS check_id, CURRENT_DATE('America/Denver') AS check_date,
+           NOT EXISTS (SELECT 1 FROM `stock-trading-498512.state.ddl_drift`) AS clean
+  ) S
+  ON T.check_id = S.check_id AND T.check_date = S.check_date
+  WHEN MATCHED THEN
+    UPDATE SET clean = S.clean, logged_ts = CURRENT_TIMESTAMP()
+  WHEN NOT MATCHED THEN
+    INSERT (check_id, check_date, clean) VALUES (S.check_id, S.check_date, S.clean);
 
   IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.ddl_drift`) THEN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(

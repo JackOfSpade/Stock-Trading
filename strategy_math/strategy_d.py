@@ -136,7 +136,7 @@ def metric_structural_change_invalidated(consecutive_non_conforming_quarters: in
 
 def subtype_for_dual_signal(
     catalyst_resolution_days_from_formation: int | None,
-    trend_metric_independently_evaluable: bool = False,
+    trend_metric_independently_evaluable: bool | None = None,
 ) -> str:
     """rev 30 typing rule for dual-signal theses (both a future-dated catalyst AND a
     quantifiable trend metric present): mechanism-enforced via date arithmetic against
@@ -159,9 +159,27 @@ def subtype_for_dual_signal(
     strategy/06_strategy_d.md / Strategy.md directly before relying on it for a real
     typing decision; the source text's own three-bullet structure is ambiguous enough
     that this is a best-effort mechanical reading, not a restatement beyond dispute.
+
+    BUG FIX (rev 2026-07-11, adversarial self-audit): `trend_metric_independently_
+    evaluable` used to default to `False` — since `False` and `None` (never explicitly
+    supplied) look IDENTICAL to a caller who reads a `False` return, a caller that
+    forgot to determine this thesis-level fact would silently get the LESS STRICT 'A'
+    typing instead of an error telling them they forgot something the docstring itself
+    calls "required". The default is now `None`, a sentinel with no typing meaning of
+    its own — see below, it RAISES rather than silently resolves to 'A' in the one
+    branch (catalyst <= 365 days) where this fact actually matters. When the catalyst
+    is None or beyond the 365-day window, the fact is genuinely irrelevant to the
+    outcome and the caller is not burdened with supplying it.
     """
     if catalyst_resolution_days_from_formation is None:
         return "B"
     if catalyst_resolution_days_from_formation <= 365:
+        if trend_metric_independently_evaluable is None:
+            raise ValueError(
+                "trend_metric_independently_evaluable is required when "
+                "catalyst_resolution_days_from_formation <= 365 — this is a thesis-level fact "
+                "not derivable from date arithmetic alone (see this function's docstring). "
+                "Determine it before calling, rather than defaulting to a typing outcome."
+            )
         return "BOTH" if trend_metric_independently_evaluable else "A"
     return "B"
