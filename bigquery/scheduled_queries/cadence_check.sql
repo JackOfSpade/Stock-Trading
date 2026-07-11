@@ -19,7 +19,9 @@
 -- after D2/D3, like the freshness check. APPLY ORDER: bigquery/16_automation_health.sql must be applied
 -- BEFORE re-pasting this query (it references state.backup_health + state.automation_heartbeat). See
 -- ops/RUNBOOK.md "Scheduled queries". Also apply bigquery/34_alert_lifecycle.sql before re-pasting
--- (it defines ops.sp_auto_resolve_alerts, called first below — self-improvement audit WP2, 2026-07-07).
+-- (it defines ops.sp_auto_resolve_alerts, called below — self-improvement audit WP2, 2026-07-07), and
+-- bigquery/38_run_log_selfheal.sql before re-pasting (it defines ops.sp_backfill_run_log_from_markers,
+-- called FIRST below — RUNBOOK section 38 self-heal, ITEM 3).
 --
 -- NOTE (repo vs live): this query's LIVE scheduled-query body still ran without the
 -- sp_auto_resolve_alerts call as of this file's edit — the repo copy needs a console re-paste
@@ -29,6 +31,18 @@
 -- depth for days with zero routine runs.
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';
+
+  -- RUNBOOK section 38 self-heal (ITEM 3, bigquery/38_run_log_selfheal.sql): backfill any
+  -- ops.run_log completion row whose routine already has a landed-commit marker in
+  -- ops.routine_commit_markers, BEFORE evaluating missed_run/missing_dependency below, so a
+  -- landed-but-unlogged strand self-heals the same night instead of tripping the dead-man's
+  -- switch. (This proc also calls sp_auto_resolve_alerts() itself once it backfills anything,
+  -- so the general call right below is defense-in-depth for unrelated alerts, not redundant
+  -- plumbing.) Best-effort: never let a resolver bug break the cadence dead-man's switch itself.
+  BEGIN
+    CALL `stock-trading-498512.ops.sp_backfill_run_log_from_markers`();
+  EXCEPTION WHEN ERROR THEN SELECT @@error.message;
+  END;
 
   -- Mechanized alert auto-resolve (WP2, defense-in-depth alongside the routine-level call above).
   -- Best-effort: never let a resolver bug break the cadence dead-man's switch itself.
