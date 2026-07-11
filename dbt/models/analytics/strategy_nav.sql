@@ -8,20 +8,29 @@
 -- the SGOV park is account-level (no per-strategy split — see state.sgov_reconciliation / §13);
 -- per-strategy budget = available_funds below.
 
--- (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner directive.) Roster-derived enumeration +
--- as-of-flow-date equal-split divisor, mirroring bigquery/22_cash_flows.sql exactly so dbt-parity's
--- EXCEPT-DISTINCT still matches the live analytics.strategy_nav (both read the same state.strategy_roster).
+-- (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner directive; rev 2026-07-10b — bug fix,
+-- code-review finding #1, mirroring the bigquery/22_cash_flows.sql fix exactly so dbt-parity's
+-- EXCEPT-DISTINCT still matches the live analytics.strategy_nav.) BUG FIX: enumerating `active` as
+-- CURRENTLY is_active meant a terminated strategy's history vanished from the rollup, and the
+-- equal-split divisor for HISTORICAL flows was recomputed off the current active count -- retroactively
+-- re-splitting old deposits among fewer survivors the moment any strategy terminates. FIX: `active` now
+-- enumerates every EVER-ADOPTED strategy (including terminated), and the equal-split eligibility test
+-- uses BOTH adopted_date and retired_date evaluated AS OF THE FLOW'S OWN DATE -- a fixed historical fact
+-- a later termination can never revise.
 WITH active AS (
-  SELECT strategy_code AS s, adopted_date
+  SELECT strategy_code AS s, adopted_date, retired_date
   FROM {{ source('state_external', 'strategy_roster') }}
-  WHERE is_active
+  WHERE adopted_date IS NOT NULL
 ),
 dep AS (
   SELECT a.s AS strategy,
     SUM(CASE
           WHEN cf.strategy = a.s THEN cf.amount
           WHEN cf.strategy IS NULL AND a.adopted_date <= cf.flow_date
-            THEN cf.amount / (SELECT COUNT(*) FROM active a2 WHERE a2.adopted_date <= cf.flow_date)
+               AND (a.retired_date IS NULL OR a.retired_date > cf.flow_date)
+            THEN cf.amount / (SELECT COUNT(*) FROM active a2
+                               WHERE a2.adopted_date <= cf.flow_date
+                                 AND (a2.retired_date IS NULL OR a2.retired_date > cf.flow_date))
           ELSE 0 END) AS deposits
   FROM active a
   CROSS JOIN {{ source('events', 'cash_flows') }} cf

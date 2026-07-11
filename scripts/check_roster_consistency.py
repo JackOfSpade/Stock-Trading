@@ -53,6 +53,14 @@ CHECKS
        a routine id present in ops/cadence.yaml, so a strategy that declares its own scheduled routine can
        never reference a routine the cadence single-source doesn't know about. FAIL naming code + routine.
 
+  R-E  RAILS LITERAL AGREEMENT (added rev 2026-07-10b, code-review finding #9). bigquery/35_strategy_arsenal.sql's
+       state.arsenal_rails view hardcodes the anti-churn rails (n_min, n_max, k_incubate, k_regime,
+       adoption_rate_window_days, and the three cooldown_days) as SQL constants that DUPLICATE
+       strategy/roster.yaml's `rails:` block. That view's own comment claims these are "cross-checked by
+       scripts/check_roster_consistency.py, exactly as the cadence deadline literal is ... checked by
+       check_cadence_consistency.py" — this check makes that claim true instead of aspirational. FAIL
+       naming which rail disagrees and its two values.
+
 Usage:  python scripts/check_roster_consistency.py        # exit 0 if consistent, 1 + diff if not
 """
 import glob
@@ -95,12 +103,37 @@ BARE_LITERAL = re.compile(r"\[\s*'[A-Z]'\s*,\s*'[A-Z]'")
 FIXED_DIVISOR = re.compile(r"/\s*5\b")
 # A per-strategy slice filename referenced in the plan slice-map, e.g. `06_strategy_d.md`.
 SLICE_FILE_REF = re.compile(r"\d+_strategy_([a-z]{1,3})\.md")
+# A rail constant in bigquery/35's `consts AS (SELECT 2 AS n_min, ...)` CTE, e.g. "8  AS n_max,".
+RAIL_NAMES = ("n_min", "n_max", "k_incubate", "k_regime", "adoption_rate_window_days",
+              "reject_cooldown_days", "terminate_cooldown_days", "keep_cooldown_days")
+RAIL_CONST = re.compile(r"(\d+)\s+AS\s+(" + "|".join(RAIL_NAMES) + r")\b")
+# roster.yaml rails: key -> the arsenal_rails SQL constant name it must equal.
+ROSTER_RAIL_KEY_TO_SQL_NAME = {
+    "n_min": "n_min", "n_max": "n_max", "k_incubate": "k_incubate", "k_regime": "k_regime",
+    "adoption_rate_window_days": "adoption_rate_window_days",
+}
+ROSTER_COOLDOWN_KEY_TO_SQL_NAME = {
+    "post_rejection": "reject_cooldown_days",
+    "post_termination": "terminate_cooldown_days",
+    "post_keep": "keep_cooldown_days",
+}
 # A seed VALUES row associating a code with a lifecycle to_state (last row per code wins = latest state).
 # Two seed SHAPES are recognized (SL5 will use the VALUES shape for one-at-a-time PROBE finalizations;
 # the founding batch used the UNNEST shape to seed all five at once with one shared to_state):
-#   (1) literal tuple:  (..., 'A', ..., 'ADOPTED', ...)                      -- SEED_ROW
+#   (1) literal tuple:  (..., 'A', <from_state>, 'ADOPTED', ...)             -- SEED_ROW
 #   (2) batch UNNEST:   SELECT ..., 'ADOPTED', ... FROM UNNEST(['A',...]) AS code  -- UNNEST_SEED_BLOCK
-SEED_ROW = re.compile(r"'([A-Z]{1,3})'[^)\n]*?'(" + "|".join(LIFECYCLE_STATES) + r")'")
+# BUG FIX (rev 2026-07-10b, code-review finding #2): the standard events.strategy_lifecycle column order
+# is (event_ts, strategy_code, from_state, to_state, ...) — from_state is itself either NULL-ish or a
+# quoted lifecycle-state string (e.g. a strategy going PAPER->PROBE has from_state='PAPER'). The original
+# SEED_ROW regex captured the FIRST quoted lifecycle-state token after the code, which is from_state, not
+# to_state, on any row where from_state is a real (non-NULL) state — verified directly: it read a
+# PAPER->PROBE transition as if the code were 'PAPER'. SEED_ROW now explicitly requires the from_state
+# slot (NULL / CAST(NULL AS STRING) / a quoted state) between the code and the to_state it captures.
+SEED_ROW = re.compile(
+    r"'([A-Z]{1,3})'"
+    r"\s*,\s*(?:NULL|CAST\(\s*NULL\s+AS\s+STRING\s*\)|'[A-Z_]+')"
+    r"\s*,\s*'(" + "|".join(LIFECYCLE_STATES) + r")'"
+)
 UNNEST_SEED_BLOCK = re.compile(
     r"SELECT\b(?P<select>.*?)\bFROM\s+UNNEST\(\s*\[(?P<codes>(?:\s*'[A-Z]{1,3}'\s*,?\s*)+)\]\s*\)\s+AS\s+code",
     re.S,
@@ -146,18 +179,32 @@ def slicemap_codes():
     return {c.upper() for c in SLICE_FILE_REF.findall(section)}
 
 
-def seed_active_codes():
+def arsenal_rails_sql_consts():
     txt = open(ARSENAL_SQL, encoding="utf-8").read()
-    latest = {}
-    for code, state in SEED_ROW.findall(txt):
-        latest[code] = state          # append-only seed: later row wins
+    return {name: int(val) for val, name in RAIL_CONST.findall(txt)}
+
+
+def seed_active_codes():
+    # BUG FIX (rev 2026-07-10b, code-review finding #2): the previous version processed ALL SEED_ROW
+    # matches in one pass, then ALL UNNEST_SEED_BLOCK matches in a second pass, so an UNNEST block always
+    # overrode a literal-tuple row for the same code regardless of which actually appears LATER in the
+    # file. Both match kinds are now merged into a single list of (start_pos, code, state) events and
+    # applied in true textual order, so "the last row/block per code wins" is what actually happens.
+    txt = open(ARSENAL_SQL, encoding="utf-8").read()
+    events = []
+    for m in SEED_ROW.finditer(txt):
+        events.append((m.start(), m.group(1), m.group(2)))
     for m in UNNEST_SEED_BLOCK.finditer(txt):
         state_m = re.search(r"'(" + "|".join(LIFECYCLE_STATES) + r")'", m.group("select"))
         if not state_m:
             continue
         state = state_m.group(1)
         for code in re.findall(r"'([A-Z]{1,3})'", m.group("codes")):
-            latest[code] = state      # append-only seed: later block wins (by textual order)
+            events.append((m.start(), code, state))
+    events.sort(key=lambda e: e[0])
+    latest = {}
+    for _, code, state in events:
+        latest[code] = state          # true textual order: later position wins
     return {c for c, s in latest.items() if s in ACTIVE_STATES_SQL}, len(latest)
 
 
@@ -228,6 +275,27 @@ def main():
             errors.append(f"R-D: strategy {s.get('code')!r} names per_strategy_routine '{rt}' which is NOT "
                           f"a routine id in ops/cadence.yaml")
 
+    # ---- R-E: bigquery/35's arsenal_rails SQL constants agree with roster.yaml's rails block ----
+    rails_doc = doc.get("rails", {}) or {}
+    if not os.path.exists(ARSENAL_SQL):
+        errors.append("R-E: bigquery/35_strategy_arsenal.sql absent but strategy/roster.yaml has a rails "
+                      "block — nothing to compare arsenal_rails' SQL constants against")
+    else:
+        sql_consts = arsenal_rails_sql_consts()
+        if len(sql_consts) < len(RAIL_NAMES):
+            errors.append(f"R-E: parsed only {len(sql_consts)}/{len(RAIL_NAMES)} rail constants from "
+                          f"bigquery/35_strategy_arsenal.sql's consts CTE — did the `<N> AS <name>` shape "
+                          f"change? (update RAIL_CONST)")
+        for yaml_key, sql_name in ROSTER_RAIL_KEY_TO_SQL_NAME.items():
+            if yaml_key in rails_doc and sql_name in sql_consts and int(rails_doc[yaml_key]) != sql_consts[sql_name]:
+                errors.append(f"R-E: roster.yaml rails.{yaml_key}={rails_doc[yaml_key]} but "
+                              f"bigquery/35_strategy_arsenal.sql arsenal_rails.{sql_name}={sql_consts[sql_name]}")
+        cooldowns = rails_doc.get("cooldown_days", {}) or {}
+        for yaml_key, sql_name in ROSTER_COOLDOWN_KEY_TO_SQL_NAME.items():
+            if yaml_key in cooldowns and sql_name in sql_consts and int(cooldowns[yaml_key]) != sql_consts[sql_name]:
+                errors.append(f"R-E: roster.yaml rails.cooldown_days.{yaml_key}={cooldowns[yaml_key]} but "
+                              f"bigquery/35_strategy_arsenal.sql arsenal_rails.{sql_name}={sql_consts[sql_name]}")
+
     # ---- report ----
     if errors:
         print("ROSTER CONSISTENCY: FAIL\n")
@@ -242,7 +310,7 @@ def main():
     print(f"ROSTER CONSISTENCY: OK — {len(roster_codes)} roster-active strategies ({sorted(roster_codes)}) "
           f"agree across roster.yaml, the bigquery/35 seed, Strategy.md, the strategy/ slices, and the plan "
           f"slice-map; no bare roster literal or fixed /5 divisor in the live derived SQL; the dbt reconcile "
-          f"test is count-agnostic.")
+          f"test is count-agnostic; arsenal_rails' SQL constants agree with roster.yaml's rails block.")
     return 0
 
 

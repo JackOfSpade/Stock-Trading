@@ -65,7 +65,14 @@
 
 loops:
   - id: process_reliability          # WO-6: ops.run_log metrics -> W5 self-applied process-constant change
-    stage: dormant
+    stage: active_auto           # rev 2026-07-10b, code-review finding #7, owner-confirmed: was `dormant`
+                                  # while ceiling was already `active_auto` — self-contradictory (this
+                                  # file's own header defines dormant as "NOTHING reads or writes through
+                                  # it", and its PROMOTION RULE forbids a routine acting above its declared
+                                  # stage; the round-2 routine text DOES actively read/write + self-apply).
+                                  # stage now matches ceiling, same as strategy_arsenal — the loop's OWN
+                                  # readiness view (not a separate stage field) is what actually gates
+                                  # whether it does anything on a given firing.
     ceiling: active_auto
     artifact: analytics.routine_health_scorecard (bigquery/27_process_reliability.sql) +
       state.process_reliability_readiness / ops.process_reliability_observations /
@@ -86,7 +93,14 @@ loops:
     added: "2026-07-03"
 
   - id: strategy_playbook             # B-4-data: append-only self-authored playbook deltas
-    stage: dormant
+    stage: active_auto           # rev 2026-07-10b, code-review finding #7, owner-confirmed: was `dormant`
+                                  # while ceiling was already `active_auto` — self-contradictory (this
+                                  # file's own header defines dormant as "NOTHING reads or writes through
+                                  # it", and its PROMOTION RULE forbids a routine acting above its declared
+                                  # stage; the round-2 routine text DOES actively read/write + self-apply).
+                                  # stage now matches ceiling, same as strategy_arsenal — the loop's OWN
+                                  # readiness view (not a separate stage field) is what actually gates
+                                  # whether it does anything on a given firing.
     ceiling: active_auto
     artifact: events.playbook_updates / state.active_playbook / state.strategy_playbook_readiness
       (bigquery/37_self_improvement_autonomy.sql; consumes analytics.calibration_shrunk +
@@ -108,7 +122,14 @@ loops:
     added: "2026-07-03"
 
   - id: execution_quality_tuning      # B-3/B-8-exec: slippage + fill-vs-expire rule tuning
-    stage: dormant
+    stage: active_auto           # rev 2026-07-10b, code-review finding #7, owner-confirmed: was `dormant`
+                                  # while ceiling was already `active_auto` — self-contradictory (this
+                                  # file's own header defines dormant as "NOTHING reads or writes through
+                                  # it", and its PROMOTION RULE forbids a routine acting above its declared
+                                  # stage; the round-2 routine text DOES actively read/write + self-apply).
+                                  # stage now matches ceiling, same as strategy_arsenal — the loop's OWN
+                                  # readiness view (not a separate stage field) is what actually gates
+                                  # whether it does anything on a given firing.
     ceiling: active_auto
     artifact: analytics.execution_quality / state.execution_quality_readiness /
       ops.exec_rule_change_log (bigquery/37_self_improvement_autonomy.sql)
@@ -126,7 +147,14 @@ loops:
     added: "2026-07-03"
 
   - id: calibration_parameter_carveout  # unified S-8 + B-8-obs: the ONE whitelisted self-updating parameter
-    stage: dormant
+    stage: active_auto           # rev 2026-07-10b, code-review finding #7, owner-confirmed: was `dormant`
+                                  # while ceiling was already `active_auto` — self-contradictory (this
+                                  # file's own header defines dormant as "NOTHING reads or writes through
+                                  # it", and its PROMOTION RULE forbids a routine acting above its declared
+                                  # stage; the round-2 routine text DOES actively read/write + self-apply).
+                                  # stage now matches ceiling, same as strategy_arsenal — the loop's OWN
+                                  # readiness view (not a separate stage field) is what actually gates
+                                  # whether it does anything on a given firing.
     ceiling: active_auto
     artifact: state.calibration_param_registry / state.param_change_provenance /
       state.param_oos_degradation / state.calibration_param_readiness
