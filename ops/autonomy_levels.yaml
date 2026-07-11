@@ -260,7 +260,12 @@ cross_cutting_guards:
       scripts/check_roster_consistency.py) while holding the four constant-tuning loops subject to the guard.
       Round-2 (this rev) extends that exemption to ALL loops, retiring the guard entirely.
   - id: meta_monitoring_heartbeat
-    status: documented_not_enforced
+    status: live_for_five_of_six_loops   # rev 2026-07-11, ITEM 11 self-improvement audit (was
+                                          # documented_not_enforced for the four constant-tuning loops;
+                                          # that was already stale the moment those four were bumped to
+                                          # stage:active_auto in this same file's rev 2026-07-10b —
+                                          # active_auto loops with no heartbeat and no evaluating routine
+                                          # at all is a worse gap than "no heartbeat yet")
     note: >
       Every loop above dormant should write an "evaluated this cycle" heartbeat (or an explicit
       decision_log "no change" entry) on every firing, with a scheduled-query dead-man's-switch
@@ -271,5 +276,13 @@ cross_cutting_guards:
       dead-man's switch alerts if the expected quarterly / monthly / daily arsenal evaluation is missing.
       SL1/SL3/SL4 also register in the cadence dead-man views (bigquery/12 + 24) and the stalled-run guard
       (bigquery/18); the queue_driven SL2/SL5 register in bigquery/18 stalled_runs only (NOT 12/24, per the
-      queue_driven rule). The four constant-tuning loops above remain dormant, so no heartbeat is expected
-      from them yet.
+      queue_driven rule). LIVE for the four constant-tuning loops as of rev 2026-07-11 (ITEM 11): before
+      this rev they had NEITHER a heartbeat NOR any routine that ever evaluated their readiness views at
+      all — declared active_auto with zero operational wiring, a real gap this rev closes, not merely a
+      missing heartbeat. Claude_Task_Plan.md's W5 section now reads each of the four loops'
+      state.*_readiness view every weekly cycle (self-applying the bounded change when ready, logging
+      "not ready" otherwise) and writes `ops.heartbeat(source='loop:<id>')` unconditionally either way;
+      `bigquery/scheduled_queries/cadence_check.sql` alarms (WARNING, self-bootstrapping — never fires
+      before a loop's first-ever heartbeat) if a loop that has previously reported goes >10 days quiet.
+      cross_model_referee_independence (added rev 2026-07-11, ITEM 27) is the one loop still genuinely
+      dormant by design (see its own gate_to_next_stage) — no heartbeat is expected from it yet.
