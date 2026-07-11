@@ -57,6 +57,16 @@ QUALIFY ROW_NUMBER() OVER (ORDER BY control_ts DESC) = 1;
 -- enabled join). Fewer than 5 snapshots -> not enough peak history to trust; defaults to no breach.
 -- -15% is a first-cut POLICY INVARIANT (not fitted to the trade sample) meant to be reviewed by the
 -- owner as the book grows; see Experiment_Parameters.md for the versioned record of this constant.
+--
+-- snapshot_stale (ITEM 16, self-improvement audit 2026-07-11): unlike state.freshness's
+-- marks_fresh/engine_fresh, this view previously had NO recency check on ops.account_snapshot's latest
+-- row — a stalled D2a (the sole writer) would leave this breaker silently trusting arbitrarily old data
+-- forever, with nothing surfacing the staleness itself. snapshot_stale = latest snapshot older than the
+-- current last_trading_day; folded into state.trading_enabled below so a stalled D2a visibly and
+-- mechanically fails the book-level breaker closed instead of silently trusting stale data. Defense-in-
+-- depth: D2a's own outage already trips cadence_watch's missed_run critical (which independently forces
+-- state.system_health.all_green=FALSE and thus trading_enabled=FALSE) — this is the direct, same-signal
+-- path so the drawdown breaker's own staleness is legible without having to reason through that indirection.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.book_drawdown_watch` AS
 WITH snaps AS (
   SELECT snapshot_date, nav
@@ -72,15 +82,17 @@ agg AS (
   SELECT COUNT(*) AS n_snapshots,
     ARRAY_AGG(STRUCT(snapshot_date, nav, peak_nav) ORDER BY snapshot_date DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest
   FROM peaked
-)
+),
+ltd AS (SELECT last_trading_day FROM `stock-trading-498512.state.trading_day_today`)
 SELECT
   agg.latest.snapshot_date AS as_of_date,
   agg.latest.nav AS current_nav,
   agg.latest.peak_nav AS peak_nav,
   SAFE_DIVIDE(agg.latest.nav, agg.latest.peak_nav) - 1 AS drawdown_from_peak,
   agg.n_snapshots,
+  (agg.n_snapshots > 0 AND agg.latest.snapshot_date < ltd.last_trading_day) AS snapshot_stale,
   (agg.n_snapshots >= 5 AND SAFE_DIVIDE(agg.latest.nav, agg.latest.peak_nav) - 1 <= -0.15) AS drawdown_breach
-FROM agg;
+FROM agg CROSS JOIN ltd;
 
 -- ===== state.trading_enabled — the machine-readable gate =====
 -- Robust to an unseeded/empty ops.trading_control (defensive; should not occur post-deployment
@@ -94,11 +106,12 @@ WITH ctrl AS (
   FROM `stock-trading-498512.ops.trading_control`
 ),
 health AS (SELECT all_green FROM `stock-trading-498512.state.system_health`),
-dd AS (SELECT drawdown_breach, drawdown_from_peak FROM `stock-trading-498512.state.book_drawdown_watch`)
+dd AS (SELECT drawdown_breach, drawdown_from_peak, snapshot_stale FROM `stock-trading-498512.state.book_drawdown_watch`)
 SELECT
   NOT COALESCE(ctrl.latest.halt_all, FALSE)
   AND COALESCE(health.all_green, FALSE)
-  AND NOT COALESCE(dd.drawdown_breach, FALSE) AS trading_enabled,
+  AND NOT COALESCE(dd.drawdown_breach, FALSE)
+  AND NOT COALESCE(dd.snapshot_stale, FALSE) AS trading_enabled,
   CASE
     WHEN COALESCE(ctrl.latest.halt_all, FALSE) THEN
       FORMAT('halt_all (mode=%s): %s', COALESCE(ctrl.latest.mode, '?'), COALESCE(ctrl.latest.reason, 'no reason logged'))
@@ -106,6 +119,8 @@ SELECT
       'state.system_health.all_green = FALSE (freshness / open critical alert / embedding / firing kill-flag issue)'
     WHEN COALESCE(dd.drawdown_breach, FALSE) THEN
       FORMAT('book NAV drawdown %.2f%% from trailing peak exceeds the -15%% circuit-breaker threshold', dd.drawdown_from_peak * 100)
+    WHEN COALESCE(dd.snapshot_stale, FALSE) THEN
+      'state.book_drawdown_watch.snapshot_stale = TRUE (ops.account_snapshot has not been refreshed for the current trading day -- the book-level drawdown breaker cannot trust its own peak/current NAV comparison; ITEM 16, 2026-07-11)'
     ELSE NULL
   END AS halt_reason
 FROM ctrl, health, dd;

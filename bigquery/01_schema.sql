@@ -202,6 +202,15 @@ SELECT
   SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(payload,'$.time_exit_date')) AS time_exit_date,
   JSON_VALUE(payload,'$.instruction_id')                     AS instruction_id,
   JSON_VALUE(payload,'$.source_decision_ref')                AS source_decision_ref,
+  -- guard_passed/guard_reasons (self-improvement audit ITEM 15, 2026-07-11): the routine-side
+  -- fn_order_guard/fn_order_guard_options check was documented as an obligation on the caller with no
+  -- mechanical enforcement -- nothing stopped an ORDER_STAGED row from landing without the guard ever
+  -- having run. Embedding its own result in the payload makes the omission a queryable, detectable fact
+  -- (bigquery/scheduled_queries/daily_staging_cap_check.sql flags any today's row missing it as CRITICAL)
+  -- instead of a silent trust assumption. NULL guard_passed on an OLDER row (pre-ITEM-15) is expected and
+  -- not itself an anomaly -- only a MISSING value on a row staged TODAY, after this convention took effect.
+  CAST(JSON_VALUE(payload,'$.guard_passed') AS BOOL)         AS guard_passed,
+  JSON_VALUE(payload,'$.guard_reasons')                       AS guard_reasons,
   CASE WHEN UPPER(JSON_VALUE(payload,'$.side')) = 'BUY'
        THEN ROUND(CAST(JSON_VALUE(payload,'$.qty') AS NUMERIC)
                   * CAST(JSON_VALUE(payload,'$.limit_price') AS NUMERIC) + 0.35, 2)
