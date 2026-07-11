@@ -70,6 +70,14 @@
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.tax_lots` AS
 WITH buys AS (
   SELECT trade_id, strategy, ticker, fill_ts, price, shares, commission,
+         -- BUG FIX (rev 2026-07-11, adversarial self-audit): `price` for an OCC-format (option) ticker
+         -- is a PER-SHARE premium (same convention as bigquery/40_options_marks.sql's premium_close),
+         -- not a per-contract dollar amount -- multiplier converts it to per-contract. `commission`,
+         -- by contrast, is ALREADY a flat per-contract dollar fee for options (IBKR's own convention),
+         -- so commission_per_share needs NO multiplier scaling -- only the premium term does. See the
+         -- cost_basis/proceeds/realized_gain_loss expressions below for how the two are combined
+         -- without double-applying the multiplier to commission.
+         IF(`stock-trading-498512.analytics.fn_is_occ_option_symbol`(ticker), 100, 1) AS multiplier,
          SAFE_DIVIDE(commission, NULLIF(shares, 0)) AS commission_per_share,
          -- cum_start = total BUY shares in this ticker strictly before this fill (FIFO entry order)
          COALESCE(SUM(shares) OVER (
@@ -80,6 +88,7 @@ WITH buys AS (
 ),
 sells AS (
   SELECT trade_id, strategy, ticker, fill_ts, price, shares, commission, realized_pnl,
+         IF(`stock-trading-498512.analytics.fn_is_occ_option_symbol`(ticker), 100, 1) AS multiplier,
          SAFE_DIVIDE(commission, NULLIF(shares, 0)) AS commission_per_share,
          -- cum_start = total SELL shares in this ticker strictly before this fill (FIFO consumption order)
          COALESCE(SUM(shares) OVER (
@@ -93,6 +102,8 @@ sells AS (
 matched AS (
   SELECT
     b.ticker,
+    -- b.multiplier == s.multiplier always (both are a pure function of `ticker`, the join key).
+    b.multiplier AS multiplier,
     b.trade_id AS buy_trade_id, b.strategy AS buy_strategy, b.fill_ts AS buy_fill_ts,
     b.price AS buy_price, b.commission_per_share AS buy_commission_per_share,
     s.trade_id AS sell_trade_id, s.strategy AS sell_strategy, s.fill_ts AS sell_fill_ts,
@@ -110,7 +121,7 @@ buy_matched_totals AS (
 ),
 open_remainder AS (
   SELECT
-    b.ticker, b.trade_id AS buy_trade_id, b.strategy AS buy_strategy, b.fill_ts AS buy_fill_ts,
+    b.ticker, b.multiplier, b.trade_id AS buy_trade_id, b.strategy AS buy_strategy, b.fill_ts AS buy_fill_ts,
     b.price AS buy_price, b.commission_per_share AS buy_commission_per_share,
     b.shares - COALESCE(t.total_matched, 0) AS open_shares
   FROM buys b
@@ -126,10 +137,14 @@ SELECT
   'CLOSED' AS status,
   matched_shares AS shares,
   buy_price AS entry_price, sell_price AS exit_price,
-  ROUND(matched_shares * (buy_price + COALESCE(buy_commission_per_share, 0)), 4)  AS cost_basis,
-  ROUND(matched_shares * (sell_price - COALESCE(sell_commission_per_share, 0)), 4) AS proceeds,
-  ROUND(matched_shares * (sell_price - COALESCE(sell_commission_per_share, 0))
-        - matched_shares * (buy_price + COALESCE(buy_commission_per_share, 0)), 4) AS realized_gain_loss,
+  -- multiplier scales the PREMIUM term only (100 for options, 1 for equities); commission_per_share
+  -- is already a flat per-contract/per-share dollar fee and must NOT be multiplier-scaled again.
+  ROUND(matched_shares * multiplier * buy_price
+        + matched_shares * COALESCE(buy_commission_per_share, 0), 4)  AS cost_basis,
+  ROUND(matched_shares * multiplier * sell_price
+        - matched_shares * COALESCE(sell_commission_per_share, 0), 4) AS proceeds,
+  ROUND((matched_shares * multiplier * sell_price - matched_shares * COALESCE(sell_commission_per_share, 0))
+        - (matched_shares * multiplier * buy_price + matched_shares * COALESCE(buy_commission_per_share, 0)), 4) AS realized_gain_loss,
   DATE_DIFF(DATE(sell_fill_ts, 'America/New_York'), DATE(buy_fill_ts, 'America/New_York'), DAY) AS holding_period_days,
   IF(DATE_DIFF(DATE(sell_fill_ts, 'America/New_York'), DATE(buy_fill_ts, 'America/New_York'), DAY) > 365,
      'LONG_TERM', 'SHORT_TERM') AS term
@@ -145,7 +160,8 @@ SELECT
   'OPEN' AS status,
   open_shares AS shares,
   buy_price AS entry_price, CAST(NULL AS NUMERIC) AS exit_price,
-  ROUND(open_shares * (buy_price + COALESCE(buy_commission_per_share, 0)), 4) AS cost_basis,
+  ROUND(open_shares * multiplier * buy_price
+        + open_shares * COALESCE(buy_commission_per_share, 0), 4) AS cost_basis,
   CAST(NULL AS NUMERIC) AS proceeds,
   CAST(NULL AS NUMERIC) AS realized_gain_loss,
   DATE_DIFF(CURRENT_DATE('America/New_York'), DATE(buy_fill_ts, 'America/New_York'), DAY) AS holding_period_days,
@@ -163,8 +179,15 @@ FROM open_remainder;
 -- entry in the same name is exactly the cross-strategy exposure this view exists to catch.
 --
 -- "Within 30 days... of the SAME ticker" is IRC §1091's own text (substantially-identical is narrower
--- than "same ticker" for options/convertibles, but every position this system trades is a single-class
--- equity/ETF, so same-ticker IS substantially-identical here — no separate similarity model needed).
+-- than "same ticker" in general, but this system's wash-sale check operates on same-ticker matches
+-- only — no separate similarity model, and an option leg's ticker is its own distinct OCC symbol, so
+-- an option and its underlying stock are never matched against each other here; this is a narrower,
+-- more conservative check than a full same-underlying similarity model would be, not a broader one).
+-- CORRECTED (rev 2026-07-11, adversarial self-audit): this comment previously claimed "every position
+-- this system trades is a single-class equity/ETF" — false as of the same session that added
+-- bigquery/40_options_marks.sql (Strategy C is options-only and roster-ADOPTED with an active router
+-- path). analytics.tax_lots above now applies the OCC-format multiplier (100) to option premiums so
+-- CLOSED/OPEN lot dollar figures are correctly scaled for option trades too.
 --
 -- ESTIMATED disallowed-loss amount (clearly an ESTIMATE, not a filing figure): for a given loss sale,
 -- replacement shares are capped at the shares actually sold (buying MORE than you sold does not

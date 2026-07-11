@@ -17,6 +17,7 @@
 
 WITH equity_held AS (
   SELECT m.mark_date, l.strategy, l.position_key, l.shares, l.entry_price,
+         CAST(1 AS INT64) AS multiplier,
          l.shares * IF(m.mark_date = l.exit_date, l.exit_price, m.close) AS mv,  -- gross; exit at fill price
          l.shares * COALESCE(m.dividend,0) AS div_cash
   FROM {{ ref('position_lifecycle') }} l
@@ -29,6 +30,7 @@ WITH equity_held AS (
 ),
 option_held AS (
   SELECT om.mark_date, l.strategy, l.position_key, l.shares, l.entry_price,
+         om.multiplier,
          l.shares * om.multiplier * IF(om.mark_date = l.exit_date, l.exit_price, om.premium_close) AS mv,
          CAST(0 AS NUMERIC) AS div_cash
   FROM {{ ref('position_lifecycle') }} l
@@ -45,9 +47,13 @@ held AS (
   SELECT * FROM option_held
 ),
 lagged AS (
+  -- BUG FIX (rev 2026-07-11, adversarial self-audit): mirrors the identical fix in
+  -- bigquery/40_options_marks.sql -- the entry-day fallback was missing the options contract
+  -- multiplier that `mv` itself applies, understating an option position's entry-day baseline by
+  -- ~100x. `multiplier` now threads through `held` (1 for equities, om.multiplier for options).
   SELECT mark_date, strategy, position_key, mv, div_cash,
          COALESCE(LAG(mv) OVER (PARTITION BY position_key ORDER BY mark_date),
-                  shares*entry_price) AS prev_mv   -- entry-day baseline: market cost (no commission)
+                  shares*multiplier*entry_price) AS prev_mv   -- entry-day baseline: market cost (no commission)
   FROM held
 )
 SELECT mark_date AS as_of_date, strategy,

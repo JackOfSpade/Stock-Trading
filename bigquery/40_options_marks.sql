@@ -73,6 +73,7 @@ CREATE OR REPLACE FUNCTION `stock-trading-498512.analytics.fn_is_occ_option_symb
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.strategy_daily_returns` AS
 WITH equity_held AS (
   SELECT m.mark_date, l.strategy, l.position_key, l.shares, l.entry_price,
+         CAST(1 AS INT64) AS multiplier,
          l.shares * IF(m.mark_date = l.exit_date, l.exit_price, m.close) AS mv,
          l.shares * COALESCE(m.dividend,0) AS div_cash
   FROM `stock-trading-498512.analytics.position_lifecycle` l
@@ -85,6 +86,7 @@ WITH equity_held AS (
 ),
 option_held AS (
   SELECT om.mark_date, l.strategy, l.position_key, l.shares, l.entry_price,
+         om.multiplier,
          l.shares * om.multiplier * IF(om.mark_date = l.exit_date, l.exit_price, om.premium_close) AS mv,
          CAST(0 AS NUMERIC) AS div_cash   -- options carry no dividend
   FROM `stock-trading-498512.analytics.position_lifecycle` l
@@ -101,9 +103,17 @@ held AS (
   SELECT * FROM option_held
 ),
 lagged AS (
+  -- BUG FIX (rev 2026-07-11, adversarial self-audit): the entry-day fallback (LAG(mv) IS NULL on the
+  -- first held row of a position_key) previously used the bare `shares*entry_price`, which is correct
+  -- for equities but omits the options contract multiplier that `mv` itself applies via `om.multiplier`
+  -- above -- understating an option position's entry-day baseline by ~100x, which overstates that day's
+  -- r_deployed by the same factor and permanently corrupts the compounding deployed_unit_value/peak
+  -- chain (perf.strategy_daily), silently defeating drawdown_kill for any strategy that trades options.
+  -- `multiplier` is now carried through `held` (1 for equities, om.multiplier for options) precisely so
+  -- this fallback can apply it too, matching `mv`'s own scaling.
   SELECT mark_date, strategy, position_key, mv, div_cash,
          COALESCE(LAG(mv) OVER (PARTITION BY position_key ORDER BY mark_date),
-                  shares*entry_price) AS prev_mv
+                  shares*multiplier*entry_price) AS prev_mv
   FROM held
 )
 SELECT mark_date AS as_of_date, strategy,

@@ -96,6 +96,12 @@ models:
                 where: "side = 'BUY'"
       - name: reserved_cash
         description: Cash a pending BUY reserves; resting SELL reserves 0. Must be >= 0 (see singular test).
+      - name: guard_passed
+        description: fn_order_guard/fn_order_guard_options result embedded in the staged payload (ITEM 15,
+          2026-07-11) — NULL on a pre-ITEM-15 row is expected; a NULL on a row staged AFTER that rev is a
+          detectable guard omission (bigquery/scheduled_queries/daily_staging_cap_check.sql flags it).
+      - name: guard_reasons
+        description: Human-readable guard check detail, embedded alongside guard_passed (ITEM 15).
 
   - name: trade_fills_curated
     description: Latest ingest per trade_id (the idempotency-by-trade_id guard).
@@ -186,6 +192,10 @@ models:
     columns:
       - name: n_snapshots
         tests: [not_null]
+      - name: snapshot_stale
+        description: TRUE when the latest ops.account_snapshot row is older than the current
+          last_trading_day (ITEM 16, 2026-07-11) — folded into state.trading_enabled so a stalled
+          D2a fails the drawdown breaker closed instead of silently trusting stale data.
       - name: drawdown_breach
         tests: [not_null]
 

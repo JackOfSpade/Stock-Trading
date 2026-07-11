@@ -42,6 +42,8 @@ REAL_PATHS = {
 REAL_DERIVED_LIVE_SQL = list(rc.DERIVED_LIVE_SQL)
 REAL_DBT_RECONCILE = rc.DBT_RECONCILE
 REAL_STRATEGY_DIR = rc.STRATEGY_DIR
+REAL_STRATEGY_MATH_DIR = rc.STRATEGY_MATH_DIR
+REAL_C_OPTIONS_MATH = rc.C_OPTIONS_MATH
 
 
 @pytest.fixture
@@ -83,6 +85,14 @@ def repo_copy(tmp_path, monkeypatch):
     dbt_dst = dst_root / "dbt_tests" / "assert_cash_flows_reconcile.sql"
     shutil.copy(REAL_DBT_RECONCILE, dbt_dst)
     monkeypatch.setattr(rc, "DBT_RECONCILE", str(dbt_dst))
+
+    # strategy_math/ package + c_options_math.py (R-F spec_hash inputs) — copied so a test can mutate
+    # a math module and have spec_hash_inputs() (a function re-reading these monkeypatched constants,
+    # not a frozen dict built from the real ROOT) actually see the mutated copy.
+    shutil.copytree(REAL_STRATEGY_MATH_DIR, dst_root / "strategy_math")
+    monkeypatch.setattr(rc, "STRATEGY_MATH_DIR", str(dst_root / "strategy_math"))
+    shutil.copy(REAL_C_OPTIONS_MATH, dst_root / "c_options_math.py")
+    monkeypatch.setattr(rc, "C_OPTIONS_MATH", str(dst_root / "c_options_math.py"))
 
     return dst_root
 
@@ -260,6 +270,86 @@ def test_slice_heading_marked_candidate_desyncs_from_roster_is_caught(repo_copy)
     assert old in txt
     _write(slice_path, txt.replace(old, "## Strategy E [CANDIDATE]: Market-neutral narrative-divergence pairs"))
     assert rc.main() == 1
+
+
+# ---- (b12) R-F: a spec-locked strategy's declared spec_hash no longer matches its .md + module (ITEM
+# 28 self-improvement audit, coverage gap closed 2026-07-11 adversarial self-audit — R-F had ZERO tests) ----
+def test_spec_hash_mismatch_on_own_module_is_caught(repo_copy):
+    # Mutate strategy_a.py itself (not common.py) — the simplest single-file drift case.
+    p = os.path.join(rc.STRATEGY_MATH_DIR, "strategy_a.py")
+    txt = _read(p)
+    _write(p, txt + "\n# regression: locked machinery edited post spec-lock\n")
+    assert rc.main() == 1
+
+
+def test_spec_hash_mismatch_on_shared_common_py_is_caught(repo_copy):
+    # BUG-FIX regression guard: common.py (imported by strategy_a/b/d/e.py) must be part of every
+    # dependent strategy's hash — this is exactly the bug the 2026-07-11 adversarial self-audit found
+    # and fixed (common.py was silently omitted from the original hash inputs).
+    p = os.path.join(rc.STRATEGY_MATH_DIR, "common.py")
+    txt = _read(p)
+    _write(p, txt + "\n# regression: shared math module edited post spec-lock\n")
+    assert rc.main() == 1
+
+
+def test_spec_hash_mismatch_on_c_options_math_is_caught(repo_copy):
+    # C's math module lives at repo root (c_options_math.py), not in strategy_math/ — a separate path
+    # constant (C_OPTIONS_MATH), separately monkeypatchable; exercise it too.
+    p = rc.C_OPTIONS_MATH
+    txt = _read(p)
+    _write(p, txt + "\n# regression: C's math module edited post spec-lock\n")
+    assert rc.main() == 1
+
+
+def test_spec_hash_missing_on_spec_locked_strategy_is_caught(repo_copy):
+    p = rc.ROSTER
+    txt = _read(p)
+    old = '    spec_hash: "8503569a0b6dfc6a252141472d806b170fa7c73287187ebb7d3a8238de4a4eda"   # sha256(strategy/03_strategy_a.md || strategy_math/strategy_a.py || strategy_math/common.py), rev 2026-07-11 R-F\n'
+    assert old in txt, "fixture assumption about A's spec_hash line shape/value drifted — update this test"
+    _write(p, txt.replace(old, ""))
+    assert rc.main() == 1
+
+
+def test_spec_hash_wrong_value_is_caught(repo_copy):
+    p = rc.ROSTER
+    txt = _read(p)
+    old = "8503569a0b6dfc6a252141472d806b170fa7c73287187ebb7d3a8238de4a4eda"
+    assert old in txt, "fixture assumption about A's spec_hash value drifted — update this test"
+    _write(p, txt.replace(old, "0" * 64))
+    assert rc.main() == 1
+
+
+# ---- (b13) R-F: a spec-locked strategy with NO spec_hash_inputs() entry is a visible NOTE, not a FAIL
+# (must not become a de facto CI gate on SISA's autonomous strategy promotion — CLAUDE.md settled
+# decision) ----
+def test_spec_locked_strategy_without_math_module_is_a_non_blocking_note(repo_copy, capsys):
+    p = rc.ROSTER
+    txt = _read(p)
+    # Append a hypothetical strategy 'F', incubating (roster_state: shadow -> NOT roster-active, so this
+    # cannot trip R-A/R-B/etc.) but already spec_locked_since (SISA's SHADOW-entry freeze doctrine) —
+    # and, realistically, with no strategy_math/strategy_f.py, since SL2 does not generate one today.
+    fake_strategy = (
+        "\n  - code: F\n"
+        '    name: "Test-only hypothetical strategy (no math module)"\n'
+        "    archetype: test-only\n"
+        "    roster_state: shadow\n"
+        "    edges_exploited: []\n"
+        "    disadvantages_compensated: []\n"
+        "    per_strategy_routine: null\n"
+        "    adopted_date: null\n"
+        "    spec_locked_since: 2026-07-11\n"
+        "    immutable_since: null\n"
+        "    retired_date: null\n"
+        "    is_restart_of: null\n"
+        "    revision_history:\n"
+        "      - date: 2026-07-11\n"
+        '        note: "test fixture only"\n'
+    )
+    _write(p, txt + fake_strategy)
+    rc_code = rc.main()
+    out = capsys.readouterr().out
+    assert rc_code == 0, "a spec-locked strategy missing from spec_hash_inputs() must NOT fail the build"
+    assert "'F'" in out and "no spec_hash_inputs() entry" in out
 
 
 # ---- skip semantics: pre-2026-07-10 checkout without strategy/roster.yaml is a clean SKIP ----
