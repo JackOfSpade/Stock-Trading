@@ -149,6 +149,21 @@ say to proceed with the D1 pilot. Item 29 (a "thin order gateway" for mechanical
 order-guard before every IBKR order) is downstream of this and stays closed (see `ops/RUNBOOK.md` §40)
 until this spike's IBKR gap is separately resolved.
 
+**CORRECTED 2026-07-11 (owner fact-check) — the spike's cost-neutrality claim was wrong.** The spike
+originally claimed migrating a routine's token cost was "unchanged, not a new cost line" because a
+2026-06-15 Anthropic billing change already moved headless/Agent-SDK usage onto a separate API-rate
+credit. That change was **paused before taking effect** — Anthropic's own Help Center confirms headless/
+Agent-SDK usage still draws from the owner's Claude **subscription** limits today, not a metered pool.
+Separately, the harness in (b) would call Claude via the **Managed Agents API** — a different product
+surface from the subscription login, billed at standard per-token API rates with no subscription
+discount. So piloting D1 on this harness would very likely convert D1's token cost from "bundled into
+the flat subscription" to "real, metered API dollars per run" (one estimate: subscription pricing
+subsidizes agent usage ~15-30x vs. API rates) — the opposite of the original "near-zero, cost-neutral"
+framing. Also worth noting: the original urgency case for this migration (fixing the §38 run_log gap)
+is now moot regardless of cost — Item 3 (this same 2026-07-11 session) closed that gap for free with no
+migration needed (`ops/RUNBOOK.md` §38). Get an actual per-token cost estimate before deciding to pilot;
+see the corrected `ops/spikes/agent-sdk-orchestration-2026Q3.md` (c) for detail.
+
 ---
 
 ## Not an owner action — flagged for the record
