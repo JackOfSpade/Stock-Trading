@@ -2080,6 +2080,26 @@ never double-apply a fanout). Every transition writes `events.strategy_lifecycle
 consequential ones also write an `info`-severity `ops.alerts` row (delivered by alert_emailer.gs) purely for
 the audit trail.
 
+**Cross-model referee hardening — planned, not yet live (ITEM 27, 2026-07-11).** The adversarial-review
+"independence" this section leans on (AR_att vs AR_orc, and the theater judge that checks their pairing)
+all runs on the SAME Claude model weights, differing only by context-window isolation — a fragility the
+project's own docs concede (`AI_Trading_Foundation.md` 2.24). `bigquery/44_cross_model_referee.sql` adds a
+genuinely cross-model-family referee for the three IRREVERSIBLE decision classes (strategy-adoption,
+strategy-retirement, foundation-change-TERMINATE): a third `events.adversarial_reviews` `role=
+'referee_gemini'` row, generated via the EXISTING `ops.gemini` Vertex remote model (already provisioned +
+billed against, in production use by `ops.sp_score_theater()` since 2026-06-06 — zero new credential),
+blinded to the orchestrator's verdict (it sees only the attacker's case). DORMANT today: the objects exist
+(the procedure + `state.strategy_retirement_readiness` + `state.foundation_change_termination_readiness`),
+but nothing calls the procedure on a schedule and no readiness view's `ready` column reads
+`referee_verdict` yet — `state.strategy_adoption_readiness`'s `ready` is unaffected by this file (its only
+new AND-condition this pass is item 7's theater-judge check, a different, already-live mechanism). Design
++ staged rollout (`dormant` → `shadow` → `active_auto`, burn in one full quarter of observed
+referee/orchestrator concurrence before the AND-condition goes live) in
+`ops/spikes/cross-model-adversarial-independence-2026Q3.md` §6; register loop
+`cross_model_referee_independence` in `ops/autonomy_levels.yaml`. Adds NO human gate at any stage — the
+compensating control for promotion is the observed concurrence-rate evidence, exactly like every other
+readiness-view promotion in this register.
+
 **Kill switch.** `ops.arsenal_control` (enabled / incubation_frozen) is the owner analog of
 `ops.trading_control`; `ops.sp_assert_arsenal_enabled(<routine>)` gates the top of SL1-SL5 and RAISEs + a
 critical alert if disabled. A single out-of-band INSERT freezes ALL candidate generation / graduation /
