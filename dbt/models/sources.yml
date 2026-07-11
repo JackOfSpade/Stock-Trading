@@ -373,6 +373,30 @@ sources:
             tests:
               - not_null
 
+  - name: analytics_external
+    project: stock-trading-498512
+    dataset: analytics
+    description: >
+      analytics.* objects that dbt does NOT own because they are hand-maintained rolling-window SQL
+      (bigquery/39_beta_adjusted_alpha.sql, ITEM 10 self-improvement audit 2026-07-11). Declared as a
+      source so kill_flags can reference the beta-adjustment join without dbt trying to build it.
+    tables:
+      - name: strategy_beta_latest
+        description: >
+          Latest rolling-60-trading-day OLS beta/alpha of each strategy's deployed daily return vs SPY
+          (bigquery/39). min_n_met = n_obs >= 40; a missing row / min_n_met=FALSE means beta is not yet
+          measurable, which callers treat as "beta-adjustment suppression does not apply" (fail-closed
+          toward the original SGOV-only behavior, never toward suppressing a genuine signal).
+        columns:
+          - name: strategy
+            description: Strategy code A-E.
+          - name: beta_hat
+            description: Rolling-window REGR_SLOPE of deployed daily return vs SPY daily return.
+          - name: alpha_annualized
+            description: Annualized regression-intercept alpha vs SPY.
+          - name: min_n_met
+            description: TRUE once n_obs (trailing window size, capped at 60) >= 40.
+
   - name: perf
     project: stock-trading-498512
     dataset: perf
