@@ -445,6 +445,52 @@ stall with it (it ran under the same identity).
   Monitoring **metric-absence** alert on a per-run heartbeat metric is the backstop — now codified in
   `infra/terraform/monitoring.tf`. **It must be identity-agnostic AND count run completion, not
   success** (see §19 — a success-only heartbeat false-alarmed across the SA migration the day after).
+- **Safety-critical DML watch — detective control (ITEM 6, 2026-07-11).** This section's finding (a
+  single shared owner-OAuth principal for every routine) means nothing in IAM stops a raw
+  `UPDATE ops.trading_control` (or `ops.arsenal_control` / `events.strategy_lifecycle` /
+  `perf.strategy_daily`) from succeeding — those four tables are the halt gate, the SISA kill-switch,
+  the roster-transition truth, and the deployed-TWR engine truth respectively, each designed to be
+  mutated ONLY by INSERT (or, for `perf.strategy_daily`, by the one named nightly rebuild procedure).
+  `bigquery/scheduled_queries/safety_critical_dml_watch.sql` is the compensating control: every ~6h it
+  scans `INFORMATION_SCHEMA.JOBS_BY_PROJECT` for the last 24h and RAISEs (fail the job — BigQuery's
+  built-in failure email) plus writes a critical `ops.alerts` row on any UPDATE/DELETE/MERGE/TRUNCATE
+  touching those four tables — excluding `ops.alerts` itself (its resolution columns are legitimately
+  updated in place, frequently) and the one sanctioned nightly `perf.strategy_daily` rebuild inside
+  `ops.sp_recompute_engine()` (matched by exact query text). It is DETECTIVE, not preventive — it
+  catches a bypass within the next run (<=6h), it cannot stop the mutation. A full IAM re-scope
+  (per-routine service accounts / row-column security / a write-mediating API) is deferred until a
+  self-hosted MCP replaces the managed connector's single-OAuth design (see the credential table above)
+  — do not re-propose it without that prerequisite.
+
+  **2nd channel (owner action, one-time, Cloud Monitoring console)** — independent of this scheduled
+  query's own health, so a dead/broken scheduler does not also silence the DML alarm:
+  1. **Enable BigQuery Data Access audit logs** if not already on: IAM & Admin → Audit Logs → BigQuery →
+     check Data Read + Data Write (Admin Read is on by default and insufficient here — DML needs Data
+     Write). Without this, the log-based policy below has nothing to alert on and the scheduled query
+     above remains the sole channel.
+  2. Logging → Logs Explorer, build this query (adjust `resource.type` if the console renders BigQuery
+     job-completion audit entries under a different resource type — verify against a live sample UPDATE
+     job first, e.g. by running the fire-drill note in step 4):
+     ```
+     resource.type="bigquery_resource"
+     protoPayload.methodName="google.cloud.bigquery.v2.JobService.InsertJob"
+     protoPayload.serviceData.jobCompletedEvent.job.jobConfiguration.query.statementType=("UPDATE" OR "DELETE" OR "MERGE" OR "TRUNCATE_TABLE")
+     (protoPayload.serviceData.jobCompletedEvent.job.jobConfiguration.query.destinationTable.tableId="trading_control"
+       OR protoPayload.serviceData.jobCompletedEvent.job.jobConfiguration.query.destinationTable.tableId="arsenal_control"
+       OR protoPayload.serviceData.jobCompletedEvent.job.jobConfiguration.query.destinationTable.tableId="strategy_lifecycle"
+       OR protoPayload.serviceData.jobCompletedEvent.job.jobConfiguration.query.destinationTable.tableId="strategy_daily")
+     ```
+  3. "Create alert" from that query → Logs-based alert policy, threshold > 0 over a 5-minute rolling
+     window, notify the same channels as the other absence policies
+     (`local.scheduler_alert_channels` in `infra/terraform/monitoring.tf`). Name it
+     **"Safety-critical DML detected"**.
+  4. Optional fire-drill to derive the exact live filter fields before finalizing step 2: run one
+     harmless test (e.g. `UPDATE ops.trading_control SET reason = reason WHERE FALSE` — a no-op, zero
+     rows touched, still logged as an UPDATE job) and inspect the resulting Logs Explorer entry's exact
+     field names/values, since BigQuery's audit-log JSON shape has shifted across API versions.
+  5. Document the finished policy in `infra/terraform/monitoring.tf` as spec (see that file — appended
+     as documentation only, per this repo's Terraform-is-spec-only convention, RUNBOOK "Settled
+     decisions").
 
 ## 16. Publish the health dashboard *(D1)*
 `.github/workflows/dashboard.yml` builds `ops/dashboard/index.html` from BigQuery and deploys it to
