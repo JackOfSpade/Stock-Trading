@@ -42,6 +42,20 @@ is_ci_green() {
   [ "$1" = "success" ]
 }
 
+# is_secondary_gate_satisfied <conclusion> — BUG FIX (rev 2026-07-11, adversarial self-audit): like
+# is_ci_green, but for an OPTIONAL, PATH-GATED secondary workflow (golden-scenarios.yml's schema-validate
+# HARD GATE job, which only runs when Strategy.md/Operating_Protocols.md/Claude_Task_Plan.md/the golden
+# fixtures themselves change). Before this fix, auto-merge-claude.yml never checked this workflow's
+# status at all, so a failing schema-validate run (meant to catch a rotted golden-scenario fixture) had
+# ZERO effect on whether the offending commit merged — the HARD GATE was decorative. Unlike is_ci_green,
+# "none" (no matching run for this SHA) counts as SATISFIED here, because most commits legitimately never
+# trigger this path-gated workflow at all — treating "none" as a block would wedge auto-merge on every
+# unrelated commit. Still fail-closed for everything else: an explicit "failure", "in_progress", or
+# "error" (the API call itself failed) blocks the merge exactly like is_ci_green does.
+is_secondary_gate_satisfied() {
+  [ "$1" = "success" ] || [ "$1" = "none" ]
+}
+
 # is_ancestor_of <maybe-ancestor-ref> <descendant-ref> — true (exit 0) if the first ref's commit is
 # reachable from the second, i.e. the first is already merged into the second. Used both for "already
 # contained in main, just clean up" and for the re-confirm-before-delete ancestry check (a branch whose

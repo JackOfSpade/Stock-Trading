@@ -161,7 +161,7 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
-    spec_hash: "63f8f7266a431e6ca08b8a9213470fbdc4d769329cc6d264aed416bb9e68123b"   # sha256(strategy/06_strategy_d.md || strategy_math/strategy_d.py || strategy_math/common.py), rev 2026-07-11 R-F
+    spec_hash: "9f625d32b8bc980487767a75687f465c4a5c139819d1794aa89c64cd27949ac7"   # sha256(strategy/06_strategy_d.md || strategy_math/strategy_d.py || strategy_math/common.py), rev 2026-07-11 R-F
     retired_date: null
     is_restart_of: null
     revision_history:
@@ -171,6 +171,8 @@ strategies:
         note: "spec_hash added (Item 28, self-improvement audit) — content-hashes strategy/06_strategy_d.md + the new strategy_math/strategy_d.py against post-lock drift; verified by scripts/check_roster_consistency.py R-F. No machinery change."
       - date: 2026-07-11
         note: "spec_hash recomputed (adversarial self-audit fix) — now also hashes strategy_math/common.py (the shared math module strategy_d.py imports), which the original hash omitted, silently missing drift in that shared module. No machinery change."
+      - date: 2026-07-11
+        note: "spec_hash recomputed again (same adversarial self-audit pass, same day) — strategy_math/strategy_d.py's subtype_for_dual_signal() had a silent-wrong-default bug fixed (trend_metric_independently_evaluable now required, not defaulted to False, when the catalyst is within the 365-day window). This is a bug fix to the newly-authored strategy_math codification itself (Item 28, this same audit), not a change to Strategy D's own live trading rules — subtype_for_dual_signal is not yet called by any live routine instruction. Verified by scripts/check_roster_consistency.py R-F."
   - code: E
     name: "Market-neutral narrative-divergence pairs"
     archetype: market-neutral-pairs
