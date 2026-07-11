@@ -1141,13 +1141,19 @@ FMP mark fallback).
 > - **`shell-lint` → BLOCKING: DONE 2026-06-29.** Confirmed clean on the runner (CI #102, actionlint +
 >   shellcheck all green), so `continue-on-error` was dropped in `ci.yml`. Hardened against tool-drift wedging
 >   a *blocking* linter: actionlint pinned to **v1.7.12** (script + binary), shellcheck floored at `-S warning`.
-> - **`ddl_drift` → critical: PENDING.** One clean read (0 rows, 2026-06-29) validates the encoding, but the
->   data-monitor baseline should hold ~1–2 weeks of clean daily `cadence_check` runs first. Then in
->   `cadence_check.sql` change the `ddl_drift` block's `'warning'`→`'critical'` and add it to `raise_msg`.
->   *Reminder set:* `[Claude] Review` calendar event **2026-07-14 09:00 MT** (carries the verify+flip steps).
-> - **`restore_stale` → critical: BLOCKED (no baseline yet).** The monthly drill has not run since the change
->   (`state.restore_health.monitored=false`); promote only after ≥1 successful drill logs an `ops.drill_log` marker.
->   *Reminder set:* `[Claude] Review` calendar event **2026-08-04 09:00 MT** (verify `state.restore_health.monitored=true` first).
+> - **`ddl_drift` → critical: AUTOMATED (self-improvement audit ITEM 24, 2026-07-11).** Previously gated on a
+>   `[Claude] Review` calendar event (2026-07-14 09:00 MT) — no longer needed. `bigquery/45_monitor_promotion.sql`
+>   adds `ops.monitor_health_history` (logged unconditionally by `cadence_check.sql` every run) +
+>   `state.ddl_drift_promotion_readiness` (ready once 14 consecutive DISTINCT logged days are clean). D3
+>   (Claude_Task_Plan.md "MONITOR-PROMOTION SELF-FLIP") reads it and self-applies the `'warning'`→`'critical'`
+>   edit to `cadence_check.sql` + commits/pushes once ready — repo-side only; the live scheduled query still
+>   needs the owner's normal console re-paste (same as any other scheduled-query body edit in this codebase),
+>   which D3's `monitor_promoted` alert names explicitly as the remaining step.
+> - **`restore_stale` → critical: AUTOMATED (self-improvement audit ITEM 24, 2026-07-11).** Previously gated on
+>   a `[Claude] Review` calendar event (2026-08-04 09:00 MT) — no longer needed.
+>   `state.restore_stale_promotion_readiness` (same file) is ready once `state.restore_health.monitored=TRUE`
+>   AND the last drill passed (≥1 successful `ops.drill_log` marker — the same bar this bullet always stated,
+>   now mechanically checked). Same D3 self-flip mechanism as `ddl_drift` above.
 > - **`dbt-parity` → block: PENDING (owner repo-setting).** Requires the WIF repo vars set AND one clean parity
 >   run observed; then set `vars.DBT_PARITY=block` (it FAILS CLOSED if the WIF vars are absent — RUNBOOK §25 C1).
 

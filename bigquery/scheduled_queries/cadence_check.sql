@@ -233,6 +233,14 @@ BEGIN
   -- did not pass. A drill that writes nothing on success is otherwise invisible (state.restore_health off
   -- ops.drill_log). A silently-paused DR drill means "DR verified monthly" is a belief, not a fact. (A dead
   -- drill SCHEDULER is additionally caught by the Cloud Monitoring absence policy in monitoring.tf.)
+  -- MONITOR-PROMOTION HISTORY (ITEM 24, 2026-07-11): logged UNCONDITIONALLY (pass or fail), regardless of
+  -- whether the WARNING below fires -- state.ddl_drift_promotion_readiness / state.restore_stale_
+  -- promotion_readiness (bigquery/45_monitor_promotion.sql) need this history to evaluate "N consecutive
+  -- clean runs", which the plain live views above cannot provide on their own.
+  INSERT INTO `stock-trading-498512.ops.monitor_health_history` (check_id, check_date, clean)
+  SELECT 'restore_stale', CURRENT_DATE('America/Denver'), NOT COALESCE(stale, TRUE)
+  FROM `stock-trading-498512.state.restore_health`;
+
   IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.restore_health` WHERE stale) THEN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'warning', 'scheduled.cadence', 'restore_stale',
@@ -246,6 +254,9 @@ BEGIN
   -- cluster) diverged from the canonical bigquery/01_schema.sql spec (a silent out-of-band ALTER the
   -- idempotent CREATE-IF-NOT-EXISTS spec will not re-assert; invisible to the DML-only append_only_integrity
   -- and to dbt not_null DATA tests). Staged-rollout record-only until a clean baseline is confirmed.
+  INSERT INTO `stock-trading-498512.ops.monitor_health_history` (check_id, check_date, clean)
+  SELECT 'ddl_drift', CURRENT_DATE('America/Denver'), NOT EXISTS (SELECT 1 FROM `stock-trading-498512.state.ddl_drift`);
+
   IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.ddl_drift`) THEN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'warning', 'scheduled.cadence', 'ddl_drift',
