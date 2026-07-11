@@ -100,11 +100,14 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
+    spec_hash: "7bf3c0478b2ea64afb2751543a68f011efd0641485bdfb48773ae8a799671585"   # sha256(strategy/03_strategy_a.md || strategy_math/strategy_a.py), rev 2026-07-11 R-F
     retired_date: null
     is_restart_of: null
     revision_history:
       - date: 2026-07-10
         note: "Seeded as a founding-batch adopted member (SISA autonomy conversion, owner directive). Bootstrap of a pre-existing live strategy — no machinery change; dates pinned to experiment inception."
+      - date: 2026-07-11
+        note: "spec_hash added (Item 28, self-improvement audit) — content-hashes strategy/03_strategy_a.md + the new strategy_math/strategy_a.py against post-lock drift; verified by scripts/check_roster_consistency.py R-F. No machinery change."
   - code: B
     name: "Post-event mispricing exploitation"
     archetype: post-event-mispricing-long-bias
@@ -117,11 +120,14 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
+    spec_hash: "45f16f558cb0d2d60e186778cef51e4e06e72846df085a0d15dbcb4ad5ebccbe"   # sha256(strategy/04_strategy_b.md || strategy_math/strategy_b.py), rev 2026-07-11 R-F
     retired_date: null
     is_restart_of: null
     revision_history:
       - date: 2026-07-10
         note: "Seeded as a founding-batch adopted member (SISA autonomy conversion, owner directive). Bootstrap of a pre-existing live strategy — no machinery change; dates pinned to experiment inception."
+      - date: 2026-07-11
+        note: "spec_hash added (Item 28, self-improvement audit) — content-hashes strategy/04_strategy_b.md + the new strategy_math/strategy_b.py against post-lock drift; verified by scripts/check_roster_consistency.py R-F. No machinery change."
   - code: C
     name: "Defined-risk options structures around known events"
     archetype: defined-risk-options-on-catalysts
@@ -132,11 +138,14 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
+    spec_hash: "0d495d9d7b96027956c1ad586a74ff676658d2342331fd338e675cd4375f4922"   # sha256(strategy/05_strategy_c.md || c_options_math.py), rev 2026-07-11 R-F
     retired_date: null
     is_restart_of: null
     revision_history:
       - date: 2026-07-10
         note: "Seeded as a founding-batch adopted member (SISA autonomy conversion, owner directive). Bootstrap of a pre-existing live strategy — no machinery change; dates pinned to experiment inception."
+      - date: 2026-07-11
+        note: "spec_hash added (Item 28, self-improvement audit) — content-hashes strategy/05_strategy_c.md + the PRE-EXISTING c_options_math.py against post-lock drift (this strategy's math module already existed before Item 28; only the hash bookkeeping is new). Verified by scripts/check_roster_consistency.py R-F. No machinery change."
   - code: D
     name: "Long-horizon narrative-screened equity core"
     archetype: long-horizon-concentrated-equity
@@ -148,11 +157,14 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
+    spec_hash: "e9a5a915c28ffb7d485f904ff3db77784e6f301f46fe85bb8c9c8e3f567beb2f"   # sha256(strategy/06_strategy_d.md || strategy_math/strategy_d.py), rev 2026-07-11 R-F
     retired_date: null
     is_restart_of: null
     revision_history:
       - date: 2026-07-10
         note: "Seeded as a founding-batch adopted member (SISA autonomy conversion, owner directive). Bootstrap of a pre-existing live strategy — no machinery change; dates pinned to experiment inception."
+      - date: 2026-07-11
+        note: "spec_hash added (Item 28, self-improvement audit) — content-hashes strategy/06_strategy_d.md + the new strategy_math/strategy_d.py against post-lock drift; verified by scripts/check_roster_consistency.py R-F. No machinery change."
   - code: E
     name: "Market-neutral narrative-divergence pairs"
     archetype: market-neutral-pairs
@@ -163,8 +175,11 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
+    spec_hash: "c06f0253d5891b0c0e8ca4110f3a6dd378b9525f31e1fd31f19ab413d970ebb6"   # sha256(strategy/07_strategy_e.md || strategy_math/strategy_e.py), rev 2026-07-11 R-F
     retired_date: null
     is_restart_of: null
     revision_history:
       - date: 2026-07-10
         note: "Seeded as a founding-batch adopted member (SISA autonomy conversion, owner directive). Bootstrap of a pre-existing live strategy — no machinery change; dates pinned to experiment inception."
+      - date: 2026-07-11
+        note: "spec_hash added (Item 28, self-improvement audit) — content-hashes strategy/07_strategy_e.md + the new strategy_math/strategy_e.py against post-lock drift; verified by scripts/check_roster_consistency.py R-F. No machinery change."

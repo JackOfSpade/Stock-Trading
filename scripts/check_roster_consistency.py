@@ -61,9 +61,21 @@ CHECKS
        check_cadence_consistency.py" — this check makes that claim true instead of aspirational. FAIL
        naming which rail disagrees and its two values.
 
+  R-F  SPEC-LOCK HASH AGREEMENT (added rev 2026-07-11, Item 28 self-improvement audit). Each strategy's
+       LOCKED machinery — its strategy/0N_strategy_<code>.md slice plus its corresponding math module
+       (strategy_math/strategy_<code>.py for A/B/D/E, c_options_math.py for C) — freezes at SHADOW entry
+       (Experiment_Parameters.md immutability doctrine). strategy/roster.yaml's per-strategy `spec_hash`
+       field is a sha256 over exactly those two files' bytes (.md then module, concatenated); this check
+       recomputes it and FAILs if a spec-locked strategy (spec_locked_since is set) either has no spec_hash
+       recorded, or its recorded spec_hash no longer matches the current files — meaning locked machinery
+       drifted post-lock via a silent edit instead of a terminate-and-restart-as-new. Only strategy codes
+       present in SPEC_HASH_INPUTS are checked; a new strategy code without a wired-up math module is
+       skipped (update SPEC_HASH_INPUTS when strategy_math/ grows a new module).
+
 Usage:  python scripts/check_roster_consistency.py        # exit 0 if consistent, 1 + diff if not
 """
 import glob
+import hashlib
 import os
 import re
 import sys
@@ -89,6 +101,18 @@ DERIVED_LIVE_SQL = [
     os.path.join(ROOT, "dbt", "models", "analytics", "strategy_nav.sql"),
 ]
 DBT_RECONCILE = os.path.join(ROOT, "dbt", "tests", "assert_cash_flows_reconcile.sql")
+
+# R-F: strategy code -> (spec .md slice, corresponding math module) whose bytes are hashed into
+# roster.yaml's spec_hash. C predates strategy_math/ (its math already lived in c_options_math.py at
+# repo root); A/B/D/E use the strategy_math/ package added in Item 28. Add a new code here when its
+# math module is wired up — until then R-F silently skips that code (see module docstring R-F).
+SPEC_HASH_INPUTS = {
+    "A": (os.path.join(STRATEGY_DIR, "03_strategy_a.md"), os.path.join(ROOT, "strategy_math", "strategy_a.py")),
+    "B": (os.path.join(STRATEGY_DIR, "04_strategy_b.md"), os.path.join(ROOT, "strategy_math", "strategy_b.py")),
+    "C": (os.path.join(STRATEGY_DIR, "05_strategy_c.md"), os.path.join(ROOT, "c_options_math.py")),
+    "D": (os.path.join(STRATEGY_DIR, "06_strategy_d.md"), os.path.join(ROOT, "strategy_math", "strategy_d.py")),
+    "E": (os.path.join(STRATEGY_DIR, "07_strategy_e.md"), os.path.join(ROOT, "strategy_math", "strategy_e.py")),
+}
 
 LIFECYCLE_STATES = ("CANDIDATE", "QUALIFYING", "AUTHORING", "UNDER_REVIEW", "SHADOW", "PAPER",
                     "PROBE", "ADOPTED", "RETIREMENT_PROPOSED", "TERMINATED", "POST_MORTEM", "REJECTED")
@@ -177,6 +201,15 @@ def slicemap_codes():
     m = re.search(r"^##\s+Strategy reading\b.*?(?=^##\s)", txt, re.M | re.S)
     section = m.group(0) if m else ""
     return {c.upper() for c in SLICE_FILE_REF.findall(section)}
+
+
+def compute_spec_hash(code):
+    """sha256 over (.md slice bytes || module bytes) for a SPEC_HASH_INPUTS-mapped code (R-F)."""
+    md_path, module_path = SPEC_HASH_INPUTS[code]
+    h = hashlib.sha256()
+    h.update(open(md_path, "rb").read())
+    h.update(open(module_path, "rb").read())
+    return h.hexdigest()
 
 
 def arsenal_rails_sql_consts():
@@ -296,6 +329,30 @@ def main():
                 errors.append(f"R-E: roster.yaml rails.cooldown_days.{yaml_key}={cooldowns[yaml_key]} but "
                               f"bigquery/35_strategy_arsenal.sql arsenal_rails.{sql_name}={sql_consts[sql_name]}")
 
+    # ---- R-F: spec-locked strategies' machinery hash agrees with roster.yaml's spec_hash ----
+    for s in doc.get("strategies", []):
+        code = s.get("code")
+        if not s.get("spec_locked_since") or code not in SPEC_HASH_INPUTS:
+            continue
+        md_path, module_path = SPEC_HASH_INPUTS[code]
+        if not os.path.exists(md_path) or not os.path.exists(module_path):
+            missing = md_path if not os.path.exists(md_path) else module_path
+            errors.append(f"R-F: strategy {code!r} is spec_locked_since={s.get('spec_locked_since')} but its "
+                          f"spec_hash input {os.path.relpath(missing, ROOT)} is missing")
+            continue
+        actual = compute_spec_hash(code)
+        declared = s.get("spec_hash")
+        if not declared:
+            errors.append(f"R-F: strategy {code!r} is spec_locked_since={s.get('spec_locked_since')} but "
+                          f"roster.yaml has no spec_hash — add spec_hash: \"{actual}\"")
+        elif declared != actual:
+            errors.append(f"R-F: strategy {code!r} spec_hash mismatch — roster.yaml declares {declared!r} but "
+                          f"{os.path.relpath(md_path, ROOT)} + {os.path.relpath(module_path, ROOT)} now hash "
+                          f"to {actual!r}. Locked machinery changed post spec-lock "
+                          f"({s.get('spec_locked_since')}) — per Experiment_Parameters.md this requires "
+                          f"terminate-and-restart-as-new, not a silent edit; if this IS a genuine restart, "
+                          f"update spec_hash together with is_restart_of/spec_locked_since.")
+
     # ---- report ----
     if errors:
         print("ROSTER CONSISTENCY: FAIL\n")
@@ -310,7 +367,8 @@ def main():
     print(f"ROSTER CONSISTENCY: OK — {len(roster_codes)} roster-active strategies ({sorted(roster_codes)}) "
           f"agree across roster.yaml, the bigquery/35 seed, Strategy.md, the strategy/ slices, and the plan "
           f"slice-map; no bare roster literal or fixed /5 divisor in the live derived SQL; the dbt reconcile "
-          f"test is count-agnostic; arsenal_rails' SQL constants agree with roster.yaml's rails block.")
+          f"test is count-agnostic; arsenal_rails' SQL constants agree with roster.yaml's rails block; every "
+          f"spec-locked strategy's spec_hash agrees with its .md slice + math module.")
     return 0
 
 
