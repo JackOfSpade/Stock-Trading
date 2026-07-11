@@ -104,6 +104,22 @@ evening *after* D2 year-round:
   scheduled queries in the current UI; the scheduled scans are tiny, so the budget alert is the
   guardrail.)
 
+**POLICY — the cost guardrail NOTIFIES, it does NOT block (settled 2026-07-11).** The primary
+control is the Billing **budget alert** (email at 50/90/100% actual + 100% forecast); per-job
+`maximum_bytes_billed` caps a runaway single query where settable. Do **NOT** use a project-wide
+`QueryUsagePerDay` (BigQuery API "Query usage per day") custom quota as the primary/binding control.
+Why: on 2026-07-11 that quota was set to **32 GiB/day** and was exhausted mid-day by a manual
+routine-recovery session (the whole D1..SL stack re-run by hand to recover a broken Friday pipeline).
+When it tripped it blocked **every** query — including the read-only `state.trading_enabled_mechanical`
+gate, D2a's account reconciliation, and even `SELECT`/`UPDATE` on `ops.alerts` — i.e. cost control
+silently **bricked the safety layer** and left a D2a↔trading-gate deadlock. The cap has been raised to
+**1 TiB/day** and is retained ONLY as a non-binding runaway backstop (~30x real usage), never the
+day-to-day monitor. Bytes are tiny (<2 MB/scan, well inside BigQuery's 1 TiB/mo free tier), so a
+per-day *query* cap has no upside here and a severe downside. If query **volume** (job count; the
+10 MB minimum-bill per query) ever becomes the cost driver, fix it by batching / materializing the
+hot gate views (`state.system_health`, `state.trading_enabled_mechanical`) — not by a blocking daily
+cap. See `events.decision_log` (entry_type=ops, 2026-07-11).
+
 ---
 
 ## 3. Backups of the event store *(P2-1)*
