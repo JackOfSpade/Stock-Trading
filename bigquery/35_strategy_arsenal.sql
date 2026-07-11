@@ -60,6 +60,15 @@ OPTIONS(description='Append-only strategy-lifecycle transition log (SISA, 2026-0
 -- so the roster-derived enumeration returns exactly {A,B,C,D,E} on first read (roster_single_source
 -- bootstrapping). check_roster_consistency.py asserts this seed set == strategy/roster.yaml active set
 -- == Strategy.md '## Strategy' sections == strategy/ slices == the plan slice-map rows.
+--
+-- NOT a one-time-only block (rev 2026-07-10b, bug fix — code-review finding #2). check_roster_consistency.py
+-- R-A parses THIS FILE's text to determine the "seed" side of that comparison; the LIVE events.
+-- strategy_lifecycle table is not queryable from CI. So every subsequent SL5 adoption/termination MUST
+-- append its own guarded, idempotent INSERT here (same NOT-EXISTS shape as the founding batch below) in
+-- the SAME commit that updates strategy/roster.yaml — see Claude_Task_Plan.md SL5 steps (2)/(3). Without
+-- that append, R-A permanently disagrees for the new/retired code and the adoption/termination commit can
+-- never reach green CI / auto-merge. This section is therefore an append-only historical ledger mirror of
+-- events.strategy_lifecycle, not a founding-only bootstrap.
 INSERT INTO `stock-trading-498512.events.strategy_lifecycle`
   (event_ts, strategy_code, from_state, to_state, driver_routine, note)
 SELECT TIMESTAMP(DATE '2026-04-23'), code, CAST(NULL AS STRING), 'ADOPTED', 'seed-2026-07-10',
@@ -77,7 +86,10 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.ops.arsenal_control` (
   control_id STRING DEFAULT GENERATE_UUID(),
   control_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
   enabled BOOL NOT NULL,               -- FALSE = SL1..SL5 abort at their sp_assert_arsenal_enabled gate
-  incubation_frozen BOOL NOT NULL,     -- TRUE = no SHADOW/PAPER/PROBE advance (candidate intake may continue)
+  incubation_frozen BOOL NOT NULL,     -- TRUE = SL1..SL5 ALSO abort at the shared gate (candidate
+                                        --   generation, graduation, AND retirement-candidacy all stop;
+                                        --   fixed rev 2026-07-10b, code-review finding #3 — the shared
+                                        --   gate previously checked only `enabled`, not this column)
   reason STRING,
   set_by STRING,                       -- 'operator' | routine id
   PRIMARY KEY (control_id) NOT ENFORCED
@@ -105,25 +117,33 @@ SELECT
 FROM ctrl;
 
 -- ops.sp_assert_arsenal_enabled — FATAL top-of-routine gate for SL1..SL5 (mirrors ops.sp_assert_trading_enabled).
--- CALL FIRST, unwrapped: a disabled arsenal must abort the routine, raise + dedup a single critical alert.
+-- CALL FIRST, unwrapped: a disabled OR incubation-frozen arsenal must abort the routine, raise + dedup a
+-- single critical alert. BUG FIX (rev 2026-07-10b, code-review finding #3): the original version checked
+-- only `enabled`, never `incubation_frozen`, contradicting its own documented contract (Claude_Task_Plan.md
+-- SL1's "ARSENAL KILL-SWITCH GATE" text states it aborts on EITHER condition) and the header comment above
+-- ("freezes candidate generation / graduation / retirement"). Only graduation was actually protected (via
+-- the separate `arsenal_ok` component each of state.strategy_adoption_readiness / strategy_shadow_readiness /
+-- strategy_paper_readiness computes) — SL1's candidate generation and SL4's retirement-candidacy generation
+-- had no incubation_frozen check anywhere and would have continued regardless of the owner's freeze.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_assert_arsenal_enabled`(in_routine STRING)
 BEGIN
   DECLARE v_enabled BOOL;
+  DECLARE v_incubation_frozen BOOL;
   DECLARE v_reason STRING;
-  SET (v_enabled, v_reason) = (
-    SELECT AS STRUCT enabled, reason FROM `stock-trading-498512.state.arsenal_enabled`
+  SET (v_enabled, v_incubation_frozen, v_reason) = (
+    SELECT AS STRUCT enabled, incubation_frozen, reason FROM `stock-trading-498512.state.arsenal_enabled`
   );
-  IF NOT v_enabled THEN
+  IF NOT v_enabled OR v_incubation_frozen THEN
     -- STABLE message text (not folding in in_routine / v_reason) so sp_raise_alert_once's exact-match
     -- dedup collapses a sustained disable to ONE alert across SL1..SL5 — same rationale as the
     -- trading_halted gate (23_trading_control.sql). The dynamic detail rides the payload + RAISE.
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'critical', in_routine, 'arsenal_disabled',
-      'Strategy Arsenal loop is DISABLED (ops.arsenal_control). SL routine aborted. See payload for the routine and reason.',
-      TO_JSON_STRING(STRUCT(in_routine AS routine, v_reason AS reason)));
+      'Strategy Arsenal loop is DISABLED or INCUBATION-FROZEN (ops.arsenal_control). SL routine aborted. See payload for the routine, which condition fired, and reason.',
+      TO_JSON_STRING(STRUCT(in_routine AS routine, v_enabled AS enabled, v_incubation_frozen AS incubation_frozen, v_reason AS reason)));
     RAISE USING MESSAGE = FORMAT(
-      '%s: arsenal disabled (%s) — SL routine aborted. Investigate state.arsenal_enabled / ops.arsenal_control before re-enabling.',
-      in_routine, COALESCE(v_reason, 'unspecified'));
+      '%s: arsenal disabled or incubation-frozen (enabled=%t, incubation_frozen=%t, reason=%s) — SL routine aborted. Investigate state.arsenal_enabled / ops.arsenal_control before re-enabling.',
+      in_routine, v_enabled, v_incubation_frozen, COALESCE(v_reason, 'unspecified'));
   END IF;
 END;
 
@@ -326,9 +346,11 @@ WITH consts AS (
     90 AS keep_cooldown_days
 ),
 counts AS (
+  -- single scan of state.strategy_roster for both counts (rev 2026-07-10b, cleanup, code-review finding #9;
+  -- was two separate correlated subqueries each re-evaluating the whole view).
   SELECT
-    (SELECT COUNTIF(is_active)     FROM `stock-trading-498512.state.strategy_roster`) AS active_count,
-    (SELECT COUNTIF(is_incubating) FROM `stock-trading-498512.state.strategy_roster`) AS incubating_count,
+    (SELECT AS STRUCT COUNTIF(is_active) AS active_count, COUNTIF(is_incubating) AS incubating_count
+       FROM `stock-trading-498512.state.strategy_roster`) AS roster,
     (SELECT COUNT(*) FROM `stock-trading-498512.events.strategy_lifecycle`
        WHERE to_state = 'PROBE'
          AND event_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 90 DAY)) AS probes_in_window
@@ -336,10 +358,10 @@ counts AS (
 SELECT
   c.n_min, c.n_max, c.k_incubate, c.k_regime, c.adoption_rate_window_days,
   c.reject_cooldown_days, c.terminate_cooldown_days, c.keep_cooldown_days,
-  n.active_count, n.incubating_count, n.probes_in_window,
-  n.active_count <= c.n_min      AS at_or_below_floor,
-  n.active_count >= c.n_max      AS at_ceiling,
-  n.incubating_count >= c.k_incubate AS incubation_cap_reached,
+  n.roster.active_count AS active_count, n.roster.incubating_count AS incubating_count, n.probes_in_window,
+  n.roster.active_count <= c.n_min      AS at_or_below_floor,
+  n.roster.active_count >= c.n_max      AS at_ceiling,
+  n.roster.incubating_count >= c.k_incubate AS incubation_cap_reached,
   n.probes_in_window = 0         AS adoption_window_open
 FROM consts c CROSS JOIN counts n;
 
@@ -488,7 +510,11 @@ WITH latest AS (
   QUALIFY ROW_NUMBER() OVER (PARTITION BY strategy ORDER BY as_of_date DESC) = 1
 ),
 rails AS (SELECT * FROM `stock-trading-498512.state.arsenal_rails`),
-ars AS (SELECT enabled FROM `stock-trading-498512.state.arsenal_enabled`)
+-- defense-in-depth (rev 2026-07-10b, code-review finding #3): SL4 is now blocked entirely at the shared
+-- ops.sp_assert_arsenal_enabled gate when incubation_frozen=TRUE, but this view ALSO folds it in here,
+-- matching its 3 siblings (strategy_adoption_readiness / strategy_shadow_readiness / strategy_paper_readiness),
+-- so it stays internally safe even if ever queried without that gate having run first.
+ars AS (SELECT enabled, incubation_frozen FROM `stock-trading-498512.state.arsenal_enabled`)
 SELECT
   r.strategy_code,
   l.excess_vs_sgov,
@@ -496,7 +522,7 @@ SELECT
   (l.deployed_days >= 252 AND l.excess_vs_sgov < 0) AS edge_decay_signal,
   rails.active_count,
   rails.active_count > rails.n_min AS floor_ok,
-  ars.enabled AS arsenal_ok,
+  (ars.enabled AND NOT ars.incubation_frozen) AS arsenal_ok,
   NOT EXISTS (SELECT 1 FROM `stock-trading-498512.ops.roster_change_log` cl
               WHERE cl.strategy_code = r.strategy_code
                 AND cl.to_state = 'RETIREMENT_PROPOSED'
@@ -504,7 +530,7 @@ SELECT
   (COALESCE(l.deployed_days, 0) >= 252
    AND COALESCE(l.excess_vs_sgov, 0) < 0
    AND rails.active_count > rails.n_min
-   AND ars.enabled
+   AND ars.enabled AND NOT ars.incubation_frozen
    AND NOT EXISTS (SELECT 1 FROM `stock-trading-498512.ops.roster_change_log` cl
                    WHERE cl.strategy_code = r.strategy_code
                      AND cl.to_state = 'RETIREMENT_PROPOSED'

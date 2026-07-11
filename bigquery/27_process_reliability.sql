@@ -1,12 +1,14 @@
 -- Process-reliability scorecard — the template self-improvement loop (2026-07-03, self-improvement
 -- audit WO-6). Project: stock-trading-498512. Apply after 10_observability.sql (ops.run_log).
 --
--- STATUS: DORMANT per ops/autonomy_levels.yaml (loop id `process_reliability`). This file builds ONLY
--- the measurement view — the sensor. No routine reads this to change behavior yet. The loop's own
--- natural gate (>=3 consecutive weeks of data / N>=20 run_log rows per routine, see the W5 spec in
--- Claude_Task_Plan.md) is what governs when a human should consider promoting it past `dormant` in
--- ops/autonomy_levels.yaml — that promotion is a deliberate, evidenced, separate decision, not
--- something this view or its consumer triggers automatically.
+-- STATUS: active_auto per ops/autonomy_levels.yaml (loop id `process_reliability`; rev 2026-07-10b,
+-- round-2 autonomy conversion, owner directive + explicit confirmation). This file builds the
+-- measurement view — the sensor. W5 (Claude_Task_Plan.md) reads it every cycle and SELF-APPLIES a
+-- bounded process-constant change, with no human review, once the loop's own natural data-sufficiency
+-- gate fires (state.process_reliability_readiness.ready_for_change = TRUE: >=3 consecutive weeks of
+-- data / N>=20 run_log rows per routine AND a 3-consecutive-cycle deadline-threat persistence — see
+-- bigquery/37_self_improvement_autonomy.sql). The gate is unchanged; only the human-merged-PR
+-- requirement was removed.
 --
 -- WHY THIS IS THE SAFEST SELF-IMPROVEMENT LOOP TO BUILD FIRST: it reads ops.run_log, which is
 -- high-N and grows every routine-day (unlike the 8-closed-trade P&L sample), and its change surface

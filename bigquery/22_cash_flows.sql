@@ -62,31 +62,45 @@ SELECT
   (SELECT ROUND(SUM(amount), 2) FROM `stock-trading-498512.events.cash_flows`) = CAST(9446.86 AS NUMERIC) AS reconciled;
 
 -- ===== analytics.strategy_nav — redefined to read events.cash_flows, not the hardcoded literal =====
--- (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner directive.) The per-strategy set + the
--- equal-split divisor are now ROSTER-DERIVED, not the bare ['A'..'E'] / 5 literals: the strategies are
--- enumerated from state.strategy_roster (is_active), and a NULL-strategy (equal-split) flow divides by
--- the AS-OF-FLOW-DATE active count — the strategies active AND adopted on/before that flow's date. This
--- is both a de-hardcode (roster membership is now versioned policy) AND a latent-correctness fix (the
--- old /5 kept splitting into 5 even after a termination). It NATURALLY returns 5 for the founding flows
--- (all five were adopted 2026-04-23), so no historical per-strategy attribution or 2%-sizing base moves.
--- A strategy-tagged flow still attributes to that strategy only. scripts/check_roster_consistency.py
--- asserts no bare ['A'..'E'] literal / no /5 divisor remains here. NOTE (apply order): this view now
--- reads state.strategy_roster (bigquery/35_strategy_arsenal.sql), so 35 must be applied BEFORE this file.
+-- (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner directive; rev 2026-07-10b — bug fix,
+-- code-review finding #1.) The per-strategy set + the equal-split divisor are ROSTER-DERIVED, not the
+-- bare ['A'..'E'] / 5 literals. BUG FIX: the original version enumerated `active` as CURRENTLY is_active
+-- (state.strategy_roster.is_active), which meant (a) a terminated strategy's entire row -- realized P&L,
+-- open positions, dividends -- silently vanished from this view and from analytics.account_reconciliation,
+-- and (b) the equal-split divisor for HISTORICAL flows was recomputed off the CURRENT active count, so
+-- terminating any founding strategy retroactively re-split the two founding NULL-strategy deposits among
+-- fewer survivors, inflating every survivor's historical deposits/NAV/2%-sizing-base for money that
+-- predated the termination. FIX: `active` now enumerates every EVER-ADOPTED strategy code (including
+-- terminated ones, via `adopted_date IS NOT NULL`) so nothing drops out of the rollup, and the equal-split
+-- eligibility test uses BOTH `adopted_date` and `retired_date` evaluated AS OF THE FLOW'S OWN DATE (a
+-- fixed historical fact a later termination can never revise) instead of "is active right now". This
+-- still returns 5 for the founding flows today (no strategy has terminated yet) and preserves the
+-- SUM(deposits)==SUM(cash_flows) reconciliation identity unconditionally, for any roster size or
+-- termination history. A strategy-tagged flow still attributes to that strategy only, forever (unaffected
+-- by this fix). scripts/check_roster_consistency.py asserts no bare ['A'..'E'] literal / no /5 divisor
+-- remains here. NOTE (apply order): this view reads state.strategy_roster (bigquery/35_strategy_arsenal.sql),
+-- so 35 must be applied BEFORE this file.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.strategy_nav` AS
 WITH active AS (
-  -- roster-derived enumeration + each active strategy's adopted_date (rev 2026-07-10 — SISA).
-  SELECT strategy_code AS s, adopted_date
+  -- EVERY ever-adopted strategy code (including terminated), with adopted_date + retired_date, so a
+  -- termination never drops a strategy's history from the rollup and never revises a past flow's split.
+  SELECT strategy_code AS s, adopted_date, retired_date
   FROM `stock-trading-498512.state.strategy_roster`
-  WHERE is_active
+  WHERE adopted_date IS NOT NULL
 ),
 dep AS (
   SELECT a.s AS strategy,
     SUM(CASE
           WHEN cf.strategy = a.s THEN cf.amount
-          -- NULL-strategy (equal-split) flow: allocate only to strategies active AND adopted on/before
-          -- the flow date, divided by the count of exactly those (the as-of-flow-date active count).
+          -- NULL-strategy (equal-split) flow: allocate only to strategies that were active AS OF THAT
+          -- FLOW'S DATE -- adopted on/before it, and not yet retired (or retired strictly after it) --
+          -- divided by the count of exactly those. This is a fixed historical fact: a strategy that
+          -- terminates LATER can never change how an EARLIER flow was split.
           WHEN cf.strategy IS NULL AND a.adopted_date <= cf.flow_date
-            THEN cf.amount / (SELECT COUNT(*) FROM active a2 WHERE a2.adopted_date <= cf.flow_date)
+               AND (a.retired_date IS NULL OR a.retired_date > cf.flow_date)
+            THEN cf.amount / (SELECT COUNT(*) FROM active a2
+                               WHERE a2.adopted_date <= cf.flow_date
+                                 AND (a2.retired_date IS NULL OR a2.retired_date > cf.flow_date))
           ELSE 0 END) AS deposits
   FROM active a
   CROSS JOIN `stock-trading-498512.events.cash_flows` cf

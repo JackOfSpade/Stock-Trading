@@ -128,10 +128,14 @@ WITH edge AS (
   FROM `stock-trading-498512.analytics.calibration_shrunk`
 ),
 proc AS (
+  -- BUG FIX (rev 2026-07-10b, code-review finding #8): dvr_ok/fb_ok used ANY_VALUE(min_n_met) over
+  -- declared_vs_realized/forecast_bias, which each return ONE ROW PER STRATEGY — ANY_VALUE with no
+  -- filter/aggregation picks an arbitrary single strategy's flag, not "any strategy meets the bar".
+  -- Now consistent with cm_ok's COUNTIF(...)>0 "any strategy" semantics.
   SELECT
     (SELECT COUNTIF(min_n_met) FROM `stock-trading-498512.analytics.conviction_monotonicity`) > 0 AS cm_ok,
-    (SELECT COALESCE(ANY_VALUE(min_n_met), FALSE) FROM `stock-trading-498512.analytics.declared_vs_realized`) AS dvr_ok,
-    (SELECT COALESCE(ANY_VALUE(min_n_met), FALSE) FROM `stock-trading-498512.analytics.forecast_bias`) AS fb_ok
+    (SELECT COUNTIF(min_n_met) FROM `stock-trading-498512.analytics.declared_vs_realized`) > 0 AS dvr_ok,
+    (SELECT COUNTIF(min_n_met) FROM `stock-trading-498512.analytics.forecast_bias`) > 0 AS fb_ok
 )
 SELECT
   edge.n_trustworthy,
@@ -178,8 +182,9 @@ matched AS (
 )
 SELECT trade_id, strategy, ticker, side, shares, price, commission, limit_price,
   ROUND(adverse_slippage_bps, 2) AS adverse_slippage_bps, fill_ts
-FROM matched
-ORDER BY fill_ts;
+FROM matched;
+-- (rev 2026-07-10b, cleanup, code-review finding #9: dropped a trailing ORDER BY — its only consumer,
+-- state.execution_quality_readiness, purely aggregates the rows, so the sort was wasted work.)
 
 CREATE TABLE IF NOT EXISTS `stock-trading-498512.ops.exec_rule_change_log` (
   change_id STRING DEFAULT GENERATE_UUID(),
@@ -197,21 +202,21 @@ OPTIONS(description='Durable execution-rule change idempotency markers (round-2 
 -- state.execution_quality_readiness — single-row view. ready when >=8 non-SGOV fills with a computable
 -- slippage AND a consistent-sign signal (every measured fill adverse in the same direction). The specific
 -- rule change proposed off it is idempotency-guarded per change_key at write time against ops.exec_rule_change_log.
+-- (rev 2026-07-10b, cleanup, code-review finding #9: was ~10 repeated correlated subqueries over `m` plus
+-- two byte-identical columns under different names — consolidated to a single aggregation.)
 CREATE OR REPLACE VIEW `stock-trading-498512.state.execution_quality_readiness` AS
-WITH m AS (
-  SELECT adverse_slippage_bps FROM `stock-trading-498512.analytics.execution_quality`
+WITH agg AS (
+  SELECT COUNT(*) AS n, COUNTIF(adverse_slippage_bps > 0) AS n_adv, COUNTIF(adverse_slippage_bps < 0) AS n_fav
+  FROM `stock-trading-498512.analytics.execution_quality`
   WHERE adverse_slippage_bps IS NOT NULL
 )
 SELECT
-  (SELECT COUNT(*) FROM m) AS n_nonsgov_fills_measured,
-  (SELECT COUNTIF(adverse_slippage_bps > 0) FROM m) AS n_adverse,
-  (SELECT COUNTIF(adverse_slippage_bps < 0) FROM m) AS n_favorable,
-  ((SELECT COUNT(*) FROM m) >= 8
-   AND ((SELECT COUNTIF(adverse_slippage_bps > 0) FROM m) = (SELECT COUNT(*) FROM m)
-        OR (SELECT COUNTIF(adverse_slippage_bps < 0) FROM m) = (SELECT COUNT(*) FROM m))) AS consistent_sign_signal,
-  ((SELECT COUNT(*) FROM m) >= 8
-   AND ((SELECT COUNTIF(adverse_slippage_bps > 0) FROM m) = (SELECT COUNT(*) FROM m)
-        OR (SELECT COUNTIF(adverse_slippage_bps < 0) FROM m) = (SELECT COUNT(*) FROM m))) AS ready_for_change;
+  agg.n AS n_nonsgov_fills_measured,
+  agg.n_adv AS n_adverse,
+  agg.n_fav AS n_favorable,
+  (agg.n >= 8 AND (agg.n_adv = agg.n OR agg.n_fav = agg.n)) AS consistent_sign_signal,
+  (agg.n >= 8 AND (agg.n_adv = agg.n OR agg.n_fav = agg.n)) AS ready_for_change
+FROM agg;
 
 -- ============================================================================
 -- LOOP 4 — calibration_parameter_carveout (S-8 + B-8-obs). The ONE whitelisted self-updating parameter.
@@ -252,9 +257,17 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.state.param_change_provenance` 
 OPTIONS(description='Append-only calibration-parameter provenance + idempotency (round-2 autonomy, 2026-07-10). Presence of a CHANGE/REVERT change_key = that transition is done.');
 
 -- state.param_oos_degradation — post-change out-of-sample degradation monitor. For each param that has a
--- live CHANGE, compare the tier's realized win-rate on trades CLOSED AFTER the change vs the shrunk estimate
--- the change targeted. degraded = the post-change interval sits materially below the pre-change anchor =
--- the auto-REVERT trigger (fail-safe direction, always autonomous).
+-- live CHANGE, compare the tier's realized win-rate on trades ENTERED ON/AFTER the change vs the shrunk
+-- estimate the change targeted. degraded = the post-change interval sits materially below the pre-change
+-- anchor = the auto-REVERT trigger (fail-safe direction, always autonomous).
+-- BUG FIX (rev 2026-07-10b, code-review finding #4): the original `post` CTE joined conviction_features on
+-- conviction + position_closed with NO restriction to the change date, so wins_post/closed_post measured
+-- the tier's ENTIRE all-time closed-trade history (pre- and post-change mixed) rather than genuinely
+-- out-of-sample evidence — defeating the one compensating control that replaced human review for this
+-- highest-scrutiny loop. conviction_features has no close-date column, only `entry_date`; filtering on
+-- `entry_date >= DATE(lc.change_ts)` is the causally-correct restriction anyway, since the parameter
+-- changes ENTRY-time behavior (sizing/thresholds for the tier) — a trade entered before the change reflects
+-- OLD-parameter decisions regardless of when it later closed.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.param_oos_degradation` AS
 WITH live_change AS (
   SELECT param_key, new_value, change_ts,
@@ -265,7 +278,7 @@ WITH live_change AS (
 ),
 reg AS (SELECT param_key, conviction_tier FROM `stock-trading-498512.state.calibration_param_registry`),
 post AS (
-  -- realized win-rate on the mapped tier, closed strictly after the change
+  -- realized win-rate on the mapped tier, ENTERED on/after the change (see fix note above)
   SELECT r.param_key,
     COUNTIF(cf.was_profitable) AS wins_post,
     COUNTIF(cf.position_closed) AS closed_post
@@ -274,6 +287,7 @@ post AS (
   JOIN `stock-trading-498512.analytics.conviction_features` cf
     ON cf.conviction = r.conviction_tier
    AND cf.position_closed
+   AND cf.entry_date >= DATE(lc.change_ts)
   GROUP BY r.param_key
 )
 SELECT
@@ -293,6 +307,13 @@ LEFT JOIN post p USING (param_key);
 -- the calibration_shrunk credible interval [wilson_low, wilson_high] EXCLUDES the current anchor's implied
 -- rate, the change has been SHADOW-proven (a shadow_ok row exists), and the real CHANGE has not already been
 -- applied. Default-not-advance throughout. auto_revert_due surfaces the fail-safe direction separately.
+-- BUG FIX (rev 2026-07-10b, code-review finding #5): ready_for_change previously omitted the
+-- not_already_changed guard (computed as its own column but never ANDed in), contradicting this comment
+-- and every sibling readiness view — the loop could re-apply an already-applied change (e.g. if the new
+-- anchor still sits outside a narrow/asymmetric interval, or right after an auto-REVERT restores an anchor
+-- that's outside the interval by construction). Also de-duplicated (cleanup, finding #9): the
+-- interval-exclusion test and the SHADOW-exists check were each written out twice (once as their own named
+-- column, once again inline inside ready_for_change) — computed once now, referenced twice.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.calibration_param_readiness` AS
 WITH reg AS (
   SELECT r.param_key, r.conviction_tier, r.current_value, r.implied_rate
@@ -301,24 +322,24 @@ WITH reg AS (
 cal AS (
   SELECT conviction, wilson_low, wilson_high, closed, trustworthy_edge
   FROM `stock-trading-498512.analytics.calibration_shrunk`
+),
+joined AS (
+  SELECT
+    reg.param_key, reg.conviction_tier, reg.current_value, reg.implied_rate,
+    cal.wilson_low, cal.wilson_high, cal.closed,
+    (reg.implied_rate < cal.wilson_low OR reg.implied_rate > cal.wilson_high) AS interval_excludes_anchor,
+    EXISTS (SELECT 1 FROM `stock-trading-498512.state.param_change_provenance` pv
+            WHERE pv.param_key = reg.param_key AND pv.change_type = 'SHADOW' AND pv.shadow_ok) AS shadow_proven,
+    NOT EXISTS (SELECT 1 FROM `stock-trading-498512.state.param_change_provenance` pv
+                WHERE pv.param_key = reg.param_key AND pv.change_type = 'CHANGE'
+                  AND pv.new_value = CAST(reg.implied_rate AS STRING)) AS not_already_changed
+  FROM reg
+  LEFT JOIN cal ON cal.conviction = reg.conviction_tier
 )
 SELECT
-  reg.param_key,
-  reg.conviction_tier,
-  reg.current_value,
-  reg.implied_rate,
-  cal.wilson_low, cal.wilson_high,
-  (reg.implied_rate < cal.wilson_low OR reg.implied_rate > cal.wilson_high) AS interval_excludes_anchor,
-  EXISTS (SELECT 1 FROM `stock-trading-498512.state.param_change_provenance` pv
-          WHERE pv.param_key = reg.param_key AND pv.change_type = 'SHADOW' AND pv.shadow_ok) AS shadow_proven,
-  NOT EXISTS (SELECT 1 FROM `stock-trading-498512.state.param_change_provenance` pv
-              WHERE pv.param_key = reg.param_key AND pv.change_type = 'CHANGE'
-                AND pv.new_value = CAST(reg.implied_rate AS STRING)) AS not_already_changed,
-  ((reg.implied_rate < cal.wilson_low OR reg.implied_rate > cal.wilson_high)
-   AND cal.closed >= 15
-   AND EXISTS (SELECT 1 FROM `stock-trading-498512.state.param_change_provenance` pv
-               WHERE pv.param_key = reg.param_key AND pv.change_type = 'SHADOW' AND pv.shadow_ok)) AS ready_for_change,
+  param_key, conviction_tier, current_value, implied_rate, wilson_low, wilson_high,
+  interval_excludes_anchor, shadow_proven, not_already_changed,
+  (interval_excludes_anchor AND closed >= 15 AND shadow_proven AND not_already_changed) AS ready_for_change,
   (SELECT COALESCE(MAX(degraded_revert), FALSE)
-     FROM `stock-trading-498512.state.param_oos_degradation` d WHERE d.param_key = reg.param_key) AS auto_revert_due
-FROM reg
-LEFT JOIN cal ON cal.conviction = reg.conviction_tier;
+     FROM `stock-trading-498512.state.param_oos_degradation` d WHERE d.param_key = joined.param_key) AS auto_revert_due
+FROM joined;
