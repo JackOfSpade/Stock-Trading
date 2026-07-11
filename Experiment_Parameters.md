@@ -58,7 +58,7 @@ TWR separates the effect of strategy decisions from the effect of capital flows 
 
 - **Deployed TWR.** TWR measured only over periods when capital was in active strategy trades, excluding SGOV parking and regime-router deactivation periods.
 - **SGOV benchmark.** What SGOV would have returned over the same calendar periods during which deployed capital existed, for the same capital amounts.
-- **Excess real return.** Deployed TWR minus SGOV benchmark, post-tax, post-inflation. This is the quantity the success threshold is stated on.
+- **Excess real return.** Deployed TWR minus SGOV benchmark, post-tax, post-inflation. This is the quantity the success threshold is stated on. **Tax-lot caveat (ITEM 18, 2026-07-11):** the "post-tax" figure implicitly assumes every realized loss is fully deductible; `analytics.tax_lots` / `state.wash_sale_exposure` (`bigquery/41_tax_lots.sql`) now detect account-wide wash sales (a same-ticker BUY within 30 days of any strategy's loss-realizing SELL, across strategies — this experiment deliberately runs up to `n_max=8` strategies that can independently trade the same ticker, which is exactly the cross-strategy wash-sale exposure a per-strategy view cannot see). A disallowed loss reduces the actual post-tax figure below what the naive TWR-minus-tax-rate estimate implies; this is detection/reporting only (IBKR's own 1099-B, computed off the elected cost-basis method, remains the authoritative tax figure, not this repo's approximation).
 
 **Secondary diagnostic (not used for trigger evaluation):** full-strategy-portfolio TWR including SGOV parking. Useful in post-mortems for understanding what happened holistically. Not the basis for kill triggers or gate evaluation.
 
