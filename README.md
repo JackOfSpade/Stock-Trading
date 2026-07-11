@@ -28,3 +28,6 @@ and open alerts. `state.trading_day_today` answers "is today a trading day / las
 Start here: **`ops/RUNBOOK.md`** — it lists the one-time console actions (scheduled queries /
 the dead-man's switch, budget alerts, GCS backups, dashboard, CI merge-gating) and the staged
 adoptions (`run_log`/`alerts` calls, the strategy-slice cutover, the theater judge).
+**`OWNER_ACTIONS.md`** is the standing, short list of currently-outstanding owner-only steps
+(a console click, a `bq`/`gcloud` grant, an Apps Script paste, a tax election) — check it after
+any session that says it applied something "live" but couldn't finish the last mile itself.
