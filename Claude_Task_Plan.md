@@ -650,7 +650,10 @@ PER-STRATEGY PERFORMANCE MAINTENANCE (deployed-TWR engine; run after fill reconc
 marks are fresh; method in bigquery/03_twr_engine.sql + Operating_Protocols.md §14). The authoritative engine is
 the BigQuery value-weighted daily TOTAL-return TWR (`events.daily_marks` → `analytics.strategy_daily_returns` +
 `analytics.sgov_daily_return` → `perf.strategy_daily` → `perf.kill_flags`). Requires the BigQuery MCP connector.
-1. **Ingest today's marks (TOTAL-return source).** For each held ticker + SGOV, pull `get_price_history(
+1. **Ingest today's marks (TOTAL-return source).** For each held ticker + SGOV + SPY (self-improvement audit
+   ITEM 10, 2026-07-11 — SPY is tracked UNCONDITIONALLY, regardless of holdings, exactly like SGOV: it is the
+   market-beta benchmark `analytics.strategy_beta` regresses every strategy's daily deployed return against,
+   `bigquery/39_beta_adjusted_alpha.sql`), pull `get_price_history(
    include_corporate_actions: true)` and `INSERT INTO events.daily_marks (mark_date, ticker, close, dividend,
    split_ratio, source)`: today's close, any ex-div cash dividend/share, split_ratio (split-adjusted at ingest),
    `source='connector'`. Idempotent on (mark_date, ticker). **FMP fallback (2026-06-28 #12):** if `get_price_history`
