@@ -1967,6 +1967,28 @@ configurable from this repo — CLAUDE.md establishes that directly for the stop
 behavior in general, but the same constraint plausibly applies, which is why this section stops at
 "documented and mitigated" rather than promising a repo-side fix for the root cause.
 
+**Mechanical self-heal added (2026-07-11, ITEM 3) — the recovery no longer needs a human.** The manual
+backfill described above is now automated end to end, closing exactly the gap this section opened with:
+a routine's real output can land on `main` while its `ops.run_log` completion write never happens.
+`bigquery/38_run_log_selfheal.sql` adds three objects: `ops.routine_commit_markers` (a durable marker
+that a routine's output commit landed on `origin/main`, independent of that routine's own session ever
+reaching its `ops.run_log` write), `state.run_log_selfheal_candidates` (the objective view: marker
+present, no completed `run_log` row), and `ops.sp_backfill_run_log_from_markers()` (inserts the missing
+`completed` row, noted `auto-backfilled from commit marker`, then calls the existing
+`ops.sp_auto_resolve_alerts()` so `missing_dependency`/`missed_run`/`routine_stalled`/`staleness` clear
+mechanically off that fresh evidence — precisely the "honest backfill alone should be sufficient"
+recovery this section already documented as the intended mechanism above, minus the human). CI
+(`.github/workflows/auto-merge-claude.yml`) writes the marker for every merged commit whose subject
+parses to a known routine id + date, via the keyless WIF identity; `bigquery/scheduled_queries/
+cadence_check.sql` calls the backfill proc first thing, before evaluating `missed_run`/
+`missing_dependency`. FAIL-CLOSED BY DEFAULT: the marker write needs a narrow, table-scoped
+`roles/bigquery.dataEditor` grant on `ops.routine_commit_markers` for `gh-ci-runner@` (read-only
+otherwise, RUNBOOK section 15) that the owner has not yet applied as of this writing — until granted,
+the CI step no-ops/warns and this section's existing manual-backfill fallback is unchanged and fully
+intact. No human review/approval/chat step is anywhere in this loop (CLAUDE.md "Settled decisions");
+the compensating control is the git commit itself as objective evidence, exactly like every other
+readiness view in this system.
+
 
 ## 39. Strategy add/delete made fully autonomous — the 2026-07-10 SISA conversion *(autonomy, owner directive)*
 
