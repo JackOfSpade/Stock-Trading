@@ -100,7 +100,7 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
-    spec_hash: "7bf3c0478b2ea64afb2751543a68f011efd0641485bdfb48773ae8a799671585"   # sha256(strategy/03_strategy_a.md || strategy_math/strategy_a.py), rev 2026-07-11 R-F
+    spec_hash: "8503569a0b6dfc6a252141472d806b170fa7c73287187ebb7d3a8238de4a4eda"   # sha256(strategy/03_strategy_a.md || strategy_math/strategy_a.py || strategy_math/common.py), rev 2026-07-11 R-F
     retired_date: null
     is_restart_of: null
     revision_history:
@@ -108,6 +108,8 @@ strategies:
         note: "Seeded as a founding-batch adopted member (SISA autonomy conversion, owner directive). Bootstrap of a pre-existing live strategy — no machinery change; dates pinned to experiment inception."
       - date: 2026-07-11
         note: "spec_hash added (Item 28, self-improvement audit) — content-hashes strategy/03_strategy_a.md + the new strategy_math/strategy_a.py against post-lock drift; verified by scripts/check_roster_consistency.py R-F. No machinery change."
+      - date: 2026-07-11
+        note: "spec_hash recomputed (adversarial self-audit fix) — now also hashes strategy_math/common.py (the shared math module strategy_a.py imports), which the original hash omitted, silently missing drift in that shared module. No machinery change."
   - code: B
     name: "Post-event mispricing exploitation"
     archetype: post-event-mispricing-long-bias
@@ -120,7 +122,7 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
-    spec_hash: "45f16f558cb0d2d60e186778cef51e4e06e72846df085a0d15dbcb4ad5ebccbe"   # sha256(strategy/04_strategy_b.md || strategy_math/strategy_b.py), rev 2026-07-11 R-F
+    spec_hash: "cbc1dcec91ab446360238c22d4249f257eb6f88755fe0337a383f8d0b22e6dbb"   # sha256(strategy/04_strategy_b.md || strategy_math/strategy_b.py || strategy_math/common.py), rev 2026-07-11 R-F
     retired_date: null
     is_restart_of: null
     revision_history:
@@ -128,6 +130,8 @@ strategies:
         note: "Seeded as a founding-batch adopted member (SISA autonomy conversion, owner directive). Bootstrap of a pre-existing live strategy — no machinery change; dates pinned to experiment inception."
       - date: 2026-07-11
         note: "spec_hash added (Item 28, self-improvement audit) — content-hashes strategy/04_strategy_b.md + the new strategy_math/strategy_b.py against post-lock drift; verified by scripts/check_roster_consistency.py R-F. No machinery change."
+      - date: 2026-07-11
+        note: "spec_hash recomputed (adversarial self-audit fix) — now also hashes strategy_math/common.py (the shared math module strategy_b.py imports), which the original hash omitted, silently missing drift in that shared module. No machinery change."
   - code: C
     name: "Defined-risk options structures around known events"
     archetype: defined-risk-options-on-catalysts
@@ -157,7 +161,7 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
-    spec_hash: "e9a5a915c28ffb7d485f904ff3db77784e6f301f46fe85bb8c9c8e3f567beb2f"   # sha256(strategy/06_strategy_d.md || strategy_math/strategy_d.py), rev 2026-07-11 R-F
+    spec_hash: "63f8f7266a431e6ca08b8a9213470fbdc4d769329cc6d264aed416bb9e68123b"   # sha256(strategy/06_strategy_d.md || strategy_math/strategy_d.py || strategy_math/common.py), rev 2026-07-11 R-F
     retired_date: null
     is_restart_of: null
     revision_history:
@@ -165,6 +169,8 @@ strategies:
         note: "Seeded as a founding-batch adopted member (SISA autonomy conversion, owner directive). Bootstrap of a pre-existing live strategy — no machinery change; dates pinned to experiment inception."
       - date: 2026-07-11
         note: "spec_hash added (Item 28, self-improvement audit) — content-hashes strategy/06_strategy_d.md + the new strategy_math/strategy_d.py against post-lock drift; verified by scripts/check_roster_consistency.py R-F. No machinery change."
+      - date: 2026-07-11
+        note: "spec_hash recomputed (adversarial self-audit fix) — now also hashes strategy_math/common.py (the shared math module strategy_d.py imports), which the original hash omitted, silently missing drift in that shared module. No machinery change."
   - code: E
     name: "Market-neutral narrative-divergence pairs"
     archetype: market-neutral-pairs
@@ -175,7 +181,7 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
-    spec_hash: "c06f0253d5891b0c0e8ca4110f3a6dd378b9525f31e1fd31f19ab413d970ebb6"   # sha256(strategy/07_strategy_e.md || strategy_math/strategy_e.py), rev 2026-07-11 R-F
+    spec_hash: "a1d3e78ececa4a38e8779dcb53a98eb549372b91504612f45a59890462c378a5"   # sha256(strategy/07_strategy_e.md || strategy_math/strategy_e.py || strategy_math/common.py), rev 2026-07-11 R-F
     retired_date: null
     is_restart_of: null
     revision_history:
@@ -183,3 +189,5 @@ strategies:
         note: "Seeded as a founding-batch adopted member (SISA autonomy conversion, owner directive). Bootstrap of a pre-existing live strategy — no machinery change; dates pinned to experiment inception."
       - date: 2026-07-11
         note: "spec_hash added (Item 28, self-improvement audit) — content-hashes strategy/07_strategy_e.md + the new strategy_math/strategy_e.py against post-lock drift; verified by scripts/check_roster_consistency.py R-F. No machinery change."
+      - date: 2026-07-11
+        note: "spec_hash recomputed (adversarial self-audit fix) — now also hashes strategy_math/common.py (the shared math module strategy_e.py imports), which the original hash omitted, silently missing drift in that shared module. No machinery change."

@@ -61,16 +61,22 @@ CHECKS
        check_cadence_consistency.py" — this check makes that claim true instead of aspirational. FAIL
        naming which rail disagrees and its two values.
 
-  R-F  SPEC-LOCK HASH AGREEMENT (added rev 2026-07-11, Item 28 self-improvement audit). Each strategy's
-       LOCKED machinery — its strategy/0N_strategy_<code>.md slice plus its corresponding math module
-       (strategy_math/strategy_<code>.py for A/B/D/E, c_options_math.py for C) — freezes at SHADOW entry
-       (Experiment_Parameters.md immutability doctrine). strategy/roster.yaml's per-strategy `spec_hash`
-       field is a sha256 over exactly those two files' bytes (.md then module, concatenated); this check
-       recomputes it and FAILs if a spec-locked strategy (spec_locked_since is set) either has no spec_hash
-       recorded, or its recorded spec_hash no longer matches the current files — meaning locked machinery
-       drifted post-lock via a silent edit instead of a terminate-and-restart-as-new. Only strategy codes
-       present in SPEC_HASH_INPUTS are checked; a new strategy code without a wired-up math module is
-       skipped (update SPEC_HASH_INPUTS when strategy_math/ grows a new module).
+  R-F  SPEC-LOCK HASH AGREEMENT (added rev 2026-07-11, Item 28 self-improvement audit; hardened
+       2026-07-11 adversarial self-audit). Each strategy's LOCKED machinery — its strategy/0N_strategy_
+       <code>.md slice plus its corresponding math module(s) (strategy_math/strategy_<code>.py +
+       strategy_math/common.py for A/B/D/E — common.py is shared math EVERY one of those imports, so a
+       change there is spec drift too, not invisible just because no single strategy's own file changed;
+       c_options_math.py alone for C, which is self-contained) — freezes at SHADOW entry (Experiment_
+       Parameters.md immutability doctrine). strategy/roster.yaml's per-strategy `spec_hash` field is a
+       sha256 over exactly those files' bytes (.md then each module in SPEC_HASH_INPUTS order,
+       concatenated); this check recomputes it and FAILs if a SPEC_HASH_INPUTS-covered spec-locked
+       strategy (spec_locked_since is set) either has no spec_hash recorded, or its recorded spec_hash no
+       longer matches the current files — meaning locked machinery drifted post-lock via a silent edit
+       instead of a terminate-and-restart-as-new. A spec-locked strategy code NOT YET in SPEC_HASH_INPUTS
+       (e.g. a strategy SISA synthesizes autonomously, since its SL2 authoring routine does not today
+       generate a strategy_math module) prints a visible, NON-blocking NOTE instead of failing — hard-
+       failing there would make R-F a de facto CI gate on autonomous strategy promotion, which CLAUDE.md's
+       settled decision forbids (update SPEC_HASH_INPUTS by hand once that strategy has a math module).
 
 Usage:  python scripts/check_roster_consistency.py        # exit 0 if consistent, 1 + diff if not
 """
@@ -101,18 +107,45 @@ DERIVED_LIVE_SQL = [
     os.path.join(ROOT, "dbt", "models", "analytics", "strategy_nav.sql"),
 ]
 DBT_RECONCILE = os.path.join(ROOT, "dbt", "tests", "assert_cash_flows_reconcile.sql")
+STRATEGY_MATH_DIR = os.path.join(ROOT, "strategy_math")
+C_OPTIONS_MATH = os.path.join(ROOT, "c_options_math.py")
 
-# R-F: strategy code -> (spec .md slice, corresponding math module) whose bytes are hashed into
-# roster.yaml's spec_hash. C predates strategy_math/ (its math already lived in c_options_math.py at
-# repo root); A/B/D/E use the strategy_math/ package added in Item 28. Add a new code here when its
-# math module is wired up — until then R-F silently skips that code (see module docstring R-F).
-SPEC_HASH_INPUTS = {
-    "A": (os.path.join(STRATEGY_DIR, "03_strategy_a.md"), os.path.join(ROOT, "strategy_math", "strategy_a.py")),
-    "B": (os.path.join(STRATEGY_DIR, "04_strategy_b.md"), os.path.join(ROOT, "strategy_math", "strategy_b.py")),
-    "C": (os.path.join(STRATEGY_DIR, "05_strategy_c.md"), os.path.join(ROOT, "c_options_math.py")),
-    "D": (os.path.join(STRATEGY_DIR, "06_strategy_d.md"), os.path.join(ROOT, "strategy_math", "strategy_d.py")),
-    "E": (os.path.join(STRATEGY_DIR, "07_strategy_e.md"), os.path.join(ROOT, "strategy_math", "strategy_e.py")),
-}
+
+def spec_hash_inputs():
+    """R-F: strategy code -> (spec .md slice, [corresponding math module(s)]) whose bytes are hashed
+    into roster.yaml's spec_hash. A FUNCTION (not a frozen module-level dict) so it re-reads STRATEGY_DIR
+    / STRATEGY_MATH_DIR / C_OPTIONS_MATH on every call — those three are monkeypatchable module globals
+    (tests/test_roster_consistency.py's repo_copy fixture points them at a tmp_path copy), exactly like
+    every other path this file's checks read; a frozen dict built once at import time from the real ROOT
+    would silently ignore that monkeypatching and defeat fixture-based drift tests (BUG FIX, rev
+    2026-07-11 adversarial self-audit).
+
+    C predates strategy_math/ (its math already lived in c_options_math.py at repo root, self-contained,
+    no shared-module dependency); A/B/D/E use the strategy_math/ package added in Item 28 and each
+    imports strategy_math/common.py for shared math (OLS/correlation/day-count/sizing) — common.py is
+    included in EVERY A/B/D/E hash (but not C's) so a change to that shared module is ALSO caught as spec
+    drift, not silently invisible to R-F just because no single strategy's own file changed (BUG FIX, rev
+    2026-07-11 adversarial self-audit — common.py was omitted from the original hash).
+
+    Add a new code here when its math module is wired up. A spec-locked strategy code NOT in this dict is
+    NOT hard-failed by R-F (see the loop below) — SISA's autonomous SL2 authoring routine does not today
+    generate a strategy_math module for a newly-synthesized strategy, so hard-failing here would silently
+    turn this detective control into a de facto CI gate on autonomous strategy promotion (a "no human/CI
+    gate on strategy add" violation, CLAUDE.md settled decision) the first time SISA promotes a genuinely
+    new strategy past SHADOW. Instead it prints a visible, non-blocking NOTE — see R-F's report section.
+    """
+    return {
+        "A": (os.path.join(STRATEGY_DIR, "03_strategy_a.md"),
+              [os.path.join(STRATEGY_MATH_DIR, "strategy_a.py"), os.path.join(STRATEGY_MATH_DIR, "common.py")]),
+        "B": (os.path.join(STRATEGY_DIR, "04_strategy_b.md"),
+              [os.path.join(STRATEGY_MATH_DIR, "strategy_b.py"), os.path.join(STRATEGY_MATH_DIR, "common.py")]),
+        "C": (os.path.join(STRATEGY_DIR, "05_strategy_c.md"),
+              [C_OPTIONS_MATH]),
+        "D": (os.path.join(STRATEGY_DIR, "06_strategy_d.md"),
+              [os.path.join(STRATEGY_MATH_DIR, "strategy_d.py"), os.path.join(STRATEGY_MATH_DIR, "common.py")]),
+        "E": (os.path.join(STRATEGY_DIR, "07_strategy_e.md"),
+              [os.path.join(STRATEGY_MATH_DIR, "strategy_e.py"), os.path.join(STRATEGY_MATH_DIR, "common.py")]),
+    }
 
 LIFECYCLE_STATES = ("CANDIDATE", "QUALIFYING", "AUTHORING", "UNDER_REVIEW", "SHADOW", "PAPER",
                     "PROBE", "ADOPTED", "RETIREMENT_PROPOSED", "TERMINATED", "POST_MORTEM", "REJECTED")
@@ -203,12 +236,15 @@ def slicemap_codes():
     return {c.upper() for c in SLICE_FILE_REF.findall(section)}
 
 
-def compute_spec_hash(code):
-    """sha256 over (.md slice bytes || module bytes) for a SPEC_HASH_INPUTS-mapped code (R-F)."""
-    md_path, module_path = SPEC_HASH_INPUTS[code]
+def compute_spec_hash(code, inputs=None):
+    """sha256 over (.md slice bytes || each module's bytes, in spec_hash_inputs() list order) for a
+    spec_hash_inputs()-mapped code (R-F). `inputs` lets a caller pass an already-computed
+    spec_hash_inputs() dict to avoid recomputing it per-code in a loop; defaults to a fresh call."""
+    md_path, module_paths = (inputs or spec_hash_inputs())[code]
     h = hashlib.sha256()
     h.update(open(md_path, "rb").read())
-    h.update(open(module_path, "rb").read())
+    for module_path in module_paths:
+        h.update(open(module_path, "rb").read())
     return h.hexdigest()
 
 
@@ -248,6 +284,7 @@ def main():
         return 0
 
     errors = []
+    notes = []   # visible, NON-blocking observations (R-F coverage gaps) — never fail CI, see R-F below
     doc = roster_doc()
     roster_codes = roster_active_codes(doc)
 
@@ -330,25 +367,37 @@ def main():
                               f"bigquery/35_strategy_arsenal.sql arsenal_rails.{sql_name}={sql_consts[sql_name]}")
 
     # ---- R-F: spec-locked strategies' machinery hash agrees with roster.yaml's spec_hash ----
+    spec_inputs = spec_hash_inputs()
     for s in doc.get("strategies", []):
         code = s.get("code")
-        if not s.get("spec_locked_since") or code not in SPEC_HASH_INPUTS:
+        if not s.get("spec_locked_since"):
             continue
-        md_path, module_path = SPEC_HASH_INPUTS[code]
-        if not os.path.exists(md_path) or not os.path.exists(module_path):
-            missing = md_path if not os.path.exists(md_path) else module_path
+        if code not in spec_inputs:
+            # NON-blocking by design (see spec_hash_inputs() docstring): a spec-locked strategy with no
+            # wired-up math module is a real coverage gap worth surfacing, but hard-failing here would
+            # make R-F a de facto CI gate on SISA's autonomous strategy promotion the first time it
+            # promotes a genuinely new strategy — exactly the "no gate on strategy add" line CLAUDE.md
+            # draws. Visible note only; does not affect exit code.
+            notes.append(f"R-F: strategy {code!r} is spec_locked_since={s.get('spec_locked_since')} but has "
+                         f"no spec_hash_inputs() entry — its locked machinery is NOT drift-checked by R-F. "
+                         f"Add a strategy_math module for it (or extend spec_hash_inputs() to its existing "
+                         f"math) and register the path there to close the gap.")
+            continue
+        md_path, module_paths = spec_inputs[code]
+        missing = [p for p in [md_path, *module_paths] if not os.path.exists(p)]
+        if missing:
             errors.append(f"R-F: strategy {code!r} is spec_locked_since={s.get('spec_locked_since')} but its "
-                          f"spec_hash input {os.path.relpath(missing, ROOT)} is missing")
+                          f"spec_hash input(s) {[os.path.relpath(p, ROOT) for p in missing]} are missing")
             continue
-        actual = compute_spec_hash(code)
+        actual = compute_spec_hash(code, inputs=spec_inputs)
         declared = s.get("spec_hash")
+        inputs_desc = " + ".join(os.path.relpath(p, ROOT) for p in [md_path, *module_paths])
         if not declared:
             errors.append(f"R-F: strategy {code!r} is spec_locked_since={s.get('spec_locked_since')} but "
                           f"roster.yaml has no spec_hash — add spec_hash: \"{actual}\"")
         elif declared != actual:
             errors.append(f"R-F: strategy {code!r} spec_hash mismatch — roster.yaml declares {declared!r} but "
-                          f"{os.path.relpath(md_path, ROOT)} + {os.path.relpath(module_path, ROOT)} now hash "
-                          f"to {actual!r}. Locked machinery changed post spec-lock "
+                          f"{inputs_desc} now hash to {actual!r}. Locked machinery changed post spec-lock "
                           f"({s.get('spec_locked_since')}) — per Experiment_Parameters.md this requires "
                           f"terminate-and-restart-as-new, not a silent edit; if this IS a genuine restart, "
                           f"update spec_hash together with is_restart_of/spec_locked_since.")
@@ -358,6 +407,10 @@ def main():
         print("ROSTER CONSISTENCY: FAIL\n")
         for e in errors:
             print(" - " + e)
+        if notes:
+            print("\nNOTES (non-blocking):")
+            for n in notes:
+                print(" - " + n)
         print("\nFix strategy/roster.yaml and its mirrors (the state.strategy_roster seed in "
               "bigquery/35_strategy_arsenal.sql, Strategy.md '## Strategy' sections, strategy/ slices, the "
               "Claude_Task_Plan.md slice-map) + the roster-derived SQL so they agree, then re-run. This is "
@@ -368,7 +421,12 @@ def main():
           f"agree across roster.yaml, the bigquery/35 seed, Strategy.md, the strategy/ slices, and the plan "
           f"slice-map; no bare roster literal or fixed /5 divisor in the live derived SQL; the dbt reconcile "
           f"test is count-agnostic; arsenal_rails' SQL constants agree with roster.yaml's rails block; every "
-          f"spec-locked strategy's spec_hash agrees with its .md slice + math module.")
+          f"SPEC_HASH_INPUTS-covered spec-locked strategy's spec_hash agrees with its .md slice + math "
+          f"module(s).")
+    if notes:
+        print("\nNOTES (non-blocking):")
+        for n in notes:
+            print(" - " + n)
     return 0
 
 
