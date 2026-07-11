@@ -191,6 +191,18 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.state.strategy_candidates` (
   created_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
 ) OPTIONS(description='Candidate intake registry (SISA, 2026-07-10). Written by D1/Q1/Q3/A1 + SL1; qualified/rejected by SL1 with default-REJECT on ambiguity.');
 
+-- ADDITIVE MIGRATION (ITEM 9, 2026-07-11): a NUMERIC best-estimate of declared_frequency's prose, so
+-- state.strategy_paper_readiness can be archetype-aware instead of hardcoding one trade-count bar that
+-- structurally excludes low-turnover archetypes (Strategy D's 3-8 trades/yr counting entries+exits
+-- separately implies ~1.5-4 closed round-trips/yr — the PAPER graduation gate could never be satisfied
+-- inside any realistic window under the old single fixed threshold). NULL is the safe default: a
+-- candidate SL1 could not estimate a frequency for falls back to the strict fast-archetype bar (>=10
+-- trades) in the readiness view below, never the loosened slow-archetype path — fail-closed toward MORE
+-- evidence required, not less. CREATE TABLE IF NOT EXISTS above is a no-op on an existing table, so this
+-- ALTER is required for the column to actually land on a table created before this revision.
+ALTER TABLE `stock-trading-498512.state.strategy_candidates`
+  ADD COLUMN IF NOT EXISTS declared_annual_roundtrips FLOAT64;
+
 -- ============================================================================
 -- events.strategy_postmortems — structured termination post-mortems (SL2-authored). The precondition
 -- for any restart: SL1 refuses a restart whose post-mortem is missing or silent on the structural diff.
@@ -373,13 +385,25 @@ FROM consts c CROSS JOIN counts n;
 -- ============================================================================
 
 -- state.strategy_adoption_readiness — UNDER_REVIEW -> SHADOW. Clears on a SUFFICIENT strategy-adoption
--- orchestrator verdict (SL5 then inserts the SHADOW row + roster.yaml entry, spec-locking the strategy).
+-- orchestrator verdict (SL5 then inserts the SHADOW row + roster.yaml entry, spec-locking the strategy)
+-- AND (ITEM 7, 2026-07-11) an objective theater-judge check that the orchestrator verdict was reached
+-- independently, not an echo of the attacker's own text (bigquery/11_theater_judge.sql). Before this fix,
+-- the exact mechanism built to catch adversarial-review rubber-stamping was never consulted by the ONE
+-- gate it should most protect — a strategy could reach SHADOW off a self-certified-but-echo-suspect
+-- review, days before W5's weekly audit ever inspected it. Fail-closed: a not-yet-scored review reads
+-- theater_ok=FALSE (judge_independent defaults NULL/not-TRUE), so `ready` cannot fire on an unscored
+-- review — SL5 calling ops.sp_score_theater() synchronously (Claude_Task_Plan.md SL5) is what clears this
+-- in practice rather than waiting on W5's weekly cadence.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_adoption_readiness` AS
 WITH latest_verdict AS (
-  SELECT strategy AS strategy_code, verdict
+  SELECT strategy AS strategy_code, verdict, review_id
   FROM `stock-trading-498512.events.adversarial_reviews`
   WHERE review_type = 'strategy-adoption' AND role = 'orchestrator'
   QUALIFY ROW_NUMBER() OVER (PARTITION BY strategy ORDER BY review_date DESC, event_ts DESC) = 1
+),
+theater AS (
+  SELECT review_id, judge_independent
+  FROM `stock-trading-498512.analytics.theater_judge`
 ),
 rails AS (SELECT * FROM `stock-trading-498512.state.arsenal_rails`),
 ars AS (SELECT enabled, incubation_frozen FROM `stock-trading-498512.state.arsenal_enabled`)
@@ -387,12 +411,14 @@ SELECT
   r.strategy_code,
   v.verdict,
   v.verdict = 'SUFFICIENT' AS review_sufficient,
+  COALESCE(t.judge_independent, FALSE) AS theater_ok,
   NOT rails.incubation_cap_reached AS caps_ok,
   NOT rails.at_ceiling AS ceiling_ok,
   (ars.enabled AND NOT ars.incubation_frozen) AS arsenal_ok,
   NOT EXISTS (SELECT 1 FROM `stock-trading-498512.ops.roster_change_log` cl
               WHERE cl.change_key = CONCAT(r.strategy_code, ':UNDER_REVIEW->SHADOW')) AS not_already_transitioned,
   (v.verdict = 'SUFFICIENT'
+   AND COALESCE(t.judge_independent, FALSE)
    AND NOT rails.incubation_cap_reached
    AND NOT rails.at_ceiling
    AND ars.enabled AND NOT ars.incubation_frozen
@@ -400,6 +426,7 @@ SELECT
                    WHERE cl.change_key = CONCAT(r.strategy_code, ':UNDER_REVIEW->SHADOW'))) AS ready
 FROM `stock-trading-498512.state.strategy_roster` r
 JOIN latest_verdict v USING (strategy_code)
+LEFT JOIN theater t ON t.review_id = v.review_id
 CROSS JOIN rails CROSS JOIN ars
 WHERE r.current_state = 'UNDER_REVIEW';
 
@@ -438,15 +465,39 @@ LEFT JOIN agg a USING (strategy_code)
 CROSS JOIN ars
 WHERE r.current_state = 'SHADOW';
 
--- state.strategy_paper_readiness — PAPER -> PROBE. >= ~60 paper trading days AND >= ~10 simulated closed
--- trades AND latest paper excess-vs-SGOV >= 0 AND regime coverage (>= 2 positive cells OR fills a
--- zero-coverage arsenal gap) AND adoption-rate window open AND roster below N_max.
+-- state.strategy_paper_readiness — PAPER -> PROBE. >= ~60 paper trading days AND an ARCHETYPE-AWARE
+-- simulated-closed-trade count AND SUSTAINED (not single-day) paper excess-vs-SGOV AND regime coverage
+-- (>= 2 positive cells OR fills a zero-coverage arsenal gap) AND adoption-rate window open AND roster
+-- below N_max.
+--
+-- FIX (ITEM 9, 2026-07-11): trades_met was a single hardcoded `>= 10` bar for every archetype. Strategy
+-- D's own spec declares 3-8 trades/yr COUNTING ENTRIES+EXITS SEPARATELY (~1.5-4 closed round-trips/yr) —
+-- at that pace, 10 closed round-trips takes ~2.5-6.5 YEARS, with no time-based cull, meaning SISA could
+-- structurally never graduate a second D-like long-horizon candidate (exactly the defect D's own live spec
+-- already documents making its 30-trade GATE "effectively inactive" — this recreated the same defect one
+-- layer earlier). trades_met now scales the bar against state.strategy_candidates.declared_annual_
+-- roundtrips: fast archetypes (NULL or >=10 declared round-trips/yr) keep the original `>=10` bar
+-- unchanged; a declared slow archetype needs only `GREATEST(3, CEIL(declared_annual_roundtrips/2))` closed
+-- round-trips — still a real bar (never below 3), just not a structurally-unreachable one. `stuck` (paired
+-- with Claude_Task_Plan.md SL3's new PAPER time-cull) distinguishes "stuck" from "slow": paper_days >= 400
+-- with trades_met still FALSE culls to REJECTED rather than occupying a k_incubate slot forever.
+--
+-- FIX (ITEM 8, 2026-07-11): excess_met read only the SINGLE MOST RECENT day's cumulative excess
+-- (`ARRAY_AGG(excess ORDER BY incubation_day DESC LIMIT 1)`), re-evaluated fresh by SL3 every day — a
+-- candidate cumulative-negative for 59 of 60+ paper days could graduate to LIVE CAPITAL purely because SL3
+-- happened to check on a day with a favorable mark. excess_met now requires the trailing 10 incubation
+-- days to be ALL non-negative AND non-NULL (a NULL excess day, e.g. a missing sim_twr/sgov_twr input,
+-- counts as a failure, not a skip — fail-closed) — a sustained-positive requirement, matching the
+-- Wilson-interval small-sample discipline this codebase already applies elsewhere (analytics.
+-- calibration_shrunk) instead of trusting a single lucky reading at the highest-stakes PAPER->PROBE gate.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_paper_readiness` AS
 WITH agg AS (
   SELECT strategy_code,
     COUNT(DISTINCT incubation_day) AS paper_days,
     MAX(sim_closed_trades) AS sim_closed_trades,
-    ARRAY_AGG(excess ORDER BY incubation_day DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest_excess
+    ARRAY_AGG(excess ORDER BY incubation_day DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest_excess,
+    ARRAY_AGG(excess ORDER BY incubation_day DESC LIMIT 10) AS trailing_excess,
+    ARRAY_LENGTH(ARRAY_AGG(excess ORDER BY incubation_day DESC LIMIT 10)) AS trailing_n
   FROM `stock-trading-498512.analytics.strategy_incubation_perf`
   WHERE phase = 'paper'
   GROUP BY strategy_code
@@ -463,6 +514,10 @@ gap_fill AS (
   JOIN `stock-trading-498512.state.arsenal_regime_coverage` c ON c.regime_cell = p.regime_cell
   WHERE p.phase = 'paper' AND p.excess >= 0 AND c.is_gap
 ),
+freq AS (
+  SELECT candidate_code AS strategy_code, declared_annual_roundtrips
+  FROM `stock-trading-498512.state.strategy_candidates`
+),
 rails AS (SELECT * FROM `stock-trading-498512.state.arsenal_rails`),
 ars AS (SELECT enabled, incubation_frozen FROM `stock-trading-498512.state.arsenal_enabled`)
 SELECT
@@ -470,19 +525,39 @@ SELECT
   COALESCE(a.paper_days, 0) AS paper_days,
   COALESCE(a.sim_closed_trades, 0) AS sim_closed_trades,
   a.latest_excess,
+  fr.declared_annual_roundtrips,
+  CASE WHEN fr.declared_annual_roundtrips IS NULL OR fr.declared_annual_roundtrips >= 10 THEN 10
+       ELSE GREATEST(3, CAST(CEIL(fr.declared_annual_roundtrips / 2) AS INT64))
+  END AS trades_met_threshold,
   COALESCE(pc.n_positive_cells, 0) AS n_positive_cells,
   COALESCE(a.paper_days, 0) >= 60 AS days_met,
-  COALESCE(a.sim_closed_trades, 0) >= 10 AS trades_met,
-  COALESCE(a.latest_excess, -1) >= 0 AS excess_met,
+  COALESCE(a.sim_closed_trades, 0) >= (
+    CASE WHEN fr.declared_annual_roundtrips IS NULL OR fr.declared_annual_roundtrips >= 10 THEN 10
+         ELSE GREATEST(3, CAST(CEIL(fr.declared_annual_roundtrips / 2) AS INT64))
+    END) AS trades_met,
+  (COALESCE(a.trailing_n, 0) >= 10
+   AND (SELECT COUNT(*) FROM UNNEST(a.trailing_excess) AS e WHERE e IS NULL OR e < 0) = 0) AS excess_met,
   (COALESCE(pc.n_positive_cells, 0) >= 2 OR gf.strategy_code IS NOT NULL) AS regime_met,
   rails.adoption_window_open AS rate_limit_clear,
   NOT rails.at_ceiling AS ceiling_ok,
   (ars.enabled AND NOT ars.incubation_frozen) AS arsenal_ok,
   NOT EXISTS (SELECT 1 FROM `stock-trading-498512.ops.roster_change_log` cl
               WHERE cl.change_key = CONCAT(r.strategy_code, ':PAPER->PROBE')) AS not_already_transitioned,
+  -- stuck (ITEM 9): paper_days has run long enough that trades_met should be assessed against the 400-day
+  -- time-cull, independent of `ready` below — read by Claude_Task_Plan.md SL3 STEP 4, not itself a
+  -- component of `ready` (a stuck candidate is culled to REJECTED, not promoted).
+  (COALESCE(a.paper_days, 0) >= 400
+   AND NOT COALESCE(a.sim_closed_trades, 0) >= (
+         CASE WHEN fr.declared_annual_roundtrips IS NULL OR fr.declared_annual_roundtrips >= 10 THEN 10
+              ELSE GREATEST(3, CAST(CEIL(fr.declared_annual_roundtrips / 2) AS INT64))
+         END)) AS stuck,
   (COALESCE(a.paper_days, 0) >= 60
-   AND COALESCE(a.sim_closed_trades, 0) >= 10
-   AND COALESCE(a.latest_excess, -1) >= 0
+   AND COALESCE(a.sim_closed_trades, 0) >= (
+         CASE WHEN fr.declared_annual_roundtrips IS NULL OR fr.declared_annual_roundtrips >= 10 THEN 10
+              ELSE GREATEST(3, CAST(CEIL(fr.declared_annual_roundtrips / 2) AS INT64))
+         END)
+   AND (COALESCE(a.trailing_n, 0) >= 10
+        AND (SELECT COUNT(*) FROM UNNEST(a.trailing_excess) AS e WHERE e IS NULL OR e < 0) = 0)
    AND (COALESCE(pc.n_positive_cells, 0) >= 2 OR gf.strategy_code IS NOT NULL)
    AND rails.adoption_window_open
    AND NOT rails.at_ceiling
@@ -493,6 +568,7 @@ FROM `stock-trading-498512.state.strategy_roster` r
 LEFT JOIN agg a USING (strategy_code)
 LEFT JOIN positive_cells pc USING (strategy_code)
 LEFT JOIN gap_fill gf USING (strategy_code)
+LEFT JOIN freq fr USING (strategy_code)
 CROSS JOIN rails CROSS JOIN ars
 WHERE r.current_state = 'PAPER';
 
