@@ -84,12 +84,35 @@ function checkAlerts_() {
     const seen = new Set(JSON.parse(props.getProperty('notified_alert_ids') || '[]'));
     const fresh = rows.filter(r => !seen.has(r.alert_id));
 
-    if (fresh.length) {
+    // RECURRING RE-NOTIFY for termination_close_staged (ITEM 17, self-improvement audit 2026-07-11): a
+    // kill-trigger liquidation close order is urgent from hour 1 -- the notified_ts-once semantics above
+    // would deliver exactly one email and then go silent even if it sits unconfirmed for days. This
+    // SEPARATE query re-selects still-UNRESOLVED termination_close_staged alerts on EVERY poll,
+    // independent of notified_ts, so it re-appears in the email every ~2h until D2a's Step 0 fill
+    // reconciliation resolves it. Merged into the send batch but intentionally NOT stamped via
+    // stampNotified_ below -- that stamp would remove it from this recurring query's own future
+    // selections, defeating the point. De-duped against `fresh` so an alert on its FIRST poll (already
+    // in `fresh` via the normal notified_ts IS NULL path) is not emailed twice in the same batch.
+    let recurring = [];
+    try {
+      recurring = bqAlerts_(`
+        SELECT alert_id, CAST(alert_ts AS STRING) AS alert_ts, UNIX_MILLIS(alert_ts) AS alert_ms,
+               severity, source, category, message, resolved
+        FROM \`${ALERT_PROJECT_ID}.ops.alerts\`
+        WHERE category = 'termination_close_staged' AND NOT resolved
+        ORDER BY alert_ts DESC
+        LIMIT 50`);
+    } catch (e) { Logger.log('termination_close_staged recurring re-notify query skipped: ' + e); }
+    const freshIds = new Set(fresh.map(r => r.alert_id));
+    const combined = fresh.concat(recurring.filter(r => !freshIds.has(r.alert_id)));
+
+    if (combined.length) {
       // Split the alert-delivery self-test (canary) from real alerts so a weekly probe is never
       // disguised as an incident in the subject — and, conversely, a real alert that happens to ride
       // in the same poll batch is never softened to "[TEST]". (RUNBOOK §15 / delivery_canary.sql.)
-      const realFresh = fresh.filter(r => !isTest_(r));
-      const testCount = fresh.length - realFresh.length;
+      const realFresh = combined.filter(r => !isTest_(r));
+      const testCount = combined.length - realFresh.length;
+      const recurringCount = combined.length - fresh.length; // termination_close_staged re-sends this poll
       let subject;
       if (realFresh.length === 0) {
         // Batch is ONLY the alert-delivery self-test → unmistakable test subject, no ⚠.
@@ -97,12 +120,13 @@ function checkAlerts_() {
       } else {
         const crit = realFresh.filter(r => r.severity === 'critical').length;
         subject = `⚠ Stock-Trading ALERT — ${realFresh.length} new${crit ? ` (${crit} critical)` : ''}` +
+                  (recurringCount ? ` — ${recurringCount} UNCONFIRMED TERMINATION CLOSE (recurring)` : '') +
                   (testCount ? ` (+${testCount} test)` : '');
       }
-      GmailApp.sendEmail(ALERT_RECIPIENT, subject, plainAlerts_(fresh, rows.length),
-        { htmlBody: htmlAlerts_(fresh, rows.length), name: ALERT_SENDER });
-      Logger.log('Emailed %s new alerts', fresh.length);
-      stampNotified_(fresh.map(r => r.alert_id));
+      GmailApp.sendEmail(ALERT_RECIPIENT, subject, plainAlerts_(combined, rows.length),
+        { htmlBody: htmlAlerts_(combined, rows.length), name: ALERT_SENDER });
+      Logger.log('Emailed %s new alerts (%s recurring termination-close)', combined.length, recurringCount);
+      stampNotified_(fresh.map(r => r.alert_id)); // recurring termination_close_staged rows NEVER stamped
       // Bounded de-dup guard for ids we just emailed (in case the notified_ts stamp failed).
       const keep = [...seen, ...fresh.map(r => r.alert_id)].slice(-500);
       try {
