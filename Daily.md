@@ -1,114 +1,95 @@
-2026-07-10
-<!-- d1_scan_through_utc: 2026-07-10T22:14:15Z -->
+2026-07-11
+<!-- d1_scan_through_utc: 2026-07-11T07:45:00Z -->
 
-# Daily Market Development Scan — 2026-07-10 (Fri after-close, MT)
+# Daily Market Development Scan — 2026-07-11 (Sat pre-dawn, MT — weekend/after-hours run)
 
-Scan window: 2026-07-09 18:17 MDT → 2026-07-10 16:14 MDT (**~22h — covers the full Friday 7/10 regular session, no gap**). Prior-run hand-off marker (`d1_scan_through_utc: 2026-07-10T00:17:32Z` = 18:17 MDT) resolved the window start; cross-checked against the `Daily.md` commit time (2026-07-10T00:19:28Z) — the two agree to within one session. The 7/9 after-hours tail was covered by the prior run; this run covers the **full 7/10 (Fri) cash session**, which closed at 14:00 MDT. Market is now closed; 7/10 close levels are authoritative below.
+Scan window: 2026-07-10 16:14 MDT → 2026-07-11 01:45 MDT (**~9.5h — weekend after-hours, no new trading session**). Prior-run hand-off marker (`d1_scan_through_utc: 2026-07-10T22:14:15Z` = 16:14 MDT) resolved the window start; cross-checked against the `Daily.md` commit time (2026-07-10T22:16:49Z) — the two agree to within one session. **US cash markets have been closed since Fri 7/10 14:00 MDT and do not reopen until Mon 7/13.** The most recent completed trading session (Fri 7/10) was FULLY covered by the prior run; this window spans only the Friday-evening tail into early Saturday. No close-to-close price developments are possible in-window; **Friday 7/10 close levels remain the standing tape below.** Oil futures (the only live-through-weekend instrument relevant here) do not reopen until Sun ~16:00 MDT — after this window — so there is no fresh in-window oil print either.
 
-> **✅ FULL-MODE RUN — all surfaces read.** IBKR `get_account_summary` OK (net-liq **$9,503.13**, +$3.07 vs the prior run's $9,500.06; SGOV park 92.0612 sh / ~$9,253; total cash $0.00; available funds $7,126.93; dividends $0.56). `get_account_positions` returned live 7/10 marks. BigQuery `state.current_positions` / `state.current_regime` / `perf.kill_flags` / `events.decision_log` all OK. FMP index/quote/earnings + Tavily/web OK. HF `paper_search` OK. **The 7/9 open-book divergence is RESOLVED:** D2 reconciled the 4 Strategy-D fills into `state.current_positions` on 2026-07-09 (decision `b2d69677`) — the canonical book and the connector now agree (7 real positions).
+> **✅ FULL-MODE RUN — all surfaces read.** IBKR `get_account_summary` OK (net-liq **$9,503.30**, ~flat vs the prior run's $9,503.13; SGOV park 92.0612 sh / ~$9,253; total cash $0.01; available funds $7,127.06; dividends $0.56). `get_account_positions` returned the 7 tracked names + SGOV + sub-$0.25 dust (marks = Fri close, market shut). BigQuery `state.current_positions` / `state.current_regime` / `perf.kill_flags` (now as-of **2026-07-10**, D2 having run Friday) / `events.decision_log` all OK. FMP/Tavily/web OK. HF `paper_search` OK. Canonical book and connector **agree (7 real positions)** — no divergence.
 
-**Tape summary (7/10 cash close).** A narrow, mega-cap-AI-led grind higher against a quiet macro backdrop. **S&P 500 7,575.39 (+0.42%, 4th up-week in 5); Dow 52,637.01 (+0.28%); Nasdaq Comp 26,281.61 (+0.29%); Nasdaq 100 29,825.11 (+0.33%); Russell 2000 2,977.81 (−0.49%).** VIX 15.03 (−0.81, calm); WTI ~$72 (OVX 44.67, −1.32); 10-yr 4.57% (+3bp); DXY 100.97. Cap-weighted breadth was mildly broad-*up* (10 of 11 S&P sector SPDRs green — only Healthcare XLV −0.8% on a biotech selloff; leaders Materials +1.25% / Staples +1.1% / Comm-Svcs +1.0%), but **small-cap and equal-weight breadth were weak (Russell −0.5%)** — a large-cap-vs-small-cap / momentum-factor-unwind dispersion: 2026's hot momentum cohorts sold off (biotech **MRNA −10.8%**, cybersecurity **OKTA −6.9%**) while mega-cap AI led (**META +6.0%** on its first in-house AI chip). Earnings season opened (**DAL** BMO); big banks + TSM/ASML next week; **June CPI Tue 7/14** the near-term macro catalyst. Iran kinetic phase continues in the background but oil held the $70s — the *latent*-not-acute read is intact.
+**Tape summary (standing — Fri 7/10 cash close; unchanged, market closed all weekend).** **S&P 500 7,575.39 (+0.42%; +1.2% on the week, 2nd straight up-week); Dow 52,637.01 (+0.28%, snapped a 4-week win streak −0.5% wk); Nasdaq Comp 26,281.61 (+0.29%; +1.7% wk); Russell 2000 2,977.81 (−0.49%).** VIX 15.03 (calm); **WTI ~$71.2 (wk +3.5%), Brent ~$76 (wk +5%)** — an Iran risk-premium, but **far below the war-peak ~$103–105**; 10-yr 4.57%; DXY ~101. The live weekend thread is the **US–Iran / Strait of Hormuz** kinetic phase (ongoing multi-day strikes, shipping on the US-coordinated route effectively halted since Tue) — but through Friday's close the market kept pricing it *contained*: oil in the low-$70s, VIX at multi-week lows, Gulf producers (UAE record output) offsetting. **Near-term catalysts (Mon+):** June CPI **Tue 7/14**, big-bank kickoff (JPM/GS), **TSM/ASML**, UNH.
 
 **TL;DR**
-- Exits triggered: **none** — mechanical sweep on the 7-position canonical book (MDT/B + AMZN/CRM/DIS/GOOGL/RTX/UBER all D) found no convergence-target hit and no time-exit due.
-- New entry candidates: **none** — the in-window ≥5% movers are either info-driven-up (META), M&A-anchored (VOD), or hostile momentum-unwind knives with no clean discrete overreaction event (MRNA, OKTA). No qualifying A/B/C/E setup.
-- Watchlist changes: **none directed by D1.** Several A-queue names had thesis-relevant news (META/AVGO AI-chip ratification, OKTA pullback, ORCL) but A is DO-NOT-ACTIVATE (dormant queue) — context only, no edit.
-- Regime review: **no review.** `shock_overlay = latent` stands; the 7/8→7/9 re-review is CLOSED (keep latent). VIX 15.03, oil ~$72, no Hormuz closure — nothing reopens it. Default NO.
+- Exits triggered: **none** — mechanical sweep on the 7-position canonical book (MDT/B + AMZN/CRM/DIS/GOOGL/RTX/UBER all D) found no convergence-target hit and no time-exit due (market closed; marks unchanged from Fri).
+- New entry candidates: **none** — market closed all window; no in-window discrete catalyst or close-to-close move to create an A/B/C/E setup.
+- Watchlist changes: **none.**
+- Regime review: **no review.** `shock_overlay = latent` stands (re-review CLOSED 7/8 + 7/9). No acute watch-trigger tripped in-window (no Hormuz *closure*, oil far below war-peak, VIX 15). The multi-day-kinetic watch-item (b) remains the sole gray-zone flag — carried, with a **weekend-gap-risk note** into Monday's open. Default NO.
 
 ---
 
 ## DEVELOPMENTS
 
 ### 1. Market-wide breaking events
-- **None new/acute in-window.** No fresh geopolitical shock, regulatory-enforcement action, material bankruptcy, or disaster landed during the 7/10 session. The **US–Iran** conflict persists (Wed/Thu fresh hostilities + a wobble in the ceasefire MOU), but the market keeps pricing it as *contained*: spot oil stayed comfortably in the $70s (WTI ~$72) and OVX fell −1.32 to 44.67. No Strait of Hormuz closure. Read-through is de-escalatory, not acute (see REGIME CHECK). Source: Zacks/Saxo/IBD 7/10.
+- **No fresh in-window shock.** No new geopolitical rupture, regulatory/enforcement action, material bankruptcy, or disaster landed in the Fri-evening→Sat window. The **US–Iran** conflict continues as an *ongoing multi-day* kinetic phase (US strikes Tue/Wed, Iranian retaliation across Gulf bases Thu, Strait shipping on the US-coordinated broadcasting lane effectively halted since Tue) — but this is **continuation of the thread the prior run already captured**, not a new escalation dated to this window. Through Friday's close the tape stayed *contained*: **WTI ~$71.2 / Brent ~$76** (elevated by a risk premium but **~$30 below the war-peak ~$103–105 the EIA models**, and the market is deliberately pricing below the government's "strait effectively closed" assumption), VIX 15.03, no *declared* Iranian re-closure, UAE at record output. **Weekend-development risk is explicitly live** (desks flagged "possible weekend Middle East developments" into Friday's close): a Sunday-night escalation could gap oil/equities at Monday's open — a **Monday-D1 item, not actionable in this closed-market window.** Read-through remains latent, not acute (see REGIME CHECK). Sources: Schwab/Investopedia/Al Jazeera/PBS/The Hill/AP 7/8–7/10.
 
 ### 2. Scheduled events that resolved in-window (≥$2B universe)
-- **DAL (Delta) — Q2 print, BMO (earnings-season kickoff).** Adj EPS **$1.56** (beat Zacks consensus by ~$0.05); revenue **$17.67B** (slight miss, −0.53% vs est, but ~$1B above the year-ago quarter); **FY EPS guidance RAISED to $6.50–7.50** (well above the ~$5.78 tally); 7th straight quarterly beat. Stock **−1.8% to $87.39** — read as profit-taking after +28% YTD, not a thesis break. Not on any list; not strategy-relevant. Source: Zacks/IBD 7/10.
-- **SK Hynix (SKHY) — Nasdaq debut.** Priced a record **$26.5B** US listing (largest-ever by a foreign company, ~7× oversubscribed); popped on debut. Reinforces the memory/AI-capex leadership theme (alongside Micron's $250B onshoring). Not a position. Source: IBD/Morningstar 7/10.
-- No other ≥$2B S&P-universe scheduled print resolved in-window. Pre-Q2-season lull ends next week: **big-bank kickoff (JPM/GS), TSM, ASML, UNH**; **June CPI Tue 7/14**.
+- **None.** Weekend after-hours window — no earnings prints, FDA PDUFA outcomes, FOMC actions, or other scheduled catalysts resolved. (The Q2 season proper begins next week: big banks + TSM/ASML/UNH; **June CPI Tue 7/14**.)
 
 ### 3. Large single-name moves (≥$2B, ≥5% close-to-close, identifiable driver)
-- **META +5.97% → $669.21** (mktcap $1.70T). Confirmed its **first in-house AI training chip** — designed with **Broadcom (AVGO)** and manufactured by **TSMC** — enters production this fall. Info-driven corporate-development catalyst (momentum-up on hard information). Source: Bell Club/IBD 7/10.
-- **MRNA (Moderna) −10.83% → $68.27** (mktcap $27B). Part of a broad **biotech momentum rout** (ImmunityBio, Sarepta −8%) — profit-taking that unwound the sector's 2026 run, **not an MRNA-specific adverse catalyst** (MRNA actually *won* an EU RSV supply contract 7/9). Q2 earnings 7/31. Source: 24/7 Wall St / FMP 7/10.
-- **OKTA −6.86% → $138.63** (mktcap $23B). Sharp intraday reversal from a $151 open (near the 52-wk high $153) with no discrete adverse single-name event — an **identity/cybersecurity-momentum unwind** after the Scotiabank-upgrade-driven run (CRWD/PANW/OKTA all rallied hard; "real momentum risk after surging 76–97% YTD" was explicitly flagged 7/6). On the A-queue (see OPPORTUNITY / WATCHLIST). Source: AOL/AAII/FMP 7/10.
-- **VOD (Vodafone ADR) +12.54% → $14.72** (mktcap $34B). French billionaire **Xavier Niel agreed to buy a 16.2% stake (~$5.9B) from E&/Etisalat**, becoming Vodafone's largest shareholder. M&A/ownership repricing event. Not on any list; not strategy-relevant (mechanism-mismatch — see OPPORTUNITY). Source: WSJ/RTT/GuruFocus 7/10.
-- **CRCL (Circle)** spiked on **OCC/regulator approval to establish a national trust bank** (fintech/crypto rails). Not strategy-relevant. Source: IBD 7/10.
-- (Excluded: micro-cap and 2×/leveraged-ETF names dominate the raw FMP gainer/loser tape and fail the ≥$2B bar; the leveraged META/OKTA/MRNA ETFs merely echo the underlyings above. AstraZeneca −6.2% on the Wainua late-stage trial fail is a foreign-listed name — context in item 5.)
+- **None possible in-window** — US cash markets closed all window; no close-to-close move can occur. (Friday's in-session ≥5% movers — META +6.0% on its first in-house AI chip, MRNA −10.8% / OKTA −6.9% momentum-unwind, VOD +12.5% on the Niel stake — were fully covered and adjudicated by the prior run; none created an actionable setup and none has a fresh in-window development.)
 
 ### 4. Sector-level moves (≥2% at sector level or notable dispersion)
-- **No S&P sector SPDR moved ≥2%.** Friday was cap-weighted mildly-up: XLB Materials **+1.25%**, XLP Staples **+1.1%**, XLC Comm-Svcs **+1.0%** (META), XLU +0.6%, XLE +0.5%, XLRE +0.5%, XLI +0.4%, XLY +0.3%, XLK Tech **+0.2%** (semis mixed), XLF +0.3%; the lone red sector was **XLV Healthcare −0.8%** (biotech rout).
-- **Notable dispersion (the real signal):** large-cap up vs **small-cap down (IWM/Russell −0.5%)**, and a **momentum-factor unwind** — 2026's biggest momentum cohorts (biotech, high-flying cybersecurity) sold off while mega-cap AI led. This is a rotation/positioning event, not a directional macro shift; no strategy-actionable sector divergence at the ~$1.9k/strategy book (E remains execution-feasibility-deferred). Source: FMP SPDR quotes 7/10.
+- **None possible in-window** — market closed. (Friday's cap-weighted-up / small-cap-down + momentum-unwind dispersion was a one-day positioning rotation, covered by the prior run.)
 
 ### 5. Notable commentary
-- **Oracle (ORCL) +2.7% despite an S&P credit downgrade** — the market shrugged, keeping faith in the OCI/RPO AI-infrastructure narrative. ORCL is on the A-queue (dormant). Source: Bell Club 7/10.
-- **FedEx (FDX) launched a competing life-sciences logistics business**, pressuring healthcare-distribution names **McKesson (MCK)** and **Cencora (COR)**. Source: Saxo 7/10.
-- **Earnings-season framing:** desks (Saxo/IBD) cast next week as the test of whether "heavy AI spending is producing equally impressive revenue" — the AI-capex-vs-monetization debate now shifts from narrative to prints. Micron's $250B US-investment plan (7/9) continues to anchor the memory/AI-capex-leadership story.
-- **AstraZeneca −6.2%** after Wainua failed a late-stage trial (dragged FTSE); foreign-listed, context only.
+- **Iran/oil weekend framing.** Analysts (The Hill/Lodi-411/Rice's Medlock) characterize the current state as a **"no war, no peace" risk-premium regime**: base case Brent range-bound ~$70–85 with $3–5 spikes per shipping incident that fade within days *as long as the Oman-lane workaround holds and Gulf producers keep pumping*; the escalation case (formal MOU collapse or effective strait re-closure) is where the EIA's $105-plus / World Bank $95–115 upside becomes live. The **$30 gap** between the EIA's "strait effectively closed" model ($105) and the market's ~$76 Brent is the market betting the government's pessimism is stale. Reference-only; nothing here forces a same-day action. Sources: The Hill 7/8, Lodi-411, EIA STEO.
+- **Next-week setup (context).** Desks cast the week ahead as the test of whether heavy AI capex is producing commensurate revenue (TSM/ASML prints + big-bank kickoff), with **June CPI Tue 7/14** the gating macro catalyst into the late-July FOMC. No in-window sell-side report or central-bank speech with fresh market-moving content landed.
 
 ---
 
 ## ANALYSIS — RISK TO EXISTING POSITIONS
 
-### MECHANICAL EXIT-TRIGGER SWEEP (all open positions) — FULL MODE (`state.current_positions` authoritative + IBKR live marks)
-Canonical open book from **`state.current_positions`** (7 positions, D2-reconciled 2026-07-09). Live marks from `get_account_positions` (7/10 close):
+### MECHANICAL EXIT-TRIGGER SWEEP (all open positions) — FULL MODE (`state.current_positions` authoritative + IBKR marks)
+Canonical open book from **`state.current_positions`** (7 positions). Marks from `get_account_positions` (Fri 7/10 close — market shut, so identical to the prior run):
 
-| Pos | Strat | contract_id | Conv. target | Live mark (7/10) | Time-exit | Trigger |
+| Pos | Strat | contract_id | Conv. target | Mark (Fri close) | Time-exit | Trigger |
 |-----|-------|-------------|--------------|------------------|-----------|---------|
-| MDT | B | 181387075 | 90 | **83.55** (+1.8% d) | 2026-07-31 | **none** ($6.45 below target; time-exit 21d out) |
-| AMZN | D | 3691937 | — | 245.34 (−0.69%) | — (LTCG 2027-07-09) | none (D runs to thesis-invalidation; no target/time-exit) |
-| CRM | D | 29624264 | — | 163.32 (+0.5%) | — (LTCG 2027-07-09) | none |
-| DIS | D | 6459 | — | 95.63 (−0.56%) | 2027-05-07 | none (time-exit far off) |
-| GOOGL | D | 208813719 | — | 357.18 (−0.48%) | — (LTCG 2027-07-09) | none |
-| RTX | D | 415342104 | — | 195.93 (+0.38%) | 2027-04-27 | none (time-exit far off) |
-| UBER | D | 365207014 | — | 74.54 (+0.26%) | — (LTCG 2027-07-09) | none |
+| MDT | B | 181387075 | 90 | **83.87** | 2026-07-31 | **none** ($6.13 below target; time-exit 20d out) |
+| AMZN | D | 3691937 | — | 245.34 | — (LTCG 2027-07-09) | none (D runs to thesis-invalidation; no target/time-exit) |
+| CRM | D | 29624264 | — | 163.32 | — (LTCG 2027-07-09) | none |
+| DIS | D | 6459 | — | 95.73 | 2027-05-07 | none (time-exit far off) |
+| GOOGL | D | 208813719 | — | 357.18 | — (LTCG 2027-07-09) | none |
+| RTX | D | 415342104 | — | 195.93 | 2027-04-27 | none (time-exit far off) |
+| UBER | D | 365207014 | — | 74.54 | — (LTCG 2027-07-09) | none |
 
-**No mechanical exit triggers fired.** MDT is $6.45 below its $90 convergence target (it rose +1.8% today but nowhere near target) and 21 days from its 7/31 time-exit; the six D positions carry no convergence target, and the two with time-exits (DIS 2027-05-07, RTX 2027-04-27) are multi-year out. The four 7/9-entered D names (AMZN/CRM/GOOGL/UBER) are days old — no mechanical exit can be due.
+**No mechanical exit triggers fired.** Markets were closed for the entire window, so no price can have crossed a convergence target intraday; MDT sits $6.13 below its $90 target and 20 days from its 7/31 time-exit. The six D names carry no convergence target; the two D time-exits (DIS 2027-05-07, RTX 2027-04-27) are multi-year out. No mechanical exit can be due.
 
-**Open-book vs connector cross-check: MATCH — no divergence.** `get_account_positions` shows exactly the same 7 named positions (AMZN/CRM/DIS/GOOGL/MDT/RTX/UBER) plus the SGOV park (92.0612 sh) and untracked sub-$0.25 dust (HCA 0.0001 ≈ $0.04, IBM 0.0007 ≈ $0.20 — no action). The 2026-07-09 divergence (4 unreconciled D fills) is fully closed by D2's reconciliation.
+**Open-book vs connector cross-check: MATCH — no divergence.** `get_account_positions` shows exactly the same 7 named positions (AMZN/CRM/DIS/GOOGL/MDT/RTX/UBER) plus the SGOV park (92.0612 sh ≈ $9,253) and untracked sub-$0.25 dust (HCA 0.0001 ≈ $0.04, IBM 0.0007 ≈ $0.20 — no action).
 
 ### PER-STRATEGY KILL-TRIGGER SWEEP — FULL MODE (`perf.kill_flags` read)
-`perf.kill_flags` (engine as-of **2026-07-09** — D1 runs before D2, so this is the latest close; no position moved ≥2% intraday today, so no live-refresh is required):
-- **B (MDT):** `deployed_unit_value` 1.096, `peak` 1.115, `current_drawdown` **−1.72%**, `excess_vs_sgov` +8.8%, closed_trades 8, gate 22/30 (pre-gate). `drawdown_kill`/`runaway_review`/`m2m_underperf_review`/`gate_reached` all FALSE. **No flag** (−1.72% is nowhere near the −50% kill line; deployed TWR +9.6% has not doubled). MDT +1.8% today is favorable — live drawdown only improves.
-- **D (7 legs: MDT is B; D holds DIS/RTX + AMZN/CRM/GOOGL/UBER):** `deployed_unit_value` 1.015, `peak` 1.025, `current_drawdown` **−0.97%**, `excess_vs_sgov` +0.7%, closed_trades 0, pre-gate. `drawdown_kill`/`runaway_review` FALSE. **No flag** (−0.97% vs −50% line; ~flat TWR, no runaway). D names were mixed-to-flat today (no sharp adverse move).
+`perf.kill_flags` (engine as-of **2026-07-10** — D2 ran Friday, so this is Friday's close; market shut all window, no intraday move, no live-refresh required):
+- **B (MDT):** `deployed_unit_value` 1.1155, `peak` 1.1155, `current_drawdown` **0.0%** (at peak), `excess_vs_sgov` +10.7%, closed_trades 8, gate 22/30 (pre-gate). `drawdown_kill`/`runaway_review`/`m2m_underperf_review`/`gate_reached`/`interim_underperf_warning` all FALSE. **No flag** (0% drawdown vs the −50% kill line; deployed TWR +11.6% has not doubled).
+- **D (7 legs: DIS/RTX + AMZN/CRM/GOOGL/UBER — MDT is B):** `deployed_unit_value` 1.0137, `peak` 1.0246, `current_drawdown` **−1.06%**, `excess_vs_sgov` +0.6%, closed_trades 0, gate 0/30 (pre-gate). `drawdown_kill`/`runaway_review` FALSE. **No flag** (−1.06% vs −50% line; ~flat TWR, no runaway).
 - **No drawdown-kill and no runaway-success trigger for either strategy — confirmed against the authoritative engine.** Both clear.
 
 ### Thesis-invalidation check (judgment-laden, per entry records)
-- **MDT (B):** B exit is mechanical (target $90 or time-exit 7/31), neither fired; +1.8% today, no new invalidation. **NOT met — hold to mechanical exits.**
-- **RTX (D):** continued Iran conflict remains thesis-**supportive** (defense); +0.38% today. **NOT met — hold.**
-- **DIS (D):** no in-window development bears on the multi-year thesis; −0.56% is noise. **NOT met — hold.**
-- **AMZN / CRM / GOOGL / UBER (D):** no in-window development breaks any of the four multi-year theses (AWS/AI re-accel, Agentforce monetization, Gemini-3/Cloud/TPU, marketplace compounding). META's in-house AI chip is a marginal custom-silicon read-through but not a GOOGL break (GOOGL has its own TPU stack); the AI-capex-vs-monetization debate is two-sided narrative into earnings, not a fundamental break. **NOT met — hold all four.**
+- **MDT (B):** exit is mechanical (target $90 or time-exit 7/31), neither fired; no in-window development bears on it. **NOT met — hold to mechanical exits.**
+- **RTX (D):** the ongoing US–Iran kinetic phase remains thesis-**supportive** (defense demand), not invalidating. **NOT met — hold.**
+- **DIS / AMZN / CRM / GOOGL / UBER (D):** no in-window development (market closed; no fresh catalyst) bears on any of these multi-year theses. **NOT met — hold all five.**
 
 ### Watchlist candidacy check
-- **A-queue (DO-NOT-ACTIVATE — dormant):** several queued names had thesis-relevant news today — **META +6%** (in-house AI chip ratifies the AI-capex→monetization thesis at corporate-action level, though the ~$583 "better entry" flagged 7/5 is gone at $669), **AVGO** (Meta ASIC pact ratifies the custom-silicon A-thesis), **OKTA −6.9%** (pullback marginally improves A-entry timing on the identity/AI thesis), **ORCL +2.7%** (shrugged off the S&P downgrade). **No change to queue disposition** — A stays dormant; all noted as context for the next M1 with A router ACTIVATE. (CRM remains on the A-queue with its concurrent-D-holding annotation per D2 2026-07-09; no live conflict while A is dormant.)
+- **A-queue (DO-NOT-ACTIVATE — dormant):** no in-window development changed any queued name's status (Friday's A-relevant news — META/AVGO/OKTA/ORCL — was already logged by the prior run as context for the next M1 ACTIVATE, not an edit). **No change.**
 - No queued B/C/D/E candidate had a material status change.
 
 ---
 
 ## ANALYSIS — OPPORTUNITY CHECK
-Evaluated every in-window Development for a new A/B/C/E entry candidate (D rarely turns on single-day developments), cast broadly beyond current lists:
-- **Strategy B (post-event ≥5% mean-reversion, 10-day window):** three ≥5% ≥$2B movers, none a clean B setup:
-  - **MRNA −10.8%** — a broad **biotech momentum-factor unwind**, not a discrete adverse single-name event (MRNA had *positive* news 7/9). B's mechanism needs a sentiment-overshoot around a specific public information event amenable to convergence; a sector positioning-unwind on no adverse catalyst is a hostile falling-knife, not a B trigger. **Not a candidate.**
-  - **OKTA −6.9%** — an identity/cybersecurity-**momentum reversal** after a sell-side-upgrade run, again with no discrete adverse event; next earnings late-Aug (>60d, outside B's closed-list target window). Also A-queue territory (multi-quarter thesis). **Not a candidate.**
-  - **VOD +12.5%** — M&A/ownership (Niel stake). Mechanism-mismatch (stake-anchored; convergence blocked by the new-shareholder floor), same disposition as the MGM 6/1 precedent. **Not a candidate.**
-  - **META +5.97%** — positive info-driven move (AI chip) = momentum-up on hard information, the antithesis of B's overreaction-**down** fade; = A territory (already A-queue). **Not a B candidate.** DAL −1.8% fails the ≥5% floor and is a beat-with-guide-raise.
-  - **Net: no overreaction-down ≥5% event on a ≥$2B name with a qualifying discrete catalyst → no B candidate.**
-- **Strategy C (catalyst within 45d):** C is HYBRID ACTIVATE (FOMC-only). No FOMC catalyst created in-window (next FOMC late-July). **No candidate.**
-- **Strategy A (catalyst within 6 months):** A is DO-NOT-ACTIVATE — no initiation regardless; today's developments ratified *existing* A-queue names (META/AVGO/OKTA/ORCL) but created no new A setup requiring action. **No candidate.**
-- **Strategy E (intra-industry pairs):** the large-cap-vs-small-cap / momentum dispersion is a positioning event, not a stable intra-industry-group divergence; E remains execution-feasibility-deferred at the ~$1.9k/strategy book. **No live candidate.**
-- **Net: no new actionable entry candidates.**
+Evaluated the window for any new A/B/C/E entry candidate, cast broadly beyond current lists:
+- **No in-window discrete catalyst or close-to-close move exists** — US cash markets were closed for the entire ~9.5h window, so no ≥5% post-event move (B), newly-announced qualifying catalyst on an eligible name (A/C), or fresh intra-industry-group divergence (E) could arise. C is HYBRID ACTIVATE (FOMC-only) — no FOMC catalyst in-window (next FOMC late-July). A is DO-NOT-ACTIVATE. E remains execution-feasibility-deferred at the ~$1.9k/strategy book.
+- **Net: no new actionable entry candidates.** (Friday's movers were adjudicated by the prior run and remain non-candidates.)
 
 ## ANALYSIS — REGIME CHECK
-**`shock_overlay = latent` — no review.** `state.current_regime` confirms `shock_overlay = latent` (M4 2026-07-01), and the inter-monthly re-review is **already CLOSED** twice: D2 2026-07-08 (decision `4d1d251d`, NO-CHANGE, keep latent) and the D1 2026-07-09 carry-forward (decision `fd15cef0`, NO-CHANGE, keep latent). The four acute watch-triggers after the 7/10 session: **(a) Hormuz closure — NOT tripped**; **(c) VIX >25 — NOT tripped** (VIX 15.03, *fell*); **(d) oil above war-peak — NOT tripped** (WTI ~$72, well below); **(b) sustained multi-day kinetic** — the sole gray-zone item (Wed/Thu fresh hostilities), but the market absorbed it benignly (oil in the $70s, VIX at multi-week lows, equities firm) — the textbook *latent* signature, not *acute*. The narrow-breadth / momentum-unwind tape is a one-day positioning rotation (SPY_TREND NEUTRAL and EQUITY_BREADTH HEALTHY unchanged; VIX 15 is far from the B-router HIGH-VIX exclusion), not a monthly-DNA shift. High bar, default NO on ambiguity: **no state change, no router review.** Continue daily monitoring of the (b) watch-trigger; adjudicate latent-vs-acute on the next M-cadence input.
+**`shock_overlay = latent` — no review.** `state.current_regime` confirms `shock_overlay = latent` (M4 2026-07-01), and the inter-monthly re-review is **already CLOSED** twice: D2 2026-07-08 (`4d1d251d`, NO-CHANGE) and D1 2026-07-09 carry-forward (`fd15cef0`, NO-CHANGE). Evaluating the four acute watch-triggers against in-window data: **(a) Strait of Hormuz *closure* — NOT tripped** (shipping is *disrupted* on the US-coordinated lane, but there is no *declared* Iranian re-closure, and the market prices Brent ~$76 vs the EIA's $105 "effectively closed" model — i.e. it does not believe the strait is shut); **(c) VIX >25 — NOT tripped** (VIX 15.03 at Fri close); **(d) oil above war-peak — NOT tripped** (WTI ~$71 / Brent ~$76, ~$30 below the ~$103–105 peak); **(b) sustained multi-day kinetic — the sole gray-zone item**, unchanged from the prior run's read: the kinetic phase is genuinely multi-day, but the market continues to absorb it benignly (oil in the low-$70s, VIX at lows). That is the textbook *latent* signature, not *acute*. No in-window development moves any trigger. High bar, default NO on ambiguity: **no state change, no router review.** Continue daily monitoring of the (b) watch-trigger and carry an explicit **weekend-gap-risk note into Monday's open** — a Sunday-night Middle East escalation is the one path that could force an acute re-adjudication at the 7/13 reopen; adjudicate on that session's data if it materializes.
 
 ## ANALYSIS — FRONTIER-LLM CAPABILITY CHECK (light-touch)
-**Ran today's one HF `paper_search` (Fri = trading/financial battery, `HF_Resource_Catalog.md` §1.7 query "LLM stock trading financial forecasting reasoning", `concise_only=true`, `results_limit=5`).** All five returned hits are older (Trading-R1 Sep-2025, RETuning Oct-2025, QuantAgent Sep-2025, LM-guided RL Aug-2025, GPT-CFA Oct-2023) — **none published within the scan window (since 2026-07-09)**, so nothing new bears on an `AI_Trading_Foundation.md` disadvantage. Default silent: no `events.decision_log` `[HF Frontier-LLM Capture]` entry, no `events.strategy_candidates` row, no Daily.md action. The mechanical per-strategy kill sweep above is unchanged.
+**Ran today's one HF `paper_search` (Sat = multi-agent-debate battery, `HF_Resource_Catalog.md` §6.1 rotation, query "multi-agent LLM debate consensus reasoning reliability", `concise_only=true`, `results_limit=5`).** All five hits predate the scan window (most recent "Can LLM Agents Really Debate?" 2025-11-11; others Oct-2025/Sep-2023) — **none published since 2026-07-09**, so nothing new bears on an `AI_Trading_Foundation.md` disadvantage. Default silent: no `events.decision_log` `[HF Frontier-LLM Capture]` entry, no `events.strategy_candidates` row, no Daily.md action. The mechanical per-strategy kill sweep above is unchanged.
 
 ## RECOMMENDED ACTIONS
 The downstream D2 routine reads this section verbatim. Status by category:
-- **Exits triggered:** none. (Mechanical sweep on the 7-position canonical book — no convergence-target hit, no time-exit due; kill sweep confirmed clean against `perf.kill_flags` — no drawdown-kill, no runaway-success.)
-- **New entry candidates:** none. (The in-window ≥5% ≥$2B movers are info-driven-up (META), M&A-anchored (VOD), or hostile momentum-unwind knives with no clean discrete overreaction event (MRNA, OKTA). No qualifying A/B/C/E setup.)
-- **Watchlist updates:** none directed by D1. A-queue names META/AVGO/OKTA/ORCL had thesis-relevant news but A is DO-NOT-ACTIVATE (dormant) — context for the next M1 ACTIVATE, not an edit.
-- **Router reviews recommended:** none. `shock_overlay = latent` stands (re-review CLOSED 7/8 + 7/9); no acute watch-trigger tripped; the momentum-unwind tape is a one-day rotation, not a regime shift. Default NO.
+- **Exits triggered:** none. (Mechanical sweep on the 7-position canonical book — no convergence-target hit, no time-exit due; kill sweep clean against `perf.kill_flags` as-of 7/10 — no drawdown-kill, no runaway-success. Market closed all window.)
+- **New entry candidates:** none. (No in-window discrete catalyst or close-to-close move — US cash markets closed the entire window; no qualifying A/B/C/E setup.)
+- **Watchlist updates:** none. (No in-window status change; Friday's A-relevant news already logged by the prior run as M1 context.)
+- **Router reviews recommended:** none. `shock_overlay = latent` stands (re-review CLOSED 7/8 + 7/9); no acute watch-trigger tripped in-window (no Hormuz closure, oil far below war-peak, VIX 15). The (b) multi-day-kinetic watch-item is carried with a weekend-gap-risk note into Monday — monitoring, not a review. Default NO.
 
 **Net: No recommended actions.**
 
