@@ -2135,3 +2135,38 @@ the cadence/plan/SQL rows, letting the `instruction_drift` completed-run windows
 `strategy_adopted` / retirement rows in `ops.alerts`, the weekly W5 lifecycle digest, or query
 `state.strategy_roster` / `ops.roster_change_log` any time. To PAUSE the whole loop, INSERT an
 `enabled = FALSE` row into `ops.arsenal_control` — live trading is unaffected.
+
+## 40. "Thin order gateway" — closed NO-BUILD, gated on Item 26's IBKR headless-auth finding (self-improvement audit ITEM 29, 2026-07-11)
+
+**What was scoped.** Item 29 of the 2026-07-11 self-improvement audit proposed a "thin order gateway": a
+code layer sitting between a routine's LLM reasoning and the IBKR `create_order_instruction` MCP tool that
+would MECHANICALLY call `fn_order_guard`/`fn_order_guard_options` before every order left the system,
+closing the same gap Item 15 (§ finding H-1, `b3d01c2`) already addresses by detection rather than
+prevention: no BigQuery procedure can gate a call to a *different* MCP tool, so guard compliance today
+depends on the routine's own markdown instructions being followed, with Item 15 making an omission
+detectable after the fact (`state.open_orders.guard_passed`, a new CRITICAL check in
+`bigquery/scheduled_queries/daily_staging_cap_check.sql`). A gateway would make it detectable *before* the
+fact — genuinely stronger, IF it can be built somewhere IBKR's connector can be intercepted.
+
+**Why it is NOT built.** Item 29 was explicitly gated on Item 26's Agent-SDK-orchestration feasibility spike
+(`ops/spikes/agent-sdk-orchestration-2026Q3.md`, `b6d5332`). That spike's finding (a): the live IBKR MCP
+connector is a claude.ai product-managed, per-user delegated-OAuth connector, unreachable from any headless
+process outside claude.ai — there is no first-party IBKR OAuth path today, and the unofficial community IBKR
+MCP servers with a "headless mode" are explicitly documented as **"strictly designed for local execution...
+never run on public servers,"** an inappropriate foundation for real-money order placement without a
+security review the spike does not attempt. The spike's own (d) recommendation is **"NO-GO, unconditionally,
+for any routine that calls the IBKR connector until a follow-up spike closes the gap."** A thin order gateway
+is, by definition, a routine that calls the IBKR connector — there is no interception point between
+"the interactive claude.ai chat session" and "IBKR" for a gateway to occupy today. Building one now would
+mean either (a) intercepting inside the same interactive session the order already flows through — which is
+not a new gateway, it is just Item 15's existing detective control renamed — or (b) standing up exactly the
+headless IBKR harness Item 26 said NO-GO on, purely to host a gateway. Neither is a real Item 29.
+
+**Disposition: CLOSED, not deferred.** This is not "not yet built" pending future work in this audit — it is
+correctly unbuildable under the current connector architecture, and attempting it would either be a no-op
+relabeling of Item 15 or a violation of Item 26's own NO-GO. The compensating control remains Item 15's
+detective `guard_passed IS NULL` CRITICAL alert, unchanged. Item 29 becomes buildable only if a future,
+separately-scoped spike resolves headless IBKR auth (Item 26 (a)'s "long pole") AND that spike's own
+GO/NO-GO explicitly clears order-placing routines for a headless harness — at which point a thin order
+gateway is the natural first thing to build inside that harness, not a separate project. No `ops.autonomy_levels.yaml`
+registration, no new schema, no live-apply: this section is the entire deliverable.
