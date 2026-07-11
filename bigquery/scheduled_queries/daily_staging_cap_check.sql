@@ -18,4 +18,27 @@ BEGIN
       'Daily staging cap check: today\'s staged orders exceed the daily notional/order-count cap.',
       (SELECT TO_JSON_STRING(t) FROM `stock-trading-498512.state.daily_staging_totals` t));
   END IF;
+
+  -- order_guard_omitted (CRITICAL, not staged-rollout -- ITEM 15, self-improvement audit 2026-07-11).
+  -- fn_order_guard / fn_order_guard_options is a per-order obligation on the calling routine, with no
+  -- mechanical enforcement possible (no BigQuery stored procedure can gate a call to a DIFFERENT MCP
+  -- tool, create_order_instruction) -- compliance depended entirely on the routine's markdown instructions
+  -- being followed verbatim. state.open_orders.guard_passed (bigquery/01_schema.sql) now surfaces whether
+  -- the guard's own result was embedded in the ORDER_STAGED payload; a row STAGED TODAY with guard_passed
+  -- IS NULL means either the guard never ran, or it ran and the routine didn't record it -- either way
+  -- the safety envelope was bypassed for that order, not merely undocumented. Unlike the daily_cap_breach
+  -- check above (a soft "review before crafting more" signal), a missing guard record is unambiguous --
+  -- CRITICAL immediately, no staged-rollout warning period.
+  IF EXISTS (
+    SELECT 1 FROM `stock-trading-498512.state.open_orders`
+    WHERE DATE(staged_ts, 'America/Denver') = CURRENT_DATE('America/Denver')
+      AND guard_passed IS NULL
+  ) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'critical', 'scheduled.staging_cap', 'order_guard_omitted',
+      'One or more orders staged today have no recorded fn_order_guard/fn_order_guard_options result -- the pre-craft risk envelope may have been bypassed for these orders.',
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(item_key, strategy, ticker, side, qty, limit_price, staged_ts)))
+       FROM `stock-trading-498512.state.open_orders`
+       WHERE DATE(staged_ts, 'America/Denver') = CURRENT_DATE('America/Denver') AND guard_passed IS NULL));
+  END IF;
 END;
