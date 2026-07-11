@@ -210,6 +210,24 @@ sources:
           - name: ingest_ts
             description: Ingest timestamp — the dedup discriminator (latest wins).
 
+      - name: option_marks
+        description: >
+          Daily per-contract option premium marks (ITEM 12 self-improvement audit 2026-07-11,
+          bigquery/40_options_marks.sql). Mirrors daily_marks' shape; consumers read
+          state.option_marks_curated (latest ingest per occ_symbol/day).
+        loaded_at_field: ingest_ts
+        columns:
+          - name: mark_date
+            description: Mark date. (occ_symbol, mark_date) is the dedup key in option_marks_curated.
+          - name: occ_symbol
+            description: The option's OCC symbol — identical string to events.trade_fills.ticker for this leg.
+          - name: premium_close
+            description: Per-share premium close.
+          - name: multiplier
+            description: Contracts-to-shares multiplier (100 for standard US equity options).
+          - name: ingest_ts
+            description: Ingest timestamp — the dedup discriminator (latest wins).
+
       - name: market_holidays
         description: US equity-market full-close + early-close exceptions (trading-day calendar source, bigquery/09).
         columns:
