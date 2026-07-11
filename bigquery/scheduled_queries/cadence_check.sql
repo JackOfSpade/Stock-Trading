@@ -280,6 +280,40 @@ BEGIN
        FROM `stock-trading-498512.state.script_version_drift` WHERE drift));
   END IF;
 
+  -- constant_tuning_loop_heartbeat_missing (warning, item 11 -- self-improvement audit 2026-07-11).
+  -- meta_monitoring_heartbeat (ops/autonomy_levels.yaml) documents every active_auto loop should write
+  -- an "evaluated this cycle" heartbeat with a scheduled-query dead-man's switch alerting on absence --
+  -- LIVE today for strategy_arsenal (SL1/SL3/SL4) but the four constant-tuning loops
+  -- (process_reliability, strategy_playbook, execution_quality_tuning, calibration_parameter_carveout)
+  -- had NEITHER a heartbeat write NOR a routine that ever evaluated them at all until Claude_Task_Plan.md's
+  -- W5 section was extended (item 11) to write ops.heartbeat(source='loop:<id>') every W5 firing,
+  -- regardless of whether that loop's own readiness view fired. Self-bootstrapping: a loop with ZERO
+  -- ops.heartbeat rows ever (never yet evaluated even once post-deployment) does not alarm -- only a loop
+  -- that HAS reported at least once and then goes quiet trips this, exactly the state.script_version_drift
+  -- / instruction_drift self-bootstrapping convention above. W5 runs weekly; the ~10-day window tolerates
+  -- one missed cycle before alarming. Staged-rollout WARNING (record-only), matching every other
+  -- self-bootstrapping monitor in this file.
+  IF EXISTS (
+    SELECT 1 FROM UNNEST(['loop:process_reliability','loop:strategy_playbook',
+                           'loop:execution_quality_tuning','loop:calibration_parameter_carveout']) AS loop_source
+    WHERE EXISTS (SELECT 1 FROM `stock-trading-498512.ops.heartbeat` h WHERE h.source = loop_source)
+      AND NOT EXISTS (
+        SELECT 1 FROM `stock-trading-498512.ops.heartbeat` h
+        WHERE h.source = loop_source AND h.beat_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 10 DAY))
+  ) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'constant_tuning_loop_heartbeat_missing',
+      CONCAT('Constant-tuning loop(s) previously reporting a weekly W5 heartbeat have gone quiet >10 days: ',
+             (SELECT STRING_AGG(loop_source, ', ')
+              FROM UNNEST(['loop:process_reliability','loop:strategy_playbook',
+                            'loop:execution_quality_tuning','loop:calibration_parameter_carveout']) AS loop_source
+              WHERE EXISTS (SELECT 1 FROM `stock-trading-498512.ops.heartbeat` h WHERE h.source = loop_source)
+                AND NOT EXISTS (
+                  SELECT 1 FROM `stock-trading-498512.ops.heartbeat` h
+                  WHERE h.source = loop_source AND h.beat_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 10 DAY)))),
+      TO_JSON_STRING(STRUCT(CURRENT_TIMESTAMP() AS checked_at)));
+  END IF;
+
   -- Single consolidated RAISE so the DTS failure-email fires once, AFTER every condition is recorded.
   IF raise_msg != '' THEN
     RAISE USING MESSAGE = CONCAT('STOCK-TRADING cadence/backup/heartbeat check FAILED — ', raise_msg);
