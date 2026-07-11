@@ -31,6 +31,7 @@ const ALERT_RECIPIENT  = Session.getActiveUser().getEmail(); // self-email
 const ALERT_SENDER     = 'Stock-Trading Alerts';
 const SEVERITIES       = ['critical', 'warning']; // set to ['critical'] for criticals only
 const POLL_HOURS       = 2;                        // how often to check
+const SCRIPT_VERSION   = 'v1';                     // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep
 // LOOKBACK_HOURS bounds the notified_ts IS NULL scan. Was 48h — if the emailer itself is dead longer
 // than the lookback (revoked token / deleted trigger), alerts raised early in the outage permanently
 // keep notified_ts NULL and are never emailed by ANY code path on recovery (the webhook relay's window
@@ -144,7 +145,7 @@ function stampNotified_(ids) {
 function beat_() {
   try {
     BigQuery.Jobs.query({
-      query: `INSERT INTO \`${ALERT_PROJECT_ID}.ops.heartbeat\` (source, note) VALUES ('alert_emailer', 'poll')`,
+      query: `INSERT INTO \`${ALERT_PROJECT_ID}.ops.heartbeat\` (source, note, version) VALUES ('alert_emailer', 'poll', '${SCRIPT_VERSION}')`,
       useLegacySql: false, timeoutMs: 30000
     }, ALERT_PROJECT_ID);
   } catch (e) { Logger.log('heartbeat write skipped: ' + e); }

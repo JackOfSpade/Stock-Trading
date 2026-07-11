@@ -200,6 +200,36 @@ loops:
       ops.arsenal_control owner kill switch. CI consistency gate: scripts/check_roster_consistency.py.
     added: "2026-07-10"
 
+  - id: cross_model_referee_independence  # ITEM 27: cross-model (Gemini) referee for irreversible SISA verdicts
+    stage: dormant                   # objects created (bigquery/44_cross_model_referee.sql), nothing reads
+                                      # or writes through them yet — no routine calls
+                                      # ops.sp_score_cross_model_referee() on a schedule, and no readiness
+                                      # view's `ready` column reads referee_verdict. state.strategy_adoption_
+                                      # readiness's own `ready` is unaffected by this loop (its item-7
+                                      # theater-judge condition is a separate, already-live mechanism).
+    ceiling: active_auto
+    artifact: ops/spikes/cross-model-adversarial-independence-2026Q3.md (design) +
+      bigquery/11_theater_judge.sql (the ops.gemini Vertex substrate this loop reuses, zero new credential) +
+      bigquery/44_cross_model_referee.sql (ops.sp_score_cross_model_referee, state.strategy_retirement_
+      readiness, state.foundation_change_termination_readiness) + bigquery/35_strategy_arsenal.sql
+      (state.strategy_adoption_readiness — the object a future shadow/active_auto promotion would extend
+      with a referee_concurs AND-condition, not yet applied)
+    gate_to_next_stage: >
+      DORMANT -> SHADOW: a routine (candidate: W5, mirroring its existing S-5 adversarial-independence-audit
+      bullet) starts calling ops.sp_score_cross_model_referee() on a schedule and reporting referee-vs-
+      orchestrator concurrence via an analytics.theater_check_calibration-style view — record-only, no
+      readiness view yet reads referee_verdict, so live SISA decisions are unaffected during this stage.
+      SHADOW -> ACTIVE_AUTO: burn in ONE FULL QUARTERLY CYCLE of observed concurrence (per
+      ops/spikes/cross-model-adversarial-independence-2026Q3.md §6) before folding referee_concurs into
+      state.strategy_adoption_readiness / state.strategy_retirement_readiness / state.
+      foundation_change_termination_readiness as a fail-closed AND-condition (default 'MISSING' != the
+      required verdict, so a not-yet-refereed review reads not-ready). NO human PR/chat gate at any stage —
+      the compensating control for each promotion is the observed concurrence-rate evidence itself, logged
+      to events.decision_log, exactly the same "record-then-promote-by-editing-this-register" discipline
+      every other loop in this file follows. Promotion is a version-controlled edit to THIS file's `stage`
+      field, citing the evidence, same as every sibling loop above.
+    added: "2026-07-11"
+
 cross_cutting_guards:
   - id: no_auto_merge_self_improvement
     status: superseded_2026-07-10   # was documented_not_enforced; retired as a blocking guard (see note)
