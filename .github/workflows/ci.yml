@@ -62,7 +62,7 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install --quiet -c requirements-ci.txt ruff
-      - run: ruff check c_options_math.py tests/ scripts/ ops/ || true
+      - run: ruff check c_options_math.py strategy_math/ tests/ scripts/ ops/ || true
 
   shell-lint:
     name: actionlint + shellcheck (2026-06-28 #8)
