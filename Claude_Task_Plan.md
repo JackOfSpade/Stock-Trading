@@ -665,6 +665,21 @@ the BigQuery value-weighted daily TOTAL-return TWR (`events.daily_marks` → `an
    on a gap neither source filled, carry the prior mark forward explicitly (mirroring the SGOV forward-fill) AND
    `CALL ops.sp_raise_alert('warning','D2a','mark_gap', ...)`. Standing CI detector: dbt test
    `dbt/tests/assert_open_positions_have_marks.sql`.
+1b. **Ingest today's option marks (self-improvement audit ITEM 12, 2026-07-11 — `bigquery/40_options_marks.sql`).**
+   For each held position whose ticker is an OCC option symbol (`analytics.fn_is_occ_option_symbol`; today only
+   possible for Strategy C, which is roster-ADOPTED with an active router path — not hypothetical), pull the
+   contract's daily premium via `mcp__Interactive_Brokers_IBKR__get_option_data`, falling back to an FMP options
+   quote if IBKR returns nothing, and `INSERT INTO events.option_marks (mark_date, occ_symbol, underlying, strike,
+   expiry, option_right, premium_close, multiplier, source)`: `occ_symbol` = the exact ticker string on the fill
+   (`events.trade_fills.ticker` — the join key `analytics.strategy_daily_returns` uses), `multiplier=100` (US
+   equity options; c_options_math.py's own convention) unless the contract's actual multiplier differs (record it
+   if so), `source='connector'` or `'FMP-fallback'`. Idempotent on (mark_date, occ_symbol). This is a SEPARATE
+   ingest branch from step 1 above (equity/SGOV/SPY) — option contracts are never pulled via `get_price_history`.
+   After ingest, read `state.option_mark_anomalies`: any row there means a held option position is STILL missing
+   its mark for today — `CALL ops.sp_raise_alert('warning','D2a','option_mark_missing', ...)`. Do NOT
+   fabricate/carry-forward an option premium the way step 1 forward-fills an equity gap (option premiums move too
+   fast near expiry for a stale carry-forward to be a safe substitute) — `ops.sp_recompute_engine()` (step 2 below)
+   already excludes an unmarked option-day from the TWR chain rather than mis-valuing it.
 2. **Recompute the engine + embed (one call): `CALL ops.sp_daily_refresh()`** — runs `ops.sp_recompute_engine()`
    (a state-free `DELETE`+`INSERT` that rebuilds the full `perf.strategy_daily` series from `events.daily_marks` +
    the views) **and** `ops.sp_embed_pending()` in a single idempotent call. The full recompute is trivially cheap
