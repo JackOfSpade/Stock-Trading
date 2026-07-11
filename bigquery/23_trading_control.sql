@@ -193,6 +193,42 @@ CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_order_guard`
   FROM checks
 );
 
+-- ===== analytics.fn_order_guard_options — options-specific pre-craft risk envelope (self-improvement
+-- audit ITEM 13, 2026-07-11) =====
+-- fn_order_guard above is notional/price-band shaped for equities; an option's limit_price is a
+-- per-share PREMIUM (a wholly different scale than a stock's notional), so it cannot sensibly gate an
+-- options order. This checks the structure's MAX LOSS instead — the natural risk unit for a defined-risk
+-- options structure (Strategy C: "Defined-risk options structures around known events") — against the
+-- SAME 1.5x sizing_base_2pct bound fn_order_guard uses for equity notional, keeping options sized
+-- consistently with every other strategy's 2%-of-sub-portfolio rule. p_max_loss_dollars MUST be computed
+-- by the calling routine via c_options_math.py's verify_max_loss_dual_path BEFORE this call — a NULL or
+-- non-positive max_loss_dollars is rejected outright (an UnboundedMaxLossError structure must never reach
+-- this guard; c_options_math.py itself refuses to proceed on one, so passing NULL/0 here means that
+-- refusal was skipped upstream, which is itself the bug this check catches).
+CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_order_guard_options`(
+  p_strategy STRING, p_side STRING, p_contracts NUMERIC, p_limit_premium NUMERIC, p_max_loss_dollars NUMERIC
+) AS (
+  WITH base AS (
+    SELECT
+      p_max_loss_dollars AS max_loss,
+      (SELECT sizing_base_2pct FROM `stock-trading-498512.analytics.strategy_nav` WHERE strategy = p_strategy) AS sizing_base
+  ),
+  checks AS (
+    SELECT
+      ARRAY_CONCAT(
+        IF(p_contracts IS NULL OR p_contracts <= 0, ['contracts must be > 0'], []),
+        IF(p_limit_premium IS NULL OR p_limit_premium <= 0, ['limit_premium must be > 0'], []),
+        IF(p_max_loss_dollars IS NULL OR p_max_loss_dollars <= 0,
+           ['max_loss_dollars must be a positive, DEFINED-risk bound -- an unbounded-max-loss structure must never reach this guard; compute it via c_options_math.py verify_max_loss_dual_path before calling'], []),
+        IF(base.sizing_base IS NOT NULL AND base.max_loss IS NOT NULL AND base.max_loss > 1.5 * base.sizing_base,
+           [FORMAT('max_loss %.2f exceeds 1.5x sizing_base_2pct (%.2f) for strategy %s', base.max_loss, 1.5 * base.sizing_base, p_strategy)], [])
+      ) AS reasons
+    FROM base
+  )
+  SELECT ARRAY_LENGTH(reasons) = 0 AS passed, reasons
+  FROM checks
+);
+
 -- ===== state.daily_staging_totals — aggregate daily notional + order-count cap input =====
 -- A per-order guard (fn_order_guard) cannot stop a runaway staging MANY small in-band orders. This
 -- surfaces TODAY's (America/Denver operating day) total staged count + notional across ALL routines
@@ -230,6 +266,9 @@ BEGIN
   DECLARE v_passed_oversize BOOL;
   DECLARE v_passed_offband BOOL;
   DECLARE v_passed_negative BOOL;
+  DECLARE v_passed_opt_maxloss BOOL;
+  DECLARE v_passed_opt_null BOOL;
+  DECLARE v_passed_opt_negative BOOL;
 
   -- (1) An absurdly oversized notional (10,000 shares @ $500) must be rejected.
   SET v_passed_oversize = (SELECT passed FROM `stock-trading-498512.analytics.fn_order_guard`('B', 'BUY', 10000, 500.00, 500.00, FALSE));
@@ -237,14 +276,22 @@ BEGIN
   SET v_passed_offband = (SELECT passed FROM `stock-trading-498512.analytics.fn_order_guard`('B', 'BUY', 1, 150.00, 100.00, FALSE));
   -- (3) A non-positive qty must be rejected.
   SET v_passed_negative = (SELECT passed FROM `stock-trading-498512.analytics.fn_order_guard`('B', 'BUY', -1, 100.00, 100.00, FALSE));
+  -- (4) OPTIONS (ITEM 13, 2026-07-11): an absurdly oversized max_loss (10,000 * $50 = $500,000) must be rejected.
+  SET v_passed_opt_maxloss = (SELECT passed FROM `stock-trading-498512.analytics.fn_order_guard_options`('C', 'BUY', 10000, 1.00, 500000.00));
+  -- (5) A NULL max_loss (the UnboundedMaxLossError-not-caught-upstream case) must be rejected.
+  SET v_passed_opt_null = (SELECT passed FROM `stock-trading-498512.analytics.fn_order_guard_options`('C', 'BUY', 1, 1.00, CAST(NULL AS NUMERIC)));
+  -- (6) A non-positive contract count must be rejected.
+  SET v_passed_opt_negative = (SELECT passed FROM `stock-trading-498512.analytics.fn_order_guard_options`('C', 'BUY', -1, 1.00, 10.00));
 
-  IF v_passed_oversize OR v_passed_offband OR v_passed_negative THEN
+  IF v_passed_oversize OR v_passed_offband OR v_passed_negative
+     OR v_passed_opt_maxloss OR v_passed_opt_null OR v_passed_opt_negative THEN
     CALL `stock-trading-498512.ops.sp_raise_alert`(
       'critical', 'ops.sp_fire_drill_order_guard', 'order_guard_fire_drill_failed',
-      'The order-guard fire drill found analytics.fn_order_guard passing an order it MUST reject. The pre-craft risk envelope is not load-bearing — investigate immediately before trusting it to block a bad order.',
-      TO_JSON_STRING(STRUCT(v_passed_oversize AS oversize_passed, v_passed_offband AS offband_passed, v_passed_negative AS negative_qty_passed)));
+      'The order-guard fire drill found analytics.fn_order_guard or fn_order_guard_options passing an order it MUST reject. The pre-craft risk envelope is not load-bearing — investigate immediately before trusting it to block a bad order.',
+      TO_JSON_STRING(STRUCT(v_passed_oversize AS oversize_passed, v_passed_offband AS offband_passed, v_passed_negative AS negative_qty_passed,
+        v_passed_opt_maxloss AS opt_maxloss_passed, v_passed_opt_null AS opt_null_maxloss_passed, v_passed_opt_negative AS opt_negative_contracts_passed)));
   ELSE
-    CALL `stock-trading-498512.ops.sp_log_run`('FIRE_DRILL_ORDER_GUARD', CURRENT_DATE('America/Denver'), 'completed', NULL, NULL, 3, NULL, 'All 3 order-guard fire-drill cases correctly rejected.');
+    CALL `stock-trading-498512.ops.sp_log_run`('FIRE_DRILL_ORDER_GUARD', CURRENT_DATE('America/Denver'), 'completed', NULL, NULL, 6, NULL, 'All 6 order-guard fire-drill cases (3 equity + 3 options, ITEM 13) correctly rejected.');
   END IF;
 END;
 
