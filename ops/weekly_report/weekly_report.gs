@@ -199,6 +199,7 @@ function notDeployedReason_(activation) {
   const a = String(activation || '');
   if (/DO-NOT/i.test(a)) return 'not deployed — router: do-not-activate';
   if (/HYBRID/i.test(a)) return 'not deployed — hybrid, awaiting a qualifying event';
+  if (/execution-feasibility-deferred/i.test(a)) return 'not deployed — execution-feasibility-deferred (book too small for single-share legs; needs ~$250k total book vs current ~$1.9k)';
   return 'not deployed — awaiting first deployment';
 }
 
