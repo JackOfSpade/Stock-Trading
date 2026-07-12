@@ -180,6 +180,13 @@ class OptionInputs:
             raise ValueError(f"strike = {self.strike} (must be > 0).")
         if self.volatility < 0:
             raise ValueError(f"volatility = {self.volatility} (must be >= 0).")
+        if self.option_type not in ('call', 'put'):
+            raise ValueError(
+                f"option_type = {self.option_type!r} (must be 'call' or 'put'). "
+                f"price_bsm/greeks_bsm/payoff_at_expiration treat any non-'call' "
+                f"value as a put, so an invalid or mis-cased option_type would "
+                f"silently return a wrong price into max-loss and sizing."
+            )
 
     @property
     def time_to_expiration(self) -> float:

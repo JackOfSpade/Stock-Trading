@@ -110,21 +110,10 @@ function checkAlerts_() {
       // Split the alert-delivery self-test (canary) from real alerts so a weekly probe is never
       // disguised as an incident in the subject — and, conversely, a real alert that happens to ride
       // in the same poll batch is never softened to "[TEST]". (RUNBOOK §15 / delivery_canary.sql.)
-      const realFresh = combined.filter(r => !isTest_(r));
-      const testCount = combined.length - realFresh.length;
-      const recurringCount = combined.length - fresh.length; // termination_close_staged re-sends this poll
-      let subject;
-      if (realFresh.length === 0) {
-        // Batch is ONLY the alert-delivery self-test → unmistakable test subject, no ⚠.
-        subject = '⚗ [TEST] Stock-Trading alert-delivery self-test — no action needed';
-      } else {
-        const crit = realFresh.filter(r => r.severity === 'critical').length;
-        subject = `⚠ Stock-Trading ALERT — ${realFresh.length} new${crit ? ` (${crit} critical)` : ''}` +
-                  (recurringCount ? ` — ${recurringCount} UNCONFIRMED TERMINATION CLOSE (recurring)` : '') +
-                  (testCount ? ` (+${testCount} test)` : '');
-      }
+      const subject = alertSubject_(fresh, combined);
       GmailApp.sendEmail(ALERT_RECIPIENT, subject, plainAlerts_(combined, rows.length),
         { htmlBody: htmlAlerts_(combined, rows.length), name: ALERT_SENDER });
+      const recurringCount = combined.length - fresh.length; // termination_close_staged re-sends this poll (mirrors alertSubject_'s internal computation)
       Logger.log('Emailed %s new alerts (%s recurring termination-close)', combined.length, recurringCount);
       stampNotified_(fresh.map(r => r.alert_id)); // recurring termination_close_staged rows NEVER stamped
       // Bounded de-dup guard for ids we just emailed (in case the notified_ts stamp failed).
@@ -220,6 +209,28 @@ function esc2_(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').repl
 // It is labelled [TEST] in both subject and body so it can't be mistaken for an alert — while still
 // being delivered + notified_ts-stamped, so the canary's step-1 assertion stays valid.
 function isTest_(a) { return a.source === 'scheduled.canary' || a.category === 'delivery_canary'; }
+
+// Email subject for one poll batch. `fresh` = alerts newly notified this poll (real incidents +
+// any canary); `combined` = fresh plus non-duplicate recurring termination_close_staged re-sends
+// (see the call site). "new" must count only genuinely-new alerts (from `fresh`), NOT the recurring
+// re-sends that also ride in `combined` — otherwise the subject over-reports new incidents (e.g.
+// "3 new" when 2 are new + 1 is a recurring re-notify) and mis-attributes the recurring critical to
+// the "(N critical)" new-count. Pure (no Apps-Script-service calls) — mirrored verbatim in
+// ops/weekly_report/test_pure_helpers.js; keep both in sync.
+function alertSubject_(fresh, combined) {
+  const newReal = fresh.filter(r => !isTest_(r));         // genuinely new, non-test alerts this poll
+  const testCount = fresh.length - newReal.length;         // test canaries among the new alerts
+  const recurringCount = combined.length - fresh.length;   // termination_close_staged re-sends this poll
+  if (newReal.length === 0 && recurringCount === 0) {
+    // Batch is ONLY the alert-delivery self-test → unmistakable test subject, no ⚠.
+    return '⚗ [TEST] Stock-Trading alert-delivery self-test — no action needed';
+  }
+  const crit = newReal.filter(r => r.severity === 'critical').length;
+  return '⚠ Stock-Trading ALERT' +
+            (newReal.length ? ` — ${newReal.length} new${crit ? ` (${crit} critical)` : ''}` : '') +
+            (recurringCount ? ` — ${recurringCount} UNCONFIRMED TERMINATION CLOSE (recurring)` : '') +
+            (testCount ? ` (+${testCount} test)` : '');
+}
 
 function htmlAlerts_(fresh, totalOpen) {
   const allTest = fresh.length > 0 && fresh.every(isTest_);

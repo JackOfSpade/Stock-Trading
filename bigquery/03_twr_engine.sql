@@ -157,6 +157,12 @@ OPTIONS(description='Deployed-TWR engine output. Full series computed 2026-06-05
 -- interim_underperf_warning: a WARNING-ONLY signal (deployed_days>=90 AND excess_vs_sgov<=-15%) that
 -- does NOT feed all_green or any kill action — purely an earlier human-visible heads-up, so a
 -- structurally underwater long-horizon strategy is flagged in months, not years.
+-- !! RUNTIME OVERRIDE — this is NOT the live definition. bigquery/39_beta_adjusted_alpha.sql is applied
+-- AFTER this file and CREATE OR REPLACEs perf.kill_flags, folding a beta-adjusted suppression into
+-- m2m_underperf_review + interim_underperf_warning (all thresholds copied verbatim; 39 also adds beta
+-- columns and a LEFT JOIN). At runtime 39's definition wins. ANY change to the thresholds or columns
+-- below MUST be mirrored into bigquery/39_beta_adjusted_alpha.sql or it is silently dead. No CI gate
+-- enforces this — sync by hand.
 CREATE OR REPLACE VIEW `stock-trading-498512.perf.kill_flags` AS
 SELECT strategy, as_of_date, deployed_unit_value, peak_unit_value, current_drawdown,
        excess_vs_sgov, deployed_days, closed_trades, gate_n,

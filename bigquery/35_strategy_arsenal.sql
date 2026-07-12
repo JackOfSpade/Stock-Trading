@@ -515,7 +515,14 @@ gap_fill AS (
   WHERE p.phase = 'paper' AND p.excess >= 0 AND c.is_gap
 ),
 freq AS (
-  SELECT candidate_code AS strategy_code, declared_annual_roundtrips
+  -- trades_threshold computed ONCE here (adversarial self-audit fix, rev 2026-07-11) — the same CASE
+  -- expression used to be duplicated 4x below (trades_met_threshold, trades_met, stuck, ready), inviting
+  -- silent divergence if only some copies were ever edited. Semantics-preserving; the frequency-scaled
+  -- trade-count floor for a slow-cadence strategy (declared_annual_roundtrips < 10), floored at 3.
+  SELECT candidate_code AS strategy_code, declared_annual_roundtrips,
+    CASE WHEN declared_annual_roundtrips IS NULL OR declared_annual_roundtrips >= 10 THEN 10
+         ELSE GREATEST(3, CAST(CEIL(declared_annual_roundtrips / 2) AS INT64))
+    END AS trades_threshold
   FROM `stock-trading-498512.state.strategy_candidates`
 ),
 rails AS (SELECT * FROM `stock-trading-498512.state.arsenal_rails`),
@@ -526,15 +533,10 @@ SELECT
   COALESCE(a.sim_closed_trades, 0) AS sim_closed_trades,
   a.latest_excess,
   fr.declared_annual_roundtrips,
-  CASE WHEN fr.declared_annual_roundtrips IS NULL OR fr.declared_annual_roundtrips >= 10 THEN 10
-       ELSE GREATEST(3, CAST(CEIL(fr.declared_annual_roundtrips / 2) AS INT64))
-  END AS trades_met_threshold,
+  COALESCE(fr.trades_threshold, 10) AS trades_met_threshold,
   COALESCE(pc.n_positive_cells, 0) AS n_positive_cells,
   COALESCE(a.paper_days, 0) >= 60 AS days_met,
-  COALESCE(a.sim_closed_trades, 0) >= (
-    CASE WHEN fr.declared_annual_roundtrips IS NULL OR fr.declared_annual_roundtrips >= 10 THEN 10
-         ELSE GREATEST(3, CAST(CEIL(fr.declared_annual_roundtrips / 2) AS INT64))
-    END) AS trades_met,
+  COALESCE(a.sim_closed_trades, 0) >= COALESCE(fr.trades_threshold, 10) AS trades_met,
   (COALESCE(a.trailing_n, 0) >= 10
    AND (SELECT COUNT(*) FROM UNNEST(a.trailing_excess) AS e WHERE e IS NULL OR e < 0) = 0) AS excess_met,
   (COALESCE(pc.n_positive_cells, 0) >= 2 OR gf.strategy_code IS NOT NULL) AS regime_met,
@@ -547,15 +549,9 @@ SELECT
   -- time-cull, independent of `ready` below — read by Claude_Task_Plan.md SL3 STEP 4, not itself a
   -- component of `ready` (a stuck candidate is culled to REJECTED, not promoted).
   (COALESCE(a.paper_days, 0) >= 400
-   AND NOT COALESCE(a.sim_closed_trades, 0) >= (
-         CASE WHEN fr.declared_annual_roundtrips IS NULL OR fr.declared_annual_roundtrips >= 10 THEN 10
-              ELSE GREATEST(3, CAST(CEIL(fr.declared_annual_roundtrips / 2) AS INT64))
-         END)) AS stuck,
+   AND NOT COALESCE(a.sim_closed_trades, 0) >= COALESCE(fr.trades_threshold, 10)) AS stuck,
   (COALESCE(a.paper_days, 0) >= 60
-   AND COALESCE(a.sim_closed_trades, 0) >= (
-         CASE WHEN fr.declared_annual_roundtrips IS NULL OR fr.declared_annual_roundtrips >= 10 THEN 10
-              ELSE GREATEST(3, CAST(CEIL(fr.declared_annual_roundtrips / 2) AS INT64))
-         END)
+   AND COALESCE(a.sim_closed_trades, 0) >= COALESCE(fr.trades_threshold, 10)
    AND (COALESCE(a.trailing_n, 0) >= 10
         AND (SELECT COUNT(*) FROM UNNEST(a.trailing_excess) AS e WHERE e IS NULL OR e < 0) = 0)
    AND (COALESCE(pc.n_positive_cells, 0) >= 2 OR gf.strategy_code IS NOT NULL)
@@ -579,6 +575,11 @@ WHERE r.current_state = 'PAPER';
 -- is default-KEEP (affirmative RETIRE required), so a fired candidacy is a proposal, not a retirement.
 -- Redundancy / dominated-by-newcomer are documented additional SL4 signals; edge-decay is the encoded
 -- objective one here (correlation/dominance need cross-strategy per-cell attribution not yet in perf.*).
+-- !! RUNTIME OVERRIDE — this is NOT the live definition. bigquery/39_beta_adjusted_alpha.sql is applied
+-- AFTER this file and CREATE OR REPLACEs state.strategy_retirement_candidacy, folding a beta-adjusted
+-- suppression into edge_decay_signal + candidacy_fired (all thresholds copied verbatim; 39 also adds a
+-- beta column and LEFT JOIN). At runtime 39's definition wins. ANY change below MUST be mirrored into
+-- bigquery/39_beta_adjusted_alpha.sql or it is silently dead. No CI gate enforces this — sync by hand.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_retirement_candidacy` AS
 WITH latest AS (
   SELECT strategy AS strategy_code, excess_vs_sgov, deployed_days

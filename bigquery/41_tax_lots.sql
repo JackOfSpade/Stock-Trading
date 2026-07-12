@@ -146,7 +146,11 @@ SELECT
   ROUND((matched_shares * multiplier * sell_price - matched_shares * COALESCE(sell_commission_per_share, 0))
         - (matched_shares * multiplier * buy_price + matched_shares * COALESCE(buy_commission_per_share, 0)), 4) AS realized_gain_loss,
   DATE_DIFF(DATE(sell_fill_ts, 'America/New_York'), DATE(buy_fill_ts, 'America/New_York'), DAY) AS holding_period_days,
-  IF(DATE_DIFF(DATE(sell_fill_ts, 'America/New_York'), DATE(buy_fill_ts, 'America/New_York'), DAY) > 365,
+  -- Calendar-anniversary rule (IRS "held MORE than one year"), not a fixed 365-day count: a holding
+  -- period spanning a leap day is 366 calendar days but still SHORT_TERM if sold on/before the
+  -- one-year anniversary. A bare `> 365` mis-tagged that boundary case as LONG_TERM (adversarial
+  -- self-audit fix, rev 2026-07-11).
+  IF(DATE(sell_fill_ts, 'America/New_York') > DATE_ADD(DATE(buy_fill_ts, 'America/New_York'), INTERVAL 1 YEAR),
      'LONG_TERM', 'SHORT_TERM') AS term
 FROM matched
 UNION ALL
@@ -165,7 +169,8 @@ SELECT
   CAST(NULL AS NUMERIC) AS proceeds,
   CAST(NULL AS NUMERIC) AS realized_gain_loss,
   DATE_DIFF(CURRENT_DATE('America/New_York'), DATE(buy_fill_ts, 'America/New_York'), DAY) AS holding_period_days,
-  IF(DATE_DIFF(CURRENT_DATE('America/New_York'), DATE(buy_fill_ts, 'America/New_York'), DAY) > 365,
+  -- Calendar-anniversary rule — see the matched-lot term expression above for rationale.
+  IF(CURRENT_DATE('America/New_York') > DATE_ADD(DATE(buy_fill_ts, 'America/New_York'), INTERVAL 1 YEAR),
      'LONG_TERM', 'SHORT_TERM') AS term
 FROM open_remainder;
 

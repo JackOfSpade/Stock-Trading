@@ -58,6 +58,15 @@ REQUIRED_FIELDS = ("id", "situation", "governing_files", "expected_decision", "r
 # the free-text qualifier that follows it.
 DECISION_LEAD_TOKENS = ("GO", "NO-GO", "CONTINUE", "TERMINATE", "ACTIVATE", "DO-NOT-ACTIVATE")
 
+# Which DECISION_LEAD_TOKENS are actually valid for a given scenario `category` — catches a
+# mis-categorized/copy-paste fixture (e.g. a kill_trigger scenario expecting "GO") that the bare
+# vocabulary check above cannot, since GO/NO-GO and CONTINUE/TERMINATE are both individually valid tokens.
+CATEGORY_TOKENS = {
+    "regime_router": {"ACTIVATE", "DO-NOT-ACTIVATE"},
+    "kill_trigger": {"CONTINUE", "TERMINATE"},
+    "strategy_b_entry": {"GO", "NO-GO"},
+}
+
 # Default live-mode model. Pin/verify before relying on this — model ids retire on Anthropic's normal
 # cadence (see this repo's Quarterly_AI_Foundation_Delta.md for the current lineup); override with
 # --model or the ANTHROPIC_MODEL env var rather than editing this default in place, so a stale default
@@ -153,6 +162,13 @@ def validate_offline(scenarios):
                     f"{label}: expected_decision '{decision}' does not start with a recognized token "
                     f"{DECISION_LEAD_TOKENS} — likely a typo, or the vocabulary needs a deliberate addition"
                 )
+            cat = sc.get("category")
+            if cat in CATEGORY_TOKENS:
+                tok = _leading_token(decision)
+                if tok is not None and tok not in CATEGORY_TOKENS[cat]:
+                    errors.append(
+                        f"{label}: expected_decision token '{tok}' is not valid for category '{cat}' "
+                        f"(allowed: {sorted(CATEGORY_TOKENS[cat])}) — likely a mis-categorized/copy-paste fixture")
     return errors
 
 

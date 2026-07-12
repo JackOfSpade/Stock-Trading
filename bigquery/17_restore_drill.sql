@@ -89,9 +89,17 @@ BEGIN
       EXECUTE IMMEDIATE FORMAT("SELECT COUNT(*) FROM `stock-trading-498512.events_restore_drill.%s`", rec.table_name) INTO restored;
       EXECUTE IMMEDIATE FORMAT("SELECT COUNT(*) FROM `stock-trading-498512.events.%s`", rec.table_name) INTO live;
       SET tested = tested + 1;
-      -- a past snapshot must restore, must never EXCEED live (append-only only grows), and must be
-      -- non-empty UNLESS the live table is itself empty (a genuinely-empty table restoring to 0 is fine).
-      IF (restored = 0 AND live > 0) OR restored > live THEN
+      -- a past snapshot must restore, must never be EMPTY unless the live table itself is empty (a
+      -- genuinely-empty table restoring to 0 is fine). The "must never EXCEED live" growth check only
+      -- applies to the IMMUTABLE AUDIT-TRUTH tables (same watch-list as state.append_only_integrity,
+      -- bigquery/18_stack_review_fixes.sql) — reference/market-data feeds (daily_marks, option_marks,
+      -- market_holidays, macro_fred, macro_series, ...) are legitimately maintained by in-place
+      -- DELETE+re-insert/MERGE, so a net-reducing re-ingest there is expected, not corruption (adversarial
+      -- self-audit fix, rev 2026-07-11 — the un-scoped version raised a false CRITICAL DR alarm on those).
+      IF (restored = 0 AND live > 0)
+         OR (restored > live AND rec.table_name IN
+             ('decision_log', 'position_events', 'trade_fills', 'regime_events',
+              'queue_events', 'adversarial_reviews', 'parking_events', 'hf_capability_captures')) THEN
         SET failed = failed || FORMAT('%s(restored=%d,live=%d); ', rec.table_name, restored, live);
       END IF;
     EXCEPTION WHEN ERROR THEN

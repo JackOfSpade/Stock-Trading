@@ -154,10 +154,12 @@ ACTIVE_STATES_SQL = {"PROBE", "ADOPTED"}       # seed to_state values meaning is
 
 # '## Strategy <CODE> ...' heading (Strategy.md + each generated slice). '[CANDIDATE]' = not roster-active.
 STRATEGY_HEADING = re.compile(r"^##\s+Strategy\s+([A-Z]{1,3})\b([^\n]*)$", re.M)
-# A bare UNNEST roster literal, e.g. ['A','B',...] (any spacing) — the thing R-B forbids.
-BARE_LITERAL = re.compile(r"\[\s*'[A-Z]'\s*,\s*'[A-Z]'")
-# A fixed equal-split divisor `/ 5` (the /N literal R-B / R-C forbid).
-FIXED_DIVISOR = re.compile(r"/\s*5\b")
+# A bare UNNEST roster literal, e.g. ['A','B',...] or ['AB','CD',...] (codes are 1-3 letters, matching
+# STRATEGY_HEADING / SEED_ROW) — the thing R-B forbids.
+BARE_LITERAL = re.compile(r"\[\s*'[A-Z]{1,3}'\s*,\s*'[A-Z]{1,3}'")
+# A fixed equal-split divisor `/ N` for ANY integer N (R-B / R-C forbid a fixed divisor, and the roster
+# size is not always 5 — SISA resizes N autonomously — so match any /<int>, not just /5).
+FIXED_DIVISOR = re.compile(r"/\s*\d+\b")
 # A per-strategy slice filename referenced in the plan slice-map, e.g. `06_strategy_d.md`.
 SLICE_FILE_REF = re.compile(r"\d+_strategy_([a-z]{1,3})\.md")
 # A rail constant in bigquery/35's `consts AS (SELECT 2 AS n_min, ...)` CTE, e.g. "8  AS n_max,".

@@ -12,6 +12,10 @@ FROM {{ ref('current_positions') }} p
 CROSS JOIN {{ ref('trading_day_today') }} t
 WHERE p.ticker IS NOT NULL
   AND p.ticker != 'SGOV'
+  -- OCC-format option tickers are marked on state.option_marks_curated (bigquery/40_options_marks.sql),
+  -- NEVER on daily_marks_curated; their same-day-mark completeness is guarded by state.option_mark_anomalies.
+  -- Without this exclusion an open Strategy-C option position spuriously fails this daily-mark test.
+  AND NOT REGEXP_CONTAINS(p.ticker, r'^[A-Z]{1,6} *[0-9]{6}[CP][0-9]{8}$')
   AND NOT EXISTS (
     SELECT 1
     FROM {{ ref('daily_marks_curated') }} m

@@ -226,6 +226,60 @@ BEGIN
   END IF;
 END;
 
+-- ===== ops.sp_fire_drill_alert_resolve — proves a whitelisted class WITH a satisfied condition IS resolved =====
+-- Positive-path companion to ops.sp_fire_drill_alert_latch (which only proves a non-whitelisted class is NEVER
+-- touched). This proves that a whitelisted class (missing_dependency) whose mechanical condition is satisfied IS
+-- in fact auto-resolved by ops.sp_auto_resolve_alerts — guarding against silent payload-shape drift between the
+-- producers (ops.sp_assert_deps in 12_cadence_monitor.sql; scheduled_queries/cadence_check.sql) and this file's
+-- Rule 1 JSON paths. If a producer renames a payload key or changes the array/object shape, the resolver stops
+-- matching, whitelisted criticals latch forever, and state.trading_enabled stays FALSE — a failure no offline
+-- test can catch (the suite has no live BigQuery). Inserts a synthetic completed run_log dependency row + a
+-- synthetic critical missing_dependency alert whose payload is built EXACTLY as ops.sp_assert_deps builds it
+-- (STRUCT(routine, run_date, missing_deps)), calls the resolver, records whether the synthetic alert cleared,
+-- then ALWAYS deletes BOTH synthetic rows (the delete runs BEFORE the assert-and-raise, so a failed drill still
+-- cleans up). FIRE_DRILL_DEP is a throwaway routine name used nowhere else, so the run_log DELETE is precise.
+-- Call periodically (e.g. monthly, alongside the latch + order-guard drills) or ad hoc after any edit to this file.
+CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_fire_drill_alert_resolve`()
+BEGIN
+  DECLARE test_id STRING DEFAULT GENERATE_UUID();
+  DECLARE drill_date DATE DEFAULT CURRENT_DATE('America/Denver');
+  DECLARE did_resolve BOOL;
+
+  -- (a) synthetic completed dependency run — the mechanical fact Rule 1 checks for.
+  INSERT INTO `stock-trading-498512.ops.run_log` (routine, run_date, status, note)
+  VALUES ('FIRE_DRILL_DEP', drill_date, 'completed',
+    CONCAT('FIRE DRILL — resolve test (synthetic, auto-cleaned) id=', test_id));
+
+  -- (b) synthetic critical missing_dependency alert; payload shaped EXACTLY as ops.sp_assert_deps builds it
+  --     (12_cadence_monitor.sql), naming FIRE_DRILL_DEP as the now-satisfied upstream.
+  INSERT INTO `stock-trading-498512.ops.alerts` (alert_id, severity, source, category, message, payload)
+  VALUES (test_id, 'critical', 'ops.sp_fire_drill_alert_resolve', 'missing_dependency',
+    CONCAT('FIRE DRILL — resolve test (synthetic, auto-cleaned) id=', test_id),
+    PARSE_JSON(TO_JSON_STRING(STRUCT(
+      'FIRE_DRILL_DEP_CONSUMER' AS routine,
+      CAST(drill_date AS STRING) AS run_date,
+      'FIRE_DRILL_DEP' AS missing_deps))));
+
+  -- (c) run the resolver, then (d) capture whether the synthetic alert cleared.
+  CALL `stock-trading-498512.ops.sp_auto_resolve_alerts`();
+  SET did_resolve = (SELECT resolved FROM `stock-trading-498512.ops.alerts` WHERE alert_id = test_id);
+
+  -- (e) ALWAYS clean up BOTH synthetic rows, BEFORE the assert-and-raise, so a failed drill leaves nothing behind.
+  DELETE FROM `stock-trading-498512.ops.alerts` WHERE alert_id = test_id;
+  DELETE FROM `stock-trading-498512.ops.run_log` WHERE routine = 'FIRE_DRILL_DEP';
+
+  -- (f) verdict.
+  IF NOT COALESCE(did_resolve, FALSE) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert`(
+      'critical', 'ops.sp_fire_drill_alert_resolve', 'alert_resolve_fire_drill_failed',
+      'The alert-resolve fire drill found ops.sp_auto_resolve_alerts FAILED to clear a whitelisted class (missing_dependency) whose mechanical condition was satisfied — likely payload-shape drift between ops.sp_assert_deps / scheduled_queries/cadence_check.sql and ops.sp_auto_resolve_alerts. Auto-resolution is silently disabled: whitelisted criticals will latch and keep state.trading_enabled FALSE. Investigate ops.sp_auto_resolve_alerts payload paths immediately.',
+      TO_JSON_STRING(STRUCT(test_id AS drill_id)));
+  ELSE
+    CALL `stock-trading-498512.ops.sp_log_run`('FIRE_DRILL_ALERT_RESOLVE', drill_date, 'completed', NULL, NULL, 1, NULL,
+      'missing_dependency correctly auto-resolved by ops.sp_auto_resolve_alerts once its mechanical condition was satisfied.');
+  END IF;
+END;
+
 -- ===== state.trading_enabled — REDEFINED to exclude the gate's own trading_halted echo =====
 -- Same composition as 23_trading_control.sql's original (halt_all / marks_fresh / engine_fresh /
 -- embeddings_healthy / zero open criticals / no position drift / no drawdown breach) but computes

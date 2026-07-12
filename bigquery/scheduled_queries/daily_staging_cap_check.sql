@@ -29,16 +29,52 @@ BEGIN
   -- the safety envelope was bypassed for that order, not merely undocumented. Unlike the daily_cap_breach
   -- check above (a soft "review before crafting more" signal), a missing guard record is unambiguous --
   -- CRITICAL immediately, no staged-rollout warning period.
+  --
+  -- QUERIES events.queue_events DIRECTLY, NOT state.open_orders (adversarial self-audit fix, rev
+  -- 2026-07-11): state.open_orders is a PENDING-ONLY view (WHERE status='pending'), so an order staged
+  -- WITHOUT the guard that then FILLED or was reconciled the same Denver day drops out of it before this
+  -- check runs at ~05:25 UTC -- exactly the worst case this control exists to catch (capital deployed
+  -- outside the risk envelope) silently escaping detection. queue_events is append-only: the original
+  -- 'pending' ORDER_STAGED row for an order staged today is never overwritten by its later terminal-status
+  -- row (a separate row, same item_key), so filtering the raw table on status='pending' still finds every
+  -- staging event from today regardless of what happened to the order afterward.
+  -- MESSAGE EMBEDS THE AFFECTED item_keys (adversarial self-audit fix, rev 2026-07-11): ops.sp_raise_alert_once
+  -- dedupes on (category, message) WHERE NOT resolved (bigquery/10_observability.sql). A fully static message
+  -- would mean that once this CRITICAL opens and is left unresolved, a LATER day's guard-omission on a
+  -- DIFFERENT, newly-affected order would silently fail to re-alert (the dedup guard blocks the INSERT before
+  -- the fresh payload evidence is even recorded) -- exactly the kind of new information this check exists to
+  -- surface. Embedding the sorted, comma-joined item_keys makes the message (and so the dedup key) change
+  -- whenever the SET of affected orders changes, while an unchanged set (the same still-open omission, re-
+  -- evaluated on a later run) still correctly dedupes to a single alert, not a new one every run.
   IF EXISTS (
-    SELECT 1 FROM `stock-trading-498512.state.open_orders`
-    WHERE DATE(staged_ts, 'America/Denver') = CURRENT_DATE('America/Denver')
-      AND guard_passed IS NULL
+    SELECT 1 FROM `stock-trading-498512.events.queue_events`
+    WHERE queue = 'ORDER_STAGED' AND LOWER(status) = 'pending'
+      AND DATE(event_ts, 'America/Denver') = CURRENT_DATE('America/Denver')
+      AND JSON_VALUE(payload, '$.guard_passed') IS NULL
   ) THEN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'critical', 'scheduled.staging_cap', 'order_guard_omitted',
-      'One or more orders staged today have no recorded fn_order_guard/fn_order_guard_options result -- the pre-craft risk envelope may have been bypassed for these orders.',
-      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(item_key, strategy, ticker, side, qty, limit_price, staged_ts)))
-       FROM `stock-trading-498512.state.open_orders`
-       WHERE DATE(staged_ts, 'America/Denver') = CURRENT_DATE('America/Denver') AND guard_passed IS NULL));
+      (SELECT FORMAT(
+          'One or more orders staged today have no recorded fn_order_guard/fn_order_guard_options result -- the pre-craft risk envelope may have been bypassed for these orders: %s.',
+          -- COALESCE defends against FORMAT('%s', NULL) returning a hard SQL NULL (verified) if this ever
+          -- somehow evaluated over zero rows despite the IF EXISTS above having matched -- ops.alerts.message
+          -- is NOT NULL, so an unguarded NULL here would error the whole scheduled query (adversarial
+          -- self-audit fix, rev 2026-07-11; confirmed not currently reachable -- this predicate is
+          -- byte-identical to the IF EXISTS guard and events.queue_events is append-only -- but free to close).
+          COALESCE(STRING_AGG(DISTINCT item_key, ', ' ORDER BY item_key), 'UNKNOWN'))
+       FROM `stock-trading-498512.events.queue_events`
+       WHERE queue = 'ORDER_STAGED' AND LOWER(status) = 'pending'
+         AND DATE(event_ts, 'America/Denver') = CURRENT_DATE('America/Denver')
+         AND JSON_VALUE(payload, '$.guard_passed') IS NULL),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(
+          item_key, strategy, ticker,
+          UPPER(JSON_VALUE(payload, '$.side')) AS side,
+          CAST(JSON_VALUE(payload, '$.qty') AS NUMERIC) AS qty,
+          CAST(JSON_VALUE(payload, '$.limit_price') AS NUMERIC) AS limit_price,
+          event_ts AS staged_ts)))
+       FROM `stock-trading-498512.events.queue_events`
+       WHERE queue = 'ORDER_STAGED' AND LOWER(status) = 'pending'
+         AND DATE(event_ts, 'America/Denver') = CURRENT_DATE('America/Denver')
+         AND JSON_VALUE(payload, '$.guard_passed') IS NULL));
   END IF;
 END;

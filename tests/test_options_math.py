@@ -465,3 +465,62 @@ def test_probability_weighted_payoff_keys_present():
                             volatility_long=0.30, volatility_short=0.28, contracts=1)
     pwp = probability_weighted_payoff(dcs, n_paths=20000)
     assert isinstance(pwp, dict) and len(pwp) > 0
+    assert 0.0 <= pwp['prob_profit'] <= 1.0
+    assert 0.0 <= pwp['prob_max_loss'] <= 1.0
+    assert pwp['expected_payoff'] >= 0.0  # a debit call spread's payoff (pre-debit) is >= 0
+    assert pwp['expected_pnl'] >= -dcs.max_loss_closed_form() - 0.01  # can't lose more than defined max loss
+
+
+def test_breakeven_points_long_call_and_debit_spread():
+    # Long call: single breakeven at strike + premium-per-share.
+    lc = long_call(100, strike=100, days_to_expiration=30,
+                   risk_free_rate=0.045, volatility=0.30, contracts=1)
+    bes = lc.breakeven_points()
+    assert len(bes) == 1
+    assert bes[0] == pytest.approx(100 + lc.net_debit() / CONTRACT_MULTIPLIER, abs=0.05)
+    # Debit call spread: single breakeven at long_strike + net-debit-per-share.
+    dcs = debit_call_spread(100, long_strike=100, short_strike=105,
+                            days_to_expiration=30, risk_free_rate=0.045,
+                            volatility_long=0.30, volatility_short=0.28, contracts=1)
+    bes2 = dcs.breakeven_points()
+    assert len(bes2) == 1
+    assert bes2[0] == pytest.approx(100 + dcs.net_debit() / CONTRACT_MULTIPLIER, abs=0.05)
+
+
+def test_realized_vol_uses_only_trailing_31_closes():
+    # Only the last 31 prices (30 returns) may influence the result; prepending
+    # wildly different older closes must not change it. Guards the [-31:] slice.
+    rng = random.Random(7)
+    core = [100.0]
+    dv = 0.30 / math.sqrt(252)
+    for _ in range(40):  # 41 closes total, so the last 31 are unaffected by a prefix
+        core.append(core[-1] * math.exp(dv * rng.gauss(0, 1)))
+    rv_core = realized_volatility_30d(core)
+    rv_prefixed = realized_volatility_30d([1.0, 5000.0, 0.5, 9999.0] + core)
+    assert rv_prefixed == pytest.approx(rv_core, abs=1e-12)
+
+
+def test_scenario_pnl_grid_anchors_on_underlying_and_matches_pnl():
+    dcs = debit_call_spread(100, long_strike=100, short_strike=105,
+                            days_to_expiration=30, risk_free_rate=0.045,
+                            volatility_long=0.30, volatility_short=0.28, contracts=1)
+    grid = dcs.scenario_pnl_grid()
+    assert set(grid) == {
+        'reference_plus_10pct', 'reference_plus_5pct', 'reference',
+        'reference_minus_5pct', 'reference_minus_10pct'}
+    debit = dcs.net_debit()
+    # +10% -> S=110 (>= short strike): max profit = width*100 - debit.
+    assert grid['reference_plus_10pct'] == pytest.approx(5 * CONTRACT_MULTIPLIER - debit, abs=0.01)
+    # -10% -> S=90 (both legs OTM): max loss = -debit.
+    assert grid['reference_minus_10pct'] == pytest.approx(-debit, abs=0.01)
+
+
+def test_size_position_exact_multiple_not_dropped_by_float_error():
+    # nav_cap = 0.02 * 240.0 = 4.8; 4.8 / 1.6 == 2.9999999999999996 in binary
+    # float, so math.floor WITHOUT the +1e-9 epsilon would under-size 3 -> 2.
+    # The epsilon on c_options_math.py:1301 must keep this exact integer multiple
+    # at 3 contracts. NOTE: values like (5.0, 1000.0) give 20/5 == 4.0 exactly and
+    # therefore do NOT exercise the epsilon (they pass with or without it).
+    assert math.floor(4.8 / 1.6) == 2  # sentinel: raw float underestimates
+    contracts, defer = size_position(1.6, 240.0, 0.02)
+    assert contracts == 3 and defer is False
