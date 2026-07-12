@@ -18,7 +18,7 @@
  * KEEP IN SYNC MANUALLY with ops/weekly_report/weekly_report.gs and
  * ops/monitoring/alert_emailer.gs — if you change any of these functions there, update the
  * copies below in the same commit:
- *   - notDeployedReason_   (weekly_report.gs lines 197-202)
+ *   - notDeployedReason_   (weekly_report.gs lines 198-203)
  *   - periodAvg_           (weekly_report.gs lines 210-213)
  *   - signPct_             (weekly_report.gs line 268)
  *   - parseIsoDateLocal_   (weekly_report.gs lines 274-277)
@@ -41,6 +41,7 @@ function notDeployedReason_(activation) {
   const a = String(activation || '');
   if (/DO-NOT/i.test(a)) return 'not deployed — router: do-not-activate';
   if (/HYBRID/i.test(a)) return 'not deployed — hybrid, awaiting a qualifying event';
+  if (/execution-feasibility-deferred/i.test(a)) return 'not deployed — execution-feasibility-deferred (book too small for single-share legs; needs ~$250k total book vs current ~$1.9k)';
   return 'not deployed — awaiting first deployment';
 }
 
@@ -154,6 +155,12 @@ t('notDeployedReason_ flags a DO-NOT-ACTIVATE router activation', () => {
 });
 t('notDeployedReason_ flags a HYBRID activation', () => {
   assert.strictEqual(notDeployedReason_('HYBRID'), 'not deployed — hybrid, awaiting a qualifying event');
+});
+t('notDeployedReason_ flags an execution-feasibility-deferred activation', () => {
+  assert.strictEqual(
+    notDeployedReason_('ACTIVATE (substantive) + execution-feasibility-deferred'),
+    'not deployed — execution-feasibility-deferred (book too small for single-share legs; needs ~$250k total book vs current ~$1.9k)'
+  );
 });
 t('notDeployedReason_ falls back to "awaiting first deployment" for any other activation', () => {
   assert.strictEqual(notDeployedReason_('SOME-OTHER-STATE'), 'not deployed — awaiting first deployment');
