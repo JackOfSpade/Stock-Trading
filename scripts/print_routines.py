@@ -22,7 +22,12 @@ VERIFYING THE LIVE TRIGGERS (no screenshots): once routines record the verbatim 
 received (ops.run_log.instruction, set by ops.sp_routine_start), run
     SELECT * FROM `stock-trading-498512.state.routine_last_instruction`;
 to see the ACTUAL trigger text each routine last received, and diff it against THIS script's canonical
-output — any mismatch is a drifted/typo'd web-UI trigger.
+output — any mismatch is a drifted/typo'd web-UI trigger. That check is reactive (only catches drift
+after a routine fires) and text-only (no schedule/cron). For a live, on-demand, full check (schedule +
+instruction + enabled status), a session can call the RemoteTrigger tool directly — see
+ops/trigger_ids.json for the routine id -> live trigger id map (added 2026-07-12, so a session doesn't
+have to re-discover IDs via Claude-in-Chrome each time; `list`'s pagination is broken in-session, capped
+at ~20 of 31+ routines, which is why that file exists).
 
 VERSIONED TRIGGER MANIFEST (--write, added 2026-07-03, self-improvement audit WO-2). The web-UI
 trigger config is the one SPOF this repo can only detect drift in, never set or restore from code —

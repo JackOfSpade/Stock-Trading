@@ -298,17 +298,42 @@ routines:
     depends_on: [A1, A2]
     writes: [AI_Trading_Foundation.md, Strategy.md, events.queue_events, events.decision_log]
 
-# ---- WEB-UI TRIGGER AUDIT — 2026-07-10 (Claude-in-Chrome, cross-checked against ops.run_log) ----
+# ---- WEB-UI TRIGGER AUDIT — 2026-07-10, RE-SPACED 2026-07-12 (Claude-in-Chrome + RemoteTrigger API,
+# cross-checked against ops.run_log) ----
+# ops/trigger_ids.json (added 2026-07-12) maps routine id -> live RemoteTrigger id (trig_...), so a
+# session can call RemoteTrigger get/update/run directly instead of re-discovering IDs via
+# Claude-in-Chrome each time. See that file's _meta for provenance/staleness caveats.
+#
 # Exact clock times below are NOT enforced anywhere (per the file header, exact times live only in
 # the web UI) — recorded purely as the human-readable reference scripts/print_routines.py invites
 # ("Record exact times in cadence.yaml if you want them printed"). Read directly from each trigger's
 # editor and, where history existed, cross-checked against real ops.run_log execution timestamps.
 #
-# DAILY (the platform's native Daily/Weekdays picker IS genuinely DST-aware — shows "MDT"/"MST"):
+# 2026-07-12 INCIDENT: W2 and W4 (the two :30-minute-offset weekly triggers) silently no-showed
+# 2026-07-12 — zero ops.run_log rows, no self-heal marker, "next run" jumped straight to the
+# following Sunday — while W1/W3/W5 (the :00-minute triggers) fired normally within the same hour.
+# 13 prior weeks (2026-04-19..2026-07-05) had zero gaps for any of W1-W5, so this wasn't a chronic
+# flake. Root cause is opaque (Anthropic cloud trigger infra, no log access from this repo) but the
+# same audit also found the weekly block was NOT the only collision risk: quarterly Q1/Q2/Q3
+# exactly coincided with daily AR_orc/SL2/SL3 (6/7/8 PM MT) on every quarter-start date, and SL4 sat
+# only 5 min after M5. Re-spaced the whole non-daily schedule below to remove every exact collision
+# and land routines that share a possible calendar day on the same day at least 30 min apart
+# (financial/trading risk was zero throughout — state.system_health stayed green; only the weekly
+# research/analytics chain stalled, recovered via manual `RemoteTrigger run` on W2 then W4).
+# Watch-trigger: if a `:00`-minute-offset routine ALSO silently no-shows on a future date, that's
+# the signal this is a genuine platform bug worth filing with Anthropic, not schedule tuning.
+#
+# DAILY (the platform's native Daily/Weekdays picker IS genuinely DST-aware — shows "MDT"/"MST") —
+# UNCHANGED 2026-07-12: no exact collisions found here, and gaps are deliberately telemetry-tuned
+# (see D2/D2a note below), so widening to 1hr would only push SL3 into the new W1 Sunday slot:
 #   D1 4:00 PM MT · D2a 4:20 PM MT · D2 5:15 PM MT (widened from 4:30 PM 2026-07-10 — D2a's real
 #     completion time varies 6-17+ min in ops.run_log; the old 10-min gap was too thin) · D3 6:30 PM MT ·
 #     SL3 8:00 PM MT · AR_att 5:30 PM MT · AR_orc 6:00 PM MT · SL2 7:00 PM MT · SL5 7:15 PM MT
-#   W1 12:00 AM MT Sun · W2 12:30 AM MT Sun · W3 1:00 AM MT Sun · W4 1:30 AM MT Sun · W5 2:00 AM MT Sun
+#
+# WEEKLY (native Weekly picker, DST-aware) — RE-SPACED 2026-07-12, now a full 1hr apart (was 30 min;
+# see incident note above). W1 unchanged, W2-W5 moved:
+#   W1 12:00 AM MT Sun · W2 1:00 AM MT Sun (was 12:30 AM) · W3 2:00 AM MT Sun (was 1:00 AM) ·
+#   W4 3:00 AM MT Sun (was 1:30 AM) · W5 4:00 AM MT Sun (was 2:00 AM)
 #   D1/D2a/D2/SL3 intentionally still fire on weekends/holidays (recurrence type "Daily", not
 #   "Weekdays") — confirmed via real weekend runs (2026-06-20/21, 2026-07-04/05) that they self-detect
 #   the non-trading day and complete cheap, safe, idempotent work (D1 catches weekend geopolitical
@@ -320,13 +345,19 @@ routines:
 # exists — so these have NO timezone concept, just a fixed UTC hour. PERMANENT PLATFORM LIMITATION,
 # not a bug to keep re-investigating; revisit only if the platform ever adds a DST-aware monthly type):
 #   M1a 5:00 AM MT · M1b 6:00 AM MT · M2 7:00 AM MT · M3 8:00 AM MT · M4 9:00 AM MT · M5 10:00 AM MT ·
-#     SL4 10:05 AM MT (re-staggered off M5's collision 2026-07-10) — all tuned for MDT (UTC-6); fire
-#     ~1hr EARLY every MST month (~Nov-Mar). Accepted; no fix available.
-#   Q1 6:00 PM MT · Q2 7:00 PM MT · Q3 8:00 PM MT · Q4 9:00 PM MT · SL1 10:00 PM MT — FIXED 2026-07-10
-#     (were firing ~6h early: entered as an MT wall-clock hour but evaluated as UTC). Same MDT-only
-#     caveat as the monthly cohort above (fires ~1hr early every January).
-#   A1 7:30 PM MT · A2 8:30 PM MT · A3 9:30 PM MT — FIXED 2026-07-10 (same root cause as Q1-4/SL1);
-#     no seasonal caveat, these only ever fire in January (MST) so the fix is exact year-round.
+#     SL4 10:30 AM MT (was 10:05 AM — widened 2026-07-12 from a 5-min gap after M5 to 30 min) — all
+#     tuned for MDT (UTC-6); fire ~1hr EARLY every MST month (~Nov-Mar). Accepted; no fix available.
+#   RELOCATED 2026-07-12 off the daily-collision zone (was 6-10 PM MT, exactly overlapping
+#   AR_orc/SL2/SL3 on quarter-start dates) into the free midday window, still MDT-tuned/UTC-6:
+#   Q1 11:00 AM MT (was 6:00 PM, collided with AR_orc) · Q2 12:00 PM MT (was 7:00 PM, collided with
+#     SL2) · Q3 1:00 PM MT (was 8:00 PM, collided with SL3) · Q4 2:00 PM MT (was 9:00 PM) ·
+#     SL1 3:00 PM MT (was 10:00 PM) — all fixed 2026-07-10 for the UTC-evaluation bug, then
+#     relocated 2026-07-12 for the daily-block collision. Same MDT-only caveat as the monthly
+#     cohort above (fires ~1hr early every January).
+#   A1 9:00 PM MT · A2 10:00 PM MT · A3 11:00 PM MT — FIXED 2026-07-10 (UTC-evaluation bug), moved
+#     2026-07-12 from 7:30/8:30/9:30 PM (which sat inside the daily block) to right after SL3 (8 PM)
+#     with a full 1hr buffer on both sides; no seasonal caveat, these only ever fire in January (MST)
+#     so the MST-calibrated cron is exact year-round.
 #
 # Also confirmed correct and left untouched: M4's instruction text (a prior audit pass misread it as
 # missing its "Read Claude_Task_Plan.md. Perform " prefix; ops.run_log's actual last-received
