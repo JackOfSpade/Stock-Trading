@@ -26,8 +26,9 @@
  *   - buildHealthReasons_  (weekly_report.gs lines 216-237)
  *   - buildSubject_        (weekly_report.gs lines 97-105)
  *   - esc_                 (weekly_report.gs line 270)
- *   - isTest_              (alert_emailer.gs line 192)
- *   - esc2_                (alert_emailer.gs line 187)
+ *   - isTest_              (alert_emailer.gs line 210)
+ *   - esc2_                (alert_emailer.gs line 205)
+ *   - alertSubject_        (alert_emailer.gs, defined immediately after isTest_)
  *
  * Run: node ops/weekly_report/test_pure_helpers.js   (exits 0 iff every assertion passes)
  */
@@ -116,6 +117,27 @@ function esc2_(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').repl
 // It is labelled [TEST] in both subject and body so it can't be mistaken for an alert — while still
 // being delivered + notified_ts-stamped, so the canary's step-1 assertion stays valid.
 function isTest_(a) { return a.source === 'scheduled.canary' || a.category === 'delivery_canary'; }
+
+// Email subject for one poll batch. `fresh` = alerts newly notified this poll (real incidents +
+// any canary); `combined` = fresh plus non-duplicate recurring termination_close_staged re-sends
+// (see the call site). "new" must count only genuinely-new alerts (from `fresh`), NOT the recurring
+// re-sends that also ride in `combined` — otherwise the subject over-reports new incidents (e.g.
+// "3 new" when 2 are new + 1 is a recurring re-notify) and mis-attributes the recurring critical to
+// the "(N critical)" new-count.
+function alertSubject_(fresh, combined) {
+  const newReal = fresh.filter(r => !isTest_(r));         // genuinely new, non-test alerts this poll
+  const testCount = fresh.length - newReal.length;         // test canaries among the new alerts
+  const recurringCount = combined.length - fresh.length;   // termination_close_staged re-sends this poll
+  if (newReal.length === 0 && recurringCount === 0) {
+    // Batch is ONLY the alert-delivery self-test → unmistakable test subject, no ⚠.
+    return '⚗ [TEST] Stock-Trading alert-delivery self-test — no action needed';
+  }
+  const crit = newReal.filter(r => r.severity === 'critical').length;
+  return '⚠ Stock-Trading ALERT' +
+            (newReal.length ? ` — ${newReal.length} new${crit ? ` (${crit} critical)` : ''}` : '') +
+            (recurringCount ? ` — ${recurringCount} UNCONFIRMED TERMINATION CLOSE (recurring)` : '') +
+            (testCount ? ` (+${testCount} test)` : '');
+}
 
 // ===== tests ==================================================================================
 
@@ -294,6 +316,52 @@ t('esc2_ escapes &, <, >, and " (quote-escaping fix)', () => {
 t('esc2_ handles null/undefined without throwing, returning the empty string', () => {
   assert.strictEqual(esc2_(null), '');
   assert.strictEqual(esc2_(undefined), '');
+});
+
+// ---- alertSubject_ (alert_emailer.gs) ----
+t('alertSubject_: canary-only batch (no new real, no recurring) -> the [TEST] subject', () => {
+  const fresh = [{ source: 'scheduled.canary', category: 'delivery_canary', severity: 'warning' }];
+  assert.strictEqual(alertSubject_(fresh, fresh), '⚗ [TEST] Stock-Trading alert-delivery self-test — no action needed');
+});
+t('alertSubject_: N new real alerts + 1 recurring termination-close -> "N new", not "N+1"', () => {
+  const fresh = [
+    { source: 'router', category: 'cash_tripwire', severity: 'critical' },
+    { source: 'router', category: 'stale_data', severity: 'warning' },
+  ];
+  const recurring = [{ source: 'router', category: 'termination_close_staged', severity: 'warning' }];
+  const combined = fresh.concat(recurring);
+  assert.strictEqual(
+    alertSubject_(fresh, combined),
+    '⚠ Stock-Trading ALERT — 2 new (1 critical) — 1 UNCONFIRMED TERMINATION CLOSE (recurring)'
+  );
+});
+t('alertSubject_: recurring-only batch (no new alerts this poll) -> no "new" segment', () => {
+  const fresh = [];
+  const recurring = [{ source: 'router', category: 'termination_close_staged', severity: 'warning' }];
+  const combined = fresh.concat(recurring);
+  assert.strictEqual(
+    alertSubject_(fresh, combined),
+    '⚠ Stock-Trading ALERT — 1 UNCONFIRMED TERMINATION CLOSE (recurring)'
+  );
+});
+t('alertSubject_: a critical alert riding ONLY in the recurring set must not inflate "(N critical)"', () => {
+  const fresh = [{ source: 'router', category: 'stale_data', severity: 'warning' }];
+  const recurring = [{ source: 'router', category: 'termination_close_staged', severity: 'critical' }];
+  const combined = fresh.concat(recurring);
+  assert.strictEqual(
+    alertSubject_(fresh, combined),
+    '⚠ Stock-Trading ALERT — 1 new — 1 UNCONFIRMED TERMINATION CLOSE (recurring)'
+  );
+});
+t('alertSubject_: a test canary alongside a real new alert -> "(+1 test)" suffix, real alert not softened', () => {
+  const fresh = [
+    { source: 'router', category: 'cash_tripwire', severity: 'critical' },
+    { source: 'scheduled.canary', category: 'delivery_canary', severity: 'warning' },
+  ];
+  assert.strictEqual(
+    alertSubject_(fresh, fresh),
+    '⚠ Stock-Trading ALERT — 1 new (1 critical) (+1 test)'
+  );
 });
 
 console.log(`\n${passed} assertions passed.`);

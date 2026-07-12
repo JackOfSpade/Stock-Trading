@@ -71,6 +71,17 @@ def test_ols_regression_needs_min_3_obs():
         common.ols_regression(y=[1.0, 2.0], x=[1.0, 2.0])
 
 
+def test_ols_regression_alpha_se_nonzero_known_case():
+    # Hand-computed: x=[0,1,2], y=[0,0,3] -> Sxx=2, beta=1.5, alpha=-0.5,
+    # residuals=[0.5,-1.0,0.5], SSres=1.5, dof=1, s=sqrt(1.5);
+    # alpha_se = s * sqrt(1/3 + 1/2) = sqrt(1.5 * 5/6) = sqrt(1.25) = 1.11803399
+    result = common.ols_regression(y=[0.0, 0.0, 3.0], x=[0.0, 1.0, 2.0])
+    assert result.beta == pytest.approx(1.5)
+    assert result.alpha == pytest.approx(-0.5)
+    assert result.alpha_se == pytest.approx(1.11803399, abs=1e-7)
+    assert result.n == 3
+
+
 def test_days_between():
     d1 = datetime.date(2026, 1, 1)
     d2 = datetime.date(2026, 4, 1)
@@ -120,6 +131,9 @@ def test_b_convergence_timeline_boundary():
     beyond = entry + datetime.timedelta(days=61)
     assert strategy_b.convergence_timeline_ok(entry, within) is True
     assert strategy_b.convergence_timeline_ok(entry, beyond) is False
+    past = entry - datetime.timedelta(days=1)
+    assert strategy_b.convergence_timeline_ok(entry, past) is False
+    assert strategy_b.convergence_timeline_ok(entry, entry) is True
 
 
 def test_b_timeline_expired_boundary():
@@ -215,6 +229,16 @@ def test_d_beta_adjusted_alpha_ci_gate_blocks_a_noisy_point_estimate():
         "test to actually exercise the CI-gate rather than the point-estimate check alone"
     )
     assert result.fires is False  # point estimate alone would fire; the CI-gate correctly blocks it
+
+
+def test_d_beta_adjusted_alpha_upper_ci_uses_z_multiplier():
+    # Pin the CI construction so a change to ALPHA_TEST_Z_95 (or the alpha/alpha_se wiring) is caught.
+    spy = [0.02 + 0.001 * (i % 3) for i in range(24)]
+    d = [(-0.03) + 1.0 * s for s in spy]
+    result = strategy_d.beta_adjusted_alpha_test(d, spy)
+    expected = result.regression.alpha + strategy_d.ALPHA_TEST_Z_95 * result.regression.alpha_se
+    assert result.upper_ci_95 == pytest.approx(expected)
+    assert strategy_d.ALPHA_TEST_Z_95 == pytest.approx(1.645)
 
 
 def test_d_metric_structural_change_boundary():

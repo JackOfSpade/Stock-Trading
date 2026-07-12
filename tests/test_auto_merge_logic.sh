@@ -75,7 +75,7 @@ conclusion="$(ci_conclusion_from_json '')"
 assert_eq "empty/failed API response parses to 'error'" "$conclusion" "error"
 assert_false "gh api failure: is_ci_green must SKIP, fail-closed" is_ci_green "$conclusion"
 
-conclusion="$(ci_conclusion_from_json '{"workflow_runs":[{"conclusion":"in_progress"}]}')"
+conclusion="$(ci_conclusion_from_json '{"workflow_runs":[{"status":"in_progress","conclusion":null}]}')"
 assert_false "in-progress CI: is_ci_green must SKIP until it completes" is_ci_green "$conclusion"
 
 # ---- is_secondary_gate_satisfied: the path-gated Golden Scenarios schema-validate gate (BUG FIX,
@@ -99,7 +99,7 @@ conclusion="$(ci_conclusion_from_json '')"
 assert_false "gh api failure querying golden-scenarios: is_secondary_gate_satisfied must SKIP, fail-closed (an API error is not the same fact as 'legitimately did not run')" \
   is_secondary_gate_satisfied "$conclusion"
 
-conclusion="$(ci_conclusion_from_json '{"workflow_runs":[{"conclusion":"in_progress"}]}')"
+conclusion="$(ci_conclusion_from_json '{"workflow_runs":[{"status":"in_progress","conclusion":null}]}')"
 assert_false "in-progress golden-scenarios run: is_secondary_gate_satisfied must SKIP until it completes" \
   is_secondary_gate_satisfied "$conclusion"
 

@@ -27,7 +27,7 @@
 ci_conclusion_from_json() {
   local out
   if [ -n "$1" ] \
-     && out="$(printf '%s' "$1" | jq -r '.workflow_runs[0].conclusion // "none"' 2>/dev/null)" \
+     && out="$(printf '%s' "$1" | jq -r '.workflow_runs[0] as $r | if $r == null then "none" else ($r.conclusion // $r.status // "unknown") end' 2>/dev/null)" \
      && [ -n "$out" ]; then
     printf '%s\n' "$out"
   else

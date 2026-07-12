@@ -205,3 +205,21 @@ def test_generate_triggers_manifest_excludes_ids_not_in_cadence():
     got = cc.generate_triggers_manifest(head_by_id, cad)
     assert set(got) == {"D1"}
     assert got["D1"]["monitor_class"] == "daily_trading"
+
+
+# ---- check_depends_on: dangling/typo'd depends_on references must be caught, not pass vacuously ----
+def test_check_depends_on_flags_dangling_reference():
+    cad = {"D1": {"depends_on": []}, "D2": {"depends_on": ["D1", "GHOST"]}}
+    errs = cc.check_depends_on(cad)
+    assert len(errs) == 1
+    assert "D2" in errs[0] and "GHOST" in errs[0]
+
+
+def test_check_depends_on_clean_chain_is_silent():
+    cad = {"D1": {"depends_on": []}, "D2": {"depends_on": ["D1"]}, "D3": {}}
+    assert cc.check_depends_on(cad) == []
+
+
+def test_check_depends_on_against_real_cadence_yaml_is_clean():
+    # The real ops/cadence.yaml's actual depends_on chains must all resolve cleanly today.
+    assert cc.check_depends_on(cc.load_cadence()) == []

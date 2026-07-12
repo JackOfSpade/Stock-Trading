@@ -80,6 +80,14 @@ def test_fmt_ts_malformed_string_falls_back_to_utc_label():
     assert gd.fmt_ts("not-a-timestamp", "America/Denver") == "not-a-timestamp (UTC)"
 
 
+def test_fmt_ts_space_utc_suffixed_timestamp_renders_same_as_z_suffixed():
+    # bq's stringified TIMESTAMP wire form ends in " UTC", not "Z" (adversarial self-audit fix,
+    # rev 2026-07-11 — the sibling scripts/alert_relay.py already stripped it; this file did not).
+    z_result = gd.fmt_ts("2026-07-04T12:00:00Z", "America/Denver")
+    utc_result = gd.fmt_ts("2026-07-04 12:00:00 UTC", "America/Denver")
+    assert utc_result == z_result
+
+
 # ---- table(): HTML escaping -----------------------------------------------------------------
 
 def test_table_no_rows():
@@ -92,3 +100,13 @@ def test_table_escapes_script_and_ampersand():
     assert "<script>alert(1)</script>" not in out
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in out
     assert "A &amp; B" in out
+
+
+def test_table_renders_null_cell_as_empty_not_the_string_none():
+    # r.get(c, '') only substitutes '' when the KEY is absent — a key present with a SQL NULL value
+    # (r.get(c) is None) still hits the default-less branch and renders the literal text "None"
+    # (adversarial self-audit fix, rev 2026-07-11).
+    rows = [{"message": None, "note": "ok"}]
+    out = gd.table(rows)
+    assert "<td>None</td>" not in out
+    assert "<td></td>" in out

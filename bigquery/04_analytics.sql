@@ -218,6 +218,11 @@ FROM dep d LEFT JOIN realized r USING(strategy) LEFT JOIN open_pos o USING(strat
 -- flags any residual > ~$1 (Operating_Protocols §13). Per-strategy budget = analytics.strategy_nav
 -- (available_funds). No per-strategy SGOV-share hand-ledger — that ledger mechanic (the attribution debt)
 -- is dissolved; account integrity + per-strategy NAV cover §13's two purposes.
+-- DEAD / SUPERSEDED (matching the strategy_nav marker above): this account_reconciliation — including the
+-- hardcoded CAST(9446.86 AS NUMERIC) total_deposits below — is redefined by bigquery/22_cash_flows.sql
+-- (CREATE OR REPLACE, applied later) to read events.cash_flows dynamically. This definition is dead at
+-- runtime; do NOT hand-edit the 9446.86 literal here expecting a live effect — record a new flow via an
+-- events.cash_flows INSERT (Operating_Protocols §13.C).
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.account_reconciliation` AS
 SELECT
   CAST(9446.86 AS NUMERIC) AS total_deposits,

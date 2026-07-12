@@ -251,12 +251,23 @@ CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_order_guard_
 -- 2%-sizing base (scales with book growth) plus a floor order count — policy invariants, not fitted.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.daily_staging_totals` AS
 WITH today_staged AS (
+  -- events.queue_events is an append-only status-TRANSITION log: one ORDER_STAGED item_key gets
+  -- multiple rows over its life (pending, then filled/expired/abandoned, or a same-day re-craft with a
+  -- re-priced limit_price). Take the LATEST row per item_key (QUALIFY ROW_NUMBER() ... DESC = 1) so an
+  -- order staged-then-reconciled OR re-priced the SAME day is counted once, at its CURRENT notional, not
+  -- once per transition row (adversarial self-audit fix, rev 2026-07-11 — the un-deduped version
+  -- double-counted notional vs the COUNT(DISTINCT item_key) order count below) and not at a stale
+  -- pre-re-craft price (adversarial self-audit fix, rev 2026-07-12 — a same-day GROUP BY + MAX(notional)
+  -- picks the highest historical notional for that item_key, not the current one, silently overstating
+  -- notional_staged_today whenever a re-craft re-prices DOWN; matches the "latest row wins" convention
+  -- already used by state.open_orders / state.open_queue).
   SELECT
-    CAST(JSON_VALUE(payload, '$.qty') AS NUMERIC) * CAST(JSON_VALUE(payload, '$.limit_price') AS NUMERIC) AS notional,
-    item_key
+    item_key,
+    CAST(JSON_VALUE(payload, '$.qty') AS NUMERIC) * CAST(JSON_VALUE(payload, '$.limit_price') AS NUMERIC) AS notional
   FROM `stock-trading-498512.events.queue_events`
   WHERE queue = 'ORDER_STAGED'
     AND DATE(event_ts, 'America/Denver') = CURRENT_DATE('America/Denver')
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY item_key ORDER BY event_ts DESC) = 1
 ),
 cap AS (
   SELECT SUM(sizing_base_2pct) AS combined_sizing_base FROM `stock-trading-498512.analytics.strategy_nav`

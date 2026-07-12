@@ -62,6 +62,8 @@ def fmt_ts(v, tz_name):
         return v
     try:
         s = str(v).strip()
+        if s.endswith(" UTC"):
+            s = s[:-4]
         if s.endswith("Z"):
             s = s[:-1] + "+00:00"
         dt = datetime.fromisoformat(s)
@@ -79,7 +81,9 @@ def table(rows, cols=None):
     # Escape everything: cell values come from BigQuery (e.g. ops.alerts.message) and could
     # contain <, >, & — unescaped they'd break or inject into the page.
     head = "".join(f"<th>{html.escape(str(c))}</th>" for c in cols)
-    body = "".join("<tr>" + "".join(f"<td>{html.escape(str(r.get(c, '')))}</td>" for c in cols) + "</tr>" for r in rows)
+    body = "".join("<tr>" + "".join(
+        f"<td>{html.escape('' if r.get(c) is None else str(r.get(c)))}</td>" for c in cols
+    ) + "</tr>" for r in rows)
     return f"<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
 
 

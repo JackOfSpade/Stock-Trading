@@ -105,10 +105,14 @@ WITH orch AS (
   WHERE review_type = 'strategy-retirement' AND role = 'orchestrator'
 ),
 referee AS (
-  SELECT strategy AS strategy_code, verdict AS referee_verdict
+  -- Paired to the orchestrator by review_id (like the foundation_change_termination_readiness sibling
+  -- below), NOT by strategy_code — pairing by strategy alone let a STALE referee_gemini verdict from an
+  -- earlier, different retirement review satisfy referee_concurs against a NEW orchestrator verdict
+  -- (adversarial self-audit fix, rev 2026-07-11).
+  SELECT review_id, verdict AS referee_verdict
   FROM `stock-trading-498512.events.adversarial_reviews`
   WHERE review_type = 'strategy-retirement' AND role = 'referee_gemini'
-  QUALIFY ROW_NUMBER() OVER (PARTITION BY strategy ORDER BY review_date DESC, event_ts DESC) = 1
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY review_id ORDER BY review_date DESC, event_ts DESC) = 1
 ),
 rails AS (SELECT * FROM `stock-trading-498512.state.arsenal_rails`),
 ars AS (SELECT enabled, incubation_frozen FROM `stock-trading-498512.state.arsenal_enabled`)
@@ -130,7 +134,7 @@ SELECT
                    WHERE cl.strategy_code = r.strategy_code AND cl.to_state = 'TERMINATED')) AS ready
 FROM `stock-trading-498512.state.strategy_roster` r
 LEFT JOIN orch o ON o.strategy_code = r.strategy_code AND o.rn = 1
-LEFT JOIN referee ref ON ref.strategy_code = r.strategy_code
+LEFT JOIN referee ref ON ref.review_id = o.review_id
 CROSS JOIN rails CROSS JOIN ars
 WHERE r.current_state = 'RETIREMENT_PROPOSED';
 

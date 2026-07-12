@@ -123,6 +123,18 @@ models:
       - name: mark_date
         tests: [not_null]
 
+  - name: option_marks_curated
+    description: Latest ingest per (occ_symbol, mark_date) — the option-mark double-count guard (mirror of daily_marks_curated; bigquery/40_options_marks.sql).
+    tests:
+      # THE dedup invariant that prevents the engine from double-counting a re-ingested option-mark day.
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [occ_symbol, mark_date]
+    columns:
+      - name: occ_symbol
+        tests: [not_null]
+      - name: mark_date
+        tests: [not_null]
+
   - name: daily_briefing
     description: '"What needs attention today" union (queue due / kill flags / time exits).'
     columns:

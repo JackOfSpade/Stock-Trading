@@ -167,6 +167,19 @@ def generate_triggers_manifest(head_by_id, cad):
     }
 
 
+def check_depends_on(cad):
+    """Error strings for any depends_on entry that is not a known routine id in cad (a dangling/typo'd
+    dependency -- it feeds the FATAL ops.sp_assert_deps gate, so a silent typo here would abort a live
+    routine at runtime instead of failing this offline check)."""
+    errors = []
+    for rid, r in cad.items():
+        for dep in (r.get("depends_on") or []):
+            if dep not in cad:
+                errors.append(f"{rid}: depends_on '{dep}' is not a routine id in ops/cadence.yaml "
+                              f"(dangling/typo'd dependency — it feeds the FATAL sp_assert_deps gate)")
+    return errors
+
+
 def main():
     cad = load_cadence()
     headings = plan_headings()
@@ -196,6 +209,9 @@ def main():
             errors.append(f"{rid}: missing monitor_class in ops/cadence.yaml")
         elif mc not in ALLOWED_CLASSES:
             errors.append(f"{rid}: monitor_class '{mc}' not in {sorted(ALLOWED_CLASSES)}")
+
+    # ---- depends_on references must be known routine ids (silent-drift guard) ----
+    errors.extend(check_depends_on(cad))
 
     # ---- C. cadence.yaml id <-> plan heading 1:1 ----
     for rid in cad:

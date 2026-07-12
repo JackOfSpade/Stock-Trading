@@ -53,7 +53,7 @@ def convergence_timeline_ok(entry_date, target_convergence_date) -> bool:
     of entry. strategy/04_strategy_b.md: "Specific timeline: entry through convergence
     expected within 60 days."
     """
-    return days_between(entry_date, target_convergence_date) <= MAX_CONVERGENCE_TIMELINE_DAYS
+    return 0 <= days_between(entry_date, target_convergence_date) <= MAX_CONVERGENCE_TIMELINE_DAYS
 
 
 def timeline_expired(entry_date, as_of_date) -> bool:

@@ -130,3 +130,99 @@ def test_main_against_real_repo_files_is_clean():
     # End-to-end sanity check against the actual committed files (no monkeypatching) — locks in that
     # today's real citations are consistent, so this test starts failing the moment a real drift lands.
     assert ac.main() == 0
+
+
+# ---- check_stage_ceiling_invariant: a loop's stage may never exceed its own ceiling ----------------
+def test_check_stage_ceiling_invariant_flags_stage_above_ceiling():
+    loops = [{"id": "foo", "stage": "active_auto", "ceiling": "shadow"}]
+    errs = ac.check_stage_ceiling_invariant(loops)
+    assert len(errs) == 1
+    assert "foo" in errs[0] and "EXCEEDS its ceiling" in errs[0]
+
+
+def test_check_stage_ceiling_invariant_flags_unknown_vocabulary():
+    errs = ac.check_stage_ceiling_invariant([{"id": "foo", "stage": "bogus_stage", "ceiling": "shadow"}])
+    assert any("unknown stage" in e for e in errs)
+    errs2 = ac.check_stage_ceiling_invariant([{"id": "foo", "stage": "shadow", "ceiling": "bogus_ceiling"}])
+    assert any("unknown ceiling" in e for e in errs2)
+
+
+def test_check_stage_ceiling_invariant_clean_cases_are_silent():
+    loops = [
+        {"id": "a", "stage": "dormant", "ceiling": "active_auto"},
+        {"id": "b", "stage": "active_auto", "ceiling": "active_auto"},
+        {"id": "c", "stage": "shadow", "ceiling": None},  # no ceiling declared yet — not itself an error
+    ]
+    assert ac.check_stage_ceiling_invariant(loops) == []
+
+
+def test_check_stage_ceiling_invariant_against_real_autonomy_levels_is_clean():
+    doc = ac.yaml.safe_load(open(ac.AUTONOMY, encoding="utf-8")) or {}
+    assert ac.check_stage_ceiling_invariant(doc.get("loops", [])) == []
+
+
+# ---- active_auto_loops / cadence_heartbeat_loops / _check_cadence_heartbeat_coverage ----------------
+def test_active_auto_loops_filters_by_stage(tmp_path, monkeypatch):
+    f = tmp_path / "autonomy_levels.yaml"
+    f.write_text(
+        "loops:\n"
+        "  - id: promoted\n    stage: active_auto\n"
+        "  - id: not_promoted\n    stage: shadow\n"
+    )
+    monkeypatch.setattr(ac, "AUTONOMY", str(f))
+    assert ac.active_auto_loops() == {"promoted"}
+
+
+def test_cadence_heartbeat_loops_parses_loop_literals(tmp_path, monkeypatch):
+    f = tmp_path / "cadence_check.sql"
+    f.write_text("SELECT 1 FROM UNNEST(['loop:process_reliability','loop:strategy_playbook']) AS loop_source")
+    monkeypatch.setattr(ac, "CADENCE_SQL", str(f))
+    assert ac.cadence_heartbeat_loops() == {"process_reliability", "strategy_playbook"}
+
+
+def test_cadence_heartbeat_loops_returns_none_when_file_missing(tmp_path, monkeypatch):
+    monkeypatch.setattr(ac, "CADENCE_SQL", str(tmp_path / "does_not_exist.sql"))
+    assert ac.cadence_heartbeat_loops() is None
+
+
+def test_cadence_heartbeat_coverage_flags_unmonitored_active_auto_loop(tmp_path, monkeypatch):
+    autonomy = tmp_path / "autonomy_levels.yaml"
+    autonomy.write_text("loops:\n  - id: unmonitored_loop\n    stage: active_auto\n")
+    cadence_sql = tmp_path / "cadence_check.sql"
+    cadence_sql.write_text("SELECT 1 FROM UNNEST(['loop:some_other_loop']) AS loop_source")
+    monkeypatch.setattr(ac, "AUTONOMY", str(autonomy))
+    monkeypatch.setattr(ac, "CADENCE_SQL", str(cadence_sql))
+    monkeypatch.setattr(ac, "HEARTBEAT_SELF_MONITORED_LOOPS", set())
+    errors = []
+    ac._check_cadence_heartbeat_coverage(errors)
+    assert len(errors) == 1
+    assert "unmonitored_loop" in errors[0]
+
+
+def test_cadence_heartbeat_coverage_respects_self_monitored_exemption(tmp_path, monkeypatch):
+    autonomy = tmp_path / "autonomy_levels.yaml"
+    autonomy.write_text("loops:\n  - id: self_monitored\n    stage: active_auto\n")
+    cadence_sql = tmp_path / "cadence_check.sql"
+    cadence_sql.write_text("SELECT 1")  # no 'loop:<id>' literals at all
+    monkeypatch.setattr(ac, "AUTONOMY", str(autonomy))
+    monkeypatch.setattr(ac, "CADENCE_SQL", str(cadence_sql))
+    monkeypatch.setattr(ac, "HEARTBEAT_SELF_MONITORED_LOOPS", {"self_monitored"})
+    errors = []
+    ac._check_cadence_heartbeat_coverage(errors)
+    assert errors == []
+
+
+def test_cadence_heartbeat_coverage_no_op_when_sql_file_missing(tmp_path, monkeypatch):
+    autonomy = tmp_path / "autonomy_levels.yaml"
+    autonomy.write_text("loops:\n  - id: some_loop\n    stage: active_auto\n")
+    monkeypatch.setattr(ac, "AUTONOMY", str(autonomy))
+    monkeypatch.setattr(ac, "CADENCE_SQL", str(tmp_path / "does_not_exist.sql"))
+    errors = []
+    ac._check_cadence_heartbeat_coverage(errors)
+    assert errors == []
+
+
+def test_cadence_heartbeat_coverage_against_real_repo_files_is_clean():
+    errors = []
+    ac._check_cadence_heartbeat_coverage(errors)
+    assert errors == []

@@ -41,6 +41,16 @@ except ImportError:
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 AUTONOMY = os.path.join(ROOT, "ops", "autonomy_levels.yaml")
+CADENCE_SQL = os.path.join(ROOT, "bigquery", "scheduled_queries", "cadence_check.sql")
+
+# Loops that carry their OWN heartbeat + dead-man's switch elsewhere and so are intentionally NOT in
+# cadence_check.sql's constant_tuning_loop_heartbeat_missing UNNEST list. Today only strategy_arsenal
+# (SL1/SL3/SL4 heartbeats + cadence dead-man views in bigquery/12,18,24). This is the ONE declared place
+# for that carve-out — add here (not silently) if a future active_auto loop self-monitors.
+HEARTBEAT_SELF_MONITORED_LOOPS = {"strategy_arsenal"}
+
+# The register's own PROMOTION RULE vocabulary/ordering — a loop's stage may never exceed its ceiling.
+STAGE_ORDER = ["dormant", "shadow", "record_only", "active_pr_gated", "active_auto"]
 
 # Files grepped (2026-07-04) to currently contain a "<STAGE> per ops/autonomy_levels.yaml" citation.
 # Each of these MUST produce >=1 citation match — an empty result here means the regex rotted (a
@@ -104,10 +114,74 @@ def _check_citations(path, stages, errors):
     return found
 
 
+def active_auto_loops():
+    """Set of loop ids whose stage == 'active_auto' in ops/autonomy_levels.yaml."""
+    return {lid for lid, st in load_stages().items() if (st or "").lower() == "active_auto"}
+
+
+def cadence_heartbeat_loops():
+    """Loop ids monitored by cadence_check.sql's constant_tuning_loop_heartbeat_missing switch
+    (its 'loop:<id>' UNNEST literals). None if the file is missing."""
+    if not os.path.exists(CADENCE_SQL):
+        return None
+    txt = open(CADENCE_SQL, encoding="utf-8").read()
+    return set(re.findall(r"'loop:([a-z_]+)'", txt))
+
+
+def _check_cadence_heartbeat_coverage(errors):
+    """Every active_auto loop (except the self-monitoring ones) MUST appear in cadence_check.sql's
+    dead-man's-switch list — an active_auto loop with no heartbeat alarm is the exact gap
+    meta_monitoring_heartbeat (ops/autonomy_levels.yaml) forbids. Only the fail-OPEN direction (a
+    promoted loop missing from the SQL) is an error; a stale literal for a demoted loop is fail-safe."""
+    monitored = cadence_heartbeat_loops()
+    if monitored is None:
+        return  # cadence_check.sql not present in this checkout; nothing to compare
+    expected = active_auto_loops() - HEARTBEAT_SELF_MONITORED_LOOPS
+    if expected and not monitored:
+        errors.append("bigquery/scheduled_queries/cadence_check.sql: found no 'loop:<id>' heartbeat "
+                      "literals — the constant_tuning_loop_heartbeat_missing UNNEST list was reformatted "
+                      "(regex rotted) or removed; fix the regex here or restore the list")
+        return
+    missing = expected - monitored
+    if missing:
+        errors.append(
+            "bigquery/scheduled_queries/cadence_check.sql: constant_tuning_loop_heartbeat_missing does "
+            f"NOT monitor active_auto loop(s) {sorted(missing)} — an active_auto loop with no dead-man's "
+            "switch is the gap meta_monitoring_heartbeat forbids; add 'loop:<id>' to BOTH UNNEST literals "
+            "(~lines 332-333 and 343-344), or if it self-monitors (like strategy_arsenal) add it to "
+            "HEARTBEAT_SELF_MONITORED_LOOPS in scripts/check_autonomy_consistency.py")
+
+
+def check_stage_ceiling_invariant(loops):
+    """Error strings for any loop (a list of {id, stage, ceiling, ...} dicts, e.g. ops/autonomy_levels.yaml's
+    top-level 'loops' list) with an unknown stage/ceiling vocabulary word, or whose stage exceeds its
+    ceiling — the register's own PROMOTION RULE forbids a stage above its ceiling."""
+    errors = []
+    for loop in loops:
+        lid, st, ceil_ = loop.get("id"), loop.get("stage"), loop.get("ceiling")
+        if st is not None and st not in STAGE_ORDER:
+            errors.append(f"ops/autonomy_levels.yaml: loop '{lid}' has unknown stage '{st}' "
+                          f"(not one of {STAGE_ORDER})")
+        if ceil_ is not None and ceil_ not in STAGE_ORDER:
+            errors.append(f"ops/autonomy_levels.yaml: loop '{lid}' has unknown ceiling '{ceil_}' "
+                          f"(not one of {STAGE_ORDER})")
+        if (st in STAGE_ORDER and ceil_ in STAGE_ORDER
+                and STAGE_ORDER.index(st) > STAGE_ORDER.index(ceil_)):
+            errors.append(f"ops/autonomy_levels.yaml: loop '{lid}' stage '{st}' EXCEEDS its ceiling "
+                          f"'{ceil_}' — the register's PROMOTION RULE forbids a stage above its ceiling")
+    return errors
+
+
 def main():
     stages = load_stages()
     errors = []
     total_citations = 0
+
+    # ---- stage enum + stage<=ceiling invariant (register self-consistency) ----
+    _doc = yaml.safe_load(open(AUTONOMY, encoding="utf-8")) or {}
+    errors.extend(check_stage_ceiling_invariant(_doc.get("loops", [])))
+
+    _check_cadence_heartbeat_coverage(errors)
 
     for path in KNOWN_CITATION_FILES:
         rel = os.path.relpath(path, ROOT)

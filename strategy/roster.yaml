@@ -122,7 +122,7 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
-    spec_hash: "cbc1dcec91ab446360238c22d4249f257eb6f88755fe0337a383f8d0b22e6dbb"   # sha256(strategy/04_strategy_b.md || strategy_math/strategy_b.py || strategy_math/common.py), rev 2026-07-11 R-F
+    spec_hash: "6178acd282c27f65d0be7c7ccb833dff4a255d030b549fe42ad35fea858b6bfa"   # sha256(strategy/04_strategy_b.md || strategy_math/strategy_b.py || strategy_math/common.py), rev 2026-07-11 R-F
     retired_date: null
     is_restart_of: null
     revision_history:
@@ -132,6 +132,8 @@ strategies:
         note: "spec_hash added (Item 28, self-improvement audit) — content-hashes strategy/04_strategy_b.md + the new strategy_math/strategy_b.py against post-lock drift; verified by scripts/check_roster_consistency.py R-F. No machinery change."
       - date: 2026-07-11
         note: "spec_hash recomputed (adversarial self-audit fix) — now also hashes strategy_math/common.py (the shared math module strategy_b.py imports), which the original hash omitted, silently missing drift in that shared module. No machinery change."
+      - date: 2026-07-11
+        note: "convergence_timeline_ok() lower-bound guard added (adversarial self-audit fix) — a target_convergence_date BEFORE entry_date produced a negative day-count that still satisfied `<= 60` and wrongly qualified; now requires `0 <= days_between <= 60`. Bug fix to the newly-authored strategy_math codification itself; convergence_timeline_ok is NOT called by any live routine instruction, so this is not a change to Strategy B's live trading rules. spec_hash recomputed. Verified by scripts/check_roster_consistency.py R-F."
   - code: C
     name: "Defined-risk options structures around known events"
     archetype: defined-risk-options-on-catalysts
@@ -142,7 +144,7 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
-    spec_hash: "0d495d9d7b96027956c1ad586a74ff676658d2342331fd338e675cd4375f4922"   # sha256(strategy/05_strategy_c.md || c_options_math.py), rev 2026-07-11 R-F
+    spec_hash: "3aa60dd2783a6e6085465da8cf1c02a2ef48f6928cc536abae5dd8fe926a2ded"   # sha256(strategy/05_strategy_c.md || c_options_math.py), rev 2026-07-11 R-F
     retired_date: null
     is_restart_of: null
     revision_history:
@@ -150,6 +152,8 @@ strategies:
         note: "Seeded as a founding-batch adopted member (SISA autonomy conversion, owner directive). Bootstrap of a pre-existing live strategy — no machinery change; dates pinned to experiment inception."
       - date: 2026-07-11
         note: "spec_hash added (Item 28, self-improvement audit) — content-hashes strategy/05_strategy_c.md + the PRE-EXISTING c_options_math.py against post-lock drift (this strategy's math module already existed before Item 28; only the hash bookkeeping is new). Verified by scripts/check_roster_consistency.py R-F. No machinery change."
+      - date: 2026-07-11
+        note: "spec_hash recomputed (adversarial self-audit fix) — OptionInputs.__post_init__ now validates option_type is 'call' or 'put'; previously any other value (e.g. a mis-cased 'Call') was silently priced as a put by price_bsm/greeks_bsm/payoff_at_expiration with no error, corrupting max-loss/sizing. Purely additive validation — every sanctioned constructor and existing test already passed only lowercase 'call'/'put', so no passing behavior changed. Bug fix to the engine's input validation, not a change to Strategy C's live trading rules. Verified by scripts/check_roster_consistency.py R-F."
   - code: D
     name: "Long-horizon narrative-screened equity core"
     archetype: long-horizon-concentrated-equity

@@ -34,7 +34,12 @@ SELECT
   JSON_VALUE(payload,'$.guard_reasons')                        AS guard_reasons,
   CASE WHEN UPPER(JSON_VALUE(payload,'$.side')) = 'BUY'
        THEN ROUND(CAST(JSON_VALUE(payload,'$.qty') AS NUMERIC)
-                  * CAST(JSON_VALUE(payload,'$.limit_price') AS NUMERIC) + 0.35, 2)
+                  * CAST(JSON_VALUE(payload,'$.limit_price') AS NUMERIC)
+                  -- options stage in CONTRACTS with a per-share-premium limit_price; a debit fill
+                  -- consumes premium*100*contracts. OCC-symbol ticker => x100 (same convention as
+                  -- bigquery/40,41); equity/ETF => x1. Mirrors bigquery/01_schema.sql:state.open_orders.
+                  * IF(REGEXP_CONTAINS(ticker, r'^[A-Z]{1,6} *[0-9]{6}[CP][0-9]{8}$'), 100, 1)
+                  + 0.35, 2)
        ELSE 0 END                                             AS reserved_cash,
   event_ts AS staged_ts,
   note
@@ -44,4 +49,4 @@ FROM (
   WHERE queue = 'ORDER_STAGED'
   QUALIFY ROW_NUMBER() OVER (PARTITION BY item_key ORDER BY event_ts DESC) = 1
 )
-WHERE status = 'pending'
+WHERE LOWER(status) = 'pending'

@@ -79,8 +79,12 @@ windowed AS (
 SELECT
   as_of_date, strategy, n_obs, beta_hat, alpha_daily_hat,
   -- Annualized alpha (compounds the daily-regression intercept over ~252 trading days) — the
-  -- human-readable magnitude every consumer below actually reads.
-  POWER(1 + alpha_daily_hat, 252) - 1 AS alpha_annualized,
+  -- human-readable magnitude every consumer below actually reads. Floored at -100% when the daily
+  -- intercept implies a total-or-worse loss (base <= 0): POWER's even exponent (252) would otherwise
+  -- flip a catastrophically-negative alpha_daily_hat into a large POSITIVE alpha_annualized, which
+  -- would spuriously SATISFY the `alpha_annualized <= 0` suppression term below (adversarial
+  -- self-audit fix, rev 2026-07-11).
+  IF(1 + alpha_daily_hat <= 0, -1.0, POWER(1 + alpha_daily_hat, 252) - 1) AS alpha_annualized,
   (n_obs >= 40) AS min_n_met
 FROM windowed;
 
