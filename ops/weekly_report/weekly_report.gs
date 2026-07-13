@@ -1,25 +1,42 @@
 /**
- * Stock-Trading — Weekly System Report: "Strategies vs SGOV" (self-email, fully automatic).
+ * Stock-Trading — Weekly System Report: "Deployed vs Benchmarks" (self-email, fully automatic).
  * =================================================================
  * Runs on GOOGLE'S servers (Apps Script), NOT on Claude's remote-routine server and NOT via the
  * Gmail connector (which can only draft, not send). Runs AS YOU (self-email), so no SMTP / app
  * password / API key. Builds the HTML and sends in one shot — nothing lands in Drafts.
  *
- * PURPOSE: answer one question per strategy — is it beating SGOV? — as a percentage.
- *   * A returns chart: each deployed strategy's cumulative total return + SGOV's own return line.
- *   * A per-strategy table: AVERAGE return vs SGOV per week / month / year — a geometric per-period
- *     rate over ACTIVE (deployed) time only, so idle stretches never dilute it ("Not enough data"
- *     until that much deployed history exists), plus SGOV's own average-return row.
- * Everything else (combined aggregate, verdict labels, dollar figures, weekly-Δ, gate counts,
+ * PURPOSE (2026-07-13 redesign, owner directive): answer two questions —
+ *   1. Per strategy — is it beating SGOV? — as a percentage (unchanged from the 2026-07 redesign;
+ *      still the sanctioned kill/gate metric, perf.strategy_daily.excess_vs_sgov).
+ *   2. At the whole-deployed-book level — is deploying capital beating BOTH just parking it in SGOV
+ *      AND just buying the S&P 500 (VOO), over the same dollars and the same days? A new headline
+ *      block answers this directly: cumulative %, average/month, average/year, and dollars.
+ *   * A returns chart: each deployed strategy's cumulative total return + SGOV's own return line +
+ *     VOO's own return line (once VOO has backfilled history — see analytics.voo_cumulative).
+ *   * A headline block: deployed book vs SGOV vs VOO — cumulative %, avg/month, avg/year (†
+ *     = annualized from fewer than 252 deployed days — extrapolated), and the "same dollars, same
+ *     days" $ edge (that day's actual deployed capital notionally earning the benchmark's return).
+ *   * A per-strategy table: AVERAGE return vs SGOV per month / year — a geometric per-period rate
+ *     over ACTIVE (deployed) time only, so idle stretches never dilute it ("Not enough data" until
+ *     at least 21 deployed days exist for ANY period — MIN_AVG_DAYS, hardcoded inside periodAvg_),
+ *     plus SGOV's and VOO's own average-return rows.
+ * Everything else (combined aggregate beyond the headline, verdict labels, weekly-Δ, gate counts,
  * regime, account NAV, positions, activity, ops strip) is intentionally omitted.
  *
+ * VOO IS PURELY INFORMATIONAL — it never feeds perf.kill_flags, state.strategy_retirement_candidacy,
+ * or any other live decision surface. Only SGOV is the sanctioned kill/gate benchmark. See the header
+ * of bigquery/46_weekly_benchmarks.sql for the full methodology (same deployed-day-set for all three
+ * legs; SGOV forward-fills a missing mark, VOO reads a gap as 0% — see that file for why).
+ *
  * DATA (BigQuery, project stock-trading-498512):
- *   - analytics.strategy_scorecard     (the A-E list + activation, for the not-deployed reason)
- *   - analytics.strategy_vs_park_daily (per strategy-day: deployed_unit_value + cumulative excess_vs_sgov)
- *   - analytics.sgov_cumulative        (SGOV's own cumulative total return, aligned to the same dates)
- *   - state.system_health              (marks/engine freshness + kill-flags + critical alerts — data-trust)
- *   - state.user_tz                    (detected DISPLAY timezone — never the operating/trading-day tz)
- *   - perf.kill_flags / ops.alerts     (queried lazily, only when system_health flags something)
+ *   - analytics.strategy_scorecard          (the A-E list + activation, for the not-deployed reason)
+ *   - analytics.strategy_vs_park_daily      (per strategy-day: deployed_unit_value + cumulative excess_vs_sgov)
+ *   - analytics.sgov_cumulative             (SGOV's own cumulative total return, aligned to the same dates)
+ *   - analytics.voo_cumulative              (VOO's own cumulative total return, same date axis; NULL before its first mark)
+ *   - analytics.deployed_book_vs_benchmarks (ONE row: book/SGOV/VOO % + "same dollars, same days" $ — the headline block)
+ *   - state.system_health                   (marks/engine freshness + kill-flags + critical alerts — data-trust)
+ *   - state.user_tz                         (detected DISPLAY timezone — never the operating/trading-day tz)
+ *   - perf.kill_flags / ops.alerts          (queried lazily, only when system_health flags something)
  *
  * CHART: Apps Script Charts service PNG, inline via cid (Gmail supports no inline SVG / data-URI
  * images). Falls back to plain HTML bars if the build throws; the send must never fail over a chart.
@@ -35,15 +52,19 @@ const SENDER_NAME  = 'Stock-Trading Bot';
 const LABEL_NAME   = 'Trading/Weekly';
 const SEND_HOUR    = 7;
 const SEND_WEEKDAY = ScriptApp.WeekDay.SUNDAY;
-const SCRIPT_VERSION = 'v1';                       // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep
+const SCRIPT_VERSION = 'v2';                       // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep
 
-// Fixed per-strategy identity colors (CVD-validated) — never reassigned by rank/presence. SGOV is gray.
+// Fixed per-strategy identity colors (CVD-validated) — never reassigned by rank/presence. SGOV is
+// gray; VOO is a distinct steel blue-gray chosen to not collide with Strategy B's blue or SGOV's gray.
 const CHART_COLORS = { A: '#1baf7a', B: '#2a78d6', C: '#4a3aa7', D: '#eb6834', E: '#e87ba4' };
 const SGOV_GRAY = '#898781';
+const VOO_COLOR = '#5f7d95';
 
-// Trading days per period — the denominator basis for the per-period average return (week=5,
-// month=21, year=252 trading days). Also the min deployed history required to state each average.
-const TRADING_DAYS_PER = { week: 5, month: 21, year: 252 };
+// Trading days per period — the denominator basis for the per-period average return (month=21,
+// year=252 trading days). periodAvg_ additionally requires >=21 deployed days before stating ANY
+// average (hardcoded inside periodAvg_ itself as MIN_AVG_DAYS) — below that even a monthly average
+// is noise; this is also why per-week reporting was dropped in the 2026-07-13 redesign.
+const TRADING_DAYS_PER = { month: 21, year: 252 };
 
 // ===== ENTRY POINTS =====
 function testReport()      { sendWeeklyReport_(); }
@@ -76,7 +97,7 @@ function sendWeeklyReport_() {
   try {
     Utilities.sleep(3000);
     // NOTE: search string coupled to the subject format in buildSubject_ — update both together.
-    const threads = GmailApp.search(`subject:"Strategies vs SGOV — ${d.dateLabel}" newer_than:1d`, 0, 5);
+    const threads = GmailApp.search(`subject:"Deployed vs Benchmarks — ${d.dateLabel}" newer_than:1d`, 0, 5);
     threads.forEach(t => t.markUnread());
     if (LABEL_NAME) {
       const label = GmailApp.getUserLabelByName(LABEL_NAME) || GmailApp.createLabel(LABEL_NAME);
@@ -97,12 +118,20 @@ function sendWeeklyReport_() {
 
 function buildSubject_(d) {
   const deployed = d.rows.filter(r => r.deployed);
-  const tag = !deployed.length
-    ? 'all parked'
-    : deployed.map(r => `${r.strategy} ${signPct_(r.returnPct * 100)}`).join(' · ')
-        + ` · SGOV ${signPct_(d.sgov.returnPct * 100)}`;
+  let tag;
+  if (!deployed.length) {
+    tag = 'all parked';
+  } else {
+    tag = deployed.map(r => `${r.strategy} ${signPct_(r.returnPct * 100)}`).join(' · ')
+      + ` · SGOV ${signPct_(d.sgov.returnPct * 100)}`;
+    // VOO fragment only in the deployed branch, and only once VOO has real data in the window —
+    // never render a null through signPct_ (which would print "−NaN%").
+    if (d.headline && d.headline.voo && d.headline.voo.returnPct != null) {
+      tag += ` · VOO ${signPct_(d.headline.voo.returnPct * 100)}`;
+    }
+  }
   const warn = d.green ? '' : ' · ⚠ check data';
-  return `Stock-Trading · Strategies vs SGOV — ${d.dateLabel} · ${tag}${warn}`;
+  return `Stock-Trading · Deployed vs Benchmarks — ${d.dateLabel} · ${tag}${warn}`;
 }
 
 // ===== DATA =====
@@ -122,6 +151,13 @@ function gatherData_() {
     SELECT as_of_date, sgov_cum_return
     FROM \`${PROJECT_ID}.analytics.sgov_cumulative\`
     ORDER BY as_of_date`);
+
+  const vooRows = bq_(`
+    SELECT as_of_date, voo_cum_return
+    FROM \`${PROJECT_ID}.analytics.voo_cumulative\`
+    ORDER BY as_of_date`);
+
+  const headlineRows = bq_(`SELECT * FROM \`${PROJECT_ID}.analytics.deployed_book_vs_benchmarks\``);
 
   const health = bq_(`SELECT * FROM \`${PROJECT_ID}.state.system_health\``)[0] || {};
 
@@ -157,6 +193,32 @@ function gatherData_() {
   const sgovByDate = {};
   sgovSeries.forEach(p => { sgovByDate[p.as_of_date] = p.cum; });
 
+  // VOO's own cumulative return series (same date axis; NULL before VOO's first observed mark).
+  const vooSeries = vooRows.map(r => ({ as_of_date: r.as_of_date, cum: num_(r.voo_cum_return) }));
+  const vooByDate = {};
+  vooSeries.forEach(p => { vooByDate[p.as_of_date] = p.cum; });
+
+  // Headline block: deployed book vs SGOV vs VOO, over the SAME deployed-day set. One row, or an
+  // all-NULL row when nothing has ever been deployed (COUNT(*) still returns 0, not a missing row).
+  const headlineRaw = headlineRows[0] || {};
+  const nDeployedDays = num_(headlineRaw.n_deployed_days) || 0;
+  const nVooMarkDays = num_(headlineRaw.n_voo_mark_days) || 0;
+  const headline = nDeployedDays > 0 ? {
+    firstDeployedDate: headlineRaw.first_deployed_date,
+    asOfDate: headlineRaw.as_of_date,
+    nDeployedDays: nDeployedDays,
+    nVooMarkDays: nVooMarkDays,
+    vooLastMarkDate: headlineRaw.voo_last_mark_date || null,
+    book: benchmarkRow_(num_(headlineRaw.book_return), nDeployedDays),
+    sgov: benchmarkRow_(num_(headlineRaw.sgov_return), nDeployedDays),
+    voo: nVooMarkDays > 0 ? benchmarkRow_(num_(headlineRaw.voo_return), nDeployedDays) : null,
+    deployedPnlDollars: num_(headlineRaw.deployed_pnl_dollars),
+    sgovCounterfactualDollars: num_(headlineRaw.sgov_counterfactual_dollars),
+    vooCounterfactualDollars: num_(headlineRaw.voo_counterfactual_dollars),
+    edgeVsSgovDollars: num_(headlineRaw.edge_vs_sgov_dollars),
+    edgeVsVooDollars: num_(headlineRaw.edge_vs_voo_dollars)
+  } : null;
+
   // One row per strategy, always all five, fixed A→E order.
   const rows = scorecard.map(s => {
     const pts = dailyByStrategy[s.strategy] || [];
@@ -170,28 +232,24 @@ function gatherData_() {
       strategy: s.strategy, deployed,
       returnPct: (deployed && lastDuv != null) ? lastDuv - 1 : null,   // cumulative actual return (chart/subject)
       excessCum: lastExcess,                                            // cumulative vs SGOV
-      // average return vs SGOV per week/month/year — geometric per-period rate over active days only;
-      // null = fewer deployed days than the period (not enough history to state that average).
-      w1: periodAvg_(lastExcess, deployedDays, TRADING_DAYS_PER.week),
-      w1m: periodAvg_(lastExcess, deployedDays, TRADING_DAYS_PER.month),
-      w1y: periodAvg_(lastExcess, deployedDays, TRADING_DAYS_PER.year),
+      // average return vs SGOV per month/year — geometric per-period rate over active days only;
+      // null = fewer than 21 deployed days (not enough history to state ANY average).
+      avgMonth: periodAvg_(lastExcess, deployedDays, TRADING_DAYS_PER.month),
+      avgYear: periodAvg_(lastExcess, deployedDays, TRADING_DAYS_PER.year),
+      extrapolatedYear: isExtrapolated_(deployedDays, TRADING_DAYS_PER.year),
       notDeployedReason: deployed ? null : notDeployedReason_(s.activation)
     };
   });
 
   const sgovLast = sgovSeries.length ? sgovSeries[sgovSeries.length - 1].cum : null;
   const sgovDays = sgovSeries.length;   // SGOV axis = union of deployed days (same active window)
-  const sgov = {
-    returnPct: sgovLast,
-    w1: periodAvg_(sgovLast, sgovDays, TRADING_DAYS_PER.week),
-    w1m: periodAvg_(sgovLast, sgovDays, TRADING_DAYS_PER.month),
-    w1y: periodAvg_(sgovLast, sgovDays, TRADING_DAYS_PER.year)
-  };
+  const sgov = benchmarkRow_(sgovLast, sgovDays);
 
   const deployedStrategies = rows.filter(r => r.deployed).map(r => r.strategy);
   const firstDate = sgovSeries.length ? sgovSeries[0].as_of_date : null;
 
-  return { rows, sgov, deployedStrategies, dailyByStrategy, sgovByDate,
+  return { rows, sgov, voo: headline ? headline.voo : null, headline,
+           deployedStrategies, dailyByStrategy, sgovByDate, vooByDate,
            firstDate, health, green, healthReasons, dateLabel, tz };
 }
 
@@ -208,10 +266,33 @@ function notDeployedReason_(activation) {
 // series so they never enter the denominator (they don't dilute the rate toward 0). Converts that
 // whole-window return into an equivalent constant per-period rate:
 //   (1 + cum) ^ (tradingDaysPerPeriod / deployedDays) − 1.
-// null when deployedDays < the period — not enough deployed history to state that average.
+// null when deployedDays < 21 (MIN_AVG_DAYS, hardcoded here so this stays a self-contained pure
+// function) — below that, not enough deployed history to state ANY average, independent of which
+// period was requested; a strategy/benchmark with exactly `tradingDaysPerPeriod` deployed days still
+// needs to clear this floor before its whole-window rate is shown.
 function periodAvg_(cum, deployedDays, tradingDaysPerPeriod) {
-  if (cum == null || !deployedDays || deployedDays < tradingDaysPerPeriod) return null;
+  if (cum == null || !deployedDays || deployedDays < 21) return null;
   return Math.pow(1 + cum, tradingDaysPerPeriod / deployedDays) - 1;
+}
+
+// True when there is at least one deployed day but fewer than a full period's worth — the avg/year
+// (or avg/month) figure is a compounded EXTRAPOLATION from partial history, not a directly observed
+// full-period rate. Marked with a † in the UI.
+function isExtrapolated_(deployedDays, tradingDaysPerPeriod) {
+  return deployedDays > 0 && deployedDays < tradingDaysPerPeriod;
+}
+
+// Shapes a benchmark's (or the deployed book's) OWN cumulative return into the {cumulative, avg/month,
+// avg/year, extrapolated?} shape the headline block and the SGOV/VOO table rows share. Hardcodes
+// 21/252 (matching TRADING_DAYS_PER.month/.year) rather than referencing that file-level const, so
+// this stays a self-contained pure function safe to copy verbatim into test_pure_helpers.js.
+function benchmarkRow_(returnPct, days) {
+  return {
+    returnPct: returnPct,
+    avgMonth: periodAvg_(returnPct, days, 21),
+    avgYear: periodAvg_(returnPct, days, 252),
+    extrapolatedYear: isExtrapolated_(days, 252)
+  };
 }
 
 // ===== "Why might these numbers be stale?" — only when the data-trust predicate fails =====
@@ -268,6 +349,9 @@ function getUserTzWeekly_() {
 // ===== formatting =====
 function num_(v)  { return (v === null || v === undefined || v === '') ? null : Number(v); }
 function signPct_(p){ return (p >= 0 ? '+' : '−') + Math.abs(p).toFixed(2) + '%'; } // unicode minus
+function signDollar_(v) { return (v >= 0 ? '+$' : '−$') + Math.abs(v).toFixed(2); } // unicode minus
+function fmtAbsDollars_(v) { return '$' + Math.abs(v).toFixed(2); }
+function edgeWord_(v) { return v >= 0 ? 'beat' : 'trailed'; }
 function clr_(p)  { return p >= 0 ? '#1a7f5a' : '#c0392b'; }
 // KEEP IN SYNC MANUALLY with esc2_() in ops/monitoring/alert_emailer.gs — byte-for-byte identical on
 // purpose (separate Apps Script projects can't share a module), also copied verbatim into
@@ -283,7 +367,7 @@ function parseIsoDateLocal_(iso) {
   return new Date(p[0], p[1] - 1, p[2]);
 }
 
-// ===== chart: cumulative total return %, each strategy + SGOV =====
+// ===== chart: cumulative total return %, each strategy + SGOV + VOO =====
 function downsampleDates_(sortedDates) {
   if (sortedDates.length <= 130) return sortedDates;
   const kept = [];
@@ -296,6 +380,9 @@ function downsampleDates_(sortedDates) {
 function altTextFor_(d) {
   const parts = d.rows.filter(r => r.deployed).map(r => `${r.strategy} ${signPct_(r.returnPct * 100)}`);
   parts.push(`SGOV ${signPct_(d.sgov.returnPct * 100)}`);
+  if (d.headline && d.headline.voo && d.headline.voo.returnPct != null) {
+    parts.push(`VOO ${signPct_(d.headline.voo.returnPct * 100)}`);
+  }
   return 'Cumulative return: ' + parts.join(', ');
 }
 
@@ -305,6 +392,7 @@ function buildReturnChart_(d) {
     if (!d.deployedStrategies.length) return null;
     const allDates = Object.keys(d.sgovByDate).sort();
     const keptDates = downsampleDates_(allDates);
+    const hasVoo = !!(d.headline && d.headline.nVooMarkDays > 0);
 
     // strategy line = (deployed_unit_value − 1) forward-filled; 0 before its first day.
     const filled = {};
@@ -322,17 +410,25 @@ function buildReturnChart_(d) {
       });
     });
 
-    // SGOV first (gray, under the strategy lines).
+    // SGOV first (gray), VOO second (steel blue) if it has data — both under the strategy lines.
     const dt = Charts.newDataTable().addColumn(Charts.ColumnType.DATE, 'Date');
     dt.addColumn(Charts.ColumnType.NUMBER, 'SGOV');
+    if (hasVoo) dt.addColumn(Charts.ColumnType.NUMBER, 'VOO');
     d.deployedStrategies.forEach(s => dt.addColumn(Charts.ColumnType.NUMBER, 'Strategy ' + s));
     keptDates.forEach(iso => {
       const sgovVal = d.sgovByDate[iso] != null ? d.sgovByDate[iso] * 100 : 0;
-      dt.addRow([parseIsoDateLocal_(iso), sgovVal].concat(d.deployedStrategies.map(s => filled[s][iso])));
+      const row = [parseIsoDateLocal_(iso), sgovVal];
+      if (hasVoo) {
+        const vooVal = d.vooByDate[iso];
+        row.push(vooVal != null ? vooVal * 100 : null); // null -> a gap in the line, not a false 0
+      }
+      d.deployedStrategies.forEach(s => row.push(filled[s][iso]));
+      dt.addRow(row);
     });
 
+    const colors = [SGOV_GRAY].concat(hasVoo ? [VOO_COLOR] : []).concat(d.deployedStrategies.map(s => CHART_COLORS[s]));
     const chart = Charts.newLineChart().setDataTable(dt.build())
-      .setColors([SGOV_GRAY].concat(d.deployedStrategies.map(s => CHART_COLORS[s])))
+      .setColors(colors)
       .setDimensions(1120, 400)
       .setLegendPosition(Charts.Position.BOTTOM)
       .setPointStyle(Charts.PointStyle.NONE)
@@ -346,16 +442,19 @@ function buildReturnChart_(d) {
   }
 }
 
-// Gmail-safe fallback: one bar per deployed strategy (cumulative return), + a SGOV bar. Color: green
-// if the strategy beat SGOV, red if not; SGOV bar gray.
+// Gmail-safe fallback: one bar per deployed strategy (cumulative return), + a SGOV bar, + a VOO bar
+// (if VOO has data). Color: green if the strategy beat SGOV, red if not; SGOV bar gray, VOO bar steel.
 function fallbackBarsHtml_(d) {
   const deployed = d.rows.filter(r => r.deployed);
   const items = deployed.map(r => ({ label: r.strategy, val: r.returnPct * 100, beat: r.returnPct > d.sgov.returnPct }))
-    .concat([{ label: 'SGOV', val: d.sgov.returnPct * 100, sgov: true }]);
+    .concat([{ label: 'SGOV', val: d.sgov.returnPct * 100, neutral: true }]);
+  if (d.headline && d.headline.voo && d.headline.voo.returnPct != null) {
+    items.push({ label: 'VOO', val: d.headline.voo.returnPct * 100, neutral: true, vooColor: true });
+  }
   const maxAbs = Math.max.apply(null, items.map(it => Math.abs(it.val)).concat([1.0]));
   return items.map(it => {
     const widthPx = Math.max(2, Math.round(Math.abs(it.val) / maxAbs * 240));
-    const color = it.sgov ? SGOV_GRAY : (it.beat ? '#1a7f5a' : '#c0392b');
+    const color = it.vooColor ? VOO_COLOR : (it.neutral ? SGOV_GRAY : (it.beat ? '#1a7f5a' : '#c0392b'));
     return `<div style="padding:4px 0;font-size:12px;color:#1f2d3d;">` +
       `<span style="display:inline-block;width:40px;font-weight:700;">${esc_(it.label)}</span>` +
       `<span style="display:inline-block;background-color:${color};width:${widthPx}px;height:12px;vertical-align:middle;"></span>` +
@@ -364,14 +463,78 @@ function fallbackBarsHtml_(d) {
 }
 
 // ===== HTML =====
-function pctCellHtml_(v, colorBySign) {
+function pctCellHtml_(v, colorBySign, extrapolated) {
   if (v == null) return `<span style="color:#8a96a3;font-size:11px;">Not enough data</span>`;
   const color = colorBySign ? clr_(v) : '#3d4a59';
-  return `<span style="color:${color};font-weight:${colorBySign ? 700 : 400};">${signPct_(v * 100)}</span>`;
+  const marker = extrapolated ? '†' : '';
+  return `<span style="color:${color};font-weight:${colorBySign ? 700 : 400};">${signPct_(v * 100)}${marker}</span>`;
+}
+
+function dollarCellHtml_(v, colorBySign) {
+  if (v == null) return `<span style="color:#8a96a3;font-size:11px;">Not enough data</span>`;
+  const color = colorBySign ? clr_(v) : '#3d4a59';
+  return `<span style="color:${color};font-weight:${colorBySign ? 700 : 400};">${signDollar_(v)}</span>`;
+}
+
+function headlineSectionHtml_(d) {
+  if (!d.headline) return '';
+  const h = d.headline;
+  const firstLabel = h.firstDeployedDate ? Utilities.formatDate(parseIsoDateLocal_(h.firstDeployedDate), d.tz, 'MMM d') : '—';
+  const voo = h.voo || { returnPct: null, avgMonth: null, avgYear: null, extrapolatedYear: false };
+
+  const takeawayParts = [];
+  if (h.edgeVsSgovDollars != null) takeawayParts.push(`${edgeWord_(h.edgeVsSgovDollars)} SGOV by ${fmtAbsDollars_(h.edgeVsSgovDollars)}`);
+  if (h.edgeVsVooDollars != null) takeawayParts.push(`${edgeWord_(h.edgeVsVooDollars)} VOO by ${fmtAbsDollars_(h.edgeVsVooDollars)}`);
+  const takeawayHtml = takeawayParts.length
+    ? `<div style="margin-top:8px;font-size:12px;color:#3d4a59;">Deploying ${takeawayParts.join(' · ')} — over the same dollars and days.</div>`
+    : '';
+
+  const vooStale = h.voo && h.vooLastMarkDate && h.asOfDate && h.vooLastMarkDate < h.asOfDate;
+  const vooStaleHtml = vooStale
+    ? `<div style="margin-top:6px;font-size:11px;color:#b9770e;">⚠ VOO data through ${esc_(h.vooLastMarkDate)}.</div>`
+    : '';
+
+  return `
+  <tr><td style="padding:16px 22px 6px 22px;">
+    <div style="font-size:12px;color:#8a96a3;text-transform:uppercase;letter-spacing:0.6px;font-weight:700;">Deployed Book Since ${esc_(firstLabel)} (${h.nDeployedDays} trading days)</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:10px;border-collapse:collapse;font-size:12px;">
+      <tr style="background-color:#0f2747;color:#ffffff;">
+        <td style="padding:8px;"></td>
+        <td style="padding:8px;text-align:right;">cumulative</td>
+        <td style="padding:8px;text-align:right;">avg&nbsp;/&nbsp;month</td>
+        <td style="padding:8px;text-align:right;">avg&nbsp;/&nbsp;year</td>
+        <td style="padding:8px;text-align:right;">$&nbsp;(same&nbsp;dollars,&nbsp;same&nbsp;days)</td>
+      </tr>
+      <tr style="background-color:#fffffe;">
+        <td style="padding:9px 8px;font-weight:700;color:#0f2747;">Deployed book</td>
+        <td style="padding:9px 8px;text-align:right;">${pctCellHtml_(h.book.returnPct, true)}</td>
+        <td style="padding:9px 8px;text-align:right;">${pctCellHtml_(h.book.avgMonth, true)}</td>
+        <td style="padding:9px 8px;text-align:right;">${pctCellHtml_(h.book.avgYear, true, h.book.extrapolatedYear)}</td>
+        <td style="padding:9px 8px;text-align:right;">${dollarCellHtml_(h.deployedPnlDollars, false)}</td>
+      </tr>
+      <tr style="background-color:#f5f7fa;">
+        <td style="padding:9px 8px;font-weight:700;color:#3d4a59;">SGOV (parked)</td>
+        <td style="padding:9px 8px;text-align:right;">${pctCellHtml_(h.sgov.returnPct, false)}</td>
+        <td style="padding:9px 8px;text-align:right;">${pctCellHtml_(h.sgov.avgMonth, false)}</td>
+        <td style="padding:9px 8px;text-align:right;">${pctCellHtml_(h.sgov.avgYear, false, h.sgov.extrapolatedYear)}</td>
+        <td style="padding:9px 8px;text-align:right;">${dollarCellHtml_(h.sgovCounterfactualDollars, false)}</td>
+      </tr>
+      <tr style="background-color:#fffffe;">
+        <td style="padding:9px 8px;font-weight:700;color:#3d4a59;">VOO (S&amp;P 500)</td>
+        <td style="padding:9px 8px;text-align:right;">${pctCellHtml_(voo.returnPct, false)}</td>
+        <td style="padding:9px 8px;text-align:right;">${pctCellHtml_(voo.avgMonth, false)}</td>
+        <td style="padding:9px 8px;text-align:right;">${pctCellHtml_(voo.avgYear, false, voo.extrapolatedYear)}</td>
+        <td style="padding:9px 8px;text-align:right;">${dollarCellHtml_(h.vooCounterfactualDollars, false)}</td>
+      </tr>
+    </table>
+    ${takeawayHtml}${vooStaleHtml}
+    <div style="font-size:11px;color:#8a96a3;margin-top:6px;">$ = the book's actual deployed dollars each day, notionally earning the benchmark's return that day, summed (not a compounding buy-and-hold). † = annualized from fewer than 252 deployed days — extrapolated. Total return incl. dividends, gross of commissions.</div>
+  </td></tr>`;
 }
 
 function buildHtml_(d, chartResult) {
   const firstLabel = d.firstDate ? Utilities.formatDate(parseIsoDateLocal_(d.firstDate), d.tz, 'MMM d') : '—';
+  const hasVoo = !!(d.headline && d.headline.nVooMarkDays > 0);
 
   const trustBlock = d.green ? '' : `
   <tr><td style="padding:14px 22px 0 22px;">
@@ -380,9 +543,12 @@ function buildHtml_(d, chartResult) {
     </div>
   </td></tr>`;
 
+  const headlineSection = headlineSectionHtml_(d);
+
   // Chart section.
   const notDeployed = d.rows.filter(r => !r.deployed).map(r => esc_(r.strategy));
   const notDeployedNote = notDeployed.length ? ` ${notDeployed.join(', ')} not deployed.` : '';
+  const benchmarkCaption = hasVoo ? 'SGOV (gray) and VOO (steel blue) benchmarks.' : 'SGOV in gray.';
   let chartInner;
   if (!d.deployedStrategies.length) {
     chartInner = `<div style="margin-top:8px;font-size:12px;color:#8a96a3;">Nothing deployed yet — all cash held in SGOV.</div>`;
@@ -394,11 +560,11 @@ function buildHtml_(d, chartResult) {
   const chartSection = `
   <tr><td style="padding:16px 22px 6px 22px;">
     <div style="font-size:12px;color:#8a96a3;text-transform:uppercase;letter-spacing:0.6px;font-weight:700;">Cumulative Return Since ${esc_(firstLabel)} (%)</div>
-    <div style="margin-top:8px;font-size:11px;color:#8a96a3;">Each strategy's total return; SGOV in gray.${notDeployedNote}</div>
+    <div style="margin-top:8px;font-size:11px;color:#8a96a3;">Each strategy's total return; ${benchmarkCaption}${notDeployedNote}</div>
     ${chartInner}
   </td></tr>`;
 
-  // Table: per strategy, average return vs SGOV per week / month / year (active days only); SGOV's own row.
+  // Table: per strategy, average return vs SGOV per month / year (active days only); SGOV's + VOO's own rows.
   const strategyRows = d.rows.map(r => {
     const chip = `<span style="display:inline-block;width:10px;height:10px;background-color:${CHART_COLORS[r.strategy] || '#8a96a3'};border-radius:2px;"></span>`;
     if (!r.deployed) {
@@ -406,16 +572,15 @@ function buildHtml_(d, chartResult) {
       <tr style="background-color:#fafbfc;">
         <td style="padding:9px 8px;">${chip}</td>
         <td style="padding:9px 8px;font-weight:700;color:#8a96a3;">${esc_(r.strategy)}</td>
-        <td colspan="3" style="padding:9px 8px;font-size:11px;color:#8a96a3;font-style:italic;">${esc_(r.notDeployedReason)}</td>
+        <td colspan="2" style="padding:9px 8px;font-size:11px;color:#8a96a3;font-style:italic;">${esc_(r.notDeployedReason)}</td>
       </tr>`;
     }
     return `
       <tr style="background-color:#fffffe;">
         <td style="padding:9px 8px;">${chip}</td>
         <td style="padding:9px 8px;font-weight:700;color:#0f2747;">${esc_(r.strategy)}</td>
-        <td style="padding:9px 8px;text-align:right;">${pctCellHtml_(r.w1, true)}</td>
-        <td style="padding:9px 8px;text-align:right;">${pctCellHtml_(r.w1m, true)}</td>
-        <td style="padding:9px 8px;text-align:right;">${pctCellHtml_(r.w1y, true)}</td>
+        <td style="padding:9px 8px;text-align:right;">${pctCellHtml_(r.avgMonth, true)}</td>
+        <td style="padding:9px 8px;text-align:right;">${pctCellHtml_(r.avgYear, true, r.extrapolatedYear)}</td>
       </tr>`;
   }).join('');
 
@@ -423,9 +588,17 @@ function buildHtml_(d, chartResult) {
       <tr style="background-color:#f5f7fa;">
         <td style="padding:9px 8px;"><span style="display:inline-block;width:10px;height:10px;background-color:${SGOV_GRAY};border-radius:2px;"></span></td>
         <td style="padding:9px 8px;font-weight:700;color:#3d4a59;">SGOV<div style="font-size:10px;font-weight:400;color:#8a96a3;">own return</div></td>
-        <td style="padding:9px 8px;text-align:right;">${pctCellHtml_(d.sgov.w1, false)}</td>
-        <td style="padding:9px 8px;text-align:right;">${pctCellHtml_(d.sgov.w1m, false)}</td>
-        <td style="padding:9px 8px;text-align:right;">${pctCellHtml_(d.sgov.w1y, false)}</td>
+        <td style="padding:9px 8px;text-align:right;">${pctCellHtml_(d.sgov.avgMonth, false)}</td>
+        <td style="padding:9px 8px;text-align:right;">${pctCellHtml_(d.sgov.avgYear, false, d.sgov.extrapolatedYear)}</td>
+      </tr>`;
+
+  const vooOwn = d.voo || { avgMonth: null, avgYear: null, extrapolatedYear: false };
+  const vooRow = `
+      <tr style="background-color:#fffffe;">
+        <td style="padding:9px 8px;"><span style="display:inline-block;width:10px;height:10px;background-color:${VOO_COLOR};border-radius:2px;"></span></td>
+        <td style="padding:9px 8px;font-weight:700;color:#3d4a59;">VOO<div style="font-size:10px;font-weight:400;color:#8a96a3;">own return</div></td>
+        <td style="padding:9px 8px;text-align:right;">${pctCellHtml_(vooOwn.avgMonth, false)}</td>
+        <td style="padding:9px 8px;text-align:right;">${pctCellHtml_(vooOwn.avgYear, false, vooOwn.extrapolatedYear)}</td>
       </tr>`;
 
   const tableSection = `
@@ -435,12 +608,11 @@ function buildHtml_(d, chartResult) {
       <tr style="background-color:#0f2747;color:#ffffff;">
         <td style="padding:8px;"></td>
         <td style="padding:8px;">Strategy</td>
-        <td style="padding:8px;text-align:right;">avg&nbsp;/&nbsp;week</td>
         <td style="padding:8px;text-align:right;">avg&nbsp;/&nbsp;month</td>
         <td style="padding:8px;text-align:right;">avg&nbsp;/&nbsp;year</td>
-      </tr>${strategyRows}${sgovRow}
+      </tr>${strategyRows}${sgovRow}${vooRow}
     </table>
-    <div style="font-size:11px;color:#8a96a3;margin-top:6px;">Strategy rows: average return above SGOV per period, measured over active (deployed) time only. SGOV row: its own average return.</div>
+    <div style="font-size:11px;color:#8a96a3;margin-top:6px;">Strategy rows: average return above SGOV per period, measured over active (deployed) time only. SGOV/VOO rows: their own average return. † = annualized from fewer than 252 deployed days — extrapolated.</div>
   </td></tr>`;
 
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -450,14 +622,14 @@ function buildHtml_(d, chartResult) {
 
   <tr><td style="background-color:#0f2747;padding:22px 26px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td style="color:#ffffff;font-size:19px;font-weight:700;">Stock-Trading · Strategies vs SGOV</td>
+      <td style="color:#ffffff;font-size:19px;font-weight:700;">Stock-Trading · Deployed vs Benchmarks</td>
       <td align="right" style="color:#9fb3cc;font-size:12px;">Week ending<br><span style="color:#ffffff;font-size:13px;font-weight:600;">${esc_(d.dateLabel)}</span></td>
     </tr></table>
     <div style="margin-top:12px;color:#9fb3cc;font-size:12px;">data through ${esc_(d.health.last_mark_date || '—')} close</div>
   </td></tr>
-${trustBlock}${chartSection}${tableSection}
+${trustBlock}${headlineSection}${chartSection}${tableSection}
   <tr><td style="padding:12px 22px 22px 22px;">
-    <div style="font-size:11px;color:#9aa6b2;line-height:1.5;">Total return, gross of commissions; SGOV includes dividends. Times in ${esc_(d.tz)}.</div>
+    <div style="font-size:11px;color:#9aa6b2;line-height:1.5;">Total return, gross of commissions; SGOV and VOO include dividends. Times in ${esc_(d.tz)}.</div>
   </td></tr>
 
 </table>
@@ -468,10 +640,31 @@ ${trustBlock}${chartSection}${tableSection}
 // ===== plain-text mirror =====
 function buildPlain_(d) {
   const firstLabel = d.firstDate ? Utilities.formatDate(parseIsoDateLocal_(d.firstDate), d.tz, 'MMM d') : '—';
-  let s = `Stock-Trading — Strategies vs SGOV (${d.dateLabel})\n\n`;
+  const fmtP = (v, ex) => (v == null ? 'Not enough data' : signPct_(v * 100) + (ex ? '†' : ''));
+  const fmtD = v => (v == null ? 'Not enough data' : signDollar_(v));
+
+  let s = `Stock-Trading — Deployed vs Benchmarks (${d.dateLabel})\n\n`;
   s += `Data through ${d.health.last_mark_date || '—'} close.\n`;
   if (!d.green) s += `WARNING — numbers below may be stale: ${d.healthReasons.join(' | ')}\n`;
   s += '\n';
+
+  if (d.headline) {
+    const h = d.headline;
+    const voo = h.voo || { returnPct: null, avgMonth: null, avgYear: null, extrapolatedYear: false };
+    const hFirstLabel = h.firstDeployedDate ? Utilities.formatDate(parseIsoDateLocal_(h.firstDeployedDate), d.tz, 'MMM d') : '—';
+    s += `DEPLOYED BOOK SINCE ${hFirstLabel} (${h.nDeployedDays} trading days):\n`;
+    s += `  Book  cum ${fmtP(h.book.returnPct)}  avg/mo ${fmtP(h.book.avgMonth)}  avg/yr ${fmtP(h.book.avgYear, h.book.extrapolatedYear)}  $ ${fmtD(h.deployedPnlDollars)}\n`;
+    s += `  SGOV  cum ${fmtP(h.sgov.returnPct)}  avg/mo ${fmtP(h.sgov.avgMonth)}  avg/yr ${fmtP(h.sgov.avgYear, h.sgov.extrapolatedYear)}  $ ${fmtD(h.sgovCounterfactualDollars)}\n`;
+    s += `  VOO   cum ${fmtP(voo.returnPct)}  avg/mo ${fmtP(voo.avgMonth)}  avg/yr ${fmtP(voo.avgYear, voo.extrapolatedYear)}  $ ${fmtD(h.vooCounterfactualDollars)}\n`;
+    const takeawayParts = [];
+    if (h.edgeVsSgovDollars != null) takeawayParts.push(`${edgeWord_(h.edgeVsSgovDollars)} SGOV by ${fmtAbsDollars_(h.edgeVsSgovDollars)}`);
+    if (h.edgeVsVooDollars != null) takeawayParts.push(`${edgeWord_(h.edgeVsVooDollars)} VOO by ${fmtAbsDollars_(h.edgeVsVooDollars)}`);
+    if (takeawayParts.length) s += `  Deploying ${takeawayParts.join(' · ')} — over the same dollars and days.\n`;
+    if (h.voo && h.vooLastMarkDate && h.asOfDate && h.vooLastMarkDate < h.asOfDate) {
+      s += `  ⚠ VOO data through ${h.vooLastMarkDate}.\n`;
+    }
+    s += '\n';
+  }
 
   if (!d.deployedStrategies.length) {
     s += `Nothing deployed yet — all cash held in SGOV.\n`;
@@ -479,16 +672,20 @@ function buildPlain_(d) {
     s += `CUMULATIVE RETURN SINCE ${firstLabel}:\n`;
     d.rows.filter(r => r.deployed).forEach(r => { s += `  ${r.strategy}  ${signPct_(r.returnPct * 100)}\n`; });
     s += `  SGOV  ${signPct_(d.sgov.returnPct * 100)}\n`;
+    if (d.headline && d.headline.voo && d.headline.voo.returnPct != null) {
+      s += `  VOO  ${signPct_(d.headline.voo.returnPct * 100)}\n`;
+    }
   }
 
-  s += `\nAVERAGE RETURN VS SGOV (per active week / month / year):\n`;
-  const fmt = v => (v == null ? 'Not enough data' : signPct_(v * 100));
+  s += `\nAVERAGE RETURN VS SGOV (per active month / year):\n`;
   d.rows.forEach(r => {
     if (!r.deployed) { s += `  ${r.strategy}  ${r.notDeployedReason}\n`; return; }
-    s += `  ${r.strategy}  avg/wk ${fmt(r.w1)}  avg/mo ${fmt(r.w1m)}  avg/yr ${fmt(r.w1y)}\n`;
+    s += `  ${r.strategy}  avg/mo ${fmtP(r.avgMonth)}  avg/yr ${fmtP(r.avgYear, r.extrapolatedYear)}\n`;
   });
-  s += `  SGOV (own return)  avg/wk ${fmt(d.sgov.w1)}  avg/mo ${fmt(d.sgov.w1m)}  avg/yr ${fmt(d.sgov.w1y)}\n`;
+  s += `  SGOV (own return)  avg/mo ${fmtP(d.sgov.avgMonth)}  avg/yr ${fmtP(d.sgov.avgYear, d.sgov.extrapolatedYear)}\n`;
+  const vooOwn = d.voo || { avgMonth: null, avgYear: null, extrapolatedYear: false };
+  s += `  VOO (own return)  avg/mo ${fmtP(vooOwn.avgMonth)}  avg/yr ${fmtP(vooOwn.avgYear, vooOwn.extrapolatedYear)}\n`;
 
-  s += `\nStrategy rows are the average return above SGOV per period, over active (deployed) time only; SGOV row is its own average return. Total return, gross of commissions; SGOV incl. dividends. Times in ${d.tz}.\n`;
+  s += `\nStrategy rows are the average return above SGOV per period, over active (deployed) time only; SGOV/VOO rows are their own average return. † = annualized from fewer than 252 deployed days. Total return, gross of commissions; SGOV/VOO incl. dividends. Times in ${d.tz}.\n`;
   return s;
 }

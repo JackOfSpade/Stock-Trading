@@ -89,6 +89,38 @@ models:
           - not_null
           - unique
 
+  - name: voo_daily_return
+    description: VOO (Vanguard S&P 500 ETF) actual total-return benchmark per day. 2026-07-13.
+    columns:
+      - name: as_of_date
+        tests:
+          - not_null
+          - unique
+
+  - name: voo_cumulative
+    description: VOO's own cumulative total return per deployed trading day, aligned to the same axis as sgov_cumulative (the weekly email's VOO chart line + its own average return per month/year). NULL before VOO's first observed mark. 2026-07-13.
+    columns:
+      - name: as_of_date
+        tests:
+          - not_null
+          - unique
+      - name: voo_cum_return
+        description: VOO's cumulative total return (close + dividends) since the first deployed date; NULL until VOO has at least one mark in the window.
+
+  - name: deployed_book_vs_benchmarks
+    description: Single-row combined deployed-book comparison vs SGOV AND VOO — the weekly email's headline block (percent + "same dollars, same days" dollar legs). 2026-07-13.
+    columns:
+      - name: first_deployed_date
+        description: Earliest deployed day across all strategies.
+      - name: n_deployed_days
+        description: Count of deployed trading days in the window — the N used for both SGOV and VOO period-average denominators.
+      - name: n_voo_mark_days
+        description: Count of deployed days with an actual VOO mark. 0 means VOO-derived columns are NULL (backfill not yet applied) — gates the email's VOO rendering.
+      - name: book_return
+        description: The aggregate deployed book's cumulative return over its deployed days.
+      - name: voo_return
+        description: NULL when n_voo_mark_days = 0.
+
   - name: thesis_outcomes
     description: Thesis-construction decisions joined to their round-trip outcome.
     columns:

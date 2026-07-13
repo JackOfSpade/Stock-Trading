@@ -72,7 +72,7 @@ MERGE `stock-trading-498512.state.expected_script_versions` T
 USING (
   SELECT * FROM UNNEST([
     STRUCT('alert_emailer' AS script_name, 'v1' AS expected_version, 'bigquery/43_script_version_registry.sql initial seed -- alert_emailer.gs SCRIPT_VERSION not yet introduced; bump on first owner paste that adds it' AS git_note),
-    STRUCT('weekly_report' AS script_name, 'v1' AS expected_version, 'bigquery/43_script_version_registry.sql initial seed -- weekly_report.gs SCRIPT_VERSION not yet introduced; bump on first owner paste that adds it' AS git_note)
+    STRUCT('weekly_report' AS script_name, 'v2' AS expected_version, '2026-07-13: weekly_report.gs v2 -- VOO benchmark added alongside SGOV (owner directive), new deployed-book-vs-benchmarks headline block, avg/month+avg/year (dropped avg/week), subject prefix changed to "Deployed vs Benchmarks"' AS git_note)
   ])
 ) S
 ON T.script_name = S.script_name
