@@ -18,14 +18,16 @@
  * KEEP IN SYNC MANUALLY with ops/weekly_report/weekly_report.gs and
  * ops/monitoring/alert_emailer.gs — if you change any of these functions there, update the
  * copies below in the same commit:
- *   - notDeployedReason_   (weekly_report.gs lines 198-203)
- *   - periodAvg_           (weekly_report.gs lines 210-213)
- *   - signPct_             (weekly_report.gs line 268)
- *   - parseIsoDateLocal_   (weekly_report.gs lines 274-277)
- *   - downsampleDates_     (weekly_report.gs lines 280-287)
- *   - buildHealthReasons_  (weekly_report.gs lines 216-237)
- *   - buildSubject_        (weekly_report.gs lines 97-105)
- *   - esc_                 (weekly_report.gs line 270)
+ *   - notDeployedReason_   (weekly_report.gs lines 256-262)
+ *   - periodAvg_           (weekly_report.gs lines 273-276)
+ *   - isExtrapolated_      (weekly_report.gs lines 281-283)
+ *   - benchmarkRow_        (weekly_report.gs lines 289-296)
+ *   - signPct_             (weekly_report.gs line 351)
+ *   - parseIsoDateLocal_   (weekly_report.gs lines 365-368)
+ *   - downsampleDates_     (weekly_report.gs lines 371-378)
+ *   - buildHealthReasons_  (weekly_report.gs lines 299-320)
+ *   - buildSubject_        (weekly_report.gs lines 119-134)
+ *   - esc_                 (weekly_report.gs line 361)
  *   - isTest_              (alert_emailer.gs line 210)
  *   - esc2_                (alert_emailer.gs line 205)
  *   - alertSubject_        (alert_emailer.gs, defined immediately after isTest_)
@@ -50,10 +52,33 @@ function notDeployedReason_(activation) {
 // series so they never enter the denominator (they don't dilute the rate toward 0). Converts that
 // whole-window return into an equivalent constant per-period rate:
 //   (1 + cum) ^ (tradingDaysPerPeriod / deployedDays) − 1.
-// null when deployedDays < the period — not enough deployed history to state that average.
+// null when deployedDays < 21 (MIN_AVG_DAYS, hardcoded here so this stays a self-contained pure
+// function) — below that, not enough deployed history to state ANY average, independent of which
+// period was requested; a strategy/benchmark with exactly `tradingDaysPerPeriod` deployed days still
+// needs to clear this floor before its whole-window rate is shown.
 function periodAvg_(cum, deployedDays, tradingDaysPerPeriod) {
-  if (cum == null || !deployedDays || deployedDays < tradingDaysPerPeriod) return null;
+  if (cum == null || !deployedDays || deployedDays < 21) return null;
   return Math.pow(1 + cum, tradingDaysPerPeriod / deployedDays) - 1;
+}
+
+// True when there is at least one deployed day but fewer than a full period's worth — the avg/year
+// (or avg/month) figure is a compounded EXTRAPOLATION from partial history, not a directly observed
+// full-period rate. Marked with a † in the UI.
+function isExtrapolated_(deployedDays, tradingDaysPerPeriod) {
+  return deployedDays > 0 && deployedDays < tradingDaysPerPeriod;
+}
+
+// Shapes a benchmark's (or the deployed book's) OWN cumulative return into the {cumulative, avg/month,
+// avg/year, extrapolated?} shape the headline block and the SGOV/VOO table rows share. Hardcodes
+// 21/252 (matching TRADING_DAYS_PER.month/.year) rather than referencing that file-level const, so
+// this stays a self-contained pure function safe to copy verbatim into test_pure_helpers.js.
+function benchmarkRow_(returnPct, days) {
+  return {
+    returnPct: returnPct,
+    avgMonth: periodAvg_(returnPct, days, 21),
+    avgYear: periodAvg_(returnPct, days, 252),
+    extrapolatedYear: isExtrapolated_(days, 252)
+  };
 }
 
 function signPct_(p) { return (p >= 0 ? '+' : '−') + Math.abs(p).toFixed(2) + '%'; } // unicode minus
@@ -102,12 +127,20 @@ function buildHealthReasons_(health, marksFresh, engineFresh, firingKillFlags, k
 
 function buildSubject_(d) {
   const deployed = d.rows.filter(r => r.deployed);
-  const tag = !deployed.length
-    ? 'all parked'
-    : deployed.map(r => `${r.strategy} ${signPct_(r.returnPct * 100)}`).join(' · ')
-        + ` · SGOV ${signPct_(d.sgov.returnPct * 100)}`;
+  let tag;
+  if (!deployed.length) {
+    tag = 'all parked';
+  } else {
+    tag = deployed.map(r => `${r.strategy} ${signPct_(r.returnPct * 100)}`).join(' · ')
+      + ` · SGOV ${signPct_(d.sgov.returnPct * 100)}`;
+    // VOO fragment only in the deployed branch, and only once VOO has real data in the window —
+    // never render a null through signPct_ (which would print "−NaN%").
+    if (d.headline && d.headline.voo && d.headline.voo.returnPct != null) {
+      tag += ` · VOO ${signPct_(d.headline.voo.returnPct * 100)}`;
+    }
+  }
   const warn = d.green ? '' : ' · ⚠ check data';
-  return `Stock-Trading · Strategies vs SGOV — ${d.dateLabel} · ${tag}${warn}`;
+  return `Stock-Trading · Deployed vs Benchmarks — ${d.dateLabel} · ${tag}${warn}`;
 }
 
 // ===== copied verbatim from ops/monitoring/alert_emailer.gs ==================================
@@ -171,8 +204,8 @@ t('notDeployedReason_ handles null/undefined activation without throwing', () =>
 });
 
 // ---- periodAvg_ ----
-t('periodAvg_ returns null below the minimum-deployed-history threshold', () => {
-  assert.strictEqual(periodAvg_(0.05, 3, 5), null); // 3 deployed days < 5 (the week threshold)
+t('periodAvg_ returns null when deployedDays is below the 21-day minimum, even if it equals the period', () => {
+  assert.strictEqual(periodAvg_(0.10, 5, 5), null); // 5 < the 21-day floor -- not enough history to state ANY average, even a 5-day one
 });
 t('periodAvg_ returns null when deployedDays is 0/falsy', () => {
   assert.strictEqual(periodAvg_(0.05, 0, 5), null);
@@ -180,8 +213,12 @@ t('periodAvg_ returns null when deployedDays is 0/falsy', () => {
 t('periodAvg_ returns null when cum is null', () => {
   assert.strictEqual(periodAvg_(null, 10, 5), null);
 });
-t('periodAvg_ returns the whole-window rate when deployedDays == the period', () => {
-  const got = periodAvg_(0.10, 5, 5);
+t('periodAvg_ enforces the 21-deployed-day floor regardless of the requested period', () => {
+  assert.strictEqual(periodAvg_(0.05, 20, 252), null);
+  assert.ok(periodAvg_(0.05, 21, 252) !== null);
+});
+t('periodAvg_ returns the whole-window rate once deployedDays meets both the period and the 21-day floor', () => {
+  const got = periodAvg_(0.10, 21, 21);
   assert.ok(Math.abs(got - 0.10) < 1e-9, `expected ~0.10, got ${got}`);
 });
 t('periodAvg_ converts a longer deployed window into the equivalent annual rate', () => {
@@ -189,6 +226,38 @@ t('periodAvg_ converts a longer deployed window into the equivalent annual rate'
   const got = periodAvg_(0.15, 300, 252);
   const expected = Math.pow(1.15, 252 / 300) - 1;
   assert.ok(Math.abs(got - expected) < 1e-9, `expected ~${expected}, got ${got}`);
+});
+
+// ---- isExtrapolated_ ----
+t('isExtrapolated_ is false with zero deployed days', () => {
+  assert.strictEqual(isExtrapolated_(0, 252), false);
+});
+t('isExtrapolated_ is true with some but fewer than a full period of deployed days', () => {
+  assert.strictEqual(isExtrapolated_(52, 252), true);
+});
+t('isExtrapolated_ is false once deployed days meet or exceed the period', () => {
+  assert.strictEqual(isExtrapolated_(252, 252), false);
+  assert.strictEqual(isExtrapolated_(300, 252), false);
+});
+
+// ---- benchmarkRow_ ----
+t('benchmarkRow_ returns null avg/month and avg/year below the 21-day floor, but keeps returnPct', () => {
+  const r = benchmarkRow_(0.05, 10);
+  assert.strictEqual(r.returnPct, 0.05);
+  assert.strictEqual(r.avgMonth, null);
+  assert.strictEqual(r.avgYear, null);
+  assert.strictEqual(r.extrapolatedYear, true);
+});
+t('benchmarkRow_ computes avg/month and avg/year once the 21-day floor is met, flagging avg/year extrapolated', () => {
+  // Live-verified 2026-07-13: deployed book cum +7.3734277% over N=52 deployed days.
+  const r = benchmarkRow_(0.073734277, 52);
+  assert.ok(Math.abs(r.avgMonth - (Math.pow(1.073734277, 21 / 52) - 1)) < 1e-9);
+  assert.ok(Math.abs(r.avgYear - (Math.pow(1.073734277, 252 / 52) - 1)) < 1e-9);
+  assert.strictEqual(r.extrapolatedYear, true);
+});
+t('benchmarkRow_ marks avg/year not extrapolated once 252+ deployed days exist', () => {
+  const r = benchmarkRow_(0.15, 300);
+  assert.strictEqual(r.extrapolatedYear, false);
 });
 
 // ---- signPct_ ----
@@ -282,9 +351,9 @@ t('buildHealthReasons_ can report all three reasons at once (stale + kill-flag +
 t('buildSubject_ shows "all parked" when nothing is deployed', () => {
   const d = { rows: [{ strategy: 'A', deployed: false }, { strategy: 'B', deployed: false }],
     sgov: { returnPct: 0.01 }, green: true, dateLabel: 'Jul 6, 2026' };
-  assert.strictEqual(buildSubject_(d), 'Stock-Trading · Strategies vs SGOV — Jul 6, 2026 · all parked');
+  assert.strictEqual(buildSubject_(d), 'Stock-Trading · Deployed vs Benchmarks — Jul 6, 2026 · all parked');
 });
-t('buildSubject_ lists only deployed strategies plus SGOV when strategies are mixed parked/deployed', () => {
+t('buildSubject_ lists only deployed strategies plus SGOV when strategies are mixed parked/deployed, no headline', () => {
   const d = {
     rows: [
       { strategy: 'A', deployed: true, returnPct: 0.0123 },
@@ -293,7 +362,31 @@ t('buildSubject_ lists only deployed strategies plus SGOV when strategies are mi
     ],
     sgov: { returnPct: 0.002 }, green: true, dateLabel: 'Jul 6, 2026'
   };
-  assert.strictEqual(buildSubject_(d), 'Stock-Trading · Strategies vs SGOV — Jul 6, 2026 · A +1.23% · C −0.50% · SGOV +0.20%');
+  assert.strictEqual(buildSubject_(d), 'Stock-Trading · Deployed vs Benchmarks — Jul 6, 2026 · A +1.23% · C −0.50% · SGOV +0.20%');
+});
+t('buildSubject_ appends the VOO fragment after SGOV when headline.voo has a return', () => {
+  const d = {
+    rows: [{ strategy: 'A', deployed: true, returnPct: 0.0123 }],
+    sgov: { returnPct: 0.002 }, green: true, dateLabel: 'Jul 6, 2026',
+    headline: { voo: { returnPct: 0.015 } }
+  };
+  assert.strictEqual(buildSubject_(d), 'Stock-Trading · Deployed vs Benchmarks — Jul 6, 2026 · A +1.23% · SGOV +0.20% · VOO +1.50%');
+});
+t('buildSubject_ omits the VOO fragment when headline.voo.returnPct is null (VOO not backfilled yet)', () => {
+  const d = {
+    rows: [{ strategy: 'A', deployed: true, returnPct: 0.0123 }],
+    sgov: { returnPct: 0.002 }, green: true, dateLabel: 'Jul 6, 2026',
+    headline: { voo: { returnPct: null } }
+  };
+  assert.strictEqual(buildSubject_(d), 'Stock-Trading · Deployed vs Benchmarks — Jul 6, 2026 · A +1.23% · SGOV +0.20%');
+});
+t('buildSubject_ never appends the VOO fragment in the all-parked branch, even if headline.voo exists', () => {
+  const d = {
+    rows: [{ strategy: 'A', deployed: false }],
+    sgov: { returnPct: 0.002 }, green: true, dateLabel: 'Jul 6, 2026',
+    headline: { voo: { returnPct: 0.015 } }
+  };
+  assert.strictEqual(buildSubject_(d), 'Stock-Trading · Deployed vs Benchmarks — Jul 6, 2026 · all parked');
 });
 t('buildSubject_ omits the warning suffix when green is true', () => {
   const d = { rows: [{ strategy: 'A', deployed: true, returnPct: 0.01 }],
@@ -302,7 +395,7 @@ t('buildSubject_ omits the warning suffix when green is true', () => {
 });
 t('buildSubject_ appends the "⚠ check data" warning suffix when green is false', () => {
   const d = { rows: [{ strategy: 'A', deployed: false }], sgov: { returnPct: 0 }, green: false, dateLabel: 'Jul 6, 2026' };
-  assert.strictEqual(buildSubject_(d), 'Stock-Trading · Strategies vs SGOV — Jul 6, 2026 · all parked · ⚠ check data');
+  assert.strictEqual(buildSubject_(d), 'Stock-Trading · Deployed vs Benchmarks — Jul 6, 2026 · all parked · ⚠ check data');
 });
 
 // ---- isTest_ (alert_emailer.gs) ----

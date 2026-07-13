@@ -1803,6 +1803,79 @@ already needs). Node harness updated with a tracked fake-thread stub asserting e
 `markUnread()` + one `addLabel()` call on the just-sent thread. **Owner action required:**
 re-paste `weekly_report.gs` (no scope change).
 
+**2026-07-13 — VOO benchmark added (owner directive, SCRIPT_VERSION v2).** Owner asked for the
+weekly report to compare deployed gain/loss not only vs SGOV but also vs holding VOO (Vanguard
+S&P 500 ETF) for the same amount of time, with average monthly and average yearly figures,
+full design freedom otherwise delegated. VOO is deliberately a SECOND, purely informational
+benchmark — SGOV stays the sole sanctioned kill/gate benchmark (`perf.strategy_daily.excess_vs_sgov`,
+`perf.kill_flags`); nothing here touches that machinery (ADDITIVE ONLY, the same discipline
+`bigquery/39_beta_adjusted_alpha.sql` established for the SPY beta benchmark).
+
+*Methodology.* Three legs — deployed book (capital-weighted across strategies), SGOV, VOO — computed
+over the book's OWN deployed-day set: start = the book's first deployed day (derived dynamically,
+never hardcoded), end = the latest deployed mark date. SGOV keeps its existing forward-fill
+convention on a missing mark (correct for a cash-like accrual — repeats the last known RATE); VOO
+reads a gap as 0% (COALESCE, not forward-fill — repeating a stale rate is right for cash, wrong for
+a volatile equity index; since `r_voo` LAGs over VOO's OWN marks, the next real mark after a gap
+still spans it exactly, so no return is lost). Percent legs are geometric compounded returns.
+"Same dollars, same days" $ legs re-base the counterfactual to the book's ACTUAL deployed capital
+each day and sum arithmetically — the established `strategy_vs_park_daily.edge_dollars_day`
+convention — deliberately NOT a compounding buy-and-hold hypothetical (a different question: this
+answers "did today's deployed dollars beat parking/indexing today", not "what if the whole account
+had bought VOO at inception"). Average monthly/yearly reuses the existing geometric `periodAvg_`
+convention (`(1+cum)^(period/N)−1`), with N = deployed days shared across all three legs — but the
+**gate changed from `N < period` to `N < 21`** (`MIN_AVG_DAYS`), so avg/year is now stated (marked
+`†` = extrapolated) as soon as 21 deployed days exist, rather than waiting until 252. This is also
+why per-week reporting was dropped from the per-strategy table (a <21-day average is noise
+regardless of period) — the user asked for monthly and yearly only.
+
+*SQL (additive, applied after `03_twr_engine.sql` + `21_strategy_vs_park.sql`):*
+`bigquery/46_weekly_benchmarks.sql` — `analytics.voo_daily_return` (byte-parallel to
+`sgov_daily_return`/`spy_daily_return`), `analytics.voo_cumulative` (same date axis as
+`sgov_cumulative`; NULL before VOO's first mark, so the email can render "Not enough data" instead
+of a false flat line), `analytics.deployed_book_vs_benchmarks` (ONE row: book/SGOV/VOO % + $ legs,
+plus `n_voo_mark_days`/`voo_last_mark_date` data-presence signals every VOO-derived column NULLs out
+on — so a skipped/incomplete backfill renders "Not enough data", never a confident `VOO +0.00%`).
+dbt twins added (`voo_daily_return.sql`, `voo_cumulative.sql`, `deployed_book_vs_benchmarks.sql` +
+`schema.yml` entries). **VOO ingest:** one-time backfill via IBKR `get_price_history` for
+2026-04-17→latest (mirroring the SPY/ITEM-10 precedent, `source='connector-backfill'`); ongoing
+unconditional daily pull added to D2a STEP 1 (`Claude_Task_Plan.md`) alongside the existing SGOV/SPY
+pulls, with the per-name completeness check (previously OPEN-positions-only) extended to cover all
+three unconditional benchmark tickers — closing the exact gap that let SPY's own history sit at a
+single mark, unnoticed, since ITEM 10 (2026-07-11). **Deliberately NOT done:** a matching SPY
+backfill — SPY feeds the live beta/alpha kill-suppression in `39_beta_adjusted_alpha.sql`;
+retroactively deepening that history would change a live signal input, out of scope for a reporting
+ask.
+
+*`weekly_report.gs` v2 changes:* subject/HTML-title prefix changed to "Deployed vs Benchmarks" (was
+"Strategies vs SGOV") — the post-send `GmailApp.search()` string was updated in lockstep (both read
+`buildSubject_`'s exact prefix; a mismatch would silently break the unread/label housekeeping via its
+best-effort try/catch). New headline block (book/SGOV/VOO — cumulative %, avg/month, avg/year, $)
+between the trust block and the chart, with a sign-aware one-line takeaway ("beat"/"trailed" each
+benchmark). Chart gained a third line (VOO, steel blue `#5f7d95` — distinct from Strategy B's blue
+`#2a78d6` and SGOV's gray `#898781`), gated on `n_voo_mark_days > 0` so a not-yet-backfilled VOO never
+draws a false flat/zero line; the Gmail-safe HTML-bar fallback gained a matching VOO bar. Per-strategy
+table dropped the avg/week column (kept avg/month + avg/year per the ask) and gained a "VOO — own
+return" row parallel to the existing SGOV row (strategy rows themselves stay excess-vs-SGOV ONLY —
+never blended with VOO, to avoid any appearance that VOO factors into the kill/gate reading).
+`periodAvg_`'s new 21-day gate is hardcoded inside the function itself (not a shared file-level
+const) so it stays a self-contained pure function; new `isExtrapolated_` and `benchmarkRow_` helpers
+copied verbatim into `test_pure_helpers.js` alongside the updated `periodAvg_`/`buildSubject_`
+copies (11 new/changed assertions, including a regression pin on the live-verified 2026-07-13 figures
+— book +7.3734277% over N=52 deployed days → avg/mo +2.9147%, avg/yr +41.17%† — and an explicit test
+that the old `periodAvg_(0.10, 5, 5)` whole-window case now correctly returns `null` under the new
+21-day floor, not the pre-redesign 0.10). `node ops/weekly_report/test_pure_helpers.js`: 49/49 pass.
+Additionally verified functionally (not just via the pure-helper unit tests) with a one-off Node `vm`
+harness mirroring the 2026-07-02 precedent above — stubs `BigQuery`/`GmailApp`/`Charts`/`Utilities`/
+`ScriptApp` and feeds `gatherData_()` realistic response shapes across four scenarios (VOO fully
+backfilled; VOO with zero marks; nothing ever deployed; stale data + a simulated chart-build failure)
+— all four ran end-to-end with no throw and no `NaN` anywhere in the subject/HTML/plain-text output.
+`SCRIPT_VERSION` bumped to `'v2'`; `bigquery/43_script_version_registry.sql`'s seed updated in
+lockstep. **Owner action required to go live:** apply the VOO backfill + `46_weekly_benchmarks.sql`
++ the updated `43` MERGE via the BigQuery MCP (in that order — the views compute correctly with zero
+VOO rows, rendering "Not enough data", but have no VOO figures to show until the backfill lands),
+then re-paste `weekly_report.gs` and run `testReport()` (no new OAuth scope).
+
 ## 34. Guard config visibility + alert-channel liveness — 2026-07-03 (self-improvement audit)
 
 **Problem.** By §25/§27, five-plus CI jobs (`alert-relay`, `offsite-backup`, `keyless-sa-audit`,

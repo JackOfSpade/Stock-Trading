@@ -680,21 +680,26 @@ PER-STRATEGY PERFORMANCE MAINTENANCE (deployed-TWR engine; run after fill reconc
 marks are fresh; method in bigquery/03_twr_engine.sql + Operating_Protocols.md §14). The authoritative engine is
 the BigQuery value-weighted daily TOTAL-return TWR (`events.daily_marks` → `analytics.strategy_daily_returns` +
 `analytics.sgov_daily_return` → `perf.strategy_daily` → `perf.kill_flags`). Requires the BigQuery MCP connector.
-1. **Ingest today's marks (TOTAL-return source).** For each held ticker + SGOV + SPY (self-improvement audit
-   ITEM 10, 2026-07-11 — SPY is tracked UNCONDITIONALLY, regardless of holdings, exactly like SGOV: it is the
-   market-beta benchmark `analytics.strategy_beta` regresses every strategy's daily deployed return against,
-   `bigquery/39_beta_adjusted_alpha.sql`), pull `get_price_history(
+1. **Ingest today's marks (TOTAL-return source).** For each held ticker + SGOV + SPY + VOO (self-improvement
+   audit ITEM 10, 2026-07-11 — SPY is tracked UNCONDITIONALLY, regardless of holdings, exactly like SGOV: it is
+   the market-beta benchmark `analytics.strategy_beta` regresses every strategy's daily deployed return against,
+   `bigquery/39_beta_adjusted_alpha.sql`; VOO added 2026-07-13, owner directive — the weekly email's second,
+   purely informational benchmark, `bigquery/46_weekly_benchmarks.sql` — tracked unconditionally the same way),
+   pull `get_price_history(
    include_corporate_actions: true)` and `INSERT INTO events.daily_marks (mark_date, ticker, close, dividend,
    split_ratio, source)`: today's close, any ex-div cash dividend/share, split_ratio (split-adjusted at ingest),
    `source='connector'`. Idempotent on (mark_date, ticker). **FMP fallback (2026-06-28 #12):** if `get_price_history`
    returns no bar — or a bar older than `state.trading_day_today.last_trading_day` — fall back to the FMP connector
    (`mcp__FMP__quote` for the close; `mcp__FMP__chart` to confirm the dated bar / ex-div) and INSERT with
    `source='FMP-fallback'` (best-effort; prefer IBKR when present). On a systematic per-name IBKR gap, `CALL
-   ops.sp_raise_alert('warning','D2a','mark_gap', ...)`. **Per-name completeness check:** after ingest, assert every
-   OPEN position (`state.current_positions`, ex-SGOV) has a `state.daily_marks_curated` row for `last_trading_day`;
-   on a gap neither source filled, carry the prior mark forward explicitly (mirroring the SGOV forward-fill) AND
-   `CALL ops.sp_raise_alert('warning','D2a','mark_gap', ...)`. Standing CI detector: dbt test
-   `dbt/tests/assert_open_positions_have_marks.sql`.
+   ops.sp_raise_alert('warning','D2a','mark_gap', ...)`. **Completeness check:** after ingest, assert (a) every
+   OPEN position (`state.current_positions`, ex-SGOV) AND (b) each of the unconditional benchmark tickers
+   (SGOV, SPY, VOO — added 2026-07-13, so a silent VOO/SPY ingest stop is caught the same way a held-position
+   gap is, instead of going unnoticed the way SPY's history did before this date) has a `state.daily_marks_curated`
+   row for `last_trading_day`; on a gap neither source filled, carry the prior mark forward explicitly (mirroring
+   the SGOV forward-fill) AND `CALL ops.sp_raise_alert('warning','D2a','mark_gap', ...)`. Standing CI detector:
+   dbt test `dbt/tests/assert_open_positions_have_marks.sql` (held positions only — the benchmark-ticker leg of
+   this check is D2a-side only, not yet mirrored into a dbt test).
 1b. **Ingest today's option marks (self-improvement audit ITEM 12, 2026-07-11 — `bigquery/40_options_marks.sql`).**
    For each held position whose ticker is an OCC option symbol (`analytics.fn_is_occ_option_symbol`; today only
    possible for Strategy C, which is roster-ADOPTED with an active router path — not hypothetical), pull the
@@ -704,7 +709,7 @@ the BigQuery value-weighted daily TOTAL-return TWR (`events.daily_marks` → `an
    (`events.trade_fills.ticker` — the join key `analytics.strategy_daily_returns` uses), `multiplier=100` (US
    equity options; c_options_math.py's own convention) unless the contract's actual multiplier differs (record it
    if so), `source='connector'` or `'FMP-fallback'`. Idempotent on (mark_date, occ_symbol). This is a SEPARATE
-   ingest branch from step 1 above (equity/SGOV/SPY) — option contracts are never pulled via `get_price_history`.
+   ingest branch from step 1 above (equity/SGOV/SPY/VOO) — option contracts are never pulled via `get_price_history`.
    After ingest, read `state.option_mark_anomalies`: any row there means a held option position is STILL missing
    its mark for today — `CALL ops.sp_raise_alert('warning','D2a','option_mark_missing', ...)`. Do NOT
    fabricate/carry-forward an option premium the way step 1 forward-fills an equity gap (option premiums move too
