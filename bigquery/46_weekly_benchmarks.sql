@@ -80,6 +80,22 @@ FROM j;
 -- Same-days book vs SGOV vs VOO, percent AND dollar ("same amount, same time") legs. n_voo_mark_days
 -- / voo_last_mark_date are the data-presence signals the email gates its VOO rendering on (chart
 -- line, headline row, subject fragment) — see the NULL-vs-ZERO note above.
+--
+-- VOO GAP-SPAN CAPITAL AVERAGING (adversarial self-audit, 2026-07-13): analytics.voo_daily_return's
+-- r_voo is LAG'd over VOO's OWN sparse mark sequence, so the day VOO data resumes after any ingest
+-- gap, r_voo is a MULTI-DAY catch-up return, not a one-day rate. The PERCENT legs (voo_return,
+-- excess_vs_voo_pct) are unaffected by this — EXP(SUM(LN(1+r))) is invariant to how the return mass
+-- is distributed across days, so a multi-day catch-up return chains in exactly the same as if it had
+-- landed as several smaller daily returns. The DOLLAR legs are NOT invariant: pricing that whole
+-- catch-up return against only the resume day's SINGLE-day deployed_capital snapshot misattributes it
+-- to whichever capital level happened to be on record when data resumed, rather than the capital that
+-- was actually deployed across the gap (this book's deployed_capital can move >2x day to day). Fix:
+-- group every gap day with the resume day that closes it out (the nearest as_of_date >= it with a
+-- real VOO mark, via voo_span_end below — the standard "gaps and islands" grouping), then price the
+-- resume day's catch-up return against the AVERAGE capital across that whole span instead of its own
+-- single day's snapshot. When there is no gap (every day has its own VOO mark, the case as of
+-- 2026-07-13), every span is a singleton and voo_span_avg_capital == capital exactly — a mathematically
+-- exact no-op, so this changes nothing about any figure already computed/emailed to date.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.deployed_book_vs_benchmarks` AS
 WITH agg AS (
   SELECT as_of_date,
@@ -96,10 +112,18 @@ j AS (
         ORDER BY a.as_of_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW),
       0), -0.9999) AS r_sgov,
     GREATEST(COALESCE(v.r_voo, 0), -0.9999) AS r_voo,
-    v.r_voo IS NOT NULL AS has_voo
+    v.r_voo IS NOT NULL AS has_voo,
+    -- Nearest as_of_date >= this row with a real VOO mark — the resume day this row's gap-span
+    -- (if any) closes out on. A day WITH its own VOO mark maps to itself (a singleton span).
+    MIN(CASE WHEN v.r_voo IS NOT NULL THEN a.as_of_date END) OVER (
+      ORDER BY a.as_of_date ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) AS voo_span_end
   FROM agg a
   LEFT JOIN `stock-trading-498512.analytics.sgov_daily_return` sg USING (as_of_date)
   LEFT JOIN `stock-trading-498512.analytics.voo_daily_return`  v  USING (as_of_date)
+),
+voo_span AS (
+  SELECT *, AVG(capital) OVER (PARTITION BY voo_span_end) AS voo_span_avg_capital
+  FROM j
 )
 SELECT
   MIN(as_of_date)                       AS first_deployed_date,
@@ -119,8 +143,8 @@ SELECT
   SUM(pnl_dollars)                               AS deployed_pnl_dollars,
   SUM(capital * r_sgov)                          AS sgov_counterfactual_dollars,
   CASE WHEN COUNTIF(has_voo) = 0 THEN NULL
-       ELSE SUM(capital * r_voo) END             AS voo_counterfactual_dollars,
+       ELSE SUM(voo_span_avg_capital * r_voo) END AS voo_counterfactual_dollars,
   SUM(pnl_dollars) - SUM(capital * r_sgov)       AS edge_vs_sgov_dollars,
   CASE WHEN COUNTIF(has_voo) = 0 THEN NULL
-       ELSE SUM(pnl_dollars) - SUM(capital * r_voo) END AS edge_vs_voo_dollars
-FROM j;
+       ELSE SUM(pnl_dollars) - SUM(voo_span_avg_capital * r_voo) END AS edge_vs_voo_dollars
+FROM voo_span;
