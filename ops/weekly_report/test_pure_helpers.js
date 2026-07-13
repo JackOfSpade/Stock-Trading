@@ -23,10 +23,13 @@
  *   - isExtrapolated_      (weekly_report.gs lines 281-283)
  *   - benchmarkRow_        (weekly_report.gs lines 289-296)
  *   - signPct_             (weekly_report.gs line 351)
+ *   - signDollar_          (weekly_report.gs line 352)
+ *   - fmtAbsDollars_       (weekly_report.gs line 353)
+ *   - edgeWord_            (weekly_report.gs line 354)
  *   - parseIsoDateLocal_   (weekly_report.gs lines 365-368)
  *   - downsampleDates_     (weekly_report.gs lines 371-378)
  *   - buildHealthReasons_  (weekly_report.gs lines 299-320)
- *   - buildSubject_        (weekly_report.gs lines 119-134)
+ *   - buildSubject_        (weekly_report.gs lines 119-135)
  *   - esc_                 (weekly_report.gs line 361)
  *   - isTest_              (alert_emailer.gs line 210)
  *   - esc2_                (alert_emailer.gs line 205)
@@ -81,7 +84,10 @@ function benchmarkRow_(returnPct, days) {
   };
 }
 
-function signPct_(p) { return (p >= 0 ? '+' : '−') + Math.abs(p).toFixed(2) + '%'; } // unicode minus
+function signPct_(p){ return (p >= 0 ? '+' : '−') + Math.abs(p).toFixed(2) + '%'; } // unicode minus
+function signDollar_(v) { return (v >= 0 ? '+$' : '−$') + Math.abs(v).toFixed(2); } // unicode minus
+function fmtAbsDollars_(v) { return '$' + Math.abs(v).toFixed(2); }
+function edgeWord_(v) { return v >= 0 ? 'beat' : 'trailed'; }
 
 // 'YYYY-MM-DD' -> local-midnight Date (never new Date('YYYY-MM-DD'), which is UTC midnight and
 // renders as the previous day in a US-behind-UTC display timezone).
@@ -269,6 +275,36 @@ t('signPct_ prefixes zero with + (not the unicode minus)', () => {
 });
 t('signPct_ prefixes a negative value with the unicode minus and its absolute magnitude', () => {
   assert.strictEqual(signPct_(-2.5), '−2.50%');
+});
+
+// ---- signDollar_ ----
+t('signDollar_ prefixes a positive value with +$', () => {
+  assert.strictEqual(signDollar_(16.09), '+$16.09');
+});
+t('signDollar_ prefixes zero with +$ (not the unicode minus)', () => {
+  assert.strictEqual(signDollar_(0), '+$0.00');
+});
+t('signDollar_ prefixes a negative value with the unicode minus and its absolute magnitude', () => {
+  assert.strictEqual(signDollar_(-4.5), '−$4.50');
+});
+
+// ---- fmtAbsDollars_ ----
+t('fmtAbsDollars_ always renders an unsigned magnitude, positive input', () => {
+  assert.strictEqual(fmtAbsDollars_(14.76), '$14.76');
+});
+t('fmtAbsDollars_ always renders an unsigned magnitude, negative input', () => {
+  assert.strictEqual(fmtAbsDollars_(-14.76), '$14.76');
+});
+
+// ---- edgeWord_ ----
+t('edgeWord_ returns "beat" for a positive edge', () => {
+  assert.strictEqual(edgeWord_(8.28), 'beat');
+});
+t('edgeWord_ returns "beat" at the zero boundary (matching signPct_/signDollar_\'s zero-is-positive convention)', () => {
+  assert.strictEqual(edgeWord_(0), 'beat');
+});
+t('edgeWord_ returns "trailed" for a negative edge', () => {
+  assert.strictEqual(edgeWord_(-3.2), 'trailed');
 });
 
 // ---- parseIsoDateLocal_ ----
