@@ -364,6 +364,17 @@ routines:
 # instruction is fully canonical). W5's Instructions field was already correct; only its Name/title
 # field was missing the " — regular routine" suffix (fixed 2026-07-10). A2's Instructions had a
 # trailing newline (stripped 2026-07-10).
+#
+# 2026-07-13/14 INCIDENT (RUNBOOK §41): cron times below are NOT what drifted this time (RemoteTrigger
+# get confirmed every evening-block trigger still matches this file exactly) — the evening block (D2
+# onward) simply ran 5-7h LATE (opaque cloud trigger infra, same class as the 2026-07-12 W2/W4 no-show
+# above). Because AR_orc/D3/SL5/SL3's MT evening slots are cron-encoded on/after UTC midnight, the delay
+# pushed their actual execution past LOCAL midnight MT too — so each one's dependency check evaluated
+# against the wrong (new, not-yet-started) calendar day instead of the day it actually served, even
+# though that day's upstream had genuinely completed, just also late. Fixed same-day, mechanically,
+# inside ops.sp_assert_deps (bigquery/12_cadence_monitor.sql) — a dependency completed for
+# yesterday now also satisfies the gate while Denver wall-clock is before noon. No cadence/cron change
+# needed here; this note exists purely so a repeat delay isn't re-diagnosed as a schedule problem.
 
 # ---- NON-CLAUDE AUTOMATION (documented here for visibility; not run by the harness) ----
 # The weekly performance self-email is NOT a Claude routine. It is a Google Apps Script

@@ -20,6 +20,12 @@
 -- no routine actually invokes sp_assert_deps until well after the full 01..44 sequence has run. Just
 -- don't skip 38 in a partial/manual re-apply of this file alone.
 --
+-- ADDED 2026-07-14 (RUNBOOK §41): ops.sp_assert_deps also tolerates a dependency completed for
+-- in_run_date MINUS ONE DAY, but only while Denver wall-clock is still before NOON of in_run_date --
+-- the "midnight-crossing grace" for a delayed evening trigger whose actual execution slipped past
+-- local midnight and therefore self-diagnosed against the wrong (new, not-yet-started) day. See the
+-- comment on that clause inside the procedure for the full incident + reasoning.
+--
 -- SELF-BOOTSTRAPPING (the key design choice): most routines do not yet self-log (the run-logging
 -- convention is instruction-only and was being skipped — that is why ops.run_log was empty). If the
 -- monitor alerted on every routine that never logs, it would false-alarm constantly. So a routine is
@@ -194,6 +200,34 @@ BEGIN
   EXCEPTION WHEN ERROR THEN SELECT @@error.message;
   END;
 
+  -- MIDNIGHT-CROSSING GRACE (2026-07-14, RUNBOOK §41). in_run_date is computed by the CALLING
+  -- routine's own session from state.trading_day_today at the moment it happened to execute --
+  -- not from when it was scheduled. Confirmed live 2026-07-13/14: the evening cron block (D2
+  -- onward) ran 5-7h late (Anthropic cloud trigger infra, same opaque class as the W2/W4 no-show
+  -- and the pre-2026-07-10 UTC-evaluation bug already logged in ops/cadence.yaml), and because
+  -- several evening MT slots are encoded as UTC-midnight-adjacent cron expressions, the delay
+  -- pushed AR_orc/D3/SL5/SL3's actual execution past local midnight. By the time each one ran,
+  -- wall-clock had already rolled to the NEXT calendar day, so in_run_date became that new day --
+  -- whose own chain genuinely hasn't started yet -- even though the correct (immediately
+  -- preceding) day's upstream HAD already completed, just also late. Real example: AR_att
+  -- completed cleanly for 2026-07-13 at 23:05 MT; AR_orc fired at 00:42 MT 2026-07-14 and raised
+  -- a false missing_dependency because it checked AR_att against 07-14 instead of 07-13.
+  -- FIX: a dependency also satisfies the gate if it completed for in_run_date MINUS ONE DAY,
+  -- but ONLY while current Denver wall-clock is still before NOON of in_run_date -- i.e. only
+  -- during the plausible overnight tail of a delayed evening run, never once the new day's own
+  -- fresh evening cycle would legitimately be underway (earliest normal slot is D1 at 4pm MT).
+  -- This relaxes an equality check on data that's already correctly dated -- it does not
+  -- fabricate or backfill any row (unlike the self-heal above). Residual risk: a genuinely
+  -- anomalous OUT-OF-SCHEDULE early trigger during the grace window could read yesterday's
+  -- upstream as satisfied when today's is truly not ready yet; accepted because (a) this
+  -- pattern has never been observed here (documented failure modes are late/no-show/miscomputed
+  -- triggers, never early/duplicate ones), and (b) order-staging routines (D2) carry their own
+  -- idempotency checks (d1_actions cross-check, PENDING_ANALYSIS staged-order dedup, fn_order_guard)
+  -- as a backstop against reprocessing stale input regardless of this gate. Verified 2026-07-14
+  -- (read-only replay against real ops.run_log data, at the actual historical fire timestamps):
+  -- fixes the real AR_orc<-AR_att and SL3<-D2a false positives from the 07-13/07-14 incident,
+  -- while leaving the genuine D3<-D2 gap (D2 never completed 07-13 OR 07-14, a separate
+  -- trading_halted-driven miss) correctly still failing.
   SET missing = (
     SELECT STRING_AGG(d, ', ' ORDER BY d)
     FROM UNNEST(in_deps) AS d
@@ -201,9 +235,17 @@ BEGIN
             SELECT 1 FROM `stock-trading-498512.ops.run_log` r
             WHERE r.routine = d AND r.status = 'completed'
               AND r.run_date >= DATE_SUB(in_run_date, INTERVAL 14 DAY))
-      AND NOT EXISTS (  -- ...but it did not complete for this run_date
+      AND NOT EXISTS (  -- ...but it did not complete for this run_date, nor (within the
+                        -- midnight-crossing grace window above) for the day before it
             SELECT 1 FROM `stock-trading-498512.ops.run_log` r
-            WHERE r.routine = d AND r.run_date = in_run_date AND r.status = 'completed')
+            WHERE r.routine = d AND r.status = 'completed'
+              AND (
+                r.run_date = in_run_date
+                OR (
+                  r.run_date = DATE_SUB(in_run_date, INTERVAL 1 DAY)
+                  AND DATETIME(CURRENT_TIMESTAMP(), 'America/Denver') < DATETIME(in_run_date, TIME '12:00:00')
+                )
+              ))
   );
   IF missing IS NOT NULL AND missing != '' THEN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(

@@ -2243,3 +2243,65 @@ separately-scoped spike resolves headless IBKR auth (Item 26 (a)'s "long pole") 
 GO/NO-GO explicitly clears order-placing routines for a headless harness — at which point a thin order
 gateway is the natural first thing to build inside that harness, not a separate project. No `ops.autonomy_levels.yaml`
 registration, no new schema, no live-apply: this section is the entire deliverable.
+
+## 41. Delayed evening trigger crosses local midnight → dependency gate checks the wrong day — the 2026-07-13/14 cascade *(new incident class, fixed same-day)*
+
+**Symptom.** Four `missing_dependency` criticals fired between 00:44-01:23 MT on 2026-07-14 —
+`AR_orc` blocked on `AR_att`, `SL3` blocked on `D2a`, `SL5` blocked on `AR_orc`, `D3` blocked on `D2` — plus
+two carried-over duplicates from the evening before and the nightly `scheduled.freshness`/`scheduled.cadence`
+criticals, all landing while `state.trading_enabled = FALSE`. Surfaced via the `alert_emailer.gs` digest;
+investigated live (BigQuery + `RemoteTrigger get` on each routine's cron) rather than assumed.
+
+**Root cause, mechanically confirmed.** `RemoteTrigger get` on each trigger id (`ops/trigger_ids.json`) showed
+every evening-block cron (`D2` 23:15 UTC, `AR_att` 23:30 UTC, `AR_orc` 00:00 UTC, `D3` 00:30 UTC, `SL5` 01:15
+UTC, `SL3` 02:00 UTC — all correctly matching `ops/cadence.yaml`'s documented MT times, so this is NOT a
+schedule-drift bug like the pre-2026-07-10 UTC-evaluation issue) actually fired 5-7h late on 2026-07-13:
+`last_fired_at` for `D2` was ~22:07 MT vs. its 17:15 MT slot, `AR_orc` ~00:42 MT (07-14) vs. its 18:00 MT
+(07-13) slot, `D3` ~01:20 MT vs. 18:30 MT, etc. Root cause of the delay itself is the same opaque Anthropic
+cloud trigger infra already logged for the 2026-07-12 W2/W4 no-show (`ops/cadence.yaml` DAILY/WEEKLY
+schedule comments) — no log access from this repo. The NEW finding is the second-order effect: several
+evening MT slots are encoded as cron expressions landing on or after UTC midnight (`AR_orc` `0 0 * * *`, `D3`
+`30 0 * * *`, `SL5` `15 1 * * *`, `SL3` `0 2 * * *`), which is normally harmless (a routine still executes
+within the same MT calendar day it targets) — UNTIL a multi-hour delay pushes the ACTUAL execution past local
+midnight MT too. Each routine computes its dependency-check date (`in_run_date` passed to
+`ops.sp_assert_deps`) from `state.trading_day_today` at the moment it happens to execute, not from when it
+was scheduled — so a routine that finally runs at, say, 00:42 MT checks its upstream against the NEW calendar
+day (whose own evening chain hasn't started yet, next slot hours away) instead of the day it was actually
+serving, even though that day's upstream had genuinely completed — also late, but before midnight. Confirmed
+concretely: `AR_att` completed cleanly for 2026-07-13 at 23:05 MT; `AR_orc` fired at 00:42 MT 2026-07-14 and
+raised `missing_dependency` checking `AR_att` against 07-14 instead of 07-13. Same mechanism for `SL3`
+(`D2a` completed 07-13 at 16:28 MT, `SL3` fired 00:59 MT 07-14 and checked against the wrong day). Two of the
+four headline alerts (`SL5`<-`AR_orc`, `D3`<-`D2`) were NOT this artifact — `AR_orc` and `D2` themselves
+never produced a `completed` row for 07-13 either (see below), a genuine gap, not a day-boundary mismatch.
+
+**Distinct from, and layered under, §38.** §38's landed-but-unlogged self-heal fixes the case where the
+upstream's real output landed but its OWN `ops.run_log` completion write never happened. This incident's
+upstreams (`AR_att`, `D2a`) DID log `completed` — correctly, for the day they actually processed. The bug is
+in the CALLER's equality check (`run_date = in_run_date`), not in the upstream's logging. Both self-heals
+now live inside the same `ops.sp_assert_deps` (`bigquery/12_cadence_monitor.sql`), in the order: (1) best-
+effort `sp_backfill_run_log_from_markers()` call, (2) the dependency check itself, now tolerant of either
+`in_run_date` or `in_run_date` minus one day (the latter only while Denver wall-clock is before **noon** of
+`in_run_date` — comfortably covering the observed 5-7h delay while staying well clear of D1's normal 4pm MT
+slot for the new day, so a routine invoked once that day's own fresh evening cycle is genuinely underway
+still gets a real gate). Relaxes an equality check on already-correctly-dated data; fabricates nothing.
+
+**Why the other two alerts (`SL5`<-`AR_orc`, `D3`<-`D2`) needed no code change.** `AR_orc` halted on its OWN
+(now-fixed) `AR_att` gate rather than ever completing, so it had no `completed` row for `SL5` to find even a
+day early — once `AR_orc` succeeds on a future invocation (immediate now that its own gate self-heals), `SL5`
+resolves on its next run normally, no separate fix needed. `D2` halted for a genuinely different reason (the
+`trading_halted` gate — order-staging blocked because `state.trading_enabled = FALSE`, itself tripped by
+this same alert cascade) — a real, correctly-fail-closed gap the owner reviewed and manually resolved
+(`ops.alerts` resolved_note, 2026-07-14, "root cause fully diagnosed... no capital impact"), unrelated to the
+midnight-crossing bug and requiring no code change (`trading_halted` is deliberately human-latching per
+`ops.alert_policy`, not mechanically auto-resolvable — see §38's own Rule-4 fix for that design).
+
+**Verification.** Live-applied via BigQuery MCP 2026-07-14, then sanity-tested read-only (no test rows written
+to production `ops.run_log`/`ops.alerts` — replayed the exact `missing`-computation WHERE clause against real
+data at the actual historical fire timestamps): confirms the fix clears the `AR_orc`<-`AR_att` and `SL3`<-
+`D2a` false positives while correctly leaving `D3`<-`D2` (a genuine gap) still failing.
+
+**Owner action required:** none. All four `missing_dependency` criticals plus the two `scheduled.*` criticals
+remain `latching = FALSE` in `ops.alert_policy` and clear mechanically once the normal 07-14 evening cycle
+(D1 4pm MT onward) completes — this fix prevents the SAME false positive recurring, it does not itself need
+to touch `ops.alerts`.
+registration, no new schema, no live-apply: this section is the entire deliverable.
