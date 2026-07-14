@@ -13,6 +13,13 @@
 -- 10_observability.sql (ops.run_log, ops.sp_raise_alert_once). Idempotent (OR REPLACE). Apply via
 -- the BigQuery MCP execute_sql AFTER 09 and 10.
 --
+-- ADDED 2026-07-14: ops.sp_assert_deps now also CALLs ops.sp_backfill_run_log_from_markers()
+-- (bigquery/38_run_log_selfheal.sql) as its first, best-effort step -- a forward reference in
+-- numeric apply order (38 applies after this file). Harmless for a from-scratch apply-in-order
+-- rebuild: BigQuery resolves a CALL's callee at invocation time, not at CREATE PROCEDURE time, and
+-- no routine actually invokes sp_assert_deps until well after the full 01..44 sequence has run. Just
+-- don't skip 38 in a partial/manual re-apply of this file alone.
+--
 -- SELF-BOOTSTRAPPING (the key design choice): most routines do not yet self-log (the run-logging
 -- convention is instruction-only and was being skipped — that is why ops.run_log was empty). If the
 -- monitor alerted on every routine that never logs, it would false-alarm constantly. So a routine is
@@ -168,6 +175,25 @@ CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_assert_deps`(
 )
 BEGIN
   DECLARE missing STRING;
+
+  -- Mechanical self-heal, moved from instruction to SQL (2026-07-14, self-improvement audit —
+  -- Claude_Task_Plan.md's "§38 evidence-check BEFORE this gate can fire" paragraph, added
+  -- 2026-07-11, asked the CALLING routine's own session to manually git-log/query-marker/INSERT
+  -- before retrying this gate; verified 2026-07-13/14 that step is not reliably followed under a
+  -- session that has already hit the RAISE below and aborted. Calling the same backfill proc
+  -- (bigquery/38_run_log_selfheal.sql, depended on here -- must be (re)applied for this CALL to
+  -- resolve) HERE, first, unconditionally, on every gate check removes the reliance on agent
+  -- compliance entirely: a same-day landed-but-unlogged upstream (real output already on
+  -- origin/main, CI-written marker present, only its own ops.run_log completion write missing)
+  -- self-heals before `missing` is even evaluated, so intraday callers no longer wait on the
+  -- nightly cadence_check.sql pass OR on a session correctly hand-executing the git-evidence
+  -- dance. Best-effort/wrapped: a bug in the backfill proc must never block the actual dependency
+  -- evaluation below from running -- this is a pure attempt, not a precondition.
+  BEGIN
+    CALL `stock-trading-498512.ops.sp_backfill_run_log_from_markers`();
+  EXCEPTION WHEN ERROR THEN SELECT @@error.message;
+  END;
+
   SET missing = (
     SELECT STRING_AGG(d, ', ' ORDER BY d)
     FROM UNNEST(in_deps) AS d
