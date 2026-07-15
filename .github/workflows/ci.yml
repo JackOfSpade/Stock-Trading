@@ -114,7 +114,7 @@ jobs:
           cache: 'pip'
           cache-dependency-path: requirements-ci.txt
       - name: Install dbt (pinned via constraints — RUNBOOK §25 C3)
-        run: pip install --quiet -c requirements-ci.txt dbt-core dbt-bigquery
+        run: pip install --quiet -c requirements-ci.txt dbt-core dbt-bigquery pyyaml
       - name: Write a CI profile (no creds — parse does not connect)
         # dbt/profiles.ci.yml is the single checked-in source for this profile (2026-07-04 code-quality
         # audit — this job and dbt-parity's equivalent step previously each wrote the same content via
@@ -127,6 +127,12 @@ jobs:
         run: |
           dbt deps
           dbt parse
+      - name: dbt view coverage (advisory — 2026-07-14 audit finding)
+        # scripts/dbt_parity.py only proves parity for views that already have a dbt model/source;
+        # this prints which live state/analytics/perf views have neither, so drift in coverage
+        # itself (not just row-level logic) is visible. No baseline/allowlist yet, so it prints the
+        # full known backlog every run — advisory (|| true), does not block CI/auto-merge.
+        run: python scripts/check_dbt_view_coverage.py || true
 
   dbt-parity:
     name: dbt↔live row-level parity (keyless WIF)
