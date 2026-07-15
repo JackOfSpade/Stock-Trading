@@ -70,9 +70,10 @@ jobs:
     # The most CONSEQUENTIAL automation in the repo is the embedded bash that decides whether routine git
     # output reaches main (auto-merge-claude.yml) and whether a strand is detected (stranded-branch-check.yml)
     # — yet only the lower-stakes Python parsers had purpose-built tests. actionlint statically checks every
-    # workflow (and runs shellcheck on each `run:` block); shellcheck covers every standalone script matched
-    # by scripts/*.sh (glob — new scripts are covered automatically, no list to maintain here). A subtle edit
-    # to the branch-selection filter, the merge-base ancestry re-check, or the fail-closed default would
+    # workflow (and runs shellcheck on each `run:` block); shellcheck covers every standalone .sh script
+    # under scripts/, tests/, .claude/, and infra/terraform/ (globs — new scripts dropped into any of those
+    # four directories are covered automatically, no list to maintain here). A subtle edit to the
+    # branch-selection filter, the merge-base ancestry re-check, or the fail-closed default would
     # otherwise regress with no CI signal.
     #
     # BLOCKING GATE (promoted 2026-06-29 after a confirmed clean run on the runner — CI #102, all steps
@@ -91,7 +92,7 @@ jobs:
       - name: actionlint (workflow YAML + embedded run-block bash via shellcheck)
         run: ./actionlint -color
       - name: shellcheck standalone scripts (warning+ blocks)
-        run: shellcheck -S warning scripts/*.sh
+        run: shellcheck -S warning scripts/*.sh tests/*.sh .claude/*.sh infra/terraform/*.sh
 
   dbt:
     name: dbt parse (offline model + test validation)

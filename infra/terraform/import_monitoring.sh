@@ -27,7 +27,7 @@ set -uo pipefail
 PROJECT_ID="${PROJECT_ID:-stock-trading-498512}"
 CHANNEL_EMAIL="${CHANNEL_EMAIL:-jacksterwu@gmail.com}"
 
-cd "$(dirname "$0")"
+cd "$(dirname "$0")" || exit 1
 
 import_if_absent() { # $1 = terraform address, $2 = import id
   local addr="$1" id="$2"
