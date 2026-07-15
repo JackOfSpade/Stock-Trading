@@ -41,6 +41,7 @@ REAL_PATHS = {
 }
 REAL_DERIVED_LIVE_SQL = list(rc.DERIVED_LIVE_SQL)
 REAL_DBT_RECONCILE = rc.DBT_RECONCILE
+REAL_DBT_SCHEMA_ACCEPTED_VALUES = rc.DBT_SCHEMA_ACCEPTED_VALUES
 REAL_STRATEGY_DIR = rc.STRATEGY_DIR
 REAL_STRATEGY_MATH_DIR = rc.STRATEGY_MATH_DIR
 REAL_C_OPTIONS_MATH = rc.C_OPTIONS_MATH
@@ -85,6 +86,12 @@ def repo_copy(tmp_path, monkeypatch):
     dbt_dst = dst_root / "dbt_tests" / "assert_cash_flows_reconcile.sql"
     shutil.copy(REAL_DBT_RECONCILE, dbt_dst)
     monkeypatch.setattr(rc, "DBT_RECONCILE", str(dbt_dst))
+
+    # dbt/models/analytics/schema.yml (R-G's accepted_values(strategy) cross-check).
+    (dst_root / "dbt_models_analytics").mkdir()
+    schema_dst = dst_root / "dbt_models_analytics" / "schema.yml"
+    shutil.copy(REAL_DBT_SCHEMA_ACCEPTED_VALUES, schema_dst)
+    monkeypatch.setattr(rc, "DBT_SCHEMA_ACCEPTED_VALUES", str(schema_dst))
 
     # strategy_math/ package + c_options_math.py (R-F spec_hash inputs) — copied so a test can mutate
     # a math module and have spec_hash_inputs() (a function re-reading these monkeypatched constants,
@@ -397,6 +404,25 @@ def test_spec_locked_strategy_without_math_module_is_a_non_blocking_note(repo_co
     out = capsys.readouterr().out
     assert rc_code == 0, "a spec-locked strategy missing from spec_hash_inputs() must NOT fail the build"
     assert "'F'" in out and "no spec_hash_inputs() entry" in out
+
+
+# ---- (b14) R-G: dbt schema.yml accepted_values(strategy) drifts from the roster-active set ----
+def test_schema_yml_accepted_values_drift_is_caught(repo_copy):
+    p = rc.DBT_SCHEMA_ACCEPTED_VALUES
+    txt = _read(p)
+    old = "values: ['A', 'B', 'C', 'D', 'E']"
+    assert txt.count(old) >= 1, "fixture assumption about schema.yml's accepted_values lists drifted"
+    _write(p, txt.replace(old, "values: ['A', 'B', 'C', 'D']", 1))
+    assert rc.main() == 1
+
+
+def test_schema_yml_unrelated_accepted_values_block_is_not_flagged(repo_copy):
+    # conviction_features.decision's accepted_values(['GO']) must never be compared against the
+    # roster set — R-G only inspects columns literally named `strategy`.
+    p = rc.DBT_SCHEMA_ACCEPTED_VALUES
+    txt = _read(p)
+    assert "values: ['GO']" in txt, "fixture assumption about the decision column's accepted_values drifted"
+    assert rc.main() == 0
 
 
 # ---- skip semantics: pre-2026-07-10 checkout without strategy/roster.yaml is a clean SKIP ----

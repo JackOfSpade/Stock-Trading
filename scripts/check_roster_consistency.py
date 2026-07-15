@@ -107,6 +107,9 @@ DERIVED_LIVE_SQL = [
     os.path.join(ROOT, "dbt", "models", "analytics", "strategy_nav.sql"),
 ]
 DBT_RECONCILE = os.path.join(ROOT, "dbt", "tests", "assert_cash_flows_reconcile.sql")
+# R-G: dbt generic `accepted_values` tests on the `strategy` column that hardcode roster-active
+# codes -- same bare-literal drift class as R-B, living in schema.yml instead of derived SQL.
+DBT_SCHEMA_ACCEPTED_VALUES = os.path.join(ROOT, "dbt", "models", "analytics", "schema.yml")
 STRATEGY_MATH_DIR = os.path.join(ROOT, "strategy_math")
 C_OPTIONS_MATH = os.path.join(ROOT, "c_options_math.py")
 
@@ -438,6 +441,30 @@ def main():
                           f"terminate-and-restart-as-new, not a silent edit; if this IS a genuine restart, "
                           f"update spec_hash together with is_restart_of/spec_locked_since.")
 
+    # ---- R-G: dbt schema.yml accepted_values tests on the `strategy` column must track the roster
+    # (2026-07-14 audit finding) — CLAUDE.md's settled decision makes strategy add/delete fully
+    # autonomous (SISA), so roster.yaml's active-code set can grow/shrink with no human touch at
+    # any time; these 4 hardcoded ['A'..'E'] lists would then silently start failing `dbt test`
+    # (advisory-only — see ci.yml) at exactly the moment operators most need a clean signal. Only
+    # ever inspects columns literally named `strategy`, so it cannot trip on the unrelated
+    # `conviction_features.decision` accepted_values(['GO']) block in the same file. ----
+    if os.path.exists(DBT_SCHEMA_ACCEPTED_VALUES):
+        schema_doc = yaml.safe_load(open(DBT_SCHEMA_ACCEPTED_VALUES, encoding="utf-8")) or {}
+        for model in schema_doc.get("models", []) or []:
+            for col in model.get("columns", []) or []:
+                if col.get("name") != "strategy":
+                    continue
+                for test in col.get("tests", []) or []:
+                    if not isinstance(test, dict) or "accepted_values" not in test:
+                        continue
+                    codes = set((test["accepted_values"] or {}).get("values", []) or [])
+                    if codes and codes != roster_codes:
+                        errors.append(
+                            f"R-G: dbt/models/analytics/schema.yml model {model.get('name')!r} column "
+                            f"'strategy' accepted_values {sorted(codes)} no longer matches the roster-active "
+                            f"set {sorted(roster_codes)} — update this list (or drop the test) alongside "
+                            f"the roster change.")
+
     # ---- report ----
     if errors:
         print("ROSTER CONSISTENCY: FAIL\n")
@@ -458,7 +485,7 @@ def main():
           f"slice-map; no bare roster literal or fixed /5 divisor in the live derived SQL; the dbt reconcile "
           f"test is count-agnostic; arsenal_rails' SQL constants agree with roster.yaml's rails block; every "
           f"SPEC_HASH_INPUTS-covered spec-locked strategy's spec_hash agrees with its .md slice + math "
-          f"module(s).")
+          f"module(s); dbt schema.yml accepted_values(strategy) tests agree with the roster-active set.")
     if notes:
         print("\nNOTES (non-blocking):")
         for n in notes:
