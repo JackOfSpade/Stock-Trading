@@ -23,10 +23,22 @@
 -- events.daily_marks — this is a LATENT, not-yet-triggered gap, fixed prophylactically.
 --
 -- FIX: add a `row_uid STRING DEFAULT GENERATE_UUID()` column to events.daily_marks and
--- events.macro_fred (ALTER TABLE ... ADD COLUMN IF NOT EXISTS — does NOT backfill existing rows;
--- they get NULL row_uid, which is fine since no current duplicates exist to disambiguate), then add
--- it as a secondary ORDER BY tiebreaker in the three curated views below. trade_fills_curated adds
--- `trade_id DESC` instead (already unique per fill, no ALTER needed).
+-- events.macro_fred (does NOT backfill existing rows; they get NULL row_uid, which is fine since no
+-- current duplicates exist to disambiguate), then add it as a secondary ORDER BY tiebreaker in the
+-- three curated views below. trade_fills_curated adds `trade_id DESC` instead (already unique per
+-- fill, no ALTER needed).
+--
+-- BUG FIX (2026-07-15, caught applying this file live): the original single-statement
+-- `ADD COLUMN IF NOT EXISTS row_uid STRING DEFAULT GENERATE_UUID()` fails on an already-existing
+-- table with `Add field with default value to an existing table schema is not supported` — BigQuery
+-- only allows a defaulted ADD COLUMN at CREATE TABLE time; adding a defaulted column to a table that
+-- already exists must be split into ADD COLUMN (no default) + a separate ALTER COLUMN SET DEFAULT,
+-- exactly as the error message's own suggested fix says. Deliberately NOT taking the error message's
+-- 3rd suggested statement (`UPDATE ... SET row_uid = GENERATE_UUID() WHERE TRUE`) — that would
+-- backfill every existing row, which this file's original design explicitly decided against (see
+-- above: no current duplicates exist, so NULL row_uid on old rows is fine and a full-table UPDATE is
+-- unnecessary cost). Both dry-run-verified (0 bytes, no error) against live events.daily_marks and
+-- events.macro_fred before landing this fix.
 --
 -- SUPERSEDES the state.daily_marks_curated VIEW in bigquery/03_twr_engine.sql, the
 -- state.trade_fills_curated VIEW in bigquery/01_schema.sql, and the state.macro_fred_latest VIEW in
@@ -37,10 +49,16 @@
 -- 01_schema.sql, 03_twr_engine.sql, 07_fred_macro.sql, 46_weekly_benchmarks.sql.
 
 ALTER TABLE `stock-trading-498512.events.daily_marks`
-  ADD COLUMN IF NOT EXISTS row_uid STRING DEFAULT GENERATE_UUID();
+  ADD COLUMN IF NOT EXISTS row_uid STRING;
+
+ALTER TABLE `stock-trading-498512.events.daily_marks`
+  ALTER COLUMN row_uid SET DEFAULT GENERATE_UUID();
 
 ALTER TABLE `stock-trading-498512.events.macro_fred`
-  ADD COLUMN IF NOT EXISTS row_uid STRING DEFAULT GENERATE_UUID();
+  ADD COLUMN IF NOT EXISTS row_uid STRING;
+
+ALTER TABLE `stock-trading-498512.events.macro_fred`
+  ALTER COLUMN row_uid SET DEFAULT GENERATE_UUID();
 
 CREATE OR REPLACE VIEW `stock-trading-498512.state.daily_marks_curated` AS
 SELECT * FROM `stock-trading-498512.events.daily_marks`
