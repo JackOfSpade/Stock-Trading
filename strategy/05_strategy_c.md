@@ -30,7 +30,7 @@ Any defined-risk options structure around a qualifying event, where:
 
 Other event types (analyst days, product launches, conference presentations, M&A-related, legal rulings, index rebalances) are excluded at the strategy level. Rationale: these have weaker narrative predictability, less standardized disclosure, or both.
 
-**Deferral behavior:** If no structure satisfying the eligibility rule can be constructed for a thesis at current strategy portfolio size, the thesis is deferred. C's strategy portfolio remains in SGOV. As the portfolio grows (via deposits and realized profits), eligibility progressively expands without requiring any rule change. Deferred theses are not logged as missed opportunities for diagnostic purposes.
+**Deferral behavior:** If no structure satisfying the eligibility rule can be constructed for a thesis at current strategy portfolio size, the thesis is deferred. C's strategy portfolio ~~remains in SGOV~~ **remains parked [Rev 38, owner directive, 2026-07-15] — SGOV historically, VOO from the 2026-07-15 cutover forward; see Operating_Protocols.md §13**. As the portfolio grows (via deposits and realized profits), eligibility progressively expands without requiring any rule change. Deferred theses are not logged as missed opportunities for diagnostic purposes.
 
 ### Entry criteria
 

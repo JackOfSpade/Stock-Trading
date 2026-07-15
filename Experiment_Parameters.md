@@ -17,9 +17,9 @@ Enforcement of the immutable tier remains behavioral for the human operator but 
 Precise terminology matters in this document because the multi-strategy architecture introduces multiple financial entities that a casual reader can conflate. The following terms are used consistently throughout; readers should map each term to its precise referent rather than interpreting them loosely.
 
 - **Account.** The single IBKR custodial account holding all capital. Singular. This is the legal/custodial entity. The account is not itself a portfolio in this document's sense — it is the container.
-- **Strategy portfolio.** An externally-tracked sub-allocation of the account assigned to a specific strategy. There is one per strategy; N in total per experiment, where N is defined by the strategy document. Each strategy portfolio is tracked outside IBKR in a ledger maintained by the participant. Each has its own starting value, its own deposit share, its own deployed-capital history, its own SGOV parking allocation, its own TWR, its own drawdown, its own trade count, its own gate, and its own kill triggers.
-- **Deployed capital.** Within a strategy portfolio, the portion currently in active trades (not SGOV parking). Used for TWR measurement.
-- **SGOV parking.** Capital within a strategy portfolio not currently deployed into active trades, held in SGOV (or equivalent short-term Treasury ETF) as the default idle vehicle. SGOV is baseline treasury management, not a strategy decision.
+- **Strategy portfolio.** An externally-tracked sub-allocation of the account assigned to a specific strategy. There is one per strategy; N in total per experiment, where N is defined by the strategy document. Each strategy portfolio is tracked outside IBKR in a ledger maintained by the participant. Each has its own starting value, its own deposit share, its own deployed-capital history, its own ~~SGOV~~ **park [Rev 38, owner directive, 2026-07-15 — SGOV historically, VOO from the 2026-07-15 cutover forward; see Operating_Protocols.md §13]** allocation, its own TWR, its own drawdown, its own trade count, its own gate, and its own kill triggers.
+- **Deployed capital.** Within a strategy portfolio, the portion currently in active trades (not ~~SGOV~~ **park [Rev 38]** parking). Used for TWR measurement.
+- ~~**SGOV parking.**~~ **Idle-capital parking [Rev 38, owner directive, 2026-07-15].** Capital within a strategy portfolio not currently deployed into active trades, held in the park — SGOV historically, VOO from the 2026-07-15 cutover forward; see Operating_Protocols.md §13 — as the default idle vehicle. The park is baseline treasury management, not a strategy decision.
 - **Pending newcomer.** A newly-added strategy that is frozen (non-trading) until its booked allocation reaches its probe-stake floor ($2,000); it has first claim on incoming deposits and sunset-redistribution capital until filled. See "New strategy funding" below. (There is no "held-aside pool" — terminated capital always redistributes to survivors, never sits unallocated.)
 - **Strategy termination.** The termination of a single strategy's participation in the experiment via that strategy's drawdown kill trigger, mark-to-market underperformance trigger, 30-trade gate failure, runaway-success review, or per-strategy foundation-change assessment. Other strategies continue unaffected.
 - **Experiment termination.** The termination of the entire experiment. Occurs when the foundation-change trigger fires in a way that affects all strategies simultaneously, or when the last active strategy terminates (leaving no active strategies), or by final determination after the last strategy's post-gate run ends.
@@ -105,7 +105,7 @@ The experiment runs N strategies in parallel, where N is defined by the strategy
 - Each rule combines mechanical technical indicators (updated daily) with AI fundamental analysis (updated monthly).
 - When technicals and fundamentals agree, the activation state updates mechanically.
 - When they disagree, a two-routine adversarial review (Attacker routine + Orchestrator routine, file-handoff per `Claude_Task_Plan.md`) adjudicates the activation state.
-- The router determines which strategies are currently eligible to deploy new capital. Strategies not activated hold their strategy portfolios in SGOV and do not open new positions. Existing open positions in a deactivated strategy run to their normal thesis-invalidation or exit conditions.
+- The router determines which strategies are currently eligible to deploy new capital. Strategies not activated hold their strategy portfolios ~~in SGOV~~ **in the park [Rev 38, owner directive, 2026-07-15 — SGOV historically, VOO from the 2026-07-15 cutover forward; see Operating_Protocols.md §13]** and do not open new positions. Existing open positions in a deactivated strategy run to their normal thesis-invalidation or exit conditions.
 
 **Capital structure:**
 
@@ -215,7 +215,7 @@ Each strategy is derived from `AI_Trading_Foundation.md` without reference to th
 
 ## Regime router
 
-The router determines, for each strategy, whether that strategy is currently activated (eligible to deploy new capital) or deactivated (capital held in SGOV, no new entries, existing positions run to normal exits).
+The router determines, for each strategy, whether that strategy is currently activated (eligible to deploy new capital) or deactivated (~~capital held in SGOV~~ **capital held in the park [Rev 38, owner directive, 2026-07-15] — SGOV historically, VOO from the 2026-07-15 cutover forward; see Operating_Protocols.md §13**, no new entries, existing positions run to normal exits).
 
 The activation rules are independent, one per strategy. Activations and deactivations are computed per-strategy based on that strategy's own best-environment criteria. There is no combinatorial logic across strategies — if all strategies' criteria are met simultaneously, all are active; if none are met, none are active. Both extremes are valid states.
 
@@ -269,7 +269,7 @@ The regime router is itself a component subject to pre-mortem with adversarial r
 
 **2% of current strategy portfolio value per trade.**
 
-Measured as: for each trade within a given strategy, position size in dollars equals 2% of *that strategy's strategy portfolio total value* (including SGOV parking and any open positions' current market value) at the moment of trade initiation. Not 2% of the account. Not 2% of the sum of all strategy portfolios. 2% of the specific strategy portfolio taking the trade.
+Measured as: for each trade within a given strategy, position size in dollars equals 2% of *that strategy's strategy portfolio total value* (including ~~SGOV~~ **park [Rev 38, owner directive, 2026-07-15 — SGOV historically, VOO from the 2026-07-15 cutover forward; see Operating_Protocols.md §13]** parking and any open positions' current market value) at the moment of trade initiation. Not 2% of the account. Not 2% of the sum of all strategy portfolios. 2% of the specific strategy portfolio taking the trade.
 
 *Derivation.* Standard institutional consensus for discretionary and semi-systematic trading under parameter uncertainty. At 2% risk per trade, a 10-trade consecutive losing streak costs approximately 18% of the strategy portfolio (geometric decay). At 5%, the same streak costs 40%; at 10%, 65%. The 1-2% range falls directly from the constraint "standard variance should not produce drawdowns above 10%." 2% is the upper end of this consensus range.
 
@@ -283,7 +283,7 @@ The rationale is diagnostic integrity: letting theses play out generates clean s
 
 ### Kill criteria (per-strategy)
 
-A strategy terminates immediately — all its open positions closed at next available daily review, no new entries in that strategy, strategy portfolio moves to fully in SGOV pending deterministic redistribution to survivors — if any one of the following fires for that strategy:
+A strategy terminates immediately — all its open positions closed at next available daily review, no new entries in that strategy, strategy portfolio moves to ~~fully in SGOV~~ **fully into the park [Rev 38, owner directive, 2026-07-15] — SGOV historically, VOO from the 2026-07-15 cutover forward; see Operating_Protocols.md §13** pending deterministic redistribution to survivors — if any one of the following fires for that strategy:
 
 **1. Drawdown trigger.** Deployed TWR drops 50% below its highest historical value since the strategy's first trade.
 
@@ -299,7 +299,7 @@ Foundation changes do not automatically kill all strategies. When a foundation c
 
 **Outcome (a) — Continue.** The change does not materially affect this strategy's foundation. The strategy continues without modification.
 
-**Outcome (b) — Terminate.** The change materially weakens this strategy's foundation. Specifically: a documented edge in Part 1 was removed or materially reduced AND the strategy exploits that edge, OR a documented disadvantage in Part 2 was added or materially increased AND the strategy has not adequately compensated for it. Strategy terminates per the standard termination path (immediate close, SGOV, deterministic redistribution to survivors).
+**Outcome (b) — Terminate.** The change materially weakens this strategy's foundation. Specifically: a documented edge in Part 1 was removed or materially reduced AND the strategy exploits that edge, OR a documented disadvantage in Part 2 was added or materially increased AND the strategy has not adequately compensated for it. Strategy terminates per the standard termination path (immediate close, ~~SGOV~~ **park [Rev 38, owner directive, 2026-07-15]**, deterministic redistribution to survivors).
 
 **Outcome (c) — Constraint-relaxation review (rev 3 added, rev 4 mechanized).** The change is a *reduction* in a disadvantage that the strategy explicitly compensates for, AND the strategy has constraints (entry rules, sizing caps, eligibility restrictions, etc.) that were added to address that disadvantage. The orchestrator session executes a constraint-relaxation review by applying mechanical criteria from `AI_Trading_Foundation.md` Part 5 — no orchestrator discretion. The verdict is determined by the criteria; the orchestrator's role is to execute the criteria and produce the audit-trailed output, not to exercise judgment.
 
@@ -375,13 +375,13 @@ Each strategy's success or failure is ultimately determined at that strategy's t
 
 ### Strategy termination and capital redistribution
 
-When a strategy terminates — by any kill trigger, gate failure, negative runaway-success review, or a **foundation-change-assessment "terminate" verdict** (including the annual A1/A2/A3 AI-edge review deleting a strategy whose edge has decayed) — its strategy portfolio value at termination moves to SGOV and is **redistributed deterministically to surviving strategies, with no adversarial review.**
+When a strategy terminates — by any kill trigger, gate failure, negative runaway-success review, or a **foundation-change-assessment "terminate" verdict** (including the annual A1/A2/A3 AI-edge review deleting a strategy whose edge has decayed) — its strategy portfolio value at termination ~~moves to SGOV~~ **moves into the park [Rev 38, owner directive, 2026-07-15] — SGOV historically, VOO from the 2026-07-15 cutover forward; see Operating_Protocols.md §13** and is **redistributed deterministically to surviving strategies, with no adversarial review.**
 
 **Deterministic redistribution (the termination handler executes this inline).** The terminated strategy's booked allocation is redistributed in this fixed order:
 1. **Fill pending newcomers first.** Any active strategy still below its probe-stake floor (a "pending newcomer," see "New strategy funding") is topped up toward the floor — oldest-pending first (FIFO), one filled to the floor before the next — until the terminated capital is exhausted.
 2. **Split the remainder equally** among all currently-active strategies (including any newcomer just filled to its floor, and including regime-router-deactivated strategies — deactivation is temporary and the portfolio is still maintained).
 
-There is **no hold option and no held-aside pool** — every dollar of a terminated strategy's allocation flows to survivors. The capital physically sits in SGOV until each receiving strategy deploys it at its own 2%-per-trade pace; redistribution changes the *booked allocation*, not the immediate market exposure. The termination handler updates Portfolio_Ledger.md allocations and records the redistribution (amounts to each survivor, any newcomer fills) in Decision_Log.md alongside the termination post-mortem.
+There is **no hold option and no held-aside pool** — every dollar of a terminated strategy's allocation flows to survivors. The capital physically ~~sits in SGOV~~ **sits in the park [Rev 38, owner directive, 2026-07-15] — SGOV historically, VOO from the 2026-07-15 cutover forward; see Operating_Protocols.md §13** until each receiving strategy deploys it at its own 2%-per-trade pace; redistribution changes the *booked allocation*, not the immediate market exposure. The termination handler updates Portfolio_Ledger.md allocations and records the redistribution (amounts to each survivor, any newcomer fills) in Decision_Log.md alongside the termination post-mortem.
 
 **Why deterministic (history).** Earlier revisions ran a three-routine adversarial review (recommendation + attacker + orchestrator) to adjudicate full / partial / hold, on the theory that a *systemic*-shock termination might mean survivors shouldn't absorb the capital. That review is **removed** as of the 2026-06 capital-model revision: (a) with redistribution always equal-among-survivors there is no decision left to adjudicate; (b) redistributed capital is not immediately exposed — it accretes to the survivor's base and deploys only at 2%/trade, and survivors retain their own drawdown kill triggers and regime-router deactivation, so the systemic-shock risk is bounded without a capital gate; (c) the "was this termination systemic?" diagnosis still occurs in the foundation-change assessment and the M2M-termination review. The `capital-redistribution` review type and its dedicated Recommendation routine are retired (see `Claude_Task_Plan.md`).
 

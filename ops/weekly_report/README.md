@@ -1,22 +1,26 @@
 # Weekly performance self-email — "Deployed vs Benchmarks"
 
-A weekly HTML email that answers two questions: **is each strategy beating SGOV?**, and
-**is deploying capital beating both SGOV AND the S&P 500 (VOO), over the same dollars and
-the same days?** (2026-07 redesign — see `ops/RUNBOOK.md` §33 for the full rationale and
-the iteration history; the VOO benchmark was added 2026-07-13, owner directive.) Everything
-that didn't support those questions — regime, account NAV/MTD/YTD, open positions,
-next-7-days, weekly activity, the full ops-health strip — was cut. What's left:
-a **headline block** (the deployed book vs SGOV vs VOO — cumulative %, avg/month, avg/year,
-and a "same dollars, same days" $ edge), a **returns chart** (each deployed strategy's
-cumulative total return + a gray SGOV line + a steel-blue VOO line), a **table** of each
-strategy's **average return vs SGOV per month / year** — a geometric per-period rate
-measured over **active (deployed) time only**, so idle stretches never dilute it ("Not
-enough data" until at least 21 deployed days exist) with SGOV's and VOO's own-return rows,
-and a one-line data-trust warning that only appears when something is actually stale. No
-combined aggregate beyond the headline, no verdict labels.
+A weekly HTML email that answers one question: **what's each strategy's own return been**,
+measured on **deployed capital only, over active (deployed) time only** — with VOO's own
+return shown alongside as a single informational reference point. (2026-07-15 redesign,
+owner directive — see `ops/RUNBOOK.md` §33 for the full iteration history. The prior v2
+design, 2026-07-13, compared everything to SGOV; this directive dropped SGOV from the email
+entirely and made VOO the sole displayed benchmark.) Everything that didn't support that
+question — regime, account NAV/MTD/YTD, open positions, next-7-days, weekly activity, the
+full ops-health strip, and (as of v3) the "Deployed Book Since..." headline block — was cut.
+What's left: a **returns chart** (each deployed strategy's cumulative total return + VOO's
+own cumulative return, each plotted as its own natural, non-rebased line), a **table**
+("Average Return") of each strategy's **own average return per month / year** — a geometric
+per-period rate measured over **active (deployed) time only**, so idle stretches never
+dilute it ("Not enough data" until at least 21 deployed days exist), with a VOO own-return
+row for reference, and a one-line data-trust warning that only appears when something is
+actually stale.
 
 **VOO is purely informational** — it never feeds `perf.kill_flags` or any other live
-decision surface; only SGOV is the sanctioned kill/gate benchmark.
+decision surface. SGOV remains the sanctioned kill/gate benchmark internally
+(`perf.strategy_daily.excess_vs_sgov`) — this email simply no longer *displays* that
+comparison; the kill/gate machinery itself is untouched by the 2026-07-15 directive (see
+`events.decision_log`, 2026-07-15).
 
 ## Why it's an Apps Script and not a Claude routine
 
@@ -92,10 +96,20 @@ follow-up `gmail.modify` scope fix.
 `voo_cumulative`, `deployed_book_vs_benchmarks`) — the VOO one-time price backfill into
 `events.daily_marks` must land BEFORE this, or the new views simply compute with zero VOO
 rows (the email correctly renders "Not enough data" for VOO in that case, never a false
-`+0.00%`, but the headline/chart will be VOO-less until the backfill is applied). Then
-re-paste `weekly_report.gs` (SCRIPT_VERSION `'v2'`) and run `testReport()` — no new OAuth
-scope needed (read-only addition). Also re-apply `bigquery/43_script_version_registry.sql`'s
-MERGE so `state.script_version_drift` expects `'v2'`, not `'v1'`.
+`+0.00%`, but the chart will be VOO-less until the backfill is applied). Then re-paste
+`weekly_report.gs` (SCRIPT_VERSION `'v2'`) and run `testReport()` — no new OAuth scope
+needed (read-only addition). Also re-apply `bigquery/43_script_version_registry.sql`'s MERGE
+so `state.script_version_drift` expects `'v2'`, not `'v1'`.
+
+**Owner actions to deploy the 2026-07-15 SGOV-removal redesign (v3):** no new BigQuery views
+needed — everything v3 reads already existed (`analytics.strategy_vs_park_daily`,
+`analytics.voo_cumulative`). Re-paste `weekly_report.gs` (SCRIPT_VERSION `'v3'`) via the
+commit-SHA-pinned GitHub raw URL method (a large rewrite — dozens of functions changed, so a
+direct chat/artifact paste risks corruption) and run `testReport()` — no new OAuth scope
+needed. Re-apply `bigquery/43_script_version_registry.sql`'s MERGE so
+`state.script_version_drift` expects `'v3'`, not `'v2'`. Confirm the sent email: no "Deployed
+Book Since..." section, no SGOV anywhere (subject line, chart, table, footer), the table
+retitled "Average Return", and the chart showing only strategy lines + a VOO line.
 
 To change the schedule later, edit `SEND_HOUR`/`SEND_WEEKDAY` and run `installWeeklyTrigger`
 again. To stop, delete the trigger (clock icon in the editor) or the project.
@@ -105,52 +119,42 @@ again. To stop, delete the trigger (clock icon in the editor) or the project.
 | View / table | Feeds |
 |---|---|
 | `analytics.strategy_scorecard` | the A–E list + activation string (for the "not deployed" reason) |
-| `analytics.strategy_vs_park_daily` | per strategy-day: `deployed_unit_value` (the chart's return lines) + cumulative `excess_vs_sgov` (the `.gs` turns the latest value into an average vs-SGOV return per month/year over the strategy's deployed days) |
-| `analytics.sgov_cumulative` | SGOV's own cumulative total return per day (the chart's SGOV line + its own average return per month/year) |
-| `analytics.voo_cumulative` | VOO's own cumulative total return per day, same date axis as `sgov_cumulative`; NULL before VOO's first backfilled mark (the chart's VOO line + its own average return per month/year) |
-| `analytics.deployed_book_vs_benchmarks` | ONE row: the headline block — deployed book vs SGOV vs VOO, cumulative %, avg/month, avg/year, and "same dollars, same days" $ edges |
+| `analytics.strategy_vs_park_daily` | per strategy-day: `deployed_unit_value` — each strategy's own cumulative return (the chart's strategy lines AND, as of v3, the table's per-strategy average-return figures). A row exists only on deployed days, so idle time never dilutes the average. |
+| `analytics.voo_cumulative` | VOO's own cumulative total return per day, its own date axis from its own first observed mark; NULL before that mark (the chart's VOO line + the table's VOO own-return row) |
 | `state.system_health` | marks/engine freshness + firing kill-flags + critical alerts — the one surviving data-trust signal |
 | `state.user_tz` | detected DISPLAY timezone (never the operating/trading-day timezone) |
 | `perf.kill_flags` / `ops.alerts` | queried lazily, only when `state.system_health` flags something |
 
-The SQL for the strategy-vs-SGOV views lives in `bigquery/21_strategy_vs_park.sql`; the VOO
-benchmark views (`voo_daily_return`, `voo_cumulative`, `deployed_book_vs_benchmarks`) live in
+The SQL for `strategy_vs_park_daily` lives in `bigquery/21_strategy_vs_park.sql`; the VOO
+benchmark views (`voo_daily_return`, `voo_cumulative`) live in
 `bigquery/46_weekly_benchmarks.sql` (2026-07-13, owner directive — single-sourced,
-version-controlled). The `deployed_unit_value` / `excess_vs_sgov` columns come from
-`perf.strategy_daily` (the deployed-TWR engine, `bigquery/03_twr_engine.sql`).
+version-controlled). `deployed_unit_value` comes from `perf.strategy_daily` (the deployed-TWR
+engine, `bigquery/03_twr_engine.sql`).
 
-### What the numbers mean (2026-07-13)
+### What the numbers mean (2026-07-15)
 
-Everything is an **actual total return**, a **return vs SGOV**, or (new) a **same-dollars,
-same-days comparison to SGOV and VOO**, as percentages and dollars:
+Everything is an **actual total return** — a strategy's own, or VOO's own — as percentages,
+never a comparison to SGOV:
 
-- **Headline block** — the whole deployed book (all strategies combined, capital-weighted)
-  vs SGOV vs VOO, over the SAME set of deployed trading days, since the book's first deployed
-  day through the latest mark: cumulative %, avg/month, avg/year (`†` = annualized from fewer
-  than 252 deployed days — extrapolated), and a $ column where each day's *actual* deployed
-  dollars notionally earn the benchmark's return that day, summed (deliberately NOT a
-  compounding buy-and-hold hypothetical — see `bigquery/46_weekly_benchmarks.sql`'s header for
-  the full methodology, including why SGOV forward-fills a missing mark but VOO reads a gap as
-  0%). A one-line takeaway states whether deploying beat or trailed each benchmark in dollars.
 - **Chart** — each deployed strategy's cumulative total return since its first deployment
-  (`deployed_unit_value − 1`), SGOV's own cumulative total return (`sgov_cumulative`), and
-  VOO's own cumulative total return (`voo_cumulative`, once it has data) — each a line. SGOV
-  is gray, VOO is steel blue, neither is a flat baseline.
-- **Table** — per strategy, the **average return *above SGOV* per month / year** — a
-  geometric per-period rate over the strategy's **active (deployed) days only**:
-  `(1 + excess_latest) ^ (tradingDaysPerPeriod / deployedDays) − 1`, with
-  `TRADING_DAYS_PER = {month:21, year:252}` and `excess_vs_sgov` = deployed-TWR unit value ÷
-  SGOV index − 1 (the sanctioned kill/gate metric — VOO is never part of this calculation).
+  (`deployed_unit_value − 1`) and VOO's own cumulative total return (`voo_cumulative`, from
+  VOO's own first observed mark) — each its own natural line, never rebased to line up with
+  any other series' start date.
+- **Table ("Average Return")** — per strategy, its **own average return** per month / year —
+  a geometric per-period rate over the strategy's **active (deployed) days only**:
+  `(1 + return_latest) ^ (tradingDaysPerPeriod / deployedDays) − 1`, with
+  `TRADING_DAYS_PER = {month:21, year:252}` and `return_latest` = `deployed_unit_value − 1`
+  (the strategy's own cumulative return — no SGOV comparison anywhere in this calculation).
   `strategy_vs_park_daily` has a row only for deployed days, so idle days are absent and never
-  dilute the average toward 0. "Not enough data" shows when the strategy has fewer than 21
+  dilute the average toward 0 — this table shows return on **deployed capital only**, never
+  diluted by idle/parked capital. "Not enough data" shows when the strategy has fewer than 21
   deployed days (below that, not even a monthly average is meaningful — this floor is also why
-  per-week reporting was dropped in this redesign). Separate **SGOV and VOO rows** show each
-  benchmark's *own* average return per period over the same active window.
+  per-week reporting was dropped in the 2026-07 redesign). A separate **VOO row** shows VOO's
+  own average return per period, for reference only.
 
-Returns are gross of commissions (the sanctioned profitability convention); SGOV and VOO are
-their actual total returns including dividends. Strategies with no deployed history (A/C/E
-currently) show "not deployed" — their cash is held in SGOV, so there is no strategy return
-to compare.
+Returns are gross of commissions (the sanctioned profitability convention); VOO's return is
+its actual total return including dividends. Strategies with no deployed history (A/C/E
+currently) show "not deployed" — there is no strategy return to compare.
 
 ### Views retained but no longer read by the email
 
@@ -161,10 +165,10 @@ writes it daily) are kept in BigQuery for RUNBOOK verification, dashboard/histor
 possible future use — dropping them is a separate, later decision. See the header comment
 in `bigquery/14_weekly_report.sql`. Also retained but no longer read by the email:
 `analytics.strategy_vs_park` (dollar edge + commissions), `analytics.deployed_book_vs_sgov`
-(the short-lived combined-% hero, 2026-07-03), and `analytics.park_baseline` (the dollar-era
-hero scale anchor) — all superseded for the email's purposes by
-`analytics.deployed_book_vs_benchmarks` (2026-07-13), which covers the same "combined book"
-question plus VOO.
+(the short-lived combined-% hero, 2026-07-03), `analytics.park_baseline` (the dollar-era hero
+scale anchor), and, as of the 2026-07-15 redesign, `analytics.sgov_cumulative` (the chart's
+former SGOV line) and `analytics.deployed_book_vs_benchmarks` (the former "Deployed Book
+Since..." headline block, dropped entirely — see `events.decision_log`, 2026-07-15).
 
 ## Notes
 
@@ -174,7 +178,7 @@ question plus VOO.
   update the `GmailApp.search(...)` call in `sendWeeklyReport_` to match.
 - Preview the design any time by opening `ops/weekly_report/sample_preview.html` in a browser
   (the chart is a static placeholder there — the real email renders an actual PNG). Regenerated
-  for v2/VOO on 2026-07-14 — this file drifted for a full redesign cycle (2026-07-13's VOO
-  rewrite) because that entry's checklist omitted the regeneration step every prior redesign
-  included; regenerate it again (by hand, matching `buildHtml_`/`headlineSectionHtml_`'s current
-  output) any time the email's HTML structure changes, in the SAME commit.
+  for v3 (SGOV removal) on 2026-07-15 — a prior redesign cycle (2026-07-13's VOO rewrite) let
+  this file drift for a full cycle because that entry's checklist omitted the regeneration
+  step; regenerate it again (by hand, matching `buildHtml_`'s current output) any time the
+  email's HTML structure changes, in the SAME commit.

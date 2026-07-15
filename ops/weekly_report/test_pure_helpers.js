@@ -18,27 +18,28 @@
  * KEEP IN SYNC MANUALLY with ops/weekly_report/weekly_report.gs and
  * ops/monitoring/alert_emailer.gs — if you change any of these functions there, update the
  * copies below in the same commit:
- *   - notDeployedReason_   (weekly_report.gs lines 256-262)
- *   - periodAvg_           (weekly_report.gs lines 273-276)
- *   - isExtrapolated_      (weekly_report.gs lines 281-283)
- *   - benchmarkRow_        (weekly_report.gs lines 289-296)
- *   - signPct_             (weekly_report.gs line 351)
- *   - signDollar_          (weekly_report.gs line 352)
- *   - fmtAbsDollars_       (weekly_report.gs line 353)
- *   - edgeWord_            (weekly_report.gs line 354)
- *   - parseIsoDateLocal_   (weekly_report.gs lines 365-368)
- *   - downsampleDates_     (weekly_report.gs lines 371-378)
- *   - buildHealthReasons_  (weekly_report.gs lines 299-320)
- *   - buildSubject_        (weekly_report.gs lines 119-135)
- *   - esc_                 (weekly_report.gs line 361)
- *   - SGOV_GRAY, VOO_COLOR (weekly_report.gs lines 61-62)
- *   - clr_                 (weekly_report.gs line 356)
- *   - fallbackBarsHtml_    (weekly_report.gs lines 448-464)
- *   - pctCellHtml_         (weekly_report.gs lines 467-472)
- *   - dollarCellHtml_      (weekly_report.gs lines 474-478)
+ *   - notDeployedReason_   (weekly_report.gs lines 229-235)
+ *   - periodAvg_           (weekly_report.gs lines 246-249)
+ *   - isExtrapolated_      (weekly_report.gs lines 254-256)
+ *   - benchmarkRow_        (weekly_report.gs lines 262-269)
+ *   - signPct_             (weekly_report.gs line 324)
+ *   - parseIsoDateLocal_   (weekly_report.gs lines 335-338)
+ *   - downsampleDates_     (weekly_report.gs lines 341-348)
+ *   - buildHealthReasons_  (weekly_report.gs lines 272-293)
+ *   - buildSubject_        (weekly_report.gs lines 124-138)
+ *   - esc_                 (weekly_report.gs line 331)
+ *   - VOO_COLOR            (weekly_report.gs line 66)
+ *   - clr_                 (weekly_report.gs line 325)
+ *   - fallbackBarsHtml_    (weekly_report.gs lines 418-436)
+ *   - pctCellHtml_         (weekly_report.gs lines 441-446)
  *   - isTest_              (alert_emailer.gs line 210)
  *   - esc2_                (alert_emailer.gs line 205)
  *   - alertSubject_        (alert_emailer.gs, defined immediately after isTest_)
+ *
+ * Note: signDollar_, fmtAbsDollars_, edgeWord_, dollarCellHtml_, SGOV_GRAY, and the headline-block
+ * comparison logic in fallbackBarsHtml_/buildSubject_ were removed from weekly_report.gs in the
+ * 2026-07-15 SGOV-removal redesign (the "Deployed Book Since..." section and all vs-SGOV comparisons
+ * were dropped) — removed here too, with their now-obsolete tests.
  *
  * Run: node ops/weekly_report/test_pure_helpers.js   (exits 0 iff every assertion passes)
  */
@@ -76,10 +77,10 @@ function isExtrapolated_(deployedDays, tradingDaysPerPeriod) {
   return deployedDays > 0 && deployedDays < tradingDaysPerPeriod;
 }
 
-// Shapes a benchmark's (or the deployed book's) OWN cumulative return into the {cumulative, avg/month,
-// avg/year, extrapolated?} shape the headline block and the SGOV/VOO table rows share. Hardcodes
-// 21/252 (matching TRADING_DAYS_PER.month/.year) rather than referencing that file-level const, so
-// this stays a self-contained pure function safe to copy verbatim into test_pure_helpers.js.
+// Shapes a benchmark's OWN cumulative return into the {returnPct, avg/month, avg/year, extrapolated?}
+// shape the VOO table row shares with the strategy rows. Hardcodes 21/252 (matching
+// TRADING_DAYS_PER.month/.year) rather than referencing that file-level const, so this stays a
+// self-contained pure function safe to copy verbatim into test_pure_helpers.js.
 function benchmarkRow_(returnPct, days) {
   return {
     returnPct: returnPct,
@@ -90,9 +91,6 @@ function benchmarkRow_(returnPct, days) {
 }
 
 function signPct_(p){ return (p >= 0 ? '+' : '−') + Math.abs(p).toFixed(2) + '%'; } // unicode minus
-function signDollar_(v) { return (v >= 0 ? '+$' : '−$') + Math.abs(v).toFixed(2); } // unicode minus
-function fmtAbsDollars_(v) { return '$' + Math.abs(v).toFixed(2); }
-function edgeWord_(v) { return v >= 0 ? 'beat' : 'trailed'; }
 
 // 'YYYY-MM-DD' -> local-midnight Date (never new Date('YYYY-MM-DD'), which is UTC midnight and
 // renders as the previous day in a US-behind-UTC display timezone).
@@ -112,23 +110,28 @@ function downsampleDates_(sortedDates) {
 
 function esc_(s)  { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-const SGOV_GRAY = '#898781';
 const VOO_COLOR = '#5f7d95';
 function clr_(p)  { return p >= 0 ? '#1a7f5a' : '#c0392b'; }
 
-// Gmail-safe fallback: one bar per deployed strategy (cumulative return), + a SGOV bar, + a VOO bar
-// (if VOO has data). Color: green if the strategy beat SGOV, red if not; SGOV bar gray, VOO bar steel.
+// Gmail-safe fallback: one bar per deployed strategy (cumulative return), + a VOO bar (if VOO has
+// data). Color: green if the strategy beat VOO's own return, red if not, neutral gray-blue if VOO has
+// no data yet to compare against (never coerce a missing VOO return to 0 for the comparison — that
+// would silently mis-color every positive-return strategy bar as "beating VOO").
 function fallbackBarsHtml_(d) {
   const deployed = d.rows.filter(r => r.deployed);
-  const items = deployed.map(r => ({ label: r.strategy, val: r.returnPct * 100, beat: r.returnPct > d.sgov.returnPct }))
-    .concat([{ label: 'SGOV', val: d.sgov.returnPct * 100, neutral: true }]);
-  if (d.headline && d.headline.voo && d.headline.voo.returnPct != null) {
-    items.push({ label: 'VOO', val: d.headline.voo.returnPct * 100, neutral: true, vooColor: true });
+  const hasVooReturn = !!(d.voo && d.voo.returnPct != null);
+  const items = deployed.map(r => ({
+    label: r.strategy,
+    val: r.returnPct * 100,
+    beat: hasVooReturn ? (r.returnPct > d.voo.returnPct) : null
+  }));
+  if (hasVooReturn) {
+    items.push({ label: 'VOO', val: d.voo.returnPct * 100, neutral: true, vooColor: true });
   }
   const maxAbs = Math.max.apply(null, items.map(it => Math.abs(it.val)).concat([1.0]));
   return items.map(it => {
     const widthPx = Math.max(2, Math.round(Math.abs(it.val) / maxAbs * 240));
-    const color = it.vooColor ? VOO_COLOR : (it.neutral ? SGOV_GRAY : (it.beat ? '#1a7f5a' : '#c0392b'));
+    const color = it.vooColor ? VOO_COLOR : ((it.neutral || it.beat === null) ? '#3d4a59' : (it.beat ? '#1a7f5a' : '#c0392b'));
     return `<div style="padding:4px 0;font-size:12px;color:#1f2d3d;">` +
       `<span style="display:inline-block;width:40px;font-weight:700;">${esc_(it.label)}</span>` +
       `<span style="display:inline-block;background-color:${color};width:${widthPx}px;height:12px;vertical-align:middle;"></span>` +
@@ -141,12 +144,6 @@ function pctCellHtml_(v, colorBySign, extrapolated) {
   const color = colorBySign ? clr_(v) : '#3d4a59';
   const marker = extrapolated ? '†' : '';
   return `<span style="color:${color};font-weight:${colorBySign ? 700 : 400};">${signPct_(v * 100)}${marker}</span>`;
-}
-
-function dollarCellHtml_(v, colorBySign) {
-  if (v == null) return `<span style="color:#8a96a3;font-size:11px;">Not enough data</span>`;
-  const color = colorBySign ? clr_(v) : '#3d4a59';
-  return `<span style="color:${color};font-weight:${colorBySign ? 700 : 400};">${signDollar_(v)}</span>`;
 }
 
 // ===== "Why might these numbers be stale?" — only when the data-trust predicate fails =====
@@ -179,12 +176,11 @@ function buildSubject_(d) {
   if (!deployed.length) {
     tag = 'all parked';
   } else {
-    tag = deployed.map(r => `${r.strategy} ${signPct_(r.returnPct * 100)}`).join(' · ')
-      + ` · SGOV ${signPct_(d.sgov.returnPct * 100)}`;
+    tag = deployed.map(r => `${r.strategy} ${signPct_(r.returnPct * 100)}`).join(' · ');
     // VOO fragment only in the deployed branch, and only once VOO has real data in the window —
     // never render a null through signPct_ (which would print "−NaN%").
-    if (d.headline && d.headline.voo && d.headline.voo.returnPct != null) {
-      tag += ` · VOO ${signPct_(d.headline.voo.returnPct * 100)}`;
+    if (d.voo && d.voo.returnPct != null) {
+      tag += ` · VOO ${signPct_(d.voo.returnPct * 100)}`;
     }
   }
   const warn = d.green ? '' : ' · ⚠ check data';
@@ -319,36 +315,6 @@ t('signPct_ prefixes a negative value with the unicode minus and its absolute ma
   assert.strictEqual(signPct_(-2.5), '−2.50%');
 });
 
-// ---- signDollar_ ----
-t('signDollar_ prefixes a positive value with +$', () => {
-  assert.strictEqual(signDollar_(16.09), '+$16.09');
-});
-t('signDollar_ prefixes zero with +$ (not the unicode minus)', () => {
-  assert.strictEqual(signDollar_(0), '+$0.00');
-});
-t('signDollar_ prefixes a negative value with the unicode minus and its absolute magnitude', () => {
-  assert.strictEqual(signDollar_(-4.5), '−$4.50');
-});
-
-// ---- fmtAbsDollars_ ----
-t('fmtAbsDollars_ always renders an unsigned magnitude, positive input', () => {
-  assert.strictEqual(fmtAbsDollars_(14.76), '$14.76');
-});
-t('fmtAbsDollars_ always renders an unsigned magnitude, negative input', () => {
-  assert.strictEqual(fmtAbsDollars_(-14.76), '$14.76');
-});
-
-// ---- edgeWord_ ----
-t('edgeWord_ returns "beat" for a positive edge', () => {
-  assert.strictEqual(edgeWord_(8.28), 'beat');
-});
-t('edgeWord_ returns "beat" at the zero boundary (matching signPct_/signDollar_\'s zero-is-positive convention)', () => {
-  assert.strictEqual(edgeWord_(0), 'beat');
-});
-t('edgeWord_ returns "trailed" for a negative edge', () => {
-  assert.strictEqual(edgeWord_(-3.2), 'trailed');
-});
-
 // ---- parseIsoDateLocal_ ----
 t('parseIsoDateLocal_ round-trips an ISO date string as LOCAL midnight (not UTC)', () => {
   const d = parseIsoDateLocal_('2026-07-04');
@@ -381,8 +347,8 @@ t('esc_ handles null/undefined without throwing, returning the empty string', ()
   assert.strictEqual(esc_(undefined), '');
 });
 
-// ---- pctCellHtml_ / dollarCellHtml_ / fallbackBarsHtml_ (the "chart must never fail the send"
-//      safety fallback and its cell-renderer siblings — previously zero test coverage) ----
+// ---- pctCellHtml_ / fallbackBarsHtml_ (the "chart must never fail the send" safety fallback and
+//      its cell-renderer sibling — previously zero test coverage) ----
 t('pctCellHtml_ returns "Not enough data" for null', () => {
   assert.ok(pctCellHtml_(null, true, false).includes('Not enough data'));
 });
@@ -398,31 +364,34 @@ t('pctCellHtml_ appends the † marker when extrapolated=true', () => {
   assert.ok(pctCellHtml_(0.05, true, true).includes('†'));
   assert.ok(!pctCellHtml_(0.05, true, false).includes('†'));
 });
-t('dollarCellHtml_ returns "Not enough data" for null, signed dollars otherwise', () => {
-  assert.ok(dollarCellHtml_(null, true).includes('Not enough data'));
-  assert.ok(dollarCellHtml_(12.5, true).includes('+$12.50'));
-  assert.ok(dollarCellHtml_(-12.5, true).includes('−$12.50'));
-});
-t('fallbackBarsHtml_ colors a beating deployed strategy green and a trailing one red', () => {
+t('fallbackBarsHtml_ colors a beating deployed strategy green and a trailing one red, both vs VOO', () => {
   const d = { rows: [{ strategy: 'A', deployed: true, returnPct: 0.10 }, { strategy: 'B', deployed: true, returnPct: -0.02 }],
-              sgov: { returnPct: 0.01 }, headline: null };
+              voo: { returnPct: 0.01 } };
   const out = fallbackBarsHtml_(d);
-  assert.ok(out.includes('#1a7f5a')); // A beat SGOV (0.10 > 0.01)
-  assert.ok(out.includes('#c0392b')); // B trailed SGOV (-0.02 < 0.01)
+  assert.ok(out.includes('#1a7f5a')); // A beat VOO (0.10 > 0.01)
+  assert.ok(out.includes('#c0392b')); // B trailed VOO (-0.02 < 0.01)
 });
-t('fallbackBarsHtml_ always includes an SGOV bar colored SGOV_GRAY', () => {
-  const d = { rows: [{ strategy: 'A', deployed: true, returnPct: 0.10 }], sgov: { returnPct: 0.01 }, headline: null };
-  assert.ok(fallbackBarsHtml_(d).includes(SGOV_GRAY));
+t('fallbackBarsHtml_ never includes an SGOV bar (dropped in the 2026-07-15 redesign)', () => {
+  const d = { rows: [{ strategy: 'A', deployed: true, returnPct: 0.10 }], voo: { returnPct: 0.01 } };
+  assert.ok(!fallbackBarsHtml_(d).includes('SGOV'));
 });
-t('fallbackBarsHtml_ includes a VOO bar colored VOO_COLOR only when headline.voo.returnPct is non-null', () => {
-  const base = { rows: [{ strategy: 'A', deployed: true, returnPct: 0.10 }], sgov: { returnPct: 0.01 } };
-  const withVoo = fallbackBarsHtml_({ ...base, headline: { voo: { returnPct: 0.03 } } });
-  const withoutVoo = fallbackBarsHtml_({ ...base, headline: { voo: { returnPct: null } } });
+t('fallbackBarsHtml_ includes a VOO bar colored VOO_COLOR only when d.voo.returnPct is non-null', () => {
+  const base = { rows: [{ strategy: 'A', deployed: true, returnPct: 0.10 }] };
+  const withVoo = fallbackBarsHtml_({ ...base, voo: { returnPct: 0.03 } });
+  const withoutVoo = fallbackBarsHtml_({ ...base, voo: { returnPct: null } });
   assert.ok(withVoo.includes(VOO_COLOR));
   assert.ok(!withoutVoo.includes(VOO_COLOR));
 });
+t('fallbackBarsHtml_ colors a strategy bar neutral (not red) when VOO has no data to compare against', () => {
+  // Correctness guard: an unguarded `returnPct > undefined` would coerce to `> NaN` (false) in some
+  // engines or silently misbehave; the guarded `beat: null` path must render the neutral color, not red.
+  const d = { rows: [{ strategy: 'A', deployed: true, returnPct: 0.10 }], voo: { returnPct: null } };
+  const out = fallbackBarsHtml_(d);
+  assert.ok(!out.includes('#c0392b'));
+  assert.ok(out.includes('#3d4a59'));
+});
 t('fallbackBarsHtml_ respects the Math.max(2, ...) bar-width floor for a near-zero value', () => {
-  const d = { rows: [{ strategy: 'A', deployed: true, returnPct: 0.0001 }], sgov: { returnPct: 0.10 }, headline: null };
+  const d = { rows: [{ strategy: 'A', deployed: true, returnPct: 0.0001 }], voo: { returnPct: 0.10 } };
   const out = fallbackBarsHtml_(d);
   assert.ok(out.includes('width:2px') || /width:\d+px/.test(out));
 });
@@ -483,51 +452,52 @@ t('buildHealthReasons_ can report all three reasons at once (stale + kill-flag +
 // ---- buildSubject_ ----
 t('buildSubject_ shows "all parked" when nothing is deployed', () => {
   const d = { rows: [{ strategy: 'A', deployed: false }, { strategy: 'B', deployed: false }],
-    sgov: { returnPct: 0.01 }, green: true, dateLabel: 'Jul 6, 2026' };
+    green: true, dateLabel: 'Jul 6, 2026' };
   assert.strictEqual(buildSubject_(d), 'Stock-Trading · Deployed vs Benchmarks — Jul 6, 2026 · all parked');
 });
-t('buildSubject_ lists only deployed strategies plus SGOV when strategies are mixed parked/deployed, no headline', () => {
+t('buildSubject_ lists only deployed strategies when strategies are mixed parked/deployed, no VOO data', () => {
   const d = {
     rows: [
       { strategy: 'A', deployed: true, returnPct: 0.0123 },
       { strategy: 'B', deployed: false },
       { strategy: 'C', deployed: true, returnPct: -0.005 }
     ],
-    sgov: { returnPct: 0.002 }, green: true, dateLabel: 'Jul 6, 2026'
+    green: true, dateLabel: 'Jul 6, 2026'
   };
-  assert.strictEqual(buildSubject_(d), 'Stock-Trading · Deployed vs Benchmarks — Jul 6, 2026 · A +1.23% · C −0.50% · SGOV +0.20%');
+  assert.strictEqual(buildSubject_(d), 'Stock-Trading · Deployed vs Benchmarks — Jul 6, 2026 · A +1.23% · C −0.50%');
 });
-t('buildSubject_ appends the VOO fragment after SGOV when headline.voo has a return', () => {
+t('buildSubject_ appends the VOO fragment when d.voo has a return, and never mentions SGOV', () => {
   const d = {
     rows: [{ strategy: 'A', deployed: true, returnPct: 0.0123 }],
-    sgov: { returnPct: 0.002 }, green: true, dateLabel: 'Jul 6, 2026',
-    headline: { voo: { returnPct: 0.015 } }
+    green: true, dateLabel: 'Jul 6, 2026',
+    voo: { returnPct: 0.015 }
   };
-  assert.strictEqual(buildSubject_(d), 'Stock-Trading · Deployed vs Benchmarks — Jul 6, 2026 · A +1.23% · SGOV +0.20% · VOO +1.50%');
+  const subject = buildSubject_(d);
+  assert.strictEqual(subject, 'Stock-Trading · Deployed vs Benchmarks — Jul 6, 2026 · A +1.23% · VOO +1.50%');
+  assert.ok(!subject.includes('SGOV'));
 });
-t('buildSubject_ omits the VOO fragment when headline.voo.returnPct is null (VOO not backfilled yet)', () => {
+t('buildSubject_ omits the VOO fragment when d.voo.returnPct is null (VOO not backfilled yet)', () => {
   const d = {
     rows: [{ strategy: 'A', deployed: true, returnPct: 0.0123 }],
-    sgov: { returnPct: 0.002 }, green: true, dateLabel: 'Jul 6, 2026',
-    headline: { voo: { returnPct: null } }
+    green: true, dateLabel: 'Jul 6, 2026',
+    voo: { returnPct: null }
   };
-  assert.strictEqual(buildSubject_(d), 'Stock-Trading · Deployed vs Benchmarks — Jul 6, 2026 · A +1.23% · SGOV +0.20%');
+  assert.strictEqual(buildSubject_(d), 'Stock-Trading · Deployed vs Benchmarks — Jul 6, 2026 · A +1.23%');
 });
-t('buildSubject_ never appends the VOO fragment in the all-parked branch, even if headline.voo exists', () => {
+t('buildSubject_ never appends the VOO fragment in the all-parked branch, even if d.voo exists', () => {
   const d = {
     rows: [{ strategy: 'A', deployed: false }],
-    sgov: { returnPct: 0.002 }, green: true, dateLabel: 'Jul 6, 2026',
-    headline: { voo: { returnPct: 0.015 } }
+    green: true, dateLabel: 'Jul 6, 2026',
+    voo: { returnPct: 0.015 }
   };
   assert.strictEqual(buildSubject_(d), 'Stock-Trading · Deployed vs Benchmarks — Jul 6, 2026 · all parked');
 });
 t('buildSubject_ omits the warning suffix when green is true', () => {
-  const d = { rows: [{ strategy: 'A', deployed: true, returnPct: 0.01 }],
-    sgov: { returnPct: 0 }, green: true, dateLabel: 'Jul 6, 2026' };
+  const d = { rows: [{ strategy: 'A', deployed: true, returnPct: 0.01 }], green: true, dateLabel: 'Jul 6, 2026' };
   assert.ok(!buildSubject_(d).includes('check data'));
 });
 t('buildSubject_ appends the "⚠ check data" warning suffix when green is false', () => {
-  const d = { rows: [{ strategy: 'A', deployed: false }], sgov: { returnPct: 0 }, green: false, dateLabel: 'Jul 6, 2026' };
+  const d = { rows: [{ strategy: 'A', deployed: false }], green: false, dateLabel: 'Jul 6, 2026' };
   assert.strictEqual(buildSubject_(d), 'Stock-Trading · Deployed vs Benchmarks — Jul 6, 2026 · all parked · ⚠ check data');
 });
 

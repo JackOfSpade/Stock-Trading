@@ -74,7 +74,7 @@ MERGE `stock-trading-498512.state.expected_script_versions` T
 USING (
   SELECT * FROM UNNEST([
     STRUCT('alert_emailer' AS script_name, 'v1' AS expected_version, 'bigquery/43_script_version_registry.sql initial seed -- alert_emailer.gs SCRIPT_VERSION not yet introduced; bump on first owner paste that adds it' AS git_note),
-    STRUCT('weekly_report' AS script_name, 'v2' AS expected_version, '2026-07-13: weekly_report.gs v2 -- VOO benchmark added alongside SGOV (owner directive), new deployed-book-vs-benchmarks headline block, avg/month+avg/year (dropped avg/week), subject prefix changed to "Deployed vs Benchmarks"' AS git_note)
+    STRUCT('weekly_report' AS script_name, 'v3' AS expected_version, '2026-07-15: weekly_report.gs v3 -- SGOV removed everywhere (owner directive): "Deployed Book Since..." headline section dropped, SGOV dropped from subject/chart/table, table retitled "Average Return" and driven by each strategy''s own deployed-capital return instead of excess_vs_sgov. VOO is now the sole displayed benchmark (still purely informational -- perf.kill_flags stays SGOV-anchored, untouched). NOTE: do not apply this MERGE live until the owner has actually re-pasted weekly_report.gs into the live Apps Script project -- applying it early makes state.script_version_drift false-alarm against the still-v2 live heartbeat.' AS git_note)
   ])
 ) S
 ON T.script_name = S.script_name

@@ -17,8 +17,10 @@ click) plus the staged adoptions. Each item says what it solves (P0–P3 from th
 >   `state.freshness.marks_fresh`/`engine_fresh`.
 > - **Cadence monitor** — `state.cadence_watch` + `bigquery/scheduled_queries/cadence_check.sql`
 >   (self-bootstrapping: only alerts on routines that have adopted logging).
-> - **SGOV reconciliation** — `state.sgov_reconciliation` event-sources the SGOV holding; the
->   hand-kept per-strategy share ledger is dissolved (Operating_Protocols §13).
+> - **Park reconciliation** — `state.park_reconciliation` event-sources the idle-capital park holding
+>   (SGOV historically, VOO from the 2026-07-15 cutover forward — `state.park_policy_current` names the
+>   current vehicle); the hand-kept per-strategy share ledger is dissolved (Operating_Protocols §13).
+>   `state.sgov_reconciliation` is frozen to SGOV-only history as of the cutover (§42).
 > - **dbt** — `dbt/` is a tested, parallel-run modeling layer over the derived views (see **§14**).
 > - **Credential resilience** — see **§15**.
 > - **CI/dashboard** — `dbt parse` + keyless WIF SQL dry-run added to CI; a Pages workflow publishes
@@ -37,12 +39,15 @@ click) plus the staged adoptions. Each item says what it solves (P0–P3 from th
   `ops.sp_score_theater`, `analytics.theater_check_calibration`;
   `bigquery/12_cadence_monitor.sql` → `state.cadence_expected_today`, `state.cadence_watch`,
   `ops.sp_assert_deps`, `ops.sp_routine_start`, `ops.sp_routine_end`;
-  `bigquery/13_sgov_reconciliation.sql` → `state.sgov_position`, `state.sgov_reconciliation`;
+  `bigquery/13_sgov_reconciliation.sql` → `state.sgov_position`, `state.sgov_reconciliation` (frozen to
+  SGOV-only history as of 2026-07-15 — see `bigquery/54_park_policy_voo_cutover.sql` → `events.park_policy_changes`,
+  `state.park_policy_current`, `state.park_position`, `state.park_reconciliation`, the live vehicle-aware
+  successors, §42);
   and D2's run is logged by the routine via `ops.sp_routine_start`/`sp_routine_end` (not self-logged
   by `ops.sp_daily_refresh`).
 - Quick check anytime: `SELECT * FROM state.system_health;` (want `all_green = TRUE`);
   `SELECT * FROM state.cadence_watch WHERE needs_attention;` (want zero rows);
-  `SELECT * FROM state.sgov_reconciliation;` (events-side SGOV shares to compare to the connector).
+  `SELECT * FROM state.park_reconciliation;` (events-side park shares, current vehicle, to compare to the connector).
 
 To re-apply or move to a fresh project, run `bigquery/01..21_*.sql` in order via the BigQuery MCP
 `execute_sql` (same pattern the existing files use). (Added 2026-06-24: `18_stack_review_fixes.sql` —
@@ -2324,3 +2329,85 @@ remain `latching = FALSE` in `ops.alert_policy` and clear mechanically once the 
 (D1 4pm MT onward) completes — this fix prevents the SAME false positive recurring, it does not itself need
 to touch `ops.alerts`.
 registration, no new schema, no live-apply: this section is the entire deliverable.
+---
+
+## 42. SGOV removed from the weekly email; idle-capital parking vehicle switches SGOV → VOO — the 2026-07-15 owner directive *(design, owner directive)*
+
+**Directive.** Two changes, owner-specified 2026-07-15, both scoped to the weekly digest email's display
+and the physical idle-capital parking vehicle — neither touches the sanctioned kill/gate benchmark:
+
+1. **Weekly email v3** (`ops/weekly_report/weekly_report.gs`, `SCRIPT_VERSION` `'v2'` → `'v3'`). The
+   "Deployed Book Since..." headline section (§33/§41's v2 design: deployed-book vs SGOV vs VOO,
+   cumulative/avg/$-edge) is removed entirely. SGOV is removed from the subject line, the returns
+   chart, and the per-strategy table. The table is retitled "Average Return" and now shows each
+   strategy's OWN average return on deployed capital only, over active (deployed) time only —
+   `analytics.strategy_vs_park_daily.deployed_unit_value`, a pure `.gs`-side switch from
+   `excess_vs_sgov`; no BigQuery view changed, since `deployed_unit_value` already carried exactly
+   this figure. The chart keeps each deployed strategy's cumulative return + VOO's own cumulative
+   return, each its own natural (non-rebased) line — VOO was already plotted this way; only the SGOV
+   line was removed. VOO is the sole displayed benchmark, still purely informational.
+2. **Idle-capital parking vehicle: SGOV → VOO.** Idle (undeployed) capital parks in VOO going forward.
+   Implemented event-sourced via the new `events.park_policy_changes` table + `state.park_policy_current`
+   view (`bigquery/54_park_policy_voo_cutover.sql`), NOT a hardcoded cutover date — the actual cutover
+   activates only when a live INSERT records the owner's manual "sell all SGOV, buy VOO" IBKR transfer
+   (a separate, later, one-time action the owner triggers; not executed by this migration). History
+   before that transfer is genuinely SGOV and is not rewritten — `events.parking_events` gained a
+   `ticker` column, backfilled `'SGOV'` for all 22 pre-existing rows (2-statement `ADD COLUMN` + `UPDATE`,
+   verified live). `state.sgov_position`/`state.sgov_reconciliation` are frozen (via `WHERE ticker='SGOV'`)
+   to SGOV-only history; the new `state.park_position`/`state.park_position_current`/`state.park_reconciliation`
+   supersede them going forward, vehicle-aware. `analytics.fn_order_guard`'s `p_is_sgov` parameter is
+   renamed `p_is_park` (same call position — zero call-site changes required) and its price band is now
+   read live from `state.park_policy_current` (0.2% for SGOV, 0.5% for any other vehicle), so the
+   function needs no further edit on the actual cutover day. VOO's IBKR `contract_id` (136155102, ARCA
+   US primary listing) resolved via `search_contracts` and cached in `Claude_Task_Plan.md`.
+
+**Explicitly out of scope — the sanctioned kill/gate benchmark is unchanged.** `perf.strategy_daily.excess_vs_sgov`,
+`perf.kill_flags`, `state.strategy_retirement_candidacy`, `state.strategy_paper_readiness`'s PAPER-phase
+excess-vs-SGOV gate, `analytics.nogo_counterfactual`, `analytics.sgov_daily_return`, and
+`ops.sp_recompute_engine` all remain SGOV-anchored, exactly as `bigquery/39_beta_adjusted_alpha.sql` and
+`bigquery/46_weekly_benchmarks.sql` already document. SGOV's own daily mark ingestion continues
+unconditionally in D2a (alongside SPY and VOO) regardless of the parking-vehicle switch, because that
+benchmark still needs it — this was NOT touched.
+
+**Deliberately not done — the 9 pre-existing `ticker != 'SGOV'` defensive filters were NOT widened to
+also exclude VOO** (`analytics.position_lifecycle`, `analytics.tax_lots`, `analytics.execution_quality`,
+`state.open_positions_summary`, `analytics.strategy_vs_park`'s commission CTE, etc. — the same filters
+§29 documents). SGOV could never legitimately be a strategy's own directional position (no strategy has
+a "buy risk-free T-bills" thesis), so a blanket exclusion was always safe defense-in-depth; VOO is an
+ordinary, liquid, popular ETF a strategy COULD legitimately trade as a real thesis (none does today,
+confirmed via repo-wide search, but nothing structurally prevents it going forward). Blanket-excluding
+VOO the same way would silently drop a future strategy's real P&L from the deployed-TWR engine — a
+silent correctness bug, worse than the leak class it would guard against. Instead, a new DETECTIVE dbt
+test, `dbt/tests/assert_no_park_ticker_in_strategy_positions.sql`, watches `state.trade_fills_curated`
+for any `ticker IN ('SGOV','VOO')` row carrying a non-NULL `strategy` (the §29 leak shape, either
+vehicle), carving out the known 2026-06-30 SGOV incident by `trade_id` so it doesn't re-flag history.
+
+**Files changed:** `ops/weekly_report/weekly_report.gs` (v3 rewrite), `ops/weekly_report/test_pure_helpers.js`
+(mirrored, 58/58 assertions pass), `ops/weekly_report/sample_preview.html`, `ops/weekly_report/README.md`,
+`bigquery/43_script_version_registry.sql` (file bumped to `'v3'`; **live MERGE deliberately deferred**
+until the owner actually re-pastes the `.gs`, to avoid a false `state.script_version_drift` alarm in the
+interim), `bigquery/54_park_policy_voo_cutover.sql` (new, applied live and verified byte-identical output
+for `state.sgov_position`/`state.sgov_reconciliation` pre/post, plus a 5-case `fn_order_guard` fire-drill
+re-check), `bigquery/55_park_policy_voo_seed.sql` (new, `events.decision_log` entry applied live),
+`dbt/tests/assert_no_park_ticker_in_strategy_positions.sql` (new), `dbt/models/sources.yml`,
+`dbt/README.md`, `Operating_Protocols.md` §13 (full rewrite — vehicle-generic, event-sourced) + §1/§16/§18
+pointer updates, `Claude_Task_Plan.md` (D2a tripwire/sweep/cover sections retargeted; marks-ingest/kill-gate
+sections explicitly left unchanged; VOO `contract_id` cached), `ops/cadence.yaml` (+regenerated
+`ops/triggers.json`, `check_cadence_consistency.py` green), `bigquery/README.md`.
+
+**Owner actions still required (not executable by this change):** (1) re-paste `weekly_report.gs` into
+the live "Stock-Trading Automation" Apps Script project (commit-SHA-pinned GitHub raw URL — a large
+rewrite) and run `testReport()`; (2) apply `bigquery/43_script_version_registry.sql`'s MERGE live in the
+same window; (3) resolve/execute the manual IBKR "sell all SGOV, buy VOO" transfer whenever ready
+(~92.06 SGOV sh ≈ $9,256 today ≈ 13.3 VOO sh at VOO's live ~$694/share — fractional shares supported,
+confirmed via 10 of 10 current positions already being fractional); (4) same day as that transfer, run
+the prepared cutover SQL (INSERT the `('VOO', <date>)` row into `events.park_policy_changes` + the two
+`events.parking_events` conversion rows) and confirm the next D2a run reconciles cleanly against
+`state.park_reconciliation` with no tripwire hard-stop.
+
+**Verification.** `node ops/weekly_report/test_pure_helpers.js` — 58/58 pass. Live BigQuery: `state.sgov_position`/
+`state.sgov_reconciliation` post-migration output verified byte-identical to pre-migration (92.0612 SGOV
+shares, $9,253.99 MV, unchanged). `analytics.fn_order_guard` fire-drill: oversize/off-band/negative-qty
+strategy-order rejections unchanged (FALSE/FALSE/FALSE); SGOV in-band park order passes, off-band park
+order rejects (TRUE/FALSE) — identical to pre-redefinition behavior. New dbt test returns zero rows against
+live data. `scripts/check_cadence_consistency.py` — OK, `ops/triggers.json` current.
