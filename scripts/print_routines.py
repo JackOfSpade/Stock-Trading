@@ -43,7 +43,6 @@ Usage:  python scripts/print_routines.py
 """
 import json
 import os
-import re
 import sys
 
 try:
@@ -52,37 +51,20 @@ except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
     raise SystemExit(2)
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib.routine_manifest import heading_to_id, parse_routine_headings, build_triggers_manifest  # noqa: E402
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLAN = os.path.join(ROOT, "Claude_Task_Plan.md")
 CADENCE = os.path.join(ROOT, "ops", "cadence.yaml")
 TRIGGERS_JSON = os.path.join(ROOT, "ops", "triggers.json")
 
-# A routine section heading ends with its type tag; this excludes preamble/queue-schema headings.
-ROUTINE_SUFFIX = re.compile(r"—\s*(deep research|regular routine)\s*$")
-
 
 def routine_headings():
-    """Ordered list of routine section headings from Claude_Task_Plan.md."""
-    out = []
-    with open(PLAN, encoding="utf-8") as f:
-        for ln in f:
-            if ln.startswith("## "):
-                h = ln[3:].strip()
-                if ROUTINE_SUFFIX.search(h):
-                    out.append(h)
-    return out
-
-
-def heading_to_id(h):
-    """Map a heading to its ops/cadence.yaml id."""
-    m = re.match(r"([A-Za-z0-9]+)\.\s", h)   # "D1. ...", "M1a. ...", "Q4. ..."
-    if m:
-        return m.group(1)
-    if "Attacker" in h:
-        return "AR_att"
-    if "Orchestrator" in h:
-        return "AR_orc"
-    return None
+    """Ordered list of routine section headings from Claude_Task_Plan.md (shared parser — see
+    scripts/lib/routine_manifest.py; this used to be an independent copy of
+    scripts/check_cadence_consistency.py's identical logic, 2026-07-14 audit finding)."""
+    return parse_routine_headings(PLAN)
 
 
 def load_cadence():
@@ -131,15 +113,7 @@ def main():
         print("OK: every routine heading maps 1:1 to an ops/cadence.yaml routine.")
 
     if "--write" in sys.argv:
-        manifest = {
-            rid: {
-                "monitor_class": cad.get(rid, {}).get("monitor_class"),
-                "instruction": f"Read Claude_Task_Plan.md. Perform {h}.",
-            }
-            for h in headings
-            for rid in [heading_to_id(h)]
-            if rid in cad
-        }
+        manifest = build_triggers_manifest(headings, cad)
         with open(TRIGGERS_JSON, "w", encoding="utf-8") as f:
             json.dump(manifest, f, indent=2, sort_keys=True)
             f.write("\n")

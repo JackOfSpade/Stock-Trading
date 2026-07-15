@@ -46,6 +46,12 @@ except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
     raise SystemExit(2)
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib.routine_manifest import (  # noqa: E402
+    heading_to_id, parse_routine_headings, build_triggers_manifest,
+    ROUTINE_SUFFIX as _ROUTINE_SUFFIX,
+)
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLAN = os.path.join(ROOT, "Claude_Task_Plan.md")
 CADENCE = os.path.join(ROOT, "ops", "cadence.yaml")
@@ -66,7 +72,10 @@ ALLOWED_CLASSES = {
 # monitor_class values the calendar view (state.cadence_expected_today) must encode.
 CALENDAR_CLASSES = ALLOWED_CLASSES - {"queue_driven"}
 
-ROUTINE_SUFFIX = re.compile(r"—\s*(deep research|regular routine)\s*$")
+# ROUTINE_SUFFIX / heading_to_id are shared with scripts/print_routines.py's identical copies —
+# see scripts/lib/routine_manifest.py (2026-07-14 audit finding: two independently-maintained
+# copies of this logic undermined check F's own "ops/triggers.json is current" guarantee).
+ROUTINE_SUFFIX = _ROUTINE_SUFFIX
 
 # The state.cadence_watch deadline-guard literal: DATETIME(e.today, TIME 'HH:MM:SS'). Capture HH:MM.
 SQL_DEADLINE = re.compile(r"DATETIME\(\s*e\.today\s*,\s*TIME\s*'(\d{2}:\d{2})(?::\d{2})?'\s*\)")
@@ -74,26 +83,8 @@ HHMM = re.compile(r"^\d{2}:\d{2}$")
 
 
 def plan_headings():
-    """Ordered routine section headings from Claude_Task_Plan.md (same rule as print_routines.py)."""
-    out = []
-    with open(PLAN, encoding="utf-8") as f:
-        for ln in f:
-            if ln.startswith("## "):
-                h = ln[3:].strip()
-                if ROUTINE_SUFFIX.search(h):
-                    out.append(h)
-    return out
-
-
-def heading_to_id(h):
-    m = re.match(r"([A-Za-z0-9]+)\.\s", h)   # "D1. ...", "M1a. ...", "Q4. ..."
-    if m:
-        return m.group(1)
-    if "Attacker" in h:
-        return "AR_att"
-    if "Orchestrator" in h:
-        return "AR_orc"
-    return None
+    """Ordered routine section headings from Claude_Task_Plan.md (shared parser)."""
+    return parse_routine_headings(PLAN)
 
 
 def load_cadence():
@@ -155,16 +146,10 @@ def parse_period_grace_sql():
 
 def generate_triggers_manifest(head_by_id, cad):
     """The canonical {id: {monitor_class, instruction}} map — same shape print_routines.py --write
-    emits to ops/triggers.json. Kept here too (duplicated, matching this repo's existing
-    print_routines.py / check_cadence_consistency.py duplication convention) so CI can verify the
-    committed file is not stale without shelling out to the other script."""
-    return {
-        rid: {
-            "monitor_class": cad[rid].get("monitor_class"),
-            "instruction": f"Read Claude_Task_Plan.md. Perform {h}.",
-        }
-        for rid, h in head_by_id.items() if rid in cad
-    }
+    emits to ops/triggers.json. Delegates to the shared implementation (scripts/lib/routine_manifest.py)
+    so CI verifies the committed file against the SAME code path print_routines.py --write uses,
+    not an independently-maintained copy of it."""
+    return build_triggers_manifest(list(head_by_id.values()), cad)
 
 
 def check_depends_on(cad):
