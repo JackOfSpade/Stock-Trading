@@ -265,7 +265,15 @@ def greeks_bsm(opt: OptionInputs) -> Dict[str, float]:
     - rho: per 1 rate-point move (i.e., per 0.01 in r decimal)
     """
     if opt.time_to_expiration <= 0:
-        return {'delta': 0.0, 'gamma': 0.0, 'theta': 0.0, 'vega': 0.0, 'rho': 0.0}
+        # At expiration the price is pure intrinsic value (see price_bsm's own T<=0 branch): delta
+        # is that payoff's slope -- +1 for an ITM call, -1 for an ITM put, 0 OTM. S==K is treated as
+        # OTM, matching price_bsm's max(...,0.0) boundary convention. All other Greeks are
+        # degenerate (zero) at exact expiration.
+        if opt.option_type == 'call':
+            delta = 1.0 if opt.underlying_price > opt.strike else 0.0
+        else:
+            delta = -1.0 if opt.underlying_price < opt.strike else 0.0
+        return {'delta': delta, 'gamma': 0.0, 'theta': 0.0, 'vega': 0.0, 'rho': 0.0}
 
     if opt.volatility <= 0:
         # Zero/negative vol: gamma/vega/theta divide by sigma → guard against
@@ -559,21 +567,23 @@ class Structure:
                 f"defined-risk structure; per Strategy.md the thesis must defer."
             )
 
-        S0 = self.underlying_price
-
-        # Test prices: zero, all strikes, well-above-highest-strike, and a
-        # fine grid in between. This is exact for piecewise-linear expiration
-        # payoffs (which all permitted structures have).
+        # Test prices: zero, all strikes, and well-above-highest-strike. Every permitted
+        # structure's pnl_at_expiration is a sum of max(S-K,0)/max(K-S,0) terms scaled by leg
+        # quantity/multiplier, minus a constant (net_debit) -- exactly piecewise-linear in S with
+        # kinks only at the leg strikes. A piecewise-linear function's extrema over an interval
+        # occur only at kinks or the interval's endpoints, so {0, every strike, far-above-the-
+        # highest-strike} is PROVABLY sufficient: S=0 covers the worst case for net-short-put
+        # structures, the strikes cover every kink, and max_strike*5 sits safely in the flat/
+        # non-decreasing region above the highest strike guaranteed by the net-short-call rejection
+        # above (net call quantity >= 0 here, so payoff cannot decrease past the last strike). The
+        # previous ~2919-point fine grid (2901 uniform samples + +/-0.01 strike-adjacent probes)
+        # could never find a worse point than this set and was removed as pure overhead on this
+        # dual-path-verified, safety-critical function (2026-07-14 audit finding; verified
+        # byte-for-byte identical worst_pnl across ~5900 randomized structures of every permitted
+        # type plus naked-short-put/ratio/straddle/cancelling-leg edge cases before landing this).
         strikes = sorted({leg.option.strike for leg in self.legs})
         max_strike = max(strikes)
-        test_prices = (
-            [0.0, 0.001]  # exact zero (worst case for net-short puts) + near-zero
-            + strikes
-            + [s - 0.01 for s in strikes]  # just below each strike
-            + [s + 0.01 for s in strikes]  # just above each strike
-            + [max_strike * 5]  # far above
-            + [S0 * (0.1 + 0.001 * i) for i in range(2901)]  # 0.1 to 3.0 of S0
-        )
+        test_prices = [0.0] + strikes + [max_strike * 5]
 
         worst_pnl = min(self.pnl_at_expiration(p) for p in test_prices)
         # max_loss is magnitude of worst case (negative pnl → positive loss)
@@ -710,6 +720,18 @@ class Structure:
 # Structure constructors (only Strategy.md-permitted variants)
 # =============================================================================
 
+def _validate_contracts(contracts) -> None:
+    """Every constructor's `contracts` must be a positive int. Without this, a negative count
+    silently flips a structure's long/short semantics (e.g. long_put(..., contracts=-1) builds a
+    naked short put ~30x the real max loss, still labeled 'long_put') and a fractional count
+    builds a non-tradeable position -- both pass through net_debit()/max_loss_closed_form()/
+    verify_max_loss_dual_path() with no error (2026-07-14 audit finding)."""
+    if not isinstance(contracts, int) or isinstance(contracts, bool) or contracts < 1:
+        raise ValueError(
+            f"contracts = {contracts!r} (must be a positive int). A negative count silently "
+            f"flips long/short semantics; a fractional count is not a tradeable position.")
+
+
 def _leg(
     underlying_price: float,
     days_to_expiration: int,
@@ -758,6 +780,7 @@ def long_call(
     Keyword-only arguments after underlying_price for consistency with multi-leg
     constructors and prevention of positional-argument bugs.
     """
+    _validate_contracts(contracts)
     leg = _leg(underlying_price, days_to_expiration, risk_free_rate, dividend_yield,
                strike=strike, volatility=volatility, option_type='call', quantity=contracts)
     return Structure(
@@ -782,6 +805,7 @@ def long_put(
     Keyword-only arguments after underlying_price for consistency with multi-leg
     constructors.
     """
+    _validate_contracts(contracts)
     leg = _leg(underlying_price, days_to_expiration, risk_free_rate, dividend_yield,
                strike=strike, volatility=volatility, option_type='put', quantity=contracts)
     return Structure(
@@ -809,6 +833,7 @@ def debit_call_spread(
     bugs (e.g., swapping long_strike and short_strike). Caller must use named
     arguments. Per cycle 4 critical-eval warning [5].
     """
+    _validate_contracts(contracts)
     if long_strike >= short_strike:
         raise ValueError(
             f"Bull call spread requires long_strike < short_strike "
@@ -846,6 +871,7 @@ def debit_put_spread(
     Keyword-only arguments after underlying_price prevent silent argument-order
     bugs. Caller must use named arguments.
     """
+    _validate_contracts(contracts)
     if long_strike <= short_strike:
         raise ValueError(
             f"Bear put spread requires long_strike > short_strike "
@@ -883,6 +909,7 @@ def credit_call_spread(
     Keyword-only arguments after underlying_price prevent silent argument-order
     bugs. Caller must use named arguments.
     """
+    _validate_contracts(contracts)
     if short_strike >= long_strike:
         raise ValueError(
             f"Bear call spread requires short_strike < long_strike "
@@ -920,6 +947,7 @@ def credit_put_spread(
     Keyword-only arguments after underlying_price prevent silent argument-order
     bugs. Caller must use named arguments.
     """
+    _validate_contracts(contracts)
     if short_strike <= long_strike:
         raise ValueError(
             f"Bull put spread requires short_strike > long_strike "
@@ -961,6 +989,7 @@ def iron_condor(
 
     Keyword-only arguments after underlying_price prevent silent argument-order bugs.
     """
+    _validate_contracts(contracts)
     if not (long_put_strike < short_put_strike < short_call_strike < long_call_strike):
         raise ValueError(
             f"Iron condor requires strict ordering: "
@@ -1010,6 +1039,17 @@ def _butterfly(
     built (2026-07-09 code-review fix: a prior version took label/
     structure_type as redundant caller-supplied strings).
     """
+    _validate_contracts(contracts)
+    if not (lower_strike < middle_strike < upper_strike):
+        # The equidistant check below is vacuously true when lower==middle==upper (0.0 isclose
+        # 0.0), which would silently build a degenerate zero-net-payoff "butterfly" priced with
+        # three independently-supplied vols -- a constant, price-independent max_loss_closed_form()
+        # result that both dual-path checks agree on since they share the same legs (2026-07-14
+        # audit finding). Every sibling spread constructor already enforces strict, non-equal
+        # strike ordering; this brings _butterfly in line with that convention.
+        raise ValueError(
+            f"Butterfly requires strictly ascending strikes: "
+            f"got lower={lower_strike}, middle={middle_strike}, upper={upper_strike}")
     if not math.isclose(middle_strike - lower_strike, upper_strike - middle_strike, abs_tol=0.01):
         raise ValueError(
             f"Butterfly requires equidistant strikes: "
@@ -1260,6 +1300,19 @@ def cascade_max_loss(
     if not short_legs:
         # Long-options-only structure: no early assignment possible
         return 0.0  # Cascade not applicable; max_loss_closed_form is the bound
+
+    if not math.isfinite(implied_move_full_horizon) or implied_move_full_horizon <= 0:
+        # implied_move_full_horizon is an UNSIGNED magnitude (e.g. 0.07 for a +/-7% implied move
+        # through expiration), not a signed expected return. A negative value flips the
+        # adverse-move direction for whichever short leg's assignment risk this function exists to
+        # bound (verified: a 100/105 credit call spread's cascade loss goes from 306.26 to 0.0 when
+        # a -0.07 value is passed instead of +0.07), silently understating total_max_loss =
+        # max(closed_form, cascade) exactly where the true risk is unbounded-looking. A zero value
+        # is equally wrong (no assignment risk is never the correct answer for a short leg).
+        raise ValueError(
+            f"implied_move_full_horizon = {implied_move_full_horizon} (must be a finite value > 0). "
+            f"This is an unsigned magnitude (e.g. 0.07 for a +/-7% implied move), not a signed "
+            f"expected return; a bad value silently understates the cascade bound.")
 
     # 2x implied-move scaled to full structure expiration
     adverse_move_pct = 2.0 * implied_move_full_horizon

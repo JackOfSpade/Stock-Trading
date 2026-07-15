@@ -524,3 +524,102 @@ def test_size_position_exact_multiple_not_dropped_by_float_error():
     assert math.floor(4.8 / 1.6) == 2  # sentinel: raw float underestimates
     contracts, defer = size_position(1.6, 240.0, 0.02)
     assert contracts == 3 and defer is False
+
+
+# ---------------------------------------------------------------------------
+# 2026-07-14 self-improvement audit fixes: input validation + expiration Greeks
+# ---------------------------------------------------------------------------
+def test_cascade_max_loss_rejects_non_positive_implied_move():
+    # A negative implied_move_full_horizon used to silently flip the adverse-move
+    # direction (a 100/105 credit call spread's cascade went from 306.26 to 0.0),
+    # understating total_max_loss = max(closed_form, cascade). Must raise instead.
+    ccs = credit_call_spread(100, short_strike=100, long_strike=105,
+                              days_to_expiration=30, risk_free_rate=0.045,
+                              volatility_short=0.30, volatility_long=0.30, contracts=1)
+    for bad in (-0.05, 0.0, float('nan'), float('inf')):
+        with pytest.raises(ValueError):
+            cascade_max_loss(ccs, implied_move_full_horizon=bad)
+
+
+def test_butterfly_rejects_non_ascending_or_equal_strikes():
+    # The equidistant check alone is vacuously true for identical/reversed strikes
+    # (both differences are equal), which used to silently build a degenerate
+    # zero-net-payoff "butterfly" that both dual-path checks agree on.
+    for lo, mid, hi in [(100, 100, 100), (105, 100, 95)]:
+        with pytest.raises(ValueError):
+            long_call_butterfly(100, lower_strike=lo, middle_strike=mid, upper_strike=hi,
+                                 days_to_expiration=30, risk_free_rate=0.045,
+                                 vol_lower=0.30, vol_middle=0.30, vol_upper=0.30, contracts=1)
+
+
+def test_butterfly_rejects_non_equidistant_strikes():
+    with pytest.raises(ValueError):
+        long_put_butterfly(100, lower_strike=90, middle_strike=100, upper_strike=115,
+                            days_to_expiration=30, risk_free_rate=0.045,
+                            vol_lower=0.30, vol_middle=0.30, vol_upper=0.30, contracts=1)
+
+
+@pytest.mark.parametrize("bad", [-1, 0, 2.5])
+def test_constructors_reject_invalid_contracts(bad):
+    # A negative/fractional contracts count used to be silently accepted (e.g.
+    # long_put(..., contracts=-1) built a naked short put ~30x the real max loss,
+    # still labeled 'long_put'), sailing through dual-path verification with no
+    # error. All 8 constructors must now reject it.
+    with pytest.raises(ValueError):
+        long_call(100, strike=100, days_to_expiration=30, risk_free_rate=0.045,
+                   volatility=0.30, contracts=bad)
+    with pytest.raises(ValueError):
+        long_put(100, strike=100, days_to_expiration=30, risk_free_rate=0.045,
+                  volatility=0.30, contracts=bad)
+    with pytest.raises(ValueError):
+        debit_call_spread(100, long_strike=100, short_strike=105, days_to_expiration=30,
+                           risk_free_rate=0.045, volatility_long=0.30, volatility_short=0.28,
+                           contracts=bad)
+    with pytest.raises(ValueError):
+        debit_put_spread(100, long_strike=105, short_strike=100, days_to_expiration=30,
+                          risk_free_rate=0.045, volatility_long=0.30, volatility_short=0.28,
+                          contracts=bad)
+    with pytest.raises(ValueError):
+        credit_call_spread(100, short_strike=100, long_strike=105, days_to_expiration=30,
+                            risk_free_rate=0.045, volatility_short=0.30, volatility_long=0.28,
+                            contracts=bad)
+    with pytest.raises(ValueError):
+        credit_put_spread(100, short_strike=100, long_strike=95, days_to_expiration=30,
+                           risk_free_rate=0.045, volatility_short=0.30, volatility_long=0.28,
+                           contracts=bad)
+    with pytest.raises(ValueError):
+        iron_condor(100, long_put_strike=85, short_put_strike=90, short_call_strike=110,
+                    long_call_strike=115, days_to_expiration=30, risk_free_rate=0.045,
+                    vol_long_put=0.30, vol_short_put=0.30, vol_short_call=0.30,
+                    vol_long_call=0.30, contracts=bad)
+    with pytest.raises(ValueError):
+        long_call_butterfly(100, lower_strike=90, middle_strike=100, upper_strike=110,
+                             days_to_expiration=30, risk_free_rate=0.045,
+                             vol_lower=0.30, vol_middle=0.30, vol_upper=0.30, contracts=bad)
+
+
+def test_price_bsm_at_expiration_returns_intrinsic_value():
+    itm_call = ATMOption(110, 100, 0, 0.045, 0.30, 'call')
+    otm_call = ATMOption(90, 100, 0, 0.045, 0.30, 'call')
+    itm_put = ATMOption(90, 100, 0, 0.045, 0.30, 'put')
+    otm_put = ATMOption(110, 100, 0, 0.045, 0.30, 'put')
+    assert price_bsm(itm_call) == pytest.approx(10.0)
+    assert price_bsm(otm_call) == 0.0
+    assert price_bsm(itm_put) == pytest.approx(10.0)
+    assert price_bsm(otm_put) == 0.0
+
+
+def test_greeks_bsm_at_expiration_delta_reflects_moneyness():
+    # T<=0 used to unconditionally return delta=0.0 regardless of moneyness, even
+    # though an ITM option's value at expiration moves $1-for-$1 with the underlying
+    # (price_bsm's own T<=0 branch returns pure intrinsic value with that exact slope).
+    assert greeks_bsm(ATMOption(110, 100, 0, 0.045, 0.30, 'call'))['delta'] == 1.0
+    assert greeks_bsm(ATMOption(90, 100, 0, 0.045, 0.30, 'call'))['delta'] == 0.0
+    assert greeks_bsm(ATMOption(90, 100, 0, 0.045, 0.30, 'put'))['delta'] == -1.0
+    assert greeks_bsm(ATMOption(110, 100, 0, 0.045, 0.30, 'put'))['delta'] == 0.0
+
+
+def test_greeks_bsm_at_expiration_other_greeks_still_zero():
+    for opt in (ATMOption(110, 100, 0, 0.045, 0.30, 'call'), ATMOption(90, 100, 0, 0.045, 0.30, 'put')):
+        g = greeks_bsm(opt)
+        assert g['gamma'] == 0.0 and g['theta'] == 0.0 and g['vega'] == 0.0 and g['rho'] == 0.0
