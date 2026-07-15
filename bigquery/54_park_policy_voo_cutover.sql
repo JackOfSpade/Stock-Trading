@@ -85,10 +85,24 @@ WHERE NOT EXISTS (
 );
 
 -- ===== state.park_policy_current — the single row every vehicle-aware consumer reads =====
+-- BUG FIX (2026-07-15, caught in post-implementation review, not yet triggered live): the original
+-- version ordered by `effective_date DESC` (a hand-typed, operator-supplied TARGET date -- see
+-- bigquery/56's <TRANSFER_DATE> placeholder), not by insertion/transition time. This repo has an
+-- established house rule against exactly that pattern (bigquery/01_schema.sql's queue_events.due_date
+-- discussion: "the discriminator must be the TRANSITION time... ordering by [a target date] lets an
+-- older 'created' event outrank a later one -- use event_ts DESC, the actual INSERT-time transition
+-- order"). Under the original ORDER BY, a forward-dated or mistyped effective_date on the real VOO
+-- cutover INSERT would make that row "current" immediately, ahead of the operator's intent, while a
+-- correctly-dated-but-later-inserted correction row would lose the tiebreak. Ordering by event_ts DESC
+-- instead means whichever row was actually inserted last always wins, matching this file's own stated
+-- design goal ("the actual live INSERT on the transfer day... is what flips every downstream view") and
+-- requiring no change to bigquery/55/56 or any caller. effective_date is kept as a plain descriptive
+-- column (still NOT NULL, still owner-supplied for the audit trail) -- it is simply no longer the
+-- selection key.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.park_policy_current` AS
 SELECT vehicle, effective_date, note
 FROM `stock-trading-498512.events.park_policy_changes`
-QUALIFY ROW_NUMBER() OVER (ORDER BY effective_date DESC, event_ts DESC) = 1;
+QUALIFY ROW_NUMBER() OVER (ORDER BY event_ts DESC) = 1;
 
 -- ===== state.park_position / state.park_position_current — vehicle-aware successor to
 -- state.sgov_position. GROUP BY ticker so a SGOV-era share/cash total is never summed together with
@@ -116,10 +130,34 @@ SELECT
 FROM `stock-trading-498512.events.parking_events`
 GROUP BY ticker;
 
+-- BUG FIX (2026-07-15, caught in post-implementation review, not yet triggered live): the original
+-- version JOINed FROM park_position (only produces a row per ticker that already has
+-- events.parking_events history) INTO park_policy_current -- a default INNER join. On the real cutover,
+-- state.park_policy_current flips to VOO via a single INSERT (bigquery/56 step 1) that lands BEFORE the
+-- matching SGOV-sell/VOO-buy legs are recorded into events.parking_events (bigquery/56 step 2, gated on
+-- real IBKR fill confirmations arriving) -- during that gap, or for longer if step 2 lags, park_position
+-- has no VOO group yet, so the INNER JOIN produced ZERO rows. state.park_reconciliation is built
+-- directly on this view, so it went from "flags a discrepancy" to "silently vanishes" at exactly the
+-- moment (a fresh cutover) it matters most -- reintroducing the failure mode the frozen
+-- state.sgov_reconciliation view (below, and originally bigquery/13_sgov_reconciliation.sql) explicitly
+-- uses a LEFT JOIN to avoid ("this view feeds the §13 hard-stop, so it must never silently return zero
+-- rows"). Fixed by driving FROM the always-exactly-one-row park_policy_current and LEFT JOINing OUT to
+-- park_position, with COALESCE(...,0) on the numeric columns -- this guarantees exactly one output row
+-- naming the current vehicle even when it has zero recorded events yet, with 0s (not NULLs) making the
+-- "nothing recorded for this vehicle" state an explicit, visible discrepancy rather than an absent view.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.park_position_current` AS
-SELECT pp.*
-FROM `stock-trading-498512.state.park_position` pp
-JOIN `stock-trading-498512.state.park_policy_current` cur ON cur.vehicle = pp.ticker;
+SELECT
+  cur.vehicle                                AS ticker,
+  COALESCE(pp.events_shares, 0)               AS events_shares,
+  COALESCE(pp.buy_shares, 0)                  AS buy_shares,
+  COALESCE(pp.sell_shares, 0)                 AS sell_shares,
+  COALESCE(pp.drip_shares, 0)                 AS drip_shares,
+  COALESCE(pp.events_park_net_cash, 0)        AS events_park_net_cash,
+  COALESCE(pp.parking_commissions_total, 0)   AS parking_commissions_total,
+  COALESCE(pp.parking_event_count, 0)         AS parking_event_count,
+  pp.last_parking_date                        AS last_parking_date
+FROM `stock-trading-498512.state.park_policy_current` cur
+LEFT JOIN `stock-trading-498512.state.park_position` pp ON pp.ticker = cur.vehicle;
 
 -- ===== state.park_reconciliation — vehicle-aware successor to state.sgov_reconciliation, always
 -- reconciling whichever ticker is the CURRENT park policy (D2 Step 0 / §13.A reads this going

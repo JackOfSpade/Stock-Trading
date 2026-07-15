@@ -2411,3 +2411,38 @@ shares, $9,253.99 MV, unchanged). `analytics.fn_order_guard` fire-drill: oversiz
 strategy-order rejections unchanged (FALSE/FALSE/FALSE); SGOV in-band park order passes, off-band park
 order rejects (TRUE/FALSE) — identical to pre-redefinition behavior. New dbt test returns zero rows against
 live data. `scripts/check_cadence_consistency.py` — OK, `ops/triggers.json` current.
+
+**Post-implementation review fix (2026-07-15, same day).** A multi-agent adversarial review of this
+migration caught two latent bugs in `bigquery/54_park_policy_voo_cutover.sql`, neither triggered by
+today's SGOV-only live state but both real on the actual cutover day, plus two stale doc cross-references:
+1. `state.park_position_current` joined FROM `state.park_position` (only has a row per ticker with
+   existing `events.parking_events` history) INTO `state.park_policy_current` via a default INNER JOIN.
+   Since the real cutover is two separate, non-atomic INSERTs (bigquery/56 step 1 flips the policy row;
+   step 2, gated on real IBKR fill data, records the matching `parking_events` legs), the INNER JOIN would
+   have returned **zero rows** in the gap between those two steps — reintroducing exactly the "must never
+   silently return zero rows" failure mode `state.sgov_reconciliation` (same file) explicitly guards
+   against with a LEFT JOIN. `state.park_reconciliation` is built directly on top of it, so the §13.A
+   hard-stop check would have silently gone blank right when a cutover-day discrepancy would matter most.
+   **Fixed**: now drives FROM the always-exactly-one-row `park_policy_current` and LEFT JOINs OUT to
+   `park_position`, with `COALESCE(...,0)` on the numeric columns — guarantees one output row naming the
+   current vehicle even with zero recorded events, showing `0` (not silence) as the discrepancy signal.
+2. `state.park_policy_current` ordered `QUALIFY ROW_NUMBER() OVER (ORDER BY effective_date DESC, event_ts
+   DESC)` — `effective_date` is a hand-typed, operator-supplied target date (`bigquery/56`'s
+   `<TRANSFER_DATE>` placeholder), not a transition time, violating this repo's own documented house rule
+   (`bigquery/01_schema.sql`'s `queue_events.due_date` discussion: order by `event_ts`, the actual
+   insert-time transition order, never a target date). A forward-dated or mistyped `effective_date` on the
+   real VOO INSERT could have flipped the live vehicle ahead of the operator's intent. **Fixed**: now orders
+   by `event_ts DESC` only — whichever row was actually inserted last always wins, matching the file's own
+   stated "the actual live INSERT... is what flips every downstream view" design goal.
+3. `ops/cadence.yaml` and `ops/weekly_report/README.md` both linked "the 2026-07-15 redesign" to RUNBOOK
+   §33 (the pre-v3 "Strategies vs SGOV" section, untouched by this commit) instead of this §42. **Fixed**:
+   both now point to §42 (with §33 kept as the pre-v3 history pointer).
+
+Both view fixes re-applied live via `CREATE OR REPLACE VIEW` (idempotent, DDL-only). Re-verified:
+today's live `state.park_policy_current`/`state.park_position_current`/`state.park_reconciliation` output
+is byte-identical to pre-fix (SGOV, 92.0612 sh, $9,253.99 MV) — behavior-preserving, as designed. A
+read-only simulation of the cutover-gap scenario (policy row = VOO, zero VOO `parking_events` rows, exactly
+today's real live data otherwise) now correctly returns one row — `park_ticker=VOO, events_park_shares=0,
+park_close=$691.10 (live VOO mark), events_park_market_value=$0` — instead of returning nothing. Full
+suite re-run clean: 58/58 JS assertions, 272/272 pytest, `check_roster_consistency.py` /
+`check_cadence_consistency.py` / `check_script_version_consistency.py` all OK, `dbt_parity.py` 0 drift.
