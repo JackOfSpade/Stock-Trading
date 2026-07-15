@@ -25,6 +25,13 @@
 -- REVIEW/APPROVAL step -- the owner's remaining action is mechanical (paste the file D3 already wrote and
 -- CI-validated), not a judgment call. Idempotent (CREATE TABLE IF NOT EXISTS / CREATE OR REPLACE VIEW);
 -- safe to re-run.
+--
+-- SIBLING EXTENSION (self-improvement audit ITEM 31, 2026-07-15): bigquery/57_append_only_integrity_
+-- promotion.sql gives state.append_only_integrity/integrity_check.sql this SAME self-flip mechanism --
+-- it was the one staged-rollout monitor never wired into this ladder. It reuses ops.monitor_health_
+-- history/ops.monitor_promotion_log defined here verbatim (a third check_id value; no new tables) but
+-- its D3 edit TARGET is bigquery/scheduled_queries/integrity_check.sql, not cadence_check.sql -- a
+-- separate scheduled query with no raise_msg accumulator of its own. See that file's header for detail.
 
 -- ============================================================================
 -- ops.monitor_health_history — one row per (check_id, check_date), written UNCONDITIONALLY by
