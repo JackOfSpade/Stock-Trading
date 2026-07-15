@@ -50,6 +50,13 @@ def test_pearson_correlation_length_mismatch_raises():
         common.pearson_correlation([1.0, 2.0], [1.0])
 
 
+def test_pearson_correlation_too_few_observations_raises():
+    # A separate guard from the length-mismatch check above: equal-length inputs that are still
+    # too short (n < 2) to compute a correlation.
+    with pytest.raises(ValueError):
+        common.pearson_correlation([1.0], [1.0])
+
+
 def test_ols_regression_exact_linear_no_noise():
     # y = 2 + 3x exactly -> beta=3, alpha=2, alpha_se ~ 0 (zero residuals)
     x = [1.0, 2.0, 3.0, 4.0, 5.0]

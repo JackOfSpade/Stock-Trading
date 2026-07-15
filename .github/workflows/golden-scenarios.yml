@@ -8,7 +8,7 @@ name: Golden Scenarios (prose regression)
 # <-> Strategy.md, etc.) — none of them evaluate what a routine would DECIDE when it reads the prose.
 # Since the 2026-07-10 Strategy Arsenal (SISA) autonomy conversion, a prose edit reaches live
 # decision-making behavior via auto-merge with zero behavioral test in between. This workflow adds one:
-# tests/golden_scenarios/scenarios.yaml pins 20 decision scenarios with an expected call (GO/NO-GO,
+# tests/golden_scenarios/scenarios.yaml pins decision scenarios (23 as of 2026-07-14) with an expected call (GO/NO-GO,
 # CONTINUE/TERMINATE, ACTIVATE/DO-NOT-ACTIVATE) and the runner (run_golden.py) diffs a live model's read
 # of CURRENT prose against those pins.
 #

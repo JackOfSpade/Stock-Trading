@@ -65,6 +65,9 @@ CATEGORY_TOKENS = {
     "regime_router": {"ACTIVATE", "DO-NOT-ACTIVATE"},
     "kill_trigger": {"CONTINUE", "TERMINATE"},
     "strategy_b_entry": {"GO", "NO-GO"},
+    "strategy_a_entry": {"GO", "NO-GO"},
+    "strategy_d_entry": {"GO", "NO-GO"},
+    "strategy_e_entry": {"GO", "NO-GO"},
 }
 
 # Default live-mode model. Pin/verify before relying on this — model ids retire on Anthropic's normal

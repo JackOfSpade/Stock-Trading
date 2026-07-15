@@ -35,9 +35,11 @@
 #
 # Categories represented (per the ITEM 20 brief): regime-router edge cases (RR-*, including a wash-VIX
 # boundary pair), kill-trigger / gate mechanics (KT-*, including a -50% drawdown kill and the
-# runaway-success / mark-to-market REVIEW-not-terminate distinction), and Strategy B post-event entry
+# runaway-success / mark-to-market REVIEW-not-terminate distinction), Strategy B post-event entry
 # criteria including an ambiguous-adjacent setup and the "NO-GO records are context, not barriers" rule
-# (SB-*). 20 cases total (brief calls for 12-20).
+# (SB-*), and each of Strategy A/D/E's own entry criteria (SA-*/SD-*/SE-*, added 2026-07-14 — market-cap
+# instrument eligibility, the correlation-bucket cap, and the pair-correlation floor respectively).
+# 23 cases total (brief calls for 12-20).
 #
 # MAINTENANCE: a scenario is pinned to the prose as read on 2026-07-11. If a strategy's machinery is
 # legitimately revised pre-launch, or a NEW strategy is added (additive, per Strategy.md rev 37), add
@@ -350,3 +352,59 @@ scenarios:
       against the relevant strategy's own entry criteria; the prior record is context, not a barrier. The
       new Strategy B thesis clears every one of Strategy B's own entry criteria on its own merits, so it
       is a GO — the earlier, unrelated Strategy D NO-GO has no bearing.
+
+  # ---- Strategy A/D/E own entry criteria (SA-*, SD-*, SE-*) ----
+  # Added 2026-07-14 (self-improvement audit): prior coverage was entirely regime-router / kill-trigger
+  # / Strategy-B-entry — Strategy A, D, and E's OWN entry-criteria prose had zero prose-regression
+  # coverage (only their regime-router ACTIVATE/DO-NOT-ACTIVATE call was pinned, a different rule).
+  - id: SA-01
+    category: strategy_a_entry
+    situation: >
+      A Strategy A thesis is proposed on ticker QRS, a US-listed common-equity stock with a $1.8B market
+      cap and 30-day average daily volume of $14M. A specific catalyst (an FDA decision date) falls within
+      the next 6 months; the narrative thesis is synthesized from the last 4 quarters of earnings
+      transcripts plus recent 10-Q/10-K filings; a specific pre-catalyst price target and post-catalyst
+      completion criteria are both written at entry; the adversarial counter-argument finds no decisive
+      flaw. What is the Strategy A GO/NO-GO call on QRS today?
+    governing_files: [Strategy.md]
+    expected_decision: "NO-GO"
+    rationale: >
+      Strategy A's Instrument eligibility rule requires market cap >= $2B at entry (screens small-caps
+      where hallucination rates are elevated per 2.3). QRS's $1.8B market cap is below that floor, so the
+      thesis fails instrument eligibility outright even though the catalyst, narrative synthesis,
+      price target/completion criteria, and adversarial check are all otherwise clean. NO-GO.
+
+  - id: SD-01
+    category: strategy_d_entry
+    situation: >
+      Strategy D currently holds 3 positions -- MXA, MXB, and MXC -- every pair of which already has a
+      trailing-252-day daily-return correlation above 0.6 (all three share one correlation bucket). A new
+      candidate thesis on ticker MXD is proposed; MXD's trailing-252-day daily-return correlation with
+      each of MXA, MXB, and MXC individually is also above 0.6. The thesis is a clean 12+ month structural
+      thesis meeting D's market-cap/liquidity eligibility and completion/invalidation criteria, and the
+      adversarial counter-argument finds no decisive flaw. Does entry criterion 5 (correlation-bucket cap)
+      block MXD's entry?
+    governing_files: [Strategy.md]
+    expected_decision: "NO-GO"
+    rationale: >
+      Strategy D entry criterion 5: no more than 3 positions may share any correlation bucket, computed
+      across all currently-held positions plus the candidate entry. MXD correlates above 0.6 with all 3
+      already-held bucket members, so admitting MXD would make the bucket 4 positions, exceeding the cap.
+      The candidate fails criterion 5 regardless of its otherwise-clean thesis and adversarial read. NO-GO.
+
+  - id: SE-01
+    category: strategy_e_entry
+    situation: >
+      Within the same GICS industry group, laggard company LGX and leader company LDX are proposed as a
+      Strategy E pair. The narrative divergence thesis is specific and public-information-based with
+      explicit reconvergence predictions; adversarial counter-argument finds no decisive flaw. Classical-
+      method delegation computes L-S trailing-252-trading-day daily-return correlation at 0.42. Expected
+      holding period to thesis resolution is 3 months. Short-financing cost for the S leg is computed at
+      6% of thesis expected return. What is the Strategy E GO/NO-GO call on this LGX/LDX pair today?
+    governing_files: [Strategy.md]
+    expected_decision: "NO-GO"
+    rationale: >
+      Strategy E entry criterion 3 requires L-S trailing-252-day correlation >= 0.5 ("pairs with lower
+      correlation are not pairs -- they are two independent bets"). 0.42 is below that floor, so the pair
+      fails criterion 3 outright even though the narrative thesis, adversarial check, holding period, and
+      financing-cost ratio are all otherwise clean. NO-GO.
