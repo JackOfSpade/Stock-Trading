@@ -51,6 +51,12 @@ jobs:
         run: python scripts/check_autonomy_consistency.py
       - name: auto-merge decision logic (CI-gate + delete-safety fixtures — 2026-07-04 code-quality audit)
         run: bash tests/test_auto_merge_logic.sh
+      - name: weekly_report.gs / alert_emailer.gs pure-helper tests (esc_/esc2_, periodAvg_, alertSubject_, ...)
+        # No actions/setup-node step needed -- ubuntu-latest ships Node preinstalled and the script
+        # only uses the built-in `assert` module (no package.json/npm install anywhere in the repo).
+        # This suite previously had zero CI coverage (2026-07-14 audit finding) -- a regression in
+        # either operator-facing email's pure logic passed every other CI gate silently.
+        run: node ops/weekly_report/test_pure_helpers.js
 
   lint:
     name: ruff (informational)
