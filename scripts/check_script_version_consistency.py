@@ -15,7 +15,6 @@ Usage:  python scripts/check_script_version_consistency.py    # exit 0 if consis
 """
 import os
 import re
-import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ALERT_GS = os.path.join(ROOT, "ops", "monitoring", "alert_emailer.gs")
