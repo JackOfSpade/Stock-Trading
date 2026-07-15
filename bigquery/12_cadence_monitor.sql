@@ -29,7 +29,13 @@
 -- SELF-BOOTSTRAPPING (the key design choice): most routines do not yet self-log (the run-logging
 -- convention is instruction-only and was being skipped — that is why ops.run_log was empty). If the
 -- monitor alerted on every routine that never logs, it would false-alarm constantly. So a routine is
--- "monitored" ONLY once it has logged >=1 'completed' run in the last 14 days. A routine therefore
+-- "monitored" ONLY once it has logged >=1 'completed' run [SUPERSEDED LIVE by
+-- bigquery/48_cadence_monitor_unbounded.sql, 2026-07-14 — the "in the last 14 days" rolling window
+-- below let a previously-monitored routine's dead-man's switch go silent again after 14 days of
+-- continuous outage, exactly the failure mode it exists to catch. 48 drops the rolling window
+-- (monitored = has EVER completed, no window) while leaving the deadline guard / midnight-crossing
+-- grace untouched. This paragraph and the view/procedure definitions below are kept for DR-rebuild
+-- apply-in-order reference only — do not read them as the live behavior.]. A routine therefore
 -- enters the watched set automatically the first time it adopts sp_routine_start/end, and a SUBSEQUENT
 -- missed run is then detected. (As of 2026-06-19 the D1/D2/D3/AR routines have adopted the wrappers and
 -- are logging, so they are monitored.)

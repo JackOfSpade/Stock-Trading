@@ -18,6 +18,9 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.events.macro_fred` (
 OPTIONS(description='FRED-derived monthly macro regime metrics (public CSV, no key). Deep history for M5 AI.FORECAST. Separate from M1a-curated events.macro_series.');
 
 -- Dedup view (latest fetch wins per metric/month) -- M5 + AI.FORECAST read THIS (unique id/timestamp).
+-- SUPERSEDED LIVE by bigquery/53_curated_view_tiebreak_fix.sql (2026-07-14) — adds a row_uid
+-- secondary tiebreaker (same fetched_ts-tie class as daily_marks_curated). Kept here, unmodified,
+-- for DR-rebuild apply-in-order reference only.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.macro_fred_latest` AS
 SELECT metric, ref_month, value, source, fetched_ts
 FROM `stock-trading-498512.events.macro_fred`

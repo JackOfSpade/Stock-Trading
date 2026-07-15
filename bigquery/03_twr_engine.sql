@@ -31,6 +31,10 @@ OPTIONS(description='Daily closes + corporate actions per held ticker (+SGOV). T
 -- would DOUBLE-COUNT (mv summed twice, LAG over duplicate dates), silently
 -- corrupting r_deployed / r_sgov. Same pattern as state.trade_fills_curated.
 -- ALL mark consumers read THIS view, never the raw table.
+--
+-- SUPERSEDED LIVE by bigquery/53_curated_view_tiebreak_fix.sql (2026-07-14) — this ORDER BY has no
+-- secondary tiebreaker for an exact ingest_ts tie (same-statement multi-row INSERT); 53 adds a
+-- row_uid column + tiebreaker. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.daily_marks_curated` AS
 SELECT * FROM `stock-trading-498512.events.daily_marks`
 QUALIFY ROW_NUMBER() OVER (PARTITION BY ticker, mark_date ORDER BY ingest_ts DESC) = 1;

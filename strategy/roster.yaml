@@ -63,6 +63,10 @@ rails:
   adoption_rate_window_days: 90  # rate LIMIT: at most ONE strategy reaches PROBE (live capital) per
                                  #   rolling 90 days / per calendar quarter (paper_readiness checks the
                                  #   most recent PROBE lifecycle timestamp).
+  min_shadow_trading_days: 20    # SHADOW -> PAPER floor: state.strategy_shadow_readiness.days_met
+                                 #   (bigquery/35_strategy_arsenal.sql). Added 2026-07-14 -- the view's
+                                 #   own comment already claimed this was "mirrored in roster.yaml"
+                                 #   before this entry existed (self-improvement audit finding).
   cooldown_days:                 # per-edge cooldown stamps enforced by SL1/SL4 to prevent oscillation,
                                  #   churn, and relabeled-continuation (dead-strategy laundering); paired
                                  #   with the material-structural-difference + fresh-derivation restart tests.

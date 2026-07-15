@@ -267,6 +267,12 @@ OPTIONS(description='Daily SHADOW/PAPER forward-test series (SISA, 2026-07-10; S
 -- = first entry into the spec-frozen lifecycle (SHADOW onward); immutable_since = first PROBE/live trade;
 -- adopted_date = first ADOPTED transition (NULL until adopted). is_active = PROBE|ADOPTED (touches
 -- capital); is_incubating = SHADOW|PAPER (zero capital).
+--
+-- SUPERSEDED LIVE by bigquery/51_strategy_roster_dates_tz.sql (2026-07-14) — adopted_date/
+-- retired_date below truncate event_ts to a bare UTC date, misdating any transition an SL5 evening
+-- write logs during the Denver-UTC rollover window. 51 fixes the derivation (keyed off
+-- driver_routine so the founding-batch seed rows are unaffected) while leaving every other column
+-- unchanged. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
 -- ============================================================================
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_roster` AS
 WITH latest AS (
@@ -431,7 +437,15 @@ CROSS JOIN rails CROSS JOIN ars
 WHERE r.current_state = 'UNDER_REVIEW';
 
 -- state.strategy_shadow_readiness — SHADOW -> PAPER. min shadow trading days + signals generated within
--- band + zero scaffolding faults. min_shadow_trading_days = 20 (policy constant, mirrored in roster.yaml).
+-- band + zero scaffolding faults. min_shadow_trading_days = 20 (policy constant, added to
+-- roster.yaml's rails block 2026-07-14 — this comment previously claimed it was already mirrored
+-- there, which was false).
+--
+-- SUPERSEDED LIVE by bigquery/52_shadow_readiness_band.sql (2026-07-14) — signal_rate_ok below is a
+-- bare floor (>= 1) with no upper bound despite being documented as a "band"; a strategy firing
+-- hundreds of spurious signals in the 20-day window passes identically to one firing once. 52 adds
+-- an archetype-aware ceiling (same declared_annual_roundtrips scaling as strategy_paper_readiness's
+-- `freq` CTE). Kept here, unmodified, for DR-rebuild apply-in-order reference only.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_shadow_readiness` AS
 WITH agg AS (
   SELECT strategy_code,
