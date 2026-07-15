@@ -148,7 +148,7 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
-    spec_hash: "0f3c968caae5c787bad9fa5f15bb41be77c150567fe47a134e09310ef9f2feb5"   # sha256(strategy/05_strategy_c.md || c_options_math.py), rev 2026-07-14 R-F
+    spec_hash: "f19f8fba6dd2899e7a958b66ed7a65196816ae5c8903fb3790ca4f7efc41cbd8"   # sha256(strategy/05_strategy_c.md || c_options_math.py), rev 2026-07-15 R-F
     retired_date: null
     is_restart_of: null
     revision_history:
@@ -160,6 +160,8 @@ strategies:
         note: "spec_hash recomputed (adversarial self-audit fix) — OptionInputs.__post_init__ now validates option_type is 'call' or 'put'; previously any other value (e.g. a mis-cased 'Call') was silently priced as a put by price_bsm/greeks_bsm/payoff_at_expiration with no error, corrupting max-loss/sizing. Purely additive validation — every sanctioned constructor and existing test already passed only lowercase 'call'/'put', so no passing behavior changed. Bug fix to the engine's input validation, not a change to Strategy C's live trading rules. Verified by scripts/check_roster_consistency.py R-F."
       - date: 2026-07-14
         note: "spec_hash recomputed (2026-07-14 self-improvement audit — 5 bug/optimization fixes to c_options_math.py, all input-validation or numerically-provable, none a change to Strategy C's live trading rules): (1) cascade_max_loss() now rejects a non-finite/non-positive implied_move_full_horizon — a negative value silently flipped the adverse-move direction, understating the cascade bound (verified: a 100/105 credit call spread's cascade went from 306.26 to 0.0). (2) _butterfly() now requires strictly ascending strikes — the equidistant check alone was vacuously true for identical/reversed strikes, letting a degenerate zero-payoff structure pass both dual-path checks. (3) All 8 Structure constructors now reject a non-positive/fractional `contracts` — previously silent (e.g. contracts=-1 built a naked short put ~30x the real max loss, still labeled 'long_put'). (4) greeks_bsm()'s T<=0 branch now returns the correct +/-1/0 delta by moneyness instead of a blanket 0.0 (price_bsm's own T<=0 branch already returns the matching intrinsic-value slope; unreached by any live path today). (5) max_loss_closed_form()'s test-price grid trimmed from ~2919 points to the provably-sufficient {0, every strike, far-above-highest-strike} set (every permitted structure's expiration payoff is piecewise-linear with kinks only at the strikes; extrema occur only at kinks or interval endpoints) — verified byte-for-byte identical worst_pnl across ~5900 randomized structures. Verified by scripts/check_roster_consistency.py R-F and the full tests/test_options_math.py suite (62/62 passing, 11 new cases)."
+      - date: 2026-07-15
+        note: "spec_hash recomputed — strategy/05_strategy_c.md's 'C's strategy portfolio remains in SGOV' sentence amended via the established Rev-N strikethrough+bracket annotation convention (Rev 38, owner directive 2026-07-15: idle-capital parking vehicle switches SGOV -> VOO — see events.decision_log 2026-07-15, Operating_Protocols.md §13, bigquery/54_park_policy_voo_cutover.sql), plus a matching one-line comment update in c_options_math.py's compute_contracts_2pct_nav() docstring ('portfolio remains in SGOV' -> 'portfolio remains parked (SGOV historically, VOO from the 2026-07-15 cutover forward)'). Both are doc corrections reflecting where idle/undeployed capital sits (treasury management, explicitly NOT a strategy decision per Experiment_Parameters.md's glossary) — no change to Strategy C's entry/exit rules, thresholds, or options-sizing math/logic. Verified by scripts/check_roster_consistency.py R-F and the full tests/test_options_math.py suite."
   - code: D
     name: "Long-horizon narrative-screened equity core"
     archetype: long-horizon-concentrated-equity
@@ -171,7 +173,7 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
-    spec_hash: "1b120f81f054b7c0ebf9646aac1d92d35b9aee98bb596ac6f14d68c526880ba8"   # sha256(strategy/06_strategy_d.md || strategy_math/strategy_d.py || strategy_math/common.py), rev 2026-07-15 R-F
+    spec_hash: "7b46178c4de520472fe986a75cb502e444c17a38c578665e2b3b982e679ca90d"   # sha256(strategy/06_strategy_d.md || strategy_math/strategy_d.py || strategy_math/common.py), rev 2026-07-15 R-F
     retired_date: null
     is_restart_of: null
     revision_history:
@@ -185,6 +187,8 @@ strategies:
         note: "spec_hash recomputed again (same adversarial self-audit pass, same day) — strategy_math/strategy_d.py's subtype_for_dual_signal() had a silent-wrong-default bug fixed (trend_metric_independently_evaluable now required, not defaulted to False, when the catalyst is within the 365-day window). This is a bug fix to the newly-authored strategy_math codification itself (Item 28, this same audit), not a change to Strategy D's own live trading rules — subtype_for_dual_signal is not yet called by any live routine instruction. Verified by scripts/check_roster_consistency.py R-F."
       - date: 2026-07-15
         note: "spec_hash recomputed — Strategy.md Entry criterion 5 prose (main §D section + pre-mortem duplicate) corrected to match Rev 35 (owner directive, Strategy.md line 7 changelog), which already removed the max-3-positions-per-correlation-bucket cap and its post-entry entry-blocking behavior; the prose had never been updated to reflect that removal (Watchlist.md D-blocked correction #2). strategy_math/strategy_d.py's MAX_POSITIONS_PER_BUCKET constant and bucket_blocks_entry() removed; correlation_bucket_members()/post_entry_bucket_pairs() are now documented as monitoring/informational only (Section 6), never entry-blocking. This is a doc/code correction to match an already-live owner directive, not a new machinery change — owner directly reviewed and confirmed Rev 35's scope before this edit."
+      - date: 2026-07-15
+        note: "spec_hash recomputed (second time today) — strategy/06_strategy_d.md's 'the remainder is SGOV-parked...' sentence amended via the established Rev-N strikethrough+bracket annotation convention (Rev 38, owner directive 2026-07-15: idle-capital parking vehicle switches SGOV -> VOO — see events.decision_log 2026-07-15, Operating_Protocols.md §13, bigquery/54_park_policy_voo_cutover.sql). This is a doc correction reflecting where idle/undeployed capital sits (treasury management, explicitly NOT a strategy decision per Experiment_Parameters.md's glossary), not a change to Strategy D's entry/exit rules, thresholds, sizing, or any strategy_math/strategy_d.py logic — the math module is byte-unchanged by this directive. Verified by scripts/check_roster_consistency.py R-F."
   - code: E
     name: "Market-neutral narrative-divergence pairs"
     archetype: market-neutral-pairs

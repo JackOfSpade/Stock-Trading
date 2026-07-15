@@ -482,7 +482,7 @@ Self-containment statement: This pre-mortem enumerates within its own text the s
 
 **Qualifying events.** Corporate earnings releases (US-listed companies, confirmed date from company IR); FDA PDUFA dates (confirmed FDA calendar or company disclosure); FOMC meetings (confirmed Fed calendar). Other event types (analyst days, product launches, conference presentations, M&A-related, legal rulings, index rebalances) are excluded at the strategy level.
 
-**Deferral behavior.** If no structure satisfying eligibility can be constructed for a thesis at current strategy portfolio size, the thesis is deferred. C's strategy portfolio remains in SGOV. As portfolio grows, eligibility progressively expands without rule change. Deferred theses are not logged as missed opportunities.
+**Deferral behavior.** If no structure satisfying eligibility can be constructed for a thesis at current strategy portfolio size, the thesis is deferred. C's strategy portfolio ~~remains in SGOV~~ **remains parked [Rev 38, owner directive, 2026-07-15] — SGOV historically, VOO from the 2026-07-15 cutover forward; see Operating_Protocols.md §13**. As portfolio grows, eligibility progressively expands without rule change. Deferred theses are not logged as missed opportunities.
 
 **Entry criteria (all must be met):**
 1. A qualifying event is scheduled within 45 days
@@ -662,7 +662,7 @@ The typing rule is mechanism-enforced via date comparison against thesis-formati
 - Concurrent position count: minimum 5 (floor retained); ~~maximum 10 (hard cap)~~ **maximum REMOVED (Rev 35, owner directive)** — no holdings-count ceiling (the 2%-per-position size cap and the 30%-of-NAV sector exposure cap remain the deployment bounds)
 - Long-only
 
-**Deployment posture.** At 2% per position, D's deployment is bounded by the 2%-per-position size cap and the 30%-of-NAV sector exposure cap rather than a position-count ceiling — the former "max 10 positions → at most 20%" ceiling is **removed (Rev 35, owner directive)**, the minimum-5 floor retained; the remainder is SGOV-parked. SGOV parking during active periods reflects the scarcity of genuine long-horizon conviction, not an execution problem. D's deployed TWR is measured on deployed capital only, so SGOV parking does not dilute the strategy's measured edge.
+**Deployment posture.** At 2% per position, D's deployment is bounded by the 2%-per-position size cap and the 30%-of-NAV sector exposure cap rather than a position-count ceiling — the former "max 10 positions → at most 20%" ceiling is **removed (Rev 35, owner directive)**, the minimum-5 floor retained; ~~the remainder is SGOV-parked. SGOV parking during active periods reflects the scarcity of genuine long-horizon conviction, not an execution problem. D's deployed TWR is measured on deployed capital only, so SGOV parking does not dilute the strategy's measured edge.~~ **the remainder is parked [Rev 38, owner directive, 2026-07-15] — SGOV historically, VOO from the 2026-07-15 cutover forward; see Operating_Protocols.md §13. Parking during active periods reflects the scarcity of genuine long-horizon conviction, not an execution problem. D's deployed TWR is measured on deployed capital only, so idle-capital parking does not dilute the strategy's measured edge.**
 
 **Entry criteria (all must be met):**
 1. Structural thesis articulated with 12+ month expected realization timeline, filed under one of the two permitted subtypes (rev 4 reframed per cycle 3 T1-β): Subtype A (future-dated catalyst — primary driver is a future-dated event with publicly-known scheduled date) or Subtype B (trend-continuation — primary driver is continuation of a quantifiable current trend metric for ≥ 12 months).
@@ -698,7 +698,7 @@ Not exit-triggering: short-term adverse price moves; quarterly results that don'
 
 1. **Deployed positions underperform SGOV over actual holding periods.** Even if directionally successful, deployed TWR may trail short-rate yield over D's 1-3 year holding windows in the regimes D operates within.
 2. **36-month mark-to-market trigger becomes operative.** Universal across strategies; for D specifically because D will not hit the 30-trade gate first.
-3. **SGOV-parked capital interaction.** The 80%+ that's not deployed does not count against D's measured TWR (per Experiment_Parameters.md deployed-capital measurement), but D must also not be so under-deployed that it fails to actually express a thesis at all. Persistent under-deployment (e.g., < 5 positions for extended periods) may indicate the strategy is producing no genuine multi-year conviction, in which case the 36-month MTM trigger evaluation would lack signal.
+3. **~~SGOV~~-parked capital interaction [Rev 38, owner directive, 2026-07-15 — park vehicle is SGOV historically, VOO from the 2026-07-15 cutover forward; see Operating_Protocols.md §13].** The 80%+ that's not deployed does not count against D's measured TWR (per Experiment_Parameters.md deployed-capital measurement), but D must also not be so under-deployed that it fails to actually express a thesis at all. Persistent under-deployment (e.g., < 5 positions for extended periods) may indicate the strategy is producing no genuine multi-year conviction, in which case the 36-month MTM trigger evaluation would lack signal.
 4. **Tax-and-fee drag exceeding LTCG compensation.** If thesis-invalidation rate on positions held < 12 months is meaningful, accumulated STCG plus transaction costs can exceed the LTCG benefit on completed-thesis exits.
 
 #### 4. Edge-decay indicators
@@ -858,7 +858,7 @@ Rev 3 spot-edit fixes:
 - Each leg counts as 1 position toward the 30-trade gate; a pair equals 2 trades
 - ETF-pair substitution permitted when individual-stock shorting infeasible at current portfolio size (S's share price × minimum-share-count × 2% cap interact unfavorably). ETF-pair execution acknowledged as diluting idiosyncratic thesis; documented accepted cost (KL #9). Substitution becomes unnecessary as portfolio grows past threshold.
 
-**Deployment posture.** At 2% per leg × 4% per pair × declared 6-12 pair frequency, E deploys at most ~24-48% of strategy portfolio at any time (typically less); remainder SGOV-parked. Deployed TWR measured on deployed capital only.
+**Deployment posture.** At 2% per leg × 4% per pair × declared 6-12 pair frequency, E deploys at most ~24-48% of strategy portfolio at any time (typically less); ~~remainder SGOV-parked~~ **remainder parked [Rev 38, owner directive, 2026-07-15] — SGOV historically, VOO from the 2026-07-15 cutover forward; see Operating_Protocols.md §13**. Deployed TWR measured on deployed capital only.
 
 **Entry criteria (all must be met):**
 

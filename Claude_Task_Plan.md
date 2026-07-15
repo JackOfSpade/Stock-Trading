@@ -245,7 +245,7 @@ D2 (Daily Action Conversion) is the daily drainer. Each run, after Step 0 fill r
 
 Canonical protocol: Operating_Protocols.md §11. Operational summary for routines:
 
-**Crafting an order (equity/ETF).** When a routine stages an order: (1) resolve the `contract_id` (use the cached id from the **Cached `contract_id`s** list in this section below, else `search_contracts` selecting the US primary listing — `country_code` US, primary exchange, exact symbol, STK/ETF section); (2) pull a **realtime** `get_price_snapshot` (the operator's IBKR market-data subscription — the most accurate live quote, authoritative over web/delayed prices) and set a marketable limit (sell at a slight discount to last / buy at a slight premium; use MARKET when assured execution is the objective, e.g. a convergence exit already through target) — if the quote is not live (empty bid/ask pre-market, or a stale `last.ts`), base the limit on prior-close with a wider buffer rather than a stale price; (3) call `create_order_instruction(contract_id, side, quantity, order_type, limit_price, time_in_force)` with **`time_in_force` always `DAY`, never GTC** (the connector has no modify/amend endpoint, so a persist-and-wait order is re-crafted fresh as a DAY order each session — which is also the checkpoint to re-price the limit to the live market; Operating_Protocols.md §11) and capture `{id, url}`; (4) record the instruction `id` in the `state.open_orders` staged-order row (`events.queue_events`, queue `ORDER_STAGED`), including `guard_passed`/`guard_reasons` from the preceding ORDER-GUARD CHECK in the payload (self-improvement audit ITEM 15, 2026-07-11 — the guard result embedded so the payload itself proves the guard ran; every order craft in this system, including the §13.E SGOV sweep/cover, is gated by an order-guard check, so this applies uniformly — a craft site that omits this leaves its `ORDER_STAGED` payload indistinguishable from a genuine guard bypass to `daily_staging_cap_check.sql`'s `order_guard_omitted` CRITICAL); (5) put `url` + summary + `id` into the order-confirmation calendar event. If a staged order is superseded before the operator confirms, call `delete_order_instruction(id)`.
+**Crafting an order (equity/ETF).** When a routine stages an order: (1) resolve the `contract_id` (use the cached id from the **Cached `contract_id`s** list in this section below, else `search_contracts` selecting the US primary listing — `country_code` US, primary exchange, exact symbol, STK/ETF section); (2) pull a **realtime** `get_price_snapshot` (the operator's IBKR market-data subscription — the most accurate live quote, authoritative over web/delayed prices) and set a marketable limit (sell at a slight discount to last / buy at a slight premium; use MARKET when assured execution is the objective, e.g. a convergence exit already through target) — if the quote is not live (empty bid/ask pre-market, or a stale `last.ts`), base the limit on prior-close with a wider buffer rather than a stale price; (3) call `create_order_instruction(contract_id, side, quantity, order_type, limit_price, time_in_force)` with **`time_in_force` always `DAY`, never GTC** (the connector has no modify/amend endpoint, so a persist-and-wait order is re-crafted fresh as a DAY order each session — which is also the checkpoint to re-price the limit to the live market; Operating_Protocols.md §11) and capture `{id, url}`; (4) record the instruction `id` in the `state.open_orders` staged-order row (`events.queue_events`, queue `ORDER_STAGED`), including `guard_passed`/`guard_reasons` from the preceding ORDER-GUARD CHECK in the payload (self-improvement audit ITEM 15, 2026-07-11 — the guard result embedded so the payload itself proves the guard ran; every order craft in this system, including the §13.E park sweep/cover, is gated by an order-guard check, so this applies uniformly — a craft site that omits this leaves its `ORDER_STAGED` payload indistinguishable from a genuine guard bypass to `daily_staging_cap_check.sql`'s `order_guard_omitted` CRITICAL); (5) put `url` + summary + `id` into the order-confirmation calendar event. If a staged order is superseded before the operator confirms, call `delete_order_instruction(id)`.
 
 **Crafting an order (options — Strategy C / A/C options theses; self-improvement audit ITEM 13, 2026-07-11).** `create_order_instruction` supports single-leg Options (OPT) and OPT–OPT combos/spreads directly (verified against the tool's own documentation — the repo previously, incorrectly, documented options as connector-uncraftable; that mischaracterization is corrected here and everywhere else it appeared). (1) Resolve each leg's contract via `get_option_data` (after `get_option_parameters` resolves the expiration id) — capture `call_contract_id_ex`/`put_contract_id_ex` verbatim. (2) **Single-leg** (a long call/put): call `create_order_instruction(contract_id_ex=<that leg's id>, side, quantity=<contracts>, order_type, limit_price=<per-share premium>, time_in_force='DAY')` directly — same pattern as equity, quantity is CONTRACTS not shares. (3) **Multi-leg** (spreads/condors/butterflies — Strategy C's defined-risk structures): call `get_combo_identifier(legs=[{contract_id_ex, size: +N for BUY / -N for SELL}, ...])` FIRST (OPT legs only — never pass FOP ids) to obtain a combo `contract_id_ex`, then `create_order_instruction(contract_id_ex=<the combo id from get_combo_identifier>, side, quantity, order_type, limit_price=<net debit/credit per spread>, time_in_force='DAY')`. (4) **ORDER-GUARD CHECK, options-specific — before calling `create_order_instruction` for ANY options order:** compute the structure's max loss via `c_options_math.py`'s dual-path verification (`verify_max_loss_dual_path` — refuses to proceed on an `UnboundedMaxLossError`, i.e. never craft an undefined-risk structure), then `SELECT * FROM analytics.fn_order_guard_options(<strategy>, <side>, <contracts>, <limit_premium>, <max_loss_dollars>)` (`bigquery/23_trading_control.sql`). If `passed = FALSE`, do NOT craft — `CALL ops.sp_raise_alert_once('critical','<ID>','order_guard_block', <reasons joined>, <JSON>)` and treat as un-stageable this session. (5) Record the instruction `id` in `state.open_orders` (`ORDER_STAGED`) and put `url` + summary + `id` into chat — `create_order_instruction`'s own IBKR notification is the human-facing surface for a craftable options order, exactly as for equity (no calendar event, 2026-07-09 convention). **Fallback (genuinely non-craftable only):** if `get_combo_identifier` rejects the structure (a mixed OPT/FOP combo, or a structure it cannot resolve) or the security type is FOP/FUT and not single-leg, fall back to the manual-entry text order block in a `[Claude] Confirm order` calendar event (below) — this is now the CONTINGENCY path, not the default for every option.
 
@@ -255,9 +255,9 @@ Canonical protocol: Operating_Protocols.md §11. Operational summary for routine
 
 **Source-of-truth boundary.** Connector = authoritative for fills, positions, cash, live orders, quotes. The BigQuery events-side state is authoritative for strategy-bucket cost-basis attribution (`state.current_positions` / `events.position_events` `cost_basis`) and per-strategy NAV (`analytics.strategy_nav`) — the connector has no strategy buckets. On account-level drift (dividends/fees/reinvest), the connector is the truth and the events-side state is corrected to match (via `events.position_events` / `analytics.account_reconciliation`) while preserving strategy attribution at the cost-basis level.
 
-**Sizing and analysis on live data.** The 2% position-sizing base is the **per-strategy sub-portfolio NAV** (Strategy.md "2% of strategy portfolio"), read from `analytics.strategy_nav` (~$1,880–1,890/strategy → ~$38/entry) — NOT `get_account_summary` net-liquidation, which is the whole-account figure (~$9,460 = all five sub-portfolios + the SGOV park) and oversizes ~5× if used as the base; net-liq / `available_funds` / `buying_power` are for execution-feasibility only (does the SGOV-funded entry settle), never the sizing base. **Sanity tripwire: a computed single-name entry over ~$50 (or >3% of the sub-portfolio) means the wrong base was used — STOP and recompute off the sub-portfolio.** Use `get_account_positions` for exact current holdings; use `get_price_snapshot`/`get_price_history` for quotes, close-to-close verification, and convergence-target checks. Web quotes are a fallback only when the connector lacks the instrument.
+**Sizing and analysis on live data.** The 2% position-sizing base is the **per-strategy sub-portfolio NAV** (Strategy.md "2% of strategy portfolio"), read from `analytics.strategy_nav` (~$1,880–1,890/strategy → ~$38/entry) — NOT `get_account_summary` net-liquidation, which is the whole-account figure (~$9,460 = all five sub-portfolios + the park, §13 — SGOV historically, VOO from the 2026-07-15 cutover forward) and oversizes ~5× if used as the base; net-liq / `available_funds` / `buying_power` are for execution-feasibility only (does the SGOV-funded entry settle), never the sizing base. **Sanity tripwire: a computed single-name entry over ~$50 (or >3% of the sub-portfolio) means the wrong base was used — STOP and recompute off the sub-portfolio.** Use `get_account_positions` for exact current holdings; use `get_price_snapshot`/`get_price_history` for quotes, close-to-close verification, and convergence-target checks. Web quotes are a fallback only when the connector lacks the instrument.
 
-**Day-trade / buying-power guard.** Before staging a same-session round-trip (exit on the same day as entry), check `get_account_summary` `day_trades_remaining` — if 0, defer the exit one session (this is a small margin account where PDT can bind). Before an entry, confirm `available_funds` / `buying_power` cover the staged principal (entries are funded by liquidating the SGOV park).
+**Day-trade / buying-power guard.** Before staging a same-session round-trip (exit on the same day as entry), check `get_account_summary` `day_trades_remaining` — if 0, defer the exit one session (this is a small margin account where PDT can bind). Before an entry, confirm `available_funds` / `buying_power` cover the staged principal (entries are funded by liquidating the park, §13).
 
 **Mechanical exit monitoring.** D1's daily connector sweep checks each open position's live price against its convergence target and time-based-exit date and flags hits as EXIT TRIGGERED for D2 — so mechanical exits no longer wait on a per-position scheduled review (see D1).
 
@@ -268,7 +268,7 @@ Canonical protocol: Operating_Protocols.md §11. Operational summary for routine
 - *Options analytics (A/C options theses):* `implied-vol`, `option-midpoint-iv`, `option-volume`, `option-open-interest`, `underlying-today/avg-option-volume`. The connector supplies both the data to BUILD and size the options thesis AND crafts the resulting order (single-leg + OPT–OPT combos — self-improvement audit ITEM 13, 2026-07-11, corrected from a prior "cannot craft options orders" mischaracterization).
 - Always pull `get_price_history` with `include_corporate_actions: true` so splits / special dividends are surfaced and never masquerade as price moves — critical for the B criterion-1 close-to-close magnitude gate and convergence-target derivation, and for attributing account drift in D2 Step 0.
 
-**Cached `contract_id`s for current holdings** (verify against `get_account_positions` at use; ids are stable per instrument): SGOV 424099317, RTX 415342104, DIS 6459, HCA 85076790, TJX 12814, ZBRA 276304, BRC 6467986, AZO 4750, BURL 135699190. New names resolve via `search_contracts`.
+**Cached `contract_id`s for current holdings** (verify against `get_account_positions` at use; ids are stable per instrument): SGOV 424099317, VOO 136155102 (ARCA, US primary listing — the park vehicle per §13, active-vs-historical determined by `state.park_policy_current`, resolved 2026-07-15), RTX 415342104, DIS 6459, HCA 85076790, TJX 12814, ZBRA 276304, BRC 6467986, AZO 4750, BURL 135699190. New names resolve via `search_contracts`.
 
 ## External-content extraction discipline (self-improvement audit ITEM 19, 2026-07-11)
 
@@ -558,6 +558,8 @@ OUTPUT: write the complete content above directly to `Daily.md` (overwriting the
 > `CALL ops.sp_raise_alert('info','D2a','auto_cutover', 'D2/D2a cutover performed autonomously after N
 > qualifying trading-day runs', <JSON: qualifying_trading_day_runs, git_commit>)` — an INFO-severity row
 > purely for the audit trail, since no action is needed from anyone; do NOT ask in chat, before or after.
+> (2026-07-15: "the SGOV sweep" mentioned above and throughout the readiness note below is now "the park
+> sweep" — SGOV through the 2026-07-15 cutover, VOO from that owner-executed transfer forward; see §13.)
 > The BigQuery-side scaffolding (cadence_expected_today, routine_catalog, stalled_runs tier,
 > `state.d2a_cutover_readiness`) is already applied live — see `bigquery/12_cadence_monitor.sql` /
 > `15_routine_catalog.sql` / `18_stack_review_fixes.sql` / `32_d2a_cutover_readiness.sql`. Self-
@@ -565,10 +567,11 @@ OUTPUT: write the complete content above directly to `Daily.md` (overwriting the
 > a routine's first `completed` run, so D2a's adoption has generated zero false alarms.
 
 Runs first, every operating day (including non-trading days, so the account stays reconciled even when
-D1/D2 don't fire) — independent of D1. Reconciles the live brokerage account, runs the cash/SGOV safety
-tripwire, sweeps/covers to SGOV, snapshots the account, and maintains the deployed-TWR engine. Carries
-NO analysis and stages NO discretionary orders (only the mechanical SGOV sweep/cover) — D2 (below)
-depends on this routine's output for its own Step 1 onward.
+D1/D2 don't fire) — independent of D1. Reconciles the live brokerage account, runs the cash/park safety
+tripwire, sweeps/covers to the park (SGOV historically, VOO from the 2026-07-15 cutover forward — §13),
+snapshots the account, and maintains the deployed-TWR engine. Carries NO analysis and stages NO
+discretionary orders (only the mechanical park sweep/cover) — D2 (below) depends on this routine's
+output for its own Step 1 onward.
 
 ```
 Read access scope: Daily cadence. Read positions/perf/NAV from `state.current_positions` /
@@ -581,12 +584,12 @@ America/Denver from state.trading_day_today>, 'started', <session_id>, <branch>,
 the END, call it again with `'completed'` (or `'failed'`/`'halted'` + `error_msg`), passing
 `rows_written` = fills + marks ingested.
 
-**TRADING-ENABLE GATE (self-improvement audit B-1-obs, 2026-07-03; gate-ordering fix 2026-07-07, `bigquery/33_gate_ordering_fix.sql`) — `CALL ops.sp_assert_trading_enabled_mechanical('D2a')` before anything else.** FATAL (mirrors `ops.sp_assert_deps`) — aborts if `state.trading_enabled_mechanical.trading_enabled = FALSE` (a manual/auto halt, a NAV drawdown breach, unhealthy embeddings, an open critical alert, or position-reconciliation drift). Deliberately NOT `ops.sp_assert_trading_enabled` (the D2/W4/M4/Q4/A1/A3 gate) — that one also requires `marks_fresh`/`engine_fresh`, which THIS routine's own PER-STRATEGY PERFORMANCE MAINTENANCE step (below) is what makes true each morning; calling the freshness-inclusive gate before that ingest RAISEs on every trading-day run (see `33_gate_ordering_fix.sql`'s header for the full self-diagnosed deadlock this replaced). Reads/reconciliation are safe regardless; do not size or stage the SGOV sweep past this point if it raises.
+**TRADING-ENABLE GATE (self-improvement audit B-1-obs, 2026-07-03; gate-ordering fix 2026-07-07, `bigquery/33_gate_ordering_fix.sql`) — `CALL ops.sp_assert_trading_enabled_mechanical('D2a')` before anything else.** FATAL (mirrors `ops.sp_assert_deps`) — aborts if `state.trading_enabled_mechanical.trading_enabled = FALSE` (a manual/auto halt, a NAV drawdown breach, unhealthy embeddings, an open critical alert, or position-reconciliation drift). Deliberately NOT `ops.sp_assert_trading_enabled` (the D2/W4/M4/Q4/A1/A3 gate) — that one also requires `marks_fresh`/`engine_fresh`, which THIS routine's own PER-STRATEGY PERFORMANCE MAINTENANCE step (below) is what makes true each morning; calling the freshness-inclusive gate before that ingest RAISEs on every trading-day run (see `33_gate_ordering_fix.sql`'s header for the full self-diagnosed deadlock this replaced). Reads/reconciliation are safe regardless; do not size or stage the park sweep past this point if it raises.
 
 STEP 0 — BROKER RECONCILIATION (run first, every run). Reconcile the live brokerage account against the
 BigQuery events-side state (`state.current_positions` / `analytics.account_reconciliation`; Portfolio_Ledger.md
 retired, §15) via the IBKR connector — the full mechanical procedure per Operating_Protocols.md §11
-(staged-order registry + connector-driven fill reconciliation) and §13 (cash/SGOV tripwire + §13.E
+(staged-order registry + connector-driven fill reconciliation) and §13 (cash/park tripwire + §13.E
 sweep/cover). This is the sole owner of this work as of the 2026-07-09 cutover (D2 no longer does it).
 Concretely, every run:
 - **Fill reconciliation + event-sourcing mirror.** Read `get_account_trades` over a DAYS_7 window. For each
@@ -599,9 +602,12 @@ Concretely, every run:
   and any KL #12 event membership; write the GO/close decision via **`CALL ops.sp_log_decision(...)`** (appends
   `events.decision_log` + embeds in the same call — verify any time via `state.embedding_health`, `is_healthy =
   TRUE`). Realized P&L comes from the connector's `realized_pnl` field — never inferred; aggregate exchange-split
-  partials by `order_id`. **SGOV mechanical sweep/cover/DRIP fills are recorded to `events.parking_events`, NOT
-  `events.trade_fills`** (see the cash-flattening bullet); `state.sgov_reconciliation` reconciles events-side
-  SGOV shares to the connector holding (contract 424099317).
+  partials by `order_id`. **Park mechanical sweep/cover/DRIP fills are recorded to `events.parking_events`
+  (with `ticker` = the current park vehicle), NOT `events.trade_fills`** (see the cash-flattening bullet);
+  `state.park_reconciliation` reconciles events-side park shares to the connector holding — `SELECT vehicle
+  FROM state.park_policy_current` for which ticker/contract_id is live right now (SGOV 424099317, VOO
+  136155102 — §13; `state.sgov_reconciliation` is FROZEN to SGOV-only history as of the 2026-07-15 cutover
+  and no longer the live reconciliation basis).
 - Read (do not transcribe) live positions, cash, and net-liquidation from `get_account_positions` +
   `get_account_summary` + `get_account_balances`; reconcile account-level drift (dividends, fees, splits) to the
   connector truth while preserving per-strategy cost-basis attribution (`get_price_history` with
@@ -637,34 +643,47 @@ Concretely, every run:
   create/repair the 07:00-MT confirm event for a non-craftable order); **(c) window closed + unfilled**
   (`entry_window_close < today`) — set terminal `expired` and **`CALL ops.sp_log_decision(...)`** (the
   `conservative_default`). A row's reserved cash stays earmarked until it is terminal.
-- **Cash/SGOV balance reconciliation — tripwire (every run, before any sizing/staging; full procedure
-  Operating_Protocols.md §13).** Compute expected SGOV shares + cash (Σ per-strategy SGOV-share allocations +
-  cash residuals from `analytics.account_reconciliation`, + `state.sgov_reconciliation` for SGOV shares) vs live
-  SGOV shares (`get_account_positions`, contract 424099317) + live cash (`get_account_balances`), netting out
+- **Cash/park balance reconciliation — tripwire (every run, before any sizing/staging; full procedure
+  Operating_Protocols.md §13).** First, `SELECT vehicle FROM state.park_policy_current` — this is "the park"
+  for every step below (SGOV through the 2026-07-15 cutover; VOO from the owner's manual transfer forward).
+  Compute expected park shares + cash (Σ per-strategy park-allocation +
+  cash residuals from `analytics.account_reconciliation`, + `state.park_reconciliation` for park shares) vs live
+  park-vehicle shares (`get_account_positions`, contract_id per the current vehicle — SGOV 424099317, VOO
+  136155102) + live cash (`get_account_balances`), netting out
   commissions/realized-P&L of fills reconciled this run. Attribute every non-zero residual per the §13 decision-tree
-  (dividend/interest, deposit/withdrawal, standalone fee, commission-on-fill, operator SGOV-sale-to-cover, or
+  (dividend/interest, deposit/withdrawal, standalone fee, commission-on-fill, operator park-sale-to-cover, or
   genuinely unexplained → log + flag + conservative hold, never silently absorb). A residual that stays UNEXPLAINED
   and exceeds ~$1 is a hard STOP — `CALL ops.sp_raise_alert('critical','D2a','cash_tripwire', <one-line message>,
   <JSON: residual, connector evidence>)` + `CALL ops.sp_log_run('D2a', <today>, 'halted', …, error_msg=<message>)`;
-  resolve before sizing or staging.
-- **Cash flattening — auto-craft the SGOV sweep/cover (§13.E).** **ORDER-GUARD CHECK first — `SELECT * FROM
+  resolve before sizing or staging. (Note: VOO's per-share price is roughly 5-7x SGOV's, so the same ~$1 dollar
+  tolerance is a proportionally tighter share-count margin once VOO is the park vehicle — expected, not a bug.)
+- **Cash flattening — auto-craft the park sweep/cover (§13.E).** **ORDER-GUARD CHECK first — `SELECT * FROM
   analytics.fn_order_guard('<strategy or NULL for account-level>', '<BUY|SELL>', <qty>, <limit_price>, <last_price>,
-  TRUE)` (final `TRUE` = `is_sgov`). If `passed = FALSE`, do NOT craft — `CALL ops.sp_raise_alert_once('critical','D2a',
+  TRUE)` (final `TRUE` = `p_is_park`, renamed 2026-07-15 from `p_is_sgov` — same call position, no call-shape
+  change; the price band it applies is now read live from `state.park_policy_current` inside the function itself,
+  0.2% for SGOV / 0.5% for any other vehicle, so this call site needs no edit across the cutover). If
+  `passed = FALSE`, do NOT craft — `CALL ops.sp_raise_alert_once('critical','D2a',
   'order_guard_block', <reasons joined>, <JSON>)` and skip this sweep/cover for the session. If `passed = TRUE`,
   embed `guard_passed`/`guard_reasons` from this check into the `ORDER_STAGED` row's payload when the sweep/cover is
   staged below, per the "Crafting an order (equity/ETF)" step (4) convention (self-improvement audit ITEM 15,
-  2026-07-11 — this call site was the one gap the original ITEM 15 rollout missed: every historical SGOV
+  2026-07-11 — this call site was the one gap the original ITEM 15 rollout missed: every historical park
   sweep/cover payload lacked `guard_passed` entirely, which is harmless under the OLD pending-only
   `order_guard_omitted` check but became a guaranteed false CRITICAL once that check was broadened, adversarial
-  self-audit finding rev 2026-07-11, to also catch same-day-filled orders — SGOV sweeps/covers routinely fill the
+  self-audit finding rev 2026-07-11, to also catch same-day-filled orders — park sweeps/covers routinely fill the
   same day).** On **settled** cash:
   `free_cash = settled_cash − Σ reserved_cash from state.open_orders` (the durable registry — plus any live unfilled
-  BUY not represented there). **Sweep** if `free_cash ≥ +$25` → BUY SGOV sized DOWN `floor_to_4dp((free_cash − ~$0.35
-  comm)/ask)`. **Cover** if `settled_cash ≤ −$5` (a *realized* debit) → SELL SGOV sized UP `ceil_to_4dp((|settled_cash|
-  + ~$0.35 comm)/bid)`, capped at SGOV held. Otherwise no action (a $0…−$5 debit is left on margin). Order: contract
-  424099317, TIF **DAY**, marketable limit (ask/bid) or MARKET; record the instruction `id` + a 07:00 confirm event +
-  an `events.parking_events` row; attribute to the owning strategy(ies) per §13.C so Σ per-strategy SGOV = connector
-  SGOV and Σ per-strategy cash ≈ $0. Never sweep cash a pending buy needs.
+  BUY not represented there). **Sweep** if `free_cash ≥ +$25` → BUY the current park vehicle sized DOWN
+  `floor_to_4dp((free_cash − comm_buffer)/ask)`. **Cover** if `settled_cash ≤ −$5` (a *realized* debit) → SELL the
+  current park vehicle sized UP `ceil_to_4dp((|settled_cash| + comm_buffer)/bid)`, capped at the vehicle held.
+  `comm_buffer` per Operating_Protocols.md §13's Commission model — SGOV: `min(1% × trade_value, $0.35)`
+  (empirically confirmed); VOO: UNVERIFIED, use the SGOV formula as a conservative placeholder until confirmed
+  from the first live VOO park fills in `get_account_trades` (do not assume $0 commission just because IBKR often
+  charges nothing on whole-share ETF trades — these are fractional-share orders, which may route through a
+  different fee schedule; confirm, don't guess). Otherwise no action (a $0…−$5 debit is left on margin). Order:
+  contract_id per the current vehicle (above), TIF **DAY**, marketable limit (ask/bid) or MARKET; record the
+  instruction `id` + a 07:00 confirm event + an `events.parking_events` row (with `ticker` = the current vehicle);
+  attribute to the owning strategy(ies) per §13.C so Σ per-strategy park allocation = connector park-vehicle
+  holding and Σ per-strategy cash ≈ $0. Never sweep cash a pending buy needs.
 - Note still-working / partial orders from `get_account_orders` and leave them exit-pending / ORDER-STAGED (the
   persist-and-wait re-craft is handled by the registry reconciliation above). For any crafted instruction in
   `get_order_instructions` whose order day has passed unconfirmed, or whose position Step 0 just closed, call
@@ -676,7 +695,11 @@ the Apps Script emailer cannot reach IBKR, so D2a is the only writer. Pull `get_
 element of each period's `cps` array = cumulative TWR fraction at period end). `INSERT INTO ops.account_snapshot
 (snapshot_date, nav, total_cash, buying_power, available_funds, gross_position_value, sgov_market_value, twr_1d,
 twr_7d, twr_mtd, twr_ytd, twr_1y)`: today (America/Denver from `state.trading_day_today`); the `get_account_summary`
-fields; the SGOV market value from `get_account_positions` (contract 424099317); and the cps-array TWRs. One row per
+fields; the CURRENT park vehicle's market value from `get_account_positions` (contract_id per
+`state.park_policy_current` — SGOV 424099317, VOO 136155102) written into the `sgov_market_value` column
+(column name kept as-is post-2026-07-15 cutover — it holds whichever vehicle is currently parked in, not
+literally SGOV; renaming it is a separate, lower-priority schema cleanup, not required for correctness);
+and the cps-array TWRs. One row per
 `snapshot_date` (latest ingest wins via `state.account_latest`; skip if today's row exists). Wrap best-effort so a
 snapshot failure never aborts D2a — it feeds a report, not trading. (`bigquery/14_weekly_report.sql`.)
 
@@ -1470,7 +1493,7 @@ If found, orchestrate per the review_type's protocol:
 
 4. Take resulting action:
    - divergence-review: write the binding activation state to `events.regime_events` (scope `STRATEGY_ACTIVATION`). If the verdict differs from the prior state, write the binding decision to `events.decision_log` via `CALL ops.sp_log_decision(...)` (Operating_Protocols §15).
-   - m2m-termination with verdict TERMINATE: write an `events.decision_log` entry (`CALL ops.sp_log_decision(...)`) recording termination, mark the strategy terminated via an `events.regime_events` (scope `STRATEGY_ACTIVATION`) row AND write a TERMINATED `events.strategy_lifecycle` row (driver_routine='AR_orc'), immediately move strategy portfolio value to SGOV by CRAFTING the close orders via the IBKR connector — `create_order_instruction`'s own notification is the human-facing confirm surface (2026-07-09; a non-craftable position gets a manual-entry `[Claude] Confirm order` event); liquidation orders are the execution layer only, routed through the operator confirm-tap exactly as every trade is (rev 2026-07-10 — refreshed from the stale "stage IBKR orders in chat output for the participant" phrasing). **TERMINATION-CLOSE ESCALATION (self-improvement audit ITEM 17, 2026-07-11) — for EACH close order staged here, immediately:** `CALL ops.sp_raise_alert('critical','AR_orc','termination_close_staged', '<strategy> m2m termination close — <ticker> <SIDE> <QTY> — CONFIRM IMMEDIATELY', '<JSON: strategy, ticker, instruction_id, trigger=m2m>')` — same urgent-from-hour-1 escalation as D2's drawdown-termination path (see D2 §5), re-emailed on every `alert_emailer.gs` poll while unresolved. — and **perform the deterministic capital redistribution inline** — first fill any pending newcomer strategies to their $2,000 probe-stake floor, then split the terminated strategy's remaining booked allocation equally among the active survivors read from `state.strategy_roster` (the as-of-flow-date active-count, not a `/5` literal) (per Experiment_Parameters.md "Strategy termination and capital redistribution" + "New strategy funding"), reconciling the per-strategy allocations in the events-side state (`events.position_events` / `analytics.strategy_nav`). Enqueue an SL2 `post-mortem` PENDING_DRAFT item (`events.queue_events`, item_type='post-mortem', trigger_context=strategy_code); SL5 deregisters the roster row on the TERMINATED transition.
+   - m2m-termination with verdict TERMINATE: write an `events.decision_log` entry (`CALL ops.sp_log_decision(...)`) recording termination, mark the strategy terminated via an `events.regime_events` (scope `STRATEGY_ACTIVATION`) row AND write a TERMINATED `events.strategy_lifecycle` row (driver_routine='AR_orc'), immediately move strategy portfolio value to the park (§13 — SGOV historically, VOO from the 2026-07-15 cutover forward) by CRAFTING the close orders via the IBKR connector — `create_order_instruction`'s own notification is the human-facing confirm surface (2026-07-09; a non-craftable position gets a manual-entry `[Claude] Confirm order` event); liquidation orders are the execution layer only, routed through the operator confirm-tap exactly as every trade is (rev 2026-07-10 — refreshed from the stale "stage IBKR orders in chat output for the participant" phrasing). **TERMINATION-CLOSE ESCALATION (self-improvement audit ITEM 17, 2026-07-11) — for EACH close order staged here, immediately:** `CALL ops.sp_raise_alert('critical','AR_orc','termination_close_staged', '<strategy> m2m termination close — <ticker> <SIDE> <QTY> — CONFIRM IMMEDIATELY', '<JSON: strategy, ticker, instruction_id, trigger=m2m>')` — same urgent-from-hour-1 escalation as D2's drawdown-termination path (see D2 §5), re-emailed on every `alert_emailer.gs` poll while unresolved. — and **perform the deterministic capital redistribution inline** — first fill any pending newcomer strategies to their $2,000 probe-stake floor, then split the terminated strategy's remaining booked allocation equally among the active survivors read from `state.strategy_roster` (the as-of-flow-date active-count, not a `/5` literal) (per Experiment_Parameters.md "Strategy termination and capital redistribution" + "New strategy funding"), reconciling the per-strategy allocations in the events-side state (`events.position_events` / `analytics.strategy_nav`). Enqueue an SL2 `post-mortem` PENDING_DRAFT item (`events.queue_events`, item_type='post-mortem', trigger_context=strategy_code); SL5 deregisters the roster row on the TERMINATED transition.
    - m2m-termination with verdict CONTINUE: write an `events.decision_log` entry (`CALL ops.sp_log_decision(...)`) recording the review outcome, no portfolio action.
    - pre-mortem / strategy-adoption with verdict REVISION REQUIRED: write an `events.decision_log` entry (`CALL ops.sp_log_decision(...)`) recording the cycle outcome, THEN enqueue an SL2 auto-revision task (`events.queue_events` `PENDING_DRAFT`, `item_type='strategy-revise'`, `cycle_number` = this cycle + 1, trigger_context = the flagged Tier-1 defects + artifact_path). SL2 redrafts ONLY the flagged Tier-1 defects fresh and re-enqueues the review autonomously (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner directive: the "participant / participant-triggered drafting session revises" carve-out is RETIRED — pre-mortem revision is no longer out of scope for a routine; SL2 is the dedicated autonomous reviser). Beyond cycle 5, SL2 honors the rev-15 soft cap — either records the written continuation justification or abandons the candidate to REJECTED — per its section.
    - pre-mortem with verdict SUFFICIENT: write an `events.decision_log` entry (`CALL ops.sp_log_decision(...)`), no further action; the pre-mortem is unblocked for first-trade gating purposes.

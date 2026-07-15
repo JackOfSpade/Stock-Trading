@@ -3,7 +3,7 @@
 
 ## Regime router
 
-The router determines, for each strategy, whether that strategy is currently activated (eligible to deploy new capital) or deactivated (capital in SGOV, no new entries, existing positions run to normal exits). Activation is per-strategy, not global.
+The router determines, for each strategy, whether that strategy is currently activated (eligible to deploy new capital) or deactivated (~~capital in SGOV~~ **capital in the park — SGOV historically, VOO from the 2026-07-15 cutover forward [Rev 38, owner directive, 2026-07-15]; see Operating_Protocols.md §13**, no new entries, existing positions run to normal exits). Activation is per-strategy, not global.
 
 ### Technical indicator set (mechanical, daily)
 

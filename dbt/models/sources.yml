@@ -173,7 +173,12 @@ sources:
             description: Self-certified independence flag (judged objectively in 11_theater_judge.sql).
 
       - name: parking_events
-        description: SGOV parking activity for per-strategy cash attribution (action='DIVIDEND_REINVEST' for DRIP).
+        description: >
+          Idle-capital parking activity for per-strategy cash attribution (action='DIVIDEND_REINVEST'
+          for DRIP). ticker (added 2026-07-15, owner directive) distinguishes which vehicle a row
+          parked into -- SGOV historically, per state.park_policy_current going forward (parking
+          vehicle switches to VOO). Pre-2026-07-15 rows are backfilled ticker='SGOV', correctly --
+          the account genuinely held nothing else before then.
         loaded_at_field: event_ts
         columns:
           - name: event_id
@@ -187,6 +192,12 @@ sources:
               - not_null
           - name: action
             description: e.g. DIVIDEND_REINVEST (income, no strategy-cash debit) vs trade-funded buys.
+          - name: ticker
+            description: >
+              Which vehicle this row parked into -- 'SGOV' or 'VOO'. Added 2026-07-15; not enforced
+              not_null since it's a new column (BigQuery ADD COLUMN has no historical-row backfill
+              semantics of its own -- bigquery/54_park_policy_voo_cutover.sql backfilled all
+              pre-existing rows to 'SGOV' via a separate UPDATE, so it is in practice always populated).
 
       - name: daily_marks
         description: >

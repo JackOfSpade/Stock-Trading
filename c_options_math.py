@@ -1338,7 +1338,8 @@ def size_position(
 
     Returns (contracts, defer_flag).
     - If defer_flag = True, no integer contract count fits within max_pct_nav.
-      Per Strategy.md, the thesis defers; portfolio remains in SGOV.
+      Per Strategy.md, the thesis defers; portfolio remains parked (SGOV
+      historically, VOO from the 2026-07-15 cutover forward -- Operating_Protocols.md §13).
     - If defer_flag = False, contracts is the largest integer count where
       contracts * max_loss_per_contract <= max_pct_nav * strategy_nav.
 
