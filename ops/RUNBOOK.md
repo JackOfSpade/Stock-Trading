@@ -2379,15 +2379,13 @@ pointer updates, `Claude_Task_Plan.md` (D2a tripwire/sweep/cover sections retarg
 sections explicitly left unchanged; VOO `contract_id` cached), `ops/cadence.yaml` (+regenerated
 `ops/triggers.json`, `check_cadence_consistency.py` green), `bigquery/README.md`.
 
-**Owner actions still required (not executable by this change):** (1) re-paste `weekly_report.gs` into
-the live "Stock-Trading Automation" Apps Script project (commit-SHA-pinned GitHub raw URL — a large
-rewrite) and run `testReport()`; (2) apply `bigquery/43_script_version_registry.sql`'s MERGE live in the
-same window; (3) resolve/execute the manual IBKR "sell all SGOV, buy VOO" transfer whenever ready
-(~92.06 SGOV sh ≈ $9,256 today ≈ 13.3 VOO sh at VOO's live ~$694/share — fractional shares supported,
-confirmed via 10 of 10 current positions already being fractional); (4) same day as that transfer, run
-the prepared cutover SQL (INSERT the `('VOO', <date>)` row into `events.park_policy_changes` + the two
-`events.parking_events` conversion rows) and confirm the next D2a run reconciles cleanly against
-`state.park_reconciliation` with no tripwire hard-stop.
+**Owner actions — all 4 complete as of 2026-07-15 (same day):** (1) re-pasted `weekly_report.gs` into
+the live "Stock-Trading Automation" Apps Script project and ran `testReport()` clean — see "Deployed
+live" note below; (2) applied `bigquery/43_script_version_registry.sql`'s MERGE live in the same window
+— `state.script_version_drift` confirms v3=v3; (3) executed the manual IBKR "sell all SGOV, buy VOO"
+transfer (92.0612 SGOV sh → 13.4048 VOO sh, real fills below); (4) same day, ran the filled-in cutover
+SQL (`bigquery/56_park_policy_voo_manual_cutover_TEMPLATE.sql`) and confirmed `state.park_reconciliation`
+reconciles cleanly against the connector with no tripwire hard-stop — see "Cutover executed live" below.
 
 **Verification.** `node ops/weekly_report/test_pure_helpers.js` — 58/58 pass. Live BigQuery: `state.sgov_position`/
 `state.sgov_reconciliation` post-migration output verified byte-identical to pre-migration (92.0612 SGOV
@@ -2430,3 +2428,25 @@ today's real live data otherwise) now correctly returns one row — `park_ticker
 park_close=$691.10 (live VOO mark), events_park_market_value=$0` — instead of returning nothing. Full
 suite re-run clean: 58/58 JS assertions, 272/272 pytest, `check_roster_consistency.py` /
 `check_cadence_consistency.py` / `check_script_version_consistency.py` all OK, `dbt_parity.py` 0 drift.
+
+**Cutover executed live (2026-07-15, same day as the above).** The owner's manual IBKR "sell all SGOV,
+buy VOO" transfer ran. Actual fills (`get_account_trades`):
+- SELL SGOV: 92.0612 sh across 3 exchange-split fills (4 @ BYX, 88 @ BYX, 0.0612 @ IBKR), all @ $100.53,
+  total commission $0.559149, gross $9,254.912436, order_id 1061743393.
+- BUY VOO: 13.4048 sh across 2 exchange-split fills (13 @ DARK, 0.4048 @ IBKR), all @ $690.33,
+  total commission $0.352978, gross $9,253.735584, order_id 1061743463.
+
+`bigquery/56_park_policy_voo_manual_cutover_TEMPLATE.sql`'s 5 placeholders were filled in with these real
+values (not the earlier ~$560/~$694 estimates) and run live as a single atomic `BEGIN TRANSACTION` /
+`COMMIT TRANSACTION` — both the `events.park_policy_changes` INSERT and the two `events.parking_events`
+legs landed together, so the cutover-gap window the same-day post-implementation review fixed in
+`state.park_position_current`'s join logic was never actually opened by this run. Verified post-run:
+`state.park_policy_current` = VOO (`effective_date` 2026-07-15); `state.park_position_current` and
+`state.park_reconciliation` both report events-side shares = 13.4048, exactly matching the connector's
+live VOO holding (`get_account_positions`, contract_id 136155102). `park_mark_fresh=false` at check
+time — D2a's 2026-07-15 VOO daily mark hadn't run yet mid-session; expected, resolves at the next D2a
+cycle, not a discrepancy. Also recorded VOO's first live commission data point (Operating_Protocols.md
+§13's Commission-model note, previously UNVERIFIED): ≈0.0038% of trade value — not SGOV's ~1% schedule,
+not $0 either; only one order so far, so `comm_buffer` still falls back to the connector's actual
+per-order commission until more fills accumulate. → `events.decision_log`
+851e579a-efba-4a72-840e-889f185bbc17 "SGOV->VOO parking-vehicle cutover executed live (2026-07-15)".
