@@ -91,7 +91,8 @@ def main():
     try:
         health = q(f"SELECT * FROM `{PROJECT}.state.system_health`")
         kills = q(f"SELECT strategy,as_of_date,deployed_unit_value,current_drawdown,excess_vs_sgov,"
-                  f"deployed_days,closed_trades,drawdown_kill,runaway_review,m2m_underperf_review "
+                  f"deployed_days,closed_trades,drawdown_kill,runaway_review,m2m_underperf_review,"
+                  f"interim_underperf_warning "
                   f"FROM `{PROJECT}.perf.kill_flags` ORDER BY strategy")
         nav = q(f"SELECT strategy,nav,available_funds,sizing_base_2pct,deployed_mv "
                 f"FROM `{PROJECT}.analytics.strategy_nav` ORDER BY strategy")
@@ -101,7 +102,11 @@ def main():
         runs = q(f"SELECT routine,run_date,status,log_ts FROM `{PROJECT}.ops.run_log` "
                  f"ORDER BY log_ts DESC LIMIT 20")
     except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as e:
-        print(f"Query failed (is the bq CLI installed & authenticated?): {e}", file=sys.stderr)
+        # CalledProcessError's default __str__ is just "Command '[...]' returned non-zero exit
+        # status N" — it never includes bq's actual stderr diagnostic, even though check=True
+        # already populated e.stderr with the real error text (2026-07-14 audit finding).
+        detail = e.stderr.strip() if isinstance(e, subprocess.CalledProcessError) and e.stderr else str(e)
+        print(f"Query failed (is the bq CLI installed & authenticated?): {detail}", file=sys.stderr)
         return 1
 
     h = health[0] if health else {}
@@ -128,7 +133,7 @@ def main():
 </style></head><body>
 <h1>Stock-Trading experiment — system health</h1>
 <div class="banner">{banner[1]}</div>
-<p class="ts">generated {now} · project {PROJECT}</p>
+<p class="ts">generated {html.escape(now)} · project {html.escape(PROJECT)}</p>
 
 <h2>Freshness &amp; health</h2>{table(health)}
 <h2>Deployed-TWR engine / kill flags</h2>{table(kills)}

@@ -21,7 +21,10 @@
 -- ops/RUNBOOK.md "Scheduled queries". Also apply bigquery/34_alert_lifecycle.sql before re-pasting
 -- (it defines ops.sp_auto_resolve_alerts, called below — self-improvement audit WP2, 2026-07-07), and
 -- bigquery/38_run_log_selfheal.sql before re-pasting (it defines ops.sp_backfill_run_log_from_markers,
--- called FIRST below — RUNBOOK section 38 self-heal, ITEM 3).
+-- called FIRST below — RUNBOOK section 38 self-heal, ITEM 3). Also apply
+-- bigquery/45_monitor_promotion.sql before re-pasting (it CREATEs ops.monitor_health_history, the
+-- table this query's MERGE statements below target — 2026-07-14 audit finding: this dependency was
+-- never listed here even though the MERGEs have needed it since it was added).
 --
 -- NOTE (repo vs live): this query's LIVE scheduled-query body still ran without the
 -- sp_auto_resolve_alerts call as of this file's edit — the repo copy needs a console re-paste

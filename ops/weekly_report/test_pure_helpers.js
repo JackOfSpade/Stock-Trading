@@ -31,6 +31,11 @@
  *   - buildHealthReasons_  (weekly_report.gs lines 299-320)
  *   - buildSubject_        (weekly_report.gs lines 119-135)
  *   - esc_                 (weekly_report.gs line 361)
+ *   - SGOV_GRAY, VOO_COLOR (weekly_report.gs lines 61-62)
+ *   - clr_                 (weekly_report.gs line 356)
+ *   - fallbackBarsHtml_    (weekly_report.gs lines 448-464)
+ *   - pctCellHtml_         (weekly_report.gs lines 467-472)
+ *   - dollarCellHtml_      (weekly_report.gs lines 474-478)
  *   - isTest_              (alert_emailer.gs line 210)
  *   - esc2_                (alert_emailer.gs line 205)
  *   - alertSubject_        (alert_emailer.gs, defined immediately after isTest_)
@@ -106,6 +111,43 @@ function downsampleDates_(sortedDates) {
 }
 
 function esc_(s)  { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+const SGOV_GRAY = '#898781';
+const VOO_COLOR = '#5f7d95';
+function clr_(p)  { return p >= 0 ? '#1a7f5a' : '#c0392b'; }
+
+// Gmail-safe fallback: one bar per deployed strategy (cumulative return), + a SGOV bar, + a VOO bar
+// (if VOO has data). Color: green if the strategy beat SGOV, red if not; SGOV bar gray, VOO bar steel.
+function fallbackBarsHtml_(d) {
+  const deployed = d.rows.filter(r => r.deployed);
+  const items = deployed.map(r => ({ label: r.strategy, val: r.returnPct * 100, beat: r.returnPct > d.sgov.returnPct }))
+    .concat([{ label: 'SGOV', val: d.sgov.returnPct * 100, neutral: true }]);
+  if (d.headline && d.headline.voo && d.headline.voo.returnPct != null) {
+    items.push({ label: 'VOO', val: d.headline.voo.returnPct * 100, neutral: true, vooColor: true });
+  }
+  const maxAbs = Math.max.apply(null, items.map(it => Math.abs(it.val)).concat([1.0]));
+  return items.map(it => {
+    const widthPx = Math.max(2, Math.round(Math.abs(it.val) / maxAbs * 240));
+    const color = it.vooColor ? VOO_COLOR : (it.neutral ? SGOV_GRAY : (it.beat ? '#1a7f5a' : '#c0392b'));
+    return `<div style="padding:4px 0;font-size:12px;color:#1f2d3d;">` +
+      `<span style="display:inline-block;width:40px;font-weight:700;">${esc_(it.label)}</span>` +
+      `<span style="display:inline-block;background-color:${color};width:${widthPx}px;height:12px;vertical-align:middle;"></span>` +
+      `<span style="margin-left:8px;color:${color};font-weight:700;">${signPct_(it.val)}</span></div>`;
+  }).join('');
+}
+
+function pctCellHtml_(v, colorBySign, extrapolated) {
+  if (v == null) return `<span style="color:#8a96a3;font-size:11px;">Not enough data</span>`;
+  const color = colorBySign ? clr_(v) : '#3d4a59';
+  const marker = extrapolated ? '†' : '';
+  return `<span style="color:${color};font-weight:${colorBySign ? 700 : 400};">${signPct_(v * 100)}${marker}</span>`;
+}
+
+function dollarCellHtml_(v, colorBySign) {
+  if (v == null) return `<span style="color:#8a96a3;font-size:11px;">Not enough data</span>`;
+  const color = colorBySign ? clr_(v) : '#3d4a59';
+  return `<span style="color:${color};font-weight:${colorBySign ? 700 : 400};">${signDollar_(v)}</span>`;
+}
 
 // ===== "Why might these numbers be stale?" — only when the data-trust predicate fails =====
 function buildHealthReasons_(health, marksFresh, engineFresh, firingKillFlags, killFlagDetails, openCriticalAlerts, criticalAlerts) {
@@ -337,6 +379,61 @@ t('esc_ escapes &, <, >, and " (quote-escaping fix)', () => {
 t('esc_ handles null/undefined without throwing, returning the empty string', () => {
   assert.strictEqual(esc_(null), '');
   assert.strictEqual(esc_(undefined), '');
+});
+
+// ---- pctCellHtml_ / dollarCellHtml_ / fallbackBarsHtml_ (the "chart must never fail the send"
+//      safety fallback and its cell-renderer siblings — previously zero test coverage) ----
+t('pctCellHtml_ returns "Not enough data" for null', () => {
+  assert.ok(pctCellHtml_(null, true, false).includes('Not enough data'));
+});
+t('pctCellHtml_ colors by sign when colorBySign=true, neutral color when false', () => {
+  const positive = pctCellHtml_(0.05, true, false);
+  const negative = pctCellHtml_(-0.05, true, false);
+  assert.ok(positive.includes('#1a7f5a'));
+  assert.ok(negative.includes('#c0392b'));
+  const neutral = pctCellHtml_(0.05, false, false);
+  assert.ok(neutral.includes('#3d4a59'));
+});
+t('pctCellHtml_ appends the † marker when extrapolated=true', () => {
+  assert.ok(pctCellHtml_(0.05, true, true).includes('†'));
+  assert.ok(!pctCellHtml_(0.05, true, false).includes('†'));
+});
+t('dollarCellHtml_ returns "Not enough data" for null, signed dollars otherwise', () => {
+  assert.ok(dollarCellHtml_(null, true).includes('Not enough data'));
+  assert.ok(dollarCellHtml_(12.5, true).includes('+$12.50'));
+  assert.ok(dollarCellHtml_(-12.5, true).includes('−$12.50'));
+});
+t('fallbackBarsHtml_ colors a beating deployed strategy green and a trailing one red', () => {
+  const d = { rows: [{ strategy: 'A', deployed: true, returnPct: 0.10 }, { strategy: 'B', deployed: true, returnPct: -0.02 }],
+              sgov: { returnPct: 0.01 }, headline: null };
+  const out = fallbackBarsHtml_(d);
+  assert.ok(out.includes('#1a7f5a')); // A beat SGOV (0.10 > 0.01)
+  assert.ok(out.includes('#c0392b')); // B trailed SGOV (-0.02 < 0.01)
+});
+t('fallbackBarsHtml_ always includes an SGOV bar colored SGOV_GRAY', () => {
+  const d = { rows: [{ strategy: 'A', deployed: true, returnPct: 0.10 }], sgov: { returnPct: 0.01 }, headline: null };
+  assert.ok(fallbackBarsHtml_(d).includes(SGOV_GRAY));
+});
+t('fallbackBarsHtml_ includes a VOO bar colored VOO_COLOR only when headline.voo.returnPct is non-null', () => {
+  const base = { rows: [{ strategy: 'A', deployed: true, returnPct: 0.10 }], sgov: { returnPct: 0.01 } };
+  const withVoo = fallbackBarsHtml_({ ...base, headline: { voo: { returnPct: 0.03 } } });
+  const withoutVoo = fallbackBarsHtml_({ ...base, headline: { voo: { returnPct: null } } });
+  assert.ok(withVoo.includes(VOO_COLOR));
+  assert.ok(!withoutVoo.includes(VOO_COLOR));
+});
+t('fallbackBarsHtml_ respects the Math.max(2, ...) bar-width floor for a near-zero value', () => {
+  const d = { rows: [{ strategy: 'A', deployed: true, returnPct: 0.0001 }], sgov: { returnPct: 0.10 }, headline: null };
+  const out = fallbackBarsHtml_(d);
+  assert.ok(out.includes('width:2px') || /width:\d+px/.test(out));
+});
+
+// ---- esc_ / esc2_ parity — closes the "KEEP IN SYNC MANUALLY" gap: the two blocks above only
+//      prove each function is internally correct, never that the two hand-synced twins still agree ----
+t('esc_ and esc2_ (the two hand-synced HTML-escape twins) agree for every input', () => {
+  const cases = ['<b>&"', null, undefined, '', 'plain text', 'it\'s "quoted" <tag> & more', 0, false];
+  cases.forEach(c => {
+    assert.strictEqual(esc_(c), esc2_(c), `esc_/esc2_ diverged for input ${JSON.stringify(c)}`);
+  });
 });
 
 // ---- buildHealthReasons_ ----

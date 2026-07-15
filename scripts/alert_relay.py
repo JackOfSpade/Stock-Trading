@@ -49,6 +49,9 @@ except ImportError:  # pragma: no cover — stdlib since 3.9; CI/runners pin >=3
     ZoneInfo = None
     ZoneInfoNotFoundError = KeyError
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib.bq_json import parse_bq_json_stdout
+
 PROJECT = os.environ.get("BQ_PROJECT", "stock-trading-498512")
 MODE = os.environ.get("RELAY_MODE", "alerts")
 WINDOW_MIN = int(os.environ.get("RELAY_WINDOW_MIN", "35"))
@@ -56,16 +59,21 @@ WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "").strip()
 
 
 def bq(sql):
-    out = subprocess.run(
-        ["bq", "--project_id=" + PROJECT, "--quiet", "--headless", "--format=json",
-         "query", "--use_legacy_sql=false", "--max_rows=1000", sql],
-        capture_output=True, text=True,
-    )
+    # 600s timeout: a stalled bq CLI call (network partition / hung query poll) would otherwise
+    # block this job indefinitely, and this relay's `concurrency: cancel-in-progress: false`
+    # setting means a hung run also queues (blocks) every subsequent scheduled trigger for hours
+    # (2026-07-14 audit finding).
+    try:
+        out = subprocess.run(
+            ["bq", "--project_id=" + PROJECT, "--quiet", "--headless", "--format=json",
+             "query", "--use_legacy_sql=false", "--max_rows=1000", sql],
+            capture_output=True, text=True, timeout=600,
+        )
+    except subprocess.TimeoutExpired as e:
+        raise RuntimeError(f"bq query timed out after {e.timeout}s: {sql[:120]}") from e
     if out.returncode != 0:
         raise RuntimeError(out.stderr.strip() or out.stdout.strip())
-    s = out.stdout.strip()
-    i = s.find("[")
-    return json.loads(s[i:]) if i != -1 else []
+    return parse_bq_json_stdout(out.stdout)
 
 
 def get_user_tz():

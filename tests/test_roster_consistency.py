@@ -41,6 +41,7 @@ REAL_PATHS = {
 }
 REAL_DERIVED_LIVE_SQL = list(rc.DERIVED_LIVE_SQL)
 REAL_DBT_RECONCILE = rc.DBT_RECONCILE
+REAL_DBT_SCHEMA_ACCEPTED_VALUES = rc.DBT_SCHEMA_ACCEPTED_VALUES
 REAL_STRATEGY_DIR = rc.STRATEGY_DIR
 REAL_STRATEGY_MATH_DIR = rc.STRATEGY_MATH_DIR
 REAL_C_OPTIONS_MATH = rc.C_OPTIONS_MATH
@@ -85,6 +86,12 @@ def repo_copy(tmp_path, monkeypatch):
     dbt_dst = dst_root / "dbt_tests" / "assert_cash_flows_reconcile.sql"
     shutil.copy(REAL_DBT_RECONCILE, dbt_dst)
     monkeypatch.setattr(rc, "DBT_RECONCILE", str(dbt_dst))
+
+    # dbt/models/analytics/schema.yml (R-G's accepted_values(strategy) cross-check).
+    (dst_root / "dbt_models_analytics").mkdir()
+    schema_dst = dst_root / "dbt_models_analytics" / "schema.yml"
+    shutil.copy(REAL_DBT_SCHEMA_ACCEPTED_VALUES, schema_dst)
+    monkeypatch.setattr(rc, "DBT_SCHEMA_ACCEPTED_VALUES", str(schema_dst))
 
     # strategy_math/ package + c_options_math.py (R-F spec_hash inputs) — copied so a test can mutate
     # a math module and have spec_hash_inputs() (a function re-reading these monkeypatched constants,
@@ -252,6 +259,53 @@ def test_rails_literal_disagreement_is_caught(repo_copy):
     assert rc.main() == 1
 
 
+# ---- (b9b) R-E: a rails key DELETED ENTIRELY from roster.yaml must also be caught, not just a
+#      mismatched value — the original loops only compared when the key was present, so deleting
+#      it left NOTHING to compare against and R-E vacuously passed (2026-07-14 audit finding).
+def test_rails_key_missing_entirely_is_caught(repo_copy):
+    p = rc.ROSTER
+    txt = _read(p)
+    old = "  n_min: 2                       # roster FLOOR: SL4 never proposes retirement below this; a hit\n"
+    assert old in txt, "fixture assumption about roster.yaml's n_min line drifted"
+    _write(p, txt.replace(old, ""))
+    assert rc.main() == 1
+
+
+# ---- (b5b) R-B: a bare literal split across two lines (a SQL formatter line-wrap) must still be
+#      caught — the original line-by-line scan matched neither line (2026-07-14 audit finding).
+def test_bare_literal_split_across_lines_is_caught(repo_copy):
+    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("22_cash_flows.sql")][0]
+    txt = _read(target)
+    txt += "\nSELECT * FROM UNNEST(['A',\n  'B','C','D','E']) AS strat;\n"
+    _write(target, txt)
+    assert rc.main() == 1
+
+
+# ---- (b5c) R-B: a fixed divisor split across two lines, "amount" on either side of the wrap ----
+def test_fixed_divisor_split_across_lines_amount_before_wrap_is_caught(repo_copy):
+    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql")][0]
+    txt = _read(target)
+    txt += "\nSELECT amount /\n  5 AS per_strategy_amount FROM t;\n"
+    _write(target, txt)
+    assert rc.main() == 1
+
+
+def test_fixed_divisor_split_across_lines_amount_after_wrap_is_caught(repo_copy):
+    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql")][0]
+    txt = _read(target)
+    txt += "\nSELECT x /\n  5 AS amount_per_strategy FROM t;\n"
+    _write(target, txt)
+    assert rc.main() == 1
+
+
+# ---- (b6b) R-C: the adjacency guard must not false-fail on unrelated slash-digit prose ----
+def test_unrelated_slash_digit_comment_does_not_false_fail_r_c(repo_copy):
+    p = rc.DBT_RECONCILE
+    txt = _read(p)
+    _write(p, txt + "\n-- see RUNBOOK section 5/6 for the tolerance rationale\n")
+    assert rc.main() == 0
+
+
 # ---- (b10) R-A: Claude_Task_Plan.md slice-map row removed for a still-active code ----
 def test_missing_slicemap_row_is_caught(repo_copy):
     p = rc.PLAN
@@ -350,6 +404,25 @@ def test_spec_locked_strategy_without_math_module_is_a_non_blocking_note(repo_co
     out = capsys.readouterr().out
     assert rc_code == 0, "a spec-locked strategy missing from spec_hash_inputs() must NOT fail the build"
     assert "'F'" in out and "no spec_hash_inputs() entry" in out
+
+
+# ---- (b14) R-G: dbt schema.yml accepted_values(strategy) drifts from the roster-active set ----
+def test_schema_yml_accepted_values_drift_is_caught(repo_copy):
+    p = rc.DBT_SCHEMA_ACCEPTED_VALUES
+    txt = _read(p)
+    old = "values: ['A', 'B', 'C', 'D', 'E']"
+    assert txt.count(old) >= 1, "fixture assumption about schema.yml's accepted_values lists drifted"
+    _write(p, txt.replace(old, "values: ['A', 'B', 'C', 'D']", 1))
+    assert rc.main() == 1
+
+
+def test_schema_yml_unrelated_accepted_values_block_is_not_flagged(repo_copy):
+    # conviction_features.decision's accepted_values(['GO']) must never be compared against the
+    # roster set — R-G only inspects columns literally named `strategy`.
+    p = rc.DBT_SCHEMA_ACCEPTED_VALUES
+    txt = _read(p)
+    assert "values: ['GO']" in txt, "fixture assumption about the decision column's accepted_values drifted"
+    assert rc.main() == 0
 
 
 # ---- skip semantics: pre-2026-07-10 checkout without strategy/roster.yaml is a clean SKIP ----

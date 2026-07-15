@@ -1,13 +1,14 @@
 # Tooling config for the Stock-Trading experiment.
-# The trading system itself is markdown-spec + BigQuery + MCP connectors; the only
-# executable code is c_options_math.py (Strategy C's defined-risk engine, pure stdlib).
-# This file exists so that engine can be tested in CI — see .github/workflows/ci.yml
-# and tests/test_options_math.py.
+# The trading system's operating plane is markdown-spec + BigQuery + MCP connectors, but the repo
+# ships a real Python surface alongside it: c_options_math.py (Strategy C's defined-risk engine),
+# strategy_math/ (spec-locked A/B/D/E sizing/gate math), and scripts/ (CI drift-defense checkers,
+# the dbt-parity/alert-relay/dashboard tooling). This file exists so all of it is tested/linted in
+# CI — see .github/workflows/ci.yml and the 270+ tests under tests/.
 
 [project]
 name = "stock-trading-experiment"
 version = "0.0.0"
-description = "Strategy C options-math engine + tests (the rest of the system is BigQuery + MCP)."
+description = "Options-math + strategy-math engines, and CI drift-defense tooling, for the Stock-Trading experiment (spec/data layer is BigQuery + MCP)."
 requires-python = ">=3.11"
 
 [tool.pytest.ini_options]
@@ -18,7 +19,8 @@ testpaths = ["tests"]
 addopts = "-q"
 
 [tool.ruff]
-# Lint the one Python file we ship. Lenient line length — the module is heavily
-# commented by design (the comments are part of the safety case).
+# Lint the Python surface we ship: c_options_math.py, strategy_math/, scripts/, ops/, tests/.
+# Lenient line length — c_options_math.py is heavily commented by design (the comments are part
+# of the safety case).
 line-length = 120
 target-version = "py311"

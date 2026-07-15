@@ -4,6 +4,11 @@
 -- deliberately NOT built on top of that view; see the note below). Idempotent (CREATE OR REPLACE
 -- VIEW throughout; no tables, no INSERTs, no mutation of any other object).
 --
+-- SUPERSEDED LIVE by bigquery/50_short_sale_tax_lots.sql (2026-07-14) — both views below hardcoded
+-- BUY=entry/SELL=exit and only scanned SELL rows for a realized loss, silently mis-handling short
+-- positions (Strategy E's own mechanism requires a short leg on every trade). Kept here, unmodified,
+-- for DR-rebuild apply-in-order reference only. See 50's header for the full bug + fix description.
+--
 -- WHY THIS EXISTS. The system is the SOLE books-of-record for a taxable IBKR account and computes a
 -- post-tax success metric (Experiment_Parameters.md: "excess real return ... post-fees, post-taxes,
 -- post-inflation"; §"Taxes calculated at actual marginal rates, with short-term capital gains treated

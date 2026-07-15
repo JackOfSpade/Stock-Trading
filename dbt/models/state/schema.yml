@@ -218,3 +218,14 @@ models:
     columns:
       - name: trading_enabled
         tests: [not_null]
+
+  - name: trading_enabled_mechanical
+    description: D2a-scoped trading-enable gate (deliberately excludes marks_fresh/engine_fresh —
+      D2a's own same-run-circular term). ops.sp_assert_trading_enabled_mechanical reads this before
+      D2a's mechanical sweep/persist-and-wait re-craft step. Added 2026-07-14 (audit finding, HIGH) —
+      previously had ZERO dbt mirror despite its live sibling state.trading_enabled having full
+      coverage since 2026-07-04.
+    # Single row — asserted by tests/assert_trading_enabled_mechanical_single_row.sql.
+    columns:
+      - name: trading_enabled
+        tests: [not_null]

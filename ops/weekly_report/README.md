@@ -173,4 +173,8 @@ question plus VOO.
   label search string is coupled to the subject format; if you change the subject prefix,
   update the `GmailApp.search(...)` call in `sendWeeklyReport_` to match.
 - Preview the design any time by opening `ops/weekly_report/sample_preview.html` in a browser
-  (the chart is a static placeholder there — the real email renders an actual PNG).
+  (the chart is a static placeholder there — the real email renders an actual PNG). Regenerated
+  for v2/VOO on 2026-07-14 — this file drifted for a full redesign cycle (2026-07-13's VOO
+  rewrite) because that entry's checklist omitted the regeneration step every prior redesign
+  included; regenerate it again (by hand, matching `buildHtml_`/`headlineSectionHtml_`'s current
+  output) any time the email's HTML structure changes, in the SAME commit.

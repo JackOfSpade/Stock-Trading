@@ -50,6 +50,13 @@ def test_pearson_correlation_length_mismatch_raises():
         common.pearson_correlation([1.0, 2.0], [1.0])
 
 
+def test_pearson_correlation_too_few_observations_raises():
+    # A separate guard from the length-mismatch check above: equal-length inputs that are still
+    # too short (n < 2) to compute a correlation.
+    with pytest.raises(ValueError):
+        common.pearson_correlation([1.0], [1.0])
+
+
 def test_ols_regression_exact_linear_no_noise():
     # y = 2 + 3x exactly -> beta=3, alpha=2, alpha_se ~ 0 (zero residuals)
     x = [1.0, 2.0, 3.0, 4.0, 5.0]
@@ -167,7 +174,10 @@ def test_d_instrument_eligibility_boundary():
     assert strategy_d.meets_instrument_eligibility(10_000_000_000, 19_999_999) is False
 
 
-def test_d_correlation_bucket_members_and_cap():
+def test_d_correlation_bucket_members_monitoring_only():
+    # Rev 35 (owner directive): the bucket-size cap and entry-blocking behavior were
+    # removed — correlation_bucket_members is now monitoring/informational only
+    # (Section 6), so this only asserts the membership arithmetic, not a cap.
     candidate = [0.01, 0.02, -0.01, 0.03, 0.015]
     highly_correlated = [0.011, 0.021, -0.009, 0.031, 0.016]  # ~ same pattern, > 0.6 corr
     uncorrelated = [0.05, -0.03, 0.02, -0.04, 0.01]
@@ -176,10 +186,6 @@ def test_d_correlation_bucket_members_and_cap():
     members = strategy_d.correlation_bucket_members(candidate, held)
     assert "AAA" in members
     assert "BBB" not in members
-
-    # Candidate + 3 already-correlated names -> blocks (cap is 3 total incl. candidate)
-    assert strategy_d.bucket_blocks_entry(["AAA", "BBB", "CCC"]) is True
-    assert strategy_d.bucket_blocks_entry(["AAA", "BBB"]) is False  # candidate + 2 = 3, at cap not over
 
 
 def test_d_post_entry_bucket_pairs():

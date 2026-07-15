@@ -103,6 +103,14 @@ conclusion="$(ci_conclusion_from_json '{"workflow_runs":[{"status":"in_progress"
 assert_false "in-progress golden-scenarios run: is_secondary_gate_satisfied must SKIP until it completes" \
   is_secondary_gate_satisfied "$conclusion"
 
+# BUG FIX regression (2026-07-14 audit finding): a non-empty but ERROR-SHAPED API response (no
+# workflow_runs array at all, e.g. gh api's stdout on an HTTP error) used to parse to "none" —
+# identical to a legitimate zero-runs response — silently satisfying is_secondary_gate_satisfied
+# instead of blocking the merge like a real API error must.
+conclusion="$(ci_conclusion_from_json '{"message":"Not Found"}')"
+assert_eq "malformed/error-shaped JSON (missing workflow_runs) parses to 'error', not 'none'" "$conclusion" "error"
+assert_false "is_secondary_gate_satisfied must NOT treat a malformed API response as satisfied" is_secondary_gate_satisfied "$conclusion"
+
 # ---- is_ancestor_of: already-merged + re-confirm-before-delete, against a scratch git repo --
 
 SCRATCH="$(mktemp -d)"

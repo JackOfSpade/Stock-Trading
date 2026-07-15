@@ -63,6 +63,10 @@ rails:
   adoption_rate_window_days: 90  # rate LIMIT: at most ONE strategy reaches PROBE (live capital) per
                                  #   rolling 90 days / per calendar quarter (paper_readiness checks the
                                  #   most recent PROBE lifecycle timestamp).
+  min_shadow_trading_days: 20    # SHADOW -> PAPER floor: state.strategy_shadow_readiness.days_met
+                                 #   (bigquery/35_strategy_arsenal.sql). Added 2026-07-14 -- the view's
+                                 #   own comment already claimed this was "mirrored in roster.yaml"
+                                 #   before this entry existed (self-improvement audit finding).
   cooldown_days:                 # per-edge cooldown stamps enforced by SL1/SL4 to prevent oscillation,
                                  #   churn, and relabeled-continuation (dead-strategy laundering); paired
                                  #   with the material-structural-difference + fresh-derivation restart tests.
@@ -144,7 +148,7 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
-    spec_hash: "3aa60dd2783a6e6085465da8cf1c02a2ef48f6928cc536abae5dd8fe926a2ded"   # sha256(strategy/05_strategy_c.md || c_options_math.py), rev 2026-07-11 R-F
+    spec_hash: "0f3c968caae5c787bad9fa5f15bb41be77c150567fe47a134e09310ef9f2feb5"   # sha256(strategy/05_strategy_c.md || c_options_math.py), rev 2026-07-14 R-F
     retired_date: null
     is_restart_of: null
     revision_history:
@@ -154,6 +158,8 @@ strategies:
         note: "spec_hash added (Item 28, self-improvement audit) — content-hashes strategy/05_strategy_c.md + the PRE-EXISTING c_options_math.py against post-lock drift (this strategy's math module already existed before Item 28; only the hash bookkeeping is new). Verified by scripts/check_roster_consistency.py R-F. No machinery change."
       - date: 2026-07-11
         note: "spec_hash recomputed (adversarial self-audit fix) — OptionInputs.__post_init__ now validates option_type is 'call' or 'put'; previously any other value (e.g. a mis-cased 'Call') was silently priced as a put by price_bsm/greeks_bsm/payoff_at_expiration with no error, corrupting max-loss/sizing. Purely additive validation — every sanctioned constructor and existing test already passed only lowercase 'call'/'put', so no passing behavior changed. Bug fix to the engine's input validation, not a change to Strategy C's live trading rules. Verified by scripts/check_roster_consistency.py R-F."
+      - date: 2026-07-14
+        note: "spec_hash recomputed (2026-07-14 self-improvement audit — 5 bug/optimization fixes to c_options_math.py, all input-validation or numerically-provable, none a change to Strategy C's live trading rules): (1) cascade_max_loss() now rejects a non-finite/non-positive implied_move_full_horizon — a negative value silently flipped the adverse-move direction, understating the cascade bound (verified: a 100/105 credit call spread's cascade went from 306.26 to 0.0). (2) _butterfly() now requires strictly ascending strikes — the equidistant check alone was vacuously true for identical/reversed strikes, letting a degenerate zero-payoff structure pass both dual-path checks. (3) All 8 Structure constructors now reject a non-positive/fractional `contracts` — previously silent (e.g. contracts=-1 built a naked short put ~30x the real max loss, still labeled 'long_put'). (4) greeks_bsm()'s T<=0 branch now returns the correct +/-1/0 delta by moneyness instead of a blanket 0.0 (price_bsm's own T<=0 branch already returns the matching intrinsic-value slope; unreached by any live path today). (5) max_loss_closed_form()'s test-price grid trimmed from ~2919 points to the provably-sufficient {0, every strike, far-above-highest-strike} set (every permitted structure's expiration payoff is piecewise-linear with kinks only at the strikes; extrema occur only at kinks or interval endpoints) — verified byte-for-byte identical worst_pnl across ~5900 randomized structures. Verified by scripts/check_roster_consistency.py R-F and the full tests/test_options_math.py suite (62/62 passing, 11 new cases)."
   - code: D
     name: "Long-horizon narrative-screened equity core"
     archetype: long-horizon-concentrated-equity
@@ -165,7 +171,7 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
-    spec_hash: "9f625d32b8bc980487767a75687f465c4a5c139819d1794aa89c64cd27949ac7"   # sha256(strategy/06_strategy_d.md || strategy_math/strategy_d.py || strategy_math/common.py), rev 2026-07-11 R-F
+    spec_hash: "1b120f81f054b7c0ebf9646aac1d92d35b9aee98bb596ac6f14d68c526880ba8"   # sha256(strategy/06_strategy_d.md || strategy_math/strategy_d.py || strategy_math/common.py), rev 2026-07-15 R-F
     retired_date: null
     is_restart_of: null
     revision_history:
@@ -177,6 +183,8 @@ strategies:
         note: "spec_hash recomputed (adversarial self-audit fix) — now also hashes strategy_math/common.py (the shared math module strategy_d.py imports), which the original hash omitted, silently missing drift in that shared module. No machinery change."
       - date: 2026-07-11
         note: "spec_hash recomputed again (same adversarial self-audit pass, same day) — strategy_math/strategy_d.py's subtype_for_dual_signal() had a silent-wrong-default bug fixed (trend_metric_independently_evaluable now required, not defaulted to False, when the catalyst is within the 365-day window). This is a bug fix to the newly-authored strategy_math codification itself (Item 28, this same audit), not a change to Strategy D's own live trading rules — subtype_for_dual_signal is not yet called by any live routine instruction. Verified by scripts/check_roster_consistency.py R-F."
+      - date: 2026-07-15
+        note: "spec_hash recomputed — Strategy.md Entry criterion 5 prose (main §D section + pre-mortem duplicate) corrected to match Rev 35 (owner directive, Strategy.md line 7 changelog), which already removed the max-3-positions-per-correlation-bucket cap and its post-entry entry-blocking behavior; the prose had never been updated to reflect that removal (Watchlist.md D-blocked correction #2). strategy_math/strategy_d.py's MAX_POSITIONS_PER_BUCKET constant and bucket_blocks_entry() removed; correlation_bucket_members()/post_entry_bucket_pairs() are now documented as monitoring/informational only (Section 6), never entry-blocking. This is a doc/code correction to match an already-live owner directive, not a new machinery change — owner directly reviewed and confirmed Rev 35's scope before this edit."
   - code: E
     name: "Market-neutral narrative-divergence pairs"
     archetype: market-neutral-pairs

@@ -49,8 +49,16 @@ jobs:
         run: python scripts/check_roster_consistency.py
       - name: autonomy-stage single-source (autonomy_levels.yaml ⇄ prose/SQL citations)
         run: python scripts/check_autonomy_consistency.py
+      - name: script-version single-source (.gs SCRIPT_VERSION consts ⇄ bigquery/43 MERGE seed)
+        run: python scripts/check_script_version_consistency.py
       - name: auto-merge decision logic (CI-gate + delete-safety fixtures — 2026-07-04 code-quality audit)
         run: bash tests/test_auto_merge_logic.sh
+      - name: weekly_report.gs / alert_emailer.gs pure-helper tests (esc_/esc2_, periodAvg_, alertSubject_, ...)
+        # No actions/setup-node step needed -- ubuntu-latest ships Node preinstalled and the script
+        # only uses the built-in `assert` module (no package.json/npm install anywhere in the repo).
+        # This suite previously had zero CI coverage (2026-07-14 audit finding) -- a regression in
+        # either operator-facing email's pure logic passed every other CI gate silently.
+        run: node ops/weekly_report/test_pure_helpers.js
 
   lint:
     name: ruff (informational)
@@ -70,9 +78,10 @@ jobs:
     # The most CONSEQUENTIAL automation in the repo is the embedded bash that decides whether routine git
     # output reaches main (auto-merge-claude.yml) and whether a strand is detected (stranded-branch-check.yml)
     # — yet only the lower-stakes Python parsers had purpose-built tests. actionlint statically checks every
-    # workflow (and runs shellcheck on each `run:` block); shellcheck covers every standalone script matched
-    # by scripts/*.sh (glob — new scripts are covered automatically, no list to maintain here). A subtle edit
-    # to the branch-selection filter, the merge-base ancestry re-check, or the fail-closed default would
+    # workflow (and runs shellcheck on each `run:` block); shellcheck covers every standalone .sh script
+    # under scripts/, tests/, .claude/, and infra/terraform/ (globs — new scripts dropped into any of those
+    # four directories are covered automatically, no list to maintain here). A subtle edit to the
+    # branch-selection filter, the merge-base ancestry re-check, or the fail-closed default would
     # otherwise regress with no CI signal.
     #
     # BLOCKING GATE (promoted 2026-06-29 after a confirmed clean run on the runner — CI #102, all steps
@@ -91,7 +100,29 @@ jobs:
       - name: actionlint (workflow YAML + embedded run-block bash via shellcheck)
         run: ./actionlint -color
       - name: shellcheck standalone scripts (warning+ blocks)
-        run: shellcheck -S warning scripts/*.sh
+        run: shellcheck -S warning scripts/*.sh tests/*.sh .claude/*.sh infra/terraform/*.sh
+      - name: workflow_run trigger names stay in sync (auto-merge-claude.yml <-> ci.yml / golden-scenarios.yml name:)
+        # actionlint does NOT catch this (verified): auto-merge-claude.yml's on.workflow_run.workflows
+        # matches against a workflow's name: field, not its filename -- a rename to either name:
+        # without updating this array silently and permanently stops that workflow's completions
+        # from re-triggering auto-merge, with zero red CI signal (2026-07-14 audit finding).
+        run: |
+          set -euo pipefail
+          ci_name="$(grep -m1 '^name:' .github/workflows/ci.yml | sed 's/^name:[[:space:]]*//')"
+          gs_name="$(grep -m1 '^name:' .github/workflows/golden-scenarios.yml | sed 's/^name:[[:space:]]*//')"
+          line="$(grep -m1 'workflows:' .github/workflows/auto-merge-claude.yml)"
+          mapfile -t triggers < <(printf '%s' "$line" | grep -oP '(?<=\[)[^]]*(?=\])' | tr ',' '\n' | sed 's/^[[:space:]]*"//; s/"[[:space:]]*$//')
+          missing=""
+          for want in "$ci_name" "$gs_name"; do
+            found=0
+            for t in "${triggers[@]}"; do [ "$t" = "$want" ] && found=1 && break; done
+            [ "$found" -eq 0 ] && missing="$missing [$want]"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::auto-merge-claude.yml's on.workflow_run.workflows is missing:$missing (present as a ci.yml/golden-scenarios.yml name: but not in the trigger list) -- that workflow's completions will silently stop re-triggering auto-merge."
+            exit 1
+          fi
+          echo "OK: workflow_run trigger names match ci.yml + golden-scenarios.yml name: fields."
 
   dbt:
     name: dbt parse (offline model + test validation)
@@ -104,8 +135,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements-ci.txt
       - name: Install dbt (pinned via constraints — RUNBOOK §25 C3)
-        run: pip install --quiet -c requirements-ci.txt dbt-core dbt-bigquery
+        run: pip install --quiet -c requirements-ci.txt dbt-core dbt-bigquery pyyaml
       - name: Write a CI profile (no creds — parse does not connect)
         # dbt/profiles.ci.yml is the single checked-in source for this profile (2026-07-04 code-quality
         # audit — this job and dbt-parity's equivalent step previously each wrote the same content via
@@ -118,6 +151,12 @@ jobs:
         run: |
           dbt deps
           dbt parse
+      - name: dbt view coverage (advisory — 2026-07-14 audit finding)
+        # scripts/dbt_parity.py only proves parity for views that already have a dbt model/source;
+        # this prints which live state/analytics/perf views have neither, so drift in coverage
+        # itself (not just row-level logic) is visible. No baseline/allowlist yet, so it prints the
+        # full known backlog every run — advisory (|| true), does not block CI/auto-merge.
+        run: python scripts/check_dbt_view_coverage.py || true
 
   dbt-parity:
     name: dbt↔live row-level parity (keyless WIF)
@@ -199,6 +238,8 @@ jobs:
         if: steps.guard.outputs.skip == 'false'
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements-ci.txt
       - name: GCP WIF auth + gcloud setup (provides the bq CLI)
         if: steps.guard.outputs.skip == 'false'
         uses: ./.github/actions/gcp-wif-auth

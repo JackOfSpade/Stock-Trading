@@ -223,3 +223,129 @@ def test_check_depends_on_clean_chain_is_silent():
 def test_check_depends_on_against_real_cadence_yaml_is_clean():
     # The real ops/cadence.yaml's actual depends_on chains must all resolve cleanly today.
     assert cc.check_depends_on(cc.load_cadence()) == []
+
+
+# ---- main() end-to-end fixture: a minimal, self-contained repo copy that reaches checks F/G/H
+#      cleanly (2026-07-14 audit finding — check F previously had zero end-to-end coverage of
+#      main()'s actual fail path; only the pure generate_triggers_manifest() helper was tested) ----
+def _write_check_fixture(tmp_path):
+    plan = tmp_path / "Claude_Task_Plan.md"
+    plan.write_text("## D1. Market Development Scan — deep research\nbody\n")
+    cadence = tmp_path / "cadence.yaml"
+    cadence.write_text(
+        "timezone: America/Denver\n"
+        'cadence_watch_deadline_local: "21:00"\n'
+        "routines:\n"
+        "  - id: D1\n"
+        "    monitor_class: daily_trading\n"
+    )
+    cadence_sql = tmp_path / "12.sql"
+    cadence_sql.write_text(
+        "STRUCT('D1'  AS routine, 'daily_trading' AS schedule)\n"
+        "   AND DATETIME(CURRENT_TIMESTAMP(), 'America/Denver') >= DATETIME(e.today, TIME '21:00:00')\n"
+    )
+    catalog_sql = tmp_path / "15.sql"
+    catalog_sql.write_text(
+        "STRUCT('D1' AS routine, 'Read Claude_Task_Plan.md. Perform D1. Market Development Scan — deep research.' AS canonical_instruction)\n"
+    )
+    return plan, cadence, cadence_sql, catalog_sql
+
+
+def _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql):
+    monkeypatch.setattr(cc, "PLAN", str(plan))
+    monkeypatch.setattr(cc, "CADENCE", str(cadence))
+    monkeypatch.setattr(cc, "CADENCE_SQL", str(cadence_sql))
+    monkeypatch.setattr(cc, "CATALOG_SQL", str(catalog_sql))
+    monkeypatch.setattr(cc, "PERIOD_WATCH_SQL", str(tmp_path / "absent.sql"))
+    monkeypatch.setattr(cc, "TRIGGERS_JSON", str(tmp_path / "absent_triggers.json"))
+    monkeypatch.setattr(cc, "TRIGGER_IDS_JSON", str(tmp_path / "absent_trigger_ids.json"))
+    monkeypatch.setattr(cc, "AUTO_MERGE_YML", str(tmp_path / "absent_auto_merge.yml"))
+
+
+def test_stale_triggers_json_is_caught(tmp_path, monkeypatch, capsys):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    triggers = tmp_path / "triggers.json"
+    triggers.write_text('{"D1": {"monitor_class": "WRONG", "instruction": "WRONG"}}')
+    monkeypatch.setattr(cc, "TRIGGERS_JSON", str(triggers))
+    assert cc.main() == 1
+    assert "ops/triggers.json is STALE" in capsys.readouterr().out
+
+
+def test_malformed_triggers_json_is_caught(tmp_path, monkeypatch, capsys):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    triggers = tmp_path / "triggers.json"
+    triggers.write_text("{not valid json")
+    monkeypatch.setattr(cc, "TRIGGERS_JSON", str(triggers))
+    assert cc.main() == 1
+    assert "could not parse as JSON" in capsys.readouterr().out
+
+
+def test_real_triggers_json_check_passes(tmp_path, monkeypatch):
+    # Sanity: the real, unmodified ops/triggers.json + cadence.yaml + Claude_Task_Plan.md must
+    # still agree (this exercises check F's happy path end to end, not just the fixture).
+    assert cc.main() == 0
+
+
+# ---- check G: ops/trigger_ids.json duplicate/stale/missing-entry handling ----
+def test_trigger_ids_duplicate_trigger_id_is_caught(tmp_path, monkeypatch, capsys):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    ids = tmp_path / "trigger_ids.json"
+    ids.write_text('{"D1": {"trigger_id": "trig_SAME", "verified_via": "api"}, '
+                   '"ZZ_NOT_IN_CADENCE": {"trigger_id": "trig_SAME", "verified_via": "api"}}')
+    monkeypatch.setattr(cc, "TRIGGER_IDS_JSON", str(ids))
+    out = cc.main()
+    text = capsys.readouterr().out
+    assert out == 1
+    assert "trig_SAME" in text and "shared by routines" in text
+
+
+def test_trigger_ids_stale_entry_for_removed_routine_is_caught(tmp_path, monkeypatch, capsys):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    ids = tmp_path / "trigger_ids.json"
+    ids.write_text('{"D1": {"trigger_id": "trig_A", "verified_via": "api"}, '
+                   '"ZZ_GONE": {"trigger_id": "trig_B", "verified_via": "api"}}')
+    monkeypatch.setattr(cc, "TRIGGER_IDS_JSON", str(ids))
+    assert cc.main() == 1
+    assert "ZZ_GONE" in capsys.readouterr().out
+
+
+def test_trigger_ids_missing_entry_for_new_routine_is_warn_only(tmp_path, monkeypatch, capsys):
+    # A cad routine with no trigger_ids.json entry yet is expected/transient — must NOT fail the
+    # build, only print an informational NOTE.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    ids = tmp_path / "trigger_ids.json"
+    ids.write_text('{"_meta": {}}')
+    monkeypatch.setattr(cc, "TRIGGER_IDS_JSON", str(ids))
+    assert cc.main() == 0
+    assert "D1" in capsys.readouterr().out
+
+
+# ---- check H: auto-merge-claude.yml's routine_re must accept every cadence.yaml id ----
+def test_auto_merge_routine_re_missing_a_cadence_id_is_caught(tmp_path, monkeypatch, capsys):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    auto_merge = tmp_path / "auto-merge.yml"
+    auto_merge.write_text("routine_re='^(D2|D3)$'\n")
+    monkeypatch.setattr(cc, "AUTO_MERGE_YML", str(auto_merge))
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert "D1" in out and "routine_re" in out
+
+
+def test_auto_merge_routine_re_accepting_the_cadence_id_is_clean(tmp_path, monkeypatch):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    auto_merge = tmp_path / "auto-merge.yml"
+    auto_merge.write_text("routine_re='^(D1|D2|D3)$'\n")
+    monkeypatch.setattr(cc, "AUTO_MERGE_YML", str(auto_merge))
+    assert cc.main() == 0
+
+
+def test_auto_merge_routine_re_against_real_files_is_clean():
+    # The real ops/cadence.yaml + .github/workflows/auto-merge-claude.yml must already agree.
+    assert cc.main() == 0

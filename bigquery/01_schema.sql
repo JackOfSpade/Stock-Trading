@@ -230,6 +230,10 @@ FROM (
 )
 WHERE LOWER(status) = 'pending';
 
+-- SUPERSEDED LIVE by bigquery/53_curated_view_tiebreak_fix.sql (2026-07-14) — adds trade_id as a
+-- secondary tiebreaker (defense-in-depth; trade_id is already unique per fill, lower-risk than
+-- daily_marks_curated's tie, but fixed for consistency). Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.trade_fills_curated` AS
 SELECT * FROM `stock-trading-498512.events.trade_fills`
 QUALIFY ROW_NUMBER() OVER (PARTITION BY trade_id ORDER BY ingest_ts DESC) = 1;

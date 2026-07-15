@@ -26,8 +26,15 @@
 # empty/missing `$1` is checked explicitly rather than relying on jq's own exit code for that case.
 ci_conclusion_from_json() {
   local out
+  # BUG FIX (2026-07-14 audit finding): jq's `null[0]` also evaluates to null, so a JSON object
+  # with NO `workflow_runs` array at all (e.g. `{"message":"Not Found"}`, what a failed `gh api`
+  # call's stdout looks like on an HTTP error) used to parse to "none" — identical to a
+  # legitimate zero-runs response — silently satisfying is_secondary_gate_satisfied instead of
+  # blocking the merge as an API error must. The `(.workflow_runs | type) != "array"` guard now
+  # requires workflow_runs to actually be an array before treating it as a real (possibly empty)
+  # result.
   if [ -n "$1" ] \
-     && out="$(printf '%s' "$1" | jq -r '.workflow_runs[0] as $r | if $r == null then "none" else ($r.conclusion // $r.status // "unknown") end' 2>/dev/null)" \
+     && out="$(printf '%s' "$1" | jq -r 'if (.workflow_runs | type) != "array" then "error" else (.workflow_runs[0] as $r | if $r == null then "none" else ($r.conclusion // $r.status // "unknown") end) end' 2>/dev/null)" \
      && [ -n "$out" ]; then
     printf '%s\n' "$out"
   else

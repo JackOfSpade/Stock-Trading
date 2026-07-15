@@ -23,6 +23,13 @@ command -v bq >/dev/null || { echo "bq CLI not found (install Google Cloud SDK)"
 TABLES="$(bq --project_id="$PROJECT" ls --max_results=1000 "${PROJECT}:events" \
           | awk 'NR>2 && $2=="TABLE"{print $1}')"
 
+# `bq ls` succeeding with zero/unparseable output does NOT trip `set -e` (the pipeline's exit
+# status is bq's, which is 0) -- a listing-permission issue, wrong PROJECT, or a future bq CLI
+# output-format change (header-count/column-order) would otherwise silently back up ZERO tables
+# and still print "Done." with exit 0 (2026-07-14 audit finding; restore_drill.sh already guards
+# this identical failure mode).
+[ -n "$TABLES" ] || { echo "no events.* tables found via 'bq ls' (check PROJECT=$PROJECT, IAM list permission, or a bq CLI output-format change breaking the NR>2/\$2==\"TABLE\" parse); aborting rather than reporting a false 'Done.'"; exit 1; }
+
 # Per-table dt=<date> layout — SAME as the production scheduled export
 # (bigquery/scheduled_queries/backup_events_export.sql) and scripts/restore_drill.sh, so an ad-hoc
 # snapshot from this script is discoverable/loadable by restore_drill.sh without any translation.
