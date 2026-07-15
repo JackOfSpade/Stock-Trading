@@ -247,10 +247,13 @@ For reference, the calls each routine makes (see also `ops/cadence.yaml` `defaul
   This populates `state.freshness.d2_ran_last_trading_day` and the audit trail.
 - **On any hard-stop** (cash tripwire > $1, dual-path max-loss disagreement, embedding
   unhealthy, merge-conflict PR, stale data): `CALL ops.sp_raise_alert('critical', '<routine>',
-  '<category>', '<message>', '<payload_json>')` **and** create a `[Claude] ATTENTION …`
-  calendar event so the unmonitored failure reaches the operator.
+  '<category>', '<message>', '<payload_json>')` — delivered to the operator via
+  `alert_emailer.gs`'s email poll of `ops.alerts` (no calendar event for an ordinary hard-stop
+  since the 2026-07-09 calendar-scope narrowing; the sole surviving calendar exception is a
+  BigQuery-unreachable RE-AUTH pre-flight, since `sp_raise_alert` itself can't run when BigQuery
+  is down).
 
-**Alert DELIVERY (A2) — push channel added 2026-06-20.** Beyond the calendar event, a Google
+**Alert DELIVERY (A2) — push channel added 2026-06-20.** A Google
 Apps Script (`ops/monitoring/alert_emailer.gs`) polls `ops.alerts` every ~2h and **emails** you on
 a new unresolved critical/warning (de-duped, self-email, no console wiring) — so an alert reaches
 you between routines without watching the calendar. Setup: same as the weekly report

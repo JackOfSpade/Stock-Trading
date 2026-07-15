@@ -117,9 +117,13 @@ SELECT
   (SELECT v FROM d)  AS last_decision_date,
   (SELECT v FROM d2) AS last_d2_run_date,
   -- COALESCE -> FALSE so the dead-man's switch fails LOUD, never silent: if a source table is
-  -- empty, or last_trading_day is NULL (e.g. the market_calendar range is exhausted post-2028),
-  -- a bare `>=` would yield NULL -> all_green NULL -> the freshness check's `IF NOT all_green`
-  -- would NOT fire. FALSE instead makes it alert (and nags to extend the calendar).
+  -- empty, or last_trading_day is NULL (e.g. state.market_calendar's GENERATE_DATE_ARRAY upper
+  -- bound -- 2030-12-31 per bigquery/09_market_calendar.sql -- is reached because the W5
+  -- auto-extend routine has stopped running; the separate holiday-seed accuracy runs out after
+  -- 2029 and causes a different symptom -- a real holiday silently misclassified as a trading
+  -- day, not a NULL last_trading_day), a bare `>=` would yield NULL -> all_green NULL -> the
+  -- freshness check's `IF NOT all_green` would NOT fire. FALSE instead makes it alert (and nags
+  -- to extend the calendar).
   COALESCE((SELECT v FROM m) >= (SELECT last_trading_day FROM ltd), FALSE) AS marks_fresh,
   COALESCE((SELECT v FROM e) >= (SELECT last_trading_day FROM ltd), FALSE) AS engine_fresh,
   COALESCE((SELECT v FROM d2) >= (SELECT last_trading_day FROM ltd), FALSE) AS d2_ran_last_trading_day,
