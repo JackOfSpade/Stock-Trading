@@ -27,7 +27,7 @@ ar = _load()
 
 
 def _fake_run(returncode, stdout, stderr=""):
-    def run(cmd, capture_output=None, text=None):
+    def run(cmd, capture_output=None, text=None, timeout=None):
         return types.SimpleNamespace(returncode=returncode, stdout=stdout, stderr=stderr)
     return run
 
@@ -200,4 +200,47 @@ def test_main_heartbeat_mode_success_returns_zero(monkeypatch):
     monkeypatch.setattr(ar, "WEBHOOK_URL", "https://example.invalid/hook")
     monkeypatch.setattr(ar, "MODE", "heartbeat")
     monkeypatch.setattr(ar, "post", lambda text: 200)
+    assert ar.main() == 0
+
+
+def test_bq_raises_runtime_error_on_timeout(monkeypatch):
+    def _boom(cmd, capture_output=None, text=None, timeout=None):
+        raise ar.subprocess.TimeoutExpired(cmd=cmd, timeout=timeout)
+    monkeypatch.setattr(ar.subprocess, "run", _boom)
+    with pytest.raises(RuntimeError):
+        ar.bq("SELECT 1")
+
+
+# ---- main()'s "best-effort — swallow the exception, return 0" contract for alerts/orders/
+#      catchup (2026-07-14 audit finding: only exercised indirectly before, never through main()) --
+
+def test_main_alerts_mode_swallows_exception_and_returns_zero(monkeypatch, capsys):
+    monkeypatch.setattr(ar, "WEBHOOK_URL", "https://example.invalid/hook")
+    monkeypatch.setattr(ar, "MODE", "alerts")
+
+    def _boom(sql):
+        raise RuntimeError("bq error")
+    monkeypatch.setattr(ar, "bq", _boom)
+    rc = ar.main()
+    assert rc == 0
+    assert "relay error (non-fatal)" in capsys.readouterr().err
+
+
+def test_main_orders_mode_swallows_exception_and_returns_zero(monkeypatch):
+    monkeypatch.setattr(ar, "WEBHOOK_URL", "https://example.invalid/hook")
+    monkeypatch.setattr(ar, "MODE", "orders")
+
+    def _boom(sql):
+        raise RuntimeError("bq error")
+    monkeypatch.setattr(ar, "bq", _boom)
+    assert ar.main() == 0
+
+
+def test_main_catchup_mode_swallows_exception_and_returns_zero(monkeypatch):
+    monkeypatch.setattr(ar, "WEBHOOK_URL", "https://example.invalid/hook")
+    monkeypatch.setattr(ar, "MODE", "catchup")
+
+    def _boom(sql):
+        raise RuntimeError("bq error")
+    monkeypatch.setattr(ar, "bq", _boom)
     assert ar.main() == 0

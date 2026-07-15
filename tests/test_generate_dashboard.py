@@ -110,3 +110,72 @@ def test_table_renders_null_cell_as_empty_not_the_string_none():
     out = gd.table(rows)
     assert "<td>None</td>" not in out
     assert "<td></td>" in out
+
+
+# ---- main() query-failure error message (2026-07-14 audit finding: CalledProcessError's default
+#      __str__ never includes bq's actual stderr, even though check=True already populated it) ----
+
+def test_main_reports_bq_stderr_on_query_failure(monkeypatch, capsys):
+    monkeypatch.setattr(gd.subprocess, "run",
+                        _fake_run(1, "", "ERROR: Not found: Table perf.kill_flags"))
+    assert gd.main() == 1
+    assert "Not found: Table perf.kill_flags" in capsys.readouterr().err
+
+
+# ---- main(): banner selection, error-return path, full-page assembly (2026-07-14 audit finding:
+#      previously the module's only real branching logic had zero test coverage) -----------------
+
+def _fake_q_all(rows_by_table):
+    def fake_q(sql):
+        for needle, rows in rows_by_table.items():
+            if needle in sql:
+                return rows
+        return []
+    return fake_q
+
+
+def test_main_returns_1_on_query_failure(monkeypatch, capsys):
+    monkeypatch.setattr(gd.subprocess, "run", _fake_run(1, "", "boom"))
+    assert gd.main() == 1
+    assert "Query failed" in capsys.readouterr().err
+
+
+def test_main_all_green_banner(monkeypatch, tmp_path):
+    monkeypatch.setattr(gd, "get_user_tz", lambda: "America/Denver")
+    monkeypatch.setattr(gd, "q", _fake_q_all({"state.system_health": [{"all_green": "true"}]}))
+    out = tmp_path / "index.html"
+    monkeypatch.setattr(gd, "OUT", str(out))
+    assert gd.main() == 0
+    body = out.read_text()
+    assert "ALL GREEN" in body and "ATTENTION" not in body
+
+
+def test_main_attention_banner_when_not_all_green(monkeypatch, tmp_path):
+    monkeypatch.setattr(gd, "get_user_tz", lambda: "America/Denver")
+    monkeypatch.setattr(gd, "q", _fake_q_all({"state.system_health": [{"all_green": "false"}]}))
+    out = tmp_path / "index.html"
+    monkeypatch.setattr(gd, "OUT", str(out))
+    assert gd.main() == 0
+    body = out.read_text()
+    assert "ATTENTION" in body
+
+
+def test_main_attention_banner_when_health_query_empty(monkeypatch, tmp_path):
+    # health = [] (e.g. a rollup CROSS JOIN yielding zero rows) must fail CLOSED to ATTENTION,
+    # not crash.
+    monkeypatch.setattr(gd, "get_user_tz", lambda: "America/Denver")
+    monkeypatch.setattr(gd, "q", _fake_q_all({}))
+    out = tmp_path / "index.html"
+    monkeypatch.setattr(gd, "OUT", str(out))
+    assert gd.main() == 0
+    assert "ATTENTION" in out.read_text()
+
+
+def test_page_header_escapes_project(monkeypatch, tmp_path):
+    monkeypatch.setattr(gd, "get_user_tz", lambda: "America/Denver")
+    monkeypatch.setattr(gd, "q", lambda sql: [])
+    monkeypatch.setattr(gd, "PROJECT", 'proj"><script>alert(1)</script>')
+    out = tmp_path / "index.html"
+    monkeypatch.setattr(gd, "OUT", str(out))
+    gd.main()
+    assert "<script>alert(1)</script>" not in out.read_text()

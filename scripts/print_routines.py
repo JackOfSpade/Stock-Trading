@@ -94,14 +94,14 @@ def load_cadence():
 def main():
     headings = routine_headings()
     tz, cad = load_cadence()
-    seen = set()
+    seen_ids = []
 
     print("Routine triggers — instruction is `Read Claude_Task_Plan.md. Perform <heading>.`")
     print(f"Cadence timezone: {tz}  (exact clock times are in the web UI only)\n")
     print("=" * 100)
     for h in headings:
         rid = heading_to_id(h) or "?"
-        seen.add(rid)
+        seen_ids.append(rid)
         r = cad.get(rid, {})
         deps = ", ".join(r.get("depends_on") or []) or "—"
         print(f"{rid}   cadence: {r.get('schedule', '(not in cadence.yaml)')}   deps: {deps}")
@@ -109,6 +109,7 @@ def main():
         print()
     print("=" * 100)
     print(f"{len(headings)} routines.")
+    seen = set(seen_ids)
 
     # Drift check both directions.
     missing_heading = [cid for cid in cad if cid not in seen]
@@ -117,7 +118,16 @@ def main():
               + ", ".join(missing_heading))
     if "?" in seen:
         print("WARNING: a routine heading did not map to a cadence id (check heading format).")
-    if not missing_heading and "?" not in seen:
+    # A set discards duplicates, so two DIFFERENT headings mapping to the SAME id (a copy-pasted
+    # heading, or two ids colliding after a typo) previously looked identical to the clean
+    # single-heading case here, printing a false "OK: ... maps 1:1" (2026-07-14 audit finding;
+    # the real CI gate, scripts/check_cadence_consistency.py, already catches this — this fixes
+    # the hand-run tool's own self-check message, which was factually wrong in this case).
+    dup_ids = sorted({rid for rid in seen if rid != "?" and seen_ids.count(rid) > 1})
+    if dup_ids:
+        print("WARNING: multiple Claude_Task_Plan.md headings map to the same routine id (not 1:1): "
+              + ", ".join(dup_ids))
+    if not missing_heading and "?" not in seen and not dup_ids:
         print("OK: every routine heading maps 1:1 to an ops/cadence.yaml routine.")
 
     if "--write" in sys.argv:

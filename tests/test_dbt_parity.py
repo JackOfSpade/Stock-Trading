@@ -31,7 +31,7 @@ dp = _load()
 
 
 def _fake_run(returncode, stdout, stderr=""):
-    def run(cmd, capture_output=None, text=None):
+    def run(cmd, capture_output=None, text=None, timeout=None):
         return types.SimpleNamespace(returncode=returncode, stdout=stdout, stderr=stderr)
     return run
 
@@ -73,3 +73,43 @@ def test_non_set_comparable_types_are_serialized():
 def test_volatile_cols_constant_present():
     # checked_at (CURRENT_TIMESTAMP) must stay excluded from the compare or every view "drifts".
     assert "checked_at" in dp.VOLATILE_COLS
+
+
+def test_bq_raises_runtime_error_on_timeout(monkeypatch):
+    def _boom(cmd, capture_output=None, text=None, timeout=None):
+        raise dp.subprocess.TimeoutExpired(cmd=cmd, timeout=timeout)
+    monkeypatch.setattr(dp.subprocess, "run", _boom)
+    with pytest.raises(RuntimeError):
+        dp.bq("SELECT 1")
+
+
+# ---- main() exit-code / job-count guards (2026-07-14 audit findings) ----------------------
+
+def test_main_returns_1_when_every_model_is_skipped_due_to_bq_error(monkeypatch, capsys):
+    monkeypatch.setattr(dp, "compiled_models", lambda: iter([("state", "foo", "SELECT 1")]))
+
+    def boom(dataset, table):
+        raise RuntimeError("bq auth error")
+    monkeypatch.setattr(dp, "live_columns", boom)
+    rc = dp.main()
+    assert rc == 1
+    assert "PARITY NOT VERIFIED" in capsys.readouterr().out
+
+
+def test_main_returns_0_when_no_compiled_models_exist(monkeypatch):
+    monkeypatch.setattr(dp, "compiled_models", lambda: iter([]))
+    assert dp.main() == 0
+
+
+def test_main_uses_a_single_combined_bq_call_per_model(monkeypatch):
+    monkeypatch.setattr(dp, "compiled_models", lambda: iter([("state", "foo", "SELECT 1 AS x")]))
+    monkeypatch.setattr(dp, "live_columns", lambda dataset, table: [{"column_name": "x", "data_type": "STRING"}])
+    calls = []
+
+    def fake_bq(sql):
+        calls.append(sql)
+        return [{"n_missing": 0, "n_extra": 3}]
+    monkeypatch.setattr(dp, "bq", fake_bq)
+    rc = dp.main()
+    assert len(calls) == 1          # one combined query, not two
+    assert rc == 1                   # n_extra=3 -> drift detected end to end

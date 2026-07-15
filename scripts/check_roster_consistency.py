@@ -315,25 +315,44 @@ def main():
             errors.append(diff_msg("strategy/roster.yaml (roster-active)", roster_codes, other_name, other))
 
     # ---- R-B: no bare literal / fixed divisor in the LIVE derived SQL ----
+    # Full-text (not line-by-line) scan: a line-by-line search cannot detect the exact pattern it
+    # exists to forbid if a SQL formatter wraps it across two lines (2026-07-14 audit finding,
+    # confirmed empirically: `['A',\n  'B','C','D','E']` matched BARE_LITERAL on neither line).
     for path in DERIVED_LIVE_SQL:
         rel = os.path.relpath(path, ROOT)
         if not os.path.exists(path):
             errors.append(f"R-B: expected roster-derived file {rel} is missing")
             continue
-        for n, line in enumerate(open(path, encoding="utf-8"), 1):
-            if BARE_LITERAL.search(line):
-                errors.append(f"R-B: {rel}:{n} still has a bare ['A','B',...] roster literal — read "
-                              f"`state.active_strategy_codes` instead: {line.strip()}")
-            if FIXED_DIVISOR.search(line) and "amount" in line:
-                errors.append(f"R-B: {rel}:{n} still has a fixed `/ 5` equal-split divisor — use an "
-                              f"as-of-flow-date COUNT(*) FROM state.strategy_roster: {line.strip()}")
+        txt = open(path, encoding="utf-8").read()
+        for m in BARE_LITERAL.finditer(txt):
+            n = txt.count("\n", 0, m.start()) + 1
+            snippet = " ".join(m.group(0).split())
+            errors.append(f"R-B: {rel}:{n} still has a bare ['A','B',...] roster literal — read "
+                          f"`state.active_strategy_codes` instead: {snippet}")
+        for m in FIXED_DIVISOR.finditer(txt):
+            n = txt.count("\n", 0, m.start()) + 1
+            # Context spans the match's FIRST line through its LAST line (m.end() bounds the right
+            # edge, not m.start()) so "amount" is still found when it sits on the divisor's own
+            # line rather than the line containing "/" — a line-wrapped divisor can put either
+            # token on either side of the wrap.
+            ctx_start = txt.rfind("\n", 0, m.start()) + 1
+            ctx_end = txt.find("\n", m.end())
+            ctx = txt[ctx_start: ctx_end if ctx_end != -1 else len(txt)]
+            if "amount" in ctx:
+                errors.append(f"R-B: {rel}:{n} still has a fixed `/ N` equal-split divisor — use an "
+                              f"as-of-flow-date COUNT(*) FROM state.strategy_roster: {ctx.strip()}")
 
     # ---- R-C: count-agnostic dbt reconcile test ----
     if not os.path.exists(DBT_RECONCILE):
         errors.append("R-C: dbt/tests/assert_cash_flows_reconcile.sql is missing")
     else:
         for n, line in enumerate(open(DBT_RECONCILE, encoding="utf-8"), 1):
-            if FIXED_DIVISOR.search(line) or "amount/5" in line.replace(" ", ""):
+            # Adjacency guard (matching R-B's "amount" co-occurrence requirement): without it, ANY
+            # unrelated N/M-shaped text in this file (e.g. a RUNBOOK section reference like
+            # "section 5/6") trips FIXED_DIVISOR and false-fails CI (2026-07-14 audit finding). The
+            # separate `"amount/5" in ...` clause was also dead code — FIXED_DIVISOR already
+            # matches that exact substring, so it added no coverage.
+            if FIXED_DIVISOR.search(line) and ("amount" in line or "cash_flow" in line or "deposit" in line):
                 errors.append(f"R-C: dbt/tests/assert_cash_flows_reconcile.sql:{n} hardcodes the roster "
                               f"size (a `/ 5` / amount/5 assumption) — the reconciliation must be "
                               f"count-agnostic (per-strategy sum): {line.strip()}")
@@ -358,13 +377,28 @@ def main():
             errors.append(f"R-E: parsed only {len(sql_consts)}/{len(RAIL_NAMES)} rail constants from "
                           f"bigquery/35_strategy_arsenal.sql's consts CTE — did the `<N> AS <name>` shape "
                           f"change? (update RAIL_CONST)")
+        # Both loops below must fire on a MISSING yaml key too, not just a mismatched one — a key
+        # silently deleted from roster.yaml's rails block (accidental deletion, bad merge, a
+        # partial rails: block copy-paste) previously left the corresponding SQL constant with
+        # NOTHING to compare against, so R-E vacuously passed (2026-07-14 audit finding, confirmed
+        # empirically: deleting rails.n_min end-to-end still printed "ROSTER CONSISTENCY: OK").
         for yaml_key, sql_name in ROSTER_RAIL_KEY_TO_SQL_NAME.items():
-            if yaml_key in rails_doc and sql_name in sql_consts and int(rails_doc[yaml_key]) != sql_consts[sql_name]:
+            if sql_name not in sql_consts:
+                continue  # already reported by the len(sql_consts) < len(RAIL_NAMES) check above
+            if yaml_key not in rails_doc:
+                errors.append(f"R-E: roster.yaml rails.{yaml_key} is missing but "
+                              f"bigquery/35_strategy_arsenal.sql arsenal_rails.{sql_name}={sql_consts[sql_name]} exists")
+            elif int(rails_doc[yaml_key]) != sql_consts[sql_name]:
                 errors.append(f"R-E: roster.yaml rails.{yaml_key}={rails_doc[yaml_key]} but "
                               f"bigquery/35_strategy_arsenal.sql arsenal_rails.{sql_name}={sql_consts[sql_name]}")
         cooldowns = rails_doc.get("cooldown_days", {}) or {}
         for yaml_key, sql_name in ROSTER_COOLDOWN_KEY_TO_SQL_NAME.items():
-            if yaml_key in cooldowns and sql_name in sql_consts and int(cooldowns[yaml_key]) != sql_consts[sql_name]:
+            if sql_name not in sql_consts:
+                continue
+            if yaml_key not in cooldowns:
+                errors.append(f"R-E: roster.yaml rails.cooldown_days.{yaml_key} is missing but "
+                              f"bigquery/35_strategy_arsenal.sql arsenal_rails.{sql_name}={sql_consts[sql_name]} exists")
+            elif int(cooldowns[yaml_key]) != sql_consts[sql_name]:
                 errors.append(f"R-E: roster.yaml rails.cooldown_days.{yaml_key}={cooldowns[yaml_key]} but "
                               f"bigquery/35_strategy_arsenal.sql arsenal_rails.{sql_name}={sql_consts[sql_name]}")
 

@@ -252,6 +252,53 @@ def test_rails_literal_disagreement_is_caught(repo_copy):
     assert rc.main() == 1
 
 
+# ---- (b9b) R-E: a rails key DELETED ENTIRELY from roster.yaml must also be caught, not just a
+#      mismatched value — the original loops only compared when the key was present, so deleting
+#      it left NOTHING to compare against and R-E vacuously passed (2026-07-14 audit finding).
+def test_rails_key_missing_entirely_is_caught(repo_copy):
+    p = rc.ROSTER
+    txt = _read(p)
+    old = "  n_min: 2                       # roster FLOOR: SL4 never proposes retirement below this; a hit\n"
+    assert old in txt, "fixture assumption about roster.yaml's n_min line drifted"
+    _write(p, txt.replace(old, ""))
+    assert rc.main() == 1
+
+
+# ---- (b5b) R-B: a bare literal split across two lines (a SQL formatter line-wrap) must still be
+#      caught — the original line-by-line scan matched neither line (2026-07-14 audit finding).
+def test_bare_literal_split_across_lines_is_caught(repo_copy):
+    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("22_cash_flows.sql")][0]
+    txt = _read(target)
+    txt += "\nSELECT * FROM UNNEST(['A',\n  'B','C','D','E']) AS strat;\n"
+    _write(target, txt)
+    assert rc.main() == 1
+
+
+# ---- (b5c) R-B: a fixed divisor split across two lines, "amount" on either side of the wrap ----
+def test_fixed_divisor_split_across_lines_amount_before_wrap_is_caught(repo_copy):
+    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql")][0]
+    txt = _read(target)
+    txt += "\nSELECT amount /\n  5 AS per_strategy_amount FROM t;\n"
+    _write(target, txt)
+    assert rc.main() == 1
+
+
+def test_fixed_divisor_split_across_lines_amount_after_wrap_is_caught(repo_copy):
+    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql")][0]
+    txt = _read(target)
+    txt += "\nSELECT x /\n  5 AS amount_per_strategy FROM t;\n"
+    _write(target, txt)
+    assert rc.main() == 1
+
+
+# ---- (b6b) R-C: the adjacency guard must not false-fail on unrelated slash-digit prose ----
+def test_unrelated_slash_digit_comment_does_not_false_fail_r_c(repo_copy):
+    p = rc.DBT_RECONCILE
+    txt = _read(p)
+    _write(p, txt + "\n-- see RUNBOOK section 5/6 for the tolerance rationale\n")
+    assert rc.main() == 0
+
+
 # ---- (b10) R-A: Claude_Task_Plan.md slice-map row removed for a still-active code ----
 def test_missing_slicemap_row_is_caught(repo_copy):
     p = rc.PLAN

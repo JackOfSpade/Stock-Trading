@@ -131,6 +131,27 @@ def test_main_warns_on_cadence_id_with_no_heading(tmp_path, monkeypatch, capsys)
     assert "WARNING" in out and "ZZ" in out
 
 
+def test_main_warns_on_duplicate_heading_same_id(tmp_path, monkeypatch, capsys):
+    # Two DIFFERENT headings deriving the SAME id (a copy-pasted heading) used to leave `seen`
+    # (a set) looking identical to the clean single-heading case, printing a false "OK: every
+    # routine heading maps 1:1" (2026-07-14 audit finding).
+    plan = tmp_path / "Claude_Task_Plan.md"
+    plan.write_text(
+        "## D1. Market Development Scan — deep research\nbody\n\n"
+        "## D1. Duplicate Heading Same Id — deep research\nbody\n"
+    )
+    cadence = tmp_path / "cadence.yaml"
+    cadence.write_text("timezone: America/Denver\nroutines:\n  - id: D1\n    monitor_class: daily_trading\n")
+    monkeypatch.setattr(pr, "PLAN", str(plan))
+    monkeypatch.setattr(pr, "CADENCE", str(cadence))
+    monkeypatch.setattr(pr, "TRIGGERS_JSON", str(tmp_path / "triggers.json"))
+    monkeypatch.setattr(sys, "argv", ["print_routines.py"])
+    pr.main()
+    out = capsys.readouterr().out
+    assert "WARNING" in out and "D1" in out
+    assert "OK: every routine heading maps 1:1" not in out
+
+
 # ---- main(--write): the versioned trigger manifest (self-improvement audit WO-2) -------------------
 def test_main_write_generates_expected_triggers_manifest(tmp_path, monkeypatch, capsys):
     plan, cadence = _write_fixture(tmp_path)
