@@ -59,6 +59,11 @@ CADENCE_SQL = os.path.join(ROOT, "bigquery", "12_cadence_monitor.sql")
 CATALOG_SQL = os.path.join(ROOT, "bigquery", "15_routine_catalog.sql")
 PERIOD_WATCH_SQL = os.path.join(ROOT, "bigquery", "24_cadence_period_watch.sql")
 TRIGGERS_JSON = os.path.join(ROOT, "ops", "triggers.json")
+TRIGGER_IDS_JSON = os.path.join(ROOT, "ops", "trigger_ids.json")
+AUTO_MERGE_YML = os.path.join(ROOT, ".github", "workflows", "auto-merge-claude.yml")
+
+# The RUNBOOK §38 marker-write routine-id allowlist: routine_re='^(D1|D2a|...)$'
+AUTO_MERGE_ROUTINE_RE = re.compile(r"routine_re='\^\(([^)]+)\)\$'")
 
 # state.cadence_period_watch's OFFSET-N literals, keyed by the column alias they compute.
 PERIOD_GRACE_OFFSET = re.compile(r"OFFSET (\d+)\)\s*AS (month|quarter|year)_grace_day")
@@ -292,6 +297,60 @@ def main():
                           "ops/cadence.yaml + Claude_Task_Plan.md headings. Regenerate with "
                           "`python scripts/print_routines.py --write` and commit the result "
                           "(it must be GENERATED, never hand-edited).")
+
+    # ---- G. ops/trigger_ids.json (if present): unique trigger_ids, no entry for a routine no
+    # longer in cadence.yaml (self-improvement audit, 2026-07-14 — this file had zero CI
+    # validation despite being nearly identical in shape/purpose to ops/triggers.json). A cad
+    # routine with NO entry yet is expected/transient (recorded once its live trigger is created)
+    # and is a WARN, not a build failure. ----
+    if os.path.exists(TRIGGER_IDS_JSON):
+        try:
+            trigger_ids_doc = json.load(open(TRIGGER_IDS_JSON, encoding="utf-8"))
+        except (OSError, ValueError) as e:
+            errors.append(f"ops/trigger_ids.json: could not parse as JSON ({e})")
+            trigger_ids_doc = None
+        if trigger_ids_doc is not None:
+            have_ids = {k: v for k, v in trigger_ids_doc.items() if k != "_meta"}
+            by_trigger = {}
+            for rid, entry in have_ids.items():
+                tid = (entry or {}).get("trigger_id")
+                by_trigger.setdefault(tid, []).append(rid)
+            for tid, rids in by_trigger.items():
+                if tid and len(rids) > 1:
+                    errors.append(f"ops/trigger_ids.json: trigger_id '{tid}' is shared by routines "
+                                  f"{sorted(rids)} — duplicate/typo'd id would misdirect a live "
+                                  f"RemoteTrigger call")
+            stale = sorted(rid for rid in have_ids if rid not in cad)
+            if stale:
+                errors.append(f"ops/trigger_ids.json: entries for routine(s) no longer in "
+                              f"ops/cadence.yaml: {stale} — remove the stale entry")
+            missing = sorted(rid for rid in cad if rid not in have_ids)
+            if missing:
+                print(f"NOTE: ops/trigger_ids.json has no entry yet for {missing} (new routine — "
+                      f"record its live trigger id once created via RemoteTrigger/Chrome; not a "
+                      f"CI failure, per the file's own not-live-synced caveat).")
+
+    # ---- H. auto-merge-claude.yml's RUNBOOK §38 marker-write routine_re must accept every
+    # cadence.yaml id (self-improvement audit, 2026-07-14) — this hand-typed alternation is a
+    # second copy of the routine-id set already carried by ops/cadence.yaml, with no guard: a
+    # routine added to cadence.yaml but not to this regex has its commits silently skipped by the
+    # §38 marker-write self-heal, with no CI signal. Only checks the cadence-ids-subset-of-regex
+    # direction (under-inclusive/silent-skip) — the regex being a superset is harmless. ----
+    if os.path.exists(AUTO_MERGE_YML):
+        txt = open(AUTO_MERGE_YML, encoding="utf-8").read()
+        m = AUTO_MERGE_ROUTINE_RE.search(txt)
+        if m is None:
+            errors.append("could not find routine_re='^(...)$' in .github/workflows/auto-merge-claude.yml "
+                          "— the RUNBOOK §38 marker-write allowlist literal may have changed shape; "
+                          "update AUTO_MERGE_ROUTINE_RE in this script to match")
+        else:
+            routine_re_pat = re.compile(f"^(?:{m.group(1)})$")
+            for rid in cad:
+                if not routine_re_pat.fullmatch(rid):
+                    errors.append(f"{rid}: in ops/cadence.yaml but NOT matched by "
+                                  f"auto-merge-claude.yml's routine_re — RUNBOOK §38 marker-write "
+                                  f"will silently skip this routine's commits (add it to the "
+                                  f"routine_re alternation on the marker-write line)")
 
     # ---- report ----
     if errors:

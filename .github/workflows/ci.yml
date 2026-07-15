@@ -49,6 +49,8 @@ jobs:
         run: python scripts/check_roster_consistency.py
       - name: autonomy-stage single-source (autonomy_levels.yaml ⇄ prose/SQL citations)
         run: python scripts/check_autonomy_consistency.py
+      - name: script-version single-source (.gs SCRIPT_VERSION consts ⇄ bigquery/43 MERGE seed)
+        run: python scripts/check_script_version_consistency.py
       - name: auto-merge decision logic (CI-gate + delete-safety fixtures — 2026-07-04 code-quality audit)
         run: bash tests/test_auto_merge_logic.sh
       - name: weekly_report.gs / alert_emailer.gs pure-helper tests (esc_/esc2_, periodAvg_, alertSubject_, ...)
@@ -99,6 +101,28 @@ jobs:
         run: ./actionlint -color
       - name: shellcheck standalone scripts (warning+ blocks)
         run: shellcheck -S warning scripts/*.sh tests/*.sh .claude/*.sh infra/terraform/*.sh
+      - name: workflow_run trigger names stay in sync (auto-merge-claude.yml <-> ci.yml / golden-scenarios.yml name:)
+        # actionlint does NOT catch this (verified): auto-merge-claude.yml's on.workflow_run.workflows
+        # matches against a workflow's name: field, not its filename -- a rename to either name:
+        # without updating this array silently and permanently stops that workflow's completions
+        # from re-triggering auto-merge, with zero red CI signal (2026-07-14 audit finding).
+        run: |
+          set -euo pipefail
+          ci_name="$(grep -m1 '^name:' .github/workflows/ci.yml | sed 's/^name:[[:space:]]*//')"
+          gs_name="$(grep -m1 '^name:' .github/workflows/golden-scenarios.yml | sed 's/^name:[[:space:]]*//')"
+          line="$(grep -m1 'workflows:' .github/workflows/auto-merge-claude.yml)"
+          mapfile -t triggers < <(printf '%s' "$line" | grep -oP '(?<=\[)[^]]*(?=\])' | tr ',' '\n' | sed 's/^[[:space:]]*"//; s/"[[:space:]]*$//')
+          missing=""
+          for want in "$ci_name" "$gs_name"; do
+            found=0
+            for t in "${triggers[@]}"; do [ "$t" = "$want" ] && found=1 && break; done
+            [ "$found" -eq 0 ] && missing="$missing [$want]"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::auto-merge-claude.yml's on.workflow_run.workflows is missing:$missing (present as a ci.yml/golden-scenarios.yml name: but not in the trigger list) -- that workflow's completions will silently stop re-triggering auto-merge."
+            exit 1
+          fi
+          echo "OK: workflow_run trigger names match ci.yml + golden-scenarios.yml name: fields."
 
   dbt:
     name: dbt parse (offline model + test validation)
