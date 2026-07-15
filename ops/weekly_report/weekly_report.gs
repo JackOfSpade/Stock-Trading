@@ -53,6 +53,7 @@ const LABEL_NAME   = 'Trading/Weekly';
 const SEND_HOUR    = 7;
 const SEND_WEEKDAY = ScriptApp.WeekDay.SUNDAY;
 const SCRIPT_VERSION = 'v2';                       // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep
+const SUBJECT_LABEL = 'Deployed vs Benchmarks';    // Single source for this phrase across buildSubject_, the post-send GmailApp.search() match, and the HTML/plain-text banners below. Edit only here on a rename (2026-07-14 audit finding -- this already drifted once by hand across 4 sites during the 2026-07-13 VOO rename).
 
 // Fixed per-strategy identity colors (CVD-validated) — never reassigned by rank/presence. SGOV is
 // gray; VOO is a distinct steel blue-gray chosen to not collide with Strategy B's blue or SGOV's gray.
@@ -96,8 +97,8 @@ function sendWeeklyReport_() {
   // thread back to unread, and apply the label, in one lookup. Best-effort — must never fail the send.
   try {
     Utilities.sleep(3000);
-    // NOTE: search string coupled to the subject format in buildSubject_ — update both together.
-    const threads = GmailApp.search(`subject:"Deployed vs Benchmarks — ${d.dateLabel}" newer_than:1d`, 0, 5);
+    // Search string derives from SUBJECT_LABEL, same single source as buildSubject_ below.
+    const threads = GmailApp.search(`subject:"${SUBJECT_LABEL} — ${d.dateLabel}" newer_than:1d`, 0, 5);
     threads.forEach(t => t.markUnread());
     if (LABEL_NAME) {
       const label = GmailApp.getUserLabelByName(LABEL_NAME) || GmailApp.createLabel(LABEL_NAME);
@@ -131,7 +132,7 @@ function buildSubject_(d) {
     }
   }
   const warn = d.green ? '' : ' · ⚠ check data';
-  return `Stock-Trading · Deployed vs Benchmarks — ${d.dateLabel} · ${tag}${warn}`;
+  return `Stock-Trading · ${SUBJECT_LABEL} — ${d.dateLabel} · ${tag}${warn}`;
 }
 
 // ===== DATA =====
@@ -342,7 +343,7 @@ function getUserTzWeekly_() {
   if (_tzCache) return _tzCache;
   try {
     _tzCache = (bq_(`SELECT tz FROM \`${PROJECT_ID}.state.user_tz\``)[0] || {}).tz || 'America/Denver';
-  } catch (e) { _tzCache = 'America/Denver'; }
+  } catch (e) { Logger.log('getUserTzWeekly_ failed, defaulting to America/Denver: ' + e); _tzCache = 'America/Denver'; }
   return _tzCache;
 }
 
@@ -426,7 +427,7 @@ function buildReturnChart_(d) {
       dt.addRow(row);
     });
 
-    const colors = [SGOV_GRAY].concat(hasVoo ? [VOO_COLOR] : []).concat(d.deployedStrategies.map(s => CHART_COLORS[s]));
+    const colors = [SGOV_GRAY].concat(hasVoo ? [VOO_COLOR] : []).concat(d.deployedStrategies.map(s => CHART_COLORS[s] || '#8a96a3'));
     const chart = Charts.newLineChart().setDataTable(dt.build())
       .setColors(colors)
       .setDimensions(1120, 400)
@@ -622,7 +623,7 @@ function buildHtml_(d, chartResult) {
 
   <tr><td style="background-color:#0f2747;padding:22px 26px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td style="color:#ffffff;font-size:19px;font-weight:700;">Stock-Trading · Deployed vs Benchmarks</td>
+      <td style="color:#ffffff;font-size:19px;font-weight:700;">Stock-Trading · ${SUBJECT_LABEL}</td>
       <td align="right" style="color:#9fb3cc;font-size:12px;">Week ending<br><span style="color:#ffffff;font-size:13px;font-weight:600;">${esc_(d.dateLabel)}</span></td>
     </tr></table>
     <div style="margin-top:12px;color:#9fb3cc;font-size:12px;">data through ${esc_(d.health.last_mark_date || '—')} close</div>
@@ -643,7 +644,7 @@ function buildPlain_(d) {
   const fmtP = (v, ex) => (v == null ? 'Not enough data' : signPct_(v * 100) + (ex ? '†' : ''));
   const fmtD = v => (v == null ? 'Not enough data' : signDollar_(v));
 
-  let s = `Stock-Trading — Deployed vs Benchmarks (${d.dateLabel})\n\n`;
+  let s = `Stock-Trading — ${SUBJECT_LABEL} (${d.dateLabel})\n\n`;
   s += `Data through ${d.health.last_mark_date || '—'} close.\n`;
   if (!d.green) s += `WARNING — numbers below may be stale: ${d.healthReasons.join(' | ')}\n`;
   s += '\n';

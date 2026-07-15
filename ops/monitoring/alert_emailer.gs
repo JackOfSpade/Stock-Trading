@@ -31,7 +31,7 @@ const ALERT_RECIPIENT  = Session.getActiveUser().getEmail(); // self-email
 const ALERT_SENDER     = 'Stock-Trading Alerts';
 const SEVERITIES       = ['critical', 'warning']; // set to ['critical'] for criticals only
 const POLL_HOURS       = 2;                        // how often to check
-const SCRIPT_VERSION   = 'v1';                     // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep
+const ALERT_SCRIPT_VERSION = 'v1';                 // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep. Named ALERT_SCRIPT_VERSION (not SCRIPT_VERSION) because this file and weekly_report.gs share ONE Apps Script project's top-level scope -- a same-named const in both would throw a project-wide SyntaxError on the next paste (2026-07-14 audit finding).
 // LOOKBACK_HOURS bounds the notified_ts IS NULL scan. Was 48h — if the emailer itself is dead longer
 // than the lookback (revoked token / deleted trigger), alerts raised early in the outage permanently
 // keep notified_ts NULL and are never emailed by ANY code path on recovery (the webhook relay's window
@@ -64,6 +64,7 @@ function checkAlerts_() {
   // usually transient (next poll ~2h later typically succeeds), but if it recurred every poll for
   // long enough to also suppress the heartbeat, cadence_check.sql's automation_heartbeat dead-man's
   // switch could misdiagnose a live, working emailer as dead.
+  let pollOk = false;
   try {
     const sevList = SEVERITIES.map(s => `'${s}'`).join(',');
     // NOTIFICATION-COMPLETE: select un-notified alerts (notified_ts IS NULL), NOT `NOT resolved`, so an
@@ -124,6 +125,7 @@ function checkAlerts_() {
     } else {
       Logger.log('No un-notified alerts in the last %s h', LOOKBACK_HOURS);
     }
+    pollOk = true;
   } catch (e) {
     Logger.log('checkAlerts_ query failed (BigQuery quota or transient error?) — skipping this cycle: ' + e);
   }
@@ -132,8 +134,11 @@ function checkAlerts_() {
   // SILENTLY-DEAD emailer (revoked token / deleted trigger) via the independent DTS failure-email —
   // a dead emailer obviously can't email that it is dead. Best-effort: never block the run on it.
   // Runs regardless of the try/catch above (outside it) so a query-level failure never also
-  // suppresses the heartbeat.
-  beat_();
+  // suppresses the heartbeat. pollOk distinguishes "polled and worked" from "polled and permanently
+  // erroring" (2026-07-14 audit finding) -- a PERMANENT query failure would otherwise keep beating
+  // 'poll' forever while zero real alerts get delivered, invisible to state.automation_heartbeat
+  // (which only checks MAX(beat_ts), never `note`).
+  beat_(pollOk);
 }
 
 // ===== notified_ts stamp (stack review 2026-06-24, RUNBOOK §25) =====
@@ -155,10 +160,11 @@ function stampNotified_(ids) {
 }
 
 // ===== heartbeat =====
-function beat_() {
+function beat_(pollOk) {
+  const note = (pollOk === false) ? 'poll-error' : 'poll';
   try {
     BigQuery.Jobs.query({
-      query: `INSERT INTO \`${ALERT_PROJECT_ID}.ops.heartbeat\` (source, note, version) VALUES ('alert_emailer', 'poll', '${SCRIPT_VERSION}')`,
+      query: `INSERT INTO \`${ALERT_PROJECT_ID}.ops.heartbeat\` (source, note, version) VALUES ('alert_emailer', '${note}', '${ALERT_SCRIPT_VERSION}')`,
       useLegacySql: false, timeoutMs: 30000
     }, ALERT_PROJECT_ID);
   } catch (e) { Logger.log('heartbeat write skipped: ' + e); }
@@ -184,6 +190,7 @@ function getUserTzAlerts_() {
   try {
     _alertTzCache = (bqAlerts_(`SELECT tz FROM \`${ALERT_PROJECT_ID}.state.user_tz\``)[0] || {}).tz || 'America/Denver';
   } catch (e) {
+    Logger.log('getUserTzAlerts_ failed, defaulting to America/Denver: ' + e);
     _alertTzCache = 'America/Denver';
   }
   return _alertTzCache;

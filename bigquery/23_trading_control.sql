@@ -100,6 +100,12 @@ FROM agg CROSS JOIN ltd;
 -- book_drawdown_watch, so this view can NEVER return zero rows — sp_assert_trading_enabled below
 -- depends on that (a zero-row SELECT INTO would null out its variables and fail OPEN, the wrong
 -- direction for a safety gate).
+--
+-- SUPERSEDED LIVE by bigquery/47_trading_enabled_resync.sql (2026-07-14). Kept here, unmodified,
+-- for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE VIEW
+-- statement live in isolation — doing so on 2026-07-11 (commit e82cc96, adding the snapshot_stale
+-- term below) silently clobbered 34_alert_lifecycle.sql's already-deployed trading_halted
+-- exclusion fix and reintroduced a self-latching gate for 3+ days before it was caught. See 47.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.trading_enabled` AS
 WITH ctrl AS (
   SELECT ARRAY_AGG(STRUCT(halt_all, reason, mode) ORDER BY control_ts DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest

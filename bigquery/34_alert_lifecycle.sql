@@ -288,6 +288,12 @@ END;
 -- for honest diagnostics/dashboards — only this gate's OWN decision changes). Without this, a
 -- transient trip's own alert would keep the gate closed forever after the root cause heals, since
 -- critical alerts are (correctly, for every other class) never auto-resolved.
+--
+-- SUPERSEDED LIVE by bigquery/47_trading_enabled_resync.sql (2026-07-14) — this definition was
+-- silently clobbered live on 2026-07-11 when 23_trading_control.sql was re-applied in isolation to
+-- add the snapshot_stale term (ITEM 16), reverting this view to the pre-fix self-latching formula
+-- for 3+ days. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
+-- re-apply this CREATE OR REPLACE VIEW statement live in isolation — see 47's header.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.trading_enabled` AS
 WITH ctrl AS (
   SELECT ARRAY_AGG(STRUCT(halt_all, reason, mode) ORDER BY control_ts DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest

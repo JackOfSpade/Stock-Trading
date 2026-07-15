@@ -59,7 +59,9 @@ ALTER TABLE `stock-trading-498512.ops.heartbeat` ADD COLUMN IF NOT EXISTS versio
 -- "expected").
 CREATE TABLE IF NOT EXISTS `stock-trading-498512.state.expected_script_versions` (
   script_name STRING NOT NULL,        -- 'alert_emailer' | 'weekly_report' -- MUST match ops.heartbeat.source
-  expected_version STRING NOT NULL,   -- matches the SCRIPT_VERSION const in the corresponding .gs file
+  expected_version STRING NOT NULL,   -- matches the per-file version const: ALERT_SCRIPT_VERSION in
+                                       -- alert_emailer.gs, SCRIPT_VERSION in weekly_report.gs (renamed
+                                       -- 2026-07-14 to avoid a same-project top-level-scope const collision)
   git_note STRING,                    -- which commit / .gs change last bumped this row
   updated_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
 ) OPTIONS(description='Seed/reference table: the Apps Script version each out-of-band .gs SHOULD be running, per the repo state. Source of truth for state.script_version_drift. Updated by a guarded MERGE (idempotent re-apply) whenever a .gs SCRIPT_VERSION constant is bumped in this file.');
