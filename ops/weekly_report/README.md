@@ -3,9 +3,10 @@
 A weekly HTML email that answers one question: **what's each strategy's own return been**,
 measured on **deployed capital only, over active (deployed) time only** — with VOO's own
 return shown alongside as a single informational reference point. (2026-07-15 redesign,
-owner directive — see `ops/RUNBOOK.md` §33 for the full iteration history. The prior v2
-design, 2026-07-13, compared everything to SGOV; this directive dropped SGOV from the email
-entirely and made VOO the sole displayed benchmark.) Everything that didn't support that
+owner directive — see `ops/RUNBOOK.md` §42 for the full v3 rationale (§33 covers the pre-v3
+iteration history). The prior v2 design, 2026-07-13, compared everything to SGOV; this
+directive dropped SGOV from the email entirely and made VOO the sole displayed benchmark.)
+Everything that didn't support that
 question — regime, account NAV/MTD/YTD, open positions, next-7-days, weekly activity, the
 full ops-health strip, and (as of v3) the "Deployed Book Since..." headline block — was cut.
 What's left: a **returns chart** (each deployed strategy's cumulative total return + VOO's

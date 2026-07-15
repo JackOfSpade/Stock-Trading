@@ -380,7 +380,7 @@ routines:
 # The weekly performance self-email is NOT a Claude routine. It is a Google Apps Script
 # (ops/weekly_report/weekly_report.gs) on a weekly time-trigger that runs on Google's
 # servers as the owner. The Gmail connector can only draft (not send), so delivery lives
-# outside Claude. 2026-07-15 redesign (v3; ops/RUNBOOK.md §33): the email now answers one question
+# outside Claude. 2026-07-15 redesign (v3; ops/RUNBOOK.md §42, see also §33 for pre-v3 history): the email now answers one question
 # ("what's each strategy's own return been, on deployed capital only?", answered as percentages,
 # alongside VOO's own return as an informational reference) and reads BigQuery
 # (analytics.strategy_scorecard,
