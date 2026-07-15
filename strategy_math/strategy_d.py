@@ -18,10 +18,11 @@ MIN_MARKET_CAP_USD = 10_000_000_000
 MIN_ADV_30D_USD = 20_000_000
 MIN_CONCURRENT_POSITIONS = 5  # floor, retained; no ceiling (Rev 35, owner directive)
 
-# Entry criterion 5 — correlation-bucket test
+# Entry criterion 5 — correlation-bucket MONITORING (Rev 35, owner directive: the count cap and
+# the post-entry entry-blocking behavior are REMOVED; bucket membership is now informational only,
+# per Section 6 — see strategy/06_strategy_d.md and Strategy.md's Rev 35 changelog).
 ENTRY_CORRELATION_BUCKET_THRESHOLD = 0.6
 POST_ENTRY_CORRELATION_THRESHOLD = 0.7  # rev 28 post-entry monitoring, tighter margin
-MAX_POSITIONS_PER_BUCKET = 3
 
 # Mark-to-market underperformance trigger — rev 28/30 beta-adjusted, CI-gated
 BETA_ADJUSTED_ALPHA_FIRE_THRESHOLD = -0.03  # "-3pp" point estimate
@@ -43,49 +44,41 @@ def meets_instrument_eligibility(market_cap_usd: float, adv_30d_usd: float) -> b
 def correlation_bucket_members(
     candidate_returns: list[float],
     held_positions_returns: dict[str, list[float]],
-    threshold: float = ENTRY_CORRELATION_BUCKET_THRESHOLD,
 ) -> list[str]:
-    """Entry criterion 5: which currently-held tickers share a correlation bucket with
-    the candidate (trailing-252-day daily-return correlation > threshold). Returns the
-    list of held-position tickers that would join the candidate's bucket; the caller
-    checks `len(result) + 1 > MAX_POSITIONS_PER_BUCKET` (candidate counts as the +1) to
-    decide whether the entry is blocked. strategy/06_strategy_d.md: "for any two
-    currently-held positions with trailing-252-day daily-return correlation > 0.6, both
-    count toward the same correlation bucket. No more than 3 positions may share any
-    correlation bucket."
+    """Entry criterion 5 (Rev 35, owner directive — MONITORING ONLY, not entry-blocking):
+    which currently-held tickers share a correlation bucket with the candidate
+    (trailing-252-day daily-return correlation > ENTRY_CORRELATION_BUCKET_THRESHOLD).
+    Returns the list of held-position tickers that would join the candidate's bucket,
+    for Section 6 informational reporting; the count is no longer capped and does not
+    block entry. strategy/06_strategy_d.md: "for any two currently-held positions with
+    trailing-252-day daily-return correlation > 0.6, both count toward the same
+    correlation bucket" — the former "no more than 3 positions" cap was removed by
+    Rev 35.
     """
     return [
         ticker
         for ticker, returns in held_positions_returns.items()
-        if pearson_correlation(candidate_returns, returns) > threshold
+        if pearson_correlation(candidate_returns, returns) > ENTRY_CORRELATION_BUCKET_THRESHOLD
     ]
-
-
-def bucket_blocks_entry(bucket_members: list[str], cap: int = MAX_POSITIONS_PER_BUCKET) -> bool:
-    """The candidate (counted as the +1) plus its bucket_members must not exceed the
-    cap. strategy/06_strategy_d.md Entry criterion 5.
-    """
-    return (len(bucket_members) + 1) > cap
 
 
 def post_entry_bucket_pairs(
     held_positions_returns: dict[str, list[float]],
-    threshold: float = POST_ENTRY_CORRELATION_THRESHOLD,
 ) -> list[tuple[str, str]]:
-    """rev 28 post-entry monitoring: recomputed monthly across ALL held-position pairs.
-    Returns pairs exceeding the tighter 0.7 post-entry threshold — each such pair is
-    treated as its own 2-position bucket for the purpose of blocking a FUTURE third
-    entry (does not force an exit on the already-held pair). strategy/06_strategy_d.md:
-    "If any held-position pair exceeds 0.7 daily-return correlation post-entry... the
-    pair is treated as a 2-position correlation bucket for the purposes of subsequent
-    entry decisions."
+    """rev 28 post-entry monitoring, informational only since Rev 35 (owner directive):
+    recomputed monthly across ALL held-position pairs. Returns pairs exceeding the
+    tighter 0.7 post-entry threshold (POST_ENTRY_CORRELATION_THRESHOLD) for Section 6
+    reporting; no longer treated as a bucket for blocking a future entry and does not
+    force an exit on the already-held pair. strategy/06_strategy_d.md: "If any
+    held-position pair exceeds 0.7 daily-return correlation post-entry..." — the former
+    entry-blocking consequence was removed by Rev 35.
     """
     tickers = sorted(held_positions_returns)
     pairs = []
     for i in range(len(tickers)):
         for j in range(i + 1, len(tickers)):
             a, b = tickers[i], tickers[j]
-            if pearson_correlation(held_positions_returns[a], held_positions_returns[b]) > threshold:
+            if pearson_correlation(held_positions_returns[a], held_positions_returns[b]) > POST_ENTRY_CORRELATION_THRESHOLD:
                 pairs.append((a, b))
     return pairs
 

@@ -1586,7 +1586,7 @@ Per candidate, deepen narrative synthesis against Strategy D's entry criteria.
 
 4. Concentration check. Compare against current D book: does adding this name push any GICS sector above 30% concentration? Note the implication. (Strategy.md entry criterion 5; the former "max 3 concurrent positions per GICS sector" headcount variant is REMOVED per Rev 35, owner directive — only the 30%-of-NAV exposure form remains.)
 
-5. Correlation-bucket check (self-improvement audit staleness fix, 2026-07-03 — replaces a stale "10-concurrent-position hard cap" check here; that cap was REMOVED for D per Strategy.md Rev 35, owner directive, so a position-count block was never actually current). Per Strategy.md entry criterion 5 (rev 27/28, still LIVE — not touched by Rev 35): compute trailing-252-day daily-return correlation between this candidate and each currently-held D position (classical-method delegation — code, not eyeballed). Any pair exceeding 0.6 correlation shares a "bucket"; flag if adding this candidate would make a bucket's 3rd member — that blocks the entry (a 4th+ correlated name does not, by rev 27/28's design, force any exit — it only constrains new entries).
+5. Correlation-bucket check (monitoring only — corrected 2026-07-15 per Strategy.md Rev 35, owner directive: the bucket-size cap AND its entry-blocking consequence are REMOVED, not just the separate "10-concurrent-position hard cap" this replaced on 2026-07-03). Per Strategy.md entry criterion 5: compute trailing-252-day daily-return correlation between this candidate and each currently-held D position (classical-method delegation — code, not eyeballed). Any pair exceeding 0.6 correlation shares a "bucket"; report bucket membership/size for Section 6 informational tracking — it no longer blocks entry or forces any exit, regardless of bucket size.
 
 6. Momentum screen. Is the name rallying hard (specify magnitude) in the trailing 30 days? Flag for entry deferral per Strategy.md.
 
@@ -1594,8 +1594,8 @@ Rank shortlist of up to 10 candidates for full thesis construction. Per candidat
 - Thesis strength (ordinal rating, with reasoning)
 - Specific catalysts or drivers
 - Specific invalidation criteria
-- Current sector concentration implication AND correlation-bucket status (both are live blocking checks; D has no position-count ceiling, Rev 35)
-- Readiness (ready now / deferred pending rally pause / blocked by concentration or correlation bucket)
+- Current sector concentration implication (the one remaining live blocking check) AND correlation-bucket status (informational only, Rev 35 — not a blocking check)
+- Readiness (ready now / deferred pending rally pause / blocked by concentration)
 
 Exclude names in the open D book. Note any shortlist addition that would require an existing D position to close first — do not recommend the close.
 
@@ -1699,7 +1699,7 @@ Convert into operator-actionable outputs per the operating model. Claude resolve
 A. D THESIS CONSTRUCTION FROM Q2 — for the Q2 ranked shortlist:
    - For each candidate marked "ready now": enqueue a `PENDING_ANALYSIS` entry (`INSERT INTO events.queue_events`; analysis_type thesis-construction; strategy D; due_date today; context from Q2 + Strategy.md D criteria + Operating_Protocols.md; conservative_default decline), ordered by thesis-strength rating. No cap. D2 drains them.
    - For each candidate marked "deferred pending rally pause": add to Watchlist.md D-deferred section with the trailing-30-day momentum reading and resolution-trigger ("when 30-day trailing return drops below X%"), AND enqueue a `PENDING_ANALYSIS` entry (`INSERT INTO events.queue_events`; analysis_type re-screen; strategy D; due_date = 30 days out; context = the re-check condition; conservative_default skip) so D2 re-checks then.
-   - For each candidate marked "blocked by concentration or correlation bucket": add to Watchlist.md D-blocked section with the specific blocker and resolution condition ("when GICS <sector> concentration < 30%" or "when <bucket> drops below 3 members"). No queue entry — these resolve when an existing D position closes (M4 D-exit handling triggers re-evaluation). (D has no position-count ceiling — Rev 35, owner directive — so "position count" is never itself a blocker.)
+   - For each candidate marked "blocked by concentration": add to Watchlist.md D-blocked section with the specific blocker and resolution condition ("when GICS <sector> concentration < 30%"). No queue entry — this resolves when an existing D position closes (M4 D-exit handling triggers re-evaluation). (Correlation bucket is informational only, Rev 35, owner directive — it is never itself a blocker, so it cannot produce a "blocked by correlation bucket" candidate; D also has no position-count ceiling.)
 
 B. FOUNDATION-CHANGE ASSESSMENT FROM Q3 — for each YES verdict that cleared the transferability filter and warrants foundation-change-assessment:
    - Per the strategies-affected list in the Q3 entry, enqueue a `PENDING_ANALYSIS` entry (`INSERT INTO events.queue_events`) per affected strategy (analysis_type foundation-change-assessment; strategy; due_date today; context = Q3 evidence summary + affected Tier (1 architectural / 2 magnitude) + the branch warranted (continue / terminate / constraint-relaxation) + reference to Experiment_Parameters.md §Foundation change trigger procedure; conservative_default = no change / continue). D2 drains them.

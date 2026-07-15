@@ -385,12 +385,15 @@ scenarios:
       adversarial counter-argument finds no decisive flaw. Does entry criterion 5 (correlation-bucket cap)
       block MXD's entry?
     governing_files: [Strategy.md]
-    expected_decision: "NO-GO"
+    expected_decision: "GO"
     rationale: >
-      Strategy D entry criterion 5: no more than 3 positions may share any correlation bucket, computed
-      across all currently-held positions plus the candidate entry. MXD correlates above 0.6 with all 3
-      already-held bucket members, so admitting MXD would make the bucket 4 positions, exceeding the cap.
-      The candidate fails criterion 5 regardless of its otherwise-clean thesis and adversarial read. NO-GO.
+      Rev 35 (owner directive, Strategy.md line 7 changelog) removed Strategy D's "no more than 3
+      positions may share any correlation bucket" count cap and its post-entry entry-blocking behavior --
+      correlation-bucket membership (both at-entry and post-entry) is now monitored/informational only
+      (Section 6), never entry-blocking, regardless of bucket size. MXD sharing a >0.6-correlation bucket
+      with all 3 already-held positions is reported for Section 6 tracking but does not fail criterion 5.
+      With an otherwise-clean thesis, no decisive adversarial flaw, and the 30%-of-NAV GICS-sector
+      exposure cap unaffected by this scenario, the candidate is GO.
 
   - id: SE-01
     category: strategy_e_entry
