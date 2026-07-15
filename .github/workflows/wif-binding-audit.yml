@@ -24,6 +24,7 @@ on:
 permissions:
   contents: read
   id-token: write
+  issues: write   # 2026-07-15 fix — durable record of a finding independent of the optional webhook (RUNBOOK §43)
 
 concurrency:
   group: wif-binding-audit
@@ -58,6 +59,7 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
       - name: Assert the WIF binding is scoped to this repo
+        id: audit
         if: steps.guard.outputs.skip == 'false'
         env:
           WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
@@ -114,7 +116,10 @@ jobs:
           # INCONCLUSIVE (read failure) — NOT a security finding. Exit 2 with a distinct message so a
           # perms/propagation issue can't masquerade as "fork-permissive". Re-run after grants propagate.
           if [ -n "$verify_error" ]; then
-            echo "::error::WIF binding audit COULD NOT VERIFY (this is NOT a fork-permissive finding):$verify_error  Likely the WIF SA lacks roles/iam.workloadIdentityPoolViewer + iam.serviceAccounts.getIamPolicy on $CI_SA, or the grant has not propagated yet — wait a few minutes and re-run. RUNBOOK §25 E1."
+            msg="WIF binding audit COULD NOT VERIFY (this is NOT a fork-permissive finding):$verify_error  Likely the WIF SA lacks roles/iam.workloadIdentityPoolViewer + iam.serviceAccounts.getIamPolicy on $CI_SA, or the grant has not propagated yet — wait a few minutes and re-run. RUNBOOK §25 E1."
+            echo "::error::$msg"
+            printf '%s\n' "$msg" > /tmp/audit_finding.txt
+            echo "result=inconclusive" >> "$GITHUB_OUTPUT"
             exit 2
           fi
 
@@ -122,6 +127,59 @@ jobs:
             msg="🔐 Stock-Trading WIF binding audit FAILED:$problems. The keyless-CI trust boundary may be fork-permissive — see infra/terraform/wif.tf + RUNBOOK §25 E1. Tighten in the Console immediately."
             echo "::error::$msg"
             scripts/notify_webhook.sh "$msg"
+            # 2026-07-15 fix (RUNBOOK §43): the webhook above is best-effort/optional (silent no-op if
+            # WEBHOOK_URL is unset) and a red Actions run alone scrolls off history — neither is a durable
+            # record of a real finding on its own. Persist the message + mark this a FINDING so the
+            # dedicated issue step below (which runs even though this step is about to fail/exit) can open
+            # a durable GitHub issue regardless of webhook config.
+            printf '%s\n' "$msg" > /tmp/audit_finding.txt
+            echo "result=finding" >> "$GITHUB_OUTPUT"
             exit 1
           fi
           echo "OK: WIF binding is scoped to $EXPECTED_REPO (provider condition + repo-scoped principalSet)."
+          echo "result=ok" >> "$GITHUB_OUTPUT"
+
+      - name: Open/refresh finding issue (dedup)
+        # `always()` because the audit step above may have exit-1/exit-2'd (steps default to being
+        # skipped after a prior failure) — this step must still run to durably record that failure.
+        # Gated on skip=='false' too so a disabled/opt-out audit (no outputs set at all) never matches.
+        if: always() && steps.guard.outputs.skip == 'false' && (steps.audit.outputs.result == 'finding' || steps.audit.outputs.result == 'inconclusive')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          {
+            if [ "${{ steps.audit.outputs.result }}" = "finding" ]; then
+              echo "**FINDING** — the live WIF binding no longer matches the \`infra/terraform/wif.tf\`-declared scope (attribute_condition and/or the \`workloadIdentityUser\` principalSet). The keyless-CI trust boundary may be fork-permissive. This issue is the durable record of the finding, independent of whether \`ALERT_WEBHOOK_URL\` is configured (it may not be)."
+            else
+              echo "**INCONCLUSIVE** — the audit could not verify this run (a read failure, likely missing or not-yet-propagated \`iam.workloadIdentityPoolViewer\`/\`iam.serviceAccounts.getIamPolicy\` grants). This is NOT itself a fork-permissive finding, but the binding was not confirmed this run — re-run once resolved."
+            fi
+            echo
+            cat /tmp/audit_finding.txt 2>/dev/null || true
+            echo
+            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } > /tmp/body.md
+
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
+            --jq '[.[] | select(.title|startswith("⚠️ WIF binding audit:"))][0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body-file /tmp/body.md
+            echo "Updated existing issue #$existing."
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "⚠️ WIF binding audit: needs attention" \
+              --body-file /tmp/body.md
+          fi
+
+      - name: Close finding issue if resolved
+        if: always() && steps.guard.outputs.skip == 'false' && steps.audit.outputs.result == 'ok'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
+            --jq '[.[] | select(.title|startswith("⚠️ WIF binding audit:"))][0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Resolved — the live binding now matches the wif.tf-declared scope (RUNBOOK §25 E1). Closing."
+            gh issue close "$existing" --repo "$GITHUB_REPOSITORY"
+          fi

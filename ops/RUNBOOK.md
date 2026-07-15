@@ -923,7 +923,12 @@ never applied. **Repo artifacts are DONE; this section lists the owner/console a
   not data) and create the `integrity_check.sql` scheduled query (daily ~05:20 UTC, email-on-failure ON).
   **Posture:** staged-rollout WARNING (record-only, delivered by the emailer/relay; does NOT flip
   `all_green` or RAISE). Baseline verified clean (0 rows). **Promote** to critical+RAISE once a clean
-  baseline holds.
+  baseline holds. **Promotion mechanism (self-improvement audit ITEM 31, 2026-07-15):**
+  `bigquery/57_append_only_integrity_promotion.sql` + D3's MONITOR-PROMOTION SELF-FLIP step now do this
+  automatically, the same self-flip pattern ITEM 24 already gave `ddl_drift`/`restore_stale` — see §27
+  Promotion Ladder. No owner judgment call anymore; the owner's only remaining action is the routine
+  scheduled-query console re-paste once D3 lands the promotion, same as every other scheduled-query body
+  edit in this codebase.
 - **B4 — position-drift guard (`state.position_reconciliation`; `cadence_check` warning + dbt test).**
   `state.current_positions` (the 2%-sizing path) vs `analytics.position_lifecycle` (the TWR path) can
   diverge with no monitor; this flags a material per-(strategy,ticker) open-share gap (tolerance ignores
@@ -974,11 +979,15 @@ never applied. **Repo artifacts are DONE; this section lists the owner/console a
   to this repo. **Owner (read-only verify):** run the two `gcloud … describe` / `get-iam-policy` commands
   in `wif.tf`'s header and confirm the live binding pins `assertion.repository` to `JackOfSpade/Stock-Trading`
   (and is NOT a pool-wide binding). Record the result here. This is the highest-severity item IF the live
-  binding is fork-permissive; pure documentation if it is already scoped (likely).
+  binding is fork-permissive; pure documentation if it is already scoped (likely). The companion
+  `wif-binding-audit.yml` standing guard now durably opens a deduped GitHub issue on a real finding (or an
+  unverified read) instead of relying solely on a possibly-unconfigured webhook — see §43.
 - **E2 — keyless-SA audit (`.github/workflows/keyless-sa-audit.yml`, opt-in).** Monthly check that
   `gh-ci-runner@` / `bq-scheduler@` carry ZERO user-managed keys. **Owner to enable:** grant the WIF SA
   `iam.serviceAccountKeys.list` on those SAs and set `vars.RUN_SA_KEY_AUDIT=true`. The preventive analog
   (org policy `iam.disableServiceAccountKeyCreation`) is deferred for the same no-Org reason as §17.
+  A real finding (or a read failure that could not verify) now durably opens a deduped GitHub issue,
+  not just a webhook post that may be unconfigured — see §43.
 
 ### Marginals (scoped per the review)
 - `ops.alerts.notified_ts` (column in `18`; `alert_emailer.gs` stamps it on send — re-paste the script):
@@ -1146,6 +1155,22 @@ FMP mark fallback).
 >   `state.restore_stale_promotion_readiness` (same file) is ready once `state.restore_health.monitored=TRUE`
 >   AND the last drill passed (≥1 successful `ops.drill_log` marker — the same bar this bullet always stated,
 >   now mechanically checked). Same D3 self-flip mechanism as `ddl_drift` above.
+> - **`append_only_integrity` → critical: READINESS SUBSTRATE ADDED (self-improvement audit ITEM 31,
+>   2026-07-15).** Closes CONFIRMED GAP `append-only-integrity-no-promotion` — unlike `ddl_drift`/
+>   `restore_stale`, this monitor had NO promotion path at all until now (stuck at staged-rollout
+>   WARNING since 2026-06-24, not read by `state.trading_enabled`, so a real audit-trail tamper event
+>   produced only a dismissible email with no halt/escalation ever). `bigquery/
+>   57_append_only_integrity_promotion.sql` adds `state.append_only_integrity_promotion_readiness` (the
+>   SAME 14-consecutive-DISTINCT-logged-clean-days bar as `ddl_drift`, reusing `bigquery/45`'s
+>   `ops.monitor_health_history`/`ops.monitor_promotion_log` substrate verbatim) and
+>   `bigquery/scheduled_queries/integrity_check.sql` now writes its own history row every run
+>   (alerting behavior unchanged by that write — still WARNING-only pending promotion). Same D3
+>   self-flip mechanism as `ddl_drift`/`restore_stale` above, EXCEPT the edit target is
+>   `integrity_check.sql` (a separate scheduled query with no `raise_msg` accumulator of its own — D3
+>   adds a direct `RAISE` there instead, per that file's promoted-body spec). **Not yet promoted** — the
+>   readiness bar needs 14 FRESH logged days accumulated AFTER `integrity_check.sql`'s edited body goes
+>   live via console re-paste; the pre-2026-07-15 "baseline verified clean" note above does not carry
+>   over (no backfill, by design — see `bigquery/57`'s header).
 > - **`dbt-parity` → block: PENDING (owner repo-setting).** Requires the WIF repo vars set AND one clean parity
 >   run observed; then set `vars.DBT_PARITY=block` (it FAILS CLOSED if the WIF vars are absent — RUNBOOK §25 C1).
 
@@ -2450,3 +2475,57 @@ cycle, not a discrepancy. Also recorded VOO's first live commission data point (
 not $0 either; only one order so far, so `comm_buffer` still falls back to the connector's actual
 per-order commission until more fills accumulate. → `events.decision_log`
 851e579a-efba-4a72-840e-889f185bbc17 "SGOV->VOO parking-vehicle cutover executed live (2026-07-15)".
+
+## 43. Keyless-SA / WIF-binding audit findings had no durable record — 2026-07-15 (self-improvement audit)
+
+**Problem.** `keyless-sa-audit.yml` (E2) and `wif-binding-audit.yml` (E1) — unlike their sibling
+read-only-CI-finding workflows `stranded-branch-check.yml` (§20) and `guard-config-audit.yml` (§34) —
+only responded to a real finding (a user-managed key, or a fork-permissive WIF binding) with an
+`::error::` annotation, a best-effort POST to `scripts/notify_webhook.sh` (a confirmed silent no-op
+when `ALERT_WEBHOOK_URL` is unset — it is unset today), and `exit 1` to redden the monthly cron's
+Actions run. None of that outlives GitHub's Actions run-history retention. A genuine credential
+compromise (a downloadable key reintroduced on `gh-ci-runner@`/`bq-scheduler@`) or a fork-permissive
+WIF trust-boundary widening could therefore leave **zero durable trace** beyond a run that eventually
+scrolls off history — confirmed live: `wif-binding-audit.yml` had 3 real `failure` runs during
+2026-06-29 bring-up (IAM-grant propagation lag) with no corresponding GitHub issue anywhere. This is a
+finding-durability gap, not a stalled autonomous pipeline — remediation for a leaked key or a
+fork-permissive binding is inherently a human GCP-console IAM action (by-design exclusion, same class
+as §17/§25 E1/E2), so no automated "consumer that takes action" is possible or appropriate here. The
+fix only makes the finding **durably visible**, mirroring the pattern already proven twice in this repo.
+
+**Fix.** Both workflows now carry `issues: write` (added to their existing `contents: read` /
+`id-token: write`) and two new steps mirroring `guard-config-audit.yml`'s dedup-issue pattern:
+- **"Open/refresh finding issue (dedup)"** — runs on `always()` (the audit step itself exits
+  non-zero on a finding, which by default skips subsequent steps) whenever the audit step's new
+  `id: audit` / `result` output is `finding` or `inconclusive`. Opens a title-prefix-deduped GitHub
+  issue (`⚠️ Keyless-SA audit: needs attention` / `⚠️ WIF binding audit: needs attention`) — or
+  comments on the existing one if already open — with the persisted finding/verify-error text and a
+  link to the run. `FINDING` (a real key / a scoped-binding violation) and `INCONCLUSIVE` (a
+  read-failure that could not confirm posture either way — e.g. IAM-grant propagation lag, NOT itself
+  a security finding) are labeled distinctly in the issue body so a transient propagation hiccup can
+  never be mistaken for a leaked credential or a fork-permissive binding — same distinction the audit
+  scripts' own `verify_error` vs. real-finding branches already draw internally.
+- **"Close finding issue if resolved"** — runs when `result == 'ok'` (a real, successfully-verified
+  clean run); comments + closes any open dedup issue. Never fires on a skipped run (guard off / opt-in
+  not enabled) — an unverified state is never reported as "resolved."
+- The audit step (`id: audit`) now writes `result=finding|inconclusive|ok` to `$GITHUB_OUTPUT` and the
+  finding/verify-error message text to `/tmp/audit_finding.txt` immediately before each `exit`, so the
+  two new steps (which run after the audit step has already failed) have both a machine-readable
+  outcome and the human-readable detail to work from. The existing webhook POST + `::error::` +
+  `exit 1/2` behavior is unchanged — this is additive.
+
+Not a cadence change (no new routine, no new schedule, no BigQuery object) — both workflows keep their
+existing monthly opt-in cron and double-gate (`vars.RUN_SA_KEY_AUDIT` / `vars.RUN_WIF_AUDIT` + the WIF
+vars); `ops/cadence.yaml`'s informational CI-jobs comment block, `bigquery/12/15/24`, `ops/triggers.json`,
+and `Claude_Task_Plan.md`'s ROUTINE INVENTORY are all unaffected (these two workflows were never part of
+the 29-routine BigQuery-tracked cadence set — `scripts/check_cadence_consistency.py` does not enumerate
+them, same as `stranded-branch-check.yml`/`guard-config-audit.yml`/`offsite-backup.yml`/`dashboard.yml`).
+
+**Verified:** `actionlint -color` (repo-wide, auto-discovers `.github/workflows/`) exits 0 on both
+edited files — the embedded shellcheck pass (the CI-blocking gate, §25 Theme C actionlint job) is clean.
+No new secrets/grants: `GH_TOKEN: ${{ github.token }}` (the same default token `stranded-branch-check.yml`
+/ `guard-config-audit.yml` already use for `issues: write`) is sufficient; no GCP IAM change.
+
+**Owner action required:** none. Both workflows stay OFF by default (`vars.RUN_SA_KEY_AUDIT` /
+`vars.RUN_WIF_AUDIT` unset) exactly as before; this only changes what happens on the next real finding
+once/if the owner enables them per E1/E2 above.
