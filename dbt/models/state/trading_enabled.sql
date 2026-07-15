@@ -9,7 +9,7 @@ WITH ctrl AS (
   FROM {{ source('ops', 'trading_control') }}
 ),
 f AS (SELECT marks_fresh, engine_fresh FROM {{ ref('freshness') }}),
-eh AS (SELECT is_healthy FROM {{ source('state', 'embedding_health') }}),
+eh AS (SELECT is_healthy FROM {{ source('state_external', 'embedding_health') }}),
 al AS (
   SELECT COUNTIF(NOT resolved AND severity = 'critical' AND category != 'trading_halted') AS blocking_criticals
   FROM `stock-trading-498512.ops.alerts`

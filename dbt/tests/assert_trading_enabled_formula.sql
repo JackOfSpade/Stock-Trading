@@ -13,7 +13,7 @@ WITH expected AS (
     NOT COALESCE((SELECT ARRAY_AGG(halt_all ORDER BY control_ts DESC LIMIT 1)[SAFE_OFFSET(0)]
                   FROM {{ source('ops', 'trading_control') }}), FALSE)
     AND (SELECT marks_fresh AND engine_fresh FROM {{ ref('freshness') }})
-    AND (SELECT is_healthy FROM {{ source('state', 'embedding_health') }})
+    AND (SELECT is_healthy FROM {{ source('state_external', 'embedding_health') }})
     AND (SELECT COUNTIF(NOT resolved AND severity = 'critical' AND category != 'trading_halted') = 0
          FROM `stock-trading-498512.ops.alerts`)
     AND NOT COALESCE((SELECT LOGICAL_OR(drifted) FROM `stock-trading-498512.state.position_reconciliation`), FALSE)
