@@ -106,32 +106,49 @@ returned `trig_...` id in `ops/trigger_ids.json` (alphabetical, between `M5` and
 `"verified_via": "api"`, and run `python3 scripts/check_cadence_consistency.py` to confirm the
 missing-entry NOTE disappears.
 
-## B. Re-paste 11 of 12 scheduled queries (Gap 12 — scheduled-query body-drift detection)
+## B. Apply the ARCH-1 scheduled-query wrapper migration, THEN paste the new one-line CALL bodies (Gap 12 — closes the re-paste class PERMANENTLY)
 
-Every file in `bigquery/scheduled_queries/*.sql` now self-reports a version marker via
-`CALL ops.sp_beat_heartbeat(...)` as its first statement (`bigquery/63_scheduled_query_version_registry.sql`).
-**Checked live**, `SELECT * FROM state.scheduled_query_version_drift`: 11 of 12 show
-`monitored = FALSE` (never beaten with the new marker) — only `embed_pending` already shows
-`last_reported_version = 'v1'` matching expected (likely from this session's own validation query,
-not a real cron firing, but either way it's already current — skip it). **Action:** re-paste the
-current repo body of each of the other 11 files into its existing BigQuery Studio → Scheduled
-Queries entry (same paste-and-save flow as every prior scheduled-query update, `ops/RUNBOOK.md §1`):
-`backup_events_export`, `cadence_check` (note: bumped v1→v3 this pass, **now further bumped v3→v4
-and consolidated same-day — items G above plus the CC-3/RES-4/CC-7 consumption-closure pass** —
-picks up the 2 v2/v3 invariant checks (`b3_trading_enabled_drift`, `backup_per_table_row_drop`), the
-`ci_finding` raise/auto-resolve block, the `scheduled_query_version_drift` / `probe_funding_stalled` /
-`cash_flows_backfill_broken` record-only warning blocks, `loop:research_quality_feedback` added to
-both dead-man UNNEST lists, and `immediate_action_flagged`/`process_scorecard_signal` added to the
-#14 auto-age category list — **one consolidated v4 paste, not several**; re-paste the CURRENT (v4)
-repo body, not the v3 one), `daily_freshness_check`,
-`daily_staging_cap_check`, `delivery_canary`, `fire_drill_alert_lifecycle`, `fire_drill_order_guard`,
-`integrity_check`, `ops_export`, `restore_drill`, `safety_critical_dml_watch` (this one may not be
-registered as a scheduled query at all yet — it was also 2026-07-11 item #2 below; if it's not live,
-create it fresh per that item's steps, then it'll pick up the version marker for free). After
-re-pasting, `SELECT * FROM state.scheduled_query_version_drift` should show `drift = FALSE` /
-`monitored = TRUE` across all 12 within a day. **If skipped:** no functional loss — each query keeps
-running its old body exactly as before; you just won't get body-drift detection until the paste
-happens (self-bootstrapping: `monitored` stays `FALSE`, no false alarm).
+**SUPERSEDED (2026-07-16, ARCH-1 wrapper migration, `bigquery/75_scheduled_query_wrappers.sql`) —**
+the prior version of this item asked you to re-paste each scheduled query's full body directly; that
+would still leave every future edit needing another re-paste. Instead, all 12 scheduled-query bodies
+have been frozen as one-line `CALL ops.sp_sq_<name>()` wrappers over stored procedures now defined in
+`bigquery/75_scheduled_query_wrappers.sql` — once this migration is live + pasted, **no scheduled
+query in this directory will ever need a console re-paste again**; future logic changes happen
+entirely in `bigquery/75` + a `CREATE OR REPLACE PROCEDURE` applied via the BigQuery MCP.
+
+**Step 1 (routine/session action, NOT yours — do not do this yourself):** a future MCP-enabled Claude
+session must, in order: (a) run the two scratch pre-flight tests documented in `bigquery/75`'s header
+(`EXPORT DATA` and `CREATE TEMP TABLE` each inside a throwaway stored procedure) — these were
+deliberately NOT run live by the session that wrote `bigquery/75` (it operated under a no-BigQuery-
+MCP-calls constraint this pass); (b) apply the 12 (or fewer, if either pre-flight test is rejected and
+the affected procedure(s) are excluded — see that file's header for the exact fallback) `CREATE OR
+REPLACE PROCEDURE` statements from `bigquery/75_scheduled_query_wrappers.sql` live; (c) apply the
+edited `bigquery/63_scheduled_query_version_registry.sql` MERGE (new expected versions, `v2`
+everywhere except `cadence_check` which is `v5`).
+
+**Step 2 (your action, only AFTER step 1 is confirmed done — verify first:**
+`SELECT routine_name FROM `stock-trading-498512.ops.INFORMATION_SCHEMA.ROUTINES` WHERE routine_name
+LIKE 'sp\_sq\_%'` **should list all the migrated `sp_sq_<name>` procedures):** re-paste each of the 12
+`bigquery/scheduled_queries/<name>.sql` files' NEW one-line body (just `CALL
+\`stock-trading-498512.ops.sp_sq_<name>\`();\`` plus its frozen header comment) into its existing
+BigQuery Studio → Scheduled Queries entry (same paste-and-save flow as ever, `ops/RUNBOOK.md §1`):
+`embed_pending`, `daily_freshness_check`, `cadence_check`, `integrity_check`,
+`safety_critical_dml_watch`, `daily_staging_cap_check`, `backup_events_export`, `ops_export`,
+`delivery_canary`, `restore_drill`, `fire_drill_order_guard`, `fire_drill_alert_lifecycle`.
+`safety_critical_dml_watch` is not registered as a live scheduled query at all yet (2026-07-11 item
+#2 below) — **create it fresh with this NEW one-line wrapper body**, not the old inline body, unless
+that item's own note says the CREATE TEMP TABLE pre-flight was rejected (in which case use the old
+inline body from that item, unchanged).
+
+**If you paste Step 2 before Step 1 has actually happened:** the `CALL` errors (the procedure doesn't
+exist yet) and the notify-enabled jobs email you — fail-visible, not a silent regression, by design
+(`bigquery/75`'s SEQUENCING note).
+
+After both steps: `SELECT * FROM state.scheduled_query_version_drift` should show `drift = FALSE` /
+`monitored = TRUE` for every migrated wrapper within a day. **If skipped:** no functional loss — each
+query keeps running its OLD inline body exactly as before (nothing here changes live behavior on its
+own); you just won't get body-drift detection until both steps happen (self-bootstrapping:
+`monitored` stays `FALSE`, no false alarm).
 
 ## C. GCP IAM grant — dashboard build liveness heartbeat (Architect recommendation #3)
 
@@ -259,7 +276,14 @@ an out-of-band mutation.
 
 **Action (BigQuery Studio → Scheduled queries → Create, same flow as every other scheduled query in
 `ops/RUNBOOK.md` §1):**
-1. Paste `bigquery/scheduled_queries/safety_critical_dml_watch.sql`.
+1. Paste `bigquery/scheduled_queries/safety_critical_dml_watch.sql` — **as of the ARCH-1 wrapper
+   migration (2026-07-16, §B above) this is now the frozen one-line `CALL
+   \`stock-trading-498512.ops.sp_sq_safety_critical_dml_watch\`();\`` body, NOT the old inline
+   check text**, PROVIDED §B's Step 1 (the `CREATE TEMP TABLE`-in-a-procedure pre-flight test) has
+   already passed and `ops.sp_sq_safety_critical_dml_watch` exists live. If that pre-flight was
+   rejected (see `bigquery/75_scheduled_query_wrappers.sql`'s header / `bigquery/scheduled_queries/
+   README.md`), paste the file's OLD inline body instead (still in git history / that file's
+   pre-migration content) — functionally identical either way, just not on the frozen-wrapper path.
 2. Schedule: every 6 hours. Location: US.
 3. Run as: the **same service account you already use for `integrity_check.sql`** — it needs
    `roles/bigquery.resourceViewer`, which that SA should already have, so **no new IAM grant is

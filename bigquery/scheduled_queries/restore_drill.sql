@@ -19,8 +19,9 @@
 -- already applied via SQL (see 17_restore_drill.sql one-time setup); (a) is GCS IAM (not SQL) and is the
 -- ONE console grant still required — ops/RUNBOOK.md §3. Deliberately NOT project-level dataEditor:
 -- bq-scheduler@ must never get write on the append-only events.* source of truth.
--- SQ_NAME: restore_drill  SQ_VERSION: v1 (self-improvement audit 2026-07-15, scheduled-query
--- body-drift detection — bigquery/63_scheduled_query_version_registry.sql). Bump SQ_VERSION here AND
--- state.expected_scheduled_query_versions' matching row on any future edit to this file's body.
-CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:restore_drill', 'v1', 'restore_drill.sql ran');
-CALL `stock-trading-498512.ops.sp_restore_drill`();
+--
+-- BODY FROZEN 2026-07-16: real body lives in ops.sp_sq_restore_drill (bigquery/75_scheduled_query_wrappers.sql);
+-- edit THERE + CREATE OR REPLACE via the BigQuery MCP — this console body never changes again.
+-- SQ_NAME: restore_drill
+-- SQ_VERSION: (moved into the procedure — see bigquery/75_scheduled_query_wrappers.sql)
+CALL `stock-trading-498512.ops.sp_sq_restore_drill`();

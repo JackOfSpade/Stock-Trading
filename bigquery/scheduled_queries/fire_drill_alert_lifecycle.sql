@@ -22,9 +22,9 @@
 -- fire_drill_order_guard.sql (06:10 UTC), so all three "prove the safety net works" drills land in the
 -- same monthly window. Location US, no destination. APPLY ORDER: bigquery/34_alert_lifecycle.sql (both
 -- procedures) must be applied first.
--- SQ_NAME: fire_drill_alert_lifecycle  SQ_VERSION: v1 (self-improvement audit 2026-07-15, scheduled-
--- query body-drift detection — bigquery/63_scheduled_query_version_registry.sql). Bump SQ_VERSION
--- here AND state.expected_scheduled_query_versions' matching row on any future edit to this file's body.
-CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:fire_drill_alert_lifecycle', 'v1', 'fire_drill_alert_lifecycle.sql ran');
-CALL `stock-trading-498512.ops.sp_fire_drill_alert_latch`();
-CALL `stock-trading-498512.ops.sp_fire_drill_alert_resolve`();
+--
+-- BODY FROZEN 2026-07-16: real body lives in ops.sp_sq_fire_drill_alert_lifecycle (bigquery/75_scheduled_query_wrappers.sql);
+-- edit THERE + CREATE OR REPLACE via the BigQuery MCP — this console body never changes again.
+-- SQ_NAME: fire_drill_alert_lifecycle
+-- SQ_VERSION: (moved into the procedure — see bigquery/75_scheduled_query_wrappers.sql)
+CALL `stock-trading-498512.ops.sp_sq_fire_drill_alert_lifecycle`();

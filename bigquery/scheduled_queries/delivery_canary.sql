@@ -30,43 +30,9 @@
 -- US; no destination), run-as bq-scheduler@ (already writes ops.alerts). Enable "Send email on failure"
 -- (that IS the step-1 delivery-failure alarm). Depends on bigquery/18_stack_review_fixes.sql
 -- (ops.alerts.notified_ts) + a deployed alert_emailer.gs that stamps notified_ts.
--- SQ_NAME: delivery_canary  SQ_VERSION: v1 (self-improvement audit 2026-07-15, scheduled-query
--- body-drift detection — bigquery/63_scheduled_query_version_registry.sql). Bump SQ_VERSION here AND
--- state.expected_scheduled_query_versions' matching row on any future edit to this file's body.
-BEGIN
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:delivery_canary', 'v1', 'delivery_canary.sql ran');
-
-  -- 1. Emit this week's canary FIRST (resolved + unnotified so it is forwarded-and-stamped but never
-  -- an open alert). Reordered ahead of the assertion below (2026-07-04 audit finding): the assertion's
-  -- RAISE previously ran first and — RAISE terminating the script — aborted before this INSERT ran,
-  -- so a SUSTAINED delivery outage skipped emitting a fresh canary every other week, halving the
-  -- canary's effective detection cadence. This INSERT is independent of the assertion below, so
-  -- running it unconditionally first means it always happens, RAISE or not.
-  INSERT INTO `stock-trading-498512.ops.alerts`
-    (severity, source, category, message, payload, resolved, resolved_ts, notified_ts)
-  VALUES (
-    'warning', 'scheduled.canary', 'delivery_canary',
-    CONCAT('[CANARY] Weekly alert-delivery self-test — no action needed (', CAST(CURRENT_DATE('America/Denver') AS STRING), ').'),
-    SAFE.PARSE_JSON('{"canary":true}'),
-    TRUE, CURRENT_TIMESTAMP(), NULL);
-
-  -- 2. Assert the prior week's canary was delivered (notified_ts stamped).
-  IF EXISTS (
-    SELECT 1 FROM `stock-trading-498512.ops.alerts`
-    WHERE source = 'scheduled.canary' AND category = 'delivery_canary'
-      AND notified_ts IS NULL
-      AND alert_ts < TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 2 DAY)
-      AND alert_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 9 DAY)
-  ) THEN
-    -- Also record it durably (so the relay/digest see it too), then RAISE for the DTS failure-email.
-    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
-      'critical', 'scheduled.canary', 'delivery_failure',
-      'Alert-delivery canary: the prior weekly canary was never delivered (notified_ts still NULL after >2 days) — the alert_emailer is not stamping/sending. Verify the Apps Script BigQuery+Gmail scopes and trigger.',
-      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(alert_id, CAST(alert_ts AS STRING) AS alert_ts)))
-       FROM `stock-trading-498512.ops.alerts`
-       WHERE source = 'scheduled.canary' AND category = 'delivery_canary' AND notified_ts IS NULL
-         AND alert_ts < TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 2 DAY)
-         AND alert_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 9 DAY)));
-    RAISE USING MESSAGE = 'STOCK-TRADING delivery canary FAILED — prior weekly canary undelivered (notified_ts NULL).';
-  END IF;
-END;
+--
+-- BODY FROZEN 2026-07-16: real body lives in ops.sp_sq_delivery_canary (bigquery/75_scheduled_query_wrappers.sql);
+-- edit THERE + CREATE OR REPLACE via the BigQuery MCP — this console body never changes again.
+-- SQ_NAME: delivery_canary
+-- SQ_VERSION: (moved into the procedure — see bigquery/75_scheduled_query_wrappers.sql)
+CALL `stock-trading-498512.ops.sp_sq_delivery_canary`();

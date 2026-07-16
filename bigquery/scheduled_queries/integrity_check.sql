@@ -31,40 +31,9 @@
 -- bigquery/45_monitor_promotion.sql (creates ops.monitor_health_history, the table the MERGE just below
 -- targets) and bigquery/57_append_only_integrity_promotion.sql (the promotion-readiness view that reads
 -- it) before re-pasting this updated body — self-improvement audit ITEM 31, 2026-07-15.
--- SQ_NAME: integrity_check  SQ_VERSION: v1 (self-improvement audit 2026-07-15, scheduled-query
--- body-drift detection — bigquery/63_scheduled_query_version_registry.sql). Bump SQ_VERSION here AND
--- state.expected_scheduled_query_versions' matching row on any future edit to this file's body.
-BEGIN
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:integrity_check', 'v1', 'integrity_check.sql ran');
-
-  -- MONITOR-PROMOTION HISTORY (self-improvement audit ITEM 31, 2026-07-15): logged UNCONDITIONALLY
-  -- (pass or fail) every run, mirroring cadence_check.sql's ddl_drift/restore_stale MERGE-upsert
-  -- pattern (bigquery/45_monitor_promotion.sql, ITEM 24) — state.append_only_integrity_promotion_
-  -- readiness (bigquery/57_append_only_integrity_promotion.sql) needs this history to evaluate "14
-  -- consecutive clean logged days", which state.append_only_integrity (a today-only, 2-day-lookback
-  -- snapshot) cannot provide on its own. This does NOT change this query's alerting behavior at all —
-  -- still WARNING-only, no RAISE, until D3's MONITOR-PROMOTION SELF-FLIP later promotes it (see
-  -- bigquery/57's header for the exact future promoted body). MERGE, not INSERT, so a same-day re-run
-  -- never double-logs one day (same rationale as cadence_check.sql's 2026-07-11 adversarial-self-audit
-  -- fix).
-  MERGE `stock-trading-498512.ops.monitor_health_history` T
-  USING (
-    SELECT 'append_only_integrity' AS check_id, CURRENT_DATE('America/Denver') AS check_date,
-           NOT EXISTS (SELECT 1 FROM `stock-trading-498512.state.append_only_integrity`) AS clean
-  ) S
-  ON T.check_id = S.check_id AND T.check_date = S.check_date
-  WHEN MATCHED THEN
-    UPDATE SET clean = S.clean, logged_ts = CURRENT_TIMESTAMP()
-  WHEN NOT MATCHED THEN
-    INSERT (check_id, check_date, clean) VALUES (S.check_id, S.check_date, S.clean);
-
-  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.append_only_integrity`) THEN
-    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
-      'warning', 'scheduled.integrity', 'append_only_violation',
-      CONCAT('Append-only integrity: out-of-band UPDATE/DELETE/MERGE on immutable events.* table(s): ',
-             (SELECT STRING_AGG(DISTINCT CONCAT(statement_type, ' ', target_table), ', ' ORDER BY CONCAT(statement_type, ' ', target_table))
-              FROM `stock-trading-498512.state.append_only_integrity`)),
-      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(job_id, user_email, statement_type, target_table, query_preview)))
-       FROM `stock-trading-498512.state.append_only_integrity`));
-  END IF;
-END;
+--
+-- BODY FROZEN 2026-07-16: real body lives in ops.sp_sq_integrity_check (bigquery/75_scheduled_query_wrappers.sql);
+-- edit THERE + CREATE OR REPLACE via the BigQuery MCP — this console body never changes again.
+-- SQ_NAME: integrity_check
+-- SQ_VERSION: (moved into the procedure — see bigquery/75_scheduled_query_wrappers.sql)
+CALL `stock-trading-498512.ops.sp_sq_integrity_check`();

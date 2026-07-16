@@ -32,59 +32,9 @@
 --   bq load --source_format=PARQUET --replace ops_restore.<table> \
 --     'gs://stock-trading-backups/ops/<table>/dt=<YYYY-MM-DD>/*.parquet'
 --   -- DDL-first (faithful) restore: see ops/RUNBOOK.md §3 "DDL-first restore".
--- SQ_NAME: ops_export  SQ_VERSION: v1 (self-improvement audit 2026-07-15, scheduled-query
--- body-drift detection — bigquery/63_scheduled_query_version_registry.sql). Bump SQ_VERSION here AND
--- state.expected_scheduled_query_versions' matching row on any future edit to this file's body.
-BEGIN
-  DECLARE failed STRING DEFAULT '';
-  DECLARE n_ok INT64 DEFAULT 0;
-  DECLARE row_json STRING DEFAULT '';
-  DECLARE tbl_rows INT64;
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:ops_export', 'v1', 'ops_export.sql ran');
-
-  FOR rec IN (
-    SELECT table_name
-    FROM `stock-trading-498512.ops.INFORMATION_SCHEMA.TABLES`
-    WHERE table_type = 'BASE TABLE'   -- excludes procedures, remote models (text_embed/gemini), and views
-    ORDER BY table_name
-  ) DO
-    BEGIN
-      EXECUTE IMMEDIATE FORMAT("""
-        EXPORT DATA OPTIONS(
-          uri='gs://stock-trading-backups/ops/%s/dt=%s/*.parquet',
-          format='PARQUET', compression='SNAPPY', overwrite=true
-        ) AS SELECT %s FROM `stock-trading-498512.ops.%s`
-      """,
-        rec.table_name,
-        CAST(CURRENT_DATE('America/Denver') AS STRING),
-        (SELECT STRING_AGG(
-                  IF(data_type = 'JSON',
-                     FORMAT('TO_JSON_STRING(`%s`) AS `%s`', column_name, column_name),
-                     FORMAT('`%s`', column_name)),
-                  ', ' ORDER BY ordinal_position)
-         FROM `stock-trading-498512.ops.INFORMATION_SCHEMA.COLUMNS`
-         WHERE table_name = rec.table_name),
-        rec.table_name);
-      SET n_ok = n_ok + 1;
-      EXECUTE IMMEDIATE FORMAT(
-        "SELECT COUNT(*) FROM `stock-trading-498512.ops.%s`", rec.table_name) INTO tbl_rows;
-      SET row_json = row_json || FORMAT('%s"%s":%d', IF(row_json = '', '', ','), rec.table_name, tbl_rows);
-    EXCEPTION WHEN ERROR THEN
-      SET failed = failed || FORMAT('%s (%s); ', rec.table_name, @@error.message);
-    END;
-  END FOR;
-
-  IF failed != '' THEN
-    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
-      'critical', 'scheduled.backup', 'ops_backup_export',
-      CONCAT('ops backup: some tables failed to export: ', failed),
-      TO_JSON_STRING(STRUCT(failed AS failed_tables)));
-    RAISE USING MESSAGE = CONCAT('ops-backup-daily: table export failures: ', failed);
-  ELSE
-    -- dataset='ops' marker so state.ops_backup_health (16_automation_health.sql) can detect a stalled
-    -- ops backup. SAFE.PARSE_JSON so a malformed map degrades to NULL rather than aborting the marker.
-    INSERT INTO `stock-trading-498512.ops.backup_log` (run_date, tables_exported, per_table_rows, dataset, note)
-    VALUES (CURRENT_DATE('America/Denver'), n_ok,
-            SAFE.PARSE_JSON('{' || row_json || '}'), 'ops', 'ops.* export OK');
-  END IF;
-END;
+--
+-- BODY FROZEN 2026-07-16: real body lives in ops.sp_sq_ops_export (bigquery/75_scheduled_query_wrappers.sql);
+-- edit THERE + CREATE OR REPLACE via the BigQuery MCP — this console body never changes again.
+-- SQ_NAME: ops_export
+-- SQ_VERSION: (moved into the procedure — see bigquery/75_scheduled_query_wrappers.sql)
+CALL `stock-trading-498512.ops.sp_sq_ops_export`();

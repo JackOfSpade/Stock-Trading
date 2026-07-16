@@ -41,7 +41,11 @@ except ImportError:
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 AUTONOMY = os.path.join(ROOT, "ops", "autonomy_levels.yaml")
-CADENCE_SQL = os.path.join(ROOT, "bigquery", "scheduled_queries", "cadence_check.sql")
+# ARCH-1 wrapper migration (2026-07-16): bigquery/scheduled_queries/cadence_check.sql is now a frozen
+# one-line CALL wrapper (bigquery/scheduled_queries/README.md) — the actual
+# constant_tuning_loop_heartbeat_missing check body (the 'loop:<id>' UNNEST literals this script scans
+# for) lives in the ops.sp_sq_cadence_check procedure defined in bigquery/75_scheduled_query_wrappers.sql.
+CADENCE_SQL = os.path.join(ROOT, "bigquery", "75_scheduled_query_wrappers.sql")
 
 # Loops that carry their OWN heartbeat + dead-man's switch elsewhere and so are intentionally NOT in
 # cadence_check.sql's constant_tuning_loop_heartbeat_missing UNNEST list. Today only strategy_arsenal
@@ -135,21 +139,22 @@ def _check_cadence_heartbeat_coverage(errors):
     promoted loop missing from the SQL) is an error; a stale literal for a demoted loop is fail-safe."""
     monitored = cadence_heartbeat_loops()
     if monitored is None:
-        return  # cadence_check.sql not present in this checkout; nothing to compare
+        return  # bigquery/75_scheduled_query_wrappers.sql not present in this checkout; nothing to compare
     expected = active_auto_loops() - HEARTBEAT_SELF_MONITORED_LOOPS
     if expected and not monitored:
-        errors.append("bigquery/scheduled_queries/cadence_check.sql: found no 'loop:<id>' heartbeat "
-                      "literals — the constant_tuning_loop_heartbeat_missing UNNEST list was reformatted "
-                      "(regex rotted) or removed; fix the regex here or restore the list")
+        errors.append("bigquery/75_scheduled_query_wrappers.sql (ops.sp_sq_cadence_check): found no "
+                      "'loop:<id>' heartbeat literals — the constant_tuning_loop_heartbeat_missing UNNEST "
+                      "list was reformatted (regex rotted) or removed; fix the regex here or restore the list")
         return
     missing = expected - monitored
     if missing:
         errors.append(
-            "bigquery/scheduled_queries/cadence_check.sql: constant_tuning_loop_heartbeat_missing does "
-            f"NOT monitor active_auto loop(s) {sorted(missing)} — an active_auto loop with no dead-man's "
-            "switch is the gap meta_monitoring_heartbeat forbids; add 'loop:<id>' to BOTH UNNEST literals "
-            "(~lines 332-333 and 343-344), or if it self-monitors (like strategy_arsenal) add it to "
-            "HEARTBEAT_SELF_MONITORED_LOOPS in scripts/check_autonomy_consistency.py")
+            "bigquery/75_scheduled_query_wrappers.sql (ops.sp_sq_cadence_check): "
+            f"constant_tuning_loop_heartbeat_missing does NOT monitor active_auto loop(s) {sorted(missing)} "
+            "— an active_auto loop with no dead-man's switch is the gap meta_monitoring_heartbeat "
+            "forbids; add 'loop:<id>' to BOTH UNNEST literals in that procedure body, or if it "
+            "self-monitors (like strategy_arsenal) add it to HEARTBEAT_SELF_MONITORED_LOOPS in "
+            "scripts/check_autonomy_consistency.py")
 
 
 def check_stage_ceiling_invariant(loops):

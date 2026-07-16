@@ -43,18 +43,18 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.state.expected_scheduled_query_
 MERGE `stock-trading-498512.state.expected_scheduled_query_versions` T
 USING (
   SELECT * FROM UNNEST([
-    STRUCT('embed_pending' AS sq_name, 'v1' AS expected_version, 'initial version marker, 2026-07-15' AS git_note),
-    STRUCT('daily_freshness_check', 'v1', 'initial version marker, 2026-07-15'),
-    STRUCT('cadence_check', 'v4', 'v3, 2026-07-15 (same day as initial marker): v2 added the b3_trading_enabled_drift check (bigquery/64_b3_live_invariants.sql, Gap 13); v3 added the backup_per_table_row_drop check (bigquery/65_backup_per_table_health.sql, Gap 19). v4, 2026-07-16 (consolidated consumption-closure + resilience audit): added the ci_finding raise/auto-resolve block (bigquery/67_ci_findings_bridge.sql, CC-1); wired scheduled_query_version_drift / probe_funding_stalled / cash_flows_backfill_broken record-only warning checks (bigquery/63/62/68, CC-3+RES-4); added loop:research_quality_feedback to both constant_tuning_loop_heartbeat_missing dead-man UNNEST lists (LC-4 cadence_check portion); extended the #14 auto-age category list with immediate_action_flagged + process_scorecard_signal (CC-7)'),
-    STRUCT('integrity_check', 'v1', 'initial version marker, 2026-07-15'),
-    STRUCT('safety_critical_dml_watch', 'v1', 'initial version marker, 2026-07-15'),
-    STRUCT('daily_staging_cap_check', 'v1', 'initial version marker, 2026-07-15'),
-    STRUCT('backup_events_export', 'v1', 'initial version marker, 2026-07-15'),
-    STRUCT('ops_export', 'v1', 'initial version marker, 2026-07-15'),
-    STRUCT('delivery_canary', 'v1', 'initial version marker, 2026-07-15'),
-    STRUCT('restore_drill', 'v1', 'initial version marker, 2026-07-15'),
-    STRUCT('fire_drill_order_guard', 'v1', 'initial version marker, 2026-07-15'),
-    STRUCT('fire_drill_alert_lifecycle', 'v1', 'initial version marker, 2026-07-15')
+    STRUCT('embed_pending' AS sq_name, 'v2' AS expected_version, 'v2 -- body moved into ops.sp_sq_embed_pending wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16' AS git_note),
+    STRUCT('daily_freshness_check', 'v2', 'v2 -- body moved into ops.sp_sq_daily_freshness_check wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16'),
+    STRUCT('cadence_check', 'v5', 'v3, 2026-07-15 (same day as initial marker): v2 added the b3_trading_enabled_drift check (bigquery/64_b3_live_invariants.sql, Gap 13); v3 added the backup_per_table_row_drop check (bigquery/65_backup_per_table_health.sql, Gap 19). v4, 2026-07-16 (consolidated consumption-closure + resilience audit): added the ci_finding raise/auto-resolve block (bigquery/67_ci_findings_bridge.sql, CC-1); wired scheduled_query_version_drift / probe_funding_stalled / cash_flows_backfill_broken record-only warning checks (bigquery/63/62/68, CC-3+RES-4); added loop:research_quality_feedback to both constant_tuning_loop_heartbeat_missing dead-man UNNEST lists (LC-4 cadence_check portion); extended the #14 auto-age category list with immediate_action_flagged + process_scorecard_signal (CC-7). v5, 2026-07-16 (ARCH-1) -- body moved into ops.sp_sq_cadence_check wrapper (bigquery/75_scheduled_query_wrappers.sql); no check logic changed'),
+    STRUCT('integrity_check', 'v2', 'v2 -- body moved into ops.sp_sq_integrity_check wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16'),
+    STRUCT('safety_critical_dml_watch', 'v2', 'v2 -- body moved into ops.sp_sq_safety_critical_dml_watch wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16'),
+    STRUCT('daily_staging_cap_check', 'v2', 'v2 -- body moved into ops.sp_sq_daily_staging_cap_check wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16'),
+    STRUCT('backup_events_export', 'v2', 'v2 -- body moved into ops.sp_sq_backup_events_export wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16'),
+    STRUCT('ops_export', 'v2', 'v2 -- body moved into ops.sp_sq_ops_export wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16'),
+    STRUCT('delivery_canary', 'v2', 'v2 -- body moved into ops.sp_sq_delivery_canary wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16'),
+    STRUCT('restore_drill', 'v2', 'v2 -- body moved into ops.sp_sq_restore_drill wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16'),
+    STRUCT('fire_drill_order_guard', 'v2', 'v2 -- body moved into ops.sp_sq_fire_drill_order_guard wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16'),
+    STRUCT('fire_drill_alert_lifecycle', 'v2', 'v2 -- body moved into ops.sp_sq_fire_drill_alert_lifecycle wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16')
   ])
 ) S
 ON T.sq_name = S.sq_name
