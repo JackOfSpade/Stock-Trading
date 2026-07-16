@@ -10,6 +10,49 @@ act. Dated passes below; most recent first.
 
 ---
 
+# 2026-07-16 Orphan-BigQuery-object documentation pass (P3, lowest priority) — local-only implementation round
+
+This pass was done as a **local-only** implementation (commit sits on the working branch, not
+pushed) per that round's ground rules — nothing below is live yet. Purely header-comment additions
+to already-defined views (no SELECT body changed, per the P3 spec's explicit constraint) in
+`bigquery/14_weekly_report.sql`, `bigquery/18_stack_review_fixes.sql`,
+`bigquery/21_strategy_vs_park.sql`, `bigquery/46_weekly_benchmarks.sql`,
+`bigquery/54_park_policy_voo_cutover.sql`, plus a correction paragraph in `ops/RUNBOOK.md` §33 (a
+stale "not urgent, follow-up" note — the fix it describes, a tie-break on
+`analytics.strategy_unit_value_7d_ago`, already shipped in commit `3b8715c` on 2026-07-04; verified
+against live file content before writing anything, no SQL/dbt change was actually needed there).
+All local checks green: `check_cadence_consistency.py`, `check_roster_consistency.py`,
+`check_autonomy_consistency.py`, `check_script_version_consistency.py`, full `pytest tests/ -q`.
+
+## R. Re-apply 5 comment-only `CREATE OR REPLACE VIEW` bodies live via the BigQuery MCP/console (cosmetic, no functional change)
+
+**What it's for:** the local commit above adds header comments (documenting "retained, not read by
+any live routine — do not mistake for dead weight") to `state.embedding_scale_watch`
+(`bigquery/18`), `analytics.sgov_cumulative` (`bigquery/21`),
+`analytics.deployed_book_vs_benchmarks` (`bigquery/46`), and `state.sgov_position` /
+`state.sgov_reconciliation` (`bigquery/54`). The live BigQuery view definitions still have the OLD
+comments (or none) until these are re-applied — the SELECT body is byte-identical, so this is a
+pure documentation sync, not a bug fix or behavior change. Lowest priority in this repo's queue (P3)
+— safe to batch with the next live-apply pass whenever convenient, no urgency.
+
+**Action:** once this branch is reviewed/merged, re-run the five `CREATE OR REPLACE VIEW` statements
+in `bigquery/18_stack_review_fixes.sql` (`state.embedding_scale_watch`),
+`bigquery/21_strategy_vs_park.sql` (`analytics.sgov_cumulative`),
+`bigquery/46_weekly_benchmarks.sql` (`analytics.deployed_book_vs_benchmarks`), and
+`bigquery/54_park_policy_voo_cutover.sql` (`state.sgov_position` and `state.sgov_reconciliation`)
+live via the BigQuery MCP `execute_sql` tool or the console — each is idempotent DDL, safe to
+re-run any time.
+
+```yaml
+id: R
+type: bq
+probe: none — comment-only DDL, no functional check applicable; a visual diff of each view's
+  description against its .sql source is sufficient verification.
+done_when: all 5 views' live definitions match their bigquery/*.sql source text.
+```
+
+---
+
 # 2026-07-16 Completeness-critic findings N-1/N-2/N-4/N-5 — local-only implementation round
 
 This pass was done as a **local-only** implementation (commits sit on the working branch, not
