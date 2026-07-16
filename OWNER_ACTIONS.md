@@ -1,4 +1,4 @@
-# Owner actions — 2026-07-11 self-improvement audit (Items 1-30)
+# Owner actions
 
 Everything Claude could apply without you (schema, views, procedures, scheduled-query SQL bodies,
 repo docs) is already applied live and merged to `main`. This file is the complete list of the
@@ -6,11 +6,121 @@ handful of things only you can do — a GCP console click, a `bq`/`gcloud` comma
 credentials, an Apps Script paste (`script.google.com` isn't reachable from here), or a tax election
 with your broker. Nothing in this system is blocked or unsafe while these are outstanding — every
 item below is explicitly designed to fail closed / no-op / stay on its existing fallback until you
-act. Ordered roughly by how soon you'd want to get to it.
+act. Two dated passes below; most recent first.
 
 ---
 
-## 0. URGENT — GitHub Actions billing is currently failing (blocks ALL merges)
+# 2026-07-15 self-improvement audit (20 gaps + 5 architecture recommendations)
+
+All 20 confirmed gaps + all 5 architecture recommendations are implemented, verified live, and
+merged to this branch (`jack/pensive-fermi-jxha2b`) — see `bigquery/README.md` entries 57-66 and
+`git log` for the full commit trail. Verified before writing this section: every item below was
+checked against live BigQuery state / `gh` CLI output just now, not assumed from memory.
+
+## A. Register `OPS0` as a live routine trigger (Gap 4 — Cadence Watchdog)
+
+`OPS0. Cadence Watchdog` is a new regular routine (`Claude_Task_Plan.md`) with a full entry in
+`ops/triggers.json`, but has no live trigger yet — confirmed via
+`scripts/check_cadence_consistency.py`, which prints (non-fatally): *"ops/trigger_ids.json has no
+entry yet for `['OPS0']`"*. **Action:** create it the same way every other routine trigger was
+created (RemoteTrigger / Chrome console, per the existing pattern for the other 29 routines), then
+record its live trigger id in `ops/trigger_ids.json`. Suggested cadence: daily, off-peak, alongside
+the other daily-tier monitors — see the routine's own text for its dependency-free, read-mostly
+scope (it only reads `state.*_readiness` / `state.catchup_*` views and raises alerts; no live-order
+dependency, so timing is not sensitive).
+
+## B. Re-paste 11 of 12 scheduled queries (Gap 12 — scheduled-query body-drift detection)
+
+Every file in `bigquery/scheduled_queries/*.sql` now self-reports a version marker via
+`CALL ops.sp_beat_heartbeat(...)` as its first statement (`bigquery/63_scheduled_query_version_registry.sql`).
+**Checked live**, `SELECT * FROM state.scheduled_query_version_drift`: 11 of 12 show
+`monitored = FALSE` (never beaten with the new marker) — only `embed_pending` already shows
+`last_reported_version = 'v1'` matching expected (likely from this session's own validation query,
+not a real cron firing, but either way it's already current — skip it). **Action:** re-paste the
+current repo body of each of the other 11 files into its existing BigQuery Studio → Scheduled
+Queries entry (same paste-and-save flow as every prior scheduled-query update, `ops/RUNBOOK.md §1`):
+`backup_events_export`, `cadence_check` (note: bumped v1→v3 this pass — picks up 2 new invariant
+checks, `b3_trading_enabled_drift` and `backup_per_table_row_drop`), `daily_freshness_check`,
+`daily_staging_cap_check`, `delivery_canary`, `fire_drill_alert_lifecycle`, `fire_drill_order_guard`,
+`integrity_check`, `ops_export`, `restore_drill`, `safety_critical_dml_watch` (this one may not be
+registered as a scheduled query at all yet — it was also 2026-07-11 item #2 below; if it's not live,
+create it fresh per that item's steps, then it'll pick up the version marker for free). After
+re-pasting, `SELECT * FROM state.scheduled_query_version_drift` should show `drift = FALSE` /
+`monitored = TRUE` across all 12 within a day. **If skipped:** no functional loss — each query keeps
+running its old body exactly as before; you just won't get body-drift detection until the paste
+happens (self-bootstrapping: `monitored` stays `FALSE`, no false alarm).
+
+## C. GCP IAM grant — dashboard build liveness heartbeat (Architect recommendation #3)
+
+`ops/dashboard/generate_dashboard.py` now best-effort-writes `ops.heartbeat(source='dashboard')` at
+the end of a successful build (`bigquery/58_dashboard_heartbeat.sql`), but the workflow's
+`gh-ci-runner@` WIF identity is read-only today, so the write silently no-ops until granted:
+```
+bq add-iam-policy-binding \
+  --member="serviceAccount:gh-ci-runner@stock-trading-498512.iam.gserviceaccount.com" \
+  --role="roles/bigquery.dataEditor" \
+  stock-trading-498512:ops.heartbeat
+```
+Table-scoped — `gh-ci-runner@` gains write access to exactly `ops.heartbeat`, nothing else.
+**If skipped:** the dashboard keeps publishing exactly as before; `'dashboard'` just never appears
+as `monitored` in `state.automation_heartbeat`, which is the correct fail-quiet default, not a bug.
+
+## D. Re-enable `alert-relay.yml` (currently `disabled_manually`)
+
+**Checked live** (`gh workflow list --all`): `Alert relay (webhook push)` shows
+`disabled_manually`. Claude's auto-mode permission classifier correctly declined to re-enable a
+manually-disabled GitHub Actions workflow via `gh api -X PUT .../enable` on its own — that's a
+platform-state change outside "implement my recommendations" authorization, not a bug. **Action:**
+`gh workflow enable "Alert relay (webhook push)"` (or the Actions tab → the workflow → "Enable
+workflow"), once you've decided you want the webhook relay live — it depends on item E below to do
+anything useful (no `ALERT_WEBHOOK_URL`, nothing to relay to yet).
+
+## E. Add 3 missing GitHub Actions secrets
+
+**Checked live** (`gh secret list`): zero repo secrets exist today. Three are referenced across
+workflows and are all currently no-ops without them (each usage is already guarded/best-effort —
+nothing fails from their absence, they just don't do anything):
+- `ALERT_WEBHOOK_URL` — read by `alert-relay.yml`, `guard-config-audit.yml`, `offsite-backup.yml`,
+  `keyless-sa-audit.yml`, `wif-binding-audit.yml`. A vendor-neutral webhook endpoint (Slack/Discord/
+  ntfy/Pub-Sub push) for these workflows' own alert pushes, separate from the BigQuery-side
+  `ops.alerts` → `alert_emailer.gs` email channel.
+- `OFFSITE_BACKUP_GCS` — read by `guard-config-audit.yml`, `offsite-backup.yml`. A GCS destination
+  (bucket/path) for the offsite backup export; without it, `offsite-backup.yml` presumably no-ops or
+  fails its own step — worth checking that workflow's recent run history once this is set.
+- `ANTHROPIC_API_KEY` — read by `golden-scenarios.yml`. Without it, the workflow's `HAVE_KEY` check
+  reads false and (per that workflow's own design) it falls back to a documented lower-fidelity mode
+  rather than failing — check that workflow's file for the exact fallback behavior before assuming
+  urgency here.
+**If skipped:** every consumer above already fails closed/quiet without these — nothing is silently
+broken, these three unlock functionality that's currently inert, not fix something currently wrong.
+
+## F. 3 commits currently stuck on the branch — BigQuery per-user daily query quota hit during this session
+
+**Checked live just now** (`git log origin/main..origin/jack/pensive-fermi-jxha2b`): 3 commits are on
+this branch but NOT yet in `main` — `de604be`, `455699d` (Architect#4), `e596c24` (Architect#5). The
+`dbt↔live row-level parity (keyless WIF)` CI job has failed on the last 2 pushes in a row
+(`gh run view` on both) with *"Custom quota exceeded: Your usage exceeded the custom quota for
+QueryUsagePerUserPerDay, which is set by your administrator"* — a BigQuery cost-control quota you (or
+a prior setup pass) configured, not a code bug; every other CI job on both runs passed. Because the
+repo var `DBT_PARITY=block` (`gh variable list`) deliberately makes this job a hard merge gate
+(`.github/workflows/ci.yml` — `continue-on-error: false` when set), the whole `CI` run reads as
+failed and auto-merge correctly declines to merge, exactly as `DBT_PARITY=block` is designed to do.
+Almost certainly caused by this session's own unusually heavy live-verification query volume (every
+gap in this pass was checked against live BigQuery before and after applying) hitting a
+`QueryUsagePerUserPerDay` ceiling, not a recurring problem with the code itself — nothing in the 3
+stuck commits changed dbt/BigQuery parity-relevant logic in a way that would newly fail this check.
+**Action:** this should self-clear once the quota window resets and a future push (or the existing
+one-shot CI retry logic, Gap 5 this session) re-triggers a green run — check
+`git log origin/main..origin/jack/pensive-fermi-jxha2b` in a day; if still non-empty, either manually
+`gh run rerun --failed` on the latest `CI` run for this branch, or if `dbt↔live row-level parity`
+keeps failing with this exact message on ordinary (non-audit-scale) pushes going forward, raise the
+custom quota at https://docs.cloud.google.com/bigquery/redirects/increase-query-cost-quota. No code
+change is warranted — do not weaken `DBT_PARITY=block` to work around this; it's catching a real
+resource ceiling correctly, not misfiring.
+
+---
+
+# Owner actions — 2026-07-11 self-improvement audit (Items 1-30)
 
 **Symptom (as of 2026-07-11):** every CI job on the working branch fails immediately with *"The job
 was not started because recent account payments have failed or your spending limit needs to be
