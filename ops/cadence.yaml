@@ -139,7 +139,7 @@ routines:
     monitor_class: daily_trading
     depends_on: [D2a]
     writes: [analytics.strategy_incubation_perf, events.strategy_lifecycle, state.arsenal_regime_coverage,
-             events.queue_events, events.decision_log, ops.alerts]
+             events.queue_events, events.decision_log, ops.alerts, events.shadow_positions]
     expected_trigger:
       recurrence: daily
       time_local: "20:00"
@@ -429,7 +429,7 @@ routines:
     schedule: "annual after A1,A2"
     monitor_class: annual_ftd
     depends_on: [A1, A2]
-    writes: [AI_Trading_Foundation.md, Strategy.md, events.queue_events, events.decision_log]
+    writes: [AI_Trading_Foundation.md, Strategy.md, events.queue_events, events.decision_log, state.strategy_candidates]
     expected_trigger:
       recurrence: custom_cron
       cron_utc: TO_POPULATE
