@@ -168,7 +168,8 @@ routines:
     schedule: "daily; if a review is attacker-complete and orchestrator_due<=today"
     monitor_class: queue_driven
     depends_on: [AR_att]
-    writes: [events.adversarial_reviews, events.regime_events, events.decision_log, calendar:confirm_order]
+    writes: [events.adversarial_reviews, events.regime_events, events.decision_log, calendar:confirm_order,
+             events.strategy_lifecycle, ops.roster_change_log]
     expected_trigger:
       recurrence: daily
       time_local: "18:00"
@@ -329,7 +330,7 @@ routines:
     schedule: "monthly after M4"
     monitor_class: monthly_ftd
     depends_on: [M4]
-    writes: [events.queue_events, events.strategy_lifecycle, events.decision_log, ops.alerts]
+    writes: [events.queue_events, events.strategy_lifecycle, ops.roster_change_log, events.decision_log, ops.alerts]
     expected_trigger:
       recurrence: custom_cron
       cron_utc: TO_POPULATE

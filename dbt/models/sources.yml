@@ -381,21 +381,26 @@ sources:
       # roster-derived enumeration + as-of-flow-date deposit split.
       - name: strategy_roster
         description: >
-          Latest-row-per-code roster state (bigquery/35). is_active = current_state IN (PROBE, ADOPTED);
-          adopted_date is the first-ADOPTED date used for the as-of-flow-date equal-split divisor.
+          Latest-row-per-code roster state (bigquery/35, live-superseded by bigquery/70). is_active =
+          current_state IN (PROBE, ADOPTED, RETIREMENT_PROPOSED); adopted_date is the first-ADOPTED
+          date used for the as-of-flow-date equal-split divisor.
         columns:
           - name: strategy_code
             description: Strategy code (A-E today; grows/shrinks via the lifecycle).
             tests:
               - not_null
           - name: is_active
-            description: TRUE when current_state IN (PROBE, ADOPTED) — the enumerated live set.
+            description: >
+              TRUE when current_state IN (PROBE, ADOPTED, RETIREMENT_PROPOSED) (bigquery/70) — the
+              enumerated live set; RETIREMENT_PROPOSED stays counted since a retirement proposal is
+              default-KEEP until an affirmative RETIRE verdict.
           - name: adopted_date
             description: First-ADOPTED date; NULL until adopted. Drives the as-of-flow-date deposit split.
       - name: active_strategy_codes
         description: >
-          Thin view of state.strategy_roster WHERE is_active (bigquery/35) — the roster-derived
-          enumeration site analytics.process_scorecard and other former UNNEST literals now read.
+          Thin view of state.strategy_roster WHERE is_active = PROBE|ADOPTED|RETIREMENT_PROPOSED
+          (bigquery/70) — the roster-derived enumeration site analytics.process_scorecard and other
+          former UNNEST literals now read.
         columns:
           - name: strategy_code
             description: Active strategy code.

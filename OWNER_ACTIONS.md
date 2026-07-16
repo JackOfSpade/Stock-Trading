@@ -10,6 +10,30 @@ act. Dated passes below; most recent first.
 
 ---
 
+# 2026-07-16 SISA retirement round-trip fix (LC-1/CC-4, loop-completeness audit) — local-only implementation round
+
+This pass was done as a **local-only** implementation (commits sit on the working branch, not
+pushed) per that round's ground rules — nothing below is live yet.
+
+## K. Apply `bigquery/70_retirement_proposed_is_active.sql` live via the BigQuery MCP/console
+
+**What it's for:** redefines `state.strategy_roster` so `is_active` includes `RETIREMENT_PROPOSED`
+(currently a strategy under retirement review silently drops out of `is_active` — and therefore out
+of M4 §H's kill-trigger sweep, `state.active_strategy_codes`, and `state.arsenal_rails.active_count`
+— for the whole adversarial-review window, even though a retirement PROPOSAL is default-KEEP).
+Supersedes the live `state.strategy_roster` view currently deployed from `bigquery/51_strategy_roster_dates_tz.sql`.
+Apply order: after `51_strategy_roster_dates_tz.sql`, same as every other `bigquery/NN_*.sql` file
+(see `bigquery/README.md`).
+
+**Action:** run the `CREATE OR REPLACE VIEW` statement in
+`bigquery/70_retirement_proposed_is_active.sql` via the BigQuery MCP or console (this session was
+not permitted to call BigQuery directly). Not urgent — `state.strategy_retirement_candidacy` requires
+`deployed_days >= 252` and the founding batch's clock started 2026-04-23, so SL4 cannot fire its
+first proposal before ~2027-04 (0 `RETIREMENT_PROPOSED` rows exist today), but apply it whenever
+convenient so it's in place well before then.
+
+---
+
 # 2026-07-16 Live-SQL-parity self-heal (RES-3, issue #10) — local-only implementation round
 
 This pass was done as a **local-only** implementation (commits sit on the working branch, not

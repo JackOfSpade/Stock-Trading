@@ -152,6 +152,9 @@ END;
 -- Presence of a row for change_key = that roster transition is DONE, so SL5 can never double-apply a
 -- fanout and no readiness view can re-fire a completed transition. change_key convention:
 -- '<code>:<FROM>-><TO>' e.g. 'F:UNDER_REVIEW->SHADOW', 'F:PAPER->PROBE', 'F:ADOPTED->TERMINATED'.
+-- Repeatable transitions (ADOPTED->RETIREMENT_PROPOSED, RETIREMENT_PROPOSED->ADOPTED) suffix the key
+-- with ':<YYYY-MM>' / ':<review_id>' so a post-cooldown re-proposal years later is a distinct key
+-- (loop-completeness audit 2026-07-16, LC-1).
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS `stock-trading-498512.ops.roster_change_log` (
   change_id STRING DEFAULT GENERATE_UUID(),
@@ -306,7 +309,8 @@ SELECT
 FROM latest l JOIN stamps s USING (strategy_code);
 
 -- state.active_strategy_codes — thin view the roster-derived enumeration sites read (bigquery/22,26 +
--- dbt strategy_nav). is_active = PROBE|ADOPTED.
+-- dbt strategy_nav). is_active = PROBE|ADOPTED|RETIREMENT_PROPOSED (bigquery/70 — a retirement
+-- PROPOSAL is default-KEEP and must not drop the strategy out of this enumeration mid-review).
 CREATE OR REPLACE VIEW `stock-trading-498512.state.active_strategy_codes` AS
 SELECT strategy_code
 FROM `stock-trading-498512.state.strategy_roster`
