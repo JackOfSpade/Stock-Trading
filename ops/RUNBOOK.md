@@ -681,6 +681,19 @@ dataset (or a custom role with only `bigquery.tables.updateData` on `ops.alerts`
 `bq query` an `INSERT` via the existing WIF auth — then it flows through the alert-emailer + weekly report
 + `state.system_health` like every other alert. Left off by default to keep CI read-only.
 
+**Remediation, not just detection (2026-07-15, self-improvement audit — CONFIRMED GAP
+red-ci-merge-conflict-no-remediation).** Before this, a red-CI branch just sat parked until a human
+noticed the stranded-branch-check issue — no automated remediation at all, even for the common case of a
+transient/flaky CI failure. `auto-merge-claude.yml` now requests **one** content-free re-run
+(`gh run rerun <id> --failed`) the first time a branch's CI reads a genuine terminal `failure`
+(`should_retry_failed_ci` in `scripts/auto_merge_decision.sh`, bounded to `run_attempt == 1` — GitHub's
+own retry counter is the idempotency marker, so this can never loop). The rerun's own completion
+re-triggers the workflow via the existing `workflow_run` trigger. A real code bug just fails again on
+attempt 2 and falls through to the stranded-branch alert above unchanged; this never touches branch
+content and never attempts to resolve a genuine merge conflict (that stays a human/session action via
+the `Auto-merge conflict:` PR — automating a rebase on ambiguous conflict content was judged too risky
+to do blindly).
+
 **Second incident — 2026-06-22 (a *different*, still-open gap: the never-pushed branch).** The 6/22 daily
 cycle (D1 `fervent-franklin-2cu646`, D2 `kind-thompson-1efmei`, D3 `great-brown-pf7414`) logged `completed`
 in `ops.run_log` with BigQuery outputs intact (queue drained 6/21, GOOGL adjudicated, marks/engine through

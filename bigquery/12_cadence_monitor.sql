@@ -73,6 +73,10 @@ routines AS (
     STRUCT('D2a' AS routine, 'daily_trading' AS schedule),
     STRUCT('D2'  AS routine, 'daily_trading' AS schedule),
     STRUCT('D3'  AS routine, 'daily_all'     AS schedule),
+    -- OPS0 (added 2026-07-15, self-improvement audit — CONFIRMED GAP catchup-notify-no-auto-refire).
+    -- Self-bootstrapping, same as every routine here: cannot alarm until it logs a first completed
+    -- run, so safe to register before its live trigger exists.
+    STRUCT('OPS0' AS routine, 'daily_all'    AS schedule),
     STRUCT('W1'  AS routine, 'weekly_sun'    AS schedule),
     STRUCT('W2'  AS routine, 'weekly_sun'    AS schedule),
     STRUCT('W3'  AS routine, 'weekly_sun'    AS schedule),

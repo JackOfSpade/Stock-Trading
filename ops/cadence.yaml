@@ -97,6 +97,26 @@ routines:
     monitor_class: daily_all
     depends_on: [D2]
     writes: [calendar:confirm_order, events.queue_events]
+  - id: OPS0
+    name: Cadence Watchdog
+    schedule: "after D3 daily"             # runs daily incl. non-trading days; deliberately after D3
+                                            # so a same-evening D3 catch-up-eligible miss (if any) is
+                                            # already reflected before OPS0 sweeps
+    monitor_class: daily_all
+    depends_on: []          # DELIBERATELY independent -- this routine's job is to unblock others; a
+                             # dependency on anything would recreate the exact failure class it exists
+                             # to fix (self-improvement audit 2026-07-15, CONFIRMED GAP
+                             # catchup-notify-no-auto-refire; Architect recommendation #1)
+    writes: [ops.catchup_refire_log, events.decision_log, ops.alerts]
+    notes: >
+      Meta-repair / cadence-dispatcher routine (added 2026-07-15). Reads
+      state.catchup_refire_readiness (bigquery/59_catchup_autofire.sql) and calls
+      RemoteTrigger run(<trigger_id>) for every catchup-safe daily/period miss not yet auto-attempted
+      today -- the daily D1/D3/SL3 tier plus the period-tier research/consolidation routines
+      (W1/W2/W3/W5, M1a/M1b/M2/M3/M5, Q1/Q2/Q3/SL1, A1/A2). NEVER re-fires D2/D2a/W4/M4/Q4/A3/SL4 (the
+      order-crafting / capital-adjacent routines) -- those keep their existing human-visible
+      missed_run/period_missed alert only. Idempotent via ops.catchup_refire_log (one attempt per
+      miss_key, ever). No chat question, ever.
   - id: SL3
     name: Incubation Monitor & Graduation
     schedule: "after D2a trading_day"     # SISA arsenal loop; needs D2a's fresh marks

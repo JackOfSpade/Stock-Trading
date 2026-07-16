@@ -20,6 +20,10 @@ FROM UNNEST([
   STRUCT('D2a', 'Read Claude_Task_Plan.md. Perform D2a. Broker Reconcile & Snapshot — regular routine.'),
   STRUCT('D2',  'Read Claude_Task_Plan.md. Perform D2. Daily Action Conversion — regular routine.'),
   STRUCT('D3',  'Read Claude_Task_Plan.md. Perform D3. Calendar Hygiene — regular routine.'),
+  -- OPS0 (added 2026-07-15, self-improvement audit — CONFIRMED GAP catchup-notify-no-auto-refire):
+  -- NOT YET ACTIVE, no live web-UI trigger yet (owner action to create one; self-bootstrapping in the
+  -- meantime, same as D2a's precedent above).
+  STRUCT('OPS0', 'Read Claude_Task_Plan.md. Perform OPS0. Cadence Watchdog — regular routine.'),
   STRUCT('W1',  'Read Claude_Task_Plan.md. Perform W1. Catalyst Calendar (Strategies A and C) — deep research.'),
   STRUCT('W2',  'Read Claude_Task_Plan.md. Perform W2. Post-Event Screen (Strategy B) — deep research.'),
   STRUCT('W3',  'Read Claude_Task_Plan.md. Perform W3. Open-Position Deep-Dive (Strategies A, B, C, E) — deep research.'),
