@@ -68,6 +68,16 @@ WHERE w.period_missed;
 -- miss_key: daily = '<routine>|<today>' (matches state.catchup_available's one-row-per-day shape);
 -- period = '<routine>|<period_start>' (a period is uniquely identified by its start date across all
 -- four period classes, so no separate week/month/quarter/year discriminator is needed).
+--
+-- YESTERDAY-TIER (resilience audit 2026-07-16 — "who watches the watcher"): state.catchup_available
+-- is same-day-only (needs_attention evaluates only the current operating day and flips at 21:00 MT,
+-- bigquery/48_cadence_monitor_unbounded.sql:52-59), so an OPS0 that no-shows or slips past local
+-- midnight (the 2026-07-13/14 5-7h evening-delay class) loses that day's daily-tier misses forever —
+-- by the next morning the miss rows have vanished from state.catchup_available. yesterday_daily_misses
+-- below keeps YESTERDAY's unrecovered D1/D3/SL3 misses visible one extra day so D3's OPS0-WATCHDOG-
+-- FALLBACK bullet (Claude_Task_Plan.md, ## D3) can sweep them. ops.catchup_refire_log still caps every
+-- miss_key at one attempt ever. Routine list hand-maintained in lockstep with bigquery/31's
+-- ['D1','D3','SL3'] (the same catchup-safe daily set — D2/D2a are deliberately excluded).
 CREATE OR REPLACE VIEW `stock-trading-498512.state.catchup_refire_readiness` AS
 WITH daily_misses AS (
   SELECT
@@ -81,8 +91,38 @@ period_misses AS (
     routine, 'period' AS tier, today AS as_of
   FROM `stock-trading-498512.state.period_catchup_available`
 ),
+yesterday_daily_misses AS (
+  SELECT
+    CONCAT(routine_id, '|', CAST(y.yday AS STRING)) AS miss_key,
+    routine_id AS routine, 'daily' AS tier, y.yday AS as_of
+  FROM UNNEST(['D1', 'D3', 'SL3']) AS routine_id
+  CROSS JOIN (SELECT today, DATE_SUB(today, INTERVAL 1 DAY) AS yday
+              FROM `stock-trading-498512.state.trading_day_today`) y
+  -- D1/SL3 are daily_trading (bigquery/12): only expected if yesterday was a trading day; D3 is daily_all
+  WHERE (routine_id = 'D3' OR EXISTS (
+          SELECT 1 FROM `stock-trading-498512.state.market_calendar` c
+          WHERE c.cal_date = y.yday AND c.is_trading_day))
+    -- monitored guard, same convention as state.cadence_watch (has EVER completed)
+    AND EXISTS (SELECT 1 FROM `stock-trading-498512.ops.run_log` rl
+                WHERE rl.routine = routine_id AND rl.status = 'completed')
+    -- actually missed yesterday
+    AND NOT EXISTS (SELECT 1 FROM `stock-trading-498512.ops.run_log` rl
+                    WHERE rl.routine = routine_id AND rl.status = 'completed'
+                      AND rl.run_date = y.yday)
+    -- suppressed once TODAY's run completed (D1/D3/SL3 are non-cumulative; a same-day run supersedes)
+    AND NOT EXISTS (SELECT 1 FROM `stock-trading-498512.ops.run_log` rl
+                    WHERE rl.routine = routine_id AND rl.status = 'completed'
+                      AND rl.run_date = y.today)
+    -- suppressed when TODAY's miss row for the same routine is already pending in daily_misses (after
+    -- 21:00 MT a routine that missed both days would otherwise emit two rows and get its trigger fired
+    -- twice in one OPS0 sweep; the refire produces the new day's output either way, so the today-row
+    -- alone suffices)
+    AND NOT EXISTS (SELECT 1 FROM daily_misses dm WHERE dm.routine = routine_id)
+),
 all_misses AS (
-  SELECT * FROM daily_misses UNION ALL SELECT * FROM period_misses
+  SELECT * FROM daily_misses
+  UNION ALL SELECT * FROM period_misses
+  UNION ALL SELECT * FROM yesterday_daily_misses
 )
 SELECT m.miss_key, m.routine, m.tier, m.as_of
 FROM all_misses m
