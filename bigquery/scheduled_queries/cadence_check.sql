@@ -32,13 +32,14 @@
 -- Claude_Task_Plan.md's Observability preamble (`CALL ops.sp_auto_resolve_alerts()` at the top of
 -- every routine run) is the primary, already-live path; this scheduled-query call is defense in
 -- depth for days with zero routine runs.
--- SQ_NAME: cadence_check  SQ_VERSION: v2 (self-improvement audit 2026-07-15, scheduled-query
+-- SQ_NAME: cadence_check  SQ_VERSION: v3 (self-improvement audit 2026-07-15, scheduled-query
 -- body-drift detection — bigquery/63_scheduled_query_version_registry.sql). Bump SQ_VERSION here AND
 -- state.expected_scheduled_query_versions' matching row on any future edit to this file's body.
 -- v2 (same-day, Gap 13): added the b3_trading_enabled_drift check below.
+-- v3 (same-day, Gap 19): added the backup_per_table_row_drop check below.
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v2', 'cadence_check.sql ran');
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v3', 'cadence_check.sql ran');
 
   -- RUNBOOK section 38 self-heal (ITEM 3, bigquery/38_run_log_selfheal.sql): backfill any
   -- ops.run_log completion row whose routine already has a landed-commit marker in
@@ -314,6 +315,21 @@ BEGIN
                      ' -- a gate AND-term may have been silently clobbered (see bigquery/47_trading_enabled_resync.sql)')
        FROM `stock-trading-498512.state.b3_trading_enabled_check`),
       (SELECT TO_JSON_STRING(t) FROM `stock-trading-498512.state.b3_trading_enabled_check` t));
+  END IF;
+
+  -- backup_per_table_row_drop (warning, self-improvement audit 2026-07-15 -- CONFIRMED GAP
+  -- backup-per-table-rows-write-only). state.backup_per_table_health (bigquery/65_backup_per_table_
+  -- health.sql) was write-only (RUNBOOK B2's per-table row-count evidence, INSERTed but never read).
+  -- Every backed-up table is append-only by design, so a day-over-day row-count DROP can only mean an
+  -- out-of-band deletion or a backup-query regression -- never legitimate activity.
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.backup_per_table_health` WHERE row_count_dropped) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'backup_per_table_row_drop',
+      CONCAT('Backup per-table row-count DROP detected (append-only table(s) should never shrink): ',
+             (SELECT STRING_AGG(CONCAT(dataset, '.', table_name, ' ', CAST(prior_rows AS STRING), '->', CAST(latest_rows AS STRING)), ', ' ORDER BY dataset, table_name)
+              FROM `stock-trading-498512.state.backup_per_table_health` WHERE row_count_dropped)),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(dataset, table_name, prior_run_date, prior_rows, latest_run_date, latest_rows)))
+       FROM `stock-trading-498512.state.backup_per_table_health` WHERE row_count_dropped));
   END IF;
 
   -- script_version_drift (warning, item 23 -- Apps Script drift detection). A deployed .gs (alert_emailer

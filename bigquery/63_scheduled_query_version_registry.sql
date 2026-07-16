@@ -45,7 +45,7 @@ USING (
   SELECT * FROM UNNEST([
     STRUCT('embed_pending' AS sq_name, 'v1' AS expected_version, 'initial version marker, 2026-07-15' AS git_note),
     STRUCT('daily_freshness_check', 'v1', 'initial version marker, 2026-07-15'),
-    STRUCT('cadence_check', 'v2', 'v2, 2026-07-15 (same day as initial marker): added the b3_trading_enabled_drift check (bigquery/64_b3_live_invariants.sql, Gap 13)'),
+    STRUCT('cadence_check', 'v3', 'v3, 2026-07-15 (same day as initial marker): v2 added the b3_trading_enabled_drift check (bigquery/64_b3_live_invariants.sql, Gap 13); v3 added the backup_per_table_row_drop check (bigquery/65_backup_per_table_health.sql, Gap 19)'),
     STRUCT('integrity_check', 'v1', 'initial version marker, 2026-07-15'),
     STRUCT('safety_critical_dml_watch', 'v1', 'initial version marker, 2026-07-15'),
     STRUCT('daily_staging_cap_check', 'v1', 'initial version marker, 2026-07-15'),
