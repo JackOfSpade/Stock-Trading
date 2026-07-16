@@ -13,6 +13,14 @@
 -- ===== Adversarial-review independence (theater-check measurement) =====
 -- Embeds each attacker + orchestrator transcript, then scores attacker-vs-orchestrator
 -- semantic similarity per review. Operationalizes router pre-mortem indicators 9.2/9.4.
+--
+-- SUPERSEDED BY analytics.theater_judge / analytics.theater_check_calibration (bigquery/11_theater_judge.sql
+-- — an AI.GENERATE_BOOL judge over the paired transcripts, per the P2 refinement noted below). No routine
+-- reads review_embeddings or theater_independence anymore (self-improvement audit 2026-07-15 cleanup pass
+-- confirmed zero live consumers). RETAINED, not dropped — matches this repo's established convention for
+-- superseded analytics objects (see ops/weekly_report/weekly_report.gs's own "retain, don't delete" note for
+-- its superseded views); review_embeddings is also a materialized ML.GENERATE_EMBEDDING table, so dropping
+-- it would additionally discard real Vertex AI embedding spend for zero benefit over just leaving it alone.
 CREATE OR REPLACE TABLE `stock-trading-498512.analytics.review_embeddings` AS
 SELECT review_id, role, strategy, theater_check, verdict, review_date,
        ml_generate_embedding_result AS embedding
