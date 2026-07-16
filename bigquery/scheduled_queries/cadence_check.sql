@@ -331,21 +331,23 @@ BEGIN
   END IF;
 
   -- constant_tuning_loop_heartbeat_missing (warning, item 11 -- self-improvement audit 2026-07-11).
-  -- meta_monitoring_heartbeat (ops/autonomy_levels.yaml) documents every active_auto loop should write
-  -- an "evaluated this cycle" heartbeat with a scheduled-query dead-man's switch alerting on absence --
-  -- LIVE today for strategy_arsenal (SL1/SL3/SL4) but the four constant-tuning loops
+  -- meta_monitoring_heartbeat (ops/autonomy_levels.yaml) documents every active_auto/shadow loop should
+  -- write an "evaluated this cycle" heartbeat with a scheduled-query dead-man's switch alerting on
+  -- absence -- LIVE today for strategy_arsenal (SL1/SL3/SL4) but the four constant-tuning loops
   -- (process_reliability, strategy_playbook, execution_quality_tuning, calibration_parameter_carveout)
   -- had NEITHER a heartbeat write NOR a routine that ever evaluated them at all until Claude_Task_Plan.md's
   -- W5 section was extended (item 11) to write ops.heartbeat(source='loop:<id>') every W5 firing,
-  -- regardless of whether that loop's own readiness view fired. Self-bootstrapping: a loop with ZERO
-  -- ops.heartbeat rows ever (never yet evaluated even once post-deployment) does not alarm -- only a loop
-  -- that HAS reported at least once and then goes quiet trips this, exactly the state.script_version_drift
-  -- / instruction_drift self-bootstrapping convention above. W5 runs weekly; the ~10-day window tolerates
-  -- one missed cycle before alarming. Staged-rollout WARNING (record-only), matching every other
-  -- self-bootstrapping monitor in this file.
+  -- regardless of whether that loop's own readiness view fired. cross_model_referee_independence (added
+  -- 2026-07-15, promoted dormant->shadow) joins the same list, same W5 bullet pattern. Self-bootstrapping:
+  -- a loop with ZERO ops.heartbeat rows ever (never yet evaluated even once post-deployment) does not
+  -- alarm -- only a loop that HAS reported at least once and then goes quiet trips this, exactly the
+  -- state.script_version_drift / instruction_drift self-bootstrapping convention above. W5 runs weekly;
+  -- the ~10-day window tolerates one missed cycle before alarming. Staged-rollout WARNING (record-only),
+  -- matching every other self-bootstrapping monitor in this file.
   IF EXISTS (
     SELECT 1 FROM UNNEST(['loop:process_reliability','loop:strategy_playbook',
-                           'loop:execution_quality_tuning','loop:calibration_parameter_carveout']) AS loop_source
+                           'loop:execution_quality_tuning','loop:calibration_parameter_carveout',
+                           'loop:cross_model_referee_independence']) AS loop_source
     WHERE EXISTS (SELECT 1 FROM `stock-trading-498512.ops.heartbeat` h WHERE h.source = loop_source)
       AND NOT EXISTS (
         SELECT 1 FROM `stock-trading-498512.ops.heartbeat` h
@@ -356,7 +358,8 @@ BEGIN
       CONCAT('Constant-tuning loop(s) previously reporting a weekly W5 heartbeat have gone quiet >10 days: ',
              (SELECT STRING_AGG(loop_source, ', ')
               FROM UNNEST(['loop:process_reliability','loop:strategy_playbook',
-                            'loop:execution_quality_tuning','loop:calibration_parameter_carveout']) AS loop_source
+                            'loop:execution_quality_tuning','loop:calibration_parameter_carveout',
+                            'loop:cross_model_referee_independence']) AS loop_source
               WHERE EXISTS (SELECT 1 FROM `stock-trading-498512.ops.heartbeat` h WHERE h.source = loop_source)
                 AND NOT EXISTS (
                   SELECT 1 FROM `stock-trading-498512.ops.heartbeat` h
