@@ -56,7 +56,13 @@ def test_extract_body_strips_view_preamble_and_trailing_semicolon():
     assert body == "SELECT 1 AS x\nFROM bar"
 
 
-def test_extract_body_strips_procedure_preamble_through_begin():
+def test_extract_body_retains_procedure_begin_end_wrapper():
+    # Fixed 2026-07-16 (live-sql-parity self-heal audit, RES-3 step 0a): live
+    # INFORMATION_SCHEMA.ROUTINES.routine_definition for a PROCEDURE INCLUDES the outer
+    # BEGIN...END wrapper (verified live on ops.sp_log_decision, definition starts 'BEGIN\n'), so
+    # the repo-side extraction must keep it too -- stripping it (the old behavior this test used to
+    # assert) made every procedure spuriously DRIFT against the live body, the ~24-object
+    # false-positive class behind issue #10.
     txt = (
         "CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_foo`(x INT64)\n"
         "BEGIN\n"
@@ -65,7 +71,23 @@ def test_extract_body_strips_procedure_preamble_through_begin():
     )
     m = clsp.CREATE_STMT.search(txt)
     body = clsp.extract_body(txt, m.start(), "PROCEDURE")
-    assert body == "SELECT x;\nEND"
+    assert body == "BEGIN\n  SELECT x;\nEND"
+
+
+def test_normalize_tail_matches_repo_extraction_despite_live_trailing_comments():
+    # A live-style body (INFORMATION_SCHEMA definition retaining a trailing comment/blank line the
+    # repo-side next-statement boundary already excludes) must normalize to the same text as the
+    # repo-extracted body once normalize_tail is applied to both (RES-3 step 0b).
+    repo_txt = (
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.foo` AS\n"
+        "SELECT 1 AS x\n"
+        "FROM bar;\n"
+    )
+    m = clsp.CREATE_STMT.search(repo_txt)
+    repo_body = clsp.extract_body(repo_txt, m.start(), "VIEW")
+
+    live_style_body = "SELECT 1 AS x\nFROM bar;\n-- trailing live comment\n\n"
+    assert clsp.normalize_tail(live_style_body) == repo_body
 
 
 def test_collapse_normalizes_whitespace_for_comparison():
