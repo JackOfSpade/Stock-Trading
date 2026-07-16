@@ -348,7 +348,11 @@ routines:
 # (see D2/D2a note below), so widening to 1hr would only push SL3 into the new W1 Sunday slot:
 #   D1 4:00 PM MT · D2a 4:20 PM MT · D2 5:15 PM MT (widened from 4:30 PM 2026-07-10 — D2a's real
 #     completion time varies 6-17+ min in ops.run_log; the old 10-min gap was too thin) · D3 6:30 PM MT ·
-#     SL3 8:00 PM MT · AR_att 5:30 PM MT · AR_orc 6:00 PM MT · SL2 7:00 PM MT · SL5 7:15 PM MT
+#     SL3 8:00 PM MT · AR_att 5:30 PM MT · AR_orc 6:00 PM MT · SL2 7:00 PM MT · SL5 7:15 PM MT ·
+#     OPS0 10:30 PM MDT / 9:30 PM MST (04:30 UTC FIXED cron, not the native DST-aware picker — resilience
+#     audit 2026-07-16, RES-1/OAE-1 merge; deliberately inside the 21:00-24:00 Denver daily-miss
+#     visibility window year-round, bigquery/48_cadence_monitor_unbounded.sql:52-59, and clear of the
+#     05:15 UTC cadence_check scheduled-query snapshot) — pending owner creation, see OWNER_ACTIONS.md §A
 #
 # WEEKLY (native Weekly picker, DST-aware) — RE-SPACED 2026-07-12, now a full 1hr apart (was 30 min;
 # see incident note above). W1 unchanged, W2-W5 moved:

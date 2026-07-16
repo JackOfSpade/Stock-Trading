@@ -22,12 +22,35 @@ checked against live BigQuery state / `gh` CLI output just now, not assumed from
 `OPS0. Cadence Watchdog` is a new regular routine (`Claude_Task_Plan.md`) with a full entry in
 `ops/triggers.json`, but has no live trigger yet — confirmed via
 `scripts/check_cadence_consistency.py`, which prints (non-fatally): *"ops/trigger_ids.json has no
-entry yet for `['OPS0']`"*. **Action:** create it the same way every other routine trigger was
-created (RemoteTrigger / Chrome console, per the existing pattern for the other 29 routines), then
-record its live trigger id in `ops/trigger_ids.json`. Suggested cadence: daily, off-peak, alongside
-the other daily-tier monitors — see the routine's own text for its dependency-free, read-mostly
-scope (it only reads `state.*_readiness` / `state.catchup_*` views and raises alerts; no live-order
-dependency, so timing is not sensitive).
+entry yet for `['OPS0']`"*.
+
+**AUTOMATED 2026-07-16 (resilience audit, RES-1/OAE-1 merge): this is no longer a required owner
+action.** `Claude_Task_Plan.md`'s D3 section now carries a generalized TRIGGER SELF-REGISTRATION
+step, and `OPS0`'s own STEP 2 item 3 now self-registers rather than paging the operator. On the
+next live session that reaches either of those branches with `RemoteTrigger` access, it will:
+verify no prior create already happened (checks `events.decision_log`
+`entry_type='trigger-self-registration'` and `ops.catchup_refire_log` `outcome='trigger_created'`
+first, so this is safe to leave to happen opportunistically — it will not double-create), then
+call `RemoteTrigger create` with instruction = `ops/triggers.json`'s `OPS0` string verbatim and
+cron `30 4 * * *` (fixed UTC = 10:30 PM MDT / 9:30 PM MST — deliberately inside the 21:00–24:00
+America/Denver daily-miss visibility window year-round per `bigquery/48_cadence_monitor_unbounded.sql:52-59`,
+and clear of the 05:15 UTC `cadence_check` scheduled-query snapshot; this slot is now recorded in
+`ops/cadence.yaml`'s WEB-UI TRIGGER AUDIT block so the self-registration step's slot lookup does
+not fail closed), record the returned id in `ops/trigger_ids.json`, log the decision, and raise an
+info alert. This section remains only as the fallback if a `trigger_create_unsupported` or
+`trigger_slot_unrecorded` warning ever fires, or if you'd rather not wait for an opportunistic
+self-registration run.
+
+**Manual fallback action, if you want it live sooner:** create a trigger the same way every other
+routine trigger was created (RemoteTrigger `create` / Chrome console) — name
+"OPS0. Cadence Watchdog — regular routine"; instruction/message content EXACTLY
+`Read Claude_Task_Plan.md. Perform OPS0. Cadence Watchdog — regular routine.` (verbatim from
+`ops/triggers.json` key `OPS0`); recurrence = a fixed-UTC daily cron `30 4 * * *` (10:30 PM MDT /
+9:30 PM MST — do NOT use the native DST-aware Daily picker with a plain local time here, since an
+API-created trigger stores a literal UTC cron, not a DST-relative local slot). Then record the
+returned `trig_...` id in `ops/trigger_ids.json` (alphabetical, between `M5` and `Q1`) with
+`"verified_via": "api"`, and run `python3 scripts/check_cadence_consistency.py` to confirm the
+missing-entry NOTE disappears.
 
 ## B. Re-paste 11 of 12 scheduled queries (Gap 12 — scheduled-query body-drift detection)
 
