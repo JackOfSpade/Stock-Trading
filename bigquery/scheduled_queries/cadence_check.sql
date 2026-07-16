@@ -32,14 +32,15 @@
 -- Claude_Task_Plan.md's Observability preamble (`CALL ops.sp_auto_resolve_alerts()` at the top of
 -- every routine run) is the primary, already-live path; this scheduled-query call is defense in
 -- depth for days with zero routine runs.
--- SQ_NAME: cadence_check  SQ_VERSION: v3 (self-improvement audit 2026-07-15, scheduled-query
+-- SQ_NAME: cadence_check  SQ_VERSION: v4 (self-improvement audit 2026-07-15, scheduled-query
 -- body-drift detection — bigquery/63_scheduled_query_version_registry.sql). Bump SQ_VERSION here AND
 -- state.expected_scheduled_query_versions' matching row on any future edit to this file's body.
 -- v2 (same-day, Gap 13): added the b3_trading_enabled_drift check below.
 -- v3 (same-day, Gap 19): added the backup_per_table_row_drop check below.
+-- v4 (2026-07-16): added ci_finding raise/auto-resolve (bigquery/67)
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v3', 'cadence_check.sql ran');
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v4', 'cadence_check.sql ran');
 
   -- RUNBOOK section 38 self-heal (ITEM 3, bigquery/38_run_log_selfheal.sql): backfill any
   -- ops.run_log completion row whose routine already has a landed-commit marker in
@@ -353,6 +354,34 @@ BEGIN
               FROM `stock-trading-498512.state.script_version_drift` WHERE drift)),
       (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(script_name, expected_version, last_reported_version, last_beat_ts)))
        FROM `stock-trading-498512.state.script_version_drift` WHERE drift));
+  END IF;
+
+  -- ci_finding (warning, self-improvement audit 2026-07-16, CC-1 -- CI-findings consumption-closure
+  -- bridge, bigquery/67_ci_findings_bridge.sql). Four CI guards (live-sql-parity, keyless-sa-audit,
+  -- wif-binding-audit, guard-config-audit) each open/refresh a deduped GitHub issue on a finding, but
+  -- nothing previously read those issues -- this closes the loop by raising/auto-resolving off
+  -- state.ci_findings_open, so a finding reaches the monitored alert-emailer channel even on a day
+  -- nobody manually reads GitHub Issues. AUTO-RESOLVE FIRST (matching the RECORD-THEN-RAISE convention
+  -- above): once state.ci_findings_open is empty, clear any still-open ci_finding alert -- this also
+  -- covers the case where the underlying workflow's next clean run wrote its unconditional resolved
+  -- row (see live-sql-parity.yml's "Close finding issue if resolved" step) after a manually-closed GH
+  -- issue would otherwise have stranded it. Record-only (does NOT join raise_msg), matching
+  -- script_version_drift / ddl_drift / restore_stale above -- an open CI finding is a config/drift bug
+  -- to fix, not a trading halt.
+  UPDATE `stock-trading-498512.ops.alerts`
+     SET resolved = TRUE, resolved_ts = CURRENT_TIMESTAMP(),
+         resolved_note = CONCAT('auto-resolved: state.ci_findings_open empty. ', COALESCE(resolved_note, ''))
+   WHERE NOT resolved AND category = 'ci_finding'
+     AND NOT EXISTS (SELECT 1 FROM `stock-trading-498512.state.ci_findings_open`);
+
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.ci_findings_open`) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'ci_finding',
+      CONCAT('Open CI guard finding(s): ',
+             (SELECT STRING_AGG(CONCAT(workflow, '/', finding_key), ', ' ORDER BY workflow)
+              FROM `stock-trading-498512.state.ci_findings_open`)),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(workflow, finding_key, CAST(finding_ts AS STRING) AS finding_ts, run_url)))
+       FROM `stock-trading-498512.state.ci_findings_open`));
   END IF;
 
   -- constant_tuning_loop_heartbeat_missing (warning, item 11 -- self-improvement audit 2026-07-11).

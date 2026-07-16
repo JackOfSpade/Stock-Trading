@@ -152,6 +152,12 @@ jobs:
               --body-file /tmp/body.md
           fi
 
+          # CI-findings bridge (2026-07-16, CC-1): inconclusive counts as open here, matching the
+          # issue behavior above. Non-fatal until the table-scoped gh-ci-runner@ dataEditor grant on
+          # ops.ci_findings lands (OWNER_ACTIONS.md).
+          detail=$(printf '%s: ' "${{ steps.audit.outputs.result }}"; head -c 4000 /tmp/audit_finding.txt 2>/dev/null || echo "no detail file")
+          bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_detail:STRING:${detail}" --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("keyless-sa-audit","keyless_sa","open",@p_detail,@p_url)' || echo "::warning::ops.ci_findings insert failed — bridge inactive until the gh-ci-runner@ grant lands (OWNER_ACTIONS.md); GH issue path unaffected."
+
       - name: Close finding issue if resolved
         if: always() && steps.guard.outputs.skip == 'false' && steps.audit.outputs.result == 'ok'
         env:
@@ -164,3 +170,8 @@ jobs:
             gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Resolved — the audit is now clean (zero user-managed keys on all audited SAs, RUNBOOK §25 E2). Closing."
             gh issue close "$existing" --repo "$GITHUB_REPOSITORY"
           fi
+
+          # CI-findings bridge (2026-07-16, CC-1): unconditional resolved-row INSERT so a
+          # manually-closed GH issue never strands an open ops.ci_findings row. Non-fatal until the
+          # grant lands.
+          bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("keyless-sa-audit","keyless_sa","resolved","audit clean this run",@p_url)' || echo "::warning::ops.ci_findings resolved-row insert failed — bridge inactive until the gh-ci-runner@ grant lands; GH issue path unaffected."

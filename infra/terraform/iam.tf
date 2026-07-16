@@ -83,3 +83,25 @@ resource "google_bigquery_table_iam_member" "gh_ci_runner_routine_commit_markers
   role       = "roles/bigquery.dataEditor"
   member     = "serviceAccount:${var.ci_service_account_email}"
 }
+
+###############################################################################
+# gh-ci-runner@ table-scoped write grant -- ops.ci_findings ONLY
+# (self-improvement audit 2026-07-16, CC-1 / issue #10, bigquery/67_ci_findings_bridge.sql)
+#
+# SPEC-ONLY, same convention as gh_ci_runner_routine_commit_markers_editor above -- declare only,
+# never `terraform apply` (CLAUDE.md "Terraform / full IaC adoption" settled decision). The live
+# grant is the exact `bq add-iam-policy-binding` command in OWNER_ACTIONS.md, not this resource.
+#
+# WHY TABLE-SCOPED: four CI guard workflows (live-sql-parity, keyless-sa-audit, wif-binding-audit,
+# guard-config-audit) each need to INSERT open/resolved marker rows into exactly one table
+# (ops.ci_findings) -- nowhere else in ops.*, in particular nowhere near ops.run_log or ops.alerts
+# themselves (those stay written only by BigQuery-side procedures/routines under the operator's own
+# identity, same boundary as the routine_commit_markers grant above).
+###############################################################################
+resource "google_bigquery_table_iam_member" "gh_ci_runner_ci_findings_editor" {
+  project    = var.project_id
+  dataset_id = "ops"
+  table_id   = "ci_findings"
+  role       = "roles/bigquery.dataEditor"
+  member     = "serviceAccount:${var.ci_service_account_email}"
+}

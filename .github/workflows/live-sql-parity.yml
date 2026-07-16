@@ -96,6 +96,14 @@ jobs:
               --body-file /tmp/body.md
           fi
 
+          # CI-findings bridge (2026-07-16, CC-1 / issue #10): mirror this finding into
+          # ops.ci_findings so a BigQuery-side consumer (D3's adjudication step, cadence_check.sql's
+          # ci_finding alert) sees it too, independent of anyone reading GitHub Issues. Non-fatal —
+          # inactive (warns only) until the table-scoped gh-ci-runner@ dataEditor grant on
+          # ops.ci_findings lands (OWNER_ACTIONS.md).
+          detail=$(head -c 4000 /tmp/parity_out.txt)
+          bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_detail:STRING:${detail}" --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("live-sql-parity","live_sql_parity","open",@p_detail,@p_url)' || echo "::warning::ops.ci_findings insert failed — bridge inactive until the gh-ci-runner@ grant lands (OWNER_ACTIONS.md); GH issue path unaffected."
+
       - name: Close finding issue if resolved
         if: always() && steps.guard.outputs.skip == 'false' && steps.parity.outputs.result == 'ok'
         env:
@@ -108,3 +116,9 @@ jobs:
             gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Resolved — every checked object's live definition now matches its final-effective bigquery/*.sql source. Closing."
             gh issue close "$existing" --repo "$GITHUB_REPOSITORY"
           fi
+
+          # CI-findings bridge (2026-07-16, CC-1): unconditional resolved-row INSERT, even when no GH
+          # issue was open to close — a manually-closed issue must not strand an open ops.ci_findings
+          # row (state.ci_findings_open / cadence_check.sql's ci_finding alert would otherwise never
+          # auto-clear). Non-fatal until the grant lands.
+          bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("live-sql-parity","live_sql_parity","resolved","parity clean this run",@p_url)' || echo "::warning::ops.ci_findings resolved-row insert failed — bridge inactive until the gh-ci-runner@ grant lands; GH issue path unaffected."

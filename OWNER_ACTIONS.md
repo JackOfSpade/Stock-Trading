@@ -6,7 +6,52 @@ handful of things only you can do — a GCP console click, a `bq`/`gcloud` comma
 credentials, an Apps Script paste (`script.google.com` isn't reachable from here), or a tax election
 with your broker. Nothing in this system is blocked or unsafe while these are outstanding — every
 item below is explicitly designed to fail closed / no-op / stay on its existing fallback until you
-act. Two dated passes below; most recent first.
+act. Three dated passes below; most recent first.
+
+---
+
+# 2026-07-16 CI findings bridge (CC-1, issue #10 consumption-closure)
+
+## G. GCP IAM grant — let CI write CI-guard findings into BigQuery (CC-1)
+
+**What it's for:** four CI guards (`live-sql-parity.yml` daily, `keyless-sa-audit.yml` /
+`wif-binding-audit.yml` / `guard-config-audit.yml` monthly) each open/refresh a deduped GitHub issue
+on a finding, but nothing automated ever reads those issues today — live-sql-parity's own Actions run
+even stays green on drift (issue #10, opened 2026-07-16T09:34Z, unconsumed while run 29487150663
+concluded `success`). `bigquery/67_ci_findings_bridge.sql` + the four workflow edits wire each guard
+to also INSERT an open/resolved marker row into `ops.ci_findings`, consumed by `cadence_check.sql`
+(raises/auto-resolves a `ci_finding` warning, emailed via the alert-emailer) and by D3's new
+CI-FINDINGS ADJUDICATION step (`Claude_Task_Plan.md`). This grant is what makes the write actually
+land — until it does, every INSERT no-ops with a `::warning::` annotation and the GH-issue path is
+completely unaffected (no functional loss today).
+
+**Action — run once, with your own `gcloud`/`bq` credentials:**
+```
+bq add-iam-policy-binding \
+  --member="serviceAccount:gh-ci-runner@stock-trading-498512.iam.gserviceaccount.com" \
+  --role="roles/bigquery.dataEditor" \
+  stock-trading-498512:ops.ci_findings
+```
+This is a **table-scoped** grant — `gh-ci-runner@` stays read-only everywhere else in `ops.*` (it
+already has `jobUser`/`dataViewer`/`connectionUser` project-wide per RUNBOOK §6/§15; this adds write
+access to exactly one table). This is the **second instance** of the same narrow class already proven
+live for `ops.routine_commit_markers` (item 3 below; rows `source='auto-merge-claude.yml'` verified
+live 2026-07-14/07-15).
+
+**If skipped:** workflows warn and behave exactly as today — the GitHub-issue finding/dedup/close path
+is entirely independent of this grant.
+
+The grant's scope is also declared (never applied) in `infra/terraform/iam.tf` as
+`google_bigquery_table_iam_member.gh_ci_runner_ci_findings_editor`, mirroring
+`gh_ci_runner_routine_commit_markers_editor` — per the standing Terraform-is-spec-only decision
+(`CLAUDE.md`), do NOT `terraform apply` this file; the `bq` command above is the real grant.
+
+**Also needs a re-paste (folds into item B below, now further updated):** `bigquery/67`'s registry
+MERGE bumps `state.expected_scheduled_query_versions`'s `cadence_check` row to `v4`; the live
+`cadence_check` scheduled query needs the updated body (SQ_VERSION v3→v4, adds the `ci_finding`
+raise/auto-resolve block) re-pasted in the same console session per `bigquery/README.md`'s convention
+— apply `bigquery/67_ci_findings_bridge.sql` and re-paste `cadence_check.sql` together, since the
+registry bump is what keeps `state.scheduled_query_version_drift` green afterward.
 
 ---
 
@@ -62,8 +107,10 @@ Every file in `bigquery/scheduled_queries/*.sql` now self-reports a version mark
 not a real cron firing, but either way it's already current — skip it). **Action:** re-paste the
 current repo body of each of the other 11 files into its existing BigQuery Studio → Scheduled
 Queries entry (same paste-and-save flow as every prior scheduled-query update, `ops/RUNBOOK.md §1`):
-`backup_events_export`, `cadence_check` (note: bumped v1→v3 this pass — picks up 2 new invariant
-checks, `b3_trading_enabled_drift` and `backup_per_table_row_drop`), `daily_freshness_check`,
+`backup_events_export`, `cadence_check` (note: bumped v1→v3 this pass, **now further bumped v3→v4
+by the 2026-07-16 CI-findings bridge pass — item G above** — picks up 2 new invariant checks,
+`b3_trading_enabled_drift` and `backup_per_table_row_drop`, plus the `ci_finding` raise/auto-resolve
+block; re-paste the CURRENT (v4) repo body, not the v3 one), `daily_freshness_check`,
 `daily_staging_cap_check`, `delivery_canary`, `fire_drill_alert_lifecycle`, `fire_drill_order_guard`,
 `integrity_check`, `ops_export`, `restore_drill`, `safety_critical_dml_watch` (this one may not be
 registered as a scheduled query at all yet — it was also 2026-07-11 item #2 below; if it's not live,

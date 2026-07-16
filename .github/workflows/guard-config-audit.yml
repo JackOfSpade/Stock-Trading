@@ -32,6 +32,7 @@ permissions:
   contents: read
   issues: write
   actions: read   # 2026-07-15 fix: workflow-STATE check below (disabled_manually) reads the Actions API
+  id-token: write # 2026-07-16 fix (CC-1): CI-findings bridge WIF auth (ops.ci_findings write), optional
 
 concurrency:
   group: guard-config-audit
@@ -41,6 +42,22 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4  # required for the local ./.github/actions/gcp-wif-auth composite action below
+      - name: Gate on WIF (CI-findings bridge only — the audit itself below is unconditional)
+        id: wifguard
+        run: |
+          if [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::CI-findings bridge (ops.ci_findings write) skipped — set vars.GCP_WIF_PROVIDER/GCP_WIF_SERVICE_ACCOUNT to enable. The guard-config audit itself still runs and still fails on a load-bearing finding regardless (auditing unset WIF vars is part of its purpose)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: GCP WIF auth + gcloud setup (provides the bq CLI, for the CI-findings bridge only)
+        if: steps.wifguard.outputs.skip == 'false'
+        uses: ./.github/actions/gcp-wif-auth
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
       - name: Evaluate guard config
         id: eval
         env:
@@ -141,6 +158,15 @@ jobs:
               --title "⚠️ Guard config: load-bearing alert/backup channel still dormant" \
               --body-file /tmp/body.md
           fi
+
+          # CI-findings bridge (2026-07-16, CC-1): non-fatal, and only attempted when the CI-findings
+          # bridge WIF auth actually ran (vars unset -> no bq CLI credentials -> skip cleanly). Table-
+          # scoped gh-ci-runner@ dataEditor grant on ops.ci_findings still needed for the write to land
+          # (OWNER_ACTIONS.md); GH issue path above is unaffected either way.
+          if [ -n "${{ vars.GCP_WIF_PROVIDER }}" ]; then
+            detail=$(head -c 4000 /tmp/loadbearing.txt)
+            bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_detail:STRING:${detail}" --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("guard-config-audit","guard_config","open",@p_detail,@p_url)' || echo "::warning::ops.ci_findings insert failed — bridge inactive until the gh-ci-runner@ grant lands (OWNER_ACTIONS.md); GH issue path unaffected."
+          fi
           exit 1   # surface red in the Actions tab too
 
       - name: Close stale alert issue if resolved
@@ -154,4 +180,11 @@ jobs:
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Resolved — all load-bearing guards are now configured (or WIF was removed, resetting to the pre-bootstrap state). Closing."
             gh issue close "$existing" --repo "$GITHUB_REPOSITORY"
+          fi
+
+          # CI-findings bridge (2026-07-16, CC-1): unconditional resolved-row INSERT (when the bridge's
+          # own WIF auth ran) so a manually-closed GH issue never strands an open ops.ci_findings row.
+          # Non-fatal until the grant lands; skipped cleanly (no bq CLI) when WIF vars are unset.
+          if [ -n "${{ vars.GCP_WIF_PROVIDER }}" ]; then
+            bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("guard-config-audit","guard_config","resolved","audit clean this run",@p_url)' || echo "::warning::ops.ci_findings resolved-row insert failed — bridge inactive until the gh-ci-runner@ grant lands; GH issue path unaffected."
           fi

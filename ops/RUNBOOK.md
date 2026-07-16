@@ -214,6 +214,11 @@ value, and a live dry-run does **not** catch the runtime-only bugs we actually h
 `EXPORT DATA` JSON-serialization error — its own comment notes dry-run misses it). So the CI service
 account (`gh-ci-runner`) is kept **read-only** (`jobUser` + `dataViewer` + `connectionUser`).
 
+This read-only posture now carries two narrow, table-scoped append-only exceptions (never a dataset-
+or project-wide grant): `ops.routine_commit_markers` (OWNER_ACTIONS.md §3) and `ops.ci_findings`
+(bigquery/67_ci_findings_bridge.sql, OWNER_ACTIONS.md, self-improvement audit 2026-07-16 CC-1) — each
+grants `gh-ci-runner@` write to exactly one table, nothing else in `ops.*`.
+
 WIF itself is set up (provider `github-pool/github-provider`, SA `gh-ci-runner@…`, repo variables
 `GCP_WIF_PROVIDER` + `GCP_WIF_SERVICE_ACCOUNT`) and powers any future keyless need (e.g. a `dbt build`
 or §16's dashboard). As of 2026-06-22 it also powers the **`dbt-parity` row-level drift gate, which now
@@ -664,6 +669,16 @@ write. **Optional `ops.alerts` upgrade:** grant the WIF SA `roles/bigquery.dataE
 dataset (or a custom role with only `bigquery.tables.updateData` on `ops.alerts`) and have the workflow
 `bq query` an `INSERT` via the existing WIF auth — then it flows through the alert-emailer + weekly report
 + `state.system_health` like every other alert. Left off by default to keep CI read-only.
+
+**IMPLEMENTED VARIANT (2026-07-16, CC-1, issue #10):** the narrow, table-scoped form of this same
+upgrade is now live-wired (pending the OWNER_ACTIONS.md grant) for the four CI *guard* workflows
+(`live-sql-parity.yml`, `keyless-sa-audit.yml`, `wif-binding-audit.yml`, `guard-config-audit.yml`) —
+not this workflow — via `ops.ci_findings` / `state.ci_findings_open`
+(`bigquery/67_ci_findings_bridge.sql`), consumed by `cadence_check.sql`'s `ci_finding` alert and D3's
+adjudication step. It grants write to exactly `ops.ci_findings`, not the whole `ops` dataset, keeping
+the "read-only except one narrow append-only table" posture this section otherwise describes as
+all-or-nothing. `stranded-branch-check.yml` could adopt the identical pattern if this gap is ever
+revisited.
 
 **Remediation, not just detection (2026-07-15, self-improvement audit — CONFIRMED GAP
 red-ci-merge-conflict-no-remediation).** Before this, a red-CI branch just sat parked until a human

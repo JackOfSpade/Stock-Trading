@@ -9,7 +9,11 @@ name: Stranded-branch check
 #
 # Delivery is a GitHub issue, NOT ops.alerts, on purpose: writing ops.alerts from CI would
 # require granting the (deliberately read-only, RUNBOOK §6) CI identity BigQuery write. See
-# §20 for the optional ops.alerts upgrade.
+# §20 for the optional ops.alerts upgrade -- now IMPLEMENTED for four other CI guards (not yet
+# this workflow) via the table-scoped ops.ci_findings bridge (bigquery/67_ci_findings_bridge.sql,
+# live-sql-parity.yml / keyless-sa-audit.yml / wif-binding-audit.yml / guard-config-audit.yml,
+# self-improvement audit 2026-07-16 CC-1) -- see that file + Claude_Task_Plan.md's D3
+# CI-FINDINGS ADJUDICATION bullet for the pattern this workflow could adopt if ever extended.
 
 on:
   schedule:
