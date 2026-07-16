@@ -45,7 +45,7 @@ USING (
   SELECT * FROM UNNEST([
     STRUCT('embed_pending' AS sq_name, 'v1' AS expected_version, 'initial version marker, 2026-07-15' AS git_note),
     STRUCT('daily_freshness_check', 'v1', 'initial version marker, 2026-07-15'),
-    STRUCT('cadence_check', 'v3', 'v3, 2026-07-15 (same day as initial marker): v2 added the b3_trading_enabled_drift check (bigquery/64_b3_live_invariants.sql, Gap 13); v3 added the backup_per_table_row_drop check (bigquery/65_backup_per_table_health.sql, Gap 19)'),
+    STRUCT('cadence_check', 'v4', 'v3, 2026-07-15 (same day as initial marker): v2 added the b3_trading_enabled_drift check (bigquery/64_b3_live_invariants.sql, Gap 13); v3 added the backup_per_table_row_drop check (bigquery/65_backup_per_table_health.sql, Gap 19). v4, 2026-07-16 (consolidated consumption-closure + resilience audit): added the ci_finding raise/auto-resolve block (bigquery/67_ci_findings_bridge.sql, CC-1); wired scheduled_query_version_drift / probe_funding_stalled / cash_flows_backfill_broken record-only warning checks (bigquery/63/62/68, CC-3+RES-4); added loop:research_quality_feedback to both constant_tuning_loop_heartbeat_missing dead-man UNNEST lists (LC-4 cadence_check portion); extended the #14 auto-age category list with immediate_action_flagged + process_scorecard_signal (CC-7)'),
     STRUCT('integrity_check', 'v1', 'initial version marker, 2026-07-15'),
     STRUCT('safety_critical_dml_watch', 'v1', 'initial version marker, 2026-07-15'),
     STRUCT('daily_staging_cap_check', 'v1', 'initial version marker, 2026-07-15'),

@@ -37,7 +37,11 @@
 -- state.expected_scheduled_query_versions' matching row on any future edit to this file's body.
 -- v2 (same-day, Gap 13): added the b3_trading_enabled_drift check below.
 -- v3 (same-day, Gap 19): added the backup_per_table_row_drop check below.
--- v4 (2026-07-16): added ci_finding raise/auto-resolve (bigquery/67)
+-- v4 (2026-07-16, consolidated): added ci_finding raise/auto-resolve (bigquery/67, CC-1);
+-- scheduled_query_version_drift + probe_funding_stalled + cash_flows_backfill_broken record-only
+-- warning blocks (bigquery/63/62/68, CC-3/RES-4); loop:research_quality_feedback added to both
+-- constant_tuning_loop_heartbeat_missing UNNEST lists (LC-4 cadence_check portion); #14 auto-age
+-- category list extended with immediate_action_flagged + process_scorecard_signal (CC-7).
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';
   CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v4', 'cadence_check.sql ran');
@@ -80,7 +84,8 @@ BEGIN
     -- day-count, defeating sp_raise_alert_once's dedup and letting undeduped rows accumulate
     -- indefinitely since it was the one self-healing class missing from this auto-age list. The
     -- message fix below (stable text) restores real dedup; this stays as defense-in-depth.
-    AND category IN ('stranded_session', 'instruction_drift', 'calendar_runway_low', 'routine_stalled', 'trigger_missing')
+    -- immediate_action_flagged + process_scorecard_signal added 2026-07-16 (consumption-closure): point-in-time W3/M3/W5 signals, consumed autonomously by W4/M4 within days; 7-day age-out stops forever-open dashboard rows. A persisting condition is simply re-raised.
+    AND category IN ('stranded_session', 'instruction_drift', 'calendar_runway_low', 'routine_stalled', 'trigger_missing', 'immediate_action_flagged', 'process_scorecard_signal')
     AND alert_ts < TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY);
 
   -- missed_run (critical) — a monitored routine expected today did not complete.
@@ -356,6 +361,50 @@ BEGIN
        FROM `stock-trading-498512.state.script_version_drift` WHERE drift));
   END IF;
 
+  -- scheduled_query_version_drift (warning, consumption-closure audit 2026-07-16 -- bigquery/63's
+  -- drift view previously had NO automated reader anywhere; verbatim mirror of the script_version_drift
+  -- block directly above, same self-bootstrapping convention: monitored=FALSE rows can never fire.
+  -- Self-reference caveat: this block cannot report THIS query's own regression -- a regressed body
+  -- lacks the block -- so Claude_Task_Plan.md's D3 UNWIRED-MONITOR BRIDGE bullet also raises this
+  -- category for cadence_check itself (self-retiring once this body's own heartbeat matches v4).
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.scheduled_query_version_drift` WHERE drift) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`('warning','scheduled.cadence','scheduled_query_version_drift',
+      CONCAT('Scheduled-query body drift (live console body != repo SQ_VERSION): ',
+        (SELECT STRING_AGG(CONCAT(sq_name,' (expected ',expected_version,', reported ',COALESCE(last_reported_version,'NONE'),')'), ', ' ORDER BY sq_name)
+         FROM `stock-trading-498512.state.scheduled_query_version_drift` WHERE drift)),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(sq_name, expected_version, last_reported_version, CAST(last_beat_ts AS STRING) AS last_beat_ts)))
+       FROM `stock-trading-498512.state.scheduled_query_version_drift` WHERE drift));
+  END IF;
+
+  -- probe_funding_stalled (warning, consumption-closure audit 2026-07-16) -- state.strategy_probe_
+  -- funding_stalled (bigquery/62_probe_stake_funding.sql) flags a PROBE-phase newcomer frozen below
+  -- the $2,000 floor for >=90 days; previously had no automated reader at all.
+  -- DEDUP-CRITICAL: message lists ONLY strategy codes (stable while the stalled set is stable); the
+  -- daily-changing numbers (funding_gap_dollars, days_since_probe_entry) live ONLY in the JSON
+  -- payload, because ops.sp_raise_alert_once dedups on exact unresolved (category, message) -- a
+  -- day-counter in the message would insert a new unresolved warning row + email EVERY night per
+  -- stalled newcomer.
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.strategy_probe_funding_stalled`) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`('warning','scheduled.cadence','probe_funding_stalled',
+      CONCAT('PROBE newcomer(s) frozen below the $2,000 floor >=90 days: ',
+        (SELECT STRING_AGG(strategy_code, ', ' ORDER BY strategy_code)
+         FROM `stock-trading-498512.state.strategy_probe_funding_stalled`),
+        ' — a deposit (sanctioned residual touch) or FIFO redistribution priority check is needed; per-strategy gap/days in payload'),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(strategy_code, funding_gap_dollars, days_since_probe_entry)))
+       FROM `stock-trading-498512.state.strategy_probe_funding_stalled`));
+  END IF;
+
+  -- cash_flows_backfill_broken (warning, consumption-closure audit 2026-07-16) -- state.cash_flows_
+  -- backfill_check (bigquery/68_cash_flows_backfill_check_dated.sql, date-scoped redefinition of the
+  -- bigquery/22 apply-time gate) flags a backdated/duplicate/typo events.cash_flows row dated
+  -- <= 2026-07-03 that shifts the NAV/sizing baseline every downstream consumer relies on. A future
+  -- legitimate deposit cannot flip this (view is date-scoped), so it is now safe to poll nightly.
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.cash_flows_backfill_check` WHERE NOT reconciled) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`('warning','scheduled.cadence','cash_flows_backfill_broken',
+      'events.cash_flows rows dated <= 2026-07-03 no longer sum to the 9446.86 seed total — a backdated/duplicate/typo flow has shifted the NAV/sizing baseline; investigate before trusting analytics.strategy_nav (bigquery/68)',
+      (SELECT TO_JSON_STRING(t) FROM `stock-trading-498512.state.cash_flows_backfill_check` t));
+  END IF;
+
   -- ci_finding (warning, self-improvement audit 2026-07-16, CC-1 -- CI-findings consumption-closure
   -- bridge, bigquery/67_ci_findings_bridge.sql). Four CI guards (live-sql-parity, keyless-sa-audit,
   -- wif-binding-audit, guard-config-audit) each open/refresh a deduped GitHub issue on a finding, but
@@ -401,7 +450,7 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM UNNEST(['loop:process_reliability','loop:strategy_playbook',
                            'loop:execution_quality_tuning','loop:calibration_parameter_carveout',
-                           'loop:cross_model_referee_independence']) AS loop_source
+                           'loop:cross_model_referee_independence','loop:research_quality_feedback']) AS loop_source
     WHERE EXISTS (SELECT 1 FROM `stock-trading-498512.ops.heartbeat` h WHERE h.source = loop_source)
       AND NOT EXISTS (
         SELECT 1 FROM `stock-trading-498512.ops.heartbeat` h
@@ -413,7 +462,7 @@ BEGIN
              (SELECT STRING_AGG(loop_source, ', ')
               FROM UNNEST(['loop:process_reliability','loop:strategy_playbook',
                             'loop:execution_quality_tuning','loop:calibration_parameter_carveout',
-                            'loop:cross_model_referee_independence']) AS loop_source
+                            'loop:cross_model_referee_independence','loop:research_quality_feedback']) AS loop_source
               WHERE EXISTS (SELECT 1 FROM `stock-trading-498512.ops.heartbeat` h WHERE h.source = loop_source)
                 AND NOT EXISTS (
                   SELECT 1 FROM `stock-trading-498512.ops.heartbeat` h

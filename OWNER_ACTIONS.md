@@ -48,10 +48,19 @@ The grant's scope is also declared (never applied) in `infra/terraform/iam.tf` a
 
 **Also needs a re-paste (folds into item B below, now further updated):** `bigquery/67`'s registry
 MERGE bumps `state.expected_scheduled_query_versions`'s `cadence_check` row to `v4`; the live
-`cadence_check` scheduled query needs the updated body (SQ_VERSION v3→v4, adds the `ci_finding`
-raise/auto-resolve block) re-pasted in the same console session per `bigquery/README.md`'s convention
-— apply `bigquery/67_ci_findings_bridge.sql` and re-paste `cadence_check.sql` together, since the
-registry bump is what keeps `state.scheduled_query_version_drift` green afterward.
+`cadence_check` scheduled query needs the updated body (SQ_VERSION v3→v4 — since consolidated same
+day with the CC-3/RES-4/CC-7 consumption-closure pass into ONE v4, not a further v5 — adds the
+`ci_finding` raise/auto-resolve block, the `scheduled_query_version_drift` / `probe_funding_stalled` /
+`cash_flows_backfill_broken` record-only warning blocks, `loop:research_quality_feedback` in both
+dead-man UNNEST lists, and the `immediate_action_flagged`/`process_scorecard_signal` auto-age
+additions) re-pasted in the same console session per `bigquery/README.md`'s convention — apply
+`bigquery/67_ci_findings_bridge.sql` and `bigquery/68_cash_flows_backfill_check_dated.sql`, then
+re-paste `cadence_check.sql` (single consolidated v4 body), since the registry bump is what keeps
+`state.scheduled_query_version_drift` green afterward. **Also residual (not owner-blocked, but not
+yet run this pass):** `bigquery/63_scheduled_query_version_registry.sql`'s MERGE seed row for
+`cadence_check` was updated in-repo to `v4` with a consolidated git_note — a future BigQuery-MCP
+session must re-run that MERGE statement live so `state.expected_scheduled_query_versions` matches
+before the console re-paste below is checked against it.
 
 ---
 
@@ -108,9 +117,13 @@ not a real cron firing, but either way it's already current — skip it). **Acti
 current repo body of each of the other 11 files into its existing BigQuery Studio → Scheduled
 Queries entry (same paste-and-save flow as every prior scheduled-query update, `ops/RUNBOOK.md §1`):
 `backup_events_export`, `cadence_check` (note: bumped v1→v3 this pass, **now further bumped v3→v4
-by the 2026-07-16 CI-findings bridge pass — item G above** — picks up 2 new invariant checks,
-`b3_trading_enabled_drift` and `backup_per_table_row_drop`, plus the `ci_finding` raise/auto-resolve
-block; re-paste the CURRENT (v4) repo body, not the v3 one), `daily_freshness_check`,
+and consolidated same-day — items G above plus the CC-3/RES-4/CC-7 consumption-closure pass** —
+picks up the 2 v2/v3 invariant checks (`b3_trading_enabled_drift`, `backup_per_table_row_drop`), the
+`ci_finding` raise/auto-resolve block, the `scheduled_query_version_drift` / `probe_funding_stalled` /
+`cash_flows_backfill_broken` record-only warning blocks, `loop:research_quality_feedback` added to
+both dead-man UNNEST lists, and `immediate_action_flagged`/`process_scorecard_signal` added to the
+#14 auto-age category list — **one consolidated v4 paste, not several**; re-paste the CURRENT (v4)
+repo body, not the v3 one), `daily_freshness_check`,
 `daily_staging_cap_check`, `delivery_canary`, `fire_drill_alert_lifecycle`, `fire_drill_order_guard`,
 `integrity_check`, `ops_export`, `restore_drill`, `safety_critical_dml_watch` (this one may not be
 registered as a scheduled query at all yet — it was also 2026-07-11 item #2 below; if it's not live,
