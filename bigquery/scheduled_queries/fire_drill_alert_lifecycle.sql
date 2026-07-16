@@ -1,0 +1,26 @@
+-- SCHEDULED QUERY (self-improvement audit, 2026-07-15 — CONFIRMED GAP
+-- fire-drills-alert-latch-resolve-unscheduled): wires up ops.sp_fire_drill_alert_latch and
+-- ops.sp_fire_drill_alert_resolve (bigquery/34_alert_lifecycle.sql), which were defined with the
+-- explicit "an untested breaker is theater" discipline but never given a scheduled query of their
+-- own — unlike their sibling ops.sp_fire_drill_order_guard (scheduled_queries/fire_drill_order_guard.sql).
+--
+-- Verified live 2026-07-15 (ops.run_log): sp_fire_drill_alert_latch HAD run twice (2026-07-07,
+-- 2026-07-14) but only ad hoc/manually — no scheduled query or routine step ever called it, so its
+-- cadence was accidental, not guaranteed. sp_fire_drill_alert_resolve had NEVER run once, ever — the
+-- positive-path check (a whitelisted alert class WITH a satisfied condition IS auto-resolved) had zero
+-- coverage. This file gives both a guaranteed monthly cadence, matching sp_fire_drill_order_guard's
+-- precedent exactly.
+--
+-- Both procedures are self-contained and safe to run unattended: each inserts a synthetic row, calls
+-- ops.sp_auto_resolve_alerts(), asserts the expected outcome, ALWAYS cleans up its synthetic row(s)
+-- regardless of outcome, and raises its own critical ops.alerts row via sp_raise_alert on a genuine
+-- failure (never silently deduped, since a failed fire drill must always be seen) or logs a routine
+-- 'completed' ops.run_log row on success. Read-only against real trading tables; never crafts a real
+-- order and never touches a real (non-synthetic) alert row.
+--
+-- SCHEDULE: monthly, e.g. 06:20 UTC on the 1st — right after restore_drill.sql (06:00 UTC) and
+-- fire_drill_order_guard.sql (06:10 UTC), so all three "prove the safety net works" drills land in the
+-- same monthly window. Location US, no destination. APPLY ORDER: bigquery/34_alert_lifecycle.sql (both
+-- procedures) must be applied first.
+CALL `stock-trading-498512.ops.sp_fire_drill_alert_latch`();
+CALL `stock-trading-498512.ops.sp_fire_drill_alert_resolve`();

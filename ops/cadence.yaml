@@ -272,7 +272,7 @@ routines:
     notes: >
       SISA arsenal loop (ops/RUNBOOK.md §39; ops/autonomy_levels.yaml loop strategy_arsenal). Quarterly
       deep-research candidate synthesis + mechanical qualifier (DEFAULT-REJECT on ambiguity): reads the
-      candidate feed (events.strategy_candidates from D1/Q1/Q3/A1) + the regime/foundation factbase +
+      candidate feed (state.strategy_candidates from D1/Q1/Q3/A1) + the regime/foundation factbase +
       state.arsenal_regime_coverage + terminated-strategy post-mortems, synthesizes 0-2 candidates biased
       toward zero/under-covered regime cells, and promotes to QUALIFYING->AUTHORING only when the
       concurrent-incubation cap + adoption-rate window are open (else waits FIFO). A roster at the N>=2 floor
