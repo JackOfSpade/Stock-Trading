@@ -608,6 +608,23 @@ section's earlier "Mark resolved" commit) and `d06ce71` are now confirmed `git m
 framing above, not a still-open recurrence. The verify fence below auto-closes on that same
 already-true condition the first time the scheduled verifier runs.
 
+**RES-5 (2026-07-16, same-day follow-up):** this quota failure recurred a second time the same day
+(same run 29469270140, stranding `85c18c1`) — the prior "Transient, self-cleared" framing above
+undersold it; recovery both times required either a lucky next-push retry or a manual
+`gh run rerun --failed`, because `auto-merge-claude.yml`'s one-shot rerun (`should_retry_failed_ci`,
+capped at attempt 1) fires the same UTC/PT day it fails and hits the same still-exhausted daily
+quota. `stranded-branch-check.yml` now closes that gap itself: its "Bounded next-Pacific-day rerun
+for per-day-quota CI failures" step greps each stranded branch's latest failed CI run's
+`--log-failed` output for `QueryUsagePerUserPerDay`/`Custom quota exceeded` and, if matched and the
+run is not from the current Pacific day and attempt < 5, requests `gh run rerun --failed` — one
+bounded retry per Pacific day (quotas reset midnight PT), so a next-day sweep clears the strand with
+no owner action. **Action: none required for this to keep working.** The standing owner option
+remains raising the custom quota at
+https://docs.cloud.google.com/bigquery/redirects/increase-query-cost-quota if these automatic
+reruns start regularly burning the attempt-5 budget (i.e. the quota ceiling itself is now
+undersized for normal usage, not just an audit-scale spike). Do not weaken `DBT_PARITY=block` to
+work around a recurrence — it caught a real resource ceiling correctly here, not a misfire.
+
 ```verify
 id: F-quota
 type: repo

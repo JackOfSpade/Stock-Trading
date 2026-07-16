@@ -14,6 +14,12 @@ name: Stranded-branch check
 # live-sql-parity.yml / keyless-sa-audit.yml / wif-binding-audit.yml / guard-config-audit.yml,
 # self-improvement audit 2026-07-16 CC-1) -- see that file + Claude_Task_Plan.md's D3
 # CI-FINDINGS ADJUDICATION bullet for the pattern this workflow could adopt if ever extended.
+#
+# Also performs a bounded (max attempt 5, max 1 per Pacific day -- custom quotas reset midnight PT)
+# rerun of quota-class red CI ("QueryUsagePerUserPerDay"/"Custom quota exceeded" in the failed-step
+# logs), the one failure class where retry-after-daily-reset is the mechanically correct remediation
+# (2026-07-16; second live occurrence of the dbt-parity quota strand -- run 29469270140). Non-quota
+# failures keep the detection-only issue path unchanged.
 
 on:
   schedule:
@@ -24,6 +30,7 @@ permissions:
   contents: read
   pull-requests: read
   issues: write
+  actions: write   # rerun quota-class red CI, bounded — see 'Bounded next-Pacific-day rerun' step
 
 concurrency:
   group: stranded-branch-check
@@ -88,6 +95,35 @@ jobs:
             echo "problem=false" >> "$GITHUB_OUTPUT"
             echo "OK: no stranded branches (> ${MAX_AGE_HOURS}h), no open conflict PRs."
           fi
+
+      - name: Bounded next-Pacific-day rerun for per-day-quota CI failures
+        if: steps.detect.outputs.problem == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          # BigQuery custom quotas (QueryUsagePerUserPerDay) reset at midnight PACIFIC, not UTC —
+          # gate the once-per-day rerun on the Pacific calendar day so the retry fires in the first
+          # sweep AFTER the quota actually reset (typically the 11:23Z sweep = ~03:23 PT, fresh
+          # quota) instead of the 05:23Z sweep (= ~21:23 PT, the tail of the SAME still-exhausted
+          # Pacific day — which would deterministically re-fail and burn the attempt budget).
+          today_pt=$(TZ=America/Los_Angeles date +%F)
+          while IFS= read -r line; do
+            br=$(echo "$line" | sed -nE 's/^- `([^`]+)` .*/\1/p'); [ -n "$br" ] || continue
+            sha=$(git rev-parse "refs/remotes/$br" 2>/dev/null) || continue
+            run_json=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow CI --commit "$sha" --limit 1 --json databaseId,conclusion,updatedAt,attempt --jq '.[0] // empty' 2>/dev/null) || continue
+            [ -n "$run_json" ] || continue
+            [ "$(echo "$run_json" | jq -r .conclusion)" = "failure" ] || continue
+            attempt=$(echo "$run_json" | jq -r .attempt)
+            [ "$attempt" -lt 5 ] || { echo "::warning::$br — quota-retry budget exhausted (attempt $attempt); owner attention needed (existing stranded-branch issue stands)."; continue; }
+            run_day_pt=$(TZ=America/Los_Angeles date -d "$(echo "$run_json" | jq -r .updatedAt)" +%F 2>/dev/null) || continue
+            [ "$run_day_pt" != "$today_pt" ] || continue   # at most one rerun per PACIFIC day — per-day custom quotas reset at midnight PT
+            run_id=$(echo "$run_json" | jq -r .databaseId)
+            if gh run view "$run_id" --repo "$GITHUB_REPOSITORY" --log-failed 2>/dev/null | grep -qE 'QueryUsagePerUserPerDay|Custom quota exceeded'; then
+              echo "::notice::$br — CI run $run_id failed on a per-day BigQuery quota; requesting bounded next-Pacific-day rerun (attempt $attempt)."
+              gh run rerun "$run_id" --failed --repo "$GITHUB_REPOSITORY" || echo "::warning::rerun request failed for $br (run $run_id); falls through to the stranded-branch issue."
+            fi
+          done < /tmp/stranded.txt
 
       - name: Open alert issue (dedup) and fail the run
         if: steps.detect.outputs.problem == 'true'
