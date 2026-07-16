@@ -201,19 +201,25 @@ loops:
     added: "2026-07-10"
 
   - id: cross_model_referee_independence  # ITEM 27: cross-model (Gemini) referee for irreversible SISA verdicts
-    stage: dormant                   # objects created (bigquery/44_cross_model_referee.sql), nothing reads
-                                      # or writes through them yet — no routine calls
-                                      # ops.sp_score_cross_model_referee() on a schedule, and no readiness
-                                      # view's `ready` column reads referee_verdict. state.strategy_adoption_
-                                      # readiness's own `ready` is unaffected by this loop (its item-7
-                                      # theater-judge condition is a separate, already-live mechanism).
+    stage: shadow                    # PROMOTED 2026-07-15 (self-improvement audit, CONFIRMED GAP
+                                      # cross-model-referee-dormant): W5 now best-effort-calls
+                                      # ops.sp_score_cross_model_referee() every weekly cycle and reads the
+                                      # new analytics.referee_concurrence_calibration view
+                                      # (bigquery/61_cross_model_referee_shadow.sql), logging a
+                                      # decision_log record + a loop:cross_model_referee_independence
+                                      # heartbeat. Still RECORD-ONLY: no readiness view's `ready` column
+                                      # reads referee_verdict yet, so live SISA decisions remain fully
+                                      # unaffected — the promotion criterion below (one full quarterly
+                                      # burn-in cycle) is unmet as of this edit; evidence starts
+                                      # accruing now, not retroactively.
     ceiling: active_auto
     artifact: ops/spikes/cross-model-adversarial-independence-2026Q3.md (design) +
       bigquery/11_theater_judge.sql (the ops.gemini Vertex substrate this loop reuses, zero new credential) +
       bigquery/44_cross_model_referee.sql (ops.sp_score_cross_model_referee, state.strategy_retirement_
-      readiness, state.foundation_change_termination_readiness) + bigquery/35_strategy_arsenal.sql
-      (state.strategy_adoption_readiness — the object a future shadow/active_auto promotion would extend
-      with a referee_concurs AND-condition, not yet applied)
+      readiness, state.foundation_change_termination_readiness) + bigquery/61_cross_model_referee_shadow.sql
+      (analytics.referee_concurrence_calibration — the SHADOW-stage observation view, 2026-07-15) +
+      bigquery/35_strategy_arsenal.sql (state.strategy_adoption_readiness — the object a future
+      active_auto promotion would extend with a referee_concurs AND-condition, not yet applied)
     gate_to_next_stage: >
       DORMANT -> SHADOW: a routine (candidate: W5, mirroring its existing S-5 adversarial-independence-audit
       bullet) starts calling ops.sp_score_cross_model_referee() on a schedule and reporting referee-vs-
@@ -284,5 +290,6 @@ cross_cutting_guards:
       "not ready" otherwise) and writes `ops.heartbeat(source='loop:<id>')` unconditionally either way;
       `bigquery/scheduled_queries/cadence_check.sql` alarms (WARNING, self-bootstrapping — never fires
       before a loop's first-ever heartbeat) if a loop that has previously reported goes >10 days quiet.
-      cross_model_referee_independence (added rev 2026-07-11, ITEM 27) is the one loop still genuinely
-      dormant by design (see its own gate_to_next_stage) — no heartbeat is expected from it yet.
+      cross_model_referee_independence (added rev 2026-07-11, ITEM 27; PROMOTED dormant->shadow
+      2026-07-15) now ALSO writes `loop:cross_model_referee_independence` from the same W5 bullet
+      every weekly cycle — no loop remains without heartbeat wiring as of this rev.
