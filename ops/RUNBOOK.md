@@ -2558,3 +2558,45 @@ No new secrets/grants: `GH_TOKEN: ${{ github.token }}` (the same default token `
 **Owner action required:** none. Both workflows stay OFF by default (`vars.RUN_SA_KEY_AUDIT` /
 `vars.RUN_WIF_AUDIT` unset) exactly as before; this only changes what happens on the next real finding
 once/if the owner enables them per E1/E2 above.
+
+## 44. `append_only_violation` on `parking_events` — expected trailing detection of the 2026-07-15 cutover backfill *(monitoring, false-alarm-shaped)*
+
+**Fired 2026-07-16 07:40 UTC** (`scheduled.integrity` / `append_only_violation`, WARNING): *"out-of-band
+UPDATE/DELETE/MERGE on immutable events.* table(s): UPDATE parking_events."* Payload identified
+`job_ZDLqO17hsfG4MKAJbeAu1YO1wr_8`, `UPDATE events.parking_events SET ticker='SGOV' WHERE ticker IS
+NULL`, run by `jacksterwu@gmail.com`.
+
+**Not a violation.** This is the documented §42 cutover backfill itself — `events.parking_events`
+gained a `ticker` column on 2026-07-15 and the 22 pre-existing rows were backfilled `ticker='SGOV'`
+(a 2-statement `ADD COLUMN` + `UPDATE`, verified live per §42's "Cutover executed live" note). The
+live table description already states this is correct ground truth: the account held nothing but
+SGOV before the transfer. `INFORMATION_SCHEMA.JOBS_BY_PROJECT` confirms the UPDATE actually ran
+2026-07-15 13:57:45 UTC — same day as the rest of the cutover, well before that day's
+`integrity_check` pass (which runs ~05:20 UTC and so predated the backfill). The tripwire
+(`bigquery/scheduled_queries/integrity_check.sql`) uses a **rolling 48h lookback**
+(`state.append_only_integrity`, `bigquery/18_stack_review_fixes.sql`), not a calendar-day one, so it
+first caught this job on the very next run (2026-07-16 07:40 UTC) — a one-day-lagged, expected
+detection, not a new incident.
+
+**Resolved same day** with a root-cause note. Because `sp_raise_alert_once` dedupes forever on exact
+`(category, message)` while `NOT resolved` (`bigquery/10_observability.sql`), resolving reopens the
+dedup gate — and the source job (2026-07-15 13:57:45 UTC) is still inside the 48h window at the next
+run (2026-07-17 ~07:40 UTC cutoff ≈ 2026-07-15 07:40 UTC), so **one more identical WARNING is
+expected around 2026-07-17 ~07:40 UTC**. Resolve it the same way, no re-investigation needed; the
+window fully ages the job out by the 2026-07-18 run.
+
+**No permanent exception added — deliberately.** Unlike §21's `decision_log.sub_pattern` case (an
+*ongoing* sanctioned in-place-edit pattern, allowlisted in the tripwire itself), this was a **one-time,
+now-complete migration event**: going forward `ticker` is only ever set via `INSERT` on new rows, so
+the tripwire will not see this table again absent a genuinely new out-of-band mutation. Adding a
+permanent suppression for a single closed-out backfill would blind the tripwire to a real future
+violation on this same table for zero ongoing benefit.
+
+**Aside — confirms a known residual owner action, not a new gap.** `ops.monitor_health_history` has
+zero historical rows for `check_id='append_only_integrity'` (only `ddl_drift`/`restore_stale` are
+present). This matches OWNER_ACTIONS.md item B (2026-07-15 pass): `integrity_check` is one of the 11
+scheduled queries whose updated body (the monitor-health-history `MERGE`, self-improvement audit ITEM
+31) hasn't been re-pasted into the live BigQuery Studio scheduled query yet — so the 14-consecutive-
+clean-day promotion-readiness counter for this check isn't accumulating. No action taken here beyond
+noting it; item B already tracks the fix (re-paste the 11 bodies) and today's alert fired correctly
+off the currently-live (pre-ITEM-31) query body regardless.

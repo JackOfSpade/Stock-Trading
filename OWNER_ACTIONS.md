@@ -94,29 +94,28 @@ nothing fails from their absence, they just don't do anything):
 **If skipped:** every consumer above already fails closed/quiet without these — nothing is silently
 broken, these three unlock functionality that's currently inert, not fix something currently wrong.
 
-## F. 3 commits currently stuck on the branch — BigQuery per-user daily query quota hit during this session
+## F. Resolved — BigQuery per-user daily query quota was hit during this session (no action needed)
 
-**Checked live just now** (`git log origin/main..origin/jack/pensive-fermi-jxha2b`): 3 commits are on
-this branch but NOT yet in `main` — `de604be`, `455699d` (Architect#4), `e596c24` (Architect#5). The
-`dbt↔live row-level parity (keyless WIF)` CI job has failed on the last 2 pushes in a row
-(`gh run view` on both) with *"Custom quota exceeded: Your usage exceeded the custom quota for
-QueryUsagePerUserPerDay, which is set by your administrator"* — a BigQuery cost-control quota you (or
-a prior setup pass) configured, not a code bug; every other CI job on both runs passed. Because the
-repo var `DBT_PARITY=block` (`gh variable list`) deliberately makes this job a hard merge gate
-(`.github/workflows/ci.yml` — `continue-on-error: false` when set), the whole `CI` run reads as
-failed and auto-merge correctly declines to merge, exactly as `DBT_PARITY=block` is designed to do.
+**Transient, self-cleared within ~10 minutes — checked live, confirmed resolved.** The
+`dbt↔live row-level parity (keyless WIF)` CI job failed on 2 pushes in a row this session with
+*"Custom quota exceeded: Your usage exceeded the custom quota for QueryUsagePerUserPerDay, which is
+set by your administrator"* — a BigQuery cost-control quota you (or a prior setup pass) configured,
+not a code bug; every other CI job on both runs passed. Because the repo var `DBT_PARITY=block`
+(`gh variable list`) deliberately makes this job a hard merge gate (`.github/workflows/ci.yml` —
+`continue-on-error: false` when set), the whole `CI` run read as failed and auto-merge correctly
+declined to merge 3 commits for a short window — exactly as `DBT_PARITY=block` is designed to do.
 Almost certainly caused by this session's own unusually heavy live-verification query volume (every
 gap in this pass was checked against live BigQuery before and after applying) hitting a
-`QueryUsagePerUserPerDay` ceiling, not a recurring problem with the code itself — nothing in the 3
-stuck commits changed dbt/BigQuery parity-relevant logic in a way that would newly fail this check.
-**Action:** this should self-clear once the quota window resets and a future push (or the existing
-one-shot CI retry logic, Gap 5 this session) re-triggers a green run — check
-`git log origin/main..origin/jack/pensive-fermi-jxha2b` in a day; if still non-empty, either manually
-`gh run rerun --failed` on the latest `CI` run for this branch, or if `dbt↔live row-level parity`
-keeps failing with this exact message on ordinary (non-audit-scale) pushes going forward, raise the
-custom quota at https://docs.cloud.google.com/bigquery/redirects/increase-query-cost-quota. No code
-change is warranted — do not weaken `DBT_PARITY=block` to work around this; it's catching a real
-resource ceiling correctly, not misfiring.
+`QueryUsagePerUserPerDay` ceiling. The very next push's `dbt↔live row-level parity` run came back
+green (headroom freed up / quota window rolled over), and the existing auto-merge automation caught
+up the whole backlog in one shot: `git merge-base --is-ancestor <branch tip> origin/main` now returns
+true — `main` is fully current through this session's last commit. **Action: none.** Documented here
+only so a future session doesn't need to re-diagnose the same transient failure if it recurs; if
+`dbt↔live row-level parity` starts failing repeatedly with this exact message on ordinary
+(non-audit-scale) pushes going forward, raise the custom quota at
+https://docs.cloud.google.com/bigquery/redirects/increase-query-cost-quota. Do not weaken
+`DBT_PARITY=block` to work around a recurrence — it caught a real resource ceiling correctly here,
+not a misfire.
 
 ---
 
