@@ -43,6 +43,25 @@ def q(sql: str):
     return json.loads(s[i:]) if i != -1 else []
 
 
+def beat_heartbeat():
+    """Best-effort ops.heartbeat(source='dashboard') write (2026-07-15 self-improvement audit,
+    Architect recommendation #3 — the dashboard was the one out-of-band delivery surface with no
+    liveness monitor). Never raises: the baseline gh-ci-runner@ WIF grant is read-only
+    (bigquery.dataViewer), so this INSERT fails with a permission error until the owner grants a
+    narrow, table-scoped bigquery.dataEditor on ops.heartbeat (bigquery/58_dashboard_heartbeat.sql);
+    until then this is a silent no-op and the dashboard build must still succeed."""
+    try:
+        subprocess.run(
+            ["bq", "--project_id", PROJECT, "--quiet", "--headless", "query",
+             "--use_legacy_sql=false",
+             f"INSERT INTO `{PROJECT}.ops.heartbeat` (source, note) "
+             f"VALUES ('dashboard', 'index.html generated')"],
+            capture_output=True, text=True, timeout=60,
+        )
+    except Exception:
+        pass
+
+
 def get_user_tz():
     """Detected DISPLAY timezone (state.user_tz — bigquery/20_user_prefs.sql). Purely cosmetic:
     changes how timestamps are RENDERED to the operator, never any query logic. Falls back to
@@ -146,6 +165,7 @@ def main():
     with open(OUT, "w") as f:
         f.write(page)
     print(f"Wrote {OUT}  ({'GREEN' if green else 'ATTENTION'})")
+    beat_heartbeat()
     return 0
 
 

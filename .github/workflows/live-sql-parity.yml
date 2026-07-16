@@ -1,0 +1,110 @@
+name: Live SQL parity (bigquery/*.sql vs deployed)
+
+# 2026-07-15 self-improvement audit — CONFIRMED GAP check-live-sql-parity-unwired.
+# scripts/check_live_sql_parity.py compares each BigQuery object's LIVE definition against the
+# "final effective" apply-in-order definition across bigquery/*.sql, but nothing ever invoked it
+# (its own docstring falsely claimed it was scheduled "per ops/RUNBOOK.md" — it was not referenced
+# anywhere outside itself and its own test). It was purpose-built after the 2026-07-11 incident
+# where a partial re-apply of bigquery/23_trading_control.sql silently reverted
+# state.trading_enabled to a stale, self-latching formula for days with zero CI signal (fixed by
+# bigquery/47_trading_enabled_resync.sql) — exactly the class of drift this job now catches.
+#
+# WHY A SEPARATE DAILY CRON, NOT A dbt-parity-style PUSH TRIGGER: dbt-parity compares freshly
+# dbt-COMPILED models (built fresh every run from the current push) against live views — a
+# meaningful "does this push's logic match live" question on every push. This script instead
+# compares the repo's bigquery/*.sql DDL TEXT against whatever was last pasted into BigQuery via
+# the MCP/console — an out-of-band, manual apply step that always lags the commit that adds/edits a
+# bigquery/*.sql file (see bigquery/README.md's apply-in-order convention). Running this on every
+# push to a branch that just edited bigquery/*.sql would report "drift" for the completely normal,
+# expected case of "not live-applied yet" — structurally noisy, not a real signal. A daily,
+# decoupled cadence instead asks "does main's current final-effective SQL match live", which is
+# the actual question worth alerting on.
+#
+# RUNS BY DEFAULT once the read-only WIF vars exist (same baseline SA as dbt-parity: roles/
+# bigquery.dataViewer + jobUser — no new IAM grant needed for the comparison itself). A real drift
+# opens/refreshes a deduped GitHub issue (mirrors keyless-sa-audit.yml / wif-binding-audit.yml,
+# RUNBOOK §43) so a finding has a durable record independent of the optional webhook relay.
+
+on:
+  schedule:
+    - cron: '10 7 * * *'   # daily ~07:10 UTC — off-peak, after the 05:00-06:30 UTC scheduled-query
+                            # block (RUNBOOK §1/§25) and the dashboard publish (05:20 UTC)
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write
+  issues: write
+
+concurrency:
+  group: live-sql-parity
+  cancel-in-progress: false
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gate on WIF creds
+        id: guard
+        run: |
+          if [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Live SQL parity skipped — set vars.GCP_WIF_PROVIDER/GCP_WIF_SERVICE_ACCOUNT (the same read-only WIF SA dbt-parity already uses) to enable. ops/RUNBOOK.md §6/§14."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: GCP WIF auth + gcloud setup (provides the bq CLI)
+        if: steps.guard.outputs.skip == 'false'
+        uses: ./.github/actions/gcp-wif-auth
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
+      - name: Compare live BigQuery definitions vs bigquery/*.sql
+        id: parity
+        if: steps.guard.outputs.skip == 'false'
+        run: |
+          set -uo pipefail
+          if python scripts/check_live_sql_parity.py --project stock-trading-498512 2>&1 | tee /tmp/parity_out.txt; then
+            echo "result=ok" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=drift" >> "$GITHUB_OUTPUT"
+            echo "::error::Live SQL parity FAILED — see job output for the mismatched object(s)."
+          fi
+      - name: Open/refresh finding issue (dedup)
+        if: always() && steps.guard.outputs.skip == 'false' && steps.parity.outputs.result == 'drift'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          {
+            echo "**DRIFT** — one or more live BigQuery object definitions no longer match the final-effective (last apply-in-order \`CREATE OR REPLACE\`) definition in \`bigquery/*.sql\`. This is the exact drift class that silently reverted \`state.trading_enabled\` for days in the 2026-07-11 incident (see \`bigquery/47_trading_enabled_resync.sql\`). Re-apply the listed object(s)' current repo definition via the BigQuery MCP/console."
+            echo
+            cat /tmp/parity_out.txt
+            echo
+            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } > /tmp/body.md
+
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
+            --jq '[.[] | select(.title|startswith("⚠️ Live SQL parity:"))][0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body-file /tmp/body.md
+            echo "Updated existing issue #$existing."
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "⚠️ Live SQL parity: needs attention" \
+              --body-file /tmp/body.md
+          fi
+
+      - name: Close finding issue if resolved
+        if: always() && steps.guard.outputs.skip == 'false' && steps.parity.outputs.result == 'ok'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
+            --jq '[.[] | select(.title|startswith("⚠️ Live SQL parity:"))][0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Resolved — every checked object's live definition now matches its final-effective bigquery/*.sql source. Closing."
+            gh issue close "$existing" --repo "$GITHUB_REPOSITORY"
+          fi

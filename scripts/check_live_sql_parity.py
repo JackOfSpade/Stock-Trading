@@ -15,10 +15,11 @@ earlier ones (documented apply-in-order discipline; see bigquery/README.md). Thi
 that final body text, fetches the live object's definition via BigQuery's INFORMATION_SCHEMA (read-
 only), and compares them with whitespace collapsed to a single space.
 
-NOT wired into CI's sandboxed pytest suite — this needs live BigQuery credentials (the `bq` CLI,
-same auth as scripts/dbt_parity.py) and is meant to be run manually or from a scheduled query /
-routine with WIF creds, per ops/RUNBOOK.md. `--offline` runs just the repo-side extraction (no bq
-calls) for local iteration on the parser itself.
+NOT wired into CI's sandboxed pytest suite (it needs live BigQuery credentials) — instead it runs
+daily via .github/workflows/live-sql-parity.yml (keyless WIF, same read-only SA as dbt-parity),
+decoupled from push events since an in-flight bigquery/*.sql edit is *expected* to diverge from
+not-yet-live-applied BigQuery (see that workflow's header for why). `--offline` runs just the
+repo-side extraction (no bq calls) for local iteration on the parser itself.
 
 VALIDATION STATUS (2026-07-14): the repo-side extraction (find_final_definitions/extract_body) was
 verified offline against the real bigquery/*.sql tree -- 137 objects parse cleanly, the apply-order

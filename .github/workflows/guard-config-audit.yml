@@ -31,6 +31,7 @@ on:
 permissions:
   contents: read
   issues: write
+  actions: read   # 2026-07-15 fix: workflow-STATE check below (disabled_manually) reads the Actions API
 
 concurrency:
   group: guard-config-audit
@@ -45,6 +46,7 @@ jobs:
         env:
           ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
           OFFSITE_BACKUP_GCS: ${{ secrets.OFFSITE_BACKUP_GCS }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
           wif_live=false
@@ -53,12 +55,36 @@ jobs:
           fi
 
           if [ "$wif_live" = "false" ]; then
-            echo "::notice::WIF vars (GCP_WIF_PROVIDER / GCP_WIF_SERVICE_ACCOUNT) are not set — every keyless guard (alert-relay, offsite-backup, keyless-sa-audit, wif-binding-audit, dashboard, dbt-parity, sql-validate) is dormant by cascade. Expected pre-bootstrap state, not itself a finding (ops/RUNBOOK.md §6/§25)."
+            echo "::notice::WIF vars (GCP_WIF_PROVIDER / GCP_WIF_SERVICE_ACCOUNT) are not set — every keyless guard (alert-relay, offsite-backup, keyless-sa-audit, wif-binding-audit, dashboard, dbt-parity, sql-validate, live-sql-parity) is dormant by cascade. Expected pre-bootstrap state, not itself a finding (ops/RUNBOOK.md §6/§25)."
             echo "problem=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           : > /tmp/loadbearing.txt
+
+          # WORKFLOW-STATE CHECK (2026-07-15 self-improvement audit, completeness-critic finding):
+          # every guard above checks CONFIG (secrets/vars) but none checked whether the workflow
+          # itself is even enabled — confirmed live 2026-07-15 that alert-relay.yml had been manually
+          # disabled at the GitHub platform level (`state: disabled_manually`, distinct from GitHub's
+          # own 60-day-inactivity auto-disable and from a workflow's own internal secret/var guard,
+          # both of which still leave the workflow "active" and run-and-skip-cleanly). A scheduled
+          # workflow that is disabled_manually never runs at all — not even to report skip=true — so
+          # every check above would stay silent forever about it. Any *scheduled* workflow found
+          # disabled_manually is treated as load-bearing (same issue-opening path as the two secrets
+          # above): a manual/accidental disable of standing automation is itself the finding.
+          disabled_scheduled=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows" --paginate \
+            --jq '.workflows[] | select(.state == "disabled_manually") | .path' 2>/tmp/wf_state_err || true)
+          if [ -n "$disabled_scheduled" ]; then
+            while IFS= read -r wf_path; do
+              [ -n "$wf_path" ] || continue
+              if grep -q '^\s*schedule:' "$wf_path" 2>/dev/null; then
+                echo "- **$(basename "$wf_path")** (\`$wf_path\`): manually DISABLED at the GitHub Actions platform level (state=disabled_manually) — it has a \`schedule:\` trigger but will never fire, silently, until someone re-enables it (Settings → Actions, or \`gh api -X PUT repos/$GITHUB_REPOSITORY/actions/workflows/<id>/enable\`). This is distinct from being configured-off; the workflow's own guard/secret checks never even run." >> /tmp/loadbearing.txt
+              fi
+            done <<< "$disabled_scheduled"
+          elif [ -s /tmp/wf_state_err ]; then
+            echo "::notice::Workflow-state check could not read the Actions API (permissions or transient failure) — not itself a finding, but this run did not verify any workflow's enabled/disabled state. $(cat /tmp/wf_state_err)"
+          fi
+
           if [ -z "${ALERT_WEBHOOK_URL:-}" ]; then
             echo "- **alert-relay** (\`.github/workflows/alert-relay.yml\`): WIF is live but secret \`ALERT_WEBHOOK_URL\` is unset — the fast, off-Gmail alert channel is still dormant. Single-inbox delivery risk persists (RUNBOOK §25 Theme A / B-4-obs)." >> /tmp/loadbearing.txt
           fi

@@ -425,6 +425,25 @@ def test_schema_yml_unrelated_accepted_values_block_is_not_flagged(repo_copy):
     assert rc.main() == 0
 
 
+# ---- R-H: candidate-feed dataset name (2026-07-15 self-improvement audit) ----
+def test_events_strategy_candidates_in_plan_is_caught(repo_copy):
+    # the live table is state.strategy_candidates; a stray events.strategy_candidates reference in
+    # Claude_Task_Plan.md must fail CI.
+    p = rc.PLAN
+    txt = _read(p)
+    assert "state.strategy_candidates" in txt, "fixture assumption about PLAN's candidate-feed name drifted"
+    _write(p, txt.replace("state.strategy_candidates", "events.strategy_candidates", 1))
+    assert rc.main() == 1
+
+
+def test_events_strategy_candidates_in_cadence_is_caught(repo_copy):
+    p = rc.CADENCE
+    txt = _read(p)
+    assert "state.strategy_candidates" in txt, "fixture assumption about cadence.yaml's candidate-feed name drifted"
+    _write(p, txt.replace("state.strategy_candidates", "events.strategy_candidates", 1))
+    assert rc.main() == 1
+
+
 # ---- skip semantics: pre-2026-07-10 checkout without strategy/roster.yaml is a clean SKIP ----
 def test_missing_roster_yaml_is_a_clean_skip(repo_copy):
     os.remove(rc.ROSTER)

@@ -61,6 +61,15 @@ CHECKS
        check_cadence_consistency.py" — this check makes that claim true instead of aspirational. FAIL
        naming which rail disagrees and its two values.
 
+  R-H  CANDIDATE-FEED DATASET NAME (added 2026-07-15, self-improvement audit CONFIRMED GAP
+       strategy-candidates-dataset-mismatch). The live SISA candidate-intake table is
+       `state.strategy_candidates` (bigquery/35_strategy_arsenal.sql CREATE TABLE) — there is no
+       `events.strategy_candidates` object anywhere live. Claude_Task_Plan.md and ops/cadence.yaml
+       previously named the WRONG dataset (`events.`) in 9 places (D1/Q1/Q3/A1's write instructions +
+       SL1's read instructions), which would have made every SISA candidate-emission instruction target
+       a table that does not exist. FAIL if the literal string `events.strategy_candidates` reappears in
+       either file.
+
   R-F  SPEC-LOCK HASH AGREEMENT (added rev 2026-07-11, Item 28 self-improvement audit; hardened
        2026-07-11 adversarial self-audit). Each strategy's LOCKED machinery — its strategy/0N_strategy_
        <code>.md slice plus its corresponding math module(s) (strategy_math/strategy_<code>.py +
@@ -465,6 +474,22 @@ def main():
                             f"set {sorted(roster_codes)} — update this list (or drop the test) alongside "
                             f"the roster change.")
 
+    # ---- R-H: candidate-feed dataset name (2026-07-15 self-improvement audit) ----
+    # The live SISA candidate-intake table is state.strategy_candidates (bigquery/35); no
+    # events.strategy_candidates object exists. A stray reintroduction of the wrong dataset name here
+    # would silently point D1/Q1/Q3/A1's write instructions (and SL1's read instructions) at a
+    # nonexistent table again.
+    for path in (PLAN, CADENCE):
+        if not os.path.exists(path):
+            continue
+        txt = open(path, encoding="utf-8").read()
+        if "events.strategy_candidates" in txt:
+            rel = os.path.relpath(path, ROOT)
+            n = txt.split("events.strategy_candidates")[0].count("\n") + 1
+            errors.append(f"R-H: {rel}:{n} references `events.strategy_candidates`, which does not "
+                          f"exist live — the SISA candidate-intake table is `state.strategy_candidates` "
+                          f"(bigquery/35_strategy_arsenal.sql). Fix the dataset name.")
+
     # ---- report ----
     if errors:
         print("ROSTER CONSISTENCY: FAIL\n")
@@ -485,7 +510,8 @@ def main():
           f"slice-map; no bare roster literal or fixed /5 divisor in the live derived SQL; the dbt reconcile "
           f"test is count-agnostic; arsenal_rails' SQL constants agree with roster.yaml's rails block; every "
           f"SPEC_HASH_INPUTS-covered spec-locked strategy's spec_hash agrees with its .md slice + math "
-          f"module(s); dbt schema.yml accepted_values(strategy) tests agree with the roster-active set.")
+          f"module(s); dbt schema.yml accepted_values(strategy) tests agree with the roster-active set; "
+          f"no stray events.strategy_candidates dataset-name reference.")
     if notes:
         print("\nNOTES (non-blocking):")
         for n in notes:
