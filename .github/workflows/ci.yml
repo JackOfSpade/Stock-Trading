@@ -53,6 +53,12 @@ jobs:
         run: python scripts/check_autonomy_consistency.py
       - name: script-version single-source (.gs SCRIPT_VERSION consts ⇄ bigquery/43 MERGE seed)
         run: python scripts/check_script_version_consistency.py
+      - name: session-config tool coverage (Claude_Task_Plan.md/ops/triggers.json mcp__ refs ⇄ .claude/settings.json allowlist — completeness-critic N-1)
+        # An unattended scheduled routine calling an mcp__ tool absent from .claude/settings.json's
+        # permissions.allow gets an unanswerable permission prompt and silently stalls that step (no
+        # dedicated alert class exists for a hung permission prompt). This is a KNOWN-RED gate today —
+        # see OWNER_ACTIONS.md for the exact entries needed; it goes green once the owner adds them.
+        run: python scripts/check_settings_toolcov.py
       - name: auto-merge decision logic (CI-gate + delete-safety fixtures — 2026-07-04 code-quality audit)
         run: bash tests/test_auto_merge_logic.sh
       - name: weekly_report.gs / alert_emailer.gs pure-helper tests (esc_/esc2_, periodAvg_, alertSubject_, ...)

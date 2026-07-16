@@ -41,6 +41,13 @@ name: Golden Scenarios (prose regression)
 #     other CI job here; the CI service account, where one is configured at all, stays read-only), and
 #     the compensating control for a flip is mechanical follow-up by an autonomous routine, never a human
 #     gate.
+#
+#   RECONCILED 2026-07-16 (completeness-critic finding N-5 — verified already resolved, no change made
+#     here): that "mechanical follow-up by an autonomous routine" is Claude_Task_Plan.md D3's
+#     GOLDEN-SCENARIO PROSE-REGRESSION CHECK step (files the real queue_events row) + AR_orc's
+#     `prose-regression` adjudication (closes it with a decision_log verdict) — see CLAUDE.md's "Known
+#     non-issues" for the full reconciliation. This workflow intentionally still has no BigQuery
+#     credentials; do not add any before re-reading that note.
 
 on:
   push:

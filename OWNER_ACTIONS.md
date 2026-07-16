@@ -10,6 +10,104 @@ act. Dated passes below; most recent first.
 
 ---
 
+# 2026-07-16 Completeness-critic findings N-1/N-2/N-4/N-5 — local-only implementation round
+
+This pass was done as a **local-only** implementation (commits sit on the working branch, not
+pushed) per that round's ground rules — nothing below is live yet. N-3 (`alert_delivery_stall`) was
+checked and confirmed NOT present in `cadence_check.sql` at the time of this pass, but it is out of
+scope for this session (assigned elsewhere in the same audit chain) and was left untouched here. N-5
+was investigated and found to be **already resolved** by earlier work (D3's GOLDEN-SCENARIO
+PROSE-REGRESSION CHECK + AR_orc's `prose-regression` adjudication, self-improvement audit
+2026-07-15) — no code change was made for it; see `CLAUDE.md`'s new "Known non-issues" entry and
+`.github/workflows/golden-scenarios.yml`'s new header note for the full reconciliation, so a future
+audit pass doesn't re-flag it.
+
+## O. Add 5 missing MCP tool entries to `.claude/settings.json`'s `permissions.allow` (N-1)
+
+**What it's for:** `scripts/check_settings_toolcov.py` (new this pass, wired into `ci.yml`) greps
+`Claude_Task_Plan.md` + `ops/triggers.json` for every `mcp__<Server>__<tool>` token and asserts each
+appears in `.claude/settings.json`'s `permissions.allow` list — an unattended scheduled routine
+calling a non-allowlisted MCP tool gets a permission prompt nobody is there to answer, silently
+stalling that step with no dedicated alert class for it. **This session deliberately did NOT edit
+`.claude/settings.json` itself** (out of scope for this round's ground rules — settings.json content
+edits are owner-only this pass). Per that same rule, the CI check was still built and wired in, so it
+is a genuine, currently-RED gate today (confirmed by running it locally) until you add these entries.
+
+**Action:** add these 3 entries confirmed missing by a local run of `python
+scripts/check_settings_toolcov.py` today (plus 2 more named in the original finding's "at minimum"
+list that don't yet appear verbatim as `mcp__`-prefixed tokens in `Claude_Task_Plan.md` but ARE real
+tool calls the IBKR options-crafting steps make by bare name — `get_option_parameters`,
+`get_combo_identifier` — add them too, for the same reason, even though the CI check can't detect
+their bare-name references) to `.claude/settings.json`'s `permissions.allow` array:
+```
+mcp__Interactive_Brokers_IBKR__get_option_data
+mcp__Interactive_Brokers_IBKR__get_option_parameters
+mcp__Interactive_Brokers_IBKR__get_combo_identifier
+mcp__FMP__news
+mcp__FMP__secFilings
+```
+**If skipped:** exactly today's behavior continues (these tools already work fine in an interactive/
+attended session, since a human is there to approve the permission prompt) — the risk is specific to
+an UNATTENDED scheduled routine hitting one of them (the D2/D2a options-mark step; D1/W1/W2's
+research steps reading `mcp__FMP__news`/`secFilings`), and `ci.yml`'s new
+`session-config tool coverage` step will stay red on this branch until the entries are added — expected,
+not a bug, per this check's own acceptance criterion (CI red today, green once the settings.json fix
+lands).
+
+```verify
+id: O
+type: repo
+probe: python3 scripts/check_settings_toolcov.py
+done_when: exit 0
+```
+
+## P. Apply `bigquery/76_owner_confirmation_liveness.sql` live via the BigQuery MCP/console (N-2)
+
+**What it's for:** `state.owner_confirmation_liveness` — the absence model for the system's one
+sanctioned human touch (the IBKR order-confirm tap). `entries_halted = TRUE` when `>=1`
+`state.open_orders` row is still `pending` AND `>=3` trading days have elapsed with zero
+`events.trade_fills` reconciled. Read by D2a (raises `owner_confirmation_stale` + writes an
+audit-only `mode='entries_halted'` `ops.trading_control` row) and D2's "2. NEW ENTRY CANDIDATES" step
+(pauses new-entry crafting only; exit re-craft is completely unaffected). Auto-clears the next time a
+fill lands — no operator action needed to un-pause. Apply order: after `01_schema.sql`,
+`09_market_calendar.sql`, `23_trading_control.sql`, `34_alert_lifecycle.sql`.
+
+**Action:** run the `CREATE OR REPLACE VIEW` statement in
+`bigquery/76_owner_confirmation_liveness.sql` via the BigQuery MCP or console (this session was not
+permitted to call BigQuery directly — local-only round). Not urgent from a trading-safety standpoint
+today (checked reasoning, not live data, since no BigQuery calls were made this pass: the mechanism
+is fail-safe by construction either way — until applied, the view simply doesn't exist yet, so D2a's
+new bullet's `SELECT * FROM state.owner_confirmation_liveness` will error the same way any reference
+to a not-yet-applied view does, which is why this should be applied promptly, ideally in the same
+session as this commit's merge, same convention as every other `bigquery/*.sql` change).
+
+```verify
+id: P
+type: bq
+probe: SELECT COUNT(*) n FROM `stock-trading-498512.state.owner_confirmation_liveness`
+done_when: n=1
+```
+
+## Q. Not an owner action — N-4 (same-day double-run guard) is prose-only, nothing to apply
+
+**What it's for the record:** N-4 generalizes D2's existing "SAME-DAY IDEMPOTENCY GUARD" pattern to
+all 18 `catchup_safe: true` routines in `ops/cadence.yaml` (D1, D3, SL3, W1, W2, W3, W5, M1a, M1b,
+M2, M3, M5, Q1, Q2, Q3, SL1, A1, A2) — each now carries a `SELECT COUNT(*) FROM ops.run_log WHERE
+routine=<id> AND run_date=<today> AND status='completed'` check, first thing, before anything else,
+so a late-firing original platform trigger can never double-run a routine OPS0 already caught up
+today. Purely `Claude_Task_Plan.md` routine-text (plus one new generalized-guard bullet in the shared
+"Observability — run logging & failure alerts" section) — no schema, no live BigQuery object, nothing
+for you to apply. **Note on the original finding's count:** the finding's IMPLEMENTATION text calls
+this "the 16 catchup-safe routines" while also listing 18 routine ids and describing it as
+"18-minus-D1/D3/SL3" (=15) — internally inconsistent. This pass re-derived the authoritative list
+directly from `ops/cadence.yaml`'s already-landed `catchup_safe: true` flags (ARCH-3 Item 30b) and
+added the guard to all 18 (including D1/D3/SL3, which the finding's prose suggested might already be
+covered by something else — no such existing per-routine guard was found for those three, so they
+got it too, for safety). Verify locally any time: `grep -c "SAME-DAY DOUBLE-RUN GUARD
+(completeness-critic N-4" Claude_Task_Plan.md` should print `18`.
+
+---
+
 # 2026-07-16 ARCH-3 Item 30b: generated routine lists + catchup_safe declaration (structural audit) — local-only implementation round
 
 This pass was done as a **local-only** implementation (commits sit on the working branch, not

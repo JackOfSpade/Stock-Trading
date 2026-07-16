@@ -18,6 +18,32 @@
   (re-provisioned fresh each session), so it can't be permanently changed from this
   repo. Just ignore the message when it appears.
 
+- **`golden-scenarios.yml`'s CI-side `events.queue_events` INSERT is deliberately never executed
+  by that workflow** (verified 2026-07-16 against a critic finding that re-raised this as a gap —
+  "N-5" in that pass's findings doc — before checking whether it was already closed; it was).
+  `run_golden.py --live`'s `QUEUE_INSERT_TEMPLATE` and its `::warning::` on a decision flip are a
+  push-time, print-only, ADVISORY signal by design (the job has no BigQuery credentials at all, no
+  WIF identity — a claim to the contrary in a future audit is factually wrong against the current
+  workflow file). The REAL landing surface already exists elsewhere and is fully wired: D3's
+  **GOLDEN-SCENARIO PROSE-REGRESSION CHECK** step (`Claude_Task_Plan.md`, self-improvement audit
+  2026-07-15) independently re-evaluates any scenario whose `governing_files` changed since D3's
+  last run and, on a genuine flip, performs the real `INSERT INTO events.queue_events`
+  (`review_type='prose-regression'`) itself — no CI credentials, no separate model call, no human
+  read of the CI annotation required. **AR_orc** (same file) already adjudicates that queue row
+  (CONFIRMED DRIFT → `events.decision_log` + a `prose_regression_confirmed` warning alert +
+  `scenarios.yaml`'s `expected` field updated to match; FALSE POSITIVE → decision-log entry only) —
+  a complete, in-band, no-human-gate loop, matching the SISA no-approval-step posture, not a "zero
+  landing surface" gap.
+
+  **Action: none — do NOT wire a second BigQuery write path into `golden-scenarios.yml` itself,
+  and do NOT add a redundant W5 adjudication step for this.** Granting the CI job's identity a
+  `bigquery.dataEditor` binding (the pattern used for `ops.ci_findings`/`ops.heartbeat`) would
+  duplicate a mechanism that already works end-to-end via D3+AR_orc, and would arm a second,
+  push-time-triggered autonomous write path for the exact review class CLAUDE.md's SISA note says
+  must stay gate-free and mechanical, not something to multiply informal entry points into. If a
+  future audit re-flags "the golden-scenarios queue INSERT is never executed," check D3's/AR_orc's
+  `prose-regression` handling first — it almost certainly already covers it.
+
 ## Settled decisions — do NOT re-propose
 
 - **Terraform / full IaC adoption of the GCP substrate.** `infra/terraform/`
