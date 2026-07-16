@@ -485,7 +485,7 @@ For each watchlist candidate: does any Development materially change candidacy s
 
 ANALYSIS — OPPORTUNITY CHECK
 
-For every Development above, evaluate whether it creates a new entry candidate for any of Strategies A, B, C, or E (D's multi-year horizons rarely turn on single-day developments). Do not limit evaluation to existing watchlist names — names currently unwatchlisted can become candidates, and names currently held in one strategy can incidentally create candidacy in another (with the simultaneous-holding constraints from Strategy.md respected). Examples of signals to surface:
+For every Development above, evaluate whether it creates a new entry candidate for any roster-active strategy with `review_cadence: reactive` in `strategy/roster.yaml` (self-improvement audit 2026-07-15, CONFIRMED GAP sisa-graduate-no-signal-path — a roster-derived set, currently A, B, C, E; D is excluded via `review_cadence: long_horizon` since its multi-year horizons rarely turn on single-day developments; a future SISA graduate is picked up automatically once SL5 registers it, per that field's mandatory declaration at SHADOW-register time). Do not limit evaluation to existing watchlist names — names currently unwatchlisted can become candidates, and names currently held in one strategy can incidentally create candidacy in another (with the simultaneous-holding constraints from Strategy.md respected). Examples of signals to surface:
 - ≥5% post-event move on a name fitting Strategy B's eligibility → B candidate (10-day entry window)
 - Newly announced qualifying catalyst within 45 days on a name fitting Strategy C's eligibility → C candidate
 - Catalyst announcement within 6 months on a name fitting Strategy A's eligibility → A candidate
@@ -1008,7 +1008,7 @@ Read access scope: Weekly cadence. Query `events.decision_log` (+ `analytics.fin
 
 Read Strategy.md, Experiment_Parameters.md, Operating_Protocols.md (positions from `state.current_positions`, decisions from `events.decision_log`).
 
-For each currently-open position in Strategies A, B, C, and E (not D — D gets a monthly deep-dive in M3), produce thesis-status research. Write the complete content directly to `Weekly_Position_Deep_Dive.md` (overwrite; first line = current ISO week in YYYY-WW format).
+For each currently-open position in a roster-active strategy with `review_cadence: reactive` in `strategy/roster.yaml` (self-improvement audit 2026-07-15, CONFIRMED GAP sisa-graduate-no-signal-path — a roster-derived set, currently A, B, C, E; D is excluded via `review_cadence: long_horizon` and instead gets a monthly deep-dive in M3; a future SISA graduate is picked up automatically once SL5 registers it), produce thesis-status research. Write the complete content directly to `Weekly_Position_Deep_Dive.md` (overwrite; first line = current ISO week in YYYY-WW format).
 
 Per position, cover:
 
@@ -1022,7 +1022,7 @@ Per position, cover:
 
 5. Thesis-invalidation signals. Has cumulative evidence moved the position closer to any invalidation criterion in the entry record?
 
-6. Time-to-thesis-resolution. On track for the expected resolution window? Flag positions approaching time-based exits (A: 12-month hard stop; B: 60-day stale; C: option expiration; E: 6-month stale).
+6. Time-to-thesis-resolution. On track for the expected resolution window? Flag positions approaching time-based exits, per each position's own strategy's exit rule (current roster's attributes: A: 12-month hard stop; B: 60-day stale; C: option expiration; E: 6-month stale — a future roster-active strategy's own time-based exit rule is read from its own `strategy/0N_strategy_<code>.md` slice, per Strategy.md's exit-rule section for that strategy, not this hardcoded reference list).
 
 Per position: explicit recommendation (hold / close on thesis completion / close on thesis invalidation / further research). The downstream W4 routine reads these recommendations and stages exits for "close" calls and schedules research-deferral events for "further research" calls, so each recommendation must cite the specific invalidation criterion (for close calls) or the specific information gap (for further research calls).
 
@@ -1620,7 +1620,7 @@ Retrospective description: risk-on, risk-off, sector rotation, macro-driven, idi
 
 PART 2 — Q1 factbase feeds the autonomous Strategy Arsenal Lifecycle (SISA). (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner directive: this part no longer dead-ends at "the next experiment-restart router pre-mortem".) A LAUNCHED strategy's own machinery stays immutable for its life (spec-frozen at its SHADOW entry); what is now versioned policy is roster MEMBERSHIP — which strategies exist and in what phase. A router-STRUCTURE change affecting a LIVE strategy still requires a full router pre-mortem (now routine-runnable via the AR pair, adjudicated autonomously); roster ADDITIONS and RETIREMENTS flow autonomously through SL1-SL5. Q1 writes its roster-relevant diagnostics as structured `state.strategy_candidates` rows (`source_routine='Q1'`) feeding SL1's quarterly synthesis, and surfaces sustained edge-decay/redundancy signals as SL4-consumable inputs.
 
-1. Router activation trace. For each of A, B, C, D, E, trace activation state changes during the quarter using `events.regime_events` (router/activation history) and `events.decision_log`. Table: strategy, activation periods, deactivation periods, disagreement reviews triggered and outcomes.
+1. Router activation trace. For each roster-active strategy (self-improvement audit 2026-07-15, CONFIRMED GAP sisa-graduate-no-signal-path — enumerated from `state.strategy_roster` / `strategy/roster.yaml`, not a fixed A-E list, so a SISA graduate is picked up automatically), trace activation state changes during the quarter using `events.regime_events` (router/activation history) and `events.decision_log`. Table: strategy, activation periods, deactivation periods, disagreement reviews triggered and outcomes.
 
 2. Consistency comparison. Per strategy, compare router classifications against PART 1 retrospective. Does the regime the router classified match the regime the retrospective describes? Focus on systematic disagreements (e.g., router said HEALTHY/UP during a quarter the retrospective calls "rolling distribution").
 
@@ -2143,7 +2143,7 @@ Observability: connector pre-flight, `ops.sp_auto_resolve_alerts()`, run-logging
 
 Scan the queue for the oldest due roster-mutation task and dispatch by type. If none: chat output "No roster mutations due." and exit.
 
-(1) **SHADOW register** (on a SUFFICIENT `strategy-adoption` verdict, via `state.strategy_adoption_readiness`). Insert the SHADOW `events.strategy_lifecycle` row + add the `strategy/roster.yaml` entry (roster_state=shadow, `spec_locked_since` = today — THIS is the spec-freeze: the candidate's machinery is now immutable; any further change = terminate-and-restart-as-new). No repo-view fanout yet (still candidate-namespace, zero capital). Write `ops.roster_change_log` + `CALL ops.sp_raise_alert('info','SL5','strategy_shadow_registered', ...)`.
+(1) **SHADOW register** (on a SUFFICIENT `strategy-adoption` verdict, via `state.strategy_adoption_readiness`). Insert the SHADOW `events.strategy_lifecycle` row + add the `strategy/roster.yaml` entry (roster_state=shadow, `spec_locked_since` = today — THIS is the spec-freeze: the candidate's machinery is now immutable; any further change = terminate-and-restart-as-new). **`review_cadence` MANDATORY (self-improvement audit 2026-07-15, CONFIRMED GAP sisa-graduate-no-signal-path)** — set `review_cadence: reactive` unless the candidate's own pre-mortem/thesis explicitly documents multi-year entry horizons that do NOT turn on single-day developments (D's own documented rationale — see `roster.yaml`'s field-level comment), in which case set `review_cadence: long_horizon`. Default to `reactive` on any ambiguity: an over-included long-horizon strategy costs a cheap, harmless D1/W3 evaluation; an omitted reactive strategy silently loses real daily-opportunity/weekly-position coverage — the asymmetry this field exists to fix. No repo-view fanout yet (still candidate-namespace, zero capital). Write `ops.roster_change_log` + `CALL ops.sp_raise_alert('info','SL5','strategy_shadow_registered', ...)`.
 
 (2) **PROBE register** (on SL3's `probe-register` enqueue). Run the full ROSTER FANOUT, in this order (land repo + SQL first, live-apply last — the D2a self-bootstrapping order):
    - Finalize the Strategy.md section (candidate namespace `## Strategy <code> [CANDIDATE]` → roster-active `## Strategy <code>`); flip `strategy/roster.yaml` to roster_state=probe.

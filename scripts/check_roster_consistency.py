@@ -70,6 +70,13 @@ CHECKS
        a table that does not exist. FAIL if the literal string `events.strategy_candidates` reappears in
        either file.
 
+  R-I  REVIEW-CADENCE DECLARED (added 2026-07-15, self-improvement audit CONFIRMED GAP
+       sisa-graduate-no-signal-path). Every ROSTER-ACTIVE strategy (probe/adopted) must declare
+       `review_cadence: reactive|long_horizon` in strategy/roster.yaml — the field D1's daily
+       opportunity check and W3's weekly position deep-dive now read to decide whether a strategy is
+       in scope, replacing a hardcoded 'A, B, C, or E' enumeration that had no mechanism to pick up a
+       future SISA graduate. FAIL naming which strategy is missing the field or has an invalid value.
+
   R-F  SPEC-LOCK HASH AGREEMENT (added rev 2026-07-11, Item 28 self-improvement audit; hardened
        2026-07-11 adversarial self-audit). Each strategy's LOCKED machinery — its strategy/0N_strategy_
        <code>.md slice plus its corresponding math module(s) (strategy_math/strategy_<code>.py +
@@ -490,6 +497,22 @@ def main():
                           f"exist live — the SISA candidate-intake table is `state.strategy_candidates` "
                           f"(bigquery/35_strategy_arsenal.sql). Fix the dataset name.")
 
+    # ---- R-I: review_cadence declared for every roster-active strategy (2026-07-15 self-improvement
+    # audit) — D1/W3 read this field instead of a hardcoded strategy-letter enumeration; a
+    # roster-active strategy missing it (or with an invalid value) would silently drop out of BOTH
+    # D1's daily opportunity check and W3's weekly position deep-dive.
+    VALID_REVIEW_CADENCE = {"reactive", "long_horizon"}
+    for s in doc.get("strategies", []) or []:
+        code = s.get("code")
+        if code not in roster_codes:
+            continue   # candidate/shadow/paper/terminated entries are out of scope for this check
+        rc = s.get("review_cadence")
+        if rc not in VALID_REVIEW_CADENCE:
+            errors.append(f"R-I: strategy/roster.yaml strategy {code!r} has review_cadence={rc!r} — "
+                          f"must be one of {sorted(VALID_REVIEW_CADENCE)}. D1/W3 read this field to "
+                          f"decide whether {code} is in scope for the daily opportunity check / weekly "
+                          f"position deep-dive.")
+
     # ---- report ----
     if errors:
         print("ROSTER CONSISTENCY: FAIL\n")
@@ -511,7 +534,8 @@ def main():
           f"test is count-agnostic; arsenal_rails' SQL constants agree with roster.yaml's rails block; every "
           f"SPEC_HASH_INPUTS-covered spec-locked strategy's spec_hash agrees with its .md slice + math "
           f"module(s); dbt schema.yml accepted_values(strategy) tests agree with the roster-active set; "
-          f"no stray events.strategy_candidates dataset-name reference.")
+          f"no stray events.strategy_candidates dataset-name reference; every roster-active strategy "
+          f"declares a valid review_cadence.")
     if notes:
         print("\nNOTES (non-blocking):")
         for n in notes:
