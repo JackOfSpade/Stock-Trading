@@ -10,6 +10,32 @@ act. Dated passes below; most recent first.
 
 ---
 
+# 2026-07-16 research_quality_feedback promotion substrate (LC-4 other parts, loop-completeness audit) — local-only implementation round
+
+This pass was done as a **local-only** implementation (commits sit on the working branch, not
+pushed) per that round's ground rules — nothing below is live yet. (LC-4's other half — adding
+`loop:research_quality_feedback` to `cadence_check.sql`'s dead-man UNNEST arrays — landed earlier in
+this same sequence and is not repeated here.)
+
+## M. Apply `bigquery/71_research_quality_promotion.sql` live via the BigQuery MCP/console
+
+**What it's for:** completes the `research_quality_feedback` loop's persistence substrate so its
+SHADOW -> ACTIVE_AUTO promotion is no longer an unowned "future, separately-committed edit." Creates
+`ops.loop_promotion_log` (durable promotion idempotency marker; `CREATE TABLE IF NOT EXISTS`, safe to
+double-apply if a sibling loop-promotion change also defines it), `ops.research_quality_observations`
+(per-cycle observation log, the `ops.process_reliability_observations` analog this loop was missing),
+and `state.research_quality_promotion_readiness` (3-consecutive-W5-cycle `min_n_met` persistence AND
+not-already-promoted). Apply order: after `66_research_quality_feedback.sql`.
+
+**Action:** run the DDL/view statements in `bigquery/71_research_quality_promotion.sql` via the
+BigQuery MCP or console (this session was not permitted to call BigQuery directly). Not urgent — the
+readiness view is fail-closed empty until W5's RESEARCH-QUALITY FEEDBACK bullet starts writing
+`ops.research_quality_observations` rows (which itself requires `n_closed >= 1` cells; account-wide
+total is currently 7 GO theses, 3 closed), so nothing depends on this being applied same-day. Apply
+whenever convenient, ideally before this round's commits are pushed to `main`.
+
+---
+
 # 2026-07-16 AR_orc echo_suspect_cap_reached cool-off close (CC-2, consumption-closure audit) — local-only implementation round
 
 This pass was done as a **local-only** implementation (commits sit on the working branch, not

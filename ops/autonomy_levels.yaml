@@ -259,10 +259,14 @@ loops:
       KNOB — unlike the four constant-tuning loops above, no specific D1/W1-W3 research-criterion constant
       has been identified as the thing this loop would change; inventing one now, ahead of any real signal,
       would be exactly the unfounded self-modifying change this register's own "data gate before mechanism"
-      discipline exists to prevent. Both (1) and (2) are future, separately-committed edits — the first
-      would be a `state.research_quality_readiness` view (bigquery/37-style), the second a specific proposal
-      citing the sub_pattern/strategy cell whose signal justifies it. NO human PR/chat gate at either
-      promotion — same record-then-promote-by-editing-this-register discipline as every sibling loop.
+      discipline exists to prevent. The persistence substrate for (1) now exists (loop-completeness audit
+      2026-07-16): `ops.research_quality_observations` + `state.research_quality_promotion_readiness`
+      (`bigquery/71_research_quality_promotion.sql`) — fail-closed empty until the observation log has rows.
+      W5's RESEARCH-QUALITY FEEDBACK bullet (`Claude_Task_Plan.md`) owns detecting `ready_for_promotion = TRUE`
+      and self-executing BOTH (1) (already substrated) and (2) (the named knob, authored from the fired
+      cell's evidence at promotion time, not before) via its PROMOTION CHECK step — not an unscheduled
+      future act. NO human PR/chat gate at either promotion — same record-then-promote-by-editing-this-register
+      discipline as every sibling loop.
     added: "2026-07-15"
 
 cross_cutting_guards:
