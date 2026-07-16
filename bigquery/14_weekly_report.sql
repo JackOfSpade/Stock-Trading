@@ -15,6 +15,18 @@
 -- use — dropping/cleaning them up is a separate, later decision, out of scope for the
 -- redesign. See ops/RUNBOOK.md §33.
 --
+-- ORPHAN-DOC UPDATE (self-improvement audit 2026-07-16 cleanup pass): the "reads ... plus
+-- analytics.strategy_vs_park / park_baseline" sentence above is itself now superseded by the
+-- v3 (2026-07-15) redesign — see ops/weekly_report/weekly_report.gs's own header DATA list,
+-- which reads only analytics.strategy_scorecard from this file (unchanged) plus
+-- analytics.strategy_vs_park_daily / analytics.voo_cumulative from bigquery/21 and
+-- bigquery/46; analytics.strategy_vs_park and analytics.park_baseline joined the
+-- "retained, no longer read" set at that point too (documented at their own definitions in
+-- bigquery/21_strategy_vs_park.sql). The five objects listed just above this note
+-- (ops.account_snapshot's dedup views, weekly_activity/weekly_fills/weekly_nogos,
+-- open_positions_summary, next_7_days) were already retained-not-read BEFORE v3 and remain so
+-- under v3 — confirmed not present in weekly_report.gs's v3 DATA list either.
+--
 -- Objects:
 --   * analytics.strategy_scorecard  — one row per strategy: activation + budget + profitability
 --   * ops.account_snapshot          — daily account-level NAV/cash/TWR (written by D2 Step 0b)

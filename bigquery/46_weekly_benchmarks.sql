@@ -96,6 +96,15 @@ FROM j;
 -- single day's snapshot. When there is no gap (every day has its own VOO mark, the case as of
 -- 2026-07-13), every span is a singleton and voo_span_avg_capital == capital exactly — a mathematically
 -- exact no-op, so this changes nothing about any figure already computed/emailed to date.
+--
+-- RETAINED, no longer read (v3 redesign, 2026-07-15; self-improvement audit 2026-07-16 orphan-doc
+-- pass): this view was built as "the weekly email's new headline block" for the 2026-07-13 VOO
+-- addition, but the 2026-07-15 v3 redesign removed that headline section entirely (see
+-- ops/weekly_report/weekly_report.gs's own header: "the prior 'Deployed Book Since...' headline
+-- section is gone entirely" — this view is explicitly on the .gs's "Retained but no longer read"
+-- list). The email now reads analytics.strategy_scorecard + analytics.strategy_vs_park_daily +
+-- analytics.voo_cumulative directly instead. Kept per this repo's "retain, don't delete" convention
+-- for superseded analytics objects (see bigquery/04_analytics.sql's analytics.review_embeddings note).
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.deployed_book_vs_benchmarks` AS
 WITH agg AS (
   SELECT as_of_date,

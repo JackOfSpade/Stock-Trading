@@ -318,6 +318,8 @@ FROM h, td;
 -- chunk rows per decision_log entry (RUNBOOK §23) -- tracking decision_log's row count alone
 -- understated how close the searched table is to the threshold (825 embedding rows vs 289 decision_log
 -- rows at the 2026-07-03 cutover, a ~2.85x ratio). Track the embeddings table directly.
+-- ORPHAN-DOC (self-improvement audit 2026-07-16 cleanup pass): advisory, cited by RUNBOOK passes,
+-- no scheduled reader by design -- not orphaned, just human-read rather than machine-polled.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.embedding_scale_watch` AS
 WITH n AS (SELECT COUNT(*) AS decision_log_rows FROM `stock-trading-498512.events.decision_log`),
 e AS (SELECT COUNT(*) AS embedding_rows FROM `stock-trading-498512.analytics.decision_embeddings`)

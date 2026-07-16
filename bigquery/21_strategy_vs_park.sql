@@ -3,16 +3,26 @@
 -- there in this same redesign) and after 04_analytics.sql (analytics.strategy_nav, state.trade_fills_curated).
 --
 -- WHY THIS EXISTS: the weekly email answers a single question — "is each strategy beating SGOV?" —
--- as percentages. It iterated (full history in ops/RUNBOOK.md §33); the CURRENT (2026-07-03 #3)
--- email reads exactly two views from this file:
+-- as percentages. It iterated (full history in ops/RUNBOOK.md §33); the 2026-07-03 #3 email read
+-- exactly two views from this file: analytics.strategy_vs_park_daily and analytics.sgov_cumulative.
 --   * analytics.strategy_vs_park_daily — per strategy-day: deployed_unit_value (the chart's ACTUAL
 --     cumulative-return lines) + cumulative excess_vs_sgov (the .gs turns this into an AVERAGE return
 --     vs SGOV per week / month / year — a geometric per-period rate over the strategy's ACTIVE
 --     (deployed) days; rows exist only for deployed days, so idle time never dilutes the average).
---   * analytics.sgov_cumulative — SGOV's OWN cumulative total return (the chart's SGOV line + its
---     own average return per period). Defined at the bottom of this file.
--- The other views here (strategy_vs_park $ edge + commissions, deployed_book_vs_sgov combined
--- excess %, park_baseline) fed earlier iterations and are RETAINED but no longer read by the email.
+--     STILL read today — the v3 (2026-07-15) redesign keeps this view for deployed_unit_value; it
+--     just stopped reading excess_vs_sgov (VOO replaced SGOV as the displayed comparator — see
+--     ops/weekly_report/weekly_report.gs's own header).
+--
+-- ORPHAN-DOC UPDATE (self-improvement audit 2026-07-16 cleanup pass): the paragraph above is
+-- superseded for analytics.sgov_cumulative specifically — the v3 (2026-07-15) redesign dropped the
+-- SGOV comparison from the email entirely ("No vs-SGOV comparison anywhere in this email" — see
+-- weekly_report.gs's header), so sgov_cumulative is NO LONGER read either, alongside the other views
+-- here (strategy_vs_park $ edge + commissions, deployed_book_vs_sgov combined excess %, park_baseline)
+-- that already fed earlier iterations and are RETAINED but no longer read. weekly_report.gs's own
+-- header explicitly lists all four (sgov_cumulative, deployed_book_vs_sgov, strategy_vs_park,
+-- park_baseline) as "Retained but no longer read by this email" — this file's per-view comments below
+-- are kept in sync with that list; see also bigquery/46_weekly_benchmarks.sql's
+-- analytics.deployed_book_vs_benchmarks (same v3 orphaning, documented there).
 -- Everything derives from perf.strategy_daily (the deployed-TWR engine); excess_vs_sgov =
 -- deployed_unit_value / sgov_index − 1, the sanctioned kill/gate metric.
 
@@ -161,10 +171,14 @@ FROM j;
 
 -- ===== analytics.sgov_cumulative — SGOV's OWN cumulative total return, aligned to the deployed axis =====
 -- One row per deployed trading day: SGOV's cumulative total return (close + dividends) chained from
--- the first deployed date forward. The weekly email plots this as the SGOV line on the returns chart
--- (so SGOV's actual return is visible, not a flat 0), and derives SGOV's own average return per
--- week/month/year over those days. Built over the union of dates in strategy_vs_park_daily so it
--- shares the strategy lines' x-axis exactly. r_sgov forward-fill mirrors the engine.
+-- the first deployed date forward. Originally plotted as the SGOV line on the weekly email's returns
+-- chart. Built over the union of dates in strategy_vs_park_daily so it shares the strategy lines'
+-- x-axis exactly. r_sgov forward-fill mirrors the engine.
+-- RETAINED, no longer read (v3 redesign, 2026-07-15): per ops/weekly_report/weekly_report.gs's own
+-- header comment, this view is explicitly listed as retained-but-superseded — the redesigned email
+-- dropped the SGOV comparison entirely (VOO is now the sole informational comparator). Not dropped
+-- here for the same "retain, don't delete" convention as analytics.review_embeddings /
+-- analytics.theater_independence (bigquery/04_analytics.sql).
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.sgov_cumulative` AS
 WITH days AS (
   SELECT DISTINCT as_of_date FROM `stock-trading-498512.analytics.strategy_vs_park_daily`

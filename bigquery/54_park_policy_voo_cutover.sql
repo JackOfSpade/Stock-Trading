@@ -192,6 +192,10 @@ FROM p LEFT JOIN mark ON TRUE;
 -- D2 Step 0 / Operating_Protocols.md §13.A should read state.park_reconciliation (above) going
 -- forward; these two names are kept working, unrenamed, so any reference this migration's authors
 -- missed does not silently break.
+-- ORPHAN-DOC (self-improvement audit 2026-07-16 cleanup pass): frozen post-VOO-cutover, no runtime
+-- reader by design — confirmed via Operating_Protocols.md §13 and ops/RUNBOOK.md's cutover notes
+-- (2026-07-15). Not a candidate for removal; it's the permanent pre-cutover SGOV-only historical
+-- record, same "retain, don't delete" convention as elsewhere in this repo.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.sgov_position` AS
 SELECT
   events_shares AS events_sgov_shares, buy_shares, sell_shares, drip_shares,

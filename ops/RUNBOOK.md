@@ -1699,6 +1699,16 @@ deliberate, requested reduction, not an oversight.
   flaw and was NOT fixed here — it now feeds a column the redesigned email no longer displays, so
   it's a candidate for a follow-up, not urgent.
 
+  **CORRECTION (self-improvement audit 2026-07-16 orphan-cleanup pass):** the "not urgent, candidate
+  for follow-up" framing above went stale the same day it was written — commit `3b8715c` ("Fix
+  BigQuery SQL + dbt layer: NULL/dedup bugs, missing SGOV guard, parity gaps", 2026-07-04) already
+  applied the identical `, as_of_date DESC` tie-break to both `analytics.strategy_unit_value_7d_ago`
+  (`bigquery/14_weekly_report.sql`) and its dbt twin (`dbt/models/analytics/strategy_unit_value_7d_ago.sql`),
+  it just never updated this paragraph to say so. Verified live in both files as of 2026-07-16: the
+  `QUALIFY ROW_NUMBER()` in each now reads `ORDER BY ABS(DATE_DIFF(...)), as_of_date DESC`, matching
+  `strategy_vs_park`'s pattern exactly. No further SQL change was needed for the 2026-07-16 pass;
+  this note exists only so a future reader doesn't re-attempt a fix that already shipped.
+
 **dbt parity:** mirrored `deployed_capital` into `dbt/models/analytics/strategy_daily_returns.sql`;
 added `strategy_vs_park_daily.sql` / `strategy_vs_park.sql` / `park_baseline.sql` twins +
 `schema.yml` entries (uniqueness/not-null/accepted-values tests matching the `strategy_nav`-family
