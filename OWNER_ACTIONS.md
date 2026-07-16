@@ -10,6 +10,33 @@ act. Dated passes below; most recent first.
 
 ---
 
+# 2026-07-16 AR_orc echo_suspect_cap_reached cool-off close (CC-2, consumption-closure audit) — local-only implementation round
+
+This pass was done as a **local-only** implementation (commits sit on the working branch, not
+pushed) per that round's ground rules — nothing below is live yet.
+
+## L. Verify the CC-2 dry-run acceptance test live, then clean up the synthetic rows in the same session
+
+**What it's for:** CC-2 adds `Claude_Task_Plan.md` AR_orc **STEP 0.5 — ECHO-SUSPECT COOL-OFF
+RE-ADJUDICATION** plus a Step 4 resolve-tail and a Step 3.5 alert-text fix, so a review that hits the
+`echo_suspect_cap_reached` critical (2+ failed theater-independence checks) is retried automatically
+every >=14 days instead of parking `state.trading_enabled` open-ended pending an owner session. This
+session deliberately did **not** run the dry run against live BigQuery (out of scope for a
+local-only round — no MCP calls were made). No live `echo_suspect_cap_reached` alert has ever fired
+(confirmed latent, zero occurrences), so this is not urgent, but please verify the mechanism once
+before or shortly after the Claude_Task_Plan.md STEP 0.5 text goes live:
+
+**Action — dry run (needs the BigQuery MCP or console, run in ONE session so cleanup isn't skipped):**
+1. Insert a synthetic alert: `INSERT INTO ops.alerts (alert_ts, severity, source_routine, category, message, resolved, payload) VALUES (TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 4 DAY), 'info', 'AR_orc', 'echo_suspect_cap_reached', 'TEST-REVIEW-CC2-DRYRUN — dry-run synthetic row, do not action', FALSE, JSON '{}')` — `severity='info'` deliberately, so it never enters `blocking_criticals` and never halts trading (a `severity='critical'` synthetic row would, for the duration of the test).
+2. Run (or wait for) the next AR_orc fire. Confirm exactly one new `events.queue_events` row appears with `JSON_VALUE(payload,'$.echo_suspect_cooloff')='true'` and one `events.decision_log` row with `entry_type='echo-cooloff-requeue'`.
+3. Run AR_orc again (same day or within the 14-day window). Confirm it enqueues nothing further for this test review id (the 14-day gate holds).
+4. **Cleanup in the same session:** `UPDATE ops.alerts SET resolved=TRUE, resolved_note='dry-run' WHERE category='echo_suspect_cap_reached' AND message LIKE '%TEST-REVIEW-CC2-DRYRUN%'` AND set the synthetic `events.queue_events` row's `status='abandoned'` (note `'dry-run'`) so queue-driven AR_att never picks it up and attacks a nonexistent artifact.
+
+Not urgent (latent path, zero live occurrences) — do whenever convenient, ideally before this round's
+commits are pushed to `main`.
+
+---
+
 # 2026-07-16 SISA retirement round-trip fix (LC-1/CC-4, loop-completeness audit) — local-only implementation round
 
 This pass was done as a **local-only** implementation (commits sit on the working branch, not
