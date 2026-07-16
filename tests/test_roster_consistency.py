@@ -219,15 +219,19 @@ def test_roster_yaml_active_set_mismatch_vs_seed_is_caught(repo_copy):
     txt = _read(p)
     # Flip strategy D's roster_state from adopted to rejected in roster.yaml ONLY (leave the bigquery/35
     # seed, Strategy.md, slices, and the plan slice-map all saying D is still active) -> R-A mismatch.
-    old = (
+    marker = (
         "  - code: D\n"
         '    name: "Long-horizon narrative-screened equity core"\n'
         "    archetype: long-horizon-concentrated-equity\n"
-        "    roster_state: adopted\n"
     )
-    assert old in txt, "fixture assumption about roster.yaml's D block shape drifted — update this test"
-    new = old.replace("roster_state: adopted", "roster_state: rejected")
-    _write(p, txt.replace(old, new))
+    assert marker in txt, "fixture assumption about roster.yaml's D block shape drifted — update this test"
+    # D's roster_state line is the first "    roster_state: adopted\n" AFTER the marker above (fields
+    # between archetype and roster_state, e.g. review_cadence, may change shape without breaking this).
+    start = txt.index(marker) + len(marker)
+    state_line = "    roster_state: adopted\n"
+    state_idx = txt.index(state_line, start)
+    new_txt = txt[:state_idx] + "    roster_state: rejected\n" + txt[state_idx + len(state_line):]
+    _write(p, new_txt)
     assert rc.main() == 1
 
 
@@ -442,6 +446,34 @@ def test_events_strategy_candidates_in_cadence_is_caught(repo_copy):
     assert "state.strategy_candidates" in txt, "fixture assumption about cadence.yaml's candidate-feed name drifted"
     _write(p, txt.replace("state.strategy_candidates", "events.strategy_candidates", 1))
     assert rc.main() == 1
+
+
+# ---- R-I: review_cadence declared for every roster-active strategy (2026-07-15 self-improvement audit) ----
+def test_review_cadence_invalid_value_is_caught(repo_copy):
+    p = rc.ROSTER
+    txt = _read(p)
+    assert "review_cadence: reactive" in txt, "fixture assumption about roster.yaml's review_cadence field drifted"
+    _write(p, txt.replace("review_cadence: reactive", "review_cadence: bogus_value", 1))
+    assert rc.main() == 1
+
+
+def test_review_cadence_missing_field_is_caught(repo_copy):
+    p = rc.ROSTER
+    txt = _read(p)
+    doc = rc.yaml.safe_load(txt)
+    strat_a = next(s for s in doc["strategies"] if s["code"] == "A")
+    assert strat_a.get("review_cadence") == "reactive", "fixture assumption about strategy A's review_cadence drifted"
+    del strat_a["review_cadence"]
+    _write(p, rc.yaml.dump(doc, sort_keys=False))
+    assert rc.main() == 1
+
+
+def test_review_cadence_valid_values_pass(repo_copy):
+    # sanity: both valid values are accepted, not just the real repo's current mix.
+    p = rc.ROSTER
+    txt = _read(p)
+    assert "review_cadence: long_horizon" in txt, "fixture assumption about strategy D's review_cadence drifted"
+    assert rc.main() == 0
 
 
 # ---- skip semantics: pre-2026-07-10 checkout without strategy/roster.yaml is a clean SKIP ----

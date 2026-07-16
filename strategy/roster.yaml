@@ -97,6 +97,18 @@ strategies:
   - code: A
     name: "Catalyst-driven equity long positions (pre-event, directional)"
     archetype: catalyst-driven-long-equity
+    review_cadence: reactive        # D1 daily opportunity-check + W3 weekly position deep-dive coverage
+                                     #   (self-improvement audit 2026-07-15, CONFIRMED GAP
+                                     #   sisa-graduate-no-signal-path). reactive = catalyst/event-driven,
+                                     #   entries can turn on single-day developments -> D1 + W3.
+                                     #   long_horizon = multi-year thesis, entries do NOT turn on
+                                     #   single-day developments (D's own documented rationale) -> Q2 +
+                                     #   M3 instead, never D1/W3. New strategies default to `reactive`
+                                     #   unless SL2 explicitly declares `long_horizon` in the draft (the
+                                     #   safe default: omission from D1/W3 silently drops real
+                                     #   opportunities/positions from coverage; wrongly including a
+                                     #   long-horizon strategy only costs a cheap, harmless evaluation
+                                     #   D1/D2 will naturally decline).
     roster_state: adopted
     edges_exploited: ["1.1", "1.4", "1.10"]
     disadvantages_compensated: ["2.4", "2.13", "2.15", "2.17", "2.19"]
@@ -117,6 +129,7 @@ strategies:
   - code: B
     name: "Post-event mispricing exploitation"
     archetype: post-event-mispricing-long-bias
+    review_cadence: reactive        # entries turn on single-day post-event developments -> D1 + W3.
     roster_state: adopted
     edges_exploited: ["1.1", "1.4"]
     disadvantages_compensated: []   # B does NOT compensate 2.20 (rev-2 retraction); it is structurally
@@ -141,6 +154,7 @@ strategies:
   - code: C
     name: "Defined-risk options structures around known events"
     archetype: defined-risk-options-on-catalysts
+    review_cadence: reactive        # entries turn on single-day/known-event developments -> D1 + W3.
     roster_state: adopted
     edges_exploited: ["1.1"]        # 1.4 used as a technique, not a primary exploited edge.
     disadvantages_compensated: ["2.1", "2.18"]   # defined-risk caps loss (2.18); numerical work delegated (2.11).
@@ -165,6 +179,11 @@ strategies:
   - code: D
     name: "Long-horizon narrative-screened equity core"
     archetype: long-horizon-concentrated-equity
+    review_cadence: long_horizon    # multi-year horizons rarely turn on single-day developments ->
+                                     #   Q2 quarterly candidate screen + M3 monthly deep-dive instead;
+                                     #   excluded from D1's daily opportunity check and W3's weekly
+                                     #   position deep-dive (both routines' own long-standing rationale,
+                                     #   now made roster-derived instead of hardcoded prose).
     roster_state: adopted
     edges_exploited: ["1.1", "1.4", "1.10"]
     disadvantages_compensated: ["2.23"]   # LTCG / long-horizon-holding compensation.
@@ -192,6 +211,8 @@ strategies:
   - code: E
     name: "Market-neutral narrative-divergence pairs"
     archetype: market-neutral-pairs
+    review_cadence: reactive        # entries turn on single-day narrative-divergence developments ->
+                                     #   D1 + W3.
     roster_state: adopted
     edges_exploited: ["1.1", "1.4", "1.10"]
     disadvantages_compensated: ["2.7", "2.20"]   # regime-misclassification (2.7) + crowded-unwind (2.20).
