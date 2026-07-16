@@ -11,6 +11,10 @@
 -- last TRADING day (state.trading_day_today off CURRENT_DATE('America/Denver')), so it auto-
 -- suppresses on weekends/holidays (last_trading_day is the prior close, already covered). See
 -- ops/RUNBOOK.md "Scheduled queries".
+-- SQ_NAME: daily_freshness_check  SQ_VERSION: v1 (self-improvement audit 2026-07-15, scheduled-query
+-- body-drift detection — bigquery/63_scheduled_query_version_registry.sql). Bump SQ_VERSION here AND
+-- state.expected_scheduled_query_versions' matching row on any future edit to this file's body.
+CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:daily_freshness_check', 'v1', 'daily_freshness_check.sql ran');
 BEGIN
   IF (SELECT NOT all_green FROM `stock-trading-498512.state.system_health`) THEN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(

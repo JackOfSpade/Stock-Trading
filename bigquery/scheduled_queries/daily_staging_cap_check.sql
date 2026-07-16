@@ -11,7 +11,12 @@
 -- TIMING: any time during/after the trading day; ~05:25 UTC sits with the other daily control-plane
 -- checks (after D2 has staged the day's orders). APPLY ORDER: bigquery/23_trading_control.sql must be
 -- applied first.
+-- SQ_NAME: daily_staging_cap_check  SQ_VERSION: v1 (self-improvement audit 2026-07-15, scheduled-query
+-- body-drift detection — bigquery/63_scheduled_query_version_registry.sql). Bump SQ_VERSION here AND
+-- state.expected_scheduled_query_versions' matching row on any future edit to this file's body.
 BEGIN
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:daily_staging_cap_check', 'v1', 'daily_staging_cap_check.sql ran');
+
   IF (SELECT daily_cap_breach FROM `stock-trading-498512.state.daily_staging_totals`) THEN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'warning', 'scheduled.staging_cap', 'staging_cap_breach',
