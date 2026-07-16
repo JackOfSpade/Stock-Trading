@@ -17,19 +17,26 @@
 -- enumerates every EVER-ADOPTED strategy (including terminated), and the equal-split eligibility test
 -- uses BOTH adopted_date and retired_date evaluated AS OF THE FLOW'S OWN DATE -- a fixed historical fact
 -- a later termination can never revise.
+--
+-- rev 2026-07-15 (self-improvement audit, CONFIRMED GAP probe-stake-floor-prose-only; mirrors the
+-- bigquery/22_cash_flows.sql fix exactly): swapped `adopted_date` -> `DATE(immutable_since)` (the
+-- FIRST PROBE-or-ADOPTED transition) -- a PROBE-phase newcomer previously had NO row here at all (zero
+-- sizing_base_2pct), a structural deadlock since PROBE needs sizing to trade toward its own 30-trade
+-- gate into ADOPTED. Verified byte-identical for the founding batch (immutable_since == adopted_date
+-- when seeded straight into ADOPTED). See bigquery/22_cash_flows.sql's header for the full rationale.
 WITH active AS (
-  SELECT strategy_code AS s, adopted_date, retired_date
+  SELECT strategy_code AS s, DATE(immutable_since) AS capital_eligible_date, retired_date
   FROM {{ source('state_external', 'strategy_roster') }}
-  WHERE adopted_date IS NOT NULL
+  WHERE immutable_since IS NOT NULL
 ),
 dep AS (
   SELECT a.s AS strategy,
     SUM(CASE
           WHEN cf.strategy = a.s THEN cf.amount
-          WHEN cf.strategy IS NULL AND a.adopted_date <= cf.flow_date
+          WHEN cf.strategy IS NULL AND a.capital_eligible_date <= cf.flow_date
                AND (a.retired_date IS NULL OR a.retired_date > cf.flow_date)
             THEN cf.amount / (SELECT COUNT(*) FROM active a2
-                               WHERE a2.adopted_date <= cf.flow_date
+                               WHERE a2.capital_eligible_date <= cf.flow_date
                                  AND (a2.retired_date IS NULL OR a2.retired_date > cf.flow_date))
           ELSE 0 END) AS deposits
   FROM active a
