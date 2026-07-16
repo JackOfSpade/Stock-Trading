@@ -80,26 +80,44 @@ SELECT
 -- by this fix). scripts/check_roster_consistency.py asserts no bare ['A'..'E'] literal / no /5 divisor
 -- remains here. NOTE (apply order): this view reads state.strategy_roster (bigquery/35_strategy_arsenal.sql),
 -- so 35 must be applied BEFORE this file.
+--
+-- rev 2026-07-15 (self-improvement audit, CONFIRMED GAP probe-stake-floor-prose-only): the
+-- capital-eligibility gate below was keyed off `adopted_date` (set only on the ADOPTED transition,
+-- which itself only fires after the 30-trade gate clears) instead of `immutable_since` (set at the
+-- FIRST PROBE-or-ADOPTED transition — state.strategy_roster's own header comment). A live newcomer in
+-- PROBE (the phase between roster registration and the 30-trade gate) therefore had NO row in this
+-- view at all: zero deposits, zero NAV, zero sizing_base_2pct — a real structural deadlock, since a
+-- PROBE strategy needs sizing_base_2pct to craft its first sized trade, needs 30 closed trades to
+-- clear the gate, and needs the gate to clear before adopted_date is ever set. Verified live
+-- (2026-07-15) that swapping to `DATE(immutable_since)` produces a BYTE-IDENTICAL result for all 5
+-- current strategies (EXCEPT DISTINCT against the live view returned zero rows) — immutable_since
+-- equals adopted_date for the founding batch (seeded straight into ADOPTED, no separate PROBE row), so
+-- this is a zero-behavioral-change-today fix that only changes behavior for a future PROBE strategy.
+-- The CTE's own column alias is renamed `capital_eligible_date` (no longer synonymous with
+-- "adopted_date") for clarity; `retired_date`/every other column is unchanged.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.strategy_nav` AS
 WITH active AS (
-  -- EVERY ever-adopted strategy code (including terminated), with adopted_date + retired_date, so a
-  -- termination never drops a strategy's history from the rollup and never revises a past flow's split.
-  SELECT strategy_code AS s, adopted_date, retired_date
+  -- EVERY strategy that has ever reached PROBE or ADOPTED (including terminated), with its
+  -- capital-eligibility date + retired_date, so a termination never drops a strategy's history from
+  -- the rollup and never revises a past flow's split, AND a PROBE-phase newcomer is included from its
+  -- first PROBE trade onward, not only once it later clears the 30-trade gate into ADOPTED.
+  SELECT strategy_code AS s, DATE(immutable_since) AS capital_eligible_date, retired_date
   FROM `stock-trading-498512.state.strategy_roster`
-  WHERE adopted_date IS NOT NULL
+  WHERE immutable_since IS NOT NULL
 ),
 dep AS (
   SELECT a.s AS strategy,
     SUM(CASE
           WHEN cf.strategy = a.s THEN cf.amount
-          -- NULL-strategy (equal-split) flow: allocate only to strategies that were active AS OF THAT
-          -- FLOW'S DATE -- adopted on/before it, and not yet retired (or retired strictly after it) --
-          -- divided by the count of exactly those. This is a fixed historical fact: a strategy that
-          -- terminates LATER can never change how an EARLIER flow was split.
-          WHEN cf.strategy IS NULL AND a.adopted_date <= cf.flow_date
+          -- NULL-strategy (equal-split) flow: allocate only to strategies that were capital-eligible
+          -- AS OF THAT FLOW'S DATE -- reached PROBE/ADOPTED on/before it, and not yet retired (or
+          -- retired strictly after it) -- divided by the count of exactly those. This is a fixed
+          -- historical fact: a strategy that terminates LATER can never change how an EARLIER flow was
+          -- split.
+          WHEN cf.strategy IS NULL AND a.capital_eligible_date <= cf.flow_date
                AND (a.retired_date IS NULL OR a.retired_date > cf.flow_date)
             THEN cf.amount / (SELECT COUNT(*) FROM active a2
-                               WHERE a2.adopted_date <= cf.flow_date
+                               WHERE a2.capital_eligible_date <= cf.flow_date
                                  AND (a2.retired_date IS NULL OR a2.retired_date > cf.flow_date))
           ELSE 0 END) AS deposits
   FROM active a
