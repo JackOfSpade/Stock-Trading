@@ -60,6 +60,25 @@ defaults:
 #   annual_ftd     : first trading day of the year    (visible, not alarmed)
 #   queue_driven   : fires only when a queue entry is due — NOT calendar-predictable, so deliberately
 #                    EXCLUDED from state.cadence_expected_today (the adversarial AR routines).
+#
+# SINGLE-SOURCE catchup_safe (added 2026-07-16, ARCH-3 Item 30b). Each routine also carries an explicit
+# `catchup_safe: true|false` boolean — a DECLARED capital-adjacency judgment (never derived from
+# monitor_class, which classifies by schedule SHAPE only), reproducing bigquery/31_catchup_notify.sql
+# and bigquery/59_catchup_autofire.sql's hand-maintained catchup-safe UNNEST lists byte-for-byte in set
+# terms: `true` means a late/catch-up run of this routine reproduces exactly what a same-day run would
+# have produced (no live-order-crafting / intraday-price dependency) — D1/D3/SL3 (daily tier) and
+# W1/W2/W3/W5, M1a/M1b/M2/M3/M5, Q1/Q2/Q3/SL1, A1/A2 (period tier). `false` means the routine crafts
+# orders off live intraday quotes or is otherwise capital-adjacent — D2/D2a, W4/M4/Q4/A3/SL4 (the
+# action-conversion + discretionary-retirement routines), SL2/SL5 (queue-driven SISA authoring/roster
+# routines — never calendar-predictable so never catchup-eligible either way), AR_att/AR_orc
+# (queue-driven adversarial reviews), and OPS0 (the auto-refire dispatcher itself — re-firing the
+# watchdog that re-fires others is out of scope). scripts/check_cadence_consistency.py (CI) — check K —
+# requires every routine to declare this key AND requires bigquery/31 and 59's UNNEST lists to equal
+# the corresponding {catchup_safe AND monitor_class in <tier>} subset of this manifest, so a routine
+# added here without an explicit catchup_safe (or added to 31/59 without a matching declaration here)
+# fails the build instead of drifting silently. scripts/gen_routine_lists.py does NOT generate 31/59's
+# lists (they stay hand-kept per-file, CHECKED not GENERATED — see bigquery/31 and 59's headers) since
+# the capital-adjacency judgment is a human declaration, not a mechanical derivation from monitor_class.
 
 routines:
   # ---- DAILY (every trading day, after the close) ----
@@ -67,6 +86,7 @@ routines:
     name: Market Development Scan
     schedule: "after_close trading_day"   # ~16:10 MT
     monitor_class: daily_trading
+    catchup_safe: true
     depends_on: []
     writes: [Daily.md, events.decision_log, events.regime_events]
     expected_trigger:
@@ -77,6 +97,7 @@ routines:
     name: Broker Reconcile & Snapshot
     schedule: "after_close trading_day, before D2"
     monitor_class: daily_trading
+    catchup_safe: false
     depends_on: []   # deliberately independent of D1 -- the book must reconcile even if D1 failed
     writes: [events.trade_fills, events.position_events, events.daily_marks, perf.strategy_daily,
              ops.account_snapshot]
@@ -96,6 +117,7 @@ routines:
     name: Daily Action Conversion
     schedule: "after D1 trading_day"
     monitor_class: daily_trading
+    catchup_safe: false
     depends_on: [D1, D2a]
     writes: [events.decision_log, events.queue_events, events.position_events, calendar:confirm_order]
     expected_trigger:
@@ -107,6 +129,7 @@ routines:
     name: Calendar & Queue Hygiene
     schedule: "after D2 daily"             # runs daily incl. non-trading days for queue/calendar upkeep
     monitor_class: daily_all
+    catchup_safe: true
     depends_on: [D2]
     writes: [calendar:confirm_order, events.queue_events]
     expected_trigger:
@@ -119,6 +142,7 @@ routines:
                                             # so a same-evening D3 catch-up-eligible miss (if any) is
                                             # already reflected before OPS0 sweeps
     monitor_class: daily_all
+    catchup_safe: false
     depends_on: []          # DELIBERATELY independent -- this routine's job is to unblock others; a
                              # dependency on anything would recreate the exact failure class it exists
                              # to fix (self-improvement audit 2026-07-15, CONFIRMED GAP
@@ -137,6 +161,7 @@ routines:
     name: Incubation Monitor & Graduation
     schedule: "after D2a trading_day"     # SISA arsenal loop; needs D2a's fresh marks
     monitor_class: daily_trading
+    catchup_safe: true
     depends_on: [D2a]
     writes: [analytics.strategy_incubation_perf, events.strategy_lifecycle, state.arsenal_regime_coverage,
              events.queue_events, events.decision_log, ops.alerts, events.shadow_positions]
@@ -157,6 +182,7 @@ routines:
     name: Adversarial Review — Attacker
     schedule: "daily; if events.queue_events PENDING_REVIEW attacker_due<=today"
     monitor_class: queue_driven           # NOT calendar-predictable -> excluded from cadence_expected_today
+    catchup_safe: false
     depends_on: []
     writes: [events.adversarial_reviews]
     expected_trigger:
@@ -167,6 +193,7 @@ routines:
     name: Adversarial Review — Orchestrator
     schedule: "daily; if a review is attacker-complete and orchestrator_due<=today"
     monitor_class: queue_driven
+    catchup_safe: false
     depends_on: [AR_att]
     writes: [events.adversarial_reviews, events.regime_events, events.decision_log, calendar:confirm_order,
              events.strategy_lifecycle, ops.roster_change_log]
@@ -179,6 +206,7 @@ routines:
     name: Strategy Draft, Revise & Post-mortem
     schedule: "daily; if events.queue_events PENDING_DRAFT (strategy-draft/strategy-revise/post-mortem) due<=today"
     monitor_class: queue_driven           # NOT calendar-predictable -> excluded from cadence_expected_today (like AR)
+    catchup_safe: false
     depends_on: []
     writes: [Strategy.md, strategy/slices, events.queue_events, events.strategy_postmortems,
              events.strategy_lifecycle, events.decision_log, ops.alerts]
@@ -199,6 +227,7 @@ routines:
     name: Strategy Register & Roster Sync
     schedule: "daily; if a SUFFICIENT strategy-adoption verdict, an SL3 PAPER->PROBE enqueue, or a TERMINATED transition is due"
     monitor_class: queue_driven
+    catchup_safe: false
     depends_on: [AR_orc]
     writes: [strategy/roster.yaml, Strategy.md, strategy/slices, Claude_Task_Plan.md, ops.roster_change_log,
              events.strategy_lifecycle, events.decision_log, ops.alerts]
@@ -222,6 +251,7 @@ routines:
     name: Catalyst Calendar (A, C)
     schedule: "weekly Sun"
     monitor_class: weekly_sun
+    catchup_safe: true
     writes: [Weekly_Catalyst_Calendar.md]
     expected_trigger:
       recurrence: weekly
@@ -231,6 +261,7 @@ routines:
     name: Post-Event Screen (B)
     schedule: "weekly Sun"
     monitor_class: weekly_sun
+    catchup_safe: true
     writes: [Weekly_Post_Event_Screen.md]
     expected_trigger:
       recurrence: weekly
@@ -240,6 +271,7 @@ routines:
     name: Open-Position Deep-Dive (A,B,C,E)
     schedule: "weekly Sun"
     monitor_class: weekly_sun
+    catchup_safe: true
     writes: [Weekly_Position_Deep_Dive.md]
     expected_trigger:
       recurrence: weekly
@@ -249,6 +281,7 @@ routines:
     name: Weekly Action Conversion
     schedule: "weekly Sun after W1,W2,W3"
     monitor_class: weekly_sun
+    catchup_safe: false
     depends_on: [W1, W2, W3]
     writes: [events.queue_events, events.decision_log, calendar:confirm_order]
     expected_trigger:
@@ -259,6 +292,7 @@ routines:
     name: Factbase & Analytics Consolidation
     schedule: "weekly Sun after W4"
     monitor_class: weekly_sun
+    catchup_safe: true
     depends_on: [W4]
     writes: [B_Sub_Pattern_Taxonomy.md, analytics.decision_embeddings, events.decision_log]
     expected_trigger:
@@ -272,6 +306,7 @@ routines:
     name: Strategy-Blind Regime Scoring
     schedule: "monthly first_trading_day"
     monitor_class: monthly_ftd
+    catchup_safe: true
     writes: [events.regime_events, events.macro_series, events.macro_fred]
     expected_trigger:
       recurrence: custom_cron
@@ -281,6 +316,7 @@ routines:
     name: Strategy Mapping & Activation Calls
     schedule: "monthly after M1a"
     monitor_class: monthly_ftd
+    catchup_safe: true
     depends_on: [M1a]
     writes: [Monthly_Fundamental.md]
     expected_trigger:
@@ -291,6 +327,7 @@ routines:
     name: E Pair Divergence Screen
     schedule: "monthly first_trading_day"
     monitor_class: monthly_ftd
+    catchup_safe: true
     writes: [Monthly_E_Pairs.md]
     expected_trigger:
       recurrence: custom_cron
@@ -300,6 +337,7 @@ routines:
     name: D Position Deep-Dive
     schedule: "monthly first_trading_day"
     monitor_class: monthly_ftd
+    catchup_safe: true
     writes: [Monthly_D_Position_Deep_Dive.md]
     expected_trigger:
       recurrence: custom_cron
@@ -309,6 +347,7 @@ routines:
     name: Monthly Action Conversion
     schedule: "monthly after M1b,M2,M3"
     monitor_class: monthly_ftd
+    catchup_safe: false
     depends_on: [M1b, M2, M3]
     writes: [events.regime_events, events.queue_events, events.decision_log, calendar:confirm_order]
     expected_trigger:
@@ -319,6 +358,7 @@ routines:
     name: Deployed-TWR & Macro Forecast (advisory)
     schedule: "monthly after M4"
     monitor_class: monthly_ftd
+    catchup_safe: true
     depends_on: [M4]
     writes: [analytics.deployed_twr_forecast, events.decision_log]
     expected_trigger:
@@ -329,6 +369,7 @@ routines:
     name: Discretionary Retirement Proposer
     schedule: "monthly after M4"
     monitor_class: monthly_ftd
+    catchup_safe: false
     depends_on: [M4]
     writes: [events.queue_events, events.strategy_lifecycle, ops.roster_change_log, events.decision_log, ops.alerts]
     expected_trigger:
@@ -350,6 +391,7 @@ routines:
     name: Regime Retrospective
     schedule: "quarterly first_trading_day"
     monitor_class: quarterly_ftd
+    catchup_safe: true
     writes: [Quarterly_Regime.md]
     expected_trigger:
       recurrence: custom_cron
@@ -359,6 +401,7 @@ routines:
     name: D Long-Horizon Candidates
     schedule: "quarterly first_trading_day"
     monitor_class: quarterly_ftd
+    catchup_safe: true
     writes: [Quarterly_D_Candidates.md]
     expected_trigger:
       recurrence: custom_cron
@@ -368,6 +411,7 @@ routines:
     name: AI Foundation Quarterly Delta
     schedule: "quarterly first_trading_day"
     monitor_class: quarterly_ftd
+    catchup_safe: true
     writes: [Quarterly_AI_Foundation_Delta.md]
     expected_trigger:
       recurrence: custom_cron
@@ -377,6 +421,7 @@ routines:
     name: Quarterly Action Conversion
     schedule: "quarterly after Q2,Q3"
     monitor_class: quarterly_ftd
+    catchup_safe: false
     depends_on: [Q2, Q3]
     writes: [Watchlist.md, events.queue_events, events.decision_log]
     expected_trigger:
@@ -387,6 +432,7 @@ routines:
     name: Strategy Candidate Synthesis & Qualification
     schedule: "quarterly after Q1,Q3"
     monitor_class: quarterly_ftd
+    catchup_safe: true
     depends_on: [Q1, Q3]
     writes: [state.strategy_candidates, events.strategy_lifecycle, events.queue_events,
              events.decision_log, ops.alerts]
@@ -410,6 +456,7 @@ routines:
     name: AI Foundation Annual Re-Derivation
     schedule: "annual first_trading_day"
     monitor_class: annual_ftd
+    catchup_safe: true
     writes: [Annual_AI_Foundation_Sweep.md]
     expected_trigger:
       recurrence: custom_cron
@@ -419,6 +466,7 @@ routines:
     name: Per-Strategy Constraint Audit
     schedule: "annual first_trading_day"
     monitor_class: annual_ftd
+    catchup_safe: true
     writes: [Annual_Constraint_Audit.md]
     expected_trigger:
       recurrence: custom_cron
@@ -428,6 +476,7 @@ routines:
     name: Annual Action Conversion
     schedule: "annual after A1,A2"
     monitor_class: annual_ftd
+    catchup_safe: false
     depends_on: [A1, A2]
     writes: [AI_Trading_Foundation.md, Strategy.md, events.queue_events, events.decision_log, state.strategy_candidates]
     expected_trigger:

@@ -10,6 +10,58 @@ act. Dated passes below; most recent first.
 
 ---
 
+# 2026-07-16 ARCH-3 Item 30b: generated routine lists + catchup_safe declaration (structural audit) — local-only implementation round
+
+This pass was done as a **local-only** implementation (commits sit on the working branch, not
+pushed) per that round's ground rules — nothing below is live yet. Local-only deliverable:
+`scripts/gen_routine_lists.py` (new generator), marker-delimited regions in `bigquery/12/15/24`
+(re-normalized to cadence.yaml order via one `--write` pass), `ops/cadence.yaml`'s new per-routine
+`catchup_safe` boolean, `scripts/check_cadence_consistency.py` checks J/K/L, a new CI step
+(`gen_routine_lists.py --check`), the matching `tests/test_cadence_consistency.py` coverage, and the
+`Claude_Task_Plan.md` ROUTINE INVENTORY table's missing D2a row. All local checks green: `python
+scripts/check_cadence_consistency.py`, `python scripts/gen_routine_lists.py --check`, `python
+scripts/check_roster_consistency.py`, `python scripts/check_autonomy_consistency.py`, `python
+scripts/check_script_version_consistency.py`, `python -m pytest tests/ -q` (full suite).
+
+## N. Re-apply `bigquery/12`, `bigquery/24`, and re-seed `bigquery/15` live via the BigQuery MCP/console — in the SAME session this commit is merged
+
+**What it's for:** this commit's normalization pass (moving `bigquery/12_cadence_monitor.sql`'s,
+`bigquery/15_routine_catalog.sql`'s, and `bigquery/24_cadence_period_watch.sql`'s inline routine-list
+comments above a new marker-delimited region, then running `scripts/gen_routine_lists.py --write`)
+changes the exact TEXT of three already-LIVE BigQuery objects — `state.cadence_expected_today` (12),
+`ops.routine_catalog` (15, a `CREATE OR REPLACE TABLE`, not a view), and `state.cadence_period_watch`
+(24) — even though the row *set* is unchanged (checks A/B/J below prove that). This session was NOT
+permitted to call the BigQuery MCP (local-only round; rule: no `execute_sql`/`execute_sql_readonly`
+calls at all), so the live objects still carry the PRE-normalization text.
+
+**Why it matters / what happens if skipped:** `.github/workflows/live-sql-parity.yml` runs daily and
+diffs each live object's definition against this repo's committed, apply-in-order-effective
+definition. Once this commit reaches `main`, the repo side changes (new comment placement, generator-
+normalized row order/formatting) while the live side does not — the next `live-sql-parity` run will
+flag `state.cadence_expected_today`, `ops.routine_catalog`, and `state.cadence_period_watch` as DRIFT.
+This is a FALSE alarm (the SQL is semantically identical — same 30 routines, same monitor_class
+values, same schedule text; `scripts/gen_routine_lists.py --write` on the pre-commit tree is NOT a
+byte-no-op only because the row order changes to cadence.yaml order and the D2a inventory row didn't
+exist yet — see the CORRECTED ACCEPTANCE CRITERIA note in the source item), but it is still an
+`ops.alerts` row and (per the resilience audit's self-heal work landing elsewhere in this sequence)
+could trigger an unwanted self-heal re-apply cycle racing this one.
+
+**Action:** in the SAME session that merges this commit to `main` (standard apply-in-order
+discipline, same convention as every other `bigquery/*.sql` change), run via the BigQuery MCP or
+console, in this order:
+1. `CREATE OR REPLACE VIEW` — the full body of `bigquery/12_cadence_monitor.sql` (re-applies
+   `state.cadence_expected_today` + `state.cadence_watch` + the two procedures in that file).
+2. `CREATE OR REPLACE TABLE ... AS SELECT ...` — the full body of `bigquery/15_routine_catalog.sql`'s
+   `ops.routine_catalog` seed (re-applies `state.instruction_drift` too, same file).
+3. `CREATE OR REPLACE VIEW` — the full body of `bigquery/24_cadence_period_watch.sql` (re-applies
+   `state.cadence_period_watch`).
+
+Not urgent from a trading-safety standpoint (all three objects are read-only monitoring views/a
+catalog table — nothing here gates an order), but doing it in the same session as the merge is what
+keeps the next `live-sql-parity` run green instead of a false-positive DRIFT alert.
+
+---
+
 # 2026-07-16 research_quality_feedback promotion substrate (LC-4 other parts, loop-completeness audit) — local-only implementation round
 
 This pass was done as a **local-only** implementation (commits sit on the working branch, not

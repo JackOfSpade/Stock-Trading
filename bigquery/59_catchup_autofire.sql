@@ -48,6 +48,15 @@ OPTIONS(description='Idempotency + audit trail for OPS0 Cadence Watchdog auto-re
 -- proposal path) for the identical D2/D2a rationale bigquery/31 already documents — a hand-maintained
 -- list, deliberately NOT derived from monitor_class (which classifies by schedule SHAPE, not by
 -- order-crafting/capital-adjacency). Update it if a period routine's scope changes.
+--
+-- DECLARED-AND-CHECKED, not generated (ARCH-3 Item 30b, 2026-07-16): same discipline as
+-- bigquery/31_catchup_notify.sql's identical note — this list stays a HAND-MAINTAINED judgment call
+-- (unlike bigquery/12/15/24's STRUCT rows, which scripts/gen_routine_lists.py GENERATES from
+-- ops/cadence.yaml), but is no longer UNCHECKED: ops/cadence.yaml's per-routine `catchup_safe`
+-- boolean is the declared source of truth, and scripts/check_cadence_consistency.py's check K fails
+-- the build if this UNNEST list drifts from `{routine : catchup_safe AND monitor_class in
+-- (weekly_sun, monthly_ftd, quarterly_ftd, annual_ftd)}`. Update BOTH this list and ops/cadence.yaml's
+-- catchup_safe field together.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.period_catchup_available` AS
 WITH catchup_safe_period_routines AS (
   SELECT routine FROM UNNEST([

@@ -43,13 +43,41 @@ nth AS (
   FROM periods p
 ),
 routines AS (
+  -- Routine notes relocated here (ABOVE the generated region) by the ARCH-3 Item 30b normalization
+  -- (2026-07-16, scripts/gen_routine_lists.py --write) -- the generator does not preserve inline
+  -- comments between rows:
+  --   SL4 (rev 2026-07-10 — SISA arsenal autonomy conversion).
+  --   SL1 (rev 2026-07-10 — SISA); SL3 daily + SL2/SL5 queue-driven are not period-tracked here.
+  --
+  -- GENERATED (scripts/gen_routine_lists.py --write, ARCH-3 Item 30b, 2026-07-16) from
+  -- ops/cadence.yaml: one row per routine whose monitor_class is a period class (weekly_sun /
+  -- monthly_ftd / quarterly_ftd / annual_ftd), cadence.yaml file order, every row fully labelled
+  -- (scripts/check_cadence_consistency.py's check J requires the labelled form). Do NOT hand-edit the
+  -- marked region below -- edit ops/cadence.yaml and re-run `python scripts/gen_routine_lists.py
+  -- --write`. CI step `gen_routine_lists.py --check` verifies this region is byte-current.
   SELECT * FROM UNNEST([
-    STRUCT('W1' AS routine, 'weekly_sun' AS monitor_class), STRUCT('W2','weekly_sun'),
-    STRUCT('W3','weekly_sun'), STRUCT('W4','weekly_sun'), STRUCT('W5','weekly_sun'),
-    STRUCT('M1a','monthly_ftd'), STRUCT('M1b','monthly_ftd'), STRUCT('M2','monthly_ftd'),
-    STRUCT('M3','monthly_ftd'), STRUCT('M4','monthly_ftd'), STRUCT('M5','monthly_ftd'), STRUCT('SL4','monthly_ftd'),   -- SL4 (rev 2026-07-10 — SISA)
-    STRUCT('Q1','quarterly_ftd'), STRUCT('Q2','quarterly_ftd'), STRUCT('Q3','quarterly_ftd'), STRUCT('Q4','quarterly_ftd'), STRUCT('SL1','quarterly_ftd'),   -- SL1 (rev 2026-07-10 — SISA); SL3 daily + SL2/SL5 queue-driven are not period-tracked here
-    STRUCT('A1','annual_ftd'), STRUCT('A2','annual_ftd'), STRUCT('A3','annual_ftd')
+-- BEGIN GENERATED ROUTINE LIST (scripts/gen_routine_lists.py --write; do not hand-edit)
+    STRUCT('W1' AS routine, 'weekly_sun' AS monitor_class),
+    STRUCT('W2' AS routine, 'weekly_sun' AS monitor_class),
+    STRUCT('W3' AS routine, 'weekly_sun' AS monitor_class),
+    STRUCT('W4' AS routine, 'weekly_sun' AS monitor_class),
+    STRUCT('W5' AS routine, 'weekly_sun' AS monitor_class),
+    STRUCT('M1a' AS routine, 'monthly_ftd' AS monitor_class),
+    STRUCT('M1b' AS routine, 'monthly_ftd' AS monitor_class),
+    STRUCT('M2' AS routine, 'monthly_ftd' AS monitor_class),
+    STRUCT('M3' AS routine, 'monthly_ftd' AS monitor_class),
+    STRUCT('M4' AS routine, 'monthly_ftd' AS monitor_class),
+    STRUCT('M5' AS routine, 'monthly_ftd' AS monitor_class),
+    STRUCT('SL4' AS routine, 'monthly_ftd' AS monitor_class),
+    STRUCT('Q1' AS routine, 'quarterly_ftd' AS monitor_class),
+    STRUCT('Q2' AS routine, 'quarterly_ftd' AS monitor_class),
+    STRUCT('Q3' AS routine, 'quarterly_ftd' AS monitor_class),
+    STRUCT('Q4' AS routine, 'quarterly_ftd' AS monitor_class),
+    STRUCT('SL1' AS routine, 'quarterly_ftd' AS monitor_class),
+    STRUCT('A1' AS routine, 'annual_ftd' AS monitor_class),
+    STRUCT('A2' AS routine, 'annual_ftd' AS monitor_class),
+    STRUCT('A3' AS routine, 'annual_ftd' AS monitor_class)
+  -- END GENERATED ROUTINE LIST
   ])
 ),
 joined AS (

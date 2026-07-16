@@ -15,6 +15,14 @@
 -- ops/cadence.yaml's monitor_class, which classify by SCHEDULE shape, not by intraday-price dependency).
 -- Update it if D2a is cut over (its reconciliation/snapshot/TWR-maintenance scope carries no discretionary
 -- order crafting, so it would qualify) or if a routine's scope changes.
+--
+-- DECLARED-AND-CHECKED, not generated (ARCH-3 Item 30b, 2026-07-16): the list below is still a HAND-
+-- MAINTAINED capital-adjacency judgment call (unlike bigquery/12/15/24's routine-list STRUCT rows,
+-- which scripts/gen_routine_lists.py now GENERATES from ops/cadence.yaml). What changed is that this
+-- list is no longer UNCHECKED — ops/cadence.yaml's per-routine `catchup_safe` boolean now declares the
+-- same judgment source-of-truth-side, and scripts/check_cadence_consistency.py's check K fails the
+-- build if this UNNEST list drifts from `{routine : catchup_safe AND monitor_class in (daily_trading,
+-- daily_all)}`. Update BOTH this list and ops/cadence.yaml's catchup_safe field together.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.catchup_available` AS
 WITH catchup_safe_routines AS (
   -- SL3 (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner directive): the daily incubation

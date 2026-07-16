@@ -65,43 +65,54 @@ WITH t AS (
   FROM `stock-trading-498512.state.trading_day_today` td
 ),
 routines AS (
-  -- D2a (added 2026-07-03, self-improvement audit WO-3): NOT YET ACTIVE, no live web-UI trigger yet
-  -- (see the Claude_Task_Plan.md "## D2a." banner). Safe to list here pre-cutover -- self-bootstrapping
-  -- means it can never alarm until it logs a first completed run.
+  -- GENERATED (scripts/gen_routine_lists.py --write, ARCH-3 Item 30b, 2026-07-16) from
+  -- ops/cadence.yaml: one row per calendar-class routine (monitor_class != queue_driven), in
+  -- cadence.yaml file order. Do NOT hand-edit the marked region below -- edit ops/cadence.yaml and
+  -- re-run `python scripts/gen_routine_lists.py --write`. scripts/check_cadence_consistency.py's
+  -- check A verifies this region agrees with ops/cadence.yaml's (id -> monitor_class) map; the CI
+  -- step `python scripts/gen_routine_lists.py --check` verifies it is byte-current.
+  --
+  -- Routine notes relocated here (ABOVE the generated region) by that same normalization commit --
+  -- the generator does not preserve inline comments between rows:
+  --   D2a (added 2026-07-03, self-improvement audit WO-3): NOT YET ACTIVE, no live web-UI trigger yet
+  --   (see the Claude_Task_Plan.md "## D2a." banner). Safe to list here pre-cutover -- self-bootstrapping
+  --   means it can never alarm until it logs a first completed run.
+  --   OPS0 (added 2026-07-15, self-improvement audit — CONFIRMED GAP catchup-notify-no-auto-refire).
+  --   Self-bootstrapping, same as every routine here: cannot alarm until it logs a first completed
+  --   run, so safe to register before its live trigger exists.
+  --   SISA strategy-lifecycle routines (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner
+  --   directive). Only the calendar-scheduled SL routines register here (self-bootstrapping, so none can
+  --   alarm until it logs a first completed run); the queue-driven SL2/SL5 are intentionally NOT listed
+  --   (same rule as AR_att/AR_orc — their firing day is not calendar-derivable).
   SELECT * FROM UNNEST([
-    STRUCT('D1'  AS routine, 'daily_trading' AS schedule),
+-- BEGIN GENERATED ROUTINE LIST (scripts/gen_routine_lists.py --write; do not hand-edit)
+    STRUCT('D1' AS routine, 'daily_trading' AS schedule),
     STRUCT('D2a' AS routine, 'daily_trading' AS schedule),
-    STRUCT('D2'  AS routine, 'daily_trading' AS schedule),
-    STRUCT('D3'  AS routine, 'daily_all'     AS schedule),
-    -- OPS0 (added 2026-07-15, self-improvement audit — CONFIRMED GAP catchup-notify-no-auto-refire).
-    -- Self-bootstrapping, same as every routine here: cannot alarm until it logs a first completed
-    -- run, so safe to register before its live trigger exists.
-    STRUCT('OPS0' AS routine, 'daily_all'    AS schedule),
-    STRUCT('W1'  AS routine, 'weekly_sun'    AS schedule),
-    STRUCT('W2'  AS routine, 'weekly_sun'    AS schedule),
-    STRUCT('W3'  AS routine, 'weekly_sun'    AS schedule),
-    STRUCT('W4'  AS routine, 'weekly_sun'    AS schedule),
-    STRUCT('W5'  AS routine, 'weekly_sun'    AS schedule),
-    STRUCT('M1a' AS routine, 'monthly_ftd'   AS schedule),
-    STRUCT('M1b' AS routine, 'monthly_ftd'   AS schedule),
-    STRUCT('M2'  AS routine, 'monthly_ftd'   AS schedule),
-    STRUCT('M3'  AS routine, 'monthly_ftd'   AS schedule),
-    STRUCT('M4'  AS routine, 'monthly_ftd'   AS schedule),
-    STRUCT('M5'  AS routine, 'monthly_ftd'   AS schedule),
-    STRUCT('Q1'  AS routine, 'quarterly_ftd' AS schedule),
-    STRUCT('Q2'  AS routine, 'quarterly_ftd' AS schedule),
-    STRUCT('Q3'  AS routine, 'quarterly_ftd' AS schedule),
-    STRUCT('Q4'  AS routine, 'quarterly_ftd' AS schedule),
-    STRUCT('A1'  AS routine, 'annual_ftd'    AS schedule),
-    STRUCT('A2'  AS routine, 'annual_ftd'    AS schedule),
-    STRUCT('A3'  AS routine, 'annual_ftd'    AS schedule),
-    -- SISA strategy-lifecycle routines (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner
-    -- directive). Only the calendar-scheduled SL routines register here (self-bootstrapping, so none can
-    -- alarm until it logs a first completed run); the queue-driven SL2/SL5 are intentionally NOT listed
-    -- (same rule as AR_att/AR_orc — their firing day is not calendar-derivable).
-    STRUCT('SL1' AS routine, 'quarterly_ftd' AS schedule),
+    STRUCT('D2' AS routine, 'daily_trading' AS schedule),
+    STRUCT('D3' AS routine, 'daily_all' AS schedule),
+    STRUCT('OPS0' AS routine, 'daily_all' AS schedule),
     STRUCT('SL3' AS routine, 'daily_trading' AS schedule),
-    STRUCT('SL4' AS routine, 'monthly_ftd'   AS schedule)
+    STRUCT('W1' AS routine, 'weekly_sun' AS schedule),
+    STRUCT('W2' AS routine, 'weekly_sun' AS schedule),
+    STRUCT('W3' AS routine, 'weekly_sun' AS schedule),
+    STRUCT('W4' AS routine, 'weekly_sun' AS schedule),
+    STRUCT('W5' AS routine, 'weekly_sun' AS schedule),
+    STRUCT('M1a' AS routine, 'monthly_ftd' AS schedule),
+    STRUCT('M1b' AS routine, 'monthly_ftd' AS schedule),
+    STRUCT('M2' AS routine, 'monthly_ftd' AS schedule),
+    STRUCT('M3' AS routine, 'monthly_ftd' AS schedule),
+    STRUCT('M4' AS routine, 'monthly_ftd' AS schedule),
+    STRUCT('M5' AS routine, 'monthly_ftd' AS schedule),
+    STRUCT('SL4' AS routine, 'monthly_ftd' AS schedule),
+    STRUCT('Q1' AS routine, 'quarterly_ftd' AS schedule),
+    STRUCT('Q2' AS routine, 'quarterly_ftd' AS schedule),
+    STRUCT('Q3' AS routine, 'quarterly_ftd' AS schedule),
+    STRUCT('Q4' AS routine, 'quarterly_ftd' AS schedule),
+    STRUCT('SL1' AS routine, 'quarterly_ftd' AS schedule),
+    STRUCT('A1' AS routine, 'annual_ftd' AS schedule),
+    STRUCT('A2' AS routine, 'annual_ftd' AS schedule),
+    STRUCT('A3' AS routine, 'annual_ftd' AS schedule)
+  -- END GENERATED ROUTINE LIST
   ])
 )
 SELECT r.routine, r.schedule, t.today

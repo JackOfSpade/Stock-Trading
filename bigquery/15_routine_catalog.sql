@@ -15,51 +15,63 @@
 CREATE OR REPLACE TABLE `stock-trading-498512.ops.routine_catalog` AS
 SELECT routine, canonical_instruction
 FROM UNNEST([
-  STRUCT('D1'  AS routine, 'Read Claude_Task_Plan.md. Perform D1. Market Development Scan — deep research.' AS canonical_instruction),
-  -- D2a (added 2026-07-03, self-improvement audit WO-3): NOT YET ACTIVE, no live web-UI trigger yet.
-  STRUCT('D2a', 'Read Claude_Task_Plan.md. Perform D2a. Broker Reconcile & Snapshot — regular routine.'),
-  STRUCT('D2',  'Read Claude_Task_Plan.md. Perform D2. Daily Action Conversion — regular routine.'),
-  STRUCT('D3',  'Read Claude_Task_Plan.md. Perform D3. Calendar Hygiene — regular routine.'),
-  -- OPS0 (added 2026-07-15, self-improvement audit — CONFIRMED GAP catchup-notify-no-auto-refire):
-  -- NOT YET ACTIVE, no live web-UI trigger yet (owner action to create one; self-bootstrapping in the
-  -- meantime, same as D2a's precedent above).
-  STRUCT('OPS0', 'Read Claude_Task_Plan.md. Perform OPS0. Cadence Watchdog — regular routine.'),
-  STRUCT('W1',  'Read Claude_Task_Plan.md. Perform W1. Catalyst Calendar (Strategies A and C) — deep research.'),
-  STRUCT('W2',  'Read Claude_Task_Plan.md. Perform W2. Post-Event Screen (Strategy B) — deep research.'),
-  STRUCT('W3',  'Read Claude_Task_Plan.md. Perform W3. Open-Position Deep-Dive (Strategies A, B, C, E) — deep research.'),
-  STRUCT('W4',  'Read Claude_Task_Plan.md. Perform W4. Weekly Action Conversion — regular routine.'),
-  STRUCT('W5',  'Read Claude_Task_Plan.md. Perform W5. Factbase & Analytics Consolidation — regular routine.'),
-  STRUCT('M1a', 'Read Claude_Task_Plan.md. Perform M1a. Strategy-Blind Regime Scoring — deep research.'),
-  STRUCT('M1b', 'Read Claude_Task_Plan.md. Perform M1b. Strategy Mapping and Activation Calls — regular routine.'),
-  STRUCT('M2',  'Read Claude_Task_Plan.md. Perform M2. E Pair Divergence Screen — deep research.'),
-  STRUCT('M3',  'Read Claude_Task_Plan.md. Perform M3. D Position Deep-Dive — deep research.'),
-  STRUCT('M4',  'Read Claude_Task_Plan.md. Perform M4. Monthly Action Conversion — regular routine.'),
-  STRUCT('M5',  'Read Claude_Task_Plan.md. Perform M5. Deployed-TWR & Macro Forecast — regular routine.'),
-  -- The adversarial routines self-log under the abbreviated ids AR_att / AR_orc (ASCII,
-  -- standardized 2026-07-01 — RUNBOOK §28 — from the earlier non-ASCII middle-dot AR·att/AR·orc an
-  -- agent kept mis-transcribing). Same ids in the Claude_Task_Plan.md routine table + ops/cadence.yaml.
-  -- The separator-normalized join below folds the LEGACY middle-dot ops.run_log rows onto these keys,
-  -- so the historical partitions do NOT resurface as unknown_routine after the id switch.
-  STRUCT('AR_att',  'Read Claude_Task_Plan.md. Perform Adversarial Review Attacker — regular routine.'),
-  STRUCT('AR_orc',  'Read Claude_Task_Plan.md. Perform Adversarial Review Orchestrator — regular routine.'),
-  STRUCT('Q1',  'Read Claude_Task_Plan.md. Perform Q1. Regime Retrospective — deep research.'),
-  STRUCT('Q2',  'Read Claude_Task_Plan.md. Perform Q2. D Long-Horizon Candidates — deep research.'),
-  STRUCT('Q3',  'Read Claude_Task_Plan.md. Perform Q3. AI Foundation Quarterly Delta — deep research.'),
-  STRUCT('Q4',  'Read Claude_Task_Plan.md. Perform Q4. Quarterly Action Conversion — regular routine.'),
-  STRUCT('A1',  'Read Claude_Task_Plan.md. Perform A1. AI Foundation Annual Full Re-Derivation — deep research.'),
-  STRUCT('A2',  'Read Claude_Task_Plan.md. Perform A2. Per-Strategy Constraint Audit — deep research.'),
-  STRUCT('A3',  'Read Claude_Task_Plan.md. Perform A3. Annual Action Conversion — regular routine.'),
-  -- SISA strategy-lifecycle routines (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner
-  -- directive). canonical_instruction MUST be byte-identical to the Claude_Task_Plan.md SL headings
-  -- that scripts/print_routines.py reconstructs (shape 'Read Claude_Task_Plan.md. Perform SL<n>. <name>
-  -- — <type>.') — coordinate with the Claude_Task_Plan.md routine-table edits (same names/em-dash/type
-  -- tag). All five register here (the catalog is id-keyed, not schedule-keyed) so instruction_drift
-  -- covers the queue-driven SL2/SL5 as well as SL1/SL3/SL4.
-  STRUCT('SL1', 'Read Claude_Task_Plan.md. Perform SL1. Strategy Candidate Synthesis & Qualification — deep research.'),
-  STRUCT('SL2', 'Read Claude_Task_Plan.md. Perform SL2. Strategy Draft, Revise & Post-mortem — regular routine.'),
-  STRUCT('SL3', 'Read Claude_Task_Plan.md. Perform SL3. Incubation Monitor & Graduation — regular routine.'),
-  STRUCT('SL4', 'Read Claude_Task_Plan.md. Perform SL4. Discretionary Retirement Proposer — regular routine.'),
-  STRUCT('SL5', 'Read Claude_Task_Plan.md. Perform SL5. Strategy Register & Roster Sync — regular routine.')
+-- Routine notes relocated here (ABOVE the generated region) by the ARCH-3 Item 30b normalization
+-- (2026-07-16, scripts/gen_routine_lists.py --write) -- the generator does not preserve inline
+-- comments between rows:
+--   D2a (added 2026-07-03, self-improvement audit WO-3): NOT YET ACTIVE, no live web-UI trigger yet.
+--   OPS0 (added 2026-07-15, self-improvement audit — CONFIRMED GAP catchup-notify-no-auto-refire):
+--   NOT YET ACTIVE, no live web-UI trigger yet (owner action to create one; self-bootstrapping in the
+--   meantime, same as D2a's precedent above).
+--   The adversarial routines self-log under the abbreviated ids AR_att / AR_orc (ASCII,
+--   standardized 2026-07-01 — RUNBOOK §28 — from the earlier non-ASCII middle-dot AR·att/AR·orc an
+--   agent kept mis-transcribing). Same ids in the Claude_Task_Plan.md routine table + ops/cadence.yaml.
+--   The separator-normalized join below folds the LEGACY middle-dot ops.run_log rows onto these keys,
+--   so the historical partitions do NOT resurface as unknown_routine after the id switch.
+--   SISA strategy-lifecycle routines (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner
+--   directive). canonical_instruction MUST be byte-identical to the Claude_Task_Plan.md SL headings
+--   that scripts/print_routines.py reconstructs (shape 'Read Claude_Task_Plan.md. Perform SL<n>. <name>
+--   — <type>.') — coordinate with the Claude_Task_Plan.md routine-table edits (same names/em-dash/type
+--   tag). All five register here (the catalog is id-keyed, not schedule-keyed) so instruction_drift
+--   covers the queue-driven SL2/SL5 as well as SL1/SL3/SL4.
+--
+-- GENERATED (scripts/gen_routine_lists.py --write, ARCH-3 Item 30b, 2026-07-16) from ops/cadence.yaml
+-- + Claude_Task_Plan.md headings: one row per routine (ALL 30, cadence.yaml file order), instruction
+-- text derived from the matching plan heading exactly as check_cadence_consistency.py's check B
+-- derives it. Do NOT hand-edit the marked region below -- edit ops/cadence.yaml / the plan heading and
+-- re-run `python scripts/gen_routine_lists.py --write`. CI step `gen_routine_lists.py --check` verifies
+-- this region is byte-current.
+-- BEGIN GENERATED ROUTINE LIST (scripts/gen_routine_lists.py --write; do not hand-edit)
+  STRUCT('D1' AS routine, 'Read Claude_Task_Plan.md. Perform D1. Market Development Scan — deep research.' AS canonical_instruction),
+  STRUCT('D2a' AS routine, 'Read Claude_Task_Plan.md. Perform D2a. Broker Reconcile & Snapshot — regular routine.' AS canonical_instruction),
+  STRUCT('D2' AS routine, 'Read Claude_Task_Plan.md. Perform D2. Daily Action Conversion — regular routine.' AS canonical_instruction),
+  STRUCT('D3' AS routine, 'Read Claude_Task_Plan.md. Perform D3. Calendar Hygiene — regular routine.' AS canonical_instruction),
+  STRUCT('OPS0' AS routine, 'Read Claude_Task_Plan.md. Perform OPS0. Cadence Watchdog — regular routine.' AS canonical_instruction),
+  STRUCT('SL3' AS routine, 'Read Claude_Task_Plan.md. Perform SL3. Incubation Monitor & Graduation — regular routine.' AS canonical_instruction),
+  STRUCT('AR_att' AS routine, 'Read Claude_Task_Plan.md. Perform Adversarial Review Attacker — regular routine.' AS canonical_instruction),
+  STRUCT('AR_orc' AS routine, 'Read Claude_Task_Plan.md. Perform Adversarial Review Orchestrator — regular routine.' AS canonical_instruction),
+  STRUCT('SL2' AS routine, 'Read Claude_Task_Plan.md. Perform SL2. Strategy Draft, Revise & Post-mortem — regular routine.' AS canonical_instruction),
+  STRUCT('SL5' AS routine, 'Read Claude_Task_Plan.md. Perform SL5. Strategy Register & Roster Sync — regular routine.' AS canonical_instruction),
+  STRUCT('W1' AS routine, 'Read Claude_Task_Plan.md. Perform W1. Catalyst Calendar (Strategies A and C) — deep research.' AS canonical_instruction),
+  STRUCT('W2' AS routine, 'Read Claude_Task_Plan.md. Perform W2. Post-Event Screen (Strategy B) — deep research.' AS canonical_instruction),
+  STRUCT('W3' AS routine, 'Read Claude_Task_Plan.md. Perform W3. Open-Position Deep-Dive (Strategies A, B, C, E) — deep research.' AS canonical_instruction),
+  STRUCT('W4' AS routine, 'Read Claude_Task_Plan.md. Perform W4. Weekly Action Conversion — regular routine.' AS canonical_instruction),
+  STRUCT('W5' AS routine, 'Read Claude_Task_Plan.md. Perform W5. Factbase & Analytics Consolidation — regular routine.' AS canonical_instruction),
+  STRUCT('M1a' AS routine, 'Read Claude_Task_Plan.md. Perform M1a. Strategy-Blind Regime Scoring — deep research.' AS canonical_instruction),
+  STRUCT('M1b' AS routine, 'Read Claude_Task_Plan.md. Perform M1b. Strategy Mapping and Activation Calls — regular routine.' AS canonical_instruction),
+  STRUCT('M2' AS routine, 'Read Claude_Task_Plan.md. Perform M2. E Pair Divergence Screen — deep research.' AS canonical_instruction),
+  STRUCT('M3' AS routine, 'Read Claude_Task_Plan.md. Perform M3. D Position Deep-Dive — deep research.' AS canonical_instruction),
+  STRUCT('M4' AS routine, 'Read Claude_Task_Plan.md. Perform M4. Monthly Action Conversion — regular routine.' AS canonical_instruction),
+  STRUCT('M5' AS routine, 'Read Claude_Task_Plan.md. Perform M5. Deployed-TWR & Macro Forecast — regular routine.' AS canonical_instruction),
+  STRUCT('SL4' AS routine, 'Read Claude_Task_Plan.md. Perform SL4. Discretionary Retirement Proposer — regular routine.' AS canonical_instruction),
+  STRUCT('Q1' AS routine, 'Read Claude_Task_Plan.md. Perform Q1. Regime Retrospective — deep research.' AS canonical_instruction),
+  STRUCT('Q2' AS routine, 'Read Claude_Task_Plan.md. Perform Q2. D Long-Horizon Candidates — deep research.' AS canonical_instruction),
+  STRUCT('Q3' AS routine, 'Read Claude_Task_Plan.md. Perform Q3. AI Foundation Quarterly Delta — deep research.' AS canonical_instruction),
+  STRUCT('Q4' AS routine, 'Read Claude_Task_Plan.md. Perform Q4. Quarterly Action Conversion — regular routine.' AS canonical_instruction),
+  STRUCT('SL1' AS routine, 'Read Claude_Task_Plan.md. Perform SL1. Strategy Candidate Synthesis & Qualification — deep research.' AS canonical_instruction),
+  STRUCT('A1' AS routine, 'Read Claude_Task_Plan.md. Perform A1. AI Foundation Annual Full Re-Derivation — deep research.' AS canonical_instruction),
+  STRUCT('A2' AS routine, 'Read Claude_Task_Plan.md. Perform A2. Per-Strategy Constraint Audit — deep research.' AS canonical_instruction),
+  STRUCT('A3' AS routine, 'Read Claude_Task_Plan.md. Perform A3. Annual Action Conversion — regular routine.' AS canonical_instruction)
+  -- END GENERATED ROUTINE LIST
 ]);
 
 -- state.instruction_drift — canonical vs live trigger text per routine.
