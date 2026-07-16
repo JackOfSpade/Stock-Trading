@@ -25,13 +25,17 @@ TWO MODES, matching the two-job split in .github/workflows/golden-scenarios.yml:
       EVAL_PROMPT_TEMPLATE below to a Claude model, parses a DECISION: line from the reply, and diffs
       it against expected_decision's leading token. Prints a pass/fail table and, for the first
       leading-token mismatch on a NON-EMPTY governing_files reread, prints a GitHub Actions
-      `::warning::` annotation plus the exact (never-executed) events.queue_events INSERT a routine
-      COULD run to file it as review_type='prose-regression' for later mechanical follow-up — this
-      script does not execute that INSERT (no BigQuery write credentials in CI, and per the operating
-      model a human review/PR gate is never the compensating control for a self-improvement loop; see
-      CLAUDE.md "Settled decisions"). Requires ANTHROPIC_API_KEY. Always exits 0 (advisory) unless the
-      offline schema gate itself fails first, or setup fails outright (missing API key/library), which
-      is reported but still does not fail the *build* — the workflow's continue-on-error covers that.
+      `::warning::` annotation plus the events.queue_events INSERT this script itself has no BigQuery
+      write credentials to execute (CI stays read-only by design). WIRED FOR REAL (self-improvement
+      audit 2026-07-15, CONFIRMED GAP golden-scenarios-prose-regression-unwired): D3 (Claude_Task_
+      Plan.md's "GOLDEN-SCENARIO PROSE-REGRESSION CHECK" step) has full repo+BigQuery write access and
+      runs daily — it performs the SAME governing-files-changed-since-last-check + re-evaluate logic
+      independently (D3 IS the model, no separate API call), and actually files the queue entry
+      (review_type='prose-regression', now a recognized AR review_type — see the Adversarial Reviews
+      section) on a real mismatch. This CI job remains a secondary, push-time signal only. Requires
+      ANTHROPIC_API_KEY. Always exits 0 (advisory) unless the offline schema gate itself fails first,
+      or setup fails outright (missing API key/library), which is reported but still does not fail the
+      *build* — the workflow's continue-on-error covers that.
 
 Usage:
   python tests/golden_scenarios/run_golden.py --offline

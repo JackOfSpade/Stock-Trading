@@ -32,12 +32,13 @@
 -- Claude_Task_Plan.md's Observability preamble (`CALL ops.sp_auto_resolve_alerts()` at the top of
 -- every routine run) is the primary, already-live path; this scheduled-query call is defense in
 -- depth for days with zero routine runs.
--- SQ_NAME: cadence_check  SQ_VERSION: v1 (self-improvement audit 2026-07-15, scheduled-query
+-- SQ_NAME: cadence_check  SQ_VERSION: v2 (self-improvement audit 2026-07-15, scheduled-query
 -- body-drift detection — bigquery/63_scheduled_query_version_registry.sql). Bump SQ_VERSION here AND
 -- state.expected_scheduled_query_versions' matching row on any future edit to this file's body.
+-- v2 (same-day, Gap 13): added the b3_trading_enabled_drift check below.
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v1', 'cadence_check.sql ran');
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v2', 'cadence_check.sql ran');
 
   -- RUNBOOK section 38 self-heal (ITEM 3, bigquery/38_run_log_selfheal.sql): backfill any
   -- ops.run_log completion row whose routine already has a landed-commit marker in
@@ -309,6 +310,22 @@ BEGIN
               FROM `stock-trading-498512.state.ddl_drift`)),
       (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(table_name, column_name, drift_reasons, expected_type, live_type)))
        FROM `stock-trading-498512.state.ddl_drift`));
+  END IF;
+
+  -- b3_trading_enabled_drift (warning, self-improvement audit 2026-07-15 -- CONFIRMED GAP
+  -- dbt-b3-coverage-advisory-only). state.b3_trading_enabled_check (bigquery/64_b3_live_invariants.sql)
+  -- recomputes state.trading_enabled's formula independently and flags LIVE drift -- the exact
+  -- 2026-07-11 incident class (an in-place scheduled-query re-apply silently clobbered a gate
+  -- AND-term for days with zero CI/live signal, bigquery/47_trading_enabled_resync.sql), now checked
+  -- daily instead of only in an advisory-only dbt test.
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.b3_trading_enabled_check` WHERE drift) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'b3_trading_enabled_drift',
+      (SELECT CONCAT('state.trading_enabled formula drift: live=', CAST(live_value AS STRING),
+                     ' but independently-recomputed expected=', CAST(expected_value AS STRING),
+                     ' -- a gate AND-term may have been silently clobbered (see bigquery/47_trading_enabled_resync.sql)')
+       FROM `stock-trading-498512.state.b3_trading_enabled_check`),
+      (SELECT TO_JSON_STRING(t) FROM `stock-trading-498512.state.b3_trading_enabled_check` t));
   END IF;
 
   -- script_version_drift (warning, item 23 -- Apps Script drift detection). A deployed .gs (alert_emailer
