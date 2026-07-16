@@ -113,11 +113,23 @@ def fmt_ts(v, tz_name):
 
 
 def post(text):
-    """POST {text: ...} — the shape Slack/Discord/mattermost incoming webhooks accept; generic enough
-    for ntfy / a Pub/Sub-push proxy too. Never raises into CI noise on a transient webhook error."""
-    body = json.dumps({"text": text}).encode("utf-8")
-    req = urllib.request.Request(WEBHOOK_URL, data=body,
-                                 headers={"Content-Type": "application/json"})
+    """POST the alert text. Two shapes, branched on the destination:
+      * ntfy.sh (OAE-6, 2026-07-16 self-provisioned second channel — see RUNBOOK §25 A2/A3): ntfy
+        renders the raw request BODY as the push message, so a JSON-wrapped body would show up as a
+        literal '{"text": "..."}' string on the phone — send the plain text instead, with the ntfy
+        `Title` header for a readable notification title.
+      * everything else (Slack/Discord/mattermost incoming webhooks, a generic Pub/Sub-push proxy):
+        {text: ...} JSON, unchanged.
+    Never raises into CI noise on a transient webhook error (callers decide best-effort vs. not —
+    see relay_heartbeat's docstring)."""
+    if "ntfy.sh" in WEBHOOK_URL:
+        req = urllib.request.Request(WEBHOOK_URL, data=text.encode("utf-8"),
+                                     headers={"Title": "Stock-Trading",
+                                              "Content-Type": "text/plain; charset=utf-8"})
+    else:
+        body = json.dumps({"text": text}).encode("utf-8")
+        req = urllib.request.Request(WEBHOOK_URL, data=body,
+                                     headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=20) as r:
         return r.status
 

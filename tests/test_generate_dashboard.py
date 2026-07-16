@@ -36,6 +36,45 @@ def _fake_run(returncode, stdout, stderr=""):
     return run
 
 
+# ---- beat_heartbeat(): CI-vs-session note suffix (OAE-5, 2026-07-16) ----------------------
+
+def test_beat_heartbeat_plain_note_outside_ci(monkeypatch):
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    captured = {}
+
+    def _fake_run(cmd, capture_output=None, text=None, timeout=None):
+        captured["cmd"] = cmd
+        return types.SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(gd.subprocess, "run", _fake_run)
+    gd.beat_heartbeat()
+    assert "index.html generated'" in captured["cmd"][-1]
+    assert "(ci)" not in captured["cmd"][-1]
+
+
+def test_beat_heartbeat_ci_suffixed_note_under_github_actions(monkeypatch):
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    captured = {}
+
+    def _fake_run(cmd, capture_output=None, text=None, timeout=None):
+        captured["cmd"] = cmd
+        return types.SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(gd.subprocess, "run", _fake_run)
+    gd.beat_heartbeat()
+    assert "index.html generated (ci)'" in captured["cmd"][-1]
+
+
+def test_beat_heartbeat_never_raises_on_subprocess_error(monkeypatch):
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+
+    def _boom(cmd, capture_output=None, text=None, timeout=None):
+        raise OSError("bq not found")
+
+    monkeypatch.setattr(gd.subprocess, "run", _boom)
+    gd.beat_heartbeat()  # must not raise
+
+
 # ---- q() bq-JSON parsing (the exact regressed bug class) ----------------------------------
 
 def test_q_parses_banner_prefixed_json(monkeypatch):

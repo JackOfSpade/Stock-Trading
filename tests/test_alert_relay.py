@@ -7,6 +7,7 @@ It re-implements the SAME bq-stdout->JSON slice helper that already caused a pro
 with no red CI. These offline tests (no warehouse, no creds) lock the helper + the row-shape contract.
 """
 import importlib.util
+import json
 import os
 import types
 
@@ -201,6 +202,53 @@ def test_main_heartbeat_mode_success_returns_zero(monkeypatch):
     monkeypatch.setattr(ar, "MODE", "heartbeat")
     monkeypatch.setattr(ar, "post", lambda text: 200)
     assert ar.main() == 0
+
+
+# ---- post(): ntfy.sh gets a plain-text body, everything else keeps the JSON shape (OAE-6) -------
+
+def test_post_ntfy_url_sends_plain_text_body(monkeypatch):
+    monkeypatch.setattr(ar, "WEBHOOK_URL", "https://ntfy.sh/stock-trading-testtopic")
+    captured = {}
+
+    class _FakeResp:
+        status = 200
+        def __enter__(self):
+            return self
+        def __exit__(self, *a):
+            return False
+
+    def _fake_urlopen(req, timeout=None):
+        captured["data"] = req.data
+        captured["headers"] = dict(req.header_items())
+        return _FakeResp()
+
+    monkeypatch.setattr(ar.urllib.request, "urlopen", _fake_urlopen)
+    status = ar.post("hello from the test")
+    assert status == 200
+    assert captured["data"] == b"hello from the test"
+    assert captured["headers"]["Content-type"].startswith("text/plain")
+
+
+def test_post_non_ntfy_url_still_sends_json_body(monkeypatch):
+    monkeypatch.setattr(ar, "WEBHOOK_URL", "https://example.invalid/hook")
+    captured = {}
+
+    class _FakeResp:
+        status = 200
+        def __enter__(self):
+            return self
+        def __exit__(self, *a):
+            return False
+
+    def _fake_urlopen(req, timeout=None):
+        captured["data"] = req.data
+        captured["headers"] = dict(req.header_items())
+        return _FakeResp()
+
+    monkeypatch.setattr(ar.urllib.request, "urlopen", _fake_urlopen)
+    ar.post("hello")
+    assert json.loads(captured["data"]) == {"text": "hello"}
+    assert captured["headers"]["Content-type"] == "application/json"
 
 
 def test_bq_raises_runtime_error_on_timeout(monkeypatch):

@@ -49,13 +49,23 @@ def beat_heartbeat():
     liveness monitor). Never raises: the baseline gh-ci-runner@ WIF grant is read-only
     (bigquery.dataViewer), so this INSERT fails with a permission error until the owner grants a
     narrow, table-scoped bigquery.dataEditor on ops.heartbeat (bigquery/58_dashboard_heartbeat.sql);
-    until then this is a silent no-op and the dashboard build must still succeed."""
+    until then this is a silent no-op and the dashboard build must still succeed.
+
+    OAE-5 (2026-07-16 owner-selfservice audit, §C probe): appends ' (ci)' to the note when running
+    under GitHub Actions (GITHUB_ACTIONS=='true' — set by the platform on every Actions runner) so a
+    scheduled/CI build (using the WIF identity the §C grant targets) is deterministically
+    distinguishable from a session-window build, instead of the previous fragile
+    EXTRACT(HOUR)=7 heuristic (the dashboard cron is 05:20Z but observed delayed starts have run
+    07:21-07:33Z)."""
+    note = "index.html generated"
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        note += " (ci)"
     try:
         subprocess.run(
             ["bq", "--project_id", PROJECT, "--quiet", "--headless", "query",
              "--use_legacy_sql=false",
              f"INSERT INTO `{PROJECT}.ops.heartbeat` (source, note) "
-             f"VALUES ('dashboard', 'index.html generated')"],
+             f"VALUES ('dashboard', '{note}')"],
             capture_output=True, text=True, timeout=60,
         )
     except Exception:

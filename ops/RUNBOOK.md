@@ -932,6 +932,17 @@ never applied. **Repo artifacts are DONE; this section lists the owner/console a
   the ONLY notice of an order to confirm. **OFF until** repo **secret `ALERT_WEBHOOK_URL`** + the WIF vars
   are set. It COMPLEMENTS (does not replace) the reliable ~2h `alert_emailer`; keep the Apps Scripts until
   the relay is proven. **Do not retire `alert_emailer.gs`/`weekly_report.gs` yet.**
+  **Self-provisioned-channel note (OAE-6, 2026-07-16):** `ALERT_WEBHOOK_URL` no longer requires the
+  owner to stand up a webhook endpoint — `scripts/alert_relay.py::post()` now has a plain-text branch
+  for `ntfy.sh` (a free, capability-URL push topic: `https://ntfy.sh/<128-bit-random-topic-name>`,
+  no signup, no owner-run server), so the entire remaining owner surface for A2/A3 is: run the
+  `gh secret set` / `gh workflow enable` / dispatch-heartbeat command block in `OWNER_ACTIONS.md` §D,
+  then subscribe to the topic on a phone (ntfy app, or open the URL in a browser). **Upgrade path:**
+  to move to an authenticated or self-hosted endpoint later, just replace the `ALERT_WEBHOOK_URL`
+  secret value with the new endpoint — nothing else in `alert_relay.py`, this workflow, or the guard
+  audits changes. (A1's Cloud Monitoring webhook-channel spec in `monitoring.tf`, above, is unaffected
+  and stays Terraform-spec-only per the standing decision — this note is about A2/A3's GHA-side
+  channel only.)
 
 ### Theme B — data durability & integrity
 - **B1 — GCS Object Versioning (owner, gsutil).** `storage.tf` now declares `versioning{}` + a

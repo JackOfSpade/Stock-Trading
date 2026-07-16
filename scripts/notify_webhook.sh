@@ -13,6 +13,13 @@
 # post itself as optional/best-effort. A curl failure prints a ::warning:: but NEVER exits non-zero:
 # the caller's own failure (a drift/audit/backup finding) is the real result of the run; a dead
 # notification channel must not mask it or replace it as the reported failure.
+#
+# OAE-6 (2026-07-16, self-provisioned ntfy.sh second channel): unlike scripts/alert_relay.py's post(),
+# this script is NOT given a plain-text branch — on an ntfy.sh WEBHOOK_URL the JSON body below still
+# arrives as a literal '{"text": "..."}' string in the push notification rather than rendered plain
+# text. These are best-effort CI-failure notices (offsite-backup / keyless-sa-audit / wif-binding-
+# audit), so a slightly ugly-but-legible JSON string still delivers the finding; not worth the extra
+# code path for this file. The optional branch below exists purely for readability if you want it.
 set -euo pipefail
 
 msg="${1:?Usage: WEBHOOK_URL=... notify_webhook.sh <message>}"
@@ -21,6 +28,14 @@ if [ -z "${WEBHOOK_URL:-}" ]; then
   exit 0
 fi
 
-curl -fsS -X POST -H 'Content-Type: application/json' \
-  --data "$(printf '%s' "$msg" | python3 -c 'import json,sys;print(json.dumps({"text":sys.stdin.read()}))')" \
-  "$WEBHOOK_URL" || echo "::warning::webhook post failed (the caller's own failure still stands)."
+case "$WEBHOOK_URL" in
+  *ntfy.sh*)
+    curl -fsS -X POST -H 'Title: Stock-Trading' --data "$msg" "$WEBHOOK_URL" \
+      || echo "::warning::webhook post failed (the caller's own failure still stands)."
+    ;;
+  *)
+    curl -fsS -X POST -H 'Content-Type: application/json' \
+      --data "$(printf '%s' "$msg" | python3 -c 'import json,sys;print(json.dumps({"text":sys.stdin.read()}))')" \
+      "$WEBHOOK_URL" || echo "::warning::webhook post failed (the caller's own failure still stands)."
+    ;;
+esac

@@ -246,6 +246,13 @@ returned `trig_...` id in `ops/trigger_ids.json` (alphabetical, between `M5` and
 `"verified_via": "api"`, and run `python3 scripts/check_cadence_consistency.py` to confirm the
 missing-entry NOTE disappears.
 
+```verify
+id: A
+type: composite
+probe: bq query "SELECT COUNT(*) n FROM `stock-trading-498512.ops.run_log` WHERE routine='OPS0' AND status='completed'" AND grep -q '"OPS0"' ops/trigger_ids.json
+done_when: n>0 AND grep exits 0
+```
+
 ## B. Apply the ARCH-1 scheduled-query wrapper migration, THEN paste the new one-line CALL bodies (Gap 12 — closes the re-paste class PERMANENTLY)
 
 **SUPERSEDED (2026-07-16, ARCH-1 wrapper migration, `bigquery/75_scheduled_query_wrappers.sql`) —**
@@ -290,6 +297,13 @@ query keeps running its OLD inline body exactly as before (nothing here changes 
 own); you just won't get body-drift detection until both steps happen (self-bootstrapping:
 `monitored` stays `FALSE`, no false alarm).
 
+```verify
+id: B
+type: bq
+probe: SELECT COUNTIF(monitored AND NOT drift) n FROM `stock-trading-498512.state.scheduled_query_version_drift`
+done_when: n=12
+```
+
 ## C. GCP IAM grant — dashboard build liveness heartbeat (Architect recommendation #3)
 
 `ops/dashboard/generate_dashboard.py` now best-effort-writes `ops.heartbeat(source='dashboard')` at
@@ -305,34 +319,112 @@ Table-scoped — `gh-ci-runner@` gains write access to exactly `ops.heartbeat`, 
 **If skipped:** the dashboard keeps publishing exactly as before; `'dashboard'` just never appears
 as `monitored` in `state.automation_heartbeat`, which is the correct fail-quiet default, not a bug.
 
+**Prerequisite mini-edit (already landed, OAE-5 2026-07-16):** `ops/dashboard/generate_dashboard.py`'s
+heartbeat write now appends `' (ci)'` to the note when `GITHUB_ACTIONS=='true'`, so a scheduled/CI
+build is deterministically distinguishable from a session-window build — replaces the fragile
+hardcoded `EXTRACT(HOUR)=7` heuristic (the dashboard cron is 05:20Z but observed delayed starts run
+07:21-07:33Z). No owner action for this part; the grant above is still needed for either version of
+the note to land live.
+
+```verify
+id: C
+type: bq
+probe: SELECT COUNT(*) n FROM `stock-trading-498512.ops.heartbeat` WHERE source='dashboard' AND note LIKE '% (ci)%' AND beat_ts > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)
+done_when: n>0
+```
+
 ## D. Re-enable `alert-relay.yml` (currently `disabled_manually`)
 
 **Checked live** (`gh workflow list --all`): `Alert relay (webhook push)` shows
 `disabled_manually`. Claude's auto-mode permission classifier correctly declined to re-enable a
 manually-disabled GitHub Actions workflow via `gh api -X PUT .../enable` on its own — that's a
-platform-state change outside "implement my recommendations" authorization, not a bug. **Action:**
-`gh workflow enable "Alert relay (webhook push)"` (or the Actions tab → the workflow → "Enable
-workflow"), once you've decided you want the webhook relay live — it depends on item E below to do
-anything useful (no `ALERT_WEBHOOK_URL`, nothing to relay to yet).
+platform-state change outside "implement my recommendations" authorization, not a bug.
+
+**UPDATE 2026-07-16 (OAE-6, self-provisioned second channel) — this is now a ONE-PASTE job, not
+three separate owner decisions.** `scripts/alert_relay.py`'s `post()` now has a plain-text branch for
+`ntfy.sh` (self-provisioned, capability-URL push topic — no signup, no owner-run webhook endpoint to
+stand up) — see item E below for why this shrinks the remaining owner surface to "run these 4
+commands, then subscribe on your phone." This session's own hard ground rules for this pass forbid
+running `gh secret set` / `gh workflow enable` / any other mutating `gh`/`gcloud`/`bq` command itself
+(local-only implementation round — commands land here as text, not as executed actions), so the
+commands below were deliberately NOT run this pass; they are exactly what the OAE-6 spec would have
+run automatically had this round's ground rules allowed a live gh-mutation this time.
+
+**Action — run once, with your own `gh` credentials (or in a future session explicitly authorized to
+run mutating `gh` commands):**
+```bash
+TOPIC="stock-trading-$(python3 -c 'import secrets; print(secrets.token_hex(16))')"
+gh secret set ALERT_WEBHOOK_URL --body "https://ntfy.sh/$TOPIC"
+gh workflow enable "Alert relay (webhook push)"
+curl -s -d "channel test — subscribe me" -H "Title: Stock-Trading" "https://ntfy.sh/$TOPIC"
+gh workflow run "Alert relay (webhook push)" -f mode=heartbeat
+```
+The `-f mode=heartbeat` flag is REQUIRED: the dispatch default (`mode=alerts`) deliberately swallows a
+POST failure (`alert_relay.py`'s best-effort design), so a default-mode green run proves nothing;
+`heartbeat` is the one mode whose POST failure fails the run — the only way to actually prove the new
+ntfy topic works end to end. Confirm the dispatched run is green (`gh run list
+--workflow="Alert relay (webhook push)" -L1`), then note the topic URL and subscribe to it (ntfy app,
+or open the URL in a browser) — that's the entire remaining human step; see item E below for the
+follow-up durable in-band notice this system will send once it can see the secret is set.
+
+```verify
+id: D
+type: gh
+probe: gh api "repos/${GITHUB_REPOSITORY}/actions/workflows" --jq '.workflows[] | select(.path==".github/workflows/alert-relay.yml") | .state'
+done_when: output == 'active'
+```
 
 ## E. Add 3 missing GitHub Actions secrets
 
 **Checked live** (`gh secret list`): zero repo secrets exist today. Three are referenced across
 workflows and are all currently no-ops without them (each usage is already guarded/best-effort —
 nothing fails from their absence, they just don't do anything):
-- `ALERT_WEBHOOK_URL` — read by `alert-relay.yml`, `guard-config-audit.yml`, `offsite-backup.yml`,
-  `keyless-sa-audit.yml`, `wif-binding-audit.yml`. A vendor-neutral webhook endpoint (Slack/Discord/
-  ntfy/Pub-Sub push) for these workflows' own alert pushes, separate from the BigQuery-side
-  `ops.alerts` → `alert_emailer.gs` email channel.
+- `ALERT_WEBHOOK_URL` — **UPDATE 2026-07-16 (OAE-6):** the code side is DONE — `scripts/alert_relay.py`
+  posts plain text (not JSON) when `WEBHOOK_URL` contains `ntfy.sh`, covered by
+  `tests/test_alert_relay.py`'s new ntfy-branch unit test; `scripts/notify_webhook.sh` (used by the
+  offsite/keyless/wif audits) got an optional readability branch for the same case, documented as a
+  best-effort JSON-string delivery otherwise (see that script's header). What's left is
+  self-provisioning the actual secret (capability-URL model, 128-bit random topic name, no signup, no
+  owner-run endpoint) — see item D's 4-command block above, which sets this secret as its first step.
+  To upgrade to an authenticated/self-hosted endpoint later, just replace the secret value; nothing
+  else in the pipeline needs to change. Once set, a durable in-band notice
+  (`ops.sp_raise_alert('warning', 'OPS', 'second_channel_ready', ...)`, emailed by `alert_emailer.gs`
+  since `warning` is in its `SEVERITIES` list) should be raised via the BigQuery MCP/console in a
+  future session, pointing at the actual `https://ntfy.sh/<topic>` URL to subscribe to — this session
+  made no live BigQuery calls (local-only round) so it was not raised yet.
+
+```verify
+id: E-webhook
+type: env
+probe: read HAS_ALERT_WEBHOOK_URL (workflow exports secrets.ALERT_WEBHOOK_URL != '' — a workflow token cannot `gh secret list`)
+done_when: == 'true'
+```
 - `OFFSITE_BACKUP_GCS` — read by `guard-config-audit.yml`, `offsite-backup.yml`. A GCS destination
   (bucket/path) for the offsite backup export; without it, `offsite-backup.yml` presumably no-ops or
-  fails its own step — worth checking that workflow's recent run history once this is set.
+  fails its own step — worth checking that workflow's recent run history once this is set. Genuinely
+  owner-owned external resource — not self-provisionable the way the webhook topic above is.
+
+```verify
+id: E-offsite
+type: env
+probe: read HAS_OFFSITE_BACKUP_GCS
+done_when: == 'true'
+```
 - `ANTHROPIC_API_KEY` — read by `golden-scenarios.yml`. Without it, the workflow's `HAVE_KEY` check
   reads false and (per that workflow's own design) it falls back to a documented lower-fidelity mode
   rather than failing — check that workflow's file for the exact fallback behavior before assuming
-  urgency here.
+  urgency here. Genuinely owner-owned external resource.
+
+```verify
+id: E-anthropic
+type: env
+probe: read HAS_ANTHROPIC_API_KEY
+done_when: == 'true'
+```
 **If skipped:** every consumer above already fails closed/quiet without these — nothing is silently
-broken, these three unlock functionality that's currently inert, not fix something currently wrong.
+broken; `OFFSITE_BACKUP_GCS`/`ANTHROPIC_API_KEY` unlock functionality that's currently inert, not fix
+something currently wrong. `ALERT_WEBHOOK_URL` is now a single 4-command paste (item D) plus a phone
+subscribe tap, not three separate decisions.
 
 ## F. Resolved — BigQuery per-user daily query quota was hit during this session (no action needed)
 
@@ -357,9 +449,31 @@ https://docs.cloud.google.com/bigquery/redirects/increase-query-cost-quota. Do n
 `DBT_PARITY=block` to work around a recurrence — it caught a real resource ceiling correctly here,
 not a misfire.
 
+**RE-VERIFIED LIVE 2026-07-16 (OAE-5 owner-selfservice audit — the original audit spec for this item
+assumed a same-day recurrence; checked against live `gh`/`git` state instead of trusting that
+snapshot):** `dbt↔live row-level parity` run 29469270140 did fail once more with this exact quota
+message, but the very next run (same commit range) came back green, and both `85c18c1` (this
+section's earlier "Mark resolved" commit) and `d06ce71` are now confirmed `git merge-base
+--is-ancestor`-true against `origin/main` — the backlog is merged, matching this section's "Resolved"
+framing above, not a still-open recurrence. The verify fence below auto-closes on that same
+already-true condition the first time the scheduled verifier runs.
+
+```verify
+id: F-quota
+type: repo
+probe: git fetch origin main --quiet && git merge-base --is-ancestor 85c18c1 origin/main
+done_when: exit 0
+```
+
 ---
 
 # Owner actions — 2026-07-11 self-improvement audit (Items 1-30)
+
+**RESOLVED (checked live 2026-07-16, OAE-5 owner-selfservice audit):** the billing-failure symptom
+below is gone — every CI run today (`gh run list`) completes normally, the branch's backlog has been
+draining via auto-merge all day (most recently 2026-07-16T19:22Z), and `main` is fully current through
+this session's predecessor commits. No action needed on the billing item itself; kept below for the
+historical record.
 
 **Symptom (as of 2026-07-11):** every CI job on the working branch fails immediately with *"The job
 was not started because recent account payments have failed or your spending limit needs to be
@@ -375,7 +489,10 @@ retrigger CI — it should merge cleanly on the next green run.
 
 ---
 
-## 1. Apps Script re-pastes (script.google.com — Claude cannot reach this surface)
+## [DONE 2026-07-16 — auto-verified] 1. Apps Script re-pastes (script.google.com — Claude cannot reach this surface)
+
+  *(auto-verified 2026-07-16: state.script_version_drift shows alert_emailer v1=v1, weekly_report
+  v3=v3, both monitored, drift=FALSE — the re-pastes described below already happened live.)*
 
 Two scripts changed this session. Both are in the **"Stock-Trading Automation"** Apps Script project
 (see `ops/RUNBOOK.md` / memory `reference_apps_script_project`). For each, open the project at
@@ -431,6 +548,15 @@ an out-of-band mutation.
 4. Under Notifications, enable **"Send email on failure"** — the query RAISEs on a real hit, so that
    email *is* the alert.
 
+```verify
+id: sq-dml-watch
+type: bq
+probe: SELECT COUNTIF(monitored) n FROM `stock-trading-498512.state.scheduled_query_version_drift` WHERE sq_name='safety_critical_dml_watch'
+done_when: n=1
+```
+
+**`[DECISION / not auto-verifiable — no verify block]`**
+
 **Optional, one-time hardening — independent 2nd alert channel (Cloud Monitoring):** so a dead/broken
 scheduler can't also silence the DML alarm. Full 5-step console procedure (enable BigQuery Data
 Access audit logs → build the Logs Explorer filter → create a logs-based alert policy → optional
@@ -441,7 +567,10 @@ work; do this whenever convenient.
 
 ---
 
-## 3. GCP IAM grant — let CI self-heal a missed `ops.run_log` write (Item 3, RUNBOOK §38)
+## [DONE 2026-07-16 — auto-verified] 3. GCP IAM grant — let CI self-heal a missed `ops.run_log` write (Item 3, RUNBOOK §38)
+
+  *(auto-verified 2026-07-16: ops.routine_commit_markers has rows with source='auto-merge-claude.yml'
+  dated 2026-07-14/07-15 — the grant below is live and the CI marker write works.)*
 
 **What it's for:** closes the 2026-07-06..08 incident class where a routine's real output lands on
 `main` but its `ops.run_log` completion write never happens (harness session-lifecycle issue, not a
@@ -473,7 +602,7 @@ decision (`CLAUDE.md`), do NOT `terraform apply` this file; the `bq` command abo
 
 ---
 
-## 4. Elect (or confirm) your IBKR cost-basis method (Item 18)
+## 4. Elect (or confirm) your IBKR cost-basis method (Item 18) — `[DECISION / not auto-verifiable — no verify block]`
 
 **What changed:** `analytics.tax_lots` / `state.wash_sale_exposure`
 (`bigquery/41_tax_lots.sql`) now detect account-wide wash sales (a same-ticker BUY within 30 calendar
@@ -492,7 +621,7 @@ correct an assumption," not a blocking requirement.
 
 ---
 
-## 5. Read and decide — Agent SDK / headless-harness migration (Item 26, informational)
+## 5. Read and decide — Agent SDK / headless-harness migration (Item 26, informational) — `[DECISION / not auto-verifiable — no verify block]`
 
 `ops/spikes/agent-sdk-orchestration-2026Q3.md` is a feasibility report (no repo/live changes) on
 moving routines off the interactive claude.ai web-UI onto a headless, scheduled harness. Bottom line:

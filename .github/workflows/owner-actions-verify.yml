@@ -1,0 +1,101 @@
+name: OWNER_ACTIONS.md auto-verify
+
+# OAE-5 (2026-07-16 owner-selfservice audit). OWNER_ACTIONS.md drifts stale in both directions —
+# nothing ever detected that an owner action was actually completed, so a DONE item kept reading as
+# open until someone noticed and hand-edited the file. scripts/verify_owner_actions.py parses the
+# ```verify fences appended to each open item, re-checks the underlying live state (bq/gh/git —
+# read-only), and (if run with write access) flips a heading to `[DONE <date> — auto-verified]` the
+# first time its condition is met. NEVER auto-reopens a DONE item (regression detection is the drift
+# views' / guard-config-audit's job, not this file's).
+#
+# ALWAYS GREEN BY DESIGN: every probe in scripts/verify_owner_actions.py is fail-open (a missing
+# binary / bad creds / timeout / unexpected output all read as "still open", never as a script error),
+# and this workflow's own steps never turn a probe outcome into a failed run — it must never block CI,
+# auto-merge, or the trading path just because an owner action happens to still be open.
+#
+# COMMIT-BACK STEP DELIBERATELY NOT WIRED (2026-07-16, same call as live-sql-parity.yml's deferred
+# findings-publish step, OWNER_ACTIONS.md's OAE-5 section): the corrected spec for this workflow
+# called for it to `git commit` + `git push origin HEAD:main` the auto-closed OWNER_ACTIONS.md
+# directly, with a bounded rebase-retry. That is a genuine, standing, unattended CI->main push
+# pathway — a materially bigger step than this repo's other read-only/best-effort CI guards — and
+# committing `permissions: contents: write` + an autonomous push loop was intentionally NOT
+# implemented in this local-only pass (this implementation round's own ground rules forbid landing
+# any autonomous push path without the owner reviewing it first, on top of which the harness's own
+# auto-mode permission classifier independently declined to let this session even yaml-lint-check a
+# draft of that step, for the same reason). Instead, this workflow computes the SAME verification
+# result and prints it as a job summary; a human (or a future session with explicit push
+# authorization) applies the OWNER_ACTIONS.md rewrite. See OWNER_ACTIONS.md's OAE-5 section for the
+# owner's options (accept the direct-push design as spec'd; route it through a PR relying on the
+# existing auto-merge-on-green-CI bot — this repo's already-settled autonomous-merge model per
+# CLAUDE.md; or leave it print-only indefinitely, treating this as a "run it locally/by hand
+# periodically" tool instead of a standing cron).
+
+on:
+  schedule:
+    - cron: '20 8 * * 0'   # weekly, Sunday ~08:20 UTC — off-peak, clear of the daily scheduled-query
+                            # block and the other Sunday/weekly CI jobs
+  workflow_dispatch: {}
+
+permissions:
+  contents: read     # read-only this pass — see the deferred commit-back note above
+  id-token: write    # Workload Identity Federation (no downloadable key) — for the bq-type probes
+  actions: read      # the D probe reads workflow state via `gh api .../actions/workflows`
+
+concurrency:
+  group: owner-actions-verify
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # needed for the F-quota probe's `git merge-base --is-ancestor`
+
+      - name: Gate bq-type probes on WIF creds
+        id: guard
+        run: |
+          if [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::WIF vars not set — bq-type probes (A/B/C/sq-dml-watch) will fail-open and report OPEN this run; env/gh/repo probes (D/E-*/F-quota) still run normally."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: GCP WIF auth + gcloud setup (provides the bq CLI)
+        if: steps.guard.outputs.skip == 'false'
+        uses: ./.github/actions/gcp-wif-auth
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
+
+      - name: Run OWNER_ACTIONS.md verifier
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          HAS_ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL != '' }}
+          HAS_OFFSITE_BACKUP_GCS: ${{ secrets.OFFSITE_BACKUP_GCS != '' }}
+          HAS_ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+        run: |
+          python scripts/verify_owner_actions.py | tee /tmp/verify_out.txt
+          {
+            echo "### OWNER_ACTIONS.md auto-verify"
+            echo
+            echo '```'
+            cat /tmp/verify_out.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Surface any newly-closeable items (commit-back deliberately deferred — see header)
+        run: |
+          if git diff --quiet -- OWNER_ACTIONS.md; then
+            echo "No auto-closeable items this run — OWNER_ACTIONS.md unchanged."
+            exit 0
+          fi
+          echo "::notice::scripts/verify_owner_actions.py found item(s) it would close. Diff below is NOT committed (contents: read this pass — see this workflow's header comment). Apply by hand, or re-run 'python scripts/verify_owner_actions.py' from a session authorized to push."
+          git diff -- OWNER_ACTIONS.md >> "$GITHUB_STEP_SUMMARY" || true
