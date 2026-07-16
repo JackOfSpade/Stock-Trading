@@ -330,6 +330,46 @@ def main():
                       f"record its live trigger id once created via RemoteTrigger/Chrome; not a "
                       f"CI failure, per the file's own not-live-synced caveat).")
 
+            # ---- I. expected_trigger: every routine WITH an ops/trigger_ids.json entry must carry a
+            # well-formed `expected_trigger` in ops/cadence.yaml (trigger-config-drift audit, 2026-07-16,
+            # ARCH-2/CC-5 merge). This is the structured, mechanically-diffable schedule Q4 step E and
+            # OPS0 STEP 3 diff a live RemoteTrigger get() against, replacing the old free-text
+            # WEB-UI TRIGGER AUDIT comment block as the enforced source of truth. A routine with NO
+            # trigger_ids.json entry yet (OPS0, until its live trigger is created) is a NOTE only,
+            # mirroring the NOTE just above — not a build failure. ----
+            EXPECTED_TRIGGER_RECURRENCE = {"daily", "weekly", "custom_cron"}
+            for rid in sorted(cad):
+                et = cad[rid].get("expected_trigger")
+                if rid not in have_ids:
+                    if et is None:
+                        print(f"NOTE: {rid} has no expected_trigger yet (no live trigger id recorded "
+                              f"either — expected until ops/trigger_ids.json gets an entry for it).")
+                    continue
+                if et is None:
+                    errors.append(f"{rid}: has an ops/trigger_ids.json entry but no 'expected_trigger' "
+                                  f"in ops/cadence.yaml (structured schedule required for the "
+                                  f"RemoteTrigger-diff self-heal sweep — Q4 step E / OPS0 STEP 3)")
+                    continue
+                rec = et.get("recurrence")
+                if rec not in EXPECTED_TRIGGER_RECURRENCE:
+                    errors.append(f"{rid}: expected_trigger.recurrence={rec!r} not in "
+                                  f"{sorted(EXPECTED_TRIGGER_RECURRENCE)}")
+                    continue
+                if "enabled" not in et:
+                    errors.append(f"{rid}: expected_trigger missing 'enabled'")
+                if rec in ("daily", "weekly"):
+                    tl = et.get("time_local")
+                    if not (isinstance(tl, str) and HHMM.match(tl)):
+                        errors.append(f"{rid}: expected_trigger.time_local must be a quoted \"HH:MM\" "
+                                      f"string for recurrence={rec} (got {tl!r} — an unquoted HH:MM is "
+                                      f"YAML base-60, same caveat as cadence_watch_deadline_local)")
+                elif rec == "custom_cron":
+                    cu = et.get("cron_utc")
+                    if not (isinstance(cu, str) and cu.strip()):
+                        errors.append(f"{rid}: expected_trigger.cron_utc must be a non-empty string "
+                                      f"(TO_POPULATE bootstrap placeholder, or an observed cron once a "
+                                      f"sweep has populated it) for recurrence=custom_cron")
+
     # ---- H. auto-merge-claude.yml's RUNBOOK §38 marker-write routine_re must accept every
     # cadence.yaml id (self-improvement audit, 2026-07-14) — this hand-typed alternation is a
     # second copy of the routine-id set already carried by ops/cadence.yaml, with no guard: a

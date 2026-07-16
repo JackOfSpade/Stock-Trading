@@ -69,6 +69,10 @@ routines:
     monitor_class: daily_trading
     depends_on: []
     writes: [Daily.md, events.decision_log, events.regime_events]
+    expected_trigger:
+      recurrence: daily
+      time_local: "16:00"
+      enabled: true
   - id: D2a
     name: Broker Reconcile & Snapshot
     schedule: "after_close trading_day, before D2"
@@ -76,6 +80,10 @@ routines:
     depends_on: []   # deliberately independent of D1 -- the book must reconcile even if D1 failed
     writes: [events.trade_fills, events.position_events, events.daily_marks, perf.strategy_daily,
              ops.account_snapshot]
+    expected_trigger:
+      recurrence: daily
+      time_local: "16:20"
+      enabled: true
     notes: >
       CUT OVER 2026-07-09 (autonomous, performed by D2a itself after 3 distinct trading-day completed runs
       with no prior cutover logged; ops.d2a_cutover_log + an INFO-severity ops.alerts 'auto_cutover' row are
@@ -90,6 +98,10 @@ routines:
     monitor_class: daily_trading
     depends_on: [D1, D2a]
     writes: [events.decision_log, events.queue_events, events.position_events, calendar:confirm_order]
+    expected_trigger:
+      recurrence: daily
+      time_local: "17:15"
+      enabled: true
     notes: "CUT OVER 2026-07-09 (autonomous, by D2a; ops.d2a_cutover_log). D2 no longer runs Step 0/0b/TWR-maintenance -- those (broker reconcile + cash tripwire + park sweep, ops.account_snapshot, CALL ops.sp_daily_refresh()) now run in D2a, on which D2 now depends. D2 keeps its own ops.sp_assert_trading_enabled('D2') gate (freshness-inclusive; safe now that D2a made marks/engine fresh) before it drains the queue and converts Daily.md's RECOMMENDED ACTIONS into orders."
   - id: D3
     name: Calendar & Queue Hygiene
@@ -97,6 +109,10 @@ routines:
     monitor_class: daily_all
     depends_on: [D2]
     writes: [calendar:confirm_order, events.queue_events]
+    expected_trigger:
+      recurrence: daily
+      time_local: "18:30"
+      enabled: true
   - id: OPS0
     name: Cadence Watchdog
     schedule: "after D3 daily"             # runs daily incl. non-trading days; deliberately after D3
@@ -107,7 +123,7 @@ routines:
                              # dependency on anything would recreate the exact failure class it exists
                              # to fix (self-improvement audit 2026-07-15, CONFIRMED GAP
                              # catchup-notify-no-auto-refire; Architect recommendation #1)
-    writes: [ops.catchup_refire_log, events.decision_log, ops.alerts]
+    writes: [ops.catchup_refire_log, events.decision_log, ops.alerts, ops/cadence.yaml, ops/trigger_ids.json]
     notes: >
       Meta-repair / cadence-dispatcher routine (added 2026-07-15). Reads
       state.catchup_refire_readiness (bigquery/59_catchup_autofire.sql) and calls
@@ -124,6 +140,10 @@ routines:
     depends_on: [D2a]
     writes: [analytics.strategy_incubation_perf, events.strategy_lifecycle, state.arsenal_regime_coverage,
              events.queue_events, events.decision_log, ops.alerts]
+    expected_trigger:
+      recurrence: daily
+      time_local: "20:00"
+      enabled: true
     notes: >
       SISA strategy-arsenal lifecycle (ops/RUNBOOK.md §39; ops/autonomy_levels.yaml loop strategy_arsenal).
       Daily forward-test monitor for SHADOW/PAPER strategies: updates analytics.strategy_incubation_perf,
@@ -139,12 +159,20 @@ routines:
     monitor_class: queue_driven           # NOT calendar-predictable -> excluded from cadence_expected_today
     depends_on: []
     writes: [events.adversarial_reviews]
+    expected_trigger:
+      recurrence: daily
+      time_local: "17:30"
+      enabled: true
   - id: AR_orc
     name: Adversarial Review — Orchestrator
     schedule: "daily; if a review is attacker-complete and orchestrator_due<=today"
     monitor_class: queue_driven
     depends_on: [AR_att]
     writes: [events.adversarial_reviews, events.regime_events, events.decision_log, calendar:confirm_order]
+    expected_trigger:
+      recurrence: daily
+      time_local: "18:00"
+      enabled: true
   # ---- STRATEGY ARSENAL — QUEUE-DRIVEN (SISA lifecycle, added 2026-07-10; fire only if a queue entry is due) ----
   - id: SL2
     name: Strategy Draft, Revise & Post-mortem
@@ -153,6 +181,10 @@ routines:
     depends_on: []
     writes: [Strategy.md, strategy/slices, events.queue_events, events.strategy_postmortems,
              events.strategy_lifecycle, events.decision_log, ops.alerts]
+    expected_trigger:
+      recurrence: daily
+      time_local: "19:00"
+      enabled: true
     notes: >
       SISA arsenal loop (ops/RUNBOOK.md §39). Autonomous EDITORIAL routine that overturns the
       'revision reserved to the participant' gate: drafts the '## Strategy <code> [CANDIDATE]' section +
@@ -169,6 +201,10 @@ routines:
     depends_on: [AR_orc]
     writes: [strategy/roster.yaml, Strategy.md, strategy/slices, Claude_Task_Plan.md, ops.roster_change_log,
              events.strategy_lifecycle, events.decision_log, ops.alerts]
+    expected_trigger:
+      recurrence: daily
+      time_local: "19:15"
+      enabled: true
     notes: >
       SISA arsenal loop (ops/RUNBOOK.md §39). The D2a self-executing transition + fanout engine and the ONLY
       writer of roster MEMBERSHIP: SHADOW register (roster.yaml entry + lifecycle row, spec-locks the
@@ -186,28 +222,48 @@ routines:
     schedule: "weekly Sun"
     monitor_class: weekly_sun
     writes: [Weekly_Catalyst_Calendar.md]
+    expected_trigger:
+      recurrence: weekly
+      time_local: "00:00"
+      enabled: true
   - id: W2
     name: Post-Event Screen (B)
     schedule: "weekly Sun"
     monitor_class: weekly_sun
     writes: [Weekly_Post_Event_Screen.md]
+    expected_trigger:
+      recurrence: weekly
+      time_local: "01:00"
+      enabled: true
   - id: W3
     name: Open-Position Deep-Dive (A,B,C,E)
     schedule: "weekly Sun"
     monitor_class: weekly_sun
     writes: [Weekly_Position_Deep_Dive.md]
+    expected_trigger:
+      recurrence: weekly
+      time_local: "02:00"
+      enabled: true
   - id: W4
     name: Weekly Action Conversion
     schedule: "weekly Sun after W1,W2,W3"
     monitor_class: weekly_sun
     depends_on: [W1, W2, W3]
     writes: [events.queue_events, events.decision_log, calendar:confirm_order]
+    expected_trigger:
+      recurrence: weekly
+      time_local: "03:00"
+      enabled: true
   - id: W5
     name: Factbase & Analytics Consolidation
     schedule: "weekly Sun after W4"
     monitor_class: weekly_sun
     depends_on: [W4]
     writes: [B_Sub_Pattern_Taxonomy.md, analytics.decision_embeddings, events.decision_log]
+    expected_trigger:
+      recurrence: weekly
+      time_local: "04:00"
+      enabled: true
     notes: "Good home for CALL ops.sp_score_theater() (P3-2 independence judge) + embedding health check."
 
   # ---- MONTHLY (1st trading day) ----
@@ -216,40 +272,68 @@ routines:
     schedule: "monthly first_trading_day"
     monitor_class: monthly_ftd
     writes: [events.regime_events, events.macro_series, events.macro_fred]
+    expected_trigger:
+      recurrence: custom_cron
+      cron_utc: TO_POPULATE
+      enabled: true
   - id: M1b
     name: Strategy Mapping & Activation Calls
     schedule: "monthly after M1a"
     monitor_class: monthly_ftd
     depends_on: [M1a]
     writes: [Monthly_Fundamental.md]
+    expected_trigger:
+      recurrence: custom_cron
+      cron_utc: TO_POPULATE
+      enabled: true
   - id: M2
     name: E Pair Divergence Screen
     schedule: "monthly first_trading_day"
     monitor_class: monthly_ftd
     writes: [Monthly_E_Pairs.md]
+    expected_trigger:
+      recurrence: custom_cron
+      cron_utc: TO_POPULATE
+      enabled: true
   - id: M3
     name: D Position Deep-Dive
     schedule: "monthly first_trading_day"
     monitor_class: monthly_ftd
     writes: [Monthly_D_Position_Deep_Dive.md]
+    expected_trigger:
+      recurrence: custom_cron
+      cron_utc: TO_POPULATE
+      enabled: true
   - id: M4
     name: Monthly Action Conversion
     schedule: "monthly after M1b,M2,M3"
     monitor_class: monthly_ftd
     depends_on: [M1b, M2, M3]
     writes: [events.regime_events, events.queue_events, events.decision_log, calendar:confirm_order]
+    expected_trigger:
+      recurrence: custom_cron
+      cron_utc: TO_POPULATE
+      enabled: true
   - id: M5
     name: Deployed-TWR & Macro Forecast (advisory)
     schedule: "monthly after M4"
     monitor_class: monthly_ftd
     depends_on: [M4]
     writes: [analytics.deployed_twr_forecast, events.decision_log]
+    expected_trigger:
+      recurrence: custom_cron
+      cron_utc: TO_POPULATE
+      enabled: true
   - id: SL4
     name: Discretionary Retirement Proposer
     schedule: "monthly after M4"
     monitor_class: monthly_ftd
     depends_on: [M4]
     writes: [events.queue_events, events.strategy_lifecycle, events.decision_log, ops.alerts]
+    expected_trigger:
+      recurrence: custom_cron
+      cron_utc: TO_POPULATE
+      enabled: true
     notes: >
       SISA arsenal loop (ops/RUNBOOK.md §39). Monthly REMOVE-ONLY discretionary-retirement scanner,
       default-KEEP: reads the objective state.strategy_retirement_candidacy signal (edge-decay / redundancy /
@@ -266,22 +350,38 @@ routines:
     schedule: "quarterly first_trading_day"
     monitor_class: quarterly_ftd
     writes: [Quarterly_Regime.md]
+    expected_trigger:
+      recurrence: custom_cron
+      cron_utc: TO_POPULATE
+      enabled: true
   - id: Q2
     name: D Long-Horizon Candidates
     schedule: "quarterly first_trading_day"
     monitor_class: quarterly_ftd
     writes: [Quarterly_D_Candidates.md]
+    expected_trigger:
+      recurrence: custom_cron
+      cron_utc: TO_POPULATE
+      enabled: true
   - id: Q3
     name: AI Foundation Quarterly Delta
     schedule: "quarterly first_trading_day"
     monitor_class: quarterly_ftd
     writes: [Quarterly_AI_Foundation_Delta.md]
+    expected_trigger:
+      recurrence: custom_cron
+      cron_utc: TO_POPULATE
+      enabled: true
   - id: Q4
     name: Quarterly Action Conversion
     schedule: "quarterly after Q2,Q3"
     monitor_class: quarterly_ftd
     depends_on: [Q2, Q3]
     writes: [Watchlist.md, events.queue_events, events.decision_log]
+    expected_trigger:
+      recurrence: custom_cron
+      cron_utc: TO_POPULATE
+      enabled: true
   - id: SL1
     name: Strategy Candidate Synthesis & Qualification
     schedule: "quarterly after Q1,Q3"
@@ -289,6 +389,10 @@ routines:
     depends_on: [Q1, Q3]
     writes: [state.strategy_candidates, events.strategy_lifecycle, events.queue_events,
              events.decision_log, ops.alerts]
+    expected_trigger:
+      recurrence: custom_cron
+      cron_utc: TO_POPULATE
+      enabled: true
     notes: >
       SISA arsenal loop (ops/RUNBOOK.md §39; ops/autonomy_levels.yaml loop strategy_arsenal). Quarterly
       deep-research candidate synthesis + mechanical qualifier (DEFAULT-REJECT on ambiguity): reads the
@@ -306,23 +410,44 @@ routines:
     schedule: "annual first_trading_day"
     monitor_class: annual_ftd
     writes: [Annual_AI_Foundation_Sweep.md]
+    expected_trigger:
+      recurrence: custom_cron
+      cron_utc: TO_POPULATE
+      enabled: true
   - id: A2
     name: Per-Strategy Constraint Audit
     schedule: "annual first_trading_day"
     monitor_class: annual_ftd
     writes: [Annual_Constraint_Audit.md]
+    expected_trigger:
+      recurrence: custom_cron
+      cron_utc: TO_POPULATE
+      enabled: true
   - id: A3
     name: Annual Action Conversion
     schedule: "annual after A1,A2"
     monitor_class: annual_ftd
     depends_on: [A1, A2]
     writes: [AI_Trading_Foundation.md, Strategy.md, events.queue_events, events.decision_log]
+    expected_trigger:
+      recurrence: custom_cron
+      cron_utc: TO_POPULATE
+      enabled: true
 
 # ---- WEB-UI TRIGGER AUDIT — 2026-07-10, RE-SPACED 2026-07-12 (Claude-in-Chrome + RemoteTrigger API,
 # cross-checked against ops.run_log) ----
 # ops/trigger_ids.json (added 2026-07-12) maps routine id -> live RemoteTrigger id (trig_...), so a
 # session can call RemoteTrigger get/update/run directly instead of re-discovering IDs via
 # Claude-in-Chrome each time. See that file's _meta for provenance/staleness caveats.
+#
+# 2026-07-16: Q4 step E now audits + self-corrects via RemoteTrigger get/update over
+# ops/trigger_ids.json (each routine's structured `expected_trigger`, below, is the enforced
+# source of truth); Chrome is fallback only. Schedule corrections are snapshot+partial-update+
+# verify+rollback guarded (never a from-scratch schedule body), and are applied ONLY to the
+# custom_cron cohort — a daily/weekly schedule drift is diff-only + an emailed warning, never a
+# RemoteTrigger update, because RemoteTrigger get renders the native Daily/Weekly picker as a
+# fixed UTC cron while the live trigger is DST-aware (writing a raw cron risks demoting it to a
+# fixed-UTC Custom trigger). OPS0's STEP 3 runs the identical sweep weekly (Sundays only).
 #
 # Exact clock times below are NOT enforced anywhere (per the file header, exact times live only in
 # the web UI) — recorded purely as the human-readable reference scripts/print_routines.py invites
