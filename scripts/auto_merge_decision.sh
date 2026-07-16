@@ -71,3 +71,39 @@ is_secondary_gate_satisfied() {
 is_ancestor_of() {
   git merge-base --is-ancestor "$1" "$2"
 }
+
+# ci_run_id_from_json <json> — the numeric id of the most recent run (for gh api/gh run rerun
+# targeting), or "" if none/unparseable. Companion to ci_conclusion_from_json (2026-07-15,
+# self-improvement audit — CONFIRMED GAP red-ci-merge-conflict-no-remediation).
+ci_run_id_from_json() {
+  local out
+  if [ -n "$1" ] \
+     && out="$(printf '%s' "$1" | jq -r 'if (.workflow_runs | type) != "array" then "" else (.workflow_runs[0] as $r | if $r == null then "" else ($r.id // "") end) end' 2>/dev/null)"; then
+    printf '%s\n' "$out"
+  else
+    printf '\n'
+  fi
+}
+
+# ci_run_attempt_from_json <json> — the run_attempt of the most recent run (GitHub's own retry
+# counter — 1 for a never-retried run), or "" if none/unparseable/missing.
+ci_run_attempt_from_json() {
+  local out
+  if [ -n "$1" ] \
+     && out="$(printf '%s' "$1" | jq -r 'if (.workflow_runs | type) != "array" then "" else (.workflow_runs[0] as $r | if $r == null then "" else ($r.run_attempt // "") end) end' 2>/dev/null)"; then
+    printf '%s\n' "$out"
+  else
+    printf '\n'
+  fi
+}
+
+# should_retry_failed_ci <conclusion> <run_attempt> — true (exit 0) only for a GENUINE terminal
+# failure ("failure", never "in_progress"/"none"/"error"/"cancelled"/etc.) on its FIRST attempt
+# (run_attempt == "1"). Bounds this to exactly ONE automatic retry ever per run: GitHub increments
+# run_attempt on every rerun, so a re-run that fails again reads run_attempt=2 and is never retried
+# again — a content-free, self-limiting retry for transient/flaky CI (2026-07-15, self-improvement
+# audit). A real code bug just fails again on attempt 2 and falls through to the existing
+# stranded-branch-check.yml alert path unchanged; this never touches branch content.
+should_retry_failed_ci() {
+  [ "$1" = "failure" ] && [ "$2" = "1" ]
+}

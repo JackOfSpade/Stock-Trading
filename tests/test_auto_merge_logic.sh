@@ -156,6 +156,35 @@ git checkout -q main
 assert_false "an unmerged branch is NOT an ancestor of main — must attempt a real merge, not skip as already-merged" \
   is_ancestor_of unmerged-branch main
 
+# ---- ci_run_id_from_json / ci_run_attempt_from_json / should_retry_failed_ci: the one-shot,
+# content-free CI retry (2026-07-15, self-improvement audit — CONFIRMED GAP
+# red-ci-merge-conflict-no-remediation) ------------------------------------------------------
+
+run_id="$(ci_run_id_from_json '{"workflow_runs":[{"id":12345,"conclusion":"failure","run_attempt":1}]}')"
+assert_eq "run id parses from a real run" "$run_id" "12345"
+
+attempt="$(ci_run_attempt_from_json '{"workflow_runs":[{"id":12345,"conclusion":"failure","run_attempt":1}]}')"
+assert_eq "run_attempt parses from a real run" "$attempt" "1"
+
+run_id="$(ci_run_id_from_json '{"workflow_runs":[]}')"
+assert_eq "no matching run: run id is empty" "$run_id" ""
+
+run_id="$(ci_run_id_from_json '')"
+assert_eq "gh api failure: run id is empty (fail closed, no retry attempted)" "$run_id" ""
+
+assert_true "first-attempt genuine failure: should_retry_failed_ci allows ONE retry" \
+  should_retry_failed_ci "failure" "1"
+assert_false "second-attempt failure (already retried once): should_retry_failed_ci must NOT retry again" \
+  should_retry_failed_ci "failure" "2"
+assert_false "in-progress run: should_retry_failed_ci must NOT retry (not a terminal failure)" \
+  should_retry_failed_ci "in_progress" "1"
+assert_false "no-run-yet ('none'): should_retry_failed_ci must NOT retry" \
+  should_retry_failed_ci "none" "1"
+assert_false "API error: should_retry_failed_ci must NOT retry" \
+  should_retry_failed_ci "error" "1"
+assert_false "missing run_attempt (empty string): should_retry_failed_ci must NOT retry" \
+  should_retry_failed_ci "failure" ""
+
 echo
 if [ "$fail" -ne 0 ]; then
   echo "auto_merge_decision tests: FAILED"

@@ -17,6 +17,7 @@ Every routine reads and/or writes BigQuery for operational state (positions, reg
 | **D1** | Market Development Scan | Daily · research | `state.daily_briefing`, `state.current_positions`, `perf.kill_flags`/`perf.strategy_daily`, `state.current_regime`, `find_precedents()` | `events.decision_log` (dev notes); inline router review → `events.regime_events` | Daily.md |
 | **D2** | Daily Action Conversion | Daily · regular | `state.daily_briefing`, `state.current_positions`, `events.daily_marks` | `events.trade_fills`, `events.position_events`, `events.daily_marks`; recompute `perf.strategy_daily`; `events.decision_log` (+embedding) via `ops.sp_log_decision`; `events.regime_events`; `events.queue_events`; Watchlist.md | — (reads Daily.md) |
 | **D3** | Calendar Hygiene | Daily · regular | `state.open_queue`, `state.current_positions`, `events.queue_events`/`events.decision_log` | `events.queue_events` (terminal-entry sweep) | — |
+| **OPS0** | Cadence Watchdog | Daily · regular | `state.catchup_refire_readiness`, `ops/trigger_ids.json` (repo file) | `ops.catchup_refire_log`, `events.decision_log`, `ops.alerts`; `RemoteTrigger run(...)` (external call, not a BigQuery write) | — |
 | **W1** | Catalyst Calendar (A, C) | Weekly · research | `state.current_regime`, `state.current_positions`, `events.decision_log` | — | Weekly_Catalyst_Calendar.md |
 | **W2** | Post-Event Screen (B) | Weekly · research | `events.decision_log`/`find_precedents()`, `state.current_positions` | — | Weekly_Post_Event_Screen.md |
 | **W3** | Open-Position Deep-Dive (A,B,C,E) | Weekly · research | `state.current_positions`, `state.current_regime`, `events.decision_log` | — | Weekly_Position_Deep_Dive.md |
@@ -160,7 +161,7 @@ Conventions for the `[Claude] ATTENTION — RE-AUTH BigQuery connector` event (c
 
 ## Observability — run logging & failure alerts
 
-Cross-cutting calls every routine makes against the observability layer (`bigquery/10_observability.sql` + `bigquery/12_cadence_monitor.sql`). **Binds ALL routines: D1–D3, W1–W5, M1a–M5, Q1–Q4, A1–A3, and the adversarial attacker/orchestrator.** D2 carries the worked example (its `RUN LOGGING` step + the §13 cash-tripwire alert); the rule here is what binds the rest — do not duplicate a per-routine block, just make the calls.
+Cross-cutting calls every routine makes against the observability layer (`bigquery/10_observability.sql` + `bigquery/12_cadence_monitor.sql`). **Binds ALL routines: D1–D3, OPS0, W1–W5, M1a–M5, Q1–Q4, A1–A3, and the adversarial attacker/orchestrator.** D2 carries the worked example (its `RUN LOGGING` step + the §13 cash-tripwire alert); the rule here is what binds the rest — do not duplicate a per-routine block, just make the calls.
 
 - **Connector pre-flight (FIRST — before run-logging, the dependency gate, or any routine's own Step 0).** Before anything else, prove the connectors this routine needs are live with one trivial liveness read each: **BigQuery** via `SELECT * FROM `stock-trading-498512.state.trading_day_today`` (every routine — this is also the `today` the templates below need, so it is near-zero extra cost); for **D1/D2** the **IBKR** connector via `get_account_summary`; and for the **order-STAGING routines** (D2, D3, W4, M4, Q4, A1, A3, AR_orc — routines that may need to create a `[Claude] Confirm order` event for a non-craftable order, 2026-07-09: craftable Equity/ETF orders no longer need one — see Calendar MCP usage; D1 stages nothing, so it is exempt) the **Calendar** connector via a 1-day `list_events` read. The point is to catch a de-authed/expired connector in seconds at the top of the run instead of mid-routine (the recurring owner-OAuth BigQuery de-auth — RUNBOOK §15/§26). Route the failure by which connector failed and whether the routine can proceed safely:
   - **BigQuery unreachable (token expired / re-auth required).** The alert sink is itself down, so you canNOT `sp_raise_alert`/write `ops.alerts`; the only first-class channel is a **`[Claude] ATTENTION — RE-AUTH BigQuery connector` calendar event — create it immediately.** Then branch on the routine: **D1 is research-only and stages no orders → proceed in DEGRADED MODE** (read book/marks from the IBKR connector, carry regime forward from the prior `Daily.md`, defer every BigQuery side-write, and banner `Daily.md` exactly as the 2026-06-26 run did). **D2/D3 require canonical state → HALT cleanly** (never run on missing/stale state; craft no orders). The next-morning freshness + cadence dead-man's switches durably record the miss once BigQuery returns; resolve per RUNBOOK §26.
@@ -772,6 +773,22 @@ ops.d2a_cutover_log` and `CALL ops.sp_raise_alert('info','D2a','auto_cutover', .
 before or after; a one-line mention in this run's chat output that the cutover happened is sufficient
 (chat is unmonitored, so the alert row above is the record that matters, not the chat line).
 
+**CHAIN-CALL D2 (self-improvement audit 2026-07-15, Architect recommendation #2 — "producer-initiated
+chaining" PILOT; run absolutely LAST, after everything above, including the cutover check).** D2a's own
+successful completion is the single strongest, lowest-latency signal that D2 is now eligible to run
+(dependency-gate-eligible the instant D2a finishes, rather than waiting for D2's separately-scheduled
+cron) — this directly targets the class of incident behind the 2026-07-12 W2/W4 no-show and the
+2026-07-13/14 evening-block delay (RUNBOOK §41): independently-scheduled calendar crons reconciled only
+by a dependency gate. Best-effort, never blocks D2a's own `'completed'` log: look up `D2` in
+`ops/trigger_ids.json` (repo file); if an entry exists, `CALL RemoteTrigger run(<that trigger_id>)`. If
+no entry exists yet (trigger not yet recorded), skip silently — D2's own cron is unaffected either way.
+**D2 itself carries the idempotency guard** (its own "SAME-DAY IDEMPOTENCY GUARD" step, first line of
+its routine body) — a redundant second fire from D2's own cron later the same day is a safe, expected
+no-op, not a double-conversion risk. This is a PILOT on this ONE chain link only (D2a→D2) — do NOT
+extend the same chain-call pattern to any other routine pair (D2→D3, AR_att→AR_orc, W1/W2/W3→W4, etc.)
+without first observing this pair run cleanly for at least 2 weeks and confirming no double-fire
+incident in `ops.run_log`.
+
 CHAT OUTPUT: one-line acknowledgment of reconciliation (fills captured, cash tripwire status, sweep/
 cover crafted or not, engine recompute status). If nothing to report: "Reconciliation complete, no
 action needed."
@@ -785,6 +802,8 @@ Runs after D1 has written Daily.md. Reconciles fills, drains the analysis queue,
 
 ```
 Read access scope: Daily cadence. Read decisions from `events.decision_log` + `analytics.find_precedents()` (the retired `Decision_Log*.md` are git history only). Read positions/perf/NAV from `state.current_positions` / `perf.strategy_daily` / `analytics.strategy_nav` (retired Portfolio_Ledger.md) and regime from `state.current_regime` (retired Regime_State.md). Read the spec/working files `Strategy.md`, `Experiment_Parameters.md`, `Operating_Protocols.md`, `Watchlist.md`, `B_Sub_Pattern_Taxonomy.md` as relevant.
+
+**SAME-DAY IDEMPOTENCY GUARD (self-improvement audit 2026-07-15, Architect recommendation #2 — "producer-initiated chaining" pilot) — FIRST, before RUN LOGGING, before anything else.** D2a's last step (below) now chain-calls `RemoteTrigger run(D2's trigger id)` immediately on its own successful completion, IN ADDITION to D2's own independent cron — so on a normal day D2 may be invoked TWICE (once by the chain-call, once later by its own scheduled trigger). `SELECT COUNT(*) FROM ops.run_log WHERE routine='D2' AND run_date=<today> AND status='completed'`. If **>= 1**, this is the redundant second fire: output "D2 already completed today (chain-call + cron both fired; this is the expected redundant second invocation, not an error)." and END IMMEDIATELY — do NOT re-read Daily.md, do NOT re-run Step 1, do NOT re-convert any action, do NOT log another `started`/`completed` row (a duplicate log row is harmless but adds no signal). This is the ONLY new check the pilot requires; every other rule below (dependency gate, trading-enable gate, order-guard checks) is unchanged.
 
 RUN LOGGING (every run — observability, `bigquery/10_observability.sql`). At the very START of this routine, `CALL ops.sp_log_run('D2', <today, America/Denver from state.trading_day_today>, 'started', <session_id>, <branch>, NULL, NULL, NULL)`. At the END, call it again with `'completed'` (or `'failed'`/`'halted'` + an `error_msg` if it stopped), passing `rows_written` = fills + marks ingested. This populates `state.freshness.d2_ran_last_trading_day` and arms the dead-man's switch (`bigquery/scheduled_queries/daily_freshness_check.sql`), so a silently-skipped or crashed D2 is detected instead of failing silent.
 
@@ -890,6 +909,30 @@ Walk staged orders from **`state.open_orders`** (the durable staged-order regist
 Time zone America/Denver unless Experiment_Parameters.md specifies otherwise.
 
 CHAT OUTPUT: one-line summary of calendar + queue reconciliation (e.g., "1 legacy thesis event migrated to queue + deleted; 3 confirm-order events verified; state.open_queue clean (no past-due actionable items).").
+```
+
+## OPS0. Cadence Watchdog — regular routine
+
+```
+Read access scope: Cadence Watchdog. Read `state.catchup_refire_readiness` (`bigquery/59_catchup_autofire.sql`) + `ops/trigger_ids.json` (repo file, this routine's own read/write surface for the CALL below). No Strategy.md, no roster, no order-staging surface of any kind.
+
+WHY THIS EXISTS (self-improvement audit 2026-07-15 — CONFIRMED GAP catchup-notify-no-auto-refire; Architect recommendation #1). Every other routine in this plan DETECTS a missed/halted run (`state.cadence_watch`, `state.cadence_period_watch`, `state.stalled_runs`) but nothing ever ACTED on that detection beyond emailing the operator — verified live 2026-07-13: D2 halted twice and never completed that day, and nothing re-fired it. `ops/trigger_ids.json` + the `RemoteTrigger` tool have existed since 2026-07-12 but were never called by any routine, only manually. This routine closes that loop for the narrow, safety-conscious set of routines where a late run is genuinely harmless (no live-order-crafting / intraday-price dependency) — see `bigquery/59_catchup_autofire.sql`'s header for the full catchup-safe rationale and exclusion list.
+
+**NO DEPENDENCY GATE, deliberately — this routine must NEVER be blocked** (its entire job is to unblock others; gating it on anything would recreate the exact failure class it exists to fix). `depends_on: []` in `ops/cadence.yaml`.
+
+**Observability preamble applies as normal** (connector pre-flight — BigQuery only, this is not an order-staging routine so no IBKR/Calendar pre-flight needed; best-effort `sp_auto_resolve_alerts`; best-effort run-logging via `sp_routine_start`/`sp_routine_end`).
+
+STEP 1 — READ READINESS. `SELECT * FROM state.catchup_refire_readiness`. If empty, log `events.decision_log` "OPS0: no catchup-safe misses pending" (a one-line heartbeat, not a finding) and log `'completed'`. No Daily.md output for a clean run.
+
+STEP 2 — FOR EACH ROW, RE-FIRE. For each `(miss_key, routine, tier, as_of)` row:
+1. Look up `routine` in `ops/trigger_ids.json` (repo file — read via the repo, not a BigQuery table) for its live `trig_...` id.
+2. **If found:** `CALL RemoteTrigger run(<trigger_id>)`. `INSERT INTO ops.catchup_refire_log (miss_key, routine, tier, trigger_id, outcome, note) VALUES (<miss_key>, <routine>, <tier>, <trigger_id>, 'refired', 'auto-refired by OPS0')`. `CALL ops.sp_raise_alert('info','OPS0','catchup_refired', '<routine> auto-refired for <as_of> (<tier> tier, previously missed)', '<JSON: miss_key, routine, tier, trigger_id>')` — info severity, audit trail only, never a chat question.
+3. **If NOT found** (the routine has no entry in `ops/trigger_ids.json` yet — e.g. a brand-new routine whose trigger was never recorded): `INSERT INTO ops.catchup_refire_log (miss_key, routine, tier, outcome, note) VALUES (<miss_key>, <routine>, <tier>, 'no_trigger_id', 'no live trigger id on file')`. `CALL ops.sp_raise_alert('warning','OPS0','catchup_refire_no_trigger_id', '<routine> missed <as_of> but OPS0 has no ops/trigger_ids.json entry to re-fire it — surface to the operator', '<JSON>')` — this is the ONE case that still needs a human (recording a new trigger id), surfaced durably rather than silently doing nothing.
+4. Either branch: the `ops.catchup_refire_log` INSERT is the idempotency marker — `state.catchup_refire_readiness` excludes this `miss_key` on every subsequent read today, so OPS0 never double-fires the same miss.
+
+**SCOPE GUARDRAIL (restated — already enforced by the view, not re-checked here): NEVER re-fire D2, D2a, W4, M4, Q4, A3, or SL4.** These carry live-order-crafting or capital-adjacent-proposal dependencies where a late catch-up run is harmless to execute but does not recover the value a same-day run would have had — they keep their existing human-visible `missed_run`/`period_missed` alert only, unchanged by this routine. `state.catchup_refire_readiness` is built to never emit a row for these; if it ever does (a future edit to `bigquery/59` regressed the exclusion list), STOP and raise a critical alert rather than re-firing — do not treat an order-staging routine's absence from the exclusion list as license to auto-refire it.
+
+CHAT OUTPUT: one-line summary (e.g., "OPS0: 2 misses auto-refired (D1/2026-07-13, W2/2026-W28); 0 no_trigger_id.").
 ```
 
 ---
