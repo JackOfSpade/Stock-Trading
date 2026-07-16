@@ -6,6 +6,8 @@ they fire only when a routine session calls them — so a skipped session = sile
 
 **BigQuery schedules run in UTC** (the UI's local-time label is misleading). Times below are UTC.
 
+**Body-drift detection (self-improvement audit 2026-07-15, `bigquery/63_scheduled_query_version_registry.sql`):** every file below now calls `ops.sp_beat_heartbeat('sq:<name>', '<version>', ...)` as its first statement (an `-- SQ_NAME:`/`SQ_VERSION:` comment marks the current version). `state.scheduled_query_version_drift` compares each file's live-reported version against `state.expected_scheduled_query_versions` — previously nothing confirmed whether a repo-side edit to one of these bodies had actually been re-pasted into the live console job. **Bump the `SQ_VERSION` comment + the `CALL` literal + `state.expected_scheduled_query_versions`' matching row together whenever you edit a file's body**, in the same commit.
+
 | File | Schedule (UTC) | What it does | Notify |
 |---|---|---|---|
 | `embed_pending.sql` | daily ~06:00 UTC | `CALL ops.sp_embed_pending()` — heal any unembedded decisions (P0-3). Timing irrelevant (idempotent). | — |

@@ -32,11 +32,15 @@
 --   bq load --source_format=PARQUET --replace ops_restore.<table> \
 --     'gs://stock-trading-backups/ops/<table>/dt=<YYYY-MM-DD>/*.parquet'
 --   -- DDL-first (faithful) restore: see ops/RUNBOOK.md §3 "DDL-first restore".
+-- SQ_NAME: ops_export  SQ_VERSION: v1 (self-improvement audit 2026-07-15, scheduled-query
+-- body-drift detection — bigquery/63_scheduled_query_version_registry.sql). Bump SQ_VERSION here AND
+-- state.expected_scheduled_query_versions' matching row on any future edit to this file's body.
 BEGIN
   DECLARE failed STRING DEFAULT '';
   DECLARE n_ok INT64 DEFAULT 0;
   DECLARE row_json STRING DEFAULT '';
   DECLARE tbl_rows INT64;
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:ops_export', 'v1', 'ops_export.sql ran');
 
   FOR rec IN (
     SELECT table_name

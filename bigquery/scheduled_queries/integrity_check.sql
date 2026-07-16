@@ -31,7 +31,12 @@
 -- bigquery/45_monitor_promotion.sql (creates ops.monitor_health_history, the table the MERGE just below
 -- targets) and bigquery/57_append_only_integrity_promotion.sql (the promotion-readiness view that reads
 -- it) before re-pasting this updated body — self-improvement audit ITEM 31, 2026-07-15.
+-- SQ_NAME: integrity_check  SQ_VERSION: v1 (self-improvement audit 2026-07-15, scheduled-query
+-- body-drift detection — bigquery/63_scheduled_query_version_registry.sql). Bump SQ_VERSION here AND
+-- state.expected_scheduled_query_versions' matching row on any future edit to this file's body.
 BEGIN
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:integrity_check', 'v1', 'integrity_check.sql ran');
+
   -- MONITOR-PROMOTION HISTORY (self-improvement audit ITEM 31, 2026-07-15): logged UNCONDITIONALLY
   -- (pass or fail) every run, mirroring cadence_check.sql's ddl_drift/restore_stale MERGE-upsert
   -- pattern (bigquery/45_monitor_promotion.sql, ITEM 24) — state.append_only_integrity_promotion_

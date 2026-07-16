@@ -32,8 +32,12 @@
 -- Claude_Task_Plan.md's Observability preamble (`CALL ops.sp_auto_resolve_alerts()` at the top of
 -- every routine run) is the primary, already-live path; this scheduled-query call is defense in
 -- depth for days with zero routine runs.
+-- SQ_NAME: cadence_check  SQ_VERSION: v1 (self-improvement audit 2026-07-15, scheduled-query
+-- body-drift detection — bigquery/63_scheduled_query_version_registry.sql). Bump SQ_VERSION here AND
+-- state.expected_scheduled_query_versions' matching row on any future edit to this file's body.
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v1', 'cadence_check.sql ran');
 
   -- RUNBOOK section 38 self-heal (ITEM 3, bigquery/38_run_log_selfheal.sql): backfill any
   -- ops.run_log completion row whose routine already has a landed-commit marker in

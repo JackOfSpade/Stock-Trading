@@ -95,7 +95,12 @@
 -- RAISE-ing watch of the 4 tables where a bypass has the single highest blast radius in the system
 -- (halt gate / kill-switch / roster truth / engine truth). See owner_actions / RUNBOOK §15 for the
 -- console steps to create this scheduled query and the companion Cloud Monitoring policy.
+-- SQ_NAME: safety_critical_dml_watch  SQ_VERSION: v1 (self-improvement audit 2026-07-15, scheduled-query
+-- body-drift detection — bigquery/63_scheduled_query_version_registry.sql). Bump SQ_VERSION here AND
+-- state.expected_scheduled_query_versions' matching row on any future edit to this file's body.
 BEGIN
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:safety_critical_dml_watch', 'v1', 'safety_critical_dml_watch.sql ran');
+
   -- Computed once, reused below (same "compute once, reuse" discipline as state.system_health's
   -- alerts_summary CTE) — avoids scanning INFORMATION_SCHEMA three times for one check.
   CREATE TEMP TABLE hits AS

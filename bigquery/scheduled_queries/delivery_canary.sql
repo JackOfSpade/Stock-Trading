@@ -30,7 +30,12 @@
 -- US; no destination), run-as bq-scheduler@ (already writes ops.alerts). Enable "Send email on failure"
 -- (that IS the step-1 delivery-failure alarm). Depends on bigquery/18_stack_review_fixes.sql
 -- (ops.alerts.notified_ts) + a deployed alert_emailer.gs that stamps notified_ts.
+-- SQ_NAME: delivery_canary  SQ_VERSION: v1 (self-improvement audit 2026-07-15, scheduled-query
+-- body-drift detection — bigquery/63_scheduled_query_version_registry.sql). Bump SQ_VERSION here AND
+-- state.expected_scheduled_query_versions' matching row on any future edit to this file's body.
 BEGIN
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:delivery_canary', 'v1', 'delivery_canary.sql ran');
+
   -- 1. Emit this week's canary FIRST (resolved + unnotified so it is forwarded-and-stamped but never
   -- an open alert). Reordered ahead of the assertion below (2026-07-04 audit finding): the assertion's
   -- RAISE previously ran first and — RAISE terminating the script — aborted before this INSERT ran,

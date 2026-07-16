@@ -24,11 +24,15 @@
 --   bq load --source_format=PARQUET --replace events_restore.<table> \
 --     'gs://stock-trading-backups/events/<table>/dt=<YYYY-MM-DD>/*.parquet'
 --   -- for tables with JSON cols, re-parse: SELECT * REPLACE(SAFE.PARSE_JSON(<col>) AS <col>) ...
+-- SQ_NAME: backup_events_export  SQ_VERSION: v1 (self-improvement audit 2026-07-15, scheduled-query
+-- body-drift detection — bigquery/63_scheduled_query_version_registry.sql). Bump SQ_VERSION here AND
+-- state.expected_scheduled_query_versions' matching row on any future edit to this file's body.
 BEGIN
   DECLARE failed STRING DEFAULT '';
   DECLARE n_ok INT64 DEFAULT 0;   -- tables exported successfully this run (-> ops.backup_log marker)
   DECLARE row_json STRING DEFAULT '';  -- accumulates {"table": rows, ...} per exported table (B2)
   DECLARE tbl_rows INT64;
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:backup_events_export', 'v1', 'backup_events_export.sql ran');
 
   FOR rec IN (
     SELECT table_name
