@@ -236,6 +236,35 @@ loops:
       field, citing the evidence, same as every sibling loop above.
     added: "2026-07-11"
 
+  - id: research_quality_feedback     # Architect#4: GO-side outcome attribution -> D1/W1-W3 research criteria
+    stage: shadow                     # BUILT DIRECTLY AT SHADOW (2026-07-15, self-improvement audit
+                                       # architecture recommendation "Architect#4") — NOT dormant-then-
+                                       # promoted, to avoid the exact anti-pattern this audit found and fixed
+                                       # for cross_model_referee_independence (scaffolding with no scheduled
+                                       # caller). W5 now reads `analytics.thesis_outcome_summary`
+                                       # (bigquery/66_research_quality_feedback.sql) every weekly cycle and
+                                       # logs a digest — record-only, no readiness view exists yet so live
+                                       # D1/W1-W3 research criteria are completely unaffected.
+    ceiling: active_auto
+    artifact: analytics.thesis_outcomes (bigquery/04_analytics.sql — the pre-existing GO/NO-GO outcome-
+      attribution join this loop reuses verbatim, NOT rebuilt) + analytics.thesis_outcome_summary
+      (bigquery/66_research_quality_feedback.sql — the NEW per-(strategy, sub_pattern) tally this loop adds,
+      mirroring analytics.nogo_counterfactual_summary's shape)
+    gate_to_next_stage: >
+      SHADOW -> ACTIVE_AUTO requires TWO separate things, neither built yet: (1) DATA-SUFFICIENCY —
+      analytics.thesis_outcome_summary shows min_n_met=TRUE (>=15 closed GO theses) on at least one
+      (strategy, sub_pattern) cell with a persistent (3+ consecutive W5 cycles, mirroring the
+      process_reliability loop's own persistence bar) above-/below-chance win-rate signal; as of 2026-07-15
+      the account-wide total is 7 GO theses (3 closed), far below this floor. (2) A NAMED, VERSION-CONTROLLED
+      KNOB — unlike the four constant-tuning loops above, no specific D1/W1-W3 research-criterion constant
+      has been identified as the thing this loop would change; inventing one now, ahead of any real signal,
+      would be exactly the unfounded self-modifying change this register's own "data gate before mechanism"
+      discipline exists to prevent. Both (1) and (2) are future, separately-committed edits — the first
+      would be a `state.research_quality_readiness` view (bigquery/37-style), the second a specific proposal
+      citing the sub_pattern/strategy cell whose signal justifies it. NO human PR/chat gate at either
+      promotion — same record-then-promote-by-editing-this-register discipline as every sibling loop.
+    added: "2026-07-15"
+
 cross_cutting_guards:
   - id: no_auto_merge_self_improvement
     status: superseded_2026-07-10   # was documented_not_enforced; retired as a blocking guard (see note)
