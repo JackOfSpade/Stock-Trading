@@ -436,21 +436,29 @@ The grant's scope is also declared (never applied) in `infra/terraform/iam.tf` a
 `gh_ci_runner_routine_commit_markers_editor` — per the standing Terraform-is-spec-only decision
 (`CLAUDE.md`), do NOT `terraform apply` this file; the `bq` command above is the real grant.
 
-**Also needs a re-paste (folds into item B below, now further updated):** `bigquery/67`'s registry
+**SUPERSEDED 2026-07-17 — do NOT re-paste `cadence_check` separately.** The paragraph below (kept for
+history) predates the ARCH-1 wrapper migration. All of `ci_finding`/`scheduled_query_version_drift`/
+`probe_funding_stalled`/`cash_flows_backfill_broken`/`research_quality_feedback`/
+`immediate_action_flagged`/`process_scorecard_signal` logic it describes is now already inside the
+live `ops.sp_sq_cadence_check` wrapper procedure (`bigquery/75`, confirmed live, verified by grep —
+27 matches for those exact terms). There is nothing left to separately re-paste for `cadence_check` —
+item B step 2 below (the single one-line wrapper repoint, done once for all 10 existing configs) is
+the complete remaining action; it already covers `cadence_check`.
+
+<details><summary>Original (superseded) paragraph, kept for history</summary>
+
+Also needs a re-paste (folds into item B below, now further updated): `bigquery/67`'s registry
 MERGE bumps `state.expected_scheduled_query_versions`'s `cadence_check` row to `v4`; the live
 `cadence_check` scheduled query needs the updated body (SQ_VERSION v3→v4 — since consolidated same
 day with the CC-3/RES-4/CC-7 consumption-closure pass into ONE v4, not a further v5 — adds the
 `ci_finding` raise/auto-resolve block, the `scheduled_query_version_drift` / `probe_funding_stalled` /
 `cash_flows_backfill_broken` record-only warning blocks, `loop:research_quality_feedback` in both
 dead-man UNNEST lists, and the `immediate_action_flagged`/`process_scorecard_signal` auto-age
-additions) re-pasted in the same console session per `bigquery/README.md`'s convention — apply
-`bigquery/67_ci_findings_bridge.sql` and `bigquery/68_cash_flows_backfill_check_dated.sql`, then
-re-paste `cadence_check.sql` (single consolidated v4 body), since the registry bump is what keeps
-`state.scheduled_query_version_drift` green afterward. **Also residual (not owner-blocked, but not
-yet run this pass):** `bigquery/63_scheduled_query_version_registry.sql`'s MERGE seed row for
-`cadence_check` was updated in-repo to `v4` with a consolidated git_note — a future BigQuery-MCP
-session must re-run that MERGE statement live so `state.expected_scheduled_query_versions` matches
-before the console re-paste below is checked against it.
+additions) re-pasted in the same console session per `bigquery/README.md`'s convention. (This is now
+stale: the registry landed at `v5`, folding this same content into the consolidated wrapper instead —
+see item B step 1.)
+
+</details>
 
 ---
 
