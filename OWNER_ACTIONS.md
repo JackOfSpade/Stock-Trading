@@ -109,7 +109,10 @@ probe: python3 scripts/check_settings_toolcov.py
 done_when: exit 0
 ```
 
-## P. Apply `bigquery/76_owner_confirmation_liveness.sql` live via the BigQuery MCP/console (N-2)
+## P. Apply `bigquery/76_owner_confirmation_liveness.sql` live via the BigQuery MCP/console (N-2) — `[DONE 2026-07-17]`
+
+**Verified live 2026-07-17:** `state.owner_confirmation_liveness` returns 1 row —
+`entries_halted=false`, `n_pending_instructions=0`, `trading_days_since_last_fill=6`.
 
 **What it's for:** `state.owner_confirmation_liveness` — the absence model for the system's one
 sanctioned human touch (the IBKR order-confirm tap). `entries_halted = TRUE` when `>=1`
