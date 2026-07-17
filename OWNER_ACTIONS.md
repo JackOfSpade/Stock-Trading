@@ -760,10 +760,10 @@ done_when: == 'true'
   controls (RUNBOOK §27): the **project-deletion lien** on `stock-trading-498512` is confirmed
   **already in place** (lien `p191682978805-l03ae3152…`, restriction `resourcemanager.projects.delete`,
   reason "protect append-only trading truth" — verified live 2026-07-17). **Essential Contacts to a
-  non-Google address** is a deliberate owner skip. Note: because all projects share one Google account,
-  a full-account compromise is a threat this cross-project copy does not cover (a different account/cloud
-  would); and the new `stock-trading-offsite-backup` project itself is not lien-protected yet (say the
-  word to add one there too).
+  non-Google address** is a deliberate owner skip. The new `stock-trading-offsite-backup` project is
+  **also lien-protected** now (deletion lien `p578533197048-le286b787…`, added 2026-07-17). Note:
+  because all projects share one Google account, a full-account compromise is a threat this
+  cross-project copy does not cover (a different account/cloud would).
 
 ```verify
 id: E-offsite
@@ -782,7 +782,10 @@ done_when: == 'true'
   correct decisions via `gemini-3.5-flash`. The `GEMINI_API_KEY` secret is set; `golden-scenarios.yml`
   gates on it. **Gemini is the SOLE provider — the Anthropic path was fully removed** (owner directive
   2026-07-17), so `ANTHROPIC_API_KEY` is no longer used anywhere. "Thinking" is left ON (default) for
-  accuracy, with a generous `maxOutputTokens` so reasoning cannot crowd out the DECISION line.
+  accuracy, with an **adaptive `maxOutputTokens` budget**: it starts at 8192 and, if a call truncates
+  (finishReason=MAX_TOKENS, i.e. reasoning ran past the budget before the DECISION line), it doubles the
+  budget and retries the same model up to a 65536 ceiling before falling to the next ladder model — so a
+  hard scenario auto-recovers instead of erroring.
   **Owner follow-up (security):** the Gemini key was pasted into a chat during setup, so rotate it —
   generate a new key in AI Studio and run `gh secret set GEMINI_API_KEY -R JackOfSpade/Stock-Trading`
   (omit the value; it prompts securely; the `-R` flag means it works from any directory), which

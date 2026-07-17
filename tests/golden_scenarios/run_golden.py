@@ -88,7 +88,8 @@ CATEGORY_TOKENS = {
 # the top models exhaust for the day; the 5th is a stable final floor. Override the whole ladder with
 # the GEMINI_MODEL_LADDER env var (comma-separated). "Thinking" is left ON (default/dynamic) — this is
 # an accuracy check whose whole job is catching subtle decision flips, so the model should reason; the
-# generous maxOutputTokens below keeps the reasoning from crowding out the DECISION line.
+# adaptive maxOutputTokens budget below (which auto-escalates on truncation) keeps that reasoning from
+# crowding out the DECISION line.
 GEMINI_MODEL_LADDER = [
     m.strip() for m in os.environ.get(
         "GEMINI_MODEL_LADDER",
@@ -97,6 +98,17 @@ GEMINI_MODEL_LADDER = [
     ).split(",") if m.strip()
 ]
 GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+
+# Adaptive output-token budget. Thinking is ON (for accuracy), and thinking tokens are drawn from the
+# same maxOutputTokens budget — so a hard scenario can occasionally reason past the budget and get
+# truncated (finishReason=MAX_TOKENS) before it ever emits the DECISION line. Rather than pin one fixed
+# cap (too small = spurious truncation errors; too big = wasteful default), the caller STARTS at _START
+# and, on a MAX_TOKENS truncation, DOUBLES the budget and retries the SAME model until it succeeds or
+# reaches _CEIL (then it advances the model ladder). Free-tier TPM is 250K, so even the ceiling is one
+# request token-wise; the only cost of a retry is one unit of the per-model daily request quota, and
+# truncation is rare at the _START default, so escalation almost never triggers. Both are env-overridable.
+GEMINI_MAX_OUTPUT_TOKENS_START = int(os.environ.get("GEMINI_MAX_OUTPUT_TOKENS_START", "8192"))
+GEMINI_MAX_OUTPUT_TOKENS_CEIL = int(os.environ.get("GEMINI_MAX_OUTPUT_TOKENS_CEIL", "65536"))
 
 # Pinned eval prompt (ITEM 20 requirement: "Pin the eval prompt in-repo"). Deliberately mirrors how a
 # routine session is actually run: given the CURRENT governing prose verbatim (no memorized/cached
@@ -211,60 +223,77 @@ def _leading_token(decision_text):
 
 def _gemini_call(prompt, api_key, ladder, state):
     """POST one prompt to Gemini via the stdlib (no SDK dependency) and return (reply_text, model_id).
-    Walks GEMINI_MODEL_LADDER starting at state['idx']; on a per-model rate/quota exhaustion (HTTP 429),
-    a bad-id 404, a transient 5xx, or an empty/blocked response, it advances the ladder pointer (STICKY
-    for the rest of the run — once a top model is exhausted for the day there is no point retrying it per
-    scenario) and tries the next model. Raises RuntimeError only when the whole ladder is exhausted."""
+
+    TWO nested fallbacks:
+      * Per model — ADAPTIVE OUTPUT BUDGET. Thinking is ON and draws from maxOutputTokens, so a hard
+        scenario can truncate (finishReason=MAX_TOKENS) before emitting the DECISION line. On that, the
+        budget DOUBLES (GEMINI_MAX_OUTPUT_TOKENS_START → … → _CEIL) and the SAME model is retried, until
+        it produces an answer or the ceiling is reached.
+      * Across models — LADDER. On a quota/auth/transport error, a safety-blocked/otherwise-empty reply,
+        or still-truncating at the ceiling, it advances state['idx'] to the next ladder model (STICKY for
+        the rest of the run — a model that is quota-exhausted or too small stays skipped for later
+        scenarios too). Raises RuntimeError only when the whole ladder is exhausted."""
     import json as _json
     import urllib.error
     import urllib.request
 
-    def _post(model, body_obj):
-        body = _json.dumps(body_obj).encode("utf-8")
+    def _post(model, max_tokens):
+        body = _json.dumps({
+            "contents": [{"parts": [{"text": prompt}]}],
+            # No thinkingConfig → each model's default/dynamic thinking stays ON (accuracy).
+            "generationConfig": {"temperature": 0, "maxOutputTokens": max_tokens},
+        }).encode("utf-8")
         req = urllib.request.Request(
             GEMINI_ENDPOINT.format(model=model) + "?key=" + api_key,
             data=body, headers={"Content-Type": "application/json"}, method="POST",
         )
-        with urllib.request.urlopen(req, timeout=120) as resp:
+        with urllib.request.urlopen(req, timeout=180) as resp:
             data = _json.load(resp)
-        cands = data.get("candidates", [])
-        parts = (cands[0].get("content", {}) if cands else {}).get("parts", []) or []
+        cand = (data.get("candidates") or [{}])[0]
+        parts = cand.get("content", {}).get("parts", []) or []
         # Thinking is ON, so a model MAY return separate "thought" summary parts (part.thought == True);
         # keep only the real answer text so the DECISION line parser never sees reasoning text.
         text = "".join(p.get("text", "") for p in parts
                        if isinstance(p, dict) and not p.get("thought"))
-        return text, data
+        return text, cand.get("finishReason", "")
 
-    # Thinking is left ON (no thinkingConfig sent → each model's default/dynamic thinking) because this
-    # is an accuracy check. maxOutputTokens is set high so the (budget-consuming) reasoning cannot crowd
-    # out the short DECISION/RATIONALE answer; free-tier TPM (250K) makes a large per-call cap costless —
-    # the binding free-tier limit is requests/day, which this does not affect.
-    gen_cfg = {"temperature": 0, "maxOutputTokens": 8192}
-    # Sticky exhaustion: if an earlier scenario in this run already walked the whole ladder (e.g. a bad
-    # key / total quota-out), state['idx'] is past the end and the loop below never runs — say so
-    # clearly instead of reporting a bare "last error: None".
+    def _try_model(model):
+        """Try ONE model, escalating maxOutputTokens on MAX_TOKENS truncation up to the ceiling. Returns
+        the answer text on success, or None (setting nonlocal last_err) if this model should be skipped."""
+        nonlocal last_err
+        budget = GEMINI_MAX_OUTPUT_TOKENS_START
+        while True:
+            try:
+                text, finish = _post(model, budget)
+            except urllib.error.HTTPError as exc:
+                # 429 = per-model daily quota exhausted; 404 = bad id for this key; 400 = e.g. budget
+                # above this model's max; 5xx = transient. All => give up on this model, advance ladder.
+                last_err = f"{model}: HTTP {exc.code} {exc.read().decode('utf-8', 'replace')[:300]}"
+                return None
+            except (urllib.error.URLError, TimeoutError, ValueError) as exc:
+                last_err = f"{model}: {exc}"
+                return None
+            if text.strip():
+                return text
+            # Empty answer. If it was a MAX_TOKENS truncation and we have headroom, DOUBLE the budget and
+            # retry the SAME model — the reasoning ran past the budget before reaching the DECISION line.
+            if finish == "MAX_TOKENS" and budget < GEMINI_MAX_OUTPUT_TOKENS_CEIL:
+                budget = min(budget * 2, GEMINI_MAX_OUTPUT_TOKENS_CEIL)
+                continue
+            # Empty for another reason (safety block, unexpected finishReason) or still truncating at the
+            # ceiling — give up on this model and advance the ladder.
+            last_err = f"{model}: empty response (finishReason={finish or '?'}, maxOutputTokens={budget})"
+            return None
+
+    # Sticky exhaustion: if an earlier scenario in this run already walked the whole ladder (bad key /
+    # total quota-out), state['idx'] is past the end — say so clearly rather than a bare "None".
     last_err = "ladder already exhausted earlier this run" if state["idx"] >= len(ladder) else None
     while state["idx"] < len(ladder):
         model = ladder[state["idx"]]
-        try:
-            text, raw = _post(model, {
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": gen_cfg,
-            })
-            if text.strip():
-                return text, model
-            # Empty answer (e.g. reasoning consumed the whole budget, or a safety block) — advance the
-            # ladder rather than scoring a blank as a decision flip.
-            last_err = f"{model}: empty response ({_json.dumps(raw)[:200]})"
-            state["idx"] += 1
-        except urllib.error.HTTPError as exc:
-            # 429 = per-model daily quota exhausted; 404 = bad id for this key; 5xx = transient.
-            # All => advance the ladder to the next model.
-            last_err = f"{model}: HTTP {exc.code} {exc.read().decode('utf-8', 'replace')[:300]}"
-            state["idx"] += 1
-        except (urllib.error.URLError, TimeoutError, ValueError) as exc:
-            last_err = f"{model}: {exc}"
-            state["idx"] += 1
+        text = _try_model(model)
+        if text is not None:
+            return text, model
+        state["idx"] += 1
 
     raise RuntimeError(f"Gemini model ladder exhausted — last error: {last_err}")
 

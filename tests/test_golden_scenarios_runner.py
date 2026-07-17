@@ -201,14 +201,62 @@ def test_gemini_ladder_exhaustion_raises(monkeypatch):
 
 
 def test_gemini_empty_response_advances(monkeypatch):
-    # A blank/blocked candidate (e.g. thinking ate the whole budget) must advance the ladder, not be
-    # scored as an empty decision.
-    def fake_urlopen(req, timeout=90):
+    # A blank/blocked candidate that is NOT a MAX_TOKENS truncation (e.g. a safety block) must advance
+    # the ladder, not be scored as an empty decision and not trigger a budget escalation.
+    def fake_urlopen(req, timeout=180):
         if "m1:" in req.full_url:
-            return _FakeResp({"candidates": [{"content": {"parts": [{"text": "   "}]}}]})
+            return _FakeResp({"candidates": [{"content": {"parts": [{"text": "   "}]}, "finishReason": "SAFETY"}]})
         return _FakeResp({"candidates": [{"content": {"parts": [{"text": "DECISION: NO-GO\nRATIONALE: y"}]}}]})
 
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
     state = {"idx": 0}
     text, model = rg._gemini_call("prompt", "k", ["m1", "m2"], state)
     assert "NO-GO" in text and model == "m2"
+
+
+def _budget_of(req):
+    return _json.loads(req.data.decode())["generationConfig"]["maxOutputTokens"]
+
+
+def test_gemini_escalates_output_budget_on_truncation(monkeypatch):
+    # A MAX_TOKENS truncation (reasoning ran past the budget) must DOUBLE maxOutputTokens and retry the
+    # SAME model — not advance the ladder — until the answer fits.
+    seen = []
+
+    def fake_urlopen(req, timeout=180):
+        budget = _budget_of(req)
+        seen.append(budget)
+        if budget <= rg.GEMINI_MAX_OUTPUT_TOKENS_START:  # first attempt truncates
+            return _FakeResp({"candidates": [{"content": {"parts": []}, "finishReason": "MAX_TOKENS"}]})
+        return _FakeResp({"candidates": [{"content": {"parts": [{"text": "DECISION: GO\nRATIONALE: x"}]},
+                                          "finishReason": "STOP"}]})
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    state = {"idx": 0}
+    text, model = rg._gemini_call("prompt", "k", ["only-model"], state)
+    assert "DECISION: GO" in text
+    assert model == "only-model" and state["idx"] == 0          # stayed on the same model
+    assert seen == [rg.GEMINI_MAX_OUTPUT_TOKENS_START, rg.GEMINI_MAX_OUTPUT_TOKENS_START * 2]  # doubled
+
+
+def test_gemini_budget_escalation_is_bounded_then_advances(monkeypatch):
+    # A model that truncates at EVERY budget must escalate only up to the ceiling (never unboundedly),
+    # then advance the ladder to the next model.
+    seen_m1 = []
+
+    def fake_urlopen(req, timeout=180):
+        if "m1:" in req.full_url:
+            seen_m1.append(_budget_of(req))
+            return _FakeResp({"candidates": [{"content": {"parts": []}, "finishReason": "MAX_TOKENS"}]})
+        return _FakeResp({"candidates": [{"content": {"parts": [{"text": "DECISION: TERMINATE\nRATIONALE: z"}]},
+                                          "finishReason": "STOP"}]})
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    state = {"idx": 0}
+    text, model = rg._gemini_call("prompt", "k", ["m1", "m2"], state)
+    assert "TERMINATE" in text and model == "m2" and state["idx"] == 1
+    # m1 escalated START, 2*START, ... , capped at CEIL (last value equals the ceiling; strictly increasing)
+    assert seen_m1[0] == rg.GEMINI_MAX_OUTPUT_TOKENS_START
+    assert seen_m1[-1] == rg.GEMINI_MAX_OUTPUT_TOKENS_CEIL
+    assert max(seen_m1) == rg.GEMINI_MAX_OUTPUT_TOKENS_CEIL      # never exceeds the ceiling
+    assert seen_m1 == sorted(seen_m1)                            # monotonically escalating
