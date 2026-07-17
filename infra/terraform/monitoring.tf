@@ -375,58 +375,57 @@ resource "google_monitoring_alert_policy" "sa_key_created" {
 # channel: a scheduled query that RAISEs + writes a critical ops.alerts row on any out-of-band
 # UPDATE/DELETE/MERGE/TRUNCATE on ops.trading_control / ops.arsenal_control /
 # events.strategy_lifecycle / perf.strategy_daily — RUNBOOK §15). This sketch is DELIBERATELY LEFT
-# COMMENTED, unlike the real resources above: (1) this whole module is spec-only per RUNBOOK's
-# "Settled decisions" (never imported/applied against live state, so commenting vs. not is not a
-# functional difference), and (2) unlike sa_key_created (whose filter was verified against a live
-# Admin Activity log sample), the exact field path under
-# protoPayload.serviceData.jobCompletedEvent.job.jobConfiguration.query.* for a completed DML job has
-# NOT been confirmed against a live log sample here — RUNBOOK §15 documents a fire-drill step (a
-# harmless no-op UPDATE ... WHERE FALSE) to derive/verify the exact fields before ever standing this
-# up for real. Do not uncomment and apply without that verification.
+# APPLIED LIVE 2026-07-17 (via the Monitoring API + gcloud, NOT Terraform — this module stays spec-only
+# per RUNBOOK's "Settled decisions"; the block below documents the live resources). The earlier draft
+# here was a metric+threshold spec using the LEGACY protoPayload.serviceData.jobCompletedEvent.* audit
+# shape and an unverified filter. The 2026-07-17 fire-drill (§15) finally verified it against a live
+# sample and found TWO things that would have made the old spec silently never fire:
+#   (1) this project emits the MODERN BigQueryAuditMetadata shape
+#       (protoPayload.metadata.jobChange.job.jobConfig.queryConfig.*), NOT the legacy serviceData shape;
+#   (2) this project's log-based *metrics* surface under resource.type="global" (see sa_key_created's
+#       PromQL query), so a metric-threshold condition with a naive resource.type would also miss.
+# The live policy therefore uses a conditionMatchedLog (log-match — alerts directly on the log entry, no
+# metric indirection) with the VERIFIED modern filter, and it REPLICATES the primary watch's one
+# sanctioned exclusion (the nightly `DELETE FROM perf.strategy_daily WHERE TRUE` rebuild) so it does not
+# false-alarm nightly. Data Access (DATA_WRITE only, not DATA_READ — cost) audit logging was enabled via
+# the auditConfig below. Live: alert policy "Safety-critical DML detected" id 466668310285526135,
+# notifying the two scheduler-absence email channels.
 #
-# resource "google_logging_metric" "safety_critical_dml" {
+# resource "google_project_iam_audit_config" "bigquery_data_write" {
 #   project = var.project_id
-#   name    = "safety_critical_dml"
-#   filter = <<-EOT
-#     resource.type="bigquery_resource"
-#     protoPayload.methodName="google.cloud.bigquery.v2.JobService.InsertJob"
-#     protoPayload.serviceData.jobCompletedEvent.job.jobConfiguration.query.statementType=("UPDATE" OR "DELETE" OR "MERGE" OR "TRUNCATE_TABLE")
-#     (protoPayload.serviceData.jobCompletedEvent.job.jobConfiguration.query.destinationTable.tableId="trading_control"
-#       OR protoPayload.serviceData.jobCompletedEvent.job.jobConfiguration.query.destinationTable.tableId="arsenal_control"
-#       OR protoPayload.serviceData.jobCompletedEvent.job.jobConfiguration.query.destinationTable.tableId="strategy_lifecycle"
-#       OR protoPayload.serviceData.jobCompletedEvent.job.jobConfiguration.query.destinationTable.tableId="strategy_daily")
-#   EOT
-#   metric_descriptor {
-#     metric_kind = "DELTA"
-#     value_type  = "INT64"
-#     unit        = "1"
-#   }
+#   service = "bigquery.googleapis.com"
+#   audit_log_config { log_type = "DATA_WRITE" }
 # }
 #
 # resource "google_monitoring_alert_policy" "safety_critical_dml" {
 #   project      = var.project_id
 #   display_name = "Safety-critical DML detected"
 #   combiner     = "OR"
-#
 #   conditions {
 #     display_name = "UPDATE/DELETE/MERGE/TRUNCATE on trading_control/arsenal_control/strategy_lifecycle/strategy_daily"
-#     condition_threshold {
-#       filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.safety_critical_dml.name}\""
-#       comparison      = "COMPARISON_GT"
-#       threshold_value = 0
-#       duration        = "0s"
-#       trigger { count = 1 }
-#       aggregations {
-#         alignment_period   = "300s"
-#         per_series_aligner = "ALIGN_DELTA"
-#       }
+#     condition_matched_log {
+#       filter = <<-EOT
+#         resource.type="bigquery_project"
+#         protoPayload.methodName="google.cloud.bigquery.v2.JobService.InsertJob"
+#         protoPayload.metadata.jobChange.job.jobConfig.queryConfig.statementType=("UPDATE" OR "DELETE" OR "MERGE" OR "TRUNCATE_TABLE")
+#         (
+#           protoPayload.metadata.jobChange.job.jobConfig.queryConfig.destinationTable="projects/stock-trading-498512/datasets/ops/tables/trading_control"
+#           OR protoPayload.metadata.jobChange.job.jobConfig.queryConfig.destinationTable="projects/stock-trading-498512/datasets/ops/tables/arsenal_control"
+#           OR protoPayload.metadata.jobChange.job.jobConfig.queryConfig.destinationTable="projects/stock-trading-498512/datasets/events/tables/strategy_lifecycle"
+#           OR protoPayload.metadata.jobChange.job.jobConfig.queryConfig.destinationTable="projects/stock-trading-498512/datasets/perf/tables/strategy_daily"
+#         )
+#         NOT (
+#           protoPayload.metadata.jobChange.job.jobConfig.queryConfig.destinationTable="projects/stock-trading-498512/datasets/perf/tables/strategy_daily"
+#           AND protoPayload.metadata.jobChange.job.jobConfig.queryConfig.statementType="DELETE"
+#           AND protoPayload.metadata.jobChange.job.jobConfig.queryConfig.query=~"(?i)delete\s+from.*perf.strategy_daily.*where\s+true"
+#         )
+#       EOT
 #     }
 #   }
-#
+#   alert_strategy { notification_rate_limit { period = "300s" } }
 #   notification_channels = local.scheduler_alert_channels
-#
 #   documentation {
-#     content   = "Out-of-band UPDATE/DELETE/MERGE/TRUNCATE detected on a safety-critical table (ops.trading_control / ops.arsenal_control / events.strategy_lifecycle / perf.strategy_daily). 2nd, scheduler-independent channel for bigquery/scheduled_queries/safety_critical_dml_watch.sql (RUNBOOK item 6/§15). Investigate the triggering job in region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT immediately."
+#     content   = "Out-of-band UPDATE/DELETE/MERGE/TRUNCATE on an INSERT-only safety-critical table (ops.trading_control / ops.arsenal_control / events.strategy_lifecycle / perf.strategy_daily), excluding the sanctioned nightly perf.strategy_daily rebuild. 2nd, scheduler-independent channel for bigquery/scheduled_queries/safety_critical_dml_watch.sql (RUNBOOK item 6/§15). Investigate the triggering job in region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT immediately."
 #     mime_type = "text/markdown"
 #   }
 # }

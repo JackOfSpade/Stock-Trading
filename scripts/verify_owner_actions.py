@@ -95,12 +95,23 @@ def _bq_scalar(sql, key="n"):
         return False, None, f"could not parse bq result: {e}"
 
 
+def _bq_count(sql, key="n"):
+    """Run a COUNT-style bq scalar and normalize BigQuery JSON's stringified INT64 values."""
+    ok, value, reason = _bq_scalar(sql, key)
+    if not ok:
+        return False, None, reason
+    try:
+        return True, int(value), ""
+    except (TypeError, ValueError):
+        return False, None, f"expected integer column {key}, got {value!r}"
+
+
 # ---------------------------------------------------------------------------
 # Per-id probes. Each returns (passed: bool, evidence: str) and never raises.
 # ---------------------------------------------------------------------------
 
 def check_A():
-    ok, n, reason = _bq_scalar(
+    ok, n, reason = _bq_count(
         "SELECT COUNT(*) n FROM `%s.ops.run_log` "
         "WHERE routine='OPS0' AND status='completed'" % PROJECT
     )
@@ -108,7 +119,7 @@ def check_A():
         return False, f"bq probe error: {reason}"
     trigger_ids_path = os.path.join(ROOT, "ops", "trigger_ids.json")
     try:
-        with open(trigger_ids_path) as f:
+        with open(trigger_ids_path, encoding="utf-8") as f:
             has_ops0 = '"OPS0"' in f.read()
     except OSError as e:
         return False, f"could not read ops/trigger_ids.json: {e}"
@@ -118,7 +129,7 @@ def check_A():
 
 
 def check_B():
-    ok, n, reason = _bq_scalar(
+    ok, n, reason = _bq_count(
         "SELECT COUNTIF(monitored AND NOT drift) n FROM `%s.state.scheduled_query_version_drift`" % PROJECT
     )
     if not ok:
@@ -129,7 +140,7 @@ def check_B():
 
 
 def check_C():
-    ok, n, reason = _bq_scalar(
+    ok, n, reason = _bq_count(
         "SELECT COUNT(*) n FROM `%s.ops.heartbeat` "
         "WHERE source='dashboard' AND note LIKE '%% (ci)%%' "
         "AND beat_ts > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)" % PROJECT
@@ -183,7 +194,7 @@ def check_E_anthropic():
 
 
 def check_sq_dml_watch():
-    ok, n, reason = _bq_scalar(
+    ok, n, reason = _bq_count(
         "SELECT COUNTIF(monitored) n FROM `%s.state.scheduled_query_version_drift` "
         "WHERE sq_name='safety_critical_dml_watch'" % PROJECT
     )
@@ -254,7 +265,7 @@ def flip_heading(line, today):
 
 def main():
     try:
-        with open(OWNER_ACTIONS_PATH) as f:
+        with open(OWNER_ACTIONS_PATH, encoding="utf-8") as f:
             text = f.read()
     except OSError as e:
         print(f"verify_owner_actions: could not read {OWNER_ACTIONS_PATH}: {e}")
@@ -302,7 +313,7 @@ def main():
         results.append((fence_id, "PASS (closed just now)", evidence))
 
     if changed:
-        with open(OWNER_ACTIONS_PATH, "w") as f:
+        with open(OWNER_ACTIONS_PATH, "w", encoding="utf-8") as f:
             f.writelines(lines)
 
     print("verify_owner_actions summary:")

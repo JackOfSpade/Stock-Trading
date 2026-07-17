@@ -29,7 +29,7 @@ gd = _load()
 
 
 def _fake_run(returncode, stdout, stderr=""):
-    def run(cmd, capture_output=None, text=None, check=None):
+    def run(cmd, capture_output=None, text=None, check=None, timeout=None):
         if check and returncode != 0:
             raise subprocess.CalledProcessError(returncode, cmd, output=stdout, stderr=stderr)
         return types.SimpleNamespace(returncode=returncode, stdout=stdout, stderr=stderr)
@@ -98,6 +98,15 @@ def test_q_empty_stdout(monkeypatch):
 def test_q_raises_on_nonzero_returncode(monkeypatch):
     monkeypatch.setattr(gd.subprocess, "run", _fake_run(1, "", "ERROR: access denied"))
     with pytest.raises(subprocess.CalledProcessError):
+        gd.q("SELECT 1")
+
+
+def test_q_raises_runtime_error_on_timeout(monkeypatch):
+    def _boom(cmd, capture_output=None, text=None, check=None, timeout=None):
+        raise gd.subprocess.TimeoutExpired(cmd=cmd, timeout=timeout)
+
+    monkeypatch.setattr(gd.subprocess, "run", _boom)
+    with pytest.raises(RuntimeError):
         gd.q("SELECT 1")
 
 
@@ -177,6 +186,15 @@ def test_main_returns_1_on_query_failure(monkeypatch, capsys):
     monkeypatch.setattr(gd.subprocess, "run", _fake_run(1, "", "boom"))
     assert gd.main() == 1
     assert "Query failed" in capsys.readouterr().err
+
+
+def test_main_returns_1_on_query_timeout(monkeypatch, capsys):
+    def _boom(cmd, capture_output=None, text=None, check=None, timeout=None):
+        raise gd.subprocess.TimeoutExpired(cmd=cmd, timeout=timeout)
+
+    monkeypatch.setattr(gd.subprocess, "run", _boom)
+    assert gd.main() == 1
+    assert "timed out" in capsys.readouterr().err
 
 
 def test_main_all_green_banner(monkeypatch, tmp_path):

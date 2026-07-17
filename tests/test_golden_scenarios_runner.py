@@ -9,9 +9,14 @@ pattern, just against small in-memory scenario dicts instead of a repo_copy (val
 a plain list and only checks file-existence via the real ROOT, which real repo-relative names like
 'Strategy.md' satisfy for the happy path).
 """
+import contextlib
 import copy
+import io
 import importlib.util
+import json as _json
 import os
+import urllib.error
+import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -105,12 +110,6 @@ def test_category_tokens_cover_all_four_strategy_entry_categories():
 
 
 # ---- live-provider selection + Gemini ladder (2026-07-17) — all network-free ----
-
-import contextlib
-import io
-import json as _json
-import urllib.error
-import urllib.request
 
 
 @contextlib.contextmanager

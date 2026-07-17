@@ -521,39 +521,34 @@ stall with it (it ran under the same identity).
      as documentation only, per this repo's Terraform-is-spec-only convention, RUNBOOK "Settled
      decisions").
 
-  **VERIFIED STATE + EXACT COMMANDS (2026-07-17).** A session confirmed the live state and reduced this
-  to a couple of owner commands (the automated agent could do everything EXCEPT step 1 — enabling Data
-  Access audit logs is a project-level `setIamPolicy`, correctly gated to the owner by the permission
-  classifier; and the alert filter genuinely needs a live audit-log sample to verify, per the note in
-  step 2). Confirmed live: (a) BigQuery Data Access audit logs are **OFF** (`gcloud projects
-  get-iam-policy stock-trading-498512 --format='json(auditConfigs)'` → `null`); (b) two enabled email
-  notification channels already exist — `Jack Wu` = `1159936910064574712`, `jacksterwu@gmail.com` =
-  `1236496873256214049` (use both); (c) no "Safety-critical DML detected" policy exists yet.
-  - **Step 1 — enable audit logs (run as owner; DATA_WRITE only, NOT DATA_READ — DML is a write, and
-    DATA_READ would log every SELECT = large volume/cost for no benefit here):**
-    ```bash
-    gcloud projects get-iam-policy stock-trading-498512 --format=json > /tmp/pol.json
-    python3 - <<'PY'
-    import json
-    p=json.load(open('/tmp/pol.json'))
-    p.setdefault('auditConfigs',[]).append(
-      {'service':'bigquery.googleapis.com','auditLogConfigs':[{'logType':'DATA_WRITE'}]})
-    json.dump(p, open('/tmp/pol.json','w'), indent=2)
-    PY
-    gcloud projects set-iam-policy stock-trading-498512 /tmp/pol.json   # adds auditConfigs; bindings + etag preserved
-    ```
-  - **Step 2 — fire-drill to capture the real audit-log field shape** (BigQuery's audit JSON differs by
-    API version, so verify before finalizing the filter). Wait ~2 min after step 1, then run a harmless
-    no-op on a SCRATCH table (NOT one of the four watched tables — a DML on those would trip the primary
-    `safety_critical_dml_watch` alarm): `CREATE TABLE ops._dml_firedrill(x INT64); UPDATE ops._dml_firedrill
-    SET x=x WHERE FALSE; DROP TABLE ops._dml_firedrill;` then in Logs Explorer inspect the resulting
-    entry to confirm the `statementType` + table-id field paths for the filter in step 2 above (current
-    BigQuery emits the `protoPayload.metadata.jobChange...` shape; the legacy `protoPayload.serviceData.
-    jobCompletedEvent...` may also appear — a both-branch OR filter is safest).
-  - **Steps 3-5 unchanged** (create the log-based alert policy → threshold >0 over 5 min → notify the two
-    channel IDs above → name "Safety-critical DML detected" → append the finished spec to `monitoring.tf`).
-  **Priority: low** — this is a 2nd, independent channel; the primary `safety_critical_dml_watch`
-  scheduled query (every 6h, email-on-failure ON, registered live 2026-07-17) already covers the alarm.
+  **DONE — APPLIED LIVE 2026-07-17 (owner-authorized).** The 2nd channel is live end-to-end:
+  - **Audit logs enabled:** BigQuery Data Access **DATA_WRITE** audit logging is on (`gcloud projects
+    set-iam-policy`, adding only the `bigquery.googleapis.com` `DATA_WRITE` auditConfig — all 10 IAM
+    bindings preserved; DATA_READ deliberately NOT enabled, to avoid logging every SELECT = large
+    volume/cost). Verify: `gcloud projects get-iam-policy stock-trading-498512
+    --format='json(auditConfigs)'`.
+  - **Filter verified against a live sample (this was essential).** A fire-drill (no-op UPDATE on a
+    throwaway `ops._dml_firedrill` scratch table, since a DML on the four real tables would also trip the
+    primary alarm) revealed this project emits the **modern `BigQueryAuditMetadata`** shape
+    (`protoPayload.metadata.jobChange.job.jobConfig.queryConfig.*`), NOT the legacy
+    `serviceData.jobCompletedEvent.*` shape the earlier `monitoring.tf` draft assumed — that draft would
+    have **silently never fired**. The affected table is `queryConfig.destinationTable` (a full path
+    string); the statement type is `queryConfig.statementType`.
+  - **Live policy:** alert policy **"Safety-critical DML detected"** (id `466668310285526135`), a
+    **log-match** condition (`conditionMatchedLog` — alerts directly on the log entry; a metric-threshold
+    was rejected because this project's log-based metrics surface under `resource.type="global"`, which a
+    naive metric filter would miss — see `sa_key_created`'s PromQL). It matches
+    `statementType IN (UPDATE/DELETE/MERGE/TRUNCATE_TABLE)` on the four tables' exact `destinationTable`
+    paths, **excluding** the sanctioned nightly `DELETE FROM perf.strategy_daily WHERE TRUE` rebuild
+    (same exclusion the primary watch makes — otherwise it false-alarms nightly). Notifies both email
+    channels (`Jack Wu` = `1159936910064574712`, `jacksterwu@gmail.com` = `1236496873256214049`). The
+    exact filter is spec'd in `infra/terraform/monitoring.tf`.
+  - **Optional owner end-to-end check:** a no-op `UPDATE ops.trading_control SET reason = reason WHERE
+    FALSE` should produce the "Safety-critical DML detected" email within ~1-2 min. NOTE it will ALSO be
+    caught by the primary `safety_critical_dml_watch` on its next run (≤6h) → a critical `ops.alerts` row
+    (expected — proves both channels); resolve that test row afterward.
+  **Priority context:** this is the 2nd, independent channel; the primary `safety_critical_dml_watch`
+  scheduled query (every 6h, email-on-failure ON, live 2026-07-17) is the first line.
 
 ## 16. Publish the health dashboard *(D1)*
 `.github/workflows/dashboard.yml` builds `ops/dashboard/index.html` from BigQuery and deploys it to

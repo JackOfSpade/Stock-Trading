@@ -10,7 +10,6 @@ Usage:  python ops/dashboard/generate_dashboard.py            # writes ops/dashb
 Schedule it (Cloud Scheduler / cron / a routine) for a continuously fresh page — see ops/RUNBOOK.md.
 """
 import html
-import json
 import os
 import subprocess
 import sys
@@ -23,6 +22,11 @@ except ImportError:  # pragma: no cover — stdlib since 3.9; CI/runners pin >=3
 
 PROJECT = os.environ.get("PROJECT", "stock-trading-498512")
 OUT = os.path.join(os.path.dirname(__file__), "index.html")
+BQ_TIMEOUT_S = 600
+
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+from lib.bq_json import parse_bq_json_stdout  # noqa: E402
 
 
 def q(sql: str):
@@ -33,14 +37,15 @@ def q(sql: str):
     banner leaks to stdout anyway (this exact failure class already hit production in
     scripts/dbt_parity.py and scripts/alert_relay.py — see their bq()/bq helpers).
     """
-    out = subprocess.run(
-        ["bq", "--project_id", PROJECT, "--quiet", "--headless", "query",
-         "--use_legacy_sql=false", "--format=json", "--max_rows=1000", sql],
-        capture_output=True, text=True, check=True,
-    ).stdout
-    s = out.strip()
-    i = s.find("[")
-    return json.loads(s[i:]) if i != -1 else []
+    try:
+        out = subprocess.run(
+            ["bq", "--project_id", PROJECT, "--quiet", "--headless", "query",
+             "--use_legacy_sql=false", "--format=json", "--max_rows=1000", sql],
+            capture_output=True, text=True, check=True, timeout=BQ_TIMEOUT_S,
+        ).stdout
+    except subprocess.TimeoutExpired as e:
+        raise RuntimeError(f"bq query timed out after {e.timeout}s: {sql[:120]}") from e
+    return parse_bq_json_stdout(out)
 
 
 def beat_heartbeat():
@@ -130,7 +135,7 @@ def main():
                    f"WHERE NOT resolved ORDER BY alert_ts DESC LIMIT 20")
         runs = q(f"SELECT routine,run_date,status,log_ts FROM `{PROJECT}.ops.run_log` "
                  f"ORDER BY log_ts DESC LIMIT 20")
-    except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as e:
+    except (subprocess.CalledProcessError, FileNotFoundError, RuntimeError, ValueError) as e:
         # CalledProcessError's default __str__ is just "Command '[...]' returned non-zero exit
         # status N" — it never includes bq's actual stderr diagnostic, even though check=True
         # already populated e.stderr with the real error text (2026-07-14 audit finding).

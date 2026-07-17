@@ -7,8 +7,6 @@ import os
 import subprocess
 import types
 
-import pytest
-
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -127,6 +125,22 @@ def test_bq_scalar_empty_result_is_fail_open(monkeypatch):
     assert ok is False
 
 
+def test_bq_count_accepts_bigquery_stringified_int64(monkeypatch):
+    monkeypatch.setattr(voa.subprocess, "run", _fake_run_factory(0, '[{"n": "12"}]'))
+    ok, value, reason = voa._bq_count("SELECT COUNT(*) n FROM t")
+    assert ok is True
+    assert value == 12
+    assert reason == ""
+
+
+def test_bq_count_non_integer_is_fail_open(monkeypatch):
+    monkeypatch.setattr(voa.subprocess, "run", _fake_run_factory(0, '[{"n": "not-a-count"}]'))
+    ok, value, reason = voa._bq_count("SELECT COUNT(*) n FROM t")
+    assert ok is False
+    assert value is None
+    assert "expected integer" in reason
+
+
 # ---- per-id probes: each must be fail-open (never raise) on a probe error ------------------
 
 def test_check_A_fails_open_when_bq_unavailable(monkeypatch):
@@ -155,6 +169,27 @@ def test_check_E_webhook_false_when_unset(monkeypatch):
     monkeypatch.delenv("HAS_ALERT_WEBHOOK_URL", raising=False)
     passed, evidence = voa.check_E_webhook()
     assert passed is False
+
+
+def test_check_B_accepts_bq_count_string(monkeypatch):
+    monkeypatch.setattr(voa, "_bq_scalar", lambda sql, key="n": (True, "12", ""))
+    passed, evidence = voa.check_B()
+    assert passed is True
+    assert "12/12" in evidence
+
+
+def test_check_C_accepts_positive_bq_count_string(monkeypatch):
+    monkeypatch.setattr(voa, "_bq_scalar", lambda sql, key="n": (True, "1", ""))
+    passed, evidence = voa.check_C()
+    assert passed is True
+    assert "1 dashboard" in evidence
+
+
+def test_check_sq_dml_watch_accepts_bq_count_string(monkeypatch):
+    monkeypatch.setattr(voa, "_bq_scalar", lambda sql, key="n": (True, "1", ""))
+    passed, evidence = voa.check_sq_dml_watch()
+    assert passed is True
+    assert "monitored=TRUE" in evidence
 
 
 def test_check_F_quota_fails_open_on_git_error(monkeypatch):
