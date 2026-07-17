@@ -337,50 +337,40 @@ pushed) per that round's ground rules — nothing below is live yet.
 **Verified live 2026-07-17:** `ops.parity_selfheal_log` exists (`INFORMATION_SCHEMA.TABLES` confirms).
 
 **What it's for:** `ops.parity_selfheal_log`, the append-only latch/idempotency table
-Claude_Task_Plan.md's new D3 **LIVE-SQL-PARITY SELF-HEAL** step reads/writes to avoid re-applying
+Claude_Task_Plan.md's D3 **CI-FINDINGS ADJUDICATION** step reads/writes to avoid re-applying
 the same drifted object every day and to detect a non-converging heal (comparator bug / competing
-live writer) within a 7-day window. Apply order: after `47_trading_enabled_resync.sql`, same as
-every other `bigquery/NN_*.sql` file (see `bigquery/README.md`).
+live writer) within a 7-day window. (The separate "LIVE-SQL-PARITY SELF-HEAL" step this originally
+backed was merged into CI-FINDINGS ADJUDICATION on 2026-07-17 — see §I.) Apply order: after
+`47_trading_enabled_resync.sql`, same as every other `bigquery/NN_*.sql` file (see `bigquery/README.md`).
 
 **Action:** run the `CREATE TABLE IF NOT EXISTS` statement in `bigquery/69_live_sql_parity_selfheal.sql`
 via the BigQuery MCP or console (this session was not permitted to call BigQuery directly).
 
-## I. Decide the findings-file→`main` delivery path for `live-sql-parity.yml` (deliberately deferred)
+## I. Findings→self-heal delivery path for `live-sql-parity.yml` — `[DECIDED 2026-07-17: option 3, the ops.ci_findings bridge]`
 
-**What it's for:** the corrected spec for this improvement called for `live-sql-parity.yml`'s daily
-run to commit its `--json-out` findings (now implemented, script-side) to
-`ops/monitoring/live_sql_parity_findings.json` via a bot identity and `git push origin HEAD:main`
-directly (no PR — repo is private/free-plan, no branch protection to enforce one). **This session
-deliberately did NOT implement that push step** — widening the workflow's `contents: read` →
-`contents: write` and adding an autonomous `git push`-to-`main` retry loop would arm a standing,
-unattended CI→main push pathway with zero human review, which conflicts with this implementation
-round's own ground rules (no pushes without your review) even though the mechanism would only ever
-fire once merged and running for real. See the `if:`-gated comment block in
-`.github/workflows/live-sql-parity.yml` (right after the "Compare live BigQuery definitions..."
-step) for exactly what was left out.
+**Decision (owner directive 2026-07-17 — "go with your recommendation"): option 3.** `live-sql-parity`
+drift findings reach the D3 self-heal via the `ops.ci_findings` / `state.ci_findings_open` bridge
+(`bigquery/67_ci_findings_bridge.sql`), NOT via a committed JSON file. This is now fully live end-to-end
+because item G's grant (`gh-ci-runner@` → `bigquery.dataEditor` on `ops.ci_findings`) landed the same
+day, so the workflow's existing `INSERT INTO ops.ci_findings` step actually writes.
 
-`ops/monitoring/live_sql_parity_findings.json` is seeded as a static `{"checked_at": null,
-"findings": []}` placeholder so the new D3 step never 404s reading it — it will just stay empty
-(fail-closed, no self-heal candidates, no functional regression) until you decide how findings
-should reach `main`. Options, roughly in the order this pass would recommend them:
-1. **Accept the direct-push design as originally spec'd** (lowest complexity; this repo already has
-   an owner-approved precedent for bot-authored commits landing on `main` without a human eye per
-   `CLAUDE.md`'s auto-merge-bot note) — wire the step back in per the spec text preserved in the
-   workflow's comment block.
-2. **Route it through a PR instead**, relying on the existing auto-merge-on-green-CI bot — a
-   materially different code path (no literal `git push` to `main` in the workflow itself) but likely
-   an equivalent outcome once merged, since the auto-merge bot itself runs unattended.
-3. **Reuse the `ops.ci_findings` / `state.ci_findings_open` bridge** already built for this same
-   issue #10 by `bigquery/67_ci_findings_bridge.sql` (CC-1) instead of a second, JSON-file-based
-   path — once item G below (the `gh-ci-runner@` grant) lands, that bridge already carries
-   `live-sql-parity` findings into BigQuery with no git push at all. Note this would leave two
-   overlapping self-heal mechanisms for the same finding class (CC-1's CI-FINDINGS ADJUDICATION D3
-   step + this pass's LIVE-SQL-PARITY SELF-HEAL D3 step, both in `Claude_Task_Plan.md`) — worth
-   reconciling into one rather than running both once either delivery path is live end-to-end.
+**Rejected:** options 1 and 2 (commit a findings JSON to `main` via an autonomous CI→main `git push`,
+directly or via PR) — a standing unattended push-to-`main` pathway for no benefit the bridge does not
+already provide.
 
-**If skipped:** exactly today's behavior continues — `live-sql-parity.yml` opens/refreshes the GitHub
-issue and (once item G lands) mirrors into `ops.ci_findings` as before; the new self-heal step
-simply has nothing to do.
+**Implemented same session (all on this branch):**
+- `Claude_Task_Plan.md` D3: the two overlapping steps were **merged into one** — the former standalone
+  "LIVE-SQL-PARITY SELF-HEAL" (JSON-file) step is retired and its latch / 10-per-session bound /
+  one-day-lag / non-convergence-alert safety folded into the single **CI-FINDINGS ADJUDICATION** step,
+  which now reads `state.ci_findings_open`. No more double-adjudication path.
+- `.github/workflows/live-sql-parity.yml`: the "NOT WIRED YET" deferred block is replaced with the
+  decision; the unused `--json-out /tmp/findings.json` was dropped from the daily run.
+- `ops/monitoring/live_sql_parity_findings.json` (the seeded placeholder) is **deleted** — nothing
+  reads it anymore. `ops.parity_selfheal_log` (bigquery/69) stays; it now backs the unified step's latch.
+- `scripts/check_live_sql_parity.py`'s `--json-out` flag remains as a local debug aid only (not wired
+  to CI).
+
+**Nothing left for you here** — this item is closed.
 
 ## J. Comparator fix (already applied, no owner action) — for awareness only
 
@@ -1003,7 +993,12 @@ decision (`CLAUDE.md`), do NOT `terraform apply` this file; the `bq` command abo
 
 ---
 
-## 4. Elect (or confirm) your IBKR cost-basis method (Item 18) — `[DECISION / not auto-verifiable — no verify block]`
+## 4. Elect (or confirm) your IBKR cost-basis method (Item 18) — `[DECIDED 2026-07-17: FIFO]`
+
+**Owner decision 2026-07-17: FIFO** (the IBKR default) — no specific-lot election has been made, so the
+repo's `analytics.tax_lots` FIFO lot construction matches the broker's own accounting. Recorded in
+`Experiment_Parameters.md`'s tax-lot caveat. If you ever change the IBKR election, update that note and
+this item. Nothing further to do.
 
 **What changed:** `analytics.tax_lots` / `state.wash_sale_exposure`
 (`bigquery/41_tax_lots.sql`) now detect account-wide wash sales (a same-ticker BUY within 30 calendar
@@ -1022,7 +1017,16 @@ correct an assumption," not a blocking requirement.
 
 ---
 
-## 5. Read and decide — Agent SDK / headless-harness migration (Item 26, informational) — `[DECISION / not auto-verifiable — no verify block]`
+## 5. Read and decide — Agent SDK / headless-harness migration (Item 26, informational) — `[DECIDED 2026-07-17: NO-GO / no pilot]`
+
+**Owner decision 2026-07-17: do NOT pilot the Agent-SDK / headless-harness migration (not even D1).**
+Rationale (see the corrected analysis below): the spike's original "cost-neutral" premise was debunked
+— piloting D1 on the Managed Agents API would convert its token cost from the flat subscription to
+real metered API dollars (~15-30x), and the one concrete urgency case (the §38 run_log gap) was already
+closed for free by Item 3. IBKR-order routines remain a hard NO-GO regardless (no headless auth path).
+The routines stay on the current interactive claude.ai web-UI + RemoteTrigger model. Revisit only if
+Anthropic ships subscription-priced headless usage AND a first-party headless IBKR auth path appears.
+Item 29 (thin order gateway) stays closed. Original spike + fact-check retained below for the record.
 
 `ops/spikes/agent-sdk-orchestration-2026Q3.md` is a feasibility report (no repo/live changes) on
 moving routines off the interactive claude.ai web-UI onto a headless, scheduled harness. Bottom line:

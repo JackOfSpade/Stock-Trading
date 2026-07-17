@@ -65,27 +65,21 @@ jobs:
         if: steps.guard.outputs.skip == 'false'
         run: |
           set -uo pipefail
-          if python scripts/check_live_sql_parity.py --project stock-trading-498512 --json-out /tmp/findings.json 2>&1 | tee /tmp/parity_out.txt; then
+          if python scripts/check_live_sql_parity.py --project stock-trading-498512 2>&1 | tee /tmp/parity_out.txt; then
             echo "result=ok" >> "$GITHUB_OUTPUT"
           else
             echo "result=drift" >> "$GITHUB_OUTPUT"
             echo "::error::Live SQL parity FAILED — see job output for the mismatched object(s)."
           fi
-      # NOT WIRED YET (2026-07-16, live-sql-parity self-heal audit RES-3 step 2 — deliberately
-      # deferred, OWNER DECISION NEEDED, see OWNER_ACTIONS.md): the corrected spec for this step
-      # called for a "Publish findings file to main" step here that would commit
-      # /tmp/findings.json (produced by --json-out above) to ops/monitoring/live_sql_parity_findings.json
-      # via a bot identity and `git push origin HEAD:main` directly (no PR — repo is private/
-      # free-plan, no branch protection to enforce one). That is a genuine, standing CI->main
-      # autonomous-push pathway (distinct from a one-off session commit) and was intentionally NOT
-      # implemented in this local-only pass — committing it would arm unattended pushes to main with
-      # no human review, which is exactly what this implementation round's ground rules forbid.
-      # ops/monitoring/live_sql_parity_findings.json is seeded in this same commit as a static
-      # {"checked_at": null, "findings": []} placeholder so Claude_Task_Plan.md's D3 LIVE-SQL-PARITY
-      # SELF-HEAL step never 404s reading it; it will simply stay empty (fail-closed, no self-heal
-      # candidates) until the owner decides how findings should reach main (this direct-push design,
-      # a reviewed PR instead, or reusing the existing ops.ci_findings/state.ci_findings_open bridge
-      # bigquery/67_ci_findings_bridge.sql already built for the same issue #10).
+      # DELIVERY PATH DECIDED (2026-07-17, OWNER_ACTIONS.md §I — option 3): findings reach the
+      # self-heal consumer via the ops.ci_findings / state.ci_findings_open bridge
+      # (bigquery/67_ci_findings_bridge.sql), which this run's INSERT step below already writes now that
+      # gh-ci-runner@ holds bigquery.dataEditor on ops.ci_findings (grant applied 2026-07-17). The
+      # earlier-considered alternative — committing a findings JSON file to main via an autonomous
+      # CI->main `git push` — was REJECTED (it would arm a standing unattended push-to-main pathway for
+      # no benefit the bridge does not already provide). The seeded placeholder
+      # ops/monitoring/live_sql_parity_findings.json and the --json-out flag are therefore removed; the
+      # single self-heal path is Claude_Task_Plan.md D3's unified CI-FINDINGS ADJUDICATION step.
       - name: Open/refresh finding issue (dedup)
         if: always() && steps.guard.outputs.skip == 'false' && steps.parity.outputs.result == 'drift'
         env:
