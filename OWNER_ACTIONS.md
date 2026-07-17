@@ -65,23 +65,14 @@ PROSE-REGRESSION CHECK + AR_orc's `prose-regression` adjudication, self-improvem
 `.github/workflows/golden-scenarios.yml`'s new header note for the full reconciliation, so a future
 audit pass doesn't re-flag it.
 
-## O. Add 5 missing MCP tool entries to `.claude/settings.json`'s `permissions.allow` (N-1)
+## [DONE 2026-07-16] O. Add 5 missing MCP tool entries to `.claude/settings.json`'s `permissions.allow` (N-1)
 
-**What it's for:** `scripts/check_settings_toolcov.py` (new this pass, wired into `ci.yml`) greps
-`Claude_Task_Plan.md` + `ops/triggers.json` for every `mcp__<Server>__<tool>` token and asserts each
-appears in `.claude/settings.json`'s `permissions.allow` list — an unattended scheduled routine
-calling a non-allowlisted MCP tool gets a permission prompt nobody is there to answer, silently
-stalling that step with no dedicated alert class for it. **This session deliberately did NOT edit
-`.claude/settings.json` itself** (out of scope for this round's ground rules — settings.json content
-edits are owner-only this pass). Per that same rule, the CI check was still built and wired in, so it
-is a genuine, currently-RED gate today (confirmed by running it locally) until you add these entries.
+**Resolved:** owner reviewed and approved adding the 5 entries below; applied directly to
+`.claude/settings.json`'s `permissions.allow` array in the same pass that redesigned CC-2 (see AR_orc
+STEP 0.5 lifetime-cap rev 2, this file's CC-2 section). Verified live: `python3
+scripts/check_settings_toolcov.py` now exits 0 ("7 referenced mcp__ tool(s) all present"). `ci.yml`'s
+`session-config tool coverage` step is green.
 
-**Action:** add these 3 entries confirmed missing by a local run of `python
-scripts/check_settings_toolcov.py` today (plus 2 more named in the original finding's "at minimum"
-list that don't yet appear verbatim as `mcp__`-prefixed tokens in `Claude_Task_Plan.md` but ARE real
-tool calls the IBKR options-crafting steps make by bare name — `get_option_parameters`,
-`get_combo_identifier` — add them too, for the same reason, even though the CI check can't detect
-their bare-name references) to `.claude/settings.json`'s `permissions.allow` array:
 ```
 mcp__Interactive_Brokers_IBKR__get_option_data
 mcp__Interactive_Brokers_IBKR__get_option_parameters
@@ -89,13 +80,17 @@ mcp__Interactive_Brokers_IBKR__get_combo_identifier
 mcp__FMP__news
 mcp__FMP__secFilings
 ```
-**If skipped:** exactly today's behavior continues (these tools already work fine in an interactive/
-attended session, since a human is there to approve the permission prompt) — the risk is specific to
-an UNATTENDED scheduled routine hitting one of them (the D2/D2a options-mark step; D1/W1/W2's
-research steps reading `mcp__FMP__news`/`secFilings`), and `ci.yml`'s new
-`session-config tool coverage` step will stay red on this branch until the entries are added — expected,
-not a bug, per this check's own acceptance criterion (CI red today, green once the settings.json fix
-lands).
+
+Original finding (N-1, completeness-critic 2026-07-16): `scripts/check_settings_toolcov.py` greps
+`Claude_Task_Plan.md` + `ops/triggers.json` for every `mcp__<Server>__<tool>` token and asserts each
+appears in `.claude/settings.json`'s `permissions.allow` list — an unattended scheduled routine
+calling a non-allowlisted MCP tool gets a permission prompt nobody is there to answer, silently
+stalling that step with no dedicated alert class for it. `get_option_parameters`/`get_combo_identifier`
+are also included even though the CI check can't detect their bare-name references (the IBKR
+options-crafting steps call them by bare name) — same risk class. This was previously a genuine,
+currently-RED `ci.yml` gate (`session-config tool coverage`) until the entries above were added; now
+green, per this check's own acceptance criterion (CI red until the settings.json fix lands, green
+after).
 
 ```verify
 id: O
@@ -239,7 +234,11 @@ pushed) per that round's ground rules — nothing below is live yet.
 **What it's for:** CC-2 adds `Claude_Task_Plan.md` AR_orc **STEP 0.5 — ECHO-SUSPECT COOL-OFF
 RE-ADJUDICATION** plus a Step 4 resolve-tail and a Step 3.5 alert-text fix, so a review that hits the
 `echo_suspect_cap_reached` critical (2+ failed theater-independence checks) is retried automatically
-every >=14 days instead of parking `state.trading_enabled` open-ended pending an owner session. This
+every >=14 days — **up to a hard LIFETIME CAP of 3 cool-off retries (rev 2, 2026-07-16,
+owner-directed): after the 3rd failed retry (5 total independence failures), STEP 0.5 stops retrying
+and raises a latching `echo_suspect_exhausted` critical instead, permanently parking the review
+pending owner investigation** — instead of parking `state.trading_enabled` open-ended pending an
+owner session from the very first cap. This
 session deliberately did **not** run the dry run against live BigQuery (out of scope for a
 local-only round — no MCP calls were made). No live `echo_suspect_cap_reached` alert has ever fired
 (confirmed latent, zero occurrences), so this is not urgent, but please verify the mechanism once
@@ -249,7 +248,14 @@ before or shortly after the Claude_Task_Plan.md STEP 0.5 text goes live:
 1. Insert a synthetic alert: `INSERT INTO ops.alerts (alert_ts, severity, source_routine, category, message, resolved, payload) VALUES (TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 4 DAY), 'info', 'AR_orc', 'echo_suspect_cap_reached', 'TEST-REVIEW-CC2-DRYRUN — dry-run synthetic row, do not action', FALSE, JSON '{}')` — `severity='info'` deliberately, so it never enters `blocking_criticals` and never halts trading (a `severity='critical'` synthetic row would, for the duration of the test).
 2. Run (or wait for) the next AR_orc fire. Confirm exactly one new `events.queue_events` row appears with `JSON_VALUE(payload,'$.echo_suspect_cooloff')='true'` and one `events.decision_log` row with `entry_type='echo-cooloff-requeue'`.
 3. Run AR_orc again (same day or within the 14-day window). Confirm it enqueues nothing further for this test review id (the 14-day gate holds).
-4. **Cleanup in the same session:** `UPDATE ops.alerts SET resolved=TRUE, resolved_note='dry-run' WHERE category='echo_suspect_cap_reached' AND message LIKE '%TEST-REVIEW-CC2-DRYRUN%'` AND set the synthetic `events.queue_events` row's `status='abandoned'` (note `'dry-run'`) so queue-driven AR_att never picks it up and attacks a nonexistent artifact.
+3b. **Cap-branch test (rev 2):** insert two MORE synthetic `events.queue_events` rows for the same test
+   review id with `JSON_VALUE(payload,'$.echo_suspect_cooloff')='true'` and `status='abandoned'`
+   (backdated `event_ts` >14 days apart so the 14-day gate doesn't mask the cap), bringing the lifetime
+   cool-off count to 3. Run AR_orc once more: confirm it enqueues NOTHING, raises exactly one
+   `echo_suspect_exhausted` critical (severity as written — the real path raises `critical`; for a
+   trading-safe dry run you may pre-verify the branch logic with the count query alone instead), and
+   logs one `entry_type='echo-cooloff-exhausted'` decision_log row.
+4. **Cleanup in the same session:** `UPDATE ops.alerts SET resolved=TRUE, resolved_note='dry-run' WHERE category IN ('echo_suspect_cap_reached','echo_suspect_exhausted') AND message LIKE '%TEST-REVIEW-CC2-DRYRUN%'` AND set ALL synthetic `events.queue_events` rows' `status='abandoned'` (note `'dry-run'`) so queue-driven AR_att never picks them up and attacks a nonexistent artifact.
 
 Not urgent (latent path, zero live occurrences) — do whenever convenient, ideally before this round's
 commits are pushed to `main`.
