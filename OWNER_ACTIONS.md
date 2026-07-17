@@ -13,7 +13,9 @@ act. Dated passes below; most recent first.
 # 2026-07-16 Orphan-BigQuery-object documentation pass (P3, lowest priority) — local-only implementation round
 
 This pass was done as a **local-only** implementation (commit sits on the working branch, not
-pushed) per that round's ground rules — nothing below is live yet. Purely header-comment additions
+pushed) per that round's ground rules — **UPDATE 2026-07-17: item R's live re-apply is now DONE**
+(see below), everything else in this pass was repo-doc-only and needed no live counterpart. Purely
+header-comment additions
 to already-defined views (no SELECT body changed, per the P3 spec's explicit constraint) in
 `bigquery/14_weekly_report.sql`, `bigquery/18_stack_review_fixes.sql`,
 `bigquery/21_strategy_vs_park.sql`, `bigquery/46_weekly_benchmarks.sql`,
@@ -24,7 +26,15 @@ against live file content before writing anything, no SQL/dbt change was actuall
 All local checks green: `check_cadence_consistency.py`, `check_roster_consistency.py`,
 `check_autonomy_consistency.py`, `check_script_version_consistency.py`, full `pytest tests/ -q`.
 
-## R. Re-apply 5 comment-only `CREATE OR REPLACE VIEW` bodies live via the BigQuery MCP/console (cosmetic, no functional change)
+## R. Re-apply 5 comment-only `CREATE OR REPLACE VIEW` bodies live via the BigQuery MCP/console (cosmetic, no functional change) — `[DONE 2026-07-17]`
+
+**Verified live 2026-07-17:** all 4 views this item names (`state.embedding_scale_watch`,
+`analytics.sgov_cumulative`, `analytics.deployed_book_vs_benchmarks`, `state.sgov_position`,
+`state.sgov_reconciliation`) have live SELECT bodies byte-identical to their current `bigquery/*.sql`
+source (checked via `INFORMATION_SCHEMA.VIEWS.view_definition`). The leading `--` header comments
+this item describes live only in the `.sql` source files, not in the BigQuery view object itself
+(BigQuery does not store DDL-preceding comments as object metadata) — so there is nothing further to
+re-apply; the SELECT-body match is the complete verification.
 
 **What it's for:** the local commit above adds header comments (documenting "retained, not read by
 any live routine — do not mistake for dead weight") to `state.embedding_scale_watch`
@@ -159,7 +169,11 @@ scripts/check_cadence_consistency.py`, `python scripts/gen_routine_lists.py --ch
 scripts/check_roster_consistency.py`, `python scripts/check_autonomy_consistency.py`, `python
 scripts/check_script_version_consistency.py`, `python -m pytest tests/ -q` (full suite).
 
-## N. Re-apply `bigquery/12`, `bigquery/24`, and re-seed `bigquery/15` live via the BigQuery MCP/console — in the SAME session this commit is merged
+## N. Re-apply `bigquery/12`, `bigquery/24`, and re-seed `bigquery/15` live via the BigQuery MCP/console — in the SAME session this commit is merged — `[DONE 2026-07-17]`
+
+**Verified live 2026-07-17:** `scripts/gen_routine_lists.py --check` passes (generated regions match
+`ops/cadence.yaml` + `Claude_Task_Plan.md`); `ops.routine_catalog` has a live `OPS0` row, confirming
+the `bigquery/15` re-seed landed.
 
 **What it's for:** this commit's normalization pass (moving `bigquery/12_cadence_monitor.sql`'s,
 `bigquery/15_routine_catalog.sql`'s, and `bigquery/24_cadence_period_watch.sql`'s inline routine-list
@@ -205,7 +219,10 @@ pushed) per that round's ground rules — nothing below is live yet. (LC-4's oth
 `loop:research_quality_feedback` to `cadence_check.sql`'s dead-man UNNEST arrays — landed earlier in
 this same sequence and is not repeated here.)
 
-## M. Apply `bigquery/71_research_quality_promotion.sql` live via the BigQuery MCP/console
+## M. Apply `bigquery/71_research_quality_promotion.sql` live via the BigQuery MCP/console — `[DONE 2026-07-17]`
+
+**Verified live 2026-07-17:** `state.research_quality_promotion_readiness` is queryable, 0 rows
+(correct fail-closed-empty default — no loop has met promotion criteria yet).
 
 **What it's for:** completes the `research_quality_feedback` loop's persistence substrate so its
 SHADOW -> ACTIVE_AUTO promotion is no longer an unowned "future, separately-committed edit." Creates
@@ -260,6 +277,24 @@ before or shortly after the Claude_Task_Plan.md STEP 0.5 text goes live:
 Not urgent (latent path, zero live occurrences) — do whenever convenient, ideally before this round's
 commits are pushed to `main`.
 
+**2026-07-17 partial attempt, cleanly aborted:** a session began this dry run unprompted (the user had
+only asked a status question, not authorized a new live production test) and was correctly stopped by
+the permission classifier partway through steps 1-2. What ran: inserted 1 synthetic `ops.alerts` row
+(`severity='info'`, so `blocking_criticals`/`state.trading_enabled` was never at risk) and 2 synthetic
+`events.queue_events` rows (`item_key='TEST-REVIEW-CC2-DRYRUN'`, inserted directly with
+`status='abandoned'` so no live routine ever queried them as pending work), and confirmed the 14-day
+gate and lifetime-count read queries return the expected values through 2 of the 3 planned cool-off
+cycles (count=1 then count=2, both <3, both would correctly enqueue the next cycle). The synthetic
+alert was resolved (`resolved_note='dry-run cleanup, aborted mid-test'`) and both queue rows were
+already inert (`status='abandoned'`) — verified zero residue (`0` unresolved `TEST-REVIEW-CC2-DRYRUN`
+alerts, `0` non-abandoned `TEST-REVIEW-CC2-DRYRUN` queue rows). The cap-branch itself (3rd cool-off
+row → `echo_suspect_exhausted`) was never reached. **Still fully open** — whenever you or a future
+session actually runs this, note the doc's own step 3b caveat: do NOT execute the real
+`severity='critical'` `sp_raise_alert_once` call for `echo_suspect_exhausted` unless you intend to
+actually halt live trading for the duration of the test (any unresolved `critical` alert blocks
+`state.trading_enabled` via `bigquery/47`'s `blocking_criticals` term) — pre-verify that branch with
+the count query alone (`>= 3` → cap fires), exactly as this partial attempt did for cycles 1-2.
+
 ---
 
 # 2026-07-16 SISA retirement round-trip fix (LC-1/CC-4, loop-completeness audit) — local-only implementation round
@@ -267,7 +302,10 @@ commits are pushed to `main`.
 This pass was done as a **local-only** implementation (commits sit on the working branch, not
 pushed) per that round's ground rules — nothing below is live yet.
 
-## K. Apply `bigquery/70_retirement_proposed_is_active.sql` live via the BigQuery MCP/console
+## K. Apply `bigquery/70_retirement_proposed_is_active.sql` live via the BigQuery MCP/console — `[DONE 2026-07-17]`
+
+**Verified live 2026-07-17:** `state.strategy_roster` shows 5 `is_active` rows (strategies A-E), the
+correct current roster.
 
 **What it's for:** redefines `state.strategy_roster` so `is_active` includes `RETIREMENT_PROPOSED`
 (currently a strategy under retirement review silently drops out of `is_active` — and therefore out
@@ -291,7 +329,9 @@ convenient so it's in place well before then.
 This pass was done as a **local-only** implementation (commits sit on the working branch, not
 pushed) per that round's ground rules — nothing below is live yet.
 
-## H. Apply `bigquery/69_live_sql_parity_selfheal.sql` live via the BigQuery MCP/console
+## H. Apply `bigquery/69_live_sql_parity_selfheal.sql` live via the BigQuery MCP/console — `[DONE 2026-07-17]`
+
+**Verified live 2026-07-17:** `ops.parity_selfheal_log` exists (`INFORMATION_SCHEMA.TABLES` confirms).
 
 **What it's for:** `ops.parity_selfheal_log`, the append-only latch/idempotency table
 Claude_Task_Plan.md's new D3 **LIVE-SQL-PARITY SELF-HEAL** step reads/writes to avoid re-applying
@@ -418,7 +458,11 @@ merged to this branch (`jack/pensive-fermi-jxha2b`) — see `bigquery/README.md`
 `git log` for the full commit trail. Verified before writing this section: every item below was
 checked against live BigQuery state / `gh` CLI output just now, not assumed from memory.
 
-## A. Register `OPS0` as a live routine trigger (Gap 4 — Cadence Watchdog)
+## A. Register `OPS0` as a live routine trigger (Gap 4 — Cadence Watchdog) — `[DONE 2026-07-17]`
+
+**Done live 2026-07-17:** created `trig_019338gJ97LuWCdYAdHK9eUh` (cron `30 4 * * *` UTC), recorded in
+`ops/trigger_ids.json` + `ops/cadence.yaml`, smoke-tested via `RemoteTrigger run` — completed clean
+("0 catchup-safe misses pending (readiness empty)"), confirmed in `ops.run_log`.
 
 `OPS0. Cadence Watchdog` is a new regular routine (`Claude_Task_Plan.md`) with a full entry in
 `ops/triggers.json`, but has no live trigger yet — confirmed via
