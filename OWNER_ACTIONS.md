@@ -394,7 +394,11 @@ workflow runs post-merge.
 
 # 2026-07-16 CI findings bridge (CC-1, issue #10 consumption-closure)
 
-## G. GCP IAM grant — let CI write CI-guard findings into BigQuery (CC-1)
+## G. GCP IAM grant — let CI write CI-guard findings into BigQuery (CC-1) — `[DONE 2026-07-17]`
+
+**Done live 2026-07-17** (owner ran the `bq add-iam-policy-binding` below): `gh-ci-runner@` now holds
+`roles/bigquery.dataEditor` on exactly `ops.ci_findings` — verified via
+`bq get-iam-policy stock-trading-498512:ops.ci_findings` (the SA appears under the dataEditor binding).
 
 **What it's for:** four CI guards (`live-sql-parity.yml` daily, `keyless-sa-audit.yml` /
 `wif-binding-audit.yml` / `guard-config-audit.yml` monthly) each open/refresh a deduped GitHub issue
@@ -515,7 +519,18 @@ probe: bq query "SELECT COUNT(*) n FROM `stock-trading-498512.ops.run_log` WHERE
 done_when: n>0 AND grep exits 0
 ```
 
-## B. Apply the ARCH-1 scheduled-query wrapper migration, THEN paste the new one-line CALL bodies (Gap 12 — closes the re-paste class PERMANENTLY)
+## B. Apply the ARCH-1 scheduled-query wrapper migration, THEN paste the new one-line CALL bodies (Gap 12 — closes the re-paste class PERMANENTLY) — `[DONE 2026-07-17]`
+
+**Both steps done live 2026-07-17.** Step 1 (12 `sp_sq_*` procedures + `bigquery/63` registry) applied
+earlier this session. Step 2 (owner ran the `bq` CLI): all 10 existing configs repointed to their
+one-line `CALL ops.sp_sq_<name>();` wrapper bodies, and both new configs created —
+`safety-critical-dml-watch` (`every 6 hours`) and `fire-drill-alert-lifecycle` (`1 of month 06:20` —
+note the corrected schedule syntax; `1st of month` is rejected by BigQuery DTS). Email-on-failure
+enabled on both new configs via the DTS REST API (`emailPreferences.enableFailureEmail=true`).
+Verified: `bq ls --transfer_config` shows all 12 configs pointing at their `sp_sq_*` wrapper. The
+`state.scheduled_query_version_drift` view will read `monitored=TRUE / drift=FALSE` for each only
+after that query next runs on its own schedule and beats its heartbeat (the `done_when: n=12` probe
+below self-satisfies within a day — daily jobs by tomorrow, the two monthly jobs by the 1st).
 
 **SUPERSEDED (2026-07-16, ARCH-1 wrapper migration, `bigquery/75_scheduled_query_wrappers.sql`) —**
 the prior version of this item asked you to re-paste each scheduled query's full body directly; that
@@ -535,8 +550,8 @@ live (`INFORMATION_SCHEMA.ROUTINES` lists all 12: `sp_sq_backup_events_export`, 
 `bigquery/63_scheduled_query_version_registry.sql`'s MERGE is applied (`v2` everywhere except
 `cadence_check` = `v5`, 12/12 rows confirmed by SELECT).
 
-**Step 2 (your action — this is the one remaining piece):** repoint each scheduled query's live body
-to its one-line wrapper. Two ways to do it — pick whichever is easier:
+**Step 2 — `[DONE 2026-07-17]`, owner ran the `bq` CLI 2b path below.** (Reference kept for DR/redo.)
+Repoint each scheduled query's live body to its one-line wrapper. Two ways to do it:
 
 **2a. Console paste (original flow, `ops/RUNBOOK.md §1`):** re-paste each of the 12
 `bigquery/scheduled_queries/<name>.sql` files' NEW one-line body (just `CALL
@@ -643,7 +658,13 @@ probe: SELECT COUNTIF(monitored AND NOT drift) n FROM `stock-trading-498512.stat
 done_when: n=12
 ```
 
-## C. GCP IAM grant — dashboard build liveness heartbeat (Architect recommendation #3)
+## C. GCP IAM grant — dashboard build liveness heartbeat (Architect recommendation #3) — `[DONE 2026-07-17]`
+
+**Done live 2026-07-17** (owner ran the `bq add-iam-policy-binding` below): `gh-ci-runner@` now holds
+`roles/bigquery.dataEditor` on exactly `ops.heartbeat` — verified via
+`bq get-iam-policy stock-trading-498512:ops.heartbeat`. The `'dashboard' (ci)` heartbeat will begin
+landing (and appearing as `monitored` in `state.automation_heartbeat`) on the next scheduled dashboard
+build; the verify probe below self-satisfies then.
 
 `ops/dashboard/generate_dashboard.py` now best-effort-writes `ops.heartbeat(source='dashboard')` at
 the end of a successful build (`bigquery/58_dashboard_heartbeat.sql`), but the workflow's
@@ -864,7 +885,12 @@ until the paste happens. The existing one-shot alert still fires either way.
 
 ---
 
-## 2. Register a new scheduled query — `safety_critical_dml_watch.sql` (Item 6)
+## 2. Register a new scheduled query — `safety_critical_dml_watch.sql` (Item 6) — `[DONE 2026-07-17]`
+
+**Done live 2026-07-17** (folded into item B's cutover): `safety-critical-dml-watch` DTS config
+created via `bq mk --transfer_config` (`every 6 hours`, run-as `bq-scheduler@`, one-line wrapper body
+`CALL ops.sp_sq_safety_critical_dml_watch();`, email-on-failure enabled). Confirmed in
+`bq ls --transfer_config`.
 
 **What it does:** every 6h, RAISEs (fails the job → BigQuery's built-in failure email) and writes a
 critical `ops.alerts` row if anything ran a raw `UPDATE`/`DELETE`/`MERGE`/`TRUNCATE` against
