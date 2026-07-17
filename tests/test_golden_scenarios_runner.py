@@ -127,6 +127,26 @@ def _env(**overrides):
             os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
 
 
+def test_allowed_decisions_scoped_by_category():
+    # Each category offers ONLY its own tokens (so the model cannot answer a correct-sentiment but
+    # wrong-vocabulary token, e.g. DO-NOT-ACTIVATE on a strategy-entry scenario).
+    assert rg._allowed_decisions_for({"category": "strategy_b_entry"}) == "GO | NO-GO"
+    assert rg._allowed_decisions_for({"category": "kill_trigger"}) == "CONTINUE | TERMINATE"
+    assert rg._allowed_decisions_for({"category": "regime_router"}) == "ACTIVATE | DO-NOT-ACTIVATE"
+    # No / unknown category => all six, in the pinned longest-first-safe order.
+    all_six = " | ".join(rg.DECISION_LEAD_TOKENS)
+    assert rg._allowed_decisions_for({}) == all_six
+    assert rg._allowed_decisions_for({"category": "nope"}) == all_six
+
+
+def test_eval_prompt_renders_scoped_tokens():
+    # The pinned template must actually consume {allowed_decisions} and exclude out-of-category tokens.
+    p = rg.EVAL_PROMPT_TEMPLATE.format(governing_files_text="G", situation="S",
+                                       allowed_decisions=rg._allowed_decisions_for({"category": "strategy_b_entry"}))
+    assert "DECISION: <one of GO | NO-GO>" in p
+    assert "DO-NOT-ACTIVATE" not in p and "TERMINATE" not in p
+
+
 def test_gemini_model_ladder_wellformed():
     assert isinstance(rg.GEMINI_MODEL_LADDER, list) and rg.GEMINI_MODEL_LADDER
     assert all(isinstance(m, str) and m.strip() for m in rg.GEMINI_MODEL_LADDER)

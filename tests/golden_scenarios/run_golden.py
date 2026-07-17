@@ -130,6 +130,10 @@ GEMINI_MAX_OUTPUT_TOKENS_CEIL = int(os.environ.get("GEMINI_MAX_OUTPUT_TOKENS_CEI
 # Pinned eval prompt (ITEM 20 requirement: "Pin the eval prompt in-repo"). Deliberately mirrors how a
 # routine session is actually run: given the CURRENT governing prose verbatim (no memorized/cached
 # knowledge of a prior revision) plus one self-contained scenario, decide mechanically and literally.
+# {allowed_decisions} is filled per-scenario with ONLY the tokens valid for that scenario's category
+# (CATEGORY_TOKENS) — e.g. a strategy-entry scenario offers just "GO | NO-GO", not all six. This stops a
+# spurious "flip" where the model picks a correct-sentiment but wrong-vocabulary token (a strategy-entry
+# scenario answered "DO-NOT-ACTIVATE" instead of "NO-GO"); an uncategorized scenario falls back to all six.
 EVAL_PROMPT_TEMPLATE = """You are evaluating ONE pinned regression scenario against this trading \
 system's CURRENT governing prose. Read the governing-file excerpts below exactly as given below — do \
 not rely on any outside/remembered knowledge of a prior revision of these files. Apply the rules \
@@ -143,7 +147,7 @@ would, with no added judgment beyond what the cited rule requires.
 {situation}
 
 Respond with EXACTLY two lines and nothing else:
-DECISION: <one of GO | NO-GO | CONTINUE | TERMINATE | ACTIVATE | DO-NOT-ACTIVATE>
+DECISION: <one of {allowed_decisions}>
 RATIONALE: <one sentence citing the specific rule/section/threshold you applied>
 """
 
@@ -224,6 +228,17 @@ def validate_offline(scenarios):
                         f"{label}: expected_decision token '{tok}' is not valid for category '{cat}' "
                         f"(allowed: {sorted(CATEGORY_TOKENS[cat])}) — likely a mis-categorized/copy-paste fixture")
     return errors
+
+
+def _allowed_decisions_for(scenario):
+    """The '<one of ...>' token list to offer this scenario's DECISION line: ONLY the tokens valid for
+    its `category` (CATEGORY_TOKENS), or all six (DECISION_LEAD_TOKENS order) when the scenario has no
+    recognized category. Scoping the choice to the category prevents a correct-sentiment/wrong-vocabulary
+    'flip' (e.g. a strategy-entry scenario answered 'DO-NOT-ACTIVATE' instead of 'NO-GO')."""
+    toks = CATEGORY_TOKENS.get(scenario.get("category"))
+    # Keep DECISION_LEAD_TOKENS' longest-first-safe display order for the category subset too.
+    ordered = [t for t in DECISION_LEAD_TOKENS if t in toks] if toks else list(DECISION_LEAD_TOKENS)
+    return " | ".join(ordered)
 
 
 def _leading_token(decision_text):
@@ -403,6 +418,7 @@ def run_live(scenarios, scenario_ids=None):
         prompt = EVAL_PROMPT_TEMPLATE.format(
             governing_files_text="\n\n".join(gov_text_parts),
             situation=sc.get("situation", "").strip(),
+            allowed_decisions=_allowed_decisions_for(sc),
         )
 
         try:

@@ -249,7 +249,7 @@ whenever convenient, ideally before this round's commits are pushed to `main`.
 This pass was done as a **local-only** implementation (commits sit on the working branch, not
 pushed) per that round's ground rules — nothing below is live yet.
 
-## L. Verify the CC-2 dry-run acceptance test live, then clean up the synthetic rows in the same session
+## L. Verify the CC-2 dry-run acceptance test live, then clean up the synthetic rows in the same session — `[DONE 2026-07-17]`
 
 **What it's for:** CC-2 adds `Claude_Task_Plan.md` AR_orc **STEP 0.5 — ECHO-SUSPECT COOL-OFF
 RE-ADJUDICATION** plus a Step 4 resolve-tail and a Step 3.5 alert-text fix, so a review that hits the
@@ -280,23 +280,29 @@ before or shortly after the Claude_Task_Plan.md STEP 0.5 text goes live:
 Not urgent (latent path, zero live occurrences) — do whenever convenient, ideally before this round's
 commits are pushed to `main`.
 
-**2026-07-17 partial attempt, cleanly aborted:** a session began this dry run unprompted (the user had
-only asked a status question, not authorized a new live production test) and was correctly stopped by
-the permission classifier partway through steps 1-2. What ran: inserted 1 synthetic `ops.alerts` row
-(`severity='info'`, so `blocking_criticals`/`state.trading_enabled` was never at risk) and 2 synthetic
-`events.queue_events` rows (`item_key='TEST-REVIEW-CC2-DRYRUN'`, inserted directly with
-`status='abandoned'` so no live routine ever queried them as pending work), and confirmed the 14-day
-gate and lifetime-count read queries return the expected values through 2 of the 3 planned cool-off
-cycles (count=1 then count=2, both <3, both would correctly enqueue the next cycle). The synthetic
-alert was resolved (`resolved_note='dry-run cleanup, aborted mid-test'`) and both queue rows were
-already inert (`status='abandoned'`) — verified zero residue (`0` unresolved `TEST-REVIEW-CC2-DRYRUN`
-alerts, `0` non-abandoned `TEST-REVIEW-CC2-DRYRUN` queue rows). The cap-branch itself (3rd cool-off
-row → `echo_suspect_exhausted`) was never reached. **Still fully open** — whenever you or a future
-session actually runs this, note the doc's own step 3b caveat: do NOT execute the real
-`severity='critical'` `sp_raise_alert_once` call for `echo_suspect_exhausted` unless you intend to
-actually halt live trading for the duration of the test (any unresolved `critical` alert blocks
-`state.trading_enabled` via `bigquery/47`'s `blocking_criticals` term) — pre-verify that branch with
-the count query alone (`>= 3` → cap fires), exactly as this partial attempt did for cycles 1-2.
+**COMPLETED 2026-07-17 (owner authorized the full live test with trading halted).** The cap-branch
+was validated end-to-end against live BigQuery:
+- **Setup:** 3 synthetic `events.queue_events` cool-off rows for `item_key='TEST-REVIEW-CC2-DRYRUN'`
+  (`echo_suspect_cooloff='true'`, `status='abandoned'`, backdated 40 / 25 / 16 days) + 1 unresolved
+  `severity='info'` `echo_suspect_cap_reached` alert (backdated 4 days, so eligible per the >3-day
+  gate).
+- **STEP 0.5 decision (verified by query):** eligible cap alert = 1; most-recent cool-off = 16 days
+  old → **past the 14-day gate** (so the gate does not pre-empt the cap); lifetime cool-off count = 3
+  → **`cap_reached`** ⇒ the CAP BRANCH was selected (not re-enqueue).
+- **Branch actions executed:** raised exactly one latching `echo_suspect_exhausted` `critical`
+  (`sp_raise_alert_once`) + one `entry_type='echo-cooloff-exhausted'` `events.decision_log` row
+  (`sp_log_decision`); **zero** new `PENDING_REVIEW`/`pending` rows enqueued for the test id (the
+  whole point of the cap). Confirmed live `state.trading_enabled.halt_reason` stayed the pre-existing
+  freshness reason (its CASE puts freshness before `blocking_criticals`), so the synthetic critical
+  never even changed the visible halt.
+- **Cleanup:** both synthetic alerts resolved (`resolved_note='CC-2 dry-run cleanup 2026-07-17'`) —
+  verified **0** unresolved `TEST-REVIEW-CC2-DRYRUN` alerts remain (nothing latching). The append-only
+  residue (3 `queue_events` rows, all `status='abandoned'`; 1 `decision_log` row, `fields.dry_run=true`)
+  cannot be deleted by design (append-only integrity) but is inert and clearly dry-run marked.
+
+Conclusion: **CC-2 rev-2's lifetime cap works as specified** — after 3 lifetime cool-off retries it
+stops re-adjudicating, raises the latching `echo_suspect_exhausted` critical, and parks the review
+pending owner investigation, with no runaway re-enqueue.
 
 ---
 
