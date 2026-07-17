@@ -87,6 +87,14 @@ WHERE w.period_missed;
 -- FALLBACK bullet (Claude_Task_Plan.md, ## D3) can sweep them. ops.catchup_refire_log still caps every
 -- miss_key at one attempt ever. Routine list hand-maintained in lockstep with bigquery/31's
 -- ['D1','D3','SL3'] (the same catchup-safe daily set — D2/D2a are deliberately excluded).
+-- BUG FIX (2026-07-17, live-apply verification): the original WHERE-clause form below used
+-- NOT EXISTS against `daily_misses` and the final SELECT used NOT EXISTS against
+-- `ops.catchup_refire_log` — both fail at QUERY TIME (not at CREATE VIEW time; the DDL itself parses
+-- fine, so this bug only surfaces the first time anyone actually reads the view) with "Correlated
+-- subqueries that reference other tables are not supported unless they can be de-correlated" — BigQuery
+-- cannot de-correlate a correlated EXISTS/NOT EXISTS against a CTE stacked alongside multiple other
+-- correlated subqueries against real tables. Rewritten as LEFT JOIN + IS NULL (the standard BigQuery
+-- workaround for this exact limitation), verified live via execute_sql_readonly before applying.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.catchup_refire_readiness` AS
 WITH daily_misses AS (
   SELECT
@@ -108,9 +116,15 @@ yesterday_daily_misses AS (
   CROSS JOIN (SELECT today, DATE_SUB(today, INTERVAL 1 DAY) AS yday
               FROM `stock-trading-498512.state.trading_day_today`) y
   -- D1/SL3 are daily_trading (bigquery/12): only expected if yesterday was a trading day; D3 is daily_all
-  WHERE (routine_id = 'D3' OR EXISTS (
-          SELECT 1 FROM `stock-trading-498512.state.market_calendar` c
-          WHERE c.cal_date = y.yday AND c.is_trading_day))
+  LEFT JOIN `stock-trading-498512.state.market_calendar` mc
+    ON mc.cal_date = y.yday AND mc.is_trading_day
+  -- suppressed when TODAY's miss row for the same routine is already pending in daily_misses (after
+  -- 21:00 MT a routine that missed both days would otherwise emit two rows and get its trigger fired
+  -- twice in one OPS0 sweep; the refire produces the new day's output either way, so the today-row
+  -- alone suffices) -- LEFT JOIN + IS NULL (not NOT EXISTS against the daily_misses CTE): see the
+  -- BUG FIX note above.
+  LEFT JOIN daily_misses dm ON dm.routine = routine_id
+  WHERE (routine_id = 'D3' OR mc.cal_date IS NOT NULL)
     -- monitored guard, same convention as state.cadence_watch (has EVER completed)
     AND EXISTS (SELECT 1 FROM `stock-trading-498512.ops.run_log` rl
                 WHERE rl.routine = routine_id AND rl.status = 'completed')
@@ -122,11 +136,7 @@ yesterday_daily_misses AS (
     AND NOT EXISTS (SELECT 1 FROM `stock-trading-498512.ops.run_log` rl
                     WHERE rl.routine = routine_id AND rl.status = 'completed'
                       AND rl.run_date = y.today)
-    -- suppressed when TODAY's miss row for the same routine is already pending in daily_misses (after
-    -- 21:00 MT a routine that missed both days would otherwise emit two rows and get its trigger fired
-    -- twice in one OPS0 sweep; the refire produces the new day's output either way, so the today-row
-    -- alone suffices)
-    AND NOT EXISTS (SELECT 1 FROM daily_misses dm WHERE dm.routine = routine_id)
+    AND dm.routine IS NULL
 ),
 all_misses AS (
   SELECT * FROM daily_misses
@@ -135,9 +145,8 @@ all_misses AS (
 )
 SELECT m.miss_key, m.routine, m.tier, m.as_of
 FROM all_misses m
-WHERE NOT EXISTS (
-  SELECT 1 FROM `stock-trading-498512.ops.catchup_refire_log` l WHERE l.miss_key = m.miss_key
-);
+LEFT JOIN `stock-trading-498512.ops.catchup_refire_log` l ON l.miss_key = m.miss_key
+WHERE l.miss_key IS NULL;
 
 -- ===== state.catchup_refire_failures — misses OPS0 attempted but had no live trigger_id for =====
 -- Visibility-only (not itself an alert source here — OPS0 raises the alert at attempt time via
