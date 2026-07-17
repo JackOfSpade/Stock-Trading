@@ -45,7 +45,9 @@ Usage:
 """
 import argparse
 import os
+import re
 import sys
+import time
 
 try:
     import yaml
@@ -80,24 +82,39 @@ CATEGORY_TOKENS = {
 # The advisory live run uses Gemini's FREE tier exclusively (owner directive 2026-07-17 — no paid
 # Anthropic fallback). It is enabled whenever GEMINI_API_KEY is set, and skips cleanly otherwise. The
 # Gemini path uses the stdlib (urllib) REST endpoint, so it adds NO pip dependency to CI. The ladder
-# below is tried best-quality-first; each model falls through to the next when it hits a per-model
-# rate/quota limit (HTTP 429) for the day. Model ids + ordering were verified 2026-07-17 against this
-# project's live AI-Studio ListModels AND its free-tier rate-limit dashboard: the Pro tier has ZERO
-# free-tier quota, so the ladder is Flash-tier only. The 4th entry (`gemini-3.1-flash-lite`) carries a
-# 500 req/day free quota vs. 20/day for the others — the deep reservoir that keeps the check alive after
-# the top models exhaust for the day; the 5th is a stable final floor. Override the whole ladder with
-# the GEMINI_MODEL_LADDER env var (comma-separated). "Thinking" is left ON (default/dynamic) — this is
-# an accuracy check whose whole job is catching subtle decision flips, so the model should reason; the
-# adaptive maxOutputTokens budget below (which auto-escalates on truncation) keeps that reasoning from
-# crowding out the DECISION line.
+# below is tried best-quality-first; a model is abandoned (permanently, for the rest of the run) only on
+# a per-DAY quota exhaustion or a hard error — NOT on a per-minute rate limit (see the RPM constants
+# below). "Thinking" is left ON (default/dynamic) — this is an accuracy check whose whole job is catching
+# subtle decision flips, so the model should reason; the adaptive maxOutputTokens budget below (which
+# auto-escalates on truncation) keeps that reasoning from crowding out the DECISION line.
+#
+# LADDER MEMBERSHIP verified live 2026-07-17 by probing generateContent per model with this project's
+# key: the Pro tier has ZERO free-tier quota, and the whole 2.5 series (`gemini-2.5-flash`,
+# `gemini-2.5-flash-lite`) returns 404 NOT_FOUND for this key's project — they are deliberately NOT in
+# the ladder, since a dead rung just burns a request and a ladder slot. The survivors, best-first:
+#   gemini-3.5-flash        — best quality; 5 RPM / 20 RPD
+#   gemini-3-flash-preview  — next best;    5 RPM / 20 RPD
+#   gemini-3.1-flash-lite   — deep reservoir; 15 RPM / 500 RPD (keeps the check alive once the top two
+#                             exhaust their small daily quotas; 23 scenarios > 20 RPD, so this WILL be
+#                             reached on a full run)
+# Override the whole ladder with the GEMINI_MODEL_LADDER env var (comma-separated).
 GEMINI_MODEL_LADDER = [
     m.strip() for m in os.environ.get(
         "GEMINI_MODEL_LADDER",
-        "gemini-3.5-flash,gemini-3-flash-preview,gemini-2.5-flash,"
-        "gemini-3.1-flash-lite,gemini-2.5-flash-lite",
+        "gemini-3.5-flash,gemini-3-flash-preview,gemini-3.1-flash-lite",
     ).split(",") if m.strip()
 ]
 GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+
+# Free-tier 429s come in TWO flavors that MUST be handled differently — conflating them is what broke the
+# first live run (2026-07-17): the runner fires 23 scenarios back-to-back, tripped the 5-requests-per-
+# MINUTE limit at scenario 7, and, because every 429 was treated as "this model is done", it burned the
+# entire ladder in ~60 seconds and produced zero results for 17 of 23 scenarios.
+#   * per-MINUTE (RPM) — TRANSIENT. Wait out the API's suggested RetryInfo.retryDelay and retry the SAME
+#     model. Rate-rejected requests do not consume the daily quota.
+#   * per-DAY (RPD)    — persistent for the rest of the day. Advance the ladder (sticky) — waiting is futile.
+GEMINI_RPM_MAX_RETRIES = int(os.environ.get("GEMINI_RPM_MAX_RETRIES", "5"))
+GEMINI_RPM_RETRY_DELAY_S = float(os.environ.get("GEMINI_RPM_RETRY_DELAY_S", "20"))
 
 # Adaptive output-token budget. Thinking is ON (for accuracy), and thinking tokens are drawn from the
 # same maxOutputTokens budget — so a hard scenario can occasionally reason past the budget and get
@@ -221,6 +238,20 @@ def _leading_token(decision_text):
     return None
 
 
+def _is_daily_quota_429(body):
+    """True when a 429 body names a per-DAY quota (persistent — advance the ladder) rather than a
+    per-minute one (transient — wait and retry the same model). Google spells the metric out in the
+    message/violations, e.g. 'GenerateRequestsPerDayPerProjectPerModel' or '...requests per day'."""
+    low = (body or "").lower()
+    return "perday" in low or "per day" in low
+
+
+def _retry_delay_s(body, default):
+    """Pull RetryInfo.retryDelay (e.g. "retryDelay": "38s") out of a 429 body; fall back to `default`."""
+    m = re.search(r'"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"', body or "")
+    return float(m.group(1)) if m else default
+
+
 def _gemini_call(prompt, api_key, ladder, state):
     """POST one prompt to Gemini via the stdlib (no SDK dependency) and return (reply_text, model_id).
 
@@ -269,18 +300,28 @@ def _gemini_call(prompt, api_key, ladder, state):
         cap costs nothing per request (the model still emits only the short answer), and every ladder
         model accepts up to the ceiling, so carrying the mark across models is safe. state is fresh per
         run (created in _select_live_caller), so a new CI run re-starts at _START."""
-        nonlocal last_err
         budget = state["budget"]
+        rpm_retries = 0
         while True:
             try:
                 text, finish = _post(model, budget)
             except urllib.error.HTTPError as exc:
-                # 429 = per-model daily quota exhausted; 404 = bad id for this key; 400 = e.g. budget
-                # above this model's max; 5xx = transient. All => give up on this model, advance ladder.
-                last_err = f"{model}: HTTP {exc.code} {exc.read().decode('utf-8', 'replace')[:300]}"
+                body = exc.read().decode("utf-8", "replace")
+                # A per-MINUTE 429 is transient: sleep out the API's suggested retryDelay and retry the
+                # SAME model. Only a per-DAY 429 (or any other HTTP error) abandons the model.
+                if exc.code == 429 and not _is_daily_quota_429(body):
+                    if rpm_retries < GEMINI_RPM_MAX_RETRIES:
+                        rpm_retries += 1
+                        time.sleep(_retry_delay_s(body, GEMINI_RPM_RETRY_DELAY_S))
+                        continue
+                    errors.append(f"{model}: rate-limited (429/min) after {rpm_retries} retries")
+                    return None
+                # 429/day = daily quota gone; 404 = model not served to this key; 400 = e.g. budget above
+                # this model's max; 5xx = transient-but-unretried. All => abandon model, advance ladder.
+                errors.append(f"{model}: HTTP {exc.code} {body[:200]}")
                 return None
             except (urllib.error.URLError, TimeoutError, ValueError) as exc:
-                last_err = f"{model}: {exc}"
+                errors.append(f"{model}: {exc}")
                 return None
             if text.strip():
                 return text
@@ -292,13 +333,17 @@ def _gemini_call(prompt, api_key, ladder, state):
                 continue
             # Empty for another reason (safety block, unexpected finishReason) or still truncating at the
             # ceiling — give up on this model and advance the ladder.
-            last_err = f"{model}: empty response (finishReason={finish or '?'}, maxOutputTokens={budget})"
+            errors.append(f"{model}: empty response (finishReason={finish or '?'}, maxOutputTokens={budget})")
             return None
 
     state.setdefault("budget", GEMINI_MAX_OUTPUT_TOKENS_START)  # run-level output-budget high-water mark
-    # Sticky exhaustion: if an earlier scenario in this run already walked the whole ladder (bad key /
-    # total quota-out), state['idx'] is past the end — say so clearly rather than a bare "None".
-    last_err = "ladder already exhausted earlier this run" if state["idx"] >= len(ladder) else None
+    # Accumulate EVERY model's failure (not just the last), so a total-ladder-exhaustion error names what
+    # each model actually returned — the difference between "all 404 (bad model ids/key)", "all 429
+    # (quota)", and "mixed" is the whole diagnosis.
+    errors = []
+    if state["idx"] >= len(ladder):
+        # An earlier scenario in this run already walked the whole ladder (bad key / total quota-out).
+        raise RuntimeError("Gemini model ladder already exhausted earlier this run (see the first scenario's error)")
     while state["idx"] < len(ladder):
         model = ladder[state["idx"]]
         text = _try_model(model)
@@ -306,7 +351,7 @@ def _gemini_call(prompt, api_key, ladder, state):
             return text, model
         state["idx"] += 1
 
-    raise RuntimeError(f"Gemini model ladder exhausted — last error: {last_err}")
+    raise RuntimeError("Gemini model ladder exhausted — " + " | ".join(errors))
 
 
 def _select_live_caller():

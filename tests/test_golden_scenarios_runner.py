@@ -168,36 +168,96 @@ class _FakeResp:
         return False
 
 
-def test_gemini_ladder_advances_on_429_then_succeeds(monkeypatch):
-    # First ladder model returns 429 (daily quota exhausted); the pointer must advance and the SECOND
-    # model's valid DECISION reply must be returned, tagged with the model that actually answered.
+# A realistic per-DAY 429 body (persistent => advance the ladder) and a per-MINUTE one (transient =>
+# wait + retry the SAME model). Distinguishing these is the fix for the 2026-07-17 first-live-run bug
+# where a per-minute limit burned the whole ladder in ~60s.
+_QUOTA_DAY_BODY = (b'{"error":{"code":429,"status":"RESOURCE_EXHAUSTED","message":"Quota exceeded for '
+                   b'metric GenerateRequestsPerDayPerProjectPerModel"}}')
+_QUOTA_MIN_BODY = (b'{"error":{"code":429,"status":"RESOURCE_EXHAUSTED","message":"Quota exceeded for '
+                   b'metric GenerateRequestsPerMinutePerProjectPerModel","details":[{"@type":'
+                   b'"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"7s"}]}}')
+
+
+def test_daily_vs_minute_quota_classification():
+    assert rg._is_daily_quota_429(_QUOTA_DAY_BODY.decode()) is True
+    assert rg._is_daily_quota_429(_QUOTA_MIN_BODY.decode()) is False
+    assert rg._retry_delay_s(_QUOTA_MIN_BODY.decode(), 99) == 7.0   # honours the API's RetryInfo
+    assert rg._retry_delay_s("{}", 99) == 99                        # falls back when absent
+
+
+def test_gemini_ladder_advances_on_daily_quota_429(monkeypatch):
+    # A per-DAY 429 is persistent: the pointer must advance and the SECOND model's reply is returned.
     ladder = ["model-a", "model-b", "model-c"]
 
-    def fake_urlopen(req, timeout=90):
+    def fake_urlopen(req, timeout=180):
         if "model-a:" in req.full_url:
-            raise _fake_http_error(req.full_url, 429, b'{"error":"RESOURCE_EXHAUSTED"}')
+            raise _fake_http_error(req.full_url, 429, _QUOTA_DAY_BODY)
         return _FakeResp({"candidates": [{"content": {"parts": [{"text": "DECISION: GO\nRATIONALE: x"}]}}]})
 
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(rg.time, "sleep", lambda s: None)  # must not be needed, but never really sleep
     state = {"idx": 0}
     text, model = rg._gemini_call("prompt", "k", ladder, state)
     assert "DECISION: GO" in text
     assert model == "model-b"
-    assert state["idx"] == 1  # advanced past the exhausted model, and stuck there
+    assert state["idx"] == 1  # advanced past the day-exhausted model, and stuck there
+
+
+def test_gemini_minute_quota_429_retries_same_model(monkeypatch):
+    # A per-MINUTE 429 is TRANSIENT: wait out RetryInfo and retry the SAME model — it must NOT burn a
+    # ladder rung (this is the exact bug that killed 17 of 23 scenarios on the first live run).
+    calls = {"n": 0}
+    slept = []
+
+    def fake_urlopen(req, timeout=180):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise _fake_http_error(req.full_url, 429, _QUOTA_MIN_BODY)
+        return _FakeResp({"candidates": [{"content": {"parts": [{"text": "DECISION: NO-GO\nRATIONALE: y"}]}}]})
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(rg.time, "sleep", lambda s: slept.append(s))
+    state = {"idx": 0}
+    text, model = rg._gemini_call("prompt", "k", ["m1", "m2"], state)
+    assert "NO-GO" in text
+    assert model == "m1"          # stayed on the SAME (best) model
+    assert state["idx"] == 0      # ladder rung NOT burned
+    assert slept == [7.0]         # honoured the API's suggested retryDelay
+
+
+def test_gemini_minute_quota_429_gives_up_after_max_retries(monkeypatch):
+    # Bounded: a model stuck at a per-minute limit is eventually abandoned (ladder advances) rather than
+    # retrying forever.
+    slept = []
+
+    def fake_urlopen(req, timeout=180):
+        if "m1:" in req.full_url:
+            raise _fake_http_error(req.full_url, 429, _QUOTA_MIN_BODY)
+        return _FakeResp({"candidates": [{"content": {"parts": [{"text": "DECISION: GO\nRATIONALE: z"}]}}]})
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(rg.time, "sleep", lambda s: slept.append(s))
+    state = {"idx": 0}
+    text, model = rg._gemini_call("prompt", "k", ["m1", "m2"], state)
+    assert model == "m2" and state["idx"] == 1
+    assert len(slept) == rg.GEMINI_RPM_MAX_RETRIES  # retried the cap, then advanced
 
 
 def test_gemini_ladder_exhaustion_raises(monkeypatch):
-    # Every model 429s -> RuntimeError (never a silent blank that would score as a decision flip).
-    def fake_urlopen(req, timeout=90):
-        raise _fake_http_error(req.full_url, 429, b'{"error":"RESOURCE_EXHAUSTED"}')
+    # Every model day-quota-exhausted -> RuntimeError (never a silent blank that would score as a flip),
+    # and the message names EVERY model's failure, not just the last one.
+    def fake_urlopen(req, timeout=180):
+        raise _fake_http_error(req.full_url, 429, _QUOTA_DAY_BODY)
 
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(rg.time, "sleep", lambda s: None)
     state = {"idx": 0}
     try:
         rg._gemini_call("prompt", "k", ["m1", "m2"], state)
         assert False, "expected RuntimeError on ladder exhaustion"
     except RuntimeError as exc:
         assert "ladder exhausted" in str(exc)
+        assert "m1" in str(exc) and "m2" in str(exc)  # per-model diagnostics, not just the last error
 
 
 def test_gemini_empty_response_advances(monkeypatch):
