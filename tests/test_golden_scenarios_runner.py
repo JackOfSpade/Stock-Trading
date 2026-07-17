@@ -135,16 +135,18 @@ def test_gemini_model_ladder_wellformed():
     assert "lite" not in rg.GEMINI_MODEL_LADDER[0]
 
 
-def test_select_live_caller_none_when_no_keys():
-    with _env(GEMINI_API_KEY=None, ANTHROPIC_API_KEY=None):
-        assert rg._select_live_caller("claude-sonnet-5") is None
+def test_select_live_caller_none_without_gemini_key():
+    # Gemini is the sole provider (2026-07-17). No GEMINI_API_KEY => skip (None), even if a stray
+    # ANTHROPIC_API_KEY is present (it must NOT enable anything anymore).
+    with _env(GEMINI_API_KEY=None, ANTHROPIC_API_KEY="ignored"):
+        assert rg._select_live_caller() is None
 
 
-def test_select_live_caller_prefers_gemini_over_anthropic():
-    # With BOTH keys set, Gemini (free tier) must win. Only assert a callable is returned — never invoke
-    # it (no network in unit tests). If the anthropic branch were taken it would try to import the SDK.
-    with _env(GEMINI_API_KEY="test-key", ANTHROPIC_API_KEY="test-key"):
-        caller = rg._select_live_caller("claude-sonnet-5")
+def test_select_live_caller_returns_gemini_when_key_set():
+    # With GEMINI_API_KEY set, a callable is returned. Only assert callable — never invoke it (no
+    # network in unit tests).
+    with _env(GEMINI_API_KEY="test-key", ANTHROPIC_API_KEY=None):
+        caller = rg._select_live_caller()
     assert callable(caller)
 
 

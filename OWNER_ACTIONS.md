@@ -756,11 +756,14 @@ done_when: == 'true'
   `OFFSITE_BACKUP_GCS` secret to `gs://stock-trading-offsite-backup`, and **verified end-to-end**: a
   `workflow_dispatch` of `Off-site backup mirror` (run `29580819512`) went green and mirrored ~122 MB
   (`events/` + `ops/` dated parquet trees) cross-project. This is now a true off-trust-domain backup
-  (separate project + separate blast radius from the trading project). The complementary one-time owner
-  controls that cannot live in CI — a **project-deletion lien** on `stock-trading-498512` and
-  **Essential Contacts to a non-Google address** — are still worth doing (RUNBOOK §27); and note that
-  because all projects share one Google account, a full-account compromise is a threat this cross-project
-  copy does not cover (a different account/cloud would).
+  (separate project + separate blast radius from the trading project). Complementary one-time owner
+  controls (RUNBOOK §27): the **project-deletion lien** on `stock-trading-498512` is confirmed
+  **already in place** (lien `p191682978805-l03ae3152…`, restriction `resourcemanager.projects.delete`,
+  reason "protect append-only trading truth" — verified live 2026-07-17). **Essential Contacts to a
+  non-Google address** is a deliberate owner skip. Note: because all projects share one Google account,
+  a full-account compromise is a threat this cross-project copy does not cover (a different account/cloud
+  would); and the new `stock-trading-offsite-backup` project itself is not lien-protected yet (say the
+  word to add one there too).
 
 ```verify
 id: E-offsite
@@ -777,10 +780,13 @@ done_when: == 'true'
   reservoir) → gemini-2.5-flash-lite`. Verified live: 18/18 runner unit tests pass (incl. new
   provider-selection + ladder-advance/exhaustion tests) and a live smoke run on 2 scenarios returned
   correct decisions via `gemini-3.5-flash`. The `GEMINI_API_KEY` secret is set; `golden-scenarios.yml`
-  gates on either key and passes both. So `ANTHROPIC_API_KEY` is **no longer needed** (it still works as
-  a fallback if you ever set it). **Owner follow-up (security):** the Gemini key was pasted into a chat
-  during setup, so rotate it — generate a new key in AI Studio and run
-  `gh secret set GEMINI_API_KEY` (omit `--body`; it prompts securely), which invalidates the old value.
+  gates on it. **Gemini is the SOLE provider — the Anthropic path was fully removed** (owner directive
+  2026-07-17), so `ANTHROPIC_API_KEY` is no longer used anywhere. "Thinking" is left ON (default) for
+  accuracy, with a generous `maxOutputTokens` so reasoning cannot crowd out the DECISION line.
+  **Owner follow-up (security):** the Gemini key was pasted into a chat during setup, so rotate it —
+  generate a new key in AI Studio and run `gh secret set GEMINI_API_KEY -R JackOfSpade/Stock-Trading`
+  (omit the value; it prompts securely; the `-R` flag means it works from any directory), which
+  invalidates the old value.
 
 ```verify
 id: E-anthropic

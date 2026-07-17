@@ -176,16 +176,10 @@ def check_E_offsite():
 
 
 def check_E_anthropic():
-    # 2026-07-17: golden-scenarios' live eval was swapped to prefer Gemini's free tier, so EITHER a
-    # GEMINI_API_KEY (preferred) OR an ANTHROPIC_API_KEY (fallback) satisfies this item — run_golden.py
-    # picks whichever is present.
-    ok_g, ev_g = _check_env_true("HAS_GEMINI_API_KEY", "GEMINI_API_KEY")
-    if ok_g:
-        return True, ev_g
-    ok_a, ev_a = _check_env_true("HAS_ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY")
-    if ok_a:
-        return True, ev_a
-    return False, f"{ev_g}; {ev_a}"
+    # 2026-07-17: golden-scenarios' live eval was swapped to Gemini's FREE tier as the SOLE provider
+    # (no Anthropic fallback), so this item is satisfied by GEMINI_API_KEY. (The id keeps its historical
+    # 'E-anthropic' name for traceability against the original owner-actions list.)
+    return _check_env_true("HAS_GEMINI_API_KEY", "GEMINI_API_KEY")
 
 
 def check_sq_dml_watch():
