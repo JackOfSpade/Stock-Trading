@@ -30,7 +30,7 @@ Env (all optional — used by the bq/gh probes when present; falls back to OPEN 
 prerequisite env/binary is unavailable, per fail-open above):
   BQ_PROJECT (default stock-trading-498512), GH_TOKEN / GITHUB_TOKEN (gh CLI auth),
   GITHUB_REPOSITORY (owner/repo — used by the D probe; falls back to `gh repo view`),
-  HAS_ALERT_WEBHOOK_URL / HAS_OFFSITE_BACKUP_GCS / HAS_ANTHROPIC_API_KEY ('true'/'false' — the
+  HAS_ALERT_WEBHOOK_URL / HAS_OFFSITE_BACKUP_GCS / HAS_ANTHROPIC_API_KEY / HAS_GEMINI_API_KEY ('true'/'false' — the
   workflow exports these from `secrets.X != ''` since a workflow token cannot `gh secret list`).
 
 Stdlib only.
@@ -176,7 +176,16 @@ def check_E_offsite():
 
 
 def check_E_anthropic():
-    return _check_env_true("HAS_ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY")
+    # 2026-07-17: golden-scenarios' live eval was swapped to prefer Gemini's free tier, so EITHER a
+    # GEMINI_API_KEY (preferred) OR an ANTHROPIC_API_KEY (fallback) satisfies this item — run_golden.py
+    # picks whichever is present.
+    ok_g, ev_g = _check_env_true("HAS_GEMINI_API_KEY", "GEMINI_API_KEY")
+    if ok_g:
+        return True, ev_g
+    ok_a, ev_a = _check_env_true("HAS_ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY")
+    if ok_a:
+        return True, ev_a
+    return False, f"{ev_g}; {ev_a}"
 
 
 def check_sq_dml_watch():

@@ -22,8 +22,11 @@ TWO MODES, matching the two-job split in .github/workflows/golden-scenarios.yml:
   --live (NETWORK; calls a model; ADVISORY ONLY — see the workflow header for why this never hard-
       blocks a merge)
       For each scenario, reads the CURRENT text of its governing_files, sends the pinned
-      EVAL_PROMPT_TEMPLATE below to a Claude model, parses a DECISION: line from the reply, and diffs
-      it against expected_decision's leading token. Prints a pass/fail table and, for the first
+      EVAL_PROMPT_TEMPLATE below to a live model, parses a DECISION: line from the reply, and diffs
+      it against expected_decision's leading token. PROVIDER: prefers Gemini's FREE tier when
+      GEMINI_API_KEY is set (walks GEMINI_MODEL_LADDER, degrading model on per-model daily-quota
+      exhaustion; stdlib REST, no SDK dependency); otherwise uses the Anthropic API when
+      ANTHROPIC_API_KEY is set. Prints a pass/fail table and, for the first
       leading-token mismatch on a NON-EMPTY governing_files reread, prints a GitHub Actions
       `::warning::` annotation plus the events.queue_events INSERT this script itself has no BigQuery
       write credentials to execute (CI stays read-only by design). WIRED FOR REAL (self-improvement
@@ -33,7 +36,7 @@ TWO MODES, matching the two-job split in .github/workflows/golden-scenarios.yml:
       independently (D3 IS the model, no separate API call), and actually files the queue entry
       (review_type='prose-regression', now a recognized AR review_type — see the Adversarial Reviews
       section) on a real mismatch. This CI job remains a secondary, push-time signal only. Requires
-      ANTHROPIC_API_KEY. Always exits 0 (advisory) unless the offline schema gate itself fails first,
+      GEMINI_API_KEY (preferred, free) or ANTHROPIC_API_KEY. Always exits 0 (advisory) unless the offline schema gate itself fails first,
       or setup fails outright (missing API key/library), which is reported but still does not fail the
       *build* — the workflow's continue-on-error covers that.
 
@@ -79,6 +82,26 @@ CATEGORY_TOKENS = {
 # --model or the ANTHROPIC_MODEL env var rather than editing this default in place, so a stale default
 # here is a one-line CLI override away, not a code change.
 DEFAULT_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-5")
+
+# ---- Gemini (Google AI Studio) live-eval support (2026-07-17) ----
+# The advisory live run prefers Gemini's FREE tier over the paid Anthropic API: it is selected
+# automatically whenever GEMINI_API_KEY is set (ANTHROPIC_API_KEY still works and is used only if
+# GEMINI_API_KEY is absent). The Gemini path uses the stdlib (urllib) REST endpoint, so it adds NO new
+# pip dependency to CI. The ladder below is tried best-quality-first; each model falls through to the
+# next when it hits a per-model rate/quota limit (HTTP 429) for the day. Model ids + ordering were
+# verified 2026-07-17 against this project's live AI-Studio ListModels AND its free-tier rate-limit
+# dashboard: the Pro tier has ZERO free-tier quota, so the ladder is Flash-tier only. The 4th entry
+# (`gemini-3.1-flash-lite`) carries a 500 req/day free quota vs. 20/day for the others — the deep
+# reservoir that keeps the check alive after the top models exhaust for the day; the 5th is a stable
+# final floor. Override the whole ladder with the GEMINI_MODEL_LADDER env var (comma-separated).
+GEMINI_MODEL_LADDER = [
+    m.strip() for m in os.environ.get(
+        "GEMINI_MODEL_LADDER",
+        "gemini-3.5-flash,gemini-3-flash-preview,gemini-2.5-flash,"
+        "gemini-3.1-flash-lite,gemini-2.5-flash-lite",
+    ).split(",") if m.strip()
+]
+GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
 # Pinned eval prompt (ITEM 20 requirement: "Pin the eval prompt in-repo"). Deliberately mirrors how a
 # routine session is actually run: given the CURRENT governing prose verbatim (no memorized/cached
@@ -191,29 +214,127 @@ def _leading_token(decision_text):
     return None
 
 
+def _gemini_call(prompt, api_key, ladder, state):
+    """POST one prompt to Gemini via the stdlib (no SDK dependency) and return (reply_text, model_id).
+    Walks GEMINI_MODEL_LADDER starting at state['idx']; on a per-model rate/quota exhaustion (HTTP 429),
+    a bad-id 404, a transient 5xx, or an empty/blocked response, it advances the ladder pointer (STICKY
+    for the rest of the run — once a top model is exhausted for the day there is no point retrying it per
+    scenario) and tries the next model. Raises RuntimeError only when the whole ladder is exhausted."""
+    import json as _json
+    import urllib.error
+    import urllib.request
+
+    def _post(model, body_obj):
+        body = _json.dumps(body_obj).encode("utf-8")
+        req = urllib.request.Request(
+            GEMINI_ENDPOINT.format(model=model) + "?key=" + api_key,
+            data=body, headers={"Content-Type": "application/json"}, method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=90) as resp:
+            data = _json.load(resp)
+        cands = data.get("candidates", [])
+        parts = (cands[0].get("content", {}) if cands else {}).get("parts", []) or []
+        text = "".join(p.get("text", "") for p in parts if isinstance(p, dict))
+        return text, data
+
+    base_cfg = {"temperature": 0, "maxOutputTokens": 1024}
+    last_err = None
+    while state["idx"] < len(ladder):
+        model = ladder[state["idx"]]
+        try:
+            # Disable "thinking" so the whole output budget goes to the two required answer lines
+            # (Gemini 2.5+/3.x otherwise spend maxOutputTokens on hidden reasoning and can truncate
+            # before the DECISION: line). Some models reject thinkingConfig with a 400 — handled below.
+            text, raw = _post(model, {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {**base_cfg, "thinkingConfig": {"thinkingBudget": 0}},
+            })
+            if text.strip():
+                return text, model
+            last_err = f"{model}: empty response ({_json.dumps(raw)[:200]})"
+            state["idx"] += 1
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", "replace")[:300]
+            if exc.code == 400 and "thinking" in detail.lower():
+                # This model does not accept thinkingConfig — retry it ONCE without that field before
+                # giving up on it and advancing the ladder.
+                try:
+                    text, _ = _post(model, {
+                        "contents": [{"parts": [{"text": prompt}]}],
+                        "generationConfig": base_cfg,
+                    })
+                    if text.strip():
+                        return text, model
+                    last_err = f"{model}: empty response (no-thinking retry)"
+                except urllib.error.HTTPError as exc2:
+                    last_err = f"{model}: HTTP {exc2.code} {exc2.read().decode('utf-8', 'replace')[:200]}"
+                except (urllib.error.URLError, TimeoutError, ValueError) as exc2:
+                    last_err = f"{model}: {exc2}"
+            else:
+                last_err = f"{model}: HTTP {exc.code} {detail}"
+            state["idx"] += 1
+        except (urllib.error.URLError, TimeoutError, ValueError) as exc:
+            last_err = f"{model}: {exc}"
+            state["idx"] += 1
+
+    raise RuntimeError(f"Gemini model ladder exhausted — last error: {last_err}")
+
+
+def _select_live_caller(anthropic_model):
+    """Return a call_model(prompt) -> (reply_text, model_id) callable for the configured live provider,
+    or None (after printing a ::notice::) when none is available. Provider precedence: Gemini free tier
+    (GEMINI_API_KEY) first, then Anthropic (ANTHROPIC_API_KEY)."""
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    if gemini_key:
+        ladder = GEMINI_MODEL_LADDER
+        state = {"idx": 0}
+        print(f"::notice::golden live run — provider=Gemini (free tier); model ladder: {', '.join(ladder)}",
+              file=sys.stderr)
+
+        def call_model(prompt):
+            return _gemini_call(prompt, gemini_key, ladder, state)
+        return call_model
+
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+    if anthropic_key:
+        try:
+            import anthropic
+        except ImportError:
+            print(
+                "::warning::anthropic package not installed — live golden-scenario run skipped "
+                "(pip install anthropic, or set GEMINI_API_KEY to use the stdlib Gemini path). "
+                "Offline schema validation is unaffected.",
+                file=sys.stderr,
+            )
+            return None
+        client = anthropic.Anthropic(api_key=anthropic_key)
+        print(f"::notice::golden live run — provider=Anthropic; model={anthropic_model}", file=sys.stderr)
+
+        def call_model(prompt):
+            resp = client.messages.create(
+                model=anthropic_model, max_tokens=300,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = "".join(b.text for b in resp.content if getattr(b, "type", None) == "text")
+            return text, anthropic_model
+        return call_model
+
+    print(
+        "::notice::no live provider configured — set GEMINI_API_KEY (free tier) or ANTHROPIC_API_KEY "
+        "to enable the live golden-scenario diff (opt-in). Offline schema validation is unaffected.",
+        file=sys.stderr,
+    )
+    return None
+
+
 def run_live(scenarios, model, scenario_ids=None):
-    """Call a Claude model per scenario and diff its decision vs. the pinned expected_decision.
-    Advisory only — never returns a failing process exit code by itself; the caller decides."""
-    try:
-        import anthropic
-    except ImportError:
-        print(
-            "::warning::anthropic package not installed — live golden-scenario run skipped "
-            "(pip install anthropic). Offline schema validation is unaffected.",
-            file=sys.stderr,
-        )
+    """Call a live model per scenario and diff its decision vs. the pinned expected_decision. Prefers
+    Gemini's free tier (GEMINI_MODEL_LADDER) when GEMINI_API_KEY is set; otherwise uses the Anthropic
+    API when ANTHROPIC_API_KEY is set. Advisory only — never returns a failing process exit code by
+    itself; the caller decides."""
+    call_model = _select_live_caller(model)
+    if call_model is None:
         return []
-
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        print(
-            "::notice::ANTHROPIC_API_KEY not set — live golden-scenario run skipped (opt-in). "
-            "Offline schema validation is unaffected.",
-            file=sys.stderr,
-        )
-        return []
-
-    client = anthropic.Anthropic(api_key=api_key)
     results = []
     file_cache = {}
 
@@ -234,18 +355,11 @@ def run_live(scenarios, model, scenario_ids=None):
         )
 
         try:
-            resp = client.messages.create(
-                model=model,
-                max_tokens=300,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            reply = "".join(
-                block.text for block in resp.content if getattr(block, "type", None) == "text"
-            )
+            reply, model_used = call_model(prompt)
         except Exception as exc:  # noqa: BLE001 — advisory path, any failure is reported, not raised
             print(f"::warning::{sid}: model call failed — {exc}", file=sys.stderr)
             results.append({"id": sid, "expected": sc.get("expected_decision"), "actual": None,
-                             "match": None, "reply": str(exc)})
+                             "match": None, "reply": str(exc), "model": None})
             continue
 
         actual_line = next((ln for ln in reply.splitlines() if ln.strip().upper().startswith("DECISION:")), "")
@@ -256,7 +370,7 @@ def run_live(scenarios, model, scenario_ids=None):
 
         results.append({
             "id": sid, "expected": sc.get("expected_decision"), "actual": actual_decision,
-            "match": match, "reply": reply,
+            "match": match, "reply": reply, "model": model_used,
         })
 
         if not match:
@@ -306,7 +420,9 @@ def main():
     if not args.live:
         return 0
 
-    print(f"\nLive mode — model={args.model}, {len(scenarios)} scenario(s) "
+    _provider = "Gemini free tier" if os.environ.get("GEMINI_API_KEY") else \
+                (f"Anthropic {args.model}" if os.environ.get("ANTHROPIC_API_KEY") else "none configured")
+    print(f"\nLive mode — provider={_provider}, {len(scenarios)} scenario(s) "
           f"(filter: {args.scenario_ids or 'all'})")
     results = run_live(scenarios, args.model, scenario_ids=args.scenario_ids)
     if not results:

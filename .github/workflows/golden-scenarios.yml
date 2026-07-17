@@ -14,7 +14,8 @@ name: Golden Scenarios (prose regression)
 #
 # PATH-GATED (only Strategy.md / Operating_Protocols.md / Claude_Task_Plan.md / the golden fixtures
 # themselves) — mirrors ci.yml's dbt-parity path gate: a prose-regression check is meaningless without a
-# prose change, and the live job below calls a paid model per push, so it should not run on every
+# prose change, and the live job below calls a live model per push (Gemini free tier by default, see
+# below), so it should not run on every
 # unrelated commit.
 #
 # TWO JOBS, two different postures (mirrors ci.yml's advisory/hard-gate split, e.g. lint vs. shell-lint,
@@ -32,7 +33,7 @@ name: Golden Scenarios (prose regression)
 #     for this system's self-improvement surface (CLAUDE.md "Settled decisions" — the SISA autonomy
 #     conversion; a prose-regression flip is not a strategy-add/delete decision, but the same
 #     no-human-gate posture applies to any check that could otherwise be used to re-introduce one).
-#     Requires the ANTHROPIC_API_KEY secret; skips cleanly (green, with a ::notice::) if it is not
+#     Requires the GEMINI_API_KEY secret (free tier, preferred) or ANTHROPIC_API_KEY (fallback); skips cleanly (green, with a ::notice::) if it is not
 #     configured — opt-in, exactly like ci.yml's sql-validate / dbt-parity WIF-gated jobs. On a decision
 #     flip, run_golden.py itself prints a `::warning::` annotation naming the scenario + the expected vs.
 #     actual call, and echoes the exact (never-executed) events.queue_events INSERT a routine with write
@@ -88,15 +89,17 @@ jobs:
     continue-on-error: true   # advisory; a decision flip must never block a merge — see header above
     steps:
       - uses: actions/checkout@v4
-      - name: Check ANTHROPIC_API_KEY present (opt-in)
+      - name: Check a live-eval key is present (opt-in)
         id: guard
         env:
-          HAVE_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+          # Live eval prefers GEMINI_API_KEY (free tier, run_golden.py's stdlib Gemini path); it falls
+          # back to ANTHROPIC_API_KEY only if the Gemini key is absent. Either one enables the run.
+          HAVE_KEY: ${{ (secrets.GEMINI_API_KEY != '' || secrets.ANTHROPIC_API_KEY != '') }}
         run: |
           if [ "$HAVE_KEY" = "true" ]; then
             echo "skip=false" >> "$GITHUB_OUTPUT"
           else
-            echo "::notice::golden-scenarios live run skipped — ANTHROPIC_API_KEY secret not set (opt-in, default state). The offline schema gate in the other job still ran and is the hard gate. Set the secret to enable live prose-regression diffing."
+            echo "::notice::golden-scenarios live run skipped — neither GEMINI_API_KEY nor ANTHROPIC_API_KEY secret set (opt-in, default state). The offline schema gate in the other job still ran and is the hard gate. Set GEMINI_API_KEY (free tier) to enable live prose-regression diffing."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
       - uses: actions/setup-python@v5
@@ -105,12 +108,21 @@ jobs:
           python-version: '3.11'
       - name: Install deps
         if: steps.guard.outputs.skip == 'false'
-        # anthropic is not in requirements-ci.txt (that file pins the shared CI toolchain used by
-        # every job in ci.yml; this is the one job in the repo that needs an LLM client, so it is
-        # pinned here rather than growing the shared constraints file for a single advisory job).
-        run: pip install --quiet pyyaml 'anthropic>=0.40,<1.0'
+        env:
+          HAVE_GEMINI: ${{ secrets.GEMINI_API_KEY != '' }}
+        # The Gemini provider (preferred) uses only the Python stdlib (urllib) — no SDK to install.
+        # The anthropic SDK is pulled in ONLY as the fallback provider, i.e. when GEMINI_API_KEY is not
+        # configured; it is not in requirements-ci.txt (that file pins the shared ci.yml toolchain, and
+        # this single advisory job is the only one that ever needs an LLM client).
+        run: |
+          pip install --quiet -c requirements-ci.txt pyyaml
+          if [ "$HAVE_GEMINI" != "true" ]; then
+            pip install --quiet 'anthropic>=0.40,<1.0'
+          fi
       - name: Live decision diff vs. pinned expectations (advisory — never fails the build)
         if: steps.guard.outputs.skip == 'false'
         env:
+          # run_golden.py prefers GEMINI_API_KEY (free tier) and falls back to ANTHROPIC_API_KEY.
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python tests/golden_scenarios/run_golden.py --live

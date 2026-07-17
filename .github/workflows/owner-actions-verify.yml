@@ -81,6 +81,7 @@ jobs:
           HAS_ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL != '' }}
           HAS_OFFSITE_BACKUP_GCS: ${{ secrets.OFFSITE_BACKUP_GCS != '' }}
           HAS_ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+          HAS_GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY != '' }}
         run: |
           python scripts/verify_owner_actions.py | tee /tmp/verify_out.txt
           {

@@ -746,10 +746,21 @@ type: env
 probe: read HAS_ALERT_WEBHOOK_URL (workflow exports secrets.ALERT_WEBHOOK_URL != '' — a workflow token cannot `gh secret list`)
 done_when: == 'true'
 ```
-- `OFFSITE_BACKUP_GCS` — read by `guard-config-audit.yml`, `offsite-backup.yml`. A GCS destination
-  (bucket/path) for the offsite backup export; without it, `offsite-backup.yml` presumably no-ops or
-  fails its own step — worth checking that workflow's recent run history once this is set. Genuinely
-  owner-owned external resource — not self-provisionable the way the webhook topic above is.
+- `OFFSITE_BACKUP_GCS` — `[DONE 2026-07-17]`. Owner directive was "do not touch existing projects;
+  create a project explicitly named as a backup for this one." Done live: created a **dedicated new GCP
+  project** `stock-trading-offsite-backup` (project # 578533197048, linked to the open billing account
+  `01CC5A-639021-6C0598`, Storage API enabled), created bucket `gs://stock-trading-offsite-backup` (US
+  multi-region, uniform bucket-level access, public-access-prevention enforced), granted the WIF SA
+  `gh-ci-runner@stock-trading-498512...` `roles/storage.objectViewer` on the source
+  `gs://stock-trading-backups` and `roles/storage.objectAdmin` on the new dest bucket, set the
+  `OFFSITE_BACKUP_GCS` secret to `gs://stock-trading-offsite-backup`, and **verified end-to-end**: a
+  `workflow_dispatch` of `Off-site backup mirror` (run `29580819512`) went green and mirrored ~122 MB
+  (`events/` + `ops/` dated parquet trees) cross-project. This is now a true off-trust-domain backup
+  (separate project + separate blast radius from the trading project). The complementary one-time owner
+  controls that cannot live in CI — a **project-deletion lien** on `stock-trading-498512` and
+  **Essential Contacts to a non-Google address** — are still worth doing (RUNBOOK §27); and note that
+  because all projects share one Google account, a full-account compromise is a threat this cross-project
+  copy does not cover (a different account/cloud would).
 
 ```verify
 id: E-offsite
@@ -757,15 +768,24 @@ type: env
 probe: read HAS_OFFSITE_BACKUP_GCS
 done_when: == 'true'
 ```
-- `ANTHROPIC_API_KEY` — read by `golden-scenarios.yml`. Without it, the workflow's `HAVE_KEY` check
-  reads false and (per that workflow's own design) it falls back to a documented lower-fidelity mode
-  rather than failing — check that workflow's file for the exact fallback behavior before assuming
-  urgency here. Genuinely owner-owned external resource.
+- `ANTHROPIC_API_KEY` — **superseded by a Gemini free-tier swap, `[DONE 2026-07-17]`.** Rather than
+  buy a paid Anthropic key for the advisory `golden-scenarios.yml` prose-regression check, `run_golden.py`
+  was extended to prefer Gemini's FREE tier: it now selects a provider at runtime — **Gemini** when
+  `GEMINI_API_KEY` is set (stdlib `urllib` REST, no SDK dependency), falling back to Anthropic only if
+  `GEMINI_API_KEY` is absent. A model-fallback ladder degrades on per-model daily-quota exhaustion:
+  `gemini-3.5-flash → gemini-3-flash-preview → gemini-2.5-flash → gemini-3.1-flash-lite (500/day
+  reservoir) → gemini-2.5-flash-lite`. Verified live: 18/18 runner unit tests pass (incl. new
+  provider-selection + ladder-advance/exhaustion tests) and a live smoke run on 2 scenarios returned
+  correct decisions via `gemini-3.5-flash`. The `GEMINI_API_KEY` secret is set; `golden-scenarios.yml`
+  gates on either key and passes both. So `ANTHROPIC_API_KEY` is **no longer needed** (it still works as
+  a fallback if you ever set it). **Owner follow-up (security):** the Gemini key was pasted into a chat
+  during setup, so rotate it — generate a new key in AI Studio and run
+  `gh secret set GEMINI_API_KEY` (omit `--body`; it prompts securely), which invalidates the old value.
 
 ```verify
 id: E-anthropic
 type: env
-probe: read HAS_ANTHROPIC_API_KEY
+probe: read HAS_GEMINI_API_KEY (or HAS_ANTHROPIC_API_KEY — either enables the golden live run)
 done_when: == 'true'
 ```
 **If skipped:** every consumer above already fails closed/quiet without these — nothing is silently
