@@ -148,6 +148,13 @@ routines:
                              # to fix (self-improvement audit 2026-07-15, CONFIRMED GAP
                              # catchup-notify-no-auto-refire; Architect recommendation #1)
     writes: [ops.catchup_refire_log, events.decision_log, ops.alerts, ops/cadence.yaml, ops/trigger_ids.json]
+    expected_trigger:
+      recurrence: daily
+      time_local: "22:30"          # fixed 04:30 UTC cron (trig_019338gJ97LuWCdYAdHK9eUh, created
+                                    # 2026-07-17) -- NOT the DST-aware native picker, so this is
+                                    # 10:30 PM MDT / 9:30 PM MST depending on season, deliberately
+                                    # after D3's ~18:36 MT completion (see RUNBOOK cadence note)
+      enabled: true
     notes: >
       Meta-repair / cadence-dispatcher routine (added 2026-07-15). Reads
       state.catchup_refire_readiness (bigquery/59_catchup_autofire.sql) and calls

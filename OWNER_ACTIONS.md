@@ -462,29 +462,106 @@ have been frozen as one-line `CALL ops.sp_sq_<name>()` wrappers over stored proc
 query in this directory will ever need a console re-paste again**; future logic changes happen
 entirely in `bigquery/75` + a `CREATE OR REPLACE PROCEDURE` applied via the BigQuery MCP.
 
-**Step 1 (routine/session action, NOT yours — do not do this yourself):** a future MCP-enabled Claude
-session must, in order: (a) run the two scratch pre-flight tests documented in `bigquery/75`'s header
-(`EXPORT DATA` and `CREATE TEMP TABLE` each inside a throwaway stored procedure) — these were
-deliberately NOT run live by the session that wrote `bigquery/75` (it operated under a no-BigQuery-
-MCP-calls constraint this pass); (b) apply the 12 (or fewer, if either pre-flight test is rejected and
-the affected procedure(s) are excluded — see that file's header for the exact fallback) `CREATE OR
-REPLACE PROCEDURE` statements from `bigquery/75_scheduled_query_wrappers.sql` live; (c) apply the
-edited `bigquery/63_scheduled_query_version_registry.sql` MERGE (new expected versions, `v2`
-everywhere except `cadence_check` which is `v5`).
+**Step 1 — `[DONE 2026-07-17]`:** both scratch pre-flight tests (`EXPORT DATA`, `CREATE TEMP TABLE`,
+each inside a throwaway stored procedure) passed live; all 12 `CREATE OR REPLACE PROCEDURE
+ops.sp_sq_<name>` statements from `bigquery/75_scheduled_query_wrappers.sql` are applied and confirmed
+live (`INFORMATION_SCHEMA.ROUTINES` lists all 12: `sp_sq_backup_events_export`, `sp_sq_cadence_check`,
+`sp_sq_daily_freshness_check`, `sp_sq_daily_staging_cap_check`, `sp_sq_delivery_canary`,
+`sp_sq_embed_pending`, `sp_sq_fire_drill_alert_lifecycle`, `sp_sq_fire_drill_order_guard`,
+`sp_sq_integrity_check`, `sp_sq_ops_export`, `sp_sq_restore_drill`, `sp_sq_safety_critical_dml_watch`);
+`bigquery/63_scheduled_query_version_registry.sql`'s MERGE is applied (`v2` everywhere except
+`cadence_check` = `v5`, 12/12 rows confirmed by SELECT).
 
-**Step 2 (your action, only AFTER step 1 is confirmed done — verify first:**
-`SELECT routine_name FROM `stock-trading-498512.ops.INFORMATION_SCHEMA.ROUTINES` WHERE routine_name
-LIKE 'sp\_sq\_%'` **should list all the migrated `sp_sq_<name>` procedures):** re-paste each of the 12
+**Step 2 (your action — this is the one remaining piece):** repoint each scheduled query's live body
+to its one-line wrapper. Two ways to do it — pick whichever is easier:
+
+**2a. Console paste (original flow, `ops/RUNBOOK.md §1`):** re-paste each of the 12
 `bigquery/scheduled_queries/<name>.sql` files' NEW one-line body (just `CALL
 \`stock-trading-498512.ops.sp_sq_<name>\`();\`` plus its frozen header comment) into its existing
-BigQuery Studio → Scheduled Queries entry (same paste-and-save flow as ever, `ops/RUNBOOK.md §1`):
-`embed_pending`, `daily_freshness_check`, `cadence_check`, `integrity_check`,
-`safety_critical_dml_watch`, `daily_staging_cap_check`, `backup_events_export`, `ops_export`,
-`delivery_canary`, `restore_drill`, `fire_drill_order_guard`, `fire_drill_alert_lifecycle`.
-`safety_critical_dml_watch` is not registered as a live scheduled query at all yet (2026-07-11 item
-#2 below) — **create it fresh with this NEW one-line wrapper body**, not the old inline body, unless
-that item's own note says the CREATE TEMP TABLE pre-flight was rejected (in which case use the old
-inline body from that item, unchanged).
+BigQuery Studio → Scheduled Queries entry. `safety_critical_dml_watch` is not registered as a live
+scheduled query at all yet (2026-07-11 item #2 below) — **create it fresh with this NEW one-line
+wrapper body**, not the old inline body.
+
+**2b. `bq` CLI (faster, run from your own terminal — a Claude session attempted this on 2026-07-17
+and was blocked twice by the permission classifier, the second time with an explicit
+`[Protected-Scope IaC Apply]` reason telling it to have you run this directly instead of retrying):**
+
+```bash
+# 10 existing configs — repoint to the one-line wrapper call, same service account as today
+bq update --transfer_config \
+  --params='{"query": "CALL `stock-trading-498512.ops.sp_sq_embed_pending`();"}' \
+  --service_account_name=bq-scheduler@stock-trading-498512.iam.gserviceaccount.com \
+  projects/191682978805/locations/us/transferConfigs/6a566285-0000-22b5-b23f-240588836a44
+
+bq update --transfer_config \
+  --params='{"query": "CALL `stock-trading-498512.ops.sp_sq_daily_freshness_check`();"}' \
+  --service_account_name=bq-scheduler@stock-trading-498512.iam.gserviceaccount.com \
+  projects/191682978805/locations/us/transferConfigs/6a9c1592-0000-2caa-86b1-089e08214038
+
+bq update --transfer_config \
+  --params='{"query": "CALL `stock-trading-498512.ops.sp_sq_cadence_check`();"}' \
+  --service_account_name=bq-scheduler@stock-trading-498512.iam.gserviceaccount.com \
+  projects/191682978805/locations/us/transferConfigs/6a44a3d9-0000-2837-8b7b-883d24f5c8b8
+
+bq update --transfer_config \
+  --params='{"query": "CALL `stock-trading-498512.ops.sp_sq_integrity_check`();"}' \
+  --service_account_name=bq-scheduler@stock-trading-498512.iam.gserviceaccount.com \
+  projects/191682978805/locations/us/transferConfigs/6a4d603d-0000-2d5d-b9af-14223bafe266
+
+bq update --transfer_config \
+  --params='{"query": "CALL `stock-trading-498512.ops.sp_sq_daily_staging_cap_check`();"}' \
+  --service_account_name=bq-scheduler@stock-trading-498512.iam.gserviceaccount.com \
+  projects/191682978805/locations/us/transferConfigs/6a68ee9c-0000-2256-b525-d4f547ef3b54
+
+bq update --transfer_config \
+  --params='{"query": "CALL `stock-trading-498512.ops.sp_sq_backup_events_export`();"}' \
+  --service_account_name=bq-scheduler@stock-trading-498512.iam.gserviceaccount.com \
+  projects/191682978805/locations/us/transferConfigs/6a509810-0000-2279-a65e-f4f5e80c4144
+
+bq update --transfer_config \
+  --params='{"query": "CALL `stock-trading-498512.ops.sp_sq_ops_export`();"}' \
+  --service_account_name=bq-scheduler@stock-trading-498512.iam.gserviceaccount.com \
+  projects/191682978805/locations/us/transferConfigs/6a43d4f7-0000-276c-b1fb-7474463ce22d
+
+bq update --transfer_config \
+  --params='{"query": "CALL `stock-trading-498512.ops.sp_sq_delivery_canary`();"}' \
+  --service_account_name=bq-scheduler@stock-trading-498512.iam.gserviceaccount.com \
+  projects/191682978805/locations/us/transferConfigs/6a42a5b5-0000-2c87-aa3f-f4f5e80c48cc
+
+bq update --transfer_config \
+  --params='{"query": "CALL `stock-trading-498512.ops.sp_sq_restore_drill`();"}' \
+  --service_account_name=bq-scheduler@stock-trading-498512.iam.gserviceaccount.com \
+  projects/191682978805/locations/us/transferConfigs/6a4ecee9-0000-2ec0-9c94-24058883b1bc
+
+bq update --transfer_config \
+  --params='{"query": "CALL `stock-trading-498512.ops.sp_sq_fire_drill_order_guard`();"}' \
+  --service_account_name=bq-scheduler@stock-trading-498512.iam.gserviceaccount.com \
+  projects/191682978805/locations/us/transferConfigs/6a6e6bc0-0000-2958-b24a-ac3eb142eb78
+
+# 2 new configs — safety_critical_dml_watch (every 6h) + fire_drill_alert_lifecycle (monthly, 1st @ 06:20 UTC)
+bq mk --transfer_config \
+  --project_id=stock-trading-498512 \
+  --data_source=scheduled_query \
+  --display_name="safety-critical-dml-watch" \
+  --target_dataset=ops \
+  --schedule="every 6 hours" \
+  --service_account_name=bq-scheduler@stock-trading-498512.iam.gserviceaccount.com \
+  --params='{"query": "CALL `stock-trading-498512.ops.sp_sq_safety_critical_dml_watch`();"}'
+
+bq mk --transfer_config \
+  --project_id=stock-trading-498512 \
+  --data_source=scheduled_query \
+  --display_name="fire-drill-alert-lifecycle" \
+  --target_dataset=ops \
+  --schedule="1st of month 06:20" \
+  --service_account_name=bq-scheduler@stock-trading-498512.iam.gserviceaccount.com \
+  --params='{"query": "CALL `stock-trading-498512.ops.sp_sq_fire_drill_alert_lifecycle`();"}'
+```
+
+For both new configs, also enable email-on-failure the same way the existing notify-enabled jobs are
+set (BigQuery Studio → Scheduled Queries → the new entry → Options → "Email notifications", or the
+`emailPreferences` field on a follow-up `bq update --transfer_config` — the CLI does not expose this
+flag directly, so the console toggle is the simpler path even if you use 2b for the create/update).
 
 **If you paste Step 2 before Step 1 has actually happened:** the `CALL` errors (the procedure doesn't
 exist yet) and the notify-enabled jobs email you — fail-visible, not a silent regression, by design
