@@ -109,6 +109,8 @@ jobs:
           # Pacific day — which would deterministically re-fail and burn the attempt budget).
           today_pt=$(TZ=America/Los_Angeles date +%F)
           while IFS= read -r line; do
+            # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted markdown
+            # branch-name pattern must stay literal, not shell-expanded.
             br=$(echo "$line" | sed -nE 's/^- `([^`]+)` .*/\1/p'); [ -n "$br" ] || continue
             sha=$(git rev-parse "refs/remotes/$br" 2>/dev/null) || continue
             run_json=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow CI --commit "$sha" --limit 1 --json databaseId,conclusion,updatedAt,attempt --jq '.[0] // empty' 2>/dev/null) || continue

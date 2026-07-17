@@ -175,6 +175,8 @@ jobs:
           # issue behavior above. Non-fatal until the table-scoped gh-ci-runner@ dataEditor grant on
           # ops.ci_findings lands (OWNER_ACTIONS.md).
           detail=$(printf '%s: ' "${{ steps.audit.outputs.result }}"; head -c 4000 /tmp/audit_finding.txt 2>/dev/null || echo "no detail file")
+          # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted BigQuery
+          # identifier and @p_detail/@p_url named parameters must stay literal, not shell-expanded.
           bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_detail:STRING:${detail}" --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("wif-binding-audit","wif_binding","open",@p_detail,@p_url)' || echo "::warning::ops.ci_findings insert failed — bridge inactive until the gh-ci-runner@ grant lands (OWNER_ACTIONS.md); GH issue path unaffected."
 
       - name: Close finding issue if resolved
@@ -193,4 +195,6 @@ jobs:
           # CI-findings bridge (2026-07-16, CC-1): unconditional resolved-row INSERT so a
           # manually-closed GH issue never strands an open ops.ci_findings row. Non-fatal until the
           # grant lands.
+          # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted BigQuery
+          # identifier and @p_url named parameter must stay literal, not shell-expanded.
           bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("wif-binding-audit","wif_binding","resolved","audit clean this run",@p_url)' || echo "::warning::ops.ci_findings resolved-row insert failed — bridge inactive until the gh-ci-runner@ grant lands; GH issue path unaffected."
