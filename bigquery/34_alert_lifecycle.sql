@@ -96,18 +96,31 @@ BEGIN
   DECLARE staleness_would_clear BOOL;
 
   -- Rule 1: missing_dependency.
+  -- NOTE (self-improvement audit, 2026-07-14): the per-alert eligibility test MUST be evaluated with
+  -- GROUP BY a.alert_id + HAVING (each alert clears only when ALL its deps completed, or its window
+  -- closed), but that grouped query returns one row PER qualifying alert. Feeding it straight into a
+  -- scalar `SET eligible_dep = (SELECT ...)` therefore raised "Scalar subquery produced more than one
+  -- element" whenever >=2 alerts of a class were eligible -- i.e. exactly the multi-alert cascade this
+  -- procedure exists to unwind -- silently aborting the whole (best-effort-wrapped) auto-resolve for
+  -- every routine and letting stale missing_dependency/missed_run/routine_stalled alerts pile up
+  -- (owner re-emailed every alert_emailer.gs poll). Fix: wrap the GROUP BY+HAVING select as an inner
+  -- subquery and ARRAY_AGG over it in a non-grouped outer select (single row -> single array).
+  -- Eligibility predicates are UNCHANGED -- only the aggregation shape is corrected. Rules 2 & 3 below
+  -- shared the identical defect and identical fix; Rule 4 (no GROUP BY) was already correct.
   SET eligible_dep = (
-    SELECT ARRAY_AGG(a.alert_id)
-    FROM `stock-trading-498512.ops.alerts` a
-    CROSS JOIN UNNEST(SPLIT(JSON_VALUE(a.payload, '$.missing_deps'), ', ')) AS dep
-    LEFT JOIN `stock-trading-498512.ops.run_log` r
-      ON r.routine = dep AND r.status = 'completed'
-         AND r.run_date >= SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(a.payload, '$.run_date'))
-    WHERE NOT a.resolved AND a.category = 'missing_dependency'
-      AND a.category IN (SELECT category FROM `stock-trading-498512.ops.alert_policy` WHERE NOT latching)
-    GROUP BY a.alert_id
-    HAVING LOGICAL_AND(r.routine IS NOT NULL)
-        OR SAFE.PARSE_DATE('%Y-%m-%d', ANY_VALUE(JSON_VALUE(a.payload, '$.run_date'))) < DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 1 DAY)
+    SELECT ARRAY_AGG(alert_id) FROM (
+      SELECT a.alert_id
+      FROM `stock-trading-498512.ops.alerts` a
+      CROSS JOIN UNNEST(SPLIT(JSON_VALUE(a.payload, '$.missing_deps'), ', ')) AS dep
+      LEFT JOIN `stock-trading-498512.ops.run_log` r
+        ON r.routine = dep AND r.status = 'completed'
+           AND r.run_date >= SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(a.payload, '$.run_date'))
+      WHERE NOT a.resolved AND a.category = 'missing_dependency'
+        AND a.category IN (SELECT category FROM `stock-trading-498512.ops.alert_policy` WHERE NOT latching)
+      GROUP BY a.alert_id
+      HAVING LOGICAL_AND(r.routine IS NOT NULL)
+          OR SAFE.PARSE_DATE('%Y-%m-%d', ANY_VALUE(JSON_VALUE(a.payload, '$.run_date'))) < DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 1 DAY)
+    )
   );
   UPDATE `stock-trading-498512.ops.alerts`
   SET resolved = TRUE, resolved_ts = CURRENT_TIMESTAMP(),
@@ -116,18 +129,20 @@ BEGIN
 
   -- Rule 2: missed_run (payload is a JSON array of {routine, schedule, today}).
   SET eligible_run = (
-    SELECT ARRAY_AGG(a.alert_id)
-    FROM `stock-trading-498512.ops.alerts` a
-    CROSS JOIN UNNEST(JSON_QUERY_ARRAY(a.payload)) AS item
-    LEFT JOIN `stock-trading-498512.ops.run_log` r
-      ON r.routine = JSON_VALUE(item, '$.routine') AND r.status = 'completed'
-         AND r.run_date >= SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(item, '$.today'))
-    WHERE NOT a.resolved AND a.category = 'missed_run'
-      AND a.category IN (SELECT category FROM `stock-trading-498512.ops.alert_policy` WHERE NOT latching)
-    GROUP BY a.alert_id
-    HAVING LOGICAL_AND(
-      r.routine IS NOT NULL
-      OR SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(item, '$.today')) < DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 1 DAY)
+    SELECT ARRAY_AGG(alert_id) FROM (
+      SELECT a.alert_id
+      FROM `stock-trading-498512.ops.alerts` a
+      CROSS JOIN UNNEST(JSON_QUERY_ARRAY(a.payload)) AS item
+      LEFT JOIN `stock-trading-498512.ops.run_log` r
+        ON r.routine = JSON_VALUE(item, '$.routine') AND r.status = 'completed'
+           AND r.run_date >= SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(item, '$.today'))
+      WHERE NOT a.resolved AND a.category = 'missed_run'
+        AND a.category IN (SELECT category FROM `stock-trading-498512.ops.alert_policy` WHERE NOT latching)
+      GROUP BY a.alert_id
+      HAVING LOGICAL_AND(
+        r.routine IS NOT NULL
+        OR SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(item, '$.today')) < DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 1 DAY)
+      )
     )
   );
   UPDATE `stock-trading-498512.ops.alerts`
@@ -137,19 +152,21 @@ BEGIN
 
   -- Rule 3: routine_stalled (payload is a JSON array of {routine, run_date, hours_since_started}).
   SET eligible_stalled = (
-    SELECT ARRAY_AGG(a.alert_id)
-    FROM `stock-trading-498512.ops.alerts` a
-    CROSS JOIN UNNEST(JSON_QUERY_ARRAY(a.payload)) AS item
-    LEFT JOIN `stock-trading-498512.ops.run_log` r
-      ON r.routine = JSON_VALUE(item, '$.routine')
-         AND r.run_date = SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(item, '$.run_date'))
-         AND r.status IN ('completed', 'failed', 'halted')
-    WHERE NOT a.resolved AND a.category = 'routine_stalled'
-      AND a.category IN (SELECT category FROM `stock-trading-498512.ops.alert_policy` WHERE NOT latching)
-    GROUP BY a.alert_id
-    HAVING LOGICAL_AND(
-      r.routine IS NOT NULL
-      OR SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(item, '$.run_date')) < DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 1 DAY)
+    SELECT ARRAY_AGG(alert_id) FROM (
+      SELECT a.alert_id
+      FROM `stock-trading-498512.ops.alerts` a
+      CROSS JOIN UNNEST(JSON_QUERY_ARRAY(a.payload)) AS item
+      LEFT JOIN `stock-trading-498512.ops.run_log` r
+        ON r.routine = JSON_VALUE(item, '$.routine')
+           AND r.run_date = SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(item, '$.run_date'))
+           AND r.status IN ('completed', 'failed', 'halted')
+      WHERE NOT a.resolved AND a.category = 'routine_stalled'
+        AND a.category IN (SELECT category FROM `stock-trading-498512.ops.alert_policy` WHERE NOT latching)
+      GROUP BY a.alert_id
+      HAVING LOGICAL_AND(
+        r.routine IS NOT NULL
+        OR SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(item, '$.run_date')) < DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 1 DAY)
+      )
     )
   );
   UPDATE `stock-trading-498512.ops.alerts`

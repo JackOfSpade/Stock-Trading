@@ -283,12 +283,15 @@ BEGIN
   END IF;
 
   -- ====================================================================================
-  -- 2026-06-28 stack-review #2 additions (all WARNING, record-only — never flip all_green / RAISE).
+  -- 2026-06-28 stack-review #2 additions (originally all WARNING, record-only. restore_stale was PROMOTED
+  -- to CRITICAL + RAISE-contributing on 2026-07-11 by D3's monitor-promotion self-flip once its readiness
+  -- view fired — ITEM 24; ddl_drift below remains staged-rollout WARNING until its 14-clean-day bar is met).
   -- Reference views in bigquery/17_restore_drill.sql (state.restore_health) and
   -- bigquery/19_stack_review_fixes_2.sql (state.ddl_drift) — APPLY 17 + 19 BEFORE re-pasting this query.
   -- ====================================================================================
 
-  -- restore_stale (warning, #4) — the monthly restore drill has not completed in >40 days OR its last run
+  -- restore_stale (CRITICAL as of 2026-07-11, promoted from warning per ITEM 24 — see the self-flip note
+  -- at the IF block below; #4) — the monthly restore drill has not completed in >40 days OR its last run
   -- did not pass. A drill that writes nothing on success is otherwise invisible (state.restore_health off
   -- ops.drill_log). A silently-paused DR drill means "DR verified monthly" is a belief, not a fact. (A dead
   -- drill SCHEDULER is additionally caught by the Cloud Monitoring absence policy in monitoring.tf.)
@@ -314,13 +317,21 @@ BEGIN
   WHEN NOT MATCHED THEN
     INSERT (check_id, check_date, clean) VALUES (S.check_id, S.check_date, S.clean);
 
+  -- PROMOTED WARNING->CRITICAL (2026-07-11, D3 monitor-promotion self-flip per ITEM 24): once
+  -- state.restore_stale_promotion_readiness.ready=TRUE (monitored=TRUE AND last drill passed — the
+  -- RUNBOOK's own stated bar), D3 self-applies this promotion. Now a RAISE-contributing critical,
+  -- wired into raise_msg like backup_stale/automation_heartbeat above (a silently-stale DR drill is a
+  -- capital-safety fact, not a buried warning). ops.monitor_promotion_log guards idempotency.
   IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.restore_health` WHERE stale) THEN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
-      'warning', 'scheduled.cadence', 'restore_stale',
+      'critical', 'scheduled.cadence', 'restore_stale',
       (SELECT CONCAT('Restore-drill health: last drill ', CAST(last_drill_date AS STRING),
                      ' (passed=', CAST(last_drill_passed AS STRING), ') — stale or failing')
        FROM `stock-trading-498512.state.restore_health`),
       (SELECT TO_JSON_STRING(t) FROM `stock-trading-498512.state.restore_health` t));
+    SET raise_msg = raise_msg || (SELECT CONCAT('[restore_stale] last_drill=',
+      CAST(last_drill_date AS STRING), ' passed=', CAST(last_drill_passed AS STRING), '; ')
+      FROM `stock-trading-498512.state.restore_health`);
   END IF;
 
   -- ddl_drift (warning, #7) — a live events.* audit table's STRUCTURE (NOT NULL / type / partition /
