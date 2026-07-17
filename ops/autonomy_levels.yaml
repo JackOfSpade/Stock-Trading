@@ -76,7 +76,8 @@ loops:
     ceiling: active_auto
     artifact: analytics.routine_health_scorecard (bigquery/27_process_reliability.sql) +
       state.process_reliability_readiness / ops.process_reliability_observations /
-      ops.process_constant_change_log (bigquery/37_self_improvement_autonomy.sql)
+      ops.process_constant_change_log (bigquery/37_self_improvement_autonomy.sql) +
+      state.process_constant_oos_watch (bigquery/72_constant_tuning_oos_watch.sql — post-change OOS watch + auto-revert fail-safe, 2026-07-16)
     gate_to_next_stage: >
       DATA-SUFFICIENCY GATE (UNCHANGED, preserved): analytics.routine_health_scorecard must have >=3
       consecutive weeks of data for at least one routine (the loop's own natural N>=20 / 3-week floor, per
@@ -132,7 +133,8 @@ loops:
                                   # whether it does anything on a given firing.
     ceiling: active_auto
     artifact: analytics.execution_quality / state.execution_quality_readiness /
-      ops.exec_rule_change_log (bigquery/37_self_improvement_autonomy.sql)
+      ops.exec_rule_change_log (bigquery/37_self_improvement_autonomy.sql) +
+      state.exec_rule_oos_watch (bigquery/72_constant_tuning_oos_watch.sql — post-change OOS watch + auto-revert fail-safe, 2026-07-16)
     gate_to_next_stage: >
       DATA-SUFFICIENCY GATE (UNCHANGED, preserved): not actionable at today's fill volume (~23 fills, mostly
       SGOV). Requires >=8 single-name (non-SGOV) fills with a consistent-sign slippage signal before any
