@@ -259,9 +259,18 @@ def _gemini_call(prompt, api_key, ladder, state):
 
     def _try_model(model):
         """Try ONE model, escalating maxOutputTokens on MAX_TOKENS truncation up to the ceiling. Returns
-        the answer text on success, or None (setting nonlocal last_err) if this model should be skipped."""
+        the answer text on success, or None (setting nonlocal last_err) if this model should be skipped.
+
+        The starting budget is the run-level HIGH-WATER MARK (state['budget']), not always _START: once
+        any scenario in this run had to escalate, every later scenario/model starts at that discovered
+        budget instead of re-truncating its way back up from _START each time (the 23 scenarios have the
+        same prompt shape, so if one needs a bigger budget they all do — this spends the per-model daily
+        request quota once per run, not once per scenario). It never ratchets DOWN within a run; a bigger
+        cap costs nothing per request (the model still emits only the short answer), and every ladder
+        model accepts up to the ceiling, so carrying the mark across models is safe. state is fresh per
+        run (created in _select_live_caller), so a new CI run re-starts at _START."""
         nonlocal last_err
-        budget = GEMINI_MAX_OUTPUT_TOKENS_START
+        budget = state["budget"]
         while True:
             try:
                 text, finish = _post(model, budget)
@@ -279,12 +288,14 @@ def _gemini_call(prompt, api_key, ladder, state):
             # retry the SAME model — the reasoning ran past the budget before reaching the DECISION line.
             if finish == "MAX_TOKENS" and budget < GEMINI_MAX_OUTPUT_TOKENS_CEIL:
                 budget = min(budget * 2, GEMINI_MAX_OUTPUT_TOKENS_CEIL)
+                state["budget"] = budget   # high-water mark: later scenarios/models start here, not _START
                 continue
             # Empty for another reason (safety block, unexpected finishReason) or still truncating at the
             # ceiling — give up on this model and advance the ladder.
             last_err = f"{model}: empty response (finishReason={finish or '?'}, maxOutputTokens={budget})"
             return None
 
+    state.setdefault("budget", GEMINI_MAX_OUTPUT_TOKENS_START)  # run-level output-budget high-water mark
     # Sticky exhaustion: if an earlier scenario in this run already walked the whole ladder (bad key /
     # total quota-out), state['idx'] is past the end — say so clearly rather than a bare "None".
     last_err = "ladder already exhausted earlier this run" if state["idx"] >= len(ladder) else None
@@ -305,7 +316,9 @@ def _select_live_caller():
     gemini_key = os.environ.get("GEMINI_API_KEY")
     if gemini_key:
         ladder = GEMINI_MODEL_LADDER
-        state = {"idx": 0}
+        # Shared across all scenarios in this run: idx = ladder position (sticky), budget = output-token
+        # high-water mark (sticky, never resets down within a run). Fresh dict per run => fresh start.
+        state = {"idx": 0, "budget": GEMINI_MAX_OUTPUT_TOKENS_START}
         print(f"::notice::golden live run — provider=Gemini (free tier); model ladder: {', '.join(ladder)}",
               file=sys.stderr)
 

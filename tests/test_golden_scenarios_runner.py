@@ -260,3 +260,25 @@ def test_gemini_budget_escalation_is_bounded_then_advances(monkeypatch):
     assert seen_m1[-1] == rg.GEMINI_MAX_OUTPUT_TOKENS_CEIL
     assert max(seen_m1) == rg.GEMINI_MAX_OUTPUT_TOKENS_CEIL      # never exceeds the ceiling
     assert seen_m1 == sorted(seen_m1)                            # monotonically escalating
+
+
+def test_gemini_budget_high_water_mark_persists_across_scenarios(monkeypatch):
+    # Once one scenario escalates the budget, the NEXT scenario (sharing the same run `state`) must START
+    # at the discovered budget — not re-truncate its way back up from _START each time.
+    seen = []
+
+    def fake_urlopen(req, timeout=180):
+        budget = _budget_of(req)
+        seen.append(budget)
+        if budget <= rg.GEMINI_MAX_OUTPUT_TOKENS_START:  # only the smallest budget truncates
+            return _FakeResp({"candidates": [{"content": {"parts": []}, "finishReason": "MAX_TOKENS"}]})
+        return _FakeResp({"candidates": [{"content": {"parts": [{"text": "DECISION: GO\nRATIONALE: x"}]},
+                                          "finishReason": "STOP"}]})
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    state = {"idx": 0}  # no explicit budget => _gemini_call seeds it to _START via setdefault
+    rg._gemini_call("scenario-1", "k", ["m"], state)     # truncates at _START, escalates to 2*_START
+    assert state["budget"] == rg.GEMINI_MAX_OUTPUT_TOKENS_START * 2
+    seen.clear()
+    rg._gemini_call("scenario-2", "k", ["m"], state)     # must reuse the mark: ONE call, no re-truncation
+    assert seen == [rg.GEMINI_MAX_OUTPUT_TOKENS_START * 2]

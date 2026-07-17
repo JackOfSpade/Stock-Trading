@@ -785,7 +785,10 @@ done_when: == 'true'
   accuracy, with an **adaptive `maxOutputTokens` budget**: it starts at 8192 and, if a call truncates
   (finishReason=MAX_TOKENS, i.e. reasoning ran past the budget before the DECISION line), it doubles the
   budget and retries the same model up to a 65536 ceiling before falling to the next ladder model — so a
-  hard scenario auto-recovers instead of erroring.
+  hard scenario auto-recovers instead of erroring. The discovered budget is a **run-level high-water
+  mark**: once one scenario escalates, later scenarios in the same run start at that budget instead of
+  re-truncating from 8192 each time (conserves the per-model daily request quota); it resets to 8192 on
+  the next run.
   **Owner follow-up (security):** the Gemini key was pasted into a chat during setup, so rotate it —
   generate a new key in AI Studio and run `gh secret set GEMINI_API_KEY -R JackOfSpade/Stock-Trading`
   (omit the value; it prompts securely; the `-R` flag means it works from any directory), which
