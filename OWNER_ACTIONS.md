@@ -725,7 +725,7 @@ probe: gh api "repos/${GITHUB_REPOSITORY}/actions/workflows" --jq '.workflows[] 
 done_when: output == 'active'
 ```
 
-## E. Add 3 missing GitHub Actions secrets
+## E. Add 3 missing GitHub Actions secrets — `[DONE 2026-07-17]` (all 3 resolved; see per-secret status below)
 
 **Checked live** (`gh secret list`): zero repo secrets exist today. Three are referenced across
 workflows and are all currently no-ops without them (each usage is already guarded/best-effort —

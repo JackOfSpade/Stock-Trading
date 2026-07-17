@@ -19,6 +19,19 @@
 # a human review/approval/chat/PR gate (CLAUDE.md "Settled decisions" — SISA autonomy is not to be
 # re-gated by this or any other check).
 #
+# KNOWN FREE-TIER EVAL LIMITATION (2026-07-17). The live diff runs on Gemini's FREE tier
+# (run_golden.py, owner directive). Two kill-trigger scenarios — KT-04 (runaway-success: TWR doubled
+# pre-gate) and KT-07 (mark-to-market underperformance past the 36-month floor) — persistently flip
+# CONTINUE->TERMINATE on that tier. This was investigated 2026-07-17: it is a MODEL-PRECISION limit,
+# NOT a prose ambiguity. Both triggers' governing prose is explicit that the immediate action is to
+# ROUTE TO A STRUCTURED REVIEW, not terminate directly (Experiment_Parameters.md kill-trigger #3 line
+# "doesn't terminate the strategy directly; it forces a structured review", and #4's "structured review
+# rather than mechanical termination"); a capable model returns CONTINUE, the Flash tier over-terminates
+# on the kill-signal. The prose was deliberately NOT weakened to appease the eval model. TRIAGE: treat a
+# standing KT-04/KT-07 flip as expected free-tier noise, NOT a regression — a real prose regression is a
+# CHANGE in the flip set (a previously-matching scenario newly flipping, or these two flipping in a NEW
+# direction). D3's prose-regression re-check runs on Claude (not Gemini) and adjudicates authoritatively.
+#
 # SCHEMA (validated offline, no network, by run_golden.py --offline — the CI HARD GATE):
 #   id                 — short stable identifier, unique across this file (e.g. RR-01, KT-05, SB-02).
 #   situation          — self-contained prose description of the facts a routine session would be given.
@@ -243,7 +256,7 @@ scenarios:
       gate). Its deployed TWR, measured from its first trade, has reached +104% (more than doubled).
       What should happen to this strategy?
     governing_files: [Experiment_Parameters.md, Claude_Task_Plan.md]
-    expected_decision: "CONTINUE (routes to an m2m-termination structured review, not direct terminate)"
+    expected_decision: "CONTINUE (routes to a runaway-success structured review, not direct terminate)"
     rationale: >
       Experiment_Parameters.md kill trigger #3 (Runaway-success): deployed TWR doubles before the
       strategy reaches its 30-trade gate -> flags a RUNAWAY-SUCCESS REVIEW, which "doesn't terminate the
