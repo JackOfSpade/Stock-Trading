@@ -46,13 +46,22 @@ def find_referenced_tools():
 
 
 def load_allowlist():
-    """Read .claude/settings.json's permissions.allow — the actual JSON list, not a regex scrape."""
+    """Read .claude/settings.json's permissions.allow — the actual JSON list, not a regex scrape.
+
+    Coverage is deliberately by EXACT tool token: a referenced mcp__Server__tool is covered only by an
+    identical allow entry, NOT by a server-level `mcp__Server` grant or a `mcp__Server__*` wildcard.
+    That strictness is intentional and must not be relaxed — the harness does not expand such grants
+    into per-tool approvals at call time, so honoring them here would pass a tool that would still
+    stall an unattended session (a false negative). Every tool a routine calls must be listed explicitly.
+    """
     with open(SETTINGS_JSON, encoding="utf-8") as f:
         data = json.load(f)
     allow = data.get("permissions", {}).get("allow", [])
-    # Entries are plain mcp__... strings in this repo's settings.json; keep only those that
-    # look like MCP tool tokens (ignore any future non-tool permission strings, e.g. Bash(...)).
-    return {a for a in allow if MCP_TOKEN.fullmatch(a)}
+    # Keep only entries that are exact MCP tool tokens. `isinstance(a, str)` guards a malformed
+    # non-string entry (e.g. a dict) so this gate reports cleanly instead of crashing with a
+    # TypeError; the fullmatch filter drops non-tool permission strings (e.g. Bash(...)) and any
+    # server-level / wildcard grant (see the docstring — those are intentionally NOT coverage).
+    return {a for a in allow if isinstance(a, str) and MCP_TOKEN.fullmatch(a)}
 
 
 def main():

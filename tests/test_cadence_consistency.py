@@ -25,6 +25,14 @@ def _load():
 cc = _load()
 
 
+def test_routine_suffix_dead_reexport_removed():
+    # The unused ROUTINE_SUFFIX re-export was removed (2026-07-17): heading parsing is delegated
+    # entirely to lib.routine_manifest, nothing in this module references the name, and no other
+    # module imports it from here. Guards against a future re-introduction of the dead binding.
+    assert not hasattr(cc, "ROUTINE_SUFFIX")
+    assert not hasattr(cc, "_ROUTINE_SUFFIX")
+
+
 # ---- heading_to_id: the id-extraction rule the catalog + expected maps key on ----
 def test_heading_to_id_handles_all_id_shapes():
     assert cc.heading_to_id("D1. Market Development Scan — deep research") == "D1"
@@ -669,3 +677,251 @@ def test_gen_12_region_tolerates_missing_monitor_class_like_gen_24():
     rows = [{"id": "D1", "monitor_class": "daily_trading"}, {"id": "X9"}]
     out = gen.gen_12_region(rows)
     assert "'D1'" in out and "'X9'" not in out
+
+
+# ==================================================================================================
+# Coverage added by the parallel refactor (2026-07-17, Part B). These pin branches that previously
+# ran ONLY via the aggregate `main()==0` end-to-end tests — precisely the vacuous-pass class this
+# module's docstring exists to prevent — plus the new catchup_list_errors() check-K helper.
+# All offline / no creds.
+# ==================================================================================================
+
+# ---- catchup_list_errors(): the extracted check-K helper (bigquery/31 daily + bigquery/59 period
+#      share it). The daily/31 side previously had NO error-level coverage — only the 59 side did. ----
+def test_catchup_list_errors_absent_file_is_silent(tmp_path):
+    cad = {"D1": {"catchup_safe": True, "monitor_class": "daily_trading"}}
+    assert cc.catchup_list_errors(cad, str(tmp_path / "absent.sql"),
+                                  "bigquery/31_catchup_notify.sql", "daily", cc.DAILY_CLASSES) == []
+
+
+def test_catchup_list_errors_matching_list_is_silent(tmp_path):
+    f = tmp_path / "31.sql"
+    f.write_text("SELECT routine FROM UNNEST(['D1']) AS routine\n")
+    cad = {"D1": {"catchup_safe": True, "monitor_class": "daily_trading"}}
+    assert cc.catchup_list_errors(cad, str(f), "bigquery/31_catchup_notify.sql",
+                                  "daily", cc.DAILY_CLASSES) == []
+
+
+def test_catchup_list_errors_daily_drift_31_side_is_caught(tmp_path):
+    f = tmp_path / "31.sql"
+    f.write_text("SELECT routine FROM UNNEST(['ZZ']) AS routine\n")  # cadence wants D1, file has ZZ
+    cad = {"D1": {"catchup_safe": True, "monitor_class": "daily_trading"}}
+    errs = cc.catchup_list_errors(cad, str(f), "bigquery/31_catchup_notify.sql", "daily", cc.DAILY_CLASSES)
+    assert len(errs) == 1
+    assert "bigquery/31_catchup_notify.sql catchup-safe daily UNNEST list DRIFT" in errs[0]
+    assert "['ZZ']" in errs[0] and "['D1']" in errs[0]
+
+
+def test_catchup_list_errors_daily_disarmed_31_side_is_caught(tmp_path):
+    f = tmp_path / "31.sql"
+    f.write_text("SELECT routine FROM UNNEST(['D1']) AS  routine\n")  # double space breaks the bracket regex
+    cad = {"D1": {"catchup_safe": True, "monitor_class": "daily_trading"}}
+    assert cc.parse_unnest_routine_ids(str(f)) is None  # confirm the reformat disarms parsing
+    errs = cc.catchup_list_errors(cad, str(f), "bigquery/31_catchup_notify.sql", "daily", cc.DAILY_CLASSES)
+    assert len(errs) == 1
+    assert "bigquery/31_catchup_notify.sql" in errs[0] and "DISARMED" in errs[0]
+
+
+# ---- check M: the H1 evening-slot SAME-DAY guard noon-threshold clause (main() had no unit test) ----
+def _guard_line(rid, with_noon=True, broken=False):
+    # Mirrors the real Claude_Task_Plan.md guard query shape. `broken` spaces out status='completed'
+    # so GUARD_QUERY_RE stops matching (the regex-rot / DISARMED case); `with_noon=False` drops the
+    # noon clause (the MISSING case).
+    completed = "status = 'completed'" if broken else "status='completed'"
+    noon = (" AND DATETIME(log_ts,'America/Denver') >= "
+            "DATETIME(<today, America/Denver>, TIME '12:00:00')") if with_noon else ""
+    return f"{rid} guard: `routine='{rid}' AND run_date=<today, America/Denver> AND {completed}{noon}`\n"
+
+
+def _plan_with_guards(d1=True, d2=True, d3=True, sl3=True, d1_broken=False):
+    # Keeps the D1 heading (check C) and adds the SAME-DAY sentinel + one guard query per
+    # EVENING_DAILY_GUARD_IDS routine. D2/D3/SL3 appear only in guard-query BODY text, never as `## `
+    # headings, so they create no phantom routines.
+    return ("## D1. Market Development Scan — deep research\nbody\n\n"
+            "Shared Observability guard SAME-DAY DOUBLE-RUN GUARD (CYCLE-AWARE VARIANT):\n"
+            + _guard_line("D1", with_noon=d1, broken=d1_broken)
+            + _guard_line("D2", with_noon=d2)
+            + _guard_line("D3", with_noon=d3)
+            + _guard_line("SL3", with_noon=sl3))
+
+
+def test_check_m_happy_path_all_guards_have_noon_clause(tmp_path, monkeypatch):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    plan.write_text(_plan_with_guards())
+    assert cc.main() == 0
+
+
+def test_check_m_missing_noon_clause_is_caught(tmp_path, monkeypatch, capsys):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    plan.write_text(_plan_with_guards(d1=False))  # D1's guard copy loses its noon clause
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert "D1" in out and "MISSING the noon-threshold clause" in out
+
+
+def test_check_m_disarmed_when_guard_query_unparseable_is_caught(tmp_path, monkeypatch, capsys):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    plan.write_text(_plan_with_guards(d1_broken=True))  # D1's query no longer matches GUARD_QUERY_RE
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert "D1" in out and "DISARMED" in out
+
+
+# ---- check I: expected_trigger structural validation (every failure branch was untested) ----
+def _setup_check_i(tmp_path, monkeypatch, routine_block):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    cadence.write_text(
+        "timezone: America/Denver\n"
+        'cadence_watch_deadline_local: "21:00"\n'
+        "routines:\n" + routine_block)
+    ids = tmp_path / "trigger_ids.json"
+    ids.write_text('{"D1": {"trigger_id": "trig_A", "verified_via": "api"}}')
+    monkeypatch.setattr(cc, "TRIGGER_IDS_JSON", str(ids))
+
+
+def test_check_i_well_formed_expected_trigger_is_clean(tmp_path, monkeypatch):
+    _setup_check_i(tmp_path, monkeypatch,
+                   "  - id: D1\n    monitor_class: daily_trading\n    catchup_safe: true\n"
+                   "    expected_trigger:\n      recurrence: daily\n      enabled: true\n"
+                   '      time_local: "09:30"\n')
+    assert cc.main() == 0
+
+
+def test_check_i_missing_expected_trigger_with_live_id_is_caught(tmp_path, monkeypatch, capsys):
+    _setup_check_i(tmp_path, monkeypatch,
+                   "  - id: D1\n    monitor_class: daily_trading\n    catchup_safe: true\n")
+    assert cc.main() == 1
+    assert "no 'expected_trigger'" in capsys.readouterr().out
+
+
+def test_check_i_bad_recurrence_is_caught(tmp_path, monkeypatch, capsys):
+    _setup_check_i(tmp_path, monkeypatch,
+                   "  - id: D1\n    monitor_class: daily_trading\n    catchup_safe: true\n"
+                   "    expected_trigger:\n      recurrence: hourly\n      enabled: true\n")
+    assert cc.main() == 1
+    assert "recurrence='hourly'" in capsys.readouterr().out
+
+
+def test_check_i_missing_enabled_is_caught(tmp_path, monkeypatch, capsys):
+    _setup_check_i(tmp_path, monkeypatch,
+                   "  - id: D1\n    monitor_class: daily_trading\n    catchup_safe: true\n"
+                   "    expected_trigger:\n      recurrence: daily\n" '      time_local: "09:30"\n')
+    assert cc.main() == 1
+    assert "missing 'enabled'" in capsys.readouterr().out
+
+
+def test_check_i_bad_time_local_is_caught(tmp_path, monkeypatch, capsys):
+    _setup_check_i(tmp_path, monkeypatch,
+                   "  - id: D1\n    monitor_class: daily_trading\n    catchup_safe: true\n"
+                   "    expected_trigger:\n      recurrence: daily\n      enabled: true\n"
+                   '      time_local: "9:30"\n')  # not HH:MM (single-digit hour)
+    assert cc.main() == 1
+    assert "time_local must be a quoted" in capsys.readouterr().out
+
+
+def test_check_i_empty_cron_utc_is_caught(tmp_path, monkeypatch, capsys):
+    _setup_check_i(tmp_path, monkeypatch,
+                   "  - id: D1\n    monitor_class: daily_trading\n    catchup_safe: true\n"
+                   "    expected_trigger:\n      recurrence: custom_cron\n      enabled: true\n"
+                   '      cron_utc: ""\n')
+    assert cc.main() == 1
+    assert "cron_utc must be a non-empty string" in capsys.readouterr().out
+
+
+# ---- check D: the 'multiple distinct deadline literals' branch (only the single-literal path was hit) ----
+def test_check_d_multiple_distinct_deadline_literals_is_caught(tmp_path, monkeypatch, capsys):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    cadence_sql.write_text(
+        "STRUCT('D1'  AS routine, 'daily_trading' AS schedule)\n"
+        "   AND DATETIME(CURRENT_TIMESTAMP(), 'America/Denver') >= DATETIME(e.today, TIME '21:00:00')\n"
+        "   AND DATETIME(CURRENT_TIMESTAMP(), 'America/Denver') >= DATETIME(e.today, TIME '22:00:00')\n")
+    assert cc.main() == 1
+    assert "multiple distinct deadline literals" in capsys.readouterr().out
+
+
+# ---- monitor_class presence + vocabulary; duplicate plan-heading detection ----
+def test_missing_monitor_class_is_caught(tmp_path, monkeypatch, capsys):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    cadence.write_text(
+        "timezone: America/Denver\n"
+        'cadence_watch_deadline_local: "21:00"\n'
+        "routines:\n  - id: D1\n    catchup_safe: true\n")  # monitor_class omitted entirely
+    assert cc.main() == 1
+    assert "missing monitor_class in ops/cadence.yaml" in capsys.readouterr().out
+
+
+def test_bad_monitor_class_vocabulary_is_caught(tmp_path, monkeypatch, capsys):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    cadence.write_text(
+        "timezone: America/Denver\n"
+        'cadence_watch_deadline_local: "21:00"\n'
+        "routines:\n  - id: D1\n    monitor_class: hourly_bogus\n    catchup_safe: true\n")
+    assert cc.main() == 1
+    assert "monitor_class 'hourly_bogus' not in" in capsys.readouterr().out
+
+
+def test_duplicate_plan_heading_is_caught(tmp_path, monkeypatch, capsys):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    plan.write_text(
+        "## D1. Market Development Scan — deep research\nbody\n"
+        "## D1. Market Development Scan — deep research\nbody\n")
+    assert cc.main() == 1
+    assert "duplicate Claude_Task_Plan.md heading for id D1" in capsys.readouterr().out
+
+
+# ---- check L: the AR_att 'Daily¹' footnote branch (queue_driven behind a Daily-cadence cell) ----
+_AR_ATT_PLAN = (
+    "## D1. Market Development Scan — deep research\nbody\n"
+    "## Adversarial Review Attacker — regular routine\nbody\n\n"
+    "# ROUTINE INVENTORY & BIGQUERY RESPONSIBILITIES\n\n"
+    "| ID | Routine | Cadence · Type | reads | writes | out |\n"
+    "|---|---|---|---|---|---|\n"
+    "| **D1** | Market Development Scan | Daily · research | r | w | Daily.md |\n"
+    "| **AR_att** | Adversarial Review Attacker | Daily¹ · regular | r | w | out.md |\n"
+    "\n---\n")
+_AR_ATT_CADENCE = (
+    "timezone: America/Denver\n"
+    'cadence_watch_deadline_local: "21:00"\n'
+    "routines:\n"
+    "  - id: D1\n    monitor_class: daily_trading\n    catchup_safe: true\n"
+    "  - id: AR_att\n    monitor_class: queue_driven\n    catchup_safe: false\n")
+_AR_ATT_SQL15 = (
+    "STRUCT('D1' AS routine, 'Read Claude_Task_Plan.md. Perform D1. Market Development Scan — deep research.' AS canonical_instruction),\n"
+    "STRUCT('AR_att', 'Read Claude_Task_Plan.md. Perform Adversarial Review Attacker — regular routine.')\n")
+
+
+def _write_ar_att_fixture(tmp_path, plan_text):
+    plan = tmp_path / "Claude_Task_Plan.md"
+    plan.write_text(plan_text)
+    cadence = tmp_path / "cadence.yaml"
+    cadence.write_text(_AR_ATT_CADENCE)
+    cadence_sql = tmp_path / "12.sql"
+    cadence_sql.write_text(
+        "STRUCT('D1'  AS routine, 'daily_trading' AS schedule)\n"
+        "   AND DATETIME(CURRENT_TIMESTAMP(), 'America/Denver') >= DATETIME(e.today, TIME '21:00:00')\n")
+    catalog_sql = tmp_path / "15.sql"
+    catalog_sql.write_text(_AR_ATT_SQL15)
+    return plan, cadence, cadence_sql, catalog_sql
+
+
+def test_check_l_ar_att_daily_footnote_maps_to_queue_driven(tmp_path, monkeypatch):
+    plan, cadence, cadence_sql, catalog_sql = _write_ar_att_fixture(tmp_path, _AR_ATT_PLAN)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    assert cc.main() == 0  # 'Daily¹' on AR_att legitimately encodes queue_driven
+
+
+def test_check_l_ar_att_plain_daily_without_footnote_is_caught(tmp_path, monkeypatch, capsys):
+    plan, cadence, cadence_sql, catalog_sql = _write_ar_att_fixture(
+        tmp_path, _AR_ATT_PLAN.replace("Daily¹ · regular", "Daily · regular"))
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    assert cc.main() == 1
+    # plain 'Daily' implies a daily_* class, but AR_att is queue_driven -> the footnote is required.
+    assert "ROUTINE INVENTORY cadence cell 'Daily'" in capsys.readouterr().out
