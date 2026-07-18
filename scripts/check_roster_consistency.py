@@ -214,9 +214,14 @@ GOLDEN_COVERAGE_STATES = {"shadow", "paper", "probe", "adopted"}
 
 # '## Strategy <CODE> ...' heading (Strategy.md + each generated slice). '[CANDIDATE]' = not roster-active.
 STRATEGY_HEADING = re.compile(r"^##\s+Strategy\s+([A-Z]{1,3})\b([^\n]*)$", re.M)
-# A bare UNNEST roster literal, e.g. ['A','B',...] or ['AB','CD',...] (codes are 1-3 letters, matching
-# STRATEGY_HEADING / SEED_ROW) — the thing R-B forbids.
-BARE_LITERAL = re.compile(r"\[\s*'[A-Z]{1,3}'\s*,\s*'[A-Z]{1,3}'")
+# A bare UNNEST roster literal, e.g. ['A','B',...], ["A","B",...], or a single-element ['A'] special-case
+# (codes are 1-3 letters, matching STRATEGY_HEADING / SEED_ROW) — the thing R-B forbids. BigQuery Standard
+# SQL accepts single- AND double-quoted string literals equally, and a hardcode can pin one code, so the
+# quote class is ['"] (matched pair via backreference) and the element after the first code may be a comma
+# (multi-element list) OR the closing bracket (single-element list). The original single-quote-only,
+# two-element-minimum pattern let `["A","B",...]` and `['A']` evade R-B entirely (2026-07-17 audit). The
+# comment notation `['A'..'E']` (using `..`, not a comma) still does NOT match — nor does a STRUCT array.
+BARE_LITERAL = re.compile(r"\[\s*(['\"])[A-Z]{1,3}\1\s*[,\]]")
 # A fixed equal-split divisor `/ N` for ANY integer N (R-B / R-C forbid a fixed divisor, and the roster
 # size is not always 5 — SISA resizes N autonomously — so match any /<int>, not just /5).
 FIXED_DIVISOR = re.compile(r"/\s*\d+\b")
@@ -259,6 +264,34 @@ UNNEST_SEED_BLOCK = re.compile(
 )
 
 
+def _line_no(txt, pos):
+    """1-based line number of byte offset `pos` in `txt`."""
+    return txt.count("\n", 0, pos) + 1
+
+
+def _divisor_context(txt, m):
+    """(1-based line number, source-line context) for a FIXED_DIVISOR match `m` in `txt`. R-B / R-C
+    test whether a money token (amount / cash_flow / deposit) sits next to the divisor to distinguish
+    a forbidden equal-split from an unrelated `/N`.
+
+    The context spans the match's own first line through its last line, so an internally-wrapped
+    `amount /`⏎`5` keeps `amount` in view (FIXED_DIVISOR's `\\s*` spans the newline). When the `/` is the
+    FIRST non-space character of its own line — leading-operator SQL style (sqlfluff/dbt
+    `operator_new_lines: before`, e.g. `SUM(amount)`⏎`  / 5`) — the money token sits on the PRECEDING
+    line, so the context is extended back to include it. A mid-line `/N` (e.g. a `section 5/6` comment)
+    is NOT widened, so an unrelated preceding line can never false-trip the adjacency guard (2026-07-17
+    audit: the own-line-only window missed exactly the leading-operator wrap it claimed to cover)."""
+    n = _line_no(txt, m.start())
+    line_start = txt.rfind("\n", 0, m.start()) + 1
+    ctx_end = txt.find("\n", m.end())
+    if ctx_end == -1:
+        ctx_end = len(txt)
+    ctx_start = line_start
+    if txt[line_start:m.start()].strip() == "":     # operator is first non-space on its line -> reach back
+        ctx_start = (txt.rfind("\n", 0, line_start - 1) + 1) if line_start > 0 else 0
+    return n, txt[ctx_start:ctx_end]
+
+
 def diff_msg(name_a, a, name_b, b):
     parts = []
     only_a = sorted(a - b)
@@ -280,7 +313,7 @@ def roster_doc():
 
 
 def roster_active_codes(doc):
-    return {s["code"] for s in doc.get("strategies", [])
+    return {s["code"] for s in doc.get("strategies", []) or []
             if str(s.get("roster_state", "")).lower() in ACTIVE_STATES_YAML}
 
 
@@ -293,7 +326,10 @@ def slice_codes():
 
 def slicemap_codes():
     txt = open(PLAN, encoding="utf-8").read()
-    m = re.search(r"^##\s+Strategy reading\b.*?(?=^##\s)", txt, re.M | re.S)
+    # `(?=^##\s|\Z)`: terminate the section at the next H2 OR end-of-file, so 'Strategy reading' being
+    # the LAST H2 in the plan doesn't silently yield an empty section -> spurious R-A full-roster
+    # mismatch. Mirrors shared_regime_tokens()'s `(?=^###\s|\Z)` precedent (2026-07-17 audit).
+    m = re.search(r"^##\s+Strategy reading\b.*?(?=^##\s|\Z)", txt, re.M | re.S)
     section = m.group(0) if m else ""
     return {c.upper() for c in SLICE_FILE_REF.findall(section)}
 
@@ -313,6 +349,36 @@ def compute_spec_hash(code, inputs=None):
 def arsenal_rails_sql_consts():
     txt = open(ARSENAL_SQL, encoding="utf-8").read()
     return {name: int(val) for val, name in RAIL_CONST.findall(txt)}
+
+
+def _compare_rails(mapping, container, prefix, sql_consts, errors):
+    """R-E: compare each roster.yaml rail key against its arsenal_rails SQL constant, appending a clean
+    error for a missing key or a value mismatch. `mapping` is {yaml_key: sql_name}; `container` is the
+    roster.yaml sub-dict holding the values; `prefix` is the message label ('rails.' or
+    'rails.cooldown_days.'). A SQL const absent from `sql_consts` is skipped (already reported by the
+    RAIL_NAMES count guard). The top-level-rails and cooldowns loops were byte-for-byte identical bar the
+    container and label, and had already drifted once (the missing-key branch was hand-added to only both
+    copies in the 2026-07-14 audit) — consolidated here so the next hardening lands once (2026-07-17
+    audit). A present-but-non-integer value (a null/blanked `n_min:` from a bad merge) is reported cleanly
+    instead of crashing on int() — the delete-key branch was already clean, but a blanked key skipped it
+    and hit an unguarded int()."""
+    for yaml_key, sql_name in mapping.items():
+        if sql_name not in sql_consts:
+            continue
+        if yaml_key not in container:
+            errors.append(f"R-E: roster.yaml {prefix}{yaml_key} is missing but "
+                          f"bigquery/35_strategy_arsenal.sql arsenal_rails.{sql_name}={sql_consts[sql_name]} exists")
+            continue
+        try:
+            val = int(container[yaml_key])
+        except (TypeError, ValueError):
+            errors.append(f"R-E: roster.yaml {prefix}{yaml_key}={container[yaml_key]!r} is not an integer — "
+                          f"cannot compare against bigquery/35_strategy_arsenal.sql arsenal_rails.{sql_name}"
+                          f"={sql_consts[sql_name]}")
+            continue
+        if val != sql_consts[sql_name]:
+            errors.append(f"R-E: roster.yaml {prefix}{yaml_key}={container[yaml_key]} but "
+                          f"bigquery/35_strategy_arsenal.sql arsenal_rails.{sql_name}={sql_consts[sql_name]}")
 
 
 # R-J: a bolded regime-token bullet in strategy/01, e.g. `- **UP:** SPY close > ...`.
@@ -439,12 +505,26 @@ def main():
     roster_codes = roster_active_codes(doc)
 
     # ---- R-A: roster set agreement across all five surfaces ----
-    md_codes = headings_in(open(STRATEGY_MD, encoding="utf-8").read())
+    # Guard the top-level inputs the same way ARSENAL_SQL / the derived SQL / DBT_RECONCILE are guarded
+    # below: a missing Strategy.md / Claude_Task_Plan.md should be a clean R-A error, not an uncaught
+    # open() traceback that never prints the contractual `ROSTER CONSISTENCY: FAIL` line CI/BigQuery
+    # bridges parse (2026-07-17 audit — R-H even carries a now-reachable PLAN/CADENCE guard).
+    if not os.path.exists(STRATEGY_MD):
+        errors.append("R-A: Strategy.md is missing — cannot compare its '## Strategy' sections against "
+                      "strategy/roster.yaml's roster-active set")
+        md_codes = set()
+    else:
+        md_codes = headings_in(open(STRATEGY_MD, encoding="utf-8").read())
+        if not md_codes:
+            errors.append("R-A: found no non-candidate '## Strategy <code>' heading in Strategy.md "
+                          "(STRATEGY_HEADING rotted, or Strategy.md is empty?)")
     sl_codes = slice_codes()
-    map_codes = slicemap_codes()
-    if not md_codes:
-        errors.append("R-A: found no non-candidate '## Strategy <code>' heading in Strategy.md "
-                      "(STRATEGY_HEADING rotted, or Strategy.md is empty?)")
+    if not os.path.exists(PLAN):
+        errors.append("R-A: Claude_Task_Plan.md is missing — cannot read the '## Strategy reading' "
+                      "slice-map")
+        map_codes = set()
+    else:
+        map_codes = slicemap_codes()
     if not os.path.exists(ARSENAL_SQL):
         errors.append("R-A: bigquery/35_strategy_arsenal.sql absent but strategy/roster.yaml exists — the "
                       "state.strategy_roster seed has no source to compare against")
@@ -473,19 +553,12 @@ def main():
             continue
         txt = open(path, encoding="utf-8").read()
         for m in BARE_LITERAL.finditer(txt):
-            n = txt.count("\n", 0, m.start()) + 1
+            n = _line_no(txt, m.start())
             snippet = " ".join(m.group(0).split())
             errors.append(f"R-B: {rel}:{n} still has a bare ['A','B',...] roster literal — read "
                           f"`state.active_strategy_codes` instead: {snippet}")
         for m in FIXED_DIVISOR.finditer(txt):
-            n = txt.count("\n", 0, m.start()) + 1
-            # Context spans the match's FIRST line through its LAST line (m.end() bounds the right
-            # edge, not m.start()) so "amount" is still found when it sits on the divisor's own
-            # line rather than the line containing "/" — a line-wrapped divisor can put either
-            # token on either side of the wrap.
-            ctx_start = txt.rfind("\n", 0, m.start()) + 1
-            ctx_end = txt.find("\n", m.end())
-            ctx = txt[ctx_start: ctx_end if ctx_end != -1 else len(txt)]
+            n, ctx = _divisor_context(txt, m)
             if "amount" in ctx:
                 errors.append(f"R-B: {rel}:{n} still has a fixed `/ N` equal-split divisor — use an "
                               f"as-of-flow-date COUNT(*) FROM state.strategy_roster: {ctx.strip()}")
@@ -499,27 +572,29 @@ def main():
         # R-B was hardened against but R-C was not (2026-07-17 audit). FIXED_DIVISOR's `\s*` spans the
         # newline in a full-text scan. Adjacency guard (matching R-B's "amount" co-occurrence): without
         # it ANY unrelated N/M-shaped text (e.g. a RUNBOOK "section 5/6" reference) trips FIXED_DIVISOR
-        # and false-fails CI. The ctx spans the match's first line through its last line so the
-        # amount/cash_flow/deposit token is still found when the wrap separates it from the divisor.
+        # and false-fails CI. _divisor_context() spans the match's first line through its last line (and
+        # reaches back one line for a leading-operator wrap) so the amount/cash_flow/deposit token is
+        # still found when the wrap separates it from the divisor.
         txt = open(DBT_RECONCILE, encoding="utf-8").read()
         for m in FIXED_DIVISOR.finditer(txt):
-            n = txt.count("\n", 0, m.start()) + 1
-            ctx_start = txt.rfind("\n", 0, m.start()) + 1
-            ctx_end = txt.find("\n", m.end())
-            ctx = txt[ctx_start: ctx_end if ctx_end != -1 else len(txt)]
+            n, ctx = _divisor_context(txt, m)
             if "amount" in ctx or "cash_flow" in ctx or "deposit" in ctx:
                 errors.append(f"R-C: dbt/tests/assert_cash_flows_reconcile.sql:{n} hardcodes the roster "
                               f"size (a `/ N` amount-split assumption) — the reconciliation must be "
                               f"count-agnostic (per-strategy sum): {ctx.strip()}")
 
     # ---- R-D: per-strategy routines named in roster.yaml exist in cadence.yaml ----
-    cad = yaml.safe_load(open(CADENCE, encoding="utf-8")) or {}
-    cad_ids = {r["id"] for r in cad.get("routines", [])}
-    for s in doc.get("strategies", []):
-        rt = s.get("per_strategy_routine")
-        if rt and rt not in cad_ids:
-            errors.append(f"R-D: strategy {s.get('code')!r} names per_strategy_routine '{rt}' which is NOT "
-                          f"a routine id in ops/cadence.yaml")
+    if not os.path.exists(CADENCE):
+        errors.append("R-D: ops/cadence.yaml is missing — cannot validate that per_strategy_routine "
+                      "references name a real routine id")
+    else:
+        cad = yaml.safe_load(open(CADENCE, encoding="utf-8")) or {}
+        cad_ids = {r["id"] for r in cad.get("routines", []) or [] if "id" in r}
+        for s in doc.get("strategies", []) or []:
+            rt = s.get("per_strategy_routine")
+            if rt and rt not in cad_ids:
+                errors.append(f"R-D: strategy {s.get('code')!r} names per_strategy_routine '{rt}' which is "
+                              f"NOT a routine id in ops/cadence.yaml")
 
     # ---- R-E: bigquery/35's arsenal_rails SQL constants agree with roster.yaml's rails block ----
     rails_doc = doc.get("rails", {}) or {}
@@ -532,34 +607,20 @@ def main():
             errors.append(f"R-E: parsed only {len(sql_consts)}/{len(RAIL_NAMES)} rail constants from "
                           f"bigquery/35_strategy_arsenal.sql's consts CTE — did the `<N> AS <name>` shape "
                           f"change? (update RAIL_CONST)")
-        # Both loops below must fire on a MISSING yaml key too, not just a mismatched one — a key
-        # silently deleted from roster.yaml's rails block (accidental deletion, bad merge, a
-        # partial rails: block copy-paste) previously left the corresponding SQL constant with
-        # NOTHING to compare against, so R-E vacuously passed (2026-07-14 audit finding, confirmed
-        # empirically: deleting rails.n_min end-to-end still printed "ROSTER CONSISTENCY: OK").
-        for yaml_key, sql_name in ROSTER_RAIL_KEY_TO_SQL_NAME.items():
-            if sql_name not in sql_consts:
-                continue  # already reported by the len(sql_consts) < len(RAIL_NAMES) check above
-            if yaml_key not in rails_doc:
-                errors.append(f"R-E: roster.yaml rails.{yaml_key} is missing but "
-                              f"bigquery/35_strategy_arsenal.sql arsenal_rails.{sql_name}={sql_consts[sql_name]} exists")
-            elif int(rails_doc[yaml_key]) != sql_consts[sql_name]:
-                errors.append(f"R-E: roster.yaml rails.{yaml_key}={rails_doc[yaml_key]} but "
-                              f"bigquery/35_strategy_arsenal.sql arsenal_rails.{sql_name}={sql_consts[sql_name]}")
+        # Both loops must fire on a MISSING yaml key too, not just a mismatched one — a key silently
+        # deleted from roster.yaml's rails block (accidental deletion, bad merge, a partial rails:
+        # block copy-paste) previously left the corresponding SQL constant with NOTHING to compare
+        # against, so R-E vacuously passed (2026-07-14 audit finding, confirmed empirically: deleting
+        # rails.n_min end-to-end still printed "ROSTER CONSISTENCY: OK"). _compare_rails() carries that
+        # missing-key branch (and a present-but-non-integer clean error) for BOTH the top-level rails
+        # and the nested cooldown_days sub-block.
+        _compare_rails(ROSTER_RAIL_KEY_TO_SQL_NAME, rails_doc, "rails.", sql_consts, errors)
         cooldowns = rails_doc.get("cooldown_days", {}) or {}
-        for yaml_key, sql_name in ROSTER_COOLDOWN_KEY_TO_SQL_NAME.items():
-            if sql_name not in sql_consts:
-                continue
-            if yaml_key not in cooldowns:
-                errors.append(f"R-E: roster.yaml rails.cooldown_days.{yaml_key} is missing but "
-                              f"bigquery/35_strategy_arsenal.sql arsenal_rails.{sql_name}={sql_consts[sql_name]} exists")
-            elif int(cooldowns[yaml_key]) != sql_consts[sql_name]:
-                errors.append(f"R-E: roster.yaml rails.cooldown_days.{yaml_key}={cooldowns[yaml_key]} but "
-                              f"bigquery/35_strategy_arsenal.sql arsenal_rails.{sql_name}={sql_consts[sql_name]}")
+        _compare_rails(ROSTER_COOLDOWN_KEY_TO_SQL_NAME, cooldowns, "rails.cooldown_days.", sql_consts, errors)
 
     # ---- R-F: spec-locked strategies' machinery hash agrees with roster.yaml's spec_hash ----
     spec_inputs = spec_hash_inputs()
-    for s in doc.get("strategies", []):
+    for s in doc.get("strategies", []) or []:
         code = s.get("code")
         if not s.get("spec_locked_since"):
             continue
@@ -609,8 +670,21 @@ def main():
                 for test in col.get("tests", []) or []:
                     if not isinstance(test, dict) or "accepted_values" not in test:
                         continue
-                    codes = set((test["accepted_values"] or {}).get("values", []) or [])
-                    if codes and codes != roster_codes:
+                    av = test["accepted_values"]
+                    if not isinstance(av, dict):
+                        # `accepted_values` authored as a bare list/scalar instead of a {values: [...]}
+                        # mapping (malformed dbt YAML) previously AttributeError'd on `.get` -> uncaught
+                        # traceback rather than a clean R-G FAIL line (2026-07-17 audit).
+                        errors.append(
+                            f"R-G: dbt/models/analytics/schema.yml model {model.get('name')!r} column "
+                            f"'strategy' accepted_values is not a {{values: [...]}} mapping ({av!r})")
+                        continue
+                    codes = set(av.get("values", []) or [])
+                    # No `codes and` short-circuit: an accepted_values(strategy) degenerated to
+                    # `values: []` (or a dropped `values:` key) is a roster-vs-schema divergence that must
+                    # be FLAGGED, not treated as clean by the falsy-empty-set skip (2026-07-17 audit —
+                    # R-G is the CI-blocking guard; ci.yml's dbt accepted_values test is advisory-only).
+                    if codes != roster_codes:
                         errors.append(
                             f"R-G: dbt/models/analytics/schema.yml model {model.get('name')!r} column "
                             f"'strategy' accepted_values {sorted(codes)} no longer matches the roster-active "
@@ -693,10 +767,17 @@ def main():
             if state not in GOLDEN_COVERAGE_STATES:
                 continue
             # Coverage is DEFINED via the strategy's own per-strategy slice (governing_files) or a prose
-            # mention; a strategy with no slice file yet cannot be enforced by that signal and is not a real
-            # SL5-registered strategy (SL2 always authors a slice — its absence is caught by R-D/R-A, not
-            # here). Skip with a non-blocking note so a slice-less roster entry (e.g. an early hand-seeded
-            # SHADOW row before its slice lands) does not hard-fail this check on a signal it cannot satisfy.
+            # mention; a strategy with no slice file yet cannot be enforced by that signal. Skip with a
+            # non-blocking note so a slice-less roster entry (e.g. an early hand-seeded SHADOW row before
+            # its slice lands) does not hard-fail this check on a signal it cannot satisfy — the deliberate
+            # SISA no-hard-gate-on-strategy-add posture (CLAUDE.md settled decision; guarded by the b13
+            # test). CAVEAT (2026-07-17 audit): for a PROBE/ADOPTED (roster-active) code a missing slice is
+            # independently caught by R-A (its slice heading would be absent from slice_codes()); but for a
+            # SHADOW/PAPER code R-A/R-D never inspect it (roster_active_codes filters to probe/adopted), so
+            # this note is the ONLY signal and such an entry is genuinely un-enforced until its slice lands.
+            # Closing that (hard-fail a slice-less incubating strategy, or add an incubating-code
+            # slice-presence check) is a policy change reserved to the owner — do NOT flip the note to an
+            # error here (it would reverse the settled no-gate decision and break the b13 test).
             if not glob.glob(os.path.join(STRATEGY_DIR, f"*_strategy_{str(code).lower()}.md")):
                 notes.append(
                     f"R-K: strategy {code!r} (roster_state={state}) has no per-strategy slice file yet — "

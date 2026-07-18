@@ -246,3 +246,109 @@ def test_cadence_heartbeat_coverage_against_real_repo_files_is_clean():
     errors = []
     ac._check_cadence_heartbeat_coverage(errors)
     assert errors == []
+
+
+# =====================================================================================================
+# 2026-07-17 parallel-refactor coverage additions (adversarial-audit findings).
+# =====================================================================================================
+
+# ---- main() integration: the register-self-consistency + heartbeat checks were only tested in
+#      isolation; nothing asserted main() RETURNS 1 when they fire (2026-07-17 audit) ----
+def test_main_fails_on_stage_above_ceiling(tmp_path, monkeypatch):
+    autonomy = tmp_path / "autonomy_levels.yaml"
+    autonomy.write_text("loops:\n  - id: over\n    stage: active_auto\n    ceiling: shadow\n")
+    known = tmp_path / "known.md"                          # cite the true stage so only the ceiling fails
+    known.write_text("active_auto per `ops/autonomy_levels.yaml`, loop `over`\n")
+    monkeypatch.setattr(ac, "AUTONOMY", str(autonomy))
+    monkeypatch.setattr(ac, "KNOWN_CITATION_FILES", [str(known)])
+    monkeypatch.setattr(ac, "EXTRA_SCAN_GLOBS", [])
+    monkeypatch.setattr(ac, "CADENCE_SQL", str(tmp_path / "no_cadence.sql"))  # heartbeat check no-ops
+    assert ac.main() == 1
+
+
+def test_main_fails_on_unmonitored_active_auto_loop(tmp_path, monkeypatch):
+    autonomy = tmp_path / "autonomy_levels.yaml"
+    autonomy.write_text("loops:\n  - id: promoted\n    stage: active_auto\n    ceiling: active_auto\n")
+    known = tmp_path / "known.md"
+    known.write_text("active_auto per `ops/autonomy_levels.yaml`, loop `promoted`\n")
+    cadence = tmp_path / "cadence_check.sql"
+    cadence.write_text("SELECT 1 FROM UNNEST(['loop:some_other_loop']) AS loop_source\n")
+    monkeypatch.setattr(ac, "AUTONOMY", str(autonomy))
+    monkeypatch.setattr(ac, "KNOWN_CITATION_FILES", [str(known)])
+    monkeypatch.setattr(ac, "EXTRA_SCAN_GLOBS", [])
+    monkeypatch.setattr(ac, "CADENCE_SQL", str(cadence))
+    monkeypatch.setattr(ac, "HEARTBEAT_SELF_MONITORED_LOOPS", set())
+    assert ac.main() == 1
+
+
+# ---- the dedicated fail-loud 'no loop: literals found' rot branch (SQL present but empty) ----
+def test_cadence_heartbeat_coverage_flags_rotted_empty_list(tmp_path, monkeypatch):
+    autonomy = tmp_path / "autonomy_levels.yaml"
+    autonomy.write_text("loops:\n  - id: promoted\n    stage: active_auto\n")
+    cadence = tmp_path / "cadence_check.sql"
+    cadence.write_text("SELECT 1\n")                       # content, but zero 'loop:<id>' literals
+    monkeypatch.setattr(ac, "AUTONOMY", str(autonomy))
+    monkeypatch.setattr(ac, "CADENCE_SQL", str(cadence))
+    monkeypatch.setattr(ac, "HEARTBEAT_SELF_MONITORED_LOOPS", set())
+    errors = []
+    ac._check_cadence_heartbeat_coverage(errors)
+    assert len(errors) == 1
+    assert "found no" in errors[0] and "does NOT monitor" not in errors[0]
+
+
+# ---- 2026-07-17 fix: coverage requires DETECTION-list membership, not mere union — a loop present only
+#      in the message-text UNNEST literal (not the IF EXISTS detection literal that fires the alarm) has
+#      no working dead-man's switch and must still be flagged ----
+def test_cadence_heartbeat_coverage_flags_detection_only_divergence(tmp_path, monkeypatch):
+    autonomy = tmp_path / "autonomy_levels.yaml"
+    autonomy.write_text(
+        "loops:\n"
+        "  - id: covered\n    stage: active_auto\n"
+        "  - id: msgonly\n    stage: active_auto\n"
+    )
+    cadence = tmp_path / "cadence_check.sql"
+    cadence.write_text(
+        "IF EXISTS (SELECT 1 FROM UNNEST(['loop:covered']) AS s) THEN SELECT 1; END IF;\n"
+        "SELECT STRING_AGG(x) FROM UNNEST(['loop:covered','loop:msgonly']) AS s;\n"
+    )
+    monkeypatch.setattr(ac, "AUTONOMY", str(autonomy))
+    monkeypatch.setattr(ac, "CADENCE_SQL", str(cadence))
+    monkeypatch.setattr(ac, "HEARTBEAT_SELF_MONITORED_LOOPS", set())
+    # union (cadence_heartbeat_loops) contains msgonly; intersection (cadence_detection_loops) does not.
+    assert ac.cadence_heartbeat_loops() == {"covered", "msgonly"}
+    assert ac.cadence_detection_loops() == {"covered"}
+    errors = []
+    ac._check_cadence_heartbeat_coverage(errors)
+    assert len(errors) == 1 and "msgonly" in errors[0]
+
+
+# ---- 2026-07-17 fix: a loop that declares a ceiling but has no 'stage' (the register's core field) is
+#      flagged; a stage-present/ceiling-absent loop is NOT (that is a valid not-yet-capped entry) ----
+def test_check_stage_ceiling_invariant_flags_stageless_loop_with_ceiling():
+    errs = ac.check_stage_ceiling_invariant([{"id": "x", "ceiling": "active_auto"}])
+    assert len(errs) == 1 and "x" in errs[0] and "no 'stage'" in errs[0]
+    # stage present, ceiling absent stays silent (the existing clean-cases test relies on this too).
+    assert ac.check_stage_ceiling_invariant([{"id": "y", "stage": "shadow", "ceiling": None}]) == []
+
+
+def test_main_fails_on_citation_to_stageless_loop(tmp_path, monkeypatch):
+    # _check_citations distinguishes a KNOWN loop whose stage is None from an unknown loop id.
+    autonomy = tmp_path / "autonomy_levels.yaml"
+    autonomy.write_text("loops:\n  - id: p\n")             # id present, no stage key -> stage None
+    known = tmp_path / "known.md"
+    known.write_text("dormant per `ops/autonomy_levels.yaml`, loop `p`\n")
+    monkeypatch.setattr(ac, "AUTONOMY", str(autonomy))
+    monkeypatch.setattr(ac, "KNOWN_CITATION_FILES", [str(known)])
+    monkeypatch.setattr(ac, "EXTRA_SCAN_GLOBS", [])
+    monkeypatch.setattr(ac, "CADENCE_SQL", str(tmp_path / "no_cadence.sql"))
+    assert ac.main() == 1
+
+
+def test_cadence_detection_loops_returns_none_when_file_missing(tmp_path, monkeypatch):
+    monkeypatch.setattr(ac, "CADENCE_SQL", str(tmp_path / "does_not_exist.sql"))
+    assert ac.cadence_detection_loops() is None
+
+
+def test_cadence_detection_loops_matches_real_repo_detection_list():
+    # The real bigquery/75 carries identical detection + message lists today, so intersection == union.
+    assert ac.cadence_detection_loops() == ac.cadence_heartbeat_loops()
