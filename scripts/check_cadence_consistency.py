@@ -68,7 +68,6 @@ except ImportError:
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.routine_manifest import (  # noqa: E402
     heading_to_id, parse_routine_headings, build_triggers_manifest,
-    ROUTINE_SUFFIX as _ROUTINE_SUFFIX,
 )
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -152,11 +151,6 @@ ALLOWED_CLASSES = {
 # monitor_class values the calendar view (state.cadence_expected_today) must encode.
 CALENDAR_CLASSES = ALLOWED_CLASSES - {"queue_driven"}
 
-# ROUTINE_SUFFIX / heading_to_id are shared with scripts/print_routines.py's identical copies —
-# see scripts/lib/routine_manifest.py (2026-07-14 audit finding: two independently-maintained
-# copies of this logic undermined check F's own "ops/triggers.json is current" guarantee).
-ROUTINE_SUFFIX = _ROUTINE_SUFFIX
-
 # The state.cadence_watch deadline-guard literal: DATETIME(e.today, TIME 'HH:MM:SS'). Capture HH:MM.
 SQL_DEADLINE = re.compile(r"DATETIME\(\s*e\.today\s*,\s*TIME\s*'(\d{2}:\d{2})(?::\d{2})?'\s*\)")
 HHMM = re.compile(r"^\d{2}:\d{2}$")
@@ -209,7 +203,7 @@ def parse_period_grace_sql():
 
     month/quarter/year are OFFSET N (0-indexed -> the (N+1)th trading day); weekly is a plain
     calendar-day count already expressed the same way period_grace_days.weekly_sun is (1 = Monday).
-    Returns {} if the file is absent (pre-2026-07-03 checkout) so the caller can skip check E.
+    Returns None if the file is absent (pre-2026-07-03 checkout) so the caller can skip check E.
     """
     if not os.path.exists(PERIOD_WATCH_SQL):
         return None
@@ -289,6 +283,33 @@ def check_depends_on(cad):
                 errors.append(f"{rid}: depends_on '{dep}' is not a routine id in ops/cadence.yaml "
                               f"(dangling/typo'd dependency — it feeds the FATAL sp_assert_deps gate)")
     return errors
+
+
+def catchup_list_errors(cad, path, filename, tier_word, classes):
+    """Check K for ONE of bigquery/31/59's hand-maintained catchup-safe `UNNEST([...]) AS routine`
+    lists: it must equal cadence.yaml's {catchup_safe AND monitor_class in <classes>} subset.
+
+    An ABSENT file is skipped silently (pre-feature checkout); a PRESENT-but-unparseable file FAILS
+    loudly (DISARMED) so a benign SQL reformat can never silently disarm the guard. The daily
+    (bigquery/31) and period (bigquery/59) call sites differ only in (path, filename, tier_word,
+    classes), so this shared helper keeps their two error strings — the observable contract — from
+    ever drifting apart with a one-sided edit. Returns a list of error strings (possibly empty)."""
+    want = {rid for rid, r in cad.items()
+            if r.get("catchup_safe") is True and r.get("monitor_class") in classes}
+    have = parse_unnest_routine_ids(path)
+    if have is None and os.path.exists(path):
+        return [
+            f"{filename} exists but no `UNNEST([...]) AS routine` bracket could be "
+            f"parsed — check K's catchup-safe {tier_word} drift guard is DISARMED (regex rot? e.g. a "
+            f"reformat to `AS  routine` or `UNNEST(ARRAY[...]`). Restore a parseable bracket."]
+    if have is not None:
+        have_set = set(have)
+        if have_set != want:
+            return [
+                f"{filename} catchup-safe {tier_word} UNNEST list DRIFT — "
+                f"file has {sorted(have_set)}, cadence.yaml-derived (catchup_safe AND {tier_word} tier) "
+                f"wants {sorted(want)}"]
+    return []
 
 
 def main():
@@ -435,37 +456,10 @@ def main():
         elif not isinstance(r["catchup_safe"], bool):
             errors.append(f"{rid}: catchup_safe must be a boolean true/false (got {r['catchup_safe']!r})")
 
-    want_catchup_daily = {rid for rid, r in cad.items()
-                          if r.get("catchup_safe") is True and r.get("monitor_class") in DAILY_CLASSES}
-    have_catchup_daily = parse_unnest_routine_ids(CATCHUP_NOTIFY_SQL)
-    if have_catchup_daily is None and os.path.exists(CATCHUP_NOTIFY_SQL):
-        errors.append(
-            "bigquery/31_catchup_notify.sql exists but no `UNNEST([...]) AS routine` bracket could be "
-            "parsed — check K's catchup-safe daily drift guard is DISARMED (regex rot? e.g. a reformat "
-            "to `AS  routine` or `UNNEST(ARRAY[...]`). Restore a parseable bracket.")
-    elif have_catchup_daily is not None:
-        have_set = set(have_catchup_daily)
-        if have_set != want_catchup_daily:
-            errors.append(
-                "bigquery/31_catchup_notify.sql catchup-safe daily UNNEST list DRIFT — "
-                f"file has {sorted(have_set)}, cadence.yaml-derived (catchup_safe AND daily tier) "
-                f"wants {sorted(want_catchup_daily)}")
-
-    want_catchup_period = {rid for rid, r in cad.items()
-                           if r.get("catchup_safe") is True and r.get("monitor_class") in PERIOD_CLASSES}
-    have_catchup_period = parse_unnest_routine_ids(CATCHUP_AUTOFIRE_SQL)
-    if have_catchup_period is None and os.path.exists(CATCHUP_AUTOFIRE_SQL):
-        errors.append(
-            "bigquery/59_catchup_autofire.sql exists but no `UNNEST([...]) AS routine` bracket could be "
-            "parsed — check K's catchup-safe period drift guard is DISARMED (regex rot? e.g. a reformat "
-            "to `AS  routine` or `UNNEST(ARRAY[...]`). Restore a parseable bracket.")
-    elif have_catchup_period is not None:
-        have_set = set(have_catchup_period)
-        if have_set != want_catchup_period:
-            errors.append(
-                "bigquery/59_catchup_autofire.sql catchup-safe period UNNEST list DRIFT — "
-                f"file has {sorted(have_set)}, cadence.yaml-derived (catchup_safe AND period tier) "
-                f"wants {sorted(want_catchup_period)}")
+    errors.extend(catchup_list_errors(
+        cad, CATCHUP_NOTIFY_SQL, "bigquery/31_catchup_notify.sql", "daily", DAILY_CLASSES))
+    errors.extend(catchup_list_errors(
+        cad, CATCHUP_AUTOFIRE_SQL, "bigquery/59_catchup_autofire.sql", "period", PERIOD_CLASSES))
 
     # ---- L. Claude_Task_Plan.md's ROUTINE INVENTORY table == cadence.yaml ids, and each row's
     # 'Cadence · Type' cell agrees with that routine's monitor_class (ARCH-3 Item 30b). ----

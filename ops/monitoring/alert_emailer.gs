@@ -31,7 +31,7 @@ const ALERT_RECIPIENT  = Session.getActiveUser().getEmail(); // self-email
 const ALERT_SENDER     = 'Stock-Trading Alerts';
 const SEVERITIES       = ['critical', 'warning']; // set to ['critical'] for criticals only
 const POLL_HOURS       = 2;                        // how often to check
-const ALERT_SCRIPT_VERSION = 'v2';                 // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep. Named ALERT_SCRIPT_VERSION (not SCRIPT_VERSION) because this file and weekly_report.gs share ONE Apps Script project's top-level scope -- a same-named const in both would throw a project-wide SyntaxError on the next paste (2026-07-14 audit finding).
+const ALERT_SCRIPT_VERSION = 'v3';                 // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep. Named ALERT_SCRIPT_VERSION (not SCRIPT_VERSION) because this file and weekly_report.gs share ONE Apps Script project's top-level scope -- a same-named const in both would throw a project-wide SyntaxError on the next paste (2026-07-14 audit finding).
 // LOOKBACK_HOURS bounds the notified_ts IS NULL scan. Was 48h — if the emailer itself is dead longer
 // than the lookback (revoked token / deleted trigger), alerts raised early in the outage permanently
 // keep notified_ts NULL and are never emailed by ANY code path on recovery (the webhook relay's window
@@ -82,7 +82,17 @@ function checkAlerts_() {
       LIMIT 500`);
 
     const props = PropertiesService.getScriptProperties();
-    const seen = new Set(JSON.parse(props.getProperty('notified_alert_ids') || '[]'));
+    // Guard the parse: a corrupt/non-JSON notified_alert_ids property (manual edit, truncated write,
+    // tampering) would otherwise throw here on EVERY poll before any send, permanently suppressing ALL
+    // alert delivery. Degrade to an empty Set (at worst a re-send, never permanent silence) — matching
+    // the defensive posture of the setProperty write below (2026-07-18 audit fix).
+    let seen;
+    try {
+      seen = new Set(JSON.parse(props.getProperty('notified_alert_ids') || '[]'));
+    } catch (e) {
+      Logger.log('notified_alert_ids parse failed (corrupt property?) — treating as empty: ' + e);
+      seen = new Set();
+    }
     const fresh = rows.filter(r => !seen.has(r.alert_id));
 
     // RECURRING RE-NOTIFY for termination_close_staged (ITEM 17, self-improvement audit 2026-07-11): a

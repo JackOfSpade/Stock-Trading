@@ -326,3 +326,120 @@ def test_main_raising_probe_is_fail_open_not_crash(tmp_path, monkeypatch, capsys
     assert rc == 0
     assert "probe raised (fail-open)" in capsys.readouterr().out
     assert "[DONE" not in doc.read_text()   # nothing flipped; A raised, B open
+
+
+# ==================================================================================================
+# Coverage added by the parallel refactor (2026-07-17, Part B): probe SUCCESS paths and the
+# trigger_ids.json read branch — previously only the fail-open/error arms were exercised. All
+# offline: bq/gh are monkeypatched at _bq_count / _run / subprocess.run, never invoked for real.
+# ==================================================================================================
+
+# ---- check_A: the bq-count + ops/trigger_ids.json compound success path and its read fail-open ----
+def test_check_A_success_when_run_logged_and_trigger_id_present(tmp_path, monkeypatch):
+    (tmp_path / "ops").mkdir()
+    (tmp_path / "ops" / "trigger_ids.json").write_text('{"OPS0": {"trigger_id": "t1"}}')
+    monkeypatch.setattr(voa, "ROOT", str(tmp_path))
+    monkeypatch.setattr(voa, "_bq_count", lambda sql, key="n": (True, 3, ""))
+    passed, evidence = voa.check_A()
+    assert passed is True
+    assert "3 completed OPS0 run(s)" in evidence and "OPS0 entry" in evidence
+
+
+def test_check_A_open_when_run_logged_but_no_trigger_entry(tmp_path, monkeypatch):
+    (tmp_path / "ops").mkdir()
+    (tmp_path / "ops" / "trigger_ids.json").write_text('{"D1": {"trigger_id": "t1"}}')  # no OPS0
+    monkeypatch.setattr(voa, "ROOT", str(tmp_path))
+    monkeypatch.setattr(voa, "_bq_count", lambda sql, key="n": (True, 5, ""))
+    passed, evidence = voa.check_A()
+    assert passed is False
+    assert "entry=False" in evidence
+
+
+def test_check_A_fail_open_when_trigger_ids_unreadable(tmp_path, monkeypatch):
+    # bq succeeds, but ops/trigger_ids.json does not exist -> OSError -> read as OPEN, never raises.
+    monkeypatch.setattr(voa, "ROOT", str(tmp_path))  # no ops/trigger_ids.json created
+    monkeypatch.setattr(voa, "_bq_count", lambda sql, key="n": (True, 3, ""))
+    passed, evidence = voa.check_A()
+    assert passed is False
+    assert "could not read ops/trigger_ids.json" in evidence
+
+
+# ---- check_D: the active / inactive states and the gh-repo-view fallback (only the no-gh arm was hit) ----
+def test_check_D_active_with_repo_from_env(monkeypatch):
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setattr(voa, "_run", lambda cmd: (True, "active\n", ""))
+    passed, evidence = voa.check_D()
+    assert passed is True
+    assert "state=active" in evidence
+
+
+def test_check_D_inactive_state_reads_open(monkeypatch):
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setattr(voa, "_run", lambda cmd: (True, "disabled_manually\n", ""))
+    passed, evidence = voa.check_D()
+    assert passed is False
+    assert "disabled_manually" in evidence
+
+
+def test_check_D_repo_view_fallback_when_env_unset(monkeypatch):
+    monkeypatch.delenv("GITHUB_REPOSITORY", raising=False)
+    calls = []
+
+    def fake_run(cmd):
+        calls.append(cmd)
+        if "repo" in cmd and "view" in cmd:
+            return True, "owner/repo\n", ""
+        return True, "active\n", ""
+    monkeypatch.setattr(voa, "_run", fake_run)
+    passed, evidence = voa.check_D()
+    assert passed is True
+    assert len(calls) == 2  # gh repo view (fallback), then the workflows api call
+
+
+# ---- _bq_scalar: a row present but missing the expected column (KeyError arm of the try/except) ----
+def test_bq_scalar_row_missing_column_is_fail_open(monkeypatch):
+    monkeypatch.setattr(voa.subprocess, "run", _fake_run_factory(0, '[{"other": 5}]'))
+    ok, value, reason = voa._bq_scalar("SELECT COUNT(*) n FROM t")
+    assert ok is False
+    assert value is None
+    assert "could not parse bq result" in reason
+
+
+# ---- check_E_anthropic: satisfied by GEMINI_API_KEY (the 2026-07-17 free-tier swap) ----
+def test_check_E_anthropic_true_via_gemini_key(monkeypatch):
+    monkeypatch.setenv("HAS_GEMINI_API_KEY", "true")
+    passed, evidence = voa.check_E_anthropic()
+    assert passed is True
+    assert "GEMINI_API_KEY" in evidence
+
+
+def test_check_E_anthropic_false_when_unset(monkeypatch):
+    monkeypatch.delenv("HAS_GEMINI_API_KEY", raising=False)
+    passed, evidence = voa.check_E_anthropic()
+    assert passed is False
+
+
+# ---- write path: fail-open when persisting the flip fails (never raise / always exit 0) ----
+def test_main_write_failure_is_fail_open_not_crash(tmp_path, monkeypatch, capsys):
+    # A passing probe makes changed=True; if persisting the flip fails (read-only FS / disk full),
+    # main() must fail-open — print a clear notice and exit 0, matching the read path and the module's
+    # documented "never raise / always exit 0" contract — not unwind with a traceback + non-zero exit.
+    doc = tmp_path / "OWNER_ACTIONS.md"
+    doc.write_text(SAMPLE_DOC)
+    monkeypatch.setattr(voa, "OWNER_ACTIONS_PATH", str(doc))
+    monkeypatch.setitem(voa.PROBES, "A", lambda: (True, "closed just now"))
+    monkeypatch.setitem(voa.PROBES, "B", lambda: (False, "still open"))
+
+    real_open = open
+
+    def failing_write_open(path, mode="r", *args, **kwargs):
+        if "w" in mode:
+            raise OSError("simulated read-only filesystem")
+        return real_open(path, mode, *args, **kwargs)
+    monkeypatch.setattr("builtins.open", failing_write_open)
+
+    rc = voa.main()
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "could not write" in out
+    assert "will retry next run" in out

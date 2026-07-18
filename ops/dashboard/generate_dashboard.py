@@ -135,9 +135,16 @@ def main():
         nav = q(f"SELECT strategy,nav,available_funds,sizing_base_2pct,deployed_mv "
                 f"FROM `{PROJECT}.analytics.strategy_nav` ORDER BY strategy")
         gate = q(f"SELECT * FROM `{PROJECT}.state.gate_watch`")
-        alerts = q(f"SELECT alert_ts,severity,source,category,message FROM `{PROJECT}.ops.alerts` "
+        # CAST(... AS STRING) on the TIMESTAMP columns to match scripts/alert_relay.py's verified-good,
+        # deterministic wire form ("YYYY-MM-DD HH:MM:SS[.ffffff]+00") that fmt_ts is tested against —
+        # rather than relying on bq --format=json's default raw-TIMESTAMP rendering. ORDER BY on the
+        # same alias sorts chronologically (the zero-padded ISO string sorts lexically == temporally),
+        # the exact pattern alert_relay.py uses in production (2026-07-17 audit; parallel-refactor).
+        alerts = q(f"SELECT CAST(alert_ts AS STRING) AS alert_ts,severity,source,category,message "
+                   f"FROM `{PROJECT}.ops.alerts` "
                    f"WHERE NOT resolved ORDER BY alert_ts DESC LIMIT 20")
-        runs = q(f"SELECT routine,run_date,status,log_ts FROM `{PROJECT}.ops.run_log` "
+        runs = q(f"SELECT routine,run_date,status,CAST(log_ts AS STRING) AS log_ts "
+                 f"FROM `{PROJECT}.ops.run_log` "
                  f"ORDER BY log_ts DESC LIMIT 20")
     except (subprocess.CalledProcessError, OSError, RuntimeError, ValueError) as e:
         # OSError (broadened from FileNotFoundError) so ANY spawn-time OS error from the bq subprocess

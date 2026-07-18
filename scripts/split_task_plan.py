@@ -93,7 +93,6 @@ def split(text):
 
     routines = []
     group_intro = ""
-    seen_routine_in_group = False
     cur = None
     for i in range(group_start, len(lines)):
         if is_group(i):
@@ -101,17 +100,17 @@ def split(text):
                 routines.append(cur)
                 cur = None
             group_intro = lines[i]
-            seen_routine_in_group = False
         elif is_routine(i):
             if cur:
                 routines.append(cur)
             title = lines[i][3:].strip()
             rid = heading_to_id(title) or slug(title)
             cur = [rid, title, group_intro, lines[i]]
-            seen_routine_in_group = True
         elif cur is not None:
             cur[3] += lines[i]
-        elif not seen_routine_in_group:
+        else:
+            # cur is None here iff no routine has been seen since the last group header (or since
+            # group_start) — i.e. we are inside a group's intro region — so accumulate the intro.
             group_intro += lines[i]
     if cur:
         routines.append(cur)

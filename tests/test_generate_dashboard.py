@@ -136,6 +136,15 @@ def test_fmt_ts_space_utc_suffixed_timestamp_renders_same_as_z_suffixed():
     assert utc_result == z_result
 
 
+def test_fmt_ts_cast_as_string_plus00_wire_form_renders_localized():
+    # The CAST(... AS STRING) wire form the main() SELECTs now emit ("...+00", verified in
+    # alert_relay.py) must localize, not fall through to the "(UTC)" branch.
+    z_result = gd.fmt_ts("2026-07-04T12:00:00Z", "America/Denver")
+    cast_result = gd.fmt_ts("2026-07-04 12:00:00.000000+00", "America/Denver")
+    assert cast_result == z_result
+    assert "(UTC)" not in cast_result
+
+
 # ---- table(): HTML escaping -----------------------------------------------------------------
 
 def test_table_no_rows():

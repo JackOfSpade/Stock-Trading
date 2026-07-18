@@ -108,6 +108,14 @@ WITH expected AS (
 last AS (
   SELECT source, MAX(beat_ts) AS last_beat_ts
   FROM `stock-trading-498512.ops.heartbeat`
+  -- A 'poll-error' beat (alert_emailer.gs beat_(false) on a PERSISTENT BigQuery failure) is NOT proof
+  -- the emailer is working — it means it polled and FAILED. Excluding it from the liveness MAX lets a
+  -- sustained outage age out and trip the DTS, instead of the error-beat keeping the source "fresh"
+  -- forever while zero alerts deliver (2026-07-18 audit — the .gs already stamps note='poll-error'; the
+  -- gap was that no consumer read it). weekly_report never writes 'poll-error' so its liveness is
+  -- unchanged; a source that has ONLY ever poll-error'd stays monitored=FALSE, matching this file's
+  -- self-bootstrapping "monitored once it has produced >=1 GOOD signal" convention (state.backup_health).
+  WHERE note IS DISTINCT FROM 'poll-error'
   GROUP BY source
 )
 SELECT

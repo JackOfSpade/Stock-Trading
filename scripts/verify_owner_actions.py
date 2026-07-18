@@ -324,8 +324,17 @@ def main():
         results.append((fence_id, "PASS (closed just now)", evidence))
 
     if changed:
-        with open(OWNER_ACTIONS_PATH, "w", encoding="utf-8") as f:
-            f.writelines(lines)
+        try:
+            with open(OWNER_ACTIONS_PATH, "w", encoding="utf-8") as f:
+                f.writelines(lines)
+        except (OSError, ValueError) as e:
+            # Fail-open, mirroring the read path (269-276) and the module's "never raise / always
+            # exit 0" contract: a write failure (read-only FS / disk full) must not crash this
+            # always-green CI verifier. The auto-close is idempotent — the next run recomputes the
+            # same flip and re-attempts the write — so a transient failure is retried, not lost.
+            # Print a clear notice so the un-persisted flip is visible, never silently assumed written.
+            print(f"verify_owner_actions: could not write {OWNER_ACTIONS_PATH}: {e} "
+                  f"(flip NOT persisted; will retry next run)")
 
     print("verify_owner_actions summary:")
     for fence_id, status, evidence in sorted(results, key=lambda r: r[0]):
