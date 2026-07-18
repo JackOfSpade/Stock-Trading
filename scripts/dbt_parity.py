@@ -74,11 +74,30 @@ def bq(sql):
     return parse_bq_json_stdout(out.stdout)
 
 
-def col_expr(col):
+# Table alias applied to BOTH sides of every EXCEPT, so each selected column is referenced as
+# `<alias>.<col>` rather than bare `<col>`.
+#
+# BUG FIX (2026-07-18): a bare `col` is AMBIGUOUS whenever a view's own name equals one of its column
+# names. In `SELECT trading_enabled FROM <p>.state.trading_enabled`, BigQuery resolves the identifier
+# to the TABLE's implicit range variable — i.e. the WHOLE ROW as a STRUCT — not to the BOOL column
+# (verified live: it returned {"trading_enabled":true,"halt_reason":null}). The other EXCEPT side is an
+# anonymous subquery `(<compiled>)`, which has no such range variable, so there the same identifier
+# correctly resolved to the column. The two sides therefore disagreed on type and the parity query died
+# with `Column 1 in EXCEPT DISTINCT has incompatible types: BOOL, STRUCT<trading_enabled BOOL,
+# halt_reason STRING>`. Because "incompatible types" is a SCHEMA_DRIFT_MARKER, this fail-closed as
+# NOT VERIFIED and red-lit CI — reporting phantom schema drift on a model whose dbt port and live view
+# actually match column-for-column. Aliasing both sides makes every reference unambiguously a COLUMN.
+# state.trading_enabled is the only such name collision in state/perf/analytics today, but the fix is
+# structural so a future one can't reintroduce this.
+PARITY_ALIAS = "parity_src"
+
+
+def col_expr(col, alias=PARITY_ALIAS):
     """SQL expression for one column in the EXCEPT. JSON/ARRAY/STRUCT can't be set-compared, so
-    serialize them deterministically; scalars compare directly."""
+    serialize them deterministically; scalars compare directly. Always alias-qualified — see
+    PARITY_ALIAS for why a bare column reference is unsafe."""
     name, dtype = col["column_name"], col["data_type"]
-    q = f"`{name}`"
+    q = f"{alias}.`{name}`"
     if dtype == "JSON" or dtype.startswith("ARRAY") or dtype.startswith("STRUCT"):
         return f"TO_JSON_STRING({q})"
     return q
@@ -144,12 +163,14 @@ def main():
             # jobs per model — this job's BigQuery job volume already tripped the project's DTS
             # consumer rate-quota once (2026-06-29 CI incident); halving it directly reduces
             # recurrence risk (2026-07-14 audit finding).
+            # Both sides carry the SAME alias (PARITY_ALIAS), so the identical `exprs` string is valid
+            # against the compiled subquery and the live view alike.
             row = bq(
                 f"SELECT "
-                f"(SELECT COUNT(*) FROM (SELECT {exprs} FROM ({compiled}) "
-                f"EXCEPT DISTINCT SELECT {exprs} FROM {live})) AS n_missing, "
-                f"(SELECT COUNT(*) FROM (SELECT {exprs} FROM {live} "
-                f"EXCEPT DISTINCT SELECT {exprs} FROM ({compiled}))) AS n_extra"
+                f"(SELECT COUNT(*) FROM (SELECT {exprs} FROM ({compiled}) AS {PARITY_ALIAS} "
+                f"EXCEPT DISTINCT SELECT {exprs} FROM {live} AS {PARITY_ALIAS})) AS n_missing, "
+                f"(SELECT COUNT(*) FROM (SELECT {exprs} FROM {live} AS {PARITY_ALIAS} "
+                f"EXCEPT DISTINCT SELECT {exprs} FROM ({compiled}) AS {PARITY_ALIAS})) AS n_extra"
             )[0]
             n_missing, n_extra = int(row["n_missing"]), int(row["n_extra"])
         except Exception as e:

@@ -1,9 +1,16 @@
--- Parallel-run dbt port of bigquery/47_trading_enabled_resync.sql:state.trading_enabled — canonical
--- source is that file until owner cutover. Originally added 2026-07-04 (audit finding, HIGH
--- severity) as a port of 23_trading_control.sql; updated 2026-07-14 to match 47's merge of 34's
--- trading_halted exclusion with 23's 2026-07-11 snapshot_stale term, after a parity audit found
--- this mirror had drifted from the live view for both fixes. The machine-readable gate:
+-- Parallel-run dbt port of state.trading_enabled. CANONICAL SOURCE is
+-- bigquery/78_book_drawdown_rebase_and_staleness_gate.sql (which SUPERSEDES 47, which superseded 34
+-- and 23) until owner cutover — verified 2026-07-18 against the deployed view. Originally added
+-- 2026-07-04 (audit finding, HIGH severity) as a port of 23_trading_control.sql; updated 2026-07-14
+-- to 47, then to 78's two changes (drawdown AND-term is breach_hard, not the -15% soft tier;
+-- blocking_criticals excludes category IN ('trading_halted','staleness')). The machine-readable gate:
 -- sp_assert_trading_enabled reads this before every order-staging step.
+--
+-- DRIFT FIX 2026-07-18: this port carried 78's LOGIC but had kept 47's older snapshot_stale halt_reason
+-- WORDING. Both sides currently return halt_reason = NULL (snapshot_stale is FALSE), so row-level parity
+-- passed — but the moment that branch fired, dbt_parity.py would have reported real drift and failed CI
+-- on a purely cosmetic string. The message below is now byte-identical to bigquery/78 and to the
+-- deployed view. Keep all SEVEN halt_reason strings in lockstep with 78 when either side changes.
 WITH ctrl AS (
   SELECT ARRAY_AGG(STRUCT(halt_all, reason, mode) ORDER BY control_ts DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest
   FROM {{ source('ops', 'trading_control') }}
@@ -39,7 +46,7 @@ SELECT
     WHEN COALESCE(dd.breach_hard, FALSE) THEN
       FORMAT('book NAV drawdown %.2f%% from flow-adjusted peak exceeds the -40%% CATASTROPHE circuit-breaker (full halt); the -15%% soft tier pauses new entries only', dd.drawdown_from_peak * 100)
     WHEN COALESCE(dd.snapshot_stale, FALSE) THEN
-      'state.book_drawdown_watch.snapshot_stale = TRUE (ops.account_snapshot has not been refreshed for the current trading day -- the book-level drawdown breaker cannot trust its own peak/current NAV comparison; ITEM 16, 2026-07-11)'
+      'state.book_drawdown_watch.snapshot_stale = TRUE (ops.account_snapshot not refreshed for the current trading day — the breaker cannot trust its own peak/current NAV comparison; ITEM 16, 2026-07-11)'
     ELSE NULL
   END AS halt_reason
 FROM ctrl, f, eh, al, pr, dd

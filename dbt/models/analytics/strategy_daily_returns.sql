@@ -18,7 +18,7 @@
 -- SPLIT-AWARE equity leg (rev 2026-07-17, audit finding C2 — mirrors bigquery/82): shares are scaled
 -- by a per-position running split factor so a post-entry split on a held stock keeps mv + the dividend
 -- leg continuous instead of manufacturing a phantom ~-50% daily return that fires drawdown_kill.
-equity_marked AS (
+WITH equity_marked AS (
   SELECT m.mark_date, l.strategy, l.position_key, l.shares, l.entry_price, l.exit_price, l.exit_date,
          CAST(1 AS INT64) AS multiplier, m.close, COALESCE(m.dividend,0) AS dividend,
          COALESCE(NULLIF(m.split_ratio, 0), 1) AS day_split

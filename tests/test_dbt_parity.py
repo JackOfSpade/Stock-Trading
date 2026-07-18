@@ -58,16 +58,49 @@ def test_bq_raises_on_nonzero_returncode(monkeypatch):
 
 
 def test_scalar_columns_compare_directly():
-    assert dp.col_expr({"column_name": "as_of_date", "data_type": "DATE"}) == "`as_of_date`"
-    assert dp.col_expr({"column_name": "shares", "data_type": "NUMERIC"}) == "`shares`"
-    assert dp.col_expr({"column_name": "strategy", "data_type": "STRING"}) == "`strategy`"
+    a = dp.PARITY_ALIAS
+    assert dp.col_expr({"column_name": "as_of_date", "data_type": "DATE"}) == f"{a}.`as_of_date`"
+    assert dp.col_expr({"column_name": "shares", "data_type": "NUMERIC"}) == f"{a}.`shares`"
+    assert dp.col_expr({"column_name": "strategy", "data_type": "STRING"}) == f"{a}.`strategy`"
 
 
 def test_non_set_comparable_types_are_serialized():
     # JSON / ARRAY<...> / STRUCT<...> can't be set-compared — must be wrapped identically on both sides.
-    assert dp.col_expr({"column_name": "payload", "data_type": "JSON"}) == "TO_JSON_STRING(`payload`)"
-    assert dp.col_expr({"column_name": "refs", "data_type": "ARRAY<STRING>"}) == "TO_JSON_STRING(`refs`)"
-    assert dp.col_expr({"column_name": "f", "data_type": "STRUCT<a INT64>"}) == "TO_JSON_STRING(`f`)"
+    a = dp.PARITY_ALIAS
+    assert dp.col_expr({"column_name": "payload", "data_type": "JSON"}) == f"TO_JSON_STRING({a}.`payload`)"
+    assert dp.col_expr({"column_name": "refs", "data_type": "ARRAY<STRING>"}) == f"TO_JSON_STRING({a}.`refs`)"
+    assert dp.col_expr({"column_name": "f", "data_type": "STRUCT<a INT64>"}) == f"TO_JSON_STRING({a}.`f`)"
+
+
+def test_every_column_reference_is_alias_qualified_on_both_except_sides(monkeypatch):
+    # REGRESSION (2026-07-18 CI red): a BARE `col` is ambiguous when a view's NAME equals one of its
+    # COLUMN names. In `SELECT trading_enabled FROM <p>.state.trading_enabled`, BigQuery resolves the
+    # identifier to the TABLE's implicit range variable — the WHOLE ROW as a STRUCT — not the BOOL
+    # column (verified live). The other EXCEPT side is an anonymous subquery with no such range
+    # variable, so it resolved to the column, and the query died with "Column 1 in EXCEPT DISTINCT has
+    # incompatible types: BOOL, STRUCT<trading_enabled BOOL, halt_reason STRING>". Since "incompatible
+    # types" is a SCHEMA_DRIFT_MARKER, that fail-closed as NOT VERIFIED and red-lit CI, reporting
+    # phantom drift on a model whose port and live view match column-for-column. Both sides must carry
+    # the alias so every reference is unambiguously a COLUMN.
+    a = dp.PARITY_ALIAS
+    monkeypatch.setattr(dp, "compiled_models",
+                        lambda: iter([("state", "trading_enabled", "SELECT TRUE AS trading_enabled")]))
+    monkeypatch.setattr(dp, "model_source_names", lambda: {("state", "trading_enabled")})
+    monkeypatch.setattr(dp, "live_columns",
+                        lambda dataset, table: [{"column_name": "trading_enabled", "data_type": "BOOL"}])
+    seen = {}
+
+    def fake_bq(sql):
+        seen["sql"] = sql
+        return [{"n_missing": 0, "n_extra": 0}]
+    monkeypatch.setattr(dp, "bq", fake_bq)
+    assert dp.main() == 0
+    sql = seen["sql"]
+    # The column is only ever referenced through the alias — never bare.
+    assert f"{a}.`trading_enabled`" in sql
+    assert "`trading_enabled`" not in sql.replace(f"{a}.`trading_enabled`", "")
+    # BOTH sides are aliased: the compiled subquery AND the live table (2 EXCEPTs x 2 sides = 4).
+    assert sql.count(f"AS {a}") == 4
 
 
 def test_volatile_cols_constant_present():
