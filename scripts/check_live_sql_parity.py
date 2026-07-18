@@ -176,6 +176,108 @@ def collapse(s):
     return " ".join(s.split()) if s else s
 
 
+def canonicalize(sql):
+    """Reduce SQL to a form that ignores everything BigQuery does NOT preserve, so the comparison
+    tests MEANING rather than formatting.
+
+    WHY (2026-07-18). BigQuery does not store a view/routine definition verbatim — it RE-SERIALIZES
+    it. Measured against this repo's live warehouse, the stored text differs from the applied text by:
+      * comments STRIPPED entirely (both -- line and block);
+      * whitespace adjacent to punctuation REMOVED (`AS ( SELECT` -> `AS (SELECT`);
+      * identifier backticks dropped in some definitions;
+      * string-quote style re-serialized ('x' <-> "x").
+    collapse() (whitespace -> single space) survives none of that, so ANY comment edit in bigquery/*.sql
+    — the single most common kind of edit in this repo — made its object mismatch FOREVER, regardless
+    of re-apply. Measured effect: 70 of 179 objects (39%) reported DRIFT, of which 65 were pure
+    formatting and only 5 were real. A gate that is 93% false positive is not a gate; it trains the
+    reader to ignore the one signal that matters, which is exactly how the 2026-07-11
+    state.trading_enabled revert survived for days.
+
+    So: strip comments, drop backticks, normalize simple string-literal quoting, and keep whitespace
+    ONLY where it is semantically load-bearing (between two word/string tokens). String literals are
+    passed through VERBATIM — a `--` or extra space INSIDE a literal is content, not formatting, and
+    must still count as drift (ops.sp_score_theater's prompt text differing by an em-dash vs hyphen is
+    a real finding this must not swallow).
+    """
+    if not sql:
+        return sql
+    toks, i, n = [], 0, len(sql)
+    while i < n:
+        c = sql[i]
+        if c in ("'", '"'):                                  # string literal — verbatim
+            quote = c
+            triple = sql[i:i + 3] == quote * 3
+            if triple:
+                j = sql.find(quote * 3, i + 3)
+                j = n if j < 0 else j + 3
+            else:
+                j = i + 1
+                while j < n:
+                    if sql[j] == "\\":
+                        j += 2
+                        continue
+                    if sql[j] == quote:
+                        j += 1
+                        break
+                    if sql[j] == "\n":                       # unterminated — stop at the newline
+                        break
+                    j += 1
+            lit = sql[i:j]
+            # Normalize quote STYLE only when the content contains neither quote, so re-quoting is
+            # unambiguous and cannot change the literal's value.
+            if not triple and len(lit) >= 2 and lit[0] == lit[-1] and lit[0] in "'\"":
+                inner = lit[1:-1]
+                if '"' not in inner and "'" not in inner:
+                    lit = "'" + inner + "'"
+            toks.append(("S", lit))
+            i = j
+            continue
+        if sql.startswith("--", i):
+            j = sql.find("\n", i)
+            i = n if j < 0 else j
+            continue
+        if sql.startswith("/*", i):
+            j = sql.find("*/", i)
+            i = n if j < 0 else j + 2
+            continue
+        if c == "`":                                         # identifier quoting is not semantic
+            i += 1
+            continue
+        if c.isspace():
+            while i < n and sql[i].isspace():
+                i += 1
+            toks.append(("W", " "))
+            continue
+        if c.isalnum() or c == "_":
+            j = i
+            while j < n and (sql[j].isalnum() or sql[j] == "_"):
+                j += 1
+            toks.append(("T", sql[i:j]))
+            i = j
+            continue
+        toks.append(("P", c))
+        i += 1
+
+    # Removing a comment leaves the whitespace on BOTH sides of it as separate runs; merge them, or
+    # `wins -- note\n  FROM` canonicalizes to "wins  FROM" (two spaces) and never matches live.
+    merged = []
+    for t in toks:
+        if t[0] == "W" and merged and merged[-1][0] == "W":
+            continue
+        merged.append(t)
+
+    out = []
+    for k, (kind, val) in enumerate(merged):
+        if kind != "W":
+            out.append(val)
+            continue
+        prev = next((merged[x] for x in range(k - 1, -1, -1) if merged[x][0] != "W"), None)
+        nxt = next((merged[x] for x in range(k + 1, len(merged)) if merged[x][0] != "W"), None)
+        if prev and nxt and prev[0] in ("T", "S") and nxt[0] in ("T", "S"):
+            out.append(" ")                                  # load-bearing: `SELECT x` != `SELECTx`
+    return "".join(out)
+
+
 def find_final_definitions():
     """{(dataset, name): (obj_type, project, source_file, body)} — the LAST apply-in-order
     definition of each object across bigquery/*.sql."""
@@ -275,7 +377,10 @@ def main():
         # normalize_tail applied to the live body too (RES-3 step 0b) -- live view/routine
         # definitions retain trailing comments the repo-side extraction already strips, a second
         # never-converging false-positive class alongside the PROCEDURE-wrapper bug above.
-        if collapse(body) != collapse(normalize_tail(live_body)):
+        # canonicalize (not collapse): BigQuery re-serializes stored definitions — comments stripped,
+        # whitespace around punctuation removed, backticks/quote-style normalized — so a raw-text
+        # compare reported 70/179 objects as DRIFT when only 5 differed in MEANING (2026-07-18).
+        if canonicalize(body) != canonicalize(normalize_tail(live_body)):
             mismatches.append(f"{dataset}.{name} — live definition does NOT match the final "
                               f"effective definition in {source_file}")
             findings.append({"dataset": dataset, "name": name, "object_type": obj_type,

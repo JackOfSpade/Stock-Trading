@@ -381,3 +381,79 @@ def test_numbered_sql_files_sorts_numerically_not_lexically(tmp_path, monkeypatc
     monkeypatch.setattr(clsp, "BIGQUERY_DIR", str(d))
     got = [os.path.basename(p) for p in clsp.numbered_sql_files()]
     assert got == ["1_a.sql", "2_b.sql", "10_c.sql"]   # numeric order; unnumbered/non-sql excluded
+
+
+# ---- canonicalize(): compare MEANING, not formatting (2026-07-18) -----------------------------
+# BigQuery RE-SERIALIZES stored view/routine definitions: comments stripped, whitespace next to
+# punctuation removed, backticks dropped, string-quote style normalized. The old raw-text compare
+# (collapse) therefore reported 70 of 179 objects as DRIFT when only 5 differed in meaning — a 93%
+# false-positive rate on the very gate meant to catch the 2026-07-11 silent trading_enabled revert.
+# Each test below pins one measured false-positive class; the LAST group pins that real drift still
+# fires, so the fix cannot blind the check.
+
+def _same(a, b):
+    return clsp.canonicalize(a) == clsp.canonicalize(b)
+
+
+def test_canonicalize_ignores_comments_the_live_definition_does_not_keep():
+    repo = "SELECT a,  -- why this column exists\n       b\nFROM t"
+    live = "SELECT a, b FROM t"
+    assert _same(repo, live)
+
+
+def test_canonicalize_ignores_whitespace_adjacent_to_punctuation():
+    # The single most common shape: repo `AS (\n  SELECT`, live `AS (SELECT`.
+    assert _same("WITH c AS (\n  SELECT 1\n)\nSELECT * FROM c", "WITH c AS (SELECT 1)SELECT * FROM c")
+    assert _same("COALESCE(( SELECT 1 ), 0)", "COALESCE((SELECT 1),0)")
+
+
+def test_canonicalize_ignores_identifier_backticks():
+    assert _same("SELECT * FROM `proj.ds.tbl`", "SELECT * FROM proj.ds.tbl")
+
+
+def test_canonicalize_ignores_string_quote_style():
+    assert _same("WHERE series = 'deployed_unit_value'", 'WHERE series = "deployed_unit_value"')
+
+
+def test_canonicalize_merges_whitespace_left_behind_by_a_removed_comment():
+    # Stripping a comment leaves whitespace on BOTH sides; unmerged it yields "wins  FROM" (two
+    # spaces) and never matches live. This was the bug that kept 24 objects "drifted" mid-fix.
+    assert _same("SELECT wins   -- note\n   FROM t", "SELECT wins FROM t")
+
+
+def test_canonicalize_keeps_whitespace_that_separates_words():
+    # Must NOT fuse tokens: `SELECT x` is not `SELECTx`.
+    assert not _same("SELECT x", "SELECTx")
+    assert clsp.canonicalize("SELECT   x") == "SELECT x"
+
+
+# ---- the check must still SEE real drift ------------------------------------------------------
+
+def test_canonicalize_still_detects_an_added_predicate():
+    # The measured ops.sp_assert_deps / state.cadence_watch finding: live carries a 14-day window
+    # the repo lacks. This is real drift and must survive canonicalization.
+    repo = "WHERE r.routine=d AND r.status='completed')"
+    live = "WHERE r.routine=d AND r.status='completed' AND r.run_date>=DATE_SUB(in_run_date,INTERVAL 14 DAY))"
+    assert not _same(repo, live)
+
+
+def test_canonicalize_still_detects_an_added_statement():
+    # The measured gate-procedure finding: live has a self-heal CALL block the repo lacks.
+    repo = "BEGIN DECLARE v BOOL; SET v=(SELECT x FROM t); END"
+    live = ("BEGIN DECLARE v BOOL; BEGIN CALL ops.sp_auto_resolve_alerts(); "
+            "EXCEPTION WHEN ERROR THEN SELECT @@error.message; END; SET v=(SELECT x FROM t); END")
+    assert not _same(repo, live)
+
+
+def test_canonicalize_treats_string_CONTENT_as_significant():
+    # A `--`, an em-dash, or extra spacing INSIDE a literal is content, not formatting. The measured
+    # ops.sp_score_theater finding (em-dash vs hyphen in a prompt string) must NOT be swallowed.
+    assert not _same("SELECT 'diverges from the attacker — rather than'",
+                     "SELECT 'diverges from the attacker - rather than'")
+    assert not _same("SELECT 'a  b'", "SELECT 'a b'")
+    assert not _same("SELECT 'keep -- this'", "SELECT 'keep'")
+
+
+def test_canonicalize_handles_empty_and_none():
+    assert clsp.canonicalize("") == ""
+    assert clsp.canonicalize(None) is None
