@@ -10,6 +10,40 @@ act. Dated passes below; most recent first.
 
 ---
 
+# 2026-07-17 Whole-system deep-audit remediation — 1 residual owner apply (bigquery/75)
+
+The 2026-07-17 whole-system audit (12 confirmed + 5 deferred findings + a foundation-change gate) is
+implemented, validated (full pytest + 8 checkers green), committed on branch
+`audit/2026-07-17-whole-system-remediation`, and **10 of its 11 live-DDL files are already applied live
+and verified inert** via the BigQuery MCP: bigquery/78 (C1 breaker rebase + staleness-echo gate fix),
+82 (C2 split-aware engine), 81 (H3 A/C/E candidacy), 83 (M1 correlation), 35 (H7 regime vocab), 61+84
+(DEF-5 referee calibration + promotion readiness), 44 (DEF-5 referee scorer), 79 (M2 b3 promotion
+readiness), 63 (H5 scheduled-query beat-age registry). Live-verified after apply: `trading_enabled`
+TRUE, `b3_trading_enabled_check` drift FALSE, book drawdown −1.47% (both tiers FALSE), A/C/E now visible
+in `strategy_retirement_candidacy`, regime cells UP/NEUTRAL/DOWN.
+
+**RESIDUAL — apply `bigquery/75_scheduled_query_wrappers.sql` yourself (byte-exact, one command):**
+
+```
+bq --project_id=stock-trading-498512 query --use_legacy_sql=false --nouse_legacy_sql \
+  "$(cat bigquery/75_scheduled_query_wrappers.sql)"
+```
+
+- **Why you, not the agent:** the sandbox auto-mode classifier blocks file-based `bq` DDL from the
+  agent, and 75's `sp_sq_cadence_check` procedure is 567 lines — too large to hand-transcribe through
+  the MCP `execute_sql` tool without transcription risk on a **live-gating daily** procedure. A
+  byte-exact file apply eliminates that risk. It re-runs all 11 wrapper procedures idempotently (safe).
+- **What it activates (all RECORD-ONLY warnings — nothing gates capital):** H2 `ci_findings_bridge_stale`
+  dead-man, H4 INSERT-aware `safety_critical_dml_watch`, H5 `scheduled_query_stale` beat-age, M2 the
+  unconditional `b3_trading_enabled_drift` history MERGE, staleness-part-3 freshness-predicate narrowing,
+  DEF-3 `order_guard_verdict_mismatch` recompute. The staleness DEADLOCK itself is ALREADY fixed live by
+  bigquery/78 (gate exclusion + payload-aware Rule 4) — 75's part-3 is only the echo-source suppression.
+- After applying, `state.scheduled_query_version_drift` will show the bumped versions (daily_freshness_check
+  v3, cadence_check v6, safety_critical_dml_watch v3, daily_staging_cap_check v3) as no-longer-drifted on
+  the next sq:* heartbeat.
+
+---
+
 # 2026-07-17 Weekly-report chart audit — ALL DONE (view fix live + v5 re-pasted + drift clean)
 
 Triggered by an owner question about the weekly email's cumulative-return chart. An adversarial
