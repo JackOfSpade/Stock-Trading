@@ -10,7 +10,14 @@ act. Dated passes below; most recent first.
 
 ---
 
-# 2026-07-17 Whole-system deep-audit remediation — 1 residual owner apply (bigquery/75)
+# 2026-07-17 Whole-system deep-audit remediation — ALL DONE (bigquery/75 applied by owner 2026-07-17)
+
+**UPDATE 2026-07-17:** the owner applied bigquery/75 via `bq query --use_legacy_sql=false < file` (after
+a one-char syntax fix — `mode=''manual''` → `mode=manual` in the H4 block, commit on-branch). All 11
+live-DDL files are now applied live. The `sp_sq_*` wrapper versions (cadence_check v6, the three v3s)
+will read non-drifted in `state.scheduled_query_version_drift` once each next runs on its DTS schedule
+and emits its first versioned `sq:` heartbeat. Nothing outstanding. Original note kept below for record.
+
 
 The 2026-07-17 whole-system audit (12 confirmed + 5 deferred findings + a foundation-change gate) is
 implemented, validated (full pytest + 8 checkers green), committed on branch
