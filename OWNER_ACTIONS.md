@@ -1220,13 +1220,26 @@ see the corrected `ops/spikes/agent-sdk-orchestration-2026Q3.md` (c) for detail.
 
 - **`ops.parity_selfheal_log` is EMPTY — D3's LIVE-SQL-PARITY SELF-HEAL has never actually executed
   an apply** (verified 2026-07-18: zero rows since the table was created 2026-07-16 by
-  `bigquery/69_live_sql_parity_selfheal.sql`). Note this is *not* obviously a fault: `bigquery/69`'s
-  header describes the loop as reading candidates from `ops/monitoring/live_sql_parity_findings.json`,
-  but that file and the `--json-out` delivery path were **deliberately removed on 2026-07-17**
-  (OWNER_ACTIONS §I, option 3) in favour of the `ops.ci_findings` / `state.ci_findings_open` bridge —
-  so `69`'s prose is stale relative to the wiring it documents. Worth a look next time D3 is touched:
-  confirm the self-heal step actually reads `state.ci_findings_open` and that a real drift produces a
-  `parity_selfheal_log` row, because right now there is no positive evidence the loop has ever fired.
+  `bigquery/69_live_sql_parity_selfheal.sql`). — **`[INVESTIGATED + FIRE DRILL IN FLIGHT 2026-07-18]`**
+  (same-day follow-up session, owner-directed). Findings: the CHAIN IS CORRECTLY WIRED — D3's
+  CI-FINDINGS ADJUDICATION step already reads `state.ci_findings_open` (unified 2026-07-17), the
+  workflow writes per-object `finding_key='<dataset>.<name>'` rows, and `bigquery/86` supplies the
+  episode-aware `first_detected` the one-day lag keys on. "Never fired" is CORRECT-IDLE, not broken:
+  no qualifying per-object drift row has ever existed (per-object rows only began 2026-07-18 and
+  parity went 179/179 clean the same day), and the loop is REAL-DRIFT-ONLY by construction — each
+  clean daily parity run auto-resolves any open key before D3's evening run, so only drift persisting
+  >= 2 daily runs can ever reach a re-apply (a synthetic test row structurally cannot). Fixed this
+  pass: `bigquery/69`'s stale header/description rewired to the current bridge (repo + live ALTER),
+  and D3's adjudication gained the missing branch **(c)** "live and repo already MATCH"
+  (phantom-drift / healed-out-of-band, with JOBS_BY_PROJECT attribution — the retraction above's
+  lesson, now encoded). **POSITIVE-EVIDENCE FIRE DRILL ARMED** (decision_log `entry_type='fire-drill'`,
+  2026-07-18): a deliberate, semantically-inert live drift on `analytics.theater_check_calibration`
+  (ROUND digit 3→4; W5-digest-only consumer; repo `bigquery/11` stays canonical). Expected: Sun 07-19
+  parity flags it (+GH issue); Mon 07-20 ~18:30 MT D3 re-applies and writes the FIRST
+  `parity_selfheal_log` row; Tue 07-21 parity auto-resolves. ONE `ci_finding` warning email ~Mon
+  morning is EXPECTED (it is the drill). **If the finding is still open after Tue 2026-07-21, the
+  loop failed the drill** — investigate D3's execution of the step, then hand-heal by re-applying
+  `bigquery/11_theater_judge.sql`'s view. Do NOT hand-heal before Mon evening.
 
 - **Residual, low-probability edge case now live: `SL5 <- [AR_orc]` under the un-bounded gate.**
   With `bigquery/48` now live, `ops.sp_assert_deps`' "monitored" test has no rolling window, so a dep
