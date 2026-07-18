@@ -79,9 +79,14 @@ EXTRA_SCAN_GLOBS = [
 # Tolerant of optional backticks around the filename and either "loop `id`" or "loop id `id`" phrasing,
 # so a small punctuation reformat doesn't rot the regex, but a genuine restructure (see
 # tests/test_autonomy_consistency.py) still correctly yields no match.
+# The id class includes digits ([a-z0-9_]+): load_stages() accepts loop ids verbatim, and this
+# repo's routine/loop namespace uses digits heavily (D1, SL1-SL5, W5...), so a digit-bearing loop id
+# is plausible. A restrictive [a-z_]+ here would silently fail to match a citation to such a loop —
+# a vacuous pass (stale citation never flagged) — and the twin parser in cadence_heartbeat_loops()
+# would false-positive a coverage gap for it (2026-07-17 audit).
 CITATION_RE = re.compile(
     r"(?P<stage>[A-Za-z][A-Za-z_]*)\s+per\s+`?ops/autonomy_levels\.yaml`?"
-    r"[^\n]{0,40}?loop(?:\s+id)?\s+`(?P<id>[a-z_]+)`"
+    r"[^\n]{0,40}?loop(?:\s+id)?\s+`(?P<id>[a-z0-9_]+)`"
 )
 
 
@@ -129,7 +134,8 @@ def cadence_heartbeat_loops():
     if not os.path.exists(CADENCE_SQL):
         return None
     txt = open(CADENCE_SQL, encoding="utf-8").read()
-    return set(re.findall(r"'loop:([a-z_]+)'", txt))
+    # [a-z0-9_]+ (not [a-z_]+): match a digit-bearing loop id too — see CITATION_RE's comment.
+    return set(re.findall(r"'loop:([a-z0-9_]+)'", txt))
 
 
 def _check_cadence_heartbeat_coverage(errors):

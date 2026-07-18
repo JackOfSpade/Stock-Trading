@@ -177,7 +177,10 @@ def main():
 <h2>Recent routine runs</h2>{table(runs)}
 </body></html>"""
 
-    with open(OUT, "w") as f:
+    # Explicit encoding: the page declares <meta charset="utf-8"> and contains non-ASCII (em-dash,
+    # middle dot), so pin UTF-8 rather than relying on the platform default (matches the other
+    # generators; PEP 597 hygiene — 2026-07-17).
+    with open(OUT, "w", encoding="utf-8") as f:
         f.write(page)
     print(f"Wrote {OUT}  ({'GREEN' if green else 'ATTENTION'})")
     beat_heartbeat()

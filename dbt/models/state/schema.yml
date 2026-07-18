@@ -208,7 +208,17 @@ models:
         description: TRUE when the latest ops.account_snapshot row is older than the current
           last_trading_day (ITEM 16, 2026-07-11) — folded into state.trading_enabled so a stalled
           D2a fails the drawdown breaker closed instead of silently trusting stale data.
+      - name: breach_soft
+        description: TRUE when flow-adjusted drawdown <= -15% (entries-only pause via
+          state.entry_staging_allowed; NOT a gate term). Rebased 2026-07-17 (audit finding C1).
+        tests: [not_null]
+      - name: breach_hard
+        description: TRUE when flow-adjusted drawdown <= -40% (the catastrophe full-halt gate term).
+        tests: [not_null]
+      - name: capital_base
+        description: Cumulative net external flows (deposited capital) — the drawdown denominator.
       - name: drawdown_breach
+        description: Backward-compat alias == breach_hard (pre-78 consumers). New code reads breach_hard.
         tests: [not_null]
 
   - name: trading_enabled

@@ -96,8 +96,52 @@ def test_main_returns_1_when_every_model_is_skipped_due_to_bq_error(monkeypatch,
     assert "PARITY NOT VERIFIED" in capsys.readouterr().out
 
 
-def test_main_returns_0_when_no_compiled_models_exist(monkeypatch):
+def test_main_returns_0_when_nothing_ported_yet(monkeypatch):
+    # total==0 is legitimately OK only when there are ALSO no model sources (nothing ported yet).
     monkeypatch.setattr(dp, "compiled_models", lambda: iter([]))
+    monkeypatch.setattr(dp, "model_source_count", lambda: 0)
+    assert dp.main() == 0
+
+
+def test_main_returns_1_when_sources_exist_but_zero_compiled(monkeypatch, capsys):
+    # #8 (2026-07-17): 0 compiled models WHILE model sources exist = stale COMPILED_ROOT / renamed
+    # project / empty compile — must NOT report OK (the checked==0 guard couldn't fire at total==0).
+    monkeypatch.setattr(dp, "compiled_models", lambda: iter([]))
+    monkeypatch.setattr(dp, "model_source_count", lambda: 40)
+    assert dp.main() == 1
+    assert "PARITY NOT VERIFIED" in capsys.readouterr().out
+
+
+def test_main_returns_1_on_schema_shaped_query_error(monkeypatch, capsys):
+    # #7 (2026-07-17): a parity query that errors on a schema-shaped cause (dbt port missing a live
+    # column -> "Unrecognized name") must FAIL CLOSED, not be swallowed as a benign skip.
+    monkeypatch.setattr(dp, "compiled_models", lambda: iter([("state", "foo", "SELECT 1 AS a")]))
+    monkeypatch.setattr(dp, "live_columns",
+                        lambda dataset, table: [{"column_name": "a", "data_type": "STRING"},
+                                                {"column_name": "c", "data_type": "STRING"}])
+
+    def boom(sql):
+        raise RuntimeError("Unrecognized name: c at [1:8]")
+    monkeypatch.setattr(dp, "bq", boom)
+    assert dp.main() == 1
+    out = capsys.readouterr().out
+    assert "NOT VERIFIED" in out
+
+
+def test_main_skips_transient_query_error_but_still_reports_other_models(monkeypatch):
+    # A genuinely transient error (timeout/network) on one model stays a tolerant SKIP; as long as
+    # another model compares cleanly (checked>0, no drift), main() reports OK — the transient error
+    # must NOT fail closed the way a schema-shaped error does (#7's other direction).
+    models = iter([("state", "flaky", "SELECT 1 AS a"), ("state", "good", "SELECT 1 AS a")])
+    monkeypatch.setattr(dp, "compiled_models", lambda: models)
+    monkeypatch.setattr(dp, "live_columns",
+                        lambda dataset, table: [{"column_name": "a", "data_type": "STRING"}])
+
+    def fake_bq(sql):
+        if "flaky" in sql:
+            raise RuntimeError("bq query timed out after 600s")
+        return [{"n_missing": 0, "n_extra": 0}]
+    monkeypatch.setattr(dp, "bq", fake_bq)
     assert dp.main() == 0
 
 

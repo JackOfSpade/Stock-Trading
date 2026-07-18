@@ -43,8 +43,12 @@ jobs:
         run: python -m pytest -q
       - name: strategy/ slices in sync with Strategy.md
         run: python scripts/split_strategy.py --check
+      - name: task_plan/ slices in sync with Claude_Task_Plan.md
+        run: python scripts/split_task_plan.py --check
       - name: cadence single-source (cadence.yaml ⇄ 12/15/24 SQL ⇄ plan headings/inventory ⇄ 31/59 catchup lists)
         run: python scripts/check_cadence_consistency.py
+      - name: prose invariants (routine-executed prose ⇄ ops/prose_invariants.yaml — no RETIRED instructions, H6)
+        run: python scripts/check_prose_invariants.py
       - name: cadence routine lists are generator-current (bigquery/12/15/24 ⇄ ops/cadence.yaml — ARCH-3 Item 30b)
         run: python scripts/gen_routine_lists.py --check
       - name: roster single-source (roster.yaml ⇄ state seed ⇄ Strategy.md ⇄ slices ⇄ slice-map ⇄ derived SQL)

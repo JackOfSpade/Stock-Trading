@@ -2,7 +2,7 @@
 
 An LLM-operated, event-sourced trading experiment. Claude runs scheduled routines (each a
 Claude-Code-on-Web session); BigQuery is the system of record; IBKR + Google Calendar are the
-execution interface; the only human action is tapping a `[Claude] Confirm order` calendar event.
+execution interface; the only human actions are confirming Claude-crafted orders (a tap in IBKR, surfaced by IBKR's own order notification — a `[Claude] Confirm order` calendar event is created only for a non-craftable manual-entry order, per the 2026-07-09 calendar-scope narrowing) and funding deposits.
 
 ## Map
 - **Spec / rules:** `Strategy.md`, `Operating_Protocols.md`, `Claude_Task_Plan.md`,
@@ -10,7 +10,7 @@ execution interface; the only human action is tapping a `[Claude] Confirm order`
   - `strategy/` — generated read-optimized slices of `Strategy.md` (see `strategy/README.md`)
 - **Data substrate:** `bigquery/` — `events` (append-only truth) · `state` (latest-wins views)
   · `perf` (deployed-TWR engine) · `analytics` (BQML/embeddings/NAV) · `ops` (models + procedures).
-  Apply `bigquery/01..11_*.sql` in order via the BigQuery MCP. See `bigquery/README.md`.
+  Apply `bigquery/NN_*.sql` in ascending numeric order (01 → the highest-numbered file) via the BigQuery MCP. See `bigquery/README.md`.
 - **Numerics:** `c_options_math.py` — Strategy C's defined-risk engine (pure stdlib),
   guarded by `tests/` + CI (`.github/workflows/ci.yml`).
 - **Ops / control plane:** `ops/` — `RUNBOOK.md` (owner console steps), `cadence.yaml`

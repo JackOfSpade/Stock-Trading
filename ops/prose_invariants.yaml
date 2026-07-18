@@ -1,0 +1,103 @@
+# Prose invariants — the version-controlled source of truth for "protocol prose must not re-instruct
+# RETIRED behavior in the sections agents execute" (finding H6, whole-system deep audit 2026-07-17).
+#
+# WHY THIS EXISTS. The routine-executed prose files (Claude_Task_Plan.md, Operating_Protocols.md,
+# Watchlist.md, README.md, AI_Trading_Foundation.md) are read and ACTED ON by the scheduled Claude
+# routines. When a mechanism is retired (the 2026-06-06 `.md`->BigQuery cutover; the 2026-07-09
+# calendar-scope narrowing; the D2/D2a Step-0 cutover; the SGOV->VOO park cutover) the CHANGELOG and
+# the §15 redirect map get updated, but stray IMPERATIVE instructions elsewhere in the same files can
+# keep telling a routine to do the retired thing — write to Portfolio_Ledger.md, hand-carry a router
+# state from Regime_State.md, drop an order-confirmation into a calendar event, apply a pinned SQL
+# range. Those went undetected because nothing cross-checked the prose. scripts/check_prose_invariants.py
+# (CI, BLOCKING) turns each such retired-instruction class into a machine-checked invariant: a future
+# revision that re-introduces the retired phrasing (silent non-propagation) fails the build with a
+# precise file:line diff instead of silently mis-instructing a live routine. The same discipline as
+# scripts/check_cadence_consistency.py / check_roster_consistency.py, applied to prose.
+#
+# HOW A RULE WORKS (see scripts/check_prose_invariants.py for the exact semantics):
+#   - `files`         : the file(s) the rule scans (repo-relative).
+#   - `forbid_regex`  : FAIL if any non-exempt line matches it (a retired instruction re-appeared).
+#   - `require_regex` : FAIL if NO line in the file matches it (a load-bearing correct phrasing vanished).
+#   - `ignorecase`    : optional; case-insensitive match.
+#   - `exempt_line_regex` : optional; a line matching this is SKIPPED for `forbid_regex` (the sanctioned
+#                       passages — the §15 retirement map, dated changelog lines, and explicit
+#                       "retired"/"there is no <file>" notes legitimately NAME the retired file).
+#   - `exempt_sections`: optional; markdown-heading substrings — a match under a heading containing one
+#                       of these is skipped.
+#   - `reason` / `source_of_truth` : printed on failure so the fix is self-evident.
+#
+# The `forbid_regex`es are deliberately tight to the retired IMPERATIVE phrasing (e.g. "in
+# Portfolio_Ledger.md alongside", "per Regime_State.md"), NOT the bare filename — so the many
+# legitimate references (the redirect map, "Portfolio_Ledger.md retired, §15", "there is no
+# Portfolio_Ledger.md to update") do not trip it and this file needs almost no exemptions.
+
+invariants:
+  # ---- Portfolio_Ledger.md is RETIRED (2026-06-06 cutover, §15). No routine writes/caches/edits it;
+  # positions/perf/NAV live in state.current_positions / perf.* / analytics.* / state.open_orders. ----
+  - id: portfolio_ledger_not_a_write_target
+    files: [Operating_Protocols.md, Claude_Task_Plan.md]
+    forbid_regex: '(?:\b(?:records?|cache|write|writing|append|logs?)\b[^.\n]{0,70}\bin Portfolio_Ledger\.md\b|\brecorded in Portfolio_Ledger\.md\b|Portfolio_Ledger\.md.{0,3}(?:remains authoritative|mirrors it)|edited in place\)[^.\n]*Portfolio_Ledger\.md)'
+    ignorecase: true
+    reason: >
+      Portfolio_Ledger.md was RETIRED in the 2026-06-06 cutover (Operating_Protocols.md §15). A routine
+      must NOT be instructed to record/cache/write to it or told it "remains authoritative" — the live
+      state is state.current_positions / perf.strategy_daily / analytics.strategy_nav /
+      analytics.account_reconciliation, and staged orders live in state.open_orders (events.queue_events).
+    source_of_truth: Operating_Protocols.md §11/§13/§15
+
+  # ---- Regime_State.md is RETIRED (2026-06-06, §15). Router/regime state is authoritative in
+  # state.current_regime (events.regime_events); prose must never hand-carry a router value or read it. ----
+  - id: regime_state_not_hand_carried
+    files: [Operating_Protocols.md, Watchlist.md, Claude_Task_Plan.md]
+    forbid_regex: '(?:per Regime_State\.md|mirror Regime_State\.md|Regime_State\.md\s+activation|lives independently[^.\n]*Regime_State\.md|edited in place\)[^.\n]*Regime_State\.md)'
+    ignorecase: true
+    reason: >
+      Regime_State.md was RETIRED (§15). Router/regime state is authoritative in state.current_regime
+      (events.regime_events, scopes STRATEGY_ACTIVATION + TECHNICAL_SIGNAL) and must be read live, never
+      hand-carried in prose or cited as "per Regime_State.md activation rules".
+    source_of_truth: state.current_regime / events.regime_events (§15 redirect map)
+
+  # ---- Order confirmations use create_order_instruction's own IBKR notification (2026-07-09 scope
+  # narrowing, §1). A [Claude] Confirm order calendar event is the CONTINGENCY for a non-craftable
+  # order ONLY — never the default staging step. ----
+  - id: no_default_confirm_order_calendar_event
+    files: [Operating_Protocols.md, Claude_Task_Plan.md]
+    forbid_regex: '(?:into the order-confirmation calendar event|via connector-crafted Confirm-order events|into a [^.\n]{0,20}confirm-order event)'
+    ignorecase: true
+    reason: >
+      The 2026-07-09 calendar-scope narrowing (Operating_Protocols.md §1) made create_order_instruction's
+      own IBKR notification the human-facing confirm surface for every CRAFTABLE order. A [Claude] Confirm
+      order calendar event is created ONLY for a genuinely non-craftable/manual-entry order. Prose must not
+      route the default craftable-order confirmation into a calendar event.
+    source_of_truth: Operating_Protocols.md §1 (calendar-scope narrowing) / §11
+
+  # ---- README bigquery apply-range must be COMPUTED (ascending to the highest-numbered file), never a
+  # pinned two-endpoint literal that silently goes stale as new bigquery/NN_*.sql files are added. ----
+  - id: readme_apply_range_not_pinned
+    files: [README.md]
+    forbid_regex: 'bigquery/0?1\.\.\d'
+    reason: >
+      The bigquery apply-range in README.md was pinned ("bigquery/01..11_*.sql") and silently went stale as
+      files up to bigquery/NN accumulated. It must be phrased as ascending numeric order to the highest file,
+      not a pinned endpoint.
+    source_of_truth: bigquery/ (apply in ascending numeric order; see bigquery/README.md)
+  - id: readme_apply_range_computed_present
+    files: [README.md]
+    require_regex: 'ascending numeric order'
+    reason: >
+      README.md must state the bigquery apply order as "ascending numeric order" (the computed phrasing that
+      replaced the pinned "01..11" range) so the instruction can never re-pin a stale endpoint.
+    source_of_truth: bigquery/README.md
+
+  # ---- The ROUTINE INVENTORY D2 row must reflect the 2026-07-09 D2/D2a cutover: fills reconciliation,
+  # events.trade_fills/daily_marks, and the perf.strategy_daily recompute moved to D2a. ----
+  - id: inventory_d2_row_no_retired_writes
+    files: [Claude_Task_Plan.md]
+    forbid_regex: '^\|\s*\*\*D2\*\*\s*\|[^\n]*(?:trade_fills|recompute\s+.?perf)'
+    reason: >
+      The ROUTINE INVENTORY D2 row still listed an events.trade_fills WRITE and a "recompute
+      perf.strategy_daily" — both moved to D2a in the 2026-07-09 cutover (Claude_Task_Plan.md D2 §"STEP
+      0…now run in D2a"; ops/cadence.yaml D2/D2a writes). The D2 row must not claim them. (events.daily_marks
+      is fine as a READ in this row's reads column — only the trade_fills/perf-recompute WRITE claims are
+      forbidden.)
+    source_of_truth: ops/cadence.yaml (D2 / D2a writes) + Claude_Task_Plan.md D2 cutover note

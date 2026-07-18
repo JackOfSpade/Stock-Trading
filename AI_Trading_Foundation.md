@@ -77,7 +77,7 @@ Interim performance expectations are modest. The deliverable during this phase i
 
 ## Workflow Assumption
 
-All claims below assume: Claude is the sole decision-maker and produces every recommendation; a human executes recommendations manually in IBKR; the human performs no independent analysis, no discretionary overrides, and checks the account once per trading day after market close. The human also has no edge-generating private information — they cannot attend industry conferences, do not have a professional network in relevant sectors, and will not be gathering real-world observations that AI couldn't retrieve through public sources.
+All claims below assume: Claude is the sole decision-maker and produces every recommendation; Claude crafts each order as a pending IBKR instruction through the connector (Operating_Protocols.md §11) and the human's only execution action is confirming it — a tap surfaced by IBKR's own order notification (a manual-entry `[Claude] Confirm order` calendar event only for a genuinely non-craftable order, per the 2026-07-09 calendar-scope narrowing), plus funding deposits; the human performs no independent analysis, no discretionary overrides, and checks the account once per trading day after market close. The human also has no edge-generating private information — they cannot attend industry conferences, do not have a professional network in relevant sectors, and will not be gathering real-world observations that AI couldn't retrieve through public sources.
 
 Rule-based algorithmic trading via IBKR's API is feasible for individuals but is not in scope. The edges catalogued here are specifically the edges of LLM-based analytical decision-making, which is distinct from rule-based algorithmic execution.
 

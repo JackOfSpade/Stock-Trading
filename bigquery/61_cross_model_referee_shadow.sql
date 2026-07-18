@@ -27,11 +27,46 @@
 -- sides are normalized to a small canonical vocabulary before comparing, so a phrasing difference alone
 -- never counts as disagreement. Empty until ops.sp_score_cross_model_referee() has scored at least one
 -- paired review (self-bootstrapping, same as analytics.theater_check_calibration).
+--
+-- DIVERGENCE-REVIEW SCORING ADDED (DEF-5 Part 1, 2026-07-17). 'divergence-review' joins the scored
+-- review_type set here AND in bigquery/44's ops.sp_score_cross_model_referee IN-list. As of 2026-07-17
+-- the three previously-scored irreversible classes (strategy-adoption / strategy-retirement /
+-- foundation-change-assessment) have produced ZERO attacker rows, so the referee had NOTHING to score
+-- and this calibration was permanently empty (the __ALL__ rollup read n_scored=0). Divergence-review —
+-- the D1/D2 router adversarial STEP-0 that lifts/reinstates a per-strategy new-entry block — already has
+-- ~6 historical attacker+orchestrator pairs (2026-06-02 .. 2026-07-06) plus a roughly monthly stream, so
+-- widening the scored set finally gives the SHADOW loop real concurrence evidence to accrue.
+-- SCOPE NOTE (deliberate): the referee loop is in SHADOW (record-only, non-gating — no readiness view's
+-- `ready` column reads referee_verdict yet), so widening its SCORED set changes NO live behavior and is
+-- safe. Divergence-review DOES bind capital (an ACTIVATE lifts a new-entry block; DO-NOT-ACTIVATE keeps
+-- it), unlike the three strictly-irreversible classes, but that binding is REVERSIBLE (a later cycle can
+-- re-impose the block) — it is nonetheless a legitimate cross-model-independence target: an
+-- orchestrator that mis-lifts a block on a weak divergence case deploys real capital, exactly the
+-- single-model-fragility this referee exists to cross-check. Documenting the reversibility so a future
+-- audit does not mistake this for scope-creep into a class the design meant to exclude.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.referee_concurrence_calibration` AS
 WITH normalized AS (
   SELECT
     review_id, role, review_type,
     CASE
+      -- divergence-review vocabulary (DEF-5 Part 1, 2026-07-17): ACTIVATE / DO-NOT-ACTIVATE / HYBRID.
+      -- SCOPED to review_type='divergence-review' AND ANCHORED to the LEADING decision token
+      -- (^[^A-Z]* skips leading spaces / markdown '**' / quotes before the token) rather than a bare
+      -- substring match. This deviates from a naive '%DO-NOT-ACTIVATE%'/'%DNA%'-before-'%ACTIVATE%'
+      -- substring ordering ON PURPOSE: the live orchestrator divergence-review verdicts are verbose
+      -- free-text whose REASONING embeds the word "DNA" while the DECISION is ACTIVATE — e.g.
+      -- "ACTIVATE (binding, UNCHANGED). Post-reconciliation DNA is override-manufactured on a raw call
+      -- that ROSE to ACTIVATE...". A bare '%DNA%' test (checked before ACTIVATE) misnormalizes ALL FOUR
+      -- such ACTIVATE decisions to DO_NOT_ACTIVATE (VERIFIED against the 6 live orchestrator rows,
+      -- 2026-07-17), which would falsely record disagreement and understate concurrence on a metric that
+      -- gates a capital-binding promotion. Anchoring to the leading token fixes that while preserving the
+      -- required ordering (HYBRID first — "HYBRID ACTIVATE" contains ACTIVATE; DO-NOT-ACTIVATE / DNA
+      -- before the bare ACTIVATE fallback). Scoping to the review_type keeps a SISA verdict that happens
+      -- to contain the word "activate" in prose from cross-normalizing into this vocabulary.
+      WHEN review_type = 'divergence-review' AND REGEXP_CONTAINS(UPPER(verdict), r'^[^A-Z]*HYBRID') THEN 'HYBRID'
+      WHEN review_type = 'divergence-review' AND REGEXP_CONTAINS(UPPER(verdict), r'^[^A-Z]*DO[ -]?NOT[ -]?ACTIVATE') THEN 'DO_NOT_ACTIVATE'
+      WHEN review_type = 'divergence-review' AND REGEXP_CONTAINS(UPPER(verdict), r'^[^A-Z]*DNA\b') THEN 'DO_NOT_ACTIVATE'
+      WHEN review_type = 'divergence-review' AND UPPER(verdict) LIKE '%ACTIVATE%' THEN 'ACTIVATE'
       WHEN UPPER(verdict) LIKE '%RETIRE%' THEN 'RETIRE'
       WHEN UPPER(verdict) LIKE '%KEEP%' THEN 'KEEP'
       WHEN UPPER(verdict) LIKE '%TERMINATE%' THEN 'TERMINATE'
@@ -45,7 +80,7 @@ WITH normalized AS (
       ELSE 'OTHER'
     END AS verdict_norm
   FROM `stock-trading-498512.events.adversarial_reviews`
-  WHERE review_type IN ('strategy-adoption', 'strategy-retirement', 'foundation-change-assessment')
+  WHERE review_type IN ('strategy-adoption', 'strategy-retirement', 'foundation-change-assessment', 'divergence-review')
     AND role IN ('orchestrator', 'referee_gemini')
 ),
 paired AS (

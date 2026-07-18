@@ -77,6 +77,39 @@ CHECKS
        in scope, replacing a hardcoded 'A, B, C, or E' enumeration that had no mechanism to pick up a
        future SISA graduate. FAIL naming which strategy is missing the field or has an invalid value.
 
+  R-J  REGIME-COVERAGE VOCABULARY AGREEMENT (added 2026-07-17, finding H7). bigquery/35_strategy_arsenal.sql's
+       state.arsenal_regime_coverage view builds its 9 cells from two UNNEST literals
+       (`UNNEST([...]) AS spy_trend` x `UNNEST([...]) AS vix_regime`). Those tokens MUST equal the
+       IMMUTABLE shared regime vocabulary parsed from strategy/01_shared_regime_vocabulary.md
+       (spy_trend IN {UP,NEUTRAL,DOWN} from the '### SPY Trend State' section, vix_regime IN
+       {LOW,NORMAL,HIGH} from '### VIX Regime') — the exact tokens SL3 stamps onto
+       analytics.strategy_incubation_perf.regime_cell. The pre-H7 literals (UPTREND/RANGE/DOWNTREND x
+       LOW_VIX/ELEVATED_VIX/HIGH_VIX) matched no writer, so every cov/gap-fill string-equality join
+       missed and all 9 cells read is_gap=TRUE forever, biasing SL1's zero-coverage synthesis. This makes
+       the arsenal_regime_coverage header's own claim ("the strategy/01 shared vocabulary") a checked
+       invariant. FAIL naming the disagreeing token set and its two values.
+
+  R-K  GOLDEN-SCENARIO PROSE-REGRESSION COVERAGE (added 2026-07-17, finding DEF-4 — the golden-scenario
+       expansion gap. Named R-K, NOT R-J: the DEF-4 brief said "R-J" but that id was already taken by the
+       regime-coverage vocabulary check above (finding H7), so this one takes the next free letter.).
+       CLAUDE.md makes strategy add/delete fully autonomous (SISA), and the golden fixture set
+       (tests/golden_scenarios/scenarios.yaml) is the ONLY behavioral gate on the DECISION prose an
+       adopted strategy runs on — but nothing forced a NEW strategy's decision prose to get any
+       prose-regression coverage, so SISA could adopt a strategy whose activation/entry wording could
+       silently flip forever unguarded. This check makes that a BUILD FAILURE: every strategy in
+       strategy/roster.yaml whose roster_state is SHADOW / PAPER / PROBE / ADOPTED must be referenced by
+       >= 1 scenario in scenarios.yaml. A scenario "references" code X if EITHER (a) a governing_files
+       entry is X's own per-strategy slice `NN_strategy_<x>.md` (the explicit signal SL5's SHADOW-register
+       step stamps on the >=2 scenarios it authors in the same commit that registers the strategy — the
+       proven "same-commit-or-CI-fails" enforcement, exactly like R-A on the bigquery/35 seed), OR (b) it
+       names "Strategy X" as a whole token in its id/situation/rationale (the founding A-E fixtures' signal
+       — they pin the aggregate Strategy.md, not a slice, and each names its strategy, so all five pass
+       today with no fixture edit). This is a MECHANICAL consistency gate the autonomous registrar
+       satisfies itself in-band, NOT a human review/approval gate on strategy add (SISA no-human-gate
+       posture preserved — R-A already blocks a half-applied fanout the same way). FAIL naming the
+       uncovered strategy + its state. If scenarios.yaml is ABSENT (pre-ITEM-20 checkout) this check
+       SKIPS cleanly, exactly as R-A/R-E skip a missing bigquery/35.
+
   R-F  SPEC-LOCK HASH AGREEMENT (added rev 2026-07-11, Item 28 self-improvement audit; hardened
        2026-07-11 adversarial self-audit). Each strategy's LOCKED machinery — its strategy/0N_strategy_
        <code>.md slice plus its corresponding math module(s) (strategy_math/strategy_<code>.py +
@@ -115,6 +148,9 @@ STRATEGY_DIR = os.path.join(ROOT, "strategy")
 PLAN = os.path.join(ROOT, "Claude_Task_Plan.md")
 CADENCE = os.path.join(ROOT, "ops", "cadence.yaml")
 ARSENAL_SQL = os.path.join(ROOT, "bigquery", "35_strategy_arsenal.sql")
+# R-K: the golden-scenario prose-regression fixture set (tests/golden_scenarios/scenarios.yaml). A
+# module global (not a frozen constant read once) so tests can monkeypatch it, like every other path here.
+SCENARIOS_YAML = os.path.join(ROOT, "tests", "golden_scenarios", "scenarios.yaml")
 
 # The LIVE roster-derived SQL that must carry NO bare ['A'..] literal / fixed /5 divisor (R-B).
 DERIVED_LIVE_SQL = [
@@ -170,6 +206,11 @@ LIFECYCLE_STATES = ("CANDIDATE", "QUALIFYING", "AUTHORING", "UNDER_REVIEW", "SHA
                     "PROBE", "ADOPTED", "RETIREMENT_PROPOSED", "TERMINATED", "POST_MORTEM", "REJECTED")
 ACTIVE_STATES_YAML = {"probe", "adopted"}      # roster.yaml roster_state values meaning is_active
 ACTIVE_STATES_SQL = {"PROBE", "ADOPTED"}       # seed to_state values meaning is_active
+# R-K: the roster_state values (lowercase, as roster.yaml writes them) that require golden-scenario
+# coverage — every incubating-or-live phase from SHADOW entry onward. SHADOW is the moment the candidate's
+# machinery freezes and its decision prose becomes real, so coverage is required from there, not only at
+# PROBE (is_active). CANDIDATE/QUALIFYING/AUTHORING/UNDER_REVIEW/RETIRED/TERMINATED are out of scope.
+GOLDEN_COVERAGE_STATES = {"shadow", "paper", "probe", "adopted"}
 
 # '## Strategy <CODE> ...' heading (Strategy.md + each generated slice). '[CANDIDATE]' = not roster-active.
 STRATEGY_HEADING = re.compile(r"^##\s+Strategy\s+([A-Z]{1,3})\b([^\n]*)$", re.M)
@@ -274,6 +315,83 @@ def arsenal_rails_sql_consts():
     return {name: int(val) for val, name in RAIL_CONST.findall(txt)}
 
 
+# R-J: a bolded regime-token bullet in strategy/01, e.g. `- **UP:** SPY close > ...`.
+SHARED_VOCAB_BULLET = re.compile(r"^-\s+\*\*([A-Z][A-Z_]*):\*\*", re.M)
+
+
+def shared_regime_tokens():
+    """R-J: parse the immutable SPY-trend and VIX-regime token SETS from strategy/01_shared_regime_
+    vocabulary.md (spy = {UP,DOWN,NEUTRAL} under '### SPY Trend State'; vix = {LOW,NORMAL,HIGH} under
+    '### VIX Regime'). Returns (spy_set, vix_set, path); (None, None, path) if the file is absent.
+
+    The vocab path is derived from STRATEGY_DIR at CALL time (not a frozen module global built once from
+    the real ROOT) so the tests/test_roster_consistency.py repo_copy fixture — which copies the whole
+    strategy/ dir and monkeypatches STRATEGY_DIR at the tmp copy — is honored, exactly as spec_hash_inputs()
+    re-reads STRATEGY_DIR/STRATEGY_MATH_DIR on every call. Section-scoped so the NORMAL/INVERTED yield-curve
+    and HEALTHY/WEAK breadth labels lower in the same file can never leak into the SPY/VIX token sets."""
+    path = os.path.join(STRATEGY_DIR, "01_shared_regime_vocabulary.md")
+    if not os.path.exists(path):
+        return None, None, path
+    txt = open(path, encoding="utf-8").read()
+
+    def section_tokens(header):
+        m = re.search(r"^###\s+" + re.escape(header) + r"\s*$(.*?)(?=^###\s|\Z)", txt, re.M | re.S)
+        return set(SHARED_VOCAB_BULLET.findall(m.group(1))) if m else set()
+
+    return section_tokens("SPY Trend State"), section_tokens("VIX Regime"), path
+
+
+def arsenal_coverage_cell_tokens():
+    """R-J: extract the two `UNNEST([...]) AS spy_trend` / `... AS vix_regime` cell literals from
+    bigquery/35_strategy_arsenal.sql's state.arsenal_regime_coverage `cells` CTE. Returns
+    (spy_set, vix_set); either element is None if its literal cannot be located. The `AS code` seed
+    UNNEST (a different alias) cannot collide."""
+    txt = open(ARSENAL_SQL, encoding="utf-8").read()
+
+    def toks(alias):
+        m = re.search(r"UNNEST\(\s*\[([^\]]*)\]\s*\)\s+AS\s+" + alias + r"\b", txt)
+        return set(re.findall(r"'([A-Z_]+)'", m.group(1))) if m else None
+
+    return toks("spy_trend"), toks("vix_regime")
+
+
+# R-K: a "Strategy <CODE>" whole-token mention in a founding fixture's prose (id/situation/rationale).
+# `[A-Z]{1,3}\b` matches only the 1-3-letter uppercase code (so "Strategy Arsenal" does not match code
+# 'A' — after 'A' comes lowercase 'r', no word boundary), mirroring STRATEGY_HEADING / SEED_ROW.
+SCENARIO_STRATEGY_MENTION = re.compile(r"\bStrategy\s+([A-Z]{1,3})\b")
+
+
+def scenario_docs():
+    """R-K: load the golden-scenario fixtures -> list of scenario dicts. Returns None (not []) when the
+    file is ABSENT, so main() can SKIP R-K cleanly on a pre-ITEM-20 checkout — distinct from a present-but-
+    empty file (which yields [] and legitimately covers nothing). SCENARIOS_YAML is read at CALL time so a
+    monkeypatched path is honored, like slice_codes()/shared_regime_tokens()."""
+    if not os.path.exists(SCENARIOS_YAML):
+        return None
+    doc = yaml.safe_load(open(SCENARIOS_YAML, encoding="utf-8")) or {}
+    return doc.get("scenarios", []) or []
+
+
+def golden_covered_codes(scenarios):
+    """R-K: the set of strategy codes the fixture set gives prose-regression coverage. A scenario covers
+    code X if EITHER (a) a governing_files entry is X's own per-strategy slice `NN_strategy_<x>.md` (the
+    signal SL5 stamps on new-strategy fixtures — numbering-agnostic via SLICE_FILE_REF), OR (b) it names
+    "Strategy X" as a whole token in its id/situation/rationale (the founding A-E fixtures, which pin the
+    aggregate Strategy.md and name their strategy in prose)."""
+    covered = set()
+    for sc in scenarios:
+        if not isinstance(sc, dict):
+            continue
+        for g in sc.get("governing_files", []) or []:
+            m = SLICE_FILE_REF.search(str(g))
+            if m:
+                covered.add(m.group(1).upper())
+        text = " ".join(str(sc.get(k, "") or "") for k in ("id", "situation", "rationale"))
+        for m in SCENARIO_STRATEGY_MENTION.finditer(text):
+            covered.add(m.group(1))
+    return covered
+
+
 def seed_active_codes():
     # BUG FIX (rev 2026-07-10b, code-review finding #2): the previous version processed ALL SEED_ROW
     # matches in one pass, then ALL UNNEST_SEED_BLOCK matches in a second pass, so an UNNEST block always
@@ -285,7 +403,18 @@ def seed_active_codes():
     for m in SEED_ROW.finditer(txt):
         events.append((m.start(), m.group(1), m.group(2)))
     for m in UNNEST_SEED_BLOCK.finditer(txt):
-        state_m = re.search(r"'(" + "|".join(LIFECYCLE_STATES) + r")'", m.group("select"))
+        # Capture to_state, NOT from_state. The SELECT projection is (event_ts, code, from_state,
+        # to_state, driver_routine, note); grabbing the FIRST quoted lifecycle-state read from_state
+        # instead of to_state on any batch whose from_state is a real quoted state (e.g. a
+        # PAPER->PROBE / ADOPTED->TERMINATED batch retirement) — the exact swap SEED_ROW was hardened
+        # against (lines above) but the UNNEST path was left unpatched (2026-07-17 audit). Anchor on
+        # the bare `code` loop-var column + the from_state slot, mirroring SEED_ROW, so the founding
+        # batch (from_state = CAST(NULL AS STRING)) still reads 'ADOPTED' and a future quoted-
+        # from_state batch reads its true to_state.
+        state_m = re.search(
+            r"\bcode\b\s*,\s*(?:NULL|CAST\(\s*NULL\s+AS\s+STRING\s*\)|'[A-Z_]+')"
+            r"\s*,\s*'(" + "|".join(LIFECYCLE_STATES) + r")'",
+            m.group("select"))
         if not state_m:
             continue
         state = state_m.group(1)
@@ -365,16 +494,23 @@ def main():
     if not os.path.exists(DBT_RECONCILE):
         errors.append("R-C: dbt/tests/assert_cash_flows_reconcile.sql is missing")
     else:
-        for n, line in enumerate(open(DBT_RECONCILE, encoding="utf-8"), 1):
-            # Adjacency guard (matching R-B's "amount" co-occurrence requirement): without it, ANY
-            # unrelated N/M-shaped text in this file (e.g. a RUNBOOK section reference like
-            # "section 5/6") trips FIXED_DIVISOR and false-fails CI (2026-07-14 audit finding). The
-            # separate `"amount/5" in ...` clause was also dead code — FIXED_DIVISOR already
-            # matches that exact substring, so it added no coverage.
-            if FIXED_DIVISOR.search(line) and ("amount" in line or "cash_flow" in line or "deposit" in line):
+        # Full-text (not line-by-line) scan, mirroring R-B: a line-by-line search cannot see a
+        # divisor a SQL formatter wrapped across two lines (`amount /\n  5`) — the exact vacuous-pass
+        # R-B was hardened against but R-C was not (2026-07-17 audit). FIXED_DIVISOR's `\s*` spans the
+        # newline in a full-text scan. Adjacency guard (matching R-B's "amount" co-occurrence): without
+        # it ANY unrelated N/M-shaped text (e.g. a RUNBOOK "section 5/6" reference) trips FIXED_DIVISOR
+        # and false-fails CI. The ctx spans the match's first line through its last line so the
+        # amount/cash_flow/deposit token is still found when the wrap separates it from the divisor.
+        txt = open(DBT_RECONCILE, encoding="utf-8").read()
+        for m in FIXED_DIVISOR.finditer(txt):
+            n = txt.count("\n", 0, m.start()) + 1
+            ctx_start = txt.rfind("\n", 0, m.start()) + 1
+            ctx_end = txt.find("\n", m.end())
+            ctx = txt[ctx_start: ctx_end if ctx_end != -1 else len(txt)]
+            if "amount" in ctx or "cash_flow" in ctx or "deposit" in ctx:
                 errors.append(f"R-C: dbt/tests/assert_cash_flows_reconcile.sql:{n} hardcodes the roster "
-                              f"size (a `/ 5` / amount/5 assumption) — the reconciliation must be "
-                              f"count-agnostic (per-strategy sum): {line.strip()}")
+                              f"size (a `/ N` amount-split assumption) — the reconciliation must be "
+                              f"count-agnostic (per-strategy sum): {ctx.strip()}")
 
     # ---- R-D: per-strategy routines named in roster.yaml exist in cadence.yaml ----
     cad = yaml.safe_load(open(CADENCE, encoding="utf-8")) or {}
@@ -513,6 +649,71 @@ def main():
                           f"decide whether {code} is in scope for the daily opportunity check / weekly "
                           f"position deep-dive.")
 
+    # ---- R-J: arsenal_regime_coverage cell tokens == the strategy/01 shared regime vocabulary ----
+    # (H7 fix, 2026-07-17). Only runs when bigquery/35 exists (its absence is already reported by R-A/R-E).
+    if os.path.exists(ARSENAL_SQL):
+        spy_vocab, vix_vocab, vocab_path = shared_regime_tokens()
+        if spy_vocab is None:
+            errors.append(f"R-J: {os.path.relpath(vocab_path, ROOT)} absent — cannot source the canonical "
+                          f"SPY-trend / VIX-regime tokens that arsenal_regime_coverage's cells must equal.")
+        elif not spy_vocab or not vix_vocab:
+            errors.append("R-J: parsed zero SPY-trend and/or VIX-regime tokens from "
+                          "strategy/01_shared_regime_vocabulary.md — did the '### SPY Trend State' / "
+                          "'### VIX Regime' heading or the bolded-bullet shape change? (update "
+                          "SHARED_VOCAB_BULLET / the section headers).")
+        else:
+            spy_cells, vix_cells = arsenal_coverage_cell_tokens()
+            if spy_cells is None or vix_cells is None:
+                errors.append("R-J: could not locate both `UNNEST([...]) AS spy_trend` and "
+                              "`... AS vix_regime` cell literals in bigquery/35_strategy_arsenal.sql's "
+                              "arsenal_regime_coverage view — did the `cells` CTE shape change?")
+            else:
+                if spy_cells != spy_vocab:
+                    errors.append(f"R-J: bigquery/35 arsenal_regime_coverage spy_trend cell tokens "
+                                  f"{sorted(spy_cells)} != strategy/01 shared vocabulary {sorted(spy_vocab)} "
+                                  f"— align the UNNEST literal with the immutable SPY Trend State tokens.")
+                if vix_cells != vix_vocab:
+                    errors.append(f"R-J: bigquery/35 arsenal_regime_coverage vix_regime cell tokens "
+                                  f"{sorted(vix_cells)} != strategy/01 shared vocabulary {sorted(vix_vocab)} "
+                                  f"— align the UNNEST literal with the immutable VIX Regime tokens.")
+
+    # ---- R-K: golden-scenario prose-regression coverage for every SHADOW/PAPER/PROBE/ADOPTED strategy
+    # (2026-07-17, finding DEF-4) — SISA can adopt a strategy whose DECISION prose (activation / entry
+    # rules) has zero behavioral coverage; the golden fixture set is the only gate that reads what a
+    # routine would DECIDE, and nothing forced a newcomer into it. This makes an uncovered incubating/live
+    # strategy a BUILD FAILURE, so SL5's SHADOW-register step (which authors >=2 scenarios in the same
+    # commit that adds the roster.yaml entry) is enforced "same-commit-or-CI-fails", exactly like R-A on
+    # the bigquery/35 seed. Mechanical consistency gate, NOT a human review gate on strategy add. ----
+    scenarios = scenario_docs()
+    if scenarios is not None:  # None = scenarios.yaml absent (pre-ITEM-20 checkout) -> skip cleanly
+        covered = golden_covered_codes(scenarios)
+        for s in doc.get("strategies", []) or []:
+            code = s.get("code")
+            state = str(s.get("roster_state", "")).lower()
+            if state not in GOLDEN_COVERAGE_STATES:
+                continue
+            # Coverage is DEFINED via the strategy's own per-strategy slice (governing_files) or a prose
+            # mention; a strategy with no slice file yet cannot be enforced by that signal and is not a real
+            # SL5-registered strategy (SL2 always authors a slice — its absence is caught by R-D/R-A, not
+            # here). Skip with a non-blocking note so a slice-less roster entry (e.g. an early hand-seeded
+            # SHADOW row before its slice lands) does not hard-fail this check on a signal it cannot satisfy.
+            if not glob.glob(os.path.join(STRATEGY_DIR, f"*_strategy_{str(code).lower()}.md")):
+                notes.append(
+                    f"R-K: strategy {code!r} (roster_state={state}) has no per-strategy slice file yet — "
+                    f"golden-scenario coverage not enforced until its strategy/NN_strategy_"
+                    f"{str(code).lower()}.md slice exists (non-blocking).")
+                continue
+            if code not in covered:
+                errors.append(
+                    f"R-K: strategy {code!r} (roster_state={state}) has NO golden-scenario coverage in "
+                    f"tests/golden_scenarios/scenarios.yaml — every SHADOW/PAPER/PROBE/ADOPTED strategy "
+                    f"must be referenced by >=1 scenario (its per-strategy slice "
+                    f"'NN_strategy_{str(code).lower()}.md' in governing_files, or a 'Strategy {code}' "
+                    f"prose mention). SL5's SHADOW-register step authors >=2 fixtures (one "
+                    f"router-ACTIVATE, one router-DO-NOT-ACTIVATE boundary) in the SAME commit that "
+                    f"registers the strategy, so its decision prose cannot land with zero "
+                    f"prose-regression coverage.")
+
     # ---- report ----
     if errors:
         print("ROSTER CONSISTENCY: FAIL\n")
@@ -535,7 +736,9 @@ def main():
           f"SPEC_HASH_INPUTS-covered spec-locked strategy's spec_hash agrees with its .md slice + math "
           f"module(s); dbt schema.yml accepted_values(strategy) tests agree with the roster-active set; "
           f"no stray events.strategy_candidates dataset-name reference; every roster-active strategy "
-          f"declares a valid review_cadence.")
+          f"declares a valid review_cadence; arsenal_regime_coverage's cell tokens equal the strategy/01 "
+          f"shared regime vocabulary; every SHADOW/PAPER/PROBE/ADOPTED strategy has >=1 golden-scenario "
+          f"fixture.")
     if notes:
         print("\nNOTES (non-blocking):")
         for n in notes:

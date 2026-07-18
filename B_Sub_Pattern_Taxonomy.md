@@ -286,35 +286,26 @@ To group by primary pattern: `REGEXP_EXTRACT(sub_pattern, r'^(SP[0-9]+|PatternN|
 
 ---
 
-## Mechanical-Failure NO-GOs (Pure Archive Moves — Reference Only)
+## Mechanical-Failure NO-GOs (Pure Archive Moves) — ARCHIVED
 
-The following NO-GO archives in this cycle did NOT undergo sub-pattern extraction because they failed at the mechanical gate (criterion 1 close-to-close magnitude or instrument-rule mcap-floor) before reaching criterion 4. Listed here only for completeness; future thesis-construction sessions should NOT route candidates against these as sub-pattern matches (they're not sub-patterns).
+**Moved to `B_Sub_Pattern_Taxonomy_Archive.md` (2026-07-17, DEF-2 working-file pruning).** The
+mechanical-gate NO-GO reference table (criterion-1 magnitude / instrument-rule mcap-floor /
+event-verification / sector-cap fails — pure archive moves that never reach criterion-4 sub-pattern
+extraction) is now in that archive file. It is **authoritative but low-traffic**: read only by the
+**W5 tally** and **Q1 retrospectives**, never by thesis-construction sub-pattern routing (those
+entries are NOT sub-patterns — do not route candidates against them). This split keeps the active
+file scoped to definitions + routing-rules + benchmark instances + the recent-cycle window.
 
-| Ticker | Decision date | Mechanical failure | Archive pointer |
-|--------|---------------|---------------------|------------------|
-| EQIX | 2026-05-01 | Criterion 1 mechanical eligibility failure on close-to-close magnitude (premarket-vs-regular-session-close measurement artifact) | 2026-05-01 EQIX NO-GO → Decision_Log_Archive_2026_Q2.md |
-| TDOC | 2026-05-01 | Instrument rule mechanical eligibility failure (mcap ~$1.07B vs $2B floor) | 2026-05-01 TDOC NO-GO → Decision_Log_Archive_2026_Q2.md |
-| FIVN | 2026-05-02 | Instrument rule mechanical eligibility failure (mcap ~$1.65B vs $2B floor) | 2026-05-02 FIVN NO-GO → Decision_Log_Archive_2026_Q2.md |
-| AXSM | 2026-05-02 | Criterion 1 mechanical eligibility failure on close-to-close magnitude (FDA-approval close-to-close +2.6% vs Daily.md-scan "+13%" premarket artifact) | 2026-05-02 AXSM NO-GO → Decision_Log_Archive_2026_Q2.md |
-| DASH | 2026-05-11 | Criterion 1 magnitude gate fail (Daily.md "+9.6%" = Thu 5/7 intraday peak $183.50; actual Day-0 C/C +2.01% [$167.97→$171.35] < 5%; premarket / intraday-peak artifact — 3rd such after EQIX/AXSM; move fully unwound below baseline by Day-2) | events.decision_log 2026-05-11 DASH B NO-GO |
-| DG | 2026-05-12 | Event-verification-gate fail (no qualifying B event in the 10-day window — FY26 guidance + CEO succession were 29-40+ trading days stale; the −7.64% Mon 5/11 move was a macro / sector retail sell-off [UMich 48.2 ATL, gas >$4 on Iran], outside B's enumerated event class; the live "sub-pattern 1" tag is stale). Same EVG class as CPRI 2026-06-03 | events.decision_log 2026-05-12 DG B NO-GO |
-| MRNA | 2026-05-12 | Criterion 1 magnitude gate fail (prompt-anchored Mon 5/11 C/C −2.70% [$54.35→$52.88] < 5%; the asserted +7.5% / +9% was a premarket / intraday spike that "pared all gains"; even the corrected Fri-5/8 +11.97% anchoring fails criterion 3 [next earnings Jul 30 outside window] + criterion 4 [preclinical hantavirus pipeline]) | events.decision_log 2026-05-12 MRNA B NO-GO |
-| AGL | 2026-05-14 | Instrument-rule mcap-floor fail (mcap $910.6M = 54.5% below the $2B floor; terminated at the criterion-1 instrument gate before any criteria 2-5 / sub-pattern routing). Same family as TDOC/FIVN/POET-2026-04-27 | events.decision_log 2026-05-14 AGL B NO-GO |
-| BKE | 2026-05-29 | Portfolio-construction sector-cap gate fail (Consumer Discretionary book already 3/3 — TJX + AZO + BURL [BURL filled 5/29 @ ~$300.60] — so BKE would be the 4th; NO-GO at MANDATORY Step 2 before criteria 2-5; the beat-and-fade / SP6 thesis was never adjudicated; mcap $2.33B cleared). Sister to AEO 2026-05-30 (same cap) | events.decision_log 2026-05-29 BKE B NO-GO |
-| PLAB | 2026-06-02 | Instrument-rule mechanical failure (mcap < $2B floor after a −36.4% Day-0 decline) | events.decision_log 2026-06-02 PLAB B NO-GO |
-| ULTA | 2026-06-03 | Criterion 1 magnitude gate fail (Day-0 +1.33% < 5%) | events.decision_log 2026-06-03 ULTA B NO-GO |
-| DG | 2026-06-03 | Criterion 1 magnitude gate fail (Day-0 −3.33% < 5%; intraday +5.8% faded to a down close) | events.decision_log 2026-06-03 DG B NO-GO |
-| CRDO | 2026-06-03 | Criterion 1 magnitude gate fail (Day-0 +1.28% < 5%) | events.decision_log 2026-06-03 CRDO B NO-GO |
-| CPRI | 2026-06-03 | Event-verification gate failure (no qualifying B event on 2026-06-03; the real Day-0 event was the 5/27 print — see SP6 CPRI 2026-06-04) | events.decision_log 2026-06-03 CPRI B NO-GO |
-| CRWD | 2026-06-04 | Criterion 1 magnitude gate fail (Day-0 −3.81% < 5%; A-router gate cleared) | events.decision_log 2026-06-04 CRWD B NO-GO |
-| OLLI | 2026-06-06 | Criterion 1 magnitude gate fail (qualifying earnings Day-0 close-to-close +0.62% < 5%; the −6.6% Day+1 was an analyst-downgrade move, not the earnings event) | events.decision_log 2026-06-06 OLLI B NO-GO |
-| RH | 2026-06-13 | Criterion-1 magnitude gate fail (true Day-0 Fri 6/12 −3.94% < 5%; RH reported Thu 6/11 AMC, so the +7.15% on 6/11 was a pre-print rally, not the reaction; D1's "−5.8% / $149.95" was a stale-weekend-snapshot artifact — connector get_price_history authoritative). SP3 pre-print-rally + SP4 / Pattern-N housing-demand-overhang context recorded for any future qualifying RH event. | events.decision_log 2026-06-13 RH B NO-GO |
+<!-- W5 maintenance rule: if this active file exceeds 80KB, move criterion-4 instances older than
+     90 days to B_Sub_Pattern_Taxonomy_Archive.md (NEVER move a benchmark / "Cleanest-L1" instance).
+     As of the 2026-07-17 split no non-mechanical instance is >90 days old, so only the
+     Mechanical-Failure table was moved. -->
 
 ---
 
 ## Maintenance
 
-- **W5 (weekly Factbase & Analytics Consolidation)** appends new sub-pattern instances as new B criterion-4 NO-GOs are extracted from events.decision_log. Mechanical-failure NO-GOs are listed in the bottom reference table only (no sub-pattern routing).
+- **W5 (weekly Factbase & Analytics Consolidation)** appends new sub-pattern instances as new B criterion-4 NO-GOs are extracted from events.decision_log. Mechanical-failure NO-GOs are listed in the archived reference table (`B_Sub_Pattern_Taxonomy_Archive.md`) only (no sub-pattern routing).
 - **Thesis-construction sessions** read this file FIRST for sub-pattern routing before scanning archived Decision_Log entries; the instance entries here are dense enough to route a new candidate without reading the original archived NO-GO.
 - **New sub-pattern category emerges** when a NO-GO entry establishes a new sub-pattern label (e.g., TEAM 2026-05-02 established sub-pattern 6; UPS 2026-05-05 established variant 4b). W5 adds new categories or variants as needed.
 - **Pattern-Number Naming**: live Decision_Log uses numerical scheme (1, 3, 4, 5, 6, 8, 9 active; 2 and 7 historical-placeholder). Pattern N (NOW/CHTR negative-direction-cross-section) predates the numerical scheme and retains descriptive naming.

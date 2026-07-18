@@ -15,11 +15,13 @@
 -- of the live analytics.fn_is_occ_option_symbol UDF (bigquery/40) — dbt models cannot reference a
 -- hand-created BigQuery routine, so this must be kept in sync by hand if that UDF's pattern ever changes.
 
-WITH equity_held AS (
-  SELECT m.mark_date, l.strategy, l.position_key, l.shares, l.entry_price,
-         CAST(1 AS INT64) AS multiplier,
-         l.shares * IF(m.mark_date = l.exit_date, l.exit_price, m.close) AS mv,  -- gross; exit at fill price
-         l.shares * COALESCE(m.dividend,0) AS div_cash
+-- SPLIT-AWARE equity leg (rev 2026-07-17, audit finding C2 — mirrors bigquery/82): shares are scaled
+-- by a per-position running split factor so a post-entry split on a held stock keeps mv + the dividend
+-- leg continuous instead of manufacturing a phantom ~-50% daily return that fires drawdown_kill.
+equity_marked AS (
+  SELECT m.mark_date, l.strategy, l.position_key, l.shares, l.entry_price, l.exit_price, l.exit_date,
+         CAST(1 AS INT64) AS multiplier, m.close, COALESCE(m.dividend,0) AS dividend,
+         COALESCE(NULLIF(m.split_ratio, 0), 1) AS day_split
   FROM {{ ref('position_lifecycle') }} l
   JOIN {{ ref('daily_marks_curated') }} m
     ON m.ticker = l.ticker
@@ -27,6 +29,16 @@ WITH equity_held AS (
    AND (l.exit_date IS NULL OR m.mark_date <= l.exit_date)
   WHERE l.strategy IS NOT NULL
     AND NOT REGEXP_CONTAINS(l.ticker, r'^[A-Z]{1,6} *[0-9]{6}[CP][0-9]{8}$')
+),
+equity_runprod AS (
+  SELECT *, EXP(SUM(LN(day_split)) OVER (PARTITION BY position_key ORDER BY mark_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)) AS rp
+  FROM equity_marked
+),
+equity_held AS (
+  SELECT mark_date, strategy, position_key, shares, entry_price, multiplier,
+         shares * eff * IF(mark_date = exit_date, exit_price, close) AS mv,
+         shares * eff * dividend AS div_cash
+  FROM (SELECT *, SAFE_DIVIDE(rp, FIRST_VALUE(rp) OVER (PARTITION BY position_key ORDER BY mark_date)) AS eff FROM equity_runprod)
 ),
 option_held AS (
   SELECT om.mark_date, l.strategy, l.position_key, l.shares, l.entry_price,

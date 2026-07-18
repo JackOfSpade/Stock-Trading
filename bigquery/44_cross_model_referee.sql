@@ -31,6 +31,19 @@
 -- `ready` column — SL5's retirement-execution path and D2/AR_orc's foundation-change TERMINATE handler
 -- both still act on the orchestrator verdict alone, unchanged by this file. Wiring either consumer to
 -- require `ready` is a separate future change (also gated on the same burn-in criterion).
+--
+-- DIVERGENCE-REVIEW ADDED TO THE SCORED SET (DEF-5 Part 1, 2026-07-17). The referee's review_type IN-list
+-- below now also scores 'divergence-review' (the D1/D2 router adversarial STEP-0 that lifts/reinstates a
+-- per-strategy new-entry block). RATIONALE: as of 2026-07-17 the three irreversible classes above have
+-- produced ZERO attacker rows, so the referee had nothing to score and analytics.referee_concurrence_
+-- calibration (bigquery/61) was permanently empty — the SHADOW loop could not accrue promotion evidence.
+-- Divergence-review has ~6 historical attacker+orchestrator pairs already + a ~monthly stream. This is
+-- SAFE because the loop is still SHADOW/record-only (no readiness view reads referee_verdict); it is a
+-- LEGITIMATE cross-model-independence target because a divergence-review binds real capital (an ACTIVATE
+-- lifts a block), even though — unlike the three irreversible classes — that binding is REVERSIBLE. The
+-- referee prompt below gains the ACTIVATE/DO-NOT-ACTIVATE/HYBRID vocabulary + a capital-protective
+-- DO-NOT-ACTIVATE ambiguity default (keep the block on a genuinely ambiguous case). See bigquery/61's
+-- header for the paired scope note and the anchored (not bare-substring) verdict normalization.
 
 -- ============================================================================
 -- ops.sp_score_cross_model_referee — direct structural analog of ops.sp_score_theater()
@@ -59,15 +72,18 @@ BEGIN
       (
         SELECT a.review_id, a.review_type, a.strategy, a.review_date, a.cycle_number,
           CONCAT(
-            'You are an INDEPENDENT cross-model referee for an IRREVERSIBLE autonomous-trading-system ',
+            'You are an INDEPENDENT cross-model referee for a capital-binding autonomous-trading-system ',
             'decision. You have NOT seen any other reviewer opinion or verdict -- form your own from ',
             'first principles against the case below only. Return the SAME verdict vocabulary the review ',
             'type uses (SUFFICIENT/INSUFFICIENT for strategy-adoption; RETIRE/KEEP for strategy-retirement; ',
-            'TERMINATE/CONTINUE/CONSTRAINT_RELAXATION for foundation-change-assessment). Default on genuine ',
+            'TERMINATE/CONTINUE/CONSTRAINT_RELAXATION for foundation-change-assessment; ',
+            'ACTIVATE/DO-NOT-ACTIVATE/HYBRID for divergence-review). Begin your answer with the single ',
+            'verdict token. Default on genuine ',
             'ambiguity: ',
             CASE a.review_type
               WHEN 'strategy-adoption' THEN 'INSUFFICIENT (reject)'
               WHEN 'strategy-retirement' THEN 'KEEP'
+              WHEN 'divergence-review' THEN 'DO-NOT-ACTIVATE (keep the new-entry block)'
               ELSE 'CONTINUE' END,
             '.\n\nReview type: ', a.review_type,
             '\n\n=== CASE (attacker submission only -- no orchestrator text shown) ===\n',
@@ -75,7 +91,7 @@ BEGIN
           ) AS prompt
         FROM `stock-trading-498512.events.adversarial_reviews` a
         WHERE a.role = 'attacker'
-          AND a.review_type IN ('strategy-adoption','strategy-retirement','foundation-change-assessment')
+          AND a.review_type IN ('strategy-adoption','strategy-retirement','foundation-change-assessment','divergence-review')
           AND NOT EXISTS (
             SELECT 1 FROM `stock-trading-498512.events.adversarial_reviews` r
             WHERE r.review_id = a.review_id AND r.role = 'referee_gemini')

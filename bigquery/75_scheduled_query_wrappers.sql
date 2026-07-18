@@ -61,20 +61,37 @@ END;
 
 -- =====================================================================================================
 -- ops.sp_sq_daily_freshness_check   (was bigquery/scheduled_queries/daily_freshness_check.sql; that file is now a frozen one-line
--- CALL wrapper — full historical header/rationale comments remain there. SQ_VERSION v2 (bumped
--- from v1 by this ARCH-1 wrapper migration, 2026-07-16 — no check logic changed).
+-- CALL wrapper — full historical header/rationale comments remain there. SQ_VERSION v3 (bumped
+-- from v2 by MON STALENESS PART-3, 2026-07-17 — source-echo suppression: RAISE predicate narrowed
+-- from all_green to the data-staleness component conjunction only; see the inline note below).
 -- =====================================================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_daily_freshness_check`()
 BEGIN
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:daily_freshness_check', 'v2', 'daily_freshness_check.sql ran');
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:daily_freshness_check', 'v3', 'daily_freshness_check.sql ran');
   BEGIN
-    IF (SELECT NOT all_green FROM `stock-trading-498512.state.system_health`) THEN
+    -- STALENESS PART-3 (MON, 2026-07-17 source-echo suppression). This dead-man now RAISEs on the genuine
+    -- DATA-STALENESS COMPONENTS only — marks_fresh AND engine_fresh AND embeddings_healthy AND NOT
+    -- position_drift_detected — i.e. state.system_health.all_green MINUS its open_critical_alerts=0 term.
+    -- WHY drop that term: it made this check an alert-on-alert ECHO. Any open critical (each of which
+    -- already has its own delivery channel) flipped all_green FALSE and re-raised a content-free
+    -- 'staleness' critical here; both gates then counted 'staleness' as blocking, so a staleness echo of a
+    -- since-healed overnight transient kept trading disabled all day and D2a hit a FATAL gate whose clear
+    -- condition (marks_fresh) needs the very marks D2a would ingest — the 2026-07-14/07-17 circular
+    -- deadlock. bigquery/78 broke that circularity at the GATE layer (excluding 'staleness' from
+    -- blocking_criticals); this stops the echo at its SOURCE so the redundant critical is not raised in
+    -- the first place. d2_ran_last_trading_day / a backup-freshness term are deliberately NOT added: neither
+    -- is an all_green term today (d2_ran_last_trading_day is FALSE at this 05:00 UTC run on a normal day —
+    -- verified live 2026-07-17 with all_green=TRUE — so adding it would false-fire every morning; backup
+    -- staleness has its own cadence_check backup_stale critical). Behaviourally INERT on apply day (the
+    -- component conjunction reads TRUE right now, same as all_green).
+    IF (SELECT NOT (marks_fresh AND engine_fresh AND embeddings_healthy AND NOT position_drift_detected)
+        FROM `stock-trading-498512.state.system_health`) THEN
       CALL `stock-trading-498512.ops.sp_raise_alert_once`(
         'critical', 'scheduled.freshness', 'staleness',
-        'Daily freshness check: system_health not green',
+        'Daily freshness check: a data-staleness component (marks/engine freshness, embedding health, or position reconciliation) is not green',
         (SELECT TO_JSON_STRING(t) FROM `stock-trading-498512.state.system_health` t));
       RAISE USING MESSAGE = CONCAT(
-        'STOCK-TRADING freshness check FAILED (not all_green): ',
+        'STOCK-TRADING freshness check FAILED (data-staleness component not green): ',
         (SELECT TO_JSON_STRING(t) FROM `stock-trading-498512.state.system_health` t));
     END IF;
   END;
@@ -82,13 +99,15 @@ END;
 
 -- =====================================================================================================
 -- ops.sp_sq_cadence_check   (was bigquery/scheduled_queries/cadence_check.sql; that file is now a frozen one-line
--- CALL wrapper — full historical header/rationale comments remain there. SQ_VERSION v5 (bumped
--- from v4 by this ARCH-1 wrapper migration, 2026-07-16 — no check logic changed).
+-- CALL wrapper — full historical header/rationale comments remain there. SQ_VERSION v6 (bumped
+-- from v5 by MON, 2026-07-17: added the ci_findings_bridge_stale dead-man (H2), the scheduled_query_stale
+-- beat-age dead-man (H5), and the unconditional b3_trading_enabled_drift monitor-health-history MERGE (M2);
+-- all three are record-only warnings / history writes — no RAISE-contributing change).
 -- =====================================================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v5', 'cadence_check.sql ran');
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v6', 'cadence_check.sql ran');
 
   -- RUNBOOK section 38 self-heal (ITEM 3, bigquery/38_run_log_selfheal.sql): backfill any
   -- ops.run_log completion row whose routine already has a landed-commit marker in
@@ -129,7 +148,8 @@ BEGIN
     -- indefinitely since it was the one self-healing class missing from this auto-age list. The
     -- message fix below (stable text) restores real dedup; this stays as defense-in-depth.
     -- immediate_action_flagged + process_scorecard_signal added 2026-07-16 (consumption-closure): point-in-time W3/M3/W5 signals, consumed autonomously by W4/M4 within days; 7-day age-out stops forever-open dashboard rows. A persisting condition is simply re-raised.
-    AND category IN ('stranded_session', 'instruction_drift', 'calendar_runway_low', 'routine_stalled', 'trigger_missing', 'immediate_action_flagged', 'process_scorecard_signal')
+    -- scheduled_query_stale + ci_findings_bridge_stale + control_plane_insert added 2026-07-17 (MON H2/H4/H5): self-healing warnings (a resumed beat / a re-armed bridge / an aged-out control INSERT event stop being true) whose stable-message rows would otherwise linger open after the condition heals; a STILL-true condition is simply re-raised below (bridge_stale/scheduled_query_stale in THIS proc, control_plane_insert by safety_critical_dml_watch).
+    AND category IN ('stranded_session', 'instruction_drift', 'calendar_runway_low', 'routine_stalled', 'trigger_missing', 'immediate_action_flagged', 'process_scorecard_signal', 'scheduled_query_stale', 'ci_findings_bridge_stale', 'control_plane_insert')
     AND alert_ts < TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY);
 
   -- missed_run (critical) — a monitored routine expected today did not complete.
@@ -368,6 +388,28 @@ BEGIN
   -- 2026-07-11 incident class (an in-place scheduled-query re-apply silently clobbered a gate
   -- AND-term for days with zero CI/live signal, bigquery/47_trading_enabled_resync.sql), now checked
   -- daily instead of only in an advisory-only dbt test.
+  -- MONITOR-PROMOTION HISTORY for b3_trading_enabled_drift (MON M2, 2026-07-17). Mirrors the
+  -- ddl_drift/restore_stale MERGE-upsert above and the append_only_integrity one in integrity_check.sql
+  -- (ITEM 24/31): logged UNCONDITIONALLY every run (clean = zero drift rows in
+  -- state.b3_trading_enabled_check) so state.b3_promotion_readiness (bigquery/79_b3_promotion.sql) can
+  -- evaluate the 14-consecutive-clean-DISTINCT-day bar the plain live view cannot provide on its own —
+  -- bigquery/64's header promised this promotion path but nothing wrote the history until now. MERGE
+  -- (not INSERT) so a same-day off-schedule/manual re-run never double-logs one day (same rationale as
+  -- the ddl_drift/restore_stale writes). Does NOT change this check's alerting: still the WARNING-only
+  -- IF block below. Because b3_trading_enabled_drift lives in THIS file (which HAS the raise_msg
+  -- accumulator, unlike append_only_integrity), D3's MONITOR-PROMOTION SELF-FLIP promotes it by flipping
+  -- the 'warning' literal below to 'critical' AND appending to raise_msg — see bigquery/79's header.
+  MERGE `stock-trading-498512.ops.monitor_health_history` T
+  USING (
+    SELECT 'b3_trading_enabled_drift' AS check_id, CURRENT_DATE('America/Denver') AS check_date,
+           NOT EXISTS (SELECT 1 FROM `stock-trading-498512.state.b3_trading_enabled_check` WHERE drift) AS clean
+  ) S
+  ON T.check_id = S.check_id AND T.check_date = S.check_date
+  WHEN MATCHED THEN
+    UPDATE SET clean = S.clean, logged_ts = CURRENT_TIMESTAMP()
+  WHEN NOT MATCHED THEN
+    INSERT (check_id, check_date, clean) VALUES (S.check_id, S.check_date, S.clean);
+
   IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.b3_trading_enabled_check` WHERE drift) THEN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'warning', 'scheduled.cadence', 'b3_trading_enabled_drift',
@@ -432,6 +474,27 @@ BEGIN
        FROM `stock-trading-498512.state.scheduled_query_version_drift` WHERE drift));
   END IF;
 
+  -- scheduled_query_stale (warning, MON H5, 2026-07-17). state.scheduled_query_version_drift detects only
+  -- a VERSION mismatch among sources that have EVER beaten; a DTS config that silently STOPS forever (7 of
+  -- the 12 can), or one registered but never once beaten, is invisible to it — nothing watched beat AGE.
+  -- bigquery/63 now carries expected_interval_hours per query + a grace factor and exposes two new columns:
+  --   * stale_beat        — monitored (has beaten >=1x) AND last_beat_ts older than interval x grace.
+  --   * never_beat_overdue — NOT monitored AND the registry row was declared > 7 days ago (self-
+  --                          bootstrapping grace: a freshly-registered query stays quiet for a week).
+  -- Record-only, no RAISE (promotion-eligible via the bigquery/45 ladder later, like ddl_drift): a stalled
+  -- scheduled query is also caught by its own DTS email-on-failure and the Cloud Monitoring absence policy;
+  -- this is the in-band, digest-visible backstop. DEDUP-CRITICAL: the message lists ONLY sq_names +
+  -- which failure mode (stable while the stalled set is stable, per the order_guard_omitted convention);
+  -- daily-changing ages live ONLY in the JSON payload.
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.scheduled_query_version_drift` WHERE stale_beat OR never_beat_overdue) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`('warning','scheduled.cadence','scheduled_query_stale',
+      CONCAT('Scheduled-query beat-age dead-man — DTS config(s) overdue past their expected interval (x grace) or never-beat window: ',
+        (SELECT STRING_AGG(CONCAT(sq_name, IF(never_beat_overdue, ' (NEVER beat)', ' (stale beat)')), ', ' ORDER BY sq_name)
+         FROM `stock-trading-498512.state.scheduled_query_version_drift` WHERE stale_beat OR never_beat_overdue)),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(sq_name, monitored, stale_beat, never_beat_overdue, expected_interval_hours, CAST(last_beat_ts AS STRING) AS last_beat_ts) ORDER BY sq_name))
+       FROM `stock-trading-498512.state.scheduled_query_version_drift` WHERE stale_beat OR never_beat_overdue));
+  END IF;
+
   -- probe_funding_stalled (warning, consumption-closure audit 2026-07-16) -- state.strategy_probe_
   -- funding_stalled (bigquery/62_probe_stake_funding.sql) flags a PROBE-phase newcomer frozen below
   -- the $2,000 floor for >=90 days; previously had no automated reader at all.
@@ -487,6 +550,34 @@ BEGIN
               FROM `stock-trading-498512.state.ci_findings_open`)),
       (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(workflow, finding_key, CAST(finding_ts AS STRING) AS finding_ts, run_url)))
        FROM `stock-trading-498512.state.ci_findings_open`));
+  END IF;
+
+  -- ci_findings_bridge_stale (warning, MON H2, 2026-07-17). The ci_finding block above only ever fires
+  -- when the bridge DELIVERS a finding — but ops.ci_findings is the DECLARED single delivery path for
+  -- live-sql-parity drift (bigquery/67 / Claude_Task_Plan.md D3), and a DEAD bridge is indistinguishable
+  -- from a clean one: zero rows reads identically to "no drift" while objects could sit drifted invisibly.
+  -- As of 2026-07-17 the bridge has delivered ZERO live-sql-parity rows EVER (the workflow's INSERT was
+  -- swallowed by `|| echo ::warning::` inside an otherwise-green run — fixed in live-sql-parity.yml this
+  -- same pass). This dead-man fires when the newest live-sql-parity finding_ts is older than ~40h (the
+  -- daily workflow cadence + one missed run of grace) OR — critically — when NONE has EVER been delivered
+  -- (MAX over empty = NULL; COALESCE to the epoch makes the never-delivered state fire, which is the
+  -- current state and exactly the never-armed failure the swallowed INSERT produced). Record-only, does
+  -- NOT join raise_msg (a stalled plumbing bridge is a config fix, not a trading halt), matching
+  -- ci_finding/ddl_drift. DEDUP-CRITICAL: the message is fully static (no timestamps/counts); detail is in
+  -- the payload — so a persisting dead bridge dedups to a single open warning, not a fresh row every run.
+  IF (
+    SELECT COALESCE(MAX(finding_ts), TIMESTAMP '1970-01-01 00:00:00 UTC')
+             < TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 40 HOUR)
+    FROM `stock-trading-498512.ops.ci_findings`
+    WHERE workflow = 'live-sql-parity'
+  ) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'ci_findings_bridge_stale',
+      'ops.ci_findings has NO live-sql-parity row newer than ~40h (or none has EVER been delivered) — the DECLARED single delivery path for live-sql-parity drift (bigquery/67) may be dead. A dead bridge reads identically to "no drift", so drifted objects could sit unsurfaced. Verify the daily live-sql-parity.yml run: the WIF vars (GCP_WIF_PROVIDER/SERVICE_ACCOUNT) must be set AND the gh-ci-runner@ dataEditor grant on ops.ci_findings must be live, and the INSERT step must now fail-loud on error (fixed 2026-07-17). See payload for row count / last finding_ts.',
+      (SELECT TO_JSON_STRING(STRUCT(
+         (SELECT COUNT(*) FROM `stock-trading-498512.ops.ci_findings` WHERE workflow = 'live-sql-parity') AS live_sql_parity_rows,
+         (SELECT CAST(MAX(finding_ts) AS STRING) FROM `stock-trading-498512.ops.ci_findings` WHERE workflow = 'live-sql-parity') AS last_finding_ts,
+         CAST(CURRENT_TIMESTAMP() AS STRING) AS checked_at))));
   END IF;
 
   -- constant_tuning_loop_heartbeat_missing (warning, item 11 -- self-improvement audit 2026-07-11).
@@ -575,12 +666,16 @@ END;
 
 -- =====================================================================================================
 -- ops.sp_sq_safety_critical_dml_watch   (was bigquery/scheduled_queries/safety_critical_dml_watch.sql; that file is now a frozen one-line
--- CALL wrapper — full historical header/rationale comments remain there. SQ_VERSION v2 (bumped
--- from v1 by this ARCH-1 wrapper migration, 2026-07-16 — no check logic changed).
+-- CALL wrapper — full historical header/rationale comments remain there. SQ_VERSION v3 (bumped
+-- from v2 by MON H4, 2026-07-17: INSERT-aware extension — ops.trading_control / ops.arsenal_control /
+-- events.strategy_lifecycle change state by INSERT (append-only), which the UPDATE/DELETE/MERGE/TRUNCATE
+-- filter could not see; the mutation-class watch is unchanged, and a single consolidated RAISE at the end
+-- now folds in the two new CRITICAL conditions. See the inline INSERT block below).
 -- =====================================================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_safety_critical_dml_watch`()
 BEGIN
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:safety_critical_dml_watch', 'v2', 'safety_critical_dml_watch.sql ran');
+  DECLARE raise_msg STRING DEFAULT '';   -- H4: accumulate so all conditions RECORD before one final RAISE
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:safety_critical_dml_watch', 'v3', 'safety_critical_dml_watch.sql ran');
 
   -- Computed once, reused below (same "compute once, reuse" discipline as state.system_health's
   -- alerts_summary CTE) — avoids scanning INFORMATION_SCHEMA three times for one check.
@@ -632,23 +727,142 @@ BEGIN
           job_id, user_email, statement_type, target_dataset, target_table, creation_time, query_preview
         ) ORDER BY creation_time))
        FROM hits));
-    RAISE USING MESSAGE = CONCAT(
-      'STOCK-TRADING safety-critical DML watch FAILED — out-of-band UPDATE/DELETE/MERGE/TRUNCATE on ',
+    -- H4: RECORD then accumulate (was an immediate RAISE) so the two INSERT-aware CRITICALs below also
+    -- record their own ops.alerts row before the single consolidated RAISE at the bottom fires.
+    SET raise_msg = raise_msg || CONCAT('[safety_critical_dml] ',
       (SELECT STRING_AGG(DISTINCT CONCAT(statement_type, ' ', target_dataset, '.', target_table), ', '
               ORDER BY CONCAT(statement_type, ' ', target_dataset, '.', target_table))
-       FROM hits),
-      ' in the last 24h. See ops.alerts (category=safety_critical_dml) for job_id/user_email detail.');
+       FROM hits), '; ');
+  END IF;
+
+  -- =====================================================================================================
+  -- INSERT-AWARE EXTENSION (MON H4, 2026-07-17). The mutation-class watch above filters
+  -- statement_type IN (UPDATE/DELETE/MERGE/TRUNCATE) — but the three append-only CONTROL tables change
+  -- state by INSERT: a halt-clear (ops.trading_control), a kill-switch clear (ops.arsenal_control), and a
+  -- roster add/transition (events.strategy_lifecycle) are all INSERTs, and were therefore invisible.
+  -- INSERT is the NORMAL way these tables change (unlike UPDATE/DELETE, which are definitionally wrong on
+  -- an append-only table), so a bare INSERT is only WARNING-tier visibility (rare — a handful/month —
+  -- hence high-signal); two CONTENT-specific anomalies escalate to CRITICAL + RAISE. perf.strategy_daily
+  -- is deliberately NOT in this INSERT set: the nightly engine rebuild re-INSERTs it every day (its DELETE
+  -- is the watched anomaly, already handled with the WHERE-TRUE exception above).
+  CREATE TEMP TABLE control_inserts AS
+  SELECT
+    job_id, user_email,
+    destination_table.dataset_id AS target_dataset,
+    destination_table.table_id   AS target_table,
+    creation_time
+  FROM `stock-trading-498512`.`region-us`.INFORMATION_SCHEMA.JOBS_BY_PROJECT
+  WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
+    AND state = 'DONE'
+    AND error_result IS NULL
+    AND statement_type = 'INSERT'
+    AND (
+      (destination_table.dataset_id = 'ops'    AND destination_table.table_id IN ('trading_control', 'arsenal_control'))
+      OR (destination_table.dataset_id = 'events' AND destination_table.table_id = 'strategy_lifecycle')
+    );
+
+  -- CRITICAL 1 — SPOOFED OPERATOR HALT-CLEAR. A trading_control INSERT landed in the last 24h AND a
+  -- trading_control row with control_ts in that window reads halt_all=FALSE, mode='manual' — i.e. trading
+  -- was re-enabled as if by the operator. Under the shared-OAuth model (RUNBOOK §15) BigQuery job metadata
+  -- cannot distinguish a genuine operator clear from a spoofed one, so this DETECTIVE control alerts on
+  -- EVERY manual re-enable and requires the operator to recognise their own action — a re-enable they did
+  -- NOT perform is an intrusion. (Correlated as two independent EXISTS, not a job↔row time-join, because a
+  -- correlated subquery with only an inequality condition is rejected by BigQuery; both live in the same
+  -- 24h window, which is sufficient for detection.)
+  IF ( EXISTS (SELECT 1 FROM control_inserts WHERE target_table = 'trading_control')
+       AND EXISTS (SELECT 1 FROM `stock-trading-498512.ops.trading_control`
+                   WHERE NOT halt_all AND mode = 'manual'
+                     AND control_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)) ) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'critical', 'scheduled.safety_critical_dml', 'safety_critical_control_insert',
+      CONCAT('Safety-critical control INSERT: a trading_control INSERT in the last 24h re-enabled trading ',
+             '(halt_all=FALSE, mode=''manual'') — a manual halt-clear. If YOU did not just re-enable ',
+             'trading, this is a spoofed operator clear (shared-OAuth, RUNBOOK §15): re-assert the halt via ',
+             'a fresh sanctioned INSERT and investigate the job_id/user_email in the payload.'),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(job_id, user_email, target_dataset, target_table, creation_time) ORDER BY creation_time))
+       FROM control_inserts WHERE target_table = 'trading_control'));
+    SET raise_msg = raise_msg || '[safety_critical_control_insert] trading_control manual halt-clear; ';
+  END IF;
+
+  -- CRITICAL 2 — UNKNOWN-STRATEGY LIFECYCLE INSERT. A strategy_lifecycle INSERT in the last 24h carries a
+  -- strategy_code that entered NEITHER the SISA candidate funnel (state.strategy_candidates) NOR any prior
+  -- lifecycle history (a code first seen >24h ago) — i.e. a strategy that materialised in the roster truth
+  -- table without passing through the graduation pipeline. This is the live-detectable complement to the
+  -- repo↔live roster parity check (scripts/check_live_roster_parity.py, which authoritatively diffs live
+  -- vs strategy/roster.yaml in CI): SQL cannot read the repo YAML, so the "known set" here is the two live
+  -- sources every legitimate code passes through — a legitimate transition of an existing strategy (A–E or
+  -- a graduate) has prior history; a legitimate new probe was a candidate first. A garbage/spoofed code is
+  -- in neither.
+  IF ( EXISTS (SELECT 1 FROM control_inserts WHERE target_table = 'strategy_lifecycle')
+       AND EXISTS (
+         SELECT 1 FROM `stock-trading-498512.events.strategy_lifecycle` sl
+         WHERE sl.event_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
+           AND sl.strategy_code NOT IN (
+             SELECT strategy_code FROM `stock-trading-498512.events.strategy_lifecycle`
+               WHERE event_ts < TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
+             UNION DISTINCT
+             SELECT candidate_code FROM `stock-trading-498512.state.strategy_candidates`
+           )) ) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'critical', 'scheduled.safety_critical_dml', 'safety_critical_lifecycle_insert',
+      CONCAT('Safety-critical control INSERT: a strategy_lifecycle INSERT in the last 24h added a ',
+             'strategy_code that never entered the SISA candidate funnel and has no prior lifecycle history ',
+             '— a roster membership change that bypassed the graduation pipeline. Codes: ',
+             (SELECT STRING_AGG(DISTINCT sl.strategy_code, ', ' ORDER BY sl.strategy_code)
+              FROM `stock-trading-498512.events.strategy_lifecycle` sl
+              WHERE sl.event_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
+                AND sl.strategy_code NOT IN (
+                  SELECT strategy_code FROM `stock-trading-498512.events.strategy_lifecycle`
+                    WHERE event_ts < TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
+                  UNION DISTINCT
+                  SELECT candidate_code FROM `stock-trading-498512.state.strategy_candidates`)),
+             '. Investigate the job/user in the payload; verify against strategy/roster.yaml.'),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(sl.strategy_code, sl.from_state, sl.to_state, sl.driver_routine, sl.event_ts) ORDER BY sl.event_ts))
+       FROM `stock-trading-498512.events.strategy_lifecycle` sl
+       WHERE sl.event_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
+         AND sl.strategy_code NOT IN (
+           SELECT strategy_code FROM `stock-trading-498512.events.strategy_lifecycle`
+             WHERE event_ts < TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
+           UNION DISTINCT
+           SELECT candidate_code FROM `stock-trading-498512.state.strategy_candidates`)));
+    SET raise_msg = raise_msg || '[safety_critical_lifecycle_insert] strategy_lifecycle unknown code; ';
+  END IF;
+
+  -- WARNING (record-only, no RAISE) — general control-plane INSERT visibility. Any INSERT on the three
+  -- append-only control tables in the last 24h. DEDUP-CRITICAL: the message lists the DISTINCT
+  -- table@Denver-date set (stable across this query's 6-hourly re-runs of the same day's activity, so one
+  -- warning per table per day of control-plane change), while per-job detail stays in the payload.
+  IF EXISTS (SELECT 1 FROM control_inserts) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.safety_critical_dml', 'control_plane_insert',
+      CONCAT('Control-plane INSERT(s) on append-only safety table(s) in the last 24h (rare — confirm each ',
+             'was a sanctioned operator/routine action): ',
+             (SELECT STRING_AGG(DISTINCT CONCAT(target_dataset, '.', target_table, '@',
+                                                 CAST(DATE(creation_time, 'America/Denver') AS STRING)), ', '
+                     ORDER BY CONCAT(target_dataset, '.', target_table, '@',
+                                     CAST(DATE(creation_time, 'America/Denver') AS STRING)))
+              FROM control_inserts)),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(job_id, user_email, target_dataset, target_table, creation_time) ORDER BY creation_time))
+       FROM control_inserts));
+  END IF;
+
+  -- Single consolidated RAISE — fires the DTS failure-email once, AFTER every CRITICAL above is recorded.
+  IF raise_msg != '' THEN
+    RAISE USING MESSAGE = CONCAT(
+      'STOCK-TRADING safety-critical DML/INSERT watch FAILED — ', raise_msg,
+      'See ops.alerts (source=scheduled.safety_critical_dml) for job_id/user_email detail.');
   END IF;
 END;
 
 -- =====================================================================================================
 -- ops.sp_sq_daily_staging_cap_check   (was bigquery/scheduled_queries/daily_staging_cap_check.sql; that file is now a frozen one-line
--- CALL wrapper — full historical header/rationale comments remain there. SQ_VERSION v2 (bumped
--- from v1 by this ARCH-1 wrapper migration, 2026-07-16 — no check logic changed).
+-- CALL wrapper — full historical header/rationale comments remain there. SQ_VERSION v3 (bumped
+-- from v2 by DEF-3, 2026-07-17: added the order_guard_verdict_mismatch RECOMPUTE backstop below;
+-- v2 was the ARCH-1 wrapper migration, 2026-07-16).
 -- =====================================================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_daily_staging_cap_check`()
 BEGIN
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:daily_staging_cap_check', 'v2', 'daily_staging_cap_check.sql ran');
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:daily_staging_cap_check', 'v3', 'daily_staging_cap_check.sql ran');
 
   IF (SELECT daily_cap_breach FROM `stock-trading-498512.state.daily_staging_totals`) THEN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
@@ -715,6 +929,92 @@ BEGIN
          AND DATE(event_ts, 'America/Denver') = CURRENT_DATE('America/Denver')
          AND JSON_VALUE(payload, '$.guard_passed') IS NULL));
   END IF;
+
+  -- order_guard_verdict_mismatch (CRITICAL, DEF-3 order-guard TRUTHFULNESS backstop -- defense-in-depth,
+  -- 2026-07-17). The order_guard_omitted check directly above is the sole detective backstop, but it only
+  -- verifies that payload.guard_passed IS PRESENT -- never that it is TRUTHFUL. A routine could stage an
+  -- order carrying guard_passed=true beside an oversized qty/limit_price the guard would actually REJECT,
+  -- and order_guard_omitted (which keys only on the field's presence) would wave it through. This check
+  -- RECOMPUTES analytics.fn_order_guard from each row's OWN payload (strategy, qty, limit_price; last_price
+  -- is passed = limit_price so pct_off_last = 0 and the price-band checks no-op -- the goal is the
+  -- notional / $50-backstop MAGNITUDE bound, not a stale price-band re-litigation) and RAISEs CRITICAL when
+  -- the recomputed verdict is FALSE (the guard would have rejected), whether the row carried a forged
+  -- guard_passed=true, an honest guard_passed=false the routine staged anyway, or no guard record at all.
+  --
+  -- HONEST LIMITATION (read before trusting this as a gate). BigQuery has NO independent source of order
+  -- truth: the REAL order goes to IBKR via a DIFFERENT MCP tool (create_order_instruction) that no
+  -- BigQuery stored procedure can see or gate (the same 'no SP can gate a call to a different MCP tool'
+  -- limitation the order_guard_omitted header states). This recompute therefore catches an INCONSISTENT
+  -- forgery -- guard_passed=true left beside HONEST qty/limit_price the guard would reject, a guard that
+  -- returned FALSE but the order was staged, or a guard never called on an over-envelope order -- but it
+  -- CANNOT catch a fully-COHERENT forgery that ALSO fakes qty/limit_price in the payload to match the
+  -- fabricated guard_passed=true (the recompute would then read the faked-consistent numbers and pass).
+  -- It raises the bar (an attacker must now forge the order fields consistently, not just the flag); it is
+  -- NOT a complete gate. is_park (ticker = the live park vehicle, or legacy SGOV) is derived so a
+  -- legitimate park sweep/cover -- which the guard lets exceed the $50 equity backstop under its 1.10x-NAV
+  -- park rule -- does not false-fire. Queries events.queue_events DIRECTLY (append-only), same rationale as
+  -- order_guard_omitted: a same-day-filled order must not drop out of a pending-only view before this runs.
+  BEGIN
+    DECLARE mismatch_keys STRING DEFAULT '';
+    DECLARE mismatch_json STRING DEFAULT '';
+    DECLARE v_passed BOOL;
+    DECLARE v_reasons STRING;
+    FOR rec IN (
+      SELECT
+        item_key,
+        strategy,
+        COALESCE(UPPER(JSON_VALUE(payload, '$.side')), 'BUY') AS side,
+        SAFE_CAST(JSON_VALUE(payload, '$.qty') AS NUMERIC) AS qty,
+        SAFE_CAST(JSON_VALUE(payload, '$.limit_price') AS NUMERIC) AS limit_price,
+        JSON_VALUE(payload, '$.guard_passed') AS recorded_guard_passed,
+        -- is_park mirrors what the order-guard caller passes for a park sweep/cover: the ticker equals the
+        -- currently-declared park vehicle (state.park_policy_current, read as a scalar exactly like
+        -- fn_order_guard itself does) OR the legacy 'SGOV'. Park orders legitimately exceed the $50 equity
+        -- backstop (guarded instead by the 1.10x-NAV park rule), so mis-flagging one as non-park would
+        -- false-fire this CRITICAL.
+        rec_ticker IN ('SGOV', COALESCE((SELECT vehicle FROM `stock-trading-498512.state.park_policy_current`), 'SGOV')) AS is_park
+      FROM (
+        SELECT item_key, strategy, ticker AS rec_ticker, payload
+        FROM `stock-trading-498512.events.queue_events`
+        WHERE queue = 'ORDER_STAGED' AND LOWER(status) = 'pending'
+          AND DATE(event_ts, 'America/Denver') = CURRENT_DATE('America/Denver')
+      )
+      WHERE SAFE_CAST(JSON_VALUE(payload, '$.qty') AS NUMERIC) IS NOT NULL
+        AND SAFE_CAST(JSON_VALUE(payload, '$.limit_price') AS NUMERIC) IS NOT NULL
+    ) DO
+      -- Per-row recompute. rec.* are scripting-variable field accesses (constant per iteration), a valid
+      -- table-function argument form (verified: fn_order_guard accepts non-constant scalar arguments).
+      SET (v_passed, v_reasons) = (
+        SELECT AS STRUCT passed, TO_JSON_STRING(reasons)
+        FROM `stock-trading-498512.analytics.fn_order_guard`(
+          rec.strategy, rec.side, rec.qty, rec.limit_price, rec.limit_price, rec.is_park)
+      );
+      IF NOT COALESCE(v_passed, FALSE) THEN
+        SET mismatch_keys = mismatch_keys || IF(mismatch_keys = '', '', ', ') || rec.item_key;
+        SET mismatch_json = mismatch_json || IF(mismatch_json = '', '', ',') ||
+          TO_JSON_STRING(STRUCT(
+            rec.item_key AS item_key, rec.strategy AS strategy, rec.side AS side,
+            rec.qty AS qty, rec.limit_price AS limit_price, rec.is_park AS is_park,
+            rec.recorded_guard_passed AS recorded_guard_passed,
+            v_passed AS recomputed_passed, v_reasons AS recomputed_reasons));
+      END IF;
+    END FOR;
+    -- DEDUP-CRITICAL, same convention as order_guard_omitted above: the message embeds the sorted set of
+    -- affected item_keys so ops.sp_raise_alert_once's (category, message) dedup re-alerts when the SET of
+    -- offending orders changes, but collapses an unchanged still-open mismatch to one row. mismatch_keys is
+    -- accumulated in the FOR loop's own iteration order (item_key); daily-changing detail lives in payload.
+    IF mismatch_keys != '' THEN
+      CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+        'critical', 'scheduled.staging_cap', 'order_guard_verdict_mismatch',
+        CONCAT('Order-guard verdict RECOMPUTE mismatch -- order(s) staged today whose OWN payload ',
+               '(strategy/qty/limit_price) independently re-run through analytics.fn_order_guard return ',
+               'FALSE (the guard would REJECT), yet the order was staged -- in some cases beside a recorded ',
+               'guard_passed=true. This is an INCONSISTENT order-guard record (a forged/omitted guard left ',
+               'beside honest order fields), not merely an undocumented one: ', mismatch_keys,
+               '. See payload for per-order recomputed reasons.'),
+        CONCAT('[', mismatch_json, ']'));
+    END IF;
+  END;
 END;
 
 -- =====================================================================================================

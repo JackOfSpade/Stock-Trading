@@ -448,6 +448,38 @@ def test_check_k_removing_w5_from_59_is_caught(tmp_path, monkeypatch, capsys):
     assert "59_catchup_autofire.sql" in out and "DRIFT" in out
 
 
+def test_check_k_present_but_unparseable_59_fails_loud_not_silent(tmp_path, monkeypatch, capsys):
+    # 2026-07-17 audit: parse_unnest_routine_ids returns None for BOTH "file absent" and "bracket
+    # unparseable". main() must FAIL (not silently skip) when the file EXISTS but its UNNEST bracket
+    # no longer matches — otherwise a valid SQL reformat (`AS  routine`, `UNNEST(ARRAY[...]`) silently
+    # disarms the only drift guard bigquery/59 has.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    cadence.write_text(
+        "timezone: America/Denver\n"
+        'cadence_watch_deadline_local: "21:00"\n'
+        "routines:\n"
+        "  - id: D1\n"
+        "    monitor_class: daily_trading\n"
+        "    catchup_safe: true\n"
+        "  - id: W5\n"
+        "    monitor_class: weekly_sun\n"
+        "    catchup_safe: true\n"
+    )
+    plan.write_text(
+        "## D1. Market Development Scan — deep research\nbody\n"
+        "## W5. Factbase & Analytics Consolidation — regular routine\nbody\n"
+    )
+    autofire = tmp_path / "59.sql"
+    # Reformatted so UNNEST_ROUTINE_BRACKET no longer matches: double space before `routine`.
+    autofire.write_text("SELECT routine FROM UNNEST(['W5']) AS  routine\n")
+    monkeypatch.setattr(cc, "CATCHUP_AUTOFIRE_SQL", str(autofire))
+    assert cc.parse_unnest_routine_ids(str(autofire)) is None  # confirm the reformat breaks parsing
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert "59_catchup_autofire.sql" in out and "DISARMED" in out
+
+
 def test_check_k_missing_catchup_safe_key_is_caught(tmp_path, monkeypatch, capsys):
     plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
     _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
@@ -623,3 +655,17 @@ def test_gen_routine_lists_against_real_repo_write_is_noop():
     assert changed == []
     for path, body in gen.build_targets():
         assert gen.current_region(path) == gen.wanted_region(body)
+
+
+def test_gen_12_region_tolerates_missing_monitor_class_like_gen_24():
+    # #10 (2026-07-17 audit): a malformed cadence.yaml routine with no monitor_class must not crash
+    # gen_12_region with a KeyError (the old `!= "queue_driven"` filter kept the None row, then the
+    # f-string bracket-accessed r['monitor_class']). It now silently omits the row, matching the
+    # parallel gen_24_region; check_cadence_consistency.py flags the missing key loudly.
+    gen = _load_gen()
+    assert gen.gen_12_region([{"id": "X9"}]) == ""
+    assert gen.gen_24_region([{"id": "X9"}]) == ""
+    # a well-formed row alongside a malformed one still renders the good one, drops the bad one
+    rows = [{"id": "D1", "monitor_class": "daily_trading"}, {"id": "X9"}]
+    out = gen.gen_12_region(rows)
+    assert "'D1'" in out and "'X9'" not in out

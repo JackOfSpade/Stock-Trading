@@ -61,6 +61,16 @@
 # deliberate threshold change (which for an in-force strategy's own machinery is otherwise prohibited —
 # see Strategy.md "Threshold immutability") is the one case where updating an existing fixture's
 # expected_decision is legitimate, and it should cite the Decision_Log entry that authorized the change.
+#
+# COVERAGE IS ENFORCED (finding DEF-4, 2026-07-17). scripts/check_roster_consistency.py check R-K fails
+# CI if any strategy in strategy/roster.yaml whose roster_state is SHADOW / PAPER / PROBE / ADOPTED has
+# ZERO scenario here. A scenario "covers" strategy X if its governing_files name X's own per-strategy
+# slice (NN_strategy_<x>.md) OR it names "Strategy X" in its id/situation/rationale (how the founding A-E
+# fixtures qualify — they pin the aggregate Strategy.md). SL5's SHADOW-register step (Claude_Task_Plan.md)
+# authors >=2 fixtures for a newcomer — one router-ACTIVATE + one router-DO-NOT-ACTIVATE boundary — in the
+# SAME commit that registers the strategy, so an adopted strategy's decision prose can never land here with
+# no regression coverage. This is a mechanical same-commit consistency gate, not a human-review gate on
+# strategy add (SISA no-human-gate posture — CLAUDE.md).
 
 scenarios:
 
