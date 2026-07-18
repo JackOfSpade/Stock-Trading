@@ -1,3 +1,23 @@
+-- ======================= SUPERSEDED — DO NOT APPLY THIS FILE =======================
+-- This file's `CREATE OR REPLACE VIEW state.trading_enabled` is NO LONGER CANONICAL.
+-- bigquery/78_book_drawdown_rebase_and_staleness_gate.sql SUPERSEDES it (2026-07-17) and is the
+-- current single source of truth for this gate. Confirmed against the deployed view 2026-07-18:
+-- live matches 78, not this file.
+--
+-- Re-applying THIS file would REGRESS the live gate on BOTH of 78's changes:
+--   * the drawdown AND-term would revert from `breach_hard` (the -40% CATASTROPHE tier) to
+--     `drawdown_breach` (the -15% soft tier) — hard-halting ALL trading on a soft-tier drawdown that
+--     is only supposed to pause new entries; and
+--   * blocking_criticals would revert from `category NOT IN ('trading_halted','staleness')` to
+--     `category != 'trading_halted'` — letting a staleness gate-echo latch the gate closed.
+-- That is precisely the apply-an-older-file-in-isolation accident this very file was written to fix
+-- (see ROOT CAUSE below) — the same rake, one link further down the chain.
+--
+-- Marker added 2026-07-18, after this header was found still asserting "THIS FILE is the new single
+-- source of truth" long after 78 landed — the misleading claim, not the SQL, was the hazard. The DDL
+-- below is deliberately left UNMODIFIED as the historical record of the 2026-07-14 resync.
+-- ===================================================================================
+--
 -- ITEM: live-vs-repo drift fix (2026-07-14 self-improvement audit, finding P0/sql-mid#1).
 --
 -- ROOT CAUSE: bigquery/34_alert_lifecycle.sql redefined state.trading_enabled to exclude the
@@ -10,7 +30,8 @@
 -- the regression). Confirmed live via INFORMATION_SCHEMA.VIEWS before this file was applied: the
 -- deployed view lacked `category != 'trading_halted'` entirely.
 --
--- THIS FILE is the new single source of truth for state.trading_enabled, merging:
+-- THIS FILE WAS the single source of truth for state.trading_enabled AS OF 2026-07-14 (it is NOT any
+-- longer — bigquery/78 superseded it 2026-07-17; see the SUPERSEDED banner at the top), merging:
 --   * 34's trading_halted exclusion (al AS ... category != 'trading_halted')
 --   * 23's 2026-07-11 ITEM 16 snapshot_stale AND-term (dd AS ... snapshot_stale)
 -- Supersedes the trading_enabled definitions in both 23 (as edited 2026-07-11) and 34.
