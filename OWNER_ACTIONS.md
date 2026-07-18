@@ -899,18 +899,17 @@ done_when: == 'true'
   (The GEMINI_API_KEY rotation follow-up formerly buried in this paragraph now has its own OPEN item
   — see **E-2** immediately below — so it cannot be absorbed into this item's closed status.)
 
-## E-2. OPEN — rotate the chat-exposed `GEMINI_API_KEY` (security; owner-only)
+## E-2. Rotate the chat-exposed `GEMINI_API_KEY` — `[DONE 2026-07-18 — owner confirmed rotated]`
 
-**Still open as of 2026-07-18** (given its own heading by the 2026-07-18 audit: it previously lived
-as unheaded prose inside item E above, structurally invisible once E's parent heading read as done —
-and `scripts/verify_owner_actions.py` can only ever confirm "a key exists", not "the exposed key was
-replaced", so no checker will ever auto-close this; it stays open until you act). The Gemini key was
-pasted into a chat during setup, so treat it as exposed and rotate it: generate a new key in AI
-Studio (requires your browser/OAuth session — cannot be done from an agent session), then run
-`gh secret set GEMINI_API_KEY -R JackOfSpade/Stock-Trading` (omit the value; it prompts securely;
-the `-R` flag means it works from any directory), which invalidates the old value. **If skipped:**
-`golden-scenarios.yml`'s live runs keep working on the exposed key; the risk is unauthorized use of
-your Gemini quota/billing, not a trading-safety issue.
+**Closed 2026-07-18: the owner confirmed the key has already been rotated** (owner message,
+2026-07-18 session). Nothing further to do. For the record: the original Gemini key was pasted into
+a chat during setup and was to be treated as exposed; the 2026-07-18 audit gave the rotation its own
+heading here because it previously lived as unheaded prose inside item E above (structurally
+invisible once E's parent heading read as done, and `scripts/verify_owner_actions.py` can only ever
+confirm "a key exists", not "the exposed key was replaced" — so closure had to come from the owner,
+as it now has). Redo reference if a future key is ever exposed: generate a new key in AI Studio,
+then `gh secret set GEMINI_API_KEY -R JackOfSpade/Stock-Trading` (omit the value; it prompts
+securely), which invalidates the old one.
 
 ```verify
 id: E-anthropic
