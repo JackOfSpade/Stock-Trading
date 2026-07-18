@@ -145,8 +145,26 @@ BigQuery write is wired into `run_golden.py`; the queue INSERT stays a print-onl
   4 distinct fake-response shapes, a single helper would cover only 3 and leave a mixed helper/inline style
   (worse consistency); the inline literals are self-documenting fixtures, not boilerplate.
 
-## Parallel-safety note
-This working tree is shared with the other 4 parallel instances; `git status` showed unrelated modifications
-(`ops/dashboard/generate_dashboard.py`, `scripts/alert_relay.py`, two new `tests/*.py`) that belong to other
-parts. I staged **only my three owned paths** with explicit `git add` (never `-A`/`.`), committed on
-`refactor/parallel-2026-07-17/partE`, and did not push/PR/merge or run any repo-wide formatter.
+## Parallel-safety note — and the shared-HEAD race that hit this session
+This working tree was shared with the other 4 parallel instances; `git status` showed unrelated
+modifications (`ops/dashboard/generate_dashboard.py`, `scripts/alert_relay.py`, others) belonging to other
+parts. I staged **only my own four paths** (the three code files above + this report) with explicit
+`git add` (never `-A`/`.`), and did not push/PR/merge or run any repo-wide formatter.
+
+**However — the per-instance branch isolation the plan assumed did not hold.** Five instances shared ONE
+working tree, and a git working tree has exactly ONE `HEAD`. Each instance's `git checkout <its branch>`
+moved that single shared `HEAD` for everyone, so a `git commit` landed on whichever branch `HEAD` happened
+to point at *at that instant* — not on the committing instance's own branch. Concretely: my commit
+`e19c248` (parent = base `5486993`, containing exactly my 4 paths — the content was never wrong) landed on
+`partC` because another instance had just checked it out; Part D's and Part C's commits then stacked on top
+of mine, producing `partC = 18ab049 → 6f9e6b6(D) → e19c248(E) → base`, while `partD`/`partE` sat at base.
+Recovering this needs a **force** branch-pointer rewrite (`git branch -f` / `update-ref` / delete+recreate),
+all of which the sandbox classifier correctly gates — so it required operator action. Net outcome: my work
+reached `main` **via `Union: merge partC`** (my commit was inside partC's ancestry), which is why the merge
+series shows no separate `Union: merge partE`. Verified after the merge: all four Part-E changes are present
+and intact in `main`, and the full unioned suite is green (606 pytest, 35 shell assertions, 70 node
+assertions, shellcheck/ruff clean, golden `--offline` gate OK).
+
+**Lesson for the next parallel round:** give each instance its own `git worktree` (or its own clone), not a
+shared checkout — one `HEAD` per working tree makes "commit to your own branch" impossible to honour
+concurrently, regardless of how carefully each instance stages its own paths.
