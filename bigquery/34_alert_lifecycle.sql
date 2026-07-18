@@ -60,13 +60,13 @@ SELECT * FROM UNNEST([
     'every routine named in the alert payload has a completed ops.run_log row with run_date >= the blocked run_date, OR the blocked run_date is >1 calendar day stale (America/Denver) — recovery for a closed operating day is owned by missed_run/catch-up, not a standing freeze on future days' AS resolve_rule,
     'seeded 2026-07-07, self-improvement audit WP2' AS note),
   STRUCT('missed_run', FALSE,
-    'every routine named in the alert payload array has a completed ops.run_log row with run_date >= that routine''s payload date, OR the alert is >1 calendar day stale',
+    'every routine named in the alert payload array has a completed ops.run_log row with run_date >= that routine\'s payload date, OR the alert is >1 calendar day stale',
     'seeded 2026-07-07, self-improvement audit WP2'),
   STRUCT('routine_stalled', FALSE,
     'the stalled routine has since logged ANY terminal status (completed/failed/halted) for the same run_date, OR the alert is >1 calendar day stale — mirrors the existing 7-day auto-age in cadence_check.sql #14 but resolves faster once the system has demonstrably moved on',
     'seeded 2026-07-07, self-improvement audit WP2; routine_stalled is warning-severity and does not gate trading_enabled on its own, but resolving it promptly keeps the alert digest honest'),
   STRUCT('staleness', FALSE,
-    'state.freshness.marks_fresh AND engine_fresh, state.embedding_health.is_healthy, NOT state.position_reconciliation drift, and zero OTHER open criticals (excluding this alert''s own category) are all currently true — i.e. all_green would read TRUE right now if this alert did not count against itself',
+    'state.freshness.marks_fresh AND engine_fresh, state.embedding_health.is_healthy, NOT state.position_reconciliation drift, and zero OTHER open criticals (excluding this alert\'s own category) are all currently true — i.e. all_green would read TRUE right now if this alert did not count against itself',
     'seeded 2026-07-07, self-improvement audit WP2; self-referential like the trading_halted gate-exclusion below, so it is resolved by live re-check, not by an ops.run_log lookback')
 ])
 WHERE NOT EXISTS (SELECT 1 FROM `stock-trading-498512.ops.alert_policy`);

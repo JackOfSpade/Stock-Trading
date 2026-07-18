@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.state.expected_scheduled_query_
                                        --   (daily=24, weekly=168, monthly=744, every-6h=6). Drives the
                                        --   beat-AGE dead-man (stale_beat) in state.scheduled_query_version_drift.
   updated_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
-) OPTIONS(description='Seed/reference table: the version each bigquery/scheduled_queries/*.sql body SHOULD be running live, per repo state. Source of truth for state.scheduled_query_version_drift. Updated by a guarded MERGE whenever a file''s SQ_VERSION marker is bumped. expected_interval_hours (MON H5) drives the beat-age dead-man.');
+) OPTIONS(description='Seed/reference table: the version each bigquery/scheduled_queries/*.sql body SHOULD be running live, per repo state. Source of truth for state.scheduled_query_version_drift. Updated by a guarded MERGE whenever a file\'s SQ_VERSION marker is bumped. expected_interval_hours (MON H5) drives the beat-age dead-man.');
 
 -- MON H5 (2026-07-17): additive column for the beat-age dead-man on the ALREADY-LIVE table (the
 -- CREATE TABLE IF NOT EXISTS above is a no-op once the table exists, so it cannot add the column live).
