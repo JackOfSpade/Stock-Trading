@@ -46,13 +46,19 @@ jobs:
 
       - name: WIF-present + not-disabled guard
         id: guard
+        # INDEPENDENT kill-switch (2026-07-18 audit): this sweep exists precisely for the windows
+        # where the incremental gate is dark, so it must NOT share the incremental gate's
+        # RUN_SQL_DRYRUN switch — turning the noisy per-push gate off would silently turn the
+        # backstop off with it, and the header's "two independent failure modes" claim would be
+        # false. Only RUN_SQL_DRYRUN_SWEEP=off suppresses the sweep. The WIF-vars dependency is
+        # inherent (no credentials = no dry-run possible for either job) and stays.
         run: |
-          if [ "${{ vars.RUN_SQL_DRYRUN }}" != "off" ] \
+          if [ "${{ vars.RUN_SQL_DRYRUN_SWEEP }}" != "off" ] \
              && [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] \
              && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ]; then
             echo "skip=false" >> "$GITHUB_OUTPUT"
           else
-            echo "::notice::SQL dry-run sweep skipped — set the WIF vars (read-only SA) to enable it (RUN_SQL_DRYRUN=off suppresses)."
+            echo "::notice::SQL dry-run sweep skipped — set the WIF vars (read-only SA) to enable it (RUN_SQL_DRYRUN_SWEEP=off suppresses the sweep alone; the incremental gate's RUN_SQL_DRYRUN is deliberately NOT consulted here)."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
 
@@ -71,6 +77,10 @@ jobs:
       - name: Dry-run ALL bigquery/*.sql — BLOCK on a syntax error
         id: sweep
         if: steps.guard.outputs.skip == 'false'
+        env:
+          # Without this the notify_webhook.sh call below is a guaranteed silent no-op (the script
+          # exits 0 when WEBHOOK_URL is unset) — the 3 sibling workflows all pass it (2026-07-18).
+          WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
         run: |
           set -uo pipefail
           gcloud config set project stock-trading-498512 >/dev/null 2>&1 || true
@@ -128,6 +138,38 @@ jobs:
               --body-file /tmp/body.md
           fi
 
+          # CI-findings bridge (2026-07-18): mirror each failing FILE into ops.ci_findings — one row
+          # per file (finding_key=<path>, the per-object pattern live-sql-parity.yml uses), so the
+          # BigQuery-side consumers (cadence_check's ci_finding warning alert -> monitored email; D3's
+          # adjudication read of state.ci_findings_open) see a sweep finding even on a week nobody
+          # reads GitHub Issues. Without this the sweep was the ONLY one of the 5 CI guards with zero
+          # BigQuery-side landing surface. Same WIF auth + table-scoped gh-ci-runner@ dataEditor
+          # grant this job already relies on; FAIL-LOUD on INSERT failure (a dead bridge must not
+          # hide inside an already-red run as "just the sweep finding").
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          grep '✗ SYNTAX ERROR (blocks merge):' /tmp/sweep.txt | sed 's/.*(blocks merge): //' > /tmp/bad_files.txt || true
+          if [ ! -s /tmp/bad_files.txt ]; then
+            # Failure with ZERO per-file syntax errors = the checker's fail-closed canary path (the
+            # environment could not prove it detects syntax errors) — no files to key on, so land ONE
+            # aggregate not-verified row, same convention as live-sql-parity's zero-verification key.
+            detail=$(head -c 4000 /tmp/sweep.txt)
+            # shellcheck disable=SC2016 # single-quoted intentionally: see below.
+            if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_detail:STRING:${detail}" --parameter="p_url:STRING:${run_url}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("sql-dryrun-sweep","sql_dryrun_sweep","open",@p_detail,@p_url)'; then
+              echo "::error::ops.ci_findings not-verified INSERT FAILED (verify the gh-ci-runner@ dataEditor grant on ops.ci_findings)."
+              exit 1
+            fi
+          fi
+          while IFS= read -r line; do
+            key="${line%% :: *}"
+            errdetail=$(printf '%s' "${line#* :: }" | head -c 900)
+            # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted BigQuery
+            # identifier and @p_* named parameters must stay literal, not shell-expanded.
+            if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_key:STRING:${key}" --parameter="p_detail:STRING:parse error on dry-run: ${errdetail}" --parameter="p_url:STRING:${run_url}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("sql-dryrun-sweep",@p_key,"open",@p_detail,@p_url)'; then
+              echo "::error::ops.ci_findings open-row INSERT FAILED for ${key} — the sweep's BigQuery-side landing surface is broken (verify the gh-ci-runner@ dataEditor grant on ops.ci_findings)."
+              exit 1
+            fi
+          done < /tmp/bad_files.txt
+
       - name: Close finding issue if resolved
         if: always() && steps.guard.outputs.skip == 'false' && steps.sweep.outputs.result == 'ok'
         env:
@@ -141,4 +183,15 @@ jobs:
               --body "Resolved — the full sweep now parses every \`bigquery/*.sql\` cleanly. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             gh issue close "$existing" --repo "$GITHUB_REPOSITORY"
             echo "Closed issue #$existing."
+          fi
+
+          # CI-findings bridge (2026-07-18): a clean sweep resolves every still-open sweep key —
+          # same per-object resolve-all pattern as live-sql-parity.yml's clean path. Writes zero
+          # rows when nothing is open (harmless); FAIL-LOUD on INSERT failure so a dead bridge
+          # cannot strand an open finding inside a green run.
+          # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted BigQuery
+          # identifier and @p_url named parameter must stay literal, not shell-expanded.
+          if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) SELECT workflow, finding_key, "resolved", "sweep clean this run", @p_url FROM `stock-trading-498512.state.ci_findings_open` WHERE workflow = "sql-dryrun-sweep"'; then
+            echo "::error::ops.ci_findings resolved-row INSERT FAILED — stale sweep findings cannot auto-clear (verify the gh-ci-runner@ dataEditor grant on ops.ci_findings). Failing the job so a dead bridge is visible, not swallowed."
+            exit 1
           fi

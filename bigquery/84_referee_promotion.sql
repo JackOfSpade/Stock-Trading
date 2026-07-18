@@ -67,6 +67,10 @@ PARTITION BY DATE(promoted_ts)
 OPTIONS(description='Durable idempotency marker for ops/autonomy_levels.yaml stage promotions (loop-completeness audit 2026-07-16; ops.process_constant_change_log / ops.param_change_provenance analog). One row per executed promotion; readiness views test row-absence for a given (loop_id, to_stage) to stay fail-closed and single-shot.');
 
 -- Promotion readiness — fail-closed (no referee rows / empty calibration => ready_for_promotion=FALSE).
+-- SUPERSEDED LIVE by bigquery/87_referee_promotion_class_breadth.sql — current single source of truth
+-- for state.referee_promotion_readiness (adds the class_breadth_met bar: >=2 distinct review_types
+-- with evidence, so single-class pooled evidence cannot clear the promotion). Kept here, unmodified,
+-- for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.referee_promotion_readiness` AS
 WITH first_ref AS (
   -- MIN(event_ts) = the actual INSERTION time of the earliest referee_gemini row, deliberately NOT its

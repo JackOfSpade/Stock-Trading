@@ -42,6 +42,10 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.ops.ci_findings` (
 PARTITION BY DATE(finding_ts)
 OPTIONS(description='Append-only CI-guard finding markers (consumption-closure 2026-07-16). Written by GitHub Actions via a table-scoped gh-ci-runner@ dataEditor grant (ops.routine_commit_markers precedent, OWNER_ACTIONS.md §3 / auto-merge-claude.yml:208). status=open|resolved; latest row per (workflow,finding_key) wins. Clean runs write unconditional resolved rows — harmless, the view takes the latest.');
 
+-- SUPERSEDED LIVE by bigquery/86_ci_findings_first_detected.sql — current single source of truth for
+-- state.ci_findings_open (adds the episode-aware first_detected column D3's adjudication step and
+-- ops.parity_selfheal_log key on). Kept here, unmodified, for DR-rebuild apply-in-order reference
+-- only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.ci_findings_open` AS
 SELECT workflow, finding_key, finding_ts, detail, run_url
 FROM (

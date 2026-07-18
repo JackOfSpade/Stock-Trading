@@ -74,9 +74,21 @@ def test_marker_needs_both_the_word_and_the_canonical_pointer():
 
 def test_marker_accepts_the_repo_reference_spellings():
     for text in ("-- superseded by bigquery/78_book.sql",
-                 "-- SUPERSEDED — see 78_book_drawdown.sql",
-                 "-- superseded live by 78"):
+                 "-- SUPERSEDED — see 78_book_drawdown.sql"):
         assert cs.marks_superseded(text, 78) is True, text
+
+
+def test_bare_number_is_not_a_file_pointer():
+    # 2026-07-18 audit: a bare \b78\b used to satisfy the pointer half, so the word "superseded"
+    # plus ANY coincidental standalone 78 (a line reference, a threshold, a date fragment) passed
+    # the gate while pointing the operator at nothing. The pointer must look like a file reference.
+    assert cs.marks_superseded("-- superseded live by 78", 78) is False
+    assert cs.marks_superseded(
+        "-- This superseded an older formula; alert retries back off for 78 seconds.", 78) is False
+    assert cs.marks_superseded(
+        "-- SUPERSEDED — the -15% tier moved (see line 78 of the runbook)", 78) is False
+    # ...and the two real file-reference spellings still pass right next to noise numbers.
+    assert cs.marks_superseded("-- superseded (was 78 lines) — see bigquery/78_book.sql", 78) is True
 
 
 def test_zero_padded_file_numbers_match():

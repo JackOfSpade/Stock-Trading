@@ -116,6 +116,28 @@ def test_main_skips_templates_without_failing(monkeypatch, capsys):
     assert "skipped" in out and "TEMPLATE" in out
 
 
+def test_canary_failure_fails_closed(monkeypatch, capsys):
+    # 2026-07-18 audit: if the environment can't detect a KNOWN syntax error, a "clean" pass over the
+    # real files proves nothing — the gate must exit 1, not print a warning and green-light the merge
+    # (the pre-fix behavior). Same discipline as dbt_parity's checked==0 fail-closed guard.
+    monkeypatch.setattr(csd, "canary_ok", lambda: False)
+    called = []
+    monkeypatch.setattr(csd, "_bq_dry_run", lambda sql_path: called.append(sql_path) or (0, "ok"))
+    rc = csd.main(["check_sql_dryrun.py", "bigquery/34_real.sql"])
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert "FAILS CLOSED" in out
+    assert called == [], "no point dry-running files in an environment proven unable to catch errors"
+
+
+def test_canary_not_consulted_when_nothing_to_check(monkeypatch):
+    # Vacuous invocations (template-only / empty) exit 0 without spending a canary call — there is no
+    # clean-pass claim to verify, so a broken environment must not red an empty change.
+    monkeypatch.setattr(csd, "canary_ok", lambda: (_ for _ in ()).throw(AssertionError("must not run")))
+    assert csd.main(["check_sql_dryrun.py"]) == 0
+    assert csd.main(["check_sql_dryrun.py", "bigquery/56_x_TEMPLATE.sql"]) == 0
+
+
 def test_main_still_blocks_a_real_syntax_error_alongside_a_template(monkeypatch, capsys):
     # The skip must not become a hole: a genuine syntax error in a NON-template file still blocks,
     # even when a template rides along in the same invocation.

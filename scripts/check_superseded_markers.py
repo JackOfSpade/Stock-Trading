@@ -130,14 +130,21 @@ def definitions():
 
 
 def marks_superseded(text, canonical_number):
-    """True when `text` both calls itself superseded AND points at the CURRENT canonical file."""
+    """True when `text` both calls itself superseded AND points at the CURRENT canonical file.
+
+    The pointer must look like an actual FILE reference — "bigquery/78", "78_book_..." — not a bare
+    number. A bare \b78\b alternative used to be accepted (2026-07-18 audit): combined with the mere
+    presence of the word "superseded" ANYWHERE in the same comment block, any coincidental standalone
+    occurrence of the canonical number (a line reference, a threshold, a date fragment) silently
+    satisfied the gate while pointing the operator nowhere — exactly the stale-pointer trap this
+    check exists to catch.
+    """
     if "supersed" not in text.lower():
         return False
     n = canonical_number
     return bool(
         re.search(rf"bigquery/0*{n}\b", text)
         or re.search(rf"\b0*{n}_[a-z]", text)
-        or re.search(rf"\b0*{n}\b", text)
     )
 
 

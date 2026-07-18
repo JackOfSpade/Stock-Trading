@@ -121,7 +121,15 @@ change below was independently reproduced before applying, and each preserves ex
 
 ## Owner actions required (could NOT be applied in-repo — here is the exact patch)
 
-Two `alert_emailer.gs` bugs are **genuinely blocked from landing in this parallel-refactor commit**, and
+> **RESOLVED 2026-07-18 — no owner action remains.** The constraint below was real only for the
+> parallel-refactor commit itself (bigquery/** frozen per-instance). The same night, commit
+> `05ed20b` swept the coordinated change (`.gs` v3 + `bigquery/43` seed + the 16/58 DTS-masking
+> fix) onto `main`, and it was deployed + verified live (`state.script_version_drift`:
+> `alert_emailer` v3/v3, drift=false, 2026-07-18). The local branch
+> `fix/alert-emailer-poison-pill-and-dts-2026-07-18` (de8fd93) was a byte-identical duplicate of
+> that already-merged work and has been deleted. Runbook kept below for the historical record.
+
+Two `alert_emailer.gs` bugs were **genuinely blocked from landing in this parallel-refactor commit**, and
 directed to fix them, I did **not** edit the `.gs` — doing so would break CI or corrupt the deploy-mirror
 invariant. The reasons (and the ready-to-apply patch) follow so the owner can apply them via the proper
 Apps-Script redeploy workflow.

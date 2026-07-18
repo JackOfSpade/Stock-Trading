@@ -18,15 +18,18 @@ NO DDL GRANT / NO OVER-PRIVILEGE. This runs with the EXISTING READ-ONLY WIF serv
   * a transient/infra error                                                                            -> TOLERATE (fail-open, like dbt-parity's skips).
 So the gate blocks ONLY on a parse failure — it can never false-block on a permission/reference message.
 
-SELF-CHECK CANARY. Before trusting a clean result, the script proves its own environment can actually
-detect a syntax error: it dry-runs a known-BAD trivial SELECT ("SELECT 1 FROM") — a pure parse error
-needing no DDL/table perms — and asserts it classifies as 'syntax'. If the canary does NOT surface as a
-syntax error (e.g. a future BigQuery that authorizes before it parses), the check prints a loud
-::warning:: that it may be ineffective, so a silent no-op can't masquerade as "all clean".
+SELF-CHECK CANARY — FAIL CLOSED. Before trusting a clean result, the script proves its own environment
+can actually detect a syntax error: it dry-runs a known-BAD trivial SELECT ("SELECT 1 FROM") — a pure
+parse error needing no DDL/table perms — and asserts it classifies as 'syntax'. If the canary does NOT
+surface as a syntax error (bq/auth misconfigured, or a future BigQuery that authorizes before it
+parses), a "clean" pass over the real files would be unverifiable — so the gate exits 1 instead of
+reporting an OK it cannot stand behind (same discipline as dbt_parity's checked==0 guard and
+check_live_sql_parity's fail-closed exits; 2026-07-18 audit — previously this only printed a
+::warning:: and fell through, so a broken environment green-lit every merge).
 
 Usage:  python scripts/check_sql_dryrun.py <file.sql> [<file.sql> ...]
 Requires the `bq` CLI authed (WIF in CI; local gcloud otherwise). Exit 0 = no syntax errors (or nothing
-to check); exit 1 = at least one file has a syntax error, or (in --strict) the canary self-check failed.
+to check); exit 1 = at least one file has a syntax error, or the canary self-check failed.
 """
 import os
 import subprocess
@@ -125,9 +128,12 @@ def main(argv):
         return 0
 
     if not canary_ok():
-        print("::warning::check_sql_dryrun self-check canary FAILED — 'SELECT 1 FROM' did not surface as "
-              "a syntax error in this environment, so the dry-run gate may be ineffective (bq/auth "
-              "misconfigured, or BigQuery authorized before parsing). Treating results as advisory.")
+        print("::error::check_sql_dryrun self-check canary FAILED — 'SELECT 1 FROM' did not surface as "
+              "a syntax error in this environment (bq/auth misconfigured, or BigQuery authorized before "
+              "parsing). A clean pass would be unverifiable, so the gate FAILS CLOSED instead of "
+              "green-lighting files it cannot actually check. Fix the environment (or investigate a "
+              "BigQuery behavior change) and re-run.")
+        return 1
 
     syntax_errs, tolerated, unknown, ok = [], [], [], 0
     for f in files:

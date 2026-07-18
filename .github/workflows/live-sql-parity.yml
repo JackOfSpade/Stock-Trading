@@ -65,7 +65,7 @@ jobs:
         if: steps.guard.outputs.skip == 'false'
         run: |
           set -uo pipefail
-          if python scripts/check_live_sql_parity.py --project stock-trading-498512 2>&1 | tee /tmp/parity_out.txt; then
+          if python scripts/check_live_sql_parity.py --project stock-trading-498512 --json-out /tmp/findings.json 2>&1 | tee /tmp/parity_out.txt; then
             echo "result=ok" >> "$GITHUB_OUTPUT"
           else
             echo "result=drift" >> "$GITHUB_OUTPUT"
@@ -125,12 +125,51 @@ jobs:
           # ZERO rows ever. On a drift run, a failed INSERT now FAILS THE JOB — a dead bridge is exactly
           # as bad as the drift it is supposed to deliver, and must not be swallowed. (The ::warning::
           # fallback was only ever meaningful when WIF is absent, which is impossible in this step.)
-          detail=$(head -c 4000 /tmp/parity_out.txt)
-          # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted BigQuery
-          # identifier and @p_detail/@p_url named parameters must stay literal, not shell-expanded.
-          if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_detail:STRING:${detail}" --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("live-sql-parity","live_sql_parity","open",@p_detail,@p_url)'; then
-            echo "::error::ops.ci_findings open-row INSERT FAILED on a DRIFT run — the DECLARED single delivery path for live-sql-parity drift (bigquery/67) is broken (WIF is present; verify the gh-ci-runner@ dataEditor grant on ops.ci_findings). Failing the job so a dead bridge is visible, not swallowed."
-            exit 1
+          # PER-OBJECT rows (2026-07-18 audit): the previous single-row INSERT
+          # (finding_key='live_sql_parity', detail=head -c 4000 of the whole run output) silently
+          # truncated most drifted objects out of the DECLARED single delivery path on a high-drift
+          # day — D3's adjudication step and ops.parity_selfheal_log (bigquery/69) both key on
+          # individual objects and a per-object first_detected, which one aggregate blob can never
+          # provide. Source of truth is the checker's own --json-out findings (dataset/name/
+          # object_type/source_file — lookup-failure "skipped" entries are deliberately NOT
+          # findings). One row per drifted object; keys that stop drifting are auto-resolved below;
+          # state.ci_findings_open (bigquery/86) computes first_detected per key from the append-only
+          # history.
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          n=$(jq '.findings | length' /tmp/findings.json)
+          if [ "$n" -eq 0 ]; then
+            # Drift exit with ZERO per-object findings = the checker's fail-closed paths (checked==0
+            # systemic auth failure, or an internal error) — there are no objects to key on, so keep
+            # the aggregate key for exactly this case: "parity could not be verified" is itself the
+            # finding, and it must not auto-resolve the real per-object rows below.
+            detail=$(head -c 4000 /tmp/parity_out.txt)
+            # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted BigQuery
+            # identifier and @p_* named parameters must stay literal, not shell-expanded.
+            if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_detail:STRING:${detail}" --parameter="p_url:STRING:${run_url}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("live-sql-parity","live_sql_parity","open",@p_detail,@p_url)'; then
+              echo "::error::ops.ci_findings open-row INSERT FAILED on a DRIFT run — the DECLARED single delivery path for live-sql-parity drift (bigquery/67) is broken (WIF is present; verify the gh-ci-runner@ dataEditor grant on ops.ci_findings). Failing the job so a dead bridge is visible, not swallowed."
+              exit 1
+            fi
+          else
+            for i in $(seq 0 $((n - 1))); do
+              key=$(jq -r ".findings[$i] | .dataset + \".\" + .name" /tmp/findings.json)
+              src=$(jq -r ".findings[$i].source_file" /tmp/findings.json)
+              typ=$(jq -r ".findings[$i].object_type" /tmp/findings.json)
+              detail="live definition does NOT match the final-effective definition in ${src} (${typ})"
+              # shellcheck disable=SC2016 # single-quoted intentionally: see above.
+              if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_key:STRING:${key}" --parameter="p_detail:STRING:${detail}" --parameter="p_url:STRING:${run_url}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("live-sql-parity",@p_key,"open",@p_detail,@p_url)'; then
+                echo "::error::ops.ci_findings open-row INSERT FAILED for ${key} on a DRIFT run — the DECLARED single delivery path for live-sql-parity drift (bigquery/67) is broken (WIF is present; verify the gh-ci-runner@ dataEditor grant on ops.ci_findings). Failing the job so a dead bridge is visible, not swallowed."
+                exit 1
+              fi
+            done
+            # Auto-resolve any still-open live-sql-parity key that did NOT drift this run (an object
+            # healed since yesterday, or the legacy aggregate 'live_sql_parity' key) — otherwise a
+            # once-drifted object stays open forever unless a FULLY clean run happens to come along.
+            keys=$(jq -c '[.findings[] | .dataset + "." + .name]' /tmp/findings.json)
+            # shellcheck disable=SC2016 # single-quoted intentionally: see above.
+            if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_keys:ARRAY<STRING>:${keys}" --parameter="p_url:STRING:${run_url}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) SELECT workflow, finding_key, "resolved", "no longer drifted this run (per-object auto-resolve)", @p_url FROM `stock-trading-498512.state.ci_findings_open` WHERE workflow = "live-sql-parity" AND finding_key NOT IN UNNEST(@p_keys)'; then
+              echo "::error::ops.ci_findings per-object auto-resolve INSERT FAILED — stale open findings cannot clear (WIF is present; verify the gh-ci-runner@ dataEditor grant on ops.ci_findings). Failing the job so a dead bridge is visible, not swallowed."
+              exit 1
+            fi
           fi
 
       - name: Close finding issue if resolved
@@ -146,17 +185,19 @@ jobs:
             gh issue close "$existing" --repo "$GITHUB_REPOSITORY"
           fi
 
-          # CI-findings bridge (2026-07-16, CC-1): unconditional resolved-row INSERT, even when no GH
-          # issue was open to close — a manually-closed issue must not strand an open ops.ci_findings
-          # row (state.ci_findings_open / cadence_check.sql's ci_finding alert would otherwise never
-          # auto-clear).
+          # CI-findings bridge (2026-07-16, CC-1; PER-OBJECT since 2026-07-18): a clean run resolves
+          # EVERY still-open live-sql-parity key — the per-object keys the drift path now writes AND
+          # the legacy/zero-verification aggregate 'live_sql_parity' key — even when no GH issue was
+          # open to close (a manually-closed issue must not strand an open ops.ci_findings row;
+          # state.ci_findings_open / cadence_check.sql's ci_finding alert would otherwise never
+          # auto-clear). INSERT..SELECT writes zero rows when nothing is open — harmless.
           # FAIL-LOUD (MON H2, 2026-07-17): same rationale as the open-row INSERT above. This step runs
           # only with WIF present (skip=='false') and on a CLEAN run; a failed resolved-row INSERT means
           # the bridge cannot auto-clear a stale open finding, so it now FAILS THE JOB rather than being
           # swallowed into a green run (the state where ops.ci_findings sat at ZERO rows undetected).
           # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted BigQuery
           # identifier and @p_url named parameter must stay literal, not shell-expanded.
-          if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("live-sql-parity","live_sql_parity","resolved","parity clean this run",@p_url)'; then
+          if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) SELECT workflow, finding_key, "resolved", "parity clean this run", @p_url FROM `stock-trading-498512.state.ci_findings_open` WHERE workflow = "live-sql-parity"'; then
             echo "::error::ops.ci_findings resolved-row INSERT FAILED — the ci_findings bridge cannot auto-clear stale open findings (WIF is present; verify the gh-ci-runner@ dataEditor grant on ops.ci_findings). Failing the job so a dead bridge is visible, not swallowed."
             exit 1
           fi

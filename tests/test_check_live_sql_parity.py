@@ -198,12 +198,14 @@ def test_view_body_stops_at_a_following_top_level_merge():
 
 def test_ci_findings_open_real_body_has_no_bled_merge():
     # Direct lock on the real object behind the HIGH finding: its final-effective body must be only the
-    # SELECT, never the trailing MERGE from bigquery/67_ci_findings_bridge.sql.
+    # SELECT, never the trailing MERGE from bigquery/67_ci_findings_bridge.sql. Since 2026-07-18 the
+    # canonical definition is bigquery/86 (adds episode-aware first_detected); the synthetic bleed test
+    # above still locks the 67-shaped statement-boundary behavior itself.
     final = clsp.find_final_definitions()
     _ot, _p, src, body = final[("state", "ci_findings_open")]
-    assert src == "67_ci_findings_bridge.sql"
+    assert src == "86_ci_findings_first_detected.sql"
     assert "MERGE" not in body
-    assert body.strip().endswith("status = 'open'")
+    assert body.strip().endswith("ON e.workflow = o.workflow AND e.finding_key = o.finding_key")
 
 
 # ---- extract_body: TABLE FUNCTION branch (single AS ( ... ) wrapper) ------------------------------

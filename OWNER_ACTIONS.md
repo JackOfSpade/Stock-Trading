@@ -77,13 +77,14 @@ Claude-in-Chrome from the commit-SHA-pinned GitHub URL (commit `4522cb0`, branch
 — y-axis fitted to ~−7.5%…+12.5%, 0 baseline visible, lines no longer squished), then the
 `state.expected_script_versions` row bumped to v5 (targeted UPDATE, done from here AFTER the v5
 heartbeat landed so no false drift). **Verified: `state.script_version_drift` → `weekly_report` v5/v5,
-`monitored=true`, `drift=false`.** `alert_emailer` untouched (still v2/v2). What v5 shipped: strategy
+`monitored=true`, `drift=false`.** `alert_emailer` was untouched by THIS pass (v2/v2 at the time;
+since bumped to v3/v3 by the 2026-07-18 poison-pill fix — landed on `main` via commit `05ed20b`,
+deployed + drift-clean, verified live 2026-07-18). What v5 shipped: strategy
 lines GAP (not false-flat-0%) before first deploy / after last mark; full-axis forward-fill (downsampled
 points no longer stale); `fmtRetPct_` null-return guard in subject/alt/plain/fallback-bars; captions
 dropped the shared "Since <date>" claim; tighter/taller y-axis. The paired `analytics.voo_cumulative`
 null-on-gap view fix was already applied live earlier this pass. **No remaining owner steps.** (Repo
-housekeeping: the fix lives on branch `fix/weekly-chart-audit-v5`; merge it to `main` at your
-convenience — nothing operational depends on the merge since the live surfaces are already updated.)
+housekeeping: DONE — `fix/weekly-chart-audit-v5` was merged to `main` by 2026-07-18.)
 
 ---
 
@@ -895,10 +896,21 @@ done_when: == 'true'
   mark**: once one scenario escalates, later scenarios in the same run start at that budget instead of
   re-truncating from 8192 each time (conserves the per-model daily request quota); it resets to 8192 on
   the next run.
-  **Owner follow-up (security):** the Gemini key was pasted into a chat during setup, so rotate it —
-  generate a new key in AI Studio and run `gh secret set GEMINI_API_KEY -R JackOfSpade/Stock-Trading`
-  (omit the value; it prompts securely; the `-R` flag means it works from any directory), which
-  invalidates the old value.
+  (The GEMINI_API_KEY rotation follow-up formerly buried in this paragraph now has its own OPEN item
+  — see **E-2** immediately below — so it cannot be absorbed into this item's closed status.)
+
+## E-2. OPEN — rotate the chat-exposed `GEMINI_API_KEY` (security; owner-only)
+
+**Still open as of 2026-07-18** (given its own heading by the 2026-07-18 audit: it previously lived
+as unheaded prose inside item E above, structurally invisible once E's parent heading read as done —
+and `scripts/verify_owner_actions.py` can only ever confirm "a key exists", not "the exposed key was
+replaced", so no checker will ever auto-close this; it stays open until you act). The Gemini key was
+pasted into a chat during setup, so treat it as exposed and rotate it: generate a new key in AI
+Studio (requires your browser/OAuth session — cannot be done from an agent session), then run
+`gh secret set GEMINI_API_KEY -R JackOfSpade/Stock-Trading` (omit the value; it prompts securely;
+the `-R` flag means it works from any directory), which invalidates the old value. **If skipped:**
+`golden-scenarios.yml`'s live runs keep working on the exposed key; the risk is unauthorized use of
+your Gemini quota/billing, not a trading-safety issue.
 
 ```verify
 id: E-anthropic
@@ -911,7 +923,8 @@ broken; `OFFSITE_BACKUP_GCS`/`ANTHROPIC_API_KEY` unlock functionality that's cur
 something currently wrong. `ALERT_WEBHOOK_URL` is now a single 4-command paste (item D) plus a phone
 subscribe tap, not three separate decisions.
 
-## F. Resolved — BigQuery per-user daily query quota was hit during this session (no action needed)
+## [DONE 2026-07-18 — auto-verified] F. Resolved — BigQuery per-user daily query quota was hit during this session (no action needed)
+  *(auto-verified 2026-07-18: commit 85c18c1 is an ancestor of origin/main (backlog merged))*
 
 **Transient, self-cleared within ~10 minutes — checked live, confirmed resolved.** The
 `dbt↔live row-level parity (keyless WIF)` CI job failed on 2 pushes in a row this session with
