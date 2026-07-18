@@ -54,10 +54,20 @@ FROM s WHERE prev_close IS NOT NULL;
 
 -- ===== analytics.voo_cumulative — VOO's own cumulative total return, aligned to the deployed axis =====
 -- Mirrors analytics.sgov_cumulative's date axis (DISTINCT as_of_date FROM strategy_vs_park_daily) so
--- the weekly email's chart plots SGOV and VOO on identical x-axes. Unlike SGOV's forward-fill, a
--- missing VOO mark reads as a 0% return for that day (COALESCE, not LAST_VALUE) — see the file header.
--- voo_cum_return is NULL before VOO's first observed mark (first_voo_date), so the email can render
--- "Not enough data" instead of a misleading flat line from day one.
+-- the weekly email's chart plots SGOV and VOO on identical x-axes.
+--
+-- NULL-ON-GAP (2026-07-17 audit fix): voo_cum_return is NULL on ANY axis day with no real VOO mark —
+-- both BEFORE VOO's first observed mark (first_voo_date) AND on any interior/trailing ingest gap
+-- (r_voo IS NULL). The running cumulative is still chained internally with COALESCE(r_voo,0), so the
+-- LEVEL is preserved across a gap and resumes exactly right on the next real mark (r_voo LAGs over
+-- VOO's OWN marks, so the resume day's return spans the gap in full); only the OUTPUT on gap days is
+-- hidden. WHY the change: the prior version emitted the COALESCE-to-0 cumulative on gap days too, which
+-- (a) drew VOO as a confident FLAT line through a data gap — the "false flat" it was meant to avoid —
+-- and (b) made vooLastMarkDate (derived in weekly_report.gs from the last non-null voo_cum_return)
+-- structurally equal to as_of_date, so the email's "⚠ VOO data through <date>" staleness warning could
+-- never fire. Emitting NULL on gap days fixes BOTH: the chart shows a genuine break, and the last
+-- non-null day again equals the true last VOO mark, reviving the staleness guard. A VOO-only ingest
+-- stall does NOT trip the all-ticker marks_fresh predicate, so this in-band signal is the only warning.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.voo_cumulative` AS
 WITH axis AS (
   SELECT DISTINCT as_of_date
@@ -70,9 +80,10 @@ j AS (
   LEFT JOIN `stock-trading-498512.analytics.voo_daily_return` v USING (as_of_date)
 )
 SELECT as_of_date,
-  CASE WHEN first_voo_date IS NULL OR as_of_date < first_voo_date THEN NULL
+  CASE WHEN first_voo_date IS NULL OR as_of_date < first_voo_date THEN NULL  -- before VOO's first mark
+       WHEN r_voo IS NULL THEN NULL  -- interior/trailing ingest gap: break the line, don't carry a false 0
        ELSE EXP(SUM(LN(1 + GREATEST(COALESCE(r_voo, 0), -0.9999)))
-                OVER (ORDER BY as_of_date)) - 1
+                OVER (ORDER BY as_of_date)) - 1  -- level chained across gaps via COALESCE, hidden above
   END AS voo_cum_return
 FROM j;
 

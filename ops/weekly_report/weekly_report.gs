@@ -57,7 +57,7 @@ const SENDER_NAME  = 'Stock-Trading Bot';
 const LABEL_NAME   = 'Trading/Weekly';
 const SEND_HOUR    = 7;
 const SEND_WEEKDAY = ScriptApp.WeekDay.SUNDAY;
-const SCRIPT_VERSION = 'v3';                       // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep
+const SCRIPT_VERSION = 'v5';                       // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep
 const SUBJECT_LABEL = 'Deployed vs Benchmarks';    // Single source for this phrase across buildSubject_, the post-send GmailApp.search() match, and the HTML/plain-text banners below. Edit only here on a rename (2026-07-14 audit finding -- this already drifted once by hand across 4 sites during the 2026-07-13 VOO rename).
 
 // Fixed per-strategy identity colors (CVD-validated) — never reassigned by rank/presence. VOO is a
@@ -127,7 +127,7 @@ function buildSubject_(d) {
   if (!deployed.length) {
     tag = 'all parked';
   } else {
-    tag = deployed.map(r => `${r.strategy} ${signPct_(r.returnPct * 100)}`).join(' · ');
+    tag = deployed.map(r => `${r.strategy} ${fmtRetPct_(r.returnPct)}`).join(' · ');
     // VOO fragment only in the deployed branch, and only once VOO has real data in the window —
     // never render a null through signPct_ (which would print "−NaN%").
     if (d.voo && d.voo.returnPct != null) {
@@ -321,7 +321,13 @@ function getUserTzWeekly_() {
 
 // ===== formatting =====
 function num_(v)  { return (v === null || v === undefined || v === '') ? null : Number(v); }
-function signPct_(p){ return (p >= 0 ? '+' : '−') + Math.abs(p).toFixed(2) + '%'; } // unicode minus
+function signPct_(p){ const s = Math.abs(p).toFixed(2); return (p >= 0 || s === '0.00' ? '+' : '−') + s + '%'; } // unicode minus; force '+' when the rounded magnitude is 0.00 (else a tiny loss prints "−0.00%")
+// Renders a return FRACTION as a signed %, or 'n/a' when null. A DEPLOYED strategy can still have a
+// null latest return (returnPct is set null when the latest deployed_unit_value is missing — a
+// partial/failed D2 engine run, line ~210); signPct_(null*100) would otherwise print a confident,
+// misleading "+0.00%" (2026-07-17 audit). Mirrors the `!= null` guard the VOO fragment already uses
+// and the table's "Not enough data" cell — so subject / alt-text / plain-text never fabricate a 0.00%.
+function fmtRetPct_(p){ return p == null ? 'n/a' : signPct_(p * 100); }
 function clr_(p)  { return p >= 0 ? '#1a7f5a' : '#c0392b'; }
 // KEEP IN SYNC MANUALLY with esc2_() in ops/monitoring/alert_emailer.gs — byte-for-byte identical on
 // purpose (separate Apps Script projects can't share a module), also copied verbatim into
@@ -347,8 +353,36 @@ function downsampleDates_(sortedDates) {
   return kept;
 }
 
+// Rounds x UP to the nearest "nice" number — 1, 2, 2.5, or 5 × a power of 10 — so an auto-derived
+// y-axis gridline step reads cleanly (e.g. 2%, not 1.8333%). Non-positive input floors to 1.
+function niceNum_(x) {
+  if (!(x > 0)) return 1;
+  const pow = Math.pow(10, Math.floor(Math.log(x) / Math.LN10));
+  const f = x / pow;                                    // normalized to [1, 10)
+  const nice = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10;
+  return nice * pow;
+}
+
+// Computes a tight, clean y-axis {min, max, step, gridlines} for the returns chart. Goals: (a) always
+// include the 0 breakeven line so above/below-water stays readable; (b) fit closely to the data so the
+// lines fill the plot instead of being squished into a thin band by the auto-range; (c) snap the bounds
+// to a nice round step (targeting ~8 intervals) so labels and gridlines are legible. `values` is the
+// list of ALL plotted points across every series (already ×100, in %); nulls/NaNs (line gaps) are
+// ignored. Pure — mirrored in test_pure_helpers.js.
+function niceYRange_(values) {
+  const nums = (values || []).filter(v => v != null && isFinite(v));
+  if (!nums.length) return { min: -1, max: 1, step: 1, gridlines: 3 };
+  let lo = Math.min(0, Math.min.apply(null, nums));
+  let hi = Math.max(0, Math.max.apply(null, nums));
+  if (lo === hi) { lo -= 1; hi += 1; }                  // wholly-flat series guard (never a zero span)
+  const step = niceNum_((hi - lo) / 8);
+  lo = Math.floor(lo / step) * step;
+  hi = Math.ceil(hi / step) * step;
+  return { min: lo, max: hi, step: step, gridlines: Math.round((hi - lo) / step) + 1 };
+}
+
 function altTextFor_(d) {
-  const parts = d.rows.filter(r => r.deployed).map(r => `${r.strategy} ${signPct_(r.returnPct * 100)}`);
+  const parts = d.rows.filter(r => r.deployed).map(r => `${r.strategy} ${fmtRetPct_(r.returnPct)}`);
   if (d.voo && d.voo.returnPct != null) {
     parts.push(`VOO ${signPct_(d.voo.returnPct * 100)}`);
   }
@@ -363,48 +397,77 @@ function buildReturnChart_(d) {
     const keptDates = downsampleDates_(allDates);
     const hasVoo = d.nVooMarkDays > 0;
 
-    // strategy line = (deployed_unit_value − 1) forward-filled; 0 before its first day.
+    // Each strategy line = (deployed_unit_value − 1) × 100. Two deliberate choices:
+    //  * Forward-filled over the FULL date axis first, THEN sampled at the (possibly downsampled) kept
+    //    dates — so a weekly-downsampled point reflects the true last value AS OF that date, never a
+    //    stale value frozen at the previous KEPT date (the pre-2026-07-17 bug: the fill only advanced on
+    //    kept dates, so a mark landing between kept dates was skipped).
+    //  * A GAP (null → a break in the line), never a flat 0, OUTSIDE the strategy's own data span:
+    //    before its first deployed day and after its last mark. A flat-0 lead-in would read as
+    //    "deployed and breakeven" for a strategy that simply wasn't live yet — the exact false-flat the
+    //    VOO series was already written to avoid (2026-07-17 audit). Within [first, last], real values
+    //    are forward-filled across genuinely idle days (cumulative return doesn't move while un-deployed).
     const filled = {};
     d.deployedStrategies.forEach(s => {
       const pts = d.dailyByStrategy[s] || [];
       const map = {};
       pts.forEach(p => { if (p.duv != null) map[p.as_of_date] = (p.duv - 1) * 100; });
       const firstDate = pts.length ? pts[0].as_of_date : null;
-      let last = 0;
-      filled[s] = {};
-      keptDates.forEach(iso => {
-        if (firstDate == null || iso < firstDate) { filled[s][iso] = 0; return; }
+      const lastDate  = pts.length ? pts[pts.length - 1].as_of_date : null;
+      let last = null;
+      const full = {};
+      allDates.forEach(iso => {
+        if (firstDate == null || iso < firstDate || (lastDate != null && iso > lastDate)) {
+          full[iso] = null; return;                     // outside this strategy's data span → gap
+        }
         if (map[iso] != null) last = map[iso];
-        filled[s][iso] = last;
+        full[iso] = last;
       });
+      filled[s] = {};
+      keptDates.forEach(iso => { filled[s][iso] = full[iso]; });
     });
 
-    // VOO first (steel blue) if it has data, under the strategy lines. VOO's own series is used as-is
-    // (a gap reads as null -> a break in the line, never a false 0) — never rebased to line up with any
-    // strategy's deployed-day start (directive 3: VOO plots as its own natural line).
+    // VOO first (steel blue) if it has data, under the strategy lines. VOO's own series is used as-is:
+    // analytics.voo_cumulative now emits NULL on ANY day it has no real mark (leading, mid, or trailing
+    // ingest gap — 2026-07-17 audit), so a gap reads as a break in the line, never a false flat 0 — and
+    // it's never rebased to line up with any strategy's start (VOO plots as its own natural line).
     const dt = Charts.newDataTable().addColumn(Charts.ColumnType.DATE, 'Date');
     if (hasVoo) dt.addColumn(Charts.ColumnType.NUMBER, 'VOO');
     d.deployedStrategies.forEach(s => dt.addColumn(Charts.ColumnType.NUMBER, 'Strategy ' + s));
+    const yvals = [];                                    // every plotted point (%), for the y-axis fit
     keptDates.forEach(iso => {
       const row = [parseIsoDateLocal_(iso)];
       if (hasVoo) {
         const vooVal = d.vooByDate[iso];
-        row.push(vooVal != null ? vooVal * 100 : null); // null -> a gap in the line, not a false 0
+        const v = vooVal != null ? vooVal * 100 : null;  // null -> a gap in the line, not a false 0
+        row.push(v);
+        if (v != null) yvals.push(v);
       }
-      d.deployedStrategies.forEach(s => row.push(filled[s][iso]));
+      d.deployedStrategies.forEach(s => {
+        const sv = filled[s][iso];
+        row.push(sv);
+        if (sv != null) yvals.push(sv);
+      });
       dt.addRow(row);
     });
 
+    // Fit the y-axis tightly to the data (0 always included) instead of the auto-range — this is what
+    // stops the lines from being squished into a thin band and makes the gaps between them legible at a
+    // glance. Taller canvas (600 vs the old 400) adds vertical room for the same effect.
+    const yr = niceYRange_(yvals);
     const colors = (hasVoo ? [VOO_COLOR] : []).concat(d.deployedStrategies.map(s => CHART_COLORS[s] || '#8a96a3'));
     const chart = Charts.newLineChart().setDataTable(dt.build())
       .setColors(colors)
-      .setDimensions(1120, 400)
+      .setDimensions(1120, 600)
       .setLegendPosition(Charts.Position.BOTTOM)
       .setPointStyle(Charts.PointStyle.NONE)
       .setBackgroundColor('#fffffe') // opaque near-white; never transparent; PNG pixels aren't inverted by Gmail
       .setYAxisTitle('Cumulative return %')
-      .build();
-    return { blob: chart.getAs('image/png').setName('cumulative_returns.png') };
+      .setRange(yr.min, yr.max);
+    // Best-effort finer gridlines — the Charts service ignores unsupported options without throwing, and
+    // the tight setRange + taller canvas already do the heavy lifting if this is a no-op.
+    try { chart.setOption('vAxis.gridlines.count', yr.gridlines); } catch (eOpt) {}
+    return { blob: chart.build().getAs('image/png').setName('cumulative_returns.png') };
   } catch (e) {
     Logger.log('chart build failed, using HTML fallback: ' + e);
     return null;
@@ -420,14 +483,21 @@ function fallbackBarsHtml_(d) {
   const hasVooReturn = !!(d.voo && d.voo.returnPct != null);
   const items = deployed.map(r => ({
     label: r.strategy,
-    val: r.returnPct * 100,
-    beat: hasVooReturn ? (r.returnPct > d.voo.returnPct) : null
+    // null when the latest deployed_unit_value is missing (returnPct null) — render "no data", never a
+    // false 0% bar; the beat-vs-VOO comparison is likewise only meaningful with a real return.
+    val: r.returnPct != null ? r.returnPct * 100 : null,
+    beat: (hasVooReturn && r.returnPct != null) ? (r.returnPct > d.voo.returnPct) : null
   }));
   if (hasVooReturn) {
     items.push({ label: 'VOO', val: d.voo.returnPct * 100, neutral: true, vooColor: true });
   }
-  const maxAbs = Math.max.apply(null, items.map(it => Math.abs(it.val)).concat([1.0]));
+  const maxAbs = Math.max.apply(null, items.filter(it => it.val != null).map(it => Math.abs(it.val)).concat([1.0]));
   return items.map(it => {
+    if (it.val == null) {
+      return `<div style="padding:4px 0;font-size:12px;color:#1f2d3d;">` +
+        `<span style="display:inline-block;width:40px;font-weight:700;">${esc_(it.label)}</span>` +
+        `<span style="color:#8a96a3;">no data</span></div>`;
+    }
     const widthPx = Math.max(2, Math.round(Math.abs(it.val) / maxAbs * 240));
     const color = it.vooColor ? VOO_COLOR : ((it.neutral || it.beat === null) ? '#3d4a59' : (it.beat ? '#1a7f5a' : '#c0392b'));
     return `<div style="padding:4px 0;font-size:12px;color:#1f2d3d;">` +
@@ -446,7 +516,6 @@ function pctCellHtml_(v, colorBySign, extrapolated) {
 }
 
 function buildHtml_(d, chartResult) {
-  const firstLabel = d.firstDate ? Utilities.formatDate(parseIsoDateLocal_(d.firstDate), d.tz, 'MMM d') : '—';
   const hasVoo = d.nVooMarkDays > 0;
 
   const trustBlock = d.green ? '' : `
@@ -472,8 +541,8 @@ function buildHtml_(d, chartResult) {
   }
   const chartSection = `
   <tr><td style="padding:16px 22px 6px 22px;">
-    <div style="font-size:12px;color:#8a96a3;text-transform:uppercase;letter-spacing:0.6px;font-weight:700;">Cumulative Return Since ${esc_(firstLabel)} (%)</div>
-    <div style="margin-top:8px;font-size:11px;color:#8a96a3;">Each strategy's total return; ${benchmarkCaption}${notDeployedNote}${vooStaleNote}</div>
+    <div style="font-size:12px;color:#8a96a3;text-transform:uppercase;letter-spacing:0.6px;font-weight:700;">Cumulative Return (%)</div>
+    <div style="margin-top:8px;font-size:11px;color:#8a96a3;">Each line from its own start — a strategy from its first deployed day, VOO from its first mark. ${benchmarkCaption}${notDeployedNote}${vooStaleNote}</div>
     ${chartInner}
   </td></tr>`;
 
@@ -544,7 +613,6 @@ ${trustBlock}${chartSection}${tableSection}
 
 // ===== plain-text mirror =====
 function buildPlain_(d) {
-  const firstLabel = d.firstDate ? Utilities.formatDate(parseIsoDateLocal_(d.firstDate), d.tz, 'MMM d') : '—';
   const fmtP = (v, ex) => (v == null ? 'Not enough data' : signPct_(v * 100) + (ex ? '†' : ''));
 
   let s = `Stock-Trading — ${SUBJECT_LABEL} (${d.dateLabel})\n\n`;
@@ -555,8 +623,8 @@ function buildPlain_(d) {
   if (!d.deployedStrategies.length) {
     s += `Nothing deployed yet — all cash is parked.\n`;
   } else {
-    s += `CUMULATIVE RETURN SINCE ${firstLabel}:\n`;
-    d.rows.filter(r => r.deployed).forEach(r => { s += `  ${r.strategy}  ${signPct_(r.returnPct * 100)}\n`; });
+    s += `CUMULATIVE RETURN (each line from its own start — strategy since first deployed, VOO since first mark):\n`;
+    d.rows.filter(r => r.deployed).forEach(r => { s += `  ${r.strategy}  ${fmtRetPct_(r.returnPct)}\n`; });
     if (d.voo && d.voo.returnPct != null) {
       s += `  VOO  ${signPct_(d.voo.returnPct * 100)}\n`;
     }

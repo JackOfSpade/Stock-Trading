@@ -98,14 +98,14 @@ models:
           - unique
 
   - name: voo_cumulative
-    description: VOO's own cumulative total return per deployed trading day, aligned to the same axis as sgov_cumulative (the weekly email's VOO chart line + its own average return per month/year). NULL before VOO's first observed mark. 2026-07-13.
+    description: VOO's own cumulative total return per deployed trading day, aligned to the same axis as sgov_cumulative (the weekly email's VOO chart line + its own average return per month/year). NULL before VOO's first observed mark, and NULL on any interior/trailing day its mark is missing (an ingest gap → a break in the chart line, not a false flat carry). 2026-07-13; null-on-gap 2026-07-17.
     columns:
       - name: as_of_date
         tests:
           - not_null
           - unique
       - name: voo_cum_return
-        description: VOO's cumulative total return (close + dividends) since the first deployed date; NULL until VOO has at least one mark in the window.
+        description: VOO's cumulative total return (close + dividends) since the first deployed date; NULL until VOO's first mark AND on any day with no real VOO mark (ingest gap). The running level is still chained across gaps internally, so it resumes exactly on the next real mark.
 
   - name: deployed_book_vs_benchmarks
     description: Single-row combined deployed-book comparison vs SGOV AND VOO — the weekly email's headline block (percent + "same dollars, same days" dollar legs). 2026-07-13.

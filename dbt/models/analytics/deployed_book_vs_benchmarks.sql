@@ -1,7 +1,10 @@
 -- Parallel-run dbt port of bigquery/46_weekly_benchmarks.sql:analytics.deployed_book_vs_benchmarks — canonical source is that file until owner cutover.
 -- One row: the weekly email's new headline block. Same-days book vs SGOV vs VOO, percent AND dollar
 -- ("same amount, same time") legs. SGOV forward-fills a missing mark (cash-like accrual); VOO
--- COALESCEs a missing mark to 0 (see voo_cumulative.sql). n_voo_mark_days / voo_last_mark_date are
+-- COALESCEs a missing mark to 0 HERE (correct: the aggregate percent legs are invariant to how a
+-- gap's return mass is distributed). NB: analytics.voo_cumulative no longer does this in its OUTPUT —
+-- since the 2026-07-17 audit it NULLs a missing mark so the chart shows a gap and the staleness note
+-- can fire; only this aggregate view still COALESCEs-to-0 internally. n_voo_mark_days / voo_last_mark_date are
 -- data-presence signals the email gates its VOO rendering on — every VOO-derived column is NULL when
 -- zero VOO marks exist in the window, so a skipped backfill renders "Not enough data", never a
 -- confident "VOO +0.00%".

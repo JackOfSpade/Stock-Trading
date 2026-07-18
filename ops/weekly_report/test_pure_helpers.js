@@ -22,9 +22,12 @@
  *   - periodAvg_           (weekly_report.gs lines 246-249)
  *   - isExtrapolated_      (weekly_report.gs lines 254-256)
  *   - benchmarkRow_        (weekly_report.gs lines 262-269)
- *   - signPct_             (weekly_report.gs line 324)
- *   - parseIsoDateLocal_   (weekly_report.gs lines 335-338)
- *   - downsampleDates_     (weekly_report.gs lines 341-348)
+ *   - signPct_             (weekly_report.gs signPct_)
+ *   - fmtRetPct_           (weekly_report.gs fmtRetPct_)
+ *   - parseIsoDateLocal_   (weekly_report.gs parseIsoDateLocal_)
+ *   - downsampleDates_     (weekly_report.gs downsampleDates_)
+ *   - niceNum_             (weekly_report.gs niceNum_)
+ *   - niceYRange_          (weekly_report.gs niceYRange_)
  *   - buildHealthReasons_  (weekly_report.gs lines 272-293)
  *   - buildSubject_        (weekly_report.gs lines 124-138)
  *   - esc_                 (weekly_report.gs line 331)
@@ -90,7 +93,8 @@ function benchmarkRow_(returnPct, days) {
   };
 }
 
-function signPct_(p){ return (p >= 0 ? '+' : '−') + Math.abs(p).toFixed(2) + '%'; } // unicode minus
+function signPct_(p){ const s = Math.abs(p).toFixed(2); return (p >= 0 || s === '0.00' ? '+' : '−') + s + '%'; } // unicode minus; force '+' when the rounded magnitude is 0.00 (else a tiny loss prints "−0.00%")
+function fmtRetPct_(p){ return p == null ? 'n/a' : signPct_(p * 100); }
 
 // 'YYYY-MM-DD' -> local-midnight Date (never new Date('YYYY-MM-DD'), which is UTC midnight and
 // renders as the previous day in a US-behind-UTC display timezone).
@@ -108,6 +112,26 @@ function downsampleDates_(sortedDates) {
   return kept;
 }
 
+function niceNum_(x) {
+  if (!(x > 0)) return 1;
+  const pow = Math.pow(10, Math.floor(Math.log(x) / Math.LN10));
+  const f = x / pow;                                    // normalized to [1, 10)
+  const nice = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10;
+  return nice * pow;
+}
+
+function niceYRange_(values) {
+  const nums = (values || []).filter(v => v != null && isFinite(v));
+  if (!nums.length) return { min: -1, max: 1, step: 1, gridlines: 3 };
+  let lo = Math.min(0, Math.min.apply(null, nums));
+  let hi = Math.max(0, Math.max.apply(null, nums));
+  if (lo === hi) { lo -= 1; hi += 1; }                  // wholly-flat series guard (never a zero span)
+  const step = niceNum_((hi - lo) / 8);
+  lo = Math.floor(lo / step) * step;
+  hi = Math.ceil(hi / step) * step;
+  return { min: lo, max: hi, step: step, gridlines: Math.round((hi - lo) / step) + 1 };
+}
+
 function esc_(s)  { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 const VOO_COLOR = '#5f7d95';
@@ -122,14 +146,19 @@ function fallbackBarsHtml_(d) {
   const hasVooReturn = !!(d.voo && d.voo.returnPct != null);
   const items = deployed.map(r => ({
     label: r.strategy,
-    val: r.returnPct * 100,
-    beat: hasVooReturn ? (r.returnPct > d.voo.returnPct) : null
+    val: r.returnPct != null ? r.returnPct * 100 : null,
+    beat: (hasVooReturn && r.returnPct != null) ? (r.returnPct > d.voo.returnPct) : null
   }));
   if (hasVooReturn) {
     items.push({ label: 'VOO', val: d.voo.returnPct * 100, neutral: true, vooColor: true });
   }
-  const maxAbs = Math.max.apply(null, items.map(it => Math.abs(it.val)).concat([1.0]));
+  const maxAbs = Math.max.apply(null, items.filter(it => it.val != null).map(it => Math.abs(it.val)).concat([1.0]));
   return items.map(it => {
+    if (it.val == null) {
+      return `<div style="padding:4px 0;font-size:12px;color:#1f2d3d;">` +
+        `<span style="display:inline-block;width:40px;font-weight:700;">${esc_(it.label)}</span>` +
+        `<span style="color:#8a96a3;">no data</span></div>`;
+    }
     const widthPx = Math.max(2, Math.round(Math.abs(it.val) / maxAbs * 240));
     const color = it.vooColor ? VOO_COLOR : ((it.neutral || it.beat === null) ? '#3d4a59' : (it.beat ? '#1a7f5a' : '#c0392b'));
     return `<div style="padding:4px 0;font-size:12px;color:#1f2d3d;">` +
@@ -176,7 +205,7 @@ function buildSubject_(d) {
   if (!deployed.length) {
     tag = 'all parked';
   } else {
-    tag = deployed.map(r => `${r.strategy} ${signPct_(r.returnPct * 100)}`).join(' · ');
+    tag = deployed.map(r => `${r.strategy} ${fmtRetPct_(r.returnPct)}`).join(' · ');
     // VOO fragment only in the deployed branch, and only once VOO has real data in the window —
     // never render a null through signPct_ (which would print "−NaN%").
     if (d.voo && d.voo.returnPct != null) {
@@ -314,6 +343,27 @@ t('signPct_ prefixes zero with + (not the unicode minus)', () => {
 t('signPct_ prefixes a negative value with the unicode minus and its absolute magnitude', () => {
   assert.strictEqual(signPct_(-2.5), '−2.50%');
 });
+t('signPct_ shows +0.00% (not −0.00%) for a tiny loss that rounds to zero', () => {
+  // 2026-07-17 audit GS-1: the sign came from raw p while the magnitude rounded via toFixed(2), so
+  // any p in (-0.005, 0) printed the contradictory "−0.00%". Now the sign is '+' when the FORMATTED
+  // magnitude is 0.00. Boundary preserved: -0.005 still rounds to a real "−0.01%".
+  assert.strictEqual(signPct_(-0.004), '+0.00%');
+  assert.strictEqual(signPct_(-0.001), '+0.00%');
+  assert.strictEqual(signPct_(-0.005), '−0.01%');
+});
+
+// ---- fmtRetPct_ ----
+t('fmtRetPct_ renders a real fraction as a signed % (same as signPct_(p*100))', () => {
+  assert.strictEqual(fmtRetPct_(0.0123), '+1.23%');
+  assert.strictEqual(fmtRetPct_(-0.05), '−5.00%');
+  assert.strictEqual(fmtRetPct_(0), '+0.00%');
+});
+t('fmtRetPct_ renders null as "n/a" (not a misleading "+0.00%") — the 2026-07-17 null-return guard', () => {
+  // A deployed strategy can have returnPct === null (missing latest deployed_unit_value); the old
+  // unguarded signPct_(null*100) printed "+0.00%", fabricating a flat return. Must be 'n/a' now.
+  assert.strictEqual(fmtRetPct_(null), 'n/a');
+  assert.strictEqual(fmtRetPct_(undefined), 'n/a');
+});
 
 // ---- parseIsoDateLocal_ ----
 t('parseIsoDateLocal_ round-trips an ISO date string as LOCAL midnight (not UTC)', () => {
@@ -336,6 +386,51 @@ t('downsampleDates_ downsamples above 130 entries and always keeps the last date
   const kept = downsampleDates_(dates);
   assert.ok(kept.length < dates.length, `expected fewer than ${dates.length}, got ${kept.length}`);
   assert.strictEqual(kept[kept.length - 1], dates[dates.length - 1]);
+});
+
+// ---- niceNum_ / niceYRange_ (chart y-axis fit) ----
+t('niceNum_ rounds UP to a 1/2/2.5/5 × 10^k step', () => {
+  assert.strictEqual(niceNum_(2.67), 5);
+  assert.strictEqual(niceNum_(2), 2);
+  assert.strictEqual(niceNum_(2.1), 2.5);
+  assert.strictEqual(niceNum_(0.8), 1);
+  assert.strictEqual(niceNum_(12.5), 20);
+  assert.strictEqual(niceNum_(0.03), 0.05);
+});
+t('niceNum_ floors non-positive input to 1 (never a zero/negative step)', () => {
+  assert.strictEqual(niceNum_(0), 1);
+  assert.strictEqual(niceNum_(-5), 1);
+});
+t('niceYRange_ always brackets 0 and fits tightly around the data', () => {
+  const r = niceYRange_([-5, 11, 2, -4]); // e.g. Strategy D low, Strategy B high
+  assert.ok(r.min <= -5 && r.min <= 0, `min ${r.min} should be <= data min and <= 0`);
+  assert.ok(r.max >= 11 && r.max >= 0, `max ${r.max} should be >= data max and >= 0`);
+  // tighter than the old fixed -10..15 auto band
+  assert.ok(r.min > -10 && r.max <= 15, `expected a tight band, got [${r.min}, ${r.max}]`);
+  assert.ok(r.gridlines >= 3, 'should propose at least a few gridlines');
+});
+t('niceYRange_ includes 0 even when every value is positive (breakeven stays visible)', () => {
+  const r = niceYRange_([3, 5, 8]);
+  assert.strictEqual(r.min, 0);
+  assert.ok(r.max >= 8);
+});
+t('niceYRange_ includes 0 even when every value is negative', () => {
+  const r = niceYRange_([-3, -5, -8]);
+  assert.strictEqual(r.max, 0);
+  assert.ok(r.min <= -8);
+});
+t('niceYRange_ ignores nulls/NaN (line gaps) and guards an all-equal / empty series', () => {
+  const r = niceYRange_([null, 4, NaN, 4]); // effectively a flat 4
+  assert.ok(r.min <= 0 && r.max >= 4 && r.max > r.min, `bad flat-series range [${r.min}, ${r.max}]`);
+  const empty = niceYRange_([]);
+  assert.ok(empty.min < empty.max, 'empty series must still yield a non-zero span');
+  const allNull = niceYRange_([null, undefined, NaN]);
+  assert.ok(allNull.min < allNull.max, 'all-null series must still yield a non-zero span');
+});
+t('niceYRange_ snaps bounds to whole multiples of its step', () => {
+  const r = niceYRange_([-5, 11]);
+  assert.ok(Math.abs(r.min / r.step - Math.round(r.min / r.step)) < 1e-9, 'min not on a step boundary');
+  assert.ok(Math.abs(r.max / r.step - Math.round(r.max / r.step)) < 1e-9, 'max not on a step boundary');
 });
 
 // ---- esc_ ----
@@ -394,6 +489,15 @@ t('fallbackBarsHtml_ respects the Math.max(2, ...) bar-width floor for a near-ze
   const d = { rows: [{ strategy: 'A', deployed: true, returnPct: 0.0001 }], voo: { returnPct: 0.10 } };
   const out = fallbackBarsHtml_(d);
   assert.ok(out.includes('width:2px') || /width:\d+px/.test(out));
+});
+t('fallbackBarsHtml_ renders "no data" (not a false 0% bar) for a deployed strategy with null returnPct', () => {
+  // 2026-07-17 null-return guard: an unguarded null*100 drew a confident 0.00% bar; must be "no data".
+  const d = { rows: [{ strategy: 'A', deployed: true, returnPct: null }, { strategy: 'B', deployed: true, returnPct: 0.05 }],
+              voo: { returnPct: 0.01 } };
+  const out = fallbackBarsHtml_(d);
+  assert.ok(out.includes('no data'), 'expected a "no data" row for the null-return strategy');
+  assert.ok(!/A<\/span><span[^>]*background-color/.test(out), 'null-return strategy must not get a colored bar');
+  assert.ok(out.includes('+5.00%'), 'the real-return strategy must still render its bar');
 });
 
 // ---- esc_ / esc2_ parity — closes the "KEEP IN SYNC MANUALLY" gap: the two blocks above only
@@ -475,6 +579,18 @@ t('buildSubject_ appends the VOO fragment when d.voo has a return, and never men
   const subject = buildSubject_(d);
   assert.strictEqual(subject, 'Stock-Trading · Deployed vs Benchmarks — Jul 6, 2026 · A +1.23% · VOO +1.50%');
   assert.ok(!subject.includes('SGOV'));
+});
+t('buildSubject_ renders a deployed strategy with a null return as "n/a", not a false "+0.00%"', () => {
+  const d = {
+    rows: [
+      { strategy: 'A', deployed: true, returnPct: 0.0123 },
+      { strategy: 'B', deployed: true, returnPct: null }   // missing latest deployed_unit_value
+    ],
+    green: false, dateLabel: 'Jul 6, 2026'
+  };
+  const subject = buildSubject_(d);
+  assert.ok(subject.includes('B n/a'), `expected "B n/a", got: ${subject}`);
+  assert.ok(!subject.includes('B +0.00%'), 'must not fabricate a +0.00% for a null return');
 });
 t('buildSubject_ omits the VOO fragment when d.voo.returnPct is null (VOO not backfilled yet)', () => {
   const d = {
