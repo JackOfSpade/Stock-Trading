@@ -57,6 +57,13 @@ jobs:
         run: python scripts/check_autonomy_consistency.py
       - name: script-version single-source (.gs SCRIPT_VERSION consts ⇄ bigquery/43 MERGE seed)
         run: python scripts/check_script_version_consistency.py
+      - name: superseded bigquery/*.sql definitions name the CURRENT canonical file (supersede-only discipline)
+        # bigquery/*.sql is apply-in-order + supersede-only, enforced only by hand-written comments —
+        # which rotted twice: 23's trading_enabled was re-applied live in isolation (re-latching the
+        # trading gate for 3+ days), and 47 still claimed to be "the new single source of truth" long
+        # after 78 superseded it, with 23/34 both pointing at the by-then-stale 47. Blocks NEW unmarked
+        # or stale-pointer definitions; 19 pre-existing ones are grandfathered in the script's BASELINE.
+        run: python scripts/check_superseded_markers.py
       - name: session-config tool coverage (Claude_Task_Plan.md/ops/triggers.json mcp__ refs ⇄ .claude/settings.json allowlist — completeness-critic N-1)
         # An unattended scheduled routine calling an mcp__ tool absent from .claude/settings.json's
         # permissions.allow gets an unanswerable permission prompt and silently stalls that step (no
