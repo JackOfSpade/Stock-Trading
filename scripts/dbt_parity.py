@@ -39,13 +39,18 @@ VOLATILE_COLS = {"checked_at"}
 # BigQuery error substrings that indicate a SCHEMA-SHAPED divergence rather than a transient/infra
 # hiccup. live_columns() already succeeded (auth + object existence proven), so a subsequent parity-
 # query error naming one of these is real drift `dbt parse` cannot catch — most commonly a dbt port
-# that lacks a column its live view has (`SELECT <col> FROM (compiled)` -> "Unrecognized name"), or a
+# that lacks a column its live view has (`SELECT <col> FROM (compiled)` -> "Unrecognized name"), a
 # column type present on both sides that EXCEPT DISTINCT can't compare (GEOGRAPHY/INTERVAL/RANGE ->
-# "cannot be used in set operations"). These FAIL CLOSED (see main()'s `errors`) instead of being
-# swallowed as a benign skip, which let schema drift pass green even in DBT_PARITY=block (2026-07-17
-# audit). A genuinely transient error (timeout, network, quota) matches none of these and still skips.
+# "cannot be used in set operations"), or a column whose TYPE DIFFERS between the dbt port and the
+# live view so the two EXCEPT sides don't line up ("… has incompatible types: INT64, STRING" ->
+# "incompatible types"; added 2026-07-17 parallel-refactor audit — a type-drifted column is exactly
+# the schema drift `dbt parse` cannot catch, yet its error matched none of the other markers and so
+# was mis-routed to a tolerant skip that passed green). These FAIL CLOSED (see main()'s `errors`)
+# instead of being swallowed as a benign skip, which let schema drift pass green even in
+# DBT_PARITY=block (2026-07-17 audit). A genuinely transient error (timeout, network, quota) matches
+# none of these and still skips.
 SCHEMA_DRIFT_MARKERS = ("unrecognized name", "set operations", "not groupable",
-                        "no matching signature", "does not have a column")
+                        "no matching signature", "does not have a column", "incompatible types")
 
 
 def bq(sql):

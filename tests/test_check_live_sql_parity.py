@@ -6,7 +6,12 @@ indented CREATE OR REPLACE embedded inside a FORMAT() string literal (bigquery/1
 must never be mistaken for a real top-level statement.
 """
 import importlib.util
+import json
 import os
+import sys
+import types
+
+import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -20,6 +25,12 @@ def _load():
 
 
 clsp = _load()
+
+
+def _fake_run(returncode, stdout, stderr=""):
+    def run(cmd, capture_output=None, text=None, timeout=None):
+        return types.SimpleNamespace(returncode=returncode, stdout=stdout, stderr=stderr)
+    return run
 
 
 def test_parses_the_real_repo_without_crashing():
@@ -151,11 +162,196 @@ def test_inline_as_select_header_is_not_sliced_by_a_column_alias(monkeypatch):
     assert body == "SELECT\n  a AS\n  b\nFROM t"
 
 
-def test_no_object_in_the_real_tree_bleeds_a_foreign_create_into_its_body():
+def test_no_object_in_the_real_tree_bleeds_a_foreign_statement_into_its_body():
     # Strong invariant guarding the boundary fix against regression: no extracted body may contain a
-    # column-0 CREATE (that would be a foreign DDL block bled in from a following statement).
+    # column-0 top-level statement (CREATE *or* a DML/DDL statement like MERGE/INSERT/... that follows
+    # the object). The old guard only rejected a bled ^CREATE, so it could not catch the ci_findings_open
+    # MERGE bleed (2026-07-17 HIGH); this broadened set matches NEXT_TOP_LEVEL's own keyword list so any
+    # bled top-level statement fails the invariant.
     import re
-    top = re.compile(r"^CREATE\b", re.MULTILINE)
+    top = re.compile(r"^(CREATE|INSERT|MERGE|UPDATE|DELETE|TRUNCATE|DROP|ALTER|GRANT|REVOKE|CALL|EXPORT|ASSERT)\b",
+                     re.MULTILINE)
     final = clsp.find_final_definitions()
     bled = [f"{ds}.{nm}" for (ds, nm), (_ot, _p, _src, body) in final.items() if top.search(body)]
-    assert bled == [], f"objects bleeding a foreign CREATE into their body: {bled}"
+    assert bled == [], f"objects bleeding a foreign top-level statement into their body: {bled}"
+
+
+def test_view_body_stops_at_a_following_top_level_merge():
+    # 2026-07-17 HIGH regression: bigquery/67 ends `CREATE OR REPLACE VIEW state.ci_findings_open AS
+    # SELECT … ;` then runs a standalone `MERGE …` registry bump. A CREATE-only boundary swept the
+    # MERGE into the view body -> permanent false DRIFT vs the live view_definition (just the SELECT).
+    txt = (
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.foo` AS\n"
+        "SELECT 1 AS x\n"
+        "FROM bar;\n"
+        "\n"
+        "-- a standalone registry-bump comment\n"
+        "MERGE `stock-trading-498512.state.reg` T\n"
+        "USING (SELECT 'a' AS k) S ON T.k = S.k\n"
+        "WHEN NOT MATCHED THEN INSERT (k) VALUES (S.k);\n"
+    )
+    m = clsp.CREATE_STMT.search(txt)
+    body = clsp.extract_body(txt, m.start(), "VIEW")
+    assert body == "SELECT 1 AS x\nFROM bar"
+    assert "MERGE" not in body
+
+
+def test_ci_findings_open_real_body_has_no_bled_merge():
+    # Direct lock on the real object behind the HIGH finding: its final-effective body must be only the
+    # SELECT, never the trailing MERGE from bigquery/67_ci_findings_bridge.sql.
+    final = clsp.find_final_definitions()
+    _ot, _p, src, body = final[("state", "ci_findings_open")]
+    assert src == "67_ci_findings_bridge.sql"
+    assert "MERGE" not in body
+    assert body.strip().endswith("status = 'open'")
+
+
+# ---- extract_body: TABLE FUNCTION branch (single AS ( ... ) wrapper) ------------------------------
+def test_extract_body_table_function_strips_outer_paren_wrapper():
+    # All live TABLE FUNCTIONs in this repo are a single `AS ( SELECT ... )` wrapper; extract_body
+    # drops the one outer paren pair. Exercised only against live BigQuery before now.
+    txt = (
+        "CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_x`(p INT64)\n"
+        "AS (\n"
+        "  SELECT p AS y\n"
+        ");\n"
+    )
+    m = clsp.CREATE_STMT.search(txt)
+    body = clsp.extract_body(txt, m.start(), "TABLE FUNCTION")
+    assert body == "SELECT p AS y"
+
+
+# ---- bq(): the subprocess/JSON-slice wrapper (same regressed class as dbt_parity.bq) --------------
+def test_bq_parses_banner_prefixed_json(monkeypatch):
+    monkeypatch.setattr(clsp.subprocess, "run",
+                        _fake_run(0, 'Waiting on bqjob [RUNNING]\n[{"view_definition": "SELECT 1"}]'))
+    assert clsp.bq("SELECT 1", "proj") == [{"view_definition": "SELECT 1"}]
+
+
+def test_bq_raises_on_nonzero_returncode(monkeypatch):
+    monkeypatch.setattr(clsp.subprocess, "run", _fake_run(1, "", "ERROR: access denied"))
+    with pytest.raises(RuntimeError):
+        clsp.bq("SELECT 1", "proj")
+
+
+def test_bq_raises_runtime_error_on_timeout(monkeypatch):
+    def _boom(cmd, capture_output=None, text=None, timeout=None):
+        raise clsp.subprocess.TimeoutExpired(cmd=cmd, timeout=timeout)
+    monkeypatch.setattr(clsp.subprocess, "run", _boom)
+    with pytest.raises(RuntimeError):
+        clsp.bq("SELECT 1", "proj")
+
+
+# ---- live_definition(): per-object-type query shape + key extraction ------------------------------
+def test_live_definition_view_reads_views_and_returns_view_definition(monkeypatch):
+    seen = {}
+
+    def fake_bq(sql, project):
+        seen["sql"], seen["project"] = sql, project
+        return [{"view_definition": "SELECT 1 AS x"}]
+    monkeypatch.setattr(clsp, "bq", fake_bq)
+    assert clsp.live_definition("proj", "state", "foo", "VIEW") == "SELECT 1 AS x"
+    assert "INFORMATION_SCHEMA.VIEWS" in seen["sql"] and "table_name = 'foo'" in seen["sql"]
+    assert seen["project"] == "proj"
+
+
+def test_live_definition_procedure_reads_routines_with_type_filter(monkeypatch):
+    def fake_bq(sql, project):
+        assert "INFORMATION_SCHEMA.ROUTINES" in sql and "routine_type = 'PROCEDURE'" in sql
+        return [{"routine_definition": "BEGIN SELECT 1; END"}]
+    monkeypatch.setattr(clsp, "bq", fake_bq)
+    assert clsp.live_definition("proj", "ops", "sp_foo", "PROCEDURE") == "BEGIN SELECT 1; END"
+
+
+def test_live_definition_table_function_reads_routines_with_type_filter(monkeypatch):
+    def fake_bq(sql, project):
+        assert "INFORMATION_SCHEMA.ROUTINES" in sql and "routine_type = 'TABLE FUNCTION'" in sql
+        return [{"routine_definition": "SELECT 1"}]
+    monkeypatch.setattr(clsp, "bq", fake_bq)
+    assert clsp.live_definition("proj", "analytics", "fn_x", "TABLE FUNCTION") == "SELECT 1"
+
+
+def test_live_definition_returns_none_when_no_rows(monkeypatch):
+    monkeypatch.setattr(clsp, "bq", lambda sql, project: [])
+    assert clsp.live_definition("proj", "state", "missing", "VIEW") is None
+
+
+# ---- main(): offline flag, drift/clean exit codes, and the missing-live skip ----------------------
+def test_main_offline_returns_0_without_touching_bq(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py", "--offline"])
+
+    def _forbidden(*a, **k):
+        raise AssertionError("live_definition must not be called in --offline mode")
+    monkeypatch.setattr(clsp, "live_definition", _forbidden)
+    assert clsp.main() == 0
+    assert "offline" in capsys.readouterr().out.lower()
+
+
+def test_main_reports_ok_when_live_matches_after_whitespace_collapse(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py"])
+    monkeypatch.setattr(clsp, "find_final_definitions",
+                        lambda: {("state", "foo"): ("VIEW", "proj", "01.sql", "SELECT 1 AS x")})
+    # Live body differs only by whitespace -> collapse() equalizes -> no drift.
+    monkeypatch.setattr(clsp, "live_definition", lambda project, ds, nm, ot: "SELECT   1   AS x")
+    assert clsp.main() == 0
+    assert "OK:" in capsys.readouterr().out
+
+
+def test_main_reports_drift_and_exits_1(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py"])
+    monkeypatch.setattr(clsp, "find_final_definitions",
+                        lambda: {("state", "foo"): ("VIEW", "proj", "01.sql", "SELECT 1 AS x")})
+    monkeypatch.setattr(clsp, "live_definition", lambda *a: "SELECT 2 AS x")
+    assert clsp.main() == 1
+    out = capsys.readouterr().out
+    assert "DRIFT" in out and "state.foo" in out
+
+
+def test_main_skips_a_missing_live_object_without_reporting_drift(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py"])
+    monkeypatch.setattr(clsp, "find_final_definitions",
+                        lambda: {("state", "foo"): ("VIEW", "proj", "01.sql", "SELECT 1 AS x")})
+    monkeypatch.setattr(clsp, "live_definition", lambda *a: None)   # object not found live
+    assert clsp.main() == 0                                          # a lookup miss is a skip, not drift
+    assert "no live object found" in capsys.readouterr().out
+
+
+def test_main_json_out_writes_findings_and_skips(tmp_path, monkeypatch):
+    out_path = tmp_path / "findings.json"
+    monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py", "--json-out", str(out_path)])
+    monkeypatch.setattr(clsp, "find_final_definitions", lambda: {
+        ("state", "drifted"): ("VIEW", "proj", "01.sql", "SELECT 1 AS x"),
+        ("state", "gone"): ("VIEW", "proj", "02.sql", "SELECT 9 AS z"),
+    })
+
+    def fake_live(project, ds, nm, ot):
+        return None if nm == "gone" else "SELECT 2 AS x"   # drifted mismatches, gone is a lookup miss
+    monkeypatch.setattr(clsp, "live_definition", fake_live)
+    assert clsp.main() == 1
+    payload = json.loads(out_path.read_text())
+    assert [f["name"] for f in payload["findings"]] == ["drifted"]   # only the real mismatch is a finding
+    assert any("gone" in s for s in payload["skipped"])               # the lookup miss is a skip, never a finding
+    assert "checked_at" in payload
+
+
+# ---- write_json_out(): structured findings/skipped payload ----------------------------------------
+def test_write_json_out_shape(tmp_path):
+    out_path = tmp_path / "f.json"
+    clsp.write_json_out(str(out_path),
+                        [{"dataset": "state", "name": "foo", "object_type": "VIEW", "source_file": "01.sql"}],
+                        ["state.bar (02.sql): no live object found"])
+    payload = json.loads(out_path.read_text())
+    assert payload["findings"][0]["name"] == "foo"
+    assert payload["skipped"] == ["state.bar (02.sql): no live object found"]
+    assert payload["checked_at"].endswith("Z")
+
+
+# ---- numbered_sql_files(): NUMERIC (not lexical) apply-order --------------------------------------
+def test_numbered_sql_files_sorts_numerically_not_lexically(tmp_path, monkeypatch):
+    d = tmp_path / "bigquery"
+    d.mkdir()
+    for fn in ("2_b.sql", "10_c.sql", "1_a.sql", "notes.md", "readme_no_number.sql"):
+        (d / fn).write_text("-- x\n")
+    monkeypatch.setattr(clsp, "BIGQUERY_DIR", str(d))
+    got = [os.path.basename(p) for p in clsp.numbered_sql_files()]
+    assert got == ["1_a.sql", "2_b.sql", "10_c.sql"]   # numeric order; unnumbered/non-sql excluded

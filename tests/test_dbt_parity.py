@@ -75,6 +75,51 @@ def test_volatile_cols_constant_present():
     assert "checked_at" in dp.VOLATILE_COLS
 
 
+def test_volatile_column_is_actually_dropped_from_the_parity_query(monkeypatch):
+    # Behavioral counterpart to the constant-presence check above: prove main() really EXCLUDES a
+    # VOLATILE_COLS column from the EXCEPT compare (not just that the constant contains the name). A
+    # left-in checked_at (CURRENT_TIMESTAMP, fresh each eval) would make every view falsely drift.
+    monkeypatch.setattr(dp, "compiled_models", lambda: iter([("state", "foo", "SELECT 1 AS as_of_date")]))
+    monkeypatch.setattr(dp, "live_columns",
+                        lambda dataset, table: [{"column_name": "checked_at", "data_type": "TIMESTAMP"},
+                                                {"column_name": "as_of_date", "data_type": "DATE"}])
+    seen = {}
+
+    def fake_bq(sql):
+        seen["sql"] = sql
+        return [{"n_missing": 0, "n_extra": 0}]
+    monkeypatch.setattr(dp, "bq", fake_bq)
+    assert dp.main() == 0
+    assert "checked_at" not in seen["sql"]        # volatile col excluded from the EXCEPT
+    assert "`as_of_date`" in seen["sql"]           # the real column is compared
+
+
+def test_main_fails_closed_on_incompatible_types_query_error(monkeypatch, capsys):
+    # 2026-07-17 parallel-refactor audit: a column whose TYPE differs between the dbt port and the
+    # live view makes EXCEPT DISTINCT error "... has incompatible types: INT64, STRING". That is real
+    # schema drift `dbt parse` cannot catch, yet it matched none of the old SCHEMA_DRIFT_MARKERS and
+    # was mis-routed to a tolerant skip that passed green. It must now FAIL CLOSED on the ERROR path.
+    #
+    # A SECOND, cleanly-comparing model is essential to make this a true regression catcher: with only
+    # the errored model, checked==0 would make main() return 1 via the "everything skipped" guard even
+    # WITHOUT the marker fix. The clean model keeps checked>0, so the ONLY way main() reaches exit 1 +
+    # the "schema-shaped" errors path is the marker routing the error to `errors` instead of `skipped`.
+    assert "incompatible types" in dp.SCHEMA_DRIFT_MARKERS
+    monkeypatch.setattr(dp, "compiled_models",
+                        lambda: iter([("state", "typed", "SELECT 1 AS a"), ("state", "good", "SELECT 1 AS a")]))
+    monkeypatch.setattr(dp, "live_columns",
+                        lambda dataset, table: [{"column_name": "a", "data_type": "STRING"}])
+
+    def fake_bq(sql):
+        if "typed" in sql:
+            raise RuntimeError("Column 1 in EXCEPT DISTINCT has incompatible types: INT64, STRING at [1:8]")
+        return [{"n_missing": 0, "n_extra": 0}]
+    monkeypatch.setattr(dp, "bq", fake_bq)
+    assert dp.main() == 1
+    out = capsys.readouterr().out
+    assert "schema-shaped" in out   # the ERRORS path (fail-closed), not the benign-skip path
+
+
 def test_bq_raises_runtime_error_on_timeout(monkeypatch):
     def _boom(cmd, capture_output=None, text=None, timeout=None):
         raise dp.subprocess.TimeoutExpired(cmd=cmd, timeout=timeout)

@@ -58,6 +58,28 @@ def test_mismatch_between_gs_and_seed_is_caught(tmp_path, monkeypatch, capsys):
     assert "v99" in out and "v1" in out
 
 
+def test_gs_const_that_the_regex_cannot_find_is_caught(tmp_path, monkeypatch, capsys):
+    # The one branch that fires when GS_VERSION stops matching (a renamed const, or double quotes the
+    # single-quote regex doesn't accept) — parse_gs_version returns None — was never exercised. A
+    # vacuously-non-matching regex is the exact failure mode this checker exists to prevent, so its
+    # own "could not find" path must be proven to FAIL, not silently pass (2026-07-17 audit).
+    alert_gs = tmp_path / "alert_emailer.gs"
+    alert_gs.write_text('const ALERT_SCRIPT_VERSION = "v1";\n')   # double quotes -> GS_VERSION (single-quote) misses
+    weekly_gs = tmp_path / "weekly_report.gs"
+    weekly_gs.write_text("const SCRIPT_VERSION = 'v2';\n")
+    registry = tmp_path / "43.sql"
+    registry.write_text(
+        "STRUCT('alert_emailer' AS script_name, 'v1' AS expected_version, 'note' AS git_note),\n"
+        "STRUCT('weekly_report' AS script_name, 'v2' AS expected_version, 'note' AS git_note)\n"
+    )
+    monkeypatch.setattr(svc, "ALERT_GS", str(alert_gs))
+    monkeypatch.setattr(svc, "WEEKLY_GS", str(weekly_gs))
+    monkeypatch.setattr(svc, "REGISTRY_SQL", str(registry))
+    monkeypatch.setattr(svc, "SCRIPTS", {"alert_emailer": str(alert_gs), "weekly_report": str(weekly_gs)})
+    assert svc.main() == 1
+    assert "could not find a SCRIPT_VERSION" in capsys.readouterr().out
+
+
 def test_missing_seed_row_is_caught(tmp_path, monkeypatch):
     alert_gs = tmp_path / "alert_emailer.gs"
     alert_gs.write_text("const ALERT_SCRIPT_VERSION = 'v1';\n")
