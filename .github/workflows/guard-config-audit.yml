@@ -124,8 +124,8 @@ jobs:
           if [ "${{ vars.DBT_PARITY }}" = "off" ]; then
             echo "::notice::dbt-parity explicitly disabled (DBT_PARITY=off) — the dbt/BigQuery drift check is not running. RUNBOOK §14/§25 C1."
           fi
-          if [ "${{ vars.RUN_SQL_DRYRUN }}" != "true" ]; then
-            echo "::notice::sql-validate dry-run disabled (opt-in) — dbt parse remains the always-on SQL gate. RUNBOOK §6."
+          if [ "${{ vars.RUN_SQL_DRYRUN }}" = "off" ]; then
+            echo "::notice::sql-validate BigQuery SQL syntax gate explicitly disabled (RUN_SQL_DRYRUN=off) — a raw bigquery/*.sql parse error would not be caught before it reaches the live apply step. RUNBOOK §6."
           fi
 
           if [ -s /tmp/loadbearing.txt ]; then

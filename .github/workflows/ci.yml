@@ -295,48 +295,73 @@ jobs:
           fi
 
   sql-validate:
-    name: BigQuery SQL dry-run (keyless WIF, opt-in)
+    name: BigQuery SQL syntax gate (keyless WIF, read-only)
     runs-on: ubuntu-latest
-    # OPT-IN, default OFF. Dry-running the bigquery/*.sql DDL (CREATE TABLE/MODEL/VIEW) requires
-    # CREATE/DDL permissions on the production datasets — even in --dry_run mode. Granting a
-    # CI/PR-triggered identity write+DDL on events/ops/analytics/state (the append-only source of
-    # truth among them) over-privileges it for marginal value, and a live dry-run does NOT catch the
-    # runtime-only bugs we care about (e.g. the EXPORT DATA JSON-serialization error). So the CI
-    # service account stays READ-ONLY and this job is DISABLED unless the owner explicitly opts in by
-    # setting repo variable RUN_SQL_DRYRUN=true AND granting the SA the needed DDL perms + enabling
-    # the Cloud Resource Manager API (see ops/RUNBOOK.md §6). The always-on SQL gate is the `dbt`
-    # job's offline `dbt parse`; raw SQL is also dry-run via the BigQuery MCP during development.
+    # BLOCKING SYNTAX GATE (2026-07-17 audit follow-up), default ON when the WIF vars exist; skips clean
+    # (green) when they don't. Closes the gap where a pure PARSE error in a hand-SQL file reached the
+    # live apply step undetected — mode=''manual'' (BigQuery escapes a quote with \' , not '') parsed as
+    # two adjacent string literals and aborted the whole script; pytest / dbt parse / the prose checks
+    # never touch raw bigquery/*.sql.
+    #
+    # NO DDL GRANT — uses the SAME READ-ONLY SA as dbt-parity (dataViewer + jobUser). This does NOT
+    # re-open the over-privilege concern the old opt-in job carried: BigQuery COMPILES a --dry_run
+    # (parse -> resolve) BEFORE it authorizes the DDL, so a SYNTAX-broken CREATE returns "Syntax error"
+    # at parse regardless of perms, while a valid CREATE the read-only SA can't perform returns "Access
+    # Denied" and a not-yet-live sibling ref returns "Not found". scripts/check_sql_dryrun.py BLOCKS ONLY
+    # on the parse-class message and TOLERATES the permission/reference ones, so it can never false-block
+    # (and a self-check canary proves the environment can actually detect a syntax error before trusting
+    # a clean pass). `dbt parse` stays the always-on structural gate; this adds raw-SQL parse coverage.
+    # Escape hatch: set repo var RUN_SQL_DRYRUN=off to disable if it ever misbehaves.
     permissions:
       contents: read
-      id-token: write   # required for Workload Identity Federation (no downloadable key)
+      id-token: write   # Workload Identity Federation (no downloadable key)
     steps:
       - uses: actions/checkout@v4
-      - name: Check opt-in + WIF config
+        with:
+          fetch-depth: 0   # full history so the change-scope diff below resolves the pushed range
+      - name: WIF-present + not-disabled guard
         id: guard
         run: |
-          if [ "${{ vars.RUN_SQL_DRYRUN }}" = "true" ] \
+          if [ "${{ vars.RUN_SQL_DRYRUN }}" != "off" ] \
              && [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] \
              && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ]; then
             echo "skip=false" >> "$GITHUB_OUTPUT"
           else
-            echo "::notice::SQL dry-run disabled (default). To enable: set vars.RUN_SQL_DRYRUN=true, set the WIF vars, grant the CI SA DDL perms, and enable cloudresourcemanager.googleapis.com — see ops/RUNBOOK.md §6. dbt parse remains the always-on SQL gate."
+            echo "::notice::SQL syntax gate skipped — set the WIF vars (read-only SA) to enable it (runs by default once they exist; RUN_SQL_DRYRUN=off suppresses). dbt parse remains the always-on structural SQL gate."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
-      - name: GCP WIF auth + gcloud setup
+      - uses: actions/setup-python@v5
+        if: steps.guard.outputs.skip == 'false'
+        with:
+          python-version: '3.11'
+      - name: GCP WIF auth + gcloud setup (provides the bq CLI)
         if: steps.guard.outputs.skip == 'false'
         uses: ./.github/actions/gcp-wif-auth
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
-      - name: Dry-run every bigquery/*.sql
+      - name: Dry-run changed bigquery/*.sql — BLOCK on a syntax error
         if: steps.guard.outputs.skip == 'false'
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          gcloud config set project stock-trading-498512
-          rc=0
-          for f in bigquery/*.sql bigquery/scheduled_queries/*.sql; do
-            [ -f "$f" ] || continue
-            echo "== dry-run $f =="
-            bq query --use_legacy_sql=false --dry_run --quiet < "$f" || { echo "::error file=$f::dry-run failed"; rc=1; }
-          done
-          exit $rc
+          gcloud config set project stock-trading-498512 >/dev/null 2>&1 || true
+          if [ "$EVENT_NAME" = "pull_request" ]; then base="$PR_BASE"; else base="$PUSH_BEFORE"; fi
+          # Scope to the pushed range to bound BigQuery dry-run job volume (dbt-parity §6 quota note).
+          # FAIL OPEN: unknown/new-branch base -> validate ALL bigquery/*.sql rather than skip a real check.
+          if [ -n "$base" ] && git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            mapfile -t files < <(git diff --name-only "$base" "$HEAD_SHA" -- 'bigquery/*.sql' 'bigquery/scheduled_queries/*.sql')
+          else
+            mapfile -t files < <(printf '%s\n' bigquery/*.sql bigquery/scheduled_queries/*.sql)
+          fi
+          existing=()
+          for f in "${files[@]}"; do [ -f "$f" ] && existing+=("$f"); done
+          if [ "${#existing[@]}" -eq 0 ]; then
+            echo "No bigquery/*.sql changed in this push — nothing to dry-run."
+            exit 0
+          fi
+          python scripts/check_sql_dryrun.py "${existing[@]}"
