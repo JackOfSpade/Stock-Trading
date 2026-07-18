@@ -361,3 +361,90 @@ def test_gemini_budget_high_water_mark_persists_across_scenarios(monkeypatch):
     seen.clear()
     rg._gemini_call("scenario-2", "k", ["m"], state)     # must reuse the mark: ONE call, no re-truncation
     assert seen == [rg.GEMINI_MAX_OUTPUT_TOKENS_START * 2]
+
+
+# ---- run_live() end-to-end grading (the core of --live mode) — all network-free ----
+# run_live composes already-tested helpers, but its OWN logic had zero direct coverage: the DECISION-line
+# scan (must find a non-first, case-insensitive line), the split/reply.strip() fallback, match-vs-flip
+# token grading, the call-failed -> match=None error class main() counts, the scenario_ids filter, and the
+# flip branch that PRINTS the ::warning:: annotation + the SPEC-ONLY QUEUE_INSERT advisory. These drive a
+# fake Gemini caller (no network) and assert only on run_live's returned dicts + its printed strings — no
+# BigQuery write is wired (the queue INSERT is a print-only advisory by design; see the module docstring).
+
+
+def _sc(sid, expected, category="strategy_b_entry"):
+    # A minimal valid scenario whose single governing_file exists on disk (run_live really reads it).
+    return {"id": sid, "category": category, "situation": "synthetic",
+            "governing_files": ["Strategy.md"], "expected_decision": expected, "rationale": "r"}
+
+
+def _fake_caller_returning(*replies):
+    """Return a drop-in _select_live_caller() whose call_model yields `replies` in call order. A reply
+    that is an Exception instance is RAISED (to exercise run_live's error path); any other value is
+    returned as (reply, 'fake-model-1'). run_live looks up _select_live_caller as a module global at call
+    time, so monkeypatching rg._select_live_caller to this is sufficient — no real Gemini/network."""
+    queue = list(replies)
+
+    def select():
+        def call_model(prompt):
+            item = queue.pop(0)
+            if isinstance(item, Exception):
+                raise item
+            return item, "fake-model-1"
+        return call_model
+    return select
+
+
+def test_run_live_scores_a_match_and_prints_no_flip_or_queue_insert(monkeypatch, capsys):
+    monkeypatch.setattr(rg, "_select_live_caller", _fake_caller_returning("DECISION: GO\nRATIONALE: because"))
+    results = rg.run_live([_sc("T-MATCH", "GO")])
+    assert len(results) == 1
+    r = results[0]
+    assert r["match"] is True and r["actual"] == "GO" and r["model"] == "fake-model-1"
+    out = capsys.readouterr().out
+    assert "decision flip" not in out and "INSERT INTO" not in out
+
+
+def test_run_live_finds_a_decision_line_after_preamble_case_insensitively(monkeypatch):
+    # The next() scan must find a DECISION line that is NOT first, matched case-insensitively.
+    reply = "Here is my reasoning first.\ndecision: CONTINUE (routes to review)\nRATIONALE: x"
+    monkeypatch.setattr(rg, "_select_live_caller", _fake_caller_returning(reply))
+    r = rg.run_live([_sc("T-PRE", "CONTINUE", category="kill_trigger")])[0]
+    assert r["match"] is True
+    assert r["actual"] == "CONTINUE (routes to review)"
+
+
+def test_run_live_flags_a_flip_and_prints_the_advisory_queue_insert(monkeypatch, capsys):
+    monkeypatch.setattr(rg, "_select_live_caller", _fake_caller_returning("DECISION: NO-GO\nRATIONALE: nope"))
+    r = rg.run_live([_sc("T-FLIP", "GO")])[0]
+    assert r["match"] is False and r["actual"] == "NO-GO"
+    out = capsys.readouterr().out
+    # A flip prints a GitHub Actions annotation AND the spec-only advisory INSERT (a print-only string;
+    # never executed — the runner has no BigQuery credentials, per the golden non-issue). Assert the
+    # STRING only; no write is performed.
+    assert "::warning file=tests/golden_scenarios/scenarios.yaml::T-FLIP decision flip" in out
+    assert "INSERT INTO" in out and "prose-regression" in out and "T-FLIP" in out
+
+
+def test_run_live_records_an_error_class_when_the_model_call_raises(monkeypatch, capsys):
+    monkeypatch.setattr(rg, "_select_live_caller", _fake_caller_returning(RuntimeError("ladder exhausted")))
+    r = rg.run_live([_sc("T-ERR", "GO")])[0]
+    # The except branch records match=None (the ERROR class main() counts), not a scored flip.
+    assert r["match"] is None and r["actual"] is None and r["model"] is None
+    assert "ladder exhausted" in r["reply"]
+    assert "model call failed" in capsys.readouterr().err
+
+
+def test_run_live_respects_the_scenario_ids_filter(monkeypatch):
+    scs = [_sc("T-A", "GO"), _sc("T-B", "GO")]
+    # Only ONE reply queued: if the filter leaked and evaluated T-A too, call_model would pop from empty.
+    monkeypatch.setattr(rg, "_select_live_caller", _fake_caller_returning("DECISION: GO\nRATIONALE: x"))
+    results = rg.run_live(scs, scenario_ids=["T-B"])
+    assert [r["id"] for r in results] == ["T-B"]
+
+
+def test_run_live_bare_token_without_decision_prefix_uses_the_reply_fallback(monkeypatch):
+    # No 'DECISION:' line and no colon -> actual_decision = reply.strip() (the else fallback).
+    monkeypatch.setattr(rg, "_select_live_caller", _fake_caller_returning("GO"))
+    r = rg.run_live([_sc("T-BARE", "GO")])[0]
+    assert r["match"] is True and r["actual"] == "GO"

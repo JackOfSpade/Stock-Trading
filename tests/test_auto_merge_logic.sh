@@ -172,6 +172,29 @@ assert_eq "no matching run: run id is empty" "$run_id" ""
 run_id="$(ci_run_id_from_json '')"
 assert_eq "gh api failure: run id is empty (fail closed, no retry attempted)" "$run_id" ""
 
+# Sibling fail-closed coverage for the run-metadata parsers, restoring parity with ci_conclusion_from_json's
+# full input matrix above (2026-07-17 parallel refactor — Part-E test-coverage gap). ci_run_attempt_from_json
+# gates should_retry_failed_ci (which fires ONLY when run_attempt == "1"), so its "" result — never a number,
+# never "null" — on no-run / API-failure / error-shaped input is the load-bearing guarantee that a wrongful
+# retry can't fire against the main-merge automation. It was asserted only on the happy path; pin the rest.
+attempt="$(ci_run_attempt_from_json '{"workflow_runs":[]}')"
+assert_eq "no matching run: run_attempt is empty (fail closed — should_retry can't see '1')" "$attempt" ""
+attempt="$(ci_run_attempt_from_json '')"
+assert_eq "gh api failure: run_attempt is empty (fail closed, no retry)" "$attempt" ""
+# Error-shaped body (no workflow_runs array, e.g. gh api's stdout on an HTTP error). Each parser carries its
+# OWN copy of the (.workflow_runs|type)!="array" guard, so ci_conclusion_from_json's malformed test above does
+# NOT cover these two — assert them directly.
+attempt="$(ci_run_attempt_from_json '{"message":"Not Found"}')"
+assert_eq "error-shaped JSON (missing workflow_runs): run_attempt is empty, not a bogus number" "$attempt" ""
+run_id="$(ci_run_id_from_json '{"message":"Not Found"}')"
+assert_eq "error-shaped JSON (missing workflow_runs): run id is empty, not a bogus id" "$run_id" ""
+
+# End-to-end lock: the parser's actual no-run output, piped straight into the predicate, must NOT trigger a
+# retry. The should_retry assertions below feed hardcoded "1"/"" literals, leaving the parser->predicate
+# wiring unpinned — a future edit that made the parser emit "1" for a no-run state would slip through them.
+assert_false "no-run run_attempt piped into should_retry_failed_ci must NOT retry (fail closed end-to-end)" \
+  should_retry_failed_ci "failure" "$(ci_run_attempt_from_json '{"workflow_runs":[]}')"
+
 assert_true "first-attempt genuine failure: should_retry_failed_ci allows ONE retry" \
   should_retry_failed_ci "failure" "1"
 assert_false "second-attempt failure (already retried once): should_retry_failed_ci must NOT retry again" \
