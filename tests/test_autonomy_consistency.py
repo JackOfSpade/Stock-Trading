@@ -352,3 +352,26 @@ def test_cadence_detection_loops_returns_none_when_file_missing(tmp_path, monkey
 def test_cadence_detection_loops_matches_real_repo_detection_list():
     # The real bigquery/75 carries identical detection + message lists today, so intersection == union.
     assert ac.cadence_detection_loops() == ac.cadence_heartbeat_loops()
+
+
+# ---- 2026-07-17 (owner direction): EXTRA_SCAN_GLOBS now covers bigquery/*.md, so a stage citation in
+#      bigquery/README.md is checked. A live-stale DORMANT citation there (for a now-active_auto loop)
+#      previously went entirely unscanned — a vacuous pass in a drift guard. ----
+def test_extra_scan_globs_includes_bigquery_md():
+    assert any(g.endswith(os.path.join("bigquery", "*.md")) for g in ac.EXTRA_SCAN_GLOBS)
+
+
+def test_stale_citation_in_a_bigquery_md_file_is_caught(tmp_path, monkeypatch):
+    autonomy = tmp_path / "autonomy_levels.yaml"
+    autonomy.write_text("loops:\n  - id: process_reliability\n    stage: active_auto\n")
+    bq = tmp_path / "bigquery"
+    bq.mkdir()
+    (bq / "README.md").write_text(
+        "STATUS: DORMANT per `ops/autonomy_levels.yaml` (loop id `process_reliability`)\n")
+    known = tmp_path / "known.md"
+    known.write_text("active_auto per `ops/autonomy_levels.yaml`, loop `process_reliability`\n")
+    monkeypatch.setattr(ac, "AUTONOMY", str(autonomy))
+    monkeypatch.setattr(ac, "KNOWN_CITATION_FILES", [str(known)])
+    monkeypatch.setattr(ac, "EXTRA_SCAN_GLOBS", [str(bq / "*.md")])   # the class the real glob now covers
+    monkeypatch.setattr(ac, "CADENCE_SQL", str(tmp_path / "no_cadence.sql"))
+    assert ac.main() == 1                                            # the DORMANT bigquery/*.md drift fails

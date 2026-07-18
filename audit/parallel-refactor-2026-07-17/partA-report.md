@@ -26,10 +26,14 @@ against the real frozen inputs for behavior-preservation, and locked with a regr
 
 | | Baseline | After |
 |---|---|---|
-| Owned test files (roster+autonomy) | 59 | **118** (roster 66, autonomy 32, parity **20 new**) |
-| Full suite | green | **green** (588 passed) |
+| Owned test files (roster+autonomy) | 59 | **123** (roster 71, autonomy 34, parity **20 new**) |
+| Full suite (isolated: base + Part A) | 396 | **442 passed** |
 | `check_roster_consistency.py` / `check_autonomy_consistency.py` | exit 0 | exit 0 (byte-identical OK output) |
 | `ruff` on all owned files | clean | clean |
+
+*(Counts include the owner-directed second pass — items **F1** and **F2** below. The autonomy checker now
+scans 7 stage citations, up from 6, after the `bigquery/*.md` glob addition + the `bigquery/README.md`
+citation fix.)*
 
 Every change is **behavior-preserving on the current green repo** — the OK-path stdout, exit codes, and
 CLI of all three checkers are unchanged (verified by diffing output and by the existing tests). All new
@@ -126,23 +130,39 @@ guards fire only on inputs that do not occur today (latent gaps / crash-instead-
 
 ---
 
-## Deferred / owner items (NOT actionable within owned files)
+## Owner-directed follow-up fixes (2026-07-17, second pass — operator said "fix both")
 
-1. **OWNER — live stale autonomy citation + owned glob (HIGH).** `bigquery/README.md:32` carries
-   `STATUS: DORMANT per ops/autonomy_levels.yaml (loop id process_reliability)`, but that loop is
-   `active_auto` (promoted 2026-07-10b) — a **real live drift**. `check_autonomy_consistency.py`'s
-   `EXTRA_SCAN_GLOBS` scans `bigquery/*.sql` but **not** `bigquery/*.md`, so the stale citation is never
-   checked (a genuine vacuous pass). Fix is two-part and cannot ship owned-only: the owner must correct the
-   frozen `bigquery/README.md:32` (`DORMANT` → `active_auto`), and **together** add
-   `os.path.join(ROOT, "bigquery", "*.md")` to `EXTRA_SCAN_GLOBS`. Adding the glob alone flips the checker
-   RED on the current repo (confirmed), so it must land with the doc fix — hence deferred.
+The two items originally deferred to the owner were then **explicitly authorized by the operator** and are
+now **fixed** on this branch. Both were verified behavior-preserving on the current repo (checkers stay
+exit 0) and regression-tested.
 
-2. **OWNER (policy) — R-K slice-less SHADOW/PAPER coverage gap.** A SHADOW/PAPER strategy whose roster
-   entry lands before its slice file passes R-K with a non-blocking note and **zero** enforced coverage
-   (R-A/R-D never inspect non-active entries). Closing this (hard-fail a slice-less incubating strategy)
-   is a **policy change** that would reverse the settled SISA "no hard gate on strategy add" decision and
-   break the `b13` test, so it is the owner's call. I made the safe, owned, behavior-neutral part: the
-   **false in-code comment** ("its absence is caught by R-D/R-A") is corrected to state the true caveat.
+**F1 — live stale autonomy citation + `bigquery/*.md` glob (was HIGH deferred).** `bigquery/README.md:32`
+cited `DORMANT` for `process_reliability`, which is `active_auto` (promoted 2026-07-10b) — a real live
+drift that `check_autonomy_consistency.py` never scanned (its `EXTRA_SCAN_GLOBS` covered `bigquery/*.sql`
+but not `bigquery/*.md`). Fixed **both halves together** (they must land together — the glob alone flips CI
+red): (a) **owner action on a frozen file** — corrected `bigquery/README.md:32` `DORMANT` → `active_auto`
+with accurate round-2-conversion prose, mirroring the sibling `bigquery/27_process_reliability.sql:4`
+citation that was already updated; (b) added `bigquery/*.md` to `EXTRA_SCAN_GLOBS`. The checker now scans
+**7** citations (was 6) and stays green. Tested: `test_extra_scan_globs_includes_bigquery_md` +
+`test_stale_citation_in_a_bigquery_md_file_is_caught`.
+> **Frozen-file note for the consolidator:** `bigquery/README.md` is under the frozen `bigquery/**` tree
+> (read-only for *all* five instances), so no other branch should touch it — this edit merges without
+> conflict. It changes only a documentation citation; it does not touch any migration SQL or live DB state.
+
+**F2 — R-K SHADOW/PAPER coverage now enforced (was policy-deferred).** A SHADOW/PAPER strategy with no
+slice file previously passed R-K with a non-blocking note and **zero** enforced coverage (R-A/R-D never
+inspect a non-active entry). R-K now enforces coverage for SHADOW/PAPER: a slice-less incubating strategy
+with **no** golden-scenario coverage (neither its slice in `governing_files` **nor** a `Strategy <code>`
+prose mention) FAILs — exactly as R-A blocks a half-applied fanout. This is preserved as a **mechanical
+same-commit-or-CI-fails gate** the autonomous registrar satisfies in-band (SL5 authors the slice + ≥2
+scenarios in the same commit), **not** a human review gate — so the SISA no-human-gate posture stands. For
+PROBE/ADOPTED, a missing slice is still handled as a non-blocking note (R-A independently fails on the
+absent heading, so no double-report). The `b13` R-F test was updated to give its shadow fixture prose
+coverage (preserving its actual subject). Tested: `test_slice_less_shadow_strategy_without_coverage_is_caught`,
+`test_slice_less_shadow_strategy_with_prose_coverage_passes`,
+`test_slice_less_probe_adopted_missing_slice_stays_a_note`.
+
+## Remaining notes (left as-is)
 
 3. **NOTE (left as-is, fails closed).** `check_live_roster_parity.py`'s `only_live = sorted(live - repo)`
    would `TypeError` if the live view ever returned a NULL `strategy_code`. It fails **closed** (crash →
@@ -173,11 +193,18 @@ Part C's live work / other agents' uncommitted changes in the shared tree). **Co
 Part A from the `partA` branch; the `45ca689` copy stacked on `partC` is a duplicate of the same 7-file
 change and should be dropped when consolidating `partC`.**
 
-## Owned files touched
+## Files touched
 
-- `scripts/check_roster_consistency.py` (+143 / −62)
-- `scripts/check_autonomy_consistency.py` (+37 / −2)
-- `scripts/check_live_roster_parity.py` (+13 / −0)
-- `tests/test_roster_consistency.py` (+346)
-- `tests/test_autonomy_consistency.py` (+106)
-- `tests/test_check_live_roster_parity.py` (NEW, 229 lines)
+Owned:
+- `scripts/check_roster_consistency.py` — checker fixes/refactors + F2 (R-K SHADOW/PAPER enforcement)
+- `scripts/check_autonomy_consistency.py` — checker fixes + F1 (`bigquery/*.md` glob)
+- `scripts/check_live_roster_parity.py` — both-empty NOT-VERIFIED guard
+- `tests/test_roster_consistency.py` — +34 tests (incl. R-K enforcement; `b13` updated)
+- `tests/test_autonomy_consistency.py` — +10 tests (incl. `bigquery/*.md` scanning)
+- `tests/test_check_live_roster_parity.py` — NEW offline suite (20 tests)
+
+Owner action (operator-directed, on a frozen file — flagged for the consolidator):
+- `bigquery/README.md` — one-line stale autonomy citation fixed (`DORMANT` → `active_auto` for
+  `process_reliability`); documentation only, no migration SQL / live-DB change. Under `bigquery/**`
+  (frozen for all instances) so no other branch touches it — merges cleanly. Coupled with the
+  `EXTRA_SCAN_GLOBS` `bigquery/*.md` addition (must land together to keep CI green).

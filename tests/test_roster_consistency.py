@@ -129,6 +129,25 @@ def _scenarios_covering(codes):
     return "\n".join(lines) + "\n"
 
 
+def _shadow_f_entry():
+    """A minimal SHADOW roster entry for a hypothetical strategy F (not roster-active, not spec-locked)
+    to append to roster.yaml — used by the R-K SHADOW/PAPER-enforcement tests."""
+    return (
+        "\n  - code: F\n"
+        '    name: "Shadow test strategy"\n'
+        "    archetype: test-only\n"
+        "    roster_state: shadow\n"
+        "    edges_exploited: []\n"
+        "    disadvantages_compensated: []\n"
+        "    per_strategy_routine: null\n"
+        "    adopted_date: null\n"
+        "    spec_locked_since: null\n"
+        "    immutable_since: null\n"
+        "    retired_date: null\n"
+        "    is_restart_of: null\n"
+    )
+
+
 def _read(p):
     return open(p, encoding="utf-8").read()
 
@@ -462,6 +481,11 @@ def test_spec_locked_strategy_without_math_module_is_a_non_blocking_note(repo_co
         '        note: "test fixture only"\n'
     )
     _write(p, txt + fake_strategy)
+    # F is a SHADOW strategy, so R-K now enforces golden-scenario coverage for it (2026-07-17: a
+    # slice-less SHADOW/PAPER strategy is no longer a non-blocking note — see R-K tests below). Give F
+    # coverage via a 'Strategy F' prose mention so the ONLY thing left to observe is R-F's non-blocking
+    # spec_hash note (this test's actual subject); otherwise R-K would fail the build for uncovered F.
+    _write(rc.SCENARIOS_YAML, _scenarios_covering("ABCDEF"))
     rc_code = rc.main()
     out = capsys.readouterr().out
     assert rc_code == 0, "a spec-locked strategy missing from spec_hash_inputs() must NOT fail the build"
@@ -811,28 +835,42 @@ def test_scenarios_absent_skips_r_k_cleanly(repo_copy):
 
 
 def test_shadow_strategy_with_slice_but_no_coverage_is_caught(repo_copy, capsys):
-    # A SHADOW strategy WITH a slice file (so R-K enforces it) but no golden-scenario coverage must
-    # FAIL — distinct from the slice-LESS shadow entry, which is a non-blocking note (below).
+    # A SHADOW strategy WITH a slice file but no golden-scenario coverage must FAIL R-K.
     (open(os.path.join(rc.STRATEGY_DIR, "08_strategy_f.md"), "w", encoding="utf-8")
      .write("## Strategy F [CANDIDATE]: shadow test strategy\n\nbody\n"))
-    p = rc.ROSTER
-    _write(p, _read(p) + (
-        "\n  - code: F\n"
-        '    name: "Shadow test strategy (has slice, no coverage)"\n'
-        "    archetype: test-only\n"
-        "    roster_state: shadow\n"
-        "    edges_exploited: []\n"
-        "    disadvantages_compensated: []\n"
-        "    per_strategy_routine: null\n"
-        "    adopted_date: null\n"
-        "    spec_locked_since: null\n"
-        "    immutable_since: null\n"
-        "    retired_date: null\n"
-        "    is_restart_of: null\n"
-    ))
+    _write(rc.ROSTER, _read(rc.ROSTER) + _shadow_f_entry())
     _write(rc.SCENARIOS_YAML, _scenarios_covering("ABCDE"))   # A-E covered, F is not
     assert rc.main() == 1
     assert "R-K" in capsys.readouterr().out
+
+
+def test_slice_less_shadow_strategy_without_coverage_is_caught(repo_copy, capsys):
+    # 2026-07-17 (owner direction): a SHADOW/PAPER strategy with NO slice AND no coverage is a
+    # half-applied SL5 SHADOW-register that must FAIL. R-A/R-D never inspect a non-active entry, so R-K
+    # is the only gate — previously this was a non-blocking note (zero enforcement, a vacuous pass).
+    _write(rc.ROSTER, _read(rc.ROSTER) + _shadow_f_entry())   # F: shadow, no slice
+    _write(rc.SCENARIOS_YAML, _scenarios_covering("ABCDE"))   # A-E covered, F not
+    assert rc.main() == 1
+    assert "R-K" in capsys.readouterr().out
+
+
+def test_slice_less_shadow_strategy_with_prose_coverage_passes(repo_copy):
+    # A slice-less SHADOW strategy CAN still satisfy R-K via a 'Strategy F' prose mention (path b) —
+    # the enforcement requires coverage, not a slice specifically.
+    _write(rc.ROSTER, _read(rc.ROSTER) + _shadow_f_entry())   # F: shadow, no slice
+    _write(rc.SCENARIOS_YAML, _scenarios_covering("ABCDEF"))  # F covered by a prose mention
+    assert rc.main() == 0
+
+
+def test_slice_less_probe_adopted_missing_slice_stays_a_note(repo_copy, capsys):
+    # A PROBE/ADOPTED (roster-active) strategy missing its slice is caught by R-A (heading absent from
+    # slice_codes); R-K keeps that a non-blocking note to avoid double-reporting — exit is already 1.
+    slice_path = os.path.join(rc.STRATEGY_DIR, "07_strategy_e.md")
+    os.remove(slice_path)                                     # remove adopted E's slice
+    assert rc.main() == 1                                     # R-A fails on the missing E heading
+    out = capsys.readouterr().out
+    assert "R-A" in out                                       # the authoritative failure
+    assert "already reported by R-A" in out                  # R-K's non-blocking note, not a 2nd error
 
 
 # ---- R-H: the reported line number (a bespoke formula distinct from the _line_no idiom) is correct ----

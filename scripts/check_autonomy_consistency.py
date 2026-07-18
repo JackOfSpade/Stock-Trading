@@ -69,6 +69,9 @@ KNOWN_CITATION_FILES = [
 EXTRA_SCAN_GLOBS = [
     os.path.join(ROOT, "*.md"),
     os.path.join(ROOT, "ops", "*.md"),
+    os.path.join(ROOT, "bigquery", "*.md"),   # e.g. bigquery/README.md — carried a stage citation that
+                                              #   went unscanned (a live-stale DORMANT for a now-active_auto
+                                              #   loop) until this glob was added (2026-07-17 audit).
     os.path.join(ROOT, "bigquery", "*.sql"),
     os.path.join(ROOT, "bigquery", "scheduled_queries", "*.sql"),
 ]

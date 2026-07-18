@@ -766,24 +766,30 @@ def main():
             state = str(s.get("roster_state", "")).lower()
             if state not in GOLDEN_COVERAGE_STATES:
                 continue
-            # Coverage is DEFINED via the strategy's own per-strategy slice (governing_files) or a prose
-            # mention; a strategy with no slice file yet cannot be enforced by that signal. Skip with a
-            # non-blocking note so a slice-less roster entry (e.g. an early hand-seeded SHADOW row before
-            # its slice lands) does not hard-fail this check on a signal it cannot satisfy — the deliberate
-            # SISA no-hard-gate-on-strategy-add posture (CLAUDE.md settled decision; guarded by the b13
-            # test). CAVEAT (2026-07-17 audit): for a PROBE/ADOPTED (roster-active) code a missing slice is
-            # independently caught by R-A (its slice heading would be absent from slice_codes()); but for a
-            # SHADOW/PAPER code R-A/R-D never inspect it (roster_active_codes filters to probe/adopted), so
-            # this note is the ONLY signal and such an entry is genuinely un-enforced until its slice lands.
-            # Closing that (hard-fail a slice-less incubating strategy, or add an incubating-code
-            # slice-presence check) is a policy change reserved to the owner — do NOT flip the note to an
-            # error here (it would reverse the settled no-gate decision and break the b13 test).
+            # Coverage is DEFINED via the strategy's own per-strategy slice (governing_files) or a
+            # 'Strategy <code>' prose mention. A missing slice is handled by state:
+            #   PROBE/ADOPTED (roster-active): R-A INDEPENDENTLY FAILs (the slice heading is absent from
+            #     slice_codes()), so keep a non-blocking note here to avoid double-reporting the same
+            #     missing-slice condition — the exit code is already 1 via R-A.
+            #   SHADOW/PAPER: R-A/R-D never inspect a non-active entry (roster_active_codes filters to
+            #     probe/adopted), so R-K is the ONLY gate. Do NOT skip — fall through to the coverage
+            #     check, so a half-applied SL5 SHADOW-register (roster entry lands but its slice + >=2
+            #     scenarios do NOT) FAILs here, exactly like R-A blocks a half-applied fanout. A
+            #     slice-less SHADOW/PAPER code can still satisfy R-K via a 'Strategy <code>' prose mention
+            #     (path b); only a code with NO coverage at all fails. This is a MECHANICAL
+            #     same-commit-or-CI-fails gate the autonomous registrar satisfies in-band (SL5 authors the
+            #     slice + scenarios in the same commit), NOT a human review gate on strategy add — so it
+            #     does not reverse the SISA no-human-gate posture (CLAUDE.md settled decision; R-K's own
+            #     doc frames it as mechanical). Fixed 2026-07-17 on owner direction — the prior slice-less
+            #     non-blocking note left SHADOW/PAPER wholly un-enforced (a real vacuous-pass gap).
             if not glob.glob(os.path.join(STRATEGY_DIR, f"*_strategy_{str(code).lower()}.md")):
-                notes.append(
-                    f"R-K: strategy {code!r} (roster_state={state}) has no per-strategy slice file yet — "
-                    f"golden-scenario coverage not enforced until its strategy/NN_strategy_"
-                    f"{str(code).lower()}.md slice exists (non-blocking).")
-                continue
+                if code in roster_codes:                          # PROBE/ADOPTED — R-A already fails
+                    notes.append(
+                        f"R-K: strategy {code!r} (roster_state={state}) has no per-strategy slice file — "
+                        f"the missing slice is already reported by R-A (roster-active heading absent); "
+                        f"coverage not separately re-checked here (non-blocking).")
+                    continue
+                # SHADOW/PAPER: no independent guard exists — enforce coverage (prose path b) below.
             if code not in covered:
                 errors.append(
                     f"R-K: strategy {code!r} (roster_state={state}) has NO golden-scenario coverage in "
