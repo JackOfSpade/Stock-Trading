@@ -22,15 +22,18 @@ backlog print).
 
 ## Summary
 
-- **4 real bugs fixed** in owned CLI checkers (1 HIGH, 3 MEDIUM), each with a **mutation-verified**
-  regression test (proven to fail when the fix is reverted). The initial pass shipped 2; a follow-up
-  (owner directive: "fix all") implemented the two fail-open guards this report had first deferred.
-- **~61 new tests** added across the owned surface (3 brand-new files for previously **untested**
+- **5 fixes to owned CLI checkers** (1 HIGH bug, 3 MEDIUM bugs, 1 LOW latent-corruption hardening),
+  each with a **mutation-verified** regression test (proven to fail when the fix is reverted). The
+  initial pass shipped 2; a follow-up (owner directive: "fix all") implemented the two fail-open
+  guards and the apostrophe fail-fast this report had first deferred.
+- **~64 new tests** added across the owned surface (3 brand-new files for previously **untested**
   modules + additions to 4 existing files). Full suite: **596 passed** (shared tree — includes other
   instances' concurrent additions), ruff clean, all checkers pass.
-- **Zero shared-lib edits**, zero frozen-file edits. Behavior changes are confined to fail-open
-  cases: a permanent false-DRIFT object, a mis-routed schema-drift error, and two "reported OK on
-  zero real comparisons" gates that now fail closed.
+- **Zero shared-lib edits**, zero frozen-file edits. Behavior changes are confined to
+  previously-broken cases: a permanent false-DRIFT object, a mis-routed schema-drift error, two
+  "reported OK on zero real comparisons" gates that now fail closed, and a malformed-SQL-emitting
+  apostrophe path that now fails fast — **all byte-identical / exit-code-identical on the current
+  tree**.
 - Method: an adversarial multi-agent review (6 finders × per-finding verify) surfaced 32 findings /
   16 confirmed; every confirmed item was re-verified by hand against the real tree before acting.
 
@@ -101,6 +104,27 @@ source universe; added a partial-compile fail test, a full-compile OK control, a
 `count == len(names)` invariant test. **Mutation check:** neutering the guard prints the vacuous
 `OK:` and fails the new test.
 
+### 5. LOW — `gen_routine_lists.py` `gen_15_region` apostrophe: silent corruption → explicit fail-fast *(follow-up; was deferred)*
+[`scripts/gen_routine_lists.py`](../../scripts/gen_routine_lists.py) `gen_15_region()`.
+
+A routine heading containing `'` would (a) break the single-quoted `ops.routine_catalog` SQL literal
+and (b) be **structurally un-representable** downstream: the frozen `check_cadence_consistency.py`
+check B parses this row back with `'(Read …\. Perform [^']*)'`, whose `[^']*` truncates at the first
+quote and can **never** match the raw-apostrophe `want_catalog` — so the two byte-identical
+derivations could not agree no matter what this generator emits. A *complete* fix (support
+apostrophes) is therefore **impossible within Part C's ownership**: it requires escaping `'`→`''`
+here **and** teaching check B's frozen parser to un-escape — a coordinated two-file change.
+
+What I *could* do, and did: convert the latent failure into an **explicit fail-fast**. `gen_15_region`
+now raises `SystemExit` with a clear, actionable message the moment a heading contains `'`, naming the
+routine and the two-file coordination needed — instead of silently writing malformed SQL that surfaces
+later (possibly after being applied to BigQuery) as a confusing `routine_catalog instruction drift`
+from check B. The guard fires **only** on an apostrophe, so it is **byte-identical on the current tree**
+(no heading has one; `gen --check` still clean). Tests: a unit rejection test + an integration test
+proving the guard propagates through `main() --check`. **Mutation check:** neutering the guard fails
+both. The path to real apostrophe *support* (the coordinated escape/un-escape change) is documented
+inline and in Deferred below for the operator.
+
 ## Tests added (56 total; the core deliverable)
 
 New files for **previously untested** modules:
@@ -133,19 +157,19 @@ Additions to existing owned files:
 
 ## Deferred / owner items (NOT changed — flagged for coordination)
 
-> The two fail-open guards this section originally deferred (`check_live_sql_parity` `checked==0`,
-> `dbt_parity` partial-compile) were **implemented** in the follow-up pass per owner directive — see
-> Bugs fixed #3 and #4 above. The `dbt_parity` guard ships with a documented disabled-model caveat:
-> it can't false-fire today (full atomic compile, no disabled models), and the inline note tells a
-> future maintainer to exclude a deliberately-disabled model from `model_source_names()`.
+> Every item this section originally deferred has since been addressed within Part C's ownership per
+> owner directive ("fix all"): the two fail-open guards (`check_live_sql_parity` `checked==0`,
+> `dbt_parity` partial-compile) are Bugs fixed #3/#4, and the `gen_15_region` apostrophe is now a
+> fail-fast guard (Bugs fixed #5). The `dbt_parity` guard ships with a documented disabled-model
+> caveat (can't false-fire today; inline note tells a future maintainer to exclude a deliberately
+> `enabled=false` model from `model_source_names()`).
 
-1. **LOW (out of scope) — `gen_routine_lists.py` `gen_15_region` SQL-literal apostrophe.** A routine
-   heading containing `'` would emit a malformed single-quoted SQL literal. **Not actionable here:**
-   the frozen `check_cadence_consistency.py` check B derives the byte-identical instruction text
-   (`Claude_Task_Plan.md:` → `f"Read Claude_Task_Plan.md. Perform {h}."`) and its parser is `[^']*`,
-   so quote-escaping would have to be coordinated across a frozen file. No heading contains an
-   apostrophe today, and check B fails loud if one is ever introduced. Enforced invariant, not a
-   code change.
+**Only cross-file work that remains (genuinely NOT in Part C's ownership):** to *support* (rather than
+reject) an apostrophe in a routine heading, a coordinated two-file change is required — escape
+`'`→`''` in `gen_15_region` (Part C) **and** teach the frozen `check_cadence_consistency.py` check B
+parser to un-escape `''`→`'` (not owned by Part C). Until then, Bugs fixed #5's guard enforces the
+"no apostrophe in a heading" invariant explicitly and early. No heading has an apostrophe today, so
+nothing is blocked.
 
 ## Considered but declined (no clear, meaningful win / would risk a constraint)
 
@@ -170,8 +194,8 @@ Additions to existing owned files:
 Full suite `python -m pytest -q` → **596 passed** (shared tree — count includes other instances'
 concurrent work). `gen_routine_lists.py --check` → 0; `check_script_version_consistency.py` → 0;
 `check_live_sql_parity.py --offline` → 0 (179 objects parse); `check_dbt_view_coverage.py` → 1
-(advisory, by design); `ruff check` on all owned .py → clean. All **four** source fixes carry
+(advisory, by design); `ruff check` on all owned .py → clean. All **five** source fixes carry
 mutation-verified regression tests (each proven to fail when its fix is reverted — including the two
-follow-up guards, whose mutation prints the vacuous `OK:` they prevent). Only my owned paths were
-staged (the working tree also carries other parallel instances' in-flight edits to non-owned files,
-which were **not** staged).
+fail-open guards and the apostrophe guard, whose mutations reproduce the vacuous `OK:` / missing
+fail-fast they prevent). Only my owned paths were staged (the working tree also carries other parallel
+instances' in-flight edits to non-owned files, which were **not** staged).

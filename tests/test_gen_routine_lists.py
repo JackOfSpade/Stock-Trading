@@ -94,6 +94,18 @@ def test_gen_15_region_empty_instruction_when_heading_missing():
     assert got == "  STRUCT('GHOST' AS routine, '' AS canonical_instruction)"
 
 
+def test_gen_15_region_rejects_apostrophe_heading_with_clear_error():
+    # A heading containing an apostrophe can't be represented in the single-quoted routine_catalog SQL
+    # literal AND is structurally un-parseable by check_cadence_consistency.py check B's `[^']*`
+    # capture (which truncates at the quote), so the two byte-identical derivations could never agree.
+    # The generator fails FAST with a clear, actionable cause instead of writing malformed SQL that
+    # surfaces later as a confusing "instruction drift" from check B (2026-07-18 audit).
+    with pytest.raises(SystemExit) as ei:
+        gr.gen_15_region([{"id": "D9"}], {"D9": "D9. O'Brien Momentum Screen — regular routine"})
+    msg = str(ei.value)
+    assert "apostrophe" in msg and "D9" in msg
+
+
 # ---- gen_24_region: only the four period classes -------------------------------------------------
 def test_gen_24_region_keeps_only_period_class_routines():
     routines = [
@@ -241,6 +253,21 @@ def test_main_requires_exactly_one_of_write_or_check(monkeypatch):
     monkeypatch.setattr(sys, "argv", ["gen_routine_lists.py"])
     with pytest.raises(SystemExit):
         gr.main()
+
+
+def test_main_fails_fast_on_an_apostrophe_heading(tmp_path, monkeypatch):
+    # The apostrophe guard propagates through main(): --check (like --write) fails fast via
+    # build_targets()->gen_15_region rather than generating malformed routine_catalog SQL.
+    _wire_fixture(tmp_path, monkeypatch)
+    plan = tmp_path / "Claude_Task_Plan.md"      # rewrite so D1's heading carries an apostrophe
+    plan.write_text(
+        "## D1. O'Brien Screen — deep research\nbody\n\n"
+        "## W1. Catalyst Calendar (Strategies A and C) — deep research\nbody\n"
+    )
+    monkeypatch.setattr(sys, "argv", ["gen_routine_lists.py", "--check"])
+    with pytest.raises(SystemExit) as ei:
+        gr.main()
+    assert "apostrophe" in str(ei.value)
 
 
 def test_build_targets_returns_three_targets(tmp_path, monkeypatch):

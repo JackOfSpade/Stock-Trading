@@ -97,6 +97,26 @@ def gen_15_region(routines, head_by_id):
     for i, r in enumerate(routines):
         rid = r["id"]
         heading = head_by_id.get(rid)
+        if heading and "'" in heading:
+            # The heading is the only FREE-TEXT value embedded in a single-quoted SQL literal here
+            # (rid is a \w+ id; gen_12/gen_24's monitor_class is a fixed vocabulary). An apostrophe in
+            # a heading would break this literal, AND it is structurally un-representable downstream:
+            # check_cadence_consistency.py check B parses this row back with `'(Read …\. Perform
+            # [^']*)'`, whose `[^']*` truncates at the first quote and can therefore NEVER match the
+            # raw-apostrophe want_catalog — so the two byte-identical derivations cannot agree no
+            # matter what this generator emits. That frozen parser is not ours to change, so a
+            # single-file fix can only fail fast: reject the apostrophe with a clear cause at
+            # generation time, instead of writing malformed SQL that surfaces later as a confusing
+            # "routine_catalog instruction drift" from check B (2026-07-18 audit; fires only on an
+            # apostrophe heading — byte-identical on the current tree, none exist). To actually SUPPORT
+            # apostrophes, escape "'"->"''" here AND teach check B's parser to un-escape — a
+            # coordinated change across this file and the frozen check_cadence_consistency.py.
+            raise SystemExit(
+                f"gen_routine_lists: routine {rid}'s Claude_Task_Plan.md heading contains an "
+                f"apostrophe, which the ops.routine_catalog SQL literal cannot represent and "
+                f"check_cadence_consistency.py check B cannot parse. Rename the heading to remove the "
+                f"apostrophe (or coordinate an escaping fix across gen_15_region AND check B's parser "
+                f"to support apostrophes). Heading: {heading!r}")
         instr = f"Read Claude_Task_Plan.md. Perform {heading}." if heading else ""
         comma = "," if i < n - 1 else ""
         lines.append(f"  STRUCT('{rid}' AS routine, '{instr}' AS canonical_instruction){comma}")
