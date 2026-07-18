@@ -19,24 +19,22 @@ name: Alert relay (webhook push)
 # canary line and, uniquely, FAILS THE RUN on a POST error, so channel diversity is actively verified,
 # not just assumed from the secret being set. See scripts/alert_relay.py::relay_heartbeat.
 #
-# Self-improvement audit WO-8 part 1 (2026-07-03): also runs a daily `catchup` check
-# (state.catchup_available, bigquery/31_catchup_notify.sql) — a distinct, lower-alarm "no rush, fire the
-# trigger whenever" notice for the subset of missed daily routines (currently D1/D3) that carry no
-# intraday-price dependency, so a late catch-up run recovers full value. This is separate from — not a
-# replacement for — the existing missed_run CRITICAL relayed via the `alerts` mode, which still fires for
-# every miss including D2 (where late catch-up does NOT recover full value).
+# RETIRED 2026-07-18 (consolidation audit): the daily `catchup` mode (WO-8 part 1, 2026-07-03 — a
+# "no rush, fire the trigger yourself" human notice over state.catchup_available). OPS0's autonomous
+# catch-up auto-refire (bigquery/59_catchup_autofire.sql, 2026-07-15) reads the same signal and fires
+# the trigger ITSELF in the same 04:30 UTC slot — a push asking a human to duplicate an autonomous
+# action is alert-fatigue noise (RUNBOOK §19). The residual needs-a-human case (no live trigger id)
+# alerts via bigquery/59's catchup_refire_no_trigger_id warning through the standard `alerts` mode.
 
 on:
   schedule:
     - cron: '*/30 * * * *'   # alert relay — recent ops.alerts (fast, best-effort)
     - cron: '5 13 * * *'     # daily staged-order reminder ~07:05 MT confirm window (A3)
     - cron: '15 13 * * 1'    # weekly (Monday) webhook liveness heartbeat
-    - cron: '30 4 * * *'     # daily ~21:30-22:30 MT (DST-dependent) catch-up-available check — after
-                              # the 21:00 MT daily-routine deadline, before the 05:15 UTC main cadence_check
   workflow_dispatch:
     inputs:
       mode:
-        description: 'alerts | orders | heartbeat | catchup'
+        description: 'alerts | orders | heartbeat'
         required: false
         default: 'alerts'
         type: choice
@@ -44,11 +42,12 @@ on:
           - alerts
           - orders
           - heartbeat
-          - catchup
 
 permissions:
   contents: read
   id-token: write   # Workload Identity Federation (no downloadable key)
+  issues: write   # 2026-07-18 audit — durable record of a relay failure (esp. a dead-webhook heartbeat,
+                  # which by definition cannot self-report through the channel that just failed)
 
 concurrency:
   group: alert-relay
@@ -142,14 +141,12 @@ jobs:
           MODE_INPUT: ${{ github.event.inputs.mode }}
         run: |
           # The daily 13:05 UTC schedule is the staged-order reminder; the weekly Monday 13:15 UTC
-          # schedule is the webhook liveness heartbeat; the daily 04:30 UTC schedule is the
-          # catch-up-available check; everything else is alerts.
+          # schedule is the webhook liveness heartbeat; everything else is alerts. (The former daily
+          # 04:30 UTC catchup schedule was retired 2026-07-18 — see the header.)
           if [ "${{ github.event.schedule }}" = "5 13 * * *" ]; then
             echo "mode=orders" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event.schedule }}" = "15 13 * * 1" ]; then
             echo "mode=heartbeat" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.event.schedule }}" = "30 4 * * *" ]; then
-            echo "mode=catchup" >> "$GITHUB_OUTPUT"
           else
             echo "mode=${MODE_INPUT:-alerts}" >> "$GITHUB_OUTPUT"
           fi
@@ -164,8 +161,67 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
       - name: Relay
+        id: relay
         if: steps.guard.outputs.skip == 'false'
         env:
           WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
           RELAY_MODE: ${{ steps.mode.outputs.mode }}
         run: python scripts/alert_relay.py
+
+      # 2026-07-18 audit — durable failure record (the exact treatment 5 sibling guards already got:
+      # keyless-sa-audit / wif-binding-audit / live-sql-parity / guard-config-audit / sql-dryrun-sweep).
+      # A red run here otherwise just scrolls off Actions history, and the heartbeat mode's failure is
+      # BY DEFINITION un-self-reportable (the webhook that would carry the alert is the thing that
+      # died). Issues are PER-MODE ("(heartbeat)", "(alerts)", ...) so a green fast-lane alerts run can
+      # never close a dead-webhook heartbeat finding — only the next green heartbeat can.
+      - name: Open/refresh finding issue (dedup, per-mode)
+        if: always() && steps.guard.outputs.skip == 'false' && steps.relay.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODE: ${{ steps.mode.outputs.mode }}
+        run: |
+          set -uo pipefail
+          title="⚠️ Alert relay ($MODE): needs attention"
+          {
+            if [ "$MODE" = "heartbeat" ]; then
+              echo "**FINDING** — the weekly webhook liveness heartbeat FAILED: the diversification alert channel is dead (revoked URL, decommissioned endpoint, or POST error). Until fixed, alert delivery has fallen back to the single Google-inbox path this channel exists to diversify away from. This issue is the durable record — the dead channel cannot self-report."
+            else
+              echo "**FINDING** — the alert relay run (mode: $MODE) FAILED. The reliable ~2h alert_emailer still covers delivery; investigate the run log."
+            fi
+            echo
+            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } > /tmp/body.md
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
+            --jq "[.[] | select(.title|startswith(\"$title\"))][0].number // empty")
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body-file /tmp/body.md
+            echo "Updated existing issue #$existing."
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body-file /tmp/body.md
+          fi
+          # CI-findings bridge (same non-fatal pattern as the sibling guards).
+          # shellcheck disable=SC2016 # single-quoted intentionally: backtick identifier + @p_* params stay literal.
+          bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_key:STRING:relay_${MODE}" --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("alert-relay",@p_key,"open","relay run failed — see issue/run",@p_url)' || echo "::warning::ops.ci_findings insert failed — GH issue path unaffected."
+
+      - name: Close finding issue if resolved (same mode only)
+        if: always() && steps.guard.outputs.skip == 'false' && steps.relay.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODE: ${{ steps.mode.outputs.mode }}
+        run: |
+          set -uo pipefail
+          title="⚠️ Alert relay ($MODE): needs attention"
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
+            --jq "[.[] | select(.title|startswith(\"$title\"))][0].number // empty")
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Resolved — a $MODE relay run succeeded. Closing."
+            gh issue close "$existing" --repo "$GITHUB_REPOSITORY"
+          fi
+          # Resolved-row INSERT: unconditional for heartbeat (weekly — cheap, and matches the sibling
+          # guards' "a manually-closed GH issue never strands an open ops.ci_findings row" rule), but
+          # issue-conditional for the fast lanes (alerts runs every 30 min; an unconditional resolved
+          # row per green run would write ~50 no-op rows/day).
+          if [ -n "$existing" ] || [ "$MODE" = "heartbeat" ]; then
+            # shellcheck disable=SC2016 # single-quoted intentionally: backtick identifier + @p_* params stay literal.
+            bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_key:STRING:relay_${MODE}" --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("alert-relay",@p_key,"resolved","relay healthy this run",@p_url)' || echo "::warning::ops.ci_findings resolved-row insert failed — GH issue path unaffected."
+          fi

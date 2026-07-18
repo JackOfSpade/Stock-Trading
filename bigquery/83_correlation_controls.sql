@@ -11,8 +11,11 @@
 -- anywhere computes return correlation (grep 'CORR(' over bigquery/ dbt/ = empty). This file encodes
 -- it once. It ALSO gives SL4's "redundancy" retirement signal (rolling return-correlation with a peer
 -- above threshold, Claude_Task_Plan.md:2220; bigquery/35:595 admits it is unencoded) its missing
--- substrate. Both views are record-only inputs; the D1/W3 alert wiring (a record-only warning, never
--- an entry block — Rev 35's no-cap doctrine is untouched) lives in Claude_Task_Plan.md.
+-- substrate — WIRED 2026-07-18 (audit follow-up: the view sat consumer-less for a day): SL4 STEP 1's
+-- redundancy bullet now reads analytics.strategy_return_correlation (corr >= 0.7, overlap_days >= 40,
+-- dominated-member-only, default-KEEP on ambiguity). Both views are record-only inputs; the D1/W3
+-- alert wiring (a record-only warning, never an entry block — Rev 35's no-cap doctrine is untouched)
+-- lives in Claude_Task_Plan.md.
 
 -- ===== analytics.b_pairwise_correlation — the KL #12 metric (d) control (single-row summary) =====
 -- Trailing ~63-trading-day (90 calendar-day) daily-return CORR across every pair of open Strategy-B
@@ -44,7 +47,12 @@ SELECT
   (SELECT COUNT(*) FROM b_pos) AS n_positions,
   (SELECT COUNT(*) FROM pair_corr) AS n_pairs,
   (SELECT AVG(corr) FROM pair_corr WHERE overlap_days >= 40) AS avg_offdiagonal_corr,
-  (SELECT MIN(overlap_days) FROM pair_corr) AS min_overlap_days,
+  -- min over the SAME >=40-day population as AVG/MAX (2026-07-18 audit): an unfiltered global MIN
+  -- let a single fresh position drag min_overlap_days below D1's `min_overlap_days >= 40` AND-term
+  -- and suppress the KL #12 alert for the WHOLE book — the exact routine state (2 mature correlated
+  -- positions + 1 new one) the control exists for. NULL when no qualifying pair exists, which still
+  -- correctly fails D1's condition (no mature evidence -> no alert).
+  (SELECT MIN(overlap_days) FROM pair_corr WHERE overlap_days >= 40) AS min_overlap_days,
   (SELECT MAX(corr) FROM pair_corr WHERE overlap_days >= 40) AS max_pairwise_corr,
   CURRENT_TIMESTAMP() AS computed_at;
 

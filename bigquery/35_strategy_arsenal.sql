@@ -553,6 +553,11 @@ freq AS (
          ELSE GREATEST(3, CAST(CEIL(declared_annual_roundtrips / 2) AS INT64))
     END AS trades_threshold
   FROM `stock-trading-498512.state.strategy_candidates`
+  -- Defense-in-depth (2026-07-18 audit): candidate_code has no enforced uniqueness (NOT ENFORCED PK
+  -- world) and four independent routines write NEW rows. A duplicate code here would fan out the
+  -- LEFT JOIN below into duplicate readiness rows, corrupting the single `ready`/`stuck` boolean SL3
+  -- keys transitions off. Newest row wins.
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY candidate_code ORDER BY created_ts DESC) = 1
 ),
 rails AS (SELECT * FROM `stock-trading-498512.state.arsenal_rails`),
 ars AS (SELECT enabled, incubation_frozen FROM `stock-trading-498512.state.arsenal_enabled`)

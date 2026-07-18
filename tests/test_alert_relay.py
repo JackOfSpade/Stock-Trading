@@ -137,33 +137,8 @@ def test_relay_orders_missing_column_raises_not_silent(monkeypatch):
         ar.relay_orders()
 
 
-# ---- relay_catchup(): WO-8 part 1, distinct "no-rush" notice --------------------------------
-
-def test_relay_catchup_empty_does_not_post(monkeypatch):
-    monkeypatch.setattr(ar, "bq", lambda sql: [])
-    posted = []
-    monkeypatch.setattr(ar, "post", lambda text: posted.append(text))
-    ar.relay_catchup()
-    assert posted == []
-
-
-def test_relay_catchup_posts_and_formats(monkeypatch):
-    monkeypatch.setattr(ar, "bq", lambda sql: [
-        {"routine": "D1", "today": "2026-07-03"},
-    ])
-    posted = []
-    monkeypatch.setattr(ar, "post", lambda text: posted.append(text))
-    ar.relay_catchup()
-    assert len(posted) == 1
-    assert "D1" in posted[0] and "safe to catch up" in posted[0]
-
-
-def test_relay_catchup_missing_column_raises_not_silent(monkeypatch):
-    monkeypatch.setattr(ar, "bq", lambda sql: [{"routine": "D1"}])  # missing "today"
-    monkeypatch.setattr(ar, "post", lambda text: None)
-    with pytest.raises(KeyError):
-        ar.relay_catchup()
-
+# (relay_catchup + its tests RETIRED 2026-07-18 — subsumed by OPS0's autonomous catch-up
+#  auto-refire, bigquery/59_catchup_autofire.sql; see scripts/alert_relay.py's module docstring.)
 
 # ---- relay_heartbeat(): the ONE mode that must NOT swallow a POST failure ------------------
 
@@ -259,8 +234,8 @@ def test_bq_raises_runtime_error_on_timeout(monkeypatch):
         ar.bq("SELECT 1")
 
 
-# ---- main()'s "best-effort — swallow the exception, return 0" contract for alerts/orders/
-#      catchup (2026-07-14 audit finding: only exercised indirectly before, never through main()) --
+# ---- main()'s "best-effort — swallow the exception, return 0" contract for alerts/orders
+#      (2026-07-14 audit finding: only exercised indirectly before, never through main()) --
 
 def test_main_alerts_mode_swallows_exception_and_returns_zero(monkeypatch, capsys):
     monkeypatch.setattr(ar, "WEBHOOK_URL", "https://example.invalid/hook")
@@ -277,16 +252,6 @@ def test_main_alerts_mode_swallows_exception_and_returns_zero(monkeypatch, capsy
 def test_main_orders_mode_swallows_exception_and_returns_zero(monkeypatch):
     monkeypatch.setattr(ar, "WEBHOOK_URL", "https://example.invalid/hook")
     monkeypatch.setattr(ar, "MODE", "orders")
-
-    def _boom(sql):
-        raise RuntimeError("bq error")
-    monkeypatch.setattr(ar, "bq", _boom)
-    assert ar.main() == 0
-
-
-def test_main_catchup_mode_swallows_exception_and_returns_zero(monkeypatch):
-    monkeypatch.setattr(ar, "WEBHOOK_URL", "https://example.invalid/hook")
-    monkeypatch.setattr(ar, "MODE", "catchup")
 
     def _boom(sql):
         raise RuntimeError("bq error")

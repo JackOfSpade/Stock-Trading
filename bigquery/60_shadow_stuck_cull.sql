@@ -44,6 +44,10 @@ freq AS (
          ELSE GREATEST(3, CAST(CEIL(declared_annual_roundtrips / 2) AS INT64))
     END AS annualized_rate_floor
   FROM `stock-trading-498512.state.strategy_candidates`
+  -- Defense-in-depth (2026-07-18 audit, mirrors state.strategy_paper_readiness's freq): candidate_code
+  -- has no enforced uniqueness and four independent routines write NEW rows; a duplicate would fan out
+  -- the LEFT JOIN into duplicate readiness rows and corrupt the `ready`/`stuck` booleans. Newest wins.
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY candidate_code ORDER BY created_ts DESC) = 1
 ),
 ars AS (SELECT enabled, incubation_frozen FROM `stock-trading-498512.state.arsenal_enabled`)
 SELECT

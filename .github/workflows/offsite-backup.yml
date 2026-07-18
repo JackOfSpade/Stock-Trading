@@ -24,6 +24,8 @@ on:
 permissions:
   contents: read
   id-token: write
+  issues: write   # 2026-07-18 audit — durable record of a failed mirror (a red daily run + best-effort
+                  # webhook alone scroll off history; same treatment as keyless-sa-audit et al.)
 
 concurrency:
   group: offsite-backup
@@ -55,6 +57,7 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
       - name: Mirror the latest snapshot off-project
+        id: mirror
         if: steps.guard.outputs.skip == 'false'
         env:
           WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
@@ -69,5 +72,56 @@ jobs:
             msg="🗄 Stock-Trading OFF-SITE backup mirror FAILED ($SRC -> $DEST). The off-project copy is stale — the events/ops truth has no out-of-trust-domain backup until this is fixed. See ops/RUNBOOK.md §27."
             echo "::error::$msg"
             scripts/notify_webhook.sh "$msg"
+            printf '%s\n' "$msg" > /tmp/mirror_finding.txt
             exit 1
+          fi
+
+      # 2026-07-18 audit — durable failure record (same dedup'd-issue pattern as keyless-sa-audit /
+      # wif-binding-audit): the webhook above is best-effort/optional and a red daily run scrolls off
+      # history, yet a chronically-failing mirror means the irreplaceable events/ops truth has NO
+      # out-of-trust-domain copy — precisely the silent-degradation class this repo's other guards
+      # were already fixed for.
+      - name: Open/refresh finding issue (dedup)
+        if: always() && steps.guard.outputs.skip == 'false' && steps.mirror.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          {
+            echo "**FINDING** — the off-site backup mirror FAILED. The off-project copy is stale; the events/ops truth currently has no out-of-trust-domain backup (RUNBOOK §27). This issue is the durable record, independent of whether \`ALERT_WEBHOOK_URL\` is configured."
+            echo
+            cat /tmp/mirror_finding.txt 2>/dev/null || true
+            echo
+            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } > /tmp/body.md
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
+            --jq '[.[] | select(.title|startswith("⚠️ Off-site backup mirror:"))][0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body-file /tmp/body.md
+            echo "Updated existing issue #$existing."
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "⚠️ Off-site backup mirror: needs attention" \
+              --body-file /tmp/body.md
+          fi
+          # CI-findings bridge (same non-fatal pattern as the sibling guards). gcloud/bq are available
+          # from the WIF auth step above (it must have succeeded for the mirror step to have run).
+          # shellcheck disable=SC2016 # single-quoted intentionally: backtick identifier + @p_url stay literal.
+          bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("offsite-backup","offsite_mirror","open","gsutil rsync to the off-project destination failed — off-site copy stale",@p_url)' || echo "::warning::ops.ci_findings insert failed — GH issue path unaffected."
+
+      - name: Close finding issue if resolved
+        if: always() && steps.guard.outputs.skip == 'false' && steps.mirror.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
+            --jq '[.[] | select(.title|startswith("⚠️ Off-site backup mirror:"))][0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Resolved — the off-site mirror succeeded this run. Closing."
+            gh issue close "$existing" --repo "$GITHUB_REPOSITORY"
+            # Resolved-row INSERT only when an issue was actually open (daily job — avoids a no-op row
+            # per green day; a manually-closed issue is re-opened by the next failure, which re-inserts).
+            # shellcheck disable=SC2016 # single-quoted intentionally: backtick identifier + @p_url stay literal.
+            bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("offsite-backup","offsite_mirror","resolved","mirror healthy this run",@p_url)' || echo "::warning::ops.ci_findings resolved-row insert failed — GH issue path unaffected."
           fi

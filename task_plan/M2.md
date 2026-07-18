@@ -76,7 +76,7 @@ Each routine run is a fresh session — there is no cross-run chat memory. State
 | **AR_attacker** | the artifact under review only | any strategy slice / Decision_Log / prior reviews (strict blinding) |
 | **W2** (B) | `04_strategy_b.md` + `01` | other strategy slices |
 | **M2** (E) | `07_strategy_e.md` + `01` | other strategy slices |
-| **M3 / Q2** (D) | `06_strategy_d.md` + `01` | other strategy slices |
+| **M3 / Q2** (every `review_cadence: long_horizon` roster strategy — currently D) | `06_strategy_d.md` + `01` (+ the slice of any future `long_horizon` graduate — roster-derived, 2026-07-18) | other strategy slices |
 | **W1** (A, C) | `03_strategy_a.md`, `05_strategy_c.md` + `01` | B/D/E slices |
 | Strategy C order routines | `05_strategy_c.md` + `c_options_math.py` | — |
 | **M1b** (strategy mapping) | `02_regime_router.md` + `03–07` (mapping needs the activation rules) | — |

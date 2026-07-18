@@ -49,8 +49,13 @@ click) plus the staged adoptions. Each item says what it solves (P0–P3 from th
   `SELECT * FROM state.cadence_watch WHERE needs_attention;` (want zero rows);
   `SELECT * FROM state.park_reconciliation;` (events-side park shares, current vehicle, to compare to the connector).
 
-To re-apply or move to a fresh project, run `bigquery/01..21_*.sql` in order via the BigQuery MCP
-`execute_sql` (same pattern the existing files use). (Added 2026-06-24: `18_stack_review_fixes.sql` —
+To re-apply or move to a fresh project, run EVERY `bigquery/NN_*.sql` file present in the directory, in
+ascending numeric order, via the BigQuery MCP `execute_sql` (same pattern the existing files use) —
+deliberately no hardcoded endpoint (2026-07-18 audit: this line previously said "01..21", frozen at a
+2026-06-24 file count while the directory grew to 87; a DR rebuild following it literally would have
+silently omitted the arsenal lifecycle, cash-flow event-sourcing, gate self-heal, and everything else
+in 22+. Respect each file's own "apply after"/supersede banners; `scripts/check_superseded_markers.py`
+enforces the pointer discipline). (Added 2026-06-24: `18_stack_review_fixes.sql` —
 additive monitor/integrity views + two `ALTER ADD COLUMN IF NOT EXISTS`; apply before re-pasting
 `cadence_check.sql` / `backup_events_export.sql` and before creating `integrity_check.sql`. See §25.)
 (Added 2026-06-22: `16_automation_health.sql` —
@@ -427,7 +432,7 @@ TEST layer.**
 **Decision: do NOT transfer view OWNERSHIP to dbt** (i.e., do not remove the view DDL from
 `bigquery/*.sql`). Reasons specific to this system: (1) routine sessions run on the BigQuery MCP and
 have **no dbt runtime**, so if dbt owned the views, a session could neither rebuild nor change them;
-(2) the disaster-recovery / fresh-project path is "apply `bigquery/01..13_*.sql` in order via the MCP"
+(2) the disaster-recovery / fresh-project path is "apply every `bigquery/NN_*.sql` in ascending numeric order via the MCP" (no hardcoded endpoint — see the DR note near the top of this file)
 — removing the view DDL breaks that single-command rebuild; (3) it can't be validated here (no dbt in
 this environment) that `dbt build` reproduces every view byte-identically, and these are live trading
 views. So `bigquery/*.sql` stays the **canonical runtime owner** of the views; `dbt/` is the test
@@ -2058,11 +2063,19 @@ harmless to execute but does not recover the value a same-day run would have had
 `state.catchup_available` (new view, `bigquery/31_catchup_notify.sql`) — a short, hand-maintained
 `catchup_safe` list (currently `['D1','D3']`; update if D2a is cut over, since its reconciliation-only
 scope carries no discretionary order crafting either) joined against `state.cadence_watch`. `alert-relay.
-yml` gained a fourth schedule (daily `30 4 * * *`, safely after the 21:00 MT deadline in both DST states
-and before the 05:15 UTC main `cadence_check.sql`) running a new `RELAY_MODE=catchup`
+yml` gained a fourth schedule (daily `30 4 * * *`) running a new `RELAY_MODE=catchup`
 (`scripts/alert_relay.py::relay_catchup`) — worded as an opportunity ("no rush, fire the trigger
 whenever"), delivered separately from the existing `missed_run` critical so a D2 miss is never
 mis-described as low-urgency.
+
+**RETIRED 2026-07-18 (consolidation audit) — the `catchup` relay mode + its `30 4 * * *` cron only.**
+OPS0's autonomous catch-up auto-refire (`bigquery/59_catchup_autofire.sql`, 2026-07-15) reads the same
+underlying signal (`state.catchup_refire_readiness`, built on `state.catchup_available`) and fires the
+trigger ITSELF in the same 04:30 UTC slot, so a push asking a human to duplicate an autonomous action
+had become alert-fatigue noise (§19). The residual needs-a-human case (no live trigger id) alerts via
+`bigquery/59`'s `catchup_refire_no_trigger_id` warning through the standard `alerts` relay mode. The
+`state.catchup_available` VIEW stays (OPS0's readiness view builds on it); only the human-notice relay
+mode was removed.
 
 **Owner action required:** none — both are additive to already-gated mechanisms (D3's attestation write
 requires no new grant; `alert-relay.yml`'s new schedule is covered by the same double-gate as its other
