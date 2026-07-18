@@ -10,6 +10,75 @@ act. Dated passes below; most recent first.
 
 ---
 
+# 2026-07-17 Weekly-report chart audit — ALL DONE (view fix live + v5 re-pasted + drift clean)
+
+Triggered by an owner question about the weekly email's cumulative-return chart. An adversarial
+multi-agent bug hunt (verified against live BigQuery) confirmed the y-axis label is correct as-is (VOO
+is plotted as its own non-rebased line, not zeroed), but found real defects, all now fixed in the repo
+with tests (`node ops/weekly_report/test_pure_helpers.js` → 70 assertions pass). Also a requested
+chart redesign: the y-axis is now fitted tightly to the data (always including 0) on a taller canvas so
+the lines are no longer squished together.
+
+**Already applied live by Claude (no owner step):** the paired BigQuery fix
+`analytics.voo_cumulative` — it now emits `NULL` on any day with no real VOO mark (leading, interior,
+or trailing ingest gap) instead of carrying a false-flat COALESCE-to-0 value. `CREATE OR REPLACE VIEW`
+run live 2026-07-17; **verified a no-op on current data** (57 rows, 0 nulls, unchanged min/max — there
+are no gaps today) and verified via a simulated stall that gap days now go NULL while the level resumes
+correctly. This revives the chart's line-break-on-gap AND the `weekly_report.gs` "⚠ VOO data through
+<date>" staleness note (previously dead code, since the COALESCE'd column was never null at the tail).
+Canonical `bigquery/46_weekly_benchmarks.sql` + the dbt port + `schema.yml` updated to match.
+
+## WR-1. Re-paste `weekly_report.gs` (v4 → v5) into Apps Script — `[DONE 2026-07-17 — deployed + verified live]`
+
+v5 was re-pasted into the "Stock-Trading Automation" Apps Script project (the `Code.gs` file) via
+Claude-in-Chrome from the commit-SHA-pinned GitHub URL (commit `4522cb0`, branch
+`fix/weekly-chart-audit-v5`), `runWeeklyReport` run (email sent 2026-07-17 6:27 PM; new chart confirmed
+— y-axis fitted to ~−7.5%…+12.5%, 0 baseline visible, lines no longer squished), then the
+`state.expected_script_versions` row bumped to v5 (targeted UPDATE, done from here AFTER the v5
+heartbeat landed so no false drift). **Verified: `state.script_version_drift` → `weekly_report` v5/v5,
+`monitored=true`, `drift=false`.** `alert_emailer` untouched (still v2/v2). What v5 shipped: strategy
+lines GAP (not false-flat-0%) before first deploy / after last mark; full-axis forward-fill (downsampled
+points no longer stale); `fmtRetPct_` null-return guard in subject/alt/plain/fallback-bars; captions
+dropped the shared "Since <date>" claim; tighter/taller y-axis. The paired `analytics.voo_cumulative`
+null-on-gap view fix was already applied live earlier this pass. **No remaining owner steps.** (Repo
+housekeeping: the fix lives on branch `fix/weekly-chart-audit-v5`; merge it to `main` at your
+convenience — nothing operational depends on the merge since the live surfaces are already updated.)
+
+---
+
+# 2026-07-17 Code-quality audit — two Apps Script (`.gs`) fixes: DONE (deployed + verified live 2026-07-17)
+
+An adversarially-verified code-quality audit this pass fixed 14 latent bugs/cleanups in the Python
+surface (committed with tests, CI-green) plus these two Apps Script (`.gs`) fixes. **Both are now fully
+deployed and verified live** — repo side (`.gs` code + test twin + version-const bumps + the
+`bigquery/43` seed rows, CI-green) AND the live deploy (both files re-saved in the "Stock-Trading
+Automation" Apps Script project, `runAlertCheck`/`runWeeklyReport` run to refresh the live heartbeat,
+then `state.expected_script_versions` bumped — in that order, so no false drift). **Both were
+LOW-severity / cosmetic** (a rare display glitch and one word in an operator email).
+
+**Verification (live, 2026-07-17):** `state.script_version_drift` returns `alert_emailer` v2/v2 and
+`weekly_report` v4/v4, both `monitored=true`, `drift=false`. A weekly-report email was sent as the
+`runWeeklyReport` side effect (also confirmed the `signPct_` render). **No remaining owner steps.**
+
+## GS-1. `signPct_` printed `−0.00%` for a tiny negative that rounds to zero (`weekly_report.gs`) — `[DONE 2026-07-17 — deployed live]`
+
+The sign came from the raw `p` while `toFixed(2)` rounded the magnitude, so any `p` in `(-0.005, 0)`
+printed the contradictory `−0.00%`. Fixed to force `+` when the formatted magnitude is `0.00`
+(behavior-preserving for every other value; a `node` regression test locks it). Applied in
+`weekly_report.gs:324` + its twin `test_pure_helpers.js:93`; `SCRIPT_VERSION` `v3`→`v4` +
+`bigquery/43` weekly_report seed `v3`→`v4`. Redeployed live + expected-version bumped to v4; drift
+check clean.
+
+## GS-2. `plainAlerts_` labeled recurring re-sends as "new", contradicting its subject (`alert_emailer.gs`) — `[DONE 2026-07-17 — deployed live]`
+
+`plainAlerts_(combined, rows.length)` labeled `combined.length` as "new" in the plain-text header, so
+a recurring `termination_close_staged` re-send inflated/contradicted the (correct) subject. Fixed by
+dropping the word "new" (copy-only; the HTML body was already fine). Applied in
+`alert_emailer.gs:274`; `ALERT_SCRIPT_VERSION` `v1`→`v2` + `bigquery/43` alert_emailer seed `v1`→`v2`.
+Redeployed live + expected-version bumped to v2; drift check clean.
+
+---
+
 # 2026-07-16 Orphan-BigQuery-object documentation pass (P3, lowest priority) — local-only implementation round
 
 This pass was done as a **local-only** implementation (commit sits on the working branch, not

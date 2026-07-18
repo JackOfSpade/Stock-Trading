@@ -161,6 +161,29 @@ def test_seed_row_regex_captures_to_state_not_from_state_directly():
     assert m.group(2) == "PROBE"   # NOT 'PAPER' — the from_state/to_state swap bug this guards against
 
 
+def test_unnest_seed_batch_captures_to_state_not_from_state(repo_copy):
+    # #2 (2026-07-17 audit): the UNNEST-batch state extraction must read to_state, NOT from_state, on
+    # a batch whose from_state is a real quoted state — the identical swap SEED_ROW is already guarded
+    # against (above), left unpatched on the UNNEST path. Append a batch retiring A (from_state=
+    # 'ADOPTED', to_state='TERMINATED'); the later to_state must win, dropping A from the active set.
+    arsenal = rc.ARSENAL_SQL
+    txt = _read(arsenal)
+    txt += (
+        "\nINSERT INTO `stock-trading-498512.events.strategy_lifecycle` "
+        "(event_ts, strategy_code, from_state, to_state, driver_routine, note)\n"
+        "SELECT TIMESTAMP(DATE '2026-08-01'), code, 'ADOPTED', 'TERMINATED', 'test-retire', 'test'\n"
+        "FROM UNNEST(['A']) AS code "
+        "WHERE NOT EXISTS (SELECT 1 FROM `stock-trading-498512.events.strategy_lifecycle` "
+        "WHERE driver_routine = 'test-retire');\n"
+    )
+    _write(arsenal, txt)
+    active, _n = rc.seed_active_codes()
+    # The old first-quoted-token bug would read from_state 'ADOPTED' and keep A active.
+    assert active == {"B", "C", "D", "E"}
+    # End-to-end this surfaces as an R-A mismatch (roster.yaml still says A is adopted).
+    assert rc.main() == 1
+
+
 # ---- (b2) missing Strategy.md '## Strategy' section ----
 def test_missing_strategy_md_section_is_caught(repo_copy):
     p = rc.STRATEGY_MD
@@ -299,6 +322,16 @@ def test_fixed_divisor_split_across_lines_amount_after_wrap_is_caught(repo_copy)
     txt = _read(target)
     txt += "\nSELECT x /\n  5 AS amount_per_strategy FROM t;\n"
     _write(target, txt)
+    assert rc.main() == 1
+
+
+# ---- (b6c) R-C: a fixed divisor split across two lines in the dbt reconcile test (2026-07-17) ----
+def test_fixed_divisor_split_across_lines_in_dbt_reconcile_is_caught(repo_copy):
+    # #3: R-C now scans full-text like R-B, so a formatter-wrapped `amount /\n  5` divisor in the
+    # reconcile test is caught — the old line-by-line scan missed it (vacuous pass).
+    p = rc.DBT_RECONCILE
+    txt = _read(p)
+    _write(p, txt + "\nSELECT amount /\n  5 AS expected_share FROM cash_flows\n")
     assert rc.main() == 1
 
 

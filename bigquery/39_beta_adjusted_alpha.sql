@@ -135,6 +135,15 @@ WHERE k.rn = 1;
 -- SAME beta-adjusted suppression folded into edge_decay_signal / candidacy_fired. This file must be
 -- applied AFTER 35_strategy_arsenal.sql on any full DR rebuild (see header). Byte-for-byte copy of that
 -- view with only edge_decay_signal's condition changed to add the beta AND-term — keep in sync.
+--
+-- SUPERSEDED LIVE by bigquery/81_arsenal_fixes.sql (2026-07-17, H3 fix) — 81 is applied AFTER this file
+-- and CREATE OR REPLACEs state.strategy_retirement_candidacy to (a) LEFT JOIN perf.strategy_daily so the
+-- zero-deployment ADOPTED strategies (A/C/E) each get a row with NULL-safe defaults + a never_deployed_days
+-- column (unblocking SL4's qualitative-evidence intake, which the old INNER JOIN silently dropped), and
+-- (b) require a SUSTAINED trailing-63-day negative-excess count (>=42) ALONGSIDE the latest-row condition,
+-- fixing the single-lucky/unlucky-day edge_decay defect — while PRESERVING this file's beta-adjusted
+-- suppression term VERBATIM. At runtime 81's definition wins. This block is kept, unmodified, for
+-- DR-rebuild apply-in-order reference only; the retirement-candidacy semantics now land in 81, not here.
 -- ============================================================================
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_retirement_candidacy` AS
 WITH latest AS (

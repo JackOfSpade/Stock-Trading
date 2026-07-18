@@ -56,6 +56,19 @@ def load_allowlist():
 
 
 def main():
+    # Fail CLOSED on a missing required source. find_referenced_tools() skips a nonexistent SOURCES
+    # file, so without this guard a renamed/moved doc (or a drifted TASK_PLAN/TRIGGERS_JSON constant)
+    # would silently shrink the scanned set — with 0 mcp__ refs left, the gate prints OK and exits 0,
+    # disarming itself (2026-07-17 audit). Both current sources are committed repo files.
+    missing_sources = [os.path.relpath(p, ROOT) for p in SOURCES if not os.path.exists(p)]
+    if missing_sources:
+        print("SETTINGS TOOL COVERAGE: FAIL\n")
+        print(f"Required source file(s) not found: {', '.join(missing_sources)}. This gate cannot "
+              f"verify mcp__ tool coverage against a source it can't read — failing closed rather "
+              f"than silently passing on an unscanned source (renamed/moved doc, or a drifted path "
+              f"constant). Restore the file or update the SOURCES path constant.")
+        return 1
+
     refs = find_referenced_tools()
     allowlist = load_allowlist()
 

@@ -42,8 +42,8 @@ import sys
 
 import yaml
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
-from routine_manifest import parse_routine_headings, heading_to_id  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib.routine_manifest import parse_routine_headings, heading_to_id  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLAN = os.path.join(ROOT, "Claude_Task_Plan.md")
@@ -73,7 +73,12 @@ def load_headings_by_id():
 def gen_12_region(routines):
     """state.cadence_expected_today rows: one per calendar-class routine (monitor_class !=
     queue_driven), cadence.yaml order, 4-space indent matching the surrounding UNNEST([ block."""
-    rows = [r for r in routines if r.get("monitor_class") != "queue_driven"]
+    # Exclude both queue_driven AND a missing/None monitor_class (a malformed cadence.yaml routine):
+    # the old `!= "queue_driven"` filter kept a None-monitor_class row, then the f-string's
+    # r['monitor_class'] bracket-access raised KeyError, unlike the parallel gen_24_region whose
+    # `in PERIOD_CLASSES` filter already drops None. check_cadence_consistency.py flags the missing
+    # key loudly (`{rid}: missing monitor_class`), so omitting the row here masks nothing (2026-07-17).
+    rows = [r for r in routines if r.get("monitor_class") not in ("queue_driven", None)]
     lines = []
     for i, r in enumerate(rows):
         comma = "," if i < len(rows) - 1 else ""

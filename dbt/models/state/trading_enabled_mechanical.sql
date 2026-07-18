@@ -14,27 +14,27 @@ health AS (
   FROM {{ ref('system_health') }}
 ),
 al AS (
-  SELECT COUNTIF(NOT resolved AND severity = 'critical' AND category != 'trading_halted') AS blocking_criticals
+  SELECT COUNTIF(NOT resolved AND severity = 'critical' AND category NOT IN ('trading_halted', 'staleness')) AS blocking_criticals
   FROM `stock-trading-498512.ops.alerts`
 ),
-dd AS (SELECT drawdown_breach, drawdown_from_peak FROM {{ ref('book_drawdown_watch') }})
+dd AS (SELECT breach_hard, drawdown_from_peak FROM {{ ref('book_drawdown_watch') }})
 SELECT
   NOT COALESCE(ctrl.latest.halt_all, FALSE)
   AND COALESCE(health.embeddings_healthy, FALSE)
   AND al.blocking_criticals = 0
   AND NOT COALESCE(health.position_drift_detected, TRUE)
-  AND NOT COALESCE(dd.drawdown_breach, FALSE) AS trading_enabled,
+  AND NOT COALESCE(dd.breach_hard, FALSE) AS trading_enabled,
   CASE
     WHEN COALESCE(ctrl.latest.halt_all, FALSE) THEN
       FORMAT('halt_all (mode=%s): %s', COALESCE(ctrl.latest.mode, '?'), COALESCE(ctrl.latest.reason, 'no reason logged'))
     WHEN NOT COALESCE(health.embeddings_healthy, FALSE) THEN
       'state.system_health.embeddings_healthy = FALSE'
     WHEN al.blocking_criticals != 0 THEN
-      FORMAT('%d open critical alert(s) (excluding the trading_halted gate echo) — see ops.alerts', al.blocking_criticals)
+      FORMAT('%d open critical alert(s) (excluding trading_halted/staleness gate echoes) — see ops.alerts', al.blocking_criticals)
     WHEN COALESCE(health.position_drift_detected, TRUE) THEN
       'state.position_reconciliation drift detected'
-    WHEN COALESCE(dd.drawdown_breach, FALSE) THEN
-      FORMAT('book NAV drawdown %.2f%% from trailing peak exceeds the -15%% circuit-breaker threshold', dd.drawdown_from_peak * 100)
+    WHEN COALESCE(dd.breach_hard, FALSE) THEN
+      FORMAT('book NAV drawdown %.2f%% from flow-adjusted peak exceeds the -40%% CATASTROPHE circuit-breaker (full halt)', dd.drawdown_from_peak * 100)
     ELSE NULL
   END AS halt_reason
 FROM ctrl, health, al, dd

@@ -297,3 +297,32 @@ def test_main_missing_file_exits_zero_not_raise(monkeypatch, capsys):
     rc = voa.main()
     assert rc == 0
     assert "could not read" in capsys.readouterr().out
+
+
+def test_main_non_utf8_owner_actions_exits_zero_not_raise(tmp_path, monkeypatch, capsys):
+    # #9 (2026-07-17): a non-UTF-8 OWNER_ACTIONS.md raises UnicodeDecodeError (a ValueError, NOT an
+    # OSError), which the old `except OSError` missed — crashing the always-exit-0 verifier. The
+    # broadened handler now reads it as "could not read" and exits 0.
+    doc = tmp_path / "OWNER_ACTIONS.md"
+    doc.write_bytes(b"## A. x\n\n\xff\xfe not valid utf-8\n")
+    monkeypatch.setattr(voa, "OWNER_ACTIONS_PATH", str(doc))
+    rc = voa.main()
+    assert rc == 0
+    assert "could not read" in capsys.readouterr().out
+
+
+def test_main_raising_probe_is_fail_open_not_crash(tmp_path, monkeypatch, capsys):
+    # #9 (2026-07-17): a probe that raises must be caught and reported OPEN, never abort the whole
+    # pass with a traceback / non-zero exit (the module's fail-open / always-exit-0 contract).
+    doc = tmp_path / "OWNER_ACTIONS.md"
+    doc.write_text(SAMPLE_DOC)
+    monkeypatch.setattr(voa, "OWNER_ACTIONS_PATH", str(doc))
+
+    def boom():
+        raise RuntimeError("unexpected probe explosion")
+    monkeypatch.setitem(voa.PROBES, "A", boom)
+    monkeypatch.setitem(voa.PROBES, "B", lambda: (False, "count=0"))
+    rc = voa.main()
+    assert rc == 0
+    assert "probe raised (fail-open)" in capsys.readouterr().out
+    assert "[DONE" not in doc.read_text()   # nothing flipped; A raised, B open

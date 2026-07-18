@@ -37,31 +37,45 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.state.expected_scheduled_query_
                                        -- the 'sq:<name>' ops.heartbeat source suffix
   expected_version STRING NOT NULL,
   git_note STRING,
+  expected_interval_hours INT64,      -- MON H5 (2026-07-17): the cadence of this DTS job in hours
+                                       --   (daily=24, weekly=168, monthly=744, every-6h=6). Drives the
+                                       --   beat-AGE dead-man (stale_beat) in state.scheduled_query_version_drift.
   updated_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
-) OPTIONS(description='Seed/reference table: the version each bigquery/scheduled_queries/*.sql body SHOULD be running live, per repo state. Source of truth for state.scheduled_query_version_drift. Updated by a guarded MERGE whenever a file''s SQ_VERSION marker is bumped.');
+) OPTIONS(description='Seed/reference table: the version each bigquery/scheduled_queries/*.sql body SHOULD be running live, per repo state. Source of truth for state.scheduled_query_version_drift. Updated by a guarded MERGE whenever a file''s SQ_VERSION marker is bumped. expected_interval_hours (MON H5) drives the beat-age dead-man.');
+
+-- MON H5 (2026-07-17): additive column for the beat-age dead-man on the ALREADY-LIVE table (the
+-- CREATE TABLE IF NOT EXISTS above is a no-op once the table exists, so it cannot add the column live).
+ALTER TABLE `stock-trading-498512.state.expected_scheduled_query_versions`
+  ADD COLUMN IF NOT EXISTS expected_interval_hours INT64;
 
 MERGE `stock-trading-498512.state.expected_scheduled_query_versions` T
 USING (
   SELECT * FROM UNNEST([
-    STRUCT('embed_pending' AS sq_name, 'v2' AS expected_version, 'v2 -- body moved into ops.sp_sq_embed_pending wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16' AS git_note),
-    STRUCT('daily_freshness_check', 'v2', 'v2 -- body moved into ops.sp_sq_daily_freshness_check wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16'),
-    STRUCT('cadence_check', 'v5', 'v3, 2026-07-15 (same day as initial marker): v2 added the b3_trading_enabled_drift check (bigquery/64_b3_live_invariants.sql, Gap 13); v3 added the backup_per_table_row_drop check (bigquery/65_backup_per_table_health.sql, Gap 19). v4, 2026-07-16 (consolidated consumption-closure + resilience audit): added the ci_finding raise/auto-resolve block (bigquery/67_ci_findings_bridge.sql, CC-1); wired scheduled_query_version_drift / probe_funding_stalled / cash_flows_backfill_broken record-only warning checks (bigquery/63/62/68, CC-3+RES-4); added loop:research_quality_feedback to both constant_tuning_loop_heartbeat_missing dead-man UNNEST lists (LC-4 cadence_check portion); extended the #14 auto-age category list with immediate_action_flagged + process_scorecard_signal (CC-7). v5, 2026-07-16 (ARCH-1) -- body moved into ops.sp_sq_cadence_check wrapper (bigquery/75_scheduled_query_wrappers.sql); no check logic changed'),
-    STRUCT('integrity_check', 'v2', 'v2 -- body moved into ops.sp_sq_integrity_check wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16'),
-    STRUCT('safety_critical_dml_watch', 'v2', 'v2 -- body moved into ops.sp_sq_safety_critical_dml_watch wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16'),
-    STRUCT('daily_staging_cap_check', 'v2', 'v2 -- body moved into ops.sp_sq_daily_staging_cap_check wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16'),
-    STRUCT('backup_events_export', 'v2', 'v2 -- body moved into ops.sp_sq_backup_events_export wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16'),
-    STRUCT('ops_export', 'v2', 'v2 -- body moved into ops.sp_sq_ops_export wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16'),
-    STRUCT('delivery_canary', 'v2', 'v2 -- body moved into ops.sp_sq_delivery_canary wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16'),
-    STRUCT('restore_drill', 'v2', 'v2 -- body moved into ops.sp_sq_restore_drill wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16'),
-    STRUCT('fire_drill_order_guard', 'v2', 'v2 -- body moved into ops.sp_sq_fire_drill_order_guard wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16'),
-    STRUCT('fire_drill_alert_lifecycle', 'v2', 'v2 -- body moved into ops.sp_sq_fire_drill_alert_lifecycle wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16')
+    STRUCT('embed_pending' AS sq_name, 'v2' AS expected_version, 'v2 -- body moved into ops.sp_sq_embed_pending wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16' AS git_note, 24 AS expected_interval_hours),
+    STRUCT('daily_freshness_check', 'v3', 'v2 -- body moved into ops.sp_sq_daily_freshness_check wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16. v3, 2026-07-17 (MON STALENESS PART-3) -- RAISE predicate narrowed from all_green to the data-staleness component conjunction only (drops the open-critical-alerts echo term)', 24),
+    STRUCT('cadence_check', 'v6', 'v3, 2026-07-15 (same day as initial marker): v2 added the b3_trading_enabled_drift check (bigquery/64_b3_live_invariants.sql, Gap 13); v3 added the backup_per_table_row_drop check (bigquery/65_backup_per_table_health.sql, Gap 19). v4, 2026-07-16 (consolidated consumption-closure + resilience audit): added the ci_finding raise/auto-resolve block (bigquery/67_ci_findings_bridge.sql, CC-1); wired scheduled_query_version_drift / probe_funding_stalled / cash_flows_backfill_broken record-only warning checks (bigquery/63/62/68, CC-3+RES-4); added loop:research_quality_feedback to both constant_tuning_loop_heartbeat_missing dead-man UNNEST lists (LC-4 cadence_check portion); extended the #14 auto-age category list with immediate_action_flagged + process_scorecard_signal (CC-7). v5, 2026-07-16 (ARCH-1) -- body moved into ops.sp_sq_cadence_check wrapper (bigquery/75_scheduled_query_wrappers.sql); no check logic changed. v6, 2026-07-17 (MON): added ci_findings_bridge_stale (H2) + scheduled_query_stale beat-age (H5) record-only warnings and the unconditional b3_trading_enabled_drift monitor-health-history MERGE (M2, bigquery/79)', 24),
+    STRUCT('integrity_check', 'v2', 'v2 -- body moved into ops.sp_sq_integrity_check wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16', 24),
+    STRUCT('safety_critical_dml_watch', 'v3', 'v2 -- body moved into ops.sp_sq_safety_critical_dml_watch wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16. v3, 2026-07-17 (MON H4) -- INSERT-aware extension: flags INSERT on ops.trading_control / ops.arsenal_control / events.strategy_lifecycle (warning), CRITICAL on a spoofed manual halt-clear or an unknown-code lifecycle add', 6),
+    STRUCT('daily_staging_cap_check', 'v3', 'v2 -- body moved into ops.sp_sq_daily_staging_cap_check wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16. v3, 2026-07-17 (DEF-3) -- added the order_guard_verdict_mismatch recompute backstop', 24),
+    STRUCT('backup_events_export', 'v2', 'v2 -- body moved into ops.sp_sq_backup_events_export wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16', 24),
+    STRUCT('ops_export', 'v2', 'v2 -- body moved into ops.sp_sq_ops_export wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16', 24),
+    STRUCT('delivery_canary', 'v2', 'v2 -- body moved into ops.sp_sq_delivery_canary wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16', 168),
+    STRUCT('restore_drill', 'v2', 'v2 -- body moved into ops.sp_sq_restore_drill wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16', 744),
+    STRUCT('fire_drill_order_guard', 'v2', 'v2 -- body moved into ops.sp_sq_fire_drill_order_guard wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16', 744),
+    STRUCT('fire_drill_alert_lifecycle', 'v2', 'v2 -- body moved into ops.sp_sq_fire_drill_alert_lifecycle wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16', 744)
   ])
 ) S
 ON T.sq_name = S.sq_name
-WHEN MATCHED AND T.expected_version != S.expected_version THEN
-  UPDATE SET expected_version = S.expected_version, git_note = S.git_note, updated_ts = CURRENT_TIMESTAMP()
+-- WHEN MATCHED is unconditional so expected_interval_hours always syncs, but updated_ts is bumped ONLY on
+-- a real version change (IF guard) — the never_beat_overdue dead-man keys on updated_ts as its 7-day
+-- registry grace clock, and re-applying this file (or only an interval edit) must NOT reset that clock.
+WHEN MATCHED THEN
+  UPDATE SET expected_version = S.expected_version, git_note = S.git_note,
+             expected_interval_hours = S.expected_interval_hours,
+             updated_ts = IF(T.expected_version != S.expected_version, CURRENT_TIMESTAMP(), T.updated_ts)
 WHEN NOT MATCHED THEN
-  INSERT (sq_name, expected_version, git_note) VALUES (S.sq_name, S.expected_version, S.git_note);
+  INSERT (sq_name, expected_version, git_note, expected_interval_hours)
+  VALUES (S.sq_name, S.expected_version, S.git_note, S.expected_interval_hours);
 
 -- ===== state.scheduled_query_version_drift — latest reported version vs expected, per query =====
 CREATE OR REPLACE VIEW `stock-trading-498512.state.scheduled_query_version_drift` AS
@@ -78,6 +92,7 @@ WITH latest_beat AS (
 SELECT
   e.sq_name,
   e.expected_version,
+  e.expected_interval_hours,
   lb.last_reported_version,
   lb.last_beat_ts,
   COALESCE(lb.ever_reported_version, FALSE) AS monitored,
@@ -85,6 +100,21 @@ SELECT
     AND (lb.last_reported_version IS NULL
          OR TRIM(lb.last_reported_version) = ''
          OR lb.last_reported_version != e.expected_version) AS drift,
+  -- MON H5 (2026-07-17) beat-AGE dead-man. GRACE_FACTOR = 1.5 (a daily query tolerates one missed run
+  -- before flagging; weekly ~10.5d; monthly ~46d — the monthly restore_drill is additionally covered by
+  -- restore_stale's own >40d critical, so a generous grace here just avoids false fires on the backstop).
+  --   * stale_beat: a query that HAS beaten (monitored) but whose last beat is older than interval x grace
+  --     — it was running and silently stopped. NULL expected_interval_hours (unseeded) can never fire.
+  (COALESCE(lb.ever_reported_version, FALSE)
+   AND e.expected_interval_hours IS NOT NULL
+   AND lb.last_beat_ts < TIMESTAMP_SUB(CURRENT_TIMESTAMP(),
+                                       INTERVAL CAST(e.expected_interval_hours * 1.5 AS INT64) HOUR)) AS stale_beat,
+  --   * never_beat_overdue: a query registered (updated_ts) more than 7 days ago that has NEVER beaten —
+  --     the self-bootstrapping grace so a freshly-registered query stays quiet for a week (matching the
+  --     state.script_version_drift / automation_heartbeat convention: no alarm until first beat unless the
+  --     never-beat state itself persists past the grace window).
+  (NOT COALESCE(lb.ever_reported_version, FALSE)
+   AND e.updated_ts < TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)) AS never_beat_overdue,
   CURRENT_TIMESTAMP() AS checked_at
 FROM `stock-trading-498512.state.expected_scheduled_query_versions` e
 LEFT JOIN latest_beat lb ON lb.sq_name = e.sq_name;

@@ -121,7 +121,9 @@ def check_A():
     try:
         with open(trigger_ids_path, encoding="utf-8") as f:
             has_ops0 = '"OPS0"' in f.read()
-    except OSError as e:
+    except (OSError, ValueError) as e:
+        # ValueError catches UnicodeDecodeError (a non-UTF-8 file) — NOT an OSError subclass — so a
+        # corrupt trigger_ids.json reads as OPEN rather than crashing this fail-open probe (2026-07-17).
         return False, f"could not read ops/trigger_ids.json: {e}"
     if n and n > 0 and has_ops0:
         return True, f"ops.run_log has {n} completed OPS0 run(s); ops/trigger_ids.json has an OPS0 entry"
@@ -267,7 +269,9 @@ def main():
     try:
         with open(OWNER_ACTIONS_PATH, encoding="utf-8") as f:
             text = f.read()
-    except OSError as e:
+    except (OSError, ValueError) as e:
+        # ValueError catches a non-UTF-8 OWNER_ACTIONS.md (UnicodeDecodeError isn't an OSError) — the
+        # script's contract is to ALWAYS exit 0, never raise (2026-07-17 audit).
         print(f"verify_owner_actions: could not read {OWNER_ACTIONS_PATH}: {e}")
         return 0
 
@@ -300,7 +304,14 @@ def main():
             results.append((fence_id, "DONE", "already flipped — not re-checked (no auto-reopen)"))
             continue
 
-        passed, evidence = probe_fn()
+        # Guard the probe so a single raising probe can never abort the whole pass (leaving other
+        # fences unevaluated and the process exiting non-zero with a traceback) — the module's
+        # documented contract is fail-open / always-exit-0 (2026-07-17 audit).
+        try:
+            passed, evidence = probe_fn()
+        except Exception as e:
+            results.append((fence_id, "OPEN", f"probe raised (fail-open): {e}"))
+            continue
         if not passed:
             results.append((fence_id, "OPEN", evidence))
             continue

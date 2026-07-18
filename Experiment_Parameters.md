@@ -373,6 +373,17 @@ Each strategy's success or failure is ultimately determined at that strategy's t
 
 *Regime diversity.* If a strategy reaches its gate in under ~12 months of active trading, the gate evaluation reflects a narrower regime window than ideal; this does not invalidate the gate, but it does weaken the generalizability of any conclusion drawn at evaluation. The post-mortem (whether final or at-gate) should explicitly note what regimes were represented in that strategy's active sample.
 
+### Book-level NAV drawdown circuit-breaker — the versioned constant record (account-level; Rev 39, 2026-07-17)
+
+This is the versioned record `bigquery/23_trading_control.sql` points to for `state.book_drawdown_watch` — distinct from the per-strategy kill criteria above; it is an **account-level** breaker on total NAV, not a per-strategy trigger. Its live definition is `bigquery/78_book_drawdown_rebase_and_staleness_gate.sql` (supersedes 23's original).
+
+- **Measurement (flow-adjusted, Rev 39).** Drawdown is measured on **flow-neutral trading gain**, not raw NAV: `gain(t) = nav(t) − cumulative_net_external_flows(t)` (deposits +, withdrawals −, from `events.cash_flows`); `drawdown = (gain − running_peak_gain) / cumulative_net_flows`. A deposit raises NAV and cumulative flows equally, so it cannot ratchet the peak; a withdrawal cannot manufacture a phantom breach. When flows are constant this reproduces the old raw-NAV drawdown to within rounding.
+- **Two tiers (Rev 39 — rebased at the SGOV→VOO park cutover, which put ~97% of NAV into equity and made the old single −15% raw-NAV full-halt trip on an ordinary correction while freezing exits):**
+  - **`breach_soft` = drawdown ≤ −15%** → **entries-only pause** (via `state.entry_staging_allowed`). New-entry staging pauses; exit re-craft, per-strategy drawdown-kill terminations, and park cover are **unaffected**. A first-cut POLICY INVARIANT (not fitted to any trade sample), to be reviewed as the book grows.
+  - **`breach_hard` = drawdown ≤ −40%** → **full halt** (an AND-term in `state.trading_enabled` / `state.trading_enabled_mechanical`). The genuine-catastrophe / data-corruption backstop; a book collapse of this magnitude warrants a hard stop and owner review.
+- **`n_snapshots ≥ 5`** guard: fewer than five snapshots is insufficient peak history; defaults to no breach.
+- **History note.** Rev ≤38 used a single **−15% raw-NAV** threshold as a full-halt gate term. The Rev 39 rebase is the fix for whole-system-audit finding **C1 (2026-07-17)**: the SGOV-era constant was never re-reviewed at the VOO cutover. A **park-beta-adjusted** soft tier (measure drawdown in excess of what holding the park vehicle alone would explain) is a documented future refinement, deferred until VOO price history accrues; the flat flow-adjusted tiers above are the current live definition.
+
 ### Strategy termination and capital redistribution
 
 When a strategy terminates — by any kill trigger, gate failure, negative runaway-success review, or a **foundation-change-assessment "terminate" verdict** (including the annual A1/A2/A3 AI-edge review deleting a strategy whose edge has decayed) — its strategy portfolio value at termination ~~moves to SGOV~~ **moves into the park [Rev 38, owner directive, 2026-07-15] — SGOV historically, VOO from the 2026-07-15 cutover forward; see Operating_Protocols.md §13** and is **redistributed deterministically to surviving strategies, with no adversarial review.**

@@ -36,6 +36,17 @@ DATASET_FOLDERS = ("state", "perf", "analytics")   # folder name == BigQuery dat
 # Columns generated fresh on every evaluation (CURRENT_TIMESTAMP) — excluded from row compare.
 VOLATILE_COLS = {"checked_at"}
 
+# BigQuery error substrings that indicate a SCHEMA-SHAPED divergence rather than a transient/infra
+# hiccup. live_columns() already succeeded (auth + object existence proven), so a subsequent parity-
+# query error naming one of these is real drift `dbt parse` cannot catch — most commonly a dbt port
+# that lacks a column its live view has (`SELECT <col> FROM (compiled)` -> "Unrecognized name"), or a
+# column type present on both sides that EXCEPT DISTINCT can't compare (GEOGRAPHY/INTERVAL/RANGE ->
+# "cannot be used in set operations"). These FAIL CLOSED (see main()'s `errors`) instead of being
+# swallowed as a benign skip, which let schema drift pass green even in DBT_PARITY=block (2026-07-17
+# audit). A genuinely transient error (timeout, network, quota) matches none of these and still skips.
+SCHEMA_DRIFT_MARKERS = ("unrecognized name", "set operations", "not groupable",
+                        "no matching signature", "does not have a column")
+
 
 def bq(sql):
     """Run a read-only query and return a list of dict rows.
@@ -86,8 +97,21 @@ def compiled_models():
                     yield dataset, fn[:-4], f.read().strip().rstrip(";")
 
 
+def model_source_count():
+    """Number of dbt model SOURCE files under dbt/models/{state,perf,analytics} — the universe
+    compiled_models() should produce. Lets main() distinguish 'no models ported yet' (legitimately
+    OK when total==0) from 'sources exist but compile emitted nothing under COMPILED_ROOT' (a stale
+    path / renamed dbt project — breakage that must NOT report OK; 2026-07-17 audit)."""
+    n = 0
+    for dataset in DATASET_FOLDERS:
+        d = os.path.join("dbt", "models", dataset)
+        if os.path.isdir(d):
+            n += sum(1 for fn in os.listdir(d) if fn.endswith(".sql"))
+    return n
+
+
 def main():
-    diffs, skipped, checked, total = [], [], 0, 0
+    diffs, skipped, errors, checked, total = [], [], [], 0, 0
     for dataset, name, compiled in compiled_models():
         total += 1
         live = f"`{PROJECT}`.{dataset}.{name}"
@@ -114,18 +138,48 @@ def main():
             )[0]
             n_missing, n_extra = int(row["n_missing"]), int(row["n_extra"])
         except Exception as e:
-            skipped.append(f"{dataset}.{name} (query error: {e})")
+            # A parity-query error AFTER live_columns() succeeded is, for a schema-shaped cause, real
+            # drift (not a transient hiccup) — fail closed instead of swallowing it as a skip that
+            # lets the drift pass green (2026-07-17 audit). Anything else stays a tolerant skip.
+            if any(marker in str(e).lower() for marker in SCHEMA_DRIFT_MARKERS):
+                errors.append(f"{dataset}.{name} (parity query failed on a schema-shaped error — the "
+                              f"dbt port likely lacks a column its live view has, or a column type "
+                              f"can't be EXCEPT-compared: {e})")
+            else:
+                skipped.append(f"{dataset}.{name} (query error: {e})")
             continue
         checked += 1
         if n_missing or n_extra:
             diffs.append(f"{dataset}.{name}: dbt-only={n_missing} live-only={n_extra} rows")
 
-    print(f"dbt↔live parity: {checked} models compared, {len(skipped)} skipped, {len(diffs)} drifted.")
+    print(f"dbt↔live parity: {checked} models compared, {len(skipped)} skipped, "
+          f"{len(errors)} errored, {len(diffs)} drifted.")
     for s in skipped:
         print(f"  - skipped {s}")
+    for er in errors:
+        print(f"  ✗ NOT VERIFIED {er}")
     for d in diffs:
         print(f"  ✗ DRIFT {d}")
-    if total and checked == 0:
+    if total == 0:
+        # No compiled models discovered. That's legitimately OK only if nothing is ported yet;
+        # if model SOURCES exist, COMPILED_ROOT is stale/renamed/empty and reporting OK would be the
+        # same 'OK on zero real comparisons' vacuous pass the checked==0 guard below prevents, via a
+        # different cause (2026-07-17 audit).
+        if model_source_count() > 0:
+            print("\nPARITY NOT VERIFIED — model sources exist under dbt/models/ but 0 compiled models "
+                  "were found under COMPILED_ROOT (stale path / renamed dbt project / `dbt compile` "
+                  "emitted nothing). Run `dbt compile` from dbt/ before this check.")
+            return 1
+        print("OK: no dbt models ported yet (0 compiled, 0 sources) — nothing to compare.")
+        return 0
+    if errors:
+        # Checked BEFORE the generic checked==0 guard: a schema-shaped error is a more specific and
+        # more actionable finding than "everything was skipped", and it fails closed either way.
+        print("\nPARITY NOT VERIFIED — a parity query errored on a schema-shaped divergence (a dbt "
+              "model missing a live column, or an un-comparable column type). This is real drift "
+              "`dbt parse` cannot catch — reconcile the dbt model with its live view.")
+        return 1
+    if checked == 0:
         print("\nPARITY NOT VERIFIED — every compiled model was skipped (bq/auth failure?); "
               "refusing to report OK on zero comparisons.")
         return 1

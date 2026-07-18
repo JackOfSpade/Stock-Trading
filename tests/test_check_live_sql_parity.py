@@ -29,12 +29,13 @@ def test_parses_the_real_repo_without_crashing():
 
 def test_apply_order_last_file_wins_for_a_known_redefinition():
     final = clsp.find_final_definitions()
-    # bigquery/47 supersedes 34, which supersedes 23, for state.trading_enabled.
+    # bigquery/78 (2026-07-17 audit C1 + staleness-gate rebase) supersedes 47, which superseded 34,
+    # which superseded 23, for state.trading_enabled.
     _, _, source_file, _ = final[("state", "trading_enabled")]
-    assert source_file == "47_trading_enabled_resync.sql"
-    # bigquery/34 is still the final (unsuperseded) definition of trading_enabled_mechanical.
+    assert source_file == "78_book_drawdown_rebase_and_staleness_gate.sql"
+    # bigquery/78 also supersedes 34's state.trading_enabled_mechanical (same gate rebase).
     _, _, source_file2, _ = final[("state", "trading_enabled_mechanical")]
-    assert source_file2 == "34_alert_lifecycle.sql"
+    assert source_file2 == "78_book_drawdown_rebase_and_staleness_gate.sql"
 
 
 def test_embedded_format_string_create_statement_is_not_a_false_positive():
@@ -92,3 +93,69 @@ def test_normalize_tail_matches_repo_extraction_despite_live_trailing_comments()
 
 def test_collapse_normalizes_whitespace_for_comparison():
     assert clsp.collapse("SELECT   1\nFROM  bar") == "SELECT 1 FROM bar"
+
+
+def test_view_body_stops_at_a_following_non_compared_create(monkeypatch):
+    # 2026-07-17 audit: CREATE_STMT only recognizes VIEW/PROCEDURE/TABLE FUNCTION, so when one of
+    # those is followed by a top-level CREATE TABLE / scalar CREATE FUNCTION / CREATE MODEL /
+    # CREATE SCHEMA, the older boundary (CREATE_STMT.search) skipped past it and BLED that foreign
+    # DDL into the object's extracted body -> permanent false DRIFT. The boundary now stops at ANY
+    # top-level CREATE (NEXT_TOP_LEVEL).
+    txt = (
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.foo` AS\n"
+        "SELECT 1 AS x\n"
+        "FROM bar;\n"
+        "\n"
+        "CREATE TABLE IF NOT EXISTS `stock-trading-498512.ops.sink` (\n"
+        "  id INT64\n"
+        ");\n"
+    )
+    m = clsp.CREATE_STMT.search(txt)
+    body = clsp.extract_body(txt, m.start(), "VIEW")
+    assert body == "SELECT 1 AS x\nFROM bar"
+    assert "CREATE TABLE" not in body
+
+
+def test_procedure_body_stops_at_a_following_create_table(monkeypatch):
+    # Same boundary bug, PROCEDURE side: sp_log_run's body used to swallow the CREATE TABLE
+    # IF NOT EXISTS ops.alerts that follows its own END; (bigquery/10_observability.sql).
+    txt = (
+        "CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_foo`(x INT64)\n"
+        "BEGIN\n"
+        "  SELECT x;\n"
+        "END;\n"
+        "\n"
+        "CREATE TABLE IF NOT EXISTS `stock-trading-498512.ops.alerts` (\n"
+        "  id INT64\n"
+        ");\n"
+    )
+    m = clsp.CREATE_STMT.search(txt)
+    body = clsp.extract_body(txt, m.start(), "PROCEDURE")
+    assert body == "BEGIN\n  SELECT x;\nEND"
+    assert "CREATE TABLE" not in body
+
+
+def test_inline_as_select_header_is_not_sliced_by_a_column_alias(monkeypatch):
+    # 2026-07-17 audit: an inline `... AS SELECT` header (AS and SELECT on one line) with a later
+    # `expr AS\n` column alias used to make the old first-branch (`AS\s*\n`) match the alias instead
+    # of the header AS, dropping `SELECT ... AS` off the front. Using the first standalone AS fixes it.
+    txt = (
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.foo` AS SELECT\n"
+        "  a AS\n"
+        "  b\n"
+        "FROM t;\n"
+    )
+    m = clsp.CREATE_STMT.search(txt)
+    body = clsp.extract_body(txt, m.start(), "VIEW")
+    assert body.startswith("SELECT")
+    assert body == "SELECT\n  a AS\n  b\nFROM t"
+
+
+def test_no_object_in_the_real_tree_bleeds_a_foreign_create_into_its_body():
+    # Strong invariant guarding the boundary fix against regression: no extracted body may contain a
+    # column-0 CREATE (that would be a foreign DDL block bled in from a following statement).
+    import re
+    top = re.compile(r"^CREATE\b", re.MULTILINE)
+    final = clsp.find_final_definitions()
+    bled = [f"{ds}.{nm}" for (ds, nm), (_ot, _p, _src, body) in final.items() if top.search(body)]
+    assert bled == [], f"objects bleeding a foreign CREATE into their body: {bled}"

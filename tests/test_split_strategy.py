@@ -106,6 +106,28 @@ def test_split_no_headings_returns_whole_text_as_preamble():
     assert sections == []
 
 
+def test_split_ignores_hash_headings_inside_a_fenced_code_block():
+    # #14 (2026-07-17 audit): a column-0 '## ' line INSIDE a ``` fence is body, not a section
+    # boundary. Without fence tracking it split the code block across two slices and truncated the
+    # real section. Strategy.md sections are machine-authored (SL2) and may contain markdown examples.
+    text = (
+        "intro\n\n"
+        "## Real Section A\n"
+        "body a\n"
+        "```text\n"
+        "## looks like a heading but is inside a fence\n"
+        "```\n"
+        "more body a\n\n"
+        "## Real Section B\n"
+        "body b\n"
+    )
+    preamble, sections = ss.split(text)
+    assert [t for t, _ in sections] == ["Real Section A", "Real Section B"]
+    # Section A keeps its entire body — the fenced block AND the text after it.
+    assert "## looks like a heading but is inside a fence" in sections[0][1]
+    assert "more body a" in sections[0][1]
+
+
 # ---- build()/main(): end-to-end slice generation into a tmp_path OUTDIR --------------------------
 
 def test_main_writes_expected_files_with_expected_content_to_tmp_path(tmp_path, monkeypatch):

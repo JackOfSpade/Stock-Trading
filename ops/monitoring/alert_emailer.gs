@@ -31,7 +31,7 @@ const ALERT_RECIPIENT  = Session.getActiveUser().getEmail(); // self-email
 const ALERT_SENDER     = 'Stock-Trading Alerts';
 const SEVERITIES       = ['critical', 'warning']; // set to ['critical'] for criticals only
 const POLL_HOURS       = 2;                        // how often to check
-const ALERT_SCRIPT_VERSION = 'v1';                 // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep. Named ALERT_SCRIPT_VERSION (not SCRIPT_VERSION) because this file and weekly_report.gs share ONE Apps Script project's top-level scope -- a same-named const in both would throw a project-wide SyntaxError on the next paste (2026-07-14 audit finding).
+const ALERT_SCRIPT_VERSION = 'v2';                 // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep. Named ALERT_SCRIPT_VERSION (not SCRIPT_VERSION) because this file and weekly_report.gs share ONE Apps Script project's top-level scope -- a same-named const in both would throw a project-wide SyntaxError on the next paste (2026-07-14 audit finding).
 // LOOKBACK_HOURS bounds the notified_ts IS NULL scan. Was 48h — if the emailer itself is dead longer
 // than the lookback (revoked token / deleted trigger), alerts raised early in the outage permanently
 // keep notified_ts NULL and are never emailed by ANY code path on recovery (the webhook relay's window
@@ -271,7 +271,7 @@ function plainAlerts_(fresh, totalOpen) {
   const allTest = fresh.length > 0 && fresh.every(isTest_);
   let s = allTest
     ? `[TEST] Stock-Trading — alert-delivery self-test, no action needed:\n\n`
-    : `Stock-Trading — ${fresh.length} new unresolved alert(s) (${totalOpen} un-notified in the last ${LOOKBACK_LABEL}):\n\n`;
+    : `Stock-Trading — ${fresh.length} unresolved alert(s) (${totalOpen} un-notified in the last ${LOOKBACK_LABEL}):\n\n`;
   fresh.forEach(a => {
     const tag = isTest_(a) ? '[TEST] ' : (String(a.resolved) === 'true' ? '[AUTO-RESOLVED] ' : '');
     s += `[${a.severity.toUpperCase()}] ${tag}${a.source}/${a.category}: ${a.message}  (${fmtAlertTs_(a)})\n`;

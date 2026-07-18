@@ -58,6 +58,24 @@ CREATE_STMT = re.compile(
     re.MULTILINE,
 )
 
+# Boundary for extract_body: the NEXT top-level (column-0) CREATE of ANY kind ends the current
+# object's body. CREATE_STMT only recognizes the three object types this script COMPARES
+# (VIEW/PROCEDURE/TABLE FUNCTION), but bigquery/*.sql also carries top-level CREATE TABLE [IF NOT
+# EXISTS], scalar CREATE OR REPLACE FUNCTION, CREATE OR REPLACE MODEL, and CREATE SCHEMA between
+# comparable objects. Using CREATE_STMT itself as the end boundary let those foreign DDL blocks
+# BLEED into the preceding object's extracted body — 10 live objects mis-parsed into a permanent
+# false DRIFT that also fed the RES-3 self-heal candidate loop (2026-07-17 code-quality audit).
+# Matching any top-level CREATE keyword fixes it. The keyword list is deliberately RESTRICTED (not
+# a bare ^CREATE): a column-0 CREATE inside a procedure's BEGIN…END body — none exist today, the
+# EXECUTE IMMEDIATE literals in bigquery/17_restore_drill.sql are indented — could then only ever
+# truncate on a real DDL keyword, never on an arbitrary identifier that happens to begin a line.
+# Order matters: the two-word forms precede their one-word prefixes so alternation picks the longer.
+NEXT_TOP_LEVEL = re.compile(
+    r"^CREATE\s+(?:OR\s+REPLACE\s+)?"
+    r"(?:MATERIALIZED\s+VIEW|TABLE\s+FUNCTION|VIEW|PROCEDURE|TABLE|FUNCTION|MODEL|SCHEMA)\b",
+    re.MULTILINE,
+)
+
 
 def numbered_sql_files():
     """bigquery/NN_*.sql files in NUMERIC apply-order (not lexical — NN is zero-padded to 2 digits
@@ -96,8 +114,9 @@ def extract_body(txt, start, obj_type):
     """Given the file text and the start offset of a CREATE_STMT match, return the object's body:
     the preamble (CREATE ... AS / ... BEGIN) is dropped, keeping only what INFORMATION_SCHEMA's
     view_definition/routine_definition itself contains."""
-    # Find the end of this statement: the next top-level CREATE_STMT, or end of file.
-    next_m = CREATE_STMT.search(txt, start + 1)
+    # Find the end of this statement: the next top-level CREATE of ANY kind (NEXT_TOP_LEVEL — not
+    # just the three COMPARED object types), or end of file. See NEXT_TOP_LEVEL's comment.
+    next_m = NEXT_TOP_LEVEL.search(txt, start + 1)
     end = next_m.start() if next_m else len(txt)
     stmt = txt[start:end]
 
@@ -114,14 +133,14 @@ def extract_body(txt, start, obj_type):
             return None
         body = stmt[m.start():]
     else:  # VIEW / TABLE FUNCTION
-        # The first standalone " AS " after the CREATE line's closing backtick/paren. Split on the
-        # last-preceding-newline-terminated " AS" to avoid matching an "AS" inside a column alias
-        # on the same preamble line (rare in this codebase's style, but the split targets the AS
-        # that starts the SELECT/body, identified as the first "AS\n" or "AS " immediately
-        # followed by whitespace+SELECT/WITH on the next non-blank content).
-        m = re.search(r"\bAS\b\s*\n", stmt)
-        if not m:
-            m = re.search(r"\bAS\b(?=\s)", stmt)
+        # The first standalone "AS" (followed by whitespace) after the CREATE header — the AS that
+        # starts the SELECT/body. A column-alias "AS" can never appear textually before this header
+        # AS, so the first `\bAS\b(?=\s)` is always the header AS in both the end-of-line style
+        # (`… AS\n  SELECT`) and the inline style (`… AS SELECT`). An earlier variant preferred the
+        # first `AS\s*\n`, which on an inline `AS SELECT` header skipped to a later `col AS\n`
+        # column alias and sliced off the front of the SELECT; removing that branch is byte-
+        # identical across all live objects and closes that latent trap (2026-07-17 audit).
+        m = re.search(r"\bAS\b(?=\s)", stmt)
         if not m:
             return None
         body = stmt[m.end():]

@@ -57,6 +57,26 @@ def test_find_citations_matches_sql_style(tmp_path):
     assert ac.find_citations(str(f)) == [("DORMANT", "process_reliability")]
 
 
+def test_find_citations_matches_digit_bearing_loop_id(tmp_path):
+    # #4 (2026-07-17 audit): the loop-id class includes digits, so a citation to a loop id containing
+    # a digit (plausible given the D1/SL1-SL5/W5 routine namespace) is matched, not silently skipped
+    # (which would be a vacuous pass — a stale citation to such a loop never flagged).
+    f = tmp_path / "Claude_Task_Plan.md"
+    f.write_text(
+        "- **DORMANT per `ops/autonomy_levels.yaml`, loop `sl2_probe`.** Read the scorecard.\n"
+    )
+    assert ac.find_citations(str(f)) == [("DORMANT", "sl2_probe")]
+
+
+def test_cadence_heartbeat_loops_matches_digit_bearing_loop_id(tmp_path, monkeypatch):
+    # Twin parser: the cadence-heartbeat 'loop:<id>' extraction must also accept a digit-bearing id,
+    # or _check_cadence_heartbeat_coverage would false-positive a missing dead-man's switch for it.
+    f = tmp_path / "cadence_check.sql"
+    f.write_text("WHEN literal IN ('loop:sl2_probe','loop:process_reliability') THEN 1\n")
+    monkeypatch.setattr(ac, "CADENCE_SQL", str(f))
+    assert ac.cadence_heartbeat_loops() == {"sl2_probe", "process_reliability"}
+
+
 def test_find_citations_empty_on_reformat_is_caught(tmp_path):
     # A restructure that drops the "loop `<id>`" phrasing entirely (e.g. moves the loop id to a
     # separate sentence) must yield [] — main() then flags "expected >=1 ... citation ... found none"

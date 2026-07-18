@@ -321,12 +321,23 @@ WHERE is_active;
 -- any regime". SPY trend x VIX regime cross-product; a cell is COVERED by a strategy that DEMONSTRATED
 -- positive paper excess in it (measured, not forecast — 2.14 recency guard). is_gap biases SL1 toward
 -- zero-coverage cells and lets SL3's paper graduation fill a gap even with < k_regime positive cells.
+--
+-- H7 FIX (2026-07-17): the cell tokens are the IMMUTABLE strategy/01_shared_regime_vocabulary.md tokens
+-- (spy_trend IN UP/NEUTRAL/DOWN x vix_regime IN LOW/NORMAL/HIGH). The prior literals
+-- (UPTREND/RANGE/DOWNTREND x LOW_VIX/ELEVATED_VIX/HIGH_VIX) matched NO writer's regime_cell — SL3 stamps
+-- analytics.strategy_incubation_perf.regime_cell with the shared-vocab CONCAT(spy_trend,'/',vix_regime) —
+-- so the string-equality cov/gap-fill joins never matched and all 9 cells read is_gap=TRUE forever,
+-- biasing SL1's zero-coverage synthesis. scripts/check_roster_consistency.py R-J now asserts these tokens
+-- equal the strategy/01 vocabulary. Zero migration burden: analytics.strategy_incubation_perf is empty
+-- (0 rows, verified read-only 2026-07-17), so no already-written regime_cell strings need remapping. The
+-- ADOPTED-coverage measurement leg (measuring live-capital regime coverage) is a documented follow-on —
+-- it needs a technical-regime daily series that does not yet exist — and is deliberately NOT built here.
 -- ============================================================================
 CREATE OR REPLACE VIEW `stock-trading-498512.state.arsenal_regime_coverage` AS
 WITH cells AS (
-  SELECT trend, vix, CONCAT(trend, '/', vix) AS regime_cell
-  FROM UNNEST(['UPTREND','RANGE','DOWNTREND']) AS trend
-  CROSS JOIN UNNEST(['LOW_VIX','ELEVATED_VIX','HIGH_VIX']) AS vix
+  SELECT spy_trend, vix_regime, CONCAT(spy_trend, '/', vix_regime) AS regime_cell
+  FROM UNNEST(['UP','NEUTRAL','DOWN']) AS spy_trend
+  CROSS JOIN UNNEST(['LOW','NORMAL','HIGH']) AS vix_regime
 ),
 demonstrated AS (
   SELECT p.strategy_code, p.regime_cell, LOGICAL_OR(p.excess >= 0) AS positive_excess
@@ -343,7 +354,7 @@ cov AS (
   GROUP BY d.regime_cell
 )
 SELECT
-  c.regime_cell, c.trend, c.vix,
+  c.regime_cell, c.spy_trend, c.vix_regime,
   COALESCE(cov.covered_active_count, 0) AS covered_active_count,
   COALESCE(cov.covered_incubating_count, 0) AS covered_incubating_count,
   COALESCE(cov.covered_active_count, 0) = 0 AS is_gap
@@ -596,8 +607,13 @@ WHERE r.current_state = 'PAPER';
 -- !! RUNTIME OVERRIDE — this is NOT the live definition. bigquery/39_beta_adjusted_alpha.sql is applied
 -- AFTER this file and CREATE OR REPLACEs state.strategy_retirement_candidacy, folding a beta-adjusted
 -- suppression into edge_decay_signal + candidacy_fired (all thresholds copied verbatim; 39 also adds a
--- beta column and LEFT JOIN). At runtime 39's definition wins. ANY change below MUST be mirrored into
--- bigquery/39_beta_adjusted_alpha.sql or it is silently dead. No CI gate enforces this — sync by hand.
+-- beta column and LEFT JOIN). ANY change below MUST be mirrored into bigquery/39_beta_adjusted_alpha.sql
+-- or it is silently dead. No CI gate enforces this — sync by hand.
+-- SUPERSEDED FURTHER (2026-07-17, H3 fix): bigquery/81_arsenal_fixes.sql now CREATE OR REPLACEs this view
+-- AFTER 39 (LEFT JOIN perf.strategy_daily so zero-deployment ADOPTED A/C/E get a row + never_deployed_days,
+-- unblocking SL4; SUSTAINED trailing-63-day negative-excess count alongside the latest-row condition;
+-- 39's beta suppression PRESERVED verbatim). At runtime 81 wins, not 39 and not this block. Both this
+-- block and 39's are kept for DR apply-in-order reference only; retirement-candidacy semantics now live in 81.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_retirement_candidacy` AS
 WITH latest AS (
   SELECT strategy AS strategy_code, excess_vs_sgov, deployed_days

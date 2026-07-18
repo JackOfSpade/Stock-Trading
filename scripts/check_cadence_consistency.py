@@ -96,6 +96,25 @@ PERIOD_GRACE_WEEKLY = re.compile(r"DATE_ADD\(n\.week_start,\s*INTERVAL (\d+) DAY
 PERIOD_CLASSES = {"weekly_sun", "monthly_ftd", "quarterly_ftd", "annual_ftd"}
 DAILY_CLASSES = {"daily_trading", "daily_all"}
 
+# ---- check M (H1, whole-system deep audit 2026-07-17): the EVENING-slot daily cohort's SAME-DAY
+# DOUBLE-RUN GUARD copies must carry the noon-threshold clause. bigquery/12's midnight-crossing grace
+# can stamp a post-midnight prior-day run onto today's run_date; without counting ONLY completions
+# whose log_ts is in the real evening window, that mis-stamped early-AM completion cancels the genuine
+# evening run. D1/D2/D3/SL3 each carry a per-routine guard copy in Claude_Task_Plan.md (D2a has no
+# per-routine copy — its double-run risk is covered by D2's own guard, not a copy of its own). Each
+# copy's ops.run_log COUNT(*) query must therefore also filter
+# `AND DATETIME(log_ts,'America/Denver') >= DATETIME(<today...>, TIME '12:00:00')`.
+EVENING_DAILY_GUARD_IDS = ("D1", "D2", "D3", "SL3")
+# The guard query's stable prefix (D2's copy omits the ", America/Denver" qualifier on <today>, so the
+# run_date token is matched loosely), capturing what follows status='completed' up to the closing `.
+GUARD_QUERY_RE = {
+    rid: re.compile(
+        r"routine='%s' AND run_date=<today[^>]*> AND status='completed'(?P<after>[^`]{0,160})" % rid)
+    for rid in EVENING_DAILY_GUARD_IDS
+}
+GUARD_NOON_CLAUSE_RE = re.compile(
+    r"AND DATETIME\(log_ts,'America/Denver'\) >= DATETIME\(<today[^>]*>, TIME '12:00:00'\)")
+
 # ---- check J: bigquery/24's post-normalization STRUCT rows are ALWAYS fully labelled (both
 # `AS routine` and `AS monitor_class`) -- scripts/gen_routine_lists.py emits every row this way.
 PERIOD_WATCH_ROUTINE_ROW = re.compile(
@@ -220,9 +239,12 @@ def parse_period_watch_routines_sql():
 def parse_unnest_routine_ids(path):
     """Ids inside a `... UNNEST([ ... ]) AS routine` bracket (check K), `--` line comments stripped
     FIRST so an inline comment naming an id (e.g. "-- SL4 (rev ...)") can never be mistaken for a
-    quoted list entry. Returns None if `path` does not exist, or if no such bracket is found (both
-    treated as "skip this file's check", same convention as parse_period_grace_sql's file-absent
-    case) — main() distinguishes "file absent" from "bracket missing" in its own message."""
+    quoted list entry. Returns None if `path` does not exist OR if no such bracket is found. main()
+    DISTINGUISHES the two by os.path.exists: a file that is ABSENT skips check K silently (pre-
+    feature checkout), but a file that is PRESENT-but-unparseable FAILS check K loudly — otherwise a
+    reformat that breaks the regex (`AS  routine`, `UNNEST(ARRAY[...]`) would silently disarm the
+    only drift guard bigquery/31 and 59 have (2026-07-17 audit — the same regex-rot vacuous-pass
+    class checks A/D/E/J/L already fail loud on by returning an empty container, not None)."""
     if not os.path.exists(path):
         return None
     txt = SQL_LINE_COMMENT.sub("", open(path, encoding="utf-8").read())
@@ -416,7 +438,12 @@ def main():
     want_catchup_daily = {rid for rid, r in cad.items()
                           if r.get("catchup_safe") is True and r.get("monitor_class") in DAILY_CLASSES}
     have_catchup_daily = parse_unnest_routine_ids(CATCHUP_NOTIFY_SQL)
-    if have_catchup_daily is not None:
+    if have_catchup_daily is None and os.path.exists(CATCHUP_NOTIFY_SQL):
+        errors.append(
+            "bigquery/31_catchup_notify.sql exists but no `UNNEST([...]) AS routine` bracket could be "
+            "parsed — check K's catchup-safe daily drift guard is DISARMED (regex rot? e.g. a reformat "
+            "to `AS  routine` or `UNNEST(ARRAY[...]`). Restore a parseable bracket.")
+    elif have_catchup_daily is not None:
         have_set = set(have_catchup_daily)
         if have_set != want_catchup_daily:
             errors.append(
@@ -427,7 +454,12 @@ def main():
     want_catchup_period = {rid for rid, r in cad.items()
                            if r.get("catchup_safe") is True and r.get("monitor_class") in PERIOD_CLASSES}
     have_catchup_period = parse_unnest_routine_ids(CATCHUP_AUTOFIRE_SQL)
-    if have_catchup_period is not None:
+    if have_catchup_period is None and os.path.exists(CATCHUP_AUTOFIRE_SQL):
+        errors.append(
+            "bigquery/59_catchup_autofire.sql exists but no `UNNEST([...]) AS routine` bracket could be "
+            "parsed — check K's catchup-safe period drift guard is DISARMED (regex rot? e.g. a reformat "
+            "to `AS  routine` or `UNNEST(ARRAY[...]`). Restore a parseable bracket.")
+    elif have_catchup_period is not None:
         have_set = set(have_catchup_period)
         if have_set != want_catchup_period:
             errors.append(
@@ -568,6 +600,31 @@ def main():
                                   f"auto-merge-claude.yml's routine_re — RUNBOOK §38 marker-write "
                                   f"will silently skip this routine's commits (add it to the "
                                   f"routine_re alternation on the marker-write line)")
+
+    # ---- M. EVENING-slot daily SAME-DAY guard copies carry the noon-threshold clause (H1). ----
+    # Gated on the "SAME-DAY DOUBLE-RUN GUARD" sentinel being present at all, so a minimal test fixture
+    # / pre-feature checkout of Claude_Task_Plan.md skips silently — same convention as check L
+    # (parse_inventory_table returns None when the ROUTINE INVENTORY heading is absent).
+    plan_txt = open(PLAN, encoding="utf-8").read()
+    if "SAME-DAY DOUBLE-RUN GUARD" in plan_txt:
+        for rid in EVENING_DAILY_GUARD_IDS:
+            matches = list(GUARD_QUERY_RE[rid].finditer(plan_txt))
+            if not matches:
+                errors.append(f"{rid}: could not find its SAME-DAY DOUBLE-RUN GUARD `ops.run_log` "
+                              f"COUNT(*) query in Claude_Task_Plan.md — check M's H1 noon-threshold guard "
+                              f"is DISARMED for this routine (did the guard query change shape?)")
+                continue
+            for m in matches:
+                if not GUARD_NOON_CLAUSE_RE.search(m.group("after")):
+                    errors.append(
+                        f"{rid}: SAME-DAY DOUBLE-RUN GUARD copy is MISSING the noon-threshold clause "
+                        f"(H1) — an EVENING-slot daily routine (slot >= 16:00 MT) must count only "
+                        f"completions in the real evening window: append "
+                        f"`AND DATETIME(log_ts,'America/Denver') >= DATETIME(<today, America/Denver>, "
+                        f"TIME '12:00:00')` to its `status='completed'` COUNT(*) query, so a post-midnight "
+                        f"prior-day run mis-stamped onto today by bigquery/12's midnight-crossing grace "
+                        f"cannot cancel the genuine evening run (see the shared Observability guard's "
+                        f"CYCLE-AWARE VARIANT).")
 
     # ---- report ----
     if errors:

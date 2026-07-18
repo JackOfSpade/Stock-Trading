@@ -40,9 +40,22 @@ def slug(title: str) -> str:
 
 
 def split(text: str):
-    """Return (preamble, [(title, body_including_heading), ...]) split on top-level '## '."""
+    """Return (preamble, [(title, body_including_heading), ...]) split on top-level '## '.
+
+    A `## ` line INSIDE a fenced code block (``` or ~~~ at column 0) is body text, NOT a section
+    heading. Strategy.md sections are machine-authored (SISA SL2) and can carry markdown examples
+    with column-0 '## ' lines; treating one as a heading would split a code block across two slices
+    and silently truncate the real section (2026-07-17 audit). The current Strategy.md has no such
+    case, so this is byte-identical for today's tree — verify with `--check`."""
     lines = text.splitlines(keepends=True)
-    idx = [i for i, ln in enumerate(lines) if re.match(r"^## ", ln)]
+    idx = []
+    in_fence = False
+    for i, ln in enumerate(lines):
+        if re.match(r"^(```|~~~)", ln):
+            in_fence = not in_fence
+            continue
+        if not in_fence and re.match(r"^## ", ln):
+            idx.append(i)
     preamble = "".join(lines[: idx[0]]) if idx else text
     sections = []
     for n, start in enumerate(idx):
@@ -53,7 +66,7 @@ def split(text: str):
 
 
 def build():
-    with open(SRC) as f:
+    with open(SRC, encoding="utf-8") as f:
         text = f.read()
     preamble, sections = split(text)
     files = {"00_preamble.md": HEADER + preamble}
@@ -96,12 +109,18 @@ def main(argv):
     drift = []
     for name, content in files.items():
         path = os.path.join(OUTDIR, name)
-        existing = open(path).read() if os.path.exists(path) else None
+        # Explicit encoding on every open (HEADER carries a U+2014 em-dash and Strategy.md is
+        # non-ASCII) so a stripped-locale runner doesn't crash on locale.getpreferredencoding().
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as f:
+                existing = f.read()
+        else:
+            existing = None
         if check:
             if existing != content:
                 drift.append(name)
         else:
-            with open(path, "w") as f:
+            with open(path, "w", encoding="utf-8") as f:
                 f.write(content)
     orphans = find_orphans(files)
     if check:
