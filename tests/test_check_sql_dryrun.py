@@ -69,3 +69,62 @@ def test_syntax_wins_over_tolerate_when_both_present():
     # Parse failures surface before authorization, but be explicit: a syntax marker must win.
     msg = "Syntax error: unexpected keyword; also the user does not have permission"
     assert csd.classify(1, msg) == "syntax"
+
+
+# ---- is_template(): fill-in-the-blanks files are unparseable BY DESIGN --------------------------
+# 2026-07-18, first full-repo sweep (82 files): the ONLY "syntax error" was
+# bigquery/56_park_policy_voo_manual_cutover_TEMPLATE.sql, whose header says "TEMPLATE, NOT
+# auto-applied ... fill in the 5 placeholders below" and which carries literal <TRANSFER_DATE>
+# markers. BigQuery rejects it with `Unexpected "<"` — correctly. Blocking CI on it is a false
+# positive AND a latent landmine: the path-gated CI step only sees the file once someone edits it
+# (even a comment), so the build would red on a file that is correct by design.
+
+
+def test_template_files_are_recognised():
+    assert csd.is_template("bigquery/56_park_policy_voo_manual_cutover_TEMPLATE.sql") is True
+    assert csd.is_template("56_park_policy_voo_manual_cutover_TEMPLATE.sql") is True
+    # case-insensitive on the suffix
+    assert csd.is_template("bigquery/99_thing_template.sql") is True
+
+
+def test_ordinary_sql_files_are_not_treated_as_templates():
+    # The guard must be narrow: a normal file must still be dry-run and still be able to FAIL.
+    for path in ("bigquery/34_alert_lifecycle.sql",
+                 "bigquery/78_book_drawdown_rebase_and_staleness_gate.sql",
+                 "bigquery/03_twr_engine.sql",
+                 "bigquery/template_helpers.sql"):        # 'template' not as the _TEMPLATE suffix
+        assert csd.is_template(path) is False, path
+
+
+def test_template_detection_is_filename_based_not_placeholder_based():
+    # Deliberate design choice: a <PLACEHOLDER>-marker regex would also match BigQuery's own type
+    # syntax (ARRAY<STRING>, STRUCT<a INT64>) and would silently skip REAL files. Pin that a file
+    # containing such type syntax in its NAME-less form is never auto-skipped.
+    assert csd.is_template("bigquery/40_options_marks.sql") is False
+
+
+def test_main_skips_templates_without_failing(monkeypatch, capsys):
+    # A template-only invocation must exit 0, and must PRINT the skip (never silent — a template must
+    # not be able to hide breakage).
+    monkeypatch.setattr(csd, "canary_ok", lambda: True)
+    called = []
+    monkeypatch.setattr(csd, "_bq_dry_run", lambda sql_path: called.append(sql_path) or (0, "ok"))
+    rc = csd.main(["check_sql_dryrun.py", "bigquery/56_x_TEMPLATE.sql"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert called == [], "a template must never be sent to bq --dry_run"
+    assert "skipped" in out and "TEMPLATE" in out
+
+
+def test_main_still_blocks_a_real_syntax_error_alongside_a_template(monkeypatch, capsys):
+    # The skip must not become a hole: a genuine syntax error in a NON-template file still blocks,
+    # even when a template rides along in the same invocation.
+    monkeypatch.setattr(csd, "canary_ok", lambda: True)
+
+    def fake(sql_path):
+        return (1, 'Error in query string: Syntax error: Unexpected "(" at [21:18]')
+    monkeypatch.setattr(csd, "_bq_dry_run", fake)
+    rc = csd.main(["check_sql_dryrun.py", "bigquery/56_x_TEMPLATE.sql", "bigquery/34_real.sql"])
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert "34_real.sql" in out and "SYNTAX ERROR" in out

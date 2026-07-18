@@ -1,0 +1,144 @@
+name: BigQuery SQL full dry-run sweep
+
+# WHY THIS EXISTS (2026-07-18). ci.yml's `sql-validate` job is PATH-GATED: it dry-runs only the
+# bigquery/*.sql files CHANGED in a push. That is the right default (it bounds BigQuery dry-run job
+# volume — see dbt_parity.py's §6 quota note), but it means a file that never changes is never parsed.
+#
+# That gap was not theoretical. The gate landed 2026-07-17; on 2026-07-18 a comment-only edit to
+# bigquery/34_alert_lifecycle.sql pulled it into the changed set for the FIRST time and it immediately
+# failed with "concatenated string literals must be separated by whitespace or comments" — three
+# pre-existing '' apostrophe mis-escapes (34 x2, 63 x1) that had been sitting unparsed. Each file aborts
+# at its FIRST bad literal, so 34's ops.sp_auto_resolve_alerts and BOTH trading_enabled views, and 63's
+# ALTER TABLE, would silently never have applied during a DR rebuild. Nothing would have caught them
+# until someone happened to touch those files.
+#
+# The first full-repo sweep (82 files) found exactly one other "error", and it was a FALSE positive:
+# bigquery/56_..._TEMPLATE.sql is unparseable by design (literal <TRANSFER_DATE> placeholders), now
+# skipped by check_sql_dryrun.py's is_template().
+#
+# WHY A SWEEP IS STILL NEEDED once the baseline is clean: a clean file does not rot on its own, and any
+# EDIT to it re-triggers the path-gated CI job — so in steady state the incremental gate is sufficient.
+# This exists for the windows where that reasoning breaks: the gate skips silently when the WIF vars are
+# absent or RUN_SQL_DRYRUN=off, a file can land during such a window, and a future BigQuery parser change
+# can newly reject SQL that parsed before. Weekly, off-peak, it turns "we assume the unchanged files are
+# fine" into "we re-confirm it every Sunday" — the same dead-man discipline the rest of ops/ uses.
+#
+# Read-only: `bq query --dry_run` never executes anything, and this uses the SAME read-only WIF SA as
+# ci.yml's gate (dataViewer + jobUser). No DDL grant, no writes.
+
+on:
+  schedule:
+    - cron: '15 9 * * 0'   # weekly, Sunday ~09:15 UTC — after owner-actions-verify (08:20 Sun), clear
+                           # of the daily offsite-backup (06:00) / live-sql-parity (07:10) crons
+  workflow_dispatch: {}    # manual sweep escape hatch
+
+permissions:
+  contents: read
+  id-token: write          # Workload Identity Federation (no downloadable key)
+  issues: write            # durable finding record when the webhook is unconfigured
+
+jobs:
+  sweep:
+    name: Dry-run every bigquery/*.sql (not just changed)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: WIF-present + not-disabled guard
+        id: guard
+        run: |
+          if [ "${{ vars.RUN_SQL_DRYRUN }}" != "off" ] \
+             && [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] \
+             && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::SQL dry-run sweep skipped — set the WIF vars (read-only SA) to enable it (RUN_SQL_DRYRUN=off suppresses)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-python@v5
+        if: steps.guard.outputs.skip == 'false'
+        with:
+          python-version: '3.11'
+
+      - name: GCP WIF auth + gcloud setup (provides the bq CLI)
+        if: steps.guard.outputs.skip == 'false'
+        uses: ./.github/actions/gcp-wif-auth
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
+
+      - name: Dry-run ALL bigquery/*.sql — BLOCK on a syntax error
+        id: sweep
+        if: steps.guard.outputs.skip == 'false'
+        run: |
+          set -uo pipefail
+          gcloud config set project stock-trading-498512 >/dev/null 2>&1 || true
+          mapfile -t files < <(printf '%s\n' bigquery/*.sql bigquery/scheduled_queries/*.sql)
+          existing=()
+          for f in "${files[@]}"; do [ -f "$f" ] && existing+=("$f"); done
+          if [ "${#existing[@]}" -eq 0 ]; then
+            echo "::warning::no bigquery/*.sql found — checkout or path layout changed?"
+            echo "result=ok" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "Sweeping ${#existing[@]} file(s)…"
+          if python scripts/check_sql_dryrun.py "${existing[@]}" | tee /tmp/sweep.txt; then
+            echo "result=ok" >> "$GITHUB_OUTPUT"
+          else
+            msg="🧩 Stock-Trading SQL sweep FAILED — a bigquery/*.sql file has a PARSE error and would abort on apply (DR rebuild / re-apply). This file did not change recently, so ci.yml's path-gated gate never saw it. $(grep -c 'SYNTAX ERROR (blocks merge)' /tmp/sweep.txt || true) file(s) affected; see the run log."
+            echo "::error::$msg"
+            scripts/notify_webhook.sh "$msg" || true
+            printf '%s\n\n' "$msg" > /tmp/finding.md
+            cat /tmp/sweep.txt >> /tmp/finding.md
+            echo "result=finding" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+      - name: Open/refresh finding issue (dedup)
+        # always(): the sweep step above exit-1s on a finding, which would otherwise skip this step —
+        # but the durable record is the whole point when ALERT_WEBHOOK_URL is unset.
+        if: always() && steps.guard.outputs.skip == 'false' && steps.sweep.outputs.result == 'finding'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          {
+            echo "**FINDING** — a \`bigquery/*.sql\` file fails \`bq query --dry_run\` with a parse-class error."
+            echo
+            echo "It would abort at parse time on apply, so every statement AFTER the bad one in that file"
+            echo "would silently never apply (a DR rebuild would come up quietly incomplete). Because the file"
+            echo "has not changed recently, ci.yml's path-gated \`sql-validate\` job never dry-ran it."
+            echo
+            echo '```'
+            cat /tmp/sweep.txt 2>/dev/null || true
+            echo '```'
+            echo
+            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } > /tmp/body.md
+
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
+            --jq '[.[] | select(.title|startswith("⚠️ BigQuery SQL sweep:"))][0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body-file /tmp/body.md
+            echo "Updated existing issue #$existing."
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "⚠️ BigQuery SQL sweep: parse error in an unchanged file" \
+              --body-file /tmp/body.md
+          fi
+
+      - name: Close finding issue if resolved
+        if: always() && steps.guard.outputs.skip == 'false' && steps.sweep.outputs.result == 'ok'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
+            --jq '[.[] | select(.title|startswith("⚠️ BigQuery SQL sweep:"))][0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" \
+              --body "Resolved — the full sweep now parses every \`bigquery/*.sql\` cleanly. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            gh issue close "$existing" --repo "$GITHUB_REPOSITORY"
+            echo "Closed issue #$existing."
+          fi

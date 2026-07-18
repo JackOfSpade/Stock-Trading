@@ -28,6 +28,7 @@ Usage:  python scripts/check_sql_dryrun.py <file.sql> [<file.sql> ...]
 Requires the `bq` CLI authed (WIF in CI; local gcloud otherwise). Exit 0 = no syntax errors (or nothing
 to check); exit 1 = at least one file has a syntax error, or (in --strict) the canary self-check failed.
 """
+import os
 import subprocess
 import sys
 
@@ -91,8 +92,34 @@ def canary_ok():
     return classify(rc, out) == "syntax"
 
 
+def is_template(path):
+    """True for a fill-in-the-blanks TEMPLATE file, which is UNPARSEABLE BY DESIGN.
+
+    bigquery/56_park_policy_voo_manual_cutover_TEMPLATE.sql is the live example: its header states
+    "TEMPLATE, NOT auto-applied ... BEFORE running: fill in the 5 placeholders below", and it carries
+    literal <TRANSFER_DATE> / <SGOV_SELL_SHARES> markers the operator substitutes before the one-time
+    manual run. BigQuery rejects it with `Syntax error: Unexpected "<"` — correctly, because a template
+    is not valid SQL until filled in. Blocking CI on that is a FALSE POSITIVE, and a latent landmine: it
+    stays invisible until someone edits the file (even a comment), at which point the path-gated CI step
+    picks it up and reds the build on a file that is correct by design. Found 2026-07-18 by the first
+    full-repo sweep (82 files: 81 clean, this the only "error").
+
+    Detected by the `_TEMPLATE.sql` filename convention rather than by scanning for <PLACEHOLDER>
+    markers on purpose: BigQuery's own type syntax (ARRAY<STRING>, STRUCT<a INT64>) matches any
+    reasonable placeholder regex, so a marker-based rule would silently skip real files. The filename is
+    an explicit, greppable opt-out, and skips are PRINTED (never silent) so a template cannot hide
+    breakage.
+    """
+    return os.path.basename(path).upper().endswith("_TEMPLATE.SQL")
+
+
 def main(argv):
     files = [a for a in argv[1:] if not a.startswith("-")]
+    templates = [f for f in files if is_template(f)]
+    files = [f for f in files if not is_template(f)]
+    for f in templates:
+        print(f"  - skipped (fill-in-the-blanks TEMPLATE — unparseable until placeholders are "
+              f"substituted; not part of the apply-in-order sequence): {f}")
     if not files:
         print("check_sql_dryrun: no bigquery/*.sql files to validate — nothing to do.")
         return 0
