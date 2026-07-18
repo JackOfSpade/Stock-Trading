@@ -1196,20 +1196,37 @@ see the corrected `ops/spikes/agent-sdk-orchestration-2026Q3.md` (c) for detail.
   resolve itself via the document's own existing version-change protocol at the next Q3/A1 cycle; no
   action needed from you specifically.
 
-- **The repo IS the deploy mechanism — "in the repo but not applied live" is NOT a stable state**
-  (observed directly 2026-07-18, live-sql-parity remediation pass). A session set out to decide
-  *whether* to apply `bigquery/48_cadence_monitor_unbounded.sql` (which removes a 14-day window from
-  the FATAL `ops.sp_assert_deps` gate) and deliberately held it back pending review of one risky
-  caller/dep pair. While that deliberation was happening, the **D3 LIVE-SQL-PARITY SELF-HEAL loop**
-  (`bigquery/69_live_sql_parity_selfheal.sql`) applied it anyway — converging live to the repo, as
-  designed. `ops.sp_score_theater` healed in the same window. Measured before/after: parity went
-  5 → 3 → 0 mismatched over ~20 minutes with only ONE of those applies being human/agent-initiated.
+- **Live BigQuery changed mid-session from an OUT-OF-BAND apply — re-measure before concluding
+  anything about drift** (observed 2026-07-18, live-sql-parity remediation pass). A session was
+  deciding *whether* to apply `bigquery/48_cadence_monitor_unbounded.sql` (removes the 14-day window
+  from the FATAL `ops.sp_assert_deps` gate) and deliberately held it back pending review of one risky
+  caller/dep pair. Between two parity runs ~50 minutes apart, live changed underneath it: file 48 was
+  applied (both its objects) and `ops.sp_score_theater` was updated to the repo version. Parity read
+  5 → 3 → 0 mismatched across the window, and two *phantom* drifts (`state.ci_findings_open`,
+  `state.referee_promotion_readiness`) appeared and vanished between consecutive runs while the applies
+  were in flight.
 
-  **The lesson, for future sessions: you cannot "decline to apply" a definition that is sitting in
-  `bigquery/*.sql` as the final-effective definition.** The self-heal will land it within a day. If a
-  change genuinely should not go live, it must be REMOVED from / superseded in the repo, not merely
-  left un-applied. Reasoning about "should I apply this?" for a file already in the repo is reasoning
-  about something the architecture has already decided.
+  **Attribution (verified via `region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT`):** all the DDL ran as
+  SCRIPT jobs under `jacksterwu@gmail.com` at ~06:52 MT — i.e. an owner-credentialed session running
+  the files directly, which is this repo's *documented normal* operating model (CLAUDE.md: "out-of-band
+  mutation via MCP/console **is** the operating model"). Ruled out by evidence, NOT assumption:
+  CI/WIF (those run as `gh-ci-runner@`, not the owner address), any routine (`ops.run_log` has **zero**
+  rows for 2026-07-18 — nothing ran), `scripts/check_live_sql_parity.py` itself (read-only; it only
+  SELECTs and optionally writes a JSON file), and the D3 self-heal (see next item).
+
+  **Lesson: a drift reading taken while an apply is in flight is a snapshot, not a fact.** Re-run
+  before diagnosing, and check `JOBS_BY_PROJECT` for `user_email` + `statement_type` before attributing
+  a live change to any automated loop — the answer is often "a human/agent applied it out of band."
+
+- **`ops.parity_selfheal_log` is EMPTY — D3's LIVE-SQL-PARITY SELF-HEAL has never actually executed
+  an apply** (verified 2026-07-18: zero rows since the table was created 2026-07-16 by
+  `bigquery/69_live_sql_parity_selfheal.sql`). Note this is *not* obviously a fault: `bigquery/69`'s
+  header describes the loop as reading candidates from `ops/monitoring/live_sql_parity_findings.json`,
+  but that file and the `--json-out` delivery path were **deliberately removed on 2026-07-17**
+  (OWNER_ACTIONS §I, option 3) in favour of the `ops.ci_findings` / `state.ci_findings_open` bridge —
+  so `69`'s prose is stale relative to the wiring it documents. Worth a look next time D3 is touched:
+  confirm the self-heal step actually reads `state.ci_findings_open` and that a real drift produces a
+  `parity_selfheal_log` row, because right now there is no positive evidence the loop has ever fired.
 
 - **Residual, low-probability edge case now live: `SL5 <- [AR_orc]` under the un-bounded gate.**
   With `bigquery/48` now live, `ops.sp_assert_deps`' "monitored" test has no rolling window, so a dep
