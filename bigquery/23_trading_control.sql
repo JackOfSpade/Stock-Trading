@@ -141,6 +141,14 @@ FROM ctrl, health, dd;
 -- ASYMMETRY (manual review before clearing an AUTO halt) is an operator-procedure discipline, not
 -- something this procedure enforces, since an auto halt_all=TRUE row is itself just data; clearing
 -- it requires a NEW manual-mode row, which only a human/console action produces.
+-- SUPERSEDED BY bigquery/85_gate_selfheal_repo_catchup.sql (2026-07-18). 85 is identical to the body
+-- below EXCEPT that it adds the 2026-07-17 stale-echo self-heal resolver (a best-effort
+-- ops.sp_auto_resolve_alerts() call) ahead of the halt decision — a fix that went live 2026-07-17 but
+-- was never written back here, so the repo silently disagreed with production until the live-sql-parity
+-- comparator was fixed 2026-07-18. Kept here unmodified for apply-in-order reference only. DO NOT
+-- re-apply this statement live in isolation: it would REVERT the resolver and reintroduce the D2a
+-- whole-day trading halt on an already-healed `staleness` critical (same accident class as bigquery/47's
+-- ROOT CAUSE).
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_assert_trading_enabled`(in_routine STRING)
 BEGIN
   DECLARE v_enabled BOOL;

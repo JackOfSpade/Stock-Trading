@@ -83,6 +83,12 @@ FROM ctrl, health, dd;
 -- ===== ops.sp_assert_trading_enabled_mechanical — FATAL pre-stage gate for D2a's mechanical-only
 -- actions (sweep/cover + persist-and-wait re-craft). Same shape/behavior as
 -- ops.sp_assert_trading_enabled, reading the mechanical view above instead. =====
+-- SUPERSEDED BY bigquery/85_gate_selfheal_repo_catchup.sql (2026-07-18) — same reason and same
+-- direction as the banner on ops.sp_assert_trading_enabled in bigquery/23: 85 adds the 2026-07-17
+-- stale-echo self-heal resolver that went live but was never written back to the repo. This procedure
+-- is the one whose ROOT INCIDENT the resolver fixed (D2a halted trading for a whole day on an
+-- already-healed `staleness` critical). Kept unmodified for apply-in-order reference only; DO NOT
+-- re-apply in isolation — that reverts the resolver.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_assert_trading_enabled_mechanical`(in_routine STRING)
 BEGIN
   DECLARE v_enabled BOOL;
