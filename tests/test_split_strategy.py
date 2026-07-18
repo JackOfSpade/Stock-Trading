@@ -214,3 +214,66 @@ def test_find_orphans_empty_when_everything_current_or_hand_maintained(tmp_path,
     (outdir / "README.md").write_text("hand-maintained")
     monkeypatch.setattr(ss, "OUTDIR", str(outdir))
     assert ss.find_orphans({"00_preamble.md": "..."}) == []
+
+
+# ---- slug() edge cases: empty-title fallback + anchored strategy-letter rule -------------------
+
+def test_slug_all_punctuation_title_falls_back_to_section():
+    # slug()'s `return s or "section"` guard: an all-punctuation title normalizes to '' -> 'section'
+    # (otherwise build() would emit a name like '01_.md').
+    assert ss.slug("***") == "section"
+    assert ss.slug("###") == "section"
+
+
+def test_slug_strategy_letter_rule_is_anchored_to_the_title_start():
+    # Anchored (^strategy...): a REAL title that starts with the phrase still collapses to
+    # 'strategy_<letter>'; a title that merely MENTIONS it mid-line is slugified in full, not
+    # truncated. Byte-identical for every current heading (all real ones start with the phrase).
+    assert ss.slug("Strategy A: Momentum Breakout") == "strategy_a"
+    assert ss.slug("Notes on Strategy A: results") == "notes_on_strategy_a_results"
+
+
+# ---- split(): the ~~~ fence alternative (only ``` was covered before) -------------------------
+
+def test_split_ignores_hash_headings_inside_a_tilde_fenced_block():
+    text = (
+        "intro\n\n"
+        "## Real Section A\n"
+        "body a\n"
+        "~~~\n"
+        "## looks like a heading but is inside a ~~~ fence\n"
+        "~~~\n"
+        "more body a\n\n"
+        "## Real Section B\n"
+        "body b\n"
+    )
+    _, sections = ss.split(text)
+    assert [t for t, _ in sections] == ["Real Section A", "Real Section B"]
+    assert "inside a ~~~ fence" in sections[0][1]
+    assert "more body a" in sections[0][1]
+
+
+# ---- main(): orphan handling driven end-to-end (find_orphans was only unit-tested in isolation) --
+
+def test_main_check_flags_orphan_and_returns_1(tmp_path, monkeypatch, capsys):
+    src = tmp_path / "Strategy.md"
+    src.write_text("# T\n\nIntro.\n\n## Sec\nbody\n")
+    outdir = tmp_path / "strategy"
+    monkeypatch.setattr(ss, "SRC", str(src))
+    monkeypatch.setattr(ss, "OUTDIR", str(outdir))
+    ss.main([])                                              # generate slices
+    (outdir / "99_stale.md").write_text("stale leftover from a renamed section")
+    assert ss.main(["--check"]) == 1
+    assert "ORPHANED slice file(s)" in capsys.readouterr().err
+
+
+def test_main_non_check_warns_about_orphan_but_returns_0(tmp_path, monkeypatch, capsys):
+    src = tmp_path / "Strategy.md"
+    src.write_text("# T\n\nIntro.\n\n## Sec\nbody\n")
+    outdir = tmp_path / "strategy"
+    monkeypatch.setattr(ss, "SRC", str(src))
+    monkeypatch.setattr(ss, "OUTDIR", str(outdir))
+    ss.main([])
+    (outdir / "99_stale.md").write_text("stale leftover")
+    assert ss.main([]) == 0
+    assert "WARNING: orphaned slice file(s)" in capsys.readouterr().out

@@ -136,6 +136,15 @@ def test_fmt_ts_space_utc_suffixed_timestamp_renders_same_as_z_suffixed():
     assert utc_result == z_result
 
 
+def test_fmt_ts_cast_as_string_plus00_wire_form_renders_localized():
+    # The CAST(... AS STRING) wire form the main() SELECTs now emit ("...+00", verified in
+    # alert_relay.py) must localize, not fall through to the "(UTC)" branch.
+    z_result = gd.fmt_ts("2026-07-04T12:00:00Z", "America/Denver")
+    cast_result = gd.fmt_ts("2026-07-04 12:00:00.000000+00", "America/Denver")
+    assert cast_result == z_result
+    assert "(UTC)" not in cast_result
+
+
 # ---- table(): HTML escaping -----------------------------------------------------------------
 
 def test_table_no_rows():
@@ -236,3 +245,48 @@ def test_page_header_escapes_project(monkeypatch, tmp_path):
     monkeypatch.setattr(gd, "OUT", str(out))
     gd.main()
     assert "<script>alert(1)</script>" not in out.read_text()
+
+
+# ---- get_user_tz(): happy path + NULL/empty/error fallback to Denver ------------------------
+#      (a None return would make fmt_ts(v, None) raise TypeError and crash the render loop.)
+
+def test_get_user_tz_happy_path(monkeypatch):
+    monkeypatch.setattr(gd, "q", lambda sql: [{"tz": "Europe/London"}])
+    assert gd.get_user_tz() == "Europe/London"
+
+
+def test_get_user_tz_null_value_falls_back_to_denver(monkeypatch):
+    monkeypatch.setattr(gd, "q", lambda sql: [{"tz": None}])
+    assert gd.get_user_tz() == "America/Denver"
+
+
+def test_get_user_tz_empty_rows_falls_back_to_denver(monkeypatch):
+    monkeypatch.setattr(gd, "q", lambda sql: [])
+    assert gd.get_user_tz() == "America/Denver"
+
+
+def test_get_user_tz_error_falls_back_to_denver(monkeypatch):
+    def _boom(sql):
+        raise RuntimeError("bq down")
+    monkeypatch.setattr(gd, "q", _boom)
+    assert gd.get_user_tz() == "America/Denver"
+
+
+# ---- main(): a non-FileNotFoundError OSError from the bq spawn now yields the clean diagnostic
+#      (the except tuple was broadened FileNotFoundError -> OSError, 2026-07-17) -----------------
+
+def test_main_permission_error_yields_clean_message_not_traceback(monkeypatch, capsys):
+    def _boom(cmd, **kw):
+        raise PermissionError(13, "Permission denied")   # OSError subclass, NOT FileNotFoundError
+    monkeypatch.setattr(gd.subprocess, "run", _boom)
+    assert gd.main() == 1
+    assert "Query failed" in capsys.readouterr().err
+
+
+def test_main_file_not_found_still_caught(monkeypatch, capsys):
+    # FileNotFoundError is an OSError subclass, so broadening the catch keeps this case working.
+    def _boom(cmd, **kw):
+        raise FileNotFoundError(2, "No such file: bq")
+    monkeypatch.setattr(gd.subprocess, "run", _boom)
+    assert gd.main() == 1
+    assert "Query failed" in capsys.readouterr().err

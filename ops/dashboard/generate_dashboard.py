@@ -83,7 +83,11 @@ def get_user_tz():
     America/Denver (never bare UTC) so a missing view or a fresh deploy still reads sensibly."""
     try:
         rows = q(f"SELECT tz FROM `{PROJECT}.state.user_tz`")
-        return rows[0]["tz"] if rows else "America/Denver"
+        # `... or "America/Denver"` coalesces a NULL/empty tz too (not just an empty result set): a
+        # None tz would otherwise reach fmt_ts, where ZoneInfo(None) raises TypeError and crashes the
+        # render loop (that TypeError is outside main()'s query-only except tuple). state.user_tz's
+        # view already COALESCEs NULL, so this is defense-in-depth for a schema change.
+        return (rows[0]["tz"] if rows else None) or "America/Denver"
     except Exception:
         return "America/Denver"
 
@@ -131,11 +135,22 @@ def main():
         nav = q(f"SELECT strategy,nav,available_funds,sizing_base_2pct,deployed_mv "
                 f"FROM `{PROJECT}.analytics.strategy_nav` ORDER BY strategy")
         gate = q(f"SELECT * FROM `{PROJECT}.state.gate_watch`")
-        alerts = q(f"SELECT alert_ts,severity,source,category,message FROM `{PROJECT}.ops.alerts` "
+        # CAST(... AS STRING) on the TIMESTAMP columns to match scripts/alert_relay.py's verified-good,
+        # deterministic wire form ("YYYY-MM-DD HH:MM:SS[.ffffff]+00") that fmt_ts is tested against —
+        # rather than relying on bq --format=json's default raw-TIMESTAMP rendering. ORDER BY on the
+        # same alias sorts chronologically (the zero-padded ISO string sorts lexically == temporally),
+        # the exact pattern alert_relay.py uses in production (2026-07-17 audit; parallel-refactor).
+        alerts = q(f"SELECT CAST(alert_ts AS STRING) AS alert_ts,severity,source,category,message "
+                   f"FROM `{PROJECT}.ops.alerts` "
                    f"WHERE NOT resolved ORDER BY alert_ts DESC LIMIT 20")
-        runs = q(f"SELECT routine,run_date,status,log_ts FROM `{PROJECT}.ops.run_log` "
+        runs = q(f"SELECT routine,run_date,status,CAST(log_ts AS STRING) AS log_ts "
+                 f"FROM `{PROJECT}.ops.run_log` "
                  f"ORDER BY log_ts DESC LIMIT 20")
-    except (subprocess.CalledProcessError, FileNotFoundError, RuntimeError, ValueError) as e:
+    except (subprocess.CalledProcessError, OSError, RuntimeError, ValueError) as e:
+        # OSError (broadened from FileNotFoundError) so ANY spawn-time OS error from the bq subprocess
+        # — a missing binary (FileNotFoundError), a non-executable one (PermissionError), a PATH entry
+        # that is a directory (IsADirectoryError), all OSError subclasses — yields the clean "Query
+        # failed" diagnostic + return 1, instead of an uncaught traceback (2026-07-17 audit).
         # CalledProcessError's default __str__ is just "Command '[...]' returned non-zero exit
         # status N" — it never includes bq's actual stderr diagnostic, even though check=True
         # already populated e.stderr with the real error text (2026-07-14 audit finding).
