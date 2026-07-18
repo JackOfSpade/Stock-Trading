@@ -308,12 +308,38 @@ def test_main_reports_drift_and_exits_1(monkeypatch, capsys):
 
 
 def test_main_skips_a_missing_live_object_without_reporting_drift(monkeypatch, capsys):
+    # A single missing-live object among otherwise-verified objects is a SKIP, not a DRIFT. (A second
+    # object that verifies cleanly keeps checked>0 so the checked==0 fail-closed guard doesn't fire —
+    # that guard only trips when NOTHING was verified.)
     monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py"])
-    monkeypatch.setattr(clsp, "find_final_definitions",
-                        lambda: {("state", "foo"): ("VIEW", "proj", "01.sql", "SELECT 1 AS x")})
-    monkeypatch.setattr(clsp, "live_definition", lambda *a: None)   # object not found live
-    assert clsp.main() == 0                                          # a lookup miss is a skip, not drift
+    monkeypatch.setattr(clsp, "find_final_definitions", lambda: {
+        ("state", "present"): ("VIEW", "proj", "01.sql", "SELECT 1 AS x"),
+        ("state", "gone"): ("VIEW", "proj", "02.sql", "SELECT 9 AS z"),
+    })
+
+    def fake_live(project, ds, nm, ot):
+        return None if nm == "gone" else "SELECT 1 AS x"   # 'present' matches; 'gone' not found live
+    monkeypatch.setattr(clsp, "live_definition", fake_live)
+    assert clsp.main() == 0                                  # 'present' verified clean; a lookup miss is a skip
     assert "no live object found" in capsys.readouterr().out
+
+
+def test_main_fails_closed_when_every_object_is_skipped(monkeypatch, capsys):
+    # 2026-07-17 parallel-refactor audit: a systemic live-read failure (every live_definition raises —
+    # WIF/auth broken) sends ALL objects to missing_live, checked stays 0. Reporting OK would be a
+    # vacuous green on zero comparisons that hides a completely broken gate; must fail closed instead.
+    monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py"])
+    monkeypatch.setattr(clsp, "find_final_definitions", lambda: {
+        ("state", "a"): ("VIEW", "proj", "01.sql", "SELECT 1 AS x"),
+        ("state", "b"): ("VIEW", "proj", "02.sql", "SELECT 2 AS y"),
+    })
+
+    def boom(*a):
+        raise RuntimeError("bq auth error: could not refresh WIF token")
+    monkeypatch.setattr(clsp, "live_definition", boom)
+    assert clsp.main() == 1
+    out = capsys.readouterr().out
+    assert "NOT VERIFIED" in out and "zero comparisons" in out
 
 
 def test_main_json_out_writes_findings_and_skips(tmp_path, monkeypatch):

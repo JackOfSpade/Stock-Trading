@@ -102,23 +102,33 @@ def compiled_models():
                     yield dataset, fn[:-4], f.read().strip().rstrip(";")
 
 
-def model_source_count():
-    """Number of dbt model SOURCE files under dbt/models/{state,perf,analytics} — the universe
-    compiled_models() should produce. Lets main() distinguish 'no models ported yet' (legitimately
-    OK when total==0) from 'sources exist but compile emitted nothing under COMPILED_ROOT' (a stale
-    path / renamed dbt project — breakage that must NOT report OK; 2026-07-17 audit)."""
-    n = 0
+def model_source_names():
+    """{(dataset, name)} for every dbt model SOURCE file under dbt/models/{state,perf,analytics} — the
+    universe compiled_models() should reproduce. Lets main() distinguish 'no models ported yet'
+    (legitimately OK when empty) from 'sources exist but compile emitted nothing, or only a SUBSET,
+    under COMPILED_ROOT' (a stale path / renamed dbt project / partial `dbt compile` — breakage that
+    must NOT report OK; 2026-07-17 audit + parallel-refactor partial-compile guard)."""
+    names = set()
     for dataset in DATASET_FOLDERS:
         d = os.path.join("dbt", "models", dataset)
         if os.path.isdir(d):
-            n += sum(1 for fn in os.listdir(d) if fn.endswith(".sql"))
-    return n
+            for fn in os.listdir(d):
+                if fn.endswith(".sql"):
+                    names.add((dataset, fn[:-4]))
+    return names
+
+
+def model_source_count():
+    """Number of dbt model SOURCE files (== len(model_source_names())); see that function."""
+    return len(model_source_names())
 
 
 def main():
     diffs, skipped, errors, checked, total = [], [], [], 0, 0
+    compiled_names = set()
     for dataset, name, compiled in compiled_models():
         total += 1
+        compiled_names.add((dataset, name))
         live = f"`{PROJECT}`.{dataset}.{name}"
         try:
             cols = [c for c in live_columns(dataset, name) if c["column_name"] not in VOLATILE_COLS]
@@ -191,6 +201,22 @@ def main():
     if diffs:
         print("\nPARITY FAILED — a dbt model and its live view disagree. Reconcile "
               "bigquery/*.sql and dbt/models/*.sql (or add a genuinely-volatile column to VOLATILE_COLS).")
+        return 1
+    # Partial-compile guard (checked last — everything that WAS compiled compared cleanly). A model
+    # SOURCE with no compiled artifact was never verified at all, so reporting full parity would be the
+    # same 'OK on zero real comparisons FOR THAT MODEL' vacuous pass the total==0 branch guards, one
+    # model at a time. `dbt compile` is atomic today (a compile error fails the CI step before this
+    # runs) and no model is disabled, so this normally can't fire — it is defense-in-depth against a
+    # selective/partial compile. NOTE: a deliberately-disabled model (config enabled=false) has a
+    # source file but no compiled artifact and would also surface here; none exist today, but if one is
+    # added, exclude it from model_source_names() or declare it out of scope (2026-07-17 audit).
+    uncompiled = sorted(model_source_names() - compiled_names)
+    if uncompiled:
+        print(f"\nPARITY NOT VERIFIED — {len(uncompiled)} dbt model source(s) under dbt/models/ have no "
+              "compiled artifact under COMPILED_ROOT, so they were never compared (partial `dbt "
+              "compile`?). Run a full `dbt compile` from dbt/ before this check:")
+        for ds, nm in uncompiled:
+            print(f"  - {ds}.{nm}")
         return 1
     print("OK: every compared dbt model matches its live view row-for-row.")
     return 0

@@ -22,14 +22,15 @@ backlog print).
 
 ## Summary
 
-- **2 real bugs fixed** in owned CLI checkers (1 HIGH, 1 MEDIUM), each with a **mutation-verified**
-  regression test (proven to fail when the fix is reverted).
-- **56 new tests** added across the owned surface (3 brand-new files for previously **untested**
-  modules + 20 additions to 4 existing files). Full suite: **529 passed**, ruff clean, all checkers
-  pass.
-- **Zero shared-lib edits**, zero frozen-file edits, zero changes to any printed string / exit code /
-  CLI flag of a passing path. The two bug fixes intentionally change behavior **only** in the
-  currently-broken case (a permanent false-DRIFT object; a mis-routed schema-drift error).
+- **4 real bugs fixed** in owned CLI checkers (1 HIGH, 3 MEDIUM), each with a **mutation-verified**
+  regression test (proven to fail when the fix is reverted). The initial pass shipped 2; a follow-up
+  (owner directive: "fix all") implemented the two fail-open guards this report had first deferred.
+- **~61 new tests** added across the owned surface (3 brand-new files for previously **untested**
+  modules + additions to 4 existing files). Full suite: **596 passed** (shared tree — includes other
+  instances' concurrent additions), ruff clean, all checkers pass.
+- **Zero shared-lib edits**, zero frozen-file edits. Behavior changes are confined to fail-open
+  cases: a permanent false-DRIFT object, a mis-routed schema-drift error, and two "reported OK on
+  zero real comparisons" gates that now fail closed.
 - Method: an adversarial multi-agent review (6 finders × per-finding verify) surfaced 32 findings /
   16 confirmed; every confirmed item was re-verified by hand against the real tree before acting.
 
@@ -70,6 +71,36 @@ pass green (even under `DBT_PARITY=block`). **Fix:** add `"incompatible types"` 
 error path. **Mutation check:** removing the marker fails that test (the error would route to skip
 and, because the clean model keeps `checked>0`, `main()` would return 0).
 
+### 3. MEDIUM — `check_live_sql_parity.py` failed OPEN on total live-read failure *(follow-up; was deferred)*
+[`scripts/check_live_sql_parity.py`](../../scripts/check_live_sql_parity.py) `main()`.
+
+If every `live_definition()` raised (systemic WIF/auth failure) every object landed in `missing_live`,
+`checked` stayed 0, and `main()` printed `OK:` and returned **0** — a false green hiding a fully
+broken daily parity gate. Its sibling `dbt_parity.py` had this exact `checked==0` guard; this script
+didn't. **Fix:** added a `checked == 0` fail-closed branch (after the mismatches return, before the
+final OK) mirroring `dbt_parity.py`. I went **beyond** the report's first draft (`checked==0 and
+final`) to a bare `checked == 0`: for this repo `bigquery/*.sql` always has objects, so an empty
+parse is itself a breakage that should also fail closed, not pass. Updated the one existing test
+whose premise was the bug (a lone missing object → now needs a second clean object to stay OK) and
+added a fail-closed test. **Mutation check:** neutering the guard prints the vacuous `OK:` and fails
+the new test.
+
+### 4. MEDIUM — `dbt_parity.py` partial-compile gap *(follow-up; was deferred)*
+[`scripts/dbt_parity.py`](../../scripts/dbt_parity.py) `main()` + new `model_source_names()`.
+
+The "sources exist but nothing compiled" guard only fired at `total==0`; a *partial* compile
+(`0 < total < sources`) left the uncompiled models silently unverified while `main()` still reported
+full parity OK. **Fix:** added `model_source_names()` (refactored `model_source_count()` to
+`len(model_source_names())` for a single source of truth), collect the compiled `(dataset, name)` set
+in the loop, and fail closed (listing the specific models) if any source has no compiled artifact.
+Placed last, so it only changes the would-be-OK path. **Disabled-model caveat** (documented inline):
+a deliberately `enabled=false` model would also surface here — **none exist today** and CI runs a full
+`dbt compile`, so this can't false-fire now; if one is ever added, exclude it from
+`model_source_names()` or declare it out of scope. Two happy-path tests were updated to declare their
+source universe; added a partial-compile fail test, a full-compile OK control, and a
+`count == len(names)` invariant test. **Mutation check:** neutering the guard prints the vacuous
+`OK:` and fails the new test.
+
 ## Tests added (56 total; the core deliverable)
 
 New files for **previously untested** modules:
@@ -102,34 +133,13 @@ Additions to existing owned files:
 
 ## Deferred / owner items (NOT changed — flagged for coordination)
 
-1. **MEDIUM — `check_live_sql_parity.py` fails OPEN on total live-read failure.** If every
-   `live_definition()` raises (systemic WIF/auth failure), all objects land in `missing_live`,
-   `checked` stays 0, and `main()` prints `OK:` and returns **0** — a false green that hides a fully
-   broken parity gate. Its sibling `dbt_parity.py` was explicitly hardened against this exact
-   *vacuous-pass* class (its `checked==0` guard, 2026-07-14 audit); this script never got the guard.
-   **Deferred to owner** (not applied) because the fix necessarily changes an exit code (0→1) and
-   adds a printed line on a **live daily CI gate** I cannot exercise against BigQuery or observe the
-   workflow's failure handling for — HARD RULE 7 (bias to safe / leave uncertain), and the review's
-   own independent verifier reached the same `defer-owner` verdict. Ready-to-apply patch — insert
-   before the final `print("OK: …"); return 0` in `main()`:
-   ```python
-   if not mismatches and checked == 0 and final:
-       print("\nLIVE SQL PARITY NOT VERIFIED — every object was skipped (bq/auth failure?); "
-             "refusing to report OK on zero comparisons.")
-       return 1
-   ```
+> The two fail-open guards this section originally deferred (`check_live_sql_parity` `checked==0`,
+> `dbt_parity` partial-compile) were **implemented** in the follow-up pass per owner directive — see
+> Bugs fixed #3 and #4 above. The `dbt_parity` guard ships with a documented disabled-model caveat:
+> it can't false-fire today (full atomic compile, no disabled models), and the inline note tells a
+> future maintainer to exclude a deliberately-disabled model from `model_source_names()`.
 
-2. **MEDIUM — `dbt_parity.py` partial-compile gap.** The "sources exist but nothing compiled" guard
-   only fires at `total==0`; a *partial* compile (`0 < total < model_source_count`) leaves the
-   uncompiled models silently unverified while `main()` still reports full parity OK. **Deferred**
-   (not applied): today CI runs a **full** `dbt compile` (no `--select`) and the project has **no
-   disabled/ephemeral models**, so `total == model_source_count` always holds and a partial compile
-   is practically unreachable (dbt compile is atomic — a compile error fails the CI step before this
-   script runs). A stricter per-model set check would add a new fail path to a safety gate for an
-   unreachable case, and would false-fail the day a legitimately-disabled model is introduced. Note
-   for owner if selective compile is ever adopted.
-
-3. **LOW (out of scope) — `gen_routine_lists.py` `gen_15_region` SQL-literal apostrophe.** A routine
+1. **LOW (out of scope) — `gen_routine_lists.py` `gen_15_region` SQL-literal apostrophe.** A routine
    heading containing `'` would emit a malformed single-quoted SQL literal. **Not actionable here:**
    the frozen `check_cadence_consistency.py` check B derives the byte-identical instruction text
    (`Claude_Task_Plan.md:` → `f"Read Claude_Task_Plan.md. Perform {h}."`) and its parser is `[^']*`,
@@ -157,11 +167,11 @@ Additions to existing owned files:
 
 ## Verification
 
-Full suite `python -m pytest -q` → **529 passed**. `gen_routine_lists.py --check` → 0;
-`check_script_version_consistency.py` → 0; `check_live_sql_parity.py --offline` → 0 (179 objects
-parse); `check_dbt_view_coverage.py` → 1 (advisory, by design); `ruff check` on all owned .py → clean.
-Both source fixes carry mutation-verified regression tests (proven to fail when reverted). Only my
-owned paths were staged (the working tree also carries other parallel instances' in-flight edits to
-non-owned files — `check_cadence_consistency.py`, `check_roster_consistency.py`,
-`test_cadence_consistency.py`, `test_settings_toolcov.py`, `test_verify_owner_actions.py` — which were
-**not** staged).
+Full suite `python -m pytest -q` → **596 passed** (shared tree — count includes other instances'
+concurrent work). `gen_routine_lists.py --check` → 0; `check_script_version_consistency.py` → 0;
+`check_live_sql_parity.py --offline` → 0 (179 objects parse); `check_dbt_view_coverage.py` → 1
+(advisory, by design); `ruff check` on all owned .py → clean. All **four** source fixes carry
+mutation-verified regression tests (each proven to fail when its fix is reverted — including the two
+follow-up guards, whose mutation prints the vacuous `OK:` they prevent). Only my owned paths were
+staged (the working tree also carries other parallel instances' in-flight edits to non-owned files,
+which were **not** staged).

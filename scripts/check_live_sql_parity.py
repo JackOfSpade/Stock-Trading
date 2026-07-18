@@ -295,6 +295,17 @@ def main():
         print("\nLIVE SQL PARITY FAILED — re-apply the final-effective bigquery/*.sql definition "
               "for the listed object(s) via the BigQuery MCP/console.")
         return 1
+    if checked == 0:
+        # Fail closed on ZERO verification. If every object fell into missing_live — a systemic bq/WIF
+        # auth failure making every live_definition() raise, or (should-never-happen) an empty/broken
+        # parse of bigquery/*.sql — then no parity was actually proven, so reporting OK would be a
+        # vacuous green on zero comparisons. This mirrors dbt_parity.py's checked==0 guard; the daily
+        # WIF workflow (.github/workflows/live-sql-parity.yml) gates on this exit code, so a fail-open
+        # here would silently hide a completely broken parity gate (2026-07-17 parallel-refactor audit).
+        print("\nLIVE SQL PARITY NOT VERIFIED — 0 objects were verified against live BigQuery (every "
+              "object was skipped — a systemic bq/auth failure — or none parsed from bigquery/*.sql); "
+              "refusing to report OK on zero comparisons.")
+        return 1
     print("OK: every checked object's live definition matches its final-effective bigquery/*.sql source.")
     return 0
 

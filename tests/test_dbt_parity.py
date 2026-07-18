@@ -80,6 +80,7 @@ def test_volatile_column_is_actually_dropped_from_the_parity_query(monkeypatch):
     # VOLATILE_COLS column from the EXCEPT compare (not just that the constant contains the name). A
     # left-in checked_at (CURRENT_TIMESTAMP, fresh each eval) would make every view falsely drift.
     monkeypatch.setattr(dp, "compiled_models", lambda: iter([("state", "foo", "SELECT 1 AS as_of_date")]))
+    monkeypatch.setattr(dp, "model_source_names", lambda: {("state", "foo")})
     monkeypatch.setattr(dp, "live_columns",
                         lambda dataset, table: [{"column_name": "checked_at", "data_type": "TIMESTAMP"},
                                                 {"column_name": "as_of_date", "data_type": "DATE"}])
@@ -179,6 +180,7 @@ def test_main_skips_transient_query_error_but_still_reports_other_models(monkeyp
     # must NOT fail closed the way a schema-shaped error does (#7's other direction).
     models = iter([("state", "flaky", "SELECT 1 AS a"), ("state", "good", "SELECT 1 AS a")])
     monkeypatch.setattr(dp, "compiled_models", lambda: models)
+    monkeypatch.setattr(dp, "model_source_names", lambda: {("state", "flaky"), ("state", "good")})
     monkeypatch.setattr(dp, "live_columns",
                         lambda dataset, table: [{"column_name": "a", "data_type": "STRING"}])
 
@@ -202,3 +204,38 @@ def test_main_uses_a_single_combined_bq_call_per_model(monkeypatch):
     rc = dp.main()
     assert len(calls) == 1          # one combined query, not two
     assert rc == 1                   # n_extra=3 -> drift detected end to end
+
+
+# ---- partial-compile guard (2026-07-17 parallel-refactor audit) -----------------------------------
+
+def test_main_fails_closed_when_a_source_model_was_never_compiled(monkeypatch, capsys):
+    # Every COMPILED model compared cleanly, but a model SOURCE has no compiled artifact (a partial
+    # `dbt compile`), so it was never verified. Reporting full parity OK would leave it silently
+    # unchecked — fail closed and name the uncompiled model instead.
+    monkeypatch.setattr(dp, "compiled_models", lambda: iter([("state", "compiled_one", "SELECT 1 AS a")]))
+    monkeypatch.setattr(dp, "model_source_names",
+                        lambda: {("state", "compiled_one"), ("state", "never_compiled")})
+    monkeypatch.setattr(dp, "live_columns", lambda ds, t: [{"column_name": "a", "data_type": "STRING"}])
+    monkeypatch.setattr(dp, "bq", lambda sql: [{"n_missing": 0, "n_extra": 0}])
+    assert dp.main() == 1
+    out = capsys.readouterr().out
+    assert "PARITY NOT VERIFIED" in out
+    assert "state.never_compiled" in out
+    assert "state.compiled_one" not in out.split("PARITY NOT VERIFIED")[1]   # the compiled one isn't listed
+
+
+def test_main_ok_when_every_source_has_a_compiled_artifact(monkeypatch):
+    # Positive control: a FULL compile (compiled set == source set) with clean parity -> OK, exit 0.
+    monkeypatch.setattr(dp, "compiled_models",
+                        lambda: iter([("state", "m1", "SELECT 1 AS a"), ("perf", "m2", "SELECT 1 AS a")]))
+    monkeypatch.setattr(dp, "model_source_names", lambda: {("state", "m1"), ("perf", "m2")})
+    monkeypatch.setattr(dp, "live_columns", lambda ds, t: [{"column_name": "a", "data_type": "STRING"}])
+    monkeypatch.setattr(dp, "bq", lambda sql: [{"n_missing": 0, "n_extra": 0}])
+    assert dp.main() == 0
+
+
+def test_model_source_count_is_len_of_model_source_names(monkeypatch):
+    # model_source_count() is now derived from model_source_names(); pin the invariant so the two can
+    # never disagree (the total==0 branch uses the count, the partial guard uses the names).
+    monkeypatch.setattr(dp, "model_source_names", lambda: {("state", "a"), ("state", "b"), ("perf", "c")})
+    assert dp.model_source_count() == 3
