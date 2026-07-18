@@ -1195,3 +1195,42 @@ see the corrected `ops/spikes/agent-sdk-orchestration-2026Q3.md` (c) for detail.
   silently overwritten (this repo can't query which model a web-UI session actually ran on) — it will
   resolve itself via the document's own existing version-change protocol at the next Q3/A1 cycle; no
   action needed from you specifically.
+
+- **The repo IS the deploy mechanism — "in the repo but not applied live" is NOT a stable state**
+  (observed directly 2026-07-18, live-sql-parity remediation pass). A session set out to decide
+  *whether* to apply `bigquery/48_cadence_monitor_unbounded.sql` (which removes a 14-day window from
+  the FATAL `ops.sp_assert_deps` gate) and deliberately held it back pending review of one risky
+  caller/dep pair. While that deliberation was happening, the **D3 LIVE-SQL-PARITY SELF-HEAL loop**
+  (`bigquery/69_live_sql_parity_selfheal.sql`) applied it anyway — converging live to the repo, as
+  designed. `ops.sp_score_theater` healed in the same window. Measured before/after: parity went
+  5 → 3 → 0 mismatched over ~20 minutes with only ONE of those applies being human/agent-initiated.
+
+  **The lesson, for future sessions: you cannot "decline to apply" a definition that is sitting in
+  `bigquery/*.sql` as the final-effective definition.** The self-heal will land it within a day. If a
+  change genuinely should not go live, it must be REMOVED from / superseded in the repo, not merely
+  left un-applied. Reasoning about "should I apply this?" for a file already in the repo is reasoning
+  about something the architecture has already decided.
+
+- **Residual, low-probability edge case now live: `SL5 <- [AR_orc]` under the un-bounded gate.**
+  With `bigquery/48` now live, `ops.sp_assert_deps`' "monitored" test has no rolling window, so a dep
+  that has EVER completed is monitored forever. 13 of 14 caller/dep pairs are provably safe (each dep
+  is co-scheduled the same period-day as its caller, hours earlier — verified structurally against
+  `ops/cadence.yaml` and empirically against `ops.run_log`). The exception is **SL5**, which has three
+  trigger sources, two of them structurally decoupled from AR_orc (an SL3 PAPER→PROBE enqueue, and a
+  D2 step-5 mechanical drawdown/30-trade/m2m TERMINATED transition). If AR_orc were dark for >14
+  consecutive days AND one of those two paths fired, SL5 would be FATAL-blocked with no auto-heal
+  (SL5/AR_orc are `catchup_safe: false`, so OPS0's catch-up refire excludes them) — which would stall
+  post-kill roster DEREGISTRATION specifically.
+
+  **Why this is being recorded rather than fixed:** the probability is low and the failure is
+  fail-CLOSED, which is the correct direction for this system. AR_orc fires daily by trigger (not
+  queue-gated) and logs explicit no-op `completed` rows on empty-queue days, so a >14-day gap requires
+  a genuine multi-week trigger outage — the exact SPOF that file 48 exists to catch. The largest gap
+  ever observed for ANY routine in `ops.run_log` is 7 days. Under the OLD bounded rule that same
+  outage would have SILENTLY UN-MONITORED AR_orc and let SL5 proceed on a broken upstream — strictly
+  worse. So the new behavior is an improvement, with one narrow edge worth knowing about.
+
+  If you ever do want it closed, the cleanest fix is to scope SL5's `sp_assert_deps` call to require
+  AR_orc same-day completion **only when the dispatched task's trigger is an AR_orc-authored verdict**,
+  leaving the SL3-enqueue and D2-mechanical-kill paths ungated. That is a `Claude_Task_Plan.md` prose
+  change to SL5's DEPENDENCY GATE line, not a SQL change.
