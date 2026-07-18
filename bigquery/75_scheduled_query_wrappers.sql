@@ -776,7 +776,7 @@ BEGIN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'critical', 'scheduled.safety_critical_dml', 'safety_critical_control_insert',
       CONCAT('Safety-critical control INSERT: a trading_control INSERT in the last 24h re-enabled trading ',
-             '(halt_all=FALSE, mode=''manual'') — a manual halt-clear. If YOU did not just re-enable ',
+             '(halt_all=FALSE, mode=manual) — a manual halt-clear. If YOU did not just re-enable ',
              'trading, this is a spoofed operator clear (shared-OAuth, RUNBOOK §15): re-assert the halt via ',
              'a fresh sanctioned INSERT and investigate the job_id/user_email in the payload.'),
       (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(job_id, user_email, target_dataset, target_table, creation_time) ORDER BY creation_time))
