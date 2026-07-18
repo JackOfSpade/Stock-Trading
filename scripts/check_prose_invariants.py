@@ -44,11 +44,27 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SPEC = os.path.join(ROOT, "ops", "prose_invariants.yaml")
 
 HEADING = re.compile(r"^#{1,6}\s+(.*\S)")
+FENCE = re.compile(r"^(```|~~~)")
 
 
 def load_spec():
-    doc = yaml.safe_load(open(SPEC, encoding="utf-8")) or {}
+    with open(SPEC, encoding="utf-8") as f:
+        doc = yaml.safe_load(f) or {}
     return doc.get("invariants", [])
+
+
+def fence_mask(lines):
+    """Per-line bool: True where the line sits INSIDE a fenced code block (``` or ~~~ at column 0).
+    A column-0 '#'/'##' inside a fence is a code comment, not a markdown heading — the same fence
+    handling scripts/split_task_plan.py / split_strategy.py already use. Used by nearest_heading so
+    exempt_sections attributes a forbid match to the right REAL heading, not a stray code-comment."""
+    mask = [False] * len(lines)
+    in_fence = False
+    for i, ln in enumerate(lines):
+        if FENCE.match(ln):
+            in_fence = not in_fence
+        mask[i] = in_fence
+    return mask
 
 
 def files_for(rule):
@@ -59,9 +75,14 @@ def files_for(rule):
     return []
 
 
-def nearest_heading(lines, idx):
-    """The text of the closest markdown heading at or before line index `idx` (0-based), or ''."""
+def nearest_heading(lines, idx, in_fence=None):
+    """The text of the closest markdown heading at or before line index `idx` (0-based), or ''.
+    Lines inside a fenced code block (per `in_fence` from fence_mask) are skipped: a '# comment'
+    inside a ```-fence is not a heading, and treating it as one would mis-attribute a forbid match to
+    the wrong section (breaking exempt_sections)."""
     for j in range(idx, -1, -1):
+        if in_fence is not None and in_fence[j]:
+            continue
         m = HEADING.match(lines[j])
         if m:
             return m.group(1)
@@ -84,17 +105,18 @@ def check_rule(rule, errors):
     exempt_line = re.compile(rule["exempt_line_regex"], flags) if rule.get("exempt_line_regex") else None
     exempt_sections = rule.get("exempt_sections") or []
 
-    if has_forbid:
-        pat = re.compile(rule["forbid_regex"], flags | re.MULTILINE)
-    else:
-        pat = re.compile(rule["require_regex"], flags | re.MULTILINE)
+    # Each rule matches one PHYSICAL LINE at a time (pat.search(ln) below over read().split("\n")),
+    # so `^`/`$` already anchor to the line's ends and a cross-line regex is unsupported by design —
+    # no re.MULTILINE (it would be inert here and only imply cross-line matching that does not exist).
+    pat = re.compile(rule["forbid_regex" if has_forbid else "require_regex"], flags)
 
     for rel in targets:
         path = os.path.join(ROOT, rel)
         if not os.path.exists(path):
             errors.append(f"[{rid}] {rel}: file not found (rule targets a missing file)")
             continue
-        lines = open(path, encoding="utf-8").read().split("\n")
+        with open(path, encoding="utf-8") as f:
+            lines = f.read().split("\n")
 
         if has_require:
             if not any(pat.search(ln) for ln in lines):
@@ -103,7 +125,9 @@ def check_rule(rule, errors):
                               f"        source of truth: {rule.get('source_of_truth', '?')}")
             continue
 
-        # forbid: report every non-exempt matching line
+        # forbid: report every non-exempt matching line. The fence mask is only needed for
+        # exempt_sections (nearest_heading) and is computed once per file, lazily.
+        in_fence = fence_mask(lines) if exempt_sections else None
         for i, ln in enumerate(lines):
             m = pat.search(ln)
             if not m:
@@ -111,7 +135,7 @@ def check_rule(rule, errors):
             if exempt_line and exempt_line.search(ln):
                 continue
             if exempt_sections:
-                head = nearest_heading(lines, i)
+                head = nearest_heading(lines, i, in_fence)
                 if any(sub in head for sub in exempt_sections):
                     continue
             errors.append(

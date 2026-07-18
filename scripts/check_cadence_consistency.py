@@ -174,11 +174,17 @@ def parse_expected_sql():
 
 
 def parse_catalog_sql():
-    """{routine: canonical_instruction} from 15_*.sql (handles the first AS-labelled row + shorthand rows)."""
+    """{routine: canonical_instruction} from 15_*.sql (handles the first AS-labelled row + shorthand rows).
+
+    The instruction literal may contain BigQuery-escaped single quotes (''), emitted by
+    scripts/gen_routine_lists.py gen_15_region (_sql_str) when a routine heading contains an
+    apostrophe. Match those doubled quotes and un-escape '' -> ' so the parsed value equals check B's
+    want_catalog (derived from the RAW heading text). This is the paired half of gen_15_region's
+    escaping -- the two MUST stay in lockstep. Byte-identical on a tree with no apostrophe headings."""
     txt = open(CATALOG_SQL, encoding="utf-8").read()
     pat = re.compile(
-        r"STRUCT\('([^']+)'(?:\s+AS routine)?,\s*'(Read Claude_Task_Plan\.md\. Perform [^']*)'")
-    return dict(pat.findall(txt))
+        r"STRUCT\('([^']+)'(?:\s+AS routine)?,\s*'(Read Claude_Task_Plan\.md\. Perform (?:[^']|'')*)'")
+    return {rid: instr.replace("''", "'") for rid, instr in pat.findall(txt)}
 
 
 def parse_deadline_sql():

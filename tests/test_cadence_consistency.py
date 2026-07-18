@@ -82,6 +82,21 @@ def test_parse_catalog_sql_empty_on_reformat_is_caught(tmp_path, monkeypatch):
     assert cc.parse_catalog_sql() == {}
 
 
+def test_parse_catalog_sql_unescapes_doubled_single_quotes(tmp_path, monkeypatch):
+    # gen_routine_lists.py gen_15_region escapes ' -> '' for the single-quoted SQL literal when a
+    # routine heading contains an apostrophe; parse_catalog_sql must un-escape '' -> ' so the parsed
+    # instruction matches want_catalog's raw heading text. Paired half of the coordinated apostrophe
+    # support (mirror of gen_15_region's escaping). Two apostrophes in one instruction to be thorough.
+    f = tmp_path / "15.sql"
+    f.write_text(
+        "STRUCT('D9' AS routine, 'Read Claude_Task_Plan.md. Perform D9. "
+        "O''Brien''s Screen — regular routine.' AS canonical_instruction),\n"
+    )
+    monkeypatch.setattr(cc, "CATALOG_SQL", str(f))
+    assert cc.parse_catalog_sql()["D9"] == \
+        "Read Claude_Task_Plan.md. Perform D9. O'Brien's Screen — regular routine."
+
+
 # ---- parse_deadline_sql: the cadence_watch deadline-guard TIME literal (check D) ----
 def test_parse_deadline_sql_matches_known_good(tmp_path, monkeypatch):
     f = tmp_path / "12.sql"

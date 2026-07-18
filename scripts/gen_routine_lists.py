@@ -70,6 +70,14 @@ def load_headings_by_id():
     return {heading_to_id(h): h for h in parse_routine_headings(PLAN) if heading_to_id(h)}
 
 
+def _sql_str(s):
+    """Escape a Python string for embedding inside a single-quoted BigQuery SQL literal: ' -> ''.
+    check_cadence_consistency.py check B (parse_catalog_sql) performs the exact inverse ('' -> ')
+    when it reads the row back, so gen_15_region's output and check B's want_catalog stay byte-
+    compatible even for a heading containing an apostrophe. The two MUST stay in lockstep."""
+    return s.replace("'", "''")
+
+
 def gen_12_region(routines):
     """state.cadence_expected_today rows: one per calendar-class routine (monitor_class !=
     queue_driven), cadence.yaml order, 4-space indent matching the surrounding UNNEST([ block."""
@@ -91,7 +99,14 @@ def gen_15_region(routines, head_by_id):
     matching plan heading exactly as check_cadence_consistency.py's check B derives want_catalog, so
     the generated output stays byte-compatible with that check. A routine with no plan heading yet
     (should not happen in a consistent tree) gets an empty instruction string -- check B/C will flag
-    that loudly rather than this generator silently guessing."""
+    that loudly rather than this generator silently guessing.
+
+    A heading may contain an apostrophe; it is escaped to '' for the single-quoted SQL literal (see
+    _sql_str). This is kept in LOCKSTEP with check_cadence_consistency.py check B (parse_catalog_sql),
+    which un-escapes ''->' when it parses the row back so its want_catalog (raw heading text) matches.
+    The two derivations are byte-identical and MUST move together: changing the escaping here without
+    the paired check B un-escape (or vice-versa) desyncs them. Byte-identical on the current tree --
+    no routine heading contains an apostrophe today, so this only changes output once one does."""
     lines = []
     n = len(routines)
     for i, r in enumerate(routines):
@@ -99,7 +114,10 @@ def gen_15_region(routines, head_by_id):
         heading = head_by_id.get(rid)
         instr = f"Read Claude_Task_Plan.md. Perform {heading}." if heading else ""
         comma = "," if i < n - 1 else ""
-        lines.append(f"  STRUCT('{rid}' AS routine, '{instr}' AS canonical_instruction){comma}")
+        # rid is a constrained \w+ id (never quoted), so only the free-text instruction needs escaping
+        # -- and check B un-escapes only the instruction capture, so escaping only it keeps the two
+        # derivations matched.
+        lines.append(f"  STRUCT('{rid}' AS routine, '{_sql_str(instr)}' AS canonical_instruction){comma}")
     return "\n".join(lines)
 
 

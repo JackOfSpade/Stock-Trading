@@ -17,26 +17,29 @@
  *
  * KEEP IN SYNC MANUALLY with ops/weekly_report/weekly_report.gs and
  * ops/monitoring/alert_emailer.gs — if you change any of these functions there, update the
- * copies below in the same commit:
- *   - notDeployedReason_   (weekly_report.gs lines 229-235)
- *   - periodAvg_           (weekly_report.gs lines 246-249)
- *   - isExtrapolated_      (weekly_report.gs lines 254-256)
- *   - benchmarkRow_        (weekly_report.gs lines 262-269)
- *   - signPct_             (weekly_report.gs signPct_)
- *   - fmtRetPct_           (weekly_report.gs fmtRetPct_)
- *   - parseIsoDateLocal_   (weekly_report.gs parseIsoDateLocal_)
- *   - downsampleDates_     (weekly_report.gs downsampleDates_)
- *   - niceNum_             (weekly_report.gs niceNum_)
- *   - niceYRange_          (weekly_report.gs niceYRange_)
- *   - buildHealthReasons_  (weekly_report.gs lines 272-293)
- *   - buildSubject_        (weekly_report.gs lines 124-138)
- *   - esc_                 (weekly_report.gs line 331)
- *   - VOO_COLOR            (weekly_report.gs line 66)
- *   - clr_                 (weekly_report.gs line 325)
- *   - fallbackBarsHtml_    (weekly_report.gs lines 418-436)
- *   - pctCellHtml_         (weekly_report.gs lines 441-446)
- *   - isTest_              (alert_emailer.gs line 210)
- *   - esc2_                (alert_emailer.gs line 205)
+ * copies below in the same commit. Located by function NAME (grep the source), not by line number:
+ * the sources grow and line numbers drift — six of these pointers had already gone stale by 2026-07-17
+ * (e.g. fallbackBarsHtml_ had moved ~60 lines from where a "lines 418-436" pointer claimed) — whereas
+ * the function name is a stable, grep-able locator that never rots.
+ *   - notDeployedReason_   (weekly_report.gs)
+ *   - periodAvg_           (weekly_report.gs)
+ *   - isExtrapolated_      (weekly_report.gs)
+ *   - benchmarkRow_        (weekly_report.gs)
+ *   - signPct_             (weekly_report.gs)
+ *   - fmtRetPct_           (weekly_report.gs)
+ *   - parseIsoDateLocal_   (weekly_report.gs)
+ *   - downsampleDates_     (weekly_report.gs)
+ *   - niceNum_             (weekly_report.gs)
+ *   - niceYRange_          (weekly_report.gs)
+ *   - buildHealthReasons_  (weekly_report.gs)
+ *   - buildSubject_        (weekly_report.gs)
+ *   - esc_                 (weekly_report.gs)
+ *   - VOO_COLOR            (weekly_report.gs)
+ *   - clr_                 (weekly_report.gs)
+ *   - fallbackBarsHtml_    (weekly_report.gs)
+ *   - pctCellHtml_         (weekly_report.gs)
+ *   - isTest_              (alert_emailer.gs)
+ *   - esc2_                (alert_emailer.gs)
  *   - alertSubject_        (alert_emailer.gs, defined immediately after isTest_)
  *
  * Note: signDollar_, fmtAbsDollars_, edgeWord_, dollarCellHtml_, SGOV_GRAY, and the headline-block
@@ -488,7 +491,10 @@ t('fallbackBarsHtml_ colors a strategy bar neutral (not red) when VOO has no dat
 t('fallbackBarsHtml_ respects the Math.max(2, ...) bar-width floor for a near-zero value', () => {
   const d = { rows: [{ strategy: 'A', deployed: true, returnPct: 0.0001 }], voo: { returnPct: 0.10 } };
   const out = fallbackBarsHtml_(d);
-  assert.ok(out.includes('width:2px') || /width:\d+px/.test(out));
+  // Assert the floor directly: A's near-zero |val| (0.01, vs VOO 10 -> widthPx = max(2, round(0.24)) = 2)
+  // must render at the 2px floor. The old `|| /width:\d+px/` disjunct made this vacuous — it matched the
+  // VOO bar (width:240px) and even the 40px label spans, so a regression to width:0px on A would still pass.
+  assert.ok(out.includes('width:2px'), 'strategy A near-zero bar must render at the Math.max(2,...) floor');
 });
 t('fallbackBarsHtml_ renders "no data" (not a false 0% bar) for a deployed strategy with null returnPct', () => {
   // 2026-07-17 null-return guard: an unguarded null*100 drew a confident 0.00% bar; must be "no data".

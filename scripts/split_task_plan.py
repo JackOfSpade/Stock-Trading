@@ -79,12 +79,20 @@ def split(text):
         return text, []
     # Preamble ends at the cadence-group header that opens the routines region (the last `# ...`
     # top-level heading at or before the first routine — `# DAILY ...`).
-    group_start = max(i for i in range(first_routine + 1) if is_group(i))
+    group_headers = [i for i in range(first_routine + 1) if is_group(i)]
+    if not group_headers:
+        # Routines always live under a `# <CADENCE>` group header. If the plan is ever restructured so
+        # the first routine precedes every top-level `# ` header, fail with an actionable message
+        # instead of an opaque `max() arg is an empty sequence` ValueError from the max() below.
+        raise ValueError(
+            "Claude_Task_Plan.md: the first routine heading has no preceding `# ` cadence-group "
+            "header (routines must sit under a `# DAILY`/`# WEEKLY`/... group). Fix the plan structure."
+        )
+    group_start = max(group_headers)
     preamble = "".join(lines[:group_start])
 
     routines = []
     group_intro = ""
-    seen_routine_in_group = False
     cur = None
     for i in range(group_start, len(lines)):
         if is_group(i):
@@ -92,17 +100,17 @@ def split(text):
                 routines.append(cur)
                 cur = None
             group_intro = lines[i]
-            seen_routine_in_group = False
         elif is_routine(i):
             if cur:
                 routines.append(cur)
             title = lines[i][3:].strip()
             rid = heading_to_id(title) or slug(title)
             cur = [rid, title, group_intro, lines[i]]
-            seen_routine_in_group = True
         elif cur is not None:
             cur[3] += lines[i]
-        elif not seen_routine_in_group:
+        else:
+            # cur is None here iff no routine has been seen since the last group header (or since
+            # group_start) — i.e. we are inside a group's intro region — so accumulate the intro.
             group_intro += lines[i]
     if cur:
         routines.append(cur)

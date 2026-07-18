@@ -58,21 +58,37 @@ CREATE_STMT = re.compile(
     re.MULTILINE,
 )
 
-# Boundary for extract_body: the NEXT top-level (column-0) CREATE of ANY kind ends the current
-# object's body. CREATE_STMT only recognizes the three object types this script COMPARES
-# (VIEW/PROCEDURE/TABLE FUNCTION), but bigquery/*.sql also carries top-level CREATE TABLE [IF NOT
-# EXISTS], scalar CREATE OR REPLACE FUNCTION, CREATE OR REPLACE MODEL, and CREATE SCHEMA between
-# comparable objects. Using CREATE_STMT itself as the end boundary let those foreign DDL blocks
-# BLEED into the preceding object's extracted body — 10 live objects mis-parsed into a permanent
-# false DRIFT that also fed the RES-3 self-heal candidate loop (2026-07-17 code-quality audit).
-# Matching any top-level CREATE keyword fixes it. The keyword list is deliberately RESTRICTED (not
-# a bare ^CREATE): a column-0 CREATE inside a procedure's BEGIN…END body — none exist today, the
-# EXECUTE IMMEDIATE literals in bigquery/17_restore_drill.sql are indented — could then only ever
-# truncate on a real DDL keyword, never on an arbitrary identifier that happens to begin a line.
-# Order matters: the two-word forms precede their one-word prefixes so alternation picks the longer.
+# Boundary for extract_body: the NEXT top-level (column-0) statement ends the current object's body.
+# CREATE_STMT only recognizes the three object types this script COMPARES (VIEW/PROCEDURE/TABLE
+# FUNCTION), but bigquery/*.sql also carries top-level CREATE TABLE [IF NOT EXISTS], scalar CREATE OR
+# REPLACE FUNCTION, CREATE OR REPLACE MODEL, and CREATE SCHEMA between comparable objects. Using
+# CREATE_STMT itself as the end boundary let those foreign DDL blocks BLEED into the preceding
+# object's extracted body — 10 live objects mis-parsed into a permanent false DRIFT that also fed the
+# RES-3 self-heal candidate loop (2026-07-17 code-quality audit). Matching any top-level CREATE
+# keyword fixed that class.
+#
+# But top-level *non-CREATE* statements bleed the same way: bigquery/67_ci_findings_bridge.sql ends
+# `CREATE OR REPLACE VIEW state.ci_findings_open AS SELECT … ;` and then, in the SAME file, runs a
+# standalone `MERGE state.expected_scheduled_query_versions …` registry bump. A CREATE-only boundary
+# swept that MERGE into the view's extracted body, so its repo-side text could NEVER match the live
+# `view_definition` (which is only the SELECT) — a permanent false DRIFT that normalize_tail can't
+# strip because the tail is a whole statement, not a comment (2026-07-17 parallel-refactor audit,
+# HIGH; regression-guarded by tests/test_check_live_sql_parity.py). So the boundary now also stops at
+# the start of a top-level DML/DDL statement.
+#
+# The keyword list is deliberately RESTRICTED (not a bare ^\w+): a column-0 keyword can only ever be
+# a new top-level statement, never an identifier that happens to begin a line. BEGIN is deliberately
+# EXCLUDED — it opens a PROCEDURE's OWN body (extract_body slices a procedure from its `BEGIN`), and
+# every statement *inside* a procedure's BEGIN…END is indented in this repo (verified: no compared
+# body holds a column-0 DML keyword after this fix), so a column-0 MERGE/INSERT/etc. is always a
+# following top-level statement, not procedure-internal. Order matters: the two-word CREATE forms
+# precede their one-word prefixes so alternation picks the longer.
 NEXT_TOP_LEVEL = re.compile(
-    r"^CREATE\s+(?:OR\s+REPLACE\s+)?"
-    r"(?:MATERIALIZED\s+VIEW|TABLE\s+FUNCTION|VIEW|PROCEDURE|TABLE|FUNCTION|MODEL|SCHEMA)\b",
+    r"^(?:"
+    r"CREATE\s+(?:OR\s+REPLACE\s+)?"
+    r"(?:MATERIALIZED\s+VIEW|TABLE\s+FUNCTION|VIEW|PROCEDURE|TABLE|FUNCTION|MODEL|SCHEMA)"
+    r"|INSERT|MERGE|UPDATE|DELETE|TRUNCATE|DROP|ALTER|GRANT|REVOKE|CALL|EXPORT|ASSERT"
+    r")\b",
     re.MULTILINE,
 )
 
@@ -278,6 +294,17 @@ def main():
     if mismatches:
         print("\nLIVE SQL PARITY FAILED — re-apply the final-effective bigquery/*.sql definition "
               "for the listed object(s) via the BigQuery MCP/console.")
+        return 1
+    if checked == 0:
+        # Fail closed on ZERO verification. If every object fell into missing_live — a systemic bq/WIF
+        # auth failure making every live_definition() raise, or (should-never-happen) an empty/broken
+        # parse of bigquery/*.sql — then no parity was actually proven, so reporting OK would be a
+        # vacuous green on zero comparisons. This mirrors dbt_parity.py's checked==0 guard; the daily
+        # WIF workflow (.github/workflows/live-sql-parity.yml) gates on this exit code, so a fail-open
+        # here would silently hide a completely broken parity gate (2026-07-17 parallel-refactor audit).
+        print("\nLIVE SQL PARITY NOT VERIFIED — 0 objects were verified against live BigQuery (every "
+              "object was skipped — a systemic bq/auth failure — or none parsed from bigquery/*.sql); "
+              "refusing to report OK on zero comparisons.")
         return 1
     print("OK: every checked object's live definition matches its final-effective bigquery/*.sql source.")
     return 0
