@@ -69,6 +69,9 @@ KNOWN_CITATION_FILES = [
 EXTRA_SCAN_GLOBS = [
     os.path.join(ROOT, "*.md"),
     os.path.join(ROOT, "ops", "*.md"),
+    os.path.join(ROOT, "bigquery", "*.md"),   # e.g. bigquery/README.md — carried a stage citation that
+                                              #   went unscanned (a live-stale DORMANT for a now-active_auto
+                                              #   loop) until this glob was added (2026-07-17 audit).
     os.path.join(ROOT, "bigquery", "*.sql"),
     os.path.join(ROOT, "bigquery", "scheduled_queries", "*.sql"),
 ]
@@ -130,12 +133,36 @@ def active_auto_loops():
 
 def cadence_heartbeat_loops():
     """Loop ids monitored by cadence_check.sql's constant_tuning_loop_heartbeat_missing switch
-    (its 'loop:<id>' UNNEST literals). None if the file is missing."""
+    (its 'loop:<id>' UNNEST literals). None if the file is missing. This is the UNION across every
+    'loop:<id>' literal in the file — used for the rot / file-missing signals; the actual coverage
+    requirement uses cadence_detection_loops() (the DETECTION-list-only view, see below)."""
     if not os.path.exists(CADENCE_SQL):
         return None
     txt = open(CADENCE_SQL, encoding="utf-8").read()
     # [a-z0-9_]+ (not [a-z_]+): match a digit-bearing loop id too — see CITATION_RE's comment.
     return set(re.findall(r"'loop:([a-z0-9_]+)'", txt))
+
+
+def cadence_detection_loops():
+    """Loop ids that appear in EVERY 'loop:<id>' UNNEST literal in the cadence SQL — i.e. their
+    intersection. None if the file is missing.
+
+    bigquery/75's ops.sp_sq_cadence_check carries the loop list TWICE: the IF EXISTS DETECTION literal
+    that actually fires the constant_tuning_loop_heartbeat_missing alarm, and a STRING_AGG MESSAGE
+    literal that only builds the alert text. A loop present in the message list but MISSING from the
+    detection list has NO working dead-man's switch, yet cadence_heartbeat_loops()'s whole-file UNION
+    would still count it as monitored — a latent fail-OPEN in a safety guard (2026-07-17 audit). Since
+    the detection list is a subset of (or equal to) the message list, requiring membership in the
+    intersection of all loop-bearing UNNEST literals enforces detection-list membership without
+    hardcoding which literal is which. Returns set() if no loop-bearing UNNEST literal is found (the
+    caller already handles the rot/empty case via cadence_heartbeat_loops())."""
+    if not os.path.exists(CADENCE_SQL):
+        return None
+    txt = open(CADENCE_SQL, encoding="utf-8").read()
+    blocks = re.findall(r"UNNEST\(\s*\[([^\]]*'loop:[^\]]*)\]\s*\)", txt)
+    loop_sets = [set(re.findall(r"'loop:([a-z0-9_]+)'", b)) for b in blocks]
+    loop_sets = [s for s in loop_sets if s]
+    return set.intersection(*loop_sets) if loop_sets else set()
 
 
 def _check_cadence_heartbeat_coverage(errors):
@@ -152,7 +179,9 @@ def _check_cadence_heartbeat_coverage(errors):
                       "'loop:<id>' heartbeat literals — the constant_tuning_loop_heartbeat_missing UNNEST "
                       "list was reformatted (regex rotted) or removed; fix the regex here or restore the list")
         return
-    missing = expected - monitored
+    # Require each expected loop in the DETECTION literal (intersection of all loop: UNNEST lists), not
+    # merely the whole-file union: a loop present only in the message-text literal has no working alarm.
+    missing = expected - cadence_detection_loops()
     if missing:
         errors.append(
             "bigquery/75_scheduled_query_wrappers.sql (ops.sp_sq_cadence_check): "
@@ -170,6 +199,15 @@ def check_stage_ceiling_invariant(loops):
     errors = []
     for loop in loops:
         lid, st, ceil_ = loop.get("id"), loop.get("stage"), loop.get("ceiling")
+        if st is None and ceil_ is not None:
+            # `stage` is the register's core field (its whole purpose is to record each loop's CURRENT
+            # stage); a loop that declares a ceiling but has no stage is a dropped/indented-out `stage:`
+            # line, which otherwise passes silently — active_auto_loops() then omits it and its heartbeat
+            # coverage is never demanded (2026-07-17 audit). Gate on stage-absent specifically, not
+            # ceiling-absent: a stage-present/ceiling-absent loop is a valid not-yet-capped entry.
+            errors.append(f"ops/autonomy_levels.yaml: loop '{lid}' declares a ceiling '{ceil_}' but has no "
+                          f"'stage' — the register's core field is missing (a dropped/indented-out "
+                          f"'stage:' line?)")
         if st is not None and st not in STAGE_ORDER:
             errors.append(f"ops/autonomy_levels.yaml: loop '{lid}' has unknown stage '{st}' "
                           f"(not one of {STAGE_ORDER})")

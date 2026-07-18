@@ -100,6 +100,19 @@ def main():
               f"({e}). Refusing to report OK on zero comparison.")
         return 1
 
+    if not repo and not live:
+        # Zero-vs-zero is not a real comparison. roster.yaml is PRESENT here (the absent case SKIPed
+        # above), so an empty roster-active set means zero probe/adopted codes — a violation of the SISA
+        # N>=2 floor — and an empty live state.active_strategy_codes would starve the derived NAV/sizing
+        # SQL (bigquery/22/26 + strategy_nav). Fail closed rather than report a vacuous OK on zero codes,
+        # matching dbt_parity.py's total==0 NOT-VERIFIED guard and this file's own "never report OK on
+        # zero real comparison" doctrine (MON H4).
+        print("LIVE ROSTER PARITY: NOT VERIFIED — both strategy/roster.yaml's roster-active set and live "
+              "state.active_strategy_codes are EMPTY. Refusing to report OK on a zero-vs-zero comparison: "
+              "a present roster with zero probe/adopted codes violates the SISA N>=2 floor, and an empty "
+              "live active set would starve the derived NAV/sizing SQL.")
+        return 1
+
     if repo == live:
         print(f"LIVE ROSTER PARITY: OK — live state.active_strategy_codes == strategy/roster.yaml "
               f"roster-active set ({sorted(repo)}).")

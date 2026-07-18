@@ -240,15 +240,19 @@ WIF itself is set up (provider `github-pool/github-provider`, SA `gh-ci-runner@�
 or §16's dashboard). As of 2026-06-22 it also powers the **`dbt-parity` row-level drift gate, which now
 runs by default whenever those WIF vars are present** (read-only; advisory until promoted to `DBT_PARITY=block`
 — see §12 "D1"). That is the real guard on the two hand-maintained copies of each view; `dbt parse` only
-checks structure. To turn the live SQL dry-run ON anyway, the owner must:
-1. Enable the **Cloud Resource Manager API** (`gcloud services enable cloudresourcemanager.googleapis.com`)
-   and the IAM Service Account Credentials API (already enabled).
-2. Grant `gh-ci-runner` the DDL perms the dry-run needs (`roles/bigquery.dataEditor` on
-   events/ops/analytics/state/perf + `bigquery.models.create` on `ops`) — accepting the
-   over-privilege tradeoff above.
-3. Set repo variable **`RUN_SQL_DRYRUN=true`**.
-Until all three are set the job skips cleanly (green). SQL is also dry-run via the BigQuery MCP during
-development, which is the practical safety net.
+checks structure.
+
+The same read-only WIF SA also powers the **`sql-validate` BigQuery SQL syntax gate** (ci.yml, added
+2026-07-17 after a `mode=''manual''` parse error reached the live apply step undetected — nothing in CI
+parsed raw hand-SQL). It runs **by default whenever the WIF vars are present**, needs **NO DDL grant**
+(BigQuery compiles a `--dry_run` before it authorizes the DDL, so `scripts/check_sql_dryrun.py` sees a
+syntax error at parse time and BLOCKS on it, while it TOLERATES the "Access Denied" a read-only SA gets
+on a valid CREATE and the "Not found" of a not-yet-live sibling — it can never false-block). It is a
+**blocking** gate on the `CI` workflow (a parse error fails CI → blocks auto-merge), scoped to the
+changed `bigquery/*.sql` in each push. Escape hatch: repo var **`RUN_SQL_DRYRUN=off`** disables it. The
+old opt-in variant (`RUN_SQL_DRYRUN=true` + a `roles/bigquery.dataEditor` DDL grant to dry-run the DDL
+*successfully*) is retired — that over-privilege is unnecessary to catch the parse errors that actually
+bite. SQL is also dry-run via the BigQuery MCP during development, a further safety net.
 
 ---
 

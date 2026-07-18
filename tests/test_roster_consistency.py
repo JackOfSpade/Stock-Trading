@@ -45,6 +45,7 @@ REAL_DBT_SCHEMA_ACCEPTED_VALUES = rc.DBT_SCHEMA_ACCEPTED_VALUES
 REAL_STRATEGY_DIR = rc.STRATEGY_DIR
 REAL_STRATEGY_MATH_DIR = rc.STRATEGY_MATH_DIR
 REAL_C_OPTIONS_MATH = rc.C_OPTIONS_MATH
+REAL_SCENARIOS_YAML = rc.SCENARIOS_YAML
 
 
 @pytest.fixture
@@ -101,7 +102,50 @@ def repo_copy(tmp_path, monkeypatch):
     shutil.copy(REAL_C_OPTIONS_MATH, dst_root / "c_options_math.py")
     monkeypatch.setattr(rc, "C_OPTIONS_MATH", str(dst_root / "c_options_math.py"))
 
+    # tests/golden_scenarios/scenarios.yaml (R-K's prose-regression coverage source). Copied + repointed
+    # so an R-K perturbation test can overwrite/remove it in the tmp repo without touching the real
+    # fixture set — repo_copy previously left rc.SCENARIOS_YAML pointing at the real file, so R-K was
+    # untestable and every repo_copy test silently read the real scenarios (2026-07-17 audit).
+    (dst_root / "golden_scenarios").mkdir()
+    scen_dst = dst_root / "golden_scenarios" / "scenarios.yaml"
+    shutil.copy(REAL_SCENARIOS_YAML, scen_dst)
+    monkeypatch.setattr(rc, "SCENARIOS_YAML", str(scen_dst))
+
     return dst_root
+
+
+def _scenarios_covering(codes):
+    """Build a minimal valid scenarios.yaml body giving prose-mention (path b) coverage to exactly the
+    given roster codes — used to drive R-K to a known covered-set without editing the real 23-fixture set."""
+    lines = ["scenarios:"]
+    for c in codes:
+        lines += [
+            f"  - id: cover-{c}",
+            f"    situation: Strategy {c} decision setup with concrete facts.",
+            "    governing_files: [Strategy.md]",
+            "    expected_decision: ACTIVATE",
+            f"    rationale: Strategy {c} activation rule applies.",
+        ]
+    return "\n".join(lines) + "\n"
+
+
+def _shadow_f_entry():
+    """A minimal SHADOW roster entry for a hypothetical strategy F (not roster-active, not spec-locked)
+    to append to roster.yaml — used by the R-K SHADOW/PAPER-enforcement tests."""
+    return (
+        "\n  - code: F\n"
+        '    name: "Shadow test strategy"\n'
+        "    archetype: test-only\n"
+        "    roster_state: shadow\n"
+        "    edges_exploited: []\n"
+        "    disadvantages_compensated: []\n"
+        "    per_strategy_routine: null\n"
+        "    adopted_date: null\n"
+        "    spec_locked_since: null\n"
+        "    immutable_since: null\n"
+        "    retired_date: null\n"
+        "    is_restart_of: null\n"
+    )
 
 
 def _read(p):
@@ -437,6 +481,11 @@ def test_spec_locked_strategy_without_math_module_is_a_non_blocking_note(repo_co
         '        note: "test fixture only"\n'
     )
     _write(p, txt + fake_strategy)
+    # F is a SHADOW strategy, so R-K now enforces golden-scenario coverage for it (2026-07-17: a
+    # slice-less SHADOW/PAPER strategy is no longer a non-blocking note — see R-K tests below). Give F
+    # coverage via a 'Strategy F' prose mention so the ONLY thing left to observe is R-F's non-blocking
+    # spec_hash note (this test's actual subject); otherwise R-K would fail the build for uncovered F.
+    _write(rc.SCENARIOS_YAML, _scenarios_covering("ABCDEF"))
     rc_code = rc.main()
     out = capsys.readouterr().out
     assert rc_code == 0, "a spec-locked strategy missing from spec_hash_inputs() must NOT fail the build"
@@ -513,6 +562,341 @@ def test_review_cadence_valid_values_pass(repo_copy):
 def test_missing_roster_yaml_is_a_clean_skip(repo_copy):
     os.remove(rc.ROSTER)
     assert rc.main() == 0
+
+
+# =====================================================================================================
+# 2026-07-17 parallel-refactor coverage additions (adversarial-audit findings). Each locks in a
+# checker behavior that had no regression test, or a fix landed in this pass.
+# =====================================================================================================
+
+# ---- R-B: the widened bare-literal detector catches double-quoted + single-element roster lists that
+#      the original single-quote/two-element-minimum pattern silently let through (2026-07-17 fix) ----
+def test_bare_literal_double_quoted_is_caught(repo_copy):
+    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("22_cash_flows.sql")][0]
+    txt = _read(target)
+    # BigQuery accepts double-quoted string literals; a re-hardcoded roster written this way used to
+    # evade R-B entirely (BARE_LITERAL was single-quote only).
+    _write(target, txt + '\nSELECT * FROM UNNEST(["A","B","C","D","E"]) AS strat;\n')
+    assert rc.main() == 1
+
+
+def test_bare_literal_single_element_is_caught(repo_copy):
+    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql")][0]
+    txt = _read(target)
+    # A subset/special-case hardcode of ONE code (list without a comma) also used to evade the
+    # two-element-minimum pattern.
+    _write(target, txt + "\nSELECT * FROM UNNEST(['A']) AS strat;\n")
+    assert rc.main() == 1
+
+
+# ---- R-B / R-C: a fixed divisor written leading-operator style (operator at the start of the
+#      continuation line, sqlfluff/dbt default) must still be caught — the own-line-only context
+#      window missed exactly the wrap it claimed to cover (2026-07-17 fix) ----
+def test_leading_operator_divisor_in_derived_sql_is_caught(repo_copy):
+    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql")][0]
+    txt = _read(target)
+    _write(target, txt + "\nSELECT SUM(cf.amount)\n  / 5 AS per_strategy FROM t;\n")
+    assert rc.main() == 1
+
+
+def test_leading_operator_divisor_in_dbt_reconcile_is_caught(repo_copy):
+    p = rc.DBT_RECONCILE
+    txt = _read(p)
+    _write(p, txt + "\nSELECT SUM(deposit_amount)\n  / 5 AS expected_share FROM cash_flows\n")
+    assert rc.main() == 1
+
+
+# ---- R-B: the "amount"-adjacency SUPPRESSION direction (a `/N` on a line with no money token is
+#      ignored) — R-C had this test but R-B's identical guard did not (2026-07-17 audit) ----
+def test_unrelated_slash_digit_in_derived_sql_without_amount_does_not_fail(repo_copy):
+    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql")][0]
+    txt = _read(target)
+    _write(target, txt + "\n-- see RUNBOOK section 5/6 for the split rationale\n")
+    assert rc.main() == 0
+
+
+# ---- R-C: the cash_flow / deposit adjacency alternates (not just 'amount') are exercised ----
+def test_fixed_divisor_near_deposit_token_is_caught(repo_copy):
+    p = rc.DBT_RECONCILE
+    txt = _read(p)
+    _write(p, txt + "\nSELECT total_deposit / 5 AS share FROM cash_flows\n")
+    assert rc.main() == 1
+
+
+# ---- R-E: the cooldown_days sub-block (a SEPARATE comparison loop from the top-level rails) —
+#      both the mismatch and the missing-key vacuous-pass directions (2026-07-17 audit) ----
+def test_cooldown_rail_disagreement_is_caught(repo_copy):
+    p = rc.ROSTER
+    txt = _read(p)
+    assert "post_termination: 180" in txt, "fixture assumption about roster.yaml's cooldown drifted"
+    _write(p, txt.replace("post_termination: 180", "post_termination: 5"))
+    assert rc.main() == 1
+
+
+def test_cooldown_rail_key_missing_is_caught(repo_copy):
+    p = rc.ROSTER
+    doc = rc.yaml.safe_load(_read(p))
+    assert doc["rails"]["cooldown_days"].get("post_keep") == 90, "fixture assumption about post_keep drifted"
+    del doc["rails"]["cooldown_days"]["post_keep"]
+    _write(p, rc.yaml.dump(doc, sort_keys=False))
+    assert rc.main() == 1
+
+
+# ---- R-E: the rail-constant parser rot guard (parsed < RAIL_NAMES count) — the analog of the
+#      autonomy suite's regex-rot tests, previously unexercised (2026-07-17 audit) ----
+def test_rail_const_shape_rot_is_caught(repo_copy, capsys):
+    arsenal = rc.ARSENAL_SQL
+    txt = _read(arsenal)
+    assert "8  AS n_max," in txt, "fixture assumption about the arsenal_rails consts CTE shape drifted"
+    # Break one `<N> AS <name>` const so RAIL_CONST no longer matches it -> only 7/8 parse.
+    _write(arsenal, txt.replace("8  AS n_max,", "n_max = 8,"))
+    assert rc.main() == 1
+    assert "rail constants" in capsys.readouterr().out
+
+
+# ---- R-E: a present-but-non-integer rail value is a CLEAN error, not an int() crash (2026-07-17 fix) ----
+def test_rail_non_integer_value_is_a_clean_fail(repo_copy, capsys):
+    p = rc.ROSTER
+    txt = _read(p)
+    # Blank n_min's value (YAML null) — it stays a PRESENT key (skips the clean 'missing' branch) and
+    # used to hit an unguarded int(None) -> traceback instead of a clean R-E error.
+    assert "n_min: 2 " in txt, "fixture assumption about roster.yaml's n_min line drifted"
+    _write(p, txt.replace("n_min: 2 ", "n_min:  ", 1))
+    assert rc.main() == 1
+    out = capsys.readouterr().out
+    assert "ROSTER CONSISTENCY: FAIL" in out and "is not an integer" in out
+
+
+# ---- R-F: editing a LOCKED strategy's .md slice trips its spec_hash (MEMORY records this explicitly),
+#      and a missing spec_hash input file is a clean error — neither was tested (2026-07-17 audit) ----
+def test_spec_hash_mismatch_on_md_slice_is_caught(repo_copy):
+    p = os.path.join(rc.STRATEGY_DIR, "03_strategy_a.md")
+    _write(p, _read(p) + "\n<!-- regression: locked strategy doc edited post spec-lock -->\n")
+    assert rc.main() == 1
+
+
+def test_spec_hash_missing_input_file_is_caught(repo_copy, capsys):
+    os.remove(os.path.join(rc.STRATEGY_MATH_DIR, "strategy_a.py"))
+    assert rc.main() == 1
+    assert "are missing" in capsys.readouterr().out
+
+
+# ---- R-A: the three dedicated fail-LOUD guards (empty Strategy.md headings, ARSENAL_SQL absent,
+#      zero seed rows) — each only incidentally exercised before (2026-07-17 audit) ----
+def test_empty_strategy_md_headings_is_caught(repo_copy, capsys):
+    p = rc.STRATEGY_MD
+    # Break every '## Strategy <code>' heading so STRATEGY_HEADING matches nothing -> md_codes empty.
+    _write(p, _read(p).replace("## Strategy ", "## Strat "))
+    assert rc.main() == 1
+    assert "STRATEGY_HEADING" in capsys.readouterr().out
+
+
+def test_arsenal_sql_absent_is_caught(repo_copy):
+    os.remove(rc.ARSENAL_SQL)
+    assert rc.main() == 1
+
+
+def test_zero_seed_rows_is_caught(repo_copy, capsys):
+    arsenal = rc.ARSENAL_SQL
+    txt = _read(arsenal)
+    old = "FROM UNNEST(['A','B','C','D','E']) AS code"
+    assert old in txt
+    # Rename the seed batch's `AS code` alias so UNNEST_SEED_BLOCK no longer matches (the sole seed
+    # source per the founding batch) -> zero code/to_state rows parse.
+    _write(arsenal, txt.replace(old, "FROM UNNEST(['A','B','C','D','E']) AS strat_code"))
+    assert rc.main() == 1
+    assert "parsed zero" in capsys.readouterr().out
+
+
+# ---- R-A: missing top-level input files are CLEAN R-A/R-D errors, not open() tracebacks (2026-07-17 fix) ----
+def test_missing_strategy_md_is_a_clean_fail(repo_copy, capsys):
+    os.remove(rc.STRATEGY_MD)
+    assert rc.main() == 1
+    out = capsys.readouterr().out
+    assert "ROSTER CONSISTENCY: FAIL" in out and "Strategy.md is missing" in out
+
+
+def test_missing_plan_is_a_clean_fail(repo_copy, capsys):
+    os.remove(rc.PLAN)
+    assert rc.main() == 1
+    out = capsys.readouterr().out
+    assert "ROSTER CONSISTENCY: FAIL" in out and "Claude_Task_Plan.md is missing" in out
+
+
+def test_missing_cadence_is_a_clean_fail(repo_copy, capsys):
+    os.remove(rc.CADENCE)
+    assert rc.main() == 1
+    out = capsys.readouterr().out
+    assert "ROSTER CONSISTENCY: FAIL" in out and "ops/cadence.yaml is missing" in out
+
+
+# ---- strategies-null: a present-but-null `strategies:` key is a clean FAIL, not a `for s in None`
+#      TypeError traceback (2026-07-17 fix — 3 sibling sites had forgotten the `or []` guard) ----
+def test_strategies_null_is_a_clean_fail(repo_copy, capsys):
+    p = rc.ROSTER
+    doc = rc.yaml.safe_load(_read(p))
+    doc["strategies"] = None            # present key, null value (e.g. a partial/interrupted SL5 write)
+    _write(p, rc.yaml.dump(doc, sort_keys=False))
+    assert rc.main() == 1               # must NOT raise; a clean, bridge-parseable FAIL
+    assert "ROSTER CONSISTENCY: FAIL" in capsys.readouterr().out
+
+
+# ---- R-G: an empty accepted_values(strategy) list is FLAGGED (not silently clean), and a non-mapping
+#      accepted_values is a clean error, not an AttributeError crash (2026-07-17 fixes) ----
+def test_schema_yml_empty_accepted_values_is_caught(repo_copy):
+    p = rc.DBT_SCHEMA_ACCEPTED_VALUES
+    txt = _read(p)
+    old = "values: ['A', 'B', 'C', 'D', 'E']"
+    assert old in txt, "fixture assumption about schema.yml's accepted_values lists drifted"
+    _write(p, txt.replace(old, "values: []", 1))
+    assert rc.main() == 1
+
+
+def test_schema_yml_nonmapping_accepted_values_is_a_clean_fail(repo_copy, capsys):
+    p = rc.DBT_SCHEMA_ACCEPTED_VALUES
+    txt = _read(p)
+    # accepted_values authored as a bare list instead of a {values: [...]} mapping — used to
+    # AttributeError on `.get`; now a clean R-G error.
+    old = "accepted_values:\n              values: ['A', 'B', 'C', 'D', 'E']"
+    if old not in txt:                  # tolerate an indentation drift in the real schema.yml
+        import re as _re
+        m = _re.search(r"accepted_values:\s*\n\s*values: \['A', 'B', 'C', 'D', 'E'\]", txt)
+        assert m, "fixture assumption about schema.yml's accepted_values block shape drifted"
+        old = m.group(0)
+    _write(p, txt.replace(old, "accepted_values: ['A', 'B', 'C', 'D', 'E']", 1))
+    assert rc.main() == 1
+    assert "not a {values: [...]} mapping" in capsys.readouterr().out
+
+
+# ---- R-J: arsenal_regime_coverage cell tokens must equal the strategy/01 shared vocabulary — the H7
+#      bug class had ZERO tests (2026-07-17 audit) ----
+def test_regime_spy_trend_cell_drift_is_caught(repo_copy):
+    arsenal = rc.ARSENAL_SQL
+    txt = _read(arsenal)
+    assert "UNNEST(['UP','NEUTRAL','DOWN']) AS spy_trend" in txt
+    # The exact pre-H7 mismatch: cells say UPTREND/RANGE/DOWNTREND, vocab says UP/NEUTRAL/DOWN.
+    _write(arsenal, txt.replace("UNNEST(['UP','NEUTRAL','DOWN']) AS spy_trend",
+                                "UNNEST(['UPTREND','RANGE','DOWNTREND']) AS spy_trend"))
+    assert rc.main() == 1
+
+
+def test_regime_vix_cell_drift_is_caught(repo_copy):
+    arsenal = rc.ARSENAL_SQL
+    txt = _read(arsenal)
+    assert "UNNEST(['LOW','NORMAL','HIGH']) AS vix_regime" in txt
+    _write(arsenal, txt.replace("UNNEST(['LOW','NORMAL','HIGH']) AS vix_regime",
+                                "UNNEST(['LOW_VIX','ELEVATED_VIX','HIGH_VIX']) AS vix_regime"))
+    assert rc.main() == 1
+
+
+def test_regime_vocabulary_side_drift_is_caught(repo_copy):
+    # A drift on the strategy/01 VOCABULARY side (not the SQL cell side) must also fail R-J.
+    p = os.path.join(rc.STRATEGY_DIR, "01_shared_regime_vocabulary.md")
+    txt = _read(p)
+    assert "- **UP:**" in txt
+    _write(p, txt.replace("- **UP:**", "- **UPWARD:**"))
+    assert rc.main() == 1
+
+
+def test_shared_regime_tokens_are_section_scoped():
+    # Unit-level lock on shared_regime_tokens(): the SPY/VIX sets are exactly the router vocabulary and
+    # do NOT leak the yield-curve NORMAL/INVERTED or breadth HEALTHY/WEAK bullets lower in the same file.
+    spy, vix, _path = rc.shared_regime_tokens()
+    assert spy == {"UP", "NEUTRAL", "DOWN"}
+    assert vix == {"LOW", "NORMAL", "HIGH"}
+    assert "INVERTED" not in vix and "HEALTHY" not in vix
+
+
+# ---- R-K: golden-scenario prose-regression coverage — the check had ZERO tests, and repo_copy never
+#      repointed SCENARIOS_YAML so no perturbation was even possible (2026-07-17 audit) ----
+def test_uncovered_adopted_strategy_is_caught(repo_copy, capsys):
+    _write(rc.SCENARIOS_YAML, _scenarios_covering("ABCD"))   # E adopted but uncovered
+    assert rc.main() == 1
+    out = capsys.readouterr().out
+    assert "R-K" in out and "'E'" in out
+
+
+def test_slice_based_coverage_path_a_is_honored(repo_copy):
+    # Coverage via governing_files naming E's own slice (path a), with NO 'Strategy E' prose anywhere.
+    body = _scenarios_covering("ABCD") + (
+        "  - id: e-via-slice\n"
+        "    situation: A market-neutral pairs setup with no code word in the prose.\n"
+        "    governing_files: ['07_strategy_e.md']\n"
+        "    expected_decision: ACTIVATE\n"
+        "    rationale: The per-strategy slice governs this decision.\n"
+    )
+    _write(rc.SCENARIOS_YAML, body)
+    assert rc.main() == 0
+
+
+def test_scenarios_absent_skips_r_k_cleanly(repo_copy):
+    os.remove(rc.SCENARIOS_YAML)         # scenario_docs() -> None -> R-K skips, rest still passes
+    assert rc.main() == 0
+
+
+def test_shadow_strategy_with_slice_but_no_coverage_is_caught(repo_copy, capsys):
+    # A SHADOW strategy WITH a slice file but no golden-scenario coverage must FAIL R-K.
+    (open(os.path.join(rc.STRATEGY_DIR, "08_strategy_f.md"), "w", encoding="utf-8")
+     .write("## Strategy F [CANDIDATE]: shadow test strategy\n\nbody\n"))
+    _write(rc.ROSTER, _read(rc.ROSTER) + _shadow_f_entry())
+    _write(rc.SCENARIOS_YAML, _scenarios_covering("ABCDE"))   # A-E covered, F is not
+    assert rc.main() == 1
+    assert "R-K" in capsys.readouterr().out
+
+
+def test_slice_less_shadow_strategy_without_coverage_is_caught(repo_copy, capsys):
+    # 2026-07-17 (owner direction): a SHADOW/PAPER strategy with NO slice AND no coverage is a
+    # half-applied SL5 SHADOW-register that must FAIL. R-A/R-D never inspect a non-active entry, so R-K
+    # is the only gate — previously this was a non-blocking note (zero enforcement, a vacuous pass).
+    _write(rc.ROSTER, _read(rc.ROSTER) + _shadow_f_entry())   # F: shadow, no slice
+    _write(rc.SCENARIOS_YAML, _scenarios_covering("ABCDE"))   # A-E covered, F not
+    assert rc.main() == 1
+    assert "R-K" in capsys.readouterr().out
+
+
+def test_slice_less_shadow_strategy_with_prose_coverage_passes(repo_copy):
+    # A slice-less SHADOW strategy CAN still satisfy R-K via a 'Strategy F' prose mention (path b) —
+    # the enforcement requires coverage, not a slice specifically.
+    _write(rc.ROSTER, _read(rc.ROSTER) + _shadow_f_entry())   # F: shadow, no slice
+    _write(rc.SCENARIOS_YAML, _scenarios_covering("ABCDEF"))  # F covered by a prose mention
+    assert rc.main() == 0
+
+
+def test_slice_less_probe_adopted_missing_slice_stays_a_note(repo_copy, capsys):
+    # A PROBE/ADOPTED (roster-active) strategy missing its slice is caught by R-A (heading absent from
+    # slice_codes); R-K keeps that a non-blocking note to avoid double-reporting — exit is already 1.
+    slice_path = os.path.join(rc.STRATEGY_DIR, "07_strategy_e.md")
+    os.remove(slice_path)                                     # remove adopted E's slice
+    assert rc.main() == 1                                     # R-A fails on the missing E heading
+    out = capsys.readouterr().out
+    assert "R-A" in out                                       # the authoritative failure
+    assert "already reported by R-A" in out                  # R-K's non-blocking note, not a 2nd error
+
+
+# ---- R-H: the reported line number (a bespoke formula distinct from the _line_no idiom) is correct ----
+def test_r_h_reports_the_offending_line_number(repo_copy, capsys):
+    p = rc.PLAN
+    txt = _read(p)
+    idx = txt.index("state.strategy_candidates")
+    expected_line = txt[:idx].count("\n") + 1
+    _write(p, txt[:idx] + "events.strategy_candidates" + txt[idx + len("state.strategy_candidates"):])
+    assert rc.main() == 1
+    assert f"Claude_Task_Plan.md:{expected_line}" in capsys.readouterr().out
+
+
+# ---- slicemap end-of-file tolerance: 'Strategy reading' as the LAST H2 must still yield its codes
+#      (the `(?=^##\s|\Z)` fix), rather than an empty section -> spurious R-A mismatch (2026-07-17 fix) ----
+def test_slicemap_reads_last_section_to_eof(tmp_path, monkeypatch):
+    plan = tmp_path / "plan.md"
+    plan.write_text(
+        "## Something earlier\n\nblah\n\n"
+        "## Strategy reading\n\n"
+        "| **M1** (A) | `03_strategy_a.md` | x |\n"
+        "| **M2** (B) | `04_strategy_b.md` | x |\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(rc, "PLAN", str(plan))
+    assert rc.slicemap_codes() == {"A", "B"}
 
 
 if __name__ == "__main__":
