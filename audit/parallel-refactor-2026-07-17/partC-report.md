@@ -22,10 +22,12 @@ backlog print).
 
 ## Summary
 
-- **5 fixes to owned CLI checkers** (1 HIGH bug, 3 MEDIUM bugs, 1 LOW latent-corruption hardening),
+- **5 fixes to owned CLI checkers** (1 HIGH bug, 3 MEDIUM bugs, 1 LOW apostrophe-support change),
   each with a **mutation-verified** regression test (proven to fail when the fix is reverted). The
-  initial pass shipped 2; a follow-up (owner directive: "fix all") implemented the two fail-open
-  guards and the apostrophe fail-fast this report had first deferred.
+  initial pass shipped 2; follow-ups (owner directives "fix all", then "do the coordinated two-file
+  change") implemented the two fail-open guards and the apostrophe escaping this report had first
+  deferred — with the paired check-B un-escape verified end-to-end and handed off (it lives in a
+  non-owned file another instance was editing).
 - **~64 new tests** added across the owned surface (3 brand-new files for previously **untested**
   modules + additions to 4 existing files). Full suite: **596 passed** (shared tree — includes other
   instances' concurrent additions), ruff clean, all checkers pass.
@@ -104,26 +106,39 @@ source universe; added a partial-compile fail test, a full-compile OK control, a
 `count == len(names)` invariant test. **Mutation check:** neutering the guard prints the vacuous
 `OK:` and fails the new test.
 
-### 5. LOW — `gen_routine_lists.py` `gen_15_region` apostrophe: silent corruption → explicit fail-fast *(follow-up; was deferred)*
-[`scripts/gen_routine_lists.py`](../../scripts/gen_routine_lists.py) `gen_15_region()`.
+### 5. LOW — `gen_routine_lists.py` `gen_15_region` apostrophe: now SUPPORTED via escaping (Part C half; check-B half handed off) *(follow-up; was deferred)*
+[`scripts/gen_routine_lists.py`](../../scripts/gen_routine_lists.py) `gen_15_region()` + new `_sql_str()`.
 
-A routine heading containing `'` would (a) break the single-quoted `ops.routine_catalog` SQL literal
-and (b) be **structurally un-representable** downstream: the frozen `check_cadence_consistency.py`
-check B parses this row back with `'(Read …\. Perform [^']*)'`, whose `[^']*` truncates at the first
-quote and can **never** match the raw-apostrophe `want_catalog` — so the two byte-identical
-derivations could not agree no matter what this generator emits. A *complete* fix (support
-apostrophes) is therefore **impossible within Part C's ownership**: it requires escaping `'`→`''`
-here **and** teaching check B's frozen parser to un-escape — a coordinated two-file change.
+A routine heading containing `'` would break the single-quoted `ops.routine_catalog` SQL literal, and
+was un-representable downstream because `check_cadence_consistency.py` check B parsed the row back with
+`'(Read …\. Perform [^']*)'` (`[^']*` truncates at the first quote). *Supporting* apostrophes is a
+**coordinated two-file change**: escape `'`→`''` here **and** teach check B to un-escape. Per owner
+directive ("do the coordinated two-file change"), the Part C half is now implemented; the check-B half
+is handed off because it lives in a non-owned file that was **actively being edited by another instance**
+(uncommitted `M` in `git status`) — committing an edit there on the `partC` branch would have entangled
+that instance's in-progress work.
 
-What I *could* do, and did: convert the latent failure into an **explicit fail-fast**. `gen_15_region`
-now raises `SystemExit` with a clear, actionable message the moment a heading contains `'`, naming the
-routine and the two-file coordination needed — instead of silently writing malformed SQL that surfaces
-later (possibly after being applied to BigQuery) as a confusing `routine_catalog instruction drift`
-from check B. The guard fires **only** on an apostrophe, so it is **byte-identical on the current tree**
-(no heading has one; `gen --check` still clean). Tests: a unit rejection test + an integration test
-proving the guard propagates through `main() --check`. **Mutation check:** neutering the guard fails
-both. The path to real apostrophe *support* (the coordinated escape/un-escape change) is documented
-inline and in Deferred below for the operator.
+**Part C half (done):** `gen_15_region` now routes the instruction through a new `_sql_str()` that
+escapes `'`→`''` (BigQuery's escaped quote; BigQuery stores the un-escaped value, so
+`ops.routine_catalog.canonical_instruction` holds the raw heading). Escaping only the free-text
+instruction (not the `\w+` rid) matches what check B un-escapes. **Byte-identical on the current tree**
+— no heading has an apostrophe, so `_sql_str` is a no-op and `gen --check` stays clean. Tests: a
+`_sql_str` escape+reversibility unit test, a `gen_15_region` escaped-output test, and a `main()`
+`--write`→`--check` round-trip on an apostrophe heading. **Mutation check:** reverting `_sql_str` to
+identity fails all three.
+
+**Check-B half (ready-to-apply, for the file's owner) — `scripts/check_cadence_consistency.py`
+`parse_catalog_sql`:**
+```python
+    pat = re.compile(
+        r"STRUCT\('([^']+)'(?:\s+AS routine)?,\s*'(Read Claude_Task_Plan\.md\. Perform (?:[^']|'')*)'")
+    return {rid: instr.replace("''", "'") for rid, instr in pat.findall(txt)}
+```
+(plus an un-escape test in `tests/test_cadence_consistency.py`). **Verified end-to-end:** I simulated
+this exact parser against `gen_15_region`'s escaped output for headings with one *and two* apostrophes
+(`O'Brien's` → `O''Brien''s` → recovered exactly) and confirmed the parsed-and-un-escaped instruction
+equals check B's raw-heading `want_catalog`, and that the escaped SQL literals are quote-balanced. The
+two halves are in lockstep and both byte-identical on today's tree; they should land together.
 
 ## Tests added (56 total; the core deliverable)
 
@@ -158,18 +173,18 @@ Additions to existing owned files:
 ## Deferred / owner items (NOT changed — flagged for coordination)
 
 > Every item this section originally deferred has since been addressed within Part C's ownership per
-> owner directive ("fix all"): the two fail-open guards (`check_live_sql_parity` `checked==0`,
-> `dbt_parity` partial-compile) are Bugs fixed #3/#4, and the `gen_15_region` apostrophe is now a
-> fail-fast guard (Bugs fixed #5). The `dbt_parity` guard ships with a documented disabled-model
-> caveat (can't false-fire today; inline note tells a future maintainer to exclude a deliberately
-> `enabled=false` model from `model_source_names()`).
+> owner directives ("fix all", then "do the coordinated two-file change"): the two fail-open guards
+> (`check_live_sql_parity` `checked==0`, `dbt_parity` partial-compile) are Bugs fixed #3/#4, and the
+> `gen_15_region` apostrophe is now *supported* via escaping (Bugs fixed #5). The `dbt_parity` guard
+> ships with a documented disabled-model caveat (can't false-fire today; inline note tells a future
+> maintainer to exclude a deliberately `enabled=false` model from `model_source_names()`).
 
-**Only cross-file work that remains (genuinely NOT in Part C's ownership):** to *support* (rather than
-reject) an apostrophe in a routine heading, a coordinated two-file change is required — escape
-`'`→`''` in `gen_15_region` (Part C) **and** teach the frozen `check_cadence_consistency.py` check B
-parser to un-escape `''`→`'` (not owned by Part C). Until then, Bugs fixed #5's guard enforces the
-"no apostrophe in a heading" invariant explicitly and early. No heading has an apostrophe today, so
-nothing is blocked.
+**One ready-to-apply patch remains for another file's owner** (NOT applied by Part C — the target,
+`scripts/check_cadence_consistency.py` + `tests/test_cadence_consistency.py`, was actively being
+edited by another instance, so committing there on the `partC` branch would clobber that work): the
+check-B `parse_catalog_sql` un-escape shown in **Bugs fixed #5**. It is **verified end-to-end** against
+Part C's live escaping and is **byte-identical on today's tree** (no apostrophe headings exist), so it
+can be applied any time the two halves are landed together — nothing is blocked until then.
 
 ## Considered but declined (no clear, meaningful win / would risk a constraint)
 
@@ -195,7 +210,9 @@ Full suite `python -m pytest -q` → **596 passed** (shared tree — count inclu
 concurrent work). `gen_routine_lists.py --check` → 0; `check_script_version_consistency.py` → 0;
 `check_live_sql_parity.py --offline` → 0 (179 objects parse); `check_dbt_view_coverage.py` → 1
 (advisory, by design); `ruff check` on all owned .py → clean. All **five** source fixes carry
-mutation-verified regression tests (each proven to fail when its fix is reverted — including the two
-fail-open guards and the apostrophe guard, whose mutations reproduce the vacuous `OK:` / missing
-fail-fast they prevent). Only my owned paths were staged (the working tree also carries other parallel
-instances' in-flight edits to non-owned files, which were **not** staged).
+mutation-verified regression tests (each proven to fail when its fix is reverted — the two fail-open
+guards' mutations reproduce the vacuous `OK:` they prevent; reverting `_sql_str` to identity fails all
+three apostrophe-escaping tests). The Part C↔check-B coordination was additionally verified by
+simulating the handed-off check-B parser against live escaped output (one- and two-apostrophe
+headings round-trip exactly). Only my owned paths were staged (the working tree also carries other
+parallel instances' in-flight edits to non-owned files, which were **not** staged).

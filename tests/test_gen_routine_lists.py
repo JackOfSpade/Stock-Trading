@@ -94,16 +94,25 @@ def test_gen_15_region_empty_instruction_when_heading_missing():
     assert got == "  STRUCT('GHOST' AS routine, '' AS canonical_instruction)"
 
 
-def test_gen_15_region_rejects_apostrophe_heading_with_clear_error():
-    # A heading containing an apostrophe can't be represented in the single-quoted routine_catalog SQL
-    # literal AND is structurally un-parseable by check_cadence_consistency.py check B's `[^']*`
-    # capture (which truncates at the quote), so the two byte-identical derivations could never agree.
-    # The generator fails FAST with a clear, actionable cause instead of writing malformed SQL that
-    # surfaces later as a confusing "instruction drift" from check B (2026-07-18 audit).
-    with pytest.raises(SystemExit) as ei:
-        gr.gen_15_region([{"id": "D9"}], {"D9": "D9. O'Brien Momentum Screen — regular routine"})
-    msg = str(ei.value)
-    assert "apostrophe" in msg and "D9" in msg
+def test_sql_str_escapes_single_quotes_and_mirrors_check_b_unescape():
+    # _sql_str escapes ' -> '' for the single-quoted SQL literal; check_cadence_consistency.py check B
+    # (parse_catalog_sql) does the exact inverse ('' -> ') when it reads the row back. Pin both the
+    # escape and its reversibility so the two byte-identical derivations stay in lockstep.
+    assert gr._sql_str("no quotes here") == "no quotes here"        # no-op when nothing to escape
+    assert gr._sql_str("O'Brien") == "O''Brien"
+    assert gr._sql_str("a'b'c").replace("''", "'") == "a'b'c"       # round-trips through check B's inverse
+
+
+def test_gen_15_region_escapes_apostrophe_in_heading():
+    # Apostrophe SUPPORT (coordinated with check B's un-escape): the heading's ' is escaped to '' in
+    # the single-quoted SQL literal, producing VALID BigQuery SQL (BigQuery stores the un-escaped
+    # value). check B un-escapes '' -> ' when parsing the row back so want_catalog (raw heading) matches.
+    got = gr.gen_15_region([{"id": "D9"}], {"D9": "D9. O'Brien Momentum Screen — regular routine"})
+    assert got == ("  STRUCT('D9' AS routine, 'Read Claude_Task_Plan.md. Perform D9. O''Brien "
+                   "Momentum Screen — regular routine.' AS canonical_instruction)")
+    # Mirror of check B: un-escaping the instruction recovers the raw text want_catalog derives.
+    assert "Perform D9. O''Brien Momentum Screen" in got
+    assert got.replace("''", "'").count("O'Brien") == 1
 
 
 # ---- gen_24_region: only the four period classes -------------------------------------------------
@@ -255,19 +264,21 @@ def test_main_requires_exactly_one_of_write_or_check(monkeypatch):
         gr.main()
 
 
-def test_main_fails_fast_on_an_apostrophe_heading(tmp_path, monkeypatch):
-    # The apostrophe guard propagates through main(): --check (like --write) fails fast via
-    # build_targets()->gen_15_region rather than generating malformed routine_catalog SQL.
-    _wire_fixture(tmp_path, monkeypatch)
+def test_main_write_check_round_trips_with_an_apostrophe_heading(tmp_path, monkeypatch):
+    # Apostrophe SUPPORT end to end: --write emits ESCAPED, valid SQL for a heading with an apostrophe,
+    # and --check round-trips clean against it. (check B's paired '' -> ' un-escape lives in the
+    # non-owned check_cadence_consistency.py — see partC-report.md for that half of the change.)
+    _f12, f15, _f24 = _wire_fixture(tmp_path, monkeypatch)
     plan = tmp_path / "Claude_Task_Plan.md"      # rewrite so D1's heading carries an apostrophe
     plan.write_text(
         "## D1. O'Brien Screen — deep research\nbody\n\n"
         "## W1. Catalyst Calendar (Strategies A and C) — deep research\nbody\n"
     )
+    monkeypatch.setattr(sys, "argv", ["gen_routine_lists.py", "--write"])
+    assert gr.main() == 0
+    assert "Perform D1. O''Brien Screen — deep research." in f15.read_text()   # escaped in the SQL literal
     monkeypatch.setattr(sys, "argv", ["gen_routine_lists.py", "--check"])
-    with pytest.raises(SystemExit) as ei:
-        gr.main()
-    assert "apostrophe" in str(ei.value)
+    assert gr.main() == 0                                                       # self-consistent round-trip
 
 
 def test_build_targets_returns_three_targets(tmp_path, monkeypatch):
