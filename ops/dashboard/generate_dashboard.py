@@ -83,7 +83,11 @@ def get_user_tz():
     America/Denver (never bare UTC) so a missing view or a fresh deploy still reads sensibly."""
     try:
         rows = q(f"SELECT tz FROM `{PROJECT}.state.user_tz`")
-        return rows[0]["tz"] if rows else "America/Denver"
+        # `... or "America/Denver"` coalesces a NULL/empty tz too (not just an empty result set): a
+        # None tz would otherwise reach fmt_ts, where ZoneInfo(None) raises TypeError and crashes the
+        # render loop (that TypeError is outside main()'s query-only except tuple). state.user_tz's
+        # view already COALESCEs NULL, so this is defense-in-depth for a schema change.
+        return (rows[0]["tz"] if rows else None) or "America/Denver"
     except Exception:
         return "America/Denver"
 
@@ -135,7 +139,11 @@ def main():
                    f"WHERE NOT resolved ORDER BY alert_ts DESC LIMIT 20")
         runs = q(f"SELECT routine,run_date,status,log_ts FROM `{PROJECT}.ops.run_log` "
                  f"ORDER BY log_ts DESC LIMIT 20")
-    except (subprocess.CalledProcessError, FileNotFoundError, RuntimeError, ValueError) as e:
+    except (subprocess.CalledProcessError, OSError, RuntimeError, ValueError) as e:
+        # OSError (broadened from FileNotFoundError) so ANY spawn-time OS error from the bq subprocess
+        # — a missing binary (FileNotFoundError), a non-executable one (PermissionError), a PATH entry
+        # that is a directory (IsADirectoryError), all OSError subclasses — yields the clean "Query
+        # failed" diagnostic + return 1, instead of an uncaught traceback (2026-07-17 audit).
         # CalledProcessError's default __str__ is just "Command '[...]' returned non-zero exit
         # status N" — it never includes bq's actual stderr diagnostic, even though check=True
         # already populated e.stderr with the real error text (2026-07-14 audit finding).

@@ -292,3 +292,63 @@ def test_main_catchup_mode_swallows_exception_and_returns_zero(monkeypatch):
         raise RuntimeError("bq error")
     monkeypatch.setattr(ar, "bq", _boom)
     assert ar.main() == 0
+
+
+def test_main_no_webhook_is_a_clean_noop(monkeypatch, capsys):
+    monkeypatch.setattr(ar, "WEBHOOK_URL", "")
+    assert ar.main() == 0
+    assert "clean no-op" in capsys.readouterr().out
+
+
+# ---- get_user_tz(): happy path + documented "falls back to America/Denver" contract -----------
+#      (the value feeds fmt_ts for every rendered alert timestamp; previously untested.)
+
+def test_get_user_tz_happy_path(monkeypatch):
+    monkeypatch.setattr(ar, "bq", lambda sql: [{"tz": "Europe/London"}])
+    assert ar.get_user_tz() == "Europe/London"
+
+
+def test_get_user_tz_null_value_falls_back_to_denver(monkeypatch):
+    # A NULL state.user_tz.tz (row present, value None) must coalesce to Denver — returning None here
+    # would make fmt_ts(v, None) raise TypeError and, via main()'s swallow, drop the whole alert batch.
+    monkeypatch.setattr(ar, "bq", lambda sql: [{"tz": None}])
+    assert ar.get_user_tz() == "America/Denver"
+
+
+def test_get_user_tz_empty_result_falls_back_to_denver(monkeypatch):
+    monkeypatch.setattr(ar, "bq", lambda sql: [])   # IndexError -> fallback
+    assert ar.get_user_tz() == "America/Denver"
+
+
+def test_get_user_tz_bq_error_falls_back_to_denver(monkeypatch):
+    def _boom(sql):
+        raise RuntimeError("bq down")
+    monkeypatch.setattr(ar, "bq", _boom)
+    assert ar.get_user_tz() == "America/Denver"
+
+
+# ---- fmt_ts(): a None/empty tz must stay cosmetic (never raise) -------------------------------
+
+def test_fmt_ts_none_timezone_falls_back_without_raising():
+    # ZoneInfo(None) raises TypeError (neither ValueError nor ZoneInfoNotFoundError). The top-of-fn
+    # `not tz_name` guard degrades it to the cosmetic "... UTC" string instead of letting it escape.
+    assert ar.fmt_ts("2026-07-09 18:26:21+00", None) == "2026-07-09 18:26:21+00 UTC"
+
+
+def test_fmt_ts_empty_timezone_falls_back():
+    assert ar.fmt_ts("2026-07-09 18:26:21+00", "") == "2026-07-09 18:26:21+00 UTC"
+
+
+def test_relay_alerts_still_posts_when_user_tz_is_null(monkeypatch):
+    # End-to-end regression: a NULL state.user_tz.tz previously crashed fmt_ts (TypeError) inside
+    # relay_alerts -> main()'s best-effort except swallowed it -> the alert batch silently vanished.
+    def _fake_bq(sql):
+        if "user_tz" in sql:
+            return [{"tz": None}]
+        return [{"alert_ts": "2026-07-09 18:26:21+00", "severity": "critical",
+                 "source": "s", "category": "c", "message": "m"}]
+    monkeypatch.setattr(ar, "bq", _fake_bq)
+    posted = []
+    monkeypatch.setattr(ar, "post", lambda t: posted.append(t))
+    ar.relay_alerts()
+    assert len(posted) == 1 and "s/c" in posted[0]   # batch delivered, not dropped

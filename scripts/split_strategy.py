@@ -34,7 +34,11 @@ HAND_MAINTAINED = {"README.md"}
 
 def slug(title: str) -> str:
     s = title.strip().lower()
-    s = re.sub(r"strategy ([a-e]):.*", r"strategy_\1", s)   # "Strategy C: ..." -> strategy_c
+    # Anchored (^): this rewrite is only for a section TITLE that STARTS with "Strategy <letter>:"
+    # (e.g. "Strategy C: ..." -> strategy_c). Unanchored, a title merely MENTIONING "Strategy A:"
+    # mid-line (e.g. "Notes on Strategy A: results") would match and silently truncate everything
+    # after it. Byte-identical for every current heading (all real ones begin with the phrase).
+    s = re.sub(r"^strategy ([a-e]):.*", r"strategy_\1", s)
     s = re.sub(r"[^a-z0-9]+", "_", s).strip("_")
     return s or "section"
 

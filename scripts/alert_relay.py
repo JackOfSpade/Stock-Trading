@@ -79,10 +79,17 @@ def bq(sql):
 def get_user_tz():
     """Detected DISPLAY timezone (state.user_tz — bigquery/20_user_prefs.sql). Cosmetic only — never
     fails the relay: any error (including a monkeypatched `bq` returning an unrelated row shape in
-    tests) falls back to America/Denver silently."""
+    tests) falls back to America/Denver silently.
+
+    The `or "America/Denver"` coalesce makes the documented fallback hold for a NULL/empty tz value
+    too, not just for an exception. state.user_tz already COALESCEs NULL -> 'America/Denver' at the
+    view, so this is defense-in-depth — but without it a NULL tz would return None, and fmt_ts(v, None)
+    raises TypeError (ZoneInfo(None)), which is neither ValueError nor ZoneInfoNotFoundError, so it
+    escapes fmt_ts's cosmetic-fallback and — via main()'s outer `except Exception` — silently drops the
+    whole alert batch. Returning a real tz string here keeps a bad/absent tz strictly cosmetic."""
     try:
         rows = bq(f"SELECT tz FROM `{PROJECT}.state.user_tz`")
-        return rows[0]["tz"]
+        return rows[0]["tz"] or "America/Denver"
     except Exception:
         return "America/Denver"
 
@@ -95,7 +102,11 @@ def fmt_ts(v, tz_name):
     — it never contains the literal string "UTC". The `endswith(" UTC")` strip below is harmless
     defense-in-depth (e.g. hand-constructed test fixtures or a future BigQuery format change), not a
     reflection of what CAST(... AS STRING) actually emits today."""
-    if not v or ZoneInfo is None:
+    # `not tz_name` guards a None/empty tz: ZoneInfo(None) raises TypeError (not caught below), which
+    # would escape into main()'s outer `except Exception` and drop the whole batch — exactly what this
+    # function's contract forbids. get_user_tz() already coalesces to a real tz, so this is belt-and-
+    # suspenders; for tz_name == "" it returns the same "... UTC" string the except-branch would.
+    if not v or not tz_name or ZoneInfo is None:
         return f"{v} UTC"
     try:
         s = str(v).strip()

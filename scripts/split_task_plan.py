@@ -79,7 +79,16 @@ def split(text):
         return text, []
     # Preamble ends at the cadence-group header that opens the routines region (the last `# ...`
     # top-level heading at or before the first routine — `# DAILY ...`).
-    group_start = max(i for i in range(first_routine + 1) if is_group(i))
+    group_headers = [i for i in range(first_routine + 1) if is_group(i)]
+    if not group_headers:
+        # Routines always live under a `# <CADENCE>` group header. If the plan is ever restructured so
+        # the first routine precedes every top-level `# ` header, fail with an actionable message
+        # instead of an opaque `max() arg is an empty sequence` ValueError from the max() below.
+        raise ValueError(
+            "Claude_Task_Plan.md: the first routine heading has no preceding `# ` cadence-group "
+            "header (routines must sit under a `# DAILY`/`# WEEKLY`/... group). Fix the plan structure."
+        )
+    group_start = max(group_headers)
     preamble = "".join(lines[:group_start])
 
     routines = []
