@@ -314,6 +314,49 @@ loops:
       and blast radius.
     added: "2026-07-18"
 
+  - id: capital_allocator             # AI capital-allocation call: bounded AI judgment on the post-
+                                      # newcomer-floor remainder of a strategy-termination redistribution
+                                      # or a deposit, D2/AR_orc/§13.C-inline (AI_DECISION_REDESIGN.md §3
+                                      # Redesign A, owner-approved 2026-07-19)
+    stage: active_auto                # BUILT DIRECTLY AT ACTIVE_AUTO (2026-07-19, owner-approved redesign
+                                      # verdict, AI_DECISION_REDESIGN.md §3 Redesign A) — NOT dormant- or
+                                      # shadow-then-promoted. Unlike park_allocator (which burned in at
+                                      # shadow because every trading day is a live decision point with no
+                                      # inherent bound), this loop's blast radius is bounded FROM ITS FIRST
+                                      # EVENT by construction: the [0.5x, 2x]-of-equal-share rail, the
+                                      # default-EQUAL-below-MEDIUM-conviction fallback, no new movement
+                                      # point (fires only where capital already moves — termination close-
+                                      # out or a deposit, both already-mechanical events), and per-strategy
+                                      # deployed TWR being flow-invariant by construction (so a skewed split
+                                      # cannot distort any kill/gate measurement). Same reasoning
+                                      # strategy_arsenal used to justify its own build-at-ceiling entry
+                                      # below, generalized to a narrower, rail-bounded judgment call.
+    ceiling: active_auto
+    artifact: events.decision_log entry_type='capital-allocation' (fields JSON — trigger, allocations,
+      conviction, conviction_pct, is_default_equal, winner_code, runner_up_code, total_dollars,
+      invalidation, theater_check) -> state.capital_allocation_calls (bigquery/95_capital_allocator.sql,
+      one row per {call, survivor} with an equal_share_pct/deviation_pct counterfactual column) + the
+      per-survivor events.cash_flows rows (deposit path, Operating_Protocols.md §13.C) / events.
+      position_events reconciliation (termination path, Operating_Protocols.md §16) the call's dollar
+      amounts actually land in
+    gate_to_next_stage: >
+      n/a — this loop is authorized AT its ceiling (active_auto) by the owner's 2026-07-19 verdict on
+      AI_DECISION_REDESIGN.md §3 Redesign A, the same "authorized at ceiling, no promotion path needed"
+      posture as strategy_arsenal above (Redesign A's own "Staging" section: "Given the 0.5x-2x bounds,
+      flow-invariant measurement, and decision-log audit, this can bind from its first event"). The
+      compensating control replacing human PR review / a shadow burn-in is the rail bundle itself
+      (bounds + default-equal fallback + no-new-movement-point + flow-invariant TWR) plus the full
+      events.decision_log audit trail and W5's weekly CAPITAL-ALLOCATION SCORECARD bullet
+      (Claude_Task_Plan.md) comparing every call against its equal-split counterfactual on
+      state.capital_allocation_calls — read-only, never gates a call, exactly like park_allocator's own
+      PARK SCORECARD. No dedicated heartbeat/dead-man's switch registration for this loop (see
+      scripts/check_autonomy_consistency.py HEARTBEAT_SELF_MONITORED_LOOPS): unlike a daily/weekly-
+      cadence loop, this one fires only inline within D2's STRATEGY TERMINATIONS step / AR_orc's
+      m2m-termination handler / D2's §13.C deposit-recording flow — all three already carry their own
+      run_log / cadence dead-man coverage, so a standalone 10-day-quiet alarm on an event that is
+      legitimately rare (terminations: zero so far) would be pure false-positive noise, not a real gap.
+    added: "2026-07-19"
+
 cross_cutting_guards:
   - id: no_auto_merge_self_improvement
     status: superseded_2026-07-10   # was documented_not_enforced; retired as a blocking guard (see note)
