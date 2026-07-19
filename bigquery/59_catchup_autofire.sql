@@ -57,6 +57,16 @@ OPTIONS(description='Idempotency + audit trail for OPS0 Cadence Watchdog auto-re
 -- the build if this UNNEST list drifts from `{routine : catchup_safe AND monitor_class in
 -- (weekly_sun, monthly_ftd, quarterly_ftd, annual_ftd)}`. Update BOTH this list and ops/cadence.yaml's
 -- catchup_safe field together.
+
+-- SUPERSEDED (2026-07-18): state.period_catchup_available (ONLY this view -- the
+-- ops.catchup_refire_log TABLE above and the state.catchup_refire_readiness /
+-- state.catchup_refire_failures VIEWs below are UNCHANGED and remain canonical in THIS file) is now
+-- defined canonically in bigquery/90_catchup_inprogress_guard.sql, which reproduces this exact view
+-- (including the catchup_safe_period_routines UNNEST list below -- still the copy
+-- scripts/check_cadence_consistency.py's check K actually parses; leave it here unchanged) and
+-- additionally excludes a routine that is in-flight (a fresh 'started' ops.run_log row with no
+-- terminal row yet). Apply bigquery/90 -- do NOT re-apply the CREATE OR REPLACE VIEW below live in
+-- isolation. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.period_catchup_available` AS
 WITH catchup_safe_period_routines AS (
   SELECT routine FROM UNNEST([

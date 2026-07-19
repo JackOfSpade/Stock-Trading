@@ -406,6 +406,20 @@ sources:
             description: Active strategy code.
             tests:
               - not_null
+      - name: retry_telemetry
+        description: >
+          Per-token-occurrence parse of the RETRY[...]/DEPWAIT[...]/INCIDENT[...] machine tokens
+          routines append to ops.run_log.note (bigquery/88_retry_telemetry.sql, owner directive
+          2026-07-18). Declared out-of-scope for now (not yet ported as a dbt model) — added here so
+          it and analytics.routine_health_scorecard (which LEFT JOINs its per-routine rollup) stay off
+          scripts/check_dbt_view_coverage.py's advisory uncovered list.
+        columns:
+          - name: routine
+            description: Routine code the token was logged under.
+          - name: token_type
+            description: "'RETRY' | 'DEPWAIT' | 'INCIDENT'."
+          - name: outcome
+            description: RETRY's outcome= / DEPWAIT's outcome= field; NULL for INCIDENT.
 
   - name: analytics_external
     project: stock-trading-498512
@@ -430,6 +444,18 @@ sources:
             description: Annualized regression-intercept alpha vs SPY.
           - name: min_n_met
             description: TRUE once n_obs (trailing window size, capped at 60) >= 40.
+      - name: routine_health_scorecard
+        description: >
+          Per-routine 90-day process-reliability scorecard (bigquery/27_process_reliability.sql,
+          canonical definition now bigquery/89_scorecard_midnight_retry.sql — midnight-safe
+          completion-minute metric + retry/dep-wait telemetry columns from state.retry_telemetry).
+          Hand-maintained rolling-window SQL feeding W5's PROCESS-RELIABILITY REVIEW; dbt does not
+          own it. Declared here so it stays off scripts/check_dbt_view_coverage.py's uncovered list.
+        columns:
+          - name: routine
+            description: Routine code.
+          - name: min_n_met
+            description: TRUE once n_log_rows_90d >= 20 — the loop's own minimum-observation floor.
 
   - name: perf
     project: stock-trading-498512

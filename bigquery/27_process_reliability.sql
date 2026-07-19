@@ -14,6 +14,12 @@
 -- high-N and grows every routine-day (unlike the 8-closed-trade P&L sample), and its change surface
 -- is a bounded, version-controlled PROCESS CONSTANT (a cadence deadline, a stalled-run threshold) —
 -- it never touches strategy/P&L math. This is the pattern every other loop in the audit should copy.
+--
+-- SUPERSEDED (2026-07-18): analytics.routine_health_scorecard is now defined canonically in
+-- bigquery/89_scorecard_midnight_retry.sql — apply that file, not this one. bigquery/89 fixes a
+-- midnight-wrap bug in the completion-minute-of-day metric below and adds retry/dependency-wait
+-- telemetry columns; the CREATE OR REPLACE VIEW statement immediately below is kept here,
+-- unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply it live in isolation.
 
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.routine_health_scorecard` AS
 WITH runs AS (
