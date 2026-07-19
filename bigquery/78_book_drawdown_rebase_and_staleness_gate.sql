@@ -251,6 +251,13 @@ FROM `stock-trading-498512.state.trading_enabled` t, expected e;
 -- WITHOUT waiting for intraday marks_fresh (which is false by construction until the evening ingest).
 -- A genuinely-stale staleness alert (payload marks_fresh=false) still resolves only via the strict
 -- live-recheck path. This removes the last source of the daily staleness echo lingering all day.
+--
+-- SUPERSEDED (2026-07-19): this definition of ops.sp_auto_resolve_alerts is now superseded by
+-- bigquery/94_catchup_refire_blocked_policy.sql, which reproduces this exact procedure body (Rules
+-- 1-4 below, byte-identical) and additionally adds Rule 3b (catchup_refire_blocked). Apply
+-- bigquery/94 -- do NOT re-apply the CREATE OR REPLACE PROCEDURE below live in isolation. Kept here,
+-- unmodified, for DR-rebuild apply-in-order reference only. (Historical context preserved: this
+-- definition itself SUPERSEDES bigquery/34, per the banner above.)
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_auto_resolve_alerts`()
 BEGIN
   DECLARE eligible_dep, eligible_run, eligible_stalled, eligible_stale ARRAY<STRING>;
