@@ -12,35 +12,19 @@ extraction; and every main() branch (SKIP / OK / drift-FAIL / FAIL-CLOSED / both
 
 Added 2026-07-17 (parallel-refactor Part A) alongside the both-empty NOT-VERIFIED guard fix.
 """
-import importlib.util
 import os
 import sys
-import types
 
 import pytest
 
+from conftest import fake_subprocess_run as _fake_run
+from conftest import load_module_from_path
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-
-def _load(name, relpath):
-    path = os.path.join(ROOT, relpath)
-    spec = importlib.util.spec_from_file_location(name, path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-clrp = _load("check_live_roster_parity", os.path.join("scripts", "check_live_roster_parity.py"))
+clrp = load_module_from_path("check_live_roster_parity", "scripts", "check_live_roster_parity.py")
 # The other roster gate — imported only to lock the docstring-promised roster_active_codes() parity.
-crc = _load("check_roster_consistency", os.path.join("scripts", "check_roster_consistency.py"))
-
-
-def _fake_run(returncode, stdout, stderr=""):
-    def run(cmd, capture_output=None, text=None, timeout=None):
-        run.calls.append({"cmd": cmd, "timeout": timeout})
-        return types.SimpleNamespace(returncode=returncode, stdout=stdout, stderr=stderr)
-    run.calls = []
-    return run
+crc = load_module_from_path("check_roster_consistency", "scripts", "check_roster_consistency.py")
 
 
 @pytest.fixture(autouse=True)

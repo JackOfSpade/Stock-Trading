@@ -2,23 +2,12 @@
 (OAE-5, 2026-07-16 owner-selfservice audit). Offline only — no `bq`/`gh` network calls; every probe
 is monkeypatched or exercised via a faked subprocess.run so this suite never touches live infra.
 """
-import importlib.util
-import os
 import subprocess
 import types
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from conftest import load_module_from_path
 
-
-def _load():
-    path = os.path.join(ROOT, "scripts", "verify_owner_actions.py")
-    spec = importlib.util.spec_from_file_location("verify_owner_actions", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-voa = _load()
+voa = load_module_from_path("verify_owner_actions", "scripts", "verify_owner_actions.py")
 
 
 SAMPLE_DOC = """# Owner actions
@@ -290,6 +279,31 @@ done_when: n>0
     rc = voa.main()
     assert rc == 0
     assert "no probe implementation" in capsys.readouterr().out
+
+
+def test_main_reports_done_for_already_flipped_item_with_no_registered_probe(tmp_path, monkeypatch, capsys):
+    # Anchor lookup + already_done() must run before the probe-registration check, so an
+    # already-[DONE]-flipped item whose id has no PROBES entry reports DONE, not OPEN
+    # "no probe implementation for this id" (2026-07-18 fix).
+    doc = tmp_path / "OWNER_ACTIONS.md"
+    doc.write_text("""## [DONE 2026-07-16 — auto-verified] Z. Unknown but already done
+
+```verify
+id: Z-does-not-exist
+type: bq
+probe: SELECT 1
+done_when: n>0
+```
+""")
+    monkeypatch.setattr(voa, "OWNER_ACTIONS_PATH", str(doc))
+    before = doc.read_text()
+    rc = voa.main()
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "no probe implementation" not in out
+    assert "DONE" in out
+    after = doc.read_text()
+    assert before == after
 
 
 def test_main_missing_file_exits_zero_not_raise(monkeypatch, capsys):

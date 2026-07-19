@@ -11,24 +11,14 @@ surface at a time and assert the run fails with the expected check id (R-A / R-B
 
 No warehouse, no creds — pure offline fixture/parser tests (run in the always-on `test` job).
 """
-import importlib.util
 import os
 import shutil
 
 import pytest
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from conftest import load_module_from_path
 
-
-def _load():
-    path = os.path.join(ROOT, "scripts", "check_roster_consistency.py")
-    spec = importlib.util.spec_from_file_location("check_roster_consistency", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-rc = _load()
+rc = load_module_from_path("check_roster_consistency", "scripts", "check_roster_consistency.py")
 
 
 # ---- fixture scaffolding: copy the REAL repo files into tmp_path, then let each test mutate ----
@@ -730,6 +720,17 @@ def test_missing_cadence_is_a_clean_fail(repo_copy, capsys):
     assert "ROSTER CONSISTENCY: FAIL" in out and "ops/cadence.yaml is missing" in out
 
 
+# ---- R-G: 2026-07-18 fix — a missing dbt/models/analytics/schema.yml was the one file-existence guard
+#      in this script with no `else` branch, so it silently no-op'd (zero errors, zero notes) instead of
+#      failing loud like every sibling single-file guard (STRATEGY_MD/PLAN/ARSENAL_SQL/CADENCE/DBT_RECONCILE
+#      above) ----
+def test_missing_schema_yml_is_a_clean_fail(repo_copy, capsys):
+    os.remove(rc.DBT_SCHEMA_ACCEPTED_VALUES)
+    assert rc.main() == 1
+    out = capsys.readouterr().out
+    assert "ROSTER CONSISTENCY: FAIL" in out and "dbt/models/analytics/schema.yml is missing" in out
+
+
 # ---- strategies-null: a present-but-null `strategies:` key is a clean FAIL, not a `for s in None`
 #      TypeError traceback (2026-07-17 fix — 3 sibling sites had forgotten the `or []` guard) ----
 def test_strategies_null_is_a_clean_fail(repo_copy, capsys):
@@ -860,6 +861,29 @@ def test_slice_less_shadow_strategy_with_prose_coverage_passes(repo_copy):
     _write(rc.ROSTER, _read(rc.ROSTER) + _shadow_f_entry())   # F: shadow, no slice
     _write(rc.SCENARIOS_YAML, _scenarios_covering("ABCDEF"))  # F covered by a prose mention
     assert rc.main() == 0
+
+
+def test_heading_present_filename_mismatched_slice_still_enforces_coverage(repo_copy, capsys):
+    # 2026-07-18 fix: R-K's slice-presence test must reuse R-A's heading-based sl_codes, not a fresh
+    # `*_strategy_<code>.md` filename glob — a slice whose heading correctly reads '## Strategy E' but
+    # whose filename does not end in `_strategy_e.md` (plausible for a SISA-synthesized code beyond
+    # split_strategy.py's a-e-only slug regex) must still count as "has a slice", so the real
+    # `if code not in covered` check still runs instead of vacuously skipping behind a false "already
+    # reported by R-A" note. Rename E's real slice to a mismatched filename (its heading text — and
+    # therefore sl_codes, which R-A also reads — is unaffected by the rename) and strip E's coverage.
+    # NOTE: the rename incidentally also trips R-F (spec_hash_inputs() hardcodes the literal
+    # 07_strategy_e.md path), so main() exits 1 even under the pre-fix glob code — the R-K-specific
+    # substring assertions below, not the bare exit code, are what discriminate pre/post-fix: the
+    # pre-fix code vacuously note-and-skips E's coverage (no "NO golden-scenario coverage" error,
+    # a false "already reported by R-A" note instead), the fixed code fails loud on R-K itself.
+    slice_path = os.path.join(rc.STRATEGY_DIR, "07_strategy_e.md")
+    renamed_path = os.path.join(rc.STRATEGY_DIR, "07_strategy_e_market_neutral_pairs.md")
+    os.rename(slice_path, renamed_path)
+    _write(rc.SCENARIOS_YAML, _scenarios_covering("ABCD"))   # E adopted but given ZERO coverage
+    assert rc.main() == 1
+    out = capsys.readouterr().out
+    assert "R-K" in out and "'E'" in out and "NO golden-scenario coverage" in out
+    assert "already reported by R-A" not in out
 
 
 def test_slice_less_probe_adopted_missing_slice_stays_a_note(repo_copy, capsys):

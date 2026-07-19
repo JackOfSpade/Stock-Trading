@@ -23,6 +23,9 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib.md_fence import fence_mask  # noqa: E402
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "Strategy.md")
 OUTDIR = os.path.join(ROOT, "strategy")
@@ -52,13 +55,10 @@ def split(text: str):
     and silently truncate the real section (2026-07-17 audit). The current Strategy.md has no such
     case, so this is byte-identical for today's tree — verify with `--check`."""
     lines = text.splitlines(keepends=True)
+    fence = fence_mask(lines)
     idx = []
-    in_fence = False
     for i, ln in enumerate(lines):
-        if re.match(r"^(```|~~~)", ln):
-            in_fence = not in_fence
-            continue
-        if not in_fence and re.match(r"^## ", ln):
+        if not fence[i] and re.match(r"^## ", ln):
             idx.append(i)
     preamble = "".join(lines[: idx[0]]) if idx else text
     sections = []

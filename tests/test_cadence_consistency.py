@@ -8,21 +8,9 @@ that rots is caught by CI instead of silently disarming the gate.
 
 No warehouse, no creds — pure offline parser tests (run in the always-on `test` job).
 """
-import importlib.util
-import os
+from conftest import load_module_from_path
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-
-def _load():
-    path = os.path.join(ROOT, "scripts", "check_cadence_consistency.py")
-    spec = importlib.util.spec_from_file_location("check_cadence_consistency", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-cc = _load()
+cc = load_module_from_path("check_cadence_consistency", "scripts", "check_cadence_consistency.py")
 
 
 def test_routine_suffix_dead_reexport_removed():
@@ -311,10 +299,28 @@ def test_malformed_triggers_json_is_caught(tmp_path, monkeypatch, capsys):
     assert "could not parse as JSON" in capsys.readouterr().out
 
 
-def test_real_triggers_json_check_passes(tmp_path, monkeypatch):
-    # Sanity: the real, unmodified ops/triggers.json + cadence.yaml + Claude_Task_Plan.md must
-    # still agree (this exercises check F's happy path end to end, not just the fixture).
-    assert cc.main() == 0
+# ---- checks A/B: main()-level drift injection for the script's two founding checks (the parsers
+#      are unit-tested above; this drives main()'s actual comparison branches end to end) ----
+def test_check_a_schedule_class_mismatch_is_caught(tmp_path, monkeypatch, capsys):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    cadence_sql.write_text(
+        "STRUCT('D1'  AS routine, 'daily_all' AS schedule)\n"  # cadence.yaml says daily_trading
+        "   AND DATETIME(CURRENT_TIMESTAMP(), 'America/Denver') >= DATETIME(e.today, TIME '21:00:00')\n"
+    )
+    assert cc.main() == 1
+    assert "schedule class mismatch" in capsys.readouterr().out
+
+
+def test_check_b_instruction_drift_is_caught(tmp_path, monkeypatch, capsys):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    catalog_sql.write_text(
+        "STRUCT('D1' AS routine, 'Read Claude_Task_Plan.md. Perform D1. Wrong instruction text.' "
+        "AS canonical_instruction)\n"
+    )
+    assert cc.main() == 1
+    assert "routine_catalog instruction drift" in capsys.readouterr().out
 
 
 # ---- check G: ops/trigger_ids.json duplicate/stale/missing-entry handling ----
@@ -375,11 +381,6 @@ def test_auto_merge_routine_re_accepting_the_cadence_id_is_clean(tmp_path, monke
     assert cc.main() == 0
 
 
-def test_auto_merge_routine_re_against_real_files_is_clean():
-    # The real ops/cadence.yaml + .github/workflows/auto-merge-claude.yml must already agree.
-    assert cc.main() == 0
-
-
 # ---- check J: parse_period_watch_routines_sql — bigquery/24's post-normalization labelled rows ----
 def test_parse_period_watch_routines_sql_matches_known_good(tmp_path, monkeypatch):
     f = tmp_path / "24.sql"
@@ -403,10 +404,6 @@ def test_parse_period_watch_routines_sql_empty_on_reformat_is_caught(tmp_path, m
 def test_parse_period_watch_routines_sql_returns_none_when_file_absent(tmp_path, monkeypatch):
     monkeypatch.setattr(cc, "PERIOD_WATCH_SQL", str(tmp_path / "does_not_exist.sql"))
     assert cc.parse_period_watch_routines_sql() is None
-
-
-def test_check_j_against_real_files_is_clean():
-    assert cc.main() == 0
 
 
 # ---- check K: parse_unnest_routine_ids — 31/59's comment-stripped UNNEST([...]) AS routine list ----
@@ -517,10 +514,6 @@ def test_check_k_missing_catchup_safe_key_is_caught(tmp_path, monkeypatch, capsy
     assert "missing catchup_safe boolean" in capsys.readouterr().out
 
 
-def test_check_k_against_real_files_is_clean():
-    assert cc.main() == 0
-
-
 # ---- check L: parse_inventory_table — the ROUTINE INVENTORY table section, strictly scoped ----
 def test_parse_inventory_table_scoping_excludes_slice_map_rows(tmp_path):
     plan = tmp_path / "plan.md"
@@ -581,20 +574,7 @@ def test_check_l_deleting_a_row_is_caught(tmp_path, monkeypatch, capsys):
     assert "D1: in ops/cadence.yaml but missing a row in Claude_Task_Plan.md's ROUTINE INVENTORY table" in out
 
 
-def test_check_l_against_real_files_is_clean():
-    assert cc.main() == 0
-
-
 # ---- scripts/gen_routine_lists.py: --write / --check round trip (ARCH-3 Item 30b) ----
-def _load_gen():
-    import importlib.util
-    path = os.path.join(ROOT, "scripts", "gen_routine_lists.py")
-    spec = importlib.util.spec_from_file_location("gen_routine_lists", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
 def _write_gen_fixture(tmp_path):
     plan = tmp_path / "plan.md"
     plan.write_text(
@@ -635,7 +615,7 @@ def _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24):
 
 
 def test_gen_routine_lists_write_then_check_is_clean(tmp_path, monkeypatch):
-    gen = _load_gen()
+    gen = load_module_from_path("gen_routine_lists", "scripts", "gen_routine_lists.py")
     plan, cadence, sql12, sql15, sql24 = _write_gen_fixture(tmp_path)
     _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24)
     # --write: populates the marker regions
@@ -650,7 +630,7 @@ def test_gen_routine_lists_write_then_check_is_clean(tmp_path, monkeypatch):
 
 
 def test_gen_routine_lists_check_is_dirty_after_row_deleted(tmp_path, monkeypatch):
-    gen = _load_gen()
+    gen = load_module_from_path("gen_routine_lists", "scripts", "gen_routine_lists.py")
     plan, cadence, sql12, sql15, sql24 = _write_gen_fixture(tmp_path)
     _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24)
     for path, body in gen.build_targets():
@@ -673,7 +653,7 @@ def test_gen_routine_lists_check_is_dirty_after_row_deleted(tmp_path, monkeypatc
 def test_gen_routine_lists_against_real_repo_write_is_noop():
     # The real, already-normalized bigquery/12/15/24 must be a byte-level no-op for --write, and
     # --check must pass clean (proves the generator reproduces today's 30-routine state exactly).
-    gen = _load_gen()
+    gen = load_module_from_path("gen_routine_lists", "scripts", "gen_routine_lists.py")
     changed = [path for path, body in gen.build_targets() if gen.write_region(path, body)]
     assert changed == []
     for path, body in gen.build_targets():
@@ -685,7 +665,7 @@ def test_gen_12_region_tolerates_missing_monitor_class_like_gen_24():
     # gen_12_region with a KeyError (the old `!= "queue_driven"` filter kept the None row, then the
     # f-string bracket-accessed r['monitor_class']). It now silently omits the row, matching the
     # parallel gen_24_region; check_cadence_consistency.py flags the missing key loudly.
-    gen = _load_gen()
+    gen = load_module_from_path("gen_routine_lists", "scripts", "gen_routine_lists.py")
     assert gen.gen_12_region([{"id": "X9"}]) == ""
     assert gen.gen_24_region([{"id": "X9"}]) == ""
     # a well-formed row alongside a malformed one still renders the good one, drops the bad one
@@ -940,3 +920,17 @@ def test_check_l_ar_att_plain_daily_without_footnote_is_caught(tmp_path, monkeyp
     assert cc.main() == 1
     # plain 'Daily' implies a daily_* class, but AR_att is queue_driven -> the footnote is required.
     assert "ROUTINE INVENTORY cadence cell 'Daily'" in capsys.readouterr().out
+
+
+# ---- aggregate real-repo sanity check (2026-07-18 audit: collapses five byte-identical
+#      `assert cc.main() == 0` tests that were previously scattered under misleading per-check names —
+#      test_real_triggers_json_check_passes / test_auto_merge_routine_re_against_real_files_is_clean /
+#      test_check_j_against_real_files_is_clean / test_check_k_against_real_files_is_clean /
+#      test_check_l_against_real_files_is_clean. All five ran the same unpatched cc.main() against the
+#      live repo, so a real-repo regression in ANY check made all five fail identically and misdirected
+#      CI triage toward the wrong check letters. One canonical test has identical detection power. ----
+def test_main_against_real_repo_is_clean():
+    # The real, unmodified ops/cadence.yaml + Claude_Task_Plan.md + bigquery/12/15/24 +
+    # ops/triggers.json + ops/trigger_ids.json + .github/workflows/auto-merge-claude.yml must all
+    # still agree — the full, unpatched end-to-end happy path.
+    assert cc.main() == 0

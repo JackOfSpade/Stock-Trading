@@ -6,31 +6,14 @@ It re-implements the SAME bq-stdout->JSON slice helper that already caused a pro
 `except` returns 0, so a parse/format regression fails SILENTLY — alerts/orders simply stop being POSTed
 with no red CI. These offline tests (no warehouse, no creds) lock the helper + the row-shape contract.
 """
-import importlib.util
 import json
-import os
-import types
 
 import pytest
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from conftest import fake_subprocess_run as _fake_run
+from conftest import load_module_from_path
 
-
-def _load():
-    path = os.path.join(ROOT, "scripts", "alert_relay.py")
-    spec = importlib.util.spec_from_file_location("alert_relay", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-ar = _load()
-
-
-def _fake_run(returncode, stdout, stderr=""):
-    def run(cmd, capture_output=None, text=None, timeout=None):
-        return types.SimpleNamespace(returncode=returncode, stdout=stdout, stderr=stderr)
-    return run
+ar = load_module_from_path("alert_relay", "scripts", "alert_relay.py")
 
 
 # ---- bq() JSON-slice helper (the exact regressed bug class) -------------------------------

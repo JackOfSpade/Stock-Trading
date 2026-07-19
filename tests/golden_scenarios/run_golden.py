@@ -467,7 +467,7 @@ def main():
 
     try:
         scenarios = load_scenarios()
-    except (OSError, ValueError) as exc:
+    except (OSError, ValueError, yaml.YAMLError) as exc:
         print(f"FATAL: could not load {SCENARIOS_PATH}: {exc}", file=sys.stderr)
         return 1
 
@@ -489,6 +489,11 @@ def main():
     _provider = "Gemini free tier" if os.environ.get("GEMINI_API_KEY") else "none configured (set GEMINI_API_KEY)"
     print(f"\nLive mode — provider={_provider}, {len(scenarios)} scenario(s) "
           f"(filter: {args.scenario_ids or 'all'})")
+    if args.scenario_ids:
+        known_ids = {sc.get("id") for sc in scenarios}
+        unknown = [sid for sid in args.scenario_ids if sid not in known_ids]
+        if unknown:
+            print(f"::warning::--scenario id(s) not found in scenarios.yaml: {unknown}", file=sys.stderr)
     results = run_live(scenarios, scenario_ids=args.scenario_ids)
     if not results:
         print("Live run produced no results (skipped — see notice/warning above). Advisory: exit 0.")

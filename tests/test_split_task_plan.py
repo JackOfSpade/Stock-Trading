@@ -8,25 +8,13 @@ fence-guarded heading detection, the no-preceding-group-header guard, and the or
 main(). These tests run entirely against tmp_path fixtures (never the real Claude_Task_Plan.md /
 task_plan/), so nothing here can touch or drift the real committed slices.
 """
-import importlib.util
-import os
-
 import pytest
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from conftest import load_module_from_path
 
 DR = "— regular routine"   # the em-dash + type tag ROUTINE_SUFFIX matches ("— regular routine")
 
-
-def _load():
-    path = os.path.join(ROOT, "scripts", "split_task_plan.py")
-    spec = importlib.util.spec_from_file_location("split_task_plan", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-stp = _load()
+stp = load_module_from_path("split_task_plan", "scripts", "split_task_plan.py")
 
 
 # ---- slug() (fallback id maker when heading_to_id returns None) --------------------------------

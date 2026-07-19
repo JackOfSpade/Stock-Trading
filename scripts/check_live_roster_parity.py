@@ -31,11 +31,11 @@ Usage:  python scripts/check_live_roster_parity.py [--project stock-trading-4985
 """
 import argparse
 import os
-import subprocess
+import subprocess  # noqa: F401 — kept so tests can monkeypatch subprocess.run/TimeoutExpired at the module level
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.bq_json import parse_bq_json_stdout
+from lib.bq_json import run_bq_query
 
 try:
     import yaml
@@ -52,18 +52,9 @@ ACTIVE_STATES_YAML = {"probe", "adopted"}
 def bq(sql, project):
     """Run a read-only query and return a list of dict rows (dbt_parity.py's bq() pattern:
     --format=json + --quiet/--headless to suppress banner noise, 600s timeout so a stalled CLI call
-    can't hang the CI job)."""
-    try:
-        out = subprocess.run(
-            ["bq", "--project_id=" + project, "--quiet", "--headless", "--format=json",
-             "query", "--use_legacy_sql=false", "--max_rows=100000", sql],
-            capture_output=True, text=True, timeout=600,
-        )
-    except subprocess.TimeoutExpired as e:
-        raise RuntimeError(f"bq query timed out after {e.timeout}s") from e
-    if out.returncode != 0:
-        raise RuntimeError(out.stderr.strip() or out.stdout.strip())
-    return parse_bq_json_stdout(out.stdout)
+    can't hang the CI job). Delegates to lib/bq_json.py's run_bq_query — the shared invoke wrapper
+    this module's copy was consolidated into (2026-07-18 dedup-sweep audit)."""
+    return run_bq_query(sql, project, max_rows=100000)
 
 
 def roster_active_codes():

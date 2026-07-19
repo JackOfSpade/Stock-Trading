@@ -7,24 +7,14 @@ never flags drift) had zero coverage.
 All tests run against tmp_path fixtures (never the real bigquery/*.sql, ops/cadence.yaml, or
 Claude_Task_Plan.md), so a --write test can never touch a committed file.
 """
-import importlib.util
 import os
 import sys
 
 import pytest
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from conftest import load_module_from_path
 
-
-def _load():
-    path = os.path.join(ROOT, "scripts", "gen_routine_lists.py")
-    spec = importlib.util.spec_from_file_location("gen_routine_lists", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-gr = _load()
+gr = load_module_from_path("gen_routine_lists", "scripts", "gen_routine_lists.py")
 
 
 # ---- gen_12_region: calendar-class rows (monitor_class not in queue_driven/None) ------------------

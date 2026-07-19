@@ -6,21 +6,9 @@ Strategy.md — which never exercises edge cases the live file doesn't happen to
 run entirely against tmp_path fixtures (never the real Strategy.md / strategy/ directory), so
 nothing here can touch or drift the real committed slices.
 """
-import importlib.util
-import os
+from conftest import load_module_from_path
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-
-def _load():
-    path = os.path.join(ROOT, "scripts", "split_strategy.py")
-    spec = importlib.util.spec_from_file_location("split_strategy", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-ss = _load()
+ss = load_module_from_path("split_strategy", "scripts", "split_strategy.py")
 
 
 # ---- slug() ------------------------------------------------------------------------------------

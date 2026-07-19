@@ -40,31 +40,19 @@ except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
     raise SystemExit(2)
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib.md_fence import fence_mask  # noqa: E402
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SPEC = os.path.join(ROOT, "ops", "prose_invariants.yaml")
 
 HEADING = re.compile(r"^#{1,6}\s+(.*\S)")
-FENCE = re.compile(r"^(```|~~~)")
 
 
 def load_spec():
     with open(SPEC, encoding="utf-8") as f:
         doc = yaml.safe_load(f) or {}
     return doc.get("invariants", [])
-
-
-def fence_mask(lines):
-    """Per-line bool: True where the line sits INSIDE a fenced code block (``` or ~~~ at column 0).
-    A column-0 '#'/'##' inside a fence is a code comment, not a markdown heading — the same fence
-    handling scripts/split_task_plan.py / split_strategy.py already use. Used by nearest_heading so
-    exempt_sections attributes a forbid match to the right REAL heading, not a stray code-comment."""
-    mask = [False] * len(lines)
-    in_fence = False
-    for i, ln in enumerate(lines):
-        if FENCE.match(ln):
-            in_fence = not in_fence
-        mask[i] = in_fence
-    return mask
 
 
 def files_for(rule):

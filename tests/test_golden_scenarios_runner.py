@@ -12,24 +12,15 @@ a plain list and only checks file-existence via the real ROOT, which real repo-r
 import contextlib
 import copy
 import io
-import importlib.util
 import json as _json
 import os
+import sys
 import urllib.error
 import urllib.request
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from conftest import load_module_from_path
 
-
-def _load():
-    path = os.path.join(ROOT, "tests", "golden_scenarios", "run_golden.py")
-    spec = importlib.util.spec_from_file_location("run_golden", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-rg = _load()
+rg = load_module_from_path("run_golden", "tests", "golden_scenarios", "run_golden.py")
 
 VALID = {
     "id": "ZZ-01", "category": "kill_trigger", "situation": "x",
@@ -448,3 +439,35 @@ def test_run_live_bare_token_without_decision_prefix_uses_the_reply_fallback(mon
     monkeypatch.setattr(rg, "_select_live_caller", _fake_caller_returning("GO"))
     r = rg.run_live([_sc("T-BARE", "GO")])[0]
     assert r["match"] is True and r["actual"] == "GO"
+
+
+# ---- main() — the actual CLI entry point / CI hard-gate contract — previously never invoked by any
+# test here, even though every helper it calls (above) is meticulously unit-tested in isolation. These
+# monkeypatch sys.argv (matching the convention already used by test_check_live_sql_parity.py et al. in
+# this repo) rather than subprocess, so module internals can be patched too.
+
+
+def test_main_offline_returns_0_on_real_scenarios(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["run_golden.py", "--offline"])
+    assert rg.main() == 0
+    assert "OK —" in capsys.readouterr().out
+
+
+def test_main_returns_1_and_prints_fatal_on_load_error(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["run_golden.py", "--offline"])
+    monkeypatch.setattr(rg, "load_scenarios", lambda: (_ for _ in ()).throw(ValueError("boom")))
+    assert rg.main() == 1
+    assert "FATAL" in capsys.readouterr().err
+
+
+def test_main_returns_1_on_offline_validation_errors(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["run_golden.py", "--offline"])
+    monkeypatch.setattr(rg, "validate_offline", lambda scenarios: ["fake error"])
+    assert rg.main() == 1
+    assert "FAIL" in capsys.readouterr().err
+
+
+def test_main_live_returns_0_when_no_provider_configured(monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["run_golden.py", "--live"])
+    monkeypatch.setattr(rg, "_select_live_caller", lambda: None)
+    assert rg.main() == 0

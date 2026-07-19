@@ -7,21 +7,11 @@ deliberately-reformatted fixtures and assert the parser + main() behave.
 
 No warehouse, no creds — pure offline fixture tests (run in the always-on `test` job).
 """
-import importlib.util
 import os
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from conftest import load_module_from_path
 
-
-def _load():
-    path = os.path.join(ROOT, "scripts", "check_autonomy_consistency.py")
-    spec = importlib.util.spec_from_file_location("check_autonomy_consistency", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-ac = _load()
+ac = load_module_from_path("check_autonomy_consistency", "scripts", "check_autonomy_consistency.py")
 
 
 # ---- load_stages(): {loop id: stage} from ops/autonomy_levels.yaml -------------------------------

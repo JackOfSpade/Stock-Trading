@@ -41,11 +41,11 @@ Usage:  python scripts/check_live_sql_parity.py --project stock-trading-498512
 """
 import os
 import re
-import subprocess
+import subprocess  # noqa: F401 — kept so tests can monkeypatch subprocess.run/TimeoutExpired at the module level
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.bq_json import parse_bq_json_stdout
+from lib.bq_json import run_bq_query
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BIGQUERY_DIR = os.path.join(ROOT, "bigquery")
@@ -165,15 +165,30 @@ def extract_body(txt, start, obj_type):
     if obj_type == "TABLE FUNCTION":
         # The outer wrapping ")" that closes the function's parameter list is part of the
         # preamble captured differently per call site; TABLE FUNCTION bodies in this repo are a
-        # single AS ( ... ) wrapper — strip one matching outer paren pair if present.
+        # single AS ( ... ) wrapper — strip one matching outer paren pair if present. A naive
+        # startswith("(")/endswith(")") check strips a leading paren that is NOT actually matched
+        # by the trailing one whenever the body's true shape is a set operation of parenthesized
+        # branches with no extra outer wrap (e.g. `(SELECT a) UNION ALL (SELECT b)`), corrupting an
+        # otherwise-balanced body. Only strip when paren depth returns to 0 exactly at the last
+        # character — i.e. the leading "(" really is the one that closes at the trailing ")" —
+        # never earlier (2026-07-18 audit fix). This assumes no unbalanced parens appear inside a
+        # string literal in this position, true for this repo's DDL today; a full string-literal-
+        # aware scan (like canonicalize's tokenizer) is unneeded here.
         stripped = body.strip()
         if stripped.startswith("(") and stripped.endswith(")"):
-            body = stripped[1:-1]
+            depth = 0
+            true_wrapper = False
+            for idx, ch in enumerate(stripped):
+                if ch == "(":
+                    depth += 1
+                elif ch == ")":
+                    depth -= 1
+                    if depth == 0:
+                        true_wrapper = idx == len(stripped) - 1
+                        break
+            if true_wrapper:
+                body = stripped[1:-1]
     return body.strip()
-
-
-def collapse(s):
-    return " ".join(s.split()) if s else s
 
 
 def canonicalize(sql):
@@ -294,17 +309,9 @@ def find_final_definitions():
 
 
 def bq(sql, project):
-    try:
-        out = subprocess.run(
-            ["bq", "--project_id=" + project, "--quiet", "--headless", "--format=json",
-             "query", "--use_legacy_sql=false", sql],
-            capture_output=True, text=True, timeout=600,
-        )
-    except subprocess.TimeoutExpired as e:
-        raise RuntimeError(f"bq query timed out after {e.timeout}s: {sql[:120]}") from e
-    if out.returncode != 0:
-        raise RuntimeError(out.stderr.strip() or out.stdout.strip())
-    return parse_bq_json_stdout(out.stdout)
+    # Delegates to lib/bq_json.py's run_bq_query — the shared invoke wrapper this module's copy
+    # was consolidated into (2026-07-18 dedup-sweep audit).
+    return run_bq_query(sql, project)
 
 
 def live_definition(project, dataset, name, obj_type):

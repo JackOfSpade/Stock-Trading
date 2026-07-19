@@ -290,11 +290,6 @@ def main():
         # Convert char offset to line index.
         fence_start_line = text.count("\n", 0, fence_start_char)
 
-        probe_fn = PROBES.get(fence_id)
-        if probe_fn is None:
-            results.append((fence_id, "OPEN", "no probe implementation for this id"))
-            continue
-
         anchor_idx = find_anchor_line_index(lines, fence_start_line)
         if anchor_idx is None:
             results.append((fence_id, "OPEN", "could not locate an anchor heading/bullet"))
@@ -302,6 +297,14 @@ def main():
 
         if already_done(lines[anchor_idx]):
             results.append((fence_id, "DONE", "already flipped — not re-checked (no auto-reopen)"))
+            continue
+
+        # Anchor lookup + already_done() run before the probe-registration check (2026-07-18 fix):
+        # an already-flipped item with no PROBES entry now reports DONE via already_done() above
+        # instead of permanently misreporting OPEN "no probe implementation for this id".
+        probe_fn = PROBES.get(fence_id)
+        if probe_fn is None:
+            results.append((fence_id, "OPEN", "no probe implementation for this id"))
             continue
 
         # Guard the probe so a single raising probe can never abort the whole pass (leaving other

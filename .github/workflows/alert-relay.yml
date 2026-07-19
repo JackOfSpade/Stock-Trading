@@ -217,11 +217,15 @@ jobs:
             gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Resolved — a $MODE relay run succeeded. Closing."
             gh issue close "$existing" --repo "$GITHUB_REPOSITORY"
           fi
-          # Resolved-row INSERT: unconditional for heartbeat (weekly — cheap, and matches the sibling
-          # guards' "a manually-closed GH issue never strands an open ops.ci_findings row" rule), but
-          # issue-conditional for the fast lanes (alerts runs every 30 min; an unconditional resolved
-          # row per green run would write ~50 no-op rows/day).
-          if [ -n "$existing" ] || [ "$MODE" = "heartbeat" ]; then
-            # shellcheck disable=SC2016 # single-quoted intentionally: backtick identifier + @p_* params stay literal.
-            bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_key:STRING:relay_${MODE}" --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("alert-relay",@p_key,"resolved","relay healthy this run",@p_url)' || echo "::warning::ops.ci_findings resolved-row insert failed — GH issue path unaffected."
-          fi
+          # CI-findings bridge (2026-07-18 fix): unconditional, SELECT-based resolved-row INSERT for
+          # ALL three modes — same daily/weekly-cadence pattern as live-sql-parity.yml's clean path
+          # (bigquery/67 documents this as the rule: "a clean run writes an unconditional resolved row
+          # even when no GH issue was open to close ... it is what prevents a manually-closed GH issue
+          # from stranding an open ops.ci_findings row / stuck cadence_check alert"). Previously this
+          # was gated on `[ -n "$existing" ] || [ "$MODE" = "heartbeat" ]`, so a manually-closed GH
+          # issue for the alerts/orders modes followed by continued healthy runs left the "open" row
+          # (and its ci_finding alert) stuck forever. SELECT FROM state.ci_findings_open, scoped to
+          # this mode's finding_key, writes zero rows on an already-clean run — no no-op-row-volume
+          # cost, same concern the old issue-conditional gating was (incompletely) guarding against.
+          # shellcheck disable=SC2016 # single-quoted intentionally: backtick identifier + @p_* params stay literal.
+          bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_key:STRING:relay_${MODE}" --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) SELECT workflow, finding_key, "resolved", "relay healthy this run", @p_url FROM `stock-trading-498512.state.ci_findings_open` WHERE workflow = "alert-relay" AND finding_key = @p_key' || echo "::warning::ops.ci_findings resolved-row insert failed — GH issue path unaffected."

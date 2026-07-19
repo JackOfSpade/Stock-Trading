@@ -36,6 +36,7 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib.md_fence import fence_mask  # noqa: E402
 from lib.routine_manifest import ROUTINE_SUFFIX, heading_to_id  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -61,12 +62,7 @@ def split(text):
     proves today's tree is byte-identical.
     """
     lines = text.splitlines(keepends=True)
-    in_fence = False
-    fence = [False] * len(lines)
-    for i, ln in enumerate(lines):
-        if re.match(r"^(```|~~~)", ln):
-            in_fence = not in_fence
-        fence[i] = in_fence
+    fence = fence_mask(lines)
 
     def is_group(i):
         return (not fence[i]) and re.match(r"^# ", lines[i]) is not None

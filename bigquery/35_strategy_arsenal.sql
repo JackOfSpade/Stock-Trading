@@ -275,7 +275,9 @@ OPTIONS(description='Daily SHADOW/PAPER forward-test series (SISA, 2026-07-10; S
 -- retired_date below truncate event_ts to a bare UTC date, misdating any transition an SL5 evening
 -- write logs during the Denver-UTC rollover window. 51 fixes the derivation (keyed off
 -- driver_routine so the founding-batch seed rows are unaffected) while leaving every other column
--- unchanged. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- unchanged. 51 has itself since been superseded — the CURRENT single source of truth for this view
+-- is bigquery/70_retirement_proposed_is_active.sql. Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only.
 -- ============================================================================
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_roster` AS
 WITH latest AS (
@@ -460,7 +462,9 @@ WHERE r.current_state = 'UNDER_REVIEW';
 -- bare floor (>= 1) with no upper bound despite being documented as a "band"; a strategy firing
 -- hundreds of spurious signals in the 20-day window passes identically to one firing once. 52 adds
 -- an archetype-aware ceiling (same declared_annual_roundtrips scaling as strategy_paper_readiness's
--- `freq` CTE). Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- `freq` CTE). 52 has itself since been superseded — the CURRENT single source of truth for this
+-- view is bigquery/60_shadow_stuck_cull.sql. Kept here, unmodified, for DR-rebuild apply-in-order
+-- reference only.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_shadow_readiness` AS
 WITH agg AS (
   SELECT strategy_code,

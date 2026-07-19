@@ -4,21 +4,9 @@ A checker whose regex vacuously stops matching is worse than no checker — thes
 real-world whitespace variants (alert_emailer.gs aligns with extra spaces; weekly_report.gs does
 not) and prove a genuine mismatch is caught, not silently skipped.
 """
-import importlib.util
-import os
+from conftest import load_module_from_path
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-
-def _load():
-    path = os.path.join(ROOT, "scripts", "check_script_version_consistency.py")
-    spec = importlib.util.spec_from_file_location("check_script_version_consistency", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-svc = _load()
+svc = load_module_from_path("check_script_version_consistency", "scripts", "check_script_version_consistency.py")
 
 
 def test_gs_version_regex_handles_alert_emailer_whitespace_alignment():

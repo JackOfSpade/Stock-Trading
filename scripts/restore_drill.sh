@@ -20,8 +20,12 @@ set -euo pipefail
 
 PROJECT="${PROJECT:-stock-trading-498512}"
 BUCKET="${BUCKET:-gs://stock-trading-backups}"
+BUCKET="${BUCKET%/}"
 SCRATCH="${SCRATCH:-events_restore_drill}"
 KEEP="${KEEP:-0}"
+
+command -v bq >/dev/null || { echo "bq CLI not found (install Google Cloud SDK)"; exit 1; }
+command -v gsutil >/dev/null || { echo "gsutil CLI not found (install Google Cloud SDK)"; exit 1; }
 
 bqq() { bq --project_id="$PROJECT" query --use_legacy_sql=false --format=csv --quiet --headless --max_rows=100000 "$1" | tail -n +2; }
 

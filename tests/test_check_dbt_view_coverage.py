@@ -5,21 +5,9 @@ silently stops matching, or set math that quietly under/over-reports, turns the 
 
 All tests run against tmp_path fixtures (never the real bigquery/ or dbt/ trees).
 """
-import importlib.util
-import os
+from conftest import load_module_from_path
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-
-def _load():
-    path = os.path.join(ROOT, "scripts", "check_dbt_view_coverage.py")
-    spec = importlib.util.spec_from_file_location("check_dbt_view_coverage", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-cov = _load()
+cov = load_module_from_path("check_dbt_view_coverage", "scripts", "check_dbt_view_coverage.py")
 
 
 # ---- live_views(): CREATE OR REPLACE VIEW extraction across bigquery/*.sql ------------------------

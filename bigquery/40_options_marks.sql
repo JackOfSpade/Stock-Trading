@@ -69,6 +69,10 @@ CREATE OR REPLACE FUNCTION `stock-trading-498512.analytics.fn_is_occ_option_symb
 -- state.option_marks_curated and values at `contracts * multiplier * premium_close`. A held option-format
 -- position with NO same-day option mark is EXCLUDED from that day's contribution (not zero-valued, not
 -- silently dropped from the whole chain) — see the anomaly-guard note below.
+--
+-- SUPERSEDED LIVE by bigquery/82_split_aware_engine.sql — the CURRENT single source of truth for
+-- this view. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
+-- this CREATE statement live in isolation.
 -- ============================================================================
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.strategy_daily_returns` AS
 WITH equity_held AS (

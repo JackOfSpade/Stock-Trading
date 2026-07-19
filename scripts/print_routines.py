@@ -98,6 +98,13 @@ def main():
     if missing_heading:
         print("WARNING: in cadence.yaml but no matching Claude_Task_Plan heading: "
               + ", ".join(missing_heading))
+    # Reverse direction: a well-formed heading id with no matching ops/cadence.yaml routine at all
+    # (the docstring promises this check "and vice-versa" but it was never implemented — 2026-07-18
+    # audit finding; missing_heading above only ever caught cadence-id -> heading drift).
+    missing_cadence = sorted({rid for rid in seen if rid != "?" and rid not in cad})
+    if missing_cadence:
+        print("WARNING: Claude_Task_Plan.md heading(s) with no matching ops/cadence.yaml routine: "
+              + ", ".join(missing_cadence))
     if "?" in seen:
         print("WARNING: a routine heading did not map to a cadence id (check heading format).")
     # A set discards duplicates, so two DIFFERENT headings mapping to the SAME id (a copy-pasted
@@ -109,7 +116,7 @@ def main():
     if dup_ids:
         print("WARNING: multiple Claude_Task_Plan.md headings map to the same routine id (not 1:1): "
               + ", ".join(dup_ids))
-    if not missing_heading and "?" not in seen and not dup_ids:
+    if not missing_heading and not missing_cadence and "?" not in seen and not dup_ids:
         print("OK: every routine heading maps 1:1 to an ops/cadence.yaml routine.")
 
     if "--write" in sys.argv:

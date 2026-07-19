@@ -32,8 +32,11 @@ Pointing only at an INTERMEDIATE file that is itself superseded does NOT satisfy
 the exact dead-end chain this exists to prevent. The canonical file declaring "SUPERSEDES 47" also
 does not count: the operator at risk is the one reading the OLD file, who never sees the new one.
 
-BASELINE. 19 pre-existing unmarked definitions are grandfathered below so this can land blocking
-without a 19-file comment sweep. NEW violations fail CI, so the class cannot grow. The baseline is
+BASELINE. Pre-existing unmarked definitions (19 at introduction 2026-07-18; 5 burned down same day
+when their pointers were found actively stale, see below) are grandfathered below so this can land
+blocking without a full comment sweep. NEW violations fail CI, so the class cannot grow. An entry
+whose comment block actively points at a non-canonical file is NEVER exempt, baselined or not —
+grandfathering covers only the silent no-marker case, not a live wrong pointer. The baseline is
 also checked for ROT in the other direction: once an entry is marked (or stops being multi-defined),
 the check FAILS telling you to delete it, so the allowlist can't quietly outlive its subjects.
 
@@ -78,11 +81,6 @@ BASELINE = frozenset({
     ("VIEW", "state", "book_drawdown_watch", "23_trading_control.sql"),
     ("VIEW", "state", "daily_staging_totals", "23_trading_control.sql"),
     ("PROCEDURE", "ops", "sp_auto_resolve_alerts", "34_alert_lifecycle.sql"),
-    ("VIEW", "state", "strategy_roster", "35_strategy_arsenal.sql"),
-    ("VIEW", "state", "strategy_shadow_readiness", "35_strategy_arsenal.sql"),
-    ("VIEW", "analytics", "strategy_daily_returns", "40_options_marks.sql"),
-    ("VIEW", "state", "strategy_roster", "51_strategy_roster_dates_tz.sql"),
-    ("VIEW", "state", "strategy_shadow_readiness", "52_shadow_readiness_band.sql"),
     ("VIEW", "state", "b3_trading_enabled_check", "64_b3_live_invariants.sql"),
     ("TABLE", "ops", "loop_promotion_log", "71_research_quality_promotion.sql"),
 })
@@ -173,7 +171,17 @@ def violations():
             # not stay silently exempted forever because the definition still exists.
             live_keys.add(entry)
             canonical_file = next(f for n, f, _ in occurrences if n == canonical)
-            (still if entry in BASELINE else new).append((entry, canonical_file, idx + 1))
+            # BASELINE grandfathers only the no-marker-at-all case. A definition whose comment
+            # block actively points at some OTHER superseded occurrence of the same object (a
+            # stale/dead-end pointer, or a canonical-file "SUPERSEDES <old>" read in the old file's
+            # direction) is the exact 47-style trap in this script's header and is never exempt.
+            other_numbers = {n for n, _, _ in occurrences}
+            stale_pointer = any(
+                n not in (number, canonical) and marks_superseded(context, n)
+                for n in other_numbers
+            )
+            is_exempt = entry in BASELINE and not stale_pointer
+            (still if is_exempt else new).append((entry, canonical_file, idx + 1))
     stale = sorted(BASELINE - live_keys)
     return sorted(new), sorted(still), stale
 

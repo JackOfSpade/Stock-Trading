@@ -24,11 +24,11 @@ Two column adjustments make the EXCEPT well-defined:
     TO_JSON_STRING() (applied identically to both sides) instead of being skipped.
 """
 import os
-import subprocess
+import subprocess  # noqa: F401 — kept so tests can monkeypatch subprocess.run/TimeoutExpired at the module level
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.bq_json import parse_bq_json_stdout
+from lib.bq_json import run_bq_query
 
 PROJECT = "stock-trading-498512"
 COMPILED_ROOT = os.path.join("dbt", "target", "compiled", "stock_trading", "models")
@@ -59,19 +59,10 @@ def bq(sql):
     Uses --format=json (unambiguous, unlike CSV header parsing) with global --quiet/--headless so
     bq emits no 'Waiting on bqjob...' status noise. A 600s timeout keeps a stalled bq CLI call (a
     network partition mid-token-refresh, or a hung query-polling loop) from blocking the CI job
-    indefinitely (2026-07-14 audit finding).
+    indefinitely (2026-07-14 audit finding). Delegates to lib/bq_json.py's run_bq_query — the
+    shared invoke wrapper this module's copy was consolidated into (2026-07-18 dedup-sweep audit).
     """
-    try:
-        out = subprocess.run(
-            ["bq", "--project_id=" + PROJECT, "--quiet", "--headless", "--format=json",
-             "query", "--use_legacy_sql=false", "--max_rows=100000", sql],
-            capture_output=True, text=True, timeout=600,
-        )
-    except subprocess.TimeoutExpired as e:
-        raise RuntimeError(f"bq query timed out after {e.timeout}s: {sql[:120]}") from e
-    if out.returncode != 0:
-        raise RuntimeError(out.stderr.strip() or out.stdout.strip())
-    return parse_bq_json_stdout(out.stdout)
+    return run_bq_query(sql, PROJECT, max_rows=100000)
 
 
 # Table alias applied to BOTH sides of every EXCEPT, so each selected column is referenced as

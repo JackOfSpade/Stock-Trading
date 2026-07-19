@@ -690,6 +690,9 @@ def main():
                             f"'strategy' accepted_values {sorted(codes)} no longer matches the roster-active "
                             f"set {sorted(roster_codes)} — update this list (or drop the test) alongside "
                             f"the roster change.")
+    else:
+        errors.append("R-G: dbt/models/analytics/schema.yml is missing — cannot validate that "
+                      "accepted_values(strategy) tests track the roster")
 
     # ---- R-H: candidate-feed dataset name (2026-07-15 self-improvement audit) ----
     # The live SISA candidate-intake table is state.strategy_candidates (bigquery/35); no
@@ -782,7 +785,7 @@ def main():
             #     does not reverse the SISA no-human-gate posture (CLAUDE.md settled decision; R-K's own
             #     doc frames it as mechanical). Fixed 2026-07-17 on owner direction — the prior slice-less
             #     non-blocking note left SHADOW/PAPER wholly un-enforced (a real vacuous-pass gap).
-            if not glob.glob(os.path.join(STRATEGY_DIR, f"*_strategy_{str(code).lower()}.md")):
+            if code not in sl_codes:
                 if code in roster_codes:                          # PROBE/ADOPTED — R-A already fails
                     notes.append(
                         f"R-K: strategy {code!r} (roster_state={state}) has no per-strategy slice file — "

@@ -6,21 +6,9 @@ TOLERATE the permission/reference messages a READ-ONLY SA legitimately gets when
 regression either way silently breaks the gate (false-blocks every merge, or never catches a syntax
 bug). Pure offline unit tests (no warehouse, no bq) — runs in the always-on `test` job.
 """
-import importlib.util
-import os
+from conftest import load_module_from_path
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-
-def _load():
-    path = os.path.join(ROOT, "scripts", "check_sql_dryrun.py")
-    spec = importlib.util.spec_from_file_location("check_sql_dryrun", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-csd = _load()
+csd = load_module_from_path("check_sql_dryrun", "scripts", "check_sql_dryrun.py")
 
 
 def test_exit_zero_is_ok():

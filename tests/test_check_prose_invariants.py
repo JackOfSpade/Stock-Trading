@@ -8,23 +8,11 @@ and the exempt_line_regex / exempt_sections / nearest_heading branches have lite
 production (the live ops/prose_invariants.yaml uses none of them). These tests exercise every branch
 against tmp_path spec + fixture files (never the real files), and assert the exact printed contract.
 """
-import importlib.util
-import os
-
 import yaml
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from conftest import load_module_from_path
 
-
-def _load():
-    path = os.path.join(ROOT, "scripts", "check_prose_invariants.py")
-    spec = importlib.util.spec_from_file_location("check_prose_invariants", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-cpi = _load()
+cpi = load_module_from_path("check_prose_invariants", "scripts", "check_prose_invariants.py")
 
 
 def _run(tmp_path, monkeypatch, rules, files):

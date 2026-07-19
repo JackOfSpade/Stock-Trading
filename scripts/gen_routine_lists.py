@@ -40,7 +40,11 @@ import argparse
 import os
 import sys
 
-import yaml
+try:
+    import yaml
+except ImportError:
+    print("PyYAML required: pip install pyyaml", file=sys.stderr)
+    raise SystemExit(2)
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.routine_manifest import parse_routine_headings, heading_to_id  # noqa: E402

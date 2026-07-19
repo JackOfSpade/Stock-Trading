@@ -12,21 +12,9 @@ These build synthetic bigquery/ trees in tmp_path and point the module's BIGQUER
 assertion depends on the real repo's evolving contents (except the one live-guard test, which pins
 that the repo currently has no NEW violations).
 """
-import importlib.util
-import os
+from conftest import load_module_from_path
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-
-def _load():
-    path = os.path.join(ROOT, "scripts", "check_superseded_markers.py")
-    spec = importlib.util.spec_from_file_location("check_superseded_markers", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-cs = _load()
+cs = load_module_from_path("check_superseded_markers", "scripts", "check_superseded_markers.py")
 
 DDL = "CREATE OR REPLACE VIEW `stock-trading-498512.state.thing` AS SELECT 1 AS a;\n"
 
@@ -169,6 +157,24 @@ def test_baselined_violation_does_not_fail_but_is_reported(tmp_path, monkeypatch
     assert new == [] and stale == []
     assert [v[0][3] for v in still] == ["10_old.sql"]
     assert cs.main() == 0
+
+
+def test_baselined_entry_with_a_stale_pointer_is_not_exempt(tmp_path, monkeypatch):
+    # BASELINE grandfathers only the silent no-marker case. An entry whose comment ACTIVELY points
+    # at a non-canonical occurrence (10 names 20, but 30 has since superseded 20) is the exact
+    # dead-end-chain trap the checker exists for and must be flagged as NEW despite the baseline —
+    # found live 2026-07-18 in 5 baselined entries (35/51's roster and 35/52's shadow-readiness
+    # chains, 40's backward-only "supersedes 03") whose pointers all dead-ended mid-chain.
+    _tree(tmp_path, {
+        "10_old.sql": "-- SUPERSEDED LIVE by bigquery/20_mid.sql\n" + DDL,
+        "20_mid.sql": "-- SUPERSEDED LIVE by bigquery/30_new.sql\n" + DDL,
+        "30_new.sql": "-- canonical\n" + DDL,
+    }, monkeypatch)
+    monkeypatch.setattr(cs, "BASELINE", frozenset({("VIEW", "state", "thing", "10_old.sql")}))
+    new, still, _stale = cs.violations()
+    assert [v[0][3] for v in new] == ["10_old.sql"], "stale pointer must override the baseline"
+    assert still == []
+    assert cs.main() == 1
 
 
 def test_baseline_that_is_now_compliant_fails_as_stale(tmp_path, monkeypatch):

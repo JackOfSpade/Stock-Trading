@@ -20,15 +20,23 @@ STAMP="$(date -u +%Y-%m-%d)"
 command -v bq >/dev/null || { echo "bq CLI not found (install Google Cloud SDK)"; exit 1; }
 
 # Every table in the append-only events dataset (the irreplaceable substrate).
-TABLES="$(bq --project_id="$PROJECT" ls --max_results=1000 "${PROJECT}:events" \
-          | awk 'NR>2 && $2=="TABLE"{print $1}')"
+# INFORMATION_SCHEMA.TABLES, not `bq ls`'s human-readable text output -- immune to a future bq
+# CLI output-format change (header-count/column-order), unlike the columnar-text-parse this
+# replaced. Matches restore_drill.sh's own table-enumeration query exactly, including the explicit
+# --max_rows: bq's built-in default is 100 rows, which would silently drop the alphabetically-last
+# tables once the dataset grows past 100 -- the same silent-incompleteness class the guard below
+# exists for.
+TABLES="$(bq --project_id="$PROJECT" query --use_legacy_sql=false --format=csv --quiet --headless \
+          --max_rows=100000 \
+          "SELECT table_name FROM \`${PROJECT}.events.INFORMATION_SCHEMA.TABLES\` WHERE table_type='BASE TABLE' ORDER BY table_name" \
+          | tail -n +2)"
 
-# `bq ls` succeeding with zero/unparseable output does NOT trip `set -e` (the pipeline's exit
-# status is bq's, which is 0) -- a listing-permission issue, wrong PROJECT, or a future bq CLI
-# output-format change (header-count/column-order) would otherwise silently back up ZERO tables
-# and still print "Done." with exit 0 (2026-07-14 audit finding; restore_drill.sh already guards
-# this identical failure mode).
-[ -n "$TABLES" ] || { echo "no events.* tables found via 'bq ls' (check PROJECT=$PROJECT, IAM list permission, or a bq CLI output-format change breaking the NR>2/\$2==\"TABLE\" parse); aborting rather than reporting a false 'Done.'"; exit 1; }
+# A genuinely-empty events dataset, a wrong PROJECT, or a query that succeeds with zero rows
+# would otherwise silently back up ZERO tables and still print "Done." with exit 0 (2026-07-14
+# audit finding). A real permission or query failure now trips `set -e`/`pipefail` directly via
+# bq's own non-zero exit code before this guard is even reached, since the pipeline runs under
+# `set -euo pipefail`.
+[ -n "$TABLES" ] || { echo "no events.* base tables found via INFORMATION_SCHEMA.TABLES (check PROJECT=$PROJECT or IAM list/query permission); aborting rather than reporting a false 'Done.'"; exit 1; }
 
 # Per-table dt=<date> layout — SAME as the production scheduled export
 # (bigquery/scheduled_queries/backup_events_export.sql) and scripts/restore_drill.sh, so an ad-hoc

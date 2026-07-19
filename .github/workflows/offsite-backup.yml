@@ -120,8 +120,16 @@ jobs:
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Resolved — the off-site mirror succeeded this run. Closing."
             gh issue close "$existing" --repo "$GITHUB_REPOSITORY"
-            # Resolved-row INSERT only when an issue was actually open (daily job — avoids a no-op row
-            # per green day; a manually-closed issue is re-opened by the next failure, which re-inserts).
-            # shellcheck disable=SC2016 # single-quoted intentionally: backtick identifier + @p_url stay literal.
-            bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("offsite-backup","offsite_mirror","resolved","mirror healthy this run",@p_url)' || echo "::warning::ops.ci_findings resolved-row insert failed — GH issue path unaffected."
           fi
+
+          # CI-findings bridge (2026-07-18 fix): unconditional, SELECT-based resolved-row INSERT —
+          # same daily-cadence pattern as live-sql-parity.yml's clean path (bigquery/67 documents this
+          # as the rule: "a clean run writes an unconditional resolved row even when no GH issue was
+          # open to close ... it is what prevents a manually-closed GH issue from stranding an open
+          # ops.ci_findings row / stuck cadence_check alert"). Previously this INSERT was nested inside
+          # `if [ -n "$existing" ]`, so a manually-closed GH issue followed by continued healthy runs
+          # left the "open" row (and its ci_finding alert) stuck forever. SELECT FROM
+          # state.ci_findings_open writes zero rows on an already-clean day — no no-op-row cost, same
+          # as the concern the old comment was (incompletely) guarding against.
+          # shellcheck disable=SC2016 # single-quoted intentionally: backtick identifier + @p_url stay literal.
+          bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) SELECT workflow, finding_key, "resolved", "mirror healthy this run", @p_url FROM `stock-trading-498512.state.ci_findings_open` WHERE workflow = "offsite-backup"' || echo "::warning::ops.ci_findings resolved-row insert failed — GH issue path unaffected."

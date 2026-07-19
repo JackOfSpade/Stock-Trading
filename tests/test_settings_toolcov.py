@@ -12,22 +12,11 @@ green is now locked in by test_real_repo_settings_toolcov_is_consistent below (m
 test_script_version_consistency.py's test_real_repo_is_consistent), so a future routine-text change that
 names a not-yet-allowlisted tool fails CI here instead of only being caught by hand.
 """
-import importlib.util
 import json
-import os
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from conftest import load_module_from_path
 
-
-def _load():
-    path = os.path.join(ROOT, "scripts", "check_settings_toolcov.py")
-    spec = importlib.util.spec_from_file_location("check_settings_toolcov", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-stc = _load()
+stc = load_module_from_path("check_settings_toolcov", "scripts", "check_settings_toolcov.py")
 
 
 def _write_fixtures(tmp_path, task_plan_text, triggers_text, settings_allow):

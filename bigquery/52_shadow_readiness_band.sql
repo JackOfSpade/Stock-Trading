@@ -33,6 +33,10 @@
 --
 -- SUPERSEDES the state.strategy_shadow_readiness VIEW definition in bigquery/35_strategy_arsenal.sql.
 -- No dbt mirror exists. Apply after 35_strategy_arsenal.sql, 46_weekly_benchmarks.sql.
+--
+-- SUPERSEDED LIVE in turn by bigquery/60_shadow_stuck_cull.sql — the CURRENT single source of truth
+-- for this view. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
+-- re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_shadow_readiness` AS
 WITH agg AS (
   SELECT strategy_code,

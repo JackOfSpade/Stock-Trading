@@ -5,32 +5,16 @@ resolution picks the LAST bigquery/NN_*.sql file that CREATE OR REPLACEs a given
 indented CREATE OR REPLACE embedded inside a FORMAT() string literal (bigquery/17_restore_drill.sql)
 must never be mistaken for a real top-level statement.
 """
-import importlib.util
 import json
 import os
 import sys
-import types
 
 import pytest
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from conftest import fake_subprocess_run as _fake_run
+from conftest import load_module_from_path
 
-
-def _load():
-    path = os.path.join(ROOT, "scripts", "check_live_sql_parity.py")
-    spec = importlib.util.spec_from_file_location("check_live_sql_parity", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-clsp = _load()
-
-
-def _fake_run(returncode, stdout, stderr=""):
-    def run(cmd, capture_output=None, text=None, timeout=None):
-        return types.SimpleNamespace(returncode=returncode, stdout=stdout, stderr=stderr)
-    return run
+clsp = load_module_from_path("check_live_sql_parity", "scripts", "check_live_sql_parity.py")
 
 
 def test_parses_the_real_repo_without_crashing():
@@ -100,10 +84,6 @@ def test_normalize_tail_matches_repo_extraction_despite_live_trailing_comments()
 
     live_style_body = "SELECT 1 AS x\nFROM bar;\n-- trailing live comment\n\n"
     assert clsp.normalize_tail(live_style_body) == repo_body
-
-
-def test_collapse_normalizes_whitespace_for_comparison():
-    assert clsp.collapse("SELECT   1\nFROM  bar") == "SELECT 1 FROM bar"
 
 
 def test_view_body_stops_at_a_following_non_compared_create(monkeypatch):
@@ -221,6 +201,37 @@ def test_extract_body_table_function_strips_outer_paren_wrapper():
     m = clsp.CREATE_STMT.search(txt)
     body = clsp.extract_body(txt, m.start(), "TABLE FUNCTION")
     assert body == "SELECT p AS y"
+
+
+def test_extract_body_table_function_no_outer_wrapper_is_left_intact():
+    # 2026-07-18 audit fix: a body shaped `(SELECT a) UNION ALL (SELECT b)` — no extra outer wrap —
+    # merely starts/ends with a paren, but the leading "(" is NOT matched by the trailing ")". The
+    # old naive startswith/endswith strip corrupted this into unbalanced garbage; the paren-depth
+    # guard must leave both inner paren pairs intact.
+    txt = (
+        "CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_x`(p INT64)\n"
+        "AS\n"
+        "  (SELECT p AS y) UNION ALL (SELECT p + 1 AS y)\n"
+        ";\n"
+    )
+    m = clsp.CREATE_STMT.search(txt)
+    body = clsp.extract_body(txt, m.start(), "TABLE FUNCTION")
+    assert body == "(SELECT p AS y) UNION ALL (SELECT p + 1 AS y)"
+
+
+def test_extract_body_table_function_genuine_wrapper_around_union_stays_correct():
+    # The genuine-wrapper counterpart: an actual `AS ( ... )` wrapper around a union of parenthesized
+    # subqueries must still have exactly its own outer pair stripped, since paren depth here DOES
+    # return to 0 only at the final character.
+    txt = (
+        "CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_x`(p INT64)\n"
+        "AS (\n"
+        "  (SELECT p AS y) UNION ALL (SELECT p + 1 AS y)\n"
+        ");\n"
+    )
+    m = clsp.CREATE_STMT.search(txt)
+    body = clsp.extract_body(txt, m.start(), "TABLE FUNCTION")
+    assert body == "(SELECT p AS y) UNION ALL (SELECT p + 1 AS y)"
 
 
 # ---- bq(): the subprocess/JSON-slice wrapper (same regressed class as dbt_parity.bq) --------------

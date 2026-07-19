@@ -7,23 +7,12 @@ covers that generator's duplicate copy). This file had NO test coverage at all b
 run entirely against tmp_path fixtures (never the real Claude_Task_Plan.md / ops/cadence.yaml /
 ops/triggers.json), so a --write test can never touch the real committed ops/triggers.json.
 """
-import importlib.util
 import json
-import os
 import sys
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from conftest import load_module_from_path
 
-
-def _load():
-    path = os.path.join(ROOT, "scripts", "print_routines.py")
-    spec = importlib.util.spec_from_file_location("print_routines", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-pr = _load()
+pr = load_module_from_path("print_routines", "scripts", "print_routines.py")
 
 
 # ---- heading_to_id: the id-extraction rule (same contract as check_cadence_consistency.py's copy) --
@@ -129,6 +118,23 @@ def test_main_warns_on_cadence_id_with_no_heading(tmp_path, monkeypatch, capsys)
     assert pr.main() == 0  # print_routines.py only WARNS; it does not fail the build (unlike check_cadence_consistency.py)
     out = capsys.readouterr().out
     assert "WARNING" in out and "ZZ" in out
+
+
+def test_main_warns_on_heading_with_no_cadence_id(tmp_path, monkeypatch, capsys):
+    # Reverse direction of test_main_warns_on_cadence_id_with_no_heading: a well-formed plan
+    # heading id with no matching ops/cadence.yaml routine at all. Previously this left
+    # missing_heading empty, "?" not in seen, and dup_ids empty, so the final gate fired and
+    # printed a false "OK: every routine heading maps 1:1" (2026-07-18 audit finding).
+    plan, cadence = _write_fixture(tmp_path)
+    plan.write_text(plan.read_text() + "\n## ZZ. Ghost Routine — deep research\nbody...\n")
+    monkeypatch.setattr(pr, "PLAN", str(plan))
+    monkeypatch.setattr(pr, "CADENCE", str(cadence))
+    monkeypatch.setattr(pr, "TRIGGERS_JSON", str(tmp_path / "triggers.json"))
+    monkeypatch.setattr(sys, "argv", ["print_routines.py"])
+    assert pr.main() == 0  # print_routines.py only WARNS; it does not fail the build
+    out = capsys.readouterr().out
+    assert "WARNING" in out and "ZZ" in out
+    assert "OK: every routine heading maps 1:1" not in out
 
 
 def test_main_warns_on_duplicate_heading_same_id(tmp_path, monkeypatch, capsys):

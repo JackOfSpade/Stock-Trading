@@ -27,6 +27,10 @@
 -- SUPERSEDES the state.strategy_roster VIEW definition in bigquery/35_strategy_arsenal.sql. No dbt
 -- mirror exists (state.strategy_roster is a declared dbt SOURCE, not a model — no dbt edit needed).
 -- Apply after 35_strategy_arsenal.sql, 46_weekly_benchmarks.sql.
+--
+-- SUPERSEDED LIVE in turn by bigquery/70_retirement_proposed_is_active.sql — the CURRENT single
+-- source of truth for this view. Kept here, unmodified, for DR-rebuild apply-in-order reference
+-- only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_roster` AS
 WITH latest AS (
   SELECT strategy_code, to_state AS current_state, event_ts AS state_since,

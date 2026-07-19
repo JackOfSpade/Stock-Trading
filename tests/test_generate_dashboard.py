@@ -5,8 +5,6 @@ that already caused production bugs in its siblings (scripts/dbt_parity.py, scri
 — see tests/test_alert_relay.py). These offline tests (no warehouse, no `bq` CLI) lock q()'s
 banner-tolerant parsing, fmt_ts()'s timezone rendering/fallback, and table()'s HTML escaping.
 """
-import importlib.util
-import os
 import subprocess
 import types
 from datetime import datetime, timezone
@@ -14,18 +12,9 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from conftest import load_module_from_path
 
-
-def _load():
-    path = os.path.join(ROOT, "ops", "dashboard", "generate_dashboard.py")
-    spec = importlib.util.spec_from_file_location("generate_dashboard", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-gd = _load()
+gd = load_module_from_path("generate_dashboard", "ops", "dashboard", "generate_dashboard.py")
 
 
 def _fake_run(returncode, stdout, stderr=""):

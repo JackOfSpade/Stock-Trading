@@ -10,30 +10,12 @@ production bug HERE (commit "parse bq JSON, not CSV â€” KeyError on first run" â
 tests/test_alert_relay.py and tests/test_generate_dashboard.py for the sibling copies), yet had zero
 test coverage of that exact regression class. These lock the banner-tolerant parsing.
 """
-import importlib.util
-import os
-import types
-
 import pytest
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from conftest import fake_subprocess_run as _fake_run
+from conftest import load_module_from_path
 
-
-def _load():
-    path = os.path.join(ROOT, "scripts", "dbt_parity.py")
-    spec = importlib.util.spec_from_file_location("dbt_parity", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-dp = _load()
-
-
-def _fake_run(returncode, stdout, stderr=""):
-    def run(cmd, capture_output=None, text=None, timeout=None):
-        return types.SimpleNamespace(returncode=returncode, stdout=stdout, stderr=stderr)
-    return run
+dp = load_module_from_path("dbt_parity", "scripts", "dbt_parity.py")
 
 
 # ---- bq() JSON-slice helper (the exact regressed bug class) -------------------------------
