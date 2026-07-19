@@ -1,8 +1,10 @@
 # AI-Conversion Audit & Redesign — deterministic decisions → AI judgment
 
-Status: **DESIGN — for owner review 2026-07-18.** Companion to `PARK_ROUTER_DESIGN.md` v2
-(the park allocator, which converted the largest formula-made capital decision and is
-being implemented under separate owner authorization).
+Status: **Redesigns A and B IMPLEMENTED 2026-07-19 (owner verdicts: A approve, B approve,
+C defer — relayed by the owner via their Claude-in-Chrome session and pasted into this
+session by the owner).** Companion to `PARK_ROUTER_DESIGN.md` v2 (the park allocator,
+implemented and live under separate owner authorization). Redesign C is owner-DEFERRED
+2026-07-19 — see §4.
 Method: 4-agent exhaustive catalog of every deterministic decision point (~60 entries
 across Claude_Task_Plan.md, bigquery/*.sql, strategy specs, Operating_Protocols/ops),
 then orchestrator classification. Full catalogs preserved in the session workspace.
@@ -36,10 +38,10 @@ runs on, each of which exists *because* it is not judgment:
 | Decision | Today | Verdict |
 |---|---|---|
 | Park vehicle selection (sweep target) | Static `state.park_policy_current`, owner-set | **DONE — PARK_ROUTER_DESIGN.md v2** (implementing now) |
-| Termination capital redistribution (D2 §5 / AR_orc): equal-split residual | FIFO newcomer floor, then equal split among survivors — "no review, no hold" | **CONVERT** → Redesign A |
-| Deposit allocation residual (§13.C) | FIFO newcomer floor, then equal split | **CONVERT** → Redesign A (same call) |
-| Future strategies' internal machinery | SL2 authors numeric-trigger specs by default | **CONVERT the authoring guidance** → Redesign B (judgment-native specs for FUTURE candidates; frozen live specs untouched) |
-| Research-funnel significance thresholds (W2 ≥5% move; M2 corr ≥0.5 pairing) | Fixed numeric screens | **CONVERTIBLE — recommend DEFER** → Redesign C (keep liquidity/capacity floors as rails either way) |
+| Termination capital redistribution (D2 §5 / AR_orc): equal-split residual | FIFO newcomer floor, then equal split among survivors — "no review, no hold" | **DONE — Redesign A** (implemented 2026-07-19; `Operating_Protocols.md` §16, `Claude_Task_Plan.md` D2 §5/AR_orc, `bigquery/95_capital_allocator.sql`) |
+| Deposit allocation residual (§13.C) | FIFO newcomer floor, then equal split | **DONE — Redesign A** (same call; `Operating_Protocols.md` §13.C) |
+| Future strategies' internal machinery | SL2 authors numeric-trigger specs by default | **DONE — Redesign B** (implemented 2026-07-19; Claude_Task_Plan.md SL1 STEP 2 + SL2 (A) 1b, Experiment_Parameters.md authoring note) |
+| Research-funnel significance thresholds (W2 ≥5% move; M2 corr ≥0.5 pairing) | Fixed numeric screens | **OWNER-DEFERRED 2026-07-19** — Redesign C (revisit only if the W5 research-quality loop shows the screens rejecting winners) |
 
 ### KEEP mechanical — with the specific reason
 
@@ -134,8 +136,17 @@ loop ever shows the screens rejecting winners.
 
 ## 4. What Phase 2 implements now vs what awaits your verification
 
-- **Implementing now** (authorized): PARK_ROUTER_DESIGN.md v2 in full.
-- **Awaiting your verification** (this document, per your verify-first practice):
-  Redesigns A and B (C is a recorded option, recommended deferred). Say the word and
-  A/B land as a follow-up branch — both are prose+view-level changes, no new
-  routine, no schema migration beyond one view.
+- **Implemented** (authorized): PARK_ROUTER_DESIGN.md v2 in full, and — per your 2026-07-19
+  verdict on this document — **Redesign A** (the AI capital-allocation call, both the
+  termination-redistribution and deposit-allocation residuals): `Operating_Protocols.md`
+  §16/§13.C, `Claude_Task_Plan.md` D2 §5/AR_orc/W5, `bigquery/95_capital_allocator.sql`
+  (`state.capital_allocation_calls`), loop `capital_allocator` in `ops/autonomy_levels.yaml`
+  (built directly `active_auto`, no shadow phase — per this document's own staging
+  rationale above). No held-aside pool, no review, no new movement point added — exactly
+  as designed.
+- **Implemented** (same 2026-07-19 verdict): **Redesign B** — judgment-native machinery
+  for FUTURE candidates: `Claude_Task_Plan.md` SL1 STEP 2 (judgment-native preference) +
+  SL2 (A) 1b (the four non-waivable requirements), `Experiment_Parameters.md` "Strategy
+  authoring — judgment-native machinery". Prose-only, zero schema, no live strategy touched.
+- **Owner-DEFERRED 2026-07-19**: Redesign C — revisit only if the W5 research-quality
+  loop shows the funnel screens rejecting winners.

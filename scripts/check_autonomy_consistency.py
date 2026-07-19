@@ -47,11 +47,26 @@ AUTONOMY = os.path.join(ROOT, "ops", "autonomy_levels.yaml")
 # for) lives in the ops.sp_sq_cadence_check procedure defined in bigquery/75_scheduled_query_wrappers.sql.
 CADENCE_SQL = os.path.join(ROOT, "bigquery", "75_scheduled_query_wrappers.sql")
 
-# Loops that carry their OWN heartbeat + dead-man's switch elsewhere and so are intentionally NOT in
-# cadence_check.sql's constant_tuning_loop_heartbeat_missing UNNEST list. Today only strategy_arsenal
-# (SL1/SL3/SL4 heartbeats + cadence dead-man views in bigquery/12,18,24). This is the ONE declared place
-# for that carve-out — add here (not silently) if a future active_auto loop self-monitors.
-HEARTBEAT_SELF_MONITORED_LOOPS = {"strategy_arsenal"}
+# Loops intentionally NOT in cadence_check.sql's constant_tuning_loop_heartbeat_missing UNNEST list —
+# each for its own declared reason, not a silent gap:
+#   strategy_arsenal   — carries its OWN heartbeat + dead-man's switch elsewhere (SL1/SL3/SL4
+#                         heartbeats + cadence dead-man views in bigquery/12,18,24).
+#   capital_allocator  — added 2026-07-19 (AI_DECISION_REDESIGN.md §3 Redesign A). Carries NO heartbeat
+#                         of its own, dedicated or otherwise: it is not a scheduled/cadence routine but
+#                         an inline step inside D2's STRATEGY TERMINATIONS handler, AR_orc's m2m-
+#                         termination handler, and D2's §13.C deposit-recording flow. The two D2-hosted
+#                         paths carry D2's own run_log/cadence dead-man coverage (daily_trading class);
+#                         the AR_orc path is queue_driven (deliberately OUTSIDE the calendar nets) and is
+#                         covered only CONDITIONALLY by D3's queue_item_stale scan — i.e. detection there
+#                         requires a review item actually sitting stale in the queue (2026-07-19 review
+#                         F4: do not read this carve-out as claiming uniform coverage). The
+#                         event this loop fires on (a strategy termination or a deposit) is legitimately
+#                         rare/irregular (terminations: zero so far), so a standalone 10-day-quiet cadence
+#                         alarm modeled on a daily/weekly loop would be constant false-positive noise, not
+#                         a real gap — see this loop's ops/autonomy_levels.yaml gate_to_next_stage note.
+# This is the ONE declared place for this carve-out — add here (not silently) if a future active_auto
+# loop self-monitors or has no independent cadence to alarm on.
+HEARTBEAT_SELF_MONITORED_LOOPS = {"strategy_arsenal", "capital_allocator"}
 
 # The register's own PROMOTION RULE vocabulary/ordering — a loop's stage may never exceed its ceiling.
 STAGE_ORDER = ["dormant", "shadow", "record_only", "active_pr_gated", "active_auto"]

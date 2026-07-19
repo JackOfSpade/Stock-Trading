@@ -18,9 +18,12 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.events.cash_flows` (
   flow_date DATE NOT NULL,
   flow_type STRING NOT NULL,   -- 'DEPOSIT' | 'WITHDRAWAL'
   amount NUMERIC NOT NULL,     -- signed: +deposit, -withdrawal
-  strategy STRING,             -- NULL = equal-split across active strategies (standing methodology,
-                                -- Operating_Protocols §13.C); non-NULL only if the operator states an
-                                -- allocation for that specific flow.
+  strategy STRING,             -- NULL = equal-split across active strategies (standing default,
+                                -- Operating_Protocols §13.C); non-NULL for an operator-stated allocation
+                                -- for that specific flow, OR (2026-07-19, AI_DECISION_REDESIGN.md §3
+                                -- Redesign A) one row per active strategy carrying its AI-allocated
+                                -- share at MEDIUM+ conviction (Operating_Protocols §16) — same
+                                -- per-strategy-row shape the PENDING-NEWCOMER FIFO fill already uses.
   note STRING,
   source STRING DEFAULT 'D2',
   ingest_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
