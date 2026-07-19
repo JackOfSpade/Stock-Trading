@@ -17,10 +17,22 @@ tool was absent from its own session (`ops.alerts` category `catchup_refire_bloc
 `eadf89c4-185d-4bec-be19-38652d1d4adb`, miss_key `D3|2026-07-18`) — formalized this session as a policy
 row + mechanical resolution rule in `bigquery/94_catchup_refire_blocked_policy.sql`, and OPS0's own
 STEP 2 / STEP 3 text (`Claude_Task_Plan.md`) now names the tool-absent branch as an expected, safely-
-handled path rather than an anomaly. The root cause itself is below and needs you (or an owner-approved
-session) to fix — this session could not.
+handled path rather than an anomaly. The root cause itself is below — CLOSED same day: the owner
+allowlisted `RemoteTrigger` in `.claude/settings.local.json` (kept permanently, per owner choice) and
+the interactive session then executed the fix on all 30 triggers.
 
-## U. Add `RemoteTrigger` to every routine trigger's `allowed_tools` (root cause of the 2026-07-18 OPS0 blocked-refire)
+## [DONE 2026-07-19 — executed same day, all 30 updated + echo-verified] U. Add `RemoteTrigger` to every routine trigger's `allowed_tools` (root cause of the 2026-07-18 OPS0 blocked-refire)
+
+**DONE note (2026-07-19, same interactive session):** after the owner added `"RemoteTrigger"` to the
+project `.claude/settings.local.json` allow list (the claude.ai web UI exposes no allowed-tools control —
+confirmed by Claude-in-Chrome inspection of the task editor), the session ran get → full-`job_config`
+update → echo-verify on all 30 triggers below. All 30 now carry `RemoteTrigger`; names, crons, enabled,
+instructions, connectors, notification flags, and the SL1–SL5 routines' distinct
+`env_01Hk7kzYng7X31ba8kTbf17w` environment + `autofix_on_pr_create:false` were preserved byte-for-byte.
+Update semantics are now KNOWN, superseding the "UNTESTED" warning in step 2 below: the API replaces
+`job_config` WHOLESALE and rejects partial bodies (HTTP 400 "must set ccr.environment_id"), so the
+read-whole/modify-one-list/write-whole shape is mandatory, exactly as step 2 prescribes. OPS0's Sunday
+STEP 3 sweep keeps the invariant true going forward (first live check: tonight 2026-07-19 22:30 MT).
 
 **What it's for:** verified live this session via `RemoteTrigger get` on all 30 routine triggers in
 `ops/trigger_ids.json`: every one of them has `job_config.ccr.session_context.allowed_tools =
