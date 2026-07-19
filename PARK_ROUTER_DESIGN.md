@@ -147,13 +147,21 @@ current vehicle," a $9.2k book makes multi-leg rebalancing mostly confirm-tap fr
 and AOR already gives the AI a one-ticker blend. The AI expresses *risk level* by choosing
 the instrument, not by weighting legs.
 
-Execution of a switch (unchanged from v1, and the part of v1 worth keeping): the policy
-row flips at decision time; generalized §13.E gains one rule — *any park-book ticker ≠
-policy vehicle above dust → craft full SELL* — and the existing sweep re-deploys settled
-proceeds into the policy vehicle. Convergence in 1–2 sessions using only existing
-staged-order persistence, re-craft-on-expiry, fill reconciliation, and tripwire
-machinery. `CASH` policy = §13.E sweep no-ops (cover still allowed). Cross-ticker switch
-≠ PDT day-trade pairing; both legs = two confirm-taps, typically one sitting.
+Execution of a switch (2026-07-19 tightening, owner-approved: the FIRST leg moves from
+§13.E to D2 itself, same evening as the flip — see §7 rail 1): the policy row flips at
+decision time and D2 immediately crafts the full SELL of the vehicle the switch just
+vacated in that same run — menu-membership and order-guard checked there — so the SELL
+is already working at the **next** open instead of the one after. Generalized §13.E
+keeps its rule — *any park-book ticker ≠ policy vehicle above dust → craft full SELL* —
+as the convergence **backstop** (re-crafts the same leg if D2's DAY order expires
+unfilled; still the only path for an older, pre-cutover stranded leg), and its existing
+sweep re-deploys settled proceeds into the policy vehicle once they land — the BUY side
+is untouched by this tightening, still exclusively §13.E-owned. Convergence to full
+redeployment now runs in **~1–2 sessions** (one session tighter than before this
+change) using only existing staged-order persistence, re-craft-on-expiry, fill
+reconciliation, and tripwire machinery — no new mechanism, just an earlier trigger for
+the first leg. `CASH` policy = §13.E sweep no-ops (cover still allowed). Cross-ticker
+switch ≠ PDT day-trade pairing; both legs = two confirm-taps, typically one sitting.
 
 **Deferred option (owner call, §12)**: allow the AI to nominate a two-leg split (primary +
 secondary, min 25% per leg, 10% drift band). Real machinery cost; recommend v2 ships
@@ -177,7 +185,10 @@ and blast radius** (as N-floor/ceiling and cooldowns do for strategy adoption). 
 ever chooses a vehicle:
 
 1. **De-risk binds same day.** A MEDIUM+ conviction call to a lower risk_tier converts
-   that evening (D2). Flight to safety is never queued, never blocked by budget.
+   that evening (D2) — and, in that same D2 run, the outgoing vehicle's full SELL is
+   crafted immediately (2026-07-19 tightening, §5), so the leg is already working the
+   **next** open rather than waiting for D2a's following-day §13.E pass. Flight to
+   safety is never queued, never blocked by budget.
 2. **Re-risk needs next-session concurrence.** A HIGH-conviction call to a higher
    risk_tier is recorded PENDING; it binds only if the *next* trading day's D1 —
    instructed to derive its own call **before** reading the pending one (derive-then-
