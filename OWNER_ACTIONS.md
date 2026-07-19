@@ -10,6 +10,55 @@ act. Dated passes below; most recent first.
 
 ---
 
+# 2026-07-18 AI Park Allocator design rollout (`PARK_ROUTER_DESIGN.md` v2) — prose/config landed this branch
+
+Owner-review design for active park management: a daily AI judgment call among a 12-vehicle menu
+(CASH/SGOV/GOVT/IEF/TLT/LQD/MUB/HYG/PFF/AOR/VOO/VTI), SISA-style cadence rails (de-risk same-day,
+re-risk next-session concurrence, budget, cooldown), loop `park_allocator` registered `shadow` in
+`ops/autonomy_levels.yaml`. This branch lands the prose/protocol/config layer
+(`Operating_Protocols.md` §13.F, `Claude_Task_Plan.md` D1/D2/D2a/W5, `ops/cadence.yaml`,
+`ops/autonomy_levels.yaml`, `ops/foundation_change_review.md`) plus the `bigquery/91-93` SQL layer and
+a `weekly_report.gs` v6 park-section bump landed elsewhere in the same rollout. See
+`PARK_ROUTER_DESIGN.md` for the full design and `bigquery/README.md` entries 91-93 for the SQL layer's
+object inventory. Nothing here changes live trading behavior today — the loop starts at `shadow`
+(record-only; see `ops/autonomy_levels.yaml`'s `park_allocator` entry), and `bigquery/91-93` still need
+a live apply (same "owner or a BigQuery-MCP session applies the new numbered files" step every prior
+`bigquery/NN_*.sql` addition has needed — not re-documented as a separate item here since it's the
+standing convention, not new).
+
+## T. Redeploy `weekly_report.gs` (v5 → v6, AI Park Allocator section) via the pinned-SHA GitHub-raw flow — after this branch merges
+
+**What it's for:** the park-allocator rollout adds a weekly park section (vehicle history, park TWR vs.
+the three `analytics.park_counterfactuals` benchmarks — SGOV / VOO / rule-shadow) to the self-email,
+`SCRIPT_VERSION` bumped `'v5'` → `'v6'` in `ops/weekly_report/weekly_report.gs`, with the matching
+`bigquery/43_script_version_registry.sql` seed row bumped to match. Same class of change as every
+prior `.gs` redeploy in this file (GS-1/GS-2, WR-1) — Claude cannot reach `script.google.com` directly,
+so the deploy is a Chrome-driven paste from the commit-SHA-pinned GitHub raw URL, per the
+small-edit=edit-list / large-rewrite=commit-SHA-pinned-URL convention.
+
+**Action:** once this branch (and the sibling branch carrying the actual `weekly_report.gs` v6 diff, if
+authored separately from this prose/config pass) merges to `main`, paste the merged `Code.gs` content
+into the "Stock-Trading Automation" Apps Script project via Claude-in-Chrome from the commit-SHA-pinned
+GitHub raw URL, run `runWeeklyReport` once to confirm the new park section renders and the
+`sq:`/`weekly_report` heartbeat lands with `version='v6'`, THEN bump
+`state.expected_script_versions`'s `weekly_report` row to `v6` (targeted UPDATE, done AFTER the v6
+heartbeat lands so no false drift is introduced) — the same after-the-heartbeat sequencing WR-1 used.
+
+**If skipped:** `state.script_version_drift` shows `weekly_report` running the OLD deployed version
+against a NEWER expected/repo version (or, until the expected-version row is bumped, a `(v6 repo, v5
+live)` mismatch) — a **`script_version_drift` warning is expected and non-blocking** until this
+redeploy lands; nothing else in the system depends on the live email carrying the park section (it is
+informational-only, same as the existing VOO/SGOV benchmark rows).
+
+```verify
+id: T
+type: gs
+probe: SELECT script_name, last_reported_version, expected_version, drift FROM `stock-trading-498512.state.script_version_drift` WHERE script_name='weekly_report'
+done_when: last_reported_version='v6' AND expected_version='v6' AND drift=FALSE
+```
+
+---
+
 # 2026-07-18 Per-user BigQuery quota root-cause (recurring 07-11/07-16 x2/07-18 quota exhaustions)
 
 Root-caused a live incident: `bigquery.googleapis.com/quota/query/usage` carries two independent

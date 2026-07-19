@@ -145,6 +145,14 @@ GROUP BY ticker;
 -- park_position, with COALESCE(...,0) on the numeric columns -- this guarantees exactly one output row
 -- naming the current vehicle even when it has zero recorded events yet, with 0s (not NULLs) making the
 -- "nothing recorded for this vehicle" state an explicit, visible discrepancy rather than an absent view.
+--
+-- SUPERSEDED LIVE by bigquery/92_park_allocator.sql — current single source of truth for this
+-- object. bigquery/92 generalizes this single-vehicle-only definition to one row per above-dust
+-- ticker in state.park_position (plus is_policy_vehicle), for the multi-instrument park menu
+-- (PARK_ROUTER_DESIGN.md), while PRESERVING this view's zero-row-gap LEFT-JOIN fix and every column
+-- below. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
+-- CREATE statement live in isolation — it would silently drop is_policy_vehicle and any residual
+-- switch-in-progress ticker row bigquery/92 added.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.park_position_current` AS
 SELECT
   cur.vehicle                                AS ticker,
@@ -162,6 +170,14 @@ LEFT JOIN `stock-trading-498512.state.park_position` pp ON pp.ticker = cur.vehic
 -- ===== state.park_reconciliation — vehicle-aware successor to state.sgov_reconciliation, always
 -- reconciling whichever ticker is the CURRENT park policy (D2 Step 0 / §13.A reads this going
 -- forward instead of the frozen state.sgov_reconciliation below). =====
+--
+-- SUPERSEDED LIVE by bigquery/92_park_allocator.sql — current single source of truth for this
+-- object. bigquery/92 generalizes this to one row per state.park_position_current ticker (plural
+-- when a switch is converging) and marks each against COALESCE(daily_marks_curated,
+-- signal_marks_curated), while PRESERVING every column name below (park_ticker,
+-- events_park_shares, ..., park_mark_fresh, checked_at) and adding only is_policy_vehicle. Kept
+-- here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE
+-- statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.park_reconciliation` AS
 WITH p AS (SELECT * FROM `stock-trading-498512.state.park_position_current`),
 mark AS (

@@ -88,7 +88,7 @@ routines:
     monitor_class: daily_trading
     catchup_safe: true
     depends_on: []
-    writes: [Daily.md, events.decision_log, events.regime_events]
+    writes: [Daily.md, events.decision_log, events.regime_events, ops.heartbeat]
     expected_trigger:
       recurrence: daily
       time_local: "16:00"
@@ -100,7 +100,7 @@ routines:
     catchup_safe: false
     depends_on: []   # deliberately independent of D1 -- the book must reconcile even if D1 failed
     writes: [events.trade_fills, events.position_events, events.daily_marks, perf.strategy_daily,
-             ops.account_snapshot]
+             ops.account_snapshot, events.signal_marks]
     expected_trigger:
       recurrence: daily
       time_local: "16:20"
@@ -119,7 +119,8 @@ routines:
     monitor_class: daily_trading
     catchup_safe: false
     depends_on: [D1, D2a]
-    writes: [events.decision_log, events.queue_events, events.position_events, calendar:confirm_order]
+    writes: [events.decision_log, events.queue_events, events.position_events, calendar:confirm_order,
+             events.park_policy_changes]
     expected_trigger:
       recurrence: daily
       time_local: "17:15"
@@ -301,7 +302,8 @@ routines:
     monitor_class: weekly_sun
     catchup_safe: true
     depends_on: [W4]
-    writes: [B_Sub_Pattern_Taxonomy.md, analytics.decision_embeddings, events.decision_log]
+    writes: [B_Sub_Pattern_Taxonomy.md, analytics.decision_embeddings, events.decision_log,
+             ops/autonomy_levels.yaml]
     expected_trigger:
       recurrence: weekly
       time_local: "04:00"

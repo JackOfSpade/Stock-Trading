@@ -185,8 +185,56 @@ models:
               values: ['A', 'B', 'C', 'D', 'E']
 
   - name: account_reconciliation
-    description: Account-level §13 events-side expected totals (single row).
+    description: >-
+      Account-level §13 events-side expected totals (single row). 2026-07-18 (PARK_ROUTER_DESIGN.md
+      v2 §9, AI Park Allocator accounting): SUPERSEDES the bigquery/22-era definition — canonical
+      source is now bigquery/93_park_accounting.sql. Adds park_unrealized / residual_after_park;
+      every prior column preserved byte-identical.
     # Single row — asserted by tests/assert_account_reconciliation_single_row.sql.
+    columns:
+      - name: park_unrealized
+        description: >-
+          Current park market value (across every ever-held state.park_menu ticker) minus cost basis
+          derived from events.parking_events' net cash. Instrument-only — unswept cash is never
+          counted as park exposure.
+      - name: residual_after_park
+        description: >-
+          The existing events-vs-live residual (undeployed_total − park MV − cash), with
+          park_unrealized netted out. An ongoing drift signal (magnitude/trend over time), not
+          expected to be exactly zero on any given day — see bigquery/93's DEVIATION #2 note.
+
+  - name: park_nav_daily
+    description: >-
+      The AI Park Allocator's own daily-chained NAV/TWR, vehicle-generalized across the 12-ticker
+      menu (PARK_ROUTER_DESIGN.md v2 §9; bigquery/93_park_accounting.sql). 2026-07-18.
+    columns:
+      - name: as_of_date
+        tests:
+          - not_null
+          - unique
+      - name: park_mv
+        description: Park market value that day (instrument-only; unswept cash excluded by design).
+      - name: twr_index
+        description: Chained park TWR index (EXP(SUM(LN(1+r))) − 1), the AI's own book performance.
+
+  - name: park_counterfactuals
+    description: >-
+      SGOV / VOO / v1-rule-shadow / AI, same date axis, four chained total-return indices —
+      PARK_ROUTER_DESIGN.md v2 §9's three-way evaluation benchmark for the AI Park Allocator.
+      2026-07-18 (bigquery/93_park_accounting.sql).
+    columns:
+      - name: as_of_date
+        tests:
+          - not_null
+          - unique
+      - name: sgov_index
+        description: 100% SGOV counterfactual — never left the old world.
+      - name: voo_index
+        description: 100% VOO counterfactual — the prior static policy. NULL before VOO's first mark / on an ingest gap (voo_daily_return's own null-on-gap discipline).
+      - name: rule_index
+        description: The v1 deterministic rule table, running record-only (state.park_rule_shadow) — never trades.
+      - name: ai_index
+        description: park_nav_daily.twr_index joined by date — the AI's actual realized book performance.
 
   - name: strategy_unit_value_7d_ago
     description: Nearest perf.strategy_daily row to "7 days ago" per strategy — feeds strategy_scorecard's Δ Wk column.

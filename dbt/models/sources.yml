@@ -199,6 +199,33 @@ sources:
               semantics of its own -- bigquery/54_park_policy_voo_cutover.sql backfilled all
               pre-existing rows to 'SGOV' via a separate UPDATE, so it is in practice always populated).
 
+      - name: park_policy_changes
+        description: >
+          Event-sourced idle-cash vehicle policy (bigquery/54_park_policy_voo_cutover.sql). Latest
+          row wins -> state.park_policy_current (NOT dbt-ported -- ordering is event_ts DESC, the
+          house transition-time discriminator; effective_date is a retroactive historical marker for
+          the SGOV founding row only, see analytics.park_nav_daily.sql's policy_asof CTE note).
+        loaded_at_field: event_ts
+        columns:
+          - name: event_id
+            description: Primary key (GENERATE_UUID default).
+            tests:
+              - unique
+              - not_null
+          - name: effective_date
+            description: >
+              Historical as-of date the vehicle change is meant to represent. NOT the latest-wins
+              discriminator (see 2026-07-15 bug-fix note on state.park_policy_current) -- used by
+              analytics.park_nav_daily.sql's policy_asof CTE as the as-of threshold specifically
+              because the SGOV founding row's effective_date (2026-04-17) predates its retroactive
+              event_ts (~2026-07-15).
+            tests:
+              - not_null
+          - name: vehicle
+            description: "'SGOV' | 'VOO' | any state.park_menu ticker (PARK_ROUTER_DESIGN.md v2 §4)."
+            tests:
+              - not_null
+
       - name: daily_marks
         description: >
           Daily closes + corporate actions per held ticker (+SGOV). Total-return source
@@ -420,6 +447,40 @@ sources:
             description: "'RETRY' | 'DEPWAIT' | 'INCIDENT'."
           - name: outcome
             description: RETRY's outcome= / DEPWAIT's outcome= field; NULL for INCIDENT.
+      - name: signal_marks_curated
+        description: >
+          Latest-ingest-wins curated view over the new events.signal_marks table
+          (bigquery/91_park_signal_layer.sql, 2026-07-18) -- the AI Park Allocator's isolated
+          evidence layer (menu tickers + SPY + ^VIX, deliberately separate from events.daily_marks).
+          Declared out-of-scope for now (not yet ported as a dbt model, whole bigquery/91 file is
+          out of scope for this dbt-port pass) -- added here so analytics.park_nav_daily /
+          park_counterfactuals / account_reconciliation can reference it and stay off
+          scripts/check_dbt_view_coverage.py's advisory uncovered list.
+        columns:
+          - name: mark_date
+            description: Mark date. (ticker, mark_date) is the dedup key.
+          - name: ticker
+            description: Menu ticker, SPY, or ^VIX. CASH is never a row here (no market price).
+          - name: close
+            description: Close price.
+          - name: dividend
+            description: Cash dividend per share on the ex-div date.
+      - name: park_rule_shadow
+        description: >
+          v1's deterministic regime->vehicle rule table, running RECORD-ONLY as counterfactual
+          benchmark #3 the AI Park Allocator's judgment is measured against
+          (bigquery/92_park_allocator.sql, PARK_ROUTER_DESIGN.md v2 §1/§9/§11 -- owner-rejected as
+          decision-maker 2026-07-18). Never trades; nothing in the live decision path reads it.
+          Declared out-of-scope for now (not yet ported as a dbt model, whole bigquery/92 file is
+          out of scope for this dbt-port pass) -- added here so analytics.park_counterfactuals can
+          reference it and stay off scripts/check_dbt_view_coverage.py's advisory uncovered list.
+        columns:
+          - name: mark_date
+            description: Mark date -- NOT as_of_date (confirmed live against bigquery/92's actual text).
+          - name: rule_vehicle
+            description: >
+              The v1 rule table's classified vehicle for this date, or NULL if any of the seven core
+              signals it consults ("no data, no claim") was unavailable that day.
 
   - name: analytics_external
     project: stock-trading-498512

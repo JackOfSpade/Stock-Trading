@@ -271,6 +271,49 @@ loops:
       discipline as every sibling loop.
     added: "2026-07-15"
 
+  - id: park_allocator               # AI Park Allocator: daily AI judgment call on which park-menu
+                                      # vehicle idle capital holds, D1/D2 rail (PARK_ROUTER_DESIGN.md v2)
+    stage: shadow                    # BUILT DIRECTLY AT SHADOW (2026-07-18, PARK_ROUTER_DESIGN.md v2 —
+                                      # owner-review design, SISA precedent) — NOT dormant-then-promoted,
+                                      # same anti-pattern-avoidance rationale as research_quality_feedback
+                                      # (scaffolding with no scheduled caller). D1 makes the full park
+                                      # allocation call every trading day (Operating_Protocols.md §13.F);
+                                      # logged EVERY day (incl. KEEP) to events.decision_log
+                                      # (entry_type='park-allocation'), surfaced on
+                                      # state.park_allocation_latest — RECORD_ONLY while shadow: the call
+                                      # never converts to an order (D2's PARK ALLOCATION CONVERSION step
+                                      # no-ops on any status != 'BOUND', and shadow-stage D1 never emits
+                                      # 'BOUND').
+    ceiling: active_auto
+    artifact: state.park_allocation_latest (bigquery/92_park_allocator.sql — the daily call, PENDING/
+      concurrence state, budget/cooldown views) + events.park_policy_changes (the existing
+      bigquery/54_park_policy_voo_cutover.sql event-sourced policy table — this loop's ONLY write to it
+      is the conversion INSERT once active_auto and a call is BOUND) + state.park_allocator_promotion_readiness
+      (bigquery/92_park_allocator.sql — the shadow->active_auto gate) + events.signal_marks /
+      state.park_signal_daily (bigquery/91_park_signal_layer.sql — the isolated evidence layer, kept
+      strictly separate from events.daily_marks per the design's grounding) + analytics.park_nav_daily /
+      analytics.park_counterfactuals (bigquery/93_park_accounting.sql — evaluation substrate, read weekly
+      by W5's PARK SCORECARD bullet, Claude_Task_Plan.md)
+    gate_to_next_stage: >
+      SHADOW -> ACTIVE_AUTO requires the 10-CLEAN-TRADING-DAY READINESS VIEW
+      (state.park_allocator_promotion_readiness, bigquery/92_park_allocator.sql) to read
+      ready=TRUE (that view's actual column name — NOT ready_for_promotion, the sibling loops' column
+      name; verified live via get_table_info against bigquery/92_park_allocator.sql, 2026-07-18): >=10
+      trading-day sessions with a well-formed call (all five structured fields present), 0 missing-call
+      trading days, and would-be churn (what the AI WOULD have switched, had it been binding) within the
+      2-per-30d up/lateral budget — PARK_ROUTER_DESIGN.md §10 Phase 1.
+      NO human PR/chat gate — same record-then-promote-by-editing-this-register discipline as every
+      sibling loop above. W5's PARK-ALLOCATOR PROMOTION CHECK bullet (Claude_Task_Plan.md) owns detecting
+      ready=TRUE and SELF-EXECUTING the stage flip (this file's stage: shadow -> active_auto),
+      commit + push (auto-merge on green CI), an ops.loop_promotion_log row, an events.decision_log entry,
+      and an info-severity ops.alerts row — the identical single-shot self-execute pattern
+      research_quality_feedback / cross_model_referee_independence use above. Once active_auto, D1's
+      conviction gates + the §13.F cadence rails (de-risk same-day; re-risk next-session concurrence;
+      lateral+budget; 5-day cooldown; ops.park_control kill/pin; connectors-down HOLD) are the
+      compensating control that replaces human PR review — no rail ever chooses a vehicle, only cadence
+      and blast radius.
+    added: "2026-07-18"
+
 cross_cutting_guards:
   - id: no_auto_merge_self_improvement
     status: superseded_2026-07-10   # was documented_not_enforced; retired as a blocking guard (see note)
@@ -328,3 +371,12 @@ cross_cutting_guards:
       cross_model_referee_independence (added rev 2026-07-11, ITEM 27; PROMOTED dormant->shadow
       2026-07-15) now ALSO writes `loop:cross_model_referee_independence` from the same W5 bullet
       every weekly cycle — no loop remains without heartbeat wiring as of this rev.
+      park_allocator (added 2026-07-18, PARK_ROUTER_DESIGN.md v2, built directly at shadow) writes
+      `loop:park_allocator` from D1 — NOT W5 — on EVERY trading-day firing (daily cadence, not weekly;
+      Claude_Task_Plan.md D1 PARK ALLOCATION CALL step), the first loop whose primary heartbeat rides
+      its own daily routine rather than W5's weekly evaluation pass; W5's PARK SCORECARD bullet adds a
+      second, belt-and-suspenders weekly heartbeat on the same source. Since this loop starts at
+      `shadow` (not `active_auto`), it is NOT required in cadence_check.sql's active_auto-only
+      dead-man's-switch list (scripts/check_autonomy_consistency.py's `_check_cadence_heartbeat_coverage`)
+      until it promotes — at which point it joins that list per the normal rule, same as every sibling
+      loop above.

@@ -227,9 +227,14 @@ FROM dep d LEFT JOIN realized r USING(strategy) LEFT JOIN open_pos o USING(strat
 -- (available_funds). No per-strategy SGOV-share hand-ledger — that ledger mechanic (the attribution debt)
 -- is dissolved; account integrity + per-strategy NAV cover §13's two purposes.
 -- DEAD / SUPERSEDED (matching the strategy_nav marker above): this account_reconciliation — including the
--- hardcoded CAST(9446.86 AS NUMERIC) total_deposits below — is redefined by bigquery/22_cash_flows.sql
--- (CREATE OR REPLACE, applied later) to read events.cash_flows dynamically. This definition is dead at
--- runtime; do NOT hand-edit the 9446.86 literal here expecting a live effect — record a new flow via an
+-- hardcoded CAST(9446.86 AS NUMERIC) total_deposits below — was redefined by bigquery/22_cash_flows.sql
+-- (CREATE OR REPLACE) to read events.cash_flows dynamically, and bigquery/22's own definition is now
+-- ITSELF superseded in turn.
+-- SUPERSEDED LIVE by bigquery/93_park_accounting.sql — current single source of truth for
+-- this object (bigquery/22_cash_flows.sql is an intermediate, also-superseded definition — do not
+-- stop there). Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation. This definition is dead at runtime; do NOT
+-- hand-edit the 9446.86 literal here expecting a live effect — record a new flow via an
 -- events.cash_flows INSERT (Operating_Protocols §13.C).
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.account_reconciliation` AS
 SELECT
