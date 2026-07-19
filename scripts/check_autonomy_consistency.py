@@ -66,7 +66,10 @@ CADENCE_SQL = os.path.join(ROOT, "bigquery", "75_scheduled_query_wrappers.sql")
 #                         a real gap — see this loop's ops/autonomy_levels.yaml gate_to_next_stage note.
 # This is the ONE declared place for this carve-out — add here (not silently) if a future active_auto
 # loop self-monitors or has no independent cadence to alarm on.
-HEARTBEAT_SELF_MONITORED_LOOPS = {"strategy_arsenal", "capital_allocator"}
+# - research_screener (2026-07-19, Redesign C): fires only inline within D1/W2/M2's own runs, each of
+#   which already carries run_log/cadence dead-man coverage — a standalone quiet-loop alarm would only
+#   re-alarm what the D1/W2/M2 cadence checks already catch (same posture as capital_allocator above).
+HEARTBEAT_SELF_MONITORED_LOOPS = {"strategy_arsenal", "capital_allocator", "research_screener"}
 
 # The register's own PROMOTION RULE vocabulary/ordering — a loop's stage may never exceed its ceiling.
 STAGE_ORDER = ["dormant", "shadow", "record_only", "active_pr_gated", "active_auto"]

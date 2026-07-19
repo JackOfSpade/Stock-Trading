@@ -51,11 +51,13 @@
 # runaway-success / mark-to-market REVIEW-not-terminate distinction), Strategy B post-event entry
 # criteria including an ambiguous-adjacent setup and the "NO-GO records are context, not barriers" rule
 # (SB-*), each of Strategy A/D/E's own entry criteria (SA-*/SD-*/SE-*, added 2026-07-14 — market-cap
-# instrument eligibility, the correlation-bucket cap, and the pair-correlation floor respectively), and
-# the AI Park Allocator's daily status-computation rule (PA-*, added 2026-07-18 per PARK_ROUTER_DESIGN.md
+# instrument eligibility, the correlation-bucket cap, and the pair-correlation floor respectively), the
+# AI Park Allocator's daily status-computation rule (PA-*, added 2026-07-18 per PARK_ROUTER_DESIGN.md
 # v2 §10 Phase 0's fixture requirement — Operating_Protocols.md §13.F / Claude_Task_Plan.md D1's PARK
-# ALLOCATION CALL + D2's PARK ALLOCATION CONVERSION step).
-# 27 cases total (brief calls for 12-20).
+# ALLOCATION CALL + D2's PARK ALLOCATION CONVERSION step), and the AI Research-Significance Screen's
+# two-layer conversion (RS-*, added 2026-07-19 per Redesign C, owner reversal of the same-day DEFER —
+# Operating_Protocols.md §19 / Claude_Task_Plan.md's D1/W2/M2 research-screen calls).
+# 31 cases total (brief calls for 12-20).
 #
 # VOCABULARY NOTE ON PA-* (park-allocator scenarios). run_golden.py's offline hard gate only recognizes
 # expected_decision leading tokens GO | NO-GO | CONTINUE | TERMINATE | ACTIVATE | DO-NOT-ACTIVATE
@@ -68,6 +70,20 @@
 # exactly like KT-04/KT-07's "CONTINUE (routes to review, not direct terminate)" pattern. A future pass
 # that gives run_golden.py a native park_allocator CATEGORY_TOKENS entry (e.g. BOUND/PENDING/HOLD) would
 # be a strict improvement over this proxy but is out of scope here.
+#
+# VOCABULARY NOTE ON RS-* (research-significance-screen scenarios). run_golden.py's offline hard gate
+# only recognizes expected_decision leading tokens GO | NO-GO | CONTINUE | TERMINATE | ACTIVATE |
+# DO-NOT-ACTIVATE (DECISION_LEAD_TOKENS) — there is no native research-screener vocabulary (the real
+# Layer 2 output is a significant yes/no + conviction + below_spec_floor flag, per Operating_Protocols.md
+# §19). Category `research_screener` is deliberately NOT added to run_golden.py's CATEGORY_TOKENS map
+# (that file is out of scope for this change, same reasoning as park_allocator's), so RS-* scenarios use
+# GO/NO-GO as the closest-fit proxy — GO = the item is screened in / surfaced (written up in Daily.md,
+# shortlisted, or advanced to PART 2, whether or not it goes on to clear a downstream B/E spec floor),
+# NO-GO = the item is screened out entirely (rejected as noise) OR surfaced-but-not-routed as a B/E entry
+# candidate by the spec-floor rail — with the real significant/below_spec_floor/legacy_rule_pass outcome
+# spelled out in the parenthetical, exactly like PA-*'s GO/NO-GO proxy pattern above. A future pass that
+# gives run_golden.py a native research_screener CATEGORY_TOKENS entry would be a strict improvement over
+# this proxy but is out of scope here.
 #
 # MAINTENANCE: a scenario is pinned to the prose as read on 2026-07-11. If a strategy's machinery is
 # legitimately revised pre-launch, or a NEW strategy is added (additive, per Strategy.md rev 37), add
@@ -545,3 +561,98 @@ scenarios:
       concurrence -- it is the FIRST of the two required reads. Claude_Task_Plan.md's status enumeration:
       "'PENDING' (a re-risk awaiting tomorrow's concurrence)." D2's PARK ALLOCATION CONVERSION step 6,
       first bullet: status != 'BOUND' -> do nothing. GOVT remains the park vehicle today. NO-GO.
+
+  # ---- AI Research-Significance Screen scenarios (RS-*) ----
+  # Added 2026-07-19 (Redesign C -- owner reversal of the same-day DEFER verdict; AI_DECISION_REDESIGN.md
+  # §3). Every scenario below assumes the item has ALREADY cleared Layer 1's mechanical population rail
+  # (Operating_Protocols.md §19) -- these fixtures pin only the Layer 2 AI significance judgment and the
+  # spec-floor rail (both §19), not the population-rail arithmetic itself (that stays mechanical and
+  # untested here by design). Also assumes loop `research_screener` (ops/autonomy_levels.yaml) sits at its
+  # build ceiling `active_auto` from the first call -- unlike `park_allocator`'s shadow-first build, a
+  # screen decision moves research attention, never capital, so there is no shadow-vs-live branch to pin
+  # the way PA-* pins park_allocator's build-stage branch. See this file's header VOCABULARY NOTE ON RS-*
+  # for why GO/NO-GO (not a native research-screener status token) is the leading `expected_decision`
+  # vocabulary used here.
+
+  - id: RS-01
+    category: research_screener
+    situation: >
+      D1's single-name-move population rail (Operating_Protocols.md §19 Layer 1: mkt cap >= $2B, moved
+      >= 2% close-to-close today) surfaces ticker JJK: a high-beta, unprofitable name (mkt cap $3.4B) that
+      closed -6.8% today. The only same-day catalyst is a press release announcing the board "is exploring
+      strategic alternatives" -- no process timeline, no advisor named, no financial specifics of any
+      kind. JJK's realized volatility regime is already elevated (this magnitude of daily move is common
+      for the name), and vague strategic-alternatives PRs of this kind have recurred for JJK without
+      follow-through. The session's Layer 2 judgment concludes the move is NOT significant -- noise in an
+      already-noisy name, not a real informational event. What is today's D1 single-name research-screen
+      disposition on JJK?
+    governing_files: [Operating_Protocols.md, Claude_Task_Plan.md]
+    expected_decision: "NO-GO (rejected_notable -- legacy rule would have passed at >=5%; logged as a rule_only disagreement)"
+    rationale: >
+      Operating_Protocols.md §19 Layer 2: the session judges significance in the name's OWN volatility
+      regime and event context, not off the raw move size -- "a 3% move in a low-vol mega-cap staple on a
+      real event can outrank a 7% move in a high-beta name on noise." JJK's 6.8% move on a content-free
+      strategic-alternatives PR, in a name where moves this size are routine, is judged not significant and
+      REJECTED. Because 6.8% clears the legacy fixed bar (>=5%), §19's logging contract requires this item
+      in `rejected_notable` with `legacy_rule_pass=true` -- the record-only legacy benchmark (the
+      park_rule_shadow precedent) disagrees with the AI call, so it counts toward `agreement.rule_only`.
+      NO-GO -- screened out.
+
+  - id: RS-02
+    category: research_screener
+    situation: >
+      D1's single-name-move population rail surfaces ticker PZQ: an ultra-low-volatility mega-cap consumer
+      staple (mkt cap $190B) whose realized daily moves are rarely more than 1% in either direction. Today
+      PZQ closed -3.4% after management cut full-year EPS guidance at a same-day investor conference -- a
+      concrete, quantified, hard event (not rumor or vague language). The session's Layer 2 judgment
+      concludes the move IS significant in PZQ's own volatility regime: 3.4% is several multiples of a
+      typical daily move for this name, and the guidance cut is a real, quantifiable informational event.
+      What is today's D1 single-name research-screen disposition on PZQ, and can it be routed as a Strategy
+      B entry candidate?
+    governing_files: [Operating_Protocols.md, Claude_Task_Plan.md]
+    expected_decision: "GO (surfaced below_spec_floor=true -- context/SL1 evidence only; NOT routed as a B entry candidate: strategy/04 frozen Entry criterion 1 requires >=5%)"
+    rationale: >
+      Operating_Protocols.md §19 Layer 2 judges PZQ's 3.4% move significant given its ultra-low-vol regime
+      and the hard guidance-cut catalyst -- it is written up. §19's spec-floor rail then applies: a name
+      may be routed as a Strategy B ENTRY CANDIDATE only if it ALSO meets B's frozen Entry criterion 1
+      (>=5% close-to-close on event day -- `strategy/04_strategy_b.md`, spec_hash-frozen). 3.4% is below
+      that floor, so PZQ is recorded `below_spec_floor=true` -- context / SL1 ideation evidence only, per
+      §19 -- and the write-up must not describe it as a tradeable candidate. GO -- screened in/surfaced,
+      but not routed as a B candidate.
+
+  - id: RS-03
+    category: research_screener
+    situation: >
+      M2 PART 1's population rail (Operating_Protocols.md §19 Layer 1: same 6-digit GICS group, trailing
+      252-day daily-return correlation >= 0.3) surfaces a pair, laggard LGQ and leader LDQ, with a computed
+      correlation of 0.44. M2 PART 2's narrative-divergence assessment finds a striking, publicly-explained
+      divergence (LDQ beating on a new-product cycle, LGQ flat on execution issues) with a clear
+      reconvergence story. The session's judgment is that the divergence IS significant and worth
+      surfacing. Is this pair routed as a Strategy E entry candidate today?
+    governing_files: [Operating_Protocols.md, Claude_Task_Plan.md]
+    expected_decision: "NO-GO (as an E entry candidate -- spec floor corr >=0.5, strategy/07 frozen Entry criterion 3; recorded below_spec_floor as context)"
+    rationale: >
+      Operating_Protocols.md §19's spec-floor rail: a pair may be routed as a Strategy E ENTRY CANDIDATE
+      only if it ALSO meets E's frozen Entry criterion 3 (252-day corr >= 0.5 -- `strategy/07_strategy_e.md`,
+      spec_hash-frozen) -- the same 0.5 bar SE-01 pins directly against Strategy.md, now re-derived as a
+      screen-side floor rather than a free judgment call. LGQ/LDQ's 0.44 correlation is below that floor,
+      so however compelling the narrative divergence, the pair is NEVER routed as an E entry candidate; it
+      is recorded `below_spec_floor=true` as context / SL1 ideation evidence only, per §19. NO-GO -- not
+      routed.
+
+  - id: RS-04
+    category: research_screener
+    situation: >
+      D1's sector-move population rail (Operating_Protocols.md §19 Layer 1: any GICS sector >= 1% at
+      sector-ETF level) surfaces the Consumer Staples sector, up +1.3% at the sector-ETF level today while
+      the broad tape (SPY) is essentially flat at -0.2%. The session's Layer 2 judgment concludes this
+      divergence is a significant defensive rotation signal (a leadership sector reversal on an otherwise
+      flat day), not noise. What is today's D1 sector research-screen disposition?
+    governing_files: [Operating_Protocols.md, Claude_Task_Plan.md]
+    expected_decision: "GO (written up; sector screen has no spec floor)"
+    rationale: >
+      Operating_Protocols.md §19 Layer 2: the session judges the +1.3%-on-a-flat-tape divergence a
+      significant rotation signal and writes it up in Daily.md. §19's spec-floor rail (frozen Entry
+      criterion 1 for B, Entry criterion 3 for E) governs ONLY single-name B-candidate and pair E-candidate
+      routing -- a sector-level screen never routes to either strategy's entry-candidate path, so no floor
+      concept applies here at all. GO -- screened in/surfaced, no below_spec_floor consideration.

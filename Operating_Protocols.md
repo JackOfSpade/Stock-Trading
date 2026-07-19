@@ -623,6 +623,65 @@ Runs as the first step inside D2 Step-0, before fill reconciliation, sizing, or 
 
 ---
 
+## 19. AI Research-Significance Screen Protocol (Redesign C)
+
+**Canonical rail text for the converted funnel screens (owner-approved redesign — `AI_DECISION_REDESIGN.md` §3 Redesign C).** Owner verdict history (recorded exactly, do not erase): Redesign C was initially **DEFERRED** by owner verdict 2026-07-19 (relayed via the owner's Claude-in-Chrome session); LATER THE SAME DAY the owner **REVERSED** the deferral by direct in-session directive ("Yes, implement it") after asking for and reading a plain-language explanation of the redesign. This section is the SINGLE canonical home for the population rails, the spec-floor rail, and the logging contract — Claude_Task_Plan.md's D1/W2/M2/W5 texts POINT here rather than restating them divergently (the F3b lesson from the Redesign A review: call-site texts must cite one canonical rail text).
+
+**Settled scope — what converts, what does not (do not re-litigate).**
+
+CONVERTS to AI judgment (routine-owned funnel screens in Claude_Task_Plan.md):
+- D1 DEVELOPMENTS item 3 (~line 492): single-name "moved ≥5% close-to-close" screen.
+- D1 DEVELOPMENTS item 4 (~line 494): sector "move of ≥2% at sector-ETF level" screen.
+- D1 OPPORTUNITY CHECK routing bullet (~line 519): "≥5% post-event move → B candidate" (reworded to the spec-floor language below).
+- W2 PART 1 (~line 1136): "close-to-close price move of ≥5% in the prior 10 trading days" screen.
+- M2 PART 1 (~line 1464): "Trailing 252-day daily-return correlation ≥ 0.5" — **PARTIAL conversion only**: the 0.5 bar is RE-LABELED as a spec-derived rail (it mirrors Strategy E's frozen Entry criterion 3, below) and a below-floor context-capture band is added; it does NOT become a free AI judgment for E-candidacy. M2 PART 2's divergence assessment is ALREADY qualitative judgment and is left as is.
+
+DOES NOT CONVERT (stated explicitly per `AI_DECISION_REDESIGN.md`):
+- **W1 and Q2** — they contain NO fixed significance bars, only liquidity/capacity/scope rails ($2B/$10B mkt cap, $10M/$20M ADV, catalyst windows, shortlist result-count caps); their candidate-worthiness prose is already qualitative. The original Redesign C text's "similar thresholds in W1/Q2" turned out to be empty on inventory (2026-07-19 scout finding).
+- **All liquidity/capacity floors, lookback windows, entry-window lengths, and result-count caps** stay mechanical everywhere, verbatim — nothing about a numeric enumeration bound converts.
+- **Frozen strategy machinery**: `strategy/04_strategy_b.md` Entry criterion 1 (≥5% close-to-close on event day) and `strategy/07_strategy_e.md` Entry criterion 3 (252-day corr ≥ 0.5) are spec_hash-frozen and MUST NOT be edited by this protocol or any routine acting under it — nor may Strategy.md's B/E sections (frozen-by-transitivity: `split_strategy.py --check` + `check_roster_consistency.py` R-F). No file under `strategy/` or `strategy_math/` or Strategy.md is touched by this conversion. **KL #12's 0.5 correlation monitor is a DIFFERENT mechanism that happens to share the number** (§10 above, ~lines 242/246; D1 ~line 509) — not part of this conversion, not touched.
+
+**LAYER 1 — mechanical population rail (a cost bound, never a significance claim).**
+- D1 single-name: wide net = all US-listed, mkt cap ≥ $2B (unchanged), moved ≥2% close-to-close today. (Old bar was 5%; 2% is the enumeration floor only.)
+- D1 sector: wide net = any GICS sector ≥1% at sector-ETF level, or notable intraday dispersion. `metric_pct` for a sector item is ALWAYS the raw sector-ETF close-to-close move % — the same quantity `legacy_rule` "sector>=2%" tests — never a tape-relative number, however tape-relatively Layer-2's judgment reasons. A dispersion-only surfacing (no ≥1% net move) still logs its raw close-to-close move as `metric_pct`, with `legacy_rule_pass=false` BY CONVENTION (the old fixed rule had no dispersion concept, so it would not have surfaced the item — never log NULL, which would silently drop the row from the disagreement counts' three-valued logic).
+- W2: wide net = mkt cap ≥ $2B, 30-day ADV ≥ $10M (unchanged), moved ≥3% close-to-close on any day in the prior 10 trading days (unchanged window), event-attributable. (3% not 2%: the 10-day retrospective population is ~5× the daily one; this keeps enumeration tractable — the cost rationale lives here, where the rail is defined.)
+- M2: population = pairs in the same 6-digit GICS group with corr ≥ 0.3 (plus the unchanged liquidity + 90-day filing-recency bullets). 0.3–0.49 pairs are BELOW-SPEC-FLOOR context only (see the spec-floor rail below), recorded at most 3 per call — a cap distinct from (and additive to) the escape valve below, which concerns sub-NET items.
+- **Escape valve**: the session MAY additionally surface up to **3** sub-net items per call it judges extraordinary (so the net is a cost bound, not a blinder). The cap of 3 is mechanical.
+
+**LAYER 2 — AI significance judgment (the decider — this is the conversion).**
+For each surfaced item the session judges whether the move/divergence is SIGNIFICANT in that name's own volatility regime and event context — a 3% move in a low-vol mega-cap staple on a real event can outrank a 7% move in a high-beta name on noise. Per item the session states: significant yes/no, conviction on the house coarse ladder (30/45/60/75, per the Claude_Task_Plan.md preamble's "Conviction-calibration ladder" note — NOT this file's §8, which is Strategy B's separate gap-fill ladder; word mapping: 30 = low, 45/60 = medium, 75 = high), and a one-sentence reason. The JUDGMENT — not any number — decides what gets written up (D1 Daily.md), shortlisted (W2, existing "up to 15" cap unchanged), or advanced to PART 2 (M2, existing "up to 10" cap unchanged). An above-net item the session judges noise is **REJECTED** (and recorded — see the logging contract below).
+
+**Spec-floor rail (mechanical — the frozen-spec constraint made explicit).** A name may be routed as a Strategy B ENTRY CANDIDATE only if it also meets B's frozen Entry criterion 1 (≥5% close-to-close on event day — `strategy/04_strategy_b.md`, spec_hash-frozen). A pair may be routed as a Strategy E ENTRY CANDIDATE only if it also meets E's frozen Entry criterion 3 (252-day corr ≥ 0.5 — `strategy/07_strategy_e.md`, spec_hash-frozen). These numbers now DERIVE FROM the frozen specs, not from the screens: changing them is a strategy-machinery change (owner-directed spec_hash recompute), not a screen tune. AI-significant items BELOW the spec floor are recorded with `below_spec_floor=true` and are context / SL1 ideation evidence ONLY (a recurring class of sub-floor significant moves is exactly the judgment-native new-strategy material Redesign B contemplates). They are NEVER routed as B/E entry candidates and the write-up must never describe them as tradeable candidates. D1's routing bullet and W2's shortlist instructions carry this rail by pointing to this section (§19) rather than restating it divergently.
+
+**Logging contract (every converted-screen execution, including quiet days).** One `CALL ops.sp_log_decision(...)` row per (routine, screen) per run — D1 logs up to two rows (single-name-move, sector-move), W2 one, M2 one. 16 positional args (`bigquery/08`): `in_entry_date=<run date MT>, in_entry_type='research-screen', in_strategy=NULL, in_ticker=NULL, in_decision='SCREEN', in_conviction=NULL, in_conviction_pct=NULL, in_sub_pattern=NULL, in_theater_check=NULL, in_title='<routine> <screen> screen <date>', in_body_md=<brief judgment narrative>, in_fields_json=<contract below>, in_refs=[], in_tags=['research-screen','<routine>'], in_superseded_by=NULL, in_source_session='<routine> <date>'`.
+
+fields JSON contract (document verbatim also in `bigquery/96`'s header):
+```
+{
+  "routine": "D1"|"W2"|"M2",
+  "screen": "single-name-move"|"sector-move"|"post-event"|"pair-divergence",
+  "population_rail": "<the Layer-1 net applied, e.g. 'move>=2% mktcap>=2B'>",
+  "surfaced_count": <int — Layer-1 population size>,
+  "legacy_rule": "move>=5%"|"sector>=2%"|"corr>=0.5",
+  "passed": [ {"name":"<TICKER | L/S pair | SECTOR>", "metric_pct": <number — the move %/corr>,
+               "conviction":"low|medium|high", "conviction_pct": <30|45|60|75>,
+               "reason":"<one sentence>", "below_spec_floor": <bool>,
+               "legacy_rule_pass": <bool>} ],
+  "rejected_notable": [ same item shape — MUST include EVERY legacy-rule-passing item the AI rejected ],
+  "agreement": {"both": n, "ai_only": n, "rule_only": n}
+}
+```
+`legacy_rule_pass` is computed MECHANICALLY in-session (metric vs. the old fixed bar). The old rule thereby runs as a **RECORD-ONLY benchmark** inside every call — the `park_rule_shadow` precedent (§13.F: v1's deterministic regime→vehicle rule table rejected as decision-maker, retained only as a record-only shadow benchmark) — never the decider, here or there. An empty population logs `surfaced_count=0` with empty arrays. Agreement counts: `both` = passed with `legacy_rule_pass`; `ai_only` = passed without; `rule_only` = `rejected_notable` with `legacy_rule_pass`. Canonical `name` formats (so W5's recurrence check can match items across cycles): single name = the bare ticker; pair = `L_TICKER/S_TICKER` (long leg first); sector = the GICS sector label exactly as written in the Daily.md write-up. For `rejected_notable` items, `conviction`/`conviction_pct` express confidence in the REJECTION (that the item is NOT significant), on the same scale — never a leftover significance conviction. Items failing BOTH the AI judgment and the legacy rule (double-rejects) are NOT required in `rejected_notable` — the MUST above is a floor covering every legacy-rule-passing rejection; double-rejects may be included when genuinely informative.
+
+**W5 evaluation.** W5's RESEARCH-SCREEN SCORECARD bullet (Claude_Task_Plan.md, after the CAPITAL-ALLOCATION SCORECARD) reads `state.research_screen_calls` + `analytics.research_screen_disagreements` (`bigquery/96_research_screener.sql`) weekly: per-screen agreement counts (both/ai_only/rule_only); any `rule_only` item that later reached a GO thesis (the screens-rejecting-winners check — formerly Redesign C's defer-revisit trigger, now a standing measured check); recurring `ai_only` below-spec-floor names/classes noted as SL1 ideation evidence (the same qualitative-intake spirit as SL4's intake). **RECORD-ONLY — never gates a screen.** Logs one `entry_type='research-screen-scorecard'` decision_log row; no dedicated heartbeat (rides D1/W2/M2 dead-man coverage per `HEARTBEAT_SELF_MONITORED_LOOPS`).
+
+**Loop.** active_auto per `ops/autonomy_levels.yaml`, loop `research_screener` — built directly at active_auto (the `capital_allocator` staging pattern, not `park_allocator`'s shadow): blast radius is bounded from the first call by construction — a screen decision moves research attention, never capital; every output still passes the full downstream AI judgment (thesis construction, GO/NO-GO) and the frozen entry criteria above; result-count caps unchanged; spec floors mechanical; the legacy fixed rule runs record-only inside every call as benchmark; W5 scorecard + full decision-log audit are the compensating controls. Worst case = wasted research or a missed candidate — the old fixed bars also missed candidates by construction. **No kill-switch table** (unlike `ops.park_control`/`ops.arsenal_control`): screens move no capital; the owner reverts by directive; the rails above are the compensating control.
+
+**Revision history:**
+- 2026-07-19: Section established (owner-approved redesign, `AI_DECISION_REDESIGN.md` §3 Redesign C — owner reversal of the same-day DEFER verdict via direct in-session directive "Yes, implement it"). Converts D1's single-name/sector move screens, W2's price-move screen, and M2's correlation-pair population screen (PART 1 only) from fixed thresholds to a two-layer mechanical-population-rail + AI-significance-judgment structure, with the frozen Strategy B/E entry criteria surviving as an explicit spec-floor rail (not a screen bar) and the legacy fixed rule retained record-only as a benchmark (the `park_rule_shadow` precedent, §13.F). Confirmed W1/Q2 have no analogous fixed bars (empty on inventory) and are out of scope. Loop `research_screener` registered directly `active_auto` in `ops/autonomy_levels.yaml`; SQL layer `bigquery/96_research_screener.sql`. → `AI_DECISION_REDESIGN.md` §3 (owner verdict 2026-07-19).
+
+---
+
 ## Maintenance
 
 - W5 (weekly Factbase & Analytics Consolidation) appends new protocol revisions to the relevant section here as they emerge from Decision_Log entries.
