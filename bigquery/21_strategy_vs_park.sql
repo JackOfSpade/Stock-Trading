@@ -119,6 +119,10 @@ LEFT JOIN comm c USING (strategy);
 -- see an empty table). park_dollars_approx uses current total sleeve NAV as the base
 -- (≈ deposits ± small P&L) rather than duplicating the deposit literal hardcoded in
 -- analytics.strategy_nav — labeled ≈ in the email.
+-- Retained as-is for history, superseded-in-usage by analytics.park_nav_daily +
+-- analytics.park_counterfactuals (bigquery/93_park_accounting.sql) as of 2026-07-19 — still
+-- hardcoded to sgov_daily_return by design (this view answers "what would 100% SGOV have earned,"
+-- not the AI allocator's actual multi-vehicle book; the new views are the vehicle-aware successors).
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.park_baseline` AS
 WITH f AS (
   SELECT MIN(as_of_date) AS first_deployed_date

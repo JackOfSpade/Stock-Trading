@@ -28,6 +28,12 @@
  * email + the idle-capital parking vehicle only — see events.decision_log 2026-07-15). See the header
  * of bigquery/46_weekly_benchmarks.sql for the full benchmark methodology.
  *
+ * PARK SECTION (2026-07-18, PARK_ROUTER_DESIGN.md v2 §9 — the AI Park Allocator): a compact block
+ * below the per-strategy table showing the park's current vehicle, days in that vehicle, switches in
+ * the last 30 days, and the park's own realized TWR vs the three counterfactuals (100% SGOV, 100%
+ * VOO, and the record-only v1 rule-shadow) from analytics.park_counterfactuals. Degrades gracefully
+ * (never fails the send) if bigquery/91-93 are not yet applied live — see gatherParkData_.
+ *
  * DATA (BigQuery, project stock-trading-498512):
  *   - analytics.strategy_scorecard          (the A-E list + activation, for the not-deployed reason)
  *   - analytics.strategy_vs_park_daily      (per strategy-day: deployed_unit_value — each strategy's
@@ -38,6 +44,10 @@
  *   - state.system_health                   (marks/engine freshness + kill-flags + critical alerts — data-trust)
  *   - state.user_tz                         (detected DISPLAY timezone — never the operating/trading-day tz)
  *   - perf.kill_flags / ops.alerts          (queried lazily, only when system_health flags something)
+ *   - events.park_policy_changes / state.park_policy_current  (2026-07-18: current park vehicle +
+ *                                             tenure + switch cadence, PARK section)
+ *   - analytics.park_counterfactuals        (2026-07-18: park's own realized TWR vs SGOV / VOO /
+ *                                             rule-shadow, PARK section — bigquery/93_park_accounting.sql)
  *
  * Retained but no longer read by this email (matches this file's established "retain, don't delete"
  * convention for superseded views): analytics.sgov_cumulative, analytics.deployed_book_vs_benchmarks,
@@ -57,7 +67,7 @@ const SENDER_NAME  = 'Stock-Trading Bot';
 const LABEL_NAME   = 'Trading/Weekly';
 const SEND_HOUR    = 7;
 const SEND_WEEKDAY = ScriptApp.WeekDay.SUNDAY;
-const SCRIPT_VERSION = 'v5';                       // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep
+const SCRIPT_VERSION = 'v6';                       // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep
 const SUBJECT_LABEL = 'Deployed vs Benchmarks';    // Single source for this phrase across buildSubject_, the post-send GmailApp.search() match, and the HTML/plain-text banners below. Edit only here on a rename (2026-07-14 audit finding -- this already drifted once by hand across 4 sites during the 2026-07-13 VOO rename).
 
 // Fixed per-strategy identity colors (CVD-validated) — never reassigned by rank/presence. VOO is a
@@ -222,8 +232,67 @@ function gatherData_() {
 
   const deployedStrategies = rows.filter(r => r.deployed).map(r => r.strategy);
 
+  const park = gatherParkData_();
+
   return { rows, voo, nVooMarkDays, vooLastMarkDate, deployedStrategies, dailyByStrategy, vooByDate,
-           firstDate, asOfDate, health, green, healthReasons, dateLabel, tz };
+           firstDate, asOfDate, health, green, healthReasons, dateLabel, tz, park };
+}
+
+// ===== PARK (AI Park Allocator, PARK_ROUTER_DESIGN.md v2 §9, 2026-07-18) =====
+// Two independently try/caught queries — bigquery/91_park_signal_layer.sql / 92_park_allocator.sql /
+// 93_park_accounting.sql may not be applied live yet at the time this script is redeployed (the .gs
+// re-paste and the SQL apply are two separate owner/routine actions), and a missing table here must
+// never fail the whole weekly send, mirroring buildReturnChart_'s "chart must never fail the send"
+// posture. Each query degrades independently: a vehicle-query failure still lets the counterfactuals
+// render (and vice versa), and gatherData_'s caller renders "n/a"/"Not enough data" throughout when
+// either half is unavailable — never a fabricated 0/undefined.
+function gatherParkData_() {
+  let vehicleRow = {};
+  try {
+    // current_vehicle/days_in_vehicle from state.park_policy_current (bigquery/54, already live);
+    // switches_30d counts every ACTUAL vehicle change (any direction — de-risk/re-risk/lateral, unlike
+    // state.park_switch_budget's up/lateral-only scope) recorded in events.park_policy_changes in the
+    // trailing 30 days, via the same LAG-over-event_ts "did the vehicle actually change" idiom
+    // bigquery/92_park_allocator.sql's state.park_switch_budget view uses (event_ts is the house
+    // transition-time discriminator — never effective_date, bigquery/54's documented fix).
+    vehicleRow = bq_(`
+      WITH ordered AS (
+        SELECT event_ts, vehicle,
+               LAG(vehicle) OVER (ORDER BY event_ts) AS prev_vehicle
+        FROM \`${PROJECT_ID}.events.park_policy_changes\`
+      ), cur AS (
+        SELECT vehicle, effective_date FROM \`${PROJECT_ID}.state.park_policy_current\`
+      )
+      SELECT
+        cur.vehicle AS current_vehicle,
+        DATE_DIFF(CURRENT_DATE('America/Denver'), cur.effective_date, DAY) AS days_in_vehicle,
+        (SELECT COUNT(*) FROM ordered
+           WHERE prev_vehicle IS NOT NULL AND vehicle != prev_vehicle
+             AND event_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)) AS switches_30d
+      FROM cur`)[0] || {};
+  } catch (e) { Logger.log('gatherParkData_ vehicle query skipped (bigquery/54 not live?): ' + e); }
+
+  let cfRow = {};
+  try {
+    // Latest row of analytics.park_counterfactuals (bigquery/93_park_accounting.sql) — the park's own
+    // realized TWR (ai_index) alongside the three PARK_ROUTER_DESIGN.md v2 §9 counterfactuals: 100%
+    // SGOV (sgov_index), 100% VOO (voo_index), and the record-only v1 rule-shadow (rule_index).
+    cfRow = bq_(`
+      SELECT as_of_date, ai_index, sgov_index, voo_index, rule_index
+      FROM \`${PROJECT_ID}.analytics.park_counterfactuals\`
+      ORDER BY as_of_date DESC LIMIT 1`)[0] || {};
+  } catch (e) { Logger.log('gatherParkData_ counterfactuals query skipped (bigquery/91-93 not live yet?): ' + e); }
+
+  return {
+    vehicle: vehicleRow.current_vehicle || null,
+    daysInVehicle: num_(vehicleRow.days_in_vehicle),
+    switches30d: num_(vehicleRow.switches_30d),
+    asOfDate: cfRow.as_of_date || null,
+    ai: num_(cfRow.ai_index),
+    sgov: num_(cfRow.sgov_index),
+    voo: num_(cfRow.voo_index),
+    rule: num_(cfRow.rule_index)
+  };
 }
 
 function notDeployedReason_(activation) {
@@ -515,6 +584,38 @@ function pctCellHtml_(v, colorBySign, extrapolated) {
   return `<span style="color:${color};font-weight:${colorBySign ? 700 : 400};">${signPct_(v * 100)}${marker}</span>`;
 }
 
+// Compact PARK section (2026-07-18, PARK_ROUTER_DESIGN.md v2 §9) — current vehicle, tenure, switch
+// cadence, and the AI's own realized TWR vs the three counterfactuals (100% SGOV, 100% VOO, the
+// record-only v1 rule-shadow). Reuses pctCellHtml_/esc_ exactly like the Average Return table above.
+// Guards every field independently (never a bare "undefined"/fabricated 0%) — bigquery/91-93 may not
+// be applied live yet, see gatherParkData_.
+function buildParkSection_(d) {
+  const p = d.park || {};
+  const vehicleLabel = p.vehicle ? esc_(p.vehicle) : 'unknown';
+  const daysLabel = p.daysInVehicle != null ? `${p.daysInVehicle} day${p.daysInVehicle === 1 ? '' : 's'}` : 'n/a';
+  const switchesLabel = p.switches30d != null ? `${p.switches30d} switch${p.switches30d === 1 ? '' : 'es'} / 30d` : 'n/a';
+
+  const hasCf = p.ai != null || p.sgov != null || p.voo != null || p.rule != null;
+  const cfRowHtml = (label, val, colorBySign) => `
+      <tr>
+        <td style="padding:6px 8px;color:#3d4a59;">${esc_(label)}</td>
+        <td style="padding:6px 8px;text-align:right;">${pctCellHtml_(val, !!colorBySign)}</td>
+      </tr>`;
+  const cfTable = hasCf ? `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;border-collapse:collapse;font-size:12px;">
+      ${cfRowHtml('AI (actual)', p.ai, true)}${cfRowHtml('100% SGOV', p.sgov, false)}${cfRowHtml('100% VOO', p.voo, false)}${cfRowHtml('Rule-shadow (record-only)', p.rule, false)}
+    </table>` :
+    `<div style="margin-top:8px;font-size:11px;color:#8a96a3;">Not enough data yet.</div>`;
+
+  return `
+  <tr><td style="padding:16px 22px 6px 22px;">
+    <div style="font-size:12px;color:#8a96a3;text-transform:uppercase;letter-spacing:0.6px;font-weight:700;">Park (AI Allocator)</div>
+    <div style="margin-top:6px;font-size:12px;color:#1f2d3d;">Current vehicle: <b>${vehicleLabel}</b> · ${daysLabel} · ${switchesLabel}</div>
+    ${cfTable}
+    <div style="font-size:11px;color:#8a96a3;margin-top:6px;">Park TWR since 2026-04-17 vs. the three PARK_ROUTER_DESIGN.md counterfactuals — SGOV never-left, VOO the prior static policy, rule-shadow the record-only v1 lookup table (owner-rejected as decision-maker).</div>
+  </td></tr>`;
+}
+
 function buildHtml_(d, chartResult) {
   const hasVoo = d.nVooMarkDays > 0;
 
@@ -589,6 +690,8 @@ function buildHtml_(d, chartResult) {
     <div style="font-size:11px;color:#8a96a3;margin-top:6px;">Strategy rows: each strategy's own average return, on deployed capital, measured over active (deployed) time only. VOO row: its own average return. † = annualized from fewer than 252 deployed days — extrapolated.</div>
   </td></tr>`;
 
+  const parkSection = buildParkSection_(d);
+
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background-color:#eef1f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1f2d3d;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#eef1f5;padding:18px 0;"><tr><td align="center">
@@ -601,7 +704,7 @@ function buildHtml_(d, chartResult) {
     </tr></table>
     <div style="margin-top:12px;color:#9fb3cc;font-size:12px;">data through ${esc_(d.health.last_mark_date || '—')} close</div>
   </td></tr>
-${trustBlock}${chartSection}${tableSection}
+${trustBlock}${chartSection}${tableSection}${parkSection}
   <tr><td style="padding:12px 22px 22px 22px;">
     <div style="font-size:11px;color:#9aa6b2;line-height:1.5;">Total return, gross of commissions; VOO includes dividends. Times in ${esc_(d.tz)}.</div>
   </td></tr>
@@ -642,5 +745,18 @@ function buildPlain_(d) {
   s += `  VOO (own return)  avg/mo ${fmtP(vooOwn.avgMonth)}  avg/yr ${fmtP(vooOwn.avgYear, vooOwn.extrapolatedYear)}\n`;
 
   s += `\nStrategy rows are each strategy's own average return, on deployed capital, over active (deployed) time only; VOO row is its own average return. † = annualized from fewer than 252 deployed days. Total return, gross of commissions; VOO incl. dividends. Times in ${d.tz}.\n`;
+
+  // PARK (AI Allocator) — 2026-07-18, PARK_ROUTER_DESIGN.md v2 §9. Mirrors buildParkSection_.
+  const p = d.park || {};
+  const vehicleLabel = p.vehicle || 'unknown';
+  const daysLabel = p.daysInVehicle != null ? `${p.daysInVehicle} day${p.daysInVehicle === 1 ? '' : 's'}` : 'n/a';
+  const switchesLabel = p.switches30d != null ? `${p.switches30d} switch${p.switches30d === 1 ? '' : 'es'} / 30d` : 'n/a';
+  s += `\nPARK (AI Allocator): vehicle=${vehicleLabel}  ${daysLabel}  ${switchesLabel}\n`;
+  if (p.ai != null || p.sgov != null || p.voo != null || p.rule != null) {
+    s += `  AI ${fmtRetPct_(p.ai)}  SGOV ${fmtRetPct_(p.sgov)}  VOO ${fmtRetPct_(p.voo)}  rule-shadow ${fmtRetPct_(p.rule)}\n`;
+  } else {
+    s += `  Not enough data yet.\n`;
+  }
+
   return s;
 }

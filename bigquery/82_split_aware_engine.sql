@@ -109,6 +109,13 @@ FROM lagged
 GROUP BY mark_date, strategy;
 
 -- ===== state.mark_discontinuity_watch — bad-print / missed-split tripwire (NEW) =====
+--
+-- SUPERSEDED LIVE by bigquery/92_park_allocator.sql — current single source of truth for this
+-- object. bigquery/92 keeps this view's logic byte-identical (same >25% threshold, same
+-- split_ratio/dividend exclusions) and only extends the explicit benchmark UNION DISTINCT list from
+-- SGOV/VOO/SPY to the full 12-ticker park menu (PARK_ROUTER_DESIGN.md §4). Kept here, unmodified,
+-- for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in
+-- isolation — it would silently narrow the watched-ticker set back to SGOV/VOO/SPY.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.mark_discontinuity_watch` AS
 WITH watched AS (
   SELECT DISTINCT ticker FROM `stock-trading-498512.state.current_positions` WHERE ticker IS NOT NULL

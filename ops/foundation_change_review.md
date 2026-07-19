@@ -56,6 +56,8 @@ in the decision-log entry.
       share-count margin — expected, not a retune).
 - [ ] **Benchmark/park-beta assumptions** downstream of the park vehicle (see B).
 
+**AI Park Allocator amendment (2026-07-18 implementation, `PARK_ROUTER_DESIGN.md` v2 — Operating_Protocols.md §13.F).** The 12 park-menu tickers (CASH/SGOV/GOVT/IEF/TLT/LQD/MUB/HYG/PFF/AOR/VOO/VTI) are **pre-validated ONCE, at onboarding**: this full §A checklist runs for the menu as a whole when the AI park allocator itself is stood up, exactly as it ran for the 2026-07-15 SGOV→VOO cutover. Thereafter, an allocator SWITCH among already-onboarded menu rungs (the AI's daily vehicle choice, §13.F) is NOT a foundation change — it needs only its `events.decision_log` `entry_type='park-allocation'` / conversion row, no re-run of this checklist. Only a **MENU CHANGE** — adding, removing, or substituting a ticker from the allowlist itself — re-triggers the full §A checklist (a genuinely new instrument's volatility/spread/commission profile is unvalidated against the −15%/−40% breaker tiers, the D2a NAV band, the order-guard band, and the benchmark assumptions above, exactly the gap this file exists to close). This mirrors the file's own onboard-once/menu-changes-only distinction already stated for the SGOV→VOO single-vehicle case — the AI park allocator generalizes it to a 12-ticker menu without weakening it: switching WITHIN the pre-validated menu is cheap and mechanical; widening or narrowing the menu ITSELF is a foundation change like any other.
+
 ### B. Benchmark change
 - [ ] **Excess-vs-park / beta-adjusted alpha** — `bigquery/39_beta_adjusted_alpha.sql`,
       `analytics.strategy_vs_park*`, `bigquery/46_weekly_benchmarks.sql` reference the correct benchmark
