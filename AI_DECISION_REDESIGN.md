@@ -1,10 +1,13 @@
 # AI-Conversion Audit & Redesign — deterministic decisions → AI judgment
 
-Status: **Redesigns A and B IMPLEMENTED 2026-07-19 (owner verdicts: A approve, B approve,
-C defer — relayed by the owner via their Claude-in-Chrome session and pasted into this
-session by the owner).** Companion to `PARK_ROUTER_DESIGN.md` v2 (the park allocator,
-implemented and live under separate owner authorization). Redesign C is owner-DEFERRED
-2026-07-19 — see §4.
+Status: **Redesigns A, B, and C ALL IMPLEMENTED 2026-07-19.** Owner verdict history: A
+approve, B approve, C defer — relayed by the owner via their Claude-in-Chrome session and
+pasted into this session by the owner; the C deferral was then REVERSED later the same day
+by direct in-session owner directive ("Yes, implement it"), given immediately after the
+owner asked for and read a plain-language explanation of Redesign C ("whats redesign C").
+Companion to `PARK_ROUTER_DESIGN.md` v2 (the park allocator, implemented and live under
+separate owner authorization). Redesign C's canonical rails live in
+`Operating_Protocols.md` §19 — see §3/§4.
 Method: 4-agent exhaustive catalog of every deterministic decision point (~60 entries
 across Claude_Task_Plan.md, bigquery/*.sql, strategy specs, Operating_Protocols/ops),
 then orchestrator classification. Full catalogs preserved in the session workspace.
@@ -41,7 +44,7 @@ runs on, each of which exists *because* it is not judgment:
 | Termination capital redistribution (D2 §5 / AR_orc): equal-split residual | FIFO newcomer floor, then equal split among survivors — "no review, no hold" | **DONE — Redesign A** (implemented 2026-07-19; `Operating_Protocols.md` §16, `Claude_Task_Plan.md` D2 §5/AR_orc, `bigquery/95_capital_allocator.sql`) |
 | Deposit allocation residual (§13.C) | FIFO newcomer floor, then equal split | **DONE — Redesign A** (same call; `Operating_Protocols.md` §13.C) |
 | Future strategies' internal machinery | SL2 authors numeric-trigger specs by default | **DONE — Redesign B** (implemented 2026-07-19; Claude_Task_Plan.md SL1 STEP 2 + SL2 (A) 1b, Experiment_Parameters.md authoring note) |
-| Research-funnel significance thresholds (W2 ≥5% move; M2 corr ≥0.5 pairing) | Fixed numeric screens | **OWNER-DEFERRED 2026-07-19** — Redesign C (revisit only if the W5 research-quality loop shows the screens rejecting winners) |
+| Research-funnel significance thresholds (W2 ≥5% move; M2 corr ≥0.5 pairing; + D1's single-name ≥5% / sector ≥2% screens, found on inventory) | Fixed numeric screens | **DONE — Redesign C** (initially owner-DEFERRED 2026-07-19, REVERSED same day by direct in-session owner directive; implemented 2026-07-19 — `Operating_Protocols.md` §19, `Claude_Task_Plan.md` D1/W2/M2/W4/W5, `bigquery/96_research_screener.sql`; the old revisit trigger is now W5's standing rule_only-then-GO check) |
 
 ### KEEP mechanical — with the specific reason
 
@@ -123,16 +126,62 @@ any edge clock.
 Surface: SL1/SL2 prose sections + one paragraph in Experiment_Parameters' strategy-
 authoring notes. Zero schema.
 
-### Redesign C — Research-funnel significance judgment (recommend DEFER)
+### Redesign C — Research-funnel significance judgment (IMPLEMENTED 2026-07-19 — owner reversal of same-day DEFER)
 
-W2's "≥5% close-to-close move," M2's "correlation ≥0.5" pairing bar, and similar
-*significance* thresholds encode market judgment and could become per-session AI calls
-("is this move significant for this name's vol regime?") with the liquidity/capacity
-floors (mkt-cap/ADV) kept as rails. Deferred because: the funnel feeds AI judgment
-two steps later anyway (thesis construction, GO/NO-GO), the thresholds bound research
-cost predictably, and the conversion's win is marginal while its churn (per-routine prose
-+ golden-scenario updates across W1/W2/M2/Q2) is not. Revisit if W5's research-quality
-loop ever shows the screens rejecting winners.
+**Verdict history (recorded exactly).** This audit recommended DEFER and the owner's
+2026-07-19 verdict (Chrome relay) agreed. Later the same day the owner asked "whats
+redesign C", read a plain-language explanation, and reversed with a direct in-session
+directive: "Yes, implement it." The original defer reasoning stays visible below —
+it was sound as far as it went, and the implementation answers each point rather than
+ignoring it.
+
+**What the original text proposed.** W2's "≥5% close-to-close move," M2's "correlation
+≥0.5" pairing bar, and similar *significance* thresholds encode market judgment and could
+become per-session AI calls ("is this move significant for this name's vol regime?") with
+the liquidity/capacity floors (mkt-cap/ADV) kept as rails. Deferred because: the funnel
+feeds AI judgment two steps later anyway (thesis construction, GO/NO-GO), the thresholds
+bound research cost predictably, and the conversion's win is marginal while its churn is
+not.
+
+**What the 2026-07-19 implementation inventory found (and how it sharpened the design).**
+(1) The two named bars are ALSO frozen strategy machinery: `strategy/04_strategy_b.md`
+Entry criterion 1 independently requires the ≥5% event-day move and
+`strategy/07_strategy_e.md` Entry criterion 3 independently requires corr ≥0.5 — both
+spec_hash-frozen. A below-bar name/pair can never trade B/E regardless of what the funnel
+says, so the honest conversion target is SURFACING/PRIORITIZATION (what earns research
+attention and write-up), with the frozen numbers surviving as an explicit **spec-floor
+rail** (they now derive from the frozen specs, not from a tunable screen). (2) The
+"similar thresholds in W1/Q2" clause was empty — W1/Q2 carry only liquidity/scope rails;
+their worthiness prose was already qualitative. (3) One unnamed screen of the same class
+was found and converted: D1's sector-move ≥2% bar (no frozen constraint).
+
+**As implemented** (canonical rails: `Operating_Protocols.md` §19; loop
+`research_screener`, built directly `active_auto` per the capital_allocator staging
+rationale — a screen moves research attention, never capital):
+- **Two-layer structure.** Layer 1 = mechanical population rails, explicitly cost bounds
+  and never significance claims (D1 single-name ≥2%, D1 sector ≥1%, W2 ≥3% over the
+  unchanged 10-day window, M2 corr ≥0.3 band; +3-item sub-net escape valve). Layer 2 =
+  the AI significance judgment as the sole decider of what advances, with per-item
+  conviction on the house ladder. This answers the defer's research-cost point: the
+  enumeration stays bounded by the nets and the unchanged result-count caps (W2 ≤15,
+  M2 ≤10), while the *judgment* is no longer a number.
+- **Spec-floor rail.** B/E candidacy still mechanically requires the frozen criteria;
+  AI-significant sub-floor items are recorded `below_spec_floor` as context/SL1 ideation
+  evidence (judgment-native new-strategy material per Redesign B), never entry candidates.
+- **Record-only legacy benchmark.** Every call computes the old fixed bars mechanically
+  (`legacy_rule_pass`) — the park_rule_shadow precedent — producing a standing
+  agreement/disagreement ledger (`both`/`ai_only`/`rule_only`) instead of a shadow phase.
+- **Read surface + evaluation.** `entry_type='research-screen'` decision_log rows →
+  `state.research_screen_calls` + `analytics.research_screen_disagreements`
+  (`bigquery/96_research_screener.sql`); W5's RESEARCH-SCREEN SCORECARD (record-only)
+  reports the ledger weekly and flags any `rule_only` rejection that later reached a GO
+  thesis — the old defer-revisit trigger ("screens rejecting winners"), converted from a
+  passive hope into a standing measured check.
+Surface: `Operating_Protocols.md` §19 (canonical), `Claude_Task_Plan.md` D1 items 3/4 +
+routing / W2 PART 1-2 / M2 PART 1 / W4 HARD CHECK rewording / W5 scorecard bullet + table
+rows, `bigquery/96_research_screener.sql` + README index, `ops/autonomy_levels.yaml`
+loop entry + `check_autonomy_consistency.py` heartbeat carve-out, `Watchlist.md`
+rewordings, golden scenarios RS-01..04. Zero edits to frozen specs or Strategy.md.
 
 ## 4. What Phase 2 implements now vs what awaits your verification
 
@@ -148,5 +197,13 @@ loop ever shows the screens rejecting winners.
   for FUTURE candidates: `Claude_Task_Plan.md` SL1 STEP 2 (judgment-native preference) +
   SL2 (A) 1b (the four non-waivable requirements), `Experiment_Parameters.md` "Strategy
   authoring — judgment-native machinery". Prose-only, zero schema, no live strategy touched.
-- **Owner-DEFERRED 2026-07-19**: Redesign C — revisit only if the W5 research-quality
-  loop shows the funnel screens rejecting winners.
+- **Implemented (owner reversal, same day)**: **Redesign C** — initially owner-DEFERRED
+  2026-07-19 (Chrome-relay verdict), reversed later that day by direct in-session owner
+  directive ("Yes, implement it") after the owner asked for and read a plain-language
+  explanation. Surfaces: `Operating_Protocols.md` §19 (canonical rails),
+  `Claude_Task_Plan.md` D1/W2/M2/W4/W5, `bigquery/96_research_screener.sql`
+  (`state.research_screen_calls`, `analytics.research_screen_disagreements`), loop
+  `research_screener` (`active_auto`) in `ops/autonomy_levels.yaml` +
+  `check_autonomy_consistency.py` carve-out, `Watchlist.md` rewordings, golden scenarios
+  RS-01..04. The frozen B/E entry bars survive as §19's spec-floor rail (zero frozen-spec
+  edits); the old revisit trigger is now W5's standing rule_only-then-GO check.
