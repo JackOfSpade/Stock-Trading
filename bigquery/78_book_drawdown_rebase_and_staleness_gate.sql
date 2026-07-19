@@ -2,11 +2,15 @@
 -- findings C1 [risk-rails, CRITICAL] and the staleness-echo deadlock [risk-rails, HIGH]).
 -- Project: stock-trading-498512. Apply AFTER 23_trading_control.sql, 34_alert_lifecycle.sql,
 -- 47_trading_enabled_resync.sql, 64_b3_live_invariants.sql, 76_owner_confirmation_liveness.sql.
--- This file is the NEW single source of truth for state.book_drawdown_watch, state.trading_enabled,
+-- This file WAS the new single source of truth for state.book_drawdown_watch, state.trading_enabled,
 -- state.trading_enabled_mechanical, state.b3_trading_enabled_check and ops.sp_auto_resolve_alerts;
--- it SUPERSEDES those definitions in 23/33/34/47/64. Per 47's header rule, any future change to this
--- gate cluster must land as a new numbered file that supersedes THIS one — never re-apply an earlier
--- file's CREATE OR REPLACE for these objects in isolation.
+-- it SUPERSEDES those definitions in 23/33/34/47/64. It REMAINS canonical ONLY for
+-- state.book_drawdown_watch and state.entry_staging_allowed: sp_auto_resolve_alerts was superseded
+-- by bigquery/94, and the three gate views AND 94's procedure are in turn superseded by
+-- bigquery/97_halt_echo_dependency_gate.sql (2026-07-19) — see the per-statement markers below.
+-- Per 47's header rule, any future change to this gate cluster must land as a new numbered file
+-- that supersedes THIS one — never re-apply an earlier file's CREATE OR REPLACE for these objects
+-- in isolation.
 --
 -- ============================ WHY (C1 — the drawdown breaker) ============================
 -- state.book_drawdown_watch's -15% breach was a no-override AND-term in BOTH trading gates. In the
@@ -130,6 +134,14 @@ FROM bdw, ocl;
 -- ===== state.trading_enabled — REDEFINED (SUPERSEDES bigquery/47) =====
 -- Changes vs 47: (1) drawdown AND-term is now breach_hard (-40% catastrophe) not the -15% soft tier;
 -- (2) blocking_criticals excludes category IN ('trading_halted','staleness') (was trading_halted only).
+--
+-- SUPERSEDED (2026-07-19): this definition of state.trading_enabled is now superseded by
+-- bigquery/97_halt_echo_dependency_gate.sql, which reproduces this exact body and additionally
+-- excludes halt-echo missing_dependency alerts (pure same-day fallout of a still-open trading
+-- halt) from blocking_criticals. Re-applying the CREATE OR REPLACE VIEW below live in isolation
+-- would REGRESS that halt-echo exclusion (re-arming the 2026-07-19 W5-on-halted-W4 gate deadlock).
+-- Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
+-- CREATE OR REPLACE VIEW statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.trading_enabled` AS
 WITH ctrl AS (
   SELECT ARRAY_AGG(STRUCT(halt_all, reason, mode) ORDER BY control_ts DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest
@@ -174,6 +186,13 @@ FROM ctrl, f, eh, al, pr, dd;
 -- ===== state.trading_enabled_mechanical — REDEFINED (SUPERSEDES bigquery/34) =====
 -- Same two changes as state.trading_enabled (breach_hard; exclude trading_halted+staleness). Still
 -- deliberately excludes marks_fresh/engine_fresh (D2a's own same-run-circular term, per 33's header).
+--
+-- SUPERSEDED (2026-07-19): this definition of state.trading_enabled_mechanical is now superseded by
+-- bigquery/97_halt_echo_dependency_gate.sql, which reproduces this exact body and additionally
+-- excludes halt-echo missing_dependency alerts (pure same-day fallout of a still-open trading
+-- halt) from blocking_criticals. Re-applying the CREATE OR REPLACE VIEW below live in isolation
+-- would REGRESS that halt-echo exclusion. Kept here, unmodified, for DR-rebuild apply-in-order
+-- reference only. DO NOT re-apply this CREATE OR REPLACE VIEW statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.trading_enabled_mechanical` AS
 WITH ctrl AS (
   SELECT ARRAY_AGG(STRUCT(halt_all, reason, mode) ORDER BY control_ts DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest
@@ -212,6 +231,14 @@ FROM ctrl, health, al, dd;
 -- ===== state.b3_trading_enabled_check — REDEFINED (SUPERSEDES bigquery/64) =====
 -- The live formula self-check must track the gate it mirrors, or it false-fires drift. Updated to the
 -- new blocking-criticals exclusion (trading_halted+staleness) and breach_hard drawdown term.
+--
+-- SUPERSEDED (2026-07-19): this definition of state.b3_trading_enabled_check is now superseded by
+-- bigquery/97_halt_echo_dependency_gate.sql, which reproduces this exact body and additionally
+-- carries the halt-echo missing_dependency exclusion in its blocking-criticals recomputation.
+-- Re-applying the CREATE OR REPLACE VIEW below live in isolation would REGRESS that halt-echo
+-- exclusion and false-fire drift against the 97-based state.trading_enabled. Kept here, unmodified,
+-- for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE VIEW
+-- statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.b3_trading_enabled_check` AS
 WITH ctrl AS (
   SELECT ARRAY_AGG(STRUCT(halt_all) ORDER BY control_ts DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest
@@ -251,6 +278,16 @@ FROM `stock-trading-498512.state.trading_enabled` t, expected e;
 -- WITHOUT waiting for intraday marks_fresh (which is false by construction until the evening ingest).
 -- A genuinely-stale staleness alert (payload marks_fresh=false) still resolves only via the strict
 -- live-recheck path. This removes the last source of the daily staleness echo lingering all day.
+--
+-- SUPERSEDED (2026-07-19): this definition of ops.sp_auto_resolve_alerts was first superseded by
+-- bigquery/94_catchup_refire_blocked_policy.sql, which reproduces this exact procedure body (Rules
+-- 1-4 below, byte-identical) and additionally adds Rule 3b (catchup_refire_blocked) — and 94 was in
+-- turn superseded by bigquery/97_halt_echo_dependency_gate.sql (2026-07-19, halt-echo
+-- missing_dependency exclusion in Rule 4's no_other_criticals count). 97 is the CURRENT single
+-- source of truth for this procedure: apply bigquery/97 -- do NOT re-apply the CREATE OR REPLACE
+-- PROCEDURE below live in isolation. Kept here, unmodified, for DR-rebuild apply-in-order reference
+-- only. (Historical context preserved: this definition itself SUPERSEDES bigquery/34, per the
+-- banner above.)
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_auto_resolve_alerts`()
 BEGIN
   DECLARE eligible_dep, eligible_run, eligible_stalled, eligible_stale ARRAY<STRING>;

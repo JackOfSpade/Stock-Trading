@@ -1,10 +1,12 @@
 -- ======================= SUPERSEDED — DO NOT APPLY THIS FILE =======================
 -- This file's `CREATE OR REPLACE VIEW state.trading_enabled` is NO LONGER CANONICAL.
--- bigquery/78_book_drawdown_rebase_and_staleness_gate.sql SUPERSEDES it (2026-07-17) and is the
--- current single source of truth for this gate. Confirmed against the deployed view 2026-07-18:
--- live matches 78, not this file.
+-- bigquery/78_book_drawdown_rebase_and_staleness_gate.sql SUPERSEDED it (2026-07-17; confirmed
+-- against the deployed view 2026-07-18: live matched 78, not this file), and 78 was in turn
+-- superseded by bigquery/97_halt_echo_dependency_gate.sql (2026-07-19) — 97 is the current single
+-- source of truth for this gate.
 --
--- Re-applying THIS file would REGRESS the live gate on BOTH of 78's changes:
+-- Re-applying THIS file would REGRESS the live gate on BOTH of 78's changes (and on 97's
+-- halt-echo missing_dependency exclusion):
 --   * the drawdown AND-term would revert from `breach_hard` (the -40% CATASTROPHE tier) to
 --     `drawdown_breach` (the -15% soft tier) — hard-halting ALL trading on a soft-tier drawdown that
 --     is only supposed to pause new entries; and
@@ -31,7 +33,8 @@
 -- deployed view lacked `category != 'trading_halted'` entirely.
 --
 -- THIS FILE WAS the single source of truth for state.trading_enabled AS OF 2026-07-14 (it is NOT any
--- longer — bigquery/78 superseded it 2026-07-17; see the SUPERSEDED banner at the top), merging:
+-- longer — bigquery/78 superseded it 2026-07-17, and bigquery/97 supersedes 78 as of 2026-07-19;
+-- see the SUPERSEDED banner at the top), merging:
 --   * 34's trading_halted exclusion (al AS ... category != 'trading_halted')
 --   * 23's 2026-07-11 ITEM 16 snapshot_stale AND-term (dd AS ... snapshot_stale)
 -- Supersedes the trading_enabled definitions in both 23 (as edited 2026-07-11) and 34.

@@ -1,4 +1,5 @@
 .claude/settings.local.json
+.DS_Store
 
 # BigQuery migration intermediates (derived data, not source)
 bigquery/out/

@@ -25,6 +25,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.md_fence import fence_mask  # noqa: E402
+from lib.slice_writer import check_or_write_slices, find_orphaned_markdown_files, slugify  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "Strategy.md")
@@ -42,8 +43,7 @@ def slug(title: str) -> str:
     # mid-line (e.g. "Notes on Strategy A: results") would match and silently truncate everything
     # after it. Byte-identical for every current heading (all real ones begin with the phrase).
     s = re.sub(r"^strategy ([a-e]):.*", r"strategy_\1", s)
-    s = re.sub(r"[^a-z0-9]+", "_", s).strip("_")
-    return s or "section"
+    return slugify(s)
 
 
 def split(text: str):
@@ -97,52 +97,26 @@ def find_orphans(files):
     old numbered slice behind forever otherwise — build()'s loop only ever visits keys freshly derived
     from Strategy.md's CURRENT headings, so it never notices a stale file it no longer intends to
     (re)write. Returns [] if OUTDIR doesn't exist yet (nothing to be stale)."""
-    if not os.path.isdir(OUTDIR):
-        return []
-    expected = set(files) | HAND_MAINTAINED
-    return sorted(
-        fn for fn in os.listdir(OUTDIR)
-        if fn.endswith(".md") and fn not in expected
-    )
+    return find_orphaned_markdown_files(OUTDIR, files, HAND_MAINTAINED)
 
 
 def main(argv):
     check = "--check" in argv
     files = build()
-    os.makedirs(OUTDIR, exist_ok=True)
-    drift = []
-    for name, content in files.items():
-        path = os.path.join(OUTDIR, name)
-        # Explicit encoding on every open (HEADER carries a U+2014 em-dash and Strategy.md is
-        # non-ASCII) so a stripped-locale runner doesn't crash on locale.getpreferredencoding().
-        if os.path.exists(path):
-            with open(path, encoding="utf-8") as f:
-                existing = f.read()
-        else:
-            existing = None
-        if check:
-            if existing != content:
-                drift.append(name)
-        else:
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(content)
-    orphans = find_orphans(files)
-    if check:
-        if drift:
-            print("STALE slices (run scripts/split_strategy.py): " + ", ".join(sorted(drift)), file=sys.stderr)
-        if orphans:
-            print("ORPHANED slice file(s) — no longer produced by any current Strategy.md heading "
-                  "(a section was likely renamed/removed; delete these or the check will keep failing): "
-                  + ", ".join(orphans), file=sys.stderr)
-        if drift or orphans:
-            return 1
-        print("strategy/ slices are in sync with Strategy.md")
-        return 0
-    if orphans:
-        print("WARNING: orphaned slice file(s) present (not written by this run, not hand-maintained): "
-              + ", ".join(orphans))
-    print(f"Wrote {len(files)} files to strategy/")
-    return 0
+    return check_or_write_slices(
+        files,
+        outdir=OUTDIR,
+        check=check,
+        hand_maintained=HAND_MAINTAINED,
+        stale_message="STALE slices (run scripts/split_strategy.py): ",
+        orphan_message=(
+            "ORPHANED slice file(s) — no longer produced by any current Strategy.md heading "
+            "(a section was likely renamed/removed; delete these or the check will keep failing): "
+        ),
+        orphan_warning="WARNING: orphaned slice file(s) present (not written by this run, not hand-maintained): ",
+        ok_message="strategy/ slices are in sync with Strategy.md",
+        wrote_message=f"Wrote {len(files)} files to strategy/",
+    )
 
 
 if __name__ == "__main__":

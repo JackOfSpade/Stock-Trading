@@ -166,7 +166,7 @@ VALUES (
 
 
 def load_scenarios(path=SCENARIOS_PATH):
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         data = yaml.safe_load(f)
     if not isinstance(data, dict) or "scenarios" not in data:
         raise ValueError("scenarios.yaml must be a mapping with a top-level 'scenarios' list")

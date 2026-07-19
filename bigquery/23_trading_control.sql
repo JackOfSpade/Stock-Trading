@@ -101,14 +101,15 @@ FROM agg CROSS JOIN ltd;
 -- depends on that (a zero-row SELECT INTO would null out its variables and fail OPEN, the wrong
 -- direction for a safety gate).
 --
--- SUPERSEDED LIVE by bigquery/47_trading_enabled_resync.sql (2026-07-14), and 47 was in turn
--- superseded by bigquery/78_book_drawdown_rebase_and_staleness_gate.sql (2026-07-17) — 78 is the
--- CURRENT single source of truth for this gate (verified against the deployed view 2026-07-18).
--- Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
--- CREATE OR REPLACE VIEW statement live in isolation — doing so on 2026-07-11 (commit e82cc96,
--- adding the snapshot_stale term below) silently clobbered 34_alert_lifecycle.sql's already-deployed
--- trading_halted exclusion fix and reintroduced a self-latching gate for 3+ days before it was
--- caught. See 78 (not 47 — 47 is itself superseded).
+-- SUPERSEDED LIVE by bigquery/47_trading_enabled_resync.sql (2026-07-14), 47 in turn by
+-- bigquery/78_book_drawdown_rebase_and_staleness_gate.sql (2026-07-17, verified against the
+-- deployed view 2026-07-18), and 78 in turn by bigquery/97_halt_echo_dependency_gate.sql
+-- (2026-07-19, halt-echo missing_dependency exclusion) — 97 is the CURRENT single source of truth
+-- for this gate. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
+-- re-apply this CREATE OR REPLACE VIEW statement live in isolation — doing so on 2026-07-11
+-- (commit e82cc96, adding the snapshot_stale term below) silently clobbered 34_alert_lifecycle.sql's
+-- already-deployed trading_halted exclusion fix and reintroduced a self-latching gate for 3+ days
+-- before it was caught. See 97 (not 47/78 — both are themselves superseded).
 CREATE OR REPLACE VIEW `stock-trading-498512.state.trading_enabled` AS
 WITH ctrl AS (
   SELECT ARRAY_AGG(STRUCT(halt_all, reason, mode) ORDER BY control_ts DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest

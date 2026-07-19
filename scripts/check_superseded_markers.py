@@ -81,7 +81,6 @@ BASELINE = frozenset({
     ("VIEW", "state", "book_drawdown_watch", "23_trading_control.sql"),
     ("VIEW", "state", "daily_staging_totals", "23_trading_control.sql"),
     ("PROCEDURE", "ops", "sp_auto_resolve_alerts", "34_alert_lifecycle.sql"),
-    ("VIEW", "state", "b3_trading_enabled_check", "64_b3_live_invariants.sql"),
     ("TABLE", "ops", "loop_promotion_log", "71_research_quality_promotion.sql"),
 })
 

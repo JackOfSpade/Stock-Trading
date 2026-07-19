@@ -42,13 +42,15 @@
 
 -- ===== state.trading_enabled_mechanical — D2a-scoped gate (excludes marks_fresh/engine_fresh) =====
 -- SUPERSEDED LIVE — first by bigquery/34_alert_lifecycle.sql (trading_halted exclusion), then by
--- bigquery/78_book_drawdown_rebase_and_staleness_gate.sql (2026-07-17), which is the CURRENT single
--- source of truth for this view (verified against the deployed view 2026-07-18). Kept here,
--- unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE
+-- bigquery/78_book_drawdown_rebase_and_staleness_gate.sql (2026-07-17, verified against the
+-- deployed view 2026-07-18), then by bigquery/97_halt_echo_dependency_gate.sql (2026-07-19),
+-- which is the CURRENT single source of truth for this view. Kept here, unmodified, for
+-- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE
 -- VIEW statement live in isolation: it would revert 78's two changes — the drawdown AND-term back
 -- from `breach_hard` (-40% catastrophe) to the -15% soft tier, and blocking_criticals back to
--- counting 'trading_halted'/'staleness' gate-echoes — re-latching the gate. That in-isolation
--- re-apply is the exact accident documented in bigquery/47's ROOT CAUSE. Marker added 2026-07-18.
+-- counting 'trading_halted'/'staleness' gate-echoes — plus 97's halt-echo missing_dependency
+-- exclusion, re-latching the gate. That in-isolation re-apply is the exact accident documented in
+-- bigquery/47's ROOT CAUSE. Marker added 2026-07-18; chain extended to 97 on 2026-07-19.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.trading_enabled_mechanical` AS
 WITH ctrl AS (
   SELECT ARRAY_AGG(STRUCT(halt_all, reason, mode) ORDER BY control_ts DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest
