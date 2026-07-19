@@ -16,7 +16,8 @@ Root-caused a live incident: `bigquery.googleapis.com/quota/query/usage` carries
 `consumerOverride`s, and only one of them was ever fixed. Full narrative + policy extension in
 `ops/RUNBOOK.md` §2's 2026-07-18 addendum.
 
-## S. Remove the forgotten per-user BigQuery query-usage quota override (root cause of the 07-11/07-16/07-18 quota exhaustions)
+## [DONE 2026-07-19 — auto-verified] S. Remove the forgotten per-user BigQuery query-usage quota override (root cause of the 07-11/07-16/07-18 quota exhaustions)
+  *(auto-verified 2026-07-19: per-user query/usage limit has no consumerOverride (default unlimited))*
 
 **Context:** the 2026-07-11 remediation (RUNBOOK §2) raised the project-wide `1/d/{project}`
 ("Query usage per day") dimension to 1 TiB/day, but a separate `1/d/{project}/{user}` ("Query usage
