@@ -20,6 +20,14 @@ name: Stranded-branch check
 # logs), the one failure class where retry-after-daily-reset is the mechanically correct remediation
 # (2026-07-16; second live occurrence of the dbt-parity quota strand -- run 29469270140). Non-quota
 # failures keep the detection-only issue path unchanged.
+#
+# 2026-07-19 hardening: the rerun step's guards were all bare `|| continue` (the exact bug class
+# fixed above on 2026-07-09), so a transient `gh` failure was indistinguishable from "nothing to
+# do" -- runs 29680174657 and 29689890540 both silently no-op'd against an eligible quota-stranded
+# branch (claude/fervent-franklin-kzblrt). Every skip path now emits a ::warning::/::notice:: naming
+# the branch and reason, and the failed-step log fetch is a distinct, explicitly-checked step. The
+# dedup issue step also now refreshes an already-open issue's body on every firing instead of only
+# creating it once (issue #11's body sat stale, naming a since-deleted branch, for 3 days).
 
 on:
   schedule:
@@ -111,19 +119,34 @@ jobs:
           while IFS= read -r line; do
             # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted markdown
             # branch-name pattern must stay literal, not shell-expanded.
-            br=$(echo "$line" | sed -nE 's/^- `([^`]+)` .*/\1/p'); [ -n "$br" ] || continue
-            sha=$(git rev-parse "refs/remotes/$br" 2>/dev/null) || continue
-            run_json=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow CI --commit "$sha" --limit 1 --json databaseId,conclusion,updatedAt,attempt --jq '.[0] // empty' 2>/dev/null) || continue
-            [ -n "$run_json" ] || continue
-            [ "$(echo "$run_json" | jq -r .conclusion)" = "failure" ] || continue
+            br=$(echo "$line" | sed -nE 's/^- `([^`]+)` .*/\1/p')
+            [ -n "$br" ] || { echo "::warning::rerun-check: could not parse a branch name from stranded.txt line: $line"; continue; }
+            # Every guard below speaks on skip (2026-07-19): a transient `gh`/API failure must not
+            # be indistinguishable from "nothing to do" — the exact bug class the detect step above
+            # fixed on 2026-07-09. Two sweeps (runs 29680174657/29689890540) silently no-op'd against
+            # an eligible quota-stranded branch before this was hardened.
+            sha=$(git rev-parse "refs/remotes/$br" 2>/dev/null) || { echo "::warning::rerun-check: could not resolve $br to a sha"; continue; }
+            run_json=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow CI --commit "$sha" --limit 1 --json databaseId,conclusion,updatedAt,attempt --jq '.[0] // empty' 2>/dev/null) || { echo "::warning::rerun-check: gh run list failed for $br — cannot evaluate quota-retry (transient API failure?)"; continue; }
+            [ -n "$run_json" ] || { echo "::notice::rerun-check: $br has no CI run for tip sha — nothing to rerun"; continue; }
+            conclusion=$(echo "$run_json" | jq -r .conclusion)
+            [ "$conclusion" = "failure" ] || { echo "::notice::rerun-check: $br CI conclusion is '$conclusion', not failure — skip"; continue; }
             attempt=$(echo "$run_json" | jq -r .attempt)
             [ "$attempt" -lt 5 ] || { echo "::warning::$br — quota-retry budget exhausted (attempt $attempt); owner attention needed (existing stranded-branch issue stands)."; continue; }
-            run_day_pt=$(TZ=America/Los_Angeles date -d "$(echo "$run_json" | jq -r .updatedAt)" +%F 2>/dev/null) || continue
-            [ "$run_day_pt" != "$today_pt" ] || continue   # at most one rerun per PACIFIC day — per-day custom quotas reset at midnight PT
+            run_day_pt=$(TZ=America/Los_Angeles date -d "$(echo "$run_json" | jq -r .updatedAt)" +%F 2>/dev/null) || { echo "::warning::rerun-check: could not parse updatedAt for $br — cannot evaluate the once-per-Pacific-day gate"; continue; }
+            if [ "$run_day_pt" = "$today_pt" ]; then
+              echo "::notice::rerun-check: $br already retried this Pacific day (run day $run_day_pt) — skip"
+              continue
+            fi
             run_id=$(echo "$run_json" | jq -r .databaseId)
-            if gh run view "$run_id" --repo "$GITHUB_REPOSITORY" --log-failed 2>/dev/null | grep -qE 'QueryUsagePerUserPerDay|Custom quota exceeded'; then
+            if ! gh run view "$run_id" --repo "$GITHUB_REPOSITORY" --log-failed > /tmp/rerun_log.txt 2>/tmp/rerun_log_err.txt; then
+              echo "::warning::rerun-check: could not fetch failed-step logs for run $run_id — cannot classify failure; leaving for the stranded-branch issue ($(tr '\n' ' ' < /tmp/rerun_log_err.txt))"
+              continue
+            fi
+            if grep -qE 'QueryUsagePerUserPerDay|Custom quota exceeded' /tmp/rerun_log.txt; then
               echo "::notice::$br — CI run $run_id failed on a per-day BigQuery quota; requesting bounded next-Pacific-day rerun (attempt $attempt)."
               gh run rerun "$run_id" --failed --repo "$GITHUB_REPOSITORY" || echo "::warning::rerun request failed for $br (run $run_id); falls through to the stranded-branch issue."
+            else
+              echo "::notice::rerun-check: run $run_id failure is not quota-class — no rerun (detection-only path stands)"
             fi
           done < /tmp/stranded.txt
 
@@ -152,7 +175,9 @@ jobs:
           existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
             --jq '[.[] | select(.title|startswith("⚠️ Stranded routine branch"))][0].number // empty')
           if [ -n "$existing" ]; then
-            echo "Alert issue #$existing already open; not duplicating."
+            gh issue edit "$existing" --repo "$GITHUB_REPOSITORY" --body-file /tmp/body.md \
+              && echo "Alert issue #$existing already open; body refreshed with the current stranded list." \
+              || echo "::warning::could not refresh issue #$existing body (transient gh failure?) — issue remains open with a stale body."
           else
             gh issue create --repo "$GITHUB_REPOSITORY" \
               --title "⚠️ Stranded routine branch / unmerged output detected" \
