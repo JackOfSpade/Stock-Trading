@@ -130,6 +130,53 @@ per-day *query* cap has no upside here and a severe downside. If query **volume*
 hot gate views (`state.system_health`, `state.trading_enabled_mechanical`) — not by a blocking daily
 cap. See `events.decision_log` (entry_type=ops, 2026-07-11).
 
+**2026-07-18 addendum — the quota has TWO dimensions; the per-user one was the recurring root
+cause.** `bigquery.googleapis.com/quota/query/usage` carries two independent `consumerOverride`s:
+unit `1/d/{project}` ("Query usage per day", raised to 1 TiB/day above) and a separate unit
+`1/d/{project}/{user}` ("Query usage per user per day", alert string `QueryUsagePerUserPerDay`).
+The 2026-07-11 remediation above raised only the project-wide dimension; a forgotten per-user
+override was left at the original **32 GiB/day** (GCP's default for this dimension is
+unlimited/int64-max) and caused **all four** recorded exhaustions since: 2026-07-11 (this section's
+original incident), 2026-07-16 twice (`gh-ci-runner@` CI identity — OWNER_ACTIONS.md item F), and
+2026-07-18 (BOTH `jacksterwu@gmail.com` at ~34.0 GiB/3046 jobs AND `gh-ci-runner@` at ~34.4
+GiB/3391 jobs, each tripping its own per-user bucket independently on an unusually heavy audit day
+of many ~10 MB-minimum-billed small jobs — not a runaway query/loop). 2026-07-18 evening cascade:
+owner bucket tripped ~14:36 MT → D2a WARNING 16:27 MT (alert_id
+`8c2c2545-9873-42ea-b990-f722a5985604`) → AR_orc CRITICAL 18:11 MT (alert_id
+`c987e393-f03a-48d7-9f7b-468276bbc1a8`) → D3 CRITICAL 18:36 MT (alert_id
+`90f6b974-eea4-4056-a325-0b7ff513fb19`; D2a failed, D2 never ran, D3 halted).
+
+**Diagnostic gotcha:** metadata calls, dry-runs, result-cache repeats, and 0-byte queries all still
+succeed once a per-user bucket is exhausted — only a FRESH table-scanning query fails — so a casual
+connector spot-check can read healthy while the safety layer (the trading-enable gate, D2a
+reconciliation, `sp_daily_refresh`, even `UPDATE ops.alerts`) is bricked for that principal (measured
+live 2026-07-18 ~19:00-20:00 MT: 12 of 13 fresh scans rejected). Always probe with a query that
+scans a real table, never a metadata/cached/dry-run check, when diagnosing a suspected quota brick.
+
+**Policy extension (2026-07-18):** the per-user dimension must carry **NO** binding override —
+default/unlimited, the same posture this section already mandates for the project-wide dimension's
+day-to-day role; the project-wide 1 TiB/day cap remains the sole backstop. If a per-user backstop is
+ever deliberately reintroduced, size it ≥30x the heaviest observed per-user day (≥1 TiB as of
+2026-07-18 — mirroring this section's original ~30x-real-usage sizing rule), never a bare default
+like 32 GiB.
+
+Removal (owner-only — the Service Usage API mutation classifier blocks this from a Claude session,
+the same class as DTS config/IAM grants; see OWNER_ACTIONS.md item S):
+```
+TOKEN=$(gcloud auth print-access-token) && curl -s -X DELETE -H "Authorization: Bearer $TOKEN" "https://serviceusage.googleapis.com/v1beta1/projects/191682978805/services/bigquery.googleapis.com/consumerQuotaMetrics/bigquery.googleapis.com%2Fquota%2Fquery%2Fusage/limits/%2Fd%2Fproject%2Fuser/consumerOverrides/Cg1RdW90YU92ZXJyaWRl"
+```
+Console alternative: IAM & Admin → Quotas → BigQuery API → "Query usage per user per day" →
+remove/raise the override (the redirect link below lands there). Verify (read-only):
+```
+TOKEN=$(gcloud auth print-access-token) && curl -s -H "Authorization: Bearer $TOKEN" "https://serviceusage.googleapis.com/v1beta1/projects/stock-trading-498512/services/bigquery.googleapis.com/consumerQuotaMetrics" | jq '[.metrics[] | select(.metric=="bigquery.googleapis.com/quota/query/usage") | .consumerQuotaLimits[] | select(.unit=="1/d/{project}/{user}") | .quotaBuckets[0] | {effective: .effectiveLimit, override: .consumerOverride}]'
+```
+Success = `effective` = `"9223372036854775807"` and `override` = `null`. Today's 2026-07-18
+exhaustion also self-clears at midnight US/Pacific regardless, but without the removal the 32 GiB
+cap stays armed and will recur on the next heavy day (it already has, four times). See also
+`Claude_Task_Plan.md`'s preamble TRANSIENT-FAILURE WAIT-AND-RETRY bullet (2026-07-18), which
+classifies daily-window quota exhaustion (`QueryUsagePerUserPerDay`) as non-waitable in-session —
+alert-and-halt is correct, not retry.
+
 ---
 
 ## 3. Backups of the event store *(P2-1)*

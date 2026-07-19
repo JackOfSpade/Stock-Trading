@@ -35,6 +35,7 @@ prerequisite env/binary is unavailable, per fail-open above):
 
 Stdlib only.
 """
+import json
 import os
 import re
 import subprocess
@@ -217,6 +218,38 @@ def check_F_quota():
     return False, f"85c18c1 not yet an ancestor of origin/main ({reason or 'exit 1'})"
 
 
+def check_S():
+    # Item S (2026-07-18): the forgotten per-user 32 GiB/day query-usage override must be GONE.
+    # Read-only Service Usage GET under the owner's gcloud credentials; classifier policy makes the
+    # DELETE itself owner-only, but this verification read is fine from any session (RUNBOOK §2).
+    ok, token, reason = _run(["gcloud", "auth", "print-access-token"])
+    if not ok:
+        return False, f"gcloud token unavailable: {reason}"
+    ok, stdout, reason = _run([
+        "curl", "-sf", "-H", "Authorization: Bearer " + token.strip(),
+        "https://serviceusage.googleapis.com/v1beta1/projects/%s/services/"
+        "bigquery.googleapis.com/consumerQuotaMetrics" % PROJECT,
+    ])
+    if not ok:
+        return False, f"serviceusage GET failed: {reason}"
+    try:
+        overrides = [
+            bucket["consumerOverride"]
+            for metric in json.loads(stdout).get("metrics", [])
+            if metric.get("metric") == "bigquery.googleapis.com/quota/query/usage"
+            for limit in metric.get("consumerQuotaLimits", [])
+            if limit.get("unit") == "1/d/{project}/{user}"
+            for bucket in limit.get("quotaBuckets", [])
+            if bucket.get("consumerOverride")
+        ]
+    except (ValueError, KeyError, TypeError) as e:
+        return False, f"could not parse consumerQuotaMetrics response: {e}"
+    if not overrides:
+        return True, "per-user query/usage limit has no consumerOverride (default unlimited)"
+    vals = ",".join(o.get("overrideValue", "?") for o in overrides)
+    return False, f"per-user consumerOverride still present (MiB: {vals})"
+
+
 PROBES = {
     "A": check_A,
     "B": check_B,
@@ -227,6 +260,7 @@ PROBES = {
     "E-anthropic": check_E_anthropic,
     "sq-dml-watch": check_sq_dml_watch,
     "F-quota": check_F_quota,
+    "S": check_S,
 }
 
 

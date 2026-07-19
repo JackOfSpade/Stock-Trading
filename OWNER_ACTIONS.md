@@ -10,6 +10,70 @@ act. Dated passes below; most recent first.
 
 ---
 
+# 2026-07-18 Per-user BigQuery quota root-cause (recurring 07-11/07-16 x2/07-18 quota exhaustions)
+
+Root-caused a live incident: `bigquery.googleapis.com/quota/query/usage` carries two independent
+`consumerOverride`s, and only one of them was ever fixed. Full narrative + policy extension in
+`ops/RUNBOOK.md` §2's 2026-07-18 addendum.
+
+## S. Remove the forgotten per-user BigQuery query-usage quota override (root cause of the 07-11/07-16/07-18 quota exhaustions)
+
+**Context:** the 2026-07-11 remediation (RUNBOOK §2) raised the project-wide `1/d/{project}`
+("Query usage per day") dimension to 1 TiB/day, but a separate `1/d/{project}/{user}` ("Query usage
+per user per day", alert string `QueryUsagePerUserPerDay`) dimension was never touched and stayed at
+its original **32 GiB/day**. That forgotten override caused every recorded exhaustion since,
+including item F's two 2026-07-16 `dbt↔live row-level parity` CI failures (the `gh-ci-runner@`
+identity's own per-user bucket) and a 2026-07-18 double-trip (both `jacksterwu@gmail.com` and
+`gh-ci-runner@`, each independently, on an unusually heavy audit day) that left three `ops.alerts`
+rows CRITICAL/WARNING and unresolved by design until this override is actually removed. Claude
+sessions cannot do this themselves — the Service Usage API mutation classifier blocks it (tested
+2026-07-18, twice: subagent launch and direct curl DELETE both denied), the same owner-only class as
+DTS config and IAM grants.
+
+**Action — run once, with your own `gcloud` credentials (already authenticated as
+`jacksterwu@gmail.com`, which holds `serviceusage.quotas.update`):**
+```
+TOKEN=$(gcloud auth print-access-token) && curl -s -X DELETE -H "Authorization: Bearer $TOKEN" "https://serviceusage.googleapis.com/v1beta1/projects/191682978805/services/bigquery.googleapis.com/consumerQuotaMetrics/bigquery.googleapis.com%2Fquota%2Fquery%2Fusage/limits/%2Fd%2Fproject%2Fuser/consumerOverrides/Cg1RdW90YU92ZXJyaWRl"
+```
+This only RAISES the per-user limit to default/unlimited; the separate project-wide 1 TiB/day
+override is untouched. **Console alternative:** IAM & Admin → Quotas → BigQuery API → "Query usage
+per user per day" → remove/raise the override (the repo's existing
+`https://docs.cloud.google.com/bigquery/redirects/increase-query-cost-quota` link lands there).
+
+**Verification (read-only):**
+```
+TOKEN=$(gcloud auth print-access-token) && curl -s -H "Authorization: Bearer $TOKEN" "https://serviceusage.googleapis.com/v1beta1/projects/stock-trading-498512/services/bigquery.googleapis.com/consumerQuotaMetrics" | jq '[.metrics[] | select(.metric=="bigquery.googleapis.com/quota/query/usage") | .consumerQuotaLimits[] | select(.unit=="1/d/{project}/{user}") | .quotaBuckets[0] | {effective: .effectiveLimit, override: .consumerOverride}]'
+```
+Success = `effective` = `"9223372036854775807"` and `override` = `null`.
+
+**After removal, resolve the three live `ops.alerts` rows** (any Claude session can run these via the
+BigQuery MCP — DML is an allowed class):
+
+<details><summary>Three verbatim <code>UPDATE ops.alerts</code> statements</summary>
+
+```sql
+UPDATE `stock-trading-498512.ops.alerts` SET resolved=TRUE, resolved_ts=CURRENT_TIMESTAMP(), resolved_note='Root-caused 2026-07-18: forgotten /d/{project}/{user} consumerOverride on bigquery query/usage still at 32 GiB/day — the 2026-07-11 fix raised only the project-wide dimension to 1 TiB (RUNBOOK §2). Owner OAuth (~34.0 GiB/3046 jobs) and gh-ci-runner CI SA (~34.4 GiB/3391 jobs) each crossed it independently on the heavy 2026-07-18 audit day (job-count x ~10MB min-bill, not a runaway). Per-user override removed by owner (see OWNER_ACTIONS); per-user dimension back to default unlimited, project-wide 1 TiB/day backstop unchanged. Recurrence class (07-11, 07-16 x2, 07-18) closed.' WHERE alert_id='c987e393-f03a-48d7-9f7b-468276bbc1a8' AND resolved=FALSE;
+
+UPDATE `stock-trading-498512.ops.alerts` SET resolved=TRUE, resolved_ts=CURRENT_TIMESTAMP(), resolved_note='Same root cause as alert c987e393 (per-user 32 GiB quota override, now removed). No marks/engine work was due (non-trading day), IBKR already reconciled clean; non-latching by design, Monday 2026-07-20 trading unaffected.' WHERE alert_id='8c2c2545-9873-42ea-b990-f722a5985604' AND resolved=FALSE;
+
+UPDATE `stock-trading-498512.ops.alerts` SET resolved=TRUE, resolved_ts=CURRENT_TIMESTAMP(), resolved_note='Same root cause as alert c987e393 (per-user 32 GiB quota override, now removed). 2026-07-18 evening cadence (D2a failed, D2 never ran, D3 halted) was quota-blocked; cap now non-binding so the predicted recurrence cannot happen; normal cadence resumes next scheduled triggers, OPS0 catch-up covers eligible routines.' WHERE alert_id='90f6b974-eea4-4056-a325-0b7ff513fb19' AND resolved=FALSE;
+```
+
+</details>
+
+**If skipped:** the three `ops.alerts` rows stay CRITICAL/WARNING (deliberately, per RUNBOOK §2's
+addendum) and the 32 GiB/day per-user cap remains armed — it will recur on the next heavy query-volume
+day for whichever identity trips it, exactly as it already has four times.
+
+```verify
+id: S
+type: gcp
+probe: TOKEN=$(gcloud auth print-access-token) && curl -s -H "Authorization: Bearer $TOKEN" "https://serviceusage.googleapis.com/v1beta1/projects/stock-trading-498512/services/bigquery.googleapis.com/consumerQuotaMetrics" | jq -e '[.metrics[] | select(.metric=="bigquery.googleapis.com/quota/query/usage") | .consumerQuotaLimits[] | select(.unit=="1/d/{project}/{user}") | .quotaBuckets[] | select(.consumerOverride != null)] | length == 0'
+done_when: exit 0
+```
+
+---
+
 # 2026-07-17 Whole-system deep-audit remediation — ALL DONE (bigquery/75 applied by owner 2026-07-17)
 
 **UPDATE 2026-07-17:** the owner applied bigquery/75 via `bq query --use_legacy_sql=false < file` (after
@@ -971,6 +1035,9 @@ https://docs.cloud.google.com/bigquery/redirects/increase-query-cost-quota if th
 reruns start regularly burning the attempt-5 budget (i.e. the quota ceiling itself is now
 undersized for normal usage, not just an audit-scale spike). Do not weaken `DBT_PARITY=block` to
 work around a recurrence — it caught a real resource ceiling correctly here, not a misfire.
+
+**2026-07-18:** root cause found — a forgotten per-user 32 GiB/day override (see item S + RUNBOOK §2
+addendum); removal pending owner.
 
 ```verify
 id: F-quota
