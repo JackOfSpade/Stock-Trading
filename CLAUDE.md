@@ -1,5 +1,26 @@
 # Project notes for Claude
 
+## Operating notes
+
+- **Batch pushes within a session — every push costs CI minutes.** This repo is private,
+  so GitHub Actions bills per job-minute, and `ci.yml` runs 6 jobs on EVERY push with no
+  branch/path filter at the workflow level (deliberate — auto-merge's gate looks up the CI
+  run for a branch's exact tip SHA, so a push with no CI run would never merge). A 2026-07-20
+  cost audit measured ~13 billable minutes per CI run, ~76% of the month's Actions bill, and
+  found one long interactive session that pushed 61 times to a single branch (~23% of July's
+  CI minutes) by pushing after each small edit.
+
+  **Practice:** in an interactive session, accumulate related edits and push ONCE per
+  completed, reviewable unit of work — the same discipline the scheduled routine fleet
+  already follows (one branch, one push, auto-merge drains it). Do not push to "checkpoint"
+  work in progress; the working tree is the checkpoint. An incident night that legitimately
+  produces many separate landings (each its own reviewed fix) is fine — the anti-pattern is
+  re-pushing the *same* unit of work repeatedly.
+
+  Related, already fixed (do not re-flag): the `dbt-parity` / `sql-validate` path gates used
+  to fail open on every new branch because `github.event.before` is the zero-SHA on ref
+  creation; they now fall back to `merge-base(HEAD, origin/main)` (rev 2026-07-20).
+
 ## Known non-issues — do NOT re-investigate
 
 - **Stop-hook "Unverified commits" warning** (`~/.claude/stop-hook-git-check.sh`).

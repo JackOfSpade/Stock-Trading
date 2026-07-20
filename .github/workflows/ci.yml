@@ -225,11 +225,28 @@ jobs:
           # count. That volume already tripped the project's BigQuery Data Transfer Service consumer
           # rate-quota on 2026-06-29 (delayed the 05:00-06:00 scheduled window and FAILED the embed +
           # integrity scheduled-query runs). Skipping parity on docs-/code-only pushes removes that load
-          # with no loss of coverage. FAIL OPEN: if the base commit is unknown (new branch / force-push)
-          # RUN parity rather than risk skipping a real check. Block-mode fail-closed (below) is kept for
-          # the case that matters — an SQL/model change pushed with the WIF creds missing.
+          # with no loss of coverage.
+          #
+          # BUG FIX (rev 2026-07-20, Actions-cost audit): github.event.before is the all-zeroes SHA on
+          # every push that CREATES a new branch — the overwhelming majority of pushes in this repo's
+          # claude/* workflow — which made "$base" unresolvable and fell straight into the fail-open
+          # branch below, running the full 3-9min compile+parity regardless of whether bigquery/**|dbt/**
+          # actually changed. Measured: 49/50 sampled dbt-parity runs ran full; only ~35% of those pushes
+          # touched bigquery/**|dbt/** (~1,100-1,200 wasted billable minutes/month, ~76% of the repo's
+          # Actions bill). FIX: when $base is empty or unresolvable, fall back to the merge-base of HEAD
+          # against origin/main — a brand-new branch then diffs correctly against ONLY its own commits
+          # since it forked from main, instead of treating "unknown base" as "must run everything". FAIL
+          # OPEN remains the final fallback: if merge-base ALSO can't be resolved (e.g. origin/main
+          # missing — first-ever push to the repo, or an unrelated-history force-push) RUN parity rather
+          # than risk skipping a real check. Block-mode fail-closed (below) is kept for the case that
+          # matters — an SQL/model change pushed with the WIF creds missing. Requires fetch-depth: 0 on
+          # this job's checkout (already set above) so origin/main and the merge-base are resolvable.
           relevant=true
           if [ "$EVENT_NAME" = "pull_request" ]; then base="$PR_BASE"; else base="$PUSH_BEFORE"; fi
+          if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            git fetch --quiet origin main 2>/dev/null || true
+            base="$(git merge-base HEAD origin/main 2>/dev/null || true)"
+          fi
           if [ -n "$base" ] && git cat-file -e "${base}^{commit}" 2>/dev/null; then
             if git diff --name-only "$base" "$HEAD_SHA" | grep -qE '^(bigquery/|dbt/)'; then
               relevant=true
@@ -358,8 +375,19 @@ jobs:
           set -euo pipefail
           gcloud config set project stock-trading-498512 >/dev/null 2>&1 || true
           if [ "$EVENT_NAME" = "pull_request" ]; then base="$PR_BASE"; else base="$PUSH_BEFORE"; fi
+          # BUG FIX (rev 2026-07-20, Actions-cost audit): github.event.before is the all-zeroes SHA on
+          # every push that creates a new branch, which is unresolvable and used to fall straight into
+          # the "validate everything" fail-open branch below on nearly every push (mirrors the same bug
+          # in dbt-parity's path gate above — see its comment for the measured cost). Fall back to the
+          # merge-base of HEAD against origin/main so a new branch diffs against only its own commits
+          # since it forked from main. Requires fetch-depth: 0 on this job's checkout (already set above).
+          if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            git fetch --quiet origin main 2>/dev/null || true
+            base="$(git merge-base HEAD origin/main 2>/dev/null || true)"
+          fi
           # Scope to the pushed range to bound BigQuery dry-run job volume (dbt-parity §6 quota note).
-          # FAIL OPEN: unknown/new-branch base -> validate ALL bigquery/*.sql rather than skip a real check.
+          # FAIL OPEN: unknown/new-branch base (merge-base above also failed, e.g. missing origin/main or
+          # unrelated histories) -> validate ALL bigquery/*.sql rather than skip a real check.
           if [ -n "$base" ] && git cat-file -e "${base}^{commit}" 2>/dev/null; then
             mapfile -t files < <(git diff --name-only "$base" "$HEAD_SHA" -- 'bigquery/*.sql' 'bigquery/scheduled_queries/*.sql')
           else

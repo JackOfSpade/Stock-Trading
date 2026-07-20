@@ -105,6 +105,48 @@ FROM UNNEST([
 -- routine (different alphanumeric stem) still flags unknown_routine. The live side is re-deduped to one
 -- row per normalized key (latest run) so a routine that logged under two spellings shows a single current
 -- row reported under its canonical (catalog) id. Durable root-cause discussion + alternatives: RUNBOOK §28.
+-- ADDENDUM-INVARIANT FIRST-LINE COMPARISON (2026-07-20): the live web-UI trigger message is now ALWAYS
+-- the canonical heading line PLUS a standing operator addendum ("Spawn sub-agents to do the grunt work.
+-- Save your processing (Fable 5) for analysis and orchestration work only. Any sub-agents you spawn must
+-- use the sonnet 5 model."), separated from the heading by a blank line. sp_routine_start logs that FULL
+-- verbatim text by design (bigquery/10_observability.sql: "captures the verbatim trigger text"), so once
+-- a routine's live trigger carries the addendum its live_instruction differs from ops.routine_catalog's
+-- single-line canonical_instruction PERMANENTLY -- not a one-time drift, a standing false positive.
+-- Confirmed empirically 2026-07-19/20 (scheduled.cadence/instruction_drift, OPS0/W1/W2): those three
+-- fired only because their MOST RECENT logged run happened to carry the addendum; W4/W5's ops.run_log
+-- shows the identical addendum on an OLDER row that a later, addendum-free run superseded, so they read
+-- clean today by accident of ordering, not because they're structurally different -- this population
+-- rotates through whichever routine was most recently triggered and will keep growing as the operator
+-- appends the same boilerplate to every trigger in turn (OPS1's first-ever log, 2026-07-20, has no
+-- addendum yet -- it is simply next in line, not exempt). The addendum carries ZERO routing information
+-- (a delegation/model-selection instruction to the session, not a "what to do" instruction), so it is not
+-- part of what this detector exists to catch (file header above: "a typo'd/edited trigger would point a
+-- routine at the wrong section or pass the wrong instruction").
+-- FIX: compare only the FIRST LINE of live_instruction (REGEXP_EXTRACT(..., r'^[^\n]*')) against
+-- canonical_instruction -- canonical_instruction is always a single line and the addendum is always
+-- separated from the heading by an actual blank-line newline, never just extra whitespace. live_instruction
+-- itself (the payload column consumed by bigquery/75_scheduled_query_wrappers.sql's alert message) is left
+-- as the full raw verbatim text -- only the EQUALITY CHECK is narrowed, so a real alert's payload still
+-- shows the operator the complete live trigger for diagnosis.
+-- Alternatives considered and rejected:
+--   (a) store the addendum in ops.routine_catalog and compare full text -- brittle: the addendum is
+--       operator-owned free text with no versioning of its own, changes independently of the routine
+--       roster, and re-diverging it from the catalog every time the operator edits boilerplate is exactly
+--       the class of silent-drift risk this detector exists to prevent, not something to absorb into it.
+--   (b) normalize whitespace only (trim/collapse spaces) -- insufficient: the addendum is ~30 words of
+--       additional sentence content, not whitespace; no amount of whitespace normalization removes it.
+--   (c) prefix-match (live_instruction STARTS WITH canonical_instruction) -- weaker than first-line
+--       comparison: it would also silently accept a heading with a typo'd/truncated tail concatenated
+--       straight onto the canonical text with NO separating newline, as long as the canonical prefix
+--       matched. First-line-via-newline still requires an EXACT, complete match of everything up to the
+--       first newline, so a truncated or run-on heading (no blank line inserted) still fails it --
+--       empirically real: the 2026-06-28 W5 row logged `...Factbase & Analytics Consolidation` with the
+--       ` — regular routine.` suffix dropped and no addendum at all (RUNBOOK §22/§30); first-line
+--       comparison still flags that, and a synthetic wrong-routine-number / wrong-type-tag / truncated
+--       instruction was verified (read-only, 2026-07-20) to still drift under this fix.
+-- This does NOT touch unknown_routine (a routine absent from the catalog still flags regardless of its
+-- instruction text) and does NOT weaken the type-suffix check RUNBOOK §22 explicitly protects (the
+-- ` — deep research.` / ` — regular routine.` tag is INSIDE the first line, still compared verbatim).
 CREATE OR REPLACE VIEW `stock-trading-498512.state.instruction_drift` AS
 WITH li AS (
   SELECT routine, instruction, run_date
@@ -120,7 +162,10 @@ SELECT
   li.instruction AS live_instruction,
   li.run_date    AS live_last_seen,
   (c.routine IS NOT NULL AND li.instruction IS NOT NULL
-     AND li.instruction != c.canonical_instruction) AS drifted,
+     -- first-line-only equality (2026-07-20, see comment block above) -- everything up to the first
+     -- newline, which excludes the operator's standing post-heading addendum but still requires an
+     -- exact match of the routine number / heading text / type-tag.
+     AND REGEXP_EXTRACT(li.instruction, r'^[^\n]*') != c.canonical_instruction) AS drifted,
   (c.routine IS NULL) AS unknown_routine,
   CURRENT_TIMESTAMP() AS checked_at
 FROM `stock-trading-498512.ops.routine_catalog` c

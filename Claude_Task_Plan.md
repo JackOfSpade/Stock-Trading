@@ -676,7 +676,15 @@ Concretely, every run:
   false halt where the whole ±15% swing reconciles to mechanically-computed real book P&L. Trust the connector's
   day-to-day story, not any single number, unverified.
 - **Staged-order registry reconciliation (`state.open_orders`; §11; run after fill reconciliation, before the
-  §13 cash steps).** For each still-`pending` `ORDER_STAGED` row: **(a) filled** — set terminal by inserting a
+  §13 cash steps).** **GUARD — read before touching this step (2026-07-20 forensic investigation): this
+  step is deliberately UNCONDITIONAL on `entries_halted`/`state.entry_staging_allowed`, for BOTH entries
+  and exits — it is item_type-AGNOSTIC and re-crafts any still-pending row regardless of side. ONLY D2's
+  "NEW ENTRY CANDIDATES" step consults those gates. Do NOT "helpfully" add an `entries_halted`/
+  `entries_allowed` check into this step to match the (imprecise) "exit re-craft is unaffected" phrasing
+  that used to appear elsewhere — doing so would create a REAL, self-sustaining DEADLOCK: entries paused
+  ⇒ this step stops re-crafting the paused entries ⇒ they never fill ⇒ entries stay paused forever. See
+  `bigquery/76_owner_confirmation_liveness.sql`'s SCOPE comment for the corrected wording.** For each
+  still-`pending` `ORDER_STAGED` row: **(a) filled** — set terminal by inserting a
   `queue_events` `filled` row (same `item_key`) if a reconciled fill matches (ticker / `contract_id` / side);
   **(b) window still open + unfilled** (`entry_window_close >= today` MT) — **ORDER-GUARD CHECK first, every
   re-craft, not just the original entry (self-improvement audit finding, 2026-07-11 — a persisting order's
@@ -721,11 +729,13 @@ Concretely, every run:
   row only (`halt_all` stays `FALSE`; see that file's header for why this must never flip `halt_all`),
   then `CALL ops.sp_raise_alert_once('warning','D2a','owner_confirmation_stale', 'Owner confirm-tap
   liveness: <n_pending_instructions> pending instruction(s), <trading_days_since_last_fill> trading days
-  since the last fill — D2 NEW ENTRY staging is paused; exit re-craft is unaffected.', <JSON:
+  since the last fill — D2 NEW-ENTRY staging (fresh GO decisions only) is paused; already-staged orders —
+  entries and exits alike — keep re-crafting daily, unaffected.', <JSON:
   n_pending_instructions, trading_days_since_last_fill, last_fill_ts>)`. D2's "2. NEW ENTRY CANDIDATES"
   step reads this same view before crafting any new entry and skips staging (logging the GO as
   staged-but-paused, same pattern as the PENDING-NEWCOMER FROZEN CHECK) while `entries_halted = TRUE`;
-  exit re-craft (this routine's own registry reconciliation above) is completely unaffected either way.
+  this routine's own Staged-order registry reconciliation above (§11) — which re-crafts ANY already-staged
+  pending row, entries and exits alike — is completely unaffected either way.
   If `entries_halted = FALSE` and an unresolved `owner_confirmation_stale` alert exists (a fill has since
   landed — auto-clears with no operator action): `UPDATE ops.alerts SET resolved = TRUE, resolved_note =
   'auto-resolved: a fill was reconciled, state.owner_confirmation_liveness.entries_halted is now FALSE'

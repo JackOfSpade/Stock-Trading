@@ -540,8 +540,10 @@ sanctioned human touch (the IBKR order-confirm tap). `entries_halted = TRUE` whe
 `state.open_orders` row is still `pending` AND `>=3` trading days have elapsed with zero
 `events.trade_fills` reconciled. Read by D2a (raises `owner_confirmation_stale` + writes an
 audit-only `mode='entries_halted'` `ops.trading_control` row) and D2's "2. NEW ENTRY CANDIDATES" step
-(pauses new-entry crafting only; exit re-craft is completely unaffected). Auto-clears the next time a
-fill lands — no operator action needed to un-pause. Apply order: after `01_schema.sql`,
+(pauses FRESH GO decisions only; D2a's Staged-order registry reconciliation, which re-crafts any
+already-staged pending row daily — entries and exits alike — is completely unaffected; see
+`bigquery/76_owner_confirmation_liveness.sql`'s SCOPE comment, corrected 2026-07-20). Auto-clears the
+next time a fill lands — no operator action needed to un-pause. Apply order: after `01_schema.sql`,
 `09_market_calendar.sql`, `23_trading_control.sql`, `34_alert_lifecycle.sql`.
 
 **Action:** run the `CREATE OR REPLACE VIEW` statement in

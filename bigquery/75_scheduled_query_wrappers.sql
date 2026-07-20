@@ -666,8 +666,14 @@ END;
 
 -- =====================================================================================================
 -- ops.sp_sq_safety_critical_dml_watch   (was bigquery/scheduled_queries/safety_critical_dml_watch.sql; that file is now a frozen one-line
--- CALL wrapper — full historical header/rationale comments remain there. SQ_VERSION v3 (bumped
--- from v2 by MON H4, 2026-07-17: INSERT-aware extension — ops.trading_control / ops.arsenal_control /
+-- CALL wrapper — full historical header/rationale comments remain there. SQ_VERSION v4 (bumped
+-- from v3 by the control_plane_insert re-raise-noise fix, 2026-07-20: the WARNING-tier control_plane_
+-- insert check near the bottom now uses a per-target-table WATERMARK instead of a flat 24h EXISTS —
+-- fixes both a re-raise-after-resolve noise bug and a swallowed-second-insert detection gap; see the
+-- inline comment on that check for the full incident/rationale. The three CRITICAL conditions (
+-- safety_critical_dml / safety_critical_control_insert / safety_critical_lifecycle_insert) are
+-- deliberately unchanged by this fix — see the same inline comment for why. v3 was bumped from v2 by
+-- MON H4, 2026-07-17: INSERT-aware extension — ops.trading_control / ops.arsenal_control /
 -- events.strategy_lifecycle change state by INSERT (append-only), which the UPDATE/DELETE/MERGE/TRUNCATE
 -- filter could not see; the mutation-class watch is unchanged, and a single consolidated RAISE at the end
 -- now folds in the two new CRITICAL conditions. See the inline INSERT block below).
@@ -675,7 +681,7 @@ END;
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_safety_critical_dml_watch`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';   -- H4: accumulate so all conditions RECORD before one final RAISE
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:safety_critical_dml_watch', 'v3', 'safety_critical_dml_watch.sql ran');
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:safety_critical_dml_watch', 'v4', 'safety_critical_dml_watch.sql ran');
 
   -- Computed once, reused below (same "compute once, reuse" discipline as state.system_health's
   -- alerts_summary CTE) — avoids scanning INFORMATION_SCHEMA three times for one check.
@@ -828,22 +834,58 @@ BEGIN
     SET raise_msg = raise_msg || '[safety_critical_lifecycle_insert] strategy_lifecycle unknown code; ';
   END IF;
 
-  -- WARNING (record-only, no RAISE) — general control-plane INSERT visibility. Any INSERT on the three
-  -- append-only control tables in the last 24h. DEDUP-CRITICAL: the message lists the DISTINCT
-  -- table@Denver-date set (stable across this query's 6-hourly re-runs of the same day's activity, so one
-  -- warning per table per day of control-plane change), while per-job detail stays in the payload.
-  IF EXISTS (SELECT 1 FROM control_inserts) THEN
+  -- WARNING (record-only, no RAISE) — general control-plane INSERT visibility, per-target-table WATERMARK
+  -- (2026-07-20 fix, control_plane_insert re-raise-noise investigation). The PREVIOUS version keyed the
+  -- message on the DISTINCT table@Denver-date set — stable across this query's 6-hourly re-runs of the
+  -- same day's activity — but sp_raise_alert_once (bigquery/10_observability.sql) dedups ONLY on
+  -- (NOT resolved AND category = ... AND message = ...). Once the operator RESOLVED the alert, the very
+  -- next 6-hourly run rebuilt the byte-identical message (the source job was still inside its 24h
+  -- INFORMATION_SCHEMA window) and RE-RAISED it. Observed live 2026-07-19: alert 578320a6 (16:59 MT,
+  -- resolved 20:05 MT) then da8dd8c1 (22:59 MT, identical text) for ONE sanctioned D2a ops.trading_control
+  -- INSERT. A WARNING channel crying wolf every 6h post-resolution trains the operator to ignore exactly
+  -- the alert class that escalates to CRITICAL above. The same table@date keying ALSO SWALLOWED a
+  -- genuinely SECOND sanctioned INSERT to the same table the same day whenever the first alert was still
+  -- open (identical message + unresolved => sp_raise_alert_once blocks it) — a real missed-detection risk,
+  -- not just noise.
+  --
+  -- FIX: only surface hits newer than the last time THIS target table's control-plane activity was
+  -- raised-or-resolved — a PER-TARGET-TABLE watermark, never global (a quick resolution on one table must
+  -- never mask another table's unsurfaced insert). Watermarked on job creation_time (monotonic at
+  -- submission), not a date string, so a genuinely second same-day insert on the same table still clears
+  -- the watermark and re-raises. COALESCE(resolved_ts, alert_ts) so a raised-but-never-resolved alert still
+  -- advances the watermark (otherwise this would re-raise every 6h regardless — the same defect, just
+  -- shifted forward). Defaults to epoch when no prior alert exists for a table, so that table's first-ever
+  -- insert still raises loud. Correlating via `message LIKE '%dataset.table%'` (rather than a structured
+  -- join column — ops.alerts has none) is safe here specifically because control_inserts.target_table is
+  -- restricted, by the CTE above, to just the 3 known control tables — no ambiguity between e.g.
+  -- 'ops.trading_control' and 'ops.arsenal_control' substrings, and this LIKE pattern matches BOTH the old
+  -- and new message formats (verified against the two live 2026-07-19 alert rows), so the watermark is
+  -- correct on the very first run after this fix deploys, not just going forward. Only the NEW hits feed
+  -- the message/payload (not the whole 24h set), so the message text itself changes whenever something
+  -- genuinely new happened; the newest new job's creation_time is folded in too, making consecutive alerts
+  -- for the same table self-distinguishing (deterministic within one run — MAX() over a materialized temp
+  -- table, not a live-changing source).
+  CREATE TEMP TABLE new_control_inserts AS
+  SELECT ci.*
+  FROM control_inserts ci
+  WHERE ci.creation_time > (
+    SELECT COALESCE(MAX(COALESCE(a.resolved_ts, a.alert_ts)), TIMESTAMP('1970-01-01'))
+    FROM `stock-trading-498512.ops.alerts` a
+    WHERE a.source = 'scheduled.safety_critical_dml' AND a.category = 'control_plane_insert'
+      AND a.message LIKE CONCAT('%', ci.target_dataset, '.', ci.target_table, '%')
+  );
+
+  IF EXISTS (SELECT 1 FROM new_control_inserts) THEN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'warning', 'scheduled.safety_critical_dml', 'control_plane_insert',
-      CONCAT('Control-plane INSERT(s) on append-only safety table(s) in the last 24h (rare — confirm each ',
-             'was a sanctioned operator/routine action): ',
-             (SELECT STRING_AGG(DISTINCT CONCAT(target_dataset, '.', target_table, '@',
-                                                 CAST(DATE(creation_time, 'America/Denver') AS STRING)), ', '
-                     ORDER BY CONCAT(target_dataset, '.', target_table, '@',
-                                     CAST(DATE(creation_time, 'America/Denver') AS STRING)))
-              FROM control_inserts)),
+      CONCAT('Control-plane INSERT(s) on append-only safety table(s) newer than the last raised-or-resolved ',
+             'alert for that table (rare — confirm each was a sanctioned operator/routine action): ',
+             (SELECT STRING_AGG(DISTINCT CONCAT(target_dataset, '.', target_table), ', '
+                     ORDER BY CONCAT(target_dataset, '.', target_table))
+              FROM new_control_inserts),
+             '. Newest: ', (SELECT CAST(MAX(creation_time) AS STRING) FROM new_control_inserts)),
       (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(job_id, user_email, target_dataset, target_table, creation_time) ORDER BY creation_time))
-       FROM control_inserts));
+       FROM new_control_inserts));
   END IF;
 
   -- Single consolidated RAISE — fires the DTS failure-email once, AFTER every CRITICAL above is recorded.

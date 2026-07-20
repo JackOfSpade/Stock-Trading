@@ -17,9 +17,15 @@
 --
 -- SCOPE (deliberately narrow, per the critic finding): does NOT touch state.trading_enabled / halt_all,
 -- the mechanical kill triggers, the IBKR confirm-tap requirement itself, or deposits. It only gates
--- NEW-entry staging in D2 (section "2. NEW ENTRY CANDIDATES") — exit re-craft (Step 0's registry
--- reconciliation, §11) is completely unaffected, exactly as it must be: an unconfirmed pile is a reason
--- to stop ADDING to it, never a reason to stop trying to get OUT of it.
+-- NEW-entry staging in D2 (section "2. NEW ENTRY CANDIDATES") — Step 0's registry reconciliation (§11)
+-- is completely unaffected, exactly as it must be: an unconfirmed pile is a reason to stop ADDING to it,
+-- never a reason to stop trying to get OUT of it. PRECISION NOTE (2026-07-20 forensic investigation):
+-- that reconciliation step is item_type-AGNOSTIC — it re-crafts ANY still-pending staged row daily,
+-- ENTRIES AND EXITS ALIKE, not "exits only." Earlier wording here said "exit re-craft is unaffected,"
+-- which is true but incomplete, and was read by the owner as implying pending ENTRIES would stop
+-- re-crafting too (they do not — only FRESH GO decisions in D2's own "NEW ENTRY CANDIDATES" step are
+-- paused). See Claude_Task_Plan.md's guard comment atop that reconciliation step for the full rationale
+-- and the deadlock hazard of "fixing" this the wrong way.
 
 -- ===== state.owner_confirmation_liveness — the absence-model view =====
 -- Self-bootstrapping / never zero-row (single-row aggregate via scalar subqueries, same pattern as
@@ -27,8 +33,10 @@
 -- one, or a data-layer outage) reads as "maximally stale" (999 trading days), NOT as "confirms are
 -- current" — fail-safe by construction, matching this file's own halt-on-doubt design intent.
 -- entries_halted=TRUE gates ONLY new-entry staging (Claude_Task_Plan.md D2 "NEW ENTRY CANDIDATES") —
--- exit re-craft is unaffected. Auto-clears the moment a fill lands (trading_days_since_last_fill
--- resets to 0 the next time this view is queried — no manual clear step, no write needed to un-halt).
+-- the registry reconciliation step (§11) that re-crafts already-staged pending rows, entries and exits
+-- alike, is unaffected (see the SCOPE note above — do not read "exit re-craft" narrowly here). Auto-
+-- clears the moment a fill lands (trading_days_since_last_fill resets to 0 the next time this view is
+-- queried — no manual clear step, no write needed to un-halt).
 CREATE OR REPLACE VIEW `stock-trading-498512.state.owner_confirmation_liveness` AS
 WITH pending AS (
   SELECT COUNT(*) AS n_pending_instructions
