@@ -165,6 +165,27 @@ routines:
       order-crafting / capital-adjacent routines) -- those keep their existing human-visible
       missed_run/period_missed alert only. Idempotent via ops.catchup_refire_log (one attempt per
       miss_key, ever). No chat question, ever.
+  - id: OPS1
+    name: Morning Connector Liveness Probe
+    schedule: "pre-market, ~9h before the 16:10-17:15 MT daily cadence"
+    monitor_class: daily_all
+    catchup_safe: true      # a late probe still helps; a missed one is covered next morning
+    depends_on: []           # DELIBERATELY independent, same rationale as OPS0 -- a probe that exists
+                              # to catch an auth failure early must never itself be blocked by one
+    writes: [ops.alerts]
+    expected_trigger:
+      recurrence: daily
+      time_local: "07:00"          # fixed 13:00 UTC cron (trig_01SeHBLodMDE9egTFMgLByVf, created
+                                    # 2026-07-19) -- NOT the DST-aware native picker, so this drifts to
+                                    # 06:00 MST in winter, which is fine -- still hours ahead of the
+                                    # 16:10-17:15 MT daily cadence either way
+      enabled: true
+    notes: >
+      Pre-market connector-auth early warning (owner-approved 2026-07-19, after an IBKR OAuth expiry
+      was discovered only at D2a's 16:20 MT pre-flight and cascaded into a halted evening -- see
+      ops/RUNBOOK.md §15b). Probes IBKR/Calendar/FMP/Gmail read-only and raises
+      connector_reauth_needed on an auth-class failure, hours before the daily cadence needs any of
+      them live. Detection-only -- never refires, stages, or writes repo files.
   - id: SL3
     name: Incubation Monitor & Graduation
     schedule: "after D2a trading_day"     # SISA arsenal loop; needs D2a's fresh marks

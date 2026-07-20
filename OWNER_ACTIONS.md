@@ -120,9 +120,17 @@ STEP 2 / STEP 3 text (`Claude_Task_Plan.md`) now names the tool-absent branch as
 handled path rather than an anomaly. The root cause itself is below and needs you (or an owner-approved
 session) to fix — this session could not.
 
-## U. Add `RemoteTrigger` to every routine trigger's `allowed_tools` (root cause of the 2026-07-18 OPS0 blocked-refire)
+## U. Add `RemoteTrigger` to every routine trigger's `allowed_tools` (root cause of the 2026-07-18 OPS0 blocked-refire) — `[DONE 2026-07-19 — executed same day; marker restored 2026-07-19 late-evening]`
 
-**What it's for:** verified live this session via `RemoteTrigger get` on all 30 routine triggers in
+**Closed 2026-07-19 (~07:40 MT): the config fix was EXECUTED and verified the same morning** — the
+owner allowlisted `RemoteTrigger` in `.claude/settings.local.json` and a session updated **all 30
+triggers** (get → full-`job_config` update → echo-verify; SL1-SL5's distinct env + `autofix:false`
+preserved; commit 5a39d38). *Marker restored 2026-07-19 late-evening: the original `[DONE]` flip
+(commit 5a39d38) was silently dropped at an auto-merge point where a sibling branch edited this section
+independently — this restores it. See the late-evening addendum below for the platform-level caveat
+discovered afterward (config correct, tool still absent headless).*
+
+**Original finding (for the record):** verified live this session via `RemoteTrigger get` on all 30 routine triggers in
 `ops/trigger_ids.json`: every one of them has `job_config.ccr.session_context.allowed_tools =
 ["Bash","Read","Write","Edit","Glob","Grep","WebFetch","WebSearch"]` — `RemoteTrigger` itself is missing
 from the list. That is why an OPS0 / D3 / dependency-wait ACTIVE-REPAIR session, once dispatched BY one
@@ -188,6 +196,13 @@ of those paths already fails safe into a `warning`-severity alert instead of sil
 (this session's `bigquery/94` + `Claude_Task_Plan.md` changes), and OPS0's Sunday STEP 3 sweep will keep
 this config true automatically once you've fixed it once — this is a one-time root-cause fix, not a
 recurring task.
+
+**2026-07-19 late-evening addendum.** The config fix above stands — applied and verified live earlier
+the same day (all 30 triggers confirmed carrying `RemoteTrigger` in `allowed_tools`) — but late-evening
+runs the same day proved headless sessions still lack the tool at the platform level regardless: OPS0's
+own run note read "RemoteTrigger tool unavailable in session", and D2a's evening note recorded its D2
+chain-call as skipped for the identical reason. No owner action here — this is a platform limitation,
+not a config regression; recorded in `ops/RUNBOOK.md` §15b. Interactive sessions remain the refire path.
 
 ---
 

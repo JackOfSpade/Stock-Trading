@@ -642,6 +642,35 @@ stall with it (it ran under the same identity).
   redesign, glance at the per-tool matrix against the table above; restore the two OPTIONAL rows to
   allow, or accept them blocked — either is fine.
 
+- **§15b. Connector OAuth expiry playbook (added 2026-07-20).** The 2026-07-19 IBKR connector expiry
+  (OWNER_ACTIONS.md item V) was the FIRST IBKR occurrence on record — the only prior connector-expiry
+  incident on record is BigQuery's, 2026-06-26 (§26). It was discovered only at D2a's 16:20 MT
+  pre-flight, hours into the evening cadence, and cascaded into a halted evening. Guidance: if the same
+  connector recurs 3+ times, record its expiry interval per §15's credential table and pre-empt the
+  predictable ones during the annual credential review rather than waiting to be caught mid-cascade
+  again.
+
+  **OPS1 (Morning Connector Liveness Probe, `Claude_Task_Plan.md`)** now closes most of this gap
+  mechanically: a daily 07:00 MT pre-market probe (trigger `trig_01SeHBLodMDE9egTFMgLByVf`) reads
+  IBKR/Calendar/FMP/Gmail read-only and raises a `connector_reauth_needed` warning on an auth-class
+  failure — ~9h before the 16:10-17:15 MT daily cadence needs any of them live, so a re-auth need lands
+  in the morning alert email instead of mid-cascade.
+
+  **PLATFORM LIMITATION (verified 2026-07-19 ~22:45-23:10 MT).** `RemoteTrigger` is unavailable INSIDE a
+  headless routine session regardless of what its trigger's `allowed_tools` lists (contrast
+  OWNER_ACTIONS.md item U's config fix, which is real but insufficient alone) — verified twice the same
+  evening: OPS0's own run note read "RemoteTrigger tool unavailable in session", and D2a's evening note
+  recorded its D2 chain-call as skipped for the identical reason. Headless auto-refire / chain-call
+  therefore cannot work today; **interactive sessions remain the real refire path** until/unless the
+  platform closes this gap.
+
+  **Related gap, same evening.** OPS0's readiness view (`state.catchup_refire_readiness`) reported "0
+  misses" even though SL3 sat halted on a dependency that had since been satisfied — the view counts
+  only MISSING runs as refireable misses, not a halted run whose blocking dependency later cleared
+  (observed `SL3|2026-07-19`; an interactive session refired it manually). The view fix is deliberately
+  DEFERRED — the platform limitation above already makes any headless refire moot, so widening the
+  view's definition buys nothing until that closes.
+
 ## 16. Publish the health dashboard *(D1)*
 `.github/workflows/dashboard.yml` builds `ops/dashboard/index.html` from BigQuery and deploys it to
 GitHub Pages. **OFF by default and double-gated** (the page shows live trading data): enable only by

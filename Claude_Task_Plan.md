@@ -19,6 +19,7 @@ Every routine reads and/or writes BigQuery for operational state (positions, reg
 | **D2a** | Broker Reconcile & Snapshot | Daily · regular | live IBKR connector state (positions/balances/trades), `events.daily_marks`, `state.current_positions`, `state.account_latest` | `events.trade_fills`/`events.position_events` reconciliation, `analytics.strategy_nav`, `perf.strategy_daily`, NAV snapshot, `ops.run_log`/`ops.alerts`; STEP 1d adds `events.signal_marks` (11 menu tickers + SPY + `^VIX`, isolated from `daily_marks`) | — |
 | **D3** | Calendar Hygiene | Daily · regular | `state.open_queue`, `state.current_positions`, `events.queue_events`/`events.decision_log` | `events.queue_events` (terminal-entry sweep) | — |
 | **OPS0** | Cadence Watchdog | Daily · regular | `state.catchup_refire_readiness`, `ops/trigger_ids.json` (repo file) | `ops.catchup_refire_log`, `events.decision_log`, `ops.alerts`; `RemoteTrigger run(...)` (external call, not a BigQuery write) | — |
+| **OPS1** | Morning Connector Liveness Probe | Daily · regular | — (no state reads beyond the standard `state.trading_day_today` pre-flight; probes IBKR/Calendar/FMP/Gmail live, read-only) | `ops.alerts` (`connector_reauth_needed` raise + self-heal resolve) | — |
 | **W1** | Catalyst Calendar (A, C) | Weekly · research | `state.current_regime`, `state.current_positions`, `events.decision_log` | — | Weekly_Catalyst_Calendar.md |
 | **W2** | Post-Event Screen (B) | Weekly · research | `events.decision_log`/`find_precedents()`, `state.current_positions` | `events.decision_log` via `ops.sp_log_decision` (`entry_type='research-screen'`, screen='post-event' — Operating_Protocols.md §19, 2026-07-19) | Weekly_Post_Event_Screen.md |
 | **W3** | Open-Position Deep-Dive (A,B,C,E) | Weekly · research | `state.current_positions`, `state.current_regime`, `events.decision_log` | — | Weekly_Position_Deep_Dive.md |
@@ -1095,6 +1096,56 @@ STEP 3 — WEEKLY TRIGGER-CONFIG SWEEP (trigger-config-drift audit, 2026-07-16, 
 **Shared refire log + in-progress exclusion (v2, 2026-07-18).** `ops.catchup_refire_log` rows may now also be written by a BLOCKED DOWNSTREAM routine's dependency-wait ACTIVE REPAIR (note prefix `refired by <ID> dependency-wait`, tier-aware miss_key identical to this routine's own format) — the log's semantics are unchanged (permanent idempotency; any row for a miss_key = attempted; skip it), so treat such rows as normal, not as an anomaly. Separately, `state.catchup_available` / `state.period_catchup_available` (bigquery/90) now EXCLUDE a routine with a `'started'` run_log row in the last 3h and no terminal row — a routine legitimately mid-DEPENDENCY-WAIT past the 21:00 deadline is in-flight, not missed; refiring it would double-run it (its own guard's in-progress variant is the session-level backstop for the same race). The `needs_attention` ALARM itself deliberately keeps NO such exclusion — the dead-man's switch stays maximally paranoid; a `missed_run` alert for a still-waiting routine is acceptable noise (non-latching, auto-resolves on completion).
 
 CHAT OUTPUT: one-line summary (e.g., "OPS0: 2 misses auto-refired (D1/2026-07-13, W2/2026-W28); 0 no_trigger_id. Sunday trigger sweep: 29 checked, 1 corrected, 0 warned.").
+```
+
+---
+
+## OPS1. Morning Connector Liveness Probe — regular routine
+
+Runs pre-market (07:00 MT), ~9 hours ahead of the 16:10-17:15 MT daily cadence (owner-approved
+2026-07-19, after an IBKR OAuth expiry was discovered only at D2a's 16:20 MT pre-flight and cascaded
+into a halted evening). Detection-only: probes the connectors this system depends on with one read-only
+call each and surfaces a re-auth need in the morning alert email instead of mid-cascade. This routine
+NEVER refires anything, stages nothing, and writes no repo files.
+
+```
+Read access scope: none beyond the standard connector pre-flight — no Strategy.md, no roster, no
+order-staging surface, no state table reads beyond `state.trading_day_today`.
+
+Observability preamble binds as normal: run logging (`sp_routine_start`/`sp_routine_end`), the standard
+BigQuery-liveness pre-flight read, TRANSIENT-FAILURE WAIT-AND-RETRY, and INCIDENT INHERITANCE. If
+BigQuery itself is down, the standard pre-flight halt path already covers it (RUNBOOK §26) — that outage
+class is loud everywhere already, nothing extra needed here. `depends_on: []`, same rationale as OPS0: a
+probe that exists to catch an auth failure early must never itself be blocked by one.
+
+PROBES (read-only, one call each; on a transient-looking failure, one ~60s-spaced retry per the shared
+ladder, then classify what's left): IBKR `get_account_summary`; Google Calendar `list_calendars`; FMP
+`chart` (historical-price-eod, light) for `^VIX`, last ~5 days — probe the FMP-PRIMARY `^VIX` path
+specifically, do NOT probe a tier-gated endpoint (`quote`, ETF historical chart) — a plan-tier ACCESS
+DENIED there is a known, accepted state (OWNER_ACTIONS.md item W) and must NOT raise anything; Gmail
+`list_labels`.
+
+CLASSIFICATION. An AUTH-class failure (401/403/token-expired/"requires re-authorization"/OAuth wording)
+surviving the retry: `CALL ops.sp_raise_alert_once('warning','OPS1','connector_reauth_needed',
+'<Connector> requires re-authorization — re-auth in claude.ai connector settings before today''s 16:10
+MT daily cadence (D1/D2a/D2)', '<JSON: connector, error_verbatim, probed_at>')` — one alert per
+connector; `sp_raise_alert_once` keeps it idempotent. A non-auth failure surviving the retry: record in
+the run_log note only, no alert — the trading routines' own pre-flights already own hard-stop authority
+for those.
+
+SELF-HEAL. On a HEALTHY probe of connector X while an unresolved `connector_reauth_needed` alert for X
+is open: `UPDATE ops.alerts SET resolved = TRUE, resolved_ts = CURRENT_TIMESTAMP(), resolved_note =
+'verified-clear: OPS1 healthy <tool> probe for <Connector> at <ts>' WHERE NOT resolved AND
+category='connector_reauth_needed' AND <connector match>` — same bespoke in-routine clear pattern as
+D2a's `owner_confirmation_stale`.
+
+RECURRENCE. If the same connector has alerted on 3+ consecutive mornings, say so in that day's alert
+message and note that the expiry interval should be recorded per RUNBOOK §15 and a provider-side fix
+considered (e.g., an IBKR support ticket on OAuth session lifetime).
+
+Log `'completed'` with a one-line per-connector status summary (e.g., "IBKR OK, Calendar OK, FMP OK,
+Gmail OK." or "IBKR requires re-auth (alert raised); Calendar/FMP/Gmail OK."); no repo changes, no git
+output.
 ```
 
 ---

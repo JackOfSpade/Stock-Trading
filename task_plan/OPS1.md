@@ -456,39 +456,54 @@ The queue archives (`Archived_Analysis` / `Archived_Adversarial_Reviews`) are re
 
 ---
 
-# STRATEGY ARSENAL LIFECYCLE (SL1–SL5)
+# DAILY (after market close)
 
-The Self-Improving Strategy Arsenal (SISA) routines make strategy ADDITION and DELETION fully autonomous — no human review / approval / chat anywhere in the path (residuals: the system-wide IBKR order-confirm tap + deposits). Roster MEMBERSHIP is versioned policy (the roster analog of the 2026-06 capital-allocation pivot); each strategy's OWN machinery freezes at SHADOW entry and its edge-measurement clock starts at its first PROBE trade. Single source of truth: `strategy/roster.yaml` (CI-guarded by `scripts/check_roster_consistency.py`) mirrored to `events.strategy_lifecycle` → `state.strategy_roster` → `state.active_strategy_codes`. Owner kill-switch: `ops.arsenal_control` (+ `ops.sp_assert_arsenal_enabled`) freezes the whole loop with one out-of-band INSERT without disturbing live trading. Loop recorded at `active_auto` in `ops/autonomy_levels.yaml` (2026-07-10 owner decision); BQ objects in `bigquery/35_strategy_arsenal.sql`; incident/decision write-up in `ops/RUNBOOK.md` §37 + Operating_Protocols.md §SISA. All five follow the shared "Observability — run logging & failure alerts" section for connector pre-flight / run-logging / failure alerts; none ever asks a chat question. (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner directive.)
+## OPS1. Morning Connector Liveness Probe — regular routine
 
-## SL2. Strategy Draft, Revise & Post-mortem — regular routine
-
-Queue-driven (fires daily; no-ops unless a `PENDING_DRAFT` item is due). The dedicated autonomous EDITORIAL routine of the lifecycle — it authors a QUALIFYING candidate's full mechanism section + self-contained pre-mortem, redrafts on an AR_orc REVISION REQUIRED verdict, and authors termination post-mortems. It OVERTURNS the retired "pre-mortem revision is out of scope for a routine / the participant revises" carve-out. Runs with INDEPENDENT context from SL1 and the AR reviewers (multi-scrutiny independence). Never stages orders, never touches capital, never edits the live roster (SL5 does).
+Runs pre-market (07:00 MT), ~9 hours ahead of the 16:10-17:15 MT daily cadence (owner-approved
+2026-07-19, after an IBKR OAuth expiry was discovered only at D2a's 16:20 MT pre-flight and cascaded
+into a halted evening). Detection-only: probes the connectors this system depends on with one read-only
+call each and surfaces a re-auth need in the morning alert email instead of mid-cascade. This routine
+NEVER refires anything, stages nothing, and writes no repo files.
 
 ```
-Read access scope: daily (queue-driven), with Strategy.md WRITE permission in the CANDIDATE namespace only. Read the draft queue `events.queue_events` / `state.open_queue_detail` (queue `PENDING_DRAFT`), `state.strategy_candidates`, `events.adversarial_reviews` (for a revise task's attacker/orchestrator output), `strategy/roster.yaml`, `Strategy.md`, `AI_Trading_Foundation.md`, `ops.arsenal_control`, `state.active_playbook` (strategy_playbook loop deltas — empty until that loop's gate clears). WRITE `events.premortem_flags` / `events.premortem_flag_outcomes` (`bigquery/42_adversarial_flag_hit.sql`, ITEM 22) — append-only, per (A)/(B)/(C) below.
+Read access scope: none beyond the standard connector pre-flight — no Strategy.md, no roster, no
+order-staging surface, no state table reads beyond `state.trading_day_today`.
 
-Observability: connector pre-flight, `ops.sp_auto_resolve_alerts()`, run-logging, failure alerts — per the shared Observability section; do not restate. Queue-driven, so (per the queue_driven monitoring rule) it is monitored via `state.stalled_runs` + `ops/triggers.json`, NOT `cadence_watch`/`period_watch`.
+Observability preamble binds as normal: run logging (`sp_routine_start`/`sp_routine_end`), the standard
+BigQuery-liveness pre-flight read, TRANSIENT-FAILURE WAIT-AND-RETRY, and INCIDENT INHERITANCE. If
+BigQuery itself is down, the standard pre-flight halt path already covers it (RUNBOOK §26) — that outage
+class is loud everywhere already, nothing extra needed here. `depends_on: []`, same rationale as OPS0: a
+probe that exists to catch an auth failure early must never itself be blocked by one.
 
-**ARSENAL KILL-SWITCH GATE — SEPARATE and FATAL, do NOT wrap — `CALL ops.sp_assert_arsenal_enabled('SL2')` before anything else.** RAISEs + `critical` alert (abort) if the arsenal loop is disabled/frozen.
+PROBES (read-only, one call each; on a transient-looking failure, one ~60s-spaced retry per the shared
+ladder, then classify what's left): IBKR `get_account_summary`; Google Calendar `list_calendars`; FMP
+`chart` (historical-price-eod, light) for `^VIX`, last ~5 days — probe the FMP-PRIMARY `^VIX` path
+specifically, do NOT probe a tier-gated endpoint (`quote`, ETF historical chart) — a plan-tier ACCESS
+DENIED there is a known, accepted state (OWNER_ACTIONS.md item W) and must NOT raise anything; Gmail
+`list_labels`.
 
-Scan `PENDING_DRAFT` for the oldest due item and dispatch by `item_type` (process all due items this fire, each as an isolated sub-task for fresh context where available). If none: chat output "No strategy-draft/revise/post-mortem tasks due." and exit.
+CLASSIFICATION. An AUTH-class failure (401/403/token-expired/"requires re-authorization"/OAuth wording)
+surviving the retry: `CALL ops.sp_raise_alert_once('warning','OPS1','connector_reauth_needed',
+'<Connector> requires re-authorization — re-auth in claude.ai connector settings before today''s 16:10
+MT daily cadence (D1/D2a/D2)', '<JSON: connector, error_verbatim, probed_at>')` — one alert per
+connector; `sp_raise_alert_once` keeps it idempotent. A non-auth failure surviving the retry: record in
+the run_log note only, no alert — the trading routines' own pre-flights already own hard-stop authority
+for those.
 
-(A) **strategy-draft** (from SL1). For the QUALIFYING candidate in `trigger_context`, and only while the concurrent-incubation cap is still open:
-   1. Author a `## Strategy <code> [CANDIDATE]` section in Strategy.md (candidate namespace — NOT roster-active) mirroring the A-E structure: Thesis with each rule inline-cited to a foundation edge/disadvantage; Differentiation vs the live roster; numbered Entry criteria; Exit / invalidation rules; declared frequency; 2%-of-sub-portfolio sizing (the immutable global rule, not re-derived); classical-method delegation list; exactly one Boolean router-activation line + the M1b fundamental-analysis question for it; kill-criteria structure. Also SELECT playbook_key, delta_text FROM state.active_playbook and honor any delta addressed to the candidate's archetype/sub-pattern, citing the playbook_key in the draft (empty today — the strategy_playbook loop's output surface; loop-completeness audit 2026-07-16: without this read, a cleared playbook delta would change nothing anywhere).
-   1b. **JUDGMENT-NATIVE MACHINERY (owner-approved Redesign B, 2026-07-19 — `AI_DECISION_REDESIGN.md` §3).** The candidate's entry/exit machinery MAY be authored as a structured judgment protocol — criteria the executing session evaluates fresh each time, with declared conviction gates and explicit invalidation criteria — instead of fixed numeric triggers, and SHOULD be where the cited edge is judgment-shaped (SL1 STEP 2's preference). Four REQUIREMENTS, none waivable: (a) the protocol must define unambiguously what constitutes a signal event AND declare its expected signal-rate band exactly like a numeric spec — SHADOW's `state.strategy_shadow_readiness` signal-rate gate needs countable signals, and a protocol whose signals can't be counted fails qualification at SL1 (c); (b) the 2%-of-sub-portfolio sizing fraction, every kill trigger, the 30-trade gate, and every graduation rail apply UNCHANGED — judgment-native machinery changes what the spec says, never which rails bind it; (c) spec-freeze applies identically — the protocol TEXT freezes at SHADOW entry (`spec_hash` covers prose exactly as it covers formulas; any later wording change = terminate-and-restart-as-new); (d) the pre-mortem attacks the protocol like any machinery — including the failure mode unique to this class, criteria drift under loss pressure, which the pre-mortem must address explicitly.
-   2. Author a self-contained 7-section pre-mortem artifact for the candidate (Experiment_Parameters.md pre-mortem format + self-containment requirement, so the strict-blinded attacker can review it standalone).
-   2b. **REGISTER PRE-MORTEM FLAGS (self-improvement audit ITEM 22, 2026-07-11).** For every Tier 1/2/3 flag the pre-mortem carries forward with a named review-trigger condition (the flags AR_att/AR_orc accept rather than reject the draft over), `INSERT INTO events.premortem_flags` (`strategy_code`, `review_id = NULL` — the correlated `strategy-adoption` review id is not yet assigned at authoring time and is not required for scoring, which reads by `strategy_code`, `tier`, `flag_text`, `review_trigger_text`, `backfilled = FALSE`). This is the pre-registration `analytics.adversarial_flag_hit` (`bigquery/42_adversarial_flag_hit.sql`) measures against at termination — never skip it even for a flag that looks minor.
-   3. Derive ALL parameters FRESH and write `state.strategy_candidates.derivation_provenance` (JSON: each parameter, its derivation, source) — the anti-inheritance evidence SL1/AR check.
-   4. Regenerate the candidate slice via `scripts/split_strategy.py` (stable code-keyed numbering — the fixed tail never renumbers).
-   5. Enqueue an `events.queue_events` `PENDING_REVIEW` `review_type='strategy-adoption'` (`conservative_default='REJECT'`, `cycle_number=1`, `artifact_path` = the candidate pre-mortem) and write an AUTHORING→UNDER_REVIEW `events.strategy_lifecycle` row.
+SELF-HEAL. On a HEALTHY probe of connector X while an unresolved `connector_reauth_needed` alert for X
+is open: `UPDATE ops.alerts SET resolved = TRUE, resolved_ts = CURRENT_TIMESTAMP(), resolved_note =
+'verified-clear: OPS1 healthy <tool> probe for <Connector> at <ts>' WHERE NOT resolved AND
+category='connector_reauth_needed' AND <connector match>` — same bespoke in-routine clear pattern as
+D2a's `owner_confirmation_stale`.
 
-(B) **strategy-revise** (from an AR_orc REVISION REQUIRED verdict). Read the orchestrator output for the flagged Tier-1 defects. Redraft ONLY those defects; re-derive any changed parameter FRESH and diff-check it against the prior draft AND any `is_restart_of` source to block inheritance; `cycle_number++`; re-enqueue the `strategy-adoption` review. Beyond cycle 5, honor the rev-15 soft cap: either record the written continuation justification (the forcing-question discipline) in `events.decision_log` or abandon → write a REJECTED lifecycle row + cooldown stamp. If a redraft changes or adds a Tier 1/2/3 flag, `INSERT` its own new `events.premortem_flags` row per (A) step 2b — append-only, never edit a prior flag row in place, so the original flag_text stays available for `adversarial_flag_hit` scoring even if the strategy's final accepted mechanism moved past it.
+RECURRENCE. If the same connector has alerted on 3+ consecutive mornings, say so in that day's alert
+message and note that the expiry interval should be recorded per RUNBOOK §15 and a provider-side fix
+considered (e.g., an IBKR support ticket on OAuth session lifetime).
 
-(C) **post-mortem** (from a D2 / AR_orc TERMINATED transition). Author `events.strategy_postmortems` {strategy_code, retired_date, trigger, what_revealed, what_unresolved, material_diff_required_for_restart, body_md} + an `events.decision_log` entry. This is the precondition SL1 enforces before any restart. **SCORE PRE-MORTEM FLAGS (self-improvement audit ITEM 22, 2026-07-11).** Read every `events.premortem_flags` row for this `strategy_code`. For each, read its `review_trigger_text` and — from the strategy's real trade/decision history (`events.decision_log`, `perf.strategy_daily`, `events.regime_events`) plus the post-mortem's own `what_revealed`/`what_unresolved` you just authored — make ONE judgment: did that flag's named review-trigger condition actually occur before the loss/termination event (`trigger_fired = TRUE`), and if so did it occur BEFORE the loss became visible in the numbers (`fired_before_loss`) or only in hindsight? `INSERT INTO events.premortem_flag_outcomes` (`flag_id`, `trigger_fired`, `fired_before_loss`, `evidence_text` — a one-to-two-sentence citation of what you read, `judge_session` = this run's session context). A flag whose trigger never fired is scored `trigger_fired = FALSE`, not skipped — the whole point of `analytics.adversarial_flag_hit` is measuring the pre-mortem's catch rate, which needs the misses recorded as honestly as the hits.
-
-Commit + push the Strategy.md / slice edits per §Branch and state propagation. `CALL ops.sp_raise_alert('info','SL2','strategy_drafted'|'strategy_revised'|'postmortem_written', <one-line>, <JSON>)` and write a `CALL ops.sp_log_decision(...)` entry for the task outcome.
-
-CHAT OUTPUT: one line per processed item — item_type, candidate/strategy code, action taken (drafted / revised to cycle N / post-mortem written / abandoned).
+Log `'completed'` with a one-line per-connector status summary (e.g., "IBKR OK, Calendar OK, FMP OK,
+Gmail OK." or "IBKR requires re-auth (alert raised); Calendar/FMP/Gmail OK."); no repo changes, no git
+output.
 ```
 
 ---

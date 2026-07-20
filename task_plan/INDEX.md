@@ -10,6 +10,7 @@ Read-optimized slices of the canonical `Claude_Task_Plan.md`. Each `<ID>.md` is 
 | D2 | D2. Daily Action Conversion — regular routine | `D2.md` |
 | D3 | D3. Calendar Hygiene — regular routine | `D3.md` |
 | OPS0 | OPS0. Cadence Watchdog — regular routine | `OPS0.md` |
+| OPS1 | OPS1. Morning Connector Liveness Probe — regular routine | `OPS1.md` |
 | W1 | W1. Catalyst Calendar (Strategies A and C) — deep research | `W1.md` |
 | W2 | W2. Post-Event Screen (Strategy B) — deep research | `W2.md` |
 | W3 | W3. Open-Position Deep-Dive (Strategies A, B, C, E) — deep research | `W3.md` |
