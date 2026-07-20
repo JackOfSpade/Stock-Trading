@@ -39,6 +39,7 @@ Usage:  python scripts/check_live_sql_parity.py --project stock-trading-498512
         python scripts/check_live_sql_parity.py --offline   # parser self-check only, no bq calls
         python scripts/check_live_sql_parity.py --project stock-trading-498512 --json-out /tmp/findings.json
 """
+import argparse
 import os
 import re
 import subprocess  # noqa: F401 — kept so tests can monkeypatch subprocess.run/TimeoutExpired at the module level
@@ -352,14 +353,18 @@ def write_json_out(json_out_path, findings, missing_live):
 
 
 def main():
-    offline = "--offline" in sys.argv
-    project = "stock-trading-498512"
-    json_out = None
-    for i, a in enumerate(sys.argv):
-        if a == "--project" and i + 1 < len(sys.argv):
-            project = sys.argv[i + 1]
-        if a == "--json-out" and i + 1 < len(sys.argv):
-            json_out = sys.argv[i + 1]
+    # argparse (mirroring check_live_roster_parity.py) so both the two-token (`--project X`) and
+    # GNU `--project=X` invocation forms work identically, and an unrecognized flag is a hard error
+    # instead of a silent no-op (2026-07-20 cross-cutting audit: the old hand-rolled argv loop only
+    # matched the two-token form, so `--project=X` silently kept the hardcoded default project).
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--project", default="stock-trading-498512")
+    ap.add_argument("--offline", action="store_true")
+    ap.add_argument("--json-out", default=None)
+    args = ap.parse_args()
+    offline = args.offline
+    project = args.project
+    json_out = args.json_out
 
     final = find_final_definitions()
     print(f"Parsed {len(final)} final-effective object definitions from bigquery/*.sql.")

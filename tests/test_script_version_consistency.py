@@ -27,20 +27,28 @@ def test_real_repo_is_consistent():
     assert svc.main() == 0
 
 
-def test_mismatch_between_gs_and_seed_is_caught(tmp_path, monkeypatch, capsys):
+def _rig(tmp_path, monkeypatch, alert_gs_text, weekly_gs_text, registry_text):
+    # main() only ever consults SCRIPTS (via .items()) and REGISTRY_SQL — never ALERT_GS/WEEKLY_GS
+    # directly (those are read once at import time solely to build SCRIPTS) — so patching SCRIPTS
+    # to point at the tmp .gs files is the only redirect main() actually needs.
     alert_gs = tmp_path / "alert_emailer.gs"
-    alert_gs.write_text("const ALERT_SCRIPT_VERSION = 'v99';\n")
+    alert_gs.write_text(alert_gs_text)
     weekly_gs = tmp_path / "weekly_report.gs"
-    weekly_gs.write_text("const SCRIPT_VERSION = 'v2';\n")
+    weekly_gs.write_text(weekly_gs_text)
     registry = tmp_path / "43.sql"
-    registry.write_text(
-        "STRUCT('alert_emailer' AS script_name, 'v1' AS expected_version, 'note' AS git_note),\n"
-        "STRUCT('weekly_report' AS script_name, 'v2' AS expected_version, 'note' AS git_note)\n"
-    )
-    monkeypatch.setattr(svc, "ALERT_GS", str(alert_gs))
-    monkeypatch.setattr(svc, "WEEKLY_GS", str(weekly_gs))
+    registry.write_text(registry_text)
     monkeypatch.setattr(svc, "REGISTRY_SQL", str(registry))
     monkeypatch.setattr(svc, "SCRIPTS", {"alert_emailer": str(alert_gs), "weekly_report": str(weekly_gs)})
+
+
+def test_mismatch_between_gs_and_seed_is_caught(tmp_path, monkeypatch, capsys):
+    _rig(
+        tmp_path, monkeypatch,
+        "const ALERT_SCRIPT_VERSION = 'v99';\n",
+        "const SCRIPT_VERSION = 'v2';\n",
+        "STRUCT('alert_emailer' AS script_name, 'v1' AS expected_version, 'note' AS git_note),\n"
+        "STRUCT('weekly_report' AS script_name, 'v2' AS expected_version, 'note' AS git_note)\n",
+    )
     assert svc.main() == 1
     out = capsys.readouterr().out
     assert "v99" in out and "v1" in out
@@ -51,34 +59,22 @@ def test_gs_const_that_the_regex_cannot_find_is_caught(tmp_path, monkeypatch, ca
     # single-quote regex doesn't accept) — parse_gs_version returns None — was never exercised. A
     # vacuously-non-matching regex is the exact failure mode this checker exists to prevent, so its
     # own "could not find" path must be proven to FAIL, not silently pass (2026-07-17 audit).
-    alert_gs = tmp_path / "alert_emailer.gs"
-    alert_gs.write_text('const ALERT_SCRIPT_VERSION = "v1";\n')   # double quotes -> GS_VERSION (single-quote) misses
-    weekly_gs = tmp_path / "weekly_report.gs"
-    weekly_gs.write_text("const SCRIPT_VERSION = 'v2';\n")
-    registry = tmp_path / "43.sql"
-    registry.write_text(
+    _rig(
+        tmp_path, monkeypatch,
+        'const ALERT_SCRIPT_VERSION = "v1";\n',   # double quotes -> GS_VERSION (single-quote) misses
+        "const SCRIPT_VERSION = 'v2';\n",
         "STRUCT('alert_emailer' AS script_name, 'v1' AS expected_version, 'note' AS git_note),\n"
-        "STRUCT('weekly_report' AS script_name, 'v2' AS expected_version, 'note' AS git_note)\n"
+        "STRUCT('weekly_report' AS script_name, 'v2' AS expected_version, 'note' AS git_note)\n",
     )
-    monkeypatch.setattr(svc, "ALERT_GS", str(alert_gs))
-    monkeypatch.setattr(svc, "WEEKLY_GS", str(weekly_gs))
-    monkeypatch.setattr(svc, "REGISTRY_SQL", str(registry))
-    monkeypatch.setattr(svc, "SCRIPTS", {"alert_emailer": str(alert_gs), "weekly_report": str(weekly_gs)})
     assert svc.main() == 1
     assert "could not find a SCRIPT_VERSION" in capsys.readouterr().out
 
 
 def test_missing_seed_row_is_caught(tmp_path, monkeypatch):
-    alert_gs = tmp_path / "alert_emailer.gs"
-    alert_gs.write_text("const ALERT_SCRIPT_VERSION = 'v1';\n")
-    weekly_gs = tmp_path / "weekly_report.gs"
-    weekly_gs.write_text("const SCRIPT_VERSION = 'v2';\n")
-    registry = tmp_path / "43.sql"
-    registry.write_text(
-        "STRUCT('weekly_report' AS script_name, 'v2' AS expected_version, 'note' AS git_note)\n"
+    _rig(
+        tmp_path, monkeypatch,
+        "const ALERT_SCRIPT_VERSION = 'v1';\n",
+        "const SCRIPT_VERSION = 'v2';\n",
+        "STRUCT('weekly_report' AS script_name, 'v2' AS expected_version, 'note' AS git_note)\n",
     )
-    monkeypatch.setattr(svc, "ALERT_GS", str(alert_gs))
-    monkeypatch.setattr(svc, "WEEKLY_GS", str(weekly_gs))
-    monkeypatch.setattr(svc, "REGISTRY_SQL", str(registry))
-    monkeypatch.setattr(svc, "SCRIPTS", {"alert_emailer": str(alert_gs), "weekly_report": str(weekly_gs)})
     assert svc.main() == 1

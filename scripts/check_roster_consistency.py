@@ -166,6 +166,22 @@ STRATEGY_MATH_DIR = os.path.join(ROOT, "strategy_math")
 C_OPTIONS_MATH = os.path.join(ROOT, "c_options_math.py")
 
 
+def _find_slice_by_heading(code):
+    """R-F helper: the strategy/ slice file whose OWN '## Strategy <code>' heading is `code` — reuses
+    headings_in()/STRATEGY_HEADING, the exact machinery slice_codes()/R-A already use, so this lookup is
+    numbering-agnostic in precisely the way R-A's own docstring promises (read the heading, not the
+    filename, so the stable code-keyed slice band can renumber). Returns None if no slice's heading
+    matches `code` at all (the slice was deleted, or its heading itself rotted) — a real gap, not a
+    renumber, so the caller falls back to reporting it as a missing spec_hash input, same as always
+    (C0 fix, 2026-07-20: spec_hash_inputs() previously hardcoded each code's .md path as a literal
+    numbered filename, so a content-free slice renumber — which R-A tolerates by design — spuriously
+    FAILed R-F with a misleading "missing" message for machinery that was not actually lost)."""
+    for p in sorted(glob.glob(os.path.join(STRATEGY_DIR, "*_strategy_*.md"))):
+        if code in headings_in(open(p, encoding="utf-8").read()):
+            return p
+    return None
+
+
 def spec_hash_inputs():
     """R-F: strategy code -> (spec .md slice, [corresponding math module(s)]) whose bytes are hashed
     into roster.yaml's spec_hash. A FUNCTION (not a frozen module-level dict) so it re-reads STRATEGY_DIR
@@ -174,6 +190,13 @@ def spec_hash_inputs():
     every other path this file's checks read; a frozen dict built once at import time from the real ROOT
     would silently ignore that monkeypatching and defeat fixture-based drift tests (BUG FIX, rev
     2026-07-11 adversarial self-audit).
+
+    The .md slice path is DISCOVERED via _find_slice_by_heading(), not hardcoded by number (C0 fix,
+    2026-07-20) — a spec-locked strategy's slice can be renumbered (or given a descriptive slug suffix,
+    like R-K's mismatched-filename fixture) with zero content change and R-F keeps tracking the right
+    file, exactly as R-A already tolerates. Only the math module path(s) below stay as literal constants:
+    strategy_math/ is not scanned by heading, so renaming a math module IS a real drift event, not a
+    tolerated renumber.
 
     C predates strategy_math/ (its math already lived in c_options_math.py at repo root, self-contained,
     no shared-module dependency); A/B/D/E use the strategy_math/ package added in Item 28 and each
@@ -189,18 +212,22 @@ def spec_hash_inputs():
     gate on strategy add" violation, CLAUDE.md settled decision) the first time SISA promotes a genuinely
     new strategy past SHADOW. Instead it prints a visible, non-blocking NOTE — see R-F's report section.
     """
-    return {
-        "A": (os.path.join(STRATEGY_DIR, "03_strategy_a.md"),
-              [os.path.join(STRATEGY_MATH_DIR, "strategy_a.py"), os.path.join(STRATEGY_MATH_DIR, "common.py")]),
-        "B": (os.path.join(STRATEGY_DIR, "04_strategy_b.md"),
-              [os.path.join(STRATEGY_MATH_DIR, "strategy_b.py"), os.path.join(STRATEGY_MATH_DIR, "common.py")]),
-        "C": (os.path.join(STRATEGY_DIR, "05_strategy_c.md"),
-              [C_OPTIONS_MATH]),
-        "D": (os.path.join(STRATEGY_DIR, "06_strategy_d.md"),
-              [os.path.join(STRATEGY_MATH_DIR, "strategy_d.py"), os.path.join(STRATEGY_MATH_DIR, "common.py")]),
-        "E": (os.path.join(STRATEGY_DIR, "07_strategy_e.md"),
-              [os.path.join(STRATEGY_MATH_DIR, "strategy_e.py"), os.path.join(STRATEGY_MATH_DIR, "common.py")]),
+    module_paths_by_code = {
+        "A": [os.path.join(STRATEGY_MATH_DIR, "strategy_a.py"), os.path.join(STRATEGY_MATH_DIR, "common.py")],
+        "B": [os.path.join(STRATEGY_MATH_DIR, "strategy_b.py"), os.path.join(STRATEGY_MATH_DIR, "common.py")],
+        "C": [C_OPTIONS_MATH],
+        "D": [os.path.join(STRATEGY_MATH_DIR, "strategy_d.py"), os.path.join(STRATEGY_MATH_DIR, "common.py")],
+        "E": [os.path.join(STRATEGY_MATH_DIR, "strategy_e.py"), os.path.join(STRATEGY_MATH_DIR, "common.py")],
     }
+    out = {}
+    for code, module_paths in module_paths_by_code.items():
+        # No slice heading matched at all (not a renumber — the slice is genuinely gone, or its heading
+        # rotted): fall back to a path that provably does not exist, so the existing "spec_hash input(s)
+        # ... are missing" R-F error still fires unchanged, rather than a None-path crash.
+        md_path = _find_slice_by_heading(code) or os.path.join(
+            STRATEGY_DIR, f"MISSING_STRATEGY_{code}_SLICE.md")
+        out[code] = (md_path, module_paths)
+    return out
 
 LIFECYCLE_STATES = ("CANDIDATE", "QUALIFYING", "AUTHORING", "UNDER_REVIEW", "SHADOW", "PAPER",
                     "PROBE", "ADOPTED", "RETIREMENT_PROPOSED", "TERMINATED", "POST_MORTEM", "REJECTED")

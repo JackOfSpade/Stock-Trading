@@ -19,6 +19,17 @@ def test_find_orphaned_markdown_files_ignores_expected_and_hand_maintained(tmp_p
     ) == ["stale.md"]
 
 
+def test_find_orphaned_markdown_files_empty_when_outdir_does_not_exist(tmp_path):
+    # check_or_write_slices always os.makedirs(outdir) before computing orphans, so this branch
+    # (outdir never created at all) is only reachable by calling find_orphaned_markdown_files
+    # directly, never via the main()/--check path -- cover it here explicitly.
+    assert find_orphaned_markdown_files(
+        str(tmp_path / "does_not_exist"),
+        {"00_preamble.md": "..."},
+        set(),
+    ) == []
+
+
 def test_check_or_write_slices_writes_then_passes_check(tmp_path, capsys):
     files = {"a.md": "A\n", "b.md": "B\n"}
 

@@ -44,6 +44,7 @@ Read-only, no BigQuery/dbt CLI needed — pure text parsing of files already in 
 
 Usage:  python scripts/check_superseded_markers.py   # exit 0 = OK; 1 = new violation or stale baseline
 """
+import bisect
 import collections
 import os
 import re
@@ -109,6 +110,15 @@ def _preceding_comment(lines, idx):
     return "\n".join(reversed(out))
 
 
+def _line_offsets(text):
+    """Cumulative start-of-line character offsets in `text`, for mapping a regex match.start() back
+    to a 0-based line index (matching `text.splitlines()` indexing) via bisect."""
+    offsets = [0]
+    for m in re.finditer("\n", text):
+        offsets.append(m.end())
+    return offsets
+
+
 def definitions():
     """{(kind, dataset, name): [(number, filename, line_index), ...]} across numbered bigquery/*.sql."""
     found = collections.defaultdict(list)
@@ -117,12 +127,18 @@ def definitions():
         path = os.path.join(BIGQUERY_DIR, fn)
         if not m or os.path.isdir(path):
             continue
-        lines = open(path, encoding="utf-8").read().splitlines()
-        for i, ln in enumerate(lines):
-            hit = OBJECT_DDL.search(ln)
-            if hit:
-                kind = " ".join(hit.group(1).upper().split())
-                found[(kind, hit.group(2), hit.group(3))].append((int(m.group(1)), fn, i))
+        text = open(path, encoding="utf-8").read()
+        # Match against the WHOLE file text, not line-by-line: `\s+` in OBJECT_DDL already spans
+        # newlines, so a CREATE statement legally wrapped across two lines (e.g. the keyword and the
+        # backtick-quoted name on separate lines, a common BigQuery style) is still recognized here.
+        # A per-line search would silently never record that occurrence at all -- collapsing
+        # `occurrences` to a single filename and letting an unmarked OLDER definition slip through
+        # uncompared, the exact dead-end-chain trap this script exists to catch (see header).
+        offsets = _line_offsets(text)
+        for hit in OBJECT_DDL.finditer(text):
+            kind = " ".join(hit.group(1).upper().split())
+            line_idx = bisect.bisect_right(offsets, hit.start()) - 1
+            found[(kind, hit.group(2), hit.group(3))].append((int(m.group(1)), fn, line_idx))
     return found
 
 
@@ -141,7 +157,10 @@ def marks_superseded(text, canonical_number):
     n = canonical_number
     return bool(
         re.search(rf"bigquery/0*{n}\b", text)
-        or re.search(rf"\b0*{n}_[a-z]", text)
+        # [A-Za-z]: NUMBERED_FILE (^(\d+)_.*\.sql$) doesn't forbid an uppercase first letter after the
+        # numeric prefix (e.g. a future 99_ParkRebalance.sql), so a correctly-marked pointer to one
+        # must not be rejected just because this class was hardcoded lowercase-only.
+        or re.search(rf"\b0*{n}_[A-Za-z]", text)
     )
 
 

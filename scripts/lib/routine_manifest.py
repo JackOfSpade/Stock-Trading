@@ -39,6 +39,15 @@ def heading_to_id(h):
     return None
 
 
+def instruction_text(heading):
+    """The canonical trigger-instruction string for a Claude_Task_Plan.md routine heading -- the
+    single source for a template that is otherwise the load-bearing contract for ops/triggers.json's
+    `instruction` field, bigquery/15's `canonical_instruction` column, and print_routines.py's
+    display, all of which MUST agree byte-for-byte (2026-07-20 audit finding: this exact f-string was
+    independently re-literalized in 3 places with no test cross-checking them)."""
+    return f"Read Claude_Task_Plan.md. Perform {heading}."
+
+
 def build_triggers_manifest(headings, cad):
     """The canonical {id: {monitor_class, instruction}} map — the same shape
     print_routines.py --write emits to ops/triggers.json and
@@ -46,7 +55,7 @@ def build_triggers_manifest(headings, cad):
     return {
         rid: {
             "monitor_class": cad.get(rid, {}).get("monitor_class"),
-            "instruction": f"Read Claude_Task_Plan.md. Perform {h}.",
+            "instruction": instruction_text(h),
         }
         for h in headings
         for rid in [heading_to_id(h)]

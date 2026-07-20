@@ -21,7 +21,9 @@ Two column adjustments make the EXCEPT well-defined:
   * VOLATILE_COLS — columns evaluated fresh each query (CURRENT_TIMESTAMP) can never match across
     two evaluations, so they are dropped from the compare.
   * JSON/ARRAY/STRUCT columns don't support set-operation comparison, so they are wrapped in
-    TO_JSON_STRING() (applied identically to both sides) instead of being skipped.
+    TO_JSON_STRING() (applied identically to both sides) instead of being skipped. GEOGRAPHY/
+    INTERVAL/RANGE have the same set-operation problem but TO_JSON_STRING() doesn't accept them, so
+    those are wrapped in SAFE_CAST(... AS STRING) instead (2026-07-20 audit).
 """
 import os
 import subprocess  # noqa: F401 — kept so tests can monkeypatch subprocess.run/TimeoutExpired at the module level
@@ -40,11 +42,14 @@ VOLATILE_COLS = {"checked_at"}
 # hiccup. live_columns() already succeeded (auth + object existence proven), so a subsequent parity-
 # query error naming one of these is real drift `dbt parse` cannot catch — most commonly a dbt port
 # that lacks a column its live view has (`SELECT <col> FROM (compiled)` -> "Unrecognized name"), a
-# column type present on both sides that EXCEPT DISTINCT can't compare (GEOGRAPHY/INTERVAL/RANGE ->
-# "cannot be used in set operations"), or a column whose TYPE DIFFERS between the dbt port and the
-# live view so the two EXCEPT sides don't line up ("… has incompatible types: INT64, STRING" ->
-# "incompatible types"; added 2026-07-17 parallel-refactor audit — a type-drifted column is exactly
-# the schema drift `dbt parse` cannot catch, yet its error matched none of the other markers and so
+# column type col_expr() doesn't yet know to serialize before the compare ("cannot be used in set
+# operations" — col_expr() already covers the known offenders, JSON/ARRAY/STRUCT/GEOGRAPHY/INTERVAL/
+# RANGE, so a genuinely-matching column of one of those no longer reaches this marker; a future
+# BigQuery type col_expr() hasn't been taught yet still would), or a column whose TYPE DIFFERS
+# between the dbt port and the live view so the two EXCEPT sides don't line up ("… has incompatible
+# types: INT64, STRING" -> "incompatible types"; added 2026-07-17 parallel-refactor audit — a
+# type-drifted column is exactly the schema drift `dbt parse` cannot catch, yet its error matched
+# none of the other markers and so
 # was mis-routed to a tolerant skip that passed green). These FAIL CLOSED (see main()'s `errors`)
 # instead of being swallowed as a benign skip, which let schema drift pass green even in
 # DBT_PARITY=block (2026-07-17 audit). A genuinely transient error (timeout, network, quota) matches
@@ -85,12 +90,19 @@ PARITY_ALIAS = "parity_src"
 
 def col_expr(col, alias=PARITY_ALIAS):
     """SQL expression for one column in the EXCEPT. JSON/ARRAY/STRUCT can't be set-compared, so
-    serialize them deterministically; scalars compare directly. Always alias-qualified — see
-    PARITY_ALIAS for why a bare column reference is unsafe."""
+    serialize them deterministically via TO_JSON_STRING(). GEOGRAPHY/INTERVAL/RANGE have the same
+    "cannot be used in set operations" problem but TO_JSON_STRING() doesn't accept them — BigQuery
+    supports an explicit CAST to STRING for all three, so SAFE_CAST(... AS STRING) serializes those
+    instead (SAFE_CAST so a value the cast can't handle yields NULL — which still compares — rather
+    than erroring the whole query; 2026-07-20 audit). RANGE reports as `RANGE<DATE>` etc. in
+    INFORMATION_SCHEMA.COLUMNS, not a bare `RANGE` literal, hence the prefix check. Scalars compare
+    directly. Always alias-qualified — see PARITY_ALIAS for why a bare column reference is unsafe."""
     name, dtype = col["column_name"], col["data_type"]
     q = f"{alias}.`{name}`"
     if dtype == "JSON" or dtype.startswith("ARRAY") or dtype.startswith("STRUCT"):
         return f"TO_JSON_STRING({q})"
+    if dtype == "GEOGRAPHY" or dtype == "INTERVAL" or dtype.startswith("RANGE"):
+        return f"SAFE_CAST({q} AS STRING)"
     return q
 
 
@@ -141,10 +153,22 @@ def main():
         compiled_names.add((dataset, name))
         live = f"`{PROJECT}`.{dataset}.{name}"
         try:
-            cols = [c for c in live_columns(dataset, name) if c["column_name"] not in VOLATILE_COLS]
+            raw_cols = live_columns(dataset, name)
         except Exception as e:
             skipped.append(f"{dataset}.{name} (no live object? {e})")
             continue
+        if not raw_cols:
+            # BigQuery's INFORMATION_SCHEMA.COLUMNS does NOT error on a `table_name` filter that
+            # matches nothing — it just returns zero rows, so a live view that was deleted or
+            # renamed looks identical, by row count alone, to "the view exists but every column is
+            # volatile" below. That's the exact 'OK on zero real comparisons' hazard this module's
+            # docstring warns against, just triggered per-model instead of project-wide — fail
+            # closed and name the missing object, instead of routing to the tolerant skip meant for
+            # the genuinely-benign all-volatile case (2026-07-20 audit).
+            errors.append(f"{dataset}.{name} (0 columns returned for live object {live} — it was "
+                          f"likely deleted or renamed)")
+            continue
+        cols = [c for c in raw_cols if c["column_name"] not in VOLATILE_COLS]
         if not cols:
             skipped.append(f"{dataset}.{name} (no comparable columns)")
             continue

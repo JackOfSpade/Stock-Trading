@@ -47,7 +47,7 @@ except ImportError:
     raise SystemExit(2)
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.routine_manifest import parse_routine_headings, heading_to_id  # noqa: E402
+from lib.routine_manifest import parse_routine_headings, heading_to_id, instruction_text  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLAN = os.path.join(ROOT, "Claude_Task_Plan.md")
@@ -116,7 +116,7 @@ def gen_15_region(routines, head_by_id):
     for i, r in enumerate(routines):
         rid = r["id"]
         heading = head_by_id.get(rid)
-        instr = f"Read Claude_Task_Plan.md. Perform {heading}." if heading else ""
+        instr = instruction_text(heading) if heading else ""
         comma = "," if i < n - 1 else ""
         # rid is a constrained \w+ id (never quoted), so only the free-text instruction needs escaping
         # -- and check B un-escapes only the instruction capture, so escaping only it keeps the two

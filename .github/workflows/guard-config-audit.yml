@@ -142,6 +142,9 @@ jobs:
         if: steps.eval.outputs.problem == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          # BUG FIX (2026-07-20 code-review, C24): same half-set-var fix as the sibling "Close stale
+          # alert issue if resolved" step below — see its env-block comment for the full rationale.
+          WIF_LIVE: ${{ steps.wifguard.outputs.skip == 'false' }}
         run: |
           set -uo pipefail
           {
@@ -166,7 +169,7 @@ jobs:
           # bridge WIF auth actually ran (vars unset -> no bq CLI credentials -> skip cleanly). Table-
           # scoped gh-ci-runner@ dataEditor grant on ops.ci_findings still needed for the write to land
           # (OWNER_ACTIONS.md); GH issue path above is unaffected either way.
-          if [ -n "${{ vars.GCP_WIF_PROVIDER }}" ]; then
+          if [ "$WIF_LIVE" = "true" ]; then
             detail=$(head -c 4000 /tmp/loadbearing.txt)
             # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted BigQuery
             # identifiers and @p_detail/@p_url named parameters must stay literal, not shell-expanded.
@@ -178,6 +181,17 @@ jobs:
         if: steps.eval.outputs.problem == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
+          # BUG FIX (2026-07-20 code-review, C24): gate the bq-query block below on the SAME both-vars
+          # condition that actually ran the auth step (steps.wifguard.outputs.skip), not a re-check of
+          # GCP_WIF_PROVIDER alone. A half-set pair (PROVIDER set, SERVICE_ACCOUNT unset) makes wifguard
+          # skip auth (no gcloud/bq credentials at all) while this inline check would still pass, so
+          # `bq query` was failing on missing creds and the failure got swallowed and misattributed to
+          # "bridge inactive until the grant lands" instead of the real half-set-var cause. Matches the
+          # step-level `steps.guard.outputs.skip == 'false'` idiom every sibling workflow uses (keyless-
+          # sa-audit, wif-binding-audit, offsite-backup, sql-dryrun-sweep, live-sql-parity), applied here
+          # as an env var (mirroring auto-merge-claude.yml's WIF_CONFIGURED) since this step's own `if:`
+          # is already spoken for by steps.eval.outputs.problem.
+          WIF_LIVE: ${{ steps.wifguard.outputs.skip == 'false' }}
         run: |
           set -uo pipefail
           existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
@@ -190,7 +204,7 @@ jobs:
           # CI-findings bridge (2026-07-16, CC-1): unconditional resolved-row INSERT (when the bridge's
           # own WIF auth ran) so a manually-closed GH issue never strands an open ops.ci_findings row.
           # Non-fatal until the grant lands; skipped cleanly (no bq CLI) when WIF vars are unset.
-          if [ -n "${{ vars.GCP_WIF_PROVIDER }}" ]; then
+          if [ "$WIF_LIVE" = "true" ]; then
             # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted BigQuery
             # identifier and @p_url named parameter must stay literal, not shell-expanded.
             bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("guard-config-audit","guard_config","resolved","audit clean this run",@p_url)' || echo "::warning::ops.ci_findings resolved-row insert failed — bridge inactive until the gh-ci-runner@ grant lands; GH issue path unaffected."

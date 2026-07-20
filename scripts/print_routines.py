@@ -52,7 +52,12 @@ except ImportError:
     raise SystemExit(2)
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.routine_manifest import heading_to_id, parse_routine_headings, build_triggers_manifest  # noqa: E402
+from lib.routine_manifest import (  # noqa: E402
+    build_triggers_manifest,
+    heading_to_id,
+    instruction_text,
+    parse_routine_headings,
+)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLAN = os.path.join(ROOT, "Claude_Task_Plan.md")
@@ -87,7 +92,7 @@ def main():
         r = cad.get(rid, {})
         deps = ", ".join(r.get("depends_on") or []) or "—"
         print(f"{rid}   cadence: {r.get('schedule', '(not in cadence.yaml)')}   deps: {deps}")
-        print(f"   instruction: Read Claude_Task_Plan.md. Perform {h}.")
+        print(f"   instruction: {instruction_text(h)}")
         print()
     print("=" * 100)
     print(f"{len(headings)} routines.")

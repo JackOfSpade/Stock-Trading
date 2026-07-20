@@ -27,6 +27,7 @@ BQ_TIMEOUT_S = 600
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 from lib.bq_json import parse_bq_json_stdout  # noqa: E402
+from lib import tz_render  # noqa: E402
 
 
 def q(sql: str):
@@ -80,34 +81,27 @@ def beat_heartbeat():
 def get_user_tz():
     """Detected DISPLAY timezone (state.user_tz — bigquery/20_user_prefs.sql). Purely cosmetic:
     changes how timestamps are RENDERED to the operator, never any query logic. Falls back to
-    America/Denver (never bare UTC) so a missing view or a fresh deploy still reads sensibly."""
-    try:
-        rows = q(f"SELECT tz FROM `{PROJECT}.state.user_tz`")
-        # `... or "America/Denver"` coalesces a NULL/empty tz too (not just an empty result set): a
-        # None tz would otherwise reach fmt_ts, where ZoneInfo(None) raises TypeError and crashes the
-        # render loop (that TypeError is outside main()'s query-only except tuple). state.user_tz's
-        # view already COALESCEs NULL, so this is defense-in-depth for a schema change.
-        return (rows[0]["tz"] if rows else None) or "America/Denver"
-    except Exception:
-        return "America/Denver"
+    America/Denver (never bare UTC) so a missing view or a fresh deploy still reads sensibly.
+
+    Thin wrapper over the shared core (scripts/lib/tz_render.py, 2026-07-20 dedup consolidation —
+    this exact NULL/empty/error-falls-back-to-Denver logic had independently drifted from
+    scripts/alert_relay.py's copy). Passes `q` itself, not a query result, so a test's
+    `monkeypatch.setattr(gd, "q", ...)` is honored — the core calls back into whatever `q` resolves
+    to in this module at call time."""
+    return tz_render.get_display_tz(q, PROJECT)
 
 
 def fmt_ts(v, tz_name):
     """Render a BigQuery TIMESTAMP string (UTC) in tz_name, labeled — never a bare unlabeled UTC
     string (the prior dashboard behavior: alert_ts/log_ts rendered raw, unlike the alert emailer
-    which at least appended ' UTC')."""
+    which at least appended ' UTC'). The parse/localize half is the shared core
+    (scripts/lib/tz_render.py); this wrapper keeps this site's own falsy-v passthrough (return `v`
+    unchanged, not a labeled fallback string — alert_relay.py's sibling deliberately does NOT match
+    this) and its "(UTC)" fallback label."""
     if not v or ZoneInfo is None:
         return v
     try:
-        s = str(v).strip()
-        if s.endswith(" UTC"):
-            s = s[:-4]
-        if s.endswith("Z"):
-            s = s[:-1] + "+00:00"
-        dt = datetime.fromisoformat(s)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt.astimezone(ZoneInfo(tz_name)).strftime("%Y-%m-%d %H:%M") + f" ({tz_name})"
+        return tz_render.render_ts(v, tz_name)
     except (ValueError, KeyError):
         return f"{v} (UTC)"
 

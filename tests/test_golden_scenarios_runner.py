@@ -471,3 +471,33 @@ def test_main_live_returns_0_when_no_provider_configured(monkeypatch):
     monkeypatch.setattr(sys, "argv", ["run_golden.py", "--live"])
     monkeypatch.setattr(rg, "_select_live_caller", lambda: None)
     assert rg.main() == 0
+
+
+def test_main_live_prints_summary_counts_and_per_row_labels(monkeypatch, capsys):
+    # Drive the aggregation/print path at run_golden.py:502-508 directly, bypassing run_live()'s own
+    # internals (already covered by the test_run_live_* tests above) — main() must count and label a
+    # mixed match/flip/error results list correctly, since this print IS what a human triaging a live
+    # CI run actually reads (module docstring: advisory, continue-on-error).
+    monkeypatch.setattr(sys, "argv", ["run_golden.py", "--live"])
+    mixed_results = [
+        {"id": "A", "expected": "GO", "actual": "GO", "match": True, "reply": "r", "model": "m"},
+        {"id": "B", "expected": "GO", "actual": "NO-GO", "match": False, "reply": "r", "model": "m"},
+        {"id": "C", "expected": "GO", "actual": None, "match": None, "reply": "boom", "model": None},
+    ]
+    monkeypatch.setattr(rg, "run_live", lambda scenarios, scenario_ids=None: mixed_results)
+    assert rg.main() == 0
+    out = capsys.readouterr().out
+    assert "Live results: 1 match, 1 flip(s), 1 error(s) out of 3." in out
+    assert "[MATCH] A: expected='GO' actual='GO'" in out
+    assert "[FLIP] B: expected='GO' actual='NO-GO'" in out
+    assert "[ERROR] C: expected='GO' actual=None" in out
+
+
+def test_main_live_scenario_unknown_id_prints_warning(monkeypatch, capsys):
+    # run_golden.py:492-496 — --scenario ids not present in scenarios.yaml must be flagged with a
+    # ::warning:: annotation so a typo'd filter doesn't silently run zero scenarios unnoticed.
+    monkeypatch.setattr(sys, "argv", ["run_golden.py", "--live", "--scenario", "nonexistent-id"])
+    monkeypatch.setattr(rg, "run_live", lambda scenarios, scenario_ids=None: [])
+    assert rg.main() == 0
+    err = capsys.readouterr().err
+    assert "::warning::--scenario id(s) not found in scenarios.yaml: ['nonexistent-id']" in err

@@ -166,6 +166,18 @@ def load_cadence():
     return {r["id"]: r for r in doc.get("routines", [])}
 
 
+def cadence_duplicate_ids():
+    """[id, ...] (sorted, deduped) for any routine id appearing more than once in ops/cadence.yaml's
+    routines list. load_cadence()'s dict comprehension above silently keeps only the LAST such entry
+    (valid YAML, no parse error -- a duplicate `id:` across list items, not a duplicate mapping key),
+    so every downstream check would validate against whichever duplicate happened to be listed last
+    with zero signal. This walks the raw list first so a duplicate id fails loud instead, mirroring
+    the duplicate Claude_Task_Plan.md heading check main() already does for `head_by_id` below."""
+    doc = yaml.safe_load(open(CADENCE, encoding="utf-8")) or {}
+    ids = [r["id"] for r in doc.get("routines", [])]
+    return sorted({i for i in ids if ids.count(i) > 1})
+
+
 def parse_expected_sql():
     """{routine: schedule_class} from the STRUCT(... AS routine, ... AS schedule) list in 12_*.sql."""
     txt = open(CADENCE_SQL, encoding="utf-8").read()
@@ -322,6 +334,12 @@ def main():
     cad = load_cadence()
     headings = plan_headings()
     errors = []
+
+    # ---- duplicate routine id in ops/cadence.yaml's routines list (silently collapsed by
+    # load_cadence()'s dict comprehension otherwise -- see cadence_duplicate_ids()'s docstring) ----
+    for rid in cadence_duplicate_ids():
+        errors.append(f"ops/cadence.yaml: duplicate routine id '{rid}' — each routine id must "
+                      f"appear exactly once")
 
     # ---- canonical maps from the SOURCE OF TRUTH (cadence.yaml + the plan) ----
     head_by_id, dup = {}, []

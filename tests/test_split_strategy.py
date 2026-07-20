@@ -175,35 +175,6 @@ def test_main_check_mode_reports_drift_without_writing(tmp_path, monkeypatch, ca
     assert "in sync" in capsys.readouterr().out
 
 
-# ---- find_orphans() -------------------------------------------------------------------------------
-
-def test_find_orphans_flags_stale_file_not_in_build_output_or_hand_maintained(tmp_path, monkeypatch):
-    outdir = tmp_path / "strategy"
-    outdir.mkdir()
-    (outdir / "03_removed_section.md").write_text("stale leftover from a renamed/removed section")
-    (outdir / "README.md").write_text("hand-maintained, never generated")
-    monkeypatch.setattr(ss, "OUTDIR", str(outdir))
-
-    current_files = {"00_preamble.md": "...", "01_kept_section.md": "...", "INDEX.md": "..."}
-    orphans = ss.find_orphans(current_files)
-
-    assert orphans == ["03_removed_section.md"]
-
-
-def test_find_orphans_empty_when_outdir_does_not_exist(tmp_path, monkeypatch):
-    monkeypatch.setattr(ss, "OUTDIR", str(tmp_path / "does_not_exist"))
-    assert ss.find_orphans({"00_preamble.md": "..."}) == []
-
-
-def test_find_orphans_empty_when_everything_current_or_hand_maintained(tmp_path, monkeypatch):
-    outdir = tmp_path / "strategy"
-    outdir.mkdir()
-    (outdir / "00_preamble.md").write_text("...")
-    (outdir / "README.md").write_text("hand-maintained")
-    monkeypatch.setattr(ss, "OUTDIR", str(outdir))
-    assert ss.find_orphans({"00_preamble.md": "..."}) == []
-
-
 # ---- slug() edge cases: empty-title fallback + anchored strategy-letter rule -------------------
 
 def test_slug_all_punctuation_title_falls_back_to_section():
@@ -241,7 +212,7 @@ def test_split_ignores_hash_headings_inside_a_tilde_fenced_block():
     assert "more body a" in sections[0][1]
 
 
-# ---- main(): orphan handling driven end-to-end (find_orphans was only unit-tested in isolation) --
+# ---- main(): orphan handling driven end-to-end via check_or_write_slices ----------------------
 
 def test_main_check_flags_orphan_and_returns_1(tmp_path, monkeypatch, capsys):
     src = tmp_path / "Strategy.md"

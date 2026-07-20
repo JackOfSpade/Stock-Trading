@@ -11,6 +11,7 @@ from scripts.lib.routine_manifest import (
     ROUTINE_SUFFIX,
     build_triggers_manifest,
     heading_to_id,
+    instruction_text,
     parse_routine_headings,
 )
 
@@ -49,6 +50,17 @@ def test_parse_routine_headings_filters_and_preserves_order(tmp_path):
         "D1. First — deep research",
         "D2. Second — regular routine",
     ]
+
+
+# ---- instruction_text: the single template shared by build_triggers_manifest, gen_routine_lists.py's
+# gen_15_region (bigquery/15 canonical_instruction), and print_routines.py's display line -------------
+def test_instruction_text_exact_template():
+    # Pin the literal template string byte-for-byte: ops/triggers.json's `instruction`, bigquery/15's
+    # `canonical_instruction`, and print_routines.py's printed line all must render identically to this
+    # (2026-07-20 audit finding: the same f-string was independently re-literalized in 3 places).
+    assert instruction_text("D1. Market Development Scan — deep research") == (
+        "Read Claude_Task_Plan.md. Perform D1. Market Development Scan — deep research."
+    )
 
 
 # ---- build_triggers_manifest: the {id: {monitor_class, instruction}} contract ---------------------

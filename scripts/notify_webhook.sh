@@ -30,7 +30,13 @@ fi
 
 case "$WEBHOOK_URL" in
   *ntfy.sh*)
-    curl -fsS -X POST -H 'Title: Stock-Trading' --data "$msg" "$WEBHOOK_URL" \
+    # BUG FIX (2026-07-20 code-review, C18): --data-raw, not --data. curl gives --data a special
+    # meaning when its value starts with the literal character '@' (read the POST body from a file
+    # of that name instead of sending the string) -- an interpolated message ($offenders, $problems,
+    # etc.) that happens to start with '@' would silently fail (file not found) or, worse, send an
+    # unrelated local file's bytes instead. --data-raw sends every input, including a leading '@',
+    # literally -- a drop-in, behavior-preserving fix for every message sent so far.
+    curl -fsS -X POST -H 'Title: Stock-Trading' --data-raw "$msg" "$WEBHOOK_URL" \
       || echo "::warning::webhook post failed (the caller's own failure still stands)."
     ;;
   *)

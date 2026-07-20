@@ -210,6 +210,20 @@ def _check_cadence_heartbeat_coverage(errors):
             "scripts/check_autonomy_consistency.py")
 
 
+def duplicate_loop_ids(loops):
+    """[id, ...] (sorted, deduped) for any loop id appearing more than once in ops/autonomy_levels.yaml's
+    'loops' list. load_stages()'s dict comprehension above silently keeps only the LAST such entry
+    (valid YAML -- a duplicate `id:` across list items, not a duplicate mapping key) when, say, a
+    copy-pasted-then-half-edited block leaves two entries sharing the same id (this file's own
+    docstring already worries about a copy-pasted-then-forgotten citation, line 14 -- a copy-pasted
+    loop block is the same failure mode one level up). Every other structural hazard in this register
+    (unknown stage/ceiling vocabulary, stage>ceiling, stale citations) has a dedicated fail-loud check;
+    a duplicated id had none, so active_auto_loops()/_check_citations()/_check_cadence_heartbeat_
+    coverage() would all silently validate against whichever duplicate happened to be listed last."""
+    ids = [loop["id"] for loop in loops if "id" in loop]
+    return sorted({i for i in ids if ids.count(i) > 1})
+
+
 def check_stage_ceiling_invariant(loops):
     """Error strings for any loop (a list of {id, stage, ceiling, ...} dicts, e.g. ops/autonomy_levels.yaml's
     top-level 'loops' list) with an unknown stage/ceiling vocabulary word, or whose stage exceeds its
@@ -247,6 +261,9 @@ def main():
     # ---- stage enum + stage<=ceiling invariant (register self-consistency) ----
     _doc = yaml.safe_load(open(AUTONOMY, encoding="utf-8")) or {}
     errors.extend(check_stage_ceiling_invariant(_doc.get("loops", [])))
+    for lid in duplicate_loop_ids(_doc.get("loops", [])):
+        errors.append(f"ops/autonomy_levels.yaml: loop '{lid}' id is duplicated in the loops list — "
+                      f"each loop id must appear exactly once")
 
     _check_cadence_heartbeat_coverage(errors)
 

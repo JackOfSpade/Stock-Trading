@@ -11,7 +11,6 @@ import sys
 
 import pytest
 
-from conftest import fake_subprocess_run as _fake_run
 from conftest import load_module_from_path
 
 clsp = load_module_from_path("check_live_sql_parity", "scripts", "check_live_sql_parity.py")
@@ -234,25 +233,19 @@ def test_extract_body_table_function_genuine_wrapper_around_union_stays_correct(
     assert body == "(SELECT p AS y) UNION ALL (SELECT p + 1 AS y)"
 
 
-# ---- bq(): the subprocess/JSON-slice wrapper (same regressed class as dbt_parity.bq) --------------
-def test_bq_parses_banner_prefixed_json(monkeypatch):
-    monkeypatch.setattr(clsp.subprocess, "run",
-                        _fake_run(0, 'Waiting on bqjob [RUNNING]\n[{"view_definition": "SELECT 1"}]'))
+# ---- bq(): thin delegation to lib/bq_json.run_bq_query -- the shared subprocess-invoke/JSON-parse/
+# returncode/timeout contract is proven ONCE on run_bq_query itself (tests/test_bq_json.py); this
+# just pins that THIS caller forwards sql/project with no extra fixed args (plain delegation, unlike
+# roster/dbt_parity/alert_relay's max_rows=N) (C3 dedup, 2026-07-20 audit).
+def test_bq_delegates_to_run_bq_query_with_no_extra_fixed_args(monkeypatch):
+    captured = {}
+
+    def fake_run_bq_query(sql, project):
+        captured["sql"], captured["project"] = sql, project
+        return [{"view_definition": "SELECT 1"}]
+    monkeypatch.setattr(clsp, "run_bq_query", fake_run_bq_query)
     assert clsp.bq("SELECT 1", "proj") == [{"view_definition": "SELECT 1"}]
-
-
-def test_bq_raises_on_nonzero_returncode(monkeypatch):
-    monkeypatch.setattr(clsp.subprocess, "run", _fake_run(1, "", "ERROR: access denied"))
-    with pytest.raises(RuntimeError):
-        clsp.bq("SELECT 1", "proj")
-
-
-def test_bq_raises_runtime_error_on_timeout(monkeypatch):
-    def _boom(cmd, capture_output=None, text=None, timeout=None):
-        raise clsp.subprocess.TimeoutExpired(cmd=cmd, timeout=timeout)
-    monkeypatch.setattr(clsp.subprocess, "run", _boom)
-    with pytest.raises(RuntimeError):
-        clsp.bq("SELECT 1", "proj")
+    assert captured == {"sql": "SELECT 1", "project": "proj"}
 
 
 # ---- live_definition(): per-object-type query shape + key extraction ------------------------------
@@ -287,6 +280,65 @@ def test_live_definition_table_function_reads_routines_with_type_filter(monkeypa
 def test_live_definition_returns_none_when_no_rows(monkeypatch):
     monkeypatch.setattr(clsp, "bq", lambda sql, project: [])
     assert clsp.live_definition("proj", "state", "missing", "VIEW") is None
+
+
+# ---- main(): --project CLI-flag plumbing through to live_definition()/bq() ------------------------
+def test_main_passes_project_flag_through(monkeypatch):
+    # Locks the exact bug class the code comment at main()'s live_definition() call site guards
+    # against ("a parsed-but-ignored argument") -- mirrors
+    # test_check_live_roster_parity.py's test_main_passes_project_flag_through.
+    captured = {}
+    monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py", "--project", "custom-proj-9"])
+    monkeypatch.setattr(clsp, "find_final_definitions",
+                        lambda: {("state", "foo"): ("VIEW", "proj", "01.sql", "SELECT 1 AS x")})
+
+    def fake_live_definition(project, ds, nm, ot):
+        captured["project"] = project
+        return "SELECT 1 AS x"
+    monkeypatch.setattr(clsp, "live_definition", fake_live_definition)
+    assert clsp.main() == 0
+    assert captured["project"] == "custom-proj-9"
+
+
+def test_main_passes_project_flag_through_gnu_equals_form(monkeypatch):
+    # Same lock as test_main_passes_project_flag_through above, but pins the GNU `--project=X`
+    # single-token form specifically. This is the half of the 2026-07-20 fix the two-token form alone
+    # doesn't cover: the OLD hand-rolled argv loop only matched `--project X` (two tokens), so
+    # `--project=X` silently kept the hardcoded default project -- a test using only the two-token
+    # form would have passed against that old buggy code too and missed the regression entirely.
+    captured = {}
+    monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py", "--project=custom-proj-9"])
+    monkeypatch.setattr(clsp, "find_final_definitions",
+                        lambda: {("state", "foo"): ("VIEW", "proj", "01.sql", "SELECT 1 AS x")})
+
+    def fake_live_definition(project, ds, nm, ot):
+        captured["project"] = project
+        return "SELECT 1 AS x"
+    monkeypatch.setattr(clsp, "live_definition", fake_live_definition)
+    assert clsp.main() == 0
+    assert captured["project"] == "custom-proj-9"
+
+
+def test_main_unrecognized_flag_is_hard_error(monkeypatch):
+    # argparse turns an unknown flag into a hard SystemExit (argparse's usage-error exit) instead of
+    # the old hand-rolled argv loop's silent no-op -- pins the other half of the 2026-07-20 fix.
+    monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py", "--bogus"])
+    with pytest.raises(SystemExit):
+        clsp.main()
+
+
+def test_main_default_project_is_stock_trading(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py"])
+    monkeypatch.setattr(clsp, "find_final_definitions",
+                        lambda: {("state", "foo"): ("VIEW", "proj", "01.sql", "SELECT 1 AS x")})
+
+    def fake_live_definition(project, ds, nm, ot):
+        captured["project"] = project
+        return "SELECT 1 AS x"
+    monkeypatch.setattr(clsp, "live_definition", fake_live_definition)
+    assert clsp.main() == 0
+    assert captured["project"] == "stock-trading-498512"
 
 
 # ---- main(): offline flag, drift/clean exit codes, and the missing-live skip ----------------------

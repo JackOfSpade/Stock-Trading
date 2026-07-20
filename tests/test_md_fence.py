@@ -50,3 +50,16 @@ def test_fence_mask_adjacent_fences_toggle_independently():
     # Two back-to-back fenced blocks: the mask must re-open after closing, not stay closed forever.
     lines = ["```", "a", "```", "```", "b", "```", "after"]
     assert fence_mask(lines) == [True, True, False, True, True, False, False]
+
+
+def test_fence_mask_tilde_inside_backtick_fence_is_content_not_a_close():
+    # CommonMark: a fence is closed only by the SAME delimiter that opened it. A column-0 ~~~
+    # line while a ``` fence is open is fence-internal content, not a close.
+    lines = ["x", "```", "code line 1", "~~~", "still code?", "```", "after"]
+    assert fence_mask(lines) == [False, True, True, True, True, False, False]
+
+
+def test_fence_mask_backtick_inside_tilde_fence_is_content_not_a_close():
+    # The mirror case: a column-0 ``` line while a ~~~ fence is open must not close it either.
+    lines = ["x", "~~~", "code line 1", "```", "still code?", "~~~", "after"]
+    assert fence_mask(lines) == [False, True, True, True, True, False, False]

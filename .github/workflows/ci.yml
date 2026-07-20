@@ -72,6 +72,8 @@ jobs:
         run: python scripts/check_settings_toolcov.py
       - name: auto-merge decision logic (CI-gate + delete-safety fixtures — 2026-07-04 code-quality audit)
         run: bash tests/test_auto_merge_logic.sh
+      - name: notify_webhook.sh curl-invocation tests (ntfy.sh / default-JSON branches, C19 code-review)
+        run: bash tests/test_notify_webhook.sh
       - name: weekly_report.gs / alert_emailer.gs pure-helper tests (esc_/esc2_, periodAvg_, alertSubject_, ...)
         # No actions/setup-node step needed -- ubuntu-latest ships Node preinstalled and the script
         # only uses the built-in `assert` module (no package.json/npm install anywhere in the repo).
@@ -119,7 +121,26 @@ jobs:
       - name: actionlint (workflow YAML + embedded run-block bash via shellcheck)
         run: ./actionlint -color
       - name: shellcheck standalone scripts (warning+ blocks)
-        run: shellcheck -S warning scripts/*.sh tests/*.sh .claude/*.sh infra/terraform/*.sh
+        run: |
+          set -euo pipefail
+          # BUG FIX (2026-07-20 code-review, C23): nullglob so a non-matching pattern vanishes instead of
+          # staying LITERAL (bash's default when nothing matches a glob) -- without it, an unmatched glob
+          # string (.claude/*.sh and infra/terraform/*.sh each currently match exactly ONE file, so
+          # deleting/renaming/moving either reproduces this immediately) is passed to shellcheck as a
+          # literal, nonexistent path argument, which fails this BLOCKING GATE (not continue-on-error --
+          # auto-merge-claude.yml gates every branch's merge on this exact CI run) with a spurious "no
+          # such file" error instead of a real lint finding. Mirrors the identical idiom already used for
+          # the sql-validate job's fail-open glob further down this file (rev 2026-07-20b, Finding 2).
+          shopt -s nullglob
+          files=(scripts/*.sh tests/*.sh .claude/*.sh infra/terraform/*.sh)
+          shopt -u nullglob
+          existing=()
+          for f in "${files[@]}"; do [ -f "$f" ] && existing+=("$f"); done
+          if [ "${#existing[@]}" -eq 0 ]; then
+            echo "::error::shellcheck found zero .sh files across scripts/, tests/, .claude/, infra/terraform/ — broken checkout or repo layout, not nothing to check."
+            exit 1
+          fi
+          shellcheck -S warning "${existing[@]}"
       - name: workflow_run trigger names stay in sync (auto-merge-claude.yml <-> ci.yml / golden-scenarios.yml name:)
         # actionlint does NOT catch this (verified): auto-merge-claude.yml's on.workflow_run.workflows
         # matches against a workflow's name: field, not its filename -- a rename to either name:

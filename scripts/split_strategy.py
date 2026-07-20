@@ -25,7 +25,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.md_fence import fence_mask  # noqa: E402
-from lib.slice_writer import check_or_write_slices, find_orphaned_markdown_files, slugify  # noqa: E402
+from lib.slice_writer import check_or_write_slices, slugify  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "Strategy.md")
@@ -89,15 +89,6 @@ def build():
         index.append(f"| {title} | `{name}` |\n")
     files["INDEX.md"] = "".join(index)
     return files
-
-
-def find_orphans(files):
-    """.md files that exist in OUTDIR but do not correspond to any CURRENT Strategy.md heading (or the
-    preamble/index) and are not hand-maintained. A section renamed/removed in Strategy.md leaves its
-    old numbered slice behind forever otherwise — build()'s loop only ever visits keys freshly derived
-    from Strategy.md's CURRENT headings, so it never notices a stale file it no longer intends to
-    (re)write. Returns [] if OUTDIR doesn't exist yet (nothing to be stale)."""
-    return find_orphaned_markdown_files(OUTDIR, files, HAND_MAINTAINED)
 
 
 def main(argv):

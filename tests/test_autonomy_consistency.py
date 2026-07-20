@@ -171,6 +171,44 @@ def test_check_stage_ceiling_invariant_against_real_autonomy_levels_is_clean():
     assert ac.check_stage_ceiling_invariant(doc.get("loops", [])) == []
 
 
+# ---- duplicate_loop_ids: a copy-pasted `- id:` block is valid YAML and loads without error -----------
+def test_duplicate_loop_ids_flags_repeated_id():
+    loops = [
+        {"id": "foo", "stage": "dormant"},
+        {"id": "bar", "stage": "shadow"},
+        {"id": "foo", "stage": "active_auto"},
+    ]
+    assert ac.duplicate_loop_ids(loops) == ["foo"]
+
+
+def test_duplicate_loop_ids_clean_case_is_silent():
+    loops = [{"id": "foo", "stage": "dormant"}, {"id": "bar", "stage": "shadow"}]
+    assert ac.duplicate_loop_ids(loops) == []
+
+
+def test_duplicate_loop_ids_against_real_autonomy_levels_is_clean():
+    doc = ac.yaml.safe_load(open(ac.AUTONOMY, encoding="utf-8")) or {}
+    assert ac.duplicate_loop_ids(doc.get("loops", [])) == []
+
+
+def test_main_fails_on_duplicate_loop_id(tmp_path, monkeypatch, capsys):
+    # Two `- id: dup` entries -- load_stages()'s dict comprehension would otherwise silently keep only
+    # the second entry's stage with zero signal.
+    autonomy = tmp_path / "autonomy_levels.yaml"
+    autonomy.write_text(
+        "loops:\n"
+        "  - id: dup\n    stage: dormant\n"
+        "  - id: dup\n    stage: active_auto\n"
+    )
+    monkeypatch.setattr(ac, "AUTONOMY", str(autonomy))
+    monkeypatch.setattr(ac, "KNOWN_CITATION_FILES", [])
+    monkeypatch.setattr(ac, "EXTRA_SCAN_GLOBS", [])
+    monkeypatch.setattr(ac, "CADENCE_SQL", str(tmp_path / "no_cadence.sql"))  # heartbeat check no-ops
+    assert ac.main() == 1
+    out = capsys.readouterr().out
+    assert "ops/autonomy_levels.yaml: loop 'dup' id is duplicated in the loops list" in out
+
+
 # ---- active_auto_loops / cadence_heartbeat_loops / _check_cadence_heartbeat_coverage ----------------
 def test_active_auto_loops_filters_by_stage(tmp_path, monkeypatch):
     f = tmp_path / "autonomy_levels.yaml"

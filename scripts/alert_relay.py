@@ -51,6 +51,7 @@ except ImportError:  # pragma: no cover — stdlib since 3.9; CI/runners pin >=3
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.bq_json import run_bq_query
+from lib import tz_render
 
 PROJECT = os.environ.get("BQ_PROJECT", "stock-trading-498512")
 MODE = os.environ.get("RELAY_MODE", "alerts")
@@ -72,17 +73,12 @@ def get_user_tz():
     fails the relay: any error (including a monkeypatched `bq` returning an unrelated row shape in
     tests) falls back to America/Denver silently.
 
-    The `or "America/Denver"` coalesce makes the documented fallback hold for a NULL/empty tz value
-    too, not just for an exception. state.user_tz already COALESCEs NULL -> 'America/Denver' at the
-    view, so this is defense-in-depth — but without it a NULL tz would return None, and fmt_ts(v, None)
-    raises TypeError (ZoneInfo(None)), which is neither ValueError nor ZoneInfoNotFoundError, so it
-    escapes fmt_ts's cosmetic-fallback and — via main()'s outer `except Exception` — silently drops the
-    whole alert batch. Returning a real tz string here keeps a bad/absent tz strictly cosmetic."""
-    try:
-        rows = bq(f"SELECT tz FROM `{PROJECT}.state.user_tz`")
-        return rows[0]["tz"] or "America/Denver"
-    except Exception:
-        return "America/Denver"
+    Thin wrapper over the shared core (scripts/lib/tz_render.py, 2026-07-20 dedup consolidation —
+    this exact NULL/empty/error-falls-back-to-Denver logic had independently drifted from
+    ops/dashboard/generate_dashboard.py's copy). Passes `bq` itself, not a query result, so a test's
+    `monkeypatch.setattr(ar, "bq", ...)` is honored — the core calls back into whatever `bq` resolves
+    to in this module at call time."""
+    return tz_render.get_display_tz(bq, PROJECT)
 
 
 def fmt_ts(v, tz_name):
@@ -90,9 +86,10 @@ def fmt_ts(v, tz_name):
     rendered as a bare "... UTC" string regardless of where the operator actually is.
 
     Real wire format (verified against live BigQuery, 2026-07-09): "YYYY-MM-DD HH:MM:SS[.ffffff]+00"
-    — it never contains the literal string "UTC". The `endswith(" UTC")` strip below is harmless
-    defense-in-depth (e.g. hand-constructed test fixtures or a future BigQuery format change), not a
-    reflection of what CAST(... AS STRING) actually emits today."""
+    — it never contains the literal string "UTC". The parse/localize half is the shared core
+    (scripts/lib/tz_render.py); this wrapper keeps the falsy-v/falsy-tz_name guard and this site's
+    own "{v} UTC" fallback label, which generate_dashboard.py's sibling deliberately does NOT match
+    (it returns `v` unchanged for a falsy v, and labels its fallback "(UTC)")."""
     # `not tz_name` guards a None/empty tz: ZoneInfo(None) raises TypeError (not caught below), which
     # would escape into main()'s outer `except Exception` and drop the whole batch — exactly what this
     # function's contract forbids. get_user_tz() already coalesces to a real tz, so this is belt-and-
@@ -100,11 +97,7 @@ def fmt_ts(v, tz_name):
     if not v or not tz_name or ZoneInfo is None:
         return f"{v} UTC"
     try:
-        s = str(v).strip()
-        if s.endswith(" UTC"):
-            s = s[:-4]
-        dt = datetime.fromisoformat(s.replace(" ", "T", 1)).replace(tzinfo=timezone.utc)
-        return dt.astimezone(ZoneInfo(tz_name)).strftime("%Y-%m-%d %H:%M") + f" ({tz_name})"
+        return tz_render.render_ts(v, tz_name)
     except (ValueError, ZoneInfoNotFoundError):
         # ZoneInfoNotFoundError (a KeyError subclass, NOT a ValueError) is raised by ZoneInfo(tz_name)
         # for a bad/unsupported IANA tz string — e.g. state.user_tz populated from the Google Calendar

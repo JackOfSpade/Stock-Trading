@@ -66,6 +66,90 @@ done_when: == 'true'
 ```
 """
 
+# Reproduces the live OWNER_ACTIONS.md shape behind id V's mis-anchor (2026-07-20 finding): the
+# item's own heading is already DONE, but TWO unrelated action-list bullets sit between it and the
+# item's own fence. A naive nearest-match walk hits the second bullet first and misreports it as the
+# anchor; the fix must fail closed (None / OPEN) instead of trusting either bullet.
+SAMPLE_DOC_INTERPOSED_BULLETS = """# Owner actions
+
+## V. Some urgent item — `[DONE 2026-07-19 — owner done]`
+
+**Action:** re-auth the thing. After that:
+- Either ask an interactive session to run the recovery chain.
+- Or let Monday's already-scheduled self-heal pick it up on its own.
+
+```verify
+id: V
+type: ibkr
+probe: some probe
+done_when: some condition
+```
+"""
+
+# Reproduces the live shape behind id E-anthropic's mis-anchor: the item's own fence physically sits
+# AFTER a DIFFERENT, sibling item's `## ` heading (Y) rather than right after its own bullet (X's).
+# Walking upward finds Y's heading first with zero intervening bullets, so a bare heading-boundary
+# stop alone would credit Y's (already-DONE) heading to X's fence. The fix must fail closed instead.
+SAMPLE_DOC_INTERPOSED_HEADING = """# Owner actions
+
+## X. Add missing secrets
+
+- `SOME_TOKEN` — X's own secret, described here.
+
+## Y. An unrelated, later item — `[DONE 2026-07-10 — owner confirmed]`
+
+Some unrelated prose about Y, nothing to do with X's secret.
+
+```verify
+id: X-token
+type: env
+probe: read HAS_SOME_TOKEN
+done_when: == 'true'
+```
+"""
+
+# A third mis-anchor shape: exactly ONE stray bullet (belonging to a DIFFERENT, sibling item, R)
+# sits between the fence and the heading boundary the walk stops at. A single collected bullet must
+# not be trusted just because there's only one of it — the enclosing heading's own label still has
+# to match the fence id, and here it doesn't (R != Q).
+SAMPLE_DOC_STRAY_BULLET_UNDER_SIBLING_HEADING = """# Owner actions
+
+## R. Some other item
+
+- A stray bullet belonging to R, not Q.
+
+```verify
+id: Q
+type: bq
+probe: SELECT 1
+done_when: n>0
+```
+"""
+
+# Reproduces id B's live shape: an item's OWN prose embeds an unrelated inline sample code block
+# (```bash, not ```verify) before its own verify fence. This must NOT be mistaken for a sibling
+# item's already-closed verify block — the walk should skip straight over it to the item's own
+# heading, with no bullets in the way.
+SAMPLE_DOC_EMBEDDED_CODE_SAMPLE = """# Owner actions
+
+## B. Apply the migration
+
+Run this:
+
+```bash
+echo hello
+```
+
+Then confirm.
+
+```verify
+id: B
+type: bq
+probe: SELECT 1
+done_when: n>0
+```
+"""
+
 
 def _fake_run_factory(returncode=0, stdout="", stderr=""):
     def run(cmd, capture_output=None, text=None, timeout=None):
@@ -192,8 +276,77 @@ def test_check_F_quota_fails_open_on_git_error(monkeypatch):
 
 def test_find_anchor_prefers_heading(tmp_path):
     lines = ["## A. Title\n", "\n", "prose\n", "```verify\n", "id: A\n", "```\n"]
-    idx = voa.find_anchor_line_index(lines, 3)
+    idx = voa.find_anchor_line_index(lines, 3, "A")
     assert idx == 0
+
+
+# ---- ambiguity fail-closed: the two live OWNER_ACTIONS.md mis-anchor shapes (2026-07-20 finding) ---
+
+def test_find_anchor_none_when_two_unrelated_bullets_interpose(tmp_path):
+    # id V's live shape: two unrelated action-list bullets sit between the fence and V's own
+    # (already-DONE) heading. Must fail closed to None rather than trusting either bullet.
+    lines = SAMPLE_DOC_INTERPOSED_BULLETS.splitlines(keepends=True)
+    fence_start = next(i for i, ln in enumerate(lines) if ln.startswith("```verify"))
+    idx = voa.find_anchor_line_index(lines, fence_start, "V")
+    assert idx is None
+
+
+def test_main_reports_open_not_done_for_interposed_bullets(tmp_path, monkeypatch, capsys):
+    doc = tmp_path / "OWNER_ACTIONS.md"
+    doc.write_text(SAMPLE_DOC_INTERPOSED_BULLETS)
+    monkeypatch.setattr(voa, "OWNER_ACTIONS_PATH", str(doc))
+    before = doc.read_text()
+    rc = voa.main()
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "OPEN] V: could not locate an anchor" in out
+    # V's own heading already reads [DONE — must not be (mis)credited, and nothing gets rewritten.
+    assert doc.read_text() == before
+
+
+def test_find_anchor_none_when_fence_follows_a_sibling_heading(tmp_path):
+    # id E-anthropic's live shape: the fence physically sits after a DIFFERENT, sibling item's own
+    # heading (Y) instead of its own bullet (X's). Zero bullets intervene, so a bare heading-boundary
+    # stop alone would credit Y's heading to X's fence; the label cross-check must fail closed instead.
+    lines = SAMPLE_DOC_INTERPOSED_HEADING.splitlines(keepends=True)
+    fence_start = next(i for i, ln in enumerate(lines) if ln.startswith("```verify"))
+    idx = voa.find_anchor_line_index(lines, fence_start, "X-token")
+    assert idx is None
+
+
+def test_main_reports_open_not_done_for_interposed_heading(tmp_path, monkeypatch, capsys):
+    doc = tmp_path / "OWNER_ACTIONS.md"
+    doc.write_text(SAMPLE_DOC_INTERPOSED_HEADING)
+    monkeypatch.setattr(voa, "OWNER_ACTIONS_PATH", str(doc))
+    monkeypatch.setitem(voa.PROBES, "X-token", lambda: (True, "HAS_SOME_TOKEN=true"))
+    before = doc.read_text()
+    rc = voa.main()
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "OPEN] X-token: could not locate an anchor" in out
+    # Y's unrelated heading must never be flipped/credited on X's behalf, even though X's own probe
+    # would otherwise pass right now — this is the "never let a probe auto-flip the wrong section"
+    # guard the finding's ADJUST called for.
+    assert doc.read_text() == before
+
+
+def test_find_anchor_none_when_single_stray_bullet_under_sibling_heading(tmp_path):
+    # id Q's fence sits under a DIFFERENT item's heading (R) with exactly one stray bullet (R's own)
+    # intervening. A single bullet alone must not bypass the heading-label cross-check.
+    lines = SAMPLE_DOC_STRAY_BULLET_UNDER_SIBLING_HEADING.splitlines(keepends=True)
+    fence_start = next(i for i, ln in enumerate(lines) if ln.startswith("```verify"))
+    idx = voa.find_anchor_line_index(lines, fence_start, "Q")
+    assert idx is None
+
+
+def test_find_anchor_skips_embedded_non_verify_code_sample(tmp_path):
+    # id B's live shape: an inline ```bash sample inside the item's OWN prose, before its own verify
+    # fence. Must be skipped over (not mistaken for a sibling's closed ```verify block) so the walk
+    # reaches B's own heading with zero (correctly) intervening bullets.
+    lines = SAMPLE_DOC_EMBEDDED_CODE_SAMPLE.splitlines(keepends=True)
+    fence_start = next(i for i, ln in enumerate(lines) if ln.startswith("```verify"))
+    idx = voa.find_anchor_line_index(lines, fence_start, "B")
+    assert lines[idx].strip() == "## B. Apply the migration"
 
 
 def test_flip_heading_rewrites_heading_form():

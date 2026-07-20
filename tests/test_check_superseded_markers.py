@@ -85,6 +85,15 @@ def test_zero_padded_file_numbers_match():
     assert cs.marks_superseded("-- superseded by bigquery/3", 3) is True
 
 
+def test_pointer_accepts_uppercase_first_letter_after_numeric_prefix():
+    # NUMBERED_FILE (^(\d+)_.*\.sql$) doesn't forbid an uppercase first letter after the numeric
+    # prefix (e.g. a future 99_ParkRebalance.sql). The "bigquery/NN\b" alternative can't carry this
+    # case either: '_' is a \w char, so there's no \b between the digits and the underscore in
+    # "bigquery/99_ParkRebalance.sql" -- it's the second alternative's character class that must
+    # accept the uppercase letter.
+    assert cs.marks_superseded("-- SUPERSEDED by bigquery/99_ParkRebalance.sql", 99) is True
+
+
 # ---- the two failure modes it must catch ------------------------------------------------------
 
 def test_unmarked_old_definition_is_flagged(tmp_path, monkeypatch):
@@ -136,6 +145,41 @@ def test_single_definition_is_never_flagged(tmp_path, monkeypatch):
     # An object defined in exactly one file has nothing to be superseded by.
     _tree(tmp_path, {"10_only.sql": "-- no marker needed\n" + DDL}, monkeypatch)
     assert cs.violations()[0] == []
+
+
+WRAPPED_DDL = "CREATE OR REPLACE VIEW\n  `stock-trading-498512.state.thing` AS SELECT 1 AS a;\n"
+
+
+def test_wrapped_create_in_the_newer_file_is_still_detected(tmp_path, monkeypatch):
+    # A CREATE keyword and its backtick-quoted name split across two physical lines (legal, common
+    # BigQuery style) must still be recorded as an occurrence of the object -- otherwise the newer
+    # file's definition silently vanishes, `occurrences` collapses to a single filename, and the OLD
+    # unmarked definition below is never even compared against it (the exact dead-end-chain trap
+    # this check exists to catch).
+    _tree(tmp_path, {
+        "10_old.sql": "-- just an ordinary header\n" + DDL,
+        "20_new.sql": "-- ===== state.thing — REDEFINED =====\n" + WRAPPED_DDL,
+    }, monkeypatch)
+    new, _still, _stale = cs.violations()
+    assert len(new) == 1
+    (kind, ds, name, fn), canonical_file, _line = new[0]
+    assert (kind, ds, name, fn) == ("VIEW", "state", "thing", "10_old.sql")
+    assert canonical_file == "20_new.sql"
+
+
+def test_wrapped_create_in_the_older_file_is_still_detected(tmp_path, monkeypatch):
+    # Same collapse, opposite direction: the OLDER file wraps its CREATE. It must still be recognized
+    # so the unmarked older definition is compared against the (single-line) newer one and flagged,
+    # rather than silently passing because `occurrences` only ever saw one filename.
+    _tree(tmp_path, {
+        "10_old.sql": "-- just an ordinary header\n" + WRAPPED_DDL,
+        "20_new.sql": "-- ===== state.thing — REDEFINED =====\n" + DDL,
+    }, monkeypatch)
+    new, _still, _stale = cs.violations()
+    assert len(new) == 1
+    (kind, ds, name, fn), canonical_file, _line = new[0]
+    assert (kind, ds, name, fn) == ("VIEW", "state", "thing", "10_old.sql")
+    assert canonical_file == "20_new.sql"
 
 
 def test_non_view_object_kinds_are_covered(tmp_path, monkeypatch):

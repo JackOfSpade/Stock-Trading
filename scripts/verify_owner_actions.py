@@ -268,19 +268,114 @@ PROBES = {
 # OWNER_ACTIONS.md parsing + in-place rewrite
 # ---------------------------------------------------------------------------
 
-def find_anchor_line_index(lines, fence_start_idx):
-    """Nearest preceding non-blank line that starts a heading (`## `) or a bullet (`- `) — the
-    generic anchor rule this file's fences rely on (see OWNER_ACTIONS.md's OAE-5 packet)."""
+def _heading_label(line):
+    """Extract a `## ` heading's own leading item-label ('A', 'E-2', ...) from its `<LABEL>. ` prefix,
+    first stripping any bracket auto-flip/decided marker this script (or an owner edit) may already
+    have inserted right after `## ` — otherwise an already-flipped heading like
+    `## [DONE 2026-07-18 — auto-verified] F. Resolved ...` would misparse `[DONE` as the label.
+    Returns None for headings that don't follow the convention (e.g. this doc's numbered sub-items,
+    `## 2. Register a new scheduled query ...`) — those skip the id/label cross-check below rather
+    than being forced through a comparison that was never meaningful for them."""
+    rest = line.lstrip()
+    if not rest.startswith("## "):
+        return None
+    rest = rest[len("## "):]
+    rest = re.sub(r"^\[[^\]]*\]\s*", "", rest)  # strip a leading "[DONE ...]"/"[DECIDED ...]" marker
+    m = re.match(r"([A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)?)\.", rest)
+    return m.group(1).lower() if m else None
+
+
+def _id_primary_label(fence_id):
+    """A fence id's own leading label — the part before its first '-' ('E-anthropic' -> 'E', 'A' ->
+    'A') — compared against a candidate heading's own label (see _heading_label) to catch a fence
+    that resolves to a DIFFERENT, sibling item's heading rather than its own."""
+    return fence_id.split("-", 1)[0].lower()
+
+
+def _skip_fenced_block_upward(lines, closing_idx):
+    """`lines[closing_idx]` is a bare ``` ``` ``` closing delimiter found while scanning upward;
+    locate its matching OPEN delimiter (the nearest ```-prefixed line further up — content lines
+    inside a fence can never themselves start with ``` , or they'd close the block early, so this is
+    unambiguous) and return `(opening_idx, tag)`, tag being the word right after the backticks
+    ('verify', 'bash', ...). Returns `(None, None)` for an unterminated/malformed fence."""
+    j = closing_idx - 1
+    while j >= 0:
+        s = lines[j].strip()
+        if s.startswith("```"):
+            return j, s[3:].strip()
+        j -= 1
+    return None, None
+
+
+def find_anchor_line_index(lines, fence_start_idx, fence_id):
+    """Nearest preceding anchor for a fence — a heading (`## `) or bullet (`- `) — but FAILS CLOSED
+    (returns None, the existing 'could not locate an anchor' / OPEN path) instead of trusting the
+    nearest match whenever the walk is ambiguous. Three live/reachable OWNER_ACTIONS.md shapes make a
+    naive nearest-match walk misattribute an item's status (2026-07-20 fix):
+      * MORE THAN ONE bullet sits between the fence and its enclosing `## ` section heading — e.g.
+        two unrelated action-list bullets inside the SAME item's own body (id V's live mis-anchor,
+        which resolved to an unrelated '- Or let Monday's ...' bullet instead of V's own heading).
+        A heading-boundary stop alone does not catch this: the walk hits a bullet before it ever
+        reaches a heading, so there is no heading boundary in play at all.
+      * ZERO bullets are found before the enclosing heading, but that heading's own label doesn't
+        match the fence id's label — the fence physically sits after a DIFFERENT, sibling item's
+        heading (id E-anthropic's live mis-anchor: its fence follows item E-2's heading instead of
+        item E's own `ANTHROPIC_API_KEY` bullet, and E-2's heading already read '[DONE', permanently
+        short-circuiting E-anthropic's real probe).
+      * EXACTLY ONE bullet is found before the walk stops at a heading boundary, and that heading's
+        own label doesn't match the fence id's label either — a single stray bullet (e.g. a sibling
+        item's own bullet) sitting between the fence and a DIFFERENT item's heading must not be
+        trusted just because there's only one of it; the enclosing heading still has to check out.
+    All three shapes now resolve to None rather than guessing. A single bullet enclosed by a heading
+    that DOES match (or an unlabeled heading, e.g. this doc's numbered sub-items — see
+    _heading_label) still resolves to the bullet, same as when the walk instead stops at a
+    verify-block boundary (heading_idx never gets set at all) — neither of those is ambiguous.
+
+    A fourth shape needs care but is NOT an anchor at all: an item's own prose can embed an unrelated
+    sample code block (```bash, ```sql, ...) before its verify fence (id B's migration instructions),
+    and a SIBLING item's bullet can each own its own already-closed ```verify block immediately above
+    ours (item E's 3 secrets). Walking upward, both first appear as a bare ``` closing line, so we
+    look up its matching open tag: a sibling's closed ```verify block is a real section boundary
+    (stop, don't walk into ITS bullet/heading); a non-verify block (```bash, ...) is just inline
+    prose for OUR OWN item and is skipped over whole, so the walk continues past it undisturbed.
+    """
+    bullets = []
+    heading_idx = None
     i = fence_start_idx - 1
     while i >= 0:
         stripped = lines[i].strip()
         if stripped == "":
             i -= 1
             continue
-        if lines[i].lstrip().startswith("## ") or lines[i].lstrip().startswith("- "):
-            return i
+        if stripped == "```":
+            opening_idx, tag = _skip_fenced_block_upward(lines, i)
+            if opening_idx is None or tag == "verify":
+                break  # unterminated fence, or a sibling item's own verify block — section boundary
+            i = opening_idx - 1  # a same-item inline sample (```bash, ```sql, ...) — skip over it
+            continue
+        if stripped.startswith("```"):
+            break  # a stray fence-open reached before its own close — treat as a boundary too
+        lstripped = lines[i].lstrip()
+        if lstripped.startswith("## "):
+            heading_idx = i
+            break  # a heading always bounds the section — stop the walk here
+        if lstripped.startswith("- "):
+            bullets.append(i)
         i -= 1
-    return None
+
+    if len(bullets) > 1:
+        return None  # ambiguous: more than one candidate bullet before the section boundary
+    if heading_idx is not None:
+        # The walk stopped at a heading boundary (whether or not a bullet was collected on the way)
+        # — a label mismatch means this whole section, bullet included, belongs to a sibling item.
+        heading_label = _heading_label(lines[heading_idx])
+        if heading_label is not None and heading_label != _id_primary_label(fence_id):
+            return None  # this heading belongs to a different, sibling item — not our own anchor
+    if bullets:
+        return bullets[0]
+    if heading_idx is None:
+        return None  # nothing found at all
+    return heading_idx
 
 
 def already_done(line):
@@ -324,7 +419,7 @@ def main():
         # Convert char offset to line index.
         fence_start_line = text.count("\n", 0, fence_start_char)
 
-        anchor_idx = find_anchor_line_index(lines, fence_start_line)
+        anchor_idx = find_anchor_line_index(lines, fence_start_line, fence_id)
         if anchor_idx is None:
             results.append((fence_id, "OPEN", "could not locate an anchor heading/bullet"))
             continue

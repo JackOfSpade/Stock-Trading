@@ -872,6 +872,39 @@ def test_duplicate_plan_heading_is_caught(tmp_path, monkeypatch, capsys):
     assert "duplicate Claude_Task_Plan.md heading for id D1" in capsys.readouterr().out
 
 
+def test_duplicate_cadence_routine_id_is_caught(tmp_path, monkeypatch, capsys):
+    # A copy-pasted routines: entry sharing an id is valid YAML (no parse error) -- load_cadence()'s
+    # dict comprehension would otherwise silently keep only the second entry with zero signal.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    cadence.write_text(
+        "timezone: America/Denver\n"
+        'cadence_watch_deadline_local: "21:00"\n'
+        "routines:\n"
+        "  - id: D1\n"
+        "    monitor_class: daily_trading\n"
+        "    catchup_safe: true\n"
+        "  - id: D1\n"
+        "    monitor_class: daily_all\n"
+        "    catchup_safe: true\n"
+    )
+    assert cc.main() == 1
+    assert ("ops/cadence.yaml: duplicate routine id 'D1' — each routine id must appear exactly once"
+            in capsys.readouterr().out)
+
+
+def test_cadence_duplicate_ids_helper_directly(tmp_path, monkeypatch):
+    f = tmp_path / "cadence.yaml"
+    f.write_text(
+        "routines:\n"
+        "  - id: D1\n    monitor_class: daily_trading\n"
+        "  - id: D2\n    monitor_class: daily_trading\n"
+        "  - id: D1\n    monitor_class: daily_all\n"
+    )
+    monkeypatch.setattr(cc, "CADENCE", str(f))
+    assert cc.cadence_duplicate_ids() == ["D1"]
+
+
 # ---- check L: the AR_att 'Daily¹' footnote branch (queue_driven behind a Daily-cadence cell) ----
 _AR_ATT_PLAN = (
     "## D1. Market Development Scan — deep research\nbody\n"

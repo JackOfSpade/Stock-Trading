@@ -208,20 +208,3 @@ def test_main_non_check_warns_about_orphan_but_still_returns_0(tmp_path, monkeyp
     (outdir / "ZZ_ghost.md").write_text("stale leftover", encoding="utf-8")
     assert stp.main([]) == 0
     assert "WARNING: orphaned slice file(s)" in capsys.readouterr().out
-
-
-# ---- find_orphans() ---------------------------------------------------------------------------
-
-def test_find_orphans_flags_stale_ignores_hand_maintained(tmp_path, monkeypatch):
-    outdir = tmp_path / "task_plan"
-    outdir.mkdir()
-    (outdir / "OLD_removed.md").write_text("stale", encoding="utf-8")
-    (outdir / "README.md").write_text("hand-maintained", encoding="utf-8")
-    monkeypatch.setattr(stp, "OUTDIR", str(outdir))
-    current = {"00_preamble.md": "...", "D1.md": "...", "INDEX.md": "..."}
-    assert stp.find_orphans(current) == ["OLD_removed.md"]
-
-
-def test_find_orphans_empty_when_outdir_missing(tmp_path, monkeypatch):
-    monkeypatch.setattr(stp, "OUTDIR", str(tmp_path / "nope"))
-    assert stp.find_orphans({"00_preamble.md": "..."}) == []

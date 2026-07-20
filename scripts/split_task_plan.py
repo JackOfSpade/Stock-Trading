@@ -38,7 +38,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.md_fence import fence_mask  # noqa: E402
 from lib.routine_manifest import ROUTINE_SUFFIX, heading_to_id  # noqa: E402
-from lib.slice_writer import check_or_write_slices, find_orphaned_markdown_files, slugify  # noqa: E402
+from lib.slice_writer import check_or_write_slices, slugify  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "Claude_Task_Plan.md")
@@ -134,13 +134,6 @@ def build():
         index.append(f"| {rid} | {title} | `{name}` |\n")
     files["INDEX.md"] = "".join(index)
     return files
-
-
-def find_orphans(files):
-    """.md files in OUTDIR that no current plan heading (or the preamble/index) produces and that are
-    not hand-maintained — e.g. a routine renamed/removed in the plan leaves its old slice behind
-    forever otherwise. Returns [] if OUTDIR doesn't exist yet."""
-    return find_orphaned_markdown_files(OUTDIR, files, HAND_MAINTAINED)
 
 
 def main(argv):

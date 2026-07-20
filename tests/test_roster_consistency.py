@@ -671,6 +671,21 @@ def test_spec_hash_missing_input_file_is_caught(repo_copy, capsys):
     assert "are missing" in capsys.readouterr().out
 
 
+# ---- C0: R-F must be numbering-agnostic for the .md slice, exactly like R-A (2026-07-20 fix) ----
+def test_content_free_locked_slice_rename_keeps_r_f_green(repo_copy):
+    # A pure filename renumber of a spec-locked strategy's .md slice — ZERO byte changes to its
+    # content, so nothing about the locked machinery actually changed — must NOT trip R-F. Before the
+    # C0 fix, spec_hash_inputs() hardcoded each code's .md path as a literal numbered filename
+    # ("03_strategy_a.md"), so this exact rename spuriously FAILed with a misleading "spec_hash
+    # input(s) ... are missing" message even though R-A (which reads the heading, not the filename)
+    # stayed green throughout — the asymmetry this finding closes.
+    old_path = os.path.join(rc.STRATEGY_DIR, "03_strategy_a.md")
+    new_path = os.path.join(rc.STRATEGY_DIR, "09_strategy_a.md")
+    assert os.path.exists(old_path)
+    os.rename(old_path, new_path)
+    assert rc.main() == 0
+
+
 # ---- R-A: the three dedicated fail-LOUD guards (empty Strategy.md headings, ARSENAL_SQL absent,
 #      zero seed rows) — each only incidentally exercised before (2026-07-17 audit) ----
 def test_empty_strategy_md_headings_is_caught(repo_copy, capsys):
@@ -871,11 +886,14 @@ def test_heading_present_filename_mismatched_slice_still_enforces_coverage(repo_
     # `if code not in covered` check still runs instead of vacuously skipping behind a false "already
     # reported by R-A" note. Rename E's real slice to a mismatched filename (its heading text — and
     # therefore sl_codes, which R-A also reads — is unaffected by the rename) and strip E's coverage.
-    # NOTE: the rename incidentally also trips R-F (spec_hash_inputs() hardcodes the literal
-    # 07_strategy_e.md path), so main() exits 1 even under the pre-fix glob code — the R-K-specific
-    # substring assertions below, not the bare exit code, are what discriminate pre/post-fix: the
-    # pre-fix code vacuously note-and-skips E's coverage (no "NO golden-scenario coverage" error,
-    # a false "already reported by R-A" note instead), the fixed code fails loud on R-K itself.
+    # NOTE (updated 2026-07-20, C0 fix): this rename no longer incidentally trips R-F. Before C0,
+    # spec_hash_inputs() hardcoded the literal 07_strategy_e.md path, so main() exited 1 even under the
+    # pre-2026-07-18 R-K glob code, and it was the R-K-specific substring assertions below — not the bare
+    # exit code — that discriminated pre/post-R-K-fix (the pre-fix code vacuously note-and-skips E's
+    # coverage, a false "already reported by R-A" note instead of "NO golden-scenario coverage"). Now that
+    # R-F discovers the .md slice by heading (numbering/filename-agnostic, like R-A), this rename alone
+    # would leave R-F green (see test_content_free_locked_slice_rename_keeps_r_f_green below) — the exit
+    # 1 asserted here comes solely from R-K's own coverage check, which is this test's actual subject.
     slice_path = os.path.join(rc.STRATEGY_DIR, "07_strategy_e.md")
     renamed_path = os.path.join(rc.STRATEGY_DIR, "07_strategy_e_market_neutral_pairs.md")
     os.rename(slice_path, renamed_path)
@@ -884,6 +902,7 @@ def test_heading_present_filename_mismatched_slice_still_enforces_coverage(repo_
     out = capsys.readouterr().out
     assert "R-K" in out and "'E'" in out and "NO golden-scenario coverage" in out
     assert "already reported by R-A" not in out
+    assert "R-F" not in out   # C0: the rename alone must not ALSO trip R-F anymore
 
 
 def test_slice_less_probe_adopted_missing_slice_stays_a_note(repo_copy, capsys):

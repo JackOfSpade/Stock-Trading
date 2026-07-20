@@ -5,10 +5,12 @@ ZERO dedicated tests, unlike its siblings dbt_parity.py (tests/test_dbt_parity.p
 check_live_sql_parity.py (tests/test_check_live_sql_parity.py). It compares the live
 state.active_strategy_codes set against strategy/roster.yaml's roster-active (probe/adopted) set and must
 FAIL CLOSED on any live-read failure — a parity gate that reports OK on a swallowed exception or a
-zero-vs-zero comparison is worse than no gate. These lock: bq()'s read-only argv + banner-tolerant JSON
-parsing + returncode/timeout handling; roster_active_codes()'s probe/adopted filter (and its
-docstring-promised parity with check_roster_consistency.py's R-A definition); live_active_codes()'s
-extraction; and every main() branch (SKIP / OK / drift-FAIL / FAIL-CLOSED / both-empty-NOT-VERIFIED).
+zero-vs-zero comparison is worse than no gate. These lock: bq()'s thin delegation to lib/bq_json.py's
+run_bq_query with its own fixed max_rows=100000 (the shared subprocess-invoke/JSON-parse/returncode/
+timeout contract itself is proven once in tests/test_bq_json.py, C3 dedup 2026-07-20);
+roster_active_codes()'s probe/adopted filter (and its docstring-promised parity with
+check_roster_consistency.py's R-A definition); live_active_codes()'s extraction; and every main()
+branch (SKIP / OK / drift-FAIL / FAIL-CLOSED / both-empty-NOT-VERIFIED).
 
 Added 2026-07-17 (parallel-refactor Part A) alongside the both-empty NOT-VERIFIED guard fix.
 """
@@ -17,7 +19,6 @@ import sys
 
 import pytest
 
-from conftest import fake_subprocess_run as _fake_run
 from conftest import load_module_from_path
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -42,48 +43,30 @@ def _write_roster(path, entries):
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-# ---- bq(): read-only argv + banner-tolerant JSON parse (the exact regressed bug class) ------------
-def test_bq_parses_banner_prefixed_json(monkeypatch):
-    fake = _fake_run(0, 'Welcome to BigQuery!\nUpdate available.\n[{"strategy_code":"A"}]')
-    monkeypatch.setattr(clrp.subprocess, "run", fake)
+# ---- bq(): thin delegation to lib/bq_json.run_bq_query -- the shared subprocess-invoke/JSON-parse/
+# returncode/timeout contract is proven ONCE on run_bq_query itself (tests/test_bq_json.py); this
+# just pins that THIS caller forwards its own fixed max_rows=100000 (C3 dedup, 2026-07-20 audit).
+def test_bq_delegates_to_run_bq_query_with_max_rows_100000(monkeypatch):
+    captured = {}
+
+    def fake_run_bq_query(sql, project, max_rows=None):
+        captured["sql"], captured["project"], captured["max_rows"] = sql, project, max_rows
+        return [{"strategy_code": "A"}]
+    monkeypatch.setattr(clrp, "run_bq_query", fake_run_bq_query)
     assert clrp.bq("SELECT 1", "proj") == [{"strategy_code": "A"}]
-
-
-def test_bq_empty_when_no_array(monkeypatch):
-    monkeypatch.setattr(clrp.subprocess, "run", _fake_run(0, "No rows.\n"))
-    assert clrp.bq("SELECT 1", "proj") == []
-
-
-def test_bq_raises_on_nonzero_returncode(monkeypatch):
-    monkeypatch.setattr(clrp.subprocess, "run", _fake_run(1, "", "ERROR: access denied"))
-    with pytest.raises(RuntimeError, match="access denied"):
-        clrp.bq("SELECT 1", "proj")
-
-
-def test_bq_raises_runtime_error_on_timeout(monkeypatch):
-    def _boom(cmd, capture_output=None, text=None, timeout=None):
-        raise clrp.subprocess.TimeoutExpired(cmd=cmd, timeout=timeout)
-    monkeypatch.setattr(clrp.subprocess, "run", _boom)
-    with pytest.raises(RuntimeError):
-        clrp.bq("SELECT 1", "proj")
-
-
-def test_bq_uses_readonly_argv_and_timeout(monkeypatch):
-    fake = _fake_run(0, "[]")
-    monkeypatch.setattr(clrp.subprocess, "run", fake)
-    clrp.bq("SELECT strategy_code FROM t", "myproj-123")
-    cmd = fake.calls[0]["cmd"]
-    assert cmd == ["bq", "--project_id=myproj-123", "--quiet", "--headless", "--format=json",
-                   "query", "--use_legacy_sql=false", "--max_rows=100000",
-                   "SELECT strategy_code FROM t"]
-    assert fake.calls[0]["timeout"] == 600
-    # read-only: no bq write/insert/load subcommand ever appears in the argv.
-    assert not ({"insert", "load", "cp", "rm", "mk"} & set(cmd))
+    assert captured == {"sql": "SELECT 1", "project": "proj", "max_rows": 100000}
 
 
 # ---- roster_active_codes(): probe/adopted only, case-insensitive, + R-A parity lock ---------------
-def test_roster_active_codes_real_repo_is_a_e():
-    assert clrp.roster_active_codes() == {"A", "B", "C", "D", "E"}
+def test_roster_active_codes_real_repo_meets_n_min_floor():
+    # C2 (2026-07-20 audit): NOT an exact-set pin. Strategy roster membership is fully autonomous
+    # (SISA, owner directive 2026-07-10) -- SL1-SL5 grow/shrink it with no human review/approval step
+    # anywhere in the add/delete path, so an exact {"A","B","C","D","E"} literal would red-line CI on
+    # a correct, unattended SL2 adoption or SL5 retirement. Assert only the structural floor the
+    # roster itself is policy-bound to (rails.n_min in strategy/roster.yaml) -- the parity test right
+    # below plus test_roster_active_codes_filters_and_is_case_insensitive's synthetic fixture already
+    # lock the actual filtering/parsing behavior.
+    assert len(clrp.roster_active_codes()) >= 2
 
 
 def test_roster_active_codes_matches_check_roster_consistency_r_a():
