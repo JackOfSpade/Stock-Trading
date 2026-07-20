@@ -652,6 +652,25 @@ Concretely, every run:
   persist-and-wait re-craft is handled by the registry reconciliation above). For any crafted instruction in
   `get_order_instructions` whose order day has passed unconfirmed, or whose position Step 0 just closed, call
   `delete_order_instruction` to clear it.
+- REGIME-CAPITAL SYNC (owner directive 2026-07-19 — Regime-Capital Enablement; canonical rails
+  Operating_Protocols.md §16 REGIME-CAPITAL SYNC + §13.C; schema `bigquery/98_regime_capital_enablement.sql`;
+  substep reconstructed by W5 2026-07-19 — the implementing session's plan edit was stranded unpushed). LAST
+  thing in Step 0, after fills/attribution/flattening: `SELECT * FROM state.regime_capital_sync_pending`.
+  Empty (the steady state) → no-op, nothing to log. Non-empty:
+  - `control_enabled = FALSE` (the `ops.capital_control` kill-switch) → log a one-line `events.decision_log`
+    note recording what WOULD have moved, and move nothing.
+  - SWEEP rows (a capital-disabled strategy with `available_funds ≥ $25`): run the §16 AI CAPITAL-ALLOCATION
+    CALL (`trigger='regime_disable'`) over the capital-enabled recipients (equal-share baselines are in the
+    view; [0.5×, 2×] rails; default-EQUAL below MEDIUM), then write the atomic $0-sum `events.cash_flows`
+    double-entry on one flow_date tagged `source='regime_capital_sweep'` (one negative row for the swept
+    strategy, positive rows per recipient) and `CALL ops.sp_log_decision(..., entry_type='capital-allocation',
+    ...)` per §16 Logging.
+  - RESTORE rows (a debtor strategy back to capital-enabled, per `state.regime_capital_debt`): MECHANICAL, no
+    AI call — write the `source='regime_capital_restore'` double-entry using the view's pro-rata donor
+    amounts; log a one-line `events.decision_log` note (`trigger='regime_enable'` context).
+  - ONE MOVEMENT PER READ: after writing any sweep or restore, re-`SELECT` the pending view before acting
+    again (multi-RESTORE stale-snapshot defect, 2026-07-19 adversarial review) — at most one movement's rows
+    between reads.
 
 STEP 0b — ACCOUNT SNAPSHOT (run after Step 0, while connector account data is fresh; one INSERT, best-effort).
 Persist the account-level NAV/cash/TWR read in Step 0 so the weekly self-email + account-NAV history have it —
