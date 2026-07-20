@@ -83,7 +83,8 @@ label — best-effort, so it never blocks the send if it fails.
    forever. (Re-running it is safe; it de-dupes its own trigger.)
 
 **Owner actions to deploy this redesign onto an already-installed script:** re-paste
-`weekly_report.gs` over the existing project; update the manifest scope (step 4 above —
+`weekly_report.gs` (the Apps Script project's file is named `Code.gs`, not `weekly_report.gs` — see
+step 2 above) over the existing project; update the manifest scope (step 4 above —
 `bigquery.readonly` → `bigquery`, `gmail.labels` → `gmail.modify`); run `testReport()` and
 re-approve the consent screen (the scope changed, so Google will re-prompt); **confirm the
 email contains the line-chart PNG, not the HTML bar fallback** (a bars-only email means the

@@ -12,7 +12,14 @@ act. Dated passes below; most recent first.
 
 # 2026-07-20 Code-quality audit — `pctCellHtml_` zero-boundary swatch fix (`weekly_report.gs` v6 → v7)
 
-## Y. Redeploy `weekly_report.gs` (v6 → v7, `pctCellHtml_` zero-boundary swatch fix) via the pinned-SHA GitHub-raw flow — after this branch merges
+## [DONE 2026-07-20 — deployed + verified live] Y. Redeploy `weekly_report.gs` (v6 → v7, `pctCellHtml_` zero-boundary swatch fix) via Claude-in-Chrome
+
+**Verified live 2026-07-20:** deployed via Claude-in-Chrome; `ops.heartbeat`'s newest `weekly_report`
+row is 2026-07-20 14:22:06 UTC, `version='v7'` (prior two rows `v6`), and `runWeeklyReport` ran clean
+("Weekly report sent to jacksterwu@gmail.com", no errors). `state.expected_script_versions`'s
+`weekly_report` row was bumped to `v7` AFTER that heartbeat (targeted UPDATE, same after-the-heartbeat
+sequencing GS-1/GS-2/WR-1/T used). **Verified: `state.script_version_drift` → `weekly_report` v7/v7,
+`drift=false`** (`alert_emailer` unaffected by this pass, still v3/v3). **No remaining owner steps.**
 
 **What it's for:** finding C25 of the 2026-07-20 code-review: `pctCellHtml_`'s color swatch picked
 `clr_(v)` off `v`'s RAW sign while its text came from `signPct_(v * 100)`, which forces a '+' once the
@@ -22,20 +29,21 @@ around text reading '+0.00%'. `SCRIPT_VERSION` bumped `'v6'` → `'v7'` in
 `ops/weekly_report/weekly_report.gs`, with the matching `bigquery/43_script_version_registry.sql` seed
 row bumped to match. The ONLY functional change vs the deployed v6 is this swatch fix — same class of
 change as every prior `.gs` redeploy in this file (GS-1/GS-2, WR-1, T) — Claude cannot reach
-`script.google.com` directly, so the deploy is a Chrome-driven paste from the commit-SHA-pinned GitHub
-raw URL, per the small-edit=edit-list / large-rewrite=commit-SHA-pinned-URL convention.
+`script.google.com` directly, so the deploy is Chrome-driven either way; under the
+small-edit=edit-list / large-rewrite=commit-SHA-pinned-URL convention, a two-line change like this one
+takes the edit-list path (see Action below for what was actually executed).
 
-**Action:** once this branch merges to `main`, paste the merged `Code.gs` content into the
-"Stock-Trading Automation" Apps Script project via Claude-in-Chrome from the commit-SHA-pinned GitHub
-raw URL, run `runWeeklyReport` once to confirm the `weekly_report` heartbeat lands with `version='v7'`,
-THEN — and ONLY after that heartbeat lands — bump `state.expected_script_versions`'s `weekly_report`
-row to `v7` (targeted UPDATE, done AFTER the v7 heartbeat so no false drift is introduced) — the same
-after-the-heartbeat sequencing WR-1/T used.
-
-**If skipped:** the deployed report keeps painting a loss-red swatch around '+0.00%' for
-hairline-negative cells — purely cosmetic, nothing else depends on it. Landing this repo commit alone
-fires NO alert: the repo-side `bigquery/43` seed is not applied live by merging, so live stays v6/v6
-with `drift=false` until both the redeploy AND the seed MERGE are applied.
+**Action (as actually executed 2026-07-20 — differs from the pinned-SHA-after-merge flow this
+paragraph originally prescribed):** rather than waiting for this branch to merge and pasting the
+merged `Code.gs` from a commit-SHA-pinned GitHub raw URL, Claude-in-Chrome applied the fix pre-merge
+as a two-edit edit-list directly in the "Stock-Trading Automation" Apps Script project (the repo file
+`ops/weekly_report/weekly_report.gs` is deployed there as the project's `Code.gs` file — the project
+kept Apps Script's default filename), content-verified character-for-character against the repo's
+post-fix `pctCellHtml_` at commit `c5bd482`. `runWeeklyReport` was then run to confirm the
+`weekly_report` heartbeat landed with `version='v7'`, THEN — and ONLY after that heartbeat landed —
+`state.expected_script_versions`'s `weekly_report` row was bumped to `v7` (targeted UPDATE, done AFTER
+the v7 heartbeat so no false drift was introduced) — the same after-the-heartbeat sequencing WR-1/T
+used.
 
 ```verify
 id: Y
