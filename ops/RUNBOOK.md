@@ -606,6 +606,41 @@ stall with it (it ran under the same identity).
   **Priority context:** this is the 2nd, independent channel; the primary `safety_critical_dml_watch`
   scheduled query (every 6h, email-on-failure ON, live 2026-07-17) is the first line.
 
+- **§15a. Connector tool-permission matrix (added 2026-07-19).** The claude.ai connectors UI exposes
+  per-tool allow/ask/block controls; a tool group's dropdown reads "Always allow" only while EVERY tool
+  in the group is set to allow — if even one differs, the label silently flips to "Custom". **A label
+  flip is therefore not proof anyone changed a needed permission** — check the underlying per-tool
+  matrix, not the group label.
+
+  **Canonical expected matrix — Google Cloud BigQuery connector:**
+
+  | Tool | Setting | Why |
+  |---|---|---|
+  | `execute_sql` (write/delete group) | Always allow | REQUIRED — all routine DML/DDL |
+  | `execute_sql_readonly` | allow | REQUIRED — every routine's pre-flight liveness read (`SELECT * FROM state.trading_day_today`) |
+  | `get_dataset_info` | allow | used — diagnostics/schema inspection |
+  | `get_table_info` | allow | used — diagnostics/schema inspection |
+  | `list_dataset_ids` | OPTIONAL | zero operational dependency (repo-wide verified 2026-07-19) |
+  | `list_table_ids` | OPTIONAL | zero operational dependency (repo-wide verified 2026-07-19) |
+
+  **Incident record, 2026-07-19.** Owner observed the read-only group's label flip "Always
+  allow"→"Custom", with `list_dataset_ids`/`list_table_ids` shown as blocked. Same-evening
+  investigation concluded: (a) no Claude session, sub-agent, routine, or API surface on this side can
+  modify claude.ai connector settings (UI-only, owner-controlled) — the flip was platform-side (a
+  connectors permission-model/UI update, or a re-auth resetting defaults), not an action by anything in
+  this system; (b) `ops.run_log` back to 2026-06-25 carries zero permission-denial entries for either
+  tool — no routine ever hit the block; (c) a live probe the same evening showed BOTH tools still
+  working at runtime (the displayed block was not enforced on the session surface, or the UI state was
+  stale); (d) zero operational impact either way.
+
+  **Drift-detection posture.** A harmful flip (`execute_sql` or `execute_sql_readonly` blocked) is
+  already self-detecting — every routine's first action is the BigQuery liveness read, so a block halts
+  the routine at pre-flight and raises the connector alert same-session, identical to an OAuth expiry
+  (§26 precedent). The only invisible drift class is on the two tools nothing depends on — harmless by
+  definition. **Operator guidance:** after any connector re-auth, reconnect, or visible connectors-UI
+  redesign, glance at the per-tool matrix against the table above; restore the two OPTIONAL rows to
+  allow, or accept them blocked — either is fine.
+
 ## 16. Publish the health dashboard *(D1)*
 `.github/workflows/dashboard.yml` builds `ops/dashboard/index.html` from BigQuery and deploys it to
 GitHub Pages. **OFF by default and double-gated** (the page shows live trading data): enable only by

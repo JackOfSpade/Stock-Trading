@@ -10,6 +10,91 @@ act. Dated passes below; most recent first.
 
 ---
 
+# 2026-07-19 Connector/subscription health — IBKR expired, FMP tier degraded, BigQuery permission-matrix flip
+
+Three independent connector/subscription findings from the same evening pass, none overlapping any
+existing item above. Full BigQuery-connector reference matrix is now documented in `ops/RUNBOOK.md`
+§15a — item X below just points there.
+
+## V. URGENT — Re-authorize the Interactive Brokers (IBKR) connector before Monday 2026-07-20 16:10 MT (D1's fire time)
+
+**What it's for:** the IBKR connector grant is expired — verified still expired as of 2026-07-19
+~20:00 MT (this session's own IBKR calls fail with an auth error; see the harness's connector-auth
+system note). Until re-authorized, three things are blocked: D2a's broker reconcile/snapshot step, D2's
+action-conversion step, and the week-2026-W29 W4→W5 refire — W4's trading-enable gate counts the open
+D2 connector critical `8bbcf6c5` as a blocking condition.
+
+**Action:** re-auth the IBKR connector in claude.ai connector settings. After that:
+- Either ask an interactive session to run the recovery chain: refire D2a → D2, manually resolve
+  connector alerts `8bbcf6c5` + `cbbb8427` once verified healthy (a live `get_account_summary` call
+  succeeding), then refire W4 → W5, closing `dbd47d1f` LAST (only after W4 completes — do not close it
+  early, per this pass's own halt-echo-gate review).
+- Or let Monday's already-scheduled D1/D2a/D2 self-heal the daily layer on their own — but note **W4/W5
+  will NOT self-heal this week without a manual refire** (weekly cadence; the next natural fire is
+  Sunday 2026-07-26, a full week later).
+
+Same visit: tap the **2 pending IBKR order confirmations (ISRG/TSM)** — `owner_confirmation_stale` has
+NEW-entry staging paused (6 trading days since the last fill; see RUNBOOK §15/item P for the mechanism).
+
+**If skipped:** D2a/D2 keep no-op-ing on the connector critical every time they fire (fail-safe, no
+capital at risk), W4/W5 stay stuck mid-week-2026-W29 until the next owner-initiated refire or the
+2026-07-26 natural fire, and new-entry staging stays paused past the 2 pending confirmations.
+
+```verify
+id: V
+type: ibkr
+probe: an IBKR `get_account_summary` MCP call, plus SELECT resolved FROM `stock-trading-498512.ops.alerts` WHERE alert_id LIKE '8bbcf6c5%' OR alert_id LIKE 'cbbb8427%'
+done_when: get_account_summary succeeds (no auth error) AND both alerts show resolved=TRUE
+```
+
+## W. NORMAL — Restore the FMP subscription tier (ETF historical chart + quote endpoints currently ACCESS DENIED)
+
+**What it's for:** the FMP plan now rejects ETF historical chart and quote endpoint calls (`ACCESS
+DENIED`, verified 2026-07-19 evening). The `^VIX` index chart endpoint still works, so — despite what
+D2a's alert `96babaaa` says — the daily `^VIX` signal ingest is **not actually at risk**; that alert
+overstates the blast radius. The real impact is narrower: the FMP fallback layer for `daily_marks` is
+dead (IBKR remains the primary source), and W5's nogo-shadow quotes may degrade — both best-effort,
+non-fatal paths, not anything that gates capital.
+
+**Action:** check/restore the plan tier at financialmodelingprep.com (the ETF chart/quote endpoints
+need a higher tier than the account currently holds), or knowingly accept the degraded fallback — the
+system keeps running either way on IBKR as primary.
+
+**If skipped:** no change to today's behavior; `daily_marks` keeps sourcing from IBKR, and the FMP
+fallback simply stays unavailable if IBKR ever has its own outage on the same day.
+
+```verify
+id: W
+type: fmp
+probe: an FMP ETF historical-chart or quote call (e.g. ticker VOO) — currently returns ACCESS DENIED
+done_when: the same call returns data instead of ACCESS DENIED
+```
+
+## X. LOW / optional — BigQuery connector read-only tool group shows "Custom" (`list_dataset_ids`/`list_table_ids` displayed blocked)
+
+**What it's for:** the BigQuery connector's read-only tool group label flipped from "Always allow" to
+"Custom" with `list_dataset_ids`/`list_table_ids` shown as blocked. Verified **zero operational
+impact**: nothing in this repo calls either tool (repo-wide check, 2026-07-19), and a live probe the
+same evening showed both still working at runtime regardless of the displayed label. The canonical
+expected per-tool matrix for this connector — including which two tools are load-bearing
+(`execute_sql`, `execute_sql_readonly`) versus optional — is now documented in `ops/RUNBOOK.md` §15a.
+
+**Action (optional):** re-enable the two toggles in claude.ai connector settings to restore the "Always
+allow" group label, or leave them as-is — either is a fine end state per RUNBOOK §15a.
+
+**If skipped:** no change to anything — this is a cosmetic/optional item with no downstream effect,
+documented mainly so a future audit doesn't mistake the "Custom" label for a real permission problem.
+
+```verify
+id: X
+type: ui
+probe: claude.ai connector settings → Google Cloud BigQuery → per-tool permissions
+done_when: list_dataset_ids and list_table_ids read "allow" (fully optional — "Custom" with just these
+  two blocked is an equally acceptable end state per RUNBOOK §15a)
+```
+
+---
+
 # 2026-07-19 OPS0 blocked-refire root cause — RemoteTrigger missing from every routine trigger's allowed_tools
 
 On 2026-07-18 OPS0 (Cadence Watchdog) could not auto-refire a missed D3 run because the `RemoteTrigger`
