@@ -52,14 +52,40 @@
 -- attacker's case (role='attacker'), never the orchestrator's text, so it cannot echo it. Writes a new
 -- role='referee_gemini' row into events.adversarial_reviews (zero schema change — role is an
 -- unconstrained STRING, exactly how theater_judge's own scoring works against the same table).
--- Idempotent: NOT EXISTS + MERGE ... WHEN NOT MATCHED THEN INSERT only, never UPDATE/DELETE — a review
+-- Idempotent: INSERT ... SELECT ... WHERE NOT EXISTS only, never UPDATE/DELETE/MERGE — a review
 -- already refereed is never re-scored, matching the append-only-verdict discipline every other
--- events.adversarial_reviews row follows.
+-- events.adversarial_reviews row follows. Belt-and-suspenders double guard, both keyed on
+-- (review_id, role='referee_gemini'): the inner NOT EXISTS inside the AI.GENERATE_TABLE source
+-- subquery stops an already-scored attacker submission from ever being re-sent to Gemini (the
+-- expensive, billed step); the outer WHERE NOT EXISTS wrapping the INSERT stops a duplicate row
+-- from landing even if that inner guard's snapshot were ever stale by the time of the write — the
+-- same protection the prior MERGE's `ON T.review_id = S.review_id AND T.role = S.role` gave.
+--
+-- REV 2026-07-20 (alert 58da7e8f): rewritten from `MERGE ... WHEN NOT MATCHED THEN INSERT` (which
+-- deliberately had no WHEN MATCHED branch — it was already functionally insert-only) to plain
+-- `INSERT INTO ... SELECT ... WHERE NOT EXISTS`. WHY: state.append_only_integrity
+-- (bigquery/18_stack_review_fixes.sql) flags any completed job against events.adversarial_reviews
+-- whose statement_type IN ('UPDATE','DELETE','MERGE','TRUNCATE_TABLE') — a predicate keyed purely on
+-- the BigQuery job's statement_type, which cannot see the absence of a WHEN MATCHED branch inside a
+-- MERGE. W5's first live call of this procedure (2026-07-19 22:03 MT) emitted a MERGE job and tripped
+-- a scheduled.integrity append_only_violation warning even though nothing was ever updated, deleted,
+-- or overwritten — and would have re-tripped it every week the referee scores a new submission, since
+-- the loop is now live and recurring. Switching to INSERT preserves byte-for-byte identical
+-- idempotency semantics (see the double-guard note above) while making the emitted job's
+-- statement_type INSERT, so the monitor no longer fires. Deliberately NOT solved by adding a
+-- per-table/per-procedure suppression carve-out to state.append_only_integrity itself (the way the
+-- one existing decision_log.sub_pattern exception works): a carve-out would have to be individually
+-- maintained for every future offending table/procedure and weakens a safety check whose whole value
+-- is that it currently CANNOT distinguish "insert-only MERGE" from "the audit trail was silently
+-- rewritten" — better to just not emit a MERGE job here at all.
 -- ============================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_score_cross_model_referee`()
 BEGIN
-  MERGE `stock-trading-498512.events.adversarial_reviews` T
-  USING (
+  INSERT INTO `stock-trading-498512.events.adversarial_reviews`
+    (review_id, role, review_type, strategy, review_date, cycle_number, verdict, theater_check, weaknesses, artifact_path, body_md)
+  SELECT
+    S.review_id, S.role, S.review_type, S.strategy, S.review_date, S.cycle_number, S.verdict, S.theater_check, S.weaknesses, S.artifact_path, S.body_md
+  FROM (
     SELECT
       g.review_id, 'referee_gemini' AS role, g.review_type, g.strategy, g.review_date, g.cycle_number,
       g.verdict_out AS verdict,
@@ -99,10 +125,10 @@ BEGIN
       STRUCT('verdict_out STRING, reasoning STRING' AS output_schema, 0.0 AS temperature)
     ) g
   ) S
-  ON T.review_id = S.review_id AND T.role = S.role
-  WHEN NOT MATCHED THEN INSERT
-    (review_id, role, review_type, strategy, review_date, cycle_number, verdict, theater_check, weaknesses, artifact_path, body_md)
-    VALUES (S.review_id, S.role, S.review_type, S.strategy, S.review_date, S.cycle_number, S.verdict, S.theater_check, S.weaknesses, S.artifact_path, S.body_md);
+  WHERE NOT EXISTS (
+    SELECT 1 FROM `stock-trading-498512.events.adversarial_reviews` T
+    WHERE T.review_id = S.review_id AND T.role = S.role
+  );
 END;
 
 -- ============================================================================
