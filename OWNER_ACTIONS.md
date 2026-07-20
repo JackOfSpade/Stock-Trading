@@ -47,27 +47,30 @@ probe: an IBKR `get_account_summary` MCP call, plus SELECT resolved FROM `stock-
 done_when: get_account_summary succeeds (no auth error) AND both alerts show resolved=TRUE
 ```
 
-## W. NORMAL — Restore the FMP subscription tier (ETF historical chart + quote endpoints currently ACCESS DENIED)
+## W. NORMAL — Restore the FMP subscription tier (ETF historical chart + quote endpoints currently ACCESS DENIED) — `[DONE 2026-07-19 — owner declined, no purchase]`
 
-**What it's for:** the FMP plan now rejects ETF historical chart and quote endpoint calls (`ACCESS
-DENIED`, verified 2026-07-19 evening). The `^VIX` index chart endpoint still works, so — despite what
-D2a's alert `96babaaa` says — the daily `^VIX` signal ingest is **not actually at risk**; that alert
-overstates the blast radius. The real impact is narrower: the FMP fallback layer for `daily_marks` is
-dead (IBKR remains the primary source), and W5's nogo-shadow quotes may degrade — both best-effort,
-non-fatal paths, not anything that gates capital.
+**Closed 2026-07-19 evening: owner decided NOT to purchase an FMP tier** — the $19/mo upgrade isn't
+justified; IBKR's existing paid market-data subscription is already the primary source and covers the
+gap. The `^VIX` index chart endpoint still works on the free tier, so — despite what D2a's alert
+`96babaaa` said — the daily `^VIX` signal ingest was never actually at risk; that alert overstated the
+blast radius. Same evening, in this commit, W5's NO-GO COUNTERFACTUAL SHADOW-TRACKING sub-step
+(`Claude_Task_Plan.md`) was rewired so nogo-shadow entry/forward prices source from IBKR
+(`search_contracts` → `get_price_snapshot`) as PRIMARY, with FMP `quote` demoted to a best-effort
+fallback that now only resolves for FMP's free-list symbols post-re-scoping. The one residual accepted
+loss: the FMP fallback layer for `daily_marks` (ETF marks) stays dead — this only ever mattered when
+IBKR itself was down on a marking day, and a missed mark self-heals on the next healthy run, so it's
+accepted as-is rather than paid around. `^VIX` ingest and the market-holiday calendar auto-extend both
+stay on the FMP free tier and are verified still working, unaffected by the endpoint re-scoping.
 
-**Action:** check/restore the plan tier at financialmodelingprep.com (the ETF chart/quote endpoints
-need a higher tier than the account currently holds), or knowingly accept the degraded fallback — the
-system keeps running either way on IBKR as primary.
-
-**If skipped:** no change to today's behavior; `daily_marks` keeps sourcing from IBKR, and the FMP
-fallback simply stays unavailable if IBKR ever has its own outage on the same day.
+**If this recurs:** re-check the FMP plan tier at financialmodelingprep.com only if IBKR itself starts
+degrading and a second live quote source becomes worth paying for; until then, no action needed.
 
 ```verify
 id: W
 type: fmp
 probe: an FMP ETF historical-chart or quote call (e.g. ticker VOO) — currently returns ACCESS DENIED
-done_when: the same call returns data instead of ACCESS DENIED
+done_when: standing decision — no purchase; revisit only if the `^VIX` chart or `marketHours` calendar
+  lose free-tier coverage
 ```
 
 ## X. LOW / optional — BigQuery connector read-only tool group shows "Custom" (`list_dataset_ids`/`list_table_ids` displayed blocked) — `[DONE 2026-07-19 — owner confirmed]`
