@@ -70,20 +70,21 @@ probe: an FMP ETF historical-chart or quote call (e.g. ticker VOO) — currently
 done_when: the same call returns data instead of ACCESS DENIED
 ```
 
-## X. LOW / optional — BigQuery connector read-only tool group shows "Custom" (`list_dataset_ids`/`list_table_ids` displayed blocked)
+## X. LOW / optional — BigQuery connector read-only tool group shows "Custom" (`list_dataset_ids`/`list_table_ids` displayed blocked) — `[DONE 2026-07-19 — owner confirmed]`
 
-**What it's for:** the BigQuery connector's read-only tool group label flipped from "Always allow" to
-"Custom" with `list_dataset_ids`/`list_table_ids` shown as blocked. Verified **zero operational
-impact**: nothing in this repo calls either tool (repo-wide check, 2026-07-19), and a live probe the
-same evening showed both still working at runtime regardless of the displayed label. The canonical
-expected per-tool matrix for this connector — including which two tools are load-bearing
-(`execute_sql`, `execute_sql_readonly`) versus optional — is now documented in `ops/RUNBOOK.md` §15a.
+**Closed 2026-07-19: the owner re-enabled both toggles themselves, same evening, before reporting the
+incident.** The BigQuery connector's read-only tool group label had flipped from "Always allow" to
+"Custom" with `list_dataset_ids`/`list_table_ids` shown as blocked; verified **zero operational
+impact** while blocked (nothing in this repo calls either tool, repo-wide check 2026-07-19). Because
+the owner had already flipped both toggles back to allow before this was investigated, the
+same-evening live probe that found both tools working confirms the restored state — it does not
+establish whether the displayed block was ever enforced at runtime (untested, and now moot). Group
+label reads "Always allow" again. The canonical expected per-tool matrix for this connector —
+including which two tools are load-bearing (`execute_sql`, `execute_sql_readonly`) versus optional —
+remains documented in `ops/RUNBOOK.md` §15a.
 
-**Action (optional):** re-enable the two toggles in claude.ai connector settings to restore the "Always
+**If this recurs:** re-enable the two toggles in claude.ai connector settings to restore the "Always
 allow" group label, or leave them as-is — either is a fine end state per RUNBOOK §15a.
-
-**If skipped:** no change to anything — this is a cosmetic/optional item with no downstream effect,
-documented mainly so a future audit doesn't mistake the "Custom" label for a real permission problem.
 
 ```verify
 id: X

@@ -629,9 +629,10 @@ stall with it (it ran under the same identity).
   modify claude.ai connector settings (UI-only, owner-controlled) — the flip was platform-side (a
   connectors permission-model/UI update, or a re-auth resetting defaults), not an action by anything in
   this system; (b) `ops.run_log` back to 2026-06-25 carries zero permission-denial entries for either
-  tool — no routine ever hit the block; (c) a live probe the same evening showed BOTH tools still
-  working at runtime (the displayed block was not enforced on the session surface, or the UI state was
-  stale); (d) zero operational impact either way.
+  tool — no routine ever hit the block; (c) the owner had already re-enabled both toggles before this
+  same-evening investigation ran, so the live probe that found both tools working confirms the
+  restored state, not whether the displayed block was ever runtime-enforced (untested, now moot);
+  (d) zero operational impact either way.
 
   **Drift-detection posture.** A harmful flip (`execute_sql` or `execute_sql_readonly` blocked) is
   already self-detecting — every routine's first action is the BigQuery liveness read, so a block halts
