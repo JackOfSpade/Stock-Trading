@@ -216,7 +216,7 @@ a hope, not a backup. Two equivalent drills exist:
   drill must READ the backups; the daily backup already has write, so this read grant is drill-only), and
   (2) create the monthly scheduled query from `bigquery/scheduled_queries/restore_drill.sql`.
 - **Ad-hoc (shell):** `scripts/restore_drill.sh` (latest snapshot) or `DATE=YYYY-MM-DD scripts/restore_drill.sh`
-  from Cloud Shell — same checks via `bq`/`gsutil`.
+  from Cloud Shell — same checks via `bq`/`gcloud storage`.
 
 **Validated end-to-end 2026-06-22:** ran the drill across all 12 `events.*` tables from the dt=2026-06-21
 snapshot — every table restored at **exact row-count parity to live** (e.g. decision_log 262/262,

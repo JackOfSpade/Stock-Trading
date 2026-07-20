@@ -25,7 +25,7 @@ SCRATCH="${SCRATCH:-events_restore_drill}"
 KEEP="${KEEP:-0}"
 
 command -v bq >/dev/null || { echo "bq CLI not found (install Google Cloud SDK)"; exit 1; }
-command -v gsutil >/dev/null || { echo "gsutil CLI not found (install Google Cloud SDK)"; exit 1; }
+command -v gcloud >/dev/null || { echo "gcloud CLI not found (install Google Cloud SDK)"; exit 1; }
 
 bqq() { bq --project_id="$PROJECT" query --use_legacy_sql=false --format=csv --quiet --headless --max_rows=100000 "$1" | tail -n +2; }
 
@@ -35,7 +35,7 @@ mapfile -t TABLES < <(bqq "SELECT table_name FROM \`$PROJECT.events.INFORMATION_
 
 # Resolve the snapshot date: newest dt= partition present for the first table, unless DATE is pinned.
 if [ -z "${DATE:-}" ]; then
-  DATE="$(gsutil ls "$BUCKET/events/${TABLES[0]}/" 2>/dev/null \
+  DATE="$(gcloud storage ls "$BUCKET/events/${TABLES[0]}/" 2>/dev/null \
             | sed -n 's#.*/dt=\([0-9-]\{10\}\)/.*#\1#p' | sort -u | tail -1 || true)"
 fi
 [ -n "${DATE:-}" ] || { echo "could not resolve a backup date under $BUCKET/events/${TABLES[0]}/; pass DATE=YYYY-MM-DD"; exit 1; }
