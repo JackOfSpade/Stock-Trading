@@ -37,6 +37,18 @@ QUALIFY ROW_NUMBER() OVER (PARTITION BY item_key ORDER BY snapshot_ts DESC) = 1;
 -- Self-bootstrapping (same philosophy as state.cadence_watch / state.stalled_runs): a row staged in the
 -- last 30h is NEVER flagged here even with zero attestation history — it is simply too new for a D3
 -- cycle to have reached it yet, which is expected, not a finding.
+-- CRAFTABILITY SCOPING (2026-07-20, closes D3's 2026-07-19 confirm_event_gap finding 9dd23ed4): this
+-- view predated the 2026-07-09 rescoping under which a CRAFTABLE order (equity/ETF/single-leg-options
+-- instruction crafted via create_order_instruction) has NO confirm-order calendar event by design —
+-- the instruction's own IBKR notification is its human confirm surface — so calendar attestation only
+-- applies to NON-craftable (manual-entry) orders. The craftability marker is the recorded
+-- payload.instruction_id (state.open_orders.instruction_id): a crafted order always records it at
+-- staging (STAGING ATOMICITY gate), so its presence = craftable = exempt from calendar attestation.
+-- Fail-closed on the interesting failure: a craft that never recorded an instruction_id (atomicity
+-- breach, or a genuinely manual order) still flags here exactly as before. Liveness of the crafted
+-- instruction itself is NOT this view's job — that is owned by D2a's registry reconciliation + D3's
+-- instruction-verify/persist-and-wait re-craft (a DAY instruction expiring nightly is designed, not
+-- drift).
 CREATE OR REPLACE VIEW `stock-trading-498512.state.staged_without_confirm` AS
 SELECT
   o.item_key, o.ticker, o.side, o.entry_window_close, o.staged_ts,
@@ -50,6 +62,7 @@ SELECT
 FROM `stock-trading-498512.state.open_orders` o
 LEFT JOIN `stock-trading-498512.state.confirm_event_latest` c USING (item_key)
 WHERE o.status = 'pending'
+  AND o.instruction_id IS NULL   -- craftability scoping (2026-07-20): see header note above
   AND o.staged_ts < TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 HOUR)
   AND (c.snapshot_id IS NULL
        OR NOT c.confirm_event_found
