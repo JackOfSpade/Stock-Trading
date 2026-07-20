@@ -5,7 +5,7 @@ name: Off-site backup mirror
 # scripts/backup_events.sh's own header names "project loss" as a threat it should survive, yet the backup
 # never leaves the project. A project deletion, billing closure, or single-account compromise destroys live
 # data and backup together. This job mirrors the latest dt= snapshot to a store in a DIFFERENT trust domain
-# (a separate billing-account project's bucket, or any gsutil-addressable destination), closing that
+# (a separate billing-account project's bucket, or any gcloud-storage-addressable destination), closing that
 # blast-radius. The complementary one-time owner controls (project deletion lien + Essential Contacts to a
 # non-Google address) are in RUNBOOK §27 — they cannot live in CI.
 #
@@ -50,7 +50,7 @@ jobs:
             echo "::notice::Off-site backup disabled (default). To enable: set secret OFFSITE_BACKUP_GCS to an OFF-PROJECT gs:// bucket, grant the WIF SA storage.objectViewer on gs://stock-trading-backups + objectAdmin on the destination, and set the WIF vars. ops/RUNBOOK.md §27."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
-      - name: GCP WIF auth + gcloud setup (provides gsutil)
+      - name: GCP WIF auth + gcloud setup
         if: steps.guard.outputs.skip == 'false'
         uses: ./.github/actions/gcp-wif-auth
         with:
@@ -66,7 +66,8 @@ jobs:
           # rsync the whole backup tree (events/ + ops/) to the off-project destination. -d would delete
           # extras at the destination; we OMIT -d so the off-site copy retains history independent of the
           # source bucket's >400d lifecycle (a deliberate divergence — off-site is the deeper archive).
-          if gsutil -m rsync -r "$SRC" "$DEST"; then
+          # gcloud storage rsync parallelizes by default (unlike gsutil rsync, which needed a top-level -m).
+          if gcloud storage rsync -r "$SRC" "$DEST"; then
             echo "off-site mirror OK: $SRC -> $DEST"
           else
             msg="🗄 Stock-Trading OFF-SITE backup mirror FAILED ($SRC -> $DEST). The off-project copy is stale — the events/ops truth has no out-of-trust-domain backup until this is fixed. See ops/RUNBOOK.md §27."
@@ -107,7 +108,7 @@ jobs:
           # CI-findings bridge (same non-fatal pattern as the sibling guards). gcloud/bq are available
           # from the WIF auth step above (it must have succeeded for the mirror step to have run).
           # shellcheck disable=SC2016 # single-quoted intentionally: backtick identifier + @p_url stay literal.
-          bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("offsite-backup","offsite_mirror","open","gsutil rsync to the off-project destination failed — off-site copy stale",@p_url)' || echo "::warning::ops.ci_findings insert failed — GH issue path unaffected."
+          bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("offsite-backup","offsite_mirror","open","gcloud storage rsync to the off-project destination failed — off-site copy stale",@p_url)' || echo "::warning::ops.ci_findings insert failed — GH issue path unaffected."
 
       - name: Close finding issue if resolved
         if: always() && steps.guard.outputs.skip == 'false' && steps.mirror.outcome == 'success'
