@@ -40,7 +40,7 @@ WITH catchup_safe_routines AS (
   -- run would have produced (identical rationale to D1/D3). It is the only SL routine eligible here:
   -- SL1/SL2/SL4/SL5 are not daily, so they never enter state.cadence_watch's alarm set (they are
   -- covered by state.cadence_period_watch / state.stalled_runs instead) and cannot appear on this join.
-  SELECT routine FROM UNNEST(['D1', 'D3', 'SL3']) AS routine
+  SELECT routine FROM UNNEST(['D1', 'D3', 'OPS1', 'SL3']) AS routine
 )
 SELECT w.routine, w.schedule, w.today
 FROM `stock-trading-498512.state.cadence_watch` w

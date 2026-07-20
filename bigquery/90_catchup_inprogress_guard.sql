@@ -39,7 +39,7 @@
 -- ===== state.catchup_available (supersedes bigquery/31) =====
 CREATE OR REPLACE VIEW `stock-trading-498512.state.catchup_available` AS
 WITH catchup_safe_routines AS (
-  SELECT routine FROM UNNEST(['D1', 'D3', 'SL3']) AS routine
+  SELECT routine FROM UNNEST(['D1', 'D3', 'OPS1', 'SL3']) AS routine
 ),
 in_flight AS (
   -- Latest ops.run_log row per (routine, run_date); "in flight" iff that latest row is a fresh
