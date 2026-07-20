@@ -1109,6 +1109,27 @@ never applied. **Repo artifacts are DONE; this section lists the owner/console a
   audits changes. (A1's Cloud Monitoring webhook-channel spec in `monitoring.tf`, above, is unaffected
   and stays Terraform-spec-only per the standing decision — this note is about A2/A3's GHA-side
   channel only.)
+  **Craftability-aware wording (2026-07-20).** The daily A3 order reminder (`relay_orders()`) used to
+  tell the operator to "tap the `[Claude] Confirm order` event" on every still-`pending` row, unconditionally
+  — but per the 2026-07-09 calendar-scope narrowing a CRAFTABLE order (equity/ETF/single-leg-options,
+  `instruction_id` set at staging) never gets that calendar event; its confirm surface is
+  `create_order_instruction`'s own IBKR notification. Read literally, the old wording told the operator
+  to go find a confirm link that does not exist, and re-fired identically every day a craftable order sat
+  unfilled — including days after the operator had already confirmed it via IBKR and it was simply
+  resting (`status='pending'` in `state.open_orders` means "not yet filled + reconciled," not "not yet
+  confirmed"; this relay has no live IBKR read, so it genuinely cannot tell "still needs a tap" apart
+  from "already confirmed, just unfilled"). Root-caused from a live false-alarm report (2026-07-20,
+  ISRG/TSM staged 2026-07-17 — confirmed the confusion by checking `get_account_orders`: TSM had a live
+  working DAY order the whole time, ISRG's had lapsed with the persist-and-wait re-craft blocked by a
+  concurrent IBKR-connector-reauth outage — see the D2a/D3 `ops.run_log` notes for 2026-07-19). Fix:
+  `relay_orders()` now selects `instruction_id` and branches the per-row note — a craftable row (
+  `instruction_id` set) says "confirm surface is IBKR's own order notification, not a calendar event"
+  instead; a genuinely non-craftable/manual-entry row (`instruction_id` NULL) keeps the original
+  "tap the `[Claude] Confirm order` event" text, since that one still has a real event. Mirrors the same
+  craftability filter already added to `state.staged_without_confirm`
+  (`bigquery/30_confirm_attestation.sql`, same date). Does not fully eliminate the daily re-notify for a
+  craftable order sitting unfilled across several sessions — that is inherent to the DAY-only TIF
+  re-craft policy (§11) and this relay's lack of live IBKR access — only the misleading action text.
 
 ### Theme B — data durability & integrity
 - **B1 — GCS Object Versioning (owner, gsutil).** `storage.tf` now declares `versioning{}` + a

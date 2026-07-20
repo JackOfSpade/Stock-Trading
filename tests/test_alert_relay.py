@@ -97,7 +97,7 @@ def test_relay_orders_empty_does_not_post(monkeypatch):
 def test_relay_orders_posts_and_formats(monkeypatch):
     monkeypatch.setattr(ar, "bq", lambda sql: [
         {"item_key": "k1", "strategy": "B", "ticker": "KMX", "side": "BUY",
-         "qty": "10", "limit_price": "70.00", "window_close": "2026-06-30"},
+         "qty": "10", "limit_price": "70.00", "window_close": "2026-06-30", "instruction_id": None},
     ])
     posted = []
     monkeypatch.setattr(ar, "post", lambda text: posted.append(text))
@@ -111,6 +111,53 @@ def test_relay_orders_missing_column_raises_not_silent(monkeypatch):
     monkeypatch.setattr(ar, "post", lambda text: None)
     with pytest.raises(KeyError):
         ar.relay_orders()
+
+
+# ---- relay_orders(): craftability-aware wording (2026-07-20 fix — see scripts/alert_relay.py
+#      relay_orders' docstring). A craftable order (instruction_id set) never gets a
+#      `[Claude] Confirm order` calendar event by design (2026-07-09 policy) — telling the operator
+#      to tap one that doesn't exist is misleading, especially on a row already confirmed via IBKR's
+#      own notification days ago and just resting unfilled. Only a non-craftable/manual-entry row
+#      (instruction_id NULL) actually has that calendar event.
+
+def test_relay_orders_craftable_row_does_not_mention_calendar_event(monkeypatch):
+    monkeypatch.setattr(ar, "bq", lambda sql: [
+        {"item_key": "entry-TSM-D-20260717", "strategy": "D", "ticker": "TSM", "side": "BUY",
+         "qty": "0.0946", "limit_price": "399.3", "window_close": "2026-07-24", "instruction_id": "100"},
+    ])
+    posted = []
+    monkeypatch.setattr(ar, "post", lambda text: posted.append(text))
+    ar.relay_orders()
+    assert "[Claude] Confirm order" not in posted[0]
+    assert "IBKR's own order notification" in posted[0]
+
+
+def test_relay_orders_manual_entry_row_still_mentions_calendar_event(monkeypatch):
+    monkeypatch.setattr(ar, "bq", lambda sql: [
+        {"item_key": "k2", "strategy": "B", "ticker": "SPX 260918C05500000", "side": "BUY",
+         "qty": "1", "limit_price": "12.50", "window_close": "2026-07-30", "instruction_id": None},
+    ])
+    posted = []
+    monkeypatch.setattr(ar, "post", lambda text: posted.append(text))
+    ar.relay_orders()
+    assert "tap the [Claude] Confirm order event" in posted[0]
+
+
+def test_relay_orders_mixed_rows_annotate_independently(monkeypatch):
+    monkeypatch.setattr(ar, "bq", lambda sql: [
+        {"item_key": "k1", "strategy": "D", "ticker": "ISRG", "side": "BUY", "qty": "0.1091",
+         "limit_price": "346.3", "window_close": "2026-07-24", "instruction_id": "101"},
+        {"item_key": "k2", "strategy": "B", "ticker": "MANUAL", "side": "SELL", "qty": "1",
+         "limit_price": "10.00", "window_close": "2026-07-24", "instruction_id": None},
+    ])
+    posted = []
+    monkeypatch.setattr(ar, "post", lambda text: posted.append(text))
+    ar.relay_orders()
+    lines = posted[0].splitlines()
+    isrg_line = next(l for l in lines if "ISRG" in l)
+    manual_line = next(l for l in lines if "MANUAL" in l)
+    assert "IBKR's own order notification" in isrg_line
+    assert "tap the [Claude] Confirm order event" in manual_line
 
 
 # (relay_catchup + its tests RETIRED 2026-07-18 — subsumed by OPS0's autonomous catch-up

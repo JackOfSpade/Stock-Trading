@@ -155,16 +155,33 @@ def relay_orders():
     # unambiguous regardless of where the operator is. No tz conversion needed here.
     rows = bq(f"""
         SELECT item_key, strategy, ticker, side, CAST(qty AS STRING) AS qty,
-               CAST(limit_price AS STRING) AS limit_price, CAST(entry_window_close AS STRING) AS window_close
+               CAST(limit_price AS STRING) AS limit_price, CAST(entry_window_close AS STRING) AS window_close,
+               instruction_id
         FROM `{PROJECT}.state.open_orders`
         ORDER BY ticker
     """)
     if not rows:
         print("orders: none pending")
         return
-    lines = [f"☑ Stock-Trading — {len(rows)} staged order(s) awaiting confirmation (tap the [Claude] Confirm order event):"]
+    # Craftability-aware wording (2026-07-20 — mirrors the same fix already applied to
+    # bigquery/30_confirm_attestation.sql's state.staged_without_confirm view). Before this, every
+    # row got the same "tap the [Claude] Confirm order event" instruction — but per the 2026-07-09
+    # calendar-scope narrowing (Claude_Task_Plan.md D2 order-craft discipline), a CRAFTABLE order
+    # (equity/ETF/single-leg-options, staged with instruction_id set) never gets a `[Claude] Confirm
+    # order` calendar event at all — its confirm surface is create_order_instruction's own IBKR
+    # order-created notification. Telling the operator to go tap a calendar event that does not exist
+    # is simply false, and reads as "you still need to confirm this" even on a row the operator
+    # already confirmed via IBKR days ago and that is now just resting unfilled (`status='pending'`
+    # here means "not yet filled + reconciled", not "not yet confirmed" — this relay has no live IBKR
+    # read, so it cannot tell those two apart; the wording must not imply it can). Only a genuinely
+    # non-craftable/manual-entry row (instruction_id NULL) actually has a `[Claude] Confirm order`
+    # event to tap.
+    lines = [f"☑ Stock-Trading — {len(rows)} staged order(s) still pending (not yet filled):"]
     for r in rows:
-        lines.append(f"{r['side']} {r['qty']} {r['ticker']} ({r['strategy']}) @ {r['limit_price']} — window to {r['window_close']}")
+        note = ("tap the [Claude] Confirm order event"
+                if not r["instruction_id"] else
+                "craftable order — confirm surface is IBKR's own order notification, not a calendar event")
+        lines.append(f"{r['side']} {r['qty']} {r['ticker']} ({r['strategy']}) @ {r['limit_price']} — window to {r['window_close']} — {note}")
     post("\n".join(lines))
     print(f"orders: posted {len(rows)}")
 
