@@ -1267,10 +1267,23 @@ as it now has). Redo reference if a future key is ever exposed: generate a new k
 then `gh secret set GEMINI_API_KEY -R JackOfSpade/Stock-Trading` (omit the value; it prompts
 securely), which invalidates the old one.
 
+## [DONE 2026-07-20 — auto-verified] E-anthropic. Golden live-eval provider key present (historical id — see note)
+  *(auto-verified 2026-07-20: HAS_GEMINI_API_KEY=true (GEMINI_API_KEY secret is set))*
+
+This fence's item is simply *a live-eval provider key exists for `golden-scenarios.yml`* —
+satisfied by `GEMINI_API_KEY` since the 2026-07-17 Gemini-sole-provider swap (see **E** above); the
+id keeps its historical `E-anthropic` name for traceability against the original owner-actions
+list, not because Anthropic is still involved. No Anthropic key was ever acquired or configured for
+this repo — no `ANTHROPIC_API_KEY` GitHub secret has ever existed — so there is nothing
+Anthropic-side to rotate; the chat-exposed-key rotation item was **E-2** (`GEMINI_API_KEY`, closed
+above), not this one. Until 2026-07-20 this fence had no heading of its own and mis-anchored to
+E-2's — which already read `[DONE]` — so it falsely reported DONE too; it now has its own heading
+so `check_E_anthropic()`'s real probe can actually run.
+
 ```verify
 id: E-anthropic
 type: env
-probe: read HAS_GEMINI_API_KEY (or HAS_ANTHROPIC_API_KEY — either enables the golden live run)
+probe: read HAS_GEMINI_API_KEY (Gemini is the sole golden live-run provider since 2026-07-17)
 done_when: == 'true'
 ```
 **If skipped:** every consumer above already fails closed/quiet without these — nothing is silently
