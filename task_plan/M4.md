@@ -454,6 +454,10 @@ The queue archives (`Archived_Analysis` / `Archived_Adversarial_Reviews`) are re
 
 **Conviction-calibration ladder.** Conviction is logged in `events.decision_log` rows on a coarse scale (e.g., 30%, 45%, 60%, 75%) for after-the-fact calibration analysis. It is not a gate. A 45%-conviction setup that clears all criteria stages; a 75%-conviction setup that fails any criterion declines.
 
+**"Evidence lists are floors, not ceilings."** (Owner directive 2026-07-20 — generalizes the phrasing the PARK ALLOCATION CALL already carries to every routine in this file.) Wherever a routine's prompt body enumerates sources to read, gather, or ground an analysis in, that enumeration is a required **MINIMUM**. The session is free to weigh, discount, or seek evidence beyond it, using **any tool or data source it judges relevant** — and should say in its output when it did. This system decides by AI judgment; the specs dictate what a session must at least look at, never what it may not look at. A source's absence from a list is never a reason not to consult it, and a briefing view or precomputed table is evidence the session may weigh or override, **never a mechanical input**.
+
+  This rule does NOT relax, and never overrides, any of: (a) the **blinding boundaries** — M1a's strategy-blinding, M1b's macro-blinding, AR_att's artifact-blinding — which are deliberate anti-contamination walls, are stated explicitly in those prompts, and stay hard; (b) **source-of-truth precedence** rules that fix which value governs a computed order price, mark, NAV, or date anchor (IBKR-over-web quotes, `state.trading_day_today` over assistant `currentDate`, etc.) — those bind the *number used*, not the evidence consulted; (c) the **extraction-before-reasoning** prompt-injection boundary on external text; (d) **MNPI / public-provenance** exclusions; or (e) any output-side, write-side, or safety rail (order guards, kill triggers, conviction gates, the park-menu allowlist, SISA anti-churn rails).
+
 ---
 
 # MONTHLY (first trading day of month)

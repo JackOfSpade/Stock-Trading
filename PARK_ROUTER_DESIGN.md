@@ -1,6 +1,19 @@
 # DESIGN PROPOSAL v2 — Active Park Management ("AI Park Allocator")
 
-Status: **DESIGN ONLY — not implemented.** For owner review 2026-07-18.
+Status: **IMPLEMENTED 2026-07-19** (header corrected 2026-07-20 — it read "DESIGN ONLY — not
+implemented" long after the build landed, and a future audit could wrongly dismiss this file as
+unbuilt intent). Live surfaces: `Operating_Protocols.md` §13.F, `bigquery/91_park_signal_layer.sql`
+/ `92_park_allocator.sql` / `93`, the PARK ALLOCATION CALL step in `Claude_Task_Plan.md` +
+`task_plan/D1.md`, and the PARK ALLOCATION CONVERSION step in D2. Loop `park_allocator` is at
+autonomy stage `shadow` (calls logged `RECORD_ONLY`, no conversion) — that is a staging gate on
+the *decision*, not evidence the design is unbuilt. Originally raised for owner review 2026-07-18.
+
+**This file is now a design-rationale record, not the operative spec.** It has been edited in
+place after its stated date (see the 2026-07-19 CORRECTION in §5 and the owner-approved tightening
+in §7), so it is a hybrid design/changelog. **On any divergence, the operative surfaces above
+govern** — notably, all three operative surfaces strengthened this doc's evidence-freedom language
+to the explicit "a floor, not a ceiling" formula.
+
 v2 supersedes v1 (same session) per owner direction: v1's deterministic regime→vehicle
 rule table is **rejected as the decision-maker** — this is an AI-based trading system, and
 the park allocation decision must be AI judgment, end to end. v1's rule table survives
