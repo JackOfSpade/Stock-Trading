@@ -214,6 +214,7 @@ jobs:
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PUSH_BEFORE: ${{ github.event.before }}
           HEAD_SHA: ${{ github.sha }}
+          REF_NAME: ${{ github.ref_name }}   # push event's short branch name (e.g. "main"); rev 2026-07-20b
           WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
           WIF_SA: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
           DBT_PARITY: ${{ vars.DBT_PARITY }}
@@ -241,11 +242,52 @@ jobs:
           # than risk skipping a real check. Block-mode fail-closed (below) is kept for the case that
           # matters — an SQL/model change pushed with the WIF creds missing. Requires fetch-depth: 0 on
           # this job's checkout (already set above) so origin/main and the merge-base are resolvable.
+          #
+          # BUG FIX (rev 2026-07-20b, adversarial review of a7bed46, Finding 1): the 2026-07-20 fix above
+          # always preferred PUSH_BEFORE over merge-base(HEAD, origin/main) for ANY push event, falling to
+          # merge-base only when PUSH_BEFORE was itself unresolvable. That's wrong for a SECOND (or later)
+          # push to an already-open branch: PUSH_BEFORE resolves fine (it's the branch's own prior tip),
+          # so merge-base was never tried, and the diff only covered the latest push's delta — not the
+          # whole branch-vs-main range that a tip-SHA merge gate actually needs (auto-merge-claude.yml
+          # matches on the exact tip SHA's CI run). Concretely: commit1 touches bigquery/bar.sql (pushed),
+          # commit2 is docs-only (pushed) -> at tip commit2 this job used to see PUSH_BEFORE=commit1, diff
+          # commit1..commit2 = docs only, and skip — even though `git diff main commit2` still contains
+          # bigquery/bar.sql, and that untested change is what lands on main. FIX: branch the base choice
+          # on which ref this push is TO (REF_NAME, new env var above), not just on whether PUSH_BEFORE
+          # happens to resolve:
+          #   1. pull_request        -> PR_BASE
+          #   2. push, ref != main   -> merge-base(HEAD, origin/main), falling back to PUSH_BEFORE
+          #   3. push, ref == main   -> PUSH_BEFORE, falling back to merge-base(HEAD, origin/main)
+          #   4. nothing resolvable  -> fail open (unchanged)
+          # On a non-default branch, merge-base(HEAD, origin/main) is the right question — it re-diffs the
+          # WHOLE branch against main on every push, so a later docs-only push still sees an earlier push's
+          # SQL change. This deliberately WIDENS the diff on multi-push branches (each push re-checks the
+          # whole branch vs main); correct-over-cheap for a merge gate, and the dominant single-push-per-
+          # branch case is unaffected. On main itself, merge-base(HEAD, origin/main) would degenerate to
+          # HEAD (origin/main already includes this push once fetched) — an empty diff, i.e. a NEW vacuous-
+          # skip bug — so a push to main keeps PUSH_BEFORE as primary and only falls back to merge-base if
+          # PUSH_BEFORE is itself unresolvable (e.g. force-push, first push to main).
+          #
+          # BUG FIX (rev 2026-07-20b, Finding 3): the origin/main fetch is now explicit and refspec-
+          # independent (+refs/heads/main:refs/remotes/origin/main) instead of relying on fetch-depth: 0's
+          # wildcard refspec as a side effect — `git fetch origin main` alone only populates FETCH_HEAD
+          # under a narrow single-branch refspec, which would silently regress merge-base resolution to
+          # always-fail-open if fetch-depth ever changes.
           relevant=true
-          if [ "$EVENT_NAME" = "pull_request" ]; then base="$PR_BASE"; else base="$PUSH_BEFORE"; fi
-          if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
-            git fetch --quiet origin main 2>/dev/null || true
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            base="$PR_BASE"
+          elif [ "$REF_NAME" = "main" ]; then
+            base="$PUSH_BEFORE"
+            if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+              git fetch --quiet origin +refs/heads/main:refs/remotes/origin/main 2>/dev/null || true
+              base="$(git merge-base HEAD origin/main 2>/dev/null || true)"
+            fi
+          else
+            git fetch --quiet origin +refs/heads/main:refs/remotes/origin/main 2>/dev/null || true
             base="$(git merge-base HEAD origin/main 2>/dev/null || true)"
+            if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+              base="$PUSH_BEFORE"
+            fi
           fi
           if [ -n "$base" ] && git cat-file -e "${base}^{commit}" 2>/dev/null; then
             if git diff --name-only "$base" "$HEAD_SHA" | grep -qE '^(bigquery/|dbt/)'; then
@@ -371,31 +413,81 @@ jobs:
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PUSH_BEFORE: ${{ github.event.before }}
           HEAD_SHA: ${{ github.sha }}
+          REF_NAME: ${{ github.ref_name }}   # push event's short branch name (e.g. "main"); rev 2026-07-20b
         run: |
           set -euo pipefail
           gcloud config set project stock-trading-498512 >/dev/null 2>&1 || true
-          if [ "$EVENT_NAME" = "pull_request" ]; then base="$PR_BASE"; else base="$PUSH_BEFORE"; fi
           # BUG FIX (rev 2026-07-20, Actions-cost audit): github.event.before is the all-zeroes SHA on
           # every push that creates a new branch, which is unresolvable and used to fall straight into
           # the "validate everything" fail-open branch below on nearly every push (mirrors the same bug
           # in dbt-parity's path gate above — see its comment for the measured cost). Fall back to the
           # merge-base of HEAD against origin/main so a new branch diffs against only its own commits
           # since it forked from main. Requires fetch-depth: 0 on this job's checkout (already set above).
-          if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
-            git fetch --quiet origin main 2>/dev/null || true
+          #
+          # BUG FIX (rev 2026-07-20b, adversarial review of a7bed46) — mirrors dbt-parity's guard step
+          # above verbatim in structure (see its rev 2026-07-20b comment for the full Finding-1 repro): a
+          # second push to an already-open branch used to diff only against PUSH_BEFORE (the immediate
+          # prior push), which can miss an earlier push's SQL change on the same branch even though
+          # `git diff main HEAD` still contains it — and this job's blocking pass/fail is exactly what
+          # auto-merge-claude.yml gates the tip SHA on. Same precedence as dbt-parity:
+          #   1. pull_request        -> PR_BASE
+          #   2. push, ref != main   -> merge-base(HEAD, origin/main), falling back to PUSH_BEFORE
+          #   3. push, ref == main   -> PUSH_BEFORE, falling back to merge-base(HEAD, origin/main)
+          #   4. nothing resolvable  -> fail open (unchanged, see below)
+          # (2) deliberately WIDENS the diff on multi-push branches (each push re-checks the whole branch
+          # vs main); correct-over-cheap for a merge gate, and the dominant single-push-per-branch case is
+          # unaffected. (3) keeps PUSH_BEFORE primary on main itself, because merge-base(HEAD, origin/main)
+          # would degenerate to HEAD there (an empty, vacuously-skipping diff) once origin/main is fetched.
+          # Also makes the origin/main fetch explicit and refspec-independent (+refs/heads/main:refs/
+          # remotes/origin/main) rather than relying on fetch-depth: 0's wildcard refspec as a side effect
+          # — a narrow single-branch refspec would otherwise leave `git fetch origin main` populating only
+          # FETCH_HEAD, silently regressing merge-base resolution to always-fail-open (Finding 3).
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            base="$PR_BASE"
+          elif [ "$REF_NAME" = "main" ]; then
+            base="$PUSH_BEFORE"
+            if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+              git fetch --quiet origin +refs/heads/main:refs/remotes/origin/main 2>/dev/null || true
+              base="$(git merge-base HEAD origin/main 2>/dev/null || true)"
+            fi
+          else
+            git fetch --quiet origin +refs/heads/main:refs/remotes/origin/main 2>/dev/null || true
             base="$(git merge-base HEAD origin/main 2>/dev/null || true)"
+            if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+              base="$PUSH_BEFORE"
+            fi
           fi
           # Scope to the pushed range to bound BigQuery dry-run job volume (dbt-parity §6 quota note).
           # FAIL OPEN: unknown/new-branch base (merge-base above also failed, e.g. missing origin/main or
           # unrelated histories) -> validate ALL bigquery/*.sql rather than skip a real check.
+          fail_open=false
           if [ -n "$base" ] && git cat-file -e "${base}^{commit}" 2>/dev/null; then
             mapfile -t files < <(git diff --name-only "$base" "$HEAD_SHA" -- 'bigquery/*.sql' 'bigquery/scheduled_queries/*.sql')
           else
+            fail_open=true
+            # BUG FIX (rev 2026-07-20b, Finding 2): nullglob so a non-matching pattern vanishes instead of
+            # staying LITERAL (bash's default when nothing matches a glob) — without it, an unmatched glob
+            # string is filtered out by the `[ -f "$f" ]` check below and this fail-open branch (whose
+            # entire purpose is "validate EVERYTHING because we couldn't scope the diff") could end up
+            # validating zero files and still exit 0 below — a green, vacuous pass in the one branch that
+            # most needs to actually check something. Restored immediately after so nothing later in this
+            # step depends on non-default glob behavior.
+            shopt -s nullglob
             mapfile -t files < <(printf '%s\n' bigquery/*.sql bigquery/scheduled_queries/*.sql)
+            shopt -u nullglob
           fi
           existing=()
           for f in "${files[@]}"; do [ -f "$f" ] && existing+=("$f"); done
           if [ "${#existing[@]}" -eq 0 ]; then
+            if [ "$fail_open" = "true" ]; then
+              # BUG FIX (rev 2026-07-20b, Finding 2): an empty list from the NARROWED-DIFF branch above
+              # legitimately means "no SQL changed in this push" and stays a green no-op (below). An empty
+              # list from the FAIL-OPEN branch means "we couldn't scope the diff AND found zero real SQL
+              # files on disk" — that's a broken checkout or repo layout, not "nothing to check", so it
+              # must not pass silently.
+              echo "::error::SQL dry-run fail-open path found zero bigquery/*.sql / bigquery/scheduled_queries/*.sql files to validate — the diff base was unresolvable AND no real SQL files exist on disk, which means the checkout or repo layout is broken, not that there is nothing to check."
+              exit 1
+            fi
             echo "No bigquery/*.sql changed in this push — nothing to dry-run."
             exit 0
           fi
