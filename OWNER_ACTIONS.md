@@ -16,13 +16,24 @@ Three independent connector/subscription findings from the same evening pass, no
 existing item above. Full BigQuery-connector reference matrix is now documented in `ops/RUNBOOK.md`
 §15a — item X below just points there.
 
-## V. URGENT — Re-authorize the Interactive Brokers (IBKR) connector before Monday 2026-07-20 16:10 MT (D1's fire time)
+## V. URGENT — Re-authorize the Interactive Brokers (IBKR) connector before Monday 2026-07-20 16:10 MT (D1's fire time) — `[DONE 2026-07-19 — owner re-authed, recovery chain completed]`
 
-**What it's for:** the IBKR connector grant is expired — verified still expired as of 2026-07-19
-~20:00 MT (this session's own IBKR calls fail with an auth error; see the harness's connector-auth
-system note). Until re-authorized, three things are blocked: D2a's broker reconcile/snapshot step, D2's
-action-conversion step, and the week-2026-W29 W4→W5 refire — W4's trading-enable gate counts the open
-D2 connector critical `8bbcf6c5` as a blocking condition.
+**Closed 2026-07-19 ~22:30 MT: owner re-authorized the connector (~20:45 MT, verified by a live
+`get_account_summary` returning real account data), and the interactive session then executed the full
+recovery chain the same evening** — D2a refired → completed 21:29 MT (broker reconcile, cash tripwire,
+snapshot, SGOV/VOO 1-yr signal-marks deep backfill all ran; both SL3 `missing_dependency` criticals
+auto-healed), D2 refired → completed 21:49 MT (router-review carry-forward landed), W4 refired →
+completed 21:58 MT (5 B thesis-constructions enqueued, TSM to A-queue), W5 refired → completed 22:22 MT.
+Connector alerts `8bbcf6c5` + `cbbb8427` verified-clear-resolved after the live probe; `46dcc5fd`
+auto-healed on W4's completion; `dbd47d1f` closed LAST per the halt-echo disposition. Residual items
+live in their own alerts, not here: the 2 pending ISRG/TSM confirm-taps (`owner_confirmation_stale`
+`bbe19c79`, still the owner's tap) and the D3/D1 outage-window step skips that Monday's scheduled runs
+pick up with the now-healthy connector.
+
+**Original context (for the record):** the IBKR connector grant expired 2026-07-19; until re-auth,
+D2a's broker reconcile/snapshot, D2's action conversion, and the week-2026-W29 W4→W5 refire were all
+blocked — W4's trading-enable gate counted the open D2 connector critical `8bbcf6c5` as a blocking
+condition.
 
 **Action:** re-auth the IBKR connector in claude.ai connector settings. After that:
 - Either ask an interactive session to run the recovery chain: refire D2a → D2, manually resolve
