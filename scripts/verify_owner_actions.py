@@ -285,11 +285,16 @@ def _heading_label(line):
     return m.group(1).lower() if m else None
 
 
-def _id_primary_label(fence_id):
-    """A fence id's own leading label — the part before its first '-' ('E-anthropic' -> 'E', 'A' ->
-    'A') — compared against a candidate heading's own label (see _heading_label) to catch a fence
-    that resolves to a DIFFERENT, sibling item's heading rather than its own."""
-    return fence_id.split("-", 1)[0].lower()
+def _id_labels(fence_id):
+    """The heading labels a fence id may legitimately live under, compared against a candidate
+    heading's own label (see _heading_label) to catch a fence that resolves to a DIFFERENT, sibling
+    item's heading rather than its own. Two forms are accepted because both conventions are in use:
+    the id's leading segment, for a suffixed id filed under its parent's heading ('E-anthropic' ->
+    '## E.', one heading owning a bullet per secret), and the FULL id, for one filed under a heading
+    that spells it out ('WR-2' -> '## WR-2.'). Accepting only the leading segment would fail an id
+    of the second shape closed against its OWN heading — safe, but a silent trap for whoever adds
+    the next hyphenated item."""
+    return {fence_id.split("-", 1)[0].lower(), fence_id.lower()}
 
 
 def _skip_fenced_block_upward(lines, closing_idx):
@@ -369,7 +374,7 @@ def find_anchor_line_index(lines, fence_start_idx, fence_id):
         # The walk stopped at a heading boundary (whether or not a bullet was collected on the way)
         # — a label mismatch means this whole section, bullet included, belongs to a sibling item.
         heading_label = _heading_label(lines[heading_idx])
-        if heading_label is not None and heading_label != _id_primary_label(fence_id):
+        if heading_label is not None and heading_label not in _id_labels(fence_id):
             return None  # this heading belongs to a different, sibling item — not our own anchor
     if bullets:
         return bullets[0]

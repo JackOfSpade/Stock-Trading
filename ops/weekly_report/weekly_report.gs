@@ -67,7 +67,7 @@ const SENDER_NAME  = 'Stock-Trading Bot';
 const LABEL_NAME   = 'Trading/Weekly';
 const SEND_HOUR    = 7;
 const SEND_WEEKDAY = ScriptApp.WeekDay.SUNDAY;
-const SCRIPT_VERSION = 'v6';                       // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep
+const SCRIPT_VERSION = 'v7';                       // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep
 const SUBJECT_LABEL = 'Deployed vs Benchmarks';    // Single source for this phrase across buildSubject_, the post-send GmailApp.search() match, and the HTML/plain-text banners below. Edit only here on a rename (2026-07-14 audit finding -- this already drifted once by hand across 4 sites during the 2026-07-13 VOO rename).
 
 // Fixed per-strategy identity colors (CVD-validated) — never reassigned by rank/presence. VOO is a
@@ -579,7 +579,12 @@ function fallbackBarsHtml_(d) {
 // ===== HTML =====
 function pctCellHtml_(v, colorBySign, extrapolated) {
   if (v == null) return `<span style="color:#8a96a3;font-size:11px;">Not enough data</span>`;
-  const color = colorBySign ? clr_(v) : '#3d4a59';
+  // The swatch must agree with the sign glyph: signPct_ forces '+' whenever the rounded magnitude is
+  // '0.00' (2026-07-17 GS-1), so a hairline negative (e.g. -0.00003) still reads '+0.00%'. clr_(v)
+  // alone branches on v's raw sign and would paint that '+0.00%' loss-red — route the swatch through
+  // the same rounded view signPct_ uses so the two can never disagree at this boundary.
+  const roundedZero = Math.abs(v * 100).toFixed(2) === '0.00';
+  const color = colorBySign ? (roundedZero ? '#1a7f5a' : clr_(v)) : '#3d4a59';
   const marker = extrapolated ? '†' : '';
   return `<span style="color:${color};font-weight:${colorBySign ? 700 : 400};">${signPct_(v * 100)}${marker}</span>`;
 }

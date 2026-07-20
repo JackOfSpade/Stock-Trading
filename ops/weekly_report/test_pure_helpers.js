@@ -173,7 +173,12 @@ function fallbackBarsHtml_(d) {
 
 function pctCellHtml_(v, colorBySign, extrapolated) {
   if (v == null) return `<span style="color:#8a96a3;font-size:11px;">Not enough data</span>`;
-  const color = colorBySign ? clr_(v) : '#3d4a59';
+  // The swatch must agree with the sign glyph: signPct_ forces '+' whenever the rounded magnitude is
+  // '0.00' (2026-07-17 GS-1), so a hairline negative (e.g. -0.00003) still reads '+0.00%'. clr_(v)
+  // alone branches on v's raw sign and would paint that '+0.00%' loss-red — route the swatch through
+  // the same rounded view signPct_ uses so the two can never disagree at this boundary.
+  const roundedZero = Math.abs(v * 100).toFixed(2) === '0.00';
+  const color = colorBySign ? (roundedZero ? '#1a7f5a' : clr_(v)) : '#3d4a59';
   const marker = extrapolated ? '†' : '';
   return `<span style="color:${color};font-weight:${colorBySign ? 700 : 400};">${signPct_(v * 100)}${marker}</span>`;
 }
@@ -457,6 +462,19 @@ t('pctCellHtml_ colors by sign when colorBySign=true, neutral color when false',
   assert.ok(negative.includes('#c0392b'));
   const neutral = pctCellHtml_(0.05, false, false);
   assert.ok(neutral.includes('#3d4a59'));
+});
+t('pctCellHtml_ swatch matches the sign glyph at the rounded-zero boundary (C25)', () => {
+  // 2026-07-20 audit C25: the swatch used to branch on v's RAW sign (clr_(v)) while the text came
+  // from signPct_(v*100), which forces '+' once the FORMATTED magnitude rounds to '0.00' (GS-1). A
+  // hairline loss like -0.0000004 hit that gap: text read '+0.00%' but the swatch still painted
+  // loss-red. Pin the boundary both ways — rounded-zero must be gain-green, and a real (non-rounding)
+  // loss must still be loss-red.
+  const hairlineLoss = pctCellHtml_(-0.0000004, true, false);
+  assert.ok(hairlineLoss.includes('#1a7f5a'), 'rounded-zero cell must use the gain color');
+  assert.ok(!hairlineLoss.includes('#c0392b'), 'rounded-zero cell must not use loss-red');
+  assert.ok(hairlineLoss.includes('+0.00%'), 'rounded-zero cell text must still read +0.00%');
+  const realLoss = pctCellHtml_(-0.05, true, false);
+  assert.ok(realLoss.includes('#c0392b'), 'a real (non-rounding) loss must still render loss-red');
 });
 t('pctCellHtml_ appends the † marker when extrapolated=true', () => {
   assert.ok(pctCellHtml_(0.05, true, true).includes('†'));

@@ -10,6 +10,42 @@ act. Dated passes below; most recent first.
 
 ---
 
+# 2026-07-20 Code-quality audit — `pctCellHtml_` zero-boundary swatch fix (`weekly_report.gs` v6 → v7)
+
+## Y. Redeploy `weekly_report.gs` (v6 → v7, `pctCellHtml_` zero-boundary swatch fix) via the pinned-SHA GitHub-raw flow — after this branch merges
+
+**What it's for:** finding C25 of the 2026-07-20 code-review: `pctCellHtml_`'s color swatch picked
+`clr_(v)` off `v`'s RAW sign while its text came from `signPct_(v * 100)`, which forces a '+' once the
+FORMATTED magnitude rounds to '0.00' (the 2026-07-17 GS-1 fix). A hairline loss in roughly
+`(-0.00005, 0)` — easily hit by a near-flat sleeve or the park's AI row — rendered loss-red `#c0392b`
+around text reading '+0.00%'. `SCRIPT_VERSION` bumped `'v6'` → `'v7'` in
+`ops/weekly_report/weekly_report.gs`, with the matching `bigquery/43_script_version_registry.sql` seed
+row bumped to match. The ONLY functional change vs the deployed v6 is this swatch fix — same class of
+change as every prior `.gs` redeploy in this file (GS-1/GS-2, WR-1, T) — Claude cannot reach
+`script.google.com` directly, so the deploy is a Chrome-driven paste from the commit-SHA-pinned GitHub
+raw URL, per the small-edit=edit-list / large-rewrite=commit-SHA-pinned-URL convention.
+
+**Action:** once this branch merges to `main`, paste the merged `Code.gs` content into the
+"Stock-Trading Automation" Apps Script project via Claude-in-Chrome from the commit-SHA-pinned GitHub
+raw URL, run `runWeeklyReport` once to confirm the `weekly_report` heartbeat lands with `version='v7'`,
+THEN — and ONLY after that heartbeat lands — bump `state.expected_script_versions`'s `weekly_report`
+row to `v7` (targeted UPDATE, done AFTER the v7 heartbeat so no false drift is introduced) — the same
+after-the-heartbeat sequencing WR-1/T used.
+
+**If skipped:** the deployed report keeps painting a loss-red swatch around '+0.00%' for
+hairline-negative cells — purely cosmetic, nothing else depends on it. Landing this repo commit alone
+fires NO alert: the repo-side `bigquery/43` seed is not applied live by merging, so live stays v6/v6
+with `drift=false` until both the redeploy AND the seed MERGE are applied.
+
+```verify
+id: Y
+type: gs
+probe: SELECT script_name, last_reported_version, expected_version, drift FROM `stock-trading-498512.state.script_version_drift` WHERE script_name='weekly_report'
+done_when: last_reported_version='v7' AND expected_version='v7' AND drift=FALSE
+```
+
+---
+
 # 2026-07-19 Connector/subscription health — IBKR expired, FMP tier degraded, BigQuery permission-matrix flip
 
 Three independent connector/subscription findings from the same evening pass, none overlapping any

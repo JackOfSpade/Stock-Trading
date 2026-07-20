@@ -339,6 +339,28 @@ def test_find_anchor_none_when_single_stray_bullet_under_sibling_heading(tmp_pat
     assert idx is None
 
 
+def test_find_anchor_accepts_a_heading_spelling_out_a_hyphenated_id(tmp_path):
+    # Both id/heading conventions are in use: a suffixed id filed under its parent's heading
+    # ('E-anthropic' under '## E.') and one filed under a heading that spells it out in full. The
+    # label check must accept BOTH forms — matching only the leading segment would fail a
+    # 'WR-2'-shaped id closed against its OWN heading (fail-safe, but a silent trap for the next
+    # hyphenated item added to OWNER_ACTIONS.md).
+    doc = (
+        "## WR-2. Redeploy the weekly report\n"
+        "\n"
+        "Some prose about the redeploy.\n"
+        "\n"
+        "```verify id=WR-2\n"
+        "probe\n"
+        "```\n"
+    )
+    lines = doc.splitlines(keepends=True)
+    fence_start = next(i for i, ln in enumerate(lines) if ln.startswith("```verify"))
+    assert voa.find_anchor_line_index(lines, fence_start, "WR-2") == 0
+    # A genuinely different sibling item's heading is still rejected, both segment and full form.
+    assert voa.find_anchor_line_index(lines, fence_start, "WR-3") is None
+
+
 def test_find_anchor_skips_embedded_non_verify_code_sample(tmp_path):
     # id B's live shape: an inline ```bash sample inside the item's OWN prose, before its own verify
     # fence. Must be skipped over (not mistaken for a sibling's closed ```verify block) so the walk
