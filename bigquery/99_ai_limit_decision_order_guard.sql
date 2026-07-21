@@ -67,6 +67,10 @@
 -- ===== analytics.fn_order_guard — equity price-band check demoted to advisory (owner directive
 -- 2026-07-20). Park bands, sizing/notional/qty-sanity hard rails all UNCHANGED from
 -- bigquery/54_park_policy_voo_cutover.sql — see this file's header for exactly what changed. =====
+--
+-- SUPERSEDED LIVE by bigquery/100_market_only_order_guard.sql (2026-07-21 owner directive — market-only;
+-- the equity price-band advisory is REMOVED and a liquidity hard-gate added; order_type=MARKET enforced).
+-- Kept for DR apply-in-order reference only. DO NOT re-apply live in isolation.
 CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_order_guard`(
   p_strategy STRING, p_side STRING, p_qty NUMERIC, p_limit_price NUMERIC, p_last_price NUMERIC, p_is_park BOOL
 ) AS (
@@ -114,6 +118,10 @@ CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_order_guard`
 -- bigquery/scheduled_queries/fire_drill_order_guard.sql -> ops.sp_sq_fire_drill_order_guard, which
 -- just CALLs this procedure by name and needed no edit for this migration) or ad hoc after any edit to
 -- fn_order_guard / trading_control.
+--
+-- SUPERSEDED LIVE by bigquery/100_market_only_order_guard.sql (2026-07-21 owner directive — market-only;
+-- the equity price-band advisory is REMOVED and a liquidity hard-gate added; order_type=MARKET enforced).
+-- Kept for DR apply-in-order reference only. DO NOT re-apply live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_fire_drill_order_guard`()
 BEGIN
   DECLARE v_passed_oversize BOOL;

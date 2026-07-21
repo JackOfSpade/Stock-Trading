@@ -68,6 +68,20 @@ runs on, each of which exists *because* it is not judgment:
 owner directive (see Claude_Task_Plan.md's LIMIT DECISION block; `bigquery/99_ai_limit_decision_order_guard.sql`)
 — the one deliberate carve-out from this row since this table was written.
 
+**Follow-up (2026-07-21): the LIMIT DECISION was itself superseded the very next day.** The
+market-only order cutover (owner directive 2026-07-21) removed limit prices from every IBKR
+order this system generates — entries, exits, park/sweep, and options are all
+`order_type='MARKET'`, with no `limit_price` transmitted. With no resting limit to raise, hold,
+or lower, the RAISE/HOLD/LOWER/ABANDON judgment has nothing left to decide and retires along
+with the mechanism it governed; the equity 0.5%-off-last advisory retires with it. Illiquidity
+is now a HARD pre-trade gate (reject the pick outright) rather than a post-craft price-chase
+decision — specifically, same-day, an owner revision (SPEC v2) replaced an initial flat-dollar-
+ADV/flat-spread design with an **expected-implementation-shortfall liquidity gate**
+(Almgren-Thum-Hauptmann-Li 2005: half-spread + 0.142×sigma_daily×participation^0.6; a
+horizon-scaled slippage budget per strategy — D 150 / A 100 / C 25 / else 50 bps; a 10%-of-ADV
+metaorder cap; a $1M minimum-ADV floor; a documented ADV proxy protocol; options kept a simpler
+open-interest≥500 / spread≤10% floor). See `bigquery/100_market_only_order_guard.sql`.
+
 ## 3. Redesigns
 
 ### Redesign A — AI Capital Allocation Call (termination + deposit residuals)

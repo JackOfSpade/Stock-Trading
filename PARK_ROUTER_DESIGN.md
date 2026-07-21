@@ -67,7 +67,7 @@ Hormuz picture differently from what any threshold would say, **its judgment win
 - Data reality: no daily VIX series exists, technical regime rows are 45 days stale, SPY
   history in `daily_marks` is deliberately thin (live kill-signal input — must not be
   deepened). Any evidence layer must be new and isolated.
-- Every order passes the owner confirm-tap; DAY-TIF marketable limits; FIFO tax lots +
+- Every order passes the owner confirm-tap; DAY-TIF MARKET orders; FIFO tax lots +
   cross-strategy wash-sale watch exist; commissions characterized per vehicle only after
   real fills.
 

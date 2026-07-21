@@ -104,8 +104,11 @@ invariants:
 
   # ---- "never chase past the documented rest level" is RETIRED (2026-07-20 owner directive — the
   # mechanical never-chase 0.5% equity price-band block was replaced by the AI LIMIT DECISION:
-  # RAISE/HOLD/LOWER/ABANDON judgment). Scoped to Claude_Task_Plan.md only — the routine-executed
-  # prose — so historical mentions in RUNBOOK.md / events.decision_log stay untouched. ----
+  # RAISE/HOLD/LOWER/ABANDON judgment). That LIMIT DECISION mechanism was ITSELF retired the very
+  # next day (2026-07-21 market-only cutover — orders carry no limit price at all, so there is
+  # nothing left to raise/hold/lower; see the market_only_orders invariant below). Scoped to
+  # Claude_Task_Plan.md only — the routine-executed prose — so historical mentions in RUNBOOK.md /
+  # events.decision_log stay untouched. ----
   - id: limit_decision_never_chase_retired
     files: [Claude_Task_Plan.md]
     forbid_regex: 'never chase'
@@ -113,7 +116,31 @@ invariants:
     reason: >
       "Never chase past the documented rest level" was the mechanical never-chase 0.5% equity price-band
       rule, RETIRED 2026-07-20 by owner directive and replaced by the AI LIMIT DECISION (RAISE / HOLD /
-      LOWER / ABANDON judgment) at every equity (non-park) craft/re-craft. Claude_Task_Plan.md must not
-      re-instruct a routine to follow the retired never-chase rule.
-    source_of_truth: Claude_Task_Plan.md LIMIT DECISION protocol block (preamble) / Operating_Protocols.md
-      §11 "Limit-price decision (2026-07-20)" / bigquery/99_ai_limit_decision_order_guard.sql
+      LOWER / ABANDON judgment). That LIMIT DECISION mechanism was ITSELF retired 2026-07-21 by the
+      market-only order cutover — orders are MARKET only, so there is no resting limit to raise, hold,
+      or lower (see the market_only_orders invariant below). Claude_Task_Plan.md must not re-instruct a
+      routine to follow either retired mechanism.
+    source_of_truth: bigquery/100_market_only_order_guard.sql (2026-07-21 market-only cutover, current) /
+      bigquery/99_ai_limit_decision_order_guard.sql (2026-07-20, now itself superseded)
+
+  # ---- Every IBKR order this system generates is MARKET (2026-07-21 owner directive — the
+  # market-only order cutover). No limit orders anywhere: entries, exits, park/sweep, options. The
+  # "marketable limit" convention, order_type=LIMIT, and the LIMIT DECISION (RAISE/HOLD/LOWER/
+  # ABANDON) judgment framework are all retired. Scoped to the two routine-executed prose files;
+  # the exempt_line_regex below skips lines that NAME the retired mechanism to explain its
+  # retirement (CHANGELOG entries, the ENTRY/EXIT DECISION block's "supersedes the retired ..."
+  # sentence) rather than re-instructing it. ----
+  - id: market_only_orders
+    files: [Claude_Task_Plan.md, Operating_Protocols.md]
+    forbid_regex: '(?:marketable[- ]limit|order_type\s*[=:]\s*.?LIMIT.?|\bLIMIT DECISION\b|RAISE\s*/\s*HOLD\s*/\s*LOWER\s*/\s*ABANDON)'
+    ignorecase: true
+    exempt_line_regex: '(?:retired|supersede[sd]?|RETIRES)'
+    reason: >
+      Every IBKR order this system generates is MARKET (owner directive 2026-07-21;
+      bigquery/100_market_only_order_guard.sql) — there are no limit orders anywhere (entries,
+      exits, park/sweep, options), no "marketable limit" convention, no order_type=LIMIT, and no
+      LIMIT DECISION (RAISE/HOLD/LOWER/ABANDON) machinery to run; illiquidity is a hard pre-trade
+      gate instead. Prose in Claude_Task_Plan.md / Operating_Protocols.md must not re-instruct a
+      routine to craft a limit order or perform the retired LIMIT DECISION judgment.
+    source_of_truth: bigquery/100_market_only_order_guard.sql / bigquery/101_market_only_decision_seed.sql
+      (2026-07-21 owner directive)

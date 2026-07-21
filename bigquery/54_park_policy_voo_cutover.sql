@@ -252,12 +252,13 @@ FROM p LEFT JOIN mark ON TRUE;
 -- rejections on ordinary VOO price moves. The 1.10x-NAV notional backstop is vehicle-agnostic
 -- (a plausible-magnitude check, not a volatility check) and is unchanged for either vehicle.
 --
--- SUPERSEDED LIVE by bigquery/99_ai_limit_decision_order_guard.sql (2026-07-20 owner directive — the
--- equity (non-park) price band converts from a hard block to an AI-judgment advisory; the park bands
--- and every other check below are copied into 99 UNCHANGED). 99 is the CURRENT single source of truth
--- for this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
--- re-apply this CREATE OR REPLACE TABLE FUNCTION statement live in isolation — doing so would
--- reintroduce the pre-2026-07-20 hard equity-band block bigquery/99 removed.
+-- SUPERSEDED LIVE by bigquery/100_market_only_order_guard.sql (2026-07-21 owner directive — market-only:
+-- the equity price band/advisory is REMOVED and replaced by an expected-implementation-shortfall
+-- liquidity gate; order_type=MARKET is enforced; signature gains p_order_type/p_adv_usd/p_spread_bps/
+-- p_sigma_daily). bigquery/100 is the CURRENT single source of truth for this object (it superseded
+-- bigquery/99, which had superseded this definition). Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE TABLE FUNCTION statement live
+-- in isolation — doing so would revert the market-only guard and reintroduce the retired price band.
 CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_order_guard`(
   p_strategy STRING, p_side STRING, p_qty NUMERIC, p_limit_price NUMERIC, p_last_price NUMERIC, p_is_park BOOL
 ) AS (

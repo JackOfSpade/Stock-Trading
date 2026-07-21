@@ -184,14 +184,19 @@ END;
 -- are valid at N=1 and scale with book growth via sizing_base_2pct rather than a fixed dollar figure
 -- (the $50 check is an absolute backstop for the CURRENT tiny book size; review upward as NAV grows).
 --
--- SUPERSEDED LIVE by bigquery/99_ai_limit_decision_order_guard.sql (2026-07-20 owner directive — the
--- equity price band converts from a hard block to an AI-judgment advisory; the third returned column,
--- `advisories`, and the LIMIT DECISION protocol it feeds are documented there / Claude_Task_Plan.md's
--- preamble). 99 is the CURRENT single source of truth for this object — it in turn superseded
--- bigquery/54_park_policy_voo_cutover.sql, which had superseded the definition below. Kept here,
--- unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE
--- TABLE FUNCTION statement live in isolation — doing so would revert the vehicle-conditional park
--- bands (bigquery/54) AND reintroduce the pre-2026-07-20 hard equity-band block bigquery/99 removed.
+-- SUPERSEDED LIVE by bigquery/100_market_only_order_guard.sql (2026-07-21 owner directive — market-only
+-- cutover: every order is now MARKET, the equity price band/advisory it fed is REMOVED entirely, and a
+-- DYNAMIC EXPECTED-SHORTFALL liquidity gate takes its place: a $1M minimum-ADV floor, a 10% ADV
+-- participation cap, and a half-spread + Almgren-Thum-Hauptmann-Li 2005 impact estimate compared to a
+-- per-strategy horizon-scaled bps budget). 100 is the CURRENT single source of truth for this object —
+-- it superseded bigquery/99_ai_limit_decision_order_guard.sql
+-- (2026-07-20 owner directive — the equity price band converted from a hard block to an AI-judgment
+-- advisory; the third returned column, `advisories`, and the LIMIT DECISION protocol it fed, both now
+-- retired), which in turn superseded bigquery/54_park_policy_voo_cutover.sql, which had superseded the
+-- definition below. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
+-- this CREATE OR REPLACE TABLE FUNCTION statement live in isolation — doing so would revert the
+-- vehicle-conditional park bands (bigquery/54), reintroduce the pre-2026-07-20 hard equity-band block
+-- bigquery/99 removed, AND reintroduce limit-order behavior bigquery/100's market-only cutover retired.
 CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_order_guard`(
   p_strategy STRING, p_side STRING, p_qty NUMERIC, p_limit_price NUMERIC, p_last_price NUMERIC, p_is_sgov BOOL
 ) AS (
@@ -247,6 +252,15 @@ CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_order_guard`
 -- non-positive max_loss_dollars is rejected outright (an UnboundedMaxLossError structure must never reach
 -- this guard; c_options_math.py itself refuses to proceed on one, so passing NULL/0 here means that
 -- refusal was skipped upstream, which is itself the bug this check catches).
+--
+-- SUPERSEDED LIVE by bigquery/100_market_only_order_guard.sql (2026-07-21 owner directive — market-only
+-- cutover: this object was previously unmarked here because bigquery/99 never touched it — an option's
+-- premium has no equity-style price band to convert — but 100 now redefines it, renaming
+-- `p_limit_premium` to `p_ref_premium` and adding an order_type=MARKET check plus an options liquidity
+-- hard gate, open_interest floor and spread-vs-mid cap). 100 is the CURRENT single source of truth for
+-- this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
+-- CREATE OR REPLACE TABLE FUNCTION statement live in isolation — doing so would revert to the 5-arg
+-- signature and drop the market-only order_type check plus the options liquidity hard gate.
 CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_order_guard_options`(
   p_strategy STRING, p_side STRING, p_contracts NUMERIC, p_limit_premium NUMERIC, p_max_loss_dollars NUMERIC
 ) AS (
@@ -315,14 +329,21 @@ FROM cap;
 -- analytics.strategy_nav for a real sizing_base so the deliberately-oversized test order is
 -- guaranteed over the 1.5x/$50 threshold) but NEVER crafts a real order or writes to trading_control.
 --
--- SUPERSEDED LIVE by bigquery/99_ai_limit_decision_order_guard.sql (2026-07-20 owner directive). 99 is
--- the CURRENT single source of truth for this object — it updates the offband fire-drill case (test
--- vector + pass/fail assertion) to prove the new fn_order_guard contract (equity price band advisory,
--- not hard-block), keeping the other 5 cases and the read-only / never-crafts-a-real-order design
--- unchanged. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
--- CREATE OR REPLACE PROCEDURE statement live in isolation — doing so would revert the fire drill to
--- asserting the pre-2026-07-20 hard-block contract, which bigquery/99's fn_order_guard no longer
--- satisfies, so the drill would misfire CRITICAL against a correctly-working guard.
+-- SUPERSEDED LIVE by bigquery/100_market_only_order_guard.sql (2026-07-21 owner directive — market-only
+-- cutover). 100 is the CURRENT single source of truth for this object — it rewrites the drill to the
+-- new 9-arg (equity) / 8-arg (options) fn_order_guard/fn_order_guard_options contract: 12 cases total
+-- (7 equity + 5 options, each incl. one GOOD-PASS asserting passed=TRUE), covering order_type=MARKET
+-- enforcement and the new dynamic expected-shortfall liquidity gate (equity: $1M minimum-ADV floor,
+-- 10% participation cap, half-spread + Almgren-Thum-Hauptmann-Li 2005 impact vs. a per-strategy
+-- horizon-scaled bps budget; options: open-interest / spread-pct cap, unchanged from the first draft).
+-- 100 in turn superseded bigquery/99_ai_limit_decision_order_guard.sql (2026-07-20 owner
+-- directive), which had updated the offband fire-drill case (test vector + pass/fail assertion) to prove
+-- the equity price-band-advisory contract — that case, and its advisory contract, are now retired along
+-- with the price band itself. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO
+-- NOT re-apply this CREATE OR REPLACE PROCEDURE statement live in isolation — doing so would revert the
+-- fire drill to asserting the pre-2026-07-20 hard-block contract, which neither bigquery/99's nor
+-- bigquery/100's fn_order_guard satisfies, so the drill would misfire CRITICAL against a correctly-
+-- working guard (and would call the guard functions with the wrong, stale arity entirely).
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_fire_drill_order_guard`()
 BEGIN
   DECLARE v_passed_oversize BOOL;

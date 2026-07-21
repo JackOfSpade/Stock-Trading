@@ -85,10 +85,13 @@ models:
               config:
                 where: "side = 'BUY'"
       - name: limit_price
-        description: Limit price parsed from the staged payload. Required whenever
-          side = BUY (all entry orders in this system are crafted LIMIT per
-          Operating_Protocols.md; MARKET is only ever used for an assured SELL/exit
-          flatten) — a missing/NULL value on a BUY row silently collapses reserved_cash
+        description: Live REFERENCE price (last, or bid/ask mid) parsed from the staged
+          payload — NOT an order limit. Market-only cutover (owner directive 2026-07-21,
+          bigquery/100_market_only_order_guard.sql) — every order this system generates is
+          MARKET (order_type='MARKET', no limit transmitted), so this column now exists
+          solely to drive cash-reservation and the notional guard — the field name is kept
+          unchanged so reserved_cash math needs zero schema change. Required whenever
+          side = BUY — a missing/NULL value on a BUY row silently collapses reserved_cash
           to NULL the same way a missing qty does (2026-07-04 audit finding).
         tests:
           - not_null:
