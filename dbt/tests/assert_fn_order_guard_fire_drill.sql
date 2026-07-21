@@ -50,6 +50,10 @@ FROM UNNEST([
     (SELECT passed FROM `stock-trading-498512.analytics.fn_order_guard`('B', 'BUY', -1, 100.00, FALSE, 'MARKET', 50000000, 5, 0.02))),
   STRUCT('good_pass_equity',
     (SELECT passed FROM `stock-trading-498512.analytics.fn_order_guard`('B', 'BUY', 0.1, 150.00, FALSE, 'MARKET', 50000000, 5, 0.02))),
+  STRUCT('park_good_pass',
+    (SELECT passed FROM `stock-trading-498512.analytics.fn_order_guard`(NULL, 'BUY', NUMERIC '1', 100.00, TRUE, 'MARKET', CAST(NULL AS NUMERIC), CAST(NULL AS NUMERIC), CAST(NULL AS NUMERIC)))),  -- park order exempt from the liquidity gate; small notional
+  STRUCT('park_nav_reject',
+    (SELECT passed FROM `stock-trading-498512.analytics.fn_order_guard`(NULL, 'BUY', 1000000, 100.00, TRUE, 'MARKET', CAST(NULL AS NUMERIC), CAST(NULL AS NUMERIC), CAST(NULL AS NUMERIC)))),  -- notional $100M > 1.10x account NAV -> park NAV backstop rejects
   -- ===== OPTIONS: analytics.fn_order_guard_options(strategy, side, contracts, ref_premium,
   -- max_loss_dollars, order_type, open_interest, spread_pct) — UNCHANGED by SPEC v2, 8 args;
   -- spread_pct is a FRACTION of mid (0.02 = 2%), not a percent-as-integer =====
@@ -66,6 +70,6 @@ FROM UNNEST([
 ])
 WHERE
   -- every must-reject case that PASSED is a failure.
-  (case_name NOT IN ('good_pass_equity', 'good_pass_options') AND passed)
+  (case_name NOT IN ('good_pass_equity', 'good_pass_options', 'park_good_pass') AND passed)
   -- either GOOD-PASS case that did NOT pass is a failure.
-  OR (case_name IN ('good_pass_equity', 'good_pass_options') AND NOT passed)
+  OR (case_name IN ('good_pass_equity', 'good_pass_options', 'park_good_pass') AND NOT passed)
