@@ -977,11 +977,15 @@ BEGIN
   -- verifies that payload.guard_passed IS PRESENT -- never that it is TRUTHFUL. A routine could stage an
   -- order carrying guard_passed=true beside an oversized qty/limit_price the guard would actually REJECT,
   -- and order_guard_omitted (which keys only on the field's presence) would wave it through. This check
-  -- RECOMPUTES analytics.fn_order_guard from each row's OWN payload (strategy, qty, limit_price; last_price
-  -- is passed = limit_price so pct_off_last = 0 and the price-band checks no-op -- the goal is the
-  -- notional / $50-backstop MAGNITUDE bound, not a stale price-band re-litigation) and RAISEs CRITICAL when
-  -- the recomputed verdict is FALSE (the guard would have rejected), whether the row carried a forged
-  -- guard_passed=true, an honest guard_passed=false the routine staged anyway, or no guard record at all.
+  -- RECOMPUTES the market-only, 9-arg expected-shortfall analytics.fn_order_guard (owner directive
+  -- 2026-07-21, bigquery/100_market_only_order_guard.sql) from each row's OWN payload: strategy, qty,
+  -- limit_price (passed as p_ref_price -- there is no limit price left to band against), is_park,
+  -- order_type hardcoded to 'MARKET' (this recompute always checks what a market-only order must have
+  -- been), and the payload-recorded adv_usd/spread_bps/sigma_daily liquidity inputs the craft step wrote
+  -- alongside qty/limit_price -- the goal is the SAME notional/$50-backstop/liquidity-gate bound the live
+  -- guard applied, not a stale price-band re-litigation. RAISEs CRITICAL when the recomputed verdict is
+  -- FALSE (the guard would have rejected), whether the row carried a forged guard_passed=true, an honest
+  -- guard_passed=false the routine staged anyway, or no guard record at all.
   --
   -- HONEST LIMITATION (read before trusting this as a gate). BigQuery has NO independent source of order
   -- truth: the REAL order goes to IBKR via a DIFFERENT MCP tool (create_order_instruction) that no
@@ -1008,6 +1012,9 @@ BEGIN
         COALESCE(UPPER(JSON_VALUE(payload, '$.side')), 'BUY') AS side,
         SAFE_CAST(JSON_VALUE(payload, '$.qty') AS NUMERIC) AS qty,
         SAFE_CAST(JSON_VALUE(payload, '$.limit_price') AS NUMERIC) AS limit_price,
+        SAFE_CAST(JSON_VALUE(payload, '$.adv_usd') AS NUMERIC) AS adv_usd,
+        SAFE_CAST(JSON_VALUE(payload, '$.spread_bps') AS NUMERIC) AS spread_bps,
+        SAFE_CAST(JSON_VALUE(payload, '$.sigma_daily') AS NUMERIC) AS sigma_daily,
         JSON_VALUE(payload, '$.guard_passed') AS recorded_guard_passed,
         -- is_park mirrors what the order-guard caller passes for a park sweep/cover: the ticker equals the
         -- currently-declared park vehicle (state.park_policy_current, read as a scalar exactly like
@@ -1023,13 +1030,23 @@ BEGIN
       )
       WHERE SAFE_CAST(JSON_VALUE(payload, '$.qty') AS NUMERIC) IS NOT NULL
         AND SAFE_CAST(JSON_VALUE(payload, '$.limit_price') AS NUMERIC) IS NOT NULL
+        -- Only recompute rows that either are the park vehicle (adv_usd/spread_bps/sigma_daily are
+        -- legitimately NULL for a park sweep/cover -- fn_order_guard exempts p_is_park=TRUE from the
+        -- liquidity gate entirely) or carry the recorded liquidity inputs the market-only 9-arg guard
+        -- needs -- so a pre-cutover payload staged before adv_usd/spread_bps/sigma_daily were recorded
+        -- doesn't false-fire this mismatch alert on missing-not-forged data.
+        AND (JSON_VALUE(payload, '$.adv_usd') IS NOT NULL
+             OR rec_ticker IN ('SGOV', COALESCE((SELECT vehicle FROM `stock-trading-498512.state.park_policy_current`), 'SGOV')))
     ) DO
       -- Per-row recompute. rec.* are scripting-variable field accesses (constant per iteration), a valid
       -- table-function argument form (verified: fn_order_guard accepts non-constant scalar arguments).
+      -- order_type is hardcoded to 'MARKET' -- this recompute always checks what a market-only order must
+      -- have been (owner directive 2026-07-21, bigquery/100_market_only_order_guard.sql), independent of
+      -- whatever order_type (if any) the original payload recorded.
       SET (v_passed, v_reasons) = (
         SELECT AS STRUCT passed, TO_JSON_STRING(reasons)
         FROM `stock-trading-498512.analytics.fn_order_guard`(
-          rec.strategy, rec.side, rec.qty, rec.limit_price, rec.limit_price, rec.is_park)
+          rec.strategy, rec.side, rec.qty, rec.limit_price, rec.is_park, 'MARKET', rec.adv_usd, rec.spread_bps, rec.sigma_daily)
       );
       IF NOT COALESCE(v_passed, FALSE) THEN
         SET mismatch_keys = mismatch_keys || IF(mismatch_keys = '', '', ', ') || rec.item_key;

@@ -48,8 +48,14 @@ in the decision-log entry.
       `state.mark_discontinuity_watch` (`bigquery/82_split_aware_engine.sql`) covers the new vehicle's
       ticker (VOO/SGOV/SPY are in its watched set); confirm the threshold is not routinely tripped by
       the new vehicle's normal moves.
-- [ ] **Park-order guard band** — `analytics.fn_order_guard`'s `p_is_park` price band (read live from
-      `state.park_policy_current`: 0.2% SGOV / 0.5% other) matches the new vehicle's spread.
+- [ ] **Park-order guard exemption** — `analytics.fn_order_guard` (market-only cutover,
+      `bigquery/100_market_only_order_guard.sql`, owner directive 2026-07-21) no longer reads a
+      per-vehicle price band from `state.park_policy_current`; `p_is_park=TRUE` orders are exempt
+      from the entire ADV/spread/expected-shortfall liquidity gate, and are checked only against
+      qty/ref-price sanity, the `order_type='MARKET'` hard rail, and the 1.10x-account-NAV magnitude
+      backstop. For a new park vehicle, confirm it is liquid enough that MARKET orders on it are
+      safe (there is no price band left to re-check), and that the 1.10x-NAV backstop still bounds a
+      plausible full-book sweep/cover in that vehicle.
 - [ ] **Cash-tripwire / dwell economics** — the §13 $25 sweep floor rationale + the commission model
       (`Operating_Protocols.md` §13; VOO commission still UNVERIFIED as of 2026-07-15 — keep the
       larger-of fallback) and the $1 reconciliation tolerance (a higher per-share price is a tighter

@@ -96,13 +96,18 @@
 --   >=500 contracts; quoted spread (as a fraction of mid) must not exceed 0.10 (10%) when known.
 --
 --   ops.sp_fire_drill_order_guard — full rewrite to the new 9-arg (equity) / 8-arg (options) contract:
---   7 equity cases (6 must-reject + 1 GOOD-PASS asserting `passed=TRUE`) and 5 options cases
---   (4 must-reject + 1 GOOD-PASS asserting `passed=TRUE`) — 12 total, up from the prior 6. The 6
---   equity must-reject cases exercise: oversized notional, non-MARKET order_type, unknown ADV, ADV
---   below the $1M floor, expected shortfall exceeding the strategy's horizon budget (a wide-spread
---   vector), and non-positive qty. A standalone participation>10% case is intentionally NOT included
---   (see the procedure's own comment for why — the $50 notional backstop trips first at this book
---   size); the 10% cap is still present in the guard and implicitly exercised (no case breaches it).
+--   9 equity cases (6 non-park must-reject + 1 non-park GOOD-PASS + 1 park GOOD-PASS + 1 park
+--   must-reject, asserting `passed=TRUE`/`passed=FALSE` as applicable) and 5 options cases
+--   (4 must-reject + 1 GOOD-PASS asserting `passed=TRUE`) — 14 total, up from the prior 6. The 6
+--   non-park equity must-reject cases exercise: oversized notional, non-MARKET order_type, unknown ADV,
+--   ADV below the $1M floor, expected shortfall exceeding the strategy's horizon budget (a wide-spread
+--   vector), and non-positive qty. The 2 park equity cases cover BOTH directions of the park exemption:
+--   a clean small-notional park order (NULL adv/spread/sigma) must PASS despite the liquidity gate being
+--   entirely inapplicable to it, and an oversized park order (notional > 1.10x account NAV) must still
+--   REJECT on the pre-existing park-NAV magnitude backstop, which the liquidity-gate exemption does NOT
+--   touch. A standalone participation>10% case is intentionally NOT included (see the procedure's own
+--   comment for why — the $50 notional backstop trips first at this book size); the 10% cap is still
+--   present in the guard and implicitly exercised (no case breaches it).
 --   Read-only, never crafts a real order, never writes ops.trading_control — same discipline as every
 --   prior version of this drill.
 --
@@ -128,7 +133,7 @@
 -- byte-identical to 23; add `p_order_type` (MARKET-only) and `p_open_interest`/`p_spread_pct` (the
 -- options liquidity hard gate — a conservative pragmatic gate, NOT an implementation-shortfall model;
 -- out of scope for this pass) as new parameters. `ops.sp_fire_drill_order_guard`'s body is a full
--- rewrite proving the new contract — see the procedure's own comment below for the 12 cases and, in
+-- rewrite proving the new contract — see the procedure's own comment below for the 14 cases and, in
 -- particular, a documented interpretation call flagged for owner/orchestrator review (options
 -- test-vector spread scaling).
 --
@@ -201,6 +206,8 @@ CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_order_guard`
          [FORMAT('order is %.1f%% of dollar ADV -- exceeds the 10%% metaorder cap (convex-impact risk)', cost.participation*100)], []),
       IF(NOT p_is_park AND (p_spread_bps IS NULL OR p_sigma_daily IS NULL),
          ['cannot compute expected shortfall -- quoted spread or daily volatility is unknown; do not trade'], []),
+      IF(NOT p_is_park AND (p_spread_bps < 0 OR p_sigma_daily < 0),
+         ['quoted spread or daily volatility is negative -- the quote appears crossed/corrupted (bid>ask) or the data is invalid; do not trade'], []),
       IF(NOT p_is_park AND cost.shortfall_bps IS NOT NULL AND cost.shortfall_bps > cost.budget_bps,
          [FORMAT('expected implementation shortfall %.1f bps exceeds the %d bps horizon budget for strategy %s (half-spread + 0.142*sigma_daily*participation^0.6)', cost.shortfall_bps, CAST(cost.budget_bps AS INT64), p_strategy)], [])
     ) AS reasons
@@ -236,8 +243,8 @@ CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_order_guard_
          [FORMAT('order_type must be MARKET (market-only policy, owner directive 2026-07-21); got %s', COALESCE(p_order_type,'NULL'))], []),
       IF(p_open_interest IS NULL OR p_open_interest < 500,
          [FORMAT('option open interest %s is unknown or below the 500-contract floor — too illiquid for a market order', COALESCE(CAST(p_open_interest AS STRING),'NULL'))], []),
-      IF(p_spread_pct IS NOT NULL AND p_spread_pct > 0.10,
-         [FORMAT('option quoted spread %.1f%% of mid exceeds the 10%% cap — a market order would bleed capital', p_spread_pct*100)], [])
+      IF(p_spread_pct IS NULL OR p_spread_pct < 0 OR p_spread_pct > 0.10,
+         ['option quoted spread (as a fraction of mid) is unknown, negative, or exceeds the 10% cap -- too illiquid/unreliable for a market order'], [])
     ) AS reasons FROM base
   )
   SELECT ARRAY_LENGTH(reasons) = 0 AS passed, reasons FROM checks
@@ -254,13 +261,19 @@ CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_order_guard_
 -- CALLs this procedure by name and needs no edit for this migration) or ad hoc after any edit to
 -- fn_order_guard / fn_order_guard_options / trading_control.
 --
--- 12 cases total (up from 6 pre-2026-07-21): 7 equity (6 must-reject + 1 GOOD-PASS asserting
--- passed=TRUE) and 5 options (4 must-reject + 1 GOOD-PASS asserting passed=TRUE). Every must-reject case
--- isolates exactly ONE new-or-existing hard rail on an otherwise-clean order (mirrors the isolation
--- discipline 99's header established for its own offband case): oversized notional/max_loss, non-MARKET
--- order_type, unknown ADV, ADV below the $1M tail-trap floor, an expected shortfall over the strategy's
--- horizon budget, low open interest, and non-positive qty/contracts/NULL max_loss. The two GOOD-PASS
--- cases prove a clean, liquid, in-band MARKET order is NOT falsely rejected by the new liquidity gate —
+-- 14 cases total (up from 6 pre-2026-07-21): 9 equity (6 non-park must-reject + 1 non-park GOOD-PASS +
+-- 1 park GOOD-PASS + 1 park must-reject) and 5 options (4 must-reject + 1 GOOD-PASS asserting
+-- passed=TRUE). Every must-reject case isolates exactly ONE new-or-existing hard rail on an otherwise-
+-- clean order (mirrors the isolation discipline 99's header established for its own offband case):
+-- oversized notional/max_loss, non-MARKET order_type, unknown ADV, ADV below the $1M tail-trap floor, an
+-- expected shortfall over the strategy's horizon budget, low open interest, non-positive qty/contracts/
+-- NULL max_loss, and (the park must-reject case) a park notional exceeding 1.10x account NAV. Equity
+-- park coverage is NOT zero: the two park cases exercise BOTH directions of the park exemption — a
+-- clean, small-notional park order (NULL adv/spread/sigma) must PASS despite the liquidity gate being
+-- entirely inapplicable to a park vehicle, and an oversized park order must still REJECT on the
+-- pre-existing 1.10x-NAV magnitude backstop, which the liquidity-gate exemption does NOT touch. The
+-- three GOOD-PASS cases (non-park equity, park equity, options) prove a clean, liquid, in-band MARKET
+-- order is NOT falsely rejected by the new liquidity gate (or, for the park case, by the NAV backstop) —
 -- the failure mode a pure "does it reject bad orders" drill can't see on its own. A standalone
 -- participation>10% case is intentionally NOT included: at the current book size, 10% of even the
 -- smallest ADV a case here uses ($500,000) is $50,000 notional, which the $50 absolute notional
@@ -279,7 +292,7 @@ CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_order_guard_
 -- max_loss / LIMIT order_type / low open interest) is what drives the reject — the spread value is held
 -- constant and in-band across all 5 options cases so each case isolates exactly one condition, the same
 -- discipline the equity cases use (ADV pinned at 50,000,000 and spread pinned at 5 bps except where one
--- of those two IS the case under test). This keeps case (12)'s GOOD-PASS meaningful: it is only a true
+-- of those two IS the case under test). This keeps case (14)'s GOOD-PASS meaningful: it is only a true
 -- positive if every dimension, including spread, is genuinely in-band.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_fire_drill_order_guard`()
 BEGIN
@@ -292,15 +305,17 @@ BEGIN
   DECLARE v_eq_shortfall     BOOL;  -- (5) 150 bps quoted spread -> ~75 bps half-spread alone exceeds strategy B's 50 bps MEDIUM-horizon shortfall budget -> must REJECT.
   DECLARE v_eq_negative_qty  BOOL;  -- (6) qty=-1 -> must REJECT (qty sanity, pre-existing rail).
   DECLARE v_eq_good_pass     BOOL;  -- (7) GOOD PASS: liquid ($50M ADV), tight spread (5 bps), low vol (2% daily sigma), tiny $15 order -> expected shortfall ~2.5 bps, well under budget -> must be TRUE.
+  DECLARE v_eq_park_good_pass BOOL; -- (8) park order exempt from the liquidity gate (NULL adv/spread/sigma OK), small notional -> must PASS.
+  DECLARE v_eq_park_nav_reject BOOL; -- (9) park notional $100M > 1.10x account NAV -> must REJECT (park NAV backstop).
 
   -- OPTIONS (fn_order_guard_options, market-only 8-arg signature: strategy, side, contracts,
   -- ref_premium, max_loss_dollars, order_type, open_interest, spread_pct) -- UNCHANGED from the
   -- fixed-number draft; only the equity guard's liquidity math changed in this revision.
-  DECLARE v_opt_oversized_ml BOOL;  -- (8) max_loss $500,000 -> must REJECT (1.5x sizing cap, pre-existing rail).
-  DECLARE v_opt_null_ml      BOOL;  -- (9) max_loss NULL (unbounded-risk not caught upstream) -> must REJECT (pre-existing rail).
-  DECLARE v_opt_limit_type   BOOL;  -- (10) order_type='LIMIT' -> must REJECT (market-only hard gate).
-  DECLARE v_opt_low_oi       BOOL;  -- (11) open_interest 100 < the 500-contract floor -> must REJECT.
-  DECLARE v_opt_good_pass    BOOL;  -- (12) GOOD PASS: clean, liquid, in-band MARKET order -> must be TRUE.
+  DECLARE v_opt_oversized_ml BOOL;  -- (10) max_loss $500,000 -> must REJECT (1.5x sizing cap, pre-existing rail).
+  DECLARE v_opt_null_ml      BOOL;  -- (11) max_loss NULL (unbounded-risk not caught upstream) -> must REJECT (pre-existing rail).
+  DECLARE v_opt_limit_type   BOOL;  -- (12) order_type='LIMIT' -> must REJECT (market-only hard gate).
+  DECLARE v_opt_low_oi       BOOL;  -- (13) open_interest 100 < the 500-contract floor -> must REJECT.
+  DECLARE v_opt_good_pass    BOOL;  -- (14) GOOD PASS: clean, liquid, in-band MARKET order -> must be TRUE.
 
   SET v_eq_oversized = (
     SELECT passed FROM `stock-trading-498512.analytics.fn_order_guard`(
@@ -323,6 +338,10 @@ BEGIN
   SET v_eq_good_pass = (
     SELECT passed FROM `stock-trading-498512.analytics.fn_order_guard`(
       'B', 'BUY', NUMERIC '0.1', 150.00, FALSE, 'MARKET', 50000000, 5, NUMERIC '0.02'));
+  SET v_eq_park_good_pass = (SELECT passed FROM `stock-trading-498512.analytics.fn_order_guard`(
+    NULL, 'BUY', NUMERIC '1', 100.00, TRUE, 'MARKET', CAST(NULL AS NUMERIC), CAST(NULL AS NUMERIC), CAST(NULL AS NUMERIC)));  -- park order exempt from liquidity gate (NULL adv/spread/sigma OK), small notional -> must PASS
+  SET v_eq_park_nav_reject = (SELECT passed FROM `stock-trading-498512.analytics.fn_order_guard`(
+    NULL, 'BUY', 1000000, 100.00, TRUE, 'MARKET', CAST(NULL AS NUMERIC), CAST(NULL AS NUMERIC), CAST(NULL AS NUMERIC)));  -- notional $100M > 1.10x account NAV -> park NAV backstop must REJECT
 
   SET v_opt_oversized_ml = (
     SELECT passed FROM `stock-trading-498512.analytics.fn_order_guard_options`(
@@ -340,24 +359,26 @@ BEGIN
     SELECT passed FROM `stock-trading-498512.analytics.fn_order_guard_options`(
       'C', 'BUY', 1, 1.00, 10.00, 'MARKET', 1000, NUMERIC '0.02'));
 
-  -- FAILURE = any must-reject case incorrectly passed, OR either GOOD-PASS case incorrectly failed.
+  -- FAILURE = any must-reject case incorrectly passed, OR any GOOD-PASS case incorrectly failed.
   IF v_eq_oversized OR v_eq_limit_type OR v_eq_unknown_adv OR v_eq_illiquid_adv OR v_eq_shortfall
      OR v_eq_negative_qty OR NOT v_eq_good_pass
+     OR NOT v_eq_park_good_pass OR v_eq_park_nav_reject
      OR v_opt_oversized_ml OR v_opt_null_ml OR v_opt_limit_type OR v_opt_low_oi OR NOT v_opt_good_pass THEN
     CALL `stock-trading-498512.ops.sp_raise_alert`(
       'critical', 'ops.sp_fire_drill_order_guard', 'order_guard_fire_drill_failed',
-      'The market-only order-guard fire drill (owner directive 2026-07-21, bigquery/100_market_only_order_guard.sql) found a regression: either a must-reject case (oversized notional/max_loss, non-MARKET order_type, unknown or sub-$1M ADV, expected implementation shortfall over the strategy horizon budget, non-positive qty/contracts, or NULL max_loss) incorrectly returned passed=TRUE, or one of the two GOOD-PASS cases (a clean, liquid, in-band MARKET order) incorrectly returned passed=FALSE. See payload for which case(s) failed. The pre-craft risk envelope and/or its expected-shortfall liquidity gate is not load-bearing -- investigate immediately before trusting it to block a bad order or admit a good one.',
+      'The market-only order-guard fire drill (owner directive 2026-07-21, bigquery/100_market_only_order_guard.sql) found a regression: either a must-reject case (oversized notional/max_loss, non-MARKET order_type, unknown or sub-$1M ADV, expected implementation shortfall over the strategy horizon budget, low open interest, non-positive qty/contracts, NULL max_loss, or a park notional over 1.10x account NAV) incorrectly returned passed=TRUE, or one of the GOOD-PASS cases (a clean, liquid, in-band MARKET order -- equity, equity-park, or options) incorrectly returned passed=FALSE. See payload for which case(s) failed. The pre-craft risk envelope and/or its expected-shortfall liquidity gate is not load-bearing -- investigate immediately before trusting it to block a bad order or admit a good one.',
       TO_JSON_STRING(STRUCT(
         v_eq_oversized AS eq_oversized_passed, v_eq_limit_type AS eq_limit_order_type_passed,
         v_eq_unknown_adv AS eq_unknown_adv_passed, v_eq_illiquid_adv AS eq_illiquid_adv_passed,
         v_eq_shortfall AS eq_shortfall_over_budget_passed, v_eq_negative_qty AS eq_negative_qty_passed,
         v_eq_good_pass AS eq_good_pass_passed,
+        v_eq_park_good_pass AS eq_park_good_pass_passed, v_eq_park_nav_reject AS eq_park_nav_reject_passed,
         v_opt_oversized_ml AS opt_oversized_maxloss_passed, v_opt_null_ml AS opt_null_maxloss_passed,
         v_opt_limit_type AS opt_limit_order_type_passed, v_opt_low_oi AS opt_low_oi_passed,
         v_opt_good_pass AS opt_good_pass_passed)));
   ELSE
     CALL `stock-trading-498512.ops.sp_log_run`(
-      'FIRE_DRILL_ORDER_GUARD', CURRENT_DATE('America/Denver'), 'completed', NULL, NULL, 12, NULL,
-      'All 12 market-only order-guard fire-drill cases (7 equity + 5 options, owner directive 2026-07-21 -- bigquery/100_market_only_order_guard.sql) correctly asserted: every must-reject case (oversized notional/max_loss, non-MARKET order_type, unknown or sub-$1M ADV, expected shortfall over the strategy horizon budget, low open interest, non-positive qty/contracts, NULL max_loss) rejected, and both GOOD-PASS cases (equity + options, clean MARKET orders clearing the expected-shortfall liquidity gate) passed. Never crafted a real order or wrote to ops.trading_control.');
+      'FIRE_DRILL_ORDER_GUARD', CURRENT_DATE('America/Denver'), 'completed', NULL, NULL, 14, NULL,
+      'All 14 market-only order-guard fire-drill cases (9 equity incl. 2 park + 5 options, owner directive 2026-07-21 -- bigquery/100_market_only_order_guard.sql) correctly asserted: every must-reject case (oversized notional/max_loss, non-MARKET order_type, unknown or sub-$1M ADV, expected shortfall over the strategy horizon budget, low open interest, non-positive qty/contracts, NULL max_loss, park notional over 1.10x account NAV) rejected, and every GOOD-PASS case (equity, equity-park, and options -- clean MARKET orders clearing the applicable liquidity gate) passed. Never crafted a real order or wrote to ops.trading_control.');
   END IF;
 END;
