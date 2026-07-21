@@ -54,7 +54,7 @@ D holds 5–10 positions when fully deployed. Rationale: a 20+ name "diversified
 
 - Thesis completion: narrative fulfillment marker reached
 - Thesis invalidation: specific at-entry-defined invalidation criteria met (NOT price action alone)
-- Tax optimization: after 12 months holding, positions qualify for LTCG treatment; when exiting on completion, prefer post-12-month exits where thesis permits
+- Tax optimization: after 12 months holding, positions qualify for LTCG treatment. ~~When exiting on completion, prefer post-12-month exits where thesis permits.~~ **[REMOVED per Rev 39, owner directive, 2026-07-21 — exit timing is governed solely by thesis completion/invalidation; no preference to delay a completion-triggered exit for LTCG qualification. LTCG treatment still applies passively whenever the 12-month line has already been crossed by the time thesis criteria fire.]**
 - No maximum hold. D's theses can legitimately take 2–3 years. Unlike A's 12-month hard cap, D accepts long timelines as thesis-structural.
 
 **Not exit-triggering:**
