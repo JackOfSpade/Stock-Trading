@@ -101,3 +101,19 @@ invariants:
       is fine as a READ in this row's reads column — only the trade_fills/perf-recompute WRITE claims are
       forbidden.)
     source_of_truth: ops/cadence.yaml (D2 / D2a writes) + Claude_Task_Plan.md D2 cutover note
+
+  # ---- "never chase past the documented rest level" is RETIRED (2026-07-20 owner directive — the
+  # mechanical never-chase 0.5% equity price-band block was replaced by the AI LIMIT DECISION:
+  # RAISE/HOLD/LOWER/ABANDON judgment). Scoped to Claude_Task_Plan.md only — the routine-executed
+  # prose — so historical mentions in RUNBOOK.md / events.decision_log stay untouched. ----
+  - id: limit_decision_never_chase_retired
+    files: [Claude_Task_Plan.md]
+    forbid_regex: 'never chase'
+    ignorecase: true
+    reason: >
+      "Never chase past the documented rest level" was the mechanical never-chase 0.5% equity price-band
+      rule, RETIRED 2026-07-20 by owner directive and replaced by the AI LIMIT DECISION (RAISE / HOLD /
+      LOWER / ABANDON judgment) at every equity (non-park) craft/re-craft. Claude_Task_Plan.md must not
+      re-instruct a routine to follow the retired never-chase rule.
+    source_of_truth: Claude_Task_Plan.md LIMIT DECISION protocol block (preamble) / Operating_Protocols.md
+      §11 "Limit-price decision (2026-07-20)" / bigquery/99_ai_limit_decision_order_guard.sql

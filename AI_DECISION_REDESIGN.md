@@ -56,13 +56,17 @@ runs on, each of which exists *because* it is not judgment:
 | M1b reconciliation overrides | 4 fixed acute/stressed/hawkish overrides | Conservative-direction-only clamps ON an AI decision — exactly the rail pattern PARK v2 keeps. They never choose activation, only veto it toward safety |
 | A2 constraint-relaxation lookup | PARTIAL/MATERIAL formula table, Goodhart guardrails | Anti-self-dealing governance: this table bounds how far the AI may loosen *its own* constraints. Rev 4 mechanized it specifically to remove discretion from that loop; gaps already route to an AR review with default-HOLD (judgment has a channel) |
 | W5 self-tuning loop gates | readiness views for process/exec/calibration loops + auto-reverts | The objective data-sufficiency bars are what replaced human PR review (autonomy_levels: retired `no_auto_merge_self_improvement`). Judgment gates here would be autonomy justified by vibes |
-| Execution safety | fn_order_guard bands, options guard, daily staging caps, PDT deferral, DAY-TIF, connector-sanity band, mark-discontinuity, cash tripwire, breaker tiers, entry-staging gates, OPS0 refire exclusions | Fat-finger/runaway containment. These fire in exactly the moments AI judgment is least reliable, and they bound the blast radius of every AI decision above them |
+| Execution safety | fn_order_guard hard rails (sizing/notional/qty sanity; park bands)¹, options guard, daily staging caps, PDT deferral, DAY-TIF, connector-sanity band, mark-discontinuity, cash tripwire, breaker tiers, entry-staging gates, OPS0 refire exclusions | Fat-finger/runaway containment. These fire in exactly the moments AI judgment is least reliable, and they bound the blast radius of every AI decision above them |
 | Frozen per-strategy machinery (A–E) | entry/exit triggers, convergence/time exits, 2% sizing, B short-stop, C dual-path/80% take-profit | Two-tier immutability; spec_hash. Conversion channel exists (owner-directed override → terminate-and-restart per strategy, Rev-35 precedent) but resets every edge clock — not recommended; Redesign B achieves the goal prospectively instead |
 | 2% sizing fraction | flat 2% of sleeve NAV | "Globally immutable"; the experiment's primary risk control ("a strategy with 2% sizing and 20% stops is effectively a 0.4% sizing strategy") — sizing-by-conviction is the classic AI failure mode the design excludes |
 | Screens feeding AI review | retirement candidacy, runaway-success, probe-stuck, divergence trigger, KL monitors, universe liquidity floors | Already the correct division of labor: mechanical detection → AI adjudication. Converting detection to AI creates self-selected review queues |
 | Cross-checks | golden scenarios, theater judge, cross-model referee, dual-path max-loss, M5 TimesFM advisory, CI parity/consistency gates | Value = independence from the reasoning model. M5 in particular is quarantined advisory by design ("kill/gate triggers fire on REALISED values, never a forecast") — do not arm it |
 | Accounting/infra | TWR engine, tax lots/wash-sale detection, cash-attribution tree, catchup/retry/dep-wait, alert lifecycle, backups, split/gen scripts, .gs display constants | Determinism = correctness; none of these choose anything a market view could improve |
 | Park sweep/cover floors ($25/−$5) & sizing arithmetic | §13.E | Operational friction floors (tap friction, fractional min order) — kept as rails in PARK v2; the *decision* (vehicle) is what converted |
+
+¹ The equity %-off-last band was converted to the **AI LIMIT DECISION** on 2026-07-20 by
+owner directive (see Claude_Task_Plan.md's LIMIT DECISION block; `bigquery/99_ai_limit_decision_order_guard.sql`)
+— the one deliberate carve-out from this row since this table was written.
 
 ## 3. Redesigns
 
