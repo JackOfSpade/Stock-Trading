@@ -645,6 +645,28 @@ Concretely, every run:
   FROM state.park_policy_current` for which ticker/contract_id is live right now (SGOV 424099317, VOO
   136155102 — §13; `state.sgov_reconciliation` is FROZEN to SGOV-only history as of the 2026-07-15 cutover
   and no longer the live reconciliation basis).
+- **Post-close DRIP dust (adjudicated convention, 2026-07-20 — closes the "no documented convention" gap
+  the first live occurrence, HCA/IBM, flagged this same day).** A dividend-reinvestment fill can land in
+  `get_account_trades` AFTER its position's CLOSE was already reconciled (the ex-div/pay date fell after
+  the exit), so the fill reconciliation bullet above records it into `events.trade_fills` but has no open
+  entry/exit to flip — no OPEN/ADJUST `events.position_events` row gets written, and the connector-held
+  residual shares are invisible to `state.current_positions`. For each such fill (a `trade_fills` row with
+  no matching OPEN/ADJUST `position_events` row for its `ticker`/`contract_id`), compute the residual's
+  current market value (connector shares × `get_price_snapshot`/`get_account_positions` mark). **Materiality
+  gate, $1 — the same order of magnitude as the §13 cash-tripwire's own materiality bar:** value **<= $1**
+  is DUST — do NOT mirror it as a position (a synthetic OPEN with no strategy/thesis of record would corrupt
+  `state.current_positions`' "active strategy position" invariant for a residual not worth a commission-paying
+  SELL either); write one `CALL ops.sp_log_decision(...)` note (`entry_type='drip-dust'`, ticker, shares,
+  value, fill date) for the audit trail and take no further action — do NOT raise `position_mirror_gap`.
+  Value **> $1**: `CALL ops.sp_raise_alert_once('warning','D2a','position_mirror_gap', <ticker + shares +
+  value + fill date>, <JSON: ticker, shares, value_usd, fill_date>)` for session-level adjudication (mirror
+  as a micro-position under the position's last-known strategy, or sell) — this is real money, not dust, and
+  the call needs a thesis/strategy judgment this bullet does not make mechanically. **HEAL-RESOLUTION:** if
+  an open `position_mirror_gap` alert's `payload.ticker` residual now reads <= $1 (a further post-close
+  dividend/split shrank it) or has been mirrored/sold since (no longer present in the union of connector
+  holdings and `state.current_positions`), `UPDATE ops.alerts SET resolved=TRUE, resolved_ts=CURRENT_TIMESTAMP(),
+  resolved_note='condition healed — residual now immaterial or resolved' WHERE category='position_mirror_gap'
+  AND NOT resolved AND JSON_VALUE(payload,'$.ticker') = <ticker>`.
 - Read (do not transcribe) live positions, cash, and net-liquidation from `get_account_positions` +
   `get_account_summary` + `get_account_balances`; reconcile account-level drift (dividends, fees, splits) to the
   connector truth while preserving per-strategy cost-basis attribution (`get_price_history` with
