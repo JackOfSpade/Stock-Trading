@@ -153,6 +153,8 @@
 -- though applying 100 makes 99's live objects immediately superseded again). Apply via the BigQuery MCP
 -- execute_sql.
 
+-- SUPERSEDED LIVE by bigquery/103_adaptive_shortfall_budget.sql (2026-07-22 — self-activating φ·α
+-- adaptive budget; DO NOT re-apply this CREATE live in isolation).
 -- ===== analytics.fn_order_guard — deterministic pre-craft risk envelope, MARKET-ONLY + DYNAMIC
 -- EXPECTED-SHORTFALL LIQUIDITY GATE (owner directive 2026-07-21). qty/ref-price sanity, the 1.5x
 -- sizing_base cap, the $50 notional backstop, and the park 1.10x-NAV magnitude check are UNCHANGED
@@ -250,6 +252,8 @@ CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_order_guard_
   SELECT ARRAY_LENGTH(reasons) = 0 AS passed, reasons FROM checks
 );
 
+-- SUPERSEDED LIVE by bigquery/103_adaptive_shortfall_budget.sql (2026-07-22 — self-activating φ·α
+-- adaptive budget; DO NOT re-apply this CREATE live in isolation).
 -- ===== ops.sp_fire_drill_order_guard — v3: proves the market-only + liquidity-hard-gate contract
 -- (owner directive 2026-07-21; was `99_ai_limit_decision_order_guard.sql:117`, which in turn was
 -- `23_trading_control.sql:326`) =====

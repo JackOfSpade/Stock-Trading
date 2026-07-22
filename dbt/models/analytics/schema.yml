@@ -181,6 +181,26 @@ models:
           - not_null
           - unique
 
+  - name: calibration_return_shrunk
+    description: >-
+      Per-strategy adaptive shortfall-budget input for analytics.fn_order_guard's self-activating
+      φ·α adaptive budget (bigquery/103_adaptive_shortfall_budget.sql, 2026-07-22): realized-RETURN
+      (not win-rate) per closed campaign (analytics.position_campaigns), Bayesian-shrunk toward the
+      fixed per-strategy prior_bps (D150/A100/B·E50/C25), clamped to [0.5x, 2.0x] the prior. At
+      n_closed=0, budget_bps == prior_bps exactly — see
+      tests/assert_adaptive_budget_prior_invariant.sql.
+    columns:
+      - name: strategy
+        tests:
+          - not_null
+          - unique
+      - name: budget_bps
+        description: >-
+          phi*alpha_shrunk in bps, clamped to [0.5x, 2.0x] prior_bps — what fn_order_guard now reads
+          as the strategy's expected-shortfall budget.
+        tests:
+          - not_null
+
   - name: calibration_shrunk
     description: >-
       Beta-Binomial-shrunk per-conviction-tier win rate + Wilson 95% interval + the

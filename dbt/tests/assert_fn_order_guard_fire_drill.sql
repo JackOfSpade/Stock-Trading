@@ -32,6 +32,15 @@
 -- except a same-session BUG FIX: p_spread_pct is a FRACTION of mid (the guard checks `> 0.10`), so
 -- the prior literal `2` (200%) accidentally made the good-pass case a would-be reject; the correct
 -- in-band value is `0.02` (2%), now used in all 5 options rows.
+--
+-- v5 (2026-07-22, bigquery/103_adaptive_shortfall_budget.sql — self-activating φ·α adaptive shortfall
+-- budget): analytics.fn_order_guard's fixed per-strategy CASE budget_bps is replaced by a lookup into
+-- analytics.calibration_return_shrunk, clamped to [0.5x, 2.0x] the old fixed value (now the shrinkage
+-- PRIOR). The `shortfall_exceeds_budget` case's spread widens from 150 to 700 bps so its 350 bps
+-- half-spread exceeds the MAXIMUM possible clamped adaptive budget for strategy B (2x its 50 bps
+-- prior = 100 bps) regardless of what alpha_shrunk resolves to — the old 150 bps vector's ~75 bps
+-- half-spread was only safely over B's FIXED 50 bps budget, not over an adaptive ceiling that can now
+-- range up to 2x the prior.
 SELECT case_name, passed
 FROM UNNEST([
   -- ===== EQUITY: analytics.fn_order_guard(strategy, side, qty, ref_price, is_park, order_type,
@@ -45,7 +54,7 @@ FROM UNNEST([
   STRUCT('adv_below_1m_floor',
     (SELECT passed FROM `stock-trading-498512.analytics.fn_order_guard`('B', 'BUY', 0.1, 150.00, FALSE, 'MARKET', 500000, 5, 0.02))),
   STRUCT('shortfall_exceeds_budget',
-    (SELECT passed FROM `stock-trading-498512.analytics.fn_order_guard`('B', 'BUY', 0.1, 150.00, FALSE, 'MARKET', 50000000, 150, 0.02))),
+    (SELECT passed FROM `stock-trading-498512.analytics.fn_order_guard`('B', 'BUY', 0.1, 150.00, FALSE, 'MARKET', 50000000, 700, 0.02))),
   STRUCT('negative_qty',
     (SELECT passed FROM `stock-trading-498512.analytics.fn_order_guard`('B', 'BUY', -1, 100.00, FALSE, 'MARKET', 50000000, 5, 0.02))),
   STRUCT('good_pass_equity',
