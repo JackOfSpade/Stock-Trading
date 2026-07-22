@@ -282,7 +282,17 @@ Canonical protocol: Operating_Protocols.md §11. Operational summary for routine
 
 **Order-craft fallback (manual-entry — genuinely non-craftable structures only).** For a security type/structure `create_order_instruction`/`get_combo_identifier` cannot handle (mixed-type combos, FOP/FUT combos, or a combo resolution failure), emit a manual-entry text order block in the calendar event, labeled "manual entry — connector cannot craft this specific structure." Still run the options-specific order-guard check above first and include its computed max-loss in the manual-entry block so the human sees a mechanically-verified number alongside the free-text order, not just a number Claude typed.
 
-**Reconciling fills (D2 Step 0, daily, idempotent by `trade_id`).** Read `get_account_trades` over a multi-day window (e.g. DAYS_7). For each fill whose `trade_id` is not already recorded in `events.trade_fills`: write exact price / size / `commission` / `realized_pnl` / `trade_time` (`INSERT INTO events.trade_fills`); flip ORDER-STAGED→OPEN or exit-pending→CLOSED via an `events.position_events` row; update strategy sector counts / KL events; record the fill against the position's decision via `CALL ops.sp_log_decision(...)` (`events.decision_log`). **Resolve any open `termination_close_staged` alert this fill satisfies (self-improvement audit ITEM 17, 2026-07-11):** `UPDATE ops.alerts SET resolved=TRUE, resolved_ts=CURRENT_TIMESTAMP(), resolved_note='closed by fill <trade_id>' WHERE category='termination_close_staged' AND NOT resolved AND JSON_VALUE(payload,'$.instruction_id') = <this fill's originating instruction_id>` (match via `state.open_orders.instruction_id`, same as the ORDER-STAGED→CLOSED flip above). **Resolve any open `position_reconciliation_lag` alert this fill closes (root-cause fix, 2026-07-20 — D1's RECONCILIATION-LAG POSITION check, §"MECHANICAL EXIT-TRIGGER SWEEP" below, raises this the moment a position appears in the connector before this same-day catch-up runs; nothing previously closed it again once the catch-up landed, so it latched open forever on every occurrence, healed or not):** `UPDATE ops.alerts SET resolved=TRUE, resolved_ts=CURRENT_TIMESTAMP(), resolved_note='closed by fill <trade_id>: now reconciled into state.current_positions' WHERE category='position_reconciliation_lag' AND NOT resolved AND JSON_VALUE(payload,'$.ticker') = <this fill's ticker> AND JSON_VALUE(payload,'$.strategy') = <this fill's strategy>` (match via the alert's own `payload.ticker`/`payload.strategy`, the same fields D1 writes when it raises). Take realized P&L from the connector's `realized_pnl` field — never infer it. Aggregate exchange-split partial fills by `order_id`. Then refresh live marks/cash from `get_account_positions` + `get_account_summary` + `get_account_balances`, and note still-working orders from `get_account_orders`.
+**Reconciling fills (D2a Step 0, daily, idempotent by `trade_id`; owner as of the 2026-07-09 cutover — this
+summary previously still said "D2 Step 0" here, which is why the fix below landed as dead prose for six weeks;
+the AUTHORITATIVE copy of the alert-resolve clauses is now inline in D2a's own STEP 0 bullet, Claude_Task_Plan.md
+"D2a. Broker Reconcile & Snapshot" — this paragraph is a non-canonical operational summary, per this section's
+own header above, and must be kept in sync with that copy, not treated as a second independent source of truth).**
+Read `get_account_trades` over a multi-day window (e.g. DAYS_7). For each fill whose `trade_id` is not already
+recorded in `events.trade_fills`: write exact price / size / `commission` / `realized_pnl` / `trade_time`
+(`INSERT INTO events.trade_fills`); flip ORDER-STAGED→OPEN or exit-pending→CLOSED via an `events.position_events`
+row; update strategy sector counts / KL events; record the fill against the position's decision via `CALL
+ops.sp_log_decision(...)` (`events.decision_log`). **Resolve any open `termination_close_staged` alert this fill
+satisfies (self-improvement audit ITEM 17, 2026-07-11):** `UPDATE ops.alerts SET resolved=TRUE, resolved_ts=CURRENT_TIMESTAMP(), resolved_note='closed by fill <trade_id>' WHERE category='termination_close_staged' AND NOT resolved AND JSON_VALUE(payload,'$.instruction_id') = <this fill's originating instruction_id>` (match via `state.open_orders.instruction_id`, same as the ORDER-STAGED→CLOSED flip above). **Resolve any open `position_reconciliation_lag` alert this fill closes (root-cause fix, 2026-07-20; match condition corrected 2026-07-21 — the original strategy-scoped match never fires for a name that turns out to split across multiple strategy buckets, since D1 guesses a strategy attribution before reconciliation runs; 2026-07-21's ISRG is the live example: D1 assumed a strategy-D duplicate re-craft, but the reconciled fill correctly opened an independent strategy-B position):** `UPDATE ops.alerts SET resolved=TRUE, resolved_ts=CURRENT_TIMESTAMP(), resolved_note='closed by fill <trade_id>: now reconciled into state.current_positions' WHERE category='position_reconciliation_lag' AND NOT resolved AND JSON_VALUE(payload,'$.ticker') = <this fill's ticker>` — match by ticker ONLY, never also require `payload.strategy` equality. Take realized P&L from the connector's `realized_pnl` field — never infer it. Aggregate exchange-split partial fills by `order_id`. Then refresh live marks/cash from `get_account_positions` + `get_account_summary` + `get_account_balances`, and note still-working orders from `get_account_orders`.
 
 **Source-of-truth boundary.** Connector = authoritative for fills, positions, cash, live orders, quotes. The BigQuery events-side state is authoritative for strategy-bucket cost-basis attribution (`state.current_positions` / `events.position_events` `cost_basis`) and per-strategy NAV (`analytics.strategy_nav`) — the connector has no strategy buckets. On account-level drift (dividends/fees/reinvest), the connector is the truth and the events-side state is corrected to match (via `events.position_events` / `analytics.account_reconciliation`) while preserving strategy attribution at the cost-basis level.
 
@@ -512,7 +522,25 @@ Concretely, every run:
   and any KL #12 event membership; write the GO/close decision via **`CALL ops.sp_log_decision(...)`** (appends
   `events.decision_log` + embeds in the same call — verify any time via `state.embedding_health`, `is_healthy =
   TRUE`). Realized P&L comes from the connector's `realized_pnl` field — never inferred; aggregate exchange-split
-  partials by `order_id`. **Park mechanical sweep/cover/DRIP fills are recorded to `events.parking_events`
+  partials by `order_id`. **Resolve any open `termination_close_staged` alert this fill satisfies** (match via
+  `state.open_orders.instruction_id`, same as the ORDER-STAGED→CLOSED flip above): `UPDATE ops.alerts SET
+  resolved=TRUE, resolved_ts=CURRENT_TIMESTAMP(), resolved_note='closed by fill <trade_id>' WHERE
+  category='termination_close_staged' AND NOT resolved AND JSON_VALUE(payload,'$.instruction_id') = <this fill's
+  originating instruction_id>`. **Resolve any open `position_reconciliation_lag` alert this fill closes** (bug
+  fix, 2026-07-21 — the 2026-07-20 root-cause fix landed this clause only in the "IBKR connector usage"
+  *operational-summary* section, whose own header names Operating_Protocols.md §11 as canonical — neither §11 nor
+  this, the actual STEP 0 bullet D2a executes, ever carried it, so it silently never ran; confirmed live same-day:
+  D2a completed 2026-07-21 and correctly wrote both the ISRG and TSM reconciling fills below, D3's later run
+  attested "positions match connector," yet both alerts stayed `resolved=false` until manually closed):
+  `UPDATE ops.alerts SET resolved=TRUE, resolved_ts=CURRENT_TIMESTAMP(), resolved_note='closed by fill <trade_id>:
+  now reconciled into state.current_positions' WHERE category='position_reconciliation_lag' AND NOT resolved AND
+  JSON_VALUE(payload,'$.ticker') = <this fill's ticker>` — **match by ticker ONLY, never also require
+  `payload.strategy` equality** (the strategy-scoped match was the second half of the same bug: D1 raises this
+  alert, and guesses a strategy attribution, BEFORE reconciliation runs, so a name that turns out to be a genuine
+  independent entry under a *different* strategy bucket than D1 guessed — e.g. 2026-07-21's ISRG, D1 assumed a
+  strategy-D duplicate re-craft but the reconciled fill correctly opened a separate strategy-B position — would
+  never match a strategy-scoped condition even with the clause correctly wired in). **Park mechanical
+  sweep/cover/DRIP fills are recorded to `events.parking_events`
   (with `ticker` = the current park vehicle), NOT `events.trade_fills`** (see the cash-flattening bullet);
   `state.park_reconciliation` reconciles events-side park shares to the connector holding — `SELECT vehicle
   FROM state.park_policy_current` for which ticker/contract_id is live right now (SGOV 424099317, VOO
