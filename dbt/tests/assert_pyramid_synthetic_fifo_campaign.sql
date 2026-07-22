@@ -1,6 +1,6 @@
 -- Singular test (passes when ZERO rows): proves the Tier-1 FIFO-interval-overlap + Tier-2
 -- 0-crossing SQL LOGIC ITSELF is correct on a synthetic pyramid + a synthetic partial exit, using
--- literal inline fills (no live table -- {{ ref() }}/{{ source() }} are not used, so this runs even
+-- literal inline fills (no live table -- ref()/source() are not used, so this runs even
 -- before bigquery/102_pyramid_aware_lifecycle.sql is ever applied live, and stays independent of
 -- however few real pyramids exist in production on a given day).
 --
