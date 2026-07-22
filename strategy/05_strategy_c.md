@@ -58,6 +58,10 @@ All criteria must be met:
 - General market moves
 - Time decay (theta is priced in at entry; exiting on expected theta is paying the premium twice)
 
+### Partial exits (trim / scale-out)
+
+For a multi-contract structure, the AI may scale out partially — a market order selling some but not all of the position's contracts — on judgment, rather than only closing the full structure (Rev 41, owner directive, 2026-07-22). The remaining contracts continue to run under the structure's original defined-risk terms through to expiration (or an early exit trigger above); max_loss simply recomputes over the reduced contract count. A single 1-contract structure has no partial form and is closed as a unit, as before.
+
 ### Declared expected frequency (over active periods only)
 
 Two declarations corresponding to two router states (rev 22 split per Strategy C pre-mortem cycle 5 T1.γ):

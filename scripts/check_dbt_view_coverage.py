@@ -41,12 +41,15 @@ VIEW_DDL = re.compile(
     r"CREATE\s+OR\s+REPLACE\s+VIEW\s+`stock-trading-498512\.(state|analytics|perf)\.(\w+)`",
     re.IGNORECASE,
 )
+DROP_VIEW_DDL = re.compile(
+    r"DROP\s+VIEW\s+(?:IF\s+EXISTS\s+)?`stock-trading-498512\.(state|analytics|perf)\.(\w+)`",
+    re.IGNORECASE,
+)
 
 
 def live_views():
-    """(dataset, name) for every CREATE OR REPLACE VIEW across bigquery/*.sql. A view redefined by
-    a later-numbered file still has the same name, so a plain set of matches (regardless of which
-    file is the "latest" definition — irrelevant for a coverage count) is exactly right."""
+    """(dataset, name) for every active VIEW across bigquery/*.sql in file-sorted order.
+    A view created in an earlier file and dropped in a later file is not live."""
     found = set()
     for fn in sorted(os.listdir(BIGQUERY_DIR)):
         if not fn.endswith(".sql"):
@@ -57,6 +60,8 @@ def live_views():
         txt = open(path, encoding="utf-8").read()
         for dataset, name in VIEW_DDL.findall(txt):
             found.add((dataset, name))
+        for dataset, name in DROP_VIEW_DDL.findall(txt):
+            found.discard((dataset, name))
     return found
 
 

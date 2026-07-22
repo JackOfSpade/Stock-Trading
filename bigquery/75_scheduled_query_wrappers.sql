@@ -973,32 +973,34 @@ BEGIN
   END IF;
 
   -- order_guard_verdict_mismatch (CRITICAL, DEF-3 order-guard TRUTHFULNESS backstop -- defense-in-depth,
-  -- 2026-07-17). The order_guard_omitted check directly above is the sole detective backstop, but it only
+  -- 2026-07-17; recompute updated 2026-07-22 for the pre-trade-rail strip, bigquery/104_strip_pretrade_
+  -- rails.sql). The order_guard_omitted check directly above is the sole detective backstop, but it only
   -- verifies that payload.guard_passed IS PRESENT -- never that it is TRUTHFUL. A routine could stage an
-  -- order carrying guard_passed=true beside an oversized qty/limit_price the guard would actually REJECT,
-  -- and order_guard_omitted (which keys only on the field's presence) would wave it through. This check
-  -- RECOMPUTES the market-only, 9-arg expected-shortfall analytics.fn_order_guard (owner directive
-  -- 2026-07-21, bigquery/100_market_only_order_guard.sql) from each row's OWN payload: strategy, qty,
-  -- limit_price (passed as p_ref_price -- there is no limit price left to band against), is_park,
-  -- order_type hardcoded to 'MARKET' (this recompute always checks what a market-only order must have
-  -- been), and the payload-recorded adv_usd/spread_bps/sigma_daily liquidity inputs the craft step wrote
-  -- alongside qty/limit_price -- the goal is the SAME notional/$50-backstop/liquidity-gate bound the live
-  -- guard applied, not a stale price-band re-litigation. RAISEs CRITICAL when the recomputed verdict is
-  -- FALSE (the guard would have rejected), whether the row carried a forged guard_passed=true, an honest
-  -- guard_passed=false the routine staged anyway, or no guard record at all.
+  -- order carrying guard_passed=true beside a malformed qty/limit_price/order_type the guard would
+  -- actually REJECT, and order_guard_omitted (which keys only on the field's presence) would wave it
+  -- through. This check RECOMPUTES the market-only, 5-arg analytics.fn_order_guard (owner directive
+  -- 2026-07-22, bigquery/104_strip_pretrade_rails.sql -- ALL liquidity + sizing pre-trade rails removed;
+  -- was the 9-arg expected-shortfall guard of bigquery/100_market_only_order_guard.sql) from each row's
+  -- OWN payload: strategy, side, qty, limit_price (passed as p_ref_price -- there is no limit price left
+  -- to band against), order_type hardcoded to 'MARKET' (this recompute always checks what a market-only
+  -- order must have been). There are no liquidity inputs left to read: adv_usd/spread_bps/sigma_daily and
+  -- p_is_park are no longer guard parameters at all (the ADV/participation/expected-shortfall gate and the
+  -- park 1.10x-NAV magnitude backstop are both gone) -- every staged equity/park row is recomputed
+  -- identically, a market-only + qty/ref-price sanity check, with no park-vs-non-park distinction left to
+  -- draw. RAISEs CRITICAL when the recomputed verdict is FALSE (the guard would have rejected), whether
+  -- the row carried a forged guard_passed=true, an honest guard_passed=false the routine staged anyway, or
+  -- no guard record at all.
   --
   -- HONEST LIMITATION (read before trusting this as a gate). BigQuery has NO independent source of order
   -- truth: the REAL order goes to IBKR via a DIFFERENT MCP tool (create_order_instruction) that no
   -- BigQuery stored procedure can see or gate (the same 'no SP can gate a call to a different MCP tool'
   -- limitation the order_guard_omitted header states). This recompute therefore catches an INCONSISTENT
-  -- forgery -- guard_passed=true left beside HONEST qty/limit_price the guard would reject, a guard that
-  -- returned FALSE but the order was staged, or a guard never called on an over-envelope order -- but it
-  -- CANNOT catch a fully-COHERENT forgery that ALSO fakes qty/limit_price in the payload to match the
-  -- fabricated guard_passed=true (the recompute would then read the faked-consistent numbers and pass).
-  -- It raises the bar (an attacker must now forge the order fields consistently, not just the flag); it is
-  -- NOT a complete gate. is_park (ticker = the live park vehicle, or legacy SGOV) is derived so a
-  -- legitimate park sweep/cover -- which the guard lets exceed the $50 equity backstop under its 1.10x-NAV
-  -- park rule -- does not false-fire. Queries events.queue_events DIRECTLY (append-only), same rationale as
+  -- forgery -- guard_passed=true left beside HONEST qty/limit_price/order_type the guard would reject, a
+  -- guard that returned FALSE but the order was staged, or a guard never called on a malformed order -- but
+  -- it CANNOT catch a fully-COHERENT forgery that ALSO fakes qty/limit_price in the payload to match the
+  -- fabricated guard_passed=true (the recompute would then read the faked-consistent numbers and pass). It
+  -- raises the bar (an attacker must now forge the order fields consistently, not just the flag); it is NOT
+  -- a complete gate. Queries events.queue_events DIRECTLY (append-only), same rationale as
   -- order_guard_omitted: a same-day-filled order must not drop out of a pending-only view before this runs.
   BEGIN
     DECLARE mismatch_keys STRING DEFAULT '';
@@ -1012,48 +1014,38 @@ BEGIN
         COALESCE(UPPER(JSON_VALUE(payload, '$.side')), 'BUY') AS side,
         SAFE_CAST(JSON_VALUE(payload, '$.qty') AS NUMERIC) AS qty,
         SAFE_CAST(JSON_VALUE(payload, '$.limit_price') AS NUMERIC) AS limit_price,
-        SAFE_CAST(JSON_VALUE(payload, '$.adv_usd') AS NUMERIC) AS adv_usd,
-        SAFE_CAST(JSON_VALUE(payload, '$.spread_bps') AS NUMERIC) AS spread_bps,
-        SAFE_CAST(JSON_VALUE(payload, '$.sigma_daily') AS NUMERIC) AS sigma_daily,
-        JSON_VALUE(payload, '$.guard_passed') AS recorded_guard_passed,
-        -- is_park mirrors what the order-guard caller passes for a park sweep/cover: the ticker equals the
-        -- currently-declared park vehicle (state.park_policy_current, read as a scalar exactly like
-        -- fn_order_guard itself does) OR the legacy 'SGOV'. Park orders legitimately exceed the $50 equity
-        -- backstop (guarded instead by the 1.10x-NAV park rule), so mis-flagging one as non-park would
-        -- false-fire this CRITICAL.
-        rec_ticker IN ('SGOV', COALESCE((SELECT vehicle FROM `stock-trading-498512.state.park_policy_current`), 'SGOV')) AS is_park
-      FROM (
-        SELECT item_key, strategy, ticker AS rec_ticker, payload
-        FROM `stock-trading-498512.events.queue_events`
-        WHERE queue = 'ORDER_STAGED' AND LOWER(status) = 'pending'
-          AND DATE(event_ts, 'America/Denver') = CURRENT_DATE('America/Denver')
-      )
-      WHERE SAFE_CAST(JSON_VALUE(payload, '$.qty') AS NUMERIC) IS NOT NULL
+        JSON_VALUE(payload, '$.guard_passed') AS recorded_guard_passed
+      FROM `stock-trading-498512.events.queue_events`
+      WHERE queue = 'ORDER_STAGED' AND LOWER(status) = 'pending'
+        AND DATE(event_ts, 'America/Denver') = CURRENT_DATE('America/Denver')
+        -- qty/limit_price IS NOT NULL both sanity-filters malformed payloads AND is the only remaining
+        -- thing that distinguishes an equity ORDER_STAGED row (qty/limit_price) from an options one
+        -- (contracts/ref_premium/max_loss_dollars -- a different payload shape this recompute does not
+        -- touch, left to order_guard_omitted's presence-only check above). No adv/liquidity/park-based
+        -- eligibility filter remains -- with no liquidity or park-NAV rail left (owner directive
+        -- 2026-07-22, bigquery/104_strip_pretrade_rails.sql), every staged equity/park row is recomputed
+        -- identically, so there is no longer a distinct eligibility condition to gate the recompute on.
+        AND SAFE_CAST(JSON_VALUE(payload, '$.qty') AS NUMERIC) IS NOT NULL
         AND SAFE_CAST(JSON_VALUE(payload, '$.limit_price') AS NUMERIC) IS NOT NULL
-        -- Only recompute rows that either are the park vehicle (adv_usd/spread_bps/sigma_daily are
-        -- legitimately NULL for a park sweep/cover -- fn_order_guard exempts p_is_park=TRUE from the
-        -- liquidity gate entirely) or carry the recorded liquidity inputs the market-only 9-arg guard
-        -- needs -- so a pre-cutover payload staged before adv_usd/spread_bps/sigma_daily were recorded
-        -- doesn't false-fire this mismatch alert on missing-not-forged data.
-        AND (JSON_VALUE(payload, '$.adv_usd') IS NOT NULL
-             OR rec_ticker IN ('SGOV', COALESCE((SELECT vehicle FROM `stock-trading-498512.state.park_policy_current`), 'SGOV')))
     ) DO
       -- Per-row recompute. rec.* are scripting-variable field accesses (constant per iteration), a valid
       -- table-function argument form (verified: fn_order_guard accepts non-constant scalar arguments).
       -- order_type is hardcoded to 'MARKET' -- this recompute always checks what a market-only order must
       -- have been (owner directive 2026-07-21, bigquery/100_market_only_order_guard.sql), independent of
-      -- whatever order_type (if any) the original payload recorded.
+      -- whatever order_type (if any) the original payload recorded. The guard call itself is the 5-arg
+      -- bigquery/104_strip_pretrade_rails.sql signature (owner directive 2026-07-22): no is_park / adv_usd
+      -- / spread_bps / sigma_daily arguments remain to pass.
       SET (v_passed, v_reasons) = (
         SELECT AS STRUCT passed, TO_JSON_STRING(reasons)
         FROM `stock-trading-498512.analytics.fn_order_guard`(
-          rec.strategy, rec.side, rec.qty, rec.limit_price, rec.is_park, 'MARKET', rec.adv_usd, rec.spread_bps, rec.sigma_daily)
+          rec.strategy, rec.side, rec.qty, rec.limit_price, 'MARKET')
       );
       IF NOT COALESCE(v_passed, FALSE) THEN
         SET mismatch_keys = mismatch_keys || IF(mismatch_keys = '', '', ', ') || rec.item_key;
         SET mismatch_json = mismatch_json || IF(mismatch_json = '', '', ',') ||
           TO_JSON_STRING(STRUCT(
             rec.item_key AS item_key, rec.strategy AS strategy, rec.side AS side,
-            rec.qty AS qty, rec.limit_price AS limit_price, rec.is_park AS is_park,
+            rec.qty AS qty, rec.limit_price AS limit_price,
             rec.recorded_guard_passed AS recorded_guard_passed,
             v_passed AS recomputed_passed, v_reasons AS recomputed_reasons));
       END IF;

@@ -59,6 +59,10 @@ Per `Experiment_Parameters.md`, paired positions consume 4% of strategy portfoli
 - Adverse mark-to-market on the pair with no thesis-invalidating news
 - General market moves (pair should be approximately neutral to these by construction)
 
+### Partial exits (trim / scale-out)
+
+A partial trim is allowed only by reducing both pair legs together, proportionally, in the same session — a market SELL on part of the long L leg paired with a market partial-COVER on part of the short S leg, sized to preserve the pair's hedge ratio (Rev 41, owner directive, 2026-07-22). Trimming one leg alone is never permitted: it would leave a naked, unhedged leg and defeat the market-neutral pair structure. This directive does not change the fact that E's fills-derived campaign/lot accounting is long-only-correct only — a pre-existing limitation, unrelated to and unchanged by this directive.
+
 ### Declared expected frequency
 
 6–12 pair theses per year over active periods, equaling 12–24 trades counted toward the 30-trade gate (two positions per pair).

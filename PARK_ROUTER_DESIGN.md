@@ -56,7 +56,8 @@ Hormuz picture differently from what any threshold would say, **its judgment win
   `state.park_position*` / `park_reconciliation` (`bigquery/54`). Live: VOO 13.4048 sh
   ≈ $9,152 (~97% of NAV), cash $0.63.
 - D2a §13.E already executes all park trades mechanically (sweep ≥$25 / cover ≤−$5,
-  `create_order_instruction` + owner confirm-tap, `fn_order_guard(p_is_park=TRUE)`).
+  `create_order_instruction` + owner confirm-tap, `analytics.fn_order_guard` — market-only + sanity, no
+  park-specific parameter as of the 2026-07-22 rail strip, `bigquery/104_strip_pretrade_rails.sql`).
 - No per-strategy park attribution (dissolved 2026-06-19, by design); per-strategy budgets
   are derived (`analytics.strategy_nav.available_funds`).
 - The system's precedent for capital-affecting **judgment** decisions is exactly what v2

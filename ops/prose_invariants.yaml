@@ -139,8 +139,16 @@ invariants:
       Every IBKR order this system generates is MARKET (owner directive 2026-07-21;
       bigquery/100_market_only_order_guard.sql) — there are no limit orders anywhere (entries,
       exits, park/sweep, options), no "marketable limit" convention, no order_type=LIMIT, and no
-      LIMIT DECISION (RAISE/HOLD/LOWER/ABANDON) machinery to run; illiquidity is a hard pre-trade
-      gate instead. Prose in Claude_Task_Plan.md / Operating_Protocols.md must not re-instruct a
-      routine to craft a limit order or perform the retired LIMIT DECISION judgment.
+      LIMIT DECISION (RAISE/HOLD/LOWER/ABANDON) machinery to run. As of 2026-07-22
+      (bigquery/104_strip_pretrade_rails.sql), no liquidity or sizing pre-trade gate remains
+      either — the expected-implementation-shortfall gate, its φ·α adaptive budget, the ADV floor
+      / 10% participation cap, and the fat-finger sizing caps (1.5x sizing_base, $50 notional,
+      park 1.10x-NAV) are all removed. analytics.fn_order_guard now checks only market-only +
+      malformed-input (qty/ref-price) sanity; analytics.fn_order_guard_options checks the same
+      plus the RETAINED defined-risk (bounded, positive max_loss) rail. Prose in
+      Claude_Task_Plan.md / Operating_Protocols.md must not re-instruct a routine to craft a
+      limit order, perform the retired LIMIT DECISION judgment, or describe a liquidity/sizing
+      pre-trade check that no longer exists.
     source_of_truth: bigquery/100_market_only_order_guard.sql / bigquery/101_market_only_decision_seed.sql
-      (2026-07-21 owner directive)
+      (2026-07-21 owner directive) / bigquery/104_strip_pretrade_rails.sql (2026-07-22 pre-trade
+      rail strip)

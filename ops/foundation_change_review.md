@@ -48,14 +48,19 @@ in the decision-log entry.
       `state.mark_discontinuity_watch` (`bigquery/82_split_aware_engine.sql`) covers the new vehicle's
       ticker (VOO/SGOV/SPY are in its watched set); confirm the threshold is not routinely tripped by
       the new vehicle's normal moves.
-- [ ] **Park-order guard exemption** — `analytics.fn_order_guard` (market-only cutover,
-      `bigquery/100_market_only_order_guard.sql`, owner directive 2026-07-21) no longer reads a
-      per-vehicle price band from `state.park_policy_current`; `p_is_park=TRUE` orders are exempt
-      from the entire ADV/spread/expected-shortfall liquidity gate, and are checked only against
-      qty/ref-price sanity, the `order_type='MARKET'` hard rail, and the 1.10x-account-NAV magnitude
-      backstop. For a new park vehicle, confirm it is liquid enough that MARKET orders on it are
-      safe (there is no price band left to re-check), and that the 1.10x-NAV backstop still bounds a
-      plausible full-book sweep/cover in that vehicle.
+- [ ] **Park-order guard carve-out — now MOOT, no park-specific rail left to review.** As of
+      2026-07-22 (`bigquery/104_strip_pretrade_rails.sql`, owner directive), `analytics.fn_order_guard`
+      has NO liquidity or sizing check at all, for any order — not the ADV/spread/expected-shortfall
+      gate from the 2026-07-21 market-only cutover (`bigquery/100_market_only_order_guard.sql`), and
+      not the fat-finger sizing rails (1.5x-sizing_base, $50 notional, park 1.10x-account-NAV
+      backstop) that survived that cutover. The `p_is_park` parameter is gone from the guard's
+      signature entirely; park and non-park orders are checked identically, against only
+      `order_type='MARKET'` plus qty/ref-price sanity (options additionally keep the RETAINED
+      defined-risk max_loss rail — also not park-specific). There is therefore no park-specific
+      carve-out left to re-validate for a new park vehicle under this item — this checklist row
+      narrows to confirming the vehicle is one the owner is comfortable market-ordering without any
+      mechanical price/size backstop (the confirm-tap is the only backstop left), not to re-checking
+      a guard band that no longer exists.
 - [ ] **Cash-tripwire / dwell economics** — the §13 $25 sweep floor rationale + the commission model
       (`Operating_Protocols.md` §13; VOO commission still UNVERIFIED as of 2026-07-15 — keep the
       larger-of fallback) and the $1 reconciliation tolerance (a higher per-share price is a tighter

@@ -82,6 +82,32 @@ horizon-scaled slippage budget per strategy — D 150 / A 100 / C 25 / else 50 b
 metaorder cap; a $1M minimum-ADV floor; a documented ADV proxy protocol; options kept a simpler
 open-interest≥500 / spread≤10% floor). See `bigquery/100_market_only_order_guard.sql`.
 
+**Follow-up (2026-07-22): the expected-implementation-shortfall liquidity gate itself was retired
+the next day, along with every other pre-trade sizing rail.** Owner directive, in one interactive
+session: no buy/sell restriction due to liquidity survives — full freedom to market-buy/-sell on
+thesis and market conditions regardless of current price and slippage — confirmed, when the
+boundary was checked explicitly, to mean *strip everything except market-only*.
+`analytics.fn_order_guard` drops the Almgren-Thum-Hauptmann-Li expected-shortfall gate and its
+self-activating φ·α adaptive budget (`bigquery/103_adaptive_shortfall_budget.sql`, now retired),
+the $1M minimum-ADV floor, the 10%-of-ADV participation cap, and — beyond liquidity — even the
+fat-finger sizing rails: the 1.5x-sizing_base notional/max_loss cap, the $50 absolute notional
+backstop, and the park 1.10x-account-NAV magnitude backstop (park orders are no longer
+distinguished from any other order at all). All that remains is `order_type='MARKET'` plus
+qty/ref-price sanity. `analytics.fn_order_guard_options` keeps that same market-only + sanity
+floor but RETAINS the defined-risk requirement (max_loss must be a computed, positive, bounded
+number) — a distinct unbounded-loss-prevention rail the owner explicitly chose to keep. The
+owner's per-order IBKR confirm-tap is now the sole discretionary backstop on every order this
+system generates. See `bigquery/104_strip_pretrade_rails.sql`.
+
+Same day, the owner also authorized **partial sells** (trim/scale-out) across all strategies: the
+AI may market-sell fewer shares than a position holds, not just exit it in full. No order-guard
+change is needed for this — a partial sell is simply a SELL with qty less than the open position,
+which the (now sizing-free) guard already passes. Reconciliation runs through a new
+`events.position_events` `event_type='ADJUST'` path: the position stays `status='OPEN'` with its
+share count reduced, and the fills-derived FIFO-lot/campaign accounting
+(`bigquery/102_pyramid_aware_lifecycle.sql`) already resolves the resulting partial exit
+correctly.
+
 ## 3. Redesigns
 
 ### Redesign A — AI Capital Allocation Call (termination + deposit residuals)

@@ -90,7 +90,11 @@
 -- 0.20*prior_alpha*10000 == prior_bps algebraically (prior_alpha is DEFINED as (prior_bps/10000)/0.20,
 -- so multiplying back by 0.20*10000 exactly undoes it) — so budget_bps == prior_bps EXACTLY at n=0, and
 -- the GREATEST/LEAST clamp is a no-op there too (prior_bps is always within [0.5x,2x] of itself). ZERO
--- behavior change until a strategy closes its first campaign. =====
+-- behavior change until a strategy closes its first campaign.
+-- DROPPED by bigquery/104_strip_pretrade_rails.sql (2026-07-22 — owner directive: all liquidity + sizing
+-- pre-trade rails stripped, including the shortfall gate this view fed; DROP VIEW, no successor object).
+-- Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-create this view live —
+-- 104 drops it. =====
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.calibration_return_shrunk` AS
 WITH priors AS (
   SELECT strategy, prior_bps FROM UNNEST([
@@ -129,7 +133,11 @@ FROM calc;
 -- budget this file introduces) instead of the fixed CASE, with that same fixed CASE kept as a defensive
 -- COALESCE fallback for a strategy that somehow has no view row. budget_bps is FLOAT64 now, not INT64
 -- (e.g. 44.3) — the shortfall reject message's `CAST(cost.budget_bps AS INT64)` below already handles
--- that. =====
+-- that.
+-- SUPERSEDED LIVE by bigquery/104_strip_pretrade_rails.sql (2026-07-22 — all liquidity + sizing pre-trade
+-- rails stripped; only market-only + malformed-input sanity remain). 104 is the CURRENT single source of
+-- truth for this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
+-- re-apply this CREATE statement live in isolation. =====
 CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_order_guard`(
   p_strategy STRING, p_side STRING, p_qty NUMERIC, p_ref_price NUMERIC, p_is_park BOOL,
   p_order_type STRING, p_adv_usd NUMERIC, p_spread_bps NUMERIC, p_sigma_daily NUMERIC
@@ -196,7 +204,11 @@ CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_order_guard`
 -- budget, not over an adaptive ceiling that can now range up to 2x the prior. All 13 other cases (incl.
 -- the equity good-pass at spread 5, both park cases, and all 5 options cases) are UNCHANGED — they
 -- already clear/beat any budget in the [0.5x,2x] clamp range. Read-only, never crafts a real order,
--- never writes ops.trading_control — same discipline as every prior version of this drill. =====
+-- never writes ops.trading_control — same discipline as every prior version of this drill.
+-- SUPERSEDED LIVE by bigquery/104_strip_pretrade_rails.sql (2026-07-22 — all liquidity + sizing pre-trade
+-- rails stripped; only market-only + malformed-input sanity remain). 104 is the CURRENT single source of
+-- truth for this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
+-- re-apply this CREATE statement live in isolation. =====
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_fire_drill_order_guard`()
 BEGIN
   -- EQUITY (fn_order_guard, market-only + expected-shortfall 9-arg signature: strategy, side, qty,

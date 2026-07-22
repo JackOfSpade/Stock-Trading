@@ -195,6 +195,10 @@ AI's narrative synthesis (1.1, 1.10) identifies equity names where an upcoming c
 - Market-wide drawdowns
 - Interim quarterly results that don't affect the catalyst thesis
 
+### Partial exits (trim / scale-out)
+
+Independent of the full-exit triggers above, the AI may sell part of an open A position — reducing size without closing it — on thesis or market-condition judgment: e.g., reduced conviction that falls short of full invalidation, partial profit-taking, or risk trimming (Rev 41, owner directive, 2026-07-22). A partial exit is a market SELL for fewer shares than the position currently holds; the remainder stays open and continues to run against the same at-entry completion/invalidation criteria. Trigger and size are AI judgment — no fixed schedule or fixed fraction is specified.
+
 ### Declared expected frequency
 
 15–25 trades per year over active periods.
@@ -258,6 +262,10 @@ Already specified in A's section. Summary: A enters before event; B enters after
 
 - Adverse mark-to-market without news (long positions only — short positions now have the rev 13 stop-loss above)
 - General market moves
+
+### Partial exits (trim / scale-out)
+
+The same partial-trim authorization as A applies to B's long positions: the AI may sell part of an open long position on thesis or market-condition judgment via a market SELL for fewer shares than held, leaving the remainder open (Rev 41, owner directive, 2026-07-22). For short legs, a partial COVER — a market buy-to-cover for fewer shares than the short position — is likewise allowed on judgment. This is distinct from, and does not modify, the short stop-loss above: that trigger remains a full, mechanical close of the short position at the 25%-adverse-move threshold.
 
 ### Declared expected frequency
 
@@ -339,6 +347,10 @@ All criteria must be met:
 - Adverse price movement in the underlying with no thesis-invalidating news
 - General market moves
 - Time decay (theta is priced in at entry; exiting on expected theta is paying the premium twice)
+
+### Partial exits (trim / scale-out)
+
+For a multi-contract structure, the AI may scale out partially — a market order selling some but not all of the position's contracts — on judgment, rather than only closing the full structure (Rev 41, owner directive, 2026-07-22). The remaining contracts continue to run under the structure's original defined-risk terms through to expiration (or an early exit trigger above); max_loss simply recomputes over the reduced contract count. A single 1-contract structure has no partial form and is closed as a unit, as before.
 
 ### Declared expected frequency (over active periods only)
 
@@ -434,6 +446,10 @@ D holds 5–10 positions when fully deployed. Rationale: a 20+ name "diversified
 - Quarterly results that don't bear on the multi-year thesis
 - Macro environment shifts that don't invalidate the specific structural drivers
 
+### Partial exits (trim / scale-out)
+
+Same partial-trim authorization as A: the AI may sell part of an open D position — reducing size without closing it — on thesis or market-condition judgment via a market SELL for fewer shares than held (Rev 41, owner directive, 2026-07-22). Because D permits multiple adds (tranches) into the same name over time, a partial sell may trim one or more individual tranches, or an arbitrary partial share amount across tranches, without necessarily closing the name-level position. Any remaining shares/tranches continue running against the thesis's original completion/invalidation criteria, unchanged by the partial sell.
+
 ### Declared expected frequency
 
 3–8 trades per year over active periods (counting entries and exits as separate trades; a single 2-year hold is 2 trades over ~2 years).
@@ -518,6 +534,10 @@ Per `Experiment_Parameters.md`, paired positions consume 4% of strategy portfoli
 
 - Adverse mark-to-market on the pair with no thesis-invalidating news
 - General market moves (pair should be approximately neutral to these by construction)
+
+### Partial exits (trim / scale-out)
+
+A partial trim is allowed only by reducing both pair legs together, proportionally, in the same session — a market SELL on part of the long L leg paired with a market partial-COVER on part of the short S leg, sized to preserve the pair's hedge ratio (Rev 41, owner directive, 2026-07-22). Trimming one leg alone is never permitted: it would leave a naked, unhedged leg and defeat the market-neutral pair structure. This directive does not change the fact that E's fills-derived campaign/lot accounting is long-only-correct only — a pre-existing limitation, unrelated to and unchanged by this directive.
 
 ### Declared expected frequency
 

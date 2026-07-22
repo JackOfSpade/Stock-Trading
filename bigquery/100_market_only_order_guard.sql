@@ -153,8 +153,10 @@
 -- though applying 100 makes 99's live objects immediately superseded again). Apply via the BigQuery MCP
 -- execute_sql.
 
--- SUPERSEDED LIVE by bigquery/103_adaptive_shortfall_budget.sql (2026-07-22 — self-activating φ·α
--- adaptive budget; DO NOT re-apply this CREATE live in isolation).
+-- SUPERSEDED LIVE by bigquery/104_strip_pretrade_rails.sql (2026-07-22 — all pre-trade rails stripped
+-- except market-only; see bigquery/104). 104 is the CURRENT single source of truth for this object (it
+-- superseded 103_adaptive_shortfall_budget.sql's self-activating φ·α adaptive budget, which had
+-- superseded this definition). DO NOT re-apply this CREATE live in isolation.
 -- ===== analytics.fn_order_guard — deterministic pre-craft risk envelope, MARKET-ONLY + DYNAMIC
 -- EXPECTED-SHORTFALL LIQUIDITY GATE (owner directive 2026-07-21). qty/ref-price sanity, the 1.5x
 -- sizing_base cap, the $50 notional backstop, and the park 1.10x-NAV magnitude check are UNCHANGED
@@ -224,7 +226,9 @@ CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_order_guard`
 -- premium has no equity-style price band). NEW: order_type must be MARKET, and a liquidity hard gate
 -- (open-interest floor, spread-vs-mid cap) — owner-flagged TUNABLE DEFAULTS, conservative starting
 -- points for a market order on a multi-leg options structure; revisit as options flow accrues. See this
--- file's header for the full WHY/WHAT CHANGES. =====
+-- file's header for the full WHY/WHAT CHANGES.
+-- SUPERSEDED LIVE by bigquery/104_strip_pretrade_rails.sql (2026-07-22 — options liquidity legs + sizing
+-- cap removed; defined-risk rail retained). DO NOT re-apply live in isolation. =====
 CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_order_guard_options`(
   p_strategy STRING, p_side STRING, p_contracts NUMERIC, p_ref_premium NUMERIC, p_max_loss_dollars NUMERIC,
   p_order_type STRING, p_open_interest NUMERIC, p_spread_pct NUMERIC
@@ -252,8 +256,10 @@ CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_order_guard_
   SELECT ARRAY_LENGTH(reasons) = 0 AS passed, reasons FROM checks
 );
 
--- SUPERSEDED LIVE by bigquery/103_adaptive_shortfall_budget.sql (2026-07-22 — self-activating φ·α
--- adaptive budget; DO NOT re-apply this CREATE live in isolation).
+-- SUPERSEDED LIVE by bigquery/104_strip_pretrade_rails.sql (2026-07-22 — all pre-trade rails stripped
+-- except market-only; see bigquery/104). 104 is the CURRENT single source of truth for this object (it
+-- superseded 103_adaptive_shortfall_budget.sql, which had superseded this definition). DO NOT re-apply
+-- this CREATE live in isolation.
 -- ===== ops.sp_fire_drill_order_guard — v3: proves the market-only + liquidity-hard-gate contract
 -- (owner directive 2026-07-21; was `99_ai_limit_decision_order_guard.sql:117`, which in turn was
 -- `23_trading_control.sql:326`) =====
