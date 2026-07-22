@@ -4,15 +4,36 @@ version: 2
 
 models:
   - name: position_lifecycle
-    description: One row per round-trip; position_key carries leg_seq so it is unique.
+    description: >-
+      FIFO lots. Tier-1 of the 2026-07-21 pyramid-aware accounting rebuild
+      (bigquery/102_pyramid_aware_lifecycle.sql): one row per FIFO-matched (buy interval, sell
+      interval) overlap, partitioned by (strategy,ticker) — supersedes the old ROW_NUMBER()
+      leg_seq pairing, which left a pyramid add-leg perpetually-open. Same 12 columns as before.
     columns:
       - name: position_key
-        description: strategy:ticker:entry_date:leg_seq — unique per round-trip (LAG window partitions on it).
+        description: strategy:ticker:buy_trade_id:sell_trade_id (or :OPEN for an unmatched tail) — unique per lot (LAG window partitions on it).
         tests:
           - not_null
           - unique
       - name: strategy
         description: Strategy code (NULL strategy rows are filtered before the TWR).
+
+  - name: position_campaigns
+    description: >-
+      Campaigns. Tier-2 of the 2026-07-21 pyramid-aware accounting rebuild
+      (bigquery/102_pyramid_aware_lifecycle.sql, NEW object): one row per (strategy,ticker)
+      round-trip at the CAMPAIGN level — spans a position from the opening BUY through every
+      add/partial-exit to the fill that returns it flat (or the latest fill if still open). This is
+      "a trade" for closed_trades / gate_n (ops.sp_recompute_engine) and thesis_outcomes — a
+      partial-exit pyramid counts as ONE closed trade, not one per FIFO lot.
+    columns:
+      - name: campaign_key
+        description: strategy:ticker:campaign_seq — unique per campaign.
+        tests:
+          - not_null
+          - unique
+      - name: strategy
+        description: Strategy code.
 
   - name: strategy_daily_returns
     description: Value-weighted daily deployed total returns per strategy (gross).

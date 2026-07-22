@@ -72,7 +72,6 @@ NUMBERED_FILE = re.compile(r"^(\d+)_.*\.sql$")
 BASELINE = frozenset({
     ("TABLE FUNCTION", "analytics", "find_precedents", "02_ai_layer.sql"),
     ("VIEW", "analytics", "strategy_daily_returns", "03_twr_engine.sql"),
-    ("PROCEDURE", "ops", "sp_recompute_engine", "03_twr_engine.sql"),
     ("VIEW", "perf", "kill_flags", "03_twr_engine.sql"),
     ("VIEW", "state", "sgov_position", "13_sgov_reconciliation.sql"),
     ("VIEW", "state", "sgov_reconciliation", "13_sgov_reconciliation.sql"),

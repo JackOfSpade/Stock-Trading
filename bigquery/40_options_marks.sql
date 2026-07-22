@@ -163,6 +163,12 @@ WHERE om.occ_symbol IS NULL;
 -- (informational — the recompute itself already safely excludes an unmarked option-day via the option_held
 -- join above, so this is detection, not a blocking gate). Everything else is byte-for-byte identical to
 -- the superseded definition; keep the two files' comments in sync if either changes.
+--
+-- SUPERSEDED LIVE by bigquery/102_pyramid_aware_lifecycle.sql (2026-07-21 — pyramid-aware lots +
+-- campaigns; the closed_trades / gate_n subqueries now COUNT off analytics.position_campaigns instead
+-- of analytics.position_lifecycle so a partial-exit pyramid counts as one closed trade, not many).
+-- Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE
+-- statement live in isolation.
 -- ============================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_recompute_engine`()
 BEGIN

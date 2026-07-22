@@ -85,6 +85,12 @@ FROM a JOIN o USING (review_id);
 -- regime_events row now correctly gets NULL (unknown), not a fabricated future value. Implemented
 -- as a DECORRELATED join + QUALIFY (same pattern as state.account_nav_7d_ago) -- BigQuery views do
 -- not support a same-row correlated subquery against another table.
+--
+-- SUPERSEDED LIVE by bigquery/102_pyramid_aware_lifecycle.sql (2026-07-21 — pyramid-aware lots +
+-- campaigns; the LEFT JOIN target + QUALIFY nearest-entry_date window move from analytics.position_
+-- lifecycle to analytics.position_campaigns, so a pyramid add's own thesis-construction entry maps to
+-- the same campaign as the position's original entry). Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.thesis_outcomes` AS
 WITH theses AS (
   SELECT entry_id, entry_date, strategy, ticker, conviction, sub_pattern, decision, title

@@ -116,7 +116,7 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
-    spec_hash: "8503569a0b6dfc6a252141472d806b170fa7c73287187ebb7d3a8238de4a4eda"   # sha256(strategy/03_strategy_a.md || strategy_math/strategy_a.py || strategy_math/common.py), rev 2026-07-11 R-F
+    spec_hash: "300e210c9c9632123b76c497177379460b78c738f5e3f66c1eda61fff1c9041a"   # sha256(strategy/03_strategy_a.md || strategy_math/strategy_a.py || strategy_math/common.py), rev 2026-07-21 R-F
     retired_date: null
     is_restart_of: null
     revision_history:
@@ -126,6 +126,8 @@ strategies:
         note: "spec_hash added (Item 28, self-improvement audit) — content-hashes strategy/03_strategy_a.md + the new strategy_math/strategy_a.py against post-lock drift; verified by scripts/check_roster_consistency.py R-F. No machinery change."
       - date: 2026-07-11
         note: "spec_hash recomputed (adversarial self-audit fix) — now also hashes strategy_math/common.py (the shared math module strategy_a.py imports), which the original hash omitted, silently missing drift in that shared module. No machinery change."
+      - date: 2026-07-21
+        note: "spec_hash recomputed — strategy/03_strategy_a.md gained a new 'Adding to an existing position' subsection (Rev 40, owner directive 2026-07-21: A may add to an already-open position in the same name, AI-judgment trigger — dip-with-intact-thesis OR strengthened conviction — gated on the original at-entry invalidation criteria remaining unbreached; sizing is a fresh 2%-of-strategy-NAV tranche identical to a first entry per the globally-immutable 2% rule, no cumulative cap; each add is independently thesis-constructed and logged, and obeys the same instrument-eligibility + cross-strategy A/B exclusion as a first entry). This IS a machinery change (adds authorized where none were before), directly owner-authorized in-session and applied via the established Rev-N direct-edit convention used for prior owner-directed changes (e.g. Rev 35, Rev 38, Rev 39) rather than a terminate-and-restart. strategy_math/strategy_a.py is byte-unchanged — sizing reuses the existing 2%-of-NAV tranche math with no new formula. Verified by scripts/check_roster_consistency.py R-F."
   - code: B
     name: "Post-event mispricing exploitation"
     archetype: post-event-mispricing-long-bias
@@ -139,7 +141,7 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
-    spec_hash: "6178acd282c27f65d0be7c7ccb833dff4a255d030b549fe42ad35fea858b6bfa"   # sha256(strategy/04_strategy_b.md || strategy_math/strategy_b.py || strategy_math/common.py), rev 2026-07-11 R-F
+    spec_hash: "ae586853e9d5591d0adc6f406ffc678e8244484b9db14727d78cb0f1a3fe5634"   # sha256(strategy/04_strategy_b.md || strategy_math/strategy_b.py || strategy_math/common.py), rev 2026-07-21 R-F
     retired_date: null
     is_restart_of: null
     revision_history:
@@ -151,6 +153,8 @@ strategies:
         note: "spec_hash recomputed (adversarial self-audit fix) — now also hashes strategy_math/common.py (the shared math module strategy_b.py imports), which the original hash omitted, silently missing drift in that shared module. No machinery change."
       - date: 2026-07-11
         note: "convergence_timeline_ok() lower-bound guard added (adversarial self-audit fix) — a target_convergence_date BEFORE entry_date produced a negative day-count that still satisfied `<= 60` and wrongly qualified; now requires `0 <= days_between <= 60`. Bug fix to the newly-authored strategy_math codification itself; convergence_timeline_ok is NOT called by any live routine instruction, so this is not a change to Strategy B's live trading rules. spec_hash recomputed. Verified by scripts/check_roster_consistency.py R-F."
+      - date: 2026-07-21
+        note: "spec_hash recomputed — strategy/04_strategy_b.md gained a new 'Adding to an existing position' subsection (Rev 40, owner directive 2026-07-21: B may add to an already-open position in the same name, AI-judgment trigger — dip-with-intact-thesis OR strengthened conviction — gated on the original at-entry invalidation criteria (convergence target/60-day timeline) remaining unbreached; sizing is a fresh 2%-of-strategy-NAV tranche identical to a first entry per the globally-immutable 2% rule, no cumulative cap; each add is independently thesis-constructed and logged, obeys the same instrument-eligibility + no-A-in-same-name exclusion as a first entry, and a short-side add is additionally gated on the position not already being near its rev-13 stop-loss trigger). This IS a machinery change (adds authorized where none were before), directly owner-authorized in-session and applied via the established Rev-N direct-edit convention used for prior owner-directed changes (e.g. Rev 35, Rev 36, Rev 38) rather than a terminate-and-restart. strategy_math/strategy_b.py is byte-unchanged — sizing reuses the existing 2%-of-NAV tranche math with no new formula. Verified by scripts/check_roster_consistency.py R-F."
   - code: C
     name: "Defined-risk options structures around known events"
     archetype: defined-risk-options-on-catalysts
@@ -192,7 +196,7 @@ strategies:
     adopted_date: 2026-04-23
     spec_locked_since: 2026-04-23
     immutable_since: 2026-04-23
-    spec_hash: "a6b7f79d5ed1028cb6ecd301d7a8c1ea37b12e60a79a0fb78668be7cc8f3d5c5"   # sha256(strategy/06_strategy_d.md || strategy_math/strategy_d.py || strategy_math/common.py), rev 2026-07-21 R-F
+    spec_hash: "ba5e40d6981951f5a1aa9a664082ab99df512f946559ea107aa606f11998e7c6"   # sha256(strategy/06_strategy_d.md || strategy_math/strategy_d.py || strategy_math/common.py), rev 2026-07-21 R-F (adds authorized)
     retired_date: null
     is_restart_of: null
     revision_history:
@@ -210,6 +214,8 @@ strategies:
         note: "spec_hash recomputed (second time today) — strategy/06_strategy_d.md's 'the remainder is SGOV-parked...' sentence amended via the established Rev-N strikethrough+bracket annotation convention (Rev 38, owner directive 2026-07-15: idle-capital parking vehicle switches SGOV -> VOO — see events.decision_log 2026-07-15, Operating_Protocols.md §13, bigquery/54_park_policy_voo_cutover.sql). This is a doc correction reflecting where idle/undeployed capital sits (treasury management, explicitly NOT a strategy decision per Experiment_Parameters.md's glossary), not a change to Strategy D's entry/exit rules, thresholds, sizing, or any strategy_math/strategy_d.py logic — the math module is byte-unchanged by this directive. Verified by scripts/check_roster_consistency.py R-F."
       - date: 2026-07-21
         note: "spec_hash recomputed — strategy/06_strategy_d.md's exit-rules 'when exiting on completion, prefer post-12-month exits where thesis permits' clause REMOVED via the established Rev-N strikethrough+bracket annotation convention (Rev 39, owner directive 2026-07-21: confirming, for long-horizon/long-term holdings same as every other strategy, that exit timing is decided purely by daily thesis completion/invalidation assessment, never delayed for LTCG tax optimization — no fixed-hold-time preference of any kind survives, disregarding market conditions). Strategy.md's main §D exit-rules section, its pre-mortem duplicate, and the 2.23 (tax-and-fee-drag) compensated-disadvantage entry were updated in parallel to keep the pre-mortem residual honest: 2.23's compensation is now documented as fully incidental (D's multi-year theses often naturally exceed 12 months) rather than an actively pursued exit-timing mechanism. This is a machinery change (removes a stated exit-timing preference) directly authorized by the owner in-session, applied to the locked doc per the same direct-edit convention used for prior owner-directed changes (e.g. Rev 35, Rev 38) rather than a terminate-and-restart. strategy_math/strategy_d.py is byte-unchanged — no min-hold logic existed in code to begin with. Verified by scripts/check_roster_consistency.py R-F."
+      - date: 2026-07-21
+        note: "spec_hash recomputed (second time today) — strategy/06_strategy_d.md gained a new 'Adding to an existing position' subsection plus a clarifying parenthetical on the 'Concurrent position count: minimum 5' line (Rev 40, owner directive 2026-07-21: D may add to an already-open position in the same name, AI-judgment trigger — dip-with-intact-thesis OR strengthened conviction — gated on the original at-entry invalidation criteria (Subtype A or Subtype B menu) remaining unbreached; sizing is a fresh 2%-of-strategy-NAV tranche identical to a first entry per the globally-immutable 2% rule, no cumulative cap; each add is independently thesis-constructed and logged, inherits the parent position's immutable completion/invalidation criteria and subtype classification, and obeys the same instrument-eligibility + sector/correlation-bucket + momentum-deferral screens as a first entry; a multi-tranche name counts as ONE position toward the minimum-5 concurrent-position floor and toward the sector/correlation-bucket math, not one per add). This IS a machinery change (adds authorized where none were before, plus the floor-counting clarification), directly owner-authorized in-session and applied via the established Rev-N direct-edit convention used for prior owner-directed changes (e.g. Rev 35, Rev 38, Rev 39) rather than a terminate-and-restart. strategy_math/strategy_d.py is byte-unchanged — sizing reuses the existing 2%-of-NAV tranche math with no new formula, and no position-counting logic existed in code to begin with. Verified by scripts/check_roster_consistency.py R-F."
   - code: E
     name: "Market-neutral narrative-divergence pairs"
     archetype: market-neutral-pairs
