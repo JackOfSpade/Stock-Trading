@@ -21,6 +21,26 @@
   to fail open on every new branch because `github.event.before` is the zero-SHA on ref
   creation; they now fall back to `merge-base(HEAD, origin/main)` (rev 2026-07-20).
 
+- **Interactive sessions must ASK before `git commit` / `git push` — the autonomous-routine
+  gate-free posture (SISA, D1–W5, SL1–SL5, etc.) does NOT extend to a chat session with the
+  operator.** Incident 2026-07-21: in an interactive session responding to an operator-forwarded
+  alert email ("investigate and fix"), Claude committed and pushed a doc fix on its own initiative,
+  reasoning from this file's extensive description of the autonomous scheduled-routine fleet
+  (which commits/pushes with no human gate by explicit owner directive) instead of recognizing
+  that authorization is scoped to *those* routines, not to interactive sessions. Claude's own
+  standing operating instructions already say never to commit without being explicitly asked —
+  this file's push-discipline guidance above is about *cost* (batch, don't checkpoint) **if and
+  when** a push happens; it is not, and was never intended as, blanket authorization to skip
+  asking in a chat session.
+
+  **Practice:** in an interactive session, Claude proposes the fix and asks before running
+  `git commit` / `git push` (or checks explicitly before doing so), even for a fix that mirrors
+  something a scheduled routine would do autonomously. The scheduled/cron routine fleet's
+  gate-free posture is a separate, explicitly owner-directed operating mode (`ops/autonomy_levels.yaml`)
+  and does not carry over to chat sessions merely because the same repo and the same kinds of
+  fixes are involved. If the operator wants a given interactive session to operate autonomously
+  end-to-end, they say so in that session.
+
 ## Known non-issues — do NOT re-investigate
 
 - **Stop-hook "Unverified commits" warning** (`~/.claude/stop-hook-git-check.sh`).
