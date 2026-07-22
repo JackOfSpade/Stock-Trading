@@ -2815,3 +2815,65 @@ scheduled queries whose updated body (the monitor-health-history `MERGE`, self-i
 clean-day promotion-readiness counter for this check isn't accumulating. No action taken here beyond
 noting it; item B already tracks the fix (re-paste the 11 bodies) and today's alert fired correctly
 off the currently-live (pre-ITEM-31) query body regardless.
+
+## 45. Order-guard evolution — market-only cutover, then full pre-trade-rail strip; partial-sell support — 2026-07-21..22 *(design, owner directive)*
+
+**Why this section exists.** §42 (2026-07-15) is the last place this runbook described
+`analytics.fn_order_guard`, and it describes a guard that no longer exists: a `p_is_park` parameter
+(renamed from `p_is_sgov`) plus a per-vehicle price band read from `state.park_policy_current`. That
+paragraph is a correct **dated record of the 2026-07-15 vehicle cutover** and is deliberately left
+intact — but the guard has since changed twice, and a reader who stops at §42 would wrongly believe the
+price band and `p_is_park` are still live. This section carries the guard forward to its current state.
+The canonical spec is now `bigquery/104_strip_pretrade_rails.sql` plus the order-craft sections of
+`Claude_Task_Plan.md` (§"Crafting an order", D2/D2a/D3) and `Operating_Protocols.md` (§11/§13) — **not** §42.
+
+**2026-07-21 — market-only cutover (`bigquery/100_market_only_order_guard.sql` / `101`, owner directive).**
+Every IBKR order the system crafts became a MARKET order (`order_type='MARKET'`, TIF `DAY`) — entries,
+exits, park sweeps/covers, options alike. This retired limit orders entirely: the marketable-limit
+convention, the persist-and-wait resting-limit model, the 2026-07-20 LIMIT DECISION
+(RAISE/HOLD/LOWER/ABANDON) framework, and the >0.5%-off-last equity price band (§42's per-vehicle band
+included). In their place liquidity became a HARD pre-craft gate: an expected-implementation-shortfall
+model (Almgren-Thum-Hauptmann-Li 2005: half-spread + 0.142·σ·participation^0.6) vs a per-strategy
+holding-horizon budget (D 150 / A 100 / C 25 / else 50 bps), a $1M minimum-ADV floor, and a 10% ADV
+participation cap. `fn_order_guard`/`fn_order_guard_options` gained ADV/spread/σ (equity) and
+open-interest/spread (options) parameters; `p_is_park` still selected a liquidity exemption + the
+1.10×-NAV magnitude backstop for park orders. (A follow-up the next morning,
+`bigquery/103_adaptive_shortfall_budget.sql`, briefly made that horizon budget a self-activating φ·α
+edge-relative number via `analytics.calibration_return_shrunk` — superseded within the day, below.)
+
+**2026-07-22 — all pre-trade rails stripped except market-only (`bigquery/104_strip_pretrade_rails.sql`,
+owner directive; the CURRENT state).** In one interactive session the owner directed "strip everything
+except market orders only": full freedom to market-buy/-sell on thesis and market conditions
+**regardless of current price and slippage**. `fn_order_guard` collapses to a 5-arg signature
+`(p_strategy, p_side, p_qty, p_ref_price, p_order_type)` whose only rail is `order_type IN ('MARKET','MKT')`
+plus malformed-input sanity (`qty>0`, `ref_price>0`). Removed: the entire expected-shortfall gate + its
+φ·α adaptive budget (`analytics.calibration_return_shrunk` **dropped**), the $1M ADV floor, the 10%
+participation cap, **and** the fat-finger sizing rails that predated even the shortfall gate — the 1.5×
+`sizing_base_2pct` notional cap, the $50 absolute-notional backstop, and the park 1.10×-NAV magnitude
+backstop. `p_is_park` is gone from the signature entirely: park and non-park orders are now checked
+identically. `fn_order_guard_options` drops to 6 args and keeps exactly ONE rail beyond market-only +
+sanity — a **defined, positive `max_loss`** (unbounded-loss prevention; explicitly retained by owner
+directive as a risk class distinct from liquidity/sizing). **The owner's per-order IBKR confirm-tap is now
+the sole discretionary backstop.** `ops.sp_fire_drill_order_guard` was rewritten to 10 cases (down from
+14), two of which prove the strip — a $5M-notional equity order and a $500k-defined-`max_loss` options
+order that the pre-strip guard rejected must now PASS. The superseded-marker chain
+(`bigquery/23/54/99/100/103`) was repointed to 104; `ops.sp_sq_daily_staging_cap_check` (`bigquery/75`)
+recompute was updated to the 5-arg guard; the dead adaptive-budget dbt model/test/schema were deleted.
+**Applied live via the BigQuery MCP and verified 2026-07-22:** 10/10 fire-drill cases correct,
+`calibration_return_shrunk` confirmed dropped, `ops.run_log` FIRE_DRILL_ORDER_GUARD = `completed`.
+
+**2026-07-22 — partial-sell (trim / scale-out) support (same session, owner directive).** The AI may now
+sell PART of an open position — a MARKET sell for fewer shares than held — in addition to the pre-existing
+full-exit and add-to-position operations. The fills-derived FIFO-lot + campaign accounting
+(`bigquery/102_pyramid_aware_lifecycle.sql`) already resolved partial exits correctly, so **no
+accounting-engine change was needed**; the new work is in the event-sourcing layer + prose. A partial-sell
+fill that does NOT zero the `(strategy,ticker)` position is reconciled (D2a Step 0) FIFO across the
+position's open tranches: a CLOSE `events.position_events` row for each fully-consumed tranche, and for the
+boundary tranche an **`event_type='ADJUST'`** row with **`status='OPEN'`** (the exact literal —
+`analytics.strategy_nav` / `state.daily_briefing` / `weekly_report` filter on it), reduced `shares`, and
+proportionally-reduced `cost_basis`; `state.current_positions` (latest non-CLOSE row per `position_key`)
+then shows the trimmed position automatically. The `ORDER_STAGED` payload gained `sell_type:
+'FULL'|'PARTIAL'`, and fill matching prefers `payload.instruction_id` (+ a qty-consistency check) so two
+concurrent SELL rows on one ticker aren't conflated. Per-strategy trim rules are in `Strategy.md` (Rev 41):
+A/B/D long trims (B short partial-cover), C partial-contract scale-out, E both pair legs together in the
+same session (never a naked leg); all five `spec_hash`es were recomputed.
