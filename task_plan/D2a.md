@@ -211,6 +211,15 @@ This mechanically clears a small, explicit allowlist of critical/warning alerts 
   ```
   `<instruction>` is the exact text the web-UI trigger sent you (e.g. `'Read Claude_Task_Plan.md. Perform D2. Daily Action Conversion — regular routine.'`); it lands in `ops.run_log.instruction` → `state.routine_last_instruction`, so the **live trigger text is verifiable by query** (no screenshots) and diffable against `scripts/print_routines.py`. **`<instruction>` is the trigger-of-record for drift detection, NOT a freeform task note:** always pass the **verbatim scheduled trigger** — even for an ad-hoc / one-off session that reuses an existing routine id (e.g. a one-time W5 §20/§21 remediation). Put what the one-off run actually did in `<note>` (the `sp_routine_end` arg) and the `session_id`, never in `<instruction>`. (`state.routine_last_instruction` only reads instructions of the canonical `Read Claude_Task_Plan.md. Perform …` shape, so a stray free-form note is ignored rather than mistaken for a drifted trigger — RUNBOOK §22 — but log the verbatim trigger anyway so the live read is faithful.) A run that never logs `completed` arms the freshness dead-man's switch (`state.freshness`), the **cadence dead-man's switch** (`state.cadence_watch` / `cadence_check.sql`), and the audit trail. (Data currency is *also* proven independently by `state.freshness.marks_fresh`/`engine_fresh`, which read the data tables directly and gate `all_green` — a missed log never hides stale data.) A routine becomes "monitored" automatically once it has logged a `completed` run in the last 14 days.
 
+- **CATCH-UP EVIDENCE WINDOW (owner directive 2026-07-25) — every routine, right after run logging, BEST-EFFORT, never gates.** Principle: this run's evidence/analysis reach is **(this routine's own last successful completion, now]**, not a fixed lookback — resolve it with `SELECT window_start_ts, never_completed, window_days FROM state.routine_catchup_window WHERE routine='<ID>'` (`bigquery/105_routine_catchup_window.sql`, one row per routine, keyed off the same `ops.run_log` completions the Run-logging bullet above just established; `window_start_ts` = the timestamp of this routine's own last `completed` row, or, if `never_completed`, a cadence-sized fallback keyed to its `ops/cadence.yaml` monitor class). Wherever a routine's own section below says "today" / "since the last run" / "the prior week/month/quarter" for **evidence gathering** (Daily.md scan ranges, `events.decision_log` lookbacks, file diffs, etc.), `window_start_ts` is the actual lower bound whenever it reaches further back than that phrase's normal cadence — it only ever widens the phrase, never narrows it.
+  - **WHY (the aging-alert trap).** `ops.sp_auto_resolve_alerts` Rule 2 (`bigquery/34_alert_lifecycle.sql`, invoked by the Alert auto-resolve bullet above) clears a `missed_run` alert once the alerted day is simply >1 day stale — with ZERO completion evidence required. A cleared alert is therefore never proof a missed day's evidence was actually analyzed; the 2026-07-23/24 connector outage showed exactly this — missed days went uncovered because each routine's next run only ever looked at "today" or its own fixed lookback once the alert had aged off. This protocol is the actual coverage mechanism the aging-out resolver was silently assumed to be.
+  - **DECISION SCOPING (unchanged).** Only the EVIDENCE window widens — decisions and actions stay current-session-scoped exactly as **Decision discipline** above already requires: no retroactive orders, no backdated staging/period writes, nothing dated into a missed period. A wider window means this run *sees* more history; it does not let this run *act* as if it were an earlier date.
+  - **MULTI-PERIOD OUTPUT RULE.** File first-line period markers (see "File-write conventions for routine outputs") stay CURRENT-period always — never stamp a file with a missed period's marker. If `window_start_ts` spans more than one period for that routine's cadence, cover the missed periods as labeled sub-sections in the body, **oldest first**, ahead of the current-period content.
+  - **WRITE-ONCE RULE.** Catch-up coverage reuses each routine's EXISTING idempotency keys (`events.decision_log` entry conventions, `ops.catchup_refire_log` miss_keys, per-finding dedup, etc.) — one BigQuery write per distinct finding even when the session's widened window covers several missed periods at once; never re-emit a write for a period/finding already durably recorded.
+  - **TELEMETRY.** When `window_days` materially exceeds this routine's own cadence (**>1.5x** its normal lookback — daily >1.5 days, weekly >10.5 days, etc.), append the machine-parseable token **`CATCHUP[window_days=<N>]`** to the run's completion `<note>`, mirroring the `RETRY[...]`/`DEPWAIT[...]` token convention above. Routine cadence-normal windows (`window_days` at or near the fallback) need no token.
+  - **NON-GATING + FALLBACK.** Best-effort only, same posture as Alert auto-resolve above and the OPS0 "must NEVER be blocked" rule: if `state.routine_catchup_window` is unreadable (BigQuery hiccup, view missing) or the query errors, fall back to this routine's own existing cadence-default lookback, proceed, and note the fallback in `<note>` (e.g. `catchup view unreadable, used cadence-default lookback`) — never halt or degrade the run on this view's absence.
+  - **Reference implementations generalized here — cite, don't reinvent per routine:** D1's SCAN WINDOW (marker + git-commit-timestamp + fixed-lookback fallback), D3's golden-scenario check (`git log --since=<D3's own last completed ops.run_log run>`), W5's "since the last W5 run" bullets, and the queue-drain routines (SL2, SL5, SL1, AR_att, AR_orc) all independently solved this same "how far back since I last ran" problem in routine-specific ways; this bullet is the single mechanism the rest of the plan should point back to instead of restating it. **Distinct from two similarly-named windows — do not conflate:** the **DEPENDENCY-WAIT WINDOW** (Dependency-gate bullet below) is this routine waiting on an UPSTREAM routine to complete before it may run at all; this CATCH-UP EVIDENCE WINDOW is this routine widening how far back its OWN evidence reads once it does run. Likewise distinct from **`catchup_safe`** (`ops/cadence.yaml`), which governs whether OPS0 may auto-refire a routine's missed TRIGGER — a live-ops scheduling concept, not an evidence-reach concept; a routine can be `catchup_safe: false` (e.g. the queue-driven ids) and still fully benefit from this bullet. **Blinding is unchanged**: this bullet governs only how far back in TIME a routine's evidence reaches, never WHICH sources it may read — AR_att's strict blinding and M1a's file-boundary blinding apply exactly as before regardless of window width.
+
 - **Dependency gate (action routines) — SEPARATE and FATAL, do NOT wrap.** This is the one control call that *should* abort the run, so it is its own statement (kept out of the best-effort logging above): `CALL ops.sp_assert_deps('<ID>', <deps>, <today>)` **before** the start-log, where `<deps>` is the upstream array (D2 → `['D1']`, W4 → `['W1','W2','W3']`, M4 → `['M1b','M2','M3']`; omit the call entirely if none). If a *monitored* upstream has not logged `completed` for today it raises a `missing_dependency` alert AND aborts (RAISE) so the routine never runs on stale inputs (D2 on a stale `Daily.md`, W4 on missing W1/W2/W3). Self-bootstrapping: an upstream that hasn't adopted logging yet is treated as satisfied, so declaring `<deps>` now is always safe and becomes a real gate the moment that upstream starts logging.
 
   **§38 evidence-check — now MECHANICAL inside the gate itself (2026-07-14 update; originally an agent-level manual step added 2026-07-11, self-improvement audit ITEM 4, RUNBOOK §38 layer B).** `ops.sp_assert_deps` (`bigquery/12_cadence_monitor.sql`) now CALLs `ops.sp_backfill_run_log_from_markers()` itself — first, unconditionally, best-effort — before evaluating whether to abort. A same-day landed-but-unlogged upstream (real output already on `origin/main`, CI-written marker present, only its own `ops.run_log` completion write missing) now self-heals on every gate check, for every routine, with **no session-level action required** — verified 2026-07-13/14 that the original hand-executed version of this step was not being reliably followed by a session that had already hit the RAISE and aborted, which is why it moved into the stored procedure instead. **You do not need to git-log/backfill before retrying this gate anymore — that's automatic now.**
@@ -287,7 +296,10 @@ summary previously still said "D2 Step 0" here, which is why the fix below lande
 the AUTHORITATIVE copy of the alert-resolve clauses is now inline in D2a's own STEP 0 bullet, Claude_Task_Plan.md
 "D2a. Broker Reconcile & Snapshot" — this paragraph is a non-canonical operational summary, per this section's
 own header above, and must be kept in sync with that copy, not treated as a second independent source of truth).**
-Read `get_account_trades` over a multi-day window (e.g. DAYS_7). For each fill whose `trade_id` is not already
+Read `get_account_trades` over a multi-day window floored at DAYS_7 but widened to `GREATEST(7 days, days
+since D2a's own last successful completion)` — kept in sync with the canonical STEP 0 copy above, per this
+routine's own header (owner directive 2026-07-25 CATCH-UP EVIDENCE WINDOW; fills are idempotent on
+`trade_id`, so widening is safe). For each fill whose `trade_id` is not already
 recorded in `events.trade_fills`: write exact price / size / `commission` / `realized_pnl` / `trade_time`
 (`INSERT INTO events.trade_fills`); flip ORDER-STAGED→OPEN or exit-pending→CLOSED via an `events.position_events`
 row (a SELL fill that does NOT zero the (strategy,ticker) position is instead a PARTIAL-sell — apply the sold
@@ -515,7 +527,12 @@ retired, §15) via the IBKR connector — the full mechanical procedure per Oper
 (staged-order registry + connector-driven fill reconciliation) and §13 (cash/park tripwire + §13.E
 sweep/cover). This is the sole owner of this work as of the 2026-07-09 cutover (D2 no longer does it).
 Concretely, every run:
-- **Fill reconciliation + event-sourcing mirror.** Read `get_account_trades` over a DAYS_7 window. For each
+- **Fill reconciliation + event-sourcing mirror.** Read `get_account_trades` over a window floored at DAYS_7
+  but widened to `GREATEST(7 days, days since D2a's own last successful completion)` (owner directive
+  2026-07-25 CATCH-UP EVIDENCE WINDOW — see Observability § above; `state.routine_catchup_window` for
+  routine='D2a', falling back to the plain DAYS_7 default on a view-read failure) — fills are idempotent on
+  `trade_id`, so widening this window only closes an under-count risk on an outage longer than 7 days (the
+  2026-07-23/24 connector outage precedent), it carries no double-count risk. For each
   fill whose `trade_id` is NOT already in `events.trade_fills` (idempotent on `trade_id`): record the exact
   price / size / `commission` / `realized_pnl` / `trade_time`; `INSERT INTO events.trade_fills` and write the
   position lifecycle event to `events.position_events` (an OPEN on an entry with `cost_basis = shares×price +
@@ -599,7 +616,13 @@ Concretely, every run:
   `events.daily_marks` into the TWR engine (below).
 - **Connector-sanity band on net-liquidation.** Compare this session's `get_account_summary` net-liquidation to
   `state.account_latest.nav` (yesterday's snapshot — D2a runs before its own Step 0b, so today's row does not
-  exist yet: a clean prior-day baseline). If the day-over-day change exceeds **±15%** and is NOT fully explained
+  exist yet: a clean prior-day baseline). **Stale-baseline awareness (owner directive 2026-07-25 CATCH-UP
+  EVIDENCE WINDOW) — when D2a's own gap since its last successful completion spans MORE than 1 trading day**
+  (`state.routine_catchup_window` for routine='D2a', or `days since D2a's own last completed ops.run_log run`
+  on a view-read failure) **this baseline is that many trading days stale, not a true prior-day snapshot** —
+  annotate the actual day-count gap in the alert/decision note below and let the MARKET-MOVE TERM's
+  `expected_ΔNAV` sum the mechanical mark-to-market move across the FULL gap (not a single day) before judging
+  the residual, so a genuine multi-day catch-up doesn't misclassify as connector corruption. If the day-over-day change exceeds **±15%** and is NOT fully explained
   by what this session reconciled (a fill's realized P&L, a dividend, a deposit/withdrawal, a confirmed split) —
   **NOR by ordinary mark-to-market movement of the held book** — treat it as a candidate connector-corruption
   signal, but apply the **MARKET-MOVE TERM** below before halting.
@@ -611,7 +634,10 @@ Concretely, every run:
     ITEM-16 safe): `expected_ΔNAV = Σ_held ( shares × (today get_price_snapshot − yesterday events.daily_marks
     close) ) + park_shares × Δ(park-vehicle price) + reconciled_flows`, where `reconciled_flows` is the SAME
     signed fills'-realized-P&L / dividend / deposit-withdrawal / confirmed-split cash the escape list already
-    covers. Then take the **RESIDUAL** `|ΔNLV − expected_ΔNAV|` and branch:
+    covers (when D2a's own gap exceeds 1 trading day per the stale-baseline awareness clause above,
+    "yesterday" here is the last `events.daily_marks` close as of D2a's last successful completion, not
+    literally the calendar day before today — consistent with the marks backfill below). Then take the
+    **RESIDUAL** `|ΔNLV − expected_ΔNAV|` and branch:
     - **RESIDUAL within tolerance** (`<= max($50, 2% × prior_nav)`): the ±15% move is real market P&L, not
       connector corruption. Do **NOT** halt — `CALL ops.sp_raise_alert('warning','D2a','large_market_move',
       <one-line with prior_nav/today_nlv/pct_change/expected_ΔNAV/residual>, <JSON: prior_nav, today_nlv,
@@ -801,7 +827,13 @@ the BigQuery value-weighted daily TOTAL-return TWR (`events.daily_marks` → `an
    pull `get_price_history(
    include_corporate_actions: true)` and `INSERT INTO events.daily_marks (mark_date, ticker, close, dividend,
    split_ratio, source)`: today's close, any ex-div cash dividend/share, split_ratio (split-adjusted at ingest),
-   `source='connector'`. Idempotent on (mark_date, ticker). **FMP fallback (2026-06-28 #12):** if `get_price_history`
+   `source='connector'`. Idempotent on (mark_date, ticker). **Missed-day backfill (owner directive 2026-07-25
+   CATCH-UP EVIDENCE WINDOW — see Observability § above; same call, wider date range):** if D2a's own gap since
+   its last successful completion spans more than 1 trading day (`state.routine_catchup_window` for
+   routine='D2a'), pull `get_price_history` over the full missed-trading-day range (not just today) and
+   `INSERT` one row per (ticker, missed trading day) exactly as above — idempotent on (mark_date, ticker), so a
+   backfill re-run is safe; this closes the gap SL3's own catch-up signal/simulated-fill generation depends on
+   (see SL3). **FMP fallback (2026-06-28 #12):** if `get_price_history`
    returns no bar — or a bar older than `state.trading_day_today.last_trading_day` — fall back to the FMP connector
    (`mcp__FMP__quote` for the close; `mcp__FMP__chart` to confirm the dated bar / ex-div) and INSERT with
    `source='FMP-fallback'` (best-effort; prefer IBKR when present). On a systematic per-name IBKR gap, `CALL
@@ -809,7 +841,8 @@ the BigQuery value-weighted daily TOTAL-return TWR (`events.daily_marks` → `an
    OPEN position (`state.current_positions`, ex-SGOV) AND (b) each of the unconditional benchmark tickers
    (SGOV, SPY, VOO — added 2026-07-13, so a silent VOO/SPY ingest stop is caught the same way a held-position
    gap is, instead of going unnoticed the way SPY's history did before this date) has a `state.daily_marks_curated`
-   row for `last_trading_day`; on a gap neither source filled, carry the prior mark forward explicitly (mirroring
+   row for EVERY trading day in the window back to D2a's own last successful completion (not only
+   `last_trading_day` — owner directive 2026-07-25 CATCH-UP EVIDENCE WINDOW); on a gap neither source filled, carry the prior mark forward explicitly (mirroring
    the SGOV forward-fill) AND `CALL ops.sp_raise_alert('warning','D2a','mark_gap', ...)`. Standing CI detector:
    dbt test `dbt/tests/assert_open_positions_have_marks.sql` (held positions only — the benchmark-ticker leg of
    this check is D2a-side only, not yet mirrored into a dbt test).

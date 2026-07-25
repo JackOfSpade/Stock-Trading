@@ -130,6 +130,33 @@ def test_gen_24_region_drops_none_monitor_class_without_crashing():
     assert got == "    STRUCT('W1' AS routine, 'weekly_sun' AS monitor_class)"
 
 
+# ---- gen_105_region: ALL routines (calendar AND queue_driven) ------------------------------------
+def test_gen_105_region_emits_one_row_per_routine_including_queue_driven():
+    routines = [
+        {"id": "D1", "monitor_class": "daily_trading"},
+        {"id": "AR_att", "monitor_class": "queue_driven"},
+        {"id": "W1", "monitor_class": "weekly_sun"},
+    ]
+    got = gr.gen_105_region(routines)
+    assert got == (
+        "    STRUCT('D1' AS routine, 'daily_trading' AS monitor_class),\n"
+        "    STRUCT('AR_att' AS routine, 'queue_driven' AS monitor_class),\n"
+        "    STRUCT('W1' AS routine, 'weekly_sun' AS monitor_class)"
+    )
+    # 4-space indent (matches the surrounding UNNEST block), comma on every row but the last.
+    assert got.splitlines()[0].startswith("    STRUCT(")
+    assert not got.rstrip().endswith(",")
+
+
+def test_gen_105_region_drops_none_monitor_class_without_crashing():
+    got = gr.gen_105_region([{"id": "BAD"}, {"id": "D1", "monitor_class": "daily_trading"}])
+    assert got == "    STRUCT('D1' AS routine, 'daily_trading' AS monitor_class)"
+
+
+def test_gen_105_region_empty_when_no_routines():
+    assert gr.gen_105_region([]) == ""
+
+
 # ---- wanted_region / current_region / write_region round-trip ------------------------------------
 def test_wanted_region_padding_is_exact():
     assert gr.wanted_region("BODY") == "\nBODY\n  "
@@ -198,28 +225,33 @@ def _wire_fixture(tmp_path, monkeypatch, *, plan_headings=True, extra_routine=""
     f12 = tmp_path / "12.sql"
     f15 = tmp_path / "15.sql"
     f24 = tmp_path / "24.sql"
-    for f in (f12, f15, f24):
+    f105 = tmp_path / "105.sql"
+    for f in (f12, f15, f24, f105):
         f.write_text(_sql_with_region("\nSTALE\n  "))
     monkeypatch.setattr(gr, "PLAN", str(plan))
     monkeypatch.setattr(gr, "CADENCE", str(cadence))
     monkeypatch.setattr(gr, "CADENCE_MONITOR_SQL", str(f12))
     monkeypatch.setattr(gr, "ROUTINE_CATALOG_SQL", str(f15))
     monkeypatch.setattr(gr, "PERIOD_WATCH_SQL", str(f24))
-    return f12, f15, f24
+    monkeypatch.setattr(gr, "ROUTINE_CATCHUP_SQL", str(f105))
+    return f12, f15, f24, f105
 
 
 def test_main_write_then_check_is_a_clean_round_trip(tmp_path, monkeypatch, capsys):
-    f12, f15, f24 = _wire_fixture(tmp_path, monkeypatch)
+    f12, f15, f24, f105 = _wire_fixture(tmp_path, monkeypatch)
 
     monkeypatch.setattr(sys, "argv", ["gen_routine_lists.py", "--write"])
     assert gr.main() == 0
     assert "regenerated" in capsys.readouterr().out
 
-    # 12 gets both calendar routines; 24 gets only the weekly one; 15 gets both with instructions.
+    # 12 gets both calendar routines; 24 gets only the weekly one; 15 gets both with instructions;
+    # 105 gets both (it takes the full roster, calendar AND queue_driven alike).
     assert "STRUCT('D1' AS routine, 'daily_trading' AS schedule)" in f12.read_text()
     assert "STRUCT('W1' AS routine, 'weekly_sun' AS schedule)" in f12.read_text()
     assert "D1" not in f24.read_text() and "STRUCT('W1' AS routine, 'weekly_sun' AS monitor_class)" in f24.read_text()
     assert "Perform D1. Market Development Scan — deep research." in f15.read_text()
+    assert "STRUCT('D1' AS routine, 'daily_trading' AS monitor_class)" in f105.read_text()
+    assert "STRUCT('W1' AS routine, 'weekly_sun' AS monitor_class)" in f105.read_text()
 
     # --check now agrees (exit 0), and --write again is a no-op.
     monkeypatch.setattr(sys, "argv", ["gen_routine_lists.py", "--check"])
@@ -241,7 +273,7 @@ def test_main_check_returns_1_and_reports_stale_region(tmp_path, monkeypatch, ca
 def test_main_check_returns_1_when_a_target_lacks_markers(tmp_path, monkeypatch, capsys):
     # --check on a file with no markers must report the marker problem (current_region()==None path)
     # and fail, NOT silently pass — a stripped/renamed marker would otherwise hide real staleness.
-    f12, _f15, _f24 = _wire_fixture(tmp_path, monkeypatch)
+    f12, _f15, _f24, _f105 = _wire_fixture(tmp_path, monkeypatch)
     f12.write_text("a file with no markers at all\n")
     monkeypatch.setattr(sys, "argv", ["gen_routine_lists.py", "--check"])
     assert gr.main() == 1
@@ -258,7 +290,7 @@ def test_main_write_check_round_trips_with_an_apostrophe_heading(tmp_path, monke
     # Apostrophe SUPPORT end to end: --write emits ESCAPED, valid SQL for a heading with an apostrophe,
     # and --check round-trips clean against it. (check B's paired '' -> ' un-escape lives in the
     # non-owned check_cadence_consistency.py — see partC-report.md for that half of the change.)
-    _f12, f15, _f24 = _wire_fixture(tmp_path, monkeypatch)
+    _f12, f15, _f24, _f105 = _wire_fixture(tmp_path, monkeypatch)
     plan = tmp_path / "Claude_Task_Plan.md"      # rewrite so D1's heading carries an apostrophe
     plan.write_text(
         "## D1. O'Brien Screen — deep research\nbody\n\n"
@@ -271,11 +303,11 @@ def test_main_write_check_round_trips_with_an_apostrophe_heading(tmp_path, monke
     assert gr.main() == 0                                                       # self-consistent round-trip
 
 
-def test_build_targets_returns_three_targets(tmp_path, monkeypatch):
+def test_build_targets_returns_four_targets(tmp_path, monkeypatch):
     _wire_fixture(tmp_path, monkeypatch)
     targets = gr.build_targets()
-    assert len(targets) == 3
-    assert [os.path.basename(p) for p, _ in targets] == ["12.sql", "15.sql", "24.sql"]
+    assert len(targets) == 4
+    assert [os.path.basename(p) for p, _ in targets] == ["12.sql", "15.sql", "24.sql", "105.sql"]
 
 
 # ---- load_cadence_routines / load_headings_by_id edge behavior ------------------------------------

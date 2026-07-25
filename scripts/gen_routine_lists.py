@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""Generate the routine-list STRUCT rows for bigquery/12/15/24 from ops/cadence.yaml + Claude_Task_Plan.md.
+"""Generate the routine-list STRUCT rows for bigquery/12/15/24/105 from ops/cadence.yaml +
+Claude_Task_Plan.md.
 
 WHY THIS EXISTS (ARCH-3 Item 30b, closing the deferred hand-copy hole). bigquery/12
-(state.cadence_expected_today), bigquery/15 (ops.routine_catalog), and bigquery/24
-(state.cadence_period_watch) each independently hand-carry a list of routine STRUCT rows that must
-stay byte-consistent with ops/cadence.yaml. scripts/check_cadence_consistency.py's checks A/B/J only
-CHECK that agreement -- nothing GENERATES the rows, so adding/renaming/rescheduling a routine still
-required hand-editing three files (the deferred half of Item 30b). This script generates the row text
-for a marker-delimited region inside each file, so a routine change only requires editing
-ops/cadence.yaml (+ a Claude_Task_Plan.md heading for a brand-new routine) and re-running --write.
+(state.cadence_expected_today), bigquery/15 (ops.routine_catalog), bigquery/24
+(state.cadence_period_watch), and bigquery/105 (state.routine_catchup_window) each independently
+hand-carry a list of routine STRUCT rows that must stay byte-consistent with ops/cadence.yaml.
+scripts/check_cadence_consistency.py's checks A/B/J only CHECK the first three's agreement --
+nothing GENERATES the rows, so adding/renaming/rescheduling a routine still required hand-editing
+multiple files (the deferred half of Item 30b). This script generates the row text for a
+marker-delimited region inside each file, so a routine change only requires editing ops/cadence.yaml
+(+ a Claude_Task_Plan.md heading for a brand-new routine) and re-running --write.
 
 It does NOT generate bigquery/31_catchup_notify.sql or bigquery/59_catchup_autofire.sql's catchup-safe
 UNNEST lists (those stay hand-kept, declared judgment calls -- check_cadence_consistency.py's check K
@@ -26,9 +28,13 @@ Regions generated (marker-delimited, one BEGIN/END pair per file):
                                         one per routine whose monitor_class is a period class
                                         (weekly_sun/monthly_ftd/quarterly_ftd/annual_ftd), cadence.yaml
                                         order.
+  bigquery/105_routine_catchup_window.sql -- state.routine_catchup_window's `routines` CTE STRUCT
+                                        rows, ALL routines INCLUDING the 4 queue_driven ids (unlike
+                                        bigquery/12's calendar-only filter -- this is the one region
+                                        that needs the full 31-routine roster), cadence.yaml order.
 
 Usage:
-  python scripts/gen_routine_lists.py --write   # regenerate all 3 marker regions in place
+  python scripts/gen_routine_lists.py --write   # regenerate all 4 marker regions in place
   python scripts/gen_routine_lists.py --check   # exit 1 + diff if any region is stale
 
 Markers (exactly one BEGIN/END pair per file, wrapping ONLY the STRUCT rows -- the surrounding
@@ -56,6 +62,7 @@ CADENCE = os.path.join(ROOT, "ops", "cadence.yaml")
 CADENCE_MONITOR_SQL = os.path.join(ROOT, "bigquery", "12_cadence_monitor.sql")
 ROUTINE_CATALOG_SQL = os.path.join(ROOT, "bigquery", "15_routine_catalog.sql")
 PERIOD_WATCH_SQL = os.path.join(ROOT, "bigquery", "24_cadence_period_watch.sql")
+ROUTINE_CATCHUP_SQL = os.path.join(ROOT, "bigquery", "105_routine_catchup_window.sql")
 
 BEGIN_MARKER = "-- BEGIN GENERATED ROUTINE LIST (scripts/gen_routine_lists.py --write; do not hand-edit)"
 END_MARKER = "-- END GENERATED ROUTINE LIST"
@@ -136,6 +143,21 @@ def gen_24_region(routines):
     return "\n".join(lines)
 
 
+def gen_105_region(routines):
+    """state.routine_catchup_window rows: ALL routines, INCLUDING the 4 queue_driven ids (unlike
+    gen_12_region's calendar-only filter and gen_24_region's period-only filter), cadence.yaml
+    order, 4-space indent matching the surrounding UNNEST([ block. This is the one generated region
+    that needs the full 31-routine roster -- state.routine_catchup_window computes a catch-up
+    evidence window for every routine, calendar-predictable or queue_driven alike (owner directive
+    2026-07-25; see bigquery/105_routine_catchup_window.sql's header)."""
+    rows = [r for r in routines if r.get("monitor_class") is not None]
+    lines = []
+    for i, r in enumerate(rows):
+        comma = "," if i < len(rows) - 1 else ""
+        lines.append(f"    STRUCT('{r['id']}' AS routine, '{r['monitor_class']}' AS monitor_class){comma}")
+    return "\n".join(lines)
+
+
 def _region_bounds(txt, path):
     b = txt.find(BEGIN_MARKER)
     e = txt.find(END_MARKER)
@@ -180,13 +202,14 @@ def build_targets():
         (CADENCE_MONITOR_SQL, gen_12_region(routines)),
         (ROUTINE_CATALOG_SQL, gen_15_region(routines, head_by_id)),
         (PERIOD_WATCH_SQL, gen_24_region(routines)),
+        (ROUTINE_CATCHUP_SQL, gen_105_region(routines)),
     ]
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     g = ap.add_mutually_exclusive_group(required=True)
-    g.add_argument("--write", action="store_true", help="regenerate all 3 marker regions in place")
+    g.add_argument("--write", action="store_true", help="regenerate all 4 marker regions in place")
     g.add_argument("--check", action="store_true", help="exit 1 + diff if any region is stale")
     args = ap.parse_args()
 
@@ -200,7 +223,7 @@ def main():
         if changed:
             print(f"gen_routine_lists --write: regenerated {', '.join(changed)}.")
         else:
-            print("gen_routine_lists --write: all 3 regions already current (no-op).")
+            print("gen_routine_lists --write: all 4 regions already current (no-op).")
         return 0
 
     # --check
@@ -219,7 +242,7 @@ def main():
                   f"Claude_Task_Plan.md -- run `python scripts/gen_routine_lists.py --write`")
     if drift:
         return 1
-    print("gen_routine_lists --check: OK -- bigquery/12, 15, 24 generated regions match "
+    print("gen_routine_lists --check: OK -- bigquery/12, 15, 24, 105 generated regions match "
           "ops/cadence.yaml + Claude_Task_Plan.md.")
     return 0
 

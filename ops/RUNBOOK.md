@@ -2877,3 +2877,123 @@ then shows the trimmed position automatically. The `ORDER_STAGED` payload gained
 concurrent SELL rows on one ticker aren't conflated. Per-strategy trim rules are in `Strategy.md` (Rev 41):
 A/B/D long trims (B short partial-cover), C partial-contract scale-out, E both pair legs together in the
 same session (never a naked leg); all five `spec_hash`es were recomputed.
+
+## 46. Catch-up evidence windows — every routine covers back to its own last completion (owner directive 2026-07-25)
+
+**Why this section exists.** The 2026-07-23/24 BigQuery-connector outage (in the lineage of §26's
+2026-06-26 incident) showed a gap that every prior fix in this runbook had left open: each routine's
+evidence-gathering step only ever looked at "today," "this week," or some other FIXED lookback window
+hand-anchored to its own cadence. When a routine was itself down (or its upstream feed was) for longer
+than that fixed window, the missed day(s) were never covered by any later run — the routine simply
+resumed reading from wherever its normal window happened to start, and evidence from the outage window
+was silently lost forever. This is a distinct failure class from a missed TRIGGER (which `catchup_safe` +
+OPS0 already refire) and from a stale ALERT (which auto-resolves) — a routine can run exactly on schedule,
+every trigger firing normally, and still never look far enough back to see what it missed while it (or a
+dependency) was down.
+
+**The aging-alert trap that made the gap invisible.** `ops.sp_auto_resolve_alerts` Rule 2
+(`bigquery/34_alert_lifecycle.sql`) clears a `missed_run` alert once the alerted day is more than 1 day
+stale — on EITHER a later completion OR simply the alert aging out, whichever comes first, with **zero**
+requirement that any completion evidence exists. That means a cleared `missed_run` alert was never
+proof the missed day's evidence was actually analyzed by anything; the alert lifecycle and the evidence
+lifecycle were two unrelated clocks that happened to look like the same signal. This is the concrete
+mechanism verified during recon for this redesign, and it is why "the alert is clear" cannot be trusted
+as a stand-in for "the routine covered that day."
+
+**`state.routine_catchup_window` (`bigquery/105_routine_catchup_window.sql`) — the mechanism.** One row
+per routine (all 31 ids in `ops/cadence.yaml`, including the 4 `queue_driven` ones — no existing view
+carried that full set), generated via a new `scripts/gen_routine_lists.py` marker region (its 4th, joining
+the existing bigquery/12/15/24 regions) so the roster can never hand-drift from `ops/cadence.yaml`. For
+each routine: `window_start_ts` = the timestamp of that routine's own last `completed` `ops.run_log` row,
+or — if it has never completed — a cadence-sized fallback keyed to its monitor class (daily/queue_driven 1
+day, weekly 7, monthly 31, quarterly 92, annual 366). `window_days` reports the elapsed size for quick
+reading. Routine ids are normalized the same way `state.instruction_drift` already does (§28,
+`REGEXP_REPLACE(routine, r'[·._-]', '')`) so legacy middle-dot `AR·att`/`AR·orc` rows fold onto the
+current keys instead of being dropped from the `MAX(log_ts)`. The `routines` CTE is the closed, generated
+list — never `SELECT DISTINCT routine FROM ops.run_log` — specifically so fire-drill/self-heal synthetic
+markers (`FIRE_DRILL_ORDER_GUARD`, `SELFHEAL_RUN_LOG`, etc.) never surface as phantom routines with their
+own meaningless windows. As part of the same file, `state.go_without_order` (D3's staging-completeness
+surface, §25, originally defined in `bigquery/18_stack_review_fixes.sql`) is redefined with its lookback
+now `GREATEST(2 days, days since D3's own last completed run)` — floored at the original fixed ~36h/2-day
+cutoff so it never narrows, widening automatically across a D3 outage. bigquery/18's original copy is kept
+in place, unmodified, as the DR-rebuild apply-in-order record, with an explicit SUPERSEDED marker pointing
+forward to bigquery/105 (verified clean by `scripts/check_superseded_markers.py`) and a caution against
+re-applying it live in isolation.
+
+**The preamble protocol (`Claude_Task_Plan.md`, Observability section, the CATCH-UP EVIDENCE WINDOW
+bullet, immediately after Run logging).** States the principle once — this run's evidence reach is
+*(this routine's own last successful completion, now]*, not a fixed lookback — and is the single place
+every routine-specific edit points back to rather than restating the mechanism. Read
+`state.routine_catchup_window` for the routine's own id; fold `window_start_ts` into whatever the routine
+already reads for evidence (a Daily.md scan range, a `decision_log` lookback, a git-log-since bound, a
+missed-trading-day marks backfill) as a widen-only floor — it can push a lookback further back than its
+normal cadence would, never pull it in tighter. Explicitly generalizes, rather than replaces, the
+reference implementations that had already independently solved pieces of this same problem: D1's SCAN
+WINDOW (marker + git-commit-timestamp + fixed-lookback fallback), D3's golden-scenario
+`git log --since=<D3's own last completed run>` check, W5's "since the last W5 run" bullets, and the
+queue-drain routines SL2/SL5/SL1/AR_att/AR_orc. **BEST-EFFORT / NON-GATING**, mirroring the OPS0 "must
+NEVER be blocked" rule and the existing Alert auto-resolve bullet's posture: if
+`state.routine_catchup_window` is unreadable (BigQuery hiccup, view missing) or the query errors, the
+routine falls back to its own existing cadence-default lookback, proceeds, and notes the fallback (e.g.
+`catchup view unreadable, used cadence-default lookback`) — it must never halt or degrade a run on this
+view's absence. The bullet also explicitly disambiguates two similarly-named windows so future edits don't
+conflate them: the pre-existing DEPENDENCY-WAIT WINDOW (waiting on an upstream routine before running at
+all) is unrelated to this CATCH-UP EVIDENCE WINDOW (this routine widening how far back its OWN evidence
+reads once it does run); and `catchup_safe` (`ops/cadence.yaml`) — whether OPS0 may auto-refire a missed
+TRIGGER — is a live-ops scheduling concept, not an evidence-reach one; a routine can be `catchup_safe:
+false` and still fully benefit from this bullet.
+
+**The 12 routine-specific edits.** Each points back at the universal bullet rather than re-deriving the
+mechanism: **D2** gained a CATCH-UP CHECK paragraph (immediately after the same-day idempotency guard,
+before run logging) that git-diffs `Daily.md` since D2's own last completion and unions any un-converted
+RECOMMENDED ACTIONS bullets from intervening D1 saves into Step 1, skipping anything already reflected in
+`decision_log`/`queue_events`/`open_orders`. **D2a** widened the fills-reconciliation window to
+`GREATEST(7 days, days since D2a's own last completion)` in both the canonical STEP 0 copy and the
+non-canonical connector-usage-preamble summary (kept in sync per that section's own header), widened the
+daily-marks ingest to backfill every missed trading day (idempotent on `(mark_date, ticker)`, feeding SL3's
+own catch-up loop), and added a stale-baseline-awareness clause to the connector-sanity ΔNAV band so a
+multi-day gap's mechanical mark-to-market sum — not a same-day delta — is what gets judged against the
+±15% threshold. **D3** widened `state.go_without_order`'s window as described above and requires a durable
+`sp_log_decision` adjudication row for every surfaced candidate regardless of verdict. **SL3** added a
+catch-up loop that runs the SHADOW/PAPER signal/simulated-fill steps against EVERY missed trading day
+between SL3's own last completion and today (oldest first), each day keyed off `state.daily_marks_curated`
+— dependent on D2a's own marks backfill above. **OPS1** got a naming-clarification only: its
+3-consecutive-completed-runs recurrence streak is explicitly NOT widened by this protocol (a gap where
+OPS1 itself did not run neither breaks nor pads the streak) — called out so a future edit doesn't
+misapply evidence-window widening to a streak-counting rule. **W2** widened its post-event significance
+screen's lookback past the normal 10-trading-day floor when the gap since W2's own last completion exceeds
+10 trading days (screen-only; Strategy B's frozen 10-trading-day entry window is untouched). **W3** and
+**M3** each now cover the full span back through every missed weekly/monthly cycle, oldest first, stating
+the actual span covered (e.g. "covering 2026-W25–W27") instead of silently treating only the
+immediately-prior period. **M1a** and **Q3** cover each missed month/quarter as its own labeled
+sub-section, oldest first, in addition to the immediately-prior period; **Q1** and **Q3** additionally
+carry an explicit WRITE-ONCE rule (a 2+-quarter catch-up session writes each distinct
+`state.strategy_candidates` finding / verification answer once, not once per covered quarter, so it can't
+inflate SL1's candidate feed or falsely satisfy SL4's multi-cycle corroboration test). **A1** widens its
+full-re-derivation scope to the longer of last-24-months or the full span since A1's own last completion
+(same in the ordinary case, since A1 is annual; only actually widens if A1 has been down more than ~2
+years).
+
+**Decision-scoping rule (unchanged, restated everywhere this protocol touches).** Only the EVIDENCE window
+widens. Every decision a routine makes while covering a catch-up span is still taken, staged, and dated as
+of the CURRENT session — nobody retroactively places, backdates, or alters an order for a missed day. D3's
+go-without-order re-staging, D2a's fills/marks backfill, and SL3's per-day simulated-fill catch-up loop all
+write records dated to the historical day they reconstruct (a fill happened when it happened, a mark is
+for the day it prices), but that is data reconstruction from real, already-occurred broker/market events —
+not a new trading decision being backdated. The Decision discipline section (trigger + conservative
+default; deferrals do not chain) is unchanged.
+
+**What was deliberately NOT changed.** `ops/cadence.yaml`'s `catchup_safe` list and the OPS0 auto-refire
+machinery it drives are untouched and remain conceptually distinct (see the preamble bullet's explicit
+disambiguation) — this protocol governs how far back a routine's evidence reaches once it runs, never
+whether OPS0 may fire a missed trigger for it. Blinding is unchanged: AR_att's strict blinding and M1a's
+file-boundary blinding govern WHICH sources a routine may read and are untouched by a protocol that only
+ever widens WHEN (in time) a routine reads from sources it was already allowed to read. File-write markers
+stay CURRENT-period — W4/M4/Q4/A3's freshness checks still parse a first-line marker for the immediately-
+current week/month/quarter/year; missed periods are folded in as labeled sub-sections in the body (oldest
+first), not by back-dating the marker itself. Write-once discipline reuses each routine's existing
+idempotency keys (`trade_id`, `(mark_date, ticker)`, `entry_id`, etc.) so covering multiple periods in one
+session produces one BigQuery write per distinct finding, not a duplicate per period. No cap was added on
+`window_days` — a routine broken for months would get an arbitrarily large window; a safety valve (e.g.
+capping at some multiple of the routine's own cadence default) was explicitly left as a future design call
+for whoever wires a given routine's evidence-gathering step against this view, not assumed here.

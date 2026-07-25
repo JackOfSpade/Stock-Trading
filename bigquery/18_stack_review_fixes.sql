@@ -191,6 +191,13 @@ LEFT JOIN lastrun l ON l.routine = c.routine;
 -- mid-step) is invisible to them. This anchors on the GO decision instead: a recent GO with NO matching
 -- staged-order row AND no fill. Surfacing-only — D3 (the routine) adjudicates each candidate (a GO can be
 -- analytical / deferred), and raises go_without_order only for a genuine missing order (RUNBOOK §25 / D3).
+--
+-- SUPERSEDED LIVE by bigquery/105_routine_catchup_window.sql — current single source of truth for
+-- this object (owner directive 2026-07-25: the window is now anchored to D3's own last completed
+-- ops.run_log run, floored at this file's original ~36h/2-day lookback via GREATEST, instead of the
+-- fixed 2-day cutoff below). Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation — it would revert the window to the fixed
+-- 2-day cutoff and silently reintroduce the missed-catch-up gap bigquery/105 exists to close.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.go_without_order` AS
 WITH go_decisions AS (
   SELECT entry_id, entry_date, strategy, ticker, entry_type, title

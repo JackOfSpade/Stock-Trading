@@ -603,21 +603,30 @@ def _write_gen_fixture(tmp_path):
     sql15.write_text(marker_body.replace("blah AS (\n  SELECT * FROM UNNEST([", "SELECT routine FROM UNNEST(["))
     sql24 = tmp_path / "24.sql"
     sql24.write_text(marker_body)
-    return plan, cadence, sql12, sql15, sql24
+    sql105 = tmp_path / "105.sql"
+    sql105.write_text(marker_body)
+    return plan, cadence, sql12, sql15, sql24, sql105
 
 
-def _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24):
+def _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105):
+    # MUST patch every build_targets() entry, including ROUTINE_CATCHUP_SQL — otherwise a test that
+    # calls gen.write_region() for all of build_targets() writes real content straight into the actual
+    # repo's bigquery/105_routine_catchup_window.sql as a side effect (monkeypatch only undoes attribute
+    # patches at teardown, not a file write that already happened). Bit the real-repo no-op test below
+    # once, the day ROUTINE_CATCHUP_SQL/gen_105_region were added (2026-07-25) without updating this
+    # helper in lockstep — every future generated target must be added here too.
     monkeypatch.setattr(gen, "PLAN", str(plan))
     monkeypatch.setattr(gen, "CADENCE", str(cadence))
     monkeypatch.setattr(gen, "CADENCE_MONITOR_SQL", str(sql12))
     monkeypatch.setattr(gen, "ROUTINE_CATALOG_SQL", str(sql15))
     monkeypatch.setattr(gen, "PERIOD_WATCH_SQL", str(sql24))
+    monkeypatch.setattr(gen, "ROUTINE_CATCHUP_SQL", str(sql105))
 
 
 def test_gen_routine_lists_write_then_check_is_clean(tmp_path, monkeypatch):
     gen = load_module_from_path("gen_routine_lists", "scripts", "gen_routine_lists.py")
-    plan, cadence, sql12, sql15, sql24 = _write_gen_fixture(tmp_path)
-    _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24)
+    plan, cadence, sql12, sql15, sql24, sql105 = _write_gen_fixture(tmp_path)
+    _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105)
     # --write: populates the marker regions
     for path, body in gen.build_targets():
         gen.write_region(path, body)
@@ -631,8 +640,8 @@ def test_gen_routine_lists_write_then_check_is_clean(tmp_path, monkeypatch):
 
 def test_gen_routine_lists_check_is_dirty_after_row_deleted(tmp_path, monkeypatch):
     gen = load_module_from_path("gen_routine_lists", "scripts", "gen_routine_lists.py")
-    plan, cadence, sql12, sql15, sql24 = _write_gen_fixture(tmp_path)
-    _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24)
+    plan, cadence, sql12, sql15, sql24, sql105 = _write_gen_fixture(tmp_path)
+    _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105)
     for path, body in gen.build_targets():
         gen.write_region(path, body)
     # delete W1 from cadence.yaml (simulating drift) without re-running --write
@@ -651,8 +660,8 @@ def test_gen_routine_lists_check_is_dirty_after_row_deleted(tmp_path, monkeypatc
 
 
 def test_gen_routine_lists_against_real_repo_write_is_noop():
-    # The real, already-normalized bigquery/12/15/24 must be a byte-level no-op for --write, and
-    # --check must pass clean (proves the generator reproduces today's 30-routine state exactly).
+    # The real, already-normalized bigquery/12/15/24/105 must be a byte-level no-op for --write, and
+    # --check must pass clean (proves the generator reproduces today's 31-routine state exactly).
     gen = load_module_from_path("gen_routine_lists", "scripts", "gen_routine_lists.py")
     changed = [path for path, body in gen.build_targets() if gen.write_region(path, body)]
     assert changed == []
