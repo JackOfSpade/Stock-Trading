@@ -21,6 +21,13 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Cancel redundant in-flight runs on the same branch when a newer push arrives.
+# Safe because auto-merge-claude.yml only reads the conclusion of the tip-SHA run;
+# cancelling an earlier run on the same branch is correct-and-cheaper behavior.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -33,6 +40,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements-ci.txt
       - name: Install test deps (pinned via constraints — RUNBOOK §25 C3)
         # pyyaml up front so the new parser tests can import check_cadence_consistency (which imports yaml)
         # during pytest, not only in the later cadence step.
@@ -90,6 +99,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements-ci.txt
       - run: pip install --quiet -c requirements-ci.txt ruff
       - run: ruff check c_options_math.py strategy_math/ tests/ scripts/ ops/ || true
 
@@ -115,7 +126,14 @@ jobs:
     #     nit from wedging the gate.
     steps:
       - uses: actions/checkout@v4
+      - name: Cache actionlint binary (pinned v1.7.12)
+        id: cache-actionlint
+        uses: actions/cache@v4
+        with:
+          path: actionlint
+          key: actionlint-v1.7.12-${{ runner.os }}
       - name: Install actionlint (pinned v1.7.12)
+        if: steps.cache-actionlint.outputs.cache-hit != 'true'
         run: |
           bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash) 1.7.12
       - name: actionlint (workflow YAML + embedded run-block bash via shellcheck)

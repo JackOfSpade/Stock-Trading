@@ -48,6 +48,8 @@ jobs:
         if: steps.guard.outputs.skip == 'false'
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements-ci.txt
       - name: GCP WIF auth + gcloud setup (provides the bq CLI)
         if: steps.guard.outputs.skip == 'false'
         uses: ./.github/actions/gcp-wif-auth

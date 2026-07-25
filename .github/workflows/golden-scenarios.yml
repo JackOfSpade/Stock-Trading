@@ -65,6 +65,12 @@ on:
       - 'tests/golden_scenarios/**'
   workflow_dispatch:
 
+# Cancel a superseded run on the same branch (path-gated, so if a second prose
+# push arrives before the first run finishes, only the latest matters).
+concurrency:
+  group: golden-scenarios-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -77,6 +83,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements-ci.txt
       - name: Install deps (pinned via constraints — RUNBOOK §25 C3)
         run: pip install --quiet -c requirements-ci.txt pyyaml
       - name: Validate scenarios.yaml schema + governing_files existence (no network)
@@ -105,6 +113,8 @@ jobs:
         if: steps.guard.outputs.skip == 'false'
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements-ci.txt
       - name: Install deps
         if: steps.guard.outputs.skip == 'false'
         # The Gemini provider uses only the Python stdlib (urllib) — no LLM SDK to install, just the

@@ -154,8 +154,8 @@ def test_relay_orders_mixed_rows_annotate_independently(monkeypatch):
     monkeypatch.setattr(ar, "post", lambda text: posted.append(text))
     ar.relay_orders()
     lines = posted[0].splitlines()
-    isrg_line = next(l for l in lines if "ISRG" in l)
-    manual_line = next(l for l in lines if "MANUAL" in l)
+    isrg_line = next(line for line in lines if "ISRG" in line)
+    manual_line = next(line for line in lines if "MANUAL" in line)
     assert "IBKR's own order notification" in isrg_line
     assert "tap the [Claude] Confirm order event" in manual_line
 
