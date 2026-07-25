@@ -28,6 +28,12 @@ Already specified in A's section. Summary: A enters before event; B enters after
 4. Adversarial counter-argument doesn't identify a decisive flaw — specifically, attacker must consider whether the market reaction is information-driven rather than sentiment-driven (if information-driven, "mispricing" is actually correct pricing)
 5. No A position currently open in the same name
 
+### Adding to an existing position
+
+**Authorized (Rev 40, owner directive 2026-07-21).** B may add to an already-open position in the same name — a second (or subsequent) 2% tranche layered onto an existing post-event thesis. Trigger is AI judgment: either (a) a dip against an intact thesis (adverse mark-to-market with no new information, per the "Not exit-triggering" list below — long positions only, consistent with B's asymmetric stop-loss design) or (b) strengthened conviction (new information reinforcing the original over/under-reaction read without itself requiring an independently-enumerated new convergence target). The hard gate: the position's original at-entry invalidation criteria (Exit rules below — new information that changes the situation, or the strict convergence-target/60-day timeline) must remain UNBREACHED at the time of the add — an add that would coincide with invalidation territory does not happen; that situation routes to exit, not to a pyramid.
+
+Sizing: each add is a fresh 2%-of-strategy-NAV tranche, identical in size to a first entry (Instrument eligibility rule above) — no scaled sizing formula, no cumulative cap on the number of tranches a single name may accumulate. Each add is independently thesis-constructed (its own adversarial counter-argument per Entry criterion 4) and logged as a distinct entry event; it shares the parent position's immutable convergence target and timeline (Entry criterion 3) rather than restating a new one. Adds obey the same instrument-eligibility rule and the same cross-strategy exclusion (no A position open in the same name, Entry criterion 5) as a first entry. For a short position specifically, an add is additionally gated on the position not already being at or near its rev-13 stop-loss trigger (underlying up ≥ 25% from short-entry) — adding into a position approaching its own stop is definitionally not "thesis-intact."
+
 ### Exit rules and thesis invalidation
 
 **Exit if any of:**
