@@ -100,6 +100,16 @@ def test_category_tokens_cover_all_four_strategy_entry_categories():
         assert rg.CATEGORY_TOKENS[cat] == {"GO", "NO-GO"}
 
 
+def test_category_tokens_cover_park_allocator_and_research_screener():
+    # 2026-07-26 fix: PA-*/RS-* scenarios use GO/NO-GO as a proxy vocabulary (see scenarios.yaml's
+    # VOCABULARY NOTE headers) but were missing a CATEGORY_TOKENS entry, so the live model was offered
+    # all six DECISION_LEAD_TOKENS instead of just GO/NO-GO and could "flip" on pure vocabulary alone
+    # (e.g. answering ACTIVATE instead of GO on a park_allocator scenario).
+    for cat in ("park_allocator", "research_screener"):
+        assert cat in rg.CATEGORY_TOKENS
+        assert rg.CATEGORY_TOKENS[cat] == {"GO", "NO-GO"}
+
+
 # ---- live-provider selection + Gemini ladder (2026-07-17) — all network-free ----
 
 
@@ -123,6 +133,10 @@ def test_allowed_decisions_scoped_by_category():
     assert rg._allowed_decisions_for({"category": "strategy_b_entry"}) == "GO | NO-GO"
     assert rg._allowed_decisions_for({"category": "kill_trigger"}) == "CONTINUE | TERMINATE"
     assert rg._allowed_decisions_for({"category": "regime_router"}) == "ACTIVATE | DO-NOT-ACTIVATE"
+    # park_allocator/research_screener also scope to GO | NO-GO (2026-07-26 fix) despite being a proxy
+    # vocabulary rather than a native decision token — see scenarios.yaml's VOCABULARY NOTE headers.
+    assert rg._allowed_decisions_for({"category": "park_allocator"}) == "GO | NO-GO"
+    assert rg._allowed_decisions_for({"category": "research_screener"}) == "GO | NO-GO"
     # No / unknown category => all six, in the pinned longest-first-safe order.
     all_six = " | ".join(rg.DECISION_LEAD_TOKENS)
     assert rg._allowed_decisions_for({}) == all_six
@@ -417,6 +431,19 @@ def test_run_live_flags_a_flip_and_prints_the_advisory_queue_insert(monkeypatch,
     assert "INSERT INTO" in out and "prose-regression" in out and "T-FLIP" in out
 
 
+def test_run_live_scores_unparseable_when_reply_has_no_recognized_token(monkeypatch, capsys):
+    # 2026-07-26 fix: a reply that ignores the "<one of ...>" instruction and answers with a token
+    # outside DECISION_LEAD_TOKENS entirely (e.g. the model inventing "SCREEN") is a format-following
+    # failure, not a decision disagreement — it must NOT be scored as a FLIP (match=False) or file the
+    # advisory queue_events INSERT, since there is no real expected-vs-actual call to adjudicate.
+    monkeypatch.setattr(rg, "_select_live_caller", _fake_caller_returning("DECISION: SCREEN\nRATIONALE: x"))
+    r = rg.run_live([_sc("T-UNPARSE", "GO")])[0]
+    assert r["match"] == "UNPARSEABLE" and r["actual"] == "SCREEN"
+    out = capsys.readouterr().out
+    assert "T-UNPARSE decision flip" not in out and "INSERT INTO" not in out
+    assert "::warning::T-UNPARSE: model reply had no recognized decision token" in out
+
+
 def test_run_live_records_an_error_class_when_the_model_call_raises(monkeypatch, capsys):
     monkeypatch.setattr(rg, "_select_live_caller", _fake_caller_returning(RuntimeError("ladder exhausted")))
     r = rg.run_live([_sc("T-ERR", "GO")])[0]
@@ -483,14 +510,16 @@ def test_main_live_prints_summary_counts_and_per_row_labels(monkeypatch, capsys)
         {"id": "A", "expected": "GO", "actual": "GO", "match": True, "reply": "r", "model": "m"},
         {"id": "B", "expected": "GO", "actual": "NO-GO", "match": False, "reply": "r", "model": "m"},
         {"id": "C", "expected": "GO", "actual": None, "match": None, "reply": "boom", "model": None},
+        {"id": "D", "expected": "GO", "actual": "SCREEN", "match": "UNPARSEABLE", "reply": "r", "model": "m"},
     ]
     monkeypatch.setattr(rg, "run_live", lambda scenarios, scenario_ids=None: mixed_results)
     assert rg.main() == 0
     out = capsys.readouterr().out
-    assert "Live results: 1 match, 1 flip(s), 1 error(s) out of 3." in out
+    assert "Live results: 1 match, 1 flip(s), 1 unparseable, 1 error(s) out of 4." in out
     assert "[MATCH] A: expected='GO' actual='GO'" in out
     assert "[FLIP] B: expected='GO' actual='NO-GO'" in out
     assert "[ERROR] C: expected='GO' actual=None" in out
+    assert "[UNPARSEABLE] D: expected='GO' actual='SCREEN'" in out
 
 
 def test_main_live_scenario_unknown_id_prints_warning(monkeypatch, capsys):

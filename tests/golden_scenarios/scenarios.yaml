@@ -62,28 +62,31 @@
 # VOCABULARY NOTE ON PA-* (park-allocator scenarios). run_golden.py's offline hard gate only recognizes
 # expected_decision leading tokens GO | NO-GO | CONTINUE | TERMINATE | ACTIVATE | DO-NOT-ACTIVATE
 # (DECISION_LEAD_TOKENS) — there is no native park-allocator vocabulary (the real status values are
-# BOUND / HOLD, per the immediate-binding redesign, owner directive 2026-07-26). Category
-# `park_allocator` is deliberately NOT added to run_golden.py's CATEGORY_TOKENS map (that file is out of
-# scope for this change), so PA-* scenarios use GO/NO-GO as the closest-fit proxy — GO = a capital-moving
-# switch actually converts this cycle (status='BOUND' with vehicle != current), NO-GO = nothing executes
-# this cycle (KEEP / HOLD) — with the real status/outcome spelled out in the parenthetical,
-# exactly like KT-04/KT-07's "CONTINUE (routes to review, not direct terminate)" pattern. A future pass
-# that gives run_golden.py a native park_allocator CATEGORY_TOKENS entry (e.g. BOUND/HOLD) would
-# be a strict improvement over this proxy but is out of scope here.
+# BOUND / HOLD, per the immediate-binding redesign, owner directive 2026-07-26), so PA-* scenarios use
+# GO/NO-GO as the closest-fit proxy — GO = a capital-moving switch actually converts this cycle
+# (status='BOUND' with vehicle != current), NO-GO = nothing executes this cycle (KEEP / HOLD) — with the
+# real status/outcome spelled out in the parenthetical, exactly like KT-04/KT-07's "CONTINUE (routes to
+# review, not direct terminate)" pattern. Category `park_allocator` IS scoped in run_golden.py's
+# CATEGORY_TOKENS map to just {GO, NO-GO} (fixed 2026-07-26 — an unscoped category let the live model
+# pick a correct-sentiment/wrong-vocabulary token, e.g. ACTIVATE instead of GO, scoring a pure-vocabulary
+# flip against nothing but the proxy label), so the live model is only ever offered GO | NO-GO here, same
+# as every other category. A future pass giving run_golden.py a fully NATIVE park_allocator vocabulary
+# (BOUND/HOLD, replacing the GO/NO-GO proxy label itself, not just scoping it) would be a further
+# improvement but is a separate, larger change than the scoping fix above.
 #
 # VOCABULARY NOTE ON RS-* (research-significance-screen scenarios). run_golden.py's offline hard gate
 # only recognizes expected_decision leading tokens GO | NO-GO | CONTINUE | TERMINATE | ACTIVATE |
 # DO-NOT-ACTIVATE (DECISION_LEAD_TOKENS) — there is no native research-screener vocabulary (the real
 # Layer 2 output is a significant yes/no + conviction + below_spec_floor flag, per Operating_Protocols.md
-# §19). Category `research_screener` is deliberately NOT added to run_golden.py's CATEGORY_TOKENS map
-# (that file is out of scope for this change, same reasoning as park_allocator's), so RS-* scenarios use
-# GO/NO-GO as the closest-fit proxy — GO = the item is screened in / surfaced (written up in Daily.md,
-# shortlisted, or advanced to PART 2, whether or not it goes on to clear a downstream B/E spec floor),
-# NO-GO = the item is screened out entirely (rejected as noise) OR surfaced-but-not-routed as a B/E entry
-# candidate by the spec-floor rail — with the real significant/below_spec_floor/legacy_rule_pass outcome
-# spelled out in the parenthetical, exactly like PA-*'s GO/NO-GO proxy pattern above. A future pass that
-# gives run_golden.py a native research_screener CATEGORY_TOKENS entry would be a strict improvement over
-# this proxy but is out of scope here.
+# §19), so RS-* scenarios use GO/NO-GO as the closest-fit proxy — GO = the item is screened in / surfaced
+# (written up in Daily.md, shortlisted, or advanced to PART 2, whether or not it goes on to clear a
+# downstream B/E spec floor), NO-GO = the item is screened out entirely (rejected as noise) OR
+# surfaced-but-not-routed as a B/E entry candidate by the spec-floor rail — with the real
+# significant/below_spec_floor/legacy_rule_pass outcome spelled out in the parenthetical, exactly like
+# PA-*'s GO/NO-GO proxy pattern above. Category `research_screener` IS scoped in run_golden.py's
+# CATEGORY_TOKENS map to just {GO, NO-GO} too (same 2026-07-26 fix, same reasoning as park_allocator's
+# above). A future pass giving run_golden.py a fully NATIVE research_screener vocabulary would be a
+# further improvement but is a separate, larger change than the scoping fix above.
 #
 # MAINTENANCE: a scenario is pinned to the prose as read on 2026-07-11. If a strategy's machinery is
 # legitimately revised pre-launch, or a NEW strategy is added (additive, per Strategy.md rev 37), add

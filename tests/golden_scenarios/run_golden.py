@@ -76,6 +76,13 @@ CATEGORY_TOKENS = {
     "strategy_a_entry": {"GO", "NO-GO"},
     "strategy_d_entry": {"GO", "NO-GO"},
     "strategy_e_entry": {"GO", "NO-GO"},
+    # GO/NO-GO is a proxy vocabulary here too (there is no native park-allocator/research-screener
+    # decision token — see scenarios.yaml's "VOCABULARY NOTE ON PA-*"/"...RS-*" headers) but the proxy
+    # still needs scoping like every other category: without an entry here the live model was offered
+    # all six DECISION_LEAD_TOKENS and would pick a correct-sentiment/wrong-vocabulary answer (e.g.
+    # ACTIVATE instead of GO), scoring as a flip against nothing but vocabulary (fixed 2026-07-26).
+    "park_allocator": {"GO", "NO-GO"},
+    "research_screener": {"GO", "NO-GO"},
 }
 
 # ---- Gemini (Google AI Studio) live-eval provider (2026-07-17) ----
@@ -433,14 +440,23 @@ def run_live(scenarios, scenario_ids=None):
         actual_decision = actual_line.split(":", 1)[1].strip() if ":" in actual_line else reply.strip()
         expected_tok = _leading_token(sc.get("expected_decision"))
         actual_tok = _leading_token(actual_decision)
-        match = expected_tok is not None and expected_tok == actual_tok
+
+        if actual_tok is None:
+            # The model replied (no exception) but the answer didn't start with ANY recognized
+            # DECISION_LEAD_TOKENS token -- it ignored the "<one of ...>" instruction and invented its
+            # own word. That's a format-following failure, not a decision disagreement: there is no real
+            # expected-vs-actual call to adjudicate, so it must not be blended into the FLIP bucket below
+            # (which proposes a prose-regression review) or silently miscounted as one.
+            match = "UNPARSEABLE"
+        else:
+            match = expected_tok is not None and expected_tok == actual_tok
 
         results.append({
             "id": sid, "expected": sc.get("expected_decision"), "actual": actual_decision,
             "match": match, "reply": reply, "model": model_used,
         })
 
-        if not match:
+        if match is False:
             print(
                 f"::warning file=tests/golden_scenarios/scenarios.yaml::{sid} decision flip — "
                 f"expected '{sc.get('expected_decision')}' got '{actual_decision}'. "
@@ -452,6 +468,12 @@ def run_live(scenarios, scenario_ids=None):
                 actual=actual_decision,
                 governing_files=sc.get("governing_files"),
             ))
+        elif match == "UNPARSEABLE":
+            print(
+                f"::warning::{sid}: model reply had no recognized decision token — got '{actual_decision}'. "
+                f"Not filed as a decision flip (no expected-vs-actual call to adjudicate); no "
+                f"queue_events INSERT emitted."
+            )
 
     return results
 
@@ -501,10 +523,19 @@ def main():
 
     n_match = sum(1 for r in results if r["match"] is True)
     n_flip = sum(1 for r in results if r["match"] is False)
+    n_unparseable = sum(1 for r in results if r["match"] == "UNPARSEABLE")
     n_err = sum(1 for r in results if r["match"] is None)
-    print(f"\nLive results: {n_match} match, {n_flip} flip(s), {n_err} error(s) out of {len(results)}.")
+    print(f"\nLive results: {n_match} match, {n_flip} flip(s), {n_unparseable} unparseable, "
+          f"{n_err} error(s) out of {len(results)}.")
     for r in results:
-        status = "MATCH" if r["match"] else ("ERROR" if r["match"] is None else "FLIP")
+        if r["match"] is True:
+            status = "MATCH"
+        elif r["match"] is False:
+            status = "FLIP"
+        elif r["match"] == "UNPARSEABLE":
+            status = "UNPARSEABLE"
+        else:
+            status = "ERROR"
         print(f"  [{status}] {r['id']}: expected={r['expected']!r} actual={r['actual']!r}")
 
     # Advisory only — see module docstring. A flip or an error is reported (already emitted as
