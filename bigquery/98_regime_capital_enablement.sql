@@ -21,7 +21,8 @@
 --   state.regime_capital_debt              — swept-out minus restored, per strategy
 --   state.regime_capital_sync_pending      — pre-computed SWEEP/RESTORE movements for D2a
 
--- Kill-switch (analog of ops.park_control / ops.arsenal_control / ops.trading_control).
+-- Kill-switch (analog of ops.arsenal_control / ops.trading_control; ops.park_control, a third
+-- former analog, was retired 2026-07-26 by bigquery/108_park_allocator_immediate_binding.sql).
 CREATE TABLE IF NOT EXISTS `stock-trading-498512.ops.capital_control`
 (
   control_id STRING DEFAULT GENERATE_UUID(),

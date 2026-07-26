@@ -62,13 +62,13 @@
 # VOCABULARY NOTE ON PA-* (park-allocator scenarios). run_golden.py's offline hard gate only recognizes
 # expected_decision leading tokens GO | NO-GO | CONTINUE | TERMINATE | ACTIVATE | DO-NOT-ACTIVATE
 # (DECISION_LEAD_TOKENS) — there is no native park-allocator vocabulary (the real status values are
-# BOUND / PENDING / HOLD / RECORD_ONLY, per Claude_Task_Plan.md D1's AUTONOMY-STAGE BRANCH). Category
+# BOUND / HOLD, per the immediate-binding redesign, owner directive 2026-07-26). Category
 # `park_allocator` is deliberately NOT added to run_golden.py's CATEGORY_TOKENS map (that file is out of
 # scope for this change), so PA-* scenarios use GO/NO-GO as the closest-fit proxy — GO = a capital-moving
 # switch actually converts this cycle (status='BOUND' with vehicle != current), NO-GO = nothing executes
-# this cycle (KEEP / HOLD / PENDING) — with the real status/outcome spelled out in the parenthetical,
+# this cycle (KEEP / HOLD) — with the real status/outcome spelled out in the parenthetical,
 # exactly like KT-04/KT-07's "CONTINUE (routes to review, not direct terminate)" pattern. A future pass
-# that gives run_golden.py a native park_allocator CATEGORY_TOKENS entry (e.g. BOUND/PENDING/HOLD) would
+# that gives run_golden.py a native park_allocator CATEGORY_TOKENS entry (e.g. BOUND/HOLD) would
 # be a strict improvement over this proxy but is out of scope here.
 #
 # VOCABULARY NOTE ON RS-* (research-significance-screen scenarios). run_golden.py's offline hard gate
@@ -468,17 +468,14 @@ scenarios:
 
   # ---- AI Park Allocator daily status-computation rule (PA-*) ----
   # Added 2026-07-18 (PARK_ROUTER_DESIGN.md v2 §10 Phase 0's golden-scenario fixture requirement --
-  # "crisis call -> binds same day; low-conviction ambiguity -> KEEP; connectors-down -> HOLD; re-risk
-  # without concurrence -> stays PENDING"). Every scenario below assumes loop `park_allocator`
-  # (ops/autonomy_levels.yaml) has already been promoted to autonomy stage `active_auto` -- Claude_
-  # Task_Plan.md's AUTONOMY-STAGE BRANCH is explicit that while the loop sits at its current build stage
-  # `shadow`, EVERY call logs status='RECORD_ONLY' unconditionally and D2 converts nothing regardless of
-  # vehicle/conviction, which would make all four scenarios collapse to the same trivial answer and
-  # defeat the point of pinning the underlying conviction-gate / cadence-rail rule ahead of promotion
-  # (exactly the ahead-of-rollout fixture role PARK_ROUTER_DESIGN.md's Phase 0 describes). Also assumes
-  # `ops.park_control` is `enabled=TRUE` with no `forced_vehicle` pin and evidence is otherwise fresh
-  # unless a scenario says otherwise. See this file's header VOCABULARY NOTE ON PA-* for why GO/NO-GO
-  # (not a native park-status token) is the leading `expected_decision` vocabulary used here.
+  # "crisis call -> binds same day; low-conviction ambiguity -> KEEP; connectors-down -> HOLD"; v2 also
+  # gated re-risk on next-session concurrence, since retired -- see below). Updated 2026-07-26 for the
+  # immediate-binding redesign (owner directive; PARK_ROUTER_DESIGN.md v3 status block): loop
+  # `park_allocator` (ops/autonomy_levels.yaml) is `active_auto` with no staged build-mode at all --
+  # every well-formed PARK ALLOCATION CALL binds same-day, any direction, any conviction, and D2
+  # converts it that same evening. Evidence is assumed fresh unless a scenario says otherwise. See this
+  # file's header VOCABULARY NOTE ON PA-* for why GO/NO-GO (not a native park-status token) is the
+  # leading `expected_decision` vocabulary used here.
 
   - id: PA-01
     category: park_allocator
@@ -486,19 +483,17 @@ scenarios:
       The park's current vehicle is VOO (risk_tier 4). Today's PARK ALLOCATION CALL evidence:
       state.current_regime's FUNDAMENTAL_AXIS shock_overlay reads 'acute', live VIX closes at 34.5, and
       hy_oas has widened sharply intraday per today's own scanned developments. D1 judges HIGH conviction
-      (conviction_pct 90) that the park should switch to SGOV (risk_tier 0) -- a de-risk. No
-      forced_vehicle pin is set, the switch is exempt from the re-risk/lateral budget (it is a de-risk),
-      and there is no active post-de-risk cooldown in effect. What status does today's call resolve to,
-      and does it convert the park to SGOV this evening?
+      (conviction_pct 90) that the park should switch to SGOV (risk_tier 0) -- a de-risk. What status
+      does today's call resolve to, and does it convert the park to SGOV this evening?
     governing_files: [Operating_Protocols.md, Claude_Task_Plan.md]
     expected_decision: "GO (status='BOUND' -- de-risk converts same day via D2, no concurrence required)"
     rationale: >
-      Operating_Protocols.md §13.F conviction gates: "A de-risking call (to a lower risk_tier) binds at
-      MEDIUM+ conviction" -- HIGH clears MEDIUM+. Cadence rail 1: "De-risk binds same day. A MEDIUM+
-      conviction call to a lower risk_tier converts that evening (D2) -- flight to safety is never queued,
-      never blocked by budget." Claude_Task_Plan.md D2's PARK ALLOCATION CONVERSION step 6: status='BOUND'
-      and vehicle (SGOV) differs from state.park_policy_current.vehicle (VOO) -> D2 re-verifies the rails
-      and, on a clean pass, INSERTs the events.park_policy_changes row today. GO.
+      Operating_Protocols.md §13.F (immediate binding, owner directive 2026-07-26): every well-formed
+      SWITCH call binds same-day, any direction, any conviction -- a HIGH-conviction de-risk clears
+      trivially, with no conviction gate or budget/cooldown rail left to check. Claude_Task_Plan.md D2's
+      PARK ALLOCATION CONVERSION step: status='BOUND' and vehicle (SGOV) differs from
+      state.park_policy_current.vehicle (VOO) -> menu-membership check -> D2 INSERTs the
+      events.park_policy_changes row and crafts the SELL of the vacated vehicle today. GO.
 
   - id: PA-02
     category: park_allocator
@@ -513,12 +508,13 @@ scenarios:
     governing_files: [Operating_Protocols.md, Claude_Task_Plan.md]
     expected_decision: "NO-GO (KEEP -- status='BOUND' but vehicle is unchanged, so nothing executes)"
     rationale: >
-      Operating_Protocols.md §13.F: "Default-KEEP on ambiguity -- the same high-bar, default-NO posture as
-      D1's existing regime-router-review flag," logged every day including KEEP days. Claude_Task_Plan.md
-      D2's PARK ALLOCATION CONVERSION step 6, second bullet: "If status='BOUND' and the call's vehicle
-      already equals state.park_policy_current.vehicle (a bound KEEP) -- also do nothing; there is no
-      switch to execute." A KEEP call has no risk_tier change to gate, so it resolves 'BOUND' trivially,
-      but VOO stays VOO -- no capital-moving action occurs. NO-GO.
+      Operating_Protocols.md §13.F: "Default-KEEP on ambiguity" is D1's own judgment discipline, not a
+      mechanical conviction gate -- when D1 sees nothing compelling in either direction it simply calls
+      KEEP, logged every day like any other call. Claude_Task_Plan.md D2's PARK ALLOCATION CONVERSION
+      step: "If status='BOUND' and the call's vehicle already equals state.park_policy_current.vehicle
+      (a bound KEEP) -- do nothing; there is no switch to execute." A KEEP call resolves 'BOUND' trivially
+      (every well-formed call binds), but VOO stays VOO -- no capital-moving action occurs, regardless of
+      the conviction number attached. NO-GO.
 
   - id: PA-03
     category: park_allocator
@@ -531,36 +527,35 @@ scenarios:
     governing_files: [Operating_Protocols.md, Claude_Task_Plan.md]
     expected_decision: "NO-GO (HOLD -- status='HOLD', a park_router warning alert is raised, VOO continues unchanged)"
     rationale: >
-      Operating_Protocols.md §13.F cadence rail 6: "Connectors down / evidence ungatherable -> no call
-      binds. HOLD + a warning alert (park_router category, auto-resolvable) -- the AI decides with
-      evidence or not at all." Claude_Task_Plan.md's CONNECTORS-DOWN / EVIDENCE UNGATHERABLE clause: "no
-      call binds -- log status='HOLD' and CALL ops.sp_raise_alert('warning','D1','park_router', 'evidence
-      ungatherable -- park allocation HOLD', ...)." D2's PARK ALLOCATION CONVERSION step 6, first bullet:
-      "If status != 'BOUND' (...'HOLD' on stale evidence / connectors-down) -- do nothing." VOO remains the
-      park vehicle by default, not by an evidenced KEEP judgment. NO-GO.
+      Operating_Protocols.md §13.F: "Connectors down / evidence ungatherable -> no call binds. HOLD + a
+      warning alert (park_router category, auto-resolvable) -- the AI decides with evidence or not at
+      all." Claude_Task_Plan.md's CONNECTORS-DOWN / EVIDENCE UNGATHERABLE clause: "no call binds -- log
+      status='HOLD' and CALL ops.sp_raise_alert('warning','D1','park_router', 'evidence ungatherable --
+      park allocation HOLD', ...)." D2's PARK ALLOCATION CONVERSION step: "If status != 'BOUND' (...
+      'HOLD' on stale evidence / connectors-down) -- do nothing." VOO remains the park vehicle by
+      default, not by an evidenced KEEP judgment. NO-GO.
 
   - id: PA-04
     category: park_allocator
     situation: >
-      The park's current vehicle is GOVT (risk_tier 1) -- the last de-risk execution into GOVT completed
-      20 trading days ago (outside the 5-trading-day post-de-risk cooldown), and state.park_switch_budget
-      shows 0 of the 2-per-30-day re-risk/lateral budget used. Today's PARK ALLOCATION CALL evidence leads
-      D1 to HIGH conviction (conviction_pct 88) that the park should move to VOO (risk_tier 4) -- a
-      re-risk. No prior trading day's PARK ALLOCATION CALL proposed this same VOO switch, so there is no
-      existing PENDING row to compare against -- this is the first session to propose it. What status does
-      today's call resolve to, and does the park convert to VOO today?
+      The park's current vehicle is GOVT (risk_tier 1). Today's PARK ALLOCATION CALL evidence leads D1
+      to HIGH conviction (conviction_pct 88) that the park should move to VOO (risk_tier 4) -- a
+      re-risk. What status does today's call resolve to, and does the park convert to VOO today?
     governing_files: [Operating_Protocols.md, Claude_Task_Plan.md]
-    expected_decision: "NO-GO (PENDING -- recorded awaiting tomorrow's independently-derived concurrence, does not convert today)"
+    expected_decision: "GO (status='BOUND' -- re-risk converts same day via D2, no concurrence required)"
     rationale: >
-      Operating_Protocols.md §13.F conviction gates: "A re-risking call (to a higher risk_tier) binds only
-      at HIGH conviction, and even then only through the concurrence rail below." Cadence rail 2: "A
-      HIGH-conviction call to a higher risk_tier is recorded PENDING; it binds only if the NEXT trading
-      day's D1 -- instructed to derive its own call BEFORE reading the pending one -- independently lands
-      on the same vehicle. Two fresh-context sessions must agree before the book re-risks." No such prior
-      independently-matching session exists yet, so today's HIGH-conviction call cannot itself satisfy
-      concurrence -- it is the FIRST of the two required reads. Claude_Task_Plan.md's status enumeration:
-      "'PENDING' (a re-risk awaiting tomorrow's concurrence)." D2's PARK ALLOCATION CONVERSION step 6,
-      first bullet: status != 'BOUND' -> do nothing. GOVT remains the park vehicle today. NO-GO.
+      Operating_Protocols.md §13.F (immediate binding, owner directive 2026-07-26): every well-formed
+      SWITCH call binds same-day, any direction, any conviction -- a HIGH-conviction re-risk binds
+      exactly like PA-01's HIGH-conviction de-risk; the v2 concurrence rail (two independent sessions
+      required to agree before a re-risk could convert) is retired, along with the re-risk/lateral
+      budget and post-de-risk cooldown it used to interact with. Claude_Task_Plan.md D2's PARK
+      ALLOCATION CONVERSION step: status='BOUND' and vehicle (VOO) differs from
+      state.park_policy_current.vehicle (GOVT) -> menu-membership check -> D2 INSERTs the
+      events.park_policy_changes row and crafts the SELL of GOVT today. This is a deliberate
+      expected_decision change from this fixture's prior pinning (NO-GO/PENDING), made under this
+      file's own MAINTENANCE policy: owner directive 2026-07-26 (events.decision_log
+      entry_type='loop-promotion', park_allocator immediate-binding redesign, 2026-07-26;
+      PARK_ROUTER_DESIGN.md v3 status block). GO.
 
   # ---- AI Research-Significance Screen scenarios (RS-*) ----
   # Added 2026-07-19 (Redesign C -- owner reversal of the same-day DEFER verdict; AI_DECISION_REDESIGN.md
@@ -568,11 +563,12 @@ scenarios:
   # (Operating_Protocols.md §19) -- these fixtures pin only the Layer 2 AI significance judgment and the
   # spec-floor rail (both §19), not the population-rail arithmetic itself (that stays mechanical and
   # untested here by design). Also assumes loop `research_screener` (ops/autonomy_levels.yaml) sits at its
-  # build ceiling `active_auto` from the first call -- unlike `park_allocator`'s shadow-first build, a
-  # screen decision moves research attention, never capital, so there is no shadow-vs-live branch to pin
-  # the way PA-* pins park_allocator's build-stage branch. See this file's header VOCABULARY NOTE ON RS-*
-  # for why GO/NO-GO (not a native research-screener status token) is the leading `expected_decision`
-  # vocabulary used here.
+  # build ceiling `active_auto` from the first call -- a screen decision moves research attention, never
+  # capital, so there was never a shadow-vs-live branch to pin the way PA-* originally pinned
+  # park_allocator's build-stage branch (park_allocator has since converted to the same active_auto,
+  # no-staged-build posture, 2026-07-26 immediate-binding redesign -- see the PA-* header above). See this
+  # file's header VOCABULARY NOTE ON RS-* for why GO/NO-GO (not a native research-screener status token)
+  # is the leading `expected_decision` vocabulary used here.
 
   - id: RS-01
     category: research_screener

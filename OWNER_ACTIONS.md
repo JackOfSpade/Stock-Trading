@@ -10,6 +10,45 @@ act. Dated passes below; most recent first.
 
 ---
 
+# 2026-07-26 AI Park Allocator — immediate-binding redesign (owner directive)
+
+## Z. Park allocator converts shadow → active_auto, immediate binding — no owner action required
+
+**What changed:** per your in-session directive 2026-07-26 ("aim for fastest execution, assume
+the ai is correct on first analysis and accept the risk that ai may be wrong at times... We can
+always pull out of a trade at any time (or the inverse, go back into a trade at any time)... that's
+fine with me" — and, on `ops.park_control`, "human would never do this manually. remove this
+feature."), the `park_allocator` loop converts directly from `shadow` to `active_auto`: every D1
+park call now binds same-day — any direction, any conviction — and D2 converts it the same
+evening. v2's shadow burn-in, promotion gate, cadence rails (re-risk concurrence, lateral-pending,
+2-per-30d budget, 5-day cooldown), conviction binding gates, the `ops.park_control` kill-switch,
+and the park-specific soft-breach re-risk block are all retired. Kept unchanged: menu allowlist,
+connectors-down HOLD, order guard + IBKR confirm-tap, daily KEEP logging, W5 scorecard vs three
+counterfactuals, Q1 retro, park accounting.
+
+**Triggering defect, for the record:** the v2 promotion gate
+(`state.park_allocator_promotion_readiness`) counted missing call-days over the *entire*
+since-inception window with no recovery path; the 2026-07-23/24 platform-trigger outage left 2
+permanently-missing days (verified live 2026-07-26:
+`n_call_days=5, n_missing_trading_days=2, ready=false`), so `ready` could never flip TRUE — the
+shadow phase was unpromotable as built. This directive supersedes fixing the gate: the gate is
+dropped, not repaired.
+
+**No owner action required.** `ops.park_control` (the manual owner freeze/pin lever) is retired
+per your explicit instruction — there is no replacement lever; owner recourse going forward is a
+direct instruction in any session, not a control table. Everything else self-applies via the
+numbered SQL file below; the residual system-wide IBKR order-confirm tap is unchanged.
+
+**Where it landed:** `bigquery/108_park_allocator_immediate_binding.sql` (4 DROPs:
+`state.park_allocator_promotion_readiness`, `state.park_switch_budget`,
+`state.park_control_latest`, `ops.park_control`); `bigquery/75`/`63` v8 heartbeat coverage;
+`Operating_Protocols.md` §13.F rewrite; `Claude_Task_Plan.md` D1/D2/W5 steps;
+`ops/autonomy_levels.yaml` (`park_allocator` → `active_auto`); `PARK_ROUTER_DESIGN.md` v3 status
+block. Full rationale and the removed/kept inventory: `PARK_ROUTER_DESIGN.md`'s status block and
+§12b.
+
+---
+
 # 2026-07-20 Code-quality audit — `pctCellHtml_` zero-boundary swatch fix (`weekly_report.gs` v6 → v7)
 
 ## [DONE 2026-07-20 — deployed + verified live] Y. Redeploy `weekly_report.gs` (v6 → v7, `pctCellHtml_` zero-boundary swatch fix) via Claude-in-Chrome

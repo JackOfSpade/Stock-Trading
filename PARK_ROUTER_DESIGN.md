@@ -1,12 +1,23 @@
 # DESIGN PROPOSAL v2 — Active Park Management ("AI Park Allocator")
 
-Status: **IMPLEMENTED 2026-07-19** (header corrected 2026-07-20 — it read "DESIGN ONLY — not
-implemented" long after the build landed, and a future audit could wrongly dismiss this file as
-unbuilt intent). Live surfaces: `Operating_Protocols.md` §13.F, `bigquery/91_park_signal_layer.sql`
-/ `92_park_allocator.sql` / `93`, the PARK ALLOCATION CALL step in `Claude_Task_Plan.md` +
-`task_plan/D1.md`, and the PARK ALLOCATION CONVERSION step in D2. Loop `park_allocator` is at
-autonomy stage `shadow` (calls logged `RECORD_ONLY`, no conversion) — that is a staging gate on
-the *decision*, not evidence the design is unbuilt. Originally raised for owner review 2026-07-18.
+Status: **v3 — IMMEDIATE BINDING (owner directive 2026-07-26), IMPLEMENTED**. v2's shadow
+burn-in, promotion gate, cadence rails (re-risk concurrence, lateral-pending, 2-per-30d
+budget, 5-day cooldown), conviction binding gates, the `ops.park_control` kill-switch, and
+the park-specific soft-breach re-risk block are ALL RETIRED
+(`bigquery/108_park_allocator_immediate_binding.sql`; loop `park_allocator` = `active_auto`).
+Every D1 park call now binds same-day — any direction, any conviction — and D2 converts it
+the same evening; the only non-binding outcomes are KEEP and the connectors-down HOLD. The
+owner's stated risk posture: assume the first analysis is right, accept wrong-call cost, rely
+on next-session reversibility rather than confirmation delays. Triggering defect, for the
+record: the v2 promotion gate was permanently latched —
+`state.park_allocator_promotion_readiness` counted missing call-days since inception with no
+recovery window, so the 2026-07-23/24 platform outage (2 missed days) made `ready`
+unreachable forever (verified live 2026-07-26: n_call_days=5, n_missing_trading_days=2,
+ready=false). The owner directive removed the gate rather than repairing it. Live surfaces:
+`Operating_Protocols.md` §13.F (rewritten),
+`Claude_Task_Plan.md` D1/D2/W5 steps, `ops/autonomy_levels.yaml` (`active_auto`),
+`bigquery/108`. §§7/8/10 below are v2-HISTORICAL — kept as the design-rationale record of
+the rails this directive removed.
 
 **This file is now a design-rationale record, not the operative spec.** It has been edited in
 place after its stated date (see the 2026-07-19 CORRECTION in §5 and the owner-approved tightening
@@ -36,12 +47,12 @@ invalidation criteria, logged and executed through the existing park machinery.
 | Decision scope | Full: crisis assessment, risk level, duration stance, credit stance, tax angle — all judgment. The AI picks any menu instrument for any articulable reason |
 | Menu (allowlist, a rail not a decision) | CASH, SGOV, GOVT, IEF, TLT, LQD, MUB, HYG, PFF, AOR, VOO, VTI — one liquid wrapper per class the owner enumerated |
 | Book structure | Single vehicle at a time (execution/accounting plumbing, not a decision constraint — §5) |
-| Anti-churn | Mechanical *cadence* rails around the AI's decisions (de-risk binds same day; re-risk needs next-session concurrence), SISA-style — §7 |
+| Anti-churn | v3 (2026-07-26): NONE — every call binds same-day, any direction, any conviction. v2's cadence rails are retired; see §7 (v2-HISTORICAL) |
 | Data | `events.signal_marks` layer kept from v1 — now the AI's evidence base + evaluation substrate, not a rule input |
 | Accounting | Unchanged from v1: generalized multi-ticker park views, `analytics.park_nav_daily` (park TWR), vehicle-aware reconciliation |
-| Kill-switch | `ops.park_control` (freeze / pin a vehicle), house append-only pattern |
+| Kill-switch | RETIRED 2026-07-26 (owner directive: "human would never do this manually. remove this feature."). No replacement lever — owner recourse is a direct instruction, not a control table; see §8 |
 | Evaluation | W5 weekly: AI's park TWR vs **three** counterfactuals — 100% SGOV, 100% VOO, and the v1 rule table running record-only in shadow |
-| Rollout | 10-trading-day shadow (AI calls logged, no orders) → mechanical auto-promotion via W5 |
+| Rollout | None — registered directly at `active_auto` 2026-07-26 (immediate-binding redesign; the shadow/promotion machinery was permanently latched, see status block above); see §10 (v2-HISTORICAL) |
 
 Today's tape (VIX ~15.7, market near highs, shock latent-but-building): the AI would very
 likely call VOO / KEEP — adoption is a no-trade event. But unlike v1, if the AI judges the
@@ -97,7 +108,8 @@ is the natural last analytical output of that scan, not a new analysis surface:
 3. **Default-KEEP on ambiguity** — the same "high bar, default NO" posture as D1's
    existing router-review flag. Conviction gates: de-risking calls bind at MEDIUM+,
    re-risking calls at HIGH (asymmetry: cheap to be safely wrong in SGOV, expensive to be
-   wrongly brave in VOO).
+   wrongly brave in VOO). *(v2; retired 2026-07-26 — any conviction binds. Default-KEEP
+   above stays as AI-judgment discipline, not a mechanical gate.)*
 4. **Logged**: `events.decision_log` `entry_type='park-allocation'` (every day, including
    KEEP days — the daily no-change record is what makes calibration and the Q1
    retrospective possible), structured readings snapshot in `fields` JSON. View
@@ -148,9 +160,10 @@ there, before any order is crafted. Menu changes = numbered SQL + Operating_Prot
 edit + decision-log + foundation review.
 
 A mechanical `risk_tier` (0 CASH/SGOV · 1 GOVT/IEF/MUB · 2 LQD/TLT · 3 HYG/PFF/AOR ·
-4 VOO/VTI) is attached to each ticker — **not** used to pick vehicles, only to classify a
-switch's *direction* (de-risk vs re-risk) for the cadence rails (§7) and breaker
-interplay (§8).
+4 VOO/VTI) is attached to each ticker — **not** used to pick vehicles. *(v3, 2026-07-26: the
+cadence rails (§7) and breaker interplay (§8) that once read this direction are retired;
+`risk_tier` now classifies a switch's direction only for W5 scorecard/counterfactual
+evaluation — §9.)*
 
 ## 5. Book structure: single vehicle at a time (plumbing, not a decision limit)
 
@@ -162,7 +175,7 @@ and AOR already gives the AI a one-ticker blend. The AI expresses *risk level* b
 the instrument, not by weighting legs.
 
 Execution of a switch (2026-07-19 tightening, owner-approved: the FIRST leg moves from
-§13.E to D2 itself, same evening as the flip — see §7 rail 1): the policy row flips at
+§13.E to D2 itself, same evening as the flip — binds same day (v3)): the policy row flips at
 decision time and D2 immediately crafts the full SELL of the vehicle the switch just
 vacated in that same run — menu-membership and order-guard checked there — so the SELL
 is already working at the **next** open instead of the one after. Generalized §13.E
@@ -193,6 +206,10 @@ substrate for the three counterfactuals (§9). Nothing in the decision path cons
 mechanically.
 
 ## 7. Anti-churn: mechanical rails around AI decisions, SISA-style
+
+**[v2-HISTORICAL — rails retired 2026-07-26; only the connectors-down HOLD (rail 6) survives.
+Kept below as the design-rationale record of what this directive removed — see the status
+block and §12b.]**
 
 The SISA precedent is the model: the AI makes every decision; rails bound only **cadence
 and blast radius** (as N-floor/ceiling and cooldowns do for strategy adoption). No rail
@@ -234,6 +251,10 @@ full-book taxable round trip.
 
 ## 8. Safety rails, kill-switch, breaker interplay (unchanged from v1 in substance)
 
+**[v2-HISTORICAL — the `ops.park_control` kill-switch bullet and the soft-breach re-risk
+block below are retired 2026-07-26 (owner directive). The foundation-change-review and
+wash-sale-monitoring bullets remain OPERATIVE, unchanged.]**
+
 - **`ops.park_control`** (append-only, latest-wins, seeded open): `enabled BOOL`
   (FALSE = allocator records-only; sweeps continue on current vehicle),
   `forced_vehicle STRING` (owner pins; AI records disagreement daily), `reason`,
@@ -269,13 +290,16 @@ counterfactuals** from feature inception (all computable from `signal_marks`):
    mechanical classification that never trades. If AI judgment can't beat a lookup table,
    the owner should know.
 
-W5 weekly: park TWR vs all three, switch/budget usage, concurrence outcomes (how often a
-pending re-risk died on day 2 — the whipsaw brake's hit rate), conviction calibration
-(conviction_pct vs realized next-20-day outcome, feeding the house calibration concept).
+W5 weekly: park TWR vs all three, conviction calibration (conviction_pct vs realized
+next-20-day outcome, feeding the house calibration concept). *(v3, 2026-07-26: switch/budget
+usage and concurrence-outcome metrics dropped — those rails no longer exist.)*
 Q1 quarterly: park-allocation retrospective bullet — hindsight review of every switch and
 notable KEEP, theater/bias check on rationales, alongside the existing regime retro.
 
 ## 10. Autonomy staging & rollout
+
+**[v2-HISTORICAL — shadow/promotion machinery retired 2026-07-26. The loop is registered
+directly at `active_auto`; see the status block and §12b.]**
 
 `ops/autonomy_levels.yaml` loop `park_allocator` (ceiling `active_auto`), starting
 `shadow` per house precedent, with mechanical self-promotion (no owner gate, SISA
@@ -329,14 +353,30 @@ and none is added.
 | `ops/weekly_report/weekly_report.gs` | Park section (version bump, pinned-SHA redeploy) |
 | One-time | signal_marks backfill; 12-ticker onboarding (foundation §A, contract_id cache, commission/dividend bootstrap) |
 
+## 12b. v3 change inventory (2026-07-26)
+
+Immediate-binding redesign (owner directive 2026-07-26) — what changed on top of the v2 build
+above. See the status block for the one-line story and the triggering defect.
+
+| Surface | Change |
+|---|---|
+| `bigquery/108_park_allocator_immediate_binding.sql` (new) | 4 DROPs: `state.park_allocator_promotion_readiness`, `state.park_switch_budget`, `state.park_control_latest`, `ops.park_control`; superseded/retired markers added to `bigquery/92`'s affected sections |
+| `bigquery/75_scheduled_query_wrappers.sql` + `bigquery/63_scheduled_query_version_registry.sql` | `sp_sq_cadence_check` v7→v8: `loop:park_allocator` added to the active_auto required-heartbeat lists + a dedicated 3-trading-day daily-heartbeat staleness check |
+| `Operating_Protocols.md` §13.F | Rewritten: rails/conviction-gates/`ops.park_control` clauses removed; menu, connectors-down HOLD, default-KEEP discipline, daily logging, W5/Q1 evaluation text kept; `BOUND`/`HOLD` status vocabulary |
+| `Claude_Task_Plan.md` | D1: emits `status='BOUND'` directly, no pending-read; D2: conversion strips `park_control`/budget/cooldown/concurrence/`entry_staging_allowed` reads; W5: PROMOTION CHECK bullet removed, scorecard stays |
+| `ops/autonomy_levels.yaml` | `park_allocator` loop: `stage: shadow` → `active_auto`; `gate_to_next_stage` becomes terminal "authorized at ceiling" prose with compensating controls |
+| `tests/golden_scenarios/scenarios.yaml` | PA-1/PA-2/PA-3 rationale reframed (no rails/budget/cadence-numbering assumptions); PA-4 flips to `GO (status='BOUND')` — re-risk now converts same day, no concurrence |
+
 ## 13. Open questions for the owner
 
 1. **Menu breadth**: all 12 tickers incl. CASH as proposed — or trim (e.g. drop
    MUB/PFF)? Each is one-time onboarding cost only.
-2. **Cadence rails** (§7.2–7.5: re-risk concurrence, budget, cooldown): keep as proposed
-   (recommended — SISA-style rails around AI judgment), or remove for fully
-   unconstrained AI?
-3. **Conviction gates** (MEDIUM+ to de-risk, HIGH to re-risk): keep, or let any-conviction
-   calls bind?
-4. **Two-leg splits** (§5): defer (recommended) or include in v2?
-5. **Shadow length**: 10 trading days then mechanical auto-promote (recommended)?
+2. **RESOLVED by owner directive 2026-07-26.** *Cadence rails* (§7.2–7.5: re-risk
+   concurrence, budget, cooldown): removed entirely — fully unconstrained AI, not the
+   "keep them" recommendation this doc originally made.
+3. **RESOLVED by owner directive 2026-07-26.** *Conviction gates* (MEDIUM+ to de-risk,
+   HIGH to re-risk): removed — any-conviction calls bind.
+4. **Two-leg splits** (§5): defer (recommended) or include in v2? — still open.
+5. **RESOLVED by owner directive 2026-07-26.** *Shadow length*: moot — the shadow phase
+   itself is abolished; the loop registered directly at `active_auto` (no burn-in, no
+   auto-promotion mechanics).

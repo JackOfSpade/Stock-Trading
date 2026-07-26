@@ -88,6 +88,11 @@ SELECT * FROM UNNEST([
 -- >conversion step, not a fatal top-of-routine abort) — see PARK_ROUTER_DESIGN.md §8. This is a
 -- deliberate scope choice for this file, not an oversight: do not add an assert procedure here
 -- without updating the D2 conversion-clause prose in the same change.
+-- DROPPED by bigquery/108_park_allocator_immediate_binding.sql (2026-07-26 — immediate-binding
+-- redesign, owner directive: "human would never do this manually. remove this feature." No
+-- replacement lever; owner recourse going forward is a direct instruction in any session, not a
+-- control table). Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
+-- re-create live — 108 drops both this table and state.park_control_latest below.
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS `stock-trading-498512.ops.park_control` (
   control_id STRING DEFAULT GENERATE_UUID(),
@@ -191,6 +196,10 @@ LIMIT 1;
 -- GROUP BY) — CROSS JOINed at the end (1 row x 1 row = 1 row) rather than aggregated together, so
 -- the view keeps its "must return one sane row even with <2 policy rows, or 0 park-allocation calls
 -- logged yet" contract without a GROUP BY/aggregation error on the non-aggregated cooldown columns.
+-- DROPPED by bigquery/108_park_allocator_immediate_binding.sql (2026-07-26 — immediate-binding
+-- redesign, owner directive: every SWITCH now binds same-day at any conviction, so there is no
+-- budget/cooldown left to measure). Kept here, unmodified, for DR-rebuild apply-in-order
+-- reference only. DO NOT re-create live — 108 drops it.
 -- ============================================================================
 CREATE OR REPLACE VIEW `stock-trading-498512.state.park_switch_budget` AS
 WITH epoch AS (
@@ -319,6 +328,14 @@ FROM classified;
 -- n_call_days=0 and ready=FALSE when no park-allocation call has ever been logged (first_call_date
 -- NULL in that case; NULL BETWEEN ... is UNKNOWN, so the `missing` CTE's COUNT(*) still safely
 -- yields 0 over zero matched calendar rows rather than propagating NULL or vanishing).
+-- DROPPED by bigquery/108_park_allocator_immediate_binding.sql (2026-07-26 — immediate-binding
+-- redesign, owner directive). DEFECT ON RECORD: this gate required n_missing_trading_days = 0
+-- over the ENTIRE window since first_call_date with no recovery/rolling mechanism — the
+-- 2026-07-23/24 platform-trigger outage left 2 permanently-missing call days (verified live
+-- 2026-07-26: n_call_days=5, n_missing_trading_days=2, ready=false), so ready could NEVER become
+-- TRUE; the owner directive supersedes fixing it, the gate is removed rather than repaired. Kept
+-- here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-create live — 108
+-- drops it.
 -- ============================================================================
 CREATE OR REPLACE VIEW `stock-trading-498512.state.park_allocator_promotion_readiness` AS
 WITH calls AS (
