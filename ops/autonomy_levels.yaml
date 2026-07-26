@@ -272,47 +272,70 @@ loops:
     added: "2026-07-15"
 
   - id: park_allocator               # AI Park Allocator: daily AI judgment call on which park-menu
-                                      # vehicle idle capital holds, D1/D2 rail (PARK_ROUTER_DESIGN.md v2)
-    stage: shadow                    # BUILT DIRECTLY AT SHADOW (2026-07-18, PARK_ROUTER_DESIGN.md v2 —
-                                      # owner-review design, SISA precedent) — NOT dormant-then-promoted,
-                                      # same anti-pattern-avoidance rationale as research_quality_feedback
-                                      # (scaffolding with no scheduled caller). D1 makes the full park
-                                      # allocation call every trading day (Operating_Protocols.md §13.F);
-                                      # logged EVERY day (incl. KEEP) to events.decision_log
-                                      # (entry_type='park-allocation'), surfaced on
-                                      # state.park_allocation_latest — RECORD_ONLY while shadow: the call
-                                      # never converts to an order (D2's PARK ALLOCATION CONVERSION step
-                                      # no-ops on any status != 'BOUND', and shadow-stage D1 never emits
-                                      # 'BOUND').
+                                      # vehicle idle capital holds, D1/D2 rail (PARK_ROUTER_DESIGN.md v3)
+    stage: active_auto               # BUILT AT SHADOW (2026-07-18, PARK_ROUTER_DESIGN.md v2 — owner-
+                                      # review design, SISA precedent) — NOT dormant-then-promoted, same
+                                      # anti-pattern-avoidance rationale as research_quality_feedback
+                                      # (scaffolding with no scheduled caller). CONVERTED to active_auto
+                                      # 2026-07-26 by owner directive (PARK v3 immediate-binding redesign
+                                      # — "aim for fastest execution, assume the ai is correct on first
+                                      # analysis and accept the risk that ai may be wrong at times ... We
+                                      # can always pull out of a trade at any time ... lose a bit of money
+                                      # if during later reassessment we determine the initial call was not
+                                      # actually correct, that's fine with me"). NOT a self-executed
+                                      # data-gated promotion (the usual register discipline every sibling
+                                      # loop above uses): the shadow phase's own mechanical gate
+                                      # (state.park_allocator_promotion_readiness) was PERMANENTLY
+                                      # LATCHED — it measured n_missing_trading_days over the ENTIRE
+                                      # since-inception window with no recovery path, and the
+                                      # 2026-07-23/24 platform-trigger outage left 2 permanently-missing
+                                      # call days (verified live 2026-07-26: n_call_days=5,
+                                      # n_missing_trading_days=2, ready=false) — ready could NEVER become
+                                      # TRUE. The owner directive supersedes fixing the gate: it is
+                                      # RETIRED, not repaired (bigquery/108_park_allocator_immediate_
+                                      # binding.sql). D1 makes the full park allocation call every trading
+                                      # day (Operating_Protocols.md §13.F); logged EVERY day (incl. KEEP)
+                                      # to events.decision_log (entry_type='park-allocation'), surfaced on
+                                      # state.park_allocation_latest. Every well-formed call now emits
+                                      # status='BOUND' directly — ANY direction, ANY conviction — and D2
+                                      # converts it the same evening; the only non-binding status is
+                                      # 'HOLD' (connectors-down / evidence-ungatherable).
     ceiling: active_auto
-    artifact: state.park_allocation_latest (bigquery/92_park_allocator.sql — the daily call, PENDING/
-      concurrence state, budget/cooldown views) + events.park_policy_changes (the existing
-      bigquery/54_park_policy_voo_cutover.sql event-sourced policy table — this loop's ONLY write to it
-      is the conversion INSERT once active_auto and a call is BOUND) + state.park_allocator_promotion_readiness
-      (bigquery/92_park_allocator.sql — the shadow->active_auto gate) + events.signal_marks /
-      state.park_signal_daily (bigquery/91_park_signal_layer.sql — the isolated evidence layer, kept
-      strictly separate from events.daily_marks per the design's grounding) + analytics.park_nav_daily /
-      analytics.park_counterfactuals (bigquery/93_park_accounting.sql — evaluation substrate, read weekly
-      by W5's PARK SCORECARD bullet, Claude_Task_Plan.md)
+    artifact: state.park_allocation_latest / state.park_allocation_recent (bigquery/92_park_allocator.sql
+      — the daily call; 92 remains their sole/canonical definition — 108 does NOT redefine them; 92's
+      inline status-enum comment listing PENDING/RECORD_ONLY is historical vocabulary, valid only for
+      pre-2026-07-26 rows) + events.park_policy_changes (the existing
+      bigquery/54_park_policy_voo_cutover.sql event-sourced policy table — this loop's write to it is the
+      conversion INSERT whenever a BOUND call's vehicle differs from state.park_policy_current) +
+      events.signal_marks / state.park_signal_daily (bigquery/91_park_signal_layer.sql — the isolated
+      evidence layer, kept strictly separate from events.daily_marks per the design's grounding) +
+      analytics.park_nav_daily / analytics.park_counterfactuals (bigquery/93_park_accounting.sql —
+      evaluation substrate, read weekly by W5's PARK SCORECARD bullet, Claude_Task_Plan.md) +
+      bigquery/108_park_allocator_immediate_binding.sql (the 2026-07-26 retirement file — DROPs
+      state.park_allocator_promotion_readiness, state.park_switch_budget, state.park_control_latest,
+      ops.park_control; none of the four remain live artifacts of this loop)
     gate_to_next_stage: >
-      SHADOW -> ACTIVE_AUTO requires the 10-CLEAN-TRADING-DAY READINESS VIEW
-      (state.park_allocator_promotion_readiness, bigquery/92_park_allocator.sql) to read
-      ready=TRUE (that view's actual column name — NOT ready_for_promotion, the sibling loops' column
-      name; verified live via get_table_info against bigquery/92_park_allocator.sql, 2026-07-18): >=10
-      trading-day sessions with a well-formed call (all five structured fields present), 0 missing-call
-      trading days, and would-be churn (what the AI WOULD have switched, had it been binding) within the
-      2-per-30d up/lateral budget — PARK_ROUTER_DESIGN.md §10 Phase 1.
-      NO human PR/chat gate — same record-then-promote-by-editing-this-register discipline as every
-      sibling loop above. W5's PARK-ALLOCATOR PROMOTION CHECK bullet (Claude_Task_Plan.md) owns detecting
-      ready=TRUE and SELF-EXECUTING the stage flip (this file's stage: shadow -> active_auto),
-      commit + push (auto-merge on green CI), an ops.loop_promotion_log row, an events.decision_log entry,
-      and an info-severity ops.alerts row — the identical single-shot self-execute pattern
-      research_quality_feedback / cross_model_referee_independence use above. Once active_auto, D1's
-      conviction gates + the §13.F cadence rails (de-risk same-day; re-risk next-session concurrence;
-      lateral+budget; 5-day cooldown; ops.park_control kill/pin; connectors-down HOLD) are the
-      compensating control that replaces human PR review — no rail ever chooses a vehicle, only cadence
-      and blast radius.
-    added: "2026-07-18"
+      n/a — this loop is authorized AT its ceiling (active_auto) by the owner's 2026-07-26 immediate-
+      binding directive (see stage comment for the exact provenance and the permanently-latched
+      promotion-gate defect that made the original shadow->active_auto data-gated path unreachable), the
+      same "authorized at ceiling, no promotion path needed" posture as capital_allocator/research_screener
+      above — reached here by RETIRING a mechanical gate rather than by never having had one. The
+      compensating control replacing both the retired promotion gate AND the retired §13.F cadence rails
+      (re-risk next-session concurrence, lateral-pending, 2-per-30d up/lateral budget, 5-trading-day
+      cooldown, conviction binding gates, the ops.park_control kill-switch, the park-specific soft-breach
+      re-risk block) is the owner's explicitly chosen risk posture itself: full same-day reversibility (a
+      wrong call converts back the very next session — the "later reassessment" the owner cited), the menu
+      allowlist (state.park_menu — an off-menu vehicle is still HELD/blocked), the connectors-down HOLD (no
+      call binds without gathered evidence), analytics.fn_order_guard + the IBKR confirm-tap (system-wide
+      execution layer, unchanged), a dedicated daily loop:park_allocator heartbeat dead-man's switch
+      (bigquery/75_scheduled_query_wrappers.sql ops.sp_sq_cadence_check v8 — 3-trading-day staleness
+      window; see the meta_monitoring_heartbeat note below), and W5's weekly PARK SCORECARD vs 3
+      counterfactuals (SGOV / VOO / state.park_rule_shadow) + conviction calibration + the quarterly Q1
+      park retrospective — read-only, never gates a call, exactly like capital_allocator's own scorecard.
+      No rail ever chooses a vehicle now, only reversibility and evidence integrity; the owner accepts
+      wrong-call cost in exchange for speed.
+    added: "2026-07-18"                # converted to active_auto: 2026-07-26 (owner directive, PARK v3
+                                        # immediate-binding redesign — see stage comment)
 
   - id: capital_allocator             # AI capital-allocation call: bounded AI judgment on the post-
                                       # newcomer-floor remainder of a strategy-termination redistribution
@@ -322,7 +345,9 @@ loops:
                                       # verdict, AI_DECISION_REDESIGN.md §3 Redesign A) — NOT dormant- or
                                       # shadow-then-promoted. Unlike park_allocator (which burned in at
                                       # shadow because every trading day is a live decision point with no
-                                      # inherent bound), this loop's blast radius is bounded FROM ITS FIRST
+                                      # inherent bound — park_allocator has since CONVERTED to
+                                      # immediate-binding active_auto, 2026-07-26, by owner directive; see
+                                      # its entry), this loop's blast radius is bounded FROM ITS FIRST
                                       # EVENT by construction: the [0.5x, 2x]-of-equal-share rail, the
                                       # default-EQUAL-below-MEDIUM-conviction fallback, no new movement
                                       # point (fires only where capital already moves — termination close-
@@ -368,7 +393,9 @@ loops:
                                       # then REVERSED later the same day by direct in-session owner
                                       # directive ("Yes, implement it") after the owner asked for and read
                                       # a plain-language explanation of the redesign). The capital_allocator
-                                      # staging pattern, not park_allocator's shadow: blast radius is
+                                      # staging pattern (park_allocator has since converted to the same
+                                      # built/operating-at-ceiling posture, 2026-07-26 — see its entry, it
+                                      # is no longer the shadow-burn-in counterexample): blast radius is
                                       # bounded FROM THE FIRST CALL by construction — a screen decision
                                       # moves research attention, never capital; every screened-in item
                                       # still passes the full downstream AI judgment (thesis construction,
@@ -395,7 +422,9 @@ loops:
       every call as a RECORD-ONLY benchmark (agreement/disagreement ledger); and W5's weekly RESEARCH-SCREEN
       SCORECARD (read-only, never gates a screen) whose rule_only-then-GO check makes the old defer-revisit
       trigger ("screens rejecting winners") a standing measured check. NO kill-switch table (unlike
-      ops.park_control / ops.arsenal_control): screens move no capital; the owner reverts by directive.
+      ops.arsenal_control — ops.park_control was itself retired 2026-07-26 by bigquery/108_park_allocator_
+      immediate_binding.sql, PARK v3 immediate-binding redesign; owner: "human would never do this
+      manually. remove this feature."): screens move no capital; the owner reverts by directive.
       NO dedicated cadence heartbeat: this loop fires only inline within D1/W2/M2, which already carry
       their own run_log/cadence dead-man coverage — declared in scripts/check_autonomy_consistency.py's
       HEARTBEAT_SELF_MONITORED_LOOPS (the one sanctioned carve-out place), same posture as capital_allocator.
@@ -458,12 +487,25 @@ cross_cutting_guards:
       cross_model_referee_independence (added rev 2026-07-11, ITEM 27; PROMOTED dormant->shadow
       2026-07-15) now ALSO writes `loop:cross_model_referee_independence` from the same W5 bullet
       every weekly cycle — no loop remains without heartbeat wiring as of this rev.
-      park_allocator (added 2026-07-18, PARK_ROUTER_DESIGN.md v2, built directly at shadow) writes
+      park_allocator (added 2026-07-18, PARK_ROUTER_DESIGN.md v2, built directly at shadow; CONVERTED to
+      active_auto 2026-07-26, owner directive, PARK v3 immediate-binding redesign — see its entry) writes
       `loop:park_allocator` from D1 — NOT W5 — on EVERY trading-day firing (daily cadence, not weekly;
       Claude_Task_Plan.md D1 PARK ALLOCATION CALL step), the first loop whose primary heartbeat rides
       its own daily routine rather than W5's weekly evaluation pass; W5's PARK SCORECARD bullet adds a
-      second, belt-and-suspenders weekly heartbeat on the same source. Since this loop starts at
-      `shadow` (not `active_auto`), it is NOT required in cadence_check.sql's active_auto-only
-      dead-man's-switch list (scripts/check_autonomy_consistency.py's `_check_cadence_heartbeat_coverage`)
-      until it promotes — at which point it joins that list per the normal rule, same as every sibling
-      loop above.
+      second, belt-and-suspenders weekly heartbeat on the same source. Now active_auto, it IS in
+      cadence_check.sql's active_auto-only dead-man's-switch list (scripts/check_autonomy_consistency.py's
+      `_check_cadence_heartbeat_coverage`) — joined per the normal rule, same as every sibling loop above:
+      `loop:park_allocator` was added to BOTH of ops.sp_sq_cadence_check's constant_tuning_loop_heartbeat_
+      missing UNNEST literals (bigquery/75_scheduled_query_wrappers.sql, SQ_VERSION v8; bigquery/63's
+      registry MERGE bumped to match). That generic list's flat 10-CALENDAR-day window is calibrated for
+      the weekly constant-tuning loops and shares its alarm source string with W5's weekly
+      belt-and-suspenders write above — so on its own, a real multi-day D1 outage could be invisibly
+      papered over by W5's once-a-week write resetting the shared 10-day clock before the generic window
+      ever trips. v8 therefore ALSO adds a DEDICATED `park_allocator daily-heartbeat staleness` WARNING
+      block (parallel to, not folded into, the generic UNNEST list; deliberately not expressed as an
+      UNNEST literal itself, so it cannot shrink check_autonomy_consistency.py's intersection-of-UNNEST-
+      lists coverage check) with its own tighter, TRADING-day-aware window — >=3 trading days quiet, via
+      state.market_calendar, same trading-day idiom as bigquery/92's 2026-07-19 park_switch_budget
+      cooldown fix, not a naive calendar-day DATE_DIFF. That dedicated block is park_allocator's real
+      primary coverage; its membership in the generic 10-day list is required belt-and-suspenders for the
+      coverage check, not the loop's tightest alarm.

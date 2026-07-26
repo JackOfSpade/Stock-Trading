@@ -1,0 +1,93 @@
+-- bigquery/108_park_allocator_immediate_binding.sql — PARK ALLOCATOR IMMEDIATE BINDING (owner
+-- directive 2026-07-26). Retires bigquery/92's v2 rail substrate outright: DROP TABLE/VIEW IF
+-- EXISTS on ops.park_control, state.park_control_latest, state.park_switch_budget, and
+-- state.park_allocator_promotion_readiness. NO CREATE OR REPLACE of any object in this file —
+-- everything else the park allocator reads/writes (menu, allocation_recent/latest, rule_shadow,
+-- position/reconciliation, mark_discontinuity_watch, park accounting) is untouched and stays
+-- exactly as bigquery/92_park_allocator.sql / bigquery/93_park_accounting.sql define it.
+--
+-- OWNER DIRECTIVE (2026-07-26, verbatim intent):
+--   "aim for fastest execution, assume the ai is correct on first analysis and accept the risk
+--   that ai may be wrong at times. No longer are we waiting multiple days for additional
+--   confirmation. We can always pull out of a trade at any time (or the inverse, go back into a
+--   trade at any time), lose a bit of money if during later reassessment, we determine the
+--   initial call was not actually correct, that's fine with me."
+--   On ops.park_control (the manual owner freeze/pin lever): "human would never do this
+--   manually. remove this feature."
+-- Immediate binding, one line: every D1 park call binds same-day — any direction, any
+-- conviction; D2 converts the same evening. Shadow burn-in, the promotion gate, concurrence,
+-- lateral-pending, budget, cooldown, conviction gates, the ops.park_control kill-switch, and the
+-- park-specific soft-breach re-risk block are all retired. Kept: menu allowlist, connectors-down
+-- HOLD, evidence-freshness check, order guard + IBKR confirm-tap, daily KEEP logging +
+-- calibration, W5 scorecard vs three counterfactuals, Q1 retro, park accounting + §13.E
+-- convergence backstop, EOD cadence. The compensating control is reversibility: the book can be
+-- switched back the very next session, and the owner accepts wrong-call cost.
+--
+-- TRIGGERING DEFECT (the owner directive supersedes fixing this — the gate is dropped, not
+-- repaired, not superseded by a repaired successor): state.park_allocator_promotion_readiness
+-- required n_missing_trading_days = 0 measured over the ENTIRE window from first_call_date to
+-- the latest trading day, with no recovery/rolling mechanism. The 2026-07-23/24 platform-trigger
+-- outage left 2 permanently-missing call days (verified live 2026-07-26: n_call_days=5,
+-- n_missing_trading_days=2, ready=false). ready could NEVER become TRUE — the shadow phase was
+-- unpromotable as built, i.e. the park allocator would have stayed RECORD_ONLY forever.
+--
+-- REMOVED by this file (DROPs below):
+--   * state.park_allocator_promotion_readiness — the shadow->active_auto gate (permanently
+--     latched, see above). Loop park_allocator converts shadow->active_auto directly
+--     (ops/autonomy_levels.yaml, same commit) — no replacement readiness view.
+--   * state.park_switch_budget — the 2-per-rolling-30d re-risk/lateral budget + 5-trading-day
+--     post-de-risk cooldown anti-churn rails. Every SWITCH call now binds same-day at any
+--     conviction, so there is nothing left for a budget/cooldown view to gate.
+--   * state.park_control_latest — the latest-row-wins read view over ops.park_control.
+--   * ops.park_control — the owner kill-switch/pin table. No replacement lever: "human would
+--     never do this manually. remove this feature." Owner recourse going forward is a direct
+--     instruction in any session, not a control table.
+--   Also retired by this same redesign, with NO SQL object of their own (removed in prose only —
+--   see Operating_Protocols.md §13.F, Claude_Task_Plan.md D1/D2): the re-risk next-session
+--   concurrence rail (PENDING -> next-day derive-then-compare), the lateral PENDING-then-auto-
+--   BOUND rail, conviction binding gates (conviction/conviction_pct are still logged every call,
+--   calibration substrate, but never gate binding), and D2's read of
+--   state.entry_staging_allowed for park switches (a park switch is not a strategy entry; the
+--   owner accepts park re-risk during a soft drawdown breach as an AI judgment call).
+--
+-- KEPT (unchanged mechanisms — no statement in this file touches these): state.park_menu
+-- (12-vehicle allowlist); state.park_allocation_recent / state.park_allocation_latest (daily
+-- call audit trail, incl. KEEP days); state.park_rule_shadow + the W5 PARK SCORECARD's 3
+-- counterfactuals (SGOV / VOO / rule_shadow) + conviction calibration + Q1 park retro;
+-- connectors-down HOLD; analytics.fn_order_guard + IBKR confirm-tap; state.park_position_current
+-- / state.park_reconciliation / D2a's §13.E convergence backstop; the daily D1 ~16:00 call ->
+-- D2 ~17:15 conversion EOD cadence (no intraday path exists anywhere in the stack, none added).
+--
+-- STATUS VOCABULARY GOING FORWARD: 'BOUND' | 'HOLD' only. Historical events.decision_log /
+-- events.park_policy_changes rows carrying 'PENDING' or 'RECORD_ONLY' remain valid history —
+-- state.park_allocation_recent/_latest keep parsing them unmodified (this file does not touch
+-- those two views).
+--
+-- Apply after bigquery/92_park_allocator.sql + bigquery/93_park_accounting.sql (bigquery/92
+-- defines the four objects this file drops). Parity-safe: scripts/check_live_sql_parity.py only
+-- reads CREATE statements and treats a genuinely-dropped-live object as a non-fatal missing_live
+-- skip, never a DRIFT — same note as bigquery/104_strip_pretrade_rails.sql. DO NOT re-apply
+-- bigquery/92's dropped sections in isolation — bigquery/92 is left unmodified in the repo as
+-- DR-rebuild apply-in-order reference only (see its own annotated comment blocks); re-running its
+-- CREATE TABLE/VIEW statements for these four objects after this file has applied would silently
+-- resurrect a retired mechanism. Statements below: views before the table they read
+-- (state.park_control_latest before ops.park_control).
+
+-- ===== state.park_allocator_promotion_readiness — DROPPED. Permanently-latched shadow->
+-- active_auto gate (see TRIGGERING DEFECT above); loop park_allocator converts to active_auto
+-- directly, no successor readiness view. =====
+DROP VIEW IF EXISTS `stock-trading-498512.state.park_allocator_promotion_readiness`;
+
+-- ===== state.park_switch_budget — DROPPED. 2-per-30d re-risk/lateral budget + 5-trading-day
+-- de-risk cooldown anti-churn rails; every SWITCH call now binds same-day at any conviction, so
+-- there is no budget/cooldown left to measure. =====
+DROP VIEW IF EXISTS `stock-trading-498512.state.park_switch_budget`;
+
+-- ===== state.park_control_latest — DROPPED. Read view over ops.park_control (dropped next,
+-- below); no successor. =====
+DROP VIEW IF EXISTS `stock-trading-498512.state.park_control_latest`;
+
+-- ===== ops.park_control — DROPPED. Owner kill-switch/pin table. Owner directive: "human would
+-- never do this manually. remove this feature." No replacement lever — owner recourse is a
+-- direct instruction in any session, not a control table. =====
+DROP TABLE IF EXISTS `stock-trading-498512.ops.park_control`;

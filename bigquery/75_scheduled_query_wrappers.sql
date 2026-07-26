@@ -99,16 +99,24 @@ END;
 
 -- =====================================================================================================
 -- ops.sp_sq_cadence_check   (was bigquery/scheduled_queries/cadence_check.sql; that file is now a frozen one-line
--- CALL wrapper — full historical header/rationale comments remain there. SQ_VERSION v7 (bumped
--- from v6 by D3's monitor-promotion self-flip, 2026-07-26: ddl_drift promoted WARNING->CRITICAL +
--- joined raise_msg per ITEM 24 once state.ddl_drift_promotion_readiness fired. v6, MON 2026-07-17:
--- added the ci_findings_bridge_stale dead-man (H2), the scheduled_query_stale beat-age dead-man (H5),
--- and the unconditional b3_trading_enabled_drift monitor-health-history MERGE (M2)).
+-- CALL wrapper — full historical header/rationale comments remain there. SQ_VERSION v8 (bumped
+-- from v7 by the PARK v3 immediate-binding redesign, 2026-07-26, owner directive: park_allocator
+-- converted shadow->active_auto (ops/autonomy_levels.yaml) in the same change, so its daily
+-- `loop:park_allocator` heartbeat now needs active_auto dead-man's-switch coverage per
+-- scripts/check_autonomy_consistency.py's `_check_cadence_heartbeat_coverage` — added to BOTH
+-- constant_tuning_loop_heartbeat_missing UNNEST literals below, PLUS a new dedicated
+-- `park_allocator daily-heartbeat staleness` block with its own 3-trading-day window (see inline
+-- comment there for why the generic list's flat 10-calendar-day window alone would be too loose/
+-- maskable for a daily loop). v7 was bumped from v6 by D3's monitor-promotion self-flip, 2026-07-26:
+-- ddl_drift promoted WARNING->CRITICAL + joined raise_msg per ITEM 24 once
+-- state.ddl_drift_promotion_readiness fired. v6, MON 2026-07-17: added the ci_findings_bridge_stale
+-- dead-man (H2), the scheduled_query_stale beat-age dead-man (H5), and the unconditional
+-- b3_trading_enabled_drift monitor-health-history MERGE (M2)).
 -- =====================================================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v7', 'cadence_check.sql ran');
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v8', 'cadence_check.sql ran');
 
   -- RUNBOOK section 38 self-heal (ITEM 3, bigquery/38_run_log_selfheal.sql): backfill any
   -- ops.run_log completion row whose routine already has a landed-commit marker in
@@ -601,11 +609,16 @@ BEGIN
   -- alarm -- only a loop that HAS reported at least once and then goes quiet trips this, exactly the
   -- state.script_version_drift / instruction_drift self-bootstrapping convention above. W5 runs weekly;
   -- the ~10-day window tolerates one missed cycle before alarming. Staged-rollout WARNING (record-only),
-  -- matching every other self-bootstrapping monitor in this file.
+  -- matching every other self-bootstrapping monitor in this file. park_allocator (added 2026-07-26, PARK
+  -- v3 immediate-binding redesign, shadow->active_auto) joins this list too, per
+  -- scripts/check_autonomy_consistency.py's coverage requirement -- but its REAL primary coverage is the
+  -- dedicated, tighter, trading-day-aware block immediately below (this flat 10-calendar-day window is a
+  -- required belt-and-suspenders membership for a loop whose actual cadence is daily, not weekly).
   IF EXISTS (
     SELECT 1 FROM UNNEST(['loop:process_reliability','loop:strategy_playbook',
                            'loop:execution_quality_tuning','loop:calibration_parameter_carveout',
-                           'loop:cross_model_referee_independence','loop:research_quality_feedback']) AS loop_source
+                           'loop:cross_model_referee_independence','loop:research_quality_feedback',
+                           'loop:park_allocator']) AS loop_source
     WHERE EXISTS (SELECT 1 FROM `stock-trading-498512.ops.heartbeat` h WHERE h.source = loop_source)
       AND NOT EXISTS (
         SELECT 1 FROM `stock-trading-498512.ops.heartbeat` h
@@ -617,13 +630,65 @@ BEGIN
              (SELECT STRING_AGG(loop_source, ', ')
               FROM UNNEST(['loop:process_reliability','loop:strategy_playbook',
                             'loop:execution_quality_tuning','loop:calibration_parameter_carveout',
-                            'loop:cross_model_referee_independence','loop:research_quality_feedback']) AS loop_source
+                            'loop:cross_model_referee_independence','loop:research_quality_feedback',
+                            'loop:park_allocator']) AS loop_source
               WHERE EXISTS (SELECT 1 FROM `stock-trading-498512.ops.heartbeat` h WHERE h.source = loop_source)
                 AND NOT EXISTS (
                   SELECT 1 FROM `stock-trading-498512.ops.heartbeat` h
                   WHERE h.source = loop_source AND h.beat_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 10 DAY)))),
       TO_JSON_STRING(STRUCT(CURRENT_TIMESTAMP() AS checked_at)));
   END IF;
+
+  -- park_allocator daily-heartbeat staleness (warning, PARK v3 immediate-binding redesign, owner
+  -- directive 2026-07-26). loop:park_allocator (ops/autonomy_levels.yaml) converted shadow->active_auto
+  -- in this same change and is written DAILY by D1's PARK ALLOCATION CALL (every trading day) -- NOT
+  -- weekly like the constant-tuning loops in the generic block above. Folding it only into that block's
+  -- flat 10-CALENDAR-day window would be semantically wrong two ways: (1) 10 calendar days is far looser
+  -- than appropriate for a nominally-daily loop; (2) because D1's daily beat and W5's own weekly
+  -- belt-and-suspenders beat write the IDENTICAL heartbeat source, a real multi-day D1 outage could be
+  -- invisibly papered over by W5's once-a-week write resetting the shared clock before the generic
+  -- 10-day window ever trips -- defeating the point of watching a daily loop at all. This dedicated block
+  -- uses a TRADING-day count via state.market_calendar (same idiom as bigquery/92_park_allocator.sql's
+  -- 2026-07-19 park_switch_budget cooldown fix and bigquery/76_owner_confirmation_liveness.sql's
+  -- trading_days_since_last_fill -- NOT a naive calendar-day DATE_DIFF, the exact bug class that fix
+  -- removed) and a tighter >=3-trading-day threshold. Self-bootstrapping: park_last_beat IS NULL (no
+  -- heartbeat row ever) skips the whole block -- no alarm before the loop's first-ever beat; park_allocator
+  -- has beaten daily since 2026-07-19, so this arms immediately on apply. Deliberately expressed via a
+  -- scalar `source = 'loop:park_allocator'` equality, NEVER an UNNEST(['loop:...']) literal -- adding a
+  -- THIRD, single-member UNNEST literal here would shrink
+  -- scripts/check_autonomy_consistency.py's cadence_detection_loops() intersection-of-UNNEST-lists to
+  -- {park_allocator} alone and false-flag every other constant-tuning loop above as unmonitored. Reuses
+  -- the same category ('constant_tuning_loop_heartbeat_missing') as the generic block so it rides the
+  -- same emailer/auto-resolve wiring; sp_raise_alert_once dedups on (category, message), so the message
+  -- text below is held stable (keyed on the frozen last-beat timestamp, not on the day this check runs)
+  -- while the staleness persists, and is distinct from the generic block's message (which never names
+  -- park_allocator, since park_allocator's own beats keep it out of that block's stale-source list under
+  -- normal operation).
+  BEGIN
+    DECLARE park_last_beat TIMESTAMP;
+    DECLARE park_trading_days_since_beat INT64;
+    SET park_last_beat = (
+      SELECT MAX(beat_ts) FROM `stock-trading-498512.ops.heartbeat` WHERE source = 'loop:park_allocator');
+    IF park_last_beat IS NOT NULL THEN
+      SET park_trading_days_since_beat = (
+        SELECT COUNT(*)
+        FROM `stock-trading-498512.state.market_calendar` mc
+        WHERE mc.is_trading_day
+          AND mc.cal_date > DATE(park_last_beat, 'America/Denver')
+          AND mc.cal_date <= (SELECT last_trading_day FROM `stock-trading-498512.state.trading_day_today`));
+      IF park_trading_days_since_beat >= 3 THEN
+        CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+          'warning', 'scheduled.cadence', 'constant_tuning_loop_heartbeat_missing',
+          CONCAT('loop:park_allocator (active_auto, daily D1 heartbeat) has gone quiet >=3 trading days ',
+                 '-- last beat ', CAST(park_last_beat AS STRING), '. This is the DEDICATED trading-day-aware ',
+                 'check (not the flat 10-calendar-day window above) because D1 writes this heartbeat every ',
+                 'trading day, not weekly.'),
+          TO_JSON_STRING(STRUCT(park_last_beat AS last_beat,
+                                 park_trading_days_since_beat AS trading_days_since_beat,
+                                 CURRENT_TIMESTAMP() AS checked_at)));
+      END IF;
+    END IF;
+  END;
 
   -- Single consolidated RAISE so the DTS failure-email fires once, AFTER every condition is recorded.
   IF raise_msg != '' THEN
