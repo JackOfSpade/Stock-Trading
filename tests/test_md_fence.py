@@ -9,24 +9,28 @@ tests/test_check_prose_invariants.py's cpi.fence_mask, and the split scripts' fe
 fixtures); these pin the contract directly so an interface-preserving refactor of the lib has a
 first-class guard.
 
-CODEBASE AUDIT 2026-07-26 — do NOT "fix" fence_mask() to require a bare closing marker.
-An audit pass claimed fence_mask()'s "any column-0 marker-with-same-character toggles the fence,
-even one carrying an info string like ```yaml" is a CommonMark bug, and proposed requiring a BARE
-closing line (no info string) to close a fence. The orchestrator measured that exact "fix" against
-this repo's real corpus and it is a catastrophic regression: Claude_Task_Plan.md currently yields
-51 `## ` headings and 11 `# ` headings outside fences under the CURRENT permissive mask; under the
-strict-bare-closer fix it yields 20 and 5 — 31 real routine headings get swallowed into a phantom
-never-closed fence. Root cause: Claude_Task_Plan.md legitimately nests a ```yaml d1_actions``` fence
-inside an outer ``` fence (around lines 491/613/618/622 — the outer fence opens at line 491 and the
-document's author never bumped it to 4 backticks around the inner ```yaml block, so it is not valid
-CommonMark). The CURRENT permissive rule ("any column-0 same-marker line toggles, info string or
-not") recovers correct heading parity by the next real marker; strict CommonMark instead keeps the
-line-491 fence open for the rest of the file and eats every heading after it. The current behavior
-is therefore load-bearing and CORRECT FOR THIS CORPUS, not a bug — this file pins it so a future
-session doesn't "correct" it back into the outage. Before touching fence_mask()'s toggle logic,
-run `python scripts/split_task_plan.py --check` and re-derive the heading counts below; if they
-still don't match, the .md changed (see the corpus test's own failure-message diagnosis), not the
-fence logic.
+CODEBASE AUDIT 2026-07-26 — fence_mask() is a DEPTH STACK; do not flatten it back to one flag.
+The original implementation tracked a single open/closed flag and toggled it on any column-0 line
+starting with the open fence's delimiter character, info string or not. That is wrong in both
+directions, and this repo's corpus hits it: Claude_Task_Plan.md nests a ```yaml d1_actions block
+inside an outer ``` fence (lines 491/613/618/622) without bumping the outer fence to four
+backticks, so the flat flag read line 613's ```yaml as CLOSING the line-491 fence and reported
+lines 614-617 as OUTSIDE a fence they are plainly inside.
+
+Two "fixes" were considered. Requiring a BARE closing line while keeping the flat flag is the
+obvious one and is CATASTROPHIC — measured against this file, outside-of-fence heading counts
+collapse from 51 `## ` / 11 `# ` to 20 / 5, because the line-491 fence then never closes and eats
+31 real routine headings (and with them 31 slices, plus gen_routine_lists.py and the cadence gate
+downstream). The stack is the actual fix: since this function only reports "inside ANY fence"
+(depth > 0), nesting collapses to depth, so it satisfies CommonMark's delimiter/length/info-string
+rules AND the corpus's technically-invalid equal-length nesting at the same time. Measured across
+all 83 markdown files it changed exactly the five previously-misclassified lines and left every
+heading count identical.
+
+So: the counts pinned below are NOT a fingerprint of the old permissive rule — both the old flat
+flag and the current stack produce them. A sharp drop toward 20/5 means someone reintroduced the
+strict-bare-closer-plus-flat-flag combination. Before touching the toggle logic at all, run
+`python scripts/split_task_plan.py --check` and re-derive these counts.
 """
 import pathlib
 
@@ -89,47 +93,63 @@ def test_fence_mask_backtick_inside_tilde_fence_is_content_not_a_close():
     assert fence_mask(lines) == [False, True, True, True, True, False, False]
 
 
-# ---- deliberate non-CommonMark divergence: marker-with-info-string closes an open fence ---------
-def test_fence_mask_marker_with_info_string_closes_an_open_fence_deliberately_non_commonmark():
-    """DELIBERATE divergence from CommonMark — codebase audit 2026-07-26.
+# ---- nesting: an info-string marker OPENS, it never closes -------------------------------------
+def test_fence_mask_info_string_marker_nests_instead_of_closing():
+    """The corpus shape: a ```yaml block nested inside an outer ``` block (codebase audit
+    2026-07-26). A line carrying an info string can only OPEN — CommonMark closers carry none — so
+    the outer fence must stay open across the whole inner block, and everything between the two
+    outer markers is inside a fence.
 
-    CommonMark says a fence is closed only by a BARE closing-marker line (no info string); a line
-    like ```yaml while a ``` fence is already open would, under strict CommonMark, be ordinary
-    fenced content (you can't "re-open" what's already open) and the original fence would stay
-    open. fence_mask() instead treats ANY column-0 line starting with the open fence's marker
-    character as a toggle, info string or not — so it closes the outer fence right there.
+    The flat open/closed flag this replaced read the ```yaml line as CLOSING the outer fence, so
+    the inner block's body came back as OUTSIDE any fence. That is how a '## ' example line inside
+    such a block would have been mistaken for a real routine heading by split_task_plan.py."""
+    lines = ["outside", "```", "inside 1", "```yaml some-info-string", "inside 2", "```", "```", "after"]
+    #          F         T      T           T (nests, does not close)   T          T (pops inner)
+    #                                                                              F (pops outer)
+    assert fence_mask(lines) == [False, True, True, True, True, True, False, False]
 
-    This is intentional, not an oversight: Claude_Task_Plan.md nests a ```yaml d1_actions``` fence
-    inside an outer ``` fence (lines 491/613/618/622) without bumping the outer fence to 4
-    backticks, which is not valid CommonMark. The permissive toggle-on-any-marker rule recovers
-    correct heading parity at the next real marker; a strict bare-closer "fix" was measured on
-    2026-07-26 to keep the line-491 fence open through the rest of the file, dropping 31 of the
-    file's 51 `## ` routine headings (see test_claude_task_plan_corpus_heading_counts below and
-    the module docstring). Anyone tempted to require a bare closer here MUST re-run
-    `python scripts/split_task_plan.py --check` and the corpus heading-count test first.
-    """
-    lines = ["outside", "```", "inside 1", "```yaml some-info-string", "inside 2", "```", "after"]
-    # The info-string line at index 3 CLOSES the fence opened at index 1 (permissive toggle);
-    # "inside 2" is then classified OUTSIDE, and the ``` at index 5 opens a fresh, unterminated
-    # fence that (per the "unterminated fence stays open to end of file" contract) swallows "after".
-    assert fence_mask(lines) == [False, True, True, False, False, True, True]
+
+def test_fence_mask_longer_outer_fence_nests_legally_per_commonmark():
+    """The VALID way to write the case above: a four-backtick outer fence around a three-backtick
+    inner one. Must behave identically to the equal-length corpus shape (codebase audit
+    2026-07-26)."""
+    lines = ["````", "```yaml", "x", "```", "````", "after"]
+    assert fence_mask(lines) == [True, True, True, True, False, False]
+
+
+def test_fence_mask_short_bare_marker_cannot_close_a_longer_fence():
+    """CommonMark's closing-run-length rule: a bare ``` inside an open ```` block is content, not a
+    close — that is the whole point of opening with a longer run. The flat flag closed on it, then
+    treated the real ```` closer as a fresh opener, inverting the mask for everything after
+    (codebase audit 2026-07-26)."""
+    lines = ["````", "```", "x", "````", "after"]
+    assert fence_mask(lines) == [True, True, True, False, False]
+
+
+def test_fence_mask_info_string_with_the_other_delimiter_is_content():
+    """The divergence stays narrow: nesting on an info-string line applies only to the SAME
+    delimiter character. A ~~~lang line while a ``` fence is open is ordinary content, exactly as
+    the bare-~~~ case already is (codebase audit 2026-07-26)."""
+    lines = ["```", "~~~yaml", "x", "```", "after"]
+    assert fence_mask(lines) == [True, True, True, False, False]
 
 
 # ---- corpus-level regression pin: real routine headings must stay outside fences ----------------
 def test_claude_task_plan_corpus_heading_counts():
     """Pin fence_mask()'s classification of Claude_Task_Plan.md's real routine headings.
 
-    codebase audit 2026-07-26: an auditor proposed a strict-CommonMark bare-closer fix to
-    fence_mask() (see module docstring and the synthetic test above) that, measured against this
-    exact file, collapses the outside-of-fence heading counts from 51 `## ` / 11 `# ` down to
-    20 / 5 — 31 routine headings silently swallowed into a phantom never-closed fence, which would
-    cascade into split_task_plan.py dropping 31 routine slices and poisoning gen_routine_lists.py
-    and the cadence gate downstream.
+    codebase audit 2026-07-26: a strict-CommonMark bare-closer fix layered onto the old flat
+    open/closed flag was measured against this exact file and collapses the outside-of-fence
+    heading counts from 51 `## ` / 11 `# ` down to 20 / 5 — 31 routine headings silently swallowed
+    into a phantom never-closed fence, which would cascade into split_task_plan.py dropping 31
+    routine slices and poisoning gen_routine_lists.py and the cadence gate downstream. The
+    depth-stack fence_mask() now in place satisfies CommonMark's rules WITHOUT that collapse (see
+    module docstring), and reproduces these counts exactly.
 
     If this test fails:
       - If the counts DROPPED sharply (toward ~20/~5) and nobody intentionally restructured the
-        file's fences: this is the regression above — do NOT change fence_mask()'s toggle logic;
-        revert whatever touched it.
+        file's fences: this is the regression above — someone has reintroduced a flat open/closed
+        flag in place of the depth stack; revert whatever touched it.
       - If the counts changed by a small amount that matches routine headings you (or another
         session) deliberately added/removed/renamed in Claude_Task_Plan.md in this same change:
         that is a legitimate content edit — update the hard-coded expected counts below to match,
