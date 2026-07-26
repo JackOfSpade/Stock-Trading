@@ -105,10 +105,12 @@ FROM UNNEST([
 -- routine (different alphanumeric stem) still flags unknown_routine. The live side is re-deduped to one
 -- row per normalized key (latest run) so a routine that logged under two spellings shows a single current
 -- row reported under its canonical (catalog) id. Durable root-cause discussion + alternatives: RUNBOOK §28.
--- ADDENDUM-INVARIANT FIRST-LINE COMPARISON (2026-07-20): the live web-UI trigger message is now ALWAYS
--- the canonical heading line PLUS a standing operator addendum ("Spawn sub-agents to do the grunt work.
--- Save your processing (Fable 5) for analysis and orchestration work only. Any sub-agents you spawn must
--- use the sonnet 5 model."), separated from the heading by a blank line. sp_routine_start logs that FULL
+-- ADDENDUM-INVARIANT FIRST-LINE COMPARISON (2026-07-20, wording updated 2026-07-26 -- owner switched the
+-- addendum's model references from Fable 5 to Opus 5, and the routines' own `model` field to
+-- claude-opus-5): the live web-UI trigger message is now ALWAYS the canonical heading line PLUS a standing
+-- operator addendum (as of 2026-07-26: "Spawn Sonnet 5 model sub-agents to do the grunt work. Save your
+-- processing (Opus 5) for design/analysis/orchestration work only."), separated from the heading by a
+-- blank line. sp_routine_start logs that FULL
 -- verbatim text by design (bigquery/10_observability.sql: "captures the verbatim trigger text"), so once
 -- a routine's live trigger carries the addendum its live_instruction differs from ops.routine_catalog's
 -- single-line canonical_instruction PERMANENTLY -- not a one-time drift, a standing false positive.
