@@ -18,6 +18,11 @@
 -- baseline WIF grant is read-only, RUNBOOK §6). The write is wrapped try/except (never fails the
 -- dashboard build without it); until granted, 'dashboard' simply never appears as `monitored` here,
 -- which is the correct fail-quiet default, not a bug.
+--
+-- SUPERSEDED LIVE by bigquery/106_retire_dashboard_heartbeat.sql — current single source of truth for
+-- this object (removes the 'dashboard' UNNEST row added here; incident 2026-07-25, RUNBOOK §16).
+-- Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.automation_heartbeat` AS
 WITH expected AS (
   SELECT * FROM UNNEST([
