@@ -78,7 +78,6 @@ BASELINE = frozenset({
     ("VIEW", "state", "automation_heartbeat", "16_automation_health.sql"),
     ("VIEW", "state", "cash_flows_backfill_check", "22_cash_flows.sql"),
     ("VIEW", "state", "book_drawdown_watch", "23_trading_control.sql"),
-    ("VIEW", "state", "daily_staging_totals", "23_trading_control.sql"),
     ("PROCEDURE", "ops", "sp_auto_resolve_alerts", "34_alert_lifecycle.sql"),
     ("TABLE", "ops", "loop_promotion_log", "71_research_quality_promotion.sql"),
 })

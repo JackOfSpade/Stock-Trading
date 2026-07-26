@@ -971,20 +971,19 @@ END;
 
 -- =====================================================================================================
 -- ops.sp_sq_daily_staging_cap_check   (was bigquery/scheduled_queries/daily_staging_cap_check.sql; that file is now a frozen one-line
--- CALL wrapper — full historical header/rationale comments remain there. SQ_VERSION v3 (bumped
--- from v2 by DEF-3, 2026-07-17: added the order_guard_verdict_mismatch RECOMPUTE backstop below;
--- v2 was the ARCH-1 wrapper migration, 2026-07-16).
+-- CALL wrapper — full historical header/rationale comments remain there. SQ_VERSION v4 (bumped from
+-- v3, 2026-07-26, owner directive -- the daily order-count/notional cap is retired: dropped the
+-- daily_cap_breach IF block below. daily_cap_breach was the ONLY consumer of state.daily_staging_totals's
+-- now-removed max_daily_notional/max_daily_orders fields (bigquery/109_retire_daily_staging_cap.sql);
+-- it was a RECORD-ONLY WARNING alert that never blocked any order craft, so this changes review/
+-- alerting only, not trading behavior. order_guard_omitted / order_guard_verdict_mismatch below are
+-- UNRELATED per-order guard-record checks and are unchanged. v3 bumped from v2 by DEF-3, 2026-07-17:
+-- added the order_guard_verdict_mismatch RECOMPUTE backstop below; v2 was the ARCH-1 wrapper
+-- migration, 2026-07-16).
 -- =====================================================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_daily_staging_cap_check`()
 BEGIN
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:daily_staging_cap_check', 'v3', 'daily_staging_cap_check.sql ran');
-
-  IF (SELECT daily_cap_breach FROM `stock-trading-498512.state.daily_staging_totals`) THEN
-    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
-      'warning', 'scheduled.staging_cap', 'staging_cap_breach',
-      'Daily staging cap check: today\'s staged orders exceed the daily notional/order-count cap.',
-      (SELECT TO_JSON_STRING(t) FROM `stock-trading-498512.state.daily_staging_totals` t));
-  END IF;
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:daily_staging_cap_check', 'v4', 'daily_staging_cap_check.sql ran');
 
   -- order_guard_omitted (CRITICAL, not staged-rollout -- ITEM 15, self-improvement audit 2026-07-11).
   -- fn_order_guard / fn_order_guard_options is a per-order obligation on the calling routine, with no

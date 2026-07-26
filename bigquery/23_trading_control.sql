@@ -299,6 +299,13 @@ CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_order_guard_
 -- surfaces TODAY's (America/Denver operating day) total staged count + notional across ALL routines
 -- so a routine can check it before crafting one more. Caps expressed as a MULTIPLE of the combined
 -- 2%-sizing base (scales with book growth) plus a floor order count — policy invariants, not fitted.
+--
+-- SUPERSEDED LIVE by bigquery/109_retire_daily_staging_cap.sql (owner directive 2026-07-26 — the daily
+-- order-count/notional cap is retired; the view now exposes only the raw orders_staged_today /
+-- notional_staged_today counters). 109 is the CURRENT single source of truth for this object. Kept
+-- here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE OR
+-- REPLACE VIEW statement live in isolation — doing so would reintroduce the retired daily_cap_breach
+-- warning alert and its now-removed max_daily_notional/max_daily_orders fields.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.daily_staging_totals` AS
 WITH today_staged AS (
   -- events.queue_events is an append-only status-TRANSITION log: one ORDER_STAGED item_key gets

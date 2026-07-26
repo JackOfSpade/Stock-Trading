@@ -25,6 +25,12 @@
 --
 -- SUPERSEDES the state.daily_staging_totals VIEW definition in bigquery/23_trading_control.sql. No
 -- dbt mirror exists for this view. Apply after 23_trading_control.sql, 46_weekly_benchmarks.sql.
+--
+-- SUPERSEDED LIVE, IN TURN, by bigquery/109_retire_daily_staging_cap.sql (owner directive 2026-07-26 —
+-- the daily order-count/notional cap this file introduced the fail-closed fix for is itself retired;
+-- 109 is the CURRENT single source of truth for state.daily_staging_totals). Kept here, unmodified,
+-- for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE VIEW statement
+-- live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.daily_staging_totals` AS
 WITH today_staged AS (
   SELECT
