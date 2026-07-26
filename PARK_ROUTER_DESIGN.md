@@ -182,13 +182,30 @@ is already working at the **next** open instead of the one after. Generalized §
 keeps its rule — *any park-book ticker ≠ policy vehicle above dust → craft full SELL* —
 as the convergence **backstop** (re-crafts the same leg if D2's DAY order expires
 unfilled; still the only path for an older, pre-cutover stranded leg), and its existing
-sweep re-deploys settled proceeds into the policy vehicle once they land — the BUY side
-is untouched by this tightening, still exclusively §13.E-owned. Convergence to full
-redeployment now runs in **~1–2 sessions** (one session tighter than before this
-change) using only existing staged-order persistence, re-craft-on-expiry, fill
-reconciliation, and tripwire machinery — no new mechanism, just an earlier trigger for
-the first leg. `CASH` policy = §13.E sweep no-ops (cover still allowed). Cross-ticker
-switch ≠ PDT day-trade pairing; both legs = two confirm-taps, typically one sitting.
+sweep re-deploys any residual cash into the policy vehicle once it lands.
+
+**v3.1 — BOTH LEGS, SAME SESSION (owner directive 2026-07-26).** Superseding the
+2026-07-19 tightening above, D2 now also crafts the **BUY** of the incoming vehicle in
+that same run, sized off the **expected** net proceeds of the SELL it just crafted
+rather than off settled cash (`Operating_Protocols.md` §13.E step 1, PAIRED-ROTATION
+EXCEPTION). Convergence therefore completes at **ONE open**, not across ~1–2 sessions,
+and the book is never parked for a session in cash — or in the vehicle the AI just
+decided to leave — purely as a settlement artifact. Rationale: orders are market-only
+(owner directive 2026-07-21) so a fill is near-certain, and the account is
+margin-enabled, so the settlement wait bought nothing but unintended exposure. Bounded
+by `buy_cost ≤ settled_cash + expected_net_proceeds(paired SELL)` — **settlement
+bridging, never leverage** — with a mandatory 0.5% open-gap haircut, a
+different-tickers rail (a same-ticker pair is a PDT day-trade), and a hard ordering
+rule that a failed SELL guard cancels BOTH legs. §13.E is now the convergence
+**backstop for both legs** (re-craft either expired leg; deploy the haircut residual),
+still the only path for an older pre-cutover stranded leg. Two consequences recorded
+deliberately: §13.E step 4's cover test must read `bridge_adjusted_settled_cash` or it
+would sell the brand-new vehicle to "cover" the T+1 artifact and unwind the switch; and
+`bigquery/93_park_accounting.sql`'s "cash ≤ $25 by construction" exclusion is knowingly
+violated for one settlement cycle, so a park-TWR point inside a bridge window is not
+clean (W5 must note it). `CASH` policy = §13.E sweep no-ops (cover still allowed).
+Cross-ticker switch ≠ PDT day-trade pairing; both legs = two confirm-taps, typically
+one sitting.
 
 **Deferred option (owner call, §12)**: allow the AI to nominate a two-leg split (primary +
 secondary, min 25% per leg, 10% drift band). Real machinery cost; recommend v2 ships

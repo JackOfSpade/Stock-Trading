@@ -33,12 +33,27 @@
 --      attribution -- is visible instead of silently living inside the account's existing
 --      events-vs-live reconciliation gap.
 --
--- CASH EXCLUSION (applies to all three views): unswept cash is <= $25 by construction (the D2a
+-- CASH EXCLUSION (applies to all three views): unswept cash is NORMALLY <= $25 (the D2a
 -- sweep/cover step, Operating_Protocols.md §13.E) and is NEVER counted as park exposure here --
 -- park_nav_daily's park_mv and park_counterfactuals' indices are 100% instrument-based (shares *
 -- close), and account_reconciliation's park_unrealized is likewise instrument-only; state.account_latest
 -- .total_cash is read ONLY for the reconciliation's residual math (a separate concern from "what is the
 -- park invested in"), never added into a park_mv/index figure.
+--
+-- KNOWN, BOUNDED EXCEPTION TO THE <= $25 ASSUMPTION -- PAIRED-ROTATION SETTLEMENT BRIDGE (owner
+-- directive 2026-07-26, Operating_Protocols.md 13.E PAIRED-ROTATION EXCEPTION). D2 now crafts BOTH
+-- legs of a park switch in one session, sizing the incoming vehicle's BUY off the EXPECTED proceeds of
+-- the outgoing vehicle's SELL. For ONE settlement cycle (T+1) the account therefore carries a
+-- deliberate transient cash balance of order the full switch notional -- thousands of dollars, not the
+-- <= $25 this exclusion was written against. DELIBERATELY NOT FIXED IN SQL: these three views are
+-- instrument-based by design ("what is the park invested in"), and folding a transiting settlement
+-- balance into park_mv would conflate exposure with cash-in-flight and corrupt the counterfactual
+-- indices they exist to compare against. The bridge is self-extinguishing (both legs settle within one
+-- cycle) and is fully visible elsewhere -- the two ORDER_STAGED legs, events.parking_events fills, and
+-- 13.C's paired-rotation attribution branch. CONSEQUENCE TO KNOW: if a park TWR measurement date falls
+-- INSIDE a bridge window, park_nav_daily's park_mv understates or overstates the book for that one day
+-- (the outgoing vehicle already sold, the incoming one not yet settled). W5's PARK SCORECARD must note
+-- any measurement window overlapping a switch date rather than treat that day's TWR point as clean.
 --
 -- DEVIATION #1 FROM PARK_ROUTER_DESIGN.md's LITERAL PHRASING -- "vehicle = policy vehicle as-of date
 -- (events.park_policy_changes, as-of by event_ts)": implemented instead by thresholding on

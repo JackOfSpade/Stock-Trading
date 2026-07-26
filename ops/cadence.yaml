@@ -108,11 +108,16 @@ routines:
     notes: >
       CUT OVER 2026-07-09 (autonomous, performed by D2a itself after 3 distinct trading-day completed runs
       with no prior cutover logged; ops.d2a_cutover_log + an INFO-severity ops.alerts 'auto_cutover' row are
-      the record -- no chat question was raised). D2a now solely owns the mechanical broker-reconcile /
+      the record -- no chat question was raised). D2a owns the mechanical broker-reconcile /
       cash-tripwire / park-sweep / TWR-engine-maintenance (Step 0/0b/PER-STRATEGY PERFORMANCE MAINTENANCE),
       split out of D2's analysis-heavy action-conversion so a D2 halt can never also stall fills
       reconciliation, cash safety, or the engine. D2 now depends_on [D1, D2a] (flipped by that cutover).
-      Runs every trading day, before D2, independent of D1.
+      Runs every trading day, before D2, independent of D1. PARK-SWEEP AMENDED 2026-07-26 (owner
+      directive): D2 now crafts BOTH legs of a park switch in its own session, sizing the BUY off the
+      expected proceeds of the paired in-flight SELL (Operating_Protocols.md 13.E PAIRED-ROTATION
+      EXCEPTION), so D2a's park-sweep is the BACKSTOP for both legs -- re-craft either leg whose DAY
+      order expired unfilled, deploy the slippage-haircut residual -- and is no longer the owner of the
+      BUY side. Its cover test now reads bridge_adjusted_settled_cash, never raw settled_cash.
   - id: D2
     name: Daily Action Conversion
     schedule: "after D1 trading_day"

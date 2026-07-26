@@ -496,7 +496,9 @@ scenarios:
       trivially, with no conviction gate or budget/cooldown rail left to check. Claude_Task_Plan.md D2's
       PARK ALLOCATION CONVERSION step: status='BOUND' and vehicle (SGOV) differs from
       state.park_policy_current.vehicle (VOO) -> menu-membership check -> D2 INSERTs the
-      events.park_policy_changes row and crafts the SELL of the vacated vehicle today. GO.
+      events.park_policy_changes row and crafts BOTH legs today (owner directive 2026-07-26): the SELL of
+      the vacated vehicle VOO and, in the same run, the paired BUY of SGOV sized off that SELL's expected
+      net proceeds per Operating_Protocols.md 13.E's PAIRED-ROTATION EXCEPTION. GO.
 
   - id: PA-02
     category: park_allocator
@@ -554,7 +556,9 @@ scenarios:
       budget and post-de-risk cooldown it used to interact with. Claude_Task_Plan.md D2's PARK
       ALLOCATION CONVERSION step: status='BOUND' and vehicle (VOO) differs from
       state.park_policy_current.vehicle (GOVT) -> menu-membership check -> D2 INSERTs the
-      events.park_policy_changes row and crafts the SELL of GOVT today. This is a deliberate
+      events.park_policy_changes row and crafts BOTH legs today (owner directive 2026-07-26): the SELL of
+      GOVT and, in the same run, the paired BUY of VOO sized off that SELL's expected net proceeds per
+      Operating_Protocols.md 13.E's PAIRED-ROTATION EXCEPTION. This is a deliberate
       expected_decision change from this fixture's prior pinning (NO-GO/PENDING), made under this
       file's own MAINTENANCE policy: owner directive 2026-07-26 (events.decision_log
       entry_type='loop-promotion', park_allocator immediate-binding redesign, 2026-07-26;
