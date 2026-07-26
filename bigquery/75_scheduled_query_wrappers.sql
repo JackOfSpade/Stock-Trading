@@ -992,9 +992,10 @@ BEGIN
   -- being followed verbatim. state.open_orders.guard_passed (bigquery/01_schema.sql) now surfaces whether
   -- the guard's own result was embedded in the ORDER_STAGED payload; a row STAGED TODAY with guard_passed
   -- IS NULL means either the guard never ran, or it ran and the routine didn't record it -- either way
-  -- the safety envelope was bypassed for that order, not merely undocumented. Unlike the daily_cap_breach
-  -- check above (a soft "review before crafting more" signal), a missing guard record is unambiguous --
-  -- CRITICAL immediately, no staged-rollout warning period.
+  -- the safety envelope was bypassed for that order, not merely undocumented. Unlike a soft aggregate-
+  -- level warning (the now-retired daily_cap_breach check, bigquery/109_retire_daily_staging_cap.sql --
+  -- 2026-07-26), a missing guard record is unambiguous -- CRITICAL immediately, no staged-rollout
+  -- warning period.
   --
   -- QUERIES events.queue_events DIRECTLY, NOT state.open_orders (adversarial self-audit fix, rev
   -- 2026-07-11): state.open_orders is a PENDING-ONLY view (WHERE status='pending'), so an order staged
