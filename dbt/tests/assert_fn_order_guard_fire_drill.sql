@@ -47,11 +47,15 @@
 -- cases that the PRE-STRIP guard would have REJECTED on a now-removed sizing rail — a $5,000,000-
 -- notional equity MARKET order (10,000 sh @ $500) and a $500,000-defined-max_loss options MARKET
 -- order (10,000 contracts) — and both must now PASS, proving the strip actually happened.
+-- The first STRUCT's field aliases (case_name, passed) set the array's schema; later elements are
+-- matched positionally and don't need their own aliases. BigQuery does NOT infer a scalar subquery's
+-- own column alias for an unnamed STRUCT field (it gets a generic f0_) -- hence the explicit AS passed
+-- below, without which the outer WHERE passed / SELECT passed can't resolve the column at all.
 SELECT case_name, passed
 FROM UNNEST([
   -- ===== EQUITY: analytics.fn_order_guard(strategy, side, qty, ref_price, order_type) — 5 args =====
   STRUCT('order_type_limit' AS case_name,
-    (SELECT passed FROM `stock-trading-498512.analytics.fn_order_guard`('B', 'BUY', NUMERIC '0.1', 150.00, 'LIMIT'))),
+    (SELECT passed FROM `stock-trading-498512.analytics.fn_order_guard`('B', 'BUY', NUMERIC '0.1', 150.00, 'LIMIT')) AS passed),
   STRUCT('negative_qty',
     (SELECT passed FROM `stock-trading-498512.analytics.fn_order_guard`('B', 'BUY', -1, 100.00, 'MARKET'))),
   STRUCT('bad_ref_price',

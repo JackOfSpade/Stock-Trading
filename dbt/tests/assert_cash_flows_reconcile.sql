@@ -10,7 +10,12 @@
 -- of scope — deposits are NULL-tagged equal-split by standing methodology, Operating_Protocols §13.C.)
 -- scripts/check_roster_consistency.py asserts this file hardcodes no strategy count.
 
-SELECT
-  (SELECT ROUND(SUM(amount), 2) FROM {{ source('events', 'cash_flows') }}) AS cash_flows_total,
-  (SELECT ROUND(SUM(deposits), 2) FROM {{ ref('strategy_nav') }}) AS strategy_nav_deposits_total
-HAVING cash_flows_total != strategy_nav_deposits_total
+-- BigQuery rejects a HAVING clause on a SELECT with no FROM/GROUP BY (even referencing only its own
+-- SELECT-list aliases), so the comparison has to live in an outer WHERE over a wrapped subquery.
+SELECT *
+FROM (
+  SELECT
+    (SELECT ROUND(SUM(amount), 2) FROM {{ source('events', 'cash_flows') }}) AS cash_flows_total,
+    (SELECT ROUND(SUM(deposits), 2) FROM {{ ref('strategy_nav') }}) AS strategy_nav_deposits_total
+)
+WHERE cash_flows_total != strategy_nav_deposits_total
