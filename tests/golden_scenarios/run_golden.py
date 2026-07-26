@@ -198,6 +198,21 @@ def validate_offline(scenarios):
             val = sc.get(field)
             if val is None or (isinstance(val, str) and not val.strip()):
                 errors.append(f"{label}: missing or empty required field '{field}'")
+            # codebase audit 2026-07-26: a non-string value (list/dict/int/bool) satisfies NEITHER branch
+            # above — it is not None and `isinstance(val, str)` is False — so it silently passed this
+            # loop forever. A YAML mis-indent (e.g. `expected_decision:\n  - GO`, which parses as a
+            # one-element list, not the string "GO") is exactly this. Left unguarded, it sailed through
+            # validate_offline() with zero errors and only blew up later, in --live, where _leading_token()
+            # calls .strip() on it unguarded (outside run_live's try/except) and kills the ENTIRE live job
+            # for all 23+ scenarios, not just the malformed one. Reject it here, by name and actual type,
+            # so the hard gate catches it instead. `governing_files` is EXCLUDED here — it is the one
+            # REQUIRED_FIELDS member that is legitimately a list, not a string, and already gets its own
+            # dedicated type/contents validation a few lines below; running this check on it too would
+            # make a well-formed governing_files list fail validation.
+            elif field != "governing_files" and not isinstance(val, str):
+                errors.append(
+                    f"{label}: required field '{field}' must be a string, got {type(val).__name__} ({val!r})"
+                )
 
         sid = sc.get("id")
         if sid:
@@ -222,7 +237,10 @@ def validate_offline(scenarios):
         decision = sc.get("expected_decision")
         if isinstance(decision, str) and decision.strip():
             lead = decision.strip().upper()
-            if not any(lead.startswith(tok) for tok in DECISION_LEAD_TOKENS):
+            # codebase audit 2026-07-26: token-boundary match, not bare startswith — see
+            # _token_boundary_match's docstring for the 'CONTINUES'/'TERMINATED'/'ACTIVATED'/'GOOF' typo
+            # class this closes.
+            if not any(_token_boundary_match(lead, tok) for tok in DECISION_LEAD_TOKENS):
                 errors.append(
                     f"{label}: expected_decision '{decision}' does not start with a recognized token "
                     f"{DECISION_LEAD_TOKENS} — likely a typo, or the vocabulary needs a deliberate addition"
@@ -235,6 +253,21 @@ def validate_offline(scenarios):
                         f"{label}: expected_decision token '{tok}' is not valid for category '{cat}' "
                         f"(allowed: {sorted(CATEGORY_TOKENS[cat])}) — likely a mis-categorized/copy-paste fixture")
     return errors
+
+
+def _token_boundary_match(lead, tok):
+    """True when `lead` (already .strip().upper()'d) starts with `tok` AND that match ends at a real
+    token boundary — end-of-string, whitespace, or an opening paren (the documented free-text-qualifier
+    separator, e.g. "CONTINUE (routes to review, not direct terminate)"). Plain str.startswith() alone
+    lets a PREFIX TYPO through: 'CONTINUES' startswith 'CONTINUE', 'TERMINATED' startswith 'TERMINATE',
+    'ACTIVATED' startswith 'ACTIVATE', 'GOOF' startswith 'GO' — none of those are the token, all are a
+    fixture typo, and all four passed the offline gate with zero errors and were then graded in --live
+    as if correctly spelled (codebase audit 2026-07-26). Shared by validate_offline()'s vocabulary check
+    and _leading_token()'s grader so the gate and the grader can never disagree about what a token is."""
+    if not lead.startswith(tok):
+        return False
+    rest = lead[len(tok):]
+    return rest == "" or rest[0].isspace() or rest[0] == "("
 
 
 def _allowed_decisions_for(scenario):
@@ -254,8 +287,11 @@ def _leading_token(decision_text):
         return None
     lead = decision_text.strip().upper()
     # Longest-first so 'DO-NOT-ACTIVATE' isn't misread as a partial 'NO-GO'/'ACTIVATE' match.
+    # codebase audit 2026-07-26: token-boundary match (see _token_boundary_match), not bare startswith
+    # — a bare startswith let 'CONTINUES'/'TERMINATED'/'ACTIVATED'/'GOOF' grade as the clean token, which
+    # both this grader AND the offline gate must agree is wrong (they share this helper for that reason).
     for tok in sorted(DECISION_LEAD_TOKENS, key=len, reverse=True):
-        if lead.startswith(tok):
+        if _token_boundary_match(lead, tok):
             return tok
     return None
 

@@ -30,7 +30,27 @@ command -v gcloud >/dev/null || { echo "gcloud CLI not found (install Google Clo
 bqq() { bq --project_id="$PROJECT" query --use_legacy_sql=false --format=csv --quiet --headless --max_rows=100000 "$1" | tail -n +2; }
 
 # Tables to restore = every base table in the live events dataset.
-mapfile -t TABLES < <(bqq "SELECT table_name FROM \`$PROJECT.events.INFORMATION_SCHEMA.TABLES\` WHERE table_type='BASE TABLE' ORDER BY table_name")
+# NOTE (codebase audit 2026-07-26): do NOT rewrite this back to `mapfile -t TABLES < <(bqq ...)`.
+# Under `set -euo pipefail`, bash only checks mapfile's OWN exit status here, not the process
+# substitution's -- a failing `bqq` (bad PROJECT, revoked IAM, etc.) would NOT trip `set -e` and
+# the drill would silently fall through to the empty-array guard below instead of aborting loudly
+# with the underlying `bq` error. Confirmed empirically: `f(){ echo line1; return 1; }; mapfile -t
+# ARR < <(f)` does not abort. Its sibling scripts/backup_events.sh (~lines 29-32) already uses the
+# direct-assignment idiom below for the identical query, which DOES propagate a `bqq` failure
+# straight into `set -e`. Mirror it here so both scripts fail closed the same way.
+TABLES_RAW="$(bqq "SELECT table_name FROM \`$PROJECT.events.INFORMATION_SCHEMA.TABLES\` WHERE table_type='BASE TABLE' ORDER BY table_name")"
+# Check the raw string BEFORE mapfile, not just the array after: `mapfile -t TABLES <<< ""` does
+# NOT yield a zero-length array -- the here-string appends a trailing newline, so bash reads one
+# empty line and TABLES ends up with count=1 containing "" (verified empirically, codebase audit
+# 2026-07-26). Checking `${#TABLES[@]}` alone would have silently defeated the very guard this is
+# meant to be a second layer for, on the exact "empty dataset / wrong PROJECT" case it exists to
+# catch.
+[ -n "$TABLES_RAW" ] || { echo "no events.* base tables found; aborting"; exit 1; }
+mapfile -t TABLES <<< "$TABLES_RAW"
+# Empty-array guard kept as a SECOND layer (belt-and-suspenders with the -n check above), not a
+# replacement: a query that succeeds with zero rows (empty dataset, wrong PROJECT) still needs to
+# abort rather than report a false "OK" over zero tables, same failure mode backup_events.sh's
+# 2026-07-14 audit finding covers.
 [ "${#TABLES[@]}" -gt 0 ] || { echo "no events.* base tables found; aborting"; exit 1; }
 
 # Resolve the snapshot date: newest dt= partition present for the first table, unless DATE is pinned.

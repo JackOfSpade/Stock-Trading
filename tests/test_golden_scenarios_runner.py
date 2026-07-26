@@ -84,6 +84,83 @@ def test_non_mapping_scenario_entry_caught():
     assert any("is not a mapping" in e for e in rg.validate_offline(["not-a-dict"]))
 
 
+# ---- codebase audit 2026-07-26: two schema-gate holes that let a broken fixture "vacuously pass" ----
+
+
+def test_list_valued_expected_decision_caught():
+    # A YAML mis-indent (`expected_decision:\n  - GO`) parses as a one-element list, not a string. The
+    # old REQUIRED_FIELDS emptiness test (`val is None or (isinstance(val, str) and not val.strip())`)
+    # satisfies neither branch for a list, so it silently passed; then _leading_token() blew up
+    # unguarded in --live (AttributeError, kills the whole live job). Must be rejected here, by name and
+    # actual type, before it ever reaches --live.
+    sc = copy.deepcopy(VALID)
+    sc["expected_decision"] = ["GO"]
+    errs = rg.validate_offline([sc])
+    assert any(
+        "required field 'expected_decision' must be a string, got list" in e for e in errs
+    )
+
+
+def test_int_valued_expected_decision_caught():
+    sc = copy.deepcopy(VALID)
+    sc["expected_decision"] = 1
+    errs = rg.validate_offline([sc])
+    assert any(
+        "required field 'expected_decision' must be a string, got int" in e for e in errs
+    )
+
+
+def test_non_string_required_field_does_not_crash_leading_token_downstream():
+    # The actual failure mode this closes: unguarded, _leading_token(['GO']) raises AttributeError
+    # (outside run_live's try/except, per the module docstring) and kills the entire --live job for
+    # every scenario, not just the malformed one. Confirm validate_offline() now catches it BEFORE that
+    # code path is ever reached (main() always runs the offline gate first — see its docstring/comment).
+    sc = copy.deepcopy(VALID)
+    sc["expected_decision"] = ["GO"]
+    assert rg.validate_offline([sc]) != []
+
+
+def test_governing_files_valid_list_is_not_flagged_by_the_string_check():
+    # governing_files is the one REQUIRED_FIELDS member that is LEGITIMATELY a list, not a string — the
+    # new non-string check must not regress the happy path (it has its own dedicated list validation a
+    # few lines below in validate_offline()).
+    assert rg.validate_offline([copy.deepcopy(VALID)]) == []
+
+
+def test_prefix_typo_expected_decision_caught_offline():
+    # 'CONTINUES'.startswith('CONTINUE'), 'TERMINATED'.startswith('TERMINATE'),
+    # 'ACTIVATED'.startswith('ACTIVATE'), 'GOOF'.startswith('GO') — a bare str.startswith() let all four
+    # of these prefix typos through the vocabulary check with zero errors. Each must now be flagged.
+    for typo, category in [
+        ("CONTINUES", "kill_trigger"),
+        ("TERMINATED", "kill_trigger"),
+        ("ACTIVATED", "regime_router"),
+        ("GOOF", "strategy_b_entry"),
+    ]:
+        sc = copy.deepcopy(VALID)
+        sc["category"] = category
+        sc["expected_decision"] = typo
+        errs = rg.validate_offline([sc])
+        assert any("does not start with a recognized token" in e for e in errs), (typo, errs)
+
+
+def test_prefix_typo_leading_token_returns_none_not_the_truncated_token():
+    # The SAME boundary rule must apply in the --live grader (_leading_token), not just the offline
+    # gate — otherwise a typo'd fixture that (somehow) slipped past validate_offline would still be
+    # graded in --live as if it were the correctly-spelled token, and the gate/grader would disagree.
+    for typo in ("CONTINUES", "TERMINATED", "ACTIVATED", "GOOF"):
+        assert rg._leading_token(typo) is None, typo
+
+
+def test_token_boundary_match_allows_the_documented_free_text_qualifier():
+    # The fix must not break the documented "TOKEN (free text)" format — only a bare continuation of the
+    # same word (no boundary) is rejected.
+    assert rg._token_boundary_match("CONTINUE (ROUTES TO REVIEW)", "CONTINUE") is True
+    assert rg._token_boundary_match("CONTINUE", "CONTINUE") is True
+    assert rg._token_boundary_match("CONTINUES", "CONTINUE") is False
+    assert rg._token_boundary_match("CONTINUE-ISH", "CONTINUE") is False
+
+
 def test_leading_token_disambiguation():
     assert rg._leading_token("DO-NOT-ACTIVATE") == "DO-NOT-ACTIVATE"
     assert rg._leading_token("NO-GO") == "NO-GO"

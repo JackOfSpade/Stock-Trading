@@ -41,13 +41,17 @@ CHECKS
        `COUNT(*) FROM state.strategy_roster ... WHERE r.is_active AND r.adopted_date <= cf.flow_date`
        instead. FAIL naming file:line. (bigquery/04_analytics.sql is the SUPERSEDED/dead strategy_nav — it
        is EXEMPT from this hard check; it should carry an explicit dead-code marker so its stale literal is
-       never mistaken for live.)
+       never mistaken for live.) The adjacency guard resolves simple `<col> AS <alias>` bindings
+       (_money_alias_names(), codebase audit 2026-07-26) so a divisor fed by an ALIASED money column (e.g.
+       `cf.amount AS raw` ... `SUM(raw) / 5`) is still caught — see that function's docstring for the hole
+       this closes.
 
   R-C  COUNT-AGNOSTIC dbt RECONCILE TEST. dbt/tests/assert_cash_flows_reconcile.sql must not hardcode the
        roster size: no `/ 5` divisor and no `amount/5` / 'exactly 5' assumption. The reconciliation (sum of
        each strategy's attributed deposits + redistributions == its cash_flows) must hold for ANY roster
        size. FAIL if a 5-hardcode remains. (Test CONTENT edit only — NOT a dbt-ownership change; the
-       settled decision to keep dbt as a test/validation layer stands.)
+       settled decision to keep dbt as a test/validation layer stands.) Same alias-resolution adjacency
+       guard as R-B (codebase audit 2026-07-26).
 
   R-D  PER-STRATEGY ROUTINE EXISTS. Every non-null strategies[].per_strategy_routine in roster.yaml must be
        a routine id present in ops/cadence.yaml, so a strategy that declares its own scheduled routine can
@@ -252,6 +256,13 @@ BARE_LITERAL = re.compile(r"\[\s*(['\"])[A-Z]{1,3}\1\s*[,\]]")
 # A fixed equal-split divisor `/ N` for ANY integer N (R-B / R-C forbid a fixed divisor, and the roster
 # size is not always 5 — SISA resizes N autonomously — so match any /<int>, not just /5).
 FIXED_DIVISOR = re.compile(r"/\s*\d+\b")
+# A SIMPLE `<col> AS <alias>` binding — one identifier, optionally table-qualified (`cf.amount`), followed
+# by `AS <alias>` (case-insensitive). Deliberately restricted to a single bare identifier on the source
+# side (NOT an arbitrary expression like `SUM(amount) AS total` or `a + b AS x`) so alias resolution stays
+# the same precise instrument the audit asked for, rather than a blind widen that would start crediting
+# any expression merely mentioning a money column as "the" money value (R-B / R-C, codebase audit
+# 2026-07-26 — see _money_alias_names()).
+MONEY_ALIAS_BINDING = re.compile(r"(?:[A-Za-z_]\w*\.)?([A-Za-z_]\w*)\s+AS\s+([A-Za-z_]\w*)", re.I)
 # A per-strategy slice filename referenced in the plan slice-map, e.g. `06_strategy_d.md`.
 SLICE_FILE_REF = re.compile(r"\d+_strategy_([a-z]{1,3})\.md")
 # A rail constant in bigquery/35's `consts AS (SELECT 2 AS n_min, ...)` CTE, e.g. "8  AS n_max,".
@@ -299,7 +310,10 @@ def _line_no(txt, pos):
 def _divisor_context(txt, m):
     """(1-based line number, source-line context) for a FIXED_DIVISOR match `m` in `txt`. R-B / R-C
     test whether a money token (amount / cash_flow / deposit) sits next to the divisor to distinguish
-    a forbidden equal-split from an unrelated `/N`.
+    a forbidden equal-split from an unrelated `/N`. Callers layer _money_alias_names() on top of this
+    context window (codebase audit 2026-07-26) to also catch a money value that reaches the divisor via
+    a column ALIAS rather than the bare column name — see that function's docstring; this function's own
+    remit stays exactly "adjacent source lines", unchanged.
 
     The context spans the match's own first line through its last line, so an internally-wrapped
     `amount /`⏎`5` keeps `amount` in view (FIXED_DIVISOR's `\\s*` spans the newline). When the `/` is the
@@ -317,6 +331,77 @@ def _divisor_context(txt, m):
     if txt[line_start:m.start()].strip() == "":     # operator is first non-space on its line -> reach back
         ctx_start = (txt.rfind("\n", 0, line_start - 1) + 1) if line_start > 0 else 0
     return n, txt[ctx_start:ctx_end]
+
+
+def _money_alias_names(txt, markers):
+    """R-B / R-C (codebase audit 2026-07-26 — CI-BLOCKING fixed-divisor fail-open hole): the set of alias
+    names in `txt` that a MONEY_ALIAS_BINDING (`<col> AS <alias>`) traces back, transitively, to one of
+    `markers` (e.g. {"amount"} for R-B; {"amount","cash_flow","deposit"} for R-C).
+
+    THE HOLE THIS CLOSES: _divisor_context()'s adjacency window only sees the divisor's own source
+    line(s); it never looks at where the money value going into `SUM(...)` originally came from. An
+    ordinary SQL restyle that lifts a money column into a CTE under an alias —
+        SELECT cf.amount AS raw, a.s AS strategy FROM active a CROSS JOIN cash_flows cf GROUP BY a.s
+        )
+        SELECT SUM(raw) / 5 AS equal_split
+    — leaves NO "amount" (or "cash_flow"/"deposit") token anywhere in the divisor's own-line-or-wrapped
+    context, so the R-B `"amount" in ctx` / R-C `"amount" in ctx or ...` guard never fires and a textbook
+    forbidden equal-split divisor passes CI clean. An auditor reproduced this directly against the pre-fix
+    code (2026-07-26).
+
+    WHY ALIAS RESOLUTION, NOT A BIGGER BLIND LOOKBACK: the 1-line (+leading-operator-wrap) window is
+    deliberate (see _divisor_context's own docstring, 2026-07-17 audit) to keep an unrelated `/N` — a
+    "section 5/6" comment, an unrelated rail constant — from false-tripping the guard just because it
+    happens to sit near a money-flavored word. Widening the window instead of resolving aliases would
+    trade this fail-open hole for a fail-closed one (a false CI block, which the unit's own brief flags as
+    the constraint that matters most: it would block ALL CI, not just this check). Resolving the alias's
+    OWN origin column is the precise fix: it only credits a divisor as money-adjacent when the identifier
+    actually IN that window really does trace back to a money column somewhere in the same file, not
+    merely because some other line happens to also mention "amount".
+
+    Deliberately restricted to SIMPLE bindings (MONEY_ALIAS_BINDING requires exactly one bare identifier,
+    optionally table-qualified, before `AS`) — an aggregate or arithmetic expression (`SUM(amount) AS
+    total`, `a+b AS x`) is NOT resolved, so this stays "the alias's origin column", not "anything that
+    mentions a money column anywhere in its expression" (which would start crediting unrelated derived
+    values as money-adjacent and reopen a different false-negative class). Resolution is transitive via a
+    fixed-point loop (`cf.amount AS raw` then `raw AS raw2` resolves raw2 too), because a multi-hop rename
+    is no less a restyle than a single hop.
+
+    File-scoped (re-scans the whole file text, like every other regex check here) rather than
+    statement-scoped: DERIVED_LIVE_SQL / DBT_RECONCILE are each a single focused file with one cash-flow
+    concern, so a same-named alias colliding with an unrelated meaning elsewhere in the SAME file is not a
+    realistic false-positive vector in practice — verified empirically against the real repo (see
+    check_roster_consistency.py's own `python scripts/check_roster_consistency.py` run) that this adds
+    zero aliases (and therefore zero behavior change) on the actual DERIVED_LIVE_SQL / DBT_RECONCILE
+    files, which alias no money column today."""
+    known = {marker.lower() for marker in markers}
+    aliases = set()
+    bindings = MONEY_ALIAS_BINDING.findall(txt)
+    changed = True
+    while changed:
+        changed = False
+        for source, alias in bindings:
+            if alias.lower() in known:
+                continue
+            if source.lower() in known:
+                known.add(alias.lower())
+                aliases.add(alias)
+                changed = True
+    return aliases
+
+
+def _money_nearby(ctx, markers, money_aliases):
+    """True if `ctx` (a _divisor_context() window) contains either a bare money `marker` substring (the
+    original R-B/R-C adjacency check) OR a whole-word mention of a resolved money `money_aliases` name
+    (_money_alias_names() — codebase audit 2026-07-26). Whole-word (`\\b`) matching on the alias side only,
+    matching the STRUCTURE of the pre-existing marker check but avoiding a short alias name (e.g. `raw`)
+    accidentally substring-matching an unrelated longer identifier."""
+    if any(marker in ctx for marker in markers):
+        return True
+    if not money_aliases:
+        return False
+    alias_pattern = r"\b(?:" + "|".join(re.escape(a) for a in money_aliases) + r")\b"
+    return re.search(alias_pattern, ctx) is not None
 
 
 def diff_msg(name_a, a, name_b, b):
@@ -584,9 +669,13 @@ def main():
             snippet = " ".join(m.group(0).split())
             errors.append(f"R-B: {rel}:{n} still has a bare ['A','B',...] roster literal — read "
                           f"`state.active_strategy_codes` instead: {snippet}")
+        # money_aliases: resolve `<col> AS <alias>` bindings before scanning divisors (codebase audit
+        # 2026-07-26) so a money value that reaches the divisor via an aliased column — not the bare
+        # `amount` token — still trips the adjacency guard below. See _money_alias_names() docstring.
+        money_aliases = _money_alias_names(txt, ("amount",))
         for m in FIXED_DIVISOR.finditer(txt):
             n, ctx = _divisor_context(txt, m)
-            if "amount" in ctx:
+            if _money_nearby(ctx, ("amount",), money_aliases):
                 errors.append(f"R-B: {rel}:{n} still has a fixed `/ N` equal-split divisor — use an "
                               f"as-of-flow-date COUNT(*) FROM state.strategy_roster: {ctx.strip()}")
 
@@ -601,11 +690,14 @@ def main():
         # it ANY unrelated N/M-shaped text (e.g. a RUNBOOK "section 5/6" reference) trips FIXED_DIVISOR
         # and false-fails CI. _divisor_context() spans the match's first line through its last line (and
         # reaches back one line for a leading-operator wrap) so the amount/cash_flow/deposit token is
-        # still found when the wrap separates it from the divisor.
+        # still found when the wrap separates it from the divisor. money_aliases: same alias-resolution
+        # layer as R-B (codebase audit 2026-07-26) so an aliased money column (e.g. `cf.amount AS raw`
+        # then `SUM(raw) / 5`) still trips this guard — see _money_alias_names() docstring.
         txt = open(DBT_RECONCILE, encoding="utf-8").read()
+        money_aliases = _money_alias_names(txt, ("amount", "cash_flow", "deposit"))
         for m in FIXED_DIVISOR.finditer(txt):
             n, ctx = _divisor_context(txt, m)
-            if "amount" in ctx or "cash_flow" in ctx or "deposit" in ctx:
+            if _money_nearby(ctx, ("amount", "cash_flow", "deposit"), money_aliases):
                 errors.append(f"R-C: dbt/tests/assert_cash_flows_reconcile.sql:{n} hardcodes the roster "
                               f"size (a `/ N` amount-split assumption) — the reconciliation must be "
                               f"count-agnostic (per-strategy sum): {ctx.strip()}")

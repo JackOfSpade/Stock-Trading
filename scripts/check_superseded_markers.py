@@ -50,6 +50,9 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib.sql_files import numbered_sql_files
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BIGQUERY_DIR = os.path.join(ROOT, "bigquery")
 
@@ -63,8 +66,6 @@ OBJECT_DDL = re.compile(
     rf"`{re.escape(PROJECT)}\.(\w+)\.(\w+)`",
     re.IGNORECASE,
 )
-
-NUMBERED_FILE = re.compile(r"^(\d+)_.*\.sql$")
 
 # Pre-existing unmarked definitions (2026-07-18). BURN-DOWN LIST, not a permanent exemption: add a
 # proper "SUPERSEDED ... see bigquery/<canonical>" marker above the CREATE, then DELETE the entry here
@@ -117,13 +118,19 @@ def _line_offsets(text):
 
 
 def definitions():
-    """{(kind, dataset, name): [(number, filename, line_index), ...]} across numbered bigquery/*.sql."""
+    """{(kind, dataset, name): [(number, filename, line_index), ...]} across numbered bigquery/*.sql.
+
+    Iterates via scripts/lib/sql_files.py's numbered_sql_files() — the shared NN-prefix parser this
+    script's own NUMBERED_FILE regex was consolidated into (codebase audit 2026-07-26). NOTE this is
+    a pure dedup, not a bug fix here: violations() below determines each object's canonical file via
+    max(n for n, _, _ in occurrences), which is order-independent, so the lexical-vs-numeric mismatch
+    that made check_dbt_view_coverage.py's found.add()/discard() apply CREATE/DROP out of order can't
+    happen to this script's max()-based logic regardless of what order definitions() visits files in."""
     found = collections.defaultdict(list)
-    for fn in sorted(os.listdir(BIGQUERY_DIR)):
-        m = NUMBERED_FILE.match(fn)
-        path = os.path.join(BIGQUERY_DIR, fn)
-        if not m or os.path.isdir(path):
+    for number, path in numbered_sql_files(BIGQUERY_DIR):
+        if os.path.isdir(path):
             continue
+        fn = os.path.basename(path)
         text = open(path, encoding="utf-8").read()
         # Match against the WHOLE file text, not line-by-line: `\s+` in OBJECT_DDL already spans
         # newlines, so a CREATE statement legally wrapped across two lines (e.g. the keyword and the
@@ -135,7 +142,7 @@ def definitions():
         for hit in OBJECT_DDL.finditer(text):
             kind = " ".join(hit.group(1).upper().split())
             line_idx = bisect.bisect_right(offsets, hit.start()) - 1
-            found[(kind, hit.group(2), hit.group(3))].append((int(m.group(1)), fn, line_idx))
+            found[(kind, hit.group(2), hit.group(3))].append((number, fn, line_idx))
     return found
 
 
@@ -154,9 +161,10 @@ def marks_superseded(text, canonical_number):
     n = canonical_number
     return bool(
         re.search(rf"bigquery/0*{n}\b", text)
-        # [A-Za-z]: NUMBERED_FILE (^(\d+)_.*\.sql$) doesn't forbid an uppercase first letter after the
-        # numeric prefix (e.g. a future 99_ParkRebalance.sql), so a correctly-marked pointer to one
-        # must not be rejected just because this class was hardcoded lowercase-only.
+        # [A-Za-z]: the NN_ prefix (scripts/lib/sql_files.py's NUMBERED_FILE: ^(\d+)_.*\.sql$)
+        # doesn't forbid an uppercase first letter after the numeric prefix (e.g. a future
+        # 99_ParkRebalance.sql), so a correctly-marked pointer to one must not be rejected just
+        # because this class was hardcoded lowercase-only.
         or re.search(rf"\b0*{n}_[A-Za-z]", text)
     )
 

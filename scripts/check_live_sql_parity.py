@@ -47,6 +47,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.bq_json import run_bq_query
+from lib.sql_files import sql_file_paths
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BIGQUERY_DIR = os.path.join(ROOT, "bigquery")
@@ -96,13 +97,13 @@ NEXT_TOP_LEVEL = re.compile(
 
 def numbered_sql_files():
     """bigquery/NN_*.sql files in NUMERIC apply-order (not lexical — NN is zero-padded to 2 digits
-    today, but sort by the leading integer explicitly so this stays correct if that ever changes)."""
-    files = []
-    for fn in os.listdir(BIGQUERY_DIR):
-        m = re.match(r"^(\d+)_.*\.sql$", fn)
-        if m:
-            files.append((int(m.group(1)), os.path.join(BIGQUERY_DIR, fn)))
-    return [path for _, path in sorted(files)]
+    today, but sort by the leading integer explicitly so this stays correct if that ever changes).
+
+    Delegates to scripts/lib/sql_files.py — the shared apply-order walk this module's own copy was
+    consolidated into (codebase audit 2026-07-26) after check_dbt_view_coverage.py was found still
+    walking `sorted(os.listdir(...))` (lexical) and mis-ordering every 3-digit bigquery/*.sql file
+    against this repo's now-100+-file tree; see that module's docstring for the reproduced bug."""
+    return sql_file_paths(BIGQUERY_DIR)
 
 
 def normalize_tail(body):

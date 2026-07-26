@@ -613,6 +613,85 @@ def test_fixed_divisor_near_deposit_token_is_caught(repo_copy):
     assert rc.main() == 1
 
 
+# ---- R-B / R-C: the fixed-divisor-via-ALIASED-money-column fail-open hole (codebase audit
+#      2026-07-26 — an auditor reproduced this against the pre-fix code). _divisor_context()'s
+#      adjacency window only sees the divisor's own source line(s), never where the money value
+#      going into SUM(...) originally came from — so a plain, ordinary restyle that lifts `cf.amount`
+#      into a CTE alias before summing carried NO 'amount' token anywhere near the divisor, and the
+#      textbook forbidden equal-split `/ 5` sailed through both R-B and R-C clean. These fixtures pin
+#      the fix (_money_alias_names() / _money_nearby()): the alias's OWN origin column is what gets
+#      checked, not just the divisor's immediate text. ----
+def test_fixed_divisor_via_column_alias_in_derived_sql_is_caught(repo_copy):
+    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql")][0]
+    txt = _read(target)
+    _write(target, txt + (
+        "\n-- regression: money value reaches the divisor via a column alias, not the bare 'amount' token\n"
+        "WITH renamed AS (\n"
+        "  SELECT cf.amount AS raw, a.s AS strategy\n"
+        "  FROM active a CROSS JOIN cash_flows cf\n"
+        "  GROUP BY a.s\n"
+        ")\n"
+        "SELECT SUM(raw)\n"
+        "  / 5 AS equal_split\n"
+        "FROM renamed;\n"
+    ))
+    assert rc.main() == 1
+
+
+def test_fixed_divisor_via_column_alias_in_dbt_reconcile_is_caught(repo_copy):
+    p = rc.DBT_RECONCILE
+    txt = _read(p)
+    _write(p, txt + (
+        "\n-- regression: same aliased-money-column restyle in the dbt reconcile test\n"
+        "WITH renamed AS (\n"
+        "  SELECT cf.amount AS raw FROM cash_flows cf\n"
+        ")\n"
+        "SELECT SUM(raw)\n"
+        "  / 5 AS expected_share\n"
+        "FROM renamed;\n"
+    ))
+    assert rc.main() == 1
+
+
+# ---- R-B: a MULTI-HOP alias (renamed twice before reaching the divisor) is no less a restyle than a
+#      single hop, and must still resolve transitively (_money_alias_names()'s fixed-point loop) ----
+def test_fixed_divisor_via_multi_hop_alias_is_caught(repo_copy):
+    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("22_cash_flows.sql")][0]
+    txt = _read(target)
+    _write(target, txt + (
+        "\n-- regression: money value renamed TWICE before the divisor sees it\n"
+        "WITH base AS (\n"
+        "  SELECT cf.amount AS raw FROM cash_flows cf\n"
+        "),\n"
+        "renamed AS (\n"
+        "  SELECT raw AS raw2 FROM base\n"
+        ")\n"
+        "SELECT SUM(raw2)\n"
+        "  / 5 AS equal_split\n"
+        "FROM renamed;\n"
+    ))
+    assert rc.main() == 1
+
+
+# ---- R-B: the alias-resolution fix must NOT reopen a false positive. An alias bound to an UNRELATED
+#      (non-money) column, sitting next to an unrelated `/N`, must still pass — proving the fix checks
+#      the alias's actual origin column, not merely "some alias exists nearby" (codebase audit
+#      2026-07-26). ----
+def test_unrelated_alias_near_unrelated_divisor_does_not_false_fail(repo_copy):
+    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql")][0]
+    txt = _read(target)
+    _write(target, txt + (
+        "\n-- unrelated alias (no money column anywhere in its origin) next to an unrelated divisor\n"
+        "WITH renamed AS (\n"
+        "  SELECT strategy_count AS n FROM some_unrelated_table\n"
+        ")\n"
+        "SELECT n\n"
+        "  / 5 AS unrelated_ratio\n"
+        "FROM renamed;\n"
+    ))
+    assert rc.main() == 0
+
+
 # ---- R-E: the cooldown_days sub-block (a SEPARATE comparison loop from the top-level rails) —
 #      both the mismatch and the missing-key vacuous-pass directions (2026-07-17 audit) ----
 def test_cooldown_rail_disagreement_is_caught(repo_copy):

@@ -67,7 +67,7 @@ except ImportError:
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.routine_manifest import (  # noqa: E402
-    heading_to_id, parse_routine_headings, build_triggers_manifest,
+    heading_to_id, parse_routine_headings, build_triggers_manifest, instruction_text,
 )
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -354,7 +354,13 @@ def main():
     for rid in dup:
         errors.append(f"duplicate Claude_Task_Plan.md heading for id {rid}")
 
-    want_catalog = {rid: f"Read Claude_Task_Plan.md. Perform {h}." for rid, h in head_by_id.items()}
+    # check B must derive its expectation from the SAME shared template check F uses (lib/
+    # routine_manifest.instruction_text) rather than re-literalizing the f-string here -- that literal
+    # was the 4th independent copy the 2026-07-20 extraction was supposed to kill (codebase audit
+    # 2026-07-26): edit instruction_text's wording and regenerate bigquery/15 via gen_routine_lists.py
+    # --write, and this hardcoded copy would silently compute the OLD string, failing CI for every
+    # routine with a diff that points at cadence.yaml/plan headings instead of the real culprit.
+    want_catalog = {rid: instruction_text(h) for rid, h in head_by_id.items()}
     want_expected = {rid: r["monitor_class"] for rid, r in cad.items()
                      if r.get("monitor_class") in CALENDAR_CLASSES}
 

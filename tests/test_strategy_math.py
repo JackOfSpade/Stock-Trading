@@ -174,6 +174,20 @@ def test_d_instrument_eligibility_boundary():
     assert strategy_d.meets_instrument_eligibility(10_000_000_000, 19_999_999) is False
 
 
+def test_d_concurrent_position_floor_boundary():
+    # codebase audit 2026-07-26: MIN_CONCURRENT_POSITIONS was defined but had no
+    # consuming predicate (unlike every sibling constant in this module) — this test
+    # guards the floor's boundary (4 fails, 5 and 6 pass) now that
+    # meets_concurrent_position_floor exists.
+    assert strategy_d.meets_concurrent_position_floor(4) is False
+    assert strategy_d.meets_concurrent_position_floor(5) is True
+    assert strategy_d.meets_concurrent_position_floor(6) is True
+    # zero open positions means D hasn't deployed yet — the floor's own text
+    # ("minimum 5 when any are held") only binds once some exposure exists, so this
+    # is vacuously floor-satisfied, not a violation.
+    assert strategy_d.meets_concurrent_position_floor(0) is True
+
+
 def test_d_correlation_bucket_members_monitoring_only():
     # Rev 35 (owner directive): the bucket-size cap and entry-blocking behavior were
     # removed — correlation_bucket_members is now monitoring/informational only

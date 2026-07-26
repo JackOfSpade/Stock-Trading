@@ -22,31 +22,27 @@ except ImportError:  # pragma: no cover — stdlib since 3.9; CI/runners pin >=3
 
 PROJECT = os.environ.get("PROJECT", "stock-trading-498512")
 OUT = os.path.join(os.path.dirname(__file__), "index.html")
-BQ_TIMEOUT_S = 600
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
-from lib.bq_json import parse_bq_json_stdout  # noqa: E402
+from lib.bq_json import run_bq_query  # noqa: E402
 from lib import tz_render  # noqa: E402
 
 
 def q(sql: str):
     """Run a read-only query via the bq CLI and return a list of dict rows.
 
-    Uses --quiet/--headless so bq emits no 'Waiting on bqjob...' status noise; as a
-    belt-and-suspenders guard we still slice from the first JSON bracket in case any
-    banner leaks to stdout anyway (this exact failure class already hit production in
-    scripts/dbt_parity.py and scripts/alert_relay.py — see their bq()/bq helpers).
+    Thin wrapper over the shared invoke half of the pattern (scripts/lib/bq_json.py's
+    run_bq_query) — this module was the one holdout still building its own argv/subprocess.run
+    with a locally hardcoded 600s timeout after alert_relay.py/dbt_parity.py/
+    check_live_roster_parity.py/check_live_sql_parity.py were all migrated onto the shared
+    wrapper (2026-07-18 dedup-sweep audit; this file was missed then and is closed out here,
+    codebase audit 2026-07-26). Same max_rows=1000 alert_relay.py's bq() uses. run_bq_query
+    raises RuntimeError (nonzero bq exit or a subprocess timeout) rather than
+    subprocess.CalledProcessError/TimeoutExpired — see main()'s except tuple below, which was
+    narrowed to match.
     """
-    try:
-        out = subprocess.run(
-            ["bq", "--project_id", PROJECT, "--quiet", "--headless", "query",
-             "--use_legacy_sql=false", "--format=json", "--max_rows=1000", sql],
-            capture_output=True, text=True, check=True, timeout=BQ_TIMEOUT_S,
-        ).stdout
-    except subprocess.TimeoutExpired as e:
-        raise RuntimeError(f"bq query timed out after {e.timeout}s: {sql[:120]}") from e
-    return parse_bq_json_stdout(out)
+    return run_bq_query(sql, PROJECT, max_rows=1000)
 
 
 def beat_heartbeat():
@@ -140,16 +136,23 @@ def main():
         runs = q(f"SELECT routine,run_date,status,CAST(log_ts AS STRING) AS log_ts "
                  f"FROM `{PROJECT}.ops.run_log` "
                  f"ORDER BY log_ts DESC LIMIT 20")
-    except (subprocess.CalledProcessError, OSError, RuntimeError, ValueError) as e:
+    except (OSError, RuntimeError, ValueError) as e:
         # OSError (broadened from FileNotFoundError) so ANY spawn-time OS error from the bq subprocess
         # — a missing binary (FileNotFoundError), a non-executable one (PermissionError), a PATH entry
         # that is a directory (IsADirectoryError), all OSError subclasses — yields the clean "Query
         # failed" diagnostic + return 1, instead of an uncaught traceback (2026-07-17 audit).
-        # CalledProcessError's default __str__ is just "Command '[...]' returned non-zero exit
-        # status N" — it never includes bq's actual stderr diagnostic, even though check=True
-        # already populated e.stderr with the real error text (2026-07-14 audit finding).
-        detail = e.stderr.strip() if isinstance(e, subprocess.CalledProcessError) and e.stderr else str(e)
-        print(f"Query failed (is the bq CLI installed & authenticated?): {detail}", file=sys.stderr)
+        #
+        # subprocess.CalledProcessError dropped from this tuple (codebase audit 2026-07-26, closing
+        # out the 2026-07-18 bq-invoke consolidation this file was missed by): q() now delegates to
+        # lib/bq_json.py's run_bq_query, which runs bq WITHOUT check=True and instead raises a plain
+        # RuntimeError(stderr-or-stdout) itself on a nonzero exit code (same helper also turns a
+        # subprocess.TimeoutExpired into RuntimeError) — so CalledProcessError can no longer reach
+        # here at all, and RuntimeError's str(e) already IS the real bq diagnostic text, unlike
+        # CalledProcessError's old default __str__ ("Command '[...]' returned non-zero exit status
+        # N") which never included it (the 2026-07-14 finding this branch originally worked around —
+        # still true in spirit, just resolved by run_bq_query's own message instead of this file's
+        # own e.stderr extraction).
+        print(f"Query failed (is the bq CLI installed & authenticated?): {e}", file=sys.stderr)
         return 1
 
     h = health[0] if health else {}

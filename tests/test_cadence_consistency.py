@@ -323,6 +323,49 @@ def test_check_b_instruction_drift_is_caught(tmp_path, monkeypatch, capsys):
     assert "routine_catalog instruction drift" in capsys.readouterr().out
 
 
+def test_check_b_follows_the_shared_instruction_text_template(tmp_path, monkeypatch, capsys):
+    # Coupling test for the 2026-07-20 extraction (codebase audit 2026-07-26): check B's want_catalog
+    # must be COMPUTED by calling lib.routine_manifest.instruction_text, not by re-literalizing its
+    # f-string. Reproduce the exact failure mode an auditor hit: vary instruction_text's template (here,
+    # append an " (URGENT)" suffix -- kept inside parse_catalog_sql's "Perform ..." prefix match so the
+    # SQL-scraper regex, a separate concern, still parses it) and regenerate 15_routine_catalog.sql to
+    # match the NEW template (as gen_routine_lists.py --write would, since it also calls the shared
+    # helper). If check B still had its own hardcoded "Perform {h}." f-string blind to this patch, it
+    # would report a false instruction-drift error for D1 even though catalog and template agree -- the
+    # diff would misdirect a maintainer toward cadence.yaml/plan headings instead of the real culprit.
+    # With the dedup in place this must be clean.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+
+    def patched_instruction_text(heading):
+        return f"Read Claude_Task_Plan.md. Perform {heading} (URGENT)."
+    monkeypatch.setattr(cc, "instruction_text", patched_instruction_text)
+
+    catalog_sql.write_text(
+        "STRUCT('D1' AS routine, 'Read Claude_Task_Plan.md. Perform D1. Market Development Scan — "
+        "deep research (URGENT).' AS canonical_instruction)\n"
+    )
+    assert cc.main() == 0
+    assert "routine_catalog instruction drift" not in capsys.readouterr().out
+
+
+def test_check_b_hardcoded_literal_would_be_caught_by_the_coupling_test(tmp_path, monkeypatch, capsys):
+    # Sanity check that the coupling test above actually HAS teeth: if want_catalog were still the old
+    # hardcoded f-string (blind to the patched instruction_text), the SAME patched-template fixture
+    # would report a drift -- proving the previous test only passes because check B genuinely delegates
+    # to instruction_text now, not because the assertion is vacuous.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    catalog_sql.write_text(
+        "STRUCT('D1' AS routine, 'Read Claude_Task_Plan.md. Perform D1. Market Development Scan — "
+        "deep research (URGENT).' AS canonical_instruction)\n"
+    )
+    # do NOT monkeypatch cc.instruction_text here -- this reproduces main() computing want_catalog
+    # with the OLD, un-patched (hardcoded-equivalent) template against the NEW catalog content.
+    assert cc.main() == 1
+    assert "routine_catalog instruction drift" in capsys.readouterr().out
+
+
 # ---- check G: ops/trigger_ids.json duplicate/stale/missing-entry handling ----
 def test_trigger_ids_duplicate_trigger_id_is_caught(tmp_path, monkeypatch, capsys):
     plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)

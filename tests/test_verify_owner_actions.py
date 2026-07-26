@@ -609,6 +609,157 @@ def test_check_E_anthropic_false_when_unset(monkeypatch):
 
 
 # ---- write path: fail-open when persisting the flip fails (never raise / always exit 0) ----
+# ---- malformed ```verify fences must be LOUD, not silent (codebase audit 2026-07-26) -------
+#
+# FENCE_RE requires an exact 4-line id/type/probe/done_when shape right after ```verify. Any
+# deviation makes the whole fence match NOTHING, so before this fix the item would silently
+# vanish from the run — no OPEN, no diagnostic, exit 0, a normal-looking summary. These four cases
+# reproduce the four malformed shapes an auditor found live: a case-typo'd field name, trailing
+# text on the id line, an extra field inserted between fields, and CRLF line endings (the last one
+# is now tolerated by FENCE_RE itself via `\r?`, so it must NOT warn — see the CRLF case below).
+
+SAMPLE_DOC_CASE_TYPO_FIELD = """## A. thing
+
+```verify
+id: A
+type: bq
+probe: SELECT 1
+Done_when: n>0
+```
+"""
+
+SAMPLE_DOC_TRAILING_TEXT_ON_ID = """## A. thing
+
+```verify
+id: A  (registered under Gap 4)
+type: bq
+probe: SELECT 1
+done_when: n>0
+```
+"""
+
+SAMPLE_DOC_EXTRA_FIELD = """## A. thing
+
+```verify
+id: A
+type: bq
+severity: high
+probe: SELECT 1
+done_when: n>0
+```
+"""
+
+SAMPLE_DOC_CRLF = (
+    "## A. thing\r\n"
+    "\r\n"
+    "```verify\r\n"
+    "id: A\r\n"
+    "type: bq\r\n"
+    "probe: SELECT 1\r\n"
+    "done_when: n>0\r\n"
+    "```\r\n"
+)
+
+
+def test_fence_re_rejects_case_typo_field_name():
+    assert list(voa.FENCE_RE.finditer(SAMPLE_DOC_CASE_TYPO_FIELD)) == []
+
+
+def test_fence_re_rejects_trailing_text_on_id_line():
+    assert list(voa.FENCE_RE.finditer(SAMPLE_DOC_TRAILING_TEXT_ON_ID)) == []
+
+
+def test_fence_re_rejects_extra_inserted_field():
+    assert list(voa.FENCE_RE.finditer(SAMPLE_DOC_EXTRA_FIELD)) == []
+
+
+def test_fence_re_tolerates_crlf_line_endings():
+    # \r? tolerance added 2026-07-26 — CRLF alone is not a shape violation, just a line-ending
+    # difference, so it must still match (and therefore must NOT warn — see below).
+    matches = list(voa.FENCE_RE.finditer(SAMPLE_DOC_CRLF))
+    assert len(matches) == 1
+    assert matches[0].group("id") == "A"
+
+
+def test_main_warns_with_line_number_for_case_typo_field(tmp_path, monkeypatch, capsys):
+    doc = tmp_path / "OWNER_ACTIONS.md"
+    doc.write_text(SAMPLE_DOC_CASE_TYPO_FIELD)
+    monkeypatch.setattr(voa, "OWNER_ACTIONS_PATH", str(doc))
+    rc = voa.main()
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "WARNING" in out
+    assert "line 3" in out
+    # No item was ever registered/tracked — the malformed fence produced no OPEN/DONE/PASS row.
+    assert "id/type/probe/done_when" in out
+
+
+def test_main_warns_with_line_number_for_trailing_text_on_id(tmp_path, monkeypatch, capsys):
+    doc = tmp_path / "OWNER_ACTIONS.md"
+    doc.write_text(SAMPLE_DOC_TRAILING_TEXT_ON_ID)
+    monkeypatch.setattr(voa, "OWNER_ACTIONS_PATH", str(doc))
+    rc = voa.main()
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "WARNING" in out and "line 3" in out
+
+
+def test_main_warns_with_line_number_for_extra_field(tmp_path, monkeypatch, capsys):
+    doc = tmp_path / "OWNER_ACTIONS.md"
+    doc.write_text(SAMPLE_DOC_EXTRA_FIELD)
+    monkeypatch.setattr(voa, "OWNER_ACTIONS_PATH", str(doc))
+    rc = voa.main()
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "WARNING" in out and "line 3" in out
+
+
+def test_main_does_not_warn_for_crlf_fence(tmp_path, monkeypatch, capsys):
+    # CRLF is now tolerated by FENCE_RE, so it is a normal successfully-parsed fence — no warning,
+    # and it participates in the ordinary OPEN/DONE/PASS flow like any other well-formed fence.
+    doc = tmp_path / "OWNER_ACTIONS.md"
+    doc.write_bytes(SAMPLE_DOC_CRLF.encode("utf-8"))
+    monkeypatch.setattr(voa, "OWNER_ACTIONS_PATH", str(doc))
+    monkeypatch.setitem(voa.PROBES, "A", lambda: (False, "still open"))
+    rc = voa.main()
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "WARNING" not in out
+    assert "OPEN] A:" in out
+
+
+def test_main_does_not_warn_for_a_well_formed_fence(tmp_path, monkeypatch, capsys):
+    # Sanity check that the new scan doesn't false-positive-warn on every normal fence.
+    doc = tmp_path / "OWNER_ACTIONS.md"
+    doc.write_text(SAMPLE_DOC)
+    monkeypatch.setattr(voa, "OWNER_ACTIONS_PATH", str(doc))
+    monkeypatch.setitem(voa.PROBES, "A", lambda: (False, "still open"))
+    monkeypatch.setitem(voa.PROBES, "B", lambda: (False, "still open"))
+    rc = voa.main()
+    assert rc == 0
+    assert "WARNING" not in capsys.readouterr().out
+
+
+def test_main_warning_does_not_change_flip_behavior_of_other_items(tmp_path, monkeypatch, capsys):
+    # A malformed fence for one item must not affect a well-formed sibling fence's normal
+    # OPEN/DONE/PASS flip behavior elsewhere in the same document.
+    # Well-formed fence FIRST, malformed one SECOND: FENCE_RE's non-greedy DOTALL probe/done_when
+    # groups can otherwise "leak" past an unterminated malformed fence into a LATER well-formed
+    # fence's own done_when line (a separate, pre-existing quirk of this regex, not something this
+    # unit changes) — ordering avoids that so this test isolates the warning-vs-flip interaction.
+    doc_text = SAMPLE_DOC_BULLET + "\n" + SAMPLE_DOC_CASE_TYPO_FIELD
+    doc = tmp_path / "OWNER_ACTIONS.md"
+    doc.write_text(doc_text)
+    monkeypatch.setattr(voa, "OWNER_ACTIONS_PATH", str(doc))
+    monkeypatch.setitem(voa.PROBES, "E-webhook", lambda: (True, "HAS_ALERT_WEBHOOK_URL=true"))
+    rc = voa.main()
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "WARNING" in out
+    assert "PASS (closed just now)] E-webhook:" in out
+    assert "[DONE" in doc.read_text()
+
+
 def test_main_write_failure_is_fail_open_not_crash(tmp_path, monkeypatch, capsys):
     # A passing probe makes changed=True; if persisting the flip fails (read-only FS / disk full),
     # main() must fail-open — print a clear notice and exit 0, matching the read path and the module's

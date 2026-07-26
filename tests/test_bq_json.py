@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-import scripts.lib.bq_json as bq_json
-from scripts.lib.bq_json import parse_bq_json_stdout, run_bq_query
+import lib.bq_json as bq_json
+from lib.bq_json import parse_bq_json_stdout, run_bq_query
 
 from conftest import fake_subprocess_run as _fake_run
 

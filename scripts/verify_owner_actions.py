@@ -25,6 +25,14 @@ GUARDS (see fence block below + Claude_Task_Plan.md / OWNER_ACTIONS.md OAE-5 pac
   * Single-file commit surface: this script only ever rewrites OWNER_ACTIONS.md.
   * Always exits 0 — a probe outcome must never fail the CI run that calls this (see
     .github/workflows/owner-actions-verify.yml).
+  * Malformed fences are LOUD, not silent (codebase audit 2026-07-26): FENCE_RE requires an exact
+    4-line id/type/probe/done_when shape right after ```verify, so any deviation (a case-typo'd
+    field name, trailing text on the id line, an extra field inserted between fields, or — before
+    the \r? tolerance added here — CRLF line endings) used to make the whole fence match NOTHING,
+    silently dropping the item from the run with no OPEN, no diagnostic, and a normal-looking exit-0
+    summary. main() now also scans for every bare ```verify opening line and prints a WARNING naming
+    the line number for any not covered by a successful FENCE_RE match — still exit 0, still no
+    change to flip/anchor behavior, purely an added diagnostic.
 
 Env (all optional — used by the bq/gh probes when present; falls back to OPEN if a probe's
 prerequisite env/binary is unavailable, per fail-open above):
@@ -51,14 +59,24 @@ PROJECT = os.environ.get("BQ_PROJECT", "stock-trading-498512")
 TIMEOUT = 120
 
 FENCE_RE = re.compile(
-    r"```verify\n"
-    r"id:\s*(?P<id>\S+)\s*\n"
-    r"type:\s*(?P<type>\S+)\s*\n"
-    r"probe:\s*(?P<probe>.*?)\s*\n"
-    r"done_when:\s*(?P<done_when>.*?)\s*\n"
+    r"```verify\r?\n"
+    r"id:\s*(?P<id>\S+)\s*\r?\n"
+    r"type:\s*(?P<type>\S+)\s*\r?\n"
+    r"probe:\s*(?P<probe>.*?)\s*\r?\n"
+    r"done_when:\s*(?P<done_when>.*?)\s*\r?\n"
     r"```",
     re.DOTALL,
 )
+
+# Any bare ```verify opening line, used only to detect a fence whose body does NOT match FENCE_RE
+# above (codebase audit 2026-07-26). A malformed fence body — case-typo'd field name, trailing text
+# on the id line, an extra field inserted between the four required ones, or (pre-\r? fix) CRLF line
+# endings — makes FENCE_RE match NOTHING for that block, and the item silently vanishes from the run:
+# no OPEN line, no diagnostic, exit 0, a normal-looking summary. Every OTHER failure mode in this
+# script (unregistered id, anchor-not-found, probe exception) prints a visible diagnostic; this was
+# the one silent path, and OWNER_ACTIONS.md is a 120KB hand-maintained file people edit by hand, so a
+# malformed fence is a realistic way for an item to drop out of tracking with nobody noticing.
+FENCE_OPEN_RE = re.compile(r"^```verify\s*$", re.MULTILINE)
 
 
 # ---------------------------------------------------------------------------
@@ -418,6 +436,22 @@ def main():
     # Work from the end of the file backwards so earlier edits don't shift indices for
     # not-yet-processed matches.
     matches = list(FENCE_RE.finditer(text))
+
+    # Loud diagnostic for a malformed fence (codebase audit 2026-07-26 — see FENCE_OPEN_RE above):
+    # every bare ```verify opening line that FENCE_RE did NOT consume as part of a successful match
+    # gets its own warning naming the line number, instead of silently vanishing from the run. This
+    # runs before the fail-open/exit-0 contract is exercised below and never changes it — it only
+    # ever adds a printed line; no flip/anchor behavior is touched.
+    matched_open_offsets = {m.start() for m in matches}
+    for open_m in FENCE_OPEN_RE.finditer(text):
+        if open_m.start() not in matched_open_offsets:
+            line_no = text.count("\n", 0, open_m.start()) + 1
+            print(
+                f"verify_owner_actions: WARNING — malformed ```verify fence at line {line_no}: "
+                "did not match the expected id/type/probe/done_when shape (4 lines, in that order, "
+                "no extra/renamed fields) — this item will NOT be tracked or auto-closed."
+            )
+
     for m in reversed(matches):
         fence_id = m.group("id").strip()
         fence_start_char = m.start()

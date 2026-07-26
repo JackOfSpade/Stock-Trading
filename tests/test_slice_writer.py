@@ -1,4 +1,4 @@
-from scripts.lib.slice_writer import check_or_write_slices, find_orphaned_markdown_files, slugify
+from lib.slice_writer import check_or_write_slices, find_orphaned_markdown_files, slugify
 
 
 def test_slugify_collapses_non_alnum_and_uses_section_fallback():

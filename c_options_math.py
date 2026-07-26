@@ -126,6 +126,16 @@ import random
 # computations. Per cycle 4 critical-eval warning [4].
 CONTRACT_MULTIPLIER = 100
 
+# Volatility search bounds for implied_vol()'s bracketed solve (codebase audit
+# 2026-07-26). These are the same bounds the previous Newton-only implementation
+# clamped its iterate into, promoted to named constants because they now also
+# define the IDENTIFIABILITY test: a target price outside
+# [price(_IV_SOLVE_MIN), price(_IV_SOLVE_MAX)] has no implied vol, and saying so
+# is the whole point of that function's None contract. Widening them widens what
+# the solver will claim to have solved, so change them deliberately.
+_IV_SOLVE_MIN = 0.001
+_IV_SOLVE_MAX = 5.0
+
 
 # =============================================================================
 # Black-Scholes-Merton primitives
@@ -348,14 +358,94 @@ def implied_vol(
     tolerance: float = 1e-6,
     max_iter: int = 100,
 ) -> Optional[float]:
-    """Solve for implied volatility via Newton-Raphson on Black-Scholes price.
+    """Solve for implied volatility by bracketed root-finding on Black-Scholes price.
 
-    Returns None if no solution converges within max_iter (caller must handle
-    deferral). Per Strategy.md, code-execution failures defer the thesis; they
-    do NOT prompt Claude to estimate IV from reasoning.
+    Returns None if the target price admits no identifiable IV, or if no solution
+    converges within max_iter (caller must handle deferral). Per Strategy.md,
+    code-execution failures defer the thesis; they do NOT prompt Claude to
+    estimate IV from reasoning.
+
+    codebase audit 2026-07-26 — this was a bare Newton-Raphson loop that accepted
+    `abs(price - target_price) < tolerance` as convergence. That test is NOT
+    evidence of a solve: it is also satisfied wherever the pricing function is
+    numerically FLAT in sigma, and there the returned sigma is just whatever the
+    caller passed as `initial_guess`. Two real, measured failure classes came out
+    of that:
+
+      * Deep-OTM / $0.00-quoted legs (routine on the short and protective legs of
+        the iron condors and wide credit spreads this module builds): price
+        underflows to 0.0 across essentially the whole practical vol range, so
+        iteration 0 "converged" immediately. implied_vol(0.0, 100, 150, 5, 0.045,
+        'call') returned 0.30 for initial_guess=0.30, 0.05 for 0.05, 0.50 for
+        0.50 — an answer tracking the solver knob instead of the input.
+      * Deep-ITM legs: price sits within `tolerance` of the discounted-intrinsic
+        floor for a wide band of sigma, so the same vacuous accept fired there.
+        A 20k-case randomized sweep found 2281 quotes returning a fabricated IV.
+
+    Neither is fixable by thresholding vega alone: an intermediate fix that moved
+    a `vega_per_unit < 1e-6` guard ahead of the accept-check was measured on the
+    same sweep to still fabricate 410 IVs while NEWLY rejecting 760 genuinely
+    solvable quotes (Newton wandering into a flat region mid-iteration is not the
+    same thing as the target being unidentifiable).
+
+    The fix is to decide identifiability from the TARGET PRICE rather than from a
+    local vega reading, which is well-posed because BSM price is strictly
+    increasing in sigma:
+
+      1. Bracket. The solvable price range is exactly (price(_IV_MIN),
+         price(_IV_MAX)). A target at or outside either endpoint has no
+         identifiable IV -> None, before any iteration. This is what catches both
+         classes above: the $0.00 quote sits at/below the floor, and the deep-ITM
+         quote sits within tolerance of it.
+      2. Solve inside the proven bracket with Newton, but SAFEGUARDED — any step
+         that leaves the bracket (or a vega too small to divide by) falls back to
+         bisection on that bracket. Monotonicity guarantees the root stays
+         bracketed, so this converges where bare Newton wandered off and returned
+         None.
+
+    Measured on that same 20k-quote sweep (old -> new): 2278 fabricated IVs
+    become None, 3294 quotes bare Newton could not solve now solve correctly, and
+    there are no true regressions. Two residuals are deliberate, not gaps:
+
+      * 157 deep-ITM quotes return an IV more than 1e-3 from the vol that
+        generated them — but all 157 REPRICE to the target within `tolerance`,
+        i.e. they are genuine roots of an ill-conditioned inverse problem (the
+        quote itself does not pin sigma that tightly), not fabrications. The
+        tell: they differ from `initial_guess`, whereas every pre-fix wrong
+        answer WAS `initial_guess` exactly.
+      * 5 quotes the old code appeared to solve now return None. Each has its
+        target sitting exactly at the discounted-intrinsic floor (bracket margin
+        0.0) with a generating vol of ~0.2993 — i.e. the old "right" answer was
+        the fabrication bug returning the 0.30 default guess and coincidentally
+        landing near the truth. None is the correct answer there.
     """
-    sigma = initial_guess
+    def _price_at(sig: float) -> float:
+        return price_bsm(ATMOption(
+            underlying_price=underlying_price,
+            strike=strike,
+            days_to_expiration=days_to_expiration,
+            risk_free_rate=risk_free_rate,
+            volatility=sig,
+            option_type=option_type,
+            dividend_yield=dividend_yield,
+        ))
 
+    # --- Step 1: identifiability bracket -------------------------------------
+    # Endpoints are the same [0.001, 5.0] range the previous implementation
+    # clamped its Newton iterate into, so the solvable set is unchanged; what is
+    # new is REJECTING targets outside it instead of silently returning a clamped
+    # or unmoved sigma. A degenerate contract (T<=0, where price_bsm returns
+    # intrinsic and is constant in sigma) collapses lo==hi and is rejected here
+    # too — IV is genuinely undefined at expiration.
+    lo, hi = _IV_SOLVE_MIN, _IV_SOLVE_MAX
+    price_lo, price_hi = _price_at(lo), _price_at(hi)
+    if not (price_lo + tolerance <= target_price <= price_hi - tolerance):
+        return None  # target price admits no identifiable IV in [lo, hi]
+
+    # --- Step 2: safeguarded Newton (bisection fallback) ---------------------
+    # Invariant: _price_at(lo) < target_price < _price_at(hi) at all times, so a
+    # root provably remains in [lo, hi] and bisection can always make progress.
+    sigma = min(max(initial_guess, lo), hi)
     for _ in range(max_iter):
         opt = ATMOption(
             underlying_price=underlying_price,
@@ -366,24 +456,37 @@ def implied_vol(
             option_type=option_type,
             dividend_yield=dividend_yield,
         )
-        price = price_bsm(opt)
-        diff = price - target_price
-
+        diff = price_bsm(opt) - target_price
         if abs(diff) < tolerance:
+            # Safe to accept: the bracket check above already established that
+            # target_price is strictly inside the strictly-increasing price
+            # range, so a price match here really does pin sigma — unlike the
+            # pre-2026-07-26 code, where this same test could fire in a flat
+            # region that pins nothing.
             return sigma
 
-        # Vega for Newton step (vega is in /1% units, so multiply by 100 for /1)
+        # Re-bracket on the sign of the residual (price is increasing in sigma).
+        if diff < 0.0:
+            lo = sigma
+        else:
+            hi = sigma
+
+        # Vega for Newton step (vega is in /1% units, so multiply by 100 for /1).
+        # 1e-10 stays a pure divide-by-zero guard here — it no longer has to
+        # carry any correctness weight, because a flat region can no longer be
+        # mistaken for a solution; it just means "Newton is useless here, bisect".
         vega_per_unit = greeks_bsm(opt)['vega'] * 100.0
-        if vega_per_unit < 1e-10:
-            return None  # Vega too small; no convergence
-
-        sigma = sigma - diff / vega_per_unit
-
-        # Bound to reasonable range
-        if sigma < 0.001:
-            sigma = 0.001
-        elif sigma > 5.0:
-            sigma = 5.0
+        candidate = sigma - diff / vega_per_unit if vega_per_unit > 1e-10 else None
+        # Reject a Newton step that leaves the bracket (or is non-finite): those
+        # are exactly the wanderings that used to end in a spurious None.
+        if candidate is None or not (lo < candidate < hi):
+            if hi - lo < 1e-12:
+                # Bracket collapsed to float precision: monotonicity + the Step 1
+                # check prove the root is here, so this IS the answer.
+                return 0.5 * (lo + hi)
+            sigma = 0.5 * (lo + hi)
+        else:
+            sigma = candidate
 
     return None  # Did not converge
 
@@ -1410,6 +1513,40 @@ def realized_volatility_30d(
     return annualized_vol
 
 
+def _atm_nearest_leg_volatility(structure: Structure) -> float:
+    """Pick the volatility to drive the underlying's own risk-neutral price path:
+    the vol of whichever leg's strike sits nearest structure.underlying_price (the
+    standard ATM-IV proxy — the near-the-money contract is the closest observable
+    read on the market's view of the underlying's own vol).
+
+    codebase audit 2026-07-26: probability_weighted_payoff used to take
+    structure.legs[0].option.volatility unconditionally -- i.e. whichever leg the
+    builder happened to construct first, not any principled choice. For
+    iron_condor(...) legs[0] is always the long put, which is the WING, not the
+    body. With realistic skew (e.g. wings quoted at 0.60 vol, body at 0.40) that
+    sourced 0.60 into the terminal-price simulation and produced prob_max_loss =
+    0.2398; sourcing the near-the-money leg's 0.40 instead gives 0.0806 — a 2.4x
+    swing on an input the function itself never varies. Contrast with
+    Structure.__post_init__, which DOES enforce risk_free_rate/dividend_yield
+    uniform across legs (see its comment above) -- volatility is deliberately
+    the one field NOT forced uniform, because every constructor below takes
+    per-leg vol params precisely so real (skewed) chains can be modeled. That is
+    exactly why "just take legs[0]" was wrong here: it grabbed the one field most
+    likely to differ, by an accident of leg-construction order rather than by
+    any relationship to the underlying's own vol.
+
+    Tie-break: if two+ legs are exactly equidistant from underlying_price (e.g. a
+    symmetric straddle straddling S0 exactly), deterministically prefer the
+    lower strike so the result never depends on leg list ordering.
+    """
+    S0 = structure.underlying_price
+    nearest_leg = min(
+        structure.legs,
+        key=lambda leg: (abs(leg.option.strike - S0), leg.option.strike),
+    )
+    return nearest_leg.option.volatility
+
+
 def probability_weighted_payoff(
     structure: Structure,
     n_paths: int = 100000,
@@ -1427,7 +1564,10 @@ def probability_weighted_payoff(
     rng = random.Random(seed)
     S0 = structure.underlying_price
     T = structure.days_to_expiration / 365.0
-    sigma = structure.legs[0].option.volatility
+    # ATM-nearest-leg vol, NOT legs[0] -- see _atm_nearest_leg_volatility's
+    # docstring (codebase audit 2026-07-26) for why legs[0] silently sourced the
+    # wing's vol for every iron_condor() structure.
+    sigma = _atm_nearest_leg_volatility(structure)
     r = structure.legs[0].option.risk_free_rate
     q = structure.legs[0].option.dividend_yield
     # net_debit() is invariant across every path sampled below — hoist it once
@@ -1603,10 +1743,26 @@ if __name__ == '__main__':
     )
     cps_credit = -cps.net_debit()
     cps_cf_loss = cps.max_loss_closed_form()
-    cps_cascade = cascade_max_loss(cps, implied_move_full_horizon=0.05)
+    cps_implied_move = 0.05
+    cps_cascade = cascade_max_loss(cps, implied_move_full_horizon=cps_implied_move)
     print(f"\n[9] Credit put spread 95/90: net credit = {cps_credit:.4f}, "
           f"closed-form max loss = {cps_cf_loss:.4f}, cascade max loss = {cps_cascade:.4f}")
     print(f"    Total bound max loss = max of two = {max(cps_cf_loss, cps_cascade):.4f}")
+    # codebase audit 2026-07-26: this test printed cascade_max_loss's output but
+    # never asserted anything against it, so a regression in cascade_max_loss (a
+    # load-bearing safety bound) would still let the block print "ALL SELF-TESTS
+    # PASSED" below. Pin to the same hand-computed golden value as
+    # tests/test_options_math.py::test_cascade_max_loss_golden_credit_put_spread_put_side_assigned
+    # rather than re-deriving a second, possibly-also-wrong formula here.
+    cps_adverse_mark = 100 * (1 - 2 * cps_implied_move)  # put side adverse direction is DOWN
+    cps_assignment_loss = max(95 - cps_adverse_mark, 0.0) * CONTRACT_MULTIPLIER  # short put K=95
+    cps_long_payoff = max(90 - cps_adverse_mark, 0.0) * CONTRACT_MULTIPLIER  # long put K=90
+    cps_expected_cascade = max(0.0, cps_assignment_loss - cps_long_payoff + cps.net_debit())
+    assert cps_expected_cascade > 100.0, "golden value should not be a vacuous near-zero number"
+    assert abs(cps_cascade - cps_expected_cascade) < 0.01, (
+        f"cascade_max_loss regressed: got {cps_cascade:.4f}, expected {cps_expected_cascade:.4f}"
+    )
+    print(f"    PASS: cascade max loss matches golden value {cps_expected_cascade:.4f}")
 
     # Test 10: Position sizing with deferral and zero-max-loss rejection
     contracts_ok, defer_ok = size_position(50.0, 1389.37, 0.02)
@@ -1664,12 +1820,52 @@ if __name__ == '__main__':
     print("\n[13] Probability-weighted payoff for 100/105 debit call spread:")
     for k, v in pwp.items():
         print(f"     {k}: {v}")
+    # codebase audit 2026-07-26: this test only printed the dict and never
+    # asserted anything, so a regression (e.g. a probability outside [0,1], or
+    # the legs[0]-volatility bug this same audit fixed elsewhere in this file)
+    # would still let the self-test block print "ALL SELF-TESTS PASSED". Pin
+    # invariants rather than golden floats (a Monte-Carlo simulation's exact
+    # output is seed/n_paths-sensitive and would make a golden-float assert
+    # brittle for the wrong reasons) per Strategy.md's probability contract.
+    assert 0.0 <= pwp['prob_profit'] <= 1.0, f"prob_profit out of [0,1]: {pwp['prob_profit']}"
+    assert 0.0 <= pwp['prob_max_loss'] <= 1.0, f"prob_max_loss out of [0,1]: {pwp['prob_max_loss']}"
+    # Realizing the defined max loss is a strict subset of "not profitable", so
+    # the two probabilities can never sum past 1 -- a sum > 1 would mean the
+    # simulation double-counted or mis-thresholded paths.
+    assert pwp['prob_profit'] + pwp['prob_max_loss'] <= 1.0 + 1e-9, (
+        f"prob_profit + prob_max_loss > 1: {pwp['prob_profit']} + {pwp['prob_max_loss']}"
+    )
+    # A debit call spread's expiration payoff (long call minus short call) is
+    # max(S-100,0) - max(S-105,0), which is >= 0 for every S -- so its
+    # probability-weighted average can never be negative.
+    assert pwp['expected_payoff'] >= 0.0, f"expected_payoff should be >= 0: {pwp['expected_payoff']}"
+    assert 'price-derived' in pwp['note'], "note must retain the Strategy.md 2.13 caveat"
+    print("    PASS: probabilities in [0,1], prob_profit+prob_max_loss <= 1, payoff >= 0")
 
     # Test 14: Scenario PnL grid
     grid = dcs.scenario_pnl_grid()
     print("\n[14] Scenario PnL grid for 100/105 debit call spread:")
     for k, v in grid.items():
         print(f"     {k}: ${v}")
+    # codebase audit 2026-07-26: same test-gap as [13] -- printed but never
+    # asserted. Pin the grid's shape and monotonicity instead of golden floats
+    # (each scenario's exact P&L is already covered by golden-value tests
+    # elsewhere for this dcs structure at S=110 -- Test 6 above). A debit call
+    # spread's payoff is non-decreasing in the underlying everywhere (it is a
+    # net-long-call structure with no short leg below the long strike), so the
+    # 5 standard scenarios must come out in non-decreasing P&L order as the
+    # reference price scenario rises from -10% to +10%.
+    expected_scenario_keys = {
+        'reference_minus_10pct', 'reference_minus_5pct', 'reference',
+        'reference_plus_5pct', 'reference_plus_10pct',
+    }
+    assert set(grid.keys()) == expected_scenario_keys, f"unexpected grid shape: {sorted(grid.keys())}"
+    ordered_pnls = [grid['reference_minus_10pct'], grid['reference_minus_5pct'], grid['reference'],
+                    grid['reference_plus_5pct'], grid['reference_plus_10pct']]
+    assert ordered_pnls == sorted(ordered_pnls), (
+        f"debit call spread P&L should be non-decreasing as underlying rises: {ordered_pnls}"
+    )
+    print("    PASS: grid has the 5 expected scenarios, non-decreasing P&L as underlying rises")
 
     # Test 15: Unbounded-max-loss rejection (net short calls). A naked short
     # call and a 1x2 ratio call spread have UNBOUNDED loss; both max-loss paths

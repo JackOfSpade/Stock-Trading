@@ -32,6 +32,18 @@ on:
                            # of the daily offsite-backup (06:00) / live-sql-parity (07:10) crons
   workflow_dispatch: {}    # manual sweep escape hatch
 
+# MISSING-CONCURRENCY FIX (2026-07-26, codebase audit): this was the only one of the 13 workflows
+# with no concurrency block. It has both schedule: and workflow_dispatch:, and its "Open/refresh
+# finding issue (dedup)" / "Close finding issue if resolved" steps do a read-then-write dedup lookup
+# (gh issue list -> comment/close/create) plus ops.ci_findings INSERTs that are NOT safe to run
+# twice concurrently — a manual workflow_dispatch firing during the Sunday 09:15 UTC scheduled run
+# could race the dedup lookup and create a second, undeduped issue/row instead of updating the
+# existing one. Matches live-sql-parity.yml / keyless-sa-audit.yml's group naming + cancel-in-
+# progress: false (a sweep in progress must finish and report, not be silently cancelled mid-write).
+concurrency:
+  group: sql-dryrun-sweep
+  cancel-in-progress: false
+
 permissions:
   contents: read
   id-token: write          # Workload Identity Federation (no downloadable key)

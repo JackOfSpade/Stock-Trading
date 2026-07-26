@@ -1,11 +1,16 @@
 """Guard the health dashboard's bq-JSON parsing + rendering helpers (code-quality audit 2026-07).
 
-ops/dashboard/generate_dashboard.py's q() re-implements the same bq-stdout->JSON slice pattern
-that already caused production bugs in its siblings (scripts/dbt_parity.py, scripts/alert_relay.py
-— see tests/test_alert_relay.py). These offline tests (no warehouse, no `bq` CLI) lock q()'s
-banner-tolerant parsing, fmt_ts()'s timezone rendering/fallback, and table()'s HTML escaping.
+ops/dashboard/generate_dashboard.py's q() delegates to lib/bq_json.py's run_bq_query — the shared
+subprocess-invoke/JSON-slice/returncode/timeout wrapper this module was the last holdout to adopt
+(2026-07-18 bq-invoke consolidation closed out here, codebase audit 2026-07-26; see q()'s own
+docstring). That shared contract already caused production bugs in its siblings
+(scripts/dbt_parity.py, scripts/alert_relay.py — see tests/test_alert_relay.py) and is proven ONCE
+on run_bq_query itself (tests/test_bq_json.py); these offline tests (no warehouse, no `bq` CLI)
+pin q()'s own fixed args (max_rows=1000, project) plus fmt_ts()'s timezone rendering/fallback and
+table()'s HTML escaping. Because run_bq_query and q() both resolve `subprocess.run` off the same
+shared `subprocess` module object, monkeypatching `gd.subprocess.run` still transparently patches
+the call run_bq_query makes on q()'s behalf — no test here needs to reach into lib.bq_json.
 """
-import subprocess
 import types
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -18,9 +23,13 @@ gd = load_module_from_path("generate_dashboard", "ops", "dashboard", "generate_d
 
 
 def _fake_run(returncode, stdout, stderr=""):
-    def run(cmd, capture_output=None, text=None, check=None, timeout=None):
-        if check and returncode != 0:
-            raise subprocess.CalledProcessError(returncode, cmd, output=stdout, stderr=stderr)
+    # run_bq_query (lib/bq_json.py) calls subprocess.run WITHOUT check=True — it inspects
+    # out.returncode itself and raises a plain RuntimeError(stderr-or-stdout) on a nonzero exit
+    # (codebase audit 2026-07-26: q() no longer raises subprocess.CalledProcessError at all, since
+    # it no longer builds its own check=True subprocess.run call — see q()'s docstring). This fake
+    # mirrors that: it never raises here regardless of returncode, matching real subprocess.run's
+    # own no-check behavior; the RuntimeError comes from run_bq_query, one layer up.
+    def run(cmd, capture_output=None, text=None, timeout=None):
         return types.SimpleNamespace(returncode=returncode, stdout=stdout, stderr=stderr)
     return run
 
@@ -85,13 +94,15 @@ def test_q_empty_stdout(monkeypatch):
 
 
 def test_q_raises_on_nonzero_returncode(monkeypatch):
+    # Codebase audit 2026-07-26: q() delegates to run_bq_query, which raises RuntimeError (not
+    # subprocess.CalledProcessError) on a nonzero bq exit — see the _fake_run docstring above.
     monkeypatch.setattr(gd.subprocess, "run", _fake_run(1, "", "ERROR: access denied"))
-    with pytest.raises(subprocess.CalledProcessError):
+    with pytest.raises(RuntimeError, match="ERROR: access denied"):
         gd.q("SELECT 1")
 
 
 def test_q_raises_runtime_error_on_timeout(monkeypatch):
-    def _boom(cmd, capture_output=None, text=None, check=None, timeout=None):
+    def _boom(cmd, capture_output=None, text=None, timeout=None):
         raise gd.subprocess.TimeoutExpired(cmd=cmd, timeout=timeout)
 
     monkeypatch.setattr(gd.subprocess, "run", _boom)

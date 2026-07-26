@@ -11,7 +11,7 @@ pin each thin wrapper's own falsy-v handling and fallback label.
 """
 import pytest
 
-from scripts.lib.tz_render import ZoneInfoNotFoundError, get_display_tz, render_ts
+from lib.tz_render import ZoneInfoNotFoundError, get_display_tz, render_ts
 
 
 # ---- get_display_tz(): happy path + NULL/empty/error fallback to Denver -----------------------

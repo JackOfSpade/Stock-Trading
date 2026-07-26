@@ -64,6 +64,17 @@ backup-freshness + Apps Script heartbeat monitors, apply before re-pasting `cade
 17 + the embedding re-build are already applied live** (the agent ran them via the MCP 2026-06-22 and
 verified); they are in the apply list for fresh-project reproducibility. See §3, §7, §23, §24.)
 
+**What an "apply after N" banner does and does not mean (codebase audit 2026-07-26).** Some files carry
+a banner naming a HIGHER-numbered file (e.g. a view reading a table first created later). That does not
+break a strict ascending rebuild: BigQuery binds view definitions lazily, so `CREATE VIEW` applies
+cleanly against a not-yet-existing table and self-heals once the later file lands in the same run. Run
+the files in ascending order and let the banners inform you, not reorder you. The one real exposure is
+narrow: querying such a view *mid-rebuild*, before its dependency has been applied, returns a genuine
+"table not found" — that is expected, not a broken rebuild; finish the run and re-check. Deliberately
+stated as a rule rather than a list of which files this affects — the 2026-07-18 note above records that
+a hardcoded enumeration here rotted once already, and each file's own banner (plus `bigquery/README.md`'s
+per-file "apply after" line) is the non-rotting source for that.
+
 ---
 
 ## 1. Scheduled queries — **the dead-man's switch** *(P0-2, P0-3)*

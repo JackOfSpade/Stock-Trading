@@ -30,6 +30,7 @@ from c_options_math import (
     iron_condor, long_call_butterfly, long_put_butterfly,
     verify_max_loss_dual_path, cascade_max_loss, size_position,
     realized_volatility_30d, probability_weighted_payoff,
+    _atm_nearest_leg_volatility,
 )
 
 
@@ -127,6 +128,88 @@ def test_implied_vol_returns_none_on_unsolvable():
     # The solver must return None rather than a bogus number that flows into sizing.
     deep_itm_below_intrinsic = 0.01
     assert implied_vol(deep_itm_below_intrinsic, 200, 100, 30, 0.045, 'call') is None
+
+
+# ---------------------------------------------------------------------------
+# implied_vol iteration-0 false-convergence (codebase audit 2026-07-26):
+# a vega-degenerate point (deep-OTM / $0.00-priced leg) must never be accepted
+# as "solved," even trivially on the very first Newton iteration. Deep-OTM legs
+# are routine in the iron condors and wide credit spreads this module builds, so
+# this is not a contrived edge case -- it is a real input shape.
+# ---------------------------------------------------------------------------
+def test_implied_vol_deep_otm_zero_price_returns_none():
+    # S=100, K=150, 5 DTE call: massively OTM with almost no time value at any
+    # sane vol, so target_price=0.0 sits in a flat, near-zero-vega pricing
+    # region. The old code's abs(diff) < tolerance check ran BEFORE the
+    # vega-degeneracy guard and accepted this trivially on iteration 0.
+    assert implied_vol(0.0, 100, 150, 5, 0.045, 'call') is None
+
+
+def test_implied_vol_deep_otm_zero_price_independent_of_initial_guess():
+    # The bug's smoking gun: varying ONLY initial_guess changed the "solved" IV
+    # (0.05 -> 0.05, 0.10 -> 0.10, 0.50 -> 0.50 on the unfixed code) -- proof the
+    # solver was not solving anything, just echoing back whatever guess it was
+    # handed. A correctly-guarded solver must return None regardless of guess.
+    # 0.80 is in this list deliberately: an intermediate fix that only moved a
+    # `vega_per_unit < 1e-6` guard ahead of the accept-check still fabricated
+    # 0.7011 at initial_guess=0.80, because vega there is 2.3e-10 -- above the
+    # 1e-10 divide-by-zero floor but economically meaningless. Only deciding
+    # identifiability from the TARGET PRICE (the bracket check) closes it for
+    # every guess.
+    for guess in (0.05, 0.10, 0.30, 0.50, 0.80):
+        result = implied_vol(0.0, 100, 150, 5, 0.045, 'call', initial_guess=guess)
+        assert result is None, (
+            f"implied_vol should defer (None) for this unidentifiable input "
+            f"regardless of initial_guess, but initial_guess={guess} gave {result}"
+        )
+
+
+def test_implied_vol_deep_itm_at_intrinsic_floor_returns_none():
+    """Second false-convergence class (codebase audit 2026-07-26): a deep-ITM
+    quote sitting AT the discounted-intrinsic floor prices within `tolerance` of
+    that floor for a wide band of sigma, so the old accept-check fired there too.
+    A randomized 20k-quote sweep found 2278 such fabricated IVs. The quote does
+    not identify a vol, so the contract says defer."""
+    S, K, days, r = 487.3, 875.6, 1, 0.0045
+    floor_price = price_bsm(ATMOption(S, K, days, r, 0.001, 'put'))
+    assert implied_vol(floor_price, S, K, days, r, 'put') is None
+
+
+def test_implied_vol_when_it_returns_a_value_that_value_reprices_to_the_target():
+    """The property that actually matters, and the one that separates a genuine
+    root from a fabrication: whatever implied_vol returns must reproduce the
+    input price. The pre-fix failure mode returned `initial_guess` unchanged,
+    which does NOT reprice; deep-ITM quotes whose IV is only loosely pinned still
+    do reprice, which is why they are legitimately solved rather than deferred."""
+    cases = [
+        (100.0, 100.0, 30, 0.045, 0.35, 'call'),
+        (535.3, 911.5, 21, 0.03, 0.4357, 'put'),
+        (527.4, 303.3, 90, 0.05, 0.2305, 'call'),
+        (59.3, 78.7, 3, 0.02, 0.6636, 'put'),
+    ]
+    for S, K, days, r, vol, kind in cases:
+        target = price_bsm(ATMOption(S, K, days, r, vol, kind))
+        solved = implied_vol(target, S, K, days, r, kind)
+        if solved is None:
+            continue  # deferral is always an acceptable answer; a wrong number is not
+        repriced = price_bsm(ATMOption(S, K, days, r, solved, kind))
+        assert repriced == pytest.approx(target, abs=1e-6), (
+            f"implied_vol returned {solved} for a {kind} priced {target}, but that "
+            f"vol reprices to {repriced} — not a root of the equation it claims to solve"
+        )
+
+
+def test_implied_vol_genuine_solve_still_round_trips_at_various_guesses():
+    # Guard against an overzealous degeneracy fix breaking real convergence: a
+    # solvable, reasonably-priced option must still round-trip its IV no matter
+    # which initial_guess the caller happens to pass.
+    target = 0.35
+    opt = ATMOption(100, 100, 30, 0.045, target, 'call')
+    px = price_bsm(opt)
+    for guess in (0.05, 0.10, 0.50, 1.0):
+        solved = implied_vol(px, 100, 100, 30, 0.045, 'call', initial_guess=guess)
+        assert solved is not None, f"genuine solve wrongly deferred at initial_guess={guess}"
+        assert solved == pytest.approx(target, abs=1e-4)
 
 
 # ---------------------------------------------------------------------------
@@ -469,6 +552,71 @@ def test_probability_weighted_payoff_keys_present():
     assert 0.0 <= pwp['prob_max_loss'] <= 1.0
     assert pwp['expected_payoff'] >= 0.0  # a debit call spread's payoff (pre-debit) is >= 0
     assert pwp['expected_pnl'] >= -dcs.max_loss_closed_form() - 0.01  # can't lose more than defined max loss
+
+
+# ---------------------------------------------------------------------------
+# probability_weighted_payoff's volatility source (codebase audit 2026-07-26):
+# it used to take structure.legs[0].option.volatility unconditionally. For
+# iron_condor(...), legs[0] is always the long put -- the WING, never the body
+# -- so with realistic skew that silently drove the terminal-price simulation
+# off the wrong leg's vol. Unlike underlying_price/risk_free_rate/dividend_yield
+# (enforced uniform by Structure.__post_init__), volatility is deliberately
+# per-leg, so "just take legs[0]" grabbed exactly the one field most likely to
+# differ from what the underlying's own risk-neutral vol should be.
+# ---------------------------------------------------------------------------
+def test_atm_nearest_leg_volatility_selects_near_the_money_leg_not_legs0():
+    # short_call strike=99 is nearest to underlying_price=100 (distance 1) vs.
+    # short_put strike=95 (distance 5), so its vol (0.40) must be selected --
+    # NOT legs[0]'s vol, which iron_condor always builds as the long put (the
+    # wing, vol=0.60 here).
+    ic = iron_condor(100, long_put_strike=80, short_put_strike=95,
+                      short_call_strike=99, long_call_strike=120,
+                      days_to_expiration=30, risk_free_rate=0.045,
+                      vol_long_put=0.60, vol_short_put=0.55,
+                      vol_short_call=0.40, vol_long_call=0.65, contracts=1)
+    assert ic.legs[0].option.volatility == pytest.approx(0.60)  # sanity: legs[0] IS the wing
+    assert _atm_nearest_leg_volatility(ic) == pytest.approx(0.40)
+
+
+def test_atm_nearest_leg_volatility_tie_break_is_deterministic():
+    # Symmetric iron condor: short_put (95) and short_call (105) are exactly
+    # equidistant from underlying_price=100. The tie-break (lower strike) must
+    # be deterministic so the result never depends on leg list order.
+    ic = iron_condor(100, long_put_strike=90, short_put_strike=95,
+                      short_call_strike=105, long_call_strike=110,
+                      days_to_expiration=30, risk_free_rate=0.045,
+                      vol_long_put=0.60, vol_short_put=0.42,
+                      vol_short_call=0.48, vol_long_call=0.65, contracts=1)
+    assert _atm_nearest_leg_volatility(ic) == pytest.approx(0.42)
+
+
+def test_probability_weighted_payoff_uses_atm_vol_not_legs0_wing_vol():
+    wing_vol, atm_vol = 0.60, 0.40
+    shared = dict(long_put_strike=80, short_put_strike=95, short_call_strike=99,
+                  long_call_strike=120, days_to_expiration=30, risk_free_rate=0.045,
+                  contracts=1)
+    # Skewed structure: wing legs at 0.60/0.55/0.65, near-the-money short_call at 0.40.
+    ic = iron_condor(100, vol_long_put=wing_vol, vol_short_put=0.55,
+                      vol_short_call=atm_vol, vol_long_call=0.65, **shared)
+    # Comparison structures: same strikes/quantities (so IDENTICAL expiration
+    # payoff function), but every leg quoted at one uniform vol.
+    ic_at_atm_vol = iron_condor(100, vol_long_put=atm_vol, vol_short_put=atm_vol,
+                                 vol_short_call=atm_vol, vol_long_call=atm_vol, **shared)
+    ic_at_wing_vol = iron_condor(100, vol_long_put=wing_vol, vol_short_put=wing_vol,
+                                  vol_short_call=wing_vol, vol_long_call=wing_vol, **shared)
+    seed = 7
+    pwp = probability_weighted_payoff(ic, n_paths=20000, seed=seed)
+    pwp_atm = probability_weighted_payoff(ic_at_atm_vol, n_paths=20000, seed=seed)
+    pwp_wing = probability_weighted_payoff(ic_at_wing_vol, n_paths=20000, seed=seed)
+    # expected_payoff depends ONLY on the terminal-price distribution (driven by
+    # sigma) and the strikes/quantities used to price the expiration payoff
+    # (identical across all three variants) -- net_debit (which does differ per
+    # variant, since each leg's premium depends on its own quoted vol) never
+    # enters expected_payoff. So with the same seed, the skewed structure must
+    # match the uniform-ATM-vol run's expected_payoff exactly if (and only if)
+    # the simulation is sampling with the ATM-nearest leg's vol as fixed here.
+    assert pwp['expected_payoff'] == pytest.approx(pwp_atm['expected_payoff'], abs=1e-6)
+    assert pwp['expected_payoff'] != pytest.approx(pwp_wing['expected_payoff'], abs=1e-6)
 
 
 def test_breakeven_points_long_call_and_debit_spread():

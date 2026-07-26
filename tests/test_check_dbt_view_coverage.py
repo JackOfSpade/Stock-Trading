@@ -32,12 +32,33 @@ def test_live_views_matches_datasets_dedupes_and_skips_non_sql(tmp_path, monkeyp
 def test_live_views_ignores_non_view_ddl(tmp_path, monkeypatch):
     bq = tmp_path / "bigquery"
     bq.mkdir()
-    (bq / "01.sql").write_text(
+    (bq / "01_a.sql").write_text(
         "CREATE OR REPLACE TABLE `stock-trading-498512.state.t` AS SELECT 1;\n"
         "CREATE OR REPLACE PROCEDURE `stock-trading-498512.state.p`() BEGIN SELECT 1; END;\n"
     )
     monkeypatch.setattr(cov, "BIGQUERY_DIR", str(bq))
     assert cov.live_views() == set()
+
+
+def test_live_views_applies_create_drop_in_numeric_not_lexical_order(tmp_path, monkeypatch):
+    # Regression for the codebase audit 2026-07-26 bug: a CREATE in a lower-numbered-but-lexically-
+    # LATER file (95_*.sql) must be applied BEFORE a DROP in a higher-numbered-but-lexically-EARLIER
+    # file (100_*.sql). Lexical sort ("100_..." < "95_...", since '1' < '9') would apply the DROP
+    # first and let the CREATE "win", reporting an already-dropped view as live -- exactly the 3
+    # phantom views (state.park_allocator_promotion_readiness, state.park_switch_budget,
+    # state.park_control_latest) this fix removes from the real bigquery/ tree. Under the old
+    # `sorted(os.listdir(...))` code this assertion fails (confirmed by temporarily reverting
+    # live_views() to that form and re-running this test, then restoring the fix).
+    bq = tmp_path / "bigquery"
+    bq.mkdir()
+    (bq / "95_a.sql").write_text(
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.dropped_later` AS SELECT 1;\n"
+    )
+    (bq / "100_b.sql").write_text(
+        "DROP VIEW IF EXISTS `stock-trading-498512.state.dropped_later`;\n"
+    )
+    monkeypatch.setattr(cov, "BIGQUERY_DIR", str(bq))
+    assert cov.live_views() == set()   # NOT {("state", "dropped_later")}
 
 
 def test_live_views_does_not_match_materialized_view_by_design(tmp_path, monkeypatch):
@@ -47,7 +68,7 @@ def test_live_views_does_not_match_materialized_view_by_design(tmp_path, monkeyp
     # owner scope decision (widen VIEW_DDL + confirm the dbt-parity semantics), not a silent regex tweak.
     bq = tmp_path / "bigquery"
     bq.mkdir()
-    (bq / "01.sql").write_text(
+    (bq / "01_a.sql").write_text(
         "CREATE OR REPLACE MATERIALIZED VIEW `stock-trading-498512.state.mv` AS SELECT 1;\n"
         "CREATE OR REPLACE VIEW `stock-trading-498512.state.regular` AS SELECT 1;\n"
     )

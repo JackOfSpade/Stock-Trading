@@ -41,6 +41,37 @@ def meets_instrument_eligibility(market_cap_usd: float, adv_30d_usd: float) -> b
     return market_cap_usd >= MIN_MARKET_CAP_USD and adv_30d_usd >= MIN_ADV_30D_USD
 
 
+def meets_concurrent_position_floor(open_position_count: int) -> bool:
+    """Concurrent-position-count floor (strategy/06_strategy_d.md Instrument eligibility
+    rule: "Concurrent position count: minimum 5 (floor retained ... Rev 40 ... a
+    multi-tranche name counts as ONE position toward this floor, not one per add");
+    Concentration-as-design-decision section: "the concurrent-position floor (minimum
+    5 when any are held)". Boundary: minimum-N floor language reads as >= per the
+    module's other floor/threshold predicates (meets_instrument_eligibility above uses
+    >= for both its "minimum" constants), so 5 itself satisfies the floor — not just 6+.
+
+    codebase audit 2026-07-26: this constant was defined but consumed nowhere in the
+    repo (unlike every sibling spec constant in this module, each backed by exactly one
+    predicate) even though strategy/06_strategy_d.md's Classical-method delegation
+    section lists "Concurrent-position count and sector concentration checks" as
+    something code should compute. Added to close that completeness gap.
+
+    `open_position_count` must already be collapsed to DISTINCT NAMES held, per Rev
+    40's "a multi-tranche name counts as ONE position toward this floor, not one per
+    add" — the caller, not this function, is responsible for that collapse (mirrors
+    beta_adjusted_alpha_test's windowing-is-the-caller's-job split above).
+
+    The floor's own text ("minimum 5 when any are held") only binds once D has SOME
+    exposure — an undeployed D (zero positions, e.g. before its first entry, or
+    between full-exit and a fresh entry) is not "floor-violating," it simply hasn't
+    started deploying yet. So count == 0 is treated as floor-satisfied (vacuously);
+    1-4 is the actual violation zone the floor exists to catch.
+    """
+    if open_position_count == 0:
+        return True
+    return open_position_count >= MIN_CONCURRENT_POSITIONS
+
+
 def correlation_bucket_members(
     candidate_returns: list[float],
     held_positions_returns: dict[str, list[float]],

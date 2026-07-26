@@ -7,7 +7,7 @@ two call sites, and ops/triggers.json, depend on identical output. It was only e
 TRANSITIVELY (via test_print_routines.py / test_cadence_consistency.py); these pin the contract
 directly so an interface-preserving refactor of the lib has a first-class guard.
 """
-from scripts.lib.routine_manifest import (
+from lib.routine_manifest import (
     ROUTINE_SUFFIX,
     build_triggers_manifest,
     heading_to_id,

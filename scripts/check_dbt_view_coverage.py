@@ -29,6 +29,9 @@ except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
     raise SystemExit(2)
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib.sql_files import numbered_sql_files
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BIGQUERY_DIR = os.path.join(ROOT, "bigquery")
 DBT_MODELS_DIR = os.path.join(ROOT, "dbt", "models")
@@ -48,13 +51,23 @@ DROP_VIEW_DDL = re.compile(
 
 
 def live_views():
-    """(dataset, name) for every active VIEW across bigquery/*.sql in file-sorted order.
-    A view created in an earlier file and dropped in a later file is not live."""
+    """(dataset, name) for every active VIEW across bigquery/*.sql in NUMERIC apply order.
+    A view created in an earlier file and dropped in a later file is not live.
+
+    BUG FIX (codebase audit 2026-07-26): this used to walk `sorted(os.listdir(BIGQUERY_DIR))` —
+    LEXICAL order, which agreed with apply order only while every file number shared the same
+    digit-width. Once bigquery/ grew past 99 files, lexical sort put "100_..." (and every other
+    3-digit file) BEFORE "10_...", "75_...", "92_...", so a later-numbered DROP VIEW (e.g.
+    bigquery/108_park_allocator_immediate_binding.sql) was applied to `found` BEFORE the earlier-
+    numbered CREATE OR REPLACE VIEW of the same name (bigquery/75_.../92_...) that this script's
+    own apply-order model says comes first — the CREATE then "won" the discard()/add() race and 3
+    already-dropped views (state.park_allocator_promotion_readiness, state.park_switch_budget,
+    state.park_control_latest) were reported live. numbered_sql_files() (scripts/lib/sql_files.py,
+    already used by check_live_sql_parity.py and dbt_parity.py) sorts by the parsed leading
+    integer instead, so this now applies CREATE/DROP in the same order the objects are actually
+    (re-)created live."""
     found = set()
-    for fn in sorted(os.listdir(BIGQUERY_DIR)):
-        if not fn.endswith(".sql"):
-            continue
-        path = os.path.join(BIGQUERY_DIR, fn)
+    for _number, path in numbered_sql_files(BIGQUERY_DIR):
         if os.path.isdir(path):
             continue
         txt = open(path, encoding="utf-8").read()

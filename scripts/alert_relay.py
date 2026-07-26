@@ -9,9 +9,25 @@ uncorrelated with the owner's Google account. It COMPLEMENTS — does not replac
 (the reliable ~2h-poll, de-duped channel) and the DTS failure-email (the identity-independent channel
 for a dead emailer). This relay is the FAST, BEST-EFFORT channel.
 
-DE-DUP is stateless: alerts mode posts only ops.alerts raised in the last RELAY_WINDOW_MIN minutes
-(≈ the cron interval), so a given alert is posted at most once. A skipped run is backstopped by the
-2h emailer, so no durable cursor is needed (which keeps this read-only — no notified_ts write).
+DE-DUP is stateless and is AT-LEAST-ONCE, not "at most once" (codebase audit 2026-07-26 —
+correcting a prior version of this paragraph that claimed the latter). alerts mode posts every
+ops.alerts row raised in the last RELAY_WINDOW_MIN minutes; the cron below is `*/30`, while
+WINDOW_MIN defaults to 35, so two consecutive ON-TIME runs' windows overlap by
+(WINDOW_MIN - cron_interval) = 5 minutes today, and a stateless relay with no notified_ts write
+has no way to exclude a row it already posted in the prior run's window. An alert raised in that
+5-minute slice is POSTed twice — a bounded, known duplicate, not a bug to "fix" by tightening
+WINDOW_MIN to 30. The margin is deliberate: GitHub Actions scheduled runs are routinely late by
+several minutes (queueing, runner cold-start), and a window sized to exactly the cron interval
+means any late run leaves a permanent hole — an alert raised in the gap between where the last
+run's window ended and the late run's actual (delayed) start is never posted at all, on a channel
+whose whole job is fast, best-effort delivery of things like drawdown-kill and missed-run alerts.
+For THIS channel a duplicate ping is a nuisance; a silently missed critical alert is a safety
+failure, so the tradeoff is not close. The reliable, de-duped channel is the ~2h alert_emailer
+(RUNBOOK §25 A1) — that is where "exactly once" is guaranteed, by a real notified_ts cursor this
+module deliberately does not carry. If a future audit re-flags "WINDOW_MIN=35 > cron interval=30,
+tighten it to 30": that is this same false claim recurring — don't. See
+test_window_min_covers_cron_interval_with_margin in tests/test_alert_relay.py, which pins
+WINDOW_MIN >= the alerts cron interval as an invariant.
 
 Modes (env RELAY_MODE):
   * alerts    — recent unresolved critical/warning ops.alerts rows (default).
@@ -55,6 +71,10 @@ from lib import tz_render
 
 PROJECT = os.environ.get("BQ_PROJECT", "stock-trading-498512")
 MODE = os.environ.get("RELAY_MODE", "alerts")
+# Deliberately > the alerts cron interval (*/30 in .github/workflows/alert-relay.yml) — the 5-minute
+# margin absorbs scheduler lateness at the cost of a bounded duplicate POST, not a value to "tighten
+# down to 30" (codebase audit 2026-07-26 — see the module docstring's DE-DUP paragraph for the full
+# reasoning, and test_window_min_covers_cron_interval_with_margin for the pinned invariant).
 WINDOW_MIN = int(os.environ.get("RELAY_WINDOW_MIN", "35"))
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "").strip()
 

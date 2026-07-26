@@ -10,6 +10,8 @@ SILENTLY — alerts/orders simply stop being POSTed with no red CI. These offlin
 no creds) lock the row-shape contract.
 """
 import json
+import os
+import re
 
 import pytest
 
@@ -36,6 +38,37 @@ def test_bq_delegates_to_run_bq_query_with_max_rows_1000(monkeypatch):
 def test_fmt_ts_bogus_timezone_falls_back_gracefully():
     v = "2026-06-28 05:00:00 UTC"
     assert ar.fmt_ts(v, "Not/A_Real_Zone") == f"{v} UTC"
+
+
+# ---- WINDOW_MIN >= alerts cron interval (codebase audit 2026-07-26) -----------------------------
+# The module docstring's DE-DUP paragraph now claims (correctly) at-least-once delivery with a
+# bounded duplicate window, and explicitly warns that WINDOW_MIN must stay >= the alerts cron
+# interval — shrinking it to match the cron exactly would reopen the "late run leaves a permanent
+# hole" failure mode the 5-minute margin exists to prevent. This test converts that prose claim
+# into a checked invariant: it reads the REAL cron from .github/workflows/alert-relay.yml (the
+# fast `*/30 * * * *` alerts schedule — read-only, this file does not own the workflow) so a future
+# edit to either the cron or WINDOW_MIN that violates the margin fails loudly here instead of
+# silently reopening the coverage gap.
+def _alerts_cron_interval_minutes():
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    workflow_path = os.path.join(repo_root, ".github", "workflows", "alert-relay.yml")
+    with open(workflow_path) as f:
+        text = f.read()
+    # The alerts (fast, best-effort) schedule is the only `*/N * * * *` style cron in this workflow
+    # (the other two crons are the daily orders reminder and the weekly heartbeat, both fixed times,
+    # not `*/N` intervals) — match that specific pattern rather than assuming list position.
+    m = re.search(r"cron:\s*'\*/(\d+) \* \* \* \*'", text)
+    assert m, "could not find the alerts */N cron in alert-relay.yml — did its schedule change?"
+    return int(m.group(1))
+
+
+def test_window_min_covers_cron_interval_with_margin():
+    cron_interval = _alerts_cron_interval_minutes()
+    assert cron_interval == 30, "documented/assumed alerts cron interval changed — re-check the margin"
+    # >= is the bare minimum (no coverage gap on an on-time run); WINDOW_MIN=35 keeps a 5-minute
+    # margin on top for scheduler lateness. Either regressing WINDOW_MIN below the cron interval, or
+    # widening the cron interval past WINDOW_MIN, reopens the missed-alert hole this test guards.
+    assert ar.WINDOW_MIN >= cron_interval
 
 
 def test_fmt_ts_valid_timezone_still_formats():
