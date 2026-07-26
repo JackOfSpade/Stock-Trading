@@ -202,6 +202,17 @@ SELECT
   SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(payload,'$.time_exit_date')) AS time_exit_date,
   JSON_VALUE(payload,'$.instruction_id')                     AS instruction_id,
   JSON_VALUE(payload,'$.source_decision_ref')                AS source_decision_ref,
+  -- paired_sell_item_key / paired_buy_item_key (paired-rotation redesign, owner directive 2026-07-26,
+  -- Operating_Protocols.md §13.E PAIRED-ROTATION EXCEPTION): when D2 crafts both legs of a capital
+  -- rotation in one session, each leg names its sibling so the pair is reconstructable FROM THIS VIEW --
+  -- previously the keys were written into the payload but never projected, so §13.C's paired-rotation
+  -- attribution branch ("verify both legs exist") could only reach them by hand-parsing raw JSON off
+  -- events.queue_events. Deliberately JSON_VALUE (STRING passthrough) with NO cast: convergence_target
+  -- above is a hard CAST(... AS NUMERIC), and on 2026-07-26 a ticker string written into that field made
+  -- every SELECT * against this view fail with "Invalid NUMERIC value" -- an uncastable value in a
+  -- payload field must never be able to break the whole registry again.
+  JSON_VALUE(payload,'$.paired_sell_item_key')               AS paired_sell_item_key,
+  JSON_VALUE(payload,'$.paired_buy_item_key')                AS paired_buy_item_key,
   -- guard_passed/guard_reasons (self-improvement audit ITEM 15, 2026-07-11): the routine-side
   -- fn_order_guard/fn_order_guard_options check was documented as an obligation on the caller with no
   -- mechanical enforcement -- nothing stopped an ORDER_STAGED row from landing without the guard ever

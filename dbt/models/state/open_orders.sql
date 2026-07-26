@@ -30,6 +30,11 @@ SELECT
   SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(payload,'$.time_exit_date')) AS time_exit_date,
   JSON_VALUE(payload,'$.instruction_id')                      AS instruction_id,
   JSON_VALUE(payload,'$.source_decision_ref')                 AS source_decision_ref,
+  -- paired_* keys (2026-07-26 paired-rotation redesign): each leg of a same-session capital rotation
+  -- names its sibling so the pair is reconstructable from this view. JSON_VALUE passthrough, no cast --
+  -- an uncastable payload value must never break the registry (see convergence_target, 2026-07-26).
+  JSON_VALUE(payload,'$.paired_sell_item_key')                AS paired_sell_item_key,
+  JSON_VALUE(payload,'$.paired_buy_item_key')                 AS paired_buy_item_key,
   CAST(JSON_VALUE(payload,'$.guard_passed') AS BOOL)          AS guard_passed,
   JSON_VALUE(payload,'$.guard_reasons')                        AS guard_reasons,
   CASE WHEN UPPER(JSON_VALUE(payload,'$.side')) = 'BUY'
