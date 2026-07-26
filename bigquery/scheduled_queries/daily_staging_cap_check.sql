@@ -8,6 +8,12 @@
 -- order, so it should not flip all_green or storm the DTS failure-email until a clean baseline is
 -- confirmed. Promote to critical + RAISE later if desired (cadence_check.sql's pattern).
 --
+-- RETIRED 2026-07-26 (owner directive): the daily_cap_breach warning this check raised is gone — no
+-- daily cap on staged order count/notional applies anymore (bigquery/109_retire_daily_staging_cap.sql).
+-- ops.sp_sq_daily_staging_cap_check (bigquery/75_scheduled_query_wrappers.sql, bumped to v4) now runs
+-- only the order_guard_omitted / order_guard_verdict_mismatch per-order guard-record checks, which are
+-- UNRELATED to the retired cap and remain fully active.
+--
 -- TIMING: any time during/after the trading day; ~05:25 UTC sits with the other daily control-plane
 -- checks (after D2 has staged the day's orders). APPLY ORDER: bigquery/23_trading_control.sql must be
 -- applied first.
