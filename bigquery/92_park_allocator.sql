@@ -371,8 +371,10 @@ CROSS JOIN missing;
 -- 7. state.park_position_current / state.park_reconciliation — SUPERSEDES the bigquery/54
 -- definitions (superseded-markers added there in this commit, pointing here). Generalizes 54's
 -- single-vehicle assumption for the multi-instrument menu (PARK_ROUTER_DESIGN.md §5: a switch
--- converges the book over 1-2 sessions, so both the outgoing and incoming vehicle can momentarily
--- be held above-dust at once) WHILE PRESERVING every output column name/shape 54 established
+-- can leave the outgoing and incoming vehicle both held above-dust at once; as of the 2026-07-26
+-- paired-rotation redesign D2 crafts BOTH legs in one session so this window is normally a single
+-- open rather than the 1-2 sessions this comment originally described, but the residual-row union
+-- below is unchanged and still required either way) WHILE PRESERVING every output column name/shape 54 established
 -- (state.park_reconciliation feeds Operating_Protocols.md §13's tripwire prose and the weekly
 -- report — this migration only ADDS is_policy_vehicle, never removes/renames a column).
 --

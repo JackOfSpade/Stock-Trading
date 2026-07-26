@@ -761,13 +761,18 @@ Concretely, every run:
   same day).** On **settled** cash:
   `free_cash = settled_cash − Σ reserved_cash from state.open_orders` (the durable registry — plus any live unfilled
   BUY not represented there). **Sweep** if `free_cash ≥ +$25` → BUY the current park vehicle sized DOWN
-  `floor_to_4dp((free_cash − comm_buffer)/ask)`. **Cover** if `settled_cash ≤ −$5` (a *realized* debit) → SELL the
-  current park vehicle sized UP `ceil_to_4dp((|settled_cash| + comm_buffer)/bid)`, capped at the vehicle held.
+  `floor_to_4dp((free_cash − comm_buffer)/ask)`. **Cover** if `bridge_adjusted_settled_cash ≤ −$5` (a *realized, unfunded* debit) → SELL the
+  current park vehicle sized UP `ceil_to_4dp((|bridge_adjusted_settled_cash| + comm_buffer)/bid)`, capped at the vehicle
+  held. `bridge_adjusted_settled_cash = settled_cash + Σ expected_net_proceeds(paired SELLs that have FILLED but not
+  yet SETTLED)` — MANDATORY (owner directive 2026-07-26, Operating_Protocols.md §13.E step 4). NEVER trigger or size a
+  cover off raw `settled_cash`: a paired rotation's BUY deliberately fills on margin one settlement cycle before its
+  funding SELL lands, so the raw figure reads a debit of order the full switch notional, and covering it would SELL the
+  brand-new policy vehicle and partially unwind the switch D2 just made.
   `comm_buffer` per Operating_Protocols.md §13's Commission model — SGOV: `min(1% × trade_value, $0.35)`
   (empirically confirmed); VOO: UNVERIFIED, use the SGOV formula as a conservative placeholder until confirmed
   from the first live VOO park fills in `get_account_trades` (do not assume $0 commission just because IBKR often
   charges nothing on whole-share ETF trades — these are fractional-share orders, which may route through a
-  different fee schedule; confirm, don't guess). Otherwise no action (a $0…−$5 debit is left on margin). **BRIDGE ADJUSTMENT (owner directive 2026-07-26, MANDATORY):** the cover test above reads `bridge_adjusted_settled_cash = settled_cash + Σ expected_net_proceeds(paired SELLs that have FILLED but not yet SETTLED)`, never raw `settled_cash` — a paired rotation's BUY deliberately fills on margin one settlement cycle before its funding SELL lands, and covering that artifact would SELL the brand-new policy vehicle and partially unwind the switch (Operating_Protocols.md §13.E step 4). This sweep/cover is now the BACKSTOP for BOTH legs of a switch (D2 crafts both in-session): it re-crafts either leg whose DAY order expired unfilled and deploys whatever residual the haircut left behind. Order:
+  different fee schedule; confirm, don't guess). Otherwise no action (a $0…−$5 debit is left on margin). This sweep/cover is now the BACKSTOP for BOTH legs of a switch (D2 crafts both in-session): it re-crafts either leg whose DAY order expired unfilled and deploys whatever residual the haircut left behind. Order:
   contract_id per the current vehicle (above), TIF **DAY**, `order_type='MARKET'` (no `limit_price` argument
   transmitted); record the live reference price (last, or bid/ask mid) in the staged payload's `limit_price` field
   for cash-reservation/notional purposes only; record the
