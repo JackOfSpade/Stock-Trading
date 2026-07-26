@@ -1157,11 +1157,29 @@ hardcoded `EXTRACT(HOUR)=7` heuristic (the dashboard cron is 05:20Z but observed
 07:21-07:33Z). No owner action for this part; the grant above is still needed for either version of
 the note to land live.
 
+**RETIRED 2026-07-25 — this item's premise (`'dashboard' (ci)` will eventually beat) was wrong and the
+verify probe below can never pass on this repo.** `ops/RUNBOOK.md` §16 (added 2026-06-20, i.e. BEFORE
+this item's 2026-07-17 note) already said the owner's GitHub account is personal/non-Enterprise, so
+Pages publishes PUBLICLY even for a private repo — `vars.PUBLISH_DASHBOARD` was therefore always meant
+to stay unset, `dashboard.yml`'s CI path always takes the guard-skip branch (confirmed: all ~36 runs to
+date complete in 9-36s, and `gh variable list` shows no `PUBLISH_DASHBOARD` var exists), and it can
+**never** legitimately write the `' (ci)'`-tagged heartbeat this item was waiting on. The only beats
+`'dashboard'` ever got were ad-hoc **local** `generate_dashboard.py` runs (RUNBOOK §16's own recommended
+way to view it, since Pages is off) — session-window contamination, not proof of a live CI build,
+exactly like the 240-row cleanup this item already did once. It recurred 2026-07-25 (10 local runs,
+04:34-04:38 MT, no `' (ci)'` tag) and this time the resulting stale flip latched `automation_heartbeat`
+critical `0220d792`, which held the D2/D2a trading-enable gate closed with no mechanical self-heal path
+(that category is human-only-clear by design, `bigquery/34_alert_lifecycle.sql`). Fix:
+`bigquery/106_retire_dashboard_heartbeat.sql` drops `'dashboard'` from `state.automation_heartbeat`'s
+watched sources entirely — `ops.heartbeat`/`generate_dashboard.py` are unchanged, just no longer read
+by this view. **Action: none — do NOT re-add `'dashboard'` to the watched set** unless this repo moves
+to a GitHub Enterprise/Org account where private-repo Pages is actually private.
+
 ```verify
 id: C
 type: bq
-probe: SELECT COUNT(*) n FROM `stock-trading-498512.ops.heartbeat` WHERE source='dashboard' AND note LIKE '% (ci)%' AND beat_ts > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)
-done_when: n>0
+probe: SELECT COUNT(*) n FROM `stock-trading-498512.state.automation_heartbeat` WHERE source='dashboard'
+done_when: n=0
 ```
 
 ## D. Re-enable `alert-relay.yml` (currently `disabled_manually`) — `[DONE 2026-07-17]`
