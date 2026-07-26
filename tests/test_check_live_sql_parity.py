@@ -23,13 +23,13 @@ def test_parses_the_real_repo_without_crashing():
 
 def test_apply_order_last_file_wins_for_a_known_redefinition():
     final = clsp.find_final_definitions()
-    # bigquery/97 (2026-07-19 halt-echo dependency-gate exclusion) supersedes 78, which superseded
-    # 47, which superseded 34, which superseded 23, for state.trading_enabled.
+    # bigquery/107 (2026-07-26 halt-echo missed_run exclusion) supersedes 97, which superseded 78,
+    # which superseded 47, which superseded 34, which superseded 23, for state.trading_enabled.
     _, _, source_file, _ = final[("state", "trading_enabled")]
-    assert source_file == "97_halt_echo_dependency_gate.sql"
-    # bigquery/97 also supersedes 78's/34's state.trading_enabled_mechanical (same gate cluster).
+    assert source_file == "107_halt_echo_missed_run_gate.sql"
+    # bigquery/107 also supersedes 97's/78's/34's state.trading_enabled_mechanical (same gate cluster).
     _, _, source_file2, _ = final[("state", "trading_enabled_mechanical")]
-    assert source_file2 == "97_halt_echo_dependency_gate.sql"
+    assert source_file2 == "107_halt_echo_missed_run_gate.sql"
 
 
 def test_embedded_format_string_create_statement_is_not_a_false_positive():

@@ -19,12 +19,14 @@
 -- ddl_drift/restore_stale/append_only_integrity.
 --
 -- SUPERSEDED LIVE by bigquery/78_book_drawdown_rebase_and_staleness_gate.sql (2026-07-17: breach_hard
--- drawdown term + trading_halted/staleness blocking-criticals exclusion), and 78 was in turn
--- superseded by bigquery/97_halt_echo_dependency_gate.sql (2026-07-19: halt-echo missing_dependency
--- exclusion) — 97 is the CURRENT single source of truth for this view. Re-applying the CREATE OR
--- REPLACE VIEW below live in isolation would REGRESS both of those changes and false-fire drift
--- against the current state.trading_enabled. Kept here, unmodified, for DR-rebuild apply-in-order
--- reference only. DO NOT re-apply this CREATE OR REPLACE VIEW statement live in isolation.
+-- drawdown term + trading_halted/staleness blocking-criticals exclusion), 78 was in turn superseded
+-- by bigquery/97_halt_echo_dependency_gate.sql (2026-07-19: halt-echo missing_dependency exclusion),
+-- and 97 was in turn superseded by bigquery/107_halt_echo_missed_run_gate.sql (2026-07-26: halt-echo
+-- missed_run exclusion) — 107 is the CURRENT single source of truth for this view (78/97 are
+-- themselves superseded). Re-applying the CREATE OR REPLACE VIEW below live in isolation would
+-- REGRESS all three changes and false-fire drift against the current state.trading_enabled. Kept
+-- here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE OR
+-- REPLACE VIEW statement live in isolation.
 -- (Retroactive marker added 2026-07-19; the matching grandfathered BASELINE entry was removed from
 -- scripts/check_superseded_markers.py at the same time.)
 CREATE OR REPLACE VIEW `stock-trading-498512.state.b3_trading_enabled_check` AS

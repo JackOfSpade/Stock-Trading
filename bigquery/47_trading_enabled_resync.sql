@@ -1,12 +1,13 @@
 -- ======================= SUPERSEDED — DO NOT APPLY THIS FILE =======================
 -- This file's `CREATE OR REPLACE VIEW state.trading_enabled` is NO LONGER CANONICAL.
 -- bigquery/78_book_drawdown_rebase_and_staleness_gate.sql SUPERSEDED it (2026-07-17; confirmed
--- against the deployed view 2026-07-18: live matched 78, not this file), and 78 was in turn
--- superseded by bigquery/97_halt_echo_dependency_gate.sql (2026-07-19) — 97 is the current single
--- source of truth for this gate.
+-- against the deployed view 2026-07-18: live matched 78, not this file), 78 was in turn
+-- superseded by bigquery/97_halt_echo_dependency_gate.sql (2026-07-19), and 97 was in turn
+-- superseded by bigquery/107_halt_echo_missed_run_gate.sql (2026-07-26) — 107 is the current single
+-- source of truth for this gate (78/97 are themselves superseded).
 --
 -- Re-applying THIS file would REGRESS the live gate on BOTH of 78's changes (and on 97's
--- halt-echo missing_dependency exclusion):
+-- halt-echo missing_dependency exclusion, and on 107's halt-echo missed_run exclusion):
 --   * the drawdown AND-term would revert from `breach_hard` (the -40% CATASTROPHE tier) to
 --     `drawdown_breach` (the -15% soft tier) — hard-halting ALL trading on a soft-tier drawdown that
 --     is only supposed to pause new entries; and
@@ -33,8 +34,8 @@
 -- deployed view lacked `category != 'trading_halted'` entirely.
 --
 -- THIS FILE WAS the single source of truth for state.trading_enabled AS OF 2026-07-14 (it is NOT any
--- longer — bigquery/78 superseded it 2026-07-17, and bigquery/97 supersedes 78 as of 2026-07-19;
--- see the SUPERSEDED banner at the top), merging:
+-- longer — bigquery/78 superseded it 2026-07-17, bigquery/97 superseded 78 on 2026-07-19, and
+-- bigquery/107 superseded 97 on 2026-07-26; see the SUPERSEDED banner at the top), merging:
 --   * 34's trading_halted exclusion (al AS ... category != 'trading_halted')
 --   * 23's 2026-07-11 ITEM 16 snapshot_stale AND-term (dd AS ... snapshot_stale)
 -- Supersedes the trading_enabled definitions in both 23 (as edited 2026-07-11) and 34.

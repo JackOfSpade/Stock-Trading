@@ -1,63 +1,110 @@
--- Halt-echo dependency-gate exclusion (2026-07-19): missing_dependency criticals that are pure
--- same-day fallout of a still-open trading halt no longer count as blocking criticals in the
--- trading-enable gate cluster. Project: stock-trading-498512. Apply AFTER
--- 78_book_drawdown_rebase_and_staleness_gate.sql and 94_catchup_refire_blocked_policy.sql.
--- This file is the NEW single source of truth for state.trading_enabled,
--- state.trading_enabled_mechanical, state.b3_trading_enabled_check and ops.sp_auto_resolve_alerts;
--- it SUPERSEDES the three view definitions in bigquery/78_book_drawdown_rebase_and_staleness_gate.sql
--- and the ops.sp_auto_resolve_alerts definition in bigquery/94_catchup_refire_blocked_policy.sql
--- (94 had superseded 78's procedure, which superseded 34's). Per 47's header rule, any future change
--- to this gate cluster must land as a NEW numbered file that supersedes THIS one — never re-apply an
--- earlier file's CREATE OR REPLACE for these objects in isolation.
+-- Halt-echo missed_run exclusion (2026-07-26): critical 'missed_run' alerts that are pure fallout
+-- of an already-known trading-gate halt no longer count as blocking criticals in the trading-enable
+-- gate cluster. Project: stock-trading-498512. Apply AFTER 106_retire_dashboard_heartbeat.sql. This
+-- file is the NEW single source of truth for state.trading_enabled, state.trading_enabled_mechanical,
+-- state.b3_trading_enabled_check and ops.sp_auto_resolve_alerts; it SUPERSEDES bigquery/97's
+-- definitions of all four. Per 47's header rule, any future change to this gate cluster must land as
+-- a NEW numbered file that supersedes THIS one — never re-apply an earlier file's CREATE OR REPLACE
+-- for these objects in isolation.
 --
--- ============================ WHY (the 2026-07-19 deadlock) ============================
--- W5's critical missing_dependency alert 46dcc5fd fired because its dependency W4 had not completed —
--- W4 was HALTED by a still-open trading_halted alert (source = W4, same Denver day). Both trading
--- gates counted that missing_dependency alert as a blocking critical, so the gates stayed FALSE.
--- But sp_auto_resolve_alerts Rule 1's ONLY heal for a missing_dependency alert is the named dep
--- completing (a run_log 'completed' row with run_date >= the alert's run_date) — i.e. W4 completing,
--- which the alert itself blocks by holding the gates closed. A circular deadlock: the echo of the
--- halt outlives every legitimate reason to block, resolvable only by Rule 1's >1-day age-out or a
--- human. The missing_dependency alert carries ZERO information the gates don't already have — the
--- halt itself is category='trading_halted', which the gates have excluded since bigquery/34 for
--- exactly this alert-on-alert reason (and 'staleness' since 78). Excluding the halt's
--- missing_dependency ECHOES — and only those — removes no real protection and breaks the circle.
+-- ============================ WHY (the 2026-07-25/26 deadlock) ============================
+-- A compound platform-trigger outage (07-23/24) caused D1/D2/D2a/D3/OPS0/OPS1/SL3 to miss their
+-- scheduled runs. state.cadence_watch correctly raised a critical 'missed_run' alert naming all 7
+-- (07-24) and, the next day, a second one naming only D3 (07-25). By 07-25, 5 of the 7 (D1, D2a,
+-- OPS0, OPS1, SL3) had independently recovered and completed. D2 fired on schedule but HALTED
+-- (ops.run_log status='halted') because state.trading_enabled was FALSE due to an UNRELATED root
+-- cause (a latching automation_heartbeat alert about a retired 'dashboard' heartbeat source — fixed
+-- same day via bigquery/106). D3 then also halted, blocked on D2's same-day output.
+--
+-- Once the root cause was fixed, BOTH missed_run alerts stayed open and kept blocking_criticals > 0:
+-- sp_auto_resolve_alerts Rule 2 only clears a missed_run alert once EVERY named routine in its
+-- payload shows a completed run_log row (or the item's date is >1 day stale) — D2/D2a not completing
+-- kept both alerts open. A genuine circular deadlock: D2 won't run while trading_enabled=FALSE (it
+-- checks the gate itself and halts) -> the missed_run alerts about D2/D3 not completing stay open ->
+-- which is EXACTLY what kept trading_enabled=FALSE. Broken only by an operator-authorized interactive
+-- session directly UPDATE-ing ops.alerts to resolve those two specific rows.
+--
+-- This is the SAME class of bug bigquery/97 already fixed for 'missing_dependency' alerts (see that
+-- file's own header: W5's missing_dependency echo of W4's halt deadlocked identically). 97's own
+-- ACCEPTED LIMITATIONS (ii) explicitly named missed_run as an unsuppressed BACKSTOP for its own gap
+-- ("Backstopped by the ~23:15 MT cadence watchdog's missed_run, which is not suppressed by this
+-- exclusion") — this incident is proof that backstop is insufficient on its own: Rule 2's >1-day
+-- age-out means trading can stay needlessly halted for 1-2+ days after the TRUE root cause is fixed,
+-- until a human manually intervenes or the staleness window finally passes.
 --
 -- ============================ THE FAIL-CLOSED PREDICATE ============================
--- An open critical missing_dependency alert is a "halt-echo" IFF EVERY routine named in its
--- payload.missing_deps has an OPEN (NOT resolved) trading_halted alert (ops.alerts.source = dep)
--- whose DATE(alert_ts,'America/Denver') equals SAFE.PARSE_DATE('%Y-%m-%d', payload.run_date).
--- Fail-closed: a NULL/malformed payload, an empty missing_deps, an unparseable run_date, or ANY
--- dep without a matching open same-day trading_halted alert means NOT an echo — the alert still
--- blocks, exactly as today. Only the unambiguous every-dep-halted-today case is excluded.
+-- A critical 'missed_run' alert (payload = ARRAY<STRUCT<routine, schedule, today>>, bigquery/75
+-- ~line162) is a "halt-echo" IFF EVERY named item is explained by EITHER:
+--   (A) the routine has SINCE completed (run_log 'completed', run_date >= item.today) — the exact
+--       same test Rule 2 already uses to fully resolve the alert; included here too so the item
+--       stops blocking in REAL TIME (the live view recomputes every read) rather than waiting for
+--       Rule 2's own next scheduled pass, OR
+--   (B) "halt-fallout": the routine's MOST RECENT ops.run_log row is status='halted' (it tried, and
+--       voluntarily deferred to the gate, as opposed to a platform outage where it never fired at
+--       all), and a category='trading_halted' alert was raised within 24 HOURS of that halted row's
+--       log_ts — proof the account-wide gate was actually tripped closed around the same time as
+--       this specific attempt, not an unrelated coincidence.
 --
--- !! Do NOT widen the predicate to RESOLVED trading_halted alerts — that would be FAIL-OPEN: a
--- healed halt's stale missing_dependency echo would stop blocking even though the dep never ran,
--- silently un-gating on a condition nobody re-verified. The predicate must stay OPEN-halt-only.
+-- WHY A TIME WINDOW, NOT bigquery/97's "th.source = dep AND same Denver day" test:
+--   (i)   sp_raise_alert_once dedups trading_halted on EXACT message text. The two canonical call
+--         sites (bigquery/85 lines ~73/~108) use a fixed boilerplate string, and ad-hoc diagnostic
+--         narratives from monitoring routines (e.g. OPS0) use their own distinct text — so at most
+--         one row per distinct phrasing survives, credited to whichever routine/path reached the
+--         gate (or noticed it) first, NOT one row per source. A strict source=routine match (97's
+--         dep-alert idiom) would only ever explain that one credited routine, never a routine sharing
+--         the same halt episode via a differently-worded or differently-sourced alert — exactly the
+--         D2/D2a split observed in this incident (a35dcba0 source=D2a critical boilerplate;
+--         29eb4bae source=D2 warning narrative — two different messages, two different rows, one
+--         underlying gate closure).
+--   (ii)  trading_halted is human-latching with NO auto-resolve rule anywhere in this procedure —
+--         gating on "NOT th.resolved" (97's approach for missing_dependency) is not a safe bound
+--         here: these rows routinely sit open for days with no forcing function to clear them (both
+--         a35dcba0 and 29eb4bae were STILL open hours after the root cause was fixed and manually
+--         verified as such during this fix's design). A 24h window on WHEN the corroborating alert
+--         fired — not whether it has since been resolved — is the actual, bounded correlation.
+--   (iii) missed_run's own catch-up lag means a routine can first attempt (and halt) days after its
+--         item.today; the halt evidence and the alert must correlate to EACH OTHER's timing, not to
+--         the stale expected-date, or the predicate never fires for exactly the multi-day case this
+--         incident is.
 --
--- ============================ ACCEPTED LIMITATIONS (adversarial review 2026-07-19) ============================
+-- FAIL-CLOSED: a routine with no run_log row of ANY status (the true platform-outage no-show) keeps
+-- blocking, exactly as today — hr's routine-keyed MAX(log_ts) is NULL, so both (A) and (B) are FALSE.
+-- A routine that halts again for a genuinely NEW, unrelated reason is required BY CONVENTION
+-- (Claude_Task_Plan.md "Failure alerts": "any condition that halts a routine... MUST be surfaced") to
+-- raise ITS OWN alert in a non-trading_halted category — never excluded here, so it keeps blocking on
+-- its own regardless of this CTE. A NULL alert_id is excluded outright (same reason as halt_echo_md:
+-- left in, the downstream blocking-criticals NOT IN would return NULL for every row and fail OPEN).
+-- Validated against this incident's actual data before landing: both real alerts (07-24's 7-routine
+-- bundle and 07-25's D3-only alert) independently verify as fully explained under this predicate —
+-- 5 items via (A), D2/D3 via (B) with corroborating trading_halted alerts 8-133 minutes away, well
+-- inside the 24h window.
+--
+-- !! Do NOT widen condition (B) to an unbounded date match or to "any open trading_halted alert
+-- ever" — that is the exact failure mode this file's own adversarial review rejected: an old,
+-- forgotten, still-open trading_halted row could otherwise vouch for an unrelated halt far in the
+-- future. The 24h window is the load-bearing bound; do not remove it without a replacement of
+-- equivalent rigor.
+--
+-- ============================ ACCEPTED LIMITATIONS ============================
 -- Both degrade to the STATUS-QUO blocking behaviour (fail-closed), never to fail-open:
---   (i)  sp_raise_alert_once dedups trading_halted on exact message, so only the FIRST-halted
---        routine per episode gets a trading_halted row, and a halt spanning Denver midnight has no
---        day-2 trading_halted row at all. Echo relief therefore reaches only that first routine's
---        downstreams, on the same Denver day. Day-2 deadlocks re-form and age out via Rule 1's
---        >1-day fallback — the pre-97 behaviour, no worse.
---   (ii) While a same-day trading_halted alert stays open (it is human-latching), a dep that
---        re-runs and fails for a NEW, unrelated reason keeps its missing_dependency echo suppressed
---        until the halt is cleared or Denver midnight passes. Backstopped by the ~23:15 MT cadence
---        watchdog's missed_run, which is not suppressed by this exclusion.
---
--- SUPERSEDED LIVE by bigquery/107_halt_echo_missed_run_gate.sql — current single source of truth
--- for state.trading_enabled, state.trading_enabled_mechanical, state.b3_trading_enabled_check, and
--- ops.sp_auto_resolve_alerts (107 added a parallel halt_echo_mr exclusion for missed_run alerts,
--- since Limitation (ii) above proved insufficient in practice — 2026-07-25/26 incident). Kept here,
--- unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this file's CREATE
--- statements live in isolation.
+--   (i)  If a routine's most recent halted attempt and the nearest trading_halted alert are more
+--        than 24h apart (a very slow-to-notice, long-running episode), the item is NOT excused and
+--        stays blocking — same as today, not worse. Rule 2's existing >1-day age-out remains the
+--        ultimate backstop for this case.
+--   (ii) A routine that halts TWICE in the same 24h window — once for the gate (excused) and once
+--        for a second, different, ALSO-unalerted reason — is not distinguishable by this predicate
+--        alone; it relies on the "Failure alerts" convention that any hard-stop raises its own alert.
+--        This is the same reliance every other rule in this procedure already places on that
+--        convention (e.g. Rule 1/Rule 2's own existing tests assume a named dependency's completion
+--        or absence is the whole story); not a new risk introduced here.
+--   (iii) Scope, like 97, is EXCLUSION from blocking_criticals/no_other_criticals only — the
+--        underlying missed_run alert ROW is left untouched (Rule 2 still owns its actual resolution),
+--        so it remains visible in ops.alerts for audit and still ages out via Rule 2's existing rule.
 
--- ===== state.trading_enabled — REDEFINED (SUPERSEDES bigquery/78) =====
--- Sole change vs 78: blocking_criticals additionally excludes halt-echo missing_dependency alerts
--- (halt_echo_md CTE below), and the blocking-criticals halt_reason branch names the new exclusion.
--- Everything else byte-identical to 78's committed body.
+-- ===== state.trading_enabled — REDEFINED (SUPERSEDES bigquery/97) =====
+-- Sole change vs 97: blocking_criticals additionally excludes halt-echo missed_run alerts
+-- (halt_echo_mr CTE below), alongside the existing halt_echo_md, and the blocking-criticals
+-- halt_reason branch names the new exclusion. Everything else byte-identical to 97's committed body.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.trading_enabled` AS
 WITH ctrl AS (
   SELECT ARRAY_AGG(STRUCT(halt_all, reason, mode) ORDER BY control_ts DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest
@@ -89,10 +136,38 @@ halt_echo_md AS (
   GROUP BY a.alert_id
   HAVING LOGICAL_AND(th.alert_id IS NOT NULL)
 ),
+halt_echo_mr AS (
+  -- 'missed_run' critical alerts that are pure fallout of an already-known trading-gate halt. See
+  -- this file's header for the full predicate + rationale. (A) reuses Rule 2's own completion test;
+  -- (B) correlates the routine's latest halted attempt to a trading_halted alert within 24h.
+  SELECT a.alert_id
+  FROM `stock-trading-498512.ops.alerts` a,
+       UNNEST(JSON_QUERY_ARRAY(a.payload)) AS item
+  LEFT JOIN `stock-trading-498512.ops.run_log` r
+    ON r.routine = JSON_VALUE(item, '$.routine') AND r.status = 'completed'
+       AND r.run_date >= SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(item, '$.today'))
+  LEFT JOIN (
+    SELECT routine, MAX(log_ts) AS last_halt_ts
+    FROM `stock-trading-498512.ops.run_log`
+    WHERE status = 'halted'
+    GROUP BY routine
+  ) hr ON hr.routine = JSON_VALUE(item, '$.routine')
+  LEFT JOIN `stock-trading-498512.ops.alerts` th
+    ON th.category = 'trading_halted'
+       AND hr.last_halt_ts IS NOT NULL
+       AND ABS(TIMESTAMP_DIFF(th.alert_ts, hr.last_halt_ts, HOUR)) <= 24
+  WHERE a.alert_id IS NOT NULL
+    AND NOT a.resolved
+    AND a.severity = 'critical'
+    AND a.category = 'missed_run'
+  GROUP BY a.alert_id
+  HAVING LOGICAL_AND(r.routine IS NOT NULL OR th.alert_id IS NOT NULL)
+),
 al AS (
   SELECT COUNTIF(NOT resolved AND severity = 'critical'
     AND category NOT IN ('trading_halted', 'staleness')
-    AND alert_id NOT IN (SELECT alert_id FROM halt_echo_md)) AS blocking_criticals
+    AND alert_id NOT IN (SELECT alert_id FROM halt_echo_md)
+    AND alert_id NOT IN (SELECT alert_id FROM halt_echo_mr)) AS blocking_criticals
   FROM `stock-trading-498512.ops.alerts`
 ),
 pr AS (SELECT COALESCE(LOGICAL_OR(drifted), FALSE) AS drift FROM `stock-trading-498512.state.position_reconciliation`),
@@ -114,7 +189,7 @@ SELECT
     WHEN NOT COALESCE(eh.is_healthy, FALSE) THEN
       'state.embedding_health.is_healthy = FALSE'
     WHEN al.blocking_criticals != 0 THEN
-      FORMAT('%d open critical alert(s) (excluding trading_halted/staleness/halt-echo-dependency gate echoes) — see ops.alerts', al.blocking_criticals)
+      FORMAT('%d open critical alert(s) (excluding trading_halted/staleness/halt-echo dependency+missed_run gate echoes) — see ops.alerts', al.blocking_criticals)
     WHEN pr.drift THEN
       'state.position_reconciliation drift detected'
     WHEN COALESCE(dd.breach_hard, FALSE) THEN
@@ -125,10 +200,10 @@ SELECT
   END AS halt_reason
 FROM ctrl, f, eh, al, pr, dd;
 
--- ===== state.trading_enabled_mechanical — REDEFINED (SUPERSEDES bigquery/78) =====
--- Same sole change as state.trading_enabled above (halt_echo_md exclusion + halt_reason wording).
+-- ===== state.trading_enabled_mechanical — REDEFINED (SUPERSEDES bigquery/97) =====
+-- Same sole change as state.trading_enabled above (halt_echo_mr exclusion + halt_reason wording).
 -- Still deliberately excludes marks_fresh/engine_fresh (D2a's own same-run-circular term, per 33's
--- header). Everything else byte-identical to 78's committed body.
+-- header). Everything else byte-identical to 97's committed body.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.trading_enabled_mechanical` AS
 WITH ctrl AS (
   SELECT ARRAY_AGG(STRUCT(halt_all, reason, mode) ORDER BY control_ts DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest
@@ -162,10 +237,37 @@ halt_echo_md AS (
   GROUP BY a.alert_id
   HAVING LOGICAL_AND(th.alert_id IS NOT NULL)
 ),
+halt_echo_mr AS (
+  -- 'missed_run' critical alerts that are pure fallout of an already-known trading-gate halt. See
+  -- this file's header for the full predicate + rationale.
+  SELECT a.alert_id
+  FROM `stock-trading-498512.ops.alerts` a,
+       UNNEST(JSON_QUERY_ARRAY(a.payload)) AS item
+  LEFT JOIN `stock-trading-498512.ops.run_log` r
+    ON r.routine = JSON_VALUE(item, '$.routine') AND r.status = 'completed'
+       AND r.run_date >= SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(item, '$.today'))
+  LEFT JOIN (
+    SELECT routine, MAX(log_ts) AS last_halt_ts
+    FROM `stock-trading-498512.ops.run_log`
+    WHERE status = 'halted'
+    GROUP BY routine
+  ) hr ON hr.routine = JSON_VALUE(item, '$.routine')
+  LEFT JOIN `stock-trading-498512.ops.alerts` th
+    ON th.category = 'trading_halted'
+       AND hr.last_halt_ts IS NOT NULL
+       AND ABS(TIMESTAMP_DIFF(th.alert_ts, hr.last_halt_ts, HOUR)) <= 24
+  WHERE a.alert_id IS NOT NULL
+    AND NOT a.resolved
+    AND a.severity = 'critical'
+    AND a.category = 'missed_run'
+  GROUP BY a.alert_id
+  HAVING LOGICAL_AND(r.routine IS NOT NULL OR th.alert_id IS NOT NULL)
+),
 al AS (
   SELECT COUNTIF(NOT resolved AND severity = 'critical'
     AND category NOT IN ('trading_halted', 'staleness')
-    AND alert_id NOT IN (SELECT alert_id FROM halt_echo_md)) AS blocking_criticals
+    AND alert_id NOT IN (SELECT alert_id FROM halt_echo_md)
+    AND alert_id NOT IN (SELECT alert_id FROM halt_echo_mr)) AS blocking_criticals
   FROM `stock-trading-498512.ops.alerts`
 ),
 dd AS (SELECT breach_hard, drawdown_from_peak FROM `stock-trading-498512.state.book_drawdown_watch`)
@@ -181,7 +283,7 @@ SELECT
     WHEN NOT COALESCE(health.embeddings_healthy, FALSE) THEN
       'state.system_health.embeddings_healthy = FALSE'
     WHEN al.blocking_criticals != 0 THEN
-      FORMAT('%d open critical alert(s) (excluding trading_halted/staleness/halt-echo-dependency gate echoes) — see ops.alerts', al.blocking_criticals)
+      FORMAT('%d open critical alert(s) (excluding trading_halted/staleness/halt-echo dependency+missed_run gate echoes) — see ops.alerts', al.blocking_criticals)
     WHEN COALESCE(health.position_drift_detected, TRUE) THEN
       'state.position_reconciliation drift detected'
     WHEN COALESCE(dd.breach_hard, FALSE) THEN
@@ -190,10 +292,10 @@ SELECT
   END AS halt_reason
 FROM ctrl, health, al, dd;
 
--- ===== state.b3_trading_enabled_check — REDEFINED (SUPERSEDES bigquery/78) =====
+-- ===== state.b3_trading_enabled_check — REDEFINED (SUPERSEDES bigquery/97) =====
 -- The live formula self-check must track the gate it mirrors, or it false-fires drift. Updated to
--- carry the same halt_echo_md exclusion in its blocking-criticals recomputation. Everything else
--- byte-identical to 78's committed body.
+-- carry the same halt_echo_mr exclusion (alongside the existing halt_echo_md) in its
+-- blocking-criticals recomputation. Everything else byte-identical to 97's committed body.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.b3_trading_enabled_check` AS
 WITH ctrl AS (
   SELECT ARRAY_AGG(STRUCT(halt_all) ORDER BY control_ts DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest
@@ -225,10 +327,37 @@ halt_echo_md AS (
   GROUP BY a.alert_id
   HAVING LOGICAL_AND(th.alert_id IS NOT NULL)
 ),
+halt_echo_mr AS (
+  -- 'missed_run' critical alerts that are pure fallout of an already-known trading-gate halt. See
+  -- this file's header for the full predicate + rationale.
+  SELECT a.alert_id
+  FROM `stock-trading-498512.ops.alerts` a,
+       UNNEST(JSON_QUERY_ARRAY(a.payload)) AS item
+  LEFT JOIN `stock-trading-498512.ops.run_log` r
+    ON r.routine = JSON_VALUE(item, '$.routine') AND r.status = 'completed'
+       AND r.run_date >= SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(item, '$.today'))
+  LEFT JOIN (
+    SELECT routine, MAX(log_ts) AS last_halt_ts
+    FROM `stock-trading-498512.ops.run_log`
+    WHERE status = 'halted'
+    GROUP BY routine
+  ) hr ON hr.routine = JSON_VALUE(item, '$.routine')
+  LEFT JOIN `stock-trading-498512.ops.alerts` th
+    ON th.category = 'trading_halted'
+       AND hr.last_halt_ts IS NOT NULL
+       AND ABS(TIMESTAMP_DIFF(th.alert_ts, hr.last_halt_ts, HOUR)) <= 24
+  WHERE a.alert_id IS NOT NULL
+    AND NOT a.resolved
+    AND a.severity = 'critical'
+    AND a.category = 'missed_run'
+  GROUP BY a.alert_id
+  HAVING LOGICAL_AND(r.routine IS NOT NULL OR th.alert_id IS NOT NULL)
+),
 al AS (
   SELECT COUNTIF(NOT resolved AND severity = 'critical'
     AND category NOT IN ('trading_halted', 'staleness')
-    AND alert_id NOT IN (SELECT alert_id FROM halt_echo_md)) AS blocking_criticals
+    AND alert_id NOT IN (SELECT alert_id FROM halt_echo_md)
+    AND alert_id NOT IN (SELECT alert_id FROM halt_echo_mr)) AS blocking_criticals
   FROM `stock-trading-498512.ops.alerts`
 ),
 pr AS (SELECT COALESCE(LOGICAL_OR(drifted), FALSE) AS drift FROM `stock-trading-498512.state.position_reconciliation`),
@@ -252,12 +381,13 @@ SELECT
   CURRENT_TIMESTAMP() AS checked_at
 FROM `stock-trading-498512.state.trading_enabled` t, expected e;
 
--- ===== ops.sp_auto_resolve_alerts — Rule 4's no_other_criticals made halt-echo-aware (SUPERSEDES bigquery/94) =====
--- (94 superseded 78's procedure, which superseded 34's.) Rules 1, 2, 3, 3b and Rule 4's
--- live_would_clear/eligible_stale logic below are byte-identical to bigquery/94's committed body.
--- The ONLY change is Rule 4's SET no_other_criticals: its COUNTIF now also excludes halt-echo
--- missing_dependency alerts (inline halt_echo_md WITH, same fail-closed predicate as the views
--- above), so a pure halt-echo cannot keep an otherwise-clearable staleness echo latched open.
+-- ===== ops.sp_auto_resolve_alerts — Rule 4's no_other_criticals made halt-echo-aware for missed_run
+-- too (SUPERSEDES bigquery/97) =====
+-- Rules 1, 2, 3, 3b and Rule 4's live_would_clear/eligible_stale logic below are byte-identical to
+-- bigquery/97's committed body. The ONLY change is Rule 4's SET no_other_criticals: its COUNTIF now
+-- also excludes halt-echo missed_run alerts (inline halt_echo_mr WITH, same fail-closed predicate as
+-- the views above, alongside the existing halt_echo_md), so a pure halt-echo missed_run cannot keep
+-- an otherwise-clearable staleness echo latched open.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_auto_resolve_alerts`()
 BEGIN
   DECLARE eligible_dep, eligible_run, eligible_stalled, eligible_stale, eligible_refire_blocked ARRAY<STRING>;
@@ -364,8 +494,9 @@ BEGIN
 
   -- Rule 4: staleness — strict live-recheck OR pure-echo (payload-aware). Both require that no OTHER
   -- critical (excluding staleness/trading_halted, and — since bigquery/97 — halt-echo
-  -- missing_dependency alerts) remains open. Computed as independent variables first to avoid the
-  -- self-reference de-correlation restriction documented in 34.
+  -- missing_dependency alerts, and — since bigquery/107 — halt-echo missed_run alerts) remains open.
+  -- Computed as independent variables first to avoid the self-reference de-correlation restriction
+  -- documented in 34.
   SET no_other_criticals = (
     (WITH halt_echo_md AS (
       -- missing_dependency alerts that are pure fallout of a same-day, still-open trading halt:
@@ -390,10 +521,37 @@ BEGIN
         AND a.category = 'missing_dependency'
       GROUP BY a.alert_id
       HAVING LOGICAL_AND(th.alert_id IS NOT NULL)
+    ),
+    halt_echo_mr AS (
+      -- 'missed_run' critical alerts that are pure fallout of an already-known trading-gate halt.
+      -- See this file's header for the full predicate + rationale.
+      SELECT a.alert_id
+      FROM `stock-trading-498512.ops.alerts` a,
+           UNNEST(JSON_QUERY_ARRAY(a.payload)) AS item
+      LEFT JOIN `stock-trading-498512.ops.run_log` r
+        ON r.routine = JSON_VALUE(item, '$.routine') AND r.status = 'completed'
+           AND r.run_date >= SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(item, '$.today'))
+      LEFT JOIN (
+        SELECT routine, MAX(log_ts) AS last_halt_ts
+        FROM `stock-trading-498512.ops.run_log`
+        WHERE status = 'halted'
+        GROUP BY routine
+      ) hr ON hr.routine = JSON_VALUE(item, '$.routine')
+      LEFT JOIN `stock-trading-498512.ops.alerts` th
+        ON th.category = 'trading_halted'
+           AND hr.last_halt_ts IS NOT NULL
+           AND ABS(TIMESTAMP_DIFF(th.alert_ts, hr.last_halt_ts, HOUR)) <= 24
+      WHERE a.alert_id IS NOT NULL
+        AND NOT a.resolved
+        AND a.severity = 'critical'
+        AND a.category = 'missed_run'
+      GROUP BY a.alert_id
+      HAVING LOGICAL_AND(r.routine IS NOT NULL OR th.alert_id IS NOT NULL)
     )
     SELECT COUNTIF(NOT resolved AND severity = 'critical'
       AND category NOT IN ('staleness', 'trading_halted')
-      AND alert_id NOT IN (SELECT alert_id FROM halt_echo_md))
+      AND alert_id NOT IN (SELECT alert_id FROM halt_echo_md)
+      AND alert_id NOT IN (SELECT alert_id FROM halt_echo_mr))
     FROM `stock-trading-498512.ops.alerts`) = 0
   );
   SET live_would_clear = (
