@@ -199,6 +199,26 @@ def test_implied_vol_when_it_returns_a_value_that_value_reprices_to_the_target()
         )
 
 
+def test_implied_vol_round_trips_with_dividend_yield_and_negative_rate():
+    """The bracket endpoints are prices, so anything shifting the price curve — a dividend yield, a
+    negative risk-free rate — shifts them too. Every other implied_vol test uses q=0 and r>0, so a
+    change to the bracket or the Newton step that only breaks under q>0 or r<0 would go unnoticed
+    (adversarial review, codebase audit 2026-07-26)."""
+    for S, K, days, r, q, vol, kind in [
+        (100.0, 100.0, 30, 0.045, 0.03, 0.35, 'call'),
+        (100.0, 100.0, 30, 0.045, 0.03, 0.35, 'put'),
+        (250.0, 220.0, 90, -0.005, 0.0, 0.28, 'call'),
+        (250.0, 280.0, 90, -0.005, 0.02, 0.28, 'put'),
+        (80.0, 95.0, 7, 0.02, 0.06, 0.55, 'call'),
+    ]:
+        target = price_bsm(ATMOption(S, K, days, r, vol, kind, dividend_yield=q))
+        solved = implied_vol(target, S, K, days, r, kind, dividend_yield=q)
+        assert solved is not None, f"genuine solve deferred at q={q}, r={r}, {kind}"
+        assert solved == pytest.approx(vol, abs=1e-4)
+        repriced = price_bsm(ATMOption(S, K, days, r, solved, kind, dividend_yield=q))
+        assert repriced == pytest.approx(target, abs=1e-6)
+
+
 def test_implied_vol_genuine_solve_still_round_trips_at_various_guesses():
     # Guard against an overzealous degeneracy fix breaking real convergence: a
     # solvable, reasonably-priced option must still round-trip its IV no matter

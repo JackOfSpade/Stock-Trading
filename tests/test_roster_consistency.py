@@ -692,6 +692,44 @@ def test_unrelated_alias_near_unrelated_divisor_does_not_false_fail(repo_copy):
     assert rc.main() == 0
 
 
+def test_type_cast_does_not_poison_the_money_alias_set(repo_copy):
+    """R-B/R-C false-positive guard (codebase audit 2026-07-26, adversarial review of the alias fix).
+
+    `CAST(cf.amount AS NUMERIC)` has the same `<x> AS <y>` shape as a column alias, so alias resolution
+    used to credit the bare TYPE KEYWORD ("NUMERIC") as a money alias for the whole file — after which
+    ANY unrelated `/N` sitting near ANY other cast to that same type false-tripped this gate. R-B/R-C is
+    CI-BLOCKING, so that direction of failure blocks every merge, not just this check; a defensive CAST
+    is idiomatic in this repo's own SQL, so it was one ordinary edit away from firing."""
+    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql")][0]
+    txt = _read(target)
+    _write(target, txt + (
+        "\n-- a money column cast to a type, then a totally unrelated divisor near the same type name\n"
+        "SELECT CAST(amount AS NUMERIC) AS amt FROM `stock-trading-498512.events.cash_flows`;\n"
+        "SELECT CAST(tier_width AS NUMERIC)\n"
+        "  / 3 AS third\n"
+        "FROM `stock-trading-498512.state.unrelated`;\n"
+    ))
+    assert rc.main() == 0
+
+
+def test_type_cast_exclusion_does_not_reopen_the_alias_hole(repo_copy):
+    """The other half: excluding type names must not stop a REAL aliased equal-split from being caught,
+    including when the same file also contains a type cast (codebase audit 2026-07-26)."""
+    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql")][0]
+    txt = _read(target)
+    _write(target, txt + (
+        "\nSELECT CAST(amount AS NUMERIC) AS amt FROM `stock-trading-498512.events.cash_flows`;\n"
+        "WITH aliased AS (\n"
+        "  SELECT cf.amount AS raw, a.s AS strategy\n"
+        "  FROM active a CROSS JOIN `stock-trading-498512.events.cash_flows` cf GROUP BY a.s\n"
+        ")\n"
+        "SELECT SUM(raw)\n"
+        "  / 5 AS equal_split\n"
+        "FROM aliased;\n"
+    ))
+    assert rc.main() == 1
+
+
 # ---- R-E: the cooldown_days sub-block (a SEPARATE comparison loop from the top-level rails) —
 #      both the mismatch and the missing-key vacuous-pass directions (2026-07-17 audit) ----
 def test_cooldown_rail_disagreement_is_caught(repo_copy):

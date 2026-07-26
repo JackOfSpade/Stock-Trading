@@ -67,7 +67,25 @@ def live_views():
     integer instead, so this now applies CREATE/DROP in the same order the objects are actually
     (re-)created live."""
     found = set()
-    for _number, path in numbered_sql_files(BIGQUERY_DIR):
+    numbered = numbered_sql_files(BIGQUERY_DIR)
+    # An UNNUMBERED bigquery/*.sql has no declared apply position, so numbered_sql_files() excludes it.
+    # Before the 2026-07-26 consolidation this function scanned every *.sql regardless of prefix, so
+    # dropping them silently would be a scope narrowing in a COVERAGE scanner — a view could stop being
+    # reported just because its file lacked an NN_ prefix, which is the same silent-skip class this
+    # audit was closing elsewhere (adversarial review, codebase audit 2026-07-26). There are none today
+    # (the NN_ convention is universal — see bigquery/README.md), so instead of guessing an apply
+    # position for one, scan it LAST and say so out loud: its CREATE/DROP ordering relative to the
+    # numbered files is genuinely undefined, and that is a repo-layout problem to fix, not to paper over.
+    numbered_paths = {path for _n, path in numbered}
+    unnumbered = sorted(
+        os.path.join(BIGQUERY_DIR, fn) for fn in os.listdir(BIGQUERY_DIR)
+        if fn.endswith(".sql") and os.path.join(BIGQUERY_DIR, fn) not in numbered_paths
+    )
+    if unnumbered:
+        print(f"WARNING: {len(unnumbered)} bigquery/*.sql file(s) have no NN_ apply-order prefix and are "
+              f"scanned LAST, with undefined CREATE/DROP ordering vs the numbered files: "
+              f"{[os.path.basename(p) for p in unnumbered]}")
+    for path in [p for _n, p in numbered] + unnumbered:
         if os.path.isdir(path):
             continue
         txt = open(path, encoding="utf-8").read()

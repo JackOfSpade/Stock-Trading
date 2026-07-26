@@ -49,8 +49,13 @@ NUMBERED_FILE = re.compile(r"^(\d+)_.*\.sql$")
 def numbered_sql_files(bigquery_dir):
     """(number, path) pairs for every bigquery/NN_*.sql file in `bigquery_dir`, sorted by the
     parsed leading integer — NUMERIC apply order, not `sorted(os.listdir(...))`'s lexical order.
-    A file with no leading `NN_` prefix (e.g. a README) is excluded, matching every caller's prior
-    behavior."""
+    A file with no leading `NN_` prefix (e.g. a README) is excluded — it has no declared apply
+    position, so there is no correct place to put it in an apply-ordered walk. That matches the prior
+    behavior of check_live_sql_parity.py and check_superseded_markers.py (both already required the
+    prefix) but NOT of check_dbt_view_coverage.py, which used to scan every `*.sql` regardless; that
+    caller handles the difference itself rather than silently narrowing its coverage scan (see its
+    live_views() — adversarial review, codebase audit 2026-07-26). Dormant either way: every file in
+    bigquery/ follows the NN_ convention today."""
     files = []
     for fn in os.listdir(bigquery_dir):
         m = NUMBERED_FILE.match(fn)

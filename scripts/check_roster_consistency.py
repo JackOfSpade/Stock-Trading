@@ -263,6 +263,19 @@ FIXED_DIVISOR = re.compile(r"/\s*\d+\b")
 # any expression merely mentioning a money column as "the" money value (R-B / R-C, codebase audit
 # 2026-07-26 — see _money_alias_names()).
 MONEY_ALIAS_BINDING = re.compile(r"(?:[A-Za-z_]\w*\.)?([A-Za-z_]\w*)\s+AS\s+([A-Za-z_]\w*)", re.I)
+# BigQuery type names, excluded from ever being captured as the ALIAS half of a MONEY_ALIAS_BINDING.
+# WHY (codebase audit 2026-07-26, adversarial review of this same fix): `<x> AS <y>` is also the shape of
+# a type cast, so `CAST(cf.amount AS NUMERIC)` matched with source="amount", alias="NUMERIC" — which
+# resolved the bare TYPE KEYWORD into the money-alias set for the whole file. _money_nearby() then
+# whole-word-matches that set against every other divisor's window, so any unrelated `/N` sitting near
+# any other CAST(... AS NUMERIC) would false-trip R-B/R-C. That direction of failure is the expensive
+# one: R-B/R-C is CI-BLOCKING, so a false positive blocks EVERY merge, not just this check. A defensive
+# CAST is idiomatic in this repo's own SQL (bigquery/03_twr_engine.sql, /100, /102), so this was one
+# ordinary edit away from firing.
+SQL_TYPE_NAMES = frozenset("""
+    string bytes int64 int smallint integer bigint tinyint byteint numeric decimal bignumeric bigdecimal
+    float64 float bool boolean date datetime time timestamp interval geography json array struct range
+""".split())
 # A per-strategy slice filename referenced in the plan slice-map, e.g. `06_strategy_d.md`.
 SLICE_FILE_REF = re.compile(r"\d+_strategy_([a-z]{1,3})\.md")
 # A rail constant in bigquery/35's `consts AS (SELECT 2 AS n_min, ...)` CTE, e.g. "8  AS n_max,".
@@ -376,7 +389,11 @@ def _money_alias_names(txt, markers):
     files, which alias no money column today."""
     known = {marker.lower() for marker in markers}
     aliases = set()
-    bindings = MONEY_ALIAS_BINDING.findall(txt)
+    # Drop type-cast matches: `CAST(cf.amount AS NUMERIC)` has the same `<x> AS <y>` shape as a column
+    # alias, and crediting the TYPE KEYWORD as a money alias would false-trip this CI-BLOCKING gate on any
+    # unrelated divisor elsewhere in the file that happens to sit near another cast to the same type
+    # (SQL_TYPE_NAMES, codebase audit 2026-07-26 — adversarial review of this fix).
+    bindings = [(s, a) for s, a in MONEY_ALIAS_BINDING.findall(txt) if a.lower() not in SQL_TYPE_NAMES]
     changed = True
     while changed:
         changed = False

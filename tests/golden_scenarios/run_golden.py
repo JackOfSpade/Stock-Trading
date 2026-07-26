@@ -257,17 +257,24 @@ def validate_offline(scenarios):
 
 def _token_boundary_match(lead, tok):
     """True when `lead` (already .strip().upper()'d) starts with `tok` AND that match ends at a real
-    token boundary — end-of-string, whitespace, or an opening paren (the documented free-text-qualifier
-    separator, e.g. "CONTINUE (routes to review, not direct terminate)"). Plain str.startswith() alone
-    lets a PREFIX TYPO through: 'CONTINUES' startswith 'CONTINUE', 'TERMINATED' startswith 'TERMINATE',
-    'ACTIVATED' startswith 'ACTIVATE', 'GOOF' startswith 'GO' — none of those are the token, all are a
-    fixture typo, and all four passed the offline gate with zero errors and were then graded in --live
-    as if correctly spelled (codebase audit 2026-07-26). Shared by validate_offline()'s vocabulary check
-    and _leading_token()'s grader so the gate and the grader can never disagree about what a token is."""
+    token boundary. Plain str.startswith() alone lets a PREFIX TYPO through: 'CONTINUES' startswith
+    'CONTINUE', 'TERMINATED' startswith 'TERMINATE', 'ACTIVATED' startswith 'ACTIVATE', 'GOOF' startswith
+    'GO' — none of those are the token, all are a fixture typo, and all four passed the offline gate with
+    zero errors and were then graded in --live as if correctly spelled (codebase audit 2026-07-26).
+    Shared by validate_offline()'s vocabulary check and _leading_token()'s grader so the gate and the
+    grader can never disagree about what a token is.
+
+    A boundary is "anything that does not CONTINUE THE WORD": end-of-string, or a next character that is
+    neither alphanumeric nor `_`/`-`. Defined by exclusion rather than by an allow-list of separators
+    (adversarial review, same audit): _leading_token() also grades a LIVE MODEL's free-text reply, where
+    ordinary sentence punctuation is normal — an allow-list of {whitespace, '('} rejected "GO." and
+    "GO," outright, turning a correct model answer into a false UNPARSEABLE in run_live(). Hyphen counts
+    as a word-continuation on purpose: the vocabulary itself contains hyphenated tokens ('NO-GO',
+    'DO-NOT-ACTIVATE'), so a trailing '-' means the real token may be a longer compound, not this one."""
     if not lead.startswith(tok):
         return False
     rest = lead[len(tok):]
-    return rest == "" or rest[0].isspace() or rest[0] == "("
+    return rest == "" or not (rest[0].isalnum() or rest[0] in "_-")
 
 
 def _allowed_decisions_for(scenario):

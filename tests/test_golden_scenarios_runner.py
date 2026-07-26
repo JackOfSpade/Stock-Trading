@@ -161,6 +161,23 @@ def test_token_boundary_match_allows_the_documented_free_text_qualifier():
     assert rg._token_boundary_match("CONTINUE-ISH", "CONTINUE") is False
 
 
+def test_token_boundary_match_accepts_ordinary_sentence_punctuation():
+    """_leading_token() also grades a LIVE MODEL's free-text reply in run_live(), where a trailing '.'
+    or ',' is completely normal ("DECISION: GO."). An earlier form of this boundary check allowed only
+    {end, whitespace, '('}, which graded "GO." as UNPARSEABLE — turning a CORRECT model answer into a
+    reported failure (adversarial review, codebase audit 2026-07-26). Punctuation is a boundary; only a
+    word-continuation is not."""
+    for text, expected in [
+        ("GO.", "GO"), ("GO,", "GO"), ("GO:", "GO"), ("GO;", "GO"), ("GO!", "GO"),
+        ("NO-GO.", "NO-GO"), ("TERMINATE.", "TERMINATE"), ("DO-NOT-ACTIVATE,", "DO-NOT-ACTIVATE"),
+    ]:
+        assert rg._leading_token(text) == expected, f"{text!r} should grade as {expected}"
+    # ...and the typo class stays rejected, including a hyphen continuation (the vocabulary itself has
+    # hyphenated tokens, so a trailing '-' may mean a longer compound token, not this one).
+    for text in ("CONTINUES", "TERMINATED", "ACTIVATED", "GOOF", "GO-FORTH", "CONTINUE_NOW"):
+        assert rg._leading_token(text) is None, f"{text!r} is a typo/compound and must not grade clean"
+
+
 def test_leading_token_disambiguation():
     assert rg._leading_token("DO-NOT-ACTIVATE") == "DO-NOT-ACTIVATE"
     assert rg._leading_token("NO-GO") == "NO-GO"
