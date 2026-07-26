@@ -40,7 +40,7 @@ jobs:
       CI_SA: gh-ci-runner@stock-trading-498512.iam.gserviceaccount.com
       PROJECT: stock-trading-498512
     steps:
-      - uses: actions/checkout@v4  # required for the local ./.github/actions/gcp-wif-auth composite action below
+      - uses: actions/checkout@v7  # required for the local ./.github/actions/gcp-wif-auth composite action below
       - name: Gate on opt-in + WIF
         id: guard
         run: |

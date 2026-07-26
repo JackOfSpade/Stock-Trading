@@ -42,7 +42,7 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4  # required for the local ./.github/actions/gcp-wif-auth composite action below
+      - uses: actions/checkout@v7  # required for the local ./.github/actions/gcp-wif-auth composite action below
       - name: Gate on WIF (CI-findings bridge only — the audit itself below is unconditional)
         id: wifguard
         run: |

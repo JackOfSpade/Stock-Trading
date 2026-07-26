@@ -79,8 +79,8 @@ jobs:
     name: golden scenarios — offline schema gate (HARD GATE)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -96,7 +96,7 @@ jobs:
     needs: schema-validate
     continue-on-error: true   # advisory; a decision flip must never block a merge — see header above
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Check GEMINI_API_KEY is present (opt-in)
         id: guard
         env:
@@ -109,7 +109,7 @@ jobs:
             echo "::notice::golden-scenarios live run skipped — GEMINI_API_KEY secret not set (opt-in, default state). The offline schema gate in the other job still ran and is the hard gate. Set GEMINI_API_KEY (free tier) to enable live prose-regression diffing."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         if: steps.guard.outputs.skip == 'false'
         with:
           python-version: '3.11'

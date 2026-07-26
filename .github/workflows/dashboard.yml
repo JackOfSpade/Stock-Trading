@@ -32,7 +32,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Gate on WIF + explicit opt-in
         id: guard
         run: |
@@ -44,7 +44,7 @@ jobs:
             echo "::notice::Dashboard publish disabled. Set vars.PUBLISH_DASHBOARD=true + WIF vars to enable (ops/RUNBOOK.md §16). Exposes live trading data — private repo only."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         if: steps.guard.outputs.skip == 'false'
         with:
           python-version: '3.11'

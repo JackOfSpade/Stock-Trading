@@ -57,7 +57,7 @@ jobs:
   relay:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Self-check — on.schedule crons stay in sync with the mode-dispatch step
         # The 4 cron literals in `on.schedule` above are re-typed as string comparisons in the "Pick
         # mode from the trigger" step below — GitHub Actions `on:` triggers are static YAML (no
@@ -150,7 +150,7 @@ jobs:
           else
             echo "mode=${MODE_INPUT:-alerts}" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         if: steps.guard.outputs.skip == 'false'
         with:
           python-version: '3.11'

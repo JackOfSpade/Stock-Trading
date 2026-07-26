@@ -36,8 +36,8 @@ jobs:
     name: options-math tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -95,8 +95,8 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true   # advisory; never blocks
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -125,10 +125,10 @@ jobs:
     #     block; the scripts pass clean today, this just stops a future shellcheck release's new *style/info*
     #     nit from wedging the gate.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Cache actionlint binary (pinned v1.7.12)
         id: cache-actionlint
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: actionlint
           key: actionlint-v1.7.12-${{ runner.os }}
@@ -189,8 +189,8 @@ jobs:
     # WITHOUT a warehouse (parse does not connect). The full `dbt build` against BigQuery is gated on
     # WIF creds — see ops/RUNBOOK.md §14. Always runs; offline; no secrets needed.
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -243,7 +243,7 @@ jobs:
       contents: read
       id-token: write   # Workload Identity Federation (no downloadable key)
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0   # full history so the path gate below can diff the pushed range
       - name: Path gate + WIF config + enablement
@@ -351,7 +351,7 @@ jobs:
             echo "::notice::dbt parity skipped — set the WIF vars (read-only SA) to run it (it runs by default once they exist; set DBT_PARITY=off to suppress, =block to make drift a hard merge gate that fails closed). ops/RUNBOOK.md §6/§14/§25. dbt parse remains the always-on structural gate."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         if: steps.guard.outputs.skip == 'false'
         with:
           python-version: '3.11'
@@ -421,7 +421,7 @@ jobs:
       contents: read
       id-token: write   # Workload Identity Federation (no downloadable key)
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0   # full history so the change-scope diff below resolves the pushed range
       - name: WIF-present + not-disabled guard
@@ -435,7 +435,7 @@ jobs:
             echo "::notice::SQL syntax gate skipped — set the WIF vars (read-only SA) to enable it (runs by default once they exist; RUN_SQL_DRYRUN=off suppresses). dbt parse remains the always-on structural SQL gate."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         if: steps.guard.outputs.skip == 'false'
         with:
           python-version: '3.11'
