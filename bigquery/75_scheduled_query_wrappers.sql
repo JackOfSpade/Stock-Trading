@@ -99,15 +99,16 @@ END;
 
 -- =====================================================================================================
 -- ops.sp_sq_cadence_check   (was bigquery/scheduled_queries/cadence_check.sql; that file is now a frozen one-line
--- CALL wrapper — full historical header/rationale comments remain there. SQ_VERSION v6 (bumped
--- from v5 by MON, 2026-07-17: added the ci_findings_bridge_stale dead-man (H2), the scheduled_query_stale
--- beat-age dead-man (H5), and the unconditional b3_trading_enabled_drift monitor-health-history MERGE (M2);
--- all three are record-only warnings / history writes — no RAISE-contributing change).
+-- CALL wrapper — full historical header/rationale comments remain there. SQ_VERSION v7 (bumped
+-- from v6 by D3's monitor-promotion self-flip, 2026-07-26: ddl_drift promoted WARNING->CRITICAL +
+-- joined raise_msg per ITEM 24 once state.ddl_drift_promotion_readiness fired. v6, MON 2026-07-17:
+-- added the ci_findings_bridge_stale dead-man (H2), the scheduled_query_stale beat-age dead-man (H5),
+-- and the unconditional b3_trading_enabled_drift monitor-health-history MERGE (M2)).
 -- =====================================================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v6', 'cadence_check.sql ran');
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v7', 'cadence_check.sql ran');
 
   -- RUNBOOK section 38 self-heal (ITEM 3, bigquery/38_run_log_selfheal.sql): backfill any
   -- ops.run_log completion row whose routine already has a landed-commit marker in
@@ -304,8 +305,8 @@ BEGIN
 
   -- ====================================================================================
   -- 2026-06-28 stack-review #2 additions (originally all WARNING, record-only. restore_stale was PROMOTED
-  -- to CRITICAL + RAISE-contributing on 2026-07-11 by D3's monitor-promotion self-flip once its readiness
-  -- view fired — ITEM 24; ddl_drift below remains staged-rollout WARNING until its 14-clean-day bar is met).
+  -- to CRITICAL + RAISE-contributing on 2026-07-11, and ddl_drift on 2026-07-26, each by D3's
+  -- monitor-promotion self-flip once its readiness view fired — ITEM 24).
   -- Reference views in bigquery/17_restore_drill.sql (state.restore_health) and
   -- bigquery/19_stack_review_fixes_2.sql (state.ddl_drift) — APPLY 17 + 19 BEFORE re-pasting this query.
   -- ====================================================================================
@@ -354,10 +355,13 @@ BEGIN
       FROM `stock-trading-498512.state.restore_health`);
   END IF;
 
-  -- ddl_drift (warning, #7) — a live events.* audit table's STRUCTURE (NOT NULL / type / partition /
+  -- ddl_drift (CRITICAL as of 2026-07-26, promoted from warning per ITEM 24 — D3 monitor-promotion
+  -- self-flip once state.ddl_drift_promotion_readiness.ready=TRUE (14 consecutive clean logged days);
+  -- #7) — a live events.* audit table's STRUCTURE (NOT NULL / type / partition /
   -- cluster) diverged from the canonical bigquery/01_schema.sql spec (a silent out-of-band ALTER the
   -- idempotent CREATE-IF-NOT-EXISTS spec will not re-assert; invisible to the DML-only append_only_integrity
-  -- and to dbt not_null DATA tests). Staged-rollout record-only until a clean baseline is confirmed.
+  -- and to dbt not_null DATA tests). Now a RAISE-contributing critical, wired into raise_msg like
+  -- restore_stale above. ops.monitor_promotion_log guards idempotency.
   -- BUG FIX (rev 2026-07-11, adversarial self-audit): MERGE upsert, same rationale as the restore_stale
   -- write above.
   MERGE `stock-trading-498512.ops.monitor_health_history` T
@@ -373,13 +377,17 @@ BEGIN
 
   IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.ddl_drift`) THEN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
-      'warning', 'scheduled.cadence', 'ddl_drift',
+      'critical', 'scheduled.cadence', 'ddl_drift',
       CONCAT('DDL drift: events.* base-table structure differs from bigquery/01_schema.sql: ',
              (SELECT STRING_AGG(CONCAT(table_name, '.', column_name, ' [', drift_reasons, ']'), '; '
                      ORDER BY table_name, column_name)
               FROM `stock-trading-498512.state.ddl_drift`)),
       (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(table_name, column_name, drift_reasons, expected_type, live_type)))
        FROM `stock-trading-498512.state.ddl_drift`));
+    SET raise_msg = raise_msg || CONCAT('[ddl_drift] ',
+      (SELECT STRING_AGG(CONCAT(table_name, '.', column_name, ' [', drift_reasons, ']'), '; '
+              ORDER BY table_name, column_name)
+       FROM `stock-trading-498512.state.ddl_drift`), '; ');
   END IF;
 
   -- b3_trading_enabled_drift (warning, self-improvement audit 2026-07-15 -- CONFIRMED GAP
