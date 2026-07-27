@@ -204,10 +204,9 @@ routines:
       time_local: "21:00"          # after SL3's 20:00 slot, before OPS0's 22:30 -- OPS2 executes what it
                                     # can and OPS0 emails only the residual (owner creates this trigger;
                                     # trig_id filled into ops/trigger_ids.json after creation)
-      enabled: false               # NOT LIVE YET -- no trigger exists until the owner creates it; kept
-                                    # false so cadence_watch does not flag OPS2 as a daily missed_run in
-                                    # the interim. OWNER STEP: create the trigger, record its trig_id in
-                                    # ops/trigger_ids.json, then flip this to true.
+      enabled: true                # LIVE 2026-07-27: owner created trig_01DLrkbtpDvox1N7meiFMXYe
+                                    # (cron 0 3 * * * = ~21:00 MT, model claude-opus-5); trig_id recorded
+                                    # in ops/trigger_ids.json.
     notes: >
       Catch-up EXECUTOR (added 2026-07-27, owner directive -- the headless-RemoteTrigger workaround,
       ops/RUNBOOK.md §15b). Reads state.catchup_refire_readiness + the non-trading-day D1/SL3 set and, for

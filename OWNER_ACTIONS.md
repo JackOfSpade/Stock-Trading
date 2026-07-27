@@ -12,7 +12,7 @@ act. Dated passes below; most recent first.
 
 # 2026-07-27 OPS2 Catch-up Executor — owner must create the trigger (RemoteTrigger create is session-blocked)
 
-## OPS2. Create the OPS2 "Catch-up Executor" scheduled trigger — `[OPEN 2026-07-27 — awaiting owner]`
+## OPS2. Create the OPS2 "Catch-up Executor" scheduled trigger — `[DONE 2026-07-27 — owner created trig_01DLrkbtpDvox1N7meiFMXYe; trig_id recorded + enabled:true]`
 
 OPS2 is a new routine (the headless-RemoteTrigger workaround, RUNBOOK §15b): it auto-RUNS missed catchup_safe
 routines inline instead of emailing you to re-run them. All repo scaffolding is landed and gate-green; it is NOT
@@ -26,6 +26,17 @@ you can). Create it in claude.ai (Code → Routines → New, or `RemoteTrigger c
 - **Connectors / tools — grant READ-only, NO order-craft:** BigQuery (read+write, for run-logging), FMP, Google Calendar, Gmail, and **IBKR scoped to READ tools only** via the connection's per-connector `permitted_tools` — include the `get_*` / `search_*` reads; **EXCLUDE `create_order_instruction`, `delete_order_instruction`, and any order/watchlist WRITE tool** (OPS2 must never be able to place an order). Plus the standard harness tools (Bash, Read, Write, Edit, Glob, Grep, WebFetch, WebSearch) and `RemoteTrigger`.
 
 THEN: (1) record the returned `trig_...` id in `ops/trigger_ids.json` (provenance `'api'`), and (2) flip `ops/cadence.yaml`'s OPS2 `expected_trigger.enabled` from `false` → `true`; commit both. Until you do (1)+(2), OPS2 stays correctly invisible to cadence monitoring (no false missed-run alarm), and OPS0's actionable email keeps covering all catchup_safe misses exactly as it does today — so there's no rush and nothing breaks in the interim.
+
+**DONE 2026-07-27:** trigger created (`trig_01DLrkbtpDvox1N7meiFMXYe`, cron `0 3 * * *` = ~21:00 MT, model
+`claude-opus-5`, connectors BigQuery/FMP/Calendar/Gmail/IBKR); (1) trig_id recorded in `ops/trigger_ids.json`
+and (2) `expected_trigger.enabled` flipped to `true` in this commit. **IBKR read-only NOT achievable** — the
+claude.ai connector GUI is all-or-nothing per connector (no per-tool restriction, confirmed by owner), so OPS2
+carries FULL IBKR access including `create_order_instruction`. Accepted: OPS2's guardrails (never inline-execute
+an order-crafting routine; the order-craft slice-scan defers D3/any order-crafter, so it never reaches an
+order-craft call) are the load-bearing control — the same prose-level protection every routine already runs on.
+**OPTIONAL structural lever (owner discretion, NOT required):** for a hard no-order guarantee, remove the IBKR
+connector from OPS2's trigger entirely — the only cost is that any catchup_safe routine needing an IBKR read then
+defers to OPS0's email instead of running inline.
 
 ---
 
