@@ -35,7 +35,7 @@ this and the OPS2 spec no longer flags "read-only scoping" on any run. The guard
 order-crafting routine; the order-craft slice-scan defers D3/any order-crafter, so it never reaches an order-craft
 call) are the control — the same prose-level protection every routine already runs on.
 
-## OPS2-retime. RETIME the OPS2 trigger before DST ends (~Nov 1) — `[OPEN 2026-07-27 — works now (summer), breaks in winter]`
+## OPS2-retime. RETIME the OPS2 trigger before DST ends (~Nov 1) — `[DONE 2026-07-27 — owner retimed cron to 15 4 * * * (04:15 UTC = 22:15 MDT / 21:15 MST); DST-robust, verified live]`
 
 DST bug found on OPS2's 2026-07-27 smoke run. The live cron is `0 3 * * *` (03:00 UTC), which is **21:00 MDT now**
 (fine — lands just after the 21:00 MT `needs_attention` deadline via boot delay) but **20:00 MST in winter**, an
