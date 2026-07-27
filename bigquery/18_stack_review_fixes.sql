@@ -110,7 +110,23 @@ WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 2 DAY)
 -- (← authoritative state.trade_fills_curated; the path the TWR engine / §13 read). They can diverge with
 -- NO existing monitor watching position_events. This flags a MATERIAL per-(strategy,ticker) open-share
 -- difference; the tolerance ignores sub-cent dividend-reinvest fractional shares (the live ~$0.20 drift).
--- Latest-wins leg-splits are handled by SUM on both sides. Advisory (warning), NOT part of all_green.
+-- Latest-wins leg-splits are handled by SUM on both sides.
+--
+-- NOTE (2026-07-27): the "Advisory (warning), NOT part of all_green" wording this block used to carry
+-- had been stale since 2026-07-03, when bigquery/23_trading_control.sql:402-434 (self-improvement audit
+-- B-5-exec / B-6-data) promoted `drifted` to a BLOCKING term of state.system_health.all_green — and
+-- thus of state.trading_enabled. It is not advisory; it halts trading.
+--
+-- SUPERSEDED LIVE by bigquery/110_pending_order_aware_reconciliation.sql (2026-07-27) — current single
+-- source of truth for this view. 110 keeps this predicate verbatim as `drifted_raw` and redefines
+-- `drifted` to measure the residual AFTER netting a (strategy,ticker)'s still-working BUY quantity from
+-- state.open_orders, because the comparison below is structurally guaranteed to fire on any
+-- staged-but-unfilled BUY (state.current_positions is written at ORDER-STAGING time;
+-- analytics.position_lifecycle only ever sees FILLED shares). Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation — doing so
+-- reintroduces the 2026-07-26 self-latching trading halt.
+-- NOTE: this marker supersedes ONLY state.position_reconciliation. Every other object defined in this
+-- file is still canonical here.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.position_reconciliation` AS
 WITH cp AS (
   SELECT strategy, ticker, SUM(shares) AS current_positions_shares

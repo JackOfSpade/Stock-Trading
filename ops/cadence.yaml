@@ -130,7 +130,7 @@ routines:
       recurrence: daily
       time_local: "17:15"
       enabled: true
-    notes: "CUT OVER 2026-07-09 (autonomous, by D2a; ops.d2a_cutover_log). D2 no longer runs Step 0/0b/TWR-maintenance -- those (broker reconcile + cash tripwire + park sweep, ops.account_snapshot, CALL ops.sp_daily_refresh()) now run in D2a, on which D2 now depends. D2 keeps its own ops.sp_assert_trading_enabled('D2') gate (freshness-inclusive; safe now that D2a made marks/engine fresh) before it drains the queue and converts Daily.md's RECOMMENDED ACTIONS into orders."
+    notes: "CUT OVER 2026-07-09 (autonomous, by D2a; ops.d2a_cutover_log). D2 no longer runs Step 0/0b/TWR-maintenance -- those (broker reconcile + cash tripwire + park sweep, ops.account_snapshot, CALL ops.sp_daily_refresh()) now run in D2a, on which D2 now depends. D2 keeps its own freshness-inclusive trading-enable gate (safe now that D2a made marks/engine fresh), but as of 2026-07-27 it READS state.trading_enabled non-fatally at that point and enforces the verdict at each individual order-craft point, instead of calling ops.sp_assert_trading_enabled('D2') and aborting the whole routine on FALSE. The PENDING_ANALYSIS drain and the non-staging conversion work now run regardless; only order crafting and ORDER_STAGED writes are blocked while the gate is FALSE."
   - id: D3
     name: Calendar & Queue Hygiene
     schedule: "after D2 daily"             # runs daily incl. non-trading days for queue/calendar upkeep

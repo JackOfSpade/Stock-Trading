@@ -1166,11 +1166,27 @@ never applied. **Repo artifacts are DONE; this section lists the owner/console a
   Promotion Ladder. No owner judgment call anymore; the owner's only remaining action is the routine
   scheduled-query console re-paste once D3 lands the promotion, same as every other scheduled-query body
   edit in this codebase.
-- **B4 — position-drift guard (`state.position_reconciliation`; `cadence_check` warning + dbt test).**
-  `state.current_positions` (the 2%-sizing path) vs `analytics.position_lifecycle` (the TWR path) can
-  diverge with no monitor; this flags a material per-(strategy,ticker) open-share gap (tolerance ignores
-  sub-cent dividend-reinvest fractions — the live ~$0.20 drift does NOT trip it). Surfaced as a record-only
-  warning in `cadence_check.sql` + the dbt singular test `assert_current_positions_match_lifecycle.sql`.
+- **B4 — position-drift guard (`state.position_reconciliation`; NOT advisory — a BLOCKING all_green /
+  `trading_enabled` term since 2026-07-03).** `state.current_positions` (the 2%-sizing path) vs
+  `analytics.position_lifecycle` (the TWR path) can diverge with no monitor; this flags a material
+  per-(strategy,ticker) open-share gap (tolerance ignores sub-cent dividend-reinvest fractions — the
+  live ~$0.20 drift does NOT trip it). Also surfaced as a warning in `cadence_check.sql` + the dbt
+  singular test `assert_current_positions_match_lifecycle.sql`, but the wording that used to sit here
+  ("record-only warning") had been WRONG since `bigquery/23_trading_control.sql:428,431`
+  (self-improvement audit B-5-exec/B-6-data, 2026-07-03) LOGICAL_OR'd `drifted` into
+  `state.system_health.all_green`, and thus into `state.trading_enabled` /
+  `state.trading_enabled_mechanical`'s `AND NOT pr.drift` term
+  (`bigquery/107_halt_echo_missed_run_gate.sql:173,181`) — `ops.sp_assert_trading_enabled[_mechanical]`
+  RAISEs and aborts the calling routine on a drifted row, exactly like any other blocking critical.
+  **Predicate (rev 2026-07-27, `bigquery/110_pending_order_aware_reconciliation.sql`, superseding the
+  original flat predicate in `bigquery/18_stack_review_fixes.sql:130-153`, now SUPERSEDED there with an
+  explicit marker):** `drifted` = `ABS(residual_share_diff) > 0.01`, where `residual_share_diff` nets a
+  (strategy,ticker)'s still-working BUY quantity in `state.open_orders` out of the raw `share_diff`
+  before testing the tolerance (suppress-only — it can only move a row toward not-drifted, never
+  manufacture drift). `drifted_raw` retains the original flat `ABS(share_diff) > 0.01` predicate verbatim,
+  for audit. `explained_by_pending_buy` is TRUE exactly when the two disagree — `drifted_raw` fired but
+  `drifted` did not — i.e. a benign staged-but-unfilled BUY lag, not a book discrepancy. See §47 for the
+  2026-07-26 incident that motivated this and what to check before escalating a `position_drift` alert.
 
 ### Theme C — CI / merge / supply-chain hardening
 - **C1 — `DBT_PARITY=block` fails closed (DONE, live-on-merge).** When `block`, a missing WIF var now
@@ -3008,3 +3024,141 @@ session produces one BigQuery write per distinct finding, not a duplicate per pe
 `window_days` — a routine broken for months would get an arbitrarily large window; a safety valve (e.g.
 capping at some multiple of the routine's own cadence default) was explicitly left as a future design call
 for whoever wires a given routine's evidence-gathering step against this view, not assumed here.
+
+## 47. `position_drift` halting trading on a staged-but-unfilled BUY — pending-order-aware reconciliation and the trading-enable gate rework — the 2026-07-26 `D:GOOGL` halt *(monitoring, new incident class)*
+
+**Fired 2026-07-26, D2's evening run (17:17-17:22 MT)** (`alert 7ef50e04` /
+`INCIDENT[ref=423ecc02-fdb7-4f47-9445-d8c79d399e8c]`): `state.position_reconciliation drift detected`.
+Unlike §29's SGOV phantom lot, this was a REAL, correctly-detected structural gap — the fix here is not
+"the drift was spurious," it is "the drift was expected and transient, and the gate treated it as fatal."
+
+**Root cause — two representations of an open position are written at different points in an order's
+life, and the old predicate didn't know that.** `state.current_positions` (`bigquery/01_schema.sql:129-133`,
+latest-wins over `events.position_events` `WHERE event_type <> 'CLOSE'`) gets its OPEN row at
+**ORDER-STAGING TIME** — D2 writes it on a GO, before the order even reaches the broker
+(`Claude_Task_Plan.md:1115` for a first entry, `:1124` for a pyramid add: "on a GO ... the OPEN lifecycle
+event to `events.position_events`"). `analytics.position_lifecycle`
+(`bigquery/102_pyramid_aware_lifecycle.sql`) is FIFO lots derived purely from
+`state.trade_fills_curated` — it only ever sees shares that ACTUALLY FILLED. So from the moment a BUY is
+staged until its fill reconciles, `current_positions` legitimately LEADS `position_lifecycle` by exactly
+the working order's quantity — an expected, transient, fully-explained gap. The old predicate,
+`ABS(share_diff) > 0.01` (`bigquery/18_stack_review_fixes.sql:130-153`, now carrying an explicit
+SUPERSEDED marker at that CREATE), was a flat share tolerance with no order awareness, so it read that
+gap as indistinguishable from the phantom-open-position bug it was built to catch. Trigger: one pending
+order — D:GOOGL add-tranche BUY 0.1534 sh, IBKR #84254447, owner-CONFIRMED, status NEW, staged 2026-07-26
+00:49:46 MT — produced `current_positions` 0.2577 vs `position_lifecycle` 0.1043, `share_diff` 0.1534,
+~15x the 0.01-share tolerance.
+
+**Why it mattered — `drifted` is a BLOCKING term, not advisory, and has been since 2026-07-03.**
+`drifted` is `LOGICAL_OR`'d account-wide into `state.system_health.all_green`
+(`bigquery/23_trading_control.sql:428,431`, self-improvement audit B-5-exec/B-6-data) and from there
+directly into `state.trading_enabled`'s `AND NOT pr.drift` term
+(`bigquery/107_halt_echo_missed_run_gate.sql:173,181`) and `state.trading_enabled_mechanical`'s
+equivalent. `ops.sp_assert_trading_enabled[_mechanical]` (`bigquery/85_gate_selfheal_repo_catchup.sql`)
+then RAISEs on a FALSE gate, aborting the calling routine's session outright — not a warning anyone could
+triage at leisure.
+
+**Blast radius — the SECOND consecutive blocked D2 evening, but NOT the same cause, and the cost was
+date-dependent.** The 2026-07-26 halt left `rows_written = 0` and 6 due `PENDING_ANALYSIS` theses
+undrained (ALL `due_date` 2026-07-26; two with entry windows closing 2026-07-28,
+`Claude_Task_Plan.md:1085`). The 2026-07-25 evening run was ALSO blocked, but by four unrelated,
+since-resolved open criticals (`missed_run`, two `missing_dependency`, `automation_heartbeat`) — the
+GOOGL order did not even exist yet at that halt; it was staged the following morning, 00:49:46 MT. The
+07-25 abort cost NO queue drainage, because none of those 6 items was yet due or even enqueued a day
+earlier — write it as two separate incidents, not "halted on two consecutive evenings" as if one cause.
+The general lesson: **this exact defect is cheap on a day the due-queue happens to be empty and expensive
+on a day it isn't, and nothing about the halt itself — same alert, same category, same RAISE — tells you
+which kind of day you're looking at.** A gate that fails the same way regardless of what it's about to
+discard is a gate whose blast radius you can't read off the alert; that gap, not the drift detection
+itself, is the actual defect this incident exposes.
+
+**Why it could not self-clear.** Only a fill lands in `events.trade_fills` → `analytics.position_lifecycle`
+via D2a Step 0 can close the gap — nothing else writes to the fills-derived side. 2026-07-26 was a Sunday,
+so no fill was possible; the condition was structurally guaranteed to persist through the entire
+non-trading weekend.
+
+**Latent self-latching hazard — averted, not an outage.** The only writer that can clear the drift is
+D2a's own STEP 0 broker reconciliation (`Claude_Task_Plan.md:658`), and D2a's own
+`ops.sp_assert_trading_enabled_mechanical('D2a')` gate (`Claude_Task_Plan.md:656`) reads that SAME drift
+term. A strict reading of the OLD D2a gate prose — "FATAL ... before anything else," contradicted several
+sentences later by "Reads/reconciliation are safe regardless" — would abort D2a BEFORE Step 0 ever ran,
+so the one fill that would clear the drift would never be reconciled and the halt would never lift: a
+control that disables the only mechanism able to satisfy it. **In practice this did NOT happen.**
+`ops.run_log` shows D2a COMPLETED on both 2026-07-25 (53 rows written, backfilling the outage-missed
+07-23/07-24 marks) and 2026-07-26 (0 rows — non-trading Sunday, nothing to reconcile) with the gate
+reading FALSE both days; D2a never logged `halted` (`Claude_Task_Plan.md:658`, "sessions have in fact
+been resolving it correctly ... but 'the last N sessions guessed right' is not a control"). Record this
+accurately: a latent hazard that was averted by correct per-session judgment calls, not an outage that
+actually occurred.
+
+**The alert-text-vs-actual-behavior mismatch.** The gate's alert message is the fixed string
+`'Order staging blocked: trading is HALTED. See payload for the triggering routine and reason.'`
+(`bigquery/85_gate_selfheal_repo_catchup.sql:73,106`, kept stable deliberately so
+`sp_raise_alert_once`'s exact-match dedup doesn't fragment into one alert per routine per day) — but the
+`RAISE USING MESSAGE` that immediately followed it (`bigquery/85_gate_selfheal_repo_catchup.sql:75-76,110-111`)
+aborted the ENTIRE calling routine, uncaught, not merely "order staging." The alert said one thing; the
+control flow did another, larger thing.
+
+**Fix — two parts, both 2026-07-27, `INCIDENT[ref=423ecc02-fdb7-4f47-9445-d8c79d399e8c]`.**
+1. **Data side — `bigquery/110_pending_order_aware_reconciliation.sql`**, the new single source of truth
+   for `state.position_reconciliation` (supersedes ONLY that one view from
+   `bigquery/18_stack_review_fixes.sql`; the ~10 other objects that file defines are untouched and still
+   canonical there). New predicate: `residual_share_diff = IF(share_diff > 0, GREATEST(share_diff -
+   pending_buy_shares, 0), share_diff)`, `drifted = ABS(residual_share_diff) > 0.01`, where
+   `pending_buy_shares` sums a (strategy,ticker)'s still-working BUY quantity from `state.open_orders`
+   (`side='BUY' AND qty>0`, staleness-bounded — either still inside its own entry window or (re-)staged
+   within the last 7 days, `bigquery/110:83-90`). `drifted_raw` keeps the old flat predicate verbatim, for
+   audit. `explained_by_pending_buy` is TRUE exactly when `drifted_raw` fired and `drifted` did not — a
+   benign staged-but-unfilled BUY lag, never a book discrepancy (`bigquery/110:180-190`).
+2. **Routine side — `Claude_Task_Plan.md`.** The TRADING-ENABLE GATE paragraphs for D2 (`:1081`), D2a
+   (`:656`), W4 (`:1435`), M4 (`:1777`), Q4 (`:2199`), and A3 (`:2377`) were rewritten from "FATAL, aborts
+   the routine" to "read the gate NON-FATALLY here, carry the verdict forward, and enforce it at every
+   order-craft point" — so a halt now costs exactly the orders it should block, and nothing else: research
+   reads, `PENDING_ANALYSIS`/`PENDING_REVIEW` enqueues, Watchlist.md updates, and run logging all proceed
+   regardless of the gate. D3 was GIVEN a trading-enable gate for the first time (`:1213`) — it had always
+   crafted orders (`create_order_instruction` + `ORDER_STAGED` writes) with no gate of its own; its
+   protection against staging during a halt was a pure SIDE EFFECT of D2's old FATAL abort making D2 never
+   log `completed`, which then FATAL-failed D3's `sp_assert_deps('D3', ['D2'])` dependency gate
+   (`Claude_Task_Plan.md:1215`) — "protection that only works because an unrelated upstream crashed is not
+   protection; it is a coincidence that was load-bearing." Once D2 correctly completes through a halt
+   instead of aborting, that accidental protection disappears, so D3 needed the real thing.
+
+**Why suppress-only is safe to consult from inside a load-bearing gate.** Four deliberate properties
+(`bigquery/110:62-81`): **(1) SUPPRESS-ONLY, never additive** — the `GREATEST(...,0)` floor plus the
+`share_diff > 0` guard make `|residual_share_diff| <= |share_diff|` identically, so a bug in the pending
+term can only degrade to the OLD behavior, never manufacture a spurious halt. **(2) BOUNDED masking** —
+only the pending quantity is netted, not the whole row; a genuine 5-share phantom behind a 0.15-share
+working BUY still trips the gate. **(3) PARTIAL-FILL TOLERANT** — the bound is `<=` the pending quantity,
+so a fractional MARKET fill drives the residual negative (clamped to 0) instead of flipping the row back
+to drifted mid-fill. **(4) BUY-SIDE ONLY, by construction** — a staged EXIT writes only an annotation to
+`events.position_events`; `event_type='CLOSE'` (the only thing `state.current_positions` filters on) is
+written by D2a Step 0 at FILL time, never at staging, so a pending SELL structurally cannot depress
+`current_positions` ahead of lifecycle and needs no netting term.
+
+**Verified live (read-only), post-fix.** The new predicate returns `drifted=FALSE` for all 12
+(strategy,ticker) rows, with an IDENTICAL row set and IDENTICAL raw `share_diff` values vs. the live
+(pre-fix) view — only D:GOOGL's `drifted` flag changes (`drifted_raw` stays TRUE, `explained_by_pending_buy`
+TRUE).
+
+**What to check if `position_drift` fires again — READ BEFORE ESCALATING.** `SELECT * FROM
+state.position_reconciliation WHERE drifted` and inspect `explained_by_pending_buy` and
+`pending_buy_item_keys` on the drifted row(s) (`bigquery/110:172-190`). `explained_by_pending_buy = TRUE`
+means a benign staged-but-unfilled BUY on one of the `pending_buy_item_keys` — not a book discrepancy;
+the halt clears itself once that order fills or its staleness window lapses, same as this incident.
+`explained_by_pending_buy = FALSE` on a drifted row means the residual survived netting — a genuine
+break, escalate as before this fix would have required.
+
+**Known remaining gap (pre-existing, NOT introduced by this change, never yet fired — live check found
+only `filled` and `pending` `ORDER_STAGED` rows).** A staged BUY that EXPIRES (`Claude_Task_Plan.md:826`,
+window closed unfilled → set terminal `expired`) or is ABANDONED (`:818`, the ENTER/EXIT-vs-ABANDON
+judgment sets the row terminal instead of re-crafting) unfilled leaves its staging-time OPEN
+`events.position_events` row sitting in `state.current_positions` FOREVER — latest-wins,
+`event_type <> 'CLOSE'` (`bigquery/01_schema.sql:129-133`) — while the `ORDER_STAGED` row simply drops out
+of `state.open_orders` once terminal (`state.open_orders` is pending-only,
+`bigquery/01_schema.sql:242`). Nothing nets the phantom OPEN row back out: it becomes a permanent genuine
+drift and a permanent halt. `bigquery/110` is arithmetically neutral for this specific case —
+`pending_buy_shares` collapses to 0 once the order goes terminal, so `residual_share_diff` collapses to
+the raw `share_diff`, exactly the pre-fix behavior. Neither D2a's expire branch (`:826`) nor its abandon
+branch (`:818`) writes anything beyond `CALL ops.sp_log_decision(...)` — no compensating CLOSE
+`events.position_events` row. This needs its own decision about who writes that compensating event
+(D2a's expire/abandon branches themselves, or a separate sweep) before it fires for real.
