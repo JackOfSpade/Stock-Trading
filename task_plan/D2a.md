@@ -748,7 +748,7 @@ Concretely, every run:
   category='book_drawdown_soft_breach' AND NOT resolved` (the same evidence-based routine-owned resolve
   as the `interim_underperf_warning`/`termination_close_staged` precedents). Inert today (verified
   2026-07-17: `breach_soft = FALSE`, drawdown ~-0.63%).
-- **Cash flattening — auto-craft the park sweep/cover (§13.E).** **ORDER-GUARD CHECK first — `SELECT * FROM
+- **Cash flattening — auto-craft the park sweep/cover (§13.E).** **TRADING-ENABLE RE-CHECK (2026-07-27, `INCIDENT[ref=423ecc02-fdb7-4f47-9445-d8c79d399e8c]`) — apply BEFORE crafting:** if the `state.trading_enabled_mechanical` verdict carried forward from this routine's TRADING-ENABLE GATE reads FALSE, do NOT craft and do NOT write an `ORDER_STAGED` row — record the skip via `CALL ops.sp_log_decision(...)` citing `halt_reason` and continue; the sweep is re-evaluated next run. This is the one craft site D2a owns, and it is exactly what that gate paragraph names as blocked — restated here because a rule stated only at the top of the routine is not a control. (It does NOT cover the staged-order registry's daily RE-CRAFT of an already-staged, owner-confirmed pending order further below — that is deliberately unconditional; see the gate paragraph.) **ORDER-GUARD CHECK next — `SELECT * FROM
   analytics.fn_order_guard(NULL, '<BUY|SELL>', <qty>, <ref_price>, 'MARKET')` (park now uses the SAME 5-arg
   guard as any other order — no park distinction, owner directive 2026-07-22, `bigquery/104_strip_pretrade_rails.sql`:
   market-only + qty/ref-price sanity only. The former park-exemption framing, the 1.10×-NAV magnitude backstop, and

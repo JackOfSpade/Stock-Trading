@@ -328,7 +328,8 @@ loops:
       allowlist (state.park_menu — an off-menu vehicle is still HELD/blocked), the connectors-down HOLD (no
       call binds without gathered evidence), analytics.fn_order_guard + the IBKR confirm-tap (system-wide
       execution layer, unchanged), a dedicated daily loop:park_allocator heartbeat dead-man's switch
-      (bigquery/75_scheduled_query_wrappers.sql ops.sp_sq_cadence_check v8 — 3-trading-day staleness
+      (ops.sp_sq_cadence_check — canonical definition now bigquery/111_cadence_check_version_drift_autoage.sql,
+      which supersedes bigquery/75_scheduled_query_wrappers.sql for this one procedure — 3-trading-day staleness
       window; see the meta_monitoring_heartbeat note below), and W5's weekly PARK SCORECARD vs 3
       counterfactuals (SGOV / VOO / state.park_rule_shadow) + conviction calibration + the quarterly Q1
       park retrospective — read-only, never gates a call, exactly like capital_allocator's own scorecard.
