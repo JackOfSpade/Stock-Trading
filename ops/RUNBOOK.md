@@ -682,6 +682,32 @@ stall with it (it ran under the same identity).
   DEFERRED — the platform limitation above already makes any headless refire moot, so widening the
   view's definition buys nothing until that closes.
 
+  **RE-DIAGNOSIS 2026-07-27 (this session's RemoteTrigger-gap review — the deferral rationale above is
+  INCOMPLETE and its stated cause is WRONG; neither correction reopens the RemoteTrigger platform gap,
+  which is still Anthropic's to close and still correctly tracked in OWNER_ACTIONS.md item U + §15b above).**
+  Two corrections: **(1)** `state.catchup_refire_readiness` is a plain BigQuery view read the same way by
+  interactive sessions and the operator, not only by (currently-moot) headless auto-refire — so "headless
+  refire is moot" does NOT make an undercount harmless; it would mislead the WORKING (interactive) fallback
+  path too. That is precisely how the 2026-07-19 SL3 miss escaped: an interactive session caught it by
+  independent investigation, not because the view flagged it. **(2)** The stated mechanism ("the view counts
+  only MISSING runs, not a halted-then-unblocked run") is a MISDIAGNOSIS. Reconstructed from `ops.run_log`:
+  2026-07-19 was a **Sunday** (`state.market_calendar.is_trading_day = false`) and SL3's `monitor_class` is
+  `daily_trading` (`ops/cadence.yaml`), so `state.cadence_expected_today` emitted NO row for SL3 that day —
+  it was never "expected", so `cadence_watch.needs_attention` was undefined for it regardless of the
+  halted-vs-missing distinction. The real gap is a **classification mismatch**: all four
+  `monitor_class: daily_trading` routines (`ops/cadence.yaml`: D1, D2a, D2, SL3) actually run 7 days/week
+  because each carries its OWN `expected_trigger` cron with `recurrence: daily` and no trading-day gate — the
+  `depends_on`/`sp_assert_deps` chain only gates intra-day ORDERING, not WHETHER a routine fires — yet
+  `state.cadence_expected_today` emits a `daily_trading` row only on trading days, so a NON-TRADING-DAY halt of
+  ANY of the four is invisible to the whole cadence/catch-up stack — orthogonal to RemoteTrigger and
+  fully in-repo-fixable. **NOT fixed here, by deliberate judgment — owner-gated follow-up.** Reclassifying a
+  routine's `monitor_class` changes what `cadence_watch`/`needs_attention` expects, which feeds `missed_run`
+  and thence the trading-halt gate (`state.trading_enabled` via `system_health`); a wrong expectation could
+  HALT live trading. That is not a change to make unattended/overnight — it needs a dry-run-verified pass with
+  the owner able to catch a false halt. Recorded here so the deferred item points at the RIGHT fix (cadence
+  classification for the 7-day-a-week chained routines), not the misdiagnosed one (widening the readiness view
+  for halted-vs-missing).
+
 ## 16. Publish the health dashboard *(D1)*
 `.github/workflows/dashboard.yml` builds `ops/dashboard/index.html` from BigQuery and deploys it to
 GitHub Pages. **OFF by default and double-gated** (the page shows live trading data): enable only by
@@ -3036,8 +3062,8 @@ Unlike §29's SGOV phantom lot, this was a REAL, correctly-detected structural g
 life, and the old predicate didn't know that.** `state.current_positions` (`bigquery/01_schema.sql:129-133`,
 latest-wins over `events.position_events` `WHERE event_type <> 'CLOSE'`) gets its OPEN row at
 **ORDER-STAGING TIME** — D2 writes it on a GO, before the order even reaches the broker
-(`Claude_Task_Plan.md:1115` for a first entry, `:1124` for a pyramid add: "on a GO ... the OPEN lifecycle
-event to `events.position_events`"). `analytics.position_lifecycle`
+(`Claude_Task_Plan.md` items 2 and 2a — the staging-time provisional OPEN, written co-located with the
+`ORDER_STAGED` row after the pre-craft gates pass; that write ORDERING was hardened 2026-07-27, see the FIX below). `analytics.position_lifecycle`
 (`bigquery/102_pyramid_aware_lifecycle.sql`) is FIFO lots derived purely from
 `state.trade_fills_curated` — it only ever sees shares that ACTUALLY FILLED. So from the moment a BUY is
 staged until its fill reconciles, `current_positions` legitimately LEADS `position_lifecycle` by exactly
@@ -3148,7 +3174,7 @@ the halt clears itself once that order fills or its staleness window lapses, sam
 `explained_by_pending_buy = FALSE` on a drifted row means the residual survived netting — a genuine
 break, escalate as before this fix would have required.
 
-**Known remaining gap (pre-existing, NOT introduced by this change, never yet fired — live check found
+**Known remaining gap — CLOSED 2026-07-27 (pre-existing, NOT introduced by this change, never fired — live check found
 only `filled` and `pending` `ORDER_STAGED` rows).** A staged BUY that EXPIRES (`Claude_Task_Plan.md:826`,
 window closed unfilled → set terminal `expired`) or is ABANDONED (`:818`, the ENTER/EXIT-vs-ABANDON
 judgment sets the row terminal instead of re-crafting) unfilled leaves its staging-time OPEN
@@ -3160,5 +3186,34 @@ drift and a permanent halt. `bigquery/110` is arithmetically neutral for this sp
 `pending_buy_shares` collapses to 0 once the order goes terminal, so `residual_share_diff` collapses to
 the raw `share_diff`, exactly the pre-fix behavior. Neither D2a's expire branch (`:826`) nor its abandon
 branch (`:818`) writes anything beyond `CALL ops.sp_log_decision(...)` — no compensating CLOSE
-`events.position_events` row. This needs its own decision about who writes that compensating event
-(D2a's expire/abandon branches themselves, or a separate sweep) before it fires for real.
+`events.position_events` row.
+
+**FIX (2026-07-27, `INCIDENT[ref=423ecc02-fdb7-4f47-9445-d8c79d399e8c]`, this session).** D2a's registry-reconciliation
+branches themselves now write the compensating CLOSE — the **PHANTOM-CLOSE RULE** appended to
+`Claude_Task_Plan.md`'s `ORDER_STAGED` bullet (branches (b)-ABANDON at `:818` and (c)-EXPIRE at `:826`). Chosen
+over a separate sweep deliberately: at the moment D2a flips a BUY row terminal it already holds everything needed
+to net the provisional out deterministically — the order's `payload.position_key` (`K`) — so it writes
+`INSERT INTO events.position_events (position_key=K, event_type='CLOSE', status='CLOSED', event_ts=CURRENT_TIMESTAMP(),
+…strategy/ticker/contract_id/shares/cost_basis carried verbatim from the phantom OPEN)` iff `K` is non-null AND still
+a live non-CLOSE row in `state.current_positions`. By design (`bigquery/110`'s header + `Claude_Task_Plan.md` items 2 and 2a) BOTH a first entry AND a
+pyramid `add-tranche` pre-write a staging-time provisional OPEN — but ONLY at their `ORDER_STAGED`-write step, co-located
+with the `ORDER_STAGED` row and AFTER all four pre-craft gates pass (the ordering was hardened this session, `INCIDENT`
+above, self-audit finding: writing the OPEN before the gates would strand a phantom with no `ORDER_STAGED` row for
+PHANTOM-CLOSE to reach, on any gate-declined GO). Both kinds record their `position_key` verbatim in the `ORDER_STAGED`
+payload, so PHANTOM-CLOSE (keyed on `payload.position_key`) covers BOTH. The 2026-07-27 live check happened to find
+staged provisional OPENs only for `add-tranche` (e.g. `D:GOOGL:2026-07-26`) — not because first entries never pre-write,
+but because the only BUY staged-but-still-unfilled at that instant happened to be the `D:GOOGL` add (a MARKET order
+staged 00:49 MT on a Sunday, still `NEW`/unfilled with the market closed — so a provisional OPEN is NOT short-lived
+whenever an order is staged while the market is shut; a first entry caught the same way would show one identically); a
+`park-switch` leg carries the same payload convention but never reaches
+`events.position_events` (park routes to `events.parking_events`), so it is out of scope with `K` null. The companion **STAGING-OPEN KEY INVARIANT** (`Claude_Task_Plan.md` items 2 / 2a + Step 0
+fill reconciliation) makes it forward-safe: any order that pre-writes a provisional OPEN records its key in
+`payload.position_key` and reuses that SAME key at fill (Step 0's fill OPEN SUPERSEDES the provisional) and at
+PHANTOM-CLOSE — so a fill never strands the provisional either. SUPPRESS-ONLY-safe by construction: reaching the
+abandon/expire branch means the order NEVER filled (a fill, even partial, is caught by branch (a) and routed to fill
+reconciliation, never here), so the CLOSE removes only genuinely-unbacked shares; a belt-and-suspenders guard refuses
+(and raises a `phantom_close_skipped` warning) any CLOSE that would make `state.current_positions` UNDER-count
+`analytics.position_lifecycle`. If a phantom ever slips through anyway, `state.position_reconciliation` still halts
+fail-closed with `explained_by_pending_buy=FALSE` — the correct response to a genuinely unexplained drift — so this
+fix removes the FALSE permanent halt without weakening detection of a real one. Neither a new scheduled object nor a
+BigQuery write from CI is involved; the CLOSE is written in-band by D2a exactly as its existing fill-time CLOSE rows are.
