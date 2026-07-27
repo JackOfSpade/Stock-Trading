@@ -105,6 +105,14 @@ WHERE w.period_missed;
 -- cannot de-correlate a correlated EXISTS/NOT EXISTS against a CTE stacked alongside multiple other
 -- correlated subqueries against real tables. Rewritten as LEFT JOIN + IS NULL (the standard BigQuery
 -- workaround for this exact limitation), verified live via execute_sql_readonly before applying.
+--
+-- SUPERSEDED LIVE by bigquery/112_catchup_readiness_period_asof_fix.sql (2026-07-27 OPS2 adversarial
+-- review) — current single source of truth for this object. The period_misses CTE below emits
+-- `today AS as_of` for every period-tier row instead of `period_start AS as_of`, so every outstanding
+-- period-tier miss (W1..A2) ties on the same as_of within one query execution — defeating OPS2 STEP
+-- 2's new "process at most N=4, oldest first (ORDER BY as_of ASC)" bound for exactly the rows where a
+-- real backlog matters. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
+-- re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.catchup_refire_readiness` AS
 WITH daily_misses AS (
   SELECT

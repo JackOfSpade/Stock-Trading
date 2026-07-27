@@ -207,18 +207,22 @@ routines:
                                     # 2026-07-27 (was `0 3 * * *`, which fell to 20:00 MST in winter,
                                     # before the deadline).
       enabled: true                # LIVE 2026-07-27: owner created trig_01DLrkbtpDvox1N7meiFMXYe
-                                    # (cron 0 3 * * * = ~21:00 MT, model claude-opus-5); trig_id recorded
-                                    # in ops/trigger_ids.json.
+                                    # (cron 15 4 * * * = ~21:15 MT, retimed 2026-07-27 for DST-robustness;
+                                    # model claude-opus-5); trig_id recorded in ops/trigger_ids.json.
     notes: >
       Catch-up EXECUTOR (added 2026-07-27, owner directive -- the headless-RemoteTrigger workaround,
       ops/RUNBOOK.md §15b). Reads state.catchup_refire_readiness + the non-trading-day D1/SL3 set and, for
-      each catchup_safe miss (D1/D3/SL3/OPS1 daily plus W1/W2/W3/W5, M1a/M1b/M2/M3/M5, Q1/Q2/Q3/SL1, A1/A2
+      each catchup_safe miss (D1/SL3/OPS1 daily plus W1/W2/W3/W5, M1a/M1b/M2/M3/M5, Q1/Q2/Q3/SL1, A1/A2
       period), EXECUTES that routine's slice INLINE in its own session (idempotency + 3h in-flight guards),
       logging as that routine so cadence clears the miss -- so the operator no longer manually re-runs it.
-      NEVER executes D2/D2a/W4/M4/Q4/A3/SL4 (order-crafting/capital-adjacent) and carries IBKR READ tools
-      only (no order-craft surface). Anything it cannot run (missing connector, execution error, over-bound)
-      it leaves in readiness with no log row, so OPS0's 22:30 residual-email fallback still catches it.
-      Idempotent via ops.catchup_refire_log. No chat question, ever.
+      NEVER executes D2/D2a/W4/M4/Q4/A3/SL4 (order-crafting/capital-adjacent, statically excluded) or D3
+      (catchup_safe yet order-crafting -- caught by the runtime ORDER-CRAFT SLICE-SCAN over D3's OWN slice
+      section, deferred to OPS0's email like the static exclusions). Carries FULL connector access
+      including IBKR (per-connector read-only scoping isn't offered by the claude.ai GUI, owner-accepted
+      2026-07-27) -- the guardrails above, not tool restriction, are what keep it from ever placing an
+      order. Anything it cannot run (missing connector, execution error, over-bound) it leaves in
+      readiness with no log row, so OPS0's 22:30 residual-email fallback still catches it. Idempotent via
+      ops.catchup_refire_log. No chat question, ever.
   - id: SL3
     name: Incubation Monitor & Graduation
     schedule: "after D2a trading_day"     # SISA arsenal loop; needs D2a's fresh marks

@@ -717,7 +717,7 @@ stall with it (it ran under the same identity).
 
   **CATCH-UP EXECUTOR (OPS2) — added 2026-07-27 (owner directive), the next-level workaround.** Beyond the
   email reminder, the owner opted to AUTO-RUN missed catchup_safe routines rather than manually re-run them.
-  Since `RemoteTrigger run` is uncallable headless, OPS2 — a new routine on its OWN ~21:00 MT cron — does NOT
+  Since `RemoteTrigger run` is uncallable headless, OPS2 — a new routine on its OWN ~21:15 MT cron — does NOT
   fire the missed routine's trigger; it EXECUTES that routine's slice INLINE in its own session (the cron
   launch is what works; no in-session `RemoteTrigger` call is needed). Scope: the NON-order-crafting
   catchup_safe set (D1, OPS1, SL3, and the W/M/Q/A/SL research routines), executed at full model fidelity on
@@ -730,9 +730,12 @@ stall with it (it ran under the same identity).
   22:30 actionable email remains the residual fallback for everything OPS2 defers or fails. Cost: +1 of the
   owner's Max-plan 15/day routine-run cap (accepted). Adversarially reviewed 2026-07-27 (faithfulness/git,
   guardrails/idempotency, fallback/cadence) — the review caught + fixed the D3 order-craft scope hole, a
-  model-downgrade fidelity gap, git-branch hosting, and a completion-verification gap before go-live. NOT LIVE
-  until the owner creates the trigger (`ops/cadence.yaml` OPS2 `enabled: false` until then) — see
-  OWNER_ACTIONS.md for the create step (instruction, READ-only connector grant, ~21:00 MT schedule). Recorded here so the deferred item points at the RIGHT fix (cadence
+  model-downgrade fidelity gap, git-branch hosting, and a completion-verification gap before go-live.
+  **LIVE since 2026-07-27** (`ops/cadence.yaml` OPS2 `enabled: true`; trig_id recorded in
+  `ops/trigger_ids.json`) — full IBKR access accepted (a READ-only connector grant is not offered by the
+  claude.ai GUI; see the guardrail language two sentences above), cron retimed the same day to
+  `15 4 * * *` (~21:15 MT, DST-robust; the original `0 3 * * *` fell to 20:00 MST in winter, before the
+  21:00 MT deadline) — see OWNER_ACTIONS.md for the go-live/retime record. Recorded here so the deferred item points at the RIGHT fix (cadence
   classification for the 7-day-a-week chained routines), not the misdiagnosed one (widening the readiness view
   for halted-vs-missing).
 

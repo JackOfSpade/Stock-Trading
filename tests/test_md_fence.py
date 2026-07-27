@@ -20,7 +20,7 @@ lines 614-617 as OUTSIDE a fence they are plainly inside.
 Two "fixes" were considered. Requiring a BARE closing line while keeping the flat flag is the
 obvious one and is CATASTROPHIC — measured against this file, outside-of-fence heading counts
 collapse from 52 `## ` / 11 `# ` to 20 / 5, because the line-491 fence then never closes and eats
-31 real routine headings (and with them 31 slices, plus gen_routine_lists.py and the cadence gate
+32 real routine headings (and with them 32 slices, plus gen_routine_lists.py and the cadence gate
 downstream). The stack is the actual fix: since this function only reports "inside ANY fence"
 (depth > 0), nesting collapses to depth, so it satisfies CommonMark's delimiter/length/info-string
 rules AND the corpus's technically-invalid equal-length nesting at the same time. Measured across
@@ -141,7 +141,7 @@ def test_claude_task_plan_corpus_heading_counts():
     codebase audit 2026-07-26: a strict-CommonMark bare-closer fix layered onto the old flat
     open/closed flag was measured against this exact file and collapses the outside-of-fence
     heading counts from 52 `## ` / 11 `# ` down to 20 / 5 — 32 routine headings silently swallowed
-    into a phantom never-closed fence, which would cascade into split_task_plan.py dropping 31
+    into a phantom never-closed fence, which would cascade into split_task_plan.py dropping 32
     routine slices and poisoning gen_routine_lists.py and the cadence gate downstream. The
     depth-stack fence_mask() now in place satisfies CommonMark's rules WITHOUT that collapse (see
     module docstring), and reproduces these counts exactly.
