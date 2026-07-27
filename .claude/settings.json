@@ -27,6 +27,7 @@
   "mcp__Interactive_Brokers_IBKR__delete_order_instruction",
   "mcp__Interactive_Brokers_IBKR__get_option_data","mcp__Interactive_Brokers_IBKR__get_option_parameters",
   "mcp__Interactive_Brokers_IBKR__get_combo_identifier",
+  "mcp__Claude_Code_Remote__list_triggers",
   "mcp__Google_Cloud_BigQuery__execute_sql","mcp__Google_Cloud_BigQuery__execute_sql_readonly",
   "mcp__Google_Cloud_BigQuery__list_dataset_ids","mcp__Google_Cloud_BigQuery__list_table_ids",
   "mcp__Google_Cloud_BigQuery__get_dataset_info","mcp__Google_Cloud_BigQuery__get_table_info",

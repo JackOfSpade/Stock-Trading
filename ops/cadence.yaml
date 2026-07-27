@@ -345,7 +345,7 @@ routines:
     writes: [events.regime_events, events.macro_series, events.macro_fred]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: TO_POPULATE
+      cron_utc: "0 11 1 * *"
       enabled: true
   - id: M1b
     name: Strategy Mapping & Activation Calls
@@ -356,7 +356,7 @@ routines:
     writes: [Monthly_Fundamental.md]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: TO_POPULATE
+      cron_utc: "0 12 1 * *"
       enabled: true
   - id: M2
     name: E Pair Divergence Screen
@@ -366,7 +366,7 @@ routines:
     writes: [Monthly_E_Pairs.md]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: TO_POPULATE
+      cron_utc: "0 13 1 * *"
       enabled: true
   - id: M3
     name: D Position Deep-Dive
@@ -376,7 +376,7 @@ routines:
     writes: [Monthly_D_Position_Deep_Dive.md]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: TO_POPULATE
+      cron_utc: "0 14 1 * *"
       enabled: true
   - id: M4
     name: Monthly Action Conversion
@@ -387,7 +387,7 @@ routines:
     writes: [events.regime_events, events.queue_events, events.decision_log, calendar:confirm_order]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: TO_POPULATE
+      cron_utc: "0 15 1 * *"
       enabled: true
   - id: M5
     name: Deployed-TWR & Macro Forecast (advisory)
@@ -398,7 +398,7 @@ routines:
     writes: [analytics.deployed_twr_forecast, events.decision_log]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: TO_POPULATE
+      cron_utc: "0 16 1 * *"
       enabled: true
   - id: SL4
     name: Discretionary Retirement Proposer
@@ -409,7 +409,7 @@ routines:
     writes: [events.queue_events, events.strategy_lifecycle, ops.roster_change_log, events.decision_log, ops.alerts]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: TO_POPULATE
+      cron_utc: "30 16 1 * *"
       enabled: true
     notes: >
       SISA arsenal loop (ops/RUNBOOK.md §39). Monthly REMOVE-ONLY discretionary-retirement scanner,
@@ -430,7 +430,7 @@ routines:
     writes: [Quarterly_Regime.md]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: TO_POPULATE
+      cron_utc: "0 17 2 1,4,7,10 *"
       enabled: true
   - id: Q2
     name: D Long-Horizon Candidates
@@ -440,7 +440,7 @@ routines:
     writes: [Quarterly_D_Candidates.md]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: TO_POPULATE
+      cron_utc: "0 18 2 1,4,7,10 *"
       enabled: true
   - id: Q3
     name: AI Foundation Quarterly Delta
@@ -450,7 +450,7 @@ routines:
     writes: [Quarterly_AI_Foundation_Delta.md]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: TO_POPULATE
+      cron_utc: "0 19 2 1,4,7,10 *"
       enabled: true
   - id: Q4
     name: Quarterly Action Conversion
@@ -461,7 +461,7 @@ routines:
     writes: [Watchlist.md, events.queue_events, events.decision_log]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: TO_POPULATE
+      cron_utc: "0 20 2 1,4,7,10 *"
       enabled: true
   - id: SL1
     name: Strategy Candidate Synthesis & Qualification
@@ -473,7 +473,7 @@ routines:
              events.decision_log, ops.alerts]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: TO_POPULATE
+      cron_utc: "0 21 2 1,4,7,10 *"
       enabled: true
     notes: >
       SISA arsenal loop (ops/RUNBOOK.md §39; ops/autonomy_levels.yaml loop strategy_arsenal). Quarterly
@@ -495,7 +495,7 @@ routines:
     writes: [Annual_AI_Foundation_Sweep.md]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: TO_POPULATE
+      cron_utc: "0 4 2 1 *"
       enabled: true
   - id: A2
     name: Per-Strategy Constraint Audit
@@ -505,7 +505,7 @@ routines:
     writes: [Annual_Constraint_Audit.md]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: TO_POPULATE
+      cron_utc: "0 5 2 1 *"
       enabled: true
   - id: A3
     name: Annual Action Conversion
@@ -516,7 +516,7 @@ routines:
     writes: [AI_Trading_Foundation.md, Strategy.md, events.queue_events, events.decision_log, state.strategy_candidates]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: TO_POPULATE
+      cron_utc: "0 6 2 1 *"
       enabled: true
 
 # ---- WEB-UI TRIGGER AUDIT — 2026-07-10, RE-SPACED 2026-07-12 (Claude-in-Chrome + RemoteTrigger API,
