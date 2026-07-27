@@ -724,7 +724,9 @@ stall with it (it ran under the same identity).
   OPS2's own branch. Deliberately EXCLUDED from inline execution: (a) the order-crafting/capital-adjacent
   routines D2/D2a/W4/M4/Q4/A3/SL4 (never auto-refired, by design), and (b) any routine whose slice calls
   `create_order_instruction` — notably **D3**, which is catchup_safe yet crafts orders (persist-and-wait
-  re-craft), so OPS2 (granted IBKR READ-only) DEFERS it to OPS0's email rather than run it half-way. OPS0's
+  re-craft), so OPS2 DEFERS it to OPS0's email rather than run it half-way (OPS2 never inline-executes an
+  order-crafting routine; per-connector read-only tool-scoping isn't offered by the claude.ai GUI, so full IBKR
+  access is accepted 2026-07-27 and the guardrail — not tool restriction — is the control). OPS0's
   22:30 actionable email remains the residual fallback for everything OPS2 defers or fails. Cost: +1 of the
   owner's Max-plan 15/day routine-run cap (accepted). Adversarially reviewed 2026-07-27 (faithfulness/git,
   guardrails/idempotency, fallback/cadence) — the review caught + fixed the D3 order-craft scope hole, a

@@ -201,9 +201,13 @@ routines:
     writes: [ops.run_log, ops.catchup_refire_log, events.decision_log, ops.alerts]
     expected_trigger:
       recurrence: daily
-      time_local: "21:00"          # after SL3's 20:00 slot, before OPS0's 22:30 -- OPS2 executes what it
-                                    # can and OPS0 emails only the residual (owner creates this trigger;
-                                    # trig_id filled into ops/trigger_ids.json after creation)
+      time_local: "21:00"          # TARGET is ~21:15 MT -- MUST be AFTER the 21:00 MT needs_attention
+                                    # deadline (bigquery/48:56) or the daily miss tier is structurally
+                                    # empty, and BEFORE OPS0's 04:30 UTC. DST BUG in the live cron
+                                    # `0 3 * * *`: = 21:00 MDT now (works via boot delay) but = 20:00 MST
+                                    # in WINTER, BEFORE the deadline -> blind to same-day daily misses.
+                                    # RETIME before DST ends (~Nov 1): native daily 21:15 MT, or fixed
+                                    # cron `15 4 * * *` (04:15 UTC = 22:15 MDT / 21:15 MST). OWNER_ACTIONS.md.
       enabled: true                # LIVE 2026-07-27: owner created trig_01DLrkbtpDvox1N7meiFMXYe
                                     # (cron 0 3 * * * = ~21:00 MT, model claude-opus-5); trig_id recorded
                                     # in ops/trigger_ids.json.

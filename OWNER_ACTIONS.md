@@ -29,14 +29,22 @@ THEN: (1) record the returned `trig_...` id in `ops/trigger_ids.json` (provenanc
 
 **DONE 2026-07-27:** trigger created (`trig_01DLrkbtpDvox1N7meiFMXYe`, cron `0 3 * * *` = ~21:00 MT, model
 `claude-opus-5`, connectors BigQuery/FMP/Calendar/Gmail/IBKR); (1) trig_id recorded in `ops/trigger_ids.json`
-and (2) `expected_trigger.enabled` flipped to `true` in this commit. **IBKR read-only NOT achievable** — the
-claude.ai connector GUI is all-or-nothing per connector (no per-tool restriction, confirmed by owner), so OPS2
-carries FULL IBKR access including `create_order_instruction`. Accepted: OPS2's guardrails (never inline-execute
-an order-crafting routine; the order-craft slice-scan defers D3/any order-crafter, so it never reaches an
-order-craft call) are the load-bearing control — the same prose-level protection every routine already runs on.
-**OPTIONAL structural lever (owner discretion, NOT required):** for a hard no-order guarantee, remove the IBKR
-connector from OPS2's trigger entirely — the only cost is that any catchup_safe routine needing an IBKR read then
-defers to OPS0's email instead of running inline.
+and (2) `expected_trigger.enabled` flipped to `true` in this commit. **IBKR: full access, SETTLED — no action, no recurring warning.** The claude.ai connector GUI is all-or-nothing
+per connector (no read-only tool-scoping), so OPS2 carries full IBKR access; owner directive 2026-07-27 accepts
+this and the OPS2 spec no longer flags "read-only scoping" on any run. The guardrails (never inline-execute an
+order-crafting routine; the order-craft slice-scan defers D3/any order-crafter, so it never reaches an order-craft
+call) are the control — the same prose-level protection every routine already runs on.
+
+## OPS2-retime. RETIME the OPS2 trigger before DST ends (~Nov 1) — `[OPEN 2026-07-27 — works now (summer), breaks in winter]`
+
+DST bug found on OPS2's 2026-07-27 smoke run. The live cron is `0 3 * * *` (03:00 UTC), which is **21:00 MDT now**
+(fine — lands just after the 21:00 MT `needs_attention` deadline via boot delay) but **20:00 MST in winter**, an
+hour BEFORE the deadline — at which time `state.catchup_refire_readiness`'s daily tier is structurally empty, so a
+winter OPS2 run would be blind to same-day D1/D3/SL3/OPS1 misses (they'd fall to OPS0's email instead). The slot
+must sit AFTER 21:00 MT and BEFORE OPS0's 04:30 UTC in BOTH seasons. **Fix (RemoteTrigger update / GUI, owner-only):**
+either set OPS2 to a **native daily recurrence at 21:15 MT** (DST-aware — cleanest), or change the cron to
+**`15 4 * * *`** (04:15 UTC = 22:15 MDT / 21:15 MST — after the deadline, before OPS0, both seasons). Then update
+`ops/cadence.yaml` OPS2 `time_local` to `21:15`. Not urgent (correct until DST ends), but do it before ~Nov 1.
 
 ---
 
