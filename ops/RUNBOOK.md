@@ -700,11 +700,20 @@ stall with it (it ran under the same identity).
   `depends_on`/`sp_assert_deps` chain only gates intra-day ORDERING, not WHETHER a routine fires — yet
   `state.cadence_expected_today` emits a `daily_trading` row only on trading days, so a NON-TRADING-DAY halt of
   ANY of the four is invisible to the whole cadence/catch-up stack — orthogonal to RemoteTrigger and
-  fully in-repo-fixable. **NOT fixed here, by deliberate judgment — owner-gated follow-up.** Reclassifying a
+  fully in-repo-fixable. **GATE-FEEDING RECLASSIFICATION NOT done here, by deliberate judgment — owner-gated follow-up.** Reclassifying a
   routine's `monitor_class` changes what `cadence_watch`/`needs_attention` expects, which feeds `missed_run`
   and thence the trading-halt gate (`state.trading_enabled` via `system_health`); a wrong expectation could
   HALT live trading. That is not a change to make unattended/overnight — it needs a dry-run-verified pass with
-  the owner able to catch a false halt. Recorded here so the deferred item points at the RIGHT fix (cadence
+  the owner able to catch a false halt.
+  **EMAIL-ONLY VISIBILITY SUBSET — DONE 2026-07-27 (owner directive, the safe part).** The operator chose
+  email-reminder-then-manual-refire as the workaround for the headless-RemoteTrigger gap, so the one place this
+  invisibility actually bites — an operator relying on the email — is now closed WITHOUT touching the gate:
+  OPS0's new STEP 1b (`Claude_Task_Plan.md` / `task_plan/OPS0.md`) directly checks D1 and SL3 (the two
+  `catchup_safe` `daily_trading` routines that fire every calendar day) for a non-trading-day miss and raises the
+  same actionable `catchup_refire_blocked` reminder. It reads only `ops.run_log` + the trading-day calendar and
+  feeds NO gate (`cadence_watch`/`system_health`/`trading_enabled` untouched), so it carries none of the
+  halt blast-radius. What remains owner-gated is only the gate-side `monitor_class` reclassification above — and
+  it is now lower-priority, since the operator-facing symptom is handled. Recorded here so the deferred item points at the RIGHT fix (cadence
   classification for the 7-day-a-week chained routines), not the misdiagnosed one (widening the readiness view
   for halted-vs-missing).
 
