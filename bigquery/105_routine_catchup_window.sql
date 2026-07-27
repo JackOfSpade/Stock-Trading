@@ -81,6 +81,7 @@ WITH routines AS (
     STRUCT('D3' AS routine, 'daily_all' AS monitor_class),
     STRUCT('OPS0' AS routine, 'daily_all' AS monitor_class),
     STRUCT('OPS1' AS routine, 'daily_all' AS monitor_class),
+    STRUCT('OPS2' AS routine, 'daily_all' AS monitor_class),
     STRUCT('SL3' AS routine, 'daily_trading' AS monitor_class),
     STRUCT('AR_att' AS routine, 'queue_driven' AS monitor_class),
     STRUCT('AR_orc' AS routine, 'queue_driven' AS monitor_class),

@@ -67,6 +67,10 @@
     "instruction": "Read Claude_Task_Plan.md. Perform OPS1. Morning Connector Liveness Probe \u2014 regular routine.",
     "monitor_class": "daily_all"
   },
+  "OPS2": {
+    "instruction": "Read Claude_Task_Plan.md. Perform OPS2. Catch-up Executor \u2014 regular routine.",
+    "monitor_class": "daily_all"
+  },
   "Q1": {
     "instruction": "Read Claude_Task_Plan.md. Perform Q1. Regime Retrospective \u2014 deep research.",
     "monitor_class": "quarterly_ftd"

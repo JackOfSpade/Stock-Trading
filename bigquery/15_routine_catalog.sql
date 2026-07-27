@@ -47,6 +47,7 @@ FROM UNNEST([
   STRUCT('D3' AS routine, 'Read Claude_Task_Plan.md. Perform D3. Calendar Hygiene — regular routine.' AS canonical_instruction),
   STRUCT('OPS0' AS routine, 'Read Claude_Task_Plan.md. Perform OPS0. Cadence Watchdog — regular routine.' AS canonical_instruction),
   STRUCT('OPS1' AS routine, 'Read Claude_Task_Plan.md. Perform OPS1. Morning Connector Liveness Probe — regular routine.' AS canonical_instruction),
+  STRUCT('OPS2' AS routine, 'Read Claude_Task_Plan.md. Perform OPS2. Catch-up Executor — regular routine.' AS canonical_instruction),
   STRUCT('SL3' AS routine, 'Read Claude_Task_Plan.md. Perform SL3. Incubation Monitor & Graduation — regular routine.' AS canonical_instruction),
   STRUCT('AR_att' AS routine, 'Read Claude_Task_Plan.md. Perform Adversarial Review Attacker — regular routine.' AS canonical_instruction),
   STRUCT('AR_orc' AS routine, 'Read Claude_Task_Plan.md. Perform Adversarial Review Orchestrator — regular routine.' AS canonical_instruction),

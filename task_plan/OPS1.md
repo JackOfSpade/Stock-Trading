@@ -23,6 +23,7 @@ Every routine reads and/or writes BigQuery for operational state (positions, reg
 | **D3** | Calendar Hygiene | Daily · regular | `state.open_queue`, `state.current_positions`, `events.queue_events`/`events.decision_log` | `events.queue_events` (terminal-entry sweep) | — |
 | **OPS0** | Cadence Watchdog | Daily · regular | `state.catchup_refire_readiness`, `ops/trigger_ids.json` (repo file) | `ops.catchup_refire_log`, `events.decision_log`, `ops.alerts`; `RemoteTrigger run(...)` (external call, not a BigQuery write) | — |
 | **OPS1** | Morning Connector Liveness Probe | Daily · regular | — (no state reads beyond the standard `state.trading_day_today` pre-flight; probes IBKR/Calendar/FMP/Gmail live, read-only) | `ops.alerts` (`connector_reauth_needed` raise + self-heal resolve) | — |
+| **OPS2** | Catch-up Executor | Daily · regular | `state.catchup_refire_readiness`, `ops/trigger_ids.json`, `state.market_calendar`, the missed routine's slice `task_plan/<X>.md` | `ops.catchup_refire_log`, `events.decision_log`, `ops.alerts`; + the executed routine's OWN write surfaces (it runs the routine inline) | — |
 | **W1** | Catalyst Calendar (A, C) | Weekly · research | `state.current_regime`, `state.current_positions`, `events.decision_log` | — | Weekly_Catalyst_Calendar.md |
 | **W2** | Post-Event Screen (B) | Weekly · research | `events.decision_log`/`find_precedents()`, `state.current_positions` | `events.decision_log` via `ops.sp_log_decision` (`entry_type='research-screen'`, screen='post-event' — Operating_Protocols.md §19, 2026-07-19) | Weekly_Post_Event_Screen.md |
 | **W3** | Open-Position Deep-Dive (A,B,C,E) | Weekly · research | `state.current_positions`, `state.current_regime`, `events.decision_log` | — | Weekly_Position_Deep_Dive.md |
@@ -506,6 +507,8 @@ BigQuery-liveness pre-flight read, TRANSIENT-FAILURE WAIT-AND-RETRY, and INCIDEN
 BigQuery itself is down, the standard pre-flight halt path already covers it (RUNBOOK §26) — that outage
 class is loud everywhere already, nothing extra needed here. `depends_on: []`, same rationale as OPS0: a
 probe that exists to catch an auth failure early must never itself be blocked by one.
+
+**SAME-DAY DOUBLE-RUN GUARD** (the generalized guard that binds every `catchup_safe: true` routine — added for OPS1 2026-07-27 now that OPS2's inline catch-up can re-invoke it): FIRST, before anything else, `SELECT COUNT(*) FROM ops.run_log WHERE routine='OPS1' AND run_date=<today, America/Denver> AND status='completed'`; if `>= 1`, output "OPS1 already completed today" and END IMMEDIATELY; likewise END if another session's `'started'` OPS1 row for today exists with `log_ts` within the last 3 hours and no terminal row (an in-flight original). OPS1's probes/self-heals are each individually idempotent, but this makes a redundant re-run (its own late trigger, or an OPS2 inline catch-up) a clean no-op instead of a duplicate.
 
 PROBES (read-only, one call each; on a transient-looking failure, one ~60s-spaced retry per the shared
 ladder, then classify what's left): IBKR `get_account_summary`; Google Calendar `list_calendars`; FMP

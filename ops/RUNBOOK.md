@@ -713,7 +713,24 @@ stall with it (it ran under the same identity).
   same actionable `catchup_refire_blocked` reminder. It reads only `ops.run_log` + the trading-day calendar and
   feeds NO gate (`cadence_watch`/`system_health`/`trading_enabled` untouched), so it carries none of the
   halt blast-radius. What remains owner-gated is only the gate-side `monitor_class` reclassification above — and
-  it is now lower-priority, since the operator-facing symptom is handled. Recorded here so the deferred item points at the RIGHT fix (cadence
+  it is now lower-priority, since the operator-facing symptom is handled.
+
+  **CATCH-UP EXECUTOR (OPS2) — added 2026-07-27 (owner directive), the next-level workaround.** Beyond the
+  email reminder, the owner opted to AUTO-RUN missed catchup_safe routines rather than manually re-run them.
+  Since `RemoteTrigger run` is uncallable headless, OPS2 — a new routine on its OWN ~21:00 MT cron — does NOT
+  fire the missed routine's trigger; it EXECUTES that routine's slice INLINE in its own session (the cron
+  launch is what works; no in-session `RemoteTrigger` call is needed). Scope: the NON-order-crafting
+  catchup_safe set (D1, OPS1, SL3, and the W/M/Q/A/SL research routines), executed at full model fidelity on
+  OPS2's own branch. Deliberately EXCLUDED from inline execution: (a) the order-crafting/capital-adjacent
+  routines D2/D2a/W4/M4/Q4/A3/SL4 (never auto-refired, by design), and (b) any routine whose slice calls
+  `create_order_instruction` — notably **D3**, which is catchup_safe yet crafts orders (persist-and-wait
+  re-craft), so OPS2 (granted IBKR READ-only) DEFERS it to OPS0's email rather than run it half-way. OPS0's
+  22:30 actionable email remains the residual fallback for everything OPS2 defers or fails. Cost: +1 of the
+  owner's Max-plan 15/day routine-run cap (accepted). Adversarially reviewed 2026-07-27 (faithfulness/git,
+  guardrails/idempotency, fallback/cadence) — the review caught + fixed the D3 order-craft scope hole, a
+  model-downgrade fidelity gap, git-branch hosting, and a completion-verification gap before go-live. NOT LIVE
+  until the owner creates the trigger (`ops/cadence.yaml` OPS2 `enabled: false` until then) — see
+  OWNER_ACTIONS.md for the create step (instruction, READ-only connector grant, ~21:00 MT schedule). Recorded here so the deferred item points at the RIGHT fix (cadence
   classification for the 7-day-a-week chained routines), not the misdiagnosed one (widening the readiness view
   for halted-vs-missing).
 

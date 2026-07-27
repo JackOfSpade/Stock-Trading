@@ -10,6 +10,25 @@ act. Dated passes below; most recent first.
 
 ---
 
+# 2026-07-27 OPS2 Catch-up Executor — owner must create the trigger (RemoteTrigger create is session-blocked)
+
+## OPS2. Create the OPS2 "Catch-up Executor" scheduled trigger — `[OPEN 2026-07-27 — awaiting owner]`
+
+OPS2 is a new routine (the headless-RemoteTrigger workaround, RUNBOOK §15b): it auto-RUNS missed catchup_safe
+routines inline instead of emailing you to re-run them. All repo scaffolding is landed and gate-green; it is NOT
+LIVE until you create its trigger (interactive / sub-agent `RemoteTrigger create` is classifier-blocked, so only
+you can). Create it in claude.ai (Code → Routines → New, or `RemoteTrigger create`) with:
+
+- **Instruction (verbatim, from `ops/triggers.json`):** `Read Claude_Task_Plan.md. Perform OPS2. Catch-up Executor — regular routine.`
+- **Schedule:** daily, ~21:00 America/Denver (after SL3's 20:00, before OPS0's 22:30 — OPS2 runs what it can, OPS0 emails the residual). Native daily picker if available (DST-aware); else a fixed cron ~03:00 UTC.
+- **Model:** `claude-opus-5` — REQUIRED. OPS2 runs missed routines at full fidelity; a weaker model would degrade a caught-up regime score or foundation re-derivation.
+- **Branch:** a `claude/ops2-*` branch (same auto-merge flow as every routine).
+- **Connectors / tools — grant READ-only, NO order-craft:** BigQuery (read+write, for run-logging), FMP, Google Calendar, Gmail, and **IBKR scoped to READ tools only** via the connection's per-connector `permitted_tools` — include the `get_*` / `search_*` reads; **EXCLUDE `create_order_instruction`, `delete_order_instruction`, and any order/watchlist WRITE tool** (OPS2 must never be able to place an order). Plus the standard harness tools (Bash, Read, Write, Edit, Glob, Grep, WebFetch, WebSearch) and `RemoteTrigger`.
+
+THEN: (1) record the returned `trig_...` id in `ops/trigger_ids.json` (provenance `'api'`), and (2) flip `ops/cadence.yaml`'s OPS2 `expected_trigger.enabled` from `false` → `true`; commit both. Until you do (1)+(2), OPS2 stays correctly invisible to cadence monitoring (no false missed-run alarm), and OPS0's actionable email keeps covering all catchup_safe misses exactly as it does today — so there's no rush and nothing breaks in the interim.
+
+---
+
 # 2026-07-26 AI Park Allocator — immediate-binding redesign (owner directive)
 
 ## Z. Park allocator converts shadow → active_auto, immediate binding — no owner action required

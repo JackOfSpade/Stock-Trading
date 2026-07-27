@@ -191,6 +191,33 @@ routines:
       ops/RUNBOOK.md §15b). Probes IBKR/Calendar/FMP/Gmail read-only and raises
       connector_reauth_needed on an auth-class failure, hours before the daily cadence needs any of
       them live. Detection-only -- never refires, stages, or writes repo files.
+  - id: OPS2
+    name: Catch-up Executor
+    schedule: "after the daily chain, before OPS0's 22:30 sweep"   # runs daily incl. non-trading days
+    monitor_class: daily_all
+    catchup_safe: false      # a catch-up executor must never itself be auto-caught-up (same as OPS0)
+    depends_on: []           # DELIBERATELY independent, same rationale as OPS0 -- a routine that exists to
+                             # recover others must never be blocked by a missing dependency
+    writes: [ops.run_log, ops.catchup_refire_log, events.decision_log, ops.alerts]
+    expected_trigger:
+      recurrence: daily
+      time_local: "21:00"          # after SL3's 20:00 slot, before OPS0's 22:30 -- OPS2 executes what it
+                                    # can and OPS0 emails only the residual (owner creates this trigger;
+                                    # trig_id filled into ops/trigger_ids.json after creation)
+      enabled: false               # NOT LIVE YET -- no trigger exists until the owner creates it; kept
+                                    # false so cadence_watch does not flag OPS2 as a daily missed_run in
+                                    # the interim. OWNER STEP: create the trigger, record its trig_id in
+                                    # ops/trigger_ids.json, then flip this to true.
+    notes: >
+      Catch-up EXECUTOR (added 2026-07-27, owner directive -- the headless-RemoteTrigger workaround,
+      ops/RUNBOOK.md §15b). Reads state.catchup_refire_readiness + the non-trading-day D1/SL3 set and, for
+      each catchup_safe miss (D1/D3/SL3/OPS1 daily plus W1/W2/W3/W5, M1a/M1b/M2/M3/M5, Q1/Q2/Q3/SL1, A1/A2
+      period), EXECUTES that routine's slice INLINE in its own session (idempotency + 3h in-flight guards),
+      logging as that routine so cadence clears the miss -- so the operator no longer manually re-runs it.
+      NEVER executes D2/D2a/W4/M4/Q4/A3/SL4 (order-crafting/capital-adjacent) and carries IBKR READ tools
+      only (no order-craft surface). Anything it cannot run (missing connector, execution error, over-bound)
+      it leaves in readiness with no log row, so OPS0's 22:30 residual-email fallback still catches it.
+      Idempotent via ops.catchup_refire_log. No chat question, ever.
   - id: SL3
     name: Incubation Monitor & Graduation
     schedule: "after D2a trading_day"     # SISA arsenal loop; needs D2a's fresh marks

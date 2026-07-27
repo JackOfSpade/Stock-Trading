@@ -92,6 +92,7 @@ routines AS (
     STRUCT('D3' AS routine, 'daily_all' AS schedule),
     STRUCT('OPS0' AS routine, 'daily_all' AS schedule),
     STRUCT('OPS1' AS routine, 'daily_all' AS schedule),
+    STRUCT('OPS2' AS routine, 'daily_all' AS schedule),
     STRUCT('SL3' AS routine, 'daily_trading' AS schedule),
     STRUCT('W1' AS routine, 'weekly_sun' AS schedule),
     STRUCT('W2' AS routine, 'weekly_sun' AS schedule),
