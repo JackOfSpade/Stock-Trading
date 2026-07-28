@@ -135,6 +135,14 @@ WHERE CASE r.schedule
 -- run in the last 14 days) AND (d) have not logged 'completed' today AND (e) Denver-time is past the
 -- routines' after-close completion deadline (the DEADLINE GUARD — see below). Non-daily routines are
 -- shown for observation but excluded from the alarm (their predicted day can mismatch the real trigger).
+--
+-- SUPERSEDED LIVE by bigquery/113_never_completed_watch_fix.sql — current single source of truth for
+-- this object. 48_cadence_monitor_unbounded.sql superseded this definition first, and 113 superseded
+-- that one in turn; 113 is the canonical file. Condition (c) as described above is exactly what 113
+-- fixed: gating on "already in the monitored set" hid a routine that has NEVER logged a 'completed'
+-- run, so a routine that never ran once could never raise needs_attention (the SL1/SL4 blind spot).
+-- Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE
+-- statement live in isolation — doing so silently reverts 113's fix.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.cadence_watch` AS
 WITH watch AS (
   -- monitored/ran_completed_today computed ONCE per row here and reused below (2026-07-04 audit
