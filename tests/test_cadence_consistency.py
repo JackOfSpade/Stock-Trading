@@ -246,6 +246,7 @@ def _write_check_fixture(tmp_path):
     cadence.write_text(
         "timezone: America/Denver\n"
         'cadence_watch_deadline_local: "21:00"\n'
+        "routine_model: claude-opus-5\n"
         "routines:\n"
         "  - id: D1\n"
         "    monitor_class: daily_trading\n"
@@ -268,6 +269,12 @@ def _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, cata
     monkeypatch.setattr(cc, "CADENCE", str(cadence))
     monkeypatch.setattr(cc, "CADENCE_SQL", str(cadence_sql))
     monkeypatch.setattr(cc, "CATALOG_SQL", str(catalog_sql))
+    # check N's mirror scan is now resolved at call time (FIX 2) from CADENCE/OWNER_ACTIONS/PLAN/
+    # CATALOG_SQL -- without patching OWNER_ACTIONS too, a fixture test would silently scan the REAL
+    # repo's OWNER_ACTIONS.md instead of a fixture file. Default it to an absent path (skipped
+    # silently, same convention as the other "pre-feature checkout" paths below); tests that want to
+    # exercise check N's mirror-scan logic point this at a real fixture file themselves.
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(tmp_path / "absent_owner_actions.md"))
     monkeypatch.setattr(cc, "PERIOD_WATCH_SQL", str(tmp_path / "absent.sql"))
     monkeypatch.setattr(cc, "TRIGGERS_JSON", str(tmp_path / "absent_triggers.json"))
     monkeypatch.setattr(cc, "TRIGGER_IDS_JSON", str(tmp_path / "absent_trigger_ids.json"))
@@ -491,6 +498,7 @@ def test_check_k_removing_w5_from_59_is_caught(tmp_path, monkeypatch, capsys):
     cadence.write_text(
         "timezone: America/Denver\n"
         'cadence_watch_deadline_local: "21:00"\n'
+        "routine_model: claude-opus-5\n"
         "routines:\n"
         "  - id: D1\n"
         "    monitor_class: daily_trading\n"
@@ -521,6 +529,7 @@ def test_check_k_present_but_unparseable_59_fails_loud_not_silent(tmp_path, monk
     cadence.write_text(
         "timezone: America/Denver\n"
         'cadence_watch_deadline_local: "21:00"\n'
+        "routine_model: claude-opus-5\n"
         "routines:\n"
         "  - id: D1\n"
         "    monitor_class: daily_trading\n"
@@ -549,6 +558,7 @@ def test_check_k_missing_catchup_safe_key_is_caught(tmp_path, monkeypatch, capsy
     cadence.write_text(
         "timezone: America/Denver\n"
         'cadence_watch_deadline_local: "21:00"\n'
+        "routine_model: claude-opus-5\n"
         "routines:\n"
         "  - id: D1\n"
         "    monitor_class: daily_trading\n"  # no catchup_safe key at all
@@ -627,6 +637,7 @@ def _write_gen_fixture(tmp_path):
     cadence = tmp_path / "cadence.yaml"
     cadence.write_text(
         "timezone: America/Denver\n"
+        "routine_model: claude-opus-5\n"
         "routines:\n"
         "  - id: D1\n"
         "    monitor_class: daily_trading\n"
@@ -690,6 +701,7 @@ def test_gen_routine_lists_check_is_dirty_after_row_deleted(tmp_path, monkeypatc
     # delete W1 from cadence.yaml (simulating drift) without re-running --write
     cadence.write_text(
         "timezone: America/Denver\n"
+        "routine_model: claude-opus-5\n"
         "routines:\n"
         "  - id: D1\n"
         "    monitor_class: daily_trading\n"
@@ -817,6 +829,601 @@ def test_check_m_disarmed_when_guard_query_unparseable_is_caught(tmp_path, monke
     assert "D1" in out and "DISARMED" in out
 
 
+# ---- check N: MODEL OF RECORD mirrors (added 2026-07-28; had ZERO tests -- this section closes that
+#      gap). Renamed from a collision with check M above: both blocks had labelled themselves "M". ----
+def test_check_n_missing_routine_model_is_caught(tmp_path, monkeypatch, capsys):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    # _write_check_fixture's cadence.yaml normally declares routine_model (FIX 3) -- overwrite it here
+    # to deliberately omit the key, so this test can exercise check N's "missing" branch.
+    cadence.write_text(
+        "timezone: America/Denver\n"
+        'cadence_watch_deadline_local: "21:00"\n'
+        "routines:\n"
+        "  - id: D1\n"
+        "    monitor_class: daily_trading\n"
+        "    catchup_safe: true\n"
+    )
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert "ops/cadence.yaml: missing top-level 'routine_model'" in out
+
+
+def test_check_n_malformed_routine_model_bad_shape_is_caught(tmp_path, monkeypatch, capsys):
+    # A string that lacks the 'claude-' prefix must be rejected by MODEL_ID_VALID.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    cadence.write_text(
+        "timezone: America/Denver\n"
+        'cadence_watch_deadline_local: "21:00"\n'
+        "routine_model: opus-5\n"  # missing the 'claude-' prefix
+        "routines:\n"
+        "  - id: D1\n"
+        "    monitor_class: daily_trading\n"
+        "    catchup_safe: true\n"
+    )
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert "routine_model must be a bare Claude model id" in out and "opus-5" in out
+
+
+def test_check_n_malformed_routine_model_non_string_is_caught(tmp_path, monkeypatch, capsys):
+    # The isinstance(model, str) half of the guard is a SEPARATE branch from MODEL_ID_VALID.match --
+    # a non-string (here, a YAML int) must be caught too, not just a badly-shaped string.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    cadence.write_text(
+        "timezone: America/Denver\n"
+        'cadence_watch_deadline_local: "21:00"\n'
+        "routine_model: 5\n"  # a YAML int, not a string
+        "routines:\n"
+        "  - id: D1\n"
+        "    monitor_class: daily_trading\n"
+        "    catchup_safe: true\n"
+    )
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert "routine_model must be a bare Claude model id" in out
+
+
+def test_check_n_happy_path_mirror_matches_is_clean(tmp_path, monkeypatch):
+    # A fixture mirror file (OWNER_ACTIONS, monkeypatchable per FIX 2) quoting the SAME id as
+    # cadence.yaml's routine_model must be silent.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    owner_actions.write_text("All remote routines run claude-opus-5 today.\n")
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    assert cc.main() == 0
+
+
+def test_check_n_drifted_mirror_is_caught(tmp_path, monkeypatch, capsys):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    owner_actions.write_text("All remote routines run claude-sonnet-5 today.\n")
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    # file:line, both ids, and the model-id-exempt remediation hint must all be present.
+    assert "OWNER_ACTIONS.md:1:" in out
+    assert "claude-sonnet-5" in out and "claude-opus-5" in out
+    assert "model-id-exempt" in out
+
+
+def test_check_n_model_id_exempt_marker_suppresses_drift(tmp_path, monkeypatch):
+    # The SAME drifted line as above, but carrying the model-id-exempt marker, must be silent.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    owner_actions.write_text(
+        "Historically the fleet also tried claude-sonnet-5 (model-id-exempt — illustrative only).\n")
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    assert cc.main() == 0
+
+
+def test_check_n_fixture_model_mismatch_does_not_leak_into_real_repo_files(tmp_path, monkeypatch, capsys):
+    # REGRESSION TEST for the FIX-2 cross-contamination bug. Before FIX 2, MODEL_MIRROR_FILES was a
+    # module-level list built ONCE at import time from hardcoded os.path.join(ROOT, ...) calls -- it
+    # could never be monkeypatched, so check_model_of_record() read the routine_model VALUE from this
+    # fixture's (correctly monkeypatched) cadence.yaml but SCANNED the real repo's OWNER_ACTIONS.md /
+    # Claude_Task_Plan.md / bigquery/15_routine_catalog.sql / ops/cadence.yaml. A fixture using a model
+    # id different from the real repo's routine_model (claude-opus-5) then spuriously flagged every
+    # REAL mirror site as drifted, misdirecting a maintainer at real files that were never touched by
+    # this test. Must FAIL on pre-fix code (real paths appear in the output), PASS after (they don't).
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    cadence.write_text(
+        "timezone: America/Denver\n"
+        'cadence_watch_deadline_local: "21:00"\n'
+        "routine_model: claude-sonnet-5\n"  # deliberately DIFFERENT from the real repo's claude-opus-5
+        "routines:\n"
+        "  - id: D1\n"
+        "    monitor_class: daily_trading\n"
+        "    catchup_safe: true\n"
+    )
+    cc.main()
+    out = capsys.readouterr().out
+    assert "OWNER_ACTIONS.md" not in out
+    assert "bigquery/15_routine_catalog.sql" not in out
+    assert "ops/cadence.yaml:" not in out  # the REAL ops/cadence.yaml -- a different file from the fixture's
+
+
+# ---- check N: LOUD-BY-DEFAULT matching + precise SUBTRACTION (2026-07-28 adversarial review, THREE
+#      rounds -- see the comment block above MODEL_ID_CORE in check_cadence_consistency.py for the full
+#      history). Round 1 (a shape-tightened MODEL_ID_CORE) and Round 2 (an unsound "extends the correct
+#      id" subtraction, DEFECT A) were both tried and REVERTED; Round 2's replacement, a version-shaped
+#      bound on the ONE surviving subtraction (NOT_A_MODEL_PREFIXES, DEFECT B), is current. Tests below
+#      are grouped: (1) the one surviving subtraction class (tooling prefixes) stays narrow and correct,
+#      including its DEFECT-B version bound, (2) each of the concrete regressions from all three rounds
+#      now has a dedicated test that would have caught it, (3) the surviving pre-existing coverage
+#      (URL-strip, bracket suffix, dedup ordering, VALID-vs-RE coupling) is kept unchanged. ----
+_NOT_A_MODEL_PREFIX_TOKENS = [
+    "claude-code",
+    "claude-code-action",
+    "claude-code-settings.json",
+    "claude-agent-sdk-with-your-claude-plan",
+    "claude-cli",
+    "claude-cli-tools",
+    "claude-desktop",
+    "claude-desktop-app",
+]
+
+_MODEL_ID_GENUINE_IDS = [
+    "claude-opus-5",
+    "claude-sonnet-5",
+    "claude-fable-5",
+    "claude-opus-4-8",
+    "claude-haiku-4-5-20251001",
+]
+
+
+def test_check_n_not_a_model_prefix_tokens_are_not_flagged(tmp_path, monkeypatch):
+    # Table-driven, one token per NOT_A_MODEL_PREFIXES entry (claude-code/claude-agent-sdk/claude-cli/
+    # claude-desktop) plus a couple of realistic extensions of each -- these name CLI/SDK tooling, never
+    # a model, and must be subtracted regardless of what routine_model is set to. Asserted one token at
+    # a time so a failure names the exact offender instead of a single opaque "some token matched".
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    for token in _NOT_A_MODEL_PREFIX_TOKENS:
+        owner_actions.write_text(f"See {token} for details.\n")
+        errs, _ = cc.check_model_of_record()
+        assert errs == [], f"{token!r} was wrongly flagged as a model id: {errs}"
+
+
+def test_check_n_genuine_model_ids_are_flagged_when_they_differ(tmp_path, monkeypatch):
+    # Each id here is a real Claude model id shape; with routine_model set to something else, every one
+    # of them must still be caught as drift. Asserted one id at a time (same reason as above).
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    # routine_model deliberately outside _MODEL_ID_GENUINE_IDS, so every one of them is a genuine drift.
+    cadence.write_text(
+        "timezone: America/Denver\n"
+        'cadence_watch_deadline_local: "21:00"\n'
+        "routine_model: claude-titan-9\n"
+        "routines:\n"
+        "  - id: D1\n"
+        "    monitor_class: daily_trading\n"
+        "    catchup_safe: true\n"
+    )
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    for model_id in _MODEL_ID_GENUINE_IDS:
+        owner_actions.write_text(f"The fleet runs {model_id} today.\n")
+        errs, _ = cc.check_model_of_record()
+        assert len(errs) == 1 and model_id in errs[0], (
+            f"{model_id!r} was NOT flagged as drifted from claude-titan-9: {errs}")
+
+
+def test_check_n_bracket_suffixed_model_id_is_still_flagged(tmp_path, monkeypatch):
+    # "claude-opus-5" inside "claude-opus-5[1m]" (a context-window-suffix convention seen in prose) must
+    # still be recognized as the bare id: MODEL_ID_CORE's character class ([a-z0-9.\-]) does not include
+    # '[', so the broad match naturally stops at "claude-opus-5" and "[1m]" plays no part in tokenization.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    cadence.write_text(
+        "timezone: America/Denver\n"
+        'cadence_watch_deadline_local: "21:00"\n'
+        "routine_model: claude-titan-9\n"
+        "routines:\n"
+        "  - id: D1\n"
+        "    monitor_class: daily_trading\n"
+        "    catchup_safe: true\n"
+    )
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    owner_actions.write_text("Context window: claude-opus-5[1m] supports 1M tokens.\n")
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    errs, _ = cc.check_model_of_record()
+    assert len(errs) == 1 and "claude-opus-5" in errs[0]
+
+
+def test_check_n_model_id_inside_url_is_not_flagged(tmp_path, monkeypatch):
+    # A model id inside a plain URL (no trailing bracket/quote to bound against) is still stripped by
+    # URL_RE and so is NOT flagged -- the general "URL span is a citation, not an assertion" case.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    owner_actions.write_text("See https://example.com/claude-sonnet-5 for corroboration.\n")
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    errs, _ = cc.check_model_of_record()
+    assert errs == []
+
+
+def test_check_n_model_card_slug_with_correct_routine_model_is_now_flagged_via_exempt_marker(
+        tmp_path, monkeypatch):
+    # DEFECT A (2026-07-28 adversarial review): the OLD design subtracted a citation slug that merely
+    # EXTENDS the correct routine_model ("claude-opus-5-model-card", no http(s) prefix -- so the
+    # URL-strip defense alone could not have saved it) as "clean, not a fleet assertion". That was
+    # UNSOUND -- shape alone cannot distinguish a citation slug from a real, different sibling model id
+    # extending the same prefix (see the DEFECT-A regression test below for the live repros that proved
+    # it). The subtraction was DELETED: a bare (non-URL) 'claude-opus-5-model-card' is now FLAGGED like
+    # any other differing id, and the documented remedy is the 'model-id-exempt' marker -- assert both
+    # halves of that intended author workflow.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    owner_actions.write_text("See anthropic.com/news/claude-opus-5-model-card for the model card.\n")
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    errs, _ = cc.check_model_of_record()
+    assert len(errs) == 1 and "claude-opus-5-model-card" in errs[0]
+    # Adding the marker to the SAME line makes it clean -- the intended author remediation workflow.
+    owner_actions.write_text(
+        "See anthropic.com/news/claude-opus-5-model-card for the model card. (model-id-exempt)\n")
+    errs, _ = cc.check_model_of_record()
+    assert errs == []
+
+
+def test_check_n_slug_extending_a_different_model_is_still_flagged(tmp_path, monkeypatch):
+    # A citation slug extending a DIFFERENT id (the fleet runs opus-5; this line cites an opus-4-8
+    # system card) is FLAGGED -- erring loud -- and the author resolves it with 'model-id-exempt' if the
+    # line is genuinely just a citation, not a fleet assertion. Post-DEFECT-A this is no longer a special
+    # "asymmetric" case: with the "extends the correct id" subtraction deleted entirely, EVERY extension
+    # slug is flagged the same way, including one that extends the CORRECT id (see the exempt-marker
+    # test above) -- kept as its own test because a citation of a genuinely different sibling model is
+    # the case most likely to recur in this repo's prose (see OWNER_ACTIONS.md's own migration notes).
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    owner_actions.write_text("See anthropic.com/news/claude-opus-4-8-system-card for the model card.\n")
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    errs, _ = cc.check_model_of_record()
+    assert len(errs) == 1 and "claude-opus-4-8-system-card" in errs[0]
+
+
+def test_check_n_numeric_extension_of_routine_model_is_flagged_not_subtracted(tmp_path, monkeypatch):
+    # "claude-opus-50" STARTS WITH routine_model "claude-opus-5" character-for-character, but the next
+    # character is a digit ('0'), not '-'/'.' -- it names a DIFFERENT model (opus 50, not opus 5).
+    # NOT_A_MODEL_PREFIXES doesn't match it at all (it isn't a tooling name), so it is flagged
+    # regardless -- but this pins the shape as a standing regression guard, since it is exactly the kind
+    # of "extends the correct id" token the deleted DEFECT-A subtraction used to key off of.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    owner_actions.write_text("The fleet now runs claude-opus-50 today.\n")
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    errs, _ = cc.check_model_of_record()
+    assert len(errs) == 1 and "claude-opus-50" in errs[0]
+
+
+def test_check_n_routine_model_hitting_not_a_model_prefix_is_rejected(tmp_path, monkeypatch, capsys):
+    # Step-6 guard: a routine_model value that itself hits NOT_A_MODEL_PREFIXES (e.g. 'claude-code')
+    # could never be found by the scanner -- every mirror token starting with it would be subtracted as
+    # tooling too -- which would make the whole check vacuously pass. Must be rejected the same way a
+    # badly-shaped routine_model already is (same "malformed" error family).
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    cadence.write_text(
+        "timezone: America/Denver\n"
+        'cadence_watch_deadline_local: "21:00"\n'
+        "routine_model: claude-code\n"
+        "routines:\n"
+        "  - id: D1\n"
+        "    monitor_class: daily_trading\n"
+        "    catchup_safe: true\n"
+    )
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert "routine_model must be a bare Claude model id" in out and "claude-code" in out
+
+
+# ---- check N regression tests: each of the three concrete defects the 2026-07-28 over-tightening
+#      introduced, and that the loud-by-default redesign fixes -- one test per repro named in the
+#      redesign's own comment block, so a future re-tightening trips these first. ----
+def test_check_n_regression_claude_opus_4_latest_stale_mirror_is_flagged(tmp_path, monkeypatch, capsys):
+    # HIGH regression #1: the over-tightened MODEL_ID_RE matched 'claude-opus-4-latest' (the real
+    # -latest/-preview alias convention) ZERO times, so a fixture with a genuinely stale OWNER_ACTIONS.md
+    # mirror printed "CADENCE CONSISTENCY: OK ... matches all mirror sites" and exited 0 -- silent
+    # false-clean. Driven end-to-end via main() (not just check_model_of_record()) to reproduce the
+    # exact observed failure mode: a wrong exit code plus a misleadingly clean report.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    owner_actions.write_text("The fleet runs claude-opus-4-latest today.\n")
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert "CADENCE CONSISTENCY: OK" not in out
+    assert "claude-opus-4-latest" in out
+
+
+_DIGIT_LED_HISTORICAL_MODEL_IDS = [
+    "claude-3-5-sonnet-20241022",
+    "claude-3-opus-20240229",
+    "claude-5-opus",
+]
+
+
+def test_check_n_regression_digit_led_historical_ids_are_each_flagged(tmp_path, monkeypatch):
+    # HIGH regression #2: the over-tightened MODEL_ID_CORE required a LETTER immediately after the
+    # family hyphen ('claude-[a-z]+...'), so a real historical Anthropic id with a DIGIT right after
+    # 'claude-' matched ZERO times. Asserted per-id so a failure names the exact offender instead of an
+    # opaque "some id slipped through".
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    for model_id in _DIGIT_LED_HISTORICAL_MODEL_IDS:
+        owner_actions.write_text(f"The fleet used to run {model_id}.\n")
+        errs, _ = cc.check_model_of_record()
+        assert len(errs) == 1 and model_id in errs[0], (
+            f"{model_id!r} was NOT flagged (digit-right-after-'claude-' regression): {errs}")
+
+
+_DEFECT_A_EXTENSION_IDS = [
+    "claude-opus-5-preview",
+    "claude-opus-5-latest",
+    "claude-opus-5-beta",
+    "claude-opus-5-exp",
+    "claude-opus-5-20250219",
+    "claude-opus-5-1",
+    "claude-opus-5.1",
+]
+
+
+def test_check_n_regression_defect_a_extension_ids_are_each_flagged(tmp_path, monkeypatch):
+    # DEFECT A regression test (2026-07-28 adversarial review): each id below is a real, DIFFERENT
+    # model id shape that EXTENDS the correct routine_model ('claude-opus-5') character-for-character.
+    # The now-deleted "extends the correct id" subtraction swallowed every one of these silently
+    # (confirmed live, zero errors, before the fix) -- the exact silent false-clean this check exists to
+    # prevent. Asserted per-id so a failure names the exact offender instead of an opaque "some id
+    # slipped through", and so a future re-introduction of that subtraction trips this test first.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    for model_id in _DEFECT_A_EXTENSION_IDS:
+        owner_actions.write_text(f"All remote routines run {model_id} today.\n")
+        errs, _ = cc.check_model_of_record()
+        assert len(errs) == 1 and model_id in errs[0], (
+            f"{model_id!r} was NOT flagged (DEFECT A regression -- the deleted 'extends the correct "
+            f"id' subtraction would have silently swallowed this as clean): {errs}")
+
+
+_DEFECT_B_VERSION_SHAPED_TOOLING_TOKENS = ["claude-code-5", "claude-code-4-8", "claude-cli-2.1"]
+_DEFECT_B_GENUINE_TOOLING_EXTENSION_TOKENS = [
+    "claude-code", "claude-code-action", "claude-code-settings.json", "claude-agent-sdk-python",
+]
+
+
+def test_check_n_defect_b_tooling_prefix_version_bound(tmp_path, monkeypatch):
+    # DEFECT B (2026-07-28 adversarial review): NOT_A_MODEL_PREFIXES exists to subtract CLI/SDK tooling
+    # names, never a model -- but matching it with a blunt str.startswith() silently swallowed a
+    # hypothetical real model sharing a tooling prefix's name (confirmed live: 'claude-code-5' returned
+    # zero errors before the fix). Bound it: subtract ONLY when the remainder right after the matched
+    # prefix does NOT look version-shaped ('-' or '.' then a DIGIT). Both directions asserted here so a
+    # regression toward either "too loose" (swallows a real id) or "too strict" (flags genuine tooling
+    # mentions) is caught.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    for token in _DEFECT_B_VERSION_SHAPED_TOOLING_TOKENS:
+        owner_actions.write_text(f"The fleet now runs {token} today.\n")
+        errs, _ = cc.check_model_of_record()
+        assert len(errs) == 1 and token in errs[0], (
+            f"{token!r} should be FLAGGED (version-shaped tooling-prefix extension): {errs}")
+    for token in _DEFECT_B_GENUINE_TOOLING_EXTENSION_TOKENS:
+        owner_actions.write_text(f"See {token} for details.\n")
+        errs, _ = cc.check_model_of_record()
+        assert errs == [], f"{token!r} should be SUBTRACTED (genuine tooling extension): {errs}"
+
+
+def test_check_n_block_scalar_routine_model_trailing_newline_is_malformed_and_single_line(
+        tmp_path, monkeypatch, capsys):
+    # A YAML block scalar (routine_model: |) yields "claude-opus-5\n". A bare '$'-anchored
+    # MODEL_ID_VALID would PASS this ('$' also matches just before a trailing newline), then leak the
+    # raw embedded newline into the per-mirror mismatch f-string, breaking the single-line " - " bullet
+    # report. fullmatch must reject it outright as malformed instead.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    cadence.write_text(
+        "timezone: America/Denver\n"
+        'cadence_watch_deadline_local: "21:00"\n'
+        "routine_model: |\n"
+        "  claude-opus-5\n"
+        "routines:\n"
+        "  - id: D1\n"
+        "    monitor_class: daily_trading\n"
+        "    catchup_safe: true\n"
+    )
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    hit = [ln for ln in out.splitlines() if "routine_model must be a bare Claude model id" in ln]
+    assert len(hit) == 1, f"expected exactly one single-line malformed report, got: {hit}"
+    # the malformed value's real newline is ESCAPED by repr() ('\n' as the two characters backslash-n),
+    # not embedded raw -- confirm the bullet was not split across two printed lines by a real newline.
+    assert "\\n" in hit[0]
+
+
+def test_check_n_two_wrong_ids_on_one_line_report_in_first_appearance_order(tmp_path, monkeypatch):
+    # dict.fromkeys(...) preserves FIRST-APPEARANCE (left-to-right) order while de-duping, instead of
+    # set(...) whose iteration order varies with PYTHONHASHSEED. Assert the EXACT order (not just "both
+    # present") so this test would catch a regression back to set() even under hash randomization.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    owner_actions.write_text("Tried both claude-sonnet-5 and claude-fable-5 during evaluation.\n")
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    errs, _ = cc.check_model_of_record()  # both differ from routine_model claude-opus-5
+    assert len(errs) == 2
+    assert "claude-sonnet-5" in errs[0] and "claude-fable-5" not in errs[0]
+    assert "claude-fable-5" in errs[1] and "claude-sonnet-5" not in errs[1]
+
+
+def test_check_n_model_id_valid_and_model_id_re_shape_cannot_drift_apart():
+    # MODEL_ID_VALID (the routine_model well-formedness gate) and MODEL_ID_RE (the mirror scanner) are
+    # both built from the single MODEL_ID_CORE pattern (defect 2c) -- but sharing a source doesn't stop
+    # a future hand-edit of one without the other. Guard: every id routine_model could legitimately hold
+    # must satisfy MODEL_ID_VALID, AND running MODEL_ID_RE over the bare id must find EXACTLY that id --
+    # if a future edit widens/narrows one regex without the other, this fails.
+    for model_id in _MODEL_ID_GENUINE_IDS:
+        assert cc.MODEL_ID_VALID.fullmatch(model_id), f"{model_id!r} should satisfy MODEL_ID_VALID"
+        assert cc.MODEL_ID_RE.findall(model_id) == [model_id], (
+            f"MODEL_ID_RE does not recognize well-formed routine_model value {model_id!r} as a model id")
+
+
+# ---- check N FIX 1 (HIGH, 2026-07-28): MODEL_EXEMPT anchored with \b on both sides. Pre-fix it was an
+#      unanchored substring search, and check_model_of_record() skips the ENTIRE line on a match -- so an
+#      ordinary word containing 'model-id-exempt' as an infix silently suppressed a REAL drift reported
+#      on the same line. Confirmed live pre-fix: a line naming a genuinely stale id but also containing
+#      "model-id-exemption-only" printed "CADENCE CONSISTENCY: OK" and exited 0. ----
+def test_check_n_exempt_marker_word_boundary_per_string(tmp_path, monkeypatch):
+    # Each line below names the SAME stale id (claude-sonnet-5, differing from the fixture's
+    # routine_model claude-opus-5) but varies only the marker-shaped text following it. Asserted one
+    # string at a time so a failure names the exact offender, per the task's per-string requirement.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    cases = [
+        # (line, should_still_be_flagged)
+        ("The fleet upgraded from claude-sonnet-5 last quarter; that citation is "
+         "model-id-exemption-only, not a live assertion.", True),
+        ("The fleet upgraded from claude-sonnet-5 last quarter (model-id-exempted, not current).", True),
+        ("The fleet upgraded from claude-sonnet-5 last quarter (nonmodel-id-exempt).", True),
+        ("The fleet upgraded from claude-sonnet-5 last quarter (model-id-exempt).", False),
+        ("The fleet upgraded from claude-sonnet-5 last quarter. model-id-exempt.", False),
+    ]
+    for line, should_flag in cases:
+        owner_actions.write_text(line + "\n")
+        errs, _ = cc.check_model_of_record()
+        flagged = len(errs) == 1 and "claude-sonnet-5" in errs[0]
+        assert flagged == should_flag, (
+            f"{line!r}: expected flagged={should_flag} but got errs={errs}")
+
+
+# ---- check N FIX 2 (HIGH, 2026-07-28): MODEL_ID_RE's leading \b dropped (trailing \b kept). Pre-fix, a
+#      dropped-space typo that fused an id into the previous word hid it from the scanner entirely. ----
+def test_check_n_regression_glued_no_space_id_is_flagged(tmp_path, monkeypatch):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    owner_actions.write_text("Fleet nowclaude-sonnet-5 is the model.\n")
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    errs, _ = cc.check_model_of_record()
+    assert len(errs) == 1 and "claude-sonnet-5" in errs[0]
+
+
+def test_check_n_regression_glued_no_space_id_after_verb_is_flagged(tmp_path, monkeypatch):
+    # Second glued-typo shape named in the redesign (a different preceding word), kept as its own test
+    # since the task calls out both 'nowclaude-sonnet-5' and 'runsclaude-sonnet-5' as live repros.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    owner_actions.write_text("The fleet runsclaude-sonnet-5 today.\n")
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    errs, _ = cc.check_model_of_record()
+    assert len(errs) == 1 and "claude-sonnet-5" in errs[0]
+
+
+# ---- check N FIX 3 (MEDIUM, operator-requested, 2026-07-28): URL_RE's character class also excludes
+#      ',' ';' '|' '<' '(' '[' '{' -- natural sentence delimiters it previously still admitted, so a
+#      genuine stale id sitting right after one of them (still on the same line as the URL) was eaten
+#      along with the URL and never scanned. One test per delimiter, plus one confirming the genuine
+#      in-URL-path citation case (no delimiter before the slug) is still NOT flagged. The markdown-link
+#      closing-paren delimiter is covered by test_check_n_url_delimiter_markdown_paren_stale_id_is_flagged
+#      BELOW, which also carries the Round-1 greedy-URL_RE regression that once lived in a separate
+#      test of its own (the two asserted the same shape with the same id, so they were merged
+#      2026-07-28 rather than kept as a false distinction). ----
+def test_check_n_url_delimiter_comma_stale_id_is_flagged(tmp_path, monkeypatch):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    owner_actions.write_text("See https://example.com/x,claude-sonnet-4 is stale\n")
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    errs, _ = cc.check_model_of_record()
+    assert len(errs) == 1 and "claude-sonnet-4" in errs[0]
+
+
+def test_check_n_url_delimiter_semicolon_stale_id_is_flagged(tmp_path, monkeypatch):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    owner_actions.write_text("See https://example.com/x;claude-sonnet-4 is stale\n")
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    errs, _ = cc.check_model_of_record()
+    assert len(errs) == 1 and "claude-sonnet-4" in errs[0]
+
+
+def test_check_n_url_delimiter_pipe_stale_id_is_flagged(tmp_path, monkeypatch):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    owner_actions.write_text("See https://example.com/x|claude-sonnet-4 is stale\n")
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    errs, _ = cc.check_model_of_record()
+    assert len(errs) == 1 and "claude-sonnet-4" in errs[0]
+
+
+def test_check_n_url_delimiter_angle_bracket_stale_id_is_flagged(tmp_path, monkeypatch):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    owner_actions.write_text("<https://example.com/x>claude-sonnet-4 remains\n")
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    errs, _ = cc.check_model_of_record()
+    assert len(errs) == 1 and "claude-sonnet-4" in errs[0]
+
+
+def test_check_n_url_delimiter_markdown_paren_stale_id_is_flagged(tmp_path, monkeypatch):
+    # Covers TWO things with the same shape, merged into one test (2026-07-28: the two were previously
+    # separate tests with the identical id/context and a docstring on this one falsely claiming the
+    # other test covered "a different id/context" -- it didn't):
+    #   1. The original Round-1 regression: the old greedy URL_RE (r"https?://\S+", bounded only by
+    #      whitespace) swallowed a genuine model id sitting immediately after a markdown link's closing
+    #      ')' with no space. URL_RE now stops at the closing bracket, so the id is left behind and
+    #      still scanned.
+    #   2. The later FIX 3 delimiter-bounding work's explicit table row for this exact shape, alongside
+    #      its siblings above (comma, semicolon, pipe, angle bracket).
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    owner_actions.write_text("[t](https://example.com/x)claude-sonnet-4 remains\n")
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    errs, _ = cc.check_model_of_record()
+    assert len(errs) == 1 and "claude-sonnet-4" in errs[0]
+
+
+def test_check_n_genuine_url_citation_slug_still_not_flagged(tmp_path, monkeypatch):
+    # FIX 3 regression guard: a genuine model-id-shaped slug living INSIDE a URL path with NO delimiter
+    # before it (an ordinary citation, e.g. an Anthropic model-card URL) must remain unflagged -- FIX 3
+    # only bounds the strip at extra DELIMITER characters, it must not start splitting on ordinary path
+    # segments.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    for line in [
+        "see https://anthropic.com/news/claude-opus-4-8-system-card for the announcement\n",
+        "docs at https://docs.anthropic.com/claude-opus-4-8 today\n",
+    ]:
+        owner_actions.write_text(line)
+        errs, _ = cc.check_model_of_record()
+        assert errs == [], f"{line!r} should not be flagged: {errs}"
+
+
 # ---- check I: expected_trigger structural validation (every failure branch was untested) ----
 def _setup_check_i(tmp_path, monkeypatch, routine_block):
     plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
@@ -824,6 +1431,7 @@ def _setup_check_i(tmp_path, monkeypatch, routine_block):
     cadence.write_text(
         "timezone: America/Denver\n"
         'cadence_watch_deadline_local: "21:00"\n'
+        "routine_model: claude-opus-5\n"
         "routines:\n" + routine_block)
     ids = tmp_path / "trigger_ids.json"
     ids.write_text('{"D1": {"trigger_id": "trig_A", "verified_via": "api"}}')
@@ -898,6 +1506,7 @@ def test_missing_monitor_class_is_caught(tmp_path, monkeypatch, capsys):
     cadence.write_text(
         "timezone: America/Denver\n"
         'cadence_watch_deadline_local: "21:00"\n'
+        "routine_model: claude-opus-5\n"
         "routines:\n  - id: D1\n    catchup_safe: true\n")  # monitor_class omitted entirely
     assert cc.main() == 1
     assert "missing monitor_class in ops/cadence.yaml" in capsys.readouterr().out
@@ -909,6 +1518,7 @@ def test_bad_monitor_class_vocabulary_is_caught(tmp_path, monkeypatch, capsys):
     cadence.write_text(
         "timezone: America/Denver\n"
         'cadence_watch_deadline_local: "21:00"\n'
+        "routine_model: claude-opus-5\n"
         "routines:\n  - id: D1\n    monitor_class: hourly_bogus\n    catchup_safe: true\n")
     assert cc.main() == 1
     assert "monitor_class 'hourly_bogus' not in" in capsys.readouterr().out
@@ -932,6 +1542,7 @@ def test_duplicate_cadence_routine_id_is_caught(tmp_path, monkeypatch, capsys):
     cadence.write_text(
         "timezone: America/Denver\n"
         'cadence_watch_deadline_local: "21:00"\n'
+        "routine_model: claude-opus-5\n"
         "routines:\n"
         "  - id: D1\n"
         "    monitor_class: daily_trading\n"
@@ -970,6 +1581,7 @@ _AR_ATT_PLAN = (
 _AR_ATT_CADENCE = (
     "timezone: America/Denver\n"
     'cadence_watch_deadline_local: "21:00"\n'
+    "routine_model: claude-opus-5\n"
     "routines:\n"
     "  - id: D1\n    monitor_class: daily_trading\n    catchup_safe: true\n"
     "  - id: AR_att\n    monitor_class: queue_driven\n    catchup_safe: false\n")
@@ -1019,3 +1631,93 @@ def test_main_against_real_repo_is_clean():
     # ops/triggers.json + ops/trigger_ids.json + .github/workflows/auto-merge-claude.yml must all
     # still agree — the full, unpatched end-to-end happy path.
     assert cc.main() == 0
+
+
+# ---- check N FIX 4 (HIGH, 2026-07-28): _tooling_prefix_hides_version now also treats a digit GLUED
+#      directly onto a NOT_A_MODEL_PREFIXES token (no '-'/'.' separator) as version-shaped, not ordinary
+#      tooling. Pre-fix, only a SEPARATED version ('claude-code-5') was recognized -- a digit glued
+#      straight on ('claude-code5') fell through both branches of the old check and was silently
+#      SUBTRACTED as tooling. Confirmed live pre-fix: a mirror line "The fleet now runs claude-code5
+#      today, replacing an older configuration." with routine_model='claude-opus-5' made main() print
+#      "CADENCE CONSISTENCY: OK ... matches all mirror sites" and exited 0. Same for claude-code58,
+#      claude-cli9, claude-desktop3, claude-agent-sdk7. ----
+_GLUED_DIGIT_VERSION_SHAPED_TOOLING_TOKENS = [
+    "claude-code5", "claude-code58", "claude-cli9", "claude-desktop3", "claude-agent-sdk7",
+]
+# Non-regression: a tooling token whose remainder starts with a LETTER (no version signal at all,
+# glued or separated) must still be subtracted, exactly as before this fix -- 'claude-codebase' is the
+# new case this fix must NOT start flagging (its remainder 'base' starts with a letter, not a digit).
+_GLUED_DIGIT_GENUINE_TOOLING_EXTENSION_TOKENS = [
+    "claude-code", "claude-codebase", "claude-code-action", "claude-code-settings.json",
+    "claude-agent-sdk-python",
+]
+
+
+def test_check_n_defect_b_glued_digit_tooling_prefix_also_flagged(tmp_path, monkeypatch):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    for token in _GLUED_DIGIT_VERSION_SHAPED_TOOLING_TOKENS:
+        owner_actions.write_text(f"The fleet now runs {token} today, replacing an older configuration.\n")
+        errs, _ = cc.check_model_of_record()
+        assert len(errs) == 1 and token in errs[0], (
+            f"{token!r} should be FLAGGED (digit glued directly onto tooling prefix, no separator): {errs}")
+    for token in _GLUED_DIGIT_GENUINE_TOOLING_EXTENSION_TOKENS:
+        owner_actions.write_text(f"See {token} for details.\n")
+        errs, _ = cc.check_model_of_record()
+        assert errs == [], (
+            f"{token!r} should still be SUBTRACTED (genuine tooling extension, non-regression): {errs}")
+
+
+def test_check_n_defect_b_glued_digit_helper_directly():
+    # Same table, asserted straight against the helper functions this fix actually changed -- pins the
+    # unit-level contract independently of check_model_of_record()'s line-scanning plumbing.
+    for token in _GLUED_DIGIT_VERSION_SHAPED_TOOLING_TOKENS:
+        assert not cc._is_subtracted_non_assertion(token), (
+            f"{token!r} should NOT be subtracted (version-shaped, glued digit)")
+    for token in _GLUED_DIGIT_GENUINE_TOOLING_EXTENSION_TOKENS:
+        assert cc._is_subtracted_non_assertion(token), (
+            f"{token!r} should be subtracted (genuine tooling extension)")
+
+
+# ---- check N FIX 5 (HIGH, 2026-07-28): MODEL_EXEMPT's trailing \b (satisfied by ANY non-word
+#      character, including '-') let a LONGER hyphen-continued token that merely STARTS WITH the marker
+#      -- a filename or config-key mention like 'model-id-exempt-list.md' or 'model-id-exempt-routines:'
+#      -- also match. Since check_model_of_record() skips the ENTIRE line on a MODEL_EXEMPT match, such a
+#      false hit silently suppressed a genuine drift reported on the same line. Fixed by replacing the
+#      trailing \b with a negative lookahead, `(?![-\w])`, that additionally rejects a hyphen
+#      continuation. ----
+def test_check_n_exempt_marker_rejects_hyphen_continuation_per_string():
+    # Table asserted directly against the compiled MODEL_EXEMPT regex, one string at a time so a
+    # failure names the exact offending string instead of an opaque "some case failed".
+    cases = [
+        ("model-id-exempt", True),
+        ("x model-id-exempt.", True),
+        ("marked model-id-exempt, a cite", True),  # natural prose comma
+        ("model-id-exempt-list.md", False),
+        ("model-id-exempt-routines:", False),
+        ("model-id-exemption-only", False),
+        ("model-id-exempted", False),
+        ("nonmodel-id-exempt", False),
+    ]
+    for text, should_suppress in cases:
+        matched = bool(cc.MODEL_EXEMPT.search(text))
+        assert matched == should_suppress, (
+            f"{text!r}: expected suppress={should_suppress}, got {matched}")
+
+
+def test_check_n_exempt_marker_hyphen_continued_filename_does_not_hide_real_drift(tmp_path, monkeypatch):
+    # The worst-case consequence of the pre-fix bug: a line with a GENUINE stale id that also happens to
+    # mention a hyphen-continued marker-shaped filename ('model-id-exempt-list.md') must still be
+    # flagged -- the marker must not accidentally suppress the whole line just because it is a PREFIX of
+    # a longer, unrelated hyphenated token.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    owner_actions.write_text(
+        "The fleet upgraded from claude-sonnet-5 last quarter; see model-id-exempt-list.md for the "
+        "historical roster.\n")
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    errs, _ = cc.check_model_of_record()
+    assert len(errs) == 1 and "claude-sonnet-5" in errs[0]

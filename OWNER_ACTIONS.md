@@ -20,7 +20,7 @@ routines always run the SAME model; that is a standing invariant, not a per-rout
 1. **Update `ops/cadence.yaml`'s top-level `routine_model:` key** to the new model id. This is the
    single source of truth the repo reads — the web-UI trigger config is the real config, and this key
    is its version-controlled mirror.
-2. **Run `python3 scripts/check_cadence_consistency.py`.** Check M compares `routine_model` against
+2. **Run `python3 scripts/check_cadence_consistency.py`.** Check N compares `routine_model` against
    every site that restates it (`ops/cadence.yaml`, this file, `Claude_Task_Plan.md`,
    `bigquery/15_routine_catalog.sql`) and names each file:line still carrying the old id. Fix what it
    lists. A line that names a model *illustratively or historically* rather than as a fleet assertion
