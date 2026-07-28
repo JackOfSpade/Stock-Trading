@@ -14,6 +14,15 @@
 -- in ops/cadence.yaml `period_grace_days` and mirrored here — scripts/check_cadence_consistency.py
 -- (CI) asserts they agree, the same discipline as the existing deadline-literal check.
 
+-- SUPERSEDED LIVE by bigquery/113_never_completed_watch_fix.sql (2026-07-27 interactive-session audit,
+-- alerts 56aeef9c/7d585732) — current single source of truth for this VIEW. 113 drops the `monitored`
+-- (has-ever-completed) precondition from `period_missed` so a routine that has NEVER completed can still
+-- alarm once its current period's grace deadline passes — the gate below hid SL1/SL4 (SISA, trigger-
+-- created 2026-07-10 after their only in-period cron slot had already passed) from every dead-man's
+-- switch permanently, not just during bootstrap. This file's `routines` CTE + period_grace_days literals
+-- (what scripts/check_cadence_consistency.py actually parses) are UNCHANGED and remain canonical here —
+-- 113 carries a byte-for-byte copy for its own self-contained CTE chain only. Kept here, unmodified, for
+-- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.cadence_period_watch` AS
 WITH t AS (SELECT today FROM `stock-trading-498512.state.trading_day_today`),
 periods AS (
