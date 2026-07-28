@@ -10,6 +10,39 @@ act. Dated passes below; most recent first.
 
 ---
 
+# STANDING PROCEDURE (not a dated one-off) — when you change the model on the routine triggers
+
+**Read this whenever you switch the remote-routine fleet to a different Claude model.** All remote
+routines always run the SAME model; that is a standing invariant, not a per-routine setting.
+
+**Do this in the same pass as the web-UI change:**
+
+1. **Update `ops/cadence.yaml`'s top-level `routine_model:` key** to the new model id. This is the
+   single source of truth the repo reads — the web-UI trigger config is the real config, and this key
+   is its version-controlled mirror.
+2. **Run `python3 scripts/check_cadence_consistency.py`.** Check M compares `routine_model` against
+   every site that restates it (`ops/cadence.yaml`, this file, `Claude_Task_Plan.md`,
+   `bigquery/15_routine_catalog.sql`) and names each file:line still carrying the old id. Fix what it
+   lists. A line that names a model *illustratively or historically* rather than as a fleet assertion
+   gets the marker `model-id-exempt` instead. **CI runs this check, so a missed mirror fails the build
+   rather than silently rotting.**
+3. **Trigger a foundation cycle** — `AI_Trading_Foundation.md`'s in-use-Claude-version field is written
+   only by **A3**, which is `catchup_safe: false` and next scheduled for the first trading day of
+   January. It is also gated same-day on A1 and A2. So a mid-year model change does **not** reach the
+   foundation document on its own: run **A1 → A2 → A3 on the same day**, or the document keeps
+   describing the previous model until January. A3 then executes the Part 4 version-change protocol
+   (flip Tier 2 magnitudes to version-pending) and `ops/foundation_change_review.md` §C.
+
+**Why this is written down.** Steps 1–2 used to be a comment inside the file that goes stale, addressed
+to someone who had already opened it — and that manual sync has failed in practice at least once
+(commit `f347b8f`, 2026-07-26: you switched all 33 routines to `claude-opus-5` and the in-repo comment
+"was already stale even before that"). Step 3 exists because detection is quarterly at best while the
+write is annual. The consequence of skipping these is not cosmetic: A1/Q3 read the model of record to
+decide which model's capability research is decision-relevant, so a stale value silently anchors the
+entire foundation document — and every strategy constraint derived from it — to a model you no longer run.
+
+---
+
 # 2026-07-27 OPS2 Catch-up Executor — owner must create the trigger (RemoteTrigger create is session-blocked)
 
 ## OPS2. Create the OPS2 "Catch-up Executor" scheduled trigger — `[DONE 2026-07-27 — owner created trig_01DLrkbtpDvox1N7meiFMXYe; trig_id recorded + enabled:true]`

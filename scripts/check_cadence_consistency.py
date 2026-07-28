@@ -82,6 +82,61 @@ AUTO_MERGE_YML = os.path.join(ROOT, ".github", "workflows", "auto-merge-claude.y
 CATCHUP_NOTIFY_SQL = os.path.join(ROOT, "bigquery", "31_catchup_notify.sql")
 CATCHUP_AUTOFIRE_SQL = os.path.join(ROOT, "bigquery", "59_catchup_autofire.sql")
 
+# ---- check M: MODEL OF RECORD mirrors (added 2026-07-28, owner directive) ----
+# ops/cadence.yaml's top-level `routine_model` is the single source of truth for which Claude model
+# the owner configured for the remote-routine fleet ("we will always use the same model for all remote
+# routines"). Several prose/SQL sites RESTATE that id; before this check they agreed only by hand, and
+# that manual sync had already failed once in practice (commit f347b8f, 2026-07-26: the owner switched
+# all 33 routines to claude-opus-5 and the in-repo comment "was already stale even before that").
+# A stale mirror is not cosmetic: A1/Q3 read the model of record to decide which model's capability
+# research is decision-relevant and which Tier 2 magnitudes flip to version-pending, so a wrong value
+# silently anchors the whole foundation document to a model the experiment does not run.
+# This check makes the mirrors machine-enforced: change routine_model, and CI names every file that
+# still disagrees. Research/history files (Quarterly_AI_Foundation_Delta.md, Monthly_AI_Capabilities.md,
+# Annual_AI_Foundation_Sweep.md) are deliberately NOT scanned — they legitimately name many models.
+# AI_Trading_Foundation.md is also NOT scanned: its in-use-version field is prose ("Claude Opus 4.7"),
+# is written only by the annual A3, and coupling CI to A3's cadence would fail the build for months.
+MODEL_MIRROR_FILES = [
+    os.path.join(ROOT, "ops", "cadence.yaml"),
+    os.path.join(ROOT, "OWNER_ACTIONS.md"),
+    os.path.join(ROOT, "Claude_Task_Plan.md"),
+    os.path.join(ROOT, "bigquery", "15_routine_catalog.sql"),
+]
+MODEL_ID_RE = re.compile(r"\bclaude-[a-z0-9][a-z0-9.\-]*\b")
+MODEL_ID_VALID = re.compile(r"^claude-[a-z0-9][a-z0-9.\-]*$")
+# A line carrying this marker names a model id for illustration/history, not as a fleet assertion.
+MODEL_EXEMPT = re.compile(r"model-id-exempt")
+
+
+def check_model_of_record():
+    """`routine_model` exists and is well-formed, and every mirror site quotes the same id."""
+    errs = []
+    doc = yaml.safe_load(open(CADENCE, encoding="utf-8")) or {}
+    model = doc.get("routine_model")
+    if model is None:
+        return ["ops/cadence.yaml: missing top-level 'routine_model' — it is the source of truth for "
+                "which Claude model the owner configured for the remote-routine fleet, and A1/Q3/A3 "
+                "read it to anchor AI_Trading_Foundation.md's in-use-version field. Re-add it."], None
+    if not (isinstance(model, str) and MODEL_ID_VALID.match(model)):
+        return [f"ops/cadence.yaml: routine_model must be a bare Claude model id like "
+                f"'claude-opus-5' (got {model!r})"], None
+    for path in MODEL_MIRROR_FILES:
+        if not os.path.exists(path):
+            continue
+        rel = os.path.relpath(path, ROOT)
+        for n, line in enumerate(open(path, encoding="utf-8"), 1):
+            if MODEL_EXEMPT.search(line):
+                continue
+            for found in set(MODEL_ID_RE.findall(line)):
+                if found != model:
+                    errs.append(
+                        f"{rel}:{n}: names model '{found}' but ops/cadence.yaml routine_model is "
+                        f"'{model}'. All remote routines run the SAME model, so every mirror must "
+                        f"quote it. If the owner changed the fleet model, update routine_model AND "
+                        f"this line in the same pass; if this line is illustrative or historical "
+                        f"rather than a fleet assertion, add the marker 'model-id-exempt' to it.")
+    return errs, model
+
 # The RUNBOOK §38 marker-write routine-id allowlist: routine_re='^(D1|D2a|...)$'
 AUTO_MERGE_ROUTINE_RE = re.compile(r"routine_re='\^\(([^)]+)\)\$'")
 
@@ -650,6 +705,10 @@ def main():
                         f"cannot cancel the genuine evening run (see the shared Observability guard's "
                         f"CYCLE-AWARE VARIANT).")
 
+    # ---- M. model of record: cadence.yaml routine_model == every mirror site ----
+    model_errs, model_of_record = check_model_of_record()
+    errors.extend(model_errs)
+
     # ---- report ----
     if errors:
         print("CADENCE CONSISTENCY: FAIL\n")
@@ -665,6 +724,8 @@ def main():
         extra += " period_grace_days matches 24_cadence_period_watch.sql."
     if os.path.exists(TRIGGERS_JSON):
         extra += " ops/triggers.json is current."
+    if model_of_record:
+        extra += f" routine_model {model_of_record} matches all mirror sites."
     print(f"CADENCE CONSISTENCY: OK — {len(cad)} routines; "
           f"{len(want_expected)} calendar-class match state.cadence_expected_today; "
           f"{len(have_catalog)} catalog entries match the plan headings; "

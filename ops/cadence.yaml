@@ -31,9 +31,9 @@ timezone: America/Denver
 # model was a prose comment in OWNER_ACTIONS.md and an aside in the OPS2 slice, so A1/Q3 had no
 # authoritative field to read and risked anchoring the foundation to the current FRONTIER model
 # instead of the DEPLOYED one. Those are routinely different: as of 2026-07-28 Anthropic's most
-# capable widely-released model was `claude-fable-5`, while the configured fleet model was
-# `claude-opus-5` — anchoring to Fable 5 would have made the entire foundation document describe
-# a model this experiment does not run.
+# capable widely-released model was `claude-fable-5` (model-id-exempt — illustrative, not a fleet
+# assertion), while the configured fleet model was the one below — anchoring to the frontier would
+# have made the entire foundation document describe a model this experiment does not run.
 #
 # KEEP IN SYNC: when the owner changes the model on the triggers, update this key in the same pass.
 # A1/Q3 read it as the in-use model of record; if it ever disagrees with the live trigger config,
