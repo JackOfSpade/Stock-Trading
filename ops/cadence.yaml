@@ -218,6 +218,17 @@ routines:
     schedule: "after the daily chain, before OPS0's 22:30 sweep"   # runs daily incl. non-trading days
     monitor_class: daily_all
     catchup_safe: false      # a catch-up executor must never itself be auto-caught-up (same as OPS0)
+    # ops.run_log CANNOT PROVE THIS TRIGGER FIRED (learned the hard way 2026-07-28). OPS2's SAME-DAY
+    # DOUBLE-RUN GUARD (task_plan/OPS2.md, the generalized guard bullet) runs FIRST, BEFORE run-logging,
+    # and on finding OPS2 already completed today it ends immediately and deliberately writes NO
+    # started/completed row. So a scheduled fire that lands on a day OPS2 already ran (e.g. after a manual
+    # smoke test) leaves ZERO trace in ops.run_log. On 2026-07-28 an interactive session read that absence
+    # as "the trigger has never fired", raised a trigger_never_fired alert, and began building a
+    # run_log-derived "trigger never fired on schedule" detector -- all wrong: Claude-in-Chrome confirmed
+    # in claude.ai/code/routines that the trigger is ACTIVE, on the correct cron, and had COMPLETED its
+    # 2026-07-27 22:15 scheduled fire. The alert was retracted and the detector abandoned, because no
+    # check inferring trigger health from ops.run_log alone can distinguish "never fired" from "fired and
+    # was correctly guard-suppressed". VERIFY A TRIGGER IN THE ROUTINES CONSOLE, NOT THE DATABASE.
     depends_on: []           # DELIBERATELY independent, same rationale as OPS0 -- a routine that exists to
                              # recover others must never be blocked by a missing dependency
     writes: [ops.run_log, ops.catchup_refire_log, events.decision_log, ops.alerts]
@@ -231,6 +242,23 @@ routines:
       enabled: true                # LIVE 2026-07-27: owner created trig_01DLrkbtpDvox1N7meiFMXYe
                                     # (cron 15 4 * * * = ~21:15 MT, retimed 2026-07-27 for DST-robustness;
                                     # model claude-opus-5); trig_id recorded in ops/trigger_ids.json.
+                                    #
+                                    # STANDING ADDENDUM DELIBERATELY OMITTED (owner-confirmed 2026-07-28).
+                                    # Every OTHER routine's live trigger carries the operator's standing
+                                    # second paragraph ("Spawn Sonnet 5 model sub-agents to do the grunt
+                                    # work. Save your processing (Opus 5) for design/analysis/orchestration
+                                    # work only."). OPS2's does NOT, on purpose: OPS2 HOSTS other routines
+                                    # inline at full fidelity, and its own slice's hosting requirement (a)
+                                    # NO MODEL DOWNGRADE ("execute X's judgment-heavy steps at that
+                                    # fidelity, NOT on a weaker sub-agent model ... never to downgrade the
+                                    # model") is in direct tension with a blanket instruction to push grunt
+                                    # work onto Sonnet sub-agents. Do NOT "fix" this by adding the addendum
+                                    # to OPS2 -- a hand comparison against OPS0 will keep surfacing it as a
+                                    # difference, and it is the intended one.
+                                    # NOTE state.instruction_drift cannot see this either way: it compares
+                                    # the FIRST LINE ONLY (REGEXP_EXTRACT(instruction, r'^[^\n]*'), by
+                                    # design, so the addendum's wording never trips drift), so the addendum
+                                    # is unmonitored for EVERY routine -- this comment is the only record.
     notes: >
       Catch-up EXECUTOR (added 2026-07-27, owner directive -- the headless-RemoteTrigger workaround,
       ops/RUNBOOK.md §15b). Reads state.catchup_refire_readiness + the non-trading-day D1/SL3 set and, for
