@@ -35,7 +35,7 @@ FROM UNNEST([
 --   covers the queue-driven SL2/SL5 as well as SL1/SL3/SL4.
 --
 -- GENERATED (scripts/gen_routine_lists.py --write, ARCH-3 Item 30b, 2026-07-16) from ops/cadence.yaml
--- + Claude_Task_Plan.md headings: one row per routine (ALL 30, cadence.yaml file order), instruction
+-- + Claude_Task_Plan.md headings: one row per routine (ALL 32, cadence.yaml file order), instruction
 -- text derived from the matching plan heading exactly as check_cadence_consistency.py's check B
 -- derives it. Do NOT hand-edit the marked region below -- edit ops/cadence.yaml / the plan heading and
 -- re-run `python scripts/gen_routine_lists.py --write`. CI step `gen_routine_lists.py --check` verifies

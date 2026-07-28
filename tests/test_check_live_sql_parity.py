@@ -578,8 +578,11 @@ def test_main_fails_closed_when_every_object_is_skipped(monkeypatch, capsys):
 
 def test_main_json_out_writes_findings_skips_and_missing_objects(tmp_path, monkeypatch):
     # FIX 2/3 (2026-07-28): three distinct outcomes across three objects -- a real mismatch (a
-    # "findings" self-heal candidate), a lookup exception (a "skipped" inconclusive read), and a
-    # genuine absence (a "missing_objects" entry -- non-zero exit, but NEVER merged into "findings").
+    # "findings" re-apply self-heal candidate), a lookup exception (a "skipped" inconclusive read),
+    # and a genuine absence (a "missing_objects" CREATE self-heal candidate as of the 2026-07-28
+    # owner directive -- non-zero exit, but its own category, NEVER merged into "findings", because
+    # the two categories drive different self-heal actions -- re-apply vs. create; see
+    # write_json_out()'s docstring).
     out_path = tmp_path / "findings.json"
     monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py", "--json-out", str(out_path)])
     monkeypatch.setattr(clsp, "find_final_definitions", lambda: {
@@ -598,7 +601,9 @@ def test_main_json_out_writes_findings_skips_and_missing_objects(tmp_path, monke
     assert clsp.main() == 1
     payload = json.loads(out_path.read_text())
     assert [f["name"] for f in payload["findings"]] == ["drifted"]     # only the real mismatch is a finding
-    assert not any("gone" in f["name"] for f in payload["findings"])   # absence is NEVER a self-heal finding
+    assert not any("gone" in f["name"] for f in payload["findings"])   # absence never lands in "findings"
+                                                                        # (own key -> own self-heal action,
+                                                                        # not "never a self-heal candidate")
     assert any("flaky" in s for s in payload["skipped"])               # the lookup failure is a skip
     assert not any("gone" in s for s in payload["skipped"])            # ...and absence is no longer a skip
     assert any("gone" in s for s in payload["missing_objects"])        # absence gets its own category

@@ -45,8 +45,27 @@ later CREATE OR REPLACE, processing both in TEXTUAL apply order within each file
 that function's docstring); (2) main() now distinguishes a live lookup that FAILED (exception —
 inconclusive, stays a "skipped" entry, never fails the run by itself) from a live lookup that
 SUCCEEDED with zero rows for an object still genuinely expected (positive evidence of a real
-deployment gap — a new "missing_objects" category, printed distinctly, non-zero exit, and
-deliberately excluded from "findings"/self-heal consumption; see write_json_out()'s docstring).
+deployment gap — a new "missing_objects" category, printed distinctly, non-zero exit, and kept under
+its OWN JSON key, separate from "findings", because the correct downstream action differs — CREATE,
+not re-apply — and the compensating rails differ too; see write_json_out()'s docstring).
+
+SELF-HEAL CONSUMPTION OF missing_objects — OWNER DIRECTIVE 2026-07-28 (SUPERSEDES the original
+"human-authorized step only" design this comment stated when the category was introduced, above).
+missing_objects is now consumed AUTONOMOUSLY, with no human approval step, by the same D3
+CI-FINDINGS ADJUDICATION self-heal loop that already re-applies drifted "findings" objects
+(Claude_Task_Plan.md D3, new branch (d)) — consistent with this repo's standing SISA posture that
+compensating controls are MECHANICAL RAILS, not a human review gate (CLAUDE.md). This script's own
+job is unchanged by that directive: it only detects and reports (this docstring + write_json_out()'s
+docstring below are the only things that changed here). The rails that make autonomous creation safe
+live in D3's prose, not in this file: the existing >=2-daily-run persistence requirement, the existing
+7-day non-convergence latch, the existing 10-objects-per-session bound (now shared across re-apply +
+create), a NEW mechanical DROP-guard (grep bigquery/*.sql for a DROP of the object before creating —
+an independent second check against resurrecting something bigquery/92/108 deliberately retired, that
+does not depend on this script's own DROP_STMT parsing being correct), and NEVER creating a TABLE
+object (mirrors the existing never-re-apply-a-TABLE rule for drifted "findings"). See
+.github/workflows/live-sql-parity.yml (FIX 2) for how a missing_objects entry reaches
+ops.ci_findings — detail begins with the literal marker "MISSING: " so the CI-findings consumer can
+tell a missing-object row apart from a drift row without re-deriving it.
 
 Usage:  python scripts/check_live_sql_parity.py --project stock-trading-498512
         python scripts/check_live_sql_parity.py --offline   # parser self-check only, no bq calls
@@ -427,10 +446,9 @@ def write_json_out(json_out_path, findings, missing_live, missing_objects):
     THREE distinct categories, each under its OWN JSON key — do not merge any of them:
 
       * "findings"         -- a real MISMATCH: the object exists both in the repo's final-effective
-                               bigquery/*.sql and live, but the text differs. The ONLY category safe
-                               to feed an automated re-apply/self-heal: the object already exists
-                               live, so re-applying the repo's current definition only corrects
-                               drift, it does not create anything new.
+                               bigquery/*.sql and live, but the text differs. Self-heal action:
+                               RE-APPLY the repo's current definition — the object already exists
+                               live, so this only corrects drift, it does not create anything new.
       * "skipped"           -- a live LOOKUP FAILED (exception: bq/auth error, timeout, etc.) --
                                NOT evidence of drift or of absence, just an inconclusive read. Never
                                a self-heal candidate; can starve `checked` to 0, which main()'s
@@ -439,12 +457,44 @@ def write_json_out(json_out_path, findings, missing_live, missing_objects):
       * "missing_objects"   -- the live lookup SUCCEEDED and returned zero rows: POSITIVE evidence
                                the object genuinely does not exist live, even though the repo's
                                final-effective bigquery/*.sql still expects it -- a real, currently-
-                               invisible deployment gap. This fails the run (non-zero exit) but is
-                               kept OUT of "findings" and out of any self-heal consumer's reach on
-                               purpose: auto-CREATING an object that does not exist live is a
-                               materially different, riskier action than re-applying a definition
-                               that is already there, and must stay a human-authorized step (via the
-                               BigQuery MCP/console), never an automated one.
+                               invisible deployment gap. This fails the run (non-zero exit). Self-heal
+                               action: CREATE the object from the repo's current definition.
+
+                               WHY THIS STAYS A SEPARATE KEY, NOT MERGED INTO "findings" (both before
+                               and after the 2026-07-28 directive below): a "findings" row means "this
+                               object exists live but drifted" -> re-apply (CREATE OR REPLACE is a
+                               straight swap of something already there). A "missing_objects" row means
+                               "this object does not exist live at all" -> CREATE. Those two actions
+                               are not interchangeable, and a consumer must not have to re-derive which
+                               one applies from the object's live-absence — the JSON key says so
+                               directly.
+
+                               CONSUMPTION -- OWNER DIRECTIVE 2026-07-28 SUPERSEDES the original
+                               design recorded in an earlier revision of this docstring, which kept
+                               missing_objects "out of any self-heal consumer's reach on purpose" and
+                               said auto-creating "must stay a human-authorized step." That reasoning
+                               is superseded: missing_objects IS now consumed autonomously, no human
+                               approval step, by the same D3 CI-FINDINGS ADJUDICATION loop that already
+                               re-applies drifted "findings" objects (Claude_Task_Plan.md D3, branch
+                               (d)) -- consistent with this repo's standing SISA posture that
+                               compensating controls are MECHANICAL RAILS, not human review (CLAUDE.md).
+                               Those rails (living in D3's prose, not here, since this script only
+                               detects/reports) are: the existing >=2-daily-run persistence
+                               requirement (skip a same-day-first-detected finding — the window in
+                               which someone lands a new bigquery/NN file and applies it live minutes
+                               later, where creating it underneath them would race); the existing
+                               7-day non-convergence latch (re-flagged after a recent heal -> alert,
+                               do not retry); the existing 10-objects-per-session bound (now shared
+                               across re-apply + create, not doubled); a NEW mechanical DROP-guard
+                               (grep bigquery/*.sql for a DROP of the object before creating -- an
+                               independent second check against resurrecting something bigquery/92/108
+                               deliberately retired, that does not depend on this script's own
+                               DROP_STMT parsing being correct); and NEVER creating a TABLE object
+                               (mirrors the existing never-re-apply-a-TABLE rule for "findings"). See
+                               .github/workflows/live-sql-parity.yml for how a missing_objects entry
+                               reaches ops.ci_findings: its `detail` begins with the literal marker
+                               "MISSING: " so the CI-findings consumer can tell a missing-object row
+                               apart from a drift row without re-deriving it from anything else.
     """
     import json
     from datetime import datetime, timezone
@@ -535,13 +585,15 @@ def main():
               "for the listed object(s) via the BigQuery MCP/console.")
     if missing_objects:
         # FIX 2/3 (2026-07-28): a genuine absence is a real, currently-invisible deployment gap --
-        # fails the run same as a mismatch, but the messaging (and the JSON category) stays distinct:
-        # this is NOT a self-heal candidate, see write_json_out()'s docstring for why.
+        # fails the run same as a mismatch, but the messaging (and the JSON category) stays distinct
+        # because the REMEDY differs: a mismatch is re-applied, an absence is CREATED. See
+        # write_json_out()'s docstring. This checker itself never creates anything either way.
         print("\nLIVE SQL PARITY: MISSING OBJECT(S) — the repo's final-effective bigquery/*.sql "
               "declares object(s) with no live counterpart (the lookup succeeded and found nothing "
-              "-- this is not a transient lookup failure). A human must authorize creating them via "
-              "the BigQuery MCP/console; this checker will never auto-create an object that does "
-              "not yet exist.")
+              "-- this is not a transient lookup failure). These are delivered to ops.ci_findings "
+              "with a 'MISSING: ' detail prefix and created autonomously by D3's self-heal branch "
+              "(d) under its mechanical rails (owner directive 2026-07-28); this checker only "
+              "reports them.")
     if mismatches or missing_objects:
         return 1
     if checked == 0:

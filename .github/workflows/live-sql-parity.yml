@@ -96,7 +96,7 @@ jobs:
         run: |
           set -uo pipefail
           {
-            echo "**DRIFT** — one or more live BigQuery object definitions no longer match the final-effective (last apply-in-order \`CREATE OR REPLACE\`) definition in \`bigquery/*.sql\`. This is the exact drift class that silently reverted \`state.trading_enabled\` for days in the 2026-07-11 incident (see \`bigquery/47_trading_enabled_resync.sql\`). Re-apply the listed object(s)' current repo definition via the BigQuery MCP/console."
+            echo "**DRIFT** — one or more live BigQuery object definitions no longer match the final-effective (last apply-in-order \`CREATE OR REPLACE\`) definition in \`bigquery/*.sql\`, or are missing live entirely. This is the exact drift class that silently reverted \`state.trading_enabled\` for days in the 2026-07-11 incident (see \`bigquery/47_trading_enabled_resync.sql\`). Re-apply the listed object(s)' current repo definition via the BigQuery MCP/console — or, for an object reported MISSING below (per-object detail starts \`MISSING: \`), CREATE it from the repo definition instead."
             echo
             cat /tmp/parity_out.txt
             echo
@@ -135,13 +135,46 @@ jobs:
           # findings). One row per drifted object; keys that stop drifting are auto-resolved below;
           # state.ci_findings_open (bigquery/86) computes first_detected per key from the append-only
           # history.
+          #
+          # MISSING-OBJECT rows (2026-07-28, owner directive — autonomous CREATE authorized, see
+          # scripts/check_live_sql_parity.py's module docstring + write_json_out() docstring for the
+          # full rationale): the checker's --json-out also carries a `missing_objects` array — objects
+          # the repo's final-effective bigquery/*.sql declares that do NOT exist live at all (the live
+          # lookup SUCCEEDED and returned zero rows — positive evidence of absence, distinct from a
+          # "skipped" lookup failure). These are now ALSO written one row per object, same
+          # finding_key=<dataset>.<name> shape as a drift row, so state.ci_findings_open's dedup /
+          # first_detected / auto-resolve machinery (bigquery/86) keeps working unchanged for both
+          # classes without any schema change. The two classes are made UNAMBIGUOUSLY distinguishable
+          # to the consumer (D3's CI-FINDINGS ADJUDICATION step, Claude_Task_Plan.md) by a marker at
+          # the START of `detail`: a missing-object row's detail begins literally "MISSING: "; a drift
+          # row's detail never starts with that string. D3 branches on this marker to pick CREATE
+          # (new branch (d)) vs. re-apply (existing branches (a)/(b)/(c)) — the two self-heal actions
+          # are not interchangeable and D3 must not have to re-derive which one applies.
+          #
+          # `missing_objects` entries are formatted STRINGS ("<dataset>.<name> (<source_file>): no
+          # live object found -- ..."), unlike `findings`' structured dicts — scripts/
+          # check_live_sql_parity.py FIX 1 deliberately left write_json_out()'s payload shape
+          # unchanged (a docstring-only change), so the dataset.name key is pulled out here via a jq
+          # regex capture instead of a dedicated field.
           run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           n=$(jq '.findings | length' /tmp/findings.json)
-          if [ "$n" -eq 0 ]; then
-            # Drift exit with ZERO per-object findings = the checker's fail-closed paths (checked==0
-            # systemic auth failure, or an internal error) — there are no objects to key on, so keep
-            # the aggregate key for exactly this case: "parity could not be verified" is itself the
-            # finding, and it must not auto-resolve the real per-object rows below.
+          m=$(jq '.missing_objects | length' /tmp/findings.json)
+          if [ "$n" -eq 0 ] && [ "$m" -eq 0 ]; then
+            # Drift exit with ZERO per-object findings AND ZERO missing objects = the checker's
+            # fail-closed path (checked==0 systemic auth failure, or an internal error) — there is
+            # nothing to key on either way, so keep the aggregate key for exactly this case: "parity
+            # could not be verified" is itself the finding, and it must not auto-resolve the real
+            # per-object rows below.
+            #
+            # THE SUBTLE BIT (2026-07-28): this guard must check BOTH counts, not just $n. A run with
+            # zero mismatches but one or more missing_objects genuinely verified something real (the
+            # objects it could compare are fine; the missing ones are a real, positively-evidenced
+            # gap) — gating on $n alone would wrongly (a) write this "could not be verified" aggregate
+            # row over a run that actually produced real per-object data, (b) never reach the `else`
+            # branch below at all, so the real missing_objects rows would never get written, and (c)
+            # never run the auto-resolve step either, so any object that WAS missing yesterday and
+            # healed (or was created) today would incorrectly stay open forever. Three distinct wrongs
+            # from one un-widened guard, not just one.
             detail=$(head -c 4000 /tmp/parity_out.txt)
             # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted BigQuery
             # identifier and @p_* named parameters must stay literal, not shell-expanded.
@@ -150,23 +183,45 @@ jobs:
               exit 1
             fi
           else
-            for i in $(seq 0 $((n - 1))); do
-              key=$(jq -r ".findings[$i] | .dataset + \".\" + .name" /tmp/findings.json)
-              src=$(jq -r ".findings[$i].source_file" /tmp/findings.json)
-              typ=$(jq -r ".findings[$i].object_type" /tmp/findings.json)
-              detail="live definition does NOT match the final-effective definition in ${src} (${typ})"
-              # shellcheck disable=SC2016 # single-quoted intentionally: see above.
-              if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_key:STRING:${key}" --parameter="p_detail:STRING:${detail}" --parameter="p_url:STRING:${run_url}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("live-sql-parity",@p_key,"open",@p_detail,@p_url)'; then
-                echo "::error::ops.ci_findings open-row INSERT FAILED for ${key} on a DRIFT run — the DECLARED single delivery path for live-sql-parity drift (bigquery/67) is broken (WIF is present; verify the gh-ci-runner@ dataEditor grant on ops.ci_findings). Failing the job so a dead bridge is visible, not swallowed."
-                exit 1
-              fi
-            done
-            # Auto-resolve any still-open live-sql-parity key that did NOT drift this run (an object
-            # healed since yesterday, or the legacy aggregate 'live_sql_parity' key) — otherwise a
-            # once-drifted object stays open forever unless a FULLY clean run happens to come along.
-            keys=$(jq -c '[.findings[] | .dataset + "." + .name]' /tmp/findings.json)
+            if [ "$n" -gt 0 ]; then
+              for i in $(seq 0 $((n - 1))); do
+                key=$(jq -r ".findings[$i] | .dataset + \".\" + .name" /tmp/findings.json)
+                src=$(jq -r ".findings[$i].source_file" /tmp/findings.json)
+                typ=$(jq -r ".findings[$i].object_type" /tmp/findings.json)
+                detail="live definition does NOT match the final-effective definition in ${src} (${typ})"
+                # shellcheck disable=SC2016 # single-quoted intentionally: see above.
+                if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_key:STRING:${key}" --parameter="p_detail:STRING:${detail}" --parameter="p_url:STRING:${run_url}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("live-sql-parity",@p_key,"open",@p_detail,@p_url)'; then
+                  echo "::error::ops.ci_findings open-row INSERT FAILED for ${key} on a DRIFT run — the DECLARED single delivery path for live-sql-parity drift (bigquery/67) is broken (WIF is present; verify the gh-ci-runner@ dataEditor grant on ops.ci_findings). Failing the job so a dead bridge is visible, not swallowed."
+                  exit 1
+                fi
+              done
+            fi
+            if [ "$m" -gt 0 ]; then
+              for i in $(seq 0 $((m - 1))); do
+                # Pull "<dataset>.<name>" off the front of the checker's formatted string, e.g.
+                # "state.gone (02_x.sql): no live object found -- ...". capture()'s named group keeps
+                # this a single jq call (no separate sed pass) and matches how the union `keys` query
+                # below extracts the same thing.
+                key=$(jq --argjson i "$i" -r '.missing_objects[$i] | capture("^(?<key>\\S+) \\(") | .key' /tmp/findings.json)
+                line=$(jq --argjson i "$i" -r '.missing_objects[$i]' /tmp/findings.json)
+                detail="MISSING: ${line}"
+                # shellcheck disable=SC2016 # single-quoted intentionally: see above.
+                if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_key:STRING:${key}" --parameter="p_detail:STRING:${detail}" --parameter="p_url:STRING:${run_url}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("live-sql-parity",@p_key,"open",@p_detail,@p_url)'; then
+                  echo "::error::ops.ci_findings open-row INSERT FAILED for ${key} (missing object) on a DRIFT run — the DECLARED single delivery path for live-sql-parity findings (bigquery/67) is broken (WIF is present; verify the gh-ci-runner@ dataEditor grant on ops.ci_findings). Failing the job so a dead bridge is visible, not swallowed."
+                  exit 1
+                fi
+              done
+            fi
+            # Auto-resolve any still-open live-sql-parity key that did NOT recur this run as EITHER a
+            # drift finding OR a missing object (an object healed/created since yesterday, or the
+            # legacy aggregate 'live_sql_parity' key) — otherwise a once-flagged object stays open
+            # forever unless a FULLY clean run happens to come along. The exclusion set is the UNION
+            # of both classes' keys (2026-07-28) — using only $n's findings keys here would wrongly
+            # auto-resolve a still-missing object's open row the moment ANY drift finding also
+            # existed this run (the missing object recurred too, just not as a "finding").
+            keys=$(jq -c '([.findings[] | .dataset + "." + .name]) + ([.missing_objects[] | capture("^(?<key>\\S+) \\(") | .key])' /tmp/findings.json)
             # shellcheck disable=SC2016 # single-quoted intentionally: see above.
-            if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_keys:ARRAY<STRING>:${keys}" --parameter="p_url:STRING:${run_url}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) SELECT workflow, finding_key, "resolved", "no longer drifted this run (per-object auto-resolve)", @p_url FROM `stock-trading-498512.state.ci_findings_open` WHERE workflow = "live-sql-parity" AND finding_key NOT IN UNNEST(@p_keys)'; then
+            if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false --parameter="p_keys:ARRAY<STRING>:${keys}" --parameter="p_url:STRING:${run_url}" 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) SELECT workflow, finding_key, "resolved", "no longer drifted/missing this run (per-object auto-resolve)", @p_url FROM `stock-trading-498512.state.ci_findings_open` WHERE workflow = "live-sql-parity" AND finding_key NOT IN UNNEST(@p_keys)'; then
               echo "::error::ops.ci_findings per-object auto-resolve INSERT FAILED — stale open findings cannot clear (WIF is present; verify the gh-ci-runner@ dataEditor grant on ops.ci_findings). Failing the job so a dead bridge is visible, not swallowed."
               exit 1
             fi
