@@ -32,6 +32,151 @@ def test_apply_order_last_file_wins_for_a_known_redefinition():
     assert source_file2 == "107_halt_echo_missed_run_gate.sql"
 
 
+def test_real_repo_known_dropped_park_and_calibration_views_are_absent():
+    # REGRESSION TEST for the DROP-awareness bug (2026-07-28): before the fix,
+    # find_final_definitions() ignored bigquery/104's and bigquery/108's DROP VIEW statements
+    # entirely, so these four deliberately-retired views stayed in the expected set forever even
+    # though bigquery/92's/103's own comments say "DO NOT re-create live -- 104/108 drops it." Live
+    # is exactly correct here; the checker used to be wrong.
+    final = clsp.find_final_definitions()
+    for dataset, name in [
+        ("analytics", "calibration_return_shrunk"),
+        ("state", "park_allocator_promotion_readiness"),
+        ("state", "park_switch_budget"),
+        ("state", "park_control_latest"),
+    ]:
+        assert (dataset, name) not in final, f"{dataset}.{name} should be DROP-excluded from the expected set"
+
+
+# ---- DROP-awareness (2026-07-28 fix): find_final_definitions() must remove a DROPped object from
+# the expected set, and must resolve a DROP/CREATE mix on the SAME object within a single file by
+# TEXTUAL order (not "all creates then all drops"). -------------------------------------------------
+def test_drop_in_later_file_removes_object_from_expected_set(tmp_path, monkeypatch):
+    d = tmp_path / "bigquery"
+    d.mkdir()
+    (d / "01_create.sql").write_text(
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.foo` AS\nSELECT 1 AS x;\n"
+    )
+    (d / "02_drop.sql").write_text(
+        "DROP VIEW IF EXISTS `stock-trading-498512.state.foo`;\n"
+    )
+    monkeypatch.setattr(clsp, "BIGQUERY_DIR", str(d))
+    assert ("state", "foo") not in clsp.find_final_definitions()
+
+
+def test_drop_then_create_same_file_leaves_object_expected(tmp_path, monkeypatch):
+    # A file that drops an object and recreates it LATER in the SAME file (textually after the
+    # DROP) must leave it expected -- this is exactly what apply-in-order does to the live object.
+    d = tmp_path / "bigquery"
+    d.mkdir()
+    (d / "01_create.sql").write_text(
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.foo` AS\nSELECT 1 AS x;\n"
+    )
+    (d / "02_drop_then_recreate.sql").write_text(
+        "DROP VIEW IF EXISTS `stock-trading-498512.state.foo`;\n\n"
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.foo` AS\nSELECT 2 AS x;\n"
+    )
+    monkeypatch.setattr(clsp, "BIGQUERY_DIR", str(d))
+    final = clsp.find_final_definitions()
+    assert ("state", "foo") in final
+    _ot, _p, src, body = final[("state", "foo")]
+    assert src == "02_drop_then_recreate.sql"
+    assert "2 AS x" in body
+
+
+def test_create_then_drop_same_file_leaves_object_not_expected(tmp_path, monkeypatch):
+    # The mirror case: CREATE then DROP later in the SAME file must leave it NOT expected. If this
+    # were resolved by statement TYPE ("all creates, then all drops") instead of textual order, both
+    # this test and the one above would get the SAME (wrong) answer for whichever one doesn't match
+    # file-order-of-statement-kind processing.
+    d = tmp_path / "bigquery"
+    d.mkdir()
+    (d / "01_create_then_drop.sql").write_text(
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.foo` AS\nSELECT 1 AS x;\n\n"
+        "DROP VIEW IF EXISTS `stock-trading-498512.state.foo`;\n"
+    )
+    monkeypatch.setattr(clsp, "BIGQUERY_DIR", str(d))
+    assert ("state", "foo") not in clsp.find_final_definitions()
+
+
+def test_drop_earlier_file_create_later_file_leaves_object_expected(tmp_path, monkeypatch):
+    d = tmp_path / "bigquery"
+    d.mkdir()
+    (d / "01_drop.sql").write_text(
+        "DROP VIEW IF EXISTS `stock-trading-498512.state.foo`;\n"
+    )
+    (d / "02_create.sql").write_text(
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.foo` AS\nSELECT 1 AS x;\n"
+    )
+    monkeypatch.setattr(clsp, "BIGQUERY_DIR", str(d))
+    final = clsp.find_final_definitions()
+    assert ("state", "foo") in final
+    _ot, _p, src, _body = final[("state", "foo")]
+    assert src == "02_create.sql"
+
+
+def test_drop_stmt_matches_every_real_object_type_form():
+    cases = [
+        ("DROP VIEW `stock-trading-498512.state.foo`;",
+         "VIEW", "state", "foo"),
+        ("DROP VIEW IF EXISTS `stock-trading-498512.state.foo`;",
+         "VIEW", "state", "foo"),
+        ("DROP TABLE `stock-trading-498512.ops.foo`;",
+         "TABLE", "ops", "foo"),
+        ("DROP TABLE IF EXISTS `stock-trading-498512.ops.foo`;",
+         "TABLE", "ops", "foo"),
+        ("DROP PROCEDURE `stock-trading-498512.ops.sp_foo`;",
+         "PROCEDURE", "ops", "sp_foo"),
+        ("DROP PROCEDURE IF EXISTS `stock-trading-498512.ops.sp_foo`;",
+         "PROCEDURE", "ops", "sp_foo"),
+        ("DROP FUNCTION `stock-trading-498512.analytics.fn_foo`;",
+         "FUNCTION", "analytics", "fn_foo"),
+        ("DROP FUNCTION IF EXISTS `stock-trading-498512.analytics.fn_foo`;",
+         "FUNCTION", "analytics", "fn_foo"),
+        ("DROP MATERIALIZED VIEW `stock-trading-498512.analytics.mv_foo`;",
+         "MATERIALIZED VIEW", "analytics", "mv_foo"),
+        ("DROP MATERIALIZED VIEW IF EXISTS `stock-trading-498512.analytics.mv_foo`;",
+         "MATERIALIZED VIEW", "analytics", "mv_foo"),
+    ]
+    for txt, expected_type, expected_dataset, expected_name in cases:
+        m = clsp.DROP_STMT.search(txt)
+        assert m is not None, f"DROP_STMT did not match: {txt}"
+        obj_type, project, dataset, name = m.groups()
+        assert " ".join(obj_type.split()) == expected_type, txt
+        assert (project, dataset, name) == ("stock-trading-498512", expected_dataset, expected_name), txt
+
+
+def test_drop_stmt_matches_partially_backtick_quoted_identifier():
+    # bigquery/104's and bigquery/108's real DROP statements fully backtick-quote the identifier
+    # (`` `project.dataset.name` ``), but this repo also writes the PARTIALLY-quoted form elsewhere
+    # (backticks around the project id only) -- DROP_STMT must accept both.
+    txt = "DROP VIEW IF EXISTS `stock-trading-498512`.state.foo;"
+    m = clsp.DROP_STMT.search(txt)
+    assert m is not None
+    assert m.groups() == ("VIEW", "stock-trading-498512", "state", "foo")
+
+
+def test_drop_word_inside_comment_or_string_literal_does_not_remove_object(tmp_path, monkeypatch):
+    # A "DROP" that is NOT a genuine top-level statement -- inside a `--` comment, or inside a
+    # string literal passed to EXECUTE IMMEDIATE/FORMAT() (mirroring bigquery/17_restore_drill.sql's
+    # embedded CREATE) -- must never remove the object from the expected set. Both cases here are
+    # safe for the SAME reason CREATE_STMT already is: the DROP text is not at column 0.
+    d = tmp_path / "bigquery"
+    d.mkdir()
+    (d / "01_create.sql").write_text(
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.foo` AS\nSELECT 1 AS x;\n"
+    )
+    (d / "02_not_a_real_drop.sql").write_text(
+        "-- DROP VIEW IF EXISTS `stock-trading-498512.state.foo`; (do NOT actually drop this)\n"
+        "BEGIN\n"
+        "  EXECUTE IMMEDIATE FORMAT(\n"
+        "      \"DROP VIEW IF EXISTS `stock-trading-498512.state.foo`\");\n"
+        "END;\n"
+    )
+    monkeypatch.setattr(clsp, "BIGQUERY_DIR", str(d))
+    assert ("state", "foo") in clsp.find_final_definitions()
+
+
 def test_embedded_format_string_create_statement_is_not_a_false_positive():
     # bigquery/17_restore_drill.sql contains an indented "CREATE OR REPLACE TABLE ..." inside a
     # FORMAT() string literal passed to EXECUTE IMMEDIATE — the column-0-anchored regex must skip it.
@@ -372,10 +517,11 @@ def test_main_reports_drift_and_exits_1(monkeypatch, capsys):
     assert "DRIFT" in out and "state.foo" in out
 
 
-def test_main_skips_a_missing_live_object_without_reporting_drift(monkeypatch, capsys):
-    # A single missing-live object among otherwise-verified objects is a SKIP, not a DRIFT. (A second
-    # object that verifies cleanly keeps checked>0 so the checked==0 fail-closed guard doesn't fire —
-    # that guard only trips when NOTHING was verified.)
+def test_main_missing_object_is_a_distinct_finding_and_fails_the_run(monkeypatch, capsys):
+    # FIX 2 (2026-07-28): a live lookup that SUCCEEDS with zero rows is POSITIVE evidence of
+    # absence for an object the repo's final-effective bigquery/*.sql still expects -- distinct
+    # from a lookup FAILURE (exception, tested separately below) -- and must fail the run, not be
+    # silently swallowed as an inconclusive skip the way it used to be.
     monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py"])
     monkeypatch.setattr(clsp, "find_final_definitions", lambda: {
         ("state", "present"): ("VIEW", "proj", "01.sql", "SELECT 1 AS x"),
@@ -385,8 +531,31 @@ def test_main_skips_a_missing_live_object_without_reporting_drift(monkeypatch, c
     def fake_live(project, ds, nm, ot):
         return None if nm == "gone" else "SELECT 1 AS x"   # 'present' matches; 'gone' not found live
     monkeypatch.setattr(clsp, "live_definition", fake_live)
-    assert clsp.main() == 0                                  # 'present' verified clean; a lookup miss is a skip
-    assert "no live object found" in capsys.readouterr().out
+    assert clsp.main() == 1
+    out = capsys.readouterr().out
+    assert "MISSING" in out and "state.gone" in out and "no live object found" in out
+    assert "DRIFT" not in out   # a genuine absence is not a text-mismatch drift
+
+
+def test_main_lookup_exception_is_a_skip_and_does_not_fail_the_run_alone(monkeypatch, capsys):
+    # The OTHER half of FIX 2: an exception during lookup (transient/auth/timeout) must stay a
+    # SKIP -- never promoted to missing_objects or findings -- and must not, by itself, fail an
+    # otherwise-clean run (a second object still verifies clean, so checked>0).
+    monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py"])
+    monkeypatch.setattr(clsp, "find_final_definitions", lambda: {
+        ("state", "present"): ("VIEW", "proj", "01.sql", "SELECT 1 AS x"),
+        ("state", "flaky"): ("VIEW", "proj", "02.sql", "SELECT 9 AS z"),
+    })
+
+    def fake_live(project, ds, nm, ot):
+        if nm == "flaky":
+            raise RuntimeError("timeout")
+        return "SELECT 1 AS x"
+    monkeypatch.setattr(clsp, "live_definition", fake_live)
+    assert clsp.main() == 0
+    out = capsys.readouterr().out
+    assert "skipped" in out and "state.flaky" in out and "live lookup failed" in out
+    assert "MISSING" not in out
 
 
 def test_main_fails_closed_when_every_object_is_skipped(monkeypatch, capsys):
@@ -407,33 +576,50 @@ def test_main_fails_closed_when_every_object_is_skipped(monkeypatch, capsys):
     assert "NOT VERIFIED" in out and "zero comparisons" in out
 
 
-def test_main_json_out_writes_findings_and_skips(tmp_path, monkeypatch):
+def test_main_json_out_writes_findings_skips_and_missing_objects(tmp_path, monkeypatch):
+    # FIX 2/3 (2026-07-28): three distinct outcomes across three objects -- a real mismatch (a
+    # "findings" self-heal candidate), a lookup exception (a "skipped" inconclusive read), and a
+    # genuine absence (a "missing_objects" entry -- non-zero exit, but NEVER merged into "findings").
     out_path = tmp_path / "findings.json"
     monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py", "--json-out", str(out_path)])
     monkeypatch.setattr(clsp, "find_final_definitions", lambda: {
         ("state", "drifted"): ("VIEW", "proj", "01.sql", "SELECT 1 AS x"),
         ("state", "gone"): ("VIEW", "proj", "02.sql", "SELECT 9 AS z"),
+        ("state", "flaky"): ("VIEW", "proj", "03.sql", "SELECT 3 AS w"),
     })
 
     def fake_live(project, ds, nm, ot):
-        return None if nm == "gone" else "SELECT 2 AS x"   # drifted mismatches, gone is a lookup miss
+        if nm == "gone":
+            return None                    # lookup succeeded, zero rows -> missing_objects
+        if nm == "flaky":
+            raise RuntimeError("timeout")  # lookup failed -> skipped
+        return "SELECT 2 AS x"             # drifted mismatches -> findings
     monkeypatch.setattr(clsp, "live_definition", fake_live)
     assert clsp.main() == 1
     payload = json.loads(out_path.read_text())
-    assert [f["name"] for f in payload["findings"]] == ["drifted"]   # only the real mismatch is a finding
-    assert any("gone" in s for s in payload["skipped"])               # the lookup miss is a skip, never a finding
+    assert [f["name"] for f in payload["findings"]] == ["drifted"]     # only the real mismatch is a finding
+    assert not any("gone" in f["name"] for f in payload["findings"])   # absence is NEVER a self-heal finding
+    assert any("flaky" in s for s in payload["skipped"])               # the lookup failure is a skip
+    assert not any("gone" in s for s in payload["skipped"])            # ...and absence is no longer a skip
+    assert any("gone" in s for s in payload["missing_objects"])        # absence gets its own category
     assert "checked_at" in payload
 
 
-# ---- write_json_out(): structured findings/skipped payload ----------------------------------------
+# ---- write_json_out(): structured findings/skipped/missing_objects payload ------------------------
 def test_write_json_out_shape(tmp_path):
     out_path = tmp_path / "f.json"
     clsp.write_json_out(str(out_path),
                         [{"dataset": "state", "name": "foo", "object_type": "VIEW", "source_file": "01.sql"}],
-                        ["state.bar (02.sql): no live object found"])
+                        ["state.bar (02.sql): live lookup failed: timeout"],
+                        ["state.baz (03.sql): no live object found -- repo's final-effective "
+                         "bigquery/*.sql expects this object but live has none (lookup succeeded, "
+                         "zero rows)"])
     payload = json.loads(out_path.read_text())
     assert payload["findings"][0]["name"] == "foo"
-    assert payload["skipped"] == ["state.bar (02.sql): no live object found"]
+    assert payload["skipped"] == ["state.bar (02.sql): live lookup failed: timeout"]
+    assert payload["missing_objects"] == [
+        "state.baz (03.sql): no live object found -- repo's final-effective bigquery/*.sql expects "
+        "this object but live has none (lookup succeeded, zero rows)"]
     assert payload["checked_at"].endswith("Z")
 
 

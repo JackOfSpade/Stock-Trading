@@ -35,6 +35,19 @@ orthogonal false-positive class (live definitions retaining trailing comments th
 extraction already stripped) is fixed by normalize_tail(), now applied to both sides. See
 tests/test_check_live_sql_parity.py for both regression tests.
 
+DROP-AWARENESS FIX (2026-07-28). find_final_definitions() used to build its expected-object set from
+CREATE OR REPLACE statements only, ignoring bigquery/*.sql's DROP statements entirely — so an object
+LIVE deliberately dropped (bigquery/92/103's park-allocator/calibration views, retired by bigquery/
+104 and 108, whose own comments say "DO NOT re-create live") stayed expected forever, found nothing
+live, and was silently filed as an inconclusive skip rather than being excluded. Two fixes: (1)
+find_final_definitions() now removes an object from the expected set on a DROP and re-adds it on a
+later CREATE OR REPLACE, processing both in TEXTUAL apply order within each file (see DROP_STMT and
+that function's docstring); (2) main() now distinguishes a live lookup that FAILED (exception —
+inconclusive, stays a "skipped" entry, never fails the run by itself) from a live lookup that
+SUCCEEDED with zero rows for an object still genuinely expected (positive evidence of a real
+deployment gap — a new "missing_objects" category, printed distinctly, non-zero exit, and
+deliberately excluded from "findings"/self-heal consumption; see write_json_out()'s docstring).
+
 Usage:  python scripts/check_live_sql_parity.py --project stock-trading-498512
         python scripts/check_live_sql_parity.py --offline   # parser self-check only, no bq calls
         python scripts/check_live_sql_parity.py --project stock-trading-498512 --json-out /tmp/findings.json
@@ -91,6 +104,48 @@ NEXT_TOP_LEVEL = re.compile(
     r"(?:MATERIALIZED\s+VIEW|TABLE\s+FUNCTION|VIEW|PROCEDURE|TABLE|FUNCTION|MODEL|SCHEMA)"
     r"|INSERT|MERGE|UPDATE|DELETE|TRUNCATE|DROP|ALTER|GRANT|REVOKE|CALL|EXPORT|ASSERT"
     r")\b",
+    re.MULTILINE,
+)
+
+# A DROP that removes an object from find_final_definitions()'s expected set (2026-07-28 DROP-
+# awareness fix — see that function's docstring for the concrete bug this closes). Same column-0
+# (^, re.MULTILINE) anchor CREATE_STMT relies on for the same reason: a genuine top-level DROP
+# statement always starts a line at column 0 in this repo's DDL, so a "DROP" that appears inside a
+# `-- comment` (the line starts with "--", never "DROP") or inside an indented string literal (e.g.
+# a FORMAT()/EXECUTE IMMEDIATE payload, mirroring bigquery/17_restore_drill.sql's embedded CREATE)
+# can never match. Object types are the real forms used in bigquery/*.sql today (VIEW, TABLE,
+# PROCEDURE, FUNCTION) plus MATERIALIZED VIEW for completeness; the two-word form is listed first
+# per NEXT_TOP_LEVEL's own alternation-ordering convention, though the two can never actually
+# collide (VIEW alone cannot match text that starts with MATERIALIZED).
+#
+# Identifier: bigquery/104's and bigquery/108's real DROP statements are fully backtick-quoted
+# (`` `project.dataset.name` ``), but this repo also writes a PARTIALLY-backtick-quoted form
+# elsewhere — backticks around the project id only (e.g. bigquery/18/75's
+# `` `stock-trading-498512`.`region-us`.INFORMATION_SCHEMA... ``) — so each of the three identifier
+# segments gets its OWN optional backtick pair instead of requiring one single backtick-wrapped
+# whole; both forms parse identically. `[\w-]+` for the project id (BigQuery project ids may
+# contain hyphens, mirroring CREATE_STMT's own project-id group) and `\w+` for dataset/name (no
+# hyphen allowed in a dataset or object name).
+#
+# KNOWN, ACCEPTED LIMIT (found by adversarial review 2026-07-28 — do NOT "fix" without reading this).
+# The `^` + re.MULTILINE anchor is what keeps the word DROP inside a `--` line comment or a
+# `/* block */` from matching: a real top-level DROP in this repo's DDL always starts at column 0,
+# and a comment line starts with `-` or `*`. Verified against every DROP and comment in bigquery/*.sql.
+# It does NOT, however, protect against a column-0 `DROP ...` sitting inside a triple-quoted
+# ("""...""") multi-line string literal passed to EXECUTE IMMEDIATE — that WOULD match and would
+# silently remove a still-live object from the expected set, which is the exact blind-spot class this
+# whole DROP-awareness change exists to close. It is left as-is deliberately, on two grounds:
+# (1) CREATE_STMT above has the byte-identical weakness against the same construct, so tightening only
+# DROP_STMT would make the two parsers disagree about what counts as a statement — worse than a
+# symmetric, documented limit; and (2) the only real triple-quoted EXECUTE IMMEDIATE blocks in the
+# repo (bigquery/75_scheduled_query_wrappers.sql, 2 of them) contain nothing but EXPORT DATA
+# OPTIONS(...), always indented, never a column-0 DROP or CREATE. If a future file ever embeds DDL at
+# column 0 inside a string literal, fix BOTH regexes together by stripping string literals before
+# matching — do not special-case one of them.
+DROP_STMT = re.compile(
+    r"^DROP\s+(MATERIALIZED\s+VIEW|VIEW|TABLE|PROCEDURE|FUNCTION)\s+"
+    r"(?:IF\s+EXISTS\s+)?"
+    r"`?([\w-]+)`?\.`?(\w+)`?\.`?(\w+)`?",
     re.MULTILINE,
 )
 
@@ -297,16 +352,46 @@ def canonicalize(sql):
 
 def find_final_definitions():
     """{(dataset, name): (obj_type, project, source_file, body)} — the LAST apply-in-order
-    definition of each object across bigquery/*.sql."""
+    definition of each object across bigquery/*.sql, DROP-aware.
+
+    DROP-AWARE FIX (2026-07-28). Earlier versions built the expected-object set from CREATE OR
+    REPLACE statements ONLY and ignored bigquery/*.sql's DROP statements entirely — so an object
+    LIVE deliberately dropped stayed in the expected set forever. Concretely: bigquery/92_park_
+    allocator.sql's three state.park_* views (park_allocator_promotion_readiness, park_switch_
+    budget, park_control_latest) are retired outright by bigquery/108_park_allocator_immediate_
+    binding.sql ("DO NOT re-create live — 108 drops it"), and analytics.calibration_return_shrunk
+    (bigquery/103_adaptive_shortfall_budget.sql) is retired the same way by bigquery/104_strip_
+    pretrade_rails.sql. Every scheduled live-sql-parity run found nothing live for those four
+    objects, filed them under "no live object found", conflated that with a transient lookup
+    failure, and reported PASS regardless — so those four objects were silently NEVER actually
+    verified by this checker since the day they were dropped, even though live is exactly correct
+    (see tests/test_check_live_sql_parity.py's real-repo regression test). See main()'s
+    missing_objects handling for the complementary half of this fix: an object that is STILL
+    expected (never dropped, or dropped-then-not-recreated is exactly what this function now
+    reflects) but genuinely absent live is now a distinct, non-zero-exit finding category rather
+    than being silently swallowed as a skip.
+
+    CREATE and DROP are applied in TEXTUAL ORDER WITHIN EACH FILE — not "all CREATEs in the file,
+    then all DROPs" — because a single file can legitimately do both to the same object (drop an
+    old view and recreate it under the same name, or vice versa); only processing them in the
+    order they actually appear reproduces what apply-in-order really does to the live object.
+    """
     final = {}
     for path in numbered_sql_files():
         txt = open(path, encoding="utf-8").read()
-        for m in CREATE_STMT.finditer(txt):
-            obj_type, project, dataset, name = m.groups()
-            body = extract_body(txt, m.start(), obj_type)
-            if body is None:
-                continue
-            final[(dataset, name)] = (obj_type, project, os.path.basename(path), body)
+        events = [(m.start(), "CREATE", m) for m in CREATE_STMT.finditer(txt)]
+        events += [(m.start(), "DROP", m) for m in DROP_STMT.finditer(txt)]
+        events.sort(key=lambda e: e[0])
+        for _start, kind, m in events:
+            if kind == "CREATE":
+                obj_type, project, dataset, name = m.groups()
+                body = extract_body(txt, m.start(), obj_type)
+                if body is None:
+                    continue
+                final[(dataset, name)] = (obj_type, project, os.path.basename(path), body)
+            else:  # DROP — remove from the expected set; a no-op if it was never (or no longer) present.
+                _obj_type, _project, dataset, name = m.groups()
+                final.pop((dataset, name), None)
     return final
 
 
@@ -335,11 +420,32 @@ def live_definition(project, dataset, name, obj_type):
     return rows[0].get(key)
 
 
-def write_json_out(json_out_path, findings, missing_live):
+def write_json_out(json_out_path, findings, missing_live, missing_objects):
     """Write the --json-out findings file (RES-3 step 1, live-sql-parity self-heal audit
-    2026-07-16). `findings` are structured mismatch dicts (dataset/name/object_type/source_file);
-    `missing_live` (lookup failures) go ONLY into "skipped", never "findings" -- a lookup failure
-    is not evidence of drift and must never be treated as a self-heal candidate."""
+    2026-07-16; `missing_objects` added 2026-07-28 DROP-awareness fix, FIX 3).
+
+    THREE distinct categories, each under its OWN JSON key — do not merge any of them:
+
+      * "findings"         -- a real MISMATCH: the object exists both in the repo's final-effective
+                               bigquery/*.sql and live, but the text differs. The ONLY category safe
+                               to feed an automated re-apply/self-heal: the object already exists
+                               live, so re-applying the repo's current definition only corrects
+                               drift, it does not create anything new.
+      * "skipped"           -- a live LOOKUP FAILED (exception: bq/auth error, timeout, etc.) --
+                               NOT evidence of drift or of absence, just an inconclusive read. Never
+                               a self-heal candidate; can starve `checked` to 0, which main()'s
+                               separate checked==0 fail-closed guard catches, but a lookup failure
+                               never fails the run by itself.
+      * "missing_objects"   -- the live lookup SUCCEEDED and returned zero rows: POSITIVE evidence
+                               the object genuinely does not exist live, even though the repo's
+                               final-effective bigquery/*.sql still expects it -- a real, currently-
+                               invisible deployment gap. This fails the run (non-zero exit) but is
+                               kept OUT of "findings" and out of any self-heal consumer's reach on
+                               purpose: auto-CREATING an object that does not exist live is a
+                               materially different, riskier action than re-applying a definition
+                               that is already there, and must stay a human-authorized step (via the
+                               BigQuery MCP/console), never an automated one.
+    """
     import json
     from datetime import datetime, timezone
 
@@ -347,6 +453,7 @@ def write_json_out(json_out_path, findings, missing_live):
         "checked_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "findings": findings,
         "skipped": missing_live,
+        "missing_objects": missing_objects,
     }
     with open(json_out_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2)
@@ -373,7 +480,7 @@ def main():
         print("--offline: parser structure check only, no live comparison performed.")
         return 0
 
-    mismatches, findings, missing_live, checked = [], [], [], 0
+    mismatches, findings, missing_live, missing_objects, checked = [], [], [], [], 0
     for (dataset, name), (obj_type, _obj_project, source_file, body) in sorted(final.items()):
         try:
             # Use the CLI-supplied --project (default stock-trading-498512), not the project parsed
@@ -381,10 +488,21 @@ def main():
             # override rather than a parsed-but-ignored argument.
             live_body = live_definition(project, dataset, name, obj_type)
         except Exception as e:
+            # Lookup FAILED (transient/auth/timeout) -- inconclusive, NOT evidence of anything.
+            # Keep this branch exactly as it was: a skip, never a finding, never a fail on its own.
             missing_live.append(f"{dataset}.{name} ({source_file}): live lookup failed: {e}")
             continue
         if live_body is None:
-            missing_live.append(f"{dataset}.{name} ({source_file}): no live object found")
+            # FIX 2 (2026-07-28): the lookup SUCCEEDED and returned zero rows -- positive evidence
+            # the object is genuinely absent live, distinct from the lookup-failure branch above.
+            # Previously both landed in the same missing_live bucket, so a real, currently-invisible
+            # deployment gap (the repo's final-effective bigquery/*.sql still expects an object that
+            # was never applied live) silently reported PASS forever. See find_final_definitions()'s
+            # docstring for the four concrete objects this used to hide (now DROP-excluded there, so
+            # only a GENUINE gap reaches this branch today).
+            missing_objects.append(
+                f"{dataset}.{name} ({source_file}): no live object found -- repo's final-effective "
+                f"bigquery/*.sql expects this object but live has none (lookup succeeded, zero rows)")
             continue
         checked += 1
         # normalize_tail applied to the live body too (RES-3 step 0b) -- live view/routine
@@ -400,18 +518,31 @@ def main():
                               "source_file": source_file})
 
     print(f"Compared {checked} objects against live BigQuery; {len(mismatches)} mismatched, "
-          f"{len(missing_live)} could not be checked.")
+          f"{len(missing_objects)} missing live (expected but absent), "
+          f"{len(missing_live)} could not be checked (lookup failed).")
     for m in missing_live:
         print(f"  - skipped: {m}")
+    for m in missing_objects:
+        print(f"  ! MISSING: {m}")
     for m in mismatches:
         print(f"  ✗ DRIFT: {m}")
 
     if json_out:
-        write_json_out(json_out, findings, missing_live)
+        write_json_out(json_out, findings, missing_live, missing_objects)
 
     if mismatches:
         print("\nLIVE SQL PARITY FAILED — re-apply the final-effective bigquery/*.sql definition "
               "for the listed object(s) via the BigQuery MCP/console.")
+    if missing_objects:
+        # FIX 2/3 (2026-07-28): a genuine absence is a real, currently-invisible deployment gap --
+        # fails the run same as a mismatch, but the messaging (and the JSON category) stays distinct:
+        # this is NOT a self-heal candidate, see write_json_out()'s docstring for why.
+        print("\nLIVE SQL PARITY: MISSING OBJECT(S) — the repo's final-effective bigquery/*.sql "
+              "declares object(s) with no live counterpart (the lookup succeeded and found nothing "
+              "-- this is not a transient lookup failure). A human must authorize creating them via "
+              "the BigQuery MCP/console; this checker will never auto-create an object that does "
+              "not yet exist.")
+    if mismatches or missing_objects:
         return 1
     if checked == 0:
         # Fail closed on ZERO verification. If every object fell into missing_live — a systemic bq/WIF
