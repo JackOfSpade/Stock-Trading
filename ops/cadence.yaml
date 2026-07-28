@@ -18,6 +18,28 @@
 
 timezone: America/Denver
 
+# MODEL OF RECORD for the remote-routine fleet (owner directive 2026-07-28).
+#
+# THE OWNER PICKS THE MODEL; ROUTINES DO NOT INFER IT. Every remote routine runs on the SAME model —
+# that is a standing invariant, not a per-routine setting — and this key is the version-controlled
+# record of which one. It is set from the web-UI RemoteTrigger configuration the owner actually chose,
+# NOT from whatever model happens to be newest.
+#
+# WHY THIS EXISTS: `AI_Trading_Foundation.md`'s in-use-Claude-version field drives the Part 4
+# version-change protocol (which Tier 2 magnitudes flip to version-pending, and which model's
+# capability research is even relevant). Before 2026-07-28 the only in-repo trace of the configured
+# model was a prose comment in OWNER_ACTIONS.md and an aside in the OPS2 slice, so A1/Q3 had no
+# authoritative field to read and risked anchoring the foundation to the current FRONTIER model
+# instead of the DEPLOYED one. Those are routinely different: as of 2026-07-28 Anthropic's most
+# capable widely-released model was `claude-fable-5`, while the configured fleet model was
+# `claude-opus-5` — anchoring to Fable 5 would have made the entire foundation document describe
+# a model this experiment does not run.
+#
+# KEEP IN SYNC: when the owner changes the model on the triggers, update this key in the same pass.
+# A1/Q3 read it as the in-use model of record; if it ever disagrees with the live trigger config,
+# the live trigger config wins and this key is the thing that is stale.
+routine_model: claude-opus-5
+
 # Cadence-watch deadline guard (added 2026-06-25, RUNBOOK §1 step 3). state.cadence_watch.needs_attention
 # only alarms a missed DAILY routine (D1/D2/D3) AFTER this America/Denver wall-clock time — past the
 # routines' real after-close completion (D2 ~17:47, D3 ~18:36) yet before the 05:15 UTC / 23:15 MT
