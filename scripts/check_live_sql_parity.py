@@ -63,9 +63,9 @@ create), a NEW mechanical DROP-guard (grep bigquery/*.sql for a DROP of the obje
 an independent second check against resurrecting something bigquery/92/108 deliberately retired, that
 does not depend on this script's own DROP_STMT parsing being correct), and NEVER creating a TABLE
 object (mirrors the existing never-re-apply-a-TABLE rule for drifted "findings"). See
-.github/workflows/live-sql-parity.yml (FIX 2) for how a missing_objects entry reaches
-ops.ci_findings — detail begins with the literal marker "MISSING: " so the CI-findings consumer can
-tell a missing-object row apart from a drift row without re-deriving it.
+.github/workflows/live-sql-parity.yml's "CI-findings bridge" step for how a missing_objects entry
+reaches ops.ci_findings — detail begins with the literal marker "MISSING: " so the CI-findings
+consumer can tell a missing-object row apart from a drift row without re-deriving it.
 
 Usage:  python scripts/check_live_sql_parity.py --project stock-trading-498512
         python scripts/check_live_sql_parity.py --offline   # parser self-check only, no bq calls
@@ -133,9 +133,24 @@ NEXT_TOP_LEVEL = re.compile(
 # `-- comment` (the line starts with "--", never "DROP") or inside an indented string literal (e.g.
 # a FORMAT()/EXECUTE IMMEDIATE payload, mirroring bigquery/17_restore_drill.sql's embedded CREATE)
 # can never match. Object types are the real forms used in bigquery/*.sql today (VIEW, TABLE,
-# PROCEDURE, FUNCTION) plus MATERIALIZED VIEW for completeness; the two-word form is listed first
-# per NEXT_TOP_LEVEL's own alternation-ordering convention, though the two can never actually
-# collide (VIEW alone cannot match text that starts with MATERIALIZED).
+# PROCEDURE, FUNCTION, TABLE FUNCTION) plus MATERIALIZED VIEW for completeness.
+#
+# ALTERNATION ORDER (TABLE FUNCTION vs TABLE — DEFECT, fixed 2026-07-28): unlike the MATERIALIZED
+# VIEW / VIEW pair, where a real collision is provably impossible (VIEW alone can never match text
+# that starts with MATERIALIZED), TABLE actually IS a literal prefix of TABLE FUNCTION — the bare
+# TABLE alternative can start consuming "DROP TABLE FUNCTION ..." at the TABLE token before the
+# parser discovers, several groups later, that "FUNCTION" doesn't fit where a `.`-joined identifier
+# is required. Before this fix DROP_STMT had NO TABLE FUNCTION alternative at all, so real BigQuery
+# "DROP TABLE FUNCTION [IF EXISTS] <id>" DDL (this repo has three live TABLE FUNCTION objects today:
+# analytics.fn_order_guard, analytics.fn_order_guard_options, analytics.find_precedents) produced a
+# COMPLETE non-match — confirmed live pre-fix. TABLE\s+FUNCTION is therefore listed BEFORE the bare
+# TABLE alternative, the same longest-first discipline NEXT_TOP_LEVEL's own MATERIALIZED VIEW /
+# TABLE FUNCTION / VIEW ordering already uses (see that pattern's comment above) — so the longer
+# form is the one actually tried and matched, rather than relying on Python re's alternation
+# backtracking (trying TABLE first, failing past it, then retrying TABLE FUNCTION) to recover the
+# right answer. Both would produce the same match here since Python's re does backtrack across
+# alternatives, but ordering it explicitly keeps DROP_STMT correct by inspection instead of by an
+# engine behavior a future reader would have to reason through.
 #
 # Identifier: bigquery/104's and bigquery/108's real DROP statements are fully backtick-quoted
 # (`` `project.dataset.name` ``), but this repo also writes a PARTIALLY-backtick-quoted form
@@ -162,7 +177,7 @@ NEXT_TOP_LEVEL = re.compile(
 # column 0 inside a string literal, fix BOTH regexes together by stripping string literals before
 # matching — do not special-case one of them.
 DROP_STMT = re.compile(
-    r"^DROP\s+(MATERIALIZED\s+VIEW|VIEW|TABLE|PROCEDURE|FUNCTION)\s+"
+    r"^DROP\s+(MATERIALIZED\s+VIEW|TABLE\s+FUNCTION|VIEW|TABLE|PROCEDURE|FUNCTION)\s+"
     r"(?:IF\s+EXISTS\s+)?"
     r"`?([\w-]+)`?\.`?(\w+)`?\.`?(\w+)`?",
     re.MULTILINE,

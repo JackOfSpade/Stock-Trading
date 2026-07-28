@@ -269,11 +269,12 @@ def _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, cata
     monkeypatch.setattr(cc, "CADENCE", str(cadence))
     monkeypatch.setattr(cc, "CADENCE_SQL", str(cadence_sql))
     monkeypatch.setattr(cc, "CATALOG_SQL", str(catalog_sql))
-    # check N's mirror scan is now resolved at call time (FIX 2) from CADENCE/OWNER_ACTIONS/PLAN/
-    # CATALOG_SQL -- without patching OWNER_ACTIONS too, a fixture test would silently scan the REAL
-    # repo's OWNER_ACTIONS.md instead of a fixture file. Default it to an absent path (skipped
-    # silently, same convention as the other "pre-feature checkout" paths below); tests that want to
-    # exercise check N's mirror-scan logic point this at a real fixture file themselves.
+    # check N's mirror scan is now resolved at call time (the model_mirror_files()
+    # call-time-resolution fix) from CADENCE/OWNER_ACTIONS/PLAN/CATALOG_SQL -- without patching
+    # OWNER_ACTIONS too, a fixture test would silently scan the REAL repo's OWNER_ACTIONS.md instead
+    # of a fixture file. Default it to an absent path (skipped silently, same convention as the other
+    # "pre-feature checkout" paths below); tests that want to exercise check N's mirror-scan logic
+    # point this at a real fixture file themselves.
     monkeypatch.setattr(cc, "OWNER_ACTIONS", str(tmp_path / "absent_owner_actions.md"))
     monkeypatch.setattr(cc, "PERIOD_WATCH_SQL", str(tmp_path / "absent.sql"))
     monkeypatch.setattr(cc, "TRIGGERS_JSON", str(tmp_path / "absent_triggers.json"))
@@ -834,8 +835,9 @@ def test_check_m_disarmed_when_guard_query_unparseable_is_caught(tmp_path, monke
 def test_check_n_missing_routine_model_is_caught(tmp_path, monkeypatch, capsys):
     plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
     _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
-    # _write_check_fixture's cadence.yaml normally declares routine_model (FIX 3) -- overwrite it here
-    # to deliberately omit the key, so this test can exercise check N's "missing" branch.
+    # _write_check_fixture's cadence.yaml normally declares routine_model (added alongside check N)
+    # -- overwrite it here to deliberately omit the key, so this test can exercise check N's
+    # "missing" branch.
     cadence.write_text(
         "timezone: America/Denver\n"
         'cadence_watch_deadline_local: "21:00"\n'
@@ -886,9 +888,54 @@ def test_check_n_malformed_routine_model_non_string_is_caught(tmp_path, monkeypa
     assert "routine_model must be a bare Claude model id" in out
 
 
+def test_check_n_malformed_routine_model_trailing_punctuation_is_caught(tmp_path, monkeypatch):
+    # DEFECT (2026-07-28): MODEL_ID_CORE's tail class ([a-z0-9.\-]*) admits a trailing '-' or '.', so
+    # MODEL_ID_VALID.fullmatch() alone accepts a value like 'claude-opus-5-' as well-formed -- but
+    # MODEL_ID_RE's trailing \b cannot terminate a match right after that same non-word character, so
+    # the mirror scanner recovers only the SHORTER token 'claude-opus-5' from prose naming this exact
+    # value. Left unchecked, check_model_of_record() would then report BOTH a genuine mirror line AND
+    # this very ops/cadence.yaml routine_model line as drifted -- a self-contradictory report pointing
+    # the author at the line that IS the source value. The validation gate now rejects any
+    # routine_model whose last character is not alphanumeric. Asserted one value at a time so a
+    # failure names the exact offending value.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    malformed = [
+        "claude-opus-5-",    # trailing hyphen
+        "claude-opus-5.",    # trailing dot
+        "claude-opus-5-.",   # trailing hyphen-then-dot
+    ]
+    for value in malformed:
+        cadence.write_text(
+            "timezone: America/Denver\n"
+            'cadence_watch_deadline_local: "21:00"\n'
+            f"routine_model: {value}\n"
+            "routines:\n"
+            "  - id: D1\n"
+            "    monitor_class: daily_trading\n"
+            "    catchup_safe: true\n"
+        )
+        errs, model = cc.check_model_of_record()
+        assert len(errs) == 1 and "routine_model must be a bare Claude model id" in errs[0] \
+            and value in errs[0], f"{value!r} should be rejected as malformed (trailing punctuation): {errs}"
+        assert model is None, f"{value!r}: a malformed routine_model must return model=None"
+    # Non-regression: the well-formed value (no trailing punctuation) must still be accepted.
+    cadence.write_text(
+        "timezone: America/Denver\n"
+        'cadence_watch_deadline_local: "21:00"\n'
+        "routine_model: claude-opus-5\n"
+        "routines:\n"
+        "  - id: D1\n"
+        "    monitor_class: daily_trading\n"
+        "    catchup_safe: true\n"
+    )
+    errs, model = cc.check_model_of_record()
+    assert errs == [] and model == "claude-opus-5"
+
+
 def test_check_n_happy_path_mirror_matches_is_clean(tmp_path, monkeypatch):
-    # A fixture mirror file (OWNER_ACTIONS, monkeypatchable per FIX 2) quoting the SAME id as
-    # cadence.yaml's routine_model must be silent.
+    # A fixture mirror file (OWNER_ACTIONS, monkeypatchable per the model_mirror_files()
+    # call-time-resolution fix) quoting the SAME id as cadence.yaml's routine_model must be silent.
     plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
     _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
     owner_actions = tmp_path / "OWNER_ACTIONS.md"
@@ -923,7 +970,8 @@ def test_check_n_model_id_exempt_marker_suppresses_drift(tmp_path, monkeypatch):
 
 
 def test_check_n_fixture_model_mismatch_does_not_leak_into_real_repo_files(tmp_path, monkeypatch, capsys):
-    # REGRESSION TEST for the FIX-2 cross-contamination bug. Before FIX 2, MODEL_MIRROR_FILES was a
+    # REGRESSION TEST for the model_mirror_files() call-time-resolution cross-contamination bug.
+    # Before that fix, MODEL_MIRROR_FILES was a
     # module-level list built ONCE at import time from hardcoded os.path.join(ROOT, ...) calls -- it
     # could never be monkeypatched, so check_model_of_record() read the routine_model VALUE from this
     # fixture's (correctly monkeypatched) cadence.yaml but SCANNED the real repo's OWNER_ACTIONS.md /
@@ -1284,7 +1332,7 @@ def test_check_n_model_id_valid_and_model_id_re_shape_cannot_drift_apart():
             f"MODEL_ID_RE does not recognize well-formed routine_model value {model_id!r} as a model id")
 
 
-# ---- check N FIX 1 (HIGH, 2026-07-28): MODEL_EXEMPT anchored with \b on both sides. Pre-fix it was an
+# ---- check N's MODEL_EXEMPT word-boundary fix (HIGH, 2026-07-28): MODEL_EXEMPT anchored with \b on both sides. Pre-fix it was an
 #      unanchored substring search, and check_model_of_record() skips the ENTIRE line on a match -- so an
 #      ordinary word containing 'model-id-exempt' as an infix silently suppressed a REAL drift reported
 #      on the same line. Confirmed live pre-fix: a line naming a genuinely stale id but also containing
@@ -1314,7 +1362,7 @@ def test_check_n_exempt_marker_word_boundary_per_string(tmp_path, monkeypatch):
             f"{line!r}: expected flagged={should_flag} but got errs={errs}")
 
 
-# ---- check N FIX 2 (HIGH, 2026-07-28): MODEL_ID_RE's leading \b dropped (trailing \b kept). Pre-fix, a
+# ---- check N's MODEL_ID_RE leading-\b-removal fix (HIGH, 2026-07-28): MODEL_ID_RE's leading \b dropped (trailing \b kept). Pre-fix, a
 #      dropped-space typo that fused an id into the previous word hid it from the scanner entirely. ----
 def test_check_n_regression_glued_no_space_id_is_flagged(tmp_path, monkeypatch):
     plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
@@ -1338,15 +1386,16 @@ def test_check_n_regression_glued_no_space_id_after_verb_is_flagged(tmp_path, mo
     assert len(errs) == 1 and "claude-sonnet-5" in errs[0]
 
 
-# ---- check N FIX 3 (MEDIUM, operator-requested, 2026-07-28): URL_RE's character class also excludes
-#      ',' ';' '|' '<' '(' '[' '{' -- natural sentence delimiters it previously still admitted, so a
-#      genuine stale id sitting right after one of them (still on the same line as the URL) was eaten
-#      along with the URL and never scanned. One test per delimiter, plus one confirming the genuine
-#      in-URL-path citation case (no delimiter before the slug) is still NOT flagged. The markdown-link
-#      closing-paren delimiter is covered by test_check_n_url_delimiter_markdown_paren_stale_id_is_flagged
-#      BELOW, which also carries the Round-1 greedy-URL_RE regression that once lived in a separate
-#      test of its own (the two asserted the same shape with the same id, so they were merged
-#      2026-07-28 rather than kept as a false distinction). ----
+# ---- check N's URL_RE delimiter-bounding fix (MEDIUM, operator-requested, 2026-07-28): URL_RE's
+#      character class also excludes ',' ';' '|' '<' '(' '[' '{' -- natural sentence delimiters it
+#      previously still admitted, so a genuine stale id sitting right after one of them (still on the
+#      same line as the URL) was eaten along with the URL and never scanned. One test per delimiter,
+#      plus one confirming the genuine in-URL-path citation case (no delimiter before the slug) is
+#      still NOT flagged. The markdown-link closing-paren delimiter is covered by
+#      test_check_n_url_delimiter_markdown_paren_stale_id_is_flagged BELOW, which also carries the
+#      Round-1 greedy-URL_RE regression that once lived in a separate test of its own (the two
+#      asserted the same shape with the same id, so they were merged 2026-07-28 rather than kept as a
+#      false distinction). ----
 def test_check_n_url_delimiter_comma_stale_id_is_flagged(tmp_path, monkeypatch):
     plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
     _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
@@ -1395,7 +1444,7 @@ def test_check_n_url_delimiter_markdown_paren_stale_id_is_flagged(tmp_path, monk
     #      whitespace) swallowed a genuine model id sitting immediately after a markdown link's closing
     #      ')' with no space. URL_RE now stops at the closing bracket, so the id is left behind and
     #      still scanned.
-    #   2. The later FIX 3 delimiter-bounding work's explicit table row for this exact shape, alongside
+    #   2. The later URL_RE delimiter-bounding fix's explicit table row for this exact shape, alongside
     #      its siblings above (comma, semicolon, pipe, angle bracket).
     plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
     _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
@@ -1407,10 +1456,10 @@ def test_check_n_url_delimiter_markdown_paren_stale_id_is_flagged(tmp_path, monk
 
 
 def test_check_n_genuine_url_citation_slug_still_not_flagged(tmp_path, monkeypatch):
-    # FIX 3 regression guard: a genuine model-id-shaped slug living INSIDE a URL path with NO delimiter
-    # before it (an ordinary citation, e.g. an Anthropic model-card URL) must remain unflagged -- FIX 3
-    # only bounds the strip at extra DELIMITER characters, it must not start splitting on ordinary path
-    # segments.
+    # URL_RE delimiter-bounding regression guard: a genuine model-id-shaped slug living INSIDE a URL
+    # path with NO delimiter before it (an ordinary citation, e.g. an Anthropic model-card URL) must
+    # remain unflagged -- that fix only bounds the strip at extra DELIMITER characters, it must not
+    # start splitting on ordinary path segments.
     plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
     _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
     owner_actions = tmp_path / "OWNER_ACTIONS.md"
@@ -1633,7 +1682,7 @@ def test_main_against_real_repo_is_clean():
     assert cc.main() == 0
 
 
-# ---- check N FIX 4 (HIGH, 2026-07-28): _tooling_prefix_hides_version now also treats a digit GLUED
+# ---- check N's _tooling_prefix_hides_version glued-digit fix (HIGH, 2026-07-28): _tooling_prefix_hides_version now also treats a digit GLUED
 #      directly onto a NOT_A_MODEL_PREFIXES token (no '-'/'.' separator) as version-shaped, not ordinary
 #      tooling. Pre-fix, only a SEPARATED version ('claude-code-5') was recognized -- a digit glued
 #      straight on ('claude-code5') fell through both branches of the old check and was silently
@@ -1681,7 +1730,7 @@ def test_check_n_defect_b_glued_digit_helper_directly():
             f"{token!r} should be subtracted (genuine tooling extension)")
 
 
-# ---- check N FIX 5 (HIGH, 2026-07-28): MODEL_EXEMPT's trailing \b (satisfied by ANY non-word
+# ---- check N's MODEL_EXEMPT hyphen-continuation fix (HIGH, 2026-07-28): MODEL_EXEMPT's trailing \b (satisfied by ANY non-word
 #      character, including '-') let a LONGER hyphen-continued token that merely STARTS WITH the marker
 #      -- a filename or config-key mention like 'model-id-exempt-list.md' or 'model-id-exempt-routines:'
 #      -- also match. Since check_model_of_record() skips the ENTIRE line on a MODEL_EXEMPT match, such a

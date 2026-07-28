@@ -152,10 +152,13 @@ jobs:
           # are not interchangeable and D3 must not have to re-derive which one applies.
           #
           # `missing_objects` entries are formatted STRINGS ("<dataset>.<name> (<source_file>): no
-          # live object found -- ..."), unlike `findings`' structured dicts — scripts/
-          # check_live_sql_parity.py FIX 1 deliberately left write_json_out()'s payload shape
-          # unchanged (a docstring-only change), so the dataset.name key is pulled out here via a jq
-          # regex capture instead of a dedicated field.
+          # live object found -- ..."), unlike `findings`' structured dicts — write_json_out() in
+          # scripts/check_live_sql_parity.py (2026-07-28 DROP-awareness fix) added `missing_objects`
+          # as a NEW top-level payload key, fed by a new `missing_objects` parameter, but kept it as a
+          # list of formatted strings rather than structured dicts like `findings`, so the
+          # dataset.name key is pulled out here via a jq regex capture instead of a dedicated field.
+          # That capture()/f-string coupling is pinned by tests/test_check_live_sql_parity.py's
+          # test_missing_objects_key_extraction_matches_workflow_jq_pattern.
           run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           n=$(jq '.findings | length' /tmp/findings.json)
           m=$(jq '.missing_objects | length' /tmp/findings.json)

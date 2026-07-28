@@ -7,6 +7,8 @@ must never be mistaken for a real top-level statement.
 """
 import json
 import os
+import shutil
+import subprocess
 import sys
 
 import pytest
@@ -115,6 +117,23 @@ def test_drop_earlier_file_create_later_file_leaves_object_expected(tmp_path, mo
     assert src == "02_create.sql"
 
 
+def test_drop_table_function_removes_object_from_expected_set(tmp_path, monkeypatch):
+    # DEFECT regression (2026-07-28): before DROP_STMT gained a TABLE FUNCTION alternative, a real
+    # "DROP TABLE FUNCTION ..." statement produced NO match at all, so find_final_definitions() never
+    # removed a retired TABLE FUNCTION from the expected set -- it stayed expected forever.
+    d = tmp_path / "bigquery"
+    d.mkdir()
+    (d / "01_create.sql").write_text(
+        "CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_foo`(p INT64)\n"
+        "AS (\n  SELECT p AS x\n);\n"
+    )
+    (d / "02_drop.sql").write_text(
+        "DROP TABLE FUNCTION IF EXISTS `stock-trading-498512.analytics.fn_foo`;\n"
+    )
+    monkeypatch.setattr(clsp, "BIGQUERY_DIR", str(d))
+    assert ("analytics", "fn_foo") not in clsp.find_final_definitions()
+
+
 def test_drop_stmt_matches_every_real_object_type_form():
     cases = [
         ("DROP VIEW `stock-trading-498512.state.foo`;",
@@ -137,6 +156,16 @@ def test_drop_stmt_matches_every_real_object_type_form():
          "MATERIALIZED VIEW", "analytics", "mv_foo"),
         ("DROP MATERIALIZED VIEW IF EXISTS `stock-trading-498512.analytics.mv_foo`;",
          "MATERIALIZED VIEW", "analytics", "mv_foo"),
+        # DEFECT regression (2026-07-28): DROP_STMT previously had no TABLE FUNCTION alternative at
+        # all, so real BigQuery "DROP TABLE FUNCTION [IF EXISTS] <id>" DDL (this repo has three live
+        # TABLE FUNCTION objects: analytics.fn_order_guard, analytics.fn_order_guard_options,
+        # analytics.find_precedents) produced a COMPLETE non-match -- the bare TABLE alternative
+        # cannot complete the pattern against "FUNCTION [IF EXISTS] <id>" either, since "FUNCTION"
+        # gets consumed as the identifier's project-id group and there is no following ".".
+        ("DROP TABLE FUNCTION `stock-trading-498512.analytics.fn_foo`;",
+         "TABLE FUNCTION", "analytics", "fn_foo"),
+        ("DROP TABLE FUNCTION IF EXISTS `stock-trading-498512.analytics.fn_foo`;",
+         "TABLE FUNCTION", "analytics", "fn_foo"),
     ]
     for txt, expected_type, expected_dataset, expected_name in cases:
         m = clsp.DROP_STMT.search(txt)
@@ -608,6 +637,57 @@ def test_main_json_out_writes_findings_skips_and_missing_objects(tmp_path, monke
     assert not any("gone" in s for s in payload["skipped"])            # ...and absence is no longer a skip
     assert any("gone" in s for s in payload["missing_objects"])        # absence gets its own category
     assert "checked_at" in payload
+
+
+def test_missing_objects_key_extraction_matches_workflow_jq_pattern(tmp_path, monkeypatch):
+    """Pins the jq<->Python coupling DEFECT (2026-07-28): .github/workflows/live-sql-parity.yml
+    extracts the "<dataset>.<name>" key from each `missing_objects` string with the jq filter (used
+    TWICE there -- the per-object ops.ci_findings INSERT loop and the auto-resolve exclusion-set
+    UNION query):
+
+        capture("^(?<key>\\S+) \\(")
+
+    jq's capture() never errors on a non-match -- it just omits the named field, so `.key` reads
+    null and `-r` renders it as an EMPTY STRING -- if the f-string format main() uses to build a
+    missing_objects entry ("<dataset>.<name> (<source_file>): no live object found -- ...") in
+    scripts/check_live_sql_parity.py ever changes shape, the workflow would silently write
+    ops.ci_findings rows with an empty finding_key instead of failing loudly. Nothing else in this
+    repo tests that coupling.
+
+    This test generates a REAL missing_objects entry through the actual main()/write_json_out() code
+    path (never hand-writes the string), then shells out to jq with the SAME literal pattern above
+    (skipped if jq is not installed) and asserts the extracted key equals the expected
+    "<dataset>.<name>". A future editor of either side (this test or the workflow's jq line) should
+    update the other in the same pass.
+    """
+    if shutil.which("jq") is None:
+        pytest.skip("jq not installed")
+    out_path = tmp_path / "findings.json"
+    monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py", "--json-out", str(out_path)])
+    monkeypatch.setattr(clsp, "find_final_definitions", lambda: {
+        ("state", "gone"): ("VIEW", "proj", "02_gone.sql", "SELECT 9 AS z"),
+    })
+    monkeypatch.setattr(clsp, "live_definition", lambda project, ds, nm, ot: None)
+    assert clsp.main() == 1
+    payload = json.loads(out_path.read_text())
+    assert len(payload["missing_objects"]) == 1
+
+    # The SAME anchored jq filter .github/workflows/live-sql-parity.yml applies (both call sites):
+    #     jq --argjson i "$i" -r '.missing_objects[$i] | capture("^(?<key>\\S+) \\(") | .key'
+    # (a raw string here, not a plain one, so the two literal backslashes before S/( in the jq
+    # program source survive Python's own string-literal unescaping -- jq's double-quoted-string
+    # grammar requires "\\S"/"\\(" to produce a single literal backslash for the regex engine; a
+    # single backslash in the jq source ("\S") is an invalid jq string escape and errors out.)
+    result = subprocess.run(
+        ["jq", "--argjson", "i", "0", "-r",
+         r'.missing_objects[$i] | capture("^(?<key>\\S+) \\(") | .key'],
+        input=json.dumps(payload), capture_output=True, text=True, check=True,
+    )
+    extracted_key = result.stdout.strip()
+    assert extracted_key == "state.gone", (
+        f"jq extraction from a REAL missing_objects entry {payload['missing_objects'][0]!r} produced "
+        f"{extracted_key!r}, not the expected '<dataset>.<name>' -- the workflow's jq pattern and "
+        f"check_live_sql_parity.py's f-string format have drifted apart")
 
 
 # ---- write_json_out(): structured findings/skipped/missing_objects payload ------------------------

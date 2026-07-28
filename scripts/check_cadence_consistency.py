@@ -254,8 +254,18 @@ def model_mirror_files():
 #   matching on the strength of "it seems safe," measure it.
 #
 # MODEL_ID_CORE is the one shape both MODEL_ID_RE (the mirror scanner) and MODEL_ID_VALID (the
-# routine_model well-formedness gate) are built from, so the source of truth can never drift out of
-# what the scanner is able to find.
+# routine_model well-formedness gate) are built from -- but sharing a shape does NOT by itself mean
+# the two can never drift apart: MODEL_ID_VALID.fullmatch() checks the WHOLE string, while
+# MODEL_ID_RE.findall() only has to locate an embedded token, and MODEL_ID_RE's trailing \b cannot
+# terminate a match right after a non-word character -- a trailing '-' or '.', both admitted by
+# MODEL_ID_CORE's own tail class ([a-z0-9.\-]*). So a routine_model value ending in '-' or '.' could
+# pass MODEL_ID_VALID.fullmatch() as WELL-FORMED while MODEL_ID_RE.findall() on that same text only
+# ever recovers a SHORTER token, self-contradictorily flagging the source-of-truth line itself
+# (DEFECT, 2026-07-28: confirmed live with routine_model='claude-opus-5-'). check_model_of_record()'s
+# validation gate closes that gap by separately rejecting any routine_model whose last character is
+# not alphanumeric. The precise property that now holds is narrower than "can never drift": any value
+# the VALIDATION GATE ACCEPTS is matchable IN FULL by the scanner -- not that MODEL_ID_RE and
+# MODEL_ID_VALID can never disagree on some OTHER string neither of them is ever asked to validate.
 MODEL_ID_CORE = r"claude-[a-z0-9][a-z0-9.\-]*"
 # LEADING \b DROPPED (2026-07-28 adversarial review, HIGH; see the DEFECT C paragraph above for how
 # this changes that limit's mechanism). The leading \b required a non-word character immediately before
@@ -403,6 +413,19 @@ def check_model_of_record():
     if not (isinstance(model, str) and MODEL_ID_VALID.fullmatch(model)):
         return [f"ops/cadence.yaml: routine_model must be a bare Claude model id like "
                 f"'claude-opus-5' (got {model!r})"], None
+    if not model[-1].isalnum():
+        # MODEL_ID_CORE's tail class ([a-z0-9.\-]*) admits a trailing '-' or '.', so a value like
+        # 'claude-opus-5-' or 'claude-opus-5.' passes MODEL_ID_VALID.fullmatch() above as
+        # well-formed -- but MODEL_ID_RE's trailing \b cannot terminate a match right after that same
+        # non-word character, so the mirror scanner recovers only the SHORTER token 'claude-opus-5'
+        # from prose naming this exact value. Left unchecked, check_model_of_record() would then
+        # report BOTH a mirror line AND this very ops/cadence.yaml line as drifted -- a
+        # self-contradictory report pointing the author at the line that IS the source value. Reject
+        # it here instead, explicitly naming the trailing character so the fix is obvious.
+        return [f"ops/cadence.yaml: routine_model must be a bare Claude model id like "
+                f"'claude-opus-5' (got {model!r} — it ends with {model[-1]!r}, a trailing "
+                f"non-alphanumeric character the mirror scanner's word-boundary match can never "
+                f"include, so this value could never be found in full by MODEL_ID_RE)"], None
     if model.startswith(NOT_A_MODEL_PREFIXES):
         return [f"ops/cadence.yaml: routine_model must be a bare Claude model id like "
                 f"'claude-opus-5' (got {model!r} — this names CLI/SDK tooling, never a model; every "
