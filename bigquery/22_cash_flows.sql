@@ -145,6 +145,16 @@ SELECT d.strategy, d.deposits,
   ROUND(COALESCE(o.open_mv,0),2) AS deployed_mv,
   ROUND(d.deposits+COALESCE(r.realized_pnl,0)+COALESCE(o.open_mv-o.open_cost,0)+COALESCE(dv.dividends,0),2) AS nav,
   ROUND(d.deposits+COALESCE(r.realized_pnl,0)+COALESCE(o.open_mv-o.open_cost,0)+COALESCE(dv.dividends,0)-COALESCE(o.open_mv,0),2) AS available_funds,
+  -- LEGACY REFERENCE FIGURE as of Strategy.md Rev 39 / Experiment_Parameters.md rev 18 (owner directive
+  -- 2026-07-28). The fixed 2%-per-position rule this column encoded is RETIRED: sizing is now a per-thesis
+  -- AI-chosen Capital-at-Risk budget, so there is no single scalar that is "the" position size for a strategy.
+  -- This column is RETAINED, unchanged in arithmetic, because (a) it is a pure display/reference read for the
+  -- weekly report, strategy_scorecard and the ops dashboard -- NO order guard reads it any more (every
+  -- 1.5x-sizing rail that did was stripped live by bigquery/104_strip_pretrade_rails.sql, 2026-07-22), and
+  -- (b) 2%-of-NAV remains a useful order-of-magnitude yardstick for a typical thesis. DO NOT treat it as a
+  -- cap, a budget, or an entitlement. The binding sizing controls are now the per-name (<=10% CaR) and
+  -- per-strategy-deployed (<=75% CaR) envelopes, which are book-level aggregates over open positions and
+  -- are therefore checked at trade-craft time against the live book, not precomputed here.
   ROUND(0.02*(d.deposits+COALESCE(r.realized_pnl,0)+COALESCE(o.open_mv-o.open_cost,0)+COALESCE(dv.dividends,0)),2) AS sizing_base_2pct
 FROM dep d LEFT JOIN realized r USING(strategy) LEFT JOIN open_pos o USING(strategy) LEFT JOIN divs dv USING(strategy);
 

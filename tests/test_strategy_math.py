@@ -16,15 +16,34 @@ from strategy_math import common, strategy_a, strategy_b, strategy_d, strategy_e
 # ===== common.py =====
 
 def test_position_size_dollars():
-    assert common.position_size_dollars(1900.0) == pytest.approx(38.0)
+    # Rev 39: pct is the thesis's risk budget and is REQUIRED — the old 0.02
+    # default was removed so a forgetful caller cannot silently reinstate a flat 2%.
+    assert common.position_size_dollars(1900.0, pct=0.02) == pytest.approx(38.0)
     assert common.position_size_dollars(1000.0, pct=0.05) == pytest.approx(50.0)
+    # Thesis-scaled: the same NAV supports different budgets on different theses.
+    assert common.position_size_dollars(1900.0, pct=0.01) == pytest.approx(19.0)
+    assert common.position_size_dollars(1900.0, pct=0.10) == pytest.approx(190.0)
+
+
+def test_position_size_dollars_requires_explicit_budget():
+    """Rev 39: no default pct. Omitting it is a TypeError, not a silent 2%."""
+    with pytest.raises(TypeError):
+        common.position_size_dollars(1900.0)
+
+
+def test_position_size_dollars_rejects_above_per_name_envelope():
+    """Rev 39: a single thesis cannot be budgeted above the 10% per-name CaR envelope."""
+    with pytest.raises(ValueError):
+        common.position_size_dollars(1900.0, pct=0.11)
+    with pytest.raises(ValueError):
+        common.position_size_dollars(1900.0, pct=0.50)
 
 
 def test_position_size_dollars_rejects_nonpositive_nav():
     with pytest.raises(ValueError):
-        common.position_size_dollars(0)
+        common.position_size_dollars(0, pct=0.02)
     with pytest.raises(ValueError):
-        common.position_size_dollars(-100)
+        common.position_size_dollars(-100, pct=0.02)
 
 
 def test_pearson_correlation_perfect_positive():

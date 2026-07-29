@@ -167,6 +167,16 @@ CREATE OR REPLACE VIEW `stock-trading-498512.analytics.calibration_summary` AS
 SELECT COALESCE(conviction,'(unscored)') AS conviction, ANY_VALUE(conviction_ordinal) AS ord,
   COUNT(*) AS go_theses, COUNTIF(position_closed) AS closed, COUNTIF(was_profitable) AS wins,
   ROUND(SAFE_DIVIDE(COUNTIF(was_profitable), COUNTIF(position_closed)), 3) AS win_rate,
+  -- NORMALISATION REQUIRED BEFORE THE FIRST VARIABLE-SIZED TRADE CLOSES (Rev 39 / EP rev 18, owner
+  -- directive 2026-07-28). Under the retired flat-2% rule every thesis carried the same dollar risk, so a
+  -- raw dollar AVG was comparable across theses. Under thesis-scaled risk budgeting it is NOT: a $190
+  -- (10% CaR) thesis's $19 win and a $19 (1% CaR) thesis's $2 win get averaged as if equivalent, which
+  -- silently biases the conviction-calibration read toward whichever tier happened to be sized larger.
+  -- This is currently HARMLESS because every closed position to date was sized under the flat rule; it
+  -- becomes wrong the moment a variable-sized position closes. Fix is to divide by the thesis's recorded
+  -- Capital-at-Risk (a return per unit of risk) once that field is captured on the decision-log entry.
+  -- win_rate above is count-based and stays correct either way; analytics.calibration_shrunk
+  -- (bigquery/25) is purely win/loss-count based and needs no change.
   ROUND(AVG(IF(position_closed, realized_pnl, NULL)), 3) AS avg_realized_pnl
 FROM `stock-trading-498512.analytics.conviction_features`
 GROUP BY conviction ORDER BY ord;

@@ -658,7 +658,7 @@ The typing rule is mechanism-enforced via date comparison against thesis-formati
 - US-listed common equity (ADRs acceptable for large-cap foreign-domiciled companies)
 - Market cap ≥ $10B at entry (higher threshold than A/B because D's multi-year horizons expose it to more business-risk drift in smaller names)
 - 30-day average daily volume ≥ $20M
-- Position size: 2% of strategy portfolio at entry
+- Position size: ~~2% of strategy portfolio at entry~~ **AI-chosen risk budget per thesis (Rev 39, owner directive, 2026-07-28).** No blanket per-position figure. The AI sets this thesis's Capital at Risk (for long equity, the full position notional — there is no stop-loss, so the honest worst case is total loss) as a percentage of strategy portfolio value at entry, justified in the decision-log entry against the seven-factor list in `Experiment_Parameters.md` §Position size, and attacked on size as well as direction by the adversarial counter-argument entry criterion. Bounded by the hard envelopes: **per-name aggregate CaR ≤ 10%** of strategy portfolio (all tranches summed) and **per-strategy deployed CaR ≤ 75%**. Conviction enters as an ordinal tier only — never as a probability multiplied into a sizing formula (`AI_Trading_Foundation.md` 3a.1, 2.26).
 - Concurrent position count: minimum 5 (floor retained); ~~maximum 10 (hard cap)~~ **maximum REMOVED (Rev 35, owner directive)** — no holdings-count ceiling (the 2%-per-position size cap and the 30%-of-NAV sector exposure cap remain the deployment bounds)
 - Long-only
 
@@ -854,7 +854,7 @@ Rev 3 spot-edit fixes:
 
 **Instrument eligibility rule.**
 - Long L + Short S, both same GICS industry group (6-digit level)
-- Both executable at 2% of strategy portfolio per leg (4% per pair thesis)
+- Both legs executable at the pair's AI-chosen risk budget, sized to the hedge ratio (**Rev 39** — formerly "2% per leg / 4% per pair thesis")
 - Each leg counts as 1 position toward the 30-trade gate; a pair equals 2 trades
 - ETF-pair substitution permitted when individual-stock shorting infeasible at current portfolio size (S's share price × minimum-share-count × 2% cap interact unfavorably). ETF-pair execution acknowledged as diluting idiosyncratic thesis; documented accepted cost (KL #9). Substitution becomes unnecessary as portfolio grows past threshold.
 

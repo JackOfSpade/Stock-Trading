@@ -74,8 +74,15 @@ def short_stop_loss_triggered(short_entry_price: float, current_price: float) ->
     """Exit rule (short positions only, rev 13): "close the short if the underlying
     rises >= 25% from short-entry price." Asymmetric-by-design — long positions have
     no equivalent stop (strategy/04_strategy_b.md: long downside is bounded at -100%
-    of position, so worst-case long loss is already bounded at 2% of strategy
-    portfolio without an explicit stop).
+    of position, so sizing alone already bounds worst-case long loss at the thesis's
+    stated risk budget without an explicit stop).
+
+    Rev 39 (owner directive 2026-07-28) makes this stop LOAD-BEARING rather than
+    supplementary: under thesis-scaled risk budgeting the position size IS the risk
+    control, but that only works where downside is bounded. Short downside is
+    unbounded, so this stop is what makes a short's Capital at Risk finite at all —
+    CaR = notional * 0.25. It is mandatory and is the one deliberate exception to the
+    experiment's no-price-based-stops posture.
     """
     if short_entry_price <= 0:
         raise ValueError(f"short_entry_price = {short_entry_price} (must be > 0).")

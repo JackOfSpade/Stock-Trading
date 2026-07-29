@@ -1435,9 +1435,22 @@ def cascade_max_loss(
 def size_position(
     max_loss_per_contract: float,
     strategy_nav: float,
-    max_pct_nav: float = 0.02,
+    max_pct_nav: float,
 ) -> Tuple[int, bool]:
-    """Compute integer contract count for 2% NAV cap.
+    """Compute integer contract count fitting THIS THESIS's risk budget.
+
+    `max_pct_nav` is REQUIRED and has no default (Rev 39, owner directive
+    2026-07-28). It previously defaulted to 0.02 under the retired universal 2%
+    rule; the default was removed deliberately so a caller which forgets to
+    supply a budget fails loudly instead of silently reinstating the old flat 2%.
+    The caller sets it per Experiment_Parameters.md §Position size — justified
+    against the seven-factor list, recorded in the decision-log entry, and
+    adversarially attacked on size.
+
+    Strategy C is the one strategy whose Capital at Risk is EXACT rather than
+    assumed: max_loss_per_contract is the dual-path-verified bound inclusive of
+    the early-assignment cascade, so `contracts * max_loss_per_contract` IS the
+    thesis's CaR, not an estimate of it.
 
     Returns (contracts, defer_flag).
     - If defer_flag = True, no integer contract count fits within max_pct_nav.
@@ -1457,6 +1470,12 @@ def size_position(
             f"value indicates an upstream computational bug. Defer the thesis "
             f"and audit the max-loss computation rather than treating this as "
             f"a sizing edge case."
+        )
+
+    if not (0 < max_pct_nav <= 0.10):
+        raise ValueError(
+            f"max_pct_nav = {max_pct_nav} (must be in (0, 0.10]). The upper bound is "
+            "the 10% per-name Capital-at-Risk envelope, Experiment_Parameters.md rev 18."
         )
 
     nav_cap = strategy_nav * max_pct_nav

@@ -6,6 +6,10 @@
 SELECT COALESCE(conviction,'(unscored)') AS conviction, ANY_VALUE(conviction_ordinal) AS ord,
   COUNT(*) AS go_theses, COUNTIF(position_closed) AS closed, COUNTIF(was_profitable) AS wins,
   ROUND(SAFE_DIVIDE(COUNTIF(was_profitable), COUNTIF(position_closed)), 3) AS win_rate,
+  -- See bigquery/04_analytics.sql for the full note: this raw-dollar average must be normalised to a
+  -- per-unit-of-Capital-at-Risk basis before the first variable-sized position closes (Rev 39 / EP rev 18,
+  -- owner directive 2026-07-28 — thesis-scaled risk budgeting replaced the flat 2% rule that made raw
+  -- dollar averages comparable). Harmless today; wrong once a variable-sized trade closes.
   ROUND(AVG(IF(position_closed, realized_pnl, NULL)), 3) AS avg_realized_pnl
 FROM {{ ref('conviction_features') }}
 GROUP BY conviction ORDER BY ord
