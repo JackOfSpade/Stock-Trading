@@ -982,6 +982,18 @@ project (the `notified_ts` column already exists from `bigquery/18_stack_review_
 
 Status (2026-06-23): **detector closed RUNBOOK 20's second incident** — Operating_Protocols.md 17 codifies it; merged to main via claude/never-pushed-reconciliation.
 Status (2026-06-24): **root cause confirmed + hardened** (explicit verified push gating the `completed` log; severity escalation on data-loss/recurrence/unhealed) — Claude_Task_Plan.md "Session end"/Observability + Operating_Protocols.md 17.
+
+Status (2026-07-29): **correction to the two Status lines above.** Verification on 2026-07-29 found that the
+Operating_Protocols.md §17 detector (the never-pushed-branch reconciliation step, not this file's own unrelated
+§17 public-exposure guardrail) was never inlined into `Claude_Task_Plan.md` or any `task_plan/` slice, so it
+never actually ran as a live D2 step at any point, including on 2026-06-24. The "D2 Step-0 detector (§17) fired
+correctly" account above reflects a session self-executing freshly-written spec prose from its own commit
+that same day, not a live, wired step reachable by ordinary D2 runs on other days. The "detector closed RUNBOOK
+20's second incident" and "root cause confirmed + hardened" closure claims at the two Status lines above are
+therefore not supported and should not be relied on as evidence this detector was ever live. Operating_Protocols.md
+§17 is now retired (2026-07-29); its successor is **OPS0 STEP 4(f)** in `Claude_Task_Plan.md`, which detects the
+same signature via `ops.routine_commit_markers` and currently runs in SHADOW.
+
 ## 21. `events.*` append-only convention — the `sub_pattern` in-place exception *(data governance)*
 `events.*` is the **append-only source of truth** (schema description: *"INSERT/Storage-Write only; never
 UPDATE/DELETE"*; `decision_log`: *"corrections are new rows with `superseded_by`"*). That invariant is
