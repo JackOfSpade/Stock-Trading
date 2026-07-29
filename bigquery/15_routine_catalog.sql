@@ -150,6 +150,16 @@ FROM UNNEST([
 -- This does NOT touch unknown_routine (a routine absent from the catalog still flags regardless of its
 -- instruction text) and does NOT weaken the type-suffix check RUNBOOK §22 explicitly protects (the
 -- ` — deep research.` / ` — regular routine.` tag is INSIDE the first line, still compared verbatim).
+-- SUPERSEDED LIVE by bigquery/115_instruction_drift_whitespace_normalize.sql (2026-07-29) — current
+-- single source of truth for this VIEW. 115 replaces the first-line-only equality below with a
+-- WHITESPACE-NORMALIZED PREFIX match: this check reads ops.run_log.instruction (what the routine
+-- transcribed), not the live trigger, so a session that copied its trigger with the newlines collapsed
+-- to a space produced a single-line instruction and false-fired `trigger_drift` against a CORRECT
+-- trigger (SL3, 2026-07-28 — live trigger verified right via RemoteTrigger get). Wrong routine number /
+-- heading / type-tag / truncation / prepended text are all still caught. This file's ops.routine_catalog
+-- TABLE and its generated STRUCT rows are UNCHANGED and remain canonical here. Kept below, unmodified,
+-- for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE VIEW statement live in
+-- isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.instruction_drift` AS
 WITH li AS (
   SELECT routine, instruction, run_date
