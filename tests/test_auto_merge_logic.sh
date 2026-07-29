@@ -208,6 +208,44 @@ assert_false "API error: should_retry_failed_ci must NOT retry" \
 assert_false "missing run_attempt (empty string): should_retry_failed_ci must NOT retry" \
   should_retry_failed_ci "failure" ""
 
+# ---- RUNBOOK §38 marker fields: routine + run_date extraction (2026-07-29) -----------------
+# Regression guard for the fleet-wide marker hole: requiring a full YYYY-MM-DD *in the subject*
+# meant only D1/D2/W5 ever produced ops.routine_commit_markers rows, which silently limited
+# ops.sp_backfill_run_log_from_markers to those same three routines.
+
+# routine extraction — the conventions actually used by the fleet
+assert_eq "routine: ISO-dated daily convention" \
+  "$(marker_routine_from_subject 'D1 Market Development Scan 2026-07-28')" "D1"
+assert_eq "routine: year-only annual convention (was silently unmarked before the fix)" \
+  "$(marker_routine_from_subject 'A1 2026: annual foundation re-derivation')" "A1"
+assert_eq "routine: colon-suffixed id is recognised" \
+  "$(marker_routine_from_subject 'SL5: register newcomer')" "SL5"
+assert_eq "routine: multi-char underscore id" \
+  "$(marker_routine_from_subject 'AR_orc adjudicate queue')" "AR_orc"
+assert_eq "routine: two-char suffixed id is not confused with its prefix" \
+  "$(marker_routine_from_subject 'D2a Broker Reconcile 2026-07-28')" "D2a"
+
+# non-routine subjects must yield NOTHING, so no marker row is written for human/merge commits
+assert_eq "routine: a human branch subject yields no routine" \
+  "$(marker_routine_from_subject 'Landing hardening: checkpoint pushes, halt-path save')" ""
+assert_eq "routine: an auto-merge commit subject yields no routine" \
+  "$(marker_routine_from_subject 'Merge origin/main into landing-hardening')" ""
+assert_eq "routine: an unknown token that merely looks like an id yields no routine" \
+  "$(marker_routine_from_subject 'D9 not a real routine 2026-07-28')" ""
+assert_eq "routine: empty subject yields no routine" \
+  "$(marker_routine_from_subject '')" ""
+
+# run_date — a subject-embedded ISO date stays authoritative (no regression for D1/D2/W5)
+assert_eq "run_date: subject ISO date wins over the fallback" \
+  "$(marker_run_date_from_subject 'D1 Market Development Scan 2026-07-28' '2026-07-29')" "2026-07-28"
+assert_eq "run_date: first ISO date wins when the subject carries several" \
+  "$(marker_run_date_from_subject 'D3 sweep 2026-07-28 covering 2026-07-27' '2026-07-29')" "2026-07-28"
+# ...and the commit's own author date is used when the subject has no full date
+assert_eq "run_date: year-only subject falls back to the commit author date" \
+  "$(marker_run_date_from_subject 'A1 2026: annual foundation re-derivation' '2026-07-28')" "2026-07-28"
+assert_eq "run_date: no date anywhere yields empty (caller then skips the row)" \
+  "$(marker_run_date_from_subject 'A1 2026: annual foundation re-derivation' '')" ""
+
 echo
 if [ "$fail" -ne 0 ]; then
   echo "auto_merge_decision tests: FAILED"

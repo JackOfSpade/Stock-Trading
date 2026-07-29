@@ -107,3 +107,56 @@ ci_run_attempt_from_json() {
 should_retry_failed_ci() {
   [ "$1" = "failure" ] && [ "$2" = "1" ]
 }
+
+# ---- RUNBOOK §38 commit-marker field extraction (extracted + FIXED 2026-07-29) ----------------
+# WHY THESE EXIST: the marker fields used to be parsed by two inline greps in
+# auto-merge-claude.yml, untested, and REQUIRED BOTH a routine token AND a full YYYY-MM-DD in the
+# commit subject before writing an ops.routine_commit_markers row. Verified 2026-07-29: that gate
+# meant the table had only EVER received rows for D1, D2 and W5 — the three routines whose commit
+# convention happens to embed a full ISO date ("D1 Market Development Scan 2026-07-28"). Routines
+# writing e.g. "A1 2026: annual foundation re-derivation" carry only a YEAR, so A1/A2/A3 landed real
+# commits on main and got no marker at all. Because ops.sp_backfill_run_log_from_markers (RUNBOOK
+# §38 layer A) reads this table, that self-heal had likewise only ever been able to repair those same
+# three routines — a silent, fleet-wide hole in the "commit landed but run_log missing" recovery path.
+# Extracted here as PURE string functions so tests/test_auto_merge_logic.sh covers the production
+# implementation directly (same rationale as the predicates above).
+
+# marker_routine_from_subject <subject> — print the leading routine id if the subject starts with a
+# known routine token, else print nothing. The token may be followed by whitespace OR punctuation
+# (":", ".", ",", "-"), so "SL5: register newcomer" is recognised as well as "D1 Market Scan ...".
+# A non-routine subject ("Landing hardening: ...", "Merge origin/main into ...") prints nothing, which
+# is what suppresses marker rows for human/non-routine branches.
+# The allowlist assignment below keeps the exact literal shape that
+# scripts/check_cadence_consistency.py's check H greps for — that guard asserts every id in
+# ops/cadence.yaml is accepted here, so a newly-added routine cannot be silently skipped by the
+# §38 marker-write. Do NOT rewrite it into a case statement or a different quoting style without
+# updating AUTO_MERGE_ROUTINE_RE / AUTO_MERGE_ALLOWLIST_FILES in that script. NOTE: do not restate
+# that literal's shape anywhere in a comment — the checker's own pattern would match the comment
+# first and silently validate a placeholder instead of the real allowlist.
+marker_routine_from_subject() {
+  local token routine_re
+  routine_re='^(D1|D2a|D2|D3|OPS0|OPS1|OPS2|W[1-5]|M1a|M1b|M[2-5]|Q[1-4]|A[1-3]|SL[1-5]|AR_att|AR_orc)$'
+  token="$(printf '%s' "${1:-}" | grep -oE '^[A-Za-z][A-Za-z0-9_]*' || true)"
+  if [ -n "$token" ] && [[ "$token" =~ $routine_re ]]; then
+    printf '%s\n' "$token"
+  else
+    printf '\n'
+  fi
+}
+
+# marker_run_date_from_subject <subject> <fallback_iso_date> — print the run_date for the marker row:
+# a full YYYY-MM-DD embedded in the subject when present (authoritative — preserves the existing
+# D1/D2/W5 behaviour exactly), otherwise the supplied fallback. The caller passes the COMMIT's own
+# author date (`git log -1 --format=%as`), which is the date the routine actually made the commit in
+# its own timezone — not the merge date, which can roll past midnight UTC and misattribute an evening
+# routine's run to the following day. Prints nothing if neither source yields a date, and the caller
+# then skips the row rather than inventing one.
+marker_run_date_from_subject() {
+  local in_subject
+  in_subject="$(printf '%s' "${1:-}" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1 || true)"
+  if [ -n "$in_subject" ]; then
+    printf '%s\n' "$in_subject"
+  else
+    printf '%s\n' "${2:-}"
+  fi
+}

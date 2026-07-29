@@ -78,7 +78,7 @@ BEGIN
 
   -- Auto-resolve STALE self-healing WARNING rows (2026-06-28, #14) so the weekly digest's "N open alerts"
   -- reflects live issues, not warnings the owner never manually closed (e.g. a 4-day-old self-healed
-  -- stranded_session warning keeping the digest red). Targets only the self-CLEARING classes, warning
+  -- instruction_drift warning keeping the digest red). Targets only the self-CLEARING classes, warning
   -- severity, older than 7 days. A condition that is STILL true is simply re-raised by the checks below
   -- (sp_raise_alert_once), so this can only durably clear a row whose underlying condition has actually
   -- healed. Critical rows and the persistent-DRIFT classes (position_drift / ddl_drift /
@@ -107,7 +107,11 @@ BEGIN
     -- A STILL-drifted query is simply re-raised by the scheduled_query_version_drift check below, so a
     -- genuinely unapplied wrapper cannot be aged away silently.
     -- scheduled_query_stale + ci_findings_bridge_stale + control_plane_insert added 2026-07-17 (MON H2/H4/H5): self-healing warnings (a resumed beat / a re-armed bridge / an aged-out control INSERT event stop being true) whose stable-message rows would otherwise linger open after the condition heals; a STILL-true condition is simply re-raised below (bridge_stale/scheduled_query_stale in THIS proc, control_plane_insert by safety_critical_dml_watch).
-    AND category IN ('stranded_session', 'instruction_drift', 'calendar_runway_low', 'routine_stalled', 'trigger_missing', 'immediate_action_flagged', 'process_scorecard_signal', 'scheduled_query_stale', 'ci_findings_bridge_stale', 'control_plane_insert', 'scheduled_query_version_drift')
+    -- 'stranded_session' REMOVED 2026-07-29: it was never once raised anywhere in this repo's entire git
+    -- history -- it existed only in this allowlist, added alongside the Operating_Protocols.md §17
+    -- stranded-session detector, which was itself never wired into any routine and was RETIRED 2026-07-29.
+    -- A dead entry in a fail-closed allowlist reads as coverage that does not exist; dropped with §17.
+    AND category IN ('instruction_drift', 'calendar_runway_low', 'routine_stalled', 'trigger_missing', 'immediate_action_flagged', 'process_scorecard_signal', 'scheduled_query_stale', 'ci_findings_bridge_stale', 'control_plane_insert', 'scheduled_query_version_drift')
     AND alert_ts < TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY);
 
   -- missed_run (critical) — a monitored routine expected today did not complete.

@@ -249,7 +249,9 @@ AND NOT EXISTS (
 -- (marginal) state.stalled_runs — a routine logged 'started' but never a terminal status.
 -- A session that dies AFTER sp_routine_start but BEFORE sp_routine_end (the documented §20 abnormal-end
 -- mode: usage-limit cutoff / container reclamation) leaves a stuck 'started' row that NOTHING reads — the
--- §17 stranded-session detector keys on status='completed' and is structurally blind to it.
+-- completed-run landing check (OPS0 STEP 4(f)) keys on status='completed' and is structurally blind to it.
+-- (This line used to cite "the §17 stranded-session detector"; Operating_Protocols.md §17 was RETIRED
+--  2026-07-29 as orphaned prose that was never wired into any routine. OPS0 STEP 4(f) is its successor.)
 --
 -- 2026-06-28 stack review #2 (#11): GENERALIZED beyond D1/D2/D3 to all run-logged routines via a per-class
 -- min_stale_hours table (mirrors trigger_attestation's cls CTE), with the lookback widened from 3→7 days so

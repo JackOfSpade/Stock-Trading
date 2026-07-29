@@ -176,10 +176,13 @@ routines:
                              # to fix (self-improvement audit 2026-07-15, CONFIRMED GAP
                              # catchup-notify-no-auto-refire; Architect recommendation #1)
     writes: [ops.catchup_refire_log, events.decision_log, ops.alerts, ops/cadence.yaml, ops/trigger_ids.json]
-                             # ops.alerts also carries the STEP 4 `stranded_branch` category and
-                             # events.decision_log also carries the STEP 4f `unlanded-completed-run-
-                             # shadow` entry_type (landing-hardening 2026-07-29) -- same write targets,
-                             # new categories/entry types within them, so no new list entry needed
+                             # ops.alerts also carries STEP 4's stranded_branch / stranded_branch_adopted /
+                             # unlanded_completed_run categories, and events.decision_log the
+                             # stranded-branch-adoption + unlanded-completed-run entry_types
+                             # (landing-hardening 2026-07-29). STEP 4d adoption additionally writes
+                             # ops.routine_commit_markers and may merge arbitrary NON-excluded repo files
+                             # from an adopted branch onto OPS0's own branch (bigquery/*.sql, dbt/** and
+                             # the spec-locked strategy surfaces are hard-excluded -- see STEP 4d).
     expected_trigger:
       recurrence: daily
       time_local: "22:30"          # fixed 04:30 UTC cron (trig_019338gJ97LuWCdYAdHK9eUh, created
@@ -197,10 +200,15 @@ routines:
       missed_run/period_missed alert only. Idempotent via ops.catchup_refire_log (one attempt per
       miss_key, ever). No chat question, ever. STEP 4 (landing-hardening 2026-07-29) adds a daily GIT
       LANDING SWEEP: detects claude/* branches stranded >6h unmerged into origin/main (CI-red or
-      merge-conflict) and raises a deduped 'warning'/stranded_branch alert -- detect-and-alert only,
-      it never merges/rescues a stranded branch. Also writes a SHADOW-only
-      events.decision_log entry_type='unlanded-completed-run-shadow' for completed runs with no
-      matching ops.routine_commit_markers row (no alert while shadow).
+      merge-conflict) and raises a deduped 'warning'/stranded_branch alert. Where all six STEP 4d
+      preconditions hold (clean worktree; no hard-excluded path; unambiguous merge; no conflict
+      residue; the local credential-free CI subset passing on the RESOLUTION; immediate push) it also
+      ADOPTS the stranded branch onto OPS0's own branch so the work reaches main with no human --
+      otherwise it aborts cleanly and leaves the branch for the human PR path. STEP 4f separately
+      checks, on git evidence (not commit markers), for runs that logged 'completed' but whose repo
+      output never reached main, raising 'warning'/unlanded_completed_run. Never 'critical': neither
+      category is in bigquery/107's blocking-criticals exclusion list, so a critical would gate
+      state.trading_enabled.
   - id: OPS1
     name: Morning Connector Liveness Probe
     schedule: "pre-market, ~9h before the 16:10-17:15 MT daily cadence"

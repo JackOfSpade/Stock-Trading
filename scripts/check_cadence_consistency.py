@@ -80,6 +80,10 @@ PERIOD_WATCH_SQL = os.path.join(ROOT, "bigquery", "24_cadence_period_watch.sql")
 TRIGGERS_JSON = os.path.join(ROOT, "ops", "triggers.json")
 TRIGGER_IDS_JSON = os.path.join(ROOT, "ops", "trigger_ids.json")
 AUTO_MERGE_YML = os.path.join(ROOT, ".github", "workflows", "auto-merge-claude.yml")
+# The §38 marker-write allowlist moved into the sourced helper on 2026-07-29 (extracted so
+# tests/test_auto_merge_logic.sh covers the production implementation); the workflow is kept as a
+# fallback location so this check still finds the literal if it is ever moved back inline.
+AUTO_MERGE_DECISION_SH = os.path.join(ROOT, "scripts", "auto_merge_decision.sh")
 CATCHUP_NOTIFY_SQL = os.path.join(ROOT, "bigquery", "31_catchup_notify.sql")
 CATCHUP_AUTOFIRE_SQL = os.path.join(ROOT, "bigquery", "59_catchup_autofire.sql")
 
@@ -986,21 +990,28 @@ def main():
     # routine added to cadence.yaml but not to this regex has its commits silently skipped by the
     # §38 marker-write self-heal, with no CI signal. Only checks the cadence-ids-subset-of-regex
     # direction (under-inclusive/silent-skip) — the regex being a superset is harmless. ----
-    if os.path.exists(AUTO_MERGE_YML):
-        txt = open(AUTO_MERGE_YML, encoding="utf-8").read()
-        m = AUTO_MERGE_ROUTINE_RE.search(txt)
-        if m is None:
-            errors.append("could not find routine_re='^(...)$' in .github/workflows/auto-merge-claude.yml "
-                          "— the RUNBOOK §38 marker-write allowlist literal may have changed shape; "
-                          "update AUTO_MERGE_ROUTINE_RE in this script to match")
-        else:
+    # The literal moved into the sourced helper on 2026-07-29. Look in BOTH locations and validate
+    # EVERY copy found (not first-match-wins): if the allowlist is ever duplicated across the helper
+    # and the workflow, a stale second copy must fail loudly rather than hide behind a complete one.
+    # Read the module globals at call time so tests can monkeypatch either path.
+    allowlist_paths = [p for p in (AUTO_MERGE_DECISION_SH, AUTO_MERGE_YML) if os.path.exists(p)]
+    if allowlist_paths:
+        found = [(p, AUTO_MERGE_ROUTINE_RE.search(open(p, encoding="utf-8").read()))
+                 for p in allowlist_paths]
+        found = [(p, m) for p, m in found if m is not None]
+        if not found:
+            errors.append("could not find the RUNBOOK §38 marker-write routine allowlist literal in "
+                          "scripts/auto_merge_decision.sh or .github/workflows/auto-merge-claude.yml "
+                          "— its shape may have changed; update AUTO_MERGE_ROUTINE_RE / "
+                          "AUTO_MERGE_DECISION_SH / AUTO_MERGE_YML in this script to match")
+        for _p, m in found:
+            _rel = os.path.relpath(_p, ROOT)
             routine_re_pat = re.compile(f"^(?:{m.group(1)})$")
             for rid in cad:
                 if not routine_re_pat.fullmatch(rid):
-                    errors.append(f"{rid}: in ops/cadence.yaml but NOT matched by "
-                                  f"auto-merge-claude.yml's routine_re — RUNBOOK §38 marker-write "
-                                  f"will silently skip this routine's commits (add it to the "
-                                  f"routine_re alternation on the marker-write line)")
+                    errors.append(f"{rid}: in ops/cadence.yaml but NOT matched by {_rel}'s "
+                                  f"routine_re — RUNBOOK §38 marker-write will silently skip this "
+                                  f"routine's commits (add it to the routine_re alternation)")
 
     # ---- M. EVENING-slot daily SAME-DAY guard copies carry the noon-threshold clause (H1). ----
     # Gated on the "SAME-DAY DOUBLE-RUN GUARD" sentinel being present at all, so a minimal test fixture
