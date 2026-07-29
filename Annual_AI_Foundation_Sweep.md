@@ -817,8 +817,8 @@ A3 reads this PART 2 verbatim and produces the updated `AI_Trading_Foundation.md
 ### Headline counts
 
 - **Items with ANY L1 (deployed-model) evidence: 8 of 42 (19%)** — 1.1, 1.7, 2.3, 2.5, 2.9, 2.10, 2.11, 2.25. **All eight are VENDOR-CLAIMED.** There is **zero independent L1 evidence on any foundation item.**
-- **Items with ANY L1 or L2 evidence: 11 of 42 (26%)** — the eight above plus 2.7, 2.13, 2.15 (2.15 unconfirmed).
-- **Items resting on L3/L4 only, or on nothing: 31 of 42 (74%).**
+- **Items with ANY L1 or L2 evidence: 12 of 42 (29%)** — the eight above plus 2.7, 2.13, 2.24, and 2.15 (unconfirmed).
+- **Items resting on L3/L4 only, or on nothing: 30 of 42 (71%).**
 - **Items VERSION-VOLATILE: 1** — 2.10, the single most evidence-rich item, and the only MATERIAL-reduction candidate.
 - **Items SPARSE: 7** — 1.3, 1.7, 2.4, 2.14, 2.15, 2.21, 3b.2. Of these, **2.14 and 2.21 are empty at all four levels**; the rest have phenomenon-level or adjacent-construct evidence but no magnitude.
 - **Items CONVERGENT: 8** · **LEVEL-SPLIT: 2** · **OFF-LINE-ONLY: 24.**
@@ -839,9 +839,11 @@ Per the A1 instruction: Tier 1 with no architectural-change evidence → KEEP UN
 
 No architectural-change evidence; no contradicting research; text stands as written.
 
-**1.2** (L4, OFF-LINE-ONLY) · **1.5** (L4) · **1.6** (L4) · **1.8** (L4) · **1.10** (L4) · **2.6** (L4) · **2.12** (L4 — but see C.2 for a citation *addition* that does not change the text's claim) · **2.16** (L3/L4 — with an A3 note about the `2509.01790` measurement challenge, which does not qualify as architectural-change evidence) · **2.22** (L4, mathematical fact) · **2.25** (L1/L3/L4, CONVERGENT — citation adjudicated VERIFIED) · **3a.1** (posture reinforced) · **3b.3** (posture reinforced) — plus **1.3**, **2.4**, **2.14**, **2.15**, **2.21** keep their *item text and existence claim* while their magnitudes go to C.3.
+**1.2** (L4, OFF-LINE-ONLY) · **1.5** (L4) · **1.6** (L4) · **1.8** (L4) · **1.10** (L4) · **2.6** (L4) · **2.12** (L4 — but see C.2 for a citation *addition* that does not change the text's claim) · **2.16** (L3/L4 — with an A3 note about the `2509.01790` measurement challenge, which does not qualify as architectural-change evidence) · **2.22** (L4, mathematical fact) · **2.25** (L1/L3/L4, CONVERGENT — citation adjudicated VERIFIED) · **3a.1** (posture reinforced) · **3b.3** (posture reinforced) — plus **1.3**, **1.7**, **2.4**, **2.14**, **2.15** keep their *item text and existence claim* while their magnitudes go to C.3.
 
-### C.2 — UPDATE (19 items)
+**List reconciliation (so A3 can verify coverage is complete):** 12 KEEP-only items + 5 items whose text is KEEP but whose magnitude is VERSION-PENDING = 17 here. C.2 carries 26 items, of which **2.12** is also listed above (its claim is unchanged; only a citation is added). 12 + 5 + 25 = **42**, every item dispositioned exactly once. **2.21** is in C.2, not here — its item text survives but its citation handling changes.
+
+### C.2 — UPDATE (26 items across 25 numbered entries; 2.1 and 2.2 share entry 4)
 
 Each entry: what changes, governing level, cross-level verdict, and citation.
 
@@ -958,7 +960,15 @@ Removal requires Tier 1 architectural-change evidence or Tier 2 with explicit co
 
 **STRATEGY A — CONTINUE, with pre-mortem note.**
 Changed items in A's graph: 1.1 (caveat added), 2.3 (**INCREASE** — L1 deployed-model hallucination regression, plus L4 market-cap reversal), 2.5, 2.8, 2.13, 2.14 (version-pending), 2.19 (sub-claim removed), 2.20 (scope refined).
-§5.2 test: no exploited edge removed or reduced. 2.3 is a *strengthened* disadvantage that A load-bears on (A's mechanism cites 2.3 twice). Per §5.2 step 3, A has a compensation pathway — A's mechanism already treats hallucination as a first-class risk with source-verification requirements — so **do not terminate**. Note the 2.3 increase in A's pre-mortem at its next revision. **Note the market-cap reversal is directly adverse to A** if A's universe skews large-cap: the item previously implied large-caps were *safer* to reason about, and the L4 evidence says the opposite.
+§5.2 test: no exploited edge removed or reduced. 2.3 is a *strengthened* disadvantage that A load-bears on (A's mechanism cites 2.3 twice). Per §5.2 step 3, A has a compensation pathway — A's mechanism already treats hallucination as a first-class risk with source-verification requirements — so **do not terminate**. Note the 2.3 increase in A's pre-mortem at its next revision.
+
+**⚠ A CONCRETE CONSTRAINT RESTS ON THE REVERSED SUB-CLAIM — A2 MUST LOOK AT THIS.** Strategy A's entry criteria include, verbatim:
+
+> `Market cap ≥ $2B at entry (screens small-caps where hallucination rates are elevated per 2.3)`
+
+**The only stated rationale for this constraint is the market-cap direction that this sweep found reversed at L4.** Applying §5.3 step 3's load-bearing test mechanically: the $2B floor is named as mitigation for **no other disadvantage** anywhere in A's pre-mortem (searched; zero matches), and A's liquidity requirement is carried separately by the adjacent `30-day ADV ≥ $10M` criterion. So the floor is **not** load-bearing for any still-in-force disadvantage — its justification is 2.3's market-cap sub-claim alone. Worse than merely unmotivated: if the L4 direction holds, a $2B floor screens *into* the segment the evidence says is hallucinated about more, so the constraint may be pointing against its own stated purpose.
+
+**Routing — and this is deliberately NOT a relaxation.** §5.3 requires the disadvantage to have been *materially reduced*; 2.3 was not reduced (at L1 it **worsened**), and a reversed rationale is not a reduction. Same reasoning as 2.17 in §C.2 item 14: a constraint whose justification is contradicted is **unmotivated, not over-tight**, and §5.6's lookup keys off reduction magnitude so it does not apply. **Do not relax or remove the $2B floor on the strength of this finding** — the evidence is L4-only, single-source, with no Claude model in panel, and fails §5.5 guardrail 1. The correct disposition is an **A2 constraint-audit question**: re-derive whether the $2B floor survives on grounds other than 2.3 (liquidity, spread, borrow, index membership, catalyst-coverage density), and if it does, re-annotate it to cite those grounds instead. If it survives on no other grounds, that is an out-of-table flag for the autonomous `out-of-table-resolution` review with conservative default **HOLD the constraint at its current value**.
 
 **STRATEGY B — CONTINUE.**
 Changed items in B's graph: 1.1, 1.4 (ceiling added), 2.8, 2.13, 2.14 (VP), 2.15 (VP), 2.17 (**direction contested**), 2.18 (strengthened), 2.19 (sub-claim removed), 2.20 (**scope refined — B is the heaviest 2.20 citer at ×13**).
@@ -1052,8 +1062,8 @@ Per the A1 instruction, this sweep applies §5.5 exactly as the foundation curre
 
 | Outcome | Count | Items |
 |---|---|---|
-| KEEP UNCHANGED | 17 | 1.2, 1.5, 1.6, 1.8, 1.10, 2.6, 2.12*, 2.16, 2.22, 2.25, 3a.1, 3b.3 + item-text of 1.3, 2.4, 2.14, 2.15, 2.21 |
-| UPDATE | 19 items / 25 discrete changes | 1.1, 1.4, 1.9, 2.1, 2.2, 2.3, 2.5, 2.7, 2.8, 2.9, 2.10, 2.11, 2.12, 2.13, 2.17, 2.18, 2.19, 2.20, 2.21, 2.23, 2.24, 2.26, 3a.2, 3a.3, 3b.1, 3b.2 |
+| KEEP UNCHANGED | 17 | 1.2, 1.5, 1.6, 1.8, 1.10, 2.6, 2.12*, 2.16, 2.22, 2.25, 3a.1, 3b.3 + item-text of 1.3, 1.7, 2.4, 2.14, 2.15 |
+| UPDATE | 26 items / 25 numbered entries | 1.1, 1.4, 1.9, 2.1, 2.2, 2.3, 2.5, 2.7, 2.8, 2.9, 2.10, 2.11, 2.12*, 2.13, 2.17, 2.18, 2.19, 2.20, 2.21, 2.23, 2.24, 2.26, 3a.2, 3a.3, 3b.1, 3b.2 |
 | MARK VERSION-PENDING (per-item fade review) | 6 magnitudes | 1.3/2.4 (shared), 1.7, 2.14, 2.15, 2.19, 2.21 |
 | MARK VERSION-PENDING (document-wide Part 4 step 4) | **ALL Tier 2 magnitudes** | no exemptions |
 | PROPOSED REMOVAL | 1 sub-claim | 2.19 "Scaling Paradox" |
