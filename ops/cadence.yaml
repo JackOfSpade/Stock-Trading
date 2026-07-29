@@ -176,6 +176,10 @@ routines:
                              # to fix (self-improvement audit 2026-07-15, CONFIRMED GAP
                              # catchup-notify-no-auto-refire; Architect recommendation #1)
     writes: [ops.catchup_refire_log, events.decision_log, ops.alerts, ops/cadence.yaml, ops/trigger_ids.json]
+                             # ops.alerts also carries the STEP 4 `stranded_branch` category and
+                             # events.decision_log also carries the STEP 4f `unlanded-completed-run-
+                             # shadow` entry_type (landing-hardening 2026-07-29) -- same write targets,
+                             # new categories/entry types within them, so no new list entry needed
     expected_trigger:
       recurrence: daily
       time_local: "22:30"          # fixed 04:30 UTC cron (trig_019338gJ97LuWCdYAdHK9eUh, created
@@ -191,7 +195,12 @@ routines:
       (W1/W2/W3/W5, M1a/M1b/M2/M3/M5, Q1/Q2/Q3/SL1, A1/A2). NEVER re-fires D2/D2a/W4/M4/Q4/A3/SL4 (the
       order-crafting / capital-adjacent routines) -- those keep their existing human-visible
       missed_run/period_missed alert only. Idempotent via ops.catchup_refire_log (one attempt per
-      miss_key, ever). No chat question, ever.
+      miss_key, ever). No chat question, ever. STEP 4 (landing-hardening 2026-07-29) adds a daily GIT
+      LANDING SWEEP: detects claude/* branches stranded >6h unmerged into origin/main (CI-red or
+      merge-conflict) and raises a deduped 'warning'/stranded_branch alert -- detect-and-alert only,
+      it never merges/rescues a stranded branch. Also writes a SHADOW-only
+      events.decision_log entry_type='unlanded-completed-run-shadow' for completed runs with no
+      matching ops.routine_commit_markers row (no alert while shadow).
   - id: OPS1
     name: Morning Connector Liveness Probe
     schedule: "pre-market, ~9h before the 16:10-17:15 MT daily cadence"
