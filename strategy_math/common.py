@@ -1,9 +1,11 @@
 """
 strategy_math.common — shared numeric primitives used across strategies A/B/D/E.
 
-Position sizing (2% of strategy portfolio, Strategy.md universal rule) and the
-correlation/regression math D (correlation buckets, beta-adjusted alpha) and E
-(pair correlation, hedge-ratio leg sizing) both need. Pure stdlib.
+Position sizing (thesis-scaled risk budgeting per Experiment_Parameters.md rev 18 —
+the caller supplies the risk-budget fraction; there is no universal 2% rule as of
+Strategy.md Rev 43, owner directive 2026-07-28) and the correlation/regression math
+D (correlation buckets, beta-adjusted alpha) and E (pair correlation, hedge-ratio
+leg sizing) both need. Pure stdlib.
 """
 
 from __future__ import annotations
@@ -12,17 +14,43 @@ import math
 from dataclasses import dataclass
 
 
-def position_size_dollars(sub_portfolio_nav: float, pct: float = 0.02) -> float:
-    """2%-of-strategy-portfolio position sizing (Strategy.md universal rule,
-    reaffirmed per-strategy in every A/B/D/E Instrument eligibility rule section).
-    `sub_portfolio_nav` is the STRATEGY's own sub-portfolio NAV (analytics.strategy_nav
-    .sizing_base_2pct upstream), never whole-account net-liquidation — Operating_
-    Protocols.md's "Sizing and analysis on live data" tripwire.
+def position_size_dollars(sub_portfolio_nav: float, pct: float) -> float:
+    """Thesis-scaled position sizing: `pct` is THIS THESIS's risk budget as a
+    fraction of the strategy's own sub-portfolio NAV.
+
+    `pct` is REQUIRED and has no default (Rev 43, owner directive 2026-07-28).
+    It previously defaulted to 0.02 under the retired universal 2% rule; the
+    default was removed deliberately so that a caller which forgets to supply a
+    budget fails loudly instead of silently reinstating the old flat 2%.
+
+    The caller sets `pct` per Experiment_Parameters.md §Position size: justified
+    against the seven-factor list, recorded in the thesis's decision-log entry,
+    and adversarially attacked on size as well as direction. Conviction enters as
+    an ordinal tier only — never as a probability multiplied into this call
+    (AI_Trading_Foundation.md 3a.1, 2.26).
+
+    `sub_portfolio_nav` is the STRATEGY's own sub-portfolio NAV, never whole-account
+    net-liquidation — Operating_Protocols.md's "Sizing and analysis on live data"
+    tripwire.
+
+    ENVELOPE ENFORCEMENT — necessary but NOT sufficient. This function rejects a
+    SINGLE budget above the 10% per-name ceiling, which is a necessary condition
+    only. It canNOT enforce the envelopes themselves, because both are book-level
+    AGGREGATES this pure function cannot see: two separately-valid 6% tranches in
+    the same name sum to 12% and breach the per-name envelope while passing every
+    individual call here. The caller MUST check the aggregate against the live book
+    (per-name total CaR <=10%, per-strategy deployed CaR <=75%) before staging.
     """
     if sub_portfolio_nav <= 0:
         raise ValueError(f"sub_portfolio_nav = {sub_portfolio_nav} (must be > 0).")
     if not (0 < pct <= 1):
         raise ValueError(f"pct = {pct} (must be in (0, 1]).")
+    if pct > 0.10:
+        raise ValueError(
+            f"pct = {pct} exceeds the 10% per-name Capital-at-Risk envelope "
+            "(Experiment_Parameters.md rev 18). A single thesis cannot be budgeted "
+            "above the per-name aggregate ceiling."
+        )
     return sub_portfolio_nav * pct
 
 

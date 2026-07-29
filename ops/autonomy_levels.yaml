@@ -57,7 +57,9 @@
 #                    the D2a / strategy_arsenal skeleton (bigquery/37_self_improvement_autonomy.sql). A loop
 #                    still may NOT self-apply until ITS OWN data gate clears; autonomy removes the human
 #                    step, never the evidence bar. What is NOT relaxed: the mechanical kill triggers, the
-#                    $2,000 probe-stake floor, 2% sizing, and the IBKR order-confirm execution tap — all stand.
+#                    $2,000 probe-stake floor, the per-thesis risk-budget discipline + its hard envelopes
+#                    (Rev 43/EP rev 18, 2026-07-28 — the flat 2% figure is retired), and the IBKR
+#                    order-confirm execution tap — all stand.
 #
 # PROMOTION RULE: no routine may treat a loop as being at a stage higher than what this file declares.
 # If a routine's instructions (Claude_Task_Plan.md / Operating_Protocols.md) describe a behavior that
@@ -447,7 +449,9 @@ cross_cutting_guards:
       idempotency marker + the audit trail (events.decision_log entry + info-severity ops.alerts row) + the
       meta_monitoring_heartbeat dead-man's switch — the D2a / strategy_arsenal precedent. There is no per-loop
       human-review label to enforce and nothing to exclude from auto-merge; the guard is RETIRED, not merely
-      unenforced. What is NOT relaxed: the mechanical kill triggers, the $2,000 probe-stake floor, 2% sizing,
+      unenforced. What is NOT relaxed: the mechanical kill triggers, the $2,000 probe-stake floor,
+      the per-thesis risk-budget discipline and its hard envelopes (Rev 43/EP rev 18, 2026-07-28 —
+      the flat 2% figure is retired; envelope VALUES are versioned policy, their EXISTENCE is not),
       and the IBKR order-confirm execution tap all remain fully in force (they are execution/capital gates,
       not review gates).
       --- HISTORICAL RATIONALE (2026-07-03 .. 2026-07-10, preserved per the Experiment_Parameters.md

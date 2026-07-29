@@ -429,7 +429,7 @@ def test_spec_hash_mismatch_on_c_options_math_is_caught(repo_copy):
 def test_spec_hash_missing_on_spec_locked_strategy_is_caught(repo_copy):
     p = rc.ROSTER
     txt = _read(p)
-    old = '    spec_hash: "c862ca73741606d119ffe7e849d1ac65a5876a34131ba98998c5f0e1d6fd3434"   # sha256(strategy/03_strategy_a.md || strategy_math/strategy_a.py || strategy_math/common.py), rev 2026-07-25 (slice resync)\n'
+    old = '    spec_hash: "611c7668417e87f2b870e7e50df1083b62f43399b7721b4b0d55a04bd628aa75"   # sha256(strategy/03_strategy_a.md || strategy_math/strategy_a.py || strategy_math/common.py), rev 2026-07-28 (Rev 39 thesis-scaled risk budgeting — sizing rule retired)\n'
     assert old in txt, "fixture assumption about A's spec_hash line shape/value drifted — update this test"
     _write(p, txt.replace(old, ""))
     assert rc.main() == 1
@@ -438,7 +438,7 @@ def test_spec_hash_missing_on_spec_locked_strategy_is_caught(repo_copy):
 def test_spec_hash_wrong_value_is_caught(repo_copy):
     p = rc.ROSTER
     txt = _read(p)
-    old = "c862ca73741606d119ffe7e849d1ac65a5876a34131ba98998c5f0e1d6fd3434"
+    old = "611c7668417e87f2b870e7e50df1083b62f43399b7721b4b0d55a04bd628aa75"
     assert old in txt, "fixture assumption about A's spec_hash value drifted — update this test"
     _write(p, txt.replace(old, "0" * 64))
     assert rc.main() == 1
