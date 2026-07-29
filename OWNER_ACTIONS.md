@@ -26,20 +26,48 @@ routines always run the SAME model; that is a standing invariant, not a per-rout
    lists. A line that names a model *illustratively or historically* rather than as a fleet assertion
    gets the marker `model-id-exempt` instead. **CI runs this check, so a missed mirror fails the build
    rather than silently rotting.**
-3. **Trigger a foundation cycle** — `AI_Trading_Foundation.md`'s in-use-Claude-version field is written
-   only by **A3**, which is `catchup_safe: false` and next scheduled for the first trading day of
-   January. It is also gated same-day on A1 and A2. So a mid-year model change does **not** reach the
-   foundation document on its own: run **A1 → A2 → A3 on the same day**, or the document keeps
-   describing the previous model until January. A3 then executes the Part 4 version-change protocol
-   (flip Tier 2 magnitudes to version-pending) and `ops/foundation_change_review.md` §C.
+3. **No owner action needed — the foundation document now self-syncs.** `AI_Trading_Foundation.md`'s
+   in-use-model field, the document-wide Tier 2 → version-pending-replication flip, and the
+   `ops/foundation_change_review.md` §C completion record (logged to `events.decision_log`) are a
+   **Tier M (mechanical)** write per Part 4's write-authority split — read mechanically from
+   `ops/cadence.yaml`'s `routine_model`, with no judgment involved — and are no longer A3's exclusive
+   province. A new **MODEL-OF-RECORD DOC SYNC** step in **D3** (daily) performs this write at its very
+   next run, with **Q4** (quarterly) and **A3** (annual) as idempotent backstops if D3 is ever missed.
+   You do **not** need to run A1 → A2 → A3 to reach the foundation document, and per
+   `AI_Trading_Foundation.md` Part 4 step 1 you should **not**: that full cycle also refreshes Tier J
+   capability *research*, which deliberately does not refresh early (results on a new version lag its
+   release by 1–3 months) — an immediate A1→A2→A3 re-run just spends a cycle re-asking a question
+   nothing can answer yet. **To verify the sync landed** (expect it within about a day of the model
+   switch in the ordinary case — D3 runs daily and the step is idempotent): the in-use-model field at
+   `AI_Trading_Foundation.md`'s head should read the same value as `routine_model`, the document's
+   revision number should have bumped, and `events.decision_log` should carry a new
+   `entry_type='foundation-change-review'` row dated on/after the change. **A compound outage can delay
+   this beyond a day, and that is not itself a defect:** D3's sync step sits behind D3's own FATAL
+   dependency gate on D2, so on any day D2 does not complete, D3 aborts before ever reaching the sync
+   step (confirmed 2026-07-25: D2 halted and D3 halted twice behind it, both self-healing the following
+   morning). If you check within a day or two of the switch and the field still reads the OLD value,
+   look at `ops.run_log` for whether D3 has completed since the switch: if D3 has been halting behind
+   D2, that is the explanation and no action is needed — D3 catches up the next time D2 completes, and
+   Q4 (quarterly) / A3 (annual) stand behind it as longer-horizon backstops either way. Only treat it as
+   a genuine problem if D3 HAS completed at least once since the switch and the field is still stale.
 
 **Why this is written down.** Steps 1–2 used to be a comment inside the file that goes stale, addressed
 to someone who had already opened it — and that manual sync has failed in practice at least once
-(commit `f347b8f`, 2026-07-26: you switched all 33 routines to `claude-opus-5` and the in-repo comment
-"was already stale even before that"). Step 3 exists because detection is quarterly at best while the
-write is annual. The consequence of skipping these is not cosmetic: A1/Q3 read the model of record to
-decide which model's capability research is decision-relevant, so a stale value silently anchors the
-entire foundation document — and every strategy constraint derived from it — to a model you no longer run.
+(commit `f347b8f`, 2026-07-26: you switched all 31 routines to `claude-opus-5` and the in-repo comment
+"was already stale even before that"). **Step 3's gap is now closed (cadence audit 2026-07-29).** It
+used to exist because detection was quarterly at best while the only write path was annual, and that
+gap was real and measured, not hypothetical: the in-use-model field sat wrong for 94 days in 2026
+(2026-04-25 to 2026-07-28) while Q3's quarterly delta correctly flagged a version change on day 67
+(2026-07-01) but, as a Tier J (judgment-only) writer, had no authority to act on it — the field only got
+fixed 27 days later, on 2026-07-28, via a manually-triggered A1→A2→A3 pass. The field, the Tier 2
+version-pending flip, and the `foundation_change_review.md` §C record are now a **Tier M** write
+performed automatically by D3's next daily run (Q4/A3 as idempotent backstops — see step 3 above), so
+the document self-syncs within about a day of any model change with no owner action required. The
+consequence of skipping steps 1–2 is still not cosmetic, though: A1/Q3 read `routine_model` (via this
+file and `ops/cadence.yaml`) to decide which model's capability research is decision-relevant, so if you
+skip updating `routine_model` itself, the new daily sync just faithfully propagates the wrong value into
+the foundation document — Tier M closes the "detected-but-couldn't-write" gap, not the "owner never told
+the repo which model is live" one.
 
 ---
 

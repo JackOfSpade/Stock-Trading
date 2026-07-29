@@ -90,15 +90,21 @@ CATCHUP_AUTOFIRE_SQL = os.path.join(ROOT, "bigquery", "59_catchup_autofire.sql")
 # the owner configured for the remote-routine fleet ("we will always use the same model for all remote
 # routines"). Several prose/SQL sites RESTATE that id; before this check they agreed only by hand, and
 # that manual sync had already failed once in practice (commit f347b8f, 2026-07-26: the owner switched
-# all 33 routines to claude-opus-5 and the in-repo comment "was already stale even before that").
+# all 31 routines to claude-opus-5 and the in-repo comment "was already stale even before that").
 # A stale mirror is not cosmetic: A1/Q3 read the model of record to decide which model's capability
 # research is decision-relevant and which Tier 2 magnitudes flip to version-pending, so a wrong value
 # silently anchors the whole foundation document to a model the experiment does not run.
 # This check makes the mirrors machine-enforced: change routine_model, and CI names every file that
 # still disagrees. Research/history files (Quarterly_AI_Foundation_Delta.md, Monthly_AI_Capabilities.md,
 # Annual_AI_Foundation_Sweep.md) are deliberately NOT scanned — they legitimately name many models.
-# AI_Trading_Foundation.md is also NOT scanned: its in-use-version field is prose ("Claude Opus 4.7"),
-# is written only by the annual A3, and coupling CI to A3's cadence would fail the build for months.
+# AI_Trading_Foundation.md is also NOT scanned, but not for the reason this comment used to give.
+# It used to be written only by the annual A3, so coupling CI to A3's annual cadence would have failed
+# the build for months at a time — that objection no longer applies: the field is now Tier-M-synced at
+# DAILY cadence by D3, with Q4/A3 as idempotent backstops (see AI_Trading_Foundation.md Part 4 "Write
+# authority — two tiers"). The file stays unscanned anyway, deliberately: a runtime alert
+# (D3's/Q4's `model_of_record_synced`) rather than a CI gate is the chosen detector for this field,
+# precisely so a model change can never redden the build fleet-wide and block auto-merge for every
+# branch. This field's accuracy now rests on the Tier M daily sync path, not on CI.
 def model_mirror_files():
     """The check-N mirror-file list, resolved at CALL time (not import time) from the module-level path
     constants CADENCE/OWNER_ACTIONS/PLAN/CATALOG_SQL, so monkeypatch.setattr(cc, "CADENCE", ...) (etc.,

@@ -1,7 +1,7 @@
 # HF_Resource_Catalog.md
 
-**Catalog of Hugging Face resources mapped to the 23-routine multi-strategy AI-directed trading experiment.**
-Compiled May 2026. Baseline for every verdict: "Could the routine get equivalent value from web_search / Tavily / web_fetch alone?" HF only earns a HIGH or MODERATE label where its index, structure, or invocation capability is materially better than open-web search.
+**Catalog of Hugging Face resources mapped to the 32-routine multi-strategy AI-directed trading experiment.**
+Compiled May 2026 (routine count current as of 2026-07-29; catalog content below still dates from the May 2026 compile). Baseline for every verdict: "Could the routine get equivalent value from web_search / Tavily / web_fetch alone?" HF only earns a HIGH or MODERATE label where its index, structure, or invocation capability is materially better than open-web search.
 
 Verified May 2026 via direct calls to `paper_search` and `hub_repo_search`. Operational caveat about `space_search` added in §8.
 

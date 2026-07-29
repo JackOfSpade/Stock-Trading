@@ -159,7 +159,7 @@ routines:
     monitor_class: daily_all
     catchup_safe: true
     depends_on: [D2]
-    writes: [calendar:confirm_order, events.queue_events]
+    writes: [calendar:confirm_order, events.queue_events, AI_Trading_Foundation.md]
     expected_trigger:
       recurrence: daily
       time_local: "18:30"
