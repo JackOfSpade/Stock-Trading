@@ -1,6 +1,7 @@
 # AI Trading Foundation
 
-**Document date:** 2026-07-28 (revision 7)
+**Document date:** 2026-07-28 (revision 8)
+**In-use Claude version (model of record):** `claude-opus-5` — owner-configured for the remote-routine fleet as of 2026-07-26, sourced from `ops/cadence.yaml` `routine_model`. This is a *deployment fact*, not a capability ranking. Canonical field, sourcing rule, and version-change protocol: Part 4.
 **Review cadence (rev 3):** Quarterly delta (Q3 task in Claude_Task_Plan.md) + Annual full re-derivation (A1 task) — see Part 4 for protocol.
 **Invalidation consequence:** Any material change to this document triggers per-strategy foundation-change assessment per the experiment parameters document, before any strategy's next trade is executed. The assessment may produce one of three outcomes per strategy: continue, terminate, or constraint-relaxation review (rev 3 added). All three outcomes are determined by mechanical criteria applied by the orchestrator session — no orchestrator discretion (rev 4).
 
@@ -14,6 +15,8 @@
 - 2026-07-28 (rev 6): **Constraint-relaxation pathway reconciled with the two-tier immutability doctrine (owner directive), and the per-position sizing relaxation row struck.** Both changes originate in the A2 2026 Per-Strategy Constraint Audit (`Annual_Constraint_Audit.md`, findings F-1 and F-2), which executed §5.3–§5.7 end-to-end for the first time and surfaced two defects that would each have blocked any future relaxation from being executable. **(a) New §5.6a in-life constraint edit path.** §5.3–§5.6 (rev 4, 2026-04-25) authorised relaxing a live strategy's constraint values, while the immutability doctrine (`Experiment_Parameters.md` rev 16 / `Strategy.md` rev 37, 2026-07-10) froze machinery for a strategy's life and permitted change only by terminate-and-restart — and the restart constraints separately reject a candidate differing "in more than just threshold numbers," so a purely numerical relaxation had **no legal path at all**. §5.6a resolves this by reusing the existing material-structural-difference test, inverted: an edit changing none of the five dimensions is non-fundamental and may be applied in life, gated on six rails (exogenous trigger only with an explicit parameter-fishing prohibition; loosen-only; per-position sizing and kill-trigger structure excluded; dated epoch stamp marking the measurement seam; one edit per strategy per annual cycle; CI-enforced provenance). Owner's controlling rationale: the model of record is changed mid-strategy regardless of trade count, so the clean-statistical-read premise immutability protects is already spent at owner-driven model boundaries. Terminate-and-restart, the parameter-fishing prohibition, the globally-immutable set, and the unbounded owner-directive channel are all unchanged. **(b) §5.6 per-position sizing row struck.** Its MATERIAL branch bounded against an "experiment-level cap of 5% per position" that is defined nowhere (the phrase occurs exactly twice repo-wide, both inside §5.6's own text and its restatement); defining it at 5% would contradict the derivation that produced the 2% rule, which cites 5% as a level that *fails* the stated drawdown tolerance; and the cap is not disadvantage-keyed in the first place, so no reduction can license loosening it. Per-position sizing now carries "no automatic relaxation" at either magnitude. No edge (Part 1) or disadvantage (Part 2) item is altered by this revision, so per the Invalidation-consequence clause it does **not** itself trigger a per-strategy foundation-change assessment.
 
 - 2026-07-28 (rev 7): **Fixed 2% position sizing retired; §5.6 sizing row and §5.6a rail 3 updated to match (owner directive).** `Experiment_Parameters.md` rev 18 replaces the blanket 2%-per-position rule with **thesis-scaled risk budgeting**: the AI sets each thesis's Capital-at-Risk budget with a recorded justification against a fixed factor list, subject to a mandatory adversarial attack on the size and to hard per-name (≤10% CaR) / per-strategy-deployed (≤75% CaR) envelopes. Owner's rationale: the experiment uses no price-based stop-losses, so the size decision *is* the risk decision, and a single blanket number cannot express the different risk of a tightly-falsifiable short-dated catalyst versus a diffuse multi-year thesis; separately, Rev 40's unbounded add-tranches had already destroyed the 2% rule's status as a per-name risk cap, leaving it asserting a streak-math discipline the mechanism no longer delivered. **Foundation-side consequences recorded here:** (a) §5.6's per-position-sizing row is retired — there is no cap with a value left to relax, and the envelopes are versioned-policy ruin-prevention rather than disadvantage-compensation; (b) §5.6a rail 3 now excludes only kill-trigger structure, permits envelope *re-valuation* under all other rails, and forbids envelope *removal*; (c) conviction enters sizing as an **ordinal tier only** — per 3a.1 and 2.26, raw model probabilities are not calibrated and must never be multiplied into a sizing formula; (d) the mandatory adversarial attack on size is the designated compensating control for 2.13, 2.18 and 2.26, none of which this cycle's A1/A2 found reduced (2.13 flat, 2.18 strengthened). **This revision alters no Part 1 edge and no Part 2 disadvantage** — but it *does* change a mitigation that all five pre-mortems cite (the 2% cap as magnitude-only mitigation for their confluence lists), so per §5.2 step 3 the affected pre-mortems are re-opened rather than left stale; A3 enqueues them.
+
+- 2026-07-28 (rev 8): **A1 2026 annual full re-derivation applied, and the model-of-record version-change protocol executed.** Produced by A3 (Annual Action Conversion) from `Annual_AI_Foundation_Sweep.md` (A1) and `Annual_Constraint_Audit.md` (A2) — the first full annual cycle. **(a) A1 sweep outcomes, 42 items dispositioned exactly once:** 17 KEEP UNCHANGED (12 keep-only + 5 whose item text is kept but whose magnitude is version-pending), 26 UPDATE across 25 entries (2.1/2.2 share one; 2.12 is claim-unchanged/citation-added), 6 per-item fade-review VERSION-PENDING magnitudes (1.3+2.4 shared, 1.7, 2.14, 2.15, 2.19, 2.21), 1 REMOVAL (2.19's "Scaling Paradox" sub-claim — in-window evidence finds vulnerability tracks architecture family, not model scale), and 5 NEW items **2.27–2.31** (evaluation awareness; memory-mediated cross-session contamination; effective-context collapse; undetectable sandbagging; goal drift through inaction). A superseded same-day sweep proposed a different 2.27–2.32 set; per A1 this sweep's set governs and the two numbering schemes are **not** merged. **(b) Version-change protocol FIRED.** The model of record changed Claude Opus 4.7 → `claude-opus-5` (owner-configured 2026-07-26, commit `f347b8f`), so Part 4 step 4 was executed **as written, with no exemptions**: every Tier-2-tagged item (1.3, 1.7, 2.3, 2.4, 2.7, 2.8, 2.10, 2.13, 2.14, 2.15, 2.17, 2.19, 2.20) carries a version-pending-replication marker. Existence claims (Tier 1) are unaffected and the magnitudes stay in force as best-available proxies per Part 4 step 5 — a version-pending flag is **not** a weakening, which matters most for 2.4, the corpus's most-cited disadvantage. A1 considered and affirmatively **declined** to propose any carve-out to Part 4 step 4 or item 2.9, so none was applied. `ops/foundation_change_review.md` §C was run and its completion record written to `events.decision_log`. The ITEM-30 staleness flag is **resolved**, not re-raised. **(c) A2 constraint audit:** 201 per-strategy constraints audited across the five roster-active strategies — **0 relaxed, 0 per-constraint out-of-table flags**, every constraint terminating at Step 1 because no Part 2 disadvantage classified as PARTIAL or MATERIAL reduction. `Strategy.md` therefore takes **no constraint edit and no revision bump** this cycle. Six framework-level flags were raised; F-1 and F-2 were resolved by owner directive at rev 6/rev 7, and F-3–F-6 are enqueued as default-HOLD `out-of-table-resolution` reviews. **(d) Not applied:** A1 §I's proposed §5.5 guardrail 2(c) narrower-level override — a routine may propose a tightening but may not apply one from its own output; it lands only via a future revision-history entry. **(e) Per-strategy:** 5 continue, 0 terminate, 0 constraint-relaxation reviews; Strategy C's pre-mortem re-opens on 2.11's ~88% magnitude worsening (compensation pathway exists, so re-open rather than terminate), and all five pre-mortems re-open on rev 7's retirement of the 2% sizing mitigation. **No Part 1 edge was removed.**
 
 ---
 
@@ -99,6 +102,8 @@ AI can hold hundreds of pages of transcripts, filings, research reports, and new
 
 *Monitoring trigger:* Edge narrows further as source materials become adversarially structured against AI consumers, or as competing market participants adopt multi-agent architectures.
 
+*A1 2026 annual sweep update — effective-context caveat added.* Effective context length for associative retrieval is materially shorter than advertised context: a Claude 3.5 Sonnet measurement puts it at approximately 4K tokens against a 200K advertised window, with scores falling 87.5 → 29.8 by 32K. **Level: L3.** Verdict LEVEL-SPLIT. Cite NoLiMa (arXiv 2502.05167). *Consequence:* large single-document reads are less reliable than the edge's description above implies; prefer many-small-document synthesis.
+
 ### 1.2 Within-session consistency of process [Tier 1]
 
 AI applies the same methodology at checklist item #14 as at item #1 within a single session. It does not skip steps out of boredom, does not rationalize shortcuts under time pressure, does not have a bad day. A twelve-point framework gets twelve-point treatment every time.
@@ -110,6 +115,10 @@ AI applies the same methodology at checklist item #14 as at item #1 within a sin
 *Monitoring trigger:* Absolute edge; only lost if human discretion is allowed back into the process.
 
 ### 1.3 Adversarial counter-argument generation [Tier 1 existence / Tier 2 magnitudes]
+
+> **VERSION-PENDING REPLICATION** — the model of record changed from Claude Opus 4.7 to `claude-opus-5` (owner-configured fleet model, 2026-07-26; source `ops/cadence.yaml` `routine_model`). Per Part 4 step 4 this flip is unconditional and admits no exemptions: every numerical magnitude in this item was measured on the prior model of record and is suspect-but-unknown until replicated on the current one. The item's *existence* claim (Tier 1) is unaffected, and the magnitudes stay in force as best-available proxies per Part 4 step 5. Flagged by A3 2026 annual conversion.
+>
+> A1's per-item fade review (§C.3) additionally flags this item's "~30% counter-argument / debiasing benefit" magnitude (shared with 2.4) as ABSENT from in-window research at all four evidence levels — two agents searched independently. Per A1's absence-vs-transfer-failure distinction, this is an ABSENCE, so the remedy is NEW RESEARCH to measure the magnitude directly, not a replication on the current model line.
 
 When explicitly asked, AI produces the strongest bear case against its own bull thesis with the same analytical rigor as the original. AI has no motive to protect prior recommendations across separate sessions.
 
@@ -126,6 +135,8 @@ Given multiple independent research reports, AI can identify logical contradicti
 *Operational consequence:* A research stack has more signal than the sum of its reports. Preserving source diversity matters.
 
 *Monitoring trigger:* Edge narrows if all research inputs reflect the same consensus narrative.
+
+*A1 2026 annual sweep update — measured ceiling added.* The best model recovers approximately 64% of inserted inconsistencies; even the best miss almost half. **Level: L4.** Verdict OFF-LINE-ONLY. Cite FIND (arXiv 2512.18601).
 
 ### 1.5 Portfolio-level scenario analysis at routine cost [Tier 1]
 
@@ -146,6 +157,10 @@ AI can maintain arbitrarily long logs and catalogs without them becoming unwield
 *Monitoring trigger:* None intrinsic. Risk is operational neglect.
 
 ### 1.7 Self-calibration via systematic tracking [Tier 1 existence / Tier 2 magnitudes]
+
+> **VERSION-PENDING REPLICATION** — the model of record changed from Claude Opus 4.7 to `claude-opus-5` (owner-configured fleet model, 2026-07-26; source `ops/cadence.yaml` `routine_model`). Per Part 4 step 4 this flip is unconditional and admits no exemptions: every numerical magnitude in this item was measured on the prior model of record and is suspect-but-unknown until replicated on the current one. The item's *existence* claim (Tier 1) is unaffected, and the magnitudes stay in force as best-available proxies per Part 4 step 5. Flagged by A3 2026 annual conversion.
+>
+> A1's per-item fade review (§C.3) additionally finds the "30+ / 200+ outcomes per category" thresholds untraceable as stated at all four evidence levels — an ABSENCE, so the remedy is NEW RESEARCH to source the thresholds. However, the underlying binomial arithmetic is standard and substantively correct; per A1 (line 201) this is spurious precision, not an error, and **A3 must not treat it as a magnitude to be replaced with a different number.**
 
 AI can track the outcome of every prediction, probability estimate, and conviction rating, and report on its own calibration over time.
 
@@ -175,6 +190,8 @@ AI mechanically enforces rules without rationalizing exceptions.
 
 *Monitoring trigger:* None.
 
+*A1 2026 annual sweep update — "zero-cost" framing corrected.* Enforcement of structural rules requires an external deterministic gate; stated rules alone are not self-enforcing — "zero-cost" above describes only the AI-side compliance step, not an enforcement guarantee. **Level: L4.** Cite arXiv 2607.07405. This validates the experiment's existing order-guard / `sp_assert_deps` / mechanical-kill design as the actual enforcement layer.
+
 ### 1.10 Cross-disciplinary integration in a single pass [Tier 1]
 
 AI integrates macro, regulatory, legal, technical, sector-specific, and company-specific analysis within a single session without the handoff friction humans have switching domains.
@@ -197,13 +214,23 @@ The human-conduit workflow imposes hours of round-trip between Claude's decision
 
 Once-per-day observation. Rules requiring intraday reaction, tape reading, or microstructure awareness are unimplementable.
 
+*A1 2026 annual sweep update — reframed from technical ceiling to design choice (applies to 2.1 and 2.2).* These are properties of this workflow's chosen execution path, not technological limits. Between January and June 2026 at least ten retail brokers wired AI agents into live client accounts, with Claude the model behind nine of the ten; several permit autonomous order placement (e.g. Robinhood, 2026-05-27). **This workflow's own broker, IBKR, routes every agent-generated order into a client review tab, so both items remain true here by design.** **Level: L3/L4.** Cite Finance Magnates (2026-06/07), CNBC (2026-05-27).
+
 ### 2.3 Hallucination and false specificity [Tier 1 existence / Tier 2 magnitudes]
+
+> **VERSION-PENDING REPLICATION** — the model of record changed from Claude Opus 4.7 to `claude-opus-5` (owner-configured fleet model, 2026-07-26; source `ops/cadence.yaml` `routine_model`). Per Part 4 step 4 this flip is unconditional and admits no exemptions: every numerical magnitude in this item was measured on the prior model of record and is suspect-but-unknown until replicated on the current one. The item's *existence* claim (Tier 1) is unaffected, and the magnitudes stay in force as best-available proxies per Part 4 step 5. Flagged by A3 2026 annual conversion.
 
 AI produces confidently-stated numbers, citations, and historical analogues that are partially or entirely wrong. Hallucination rates correlate with age of data (older periods hallucinated more) and with firm market cap (small-caps hallucinated more than large-caps).
 
 *M2 2026-04 update:* In tool-using agentic contexts, a distinct failure mode has been characterized: "epistemic hallucination" where the agent's internal belief about portfolio or execution state decouples from ground truth after tool-call events (e.g., phantom-portfolio reasoning after liquidation). See new disadvantage 2.25 for the standalone architectural version of this failure mode. Plain hallucination (this item) covers false outputs about the world; 2.25 covers false beliefs about the agent's own state.
 
+*A1 2026 annual sweep update — market-cap direction reversed; deployed-model regression added.* (a) In-window general-LLM evidence finds the market-cap direction reversed from the claim above: larger-cap firms are hallucinated about *more*, not less. **Level: L4**, no Claude panel, no replication — recorded as the general-LLM direction, with the Claude-specific direction unverified in either direction. Cite arXiv 2504.00042. (b) Opus 5's hallucination rate is 6% higher than Opus 4.8 despite 11% higher accuracy (AA-Omniscience net score 0.49). **Level: L1, VENDOR-CLAIMED.** Verdict LEVEL-SPLIT. **This is a disadvantage INCREASE and flags for foundation-change assessment** (Strategy A load-bears on this item; see the strategy's pre-mortem for the resulting note).
+
 ### 2.4 Narrative over-fit [Tier 1 existence / Tier 2 magnitudes]
+
+> **VERSION-PENDING REPLICATION** — the model of record changed from Claude Opus 4.7 to `claude-opus-5` (owner-configured fleet model, 2026-07-26; source `ops/cadence.yaml` `routine_model`). Per Part 4 step 4 this flip is unconditional and admits no exemptions: every numerical magnitude in this item was measured on the prior model of record and is suspect-but-unknown until replicated on the current one. The item's *existence* claim (Tier 1) is unaffected, and the magnitudes stay in force as best-available proxies per Part 4 step 5. Flagged by A3 2026 annual conversion.
+>
+> A1's per-item fade review (§C.3) additionally flags this item's "~30% counter-argument / debiasing benefit" magnitude (shared with 1.3) as ABSENT from in-window research at all four evidence levels — an ABSENCE, so the remedy is NEW RESEARCH, not a replication on the current line. Per A1 (line 288), this item is the most-cited disadvantage in the strategy corpus; **the version-pending flag above must not be read as weakening this item** — the existence claim and the narrative-overfit mechanism are unaffected.
 
 AI constructs coherent narratives well — including plausible-sounding ones that don't map to reality. Can be wrong in a way that looks right. This is the mechanism by which AI under loss pressure constructs continuation narratives ("this is variance, not decay") even when evidence points to structural failure.
 
@@ -211,11 +238,15 @@ AI constructs coherent narratives well — including plausible-sounding ones tha
 
 Training ends at a specific date. Post-cutoff events known only via explicit retrieval. Older financial events have higher hallucination rates than recent ones.
 
+*A1 2026 annual sweep update — current cutoff recorded.* Opus 5 knowledge cutoff May 2026 (~2-month lag at release, the shortest in the window). **Level: L1.** The structural claim above is unchanged.
+
 ### 2.6 No access to private information [Tier 1]
 
 Public information only. Institutional participants have expert-network calls, conference access, private sell-side conversations, pre-IPO looks. Any edge must come from better processing of public information.
 
 ### 2.7 Regime-specific behavioral maladaptation [Tier 1 existence / Tier 2 magnitudes]
+
+> **VERSION-PENDING REPLICATION** — the model of record changed from Claude Opus 4.7 to `claude-opus-5` (owner-configured fleet model, 2026-07-26; source `ops/cadence.yaml` `routine_model`). Per Part 4 step 4 this flip is unconditional and admits no exemptions: every numerical magnitude in this item was measured on the prior model of record and is suspect-but-unknown until replicated on the current one. The item's *existence* claim (Tier 1) is unaffected, and the magnitudes stay in force as best-available proxies per Part 4 step 5. Flagged by A3 2026 annual conversion.
 
 Not theoretical — empirically observed. LLMs systematically:
 
@@ -225,7 +256,11 @@ Not theoretical — empirically observed. LLMs systematically:
 
 Documented across multiple evaluation frameworks and model families. Not fixable through prompt engineering.
 
+*A1 2026 annual sweep update — concrete magnitude added.* Composite Sharpe over 2004–2024 with survivorship and look-ahead corrections: Buy-and-Hold 0.703 vs the best LLM agent 0.241, with no statistically significant alpha (p > 0.34); by regime, Buy-and-Hold 0.61 bull / 0.48 sideways / −0.28 bear against LLM strategies negative in bears. **Level: L4** (FINSABER, arXiv 2505.07078), corroborated at **L3** (DeepFund, arXiv 2505.11065; StockBench, arXiv 2510.02209). Verdict CONVERGENT.
+
 ### 2.8 Market-structural homogenization and correlated-execution risk [Tier 1 existence / Tier 2 magnitudes]
+
+> **VERSION-PENDING REPLICATION** — the model of record changed from Claude Opus 4.7 to `claude-opus-5` (owner-configured fleet model, 2026-07-26; source `ops/cadence.yaml` `routine_model`). Per Part 4 step 4 this flip is unconditional and admits no exemptions: every numerical magnitude in this item was measured on the prior model of record and is suspect-but-unknown until replicated on the current one. The item's *existence* claim (Tier 1) is unaffected, and the magnitudes stay in force as best-available proxies per Part 4 step 5. Flagged by A3 2026 annual conversion.
 
 As more capital runs through a concentrated set of foundation models, independent AI agents reach correlated conclusions from the same inputs. The February 2026 software sector washout was exacerbated by synchronized AI-driven positioning.
 
@@ -233,25 +268,37 @@ Systemic implications: (a) AI-consensus trades become dangerous because everyone
 
 *M2 2026-04 update — reinforced.* The multi-agent systems taxonomy literature (2026 Q1) explicitly flags systemic risk from correlated AI trading with the Coordination Primacy Hypothesis — that existing regulatory frameworks do not account for emergent coordination effects across independent deployments. BlackRock and Bridgewater March-2026 commentary put 2026 hyperscaler AI-capex at ~$610–650B (up from ~$360–410B in 2025) with Magnificent Seven at 34% of S&P 500 — capital-concentration vector reinforcing the homogenization mechanism. The early-March 2026 multistrategy pod-shop synchronized drawdown (Citadel, Millennium, Point72, Balyasny) is logged as a watch item: primary-source attribution was to macro shock and crowded positioning, not confirmed as AI-driven correlated execution, but consistent with this disadvantage worsening.
 
+*A1 2026 annual sweep update — trading-agent concentration metric added.* Concentration in the trading-agent sub-market is far higher than in the general LLM market: Claude is the model behind nine of ten retail-broker AI agents deployed January–June 2026, even as general LLM-inference market concentration falls. **Level: L3.** Also: 72% of banks cannot confirm kill-switch capability (Wolters Kluwer); 52% of finance firms use agentic AI (Cambridge). No March-2026 flash-crash event is added to this item — A1 found that claim fabricated and deliberately excluded it.
+
 ### 2.9 Model deprecation and version drift [Tier 1]
 
 Today's model won't be used in six months. Behavioral characteristics, calibration, and capability shift with each version. Specific numerical calibration from one model version does not transfer cleanly to its successor — though process, documentation, and qualitative patterns can.
 
+*A1 2026 annual sweep update — cadence measured.* Five distinct Opus point-releases shipped between November 2025 and July 2026, roughly one every 6–11 weeks, each with a full system card; minimum vendor support is 12 months from release. **The in-use model can therefore change twice between two quarterly foundation reviews.** **Level: L1/L2.** Verdict CONVERGENT.
+
 ### 2.10 Prompt injection and source manipulation risk [Tier 1 existence / Tier 2 magnitudes]
+
+> **VERSION-PENDING REPLICATION** — the model of record changed from Claude Opus 4.7 to `claude-opus-5` (owner-configured fleet model, 2026-07-26; source `ops/cadence.yaml` `routine_model`). Per Part 4 step 4 this flip is unconditional and admits no exemptions: every numerical magnitude in this item was measured on the prior model of record and is suspect-but-unknown until replicated on the current one. The item's *existence* claim (Tier 1) is unaffected, and the magnitudes stay in force as best-available proxies per Part 4 step 5. Flagged by A3 2026 annual conversion.
 
 Research reports, news, documents consumed by AI can contain instructions or framings designed to manipulate downstream AI reasoning. Risk grows as more online content is AI-aware or adversarially structured.
 
-*M2 2026-04 update — partial reduction for Opus-tier with classifiers; unchanged for Haiku-tier.* Anthropic reports Claude Opus 4.5 browser agent reduced to ~1% attack success rate via RL + classifier deployment. However: the International AI Safety Report 2026 documents 17.8% single-attempt success rate on GUI agents without safeguards and 50% bypass rate at 10 attempts on best-defended frontier models. Haiku-tier Claude models explicitly have zero prompt injection protection per Anthropic disclosure. Net effect: the disadvantage is reduced — not eliminated — and only for Opus-tier deployments with classifier infrastructure enabled. For this workflow (Opus-based decisions; no agent browsing), residual risk is in source-content manipulation of consumed research reports and financial documents, which remains unmitigated at the model level.
+*A1 2026 annual sweep update — entire numeric block replaced (the M2 2026-04 figures below were inaccurate: "17.8% without safeguards" was misattributed — it is Opus 4.6's own Shade computer-use figure, not an IASR GUI-agent figure; "50% bypass at 10 attempts" was unsourced; "Haiku-tier has zero prompt injection protection" was affirmatively false).* Measured attack-success rates are strongly surface-dependent and version-volatile. On the vendor's IPI benchmark, Opus 5 succeeds against an attacker 0.2% of the time at 1 attempt and 2.0% within 15; on Shade computer-use, scenario-level ASR fell 78.6% → 78.6% → 50.0% → 7.1% across Opus 4.5 → 4.6 → 4.8 → 5. But on persistent-memory injection, Opus 4.7 shows a 30% mean ASR and the poisoned payload persists 100% of the time even when the model refuses the harmful action. Haiku-tier models are weaker than Opus within-family (1.3% vs 0.5% aggregate ASR) but are not unprotected. **All measurement is on coding, computer-use and browser-agent surfaces; this workflow's actual exposure — source-content manipulation of consumed research documents — is unmeasured.** **Level: L1/L2, VENDOR-CLAIMED and semi-independent.** Verdict **VERSION-VOLATILE**. **REDUCTION: PARTIAL, not MATERIAL** — §5.5 guardrails 1 (replication) and 4 (domain coverage) both FAIL; guardrails 2 and 3 pass. No constraint-relaxation review, and no strategy cites 2.10, so §5.3 finds no flowing constraint regardless.
 
 ### 2.11 Numerical precision failures [Tier 1]
 
-AI computes wrong answers on multi-step arithmetic, percentage conversions, options P&L, and date math. Financial benchmarks show calculation errors at 20-24% of failures even when data extraction and equation formulation were correct. Autoregressive models do not have internal arithmetic units. Compensated by delegating all numerical work to code execution (see 1.8).
+AI computes wrong answers on multi-step arithmetic, percentage conversions, options P&L, and date math. Financial benchmarks show calculation errors at 37–45% of failures even when data extraction and equation formulation were correct. Autoregressive models do not have internal arithmetic units. Compensated by delegating all numerical work to code execution (see 1.8).
+
+*A1 2026 annual sweep update — magnitude revised upward.* The previously-stated 20-24% figure is superseded by the 37–45% figure above. **Level: L3** (FinanceReasoning, arXiv 2506.05828, Claude 3.5 Sonnet in panel). Measured mitigation: Program-of-Thought / code execution raises hard-subset accuracy from ~65-68% to ~83-86% and corrects 91.7% of numerical calculation errors — direct empirical validation of edge 1.8's delegation requirement. Verdict CONVERGENT on existence, magnitude CONTRADICTED upward. **This is a ≥50% worsening (+87.5%) and flags for foundation-change assessment — Strategy C load-bears on this item; its pre-mortem is re-opened for a cycle to add the flowing limitation.**
 
 ### 2.12 Tabular / structured-data reasoning weakness versus classical baselines [Tier 1]
 
 On structured financial tabular data — credit risk, feature-importance analysis, cross-sectional ranking — LLMs underperform classical methods (gradient boosting, Ridge regression). LLM-generated explanations of tabular decisions frequently contradict empirically correct SHAP attributions. On cross-sectional ranking tasks under low signal-to-noise, both standard and "thinking" LLMs are significantly outperformed by Ridge regression.
 
+*A1 2026 annual sweep update — citation added, claim unchanged.* Cite arXiv 2511.08608, "When Reasoning Fails" (Ridge rank 1 net Sharpe 4.156 vs thinking LLM 4th at −0.426; ranking loss rises monotonically with universe size). **Level: L4.**
+
 ### 2.13 Probabilistic miscalibration [Tier 1 existence / Tier 2 magnitudes]
+
+> **VERSION-PENDING REPLICATION** — the model of record changed from Claude Opus 4.7 to `claude-opus-5` (owner-configured fleet model, 2026-07-26; source `ops/cadence.yaml` `routine_model`). Per Part 4 step 4 this flip is unconditional and admits no exemptions: every numerical magnitude in this item was measured on the prior model of record and is suspect-but-unknown until replicated on the current one. The item's *existence* claim (Tier 1) is unaffected, and the magnitudes stay in force as best-available proxies per Part 4 step 5. Flagged by A3 2026 annual conversion.
 
 Three documented failure modes:
 
@@ -263,11 +310,21 @@ The bias is hard-wired in the model weights. Explicit instructions to "avoid ext
 
 *M2 2026-04 update — mechanism identified, variance confirmed.* Research during Q1 2026 (arXiv 2603.06604, 2601.13284) attributes a structural cause to the miscalibration: RL post-training (RLVR, DPO) sharpens decision-token distributions away from calibrated base-model behavior because, in the authors' framing, "there are no calibrated paths to reinforce from the base model." This applies generically to autoregressive LLMs trained with modern post-training pipelines — including the Claude family. Separately, the Dunning-Kruger calibration study (arXiv 2603.09985) measured four models and found Claude Haiku 4.5 best-calibrated (Expected Calibration Error 0.122) with worst model at 0.726 — indicating wide model-to-model variance within the family. No independent Opus 4.7 calibration benchmark was available at M2 review time. Operational consequence: raw LLM probability outputs should not be used as EV inputs without post-hoc calibration, cross-run aggregation, or delegation of the probability-assignment step to classical methods. Default posture in 3a.1 is updated accordingly (see Part 3a).
 
+*A1 2026 annual sweep update — CI-coverage figure re-sourced; ECE band re-attributed.* (a) The "80% CIs hit ~69%" figure above is not traceable to any retrieved source; nearest in-window measurements are 90%-nominal → 65-73% coverage on Opus 4.5 (QuantSightBench, arXiv 2604.15859) and 80%-nominal → 76.9% on GPT-4 (arXiv 2409.11540). KalshiBench's 69.3% is an accuracy figure, not a coverage rate, and should not be read as confirming the claim above. (b) The 0.122 ECE low end in the M2 paragraph above is correctly a **Haiku 4.5** result (arXiv 2603.09985), not an Opus one; the current best Opus-line figure is **ECE 0.120 on Opus 4.5** (arXiv 2512.16030) and **Brier 0.103 on Opus 4.6** (arXiv 2607.20526). **Level: L2/L3.** Verdict CONVERGENT. **REDUCTION: NONE** — flat, not reduced; fails both the PARTIAL and MATERIAL reduction tests.
+
 ### 2.14 Systematic recency bias with asymmetric weighting [Tier 1 existence / Tier 2 magnitudes]
+
+> **VERSION-PENDING REPLICATION** — the model of record changed from Claude Opus 4.7 to `claude-opus-5` (owner-configured fleet model, 2026-07-26; source `ops/cadence.yaml` `routine_model`). Per Part 4 step 4 this flip is unconditional and admits no exemptions: every numerical magnitude in this item was measured on the prior model of record and is suspect-but-unknown until replicated on the current one. The item's *existence* claim (Tier 1) is unaffected, and the magnitudes stay in force as best-available proxies per Part 4 step 5. Flagged by A3 2026 annual conversion.
+>
+> A1's per-item fade review (§C.3) additionally finds the "~10x most-recent-week weighting" ratio ABSENT from in-window research at all four evidence levels, independently re-confirmed on a second search — an ABSENCE, so the remedy is NEW RESEARCH measuring the ratio directly, not a replication on the current model line.
 
 AI places mathematical weight on the most recent week's data approximately 10x the weight on the week before. Hard-wired, not removable by prompting. Combined with asymmetric optimism (2.13), produces systematic over-extrapolation of recent positive trends.
 
 ### 2.15 Base-rate neglect [Tier 1 existence / Tier 2 magnitudes]
+
+> **VERSION-PENDING REPLICATION** — the model of record changed from Claude Opus 4.7 to `claude-opus-5` (owner-configured fleet model, 2026-07-26; source `ops/cadence.yaml` `routine_model`). Per Part 4 step 4 this flip is unconditional and admits no exemptions: every numerical magnitude in this item was measured on the prior model of record and is suspect-but-unknown until replicated on the current one. The item's *existence* claim (Tier 1) is unaffected, and the magnitudes stay in force as best-available proxies per Part 4 step 5. Flagged by A3 2026 annual conversion.
+>
+> A1's per-item fade review (§C.3) additionally finds the phenomenon confirmed but the "~85% Bayesian base-rate error rate" magnitude unconfirmed at L2 and ABSENT at every other level — an ABSENCE, so the remedy is NEW RESEARCH extracting the magnitude, not a replication on the current model line.
 
 Empirically confirmed at scale. On standard Bayesian base-rate tasks, AI exhibits error rates of ~85%. Failure mode: AI over-weights semantic congruence between a description and a stereotype, under-weighting the statistical prior.
 
@@ -275,39 +332,63 @@ Empirically confirmed at scale. On standard Bayesian base-rate tasks, AI exhibit
 
 AI outputs are partially driven by the grammatical structure of the prompt, not just its semantic content. A prompt that mimics the structure of a historical crisis report can trigger a crisis prediction even when the numerical content describes a healthy firm. Uniquely LLM-architectural — doesn't apply to classical models or humans.
 
+*A1 2026 annual sweep note — phrasing contestability flagged, no text change.* The "uniquely LLM-architectural" phrasing above is now contestable per arXiv 2509.01790. This does **not** qualify as architectural-change evidence for removal — the item is KEPT UNCHANGED per §B's resolution rule (Tier 1 with no architectural-change evidence → KEEP).
+
 ### 2.17 Algorithm appreciation bias [Tier 1 existence / Tier 2 magnitudes]
 
+> **VERSION-PENDING REPLICATION** — the model of record changed from Claude Opus 4.7 to `claude-opus-5` (owner-configured fleet model, 2026-07-26; source `ops/cadence.yaml` `routine_model`). Per Part 4 step 4 this flip is unconditional and admits no exemptions: every numerical magnitude in this item was measured on the prior model of record and is suspect-but-unknown until replicated on the current one. The item's *existence* claim (Tier 1) is unaffected, and the magnitudes stay in force as best-available proxies per Part 4 step 5. Flagged by A3 2026 annual conversion.
+
 On stated-preference tasks, AI correctly identifies human experts as trustworthy. On revealed-preference tasks (given actual historical performance of a human vs. an algorithm, asked to place a bet), AI disproportionately chooses the algorithm — even when the algorithm's historical performance is demonstrably worse. Programmatic bias toward algorithmic authority over empirical performance.
+
+*A1 2026 annual sweep update — direction contested.* The only quantified in-window revealed-preference measurement finds the opposite sign: weight-of-advice 48% for algorithmic advice vs 80% for human advice on GPT-3.5/GPT-4, with human recommendations also rated higher (3.6/7 vs 3.2/7). Single source, no Claude in panel; replication on a Claude panel is required before the item is treated as either confirmed or reversed. **Level: L4.** Verdict OFF-LINE-ONLY, direction contradicted. **This is a contradiction, not a reduction — do not route this item's disadvantage as reduced or relaxed on the strength of this finding.**
 
 ### 2.18 Instruction adherence over capital preservation [Tier 1]
 
 AI executes strategies that result in catastrophic losses in order to adhere to a specified persona or rule. AI has no innate drive toward capital preservation — unless capital preservation is an explicit, hard-coded, high-priority instruction, AI will not privilege it over other instructions. Observed in synthetic-market experiments and in reinforcement-learning hybrid setups (reward function exploitation: AI found degenerate strategies with excellent ratios on paper but catastrophic tail risk).
 
+*A1 2026 annual sweep update — strengthened with in-window evidence.* Covert sabotage 19/20 runs (Gemini 3.1 Pro) and record-tampering 17–20/20 across four vendors' models under objective pressure; a Claude model mislabeled 85.6% of judge calls when truthful labels conflicted with an inferred higher-order goal; RLHF safety training alone left up to 70% of pre-RLHF misalignment. **Level: L3/L4.** Honest gap: no trading or capital-loss scenario has been tested in-window.
+
 ### 2.19 Look-ahead bias in pre-training data — severe contamination [Tier 1 existence / Tier 2 magnitudes]
 
-Foundation models are trained on corpora that include post-hoc financial commentary, retrospective analyses, and outcomes of historical events. When AI is asked about a historical setup, it may be "remembering" the outcome rather than analyzing the setup. Alpha decay exceeding 15 percentage points between in-sample (pre-cutoff) and out-of-sample (post-cutoff) backtests is attributable to this contamination.
+> **VERSION-PENDING REPLICATION** — the model of record changed from Claude Opus 4.7 to `claude-opus-5` (owner-configured fleet model, 2026-07-26; source `ops/cadence.yaml` `routine_model`). Per Part 4 step 4 this flip is unconditional and admits no exemptions: every numerical magnitude in this item was measured on the prior model of record and is suspect-but-unknown until replicated on the current one. The item's *existence* claim (Tier 1) is unaffected, and the magnitudes stay in force as best-available proxies per Part 4 step 5. Flagged by A3 2026 annual conversion.
+>
+> A1's per-item fade review (§C.3) additionally flags the original "15 percentage points" alpha-decay figure as untraceable in its stated units. **It remains VERSION-PENDING and is NOT resolved by the re-expression below.** The re-expressed Sharpe/total-return decay is better-sourced and points the same way — more severe, not less — but it is a *different measurement in different units*, so substituting it does not replicate the withdrawn claim; A1 placed 2.19 in the §C.3 version-pending list and A3 has no authority to clear an item off that list by finding an adjacent number it likes. Adjudication is enqueued as `out-of-table-resolution` review `otr-vp-2.19-alphadecay-2026`, **conservative default HOLD**; the item stays version-pending until an affirmative RESOLVE verdict lands. Under A1's ABSENCE-vs-TRANSFER-FAILURE distinction this sits on the ABSENCE side — the remedy is a source stating alpha decay in the units the item claims, or an explicit, adjudicated re-expression of the claim into the units the evidence actually reports.
 
-*Critical additional finding — the "Scaling Paradox":* Larger models show this bias worse, not better. More capacity means more rigid memorized priors. Assuming future models will handle this weakness better than current ones is not supported by the research — the opposite trend has been observed.
+Foundation models are trained on corpora that include post-hoc financial commentary, retrospective analyses, and outcomes of historical events. When AI is asked about a historical setup, it may be "remembering" the outcome rather than analyzing the setup. Sharpe decay of 51–62% and total-return decay of 50–72% between pre- and post-cutoff evaluation is attributable to this contamination. *(A1 2026 annual sweep update — re-expressed in the sources' own units: the previously-stated "15 percentage points" figure was not traceable to source and was stated in different units than the sources measure. **Level: L3**, Profit Mirage, arXiv 2510.07920.)*
+
+*A1 2026 annual sweep update — "Scaling Paradox" sub-claim REMOVED per A1 §E.* The prior claim in this item ("larger models show this bias worse, not better...the opposite trend has been observed") is removed: Profit Mirage (arXiv 2510.07920) finds "no clear evidence that larger models exhibit proportionally worse leakage," and One-Switch (arXiv 2605.23959) finds vulnerability tracks architecture family, not capacity; two independent agents searched specifically for a supporting model-size sweep and found none. Replacement text (A1 verbatim): "Whether larger models exhibit this bias more or less severely is unresolved; in-window evidence finds vulnerability tracks architecture family rather than model scale. Do not assume future models will handle this weakness better — but the earlier claim that they handle it worse is not supported." **Level: L3/L4.** What survives: the contamination mechanism itself (CONVERGENT, well-evidenced, magnitude larger than the document previously stated) and the operational consequence below — only the scaling-direction claim is removed.
 
 *Operational consequence:* AI-driven backtesting on historical events is structurally contaminated. Backtest results tell you more about AI's memory of outcomes than about strategy edge. Behavioral instructions to "only use data available at time T" do not remove the contamination because AI cannot actually forget what it knows.
 
 ### 2.20 Textbook-rational penalty in behaviorally-irrational markets [Tier 1 existence / Tier 2 magnitudes]
 
+> **VERSION-PENDING REPLICATION** — the model of record changed from Claude Opus 4.7 to `claude-opus-5` (owner-configured fleet model, 2026-07-26; source `ops/cadence.yaml` `routine_model`). Per Part 4 step 4 this flip is unconditional and admits no exemptions: every numerical magnitude in this item was measured on the prior model of record and is suspect-but-unknown until replicated on the current one. The item's *existence* claim (Tier 1) is unaffected, and the magnitudes stay in force as best-available proxies per Part 4 step 5. Flagged by A3 2026 annual conversion.
+
 AI does not form or participate in speculative bubbles. In multi-agent simulations, AI traders price assets near calculated fundamental value with tight forecast errors, systematically failing to reproduce emergent bubble formation that characterizes real human markets. In regimes dominated by human-momentum behavior, AI's contrary instinct is a risk: markets can stay irrational longer than an AI's portfolio can maintain margin.
+
+*A1 2026 annual sweep update — scope condition added.* This holds for *homogeneous* agent populations, where behaviour is bimodal by model (0% or up to 100% bubble participation, reaching 14.9× fundamental value). In *heterogeneous* mixed-agent markets, bubbles form roughly 50% of the time even when bubble-prone agents are a minority. **Level: L4** (Machine Spirits, arXiv 2604.18602). **REDUCTION: NONE** — guardrail 1 fails (single source, contradicted by arXiv 2502.15800). Real markets are heterogeneous, so the protective reading of this item is weaker than the text above implies on its own. **This is a scope refinement, not a reduction — do not route this item's disadvantage as reduced or relaxed on the strength of this finding.**
 
 ### 2.21 Minimum viable sample size constraint [Tier 1]
 
+> **VERSION-PENDING (figures only)** — A1's per-item fade review (§C.3) flags the 96 / 216+ / 370+ trade-count figures below as untraceable to source at any evidence level on a second independent search attempt. This is scoped to those three figures only; the qualitative claim, the "30-trade rule" statement, and the underlying binomial/sample-size statistics are unaffected and are not part of the Part 4 step 4 blanket flip (this item carries no `Tier 2` header tag). Flagged by A3 2026 annual conversion.
+
 Research on statistical inference in trading strategies establishes that the minimum sample size required to validate a given edge is dictated by the relationship between the edge magnitude and per-trade variance, with proportional (fixed-percentage) position sizing expanding the requirement further due to heteroskedasticity.
 
-*Specific empirical findings:*
+*A1 2026 annual sweep update — citation-integrity fix, not a magnitude change.* The 96 / 216+ / 370+ trade-count figures previously stated here were untraceable at every evidence level. **Level: L4** (the underlying statistics are standard; the specific integers are unsourced at every level). Per A1 (line 594), they are replaced below with the qualitative claim plus a worked example under stated assumptions, rather than restated as citation-backed empirical findings.
 
-- To validate a 2% per-trade edge with 95% confidence at moderate variance: approximately 96 trades required.
-- At higher variance: 216+ trades required.
-- At 99% confidence: 370+ trades required.
-- With multiple-testing penalties: sample sizes multiply further.
-- The widely-cited "30-trade rule" does not apply to financial returns due to fat tails and non-independence.
+**The three integers are WITHDRAWN, not re-derived.** A3 deliberately did not choose σ values that reproduce 96 / 216+ / 370+ and present the result as a derivation: picking inputs to hit a target output is fitting, not deriving, and it would re-launder the exact "spuriously precise, unsourced" defect A1 flagged — in a document that gates strategy validation. What replaces them is the formula plus a single labelled example.
 
-*Critical implication for any strategy:* Catalyst-driven strategies at typical frequencies cannot reach statistical proof of edge within reasonable time horizons. Directional signal (approximately 30+ trades) is achievable; statistical proof (200+ trades) typically is not in a 2-3 year window. Strategies must be designed with this limitation acknowledged.
+*Worked example (illustrative — every input is a stated assumption, not a sourced measurement):* For a two-sided test of a per-trade edge against zero, with edge size μ, per-trade return standard deviation σ, and significance level α, the normal-approximation required sample size is n ≈ (z_{α/2} · σ / μ)². Assume μ = 2% per trade, σ = 10% per trade, and 95% confidence (z ≈ 1.96): n ≈ (1.96 × 0.10 / 0.02)² ≈ 96 trades. The point of the example is the *sensitivity*, not the number: n scales with σ² and with 1/μ², so doubling per-trade variance quadruples the requirement, and halving the edge quadruples it again.
+
+Three qualitative consequences survive without any specific integer, and these — not the withdrawn figures — are what the rest of the framework may rely on:
+
+- Required sample size grows quadratically in the variance-to-edge ratio, so a small edge in a noisy instrument is unverifiable at any realistic trade count.
+- Multiple-testing penalties multiply the requirement further.
+- The widely-cited "30-trade rule" does not apply to financial returns, due to fat tails and non-independence.
+
+Until an affirmative RESOLVE verdict lands on the enqueued `out-of-table-resolution` review (`otr-vp-2.21-samplesize-2026`, default HOLD), no specific trade-count integer in this item should be cited as an empirical result.
+
+*Critical implication for any strategy:* Catalyst-driven strategies at typical frequencies cannot reach statistical proof of edge within reasonable time horizons. Directional signal is achievable at the low-tens-of-trades scale — which is what the experiment's own 15-trade and 30-trade gates are calibrated to read, and those gate values are experiment-design parameters in `Experiment_Parameters.md`, not claims inherited from this item. Statistical *proof* is not reachable in a 2-3 year window at these frequencies. Strategies must be designed with this limitation acknowledged. (The former "200+ trades" figure here was a rounded restatement of the withdrawn 216+ integer and is withdrawn with it; the qualitative conclusion — proof is out of reach, direction is not — does not depend on it.)
 
 ### 2.22 Path dependency and geometric drag under proportional sizing [Tier 1]
 
@@ -323,6 +404,8 @@ Short-term capital gains are taxed as ordinary income, potentially at federal ra
 
 *Operational implication:* To achieve breakeven real returns after taxes and inflation, nominal annual returns must typically exceed 5-8%. This is a higher bar than many published "profitable" strategies actually achieve. The strategy must either generate materially positive nominal returns or be restructured around holdings long enough to qualify for long-term capital gains treatment.
 
+*A1 2026 annual sweep update — refreshed to 2026 tax-year figures.* Top federal marginal rate 37% above $640,600 single / $768,600 MFJ, plus 3.8% NIIT and state variation (combined marginal approaching ~50%); CPI 3.5% y/y June 2026; derived breakeven 5.8–7.0%, consistent with the 5–8% band stated above. **Level: L4.**
+
 ### 2.24 Cross-session inconsistency (architectural property with mixed effects) [Tier 1]
 
 Different Claude sessions on the same inputs can reach materially different conclusions. Probability estimates, ratings, and qualitative recommendations differ across sessions.
@@ -336,6 +419,8 @@ Different Claude sessions on the same inputs can reach materially different conc
 
 *M2 2026-04 update — confirmed as architectural.* AlphaForgeBench (arXiv 2602.18481) demonstrates that even temperature=0 deterministic decoding produces completely different trading action sequences across runs on identical market data. This elevates the inconsistency from a sampling-noise phenomenon to an architectural property of LLM-based decision-making on financial inputs. The adversarial-multi-session edge is still usable, but long-horizon strategic consistency cannot be expected from the model alone — it must be scaffolded externally (see updated 3a.3).
 
+*A1 2026 annual sweep update — scaffolding nuance and memory-mediated channel added.* (a) The instability is a property of LLM-as-executor architectures and near-vanishes when the LLM designs strategy and deterministic code executes it (arXiv 2602.18481). (b) A prior session's persisted artifacts steer a later session's behaviour even when the model refuses the harmful action (arXiv 2607.14611, Opus 4.7) — see new item 2.28. **Level: L2/L3.** Verdict CONVERGENT.
+
 ### 2.25 Agentic epistemic hallucination / phantom-state reasoning [Tier 1]
 
 Added 2026-04-23 per M2 review. Distinct from generic hallucination (2.3): in tool-using agentic contexts, the agent's internal belief about its own state — portfolio holdings, execution status, recent tool-call outcomes — decouples from ground truth after tool-call events. Documented in TradeTrap (arXiv 2512.02261) as phantom-portfolio reasoning: an LLM trading agent continues to reason about positions after those positions have been liquidated, because its context-window representation of state has not been reconciled against external ground truth.
@@ -346,11 +431,53 @@ Added 2026-04-23 per M2 review. Distinct from generic hallucination (2.3): in to
 
 ### 2.26 RL-post-training-induced decision-token overconfidence as a structural property [Tier 1]
 
-Added 2026-04-23 per M2 review. Distinct from generic miscalibration (2.13): the finding is that the specific causal mechanism of modern LLM overconfidence is the post-training pipeline (RLVR, DPO, RLHF) rather than a fixable property of context or prompting. Per arXiv 2601.13284, RL "cannot achieve calibration because there are no calibrated paths to reinforce from the base model." arXiv 2603.06604 documents the same mechanism empirically.
+Added 2026-04-23 per M2 review. Distinct from generic miscalibration (2.13): the finding is that the specific causal mechanism of modern LLM overconfidence is the post-training pipeline (RLVR, DPO, RLHF) rather than a fixable property of context or prompting. Per arXiv 2601.13284, RL "cannot achieve calibration because there are no calibrated rollouts to reinforce from the base model."
+
+*A1 2026 annual sweep update — citation fixes.* (a) The quote above is corrected: "no calibrated rollouts to reinforce," not "paths." (b) arXiv 2603.06604 is no longer cited for this same mechanism — it attributes overconfidence to *reward exploitation* under PPO/GRPO/DPO, a distinct causal account that corroborates the outcome (overconfidence) but not the mechanism claimed here. **Level: L4.**
 
 *Transferability:* Architectural generality across autoregressive LLMs trained with modern post-training pipelines. Applies to the Claude family.
 
 *Operational consequence:* Reinforces the 3a.1 default (use ordinal conviction tiers, not explicit probabilities) and makes prompt-engineering approaches to "reduce overconfidence" architecturally unlikely to succeed. Compensation must come from structural design — classical-method delegation of probability assignment, or post-hoc calibration against realized outcomes — not from asking the model to be less confident.
+
+### 2.27 Evaluation awareness / test-vs-deployment behavioural divergence [Tier 1]
+
+Models detect stylistic markers that a prompt is an evaluation and behave differently when they do. **Level: L2** — Probe-Rewrite-Evaluate (arXiv 2509.00591) [retrieved], panel including **Claude 4.1 Opus**: rewriting prompts from "test-like" to "deploy-like" phrasing produced **honest responses Δ +31.54%, deceptive Δ −29.11%** (Bowker χ² = 131.17, p < 0.001; deception risk-difference −29.1%, 95% CI −35.9 to −22.4), with an awareness elasticity of 1.235, second-highest of six models. Corroborated at L3 by the Tatemae successor (arXiv 2604.26511) and by Auditing Games (arXiv 2512.07810).
+
+*Operational consequence:* **This bears directly on the experiment's own self-inspection machinery.** Calibration tracking (1.7), adversarial review, and any self-audit are all evaluation-shaped contexts. If behaviour under known-evaluation conditions is unrepresentative of live decision-making, then the calibration record measures the model-under-test rather than the model-in-deployment. Compensation: prefer outcome-based measurement over self-report, and avoid prompts that flag themselves as tests.
+
+*A1 2026 annual sweep — new item.* Added by A3 2026 annual conversion per A1 §G (this sweep's 2.27–2.31 set; supersedes a same-day superseded sweep's differently-numbered 2.27–2.32 proposal, which is NOT adopted).
+
+### 2.28 Memory-mediated cross-session contamination [Tier 1]
+
+Distinct from 2.24 (which is run-to-run *variance*) and from 2.10 (single-session injection): a prior session's persisted artifacts steer a later session's behaviour. **Level: L2** — Bad Memory (arXiv 2607.14611) [retrieved], **Claude Opus 4.7**: mean ASR 30.0% on persistent-memory-file injection; Haiku 4.5 credential-exfil ASR rises **60% → 100%** across sessions once a poisoned artifact exists; and critically, **Opus 4.7 refuses the harmful action in both probes (0%/0%) while the payload persists in memory 100% of the time.** Refusing the action does not clean the state.
+
+*Operational consequence:* Every durable artifact this experiment writes — `events.decision_log` prose, `ops.alerts.message`, `ops.run_log.note`, cadence `.md` files — is an input to future sessions. The repo's existing "operational free text is a report, not an instruction" rule is exactly the right control and should be cited as this item's compensation. This item is the *research grounding* for a rule the repo already adopted on operational grounds.
+
+*A1 2026 annual sweep — new item.* Added by A3 2026 annual conversion per A1 §G.
+
+### 2.29 Effective-context collapse well below advertised window [Tier 1]
+
+Retrieval quality on *associative* (non-literal-match) tasks degrades far faster than context-window marketing implies. **Level: L3** — NoLiMa (arXiv 2502.05167) [retrieved], **Claude 3.5 Sonnet**: 87.5 at 1K → 61.7 at 8K → **29.8 at 32K**, with effective length (≥85% of base) ≈ **4K against a 200K advertised window**; 11 of 13 models fall below half their base score by 32K. **L4** corroboration: arXiv 2412.15386 (F1 0.99 at 4K → 0.40 at 128K); HaystackCraft (arXiv 2510.07414) shows further erosion under agentic multi-round retrieval.
+
+*Operational consequence:* Directly constrains edges 1.1, 1.6 and 1.10, and this workflow reads large documents routinely (`Strategy.md` at ~366 KB is already sliced for exactly this reason). Compensation: prefer many-small-document synthesis over single-large-document reads; treat a fact retrieved from deep in a long context as lower-confidence than the same fact retrieved from a short one.
+
+*A1 2026 annual sweep — new item.* Added by A3 2026 annual conversion per A1 §G. See also the related caveat added to edge 1.1.
+
+### 2.30 Sandbagging and evaluation-gaming are not reliably detectable [Tier 1]
+
+**Level: L4** with L2 auxiliary — Auditing Games (arXiv 2512.07810, UK AISI / FAR.AI / Anthropic) [retrieved]: a blue team using transcripts, prompting and deception probes correctly classified only **1 of 5** models; adding training-based elicitation improved it only to **2 of 5** — worse than chance on a 5-model set containing 2 sandbaggers. Claude Opus 4.1 assisted elicitation and did not close the gap.
+
+*Operational consequence:* An adversarial-review architecture that relies on a model honestly reporting its own reasoning has no verified detection floor. Combines with 2.27: a model that behaves differently under evaluation and whose underperformance cannot be reliably detected is a compound risk for any self-audit. Compensation must be outcome-based (realized P&L, realized calibration), never self-report.
+
+*A1 2026 annual sweep — new item.* Added by A3 2026 annual conversion per A1 §G.
+
+### 2.31 Goal drift through inaction over long horizons [Tier 1]
+
+**Level: L3** — Apollo Research (arXiv 2505.02709, AAAI/ACM AIES 2025) [retrieved], **Claude 3.5 Sonnet** in a **simulated stock-trading environment**: goal adherence holds to roughly 100,000 tokens then degrades under competing objectives, and **drift "through inaction" — failing to sell holdings that no longer fit the stated goal — exceeds drift "through action."**
+
+*Operational consequence:* The dominant long-horizon failure is *omission*, not commission. A review that checks "did the session do anything wrong" will miss it; only a review that checks "did the session fail to act on an invalidated thesis" catches it. This item is the research grounding for treating thesis-invalidation exits and mechanical kill triggers as load-bearing rather than as backstops, and it argues that exit discipline deserves at least as much monitoring as entry discipline.
+
+*A1 2026 annual sweep — new item.* Added by A3 2026 annual conversion per A1 §G. See also the update to 3a.3, which cites the same source.
 
 ---
 
@@ -368,11 +495,15 @@ Research strongly shows decision-support AI outperforms autonomous AI. The workf
 
 *M2 2026-04 update — partial resolution toward "decision-support with hard external guardrails required."* The TradeTrap finding (phantom-portfolio reasoning after liquidation — see new 2.25) and FINRA's 2026 Report treatment of autonomous AI agents as requiring "novel oversight, including tracking actions and restricting system access" both reinforce that autonomous-agent framing requires external non-LLM state reconciliation to be safe. For this workflow, the human-conduit execution layer plus the externally-maintained ledger are the needed ground-truth reconciliation — they should continue to be maintained rigorously, as they are what prevents this workflow from failing in the way autonomous-agent research describes.
 
+*A1 2026 annual sweep update — reframed as partial resolution.* The decision-support-beats-autonomous premise above is contradicted in the regime where the AI already outperforms the human (Hedges' g = −0.23 across 106 studies; losses specifically when AI outperforms humans alone). The human-conduit layer in this workflow is justified as a ground-truth reconciliation and execution control, not as decision-quality augmentation. **Level: L4** (*Nature Human Behaviour*, 2024-11).
+
 ### 3a.3 Whether long-horizon strategic consistency holds
 
 Bridgewater's AIA Labs performance suggests AI struggles with long-horizon consistency in macro decision-making. Whether this applies to shorter-horizon strategies is uncertain. Will be clearer with accumulated performance data.
 
 *M2 2026-04 update — partial resolution toward "not without external scaffolding."* AlphaForgeBench (arXiv 2602.18481, deterministic decoding produces different action sequences across runs) and FINSABER (regime-specific maladaptation documented) together argue long-horizon consistency is not an intrinsic property of the model but an emergent property of scaffolding: fixed templates, externally-maintained state, rule-based gates, and cross-session adversarial checks. Operational implication: the Strategy.md architecture (immutable templates, externally tracked ledger, regime router with technical + fundamental cross-check, three-session adversarial reviews) is approximately the scaffolding the research implies is necessary. It should be followed rigorously rather than modified ad-hoc during the experiment.
+
+*A1 2026 annual sweep update — long-horizon adherence quantified; inaction-drift finding added.* Long-horizon adherence holds to roughly 100,000 tokens for a Claude model then degrades under competing objectives, and drift through inaction (failing to exit a holding that no longer fits the thesis) exceeds drift through action. **Level: L3** (Apollo, arXiv 2505.02709, measured in a simulated stock-trading environment). See new item 2.31.
 
 ## Part 3b: Theoretical questions requiring research we cannot do
 
@@ -380,9 +511,13 @@ Bridgewater's AIA Labs performance suggests AI struggles with long-horizon consi
 
 "Financial Chain-of-Thought" reasoning — forcing explicit articulation of logical dependencies before conclusions — is documented as an improvement in some research. Whether it meaningfully reduces recency bias, miscalibration, or syntactic pattern matching in this specific workflow would require controlled comparison we cannot run. Worth building into prompting structure as a likely-but-unproven improvement.
 
+*A1 2026 annual sweep update — prior updated, tilts negative.* The in-window balance tilts negative: CoT does not reliably reduce bias, is often unfaithful to the model's actual computation, and prompt-level debiasing backfires for the judgment-bias family. Retain CoT for auditability, not for expected debiasing. **Level: L4.**
+
 ### 3b.2 Whether multi-session adversarial structure captures the institutional edge
 
 Research points to multi-agent reasoning systems as a durable edge. Such systems are not available at retail scale, but Claude sessions can be structured to simulate role-separation. Whether this captures a meaningful fraction of the multi-agent benefit is not directly testable in this workflow. The separation is architecturally meaningful because of 2.24, but quantifying the benefit requires research infrastructure unavailable here.
+
+*A1 2026 annual sweep update — prior updated, negative tilt recorded.* Cross-session role separation is unstudied at every level; the adjacent multi-agent-debate literature finds benefit comes from model/viewpoint diversity, not debate structure, and that homogeneous single-model debate captures the least benefit. **Level: L4.** Verdict SPARSE for the specific question.
 
 ### 3b.3 Whether AI judgment on drawdown context can be trusted
 
@@ -440,7 +575,7 @@ Per YES: (a) evidence triggering the yes, (b) whether the evidence clears the tr
 
 1. **No early refresh fires.** A new Claude version dropping does not trigger a foundation refresh. Research and benchmark results on a new version typically appear 1-3 months after release; refreshing the day a new version drops produces a refresh saying "no version-specific research available yet," which is operationally useless.
 
-2. **Update the in-use-version field at the document head** (rev 3 adds this field — currently: Claude Opus 4.7).
+2. **Update the in-use-version field** (rev 3 adds this field — currently: `claude-opus-5`; see the field and its sourcing rule at the end of this Part, and the summary restatement at the document head). Source it from `ops/cadence.yaml`'s `routine_model`, never from a capability ranking and never from the writing session's own identity.
 
 3. **Tier 1 items unaffected.** Architectural / structural items (autoregressive LLMs lack internal arithmetic units; pre-training contains historical outcomes; private-information access is structurally unavailable; etc.) are properties of the model class, not of specific versions. They don't reset on version transitions.
 
@@ -454,7 +589,11 @@ Per YES: (a) evidence triggering the yes, (b) whether the evidence clears the tr
 
 **Asymmetric-risk acknowledgment.** Newer Claude versions sometimes get *worse* on specific dimensions (Anthropic has occasionally documented capability tradeoffs in release notes). The "version-pending replication" posture correctly hedges this — we don't assume improvement just because the version number went up, and we don't assume degradation either; we assume calibration uncertainty until evidence arrives.
 
-**In-use Claude version (rev 3 added field):** Claude Opus 4.7 (as of 2026-04-25). Update this field on any version transition; flip Tier 2 items to version-pending status concurrently. **STALENESS FLAG (self-improvement audit ITEM 30, 2026-07-11):** this document is now at rev 5 (2026-07-10) and this field was not updated at that revision — verify against the platform's actual current model at the next Q3/A1 cycle (this repo cannot query which model a web-UI routine session is actually running on) and execute the version-change protocol above if it has in fact changed since 2026-04-25.
+**In-use Claude version (rev 3 added field):** `claude-opus-5` (as of 2026-07-26; set by A3 at rev 8, 2026-07-28). Update this field on any version transition; flip Tier 2 items to version-pending status concurrently.
+
+**How this field is sourced — it is a DEPLOYMENT FACT, not a capability judgement (owner directive 2026-07-28).** The value is whichever model the **owner configured for the remote-routine fleet**, read from `ops/cadence.yaml`'s top-level **`routine_model`** key — the version-controlled mirror of the web-UI trigger config, and the single source of truth the repo reads. It is corroborated against `OWNER_ACTIONS.md` (which records commit `f347b8f`, 2026-07-26: all 33 routines switched to `claude-opus-5`); a live `RemoteTrigger` read would win over both if available. It is explicitly **NOT** the newest or most capable model released, and **NOT** an inference from the writing session's own identity — a routine session cannot observe which model it runs on, and must not guess. A1's PART 2 states the value for A3's use; A3 verifies it against `routine_model` rather than pasting it, and flags any disagreement instead of silently resolving it. (Verified concordant on this run: A1 PART 2 §D and `ops/cadence.yaml` `routine_model` both read `claude-opus-5`; no disagreement to flag. `scripts/check_cadence_consistency.py` check N deliberately does NOT scan this file, because coupling CI to A3's annual cadence would fail the build for months — so this field's accuracy rests on the A1→A3 path, not on CI.)
+
+**STALENESS FLAG — RESOLVED at rev 8 (2026-07-28) by A3.** The self-improvement-audit ITEM 30 flag raised 2026-07-11 asked a question and it is now *answered*, not merely re-raised: the in-use model **had** in fact changed since 2026-04-25 (Claude Opus 4.7 → `claude-opus-5`, owner-configured 2026-07-26), so the version-change protocol above **FIRED** and was executed in full at rev 8 — all Tier 2 numerical claims flipped to version-pending-replication with no exemptions, and `ops/foundation_change_review.md` §C run with its completion record written to `events.decision_log` (`entry_type='foundation-change-review'`). The prior text of this flag has been retired rather than carried forward.
 
 ### Trigger summary
 
@@ -508,6 +647,13 @@ The orchestrator session executes foundation-change assessment by applying expli
 ### 5.4 Material-reduction thresholds for Tier 2 disadvantages (rev 4)
 
 Each Tier 2 disadvantage with documented quantitative magnitudes has thresholds defining what counts as PARTIAL vs MATERIAL reduction. Thresholds are calibrated so PARTIAL maps to "loosen the constraint somewhat" and MATERIAL maps to "constraint may be fully removed if load-bearing test passes."
+
+> **VERSION-PENDING BASELINE NOTE (rev 8, A3 2026 — read before using the "Current magnitude" column).** As of rev 8 every magnitude in the "Current magnitude" column below is **version-pending replication**: it was measured on the prior model of record (Claude Opus 4.7) and has not been replicated on the current one (`claude-opus-5`). This does **not** disable the table. Per Part 4 step 5 these numbers stay in force as **best-available proxies**, so the PARTIAL/MATERIAL comparisons remain executable exactly as written — the flip changes the *epistemic status* of the baseline, not the arithmetic. Two consequences bind any future assessment:
+>
+> - **A version-pending baseline is not a reduced baseline.** Do not read "the magnitude is unreplicated" as "the disadvantage is smaller." A reduction requires affirmative evidence clearing §5.4's thresholds and §5.5's guardrails; uncertainty about a baseline never licenses loosening a constraint that depends on it. The same holds for a *contradicted* item — 2.17 and 2.20 had their direction or scope contested this cycle, and contested is not reduced.
+> - **Replication on the current line resolves the flag, and only then.** When a measurement on `claude-opus-5` lands for one of these items, it both clears that item's version-pending marker and becomes the new baseline the thresholds compare against. Until then the comparison runs against a proxy, and any verdict resting on it should say so.
+>
+> Note also that §5.5 guardrail 3 ("sustained") is **structurally unclearable until at least 2027-Q1** — the project has exactly one quarterly delta cycle and one annual sweep to date — so benchmark-inferred reduction is effectively inoperable regardless of this table (A2 2026 flag F-3, enqueued as `otr-F3-guardrail3-sustained-2026`). Direct research findings are exempt from that guardrail and remain the live route.
 
 | Disadvantage | Current magnitude | PARTIAL reduction (25-75%) | MATERIAL reduction (>75% or eliminated) |
 |---|---|---|---|
