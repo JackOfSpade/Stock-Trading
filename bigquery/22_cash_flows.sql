@@ -145,7 +145,7 @@ SELECT d.strategy, d.deposits,
   ROUND(COALESCE(o.open_mv,0),2) AS deployed_mv,
   ROUND(d.deposits+COALESCE(r.realized_pnl,0)+COALESCE(o.open_mv-o.open_cost,0)+COALESCE(dv.dividends,0),2) AS nav,
   ROUND(d.deposits+COALESCE(r.realized_pnl,0)+COALESCE(o.open_mv-o.open_cost,0)+COALESCE(dv.dividends,0)-COALESCE(o.open_mv,0),2) AS available_funds,
-  -- LEGACY REFERENCE FIGURE as of Strategy.md Rev 39 / Experiment_Parameters.md rev 18 (owner directive
+  -- LEGACY REFERENCE FIGURE as of Strategy.md Rev 43 / Experiment_Parameters.md rev 18 (owner directive
   -- 2026-07-28). The fixed 2%-per-position rule this column encoded is RETIRED: sizing is now a per-thesis
   -- AI-chosen Capital-at-Risk budget, so there is no single scalar that is "the" position size for a strategy.
   -- This column is RETAINED, unchanged in arithmetic, because (a) it is a pure display/reference read for the

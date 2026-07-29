@@ -152,7 +152,7 @@ The only time capital moves between strategies is after a strategy terminates, v
 
 ### Proportional sizing property
 
-Because position size is 2% of the *strategy portfolio's* current value (not 2% of the account), a strategy portfolio mathematically cannot reach zero. Losses compound geometrically but asymptotically. In practice, the per-strategy drawdown kill trigger fires long before asymptotic decay becomes a practical concern. This is the intended behavior: the drawdown trigger terminates strategies before their portfolios become meaninglessly small.
+Because position size is a percentage of the *strategy portfolio's* current value (not of the account) — **the AI-chosen per-thesis risk budget as of rev 18, formerly a flat 2%; the argument below is unchanged by that, since it turns on sizing being proportional to the strategy portfolio rather than on any particular fraction** — a strategy portfolio mathematically cannot reach zero. Losses compound geometrically but asymptotically. In practice, the per-strategy drawdown kill trigger fires long before asymptotic decay becomes a practical concern. This is the intended behavior: the drawdown trigger terminates strategies before their portfolios become meaninglessly small.
 
 ### Capital allocation model — 2026-06 revision (live-growth pivot)
 
@@ -705,7 +705,7 @@ This requirement applies at the prompt-construction level: any routine prompt th
 - The specific technical indicator set used by the regime router. That lives in the strategy document and is immutable once trading begins.
 - The specific fundamental analysis template used by the regime router. That lives in the strategy document and is immutable once trading begins.
 - Per-trade risk management. Those are strategy-level decisions.
-- Position sizing methodology beyond the 2%-of-strategy-portfolio parameter. Strategy-level detail.
+- ~~Position sizing methodology beyond the 2%-of-strategy-portfolio parameter. Strategy-level detail.~~ **[rev 18, 2026-07-28 — NO LONGER TRUE: this document now DOES contain the position-sizing methodology. §Position size is the canonical specification of thesis-scaled risk budgeting (the CaR definitions, the seven-factor justification list, the mandatory adversarial size attack, and the hard envelopes), because sizing carries the experiment's whole risk load once price-based stop-losses are excluded. Per-strategy application detail remains in Strategy.md.]**
 - Instrument scope, entry criteria, exit rules. Strategy-level.
 - Withdrawal methodology. Deferred until first withdrawal.
 - Any calendar-based termination. Experiment duration is bounded only by per-strategy gates (pass/fail only) and, post-gate, by the per-strategy kill triggers.

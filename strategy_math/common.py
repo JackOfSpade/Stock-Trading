@@ -3,7 +3,7 @@ strategy_math.common — shared numeric primitives used across strategies A/B/D/
 
 Position sizing (thesis-scaled risk budgeting per Experiment_Parameters.md rev 18 —
 the caller supplies the risk-budget fraction; there is no universal 2% rule as of
-Strategy.md Rev 39, owner directive 2026-07-28) and the correlation/regression math
+Strategy.md Rev 43, owner directive 2026-07-28) and the correlation/regression math
 D (correlation buckets, beta-adjusted alpha) and E (pair correlation, hedge-ratio
 leg sizing) both need. Pure stdlib.
 """
@@ -18,7 +18,7 @@ def position_size_dollars(sub_portfolio_nav: float, pct: float) -> float:
     """Thesis-scaled position sizing: `pct` is THIS THESIS's risk budget as a
     fraction of the strategy's own sub-portfolio NAV.
 
-    `pct` is REQUIRED and has no default (Rev 39, owner directive 2026-07-28).
+    `pct` is REQUIRED and has no default (Rev 43, owner directive 2026-07-28).
     It previously defaulted to 0.02 under the retired universal 2% rule; the
     default was removed deliberately so that a caller which forgets to supply a
     budget fails loudly instead of silently reinstating the old flat 2%.
@@ -33,9 +33,13 @@ def position_size_dollars(sub_portfolio_nav: float, pct: float) -> float:
     net-liquidation — Operating_Protocols.md's "Sizing and analysis on live data"
     tripwire.
 
-    This function does NOT enforce the per-name (<=10% CaR) or per-strategy-deployed
-    (<=75% CaR) envelopes: those are book-level aggregates over existing positions,
-    which this pure function cannot see. The caller checks them against the live book.
+    ENVELOPE ENFORCEMENT — necessary but NOT sufficient. This function rejects a
+    SINGLE budget above the 10% per-name ceiling, which is a necessary condition
+    only. It canNOT enforce the envelopes themselves, because both are book-level
+    AGGREGATES this pure function cannot see: two separately-valid 6% tranches in
+    the same name sum to 12% and breach the per-name envelope while passing every
+    individual call here. The caller MUST check the aggregate against the live book
+    (per-name total CaR <=10%, per-strategy deployed CaR <=75%) before staging.
     """
     if sub_portfolio_nav <= 0:
         raise ValueError(f"sub_portfolio_nav = {sub_portfolio_nav} (must be > 0).")

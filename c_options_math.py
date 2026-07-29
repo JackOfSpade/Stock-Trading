@@ -1472,6 +1472,10 @@ def size_position(
             f"a sizing edge case."
         )
 
+    # Necessary-but-NOT-sufficient envelope check: this rejects a single budget above
+    # the 10% per-name ceiling, but cannot enforce the envelope itself — per-name total
+    # CaR (across tranches) and per-strategy deployed CaR are book-level aggregates this
+    # pure function cannot see. The caller checks those against the live book.
     if not (0 < max_pct_nav <= 0.10):
         raise ValueError(
             f"max_pct_nav = {max_pct_nav} (must be in (0, 0.10]). The upper bound is "

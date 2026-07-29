@@ -77,7 +77,7 @@ def short_stop_loss_triggered(short_entry_price: float, current_price: float) ->
     of position, so sizing alone already bounds worst-case long loss at the thesis's
     stated risk budget without an explicit stop).
 
-    Rev 39 (owner directive 2026-07-28) makes this stop LOAD-BEARING rather than
+    Rev 43 (owner directive 2026-07-28) makes this stop LOAD-BEARING rather than
     supplementary: under thesis-scaled risk budgeting the position size IS the risk
     control, but that only works where downside is bounded. Short downside is
     unbounded, so this stop is what makes a short's Capital at Risk finite at all —
