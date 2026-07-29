@@ -2505,7 +2505,7 @@ EP:412 human step without infinite regress); SL3 (daily, after D2a) runs the SHA
 judges graduation; SL5 (queue-driven) is the SOLE writer of roster membership + the self-executing fanout
 engine; SL4 (monthly, after M4) is a REMOVE-ONLY discretionary-retirement proposer. The graduation pipeline
 — adversarial pre-mortem -> zero-capital SHADOW signals -> simulated-fill PAPER vs SGOV (>= ~60 days, >= ~10
-sim trades, excess >= 0, regime coverage) -> live $2,000 PROBE at 2% sizing -> existing 30-trade gate — is
+sim trades, excess >= 0, regime coverage) -> live $2,000 PROBE at its per-thesis risk budget (Rev 43 / EP rev 18, 2026-07-28 — formerly a flat 2%) -> existing 30-trade gate — is
 the compensating control that REPLACES human PR review. The mechanical kill triggers (drawdown / 30-trade /
 m2m) are UNCHANGED; SL4 only ever moves in the fail-safe (retire) direction and never below the N>=2 floor.
 
