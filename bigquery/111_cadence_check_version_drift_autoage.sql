@@ -43,7 +43,11 @@
 -- Byte-for-byte identical to bigquery/75_scheduled_query_wrappers.sql:116-697 EXCEPT:
 --   1. the heartbeat version marker 'v8' -> 'v9' (bigquery/63's registry entry updated to match);
 --   2. 'scheduled_query_version_drift' appended to the #14 auto-age `category IN (...)` list;
---   3. an explanatory comment above that list.
+--   3. an explanatory comment above that list;
+--   4. 'stranded_session' removed from that same #14 auto-age `category IN (...)` list (2026-07-29):
+--      it was never once raised anywhere in this repo's git history, existed only in this allowlist,
+--      and was retired alongside the Operating_Protocols.md section 17 stranded-session detector
+--      (itself never wired into any routine).
 -- No check logic, no threshold, no severity, and no dead-man's-switch window is otherwise altered.
 --
 -- NOTE ON APPLYING THIS: bumping the marker to v9 means this proc reports v9 only from its next run.

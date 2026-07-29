@@ -412,6 +412,16 @@ def test_trigger_ids_missing_entry_for_new_routine_is_warn_only(tmp_path, monkey
 
 
 # ---- check H: auto-merge-claude.yml's routine_re must accept every cadence.yaml id ----
+# NOTE on isolation: _patch_fixture_paths does NOT touch AUTO_MERGE_DECISION_SH, so by default it
+# still points at the REAL scripts/auto_merge_decision.sh, which is always complete (contains every
+# live routine id). Check H validates EVERY allowlist copy found, not first-match-wins, so a broken
+# AUTO_MERGE_YML fixture still produces its own error regardless of what AUTO_MERGE_DECISION_SH says
+# -- the "missing" test below already passes for the right reason (if check H ever stopped reading
+# AUTO_MERGE_YML at all, this fixture's missing D1 would no longer surface and main() would flip from
+# 1 to 0, failing the assertion). The "clean"/main()==0 test is the one that was vacuous: with
+# AUTO_MERGE_DECISION_SH left un-isolated, the real script's completeness alone is enough to make
+# main() return 0 even if check H stopped reading AUTO_MERGE_YML entirely, so it must also patch
+# AUTO_MERGE_DECISION_SH to an absent path to actually isolate AUTO_MERGE_YML.
 def test_auto_merge_routine_re_missing_a_cadence_id_is_caught(tmp_path, monkeypatch, capsys):
     plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
     _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
@@ -426,10 +436,30 @@ def test_auto_merge_routine_re_missing_a_cadence_id_is_caught(tmp_path, monkeypa
 def test_auto_merge_routine_re_accepting_the_cadence_id_is_clean(tmp_path, monkeypatch):
     plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
     _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    # Isolate AUTO_MERGE_YML: without also pointing AUTO_MERGE_DECISION_SH at an absent path, the
+    # real (always-complete) scripts/auto_merge_decision.sh would still be read and would contribute
+    # zero errors regardless of what this fixture's AUTO_MERGE_YML says, making the main()==0
+    # assertion pass even if check H stopped reading AUTO_MERGE_YML altogether.
+    monkeypatch.setattr(cc, "AUTO_MERGE_DECISION_SH", str(tmp_path / "absent_auto_merge_decision.sh"))
     auto_merge = tmp_path / "auto-merge.yml"
     auto_merge.write_text("routine_re='^(D1|D2|D3)$'\n")
     monkeypatch.setattr(cc, "AUTO_MERGE_YML", str(auto_merge))
     assert cc.main() == 0
+
+
+def test_auto_merge_routine_re_missing_a_cadence_id_is_caught_via_decision_sh(tmp_path, monkeypatch, capsys):
+    # Symmetric coverage for the OTHER allowlist location: scripts/auto_merge_decision.sh (the
+    # sourced helper the literal moved into on 2026-07-29). Isolate AUTO_MERGE_DECISION_SH the same
+    # way the tests above isolate AUTO_MERGE_YML -- _patch_fixture_paths already points AUTO_MERGE_YML
+    # at an absent path by default, so only this fixture's incomplete .sh is read.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    decision_sh = tmp_path / "auto_merge_decision.sh"
+    decision_sh.write_text("routine_re='^(D2|D3)$'\n")
+    monkeypatch.setattr(cc, "AUTO_MERGE_DECISION_SH", str(decision_sh))
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert "D1" in out and "routine_re" in out
 
 
 # ---- check J: parse_period_watch_routines_sql — bigquery/24's post-normalization labelled rows ----

@@ -991,8 +991,9 @@ correctly" account above reflects a session self-executing freshly-written spec 
 that same day, not a live, wired step reachable by ordinary D2 runs on other days. The "detector closed RUNBOOK
 20's second incident" and "root cause confirmed + hardened" closure claims at the two Status lines above are
 therefore not supported and should not be relied on as evidence this detector was ever live. Operating_Protocols.md
-§17 is now retired (2026-07-29); its successor is **OPS0 STEP 4(f)** in `Claude_Task_Plan.md`, which detects the
-same signature via `ops.routine_commit_markers` and currently runs in SHADOW.
+§17 is now retired (2026-07-29); its successor is **OPS0 STEP 4(f)** in `Claude_Task_Plan.md`, which is live as of
+2026-07-29 (raises a real `warning` alert, not shadow) and detects the same signature via git evidence against
+each routine's `ops/cadence.yaml` `writes:` list, not via `ops.routine_commit_markers`.
 
 ## 21. `events.*` append-only convention — the `sub_pattern` in-place exception *(data governance)*
 `events.*` is the **append-only source of truth** (schema description: *"INSERT/Storage-Write only; never
@@ -1610,6 +1611,8 @@ FMP mark fallback).
 - **#14 — auto-resolve stale self-healing warnings (repo-done).** `cadence_check.sql` ages out >7-day
   `stranded_session`/`instruction_drift`/`calendar_runway_low`/`routine_stalled` warnings so the weekly digest's
   "N open alerts" reflects live issues (all_green keys only on open criticals — digest-quality only).
+  **[2026-07-29: `stranded_session` removed from that auto-age list — see bigquery/111 — retired alongside
+  Operating_Protocols.md section 17.]**
 - **#15 — delivery canary (owner console).** Create `scheduled_queries/delivery_canary.sql` as a **weekly**
   scheduled query (e.g. Mon ~05:40 UTC; email-on-failure ON). It asserts the prior week's canary got
   `notified_ts` stamped (proves the emailer actually DELIVERED) and emits a fresh `[CANARY]` row. The
@@ -1719,6 +1722,8 @@ up duplicates — but the one row stays open while the condition holds, and cade
 **explicitly excludes `position_drift`** (only `stranded_session` / `instruction_drift` / `calendar_runway_low` /
 `routine_stalled` auto-age). SGOV keeps leaving residual fractional lots (monthly DRIP + sweeps), so absent a fix it
 would re-drift indefinitely.
+**[2026-07-29: `stranded_session` removed from that auto-age list — see bigquery/111 — retired alongside
+Operating_Protocols.md section 17.]**
 
 **Fix (deployed 2026-07-01; repo + live).** Exclude SGOV from the deployed lifecycle at the source — `AND ticker !=
 'SGOV'` on BOTH the entries (BUY) and exits (SELL) CTEs of `analytics.position_lifecycle` — in the canonical

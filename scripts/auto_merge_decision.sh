@@ -130,7 +130,7 @@ should_retry_failed_ci() {
 # scripts/check_cadence_consistency.py's check H greps for — that guard asserts every id in
 # ops/cadence.yaml is accepted here, so a newly-added routine cannot be silently skipped by the
 # §38 marker-write. Do NOT rewrite it into a case statement or a different quoting style without
-# updating AUTO_MERGE_ROUTINE_RE / AUTO_MERGE_ALLOWLIST_FILES in that script. NOTE: do not restate
+# updating AUTO_MERGE_ROUTINE_RE / AUTO_MERGE_DECISION_SH and AUTO_MERGE_YML in that script. NOTE: do not restate
 # that literal's shape anywhere in a comment — the checker's own pattern would match the comment
 # first and silently validate a placeholder instead of the real allowlist.
 marker_routine_from_subject() {
@@ -153,7 +153,7 @@ marker_routine_from_subject() {
 # then skips the row rather than inventing one.
 marker_run_date_from_subject() {
   local in_subject
-  in_subject="$(printf '%s' "${1:-}" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1 || true)"
+  in_subject="$(printf '%s' "${1:-}" | grep -oE '\b[0-9]{4}-[0-9]{2}-[0-9]{2}\b' | head -1 || true)"
   if [ -n "$in_subject" ]; then
     printf '%s\n' "$in_subject"
   else

@@ -245,6 +245,9 @@ assert_eq "run_date: year-only subject falls back to the commit author date" \
   "$(marker_run_date_from_subject 'A1 2026: annual foundation re-derivation' '2026-07-28')" "2026-07-28"
 assert_eq "run_date: no date anywhere yields empty (caller then skips the row)" \
   "$(marker_run_date_from_subject 'A1 2026: annual foundation re-derivation' '')" ""
+# word-boundary anchors: a date glued inside another token (no boundary before it) must NOT match
+assert_eq "run_date: a date glued inside another token is skipped, real date still found" \
+  "$(marker_run_date_from_subject 'D2 rebalance v42026-07-15 sync 2026-07-28' '2026-01-01')" "2026-07-28"
 
 echo
 if [ "$fail" -ne 0 ]; then
