@@ -19,7 +19,9 @@ in `Operating_Protocols.md` §13 points here.
 
 Run this checklist whenever ANY of these four **foundations** changes — whether the change is surfaced
 by a Q3 foundation-change verdict (drained in Q4/D2), executed via the `Operating_Protocols.md` §13
-park-policy cutover, or applied by an A3 `AI_Trading_Foundation.md` edit:
+park-policy cutover, applied by an A3 `AI_Trading_Foundation.md` edit, or synced by D3's/Q4's Tier-M
+**MODEL-OF-RECORD DOC SYNC** step (`Claude_Task_Plan.md`; `AI_Trading_Foundation.md` Part 4 "Write
+authority — two tiers", cadence audit 2026-07-29 — D3 daily, Q4 quarterly backstop):
 
 1. **Park vehicle** — the cash-parking instrument (`state.park_policy_current`; SGOV → VOO 2026-07-15,
    or any future change).
