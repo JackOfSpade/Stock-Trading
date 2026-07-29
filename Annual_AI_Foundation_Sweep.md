@@ -99,8 +99,8 @@ Verified this session; the catalog is itself subject to drift.
 # PART 1 — LAST-24-MONTHS COVERAGE, ORGANIZED BY FOUNDATION ITEM
 
 **Treatment applied per item is stated explicitly**, per the A1 instruction:
-- **FULL four-level traversal** — items carrying a Tier 2 MAGNITUDE: the §5.4 threshold-table rows (2.3, 2.4, 2.7, 2.8, 2.10, 2.13, 2.14, 2.15, 2.17, 2.19, 2.20), plus 1.3 and 1.7, plus every item whose text contains a specific number (2.11, 2.21, 2.23). **16 items.**
-- **L4-PRIMARY block** — pure Tier 1 architectural/existence items, audited only for affirmative architectural-change evidence. **20 items.**
+- **FULL four-level traversal** — items carrying a Tier 2 MAGNITUDE: the §5.4 threshold-table rows (2.3, 2.4, 2.7, 2.8, 2.10, 2.13, 2.14, 2.15, 2.17, 2.19, 2.20), plus 1.3 and 1.7, plus every item whose text contains a specific number (2.11, 2.21, 2.23), plus **1.1** — which the rule does not strictly require (its text says "hundreds of pages," not a specific figure), but which was traversed four-level anyway because the advertised-vs-effective context window is a magnitude in practice. That judgement call paid: the traversal is what surfaced the effective-context collapse now proposed as new item 2.29. **17 items.**
+- **L4-PRIMARY block** — pure Tier 1 architectural/existence items, audited only for affirmative architectural-change evidence. **19 items across 18 section headers** (2.1 and 2.2 share a header).
 - **Part 3a/3b questions** get their own level rows and verdict. **6 items.**
 
 `[retrieved]` means the identifier was fetched and its title/abstract seen this session. `VENDOR-CLAIMED` marks vendor-published results.
