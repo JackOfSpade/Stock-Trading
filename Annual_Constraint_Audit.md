@@ -36,6 +36,12 @@ Per `Claude_Task_Plan.md` A3 §C, A3 reads PART 2 verbatim and produces the upda
 
 # PART 1 — Constraint inventory and foundation-citation graph
 
+> **POSTSCRIPT — PART 1's sizing rows were superseded hours after this audit ran (Rev 43 / `Experiment_Parameters.md` rev 18, owner directive 2026-07-28).** The 2%-of-strategy-portfolio cap inventoried below as C-A-07, C-B-05, C-C-05, C-D-01, C-E-05 and X-01 **no longer exists**; it was retired in favour of thesis-scaled risk budgeting (AI-chosen per-thesis Capital-at-Risk budget, bounded by per-name ≤10% CaR and per-strategy-deployed ≤75% CaR envelopes). X-01's "GLOBALLY IMMUTABLE" status is likewise superseded: what is globally immutable now is the *existence* of a risk-budget discipline and its envelopes, not any fraction.
+>
+> **This audit is deliberately NOT re-run or rewritten**, for two reasons. First, it is a **point-in-time record** of the constraint corpus as it stood when A2 executed; retro-fitting it would falsify the evidence base that the §2.5 findings were derived from — and F-2's analysis (the cap was never disadvantage-keyed; the 5% bound contradicted the derivation behind 2%) was *load-bearing* in the decision to retire the rule rather than define the missing ceiling. Second, **the verdict is unchanged either way**: PART 2's outcome is determined entirely at Step 1 by the fact that zero Part-2 disadvantages classify as PARTIAL or MATERIAL reduction (§2.0), which is a property of A1's evidence, not of any constraint's value. Every constraint terminates at Step 1 regardless of what the constraints *are*, so a re-run reproduces the same 0 relaxations / 0 per-constraint out-of-table flags with only cosmetically different PART 1 rows.
+>
+> Read the sizing rows below as *what the corpus contained at audit time*. The canonical current specification is `Experiment_Parameters.md` §Position size.
+
 ## 1.0 Method, sources, and a material caveat about the citation parse
 
 Per §5.3 step 1 and A2 PART 1, constraints were parsed from **each strategy's mechanism document and its pre-mortem** — `strategy/03_strategy_a.md` … `strategy/07_strategy_e.md` and the corresponding `### Pre-mortem: Strategy X` sections of `strategy/08_pre_mortems.md`. Experiment-level constraints binding all strategies were parsed from `Experiment_Parameters.md` and `strategy/00_preamble.md` (§1.6). Every row below is backed by verbatim text at the cited `file:line` in those sources.
