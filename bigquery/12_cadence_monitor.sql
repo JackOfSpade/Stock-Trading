@@ -207,6 +207,16 @@ FROM watch e;
 -- yet (no completed run in 14 days) is treated as satisfied, so turning the gate on can never block a
 -- routine merely because an upstream doesn't self-log. The gate goes live for a dependency pair exactly
 -- when the upstream starts logging via sp_routine_start/end — so it is safe to enable everywhere now.
+--
+-- SUPERSEDED LIVE by bigquery/114_period_aware_dependency_gate.sql (2026-07-28) — current single source
+-- of truth for this PROCEDURE. Two supersessions have landed since this original: bigquery/48 removed
+-- the 14-day rolling bound from the `monitored` EXISTS (so the paragraph above describing "in the last
+-- 14 days" is stale here — `monitored` is now has-EVER-completed), and bigquery/114 made the completion
+-- match PERIOD-AWARE (a weekly/monthly/quarterly/annual dep is satisfied by any completion inside
+-- in_run_date's own period, instead of requiring the exact same calendar day, which false-flagged every
+-- off-slot catch-up of a period routine). Daily/queue/unrecognized deps keep this file's exact
+-- predicate. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
+-- CREATE statement live in isolation — doing so silently reverts BOTH fixes.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_assert_deps`(
   in_routine STRING, in_deps ARRAY<STRING>, in_run_date DATE
 )

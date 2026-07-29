@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the routine-list STRUCT rows for bigquery/12/15/24/105 from ops/cadence.yaml +
+"""Generate the routine-list STRUCT rows for bigquery/12/15/24/105/114 from ops/cadence.yaml +
 Claude_Task_Plan.md.
 
 WHY THIS EXISTS (ARCH-3 Item 30b, closing the deferred hand-copy hole). bigquery/12
@@ -32,9 +32,17 @@ Regions generated (marker-delimited, one BEGIN/END pair per file):
                                         rows, ALL routines INCLUDING the 4 queue_driven ids (unlike
                                         bigquery/12's calendar-only filter -- this is the one region
                                         that needs the full 31-routine roster), cadence.yaml order.
+  bigquery/114_period_aware_dependency_gate.sql -- ops.sp_assert_deps' `period_class` CTE STRUCT rows.
+                                        BYTE-IDENTICAL to the bigquery/24 region (same gen_24_region
+                                        call): the dependency gate resolves a dep's period window from
+                                        the same (routine -> monitor_class) mapping the period watch
+                                        view uses, so the gate and the monitor cannot disagree about
+                                        which routines are period-cadence. 114 embeds the list rather
+                                        than joining state.cadence_period_watch because it is a FATAL,
+                                        unwrapped gate that must not gain a runtime view dependency.
 
 Usage:
-  python scripts/gen_routine_lists.py --write   # regenerate all 4 marker regions in place
+  python scripts/gen_routine_lists.py --write   # regenerate all 5 marker regions in place
   python scripts/gen_routine_lists.py --check   # exit 1 + diff if any region is stale
 
 Markers (exactly one BEGIN/END pair per file, wrapping ONLY the STRUCT rows -- the surrounding
@@ -63,6 +71,7 @@ CADENCE_MONITOR_SQL = os.path.join(ROOT, "bigquery", "12_cadence_monitor.sql")
 ROUTINE_CATALOG_SQL = os.path.join(ROOT, "bigquery", "15_routine_catalog.sql")
 PERIOD_WATCH_SQL = os.path.join(ROOT, "bigquery", "24_cadence_period_watch.sql")
 ROUTINE_CATCHUP_SQL = os.path.join(ROOT, "bigquery", "105_routine_catchup_window.sql")
+DEP_GATE_SQL = os.path.join(ROOT, "bigquery", "114_period_aware_dependency_gate.sql")
 
 BEGIN_MARKER = "-- BEGIN GENERATED ROUTINE LIST (scripts/gen_routine_lists.py --write; do not hand-edit)"
 END_MARKER = "-- END GENERATED ROUTINE LIST"
@@ -203,13 +212,21 @@ def build_targets():
         (ROUTINE_CATALOG_SQL, gen_15_region(routines, head_by_id)),
         (PERIOD_WATCH_SQL, gen_24_region(routines)),
         (ROUTINE_CATCHUP_SQL, gen_105_region(routines)),
+        # bigquery/114 needs the IDENTICAL (routine, monitor_class) period-class rows as bigquery/24 --
+        # ops.sp_assert_deps resolves a dependency's period window from the same mapping the period
+        # watch view uses -- so it reuses gen_24_region verbatim rather than defining a near-duplicate
+        # generator. The two regions are byte-identical by construction, which is the point: the gate
+        # and the monitor can never disagree about which routines are period-cadence. 114 embeds the
+        # list (instead of joining state.cadence_period_watch) because it is a FATAL, unwrapped gate
+        # that must not gain a runtime view dependency -- see that file's header.
+        (DEP_GATE_SQL, gen_24_region(routines)),
     ]
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     g = ap.add_mutually_exclusive_group(required=True)
-    g.add_argument("--write", action="store_true", help="regenerate all 4 marker regions in place")
+    g.add_argument("--write", action="store_true", help="regenerate all 5 marker regions in place")
     g.add_argument("--check", action="store_true", help="exit 1 + diff if any region is stale")
     args = ap.parse_args()
 
@@ -223,7 +240,7 @@ def main():
         if changed:
             print(f"gen_routine_lists --write: regenerated {', '.join(changed)}.")
         else:
-            print("gen_routine_lists --write: all 4 regions already current (no-op).")
+            print("gen_routine_lists --write: all 5 regions already current (no-op).")
         return 0
 
     # --check
@@ -242,7 +259,7 @@ def main():
                   f"Claude_Task_Plan.md -- run `python scripts/gen_routine_lists.py --write`")
     if drift:
         return 1
-    print("gen_routine_lists --check: OK -- bigquery/12, 15, 24, 105 generated regions match "
+    print("gen_routine_lists --check: OK -- bigquery/12, 15, 24, 105, 114 generated regions match "
           "ops/cadence.yaml + Claude_Task_Plan.md.")
     return 0
 

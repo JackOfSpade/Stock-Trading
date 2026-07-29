@@ -67,6 +67,16 @@ SELECT
   CURRENT_TIMESTAMP() AS checked_at
 FROM watch e;
 
+-- SUPERSEDED LIVE by bigquery/114_period_aware_dependency_gate.sql (2026-07-28) — current single source
+-- of truth for this PROCEDURE. 114 keeps this file's unbounded `monitored` EXISTS and the whole
+-- alert/RAISE tail byte-identical, and changes ONLY how a dependency's completion window is matched: a
+-- PERIOD-cadence dep (weekly/monthly/quarterly/annual) is now satisfied by any completion inside
+-- in_run_date's own period, instead of requiring the exact same calendar day. The day-keyed rule was a
+-- false-positive generator for every off-slot catch-up of a period routine (SL1 and SL4 both hit it on
+-- 2026-07-27 and hand-worked-around it in opposite ways) and for any weekly downstream running Monday
+-- afternoon. Daily/queue/unrecognized deps keep this file's exact predicate. With the VIEW above already
+-- superseded by bigquery/113, nothing in this file is live any more — it stays unmodified as
+-- DR-rebuild apply-in-order reference only. DO NOT re-apply either statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_assert_deps`(
   in_routine STRING, in_deps ARRAY<STRING>, in_run_date DATE
 )

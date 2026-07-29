@@ -660,28 +660,35 @@ def _write_gen_fixture(tmp_path):
     sql24.write_text(marker_body)
     sql105 = tmp_path / "105.sql"
     sql105.write_text(marker_body)
-    return plan, cadence, sql12, sql15, sql24, sql105
+    sql114 = tmp_path / "114.sql"
+    sql114.write_text(marker_body)
+    return plan, cadence, sql12, sql15, sql24, sql105, sql114
 
 
-def _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105):
-    # MUST patch every build_targets() entry, including ROUTINE_CATCHUP_SQL — otherwise a test that
-    # calls gen.write_region() for all of build_targets() writes real content straight into the actual
-    # repo's bigquery/105_routine_catchup_window.sql as a side effect (monkeypatch only undoes attribute
+def _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105, sql114):
+    # MUST patch every build_targets() entry, including ROUTINE_CATCHUP_SQL and DEP_GATE_SQL —
+    # otherwise a test that calls gen.write_region() for all of build_targets() writes real content
+    # straight into the actual repo's bigquery/105_routine_catchup_window.sql (or
+    # bigquery/114_period_aware_dependency_gate.sql) as a side effect (monkeypatch only undoes attribute
     # patches at teardown, not a file write that already happened). Bit the real-repo no-op test below
-    # once, the day ROUTINE_CATCHUP_SQL/gen_105_region were added (2026-07-25) without updating this
-    # helper in lockstep — every future generated target must be added here too.
+    # TWICE now — once the day ROUTINE_CATCHUP_SQL/gen_105_region were added (2026-07-25), and again the
+    # day DEP_GATE_SQL was added (2026-07-28) — both times because this helper was not updated in
+    # lockstep. EVERY future generated target must be added here too. The failure is confusing when it
+    # lands: the no-op test writes the CORRECT content back, so it fails while leaving the working tree
+    # looking clean, which reads like a flaky test rather than the cross-test clobber it actually is.
     monkeypatch.setattr(gen, "PLAN", str(plan))
     monkeypatch.setattr(gen, "CADENCE", str(cadence))
     monkeypatch.setattr(gen, "CADENCE_MONITOR_SQL", str(sql12))
     monkeypatch.setattr(gen, "ROUTINE_CATALOG_SQL", str(sql15))
     monkeypatch.setattr(gen, "PERIOD_WATCH_SQL", str(sql24))
     monkeypatch.setattr(gen, "ROUTINE_CATCHUP_SQL", str(sql105))
+    monkeypatch.setattr(gen, "DEP_GATE_SQL", str(sql114))
 
 
 def test_gen_routine_lists_write_then_check_is_clean(tmp_path, monkeypatch):
     gen = load_module_from_path("gen_routine_lists", "scripts", "gen_routine_lists.py")
-    plan, cadence, sql12, sql15, sql24, sql105 = _write_gen_fixture(tmp_path)
-    _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105)
+    plan, cadence, sql12, sql15, sql24, sql105, sql114 = _write_gen_fixture(tmp_path)
+    _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105, sql114)
     # --write: populates the marker regions
     for path, body in gen.build_targets():
         gen.write_region(path, body)
@@ -695,8 +702,8 @@ def test_gen_routine_lists_write_then_check_is_clean(tmp_path, monkeypatch):
 
 def test_gen_routine_lists_check_is_dirty_after_row_deleted(tmp_path, monkeypatch):
     gen = load_module_from_path("gen_routine_lists", "scripts", "gen_routine_lists.py")
-    plan, cadence, sql12, sql15, sql24, sql105 = _write_gen_fixture(tmp_path)
-    _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105)
+    plan, cadence, sql12, sql15, sql24, sql105, sql114 = _write_gen_fixture(tmp_path)
+    _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105, sql114)
     for path, body in gen.build_targets():
         gen.write_region(path, body)
     # delete W1 from cadence.yaml (simulating drift) without re-running --write
