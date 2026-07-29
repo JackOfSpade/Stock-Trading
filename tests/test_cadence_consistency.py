@@ -724,7 +724,7 @@ def test_gen_routine_lists_check_is_dirty_after_row_deleted(tmp_path, monkeypatc
 
 def test_gen_routine_lists_against_real_repo_write_is_noop():
     # The real, already-normalized bigquery/12/15/24/105 must be a byte-level no-op for --write, and
-    # --check must pass clean (proves the generator reproduces today's 31-routine state exactly).
+    # --check must pass clean (proves the generator reproduces today's routine-fleet state exactly).
     gen = load_module_from_path("gen_routine_lists", "scripts", "gen_routine_lists.py")
     changed = [path for path, body in gen.build_targets() if gen.write_region(path, body)]
     assert changed == []

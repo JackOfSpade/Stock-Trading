@@ -44,12 +44,18 @@ routines always run the SAME model; that is a standing invariant, not a per-rout
    `entry_type='foundation-change-review'` row dated on/after the change. **A compound outage can delay
    this beyond a day, and that is not itself a defect:** D3's sync step sits behind D3's own FATAL
    dependency gate on D2, so on any day D2 does not complete, D3 aborts before ever reaching the sync
-   step (confirmed 2026-07-25: D2 halted and D3 halted twice behind it, both self-healing the following
-   morning). If you check within a day or two of the switch and the field still reads the OLD value,
-   look at `ops.run_log` for whether D3 has completed since the switch: if D3 has been halting behind
-   D2, that is the explanation and no action is needed — D3 catches up the next time D2 completes, and
-   Q4 (quarterly) / A3 (annual) stand behind it as longer-horizon backstops either way. Only treat it as
-   a genuine problem if D3 HAS completed at least once since the switch and the field is still stale.
+   step. **The 2026-07-25 precedent is instructive about HOW FAR this can stretch, not reassuring about
+   a clean single cycle:** D2 halted once at 17:21:53 MDT and D3 halted twice behind it (02:55:11 and
+   18:36:46 MDT) — both recovered just past midnight (D2 completed 00:50:25 MDT, D3 completed 01:14:14
+   MDT, on 2026-07-26), i.e. "post-midnight," not "the next morning." That same outage then compounded:
+   D2 halted AGAIN on 2026-07-26 at 17:22:30 MDT (an unrelated position-reconciliation drift) and did not
+   clear until 2026-07-27 17:44:06 MDT — so a real halt can stretch recovery across more than one
+   calendar day, not just past a single midnight. If you check within a day or two of the switch and the
+   field still reads the OLD value, look at `ops.run_log` for whether D3 has completed since the switch:
+   if D3 has been halting behind D2, that is the explanation and no action is needed — D3 catches up the
+   next time D2 completes, and Q4 (quarterly) / A3 (annual) stand behind it as longer-horizon backstops
+   either way. Only treat it as a genuine problem if D3 HAS completed at least once since the switch and
+   the field is still stale.
 
 **Why this is written down.** Steps 1–2 used to be a comment inside the file that goes stale, addressed
 to someone who had already opened it — and that manual sync has failed in practice at least once
@@ -1719,10 +1725,16 @@ see the corrected `ops/spikes/agent-sdk-orchestration-2026Q3.md` (c) for detail.
   generator off `ops/cadence.yaml`. Genuine refactor with real risk of breaking the cadence-consistency
   CI gate if rushed — explicitly scoped as a future engineering follow-up, not something you need to
   do or decide.
-- **`AI_Trading_Foundation.md`'s in-use-Claude-version field** (Item 30a) is now flagged rather than
-  silently overwritten (this repo can't query which model a web-UI session actually ran on) — it will
-  resolve itself via the document's own existing version-change protocol at the next Q3/A1 cycle; no
-  action needed from you specifically.
+- **`AI_Trading_Foundation.md`'s in-use-Claude-version field** (Item 30a) — **SUPERSEDED (cadence audit
+  2026-07-29); preserved below as the historical record of the 2026-07-11 audit that raised it, not as
+  current guidance.** At the time this was written, the field was flagged rather than silently
+  overwritten (this repo couldn't query which model a web-UI session actually ran on), with the
+  expectation that it would resolve itself "via the document's own existing version-change protocol at
+  the next Q3/A1 cycle." That expectation was wrong twice over: neither Q3 nor A1 ever had write
+  authority over the field (only A3 did, and only annually), and as of `cd481da` the field self-syncs
+  via **D3 daily**, with **Q4** (quarterly) and **A3** (annual) as idempotent backstops — see the STANDING
+  PROCEDURE step 3 near the top of this file for the current mechanism. No action needed from you
+  specifically, now or then.
 
 - **Live BigQuery changed mid-session from an OUT-OF-BAND apply — re-measure before concluding
   anything about drift** (observed 2026-07-18, live-sql-parity remediation pass). A session was

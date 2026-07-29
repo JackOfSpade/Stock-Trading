@@ -110,7 +110,7 @@ routines:
     monitor_class: daily_trading
     catchup_safe: true
     depends_on: []
-    writes: [Daily.md, events.decision_log, events.regime_events, ops.heartbeat]
+    writes: [Daily.md, events.decision_log, events.regime_events, ops.heartbeat, state.strategy_candidates]
     expected_trigger:
       recurrence: daily
       time_local: "16:00"
@@ -526,7 +526,7 @@ routines:
     schedule: "quarterly first_trading_day"
     monitor_class: quarterly_ftd
     catchup_safe: true
-    writes: [Quarterly_Regime.md]
+    writes: [Quarterly_Regime.md, state.strategy_candidates, events.decision_log]
     expected_trigger:
       recurrence: custom_cron
       cron_utc: "0 17 2 1,4,7,10 *"
@@ -546,7 +546,7 @@ routines:
     schedule: "quarterly first_trading_day"
     monitor_class: quarterly_ftd
     catchup_safe: true
-    writes: [Quarterly_AI_Foundation_Delta.md]
+    writes: [Quarterly_AI_Foundation_Delta.md, state.strategy_candidates, events.decision_log]
     expected_trigger:
       recurrence: custom_cron
       cron_utc: "0 19 2 1,4,7,10 *"
@@ -557,7 +557,7 @@ routines:
     monitor_class: quarterly_ftd
     catchup_safe: false
     depends_on: [Q2, Q3]
-    writes: [Watchlist.md, events.queue_events, events.decision_log]
+    writes: [Watchlist.md, events.queue_events, events.decision_log, AI_Trading_Foundation.md]
     expected_trigger:
       recurrence: custom_cron
       cron_utc: "0 20 2 1,4,7,10 *"
