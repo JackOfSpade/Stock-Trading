@@ -103,5 +103,6 @@ in the decision-log entry.
 Write one `events.decision_log` entry via `CALL ops.sp_log_decision(...)`:
 `entry_type='foundation-change-review'`, naming the foundation(s) changed, the checklist rows evaluated,
 each row's disposition (unchanged-and-why / re-calibrated-to-X with the landing `bigquery/NN` file or
-prose edit), and the change's source (Q3 verdict / §13 cutover / A3 edit). The entry IS the record that
-the re-review ran — its absence for a foundation change is itself the detectable gap.
+prose edit), and the change's source (Q3 verdict / §13 cutover / A3 edit / D3's or Q4's Tier-M
+MODEL-OF-RECORD sync). The entry IS the record that the re-review ran — its absence for a foundation
+change is itself the detectable gap.

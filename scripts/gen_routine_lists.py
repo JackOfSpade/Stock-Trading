@@ -31,7 +31,7 @@ Regions generated (marker-delimited, one BEGIN/END pair per file):
   bigquery/105_routine_catchup_window.sql -- state.routine_catchup_window's `routines` CTE STRUCT
                                         rows, ALL routines INCLUDING the 4 queue_driven ids (unlike
                                         bigquery/12's calendar-only filter -- this is the one region
-                                        that needs the full 31-routine roster), cadence.yaml order.
+                                        that needs the full routine roster), cadence.yaml order.
   bigquery/114_period_aware_dependency_gate.sql -- ops.sp_assert_deps' `period_class` CTE STRUCT rows.
                                         BYTE-IDENTICAL to the bigquery/24 region (same gen_24_region
                                         call): the dependency gate resolves a dep's period window from
@@ -156,7 +156,7 @@ def gen_105_region(routines):
     """state.routine_catchup_window rows: ALL routines, INCLUDING the 4 queue_driven ids (unlike
     gen_12_region's calendar-only filter and gen_24_region's period-only filter), cadence.yaml
     order, 4-space indent matching the surrounding UNNEST([ block. This is the one generated region
-    that needs the full 31-routine roster -- state.routine_catchup_window computes a catch-up
+    that needs the full routine roster -- state.routine_catchup_window computes a catch-up
     evidence window for every routine, calendar-predictable or queue_driven alike (owner directive
     2026-07-25; see bigquery/105_routine_catchup_window.sql's header)."""
     rows = [r for r in routines if r.get("monitor_class") is not None]
