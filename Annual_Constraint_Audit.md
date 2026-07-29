@@ -13,7 +13,7 @@
 
 ## HEADLINE
 
-**Zero constraints are relaxed this cycle. Zero per-constraint out-of-table flags fire. Six framework-level flags are raised.**
+**Zero constraints are relaxed this cycle. Zero per-constraint out-of-table flags fire. Six framework-level flags are raised — and the two blocking ones (F-1, F-2) were resolved by owner directive the same day; four remain open for A3.**
 
 Every one of the **201 per-strategy constraints** inventoried in PART 1 terminates at **Step 1** of the §5.3 procedure. This is not a judgment call and did not require weighing evidence per constraint: **no Part-2 disadvantage in `AI_Trading_Foundation.md` classifies as PARTIAL or MATERIAL reduction in this audit cycle** (§2.0 below), so the §5.3 criterion — "a *Tier 2* disadvantage that the strategy compensates for has been *materially reduced*" — is unmet for every constraint in the corpus simultaneously.
 
@@ -29,7 +29,7 @@ Per `Claude_Task_Plan.md` A3 §C, A3 reads PART 2 verbatim and produces the upda
 
 - **A3 §C — constraint relaxations to apply: NONE.** No constraint carries a §5.6 relaxation verdict. `Strategy.md` needs **no constraint-value edit** from A2 this cycle. (A1 separately produces a Strategy C pre-mortem re-open under §5.2; that is A1's output, not A2's, and flows through A3 §B, not §C.)
 - **A3 §D — per-constraint out-of-table flags to enqueue: NONE.** §5.6's out-of-table branch sits inside **Step 4**, reachable only by constraints that pass Steps 1–3. No constraint passes Step 1, so no constraint reaches that branch. Enqueue **zero** `out-of-table-resolution` reviews on per-constraint grounds.
-- **A3 §D — framework-level flags to enqueue: SIX (F-1 … F-6, §2.5).** These are `§5.7` item-6 outputs ("any constraints **or items** the criteria couldn't deterministically resolve"). They are **not** constraint-value changes and must not be applied as such. F-1 and F-2 are the two that matter most: each would independently prevent a §5.6 relaxation from being executable at all.
+- **A3 §D — framework-level flags to enqueue: FOUR (F-3, F-4, F-5, F-6 — §2.5).** These are `§5.7` item-6 outputs ("any constraints **or items** the criteria couldn't deterministically resolve"). They are **not** constraint-value changes and must not be applied as such. **F-1 and F-2 were RESOLVED by owner directive on 2026-07-28, the same day as this audit** (foundation rev 6 / `Experiment_Parameters.md` rev 17 / `Strategy.md` rev 38 — new §5.6a in-life edit path, and the §5.6 per-position sizing row struck). **Do not enqueue F-1 or F-2**; their entries in §2.5 are retained as the audit record with the resolution stated inline.
 - **A3 §E — decision-log counts:** constraints relaxed = 0 (per strategy: A 0, B 0, C 0, D 0, E 0); per-constraint out-of-table flags = 0; framework-level flags = 6; `Strategy.md` per-strategy revision bumps required by A2 = 0.
 
 ---
@@ -510,11 +510,15 @@ To demonstrate the machinery did not merely short-circuit, the two constraints n
 
 **Per-constraint flags: ZERO.** §5.6's out-of-table branch is a **Step 4** branch, reachable only by constraints that pass Steps 1–3. No constraint passed Step 1. The 39 `O`-typed constraints in PART 1 are therefore *typed* out-of-table but were never *flagged*, and **A3 must not enqueue `out-of-table-resolution` reviews for them.** (This matches A2's own prediction that out-of-table flags are rare.)
 
-**Framework-level flags: SIX.** §5.7 item 6 requires reporting "any constraints **or items** the criteria couldn't deterministically resolve." The following are defects in the criteria themselves, surfaced by executing them end-to-end. Each is stated with its consequence and the evidence.
+**Framework-level flags: SIX raised, TWO resolved same-day, FOUR open for A3.** §5.7 item 6 requires reporting "any constraints **or items** the criteria couldn't deterministically resolve." The following are defects in the criteria themselves, surfaced by executing them end-to-end. Each is stated with its consequence and the evidence. **F-1 and F-2 were resolved by owner directive on 2026-07-28** (foundation rev 6 / `Experiment_Parameters.md` rev 17 / `Strategy.md` rev 38) and carry their resolution inline; **A3 enqueues only F-3 … F-6.**
 
 ---
 
-**F-1 — BLOCKING · The §5.6 relaxation pathway collides head-on with the two-tier immutability doctrine, which post-dates it.**
+**F-1 — ✅ RESOLVED 2026-07-28 (owner directive), same day as this audit · originally BLOCKING · The §5.6 relaxation pathway collided head-on with the two-tier immutability doctrine, which post-dated it.**
+
+> **RESOLUTION (owner directive 2026-07-28).** A new **`AI_Trading_Foundation.md` §5.6a in-life constraint edit path** (foundation rev 6; mirrored to `Experiment_Parameters.md` rev 17 and `Strategy.md` rev 38) resolves this. It reuses the existing material-structural-difference test, **inverted**: an edit changing **none** of the five dimensions {strategy approach, instrument scope, position-sizing methodology, regime-router structure, kill-criteria structure} is *non-fundamental* and may be applied in life without terminating the strategy; an edit touching ≥1 dimension remains terminate-and-restart. Six rails gate a routine-executed edit (exogenous trigger only with an explicit parameter-fishing prohibition; loosen-only; per-position sizing and kill-trigger structure excluded; dated epoch stamp marking the measurement seam; one edit per strategy per annual cycle; CI-enforced provenance). **Owner's controlling rationale:** immutability is a *means* to a clean statistical read, and that premise is already spent — the model of record is changed mid-strategy regardless of whether a strategy has reached an adequate trade count for analysis (item 2.9; Part 4 step 4), so a series already discontinuous at owner-driven model boundaries is not protected by refusing a bounded exogenous edit. **A3: do NOT enqueue this flag.** The original finding is retained below as the audit record.
+>
+> **Additional finding surfaced while resolving, now closed by the same change:** the two documents did not merely disagree — they formed a **closed loop with no legal exit**. A purely numerical relaxation was forbidden in place by immutability *and* rejected as a restart by `EP:528` ("must differ… in more than just threshold numbers"; "Same implementation with the drawdown trigger at 60% instead of 50% fails the check"). §5.6a gives a threshold-number change exactly one home instead of being refused by both.
 
 `AI_Trading_Foundation.md` §5.3–§5.6 (rev 4, **2026-04-25**) authorises mechanical relaxation of a live strategy's constraints, and `Claude_Task_Plan.md` A3 §C instructs A3 to *"replace constraint value with new (relaxed) value per §5.6 formula"* in `Strategy.md`.
 
@@ -532,7 +536,9 @@ The carve-outs that exist are explicit and do **not** cover this: roster members
 
 ---
 
-**F-2 — BLOCKING · §5.6's MATERIAL sizing branch bounds against a 5% cap that does not exist.**
+**F-2 — ✅ RESOLVED 2026-07-28 (owner directive), same day as this audit · originally BLOCKING · §5.6's MATERIAL sizing branch bounded against a 5% cap that does not exist.**
+
+> **RESOLUTION (owner directive 2026-07-28).** The **per-position sizing row is struck from §5.6 entirely** (foundation rev 6; mirrored to `Experiment_Parameters.md` rev 17). Per-position sizing caps now carry **"no automatic relaxation" at either magnitude** and are additionally excluded from the §5.6a in-life edit path. The 5% bound is **not** defined into existence — the audit's own evidence argues against it: `Experiment_Parameters.md`'s Position-size derivation cites 5% precisely as a level that *fails* the "standard variance should not produce drawdowns above 10%" constraint (a 10-trade streak at 5% costs 40%), the struck 2%→4% MATERIAL branch implies ~33% streak drawdown against a 10% tolerance and lands essentially on the book-level `breach_hard` −40% halt, and the cap is not disadvantage-keyed in the first place (its derivation cites institutional consensus and streak arithmetic, no `1.X`/`2.X` — finding F-4, constraint X-01), so no reduction can license loosening it. This follows §5.6's own hit-rate default ("no automatic relaxation unless the threshold's derivation explicitly cites a Tier 2 disadvantage magnitude") to its conclusion. 2% sizing remains globally immutable. **A3: do NOT enqueue this flag.** Original finding retained below as the audit record.
 
 > *"MATERIAL reduction → cap loosened to (current × 2) but bounded by **experiment-level cap of 5% per position**."* (`AI_Trading_Foundation.md:564`)
 
@@ -581,7 +587,7 @@ Exit triggers, regime-router activation gates, execution-integrity mechanics (E'
 | A3 section | Input from A2 | Action |
 |---|---|---|
 | §C — updated `Strategy.md` | 0 constraints relaxed; 0 constraint values changed | **No constraint edit.** No per-strategy revision bump required by A2 |
-| §D — out-of-table enqueue | 0 per-constraint flags; **6 framework-level flags (F-1…F-6)** | Enqueue the 6 as `out-of-table-resolution` (`conservative_default='HOLD'`), artifact_path = this §2.5. **F-1 and F-2 are blocking-class** — flag them as such |
+| §D — out-of-table enqueue | 0 per-constraint flags; 6 framework-level flags raised, **F-1 and F-2 RESOLVED 2026-07-28 by owner directive** | Enqueue **only F-3, F-4, F-5, F-6** as `out-of-table-resolution` (`conservative_default='HOLD'`), artifact_path = this §2.5. **Do not enqueue F-1 or F-2** |
 | §D — consume prior verdicts | None — this is A2's first execution; no prior `out-of-table-resolution` verdicts exist | Nothing to apply |
 | §E — decision log | A 0 · B 0 · C 0 · D 0 · E 0 relaxed; 0 per-constraint flags; 6 framework flags; 201 constraints audited | Record counts as stated |
 | §F — reconciliation | `roster.yaml` A row lists 2.15/2.17 (absent from A's documents); D row's 2.23 mechanism removed by Rev 39 | Minimal edits if A3 judges them in scope; **not** constraint-value changes |
