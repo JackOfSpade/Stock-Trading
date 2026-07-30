@@ -493,11 +493,16 @@ def test_schema_yml_accepted_values_drift_is_caught(repo_copy):
 
 
 def test_schema_yml_unrelated_accepted_values_block_is_not_flagged(repo_copy):
-    # conviction_features.decision's accepted_values(['GO']) must never be compared against the
-    # roster set — R-G only inspects columns literally named `strategy`.
+    # conviction_features.decision's accepted_values must never be compared against the roster set —
+    # R-G only inspects columns literally named `strategy`. Widened 2026-07-30 from ['GO'] to
+    # ['GO', 'GO (add tranche)'] when conviction_features moved to a GO-FAMILY filter (bigquery/116);
+    # the literal below is a FIXTURE-EXISTENCE guard, so that `main() == 0` below is a real assertion
+    # about R-G ignoring this block rather than a vacuous pass once the block no longer exists.
     p = rc.DBT_SCHEMA_ACCEPTED_VALUES
     txt = _read(p)
-    assert "values: ['GO']" in txt, "fixture assumption about the decision column's accepted_values drifted"
+    assert "values: ['GO', 'GO (add tranche)']" in txt, (
+        "fixture assumption about the decision column's accepted_values drifted"
+    )
     assert rc.main() == 0
 
 

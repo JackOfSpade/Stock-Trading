@@ -19,6 +19,8 @@ import re
 
 import yaml
 
+from lib.routine_manifest import cadence_routines
+
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 CADENCE_YAML = REPO_ROOT / "ops" / "cadence.yaml"
 CATCHUP_AUTOFIRE_SQL = REPO_ROOT / "bigquery" / "59_catchup_autofire.sql"
@@ -104,7 +106,11 @@ def test_order_crafting_routines_stay_catchup_excluded():
     a long comma list) — this test exists so CI catches it instead of a live incident.
     """
     doc = yaml.safe_load(CADENCE_YAML.read_text(encoding="utf-8")) or {}
-    routines = {r["id"]: r for r in doc.get("routines", [])}
+    # cadence_routines() guards a bare `routines:` key (PyYAML -> None), which doc.get("routines", [])
+    # does NOT catch (the default only fires when the KEY is absent) -- an unguarded reader raises
+    # TypeError: 'NoneType' object is not iterable on that YAML shape instead of a clean assertion
+    # failure. Migrated to match the other four readers (2026-07-29 miss).
+    routines = {r["id"]: r for r in cadence_routines(doc)}
 
     for rid in ORDER_CRAFT_ROUTINE_IDS:
         assert rid in routines, f"{rid}: not declared in ops/cadence.yaml at all"

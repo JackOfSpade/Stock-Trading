@@ -203,6 +203,12 @@ FROM open_tail;
 -- through every add/partial-exit fill until it returns to flat (closed) or the book's latest fill
 -- (still open). Long-only-correct (see file header SCOPE note): a campaign is detected opening on a
 -- 0->nonzero transition, which for this system's traded book is always a BUY. SGOV excluded verbatim.
+--
+-- SUPERSEDED LIVE by bigquery/116_decision_record_analyzability.sql — current single source of truth
+-- for this object: now carries the opening fill's source_thesis_ref forward as opening_thesis_ref —
+-- the FK thesis_outcomes needs, which this GROUP BY dropped entirely. Additive only; row count and
+-- grouping unchanged. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
+-- re-apply this CREATE statement live in isolation.
 -- ============================================================================
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.position_campaigns` AS
 WITH fills AS (
@@ -367,6 +373,14 @@ END;
 -- thesis-construction entry legitimately maps to the SAME campaign as the position's original entry
 -- (both are the same round-trip at the campaign level), not a separate per-lot row. All other columns
 -- and semantics (regime-as-of join, was_profitable NULL-until-closed) are unchanged.
+--
+-- SUPERSEDED LIVE by bigquery/116_decision_record_analyzability.sql — current single source of truth
+-- for this object: entry_type now tolerates the 'thesis' synonym (a 2026-07-20..22 logging drift
+-- silently hid 14 real rows from every calibration view); the position-campaign join is now guarded
+-- to GO-family decisions so a NO-GO can never inherit a position outcome; pairing prefers a real FK
+-- (position_campaigns.opening_thesis_ref) over nearest-date; conviction_pct + normalized added. Kept
+-- here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE
+-- statement live in isolation.
 -- ============================================================================
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.thesis_outcomes` AS
 WITH theses AS (

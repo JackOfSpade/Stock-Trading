@@ -613,6 +613,123 @@ def test_run_live_bare_token_without_decision_prefix_uses_the_reply_fallback(mon
     assert r["match"] is True and r["actual"] == "GO"
 
 
+# ---- scenarios_for_changed_files() — CI cost-scoping selection function (2026-07-30). golden-scenarios.
+# yml used to re-run ALL scenarios' live model calls on every triggering push, regardless of which ONE
+# governing file actually changed (measured ~2,251 billable CI min/month — the single largest line item
+# in the repo's Actions bill). This function maps a push's changed files to just the scenario ids they
+# govern, so the workflow's `--live` step can pass a `--scenario` filter (or skip the whole step when the
+# result is empty) instead of always evaluating all 31. FAIL-OPEN ("select every scenario") on an
+# unscoped/unknown input is the entire correctness contract here — a false NARROW selection could hide a
+# real prose regression from the (already advisory-only) live check; see HARD CONSTRAINT 3 in the task
+# that produced this and scripts/resolve_diff_base.sh's identical fail-open posture for the diff-base
+# resolution the workflow itself performs before calling this function.
+
+
+def test_scenarios_for_changed_selects_exactly_the_strategy_md_scenarios():
+    # Ground-truthed against the REAL scenarios.yaml (not a synthetic fixture) so this test would catch a
+    # regression in the real coverage, not just in the selection logic against toy data.
+    scenarios = rg.load_scenarios()
+    strategy_scenario_ids = {sc["id"] for sc in scenarios if "Strategy.md" in (sc.get("governing_files") or [])}
+    assert len(strategy_scenario_ids) == 17  # scenarios.yaml's own header: Strategy.md governs 17/31
+    assert set(rg.scenarios_for_changed_files(scenarios, ["Strategy.md"])) == strategy_scenario_ids
+
+
+def test_scenarios_for_changed_unions_two_files():
+    scs = [
+        {"id": "A", "governing_files": ["Strategy.md"]},
+        {"id": "B", "governing_files": ["Operating_Protocols.md"]},
+        {"id": "C", "governing_files": ["Claude_Task_Plan.md"]},
+        {"id": "D", "governing_files": ["Strategy.md", "Operating_Protocols.md"]},
+    ]
+    result = rg.scenarios_for_changed_files(scs, ["Strategy.md", "Operating_Protocols.md"])
+    assert result == ["A", "B", "D"]  # sorted union, C (unrelated) excluded
+
+
+def test_scenarios_for_changed_unknown_file_selects_none():
+    scs = [
+        {"id": "A", "governing_files": ["Strategy.md"]},
+        {"id": "B", "governing_files": ["Operating_Protocols.md"]},
+    ]
+    # README.md is a real repo-relative path that governs no scenario and is not under the harness's own
+    # directory — the "true zero" case that is the entire point of the narrowing (skip the live step).
+    assert rg.scenarios_for_changed_files(scs, ["README.md"]) == []
+
+
+def test_scenarios_for_changed_mixed_known_and_unknown_files_selects_only_known():
+    scs = [
+        {"id": "A", "governing_files": ["Strategy.md"]},
+        {"id": "B", "governing_files": ["Operating_Protocols.md"]},
+    ]
+    assert rg.scenarios_for_changed_files(scs, ["Strategy.md", "unrelated/file.py"]) == ["A"]
+
+
+def test_scenarios_for_changed_empty_or_none_selects_all_fail_open():
+    scs = [
+        {"id": "A", "governing_files": ["Strategy.md"]},
+        {"id": "B", "governing_files": ["Operating_Protocols.md"]},
+    ]
+    assert rg.scenarios_for_changed_files(scs, []) == ["A", "B"]
+    assert rg.scenarios_for_changed_files(scs, None) == ["A", "B"]
+
+
+def test_scenarios_for_changed_harness_self_change_fails_open_to_all():
+    scs = [
+        {"id": "A", "governing_files": ["Strategy.md"]},
+        {"id": "B", "governing_files": ["Operating_Protocols.md"]},
+    ]
+    # A change to scenarios.yaml (pinned expectations) or run_golden.py (grading logic) itself is not
+    # something any scenario's governing_files list points at (that would be self-referential) -- the
+    # governing_files intersection alone is structurally blind to it, so it must fail OPEN to every
+    # scenario rather than silently select nothing just because nothing in `scs` names that path.
+    assert rg.scenarios_for_changed_files(scs, ["tests/golden_scenarios/scenarios.yaml"]) == ["A", "B"]
+    assert rg.scenarios_for_changed_files(scs, ["tests/golden_scenarios/run_golden.py"]) == ["A", "B"]
+    # Mixed with an otherwise-narrowing file: the harness-self file still forces the wide (all) answer.
+    assert rg.scenarios_for_changed_files(scs, ["Strategy.md", "tests/golden_scenarios/scenarios.yaml"]) == ["A", "B"]
+
+
+def test_scenarios_for_changed_skips_non_dict_and_idless_entries():
+    scs = ["not-a-dict", {"governing_files": ["Strategy.md"]}, {"id": "A", "governing_files": ["Strategy.md"]}]
+    assert rg.scenarios_for_changed_files(scs, ["Strategy.md"]) == ["A"]
+    assert rg.scenarios_for_changed_files(scs, None) == ["A"]
+
+
+def test_scenarios_for_changed_every_returned_id_exists_in_scenarios_yaml():
+    # Cross-check against the real fixture file for a range of inputs, including the two fail-open paths
+    # — a returned id that doesn't actually exist in scenarios.yaml would make the workflow's downstream
+    # `--scenario <id>` call a silent no-op for that id (run_golden.py's own --scenario handling only
+    # warns on an unknown id, it doesn't fail the build).
+    scenarios = rg.load_scenarios()
+    known_ids = {sc["id"] for sc in scenarios}
+    for changed in (
+        ["Strategy.md"], ["Operating_Protocols.md"], ["Claude_Task_Plan.md"], ["Experiment_Parameters.md"],
+        None, [], ["nonexistent/file.md"], ["tests/golden_scenarios/scenarios.yaml"],
+    ):
+        for sid in rg.scenarios_for_changed_files(scenarios, changed):
+            assert sid in known_ids
+
+
+def test_main_scenarios_for_changed_prints_ids_and_returns_0(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["run_golden.py", "--scenarios-for-changed", "--changed-file", "Strategy.md"])
+    assert rg.main() == 0
+    out_lines = capsys.readouterr().out.strip().splitlines()
+    assert len(out_lines) == 17
+    assert set(out_lines) <= {sc["id"] for sc in rg.load_scenarios()}
+
+
+def test_main_scenarios_for_changed_with_no_changed_file_prints_all(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["run_golden.py", "--scenarios-for-changed"])
+    assert rg.main() == 0
+    out_lines = capsys.readouterr().out.strip().splitlines()
+    assert len(out_lines) == len(rg.load_scenarios())
+
+
+def test_main_scenarios_for_changed_does_not_run_offline_validation_banner(monkeypatch, capsys):
+    # Utility mode must short-circuit before validate_offline()'s own print — it is not the schema gate.
+    monkeypatch.setattr(sys, "argv", ["run_golden.py", "--scenarios-for-changed", "--changed-file", "Strategy.md"])
+    assert rg.main() == 0
+    assert "OK —" not in capsys.readouterr().out
+
+
 # ---- main() — the actual CLI entry point / CI hard-gate contract — previously never invoked by any
 # test here, even though every helper it calls (above) is meticulously unit-tested in isolation. These
 # monkeypatch sys.argv (matching the convention already used by test_check_live_sql_parity.py et al. in

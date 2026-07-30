@@ -20,6 +20,12 @@
 -- precisely spec'd as a versioned constant -- NOT derived ad hoc here (self-improvement audit,
 -- deferred "missing idea").
 
+-- SUPERSEDED LIVE by bigquery/116_decision_record_analyzability.sql — current single source of truth
+-- for this object: now enumerates all 7 canonical conviction tiers, so a tier with no closed GO
+-- trades (LOW, HIGHEST) renders an honest maximally-wide [0,1] interval instead of being absent from
+-- the view — absence made find_precedents' mandatory overconfidence interval return NULLs on exactly
+-- the HIGHEST-conviction precedents it exists to temper. Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.calibration_shrunk` AS
 WITH base AS (
   SELECT COALESCE(conviction, '(unscored)') AS conviction, ANY_VALUE(conviction_ordinal) AS ord,

@@ -67,6 +67,24 @@ object (mirrors the existing never-re-apply-a-TABLE rule for drifted "findings")
 reaches ops.ci_findings — detail begins with the literal marker "MISSING: " so the CI-findings
 consumer can tell a missing-object row apart from a drift row without re-deriving it.
 
+PERFORMANCE FIX (2026-07-30, measured N+1). The old live_definition() issued ONE `bq query`
+subprocess PER OBJECT — 199 sequential round-trips against the real repo (state 111, analytics 53,
+ops 34, perf 1), each carrying ~2-3s of fixed submit/auth/poll overhead, fully explaining the
+measured 517-619s (~9-11 billable CI min/day) runtimes of .github/workflows/live-sql-parity.yml's
+parity step (~76% of a month's total via the shared cost-audit finding in CLAUDE.md's push-cost
+note). Replaced with fetch_live_definitions() / resolve_live_definition(): ONE
+INFORMATION_SCHEMA.VIEWS query per dataset that has at least one expected VIEW, and ONE
+INFORMATION_SCHEMA.ROUTINES query (WHERE routine_type IN ('PROCEDURE','TABLE FUNCTION')) per
+dataset that has at least one expected PROCEDURE/TABLE FUNCTION — 5 queries total against the real
+repo's 4 datasets, not 199. See fetch_live_definitions()'s docstring for the safety property this
+batching had to preserve without weakening: a FAILED batch query must mark every object in that
+dataset SKIPPED (inconclusive), never MISSING (positive evidence of absence) — collapsing a broken
+query into "no live objects found" would be exactly the false-positive shape that could trigger an
+autonomous CREATE against production (see the SELF-HEAL CONSUMPTION section above). The
+DRIFT/comparison logic below this point (canonicalize, normalize_tail, the missing-vs-skipped
+branch in main()) is completely untouched by this fix — only HOW a live definition is fetched
+changed, never how it is compared or classified once fetched.
+
 Usage:  python scripts/check_live_sql_parity.py --project stock-trading-498512
         python scripts/check_live_sql_parity.py --offline   # parser self-check only, no bq calls
         python scripts/check_live_sql_parity.py --project stock-trading-498512 --json-out /tmp/findings.json
@@ -429,29 +447,138 @@ def find_final_definitions():
     return final
 
 
-def bq(sql, project):
+def bq(sql, project, max_rows=None):
     # Delegates to lib/bq_json.py's run_bq_query — the shared invoke wrapper this module's copy
-    # was consolidated into (2026-07-18 dedup-sweep audit).
+    # was consolidated into (2026-07-18 dedup-sweep audit). max_rows is forwarded only when given
+    # (never as an explicit None) so the zero-arg call shape existing callers/tests rely on is
+    # unchanged; fetch_live_definitions() below is the one caller that needs it.
+    if max_rows is not None:
+        return run_bq_query(sql, project, max_rows=max_rows)
     return run_bq_query(sql, project)
 
 
-def live_definition(project, dataset, name, obj_type):
-    if obj_type == "PROCEDURE":
-        rows = bq(
-            f"SELECT routine_definition FROM `{project}`.{dataset}.INFORMATION_SCHEMA.ROUTINES "
-            f"WHERE routine_name = '{name}' AND routine_type = 'PROCEDURE'", project)
-    elif obj_type == "TABLE FUNCTION":
-        rows = bq(
-            f"SELECT routine_definition FROM `{project}`.{dataset}.INFORMATION_SCHEMA.ROUTINES "
-            f"WHERE routine_name = '{name}' AND routine_type = 'TABLE FUNCTION'", project)
-    else:
-        rows = bq(
-            f"SELECT view_definition FROM `{project}`.{dataset}.INFORMATION_SCHEMA.VIEWS "
-            f"WHERE table_name = '{name}'", project)
-    if not rows:
-        return None
-    key = "routine_definition" if obj_type != "VIEW" else "view_definition"
-    return rows[0].get(key)
+# Object kinds that live in INFORMATION_SCHEMA.ROUTINES rather than .VIEWS. CREATE_STMT only ever
+# produces obj_type in {"VIEW", "PROCEDURE", "TABLE FUNCTION"} — the three kinds this script
+# compares (see CREATE_STMT's comment) — so "not a routine kind" always means VIEW here.
+ROUTINE_KINDS = frozenset({"PROCEDURE", "TABLE FUNCTION"})
+
+# bq CLI's `bq query` caps result rows at 100 by default (`--max_rows`, verified via `bq query
+# --help`: "How many rows to return in the result. (default: '100')"). A per-object query only ever
+# wanted 0 or 1 row, so the old live_definition() never hit this — but a batched, dataset-wide
+# SELECT over INFORMATION_SCHEMA.VIEWS/ROUTINES can legitimately return MORE than 100 rows (the
+# real repo's state dataset alone has 111 views). Hit LIVE 2026-07-30 during this fix's own
+# equivalence proof: the unbounded batched VIEWS query for `state` silently returned only the first
+# 100 of 111 rows, and the missing 11 were then reported as false MISSING objects (positive
+# evidence of absence -- exactly the false-positive class this script's own missing-vs-skipped
+# contract exists to prevent, and exactly what could trigger an incorrect autonomous CREATE against
+# production under the 2026-07-28 directive). Fixed by passing an explicit, generously-sized
+# --max_rows on every batched query — comfortably above any realistic per-dataset object count in
+# this repo (currently: state 111, analytics 53, ops 34, perf 1) with a wide margin for growth.
+BATCH_MAX_ROWS = 10000
+
+
+def parse_views_batch(rows):
+    """{table_name: view_definition} from one dataset's INFORMATION_SCHEMA.VIEWS batch result."""
+    return {r["table_name"]: r.get("view_definition") for r in rows}
+
+
+def parse_routines_batch(rows):
+    """{(routine_name, routine_type): routine_definition} from one dataset's
+    INFORMATION_SCHEMA.ROUTINES batch result (already WHERE-filtered to PROCEDURE/TABLE FUNCTION
+    by fetch_live_definitions()). Keyed by (name, type) rather than name alone — mirrors the old
+    per-object live_definition()'s own `routine_type = '<type>'` filter — so a same-named
+    PROCEDURE and TABLE FUNCTION in the same dataset (not observed in this repo today) could never
+    shadow each other."""
+    return {(r["routine_name"], r["routine_type"]): r.get("routine_definition") for r in rows}
+
+
+def fetch_live_definitions(project, final):
+    """Batch-fetch every dataset's live object definitions in as few `bq query` round-trips as
+    possible (2026-07-30 performance fix — see the module docstring's PERFORMANCE FIX section for
+    the measured ~10 billable-CI-min/day this replaces).
+
+    For each dataset that has at least one expected VIEW object (per `final`, find_final_
+    definitions()'s return value), issues ONE `SELECT table_name, view_definition FROM
+    ...INFORMATION_SCHEMA.VIEWS` covering every view in that dataset. For each dataset with at
+    least one expected PROCEDURE/TABLE FUNCTION object, issues ONE `SELECT routine_name,
+    routine_type, routine_definition FROM ...INFORMATION_SCHEMA.ROUTINES WHERE routine_type IN
+    ('PROCEDURE', 'TABLE FUNCTION')` covering every routine of those two kinds in that dataset.
+    Against the real repo (199 objects across 4 datasets: state 111 VIEW-only, analytics 50 VIEW +
+    3 TABLE FUNCTION, ops 34 PROCEDURE-only, perf 1 VIEW-only) this is 5 queries total, not 199.
+
+    Returns (views_by_dataset, routines_by_dataset). Each maps a dataset name to EITHER a parsed
+    dict (batch query succeeded — see parse_views_batch/parse_routines_batch) OR the raised
+    Exception object itself (batch query failed). The exception is stored, never raised here, so
+    resolve_live_definition() can re-raise it PER OBJECT in that dataset — giving every object in
+    a failed dataset's batch the exact same "lookup failed" signal a failed per-object
+    live_definition() call used to produce.
+
+    THIS IS THE LOAD-BEARING SAFETY PROPERTY (2026-07-28 missing-vs-skipped contract, restated in
+    this batching context): a single failed batch query must turn into N SKIPPED objects, never
+    into N false MISSING objects. Collapsing "the query broke" into "BigQuery told us these don't
+    exist" would be a false positive that could trigger an autonomous CREATE against production
+    (see write_json_out()'s docstring and the module docstring's SELF-HEAL CONSUMPTION section).
+    Concretely: dict.get() on a successful batch's dict returns None both for "no row" (genuinely
+    absent — MISSING) and, in principle, a row whose definition column is NULL; an Exception
+    object stored in the SAME slot is a completely different Python type, so resolve_live_
+    definition()'s `isinstance(cache, Exception)` check can never confuse the two, unlike a
+    sentinel value that could collide with a real (if implausible) None-valued row.
+    """
+    views_datasets, routine_datasets = set(), set()
+    for (dataset, _name), (obj_type, *_rest) in final.items():
+        if obj_type in ROUTINE_KINDS:
+            routine_datasets.add(dataset)
+        else:  # VIEW — the only other obj_type CREATE_STMT ever produces
+            views_datasets.add(dataset)
+
+    views_by_dataset = {}
+    for dataset in sorted(views_datasets):
+        try:
+            rows = bq(
+                f"SELECT table_name, view_definition FROM "
+                f"`{project}`.{dataset}.INFORMATION_SCHEMA.VIEWS", project,
+                max_rows=BATCH_MAX_ROWS)
+            views_by_dataset[dataset] = parse_views_batch(rows)
+        except Exception as e:
+            views_by_dataset[dataset] = e
+
+    routines_by_dataset = {}
+    for dataset in sorted(routine_datasets):
+        try:
+            rows = bq(
+                f"SELECT routine_name, routine_type, routine_definition FROM "
+                f"`{project}`.{dataset}.INFORMATION_SCHEMA.ROUTINES "
+                f"WHERE routine_type IN ('PROCEDURE', 'TABLE FUNCTION')", project,
+                max_rows=BATCH_MAX_ROWS)
+            routines_by_dataset[dataset] = parse_routines_batch(rows)
+        except Exception as e:
+            routines_by_dataset[dataset] = e
+
+    return views_by_dataset, routines_by_dataset
+
+
+def resolve_live_definition(views_by_dataset, routines_by_dataset, dataset, name, obj_type):
+    """Look up one object's live definition from fetch_live_definitions()'s batch results.
+
+    Preserves the old per-object live_definition()'s return/raise contract exactly, so main()'s
+    per-object try/except (lookup failed -> skip; lookup succeeded with no match -> None ->
+    missing) keeps working completely unchanged: a dataset whose batch query FAILED has an
+    Exception stored in its slot; that stored exception is RE-RAISED here (never swallowed), so
+    every object in that dataset's try/except lands in the same "skipped" branch a real
+    per-object failure would have. A dataset whose batch query SUCCEEDED but simply has no row for
+    this name — or, in principle, a row whose definition column is NULL — returns None either
+    way, exactly matching the old live_definition()'s `rows[0].get(key) if rows else None`
+    collapse of both cases to None.
+    """
+    if obj_type in ROUTINE_KINDS:
+        cache = routines_by_dataset.get(dataset, {})
+        if isinstance(cache, Exception):
+            raise cache
+        return cache.get((name, obj_type))
+    cache = views_by_dataset.get(dataset, {})
+    if isinstance(cache, Exception):
+        raise cache
+    return cache.get(name)
 
 
 def write_json_out(json_out_path, findings, missing_live, missing_objects):
@@ -546,12 +673,15 @@ def main():
         return 0
 
     mismatches, findings, missing_live, missing_objects, checked = [], [], [], [], 0
+    # Batched (2026-07-30 perf fix): fetch every dataset's live definitions in ~5 queries total,
+    # not one `bq query` subprocess per object — see fetch_live_definitions()'s docstring. Uses the
+    # CLI-supplied --project (default stock-trading-498512), not the project parsed from each
+    # object's own CREATE statement text, so --project is an actual, honored override rather than a
+    # parsed-but-ignored argument (same rationale the old per-object call site documented).
+    views_by_dataset, routines_by_dataset = fetch_live_definitions(project, final)
     for (dataset, name), (obj_type, _obj_project, source_file, body) in sorted(final.items()):
         try:
-            # Use the CLI-supplied --project (default stock-trading-498512), not the project parsed
-            # from the object's own CREATE statement text, so --project is an actual, honored
-            # override rather than a parsed-but-ignored argument.
-            live_body = live_definition(project, dataset, name, obj_type)
+            live_body = resolve_live_definition(views_by_dataset, routines_by_dataset, dataset, name, obj_type)
         except Exception as e:
             # Lookup FAILED (transient/auth/timeout) -- inconclusive, NOT evidence of anything.
             # Keep this branch exactly as it was: a skip, never a finding, never a fail on its own.

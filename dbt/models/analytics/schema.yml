@@ -20,12 +20,12 @@ models:
 
   - name: position_campaigns
     description: >-
-      Campaigns. Tier-2 of the 2026-07-21 pyramid-aware accounting rebuild
-      (bigquery/102_pyramid_aware_lifecycle.sql, NEW object): one row per (strategy,ticker)
-      round-trip at the CAMPAIGN level — spans a position from the opening BUY through every
-      add/partial-exit to the fill that returns it flat (or the latest fill if still open). This is
-      "a trade" for closed_trades / gate_n (ops.sp_recompute_engine) and thesis_outcomes — a
-      partial-exit pyramid counts as ONE closed trade, not one per FIFO lot.
+      Campaigns. Tier-2 of the 2026-07-21 pyramid-aware accounting rebuild, REBUILT 2026-07-30
+      (bigquery/116_decision_record_analyzability.sql section (A), was bigquery/102): one row per
+      (strategy,ticker) round-trip at the CAMPAIGN level — spans a position from the opening BUY
+      through every add/partial-exit to the fill that returns it flat (or the latest fill if still
+      open). This is "a trade" for closed_trades / gate_n (ops.sp_recompute_engine) and
+      thesis_outcomes — a partial-exit pyramid counts as ONE closed trade, not one per FIFO lot.
     columns:
       - name: campaign_key
         description: strategy:ticker:campaign_seq — unique per campaign.
@@ -34,6 +34,13 @@ models:
           - unique
       - name: strategy
         description: Strategy code.
+      - name: opening_thesis_ref
+        description: >-
+          NEW 2026-07-30 (bigquery/116 section (A)). The opening fill's source_thesis_ref —
+          decision_log.entry_id, when the write path recorded it as a UUID (convention adopted
+          ~2026-07-26; older campaigns carry free text like 'D2 2026-07-17 TSM D GO' and are left as
+          is, no backfill). Lets thesis_outcomes pair a thesis to its campaign by durable FK instead
+          of only nearest-entry_date proximity.
 
   - name: strategy_daily_returns
     description: Value-weighted daily deployed total returns per strategy (gross).
@@ -143,28 +150,65 @@ models:
         description: NULL when n_voo_mark_days = 0.
 
   - name: thesis_outcomes
-    description: Thesis-construction decisions joined to their round-trip outcome.
+    description: >-
+      Thesis-construction decisions joined to their round-trip outcome. REBUILT 2026-07-30
+      (bigquery/116_decision_record_analyzability.sql section (B), was bigquery/102): entry_type now
+      tolerates the 'thesis' synonym (recovers the 2026-07-20..22 drift-incident rows); the campaign
+      join is guarded to GO-family decisions only, so a NO-GO can never inherit a position outcome;
+      pairing prefers the durable opening_thesis_ref FK over nearest-entry_date when available.
     columns:
       - name: entry_id
-        description: One row per thesis entry_id (QUALIFY picks the nearest round-trip).
+        description: One row per thesis entry_id (QUALIFY picks the FK match, else the nearest round-trip).
         tests:
           - not_null
           - unique
       - name: decision
-        description: GO / NO-GO verdict.
+        description: GO / GO (add tranche) / NO-GO verdict (raw free-text value; see is_go_family for the safe filter).
+      - name: is_go_family
+        description: >-
+          NEW 2026-07-30. TRUE for any GO-family decision ('GO', 'GO (add tranche)', ...) via an
+          anchored ^GO\b regex — never matches 'NO-GO' or its variants. Also guards the campaign join
+          (a NO-GO thesis is never paired to a position) and is what conviction_features /
+          thesis_outcome_summary now filter on instead of the exact string decision = 'GO'.
+      - name: conviction_pct
+        description: >-
+          NEW 2026-07-30. Raw decision_log.conviction_pct as logged — mixed scale (most rows 0-100
+          percent; 7 historical rows 0-1 fraction). Use conviction_pct_normalized instead for any
+          comparison across rows.
+      - name: conviction_pct_normalized
+        description: >-
+          NEW 2026-07-30. conviction_pct rescaled to 0-100: a value in (0, 1] is multiplied by 100
+          (the 7 fraction-scale rows), everything else (incl. 0 and NULL) passes through unchanged.
+          Substrate for analytics.conviction_pct_calibration. Never multiplied into sizing/EV math —
+          conviction stays ordinal for sizing (AI_Trading_Foundation.md 2.13/2.26/3a.1); this is
+          outcome-based measurement only.
+      - name: campaign_key
+        description: NEW 2026-07-30. FK to position_campaigns.campaign_key for this thesis's paired campaign, NULL for a NO-GO or an unpaired thesis.
+      - name: paired_by_fk
+        description: >-
+          NEW 2026-07-30. TRUE when this thesis was paired to its campaign via
+          position_campaigns.opening_thesis_ref (durable FK) rather than the nearest-entry_date
+          heuristic — pairing-quality telemetry, not a filter.
 
   - name: conviction_features
-    description: GO theses with conviction mapped to an ordinal (gated feature view).
+    description: >-
+      GO-family theses with conviction mapped to an ordinal (gated feature view). REBUILT 2026-07-30
+      (bigquery/116_decision_record_analyzability.sql section (C), was bigquery/04): filters on
+      is_go_family instead of the exact string decision = 'GO', so an add-tranche GO now counts as
+      its own conviction observation (owner directive 2026-07-30).
     columns:
       - name: entry_id
         tests:
           - not_null
           - unique
       - name: decision
-        description: Always 'GO' here (the WHERE filter).
+        description: >-
+          'GO' or 'GO (add tranche)' — the WHERE is_go_family filter admits both (2026-07-30; was a
+          tautological accepted_values(['GO']) test before the GO-family widening, since it only ever
+          tested this view's own already-filtered output — dbt test never runs in CI, only dbt parse).
         tests:
           - accepted_values:
-              values: ['GO']
+              values: ['GO', 'GO (add tranche)']
       - name: conviction_ordinal
         description: 1..6 for LOW..HIGHEST; NULL when conviction is unrecognized/missing.
         tests:
@@ -172,6 +216,10 @@ models:
               min_value: 1
               max_value: 6
               # NULLs are allowed (unscored conviction); range test ignores NULLs.
+      - name: conviction_pct_normalized
+        description: >-
+          NEW 2026-07-30. Passed through from thesis_outcomes — see that model's column doc.
+          Substrate for analytics.conviction_pct_calibration.
 
   - name: calibration_summary
     description: Per-conviction-tier closed count / win-rate / avg realized P&L (cold-start safe).
@@ -188,9 +236,16 @@ models:
       2026-07-04 (audit finding): this model previously had zero test/doc coverage here, unlike every
       sibling analytics model, despite trustworthy_edge being documented as "the ONLY gate that may
       change behavior" off this view. See tests/assert_calibration_shrunk_wilson_bounds.sql for the
-      Wilson-interval well-formedness invariant (also pins the 2026-07-04 SAFE_DIVIDE fix).
+      Wilson-interval well-formedness invariant (also pins the 2026-07-04 SAFE_DIVIDE fix). REBUILT
+      2026-07-30 (bigquery/116_decision_record_analyzability.sql section (D), was bigquery/25): now
+      always enumerates all SEVEN canonical conviction tiers (FULL OUTER JOIN against the tier list)
+      instead of only the tiers observed among closed GO-family theses — a tier with zero closed
+      trades (e.g. HIGHEST) now renders an honest maximal-uncertainty [0,1] interval instead of being
+      absent, which used to make find_precedents' LEFT JOIN return four NULLs for exactly the
+      highest-conviction precedents its mandatory-interval guardrail exists to temper.
     columns:
       - name: conviction
+        description: One of the 7 canonical tiers ('(unscored)', LOW..HIGHEST) — always present, even with closed=0.
         tests:
           - not_null
           - unique

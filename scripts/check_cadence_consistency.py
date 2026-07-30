@@ -514,17 +514,19 @@ QUOTED_ID = re.compile(r"'([A-Za-z0-9_]+)'")
 # heading and the NEXT '---' divider -- the strategy slice-map table elsewhere in the file also has
 # `| **...** |`-shaped rows and must NOT be swept in).
 INVENTORY_HEADING = "# ROUTINE INVENTORY & BIGQUERY RESPONSIBILITIES"
-# A loose textual trace of the ROUTINE INVENTORY feature, weaker than the exact heading above -- the
-# check-L analogue of check K's os.path.exists(path) test (2026-07-29). parse_inventory_table() used
-# to return None for BOTH "the heading was never introduced" (pre-feature checkout / a minimal test
-# fixture -- silently skip, correct) AND "the heading text changed" (regex rot -- must fail loud,
-# wrong) with no way for main() to tell them apart. Claude_Task_Plan.md is not optional, so any
-# rewording of INVENTORY_HEADING permanently and silently disarmed check L with no CI signal. main()
-# now disambiguates the same way catchup_list_errors() disambiguates parse_unnest_routine_ids's two
-# None cases: a plan that still mentions this SUBSTRING but not the exact heading has plausibly had
-# the heading reworded, not removed as a whole feature, so that case is reported DISARMED instead of
-# skipped.
-INVENTORY_SENTINEL = "ROUTINE INVENTORY"
+# 2026-07-29: an earlier version of this file tried to tell parse_inventory_table()'s two None cases
+# apart -- "heading never introduced" (pre-feature checkout, skip silently) vs. "heading text changed"
+# (regex rot, fail loud) -- via a loose substring search for "ROUTINE INVENTORY": substring present but
+# exact heading missing => DISARMED (fail loud); substring absent too => assume pre-feature checkout and
+# skip. PROVEN DEFEATABLE the same day: renaming the heading to something that also drops the substring
+# (e.g. "# ROUTINE ROSTER & BIGQUERY RESPONSIBILITIES") makes BOTH branches miss, so main() exits 0
+# silently -- reproducing the exact bug the heuristic was built to catch, for precisely the class of
+# edit (a heading rewording) it existed to catch. The heuristic is deleted here, not re-tuned: a
+# substring test can always be defeated by a rewording that drops the substring too, so no replacement
+# substring closes that hole for good. Claude_Task_Plan.md is not optional and the ROUTINE INVENTORY
+# table is a mandatory section of it, so "the table can't be found" was never actually a legitimate
+# skip case either -- main() now treats BOTH None cases (heading reworded, section removed) as one
+# unconditional hard error instead of trying to distinguish them.
 # Columns: | ID | Routine | Cadence · Type | BigQuery reads | BigQuery writes | Cadence .md output |
 # — group 1 is the id, group 2 is the 'Cadence · Type' cell (the 3rd column; the 2nd, the routine
 # name, is skipped over).
@@ -668,10 +670,12 @@ def parse_inventory_table(plan_path):
     scoped between the "# ROUTINE INVENTORY & BIGQUERY RESPONSIBILITIES" heading and the NEXT `---`
     divider, so the strategy slice-map table elsewhere in the file (which also has `| **...** |`-
     shaped rows, e.g. `| **AR_attacker** |`) can never leak in (check L). Returns None if the exact
-    heading text is not found — main() disambiguates "genuinely absent" (pre-feature checkout / a
-    minimal test fixture, skip silently) from "present but reworded" (DISARMED, fail loud) via the
-    loose INVENTORY_SENTINEL substring search, mirroring check K's os.path.exists(path)
-    disambiguation of parse_unnest_routine_ids's two None cases (2026-07-29)."""
+    heading text is not found (reworded, or the whole section removed) — main() treats that as a
+    single unconditional hard error rather than trying to tell the two cases apart: the ROUTINE
+    INVENTORY table is a mandatory section of Claude_Task_Plan.md (which is itself not optional), so
+    there is no legitimate case where its absence should be a silent skip (2026-07-29 — replaced a
+    substring-based disambiguation that a heading rewording could defeat, see the comment above
+    INVENTORY_HEADING)."""
     txt = read_text(plan_path)
     start = txt.find(INVENTORY_HEADING)
     if start == -1:
@@ -908,20 +912,22 @@ def main():
     # 'Cadence · Type' cell agrees with that routine's monitor_class (ARCH-3 Item 30b). ----
     have_inventory = parse_inventory_table(PLAN)
     if have_inventory is None:
-        # 2026-07-29: distinguish "heading never introduced" (pre-feature checkout / a minimal test
-        # fixture -- skip silently, unchanged behavior) from "heading reworded" (check L's drift guard
-        # is DISARMED -- fail loud, the fix). Before this, both cases returned None from
-        # parse_inventory_table and were skipped identically, so any rewording of INVENTORY_HEADING
-        # permanently and silently disarmed check L -- Claude_Task_Plan.md is not optional, so that
-        # silent skip was never actually the "pre-feature checkout" case it was framed as.
-        if INVENTORY_SENTINEL in read_text(PLAN):
-            errors.append(
-                f"Claude_Task_Plan.md: text matching '{INVENTORY_SENTINEL}' was found but the exact "
-                f"heading '{INVENTORY_HEADING}' could not be located — check L's ROUTINE INVENTORY "
-                f"table drift guard is DISARMED (heading reworded? regex rot?). Restore the exact "
-                f"heading text, or update INVENTORY_HEADING in this script to match, mirroring check "
-                f"K's file-exists-but-unparseable DISARMED failure (catchup_list_errors).")
-    else:  # heading present; absent = pre-feature checkout, skip silently
+        # 2026-07-29: unconditional hard error, not a skip. A prior version of this check tried to
+        # tell "heading never introduced" (skip silently) apart from "heading reworded" (fail loud)
+        # via a loose substring search — PROVEN DEFEATABLE the same day by a rewording that drops the
+        # substring too (e.g. "# ROUTINE ROSTER & BIGQUERY RESPONSIBILITIES"), which made both
+        # branches miss and let main() exit 0 silently, reproducing the exact bug the heuristic
+        # existed to catch. The ROUTINE INVENTORY table is a mandatory section of Claude_Task_Plan.md
+        # (itself not optional), so "the table can't be found" is a drift error in every case — there
+        # is no legitimate skip case left to preserve.
+        errors.append(
+            f"Claude_Task_Plan.md: could not locate the exact heading '{INVENTORY_HEADING}' followed "
+            f"by a parseable ROUTINE INVENTORY table — check L's drift guard cannot run. Either the "
+            f"heading text was reworded (restore it exactly as shown above, or update "
+            f"INVENTORY_HEADING in this script to match the new text), or the entire ROUTINE "
+            f"INVENTORY section was deleted (restore it — the table is mandatory, so its absence is "
+            f"itself a drift error, not a pre-feature-checkout case to skip).")
+    else:  # heading present and table parsed — compare its rows against ops/cadence.yaml
         have_inventory_ids = {rid for rid, _cell in have_inventory}
         for rid in sorted(set(cad) - have_inventory_ids):
             errors.append(f"{rid}: in ops/cadence.yaml but missing a row in Claude_Task_Plan.md's "

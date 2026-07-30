@@ -1,0 +1,71 @@
+-- CI-FINDINGS BRIDGE LIVENESS MARKER (2026-07-30). Project: stock-trading-498512.
+-- Apply after 67_ci_findings_bridge.sql and 86_ci_findings_first_detected.sql.
+--
+-- METADATA ONLY. This file changes NO logic and defines NO object -- it records a new reserved
+-- finding_key on ops.ci_findings' table description, following the in-place SET OPTIONS(description=...)
+-- precedent bigquery/114_selfheal_log_created_outcome.sql established for evolving a table's documented
+-- vocabulary without redefining it (the table itself is CREATE TABLE IF NOT EXISTS in bigquery/67 and
+-- holds 35+ live rows -- it must NOT be recreated).
+--
+-- ============================================================================================
+-- WHY. Alert a37e3185-d5d9-435c-b9d1-910a15ed419b (warning, scheduled.cadence,
+-- `ci_findings_bridge_stale`, raised 2026-07-30 05:16 UTC, owner-forwarded) was investigated and is a
+-- CONFIRMED FALSE POSITIVE -- and structurally unable to do its stated job.
+--
+-- The detector (ops.sp_sq_cadence_check, canonical in bigquery/111_cadence_check_version_drift_autoage.sql)
+-- alerts when `MAX(finding_ts) WHERE workflow='live-sql-parity'` is older than ~40h, on the premise that
+-- silence means the DECLARED single delivery path for live-sql-parity drift is dead. But every write
+-- into ops.ci_findings from .github/workflows/live-sql-parity.yml was CONDITIONAL ON THERE BEING
+-- SOMETHING TO REPORT:
+--   * the drift-branch INSERTs are gated `steps.parity.outputs.result == 'drift'`;
+--   * BOTH auto-resolve steps (per-object and clean-run) are `INSERT ... SELECT ... FROM
+--     state.ci_findings_open`, which writes ZERO ROWS once nothing is open.
+-- So a healthy, drift-free system writes NOTHING, and the predicate read healthy silence as a dead
+-- bridge -- precisely the confusion the alert text claims to resolve ("A dead bridge reads identically
+-- to 'no drift'").
+--
+-- VERIFIED LIVE 2026-07-30 (read-only): ops.ci_findings held 35 live-sql-parity rows, newest
+-- 2026-07-28 12:50:02 UTC -- the tail of a same-day drift-then-fix cycle. `gh run list --workflow
+-- live-sql-parity.yml` showed three LATER runs (2026-07-28 13:09, 2026-07-28 14:01, 2026-07-29 09:47)
+-- all `completed success`, each writing nothing because nothing was wrong. ~40h after 12:50 the alert
+-- fired. The workflow was never dead.
+--
+-- AGGRAVATING FACTOR: this alert has no health-based auto-resolve -- only a time-only 7-day age-out
+-- that re-raises inside the same cadence_check run while the condition still holds. On a permanently
+-- healthy system it is therefore not a one-off false alarm but a self-sustaining permanent warning,
+-- i.e. exactly the kind of noise that trains an operator to ignore a monitored channel.
+--
+-- ============================================================================================
+-- THE FIX (in .github/workflows/live-sql-parity.yml, not here): a new
+-- "Record bridge liveness marker (unconditional)" step writes ONE row per run, gated only on
+-- `always() && steps.guard.outputs.skip == 'false'` -- so it beats on clean AND drift runs, because a
+-- drift run is still a LIVE bridge. MAX(finding_ts) then tracks BRIDGE LIVENESS instead of DRIFT
+-- INCIDENCE, and bigquery/111's predicate needs NO change: "no row in 40h" finally means what it says.
+--
+-- THE RESERVED KEY: workflow='live-sql-parity', finding_key='__run_marker__', status='resolved'.
+--   * It can NEVER surface as an open finding: state.ci_findings_open (bigquery/86) filters
+--     `rn = 1 AND status = 'open'`, so D3's CI-FINDINGS ADJUDICATION step and cadence_check's
+--     `ci_finding` alert are completely unaffected. VERIFIED by reading bigquery/86's view body.
+--   * Per-run variation lives in `detail`/`run_url` ONLY, never in finding_key, so the latest-wins
+--     dedup keeps exactly ONE marker row current per workflow rather than growing unbounded keys.
+--   * ops.ci_findings' original description already sanctioned this shape ("Clean runs write
+--     unconditional resolved rows -- harmless, the view takes the latest"); the implementation simply
+--     was never unconditional. This file makes the reserved key explicit so a future reader of
+--     state.ci_findings_open / D3 does not mistake it for a real finding.
+--
+-- REJECTED ALTERNATIVE, recorded so it is not re-proposed: beat into ops.heartbeat instead (the
+-- convention in bigquery/16_automation_health.sql). It would have required a NEW owner-only,
+-- table-scoped `roles/bigquery.dataEditor` grant for gh-ci-runner@ on ops.heartbeat -- that SA holds
+-- one on EXACTLY ops.ci_findings (OWNER_ACTIONS.md item G, granted 2026-07-17) and is otherwise
+-- read-only. Reusing the table it can already write needs no IAM change, no owner step, and no new
+-- failure mode.
+--
+-- TRANSITION NOTE (honest, so nobody is surprised): the first marker lands on the next scheduled
+-- live-sql-parity run (~09:45 UTC). cadence_check evaluates earlier in the day (~05:15 UTC), so if the
+-- current alert instance is resolved before that first marker exists, the detector CAN legitimately
+-- fire once more on its next evaluation and then go quiet permanently. That is the correct behaviour
+-- of an honest liveness check against a bridge that has not yet beaten, not a residual bug.
+-- ============================================================================================
+
+ALTER TABLE `stock-trading-498512.ops.ci_findings`
+SET OPTIONS (description = 'Append-only CI-guard finding markers (consumption-closure 2026-07-16). Written by GitHub Actions via a table-scoped gh-ci-runner@ dataEditor grant (ops.routine_commit_markers precedent, OWNER_ACTIONS.md item G / auto-merge-claude.yml). status=open|resolved; latest row per (workflow,finding_key) wins. Clean runs write unconditional resolved rows — harmless, state.ci_findings_open takes the latest and filters to status=open. RESERVED finding_key (2026-07-30, bigquery/119): "__run_marker__" is a per-run BRIDGE-LIVENESS beat, always status=resolved, written unconditionally by live-sql-parity.yml on every non-skipped run (clean or drift). It is NOT a finding: it exists so the cadence_check ci_findings_bridge_stale detector measures whether the workflow RAN rather than whether it found DRIFT — a healthy drift-free system previously wrote nothing for days and tripped that detector as a false positive (alert a37e3185-d5d9-435c-b9d1-910a15ed419b). Consumers (D3 CI-FINDINGS ADJUDICATION, cadence_check ci_finding) never see it because it is never status=open; any NEW consumer reading ops.ci_findings directly must exclude finding_key="__run_marker__".');

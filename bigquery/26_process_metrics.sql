@@ -34,6 +34,15 @@ ORDER BY strategy, conviction_ordinal;
 -- A large gap (many GO decisions, few OPEN position_events) flags either a staging pipeline problem
 -- (guard blocks, order-craft failures) or a pattern of GO decisions that don't survive to execution —
 -- both worth a human look, neither actionable from this view alone.
+--
+-- SUPERSEDED LIVE by bigquery/118_decision_record_audit_followups.sql — current single source of truth
+-- for this object. The go_theses CTE below re-derives its own count with an exact-string
+-- `entry_type = 'thesis-construction' AND decision = 'GO'` filter; bigquery/116 fixed that exact bug
+-- class in thesis_outcomes/conviction_features/thesis_outcome_summary but MISSED this sibling view, so
+-- from 2026-07-30 the two paths silently diverged (this one reported 19 GO theses vs the corrected 21,
+-- dropping B:ISRG f90e7c15 and D:GOOGL fd464178). 118 reads analytics.thesis_outcomes WHERE
+-- is_go_family instead, so the vocabulary lives in ONE place. Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.declared_vs_realized` AS
 WITH go_theses AS (
   SELECT strategy, COUNT(*) AS go_count

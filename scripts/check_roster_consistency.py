@@ -831,7 +831,9 @@ def main():
     # any time; these 4 hardcoded ['A'..'E'] lists would then silently start failing `dbt test`
     # (advisory-only — see ci.yml) at exactly the moment operators most need a clean signal. Only
     # ever inspects columns literally named `strategy`, so it cannot trip on the unrelated
-    # `conviction_features.decision` accepted_values(['GO']) block in the same file. ----
+    # `conviction_features.decision` accepted_values block in the same file (that block widened
+    # 2026-07-30 from ['GO'] to ['GO', 'GO (add tranche)'] with bigquery/116's GO-family filter — the
+    # exact value is irrelevant here precisely because the column is not named `strategy`). ----
     if os.path.exists(DBT_SCHEMA_ACCEPTED_VALUES):
         schema_doc = load_yaml(DBT_SCHEMA_ACCEPTED_VALUES)
         for model in schema_doc.get("models", []) or []:

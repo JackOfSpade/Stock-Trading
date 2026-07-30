@@ -58,35 +58,64 @@ OWNER_ACTIONS_PATH = os.path.join(ROOT, "OWNER_ACTIONS.md")
 PROJECT = os.environ.get("BQ_PROJECT", "stock-trading-498512")
 TIMEOUT = 120
 
-# probe/done_when are confined to `[^\r\n]*` (NOT `.` under DOTALL) so a fence body can never cross a
-# fence boundary (bug found + fixed 2026-07-29, reproduced live): with `.*?` + re.DOTALL, `.` matches
-# newlines, so a malformed fence missing its literal `done_when:` line (e.g. a `donewhen:` typo) let
-# the lazy probe/done_when groups keep expanding PAST the fence's own closing ``` — through any prose
-# — into the NEXT well-formed ```verify block, taking ITS id/type/probe lines as part of THIS fence's
-# corrupted, now-multi-line probe and its done_when from the wrong item. Two harms: the second item
-# silently vanished from the run (no OPEN, no diagnostic — FENCE_RE simply never matched it), and the
-# first item's "probe" became a corrupted multi-line string that got executed as SQL. probe/done_when
-# are single-line fields in this format, so excluding \r\n from their character class makes both
-# harms structurally impossible: a malformed fence now matches nothing at all (caught by the
-# FENCE_OPEN_RE malformed-fence counter below) instead of eating its neighbor. See
-# test_fence_re_malformed_donewhen_typo_does_not_leak_into_next_fence in
-# tests/test_verify_owner_actions.py.
+# probe/done_when are confined to `[^\r\n]*` per line (NOT `.` under DOTALL) so a fence body can never
+# cross a fence boundary (bug found + fixed 2026-07-29, reproduced live): with `.*?` + re.DOTALL, `.`
+# matches newlines, so a malformed fence missing its literal `done_when:` line (e.g. a `donewhen:`
+# typo) let the lazy probe/done_when groups keep expanding PAST the fence's own closing ``` — through
+# any prose — into the NEXT well-formed ```verify block, taking ITS id/type/probe lines as part of
+# THIS fence's corrupted, now-multi-line probe and its done_when from the wrong item. Two harms: the
+# second item silently vanished from the run (no OPEN, no diagnostic — FENCE_RE simply never matched
+# it), and the first item's "probe" became a corrupted multi-line string that got executed as SQL. See
+# test_fence_re_malformed_donewhen_typo_does_not_leak_into_next_fence in tests/test_verify_owner_actions.py.
+#
+# BUT a strictly single-line `[^\r\n]*?` (2026-07-29's first fix) went too far: two PRE-EXISTING,
+# well-formed OWNER_ACTIONS.md fences (ids W, X) wrap a long `done_when` value onto a 2-space-indented
+# continuation line — a normal hand-editing convention for a 120KB prose file — and a single-line
+# field can't match that at all, so W/X's fences silently matched NOTHING (same silent-drop failure
+# mode the fence-crossing fix was trying to eliminate, just via a different trigger). The fix below:
+# probe/done_when may each be followed by zero or more CONTINUATION lines, but every continuation line
+# — like every field line (`id:`/`type:`/`probe:`/`done_when:`) and the closing ``` — MUST be
+# re-anchored: `\r?\n[ \t]+[^\r\n]*` requires at least one leading space/tab before a continuation
+# line's content. This is what keeps the fence-crossing fix intact: `id:`, `type:`, `probe:`,
+# `done_when:` and ``` all sit at COLUMN 0 in this format (see OWNER_ACTIONS.md — every fence in the
+# file), so `[ \t]+` structurally can never match the start of one of those lines, meaning the
+# continuation repetition CANNOT absorb a sibling field, a closing ``` fence, or the next ```verify
+# block's opening line — it simply stops (0 more repetitions) the instant it meets an unindented line,
+# regardless of greediness or backtracking. A malformed fence (missing/typo'd field) still therefore
+# matches nothing at all, caught by the FENCE_OPEN_RE malformed-fence counter below, exactly as before
+# — see test_fence_re_malformed_donewhen_typo_does_not_leak_into_next_fence AND its new companion
+# test_fence_re_malformed_donewhen_typo_does_not_leak_into_wrapped_next_fence (a malformed fence
+# immediately followed by a WRAPPED well-formed one — the new interaction this change introduces). A
+# continuation line typo'd back to column 0 (no leading whitespace) is also proven NOT to be absorbed
+# — see test_fence_re_unindented_continuation_is_not_absorbed.
+#
+# Normalization decision: the captured probe/done_when text keeps its embedded `\n` + indent verbatim
+# (NOT collapsed to a single space). Checked first: neither group is actually read anywhere in main()
+# today — only `m.group("id")` is (see main() below) — probe/done_when exist purely as the
+# human-readable spec/description retained in the source for a reader (see module docstring), so there
+# is no live consumer whose formatting needs deciding for. With no live consumer to argue for
+# normalizing, behavior-preservation vs. the OLD (pre-2026-07-29) re.DOTALL parser is the tie-breaker,
+# and the OLD parser's `.*?` captured the raw text INCLUDING the newline+indent for these same two
+# fences. Verified byte-for-byte: replaying OLD FENCE_RE (git show c49da9a) against the real
+# OWNER_ACTIONS.md and comparing every field of every one of the file's 17 fences against this new
+# regex's captures shows zero differences, W/X included.
 FENCE_RE = re.compile(
     r"```verify\r?\n"
     r"id:\s*(?P<id>\S+)\s*\r?\n"
     r"type:\s*(?P<type>\S+)\s*\r?\n"
-    r"probe:\s*(?P<probe>[^\r\n]*?)\s*\r?\n"
-    r"done_when:\s*(?P<done_when>[^\r\n]*?)\s*\r?\n"
+    r"probe:\s*(?P<probe>[^\r\n]*(?:\r?\n[ \t]+[^\r\n]*)*)\r?\n"
+    r"done_when:\s*(?P<done_when>[^\r\n]*(?:\r?\n[ \t]+[^\r\n]*)*)\r?\n"
     r"```"
 )
 
 # Any bare ```verify opening line, used only to detect a fence whose body does NOT match FENCE_RE
 # above (codebase audit 2026-07-26). A malformed fence body — case-typo'd field name, trailing text
-# on the id line, an extra field inserted between the four required ones, or (pre-\r? fix) CRLF line
-# endings — makes FENCE_RE match NOTHING for that block, and the item silently vanishes from the run:
-# no OPEN line, no diagnostic, exit 0, a normal-looking summary. Every OTHER failure mode in this
-# script (unregistered id, anchor-not-found, probe exception) prints a visible diagnostic; this was
-# the one silent path, and OWNER_ACTIONS.md is a 120KB hand-maintained file people edit by hand, so a
+# on the id line, an extra field inserted between the four required ones, (pre-\r? fix) CRLF line
+# endings, or a probe/done_when continuation line that lost its required leading indent — makes
+# FENCE_RE match NOTHING for that block, and the item silently vanishes from the run: no OPEN line,
+# no diagnostic, exit 0, a normal-looking summary. Every OTHER failure mode in this script
+# (unregistered id, anchor-not-found, probe exception) prints a visible diagnostic; this was the one
+# silent path, and OWNER_ACTIONS.md is a 120KB hand-maintained file people edit by hand, so a
 # malformed fence is a realistic way for an item to drop out of tracking with nobody noticing.
 FENCE_OPEN_RE = re.compile(r"^```verify\s*$", re.MULTILINE)
 
@@ -473,7 +502,10 @@ def main():
             print(
                 f"verify_owner_actions: WARNING — malformed ```verify fence at line {line_no}: "
                 "did not match the expected id/type/probe/done_when shape (4 lines, in that order, "
-                "no extra/renamed fields) — this item will NOT be tracked or auto-closed."
+                "no extra/renamed fields. If probe or done_when wraps onto another line, EVERY "
+                "continuation line must start with at least one leading space or tab — a wrapped "
+                "value left at column 0 will not be recognized as part of the field and breaks the "
+                "fence) — this item will NOT be tracked or auto-closed."
             )
 
     for m in reversed(matches):

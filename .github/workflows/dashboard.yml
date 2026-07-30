@@ -28,46 +28,43 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # JOB-LEVEL GATE (2026-07-30 cost audit — replaces a step-level guard): PUBLISH_DASHBOARD is
+    # confirmed UNSET (`gh variable list`), so all 40 sampled daily runs used to check out, hit a guard
+    # step that set a `skip` output, skip every subsequent step via `if: steps.guard.outputs.skip ==
+    # 'false'`, and STILL bill a full rounded minute for zero output — a job that starts always bills its
+    # rounded minute even if every real step no-ops. A job-level `if:` makes GitHub Actions SKIP the job
+    # entirely (0 billable minutes) instead of starting the runner just to no-op through it. Behavior when
+    # PUBLISH_DASHBOARD=true + both WIF vars are set is unchanged — every step below still runs in order.
+    #
+    # Mirrors the removed guard step's condition exactly: PUBLISH_DASHBOARD must be the literal string
+    # 'true' AND both WIF vars must be non-empty. An unset `vars.*` property evaluates to '' in GitHub
+    # Actions expressions, so `!= ''` is the expression-syntax equivalent of the old step's `[ -n "..." ]`
+    # bash test. `vars` (unlike `env`/`steps`) IS available in a job-level `if:` (GitHub Actions context
+    # availability: jobs.<job_id>.if supports github, needs, vars, inputs — verified against current docs).
+    if: vars.PUBLISH_DASHBOARD == 'true' && vars.GCP_WIF_PROVIDER != '' && vars.GCP_WIF_SERVICE_ACCOUNT != ''
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
-      - name: Gate on WIF + explicit opt-in
-        id: guard
-        run: |
-          if [ "${{ vars.PUBLISH_DASHBOARD }}" = "true" ] \
-             && [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] \
-             && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ]; then
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice::Dashboard publish disabled. Set vars.PUBLISH_DASHBOARD=true + WIF vars to enable (ops/RUNBOOK.md §16). Exposes live trading data — private repo only."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          fi
       - uses: actions/setup-python@v7
-        if: steps.guard.outputs.skip == 'false'
         with:
           python-version: '3.11'
           cache: 'pip'
           cache-dependency-path: requirements-ci.txt
       - name: GCP WIF auth + gcloud setup (provides the bq CLI)
-        if: steps.guard.outputs.skip == 'false'
         uses: ./.github/actions/gcp-wif-auth
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
       - name: Generate dashboard
-        if: steps.guard.outputs.skip == 'false'
         run: python ops/dashboard/generate_dashboard.py
       - name: Prepare Pages artifact
-        if: steps.guard.outputs.skip == 'false'
         run: |
           mkdir -p _site
           cp ops/dashboard/index.html _site/index.html
       - uses: actions/upload-pages-artifact@v3
-        if: steps.guard.outputs.skip == 'false'
         with:
           path: _site
       - id: deployment
-        if: steps.guard.outputs.skip == 'false'
         uses: actions/deploy-pages@v4

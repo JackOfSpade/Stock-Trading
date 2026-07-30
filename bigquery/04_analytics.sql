@@ -86,10 +86,13 @@ FROM a JOIN o USING (review_id);
 -- as a DECORRELATED join + QUALIFY (same pattern as state.account_nav_7d_ago) -- BigQuery views do
 -- not support a same-row correlated subquery against another table.
 --
--- SUPERSEDED LIVE by bigquery/102_pyramid_aware_lifecycle.sql (2026-07-21 — pyramid-aware lots +
--- campaigns; the LEFT JOIN target + QUALIFY nearest-entry_date window move from analytics.position_
--- lifecycle to analytics.position_campaigns, so a pyramid add's own thesis-construction entry maps to
--- the same campaign as the position's original entry). Kept here, unmodified, for DR-rebuild
+-- SUPERSEDED LIVE by bigquery/116_decision_record_analyzability.sql — current single source of truth
+-- for this object (bigquery/102_pyramid_aware_lifecycle.sql is an intermediate, also-superseded
+-- definition — do not stop there). 116 adds: entry_type now tolerates the 'thesis' synonym (a
+-- 2026-07-20..22 logging drift silently hid 14 real rows from every calibration view); the
+-- position-campaign join is now guarded to GO-family decisions so a NO-GO can never inherit a
+-- position outcome; pairing prefers a real FK (position_campaigns.opening_thesis_ref) over
+-- nearest-date; conviction_pct + normalized added. Kept here, unmodified, for DR-rebuild
 -- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.thesis_outcomes` AS
 WITH theses AS (
@@ -151,6 +154,11 @@ OPTIONS(description='Structured macro indicators (from Monthly_Macro_Data_*.md, 
 -- The supervised layer: does conviction (+ regime / sub-pattern) predict GO-thesis profitability?
 -- BUILT NOW but GATED — its OUTPUTS are not acted upon until >=30 closed GO trades (B is at 4); with a
 -- handful of closed trades any model overfits noise. The substrate is live so it accrues signal now.
+-- SUPERSEDED LIVE by bigquery/116_decision_record_analyzability.sql — current single source of truth
+-- for this object: the exact-match `decision = 'GO'` filter silently excluded 'GO (add tranche)';
+-- now uses a GO-family test, plus conviction_pct_normalized is passed through for the probabilistic-
+-- calibration view. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
+-- re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.conviction_features` AS
 SELECT entry_id, entry_date, strategy, ticker, decision, conviction,
   CASE UPPER(conviction)

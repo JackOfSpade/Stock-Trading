@@ -842,6 +842,175 @@ def test_main_tracks_well_formed_sibling_despite_earlier_malformed_donewhen_typo
     assert "OPEN] ITEM-B: still open" in out
 
 
+# ==================================================================================================
+# FIX 2 (2026-07-29/30, HIGH regression, reproduced live): FIX 1 above (confining probe/done_when to
+# `[^\r\n]*?`, no DOTALL) correctly stopped a malformed fence from leaking into its neighbor, but it
+# also broke two PRE-EXISTING, well-formed OWNER_ACTIONS.md fences — ids W (~line 267) and X (~line
+# 291) — whose `done_when` value wraps onto a 2-space-indented continuation line, a normal
+# hand-editing convention for a 120KB prose file. A single-line-only field can't match that shape at
+# all, so W/X's fences started matching NOTHING: silently dropped from the parsed id set and from
+# `verify_owner_actions summary:`, with only a generic "malformed fence" WARNING (which didn't even
+# hint at line-wrapping) to go on. FENCE_RE now accepts zero or more INDENTED continuation lines for
+# probe/done_when while keeping the fence-crossing fix intact — every continuation line requires
+# `[ \t]+` leading whitespace, and every real boundary (`id:`/`type:`/`probe:`/`done_when:`/```` all
+# sit at column 0 in this format, so a continuation structurally cannot reach any of them.
+# ==================================================================================================
+
+def test_fence_re_parses_real_owner_actions_with_no_malformed_fences():
+    """THE BAR: parse the ACTUAL, unmodified OWNER_ACTIONS.md and assert every bare ```verify opening
+    line produced a successful FENCE_RE match — i.e. zero malformed fences — and that ids W and X
+    (whose done_when wraps onto an indented continuation line) are among the parsed ids. Deliberately
+    does NOT hardcode a fence count: it asserts the invariant a wrapped-value regression like this one
+    violates (open-line count == match count), so this test stays meaningful as the file grows instead
+    of needing a manual count bump on every edit. W/X are asserted by name because they are the two
+    fences already known (and pinned by OWNER_ACTIONS.md's own text, 2026-07-19-dated closures) to use
+    the wrapped-done_when convention — not an arbitrary pick."""
+    with open(voa.OWNER_ACTIONS_PATH, encoding="utf-8") as f:
+        text = f.read()
+    matches = list(voa.FENCE_RE.finditer(text))
+    open_lines = list(voa.FENCE_OPEN_RE.finditer(text))
+    unmatched = [
+        text.count("\n", 0, m.start()) + 1
+        for m in open_lines
+        if m.start() not in {mm.start() for mm in matches}
+    ]
+    assert not unmatched, f"malformed (unmatched) ```verify fence(s) at line(s): {unmatched}"
+    assert len(matches) == len(open_lines)
+    ids = {m.group("id").strip() for m in matches}
+    assert {"W", "X"}.issubset(ids)
+
+
+SAMPLE_DOC_WRAPPED_DONE_WHEN = """## W. thing with a wrapped done_when
+
+```verify
+id: W
+type: fmp
+probe: single line probe, unaffected by the wrap below
+done_when: first line of the condition
+  second line, an indented continuation of the same value
+```
+"""
+
+
+def test_fence_re_parses_wrapped_done_when_continuation():
+    # A wrapped `done_when` (indented continuation) must parse at all (this is THE regression) and
+    # must capture the FULL value, both lines, not just the first.
+    matches = list(voa.FENCE_RE.finditer(SAMPLE_DOC_WRAPPED_DONE_WHEN))
+    assert len(matches) == 1
+    assert matches[0].group("id") == "W"
+    assert matches[0].group("probe") == "single line probe, unaffected by the wrap below"
+    assert matches[0].group("done_when") == (
+        "first line of the condition\n  second line, an indented continuation of the same value"
+    )
+
+
+SAMPLE_DOC_WRAPPED_PROBE = """```verify
+id: WP
+type: manual
+probe: first line of the probe description
+  second line, an indented continuation of the probe text
+done_when: n>0
+```
+"""
+
+
+def test_fence_re_parses_wrapped_probe_continuation():
+    # The same continuation shape must also work for `probe` (not just `done_when`) — both fields use
+    # the identical pattern in FENCE_RE, but prove it explicitly rather than assuming symmetry.
+    matches = list(voa.FENCE_RE.finditer(SAMPLE_DOC_WRAPPED_PROBE))
+    assert len(matches) == 1
+    assert matches[0].group("probe") == (
+        "first line of the probe description\n  second line, an indented continuation of the probe text"
+    )
+    assert matches[0].group("done_when") == "n>0"
+
+
+SAMPLE_DOC_DONEWHEN_TYPO_CROSSES_FENCE_BOUNDARY_WRAPPED_NEXT = """```verify
+id: ITEM-A
+type: bq
+probe: SELECT 1
+donewhen: rows > 0
+```
+
+Some prose.
+
+```verify
+id: ITEM-B
+type: sql
+probe: SELECT 2
+done_when: rows > 0
+  and this wrapped continuation line too
+```
+"""
+
+
+def test_fence_re_malformed_donewhen_typo_does_not_leak_into_wrapped_next_fence():
+    # THE FIX MUST NOT REGRESS FIX 1: variant of
+    # test_fence_re_malformed_donewhen_typo_does_not_leak_into_next_fence where the FOLLOWING
+    # well-formed fence has a WRAPPED done_when — the new interaction this change introduces. The
+    # malformed (typo'd `donewhen:`) fence must still match nothing at all (not leak into ITEM-B's
+    # fields), and ITEM-B's own wrapped done_when must still be captured whole, not truncated at its
+    # first line or corrupted by ITEM-A's leftover text.
+    matches = list(
+        voa.FENCE_RE.finditer(SAMPLE_DOC_DONEWHEN_TYPO_CROSSES_FENCE_BOUNDARY_WRAPPED_NEXT)
+    )
+    assert len(matches) == 1
+    assert matches[0].group("id") == "ITEM-B"
+    assert matches[0].group("type") == "sql"
+    assert matches[0].group("probe") == "SELECT 2"
+    assert matches[0].group("done_when") == "rows > 0\n  and this wrapped continuation line too"
+
+
+SAMPLE_DOC_UNINDENTED_CONTINUATION_NOT_ABSORBED = """```verify
+id: NI
+type: manual
+probe: SELECT 1
+done_when: first line
+not indented at all -- must NOT be treated as a continuation of done_when
+```
+"""
+
+
+def test_fence_re_unindented_continuation_is_not_absorbed():
+    # Proves the leading-indent requirement is load-bearing, not decorative: a continuation line back
+    # at column 0 must break the fence (match nothing) rather than being silently folded into
+    # done_when. If it WERE absorbed, the safety argument for why a malformed fence can no longer leak
+    # into a sibling ```verify block (which also sits at column 0) would not actually hold, since both
+    # are unindented lines the continuation group would then be willing to eat.
+    matches = list(voa.FENCE_RE.finditer(SAMPLE_DOC_UNINDENTED_CONTINUATION_NOT_ABSORBED))
+    assert matches == []
+
+
+def test_main_warning_mentions_indent_for_unindented_continuation_line(tmp_path, monkeypatch, capsys):
+    # The generic malformed-fence WARNING used to describe only field-order/naming problems (a
+    # case-typo'd field, trailing text on the id line, an extra field) and never mentioned line-
+    # wrapping — actively misleading for W/X's actual failure mode, a wrapped value whose continuation
+    # line lost its required leading indent. The message must now say so, so a future operator hitting
+    # this warning knows to check for exactly that.
+    doc = tmp_path / "OWNER_ACTIONS.md"
+    doc.write_text("## NI. thing\n\n" + SAMPLE_DOC_UNINDENTED_CONTINUATION_NOT_ABSORBED)
+    monkeypatch.setattr(voa, "OWNER_ACTIONS_PATH", str(doc))
+    rc = voa.main()
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "WARNING" in out
+    assert "leading space or tab" in out
+
+
+def test_main_tracks_wrapped_done_when_end_to_end(tmp_path, monkeypatch, capsys):
+    # main()-level companion: a wrapped done_when parses, anchors, and participates in the ordinary
+    # OPEN/PASS flow exactly like a single-line fence — this is what W/X being silently dropped from
+    # `verify_owner_actions summary:` actually looked like in practice, now fixed.
+    doc = tmp_path / "OWNER_ACTIONS.md"
+    doc.write_text(SAMPLE_DOC_WRAPPED_DONE_WHEN)
+    monkeypatch.setattr(voa, "OWNER_ACTIONS_PATH", str(doc))
+    monkeypatch.setitem(voa.PROBES, "W", lambda: (False, "still open"))
+    rc = voa.main()
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "OPEN] W: still open" in out
+
+
 def test_main_write_failure_is_fail_open_not_crash(tmp_path, monkeypatch, capsys):
     # A passing probe makes changed=True; if persisting the flip fails (read-only FS / disk full),
     # main() must fail-open — print a clear notice and exit 0, matching the read path and the module's

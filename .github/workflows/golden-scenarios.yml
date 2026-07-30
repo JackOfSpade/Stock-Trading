@@ -8,9 +8,10 @@ name: Golden Scenarios (prose regression)
 # <-> Strategy.md, etc.) — none of them evaluate what a routine would DECIDE when it reads the prose.
 # Since the 2026-07-10 Strategy Arsenal (SISA) autonomy conversion, a prose edit reaches live
 # decision-making behavior via auto-merge with zero behavioral test in between. This workflow adds one:
-# tests/golden_scenarios/scenarios.yaml pins decision scenarios (23 as of 2026-07-14) with an expected call (GO/NO-GO,
-# CONTINUE/TERMINATE, ACTIVATE/DO-NOT-ACTIVATE) and the runner (run_golden.py) diffs a live model's read
-# of CURRENT prose against those pins.
+# tests/golden_scenarios/scenarios.yaml pins decision scenarios (31 as of 2026-07-30 — see that file's own
+# header for the current count and per-category/per-governing-file breakdown) with an expected call
+# (GO/NO-GO, CONTINUE/TERMINATE, ACTIVATE/DO-NOT-ACTIVATE) and the runner (run_golden.py) diffs a live
+# model's read of CURRENT prose against those pins.
 #
 # PATH-GATED (only Strategy.md / Operating_Protocols.md / Claude_Task_Plan.md / the golden fixtures
 # themselves) — mirrors ci.yml's dbt-parity path gate: a prose-regression check is meaningless without a
@@ -49,6 +50,26 @@ name: Golden Scenarios (prose regression)
 #     `prose-regression` adjudication (closes it with a decision_log verdict) — see CLAUDE.md's "Known
 #     non-issues" for the full reconciliation. This workflow intentionally still has no BigQuery
 #     credentials; do not add any before re-reading that note.
+#
+#   COST-SCOPED 2026-07-30 (cost audit — this workflow measured ~2,251 billable CI min/month, the single
+#   largest line item in the repo's Actions bill: the push path filter below is FILE-level (any one of
+#   Strategy.md / Operating_Protocols.md / Claude_Task_Plan.md / tests/golden_scenarios/**), but the
+#   `prose-regression` job used to call --live with NO --scenario filter — i.e. it re-evaluated ALL 31
+#   scenarios' live model calls on every triggering push even when only ONE governing file actually
+#   changed. The `prose-regression` job now resolves the pushed diff's changed files (same
+#   scripts/resolve_diff_base.sh merge-base-fallback pattern ci.yml's dbt-parity/sql-validate path gates
+#   use — see that script's header for the zero-SHA-on-ref-creation trap it closes) and maps them to
+#   scenario ids via run_golden.py's scenarios_for_changed_files() (governing_files intersection), then
+#   passes only those ids as repeated --scenario args to --live. If that mapping selects ZERO scenarios,
+#   the live step is skipped outright (a ::notice:: explains why) — that skip is the entire saving, since
+#   the schema-validate job above is unaffected (still the always-on, un-scoped hard gate) and this only
+#   ever narrows/skips the ADVISORY live job. CONSERVATIVE BY DESIGN: scenarios_for_changed_files() itself
+#   fails OPEN to every scenario id (never a false-narrow subset) whenever it cannot cleanly resolve what
+#   changed OR when the change is to the golden harness's own files (scenarios.yaml / run_golden.py) —
+#   see that function's docstring. The job's overall run CONCLUSION is unaffected by any of this: a
+#   skipped/narrowed live step cannot itself fail (still continue-on-error, and skipping a step is not a
+#   step failure), so auto-merge-claude.yml's schema-validate secondary-gate check (below) still sees
+#   exactly the same conclusion it always did.
 
 on:
   push:
@@ -56,12 +77,28 @@ on:
       - 'Strategy.md'
       - 'Operating_Protocols.md'
       - 'Claude_Task_Plan.md'
+      # ADDED 2026-07-30 (correctness gap, found during the Actions cost audit — NOT a cost change; it
+      # slightly RAISES cost and is worth it): Experiment_Parameters.md governs 6 scenarios in
+      # tests/golden_scenarios/scenarios.yaml (all six KT-* kill-trigger cases). Because it was absent
+      # from these paths lists, an Experiment_Parameters.md-ONLY push triggered this workflow not at all
+      # — so neither the live prose-regression check NOR the always-on offline schema-validate HARD GATE
+      # ever ran for those 6 kill-trigger scenarios on such a change. Every other file a scenario can
+      # declare in governing_files was already listed; this was the one omission.
+      - 'Experiment_Parameters.md'
       - 'tests/golden_scenarios/**'
   pull_request:
     paths:
       - 'Strategy.md'
       - 'Operating_Protocols.md'
       - 'Claude_Task_Plan.md'
+      # ADDED 2026-07-30 (correctness gap, found during the Actions cost audit — NOT a cost change; it
+      # slightly RAISES cost and is worth it): Experiment_Parameters.md governs 6 scenarios in
+      # tests/golden_scenarios/scenarios.yaml (all six KT-* kill-trigger cases). Because it was absent
+      # from these paths lists, an Experiment_Parameters.md-ONLY push triggered this workflow not at all
+      # — so neither the live prose-regression check NOR the always-on offline schema-validate HARD GATE
+      # ever ran for those 6 kill-trigger scenarios on such a change. Every other file a scenario can
+      # declare in governing_files was already listed; this was the one omission.
+      - 'Experiment_Parameters.md'
       - 'tests/golden_scenarios/**'
   workflow_dispatch:
 
@@ -97,6 +134,8 @@ jobs:
     continue-on-error: true   # advisory; a decision flip must never block a merge — see header above
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # full history so the cost-scoping diff below (scope step) can resolve the pushed range
       - name: Check GEMINI_API_KEY is present (opt-in)
         id: guard
         env:
@@ -118,10 +157,64 @@ jobs:
       - name: Install deps
         if: steps.guard.outputs.skip == 'false'
         # The Gemini provider uses only the Python stdlib (urllib) — no LLM SDK to install, just the
-        # YAML parser (pinned via the shared ci.yml constraints file).
+        # YAML parser (pinned via the shared ci.yml constraints file). Also what the scope step below
+        # needs (run_golden.py --scenarios-for-changed also imports yaml).
         run: pip install --quiet -c requirements-ci.txt pyyaml
-      - name: Live decision diff vs. pinned expectations (advisory — never fails the build)
+      - name: Cost-scope --live to the scenarios governed by this push's changed files (2026-07-30)
+        id: scope
         if: steps.guard.outputs.skip == 'false'
         env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          REF_NAME: ${{ github.ref_name }}   # push event's short branch name (e.g. "main"); rev 2026-07-20b
+        run: |
+          # DIFF-BASE RESOLUTION reuses scripts/resolve_diff_base.sh — the same merge-base-fallback chain
+          # ci.yml's dbt-parity/sql-validate path gates use, closing the same github.event.before ==
+          # zero-SHA-on-ref-creation trap (see that script's header). FAIL OPEN when unresolvable: `files`
+          # stays empty, no --changed-file args are passed below, and
+          # scenarios_for_changed_files()/scenarios-for-changed treats "no changed files given" as "could
+          # not determine what changed" -> selects EVERY scenario id, never zero.
+          set -uo pipefail
+          # shellcheck source=../../scripts/resolve_diff_base.sh
+          source scripts/resolve_diff_base.sh
+          base="$(resolve_diff_base "$EVENT_NAME" "$PR_BASE" "$PUSH_BEFORE" "$HEAD_SHA" "$REF_NAME")"
+          files=()
+          if [ -n "$base" ]; then
+            mapfile -t files < <(git diff --name-only "$base" "$HEAD_SHA")
+          fi
+          changed_file_args=()
+          for f in "${files[@]}"; do
+            changed_file_args+=(--changed-file "$f")
+          done
+          mapfile -t scenario_ids < <(python tests/golden_scenarios/run_golden.py --scenarios-for-changed "${changed_file_args[@]}")
+          if [ "${#scenario_ids[@]}" -eq 0 ]; then
+            # The TRUE cost saving: the diff resolved cleanly (or intentionally saw zero changed files) AND
+            # none of it is governed by any scenario. This can only make the live step's job CONCLUSION
+            # "skipped", never "failure" — a skipped step cannot flip continue-on-error's success-despite-
+            # failure semantics, so auto-merge-claude.yml's schema-validate secondary-gate check (which
+            # reads this WORKFLOW RUN's overall conclusion, not this job's steps) is unaffected either way.
+            echo "::notice::golden-scenarios live run SKIPPED — cost-scoping diffed ${#files[@]} changed file(s) in this push and none is in any scenario's governing_files (tests/golden_scenarios/run_golden.py scenarios_for_changed_files()). The offline schema-validate hard gate above already ran regardless. If this looks wrong (e.g. you expected a scenario to re-run), check whether the diff base was resolvable — an unresolvable base fails OPEN to running every scenario, never to this skip; see scripts/resolve_diff_base.sh."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::golden-scenarios live run scoped to ${#scenario_ids[@]} scenario(s) from ${#files[@]} changed file(s): ${scenario_ids[*]}"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "scenario_ids<<GOLDEN_SCENARIO_IDS_EOF"
+              printf '%s\n' "${scenario_ids[@]}"
+              echo "GOLDEN_SCENARIO_IDS_EOF"
+            } >> "$GITHUB_OUTPUT"
+          fi
+      - name: Live decision diff vs. pinned expectations (advisory — never fails the build)
+        if: steps.guard.outputs.skip == 'false' && steps.scope.outputs.skip == 'false'
+        env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: python tests/golden_scenarios/run_golden.py --live
+          SCENARIO_IDS: ${{ steps.scope.outputs.scenario_ids }}
+        run: |
+          set -uo pipefail
+          scenario_args=()
+          while IFS= read -r sid; do
+            [ -n "$sid" ] && scenario_args+=(--scenario "$sid")
+          done <<< "$SCENARIO_IDS"
+          python tests/golden_scenarios/run_golden.py --live "${scenario_args[@]}"

@@ -23,6 +23,15 @@
 --     thesis-construction session from reading 3 salient wins as more informative than an 8-trade
 --     sample actually supports (the exact narrative/recency-overfit hazard AI_Trading_Foundation.md
 --     flags). Claude_Task_Plan.md's NEW ENTRY CANDIDATES step requires reasoning about all three.
+--
+-- SUPERSEDED LIVE by bigquery/118_decision_record_audit_followups.sql — current single source of
+-- truth for this object (bigquery/02_ai_layer.sql AND bigquery/116_decision_record_analyzability.sql
+-- are both intermediate, also-superseded definitions — do not stop at either): 116 added exclusion of
+-- rows whose decision_log.superseded_by is set, so a corrected entry cannot resurface as a precedent;
+-- 118 then moved that filter INSIDE the top_k=>30 candidate subquery, ahead of LIMIT 10, so the
+-- MANDATORY pre-GO/NO-GO evidence set still returns 10 live precedents instead of 10-minus-superseded.
+-- Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.find_precedents`(query_text STRING)
 AS (
   SELECT

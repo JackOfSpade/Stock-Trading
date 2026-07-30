@@ -259,3 +259,55 @@ jobs:
             echo "::error::ops.ci_findings resolved-row INSERT FAILED — the ci_findings bridge cannot auto-clear stale open findings (WIF is present; verify the gh-ci-runner@ dataEditor grant on ops.ci_findings). Failing the job so a dead bridge is visible, not swallowed."
             exit 1
           fi
+
+      # ---------------------------------------------------------------------------------------------
+      # PER-RUN LIVENESS MARKER (2026-07-30 — fixes alert a37e3185-d5d9-435c-b9d1-910a15ed419b,
+      # category ci_findings_bridge_stale, which was raised as a CONFIRMED FALSE POSITIVE).
+      #
+      # THE BUG THIS CLOSES. cadence_check's `ci_findings_bridge_stale` predicate is
+      # `MAX(finding_ts) WHERE workflow='live-sql-parity' < now - ~40h`, and it was the DECLARED single
+      # detector for "the live-sql-parity delivery bridge is dead". But every pre-existing write above
+      # is conditional on there being something to report: the drift-branch INSERTs need drift, and BOTH
+      # auto-resolve steps are `INSERT..SELECT FROM state.ci_findings_open`, which writes ZERO ROWS once
+      # nothing is open. So a perfectly healthy, drift-free system writes NOTHING for days, and the
+      # predicate reads that healthy silence as a dead bridge — the exact confusion the alert claims to
+      # resolve. VERIFIED live 2026-07-30: the last row was 2026-07-28 12:50 UTC (a drift-then-fix cycle),
+      # three subsequent runs (07-28 13:09, 07-28 14:01, 07-29 09:47) all completed `success` and wrote
+      # nothing, and ~40h later the alert duly fired. Worse, it has no health-based auto-resolve — only a
+      # time-only 7-day age-out that re-raises within the same cadence_check run while the condition
+      # holds — so on a permanently healthy system it is a self-sustaining permanent warning, i.e. exactly
+      # the kind of noise that trains an operator to ignore the channel.
+      #
+      # THE FIX. Write ONE unconditional row per run so MAX(finding_ts) tracks BRIDGE LIVENESS rather
+      # than DRIFT INCIDENCE. The predicate in bigquery/111 then needs NO change and finally means what
+      # it says: no row in 40h == the workflow genuinely has not delivered in 40h.
+      #
+      # WHY THIS SHAPE, and why it needs NO new IAM grant (the alternative considered and rejected was a
+      # beat into ops.heartbeat, which would have required a NEW owner-only table-scoped dataEditor grant
+      # for gh-ci-runner@ — it holds one on EXACTLY ops.ci_findings, OWNER_ACTIONS.md item G, 2026-07-17):
+      #   * status='resolved' + a RESERVED finding_key '__run_marker__' means this row can NEVER surface
+      #     as an open finding: state.ci_findings_open (bigquery/86) filters `rn = 1 AND status = 'open'`,
+      #     so D3's CI-FINDINGS ADJUDICATION and cadence_check's `ci_finding` alert are untouched.
+      #   * The reserved key is per-run-distinct in `detail` only, never in finding_key, so the
+      #     latest-wins dedup keeps exactly one live marker per workflow instead of unbounded keys.
+      #   * ops.ci_findings' own table description has always sanctioned this ("Clean runs write
+      #     unconditional resolved rows — harmless, the view takes the latest"); the implementation simply
+      #     was not unconditional. bigquery/119 records the reserved key on the table description.
+      # `if: always()` + skip=='false' so it beats on BOTH clean and drift runs — a drift run is still a
+      # LIVE bridge, and gating on result would reintroduce a conditional write.
+      # FAIL-LOUD, same rationale as the two INSERTs above: a marker that silently fails to write would
+      # recreate the very blind spot this step exists to remove.
+      # ---------------------------------------------------------------------------------------------
+      - name: Record bridge liveness marker (unconditional)
+        if: always() && steps.guard.outputs.skip == 'false'
+        run: |
+          set -uo pipefail
+          # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted BigQuery
+          # identifier and @p_* named parameters must stay literal, not shell-expanded.
+          if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false \
+            --parameter="p_detail:STRING:bridge alive; parity result=${{ steps.parity.outputs.result }}" \
+            --parameter="p_url:STRING:${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("live-sql-parity","__run_marker__","resolved",@p_detail,@p_url)'; then
+            echo "::error::ops.ci_findings liveness-marker INSERT FAILED — cadence_check's ci_findings_bridge_stale detector will read this bridge as DEAD (WIF is present; verify the gh-ci-runner@ dataEditor grant on ops.ci_findings). Failing the job so a dead bridge is visible, not swallowed."
+            exit 1
+          fi

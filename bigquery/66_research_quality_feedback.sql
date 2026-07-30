@@ -29,6 +29,10 @@
 -- raw counts, gated by `min_n_met`, never a computed rate a routine reads as a trigger.
 
 -- ===== analytics.thesis_outcome_summary — per-(strategy, sub_pattern) GO-thesis outcome tally =====
+-- SUPERSEDED LIVE by bigquery/116_decision_record_analyzability.sql — current single source of truth
+-- for this object: the exact-match `decision = 'GO'` filter silently excluded 'GO (add tranche)';
+-- now uses a GO-family test. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO
+-- NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.thesis_outcome_summary` AS
 SELECT
   strategy,

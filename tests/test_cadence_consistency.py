@@ -241,7 +241,19 @@ def test_check_depends_on_against_real_cadence_yaml_is_clean():
 #      main()'s actual fail path; only the pure generate_triggers_manifest() helper was tested) ----
 def _write_check_fixture(tmp_path):
     plan = tmp_path / "Claude_Task_Plan.md"
-    plan.write_text("## D1. Market Development Scan — deep research\nbody\n")
+    # Includes a minimal but valid ROUTINE INVENTORY table (check L) so the many callers below that
+    # exercise a DIFFERENT check via this shared fixture aren't incidentally tripped by check L's
+    # 2026-07-29 hard-error-on-missing-table change; tests that want to exercise check L itself either
+    # overwrite plan.write_text() with their own table (see the check-L section further down) or use
+    # _write_ar_att_fixture's dedicated fixture.
+    plan.write_text(
+        "## D1. Market Development Scan — deep research\nbody\n\n"
+        "# ROUTINE INVENTORY & BIGQUERY RESPONSIBILITIES\n\n"
+        "| ID | Routine | Cadence · Type | reads | writes | out |\n"
+        "|---|---|---|---|---|---|\n"
+        "| **D1** | Market Development Scan | Daily · research | r | w | Daily.md |\n"
+        "\n---\n"
+    )
     cadence = tmp_path / "cadence.yaml"
     cadence.write_text(
         "timezone: America/Denver\n"
@@ -280,9 +292,10 @@ def _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, cata
     monkeypatch.setattr(cc, "TRIGGERS_JSON", str(tmp_path / "absent_triggers.json"))
     monkeypatch.setattr(cc, "TRIGGER_IDS_JSON", str(tmp_path / "absent_trigger_ids.json"))
     monkeypatch.setattr(cc, "AUTO_MERGE_YML", str(tmp_path / "absent_auto_merge.yml"))
-    # checks J/K/L's dependent files are absent in this minimal fixture (same "skip silently"
-    # convention as PERIOD_WATCH_SQL above for check E/J) — the plan fixture also has no ROUTINE
-    # INVENTORY heading, so check L skips too (parse_inventory_table returns None).
+    # checks J/K's dependent files are absent in this minimal fixture (same "skip silently"
+    # convention as PERIOD_WATCH_SQL above for check E/J). Check L is NOT in this "skip silently"
+    # group -- since 2026-07-29 a missing/unparseable ROUTINE INVENTORY table is a hard error, so
+    # _write_check_fixture's plan carries a minimal-but-valid table by default instead.
     monkeypatch.setattr(cc, "CATCHUP_NOTIFY_SQL", str(tmp_path / "absent_31.sql"))
     monkeypatch.setattr(cc, "CATCHUP_AUTOFIRE_SQL", str(tmp_path / "absent_59.sql"))
 
@@ -658,6 +671,75 @@ def test_check_l_deleting_a_row_is_caught(tmp_path, monkeypatch, capsys):
     assert "D1: in ops/cadence.yaml but missing a row in Claude_Task_Plan.md's ROUTINE INVENTORY table" in out
 
 
+# ---- check L: main()'s handling of parse_inventory_table's None return -- 2026-07-29 replaced a
+#      defeatable "still mentions the loose INVENTORY_SENTINEL substring?" disambiguation (present but
+#      substring-gone => silently SKIPPED, reproducing the exact pre-fix bug for exactly the class of
+#      edit -- a heading rewording -- it was supposed to catch) with a single unconditional hard error.
+#      These four cover: reworded-but-substring-survives, reworded-so-substring-also-drops (the proven
+#      defeat), heading/table entirely absent, and the real repo (no false positive). ----
+def test_check_l_heading_reworded_substring_retained_is_a_hard_error(tmp_path, monkeypatch, capsys):
+    # Old heuristic: "ROUTINE INVENTORY" substring survives this rewording -> reported DISARMED (still
+    # a failure). New behavior: same hard error as every other None case, no DISARMED-specific wording.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    plan.write_text(
+        "## D1. Market Development Scan — deep research\nbody\n\n"
+        "# ROUTINE INVENTORY TABLE & BIGQUERY RESPONSIBILITIES\n\n"  # reworded; still contains the substring
+        "| ID | Routine | Cadence · Type | reads | writes | out |\n"
+        "|---|---|---|---|---|---|\n"
+        "| **D1** | Market Development Scan | Daily · research | r | w | Daily.md |\n"
+        "\n---\n"
+    )
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert "could not locate the exact heading" in out
+    assert cc.INVENTORY_HEADING in out
+    assert "reworded" in out and "deleted" in out
+
+
+def test_check_l_heading_reworded_substring_also_dropped_is_caught(tmp_path, monkeypatch, capsys):
+    # PROVEN DEFEAT of the old heuristic (2026-07-29): this rewording drops the "ROUTINE INVENTORY"
+    # substring too, so parse_inventory_table returned None and BOTH old branches missed it --
+    # main() exited 0 SILENTLY, reproducing the exact bug check L exists to catch. Must now be a hard
+    # failure like every other None case.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    plan.write_text(
+        "## D1. Market Development Scan — deep research\nbody\n\n"
+        "# ROUTINE ROSTER & BIGQUERY RESPONSIBILITIES\n\n"  # substring "ROUTINE INVENTORY" gone too
+        "| ID | Routine | Cadence · Type | reads | writes | out |\n"
+        "|---|---|---|---|---|---|\n"
+        "| **D1** | Market Development Scan | Daily · research | r | w | Daily.md |\n"
+        "\n---\n"
+    )
+    assert "ROUTINE INVENTORY" not in plan.read_text()  # confirm the old sentinel substring is truly gone
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert "could not locate the exact heading" in out
+    assert cc.INVENTORY_HEADING in out
+
+
+def test_check_l_heading_and_table_entirely_absent_is_caught(tmp_path, monkeypatch, capsys):
+    # The changed contract: a plan with NO ROUTINE INVENTORY section at all (formerly the "pre-feature
+    # checkout" silent-skip case) is now a hard failure too -- Claude_Task_Plan.md is not optional and
+    # the table is a mandatory section of it, so there is no legitimate skip case left.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    plan.write_text("## D1. Market Development Scan — deep research\nbody\n")  # no ROUTINE INVENTORY section
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert "could not locate the exact heading" in out
+    assert cc.INVENTORY_HEADING in out
+
+
+def test_check_l_against_real_repo_plan_has_no_false_positive():
+    # The real, unmodified Claude_Task_Plan.md must still parse cleanly under the new hard-error
+    # contract -- a regression here would fail check L (and thus CI) for every routine change.
+    rows = cc.parse_inventory_table(cc.PLAN)
+    assert rows is not None
+    assert len(rows) > 0
+
+
 # ---- scripts/gen_routine_lists.py: --write / --check round trip (ARCH-3 Item 30b) ----
 def _write_gen_fixture(tmp_path):
     plan = tmp_path / "plan.md"
@@ -833,8 +915,17 @@ def _guard_line(rid, with_noon=True, broken=False):
 def _plan_with_guards(d1=True, d2=True, d3=True, sl3=True, d1_broken=False):
     # Keeps the D1 heading (check C) and adds the SAME-DAY sentinel + one guard query per
     # EVENING_DAILY_GUARD_IDS routine. D2/D3/SL3 appear only in guard-query BODY text, never as `## `
-    # headings, so they create no phantom routines.
+    # headings, so they create no phantom routines. Also carries a minimal valid ROUTINE INVENTORY
+    # table for D1 (check L) since these tests wholesale-replace _write_check_fixture's plan text via
+    # plan.write_text() -- without it, check L's 2026-07-29 hard-error-on-missing-table would fail
+    # every test built from this helper, including the happy-path one, for a reason unrelated to what
+    # check M is testing here.
     return ("## D1. Market Development Scan — deep research\nbody\n\n"
+            "# ROUTINE INVENTORY & BIGQUERY RESPONSIBILITIES\n\n"
+            "| ID | Routine | Cadence · Type | reads | writes | out |\n"
+            "|---|---|---|---|---|---|\n"
+            "| **D1** | Market Development Scan | Daily · research | r | w | Daily.md |\n"
+            "\n---\n\n"
             "Shared Observability guard SAME-DAY DOUBLE-RUN GUARD (CYCLE-AWARE VARIANT):\n"
             + _guard_line("D1", with_noon=d1, broken=d1_broken)
             + _guard_line("D2", with_noon=d2)

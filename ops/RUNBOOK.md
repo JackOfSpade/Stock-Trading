@@ -1102,24 +1102,28 @@ via the MCP — the `CREATE OR REPLACE TABLE … AS SELECT FROM ML.GENERATE_EMBE
 `analytics.decision_embeddings` atomically (Vertex-billed, ~pennies at ~250 rows; `state.embedding_health`
 should stay `is_healthy=TRUE` after). Until re-run, retrieval keeps using the 6,000-char vectors.
 
-**Known residual + the real fix (CHUNKING).** Bodies up to ~74k chars exist, so content past the model's
-token cap is still not embedded — a modest recall gap on long theses (the lead carries the decision +
-reasoning, so single-vector retrieval is usually sufficient, which is why this is staged, not urgent).
-Full coverage needs **one embedding row per `(entry_id, chunk_index)`**:
-- `analytics.decision_embeddings` gains `chunk_index`; split `body_md` into ~6k-char chunks (title on
+**Known residual as of 2026-06-22 — RESOLVED 2026-07-03 (CHUNKING built).** At the time this note was
+written, bodies up to ~74k chars existed while content past the embedding model's token cap went
+unembedded — a modest recall gap on long theses (the lead carries the decision + reasoning, so
+single-vector retrieval was usually sufficient, which is why it was staged, not urgent, at the time).
+The full-coverage fix described below — **one embedding row per `(entry_id, chunk_index)`** — was
+built the same section originally sketched it:
+- `analytics.decision_embeddings` gained `chunk_index`; `body_md` is split into ~6k-char chunks (title on
   chunk 0); `ops.sp_embed_pending` keys its MERGE on `(entry_id, chunk_index)`.
 - `find_precedents` runs `VECTOR_SEARCH(top_k => 30)` then `QUALIFY ROW_NUMBER() OVER (PARTITION BY
   entry_id ORDER BY distance)=1` and `LIMIT 10` — best chunk per entry, still 10 distinct precedents.
-- `state.embedding_health` changes its invariant from "exactly one embedding per entry" to "every entry
-  has ≥1 ok chunk AND zero errored chunks" (drop the `dup_rows = COUNT − COUNT(DISTINCT entry_id)` check —
-  multiple chunks per entry become expected; replace with a per-`(entry_id,chunk_index)` uniqueness check).
-  Keep it fail-loud (COALESCE→unhealthy) since `all_green` depends on it.
-This reshapes a live table + the dead-man's-switch input + retrieval, so it is a **deliberate, separately-
-applied + validated change** (re-embed into a scratch table, diff `find_precedents` top-k vs current, then
-cut over). The optional move to **`gemini-embedding-001`** (higher retrieval quality; 3072-dim default,
-or set `output_dimensionality`) rides the same re-embed — change the `ENDPOINT` on `ops.text_embed` and
-re-run `02` (query + doc embeddings both switch, so the space stays consistent). Validate before relying
-on it for live precedent.
+- `state.embedding_health`'s invariant changed from "exactly one embedding per entry" to "every entry
+  has ≥1 ok chunk AND zero errored chunks" (the `dup_rows` check now keys on
+  `(entry_id, chunk_index)` uniqueness instead of one-row-per-entry). Stays fail-loud
+  (COALESCE→unhealthy) since `all_green` depends on it.
+`bigquery/02_ai_layer.sql` carries the build: applied + validated 2026-07-03 at 825/825 chunk rows,
+0 failures, every entry with a `chunk_index=0` row. Live state re-verified 2026-07-30: **1,054 chunk
+rows over 496 `decision_log` rows**, `state.embedding_health` reports `is_healthy=TRUE` with 0 error /
+0 missing / 0 dup rows. Nothing remains pending here. The optional move to **`gemini-embedding-001`**
+(higher retrieval quality; 3072-dim default, or set `output_dimensionality`) would ride a future
+re-embed — change the `ENDPOINT` on `ops.text_embed` and re-run `02` (query + doc embeddings both
+switch, so the space stays consistent) — but is a separate, not-yet-scheduled enhancement, not a gap
+in current coverage.
 
 ## 24. Cadence single-source — `monitor_class` + the CI consistency gate *(maintainability)*
 **Done 2026-06-22.** "What runs when" was hand-kept in THREE places with no automated guard —

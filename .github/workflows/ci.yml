@@ -9,16 +9,29 @@ name: CI
 # NOTE on merge-gating: auto-merge-claude.yml merges ANY branch -> main via a
 # direct bot push (not a PR). It now triggers on this workflow's completion
 # (workflow_run) and merges a branch ONLY if the CI run for that branch's exact
-# tip commit concluded "success" — so a red build blocks the merge. The lint job
-# below is continue-on-error (advisory), so it never affects that gate.
+# tip commit concluded "success" — so a red build blocks the merge. The two ruff
+# steps inside the `checks` job below are step-level continue-on-error (advisory),
+# so they never affect that gate.
 #
 # `push:` has no `branches:` filter (was `['claude/**', main]`) — CI must run on
 # every branch, not just claude/*, or the auto-merge CI-gate lookup finds no run
 # for a non-claude branch's SHA and fails closed forever (skips it every drain).
 
+# `pull_request:` REMOVED (2026-07-30 cost audit — verified before removing, not just asserted):
+#   - 21 of a 27-run pull_request-triggered sample landed on a SHA that ALSO had a push-triggered run —
+#     pure duplicate work, both running every job to the same conclusion. The other 6 were early-history
+#     only (2026-07-07/08), none since.
+#   - auto-merge-claude.yml's CI gate reads the MOST RECENT run's conclusion for a SHA regardless of
+#     triggering event, so a push-triggered run alone already satisfies it.
+#   - `gh api repos/:owner/:repo/branches/main/protection` returns HTTP 403 (no GitHub Pro / branch
+#     protection on this repo) — auto-merge-claude.yml's own gate script is the ONLY merge gate; nothing
+#     else consumes a pull_request-triggered run's status or check-run.
+#   - `gh pr list --state all` shows every PR MERGED — consistent with the bot drain, not a human
+#     clicking "Merge" off a PR's own Checks tab.
+# ACCEPTED CONSEQUENCE: a PR's own "Checks" tab shows no ci.yml run of its own (it only ever duplicated
+# the branch's push run); the branch's push-triggered run remains the real gate auto-merge reads.
 on:
   push:
-  pull_request:
   workflow_dispatch:
 
 # Cancel redundant in-flight runs on the same branch when a newer push arrives.
@@ -32,9 +45,21 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: options-math tests
+  checks:
+    name: tests + dbt parse + shell-lint + ruff (consolidated 2026-07-30)
     runs-on: ubuntu-latest
+    # CONSOLIDATED (2026-07-30 GitHub Actions cost audit): these four non-credentialed jobs (formerly
+    # separate `test`, `lint`, `shell-lint`, `dbt` jobs) measured ~105-136s of combined ACTUAL runtime
+    # but billed 4-5 rounded minutes/run under GitHub's ceil(seconds/60)-per-JOB billing — each job pays
+    # its own rounding overhead separately. Folded into one job — summed then rounded ONCE — for a
+    # measured ~1.913 min/run saving (~687 min/month at ~13.1 runs/day). `dbt-parity` and `sql-validate`
+    # below are UNTOUCHED by this change: they are credentialed (WIF) and gate-critical, out of scope.
+    #
+    # BLOCKING STATUS IS UNCHANGED PER STEP (only the container changed): every step below blocks the
+    # run exactly as it did in its old standalone job, EXCEPT the two `ruff` steps at the end (formerly
+    # the whole `lint` job, which was job-level `continue-on-error: true`) — those stay advisory via
+    # their own step-level `continue-on-error: true` below, so folding an advisory check into an
+    # otherwise-blocking job does not newly block landings on a lint nit.
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -42,10 +67,12 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
           cache-dependency-path: requirements-ci.txt
-      - name: Install test deps (pinned via constraints — RUNBOOK §25 C3)
+      - name: Install test + dbt deps (pinned via constraints — RUNBOOK §25 C3)
         # pyyaml up front so the new parser tests can import check_cadence_consistency (which imports yaml)
-        # during pytest, not only in the later cadence step.
-        run: pip install --quiet -c requirements-ci.txt pytest pyyaml
+        # during pytest, not only in the later cadence step. dbt-core/dbt-bigquery unioned in here too —
+        # this one install now covers both the former `test` job's deps AND the former `dbt` job's deps
+        # (the former `dbt` job's own separate install step is gone; nothing else needs it re-installed).
+        run: pip install --quiet -c requirements-ci.txt pytest pyyaml dbt-core dbt-bigquery
       - name: Module self-test (asserts, no deps)
         run: python c_options_math.py
       - name: pytest regression suite (options-math + drift-defense parsers — RUNBOOK §25 C2)
@@ -101,42 +128,23 @@ jobs:
         # either operator-facing email's pure logic passed every other CI gate silently.
         run: node ops/weekly_report/test_pure_helpers.js
 
-  lint:
-    name: ruff (informational)
-    runs-on: ubuntu-latest
-    continue-on-error: true   # advisory; never blocks
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-          cache-dependency-path: requirements-ci.txt
-      - run: pip install --quiet -c requirements-ci.txt ruff
-      - run: ruff check c_options_math.py strategy_math/ tests/ scripts/ ops/ || true
-
-  shell-lint:
-    name: actionlint + shellcheck (2026-06-28 #8)
-    runs-on: ubuntu-latest
-    # The most CONSEQUENTIAL automation in the repo is the embedded bash that decides whether routine git
-    # output reaches main (auto-merge-claude.yml) and whether a strand is detected (stranded-branch-check.yml)
-    # — yet only the lower-stakes Python parsers had purpose-built tests. actionlint statically checks every
-    # workflow (and runs shellcheck on each `run:` block); shellcheck covers every standalone .sh script
-    # under scripts/, tests/, .claude/, and infra/terraform/ (globs — new scripts dropped into any of those
-    # four directories are covered automatically, no list to maintain here). A subtle edit to the
-    # branch-selection filter, the merge-base ancestry re-check, or the fail-closed default would
-    # otherwise regress with no CI signal.
-    #
-    # BLOCKING GATE (promoted 2026-06-29 after a confirmed clean run on the runner — CI #102, all steps
-    # green). NOT continue-on-error: a failure now fails the CI run and blocks auto-merge, the hard gate the
-    # recommendation intended. Two stability guards so a *blocking* linter can't be wedged by tool drift:
-    #   - actionlint is PINNED (script + binary at v1.7.12) — a future release adding a new check cannot
-    #     suddenly red-light merges; bump the pin deliberately.
-    #   - shellcheck (the runner's version, unpinned) is floored at `-S warning`, so only warnings/errors
-    #     block; the scripts pass clean today, this just stops a future shellcheck release's new *style/info*
-    #     nit from wedging the gate.
-    steps:
-      - uses: actions/checkout@v7
+      # The most CONSEQUENTIAL automation in the repo is the embedded bash that decides whether routine git
+      # output reaches main (auto-merge-claude.yml) and whether a strand is detected (stranded-branch-check.yml)
+      # — yet only the lower-stakes Python parsers had purpose-built tests. actionlint statically checks every
+      # workflow (and runs shellcheck on each `run:` block); shellcheck covers every standalone .sh script
+      # under scripts/, tests/, .claude/, and infra/terraform/ (globs — new scripts dropped into any of those
+      # four directories are covered automatically, no list to maintain here). A subtle edit to the
+      # branch-selection filter, the merge-base ancestry re-check, or the fail-closed default would
+      # otherwise regress with no CI signal.
+      #
+      # BLOCKING GATE (promoted 2026-06-29 after a confirmed clean run on the runner — CI #102, all steps
+      # green). NOT continue-on-error: a failure now fails the CI run and blocks auto-merge, the hard gate the
+      # recommendation intended. Two stability guards so a *blocking* linter can't be wedged by tool drift:
+      #   - actionlint is PINNED (script + binary at v1.7.12) — a future release adding a new check cannot
+      #     suddenly red-light merges; bump the pin deliberately.
+      #   - shellcheck (the runner's version, unpinned) is floored at `-S warning`, so only warnings/errors
+      #     block; the scripts pass clean today, this just stops a future shellcheck release's new *style/info*
+      #     nit from wedging the gate.
       - name: Cache actionlint binary (pinned v1.7.12)
         id: cache-actionlint
         uses: actions/cache@v6
@@ -193,21 +201,10 @@ jobs:
           fi
           echo "OK: workflow_run trigger names match ci.yml + golden-scenarios.yml name: fields."
 
-  dbt:
-    name: dbt parse (offline model + test validation)
-    runs-on: ubuntu-latest
-    # Validates the dbt/ modeling layer's structure + that every ref()/source() and test resolves,
-    # WITHOUT a warehouse (parse does not connect). The full `dbt build` against BigQuery is gated on
-    # WIF creds — see ops/RUNBOOK.md §14. Always runs; offline; no secrets needed.
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-          cache-dependency-path: requirements-ci.txt
-      - name: Install dbt (pinned via constraints — RUNBOOK §25 C3)
-        run: pip install --quiet -c requirements-ci.txt dbt-core dbt-bigquery pyyaml
+      # Validates the dbt/ modeling layer's structure + that every ref()/source() and test resolves,
+      # WITHOUT a warehouse (parse does not connect). The full `dbt build` against BigQuery is gated on
+      # WIF creds — see ops/RUNBOOK.md §14. Always runs; offline; no secrets needed. (dbt-core/dbt-bigquery
+      # are already installed by the union install step above — no separate install here anymore.)
       - name: Write a CI profile (no creds — parse does not connect)
         # dbt/profiles.ci.yml is the single checked-in source for this profile (2026-07-04 code-quality
         # audit — this job and dbt-parity's equivalent step previously each wrote the same content via
@@ -226,6 +223,19 @@ jobs:
         # itself (not just row-level logic) is visible. No baseline/allowlist yet, so it prints the
         # full known backlog every run — advisory (|| true), does not block CI/auto-merge.
         run: python scripts/check_dbt_view_coverage.py || true
+      - name: Install ruff (advisory — informational lint, never blocks; RUNBOOK §25 C3)
+        # continue-on-error: true added as belt-and-braces (2026-07-30 cost consolidation): this step used
+        # to live in its own job-level `continue-on-error: true` JOB (`lint`), so nothing it did could ever
+        # fail the CI run. Now that it is a step inside the otherwise-BLOCKING consolidated job, a
+        # transient `pip install` failure here (network blip, package-index hiccup) would, without this,
+        # newly fail the whole run and block auto-merge on something that used to be purely advisory.
+        continue-on-error: true
+        run: pip install --quiet -c requirements-ci.txt ruff
+      - name: ruff check (informational)
+        # Same belt-and-braces reasoning as the install step above, PLUS the pre-existing `|| true` on the
+        # ruff invocation itself — two independent reasons this step can never fail the job.
+        continue-on-error: true
+        run: ruff check c_options_math.py strategy_math/ tests/ scripts/ ops/ || true
 
   dbt-parity:
     name: dbt↔live row-level parity (keyless WIF)

@@ -5,10 +5,11 @@ WHY THIS EXISTS. This system's real source code is prose (Strategy.md, Operating
 Claude_Task_Plan.md routine bodies) read fresh by an LLM every routine run. Every existing CI check
 (scripts/check_cadence_consistency.py, check_roster_consistency.py, check_autonomy_consistency.py,
 split_strategy.py --check) is a STRUCTURAL fact scraper — none of them evaluate what a routine would
-DECIDE when it reads the prose. tests/golden_scenarios/scenarios.yaml pins 20 concrete decision
-scenarios (regime-router edge cases, kill-trigger/gate mechanics, Strategy B entry criteria) with an
-expected GO/NO-GO | CONTINUE/TERMINATE | ACTIVATE/DO-NOT-ACTIVATE call and the specific rule that
-produces it. This script is the runner.
+DECIDE when it reads the prose. tests/golden_scenarios/scenarios.yaml pins 31 concrete decision
+scenarios (regime-router edge cases, kill-trigger/gate mechanics, per-strategy entry criteria, the AI
+Park Allocator's daily call, the AI Research-Significance Screen) with an expected GO/NO-GO |
+CONTINUE/TERMINATE | ACTIVATE/DO-NOT-ACTIVATE call and the specific rule that produces it. This script
+is the runner.
 
 TWO MODES, matching the two-job split in .github/workflows/golden-scenarios.yml:
 
@@ -42,6 +43,14 @@ TWO MODES, matching the two-job split in .github/workflows/golden-scenarios.yml:
 Usage:
   python tests/golden_scenarios/run_golden.py --offline
   python tests/golden_scenarios/run_golden.py --live [--scenario ID ...]   # needs GEMINI_API_KEY
+  python tests/golden_scenarios/run_golden.py --scenarios-for-changed [--changed-file PATH ...]
+      Utility mode (no network): prints, one per line, the ids of scenarios whose governing_files
+      intersect the given --changed-file path(s), then exits — no offline/live run. Used by
+      golden-scenarios.yml's `prose-regression` job (2026-07-30 cost-scoping) to compute the
+      --scenario filter for --live from the push's changed files, so a push only re-evaluates the
+      scenarios actually governed by what changed instead of all of them on every push. See
+      scenarios_for_changed_files() for the fail-open rules (no --changed-file at all, or a change
+      under tests/golden_scenarios/ itself, both select EVERY scenario id).
 """
 import argparse
 import os
@@ -181,6 +190,57 @@ def load_scenarios(path=SCENARIOS_PATH):
     if not isinstance(scenarios, list) or not scenarios:
         raise ValueError("scenarios.yaml 'scenarios' must be a non-empty list")
     return scenarios
+
+
+# Directory prefix identifying the golden-scenario harness's OWN files (scenarios.yaml, this runner,
+# any future fixture placed alongside them). golden-scenarios.yml's push path filter triggers on this
+# whole directory (tests/golden_scenarios/**) alongside the prose files it gates on — but unlike a prose
+# file, a change HERE is never something a scenario's `governing_files` list points at (a scenario
+# pointing at the fixture file that *defines* it would be self-referential and meaningless), so
+# scenarios_for_changed_files()'s plain governing_files intersection is structurally blind to it. See
+# that function's docstring for why this must fail OPEN (select every scenario), not silently select
+# none, when a change lands here.
+HARNESS_SELF_PREFIX = "tests/golden_scenarios/"
+
+
+def scenarios_for_changed_files(scenarios, changed_files):
+    """Map `changed_files` (an iterable of repo-relative paths, e.g. from `git diff --name-only`) to the
+    sorted list of ids of scenarios whose `governing_files` intersect them. This is the selection
+    function behind golden-scenarios.yml's live-run cost-scoping (2026-07-30): the workflow's push path
+    filter is directory/file-level (Strategy.md, Operating_Protocols.md, Claude_Task_Plan.md,
+    tests/golden_scenarios/**), so every triggering push used to re-evaluate ALL scenarios via --live
+    regardless of which ONE governing file actually changed — this narrows that to just the scenarios
+    that file governs.
+
+    FAIL-OPEN — returns every scenario id (never a false narrow subset) in two situations:
+      * `changed_files` is falsy (None or an empty list/iterable) — the caller could not determine, or
+        did not attempt to determine, what changed (e.g. a shallow clone, a zero-SHA push-before on ref
+        creation, a force-push, or a first push to a new branch — see scripts/resolve_diff_base.sh). This
+        matches every other path-gated check in this repo (dbt-parity, sql-validate): "can't scope it" ->
+        run the full (expensive) check, never a false skip.
+      * ANY changed file lives under HARNESS_SELF_PREFIX — see that constant's docstring. A change to
+        scenarios.yaml's own pinned expectations, or to this runner's grading logic, can affect any/every
+        scenario and is not visible to the governing_files intersection by construction, so it must not
+        be treated as "matches nothing."
+
+    Otherwise, returns only the ids of scenarios whose governing_files intersect changed_files — which is
+    legitimately an EMPTY list when none of the changed files are governed by any scenario. That empty
+    result is the entire cost saving: the caller skips the live (billed) run altogether in that case.
+
+    Pure and side-effect-free (no network, no file I/O beyond what `scenarios` already embeds) so it is
+    plain-unit-testable without a real git repo or a live model."""
+    if not changed_files:
+        return sorted(sc.get("id") for sc in scenarios if isinstance(sc, dict) and sc.get("id"))
+    changed = set(changed_files)
+    if any(isinstance(f, str) and f.startswith(HARNESS_SELF_PREFIX) for f in changed):
+        return sorted(sc.get("id") for sc in scenarios if isinstance(sc, dict) and sc.get("id"))
+    ids = {
+        sc.get("id")
+        for sc in scenarios
+        if isinstance(sc, dict) and sc.get("id")
+        and changed.intersection(sc.get("governing_files") or [])
+    }
+    return sorted(ids)
 
 
 def validate_offline(scenarios):
@@ -546,8 +606,13 @@ def main():
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--offline", action="store_true", help="offline schema validation only (no network); default")
     mode.add_argument("--live", action="store_true", help="call the live Gemini ladder and diff decisions (network; advisory)")
+    mode.add_argument("--scenarios-for-changed", action="store_true", dest="scenarios_for_changed",
+                       help="print (one id per line) the scenarios governed by --changed-file path(s), then exit "
+                            "(no network, no offline/live run; utility mode for CI cost-scoping)")
     parser.add_argument("--scenario", action="append", dest="scenario_ids", default=None,
                          help="restrict --live to this scenario id (repeatable)")
+    parser.add_argument("--changed-file", action="append", dest="changed_files", default=None,
+                         help="repo-relative changed file path (repeatable); only used with --scenarios-for-changed")
     args = parser.parse_args()
 
     try:
@@ -555,6 +620,15 @@ def main():
     except (OSError, ValueError, yaml.YAMLError) as exc:
         print(f"FATAL: could not load {SCENARIOS_PATH}: {exc}", file=sys.stderr)
         return 1
+
+    if args.scenarios_for_changed:
+        # Pure utility mode: no offline schema gate, no network. Callers that need a validated
+        # scenarios.yaml before trusting this output already get that for free — golden-scenarios.yml's
+        # `prose-regression` job only runs `needs: schema-validate`, so by the time this mode is invoked
+        # there, the offline hard gate already passed for this SHA.
+        for sid in scenarios_for_changed_files(scenarios, args.changed_files):
+            print(sid)
+        return 0
 
     # The offline schema gate ALWAYS runs first, in both modes — a broken fixture file must never be
     # masked by a live run that happens to still produce plausible-looking output.

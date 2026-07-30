@@ -19,6 +19,11 @@
 --     'SP6', NULL, 'Strategy B — CEG …', '<full body_md markdown>',
 --     '{"convergence_target": 300}', ['decision:2026-06-01-CEG'], ['strategyB','no-go'],
 --     NULL, 'D2 2026-06-07');
+--
+-- SUPERSEDED LIVE by bigquery/116_decision_record_analyzability.sql — current single source of truth
+-- for this object: adds a non-mutating, non-blocking conviction_pct scale guard (seven historical
+-- rows stored a 0-1 fraction where the column means 0-100 percent). Kept here, unmodified, for
+-- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_log_decision`(
   in_entry_date DATE, in_entry_type STRING, in_strategy STRING, in_ticker STRING,
   in_decision STRING, in_conviction STRING, in_conviction_pct NUMERIC,

@@ -409,8 +409,10 @@ def test_extract_body_table_function_genuine_wrapper_around_union_stays_correct(
 
 # ---- bq(): thin delegation to lib/bq_json.run_bq_query -- the shared subprocess-invoke/JSON-parse/
 # returncode/timeout contract is proven ONCE on run_bq_query itself (tests/test_bq_json.py); this
-# just pins that THIS caller forwards sql/project with no extra fixed args (plain delegation, unlike
-# roster/dbt_parity/alert_relay's max_rows=N) (C3 dedup, 2026-07-20 audit).
+# just pins that THIS caller forwards sql/project with no extra fixed args when max_rows is omitted
+# (plain delegation, unlike roster/dbt_parity/alert_relay's max_rows=N) (C3 dedup, 2026-07-20 audit).
+# max_rows became an optional passthrough (2026-07-30 batching fix, see BATCH_MAX_ROWS) -- the
+# second test below pins that half.
 def test_bq_delegates_to_run_bq_query_with_no_extra_fixed_args(monkeypatch):
     captured = {}
 
@@ -422,54 +424,226 @@ def test_bq_delegates_to_run_bq_query_with_no_extra_fixed_args(monkeypatch):
     assert captured == {"sql": "SELECT 1", "project": "proj"}
 
 
-# ---- live_definition(): per-object-type query shape + key extraction ------------------------------
-def test_live_definition_view_reads_views_and_returns_view_definition(monkeypatch):
-    seen = {}
+def test_bq_forwards_max_rows_only_when_explicitly_given(monkeypatch):
+    captured = {}
 
-    def fake_bq(sql, project):
-        seen["sql"], seen["project"] = sql, project
-        return [{"view_definition": "SELECT 1 AS x"}]
+    def fake_run_bq_query(sql, project, max_rows=None):
+        captured["max_rows"] = max_rows
+        return []
+    monkeypatch.setattr(clsp, "run_bq_query", fake_run_bq_query)
+    clsp.bq("SELECT 1", "proj", max_rows=5000)
+    assert captured["max_rows"] == 5000
+
+
+# ---- batched live lookups (2026-07-30 perf fix): fetch_live_definitions() / resolve_live_
+# definition() replaced the old one-`bq query`-per-OBJECT live_definition() (199 sequential
+# round-trips against the real repo, ~10 billable CI min/day) with ~5 batched INFORMATION_SCHEMA
+# queries total. These tests cover: the batch-result parser (given a synthetic INFORMATION_SCHEMA
+# result set, produces the right per-object definitions), that every object KIND is routed to the
+# right INFORMATION_SCHEMA source, and — the load-bearing safety property — that a batch-query
+# FAILURE marks every object in that dataset SKIPPED, never MISSING. -------------------------------
+
+def test_parse_views_batch_maps_table_name_to_definition():
+    rows = [
+        {"table_name": "foo", "view_definition": "SELECT 1 AS x"},
+        {"table_name": "bar", "view_definition": "SELECT 2 AS y"},
+    ]
+    assert clsp.parse_views_batch(rows) == {
+        "foo": "SELECT 1 AS x",
+        "bar": "SELECT 2 AS y",
+    }
+
+
+def test_parse_views_batch_empty_result_is_empty_dict():
+    assert clsp.parse_views_batch([]) == {}
+
+
+def test_parse_routines_batch_keys_by_name_and_type():
+    # Keyed by (name, type), not name alone -- so a same-named PROCEDURE and TABLE FUNCTION in the
+    # same dataset (not observed in this repo today, but the old per-object query's own
+    # `routine_type = '<type>'` filter guarded against it) can never shadow each other.
+    rows = [
+        {"routine_name": "sp_foo", "routine_type": "PROCEDURE", "routine_definition": "BEGIN SELECT 1; END"},
+        {"routine_name": "fn_x", "routine_type": "TABLE FUNCTION", "routine_definition": "SELECT 1"},
+    ]
+    assert clsp.parse_routines_batch(rows) == {
+        ("sp_foo", "PROCEDURE"): "BEGIN SELECT 1; END",
+        ("fn_x", "TABLE FUNCTION"): "SELECT 1",
+    }
+
+
+def test_fetch_live_definitions_routes_view_kind_to_information_schema_views(monkeypatch):
+    seen = []
+
+    def fake_bq(sql, project, max_rows=None):
+        seen.append((sql, project, max_rows))
+        return [{"table_name": "foo", "view_definition": "SELECT 1 AS x"}]
     monkeypatch.setattr(clsp, "bq", fake_bq)
-    assert clsp.live_definition("proj", "state", "foo", "VIEW") == "SELECT 1 AS x"
-    assert "INFORMATION_SCHEMA.VIEWS" in seen["sql"] and "table_name = 'foo'" in seen["sql"]
-    assert seen["project"] == "proj"
+    final = {("state", "foo"): ("VIEW", "proj", "01.sql", "SELECT 1 AS x")}
+    views, routines = clsp.fetch_live_definitions("proj", final)
+    assert len(seen) == 1
+    sql, project, max_rows = seen[0]
+    assert "INFORMATION_SCHEMA.VIEWS" in sql and "state" in sql
+    assert project == "proj"
+    assert views == {"state": {"foo": "SELECT 1 AS x"}}
+    assert routines == {}
+    # REGRESSION (2026-07-30, found by this fix's own live equivalence proof): `bq query` caps
+    # results at 100 rows by default, and the real repo's `state` dataset alone has 111 views — an
+    # unbounded batched query silently truncated and reported 11 real objects as false MISSING. The
+    # batched query must always request enough rows to cover a full dataset.
+    assert max_rows == clsp.BATCH_MAX_ROWS
+    assert max_rows is not None and max_rows > 200  # generous margin above any real dataset today
 
 
-def test_live_definition_procedure_reads_routines_with_type_filter(monkeypatch):
-    def fake_bq(sql, project):
-        assert "INFORMATION_SCHEMA.ROUTINES" in sql and "routine_type = 'PROCEDURE'" in sql
-        return [{"routine_definition": "BEGIN SELECT 1; END"}]
+def test_fetch_live_definitions_routes_procedure_and_table_function_to_information_schema_routines(monkeypatch):
+    seen = []
+
+    def fake_bq(sql, project, max_rows=None):
+        seen.append(sql)
+        return [
+            {"routine_name": "sp_foo", "routine_type": "PROCEDURE", "routine_definition": "BEGIN SELECT 1; END"},
+            {"routine_name": "fn_x", "routine_type": "TABLE FUNCTION", "routine_definition": "SELECT 1"},
+        ]
     monkeypatch.setattr(clsp, "bq", fake_bq)
-    assert clsp.live_definition("proj", "ops", "sp_foo", "PROCEDURE") == "BEGIN SELECT 1; END"
+    final = {
+        ("ops", "sp_foo"): ("PROCEDURE", "proj", "01.sql", "BEGIN SELECT 1; END"),
+        ("ops", "fn_x"): ("TABLE FUNCTION", "proj", "01.sql", "SELECT 1"),
+    }
+    views, routines = clsp.fetch_live_definitions("proj", final)
+    # ONE query covers BOTH kinds for the dataset (WHERE routine_type IN (...)), not one per kind.
+    assert len(seen) == 1
+    assert "INFORMATION_SCHEMA.ROUTINES" in seen[0]
+    assert "routine_type IN ('PROCEDURE', 'TABLE FUNCTION')" in seen[0]
+    assert views == {}
+    assert routines == {"ops": {
+        ("sp_foo", "PROCEDURE"): "BEGIN SELECT 1; END",
+        ("fn_x", "TABLE FUNCTION"): "SELECT 1",
+    }}
 
 
-def test_live_definition_table_function_reads_routines_with_type_filter(monkeypatch):
-    def fake_bq(sql, project):
-        assert "INFORMATION_SCHEMA.ROUTINES" in sql and "routine_type = 'TABLE FUNCTION'" in sql
-        return [{"routine_definition": "SELECT 1"}]
+def test_fetch_live_definitions_issues_one_query_per_dataset_not_per_object(monkeypatch):
+    # The N+1 fix itself: 4 objects across 2 datasets, all VIEWs, must be exactly 2 queries.
+    calls = []
+
+    def fake_bq(sql, project, max_rows=None):
+        calls.append(sql)
+        return []
     monkeypatch.setattr(clsp, "bq", fake_bq)
-    assert clsp.live_definition("proj", "analytics", "fn_x", "TABLE FUNCTION") == "SELECT 1"
+    final = {
+        ("state", "a"): ("VIEW", "proj", "01.sql", "x"),
+        ("state", "b"): ("VIEW", "proj", "01.sql", "x"),
+        ("analytics", "c"): ("VIEW", "proj", "01.sql", "x"),
+        ("analytics", "d"): ("VIEW", "proj", "01.sql", "x"),
+    }
+    clsp.fetch_live_definitions("proj", final)
+    assert len(calls) == 2  # one per dataset, not one per object (would be 4)
 
 
-def test_live_definition_returns_none_when_no_rows(monkeypatch):
-    monkeypatch.setattr(clsp, "bq", lambda sql, project: [])
-    assert clsp.live_definition("proj", "state", "missing", "VIEW") is None
+def test_fetch_live_definitions_requests_more_than_the_bq_cli_default_row_cap(monkeypatch):
+    # DEFECT regression (2026-07-30, found via this fix's own live equivalence proof): `bq query`
+    # caps results at 100 rows unless --max_rows is given explicitly (verified: `bq query --help`
+    # -> "How many rows to return in the result. (default: '100')"). The real repo's `state` dataset
+    # has 111 VIEW objects -- an unbounded batched query silently returned only 100 of them and 11
+    # real, live objects were reported as false MISSING (positive evidence of absence that could
+    # trigger an incorrect autonomous CREATE under the 2026-07-28 directive). Simulates the CLI's
+    # own truncation behavior directly: fake_bq returns AT MOST `max_rows` rows, mirroring what the
+    # real `bq` binary does, so a caller that forgets to pass a big enough max_rows would see this
+    # test fail with a truncated dataset, exactly like the live incident did.
+    all_rows = [{"table_name": f"v{i}", "view_definition": f"SELECT {i}"} for i in range(150)]
+
+    def fake_bq(sql, project, max_rows=None):
+        cap = max_rows if max_rows is not None else 100  # bq CLI's own default
+        return all_rows[:cap]
+    monkeypatch.setattr(clsp, "bq", fake_bq)
+    final = {("state", f"v{i}"): ("VIEW", "proj", "01.sql", "x") for i in range(150)}
+    views, routines = clsp.fetch_live_definitions("proj", final)
+    assert len(views["state"]) == 150, (
+        f"only got {len(views['state'])} of 150 rows -- fetch_live_definitions is not requesting "
+        f"enough rows to cover a dataset larger than bq's 100-row CLI default")
+    for i in range(150):
+        assert clsp.resolve_live_definition(views, routines, "state", f"v{i}", "VIEW") == f"SELECT {i}"
 
 
-# ---- main(): --project CLI-flag plumbing through to live_definition()/bq() ------------------------
+def test_fetch_live_definitions_covers_all_three_real_object_kinds_across_datasets(monkeypatch):
+    # Enumerates all THREE kinds CREATE_STMT ever produces (VIEW, PROCEDURE, TABLE FUNCTION) spread
+    # across separate datasets, and asserts each lands in the correct batch bucket with none lost —
+    # a coverage regression here would silently drop objects from the check entirely.
+    def fake_bq(sql, project, max_rows=None):
+        if "INFORMATION_SCHEMA.VIEWS" in sql:
+            return [{"table_name": "v1", "view_definition": "SELECT 1"}]
+        return [
+            {"routine_name": "sp1", "routine_type": "PROCEDURE", "routine_definition": "BEGIN SELECT 1; END"},
+            {"routine_name": "tf1", "routine_type": "TABLE FUNCTION", "routine_definition": "SELECT 1"},
+        ]
+    monkeypatch.setattr(clsp, "bq", fake_bq)
+    final = {
+        ("state", "v1"): ("VIEW", "proj", "01.sql", "x"),
+        ("ops", "sp1"): ("PROCEDURE", "proj", "01.sql", "x"),
+        ("analytics", "tf1"): ("TABLE FUNCTION", "proj", "01.sql", "x"),
+    }
+    views, routines = clsp.fetch_live_definitions("proj", final)
+    assert clsp.resolve_live_definition(views, routines, "state", "v1", "VIEW") == "SELECT 1"
+    assert clsp.resolve_live_definition(views, routines, "ops", "sp1", "PROCEDURE") == "BEGIN SELECT 1; END"
+    assert clsp.resolve_live_definition(views, routines, "analytics", "tf1", "TABLE FUNCTION") == "SELECT 1"
+
+
+def test_resolve_live_definition_returns_definition_on_a_match():
+    views = {"state": {"foo": "SELECT 1 AS x"}}
+    assert clsp.resolve_live_definition(views, {}, "state", "foo", "VIEW") == "SELECT 1 AS x"
+
+
+def test_resolve_live_definition_returns_none_when_batch_succeeded_but_object_absent():
+    # SUCCESSFUL batch, object genuinely not in it -- positive evidence of absence (MISSING), not a
+    # skip. main() distinguishes this from the exception case below purely by return vs raise.
+    views = {"state": {"other": "SELECT 1 AS x"}}
+    assert clsp.resolve_live_definition(views, {}, "state", "gone", "VIEW") is None
+
+
+def test_resolve_live_definition_reraises_a_failed_batch_query_for_every_object_in_that_dataset():
+    # THE SAFETY PROPERTY (2026-07-28 missing-vs-skipped contract, restated for batching): a FAILED
+    # batch query for a dataset must never be misread as "BigQuery said these don't exist" for the
+    # objects in it -- it must re-raise so the caller's try/except files them as SKIPPED, exactly
+    # like a failed per-object lookup used to. A false MISSING here could trigger an autonomous
+    # CREATE against production.
+    boom = RuntimeError("bq auth error: could not refresh WIF token")
+    views = {"state": boom}
+    for name in ("foo", "bar", "anything"):
+        try:
+            clsp.resolve_live_definition(views, {}, "state", name, "VIEW")
+            raise AssertionError(f"expected {name} to re-raise the stored batch failure")
+        except RuntimeError as e:
+            assert e is boom  # the SAME exception object, not a new/different one
+
+
+def test_resolve_live_definition_routine_kinds_use_the_type_scoped_key():
+    routines = {"ops": {("sp_foo", "PROCEDURE"): "BEGIN SELECT 1; END"}}
+    assert clsp.resolve_live_definition({}, routines, "ops", "sp_foo", "PROCEDURE") == "BEGIN SELECT 1; END"
+    # A TABLE FUNCTION with the same name in the same dataset must not match the PROCEDURE's key.
+    assert clsp.resolve_live_definition({}, routines, "ops", "sp_foo", "TABLE FUNCTION") is None
+
+
+def test_resolve_live_definition_missing_dataset_entirely_is_treated_as_no_match():
+    # A dataset with no expected objects of a kind never gets a batch query issued for it at all
+    # (fetch_live_definitions only queries datasets that need it) -- .get(dataset, {}) must treat an
+    # absent dataset key the same as "found nothing", not KeyError.
+    assert clsp.resolve_live_definition({}, {}, "state", "foo", "VIEW") is None
+
+
+# ---- main(): --project CLI-flag plumbing through to fetch_live_definitions()/bq() ------------------
 def test_main_passes_project_flag_through(monkeypatch):
-    # Locks the exact bug class the code comment at main()'s live_definition() call site guards
-    # against ("a parsed-but-ignored argument") -- mirrors
+    # Locks the exact bug class the code comment at main()'s live-lookup call site guards against
+    # ("a parsed-but-ignored argument") -- mirrors
     # test_check_live_roster_parity.py's test_main_passes_project_flag_through.
     captured = {}
     monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py", "--project", "custom-proj-9"])
     monkeypatch.setattr(clsp, "find_final_definitions",
                         lambda: {("state", "foo"): ("VIEW", "proj", "01.sql", "SELECT 1 AS x")})
 
-    def fake_live_definition(project, ds, nm, ot):
+    def fake_fetch(project, final):
         captured["project"] = project
-        return "SELECT 1 AS x"
-    monkeypatch.setattr(clsp, "live_definition", fake_live_definition)
+        return {}, {}
+    monkeypatch.setattr(clsp, "fetch_live_definitions", fake_fetch)
+    monkeypatch.setattr(clsp, "resolve_live_definition", lambda v, r, ds, nm, ot: "SELECT 1 AS x")
     assert clsp.main() == 0
     assert captured["project"] == "custom-proj-9"
 
@@ -485,10 +659,11 @@ def test_main_passes_project_flag_through_gnu_equals_form(monkeypatch):
     monkeypatch.setattr(clsp, "find_final_definitions",
                         lambda: {("state", "foo"): ("VIEW", "proj", "01.sql", "SELECT 1 AS x")})
 
-    def fake_live_definition(project, ds, nm, ot):
+    def fake_fetch(project, final):
         captured["project"] = project
-        return "SELECT 1 AS x"
-    monkeypatch.setattr(clsp, "live_definition", fake_live_definition)
+        return {}, {}
+    monkeypatch.setattr(clsp, "fetch_live_definitions", fake_fetch)
+    monkeypatch.setattr(clsp, "resolve_live_definition", lambda v, r, ds, nm, ot: "SELECT 1 AS x")
     assert clsp.main() == 0
     assert captured["project"] == "custom-proj-9"
 
@@ -507,10 +682,11 @@ def test_main_default_project_is_stock_trading(monkeypatch):
     monkeypatch.setattr(clsp, "find_final_definitions",
                         lambda: {("state", "foo"): ("VIEW", "proj", "01.sql", "SELECT 1 AS x")})
 
-    def fake_live_definition(project, ds, nm, ot):
+    def fake_fetch(project, final):
         captured["project"] = project
-        return "SELECT 1 AS x"
-    monkeypatch.setattr(clsp, "live_definition", fake_live_definition)
+        return {}, {}
+    monkeypatch.setattr(clsp, "fetch_live_definitions", fake_fetch)
+    monkeypatch.setattr(clsp, "resolve_live_definition", lambda v, r, ds, nm, ot: "SELECT 1 AS x")
     assert clsp.main() == 0
     assert captured["project"] == "stock-trading-498512"
 
@@ -520,8 +696,8 @@ def test_main_offline_returns_0_without_touching_bq(monkeypatch, capsys):
     monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py", "--offline"])
 
     def _forbidden(*a, **k):
-        raise AssertionError("live_definition must not be called in --offline mode")
-    monkeypatch.setattr(clsp, "live_definition", _forbidden)
+        raise AssertionError("fetch_live_definitions must not be called in --offline mode")
+    monkeypatch.setattr(clsp, "fetch_live_definitions", _forbidden)
     assert clsp.main() == 0
     assert "offline" in capsys.readouterr().out.lower()
 
@@ -530,8 +706,9 @@ def test_main_reports_ok_when_live_matches_after_whitespace_collapse(monkeypatch
     monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py"])
     monkeypatch.setattr(clsp, "find_final_definitions",
                         lambda: {("state", "foo"): ("VIEW", "proj", "01.sql", "SELECT 1 AS x")})
+    monkeypatch.setattr(clsp, "fetch_live_definitions", lambda project, final: ({}, {}))
     # Live body differs only by whitespace -> collapse() equalizes -> no drift.
-    monkeypatch.setattr(clsp, "live_definition", lambda project, ds, nm, ot: "SELECT   1   AS x")
+    monkeypatch.setattr(clsp, "resolve_live_definition", lambda v, r, ds, nm, ot: "SELECT   1   AS x")
     assert clsp.main() == 0
     assert "OK:" in capsys.readouterr().out
 
@@ -540,7 +717,8 @@ def test_main_reports_drift_and_exits_1(monkeypatch, capsys):
     monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py"])
     monkeypatch.setattr(clsp, "find_final_definitions",
                         lambda: {("state", "foo"): ("VIEW", "proj", "01.sql", "SELECT 1 AS x")})
-    monkeypatch.setattr(clsp, "live_definition", lambda *a: "SELECT 2 AS x")
+    monkeypatch.setattr(clsp, "fetch_live_definitions", lambda project, final: ({}, {}))
+    monkeypatch.setattr(clsp, "resolve_live_definition", lambda *a: "SELECT 2 AS x")
     assert clsp.main() == 1
     out = capsys.readouterr().out
     assert "DRIFT" in out and "state.foo" in out
@@ -556,10 +734,11 @@ def test_main_missing_object_is_a_distinct_finding_and_fails_the_run(monkeypatch
         ("state", "present"): ("VIEW", "proj", "01.sql", "SELECT 1 AS x"),
         ("state", "gone"): ("VIEW", "proj", "02.sql", "SELECT 9 AS z"),
     })
+    monkeypatch.setattr(clsp, "fetch_live_definitions", lambda project, final: ({}, {}))
 
-    def fake_live(project, ds, nm, ot):
+    def fake_resolve(views, routines, ds, nm, ot):
         return None if nm == "gone" else "SELECT 1 AS x"   # 'present' matches; 'gone' not found live
-    monkeypatch.setattr(clsp, "live_definition", fake_live)
+    monkeypatch.setattr(clsp, "resolve_live_definition", fake_resolve)
     assert clsp.main() == 1
     out = capsys.readouterr().out
     assert "MISSING" in out and "state.gone" in out and "no live object found" in out
@@ -567,39 +746,65 @@ def test_main_missing_object_is_a_distinct_finding_and_fails_the_run(monkeypatch
 
 
 def test_main_lookup_exception_is_a_skip_and_does_not_fail_the_run_alone(monkeypatch, capsys):
-    # The OTHER half of FIX 2: an exception during lookup (transient/auth/timeout) must stay a
-    # SKIP -- never promoted to missing_objects or findings -- and must not, by itself, fail an
-    # otherwise-clean run (a second object still verifies clean, so checked>0).
+    # The OTHER half of FIX 2: an exception during lookup (transient/auth/timeout, or -- as of the
+    # 2026-07-30 batching fix -- a whole dataset's batch query failing) must stay a SKIP -- never
+    # promoted to missing_objects or findings -- and must not, by itself, fail an otherwise-clean run
+    # (a second object still verifies clean, so checked>0).
     monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py"])
     monkeypatch.setattr(clsp, "find_final_definitions", lambda: {
         ("state", "present"): ("VIEW", "proj", "01.sql", "SELECT 1 AS x"),
         ("state", "flaky"): ("VIEW", "proj", "02.sql", "SELECT 9 AS z"),
     })
+    monkeypatch.setattr(clsp, "fetch_live_definitions", lambda project, final: ({}, {}))
 
-    def fake_live(project, ds, nm, ot):
+    def fake_resolve(views, routines, ds, nm, ot):
         if nm == "flaky":
             raise RuntimeError("timeout")
         return "SELECT 1 AS x"
-    monkeypatch.setattr(clsp, "live_definition", fake_live)
+    monkeypatch.setattr(clsp, "resolve_live_definition", fake_resolve)
     assert clsp.main() == 0
     out = capsys.readouterr().out
     assert "skipped" in out and "state.flaky" in out and "live lookup failed" in out
     assert "MISSING" not in out
 
 
+def test_main_lookup_exception_from_a_shared_failed_batch_skips_every_object_in_that_dataset(monkeypatch, capsys):
+    # End-to-end version of the batching safety property, through the REAL fetch_live_definitions()/
+    # resolve_live_definition() (not stubbed): a dataset whose single batch query fails must skip
+    # EVERY object that dataset covers -- never report any of them MISSING.
+    monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py"])
+    monkeypatch.setattr(clsp, "find_final_definitions", lambda: {
+        ("state", "a"): ("VIEW", "proj", "01.sql", "SELECT 1 AS x"),
+        ("state", "b"): ("VIEW", "proj", "01.sql", "SELECT 2 AS y"),
+        ("ops", "sp_ok"): ("PROCEDURE", "proj", "01.sql", "BEGIN SELECT 1; END"),
+    })
+
+    def fake_bq(sql, project, max_rows=None):
+        if "state" in sql:
+            raise RuntimeError("bq auth error: could not refresh WIF token")
+        return [{"routine_name": "sp_ok", "routine_type": "PROCEDURE", "routine_definition": "BEGIN SELECT 1; END"}]
+    monkeypatch.setattr(clsp, "bq", fake_bq)
+    assert clsp.main() == 0  # ops.sp_ok verified clean; state's failure is a skip, not a failure on its own
+    out = capsys.readouterr().out
+    assert "skipped" in out and "state.a" in out and "state.b" in out
+    assert "MISSING" not in out
+    assert "DRIFT" not in out
+
+
 def test_main_fails_closed_when_every_object_is_skipped(monkeypatch, capsys):
-    # 2026-07-17 parallel-refactor audit: a systemic live-read failure (every live_definition raises —
-    # WIF/auth broken) sends ALL objects to missing_live, checked stays 0. Reporting OK would be a
+    # 2026-07-17 parallel-refactor audit: a systemic live-read failure (every lookup raises — WIF/
+    # auth broken) sends ALL objects to missing_live, checked stays 0. Reporting OK would be a
     # vacuous green on zero comparisons that hides a completely broken gate; must fail closed instead.
     monkeypatch.setattr(sys, "argv", ["check_live_sql_parity.py"])
     monkeypatch.setattr(clsp, "find_final_definitions", lambda: {
         ("state", "a"): ("VIEW", "proj", "01.sql", "SELECT 1 AS x"),
         ("state", "b"): ("VIEW", "proj", "02.sql", "SELECT 2 AS y"),
     })
+    monkeypatch.setattr(clsp, "fetch_live_definitions", lambda project, final: ({}, {}))
 
     def boom(*a):
         raise RuntimeError("bq auth error: could not refresh WIF token")
-    monkeypatch.setattr(clsp, "live_definition", boom)
+    monkeypatch.setattr(clsp, "resolve_live_definition", boom)
     assert clsp.main() == 1
     out = capsys.readouterr().out
     assert "NOT VERIFIED" in out and "zero comparisons" in out
@@ -619,14 +824,15 @@ def test_main_json_out_writes_findings_skips_and_missing_objects(tmp_path, monke
         ("state", "gone"): ("VIEW", "proj", "02.sql", "SELECT 9 AS z"),
         ("state", "flaky"): ("VIEW", "proj", "03.sql", "SELECT 3 AS w"),
     })
+    monkeypatch.setattr(clsp, "fetch_live_definitions", lambda project, final: ({}, {}))
 
-    def fake_live(project, ds, nm, ot):
+    def fake_resolve(views, routines, ds, nm, ot):
         if nm == "gone":
             return None                    # lookup succeeded, zero rows -> missing_objects
         if nm == "flaky":
             raise RuntimeError("timeout")  # lookup failed -> skipped
         return "SELECT 2 AS x"             # drifted mismatches -> findings
-    monkeypatch.setattr(clsp, "live_definition", fake_live)
+    monkeypatch.setattr(clsp, "resolve_live_definition", fake_resolve)
     assert clsp.main() == 1
     payload = json.loads(out_path.read_text())
     assert [f["name"] for f in payload["findings"]] == ["drifted"]     # only the real mismatch is a finding
@@ -667,7 +873,8 @@ def test_missing_objects_key_extraction_matches_workflow_jq_pattern(tmp_path, mo
     monkeypatch.setattr(clsp, "find_final_definitions", lambda: {
         ("state", "gone"): ("VIEW", "proj", "02_gone.sql", "SELECT 9 AS z"),
     })
-    monkeypatch.setattr(clsp, "live_definition", lambda project, ds, nm, ot: None)
+    monkeypatch.setattr(clsp, "fetch_live_definitions", lambda project, final: ({}, {}))
+    monkeypatch.setattr(clsp, "resolve_live_definition", lambda v, r, ds, nm, ot: None)
     assert clsp.main() == 1
     payload = json.loads(out_path.read_text())
     assert len(payload["missing_objects"]) == 1

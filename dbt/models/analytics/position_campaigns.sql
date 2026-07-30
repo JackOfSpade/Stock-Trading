@@ -1,5 +1,6 @@
--- Parallel-run dbt port of bigquery/102_pyramid_aware_lifecycle.sql:analytics.position_campaigns
--- (Tier 2 -- CAMPAIGNS, NEW 2026-07-21) -- canonical source is that file until owner cutover.
+-- Parallel-run dbt port of bigquery/116_decision_record_analyzability.sql section (A):
+-- analytics.position_campaigns — canonical source is that file until owner cutover (was
+-- bigquery/102_pyramid_aware_lifecycle.sql).
 --
 -- Per (strategy,ticker), a running signed-share position; a campaign spans the first BUY that takes
 -- it from flat (0) to non-flat, through every add/partial-exit fill, to the fill that returns it to
@@ -9,11 +10,25 @@
 -- detected opening on a 0->nonzero transition, which for this system's traded book is always a BUY
 -- (short-campaign detection is DEFERRED — see bigquery/102's header SCOPE note). SGOV excluded
 -- verbatim (same rationale as position_lifecycle — see that model's header).
+--
+-- REBUILT 2026-07-30 (bigquery/116 section (A)): additive-only change — carries the opening fill's
+-- source_thesis_ref forward as opening_thesis_ref (appended LAST; existing column order preserved).
+-- WHY: thesis_outcomes pairs a rationale to its outcome by NEAREST CALENDAR DATE, not by key, because
+-- this aggregation used to drop source_thesis_ref in its GROUP BY — there was no FK reachable at this
+-- layer at all, even though state.trade_fills_curated (a SELECT * over events.trade_fills) has always
+-- carried the column. Re-trades and same-position adds are both live features now and nothing tested
+-- for a wrong nearest-date pairing, so the FK is surfaced here for thesis_outcomes to prefer when
+-- present. Same FIRST_VALUE-over-the-campaign-window construct already used for
+-- campaign_contract_id/campaign_entry_price, so ANY_VALUE() after the GROUP BY is safe (constant
+-- within the group), not an arbitrary pick. Row count / grouping / existing columns are unchanged —
+-- ops.sp_recompute_engine's closed_trades/gate_n COUNT off this view and must be unaffected.
 
 WITH fills AS (
   SELECT trade_id, strategy, ticker, contract_id,
     DATE(fill_ts, 'America/New_York') AS fill_date, fill_ts,
     side, price, shares, commission, realized_pnl,
+    -- NEW: carried through solely to survive the GROUP BY below as opening_thesis_ref.
+    source_thesis_ref,
     IF(side = 'BUY', shares, -shares) AS signed_shares
   FROM {{ ref('trade_fills_curated') }}
   WHERE ticker != 'SGOV' AND shares IS NOT NULL AND shares > 0
@@ -42,8 +57,17 @@ seqd AS (
 ),
 tagged AS (
   SELECT *,
+    -- The opening fill's contract_id/price, taken once per campaign via a window function ordered
+    -- the same way campaign_seq was computed -- constant across every row of the campaign, so
+    -- ANY_VALUE() after GROUP BY below is safe (not an arbitrary pick).
     FIRST_VALUE(contract_id) OVER (PARTITION BY strategy, ticker, campaign_seq ORDER BY fill_ts, trade_id) AS campaign_contract_id,
     FIRST_VALUE(price) OVER (PARTITION BY strategy, ticker, campaign_seq ORDER BY fill_ts, trade_id) AS campaign_entry_price,
+    -- NEW: the OPENING fill's source_thesis_ref -- the decision-log entry_id that authorized the
+    -- campaign, when the write path recorded it as a UUID (the convention adopted ~2026-07-26; older
+    -- rows hold free text like 'D2 2026-07-17 TSM D GO' and are left exactly as they are -- no
+    -- backfill, no rewriting of history). thesis_outcomes treats a non-UUID value as "no FK" and
+    -- falls back to nearest-date, so mixed population degrades gracefully rather than breaking.
+    FIRST_VALUE(source_thesis_ref) OVER (PARTITION BY strategy, ticker, campaign_seq ORDER BY fill_ts, trade_id) AS campaign_opening_thesis_ref,
     -- The ENDING running_shares of the campaign (0 if closed, nonzero if still open).
     LAST_VALUE(running_shares) OVER (PARTITION BY strategy, ticker, campaign_seq ORDER BY fill_ts, trade_id
       ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS campaign_open_shares,
@@ -67,6 +91,7 @@ SELECT
   ANY_VALUE(campaign_open_shares) AS open_shares,
   SUM(commission) AS total_commission,
   COUNTIF(side = 'BUY') AS n_buy_fills,
-  COUNTIF(side = 'SELL') AS n_sell_fills
+  COUNTIF(side = 'SELL') AS n_sell_fills,
+  ANY_VALUE(campaign_opening_thesis_ref) AS opening_thesis_ref   -- NEW (appended last: column-order stable)
 FROM tagged
 GROUP BY strategy, ticker, campaign_seq
