@@ -77,9 +77,9 @@ the repo which model is live" one.
 
 # 2026-07-30 CI job consolidation — housekeeping only
 
-## RUN_DBT_PARITY. Delete the inert `RUN_DBT_PARITY` repo variable — LOW PRIORITY, no behaviour change
+## [DONE 2026-07-30 — owner-authorized CLI deletion verified] RUN_DBT_PARITY. Delete the inert `RUN_DBT_PARITY` repo variable — LOW PRIORITY, no behaviour change
 
-`RUN_DBT_PARITY=true` is still set in the repo's Actions variables but is read by NOTHING: `DBT_PARITY`
+`RUN_DBT_PARITY` was deleted from the repo's Actions variables on 2026-07-30 and is read by NOTHING: `DBT_PARITY`
 replaced it (ops/RUNBOOK.md §6 says so explicitly — "replaces `RUN_DBT_PARITY`"), and a repo-wide grep
 finds it only in historical comments explaining the replacement. Deleting a repo variable is a settings
 action, so only you can do it.
@@ -425,7 +425,7 @@ a live apply (same "owner or a BigQuery-MCP session applies the new numbered fil
 `bigquery/NN_*.sql` addition has needed — not re-documented as a separate item here since it's the
 standing convention, not new).
 
-## T. Redeploy `weekly_report.gs` (v5 → v6, AI Park Allocator section) via the pinned-SHA GitHub-raw flow — after this branch merges
+## T. Redeploy `weekly_report.gs` (v5 → v6, AI Park Allocator section) via the pinned-SHA GitHub-raw flow — `[SUPERSEDED 2026-07-30 — never deployed as v6; overtaken by item Y (v6→v7, DONE 2026-07-20) and then v8. Live: weekly_report expected=v8 reported=v8 drift=false. Closed by hand, NOT auto-verified — its fence targets v6, which can never be true again, so the auto-closer would have left it open forever]`
 
 **What it's for:** the park-allocator rollout adds a weekly park section (vehicle history, park TWR vs.
 the three `analytics.park_counterfactuals` benchmarks — SGOV / VOO / rule-shadow) to the self-email,
