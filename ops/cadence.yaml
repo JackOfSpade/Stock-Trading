@@ -146,8 +146,12 @@ routines:
     monitor_class: daily_trading
     catchup_safe: false
     depends_on: [D1, D2a]
+    # Watchlist.md added 2026-07-29 (OPS0 STEP 4f): D2 has written it in 20/37 of its commits
+    # (5/5 in the trailing week) since 2026-05-09 while declaring no repo path at all, which made
+    # OPS0's unlanded-completed-run detector skip the fleet's highest-frequency routine entirely.
+    # STEP 4f consumes the repo-file entries of this list as its git-evidence surface -- keep it real.
     writes: [events.decision_log, events.queue_events, events.position_events, calendar:confirm_order,
-             events.park_policy_changes]
+             events.park_policy_changes, Watchlist.md]
     expected_trigger:
       recurrence: daily
       time_local: "17:15"
@@ -416,7 +420,9 @@ routines:
     monitor_class: weekly_sun
     catchup_safe: false
     depends_on: [W1, W2, W3]
-    writes: [events.queue_events, events.decision_log, calendar:confirm_order]
+    # Watchlist.md added 2026-07-29 (OPS0 STEP 4f), same reason as D2 above: written in 9/11 of W4's
+    # commits (4/5 post-cutover) while undeclared, so STEP 4f could not see a stranded W4.
+    writes: [events.queue_events, events.decision_log, calendar:confirm_order, Watchlist.md]
     expected_trigger:
       recurrence: weekly
       time_local: "03:00"
