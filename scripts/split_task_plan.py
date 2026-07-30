@@ -39,6 +39,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.md_fence import fence_mask  # noqa: E402
 from lib.routine_manifest import ROUTINE_SUFFIX, heading_to_id  # noqa: E402
 from lib.slice_writer import check_or_write_slices, slugify  # noqa: E402
+from lib.textio import read_text  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "Claude_Task_Plan.md")
@@ -114,8 +115,7 @@ def split(text):
 
 
 def build():
-    with open(SRC, encoding="utf-8") as f:
-        text = f.read()
+    text = read_text(SRC)
     preamble, routines = split(text)
     files = {"00_preamble.md": HEADER + preamble}
     index = ["# Claude_Task_Plan.md — generated routine-slice index\n",

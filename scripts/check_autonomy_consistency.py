@@ -34,10 +34,17 @@ import re
 import sys
 
 try:
-    import yaml
+    # This module's own reads now go through lib.textio.load_yaml()/read_text() (2026-07-29 textio
+    # adoption), so `yaml` is not referenced directly below, but the import stays for (1) this fail-fast
+    # ImportError guard and (2) tests/test_autonomy_consistency.py's direct ac.yaml.safe_load() access
+    # when reading the real ops/autonomy_levels.yaml for a real-repo sanity assertion.
+    import yaml  # noqa: F401
 except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
     raise SystemExit(2)
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib.textio import read_text, load_yaml  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 AUTONOMY = os.path.join(ROOT, "ops", "autonomy_levels.yaml")
@@ -113,7 +120,7 @@ CITATION_RE = re.compile(
 
 def load_stages():
     """{loop id: current stage} from ops/autonomy_levels.yaml."""
-    doc = yaml.safe_load(open(AUTONOMY, encoding="utf-8")) or {}
+    doc = load_yaml(AUTONOMY)
     return {loop["id"]: loop.get("stage") for loop in doc.get("loops", []) if "id" in loop}
 
 
@@ -121,7 +128,7 @@ def find_citations(path):
     """[(cited_stage, loop_id), ...] in one file. [] if the file doesn't exist or has no citations."""
     if not os.path.exists(path):
         return []
-    txt = open(path, encoding="utf-8").read()
+    txt = read_text(path)
     return [(m.group("stage"), m.group("id")) for m in CITATION_RE.finditer(txt)]
 
 
@@ -156,7 +163,7 @@ def cadence_heartbeat_loops():
     requirement uses cadence_detection_loops() (the DETECTION-list-only view, see below)."""
     if not os.path.exists(CADENCE_SQL):
         return None
-    txt = open(CADENCE_SQL, encoding="utf-8").read()
+    txt = read_text(CADENCE_SQL)
     # [a-z0-9_]+ (not [a-z_]+): match a digit-bearing loop id too — see CITATION_RE's comment.
     return set(re.findall(r"'loop:([a-z0-9_]+)'", txt))
 
@@ -176,7 +183,7 @@ def cadence_detection_loops():
     caller already handles the rot/empty case via cadence_heartbeat_loops())."""
     if not os.path.exists(CADENCE_SQL):
         return None
-    txt = open(CADENCE_SQL, encoding="utf-8").read()
+    txt = read_text(CADENCE_SQL)
     blocks = re.findall(r"UNNEST\(\s*\[([^\]]*'loop:[^\]]*)\]\s*\)", txt)
     loop_sets = [set(re.findall(r"'loop:([a-z0-9_]+)'", b)) for b in blocks]
     loop_sets = [s for s in loop_sets if s]
@@ -259,7 +266,11 @@ def main():
     total_citations = 0
 
     # ---- stage enum + stage<=ceiling invariant (register self-consistency) ----
-    _doc = yaml.safe_load(open(AUTONOMY, encoding="utf-8")) or {}
+    # BUG FIX (2026-07-29 bug hunt): this exact "if exists: parse else: {}" guard is the same hand-rolled
+    # missing-file idiom load_stages() carried above — the working-tree diff had RE-INTRODUCED it twice in
+    # this one file (see lib/textio.py's docstring, point 2). load_yaml() already returns {} for an absent
+    # OR empty document, so both copies collapse to one call.
+    _doc = load_yaml(AUTONOMY)
     errors.extend(check_stage_ceiling_invariant(_doc.get("loops", [])))
     for lid in duplicate_loop_ids(_doc.get("loops", [])):
         errors.append(f"ops/autonomy_levels.yaml: loop '{lid}' id is duplicated in the loops list — "

@@ -35,13 +35,16 @@ import re
 import sys
 
 try:
-    import yaml
+    import yaml  # noqa: F401 — kept only for this early, actionable failure message; the actual
+    # parsing below goes through lib.textio.load_yaml() (2026-07-29), which imports yaml itself and
+    # would raise the SAME missing-dependency error, just as a bare traceback instead of this one.
 except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
     raise SystemExit(2)
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.md_fence import fence_mask  # noqa: E402
+from lib.textio import load_yaml, read_text  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SPEC = os.path.join(ROOT, "ops", "prose_invariants.yaml")
@@ -50,9 +53,7 @@ HEADING = re.compile(r"^#{1,6}\s+(.*\S)")
 
 
 def load_spec():
-    with open(SPEC, encoding="utf-8") as f:
-        doc = yaml.safe_load(f) or {}
-    return doc.get("invariants", [])
+    return load_yaml(SPEC).get("invariants", [])
 
 
 def files_for(rule):
@@ -103,8 +104,7 @@ def check_rule(rule, errors):
         if not os.path.exists(path):
             errors.append(f"[{rid}] {rel}: file not found (rule targets a missing file)")
             continue
-        with open(path, encoding="utf-8") as f:
-            lines = f.read().split("\n")
+        lines = read_text(path).split("\n")
 
         if has_require:
             if not any(pat.search(ln) for ln in lines):

@@ -760,6 +760,88 @@ def test_main_warning_does_not_change_flip_behavior_of_other_items(tmp_path, mon
     assert "[DONE" in doc.read_text()
 
 
+# ---- FIX 1 (2026-07-29, HIGH bug, reproduced live): a malformed fence's lazy DOTALL probe/done_when
+# groups must never cross into the NEXT fence's own body -------------------------------------------
+#
+# Pre-fix, FENCE_RE used `.*?` under re.DOTALL for probe/done_when — `.` matches newlines, so a fence
+# missing its literal `done_when:` line (here: `donewhen:`, a typo) let the lazy match keep expanding
+# PAST its own closing ``` and through any prose until it found a LATER `done_when:` line — the next
+# well-formed fence's own. That produced exactly one match: id=ITEM-A with a probe field corrupted
+# into a multi-line string spanning ITEM-A's own line, the prose between the fences, and ITEM-B's
+# id/type/probe lines, with done_when taken from ITEM-B. Two harms: ITEM-B silently vanished from the
+# run (no OPEN, no diagnostic — FENCE_RE never matched it at all), and ITEM-A's "probe" became a
+# corrupted multi-line string that would get executed as SQL by a `type: bq` probe. Confirmed this
+# reproduces against the pre-fix pattern by constructing FENCE_RE with `.*?` probe/done_when groups
+# and re.DOTALL (the exact prior definition) and re-running test_fence_re_malformed_donewhen_typo_
+# does_not_leak_into_next_fence below against it: it fails, yielding exactly the corrupted single
+# match this test now asserts does NOT happen.
+
+SAMPLE_DOC_DONEWHEN_TYPO_CROSSES_FENCE_BOUNDARY = """```verify
+id: ITEM-A
+type: bq
+probe: SELECT 1
+donewhen: rows > 0
+```
+
+Some prose.
+
+```verify
+id: ITEM-B
+type: sql
+probe: SELECT 2
+done_when: rows > 0
+```
+"""
+
+
+def test_fence_re_malformed_donewhen_typo_does_not_leak_into_next_fence():
+    matches = list(voa.FENCE_RE.finditer(SAMPLE_DOC_DONEWHEN_TYPO_CROSSES_FENCE_BOUNDARY))
+    # ITEM-A's malformed fence matches NOTHING (caught by the FENCE_OPEN_RE malformed-fence counter,
+    # not silently absorbed) — the only match is ITEM-B's own, untouched fence.
+    assert len(matches) == 1
+    assert matches[0].group("id") == "ITEM-B"
+    assert matches[0].group("type") == "sql"
+    assert matches[0].group("probe") == "SELECT 2"
+    assert matches[0].group("done_when") == "rows > 0"
+
+
+SAMPLE_DOC_DONEWHEN_TYPO_WITH_ANCHORS = """## ITEM-A. thing with a typo'd field
+
+```verify
+id: ITEM-A
+type: bq
+probe: SELECT 1
+donewhen: rows > 0
+```
+
+Some prose between items.
+
+## ITEM-B. a well-formed sibling
+
+```verify
+id: ITEM-B
+type: sql
+probe: SELECT 2
+done_when: rows > 0
+```
+"""
+
+
+def test_main_tracks_well_formed_sibling_despite_earlier_malformed_donewhen_typo(tmp_path, monkeypatch, capsys):
+    # main()-level companion to the FENCE_RE test above: ITEM-A's malformed fence is reported as
+    # malformed (not silently dropped), and ITEM-B is evaluated on its own probe/evidence — not
+    # consumed by ITEM-A's would-be leak.
+    doc = tmp_path / "OWNER_ACTIONS.md"
+    doc.write_text(SAMPLE_DOC_DONEWHEN_TYPO_WITH_ANCHORS)
+    monkeypatch.setattr(voa, "OWNER_ACTIONS_PATH", str(doc))
+    monkeypatch.setitem(voa.PROBES, "ITEM-B", lambda: (False, "still open"))
+    rc = voa.main()
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "WARNING" in out
+    assert "OPEN] ITEM-B: still open" in out
+
+
 def test_main_write_failure_is_fail_open_not_crash(tmp_path, monkeypatch, capsys):
     # A passing probe makes changed=True; if persisting the flip fails (read-only FS / disk full),
     # main() must fail-open — print a clear notice and exit 0, matching the read path and the module's

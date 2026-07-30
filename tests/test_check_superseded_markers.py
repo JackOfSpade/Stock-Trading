@@ -147,6 +147,29 @@ def test_single_definition_is_never_flagged(tmp_path, monkeypatch):
     assert cs.violations()[0] == []
 
 
+def test_commented_out_create_is_not_treated_as_a_real_definition(tmp_path, monkeypatch):
+    # BUG FIX (2026-07-29, confirmed live): OBJECT_DDL used to match a CREATE inside a `--` comment
+    # as though it were a real definition -- exactly bigquery/02_ai_layer.sql:23's "Reproduce:" doc
+    # recipe (`--   CREATE OR REPLACE TABLE ...`). Here the ONLY genuine definition of state.thing
+    # is in 20_new.sql; 10_old.sql merely MENTIONS the object inside a "Reproduce:"-style comment
+    # block (each line prefixed "--   ", matching the real repo instance). Pre-fix, definitions()
+    # recorded this as a SECOND occurrence in 10_old.sql, so `occurrences` had two distinct
+    # filenames and 20_new.sql was wrongly required to carry a "SUPERSEDES 10" marker it has no
+    # reason to carry. Post-fix, there is exactly one real definition -> nothing to flag.
+    commented = "-- Reproduce:\n" + "\n".join("--   " + line for line in DDL.splitlines()) + "\n"
+    _tree(tmp_path, {
+        "10_old.sql": commented,
+        "20_new.sql": "-- canonical, sole real definition\n" + DDL,
+    }, monkeypatch)
+    found = cs.definitions()
+    assert ("VIEW", "state", "thing") in found
+    occurrences = found[("VIEW", "state", "thing")]
+    assert [fn for _n, fn, _idx in occurrences] == ["20_new.sql"], (
+        f"the commented-out CREATE in 10_old.sql must not be recorded as a definition: {occurrences}")
+    new, still, stale = cs.violations()
+    assert new == [] and still == [] and stale == []
+
+
 WRAPPED_DDL = "CREATE OR REPLACE VIEW\n  `stock-trading-498512.state.thing` AS SELECT 1 AS a;\n"
 
 

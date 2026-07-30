@@ -60,15 +60,20 @@ import re
 import sys
 
 try:
-    import yaml
+    # noqa: F401 — this module's own reads now go through lib.textio.load_yaml() (2026-07-29 textio
+    # adoption), so `yaml` is no longer referenced directly here, but the import stays for this
+    # fail-fast ImportError guard (a clear "pip install pyyaml" message beats textio.py's own bare
+    # ImportError traceback).
+    import yaml  # noqa: F401
 except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
     raise SystemExit(2)
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.routine_manifest import (  # noqa: E402
-    heading_to_id, parse_routine_headings, build_triggers_manifest, instruction_text,
+    heading_to_id, parse_routine_headings, build_triggers_manifest, instruction_text, cadence_routines,
 )
+from lib.textio import read_text, load_yaml  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLAN = os.path.join(ROOT, "Claude_Task_Plan.md")
@@ -414,7 +419,7 @@ def _is_subtracted_non_assertion(token):
 def check_model_of_record():
     """`routine_model` exists and is well-formed, and every mirror site quotes the same id."""
     errs = []
-    doc = yaml.safe_load(open(CADENCE, encoding="utf-8")) or {}
+    doc = load_yaml(CADENCE)
     model = doc.get("routine_model")
     if model is None:
         return ["ops/cadence.yaml: missing top-level 'routine_model' — it is the source of truth for "
@@ -509,6 +514,17 @@ QUOTED_ID = re.compile(r"'([A-Za-z0-9_]+)'")
 # heading and the NEXT '---' divider -- the strategy slice-map table elsewhere in the file also has
 # `| **...** |`-shaped rows and must NOT be swept in).
 INVENTORY_HEADING = "# ROUTINE INVENTORY & BIGQUERY RESPONSIBILITIES"
+# A loose textual trace of the ROUTINE INVENTORY feature, weaker than the exact heading above -- the
+# check-L analogue of check K's os.path.exists(path) test (2026-07-29). parse_inventory_table() used
+# to return None for BOTH "the heading was never introduced" (pre-feature checkout / a minimal test
+# fixture -- silently skip, correct) AND "the heading text changed" (regex rot -- must fail loud,
+# wrong) with no way for main() to tell them apart. Claude_Task_Plan.md is not optional, so any
+# rewording of INVENTORY_HEADING permanently and silently disarmed check L with no CI signal. main()
+# now disambiguates the same way catchup_list_errors() disambiguates parse_unnest_routine_ids's two
+# None cases: a plan that still mentions this SUBSTRING but not the exact heading has plausibly had
+# the heading reworded, not removed as a whole feature, so that case is reported DISARMED instead of
+# skipped.
+INVENTORY_SENTINEL = "ROUTINE INVENTORY"
 # Columns: | ID | Routine | Cadence · Type | BigQuery reads | BigQuery writes | Cadence .md output |
 # — group 1 is the id, group 2 is the 'Cadence · Type' cell (the 3rd column; the 2nd, the routine
 # name, is skipped over).
@@ -543,8 +559,8 @@ def plan_headings():
 
 
 def load_cadence():
-    doc = yaml.safe_load(open(CADENCE, encoding="utf-8")) or {}
-    return {r["id"]: r for r in doc.get("routines", [])}
+    doc = load_yaml(CADENCE)
+    return {r["id"]: r for r in cadence_routines(doc)}
 
 
 def cadence_duplicate_ids():
@@ -554,14 +570,14 @@ def cadence_duplicate_ids():
     so every downstream check would validate against whichever duplicate happened to be listed last
     with zero signal. This walks the raw list first so a duplicate id fails loud instead, mirroring
     the duplicate Claude_Task_Plan.md heading check main() already does for `head_by_id` below."""
-    doc = yaml.safe_load(open(CADENCE, encoding="utf-8")) or {}
-    ids = [r["id"] for r in doc.get("routines", [])]
+    doc = load_yaml(CADENCE)
+    ids = [r["id"] for r in cadence_routines(doc)]
     return sorted({i for i in ids if ids.count(i) > 1})
 
 
 def parse_expected_sql():
     """{routine: schedule_class} from the STRUCT(... AS routine, ... AS schedule) list in 12_*.sql."""
-    txt = open(CADENCE_SQL, encoding="utf-8").read()
+    txt = read_text(CADENCE_SQL)
     pat = re.compile(r"STRUCT\('([^']+)'\s+AS routine,\s*'([^']+)'\s+AS schedule\)")
     return dict(pat.findall(txt))
 
@@ -574,7 +590,7 @@ def parse_catalog_sql():
     apostrophe. Match those doubled quotes and un-escape '' -> ' so the parsed value equals check B's
     want_catalog (derived from the RAW heading text). This is the paired half of gen_15_region's
     escaping -- the two MUST stay in lockstep. Byte-identical on a tree with no apostrophe headings."""
-    txt = open(CATALOG_SQL, encoding="utf-8").read()
+    txt = read_text(CATALOG_SQL)
     pat = re.compile(
         r"STRUCT\('([^']+)'(?:\s+AS routine)?,\s*'(Read Claude_Task_Plan\.md\. Perform (?:[^']|'')*)'")
     return {rid: instr.replace("''", "'") for rid, instr in pat.findall(txt)}
@@ -582,18 +598,18 @@ def parse_catalog_sql():
 
 def parse_deadline_sql():
     """['HH:MM', ...] from the DATETIME(e.today, TIME 'HH:MM:SS') deadline guard in 12_*.sql (state.cadence_watch)."""
-    return SQL_DEADLINE.findall(open(CADENCE_SQL, encoding="utf-8").read())
+    return SQL_DEADLINE.findall(read_text(CADENCE_SQL))
 
 
 def cadence_deadline_yaml():
     """Top-level cadence_watch_deadline_local from ops/cadence.yaml (raw value, or None)."""
-    doc = yaml.safe_load(open(CADENCE, encoding="utf-8")) or {}
+    doc = load_yaml(CADENCE)
     return doc.get("cadence_watch_deadline_local")
 
 
 def cadence_period_grace_yaml():
     """Top-level period_grace_days from ops/cadence.yaml (dict, or None)."""
-    doc = yaml.safe_load(open(CADENCE, encoding="utf-8")) or {}
+    doc = load_yaml(CADENCE)
     return doc.get("period_grace_days")
 
 
@@ -606,7 +622,7 @@ def parse_period_grace_sql():
     """
     if not os.path.exists(PERIOD_WATCH_SQL):
         return None
-    txt = open(PERIOD_WATCH_SQL, encoding="utf-8").read()
+    txt = read_text(PERIOD_WATCH_SQL)
     out = {}
     for offset, which in PERIOD_GRACE_OFFSET.findall(txt):
         cls = {"month": "monthly_ftd", "quarter": "quarterly_ftd", "year": "annual_ftd"}[which]
@@ -625,7 +641,7 @@ def parse_period_watch_routines_sql():
     parse_period_grace_sql."""
     if not os.path.exists(PERIOD_WATCH_SQL):
         return None
-    txt = open(PERIOD_WATCH_SQL, encoding="utf-8").read()
+    txt = read_text(PERIOD_WATCH_SQL)
     return dict(PERIOD_WATCH_ROUTINE_ROW.findall(txt))
 
 
@@ -640,7 +656,7 @@ def parse_unnest_routine_ids(path):
     class checks A/D/E/J/L already fail loud on by returning an empty container, not None)."""
     if not os.path.exists(path):
         return None
-    txt = SQL_LINE_COMMENT.sub("", open(path, encoding="utf-8").read())
+    txt = SQL_LINE_COMMENT.sub("", read_text(path))
     m = UNNEST_ROUTINE_BRACKET.search(txt)
     if m is None:
         return None
@@ -651,9 +667,12 @@ def parse_inventory_table(plan_path):
     """[(id, cadence_type_cell), ...] rows from ONLY the ROUTINE INVENTORY section of the plan —
     scoped between the "# ROUTINE INVENTORY & BIGQUERY RESPONSIBILITIES" heading and the NEXT `---`
     divider, so the strategy slice-map table elsewhere in the file (which also has `| **...** |`-
-    shaped rows, e.g. `| **AR_attacker** |`) can never leak in (check L). Returns None if the
-    heading is not present at all (pre-feature checkout / a minimal test fixture)."""
-    txt = open(plan_path, encoding="utf-8").read()
+    shaped rows, e.g. `| **AR_attacker** |`) can never leak in (check L). Returns None if the exact
+    heading text is not found — main() disambiguates "genuinely absent" (pre-feature checkout / a
+    minimal test fixture, skip silently) from "present but reworded" (DISARMED, fail loud) via the
+    loose INVENTORY_SENTINEL substring search, mirroring check K's os.path.exists(path)
+    disambiguation of parse_unnest_routine_ids's two None cases (2026-07-29)."""
+    txt = read_text(plan_path)
     start = txt.find(INVENTORY_HEADING)
     if start == -1:
         return None
@@ -709,6 +728,29 @@ def catchup_list_errors(cad, path, filename, tier_word, classes):
                 f"file has {sorted(have_set)}, cadence.yaml-derived (catchup_safe AND {tier_word} tier) "
                 f"wants {sorted(want)}"]
     return []
+
+
+def class_map_errors(want, have, *, missing_from, mismatch_label, mismatch_ref, extra_in, extra_not_a):
+    """Shared want/have `{id: class}` MISSING / mismatch / extra comparison used by check A
+    (state.cadence_expected_today vs 12_cadence_monitor.sql) and check J (state.cadence_period_watch's
+    routines CTE vs 24_cadence_period_watch.sql) — both independently re-derived this exact
+    three-branch loop, differing only in message wording (2026-07-29 dedup).
+
+    Every message fragment is a caller-supplied literal rather than something templated from a single
+    filename: the two call sites' existing wording is not even internally consistent with itself
+    (check A's own "extra" message says "12_*.sql" while its "missing"/"mismatch" messages say
+    "12_cadence_monitor.sql") and these messages are load-bearing — CI and a BigQuery bridge parse
+    them — so preserving them byte-for-byte matters more than a cleaner single-filename template."""
+    errors = []
+    for rid, cls in want.items():
+        if rid not in have:
+            errors.append(f"{rid}: monitor_class={cls} in cadence.yaml but MISSING from {missing_from}")
+        elif have[rid] != cls:
+            errors.append(f"{rid}: {mismatch_label} — cadence.yaml='{cls}' vs {mismatch_ref}='{have[rid]}'")
+    for rid in have:
+        if rid not in want:
+            errors.append(f"{rid}: in {extra_in} but not a {extra_not_a}")
+    return errors
 
 
 def main():
@@ -768,17 +810,12 @@ def main():
     have_expected = parse_expected_sql()
     if not have_expected:
         errors.append("could not parse any STRUCT(... AS schedule) rows from 12_cadence_monitor.sql")
-    for rid, cls in want_expected.items():
-        if rid not in have_expected:
-            errors.append(f"{rid}: monitor_class={cls} in cadence.yaml but MISSING from "
-                          f"state.cadence_expected_today (12_cadence_monitor.sql)")
-        elif have_expected[rid] != cls:
-            errors.append(f"{rid}: schedule class mismatch — cadence.yaml='{cls}' vs "
-                          f"12_cadence_monitor.sql='{have_expected[rid]}'")
-    for rid in have_expected:
-        if rid not in want_expected:
-            errors.append(f"{rid}: in state.cadence_expected_today (12_*.sql) but not a calendar-class "
-                          f"routine in cadence.yaml (queue_driven/unknown routines must NOT be listed)")
+    errors.extend(class_map_errors(
+        want_expected, have_expected,
+        missing_from="state.cadence_expected_today (12_cadence_monitor.sql)",
+        mismatch_label="schedule class mismatch", mismatch_ref="12_cadence_monitor.sql",
+        extra_in="state.cadence_expected_today (12_*.sql)",
+        extra_not_a="calendar-class routine in cadence.yaml (queue_driven/unknown routines must NOT be listed)"))
 
     # ---- B. ops.routine_catalog (15_*.sql) == plan-heading-derived instruction ----
     have_catalog = parse_catalog_sql()
@@ -846,17 +883,12 @@ def main():
         if not have_period_routines:
             errors.append("could not parse any labelled STRUCT(... AS monitor_class) rows from "
                           "24_cadence_period_watch.sql's `routines` CTE")
-        for rid, cls in want_period_routines.items():
-            if rid not in have_period_routines:
-                errors.append(f"{rid}: monitor_class={cls} in cadence.yaml but MISSING from "
-                              f"state.cadence_period_watch's routines CTE (24_cadence_period_watch.sql)")
-            elif have_period_routines[rid] != cls:
-                errors.append(f"{rid}: period-watch monitor_class mismatch — cadence.yaml='{cls}' vs "
-                              f"24_cadence_period_watch.sql='{have_period_routines[rid]}'")
-        for rid in have_period_routines:
-            if rid not in want_period_routines:
-                errors.append(f"{rid}: in state.cadence_period_watch's routines CTE (24_*.sql) but not "
-                              f"a period-class routine in cadence.yaml")
+        errors.extend(class_map_errors(
+            want_period_routines, have_period_routines,
+            missing_from="state.cadence_period_watch's routines CTE (24_cadence_period_watch.sql)",
+            mismatch_label="period-watch monitor_class mismatch", mismatch_ref="24_cadence_period_watch.sql",
+            extra_in="state.cadence_period_watch's routines CTE (24_*.sql)",
+            extra_not_a="period-class routine in cadence.yaml"))
 
     # ---- K. catchup_safe: every cadence.yaml routine must declare the boolean, and bigquery/31/59's
     # hand-maintained UNNEST id lists must equal the corresponding {catchup_safe AND monitor_class in
@@ -875,7 +907,21 @@ def main():
     # ---- L. Claude_Task_Plan.md's ROUTINE INVENTORY table == cadence.yaml ids, and each row's
     # 'Cadence · Type' cell agrees with that routine's monitor_class (ARCH-3 Item 30b). ----
     have_inventory = parse_inventory_table(PLAN)
-    if have_inventory is not None:  # heading present; absent = pre-feature checkout, skip silently
+    if have_inventory is None:
+        # 2026-07-29: distinguish "heading never introduced" (pre-feature checkout / a minimal test
+        # fixture -- skip silently, unchanged behavior) from "heading reworded" (check L's drift guard
+        # is DISARMED -- fail loud, the fix). Before this, both cases returned None from
+        # parse_inventory_table and were skipped identically, so any rewording of INVENTORY_HEADING
+        # permanently and silently disarmed check L -- Claude_Task_Plan.md is not optional, so that
+        # silent skip was never actually the "pre-feature checkout" case it was framed as.
+        if INVENTORY_SENTINEL in read_text(PLAN):
+            errors.append(
+                f"Claude_Task_Plan.md: text matching '{INVENTORY_SENTINEL}' was found but the exact "
+                f"heading '{INVENTORY_HEADING}' could not be located — check L's ROUTINE INVENTORY "
+                f"table drift guard is DISARMED (heading reworded? regex rot?). Restore the exact "
+                f"heading text, or update INVENTORY_HEADING in this script to match, mirroring check "
+                f"K's file-exists-but-unparseable DISARMED failure (catchup_list_errors).")
+    else:  # heading present; absent = pre-feature checkout, skip silently
         have_inventory_ids = {rid for rid, _cell in have_inventory}
         for rid in sorted(set(cad) - have_inventory_ids):
             errors.append(f"{rid}: in ops/cadence.yaml but missing a row in Claude_Task_Plan.md's "
@@ -996,7 +1042,7 @@ def main():
     # Read the module globals at call time so tests can monkeypatch either path.
     allowlist_paths = [p for p in (AUTO_MERGE_DECISION_SH, AUTO_MERGE_YML) if os.path.exists(p)]
     if allowlist_paths:
-        found = [(p, AUTO_MERGE_ROUTINE_RE.search(open(p, encoding="utf-8").read()))
+        found = [(p, AUTO_MERGE_ROUTINE_RE.search(read_text(p)))
                  for p in allowlist_paths]
         found = [(p, m) for p, m in found if m is not None]
         if not found:

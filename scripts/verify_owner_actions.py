@@ -51,21 +51,33 @@ import sys
 from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__))))
-from lib.bq_json import parse_bq_json_stdout
+from lib.bq_json import run_bq_query
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OWNER_ACTIONS_PATH = os.path.join(ROOT, "OWNER_ACTIONS.md")
 PROJECT = os.environ.get("BQ_PROJECT", "stock-trading-498512")
 TIMEOUT = 120
 
+# probe/done_when are confined to `[^\r\n]*` (NOT `.` under DOTALL) so a fence body can never cross a
+# fence boundary (bug found + fixed 2026-07-29, reproduced live): with `.*?` + re.DOTALL, `.` matches
+# newlines, so a malformed fence missing its literal `done_when:` line (e.g. a `donewhen:` typo) let
+# the lazy probe/done_when groups keep expanding PAST the fence's own closing ``` — through any prose
+# — into the NEXT well-formed ```verify block, taking ITS id/type/probe lines as part of THIS fence's
+# corrupted, now-multi-line probe and its done_when from the wrong item. Two harms: the second item
+# silently vanished from the run (no OPEN, no diagnostic — FENCE_RE simply never matched it), and the
+# first item's "probe" became a corrupted multi-line string that got executed as SQL. probe/done_when
+# are single-line fields in this format, so excluding \r\n from their character class makes both
+# harms structurally impossible: a malformed fence now matches nothing at all (caught by the
+# FENCE_OPEN_RE malformed-fence counter below) instead of eating its neighbor. See
+# test_fence_re_malformed_donewhen_typo_does_not_leak_into_next_fence in
+# tests/test_verify_owner_actions.py.
 FENCE_RE = re.compile(
     r"```verify\r?\n"
     r"id:\s*(?P<id>\S+)\s*\r?\n"
     r"type:\s*(?P<type>\S+)\s*\r?\n"
-    r"probe:\s*(?P<probe>.*?)\s*\r?\n"
-    r"done_when:\s*(?P<done_when>.*?)\s*\r?\n"
-    r"```",
-    re.DOTALL,
+    r"probe:\s*(?P<probe>[^\r\n]*?)\s*\r?\n"
+    r"done_when:\s*(?P<done_when>[^\r\n]*?)\s*\r?\n"
+    r"```"
 )
 
 # Any bare ```verify opening line, used only to detect a fence whose body does NOT match FENCE_RE
@@ -100,15 +112,27 @@ def _run(cmd):
 
 
 def _bq_scalar(sql, key="n"):
-    """Run a bq query expected to return exactly one row with column `key`. Returns (ok, value, reason)."""
-    ok, stdout, reason = _run([
-        "bq", "--project_id=" + PROJECT, "--quiet", "--headless", "--format=json",
-        "query", "--use_legacy_sql=false", "--max_rows=10", sql,
-    ])
-    if not ok:
-        return False, None, reason
+    """Run a bq query expected to return exactly one row with column `key`. Returns (ok, value, reason).
+
+    Delegates to lib/bq_json.py's run_bq_query, the shared invoke wrapper this module's own bq-CLI
+    copy is consolidated into (2026-07-29 dedup — this file had already adopted parse_bq_json_stdout
+    for the parse half but kept reimplementing the subprocess-invoke half that alert_relay.py /
+    dbt_parity.py / check_live_roster_parity.py / generate_dashboard.py were all migrated onto).
+    run_bq_query raises RuntimeError for a subprocess-level failure (nonzero exit, timeout) but a
+    missing `bq` binary (FileNotFoundError) and malformed JSON output (ValueError/JSONDecodeError from
+    parse_bq_json_stdout) are NOT wrapped — both propagate raw, so this module's fail-open contract
+    (every probe error reads OPEN, never raises) requires catching all three explicitly here, not just
+    RuntimeError (see generate_dashboard.py's q() docstring for the same exception-contract note).
+    """
     try:
-        rows = parse_bq_json_stdout(stdout)
+        rows = run_bq_query(sql, PROJECT, max_rows=10, timeout=TIMEOUT)
+    except RuntimeError as e:
+        return False, None, str(e)
+    except FileNotFoundError as e:
+        return False, None, f"binary not found: {e}"
+    except Exception as e:
+        return False, None, f"could not parse bq result: {e}"
+    try:
         return True, rows[0][key], ""
     except Exception as e:
         return False, None, f"could not parse bq result: {e}"

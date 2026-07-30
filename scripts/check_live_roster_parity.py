@@ -35,10 +35,14 @@ import subprocess  # noqa: F401 — kept so tests can monkeypatch subprocess.run
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.bq_json import run_bq_query
+from lib.bq_json import run_bq_query  # noqa: E402
+from lib.textio import load_yaml  # noqa: E402
 
 try:
-    import yaml
+    # This module's own read now goes through lib.textio.load_yaml() (2026-07-29 textio adoption), so
+    # `yaml` is not referenced directly below, but the import stays as the fail-fast "pip install pyyaml"
+    # guard (same pattern as check_roster_consistency.py / check_autonomy_consistency.py).
+    import yaml  # noqa: F401
 except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
     raise SystemExit(2)
@@ -59,7 +63,7 @@ def bq(sql, project):
 
 def roster_active_codes():
     """strategy/roster.yaml strategies[].code where roster_state in {probe, adopted}."""
-    doc = yaml.safe_load(open(ROSTER, encoding="utf-8")) or {}
+    doc = load_yaml(ROSTER)
     return {s["code"] for s in doc.get("strategies", []) or []
             if str(s.get("roster_state", "")).lower() in ACTIVE_STATES_YAML}
 

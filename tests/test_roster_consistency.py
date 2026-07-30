@@ -774,6 +774,37 @@ def test_rail_non_integer_value_is_a_clean_fail(repo_copy, capsys):
     assert "ROSTER CONSISTENCY: FAIL" in out and "is not an integer" in out
 
 
+# ---- R-E: a fractional rail value must NOT be silently truncated by int() (2026-07-29 bug hunt).
+# int(2.7) == 2 in Python, and roster.yaml's real n_min (2) matches bigquery/35's real n_min SQL
+# constant (2) -- so under the pre-fix code, writing n_min: 2.7 truncated to 2, "agreed" with the SQL
+# constant, and the build stayed GREEN even though the YAML never actually declared 2. Confirmed this
+# fails against the pre-fix code: reverting _compare_rails() to `val = int(container[yaml_key])` makes
+# this exact test see rc.main() == 0 (no "is a float" text at all), not 1 -- the truncated 2.7->2
+# silently equals arsenal_rails.n_min=2.
+def test_rail_fractional_value_is_not_silently_truncated_is_caught(repo_copy, capsys):
+    p = rc.ROSTER
+    txt = _read(p)
+    assert "n_min: 2 " in txt, "fixture assumption about roster.yaml's n_min line drifted"
+    _write(p, txt.replace("n_min: 2 ", "n_min: 2.7 ", 1))
+    assert rc.main() == 1
+    out = capsys.readouterr().out
+    assert "ROSTER CONSISTENCY: FAIL" in out and "is a float" in out
+
+
+# ---- R-E: an INTEGRAL float (2.0) is a deliberate design choice, not an oversight -- also rejected,
+# not silently coerced to int(2.0) == 2, since roster.yaml's rails: are documented as plain integer
+# counts and this file is mutated autonomously by SL1-SL5 with no human review (see _compare_rails()'s
+# docstring for the full rationale).
+def test_rail_integral_float_value_is_also_rejected_not_silently_coerced(repo_copy, capsys):
+    p = rc.ROSTER
+    txt = _read(p)
+    assert "n_min: 2 " in txt, "fixture assumption about roster.yaml's n_min line drifted"
+    _write(p, txt.replace("n_min: 2 ", "n_min: 2.0 ", 1))
+    assert rc.main() == 1
+    out = capsys.readouterr().out
+    assert "ROSTER CONSISTENCY: FAIL" in out and "is a float" in out
+
+
 # ---- R-F: editing a LOCKED strategy's .md slice trips its spec_hash (MEMORY records this explicitly),
 #      and a missing spec_hash input file is a clean error — neither was tested (2026-07-17 audit) ----
 def test_spec_hash_mismatch_on_md_slice_is_caught(repo_copy):

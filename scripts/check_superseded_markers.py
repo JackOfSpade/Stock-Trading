@@ -51,7 +51,8 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.sql_files import numbered_sql_files
+from lib.sql_files import numbered_sql_files, strip_sql_comments  # noqa: E402
+from lib.textio import read_text  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BIGQUERY_DIR = os.path.join(ROOT, "bigquery")
@@ -131,15 +132,23 @@ def definitions():
         if os.path.isdir(path):
             continue
         fn = os.path.basename(path)
-        text = open(path, encoding="utf-8").read()
+        text = read_text(path)
         # Match against the WHOLE file text, not line-by-line: `\s+` in OBJECT_DDL already spans
         # newlines, so a CREATE statement legally wrapped across two lines (e.g. the keyword and the
         # backtick-quoted name on separate lines, a common BigQuery style) is still recognized here.
         # A per-line search would silently never record that occurrence at all -- collapsing
         # `occurrences` to a single filename and letting an unmarked OLDER definition slip through
         # uncompared, the exact dead-end-chain trap this script exists to catch (see header).
+        #
+        # BUG FIX (2026-07-29, confirmed live): OBJECT_DDL used to run against the raw file text, so
+        # a `-- CREATE OR REPLACE TABLE ...` line inside a documentation comment (bigquery/
+        # 02_ai_layer.sql:23's "Reproduce:" recipe for the ticker-backfill migration) parsed as a REAL
+        # object definition. strip_sql_comments() blanks comment text with same-length whitespace
+        # (newlines untouched), so OBJECT_DDL.finditer() below can no longer match inside one, while
+        # `offsets` — built from the UNSTRIPPED text — still maps a match's char offset back to the
+        # right line, since stripping never changes the text's length or line breaks.
         offsets = _line_offsets(text)
-        for hit in OBJECT_DDL.finditer(text):
+        for hit in OBJECT_DDL.finditer(strip_sql_comments(text)):
             kind = " ".join(hit.group(1).upper().split())
             line_idx = bisect.bisect_right(offsets, hit.start()) - 1
             found[(kind, hit.group(2), hit.group(3))].append((number, fn, line_idx))
@@ -183,7 +192,7 @@ def violations():
                 continue
             entry = (kind, ds, name, fn)
             if fn not in cache:
-                lines = open(os.path.join(BIGQUERY_DIR, fn), encoding="utf-8").read().splitlines()
+                lines = read_text(os.path.join(BIGQUERY_DIR, fn)).splitlines()
                 cache[fn] = (lines, _header_block(lines))
             lines, header = cache[fn]
             context = _preceding_comment(lines, idx) + "\n" + header

@@ -67,7 +67,7 @@ const SENDER_NAME  = 'Stock-Trading Bot';
 const LABEL_NAME   = 'Trading/Weekly';
 const SEND_HOUR    = 7;
 const SEND_WEEKDAY = ScriptApp.WeekDay.SUNDAY;
-const SCRIPT_VERSION = 'v7';                       // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep
+const SCRIPT_VERSION = 'v8';                       // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep
 const SUBJECT_LABEL = 'Deployed vs Benchmarks';    // Single source for this phrase across buildSubject_, the post-send GmailApp.search() match, and the HTML/plain-text banners below. Edit only here on a rename (2026-07-14 audit finding -- this already drifted once by hand across 4 sites during the 2026-07-13 VOO rename).
 
 // Fixed per-strategy identity colors (CVD-validated) — never reassigned by rank/presence. VOO is a
@@ -363,7 +363,7 @@ function buildHealthReasons_(health, marksFresh, engineFresh, firingKillFlags, k
 
 // ===== BigQuery helper =====
 function bq_(sql) {
-  let res = BigQuery.Jobs.query({ query: sql, useLegacySql: false, timeoutMs: 30000 }, PROJECT_ID);
+  let res = BigQuery.Jobs.query({ query: sql, useLegacySql: false, timeoutMs: 30000, maxResults: 10000 }, PROJECT_ID);
   let guard = 0;
   while (!res.jobComplete && guard++ < 10) {
     Utilities.sleep(1000);
@@ -372,7 +372,15 @@ function bq_(sql) {
   // A query that never completes must FAIL the send (no heartbeat -> dead-man's switch), not render empty.
   if (!res.jobComplete) throw new Error('BigQuery job did not complete after 10s poll: ' + sql.slice(0, 120));
   const fields = (res.schema && res.schema.fields) ? res.schema.fields.map(f => f.name) : [];
-  return (res.rows || []).map(r => {
+  const rows = res.rows || [];
+  let pageToken = res.pageToken;
+  while (pageToken) {
+    const page = BigQuery.Jobs.getQueryResults(PROJECT_ID, res.jobReference.jobId,
+      { pageToken: pageToken, maxResults: 10000 });
+    rows.push.apply(rows, page.rows || []);
+    pageToken = page.pageToken;
+  }
+  return rows.map(r => {
     const o = {};
     r.f.forEach((cell, i) => { o[fields[i]] = cell.v; });
     return o;
@@ -462,7 +470,13 @@ function altTextFor_(d) {
 function buildReturnChart_(d) {
   try {
     if (!d.deployedStrategies.length) return null;
-    const allDates = Object.keys(d.vooByDate).sort();
+    // A VOO backfill gap must not make the strategy chart disappear. Use the
+    // union so strategy-only dates remain visible, with VOO represented as a
+    // deliberate gap until it has a mark.
+    const dateSet = new Set(Object.keys(d.vooByDate));
+    d.deployedStrategies.forEach(s => (d.dailyByStrategy[s] || [])
+      .forEach(p => dateSet.add(p.as_of_date)));
+    const allDates = [...dateSet].sort();
     const keptDates = downsampleDates_(allDates);
     const hasVoo = d.nVooMarkDays > 0;
 

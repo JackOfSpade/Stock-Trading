@@ -137,6 +137,12 @@ _IV_SOLVE_MIN = 0.001
 _IV_SOLVE_MAX = 5.0
 
 
+def _require_positive_path_count(n_paths: int) -> None:
+    """Reject invalid Monte Carlo sample counts before a simulation starts."""
+    if isinstance(n_paths, bool) or not isinstance(n_paths, int) or n_paths <= 0:
+        raise ValueError(f"n_paths = {n_paths!r} (must be a positive integer).")
+
+
 # =============================================================================
 # Black-Scholes-Merton primitives
 # =============================================================================
@@ -730,6 +736,7 @@ class Structure:
         structure's flat-zone worst case sits at an endpoint, so pinning them
         removes the ~range/n_paths sampling gap against the closed-form path.
         """
+        _require_positive_path_count(n_paths)
         if self._net_quantity('call') < 0:
             raise UnboundedMaxLossError(
                 f"{self.name}: net call quantity {self._net_quantity('call')} < 0 — "
@@ -1584,6 +1591,7 @@ def probability_weighted_payoff(
     Returns dict with: expected_payoff, expected_pnl, prob_profit, prob_max_loss,
     note.
     """
+    _require_positive_path_count(n_paths)
     rng = random.Random(seed)
     S0 = structure.underlying_price
     T = structure.days_to_expiration / 365.0
@@ -1600,23 +1608,34 @@ def probability_weighted_payoff(
 
     # Risk-neutral drift = r - q
     drift = r - q
+    drift_term = (drift - 0.5 * sigma ** 2) * T
+    vol_term = sigma * math.sqrt(T)
 
-    payoffs = []
-    pnls = []
+    max_loss = structure.max_loss_closed_form()
+    # A zero-loss structure has no loss event. Applying the one-cent tolerance
+    # mechanically would make its threshold positive and misclassify small
+    # profits (including break-even) as a maximum loss.
+    max_loss_threshold = -max_loss + 0.01 if max_loss > 0 else None
+
+    sum_payoff = 0.0
+    profit_count = 0
+    max_loss_count = 0
+
     for _ in range(n_paths):
         z = rng.gauss(0, 1)
-        S_T = S0 * math.exp((drift - 0.5 * sigma ** 2) * T + sigma * math.sqrt(T) * z)
+        S_T = S0 * math.exp(drift_term + vol_term * z)
         payoff = structure.payoff_at_expiration(S_T)
         pnl = payoff - net_debit
-        payoffs.append(payoff)
-        pnls.append(pnl)
+        sum_payoff += payoff
+        if pnl > 0:
+            profit_count += 1
+        if max_loss_threshold is not None and pnl <= max_loss_threshold:
+            max_loss_count += 1
 
-    expected_payoff = sum(payoffs) / n_paths
-    expected_pnl = sum(pnls) / n_paths
-    prob_profit = sum(1 for pnl in pnls if pnl > 0) / n_paths
-    # Probability of realizing (within $0.01 of) the structure's defined max loss.
-    max_loss = structure.max_loss_closed_form()
-    prob_max_loss = sum(1 for pnl in pnls if pnl <= -(max_loss - 0.01)) / n_paths
+    expected_payoff = sum_payoff / n_paths
+    expected_pnl = expected_payoff - net_debit
+    prob_profit = profit_count / n_paths
+    prob_max_loss = max_loss_count / n_paths
 
     return {
         'expected_payoff': round(expected_payoff, 4),

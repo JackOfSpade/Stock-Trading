@@ -10,6 +10,7 @@ directly so an interface-preserving refactor of the lib has a first-class guard.
 from lib.routine_manifest import (
     ROUTINE_SUFFIX,
     build_triggers_manifest,
+    cadence_routines,
     heading_to_id,
     instruction_text,
     parse_routine_headings,
@@ -61,6 +62,26 @@ def test_instruction_text_exact_template():
     assert instruction_text("D1. Market Development Scan — deep research") == (
         "Read Claude_Task_Plan.md. Perform D1. Market Development Scan — deep research."
     )
+
+
+# ---- cadence_routines: doc.get("routines", []) crashes on a bare `routines:` key (2026-07-29) ------
+def test_cadence_routines_handles_populated_list():
+    doc = {"routines": [{"id": "D1"}, {"id": "W1"}]}
+    assert cadence_routines(doc) == [{"id": "D1"}, {"id": "W1"}]
+
+
+def test_cadence_routines_missing_key_is_empty_list():
+    assert cadence_routines({}) == []
+
+
+def test_cadence_routines_bare_key_does_not_crash():
+    # A bare `routines:` key with nothing under it parses to `{"routines": None}` (YAML), not a
+    # missing key -- dict.get's default only fires when the KEY itself is absent, so the old
+    # `doc.get("routines", [])` idiom crashed with TypeError: 'NoneType' object is not iterable on
+    # this exact shape. Reproduced live: yaml.safe_load("routines:\n") == {"routines": None}, and
+    # `{r["id"]: r for r in {"routines": None}.get("routines", [])}` raises TypeError pre-fix.
+    doc = {"routines": None}
+    assert cadence_routines(doc) == []
 
 
 # ---- build_triggers_manifest: the {id: {monitor_class, instruction}} contract ---------------------

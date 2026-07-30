@@ -55,13 +55,20 @@ import os
 import sys
 
 try:
-    import yaml
+    # noqa: F401 — this module's own reads now go through lib.textio.load_yaml() (2026-07-29 textio
+    # adoption), so `yaml` is no longer referenced directly here, but the import stays for this
+    # fail-fast ImportError guard (a clear "pip install pyyaml" message beats textio.py's own bare
+    # ImportError traceback).
+    import yaml  # noqa: F401
 except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
     raise SystemExit(2)
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.routine_manifest import parse_routine_headings, heading_to_id, instruction_text  # noqa: E402
+from lib.routine_manifest import (  # noqa: E402
+    parse_routine_headings, heading_to_id, instruction_text, cadence_routines,
+)
+from lib.textio import read_text, load_yaml  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLAN = os.path.join(ROOT, "Claude_Task_Plan.md")
@@ -82,8 +89,8 @@ PERIOD_CLASSES = ("weekly_sun", "monthly_ftd", "quarterly_ftd", "annual_ftd")
 def load_cadence_routines():
     """Ordered list of routine dicts, in ops/cadence.yaml file order (the canonical order every
     generated region reproduces)."""
-    doc = yaml.safe_load(open(CADENCE, encoding="utf-8")) or {}
-    return doc.get("routines", []) or []
+    doc = load_yaml(CADENCE)
+    return cadence_routines(doc)
 
 
 def load_headings_by_id():
@@ -178,7 +185,7 @@ def _region_bounds(txt, path):
 def current_region(path):
     """The exact text currently between the markers (excluding the marker lines themselves), or None
     if the markers are not present in the file."""
-    txt = open(path, encoding="utf-8").read()
+    txt = read_text(path)
     b = txt.find(BEGIN_MARKER)
     e = txt.find(END_MARKER)
     if b == -1 or e == -1 or e < b:
@@ -194,7 +201,7 @@ def wanted_region(body):
 
 
 def write_region(path, body):
-    txt = open(path, encoding="utf-8").read()
+    txt = read_text(path)
     b, e = _region_bounds(txt, path)
     new_txt = txt[:b + len(BEGIN_MARKER)] + wanted_region(body) + txt[e:]
     if new_txt != txt:

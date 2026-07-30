@@ -27,6 +27,20 @@ def parse_routine_headings(plan_path):
     return out
 
 
+def cadence_routines(doc):
+    """Ordered list of routine dicts from a parsed ops/cadence.yaml document.
+
+    `doc.get("routines", [])` is NOT enough: a bare `routines:` key with no items under it parses to
+    None (YAML), and dict.get's default only fires when the KEY is missing entirely, not when its
+    value is None -- so that idiom crashes with `TypeError: 'NoneType' object is not iterable` on that
+    shape. scripts/gen_routine_lists.py's load_cadence_routines() already carried the `or []` guard;
+    scripts/check_cadence_consistency.py's load_cadence() / cadence_duplicate_ids() and
+    scripts/print_routines.py's load_cadence() did not -- the fix existed in exactly one of the four
+    call sites and never propagated to the other three (2026-07-29, reproduced live against a fixture
+    ops/cadence.yaml with a bare `routines:` key). One shared accessor closes all four at once."""
+    return doc.get("routines", []) or []
+
+
 def heading_to_id(h):
     """Map a heading to its ops/cadence.yaml id."""
     m = re.match(r"([A-Za-z0-9]+)\.\s", h)   # "D1. ...", "M1a. ...", "Q4. ..."

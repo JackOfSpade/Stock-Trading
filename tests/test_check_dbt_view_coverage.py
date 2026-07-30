@@ -61,6 +61,22 @@ def test_live_views_applies_create_drop_in_numeric_not_lexical_order(tmp_path, m
     assert cov.live_views() == set()   # NOT {("state", "dropped_later")}
 
 
+def test_live_views_ignores_a_commented_out_create(tmp_path, monkeypatch):
+    # BUG FIX (2026-07-29): VIEW_DDL/DROP_VIEW_DDL used to match raw file text with no comment
+    # handling -- the same gap confirmed live in check_superseded_markers.py's OBJECT_DDL (bigquery/
+    # 02_ai_layer.sql:23's `--   CREATE OR REPLACE TABLE ...` doc line). A commented-out CREATE OR
+    # REPLACE VIEW for a state/analytics/perf object must not be reported as a live view.
+    bq = tmp_path / "bigquery"
+    bq.mkdir()
+    (bq / "01_a.sql").write_text(
+        "-- Reproduce:\n"
+        "--   CREATE OR REPLACE VIEW `stock-trading-498512.state.phantom` AS SELECT 1;\n"
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.real` AS SELECT 1;\n"
+    )
+    monkeypatch.setattr(cov, "BIGQUERY_DIR", str(bq))
+    assert cov.live_views() == {("state", "real")}
+
+
 def test_live_views_does_not_match_materialized_view_by_design(tmp_path, monkeypatch):
     # SCOPE NOTE (pin, not a bug): VIEW_DDL requires "REPLACE VIEW" contiguously, so a MATERIALIZED
     # VIEW ("REPLACE MATERIALIZED VIEW") is intentionally NOT counted as a coverage-tracked live view.
@@ -131,6 +147,17 @@ def test_dbt_source_names_empty_file_is_empty(tmp_path, monkeypatch):
     src = tmp_path / "sources.yml"
     src.write_text("")
     monkeypatch.setattr(cov, "DBT_SOURCES_YML", str(src))
+    assert cov.dbt_source_names() == set()
+
+
+def test_dbt_source_names_missing_file_is_empty(tmp_path, monkeypatch):
+    # Regression for the 2026-07-29 lib.textio.load_yaml() adoption. Across its whole committed
+    # history dbt_source_names() had NO missing-file guard -- it was the bare
+    # `yaml.safe_load(open(DBT_SOURCES_YML, ...)) or {}` one-liner -- so an absent sources.yml raised
+    # FileNotFoundError out of main() instead of reporting zero dbt-covered views. load_yaml() folds
+    # "absent" and "empty" into the same {}; pin the graceful result so a future rewrite cannot
+    # quietly restore the crash.
+    monkeypatch.setattr(cov, "DBT_SOURCES_YML", str(tmp_path / "does_not_exist.yml"))
     assert cov.dbt_source_names() == set()
 
 

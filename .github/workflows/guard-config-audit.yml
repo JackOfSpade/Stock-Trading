@@ -155,10 +155,17 @@ jobs:
             echo "These two are singled out (vs. the several genuinely-optional guards this same audit checks) because the self-improvement review specifically identified them as closing a real redundancy gap — not a nice-to-have. Set the missing secret(s) to resolve; this issue auto-closes on the next monthly run once configured."
           } > /tmp/body.md
 
+          # BUG FIX (2026-07-29): this step's own name says "refresh", but until now the existing-issue
+          # branch only logged "not duplicating" and left the FIRST run's body in place forever — a
+          # second run finding a DIFFERENT load-bearing gap (e.g. offsite-backup newly missing after
+          # alert-relay got fixed) never updated the issue, so the operator kept reading a stale problem
+          # set. Mirrors stranded-branch-check.yml's identical dedup-and-refresh idiom.
           existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
             --jq '[.[] | select(.title|startswith("⚠️ Guard config:"))][0].number // empty')
           if [ -n "$existing" ]; then
-            echo "Alert issue #$existing already open; not duplicating."
+            gh issue edit "$existing" --repo "$GITHUB_REPOSITORY" --body-file /tmp/body.md \
+              && echo "Alert issue #$existing already open; body refreshed with the current finding set." \
+              || echo "::warning::could not refresh issue #$existing body (transient gh failure?) — issue remains open with a stale body."
           else
             gh issue create --repo "$GITHUB_REPOSITORY" \
               --title "⚠️ Guard config: load-bearing alert/backup channel still dormant" \
