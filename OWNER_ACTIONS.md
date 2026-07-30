@@ -425,7 +425,7 @@ a live apply (same "owner or a BigQuery-MCP session applies the new numbered fil
 `bigquery/NN_*.sql` addition has needed — not re-documented as a separate item here since it's the
 standing convention, not new).
 
-## T. Redeploy `weekly_report.gs` (v5 → v6, AI Park Allocator section) via the pinned-SHA GitHub-raw flow — `[SUPERSEDED 2026-07-30 — never deployed as v6; overtaken by item Y (v6→v7, DONE 2026-07-20) and then v8. Live: weekly_report expected=v8 reported=v8 drift=false. Closed by hand, NOT auto-verified — its fence targets v6, which can never be true again, so the auto-closer would have left it open forever]`
+## T. Redeploy `weekly_report.gs` (v5 → v6, AI Park Allocator section) via the pinned-SHA GitHub-raw flow — `[DONE 2026-07-30 — SUPERSEDED, closed BY HAND (not auto-verified): never deployed as v6; overtaken by item Y (v6→v7, DONE 2026-07-20) and then by v8. Live evidence: weekly_report expected=v8 reported=v8 drift=false. Its own fence targets v6, which can never be true again, so the auto-closer could never have closed it. "[DONE" is required here because verify_owner_actions.py's already_done() matches that literal token — a "[SUPERSEDED" marker alone leaves the item reporting OPEN forever]`
 
 **What it's for:** the park-allocator rollout adds a weekly park section (vehicle history, park TWR vs.
 the three `analytics.park_counterfactuals` benchmarks — SGOV / VOO / rule-shadow) to the self-email,
