@@ -1654,6 +1654,19 @@ def test_cadence_duplicate_ids_helper_directly(tmp_path, monkeypatch):
     assert cc.cadence_duplicate_ids() == ["D1"]
 
 
+def test_load_cadence_and_duplicate_ids_do_not_crash_on_bare_routines_key(tmp_path, monkeypatch):
+    # 2026-07-29: `routines:` with nothing under it parses to {"routines": None} (YAML), not a missing
+    # key -- `doc.get("routines", [])`'s default only fires when the KEY is absent, so this exact shape
+    # crashed load_cadence() and cadence_duplicate_ids() with TypeError: 'NoneType' object is not
+    # iterable pre-fix (confirmed live against the pre-fix `doc.get("routines", [])` idiom). Both now
+    # route through lib.routine_manifest.cadence_routines(), which guards the None case.
+    f = tmp_path / "cadence.yaml"
+    f.write_text("timezone: America/Denver\nroutines:\n")
+    monkeypatch.setattr(cc, "CADENCE", str(f))
+    assert cc.load_cadence() == {}
+    assert cc.cadence_duplicate_ids() == []
+
+
 # ---- check L: the AR_att 'Daily¹' footnote branch (queue_driven behind a Daily-cadence cell) ----
 _AR_ATT_PLAN = (
     "## D1. Market Development Scan — deep research\nbody\n"

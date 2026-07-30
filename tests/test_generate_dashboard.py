@@ -10,7 +10,17 @@ pin q()'s own fixed args (max_rows=1000, project) plus fmt_ts()'s timezone rende
 table()'s HTML escaping. Because run_bq_query and q() both resolve `subprocess.run` off the same
 shared `subprocess` module object, monkeypatching `gd.subprocess.run` still transparently patches
 the call run_bq_query makes on q()'s behalf — no test here needs to reach into lib.bq_json.
+
+BUG FIX (2026-07-29): main() calls beat_heartbeat() unconditionally at the end, which shells out to
+the real `bq` CLI and INSERTs a row into production `ops.heartbeat` (source='dashboard') — confirmed
+live: rows arriving in bursts of 3 per local pytest run, one per gd.main()-calling test below that
+patched gd.q/gd.get_user_tz but NOT beat_heartbeat/gd.subprocess.run. That spoofs the dashboard's own
+liveness dead-man's switch and cost ~10s of real network round-trips per suite run. Every test below
+that calls gd.main() now also patches gd.beat_heartbeat to a no-op; tests/conftest.py additionally
+carries an autouse fixture that hard-fails ANY test reaching a real `bq`/`gcloud` subprocess call, so
+this class of bug can't recur silently even if a future main()-calling test forgets the per-test patch.
 """
+import subprocess
 import types
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -209,6 +219,9 @@ def test_main_returns_1_on_query_timeout(monkeypatch, capsys):
 def test_main_all_green_banner(monkeypatch, tmp_path):
     monkeypatch.setattr(gd, "get_user_tz", lambda: "America/Denver")
     monkeypatch.setattr(gd, "q", _fake_q_all({"state.system_health": [{"all_green": "true"}]}))
+    # 2026-07-29: main() calls beat_heartbeat() unconditionally, which shells out to the real `bq`
+    # CLI and INSERTs into production ops.heartbeat if left unpatched (see module docstring).
+    monkeypatch.setattr(gd, "beat_heartbeat", lambda: None)
     out = tmp_path / "index.html"
     monkeypatch.setattr(gd, "OUT", str(out))
     assert gd.main() == 0
@@ -219,6 +232,7 @@ def test_main_all_green_banner(monkeypatch, tmp_path):
 def test_main_attention_banner_when_not_all_green(monkeypatch, tmp_path):
     monkeypatch.setattr(gd, "get_user_tz", lambda: "America/Denver")
     monkeypatch.setattr(gd, "q", _fake_q_all({"state.system_health": [{"all_green": "false"}]}))
+    monkeypatch.setattr(gd, "beat_heartbeat", lambda: None)  # 2026-07-29, see module docstring
     out = tmp_path / "index.html"
     monkeypatch.setattr(gd, "OUT", str(out))
     assert gd.main() == 0
@@ -231,6 +245,7 @@ def test_main_attention_banner_when_health_query_empty(monkeypatch, tmp_path):
     # not crash.
     monkeypatch.setattr(gd, "get_user_tz", lambda: "America/Denver")
     monkeypatch.setattr(gd, "q", _fake_q_all({}))
+    monkeypatch.setattr(gd, "beat_heartbeat", lambda: None)  # 2026-07-29, see module docstring
     out = tmp_path / "index.html"
     monkeypatch.setattr(gd, "OUT", str(out))
     assert gd.main() == 0
@@ -241,6 +256,7 @@ def test_page_header_escapes_project(monkeypatch, tmp_path):
     monkeypatch.setattr(gd, "get_user_tz", lambda: "America/Denver")
     monkeypatch.setattr(gd, "q", lambda sql: [])
     monkeypatch.setattr(gd, "PROJECT", 'proj"><script>alert(1)</script>')
+    monkeypatch.setattr(gd, "beat_heartbeat", lambda: None)  # 2026-07-29, see module docstring
     out = tmp_path / "index.html"
     monkeypatch.setattr(gd, "OUT", str(out))
     gd.main()
@@ -290,3 +306,37 @@ def test_main_file_not_found_still_caught(monkeypatch, capsys):
     monkeypatch.setattr(gd.subprocess, "run", _boom)
     assert gd.main() == 1
     assert "Query failed" in capsys.readouterr().err
+
+
+# ---- tests/conftest.py's autouse `_block_real_bq_gcloud_calls` fixture (2026-07-29) ---------------
+# These prove the systemic guard itself: it fires on a real bq/gcloud invocation, passes any other
+# command through untouched, and — the property the fix brief specifically called out to verify — a
+# test's own explicit subprocess.run monkeypatch still wins over the autouse fixture's.
+
+def test_autouse_guard_blocks_a_real_bq_invocation():
+    # No monkeypatch here at all: this hits the REAL subprocess.run, which the autouse fixture in
+    # conftest.py has replaced process-wide with a guard that hard-fails on argv[0] in (bq, gcloud)
+    # instead of letting the call reach the OS. pytest.fail.Exception is the class pytest.fail()
+    # raises — it is a BaseException, not an Exception, precisely so a bare `except Exception` inside
+    # the code under test (see beat_heartbeat) cannot swallow it.
+    with pytest.raises(pytest.fail.Exception):
+        subprocess.run(["bq", "--version"])
+
+
+def test_autouse_guard_passes_non_bq_gcloud_commands_through():
+    # argv[0] isn't bq/gcloud, so this must reach the real OS subprocess.run untouched.
+    result = subprocess.run(["true"], capture_output=True)
+    assert result.returncode == 0
+
+
+def test_autouse_guard_is_overridden_by_a_tests_own_monkeypatch(monkeypatch):
+    # The autouse fixture patches subprocess.run during test SETUP, before this test body runs. This
+    # test's own monkeypatch.setattr call below happens after, on the same function-scoped
+    # `monkeypatch` instance, so it wins for the rest of the test (monkeypatch's undo-stack: last
+    # setattr on a given attribute is what's live until teardown unwinds in reverse). Without this
+    # override property, EVERY test that legitimately fakes a bq call (the whole rest of this file)
+    # would incorrectly hard-fail under the autouse guard instead of exercising its own fake.
+    monkeypatch.setattr(gd.subprocess, "run",
+                        lambda *a, **kw: types.SimpleNamespace(returncode=0, stdout="", stderr=""))
+    result = gd.subprocess.run(["bq", "--version"])  # would hard-fail under the autouse guard alone
+    assert result.returncode == 0

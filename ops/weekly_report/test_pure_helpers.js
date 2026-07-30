@@ -25,22 +25,32 @@
  *   - periodAvg_           (weekly_report.gs)
  *   - isExtrapolated_      (weekly_report.gs)
  *   - benchmarkRow_        (weekly_report.gs)
+ *   - num_                 (weekly_report.gs) -- 2026-07-29: was zero-coverage
  *   - signPct_             (weekly_report.gs)
  *   - fmtRetPct_           (weekly_report.gs)
  *   - parseIsoDateLocal_   (weekly_report.gs)
  *   - downsampleDates_     (weekly_report.gs)
  *   - niceNum_             (weekly_report.gs)
  *   - niceYRange_          (weekly_report.gs)
+ *   - altTextFor_          (weekly_report.gs) -- 2026-07-29: was zero-coverage
  *   - buildHealthReasons_  (weekly_report.gs)
  *   - buildSubject_        (weekly_report.gs)
  *   - esc_                 (weekly_report.gs)
  *   - VOO_COLOR            (weekly_report.gs)
- *   - clr_                 (weekly_report.gs)
+ *   - clr_                 (weekly_report.gs) -- 2026-07-29: was only exercised indirectly via pctCellHtml_
  *   - fallbackBarsHtml_    (weekly_report.gs)
  *   - pctCellHtml_         (weekly_report.gs)
+ *   - buildParkSection_    (weekly_report.gs) -- 2026-07-29: was zero-coverage; pluralization bugs here
+ *                           (e.g. "1 days") would be silent in the rendered email
  *   - isTest_              (alert_emailer.gs)
  *   - esc2_                (alert_emailer.gs)
- *   - alertSubject_        (alert_emailer.gs, defined immediately after isTest_)
+ *   - alertSubject_        (alert_emailer.gs, defined immediately after isTest_; signature changed
+ *                           2026-07-29 from (fresh, combined) to (fresh, recurringCount) -- see that
+ *                           file's checkAlerts_ for why)
+ *   - htmlAlerts_          (alert_emailer.gs) -- 2026-07-29: copied ONLY to regression-test the
+ *                           LOOKBACK_LABEL footer text; call with an EMPTY batch ONLY, see its own
+ *                           comment above the copy
+ *   - plainAlerts_         (alert_emailer.gs) -- same empty-batch-only caveat as htmlAlerts_
  *
  * Note: signDollar_, fmtAbsDollars_, edgeWord_, dollarCellHtml_, SGOV_GRAY, and the headline-block
  * comparison logic in fallbackBarsHtml_/buildSubject_ were removed from weekly_report.gs in the
@@ -96,6 +106,7 @@ function benchmarkRow_(returnPct, days) {
   };
 }
 
+function num_(v)  { return (v === null || v === undefined || v === '') ? null : Number(v); }
 function signPct_(p){ const s = Math.abs(p).toFixed(2); return (p >= 0 || s === '0.00' ? '+' : '−') + s + '%'; } // unicode minus; force '+' when the rounded magnitude is 0.00 (else a tiny loss prints "−0.00%")
 function fmtRetPct_(p){ return p == null ? 'n/a' : signPct_(p * 100); }
 
@@ -133,6 +144,14 @@ function niceYRange_(values) {
   lo = Math.floor(lo / step) * step;
   hi = Math.ceil(hi / step) * step;
   return { min: lo, max: hi, step: step, gridlines: Math.round((hi - lo) / step) + 1 };
+}
+
+function altTextFor_(d) {
+  const parts = d.rows.filter(r => r.deployed).map(r => `${r.strategy} ${fmtRetPct_(r.returnPct)}`);
+  if (d.voo && d.voo.returnPct != null) {
+    parts.push(`VOO ${signPct_(d.voo.returnPct * 100)}`);
+  }
+  return 'Cumulative return: ' + parts.join(', ');
 }
 
 function esc_(s)  { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -181,6 +200,38 @@ function pctCellHtml_(v, colorBySign, extrapolated) {
   const color = colorBySign ? (roundedZero ? '#1a7f5a' : clr_(v)) : '#3d4a59';
   const marker = extrapolated ? '†' : '';
   return `<span style="color:${color};font-weight:${colorBySign ? 700 : 400};">${signPct_(v * 100)}${marker}</span>`;
+}
+
+// Compact PARK section (2026-07-18, PARK_ROUTER_DESIGN.md v2 §9) — current vehicle, tenure, switch
+// cadence, and the AI's own realized TWR vs the three counterfactuals (100% SGOV, 100% VOO, the
+// record-only v1 rule-shadow). Reuses pctCellHtml_/esc_ exactly like the Average Return table above.
+// Guards every field independently (never a bare "undefined"/fabricated 0%) — bigquery/91-93 may not
+// be applied live yet, see gatherParkData_.
+function buildParkSection_(d) {
+  const p = d.park || {};
+  const vehicleLabel = p.vehicle ? esc_(p.vehicle) : 'unknown';
+  const daysLabel = p.daysInVehicle != null ? `${p.daysInVehicle} day${p.daysInVehicle === 1 ? '' : 's'}` : 'n/a';
+  const switchesLabel = p.switches30d != null ? `${p.switches30d} switch${p.switches30d === 1 ? '' : 'es'} / 30d` : 'n/a';
+
+  const hasCf = p.ai != null || p.sgov != null || p.voo != null || p.rule != null;
+  const cfRowHtml = (label, val, colorBySign) => `
+      <tr>
+        <td style="padding:6px 8px;color:#3d4a59;">${esc_(label)}</td>
+        <td style="padding:6px 8px;text-align:right;">${pctCellHtml_(val, !!colorBySign)}</td>
+      </tr>`;
+  const cfTable = hasCf ? `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;border-collapse:collapse;font-size:12px;">
+      ${cfRowHtml('AI (actual)', p.ai, true)}${cfRowHtml('100% SGOV', p.sgov, false)}${cfRowHtml('100% VOO', p.voo, false)}${cfRowHtml('Rule-shadow (record-only)', p.rule, false)}
+    </table>` :
+    `<div style="margin-top:8px;font-size:11px;color:#8a96a3;">Not enough data yet.</div>`;
+
+  return `
+  <tr><td style="padding:16px 22px 6px 22px;">
+    <div style="font-size:12px;color:#8a96a3;text-transform:uppercase;letter-spacing:0.6px;font-weight:700;">Park (AI Allocator)</div>
+    <div style="margin-top:6px;font-size:12px;color:#1f2d3d;">Current vehicle: <b>${vehicleLabel}</b> · ${daysLabel} · ${switchesLabel}</div>
+    ${cfTable}
+    <div style="font-size:11px;color:#8a96a3;margin-top:6px;">Park TWR since 2026-04-17 vs. the three PARK_ROUTER_DESIGN.md counterfactuals — SGOV never-left, VOO the prior static policy, rule-shadow the record-only v1 lookup table (owner-rejected as decision-maker).</div>
+  </td></tr>`;
 }
 
 // ===== "Why might these numbers be stale?" — only when the data-trust predicate fails =====
@@ -234,15 +285,15 @@ function esc2_(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').repl
 function isTest_(a) { return a.source === 'scheduled.canary' || a.category === 'delivery_canary'; }
 
 // Email subject for one poll batch. `fresh` = alerts newly notified this poll (real incidents +
-// any canary); `combined` = fresh plus non-duplicate recurring termination_close_staged re-sends
-// (see the call site). "new" must count only genuinely-new alerts (from `fresh`), NOT the recurring
-// re-sends that also ride in `combined` — otherwise the subject over-reports new incidents (e.g.
-// "3 new" when 2 are new + 1 is a recurring re-notify) and mis-attributes the recurring critical to
-// the "(N critical)" new-count.
-function alertSubject_(fresh, combined) {
+// any canary); `recurringCount` = the count of non-duplicate recurring termination_close_staged
+// re-sends riding in the same batch, computed ONCE by the caller (checkAlerts_) and passed in —
+// NOT re-derived from a `combined` array here (2026-07-29 collapse). "new" must count only
+// genuinely-new alerts (from `fresh`), NOT the recurring re-sends — otherwise the subject
+// over-reports new incidents (e.g. "3 new" when 2 are new + 1 is a recurring re-notify) and
+// mis-attributes the recurring critical to the "(N critical)" new-count.
+function alertSubject_(fresh, recurringCount) {
   const newReal = fresh.filter(r => !isTest_(r));         // genuinely new, non-test alerts this poll
   const testCount = fresh.length - newReal.length;         // test canaries among the new alerts
-  const recurringCount = combined.length - fresh.length;   // termination_close_staged re-sends this poll
   if (newReal.length === 0 && recurringCount === 0) {
     // Batch is ONLY the alert-delivery self-test → unmistakable test subject, no ⚠.
     return '⚗ [TEST] Stock-Trading alert-delivery self-test — no action needed';
@@ -252,6 +303,57 @@ function alertSubject_(fresh, combined) {
             (newReal.length ? ` — ${newReal.length} new${crit ? ` (${crit} critical)` : ''}` : '') +
             (recurringCount ? ` — ${recurringCount} UNCONFIRMED TERMINATION CLOSE (recurring)` : '') +
             (testCount ? ` (+${testCount} test)` : '');
+}
+
+// htmlAlerts_ / plainAlerts_ are copied ONLY to regression-test the LOOKBACK_LABEL footer text
+// (2026-07-29 fix) — call them with an EMPTY batch ONLY. Both are otherwise impure: their per-row
+// map()/forEach() callback calls fmtAlertTs_(a), which needs Apps-Script globals (Session/BigQuery via
+// getUserTzAlerts_) not present under plain Node. With batch=[], that callback is never invoked, so
+// fmtAlertTs_ never needs to be defined -- JS resolves identifiers inside a function body lazily, at
+// call time, not at parse time. Do NOT call these with a non-empty batch here; it will throw
+// "fmtAlertTs_ is not defined".
+const LOOKBACK_HOURS   = 168;
+const LOOKBACK_LABEL   = (LOOKBACK_HOURS % 24 === 0) ? `${LOOKBACK_HOURS / 24}d` : `${LOOKBACK_HOURS}h`;
+
+function htmlAlerts_(batch, newlyUnnotifiedCount, recurringCount) {
+  const allTest = batch.length > 0 && batch.every(isTest_);
+  const rowsHtml = batch.map(a => {
+    const test = isTest_(a);
+    const isCrit = a.severity === 'critical';
+    const bar = test ? '#2c6e9b' : (isCrit ? '#c0392b' : '#b9770e');
+    const bg  = test ? '#eaf2f8' : (isCrit ? '#fcebea' : '#fdf3e3');
+    const tag = test
+      ? ' · <span style="color:#2c6e9b;font-weight:700;">⚗ TEST — no action needed</span>'
+      : ((String(a.resolved) === 'true') ? ' · <span style="color:#2e7d32;">AUTO-RESOLVED</span>' : '');
+    return `<tr><td style="padding:0;">
+      <div style="border-left:4px solid ${bar};background-color:${bg};border-radius:6px;padding:10px 12px;margin:6px 0;">
+        <div style="font-size:13px;font-weight:700;color:${bar};">${esc2_(a.severity.toUpperCase())} · ${esc2_(a.source)} · ${esc2_(a.category)}${tag}</div>
+        <div style="font-size:13px;color:#1f2d3d;margin-top:3px;">${esc2_(a.message)}</div>
+        <div style="font-size:11px;color:#8a96a3;margin-top:3px;">${esc2_(fmtAlertTs_(a))}</div>
+      </div></td></tr>`;
+  }).join('');
+  const header = allTest
+    ? '⚗ Stock-Trading — alert-delivery self-test (TEST · no action needed)'
+    : '⚠ Stock-Trading — unresolved alerts';
+  return `<!DOCTYPE html><html><body style="margin:0;padding:18px;background-color:#eef1f5;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:auto;background:#fff;border-radius:12px;padding:18px;">
+      <tr><td style="font-size:16px;font-weight:700;color:#0f2747;padding-bottom:8px;">${header}</td></tr>
+      ${rowsHtml}
+      <tr><td style="font-size:11px;color:#8a96a3;padding-top:10px;">This email contains ${batch.length} alert(s): ${newlyUnnotifiedCount} newly un-notified in the last ${LOOKBACK_LABEL} and ${recurringCount} recurring. Resolve via <code>UPDATE ops.alerts SET resolved=TRUE WHERE alert_id='...'</code> — always scope by alert_id, never run this unfiltered. This channel complements the [Claude] ATTENTION calendar events.</td></tr>
+    </table></body></html>`;
+}
+
+function plainAlerts_(batch, newlyUnnotifiedCount, recurringCount) {
+  const allTest = batch.length > 0 && batch.every(isTest_);
+  let s = allTest
+    ? `[TEST] Stock-Trading — alert-delivery self-test, no action needed:\n\n`
+    : `Stock-Trading — ${batch.length} alert(s) (${newlyUnnotifiedCount} newly un-notified in the last ${LOOKBACK_LABEL}, ${recurringCount} recurring):\n\n`;
+  batch.forEach(a => {
+    const tag = isTest_(a) ? '[TEST] ' : (String(a.resolved) === 'true' ? '[AUTO-RESOLVED] ' : '');
+    s += `[${a.severity.toUpperCase()}] ${tag}${a.source}/${a.category}: ${a.message}  (${fmtAlertTs_(a)})\n`;
+  });
+  s += `\nResolve via UPDATE ops.alerts SET resolved=TRUE WHERE alert_id='...' — always scope by alert_id, never run this unfiltered. Complements the [Claude] ATTENTION calendar events.`;
+  return s;
 }
 
 // ===== tests ==================================================================================
@@ -339,6 +441,35 @@ t('benchmarkRow_ computes avg/month and avg/year once the 21-day floor is met, f
 t('benchmarkRow_ marks avg/year not extrapolated once 252+ deployed days exist', () => {
   const r = benchmarkRow_(0.15, 300);
   assert.strictEqual(r.extrapolatedYear, false);
+});
+
+// ---- num_ (2026-07-29: zero-coverage BigQuery-value coercion; BigQuery Jobs.query returns every cell
+//      as a STRING regardless of the column's declared type, and a SQL NULL comes back as JS null, not
+//      a "null" string -- a wrong guard here silently propagates into every downstream %, kill-flag
+//      count, and "n/a"/"Not enough data" branch this file computes) ----
+t('num_ returns null (not NaN/0) for a real SQL NULL (JS null) and for undefined', () => {
+  assert.strictEqual(num_(null), null);
+  assert.strictEqual(num_(undefined), null);
+});
+t('num_ returns null for the empty string BigQuery can return for a NULL cell in some paths', () => {
+  assert.strictEqual(num_(''), null);
+});
+t('num_ preserves zero -- a common false-negative bug is treating 0 as "missing" like null', () => {
+  assert.strictEqual(num_(0), 0);
+  assert.strictEqual(num_('0'), 0);
+  assert.notStrictEqual(num_('0'), null, 'the string "0" must coerce to the number 0, not null');
+});
+t('num_ preserves negative values, including from a string cell', () => {
+  assert.strictEqual(num_(-3.5), -3.5);
+  assert.strictEqual(num_('-3.5'), -3.5);
+});
+t('num_ coerces a non-numeric string to NaN (JS Number() semantics) -- documents the propagation risk', () => {
+  // BigQuery numeric/boolean columns should never actually emit a non-numeric string, so this is a
+  // defensive/documentation case, not a fix: num_ is a thin Number() coercion, and NaN's own
+  // falsiness is what keeps existing `num_(x) || 0` call sites (gatherData_'s firingKillFlags /
+  // openCriticalAlerts) safe against it -- a call site that does NOT OR-default to 0, like
+  // returnPct's `lastDuv - 1`, would still propagate a silent NaN. Pin the actual behavior here.
+  assert.ok(Number.isNaN(num_('not-a-number')));
 });
 
 // ---- signPct_ ----
@@ -441,6 +572,31 @@ t('niceYRange_ snaps bounds to whole multiples of its step', () => {
   assert.ok(Math.abs(r.max / r.step - Math.round(r.max / r.step)) < 1e-9, 'max not on a step boundary');
 });
 
+// ---- altTextFor_ (2026-07-29: zero-coverage -- the chart's <img alt> text, which is what a
+//      screen-reader / images-off inbox shows in place of the chart, so a silent break here is
+//      invisible to anyone viewing images normally) ----
+t('altTextFor_ lists only deployed strategies with their formatted return', () => {
+  const d = { rows: [
+    { strategy: 'A', deployed: true, returnPct: 0.0123 },
+    { strategy: 'B', deployed: false, returnPct: null },
+  ], voo: { returnPct: null } };
+  assert.strictEqual(altTextFor_(d), 'Cumulative return: A +1.23%');
+});
+t('altTextFor_ renders a deployed strategy with a null return as "n/a", not a false "+0.00%"', () => {
+  const d = { rows: [{ strategy: 'A', deployed: true, returnPct: null }], voo: { returnPct: null } };
+  assert.strictEqual(altTextFor_(d), 'Cumulative return: A n/a');
+});
+t('altTextFor_ appends VOO only when d.voo.returnPct is non-null', () => {
+  const base = { rows: [{ strategy: 'A', deployed: true, returnPct: 0.01 }] };
+  assert.strictEqual(altTextFor_({ ...base, voo: { returnPct: 0.02 } }), 'Cumulative return: A +1.00%, VOO +2.00%');
+  assert.strictEqual(altTextFor_({ ...base, voo: { returnPct: null } }), 'Cumulative return: A +1.00%');
+  assert.strictEqual(altTextFor_({ ...base, voo: null }), 'Cumulative return: A +1.00%');
+});
+t('altTextFor_ degrades to the bare prefix when nothing is deployed and VOO has no data', () => {
+  const d = { rows: [{ strategy: 'A', deployed: false, returnPct: null }], voo: { returnPct: null } };
+  assert.strictEqual(altTextFor_(d), 'Cumulative return: ');
+});
+
 // ---- esc_ ----
 t('esc_ escapes &, <, >, and " (quote-escaping fix)', () => {
   assert.strictEqual(esc_('<b>&"'), '&lt;b&gt;&amp;&quot;');
@@ -448,6 +604,14 @@ t('esc_ escapes &, <, >, and " (quote-escaping fix)', () => {
 t('esc_ handles null/undefined without throwing, returning the empty string', () => {
   assert.strictEqual(esc_(null), '');
   assert.strictEqual(esc_(undefined), '');
+});
+
+// ---- clr_ (2026-07-29: previously only exercised indirectly through pctCellHtml_'s rounded-zero
+//      routing, never pinned directly against its own raw-sign contract) ----
+t('clr_ maps a non-negative value to the gain color, a negative value to the loss color', () => {
+  assert.strictEqual(clr_(5), '#1a7f5a');
+  assert.strictEqual(clr_(0), '#1a7f5a');
+  assert.strictEqual(clr_(-0.0001), '#c0392b');
 });
 
 // ---- pctCellHtml_ / fallbackBarsHtml_ (the "chart must never fail the send" safety fallback and
@@ -641,6 +805,37 @@ t('buildSubject_ appends the "⚠ check data" warning suffix when green is false
   assert.strictEqual(buildSubject_(d), 'Stock-Trading · Deployed vs Benchmarks — Jul 6, 2026 · all parked · ⚠ check data');
 });
 
+// ---- buildParkSection_ (2026-07-29: zero-coverage; a pluralization or "n/a" regression here (e.g.
+//      "1 days") reads as normal prose to a skim and would be silent in the rendered email) ----
+t('buildParkSection_ singularizes "1 day" / "1 switch" and pluralizes for any other count, including 0', () => {
+  const one = buildParkSection_({ park: { vehicle: 'VOO', daysInVehicle: 1, switches30d: 1 } });
+  assert.ok(one.includes('1 day ·'), 'expected singular "1 day", not "1 days"');
+  assert.ok(one.includes('1 switch / 30d'), 'expected singular "1 switch", not "1 switches"');
+  const zero = buildParkSection_({ park: { vehicle: 'VOO', daysInVehicle: 0, switches30d: 0 } });
+  assert.ok(zero.includes('0 days ·'), 'expected plural "0 days" (0 is not "1")');
+  assert.ok(zero.includes('0 switches / 30d'), 'expected plural "0 switches"');
+  const many = buildParkSection_({ park: { vehicle: 'VOO', daysInVehicle: 5, switches30d: 2 } });
+  assert.ok(many.includes('5 days ·'));
+  assert.ok(many.includes('2 switches / 30d'));
+});
+t('buildParkSection_ renders "unknown" vehicle and "n/a" tenure/switches when park data is entirely absent', () => {
+  const out = buildParkSection_({ park: {} });
+  assert.ok(out.includes('<b>unknown</b>'));
+  assert.ok(out.includes('n/a · n/a'));
+  assert.ok(out.includes('Not enough data yet.'), 'no counterfactual fields -> the not-enough-data fallback, never a fabricated 0%');
+});
+t('buildParkSection_ falls back to the same "park" defaults when d.park itself is missing (bigquery/91-93 not applied)', () => {
+  const out = buildParkSection_({});
+  assert.ok(out.includes('<b>unknown</b>'));
+  assert.ok(out.includes('Not enough data yet.'));
+});
+t('buildParkSection_ renders the counterfactual table once any of ai/sgov/voo/rule is non-null', () => {
+  const out = buildParkSection_({ park: { vehicle: 'SGOV', daysInVehicle: 3, switches30d: 1, ai: 0.01, sgov: null, voo: null, rule: null } });
+  assert.ok(!out.includes('Not enough data yet.'));
+  assert.ok(out.includes('AI (actual)'));
+  assert.ok(out.includes('+1.00%'));
+});
+
 // ---- isTest_ (alert_emailer.gs) ----
 t('isTest_ returns true for the canary source', () => {
   assert.strictEqual(isTest_({ source: 'scheduled.canary', category: 'other' }), true);
@@ -664,35 +859,31 @@ t('esc2_ handles null/undefined without throwing, returning the empty string', (
 // ---- alertSubject_ (alert_emailer.gs) ----
 t('alertSubject_: canary-only batch (no new real, no recurring) -> the [TEST] subject', () => {
   const fresh = [{ source: 'scheduled.canary', category: 'delivery_canary', severity: 'warning' }];
-  assert.strictEqual(alertSubject_(fresh, fresh), '⚗ [TEST] Stock-Trading alert-delivery self-test — no action needed');
+  assert.strictEqual(alertSubject_(fresh, 0), '⚗ [TEST] Stock-Trading alert-delivery self-test — no action needed');
 });
 t('alertSubject_: N new real alerts + 1 recurring termination-close -> "N new", not "N+1"', () => {
   const fresh = [
     { source: 'router', category: 'cash_tripwire', severity: 'critical' },
     { source: 'router', category: 'stale_data', severity: 'warning' },
   ];
-  const recurring = [{ source: 'router', category: 'termination_close_staged', severity: 'warning' }];
-  const combined = fresh.concat(recurring);
   assert.strictEqual(
-    alertSubject_(fresh, combined),
+    alertSubject_(fresh, 1),
     '⚠ Stock-Trading ALERT — 2 new (1 critical) — 1 UNCONFIRMED TERMINATION CLOSE (recurring)'
   );
 });
 t('alertSubject_: recurring-only batch (no new alerts this poll) -> no "new" segment', () => {
   const fresh = [];
-  const recurring = [{ source: 'router', category: 'termination_close_staged', severity: 'warning' }];
-  const combined = fresh.concat(recurring);
   assert.strictEqual(
-    alertSubject_(fresh, combined),
+    alertSubject_(fresh, 1),
     '⚠ Stock-Trading ALERT — 1 UNCONFIRMED TERMINATION CLOSE (recurring)'
   );
 });
 t('alertSubject_: a critical alert riding ONLY in the recurring set must not inflate "(N critical)"', () => {
   const fresh = [{ source: 'router', category: 'stale_data', severity: 'warning' }];
-  const recurring = [{ source: 'router', category: 'termination_close_staged', severity: 'critical' }];
-  const combined = fresh.concat(recurring);
+  // The recurring critical (severity of the termination_close_staged row, not modeled in `fresh`) must
+  // never enter the "(N critical)" count -- recurringCount is a plain number, it carries no severity.
   assert.strictEqual(
-    alertSubject_(fresh, combined),
+    alertSubject_(fresh, 1),
     '⚠ Stock-Trading ALERT — 1 new — 1 UNCONFIRMED TERMINATION CLOSE (recurring)'
   );
 });
@@ -702,9 +893,28 @@ t('alertSubject_: a test canary alongside a real new alert -> "(+1 test)" suffix
     { source: 'scheduled.canary', category: 'delivery_canary', severity: 'warning' },
   ];
   assert.strictEqual(
-    alertSubject_(fresh, fresh),
+    alertSubject_(fresh, 0),
     '⚠ Stock-Trading ALERT — 1 new (1 critical) (+1 test)'
   );
+});
+
+// ---- htmlAlerts_ / plainAlerts_ footer text (2026-07-29 regression fix, empty-batch-only — see the
+//      caveat above the copies) ----
+// A 2026-07 rewrite that split newly-un-notified from recurring counts DROPPED the "in the last
+// <LOOKBACK_LABEL>" window callout entirely from both footers as a side effect (LOOKBACK_LABEL went
+// unused/dead). Confirmed this test fails without the fix: reverting htmlAlerts_'s footer line to the
+// pre-fix `${newlyUnnotifiedCount} newly un-notified and ${recurringCount} recurring.` (no LOOKBACK_LABEL
+// mention at all) makes `.includes('in the last')` false and this assertion throws; restoring the
+// LOOKBACK_LABEL clause makes it pass again. Same check mirrored for plainAlerts_.
+t('htmlAlerts_ footer restores the "in the last <LOOKBACK_LABEL>" window callout on the newly-un-notified count', () => {
+  const html = htmlAlerts_([], 2, 3);
+  assert.ok(html.includes(`2 newly un-notified in the last ${LOOKBACK_LABEL} and 3 recurring`),
+    `expected the window callout in: ${html}`);
+});
+t('plainAlerts_ footer restores the "in the last <LOOKBACK_LABEL>" window callout on the newly-un-notified count', () => {
+  const plain = plainAlerts_([], 2, 3);
+  assert.ok(plain.includes(`2 newly un-notified in the last ${LOOKBACK_LABEL}, 3 recurring`),
+    `expected the window callout in: ${plain}`);
 });
 
 console.log(`\n${passed} assertions passed.`);

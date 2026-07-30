@@ -46,7 +46,11 @@ import os
 import sys
 
 try:
-    import yaml
+    # noqa: F401 — this module's own read now goes through lib.textio.load_yaml() (2026-07-29 textio
+    # adoption), so `yaml` is no longer referenced directly here, but the import stays for this
+    # fail-fast ImportError guard (a clear "pip install pyyaml" message beats textio.py's own bare
+    # ImportError traceback).
+    import yaml  # noqa: F401
 except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
     raise SystemExit(2)
@@ -54,10 +58,12 @@ except ImportError:
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.routine_manifest import (  # noqa: E402
     build_triggers_manifest,
+    cadence_routines,
     heading_to_id,
     instruction_text,
     parse_routine_headings,
 )
+from lib.textio import load_yaml  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLAN = os.path.join(ROOT, "Claude_Task_Plan.md")
@@ -73,8 +79,8 @@ def routine_headings():
 
 
 def load_cadence():
-    doc = yaml.safe_load(open(CADENCE, encoding="utf-8")) or {}
-    sched = {r["id"]: r for r in doc.get("routines", [])}
+    doc = load_yaml(CADENCE)
+    sched = {r["id"]: r for r in cadence_routines(doc)}
     return doc.get("timezone", "?"), sched
 
 

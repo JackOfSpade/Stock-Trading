@@ -31,7 +31,7 @@ const ALERT_RECIPIENT  = Session.getActiveUser().getEmail(); // self-email
 const ALERT_SENDER     = 'Stock-Trading Alerts';
 const SEVERITIES       = ['critical', 'warning']; // set to ['critical'] for criticals only
 const POLL_HOURS       = 2;                        // how often to check
-const ALERT_SCRIPT_VERSION = 'v3';                 // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep. Named ALERT_SCRIPT_VERSION (not SCRIPT_VERSION) because this file and weekly_report.gs share ONE Apps Script project's top-level scope -- a same-named const in both would throw a project-wide SyntaxError on the next paste (2026-07-14 audit finding).
+const ALERT_SCRIPT_VERSION = 'v4';                 // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep. Named ALERT_SCRIPT_VERSION (not SCRIPT_VERSION) because this file and weekly_report.gs share ONE Apps Script project's top-level scope -- a same-named const in both would throw a project-wide SyntaxError on the next paste (2026-07-14 audit finding).
 // LOOKBACK_HOURS bounds the notified_ts IS NULL scan. Was 48h — if the emailer itself is dead longer
 // than the lookback (revoked token / deleted trigger), alerts raised early in the outage permanently
 // keep notified_ts NULL and are never emailed by ANY code path on recovery (the webhook relay's window
@@ -40,7 +40,12 @@ const ALERT_SCRIPT_VERSION = 'v3';                 // bump on every functional c
 // margin for any realistic recovery lag at negligible extra query cost (2026-07 report-system fix).
 const LOOKBACK_HOURS   = 168;
 // Human-readable label derived from LOOKBACK_HOURS, used by htmlAlerts_/plainAlerts_ so the copy never
-// drifts out of sync with the actual window (days when evenly divisible, else "Nh").
+// drifts out of sync with the actual window (days when evenly divisible, else "Nh"). Scoped ONLY to the
+// newly-un-notified count in those footers -- the recurring termination_close_staged re-sends (checkAlerts_)
+// have no LOOKBACK_HOURS bound (their query is `WHERE ... AND NOT resolved`, unbounded), so labelling them
+// "in the last LOOKBACK_LABEL" too would misstate their window. (2026-07-29: the prior new-vs-recurring
+// rewrite dropped this callout from both footers entirely, going dead-code here as a side effect --
+// restored, correctly scoped, rather than deleting LOOKBACK_LABEL, since the operator needs the window.)
 const LOOKBACK_LABEL   = (LOOKBACK_HOURS % 24 === 0) ? `${LOOKBACK_HOURS / 24}d` : `${LOOKBACK_HOURS}h`;
 
 // ===== ENTRY POINTS =====
@@ -65,6 +70,14 @@ function checkAlerts_() {
   // long enough to also suppress the heartbeat, cadence_check.sql's automation_heartbeat dead-man's
   // switch could misdiagnose a live, working emailer as dead.
   let pollOk = false;
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(1000)) {
+    // A concurrent/manual run owns delivery. Skipping is safe because its
+    // successful stamp or the next scheduled poll will pick up every alert.
+    Logger.log('Alert delivery already running; skipping this poll.');
+    beat_(true);
+    return;
+  }
   try {
     const sevList = SEVERITIES.map(s => `'${s}'`).join(',');
     // NOTIFICATION-COMPLETE: select un-notified alerts (notified_ts IS NULL), NOT `NOT resolved`, so an
@@ -121,10 +134,15 @@ function checkAlerts_() {
       // Split the alert-delivery self-test (canary) from real alerts so a weekly probe is never
       // disguised as an incident in the subject — and, conversely, a real alert that happens to ride
       // in the same poll batch is never softened to "[TEST]". (RUNBOOK §15 / delivery_canary.sql.)
-      const subject = alertSubject_(fresh, combined);
-      GmailApp.sendEmail(ALERT_RECIPIENT, subject, plainAlerts_(combined, rows.length),
-        { htmlBody: htmlAlerts_(combined, rows.length), name: ALERT_SENDER });
-      const recurringCount = combined.length - fresh.length; // termination_close_staged re-sends this poll (mirrors alertSubject_'s internal computation)
+      // recurringCount is the ONE place this poll's newly-un-notified/recurring split is computed
+      // (2026-07-29): alertSubject_, htmlAlerts_, plainAlerts_, and this Logger.log line used to each
+      // recompute it independently and had already drifted once (one call site passed rows.length --
+      // the pre-Set-dedup query result -- where the others used fresh.length). Compute it once here and
+      // thread the SAME number to every consumer so it cannot diverge again.
+      const recurringCount = combined.length - fresh.length;
+      const subject = alertSubject_(fresh, recurringCount);
+      GmailApp.sendEmail(ALERT_RECIPIENT, subject, plainAlerts_(combined, fresh.length, recurringCount),
+        { htmlBody: htmlAlerts_(combined, fresh.length, recurringCount), name: ALERT_SENDER });
       Logger.log('Emailed %s new alerts (%s recurring termination-close)', combined.length, recurringCount);
       stampNotified_(fresh.map(r => r.alert_id)); // recurring termination_close_staged rows NEVER stamped
       // Bounded de-dup guard for ids we just emailed (in case the notified_ts stamp failed).
@@ -138,6 +156,8 @@ function checkAlerts_() {
     pollOk = true;
   } catch (e) {
     Logger.log('checkAlerts_ query failed (BigQuery quota or transient error?) — skipping this cycle: ' + e);
+  } finally {
+    lock.releaseLock();
   }
 
   // Liveness beat (ops.heartbeat -> state.automation_heartbeat). Lets cadence_check.sql detect a
@@ -182,13 +202,21 @@ function beat_(pollOk) {
 
 // ===== BigQuery =====
 function bqAlerts_(sql) {
-  let res = BigQuery.Jobs.query({ query: sql, useLegacySql: false, timeoutMs: 30000 }, ALERT_PROJECT_ID);
+  let res = BigQuery.Jobs.query({ query: sql, useLegacySql: false, timeoutMs: 30000, maxResults: 10000 }, ALERT_PROJECT_ID);
   let g = 0;
   while (!res.jobComplete && g++ < 10) { Utilities.sleep(1000); res = BigQuery.Jobs.getQueryResults(ALERT_PROJECT_ID, res.jobReference.jobId); }
   // A query that never completes must FAIL the send (no heartbeat -> dead-man's switch), not render empty.
   if (!res.jobComplete) throw new Error('BigQuery job did not complete after 10s poll: ' + sql.slice(0, 120));
   const fields = (res.schema && res.schema.fields) ? res.schema.fields.map(f => f.name) : [];
-  return (res.rows || []).map(r => { const o = {}; r.f.forEach((c, i) => o[fields[i]] = c.v); return o; });
+  const rows = res.rows || [];
+  let pageToken = res.pageToken;
+  while (pageToken) {
+    const page = BigQuery.Jobs.getQueryResults(ALERT_PROJECT_ID, res.jobReference.jobId,
+      { pageToken: pageToken, maxResults: 10000 });
+    rows.push.apply(rows, page.rows || []);
+    pageToken = page.pageToken;
+  }
+  return rows.map(r => { const o = {}; r.f.forEach((c, i) => o[fields[i]] = c.v); return o; });
 }
 
 // Detected DISPLAY timezone (state.user_tz — bigquery/20_user_prefs.sql). Purely cosmetic: it changes
@@ -228,16 +256,18 @@ function esc2_(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').repl
 function isTest_(a) { return a.source === 'scheduled.canary' || a.category === 'delivery_canary'; }
 
 // Email subject for one poll batch. `fresh` = alerts newly notified this poll (real incidents +
-// any canary); `combined` = fresh plus non-duplicate recurring termination_close_staged re-sends
-// (see the call site). "new" must count only genuinely-new alerts (from `fresh`), NOT the recurring
-// re-sends that also ride in `combined` — otherwise the subject over-reports new incidents (e.g.
-// "3 new" when 2 are new + 1 is a recurring re-notify) and mis-attributes the recurring critical to
-// the "(N critical)" new-count. Pure (no Apps-Script-service calls) — mirrored verbatim in
-// ops/weekly_report/test_pure_helpers.js; keep both in sync.
-function alertSubject_(fresh, combined) {
+// any canary); `recurringCount` = the count of non-duplicate recurring termination_close_staged
+// re-sends riding in the same batch (combined.length - fresh.length). Computed ONCE by the caller
+// (checkAlerts_) and passed in — NOT re-derived from a `combined` array here — so this count can never
+// diverge from what htmlAlerts_/plainAlerts_/the Logger.log line report for the same poll (2026-07-29
+// collapse; this had already drifted once, see bigquery/43's git_note). "new" must count only
+// genuinely-new alerts (from `fresh`), NOT the recurring re-sends — otherwise the subject over-reports
+// new incidents (e.g. "3 new" when 2 are new + 1 is a recurring re-notify) and mis-attributes the
+// recurring critical to the "(N critical)" new-count. Pure (no Apps-Script-service calls) — mirrored
+// verbatim in ops/weekly_report/test_pure_helpers.js; keep both in sync.
+function alertSubject_(fresh, recurringCount) {
   const newReal = fresh.filter(r => !isTest_(r));         // genuinely new, non-test alerts this poll
   const testCount = fresh.length - newReal.length;         // test canaries among the new alerts
-  const recurringCount = combined.length - fresh.length;   // termination_close_staged re-sends this poll
   if (newReal.length === 0 && recurringCount === 0) {
     // Batch is ONLY the alert-delivery self-test → unmistakable test subject, no ⚠.
     return '⚗ [TEST] Stock-Trading alert-delivery self-test — no action needed';
@@ -249,9 +279,9 @@ function alertSubject_(fresh, combined) {
             (testCount ? ` (+${testCount} test)` : '');
 }
 
-function htmlAlerts_(fresh, totalOpen) {
-  const allTest = fresh.length > 0 && fresh.every(isTest_);
-  const rowsHtml = fresh.map(a => {
+function htmlAlerts_(batch, newlyUnnotifiedCount, recurringCount) {
+  const allTest = batch.length > 0 && batch.every(isTest_);
+  const rowsHtml = batch.map(a => {
     const test = isTest_(a);
     const isCrit = a.severity === 'critical';
     const bar = test ? '#2c6e9b' : (isCrit ? '#c0392b' : '#b9770e');
@@ -273,16 +303,16 @@ function htmlAlerts_(fresh, totalOpen) {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:auto;background:#fff;border-radius:12px;padding:18px;">
       <tr><td style="font-size:16px;font-weight:700;color:#0f2747;padding-bottom:8px;">${header}</td></tr>
       ${rowsHtml}
-      <tr><td style="font-size:11px;color:#8a96a3;padding-top:10px;">${totalOpen} un-notified alert(s) in the last ${LOOKBACK_LABEL}. Resolve via <code>UPDATE ops.alerts SET resolved=TRUE WHERE alert_id='...'</code> — always scope by alert_id, never run this unfiltered. This channel complements the [Claude] ATTENTION calendar events.</td></tr>
+      <tr><td style="font-size:11px;color:#8a96a3;padding-top:10px;">This email contains ${batch.length} alert(s): ${newlyUnnotifiedCount} newly un-notified in the last ${LOOKBACK_LABEL} and ${recurringCount} recurring. Resolve via <code>UPDATE ops.alerts SET resolved=TRUE WHERE alert_id='...'</code> — always scope by alert_id, never run this unfiltered. This channel complements the [Claude] ATTENTION calendar events.</td></tr>
     </table></body></html>`;
 }
 
-function plainAlerts_(fresh, totalOpen) {
-  const allTest = fresh.length > 0 && fresh.every(isTest_);
+function plainAlerts_(batch, newlyUnnotifiedCount, recurringCount) {
+  const allTest = batch.length > 0 && batch.every(isTest_);
   let s = allTest
     ? `[TEST] Stock-Trading — alert-delivery self-test, no action needed:\n\n`
-    : `Stock-Trading — ${fresh.length} unresolved alert(s) (${totalOpen} un-notified in the last ${LOOKBACK_LABEL}):\n\n`;
-  fresh.forEach(a => {
+    : `Stock-Trading — ${batch.length} alert(s) (${newlyUnnotifiedCount} newly un-notified in the last ${LOOKBACK_LABEL}, ${recurringCount} recurring):\n\n`;
+  batch.forEach(a => {
     const tag = isTest_(a) ? '[TEST] ' : (String(a.resolved) === 'true' ? '[AUTO-RESOLVED] ' : '');
     s += `[${a.severity.toUpperCase()}] ${tag}${a.source}/${a.category}: ${a.message}  (${fmtAlertTs_(a)})\n`;
   });

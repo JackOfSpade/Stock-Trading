@@ -245,13 +245,28 @@ def validate_offline(scenarios):
                     f"{label}: expected_decision '{decision}' does not start with a recognized token "
                     f"{DECISION_LEAD_TOKENS} — likely a typo, or the vocabulary needs a deliberate addition"
                 )
-            cat = sc.get("category")
-            if cat in CATEGORY_TOKENS:
-                tok = _leading_token(decision)
-                if tok is not None and tok not in CATEGORY_TOKENS[cat]:
-                    errors.append(
-                        f"{label}: expected_decision token '{tok}' is not valid for category '{cat}' "
-                        f"(allowed: {sorted(CATEGORY_TOKENS[cat])}) — likely a mis-categorized/copy-paste fixture")
+
+        # 2026-07-29 bug hunt: `category` itself was never checked against CATEGORY_TOKENS — only the
+        # nested `if cat in CATEGORY_TOKENS:` mismatch check below existed, which just NO-OPS when `cat`
+        # doesn't match anything at all. A typo'd/invented category (e.g. 'regieme_router') therefore
+        # sailed through offline validation with zero errors, then silently lost its per-category token
+        # scoping downstream: _allowed_decisions_for() falls back to ALL SIX DECISION_LEAD_TOKENS for an
+        # unrecognized category (see its docstring), reopening the exact unscoped-vocabulary flip risk the
+        # 2026-07-26 CATEGORY_TOKENS fix was added to close — just via a misspelled key instead of a
+        # missing one. Checked independently of expected_decision's validity so a malformed decision can't
+        # mask a bad category or vice versa.
+        cat = sc.get("category")
+        if cat is not None and cat not in CATEGORY_TOKENS:
+            errors.append(
+                f"{label}: category '{cat}' is not a recognized key in CATEGORY_TOKENS "
+                f"(valid: {sorted(CATEGORY_TOKENS)}) — likely a typo"
+            )
+        elif isinstance(decision, str) and decision.strip() and cat in CATEGORY_TOKENS:
+            tok = _leading_token(decision)
+            if tok is not None and tok not in CATEGORY_TOKENS[cat]:
+                errors.append(
+                    f"{label}: expected_decision token '{tok}' is not valid for category '{cat}' "
+                    f"(allowed: {sorted(CATEGORY_TOKENS[cat])}) — likely a mis-categorized/copy-paste fixture")
     return errors
 
 
@@ -459,19 +474,24 @@ def run_live(scenarios, scenario_ids=None):
         if scenario_ids and sid not in scenario_ids:
             continue
 
-        gov_text_parts = []
-        for gf in sc.get("governing_files", []):
-            if gf not in file_cache:
-                with open(os.path.join(ROOT, gf), encoding="utf-8") as fh:
-                    file_cache[gf] = fh.read()
-            gov_text_parts.append(f"----- {gf} -----\n{file_cache[gf]}")
-        prompt = EVAL_PROMPT_TEMPLATE.format(
-            governing_files_text="\n\n".join(gov_text_parts),
-            situation=sc.get("situation", "").strip(),
-            allowed_decisions=_allowed_decisions_for(sc),
-        )
-
+        # 2026-07-29 bug hunt: this governing_files read used to sit OUTSIDE the try/except below, so one
+        # scenario with a missing/unreadable governing_file raised an uncaught OSError straight out of
+        # run_live() — aborting the ENTIRE batch (every later scenario silently never evaluated) instead
+        # of degrading just that one scenario, unlike every other per-scenario failure this loop already
+        # handles (a bad model call, a malformed reply, etc.). Folded into the same try/except so a read
+        # failure is reported and scored exactly like a model-call failure.
         try:
+            gov_text_parts = []
+            for gf in sc.get("governing_files", []):
+                if gf not in file_cache:
+                    with open(os.path.join(ROOT, gf), encoding="utf-8") as fh:
+                        file_cache[gf] = fh.read()
+                gov_text_parts.append(f"----- {gf} -----\n{file_cache[gf]}")
+            prompt = EVAL_PROMPT_TEMPLATE.format(
+                governing_files_text="\n\n".join(gov_text_parts),
+                situation=sc.get("situation", "").strip(),
+                allowed_decisions=_allowed_decisions_for(sc),
+            )
             reply, model_used = call_model(prompt)
         except Exception as exc:  # noqa: BLE001 — advisory path, any failure is reported, not raised
             print(f"::warning::{sid}: model call failed — {exc}", file=sys.stderr)

@@ -65,6 +65,18 @@ CHECKS
        check_cadence_consistency.py" — this check makes that claim true instead of aspirational. FAIL
        naming which rail disagrees and its two values.
 
+  R-G  DBT SCHEMA.YML ACCEPTED_VALUES AGREEMENT (added 2026-07-14 audit finding; this index entry itself
+       was missing until the 2026-07-29 bug hunt — the check has run since 07-14, it just was not listed
+       here, which is exactly the "an unlisted check is invisible to a maintainer" failure this index
+       exists to prevent). dbt/models/analytics/schema.yml's generic `accepted_values` tests on any
+       column literally named `strategy` hardcode a roster snapshot (e.g. `values: ['A','B','C','D','E']`)
+       — the same bare-literal drift class as R-B, living in schema.yml instead of derived SQL. CLAUDE.md's
+       settled decision makes strategy add/delete fully autonomous (SISA), so a hardcoded list here would
+       silently start failing `dbt test` (advisory-only, see ci.yml) the moment the roster changes with no
+       human touch. FAIL if any such accepted_values set != the roster-active set, is empty, or is not a
+       `{values: [...]}` mapping. FAIL (not skip) if dbt/models/analytics/schema.yml itself is missing —
+       unlike bigquery/35 (R-A/R-E's skip trigger), this file is expected to always exist.
+
   R-H  CANDIDATE-FEED DATASET NAME (added 2026-07-15, self-improvement audit CONFIRMED GAP
        strategy-candidates-dataset-mismatch). The live SISA candidate-intake table is
        `state.strategy_candidates` (bigquery/35_strategy_arsenal.sql CREATE TABLE) — there is no
@@ -140,10 +152,18 @@ import re
 import sys
 
 try:
-    import yaml
+    # noqa: F401 — this module's own reads now go through lib.textio.load_yaml() (2026-07-29 textio
+    # adoption), so `yaml` is no longer referenced directly here, but the import stays for (1) this
+    # fail-fast ImportError guard (a clear "pip install pyyaml" message beats textio.py's own bare
+    # ImportError traceback) and (2) tests/test_roster_consistency.py's direct rc.yaml.safe_load()/
+    # rc.yaml.dump() access when building a perturbed fixture.
+    import yaml  # noqa: F401
 except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
     raise SystemExit(2)
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib.textio import read_bytes, read_text, load_yaml  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROSTER = os.path.join(ROOT, "strategy", "roster.yaml")
@@ -181,7 +201,7 @@ def _find_slice_by_heading(code):
     numbered filename, so a content-free slice renumber — which R-A tolerates by design — spuriously
     FAILed R-F with a misleading "missing" message for machinery that was not actually lost)."""
     for p in sorted(glob.glob(os.path.join(STRATEGY_DIR, "*_strategy_*.md"))):
-        if code in headings_in(open(p, encoding="utf-8").read()):
+        if code in headings_in(read_text(p)):
             return p
     return None
 
@@ -438,7 +458,7 @@ def headings_in(text):
 
 
 def roster_doc():
-    return yaml.safe_load(open(ROSTER, encoding="utf-8")) or {}
+    return load_yaml(ROSTER)
 
 
 def roster_active_codes(doc):
@@ -449,12 +469,12 @@ def roster_active_codes(doc):
 def slice_codes():
     out = set()
     for p in sorted(glob.glob(os.path.join(STRATEGY_DIR, "*_strategy_*.md"))):
-        out |= headings_in(open(p, encoding="utf-8").read())
+        out |= headings_in(read_text(p))
     return out
 
 
 def slicemap_codes():
-    txt = open(PLAN, encoding="utf-8").read()
+    txt = read_text(PLAN)
     # `(?=^##\s|\Z)`: terminate the section at the next H2 OR end-of-file, so 'Strategy reading' being
     # the LAST H2 in the plan doesn't silently yield an empty section -> spurious R-A full-roster
     # mismatch. Mirrors shared_regime_tokens()'s `(?=^###\s|\Z)` precedent (2026-07-17 audit).
@@ -469,14 +489,14 @@ def compute_spec_hash(code, inputs=None):
     spec_hash_inputs() dict to avoid recomputing it per-code in a loop; defaults to a fresh call."""
     md_path, module_paths = (inputs or spec_hash_inputs())[code]
     h = hashlib.sha256()
-    h.update(open(md_path, "rb").read())
+    h.update(read_bytes(md_path))
     for module_path in module_paths:
-        h.update(open(module_path, "rb").read())
+        h.update(read_bytes(module_path))
     return h.hexdigest()
 
 
 def arsenal_rails_sql_consts():
-    txt = open(ARSENAL_SQL, encoding="utf-8").read()
+    txt = read_text(ARSENAL_SQL)
     return {name: int(val) for val, name in RAIL_CONST.findall(txt)}
 
 
@@ -490,7 +510,15 @@ def _compare_rails(mapping, container, prefix, sql_consts, errors):
     copies in the 2026-07-14 audit) — consolidated here so the next hardening lands once (2026-07-17
     audit). A present-but-non-integer value (a null/blanked `n_min:` from a bad merge) is reported cleanly
     instead of crashing on int() — the delete-key branch was already clean, but a blanked key skipped it
-    and hit an unguarded int()."""
+    and hit an unguarded int().
+
+    BUG FIX (2026-07-29 bug hunt): `int()` SILENTLY TRUNCATES a float instead of raising — int(2.7) == 2
+    — so a fractional rail (`n_min: 2.7`) used to compare as if roster.yaml had said 2, and could "agree"
+    with bigquery/35's SQL constant on a number the YAML never actually declared. EVERY float is now
+    rejected here, not just fractional ones: rails.* is documented throughout roster.yaml as plain
+    integer counts, and this file is mutated autonomously by SL1-SL5 with no human review (SISA), so even
+    an integral `2.0` is itself worth flagging as suspicious drift (e.g. a stray float computation in a
+    generator) rather than silently normalizing it to `2`."""
     for yaml_key, sql_name in mapping.items():
         if sql_name not in sql_consts:
             continue
@@ -498,10 +526,17 @@ def _compare_rails(mapping, container, prefix, sql_consts, errors):
             errors.append(f"R-E: roster.yaml {prefix}{yaml_key} is missing but "
                           f"bigquery/35_strategy_arsenal.sql arsenal_rails.{sql_name}={sql_consts[sql_name]} exists")
             continue
+        raw = container[yaml_key]
+        if isinstance(raw, float):
+            errors.append(f"R-E: roster.yaml {prefix}{yaml_key}={raw!r} is a float, not an integer — cannot "
+                          f"compare against bigquery/35_strategy_arsenal.sql arsenal_rails.{sql_name}"
+                          f"={sql_consts[sql_name]} (int() would silently truncate it — fix the YAML to a "
+                          f"plain integer literal)")
+            continue
         try:
-            val = int(container[yaml_key])
+            val = int(raw)
         except (TypeError, ValueError):
-            errors.append(f"R-E: roster.yaml {prefix}{yaml_key}={container[yaml_key]!r} is not an integer — "
+            errors.append(f"R-E: roster.yaml {prefix}{yaml_key}={raw!r} is not an integer — "
                           f"cannot compare against bigquery/35_strategy_arsenal.sql arsenal_rails.{sql_name}"
                           f"={sql_consts[sql_name]}")
             continue
@@ -527,7 +562,7 @@ def shared_regime_tokens():
     path = os.path.join(STRATEGY_DIR, "01_shared_regime_vocabulary.md")
     if not os.path.exists(path):
         return None, None, path
-    txt = open(path, encoding="utf-8").read()
+    txt = read_text(path)
 
     def section_tokens(header):
         m = re.search(r"^###\s+" + re.escape(header) + r"\s*$(.*?)(?=^###\s|\Z)", txt, re.M | re.S)
@@ -541,7 +576,7 @@ def arsenal_coverage_cell_tokens():
     bigquery/35_strategy_arsenal.sql's state.arsenal_regime_coverage `cells` CTE. Returns
     (spy_set, vix_set); either element is None if its literal cannot be located. The `AS code` seed
     UNNEST (a different alias) cannot collide."""
-    txt = open(ARSENAL_SQL, encoding="utf-8").read()
+    txt = read_text(ARSENAL_SQL)
 
     def toks(alias):
         m = re.search(r"UNNEST\(\s*\[([^\]]*)\]\s*\)\s+AS\s+" + alias + r"\b", txt)
@@ -563,7 +598,7 @@ def scenario_docs():
     monkeypatched path is honored, like slice_codes()/shared_regime_tokens()."""
     if not os.path.exists(SCENARIOS_YAML):
         return None
-    doc = yaml.safe_load(open(SCENARIOS_YAML, encoding="utf-8")) or {}
+    doc = load_yaml(SCENARIOS_YAML)
     return doc.get("scenarios", []) or []
 
 
@@ -593,7 +628,7 @@ def seed_active_codes():
     # overrode a literal-tuple row for the same code regardless of which actually appears LATER in the
     # file. Both match kinds are now merged into a single list of (start_pos, code, state) events and
     # applied in true textual order, so "the last row/block per code wins" is what actually happens.
-    txt = open(ARSENAL_SQL, encoding="utf-8").read()
+    txt = read_text(ARSENAL_SQL)
     events = []
     for m in SEED_ROW.finditer(txt):
         events.append((m.start(), m.group(1), m.group(2)))
@@ -643,7 +678,7 @@ def main():
                       "strategy/roster.yaml's roster-active set")
         md_codes = set()
     else:
-        md_codes = headings_in(open(STRATEGY_MD, encoding="utf-8").read())
+        md_codes = headings_in(read_text(STRATEGY_MD))
         if not md_codes:
             errors.append("R-A: found no non-candidate '## Strategy <code>' heading in Strategy.md "
                           "(STRATEGY_HEADING rotted, or Strategy.md is empty?)")
@@ -680,7 +715,7 @@ def main():
         if not os.path.exists(path):
             errors.append(f"R-B: expected roster-derived file {rel} is missing")
             continue
-        txt = open(path, encoding="utf-8").read()
+        txt = read_text(path)
         for m in BARE_LITERAL.finditer(txt):
             n = _line_no(txt, m.start())
             snippet = " ".join(m.group(0).split())
@@ -710,7 +745,7 @@ def main():
         # still found when the wrap separates it from the divisor. money_aliases: same alias-resolution
         # layer as R-B (codebase audit 2026-07-26) so an aliased money column (e.g. `cf.amount AS raw`
         # then `SUM(raw) / 5`) still trips this guard — see _money_alias_names() docstring.
-        txt = open(DBT_RECONCILE, encoding="utf-8").read()
+        txt = read_text(DBT_RECONCILE)
         money_aliases = _money_alias_names(txt, ("amount", "cash_flow", "deposit"))
         for m in FIXED_DIVISOR.finditer(txt):
             n, ctx = _divisor_context(txt, m)
@@ -724,7 +759,7 @@ def main():
         errors.append("R-D: ops/cadence.yaml is missing — cannot validate that per_strategy_routine "
                       "references name a real routine id")
     else:
-        cad = yaml.safe_load(open(CADENCE, encoding="utf-8")) or {}
+        cad = load_yaml(CADENCE)
         cad_ids = {r["id"] for r in cad.get("routines", []) or [] if "id" in r}
         for s in doc.get("strategies", []) or []:
             rt = s.get("per_strategy_routine")
@@ -798,7 +833,7 @@ def main():
     # ever inspects columns literally named `strategy`, so it cannot trip on the unrelated
     # `conviction_features.decision` accepted_values(['GO']) block in the same file. ----
     if os.path.exists(DBT_SCHEMA_ACCEPTED_VALUES):
-        schema_doc = yaml.safe_load(open(DBT_SCHEMA_ACCEPTED_VALUES, encoding="utf-8")) or {}
+        schema_doc = load_yaml(DBT_SCHEMA_ACCEPTED_VALUES)
         for model in schema_doc.get("models", []) or []:
             for col in model.get("columns", []) or []:
                 if col.get("name") != "strategy":
@@ -838,7 +873,7 @@ def main():
     for path in (PLAN, CADENCE):
         if not os.path.exists(path):
             continue
-        txt = open(path, encoding="utf-8").read()
+        txt = read_text(path)
         if "events.strategy_candidates" in txt:
             rel = os.path.relpath(path, ROOT)
             n = txt.split("events.strategy_candidates")[0].count("\n") + 1

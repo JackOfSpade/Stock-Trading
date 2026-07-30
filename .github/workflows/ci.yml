@@ -71,13 +71,18 @@ jobs:
         # which rotted twice: 23's trading_enabled was re-applied live in isolation (re-latching the
         # trading gate for 3+ days), and 47 still claimed to be "the new single source of truth" long
         # after 78 superseded it, with 23/34 both pointing at the by-then-stale 47. Blocks NEW unmarked
-        # or stale-pointer definitions; 19 pre-existing ones are grandfathered in the script's BASELINE.
+        # or stale-pointer definitions; pre-existing ones are grandfathered in the script's BASELINE, a
+        # burn-down list (19 at introduction 2026-07-18, down to 10 as of 2026-07-29 — see the script's
+        # own docstring/BASELINE for the current count, not a number pinned here that would go stale
+        # again the next time an entry is fixed).
         run: python scripts/check_superseded_markers.py
       - name: session-config tool coverage (Claude_Task_Plan.md/ops/triggers.json mcp__ refs ⇄ .claude/settings.json allowlist — completeness-critic N-1)
         # An unattended scheduled routine calling an mcp__ tool absent from .claude/settings.json's
         # permissions.allow gets an unanswerable permission prompt and silently stalls that step (no
-        # dedicated alert class exists for a hung permission prompt). This is a KNOWN-RED gate today —
-        # see OWNER_ACTIONS.md for the exact entries needed; it goes green once the owner adds them.
+        # dedicated alert class exists for a hung permission prompt). Went GREEN once the owner added
+        # the missing entries (was KNOWN-RED at introduction; stale "KNOWN-RED" annotation corrected
+        # 2026-07-29 — verified live: "SETTINGS TOOL COVERAGE: OK — 8 referenced mcp__ tool(s) all
+        # present"). A future red run here is a REAL regression, not an expected/known state.
         run: python scripts/check_settings_toolcov.py
       - name: auto-merge decision logic (CI-gate + delete-safety fixtures — 2026-07-04 code-quality audit)
         run: bash tests/test_auto_merge_logic.sh

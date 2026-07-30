@@ -26,6 +26,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.md_fence import fence_mask  # noqa: E402
 from lib.slice_writer import check_or_write_slices, slugify  # noqa: E402
+from lib.textio import read_text  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "Strategy.md")
@@ -70,8 +71,7 @@ def split(text: str):
 
 
 def build():
-    with open(SRC, encoding="utf-8") as f:
-        text = f.read()
+    text = read_text(SRC)
     preamble, sections = split(text)
     files = {"00_preamble.md": HEADER + preamble}
     index = ["# Strategy.md — generated section index\n",

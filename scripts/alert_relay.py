@@ -54,7 +54,6 @@ Env: WEBHOOK_URL (required — else clean no-op), RELAY_MODE, RELAY_WINDOW_MIN (
 """
 import json
 import os
-import subprocess  # noqa: F401 — kept so tests can monkeypatch subprocess.run/TimeoutExpired at the module level
 import sys
 import urllib.request
 from datetime import datetime, timezone

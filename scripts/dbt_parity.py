@@ -31,6 +31,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.bq_json import run_bq_query
+from lib.textio import read_text
 
 PROJECT = "stock-trading-498512"
 COMPILED_ROOT = os.path.join("dbt", "target", "compiled", "stock_trading", "models")
@@ -120,8 +121,7 @@ def compiled_models():
             continue
         for fn in sorted(os.listdir(d)):
             if fn.endswith(".sql"):
-                with open(os.path.join(d, fn), encoding="utf-8") as f:
-                    yield dataset, fn[:-4], f.read().strip().rstrip(";")
+                yield dataset, fn[:-4], read_text(os.path.join(d, fn)).strip().rstrip(";")
 
 
 def model_source_names():

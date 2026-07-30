@@ -80,6 +80,30 @@ def test_category_token_mismatch_caught():
     assert any("is not valid for category" in e for e in rg.validate_offline([sc]))
 
 
+def test_unrecognized_category_caught():
+    # 2026-07-29 bug hunt: validate_offline() never checked `category` itself against CATEGORY_TOKENS —
+    # the old code only ran a mismatch check INSIDE `if cat in CATEGORY_TOKENS:`, which just no-ops for a
+    # typo'd/invented category. VALID's expected_decision ("CONTINUE") is a perfectly valid GLOBAL token,
+    # so the vocabulary check alone can't catch this — only a dedicated category-membership check can.
+    sc = copy.deepcopy(VALID)
+    sc["category"] = "kil_trigger"  # typo of 'kill_trigger'
+    errs = rg.validate_offline([sc])
+    assert any("category 'kil_trigger' is not a recognized key in CATEGORY_TOKENS" in e for e in errs), errs
+    # The error must name the valid categories, so a human fixing the fixture doesn't have to go read the
+    # source for the CATEGORY_TOKENS dict.
+    assert any("kill_trigger" in e and "regime_router" in e for e in errs), errs
+
+
+def test_missing_category_not_flagged_as_unrecognized():
+    # A scenario with NO category at all is a separate (pre-existing, out of scope) concern from a
+    # WRONG category — don't conflate "absent" with "typo'd" and start rejecting fixtures that never
+    # opted into the per-category scoping in the first place.
+    sc = copy.deepcopy(VALID)
+    del sc["category"]
+    errs = rg.validate_offline([sc])
+    assert not any("not a recognized key in CATEGORY_TOKENS" in e for e in errs), errs
+
+
 def test_non_mapping_scenario_entry_caught():
     assert any("is not a mapping" in e for e in rg.validate_offline(["not-a-dict"]))
 
@@ -545,6 +569,33 @@ def test_run_live_records_an_error_class_when_the_model_call_raises(monkeypatch,
     assert r["match"] is None and r["actual"] is None and r["model"] is None
     assert "ladder exhausted" in r["reply"]
     assert "model call failed" in capsys.readouterr().err
+
+
+def test_run_live_survives_one_scenarios_unreadable_governing_file(monkeypatch):
+    # 2026-07-29 bug hunt: the governing_files read loop used to sit OUTSIDE run_live's per-scenario
+    # try/except, so an unreadable/missing governing_file on scenario N raised an uncaught OSError that
+    # propagated straight out of run_live() -- aborting the WHOLE batch and losing every scenario after
+    # it, not just the bad one. Put the bad scenario FIRST and a good one SECOND: pre-fix, run_live()
+    # itself raises FileNotFoundError before ever returning (T-GOOD never evaluated); post-fix, T-BAD's
+    # failure is recorded as a per-scenario error (matching the model-call-raises error class) and T-GOOD
+    # is still evaluated and scored normally. Only ONE reply is queued -- if the bug ever regressed to
+    # calling call_model for T-BAD too, this would fail with an IndexError (queue underflow) instead of
+    # silently passing.
+    bad = _sc("T-BAD-GOVFILE", "GO")
+    bad["governing_files"] = ["Strategy_Does_Not_Exist_2026_07_29.md"]
+    good = _sc("T-GOOD-AFTER-BAD", "GO")
+    monkeypatch.setattr(rg, "_select_live_caller", _fake_caller_returning("DECISION: GO\nRATIONALE: ok"))
+
+    results = rg.run_live([bad, good])
+
+    ids = [r["id"] for r in results]
+    assert ids == ["T-BAD-GOVFILE", "T-GOOD-AFTER-BAD"], (
+        f"a scenario after one with an unreadable governing_file was lost: {ids}"
+    )
+    bad_result = next(r for r in results if r["id"] == "T-BAD-GOVFILE")
+    assert bad_result["match"] is None  # per-scenario error class, not a raised exception
+    good_result = next(r for r in results if r["id"] == "T-GOOD-AFTER-BAD")
+    assert good_result["match"] is True and good_result["actual"] == "GO"
 
 
 def test_run_live_respects_the_scenario_ids_filter(monkeypatch):

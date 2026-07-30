@@ -24,13 +24,16 @@ import re
 import sys
 
 try:
-    import yaml
+    import yaml  # noqa: F401 — kept only for this early, actionable failure message; the actual
+    # parsing below goes through lib.textio.load_yaml() (2026-07-29), which imports yaml itself and
+    # would raise the SAME missing-dependency error, just as a bare traceback instead of this one.
 except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
     raise SystemExit(2)
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.sql_files import numbered_sql_files
+from lib.sql_files import numbered_sql_files, strip_sql_comments  # noqa: E402
+from lib.textio import load_yaml, read_text  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BIGQUERY_DIR = os.path.join(ROOT, "bigquery")
@@ -88,7 +91,14 @@ def live_views():
     for path in [p for _n, p in numbered] + unnumbered:
         if os.path.isdir(path):
             continue
-        txt = open(path, encoding="utf-8").read()
+        # BUG FIX (2026-07-29): VIEW_DDL/DROP_VIEW_DDL used to match raw file text with no comment
+        # handling — the same gap confirmed live in check_superseded_markers.py's OBJECT_DDL (a
+        # `-- CREATE OR REPLACE TABLE ...` doc-comment line, bigquery/02_ai_layer.sql:23, parsed as a
+        # real definition there). No commented-out VIEW DDL for a state/analytics/perf object exists
+        # in the tree today, so this was latent here rather than already wrong, but it's the same
+        # class of bug and shares the same fix: strip comments (scripts/lib/sql_files.py) before
+        # matching, consolidated so a future fix to one caller can't be forgotten in the other.
+        txt = strip_sql_comments(read_text(path))
         for dataset, name in VIEW_DDL.findall(txt):
             found.add((dataset, name))
         for dataset, name in DROP_VIEW_DDL.findall(txt):
@@ -111,9 +121,19 @@ def dbt_model_names():
 
 def dbt_source_names():
     """(dataset, name) for every table declared under a dbt source block whose (possibly-overridden)
-    `dataset:` is one of state/analytics/perf."""
+    `dataset:` is one of state/analytics/perf.
+
+    Uses lib.textio.load_yaml() (2026-07-29). This is a small BEHAVIOR FIX, not the pure no-op
+    refactor it was first described as: for its whole committed history this function was the bare
+    one-liner `yaml.safe_load(open(DBT_SOURCES_YML, ...)) or {}` with NO missing-file guard, so an
+    absent dbt/models/sources.yml raised an uncaught FileNotFoundError out of main() rather than
+    reporting zero dbt-covered views. (An unlanded in-flight pass had just hand-rolled an
+    `os.path.exists()` early-return here — that hand-rolled guard is exactly the duplication
+    load_yaml() exists to collapse, which is why it never landed separately.) Now: a missing file
+    yields `{}`, `doc.get("sources", []) or []` iterates zero times, and `found` stays empty. The
+    empty-file and comments-only cases are unchanged — `or {}` already covered those."""
     found = set()
-    doc = yaml.safe_load(open(DBT_SOURCES_YML, encoding="utf-8")) or {}
+    doc = load_yaml(DBT_SOURCES_YML)
     for src in doc.get("sources", []) or []:
         dataset = src.get("dataset") or src.get("name")
         if dataset not in DATASETS:

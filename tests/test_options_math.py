@@ -574,6 +574,27 @@ def test_probability_weighted_payoff_keys_present():
     assert pwp['expected_pnl'] >= -dcs.max_loss_closed_form() - 0.01  # can't lose more than defined max loss
 
 
+@pytest.mark.parametrize("n_paths", [0, -1, 1.5, True])
+def test_monte_carlo_path_count_must_be_a_positive_integer(n_paths):
+    dcs = debit_call_spread(100, long_strike=100, short_strike=105,
+                            days_to_expiration=30, risk_free_rate=0.045,
+                            volatility_long=0.30, volatility_short=0.28, contracts=1)
+    with pytest.raises(ValueError, match="positive integer"):
+        dcs.max_loss_monte_carlo(n_paths=n_paths)
+    with pytest.raises(ValueError, match="positive integer"):
+        probability_weighted_payoff(dcs, n_paths=n_paths)
+
+
+def test_probability_weighted_payoff_zero_max_loss_has_no_max_loss_event():
+    # An at-expiry, at-the-money long call has zero premium and zero defined
+    # loss. Its break-even outcome must not be labeled a loss merely because
+    # the ordinary one-cent max-loss tolerance would otherwise be positive.
+    call = long_call(100, strike=100, days_to_expiration=0,
+                     risk_free_rate=0.045, volatility=0.0, contracts=1)
+    assert call.max_loss_closed_form() == 0.0
+    assert probability_weighted_payoff(call, n_paths=10)['prob_max_loss'] == 0.0
+
+
 # ---------------------------------------------------------------------------
 # probability_weighted_payoff's volatility source (codebase audit 2026-07-26):
 # it used to take structure.legs[0].option.volatility unconditionally. For

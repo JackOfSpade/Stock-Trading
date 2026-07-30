@@ -6,7 +6,7 @@ check_dbt_view_coverage.py bug this module was extracted to fix.
 """
 import os
 
-from lib.sql_files import numbered_sql_files, sql_file_paths
+from lib.sql_files import numbered_sql_files, sql_file_paths, strip_sql_comments
 
 
 def test_numbered_sql_files_sorts_numerically_not_lexically(tmp_path):
@@ -44,3 +44,58 @@ def test_sql_file_paths_matches_numbered_sql_files_paths_only(tmp_path):
     assert sql_file_paths(str(tmp_path)) == [path for _, path in pairs]
     # and it's the numerically-sorted order, not lexical
     assert [p.split("/")[-1] for p in sql_file_paths(str(tmp_path))] == ["95_a.sql", "100_b.sql"]
+
+
+# ---- strip_sql_comments(): comment-hiding for check_superseded_markers.py / -----------------------
+# check_dbt_view_coverage.py's DDL regexes (2026-07-29 bug hunt)
+
+def test_strip_sql_comments_blanks_a_line_comment():
+    # The confirmed-live regression case: bigquery/02_ai_layer.sql:23's "Reproduce:" recipe has a
+    # commented-out CREATE that check_superseded_markers.py's OBJECT_DDL used to match as real DDL.
+    text = "SELECT 1;\n--   CREATE OR REPLACE TABLE `p.d.t` AS\n--   SELECT 2 FROM x;\nSELECT 3;\n"
+    stripped = strip_sql_comments(text)
+    assert "CREATE" not in stripped
+    assert "SELECT 2" not in stripped
+    assert "SELECT 1" in stripped and "SELECT 3" in stripped
+
+
+def test_strip_sql_comments_preserves_length_and_newlines():
+    # Callers (check_superseded_markers.py's definitions()) map a match.start() in the STRIPPED text
+    # back to a line number using offsets built from the ORIGINAL text — that only works if stripping
+    # never changes the text's length or where its newlines fall.
+    text = "AAA\n-- comment one\nBBB\n/* block\ncomment */\nCCC\n"
+    stripped = strip_sql_comments(text)
+    assert len(stripped) == len(text)
+    assert [i for i, c in enumerate(text) if c == "\n"] == [i for i, c in enumerate(stripped) if c == "\n"]
+
+
+def test_strip_sql_comments_blanks_a_block_comment_keeping_internal_newlines():
+    text = "AAA\n/* CREATE OR REPLACE VIEW `p.d.t`\n   spanning two lines */\nBBB\n"
+    stripped = strip_sql_comments(text)
+    assert "CREATE" not in stripped
+    assert stripped.count("\n") == text.count("\n")
+    assert "AAA" in stripped and "BBB" in stripped
+
+
+def test_strip_sql_comments_does_not_treat_a_dash_dash_inside_a_string_literal_as_a_comment():
+    # This repo routinely uses a bare `--` as an em-dash inside a quoted description (e.g.
+    # bigquery/03_twr_engine.sql:229's TWR-chain error message) -- a comment-stripper that doesn't
+    # track string literals would corrupt the literal and could hide real code sharing its line.
+    text = "SELECT 'clamped to avoid NULL -- corrupting the chain' AS msg, CREATE_LOOKS_LIKE_CODE;\n"
+    stripped = strip_sql_comments(text)
+    assert "corrupting the chain" in stripped
+    assert "CREATE_LOOKS_LIKE_CODE" in stripped
+
+
+def test_strip_sql_comments_handles_double_quoted_and_unterminated_literals():
+    # Double-quoted literal survives verbatim; an unterminated single-line literal (no closing quote
+    # before EOL) must not run the string-scan off the end of the file looking for a close.
+    text = 'SELECT "a -- b" AS x;\nSELECT \'unterminated\n-- real comment after\nSELECT 1;\n'
+    stripped = strip_sql_comments(text)
+    assert "a -- b" in stripped
+    assert "real comment" not in stripped
+    assert "SELECT 1" in stripped
+
+
+def test_strip_sql_comments_empty_string():
+    assert strip_sql_comments("") == ""

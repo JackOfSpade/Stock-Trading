@@ -71,6 +71,20 @@ def test_load_cadence_empty_file_is_empty_not_a_crash(tmp_path, monkeypatch):
     assert cad == {}
 
 
+def test_load_cadence_bare_routines_key_is_empty_not_a_crash(tmp_path, monkeypatch):
+    # 2026-07-29: `routines:` with nothing under it parses to {"routines": None} (YAML), not a missing
+    # key -- `doc.get("routines", [])`'s default only fires when the KEY is absent, so this exact shape
+    # crashed load_cadence() with TypeError: 'NoneType' object is not iterable pre-fix (confirmed live
+    # against the pre-fix idiom). load_cadence() now routes through lib.routine_manifest.
+    # cadence_routines(), which guards the None case.
+    cadence = tmp_path / "cadence.yaml"
+    cadence.write_text("timezone: America/Denver\nroutines:\n")
+    monkeypatch.setattr(pr, "CADENCE", str(cadence))
+    tz, cad = pr.load_cadence()
+    assert tz == "America/Denver"
+    assert cad == {}
+
+
 # ---- main(): drift warnings + printout (no --write) ------------------------------------------------
 def _write_fixture(tmp_path):
     plan = tmp_path / "Claude_Task_Plan.md"

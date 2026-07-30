@@ -3,7 +3,7 @@
 # ships a real Python surface alongside it: c_options_math.py (Strategy C's defined-risk engine),
 # strategy_math/ (spec-locked A/B/D/E sizing/gate math), and scripts/ (CI drift-defense checkers,
 # the dbt-parity/alert-relay/dashboard tooling). This file exists so all of it is tested/linted in
-# CI — see .github/workflows/ci.yml and the 270+ tests under tests/.
+# CI — see .github/workflows/ci.yml and the regression suite under tests/.
 
 [project]
 name = "stock-trading-experiment"
