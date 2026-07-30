@@ -25,6 +25,7 @@ Two column adjustments make the EXCEPT well-defined:
     INTERVAL/RANGE have the same set-operation problem but TO_JSON_STRING() doesn't accept them, so
     those are wrapped in SAFE_CAST(... AS STRING) instead (2026-07-20 audit).
 """
+import concurrent.futures
 import os
 import subprocess  # noqa: F401 — kept so tests can monkeypatch subprocess.run/TimeoutExpired at the module level
 import sys
@@ -57,6 +58,35 @@ VOLATILE_COLS = {"checked_at"}
 # none of these and still skips.
 SCHEMA_DRIFT_MARKERS = ("unrecognized name", "set operations", "not groupable",
                         "no matching signature", "does not have a column", "incompatible types")
+
+# Client-side concurrency for the per-model parity queries (owner-authorized 2026-07-30, Actions cost
+# audit). The 43 parity queries are one bq job each and cannot be batched (see main()), so the only
+# remaining lever is running them concurrently. This does NOT change the per-run BigQuery JOB COUNT — it
+# only compresses those same jobs in time.
+#
+# WHY THIS NEEDED AUTHORIZATION, and why the ceiling below is not decoration: this job's BigQuery job
+# volume tripped the project's Data Transfer Service consumer rate-quota on 2026-06-29, which delayed the
+# 05:00-06:00 scheduled window and FAILED the embed + integrity scheduled-query runs. Every mitigation
+# since then REDUCED job count (the bigquery/**|dbt/** path gate; halving to one combined query per
+# model; batching the metadata into a single job). Concurrency is the first change that moves the other
+# way on instantaneous rate, so it is deliberately conservative and overridable WITHOUT a code change:
+# set DBT_PARITY_CONCURRENCY=1 to restore fully serial behavior if the quota is ever pressured again.
+DEFAULT_PARITY_CONCURRENCY = 4
+MAX_PARITY_CONCURRENCY = 16
+
+
+def parity_concurrency():
+    """Worker count for the per-model parity loop: DBT_PARITY_CONCURRENCY, else 4.
+
+    Clamped to [1, MAX_PARITY_CONCURRENCY] and fully tolerant of a malformed value (empty, non-numeric,
+    negative) — a typo'd env var must not crash a CI gate, and must NEVER silently widen concurrency
+    beyond the ceiling given the 2026-06-29 rate-quota incident. 1 = serial (the pre-2026-07-30 path)."""
+    raw = (os.environ.get("DBT_PARITY_CONCURRENCY") or "").strip()
+    try:
+        n = int(raw) if raw else DEFAULT_PARITY_CONCURRENCY
+    except ValueError:
+        n = DEFAULT_PARITY_CONCURRENCY
+    return max(1, min(n, MAX_PARITY_CONCURRENCY))
 
 
 def bq(sql):
@@ -108,10 +138,60 @@ def col_expr(col, alias=PARITY_ALIAS):
 
 
 def live_columns(dataset, table):
+    """Per-model column lookup — ONE bq job per model. Retained as the FALLBACK path for
+    live_columns_all() (and as the seam most unit tests patch); see that function."""
     return bq(
         f"SELECT column_name, data_type FROM `{PROJECT}`.{dataset}.INFORMATION_SCHEMA.COLUMNS "
         f"WHERE table_name = '{table}' ORDER BY ordinal_position"
     )
+
+
+def live_columns_all():
+    """Every column of every object in DATASET_FOLDERS in ONE bq job ->
+    {(dataset, table): [{'column_name': .., 'data_type': ..}, ...]} in ordinal_position order.
+
+    COST (2026-07-30 Actions audit): live_columns() was called once PER MODEL, so the 43 ported models
+    cost 43 sequential bq CLI invocations. Measured against live: 43 per-model queries = 70.92s vs this
+    single batched query = 1.50s, with the resulting column lists **43/43 byte-identical** (verified by
+    an explicit old-vs-new equivalence diff, not by inspection — the same discipline that caught the
+    100-row-cap bug in check_live_sql_parity.py the same day). A single-table INFORMATION_SCHEMA query
+    and this whole-dataset one both cost ~1.7s, because the cost here is per-INVOCATION, not per-row.
+
+    Returns None — meaning "unusable, use the per-model path" — on ANY exception OR on a row shape that
+    lacks the expected keys. main() then falls back to live_columns() per model, preserving every
+    audited error-routing guarantee exactly (a missing dataset errors the batch and falls back rather
+    than mass-reporting 43 models as broken). A model ABSENT from a SUCCESSFUL batch correctly yields
+    [] — the batch covers every table in the dataset, so absence means the object does not exist, which
+    is the same signal live_columns()'s zero-row return carries and routes to the same fail-closed
+    "deleted or renamed" branch.
+
+    ROW CAP: bq() passes max_rows=100000 against 1,400 total columns across state+perf+analytics as of
+    2026-07-30 — 71x headroom. This matters because `bq query` defaults to only 100 rows, and on the same
+    day that exact default silently truncated check_live_sql_parity.py's batched query (111 views ->
+    100 returned) and reported the 11 absent objects as MISSING. Here the analogous failure is
+    fail-CLOSED, not a silent pass: a truncated batch makes real models look ABSENT, which routes to the
+    "deleted or renamed" error branch and reddens CI. Do not lower max_rows.
+
+    NOTE: batching the PARITY queries the same way was tested and REJECTED (2026-07-30) — see main().
+    """
+    unions = " UNION ALL ".join(
+        f"SELECT '{ds}' AS ds, table_name, column_name, data_type, ordinal_position "
+        f"FROM `{PROJECT}`.{ds}.INFORMATION_SCHEMA.COLUMNS"
+        for ds in DATASET_FOLDERS
+    )
+    try:
+        rows = bq(f"{unions} ORDER BY ds, table_name, ordinal_position")
+    except Exception:
+        return None
+    out = {}
+    for r in rows:
+        try:
+            out.setdefault((r["ds"], r["table_name"]), []).append(
+                {"column_name": r["column_name"], "data_type": r["data_type"]}
+            )
+        except (TypeError, KeyError, IndexError):
+            return None   # unexpected row shape — do not guess, fall back to the per-model path
+    return out or None
 
 
 def compiled_models():
@@ -145,63 +225,147 @@ def model_source_count():
     return len(model_source_names())
 
 
-def main():
-    diffs, skipped, errors, checked, total = [], [], [], 0, 0
-    compiled_names = set()
-    for dataset, name, compiled in compiled_models():
-        total += 1
-        compiled_names.add((dataset, name))
-        live = f"`{PROJECT}`.{dataset}.{name}"
-        try:
-            raw_cols = live_columns(dataset, name)
-        except Exception as e:
-            skipped.append(f"{dataset}.{name} (no live object? {e})")
-            continue
-        if not raw_cols:
-            # BigQuery's INFORMATION_SCHEMA.COLUMNS does NOT error on a `table_name` filter that
-            # matches nothing — it just returns zero rows, so a live view that was deleted or
-            # renamed looks identical, by row count alone, to "the view exists but every column is
-            # volatile" below. That's the exact 'OK on zero real comparisons' hazard this module's
-            # docstring warns against, just triggered per-model instead of project-wide — fail
-            # closed and name the missing object, instead of routing to the tolerant skip meant for
-            # the genuinely-benign all-volatile case (2026-07-20 audit).
-            errors.append(f"{dataset}.{name} (0 columns returned for live object {live} — it was "
-                          f"likely deleted or renamed)")
-            continue
-        cols = [c for c in raw_cols if c["column_name"] not in VOLATILE_COLS]
-        if not cols:
-            skipped.append(f"{dataset}.{name} (no comparable columns)")
-            continue
-        exprs = ", ".join(col_expr(c) for c in cols)
-        try:
+def check_one_model(dataset, name, compiled, batch_cols):
+    """Compare ONE dbt model against its live view. Returns a (kind, detail) tuple where kind is one of
+    'ok' | 'drift' | 'skipped' | 'error' — it never mutates shared state and never prints.
+
+    Extracted from main()'s loop body (2026-07-30) so the loop can run concurrently: with shared
+    accumulator lists the workers would race, and — more subtly — the ORDER of `skipped`/`errors`/`diffs`
+    would follow completion order, making CI output nondeterministic run to run. main() aggregates these
+    return values in model order instead, so the printed report is byte-identical to the serial version.
+    The routing of every case (tolerant skip vs fail-closed error) is unchanged from the serial code."""
+    live = f"`{PROJECT}`.{dataset}.{name}"
+    try:
+        # A model MISSING from a successful batch yields [] — the same "object does not exist"
+        # signal live_columns() returns as zero rows, routed to the same fail-closed branch below.
+        raw_cols = (batch_cols.get((dataset, name), [])
+                    if batch_cols is not None else live_columns(dataset, name))
+    except Exception as e:
+        return ("skipped", f"{dataset}.{name} (no live object? {e})")
+    if not raw_cols:
+        # BigQuery's INFORMATION_SCHEMA.COLUMNS does NOT error on a `table_name` filter that
+        # matches nothing — it just returns zero rows, so a live view that was deleted or
+        # renamed looks identical, by row count alone, to "the view exists but every column is
+        # volatile" below. That's the exact 'OK on zero real comparisons' hazard this module's
+        # docstring warns against, just triggered per-model instead of project-wide — fail
+        # closed and name the missing object, instead of routing to the tolerant skip meant for
+        # the genuinely-benign all-volatile case (2026-07-20 audit).
+        return ("error", f"{dataset}.{name} (0 columns returned for live object {live} — it was "
+                         f"likely deleted or renamed)")
+    cols = [c for c in raw_cols if c["column_name"] not in VOLATILE_COLS]
+    if not cols:
+        return ("skipped", f"{dataset}.{name} (no comparable columns)")
+    exprs = ", ".join(col_expr(c) for c in cols)
+    try:
             # ONE combined query (2 scalar EXCEPT-DISTINCT subqueries) instead of 2 separate bq
             # jobs per model — this job's BigQuery job volume already tripped the project's DTS
             # consumer rate-quota once (2026-06-29 CI incident); halving it directly reduces
             # recurrence risk (2026-07-14 audit finding).
             # Both sides carry the SAME alias (PARITY_ALIAS), so the identical `exprs` string is valid
             # against the compiled subquery and the live view alike.
-            row = bq(
-                f"SELECT "
-                f"(SELECT COUNT(*) FROM (SELECT {exprs} FROM ({compiled}) AS {PARITY_ALIAS} "
-                f"EXCEPT DISTINCT SELECT {exprs} FROM {live} AS {PARITY_ALIAS})) AS n_missing, "
-                f"(SELECT COUNT(*) FROM (SELECT {exprs} FROM {live} AS {PARITY_ALIAS} "
-                f"EXCEPT DISTINCT SELECT {exprs} FROM ({compiled}) AS {PARITY_ALIAS})) AS n_extra"
-            )[0]
-            n_missing, n_extra = int(row["n_missing"]), int(row["n_extra"])
-        except Exception as e:
-            # A parity-query error AFTER live_columns() succeeded is, for a schema-shaped cause, real
-            # drift (not a transient hiccup) — fail closed instead of swallowing it as a skip that
-            # lets the drift pass green (2026-07-17 audit). Anything else stays a tolerant skip.
-            if any(marker in str(e).lower() for marker in SCHEMA_DRIFT_MARKERS):
-                errors.append(f"{dataset}.{name} (parity query failed on a schema-shaped error — the "
-                              f"dbt port likely lacks a column its live view has, or a column type "
-                              f"can't be EXCEPT-compared: {e})")
-            else:
-                skipped.append(f"{dataset}.{name} (query error: {e})")
-            continue
-        checked += 1
-        if n_missing or n_extra:
-            diffs.append(f"{dataset}.{name}: dbt-only={n_missing} live-only={n_extra} rows")
+            #
+            # DO NOT BATCH THESE ACROSS MODELS — tested against live and REJECTED (2026-07-30 Actions
+            # cost audit). Batching the metadata lookups was a 47x win (see live_columns_all()), so the
+            # obvious next step was to UNION ALL these per-model parity SELECTs into fewer jobs. Measured,
+            # it fails twice over:
+            #   * all 43 in one query (268,589 chars) -> BigQuery "Resources exceeded during query
+            #     execution". Not a size-limit issue (the 1 MB query cap is not reached) — 86 EXCEPT
+            #     DISTINCT subqueries in one job exhaust execution resources.
+            #   * chunked, it is SLOWER than the per-model loop it replaces: 43 models took 226.1s
+            #     per-model vs 276.4s in chunks of 15 and 245.8s in chunks of 10 — and one chunk still
+            #     failed outright in BOTH chunkings. Slot contention inside a single job outweighs the
+            #     saved bq CLI invocations, because unlike the metadata queries these subqueries do real
+            #     work over the live views.
+            # The remaining lever was CONCURRENCY, not batching, and that is what shipped instead:
+            # main() runs these per-model queries through a small thread pool (owner-authorized
+            # 2026-07-30). Job COUNT is unchanged; only the instantaneous rate rises. See
+            # parity_concurrency() for the ceiling and the DBT_PARITY_CONCURRENCY=1 escape hatch.
+        row = bq(
+            f"SELECT "
+            f"(SELECT COUNT(*) FROM (SELECT {exprs} FROM ({compiled}) AS {PARITY_ALIAS} "
+            f"EXCEPT DISTINCT SELECT {exprs} FROM {live} AS {PARITY_ALIAS})) AS n_missing, "
+            f"(SELECT COUNT(*) FROM (SELECT {exprs} FROM {live} AS {PARITY_ALIAS} "
+            f"EXCEPT DISTINCT SELECT {exprs} FROM ({compiled}) AS {PARITY_ALIAS})) AS n_extra"
+        )[0]
+        n_missing, n_extra = int(row["n_missing"]), int(row["n_extra"])
+    except Exception as e:
+        # A parity-query error AFTER live_columns() succeeded is, for a schema-shaped cause, real
+        # drift (not a transient hiccup) — fail closed instead of swallowing it as a skip that
+        # lets the drift pass green (2026-07-17 audit). Anything else stays a tolerant skip.
+        if any(marker in str(e).lower() for marker in SCHEMA_DRIFT_MARKERS):
+            return ("error", f"{dataset}.{name} (parity query failed on a schema-shaped error — the "
+                             f"dbt port likely lacks a column its live view has, or a column type "
+                             f"can't be EXCEPT-compared: {e})")
+        return ("skipped", f"{dataset}.{name} (query error: {e})")
+    if n_missing or n_extra:
+        return ("drift", f"{dataset}.{name}: dbt-only={n_missing} live-only={n_extra} rows")
+    return ("ok", None)
+
+
+def main():
+    diffs, skipped, errors, checked = [], [], [], 0
+    models = list(compiled_models())
+    total = len(models)
+    compiled_names = {(dataset, name) for dataset, name, _ in models}
+    # ONE batched metadata job for all models instead of one per model (2026-07-30 Actions cost audit;
+    # 70.9s -> 1.5s, proven 43/43 equivalent — see live_columns_all()). None = batch unusable, in which
+    # case every model falls back to the original per-model live_columns() call inside the worker.
+    # Skipped entirely when there are no models, so the total==0 / no-sources guards cost no BigQuery job.
+    batch_cols = live_columns_all() if models else None
+
+    # Run the per-model comparisons concurrently (owner-authorized 2026-07-30 — see parity_concurrency()
+    # for the rate-quota history that makes this deliberately conservative and env-overridable). Results
+    # are collected POSITIONALLY and aggregated below in model order, so the printed report does not
+    # depend on completion order — a nondeterministic report would be unreviewable in CI and would make
+    # log diffs between runs meaningless.
+    workers = min(parity_concurrency(), total) if total else 0
+    results = [None] * total
+    if workers > 1:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = {pool.submit(check_one_model, d, n, c, batch_cols): i
+                       for i, (d, n, c) in enumerate(models)}
+            for fut in concurrent.futures.as_completed(futures):
+                i = futures[fut]
+                try:
+                    results[i] = fut.result()
+                except Exception as e:
+                    # check_one_model catches its own expected failures, so reaching here means an
+                    # UNEXPECTED bug. Fail closed as an error (never a tolerant skip) but keep going, so
+                    # the report still covers every other model instead of dying on the first surprise.
+                    dataset, name, _ = models[i]
+                    results[i] = ("error", f"{dataset}.{name} (unexpected worker failure: {e})")
+    else:
+        for i, (dataset, name, compiled) in enumerate(models):
+            results[i] = check_one_model(dataset, name, compiled, batch_cols)
+
+    # CONCURRENCY SAFETY NET (2026-07-30, added with the thread pool above — do not drop it if the pool
+    # stays). A transient failure routes to the TOLERANT `skipped` bucket, and a skipped model still lets
+    # main() report OK so long as some other model compared. So without this, raising concurrency could
+    # quietly REDUCE COVERAGE (auth-token refresh contention or a rate-limit blip skipping N models) while
+    # still exiting 0 — the precise "OK on fewer real comparisons" hazard this module's docstring is built
+    # to prevent, reintroduced one model at a time. Re-run every skipped model ONCE, serially, and keep
+    # the retry whenever it produced a verdict (including a fail-closed `error`). Costs nothing in the
+    # normal all-clean case because there are no skips, and the deterministic skip reasons ("no comparable
+    # columns") simply return the same answer again without issuing a query.
+    if workers > 1:
+        for i, (kind, _) in enumerate(results):
+            if kind != "skipped":
+                continue
+            dataset, name, compiled = models[i]
+            retry = check_one_model(dataset, name, compiled, batch_cols)
+            if retry[0] != "skipped":
+                results[i] = retry
+
+    for kind, detail in results:
+        if kind == "skipped":
+            skipped.append(detail)
+        elif kind == "error":
+            errors.append(detail)
+        elif kind == "drift":
+            checked += 1
+            diffs.append(detail)
+        else:
+            checked += 1
 
     print(f"dbt↔live parity: {checked} models compared, {len(skipped)} skipped, "
           f"{len(errors)} errored, {len(diffs)} drifted.")

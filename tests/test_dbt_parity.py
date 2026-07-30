@@ -12,6 +12,8 @@ tests/test_generate_dashboard.py for the sibling copies). That contract is now p
 run_bq_query itself (tests/test_bq_json.py); this file only needs a thin delegation assertion pinning
 its own fixed args (C3 dedup, 2026-07-20 audit).
 """
+import threading
+
 from conftest import load_module_from_path
 
 dp = load_module_from_path("dbt_parity", "scripts", "dbt_parity.py")
@@ -237,7 +239,11 @@ def test_main_does_not_flag_identical_geography_column_as_drift(monkeypatch):
 # ---- main() exit-code / job-count guards (2026-07-14 audit findings) ----------------------
 
 def test_main_returns_1_when_every_model_is_skipped_due_to_bq_error(monkeypatch, capsys):
+    # live_columns_all() is forced to None so this exercises the PER-MODEL fallback path deliberately
+    # (2026-07-30): without it, main() would reach the real bq CLI for the batched metadata query — a
+    # unit test must not do live I/O, and tests/conftest.py's subprocess guard would trip on it.
     monkeypatch.setattr(dp, "compiled_models", lambda: iter([("state", "foo", "SELECT 1")]))
+    monkeypatch.setattr(dp, "live_columns_all", lambda: None)
 
     def boom(dataset, table):
         raise RuntimeError("bq auth error")
@@ -321,6 +327,13 @@ def test_main_skips_transient_query_error_but_still_reports_other_models(monkeyp
 
 
 def test_main_uses_a_single_combined_bq_call_per_model(monkeypatch):
+    # Original intent (2026-07-14): the two EXCEPT directions must share ONE bq job per model, not two,
+    # because this job's BigQuery job volume once tripped the project's DTS consumer rate-quota.
+    # Restated per-CLASS 2026-07-30, when live_columns_all() added a batched metadata job: counting ALL
+    # bq calls would now be 2 (1 metadata + 1 parity) and asserting == 1 would fail for a reason that has
+    # nothing to do with what this test guards. Counting the PARITY calls specifically keeps the original
+    # guarantee exact, and the second assertion additionally pins the metadata cost at "one job for ALL
+    # models" — so a regression back to per-model metadata lookups fails here too.
     monkeypatch.setattr(dp, "compiled_models", lambda: iter([("state", "foo", "SELECT 1 AS x")]))
     monkeypatch.setattr(dp, "live_columns", lambda dataset, table: [{"column_name": "x", "data_type": "STRING"}])
     calls = []
@@ -330,8 +343,295 @@ def test_main_uses_a_single_combined_bq_call_per_model(monkeypatch):
         return [{"n_missing": 0, "n_extra": 3}]
     monkeypatch.setattr(dp, "bq", fake_bq)
     rc = dp.main()
-    assert len(calls) == 1          # one combined query, not two
-    assert rc == 1                   # n_extra=3 -> drift detected end to end
+    parity_calls = [s for s in calls if "EXCEPT DISTINCT" in s]
+    meta_calls = [s for s in calls if "INFORMATION_SCHEMA.COLUMNS" in s]
+    assert len(parity_calls) == 1     # one COMBINED parity query per model, not two
+    assert len(meta_calls) <= 1       # metadata is ONE batched job for every model, never per-model
+    assert rc == 1                    # n_extra=3 -> drift detected end to end
+
+
+# ---- live_columns_all(): batched metadata (2026-07-30 Actions cost audit) --------------------
+
+def _meta_row(ds, table, col, dtype, pos):
+    return {"ds": ds, "table_name": table, "column_name": col, "data_type": dtype,
+            "ordinal_position": pos}
+
+
+def test_live_columns_all_issues_one_query_covering_every_dataset(monkeypatch):
+    # The whole point of the batch: ONE bq invocation, and it must not silently cover only some of the
+    # datasets dbt_parity compares (a partial batch would report real models as "deleted or renamed").
+    calls = []
+
+    def fake_bq(sql):
+        calls.append(sql)
+        return [_meta_row("state", "foo", "a", "STRING", 1)]
+    monkeypatch.setattr(dp, "bq", fake_bq)
+    dp.live_columns_all()
+    assert len(calls) == 1
+    for ds in dp.DATASET_FOLDERS:
+        assert f"`{dp.PROJECT}`.{ds}.INFORMATION_SCHEMA.COLUMNS" in calls[0]
+
+
+def test_live_columns_all_groups_by_dataset_and_table_preserving_column_order(monkeypatch):
+    # Column ORDER matters: main() builds one `exprs` string used on BOTH sides of the EXCEPT, so a
+    # reordering would still compare like-for-like, but the batch must not interleave tables.
+    rows = [
+        _meta_row("state", "foo", "a", "STRING", 1),
+        _meta_row("state", "foo", "b", "INT64", 2),
+        _meta_row("state", "bar", "z", "BOOL", 1),
+        _meta_row("analytics", "foo", "q", "DATE", 1),
+    ]
+    monkeypatch.setattr(dp, "bq", lambda sql: rows)
+    out = dp.live_columns_all()
+    assert out[("state", "foo")] == [{"column_name": "a", "data_type": "STRING"},
+                                     {"column_name": "b", "data_type": "INT64"}]
+    assert out[("state", "bar")] == [{"column_name": "z", "data_type": "BOOL"}]
+    # same table NAME in a different dataset must be a distinct key, not merged
+    assert out[("analytics", "foo")] == [{"column_name": "q", "data_type": "DATE"}]
+
+
+def test_live_columns_all_returns_none_on_query_error(monkeypatch):
+    # Fail SOFT to the per-model path — never mass-report every model as broken because one batch died.
+    def boom(sql):
+        raise RuntimeError("bq auth error")
+    monkeypatch.setattr(dp, "bq", boom)
+    assert dp.live_columns_all() is None
+
+
+def test_live_columns_all_returns_none_on_unexpected_row_shape(monkeypatch):
+    # A row missing the expected keys means the query/response contract changed — do not guess, fall back.
+    monkeypatch.setattr(dp, "bq", lambda sql: [{"n_missing": 0, "n_extra": 0}])
+    assert dp.live_columns_all() is None
+    monkeypatch.setattr(dp, "bq", lambda sql: [])
+    assert dp.live_columns_all() is None
+
+
+def test_main_uses_the_batch_and_does_not_call_live_columns_per_model(monkeypatch):
+    # Non-vacuity guard for the optimization itself: if main() ever regressed to per-model metadata
+    # lookups while the batch was available, this fails.
+    monkeypatch.setattr(dp, "compiled_models",
+                        lambda: iter([("state", "foo", "SELECT 1 AS a"),
+                                      ("state", "bar", "SELECT 1 AS a")]))
+    monkeypatch.setattr(dp, "model_source_names", lambda: {("state", "foo"), ("state", "bar")})
+    monkeypatch.setattr(dp, "live_columns_all",
+                        lambda: {("state", "foo"): [{"column_name": "a", "data_type": "STRING"}],
+                                 ("state", "bar"): [{"column_name": "a", "data_type": "STRING"}]})
+    per_model = []
+    monkeypatch.setattr(dp, "live_columns",
+                        lambda dataset, table: per_model.append((dataset, table)) or [])
+    monkeypatch.setattr(dp, "bq", lambda sql: [{"n_missing": 0, "n_extra": 0}])
+    assert dp.main() == 0
+    assert per_model == []      # the batch served both models; zero per-model metadata jobs
+
+
+def test_main_fails_closed_when_model_is_absent_from_a_successful_batch(monkeypatch, capsys):
+    # EQUIVALENCE with the per-model path's zero-row case (test_main_fails_closed_when_live_columns_
+    # returns_zero_rows): a model missing from a SUCCESSFUL batch means the live object does not exist,
+    # which must route to the fail-closed "deleted or renamed" branch — NOT to a tolerant skip. A second,
+    # cleanly-comparing model keeps checked>0 so exit 1 can only come from that branch.
+    monkeypatch.setattr(dp, "compiled_models",
+                        lambda: iter([("state", "gone", "SELECT 1 AS a"),
+                                      ("state", "good", "SELECT 1 AS a")]))
+    monkeypatch.setattr(dp, "model_source_names", lambda: {("state", "gone"), ("state", "good")})
+    monkeypatch.setattr(dp, "live_columns_all",
+                        lambda: {("state", "good"): [{"column_name": "a", "data_type": "STRING"}]})
+    monkeypatch.setattr(dp, "bq", lambda sql: [{"n_missing": 0, "n_extra": 0}])
+    assert dp.main() == 1
+    out = capsys.readouterr().out
+    assert "NOT VERIFIED" in out
+    assert "state.gone" in out
+
+
+def test_parity_concurrency_defaults_to_four(monkeypatch):
+    monkeypatch.delenv("DBT_PARITY_CONCURRENCY", raising=False)
+    assert dp.parity_concurrency() == dp.DEFAULT_PARITY_CONCURRENCY == 4
+
+
+def test_parity_concurrency_honours_env_override(monkeypatch):
+    monkeypatch.setenv("DBT_PARITY_CONCURRENCY", "7")
+    assert dp.parity_concurrency() == 7
+    # 1 = fully serial, the documented escape hatch if the 2026-06-29 rate-quota is ever pressured again.
+    monkeypatch.setenv("DBT_PARITY_CONCURRENCY", "1")
+    assert dp.parity_concurrency() == 1
+
+
+def test_parity_concurrency_is_clamped_and_tolerates_garbage(monkeypatch):
+    # A typo'd env var must never crash a CI gate, and must NEVER silently widen concurrency past the
+    # ceiling — the whole point of the ceiling is the rate-quota incident.
+    for bad in ("", "   ", "abc", "4.5", "None"):
+        monkeypatch.setenv("DBT_PARITY_CONCURRENCY", bad)
+        assert dp.parity_concurrency() == dp.DEFAULT_PARITY_CONCURRENCY
+    monkeypatch.setenv("DBT_PARITY_CONCURRENCY", "0")
+    assert dp.parity_concurrency() == 1          # clamped up: 0 workers would compare nothing
+    monkeypatch.setenv("DBT_PARITY_CONCURRENCY", "-5")
+    assert dp.parity_concurrency() == 1
+    monkeypatch.setenv("DBT_PARITY_CONCURRENCY", "9999")
+    assert dp.parity_concurrency() == dp.MAX_PARITY_CONCURRENCY == 16
+
+
+def test_report_order_follows_model_order_not_completion_order(monkeypatch, capsys):
+    # THE correctness risk of parallelising the loop: with shared accumulator lists, the report would be
+    # ordered by whichever query finished first, so CI output would differ run to run on identical inputs
+    # and log diffs would be meaningless. Here the FIRST model is forced to finish LAST (it blocks on an
+    # event the LAST model sets), so a completion-ordered report would come out d,b,c,a — the assertion
+    # pins it to a,b,c,d. Without positional collection in main(), this test fails.
+    names = ["a", "b", "c", "d"]
+    monkeypatch.setattr(dp, "compiled_models",
+                        lambda: iter([("state", n, f"SELECT 1 AS x -- {n}") for n in names]))
+    monkeypatch.setattr(dp, "model_source_names", lambda: {("state", n) for n in names})
+    monkeypatch.setattr(dp, "live_columns_all",
+                        lambda: {("state", n): [{"column_name": "x", "data_type": "STRING"}]
+                                 for n in names})
+    monkeypatch.setattr(dp, "parity_concurrency", lambda: 4)
+    last_done = threading.Event()
+
+    def fake_bq(sql):
+        if "-- d" in sql:
+            last_done.set()
+        elif "-- a" in sql:
+            assert last_done.wait(timeout=10), "model d never ran"
+        return [{"n_missing": 1, "n_extra": 0}]
+    monkeypatch.setattr(dp, "bq", fake_bq)
+    assert dp.main() == 1
+    drift_lines = [ln for ln in capsys.readouterr().out.splitlines() if "DRIFT" in ln]
+    got = [ln.split("state.")[1].split(":")[0] for ln in drift_lines]
+    assert got == names, f"report order {got} is completion-ordered, not model-ordered"
+
+
+def test_concurrent_run_preserves_fail_closed_error_routing(monkeypatch, capsys):
+    # The schema-shaped -> `errors` (fail closed) vs transient -> `skipped` (tolerant) split must survive
+    # being moved into a worker thread. One model hits each path; a third compares cleanly.
+    monkeypatch.setattr(dp, "compiled_models",
+                        lambda: iter([("state", "schema", "SELECT 1 AS x -- schema"),
+                                      ("state", "flaky", "SELECT 1 AS x -- flaky"),
+                                      ("state", "good", "SELECT 1 AS x -- good")]))
+    monkeypatch.setattr(dp, "model_source_names",
+                        lambda: {("state", "schema"), ("state", "flaky"), ("state", "good")})
+    monkeypatch.setattr(dp, "live_columns_all",
+                        lambda: {("state", n): [{"column_name": "x", "data_type": "STRING"}]
+                                 for n in ("schema", "flaky", "good")})
+    monkeypatch.setattr(dp, "parity_concurrency", lambda: 3)
+
+    def fake_bq(sql):
+        if "-- schema" in sql:
+            raise RuntimeError("Unrecognized name: x at [1:8]")
+        if "-- flaky" in sql:
+            raise RuntimeError("bq query timed out after 600s")
+        return [{"n_missing": 0, "n_extra": 0}]
+    monkeypatch.setattr(dp, "bq", fake_bq)
+    assert dp.main() == 1
+    out = capsys.readouterr().out
+    assert "NOT VERIFIED state.schema" in out      # fail closed
+    assert "skipped state.flaky" in out            # tolerant
+    assert "1 models compared" in out              # state.good still counted
+
+
+def test_unexpected_worker_exception_fails_closed_without_losing_other_models(monkeypatch, capsys):
+    # A bug inside check_one_model (it catches its own expected failures) must not kill the whole report
+    # nor be swallowed as a tolerant skip.
+    monkeypatch.setattr(dp, "compiled_models",
+                        lambda: iter([("state", "boom", "SELECT 1"), ("state", "good", "SELECT 1")]))
+    monkeypatch.setattr(dp, "model_source_names", lambda: {("state", "boom"), ("state", "good")})
+    monkeypatch.setattr(dp, "live_columns_all", lambda: {})
+    monkeypatch.setattr(dp, "parity_concurrency", lambda: 2)
+    real = dp.check_one_model
+
+    def sometimes_broken(dataset, name, compiled, batch_cols):
+        if name == "boom":
+            raise MemoryError("simulated bug inside the worker")
+        return real(dataset, name, compiled, batch_cols)
+    monkeypatch.setattr(dp, "check_one_model", sometimes_broken)
+    assert dp.main() == 1
+    out = capsys.readouterr().out
+    assert "unexpected worker failure" in out
+    assert "state.good" in out            # the other model was still reported, not lost
+
+
+def test_transient_skip_under_concurrency_is_retried_serially(monkeypatch, capsys):
+    # Concurrency's coverage hazard: a transient failure becomes a TOLERANT skip, and skips still allow
+    # exit 0 — so more concurrency could mean fewer real comparisons while CI stays green. The retry turns
+    # a first-attempt flake into a real comparison. Here the model fails once then succeeds.
+    attempts = {"n": 0}
+    monkeypatch.setattr(dp, "compiled_models",
+                        lambda: iter([("state", "flaky", "SELECT 1 AS x -- flaky"),
+                                      ("state", "good", "SELECT 1 AS x -- good")]))
+    monkeypatch.setattr(dp, "model_source_names", lambda: {("state", "flaky"), ("state", "good")})
+    monkeypatch.setattr(dp, "live_columns_all",
+                        lambda: {("state", n): [{"column_name": "x", "data_type": "STRING"}]
+                                 for n in ("flaky", "good")})
+    monkeypatch.setattr(dp, "parity_concurrency", lambda: 2)
+
+    def fake_bq(sql):
+        if "-- flaky" in sql:
+            attempts["n"] += 1
+            if attempts["n"] == 1:
+                raise RuntimeError("bq query timed out after 600s")   # transient, first attempt only
+        return [{"n_missing": 0, "n_extra": 0}]
+    monkeypatch.setattr(dp, "bq", fake_bq)
+    assert dp.main() == 0
+    out = capsys.readouterr().out
+    assert attempts["n"] == 2                  # retried
+    assert "2 models compared, 0 skipped" in out   # the flake became a REAL comparison, not a hole
+
+
+def test_retry_keeps_fail_closed_verdict_and_does_not_mask_a_persistent_skip(monkeypatch, capsys):
+    # Two directions the retry must NOT get wrong: (a) if the retry surfaces a schema-shaped error it must
+    # be kept (fail closed), and (b) a model that skips on BOTH attempts must stay skipped, not vanish.
+    calls = {"n": 0}
+    monkeypatch.setattr(dp, "compiled_models",
+                        lambda: iter([("state", "schema", "SELECT 1 AS x -- schema"),
+                                      ("state", "dead", "SELECT 1 AS x -- dead"),
+                                      ("state", "good", "SELECT 1 AS x -- good")]))
+    monkeypatch.setattr(dp, "model_source_names",
+                        lambda: {("state", "schema"), ("state", "dead"), ("state", "good")})
+    monkeypatch.setattr(dp, "live_columns_all",
+                        lambda: {("state", n): [{"column_name": "x", "data_type": "STRING"}]
+                                 for n in ("schema", "dead", "good")})
+    monkeypatch.setattr(dp, "parity_concurrency", lambda: 3)
+
+    def fake_bq(sql):
+        if "-- schema" in sql:
+            calls["n"] += 1
+            # transient first, then a schema-shaped error the retry must adopt as fail-closed
+            raise RuntimeError("bq query timed out after 600s" if calls["n"] == 1
+                               else "Unrecognized name: x at [1:8]")
+        if "-- dead" in sql:
+            raise RuntimeError("bq query timed out after 600s")   # always transient
+        return [{"n_missing": 0, "n_extra": 0}]
+    monkeypatch.setattr(dp, "bq", fake_bq)
+    assert dp.main() == 1
+    out = capsys.readouterr().out
+    assert "NOT VERIFIED state.schema" in out       # (a) retry's fail-closed verdict kept
+    assert "skipped state.dead" in out              # (b) persistent skip still reported
+
+
+def test_serial_path_is_used_when_concurrency_is_one(monkeypatch):
+    # DBT_PARITY_CONCURRENCY=1 must take the plain loop, not a 1-worker pool — the documented rollback.
+    monkeypatch.setattr(dp, "compiled_models",
+                        lambda: iter([("state", "a", "SELECT 1 AS x"), ("state", "b", "SELECT 1 AS x")]))
+    monkeypatch.setattr(dp, "model_source_names", lambda: {("state", "a"), ("state", "b")})
+    monkeypatch.setattr(dp, "live_columns_all",
+                        lambda: {("state", n): [{"column_name": "x", "data_type": "STRING"}]
+                                 for n in ("a", "b")})
+    monkeypatch.setattr(dp, "parity_concurrency", lambda: 1)
+    threads = set()
+
+    def fake_bq(sql):
+        threads.add(threading.current_thread().name)
+        return [{"n_missing": 0, "n_extra": 0}]
+    monkeypatch.setattr(dp, "bq", fake_bq)
+    assert dp.main() == 0
+    assert threads == {"MainThread"}      # nothing was dispatched to a pool thread
+
+
+def test_main_skips_the_batch_query_entirely_when_no_models_compiled(monkeypatch):
+    # The total==0 / no-sources guards must not cost a BigQuery job.
+    monkeypatch.setattr(dp, "compiled_models", lambda: iter([]))
+    monkeypatch.setattr(dp, "model_source_count", lambda: 0)
+    calls = []
+    monkeypatch.setattr(dp, "bq", lambda sql: calls.append(sql) or [])
+    assert dp.main() == 0
+    assert calls == []
 
 
 # ---- partial-compile guard (2026-07-17 parallel-refactor audit) -----------------------------------

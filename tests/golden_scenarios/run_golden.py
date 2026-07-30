@@ -200,6 +200,14 @@ def load_scenarios(path=SCENARIOS_PATH):
 # scenarios_for_changed_files()'s plain governing_files intersection is structurally blind to it. See
 # that function's docstring for why this must fail OPEN (select every scenario), not silently select
 # none, when a change lands here.
+#
+# MEASUREMENT TRAP (hit 2026-07-30, the day the scoping landed): because a push that edits THIS file
+# fails open, the very push that introduces or changes the cost-scoping selects all 31 scenarios and
+# bills full price — which reads as "the optimization does not work." It does; verified on the same
+# push by re-running the selection with the harness files excluded: 71 changed files -> all 31 with
+# them, 10 without. Measure this optimization on a push that does NOT touch tests/golden_scenarios/,
+# and do NOT "fix" the fail-open to make the numbers look better — a runner/expectations change can
+# alter any scenario's outcome, so narrowing it would trade a real correctness guarantee for cost.
 HARNESS_SELF_PREFIX = "tests/golden_scenarios/"
 
 

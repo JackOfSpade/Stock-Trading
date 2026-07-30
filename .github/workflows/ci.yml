@@ -260,6 +260,13 @@ jobs:
     #   'block'                      : RUN and FAIL the build on drift (a hard merge gate).
     #   'off'                        : skip entirely (escape hatch if WIF misbehaves).
     # If the WIF vars are unset the job skips cleanly (green). See ops/RUNBOOK.md §6/§14.
+    #
+    # A SECOND var, `DBT_PARITY_CONCURRENCY`, tunes how fast (not whether) the check runs — the per-model
+    # parity queries run through a small client-side thread pool, default 4, hard-capped at 16
+    # (scripts/dbt_parity.py parity_concurrency()). Job COUNT is unchanged by it; only the instantaneous
+    # BigQuery request rate. **Set it to 1 to restore fully serial behavior** — that is the no-code-change
+    # rollback if the 2026-06-29 DTS consumer rate-quota (see the path-gate note below) is ever pressured
+    # again. Owner-authorized 2026-07-30; concurrency 4 measured 43 models 230s -> see that function.
     permissions:
       contents: read
       id-token: write   # Workload Identity Federation (no downloadable key)
@@ -280,13 +287,21 @@ jobs:
           DBT_PARITY: ${{ vars.DBT_PARITY }}
         run: |
           # PATH GATE (2026-06-29): parity only catches view-LOGIC drift, which is impossible without a
-          # change under bigquery/** or dbt/**. This job dbt-compiles + runs ~30 EXCEPT-DISTINCT parity
-          # queries PER RUN, on EVERY push to EVERY branch (widened from claude/**+main once auto-merge
-          # covers all branches) — the ~1k BigQuery jobs/day estimate below grows with total branch
-          # count. That volume already tripped the project's BigQuery Data Transfer Service consumer
-          # rate-quota on 2026-06-29 (delayed the 05:00-06:00 scheduled window and FAILED the embed +
-          # integrity scheduled-query runs). Skipping parity on docs-/code-only pushes removes that load
-          # with no loss of coverage.
+          # change under bigquery/** or dbt/**. This job dbt-compiles + runs 43 EXCEPT-DISTINCT parity
+          # queries PER RUN (one per ported model — count corrected from "~30" 2026-07-30, measured; an
+          # UNDERCOUNT matters here because this number is the basis of the quota reasoning below), on
+          # EVERY push to EVERY branch (widened from claude/**+main once auto-merge covers all branches)
+          # — the ~1k BigQuery jobs/day estimate below grows with total branch count. That volume already
+          # tripped the project's BigQuery Data Transfer Service consumer rate-quota on 2026-06-29
+          # (delayed the 05:00-06:00 scheduled window and FAILED the embed + integrity scheduled-query
+          # runs). Skipping parity on docs-/code-only pushes removes that load with no loss of coverage.
+          #
+          # Per-run BigQuery job count is now 44, not 86: the 43 per-model INFORMATION_SCHEMA metadata
+          # lookups were batched into ONE job (2026-07-30 Actions cost audit — 70.9s -> 1.5s, proven
+          # 43/43 equivalent; see scripts/dbt_parity.py live_columns_all()). That HALVES this job's
+          # contribution to the rate-quota risk described above. The 43 parity queries themselves must
+          # stay one-per-model — batching them was measured and REJECTED (BigQuery "Resources exceeded"
+          # all-in-one; SLOWER than per-model when chunked). See that function's notes before retrying.
           #
           # DIFF-BASE RESOLUTION moved to scripts/resolve_diff_base.sh (2026-07-26, codebase audit —
           # de-duplication): this job and sql-validate's guard step below carried the IDENTICAL ~15-line
@@ -357,20 +372,31 @@ jobs:
         # Drift fails this step; whether that BLOCKS the merge is the job-level continue-on-error above
         # (advisory by default; a hard gate only when repo var DBT_PARITY=block). ops/RUNBOOK.md §6/§12.
         run: python scripts/dbt_parity.py
-      - name: dbt test — B3 invariants vs live data (ADVISORY — RUNBOOK §25 C2)
-        if: steps.guard.outputs.skip == 'false'
-        working-directory: dbt
-        # Runs the B3 invariant suite (reserved_cash formula, queue latest-wins, daily_marks no-double-
-        # count, one-row health views — the exact bugs that have already bitten this system) against the
-        # LIVE views each push, instead of "on demand" only. Read-only: generate_schema_name pins refs to
-        # the bare live datasets, so the tests SELECT against the existing live objects (no dbt build).
-        # ALWAYS ADVISORY — a `::warning::` even in DBT_PARITY=block mode (block gates row-level DRIFT,
-        # not a live-data invariant that may legitimately flex); the `if !` keeps the step green.
-        run: |
-          dbt deps >/dev/null 2>&1 || true
-          if ! dbt test; then
-            echo "::warning::dbt test reported failures (advisory) — a B3 invariant may be violated on live data; see log. ops/RUNBOOK.md §25 C2."
-          fi
+      # `dbt test` (the B3 invariant suite vs LIVE data) USED TO RUN HERE and was MOVED OUT 2026-07-30 to
+      # live-sql-parity.yml's daily job. It is not deleted — see that workflow's "B3 invariants vs live
+      # data" step.
+      #
+      # WHY IT DOES NOT BELONG ON A PUSH TRIGGER: those tests assert properties of LIVE DATA (reserved_cash
+      # formula, queue latest-wins, daily_marks no-double-count, one-row health views), and live data
+      # changes on the calendar's schedule — marks land, trades fill, sweeps run — not on the schedule that
+      # someone pushes code. A push trigger therefore got it wrong in BOTH directions: blind for days when
+      # nobody pushed (exactly when the unattended routine fleet is doing all the work), and re-asserting
+      # the same invariants against the same data several times on a busy day. This is the same
+      # "a push-time trigger cannot answer a live-state question" reasoning already written out at the top
+      # of live-sql-parity.yml for why THAT check is a daily cron rather than a dbt-parity-style push job.
+      #
+      # DELIVERY WAS THE OTHER HALF OF THE PROBLEM: this step was always advisory and only ever emitted a
+      # `::warning::` annotation, which nothing routes anywhere — a violated live-data invariant was
+      # effectively reported into a log nobody reads. Its new home records an ops.ci_findings row instead,
+      # which state.ci_findings_open surfaces into cadence_check's `ci_finding` warning alert and thus the
+      # monitored email channel. That path needed NO new IAM grant: gh-ci-runner@ already holds a
+      # table-scoped bigquery.dataEditor binding on exactly ops.ci_findings (RUNBOOK §6). Writing
+      # ops.alerts directly from CI would have needed a new owner-run grant and was NOT done.
+      #
+      # Removing this step is safe against every coupling point that exists: ci.yml's
+      # "workflow_run trigger names stay in sync" step compares only workflow `name:` fields, and
+      # auto-merge-claude.yml's post-merge coverage block mirrors only the credential-free `checks` job
+      # (it deliberately excludes dbt-parity and sql-validate entirely), so neither reads this step.
 
   sql-validate:
     name: BigQuery SQL syntax gate (keyless WIF, read-only)

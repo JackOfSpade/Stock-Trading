@@ -1267,8 +1267,18 @@ never applied. **Repo artifacts are DONE; this section lists the owner/console a
   FAILS the guard (was: skip-green) so the hard parity gate can't silently become a no-op after promotion.
 - **C2 — drift-defense tests + advisory `dbt test` (DONE).** `tests/test_cadence_consistency.py` +
   `tests/test_dbt_parity.py` exercise the regex parsers / column-typing so a rotted regex is caught (not a
-  vacuous pass); an advisory `dbt test` step runs the B3 invariant suite vs live each push (`::warning::`,
-  never blocks).
+  vacuous pass); an advisory `dbt test` step runs the B3 invariant suite vs live data.
+  **[2026-07-30: that step MOVED from ci.yml's per-push `dbt-parity` job to `live-sql-parity.yml`'s DAILY
+  job, and its delivery changed from a `::warning::` annotation to an `ops.ci_findings` row.** The tests
+  assert properties of live DATA, which changes on the calendar rather than when someone pushes, so the push
+  trigger was blind on no-push days and redundant on multi-push days; and a `::warning::` is routed nowhere,
+  so a violated invariant reached no one. The finding row now flows through `state.ci_findings_open` into
+  cadence_check's `ci_finding` warning alert and the monitored email channel — no new IAM grant was needed,
+  because `gh-ci-runner@` already holds table-scoped `bigquery.dataEditor` on exactly `ops.ci_findings`
+  (§6); writing `ops.alerts` from CI would have required a new owner-run grant and was not done. It is
+  recorded under `workflow='b3-invariants'` (NOT `live-sql-parity`, whose auto-resolve is workflow-scoped
+  and would otherwise clear a still-failing B3 row, and whose D3 self-heal branch expects an object name).
+  Still never fails a job. ci.yml's `dbt-parity` job keeps the compiled-vs-live ROW parity check.]**
 - **C3 — pinned CI toolchain (DONE).** `requirements-ci.txt` (constraints) + `require-dbt-version` —
   every CI install is now version-bounded. **Owner (optional):** tighten the ranges to exact `==` from a
   green run's resolved versions for full reproducibility.

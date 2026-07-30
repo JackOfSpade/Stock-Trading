@@ -80,6 +80,97 @@ jobs:
       - name: Compare live roster vs strategy/roster.yaml
         if: steps.guard.outputs.skip == 'false'
         run: python scripts/check_live_roster_parity.py --project stock-trading-498512
+      # ---- B3 INVARIANTS vs LIVE DATA (moved here from ci.yml's dbt-parity job, 2026-07-30) -------------
+      # WHY HERE: `dbt test` asserts properties of LIVE DATA (reserved_cash formula, queue latest-wins,
+      # daily_marks no-double-count, one-row health views, + 20-odd more singular tests under dbt/tests/).
+      # Live data moves on the calendar, not on the push schedule, so its old push trigger in ci.yml was
+      # blind on days nobody pushed and redundant on days with several pushes. This job is the natural
+      # host: it is the only DAILY workflow that already has the keyless WIF auth these tests need, so the
+      # marginal cost is just the dbt toolchain plus the test runtime rather than a whole new job's
+      # checkout + auth. ci.yml's dbt-parity job keeps the COMPILED-vs-live ROW parity check (a genuine
+      # per-push question about the pushed code); only the live-DATA invariant suite moved.
+      #
+      # NOT PORTED TO SQL INSTEAD, DELIBERATELY: bigquery/64_b3_live_invariants.sql ported exactly ONE of
+      # these invariants (the state.trading_enabled formula -> state.b3_trading_enabled_check +
+      # cadence_check's b3_trading_enabled_drift warning) and its own header records that it "scoped
+      # narrowly rather than porting all 5 dbt B3 classes at once". Re-expressing all ~25 dbt tests as
+      # hand-SQL would duplicate every invariant into a second definition — precisely the drift class
+      # dbt-parity exists to police — so the dbt test stays the single definition and just runs on the
+      # right cadence.
+      - name: Install dbt + profile (for the B3 live-data invariant suite)
+        if: steps.guard.outputs.skip == 'false'
+        # Same pinned constraints file and same checked-in CI profile ci.yml's dbt jobs use, so this cannot
+        # drift to a different dbt version than dbt-parity compiles with. profiles.ci.yml authenticates via
+        # oauth/ADC, which the gcp-wif-auth step above already established.
+        run: |
+          pip install --quiet -c requirements-ci.txt dbt-core dbt-bigquery
+          mkdir -p ~/.dbt
+          cp dbt/profiles.ci.yml ~/.dbt/profiles.yml
+      - name: B3 invariants vs live data (dbt test)
+        id: b3
+        if: steps.guard.outputs.skip == 'false'
+        working-directory: dbt
+        # READ-ONLY: generate_schema_name pins refs to the bare live datasets and store_failures is off, so
+        # the tests only SELECT against existing live objects — no dbt build, nothing materialized. This is
+        # why the read-only base SA (dataViewer + jobUser) suffices, exactly as it did in ci.yml.
+        #
+        # NEVER FAILS THIS JOB. A B3 violation is a live-DATA condition, not a repo defect, and this job's
+        # other steps (SQL parity, roster parity) are hard gates whose red/green must keep meaning what it
+        # says. The finding row written by the next step is the delivery mechanism, not the job status.
+        run: |
+          set -uo pipefail
+          dbt deps >/dev/null 2>&1 || true
+          if dbt test 2>&1 | tee /tmp/b3_out.txt; then
+            echo "result=ok" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=violation" >> "$GITHUB_OUTPUT"
+            echo "::warning::B3 live-data invariant failure(s) — recorded to ops.ci_findings; cadence_check will raise the ci_finding warning alert. ops/RUNBOOK.md §25 C2."
+          fi
+      - name: Record B3 finding (ops.ci_findings bridge)
+        # `always()` so the finding is recorded even if an EARLIER hard gate (SQL parity / roster parity)
+        # already failed the job — a B3 violation must not be masked by an unrelated red step.
+        if: always() && steps.guard.outputs.skip == 'false' && steps.b3.outputs.result != ''
+        # WORKFLOW VALUE IS DELIBERATELY 'b3-invariants', NOT 'live-sql-parity', despite living in this job.
+        # Two hard reasons, both verified in the current files:
+        #   1. This job's own auto-resolve step INSERTs resolved rows with
+        #      `WHERE workflow = "live-sql-parity"` and NO finding_key restriction — under that workflow
+        #      value a clean SQL-parity run would silently resolve a STILL-FAILING B3 finding.
+        #   2. Claude_Task_Plan.md D3's CI-FINDINGS ADJUDICATION routes every `workflow='live-sql-parity'`
+        #      row into the live-SQL self-heal state machine, which re-applies a bigquery/*.sql definition
+        #      for a finding_key it expects to be a `<dataset>.<object>` name. A B3 finding_key is not an
+        #      object, so that branch must never see it.
+        # A distinct workflow value still reaches the operator: state.ci_findings_open partitions by
+        # (workflow, finding_key) with no workflow filter, and cadence_check's `ci_finding` warning reads
+        # the whole view and names each workflow/finding_key in its message — so a new producer is picked up
+        # with zero BigQuery-side change. D3 classifies this key as no-repair (see that step).
+        run: |
+          set -uo pipefail
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if [ "${{ steps.b3.outputs.result }}" = "violation" ]; then
+            # Keep `detail` SHORT and STABLE-ish: it lands in a JSON payload and an email. Name the failing
+            # tests rather than pasting dbt's whole log.
+            failed="$(grep -oE '(Failure|Error) in test [a-zA-Z0-9_]+' /tmp/b3_out.txt 2>/dev/null \
+                       | sed -E 's/^(Failure|Error) in test //' | sort -u | paste -sd',' - || true)"
+            [ -n "$failed" ] || failed="see run log (could not parse test names)"
+            detail="B3 live-data invariant failure(s): ${failed}"
+            # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted BigQuery
+            # table name must not be shell-expanded and @p_* are BigQuery named parameters, not shell vars.
+            if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false \
+                 --parameter="p_detail:STRING:${detail}" --parameter="p_url:STRING:${run_url}" \
+                 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("b3-invariants","b3_invariants","open",@p_detail,@p_url)'; then
+              echo "::error::Could not record the B3 finding to ops.ci_findings — the violation above would otherwise reach nobody. Check gh-ci-runner@'s table-scoped dataEditor grant on ops.ci_findings (RUNBOOK §6)."
+              exit 1
+            fi
+          else
+            # Auto-resolve, scoped to THIS producer only. Writes zero rows when nothing is open, so a
+            # healthy day costs one no-op query and appends nothing.
+            # shellcheck disable=SC2016 # single-quoted intentionally: see above.
+            if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false \
+                 --parameter="p_url:STRING:${run_url}" \
+                 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) SELECT workflow, finding_key, "resolved", "B3 invariants clean this run", @p_url FROM `stock-trading-498512.state.ci_findings_open` WHERE workflow = "b3-invariants"'; then
+              echo "::warning::Could not auto-resolve the B3 finding in ops.ci_findings; a stale open row may linger until the next clean run."
+            fi
+          fi
       # DELIVERY PATH DECIDED (2026-07-17, OWNER_ACTIONS.md §I — option 3): findings reach the
       # self-heal consumer via the ops.ci_findings / state.ci_findings_open bridge
       # (bigquery/67_ci_findings_bridge.sql), which this run's INSERT step below already writes now that

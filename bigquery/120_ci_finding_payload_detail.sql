@@ -1,72 +1,21 @@
--- cadence_check #14 auto-age: add scheduled_query_version_drift (2026-07-27, follow-up to the
--- INCIDENT[ref=423ecc02-fdb7-4f47-9445-d8c79d399e8c] response; owner-approved this session).
--- Project: stock-trading-498512. Apply AFTER 110_pending_order_aware_reconciliation.sql.
--- This file is the NEW single source of truth for `ops.sp_sq_cadence_check`; it SUPERSEDES the
--- definition of THAT ONE PROCEDURE in bigquery/75_scheduled_query_wrappers.sql:116-697 (75 defines
--- 12 other sp_sq_* wrapper procedures, all still canonical there -- this file touches none of them).
--- Any future change to this procedure must land as a NEW numbered file superseding THIS one; never
--- re-apply bigquery/75's CREATE OR REPLACE for this procedure in isolation.
---
--- ============================ WHY ============================
--- `state.scheduled_query_version_drift` (bigquery/63) compares each scheduled query's EXPECTED version
--- (the repo registry) against the version that query itself last reported into `ops.heartbeat`. That
--- reported value is a record of the LAST TIME THAT QUERY RAN -- not of what logic is currently live.
--- Under ARCH-1 (bigquery/75's header) every console body is a frozen one-line `CALL ops.sp_sq_*()`
--- wrapper, and `CREATE OR REPLACE PROCEDURE` is atomic, so the moment a wrapper is re-applied the new
--- logic IS live. What lags is only the marker, until that query's own next scheduled run.
---
--- `cadence_check` evaluates at ~05:15 UTC, AHEAD of most of the queries it audits (e.g.
--- `daily_staging_cap_check` at ~05:25). So a wrapper bumped mid-day leaves a guaranteed ~8-10 minute
--- window -- or a full day, if the bump lands after that query's slot -- in which this proc reads the
--- PREVIOUS version and raises `scheduled_query_version_drift`. It heals on its own within one cycle.
---
--- That category was the one self-healing warning class missing from the #14 auto-age list, so each
--- occurrence left a permanently-open alert row: the category is absent from `ops.alert_policy`'s
--- auto-resolve allowlist too, meaning the ONLY way to clear it was a human/session `UPDATE ops.alerts`.
--- Twice observed: `embed_pending` 2026-07-17/18, and `daily_staging_cap_check` v3->v4 on 2026-07-27
--- (alert 0c2b631a, closed manually during this incident response). Every future wrapper version bump
--- would have produced another. This adds it to the same 7-day age-out that already covers
--- `scheduled_query_stale` -- its closest structural sibling, a beat-age dead-man on the very same view.
---
--- ============================ WHY THIS IS SAFE ============================
--- The #14 block can only clear a row whose condition has ALREADY healed, because a still-true condition
--- is unconditionally re-raised by the checks further down THIS SAME procedure -- for this category, the
--- `scheduled_query_version_drift` block (guarded by `IF EXISTS (... WHERE drift)`), which runs after the
--- UPDATE and uses `sp_raise_alert_once`. So a genuinely unapplied wrapper re-raises every night and can
--- never be silently aged away; only the transient bootstrapping artifact ages out, and only after 7 days.
--- The block is also scoped `severity = 'warning'` and explicitly excludes the persistent-DRIFT classes
--- (position_drift / ddl_drift / append_only_violation / restore_fidelity); `scheduled_query_version_drift`
--- is raised as a WARNING (bigquery/75 ~line 485) and is NOT one of those classes. `state.system_health`'s
--- `all_green` keys only on open CRITICAL alerts, so nothing here touches the trading-enable gate.
+-- ci_finding alert payload: include finding detail (2026-07-30).
+-- Project: stock-trading-498512. Apply AFTER 111_cadence_check_version_drift_autoage.sql.
+-- This file is the NEW single source of truth for `ops.sp_sq_cadence_check`; it SUPERSEDES
+-- bigquery/111_cadence_check_version_drift_autoage.sql. Do not re-apply an earlier definition of this
+-- procedure in isolation.
 --
 -- ============================ WHAT CHANGED ============================
--- Byte-for-byte identical to bigquery/75_scheduled_query_wrappers.sql:116-697 EXCEPT:
---   1. the heartbeat version marker 'v8' -> 'v9' (bigquery/63's registry entry updated to match);
---   2. 'scheduled_query_version_drift' appended to the #14 auto-age `category IN (...)` list;
---   3. an explanatory comment above that list;
---   4. 'stranded_session' removed from that same #14 auto-age `category IN (...)` list (2026-07-29),
---      because the detector that raised it was retired alongside Operating_Protocols.md section 17.
---      CORRECTED 2026-07-30 (this file's earlier wording claimed the category "was never once raised
---      anywhere in this repo's git history" -- that is FALSE; see the inline comment at the list itself
---      for the verified history). Nothing in the tree can raise it as of 2026-07-30, which is what makes
---      the entry dead GOING FORWARD -- not that it never fired.
--- No check logic, no threshold, no severity, and no dead-man's-switch window is otherwise altered.
---
--- NOTE ON APPLYING THIS: bumping the marker to v9 means this proc reports v9 only from its next run.
--- Between applying this file and that run, `state.scheduled_query_version_drift` will show cadence_check
--- expected=v9 / reported=v8 and this proc will raise one `scheduled_query_version_drift` warning -- the
--- exact artifact this change exists to stop needing a manual close. It self-clears on the next nightly
--- run, and thereafter ages out automatically. Expected; not a failed apply.
+-- Byte-for-byte identical to the CREATE statement in bigquery/111_cadence_check_version_drift_autoage.sql
+-- EXCEPT:
+--   1. the heartbeat version marker 'v9' -> 'v10' (bigquery/63's registry entry is updated to match);
+--   2. the `ci_finding` alert payload STRUCT now includes `detail` before `run_url`, so CI finding
+--      detail text reaches the operator alert email.
+-- No check logic, thresholds, severity, or alert routing is otherwise altered.
 
--- =====================================================================================================
--- SUPERSEDED LIVE by bigquery/120_ci_finding_payload_detail.sql (2026-07-30) — current single source of
--- truth for THIS PROCEDURE ONLY. Do not re-apply this CREATE statement live in isolation; it omits the
--- ci_finding payload detail field and reports the superseded v9 heartbeat marker.
--- =====================================================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v9', 'cadence_check.sql ran');
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v10', 'cadence_check.sql ran');
 
   -- RUNBOOK section 38 self-heal (ITEM 3, bigquery/38_run_log_selfheal.sql): backfill any
   -- ops.run_log completion row whose routine already has a landed-commit marker in
@@ -540,7 +489,7 @@ BEGIN
       CONCAT('Open CI guard finding(s): ',
              (SELECT STRING_AGG(CONCAT(workflow, '/', finding_key), ', ' ORDER BY workflow)
               FROM `stock-trading-498512.state.ci_findings_open`)),
-      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(workflow, finding_key, CAST(finding_ts AS STRING) AS finding_ts, run_url)))
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(workflow, finding_key, CAST(finding_ts AS STRING) AS finding_ts, detail, run_url)))
        FROM `stock-trading-498512.state.ci_findings_open`));
   END IF;
 
