@@ -281,7 +281,7 @@ jobs:
       # either alone was fine; only the combined tree could have shown the mismatch).
       #
       # WHY ONLY THE CREDENTIAL-FREE REPO-CONTENT CHECKS, NOT ALL OF ci.yml. Measured from this repo's own
-      # CI runs (2026-07-30 cost audit): dbt-parity = 8m53s, ~64% of a run's billable minutes, and is ALSO
+      # CI runs (2026-07-30 cost audit): dbt-parity = 154s, ~3 of a 6-minute CI run's billed minutes, and is ALSO
       # redundant here — it is path-gated on bigquery/**/dbt/** and already ran pre-merge on whichever
       # branch actually touched those paths, and what it checks (dbt-compiled-vs-live BigQuery row parity)
       # is not a question a merge commit's cross-file coupling could newly break. NOTE it is a HARD

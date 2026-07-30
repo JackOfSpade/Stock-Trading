@@ -72,7 +72,7 @@ jobs:
           fi
 
           if [ "$wif_live" = "false" ]; then
-            echo "::notice::WIF vars (GCP_WIF_PROVIDER / GCP_WIF_SERVICE_ACCOUNT) are not set — every keyless guard (alert-relay, offsite-backup, keyless-sa-audit, wif-binding-audit, dashboard, dbt-parity, sql-validate, live-sql-parity) is dormant by cascade. Expected pre-bootstrap state, not itself a finding (ops/RUNBOOK.md §6/§25)."
+            echo "::notice::WIF vars (GCP_WIF_PROVIDER / GCP_WIF_SERVICE_ACCOUNT) are not set — every keyless guard (alert-relay, offsite-backup, keyless-sa-audit, wif-binding-audit, dashboard, warehouse-validation, live-sql-parity) is dormant by cascade. Expected pre-bootstrap state, not itself a finding (ops/RUNBOOK.md §6/§25)."
             echo "problem=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -122,10 +122,10 @@ jobs:
             echo "::notice::dashboard publish disabled (opt-in). RUNBOOK §16."
           fi
           if [ "${{ vars.DBT_PARITY }}" = "off" ]; then
-            echo "::notice::dbt-parity explicitly disabled (DBT_PARITY=off) — the dbt/BigQuery drift check is not running. RUNBOOK §14/§25 C1."
+            echo "::notice::warehouse-validation's dbt-parity portion is explicitly disabled (DBT_PARITY=off) — the dbt/BigQuery drift check is not running. RUNBOOK §14/§25 C1."
           fi
           if [ "${{ vars.RUN_SQL_DRYRUN }}" = "off" ]; then
-            echo "::notice::sql-validate BigQuery SQL syntax gate explicitly disabled (RUN_SQL_DRYRUN=off) — a raw bigquery/*.sql parse error would not be caught before it reaches the live apply step. RUNBOOK §6."
+            echo "::notice::warehouse-validation's SQL syntax portion is explicitly disabled (RUN_SQL_DRYRUN=off) — a raw bigquery/*.sql parse error would not be caught before it reaches the live apply step. RUNBOOK §6."
           fi
           if [ "${{ vars.RUN_SQL_DRYRUN_SWEEP }}" = "off" ]; then
             echo "::notice::sql-dryrun-sweep (weekly full-tree syntax sweep) explicitly disabled (RUN_SQL_DRYRUN_SWEEP=off) — a parse error in an UNCHANGED bigquery/*.sql file (the gap that hid 3 real parse bugs in /34 and /63) would go undetected. Deliberately independent of RUN_SQL_DRYRUN; see sql-dryrun-sweep.yml."

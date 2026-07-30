@@ -284,7 +284,7 @@ drain-all loop, would need a per-branch checkout+test), and branch protection + 
 The always-on SQL gate is the **`dbt` job's offline `dbt parse`** (no creds, runs on every push;
 validates the modeling layer + that every ref/source/test resolves). That is the recommended gate.
 
-The separate **`sql-validate`** job (live `bq --dry_run` of every `bigquery/*.sql` under keyless
+The **`warehouse-validation`** job's SQL dry-run steps (live `bq --dry_run` of changed `bigquery/*.sql` under keyless
 GitHub→GCP Workload Identity Federation) is **OPT-IN and OFF by default** — and we recommend leaving
 it off. Why: dry-running the DDL files (`CREATE TABLE/MODEL/VIEW`) requires **CREATE/DDL permissions
 on the production datasets** (events/ops/analytics/state), *even in `--dry_run`*. Granting a
@@ -300,12 +300,12 @@ grants `gh-ci-runner@` write to exactly one table, nothing else in `ops.*`.
 
 WIF itself is set up (provider `github-pool/github-provider`, SA `gh-ci-runner@…`, repo variables
 `GCP_WIF_PROVIDER` + `GCP_WIF_SERVICE_ACCOUNT`) and powers any future keyless need (e.g. a `dbt build`
-or §16's dashboard). As of 2026-06-22 it also powers the **`dbt-parity` row-level drift gate, which now
+or §16's dashboard). As of 2026-06-22 it also powers **`warehouse-validation`'s dbt-parity steps, which now
 runs by default whenever those WIF vars are present** (read-only; advisory until promoted to `DBT_PARITY=block`
 — see §12 "D1"). That is the real guard on the two hand-maintained copies of each view; `dbt parse` only
 checks structure.
 
-The same read-only WIF SA also powers the **`sql-validate` BigQuery SQL syntax gate** (ci.yml, added
+The same read-only WIF SA also powers **`warehouse-validation`'s always-blocking SQL syntax steps** (ci.yml, added
 2026-07-17 after a `mode=''manual''` parse error reached the live apply step undetected — nothing in CI
 parsed raw hand-SQL). It runs **by default whenever the WIF vars are present**, needs **NO DDL grant**
 (BigQuery compiles a `--dry_run` before it authorizes the DDL, so `scripts/check_sql_dryrun.py` sees a
@@ -442,7 +442,7 @@ Owner decisions: the `billing_account` id; and whether the backup export runs un
 then `terraform init -migrate-state`. CI does not run terraform, so this only affects an owner running
 terraform locally / in Cloud Shell.
 
-**D1 — row-level dbt↔live parity: NOW RUNS BY DEFAULT (changed 2026-06-22).** The `dbt-parity` job in
+**D1 — row-level dbt↔live parity: NOW RUNS BY DEFAULT (changed 2026-06-22).** `warehouse-validation`'s dbt-parity steps in
 `ci.yml` + `scripts/dbt_parity.py` `dbt compile` each model and run compiled-vs-live `EXCEPT DISTINCT`
 both ways (read-only; never `dbt build`, which would overwrite the live datasets). This is the ONLY guard
 on the two hand-kept copies of every view (`bigquery/*.sql` + `dbt/`); it was previously opt-in
@@ -1278,7 +1278,8 @@ never applied. **Repo artifacts are DONE; this section lists the owner/console a
   (§6); writing `ops.alerts` from CI would have required a new owner-run grant and was not done. It is
   recorded under `workflow='b3-invariants'` (NOT `live-sql-parity`, whose auto-resolve is workflow-scoped
   and would otherwise clear a still-failing B3 row, and whose D3 self-heal branch expects an object name).
-  Still never fails a job. ci.yml's `dbt-parity` job keeps the compiled-vs-live ROW parity check.]**
+  Still never fails a job. ci.yml keeps the compiled-vs-live ROW parity check as the dbt-parity steps of
+  its `warehouse-validation` job (those two jobs were consolidated later the same day).]**
 - **C3 — pinned CI toolchain (DONE).** `requirements-ci.txt` (constraints) + `require-dbt-version` —
   every CI install is now version-bounded. **Owner (optional):** tighten the ranges to exact `==` from a
   green run's resolved versions for full reproducibility.

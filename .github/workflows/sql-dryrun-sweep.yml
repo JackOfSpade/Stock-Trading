@@ -1,6 +1,7 @@
 name: BigQuery SQL full dry-run sweep
 
-# WHY THIS EXISTS (2026-07-18). ci.yml's `sql-validate` job is PATH-GATED: it dry-runs only the
+# WHY THIS EXISTS (2026-07-18). ci.yml's SQL dry-run check (the `sql-validate` job until it was folded
+# into the `warehouse-validation` job on 2026-07-30) is PATH-GATED: it dry-runs only the
 # bigquery/*.sql files CHANGED in a push. That is the right default (it bounds BigQuery dry-run job
 # volume — see dbt_parity.py's §6 quota note), but it means a file that never changes is never parsed.
 #
@@ -130,7 +131,7 @@ jobs:
             echo
             echo "It would abort at parse time on apply, so every statement AFTER the bad one in that file"
             echo "would silently never apply (a DR rebuild would come up quietly incomplete). Because the file"
-            echo "has not changed recently, ci.yml's path-gated \`sql-validate\` job never dry-ran it."
+            echo "has not changed recently, ci.yml's path-gated warehouse-validation SQL dry-run steps never dry-ran it."
             echo
             echo '```'
             cat /tmp/sweep.txt 2>/dev/null || true

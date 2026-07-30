@@ -167,7 +167,7 @@ jobs:
           # literal, nonexistent path argument, which fails this BLOCKING GATE (not continue-on-error --
           # auto-merge-claude.yml gates every branch's merge on this exact CI run) with a spurious "no
           # such file" error instead of a real lint finding. Mirrors the identical idiom already used for
-          # the sql-validate job's fail-open glob further down this file (rev 2026-07-20b, Finding 2).
+          # the SQL dry-run step's fail-open glob further down this file (rev 2026-07-20b, Finding 2).
           shopt -s nullglob
           files=(scripts/*.sh tests/*.sh .claude/*.sh infra/terraform/*.sh)
           shopt -u nullglob
@@ -207,7 +207,7 @@ jobs:
       # are already installed by the union install step above — no separate install here anymore.)
       - name: Write a CI profile (no creds — parse does not connect)
         # dbt/profiles.ci.yml is the single checked-in source for this profile (2026-07-04 code-quality
-        # audit — this job and dbt-parity's equivalent step previously each wrote the same content via
+        # audit — this job and the dbt-parity equivalent step previously each wrote the same content via
         # an inline heredoc, byte-for-byte duplicated with no single source of truth).
         run: |
           mkdir -p ~/.dbt
@@ -237,14 +237,10 @@ jobs:
         continue-on-error: true
         run: ruff check c_options_math.py strategy_math/ tests/ scripts/ ops/ || true
 
-  dbt-parity:
-    name: dbt↔live row-level parity (keyless WIF)
+  warehouse-validation:
+    name: dbt↔live parity + BigQuery SQL syntax (keyless WIF)
     runs-on: ubuntu-latest
-    # ADVISORY BY DEFAULT, HARD GATE ON DEMAND: this whole job is continue-on-error UNLESS DBT_PARITY=block,
-    # so a drift (or a transient WIF/compile hiccup) reports without blocking auto-merge until the owner
-    # promotes it to a gate. (The auto-merge gate keys off the CI run conclusion — a continue-on-error job
-    # never fails the run; cf. the lint job. RUNBOOK §5/§12.)
-    continue-on-error: ${{ vars.DBT_PARITY != 'block' }}
+    # BLOCKING SQL SYNTAX GATE + ADVISORY DBT PARITY: no job-level continue-on-error. SQL guard/dry-run failures block unconditionally; dbt-only steps are advisory unless DBT_PARITY=block.
     # RUNS BY DEFAULT whenever the read-only WIF creds exist (changed 2026-06-22 — previously it was
     # opt-in via RUN_DBT_PARITY and so NEVER actually ran, leaving the two hand-kept copies of each view
     # (bigquery/*.sql + dbt/) without a drift guard). Proves each dbt model produces the SAME rows as its
@@ -275,9 +271,13 @@ jobs:
         with:
           fetch-depth: 0   # full history so the path gate below can diff the pushed range
       - name: Path gate + WIF config + enablement
-        id: guard
+        id: dbt_guard
+        continue-on-error: ${{ vars.DBT_PARITY != 'block' }}
         env:
           EVENT_NAME: ${{ github.event_name }}
+          # ci.yml no longer has a pull_request trigger, so this is normally empty. Keep the positional
+          # argument: resolve_diff_base.sh is shared with golden-scenarios.yml's live PR path, and dropping
+          # it would silently break ci.yml diff-base resolution if its pull_request trigger is restored.
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PUSH_BEFORE: ${{ github.event.before }}
           HEAD_SHA: ${{ github.sha }}
@@ -304,7 +304,7 @@ jobs:
           # all-in-one; SLOWER than per-model when chunked). See that function's notes before retrying.
           #
           # DIFF-BASE RESOLUTION moved to scripts/resolve_diff_base.sh (2026-07-26, codebase audit —
-          # de-duplication): this job and sql-validate's guard step below carried the IDENTICAL ~15-line
+          # de-duplication): this guard and the SQL guard step below carried the IDENTICAL ~15-line
           # precedence chain verbatim, with nothing checking the two copies stayed in sync — see that
           # script's header for the full rev 2026-07-20 / 2026-07-20b history (the two correctness fixes
           # that had to be hand-applied twice in this file before the extraction). FAIL OPEN (run parity
@@ -339,36 +339,57 @@ jobs:
             echo "::notice::dbt parity skipped — set the WIF vars (read-only SA) to run it (it runs by default once they exist; set DBT_PARITY=off to suppress, =block to make drift a hard merge gate that fails closed). ops/RUNBOOK.md §6/§14/§25. dbt parse remains the always-on structural gate."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
+      - name: WIF-present + not-disabled SQL guard
+        id: sql_guard
+        if: always()
+        run: |
+          # Optional repo variable: undefined is the intended enabled default; only "off" is the escape
+          # hatch. guard-config-audit.yml watches for it; IDE context-access warnings are expected here.
+          if [ "${{ vars.RUN_SQL_DRYRUN }}" != "off" ] \
+             && [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] \
+             && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::SQL syntax gate skipped — set the WIF vars (read-only SA) to enable it (runs by default once they exist; RUN_SQL_DRYRUN=off suppresses). dbt parse remains the always-on structural SQL gate."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      # Shared bootstrap blocks whenever sql_guard is active; when only dbt parity runs, it remains advisory unless DBT_PARITY=block.
       - uses: actions/setup-python@v7
-        if: steps.guard.outputs.skip == 'false'
+        if: always() && (steps.dbt_guard.outputs.skip == 'false' || steps.sql_guard.outputs.skip == 'false')
+        continue-on-error: ${{ steps.sql_guard.outputs.skip == 'true' && vars.DBT_PARITY != 'block' }}
         with:
           python-version: '3.11'
           cache: 'pip'
           cache-dependency-path: requirements-ci.txt
       - name: GCP WIF auth + gcloud setup (provides the bq CLI)
-        if: steps.guard.outputs.skip == 'false'
+        if: always() && (steps.dbt_guard.outputs.skip == 'false' || steps.sql_guard.outputs.skip == 'false')
+        continue-on-error: ${{ steps.sql_guard.outputs.skip == 'true' && vars.DBT_PARITY != 'block' }}
         uses: ./.github/actions/gcp-wif-auth
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
       - name: Install dbt (pinned via constraints — RUNBOOK §25 C3)
-        if: steps.guard.outputs.skip == 'false'
+        if: steps.dbt_guard.outputs.skip == 'false'
+        continue-on-error: ${{ vars.DBT_PARITY != 'block' }}
         run: pip install --quiet -c requirements-ci.txt dbt-core dbt-bigquery
       - name: dbt profile (ADC from WIF via oauth)
-        if: steps.guard.outputs.skip == 'false'
+        if: steps.dbt_guard.outputs.skip == 'false'
+        continue-on-error: ${{ vars.DBT_PARITY != 'block' }}
         # dbt/profiles.ci.yml is the single checked-in source for this profile (2026-07-04
         # code-quality audit — see the `dbt` job's equivalent step above).
         run: |
           mkdir -p ~/.dbt
           cp dbt/profiles.ci.yml ~/.dbt/profiles.yml
       - name: dbt deps + compile (no build — read-only)
-        if: steps.guard.outputs.skip == 'false'
+        if: steps.dbt_guard.outputs.skip == 'false'
+        continue-on-error: ${{ vars.DBT_PARITY != 'block' }}
         working-directory: dbt
         run: |
           dbt deps
           dbt compile
       - name: Row-level parity (compiled vs live, EXCEPT both ways)
-        if: steps.guard.outputs.skip == 'false'
+        if: steps.dbt_guard.outputs.skip == 'false'
+        continue-on-error: ${{ vars.DBT_PARITY != 'block' }}
         # Drift fails this step; whether that BLOCKS the merge is the job-level continue-on-error above
         # (advisory by default; a hard gate only when repo var DBT_PARITY=block). ops/RUNBOOK.md §6/§12.
         run: python scripts/dbt_parity.py
@@ -398,56 +419,14 @@ jobs:
       # auto-merge-claude.yml's post-merge coverage block mirrors only the credential-free `checks` job
       # (it deliberately excludes dbt-parity and sql-validate entirely), so neither reads this step.
 
-  sql-validate:
-    name: BigQuery SQL syntax gate (keyless WIF, read-only)
-    runs-on: ubuntu-latest
-    # BLOCKING SYNTAX GATE (2026-07-17 audit follow-up), default ON when the WIF vars exist; skips clean
-    # (green) when they don't. Closes the gap where a pure PARSE error in a hand-SQL file reached the
-    # live apply step undetected — mode=''manual'' (BigQuery escapes a quote with \' , not '') parsed as
-    # two adjacent string literals and aborted the whole script; pytest / dbt parse / the prose checks
-    # never touch raw bigquery/*.sql.
-    #
-    # NO DDL GRANT — uses the SAME READ-ONLY SA as dbt-parity (dataViewer + jobUser). This does NOT
-    # re-open the over-privilege concern the old opt-in job carried: BigQuery COMPILES a --dry_run
-    # (parse -> resolve) BEFORE it authorizes the DDL, so a SYNTAX-broken CREATE returns "Syntax error"
-    # at parse regardless of perms, while a valid CREATE the read-only SA can't perform returns "Access
-    # Denied" and a not-yet-live sibling ref returns "Not found". scripts/check_sql_dryrun.py BLOCKS ONLY
-    # on the parse-class message and TOLERATES the permission/reference ones, so it can never false-block
-    # (and a self-check canary proves the environment can actually detect a syntax error before trusting
-    # a clean pass). `dbt parse` stays the always-on structural gate; this adds raw-SQL parse coverage.
-    # Escape hatch: set repo var RUN_SQL_DRYRUN=off to disable if it ever misbehaves.
-    permissions:
-      contents: read
-      id-token: write   # Workload Identity Federation (no downloadable key)
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0   # full history so the change-scope diff below resolves the pushed range
-      - name: WIF-present + not-disabled guard
-        id: guard
-        run: |
-          if [ "${{ vars.RUN_SQL_DRYRUN }}" != "off" ] \
-             && [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] \
-             && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ]; then
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice::SQL syntax gate skipped — set the WIF vars (read-only SA) to enable it (runs by default once they exist; RUN_SQL_DRYRUN=off suppresses). dbt parse remains the always-on structural SQL gate."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          fi
-      - uses: actions/setup-python@v7
-        if: steps.guard.outputs.skip == 'false'
-        with:
-          python-version: '3.11'
-      - name: GCP WIF auth + gcloud setup (provides the bq CLI)
-        if: steps.guard.outputs.skip == 'false'
-        uses: ./.github/actions/gcp-wif-auth
-        with:
-          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
-          service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
+
+      # SQL syntax validation remains an unconditional blocking gate.
       - name: Dry-run changed bigquery/*.sql — BLOCK on a syntax error
-        if: steps.guard.outputs.skip == 'false'
+        if: always() && steps.sql_guard.outputs.skip == 'false'
         env:
           EVENT_NAME: ${{ github.event_name }}
+          # Normally empty without ci.yml pull_request, but retain this positional shared-helper argument:
+          # golden-scenarios.yml uses its PR branch, and a restored ci.yml PR trigger needs it unchanged.
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PUSH_BEFORE: ${{ github.event.before }}
           HEAD_SHA: ${{ github.sha }}

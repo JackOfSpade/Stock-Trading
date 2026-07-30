@@ -8,8 +8,6 @@ with your broker. Nothing in this system is blocked or unsafe while these are ou
 item below is explicitly designed to fail closed / no-op / stay on its existing fallback until you
 act. Dated passes below; most recent first.
 
----
-
 # STANDING PROCEDURE (not a dated one-off) — when you change the model on the routine triggers
 
 **Read this whenever you switch the remote-routine fleet to a different Claude model.** All remote
@@ -74,6 +72,23 @@ file and `ops/cadence.yaml`) to decide which model's capability research is deci
 skip updating `routine_model` itself, the new daily sync just faithfully propagates the wrong value into
 the foundation document — Tier M closes the "detected-but-couldn't-write" gap, not the "owner never told
 the repo which model is live" one.
+
+---
+
+# 2026-07-30 CI job consolidation — housekeeping only
+
+## RUN_DBT_PARITY. Delete the inert `RUN_DBT_PARITY` repo variable — LOW PRIORITY, no behaviour change
+
+`RUN_DBT_PARITY=true` is still set in the repo's Actions variables but is read by NOTHING: `DBT_PARITY`
+replaced it (ops/RUNBOOK.md §6 says so explicitly — "replaces `RUN_DBT_PARITY`"), and a repo-wide grep
+finds it only in historical comments explaining the replacement. Deleting a repo variable is a settings
+action, so only you can do it.
+
+When convenient: `gh variable delete RUN_DBT_PARITY`
+
+Nothing depends on the outcome — it is inert either way, so there is no deadline and no failure mode if
+it is never done. Listed only so the stale value cannot mislead a future reader into thinking the
+dbt-parity check is still opt-in behind it.
 
 ---
 
