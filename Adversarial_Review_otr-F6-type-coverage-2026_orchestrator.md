@@ -1,0 +1,37 @@
+# Adversarial Review — otr-F6-type-coverage-2026 (orchestrator)
+
+- **id:** otr-F6-type-coverage-2026
+- **review_type:** out-of-table-resolution
+- **strategy:** n/a
+- **date:** 2026-07-30
+- **cycle_number:** 1
+- **artifact:** Annual_Constraint_Audit.md (§2.5, F-6 entry, lines 585–589; A3 handoff line 598)
+- **attacker_output:** Adversarial_Review_otr-F6-type-coverage-2026_attacker.md
+
+## Final verdict
+HOLD — the framework's five §5.6 constraint-type rows are unchanged this cycle; no new rows for exit triggers or regime gates are added, and F-6 stays open for a future, actually-taken owner/A2 decision.
+
+## Theater-check flag
+CONVERGENT, and substantively so. I independently reproduced both factual predicates the attacker relied on (see (a)/(c)) and confirmed no decision has since landed. Convergence here does not reflect rubber-stamping — I checked the two places a de-blinded reviewer could find something the attacker structurally could not (BigQuery `decision_log`/`adversarial_reviews`, since the attacker had zero DB access) and found nothing that would flip the call. Agreement following an actual independent check is not the "CONVERGENT theater" the protocol warns against; theater would be agreeing without doing that check.
+
+## (a) Validity assessment of each attacker finding
+
+**F1 — resolves_when asks for a decision, not a criterion.** Valid Tier 1 (supports HOLD). I pulled `trigger_context` directly from `events.queue_events` (not just the attacker's paraphrase) and it verbatim matches: `"resolves_when":"A decision on whether exit triggers and regime gates warrant their own 5.6 rows (both would most likely be no-automatic-relaxation, which resolves the volume problem cleanly)"`. The anchor at Annual_Constraint_Audit.md:589 ("Recommendation (default HOLD): consider whether exit triggers and regime gates warrant their own §5.6 rows... would most likely be 'no automatic relaxation'...") checks out exactly as quoted, including the artifact's own hedge language. A predicted likely outcome of an undecided question is not a resolved fact.
+
+**F2 — no objective trigger exists.** Valid Tier 1 (supports HOLD), and I can now confirm this more strongly than the attacker could: I queried `events.decision_log` for any entry since 2026-07-25 mentioning "exit trigger," "regime gate," or titled around "F-6" — zero rows. The only owner directives in that window resolve F-1 and F-2 (2026-07-28, sizing-cap/immutability items), explicitly NOT F-6 (per the artifact's own A3 handoff line 598: "Enqueue only F-3, F-4, F-5, F-6... Do not enqueue F-1 or F-2"). So there is no owner directive, no foundation revision, and no A2 re-run that could serve as the objective trigger. This is a fact the attacker could only infer from the artifact; I confirmed it from the state store directly.
+
+**F3 — scoping instruction already satisfied, separate from resolves_when.** Valid but Tier 3 / not determinative on its own — the attacker correctly scopes this as a confirmatory side-point, not load-bearing for the verdict. Anchor matches the fetched `trigger_context` verbatim. Correctly graded by the attacker as non-dispositive.
+
+## (b) Theater in the attacker's output
+None found that I'd flag. All three findings carry specific, checkable anchors (quoted `trigger_context` fields, a specific artifact line), and I verified each anchor against the live `trigger_context` JSON and the artifact text rather than trusting the attacker's transcription — both held exactly. The "Coverage-claim verification" section is not required by the review type but is a genuine value-add: I independently re-ran the count check (`grep -c '| O |'` restricted to line ranges 74–339 vs 340–361) and got 39 and 8 respectively, exactly matching the attacker's manual tally and the artifact's "39 of 201 (19%)" headline. That is real verification work, not padding. The attacker's self-imposed scope disclosure (reading only §2.5 and the §1.1–§1.6 tables) is honest and appropriately narrow for a non-adversarial triage — it did not manufacture false breadth.
+
+## (c) Weaknesses the attacker missed
+The attacker, being STRICT-BLINDED, had no access to `events.decision_log` or `events.adversarial_reviews` and so could only argue "no directive is cited in the artifact/trigger_context" rather than "no directive exists anywhere in the state store." I closed that gap: a targeted query against `decision_log` (title/body_md regex for "F-6", "exit trigger", "regime gate" since 2026-07-25) returned zero matches, and `adversarial_reviews` shows this item's only prior row is the attacker's own cycle-1 pass — no prior orchestrator verdict, no prior cycle. This forecloses the one scenario a blinded attacker cannot rule out: that an owner directive resolving F-6 landed between the artifact's writing and this review, which would flip HOLD to RESOLVE without needing any editorial discretion. It did not happen. Beyond that, I find no additional weakness: the attacker's reasoning about the "no discretion" principle is directly supported by AI_Trading_Foundation.md §5.6 line 753, which states the out-of-table path's conservative default is to "HOLD the constraint at its current value; an affirmative reviewer case is required to relax it" — language the attacker did not have access to (out of its self-declared scope) but which independently corroborates its conclusion from the other side of the document set.
+
+## (d) Verdict reasoning
+This is a framework-level flag (F-6 addresses whether the five §5.6 constraint *types* should be expanded to six or seven), not a per-constraint relaxation, but the same conservative-default logic applies: `trigger_context`'s `resolves_when` field is explicitly phrased as an undecided decision with a predicted-likely outcome, not a fact already in force. RESOLVE would require this triage to either (i) take the decision itself (deciding exit triggers/regime gates do or don't warrant new §5.6 rows) or (ii) adopt the artifact's stated prediction as though it were the decision — both are the exact discretionary act this non-adversarial review type and §5.6's "no discretion" principle bar it from performing. I checked the one place where an intervening owner directive could have supplied an objective trigger since the artifact was written (`decision_log`) and found none. Per the protocol's stated bar — "the resolving fact must be objectively already present... not something this review would have to construct by exercising editorial or analytical discretion" — this fails cleanly into HOLD.
+
+Non-relaxation statement: this entry is a scoping/taxonomy question about the §5.6 constraint-type table, not a request to relax any constraint. HOLD here means the five-type table stays exactly as-is (no new exit-trigger or regime-gate row added, no existing row loosened); it is not, and must not be read as, any loosening of any constraint's value or of the "no discretion" principle itself.
+
+## (e) Action taken
+Recording verdict HOLD for `otr-F6-type-coverage-2026` (cycle 1, CONVERGENT with attacker). F-6 remains open in Annual_Constraint_Audit.md §2.5 pending an actual owner-directed or A2-cycle decision on whether exit triggers and regime gates warrant their own §5.6 rows; no artifact edit, no constraint-value change, no BigQuery write, and no git action performed by this session. The orchestrating session will perform the `events.queue_events` status update and `events.adversarial_reviews` insert.
