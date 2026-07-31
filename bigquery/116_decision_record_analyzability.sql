@@ -676,7 +676,12 @@ SELECT
   JSON_VALUE(pos, '$.trigger_type')                                AS trigger_type,
   JSON_VALUE(pos, '$.disposition')                                 AS disposition,
   JSON_VALUE(pos, '$.reason')                                      AS reason,
-  SAFE_CAST(JSON_VALUE(pos, '$.invalidation_status_null') AS BOOL) AS invalidation_status_null
+  -- Legacy key retained for decision-record compatibility.  D1 switched its write
+  -- contract on 2026-07-30; read the current key separately rather than treating
+  -- its inverse semantics as a substitute for this historical field.
+  SAFE_CAST(JSON_VALUE(pos, '$.invalidation_status_null') AS BOOL) AS invalidation_status_null,
+  SAFE_CAST(JSON_VALUE(pos, '$.invalidation_criteria_evaluable') AS BOOL)
+    AS invalidation_criteria_evaluable
 FROM reviews r, UNNEST(r.positions) AS pos;
 
 

@@ -9,7 +9,8 @@
 # adversarial-pre-mortem + SHADOW + PAPER + PROBE + 30-trade graduation pipeline — no human
 # review/approval/chat step anywhere in the add or delete path (the only residual human
 # touches are the system-wide IBKR order-confirm tap and deposits). Each strategy's OWN
-# machinery (entry/exit rules, thresholds, indicators, 2%-of-sub-portfolio sizing, kill-
+# machinery (entry/exit rules, thresholds, indicators, per-thesis CaR budgeting and its hard
+# envelopes, kill-
 # criteria structure, cited edges/disadvantages, its pre-mortem) stays IMMUTABLE for that
 # strategy's entire life: it FREEZES AT SHADOW ENTRY (spec_locked_since) so the forward-test
 # measures a fixed ruleset, and the official edge-measurement clock (immutable_since) starts
