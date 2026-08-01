@@ -10,6 +10,7 @@ scripts/check_cadence_consistency.py's CADENCE/OWNER_ACTIONS/etc. constants.
 """
 import copy
 import json
+import os
 import re
 import uuid
 
@@ -700,6 +701,24 @@ def _write(tmp_path, name, obj):
     return p
 
 
+def test_write_backup_uses_a_same_directory_atomic_replace(tmp_path, monkeypatch):
+    _, _, _, backup = _wire(tmp_path, monkeypatch)
+    seen = []
+    real_replace = rb.os.replace
+
+    def capture_replace(source, destination):
+        seen.append((source, destination))
+        assert os.path.dirname(source) == str(tmp_path)
+        assert destination == str(backup)
+        real_replace(source, destination)
+
+    monkeypatch.setattr(rb.os, "replace", capture_replace)
+    rb.write_backup({"_meta": {"atomic": True}, "profiles": {}, "routines": {}, "_unmatched": {}})
+    assert seen
+    assert json.loads(backup.read_text())["_meta"]["atomic"] is True
+    assert not list(tmp_path.glob(f".{backup.name}.*.tmp"))
+
+
 def test_restore_generates_a_fresh_uuid_each_call(tmp_path, monkeypatch):
     _wire(tmp_path, monkeypatch)
     rb.ingest(str(_write(tmp_path, "in.json", {"data": [_raw_trigger()]})))
@@ -820,12 +839,19 @@ def test_build_create_body_emits_run_once_at_not_cron_for_a_one_shot_entry(tmp_p
     assert "cron_expression" not in body
 
 
-def test_restore_warns_on_past_run_once_at(tmp_path, monkeypatch, capsys):
+def test_restore_rejects_past_run_once_at_with_nonzero_exit(tmp_path, monkeypatch, capsys):
     _wire(tmp_path, monkeypatch, backup_doc=_one_shot_backup_doc("2020-01-01T00:00:00Z"))
     monkeypatch.setattr("sys.argv", ["routine_backup.py", "restore", "D1"])
-    assert rb.main() == 0
+    assert rb.main() == 1
     err = capsys.readouterr().err
     assert "run_once_at" in err and "past" in err.lower()
+
+
+def test_restore_rejects_malformed_run_once_at(tmp_path, monkeypatch):
+    _wire(tmp_path, monkeypatch, backup_doc=_one_shot_backup_doc("not-a-timestamp"))
+    bodies, errors, _ = rb.restore(["D1"])
+    assert bodies == []
+    assert len(errors) == 1 and "timezone-qualified RFC3339" in errors[0]
 
 
 def test_restore_no_warning_for_future_run_once_at(tmp_path, monkeypatch, capsys):
@@ -1111,14 +1137,19 @@ def test_check_fails_when_entry_name_is_empty(tmp_path, monkeypatch, capsys):
     assert "D1: name is missing/empty" in out
 
 
-def test_check_reports_unconfirmed_cron_count_on_an_otherwise_ok_backup(tmp_path, monkeypatch, capsys):
+def test_check_fails_when_a_fleet_cron_is_unconfirmed(tmp_path, monkeypatch, capsys):
     doc = _good_backup_doc()
     doc["routines"]["D1"]["cron_expression"] = rb.CRON_UNCONFIRMED
     _wire(tmp_path, monkeypatch, backup_doc=doc)
-    assert rb.check() == 0
+    assert rb.check() == 1
     out = capsys.readouterr().out
-    assert "ROUTINE BACKUP CHECK: OK" in out
-    assert "1 routine(s) still carry an unconfirmed" in out
+    assert "D1" in out and rb.CRON_UNCONFIRMED in out and "incomplete" in out
+
+
+def test_check_rejects_malformed_one_shot_timestamp(tmp_path, monkeypatch, capsys):
+    _wire(tmp_path, monkeypatch, backup_doc=_one_shot_backup_doc("not-a-timestamp"))
+    assert rb.check() == 1
+    assert "timezone-qualified RFC3339" in capsys.readouterr().out
 
 
 # ---- CLI wiring (main()) -----------------------------------------------------------------------------

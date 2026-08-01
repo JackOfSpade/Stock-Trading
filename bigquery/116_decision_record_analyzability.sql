@@ -503,11 +503,13 @@ ORDER BY pct_bucket_low;
 -- specified in Claude_Task_Plan.md's decision-log lifecycle section by this same change. Historical
 -- correction rows are NOT retro-linked -- that would require UPDATEs on an append-only table.
 --
--- SUPERSEDED LIVE by bigquery/118_decision_record_audit_followups.sql -- current single source of truth
--- for this object. A same-day adversarial review of THIS file found the placement below is wrong: the
--- superseded_by filter is applied OUTSIDE the candidate subquery, i.e. AFTER `QUALIFY rn=1 ... LIMIT
--- 10`, so once superseded_by starts being populated a query whose nearest 10 include N superseded rows
--- returns only 10-N precedents to a set Claude_Task_Plan.md calls MANDATORY -- while up to 20
+-- SUPERSEDED LIVE by bigquery/122_decision_correction_append_only.sql -- current single source of truth
+-- for this object. 118 first moved the filter below inside the candidate pool; 122 additionally fixes
+-- its direction, excluding the correction row's named target rather than the correction itself. A
+-- same-day adversarial review of THIS file found the placement below is wrong: the superseded_by filter
+-- is applied OUTSIDE the candidate subquery, i.e. AFTER `QUALIFY rn=1 ... LIMIT 10`, so once
+-- superseded_by starts being populated a query whose nearest 10 include N superseded rows returns only
+-- 10-N precedents to a set Claude_Task_Plan.md calls MANDATORY -- while up to 20
 -- already-fetched, non-superseded candidates at ranks 11-30 (same single Vertex embedding call) are
 -- discarded unused. The defence written below ("preferable to padding with a more distant precedent")
 -- does not hold: those ranks cost nothing extra. 118 moves the filter inside the subquery and switches
@@ -650,6 +652,9 @@ END;
 -- under 500 today) -- the per-position detail lives in the UNNESTed array, which is what makes the
 -- compact write and the granular read compatible.
 -- ============================================================================
+-- SUPERSEDED LIVE by bigquery/122_decision_correction_append_only.sql — current single source of
+-- truth for this object. It preserves this parser and filters targets named by append-only replacement
+-- rows. Kept here, unmodified, for DR-rebuild apply-in-order reference only. Do not re-apply in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.add_candidate_reviews` AS
 WITH reviews AS (
   SELECT

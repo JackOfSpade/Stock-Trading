@@ -662,10 +662,11 @@ stall with it (it ran under the same identity).
   again.
 
   **OPS1 (Morning Connector Liveness Probe, `Claude_Task_Plan.md`)** now closes most of this gap
-  mechanically: a daily 06:30 MT pre-market probe (trigger `trig_012jxpUDFsrTR5FnSRmnxej4`) reads
-  IBKR/Calendar/FMP/Gmail read-only and raises a `connector_reauth_needed` warning on an auth-class
-  failure — ~9.5h before the 16:10-17:15 MT daily cadence needs any of them live, so a re-auth need lands
-  in the morning alert email instead of mid-cascade.
+  mechanically: its currently fixed `12:30 UTC` cron fires at 06:30 MDT / 05:30 MST (trigger
+  `trig_012jxpUDFsrTR5FnSRmnxej4`) and reads IBKR/Calendar/FMP/Gmail read-only, raising a
+  `connector_reauth_needed` warning on an auth-class failure. It remains well ahead of the evening
+  cadence. The fixed-UTC winter shift is intentional and is validated against both seasons by
+  `scripts/check_cron_dst_safety.py`.
 
   **PLATFORM LIMITATION (verified 2026-07-19 ~22:45-23:10 MT).** `RemoteTrigger` is unavailable INSIDE a
   headless routine session regardless of what its trigger's `allowed_tools` lists (contrast

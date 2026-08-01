@@ -64,6 +64,9 @@
 -- arrays (side='passed' / side='rejected_notable'). Call-level fields (routine/screen/population_rail/
 -- surfaced_count/legacy_rule/agreement_*/rationale) are carried on every item row so a consumer never
 -- has to re-join back to events.decision_log for them.
+-- SUPERSEDED LIVE by bigquery/122_decision_correction_append_only.sql — current single source of truth
+-- for this object. It preserves this parser and filters targets named by append-only correction rows.
+-- Kept here, unmodified, for DR-rebuild apply-in-order reference only. Do not re-apply in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.research_screen_calls` AS
 WITH calls AS (
   SELECT

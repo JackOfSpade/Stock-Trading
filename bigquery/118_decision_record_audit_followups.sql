@@ -2,8 +2,10 @@
 -- bigquery/116_decision_record_analyzability.sql). Project: stock-trading-498512.
 -- Apply after 26_process_metrics.sql and 116_decision_record_analyzability.sql.
 --
--- SUPERSEDES the current canonical definitions of: analytics.declared_vs_realized (26) and
--- analytics.find_precedents (116). THIS FILE is the new canonical definition of both.
+-- SUPERSEDES the current canonical definition of analytics.declared_vs_realized (26). Its former
+-- analytics.find_precedents definition is SUPERSEDED LIVE by
+-- bigquery/122_decision_correction_append_only.sql, the current canonical definition for that
+-- object. Do not re-apply 118's find_precedents body in isolation.
 --
 -- Both items below were found by an adversarial review OF bigquery/116 itself, not of the pre-116
 -- system -- i.e. they are defects in (or missed by) that same-day change, caught before it was

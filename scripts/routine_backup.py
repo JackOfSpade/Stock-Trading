@@ -39,6 +39,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 import uuid
 from datetime import datetime, timezone
 
@@ -200,11 +201,25 @@ def load_backup():
 
 
 def write_backup(doc):
-    """Human-diffable write: 2-space indent, ALL dict keys sorted (routines, profiles, _meta, and each
-    entry's own fields alike), ensure_ascii=False so em-dashes stay readable rather than \\u2014."""
-    with open(BACKUP_PATH, "w", encoding="utf-8") as f:
-        json.dump(doc, f, indent=2, sort_keys=True, ensure_ascii=False)
-        f.write("\n")
+    """Atomically replace the backup with a human-diffable JSON document.
+
+    The backup is itself the recovery path, so never truncate it in place: write and fsync a temporary
+    file in its directory, then replace the old path atomically. A failed ingest therefore leaves the
+    prior known-good snapshot intact.
+    """
+    parent = os.path.dirname(os.path.abspath(BACKUP_PATH))
+    prefix = f".{os.path.basename(BACKUP_PATH)}."
+    fd, tmp_path = tempfile.mkstemp(prefix=prefix, suffix=".tmp", dir=parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(doc, f, indent=2, sort_keys=True, ensure_ascii=False)
+            f.write("\n")
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, BACKUP_PATH)
+    finally:
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
 
 
 def _today():
@@ -506,10 +521,10 @@ def ingest(path):
             entry["run_once_at"] = normalized["run_once_at"]
         else:
             entry["cron_expression"] = normalized["cron_expression"]
+        prior = doc["routines"].get(rid)
         if overrides:
             entry["overrides"] = overrides
 
-        prior = doc["routines"].get(rid)
         doc["routines"][rid] = entry
         if prior is None:
             added.append(rid)
@@ -625,6 +640,31 @@ def build_unmatched_create_body(normalized):
         notifications=normalized.get("notifications"))
 
 
+def _parse_rfc3339_utc(ts):
+    """A timezone-qualified RFC3339 timestamp as UTC, or None when the input is unsafe to restore."""
+    try:
+        dt = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None
+    if dt.tzinfo is None:
+        return None
+    return dt.astimezone(timezone.utc)
+
+
+def _one_shot_restore_error(rid, entry):
+    ts = entry.get("run_once_at")
+    if not ts:
+        return None
+    dt = _parse_rfc3339_utc(ts)
+    if dt is None:
+        return (f"{rid}: run_once_at={ts!r} is not a timezone-qualified RFC3339 timestamp -- skipped "
+                "rather than emitting an API-invalid create body.")
+    if dt < datetime.now(timezone.utc):
+        return (f"{rid}: run_once_at ({ts}) is in the past -- skipped because the API rejects past "
+                "one-shot schedules. Supply a new future timestamp before restoring it.")
+    return None
+
+
 def restore(routine_ids):
     """(bodies, errors, has_unrestored_unmatched) for the named `routine_ids` (every entry in
     `routines` if empty/None). `bodies` is [(routine_id, create_body), ...]; `errors` is a list of
@@ -633,10 +673,11 @@ def restore(routine_ids):
     whose `profile` no longer exists in `profiles` (e.g. a stale snapshot still referencing a retired
     profile) -- that entry is skipped rather than letting `profiles[entry["profile"]]` raise an
     uncaught KeyError, which would otherwise crash this fast-recovery-during-an-incident path with a
-    raw traceback; AND (B2, 2026-08-01 audit) a matched entry whose schedule is still the
+    raw traceback; (B2, 2026-08-01 audit) a matched entry whose schedule is still the
     CRON_UNCONFIRMED sentinel -- that entry is skipped rather than handed to build_create_body(),
     which would otherwise emit a create body with a bogus 'TO_POPULATE' cron_expression straight into
-    a live API call. `has_unrestored_unmatched` is True when routine_ids was empty AND `_unmatched` is
+    a live API call; and a past/malformed one-shot timestamp.
+    `has_unrestored_unmatched` is True when routine_ids was empty AND `_unmatched` is
     non-empty (a 'restore all' never silently expands to include unreviewed unmatched triggers -- the
     caller prints a note instead)."""
     doc = load_backup()
@@ -661,6 +702,10 @@ def restore(routine_ids):
                     f"(re-run `ingest` against a fresh RemoteTrigger list/get response) before "
                     f"restoring this routine; skipped rather than emitting an invalid create body.")
                 continue
+            one_shot_error = _one_shot_restore_error(rid, entry)
+            if one_shot_error:
+                errors.append(one_shot_error)
+                continue
             bodies.append((rid, build_create_body(entry, profiles)))
         elif rid in unmatched:
             normalized = unmatched[rid]
@@ -668,6 +713,10 @@ def restore(routine_ids):
                 errors.append(
                     f"{rid}: cron_expression is still {CRON_UNCONFIRMED} -- skipped rather than "
                     f"emitting an invalid create body.")
+                continue
+            one_shot_error = _one_shot_restore_error(rid, normalized)
+            if one_shot_error:
+                errors.append(one_shot_error)
                 continue
             bodies.append((rid, build_unmatched_create_body(normalized)))
         else:
@@ -724,9 +773,11 @@ def check():
     routine has an entry; (2) each entry's instruction == ops/triggers.json's instruction + ADDENDUM,
     except OPS2 (no addendum, per the documented exception); (3) each entry's trigger_id matches
     ops/trigger_ids.json; (4) every referenced profile exists (checked for EVERY entry, not just
-    cadence-known ones); (5) every entry has exactly one of cron_expression/run_once_at (B1); (6) every
-    entry's EFFECTIVE resolved fields (profile + overrides) are real, non-empty recovery data, not
-    just a profile name that happens to exist (B3). Prints per-error ' - ' bullet lines and a FAIL/OK
+    cadence-known ones); (5) every entry has exactly one of cron_expression/run_once_at (B1), with a
+    parseable timezone-qualified one-shot timestamp; (6) every entry's EFFECTIVE resolved fields
+    (profile + overrides) are real, non-empty recovery data, not just a profile name that happens to
+    exist (B3); and (7) a fleet routine can never retain a TO_POPULATE schedule that restore refuses.
+    Prints per-error ' - ' bullet lines and a FAIL/OK
     summary, mirroring scripts/check_cadence_consistency.py's conventions. Returns 0/1."""
     rel = os.path.relpath(BACKUP_PATH, ROOT)
     if not os.path.exists(BACKUP_PATH):
@@ -762,6 +813,14 @@ def check():
         else:
             errors.extend(_resolved_fields_errors(rid, entry, profiles))
         errors.extend(_schedule_errors(rid, entry))
+        if entry.get("run_once_at") and _parse_rfc3339_utc(entry["run_once_at"]) is None:
+            errors.append(f"{rid}: run_once_at must be a timezone-qualified RFC3339 timestamp "
+                          f"({entry['run_once_at']!r})")
+    # A cadence/fleet entry with this sentinel is not restorable, so it must never be CI-green.
+    for rid in cad_ids:
+        if (routines.get(rid) or {}).get("cron_expression") == CRON_UNCONFIRMED:
+            errors.append(f"{rid}: cron_expression is still {CRON_UNCONFIRMED} -- fleet recovery is "
+                          "incomplete and restore will refuse it")
 
     # (2) instruction == triggers.json instruction (+ ADDENDUM, except OPS2)
     for rid in cad_ids:
@@ -799,12 +858,9 @@ def check():
               f"against a fresh RemoteTrigger list/get response) so all checks pass, then re-run.")
         return 1
 
-    unconfirmed = sorted(rid for rid, e in routines.items() if e.get("cron_expression") == CRON_UNCONFIRMED)
-    extra = f" {len(unconfirmed)} routine(s) still carry an unconfirmed ({CRON_UNCONFIRMED}) cron." \
-        if unconfirmed else ""
     print(f"ROUTINE BACKUP CHECK: OK — {len(cad_ids)} cadence routines present, instructions and "
           f"trigger_ids match, all {len(profiles)} referenced profile(s) resolve with real recovery "
-          f"data ({len(routines)} total entries, {len(doc.get('_unmatched') or {})} unmatched).{extra}")
+          f"data ({len(routines)} total entries, {len(doc.get('_unmatched') or {})} unmatched).")
     return 0
 
 
@@ -832,19 +888,6 @@ def cmd_ingest(args):
     return 1 if result.get("conflicts") else 0
 
 
-def _is_past_rfc3339(ts):
-    """True if `ts` (an RFC3339 UTC timestamp, e.g. '2026-08-01T12:52:00Z') is strictly before now.
-    False (never raises) on anything that doesn't parse -- this only gates an advisory warning, and a
-    malformed timestamp is check()'s/the API's problem to catch, not restore's to crash on."""
-    try:
-        dt = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
-    except (ValueError, TypeError):
-        return False
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt < datetime.now(timezone.utc)
-
-
 def cmd_restore(args):
     bodies, errors, has_unrestored_unmatched = restore(args.routine_ids)
     for rid, body in bodies:
@@ -852,11 +895,6 @@ def cmd_restore(args):
         print(f"Call RemoteTrigger create with the body below, then record the returned trig_... id "
               f"in ops/trigger_ids.json for '{rid}'.")
         print(json.dumps(body, indent=2, ensure_ascii=False))
-        run_once_at = body.get("run_once_at")
-        if run_once_at and _is_past_rfc3339(run_once_at):
-            print(f"WARNING: '{rid}' run_once_at ({run_once_at}) is in the past -- the API rejects a "
-                  f"past one-shot schedule. Supply a new future timestamp before calling RemoteTrigger "
-                  f"create.", file=sys.stderr)
         print()
     for msg in errors:
         print(f"ERROR: {msg}", file=sys.stderr)

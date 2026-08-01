@@ -24,12 +24,11 @@
 --     sample actually supports (the exact narrative/recency-overfit hazard AI_Trading_Foundation.md
 --     flags). Claude_Task_Plan.md's NEW ENTRY CANDIDATES step requires reasoning about all three.
 --
--- SUPERSEDED LIVE by bigquery/118_decision_record_audit_followups.sql — current single source of
--- truth for this object (bigquery/02_ai_layer.sql AND bigquery/116_decision_record_analyzability.sql
--- are both intermediate, also-superseded definitions — do not stop at either): 116 added exclusion of
--- rows whose decision_log.superseded_by is set, so a corrected entry cannot resurface as a precedent;
--- 118 then moved that filter INSIDE the top_k=>30 candidate subquery, ahead of LIMIT 10, so the
--- MANDATORY pre-GO/NO-GO evidence set still returns 10 live precedents instead of 10-minus-superseded.
+-- SUPERSEDED LIVE by bigquery/122_decision_correction_append_only.sql — current single source of
+-- truth for this object (bigquery/02_ai_layer.sql, bigquery/116_decision_record_analyzability.sql,
+-- and bigquery/118_decision_record_audit_followups.sql are all intermediate, also-superseded
+-- definitions — do not stop at any of them). 122 correctly excludes a correction row's TARGET
+-- entry_id while keeping the replacement correction eligible as final-effective precedent evidence.
 -- Kept here, unmodified, for DR-rebuild apply-in-order reference only.
 -- DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.find_precedents`(query_text STRING)
