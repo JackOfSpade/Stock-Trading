@@ -1,0 +1,238 @@
+"""Guard scripts/check_cron_dst_safety.py -- the both-DST-seasons cron contract checker.
+
+Every test writes its own cadence.yaml into tmp_path and monkeypatches cs.CADENCE at the module
+level; nothing here reads or writes the real ops/cadence.yaml (the fixture-clobber trap this repo
+has hit twice -- see tests/test_routine_backup.py's header).
+
+The two REGRESSION tests below are the point of the file. Both encode a defect that actually
+shipped and was found by hand:
+
+  * test_w1_saturday_in_mst_is_caught -- W1's `0 6 * * 0` is Sunday 00:00 MDT but SATURDAY 23:00
+    MST. Would have hard-blocked W4 every Sunday from 2026-11-08.
+  * test_ops2_mst_time_local_convention_is_caught -- OPS2's time_local was the MST rendering while
+    every other routine's was MDT, so deriving a UTC cron from it landed an hour early.
+
+If either stops failing, the checker has gone blind to the exact class it was written for.
+"""
+import pytest
+
+from conftest import load_module_from_path
+
+cs = load_module_from_path("check_cron_dst_safety", "scripts", "check_cron_dst_safety.py")
+
+
+def write_cadence(tmp_path, monkeypatch, routines, deadline="21:00"):
+    """Build a minimal cadence.yaml containing only `routines` and point the checker at it."""
+    lines = [f'cadence_watch_deadline_local: "{deadline}"', "routines:"]
+    for r in routines:
+        lines.append(f"  - id: {r['id']}")
+        lines.append(f"    monitor_class: {r['monitor_class']}")
+        lines.append("    expected_trigger:")
+        lines.append("      recurrence: custom_cron")
+        lines.append(f"      cron_utc: \"{r['cron']}\"")
+        if r.get("time_local"):
+            lines.append(f"      time_local: \"{r['time_local']}\"")
+        lines.append("      enabled: true")
+    path = tmp_path / "cadence.yaml"
+    path.write_text("\n".join(lines) + "\n")
+    monkeypatch.setattr(cs, "CADENCE", path)
+    return path
+
+
+# ---- field parsing: the fail-closed property ------------------------------------------------
+
+def test_parse_field_supported_forms():
+    assert cs.parse_field("*", 0, 6, "dow") == {0, 1, 2, 3, 4, 5, 6}
+    assert cs.parse_field("3", 0, 23, "hour") == {3}
+    assert cs.parse_field("1,4,7,10", 1, 12, "month") == {1, 4, 7, 10}
+
+
+@pytest.mark.parametrize("bad", ["*/5", "1-5", "MON", "", "1,", "1-3,5"])
+def test_parse_field_rejects_what_it_cannot_evaluate(bad):
+    # A checker that silently treats unsupported syntax as a wildcard would report success on
+    # precisely the schedules that most need evaluating. Fail closed instead.
+    with pytest.raises(cs.CronParseError):
+        cs.parse_field(bad, 0, 59, "minute")
+
+
+def test_parse_field_rejects_out_of_range():
+    with pytest.raises(cs.CronParseError):
+        cs.parse_field("25", 0, 23, "hour")
+
+
+@pytest.mark.parametrize("bad", ["0 6 * *", "0 6 * * 0 extra", ""])
+def test_cron_firings_rejects_wrong_field_count(bad):
+    with pytest.raises(cs.CronParseError):
+        list(cs.cron_firings(bad))
+
+
+def test_cron_firings_counts():
+    # 2027 has 52 Sundays; a weekly cron fires once on each.
+    assert len(list(cs.cron_firings("0 6 * * 0"))) == 52
+    # monthly-on-the-1st -> 12; quarterly-on-the-2nd of 4 months -> 4; annual -> 1.
+    assert len(list(cs.cron_firings("0 11 1 * *"))) == 12
+    assert len(list(cs.cron_firings("0 17 2 1,4,7,10 *"))) == 4
+    assert len(list(cs.cron_firings("0 17 1 1 *"))) == 1
+
+
+# ---- REGRESSION: the two defects that actually shipped ---------------------------------------
+
+def test_w1_saturday_in_mst_is_caught(tmp_path, monkeypatch, capsys):
+    write_cadence(tmp_path, monkeypatch, [
+        {"id": "W1", "monitor_class": "weekly_sun", "cron": "0 6 * * 0", "time_local": "00:00"},
+    ])
+    assert cs.check() == 1
+    err = capsys.readouterr().err
+    assert "W1" in err and "Saturday" in err and "requires Sunday" in err
+
+
+def test_w1_retimed_cron_passes(tmp_path, monkeypatch):
+    # The actual fix that shipped: 30 7 * * 0 is 01:30 MDT / 00:30 MST, Sunday in both.
+    write_cadence(tmp_path, monkeypatch, [
+        {"id": "W1", "monitor_class": "weekly_sun", "cron": "30 7 * * 0", "time_local": "01:30"},
+    ])
+    assert cs.check() == 0
+
+
+def test_ops2_mst_time_local_convention_is_caught(tmp_path, monkeypatch, capsys):
+    # `15 4 * * *` is 22:15 MDT / 21:15 MST. Recording the MST reading is the trap.
+    write_cadence(tmp_path, monkeypatch, [
+        {"id": "OPS2", "monitor_class": "daily_all", "cron": "15 4 * * *", "time_local": "21:15"},
+    ])
+    assert cs.check() == 1
+    assert "22:15 MDT" in capsys.readouterr().err
+
+
+def test_ops2_mdt_time_local_passes(tmp_path, monkeypatch):
+    write_cadence(tmp_path, monkeypatch, [
+        {"id": "OPS2", "monitor_class": "daily_all", "cron": "15 4 * * *", "time_local": "22:15"},
+    ])
+    assert cs.check() == 0
+
+
+# ---- local-window integrity (daily_trading) ---------------------------------------------------
+
+def test_daily_trading_before_market_close_in_mst_is_caught(tmp_path, monkeypatch, capsys):
+    # 19:30 UTC -> 13:30 MDT / 12:30 MST. Summer is fine; winter falls before the 14:00 close.
+    write_cadence(tmp_path, monkeypatch, [
+        {"id": "DX", "monitor_class": "daily_trading", "cron": "30 19 * * *"},
+    ])
+    assert cs.check() == 1
+    assert "market close" in capsys.readouterr().err
+
+
+def test_daily_trading_past_deadline_is_caught(tmp_path, monkeypatch, capsys):
+    # 04:30 UTC -> 22:30 MDT, past the 21:00 MT cadence_watch deadline.
+    write_cadence(tmp_path, monkeypatch, [
+        {"id": "DX", "monitor_class": "daily_trading", "cron": "30 4 * * *"},
+    ])
+    assert cs.check() == 1
+    assert "deadline" in capsys.readouterr().err
+
+
+def test_daily_trading_inside_window_passes(tmp_path, monkeypatch):
+    write_cadence(tmp_path, monkeypatch, [
+        {"id": "D1", "monitor_class": "daily_trading", "cron": "0 22 * * *", "time_local": "16:00"},
+    ])
+    assert cs.check() == 0
+
+
+def test_deadline_is_read_from_cadence_not_hardcoded(tmp_path, monkeypatch):
+    # Same cron, stricter declared deadline -> must start failing. Proves the check is wired to
+    # cadence_watch_deadline_local rather than a constant that silently ignores the file.
+    routine = [{"id": "SL3", "monitor_class": "daily_trading", "cron": "0 2 * * *"}]
+    write_cadence(tmp_path, monkeypatch, routine, deadline="21:00")
+    assert cs.check() == 0            # 20:00 MDT / 19:00 MST, both clear
+    write_cadence(tmp_path, monkeypatch, routine, deadline="18:00")
+    assert cs.check() == 1
+
+
+# ---- period classes -------------------------------------------------------------------------
+
+def test_monthly_shifted_off_its_day_is_caught(tmp_path, monkeypatch, capsys):
+    # 05:00 UTC on the 1st is 23:00 local on the LAST day of the previous month, in both seasons.
+    write_cadence(tmp_path, monkeypatch, [
+        {"id": "MX", "monitor_class": "monthly_ftd", "cron": "0 5 1 * *"},
+    ])
+    assert cs.check() == 1
+    assert "day-of-month" in capsys.readouterr().err
+
+
+def test_annual_is_checked_only_in_the_season_it_fires(tmp_path, monkeypatch):
+    # A1 fires once, in January (MST). It has no summer instance, so demanding an MDT rendering
+    # would be a false positive -- the checker must derive seasons from the cron itself.
+    write_cadence(tmp_path, monkeypatch, [
+        {"id": "A1", "monitor_class": "annual_ftd", "cron": "0 17 1 1 *"},
+    ])
+    assert cs.check() == 0
+
+
+def test_quarterly_holds_its_day_in_both_seasons(tmp_path, monkeypatch):
+    write_cadence(tmp_path, monkeypatch, [
+        {"id": "Q1", "monitor_class": "quarterly_ftd", "cron": "0 17 2 1,4,7,10 *"},
+    ])
+    assert cs.check() == 0
+
+
+# ---- scope / plumbing -------------------------------------------------------------------------
+
+def test_non_custom_cron_routines_are_skipped(tmp_path, monkeypatch):
+    # A `daily` recurrence carries no cron_utc to evaluate; check_cadence_consistency.py owns it.
+    path = tmp_path / "cadence.yaml"
+    path.write_text(
+        'cadence_watch_deadline_local: "21:00"\n'
+        "routines:\n"
+        "  - id: GUI\n"
+        "    monitor_class: weekly_sun\n"
+        "    expected_trigger:\n"
+        "      recurrence: weekly\n"
+        '      time_local: "00:00"\n'
+        "      enabled: true\n"
+    )
+    monkeypatch.setattr(cs, "CADENCE", path)
+    assert cs.check() == 0
+
+
+def test_to_populate_placeholder_is_skipped(tmp_path, monkeypatch):
+    write_cadence(tmp_path, monkeypatch, [
+        {"id": "NEW", "monitor_class": "weekly_sun", "cron": "TO_POPULATE"},
+    ])
+    assert cs.check() == 0
+
+
+def test_backup_snapshot_cron_divergence_is_caught(tmp_path, monkeypatch, capsys):
+    # REGRESSION: routine_backup.py's own `check` compares instructions/profiles/trigger_ids but
+    # NOT crons, so on 2026-08-01 the snapshot still held W1's Saturday-landing `0 6 * * 0` while
+    # cadence.yaml had the fix, and it passed clean. A restore would have undone the DST fix.
+    write_cadence(tmp_path, monkeypatch, [
+        {"id": "W1", "monitor_class": "weekly_sun", "cron": "30 7 * * 0", "time_local": "01:30"},
+    ])
+    snap = tmp_path / "routine_backup.json"
+    snap.write_text('{"routines": {"W1": {"cron_expression": "0 6 * * 0"}}}')
+    monkeypatch.setattr(cs, "BACKUP", snap)
+    assert cs.check() == 1
+    assert "would reinstate an unchecked schedule" in capsys.readouterr().err
+
+
+def test_backup_snapshot_agreement_passes(tmp_path, monkeypatch):
+    write_cadence(tmp_path, monkeypatch, [
+        {"id": "W1", "monitor_class": "weekly_sun", "cron": "30 7 * * 0", "time_local": "01:30"},
+    ])
+    snap = tmp_path / "routine_backup.json"
+    snap.write_text('{"routines": {"W1": {"cron_expression": "30 7 * * 0"}}}')
+    monkeypatch.setattr(cs, "BACKUP", snap)
+    assert cs.check() == 0
+
+
+def test_missing_backup_file_is_not_an_error(tmp_path, monkeypatch):
+    write_cadence(tmp_path, monkeypatch, [
+        {"id": "W1", "monitor_class": "weekly_sun", "cron": "30 7 * * 0", "time_local": "01:30"},
+    ])
+    monkeypatch.setattr(cs, "BACKUP", tmp_path / "does_not_exist.json")
+    assert cs.check() == 0
+
+
+def test_real_cadence_file_passes():
+    # The live ops/cadence.yaml must satisfy its own contract. Read-only: no monkeypatch, so this
+    # exercises the real CADENCE path exactly as CI runs it.
+    assert cs.check() == 0

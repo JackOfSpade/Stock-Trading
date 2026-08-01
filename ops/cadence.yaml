@@ -104,6 +104,15 @@ defaults:
 
 routines:
   # ---- DAILY (every trading day, after the close) ----
+  #
+  # THE MARKET CLOSE IS 14:00 MT, YEAR-ROUND. Stated explicitly because it has been misread:
+  # the close is 16:00 America/New_York (bigquery/03_twr_engine.sql:64, "09:30-16:00 ET"), and
+  # Mountain is ALWAYS Eastern minus two hours -- both zones switch DST on the same dates, so the
+  # offset never varies. There is no "16:00 MT close". A fixed-UTC daily that renders 15:00 MST in
+  # winter therefore runs an HOUR AFTER the close, not before it: D1's 32 observed starts over the
+  # last 120 days run 16:04-17:14 MT, roughly two hours past close. scripts/check_cron_dst_safety.py
+  # enforces the real window (after 14:00 MT, before the 21:00 MT cadence_watch deadline) for every
+  # monitor_class: daily_trading routine in BOTH seasons, so this no longer rests on reading a comment.
   - id: D1
     name: Market Development Scan
     schedule: "after_close trading_day"   # ~16:10 MT
@@ -112,7 +121,8 @@ routines:
     depends_on: []
     writes: [Daily.md, events.decision_log, events.regime_events, ops.heartbeat, state.strategy_candidates]
     expected_trigger:
-      recurrence: daily
+      recurrence: custom_cron
+      cron_utc: "0 22 * * *"
       time_local: "16:00"
       enabled: true
   - id: D2a
@@ -124,7 +134,8 @@ routines:
     writes: [events.trade_fills, events.position_events, events.daily_marks, perf.strategy_daily,
              ops.account_snapshot, events.signal_marks]
     expected_trigger:
-      recurrence: daily
+      recurrence: custom_cron
+      cron_utc: "40 22 * * *"
       time_local: "16:40"
       enabled: true
     notes: >
@@ -153,7 +164,8 @@ routines:
     writes: [events.decision_log, events.queue_events, events.position_events, calendar:confirm_order,
              events.park_policy_changes, Watchlist.md]
     expected_trigger:
-      recurrence: daily
+      recurrence: custom_cron
+      cron_utc: "15 23 * * *"
       time_local: "17:15"
       enabled: true
     notes: "CUT OVER 2026-07-09 (autonomous, by D2a; ops.d2a_cutover_log). D2 no longer runs Step 0/0b/TWR-maintenance -- those (broker reconcile + cash tripwire + park sweep, ops.account_snapshot, CALL ops.sp_daily_refresh()) now run in D2a, on which D2 now depends. D2 keeps its own freshness-inclusive trading-enable gate (safe now that D2a made marks/engine fresh), but as of 2026-07-27 it READS state.trading_enabled non-fatally at that point and enforces the verdict at each individual order-craft point, instead of calling ops.sp_assert_trading_enabled('D2') and aborting the whole routine on FALSE. The PENDING_ANALYSIS drain and the non-staging conversion work now run regardless; only order crafting and ORDER_STAGED writes are blocked while the gate is FALSE."
@@ -165,7 +177,8 @@ routines:
     depends_on: [D2]
     writes: [calendar:confirm_order, events.queue_events, AI_Trading_Foundation.md]
     expected_trigger:
-      recurrence: daily
+      recurrence: custom_cron
+      cron_utc: "45 0 * * *"
       time_local: "18:45"
       enabled: true
   - id: OPS0
@@ -188,7 +201,8 @@ routines:
                              # from an adopted branch onto OPS0's own branch (bigquery/*.sql, dbt/** and
                              # the spec-locked strategy surfaces are hard-excluded -- see STEP 4d).
     expected_trigger:
-      recurrence: daily
+      recurrence: custom_cron
+      cron_utc: "30 4 * * *"
       time_local: "22:30"          # fixed 04:30 UTC cron (trig_018zZNYXYmgkqbmcfzss1YjU, created
                                     # 2026-07-17, recreated 2026-08-01) -- NOT the DST-aware native picker, so this is
                                     # 10:30 PM MDT / 9:30 PM MST depending on season, deliberately
@@ -222,7 +236,8 @@ routines:
                               # to catch an auth failure early must never itself be blocked by one
     writes: [ops.alerts]
     expected_trigger:
-      recurrence: daily
+      recurrence: custom_cron
+      cron_utc: "30 12 * * *"
       time_local: "06:30"          # fixed 12:30 UTC cron (trig_012jxpUDFsrTR5FnSRmnxej4, recreated
                                     # 2026-08-01) -- NOT the DST-aware native picker, so this drifts to
                                     # 05:30 MST in winter, which is fine -- still hours ahead of the
@@ -254,12 +269,18 @@ routines:
                              # recover others must never be blocked by a missing dependency
     writes: [ops.run_log, ops.catchup_refire_log, events.decision_log, ops.alerts]
     expected_trigger:
-      recurrence: daily
-      time_local: "21:15"          # AFTER the 21:00 MT needs_attention deadline (bigquery/48:56) and
-                                    # BEFORE OPS0's 04:30 UTC, in BOTH seasons. Live cron `15 4 * * *`
-                                    # (04:15 UTC = 22:15 MDT / 21:15 MST) -- DST-robust, retimed by owner
-                                    # 2026-07-27 (was `0 3 * * *`, which fell to 20:00 MST in winter,
-                                    # before the deadline).
+      recurrence: custom_cron
+      cron_utc: "15 4 * * *"
+      time_local: "22:15"          # AFTER the 21:00 MT needs_attention deadline (bigquery/48:56) and
+                                    # BEFORE OPS0's 04:30 UTC, in BOTH seasons (22:15 MDT / 21:15 MST)
+                                    # -- DST-robust, retimed by owner 2026-07-27 (was `0 3 * * *`, which
+                                    # fell to 20:00 MST in winter, before the deadline).
+                                    # NOTE 2026-08-01: this field read "21:15" (the MST rendering) while
+                                    # every other routine's time_local is the MDT rendering. That split
+                                    # convention was the documented trap for anything deriving a UTC cron
+                                    # from time_local. Normalized to MDT and now ENFORCED for every
+                                    # routine by scripts/check_cron_dst_safety.py, so the trap is retired
+                                    # rather than merely described.
       enabled: true                # LIVE 2026-07-27: owner created OPS2 (recreated 2026-08-01 after
                                     # an accidental deletion; live id trig_01YSwsMubckdarNX9Z8yb4eX)
                                     # (cron 15 4 * * * = ~21:15 MT, retimed 2026-07-27 for DST-robustness;
@@ -304,7 +325,8 @@ routines:
     writes: [analytics.strategy_incubation_perf, events.strategy_lifecycle, state.arsenal_regime_coverage,
              events.queue_events, events.decision_log, ops.alerts, events.shadow_positions]
     expected_trigger:
-      recurrence: daily
+      recurrence: custom_cron
+      cron_utc: "0 2 * * *"
       time_local: "20:00"
       enabled: true
     notes: >
@@ -324,7 +346,8 @@ routines:
     depends_on: []
     writes: [events.adversarial_reviews, Adversarial_Review_*_attacker.md]
     expected_trigger:
-      recurrence: daily
+      recurrence: custom_cron
+      cron_utc: "0 0 * * *"
       time_local: "18:00"
       enabled: true
   - id: AR_orc
@@ -336,7 +359,8 @@ routines:
     writes: [events.adversarial_reviews, events.regime_events, events.decision_log, calendar:confirm_order,
              events.strategy_lifecycle, ops.roster_change_log, Adversarial_Review_*_orchestrator.md]
     expected_trigger:
-      recurrence: daily
+      recurrence: custom_cron
+      cron_utc: "20 0 * * *"
       time_local: "18:20"
       enabled: true
   # ---- STRATEGY ARSENAL — QUEUE-DRIVEN (SISA lifecycle, added 2026-07-10; fire only if a queue entry is due) ----
@@ -349,7 +373,8 @@ routines:
     writes: [Strategy.md, strategy/slices, events.queue_events, events.strategy_postmortems,
              events.strategy_lifecycle, events.decision_log, ops.alerts]
     expected_trigger:
-      recurrence: daily
+      recurrence: custom_cron
+      cron_utc: "5 1 * * *"
       time_local: "19:05"
       enabled: true
     notes: >
@@ -370,7 +395,8 @@ routines:
     writes: [strategy/roster.yaml, Strategy.md, strategy/slices, Claude_Task_Plan.md, ops.roster_change_log,
              events.strategy_lifecycle, events.decision_log, ops.alerts]
     expected_trigger:
-      recurrence: daily
+      recurrence: custom_cron
+      cron_utc: "25 1 * * *"
       time_local: "19:25"
       enabled: true
     notes: >
@@ -392,8 +418,13 @@ routines:
     catchup_safe: true
     writes: [Weekly_Catalyst_Calendar.md]
     expected_trigger:
-      recurrence: weekly
-      time_local: "00:00"
+      recurrence: custom_cron
+      # RETIMED 2026-08-01: was `0 6 * * 0`, which is Sunday 00:00 MDT but SATURDAY 23:00 MST.
+      # bigquery/114 buckets weekly_sun by the Sunday of the run week, so from 2026-11-08 W1's
+      # run_date would have fallen outside its own period window every week — blocking W4
+      # (depends_on W1) and tripping period_watch. Moved past the boundary with ~30 min of margin.
+      cron_utc: "30 7 * * 0"
+      time_local: "01:30"
       enabled: true
   - id: W2
     name: Post-Event Screen (B)
@@ -402,8 +433,9 @@ routines:
     catchup_safe: true
     writes: [Weekly_Post_Event_Screen.md]
     expected_trigger:
-      recurrence: weekly
-      time_local: "01:00"
+      recurrence: custom_cron
+      cron_utc: "0 8 * * 0"
+      time_local: "02:00"
       enabled: true
   - id: W3
     name: Open-Position Deep-Dive (A,B,C,E)
@@ -412,8 +444,9 @@ routines:
     catchup_safe: true
     writes: [Weekly_Position_Deep_Dive.md]
     expected_trigger:
-      recurrence: weekly
-      time_local: "02:00"
+      recurrence: custom_cron
+      cron_utc: "0 9 * * 0"
+      time_local: "03:00"
       enabled: true
   - id: W4
     name: Weekly Action Conversion
@@ -425,8 +458,9 @@ routines:
     # commits (4/5 post-cutover) while undeclared, so STEP 4f could not see a stranded W4.
     writes: [events.queue_events, events.decision_log, calendar:confirm_order, Watchlist.md]
     expected_trigger:
-      recurrence: weekly
-      time_local: "03:00"
+      recurrence: custom_cron
+      cron_utc: "30 9 * * 0"
+      time_local: "03:30"
       enabled: true
   - id: W5
     name: Factbase & Analytics Consolidation
@@ -437,7 +471,8 @@ routines:
     writes: [B_Sub_Pattern_Taxonomy.md, analytics.decision_embeddings, events.decision_log,
              ops/autonomy_levels.yaml]
     expected_trigger:
-      recurrence: weekly
+      recurrence: custom_cron
+      cron_utc: "0 10 * * 0"
       time_local: "04:00"
       enabled: true
     notes: "Good home for CALL ops.sp_score_theater() (P3-2 independence judge) + embedding health check."
@@ -636,14 +671,23 @@ routines:
 # source of truth); Chrome is fallback only. Schedule corrections are snapshot+partial-update+
 # verify+rollback guarded (never a from-scratch schedule body), and are applied ONLY to the
 # custom_cron cohort — a daily/weekly schedule drift is diff-only + an emailed warning, never a
-# RemoteTrigger update, because RemoteTrigger get renders the native Daily/Weekly picker as a
-# fixed UTC cron while the live trigger is DST-aware (writing a raw cron risks demoting it to a
-# fixed-UTC Custom trigger). OPS0's STEP 3 runs the identical sweep weekly (Sundays only).
+# RemoteTrigger update. OPS0's STEP 3 runs the identical sweep weekly (Sundays only).
 #
-# Exact clock times below are NOT enforced anywhere (per the file header, exact times live only in
-# the web UI) — recorded purely as the human-readable reference scripts/print_routines.py invites
-# ("Record exact times in cadence.yaml if you want them printed"). Read directly from each trigger's
-# editor and, where history existed, cross-checked against real ops.run_log execution timestamps.
+# CORRECTED 2026-08-01: that carve-out used to exclude 17 routines, on the reasoning that
+# `RemoteTrigger get` renders a native Daily/Weekly picker as a fixed UTC cron while the live
+# trigger is really DST-aware, so a raw-cron write would demote it. The premise was FALSE — the
+# live API says every trigger is `created_via: "http_api"` with no timezone field anywhere in the
+# schema, i.e. nothing in this fleet was ever DST-aware. Those 17 are now declared
+# `recurrence: custom_cron` with their true `cron_utc`, so the sweep compares them verbatim and
+# self-corrects them like any other. The daily/weekly branch is retained as a fail-safe in case a
+# GUI-created trigger ever appears, not because one does today.
+#
+# Exact clock times below ARE enforced as of 2026-08-01: `cron_utc` is the source of truth and
+# scripts/check_cron_dst_safety.py fails CI if a cron violates its monitor_class contract in either
+# DST season, or if `time_local` disagrees with the cron's MDT rendering. `time_local` is therefore
+# derived documentation — change `cron_utc`, and let the checker tell you what `time_local` must be.
+# Values were read from each live trigger and, where history existed, cross-checked against real
+# ops.run_log execution timestamps.
 #
 # 2026-07-12 INCIDENT: W2 and W4 (the two :30-minute-offset weekly triggers) silently no-showed
 # 2026-07-12 — zero ops.run_log rows, no self-heal marker, "next run" jumped straight to the
@@ -677,16 +721,33 @@ routines:
 #     read-only probe), so it moved rather than breaking the monthly cohort's hourly ladder.
 #     6:30 AM MDT / 5:30 AM MST is still pre-market and still ~9.5h ahead of the daily cadence.
 #   * A1/A2/A3 -- see the annual block below.
-# Everything else measured clean and was deliberately left alone (D1, D2, SL3, OPS2, OPS0,
-# W1-W5, M1a-M5, SL4, Q1-Q4, SL1). Do NOT "restore" the old times without re-measuring:
-# the gaps are runtime-derived, not aesthetic. Note the daily cohort is fixed-UTC (not DST-aware)
-# since the 2026-08-01 recreation, so these MDT slots all shift 1h earlier in local terms under MST;
-# the ordering and the 21:00 MT deadline still hold in both seasons.
+# Everything else measured clean and was deliberately left alone (D1, D2, SL3, OPS2, OPS0, W5,
+# M1a-M5, SL4, Q1-Q4, SL1). Do NOT "restore" the old times without re-measuring: the gaps are
+# runtime-derived, not aesthetic.
 #
-# TRAP for anything deriving a UTC cron from `time_local`: the +6 (MDT) conversion is correct for
-# every daily/weekly routine EXCEPT OPS2, whose `time_local: "21:15"` is the MST-season reading of a
-# fixed 04:15 UTC cron (= 22:15 MDT). Naive +6 yields 03:15 UTC and is an hour early. A 2026-08-01
-# collision-analysis script hit exactly this; the error was inert there, but special-case OPS2.
+# W1-W4 RETIMED 2026-08-01 (DST day-boundary defect, NOT a runtime measurement):
+#   W1 `0 6`->`30 7`, W2 `0 7`->`0 8`, W3 `0 8`->`0 9`, W4 `0 9`->`30 9`. W1's old cron was
+#   Sunday 00:00 MDT but SATURDAY 23:00 MST, and bigquery/114 buckets monitor_class weekly_sun by
+#   the Sunday of the run week -- so from 2026-11-08 W1's run_date would have sat outside its own
+#   period window every week, hard-blocking W4 (depends_on [W1,W2,W3]) and tripping period_watch.
+#   W2-W4 moved only to keep the chain ordered behind W1 with gaps >= each predecessor's OBSERVED
+#   MAX (W1 15m, W2 29m, W3 9m, W4 13m over 180d). W5 already landed Sunday in both seasons and
+#   did not move. New MST renderings are 00:30/01:00/02:00/02:30/03:00 -- >= 30 min clear of the
+#   Saturday boundary, which matters because observed trigger jitter runs several minutes LATE.
+#
+# THE WHOLE FLEET IS FIXED-UTC, and always was. Verified 2026-08-01 against the live API: every
+# trigger reports `created_via: "http_api"` and the trigger schema carries NO timezone field at all.
+# Earlier revisions of this file described a DST-aware "native Daily/Weekly picker" cohort; that
+# cohort does not exist. Consequences, all deliberate: schedules are version-controlled and
+# API-manageable, ops/routine_backup.json restores them losslessly, DST transitions can never skip
+# or double-fire a run (a UTC instant is unambiguous), and Q4 step E / OPS0 STEP 3 -- which only
+# self-correct `recurrence: custom_cron` -- now reach every routine instead of the 15 they used to.
+# The price is that a fixed-UTC cron slides 1h EARLIER in local terms under MST, so any constraint
+# expressed in LOCAL time can hold in summer and break in winter. That has bitten twice (OPS2 vs the
+# 21:00 MT deadline, 2026-07-27; W1 vs the Sunday boundary, above), so it is now mechanical:
+# scripts/check_cron_dst_safety.py renders every cron in both seasons and fails CI on a violation.
+# It also enforces that `time_local` is the MDT rendering for EVERY routine -- the old OPS2
+# split-convention trap (its time_local was the MST reading) is fixed, not just documented.
 #
 # DAILY (the platform's native Daily/Weekdays picker IS genuinely DST-aware — shows "MDT"/"MST") —
 # UNCHANGED 2026-07-12: no exact collisions found here, and gaps are deliberately telemetry-tuned

@@ -341,7 +341,7 @@
       "trigger_id": "trig_019WdiFqtyjRh5uatMXQe789"
     },
     "W1": {
-      "cron_expression": "0 6 * * 0",
+      "cron_expression": "30 7 * * 0",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform W1. Catalyst Calendar (Strategies A and C) — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
       "name": "W1. Catalyst Calendar (Strategies A and C) — deep research",
@@ -349,7 +349,7 @@
       "trigger_id": "trig_01HDRhBsGHS4pQFJuz1cranP"
     },
     "W2": {
-      "cron_expression": "0 7 * * 0",
+      "cron_expression": "0 8 * * 0",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform W2. Post-Event Screen (Strategy B) — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
       "name": "W2. Post-Event Screen (Strategy B) — deep research",
@@ -357,7 +357,7 @@
       "trigger_id": "trig_01MXjDUrfVnHtpPoFBDirScG"
     },
     "W3": {
-      "cron_expression": "0 8 * * 0",
+      "cron_expression": "0 9 * * 0",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform W3. Open-Position Deep-Dive (Strategies A, B, C, E) — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
       "name": "W3. Open-Position Deep-Dive (Strategies A, B, C, E) — deep research",
@@ -365,7 +365,7 @@
       "trigger_id": "trig_018nnRWbq5JJsrnxavdpJ26B"
     },
     "W4": {
-      "cron_expression": "0 9 * * 0",
+      "cron_expression": "30 9 * * 0",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform W4. Weekly Action Conversion — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
       "name": "W4. Weekly Action Conversion — regular routine",
