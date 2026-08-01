@@ -131,3 +131,40 @@
   review. Mechanical kill triggers (drawdown / 30-trade / m2m / foundation-change) are
   unchanged. The residual IBKR confirm-tap on orders and deposits are the execution/funding
   layer, and stay.
+
+- **Making the OPERATING timezone plane dynamic / "detect the current location at runtime."**
+  Asked and settled 2026-08-01, when the operator relocated Colorado → Toronto for ~6 months.
+  The three planes (`bigquery/20_user_prefs.sql` is the reference):
+  - **OPERATING** — trading-day keys, cadence, dead-man switches — **pinned `America/Denver`**,
+    ~93 call sites. Never dynamic.
+  - **MARKET** — session semantics — `America/New_York`, ~8 sites. A physical fact, not a preference.
+  - **DISPLAY** — how a timestamp is RENDERED to the human — `state.user_tz`, **already dynamic**:
+    D3 reads the Google Calendar primary-calendar `timeZone` daily and writes `ops.user_prefs`
+    only on a difference. This is the ONLY plane that follows the operator, and it already works
+    (it picked up `America/Toronto` on 2026-08-01).
+
+  **A dynamic operating plane IS technically possible** — BigQuery accepts a subquery as the
+  timezone argument (`CURRENT_DATE((SELECT tz FROM state.user_tz))` compiles and runs; verified
+  2026-08-01). Do NOT take "it compiles" as evidence it is a good idea. It is rejected on
+  correctness:
+  - A date boundary there is the **partition key for records**, not a display preference. Denver
+    (UTC−6) and Toronto (UTC−4) disagree about the calendar date for a two-hour band each night,
+    and **OPS0 (04:30 UTC) and OPS2 (04:15 UTC) both fire inside it** — a dynamic plane would have
+    silently moved their `run_date` by a day the moment the operator landed. Day-keyed dedup gates
+    then see either a skipped day or a doubled day, with nothing to alert on.
+  - Historical rows do not re-plane themselves, so every relocation leaves a permanent seam through
+    the trailing-63d windows, `deployed_days >= 252`, and the 30-trade graduation counter.
+  - It reopens the 2026-05-27 bug class (a UTC-vs-Denver mixup deleted a same-day order-confirmation
+    event) — the exact incident `bigquery/20_user_prefs.sql` cites as the reason for the pin.
+
+  **Anthropic's execution-host location is the worst candidate of all** and must never become the
+  anchor: it is an infrastructure detail that can change per-run, per-region, or on any deploy with
+  no notice; it is ~UTC in the container anyway; and it cannot reach the SQL call sites regardless,
+  since those are evaluated by BigQuery, not by the routine's host.
+
+  **Action: none.** If a future session wants to de-personalize the anchor, the ONLY legitimate
+  form is a deliberate, versioned, one-time migration of the operating plane to `America/New_York`
+  (a fact about the exchange rather than about the operator) — ~93 call sites plus re-tuning the
+  21:00 MT deadline, and it still eats the historical seam once. That is its own project and the
+  owner has not asked for it. It is NOT a runtime lookup, and `America/Denver` remaining
+  "hardcoded" is the feature, not the defect.
