@@ -125,7 +125,7 @@ routines:
              ops.account_snapshot, events.signal_marks]
     expected_trigger:
       recurrence: daily
-      time_local: "16:20"
+      time_local: "16:40"
       enabled: true
     notes: >
       CUT OVER 2026-07-09 (autonomous, performed by D2a itself after 3 distinct trading-day completed runs
@@ -166,7 +166,7 @@ routines:
     writes: [calendar:confirm_order, events.queue_events, AI_Trading_Foundation.md]
     expected_trigger:
       recurrence: daily
-      time_local: "18:30"
+      time_local: "18:45"
       enabled: true
   - id: OPS0
     name: Cadence Watchdog
@@ -189,8 +189,8 @@ routines:
                              # the spec-locked strategy surfaces are hard-excluded -- see STEP 4d).
     expected_trigger:
       recurrence: daily
-      time_local: "22:30"          # fixed 04:30 UTC cron (trig_019338gJ97LuWCdYAdHK9eUh, created
-                                    # 2026-07-17) -- NOT the DST-aware native picker, so this is
+      time_local: "22:30"          # fixed 04:30 UTC cron (trig_018zZNYXYmgkqbmcfzss1YjU, created
+                                    # 2026-07-17, recreated 2026-08-01) -- NOT the DST-aware native picker, so this is
                                     # 10:30 PM MDT / 9:30 PM MST depending on season, deliberately
                                     # after D3's ~18:36 MT completion (see RUNBOOK cadence note)
       enabled: true
@@ -215,7 +215,7 @@ routines:
       state.trading_enabled.
   - id: OPS1
     name: Morning Connector Liveness Probe
-    schedule: "pre-market, ~9h before the 16:10-17:15 MT daily cadence"
+    schedule: "pre-market, ~9.5h before the 16:10-17:15 MT daily cadence"
     monitor_class: daily_all
     catchup_safe: true      # a late probe still helps; a missed one is covered next morning
     depends_on: []           # DELIBERATELY independent, same rationale as OPS0 -- a probe that exists
@@ -223,9 +223,9 @@ routines:
     writes: [ops.alerts]
     expected_trigger:
       recurrence: daily
-      time_local: "07:00"          # fixed 13:00 UTC cron (trig_01SeHBLodMDE9egTFMgLByVf, created
-                                    # 2026-07-19) -- NOT the DST-aware native picker, so this drifts to
-                                    # 06:00 MST in winter, which is fine -- still hours ahead of the
+      time_local: "06:30"          # fixed 12:30 UTC cron (trig_012jxpUDFsrTR5FnSRmnxej4, recreated
+                                    # 2026-08-01) -- NOT the DST-aware native picker, so this drifts to
+                                    # 05:30 MST in winter, which is fine -- still hours ahead of the
                                     # 16:10-17:15 MT daily cadence either way
       enabled: true
     notes: >
@@ -260,7 +260,8 @@ routines:
                                     # (04:15 UTC = 22:15 MDT / 21:15 MST) -- DST-robust, retimed by owner
                                     # 2026-07-27 (was `0 3 * * *`, which fell to 20:00 MST in winter,
                                     # before the deadline).
-      enabled: true                # LIVE 2026-07-27: owner created trig_01DLrkbtpDvox1N7meiFMXYe
+      enabled: true                # LIVE 2026-07-27: owner created OPS2 (recreated 2026-08-01 after
+                                    # an accidental deletion; live id trig_01YSwsMubckdarNX9Z8yb4eX)
                                     # (cron 15 4 * * * = ~21:15 MT, retimed 2026-07-27 for DST-robustness;
                                     # model claude-opus-5); trig_id recorded in ops/trigger_ids.json.
                                     #
@@ -324,7 +325,7 @@ routines:
     writes: [events.adversarial_reviews, Adversarial_Review_*_attacker.md]
     expected_trigger:
       recurrence: daily
-      time_local: "17:30"
+      time_local: "18:00"
       enabled: true
   - id: AR_orc
     name: Adversarial Review — Orchestrator
@@ -336,7 +337,7 @@ routines:
              events.strategy_lifecycle, ops.roster_change_log, Adversarial_Review_*_orchestrator.md]
     expected_trigger:
       recurrence: daily
-      time_local: "18:00"
+      time_local: "18:20"
       enabled: true
   # ---- STRATEGY ARSENAL — QUEUE-DRIVEN (SISA lifecycle, added 2026-07-10; fire only if a queue entry is due) ----
   - id: SL2
@@ -349,7 +350,7 @@ routines:
              events.strategy_lifecycle, events.decision_log, ops.alerts]
     expected_trigger:
       recurrence: daily
-      time_local: "19:00"
+      time_local: "19:05"
       enabled: true
     notes: >
       SISA arsenal loop (ops/RUNBOOK.md §39). Autonomous EDITORIAL routine that overturns the
@@ -370,7 +371,7 @@ routines:
              events.strategy_lifecycle, events.decision_log, ops.alerts]
     expected_trigger:
       recurrence: daily
-      time_local: "19:15"
+      time_local: "19:25"
       enabled: true
     notes: >
       SISA arsenal loop (ops/RUNBOOK.md §39). The D2a self-executing transition + fanout engine and the ONLY
@@ -600,7 +601,7 @@ routines:
     writes: [Annual_AI_Foundation_Sweep.md]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: "0 4 2 1 *"
+      cron_utc: "0 17 1 1 *"
       enabled: true
   - id: A2
     name: Per-Strategy Constraint Audit
@@ -610,7 +611,7 @@ routines:
     writes: [Annual_Constraint_Audit.md]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: "0 5 2 1 *"
+      cron_utc: "15 20 1 1 *"
       enabled: true
   - id: A3
     name: Annual Action Conversion
@@ -621,7 +622,7 @@ routines:
     writes: [AI_Trading_Foundation.md, Strategy.md, events.queue_events, events.decision_log, state.strategy_candidates]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: "0 6 2 1 *"
+      cron_utc: "0 21 1 1 *"
       enabled: true
 
 # ---- WEB-UI TRIGGER AUDIT — 2026-07-10, RE-SPACED 2026-07-12 (Claude-in-Chrome + RemoteTrigger API,
@@ -658,12 +659,41 @@ routines:
 # Watch-trigger: if a `:00`-minute-offset routine ALSO silently no-shows on a future date, that's
 # the signal this is a genuine platform bug worth filing with Anthropic, not schedule tuning.
 #
+# 2026-08-01 RUNTIME-BASED RE-SPACING (D2a, AR_att, AR_orc, D3, SL2, SL5, OPS1, A1, A2, A3).
+# Measured every
+# routine's real duration from ops.run_log (started -> next terminal row, per routine, MDT season)
+# and removed every slot where a predecessor's p90/max finish ran past the next routine's start:
+#   * D2a 4:20 -> 4:40 PM. D1 p90 27 min / max 31 min from a 4:00 PM start finishes 4:31, so the old
+#     4:20 slot started D2a while D1 was still running on ~1 day in 4.
+#   * AR_att 5:30 -> 6:00 PM, AR_orc 6:00 -> 6:20 PM, D3 6:30 -> 6:45 PM, SL2 7:00 -> 7:05 PM,
+#     SL5 7:15 -> 7:25 PM. D2 p90 21 min / max 38 min from 5:15 PM finishes 5:36-5:53; the old 5:30
+#     AR_att overlapped it routinely -- 2026-07-30 is on the record with D2 completing 17:38:15 and
+#     AR_att starting 17:38:14, a 1-second miss. The rest of the evening chain then shifts to stay
+#     clear at OBSERVED-MAX, not just p90: AR_orc depends_on [AR_att], and AR_att's max is 16 min
+#     (vs 1 min p90), so a 15-min gap could have hard-stopped AR_orc on its own dependency gate.
+#     Gaps now cover every routine's worst recorded run: AR_att 20m, AR_orc 25m, D3 20m, SL2 20m.
+#   * OPS1 7:00 -> 6:30 AM. OPS1 is daily and M2 is monthly-on-the-1st, and BOTH sat on 13:00 UTC --
+#     an exact same-minute collision every 1st of the month. OPS1 is the flexible one (a 2-min
+#     read-only probe), so it moved rather than breaking the monthly cohort's hourly ladder.
+#     6:30 AM MDT / 5:30 AM MST is still pre-market and still ~9.5h ahead of the daily cadence.
+#   * A1/A2/A3 -- see the annual block below.
+# Everything else measured clean and was deliberately left alone (D1, D2, SL3, OPS2, OPS0,
+# W1-W5, M1a-M5, SL4, Q1-Q4, SL1). Do NOT "restore" the old times without re-measuring:
+# the gaps are runtime-derived, not aesthetic. Note the daily cohort is fixed-UTC (not DST-aware)
+# since the 2026-08-01 recreation, so these MDT slots all shift 1h earlier in local terms under MST;
+# the ordering and the 21:00 MT deadline still hold in both seasons.
+#
+# TRAP for anything deriving a UTC cron from `time_local`: the +6 (MDT) conversion is correct for
+# every daily/weekly routine EXCEPT OPS2, whose `time_local: "21:15"` is the MST-season reading of a
+# fixed 04:15 UTC cron (= 22:15 MDT). Naive +6 yields 03:15 UTC and is an hour early. A 2026-08-01
+# collision-analysis script hit exactly this; the error was inert there, but special-case OPS2.
+#
 # DAILY (the platform's native Daily/Weekdays picker IS genuinely DST-aware — shows "MDT"/"MST") —
 # UNCHANGED 2026-07-12: no exact collisions found here, and gaps are deliberately telemetry-tuned
 # (see D2/D2a note below), so widening to 1hr would only push SL3 into the new W1 Sunday slot:
-#   D1 4:00 PM MT · D2a 4:20 PM MT · D2 5:15 PM MT (widened from 4:30 PM 2026-07-10 — D2a's real
-#     completion time varies 6-17+ min in ops.run_log; the old 10-min gap was too thin) · D3 6:30 PM MT ·
-#     SL3 8:00 PM MT · AR_att 5:30 PM MT · AR_orc 6:00 PM MT · SL2 7:00 PM MT · SL5 7:15 PM MT ·
+#   D1 4:00 PM MT · D2a 4:40 PM MT · D2 5:15 PM MT (widened from 4:30 PM 2026-07-10 — D2a's real
+#     completion time varies 6-17+ min in ops.run_log; the old 10-min gap was too thin) · D3 6:45 PM MT ·
+#     SL3 8:00 PM MT · AR_att 6:00 PM MT · AR_orc 6:20 PM MT · SL2 7:05 PM MT · SL5 7:25 PM MT ·
 #     OPS0 10:30 PM MDT / 9:30 PM MST (04:30 UTC FIXED cron, not the native DST-aware picker — resilience
 #     audit 2026-07-16, RES-1/OAE-1 merge; deliberately inside the 21:00-24:00 Denver daily-miss
 #     visibility window year-round, bigquery/48_cadence_monitor_unbounded.sql:52-59, and clear of the
@@ -693,10 +723,20 @@ routines:
 #     SL1 3:00 PM MT (was 10:00 PM) — all fixed 2026-07-10 for the UTC-evaluation bug, then
 #     relocated 2026-07-12 for the daily-block collision. Same MDT-only caveat as the monthly
 #     cohort above (fires ~1hr early every January).
-#   A1 9:00 PM MT · A2 10:00 PM MT · A3 11:00 PM MT — FIXED 2026-07-10 (UTC-evaluation bug), moved
-#     2026-07-12 from 7:30/8:30/9:30 PM (which sat inside the daily block) to right after SL3 (8 PM)
-#     with a full 1hr buffer on both sides; no seasonal caveat, these only ever fire in January (MST)
-#     so the MST-calibrated cron is exact year-round.
+#   A1 10:00 AM MT · A2 1:15 PM MT · A3 2:00 PM MT (all Jan 1 local) — RE-SPACED 2026-08-01 on
+#     measured runtime; no seasonal caveat, these only ever fire in January (MST) so the
+#     MST-calibrated cron is exact year-round. WAS 9/10/11 PM MT (set 2026-07-10 for the
+#     UTC-evaluation bug, moved 2026-07-12 to sit right after SL3). WHY MOVED AGAIN: that layout
+#     assumed A1 fits in its 1hr slot. ops.run_log says it does not -- A1 measured 73 min (p50) and
+#     152 min (max) over its 2 recorded runs, so a 9 PM A1 was still running at ~11:32 PM, i.e.
+#     straight through A2 (10 PM), A3 (11 PM), OPS2 (9:15 PM MST) and OPS0 (9:30 PM MST). Worse,
+#     A3 depends_on [A1, A2], so its 11 PM fire would have hit sp_assert_deps against an
+#     un-completed A1 and hard-stopped -- an annual routine failing closed for a whole year.
+#     The new slots sit in the free Jan-1 midday window: the monthly cohort ends with SL4 at
+#     9:33 AM MST and D1 opens the daily block at 3:00 PM MST, leaving 10:00 AM - 3:00 PM clear.
+#     A1 now gets a 195-min budget (10:00 AM -> A2 at 1:15 PM), A2 23 min, A3 18 min, and A3 still
+#     lands 42 min before D1. Local fire DATE is unchanged (Jan 1) -- only the UTC cron's
+#     day-of-month moved 2->1 because the local slot moved from evening to midday.
 #
 # Also confirmed correct and left untouched: M4's instruction text (a prior audit pass misread it as
 # missing its "Read Claude_Task_Plan.md. Perform " prefix; ops.run_log's actual last-received

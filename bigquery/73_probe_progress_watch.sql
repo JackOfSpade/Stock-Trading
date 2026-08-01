@@ -45,7 +45,7 @@ openpos AS (
 )
 SELECT
   p.strategy_code,
-  DATE_DIFF(CURRENT_DATE('America/Denver'), DATE(p.immutable_since), DAY) AS probe_days,
+  DATE_DIFF(CURRENT_DATE('America/Denver'), DATE(p.immutable_since, 'America/Denver'), DAY) AS probe_days,
   COALESCE(fg.funding_gap_dollars, 0) AS funding_gap_dollars,
   COALESCE(t.closed_trades, 0) AS closed_trades,
   COALESCE(o.n_open, 0) AS n_open_positions,
@@ -54,7 +54,7 @@ SELECT
   -- verdict would be re-proposed by SL4 every month forever (stuck never self-clears). The
   -- NOT EXISTS below is against a real backtick-quoted table (ops.roster_change_log), not a
   -- WITH-clause CTE, so it de-correlates fine at query time.
-  (DATE_DIFF(CURRENT_DATE('America/Denver'), DATE(p.immutable_since), DAY) >= 400
+  (DATE_DIFF(CURRENT_DATE('America/Denver'), DATE(p.immutable_since, 'America/Denver'), DAY) >= 400
    AND COALESCE(fg.funding_gap_dollars, 0) = 0
    AND COALESCE(t.closed_trades, 0) = 0
    AND COALESCE(o.n_open, 0) = 0

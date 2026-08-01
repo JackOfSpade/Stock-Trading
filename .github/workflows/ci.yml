@@ -87,6 +87,8 @@ jobs:
         run: python scripts/check_prose_invariants.py
       - name: cadence routine lists are generator-current (bigquery/12/15/24 ⇄ ops/cadence.yaml — ARCH-3 Item 30b)
         run: python scripts/gen_routine_lists.py --check
+      - name: routine backup snapshot valid (routine_backup.json ⇄ cadence.yaml ⇄ triggers.json ⇄ trigger_ids.json)
+        run: python scripts/routine_backup.py check
       - name: roster single-source (roster.yaml ⇄ state seed ⇄ Strategy.md ⇄ slices ⇄ slice-map ⇄ derived SQL)
         run: python scripts/check_roster_consistency.py
       - name: autonomy-stage single-source (autonomy_levels.yaml ⇄ prose/SQL citations)

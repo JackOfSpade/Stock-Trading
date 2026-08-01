@@ -662,9 +662,9 @@ stall with it (it ran under the same identity).
   again.
 
   **OPS1 (Morning Connector Liveness Probe, `Claude_Task_Plan.md`)** now closes most of this gap
-  mechanically: a daily 07:00 MT pre-market probe (trigger `trig_01SeHBLodMDE9egTFMgLByVf`) reads
+  mechanically: a daily 06:30 MT pre-market probe (trigger `trig_012jxpUDFsrTR5FnSRmnxej4`) reads
   IBKR/Calendar/FMP/Gmail read-only and raises a `connector_reauth_needed` warning on an auth-class
-  failure — ~9h before the 16:10-17:15 MT daily cadence needs any of them live, so a re-auth need lands
+  failure — ~9.5h before the 16:10-17:15 MT daily cadence needs any of them live, so a re-auth need lands
   in the morning alert email instead of mid-cascade.
 
   **PLATFORM LIMITATION (verified 2026-07-19 ~22:45-23:10 MT).** `RemoteTrigger` is unavailable INSIDE a

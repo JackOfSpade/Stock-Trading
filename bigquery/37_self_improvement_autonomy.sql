@@ -287,7 +287,7 @@ post AS (
   JOIN `stock-trading-498512.analytics.conviction_features` cf
     ON cf.conviction = r.conviction_tier
    AND cf.position_closed
-   AND cf.entry_date >= DATE(lc.change_ts)
+   AND cf.entry_date >= DATE(lc.change_ts, 'America/Denver')
   GROUP BY r.param_key
 )
 SELECT

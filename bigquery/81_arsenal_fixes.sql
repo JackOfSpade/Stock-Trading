@@ -85,7 +85,7 @@ SELECT
   -- days since adopted_date for a strategy that has ZERO perf rows (never deployed live capital); NULL once
   -- it has been deployed. The objective "adopted but idle" signal SL4 previously had no surface for (H3 part 1).
   IF(COALESCE(l.has_perf_row, FALSE), NULL,
-     DATE_DIFF(CURRENT_DATE(), r.adopted_date, DAY)) AS never_deployed_days,
+     DATE_DIFF(CURRENT_DATE('America/Denver'), r.adopted_date, DAY)) AS never_deployed_days,
   b.alpha_annualized,
   COALESCE(b.min_n_met, FALSE) AS beta_min_n_met,
   -- edge_decay_signal: latest-row condition AND sustained (>=42/63) negativity AND the beta-adjusted

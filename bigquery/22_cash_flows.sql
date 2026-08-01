@@ -92,10 +92,11 @@ SELECT
 -- view at all: zero deposits, zero NAV, zero sizing_base_2pct — a real structural deadlock, since a
 -- PROBE strategy needs sizing_base_2pct to craft its first sized trade, needs 30 closed trades to
 -- clear the gate, and needs the gate to clear before adopted_date is ever set. Verified live
--- (2026-07-15) that swapping to `DATE(immutable_since)` produces a BYTE-IDENTICAL result for all 5
--- current strategies (EXCEPT DISTINCT against the live view returned zero rows) — immutable_since
--- equals adopted_date for the founding batch (seeded straight into ADOPTED, no separate PROBE row), so
--- this is a zero-behavioral-change-today fix that only changes behavior for a future PROBE strategy.
+-- (2026-07-15) that swapping to `DATE(immutable_since, 'America/Denver')` produces a BYTE-IDENTICAL
+-- result for all 5 current strategies (EXCEPT DISTINCT against the live view returned zero rows) —
+-- immutable_since equals adopted_date for the founding batch (seeded straight into ADOPTED, no
+-- separate PROBE row), so this is a zero-behavioral-change-today fix that only changes behavior for
+-- a future PROBE strategy.
 -- The CTE's own column alias is renamed `capital_eligible_date` (no longer synonymous with
 -- "adopted_date") for clarity; `retired_date`/every other column is unchanged.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.strategy_nav` AS
@@ -104,7 +105,7 @@ WITH active AS (
   -- capital-eligibility date + retired_date, so a termination never drops a strategy's history from
   -- the rollup and never revises a past flow's split, AND a PROBE-phase newcomer is included from its
   -- first PROBE trade onward, not only once it later clears the 30-trade gate into ADOPTED.
-  SELECT strategy_code AS s, DATE(immutable_since) AS capital_eligible_date, retired_date
+  SELECT strategy_code AS s, DATE(immutable_since, 'America/Denver') AS capital_eligible_date, retired_date
   FROM `stock-trading-498512.state.strategy_roster`
   WHERE immutable_since IS NOT NULL
 ),

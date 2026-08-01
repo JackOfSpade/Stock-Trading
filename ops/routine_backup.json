@@ -1,0 +1,400 @@
+{
+  "_meta": {
+    "caveats": "cron_expression may read 'TO_POPULATE' for a routine whose live cron could not yet be confirmed from a trustworthy source (see the initial-bootstrap commit message / session report) -- ingest against a real `list`/`get` response overwrites it. OPS2's instruction deliberately omits the standing addendum every other routine carries (see ADDENDUM / OPS2_NO_ADDENDUM_ID in this module and ops/cadence.yaml's OPS1/OPS2 block) -- this is a documented exception, not drift. The 2 'personal' profile routines target a different repo (JackOfSpade/Image-and-Video-Generation-Pipeline) and are out of the trading fleet's scope -- kept here only because they live on the same claude.ai account and are equally vulnerable to an accidental deletion.",
+    "how_to_refresh": "In a session with the RemoteTrigger tool: call `list` (paginated, ~20 at a time -- see ops/trigger_ids.json _meta) and/or `get` on specific trigger ids, save the response body as JSON, then run `python scripts/routine_backup.py ingest <file>`. Re-running ingest on the same or overlapping data is safe and idempotent -- it cleanly overwrites each routine's stored fields (including cron_expression) with the freshly ingested values.",
+    "how_to_restore": "`python scripts/routine_backup.py restore <routine_id ...>` (or no args for every routine) prints a ready-to-use RemoteTrigger create body per routine, each with a freshly generated uuid. Call RemoteTrigger create with that body, then record the returned trig_... id in ops/trigger_ids.json for that routine id (this script cannot call RemoteTrigger itself and never invents live API data).",
+    "last_ingested": "2026-08-01",
+    "purpose": "Versioned snapshot of every claude.ai RemoteTrigger routine (schedule + instruction + connectors), profile-based so a diff shows real config changes instead of restating shared boilerplate. Exists so a future accidental trigger deletion (2026-08-01 incident: 13 routines deleted from the web UI, hand-reconstructed from scattered repo prose) is a mechanical `restore`, not a research project.",
+    "sl_environment_2026_08_01": "2026-08-01 owner directive: the ENTIRE fleet is normalised to environment 'Full Network Access' (env_01DXtTeywLPpNoXku8rGNEie), autofix_on_pr_create=true and notifications all-off. This retired the separate 'sl' profile SL1-SL5 used to carry (distinct 'Default' environment, autofix=false, push notifications on). That split was preserved by every prior change but its rationale was never written down anywhere -- searched RUNBOOK 39, CLAUDE.md's SISA section, autonomy_levels.yaml and the SISA commit. It was NOT a network restriction: SL5 git-pushes and SL3 completed 19 runs on 'Default'. Two profiles remain: 'fleet' (32 trading routines) and 'personal' (2 non-trading routines targeting a different repo)."
+  },
+  "_unmatched": {},
+  "profiles": {
+    "fleet": {
+      "allowed_tools": [
+        "Bash",
+        "Read",
+        "Write",
+        "Edit",
+        "Glob",
+        "Grep",
+        "WebFetch",
+        "WebSearch",
+        "RemoteTrigger"
+      ],
+      "autofix_on_pr_create": true,
+      "environment_id": "env_01DXtTeywLPpNoXku8rGNEie",
+      "mcp_connections": [
+        {
+          "connector_uuid": "f4bd1992-c70e-4b23-b617-271b19976e92",
+          "name": "FMP",
+          "url": "https://financialmodelingprep.com/mcp"
+        },
+        {
+          "connector_uuid": "8118e26a-1613-4cf8-b1cd-9a794b8d357b",
+          "name": "Gmail",
+          "url": "https://gmailmcp.googleapis.com/mcp/v1"
+        },
+        {
+          "connector_uuid": "c91ddbb2-ced9-4011-9838-15e5239e83e9",
+          "name": "Google-Calendar",
+          "url": "https://calendarmcp.googleapis.com/mcp/v1"
+        },
+        {
+          "connector_uuid": "64f9594a-0ed8-4081-883c-df850f1c8fcd",
+          "name": "Google-Cloud-BigQuery",
+          "url": "https://bigquery.googleapis.com/mcp"
+        },
+        {
+          "connector_uuid": "fff8d981-37df-4721-97af-9e0fdf5238e7",
+          "name": "Hugging-Face",
+          "url": "https://huggingface.co/mcp?login&gradio=none"
+        },
+        {
+          "connector_uuid": "d9d4ad11-d734-4c05-8302-9fd84698ef46",
+          "name": "Interactive-Brokers--IBKR-",
+          "url": "https://api.ibkr.com/v1/api/mcp"
+        },
+        {
+          "connector_uuid": "715856f0-b776-4037-b2a3-a0c9531d965f",
+          "name": "Tavily",
+          "url": "https://mcp.tavily.com/mcp"
+        }
+      ],
+      "model": "claude-opus-5",
+      "sources": [
+        {
+          "git_repository": {
+            "url": "https://github.com/JackOfSpade/Stock-Trading"
+          }
+        }
+      ],
+      "notifications": {
+        "channel": {
+          "email": false,
+          "push": false,
+          "slack": false
+        }
+      }
+    },
+    "personal": {
+      "allowed_tools": [
+        "Bash",
+        "Read",
+        "Write",
+        "Edit",
+        "Glob",
+        "Grep",
+        "WebFetch",
+        "WebSearch"
+      ],
+      "autofix_on_pr_create": true,
+      "environment_id": "env_01DXtTeywLPpNoXku8rGNEie",
+      "mcp_connections": [
+        {
+          "connector_uuid": "c91ddbb2-ced9-4011-9838-15e5239e83e9",
+          "name": "Google-Calendar",
+          "url": "https://calendarmcp.googleapis.com/mcp/v1"
+        },
+        {
+          "connector_uuid": "fff8d981-37df-4721-97af-9e0fdf5238e7",
+          "name": "Hugging-Face",
+          "url": "https://huggingface.co/mcp?login&gradio=none"
+        },
+        {
+          "connector_uuid": "715856f0-b776-4037-b2a3-a0c9531d965f",
+          "name": "Tavily",
+          "url": "https://mcp.tavily.com/mcp"
+        }
+      ],
+      "model": "claude-opus-5",
+      "sources": [
+        {
+          "git_repository": {
+            "url": "https://github.com/JackOfSpade/Image-and-Video-Generation-Pipeline"
+          }
+        }
+      ],
+      "notifications": {
+        "channel": {
+          "email": false,
+          "push": false,
+          "slack": false
+        }
+      }
+    }
+  },
+  "routines": {
+    "A1": {
+      "cron_expression": "0 17 1 1 *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform A1. AI Foundation Annual Full Re-Derivation — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "A1. AI Foundation Annual Full Re-Derivation — deep research",
+      "profile": "fleet",
+      "trigger_id": "trig_01GhUQNuRvefpziCGz44NaKz"
+    },
+    "A2": {
+      "cron_expression": "15 20 1 1 *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform A2. Per-Strategy Constraint Audit — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "A2. Per-Strategy Constraint Audit — deep research",
+      "profile": "fleet",
+      "trigger_id": "trig_01FagAoazkE4GsxF5EaC3cPy"
+    },
+    "A3": {
+      "cron_expression": "0 21 1 1 *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform A3. Annual Action Conversion — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "A3. Annual Action Conversion — regular routine",
+      "profile": "fleet",
+      "trigger_id": "trig_01WJrA74ehQhzVbbwNS7rX9w"
+    },
+    "AR_att": {
+      "cron_expression": "0 0 * * *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform Adversarial Review Attacker — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "Adversarial Review Attacker — regular routine",
+      "profile": "fleet",
+      "trigger_id": "trig_01KQWESvxCXWVGU18K6Cao5G"
+    },
+    "AR_orc": {
+      "cron_expression": "20 0 * * *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform Adversarial Review Orchestrator — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "Adversarial Review Orchestrator — regular routine",
+      "profile": "fleet",
+      "trigger_id": "trig_01J2qHCC1ABZdwM2R1UqwDSQ"
+    },
+    "D1": {
+      "cron_expression": "0 22 * * *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform D1. Market Development Scan — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "D1. Market Development Scan — deep research",
+      "profile": "fleet",
+      "trigger_id": "trig_016gmftbKkEi7zDqDrA3u97o"
+    },
+    "D2": {
+      "cron_expression": "15 23 * * *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform D2. Daily Action Conversion — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "D2. Daily Action Conversion — regular routine",
+      "profile": "fleet",
+      "trigger_id": "trig_014eoNf1qNZZ8Ec5n2s6KxRP"
+    },
+    "D2a": {
+      "cron_expression": "40 22 * * *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform D2a. Broker Reconcile & Snapshot — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "D2a. Broker Reconcile & Snapshot — regular routine",
+      "profile": "fleet",
+      "trigger_id": "trig_015kDvXCKiDRd5Z2bXwaRny3"
+    },
+    "D3": {
+      "cron_expression": "45 0 * * *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform D3. Calendar Hygiene — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "D3. Calendar Hygiene — regular routine",
+      "profile": "fleet",
+      "trigger_id": "trig_01B9Dw1E8DqucUVWTmafstcR"
+    },
+    "M1a": {
+      "cron_expression": "0 11 1 * *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform M1a. Strategy-Blind Regime Scoring — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "M1a. Strategy-Blind Regime Scoring — deep research",
+      "profile": "fleet",
+      "trigger_id": "trig_01Jfx7KZRACgSUSQBnwSz7wC"
+    },
+    "M1b": {
+      "cron_expression": "0 12 1 * *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform M1b. Strategy Mapping and Activation Calls — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "M1b. Strategy Mapping and Activation Calls — regular routine",
+      "profile": "fleet",
+      "trigger_id": "trig_01SWhTsnjXMCfcbm9YxC2tWt"
+    },
+    "M2": {
+      "cron_expression": "0 13 1 * *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform M2. E Pair Divergence Screen — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "M2. E Pair Divergence Screen — deep research",
+      "profile": "fleet",
+      "trigger_id": "trig_01NBdVcixbddnv3kv8ZPpfM3"
+    },
+    "M3": {
+      "cron_expression": "0 14 1 * *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform M3. D Position Deep-Dive — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "M3. D Position Deep-Dive — deep research",
+      "profile": "fleet",
+      "trigger_id": "trig_019FRQHZV9e7cmtHEc6yoeqG"
+    },
+    "M4": {
+      "cron_expression": "0 15 1 * *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform M4. Monthly Action Conversion — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "M4. Monthly Action Conversion — regular routine",
+      "profile": "fleet",
+      "trigger_id": "trig_015YrWDDNLYZN1wzmG38MT5Y"
+    },
+    "M5": {
+      "cron_expression": "0 16 1 * *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform M5. Deployed-TWR & Macro Forecast — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "M5. Deployed-TWR & Macro Forecast — regular routine",
+      "profile": "fleet",
+      "trigger_id": "trig_01EVgnRg1F8VcfZfpwTpUzCK"
+    },
+    "OPS0": {
+      "cron_expression": "30 4 * * *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform OPS0. Cadence Watchdog — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "OPS0. Cadence Watchdog — regular routine",
+      "profile": "fleet",
+      "trigger_id": "trig_018zZNYXYmgkqbmcfzss1YjU"
+    },
+    "OPS1": {
+      "cron_expression": "30 12 * * *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform OPS1. Morning Connector Liveness Probe — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "OPS1. Morning Connector Liveness Probe — regular routine",
+      "profile": "fleet",
+      "trigger_id": "trig_012jxpUDFsrTR5FnSRmnxej4"
+    },
+    "OPS2": {
+      "cron_expression": "15 4 * * *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform OPS2. Catch-up Executor — regular routine.",
+      "name": "OPS2. Catch-up Executor — regular routine",
+      "profile": "fleet",
+      "trigger_id": "trig_01YSwsMubckdarNX9Z8yb4eX"
+    },
+    "Q1": {
+      "cron_expression": "0 17 2 1,4,7,10 *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform Q1. Regime Retrospective — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "Q1. Regime Retrospective — deep research",
+      "profile": "fleet",
+      "trigger_id": "trig_01Nx9NSc325swQTYdLrAZqCB"
+    },
+    "Q2": {
+      "cron_expression": "0 18 2 1,4,7,10 *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform Q2. D Long-Horizon Candidates — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "Q2. D Long-Horizon Candidates — deep research",
+      "profile": "fleet",
+      "trigger_id": "trig_013Mn9xxPut54ZbsjwivK5Eo"
+    },
+    "Q3": {
+      "cron_expression": "0 19 2 1,4,7,10 *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform Q3. AI Foundation Quarterly Delta — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "Q3. AI Foundation Quarterly Delta — deep research",
+      "profile": "fleet",
+      "trigger_id": "trig_01BKd6KmcriLTR2u1hhebtrt"
+    },
+    "Q4": {
+      "cron_expression": "0 20 2 1,4,7,10 *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform Q4. Quarterly Action Conversion — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "Q4. Quarterly Action Conversion — regular routine",
+      "profile": "fleet",
+      "trigger_id": "trig_01JMweJiKsWc3CWD8C7kK6qG"
+    },
+    "SL1": {
+      "cron_expression": "0 21 2 1,4,7,10 *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform SL1. Strategy Candidate Synthesis & Qualification — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "SL1. Strategy Candidate Synthesis & Qualification — deep research",
+      "profile": "fleet",
+      "trigger_id": "trig_01FcK8PZ9tw4nceNoH1nJiTb"
+    },
+    "SL2": {
+      "cron_expression": "5 1 * * *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform SL2. Strategy Draft, Revise & Post-mortem — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "SL2. Strategy Draft, Revise & Post-mortem — regular routine",
+      "profile": "fleet",
+      "trigger_id": "trig_01VrC8TjY3GRxHUrS16vfHUo"
+    },
+    "SL3": {
+      "cron_expression": "0 2 * * *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform SL3. Incubation Monitor & Graduation — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "SL3. Incubation Monitor & Graduation — regular routine",
+      "profile": "fleet",
+      "trigger_id": "trig_01U1oHM1KfLY5ManmAnda3gg"
+    },
+    "SL4": {
+      "cron_expression": "30 16 1 * *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform SL4. Discretionary Retirement Proposer — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "SL4. Discretionary Retirement Proposer — regular routine",
+      "profile": "fleet",
+      "trigger_id": "trig_01JuMzHVRdom4c2KdWLtnx2v"
+    },
+    "SL5": {
+      "cron_expression": "25 1 * * *",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform SL5. Strategy Register & Roster Sync — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "SL5. Strategy Register & Roster Sync — regular routine",
+      "profile": "fleet",
+      "trigger_id": "trig_019WdiFqtyjRh5uatMXQe789"
+    },
+    "W1": {
+      "cron_expression": "0 6 * * 0",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform W1. Catalyst Calendar (Strategies A and C) — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "W1. Catalyst Calendar (Strategies A and C) — deep research",
+      "profile": "fleet",
+      "trigger_id": "trig_01HDRhBsGHS4pQFJuz1cranP"
+    },
+    "W2": {
+      "cron_expression": "0 7 * * 0",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform W2. Post-Event Screen (Strategy B) — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "W2. Post-Event Screen (Strategy B) — deep research",
+      "profile": "fleet",
+      "trigger_id": "trig_01MXjDUrfVnHtpPoFBDirScG"
+    },
+    "W3": {
+      "cron_expression": "0 8 * * 0",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform W3. Open-Position Deep-Dive (Strategies A, B, C, E) — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "W3. Open-Position Deep-Dive (Strategies A, B, C, E) — deep research",
+      "profile": "fleet",
+      "trigger_id": "trig_018nnRWbq5JJsrnxavdpJ26B"
+    },
+    "W4": {
+      "cron_expression": "0 9 * * 0",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform W4. Weekly Action Conversion — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "W4. Weekly Action Conversion — regular routine",
+      "profile": "fleet",
+      "trigger_id": "trig_01CVuxETpeuAKZ3rS5gWESDf"
+    },
+    "W5": {
+      "cron_expression": "0 10 * * 0",
+      "enabled": true,
+      "instruction": "Read Claude_Task_Plan.md. Perform W5. Factbase & Analytics Consolidation — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "W5. Factbase & Analytics Consolidation — regular routine",
+      "profile": "fleet",
+      "trigger_id": "trig_014vYVaPVpHqjkQWKEsaXBdr"
+    },
+    "personal_research_leading_omnireference_video_platforms": {
+      "enabled": false,
+      "instruction": "Deep Research current leading platforms in video generation that allows reference inputs in image, video, and audio, aka \"omnireference\" (it doesn't have to be named that).  Don't consider lite/flash/mini versions of models even if they are higher in versioning, only consider the latest full version models. Rank them.\n\nPut the conclusion of your research in \"Leading_Omnireference_Video_Platforms.md\". Do not append. Replace all existing text in \"Leading_Omnireference_Video_Platforms.md\". Create if it doesn't exist.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
+      "name": "Research Leading Omnireference Video Platforms",
+      "profile": "personal",
+      "run_once_at": "2026-08-01T12:52:00Z",
+      "trigger_id": "trig_017RyudiuJYmfKiS3FGqb7yG"
+    },
+    "personal_update_image_generation_in_the_pipeline": {
+      "enabled": false,
+      "instruction": "Read \"Current_Pipeline.md\". The last node is always the video generation platform. Do not alter that one.\n\nDeep Research current leading platforms in image generation in these categories: prompt adherence, visual quality, composition & structure, style & creative control, text rendering, image-to-image editing capabilities. (one platform can be leading in multiple categories). Analyze the current pipeline. Should it stay the same, or new platforms need to be added (happens if adding another platform into the pipeline get rid of current deficiencies or improves final image), or updated (new models of the same platform, don't just update because of new version, but actually check that the new model's capabilities are indeed better than the old model) or deleted (happens if simplification of the pipeline can occur due to improvements of a platform's capability such that it overtakes another platform in both categories). Don't consider each pipeline step as independent steps, but builds upon one another. e.g. Putting a model that is leading at pure text-to-image with no references in step 3 would not make sense because that spot would not utilize its leading capability. Don't consider lite/flash/mini versions of models even if they are higher in versioning, only consider the latest full version models.\n\nPut the conclusion of your research in \"Pipeline_Recommendations.md\". Do not append. Replace all existing text in \"Pipeline_Recommendations.md\". Create if it doesn't exist. Do not alter \"Current_Pipeline.md\".\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.\n",
+      "name": "Update Image Generation in the Pipeline",
+      "profile": "personal",
+      "run_once_at": "2026-08-01T12:52:00Z",
+      "trigger_id": "trig_01MAuburHDW3CkXbfhKj4mcs"
+    }
+  }
+}

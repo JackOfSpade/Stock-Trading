@@ -12,11 +12,45 @@ tests/test_generate_dashboard.py for the sibling copies). That contract is now p
 run_bq_query itself (tests/test_bq_json.py); this file only needs a thin delegation assertion pinning
 its own fixed args (C3 dedup, 2026-07-20 audit).
 """
+import re
 import threading
+from pathlib import Path
 
 from conftest import load_module_from_path
+from lib.sql_files import strip_sql_comments
 
 dp = load_module_from_path("dbt_parity", "scripts", "dbt_parity.py")
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def _normalized_halt_echo_mr_cte(sql):
+    """The 107 CTE has no dbt refs, so its executable text should mirror byte-for-byte."""
+    code = strip_sql_comments(sql)
+    match = re.search(r"halt_echo_mr\s+AS\s*\((.*?)\n\),\s*\nal\s+AS", code, re.DOTALL)
+    assert match, "halt_echo_mr CTE missing"
+    return " ".join(match.group(1).split())
+
+
+def test_trading_gate_dbt_ports_mirror_final_107_halt_echo_missed_run_logic():
+    canonical = (ROOT / "bigquery" / "107_halt_echo_missed_run_gate.sql").read_text()
+    canonical_ctes = re.findall(
+        r"halt_echo_mr\s+AS\s*\((.*?)\n\),\s*\nal\s+AS",
+        strip_sql_comments(canonical),
+        re.DOTALL,
+    )
+    assert len(canonical_ctes) == 3  # trading_enabled, mechanical, and the B3 self-check
+
+    models = [
+        ROOT / "dbt" / "models" / "state" / "trading_enabled.sql",
+        ROOT / "dbt" / "models" / "state" / "trading_enabled_mechanical.sql",
+    ]
+    for model, canonical_cte in zip(models, canonical_ctes[:2]):
+        sql = model.read_text()
+        code = strip_sql_comments(sql)
+        assert _normalized_halt_echo_mr_cte(sql) == " ".join(canonical_cte.split())
+        assert "AND alert_id NOT IN (SELECT alert_id FROM halt_echo_mr)" in code
+        assert "halt-echo dependency+missed_run gate echoes" in code
+        assert "bigquery/107_halt_echo_missed_run_gate.sql" in sql
 
 
 # ---- bq(): thin delegation to lib/bq_json.run_bq_query -- pins THIS caller's fixed max_rows=100000 -

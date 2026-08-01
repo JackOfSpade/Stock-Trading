@@ -523,7 +523,7 @@ The queue archives (`Archived_Analysis` / `Archived_Adversarial_Reviews`) are re
 
 ## OPS1. Morning Connector Liveness Probe — regular routine
 
-Runs pre-market (07:00 MT), ~9 hours ahead of the 16:10-17:15 MT daily cadence (owner-approved
+Runs pre-market (06:30 MT), ~9.5 hours ahead of the 16:10-17:15 MT daily cadence (owner-approved
 2026-07-19, after an IBKR OAuth expiry was discovered only at D2a's 16:20 MT pre-flight and cascaded
 into a halted evening). Detection-only: probes the connectors this system depends on with one read-only
 call each and surfaces a re-auth need in the morning alert email instead of mid-cascade. This routine

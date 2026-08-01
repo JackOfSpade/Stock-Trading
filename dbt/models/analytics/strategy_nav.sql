@@ -19,13 +19,14 @@
 -- a later termination can never revise.
 --
 -- rev 2026-07-15 (self-improvement audit, CONFIRMED GAP probe-stake-floor-prose-only; mirrors the
--- bigquery/22_cash_flows.sql fix exactly): swapped `adopted_date` -> `DATE(immutable_since)` (the
--- FIRST PROBE-or-ADOPTED transition) -- a PROBE-phase newcomer previously had NO row here at all (zero
--- sizing_base_2pct), a structural deadlock since PROBE needs sizing to trade toward its own 30-trade
--- gate into ADOPTED. Verified byte-identical for the founding batch (immutable_since == adopted_date
--- when seeded straight into ADOPTED). See bigquery/22_cash_flows.sql's header for the full rationale.
+-- bigquery/22_cash_flows.sql fix exactly): swapped `adopted_date` -> `DATE(immutable_since,
+-- 'America/Denver')` (the FIRST PROBE-or-ADOPTED transition) -- a PROBE-phase newcomer previously had
+-- NO row here at all (zero sizing_base_2pct), a structural deadlock since PROBE needs sizing to trade
+-- toward its own 30-trade gate into ADOPTED. Verified byte-identical for the founding batch
+-- (immutable_since == adopted_date when seeded straight into ADOPTED). See bigquery/22_cash_flows.sql's
+-- header for the full rationale.
 WITH active AS (
-  SELECT strategy_code AS s, DATE(immutable_since) AS capital_eligible_date, retired_date
+  SELECT strategy_code AS s, DATE(immutable_since, 'America/Denver') AS capital_eligible_date, retired_date
   FROM {{ source('state_external', 'strategy_roster') }}
   WHERE immutable_since IS NOT NULL
 ),

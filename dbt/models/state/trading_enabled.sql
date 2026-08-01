@@ -1,17 +1,18 @@
 -- Parallel-run dbt port of state.trading_enabled. CANONICAL SOURCE is
--- bigquery/97_halt_echo_dependency_gate.sql (which SUPERSEDES 78, which superseded 47, 34
+-- bigquery/107_halt_echo_missed_run_gate.sql (which SUPERSEDES 97, 78, 47, 34
 -- and 23) until owner cutover. Originally added
 -- 2026-07-04 (audit finding, HIGH severity) as a port of 23_trading_control.sql; updated 2026-07-14
 -- to 47, then to 78's two changes (drawdown AND-term is breach_hard, not the -15% soft tier;
 -- blocking_criticals excludes category IN ('trading_halted','staleness')), then 2026-07-19 to 97's
--- halt-echo missing_dependency exclusion (halt_echo_md below). The machine-readable gate:
+-- halt-echo missing_dependency exclusion (halt_echo_md below), and 2026-07-26 to 107's halt-echo
+-- missed_run exclusion (halt_echo_mr below). The machine-readable gate:
 -- sp_assert_trading_enabled reads this before every order-staging step.
 --
 -- DRIFT FIX 2026-07-18: this port carried 78's LOGIC but had kept 47's older snapshot_stale halt_reason
 -- WORDING. Both sides currently return halt_reason = NULL (snapshot_stale is FALSE), so row-level parity
 -- passed — but the moment that branch fired, dbt_parity.py would have reported real drift and failed CI
 -- on a purely cosmetic string. The message below is byte-identical to the canonical file's.
--- Keep all SEVEN halt_reason strings in lockstep with 97 when either side changes.
+-- Keep all SEVEN halt_reason strings in lockstep with 107 when either side changes.
 WITH ctrl AS (
   SELECT ARRAY_AGG(STRUCT(halt_all, reason, mode) ORDER BY control_ts DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest
   FROM {{ source('ops', 'trading_control') }}
@@ -42,10 +43,38 @@ halt_echo_md AS (
   GROUP BY a.alert_id
   HAVING LOGICAL_AND(th.alert_id IS NOT NULL)
 ),
+halt_echo_mr AS (
+  -- 'missed_run' critical alerts that are pure fallout of an already-known trading-gate halt.
+  -- (A) reuses Rule 2's completion test; (B) correlates the latest halted attempt to a
+  -- trading_halted alert within the load-bearing 24-hour bound from bigquery/107.
+  SELECT a.alert_id
+  FROM `stock-trading-498512.ops.alerts` a,
+       UNNEST(JSON_QUERY_ARRAY(a.payload)) AS item
+  LEFT JOIN `stock-trading-498512.ops.run_log` r
+    ON r.routine = JSON_VALUE(item, '$.routine') AND r.status = 'completed'
+       AND r.run_date >= SAFE.PARSE_DATE('%Y-%m-%d', JSON_VALUE(item, '$.today'))
+  LEFT JOIN (
+    SELECT routine, MAX(log_ts) AS last_halt_ts
+    FROM `stock-trading-498512.ops.run_log`
+    WHERE status = 'halted'
+    GROUP BY routine
+  ) hr ON hr.routine = JSON_VALUE(item, '$.routine')
+  LEFT JOIN `stock-trading-498512.ops.alerts` th
+    ON th.category = 'trading_halted'
+       AND hr.last_halt_ts IS NOT NULL
+       AND ABS(TIMESTAMP_DIFF(th.alert_ts, hr.last_halt_ts, HOUR)) <= 24
+  WHERE a.alert_id IS NOT NULL
+    AND NOT a.resolved
+    AND a.severity = 'critical'
+    AND a.category = 'missed_run'
+  GROUP BY a.alert_id
+  HAVING LOGICAL_AND(r.routine IS NOT NULL OR th.alert_id IS NOT NULL)
+),
 al AS (
   SELECT COUNTIF(NOT resolved AND severity = 'critical'
     AND category NOT IN ('trading_halted', 'staleness')
-    AND alert_id NOT IN (SELECT alert_id FROM halt_echo_md)) AS blocking_criticals
+    AND alert_id NOT IN (SELECT alert_id FROM halt_echo_md)
+    AND alert_id NOT IN (SELECT alert_id FROM halt_echo_mr)) AS blocking_criticals
   FROM `stock-trading-498512.ops.alerts`
 ),
 pr AS (SELECT COALESCE(LOGICAL_OR(drifted), FALSE) AS drift FROM `stock-trading-498512.state.position_reconciliation`),
@@ -67,7 +96,7 @@ SELECT
     WHEN NOT COALESCE(eh.is_healthy, FALSE) THEN
       'state.embedding_health.is_healthy = FALSE'
     WHEN al.blocking_criticals != 0 THEN
-      FORMAT('%d open critical alert(s) (excluding trading_halted/staleness/halt-echo-dependency gate echoes) — see ops.alerts', al.blocking_criticals)
+      FORMAT('%d open critical alert(s) (excluding trading_halted/staleness/halt-echo dependency+missed_run gate echoes) — see ops.alerts', al.blocking_criticals)
     WHEN pr.drift THEN
       'state.position_reconciliation drift detected'
     WHEN COALESCE(dd.breach_hard, FALSE) THEN

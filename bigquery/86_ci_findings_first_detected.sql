@@ -59,7 +59,7 @@ SELECT
   o.finding_ts,
   o.detail,
   o.run_url,
-  DATE(e.first_open_ts) AS first_detected
+  DATE(e.first_open_ts, 'America/Denver') AS first_detected
 FROM open_now o
 JOIN episode_start e
   ON e.workflow = o.workflow AND e.finding_key = o.finding_key;

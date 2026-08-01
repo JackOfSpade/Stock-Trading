@@ -14,6 +14,7 @@ import sys
 import pytest
 
 from conftest import load_module_from_path
+from lib.sql_files import strip_sql_comments
 
 clsp = load_module_from_path("check_live_sql_parity", "scripts", "check_live_sql_parity.py")
 
@@ -359,6 +360,40 @@ def test_ci_findings_open_real_body_has_no_bled_merge():
     assert src == "86_ci_findings_first_detected.sql"
     assert "MERGE" not in body
     assert body.strip().endswith("ON e.workflow = o.workflow AND e.finding_key = o.finding_key")
+
+
+def test_final_operating_date_boundaries_are_pinned_to_denver():
+    """Final live SQL must never compare an operating date with UTC-truncated timestamps."""
+    final = clsp.find_final_definitions()
+    cases = [
+        (("analytics", "strategy_nav"), "22_cash_flows.sql",
+         "DATE(immutable_since, 'America/Denver')", "DATE(immutable_since)"),
+        (("state", "param_oos_degradation"), "37_self_improvement_autonomy.sql",
+         "DATE(lc.change_ts, 'America/Denver')", "DATE(lc.change_ts)"),
+        (("state", "catchup_refire_failures"), "59_catchup_autofire.sql",
+         "DATE(attempted_ts, 'America/Denver')", "DATE(attempted_ts)"),
+        (("state", "strategy_probe_progress"), "73_probe_progress_watch.sql",
+         "DATE(p.immutable_since, 'America/Denver')", "DATE(p.immutable_since)"),
+        (("state", "strategy_retirement_candidacy"), "81_arsenal_fixes.sql",
+         "CURRENT_DATE('America/Denver')", "CURRENT_DATE()"),
+        (("state", "ci_findings_open"), "86_ci_findings_first_detected.sql",
+         "DATE(e.first_open_ts, 'America/Denver')", "DATE(e.first_open_ts)"),
+    ]
+    for key, expected_source, safe_form, unsafe_form in cases:
+        _object_type, _path, source, body = final[key]
+        code = strip_sql_comments(body)
+        assert source == expected_source
+        assert safe_form in code
+        assert unsafe_form not in code
+
+
+def test_strategy_nav_dbt_mirror_pins_capital_eligibility_to_denver():
+    path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "dbt", "models", "analytics",
+                        "strategy_nav.sql")
+    with open(path, encoding="utf-8") as f:
+        code = strip_sql_comments(f.read())
+    assert "DATE(immutable_since, 'America/Denver')" in code
+    assert "DATE(immutable_since)" not in code
 
 
 # ---- extract_body: TABLE FUNCTION branch (single AS ( ... ) wrapper) ------------------------------

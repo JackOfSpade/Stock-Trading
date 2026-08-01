@@ -174,4 +174,4 @@ CREATE OR REPLACE VIEW `stock-trading-498512.state.catchup_refire_failures` AS
 SELECT miss_key, routine, tier, attempted_ts, note
 FROM `stock-trading-498512.ops.catchup_refire_log`
 WHERE outcome = 'no_trigger_id'
-  AND DATE(attempted_ts) = CURRENT_DATE('America/Denver');
+  AND DATE(attempted_ts, 'America/Denver') = CURRENT_DATE('America/Denver');
