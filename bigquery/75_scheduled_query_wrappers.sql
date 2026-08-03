@@ -113,11 +113,12 @@ END;
 -- dead-man (H2), the scheduled_query_stale beat-age dead-man (H5), and the unconditional
 -- b3_trading_enabled_drift monitor-health-history MERGE (M2)).
 --
--- SUPERSEDED LIVE by bigquery/120_ci_finding_payload_detail.sql (2026-07-30) — current single
+-- SUPERSEDED LIVE by bigquery/128_b3_drift_promotion.sql (2026-08-03) — current single
 -- source of truth for THIS PROCEDURE ONLY (every other sp_sq_* wrapper in this file is still canonical
--- here). 120 is the current superseding definition; it retains 111's v9 auto-age fixes and additionally
--- bumps the heartbeat marker to 'v10' and includes `detail` in the ci_finding alert payload. Kept here,
--- unmodified, for
+-- here). The chain is 75 -> 111 -> 120 -> 128: 111 added the v9 auto-age fixes, 120 bumped the heartbeat
+-- marker to 'v10' and included `detail` in the ci_finding alert payload, and 128 (D3 MONITOR-PROMOTION
+-- SELF-FLIP) bumps it to 'v11' and promotes b3_trading_enabled_drift WARNING->CRITICAL + raise_msg.
+-- Kept here, unmodified, for
 -- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation —
 -- doing so silently reverts that auto-age fix and every future wrapper version bump again leaves a
 -- permanently-open alert row that only a manual UPDATE ops.alerts can clear.

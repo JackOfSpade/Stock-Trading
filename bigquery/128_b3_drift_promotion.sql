@@ -1,74 +1,60 @@
--- cadence_check #14 auto-age: add scheduled_query_version_drift (2026-07-27, follow-up to the
--- INCIDENT[ref=423ecc02-fdb7-4f47-9445-d8c79d399e8c] response; owner-approved this session).
--- Project: stock-trading-498512. Apply AFTER 110_pending_order_aware_reconciliation.sql.
--- This file is the NEW single source of truth for `ops.sp_sq_cadence_check`; it SUPERSEDES the
--- definition of THAT ONE PROCEDURE in bigquery/75_scheduled_query_wrappers.sql:116-697 (75 defines
--- 12 other sp_sq_* wrapper procedures, all still canonical there -- this file touches none of them).
--- Any future change to this procedure must land as a NEW numbered file superseding THIS one; never
--- re-apply bigquery/75's CREATE OR REPLACE for this procedure in isolation.
+-- b3_trading_enabled_drift monitor promotion: WARNING -> CRITICAL (2026-08-03, D3 MONITOR-PROMOTION
+-- SELF-FLIP; Claude_Task_Plan.md "D3. Calendar Hygiene" + bigquery/79_b3_promotion.sql).
+-- Project: stock-trading-498512. Apply AFTER 120_ci_finding_payload_detail.sql.
+-- This file is the NEW single source of truth for `ops.sp_sq_cadence_check`; it SUPERSEDES
+-- bigquery/120_ci_finding_payload_detail.sql. Do not re-apply an earlier definition of this
+-- procedure in isolation. Any future change must land as a NEW numbered file superseding THIS one
+-- (the standing rule from bigquery/111's header).
 --
 -- ============================ WHY ============================
--- `state.scheduled_query_version_drift` (bigquery/63) compares each scheduled query's EXPECTED version
--- (the repo registry) against the version that query itself last reported into `ops.heartbeat`. That
--- reported value is a record of the LAST TIME THAT QUERY RAN -- not of what logic is currently live.
--- Under ARCH-1 (bigquery/75's header) every console body is a frozen one-line `CALL ops.sp_sq_*()`
--- wrapper, and `CREATE OR REPLACE PROCEDURE` is atomic, so the moment a wrapper is re-applied the new
--- logic IS live. What lags is only the marker, until that query's own next scheduled run.
---
--- `cadence_check` evaluates at ~05:15 UTC, AHEAD of most of the queries it audits (e.g.
--- `daily_staging_cap_check` at ~05:25). So a wrapper bumped mid-day leaves a guaranteed ~8-10 minute
--- window -- or a full day, if the bump lands after that query's slot -- in which this proc reads the
--- PREVIOUS version and raises `scheduled_query_version_drift`. It heals on its own within one cycle.
---
--- That category was the one self-healing warning class missing from the #14 auto-age list, so each
--- occurrence left a permanently-open alert row: the category is absent from `ops.alert_policy`'s
--- auto-resolve allowlist too, meaning the ONLY way to clear it was a human/session `UPDATE ops.alerts`.
--- Twice observed: `embed_pending` 2026-07-17/18, and `daily_staging_cap_check` v3->v4 on 2026-07-27
--- (alert 0c2b631a, closed manually during this incident response). Every future wrapper version bump
--- would have produced another. This adds it to the same 7-day age-out that already covers
--- `scheduled_query_stale` -- its closest structural sibling, a beat-age dead-man on the very same view.
---
--- ============================ WHY THIS IS SAFE ============================
--- The #14 block can only clear a row whose condition has ALREADY healed, because a still-true condition
--- is unconditionally re-raised by the checks further down THIS SAME procedure -- for this category, the
--- `scheduled_query_version_drift` block (guarded by `IF EXISTS (... WHERE drift)`), which runs after the
--- UPDATE and uses `sp_raise_alert_once`. So a genuinely unapplied wrapper re-raises every night and can
--- never be silently aged away; only the transient bootstrapping artifact ages out, and only after 7 days.
--- The block is also scoped `severity = 'warning'` and explicitly excludes the persistent-DRIFT classes
--- (position_drift / ddl_drift / append_only_violation / restore_fidelity); `scheduled_query_version_drift`
--- is raised as a WARNING (bigquery/75 ~line 485) and is NOT one of those classes. `state.system_health`'s
--- `all_green` keys only on open CRITICAL alerts, so nothing here touches the trading-enable gate.
+-- `state.b3_promotion_readiness` (bigquery/79_b3_promotion.sql) flipped `ready = TRUE`: measured live
+-- 2026-08-03 as n_recent=14, n_recent_clean=14, baseline_met=TRUE, not_already_promoted=TRUE. That is
+-- the same 14-consecutive-clean-DISTINCT-day bar ITEM 24/31 already used to promote `restore_stale`
+-- (2026-07-12) and `ddl_drift` (2026-07-26), so this promotion follows an established, twice-proved
+-- path rather than inventing one. `ops.monitor_promotion_log` gets the matching idempotency row for
+-- check_id='b3_trading_enabled_drift' in the same session, so the flip can never re-fire.
 --
 -- ============================ WHAT CHANGED ============================
--- Byte-for-byte identical to bigquery/75_scheduled_query_wrappers.sql:116-697 EXCEPT:
---   1. the heartbeat version marker 'v8' -> 'v9' (bigquery/63's registry entry updated to match);
---   2. 'scheduled_query_version_drift' appended to the #14 auto-age `category IN (...)` list;
---   3. an explanatory comment above that list;
---   4. 'stranded_session' removed from that same #14 auto-age `category IN (...)` list (2026-07-29),
---      because the detector that raised it was retired alongside Operating_Protocols.md section 17.
---      CORRECTED 2026-07-30 (this file's earlier wording claimed the category "was never once raised
---      anywhere in this repo's git history" -- that is FALSE; see the inline comment at the list itself
---      for the verified history). Nothing in the tree can raise it as of 2026-07-30, which is what makes
---      the entry dead GOING FORWARD -- not that it never fired.
--- No check logic, no threshold, no severity, and no dead-man's-switch window is otherwise altered.
+-- Byte-for-byte identical to the CREATE statement in bigquery/120_ci_finding_payload_detail.sql
+-- EXCEPT:
+--   1. the heartbeat version marker 'v10' -> 'v11' (bigquery/63's registry entry is updated to match);
+--   2. the `b3_trading_enabled_drift` IF block flips its `sp_raise_alert_once` severity literal
+--      'warning' -> 'critical' AND now appends to the consolidated `raise_msg` accumulator, so the
+--      condition contributes to this procedure's single bottom `RAISE` like every other CRITICAL-tier
+--      check. Copied VERBATIM from bigquery/79_b3_promotion.sql's header spec (the "copy-the-body-from-
+--      the-header, do not freewrite" discipline), NOT hand-written.
+-- No other check logic, threshold, severity, or alert routing is altered. No standalone RAISE is added
+-- (bigquery/79's header is explicit: the accumulator plus the file's single bottom RAISE handle delivery
+-- -- that is what distinguishes this from the `append_only_integrity` promotion, which lives in
+-- ops.sp_sq_integrity_check and has no accumulator to join).
 --
--- NOTE ON APPLYING THIS: bumping the marker to v9 means this proc reports v9 only from its next run.
--- Between applying this file and that run, `state.scheduled_query_version_drift` will show cadence_check
--- expected=v9 / reported=v8 and this proc will raise one `scheduled_query_version_drift` warning -- the
--- exact artifact this change exists to stop needing a manual close. It self-clears on the next nightly
--- run, and thereafter ages out automatically. Expected; not a failed apply.
+-- ============================ EDIT-TARGET NOTE (doc discrepancy) ============================
+-- Claude_Task_Plan.md's D3 MONITOR-PROMOTION SELF-FLIP bullet for `b3_trading_enabled` carries a
+-- parenthetical saying the promotion target is "NOT `sp_sq_cadence_check`/`sp_sq_integrity_check`".
+-- That parenthetical is incorrect and was NOT followed here, because the same sentence designates the
+-- source-file header comment as authoritative for the body ("copy-the-body-from-the-header"), and two
+-- independent in-repo sources agree the target IS this procedure:
+--   * bigquery/79_b3_promotion.sql's header, "WHERE THE PROMOTION TARGET LIVES": "b3_trading_enabled_
+--     drift lives INSIDE ops.sp_sq_cadence_check, which already has the consolidated `raise_msg` ...
+--     So it promotes exactly like ddl_drift/restore_stale".
+--   * bigquery/120's own inline comment above the b3 block: "Because b3_trading_enabled_drift lives in
+--     THIS file (which HAS the raise_msg accumulator, unlike append_only_integrity), D3's MONITOR-
+--     PROMOTION SELF-FLIP promotes it by flipping the 'warning' literal below to 'critical' AND
+--     appending to raise_msg".
+-- The plan's prose should be corrected to match; flagged in this run's decision-log entry.
+--
+-- ============================ DOWNSTREAM EFFECT (deliberate) ============================
+-- Per bigquery/79's header: once promoted, severity='critical' + category='b3_trading_enabled_drift'
+-- (NOT IN ('trading_halted','staleness')) automatically folds into `state.trading_enabled`'s
+-- blocking_criticals (bigquery/78), so a REAL future formula clobber auto-halts new order-staging.
+-- This is the intended end state of the staged rollout, not a side effect. It is also why the 14-day
+-- clean bar exists: as measured above, the check has zero drift rows today and has been clean for 14
+-- consecutive logged days, so promoting it does not halt anything now.
 
--- =====================================================================================================
--- SUPERSEDED LIVE by bigquery/128_b3_drift_promotion.sql (2026-08-03) — current single source of
--- truth for THIS PROCEDURE ONLY. Do not re-apply this CREATE statement live in isolation; it omits the
--- ci_finding payload detail field (added by 120), still carries b3_trading_enabled_drift at the
--- pre-promotion 'warning' tier with no raise_msg join (promoted by 128), and reports the superseded v9
--- heartbeat marker.
--- =====================================================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v9', 'cadence_check.sql ran');
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v11', 'cadence_check.sql ran');
 
   -- RUNBOOK section 38 self-heal (ITEM 3, bigquery/38_run_log_selfheal.sql): backfill any
   -- ops.run_log completion row whose routine already has a landed-commit marker in
@@ -406,12 +392,14 @@ BEGIN
 
   IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.b3_trading_enabled_check` WHERE drift) THEN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
-      'warning', 'scheduled.cadence', 'b3_trading_enabled_drift',
+      'critical', 'scheduled.cadence', 'b3_trading_enabled_drift',
       (SELECT CONCAT('state.trading_enabled formula drift: live=', CAST(live_value AS STRING),
                      ' but independently-recomputed expected=', CAST(expected_value AS STRING),
                      ' -- a gate AND-term may have been silently clobbered (see bigquery/47_trading_enabled_resync.sql)')
        FROM `stock-trading-498512.state.b3_trading_enabled_check`),
       (SELECT TO_JSON_STRING(t) FROM `stock-trading-498512.state.b3_trading_enabled_check` t));
+    SET raise_msg = raise_msg || (SELECT CONCAT('[b3_trading_enabled_drift] live=', CAST(live_value AS STRING),
+      ' expected=', CAST(expected_value AS STRING), '; ') FROM `stock-trading-498512.state.b3_trading_enabled_check`);
   END IF;
 
   -- backup_per_table_row_drop (warning, self-improvement audit 2026-07-15 -- CONFIRMED GAP
@@ -542,7 +530,7 @@ BEGIN
       CONCAT('Open CI guard finding(s): ',
              (SELECT STRING_AGG(CONCAT(workflow, '/', finding_key), ', ' ORDER BY workflow)
               FROM `stock-trading-498512.state.ci_findings_open`)),
-      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(workflow, finding_key, CAST(finding_ts AS STRING) AS finding_ts, run_url)))
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(workflow, finding_key, CAST(finding_ts AS STRING) AS finding_ts, detail, run_url)))
        FROM `stock-trading-498512.state.ci_findings_open`));
   END IF;
 

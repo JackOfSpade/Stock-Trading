@@ -1,8 +1,12 @@
 -- ci_finding alert payload: include finding detail (2026-07-30).
 -- Project: stock-trading-498512. Apply AFTER 111_cadence_check_version_drift_autoage.sql.
--- This file is the NEW single source of truth for `ops.sp_sq_cadence_check`; it SUPERSEDES
--- bigquery/111_cadence_check_version_drift_autoage.sql. Do not re-apply an earlier definition of this
--- procedure in isolation.
+-- SUPERSEDED LIVE by bigquery/128_b3_drift_promotion.sql (2026-08-03) — current single source of truth
+-- for THIS PROCEDURE. When written, this file superseded
+-- bigquery/111_cadence_check_version_drift_autoage.sql; 128 has since superseded it in turn (D3
+-- MONITOR-PROMOTION SELF-FLIP: heartbeat 'v10' -> 'v11' and b3_trading_enabled_drift promoted
+-- WARNING->CRITICAL + joined to raise_msg). Kept here, unmodified, for DR-rebuild apply-in-order
+-- reference only. Do not re-apply this CREATE statement live in isolation — doing so would silently
+-- demote b3_trading_enabled_drift back to a non-blocking warning.
 --
 -- ============================ WHAT CHANGED ============================
 -- Byte-for-byte identical to the CREATE statement in bigquery/111_cadence_check_version_drift_autoage.sql
