@@ -456,7 +456,7 @@ Because each routine run is a fresh session, deep-research routines must persist
 Cadence-output files (Daily.md, Weekly_Catalyst_Calendar.md, etc.) are overwritten in full each run. The first line is ALWAYS the bare marker, literally first — before any `#` title or blockquote (a 2026-06/07 Q1 run put a title on line 1 and the marker on line 3; corrected — see Quarterly_Regime.md):
 
 - Daily files: `YYYY-MM-DD` (today's calendar date).
-- Weekly files: `YYYY-WW` — the ISO week of TODAY's run date (`state.trading_day_today.today`), the SAME week every weekly file stamps this cycle. Never the upcoming trading-Monday's week or any other look-ahead convention (a 2026-06-28 W1 run once did this and mismatched its own W2/W3 siblings — corrected, see the W1 prompt body's explicit guard).
+- Weekly files: `YYYY-Www` (e.g. `2026-W30` — the literal `W` is part of the marker, as every live weekly file and every consumer writes it; this line formerly read `YYYY-WW`, which was the same convention written loosely and is now pinned by `scripts/check_cadence_marker.py`) — the ISO week of TODAY's run date (`state.trading_day_today.today`), the SAME week every weekly file stamps this cycle. Never the upcoming trading-Monday's week or any other look-ahead convention (a 2026-06-28 W1 run once did this and mismatched its own W2/W3 siblings — corrected, see the W1 prompt body's explicit guard).
 - Monthly/Quarterly files: **per-routine, not a single rule** — the exact semantics differ by whether the routine is retrospective (looks backward) or forward-looking (stages what's ahead), so check the table below rather than assume:
 
   | Routine | File | Marker = |
