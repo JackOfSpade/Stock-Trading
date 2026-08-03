@@ -177,8 +177,15 @@ FROM `stock-trading-498512.state.open_queue_detail`;
 -- because §13's free_cash keyed off live get_order_instructions (empty) and the persist-and-wait
 -- re-craft sweep had no durable list to iterate. This view is that durable list.
 --   * One ORDER_STAGED row per intended order, written when a GO/exit is staged; item_key is stable
---     across the daily DAY re-crafts (only payload.instruction_id changes). Statuses: pending (live),
---     filled / expired / abandoned (terminal — and only a logged terminal decision may set them).
+--     across the daily DAY re-crafts (only payload.instruction_id changes). Statuses: pending (no
+--     logged terminal decision yet), filled / expired / abandoned (terminal — and only a logged
+--     terminal decision may set them).
+--   * WARNING (2026-08-03): 'pending' is a RECONCILIATION state, NOT a broker state. It does NOT mean
+--     the order is working at the broker, and it does NOT mean the order did not fill — a row that
+--     filled at this morning's open stays 'pending' until D2a Step 0 reconciles it, so the entire
+--     overnight block sees 'pending' on already-filled orders. Never infer fill state from this
+--     column; read get_account_trades / get_account_orders / get_account_positions instead. (An
+--     earlier revision of this comment read 'pending (live)', which invited exactly that misreading.)
 --   * due_date carries the entry-window-close (entries) / exit deadline; D2 detects window expiry off it.
 --   * reserved_cash = cash a still-pending BUY consumes if it fills (resting SELL reserves nothing);
 --     §13.E free_cash subtracts SUM(reserved_cash) so a sweep can never de-fund a staged entry.

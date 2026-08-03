@@ -195,7 +195,14 @@ def relay_orders():
     # read, so it cannot tell those two apart; the wording must not imply it can). Only a genuinely
     # non-craftable/manual-entry row (instruction_id NULL) actually has a `[Claude] Confirm order`
     # event to tap.
-    lines = [f"☑ Stock-Trading — {len(rows)} staged order(s) still pending (not yet filled):"]
+    # Wording note (2026-08-03): this MUST NOT assert "not yet filled". `status='pending'` is a
+    # reconciliation state — a row that filled at this morning's open stays `pending` until D2a
+    # Step 0 runs that evening — and this relay fires ~07:05 MT, i.e. inside the window where a
+    # just-filled order is most likely to still read `pending`. The old wording ("still pending
+    # (not yet filled)") asserted a broker fact this job cannot observe, contradicting the comment
+    # directly above it. Say only what the registry actually knows: unreconciled.
+    lines = [f"☑ Stock-Trading — {len(rows)} staged order(s) not yet reconciled "
+             "(registry status 'pending'; may already have filled — IBKR is authoritative):"]
     for r in rows:
         note = ("tap the [Claude] Confirm order event"
                 if not r["instruction_id"] else
