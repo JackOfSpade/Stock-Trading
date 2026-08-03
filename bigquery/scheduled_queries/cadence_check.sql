@@ -15,7 +15,12 @@
 -- failed is the alert emailer itself. instruction_drift is a config bug to FIX, not a halt, so it records
 -- a warning but does NOT contribute to the RAISE (matching the prior behaviour).
 --
--- TIMING: BigQuery schedules are UTC. Run ~05:15 UTC (≈ 22:45 MDT / 21:45 MST) — same Denver evening,
+-- TIMING: BigQuery schedules are UTC. Run ~05:15 UTC (= 23:15 MDT / 22:15 MST) — same Denver evening,
+-- (CORRECTED 2026-08-03, W5: this line previously read "≈ 22:45 MDT / 21:45 MST", which is 30 min early in
+-- both seasons — 05:15 UTC is UTC-6 => 23:15 MDT and UTC-7 => 22:15 MST. The error mattered: the WINTER
+-- 22:15 MST run is the hard ceiling on ops/cadence.yaml's cadence_watch_deadline_local, because
+-- state.cadence_watch.needs_attention only alarms once Denver time passes that deadline. A reader trusting
+-- the old "21:45 MST" figure would have mis-sized that ceiling by half an hour in the tightening direction.)
 -- after D2/D3, like the freshness check. APPLY ORDER: bigquery/16_automation_health.sql must be applied
 -- BEFORE re-pasting this query (it references state.backup_health + state.automation_heartbeat). See
 -- ops/RUNBOOK.md "Scheduled queries". Also apply bigquery/34_alert_lifecycle.sql before re-pasting

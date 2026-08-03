@@ -53,6 +53,14 @@
 -- with no logic of its own to change -- the fix propagates through automatically, no edit needed there.
 
 -- ===== state.cadence_watch (supersedes 48_cadence_monitor_unbounded.sql's view; daily tier) =====
+-- SUPERSEDED LIVE by bigquery/129_cadence_watch_deadline_autotune.sql — current single source of truth
+-- for this VIEW. 129 changes ONLY the deadline literal (TIME '21:00:00' -> TIME '21:45:00'), autotuned by
+-- W5 2026-08-03 under the process_reliability self-improvement loop; this file's own fix (dropping the
+-- `monitored` precondition from `needs_attention`) is carried forward unchanged in 129. The
+-- state.cadence_period_watch view further down THIS file is NOT superseded by 129 and remains canonical
+-- here — its TIME '21:00:00' literals are the period-grace deadlines, a DIFFERENT constant that 129 does
+-- not touch. Kept here for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE VIEW
+-- statement live in isolation — doing so silently reverts 129's deadline back to 21:00.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.cadence_watch` AS
 WITH watch AS (
   SELECT
