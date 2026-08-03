@@ -230,7 +230,10 @@ def _wire_fixture(tmp_path, monkeypatch, *, plan_headings=True, extra_routine=""
     # here too: build_targets() returns it unconditionally, so leaving it unpatched would point a
     # tmp-path test at the REAL repo file and let a --write test mutate the working tree.
     f114 = tmp_path / "114.sql"
-    for f in (f12, f15, f24, f105, f114):
+    # 132 (state.queue_driven_silence_watch, 2026-08-03) is the 6th target. Same lockstep rule as 114
+    # above: unpatched, a --write test would mutate the REAL bigquery/132 in the working tree.
+    f132 = tmp_path / "132.sql"
+    for f in (f12, f15, f24, f105, f114, f132):
         f.write_text(_sql_with_region("\nSTALE\n  "))
     monkeypatch.setattr(gr, "PLAN", str(plan))
     monkeypatch.setattr(gr, "CADENCE", str(cadence))
@@ -239,11 +242,12 @@ def _wire_fixture(tmp_path, monkeypatch, *, plan_headings=True, extra_routine=""
     monkeypatch.setattr(gr, "PERIOD_WATCH_SQL", str(f24))
     monkeypatch.setattr(gr, "ROUTINE_CATCHUP_SQL", str(f105))
     monkeypatch.setattr(gr, "DEP_GATE_SQL", str(f114))
-    return f12, f15, f24, f105, f114
+    monkeypatch.setattr(gr, "QUEUE_SILENCE_SQL", str(f132))
+    return f12, f15, f24, f105, f114, f132
 
 
 def test_main_write_then_check_is_a_clean_round_trip(tmp_path, monkeypatch, capsys):
-    f12, f15, f24, f105, f114 = _wire_fixture(tmp_path, monkeypatch)
+    f12, f15, f24, f105, f114, _f132 = _wire_fixture(tmp_path, monkeypatch)
 
     monkeypatch.setattr(sys, "argv", ["gen_routine_lists.py", "--write"])
     assert gr.main() == 0
@@ -278,7 +282,7 @@ def test_main_check_returns_1_and_reports_stale_region(tmp_path, monkeypatch, ca
 def test_main_check_returns_1_when_a_target_lacks_markers(tmp_path, monkeypatch, capsys):
     # --check on a file with no markers must report the marker problem (current_region()==None path)
     # and fail, NOT silently pass — a stripped/renamed marker would otherwise hide real staleness.
-    f12, _f15, _f24, _f105, _f114 = _wire_fixture(tmp_path, monkeypatch)
+    f12, _f15, _f24, _f105, _f114, _f132 = _wire_fixture(tmp_path, monkeypatch)
     f12.write_text("a file with no markers at all\n")
     monkeypatch.setattr(sys, "argv", ["gen_routine_lists.py", "--check"])
     assert gr.main() == 1
@@ -295,7 +299,7 @@ def test_main_write_check_round_trips_with_an_apostrophe_heading(tmp_path, monke
     # Apostrophe SUPPORT end to end: --write emits ESCAPED, valid SQL for a heading with an apostrophe,
     # and --check round-trips clean against it. (check B's paired '' -> ' un-escape lives in the
     # non-owned check_cadence_consistency.py — see partC-report.md for that half of the change.)
-    _f12, f15, _f24, _f105, _f114 = _wire_fixture(tmp_path, monkeypatch)
+    _f12, f15, _f24, _f105, _f114, _f132 = _wire_fixture(tmp_path, monkeypatch)
     plan = tmp_path / "Claude_Task_Plan.md"      # rewrite so D1's heading carries an apostrophe
     plan.write_text(
         "## D1. O'Brien Screen — deep research\nbody\n\n"
@@ -308,12 +312,24 @@ def test_main_write_check_round_trips_with_an_apostrophe_heading(tmp_path, monke
     assert gr.main() == 0                                                       # self-consistent round-trip
 
 
-def test_build_targets_returns_five_targets(tmp_path, monkeypatch):
+def test_build_targets_returns_six_targets(tmp_path, monkeypatch):
     _wire_fixture(tmp_path, monkeypatch)
     targets = gr.build_targets()
-    assert len(targets) == 5
+    assert len(targets) == 6
     assert [os.path.basename(p) for p, _ in targets] == [
-        "12.sql", "15.sql", "24.sql", "105.sql", "114.sql"]
+        "12.sql", "15.sql", "24.sql", "105.sql", "114.sql", "132.sql"]
+    # 12 and 132 must PARTITION the roster: every routine is either calendar-class (12) or
+    # queue_driven (132), never neither. A routine absent from both would be watched by nothing --
+    # exactly the SL2/SL5 hole bigquery/132 closes.
+    bodies = {os.path.basename(p): body for p, body in targets}
+
+    def _ids(body):
+        return {ln.split("'")[1] for ln in body.splitlines() if ln.strip().startswith("STRUCT(")}
+
+    all_ids = {r["id"] for r in gr.load_cadence_routines() if r.get("monitor_class") is not None}
+    calendar_ids, queue_ids = _ids(bodies["12.sql"]), _ids(bodies["132.sql"])
+    assert calendar_ids | queue_ids == all_ids, "a routine is in neither watch list"
+    assert not (calendar_ids & queue_ids), "a routine is in both watch lists"
     # 114 (ops.sp_assert_deps' period_class CTE, 2026-07-28) reuses gen_24_region, so its body must be
     # BYTE-IDENTICAL to 24's -- that identity is the guarantee the FATAL dependency gate and
     # state.cadence_period_watch can never disagree about which routines are period-cadence.

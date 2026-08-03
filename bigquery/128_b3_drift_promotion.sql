@@ -51,6 +51,9 @@
 -- clean bar exists: as measured above, the check has zero drift rows today and has been clean for 14
 -- consecutive logged days, so promoting it does not halt anything now.
 
+-- SUPERSEDED LIVE by bigquery/132_queue_driven_silence_watch.sql — current single source of truth
+-- for ops.sp_sq_cadence_check (132 adds the queue_driven_silent raise). Kept here, unmodified, for
+-- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';

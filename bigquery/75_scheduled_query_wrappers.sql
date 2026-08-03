@@ -123,6 +123,9 @@ END;
 -- doing so silently reverts that auto-age fix and every future wrapper version bump again leaves a
 -- permanently-open alert row that only a manual UPDATE ops.alerts can clear.
 -- =====================================================================================================
+-- SUPERSEDED LIVE by bigquery/132_queue_driven_silence_watch.sql — current single source of truth
+-- for ops.sp_sq_cadence_check. Kept here, unmodified, for DR-rebuild apply-in-order reference
+-- only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';

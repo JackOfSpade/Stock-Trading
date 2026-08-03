@@ -774,10 +774,12 @@ def _write_gen_fixture(tmp_path):
     sql105.write_text(marker_body)
     sql114 = tmp_path / "114.sql"
     sql114.write_text(marker_body)
-    return plan, cadence, sql12, sql15, sql24, sql105, sql114
+    sql132 = tmp_path / "132.sql"
+    sql132.write_text(marker_body)
+    return plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132
 
 
-def _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105, sql114):
+def _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132):
     # MUST patch every build_targets() entry, including ROUTINE_CATCHUP_SQL and DEP_GATE_SQL —
     # otherwise a test that calls gen.write_region() for all of build_targets() writes real content
     # straight into the actual repo's bigquery/105_routine_catchup_window.sql (or
@@ -788,6 +790,9 @@ def _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql10
     # lockstep. EVERY future generated target must be added here too. The failure is confusing when it
     # lands: the no-op test writes the CORRECT content back, so it fails while leaving the working tree
     # looking clean, which reads like a flaky test rather than the cross-test clobber it actually is.
+    # THIRD occurrence 2026-08-03, when QUEUE_SILENCE_SQL/gen_132_region were added. Same failure,
+    # same cause, same fix. If you are adding a 7th generated target: patch it HERE, in
+    # tests/test_gen_routine_lists.py::_wire_fixture, AND in that file's build_targets() count test.
     monkeypatch.setattr(gen, "PLAN", str(plan))
     monkeypatch.setattr(gen, "CADENCE", str(cadence))
     monkeypatch.setattr(gen, "CADENCE_MONITOR_SQL", str(sql12))
@@ -795,12 +800,13 @@ def _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql10
     monkeypatch.setattr(gen, "PERIOD_WATCH_SQL", str(sql24))
     monkeypatch.setattr(gen, "ROUTINE_CATCHUP_SQL", str(sql105))
     monkeypatch.setattr(gen, "DEP_GATE_SQL", str(sql114))
+    monkeypatch.setattr(gen, "QUEUE_SILENCE_SQL", str(sql132))
 
 
 def test_gen_routine_lists_write_then_check_is_clean(tmp_path, monkeypatch):
     gen = load_module_from_path("gen_routine_lists", "scripts", "gen_routine_lists.py")
-    plan, cadence, sql12, sql15, sql24, sql105, sql114 = _write_gen_fixture(tmp_path)
-    _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105, sql114)
+    plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132 = _write_gen_fixture(tmp_path)
+    _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132)
     # --write: populates the marker regions
     for path, body in gen.build_targets():
         gen.write_region(path, body)
@@ -814,8 +820,8 @@ def test_gen_routine_lists_write_then_check_is_clean(tmp_path, monkeypatch):
 
 def test_gen_routine_lists_check_is_dirty_after_row_deleted(tmp_path, monkeypatch):
     gen = load_module_from_path("gen_routine_lists", "scripts", "gen_routine_lists.py")
-    plan, cadence, sql12, sql15, sql24, sql105, sql114 = _write_gen_fixture(tmp_path)
-    _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105, sql114)
+    plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132 = _write_gen_fixture(tmp_path)
+    _patch_gen_paths(monkeypatch, gen, plan, cadence, sql12, sql15, sql24, sql105, sql114, sql132)
     for path, body in gen.build_targets():
         gen.write_region(path, body)
     # delete W1 from cadence.yaml (simulating drift) without re-running --write
@@ -835,7 +841,7 @@ def test_gen_routine_lists_check_is_dirty_after_row_deleted(tmp_path, monkeypatc
 
 
 def test_gen_routine_lists_against_real_repo_write_is_noop():
-    # The real, already-normalized bigquery/12/15/24/105 must be a byte-level no-op for --write, and
+    # The real, already-normalized bigquery/12/15/24/105/114/132 must be a byte-level no-op for --write, and
     # --check must pass clean (proves the generator reproduces today's routine-fleet state exactly).
     gen = load_module_from_path("gen_routine_lists", "scripts", "gen_routine_lists.py")
     changed = [path for path, body in gen.build_targets() if gen.write_region(path, body)]

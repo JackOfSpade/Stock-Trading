@@ -1,28 +1,92 @@
--- ci_finding alert payload: include finding detail (2026-07-30).
--- Project: stock-trading-498512. Apply AFTER 111_cadence_check_version_drift_autoage.sql.
--- SUPERSEDED LIVE by bigquery/128_b3_drift_promotion.sql (2026-08-03) — current single source of truth
--- for THIS PROCEDURE. When written, this file superseded
--- bigquery/111_cadence_check_version_drift_autoage.sql; 128 has since superseded it in turn (D3
--- MONITOR-PROMOTION SELF-FLIP: heartbeat 'v10' -> 'v11' and b3_trading_enabled_drift promoted
--- WARNING->CRITICAL + joined to raise_msg). Kept here, unmodified, for DR-rebuild apply-in-order
--- reference only. Do not re-apply this CREATE statement live in isolation — doing so would silently
--- demote b3_trading_enabled_drift back to a non-blocking warning.
+-- 132_queue_driven_silence_watch.sql (2026-08-03)
+-- Project: stock-trading-498512. Apply AFTER 128_b3_drift_promotion.sql.
 --
--- ============================ WHAT CHANGED ============================
--- Byte-for-byte identical to the CREATE statement in bigquery/111_cadence_check_version_drift_autoage.sql
--- EXCEPT:
---   1. the heartbeat version marker 'v9' -> 'v10' (bigquery/63's registry entry is updated to match);
---   2. the `ci_finding` alert payload STRUCT now includes `detail` before `run_url`, so CI finding
---      detail text reaches the operator alert email.
--- No check logic, thresholds, severity, or alert routing is otherwise altered.
+-- Defines state.queue_driven_silence_watch (NEW) and SUPERSEDES bigquery/128's definition of
+-- ops.sp_sq_cadence_check. 128's other objects are UNCHANGED and NOT re-issued here.
+--
+-- ============================ WHY ============================
+-- MEASURED 2026-08-03. The fleet has 32 routines across 7 monitor_class values. Two nets watch them:
+--   state.cadence_watch         -> daily_all, daily_trading
+--   state.cadence_period_watch  -> weekly_sun, monthly_ftd, quarterly_ftd, annual_ftd
+-- Both are built on state.cadence_expected_today, which EXCLUDES monitor_class = queue_driven by
+-- construction (a queue-driven routine has no calendar expectation to miss). So the four
+-- queue_driven routines -- AR_att, AR_orc, SL2, SL5 -- have never been watched by anything.
+--
+-- The 2026-08-03 incident made that concrete: 8 triggers were found disabled, and for SL2 and SL5
+-- the ONLY surfacing was D3's queue_item_stale alert -- a downstream symptom, whose own text had to
+-- say "INFERRED (not verified against the routines console): SL2's queue-driven trigger has simply
+-- not fired since 07-30 ... a silently-dead trigger here produces no other email signal." It was
+-- right, and it had no way to prove it. This view is that proof.
+--
+-- ============================ WHY NOT READ THE TRIGGER'S enabled FLAG ============================
+-- The obvious design -- have a routine compare each live trigger's `enabled` against
+-- ops/cadence.yaml's expected_trigger.enabled -- is IMPOSSIBLE inside a routine. OWNER_ACTIONS.md
+-- item U records the platform caveat verbatim: "config correct, tool still absent headless."
+-- RemoteTrigger is listed in every trigger's allowed_tools and is STILL not callable from a headless
+-- routine session, which is why OPS0 STEP 3's weekly sweep and Q4 step E's quarterly audit -- both
+-- written against `RemoteTrigger get` -- take their own tool-absent branch. This detector therefore
+-- reads ONLY ops.run_log: it infers a dead trigger from ABSENCE OF WORK rather than by asking the
+-- API why, which works headless and is agnostic to the cause (disabled, deleted, platform outage).
+--
+-- ============================ THRESHOLD ============================
+-- 6 calendar days since the last status='completed' run. Derived from the routines' OWN history
+-- (ops.run_log, all completed runs, gap distribution between consecutive completed run_dates):
+--   routine  completed_days  p50_gap  p90_gap  max_gap
+--   AR_att   26              1        3        4
+--   AR_orc   21              1        3        5
+--   SL2      18              1        2        3
+--   SL5      14              1        2        3
+-- All four carry DAILY crons and run essentially every day; the multi-day gaps are the known
+-- 2026-07-18 quota and 2026-07-19 connector outages, not normal quiet. 6 > the worst historical gap
+-- (AR_orc, 5), so no healthy period in the recorded history would have tripped it, while a dead
+-- trigger surfaces within a week instead of never. Against the actual incident: SL2 last completed
+-- 2026-07-30 and SL5 2026-07-29, so they would have fired 2026-08-05 and 2026-08-04.
+--
+-- A never-completed routine (no run_log row at all) is reported silent immediately -- that is the
+-- bigquery/113 never-ran concern, applied to the one class 113 could not reach.
+--
+-- The threshold is a literal here rather than a mirrored ops/cadence.yaml constant on purpose: the
+-- two constants cadence.yaml mirrors (cadence_watch_deadline_local, period_grace_days) each have a
+-- dedicated check in scripts/check_cadence_consistency.py, and adding a third mirror without a
+-- matching checker would create exactly the silent-drift surface that file exists to prevent.
 
--- SUPERSEDED LIVE by bigquery/132_queue_driven_silence_watch.sql — current single source of truth
--- for ops.sp_sq_cadence_check. Kept here, unmodified, for DR-rebuild apply-in-order reference
--- only. DO NOT re-apply this CREATE statement live in isolation.
+CREATE OR REPLACE VIEW `stock-trading-498512.state.queue_driven_silence_watch` AS
+WITH routines AS (
+  SELECT * FROM UNNEST([
+-- BEGIN GENERATED ROUTINE LIST (scripts/gen_routine_lists.py --write; do not hand-edit)
+    STRUCT('AR_att' AS routine, 'queue_driven' AS monitor_class),
+    STRUCT('AR_orc' AS routine, 'queue_driven' AS monitor_class),
+    STRUCT('SL2' AS routine, 'queue_driven' AS monitor_class),
+    STRUCT('SL5' AS routine, 'queue_driven' AS monitor_class)
+  -- END GENERATED ROUTINE LIST
+  ])
+),
+last_completed AS (
+  SELECT routine, MAX(run_date) AS last_run_date
+  FROM `stock-trading-498512.ops.run_log`
+  WHERE status = 'completed'
+  GROUP BY routine
+)
+SELECT
+  r.routine,
+  r.monitor_class,
+  CURRENT_DATE('America/Denver') AS today,
+  l.last_run_date,
+  DATE_DIFF(CURRENT_DATE('America/Denver'), l.last_run_date, DAY) AS days_silent,
+  6 AS silence_threshold_days,
+  -- COALESCE -> TRUE so a routine with NO completed run ever is reported silent rather than NULL.
+  -- Same fail-LOUD posture as state.freshness: a missing source must alarm, never read as green.
+  COALESCE(DATE_DIFF(CURRENT_DATE('America/Denver'), l.last_run_date, DAY) >= 6, TRUE) AS is_silent,
+  (l.last_run_date IS NULL) AS never_completed,
+  CURRENT_TIMESTAMP() AS checked_at
+FROM routines r
+LEFT JOIN last_completed l ON l.routine = r.routine
+ORDER BY r.routine;
+
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v10', 'cadence_check.sql ran');
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v11', 'cadence_check.sql ran');
 
   -- RUNBOOK section 38 self-heal (ITEM 3, bigquery/38_run_log_selfheal.sql): backfill any
   -- ops.run_log completion row whose routine already has a landed-commit marker in
@@ -90,7 +154,7 @@ BEGIN
     -- alert is stranded by dropping it) -- but do not re-derive "never raised" from the old wording.
     -- CAUTION for any future allowlist edit: before dropping a category from this FAIL-CLOSED list,
     -- query ops.alerts for OPEN rows in it. An open row in a removed category never auto-ages again.
-    AND category IN ('instruction_drift', 'calendar_runway_low', 'routine_stalled', 'trigger_missing', 'immediate_action_flagged', 'process_scorecard_signal', 'scheduled_query_stale', 'ci_findings_bridge_stale', 'control_plane_insert', 'scheduled_query_version_drift')
+    AND category IN ('instruction_drift', 'calendar_runway_low', 'routine_stalled', 'trigger_missing', 'immediate_action_flagged', 'process_scorecard_signal', 'scheduled_query_stale', 'ci_findings_bridge_stale', 'control_plane_insert', 'scheduled_query_version_drift', 'queue_driven_silent')
     AND alert_ts < TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY);
 
   -- missed_run (critical) — a monitored routine expected today did not complete.
@@ -105,6 +169,37 @@ BEGIN
     SET raise_msg = raise_msg || CONCAT('[missed_run] ',
       (SELECT STRING_AGG(routine, ', ' ORDER BY routine)
        FROM `stock-trading-498512.state.cadence_watch` WHERE needs_attention), '; ');
+  END IF;
+
+  -- queue_driven_silent (warning) — a queue_driven routine has logged no completed run for longer
+  -- than any gap in its own history. THIS IS THE ONLY NET THAT COVERS THEM: monitor_class
+  -- queue_driven is excluded from state.cadence_expected_today, which BOTH state.cadence_watch and
+  -- state.cadence_period_watch are built on, so AR_att/AR_orc/SL2/SL5 have never had a cadence
+  -- signal of any kind. Measured 2026-08-03: SL2 and SL5 went dark after 2026-07-30 when their
+  -- triggers were disabled, and NOTHING alerted on the silence — the only surfacing was D3's
+  -- queue_item_stale, a downstream symptom whose own text had to flag the root cause as INFERRED
+  -- because it could not verify it.
+  --
+  -- WARNING, deliberately NOT critical, and it must stay that way. state.trading_enabled ANDs
+  -- `blocking_criticals = 0`, so a critical here would HALT ORDER STAGING every time a SISA
+  -- lifecycle routine went quiet. That is exactly the failure mode of the 2026-08-01..03 incident
+  -- this file's sibling (bigquery/130) exists to prevent; do not promote this category.
+  --
+  -- Record-only, like instruction_drift: does NOT append to raise_msg and so does not contribute to
+  -- the DTS failure-email RAISE. Auto-ages after 7d via the allowlist above and re-raises on the
+  -- next run while the condition persists.
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.queue_driven_silence_watch` WHERE is_silent) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'queue_driven_silent',
+      CONCAT('Queue-driven routine(s) silent past threshold — these sit OUTSIDE the cadence nets, so a disabled or dead trigger here produces no other signal. Check the trigger is enabled in claude.ai before assuming an empty queue: ',
+             (SELECT STRING_AGG(CONCAT(routine, ' (last completed ',
+                                       COALESCE(CAST(last_run_date AS STRING), 'NEVER'), ', ',
+                                       COALESCE(CAST(days_silent AS STRING), '?'), 'd ago)'),
+                                ', ' ORDER BY routine)
+              FROM `stock-trading-498512.state.queue_driven_silence_watch` WHERE is_silent)),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(routine, last_run_date, days_silent,
+                                              silence_threshold_days, never_completed) ORDER BY routine))
+       FROM `stock-trading-498512.state.queue_driven_silence_watch` WHERE is_silent));
   END IF;
 
   -- backup_stale (critical) — events.* GCS backup has not logged a success in >2 days (16_automation_health.sql).
@@ -360,12 +455,14 @@ BEGIN
 
   IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.b3_trading_enabled_check` WHERE drift) THEN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
-      'warning', 'scheduled.cadence', 'b3_trading_enabled_drift',
+      'critical', 'scheduled.cadence', 'b3_trading_enabled_drift',
       (SELECT CONCAT('state.trading_enabled formula drift: live=', CAST(live_value AS STRING),
                      ' but independently-recomputed expected=', CAST(expected_value AS STRING),
                      ' -- a gate AND-term may have been silently clobbered (see bigquery/47_trading_enabled_resync.sql)')
        FROM `stock-trading-498512.state.b3_trading_enabled_check`),
       (SELECT TO_JSON_STRING(t) FROM `stock-trading-498512.state.b3_trading_enabled_check` t));
+    SET raise_msg = raise_msg || (SELECT CONCAT('[b3_trading_enabled_drift] live=', CAST(live_value AS STRING),
+      ' expected=', CAST(expected_value AS STRING), '; ') FROM `stock-trading-498512.state.b3_trading_enabled_check`);
   END IF;
 
   -- backup_per_table_row_drop (warning, self-improvement audit 2026-07-15 -- CONFIRMED GAP
