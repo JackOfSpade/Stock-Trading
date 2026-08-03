@@ -65,6 +65,9 @@
 -- pre-promotion 'warning' tier with no raise_msg join (promoted by 128), and reports the superseded v9
 -- heartbeat marker.
 -- =====================================================================================================
+-- SUPERSEDED LIVE by bigquery/132_queue_driven_silence_watch.sql — current single source of truth
+-- for ops.sp_sq_cadence_check. Kept here, unmodified, for DR-rebuild apply-in-order reference
+-- only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';

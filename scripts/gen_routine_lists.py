@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the routine-list STRUCT rows for bigquery/12/15/24/105/114 from ops/cadence.yaml +
+"""Generate the routine-list STRUCT rows for bigquery/12/15/24/105/114/132 from ops/cadence.yaml +
 Claude_Task_Plan.md.
 
 WHY THIS EXISTS (ARCH-3 Item 30b, closing the deferred hand-copy hole). bigquery/12
@@ -40,9 +40,14 @@ Regions generated (marker-delimited, one BEGIN/END pair per file):
                                         which routines are period-cadence. 114 embeds the list rather
                                         than joining state.cadence_period_watch because it is a FATAL,
                                         unwrapped gate that must not gain a runtime view dependency.
+  bigquery/132_queue_driven_silence_watch.sql -- state.queue_driven_silence_watch's `routines` CTE
+                                        STRUCT rows, ONLY the queue_driven routines -- the exact
+                                        complement of the bigquery/12 region. Those four sit outside
+                                        state.cadence_expected_today and therefore outside BOTH
+                                        cadence nets; 132 is the only thing watching them.
 
 Usage:
-  python scripts/gen_routine_lists.py --write   # regenerate all 5 marker regions in place
+  python scripts/gen_routine_lists.py --write   # regenerate all 6 marker regions in place
   python scripts/gen_routine_lists.py --check   # exit 1 + diff if any region is stale
 
 Markers (exactly one BEGIN/END pair per file, wrapping ONLY the STRUCT rows -- the surrounding
@@ -211,6 +216,25 @@ def write_region(path, body):
     return False
 
 
+QUEUE_SILENCE_SQL = os.path.join(ROOT, "bigquery", "132_queue_driven_silence_watch.sql")
+
+
+def gen_132_region(routines):
+    """state.queue_driven_silence_watch rows: ONLY the queue_driven routines -- the exact complement
+    of gen_12_region's calendar-class filter. These four are excluded from
+    state.cadence_expected_today by construction, so neither state.cadence_watch nor
+    state.cadence_period_watch can see them; bigquery/132 is their only net. Generating the list here
+    (rather than hand-keeping it) means adding a 5th queue_driven routine to ops/cadence.yaml cannot
+    silently leave it unwatched. cadence.yaml order, 4-space indent matching the surrounding
+    UNNEST([ block."""
+    rows = [r for r in routines if r.get("monitor_class") == "queue_driven"]
+    lines = []
+    for i, r in enumerate(rows):
+        comma = "," if i < len(rows) - 1 else ""
+        lines.append(f"    STRUCT('{r['id']}' AS routine, '{r['monitor_class']}' AS monitor_class){comma}")
+    return "\n".join(lines)
+
+
 def build_targets():
     routines = load_cadence_routines()
     head_by_id = load_headings_by_id()
@@ -227,13 +251,18 @@ def build_targets():
         # list (instead of joining state.cadence_period_watch) because it is a FATAL, unwrapped gate
         # that must not gain a runtime view dependency -- see that file's header.
         (DEP_GATE_SQL, gen_24_region(routines)),
+        # bigquery/132 takes the COMPLEMENT of bigquery/12's list: 12 carries every calendar-class
+        # routine, 132 carries every queue_driven one. Between them the two regions partition the
+        # roster, so a routine cannot be absent from both and end up watched by nothing -- which is
+        # precisely the hole bigquery/132 was written to close (SL2/SL5, 2026-08-03).
+        (QUEUE_SILENCE_SQL, gen_132_region(routines)),
     ]
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     g = ap.add_mutually_exclusive_group(required=True)
-    g.add_argument("--write", action="store_true", help="regenerate all 5 marker regions in place")
+    g.add_argument("--write", action="store_true", help="regenerate all 6 marker regions in place")
     g.add_argument("--check", action="store_true", help="exit 1 + diff if any region is stale")
     args = ap.parse_args()
 
@@ -247,7 +276,7 @@ def main():
         if changed:
             print(f"gen_routine_lists --write: regenerated {', '.join(changed)}.")
         else:
-            print("gen_routine_lists --write: all 5 regions already current (no-op).")
+            print("gen_routine_lists --write: all 6 regions already current (no-op).")
         return 0
 
     # --check
@@ -266,7 +295,7 @@ def main():
                   f"Claude_Task_Plan.md -- run `python scripts/gen_routine_lists.py --write`")
     if drift:
         return 1
-    print("gen_routine_lists --check: OK -- bigquery/12, 15, 24, 105, 114 generated regions match "
+    print("gen_routine_lists --check: OK -- bigquery/12, 15, 24, 105, 114, 132 generated regions match "
           "ops/cadence.yaml + Claude_Task_Plan.md.")
     return 0
 
