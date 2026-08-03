@@ -94,6 +94,13 @@ FROM a JOIN o USING (review_id);
 -- position outcome; pairing prefers a real FK (position_campaigns.opening_thesis_ref) over
 -- nearest-date; conviction_pct + normalized added. Kept here, unmodified, for DR-rebuild
 -- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
+--
+-- SUPERSEDED AGAIN, LIVE, by bigquery/123_drip_dust_campaign_exclusion.sql (2026-08-02) — 116 above is
+-- itself no longer canonical (102 remains an intermediate, also-superseded definition too); 123 is the
+-- current single source of truth for this object (the campaign join now also excludes post-close
+-- DRIP-dust campaigns via `AND NOT pc.is_dust`, so a GO thesis can never mis-pair to a sub-dollar
+-- phantom campaign). See bigquery/123, not 116 or 102. Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.thesis_outcomes` AS
 WITH theses AS (
   SELECT entry_id, entry_date, strategy, ticker, conviction, sub_pattern, decision, title
@@ -217,6 +224,11 @@ GROUP BY conviction ORDER BY ord;
 -- per-strategy budget = this view's available_funds. Portfolio_Ledger.md is retired (not kept).
 -- (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner directive.) DEAD / SUPERSEDED: this
 -- strategy_nav is redefined downstream by bigquery/22_cash_flows.sql (CREATE OR REPLACE, applied later),
+-- and SUPERSEDED AGAIN, LIVE, by bigquery/127_strategy_nav_dust_exclusion.sql (2026-08-02) — bigquery/22 is
+-- itself no longer canonical for this object, so the pointer above is a stale link in the chain; 127 excludes
+-- post-close DRIP dust from the `divs` CTE, the last live reader of analytics.position_lifecycle that had no
+-- is_dust filter. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
+-- CREATE statement live in isolation.
 -- which reads events.cash_flows and the ROSTER-DERIVED active set + as-of-flow-date divisor. The bare
 -- ['A'..'E'] literal and CAST(1889.372) deposits below are the pre-cash_flows / pre-roster artifact and
 -- are deliberately left unchanged — they are never the live definition. scripts/check_roster_consistency.py

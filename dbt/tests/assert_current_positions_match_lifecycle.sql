@@ -6,10 +6,11 @@
 -- for the 2%-sizing base) and analytics.position_lifecycle (← authoritative state.trade_fills_curated,
 -- the path the TWR engine / §13 read) are independent. They can diverge with NO existing monitor
 -- watching position_events. SUM on both sides absorbs leg-splits; the 0.01-share tolerance ignores
--- sub-cent dividend-reinvest fractions (the live ~$0.20 drift) while catching a whole position present
--- in one representation but not the other. This is the dbt mirror of state.position_reconciliation.
+-- small rounding noise while catching a whole position present in one representation but not the other.
+-- Audited dust is excluded explicitly rather than relying on a share tolerance: a <=$1 residual may
+-- exceed 0.01 shares. This is the dbt mirror of state.position_reconciliation.
 --
--- WHY THE PENDING-BUY TERM (must stay in lockstep with bigquery/110_pending_order_aware_reconciliation.sql):
+-- WHY THE PENDING-BUY TERM (must stay in lockstep with bigquery/126_dust_operational_hardening.sql):
 -- D2 writes the OPEN events.position_events row for a new entry or a pyramid add AT ORDER-STAGING TIME,
 -- while position_lifecycle only ever reflects FILLED shares — so every staged-but-unfilled BUY produces a
 -- guaranteed share_diff equal to the working quantity. Without this term the test flags that benign,
@@ -28,6 +29,7 @@ lc AS (
   SELECT strategy, ticker, SUM(shares) AS s
   FROM {{ ref('position_lifecycle') }}
   WHERE exit_date IS NULL AND strategy IS NOT NULL AND ticker IS NOT NULL
+    AND NOT COALESCE(is_dust, FALSE)
   GROUP BY strategy, ticker
 ),
 -- Still-working BUY quantity per (strategy, ticker). open_orders is already pending-only. NULL-strategy

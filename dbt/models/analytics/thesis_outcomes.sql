@@ -87,6 +87,13 @@ LEFT JOIN {{ ref('position_campaigns') }} pc
   ON pc.strategy = t.strategy AND pc.ticker = t.ticker
   -- GUARD: only a GO-family thesis may be paired to a position at all.
   AND t.is_go_family
+  -- NEW 2026-08-02 (bigquery/123): a post-close DRIP-dust phantom is never a thesis's outcome.
+  -- Without this, a GO thesis dated nearer its dust campaign than its real one mis-pairs via the
+  -- nearest-date fallback below and reports position_closed = FALSE with NULL realized P&L. Kept in
+  -- the ON clause (not a WHERE) so an otherwise-unpaired thesis still yields its row with a NULL
+  -- campaign. is_dust is non-nullable by construction; on a non-match it is NULL and the LEFT JOIN
+  -- handles that correctly.
+  AND NOT COALESCE(pc.is_dust, FALSE)
 -- Pair each thesis to ITS campaign. FK first: a campaign whose OPENING fill records this exact
 -- entry_id wins outright. Otherwise the original heuristic -- a re-traded ticker has >1 campaign, so
 -- pick the one whose entry_date is nearest the thesis date (an add's own thesis-construction entry

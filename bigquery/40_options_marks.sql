@@ -70,9 +70,9 @@ CREATE OR REPLACE FUNCTION `stock-trading-498512.analytics.fn_is_occ_option_symb
 -- position with NO same-day option mark is EXCLUDED from that day's contribution (not zero-valued, not
 -- silently dropped from the whole chain) — see the anomaly-guard note below.
 --
--- SUPERSEDED LIVE by bigquery/82_split_aware_engine.sql — the CURRENT single source of truth for
--- this view. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
--- this CREATE statement live in isolation.
+-- SUPERSEDED LIVE by bigquery/125_dust_excluded_from_twr.sql (via the intermediate bigquery/82 split-
+-- aware definition). 125 is the CURRENT source of truth and additionally excludes audited DRIP dust.
+-- Kept here for DR-rebuild apply-order only. DO NOT re-apply this definition in isolation.
 -- ============================================================================
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.strategy_daily_returns` AS
 WITH equity_held AS (
@@ -164,11 +164,13 @@ WHERE om.occ_symbol IS NULL;
 -- join above, so this is detection, not a blocking gate). Everything else is byte-for-byte identical to
 -- the superseded definition; keep the two files' comments in sync if either changes.
 --
--- SUPERSEDED LIVE by bigquery/102_pyramid_aware_lifecycle.sql (2026-07-21 — pyramid-aware lots +
--- campaigns; the closed_trades / gate_n subqueries now COUNT off analytics.position_campaigns instead
--- of analytics.position_lifecycle so a partial-exit pyramid counts as one closed trade, not many).
--- Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE
--- statement live in isolation.
+-- SUPERSEDED LIVE by bigquery/124_dust_excluded_from_closed_trades.sql (2026-08-02 — repointed from the
+-- intermediate bigquery/102_pyramid_aware_lifecycle.sql, 2026-07-21 — pyramid-aware lots + campaigns;
+-- the closed_trades / gate_n subqueries now COUNT off analytics.position_campaigns instead of
+-- analytics.position_lifecycle so a partial-exit pyramid counts as one closed trade, not many — and, as
+-- of 124, also exclude post-close DRIP-dust campaigns via AND NOT is_dust). 124 is the CURRENT single
+-- source of truth for this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation.
 -- ============================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_recompute_engine`()
 BEGIN

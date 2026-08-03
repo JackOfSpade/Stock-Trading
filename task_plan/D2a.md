@@ -569,14 +569,47 @@ Concretely, every run:
   routine='D2a', falling back to the plain DAYS_7 default on a view-read failure) — fills are idempotent on
   `trade_id`, so widening this window only closes an under-count risk on an outage longer than 7 days (the
   2026-07-23/24 connector outage precedent), it carries no double-count risk. For each
-  fill whose `trade_id` is NOT already in `events.trade_fills` (idempotent on `trade_id`): record the exact
-  price / size / `commission` / `realized_pnl` / `trade_time`; `INSERT INTO events.trade_fills` and write the
-  position lifecycle event to `events.position_events` (an OPEN on an entry — **reusing the SAME `position_key` the staging step recorded in the order's `payload.position_key` (STAGING-OPEN KEY INVARIANT, item 2), so this fill OPEN SUPERSEDES that order's staging-time provisional OPEN for that key rather than minting a SECOND row that would strand the provisional as a phantom on a SUCCESSFUL fill; mint a fresh key here ONLY for a legacy order that recorded no `payload.position_key`, i.e. one that wrote no staging OPEN** — with `cost_basis = shares×price +
+  fill whose `trade_id` is NOT already in `events.trade_fills` (idempotent on `trade_id`): hold the connector
+  row in memory and **BEFORE the append-only INSERT or any generic OPEN/CLOSE/ADJUST write**, adjudicate two
+  dust cases: (a) an unmatched BUY with no
+  staged strategy order is run through the exact FIFO residual + affirmative DRIP-evidence procedure below;
+  while that adjudication is pending, write NO provisional OPEN, so classification cannot make itself
+  ineligible by first minting `state.current_positions`; (b) a SELL matching an exact pending OR
+  `status='crafting'` dust item by contract, instruction/order id when available, quantity, and post-claim time
+  is reconciled by the dust procedure and writes NO strategy event. This matcher also searches exact historical
+  dust items whose latest state is terminal `abandoned`/`expired`: when the source fills are still classified,
+  there is no later real re-entry/current strategy position, the connector holding is now gone, and the SELL's
+  contract/positive quantity/post-classification time exactly fits that residual, classify it pre-insert as a
+  `closure='manual'|'external'` liquidation fill with the common source strategy and write no strategy event.
+  **It ALSO matches a classified residual with NO `events.queue_events` row at all (2026-08-02 review
+  finding — the registry was wrongly treated as the source of truth for whether a SELL is a dust
+  liquidation).** A liquidation can be tapped by the operator, or placed by hand, without D2a ever staging
+  it, so there is no pending, `crafting`, `abandoned` or `expired` item to match; the authority is
+  `analytics.dust_classified_fills`, which carries the source BUY independently of the registry. Under the
+  IDENTICAL guard set as the terminal case above — the SELL's `contract_id` resolves to exactly ONE
+  `fill_role='source-buy'` row, its source fills are still classified, there is no later real re-entry or
+  current strategy position, the connector holding is now gone, and the SELL's contract / positive quantity /
+  post-classification time exactly fits that residual — classify it pre-insert the same way, as a
+  `closure='manual'|'external'` liquidation fill carrying the common source strategy, writing no strategy
+  event. **This arm is not optional and must be evaluated BEFORE the insert, not deferred to the dust loop
+  further down this step.** `events.trade_fills` is append-only with no correction mechanism, so a dust SELL
+  once inserted with NULL strategy can NEVER be repaired; and `analytics.position_lifecycle`'s `matched` CTE
+  requires `s.strategy = b.strategy`, so a NULL strategy silently strands the source BUY OPEN forever against
+  a flat broker — with `state.position_reconciliation` blind to it, because that view excludes `is_dust` rows.
+  A coarse same-contract historical SELL is insufficient. Ambiguity in either case raises
+  `position_mirror_gap`/`staging` and remains unmirrored for explicit recovery; it never falls through to an
+  invented strategy position. This pre-insert adjudication resolves the exact source strategy for a dust SELL;
+  then insert `events.trade_fills` ONCE with that strategy in its immutable row. An ambiguous unmatched fill may
+  be inserted with NULL strategy only when routed to the gap and gets no position event. Only an ordinary or
+  strategy-staged fill proceeds to the generic mirror below.
+
+  For that ordinary path, write the position lifecycle event to `events.position_events` (an OPEN on an entry — **reusing the SAME `position_key` the staging step recorded in the order's `payload.position_key` (STAGING-OPEN KEY INVARIANT, item 2), so this fill OPEN SUPERSEDES that order's staging-time provisional OPEN for that key rather than minting a SECOND row that would strand the provisional as a phantom on a SUCCESSFUL fill; mint a fresh key here ONLY for a legacy order that recorded no `payload.position_key`, i.e. one that wrote no staging OPEN** — with `cost_basis = shares×price +
   commission`, contract_id, convergence_target / time_exit_date / conviction / source_thesis_ref from the
   staging entry — **`source_thesis_ref` is the bare `events.decision_log.entry_id` UUID of the authorizing
   thesis, NOT a human label like `'D2 2026-07-17 TSM D GO'`** (see "Decision-log lifecycle" → CURRENT ERA
   discipline 3: `analytics.thesis_outcomes` now prefers this FK over its nearest-entry_date heuristic, and a
-  prose value silently forfeits that and falls back to date-guessing); a CLOSE on an exit); flip the affected position ORDER-STAGED→OPEN / exit-pending→CLOSED, and
+  prose value silently forfeits that and falls back to date-guessing); a CLOSE on an exit). For ordinary fills,
+  flip the affected position ORDER-STAGED→OPEN / exit-pending→CLOSED, and
   set the matching `state.open_orders` `ORDER_STAGED` row terminal `filled` (§11); update strategy sector counts
   and any KL #12 event membership; write the GO/close decision via **`CALL ops.sp_log_decision(...)`** (appends
   `events.decision_log` + embeds in the same call — verify any time via `state.embedding_health`, `is_healthy =
@@ -625,28 +658,157 @@ Concretely, every run:
   matching the connector order/instruction reference to the specific `ORDER_STAGED` row's
   `payload.instruction_id` (with a qty-consistency check: fill qty <= that row's staged qty) BEFORE falling
   back to the coarse (ticker, contract_id, side) match.
-- **Post-close DRIP dust (adjudicated convention, 2026-07-20 — closes the "no documented convention" gap
-  the first live occurrence, HCA/IBM, flagged this same day).** A dividend-reinvestment fill can land in
-  `get_account_trades` AFTER its position's CLOSE was already reconciled (the ex-div/pay date fell after
-  the exit), so the fill reconciliation bullet above records it into `events.trade_fills` but has no open
-  entry/exit to flip — no OPEN/ADJUST `events.position_events` row gets written, and the connector-held
-  residual shares are invisible to `state.current_positions`. For each such fill (a `trade_fills` row with
-  no matching OPEN/ADJUST `position_events` row for its `ticker`/`contract_id`), compute the residual's
-  current market value (connector shares × `get_price_snapshot`/`get_account_positions` mark). **Materiality
-  gate, $1 — the same order of magnitude as the §13 cash-tripwire's own materiality bar:** value **<= $1**
-  is DUST — do NOT mirror it as a position (a synthetic OPEN with no strategy/thesis of record would corrupt
-  `state.current_positions`' "active strategy position" invariant for a residual not worth a commission-paying
-  SELL either); write one `CALL ops.sp_log_decision(...)` note (`entry_type='drip-dust'`, ticker, shares,
-  value, fill date) for the audit trail and take no further action — do NOT raise `position_mirror_gap`.
-  Value **> $1**: `CALL ops.sp_raise_alert_once('warning','D2a','position_mirror_gap', <ticker + shares +
-  value + fill date>, <JSON: ticker, shares, value_usd, fill_date>)` for session-level adjudication (mirror
-  as a micro-position under the position's last-known strategy, or sell) — this is real money, not dust, and
-  the call needs a thesis/strategy judgment this bullet does not make mechanically. **HEAL-RESOLUTION:** if
-  an open `position_mirror_gap` alert's `payload.ticker` residual now reads <= $1 (a further post-close
-  dividend/split shrank it) or has been mirrored/sold since (no longer present in the union of connector
-  holdings and `state.current_positions`), `UPDATE ops.alerts SET resolved=TRUE, resolved_ts=CURRENT_TIMESTAMP(),
-  resolved_note='condition healed — residual now immaterial or resolved' WHERE category='position_mirror_gap'
-  AND NOT resolved AND JSON_VALUE(payload,'$.ticker') = <ticker>`.
+- **Post-close DRIP dust — audited STK-only liquidation (2026-08-02 hardening).** This is NOT a generic
+  "connector position absent from state" liquidation. Every run, start from every positive connector holding
+  absent from `state.current_positions`, including residuals whose fills were reconciled on an earlier run.
+  Prove its source with an executable fill-residual test: for the exact contract, apply every later SELL FIFO to
+  earlier BUYs in `(fill_ts,trade_id)` order; the remaining quantities of candidate BUY fills must sum exactly
+  to connector `P.quantity` (within the connector's stated quantity precision), each candidate must be after the
+  strategy/ticker's last terminal CLOSE, have no matching BUY `ORDER_STAGED`/source-order reference, and carry
+  affirmative reinvestment evidence (`raw.exchange='IBDRIPUS'` or `raw.note` contains DRIP/dividend-reinvestment
+  language). A mere historical BUY on the same contract is never provenance. Any missing/ambiguous linkage routes
+  to `position_mirror_gap`, never this path.
+
+  Let `F[]` be that ordered set of exact remaining source fills and `anchor_trade_id` its oldest trade id. One
+  connector residual is one liquidation item even when several DRIP fills compose it:
+  `dust_id='drip-dust:'||P.contract_id||':'||anchor_trade_id` and
+  `item_key='ORDER:DRIP_DUST:'||P.contract_id||':'||anchor_trade_id`. The attempt key is therefore neither
+  ticker-global nor one-full-SELL-per-fill; a later residual after this holding reaches zero gets a new anchor.
+  All `F[]` rows must carry the same non-null strategy; otherwise the account-level connector SELL cannot be
+  attributed safely to one Tier-1 strategy lane and the residual routes to `position_mirror_gap`.
+  A fill is affirmatively DUST only when ALL are true: every `F.side='BUY'`; `P.contract_id` is exact; connector
+  security type is exactly `STK`; `P.quantity > 0` (never `ABS` — a negative quantity is a short and SELL would
+  enlarge it); `P.market_value` is known, non-negative, and `<= $1`; no OPEN/ADJUST
+  `state.current_positions` row exists for the exact contract; no `state.park_position_current` row has
+  `ticker=P.ticker`; and `P.contract_id` differs from the separately resolved current-policy contract for
+  `state.park_policy_current.vehicle`. Options, futures/FOPs, combos, shorts, zero quantities, park inventory,
+  unknown types/values, and any small holding not proven by this residual equation are NOT dust and must never be
+  sold here — route them to `position_mirror_gap` with contract/type/quantity/value evidence.
+
+  Once those facts are established, write exactly one immutable classification via
+  `CALL ops.sp_log_decision(...)` with `entry_type='drip-dust'`, this ticker, and `fields` containing
+  `{record_type:'classification', classification:'dust', source_trade_id:F.trade_id, dust_id, contract_id,
+  source_residual_qty:F.remaining_qty, observed_value_usd:P.market_value, fill_date}` for every `F` in `F[]`.
+  Idempotency: do not write a row if an exact `record_type='classification'` row already exists for that
+  `source_trade_id`; after the writes, re-read and require every `F.trade_id` to be classified before crafting.
+  `analytics.dust_classified_fills`
+  reads this audited fact; `position_campaigns.is_dust` and `position_lifecycle.is_dust` carry it after sale.
+  The two legacy HCA/IBM rows are bridged only through frozen strategy/ticker/date/shares/price BUY signatures,
+  and the bridge emits nothing unless a signature maps uniquely (bigquery/123). If any
+  classification write fails, raise `staging`, fail the run, and do not craft — liquidation may not outrun the
+  durable fact that keeps its fill out of analytics.
+
+  Liquidate each classified residual by this deterministic procedure:
+  1. **HALT + CONFLICT GATES.** Use the carried `state.trading_enabled_mechanical` verdict. Audited dust is
+     excluded from `state.position_reconciliation` by bigquery/126, so a >0.01-share dust lot cannot halt the
+     only path that clears itself; unrelated health failures still block a new craft. If FALSE, do not create a
+     NEW instruction or queue row. Also do not act while ANY other pending `state.open_orders` SELL, pending
+     instruction, or live/working SELL exists for the contract, dust or ordinary. The only allowed pending row
+     is this exact `item_key`, handled by step 2; ambiguity is a no-action diagnostic.
+     **ADOPTION OF AN UNREGISTERED DUST LIQUIDATION — PRE-FILL PATH ONLY (2026-08-02).** SCOPE, corrected
+     same day: this block handles an unregistered order seen while it is still LIVE/WORKING, i.e. before it
+     fills. It canNOT be the fix for an order that has ALREADY filled — this dust loop only iterates
+     residuals still present as a positive connector holding, and by the time D2a next runs (22:40 UTC, hours
+     after the open) a filled liquidation has both zeroed that holding and gone terminal, so neither this
+     loop nor this block would be reached. The post-fill case is handled EARLIER in this step, pre-insert, by
+     the fill-reconciliation bullet's never-registered arm — which is where it must be, because the strategy
+     attribution has to be correct at INSERT time into append-only `events.trade_fills`. Keep both: this one
+     registers a pending order so step 2 can track it; that one attributes an already-filled one. A dust-liquidation SELL can exist at the connector with NO
+     `events.queue_events` row: the operator tapped an instruction D2a did not stage, an instruction was
+     crafted before this registry existed, or the order was placed by hand. In that case the guard above
+     matches ("a live/working SELL exists for the contract") and would classify it as ambiguity and do
+     nothing — so step 2 never runs, no `liquidation-fill` is ever logged, the SELL never joins the dust FIFO
+     lane, and the source BUY stays OPEN in `analytics.position_lifecycle` FOREVER while the broker is flat.
+     That is not benign: the residual stays permanently unresolved, which via D2's UNRESOLVED-DUST RE-ENTRY
+     GATE permanently blocks any future BUY re-entry into that contract. ADOPT instead of declining, when ALL
+     of these hold: (a) the observed SELL's `contract_id` joins to exactly ONE `fill_role='source-buy'` row in
+     `analytics.dust_classified_fills` (via that row's `trade_id` in `state.trade_fills_curated`), yielding its
+     `dust_id`, `source_trade_id` and source `strategy` — zero or 2+ matches is genuine ambiguity, keep the
+     no-action diagnostic; (b) the order is `side='SELL'`, security type `STK`; (c) its quantity does not
+     exceed the outstanding residual for that `dust_id`. Then acquire the same step-5 mutex (serializing the
+     registry write; no connector call is made, so release immediately after the queue write), append an
+     `ORDER_STAGED` queue row reconstructed from the observed order with the payload shape step 5 writes plus
+     `adopted:true` and `adopted_order_id:<connector order id>`, and set `instruction_id` NULL — the step-3
+     ATTEMPT CAP counts DISTINCT non-null `payload.instruction_id`, and an order D2a did not craft must not
+     consume its own retry budget. Then continue into step 2, which reconciles the pending/filled order
+     normally and emits the `liquidation-fill` record that `analytics.dust_classified_fills` needs.
+     Record the adoption in the run's decision log so a reconstructed row is never mistaken for a staged one.
+  2. **RECONCILE THIS DUST REGISTRY ROW.** Read `get_order_instructions`, `get_account_orders`, fills, and the
+     latest `events.queue_events` row for exact `item_key`. A matching pending instruction or live SELL means
+     do nothing. Reconciled matching SELL fills set the row terminal `filled` only when their aggregate quantity
+     reaches the staged quantity; a partial fill keeps the row pending for the
+     remaining live order. Before continuing generic fill mirroring, every exact partial or complete dust SELL
+     fill logs `{record_type:'liquidation-fill',classification:'dust',dust_id,liquidation_trade_id}` idempotently,
+     and its `events.trade_fills.strategy` is the common source strategy from `F[]` (never NULL or guessed).
+     A completed item additionally logs `disposition='filled'`, `dust_id`, and the exact
+     `liquidation_trade_ids:[...]` array. `analytics.dust_classified_fills` uses those ids to put source BUYs and
+     liquidation SELLs in the same isolated FIFO lane. Write no strategy-position OPEN/CLOSE/ADJUST event. If the prior instruction is absent from both
+     connector reads, no fill exists, and `P` remains, append an `expired` row for the same item key before retry.
+     If the exact connector holding is gone, terminal the item independently of fill matching and record whether
+     closure was `matched-fill`, `manual`, or `external`; never infer a strategy position event.
+  3. **ATTEMPT CAP BY RESIDUAL.** Count DISTINCT non-null `payload.instruction_id` values in `events.queue_events`
+     where `queue='ORDER_STAGED'`, `item_key` is exact, and `payload.order_class='drip-dust-liquidation'`. At
+     three, create no fourth instruction; terminal the row `abandoned` and raise `dust_liquidation_failed` with
+     `dust_id`, anchor/source trade ids, contract id, ticker, positive shares, current value, and attempts. A later dust
+     fill in the same ticker has a different anchor/item key and starts at attempt 1.
+  4. **FRESH RE-CHECK + STANDARD GUARD.** Immediately re-read `P`, the FIFO residual equation, and every
+     eligibility condition. Require a current realtime `get_price_snapshot` with non-empty bid/ask and fresh
+     timestamp under Operating Protocol §11. A settled close or connector mark is diagnostic only and NEVER
+     authorizes a MARKET craft; outside a live executable session, defer without consuming an attempt and raise
+     a noncritical due-next-RTH diagnostic. Run
+     `analytics.fn_order_guard(NULL,'SELL',P.quantity,<ref_price>,'MARKET')`. On failure, do not craft and
+     raise `order_guard_block`; quantity is exactly the current positive `P.quantity`, never cached or absolute.
+  5. **SERIALIZED CRAFT + DURABLE STAGE.** Set `claim_token` to this D2a run's non-null `session_id` already
+     passed to `ops.sp_routine_start` (do not generate an unrelated UUID), call
+     `ops.sp_acquire_dust_order_mutex(claim_token,item_key,claimed)` (bigquery/126), and proceed only when
+     `claimed=TRUE`. This pre-seeded singleton row is the concurrency control; an `events.queue_events` item-key
+     precheck is not one because BigQuery primary keys are NOT ENFORCED. While holding the lease, re-read the
+     exact item row and connector instructions/orders once more. Any competing SELL or changed quantity releases
+     the mutex and defers. Then, BEFORE the external call, append a recoverable `events.queue_events` row with
+     `queue='ORDER_STAGED'`, `status='crafting'`, `item_type='drip-dust-liquidation'`, exact `item_key`, and the
+     full dust/source/contract/qty/guard/`claim_session_id` payload but no instruction id. Re-read the mutex and require
+     it still carries this token immediately before create. On a guard pass, call
+     `create_order_instruction(P.contract_id,'SELL',P.quantity, order_type='MARKET',time_in_force='DAY')`, then
+     INSERT a pending `events.queue_events` row with
+     `queue='ORDER_STAGED'`, `item_type='drip-dust-liquidation'`, exact `item_key`, ticker, and payload
+     `{order_class:'drip-dust-liquidation', dust_id, anchor_trade_id, source_trade_ids:[...], source_strategy, contract_id, side:'SELL', qty,
+     limit_price:<ref_price>, tif:'DAY', instruction_id, attempt, guard_passed, guard_reasons}`. Finally log one
+     `entry_type='drip-dust'` disposition row carrying the same identifiers and `disposition='staged'`.
+     Staging atomicity applies: create failure terminals the crafting row `expired` and fails the run; if the
+     pending-row INSERT fails after create, immediately `delete_order_instruction(instruction_id)`, terminal the
+     crafting row only after deletion is confirmed, raise critical `staging`, and fail the
+     run; if only the decision log fails after the queue write, retain the recoverable registry row, raise
+     critical `staging`, and do not log the run completed. Release with
+     `ops.sp_release_dust_order_mutex(claim_token,item_key)` only after the queue write (or after cleanup on every
+     failure path). Expiry is diagnostic, not permission for `sp_acquire_dust_order_mutex` to steal the lock.
+     A later run joins `claim_session_id` directly to `ops.run_log.session_id` and first reconciles any stale
+     `crafting` row: **(A)** recover a uniquely matching connector instruction
+     into a pending row, **(B)** terminal an exact post-claim fill while recording its trade id(s), or **(C)**—only when the old
+     runner has a terminal status OR its latest row is only `started` from >3 hours ago (the repo-wide dead-run
+     criterion), the lease is expired, and connector instructions/orders/fills are all absent—append
+     `expired`, call `ops.sp_recover_expired_dust_order_mutex(visible_owner_token,visible_item_key,released)`,
+     require `released=TRUE`, and retry. Otherwise it blocks and raises `staging`.
+     **Branches (A) and (B) MUST release the mutex as well (adversarial-review finding, 2026-08-02 — the
+     original wording attached the unlock to (C) alone).** Each of them has just read the connector and
+     established what actually became of the order, which is precisely the precondition the
+     `sp_acquire_dust_order_mutex` body demands before a stale owner may be cleared; so each MUST call
+     `ops.sp_release_dust_order_mutex(visible_owner_token,visible_item_key)` once its own recovery write has
+     committed. Use `sp_release_...`, **NOT** `sp_recover_expired_...`: the latter additionally requires
+     `lease_expires_at <= CURRENT_TIMESTAMP()`, so inside the 10-minute lease window it silently no-ops and
+     leaves the lock held. Without this, a process death between a successful `create_order_instruction` and
+     the pending-row INSERT strands `owner_token` on the dead session permanently — the singleton is ONE
+     global row and expiry is deliberately not self-healing (stealing on expiry would let two runs each stage
+     a SELL for the same residual), so every later run for EVERY ticker gets `claimed=FALSE` and falls through
+     to the `staging` alert above until an operator clears it by hand.
+
+  The current-value test is authoritative only at classification/craft time; analytics reads the persisted
+  source-fill fact rather than recomputing historical BUY notional, so the flag is immutable after liquidation.
+  Dust is excluded from thesis pairing, closed-trade/gate counters, deployed TWR, and deployed-day accumulation
+  (bigquery/123/124/125/126). Heal `dust_liquidation_failed` by exact `dust_id` once the exact connector holding
+  disappears, recording matched/manual/external closure even if no staged SELL fill matches. Heal
+  `position_mirror_gap` only when the exact contract is mirrored or
+  absent — becoming cheap is not proof of DRIP provenance. DRIP is account-wide OFF as of 2026-08-02; this path
+  remains the fail-safe if it recurs.
 - Read (do not transcribe) live positions, cash, and net-liquidation from `get_account_positions` +
   `get_account_summary` + `get_account_balances`; reconcile account-level drift (dividends, fees, splits) to the
   connector truth while preserving per-strategy cost-basis attribution (`get_price_history` with
@@ -699,9 +861,14 @@ Concretely, every run:
   that used to appear elsewhere — doing so would create a REAL, self-sustaining DEADLOCK: entries paused
   ⇒ this step stops re-crafting the paused entries ⇒ they never fill ⇒ entries stay paused forever. See
   `bigquery/76_owner_confirmation_liveness.sql`'s SCOPE comment for the corrected wording.** For each
-  still-`pending` `ORDER_STAGED` row: **(a) filled** — set terminal by inserting a
-  `queue_events` `filled` row (same `item_key`) if a reconciled fill matches (ticker / `contract_id` / side);
-  **(b) window still open + unfilled** (`entry_window_close >= today` MT) — **ORDER-GUARD CHECK first, every
+  **DUST EXCEPTION:** exclude `item_type='drip-dust-liquidation'` from ALL generic filled detection,
+  daily re-craft, and expiry branches. The exact-source dust procedure above alone matches its exact instruction
+  id, aggregate staged quantity, and connector holding; a coarse ticker/contract/side fill could otherwise
+  terminal it on an unrelated manual partial SELL. Apply **(a) filled** only to every still-pending NON-DUST row
+  by inserting a `queue_events` `filled` row when its normal matching rule succeeds. The executable NON-DUST
+  predicate is `COALESCE(item_type,'') <> 'drip-dust-liquidation'`, never bare `item_type <> ...`, because
+  legacy ordinary rows may have NULL `item_type` and must remain in the generic loop.
+  For non-dust rows only: **(b) window still open + unfilled** (`entry_window_close >= today` MT) — **ORDER-GUARD CHECK first, every
   re-craft, not just the original entry (self-improvement audit finding, 2026-07-11 — a persisting order's
   qty/ref_price may have changed since its original staging, and `state.open_orders` only ever
   shows the LATEST `ORDER_STAGED` row per `item_key`, so an un-re-validated re-craft would silently overwrite

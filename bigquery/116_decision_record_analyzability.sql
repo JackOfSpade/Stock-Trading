@@ -146,6 +146,12 @@
 -- arbitrary pick. Additive only: no row count, grouping, or existing column changes -- ops.
 -- sp_recompute_engine's closed_trades/gate_n COUNT off this view and MUST be unaffected (verified
 -- below: 21 campaigns / 8 closed / MAX(gate_n)=30, unchanged).
+--
+-- SUPERSEDED LIVE by bigquery/123_drip_dust_campaign_exclusion.sql (2026-08-02) — current single
+-- source of truth for this object: appends an is_dust column flagging post-close DRIP-dust campaigns
+-- (e.g. B:IBM:2 / B:HCA:2) that can never close. Additive only; row count and grouping unchanged.
+-- Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE
+-- statement live in isolation.
 -- ============================================================================
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.position_campaigns` AS
 WITH fills AS (
@@ -242,6 +248,12 @@ GROUP BY strategy, ticker, campaign_seq;
 --   4. conviction_pct is now surfaced, plus conviction_pct_normalized (the 0-1-vs-0-100 scale fix,
 --      file header (6)) -- substrate for analytics.conviction_pct_calibration below.
 -- Regime-as-of join and was_profitable NULL-until-closed semantics are unchanged.
+--
+-- SUPERSEDED LIVE by bigquery/123_drip_dust_campaign_exclusion.sql (2026-08-02) — current single
+-- source of truth for this object: the campaign join now also excludes post-close DRIP-dust campaigns
+-- via `AND NOT pc.is_dust`, so a GO thesis can never mis-pair to a sub-dollar phantom campaign. Kept
+-- here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE
+-- statement live in isolation.
 -- ============================================================================
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.thesis_outcomes` AS
 WITH theses AS (

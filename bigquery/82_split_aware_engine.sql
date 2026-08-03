@@ -44,6 +44,8 @@
 -- entry-day baseline). The ONLY change vs 40 is the equity leg: shares are scaled by a per-position
 -- running split factor (eff_split_since_entry) so a post-entry split on a held stock keeps mv and the
 -- dividend leg continuous. The option leg is byte-identical to 40 (options have no daily_marks split_ratio).
+-- SUPERSEDED LIVE by bigquery/125_dust_excluded_from_twr.sql (2026-08-02), which preserves this split/
+-- option-aware body and excludes audited post-close DRIP-dust lots. Do not re-apply this definition alone.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.strategy_daily_returns` AS
 WITH equity_marked AS (
   SELECT m.mark_date, l.strategy, l.position_key, l.shares, l.entry_price, l.exit_price, l.exit_date,

@@ -3,6 +3,7 @@
 -- any closed trade or open position exempts, so a slow-but-alive archetype is never culled; routes
 -- through SL4's default-KEEP adversarial retirement (real capital), not a direct SL3 cull. 90-day
 -- roster_change_log cooldown mirrors bigquery/39's candidacy guard. Apply after 39, 62.
+-- SUPERSEDED for state.strategy_probe_progress by bigquery/126_dust_operational_hardening.sql.
 --
 -- PROBLEM: SHADOW and PAPER both have 400-day 'stuck' culls (bigquery/60_shadow_stuck_cull.sql,
 -- bigquery/35_strategy_arsenal.sql ITEM 9) executed by SL3. PROBE has nothing:

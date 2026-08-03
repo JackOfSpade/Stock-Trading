@@ -46,10 +46,9 @@ QUALIFY ROW_NUMBER() OVER (PARTITION BY ticker, mark_date ORDER BY ingest_ts DES
 -- Reads the CURATED dedup view: trade_fills' idempotency-by-trade_id contract is enforced
 -- there, so a re-ingested fill can't shift leg_seq pairing or create phantom positions.
 --
--- SUPERSEDED LIVE by bigquery/102_pyramid_aware_lifecycle.sql (2026-07-21 — pyramid-aware lots +
--- campaigns; this ROW_NUMBER() leg_seq pairing leaves a pyramid add-leg perpetually-open and
--- mis-pairs a re-traded ticker's later legs). Kept here, unmodified, for DR-rebuild apply-in-order
--- reference only. DO NOT re-apply this CREATE statement live in isolation.
+-- SUPERSEDED LIVE by bigquery/125_dust_excluded_from_twr.sql (2026-08-02; via the intermediate
+-- bigquery/102 pyramid-aware rebuild). 125 is the current source of truth: FIFO lots plus the audited
+-- dust flag. Kept here for DR-rebuild apply-order only. DO NOT re-apply this definition in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.position_lifecycle` AS
 -- SGOV EXCLUSION (2026-07-01, RUNBOOK §29): SGOV is the shared, ACCOUNT-LEVEL cash-sweep / benchmark
 -- instrument — event-sourced through events.parking_events (strategy is NULL on every row) and reconciled
@@ -206,11 +205,13 @@ WHERE rn = 1;
 --     human via the alert below, not allowed to null the engine) and a critical alert raised whenever
 --     the clamp actually engages so the underlying mark gets corrected.
 --
--- SUPERSEDED LIVE by bigquery/102_pyramid_aware_lifecycle.sql (2026-07-21 — pyramid-aware lots +
--- campaigns; the closed_trades / gate_n subqueries now COUNT off analytics.position_campaigns instead
--- of analytics.position_lifecycle so a partial-exit pyramid counts as one closed trade, not many).
--- Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE
--- statement live in isolation.
+-- SUPERSEDED LIVE by bigquery/124_dust_excluded_from_closed_trades.sql (2026-08-02 — repointed from the
+-- intermediate bigquery/102_pyramid_aware_lifecycle.sql, 2026-07-21 — pyramid-aware lots + campaigns;
+-- the closed_trades / gate_n subqueries now COUNT off analytics.position_campaigns instead of
+-- analytics.position_lifecycle so a partial-exit pyramid counts as one closed trade, not many — and, as
+-- of 124, also exclude post-close DRIP-dust campaigns via AND NOT is_dust). 124 is the CURRENT single
+-- source of truth for this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_recompute_engine`()
 BEGIN
   DECLARE bad_mark_count INT64;

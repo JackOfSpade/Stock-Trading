@@ -28,6 +28,7 @@ WITH equity_marked AS (
    AND m.mark_date >= l.entry_date
    AND (l.exit_date IS NULL OR m.mark_date <= l.exit_date)
   WHERE l.strategy IS NOT NULL
+    AND NOT COALESCE(l.is_dust, FALSE)
     AND NOT REGEXP_CONTAINS(l.ticker, r'^[A-Z]{1,6} *[0-9]{6}[CP][0-9]{8}$')
 ),
 equity_runprod AS (
@@ -51,6 +52,7 @@ option_held AS (
    AND om.mark_date >= l.entry_date
    AND (l.exit_date IS NULL OR om.mark_date <= l.exit_date)
   WHERE l.strategy IS NOT NULL
+    AND NOT COALESCE(l.is_dust, FALSE)
     AND REGEXP_CONTAINS(l.ticker, r'^[A-Z]{1,6} *[0-9]{6}[CP][0-9]{8}$')
 ),
 held AS (

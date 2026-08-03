@@ -5,6 +5,7 @@
 -- bigquery/18_stack_review_fixes.sql:130-153 (18 defines ~10 other, unrelated, still-canonical
 -- objects — state.append_only_integrity, state.trigger_attestation, state.go_without_order,
 -- state.stalled_runs, … — none of which this file touches or supersedes).
+-- SUPERSEDED for state.position_reconciliation by bigquery/126_dust_operational_hardening.sql.
 -- Per bigquery/47's header rule (restated by 97 and 107 for the gate cluster this view feeds), any
 -- future change to this view must land as a NEW numbered file that supersedes THIS one — never
 -- re-apply bigquery/18's CREATE OR REPLACE for this object in isolation.
