@@ -117,8 +117,9 @@ WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 2 DAY)
 -- B-5-exec / B-6-data) promoted `drifted` to a BLOCKING term of state.system_health.all_green — and
 -- thus of state.trading_enabled. It is not advisory; it halts trading.
 --
--- SUPERSEDED LIVE by bigquery/110_pending_order_aware_reconciliation.sql (2026-07-27) — current single
--- source of truth for this view. 110 keeps this predicate verbatim as `drifted_raw` and redefines
+-- SUPERSEDED LIVE by bigquery/126_dust_operational_hardening.sql (2026-08-02) — current single
+-- source of truth for this view. 126 retains 110's pending-order-aware predicate and additionally
+-- excludes audited dust lots. 110 keeps this predicate verbatim as `drifted_raw` and redefines
 -- `drifted` to measure the residual AFTER netting a (strategy,ticker)'s still-working BUY quantity from
 -- state.open_orders, because the comparison below is structurally guaranteed to fire on any
 -- staged-but-unfilled BUY (state.current_positions is written at ORDER-STAGING time;

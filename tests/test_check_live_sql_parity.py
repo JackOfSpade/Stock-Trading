@@ -366,13 +366,13 @@ def test_final_operating_date_boundaries_are_pinned_to_denver():
     """Final live SQL must never compare an operating date with UTC-truncated timestamps."""
     final = clsp.find_final_definitions()
     cases = [
-        (("analytics", "strategy_nav"), "22_cash_flows.sql",
+        (("analytics", "strategy_nav"), "127_strategy_nav_dust_exclusion.sql",
          "DATE(immutable_since, 'America/Denver')", "DATE(immutable_since)"),
         (("state", "param_oos_degradation"), "37_self_improvement_autonomy.sql",
          "DATE(lc.change_ts, 'America/Denver')", "DATE(lc.change_ts)"),
         (("state", "catchup_refire_failures"), "59_catchup_autofire.sql",
          "DATE(attempted_ts, 'America/Denver')", "DATE(attempted_ts)"),
-        (("state", "strategy_probe_progress"), "73_probe_progress_watch.sql",
+        (("state", "strategy_probe_progress"), "126_dust_operational_hardening.sql",
          "DATE(p.immutable_since, 'America/Denver')", "DATE(p.immutable_since)"),
         (("state", "strategy_retirement_candidacy"), "81_arsenal_fixes.sql",
          "CURRENT_DATE('America/Denver')", "CURRENT_DATE()"),

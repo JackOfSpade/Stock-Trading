@@ -1,5 +1,8 @@
--- Parallel-run dbt port of bigquery/22_cash_flows.sql:analytics.strategy_nav (redefined there,
--- supersedes the earlier hardcoded-literal version) — canonical source is that file until owner cutover.
+-- Parallel-run dbt port of bigquery/127_strategy_nav_dust_exclusion.sql:analytics.strategy_nav
+-- (redefined there, supersedes bigquery/22_cash_flows.sql's version) — canonical source is that
+-- file until owner cutover. 2026-08-02: `divs` excludes audited post-close DRIP-dust
+-- (position_lifecycle.is_dust, bigquery/125_dust_excluded_from_twr.sql) — the last dust leak into
+-- dividends_held / nav / available_funds / sizing_base_2pct; see bigquery/127's header.
 -- Per-strategy NAV / 2%-sizing base. NAV = equal-split deposits (events.cash_flows, self-improvement
 -- audit B-1-exec — a strategy-tagged flow attributes to that strategy only) + realized P&L (curated
 -- fills) + unrealized (open positions at latest close) + held-stock dividends. Gives sizing_base_2pct
@@ -54,6 +57,7 @@ divs AS (SELECT l.strategy, SUM(l.shares*m.dividend) AS dividends
   FROM {{ ref('position_lifecycle') }} l
   JOIN {{ ref('daily_marks_curated') }} m ON m.ticker=l.ticker AND m.dividend IS NOT NULL
    AND m.mark_date>=l.entry_date AND (l.exit_date IS NULL OR m.mark_date<=l.exit_date)
+   AND NOT COALESCE(l.is_dust, FALSE)
   GROUP BY l.strategy)
 SELECT d.strategy, d.deposits,
   ROUND(COALESCE(r.realized_pnl,0),2) AS realized_pnl,

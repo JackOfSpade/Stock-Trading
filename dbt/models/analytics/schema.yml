@@ -8,7 +8,8 @@ models:
       FIFO lots. Tier-1 of the 2026-07-21 pyramid-aware accounting rebuild
       (bigquery/102_pyramid_aware_lifecycle.sql): one row per FIFO-matched (buy interval, sell
       interval) overlap, partitioned by (strategy,ticker) — supersedes the old ROW_NUMBER()
-      leg_seq pairing, which left a pyramid add-leg perpetually-open. Same 12 columns as before.
+      leg_seq pairing, which left a pyramid add-leg perpetually-open. The audited is_dust flag is
+      appended for TWR filtering; the lots themselves remain present for reconciliation.
     columns:
       - name: position_key
         description: strategy:ticker:buy_trade_id:sell_trade_id (or :OPEN for an unmatched tail) — unique per lot (LAG window partitions on it).
@@ -17,6 +18,9 @@ models:
           - unique
       - name: strategy
         description: Strategy code (NULL strategy rows are filtered before the TWR).
+      - name: is_dust
+        description: Fill-level audited dust classification carried onto the originating FIFO BUY lot; retained for reconciliation but excluded from deployed TWR.
+        tests: [not_null]
 
   - name: position_campaigns
     description: >-
@@ -41,6 +45,29 @@ models:
           ~2026-07-26; older campaigns carry free text like 'D2 2026-07-17 TSM D GO' and are left as
           is, no backfill). Lets thesis_outcomes pair a thesis to its campaign by durable FK instead
           of only nearest-entry_date proximity.
+      - name: is_dust
+        description: >-
+          TRUE when the campaign contains a fill that D2a durably classified as post-close STK dust
+          after inspecting authoritative connector state. The classification is keyed by source
+          trade_id and therefore survives liquidation without inferring from mutable market value or
+          ambiguous BUY notional. thesis_outcomes and closed-trade statistics exclude these campaigns.
+        tests: [not_null]
+
+  - name: dust_classified_fills
+    description: Source BUY and exact liquidation SELL fill ids durably classified as post-close STK dust by D2a; legacy 2026-07-20 rows use two frozen, unique BUY-fill signatures.
+    columns:
+      - name: trade_id
+        tests: [not_null, unique]
+      - name: is_dust
+        tests: [not_null]
+      - name: dust_id
+        description: Stable residual-generation identity shared by its source BUY fill(s) and liquidation SELL fill(s).
+        tests: [not_null]
+      - name: fill_role
+        description: source-buy or liquidation-sell; Tier-1 FIFO matches only within the same dust identity/class.
+        tests:
+          - accepted_values:
+              values: ['source-buy', 'liquidation-sell']
 
   - name: strategy_daily_returns
     description: Value-weighted daily deployed total returns per strategy (gross).

@@ -8,7 +8,7 @@
 -- (strategy,ticker), same technique as analytics.tax_lots (bigquery/41_tax_lots.sql /
 -- bigquery/50_short_sale_tax_lots.sql), just partitioned by (strategy,ticker) to preserve the
 -- per-strategy wall. EXACT SAME 12 output columns (names + types) as before -- every downstream
--- consumer (strategy_daily_returns, thesis_outcomes via position_campaigns) keeps working unchanged.
+-- consumer keeps working; 2026-08-02 appends is_dust for the TWR exclusion.
 -- Long-only-correct; short-sale mislabeling is DEFERRED (see bigquery/102's header SCOPE note).
 --
 -- SGOV EXCLUSION (2026-07-01, RUNBOOK §29): SGOV is the shared account-level cash-sweep / benchmark
@@ -17,20 +17,29 @@
 -- (position_reconciliation B4 false-drift) or contaminate strategy_daily_returns. Preserved verbatim.
 -- entry_date/exit_date use DATE(fill_ts, 'America/New_York') — the EXCHANGE TRADING DATE the
 -- daily-marks join and every downstream DATE_DIFF/window keys on.
+-- Dust source BUYs and their exact liquidation SELLs have a separate FIFO lane per dust_id. This
+-- prevents an ordinary SELL after a legitimate re-entry from consuming the older dust BUY first.
 
 WITH buys AS (
-  SELECT trade_id, strategy, ticker, contract_id, fill_ts, price, shares, commission,
-    COALESCE(SUM(shares) OVER (PARTITION BY strategy, ticker ORDER BY fill_ts, trade_id
+  SELECT f.trade_id, f.strategy, f.ticker, f.contract_id, f.fill_ts, f.price, f.shares, f.commission,
+    COALESCE(dcf.is_dust, FALSE) AS is_dust,
+    dcf.dust_id,
+    COALESCE(SUM(shares) OVER (PARTITION BY strategy, ticker, COALESCE(dcf.is_dust, FALSE),
+      IF(COALESCE(dcf.is_dust, FALSE), dcf.dust_id, '') ORDER BY fill_ts, trade_id
       ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING), 0) AS cum_start
-  FROM {{ ref('trade_fills_curated') }}
+  FROM {{ ref('trade_fills_curated') }} f
+  LEFT JOIN {{ ref('dust_classified_fills') }} dcf USING (trade_id)
   WHERE side = 'BUY' AND ticker != 'SGOV' AND shares IS NOT NULL AND shares > 0
 ),
 sells AS (
-  SELECT trade_id, strategy, ticker, fill_ts, price, shares, commission, realized_pnl,
-    COALESCE(SUM(shares) OVER (PARTITION BY strategy, ticker ORDER BY fill_ts, trade_id
+  SELECT f.trade_id, f.strategy, f.ticker, f.fill_ts, f.price, f.shares, f.commission, f.realized_pnl,
+    COALESCE(dcf.is_dust, FALSE) AS is_dust, dcf.dust_id,
+    COALESCE(SUM(f.shares) OVER (PARTITION BY f.strategy, f.ticker, COALESCE(dcf.is_dust, FALSE),
+      IF(COALESCE(dcf.is_dust, FALSE), dcf.dust_id, '') ORDER BY f.fill_ts, f.trade_id
       ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING), 0) AS cum_start
-  FROM {{ ref('trade_fills_curated') }}
-  WHERE side = 'SELL' AND ticker != 'SGOV' AND shares IS NOT NULL AND shares > 0
+  FROM {{ ref('trade_fills_curated') }} f
+  LEFT JOIN {{ ref('dust_classified_fills') }} dcf USING (trade_id)
+  WHERE f.side = 'SELL' AND f.ticker != 'SGOV' AND f.shares IS NOT NULL AND f.shares > 0
 ),
 -- Every (buy, sell) pair on the same (strategy,ticker) whose cumulative-share intervals overlap --
 -- the overlap width is the FIFO-matched share count between that specific buy lot and that specific
@@ -38,12 +47,14 @@ sells AS (
 matched AS (
   SELECT b.strategy, b.ticker, b.contract_id,
     b.trade_id AS buy_trade_id, b.fill_ts AS buy_fill_ts, b.price AS buy_price,
-    b.shares AS buy_shares, b.commission AS buy_commission,
+    b.shares AS buy_shares, b.commission AS buy_commission, b.is_dust,
     s.trade_id AS sell_trade_id, s.fill_ts AS sell_fill_ts, s.price AS sell_price,
     s.shares AS sell_shares, s.commission AS sell_commission, s.realized_pnl AS sell_realized_pnl,
     LEAST(b.cum_start + b.shares, s.cum_start + s.shares) - GREATEST(b.cum_start, s.cum_start) AS shares_matched
   FROM buys b
   JOIN sells s ON s.strategy = b.strategy AND s.ticker = b.ticker
+    AND s.is_dust = b.is_dust
+    AND (NOT b.is_dust OR s.dust_id = b.dust_id)
   WHERE LEAST(b.cum_start + b.shares, s.cum_start + s.shares) > GREATEST(b.cum_start, s.cum_start)
 ),
 -- Portion of each BUY not yet consumed by any SELL to date = still-open shares of that lot.
@@ -60,7 +71,7 @@ open_tail AS (
   SELECT
     b.strategy, b.ticker, b.contract_id,
     b.trade_id AS buy_trade_id, b.fill_ts AS buy_fill_ts, b.price AS buy_price,
-    b.shares AS buy_shares, b.commission AS buy_commission,
+    b.shares AS buy_shares, b.commission AS buy_commission, b.is_dust,
     b.shares - COALESCE(t.total_matched, 0) AS open_shares
   FROM buys b
   LEFT JOIN buy_matched_totals t
@@ -83,7 +94,8 @@ SELECT
   DATE(sell_fill_ts, 'America/New_York') AS exit_date,
   sell_price AS exit_price,
   shares_matched * SAFE_DIVIDE(sell_commission, NULLIF(sell_shares, 0)) AS exit_commission,
-  sell_realized_pnl * SAFE_DIVIDE(shares_matched, NULLIF(sell_shares, 0)) AS realized_pnl
+  sell_realized_pnl * SAFE_DIVIDE(shares_matched, NULLIF(sell_shares, 0)) AS realized_pnl,
+  is_dust
 FROM matched
 UNION ALL
 -- OPEN lot remainder (a BUY, or the un-sold tail of one, with no sell yet).
@@ -97,5 +109,6 @@ SELECT
   CAST(NULL AS DATE) AS exit_date,
   CAST(NULL AS NUMERIC) AS exit_price,
   CAST(NULL AS NUMERIC) AS exit_commission,
-  CAST(NULL AS NUMERIC) AS realized_pnl
+  CAST(NULL AS NUMERIC) AS realized_pnl,
+  is_dust
 FROM open_tail

@@ -99,6 +99,14 @@ SELECT
 -- a future PROBE strategy.
 -- The CTE's own column alias is renamed `capital_eligible_date` (no longer synonymous with
 -- "adopted_date") for clarity; `retired_date`/every other column is unchanged.
+--
+-- SUPERSEDED LIVE by bigquery/127_strategy_nav_dust_exclusion.sql (2026-08-02) — current single
+-- source of truth for this view. Kept here, unmodified, for DR-rebuild apply-in-order reference
+-- only. DO NOT re-apply this CREATE statement live in isolation. 127 adds exactly one predicate
+-- to the `divs` CTE below (`AND NOT COALESCE(l.is_dust, FALSE)`) so audited post-close DRIP-dust
+-- (analytics.position_lifecycle.is_dust, bigquery/125_dust_excluded_from_twr.sql) can no longer
+-- leak sub-cent dividend income into dividends_held / nav / available_funds / sizing_base_2pct —
+-- every other reader of position_lifecycle already excludes it; this was the last leak.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.strategy_nav` AS
 WITH active AS (
   -- EVERY strategy that has ever reached PROBE or ADOPTED (including terminated), with its

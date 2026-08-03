@@ -24,13 +24,15 @@
 -- ops.sp_recompute_engine's closed_trades/gate_n COUNT off this view and must be unaffected.
 
 WITH fills AS (
-  SELECT trade_id, strategy, ticker, contract_id,
+  SELECT f.trade_id, f.strategy, f.ticker, f.contract_id,
     DATE(fill_ts, 'America/New_York') AS fill_date, fill_ts,
     side, price, shares, commission, realized_pnl,
     -- NEW: carried through solely to survive the GROUP BY below as opening_thesis_ref.
     source_thesis_ref,
+    COALESCE(dcf.is_dust, FALSE) AS fill_is_dust,
     IF(side = 'BUY', shares, -shares) AS signed_shares
-  FROM {{ ref('trade_fills_curated') }}
+  FROM {{ ref('trade_fills_curated') }} f
+  LEFT JOIN {{ ref('dust_classified_fills') }} dcf USING (trade_id)
   WHERE ticker != 'SGOV' AND shares IS NOT NULL AND shares > 0
 ),
 running AS (
@@ -92,6 +94,11 @@ SELECT
   SUM(commission) AS total_commission,
   COUNTIF(side = 'BUY') AS n_buy_fills,
   COUNTIF(side = 'SELL') AS n_sell_fills,
-  ANY_VALUE(campaign_opening_thesis_ref) AS opening_thesis_ref   -- NEW (appended last: column-order stable)
+  ANY_VALUE(campaign_opening_thesis_ref) AS opening_thesis_ref,  -- (appended: column-order stable)
+  -- Fill-level classification is written by D2a after inspecting authoritative connector state.
+  -- A dust-only campaign stays flagged after its SELL; an unclassified later BUY turns a still-open
+  -- campaign into a real mixed campaign rather than suppressing the legitimate trade wholesale.
+  COUNTIF(side = 'BUY' AND fill_is_dust) > 0
+    AND COUNTIF(side = 'BUY' AND NOT fill_is_dust) = 0 AS is_dust
 FROM tagged
 GROUP BY strategy, ticker, campaign_seq

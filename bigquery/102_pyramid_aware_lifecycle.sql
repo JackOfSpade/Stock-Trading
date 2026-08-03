@@ -89,6 +89,10 @@
 -- 55): a stray SGOV fill in trade_fills must never become a deployed lifecycle lot. entry_date/
 -- exit_date use DATE(fill_ts,'America/New_York') for the same reason as the superseded view -- the
 -- EXCHANGE TRADING DATE the daily-marks join and every downstream DATE_DIFF/window keys on.
+--
+-- SUPERSEDED LIVE by bigquery/125_dust_excluded_from_twr.sql (2026-08-02), which appends the audited
+-- fill-level is_dust flag used to exclude orphan DRIP lots from deployed TWR. Kept here for apply-order
+-- history only; do not re-apply this definition in isolation.
 -- ============================================================================
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.position_lifecycle` AS
 WITH buys AS (
@@ -209,6 +213,12 @@ FROM open_tail;
 -- the FK thesis_outcomes needs, which this GROUP BY dropped entirely. Additive only; row count and
 -- grouping unchanged. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
 -- re-apply this CREATE statement live in isolation.
+--
+-- SUPERSEDED AGAIN, LIVE, by bigquery/123_drip_dust_campaign_exclusion.sql (2026-08-02) — 116 above is
+-- itself no longer canonical; 123 is the current single source of truth for this object (appends an
+-- is_dust column flagging post-close DRIP-dust campaigns, e.g. B:IBM:2 / B:HCA:2, that can never
+-- close). See bigquery/123, not 116. Kept here, unmodified, for DR-rebuild apply-in-order reference
+-- only. DO NOT re-apply this CREATE statement live in isolation.
 -- ============================================================================
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.position_campaigns` AS
 WITH fills AS (
@@ -295,6 +305,11 @@ GROUP BY strategy, ticker, campaign_seq;
 -- position_lifecycle, so a partial-exit pyramid counts as ONE closed trade (campaign-level), not one
 -- per matched lot. Nothing else in this procedure changed -- keep bigquery/03/40/102's comments in
 -- sync if any of the three is ever edited again (per bigquery/40's own note).
+--
+-- SUPERSEDED LIVE by bigquery/124_dust_excluded_from_closed_trades.sql (2026-08-02 -- closed_trades /
+-- gate_n now also filter out post-close DRIP-dust campaigns via AND NOT l.is_dust). 124 is the CURRENT
+-- single source of truth for this object. Kept here, unmodified, for DR-rebuild apply-in-order
+-- reference only. DO NOT re-apply this CREATE statement live in isolation.
 -- ============================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_recompute_engine`()
 BEGIN
@@ -381,6 +396,13 @@ END;
 -- (position_campaigns.opening_thesis_ref) over nearest-date; conviction_pct + normalized added. Kept
 -- here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE
 -- statement live in isolation.
+--
+-- SUPERSEDED AGAIN, LIVE, by bigquery/123_drip_dust_campaign_exclusion.sql (2026-08-02) — 116 above is
+-- itself no longer canonical; 123 is the current single source of truth for this object (the campaign
+-- join now also excludes post-close DRIP-dust campaigns via `AND NOT pc.is_dust`, so a GO thesis can
+-- never mis-pair to a sub-dollar phantom campaign). See bigquery/123, not 116. Kept here, unmodified,
+-- for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in
+-- isolation.
 -- ============================================================================
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.thesis_outcomes` AS
 WITH theses AS (
