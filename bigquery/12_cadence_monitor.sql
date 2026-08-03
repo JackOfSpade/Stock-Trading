@@ -136,13 +136,16 @@ WHERE CASE r.schedule
 -- routines' after-close completion deadline (the DEADLINE GUARD — see below). Non-daily routines are
 -- shown for observation but excluded from the alarm (their predicted day can mismatch the real trigger).
 --
--- SUPERSEDED LIVE by bigquery/113_never_completed_watch_fix.sql — current single source of truth for
--- this object. 48_cadence_monitor_unbounded.sql superseded this definition first, and 113 superseded
--- that one in turn; 113 is the canonical file. Condition (c) as described above is exactly what 113
--- fixed: gating on "already in the monitored set" hid a routine that has NEVER logged a 'completed'
--- run, so a routine that never ran once could never raise needs_attention (the SL1/SL4 blind spot).
--- Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE
--- statement live in isolation — doing so silently reverts 113's fix.
+-- SUPERSEDED LIVE by bigquery/129_cadence_watch_deadline_autotune.sql — current single source of truth
+-- for this object. Chain: this file -> 48_cadence_monitor_unbounded.sql -> 113_never_completed_watch_fix.sql
+-- -> 129. Condition (c) as described above is what 113 fixed: gating on "already in the monitored set"
+-- hid a routine that has NEVER logged a 'completed' run, so a routine that never ran once could never
+-- raise needs_attention (the SL1/SL4 blind spot). 129 then autotuned the deadline literal 21:00 -> 21:45
+-- (W5 2026-08-03, process_reliability loop). NOTE: the TIME literal in the CREATE below is kept in sync
+-- with ops/cadence.yaml because scripts/check_cadence_consistency.py check D parses THIS file for it —
+-- that is why the literal here reads 21:45 even though the statement itself is superseded.
+-- Kept here for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE
+-- statement live in isolation — doing so silently reverts both 113's fix and 129's deadline.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.cadence_watch` AS
 WITH watch AS (
   -- monitored/ran_completed_today computed ONCE per row here and reused below (2026-07-04 audit
@@ -180,10 +183,12 @@ SELECT
    -- deadline has passed in America/Denver. Without this, ANY execution of this view / cadence_check.sql
    -- BEFORE the routines have run today (an off-schedule, manual, or duplicate run) flags D1/D2/D3 as
    -- "missed" merely because it is not yet their time — the exact 2026-06-21 (12:00 MT) and 2026-06-24
-   -- (09:37 MT) morning false-positive CRITICALs (RUNBOOK §20 follow-up). 21:00 Denver is comfortably
-   -- past the latest observed completion (D2 ~17:47, D3 ~18:36) yet well before the 23:15 Denver
-   -- (05:15 UTC) SCHEDULED cadence_check run, so a GENUINELY missed routine still fires critical at the
-   -- scheduled run. Computed in the America/Denver named zone ⇒ DST-safe (no hardcoded UTC offset). Pure
+   -- (09:37 MT) morning false-positive CRITICALs (RUNBOOK §20 follow-up). 21:45 Denver (AUTOTUNED from
+   -- 21:00 by W5 2026-08-03, loop `process_reliability`; see bigquery/129_cadence_watch_deadline_autotune.sql
+   -- for the evidence and the ceiling analysis) is past the observed p90 completions (D2a ~21:29, D1 ~21:19)
+   -- yet still before the SCHEDULED cadence_check run in BOTH seasons — 05:15 UTC is 23:15 MDT in summer
+   -- and 22:15 MST in winter, and the WINTER figure is the binding ceiling — so a GENUINELY missed routine
+   -- still fires critical at the scheduled run. Computed in the America/Denver named zone ⇒ DST-safe (no hardcoded UTC offset). Pure
    -- wall-clock, NOT gated on is_trading_day, so D3's daily_all miss-detection still works on
    -- weekends/holidays (D3 runs every calendar day).
    --
@@ -192,7 +197,7 @@ SELECT
    -- cadence_watch_deadline_local against this literal (check D). The `watch` CTE is aliased `e` below
    -- specifically to preserve this after the 2026-07-04 dedup refactor (it used to be the outer
    -- state.cadence_expected_today alias directly).
-   AND DATETIME(CURRENT_TIMESTAMP(), 'America/Denver') >= DATETIME(e.today, TIME '21:00:00')
+   AND DATETIME(CURRENT_TIMESTAMP(), 'America/Denver') >= DATETIME(e.today, TIME '21:45:00')
   ) AS needs_attention,
   CURRENT_TIMESTAMP() AS checked_at
 FROM watch e;

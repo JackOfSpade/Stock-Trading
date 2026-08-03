@@ -103,13 +103,19 @@ evening *after* D2 year-round:
    freshness check). Enable *Send email on failure* — it RAISEs when a *monitored* routine
    (one that has logged a `completed` run in the last 14 days) was expected today but did not run.
    Self-bootstrapping, so it never false-alarms on routines that don't yet self-log. *(A3)*
-   **Deadline guard (2026-06-25):** `state.cadence_watch.needs_attention` now also requires Denver-time
-   to be past **21:00** (the daily routines' after-close completion deadline), so an *off-schedule /
+   **Deadline guard (2026-06-25; deadline autotuned 21:00 → 21:45 on 2026-08-03):**
+   `state.cadence_watch.needs_attention` now also requires Denver-time
+   to be past **21:45** (the daily routines' after-close completion deadline), so an *off-schedule /
    manual / duplicate* run of this query *before* the routines have run today can no longer raise a
    spurious `missed_run` CRITICAL (the 2026-06-21 12:00 MT + 2026-06-24 09:37 MT morning false positives,
-   exposed once the notification-complete emailer began relaying self-healed alerts). 21:00 MT clears the
-   latest observed completions (D2 ~17:47, D3 ~18:36) yet sits before this 05:15 UTC (23:15 MT) scheduled
-   run, so a *genuine* miss still fires critical here. Computed in the `America/Denver` named zone
+   exposed once the notification-complete emailer began relaying self-healed alerts). 21:45 MT clears the
+   observed p90 completions (D2a ~21:29, D1 ~21:19, D2 ~21:06) yet still sits before this 05:15 UTC
+   scheduled run in **both** seasons — 05:15 UTC is 23:15 MDT in summer but **22:15 MST in winter**, and
+   the winter figure is the binding ceiling on this constant — so a *genuine* miss still fires critical
+   here year-round. Raised from 21:00 by W5 2026-08-03 under the `process_reliability` self-improvement
+   loop (D1/D2/D3 each held the deadline-threat pattern for three consecutive post-bigquery/89 W5 cycles);
+   evidence, the ceiling analysis, and the expected auto-revert caveat are in
+   `bigquery/129_cadence_watch_deadline_autotune.sql`. Computed in the `America/Denver` named zone
    (DST-safe) and NOT gated on `is_trading_day`, so D3's daily-all miss-detection still works on
    weekends/holidays. Logic in `bigquery/12_cadence_monitor.sql`; applied live via the MCP 2026-06-25.
 4. The new scheduling UI no longer exposes `maximum_bytes_billed`; don't worry about it — all

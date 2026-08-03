@@ -28,8 +28,11 @@
 -- sp_backfill_run_log_from_markers call inside sp_assert_deps), and after 46_weekly_benchmarks.sql
 -- (highest-numbered file at time of writing).
 
--- SUPERSEDED LIVE by bigquery/113_never_completed_watch_fix.sql (2026-07-27 interactive-session audit,
--- alerts 56aeef9c/7d585732) — current single source of truth for this VIEW. 113 drops the `monitored`
+-- SUPERSEDED LIVE by bigquery/129_cadence_watch_deadline_autotune.sql — current single source of truth
+-- for this VIEW. Intermediate link: bigquery/113_never_completed_watch_fix.sql (2026-07-27
+-- interactive-session audit, alerts 56aeef9c/7d585732) superseded this file first, then 129 superseded
+-- 113 by autotuning the deadline literal 21:00 -> 21:45 (W5 2026-08-03, process_reliability loop).
+-- 113 drops the `monitored`
 -- (has-ever-completed) precondition from `needs_attention` so a routine that has NEVER completed can
 -- still alarm once today's deadline passes — same fix as this file's own header describes, one bootstrap
 -- layer deeper: this file already made `monitored` unbounded (no 14-day rolling window), but a routine
