@@ -38,8 +38,17 @@
 -- is_go_family, the same single source conviction_features and thesis_outcome_summary now use, so a
 -- future vocabulary fix lands in ONE place instead of needing to be remembered in four.
 --
--- NOT CHANGED, and NOT a defect introduced here -- flagged so the next reader does not mistake it for
--- one: the `opened` leg still counts every event_type='OPEN' row in events.position_events. That
+-- SUPERSEDED LIVE by bigquery/131_declared_vs_realized_distinct_positions.sql — current single
+-- source of truth for analytics.declared_vs_realized. Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
+--
+-- The paragraph below is the ORIGINAL 2026-07-30 note, retained as provenance. It correctly
+-- identified the opened-leg double-count and deliberately declined to fix it under cover of an
+-- unrelated change; bigquery/131 (2026-08-03) is that deferred fix, finally made on its own terms
+-- after W5 alert 5dedd49e surfaced the resulting go_minus_opened = -3 readings for B and D.
+--
+-- NOT CHANGED HERE, and NOT a defect introduced here -- flagged so the next reader does not mistake
+-- it for one: the `opened` leg still counts every event_type='OPEN' row in events.position_events. That
 -- table is append-only and the STAGING-OPEN KEY INVARIANT means a filled order legitimately leaves
 -- BOTH a staging-time provisional OPEN and a fill-time OPEN for the same position_key, so
 -- opened_count can exceed the number of distinct positions and go_minus_opened can read negative.
