@@ -35,8 +35,8 @@ ORDER BY strategy, conviction_ordinal;
 -- (guard blocks, order-craft failures) or a pattern of GO decisions that don't survive to execution —
 -- both worth a human look, neither actionable from this view alone.
 --
--- SUPERSEDED LIVE by bigquery/118_decision_record_audit_followups.sql — current single source of truth
--- for this object. The go_theses CTE below re-derives its own count with an exact-string
+-- SUPERSEDED LIVE by bigquery/131_declared_vs_realized_distinct_positions.sql — current single
+-- source of truth for this object (chain: 26 -> 118 -> 131). The go_theses CTE below re-derives its own count with an exact-string
 -- `entry_type = 'thesis-construction' AND decision = 'GO'` filter; bigquery/116 fixed that exact bug
 -- class in thesis_outcomes/conviction_features/thesis_outcome_summary but MISSED this sibling view, so
 -- from 2026-07-30 the two paths silently diverged (this one reported 19 GO theses vs the corrected 21,

@@ -381,6 +381,14 @@ SELECT
   CURRENT_TIMESTAMP() AS checked_at
 FROM `stock-trading-498512.state.trading_enabled` t, expected e;
 
+-- SUPERSEDED LIVE by bigquery/130_missing_dependency_alias_resolve.sql — current single source of
+-- truth for ops.sp_auto_resolve_alerts. 130 makes Rule 1's dependency match tolerant of the
+-- missing_upstream / unsatisfied_deps payload-key aliases and of the JSON-array encoding; the
+-- missing_deps-only expression below can never auto-resolve a routine-hand-authored
+-- missing_dependency alert, which held blocking_criticals non-zero for two days on 2026-08-01..03.
+-- Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
+-- CREATE OR REPLACE PROCEDURE statement live in isolation.
+--
 -- ===== ops.sp_auto_resolve_alerts — Rule 4's no_other_criticals made halt-echo-aware for missed_run
 -- too (SUPERSEDES bigquery/97) =====
 -- Rules 1, 2, 3, 3b and Rule 4's live_would_clear/eligible_stale logic below are byte-identical to

@@ -287,9 +287,10 @@ FROM `stock-trading-498512.state.trading_enabled` t, expected e;
 -- 1-4 below, byte-identical) and additionally adds Rule 3b (catchup_refire_blocked) — and 94 was in
 -- turn superseded by bigquery/107_halt_echo_missed_run_gate.sql (97 in turn superseded — both are
 -- themselves superseded; 107 adds a halt-echo missed_run exclusion in Rule 4's no_other_criticals
--- count, alongside 97's original halt-echo missing_dependency exclusion). 107 is the CURRENT single
--- source of truth for this procedure: apply bigquery/107 -- do NOT re-apply the CREATE OR REPLACE
--- PROCEDURE below live in isolation. Kept here, unmodified, for DR-rebuild apply-in-order reference
+-- count, alongside 97's original halt-echo missing_dependency exclusion), and 107 was in turn
+-- SUPERSEDED by bigquery/130_missing_dependency_alias_resolve.sql (Rule 1 payload-key/array
+-- tolerance). bigquery/130 is the CURRENT single source of truth for this procedure: apply
+-- bigquery/130 -- do NOT re-apply the CREATE OR REPLACE PROCEDURE below live in isolation. Kept here, unmodified, for DR-rebuild apply-in-order reference
 -- only. (Historical context preserved: this definition itself SUPERSEDES bigquery/34, per the
 -- banner above.)
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_auto_resolve_alerts`()
