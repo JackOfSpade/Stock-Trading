@@ -42,15 +42,30 @@
  *   - pctCellHtml_         (weekly_report.gs)
  *   - buildParkSection_    (weekly_report.gs) -- 2026-07-29: was zero-coverage; pluralization bugs here
  *                           (e.g. "1 days") would be silent in the rendered email
- *   - isTest_              (alert_emailer.gs)
  *   - esc2_                (alert_emailer.gs)
- *   - alertSubject_        (alert_emailer.gs, defined immediately after isTest_; signature changed
- *                           2026-07-29 from (fresh, combined) to (fresh, recurringCount) -- see that
- *                           file's checkAlerts_ for why)
+ *   - ROSTER_NOTICE_CATEGORIES (alert_emailer.gs) -- 2026-08-04 v5: new const, the six roster-change
+ *                           alert categories; isRosterNotice_ depends on it
+ *   - pl_                  (alert_emailer.gs) -- 2026-08-04 v5: new, defensive payload JSON parse
+ *   - isTest_              (alert_emailer.gs) -- 2026-08-04 v5: CHANGED, now also true when
+ *                           pl_(a).synthetic === true (fire-drill rows), not just canary source/category
+ *   - isRosterNotice_      (alert_emailer.gs) -- 2026-08-04 v5: new
+ *   - isRealRosterNotice_  (alert_emailer.gs) -- 2026-08-04 v5: new
+ *   - rosterHeadline_      (alert_emailer.gs) -- 2026-08-04 v5: new
+ *   - money_               (alert_emailer.gs) -- 2026-08-04 v5: new
+ *   - rosterDetail_        (alert_emailer.gs) -- 2026-08-04 v5: new
+ *   - alertSubject_        (alert_emailer.gs, defined immediately after isTest_/roster helpers;
+ *                           signature changed 2026-07-29 from (fresh, combined) to
+ *                           (fresh, recurringCount) -- see that file's checkAlerts_ for why. CHANGED
+ *                           AGAIN 2026-08-04 v5: now splits roster notices out of the incident count
+ *                           via rosterNew/isRealRosterNotice_ and adds a third subject form
+ *                           (roster-only batch, no ⚠/ALERT) between the existing [TEST] and mixed forms)
  *   - htmlAlerts_          (alert_emailer.gs) -- 2026-07-29: copied ONLY to regression-test the
  *                           LOOKBACK_LABEL footer text; call with an EMPTY batch ONLY, see its own
- *                           comment above the copy
- *   - plainAlerts_         (alert_emailer.gs) -- same empty-batch-only caveat as htmlAlerts_
+ *                           comment above the copy. NOT re-synced for the v5 roster-section changes
+ *                           (out of scope for the empty-batch-only footer regression this copy exists
+ *                           to guard; alertSubject_ above is the v5-covered twin)
+ *   - plainAlerts_         (alert_emailer.gs) -- same empty-batch-only caveat as htmlAlerts_, and
+ *                           likewise not re-synced for v5's roster additions
  *
  * Note: signDollar_, fmtAbsDollars_, edgeWord_, dollarCellHtml_, SGOV_GRAY, and the headline-block
  * comparison logic in fallbackBarsHtml_/buildSubject_ were removed from weekly_report.gs in the
@@ -279,29 +294,146 @@ function buildSubject_(d) {
 
 function esc2_(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+// ROSTER-CHANGE NOTICES (owner directive 2026-08-04, bigquery/134_roster_change_notifications.sql).
+// The autonomous SISA loop (SL1-SL5) adds and removes trading strategies with no human approval step --
+// that stays true. But until 2026-08-04 it did so with no operator-facing signal either: the six
+// categories below were raised at 'info', which the SEVERITIES filter above excludes, so a roster change
+// reached NO channel. They are now raised at 'warning' and therefore arrive here like any other alert.
+//
+// They are NOT faults, and rendering them as faults would be its own bug -- an operator who is emailed
+// "⚠ ALERT" every time a healthy autonomous action completes learns to ignore the channel. So this file
+// splits them into their own visual lane with their own subject line, and renders the structured payload
+// (which strategy, which transition, how much capital, why) instead of just the message string.
+//
+// Keep this list in lockstep with Rule 5's IN list in bigquery/134 and the ROSTER-CHANGE NOTICE contract
+// in the Claude_Task_Plan.md preamble. A category in only one of the three places is inert.
+const ROSTER_NOTICE_CATEGORIES = [
+  'strategy_shadow_registered',   // SL5: entered SHADOW, added to roster.yaml, zero capital
+  'strategy_probe_registered',    // SL5: PAPER->PROBE, FIRST REAL CAPITAL (renamed from strategy_adopted)
+  'strategy_graduated',           // M4 section H: PROBE->ADOPTED, 30-trade gate cleared
+  'retirement_proposed',          // SL4: a drop is pending AR_orc adjudication
+  'strategy_deregistered',        // SL5: dropped from the roster
+  'roster_below_floor'            // SL1: active roster is at the n_min=2 floor
+];
+
+// Parse an alert's payload JSON defensively (v5). ops.alerts.payload is free-shape JSON authored by
+// routines from prose, so key drift and malformed payloads are the EXPECTED steady state, not the
+// exception (this is the same reasoning bigquery/130 used when it made Rule 1 tolerant of payload-key
+// aliases rather than trying to enforce one canonical key). Every caller here treats the payload as
+// enrichment only: on NULL/absent/corrupt input this returns {}, each renderer omits the fields it
+// cannot find, and the alert still delivers with its message string intact. A payload must never be
+// able to suppress an alert email.
+function pl_(a) {
+  try {
+    const o = JSON.parse((a && a.payload) || '{}');
+    return (o && typeof o === 'object') ? o : {};
+  } catch (e) { return {}; }
+}
+
 // A canary row is the weekly alert-delivery self-test (delivery_canary.sql), never a real incident.
 // It is labelled [TEST] in both subject and body so it can't be mistaken for an alert — while still
 // being delivered + notified_ts-stamped, so the canary's step-1 assertion stays valid.
-function isTest_(a) { return a.source === 'scheduled.canary' || a.category === 'delivery_canary'; }
+// v5 adds payload.synthetic: the fire drills (ops.sp_fire_drill_roster_notice, and any future drill
+// following the same convention) insert a synthetic row, call the real resolver, and delete it again
+// within one procedure. That window is milliseconds wide but nonzero, so a 2-hourly poll CAN in
+// principle land inside it — and a drill row in the roster categories would otherwise render as a
+// fabricated "strategy ZZ entered PROBE" notice. Matching on payload.synthetic rather than on a source
+// prefix is deliberate: a drill FAILURE alert (roster_notice_fire_drill_failed, alert_latch_fire_drill_failed,
+// alert_resolve_fire_drill_failed) is a genuine critical incident raised by the same procedures, and
+// carries no synthetic key — so it correctly stays a real alert.
+function isTest_(a) {
+  if (a.source === 'scheduled.canary' || a.category === 'delivery_canary') return true;
+  return pl_(a).synthetic === true;
+}
+
+// ===== roster-change notices (v5) =====
+// A roster notice reports a COMPLETED autonomous action, not a problem. Strategy add/drop has had no
+// human approval step since the 2026-07-10 SISA conversion and this channel does not reintroduce one —
+// it exists so the owner LEARNS of a roster change instead of having to query state.strategy_roster.
+function isRosterNotice_(a) { return ROSTER_NOTICE_CATEGORIES.indexOf(a.category) !== -1; }
+
+// A roster notice that is not itself a fire-drill row. Used everywhere the two lanes are split, so a
+// synthetic drill row stays in the TEST lane instead of being rendered as a real roster change.
+function isRealRosterNotice_(a) { return !isTest_(a) && isRosterNotice_(a); }
+
+// One-line headline for the subject, e.g. "F PAPER→PROBE". Falls back through progressively less
+// specific forms so a payload-less notice still produces something meaningful.
+function rosterHeadline_(a) {
+  const p = pl_(a);
+  if (p.strategy_code && p.from_state && p.to_state) return `${p.strategy_code} ${p.from_state}→${p.to_state}`;
+  if (p.strategy_code) return `${p.strategy_code} · ${a.category}`;
+  return a.category;
+}
+
+// Money/percent formatting without locale APIs (Apps Script's locale is the script's, not the reader's).
+function money_(v) {
+  const n = Number(v);
+  if (!isFinite(n)) return String(v);
+  return '$' + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+// Ordered [label, value] pairs for the fields the ROSTER-CHANGE NOTICE contract defines
+// (Claude_Task_Plan.md preamble). Missing keys are omitted rather than rendered blank, so a partial
+// payload degrades gracefully instead of producing a card full of empty rows.
+function rosterDetail_(a) {
+  const p = pl_(a);
+  const out = [];
+  const push = (label, v) => {
+    if (v === undefined || v === null || String(v) === '') return;
+    out.push([label, String(v)]);
+  };
+  push('Strategy', [p.strategy_code, p.strategy_name].filter(x => x !== undefined && x !== null && x !== '').join(' — '));
+  if (p.from_state && p.to_state) push('Transition', `${p.from_state} → ${p.to_state}`);
+  if (p.roster_active_before !== undefined && p.roster_active_after !== undefined) {
+    push('Roster active', `${p.roster_active_before} → ${p.roster_active_after}`);
+  }
+  if (p.capital_usd !== undefined && p.capital_usd !== null) {
+    const pct = (p.pct_nav !== undefined && p.pct_nav !== null && String(p.pct_nav) !== '') ? ` (${p.pct_nav}% NAV)` : '';
+    push('Capital', Number(p.capital_usd) === 0 ? 'none — zero capital at risk' : money_(p.capital_usd) + pct);
+  }
+  push('Trigger', p.kill_trigger);
+  push('Why', p.reason);
+  push('Commit', p.git_commit);
+  return out;
+}
 
 // Email subject for one poll batch. `fresh` = alerts newly notified this poll (real incidents +
 // any canary); `recurringCount` = the count of non-duplicate recurring termination_close_staged
-// re-sends riding in the same batch, computed ONCE by the caller (checkAlerts_) and passed in —
-// NOT re-derived from a `combined` array here (2026-07-29 collapse). "new" must count only
-// genuinely-new alerts (from `fresh`), NOT the recurring re-sends — otherwise the subject
-// over-reports new incidents (e.g. "3 new" when 2 are new + 1 is a recurring re-notify) and
-// mis-attributes the recurring critical to the "(N critical)" new-count.
+// re-sends riding in the same batch (combined.length - fresh.length). Computed ONCE by the caller
+// (checkAlerts_) and passed in — NOT re-derived from a `combined` array here — so this count can never
+// diverge from what htmlAlerts_/plainAlerts_/the Logger.log line report for the same poll (2026-07-29
+// collapse; this had already drifted once, see bigquery/43's git_note). "new" must count only
+// genuinely-new alerts (from `fresh`), NOT the recurring re-sends — otherwise the subject over-reports
+// new incidents (e.g. "3 new" when 2 are new + 1 is a recurring re-notify) and mis-attributes the
+// recurring critical to the "(N critical)" new-count. Pure (no Apps-Script-service calls) — mirrored
+// verbatim in ops/weekly_report/test_pure_helpers.js; keep both in sync.
 function alertSubject_(fresh, recurringCount) {
-  const newReal = fresh.filter(r => !isTest_(r));         // genuinely new, non-test alerts this poll
-  const testCount = fresh.length - newReal.length;         // test canaries among the new alerts
-  if (newReal.length === 0 && recurringCount === 0) {
+  const rosterNew = fresh.filter(isRealRosterNotice_);                        // completed autonomous roster changes
+  const newReal = fresh.filter(r => !isTest_(r) && !isRosterNotice_(r));      // genuinely new, non-test INCIDENTS
+  const testCount = fresh.length - newReal.length - rosterNew.length;         // test canaries + synthetic drill rows
+  if (newReal.length === 0 && recurringCount === 0 && rosterNew.length === 0) {
     // Batch is ONLY the alert-delivery self-test → unmistakable test subject, no ⚠.
     return '⚗ [TEST] Stock-Trading alert-delivery self-test — no action needed';
   }
+  if (newReal.length === 0 && recurringCount === 0) {
+    // Batch is ONLY roster changes (the common case — the rails rate-limit these to roughly 5-12/year,
+    // and they rarely coincide with an incident). A completed autonomous action is not a fault, so this
+    // subject deliberately carries no ⚠ and does not say ALERT: an operator emailed "⚠ ALERT" every time
+    // the system does something healthy and expected stops reading the channel, which would undermine
+    // the genuine alerts that share it.
+    const label = rosterNew.length === 1
+      ? `ROSTER CHANGE: ${rosterHeadline_(rosterNew[0])}`
+      : `${rosterNew.length} ROSTER CHANGES`;
+    return `📋 Stock-Trading — ${label}` + (testCount ? ` (+${testCount} test)` : '');
+  }
+  // Mixed batch: an incident outranks a roster change, so the ⚠ subject leads and roster changes are
+  // appended as a count. They are NOT folded into the "N new" figure — that figure means incidents, and
+  // inflating it with healthy roster events would repeat the 2026-07-29 over-reporting bug in a new form.
   const crit = newReal.filter(r => r.severity === 'critical').length;
   return '⚠ Stock-Trading ALERT' +
             (newReal.length ? ` — ${newReal.length} new${crit ? ` (${crit} critical)` : ''}` : '') +
             (recurringCount ? ` — ${recurringCount} UNCONFIRMED TERMINATION CLOSE (recurring)` : '') +
+            (rosterNew.length ? ` — +${rosterNew.length} roster change${rosterNew.length > 1 ? 's' : ''}` : '') +
             (testCount ? ` (+${testCount} test)` : '');
 }
 
@@ -846,6 +978,111 @@ t('isTest_ returns true for the delivery_canary category', () => {
 t('isTest_ returns false for a real (non-canary) alert', () => {
   assert.strictEqual(isTest_({ source: 'router', category: 'cash_tripwire' }), false);
 });
+t('isTest_ returns true for a synthetic fire-drill row (payload.synthetic === true), even in a roster category (v5)', () => {
+  assert.strictEqual(isTest_({ source: 'ops.sp_fire_drill_roster_notice', category: 'strategy_probe_registered',
+    payload: '{"synthetic":true,"strategy_code":"ZZ"}' }), true);
+});
+t('isTest_ returns false for a fire-drill FAILURE alert -- its payload carries no synthetic key, so it stays a real incident (v5)', () => {
+  assert.strictEqual(isTest_({ source: 'ops.sp_fire_drill_roster_notice', category: 'roster_notice_fire_drill_failed',
+    payload: '{"drill_id":"x","held_before_delivery":false}' }), false);
+});
+
+// ---- pl_ (alert_emailer.gs, v5) ----
+t('pl_ returns {} for a null, undefined, or entirely missing payload, and never throws', () => {
+  assert.deepStrictEqual(pl_({ payload: null }), {});
+  assert.deepStrictEqual(pl_({ payload: undefined }), {});
+  assert.deepStrictEqual(pl_({}), {});
+  assert.deepStrictEqual(pl_(null), {});
+  assert.deepStrictEqual(pl_(undefined), {});
+});
+t('pl_ returns {} for malformed JSON, without throwing', () => {
+  assert.deepStrictEqual(pl_({ payload: '{not json' }), {});
+});
+t('pl_ returns {} for a JSON scalar payload (valid JSON that parses to a non-object)', () => {
+  assert.deepStrictEqual(pl_({ payload: '42' }), {});
+  assert.deepStrictEqual(pl_({ payload: '"a string"' }), {});
+  assert.deepStrictEqual(pl_({ payload: 'null' }), {});
+});
+t('pl_ parses a well-formed object payload normally', () => {
+  assert.deepStrictEqual(pl_({ payload: '{"strategy_code":"F","capital_usd":2000}' }), { strategy_code: 'F', capital_usd: 2000 });
+});
+
+// ---- isRosterNotice_ / isRealRosterNotice_ (alert_emailer.gs, v5) ----
+t('isRosterNotice_ is true for each of the six roster-change categories, false for a non-roster category', () => {
+  ROSTER_NOTICE_CATEGORIES.forEach(cat => {
+    assert.strictEqual(isRosterNotice_({ category: cat }), true, `expected true for category ${cat}`);
+  });
+  assert.strictEqual(isRosterNotice_({ category: 'cash_tripwire' }), false);
+  assert.strictEqual(isRosterNotice_({ category: 'roster_notice_fire_drill_failed' }), false);
+});
+t('isRealRosterNotice_ is true only for a genuine (non-synthetic) roster notice', () => {
+  const real = { category: 'strategy_probe_registered', payload: '{"strategy_code":"F"}' };
+  const synthetic = { category: 'strategy_probe_registered', payload: '{"synthetic":true,"strategy_code":"ZZ"}' };
+  const nonRoster = { category: 'cash_tripwire', payload: null };
+  assert.strictEqual(isRealRosterNotice_(real), true);
+  assert.strictEqual(isRealRosterNotice_(synthetic), false);
+  assert.strictEqual(isRealRosterNotice_(nonRoster), false);
+});
+
+// ---- rosterHeadline_ (alert_emailer.gs, v5) ----
+t('rosterHeadline_ renders "code from→to" when the full transition is present', () => {
+  assert.strictEqual(
+    rosterHeadline_({ category: 'strategy_probe_registered', payload: '{"strategy_code":"F","from_state":"PAPER","to_state":"PROBE"}' }),
+    'F PAPER→PROBE'
+  );
+});
+t('rosterHeadline_ falls back to "code · category" when only strategy_code is present', () => {
+  assert.strictEqual(
+    rosterHeadline_({ category: 'strategy_shadow_registered', payload: '{"strategy_code":"F"}' }),
+    'F · strategy_shadow_registered'
+  );
+});
+t('rosterHeadline_ falls back to the bare category when the payload has nothing usable', () => {
+  assert.strictEqual(rosterHeadline_({ category: 'roster_below_floor', payload: null }), 'roster_below_floor');
+  assert.strictEqual(rosterHeadline_({ category: 'roster_below_floor' }), 'roster_below_floor');
+});
+
+// ---- money_ / rosterDetail_ (alert_emailer.gs, v5) ----
+t('money_ formats with a leading $ and thousands separators', () => {
+  assert.strictEqual(money_(2000), '$2,000');
+  assert.strictEqual(money_(1234567), '$1,234,567');
+  assert.strictEqual(money_(950), '$950');
+});
+t('money_ falls back to String(v) for a non-finite value', () => {
+  assert.strictEqual(money_(NaN), 'NaN');
+  assert.strictEqual(money_('abc'), 'abc');
+});
+t('rosterDetail_ omits missing keys entirely -- a payload with only strategy_code yields exactly one row', () => {
+  const rows = rosterDetail_({ payload: '{"strategy_code":"F"}' });
+  assert.deepStrictEqual(rows, [['Strategy', 'F']]);
+});
+t('rosterDetail_ renders capital_usd: 0 as the "none — zero capital at risk" form', () => {
+  const rows = rosterDetail_({ payload: '{"strategy_code":"F","capital_usd":0}' });
+  const capital = rows.find(kv => kv[0] === 'Capital');
+  assert.ok(capital, 'expected a Capital row');
+  assert.strictEqual(capital[1], 'none — zero capital at risk');
+});
+t('rosterDetail_ renders a populated payload capital + pct_nav in money format with thousands separators', () => {
+  const rows = rosterDetail_({ payload: '{"strategy_code":"F","capital_usd":2000,"pct_nav":1.8}' });
+  const capital = rows.find(kv => kv[0] === 'Capital');
+  assert.strictEqual(capital[1], '$2,000 (1.8% NAV)');
+});
+t('rosterDetail_ renders the full field set (transition, roster counts, trigger, reason, commit) in order', () => {
+  const rows = rosterDetail_({ payload: JSON.stringify({
+    strategy_code: 'F', strategy_name: 'Foo', from_state: 'PAPER', to_state: 'PROBE',
+    roster_active_before: 4, roster_active_after: 5, capital_usd: 2000, pct_nav: 1.8,
+    kill_trigger: 'drawdown_kill', reason: 'graduated', git_commit: 'abc123'
+  }) });
+  assert.deepStrictEqual(rows, [
+    ['Strategy', 'F — Foo'],
+    ['Transition', 'PAPER → PROBE'],
+    ['Roster active', '4 → 5'],
+    ['Capital', '$2,000 (1.8% NAV)'],
+    ['Trigger', 'drawdown_kill'],
+    ['Why', 'graduated'],
+    ['Commit', 'abc123']
+  ]);
+});
 
 // ---- esc2_ (alert_emailer.gs) ----
 t('esc2_ escapes &, <, >, and " (quote-escaping fix)', () => {
@@ -896,6 +1133,54 @@ t('alertSubject_: a test canary alongside a real new alert -> "(+1 test)" suffix
     alertSubject_(fresh, 0),
     '⚠ Stock-Trading ALERT — 1 new (1 critical) (+1 test)'
   );
+});
+t('alertSubject_: a canary-only batch still returns the [TEST] subject unchanged in v5 (regression guard: roster split must not touch this form)', () => {
+  const fresh = [{ source: 'scheduled.canary', category: 'delivery_canary', severity: 'warning' }];
+  assert.strictEqual(alertSubject_(fresh, 0), '⚗ [TEST] Stock-Trading alert-delivery self-test — no action needed');
+});
+t('alertSubject_: roster-only batch with exactly 1 notice -> the 📋 ROSTER CHANGE subject, no ⚠/ALERT (v5)', () => {
+  const fresh = [{ source: 'SL5', category: 'strategy_probe_registered', severity: 'warning',
+    payload: '{"strategy_code":"F","from_state":"PAPER","to_state":"PROBE"}' }];
+  const subject = alertSubject_(fresh, 0);
+  assert.ok(subject.startsWith('📋'), `expected the clipboard emoji, got: ${subject}`);
+  assert.ok(subject.includes('ROSTER CHANGE:'), `expected "ROSTER CHANGE:", got: ${subject}`);
+  assert.ok(subject.includes('F PAPER→PROBE'), `expected the headline, got: ${subject}`);
+  assert.ok(!subject.includes('⚠'), 'a healthy roster notice must not carry the warning glyph');
+  assert.ok(!subject.includes('ALERT'), 'a healthy roster notice must not say ALERT');
+});
+t('alertSubject_: roster-only batch with 2+ notices -> the "N ROSTER CHANGES" plural form (v5)', () => {
+  const fresh = [
+    { source: 'SL5', category: 'strategy_probe_registered', severity: 'warning', payload: '{"strategy_code":"F"}' },
+    { source: 'M4', category: 'strategy_graduated', severity: 'warning', payload: '{"strategy_code":"B"}' },
+  ];
+  assert.strictEqual(alertSubject_(fresh, 0), '📋 Stock-Trading — 2 ROSTER CHANGES');
+});
+t('alertSubject_: mixed batch (1 real critical incident + 1 roster notice) -> ⚠ ALERT leads, "1 new (1 critical)" excludes the roster row, "+1 roster change" appended (v5)', () => {
+  const fresh = [
+    { source: 'router', category: 'cash_tripwire', severity: 'critical' },
+    { source: 'SL5', category: 'strategy_probe_registered', severity: 'warning',
+      payload: '{"strategy_code":"F","from_state":"PAPER","to_state":"PROBE"}' },
+  ];
+  assert.strictEqual(
+    alertSubject_(fresh, 0),
+    '⚠ Stock-Trading ALERT — 1 new (1 critical) — +1 roster change'
+  );
+});
+t('alertSubject_: a synthetic fire-drill row in a roster category renders as the TEST subject, not a roster subject (v5) -- proves a fire drill cannot fabricate a "strategy entered PROBE" email', () => {
+  const drillRow = { source: 'ops.sp_fire_drill_roster_notice', category: 'strategy_probe_registered', severity: 'warning',
+    payload: '{"synthetic":true,"strategy_code":"ZZ","from_state":"PAPER","to_state":"PROBE"}' };
+  assert.strictEqual(isTest_(drillRow), true);
+  assert.strictEqual(isRealRosterNotice_(drillRow), false);
+  assert.strictEqual(
+    alertSubject_([drillRow], 0),
+    '⚗ [TEST] Stock-Trading alert-delivery self-test — no action needed'
+  );
+});
+t('alertSubject_: a fire-drill FAILURE alert (no synthetic key in its payload) renders as a real critical incident, not a test (v5)', () => {
+  const failRow = { source: 'ops.sp_fire_drill_roster_notice', category: 'roster_notice_fire_drill_failed', severity: 'critical',
+    payload: '{"drill_id":"x","held_before_delivery":false}' };
+  assert.strictEqual(isTest_(failRow), false);
+  assert.strictEqual(alertSubject_([failRow], 0), '⚠ Stock-Trading ALERT — 1 new (1 critical)');
 });
 
 // ---- htmlAlerts_ / plainAlerts_ footer text (2026-07-29 regression fix, empty-batch-only — see the

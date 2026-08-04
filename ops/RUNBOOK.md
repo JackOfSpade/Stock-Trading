@@ -2604,10 +2604,21 @@ any per-strategy web-UI trigger LAST. ON DELETE, reverse it: delete the web-UI t
 the cadence/plan/SQL rows, letting the `instruction_drift` completed-run windows age so the non-self-healing
 `unknown_routine` alarm (§28/§30) never fires. The SL1-SL5 routines themselves are permanent.
 
-**Owner action required:** none, ever. Add/delete runs itself; watch for the `info`-severity
-`strategy_adopted` / retirement rows in `ops.alerts`, the weekly W5 lifecycle digest, or query
-`state.strategy_roster` / `ops.roster_change_log` any time. To PAUSE the whole loop, INSERT an
-`enabled = FALSE` row into `ops.arsenal_control` — live trading is unaffected.
+**Owner action required:** none, ever — but you are now TOLD, by email. Add/delete still runs itself with no
+approval step; since 2026-08-04 (owner directive) every roster-MEMBERSHIP change reaches your inbox within
+~2h via six `warning`-severity ROSTER-CHANGE NOTICE categories: `strategy_shadow_registered`,
+`strategy_probe_registered`, `strategy_graduated`, `retirement_proposed`, `strategy_deregistered`,
+`roster_below_floor` (contract in the `Claude_Task_Plan.md` preamble; auto-resolve Rule 5 in
+`bigquery/134_roster_change_notifications.sql`; dedicated rendering lane in `alert_emailer.gs` v5).
+**Correction to this section's pre-2026-08-04 wording,** which said to "watch for the `info`-severity
+`strategy_adopted` / retirement rows in `ops.alerts`": those rows were raised at `info`, and BOTH
+`alert_emailer.gs` (`SEVERITIES = ['critical','warning']`) and `scripts/alert_relay.py` filter `info` out —
+so a roster change reached no push channel whatsoever, and that instruction described a pull that only ever
+worked if you happened to go looking. The category `strategy_adopted` was also renamed
+`strategy_probe_registered`, because it fired at PAPER→PROBE rather than at the ADOPTED state. The weekly W5
+lifecycle digest (`events.decision_log`, `entry_type='arsenal-digest'`) and `state.strategy_roster` /
+`ops.roster_change_log` remain queryable any time. To PAUSE the whole loop, INSERT an `enabled = FALSE` row
+into `ops.arsenal_control` — live trading is unaffected.
 
 ## 40. "Thin order gateway" — closed NO-BUILD, gated on Item 26's IBKR headless-auth finding (self-improvement audit ITEM 29, 2026-07-11)
 

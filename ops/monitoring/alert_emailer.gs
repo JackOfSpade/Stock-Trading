@@ -16,6 +16,17 @@
  * is emailed exactly once and then stamped; resolved-since-raise alerts are still sent, tagged
  * AUTO-RESOLVED so you know it self-healed. (RUNBOOK §20 / §25.)
  *
+ * ROSTER-CHANGE NOTICES (v5, 2026-08-04, owner directive "although i let ai dictate when to add/drop
+ * strategies, i still want to be notified by email when it does so"): the autonomous SISA loop
+ * (SL1-SL5) previously raised its roster-membership events at 'info', which the SEVERITIES filter below
+ * excludes — so a strategy could be added to or dropped from the live roster and reach NO channel at
+ * all. Verified empirically before the change: every 'info' row ever written to ops.alerts had
+ * notified_ts IS NULL, without exception. Those six categories now raise at 'warning'
+ * (bigquery/134_roster_change_notifications.sql) and arrive here. They are rendered in their OWN lane —
+ * separate subject, separate section, structured payload detail — because a completed autonomous action
+ * is not a fault, and an operator emailed "⚠ ALERT" for healthy expected behavior stops reading the
+ * channel that also carries the real ones. This adds NO approval step: add/drop stays fully autonomous.
+ *
  * Like the weekly report, it runs on Google's servers as you (from you, to you): no SMTP, app
  * password, or API key. It de-dupes via Script Properties so you're emailed ONCE per alert,
  * not every run, and it tells you when previously-open alerts have been resolved.
@@ -31,7 +42,29 @@ const ALERT_RECIPIENT  = Session.getActiveUser().getEmail(); // self-email
 const ALERT_SENDER     = 'Stock-Trading Alerts';
 const SEVERITIES       = ['critical', 'warning']; // set to ['critical'] for criticals only
 const POLL_HOURS       = 2;                        // how often to check
-const ALERT_SCRIPT_VERSION = 'v4';                 // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep. Named ALERT_SCRIPT_VERSION (not SCRIPT_VERSION) because this file and weekly_report.gs share ONE Apps Script project's top-level scope -- a same-named const in both would throw a project-wide SyntaxError on the next paste (2026-07-14 audit finding).
+const ALERT_SCRIPT_VERSION = 'v5';                 // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep. Named ALERT_SCRIPT_VERSION (not SCRIPT_VERSION) because this file and weekly_report.gs share ONE Apps Script project's top-level scope -- a same-named const in both would throw a project-wide SyntaxError on the next paste (2026-07-14 audit finding).
+
+// ROSTER-CHANGE NOTICES (owner directive 2026-08-04, bigquery/134_roster_change_notifications.sql).
+// The autonomous SISA loop (SL1-SL5) adds and removes trading strategies with no human approval step --
+// that stays true. But until 2026-08-04 it did so with no operator-facing signal either: the six
+// categories below were raised at 'info', which the SEVERITIES filter above excludes, so a roster change
+// reached NO channel. They are now raised at 'warning' and therefore arrive here like any other alert.
+//
+// They are NOT faults, and rendering them as faults would be its own bug -- an operator who is emailed
+// "⚠ ALERT" every time a healthy autonomous action completes learns to ignore the channel. So this file
+// splits them into their own visual lane with their own subject line, and renders the structured payload
+// (which strategy, which transition, how much capital, why) instead of just the message string.
+//
+// Keep this list in lockstep with Rule 5's IN list in bigquery/134 and the ROSTER-CHANGE NOTICE contract
+// in the Claude_Task_Plan.md preamble. A category in only one of the three places is inert.
+const ROSTER_NOTICE_CATEGORIES = [
+  'strategy_shadow_registered',   // SL5: entered SHADOW, added to roster.yaml, zero capital
+  'strategy_probe_registered',    // SL5: PAPER->PROBE, FIRST REAL CAPITAL (renamed from strategy_adopted)
+  'strategy_graduated',           // M4 section H: PROBE->ADOPTED, 30-trade gate cleared
+  'retirement_proposed',          // SL4: a drop is pending AR_orc adjudication
+  'strategy_deregistered',        // SL5: dropped from the roster
+  'roster_below_floor'            // SL1: active roster is at the n_min=2 floor
+];
 // LOOKBACK_HOURS bounds the notified_ts IS NULL scan. Was 48h — if the emailer itself is dead longer
 // than the lookback (revoked token / deleted trigger), alerts raised early in the outage permanently
 // keep notified_ts NULL and are never emailed by ANY code path on recovery (the webhook relay's window
@@ -85,9 +118,14 @@ function checkAlerts_() {
     // de-dup; Script Properties is a secondary guard so a failed stamp doesn't re-send next poll.
     // alert_ms (UNIX_MILLIS) lets the renderer format alert_ts in the DETECTED display timezone
     // (state.user_tz) instead of raw unlabeled UTC — alert_ts (STRING) is kept too as a UTC fallback.
+    // payload (v5) is selected for the ROSTER CHANGE lane, which renders the structured transition
+    // detail (strategy, states, roster count, capital, reason) rather than only the message string, and
+    // for isTest_'s payload.synthetic check. Every consumer parses it defensively via pl_() -- a NULL,
+    // absent, or malformed payload degrades to the message-only rendering and never throws. Kept
+    // identical in the recurring query below so both result sets have the same shape.
     const rows = bqAlerts_(`
       SELECT alert_id, CAST(alert_ts AS STRING) AS alert_ts, UNIX_MILLIS(alert_ts) AS alert_ms,
-             severity, source, category, message, resolved
+             severity, source, category, message, resolved, TO_JSON_STRING(payload) AS payload
       FROM \`${ALERT_PROJECT_ID}.ops.alerts\`
       WHERE notified_ts IS NULL AND severity IN (${sevList})
         AND alert_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${LOOKBACK_HOURS} HOUR)
@@ -121,7 +159,7 @@ function checkAlerts_() {
     try {
       recurring = bqAlerts_(`
         SELECT alert_id, CAST(alert_ts AS STRING) AS alert_ts, UNIX_MILLIS(alert_ts) AS alert_ms,
-               severity, source, category, message, resolved
+               severity, source, category, message, resolved, TO_JSON_STRING(payload) AS payload
         FROM \`${ALERT_PROJECT_ID}.ops.alerts\`
         WHERE category = 'termination_close_staged' AND NOT resolved
         ORDER BY alert_ts DESC
@@ -250,10 +288,86 @@ function fmtAlertTs_(a) {
 // silently stops getting it (2026-07-09 code-review finding).
 function esc2_(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+// Parse an alert's payload JSON defensively (v5). ops.alerts.payload is free-shape JSON authored by
+// routines from prose, so key drift and malformed payloads are the EXPECTED steady state, not the
+// exception (this is the same reasoning bigquery/130 used when it made Rule 1 tolerant of payload-key
+// aliases rather than trying to enforce one canonical key). Every caller here treats the payload as
+// enrichment only: on NULL/absent/corrupt input this returns {}, each renderer omits the fields it
+// cannot find, and the alert still delivers with its message string intact. A payload must never be
+// able to suppress an alert email.
+function pl_(a) {
+  try {
+    const o = JSON.parse((a && a.payload) || '{}');
+    return (o && typeof o === 'object') ? o : {};
+  } catch (e) { return {}; }
+}
+
 // A canary row is the weekly alert-delivery self-test (delivery_canary.sql), never a real incident.
 // It is labelled [TEST] in both subject and body so it can't be mistaken for an alert — while still
 // being delivered + notified_ts-stamped, so the canary's step-1 assertion stays valid.
-function isTest_(a) { return a.source === 'scheduled.canary' || a.category === 'delivery_canary'; }
+// v5 adds payload.synthetic: the fire drills (ops.sp_fire_drill_roster_notice, and any future drill
+// following the same convention) insert a synthetic row, call the real resolver, and delete it again
+// within one procedure. That window is milliseconds wide but nonzero, so a 2-hourly poll CAN in
+// principle land inside it — and a drill row in the roster categories would otherwise render as a
+// fabricated "strategy ZZ entered PROBE" notice. Matching on payload.synthetic rather than on a source
+// prefix is deliberate: a drill FAILURE alert (roster_notice_fire_drill_failed, alert_latch_fire_drill_failed,
+// alert_resolve_fire_drill_failed) is a genuine critical incident raised by the same procedures, and
+// carries no synthetic key — so it correctly stays a real alert.
+function isTest_(a) {
+  if (a.source === 'scheduled.canary' || a.category === 'delivery_canary') return true;
+  return pl_(a).synthetic === true;
+}
+
+// ===== roster-change notices (v5) =====
+// A roster notice reports a COMPLETED autonomous action, not a problem. Strategy add/drop has had no
+// human approval step since the 2026-07-10 SISA conversion and this channel does not reintroduce one —
+// it exists so the owner LEARNS of a roster change instead of having to query state.strategy_roster.
+function isRosterNotice_(a) { return ROSTER_NOTICE_CATEGORIES.indexOf(a.category) !== -1; }
+
+// A roster notice that is not itself a fire-drill row. Used everywhere the two lanes are split, so a
+// synthetic drill row stays in the TEST lane instead of being rendered as a real roster change.
+function isRealRosterNotice_(a) { return !isTest_(a) && isRosterNotice_(a); }
+
+// One-line headline for the subject, e.g. "F PAPER→PROBE". Falls back through progressively less
+// specific forms so a payload-less notice still produces something meaningful.
+function rosterHeadline_(a) {
+  const p = pl_(a);
+  if (p.strategy_code && p.from_state && p.to_state) return `${p.strategy_code} ${p.from_state}→${p.to_state}`;
+  if (p.strategy_code) return `${p.strategy_code} · ${a.category}`;
+  return a.category;
+}
+
+// Money/percent formatting without locale APIs (Apps Script's locale is the script's, not the reader's).
+function money_(v) {
+  const n = Number(v);
+  if (!isFinite(n)) return String(v);
+  return '$' + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+// Ordered [label, value] pairs for the fields the ROSTER-CHANGE NOTICE contract defines
+// (Claude_Task_Plan.md preamble). Missing keys are omitted rather than rendered blank, so a partial
+// payload degrades gracefully instead of producing a card full of empty rows.
+function rosterDetail_(a) {
+  const p = pl_(a);
+  const out = [];
+  const push = (label, v) => {
+    if (v === undefined || v === null || String(v) === '') return;
+    out.push([label, String(v)]);
+  };
+  push('Strategy', [p.strategy_code, p.strategy_name].filter(x => x !== undefined && x !== null && x !== '').join(' — '));
+  if (p.from_state && p.to_state) push('Transition', `${p.from_state} → ${p.to_state}`);
+  if (p.roster_active_before !== undefined && p.roster_active_after !== undefined) {
+    push('Roster active', `${p.roster_active_before} → ${p.roster_active_after}`);
+  }
+  if (p.capital_usd !== undefined && p.capital_usd !== null) {
+    const pct = (p.pct_nav !== undefined && p.pct_nav !== null && String(p.pct_nav) !== '') ? ` (${p.pct_nav}% NAV)` : '';
+    push('Capital', Number(p.capital_usd) === 0 ? 'none — zero capital at risk' : money_(p.capital_usd) + pct);
+  }
+  push('Trigger', p.kill_trigger);
+  push('Why', p.reason);
+  push('Commit', p.git_commit);
+  return out;
+}
 
 // Email subject for one poll batch. `fresh` = alerts newly notified this poll (real incidents +
 // any canary); `recurringCount` = the count of non-duplicate recurring termination_close_staged
@@ -266,22 +380,56 @@ function isTest_(a) { return a.source === 'scheduled.canary' || a.category === '
 // recurring critical to the "(N critical)" new-count. Pure (no Apps-Script-service calls) — mirrored
 // verbatim in ops/weekly_report/test_pure_helpers.js; keep both in sync.
 function alertSubject_(fresh, recurringCount) {
-  const newReal = fresh.filter(r => !isTest_(r));         // genuinely new, non-test alerts this poll
-  const testCount = fresh.length - newReal.length;         // test canaries among the new alerts
-  if (newReal.length === 0 && recurringCount === 0) {
+  const rosterNew = fresh.filter(isRealRosterNotice_);                        // completed autonomous roster changes
+  const newReal = fresh.filter(r => !isTest_(r) && !isRosterNotice_(r));      // genuinely new, non-test INCIDENTS
+  const testCount = fresh.length - newReal.length - rosterNew.length;         // test canaries + synthetic drill rows
+  if (newReal.length === 0 && recurringCount === 0 && rosterNew.length === 0) {
     // Batch is ONLY the alert-delivery self-test → unmistakable test subject, no ⚠.
     return '⚗ [TEST] Stock-Trading alert-delivery self-test — no action needed';
   }
+  if (newReal.length === 0 && recurringCount === 0) {
+    // Batch is ONLY roster changes (the common case — the rails rate-limit these to roughly 5-12/year,
+    // and they rarely coincide with an incident). A completed autonomous action is not a fault, so this
+    // subject deliberately carries no ⚠ and does not say ALERT: an operator emailed "⚠ ALERT" every time
+    // the system does something healthy and expected stops reading the channel, which would undermine
+    // the genuine alerts that share it.
+    const label = rosterNew.length === 1
+      ? `ROSTER CHANGE: ${rosterHeadline_(rosterNew[0])}`
+      : `${rosterNew.length} ROSTER CHANGES`;
+    return `📋 Stock-Trading — ${label}` + (testCount ? ` (+${testCount} test)` : '');
+  }
+  // Mixed batch: an incident outranks a roster change, so the ⚠ subject leads and roster changes are
+  // appended as a count. They are NOT folded into the "N new" figure — that figure means incidents, and
+  // inflating it with healthy roster events would repeat the 2026-07-29 over-reporting bug in a new form.
   const crit = newReal.filter(r => r.severity === 'critical').length;
   return '⚠ Stock-Trading ALERT' +
             (newReal.length ? ` — ${newReal.length} new${crit ? ` (${crit} critical)` : ''}` : '') +
             (recurringCount ? ` — ${recurringCount} UNCONFIRMED TERMINATION CLOSE (recurring)` : '') +
+            (rosterNew.length ? ` — +${rosterNew.length} roster change${rosterNew.length > 1 ? 's' : ''}` : '') +
             (testCount ? ` (+${testCount} test)` : '');
 }
 
 function htmlAlerts_(batch, newlyUnnotifiedCount, recurringCount) {
   const allTest = batch.length > 0 && batch.every(isTest_);
-  const rowsHtml = batch.map(a => {
+  const roster = batch.filter(isRealRosterNotice_);
+  const incidents = batch.filter(a => !isRealRosterNotice_(a));
+  const rosterHtml = roster.map(a => {
+    const detail = rosterDetail_(a).map(kv =>
+      `<tr><td style="font-size:12px;color:#5b6b7a;padding:1px 10px 1px 0;white-space:nowrap;vertical-align:top;">${esc2_(kv[0])}</td>` +
+      `<td style="font-size:12px;color:#1f2d3d;padding:1px 0;">${esc2_(kv[1])}</td></tr>`).join('');
+    return `<tr><td style="padding:0;">
+      <div style="border-left:4px solid #1e7f5c;background-color:#eaf6f0;border-radius:6px;padding:10px 12px;margin:6px 0;">
+        <div style="font-size:13px;font-weight:700;color:#1e7f5c;">ROSTER CHANGE · ${esc2_(a.source)} · ${esc2_(a.category)}</div>
+        <div style="font-size:13px;color:#1f2d3d;margin-top:3px;">${esc2_(a.message)}</div>
+        ${detail ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:7px;">${detail}</table>` : ''}
+        <div style="font-size:11px;color:#8a96a3;margin-top:5px;">${esc2_(fmtAlertTs_(a))}</div>
+      </div></td></tr>`;
+  }).join('');
+  const rosterSection = roster.length ? `
+      <tr><td style="font-size:14px;font-weight:700;color:#1e7f5c;padding:12px 0 2px;">📋 Autonomous roster change${roster.length > 1 ? 's' : ''} — no action needed</td></tr>
+      ${rosterHtml}
+      <tr><td style="font-size:11px;color:#8a96a3;padding-top:6px;">Strategy add/drop is fully autonomous by design (SISA, owner directive 2026-07-10) — this is a notification, not a request. These notices resolve themselves once delivered, so no <code>UPDATE ops.alerts</code> is needed. Full history: <code>state.strategy_roster</code>, <code>ops.roster_change_log</code>, <code>events.strategy_lifecycle</code>. To pause the whole add/drop loop: INSERT an <code>enabled = FALSE</code> row into <code>ops.arsenal_control</code> — live trading is unaffected.</td></tr>` : '';
+  const rowsHtml = incidents.map(a => {
     const test = isTest_(a);
     const isCrit = a.severity === 'critical';
     const bar = test ? '#2c6e9b' : (isCrit ? '#c0392b' : '#b9770e');
@@ -298,24 +446,46 @@ function htmlAlerts_(batch, newlyUnnotifiedCount, recurringCount) {
   }).join('');
   const header = allTest
     ? '⚗ Stock-Trading — alert-delivery self-test (TEST · no action needed)'
-    : '⚠ Stock-Trading — unresolved alerts';
+    : (incidents.length === 0
+        ? `📋 Stock-Trading — autonomous roster change${roster.length > 1 ? 's' : ''}`
+        : '⚠ Stock-Trading — unresolved alerts');
+  // The incident section is suppressed entirely on a roster-only batch, so a healthy autonomous action
+  // never renders under an "unresolved alerts" heading with a resolve-by-hand instruction that does not
+  // apply to it (Rule 5 clears these on delivery).
+  const incidentSection = incidents.length ? `
+      ${rowsHtml}
+      <tr><td style="font-size:11px;color:#8a96a3;padding-top:10px;">This email contains ${batch.length} alert(s): ${newlyUnnotifiedCount} newly un-notified in the last ${LOOKBACK_LABEL} and ${recurringCount} recurring. Resolve via <code>UPDATE ops.alerts SET resolved=TRUE WHERE alert_id='...'</code> — always scope by alert_id, never run this unfiltered. This channel complements the [Claude] ATTENTION calendar events.</td></tr>` : '';
   return `<!DOCTYPE html><html><body style="margin:0;padding:18px;background-color:#eef1f5;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:auto;background:#fff;border-radius:12px;padding:18px;">
       <tr><td style="font-size:16px;font-weight:700;color:#0f2747;padding-bottom:8px;">${header}</td></tr>
-      ${rowsHtml}
-      <tr><td style="font-size:11px;color:#8a96a3;padding-top:10px;">This email contains ${batch.length} alert(s): ${newlyUnnotifiedCount} newly un-notified in the last ${LOOKBACK_LABEL} and ${recurringCount} recurring. Resolve via <code>UPDATE ops.alerts SET resolved=TRUE WHERE alert_id='...'</code> — always scope by alert_id, never run this unfiltered. This channel complements the [Claude] ATTENTION calendar events.</td></tr>
+      ${incidentSection}
+      ${rosterSection}
     </table></body></html>`;
 }
 
 function plainAlerts_(batch, newlyUnnotifiedCount, recurringCount) {
   const allTest = batch.length > 0 && batch.every(isTest_);
+  const roster = batch.filter(isRealRosterNotice_);
+  const incidents = batch.filter(a => !isRealRosterNotice_(a));
   let s = allTest
     ? `[TEST] Stock-Trading — alert-delivery self-test, no action needed:\n\n`
-    : `Stock-Trading — ${batch.length} alert(s) (${newlyUnnotifiedCount} newly un-notified in the last ${LOOKBACK_LABEL}, ${recurringCount} recurring):\n\n`;
-  batch.forEach(a => {
+    : (incidents.length === 0
+        ? `Stock-Trading — ${roster.length} autonomous roster change(s), no action needed:\n\n`
+        : `Stock-Trading — ${batch.length} alert(s) (${newlyUnnotifiedCount} newly un-notified in the last ${LOOKBACK_LABEL}, ${recurringCount} recurring):\n\n`);
+  incidents.forEach(a => {
     const tag = isTest_(a) ? '[TEST] ' : (String(a.resolved) === 'true' ? '[AUTO-RESOLVED] ' : '');
     s += `[${a.severity.toUpperCase()}] ${tag}${a.source}/${a.category}: ${a.message}  (${fmtAlertTs_(a)})\n`;
   });
-  s += `\nResolve via UPDATE ops.alerts SET resolved=TRUE WHERE alert_id='...' — always scope by alert_id, never run this unfiltered. Complements the [Claude] ATTENTION calendar events.`;
+  if (incidents.length) {
+    s += `\nResolve via UPDATE ops.alerts SET resolved=TRUE WHERE alert_id='...' — always scope by alert_id, never run this unfiltered. Complements the [Claude] ATTENTION calendar events.\n`;
+  }
+  if (roster.length) {
+    s += `\n=== ROSTER CHANGE${roster.length > 1 ? 'S' : ''} (no action needed) ===\n`;
+    roster.forEach(a => {
+      s += `\n[ROSTER CHANGE] ${a.source}/${a.category}: ${a.message}  (${fmtAlertTs_(a)})\n`;
+      rosterDetail_(a).forEach(kv => { s += `    ${kv[0]}: ${kv[1]}\n`; });
+    });
+    s += `\nStrategy add/drop is fully autonomous by design (SISA, owner directive 2026-07-10) — this is a notification, not a request. These notices resolve themselves once delivered; no UPDATE is needed. Full history: state.strategy_roster, ops.roster_change_log, events.strategy_lifecycle. To pause the whole add/drop loop: INSERT an enabled = FALSE row into ops.arsenal_control — live trading is unaffected.`;
+  }
   return s;
 }

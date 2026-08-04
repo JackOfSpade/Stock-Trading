@@ -289,10 +289,12 @@ FROM `stock-trading-498512.state.trading_enabled` t, expected e;
 -- themselves superseded; 107 adds a halt-echo missed_run exclusion in Rule 4's no_other_criticals
 -- count, alongside 97's original halt-echo missing_dependency exclusion), and 107 was in turn
 -- SUPERSEDED by bigquery/130_missing_dependency_alias_resolve.sql (Rule 1 payload-key/array
--- tolerance). bigquery/130 is the CURRENT single source of truth for this procedure: apply
--- bigquery/130 -- do NOT re-apply the CREATE OR REPLACE PROCEDURE below live in isolation. Kept here, unmodified, for DR-rebuild apply-in-order reference
--- only. (Historical context preserved: this definition itself SUPERSEDES bigquery/34, per the
--- banner above.)
+-- tolerance), and 130 was in turn SUPERSEDED by bigquery/134_roster_change_notifications.sql (adds
+-- Rule 5: roster-change notices auto-resolve once notified_ts is stamped). bigquery/134 is the
+-- CURRENT single source of truth for this procedure: apply bigquery/134 -- do NOT re-apply the
+-- CREATE OR REPLACE PROCEDURE below live in isolation. Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. (Historical context preserved: this definition itself SUPERSEDES
+-- bigquery/34, per the banner above.)
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_auto_resolve_alerts`()
 BEGIN
   DECLARE eligible_dep, eligible_run, eligible_stalled, eligible_stale ARRAY<STRING>;

@@ -49,8 +49,8 @@ WHERE category = 'staleness'
 -- and the new Rule 3b block inserted between Rule 3's UPDATE and Rule 4's no_other_criticals setup.
 --
 -- SUPERSEDED (2026-07-26, repointed 2026-08-03): this definition of ops.sp_auto_resolve_alerts is
--- now superseded by bigquery/130_missing_dependency_alias_resolve.sql — the CURRENT single source of
--- truth. (Chain: 94 -> 97 -> 107 -> 130; all intermediates are themselves superseded.) 107
+-- now superseded by bigquery/134_roster_change_notifications.sql — the CURRENT single source of
+-- truth. (Chain: 94 -> 97 -> 107 -> 130 -> 134; all intermediates are themselves superseded.) 107
 -- reproduced this exact procedure body (Rules 1, 2, 3, 3b and 4) and
 -- additionally excludes halt-echo missing_dependency AND halt-echo missed_run alerts (pure fallout
 -- of a still-open trading halt) from Rule 4's no_other_criticals count. Re-applying the CREATE OR
