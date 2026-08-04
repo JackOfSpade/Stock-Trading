@@ -577,7 +577,7 @@ Guardrails 1 and 4 fail → the benchmark signal does not count as reduction con
     - **Heterogeneous mixed markets: *"bubbles are formed roughly 50% of the time"*** — despite bubble-prone agents being a minority of the population.
 
 **CROSS-LEVEL VERDICT: OFF-LINE-ONLY**, framing materially refined.
-**TRANSFER ASSESSMENT:** L4-only, no Claude at any level, so the participation *rate* is an architectural estimate rather than a statement about the deployed model. The structural insight — participation depends on **population heterogeneity**, not just model rationality — is architectural in character and transfers.
+**TRANSFER ASSESSMENT:** **FAIL for the claimed participation rate and for any capital-affecting strategy inference.** The anchor is L4-only and tests no Claude model; both retrieved studies that do test Claude find it more fundamentals-anchored in mixed markets, not less. The narrower proposition that population composition may matter is an architectural **research hypothesis**, but it is not a transferable magnitude, validated edge, or relaxation signal for the deployed model.
 **REDUCTION CLASSIFICATION: NONE, pending replication.** The heterogeneous ~50% figure sits in §5.4's MATERIAL band (≥40%), but §5.5 **guardrail 1 fails** — one source, with `2502.15800` reporting the opposite in its own mixed-market condition; single-source signal is explicitly insufficient. Guardrail 4 is also questionable: a synthetic multi-agent asset market is a narrow domain of unestablished representativeness. **No reduction confirmed; no relaxation.**
 **Tag:** `CONTRADICTED-OR-REFINED-BY-RESEARCH [L4]` — the item is not wrong; its scope condition was missing.
 **Why this matters operationally:** the real market this workflow trades in is emphatically heterogeneous (humans, quants, and now at least ten broker AI agents per 2.1/2.2). The heterogeneous condition, not the homogeneous one, is the relevant one — which makes the "AI won't participate in bubbles, so it gets left behind" framing **less protective** than the item implies. B and E lean on 2.20 most heavily.
@@ -1030,13 +1030,14 @@ Retrieval quality on *associative* (non-literal-match) tasks degrades far faster
 
 ---
 
-## §H — ARSENAL CANDIDATE SEEDS
+## §H — ARSENAL RESEARCH LEADS
 
-Per the SISA lifecycle, materially-changed foundation edges/disadvantages implying a new or restart strategy archetype are recorded here for A3 to emit as `state.strategy_candidates` rows (`source_routine='A1'`, `status='NEW'`), feeding SL1's next qualification pass.
+Per the SISA lifecycle, a foundation change may expose an idea before it supports a candidate. Ideas that cannot already satisfy SL1's cited-edge, compensation, transferability, and implementability rails are recorded here as `events.strategy_research_leads` rows, not as `state.strategy_candidates`. A research lead carries no rejection cooldown; A3/SL1 may convert it into a candidate only after its named evidence threshold is met.
 
-**SEED 1 — Heterogeneous-regime momentum participation archetype.**
+**RESEARCH LEAD 1 — Heterogeneous-regime momentum participation archetype.**
 *Trigger:* 2.20's scope refinement. The textbook-rational penalty is now known to be **conditional on population homogeneity**: in heterogeneous mixed-agent markets, bubbles form ~50% of the time. The foundation currently treats AI's non-participation in bubbles as an unavoidable structural cost. If bubble formation is a property of heterogeneous populations — which real markets are — then a strategy archetype that *detects* the heterogeneous-bubbling regime and participates within bounded risk is a coherent candidate rather than a violation of the foundation.
-*Caveats SL1 must weigh:* the evidence is single-source (`2604.18602`), L4, with no Claude in panel, and `2502.15800` reports the opposite in its own mixed-market condition. §5.5 guardrail 1 fails, so this is a **research-grade seed, not a validated edge**. Any candidate must clear SL1's adversarial pre-mortem on the question "is this momentum-chasing with a citation."
+*Why this is not a candidate:* the evidence is single-source (`2604.18602`), L4, with no Claude in panel, and `2502.15800` reports the opposite in its own mixed-market condition. The studies that do test Claude find it more fundamentals-anchored in mixed markets. Section 5.5 guardrails 1 and 2 therefore fail; 2.20 remains version-pending, not reduced, and the proposed mechanism treats it as relaxed rather than compensating it. No prospective out-of-sample detector of a heterogeneous-bubbling regime is available, so target cells, signal frequency, invalidation, and kill structure are underivable.
+*Promotion threshold:* require (1) at least three independent sources supporting the same direction, including evidence on the current Claude line or a valid architectural-generality showing; and (2) a prospective out-of-sample detector with a countable signal, declared frequency, invalidation rule, and kill structure. Until both exist, preserve this only as a research lead and do not stamp an archetype cooldown.
 
 **NOT SEEDED, and why —** the 2.1/2.2 landscape change (broker AI agents now permitted autonomous execution) would in principle unlock lower-latency archetypes, but **it is not actionable for this experiment**: IBKR, this workflow's broker, routes every agent-generated order into a human review tab. The latency and monitoring constraints remain binding here regardless of what Robinhood permits its customers. Recording the non-seed so a future cycle does not re-derive it as an opportunity.
 
@@ -1070,7 +1071,8 @@ Per the A1 instruction, this sweep applies §5.5 exactly as the foundation curre
 | NEW ITEMS | 5 | 2.27–2.31 (supersedes the prior sweep's 2.27–2.32) |
 | Per-strategy outcomes | 5 continue, 1 pre-mortem re-open | C re-opens on 2.11 |
 | Constraint-relaxation reviews | **0** | no Tier 2 reduction cleared all four §5.5 guardrails |
-| Arsenal seeds | 1 | heterogeneous-regime momentum participation |
+| Arsenal candidate seeds | **0** | no item cleared the §H candidate-seed bar |
+| Arsenal research leads | 1 | heterogeneous-regime momentum participation — §H RESEARCH LEAD 1; A3 must NOT promote this to `state.strategy_candidates` |
 | Instruction amendments proposed | 1 | §5.5 guardrail 2(c), not applied this run |
 
 **Three things A3 must not do:**

@@ -8,6 +8,7 @@ from lib.sql_files import strip_sql_comments
 ROOT = Path(__file__).resolve().parents[1]
 CORRECTION_SQL = ROOT / "bigquery" / "122_decision_correction_append_only.sql"
 HORIZON_CORRECTION_SQL = ROOT / "bigquery" / "121_position_horizon_date_corrections.sql"
+SL1_LEADS_SQL = ROOT / "bigquery" / "133_sl1_research_leads_and_record_corrections.sql"
 PLAN = ROOT / "Claude_Task_Plan.md"
 D1_SLICE = ROOT / "task_plan" / "D1.md"
 
@@ -174,3 +175,106 @@ def test_horizon_date_correction_is_full_row_append_only_and_rerun_safe():
         "DIS ADJUST event was not appended exactly once.",
     ):
         assert inserts[-1].end() < code.index(postcondition) < commit
+
+
+def test_sl1_leads_no_update_delete_merge_targets_decision_log():
+    """bigquery/133 legitimately contains one UPDATE, but it targets the deliberately mutable
+    state.strategy_candidates registry (see the file's own comment above it), never
+    events.decision_log. A bare `not re.search(r"\bUPDATE\b", code)` would wrongly fail on that
+    UPDATE, so this must check each UPDATE/DELETE/MERGE statement's OWN target table."""
+    sql = SL1_LEADS_SQL.read_text()
+    code = strip_sql_comments(sql)
+
+    targets = re.findall(
+        r"\b(?:UPDATE|DELETE\s+FROM|MERGE(?:\s+INTO)?)\s+`([^`]+)`",
+        code,
+        re.IGNORECASE,
+    )
+    assert targets, "expected at least the state.strategy_candidates UPDATE to be present"
+    assert not any(t.endswith("events.decision_log") for t in targets)
+    assert any(t.endswith("state.strategy_candidates") for t in targets)
+
+
+def test_sl1_leads_corrections_route_through_sp_log_decision_with_superseded_by():
+    sql = SL1_LEADS_SQL.read_text()
+    code = strip_sql_comments(sql)
+
+    stale_entry_ids = {
+        "ef3cfdcf-8da8-43f8-83a1-3619a66aaf62",
+        "789de922-da85-4451-bf9c-340c0a52ee57",
+    }
+
+    # Each correction is guarded by `IF NOT EXISTS (... WHERE superseded_by = '<stale id>') THEN
+    # CALL ops.sp_log_decision(...) END IF;`. Extract the guarded block for each stale id and
+    # confirm the CALL inside it names that SAME id as in_superseded_by and carries tag
+    # 'correction' -- not just that a CALL and a superseded_by exist somewhere in the file.
+    if_block_re = re.compile(
+        r"IF\s+NOT\s+EXISTS\s*\(\s*SELECT\s+1\s+FROM\s+`stock-trading-498512\.events\.decision_log`\s+"
+        r"WHERE\s+superseded_by\s*=\s*'(?P<stale_id>[^']+)'\s*\)\s*THEN"
+        r"(?P<body>.*?)"
+        r"END\s+IF;",
+        re.DOTALL,
+    )
+    # The CALL's positional args end `..., [<tags>], '<in_superseded_by>', '<in_source_session>');`
+    # -- anchoring on the tags array immediately followed by exactly two more quoted args and the
+    # closing `);` finds the true call terminator even though the file also contains an
+    # unrelated `);`-shaped substring inside a title string ("... rejected (H); 2 research ...").
+    call_tail_re = re.compile(
+        r"\[(?P<tags>[^\[\]]*)\]\s*,\s*'(?P<superseded_by>[^']+)'\s*,\s*'[^']*'\s*\)\s*;",
+        re.DOTALL,
+    )
+
+    blocks = list(if_block_re.finditer(code))
+    assert len(blocks) == 2
+    assert {b.group("stale_id") for b in blocks} == stale_entry_ids
+
+    for block in blocks:
+        stale_id = block.group("stale_id")
+        body = block.group("body")
+        assert "CALL `stock-trading-498512.ops.sp_log_decision`(" in body
+        tail = call_tail_re.search(body)
+        assert tail is not None, f"could not locate sp_log_decision's trailing args for {stale_id}"
+        assert tail.group("superseded_by") == stale_id
+        assert "'correction'" in tail.group("tags")
+
+
+def test_sl1_leads_inserts_are_guarded_by_where_not_exists_on_own_lead_id():
+    """Each strategy_research_leads INSERT must be re-apply-safe: guarded by a WHERE NOT EXISTS
+    that names THAT SAME insert's own lead_id, not just any WHERE NOT EXISTS anywhere."""
+    sql = SL1_LEADS_SQL.read_text()
+    code = strip_sql_comments(sql)
+
+    lead_ids = {
+        "sl1-2026-08-disclosure-information-surprise",
+        "a1-2026-2.20-heterogeneous-regime",
+    }
+
+    insert_re = re.compile(
+        r"INSERT INTO `stock-trading-498512\.events\.strategy_research_leads`.*?"
+        r"SELECT\s*\n\s*'(?P<select_lead_id>[^']+)',\s*'OPEN',.*?"
+        r"WHERE NOT EXISTS \(\s*"
+        r"SELECT 1 FROM `stock-trading-498512\.events\.strategy_research_leads`\s*"
+        r"WHERE lead_id = '(?P<guard_lead_id>[^']+)'\s*"
+        r"\);",
+        re.DOTALL,
+    )
+    inserts = list(insert_re.finditer(code))
+    assert len(inserts) == 2
+    for match in inserts:
+        assert match.group("select_lead_id") == match.group("guard_lead_id")
+    assert {m.group("select_lead_id") for m in inserts} == lead_ids
+
+
+def test_sl1_leads_has_no_bare_doubled_quote_escape():
+    """BigQuery does not use SQL-standard '' doubling to escape a quote inside a string literal
+    (it reads adjacent literals as concatenation and fails to parse) -- bigquery/117's EDITOR TRAP
+    comment documents this repo hitting it twice. A `''` that is part of a `'''` triple-quote
+    delimiter is fine; an isolated `''` is the trap. `(?<!')''(?!')` matches a `''` run that is
+    exactly two quotes long -- neither preceded nor followed by another `'` -- so it never fires
+    inside a `'''` delimiter (each `'` in a 3-run has an adjacent `'` on one side) but does fire on
+    a standalone doubled-quote escape."""
+    sql = SL1_LEADS_SQL.read_text()
+    code = strip_sql_comments(sql)
+
+    bad = list(re.finditer(r"(?<!')''(?!')", code))
+    assert not bad, [code[max(0, m.start() - 40):m.start() + 40] for m in bad]

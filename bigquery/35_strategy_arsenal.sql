@@ -375,6 +375,7 @@ WITH consts AS (
     8  AS n_max,                       -- roster ceiling (~$10k account cost discipline)
     2  AS k_incubate,                  -- max concurrent SHADOW+PAPER strategies
     3  AS k_regime,                    -- regime-coverage target
+    180 AS max_roundtrip_commission_bps, -- accepted probe-scale all-in round-trip ceiling (1.8%)
     90 AS adoption_rate_window_days,   -- <= 1 PROBE per rolling 90 days
     90 AS reject_cooldown_days,
     180 AS terminate_cooldown_days,
@@ -391,7 +392,9 @@ counts AS (
          AND event_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 90 DAY)) AS probes_in_window
 )
 SELECT
-  c.n_min, c.n_max, c.k_incubate, c.k_regime, c.adoption_rate_window_days,
+  c.n_min, c.n_max, c.k_incubate, c.k_regime, c.max_roundtrip_commission_bps,
+  c.max_roundtrip_commission_bps / NUMERIC '100' AS max_roundtrip_commission_pct,
+  c.adoption_rate_window_days,
   c.reject_cooldown_days, c.terminate_cooldown_days, c.keep_cooldown_days,
   n.roster.active_count AS active_count, n.roster.incubating_count AS incubating_count, n.probes_in_window,
   n.roster.active_count <= c.n_min      AS at_or_below_floor,
