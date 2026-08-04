@@ -75,6 +75,80 @@ the repo which model is live" one.
 
 ---
 
+# 2026-08-04 SISA roster-change notifications — `alert_emailer.gs` v4 → v5 + `bigquery/43` MERGE (sequenced)
+
+Owner directive 2026-08-04: autonomous strategy roster changes (SISA add/drop, `SL1`/`SL4`/`SL5`/`M4`
+§H) now email the operator instead of landing only in `state.strategy_roster` /
+`ops.roster_change_log` / `events.strategy_lifecycle`. The BigQuery-side plumbing
+(`bigquery/134_roster_change_notifications.sql` — the six roster-membership categories
+`strategy_shadow_registered`, `strategy_probe_registered`, `strategy_graduated`,
+`retirement_proposed`, `strategy_deregistered`, `roster_below_floor` moved from `info` to `warning`
+severity upstream, which is what makes them reach `alert_emailer.gs`/`alert_relay.py` at all — `info`
+was filtered out by both) is already applied live. Two steps remain that only the owner can do — an
+Apps Script paste (`script.google.com` isn't reachable from here) and a live BigQuery apply gated
+behind that paste's own heartbeat — and they are SEQUENCED: do not do (b) before (a) has actually
+landed and emitted a v5 heartbeat.
+
+## AE-1. Re-paste `alert_emailer.gs` (v4 → v5, ROSTER CHANGE lane), THEN apply the `bigquery/43` MERGE that seeds `expected_version='v5'` for `alert_emailer`
+
+**What it's for:** `alert_emailer.gs`'s `ALERT_SCRIPT_VERSION` bumped `'v4'` → `'v5'`. What v5 adds is
+presentation, not delivery: the six roster-membership categories listed above now render in their own
+"📋 ROSTER CHANGE" email section with their own subject line and structured payload detail (strategy,
+transition, roster count, capital, reason), instead of falling into the generic
+"⚠ Stock-Trading ALERT" warning-severity format. **The severity bump alone (already live in
+`bigquery/134`) is what makes delivery work — that part does not depend on this paste.** Until this
+paste happens, a roster-membership notice STILL reaches your inbox; it just renders as an ordinary
+warning-severity alert rather than the dedicated roster-change layout. So this paste is a
+presentation upgrade queued behind a live delivery path that already works — nothing is broken or
+silently dropped while it's pending, and there's no urgency.
+
+**Action — two sequenced steps:**
+
+(a) **Re-paste `ops/monitoring/alert_emailer.gs` into the live "Stock-Trading Automation" Apps
+Script project** (script.google.com — the same project that holds `Code.gs` and
+`weekly_report.gs`). This is a large rewrite (v4 → v5 touches ~185 lines, not a small edit), so per
+this file's established small-edit=edit-list / large-rewrite=commit-SHA-pinned-URL convention, use
+the commit-SHA-pinned GitHub raw URL once this change merges to `main` — open it in a browser and
+copy from there directly, rather than a full-file paste relayed through chat (a large chat-relayed
+paste has corrupted before). Then run `runAlertCheck` (or wait for its next natural fire) once to
+confirm the `alert_emailer` heartbeat lands with `version='v5'`.
+
+(b) **Only after (a) has landed AND `alert_emailer` has emitted a v5 heartbeat**, apply the `MERGE`
+statement in `bigquery/43_script_version_registry.sql` live (BigQuery MCP `execute_sql` or console —
+same idempotent-reapply pattern as every other `bigquery/NN_*.sql` file). That file's own inline NOTE
+on the `alert_emailer` MERGE row says explicitly not to apply it until the owner has re-pasted the
+script and it has emitted a v5 heartbeat — applying it early would seed
+`state.expected_script_versions.alert_emailer = 'v5'` while the live script is still reporting `v4`,
+which `state.script_version_drift` would then correctly, but prematurely, report as drift. (The same
+MERGE statement also carries the `weekly_report` row at `'v8'`, which already matches the live
+expected value from item Y/T's closure — re-running it is a no-op for that row.)
+
+**Verify (either step, or after both):**
+```sql
+-- (a) confirm the v5 heartbeat landed before doing (b):
+SELECT source, version, beat_ts FROM `stock-trading-498512.ops.heartbeat`
+WHERE source='alert_emailer' ORDER BY beat_ts DESC LIMIT 3;
+
+-- (b) after applying the MERGE, confirm no drift:
+SELECT script_name, last_reported_version, expected_version, drift
+FROM `stock-trading-498512.state.script_version_drift` WHERE script_name='alert_emailer';
+```
+
+**If skipped:** no functional loss — roster-change notices keep arriving by email today (via the
+already-live severity bump), just in the plain warning-alert format rather than the dedicated ROSTER
+CHANGE section. `state.script_version_drift` will keep showing `alert_emailer` at its pre-v5 version
+with `drift=false` (expected still matches reported) until both steps land, then briefly `drift=true`
+only if (b) is ever run before (a) completes — the ordering above avoids that.
+
+```verify
+id: AE-1
+type: gs
+probe: SELECT script_name, last_reported_version, expected_version, drift FROM `stock-trading-498512.state.script_version_drift` WHERE script_name='alert_emailer'
+done_when: last_reported_version='v5' AND expected_version='v5' AND drift=FALSE
+```
+
+---
+
 # 2026-07-30 CI job consolidation — housekeeping only
 
 ## [DONE 2026-07-30 — owner-authorized CLI deletion verified] RUN_DBT_PARITY. Delete the inert `RUN_DBT_PARITY` repo variable — LOW PRIORITY, no behaviour change

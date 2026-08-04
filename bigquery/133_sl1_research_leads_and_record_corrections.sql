@@ -38,6 +38,17 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.events.strategy_research_leads`
 ) PARTITION BY DATE(event_ts) CLUSTER BY lead_id, event_type
 OPTIONS(description='Append-only SISA research leads. A lead is not a strategy candidate, creates no lifecycle REJECTED row, and carries no archetype cooldown. Latest event per lead_id is current.');
 
+-- source_decision_entry_id is a POINT-IN-TIME pointer, not a final-effective one. This file's own
+-- second correction block supersedes 789de922 (the heartbeat both leads below name), so resolving this
+-- column through the bigquery/122 final-effective filter -- entry_id NOT IN (SELECT superseded_by ...)
+-- -- returns ZERO rows even though the entry exists and is correct. That is intended: the lead was
+-- opened by that specific run, and repointing it at the replacement would misstate its provenance.
+-- Stated on the column so a future reader does not join it the way bigquery/122's views join.
+-- Idempotent and separate from the CREATE above, which does not re-run once the table exists.
+ALTER TABLE `stock-trading-498512.events.strategy_research_leads`
+  ALTER COLUMN source_decision_entry_id
+  SET OPTIONS(description='Point-in-time provenance: the events.decision_log entry_id of the run that opened or last updated this lead. Deliberately NOT resolved through the superseded_by chain -- it may name a row later superseded, which the bigquery/122 final-effective filter excludes. Look the entry_id up directly; do not join it to a final-effective decision_log view and expect a match.');
+
 INSERT INTO `stock-trading-498512.events.strategy_research_leads`
   (lead_id, event_type, source_routine, archetype, mechanism, cited_edges, cited_disadvantages,
    target_regime_cells, evidence_status, blocker, next_step, source_decision_entry_id, note)

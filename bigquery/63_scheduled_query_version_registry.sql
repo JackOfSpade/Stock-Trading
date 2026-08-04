@@ -62,7 +62,7 @@ USING (
     STRUCT('delivery_canary', 'v2', 'v2 -- body moved into ops.sp_sq_delivery_canary wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16', 168),
     STRUCT('restore_drill', 'v2', 'v2 -- body moved into ops.sp_sq_restore_drill wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16', 744),
     STRUCT('fire_drill_order_guard', 'v2', 'v2 -- body moved into ops.sp_sq_fire_drill_order_guard wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16', 744),
-    STRUCT('fire_drill_alert_lifecycle', 'v2', 'v2 -- body moved into ops.sp_sq_fire_drill_alert_lifecycle wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16', 744)
+    STRUCT('fire_drill_alert_lifecycle', 'v3', 'v2 -- body moved into ops.sp_sq_fire_drill_alert_lifecycle wrapper (bigquery/75_scheduled_query_wrappers.sql), ARCH-1 2026-07-16. v3, 2026-08-04 (bigquery/134_roster_change_notifications.sql, owner directive on roster-change email notifications) -- adds a third drill, ops.sp_fire_drill_roster_notice, which proves the roster-change notice auto-resolves on delivery and, critically, stays open while undelivered. No other drill logic changed.', 744)
   ])
 ) S
 ON T.sq_name = S.sq_name
