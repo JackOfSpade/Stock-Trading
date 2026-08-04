@@ -162,7 +162,24 @@ probe: SELECT script_name, last_reported_version, expected_version, drift FROM `
 done_when: last_reported_version='v5' AND expected_version='v5' AND drift=FALSE
 ```
 
-## AE-2. Re-paste `alert_emailer.gs` (v5 → v6, adversarial self-review fixes), THEN apply the `bigquery/43` MERGE that seeds `expected_version='v6'` for `alert_emailer`
+## AE-2. Re-paste `alert_emailer.gs` (v5 → v6, adversarial self-review fixes), THEN apply the `bigquery/43` MERGE that seeds `expected_version='v6'` for `alert_emailer` — [DONE 2026-08-04]
+
+**[DONE 2026-08-04 — both steps, in order, same session as AE-1.]** (a) v6 pasted into the live
+"Stock-Trading Automation" project from the `a7cf19c` blob URL; save clean, zero Monaco error
+markers; `Code.gs` and `appsscript.json` untouched. `testAlertCheck` ran and logged exactly the
+expected quiet-path line — `No un-notified alerts in the last 168.0 h`, no email sent — and stamped
+`ops.heartbeat` source=`alert_emailer` version=**v6** note=**`poll`** (NOT `poll-error`, so the new
+`escalateDeliveryFailure_` / `resetDeliveryFailureStreak_` path executed cleanly) at
+2026-08-04 13:16:03Z.
+CORRECTION to AE-1's note on paste URLs: a HAND-CONSTRUCTED `raw.githubusercontent.com` URL does
+404 on this private repo, but clicking **Raw** from the blob page works — GitHub appends a
+short-lived signed token automatically. Either the "Copy raw file" button or the Raw link is fine;
+only a manually typed raw URL fails.
+(b) With the v6 beat live, the `bigquery/43` MERGE was applied — MERGE only, not the file's
+`ALTER TABLE`, `CREATE TABLE`, or its `state.script_version_drift` view. 1 row affected
+(`alert_emailer` v5→v6); `weekly_report` matched but was correctly a no-op with `updated_ts` still
+reading 2026-07-30, confirming the guarded `WHEN MATCHED` clause. Verified end state: both scripts
+`expected_version == last_reported_version`, `monitored=TRUE`, **`drift=FALSE`**.
 
 **What it's for:** the AE-1 paste (v4 → v5) shipped the ROSTER CHANGE lane, and an adversarial
 self-review of that same change — done the same session, before AE-1's own v5 heartbeat had even
