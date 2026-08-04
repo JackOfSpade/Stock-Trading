@@ -59,7 +59,8 @@ CHECKS
 
   R-E  RAILS LITERAL AGREEMENT (added rev 2026-07-10b, code-review finding #9). bigquery/35_strategy_arsenal.sql's
        state.arsenal_rails view hardcodes the anti-churn rails (n_min, n_max, k_incubate, k_regime,
-       adoption_rate_window_days, and the three cooldown_days) as SQL constants that DUPLICATE
+       max_roundtrip_commission_bps, adoption_rate_window_days, and the three cooldown_days) as SQL
+       constants that DUPLICATE
        strategy/roster.yaml's `rails:` block. That view's own comment claims these are "cross-checked by
        scripts/check_roster_consistency.py, exactly as the cadence deadline literal is ... checked by
        check_cadence_consistency.py" — this check makes that claim true instead of aspirational. FAIL
@@ -299,12 +300,16 @@ SQL_TYPE_NAMES = frozenset("""
 # A per-strategy slice filename referenced in the plan slice-map, e.g. `06_strategy_d.md`.
 SLICE_FILE_REF = re.compile(r"\d+_strategy_([a-z]{1,3})\.md")
 # A rail constant in bigquery/35's `consts AS (SELECT 2 AS n_min, ...)` CTE, e.g. "8  AS n_max,".
-RAIL_NAMES = ("n_min", "n_max", "k_incubate", "k_regime", "adoption_rate_window_days",
-              "reject_cooldown_days", "terminate_cooldown_days", "keep_cooldown_days")
+RAIL_NAMES = (
+    "n_min", "n_max", "k_incubate", "k_regime", "max_roundtrip_commission_bps",
+    "adoption_rate_window_days", "reject_cooldown_days", "terminate_cooldown_days",
+    "keep_cooldown_days",
+)
 RAIL_CONST = re.compile(r"(\d+)\s+AS\s+(" + "|".join(RAIL_NAMES) + r")\b")
 # roster.yaml rails: key -> the arsenal_rails SQL constant name it must equal.
 ROSTER_RAIL_KEY_TO_SQL_NAME = {
     "n_min": "n_min", "n_max": "n_max", "k_incubate": "k_incubate", "k_regime": "k_regime",
+    "max_roundtrip_commission_bps": "max_roundtrip_commission_bps",
     "adoption_rate_window_days": "adoption_rate_window_days",
 }
 ROSTER_COOLDOWN_KEY_TO_SQL_NAME = {

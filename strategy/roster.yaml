@@ -61,6 +61,8 @@ rails:
                                  #   SL1 will not promote QUALIFYING -> AUTHORING beyond this.
   k_regime: 3                    # regime-coverage target: SL1 biases candidate synthesis toward zero/
                                  #   under-covered regime cells in state.arsenal_regime_coverage.
+  max_roundtrip_commission_bps: 180  # SL1 candidate cost rail: modeled all-in round-trip commission
+                                     #   must be <=1.8% of deployed notional at the $2,000 probe floor.
   adoption_rate_window_days: 90  # rate LIMIT: at most ONE strategy reaches PROBE (live capital) per
                                  #   rolling 90 days / per calendar quarter (paper_readiness checks the
                                  #   most recent PROBE lifecycle timestamp).
