@@ -332,10 +332,20 @@ BEGIN
   -- The severity these are raised at ('warning') is what makes them visible to alert_emailer.gs at all;
   -- see this file's header. Keep the list below in lockstep with the Part 1 policy rows AND with the
   -- Claude_Task_Plan.md preamble contract -- a category in only one of the three places is inert.
+  --
+  -- The `severity = 'warning'` term is DEFENSE IN DEPTH, added 2026-08-04 after an adversarial review
+  -- of this file. Every raise site for these six categories is 'warning' today, so it is dormant --
+  -- but without it the rule is enforced by prose alone, and the failure mode is fail-OPEN on the
+  -- trading gate: if some future edit ever raised one of these categories at 'critical', that critical
+  -- would count toward state.trading_enabled's blocking_criticals (halting order staging) AND would be
+  -- silently auto-resolved here the instant any poll delivered it -- un-halting trading on a rule whose
+  -- entire premise is that it only ever touches informational rows. Scoping to 'warning' makes the
+  -- mismatch fail closed instead: a mis-raised critical stays open and visible.
   SET eligible_roster_notice = (
     SELECT ARRAY_AGG(alert_id)
     FROM `stock-trading-498512.ops.alerts`
     WHERE NOT resolved
+      AND severity = 'warning'
       AND category IN ('strategy_shadow_registered', 'strategy_probe_registered', 'strategy_graduated',
                        'retirement_proposed', 'strategy_deregistered', 'roster_below_floor')
       AND category IN (SELECT category FROM `stock-trading-498512.ops.alert_policy` WHERE NOT latching)
@@ -369,6 +379,16 @@ BEGIN
   DECLARE drill_date DATE DEFAULT CURRENT_DATE('America/Denver');
   DECLARE held_before_delivery BOOL;
   DECLARE cleared_after_delivery BOOL;
+
+  -- EXCEPTION-GUARDED (added 2026-08-04 after an adversarial review of this file). Without this, a
+  -- throw anywhere below -- most plausibly inside sp_auto_resolve_alerts, which this calls TWICE and
+  -- which has grown to five rules over multiple CTEs -- would abort at that statement, so step (e)
+  -- never deletes the synthetic row and step (f) never renders a verdict. The drill would then fail
+  -- SILENTLY: no failure alert, no run_log row, nothing in either channel anyone watches, while a
+  -- synthetic row lingers in ops.alerts. The two sibling drills in bigquery/34
+  -- (sp_fire_drill_alert_latch / sp_fire_drill_alert_resolve) share this gap and are deliberately NOT
+  -- touched here -- their scope is not this change -- but the same hardening would suit them.
+  BEGIN
 
   -- (a) synthetic roster-change notice, NOT yet delivered.
   INSERT INTO `stock-trading-498512.ops.alerts` (alert_id, severity, source, category, message, payload)
@@ -412,6 +432,19 @@ BEGIN
     CALL `stock-trading-498512.ops.sp_log_run`('FIRE_DRILL_ROSTER_NOTICE', drill_date, 'completed', NULL, NULL, 1, NULL,
       'Roster-change notice correctly stayed open while undelivered and auto-resolved once notified_ts was stamped.');
   END IF;
+
+  EXCEPTION WHEN ERROR THEN
+    -- Clean up first, unconditionally: a stranded synthetic row is a fake roster notice sitting in a
+    -- live alert table. It is warning-severity so it cannot halt trading, and v5 of alert_emailer.gs
+    -- renders payload.synthetic rows as TEST rather than as a real adoption -- but leaving it would
+    -- still be wrong, and the drill is the thing that is supposed to prove this path is trustworthy.
+    DELETE FROM `stock-trading-498512.ops.alerts` WHERE alert_id = test_id;
+    CALL `stock-trading-498512.ops.sp_raise_alert`(
+      'critical', 'ops.sp_fire_drill_roster_notice', 'roster_notice_fire_drill_failed',
+      CONCAT('The roster-change-notice fire drill ABORTED with an error: ', @@error.message,
+             '. The roster add/drop email path is UNPROVEN until this drill passes — do not assume a strategy adoption or termination would reach the inbox.'),
+      TO_JSON_STRING(STRUCT(test_id AS drill_id, @@error.message AS error_message, 'aborted' AS failure_mode)));
+  END;
 END;
 
 -- =====================================================================================================

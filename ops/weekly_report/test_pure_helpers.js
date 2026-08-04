@@ -50,7 +50,10 @@
  *                           pl_(a).synthetic === true (fire-drill rows), not just canary source/category
  *   - isRosterNotice_      (alert_emailer.gs) -- 2026-08-04 v5: new
  *   - isRealRosterNotice_  (alert_emailer.gs) -- 2026-08-04 v5: new
- *   - rosterHeadline_      (alert_emailer.gs) -- 2026-08-04 v5: new
+ *   - rosterHeadline_      (alert_emailer.gs) -- 2026-08-04 v5: new. CHANGED in v6 (same day): gained a
+ *                           CR/LF-stripping clean() helper -- this is the ONLY payload-derived value
+ *                           that reaches the email SUBJECT, so a stray \r/\n in a routine-authored
+ *                           payload field was a header-injection shape
  *   - money_               (alert_emailer.gs) -- 2026-08-04 v5: new
  *   - rosterDetail_        (alert_emailer.gs) -- 2026-08-04 v5: new
  *   - alertSubject_        (alert_emailer.gs, defined immediately after isTest_/roster helpers;
@@ -360,8 +363,13 @@ function isRealRosterNotice_(a) { return !isTest_(a) && isRosterNotice_(a); }
 // specific forms so a payload-less notice still produces something meaningful.
 function rosterHeadline_(a) {
   const p = pl_(a);
-  if (p.strategy_code && p.from_state && p.to_state) return `${p.strategy_code} ${p.from_state}→${p.to_state}`;
-  if (p.strategy_code) return `${p.strategy_code} · ${a.category}`;
+  // Stripped of CR/LF because this is the ONLY payload-derived value that reaches the email SUBJECT
+  // (everything else payload-derived is confined to the escaped HTML body). A stray newline in a
+  // subject is a header-injection shape; these fields are short system tokens today, but the payload
+  // is routine-authored free-shape JSON, so do not rely on that.
+  const clean = s => String(s).replace(/[\r\n]+/g, ' ').trim();
+  if (p.strategy_code && p.from_state && p.to_state) return `${clean(p.strategy_code)} ${clean(p.from_state)}→${clean(p.to_state)}`;
+  if (p.strategy_code) return `${clean(p.strategy_code)} · ${a.category}`;
   return a.category;
 }
 
@@ -986,6 +994,21 @@ t('isTest_ returns false for a fire-drill FAILURE alert -- its payload carries n
   assert.strictEqual(isTest_({ source: 'ops.sp_fire_drill_roster_notice', category: 'roster_notice_fire_drill_failed',
     payload: '{"drill_id":"x","held_before_delivery":false}' }), false);
 });
+t('isTest_ uses strict equality on payload.synthetic -- boolean true is a test, the string "true" is not', () => {
+  // pl_(a).synthetic === true is a strict-equality check by design: a routine that authored
+  // synthetic:"true" (string) instead of synthetic:true (boolean) must NOT get silently treated as a
+  // test row. Pinned separately from the boolean-true case (already covered via the fire-drill row
+  // above) because the string-vs-boolean distinction is the actual behavior being guarded here.
+  assert.strictEqual(isTest_({ source: 'router', category: 'cash_tripwire', payload: '{"synthetic":true}' }), true);
+  assert.strictEqual(isTest_({ source: 'router', category: 'cash_tripwire', payload: '{"synthetic":"true"}' }), false);
+});
+t('isTest_ never silences a genuine critical incident that simply has no synthetic key at all', () => {
+  // A real fire-drill FAILURE alert (no payload.synthetic key -- see the case above) is one instance of
+  // this; this pins the general rule with a plain non-drill critical incident too, so the invariant
+  // isn't accidentally scoped to only the fire-drill source/category pairing.
+  assert.strictEqual(isTest_({ source: 'router', category: 'cash_tripwire', severity: 'critical', payload: null }), false);
+  assert.strictEqual(isTest_({ source: 'router', category: 'cash_tripwire', severity: 'critical' }), false);
+});
 
 // ---- pl_ (alert_emailer.gs, v5) ----
 t('pl_ returns {} for a null, undefined, or entirely missing payload, and never throws', () => {
@@ -1038,6 +1061,32 @@ t('rosterHeadline_ falls back to "code · category" when only strategy_code is p
   );
 });
 t('rosterHeadline_ falls back to the bare category when the payload has nothing usable', () => {
+  assert.strictEqual(rosterHeadline_({ category: 'roster_below_floor', payload: null }), 'roster_below_floor');
+  assert.strictEqual(rosterHeadline_({ category: 'roster_below_floor' }), 'roster_below_floor');
+});
+
+// ---- rosterHeadline_ CR/LF stripping (alert_emailer.gs, v6: the clean() helper) ----
+t('rosterHeadline_ strips CR/LF from a payload-derived field so the SUBJECT can never carry an injected newline', () => {
+  // strategy_code carrying an embedded "\nBOGUS: injected" line models a hostile/corrupt
+  // routine-authored payload -- rosterHeadline_ feeds the SUBJECT directly (checkAlerts_ ->
+  // alertSubject_ -> rosterHeadline_), so this is the header-injection shape the v6 clean() fix guards.
+  const headline = rosterHeadline_({
+    category: 'strategy_probe_registered',
+    payload: JSON.stringify({ strategy_code: 'F\nBOGUS: injected', from_state: 'PAPER', to_state: 'PROBE' })
+  });
+  assert.ok(!/[\r\n]/.test(headline), `expected no CR/LF in the headline, got: ${JSON.stringify(headline)}`);
+});
+t('rosterHeadline_ fallback forms still hold post-v6 (clean() is a no-op absent CR/LF)', () => {
+  // Regression pin, grouped: the three fallback tiers above must be unchanged now that clean() runs on
+  // every payload field -- clean() only strips \r\n and trims, so ordinary tokens pass through as-is.
+  assert.strictEqual(
+    rosterHeadline_({ category: 'strategy_probe_registered', payload: '{"strategy_code":"F","from_state":"PAPER","to_state":"PROBE"}' }),
+    'F PAPER→PROBE'
+  );
+  assert.strictEqual(
+    rosterHeadline_({ category: 'strategy_shadow_registered', payload: '{"strategy_code":"F"}' }),
+    'F · strategy_shadow_registered'
+  );
   assert.strictEqual(rosterHeadline_({ category: 'roster_below_floor', payload: null }), 'roster_below_floor');
   assert.strictEqual(rosterHeadline_({ category: 'roster_below_floor' }), 'roster_below_floor');
 });
@@ -1181,6 +1230,42 @@ t('alertSubject_: a fire-drill FAILURE alert (no synthetic key in its payload) r
     payload: '{"drill_id":"x","held_before_delivery":false}' };
   assert.strictEqual(isTest_(failRow), false);
   assert.strictEqual(alertSubject_([failRow], 0), '⚠ Stock-Trading ALERT — 1 new (1 critical)');
+});
+t('alertSubject_: 1 real roster notice + 1 canary row (recurringCount=0) -> calm 📋 ROSTER CHANGE subject with a "(+1 test)" suffix, no ⚠', () => {
+  // This is the exact batch shape whose email BODY header was wrong in v5 (htmlAlerts_/plainAlerts_ used
+  // to key the header on incidents.length, which counts the canary row too -- fixed to key on
+  // realIncidents.length instead, so a {real roster notice + canary} batch renders the calm roster
+  // header, not "⚠ unresolved alerts"). alertSubject_ (the SUBJECT) was always correct; this pins that
+  // correctness so a future edit to alertSubject_ can never regress the two back out of agreement.
+  // NOTE: htmlAlerts_/plainAlerts_ themselves build HTML/plain-text BODIES and are not re-tested here
+  // for the v5 body-header fix -- see the file header caveat above their copies; this pure-function
+  // mirror can only exercise the subject side of that fix, not the body.
+  const fresh = [
+    { source: 'SL5', category: 'strategy_probe_registered', severity: 'warning',
+      payload: '{"strategy_code":"F","from_state":"PAPER","to_state":"PROBE"}' },
+    { source: 'scheduled.canary', category: 'delivery_canary', severity: 'warning' },
+  ];
+  const subject = alertSubject_(fresh, 0);
+  assert.ok(subject.startsWith('📋'), `expected the clipboard emoji, got: ${subject}`);
+  assert.ok(subject.includes('ROSTER CHANGE:'), `expected "ROSTER CHANGE:", got: ${subject}`);
+  assert.ok(subject.includes('(+1 test)'), `expected a "(+1 test)" suffix, got: ${subject}`);
+  assert.ok(!subject.includes('⚠'), 'a roster notice + canary batch must not carry the warning glyph');
+});
+t('alertSubject_: 2 real incidents + 3 roster notices (recurringCount=0) -> reports "2 new", never "5 new", and appends "+3 roster changes"', () => {
+  // Pins that healthy roster events (rosterNew) never inflate the incident count (newReal) -- the exact
+  // over-reporting bug class the 2026-07-29 fresh-vs-recurring split fixed, now guarded for the v5
+  // roster split too: 2 real incidents + 3 roster notices must read "2 new", not "5 new".
+  const fresh = [
+    { source: 'router', category: 'cash_tripwire', severity: 'critical' },
+    { source: 'router', category: 'stale_data', severity: 'warning' },
+    { source: 'SL5', category: 'strategy_probe_registered', severity: 'warning', payload: '{"strategy_code":"F"}' },
+    { source: 'M4', category: 'strategy_graduated', severity: 'warning', payload: '{"strategy_code":"B"}' },
+    { source: 'SL1', category: 'roster_below_floor', severity: 'warning' },
+  ];
+  const subject = alertSubject_(fresh, 0);
+  assert.ok(subject.includes('2 new'), `expected "2 new", got: ${subject}`);
+  assert.ok(!subject.includes('5 new'), `must not count roster notices as incidents, got: ${subject}`);
+  assert.ok(subject.includes('+3 roster changes'), `expected "+3 roster changes", got: ${subject}`);
 });
 
 // ---- htmlAlerts_ / plainAlerts_ footer text (2026-07-29 regression fix, empty-batch-only — see the
