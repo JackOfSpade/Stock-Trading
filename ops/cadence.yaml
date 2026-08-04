@@ -525,7 +525,13 @@ routines:
     monitor_class: monthly_ftd
     catchup_safe: false
     depends_on: [M1b, M2, M3]
-    writes: [events.regime_events, events.queue_events, events.decision_log, calendar:confirm_order]
+    # Watchlist.md added 2026-08-03 (OPS0 STEP 4f), completing the D2/W4 fix of 2026-07-29 (commit
+    # 1fdb9d9). That commit asserted "M4 genuinely writes no repo files" from GIT evidence at a time
+    # when M4 had never run — an absence-of-evidence conclusion. M4's prompt body always said
+    # otherwise (step A "drain Watchlist.md A-queue", step G "WATCHLIST UPDATES"), and M4's
+    # first-ever landed run (a6de10d, 2026-08-03) edited Watchlist.md. Undeclared, STEP 4f skipped
+    # M4 as a no-repo-path routine and could not have seen a stranded M4.
+    writes: [events.regime_events, events.queue_events, events.decision_log, calendar:confirm_order, Watchlist.md]
     expected_trigger:
       recurrence: custom_cron
       cron_utc: "0 15 1 * *"
