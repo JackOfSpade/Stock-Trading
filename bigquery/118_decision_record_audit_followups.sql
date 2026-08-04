@@ -54,6 +54,12 @@
 -- opened_count can exceed the number of distinct positions and go_minus_opened can read negative.
 -- That behaviour predates 2026-07-30, is unrelated to the entry_type/decision bug class, and is left
 -- exactly as-is rather than quietly changed under cover of this fix.
+--
+-- SUPERSEDED LIVE by bigquery/136_declared_vs_realized_orphan_sides.sql (2026-08-04) — current single
+-- source of truth for this object. (The append-only double-count described just above WAS subsequently
+-- fixed, by bigquery/131, which 136 then superseded in turn; 131 carries its own marker.) Kept here,
+-- unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live
+-- in isolation — it would revert both the COUNT(DISTINCT position_key) fix and the orphan-side columns.
 -- ============================================================================================
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.declared_vs_realized` AS
 WITH go_theses AS (

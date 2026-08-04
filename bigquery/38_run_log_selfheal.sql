@@ -98,6 +98,35 @@ BEGIN
   -- (the marker proves output landed, not how many rows) and branch is 'main' (the marker only exists
   -- because the commit is already merged there) — both honestly reflect what a git commit can and
   -- cannot attest, matching the honest-backfill discipline §38 asks for over a guessed value.
+  --
+  -- log_ts IS DELIBERATELY NOT SET HERE — it falls to ops.run_log's `DEFAULT CURRENT_TIMESTAMP()`, i.e.
+  -- the moment the backfill ran. That is the LITERAL truth for this column ("when this row was logged")
+  -- and it is intentionally left alone, because log_ts is load-bearing for a safety gate.
+  --
+  -- REJECTED ALTERNATIVE, and why (evaluated and reverted 2026-08-04, same session that proposed it).
+  -- Backfilled rows DO pollute every completion-time distribution built off log_ts — this procedure runs
+  -- from cadence_check.sql at ~05:15 UTC (22:15-23:15 MT), so each backfilled row lands a synthetic
+  -- ~21:00-23:00 MT "completion". MEASURED 2026-08-04: D1's trailing-90d p90 is 1275 min (21:15 MT) with
+  -- these rows in, and 1006 min (16:46 MT) with them out — the "fat late tail" that drove W5's
+  -- process_reliability loop to autotune cadence_watch_deadline_local 21:00 -> 21:45 is mostly artifact.
+  -- The tempting fix is to write an honest log_ts here (marked_ts). It is WRONG, on two counts:
+  --   (1) marked_ts can PRECEDE run_date's midnight, making analytics.routine_health_scorecard's
+  --       completion_minute_of_day NEGATIVE. Live example on 2026-08-04: marker (SL2, run_date
+  --       2026-08-04, marked_ts 2026-08-03 19:44 MT) would compute -256.
+  --   (2) It would weaken the SAME-DAY DOUBLE-RUN GUARD. The evening cohort (D1/D2/D2a/D3/SL3) counts a
+  --       prior completion only when DATETIME(log_ts,'America/Denver') >= today 12:00. A backfill-time
+  --       log_ts is ALWAYS after noon, so it always suppresses a duplicate run; a marked_ts can be BEFORE
+  --       noon (live example: the D3 2026-08-03 marker at 04:34 MT), which would stop the guard counting
+  --       it and open a double-run window that is structurally impossible today.
+  -- The pollution is therefore fixed where it actually belongs — at the READER, not the writer: the
+  -- scorecard now excludes backfilled rows from its completion-time percentiles (bigquery/89). That fix
+  -- is also RETROACTIVE, which writing an honest log_ts here would not have been (existing rows keep
+  -- their old timestamps, so the poisoned p90 would have persisted until they aged out of the 90d window).
+  --
+  -- If you change the note format below, update bigquery/89's exclusion regex in the same commit — it
+  -- anchors on the '^(auto-)?backfilled' prefix, which is what makes a genuine backfill distinguishable
+  -- from a normal run whose note merely MENTIONS backfilling (6 such D2 rows exist; they must NOT be
+  -- excluded).
   INSERT INTO `stock-trading-498512.ops.run_log`
     (routine, run_date, status, session_id, branch, rows_written, error_msg, note)
   SELECT

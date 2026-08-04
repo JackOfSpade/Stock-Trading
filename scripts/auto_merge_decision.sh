@@ -146,11 +146,14 @@ marker_routine_from_subject() {
 
 # marker_run_date_from_subject <subject> <fallback_iso_date> — print the run_date for the marker row:
 # a full YYYY-MM-DD embedded in the subject when present (authoritative — preserves the existing
-# D1/D2/W5 behaviour exactly), otherwise the supplied fallback. The caller passes the COMMIT's own
-# author date (`git log -1 --format=%as`), which is the date the routine actually made the commit in
-# its own timezone — not the merge date, which can roll past midnight UTC and misattribute an evening
-# routine's run to the following day. Prints nothing if neither source yields a date, and the caller
-# then skips the row rather than inventing one.
+# D1/D2/W5 behaviour exactly), otherwise the supplied fallback. The caller passes the commit's author
+# date rendered in America/Denver (`TZ=America/Denver git log -1 --date=short-local --format=%ad`),
+# i.e. the OPERATING-plane calendar date on which the routine actually made the commit — not the merge
+# date, and not the commit's own recorded offset. CORRECTED 2026-08-04: the caller previously passed
+# `--format=%as`, which renders in the commit's OWN offset; routine containers commit in UTC, so an
+# evening-slot routine's commit came back dated TOMORROW — reintroducing precisely the midnight-UTC
+# misattribution this fallback exists to prevent. Prints nothing if neither source yields a date, and
+# the caller then skips the row rather than inventing one.
 marker_run_date_from_subject() {
   local in_subject
   in_subject="$(printf '%s' "${1:-}" | grep -oE '\b[0-9]{4}-[0-9]{2}-[0-9]{2}\b' | head -1 || true)"

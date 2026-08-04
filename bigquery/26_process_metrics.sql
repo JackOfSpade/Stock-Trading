@@ -43,6 +43,11 @@ ORDER BY strategy, conviction_ordinal;
 -- dropping B:ISRG f90e7c15 and D:GOOGL fd464178). 118 reads analytics.thesis_outcomes WHERE
 -- is_go_family instead, so the vocabulary lives in ONE place. Kept here, unmodified, for DR-rebuild
 -- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
+--
+-- SUPERSEDED LIVE by bigquery/136_declared_vs_realized_orphan_sides.sql (2026-08-04) — current single
+-- source of truth for this object. The chain is 26 -> 118 -> 131 (COUNT(DISTINCT position_key)) -> 136
+-- (adds n_go_theses_without_position / n_positions_without_go_thesis); each intermediate file carries
+-- its own marker. Name 136, not 118, when looking for the live definition.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.declared_vs_realized` AS
 WITH go_theses AS (
   SELECT strategy, COUNT(*) AS go_count

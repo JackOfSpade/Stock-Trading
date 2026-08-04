@@ -79,6 +79,32 @@ The experiment's quantitative data substrate. **Built, validated, and self-maint
 ## How it stays current
 The one-time `.md`→BigQuery migration is **COMPLETE**; the migration parsers (`parse_*.py` / `load_all.py`) are **RETIRED** (git history retains them). Ongoing maintenance is **connector/agent-driven**: D2 Step 0 event-sources each reconciled fill → `events.trade_fills` + `events.position_events`, ingests `daily_marks` (`get_price_history`, corporate-action aware), recomputes `perf.strategy_daily`, and writes new decisions via **`CALL ops.sp_log_decision(...)`** — which appends to `events.decision_log` **and embeds in the same call** (no separate embed step, no straggler window). Sync is auditable in one query: `SELECT * FROM state.embedding_health` (expect `is_healthy = TRUE`). See Claude_Task_Plan.md D2 + Operating_Protocols.md §14.
 
+### Supersede discipline — when your new `NN_*.sql` redefines an existing object
+
+`bigquery/*.sql` is apply-in-order and **supersede-only**: you never edit an older file's `CREATE`
+body to change behaviour, you add a new numbered file that redefines the object, and the older
+definition stays put, unmodified, as the DR-rebuild record. Two rules follow, and the second is the
+one that actually gets missed:
+
+1. **Mark the old definition.** Put a `-- SUPERSEDED LIVE by bigquery/<NN>_<name>.sql` comment
+   immediately above the superseded `CREATE`, naming the **current canonical** file and saying not to
+   re-apply it live in isolation.
+2. **Mark it in EVERY older file that defines the object — not just the most recent one.** An object
+   redefined three times has three older files, and *all* of them must now name the newest. A file
+   whose marker points at a file that is *itself* superseded is a live trap, not a cosmetic lapse:
+   it walks the next reader to a stale definition that looks canonical, and re-applying it silently
+   reverts the newer one. That is exactly how the 2026-07-11 trading-gate clobber happened (see
+   `scripts/check_superseded_markers.py`'s header for that incident and the 2026-07-18 repeat).
+   Worked example — `analytics.declared_vs_realized` is defined in `26`, `118`, `131` and `136`;
+   adding `136` meant updating the markers in `26`, `118` **and** `131`, three files, not one.
+
+`scripts/check_superseded_markers.py` enforces both mechanically, in three places: directly in
+`ci.yml`'s checks job, again in `auto-merge-claude.yml`'s pre-merge gate (so a miss cannot land even
+by auto-merge), and via `tests/test_check_superseded_markers.py::test_real_repo_has_no_new_violations`
+in the pytest suite. Run it locally after adding any file that redefines a view, procedure, table or
+table function — it reports pre-existing entries as a separate baselined backlog, so only *your* new
+violations block, and its failure message names the exact file and the file it must point at instead.
+
 ## Schema quick reference
 
 Cold-query map so you don't have to re-derive names via `INFORMATION_SCHEMA` each run. **Datasets:** `events` (append-only source of truth) · `state` (latest-wins views) · `perf` (TWR engine) · `analytics` (BQML / embeddings / rollups) · `ops` (models + procedures).

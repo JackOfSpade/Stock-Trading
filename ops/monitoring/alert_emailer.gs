@@ -218,7 +218,11 @@ function checkAlerts_() {
         props.setProperty('notified_alert_ids', JSON.stringify(keep));
       } catch (e) { Logger.log('notified_alert_ids property write skipped: ' + e); }
     } else {
-      Logger.log('No un-notified alerts in the last %s h', LOOKBACK_HOURS);
+      // Message must name BOTH halves of the query's WHERE clause: LOOKBACK_HOURS no longer describes
+      // the full selection, since roster-change notices are exempt from that bound (see the query).
+      // Saying only "in the last 168 h" would misdescribe a quiet poll as having checked a narrower
+      // set than it did — and this line is the sole evidence a human reads when confirming a paste.
+      Logger.log('No un-notified alerts (last %s h, plus roster-change notices of any age)', LOOKBACK_HOURS);
     }
     pollOk = true;
   } catch (e) {

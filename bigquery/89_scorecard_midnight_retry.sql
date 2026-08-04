@@ -40,7 +40,30 @@ WITH runs AS (
     -- MIDNIGHT FIX (bigquery/89): minutes elapsed since midnight of run_date (the operating day),
     -- NOT minutes-of-day of log_ts's own calendar date — see PROBLEM (a) above. A completion that
     -- lands the calendar day after run_date now reads > 1440 instead of wrapping near zero.
-    DATETIME_DIFF(DATETIME(log_ts, 'America/Denver'), DATETIME(run_date), MINUTE) AS completion_minute_of_day
+    DATETIME_DIFF(DATETIME(log_ts, 'America/Denver'), DATETIME(run_date), MINUTE) AS completion_minute_of_day,
+    -- BACKFILLED-ROW FLAG (2026-08-04). A backfilled row's log_ts is the moment the BACKFILL ran, not
+    -- when the routine finished — ops.sp_backfill_run_log_from_markers (bigquery/38) is invoked from
+    -- cadence_check.sql at ~05:15 UTC (22:15-23:15 MT), and hand-backfills are written whenever a human
+    -- or routine noticed. Such a row carries NO information about completion time, so including it in the
+    -- percentiles below does not merely add noise, it manufactures a late tail out of nothing.
+    -- MEASURED 2026-08-04: D1's trailing-90d p90 was 1275 min (21:15 MT) with these rows in and 1006 min
+    -- (16:46 MT) with them out, against a p50 of 978 — and that phantom p90 is what drove W5's
+    -- process_reliability loop to autotune cadence_watch_deadline_local 21:00 -> 21:45, a change its own
+    -- ceiling alert (b7922945) then correctly reported could never clear the signal that triggered it.
+    -- The fix belongs HERE, at the reader, not at the writer: writing an "honest" log_ts in bigquery/38
+    -- was evaluated and rejected the same day, because log_ts is load-bearing for the SAME-DAY DOUBLE-RUN
+    -- GUARD (a pre-noon log_ts would stop the evening cohort counting a prior completion) and because a
+    -- writer-side fix could not repair rows already written. See bigquery/38's header for the full note.
+    --
+    -- ANCHORED PREFIX, NOT A BARE 'backfill' SEARCH — this distinction is the whole correctness of the
+    -- flag. A loose LIKE '%backfill%' also matches ordinary runs whose note merely DISCUSSES backfilling
+    -- (measured 2026-08-04: 6 such D2 rows and 1 D3 row, e.g. "no backfill snapshots" and "D2 completed
+    -- via marker backfill"), which would silently delete 7 genuine completions from the distribution.
+    -- Anchoring on the leading token matches the 4 note forms an actual backfill writes
+    -- ("auto-backfilled from commit marker...", "auto-backfilled from git evidence...", "Backfilled: ...",
+    -- "Backfilled post-hoc ...") and nothing else: verified 9 D1 / 1 D2 / 1 D3 matches, 0 false positives.
+    -- Any new backfill writer MUST keep that prefix, or its rows will silently re-enter these percentiles.
+    REGEXP_CONTAINS(COALESCE(note, ''), r'(?i)^(auto-)?backfilled') AS is_backfilled
   FROM `stock-trading-498512.ops.run_log`
   WHERE run_date >= DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 90 DAY)
 ),
@@ -53,9 +76,13 @@ per_routine AS (
     COUNTIF(status = 'halted') AS n_halted_90d,
     -- p50/p90 completion minutes since midnight of run_date (America/Denver), completed runs only,
     -- last 90 days. Midnight-safe as of bigquery/89 (values > 1440 possible for past-midnight
-    -- completions) — see PROBLEM/FIX (a) above.
-    APPROX_QUANTILES(IF(status = 'completed', completion_minute_of_day, NULL), 100)[OFFSET(50)] AS p50_completion_minute_of_day,
-    APPROX_QUANTILES(IF(status = 'completed', completion_minute_of_day, NULL), 100)[OFFSET(90)] AS p90_completion_minute_of_day
+    -- completions) — see PROBLEM/FIX (a) above. Backfilled rows are EXCLUDED as of 2026-08-04 — their
+    -- log_ts is backfill time, not completion time; see the is_backfilled comment in `runs` above.
+    -- n_backfilled_excluded_90d is surfaced so the exclusion is never silent (a dropped-rows count a
+    -- reader can see beats a percentile that quietly moved).
+    APPROX_QUANTILES(IF(status = 'completed' AND NOT is_backfilled, completion_minute_of_day, NULL), 100)[OFFSET(50)] AS p50_completion_minute_of_day,
+    APPROX_QUANTILES(IF(status = 'completed' AND NOT is_backfilled, completion_minute_of_day, NULL), 100)[OFFSET(90)] AS p90_completion_minute_of_day,
+    COUNTIF(status = 'completed' AND is_backfilled) AS n_backfilled_excluded_90d
   FROM runs
   GROUP BY routine
 ),
@@ -88,6 +115,9 @@ SELECT
   p.routine,
   p.n_log_rows_90d,
   p.n_completed_90d, p.n_failed_90d, p.n_halted_90d,
+  -- Surfaced so the backfilled-row exclusion is never silent: a reader comparing n_completed_90d
+  -- against this can see exactly how many completions were held out of the percentiles below.
+  p.n_backfilled_excluded_90d,
   p.p50_completion_minute_of_day, p.p90_completion_minute_of_day,
   COALESCE(d.n_dep_gate_aborts_90d, 0) AS n_dep_gate_aborts_90d,
   COALESCE(r.n_retry_events, 0) AS n_retry_events,

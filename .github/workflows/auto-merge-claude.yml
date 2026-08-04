@@ -235,7 +235,17 @@ jobs:
             for sha in "${marker_shas[@]:-}"; do
               [ -z "$sha" ] && continue
               subject="$(git log -1 --format=%s "$sha" 2>/dev/null || true)"
-              commit_date="$(git log -1 --format=%as "$sha" 2>/dev/null || true)"
+              # RENDER THE FALLBACK DATE IN THE OPERATING TIMEZONE (2026-08-04). This used to be
+              # `--format=%as`, which renders the author date in the COMMIT'S OWN recorded offset. The
+              # routine containers stamp commits in UTC (e.g. 2026-08-04T01:41:06Z), so for any routine
+              # committing after 18:00 MT, %as returned TOMORROW's date -- the exact midnight-UTC
+              # misattribution the fallback was added to avoid. MEASURED 2026-08-04: SL2's 2026-08-03
+              # evening commit 27a8853 (subject carries no date, so the fallback is what is used) was
+              # marked run_date=2026-08-04, and ops.sp_backfill_run_log_from_markers then wrote a
+              # phantom 'completed' ops.run_log row for a run that never happened -- which in turn made
+              # SL2 read days_silent=0 in state.queue_driven_silence_watch, blinding the detector added
+              # the day before precisely to catch SL2 going quiet. --date=short-local renders in $TZ.
+              commit_date="$(TZ=America/Denver git log -1 --date=short-local --format=%ad "$sha" 2>/dev/null || true)"
               routine="$(marker_routine_from_subject "$subject")"
               run_date="$(marker_run_date_from_subject "$subject" "$commit_date")"
               if [ -n "$routine" ] && [ -n "$run_date" ]; then

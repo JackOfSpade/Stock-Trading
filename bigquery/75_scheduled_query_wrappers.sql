@@ -984,7 +984,10 @@ END;
 
 -- =====================================================================================================
 -- ops.sp_sq_daily_staging_cap_check   (was bigquery/scheduled_queries/daily_staging_cap_check.sql; that file is now a frozen one-line
--- CALL wrapper — full historical header/rationale comments remain there. SQ_VERSION v4 (bumped from
+-- CALL wrapper — full historical header/rationale comments remain there. SQ_VERSION v5 (bumped from
+-- v4, 2026-08-04: order_guard_omitted now excludes ADOPTED dust liquidations -- see the ADOPTED-DUST
+-- EXCLUSION paragraph on that check below. Review/alerting scope only; no trading behavior changes.
+-- v4 was bumped from
 -- v3, 2026-07-26, owner directive -- the daily order-count/notional cap is retired: dropped the
 -- daily_cap_breach IF block below. daily_cap_breach was the ONLY consumer of state.daily_staging_totals's
 -- now-removed max_daily_notional/max_daily_orders fields (bigquery/109_retire_daily_staging_cap.sql);
@@ -996,7 +999,7 @@ END;
 -- =====================================================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_daily_staging_cap_check`()
 BEGIN
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:daily_staging_cap_check', 'v4', 'daily_staging_cap_check.sql ran');
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:daily_staging_cap_check', 'v5', 'daily_staging_cap_check.sql ran');
 
   -- order_guard_omitted (CRITICAL, not staged-rollout -- ITEM 15, self-improvement audit 2026-07-11).
   -- fn_order_guard / fn_order_guard_options is a per-order obligation on the calling routine, with no
@@ -1026,11 +1029,43 @@ BEGIN
   -- surface. Embedding the sorted, comma-joined item_keys makes the message (and so the dedup key) change
   -- whenever the SET of affected orders changes, while an unchanged set (the same still-open omission, re-
   -- evaluated on a later run) still correctly dedupes to a single alert, not a new one every run.
+  --
+  -- ADOPTED-DUST EXCLUSION (2026-08-04, alert ebfbff4e-f491-4763-81a9-ef360744cbc5 -- this check's FIRST
+  -- ever firing, and a false positive). The premise above -- "guard_passed IS NULL means the guard never ran
+  -- or the routine didn't record it, either way the envelope was bypassed" -- has exactly one legitimate
+  -- exception, and it is not a bypass at all: an ADOPTED dust liquidation. Per Claude_Task_Plan.md's
+  -- "ADOPTION OF AN UNREGISTERED DUST LIQUIDATION — PRE-FILL PATH ONLY (2026-08-02)" branch, a dust SELL can
+  -- already be live at the connector with no queue_events row (operator-tapped, pre-registry, or hand-placed);
+  -- D2a ADOPTS it rather than declining. D2a never calls create_order_instruction for such an order, so there
+  -- is NO pre-craft moment at which fn_order_guard could have been called -- and D2a records that honestly as
+  -- guard_passed=NULL with guard_reasons=[n/a - adopted, not crafted by D2a], never as a fabricated TRUE.
+  -- Flagging that honest, self-documented null as a bypassed risk envelope is a category error, and an
+  -- expensive one: order_guard_omitted is CRITICAL, and an open CRITICAL is itself a trading-gate input
+  -- (state.trading_enabled_mechanical's blocking_criticals branch), so the false positive HALTED all order
+  -- staging over two adopted dust SELLs totalling ~$0.20 of risk-REDUCING notional (IBM 0.0007sh, HCA 0.0001sh).
+  -- The exclusion is deliberately narrow -- item_type='drip-dust-liquidation' AND payload.adopted='true'
+  -- TOGETHER. A NORMAL D2a-CRAFTED dust SELL (same item_type, adopted absent/false) still runs the spec's
+  -- STANDARD GUARD step and must still be caught here if its guard_passed is missing; and payload.adopted is
+  -- written on no other order class (verified live 2026-08-04), so this cannot become a loophole elsewhere.
+  --
+  -- WRAPPED IN COALESCE(..., FALSE) DELIBERATELY -- this is a fail-CLOSED exclusion, and the bare form is a
+  -- LIVE FAIL-OPEN BUG (caught in same-session self-review, 2026-08-04, before it could bite). Written bare as
+  -- `AND NOT (item_type = '...' AND JSON_VALUE(...) = 'true')`, the inner AND evaluates to NULL whenever
+  -- item_type IS NULL, NOT NULL is NULL, and WHERE NULL DROPS THE ROW -- silently excluding it from a CRITICAL
+  -- detector. events.queue_events DOES carry ORDER_STAGED rows with NULL item_type (verified live: item_key
+  -- 'entry-TSM-D-20260717', 2026-07-20, 1 of 82 ORDER_STAGED rows), so this is reachable, not theoretical: a
+  -- future NULL-item_type order staged WITHOUT a guard -- precisely the bypass this check exists to catch --
+  -- would have been swallowed. COALESCE(..., FALSE) makes the exclusion fire ONLY when both conjuncts are
+  -- provably TRUE; anything unknown stays IN the detector and gets flagged. When adding any future exclusion
+  -- here, keep that polarity: an exclusion on a safety check must never be able to evaluate to NULL.
   IF EXISTS (
     SELECT 1 FROM `stock-trading-498512.events.queue_events`
     WHERE queue = 'ORDER_STAGED' AND LOWER(status) = 'pending'
       AND DATE(event_ts, 'America/Denver') = CURRENT_DATE('America/Denver')
       AND JSON_VALUE(payload, '$.guard_passed') IS NULL
+      -- ADOPTED-DUST EXCLUSION -- see the paragraph above. Kept byte-identical across all three
+      -- predicates below so the message/payload can never disagree with this gate.
+      AND NOT COALESCE(item_type = 'drip-dust-liquidation' AND JSON_VALUE(payload, '$.adopted') = 'true', FALSE)
   ) THEN
     CALL `stock-trading-498512.ops.sp_raise_alert_once`(
       'critical', 'scheduled.staging_cap', 'order_guard_omitted',
@@ -1045,7 +1080,8 @@ BEGIN
        FROM `stock-trading-498512.events.queue_events`
        WHERE queue = 'ORDER_STAGED' AND LOWER(status) = 'pending'
          AND DATE(event_ts, 'America/Denver') = CURRENT_DATE('America/Denver')
-         AND JSON_VALUE(payload, '$.guard_passed') IS NULL),
+         AND JSON_VALUE(payload, '$.guard_passed') IS NULL
+         AND NOT COALESCE(item_type = 'drip-dust-liquidation' AND JSON_VALUE(payload, '$.adopted') = 'true', FALSE)),
       (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(
           item_key, strategy, ticker,
           UPPER(JSON_VALUE(payload, '$.side')) AS side,
@@ -1055,7 +1091,8 @@ BEGIN
        FROM `stock-trading-498512.events.queue_events`
        WHERE queue = 'ORDER_STAGED' AND LOWER(status) = 'pending'
          AND DATE(event_ts, 'America/Denver') = CURRENT_DATE('America/Denver')
-         AND JSON_VALUE(payload, '$.guard_passed') IS NULL));
+         AND JSON_VALUE(payload, '$.guard_passed') IS NULL
+         AND NOT COALESCE(item_type = 'drip-dust-liquidation' AND JSON_VALUE(payload, '$.adopted') = 'true', FALSE)));
   END IF;
 
   -- order_guard_verdict_mismatch (CRITICAL, DEF-3 order-guard TRUTHFULNESS backstop -- defense-in-depth,

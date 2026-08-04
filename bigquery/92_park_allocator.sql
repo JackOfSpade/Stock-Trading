@@ -144,6 +144,13 @@ FROM ctrl;
 -- per the task spec: "parsing fields JSON via JSON_VALUE"). Newest-first LIMIT 10, same
 -- ORDER BY ... LIMIT N idiom as bigquery/02_ai_layer.sql's precedent-retrieval view.
 -- ============================================================================
+-- SUPERSEDED LIVE by bigquery/135_park_allocation_call_shape.sql (2026-08-04) — that file is the current
+-- single source of truth for BOTH views below. It adds an is_call flag (fields.status IS NOT NULL) and
+-- raises this view's LIMIT 10 -> 25, and makes park_allocation_latest select the newest CALL-shaped row
+-- rather than the newest row of any shape. Reason: D2a logged a park-COVER staging note under this same
+-- entry_type on 2026-08-03, and because neither view predicated on row SHAPE, that non-call row (vehicle
+-- and status both NULL) shadowed D1's real SWITCH SGOV->VOO call in park_allocation_latest and would have
+-- silently dropped a park switch worth 92.5% of NLV. Alert c5044046-53da-4d91-be8d-4002d1882ec0.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.park_allocation_recent` AS
 SELECT
   entry_id,
@@ -162,6 +169,9 @@ ORDER BY event_ts DESC
 LIMIT 10;
 
 -- Top-of-stack convenience view (today's/most-recent call).
+-- SUPERSEDED LIVE by bigquery/135_park_allocation_call_shape.sql (2026-08-04) — see the note on
+-- state.park_allocation_recent above. This view now filters to is_call, so a non-call row sharing the
+-- park-allocation entry_type can no longer shadow the standing allocation call.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.park_allocation_latest` AS
 SELECT * FROM `stock-trading-498512.state.park_allocation_recent`
 ORDER BY event_ts DESC

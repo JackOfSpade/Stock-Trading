@@ -52,6 +52,13 @@
 -- unaffected in shape. go_minus_opened moves toward zero (less alarming), so no downstream gate can
 -- newly trip on this change.
 
+-- SUPERSEDED LIVE by bigquery/136_declared_vs_realized_orphan_sides.sql (2026-08-04) — that file is the
+-- current single source of truth. It keeps every column below unchanged and ADDS
+-- n_go_theses_without_position / n_positions_without_go_thesis. Reason: go_minus_opened is a NET count
+-- and cannot distinguish a genuinely reconciled strategy from one orphan on each side cancelling out —
+-- which is exactly strategy B's live state (OKTA thesis-without-position vs BURL position-without-thesis,
+-- netting to 0). The COUNT(DISTINCT position_key) fix below is unchanged and still the reason this file
+-- exists; see its header for the adversarial checks behind it.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.declared_vs_realized` AS
 WITH go_theses AS (
   -- Was: SELECT ... FROM events.decision_log WHERE entry_type='thesis-construction' AND decision='GO'.
