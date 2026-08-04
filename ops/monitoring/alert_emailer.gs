@@ -16,6 +16,18 @@
  * is emailed exactly once and then stamped; resolved-since-raise alerts are still sent, tagged
  * AUTO-RESOLVED so you know it self-healed. (RUNBOOK §20 / §25.)
  *
+ * DELIVERY IS NOT THE SAME THING AS LIVENESS (v6, 2026-08-04). Two related gaps, both found by an
+ * adversarial review of v5 rather than by anything failing in production:
+ *   - LOOKBACK_HOURS is a CLIFF, not a window. alert_ts is fixed while CURRENT_TIMESTAMP() advances, so
+ *     an un-notified alert that passes the bound leaves the ONLY query that ever stamps notified_ts,
+ *     permanently. Tolerable for a condition that re-raises; silently destructive for a one-shot roster
+ *     fact that nothing ever re-raises. The six roster categories are now exempt from that bound.
+ *   - The heartbeat proves the SCRIPT ran, not that anything was DELIVERED. checkAlerts_ swallows every
+ *     exception and beat_() runs outside that try, so a render throw or a Gmail quota rejection leaves a
+ *     green heartbeat and zero delivered alerts, indefinitely. After 3 consecutive failed polls the
+ *     script now escalates over two channels that do not depend on the failing one — an ops.alerts row
+ *     that alert_relay.py pushes to ntfy from GitHub Actions, and a direct Gmail send.
+ *
  * ROSTER-CHANGE NOTICES (v5, 2026-08-04, owner directive "although i let ai dictate when to add/drop
  * strategies, i still want to be notified by email when it does so"): the autonomous SISA loop
  * (SL1-SL5) previously raised its roster-membership events at 'info', which the SEVERITIES filter below
@@ -42,7 +54,7 @@ const ALERT_RECIPIENT  = Session.getActiveUser().getEmail(); // self-email
 const ALERT_SENDER     = 'Stock-Trading Alerts';
 const SEVERITIES       = ['critical', 'warning']; // set to ['critical'] for criticals only
 const POLL_HOURS       = 2;                        // how often to check
-const ALERT_SCRIPT_VERSION = 'v5';                 // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep. Named ALERT_SCRIPT_VERSION (not SCRIPT_VERSION) because this file and weekly_report.gs share ONE Apps Script project's top-level scope -- a same-named const in both would throw a project-wide SyntaxError on the next paste (2026-07-14 audit finding).
+const ALERT_SCRIPT_VERSION = 'v6';                 // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep. Named ALERT_SCRIPT_VERSION (not SCRIPT_VERSION) because this file and weekly_report.gs share ONE Apps Script project's top-level scope -- a same-named const in both would throw a project-wide SyntaxError on the next paste (2026-07-14 audit finding).
 
 // ROSTER-CHANGE NOTICES (owner directive 2026-08-04, bigquery/134_roster_change_notifications.sql).
 // The autonomous SISA loop (SL1-SL5) adds and removes trading strategies with no human approval step --
@@ -123,12 +135,29 @@ function checkAlerts_() {
     // for isTest_'s payload.synthetic check. Every consumer parses it defensively via pl_() -- a NULL,
     // absent, or malformed payload degrades to the message-only rendering and never throws. Kept
     // identical in the recurring query below so both result sets have the same shape.
+    // ROSTER NOTICES ARE EXEMPT FROM LOOKBACK_HOURS (v6, 2026-08-04). LOOKBACK_HOURS is a CLIFF, not a
+    // window: alert_ts is fixed and CURRENT_TIMESTAMP() only advances, so the instant an un-notified
+    // alert turns 168h old it leaves this WHERE clause FOREVER — and this query is the only code path
+    // in the entire system that stamps notified_ts. Raising the bound 48h->168h (see LOOKBACK_HOURS
+    // above) moved that cliff; it did not remove it.
+    //
+    // For an ordinary alert that is tolerable: the condition either recurs and re-raises, or it healed.
+    // A roster notice is different in kind. It reports a one-shot, irreversible fact — a strategy was
+    // added to or dropped from the live roster — that is never re-raised by anything. Losing one is the
+    // exact failure this whole feature exists to prevent, and it would fail SILENTLY: with notified_ts
+    // permanently NULL, bigquery/134's Rule 5 never resolves it either, so it sits open forever, visible
+    // only to someone who happens to query ops.alerts directly.
+    // Six rare categories (~5-12 rows/year, rate-limited by the SISA anti-churn rails) are exempted from
+    // the time bound entirely, so a delivery outage of any length DELAYS a roster notice instead of
+    // destroying it. LIMIT 500 and the Script Properties dedup still bound the result either way.
+    const rosterList = ROSTER_NOTICE_CATEGORIES.map(c => `'${c}'`).join(',');
     const rows = bqAlerts_(`
       SELECT alert_id, CAST(alert_ts AS STRING) AS alert_ts, UNIX_MILLIS(alert_ts) AS alert_ms,
              severity, source, category, message, resolved, TO_JSON_STRING(payload) AS payload
       FROM \`${ALERT_PROJECT_ID}.ops.alerts\`
       WHERE notified_ts IS NULL AND severity IN (${sevList})
-        AND alert_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${LOOKBACK_HOURS} HOUR)
+        AND (alert_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${LOOKBACK_HOURS} HOUR)
+             OR category IN (${rosterList}))
       ORDER BY alert_ts DESC
       LIMIT 500`);
 
@@ -194,9 +223,11 @@ function checkAlerts_() {
     pollOk = true;
   } catch (e) {
     Logger.log('checkAlerts_ query failed (BigQuery quota or transient error?) — skipping this cycle: ' + e);
+    escalateDeliveryFailure_(e);
   } finally {
     lock.releaseLock();
   }
+  if (pollOk) resetDeliveryFailureStreak_();
 
   // Liveness beat (ops.heartbeat -> state.automation_heartbeat). Lets cadence_check.sql detect a
   // SILENTLY-DEAD emailer (revoked token / deleted trigger) via the independent DTS failure-email —
@@ -228,6 +259,87 @@ function stampNotified_(ids) {
 }
 
 // ===== heartbeat =====
+// ===== DELIVERY-FAILURE ESCALATION (v6, 2026-08-04) =====
+// Closes a blind spot found by an adversarial review of the v5 change. Everything inside checkAlerts_'s
+// try — the query, the render, GmailApp.sendEmail, stampNotified_ — is caught and swallowed, and then
+// beat_() runs OUTSIDE that try and writes a heartbeat regardless. That was deliberate (see the comment
+// at the top of checkAlerts_: a transient BigQuery quota error must not be mistaken for a dead emailer),
+// but it means liveness of the SCRIPT is being used as a proxy for liveness of DELIVERY, and the two
+// come apart precisely when it matters:
+//
+//   * BigQuery itself is down  -> the beat_ INSERT also fails, no beat is written, and
+//     state.automation_heartbeat's 8h dead-man DOES fire. Already covered.
+//   * BigQuery is HEALTHY but delivery is not -> a render exception, a Gmail daily-quota rejection, a
+//     revoked Gmail scope. beat_ succeeds, note='poll-error' is written, and NOTHING reads `note`
+//     (automation_heartbeat reads only MAX(beat_ts) — its own comment says so). The heartbeat is green,
+//     the dashboard is green, and zero alerts reach the operator. Indefinitely. NOT covered before v6.
+//
+// So escalate on a streak, over two channels that do NOT depend on the thing that is broken:
+//   1. ops.alerts via sp_raise_alert_once — this row cannot be emailed by the very emailer that is
+//      failing, but scripts/alert_relay.py relays critical+warning to the ntfy.sh push topic from
+//      GitHub Actions every 30 minutes, entirely outside Apps Script and Gmail. That is the channel
+//      that actually gets through. sp_raise_alert_once (not sp_raise_alert) so repeated escalations
+//      collapse onto one open row instead of accumulating.
+//   2. A direct GmailApp.sendEmail with no BigQuery involved — covers the common case where the query
+//      is what is broken and mail is fine.
+// Each is independently try/caught: whichever channel is alive still gets the message out.
+//
+// Raised at 'warning', NOT 'critical', deliberately: a critical would count toward
+// state.trading_enabled's blocking_criticals and HALT ORDER STAGING on what may be a Gmail quota
+// hiccup. Halting live trading because an email failed is a worse outcome than the failure. The ntfy
+// push plus a stuck-open warning row is loud enough.
+const DELIVERY_FAIL_ESCALATE_AFTER = 3;    // ~6h at POLL_HOURS=2 — under automation_heartbeat's 8h bar
+const DELIVERY_FAIL_REESCALATE_EVERY = 12; // then roughly daily, so a long outage keeps reminding
+
+function resetDeliveryFailureStreak_() {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    if (props.getProperty('poll_fail_streak')) props.deleteProperty('poll_fail_streak');
+  } catch (e) { Logger.log('could not reset poll_fail_streak: ' + e); }
+}
+
+function escalateDeliveryFailure_(err) {
+  let streak = 0;
+  try {
+    const props = PropertiesService.getScriptProperties();
+    streak = (parseInt(props.getProperty('poll_fail_streak'), 10) || 0) + 1;
+    props.setProperty('poll_fail_streak', String(streak));
+  } catch (e) {
+    Logger.log('could not track poll_fail_streak: ' + e);
+    return; // without a durable streak we cannot tell a blip from an outage; stay quiet rather than spam
+  }
+  const due = (streak === DELIVERY_FAIL_ESCALATE_AFTER) ||
+              (streak > DELIVERY_FAIL_ESCALATE_AFTER && streak % DELIVERY_FAIL_REESCALATE_EVERY === 0);
+  if (!due) return;
+  const hours = streak * POLL_HOURS;
+  const msg = 'Stock-Trading ALERT DELIVERY IS FAILING: ' + streak + ' consecutive polls (~' + hours +
+              'h) ended in an error, so NO alert emails are being sent. The heartbeat may still look ' +
+              'green — it only proves the script ran, not that anything was delivered.';
+  // Channel 1: ops.alerts -> alert_relay.py -> ntfy push (independent of Apps Script and Gmail).
+  // The error text is NOT interpolated into SQL — it is arbitrary text from an exception and would be a
+  // quoting/injection hazard. It goes in the email body instead; the payload carries structured facts.
+  try {
+    BigQuery.Jobs.query({
+      query: `CALL \`${ALERT_PROJECT_ID}.ops.sp_raise_alert_once\`('warning','alert_emailer',` +
+             `'alert_delivery_failing','${msg.replace(/'/g, '')}',` +
+             `TO_JSON_STRING(STRUCT(${streak} AS consecutive_failures, ${hours} AS approx_hours, ` +
+             `'${ALERT_SCRIPT_VERSION}' AS script_version)))`,
+      useLegacySql: false, timeoutMs: 30000
+    }, ALERT_PROJECT_ID);
+  } catch (e) { Logger.log('escalation alert raise failed (BigQuery likely down too): ' + e); }
+  // Channel 2: direct mail, no BigQuery in the path.
+  try {
+    GmailApp.sendEmail(ALERT_RECIPIENT, '⛔ Stock-Trading — ALERT DELIVERY IS FAILING (' + streak + ' polls)',
+      msg + '\n\nLast error:\n' + String(err) +
+      '\n\nWhat to check: the Apps Script execution log for alert_emailer, the BigQuery quota, and the ' +
+      'Gmail daily send quota. Until this clears, treat the alert channel as DOWN and query ops.alerts ' +
+      'directly:\n  SELECT * FROM ops.alerts WHERE notified_ts IS NULL AND severity IN (\'critical\',\'warning\') ORDER BY alert_ts DESC' +
+      '\n\nRoster-change notices are exempt from the lookback window and will be delivered once this ' +
+      'recovers, however long it takes. Other alert classes older than ' + LOOKBACK_LABEL + ' will not be.',
+      { name: ALERT_SENDER });
+  } catch (e) { Logger.log('escalation email failed (Gmail likely the broken component): ' + e); }
+}
+
 function beat_(pollOk) {
   const note = (pollOk === false) ? 'poll-error' : 'poll';
   try {
@@ -332,8 +444,13 @@ function isRealRosterNotice_(a) { return !isTest_(a) && isRosterNotice_(a); }
 // specific forms so a payload-less notice still produces something meaningful.
 function rosterHeadline_(a) {
   const p = pl_(a);
-  if (p.strategy_code && p.from_state && p.to_state) return `${p.strategy_code} ${p.from_state}→${p.to_state}`;
-  if (p.strategy_code) return `${p.strategy_code} · ${a.category}`;
+  // Stripped of CR/LF because this is the ONLY payload-derived value that reaches the email SUBJECT
+  // (everything else payload-derived is confined to the escaped HTML body). A stray newline in a
+  // subject is a header-injection shape; these fields are short system tokens today, but the payload
+  // is routine-authored free-shape JSON, so do not rely on that.
+  const clean = s => String(s).replace(/[\r\n]+/g, ' ').trim();
+  if (p.strategy_code && p.from_state && p.to_state) return `${clean(p.strategy_code)} ${clean(p.from_state)}→${clean(p.to_state)}`;
+  if (p.strategy_code) return `${clean(p.strategy_code)} · ${a.category}`;
   return a.category;
 }
 
@@ -413,18 +530,40 @@ function htmlAlerts_(batch, newlyUnnotifiedCount, recurringCount) {
   const allTest = batch.length > 0 && batch.every(isTest_);
   const roster = batch.filter(isRealRosterNotice_);
   const incidents = batch.filter(a => !isRealRosterNotice_(a));
-  const rosterHtml = roster.map(a => {
-    const detail = rosterDetail_(a).map(kv =>
-      `<tr><td style="font-size:12px;color:#5b6b7a;padding:1px 10px 1px 0;white-space:nowrap;vertical-align:top;">${esc2_(kv[0])}</td>` +
-      `<td style="font-size:12px;color:#1f2d3d;padding:1px 0;">${esc2_(kv[1])}</td></tr>`).join('');
-    return `<tr><td style="padding:0;">
+  // realIncidents excludes canary/fire-drill rows. The HEADER must key on this, not on
+  // incidents.length: a batch of {real roster notice + weekly canary} has incidents.length === 1, which
+  // would print the "⚠ unresolved alerts" header under a subject that correctly reads
+  // "📋 ROSTER CHANGE" — the exact alarming-framing-for-a-healthy-event this lane exists to prevent.
+  // alertSubject_ already filters tests out via isTest_; this keeps the two in agreement.
+  const realIncidents = incidents.filter(a => !isTest_(a));
+  // Payload rendering is the only part of this file that parses routine-authored free-shape JSON, so
+  // it is the only part with a plausible unknown-unknown. It is fenced off because the outer catch in
+  // checkAlerts_ swallows exceptions and beat_() still stamps a fresh beat_ts — meaning a PERSISTENT
+  // throw anywhere in this function would silently stop ALL alert delivery forever while
+  // state.automation_heartbeat (which reads only MAX(beat_ts), never the note) stays green. Degrading
+  // one roster card to message-only is always preferable to blacking out the whole channel.
+  let rosterHtml;
+  try {
+    rosterHtml = roster.map(a => {
+      const detail = rosterDetail_(a).map(kv =>
+        `<tr><td style="font-size:12px;color:#5b6b7a;padding:1px 10px 1px 0;white-space:nowrap;vertical-align:top;">${esc2_(kv[0])}</td>` +
+        `<td style="font-size:12px;color:#1f2d3d;padding:1px 0;">${esc2_(kv[1])}</td></tr>`).join('');
+      return `<tr><td style="padding:0;">
       <div style="border-left:4px solid #1e7f5c;background-color:#eaf6f0;border-radius:6px;padding:10px 12px;margin:6px 0;">
         <div style="font-size:13px;font-weight:700;color:#1e7f5c;">ROSTER CHANGE · ${esc2_(a.source)} · ${esc2_(a.category)}</div>
         <div style="font-size:13px;color:#1f2d3d;margin-top:3px;">${esc2_(a.message)}</div>
         ${detail ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:7px;">${detail}</table>` : ''}
         <div style="font-size:11px;color:#8a96a3;margin-top:5px;">${esc2_(fmtAlertTs_(a))}</div>
       </div></td></tr>`;
-  }).join('');
+    }).join('');
+  } catch (e) {
+    rosterHtml = roster.map(a => `<tr><td style="padding:0;">
+      <div style="border-left:4px solid #1e7f5c;background-color:#eaf6f0;border-radius:6px;padding:10px 12px;margin:6px 0;">
+        <div style="font-size:13px;font-weight:700;color:#1e7f5c;">ROSTER CHANGE · ${esc2_(a.source)} · ${esc2_(a.category)}</div>
+        <div style="font-size:13px;color:#1f2d3d;margin-top:3px;">${esc2_(a.message)}</div>
+        <div style="font-size:11px;color:#8a96a3;margin-top:5px;">(detail unavailable — payload render failed: ${esc2_(String(e))})</div>
+      </div></td></tr>`).join('');
+  }
   const rosterSection = roster.length ? `
       <tr><td style="font-size:14px;font-weight:700;color:#1e7f5c;padding:12px 0 2px;">📋 Autonomous roster change${roster.length > 1 ? 's' : ''} — no action needed</td></tr>
       ${rosterHtml}
@@ -446,7 +585,7 @@ function htmlAlerts_(batch, newlyUnnotifiedCount, recurringCount) {
   }).join('');
   const header = allTest
     ? '⚗ Stock-Trading — alert-delivery self-test (TEST · no action needed)'
-    : (incidents.length === 0
+    : (realIncidents.length === 0 && recurringCount === 0
         ? `📋 Stock-Trading — autonomous roster change${roster.length > 1 ? 's' : ''}`
         : '⚠ Stock-Trading — unresolved alerts');
   // The incident section is suppressed entirely on a roster-only batch, so a healthy autonomous action
@@ -454,7 +593,7 @@ function htmlAlerts_(batch, newlyUnnotifiedCount, recurringCount) {
   // apply to it (Rule 5 clears these on delivery).
   const incidentSection = incidents.length ? `
       ${rowsHtml}
-      <tr><td style="font-size:11px;color:#8a96a3;padding-top:10px;">This email contains ${batch.length} alert(s): ${newlyUnnotifiedCount} newly un-notified in the last ${LOOKBACK_LABEL} and ${recurringCount} recurring. Resolve via <code>UPDATE ops.alerts SET resolved=TRUE WHERE alert_id='...'</code> — always scope by alert_id, never run this unfiltered. This channel complements the [Claude] ATTENTION calendar events.</td></tr>` : '';
+      <tr><td style="font-size:11px;color:#8a96a3;padding-top:10px;">This section contains ${incidents.length} alert(s): ${newlyUnnotifiedCount - roster.length} newly un-notified in the last ${LOOKBACK_LABEL} and ${recurringCount} recurring.${roster.length ? ` ${roster.length} roster change(s) follow below and need no action.` : ''} Resolve via <code>UPDATE ops.alerts SET resolved=TRUE WHERE alert_id='...'</code> — always scope by alert_id, never run this unfiltered. This channel complements the [Claude] ATTENTION calendar events.</td></tr>` : '';
   return `<!DOCTYPE html><html><body style="margin:0;padding:18px;background-color:#eef1f5;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:auto;background:#fff;border-radius:12px;padding:18px;">
       <tr><td style="font-size:16px;font-weight:700;color:#0f2747;padding-bottom:8px;">${header}</td></tr>
@@ -467,11 +606,12 @@ function plainAlerts_(batch, newlyUnnotifiedCount, recurringCount) {
   const allTest = batch.length > 0 && batch.every(isTest_);
   const roster = batch.filter(isRealRosterNotice_);
   const incidents = batch.filter(a => !isRealRosterNotice_(a));
+  const realIncidents = incidents.filter(a => !isTest_(a));   // see htmlAlerts_ for why the header keys on this
   let s = allTest
     ? `[TEST] Stock-Trading — alert-delivery self-test, no action needed:\n\n`
-    : (incidents.length === 0
+    : (realIncidents.length === 0 && recurringCount === 0
         ? `Stock-Trading — ${roster.length} autonomous roster change(s), no action needed:\n\n`
-        : `Stock-Trading — ${batch.length} alert(s) (${newlyUnnotifiedCount} newly un-notified in the last ${LOOKBACK_LABEL}, ${recurringCount} recurring):\n\n`);
+        : `Stock-Trading — ${incidents.length} alert(s) (${newlyUnnotifiedCount - roster.length} newly un-notified in the last ${LOOKBACK_LABEL}, ${recurringCount} recurring)${roster.length ? ` + ${roster.length} roster change(s) below` : ''}:\n\n`);
   incidents.forEach(a => {
     const tag = isTest_(a) ? '[TEST] ' : (String(a.resolved) === 'true' ? '[AUTO-RESOLVED] ' : '');
     s += `[${a.severity.toUpperCase()}] ${tag}${a.source}/${a.category}: ${a.message}  (${fmtAlertTs_(a)})\n`;

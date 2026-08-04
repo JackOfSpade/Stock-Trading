@@ -89,7 +89,22 @@ Apps Script paste (`script.google.com` isn't reachable from here) and a live Big
 behind that paste's own heartbeat — and they are SEQUENCED: do not do (b) before (a) has actually
 landed and emitted a v5 heartbeat.
 
-## AE-1. Re-paste `alert_emailer.gs` (v4 → v5, ROSTER CHANGE lane), THEN apply the `bigquery/43` MERGE that seeds `expected_version='v5'` for `alert_emailer`
+## AE-1. Re-paste `alert_emailer.gs` (v4 → v5, ROSTER CHANGE lane), THEN apply the `bigquery/43` MERGE that seeds `expected_version='v5'` for `alert_emailer` — [DONE 2026-08-04]
+
+**[DONE 2026-08-04 — both steps, in order, same session.]** (a) The owner pasted v5 into the live
+"Stock-Trading Automation" Apps Script project from the commit-SHA-pinned GitHub blob URL
+(`49ba0e9`), saved with no syntax error, and ran `testAlertCheck` — execution log
+`Emailed 1.0 new alerts (0.0 recurring termination-close)`, which stamped the `alert_emailer` /
+`v5` beat into `ops.heartbeat` at 2026-08-04 12:12:01Z. NOTE for future pastes: the raw
+`raw.githubusercontent.com` URL does NOT work for this repo — it is private, so raw URLs need a
+short-lived `?token=` param. The `github.com/<owner>/<repo>/blob/<sha>/<path>` URL authenticates
+from the browser session and has a "Copy raw file" button; use that form.
+(b) With the v5 beat live (and `state.script_version_drift` therefore showing
+expected=v4 / reported=v5 / drift=TRUE, exactly the gate this item guards), the `bigquery/43` MERGE
+was applied live — MERGE only, not the file's CREATE TABLE or its `state.script_version_drift` view.
+1 row affected (`alert_emailer` v4→v5); `weekly_report` matched but was a correct no-op and its
+`updated_ts` was NOT re-stamped, as the guarded WHEN MATCHED clause intends. Verified end state:
+both scripts `expected_version == last_reported_version`, `monitored=TRUE`, **`drift=FALSE`**.
 
 **What it's for:** `alert_emailer.gs`'s `ALERT_SCRIPT_VERSION` bumped `'v4'` → `'v5'`. What v5 adds is
 presentation, not delivery: the six roster-membership categories listed above now render in their own
@@ -145,6 +160,81 @@ id: AE-1
 type: gs
 probe: SELECT script_name, last_reported_version, expected_version, drift FROM `stock-trading-498512.state.script_version_drift` WHERE script_name='alert_emailer'
 done_when: last_reported_version='v5' AND expected_version='v5' AND drift=FALSE
+```
+
+## AE-2. Re-paste `alert_emailer.gs` (v5 → v6, adversarial self-review fixes), THEN apply the `bigquery/43` MERGE that seeds `expected_version='v6'` for `alert_emailer`
+
+**What it's for:** the AE-1 paste (v4 → v5) shipped the ROSTER CHANGE lane, and an adversarial
+self-review of that same change — done the same session, before AE-1's own v5 heartbeat had even
+landed — found five real defects in it. All five are already fixed in the repo
+(`ops/monitoring/alert_emailer.gs`, `ALERT_SCRIPT_VERSION` bumped `'v5'` → `'v6'`) and in the
+matching `bigquery/43_script_version_registry.sql` seed row, but — same as every `.gs` change in
+this file — Claude cannot reach `script.google.com`, so getting v6 live needs this same two-step,
+sequenced, owner-only cycle AE-1 just went through:
+
+1. Body header keyed on `incidents.length`, which counts canary/fire-drill rows — so a batch of
+   one real roster notice plus one test row printed the alarming "⚠ unresolved alerts" header under
+   a correct, calm "📋 ROSTER CHANGE" subject. Now keys on real incidents excluding tests.
+2. The newly-un-notified footer count was `fresh.length`, which now includes roster notices, but
+   was printed directly beneath an incident-only list. Now derives the incident-only figure.
+3. Payload rendering is fenced in its own try/catch. A persistent throw there would have silently
+   stopped ALL alert delivery forever, because `checkAlerts_`'s outer catch swallows exceptions and
+   `beat_()` still writes a fresh heartbeat, while `state.automation_heartbeat` reads only
+   `MAX(beat_ts)` and never the note.
+4. Roster-change categories are now EXEMPT from the `LOOKBACK_HOURS` bound. That bound is a cliff,
+   not a window: once an un-notified alert passes 168h it leaves the only query that ever stamps
+   `notified_ts`, permanently. For a one-shot, never-re-raised roster fact that meant silent
+   permanent loss.
+5. NEW delivery-failure escalation: after 3 consecutive failed polls (~6h) the script raises a
+   `warning` `alert_delivery_failing` row via `ops.sp_raise_alert_once` (which
+   `scripts/alert_relay.py` pushes to the ntfy topic from GitHub Actions — a channel independent of
+   Apps Script and Gmail) AND sends a direct Gmail escalation. Deliberately `warning`, not
+   `critical`, so an email hiccup cannot halt order staging.
+
+**Action — two sequenced steps:**
+
+(a) **Re-paste `ops/monitoring/alert_emailer.gs` (v5 → v6) into the live "Stock-Trading Automation"
+Apps Script project.** Use the `github.com/JackOfSpade/Stock-Trading/blob/<COMMIT_SHA>/ops/monitoring/alert_emailer.gs`
+URL form (once this change merges to `main`) and its "Copy raw file" button — **NOT**
+`raw.githubusercontent.com`, which 404s for this private repo because raw URLs need a short-lived
+`?token=` param. AE-1's own paste cycle hit this exact pitfall and burned a round-trip on it; it's
+recorded here so AE-2 doesn't repeat it. Then run `runAlertCheck` (or wait for its next natural
+fire) once to confirm the `alert_emailer` heartbeat lands with `version='v6'`.
+
+(b) **Only after (a) has landed AND `alert_emailer` has emitted a v6 heartbeat**, apply the `MERGE`
+statement in `bigquery/43_script_version_registry.sql` live (BigQuery MCP `execute_sql` or console
+— same idempotent-reapply pattern as every other `bigquery/NN_*.sql` file). The repo seed is
+already `'v6'`, but per that file's own inline NOTE on the `alert_emailer` MERGE row, the MERGE has
+deliberately NOT been applied yet — live still expects `'v5'`, so `state.script_version_drift`
+currently reads `drift=FALSE` (expected still matches reported) while the paste is pending. That's
+correct and not a false alarm; applying the MERGE before (a) lands would flip it to a real,
+premature `drift=TRUE`.
+
+**Verify:**
+```sql
+-- (a) confirm the v6 heartbeat landed before doing (b):
+SELECT source, version, beat_ts FROM `stock-trading-498512.ops.heartbeat`
+WHERE source='alert_emailer' ORDER BY beat_ts DESC LIMIT 3;
+
+-- (b) after applying the MERGE, confirm no drift:
+SELECT script_name, last_reported_version, expected_version, drift
+FROM `stock-trading-498512.state.script_version_drift` WHERE script_name='alert_emailer';
+```
+
+**If skipped:** no functional loss today — the BigQuery-side fixes that don't depend on this paste
+(Rule 5's severity guard, the fire-drill exception handler) are already live, and roster
+notifications keep working exactly as AE-1 left them: a real roster change still reaches the inbox,
+still renders in its own "📋 ROSTER CHANGE" section. What stays unfixed until the paste lands is
+specifically items 1-5 above — the alarming-header/footer-count self-contradictions on a mixed
+canary+roster batch, the unfenced payload-render risk, the `LOOKBACK_HOURS` cliff on roster
+notices, and the missing delivery-failure escalation. None of those are live incidents today; all
+five are latent until their specific trigger condition recurs.
+
+```verify
+id: AE-2
+type: gs
+probe: SELECT script_name, last_reported_version, expected_version, drift FROM `stock-trading-498512.state.script_version_drift` WHERE script_name='alert_emailer'
+done_when: last_reported_version='v6' AND expected_version='v6' AND drift=FALSE
 ```
 
 ---
