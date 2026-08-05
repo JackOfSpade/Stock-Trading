@@ -40,6 +40,29 @@ _LINE_COMMENT = re.compile(r"--[^\n]*")
 _UNNEST_BRACKET = re.compile(r"UNNEST\(\[(.*?)\]\)", re.S)
 _QUOTED_ID = re.compile(r"'([A-Za-z0-9_]+)'")
 
+# --- SCOPE GUARDRAIL prose pinning (see test_scope_guardrail_prose_matches_exclusion_set) ---
+# Anchor on the guardrail's own name rather than on the routine ids, so the scan cannot be satisfied
+# by the very list it is meant to verify. Case-insensitive and hyphen-or-space tolerant: the four
+# restatements spell it "scope-guardrail exclusion set", "SCOPE GUARDRAIL applies verbatim",
+# "SCOPE GUARDRAIL (restated", and "SCOPE GUARDRAIL - defense-in-depth".
+_SCOPE_GUARDRAIL_ANCHOR = re.compile(r"scope[- ]guardrail", re.I)
+# A routine id as the plan writes them: D1, D2a, W4, M1a, Q4, A3, SL4, OPS0. Deliberately generic
+# (letters + digits + optional lowercase suffix) so a DROPPED id shortens the run rather than making
+# the pattern silently fail to match -- a regex spelling out the seven expected ids would go vacuous
+# in exactly the direction this test exists to catch.
+_ROUTINE_ID = r"[A-Z]{1,3}\d+[a-z]?"
+# Three-or-more comma-separated ids, tolerating "A3, or SL4" as well as "A3, SL4" and the set-builder
+# form "{D2, ..., SL4}". Applied ONLY to anchor lines: Claude_Task_Plan.md carries 22 other id runs,
+# including the near-miss "D2, D3, W4, M4, Q4, A1, A3" (the action-conversion tier, a genuinely
+# DIFFERENT set) -- an unanchored scan would false-positive on it and on every "D1, D2, D3" in prose.
+_ID_RUN = re.compile(rf"{_ROUTINE_ID}(?:,\s*(?:or\s+)?{_ROUTINE_ID}){{2,}}")
+_ID_IN_RUN = re.compile(_ROUTINE_ID)
+# Claude_Task_Plan.md restates the exclusion set in four places (shared REFIREABLE preamble; D3's
+# OPS0 WATCHDOG-FALLBACK; OPS0's own SCOPE GUARDRAIL; OPS2's defense-in-depth item 1). A fifth anchor
+# line exists (OPS2's read-access-scope paragraph) that REFERENCES the guardrail without restating
+# the ids -- it correctly yields no run and is not counted.
+EXPECTED_GUARDRAIL_RESTATEMENTS = 4
+
 
 def _all_unnest_ids(path):
     """Union of every quoted id inside ANY `UNNEST([...])` bracket in `path`, `--` line comments
@@ -199,3 +222,70 @@ def test_ops2_retains_order_craft_slice_scan():
         "assertion is merely picking up preamble contamination again, _own_body()'s isolation itself "
         "has regressed — the exact false-positive-for-everything bug the 2026-07-27 review found.)"
     )
+
+
+def test_scope_guardrail_prose_matches_exclusion_set():
+    """Pin Claude_Task_Plan.md's four SCOPE GUARDRAIL restatements to ORDER_CRAFT_ROUTINE_IDS
+    (interactive triage 2026-08-05).
+
+    The two tests above pin the MACHINE surfaces — ops/cadence.yaml's `catchup_safe` booleans and the
+    hand-kept UNNEST allowlists in bigquery/59 and bigquery/90 — so `state.catchup_refire_readiness`
+    cannot start emitting an order-crafting routine. What was NOT pinned is the PROSE, and the prose is
+    itself a live runtime surface here: OPS0, OPS2, D3 and the dependency-wait ACTIVE REPAIR path are
+    Claude sessions that read these sentences as their operating instructions. Claude_Task_Plan.md:1686
+    calls its copy "defense-in-depth" precisely because it is meant to hold when the view is wrong —
+    a layer that has silently rotted is worse than no layer, because the other layers are documented
+    as relying on it.
+
+    The realistic failure is a one-token edit: dropping `M4,` while rewording a neighbouring clause, or
+    adding a routine to one restatement and not the other three. Nothing in CI would notice today — the
+    tuple above and cadence.yaml would still agree with each other, and split_task_plan.py --check would
+    happily propagate the drifted sentence into every generated task_plan/*.md slice.
+
+    Scoping notes (both are deliberate, and both are the difference between a real test and a vacuous
+    one):
+
+    * ANCHOR ON THE GUARDRAIL'S NAME, NOT ON THE IDS. Matching the literal string
+      "D2, D2a, W4, M4, Q4, A3, SL4" would make the test pass whenever the prose drifted — the pattern
+      would simply stop matching, and an occurrence-count assertion is the only thing standing between
+      that and a silent pass. Anchoring on /scope[- ]guardrail/i and extracting whatever id run follows
+      inverts that: drift changes the extracted SET, which is compared, rather than the match count.
+    * ANCHOR, DON'T SCAN THE WHOLE FILE. Claude_Task_Plan.md contains 22 other comma-separated routine
+      runs, including "D2, D3, W4, M4, Q4, A1, A3" (the action-conversion tier — five ids overlap, two
+      differ). An unanchored scan would fail on that legitimate, unrelated list.
+
+    Only Claude_Task_Plan.md is read: the task_plan/*.md slices are generated from it and are already
+    pinned to it by scripts/split_task_plan.py --check in both ci.yml and auto-merge-claude.yml, so
+    checking the source covers the slices without making this test depend on generated artifacts.
+    """
+    expected = set(ORDER_CRAFT_ROUTINE_IDS)
+    found = []  # (line_no, [ids])
+    for lineno, line in enumerate(TASK_PLAN.read_text(encoding="utf-8").splitlines(), 1):
+        if not _SCOPE_GUARDRAIL_ANCHOR.search(line):
+            continue
+        for run in _ID_RUN.findall(line):
+            found.append((lineno, _ID_IN_RUN.findall(run)))
+
+    assert len(found) == EXPECTED_GUARDRAIL_RESTATEMENTS, (
+        f"expected {EXPECTED_GUARDRAIL_RESTATEMENTS} SCOPE GUARDRAIL exclusion-set restatements in "
+        f"Claude_Task_Plan.md, found {len(found)} at line(s) {[n for n, _ in found]}. A DROP means a "
+        "guardrail restatement was deleted or reworded past recognition — OPS0/OPS2/D3 read these "
+        "sentences as their operating instructions, so restore it. An ADDITION is fine if deliberate: "
+        "bump EXPECTED_GUARDRAIL_RESTATEMENTS. Do not 'fix' this by loosening the anchor."
+    )
+
+    for lineno, ids in found:
+        assert set(ids) == expected, (
+            f"Claude_Task_Plan.md:{lineno}: SCOPE GUARDRAIL exclusion set has drifted from "
+            f"ORDER_CRAFT_ROUTINE_IDS.\n"
+            f"  prose says: {ids}\n"
+            f"  expected:   {sorted(expected)}\n"
+            f"  missing from prose: {sorted(expected - set(ids)) or 'none'}\n"
+            f"  extra in prose:     {sorted(set(ids) - expected) or 'none'}\n"
+            "A routine MISSING from the prose is the dangerous direction: OPS0's re-fire step and "
+            "OPS2's inline-execute step are prose-driven, so an omitted id can be auto-refired or "
+            "auto-executed with no human gate the moment the readiness view also regresses. If the "
+            "exclusion set genuinely changed, update ops/cadence.yaml, bigquery/59, bigquery/90, "
+            "ORDER_CRAFT_ROUTINE_IDS and ALL "
+            f"{EXPECTED_GUARDRAIL_RESTATEMENTS} restatements together."
+        )

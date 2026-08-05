@@ -14,7 +14,9 @@
  * window (the self-healing class — e.g. a stranded-session warning, a cadence missed_run that the next
  * run cleared) so the owner was never told it had happened. Keying on `notified_ts` means every alert
  * is emailed exactly once and then stamped; resolved-since-raise alerts are still sent, tagged
- * AUTO-RESOLVED so you know it self-healed. (RUNBOOK §20 / §25.)
+ * AUTO-RESOLVED when the auto-resolver closed it, or RESOLVED when a human did (v7, 2026-08-05:
+ * the tag previously keyed on `resolved` alone and so mislabelled every hand-closed alert as
+ * self-healed). (RUNBOOK §20 / §25.)
  *
  * DELIVERY IS NOT THE SAME THING AS LIVENESS (v6, 2026-08-04). Two related gaps, both found by an
  * adversarial review of v5 rather than by anything failing in production:
@@ -54,7 +56,7 @@ const ALERT_RECIPIENT  = Session.getActiveUser().getEmail(); // self-email
 const ALERT_SENDER     = 'Stock-Trading Alerts';
 const SEVERITIES       = ['critical', 'warning']; // set to ['critical'] for criticals only
 const POLL_HOURS       = 2;                        // how often to check
-const ALERT_SCRIPT_VERSION = 'v6';                 // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep. Named ALERT_SCRIPT_VERSION (not SCRIPT_VERSION) because this file and weekly_report.gs share ONE Apps Script project's top-level scope -- a same-named const in both would throw a project-wide SyntaxError on the next paste (2026-07-14 audit finding).
+const ALERT_SCRIPT_VERSION = 'v7';                 // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep. Named ALERT_SCRIPT_VERSION (not SCRIPT_VERSION) because this file and weekly_report.gs share ONE Apps Script project's top-level scope -- a same-named const in both would throw a project-wide SyntaxError on the next paste (2026-07-14 audit finding).
 
 // ROSTER-CHANGE NOTICES (owner directive 2026-08-04, bigquery/134_roster_change_notifications.sql).
 // The autonomous SISA loop (SL1-SL5) adds and removes trading strategies with no human approval step --
@@ -153,7 +155,7 @@ function checkAlerts_() {
     const rosterList = ROSTER_NOTICE_CATEGORIES.map(c => `'${c}'`).join(',');
     const rows = bqAlerts_(`
       SELECT alert_id, CAST(alert_ts AS STRING) AS alert_ts, UNIX_MILLIS(alert_ts) AS alert_ms,
-             severity, source, category, message, resolved, TO_JSON_STRING(payload) AS payload
+             severity, source, category, message, resolved, resolved_note, TO_JSON_STRING(payload) AS payload
       FROM \`${ALERT_PROJECT_ID}.ops.alerts\`
       WHERE notified_ts IS NULL AND severity IN (${sevList})
         AND (alert_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${LOOKBACK_HOURS} HOUR)
@@ -188,7 +190,7 @@ function checkAlerts_() {
     try {
       recurring = bqAlerts_(`
         SELECT alert_id, CAST(alert_ts AS STRING) AS alert_ts, UNIX_MILLIS(alert_ts) AS alert_ms,
-               severity, source, category, message, resolved, TO_JSON_STRING(payload) AS payload
+               severity, source, category, message, resolved, resolved_note, TO_JSON_STRING(payload) AS payload
         FROM \`${ALERT_PROJECT_ID}.ops.alerts\`
         WHERE category = 'termination_close_staged' AND NOT resolved
         ORDER BY alert_ts DESC
@@ -579,7 +581,11 @@ function htmlAlerts_(batch, newlyUnnotifiedCount, recurringCount) {
     const bg  = test ? '#eaf2f8' : (isCrit ? '#fcebea' : '#fdf3e3');
     const tag = test
       ? ' · <span style="color:#2c6e9b;font-weight:700;">⚗ TEST — no action needed</span>'
-      : ((String(a.resolved) === 'true') ? ' · <span style="color:#2e7d32;">AUTO-RESOLVED</span>' : '');
+      : ((String(a.resolved) === 'true')
+          ? (String(a.resolved_note || '').startsWith('auto-resolved:')
+              ? ' · <span style="color:#2e7d32;">AUTO-RESOLVED</span>'
+              : ' · <span style="color:#2e7d32;">RESOLVED</span>')
+          : '');
     return `<tr><td style="padding:0;">
       <div style="border-left:4px solid ${bar};background-color:${bg};border-radius:6px;padding:10px 12px;margin:6px 0;">
         <div style="font-size:13px;font-weight:700;color:${bar};">${esc2_(a.severity.toUpperCase())} · ${esc2_(a.source)} · ${esc2_(a.category)}${tag}</div>
@@ -617,7 +623,10 @@ function plainAlerts_(batch, newlyUnnotifiedCount, recurringCount) {
         ? `Stock-Trading — ${roster.length} autonomous roster change(s), no action needed:\n\n`
         : `Stock-Trading — ${incidents.length} alert(s) (${newlyUnnotifiedCount - roster.length} newly un-notified in the last ${LOOKBACK_LABEL}, ${recurringCount} recurring)${roster.length ? ` + ${roster.length} roster change(s) below` : ''}:\n\n`);
   incidents.forEach(a => {
-    const tag = isTest_(a) ? '[TEST] ' : (String(a.resolved) === 'true' ? '[AUTO-RESOLVED] ' : '');
+    const tag = isTest_(a) ? '[TEST] '
+      : (String(a.resolved) === 'true'
+          ? (String(a.resolved_note || '').startsWith('auto-resolved:') ? '[AUTO-RESOLVED] ' : '[RESOLVED] ')
+          : '');
     s += `[${a.severity.toUpperCase()}] ${tag}${a.source}/${a.category}: ${a.message}  (${fmtAlertTs_(a)})\n`;
   });
   if (incidents.length) {
