@@ -157,7 +157,7 @@
       "trigger_id": "trig_01KQWESvxCXWVGU18K6Cao5G"
     },
     "AR_orc": {
-      "cron_expression": "20 0 * * *",
+      "cron_expression": "35 0 * * *",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform Adversarial Review Orchestrator — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
       "name": "Adversarial Review Orchestrator — regular routine",

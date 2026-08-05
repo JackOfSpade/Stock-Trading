@@ -360,9 +360,25 @@ routines:
              events.strategy_lifecycle, ops.roster_change_log, Adversarial_Review_*_orchestrator.md]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: "20 0 * * *"
-      time_local: "18:20"
+      cron_utc: "35 0 * * *"
+      time_local: "18:35"
       enabled: true
+      # 2026-08-04 JITTER RE-SPACING (18:20 -> 18:35). The 2026-08-01 gap was sized against
+      # AR_att's worst observed RUNTIME (16 min) but budgeted nothing for AR_att's own
+      # TRIGGER-FIRE JITTER on top of it. On 2026-08-04 AR_att fired +12.5 min late and then
+      # drained a full 10-item batch in 14.4 min, finishing 18:26:55 -- after AR_orc's 18:23
+      # gate check. sp_assert_deps raised a CRITICAL missing_dependency (the 4th AR_orc<-AR_att
+      # occurrence: 07-10, 07-13, 07-14, 08-04) which sat on the board ~12 min until the
+      # DEPENDENCY-WAIT re-check passed and auto-resolved it. No trading impact that evening
+      # (D2 had finished 17:33), but an open CRITICAL is a trading-gate input, so this is not
+      # free noise. New arithmetic: AR_att 18:00 + worst normal-evening jitter 12.5 + max
+      # runtime 16.2 = 18:28.7, so an 18:35 start keeps a 6.3 min buffer over the worst case
+      # on record (which is 08-04 itself). Nothing downstream moves: D3 (18:45) gates on D2
+      # ONLY -- never AR_orc, in both this file and task_plan/D3.md's live sp_assert_deps call --
+      # and SL5 (19:25, depends_on AR_orc) retains ~16 min under combined worst-case
+      # jitter+runtime. LIVE TRIGGER: this repo edit does NOT take effect immediately; OPS0
+      # STEP 3's Sunday sweep (or Q4 step E) pushes cadence_utc to the live trigger, so it
+      # self-heals within 7 days -- a manual web-UI save is what makes it effective tonight.
   # ---- STRATEGY ARSENAL — QUEUE-DRIVEN (SISA lifecycle, added 2026-07-10; fire only if a queue entry is due) ----
   - id: SL2
     name: Strategy Draft, Revise & Post-mortem
