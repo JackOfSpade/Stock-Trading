@@ -175,7 +175,21 @@ routines:
     monitor_class: daily_all
     catchup_safe: true
     depends_on: [D2]
-    writes: [calendar:confirm_order, events.queue_events, AI_Trading_Foundation.md]
+    writes: [calendar:confirm_order, events.queue_events, AI_Trading_Foundation.md, bigquery/*.sql]
+                             # bigquery/*.sql added 2026-08-04 by OPS0 STEP 4(f): D3's self-heal branches
+                             # routinely land repo commits under bigquery/ (75_scheduled_query_wrappers.sql
+                             # re-apply + new NN_*.sql resync/create files -- see the routine-inventory D3
+                             # row in Claude_Task_Plan.md), but the writes list declared only
+                             # AI_Trading_Foundation.md. STEP 4(f) uses these entries as git pathspecs, so
+                             # a D3 run that landed a bigquery self-heal commit and did NOT record "no repo
+                             # changes" in its note read as UNLANDED. MEASURED 2026-08-04: D3/2026-08-03
+                             # 04:33 MT logged completed, its note recorded "commit b0cb9ee pushed and
+                             # verified on origin", b0cb9ee IS an ancestor of origin/main and touches five
+                             # bigquery/*.sql files and no AI_Trading_Foundation.md -- so the declared-path
+                             # check returned no commit for a run that had demonstrably landed. Caught by
+                             # hand this run; this declaration is what stops it recurring. Per STEP 4(f):
+                             # "If a routine's writes: list and its actual behaviour disagree, fix
+                             # ops/cadence.yaml rather than special-casing here."
     expected_trigger:
       recurrence: custom_cron
       cron_utc: "45 0 * * *"
