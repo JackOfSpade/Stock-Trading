@@ -1,0 +1,46 @@
+# Adversarial Review — Attacker
+
+- **id:** div-A-202607-1
+- **review_type:** divergence-review
+- **strategy:** A
+- **date:** 2026-08-04
+- **cycle_number:** 1
+- **artifact:** Monthly_Fundamental.md
+
+## Verdict
+
+FUNDAMENTAL CLAIM SHOULD NOT SURVIVE — it is an unfalsifiable, single-axis macro-direction call dressed in strategy-A vocabulary, never actually tested against the corrected technical read, and admitted by the artifact itself to be one of five copies of the same regime view.
+
+## Bear case against the M1b fundamental claim
+
+Strip away the framing and Strategy A's "fundamental question" — whether individual-stock catalysts are being rewarded, or whether macro factors overwhelm idiosyncratic narrative — is never actually answered with evidence about catalysts or idiosyncratic dispersion at all. The entire reasoning paragraph is built from five macro facts (payrolls +57k vs ~110k consensus, GDP +1.5% SAAR, a 9–3 FOMC with three dissents, Hormuz transits down 66–70%, Brent +20.5%) that are identical, sentence-for-sentence in substance, to the facts driving the DO-NOT-ACTIVATE calls for C, D, and E. Nowhere in A's paragraph is there a single idiosyncratic-return-dispersion statistic, an earnings-reaction measure, or any data point about whether A's actual investable universe rewarded catalysts this month. The one sentence that tries to bridge macro-to-mechanism — "large-cap growth −6.57% and small caps −3.08% against equal-weight +1.05% is a duration/style rotation off the rate path — precisely the configuration in which a single-name catalyst is absorbed by its factor loading instead of being rewarded on its own information" — is an assertion, not a measurement. Factor rotation existing somewhere in the index does not establish that catalyst-specific alpha was suppressed in A's book; the artifact supplies no dispersion metric to support the "absorbed" claim, unlike C's reasoning, which at least gestures at a named mechanism ("AI_Edges 2.13 miscalibration"). A's reasoning has no analogous anchor.
+
+Worse, the routine's own text reveals the call is riding a single regime axis, not a synthesis: "The growth re-deceleration... adds a deteriorating-fundamentals leg... and it is the same leg whose reversal was the entire basis of last month's 'removes the recessionary leg' note — it has re-reversed." That sentence is a direct admission that A's fundamental verdict tracks `growth_momentum` alone, flipping in step with a single M1a axis rather than with anything about catalyst-reward behavior. And the reconciliation table confirms the system treats A the same way mechanically: `growth_momentum = decelerating AND policy_stance = hawkish → A` is now precondition-satisfied, meaning the formal override machinery itself expects A's activation to be governed by generic growth+policy macro state, not by a catalyst-specific test. A test this constructed will output DO-NOT-ACTIVATE in almost any tape with decelerating growth and a hawkish Fed — which is most tapes — and the artifact gives no example of what M1a scoring would have had to look like for A's answer to have come out ACTIVATE. That is the signature of an unfalsifiable claim, not a mechanism-specific one.
+
+## Weaknesses identified
+
+1. **Unfalsifiable pass/fail structure** — the reasoning concludes on an absence of counter-evidence rather than a positive finding, and no scoring configuration is ever described that would have produced ACTIVATE this cycle. ANCHOR: "Nothing in M1a's scoring evidences a catalyst-reward tape. Fundamental DO-NOT-ACTIVATE."
+
+2. **No idiosyncratic-mechanism evidence for A's actual edge** — the bridge from "factor rotation happened" to "catalysts are not rewarded" is asserted with no dispersion statistic tied to A's universe. ANCHOR: "large-cap growth −6.57% and small caps −3.08% against equal-weight +1.05% is a duration/style rotation off the rate path — precisely the configuration in which a single-name catalyst is absorbed by its factor loading instead of being rewarded on its own information."
+
+3. **Single-axis dependency conceded by the routine itself** — A's call is admitted to hinge on one M1a axis (`growth_momentum`) flipping back to where it was, not on a fresh catalyst-reward assessment. ANCHOR: "it is the same leg whose reversal was the entire basis of last month's 'removes the recessionary leg' note — it has re-reversed."
+
+4. **Reconciliation machinery itself treats A as a generic macro-sensitive strategy**, undercutting the premise that A's DO-NOT-ACTIVATE reflects a strategy-specific catalyst-reward test rather than the same growth+policy read applied elsewhere on the roster. ANCHOR: "`growth_momentum = decelerating AND policy_stance = hawkish` → override A ACTIVATE → DNA... precondition NEWLY SATISFIED this month."
+
+5. **The fundamental call was never actually tested against the corrected technical picture** — it was locked in before the technical-plane repair and left unrevisited, so the "divergence" reflects a fundamental view that has not been re-examined in light of the very data correction that created it. ANCHOR: "The fundamental calls in PART 2 were fixed before the repair and were not revisited in light of it."
+
+6. **Common-cause admission — the artifact concedes its own five per-strategy reasonings are one macro view stamped five times**, which directly undercuts treating A's paragraph as an independent, strategy-specific finding. ANCHOR: "That is one disagreement about one question... refracted five ways... the honest reading is one regime call being made five times, not five findings."
+
+7. **Provenance weakness on the technical side, honestly conceded** — EQUITY_BREADTH, one of the two clauses in A's technical rule, is a reported measurement rather than a mechanical pull, with an open unresolved alert. This is a genuine hole in the technical case, though low-materiality here since SPY_TREND (the clause that actually flips A) is fully mechanical and numerically unambiguous (747.03 > 744.99 > 700.39), and breadth is reported as far from its decision threshold. ANCHOR: "EQUITY_BREADTH is not mechanically computed — the ~67% figure is M1a's reported measurement, not an independent pull... `ops.alerts` `technical_signal_stale` is left OPEN for the owner."
+
+## Self-imposed scope confirmation
+
+I read only: `/tmp/claude-0/-home-user-Stock-Trading/dfb74455-f608-5ef8-994b-ae942a05a9a9/scratchpad/artifacts/divergence_artifact.md` (the M1b artifact, verbatim copy of `Monthly_Fundamental.md`) and the trigger_context reproduced inline in my task instructions. I did not read: events.decision_log, prior adversarial reviews (attacker or orchestrator, any cycle), Strategy.md or any strategy slice, Experiment_Parameters.md, any other repo file, or any other BigQuery table.
+
+## Reasoning
+
+The verdict follows from three independent lines converging: (1) A's reasoning paragraph, read on its own terms, never produces evidence that A's specific mechanism (catalyst-reward vs. macro-overwhelm) was tested — it produces a macro narrative and asserts the mechanism conclusion without a supporting statistic; (2) the artifact's own text twice undercuts the appearance of independence — once by tying A's flip to a single recycled regime axis, and once by explicitly warning that all five strategies' fundamental calls are correlated draws off one proximate driver; (3) the fundamental call was frozen before the technical-plane repair and never re-examined against it, so there is no evidence the DO-NOT-ACTIVATE would survive contact with the corrected, genuinely-trending tape it is now being pitted against.
+
+I deliberately did NOT count against the fundamental claim: the shock_overlay=acute scoring itself (Hormuz transits, Brent, sovereign spreads) — those are M1a inputs, out of scope for an M1b-reasoning attack, and the artifact reports them as measured rather than assumed. I also did not treat the whole-roster same-direction divergence as proof the fundamental view is wrong on the merits (correlation is not refutation); I used it only to attack the *independence* claim implicit in treating A's paragraph as a freestanding, strategy-specific finding.
+
+The strongest point AGAINST my own assigned position, stated plainly: the technical call I am arguing for is itself partly a data-repair artifact. Per the trigger context, A would have read as an agreement (not a divergence) under the technical state that existed until this same run repaired it — meaning the "bullish tape" argument is only one data-correction away from having produced no signal at all this cycle. If the repair itself were wrong, contested, or premature (e.g., insufficient validation of the newly-repaired VIX_REGIME write, which the artifact says "had never been written to this scope before today"), the entire divergence — and with it the technical case for ACTIVATE — evaporates. I judge this does not overturn the verdict, because SPY_TREND's repair is numerically unambiguous and independently checkable (747.03 > 744.99 > 700.39 is not a judgment call the way the fundamental narrative is), but the orchestrator should weigh that the technical side's freshness is itself new and less battle-tested than the fundamental side's.
