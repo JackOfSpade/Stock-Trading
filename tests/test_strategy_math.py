@@ -31,12 +31,27 @@ def test_position_size_dollars_requires_explicit_budget():
         common.position_size_dollars(1900.0)
 
 
-def test_position_size_dollars_rejects_above_per_name_envelope():
-    """Rev 39: a single thesis cannot be budgeted above the 10% per-name CaR envelope."""
+def test_position_size_dollars_allows_any_budget_up_to_full_nav():
+    """Owner directive 2026-08-05: both hard CaR envelopes RETIRED — no sizing ceiling.
+
+    This test previously asserted the opposite (that pct>0.10 raised, under the Rev 43
+    per-name 10% envelope). It is inverted deliberately, not deleted, so that
+    reintroducing a numeric ceiling fails loudly here instead of silently narrowing
+    sizing freedom the owner explicitly granted.
+    """
+    assert common.position_size_dollars(1900.0, pct=0.11) == pytest.approx(209.0)
+    assert common.position_size_dollars(1900.0, pct=0.50) == pytest.approx(950.0)
+    assert common.position_size_dollars(1900.0, pct=1.0) == pytest.approx(1900.0)
+
+
+def test_position_size_dollars_still_rejects_out_of_domain_pct():
+    """The (0, 1] bound is a domain sanity check, NOT a risk envelope — it stays."""
     with pytest.raises(ValueError):
-        common.position_size_dollars(1900.0, pct=0.11)
+        common.position_size_dollars(1900.0, pct=1.01)
     with pytest.raises(ValueError):
-        common.position_size_dollars(1900.0, pct=0.50)
+        common.position_size_dollars(1900.0, pct=0.0)
+    with pytest.raises(ValueError):
+        common.position_size_dollars(1900.0, pct=-0.05)
 
 
 def test_position_size_dollars_rejects_nonpositive_nav():

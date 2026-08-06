@@ -88,9 +88,11 @@ SELECT d.strategy, d.deposits,
   -- weekly report, strategy_scorecard and the ops dashboard -- NO order guard reads it any more (every
   -- 1.5x-sizing rail that did was stripped live by bigquery/104_strip_pretrade_rails.sql, 2026-07-22), and
   -- (b) 2%-of-NAV remains a useful order-of-magnitude yardstick for a typical thesis. DO NOT treat it as a
-  -- cap, a budget, or an entitlement. The binding sizing controls are now the per-name (<=10% CaR) and
-  -- per-strategy-deployed (<=75% CaR) envelopes, which are book-level aggregates over open positions and
-  -- are therefore checked at trade-craft time against the live book, not precomputed here.
+  -- cap, a budget, or an entitlement. There is NO binding numeric sizing control any more: the per-name
+  -- (<=10% CaR) and per-strategy-deployed (<=75% CaR) envelopes were RETIRED by owner directive 2026-08-05
+  -- (Experiment_Parameters.md rev 19), so sizing is bounded only by the per-thesis judgment plus its
+  -- seven-factor justification and mandatory adversarial size attack -- none of which is precomputable here.
+  -- That makes it MORE important, not less, that nothing reads this column as a limit.
   ROUND(0.02*(d.deposits+COALESCE(r.realized_pnl,0)+COALESCE(o.open_mv-o.open_cost,0)+COALESCE(dv.dividends,0)),2) AS sizing_base_2pct
 FROM dep d LEFT JOIN realized r USING(strategy) LEFT JOIN open_pos o USING(strategy) LEFT JOIN divs dv USING(strategy);
 

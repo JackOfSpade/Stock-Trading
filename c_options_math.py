@@ -1479,14 +1479,18 @@ def size_position(
             f"a sizing edge case."
         )
 
-    # Necessary-but-NOT-sufficient envelope check: this rejects a single budget above
-    # the 10% per-name ceiling, but cannot enforce the envelope itself — per-name total
-    # CaR (across tranches) and per-strategy deployed CaR are book-level aggregates this
-    # pure function cannot see. The caller checks those against the live book.
-    if not (0 < max_pct_nav <= 0.10):
+    # NO SIZING CEILING (owner directive 2026-08-05 — both Rev 43 hard CaR envelopes
+    # RETIRED). This previously required max_pct_nav <= 0.10, the per-name Capital-at-Risk
+    # envelope. That ceiling is gone; the AI has complete freedom in sizing, because this
+    # experiment runs no stop-losses and size IS the risk lever. The bound below is a
+    # domain sanity check (a budget cannot be negative or exceed the whole strategy NAV),
+    # NOT a risk envelope. Do not reintroduce a numeric ceiling here — the surviving
+    # discipline is the seven-factor justification plus the mandatory adversarial attack
+    # on size, and for C specifically the defined-risk rail (max_loss, incl. the
+    # early-assignment cascade, dual-path verified) which is UNCHANGED by this directive.
+    if not (0 < max_pct_nav <= 1):
         raise ValueError(
-            f"max_pct_nav = {max_pct_nav} (must be in (0, 0.10]). The upper bound is "
-            "the 10% per-name Capital-at-Risk envelope, Experiment_Parameters.md rev 18."
+            f"max_pct_nav = {max_pct_nav} (must be in (0, 1])."
         )
 
     nav_cap = strategy_nav * max_pct_nav

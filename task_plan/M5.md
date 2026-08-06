@@ -273,7 +273,7 @@ The queue is `events.queue_events` (queue `PENDING_ANALYSIS`); `state.open_queue
   strategy: <A | B | C | D | E>
   ticker_or_pair: <ticker, pair id, or n/a>
   due_date: <YYYY-MM-DD America/Denver — EARLIEST date the analysis can run: today if data is available, else when the required data lands>
-  context: <self-contained prompt: candidate context, which Strategy.md criteria apply, references to Operating_Protocols.md / B_Sub_Pattern_Taxonomy.md / Watchlist.md, and the specific data to fetch (e.g. "Tue 6/2 close for Day-0 CTC via connector get_price_snapshot")>
+  context: <self-contained prompt: candidate context, which Strategy.md criteria apply, references to Operating_Protocols.md / B_Sub_Pattern_Taxonomy.md / Watchlist.md, and the specific data to fetch (e.g. "Tue 6/2 regular-session close for Day-0 CTC via connector get_price_history, step=ONE_DAY, outside_rth=false — a CTC close is NEVER taken from get_price_snapshot, see Operating_Protocols.md §19 PRICE BASIS")>
   conservative_default: <action if the analysis still cannot resolve on its due_date — always the conservative branch (skip / decline GO / exit). Deferrals do not chain.>
   status: <pending | complete | superseded>
   outcome: <set when complete: GO/NO-GO + events.decision_log pointer>
