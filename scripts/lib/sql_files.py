@@ -82,6 +82,37 @@ def sql_file_paths(bigquery_dir):
     return [path for _, path in numbered_sql_files(bigquery_dir)]
 
 
+def resolve_canonical(occurrences):
+    """(winner_number, winner_filenames) — the highest-numbered file(s) among `occurrences`, an
+    iterable of tuples whose first two elements are (number, filename) (any trailing elements, e.g.
+    a match position, are ignored via `*_`). winner_filenames is the SORTED, DEDUPED list of every
+    DISTINCT filename tied at winner_number — length 1 in the overwhelmingly common case, but NOT
+    provably always 1: `numbered_sql_files()`'s NN_ prefix is not required to be unique (see its own
+    docstring), so two files can legitimately share a leading number (e.g. bigquery/
+    114_period_aware_dependency_gate.sql and bigquery/114_selfheal_log_created_outcome.sql, both
+    live in this repo today) and, should a FUTURE file at a duplicated number define an object a
+    caller here is tracking, `max()` alone can no longer tell the two apart.
+
+    THE BUG THIS EXISTS TO FIX (2026-08-06 adversarial audit, D6): check_sq_version_registry.py's
+    resolve_winners() and check_cadence_consistency.py's find_canonical_cadence_watch_file() each
+    independently computed `max(n for n, ... in occurrences)` and then silently assumed exactly one
+    filename carried that number ("a single file number maps to exactly one filename" — true only
+    because it happened to be true, never because anything enforced it). A future duplicate-number
+    collision on a TRACKED object would have made either checker silently validate whichever of the
+    two colliding files happened to sort first, instead of failing loud — the exact class of
+    false-green these checkers exist to prevent. This is dormant on the CURRENT tree (verified:
+    neither bigquery/114 file defines an object either caller tracks), which is why it must return
+    the full tied set rather than raising outright: raising here would turn a currently-harmless
+    duplicate NN prefix into an unconditional hard failure the callers cannot selectively silence for
+    the (common, legitimate) case where the collision never touches a tracked object. Callers MUST
+    check `len(winner_filenames) > 1` themselves and report an explicit ambiguity error naming every
+    colliding filename — never index [0] unconditionally.
+    """
+    winner_number = max(n for n, _fn, *_ in occurrences)
+    winner_filenames = sorted({fn for n, fn, *_ in occurrences if n == winner_number})
+    return winner_number, winner_filenames
+
+
 def strip_sql_comments(text):
     """Blank out `--` line comments and `/* ... */` block comments in `text`, replacing every
     stripped character with a space and leaving every newline in place — so the RETURN VALUE has

@@ -218,16 +218,103 @@ def violations():
     return sorted(new), sorted(still), stale
 
 
+# ---- CONTRADICTORY "SUPERSEDED LIVE" CLAIM DETECTION (2026-08-06 adversarial audit, D7) --------------
+# violations() above has a blind spot: `if marks_superseded(context, canonical): continue` short-
+# circuits the instant ANY valid pointer to the canonical file appears anywhere in the merged comment
+# blob (preceding comment + file header) — so a SECOND, STALE "SUPERSEDED LIVE by bigquery/N" banner
+# for the SAME object, naming a DIFFERENT (non-canonical) file, sitting right next to a correct one, is
+# never even inspected. Confirmed live (2026-08-06): bigquery/75, 111, and 120 each carried an older
+# "SUPERSEDED LIVE by bigquery/128 ... current single source of truth" banner stacked directly above a
+# newer, correct "SUPERSEDED LIVE by bigquery/142 ..." banner for `ops.sp_sq_cadence_check` — two
+# competing "this IS the current truth" claims naming different files — and violations() reported zero
+# new violations for all three (marks_superseded(context, 142) was True, so the loop `continue`d before
+# ever looking at the stale 128 claim sitting in the same block). Fixed in place the same commit as this
+# check (see bigquery/75/111/120's reworded banners: the stale claim now reads as history, not a second
+# competing "current" assertion).
+#
+# This check is INDEPENDENT of that short-circuit: it inspects the raw, immediately-preceding comment
+# block for every non-canonical occurrence and fails the instant it contains MORE THAN ONE DISTINCT
+# "SUPERSEDED LIVE by bigquery/NN" target — regardless of whether one of them happens to be correct — so
+# it can no longer be short-circuited by a correct pointer sitting elsewhere in the same blob.
+#
+# SCOPED TO THE IMMEDIATE PRECEDING COMMENT ONLY — deliberately NOT `+ header` the way marks_superseded()
+# is: several files legitimately carry a DIFFERENT object's own "SUPERSEDED LIVE by bigquery/NN" banner
+# inside the shared top-of-file header (e.g. bigquery/48_cadence_monitor_unbounded.sql's header carries
+# the state.cadence_watch VIEW's own banner, ABOVE a separate, independently-marked ops.sp_assert_deps
+# PROCEDURE further down the same file). Folding the header in here would cross-contaminate one object's
+# genuine, single claim with an unrelated object's claim living earlier in the same file and false-flag
+# it as a contradiction. The immediately preceding comment block is specific to THIS occurrence's own
+# CREATE statement and cannot cross-contaminate between two different objects in the same file this way
+# (measured empirically against the real tree while building this check: scoping to `_preceding_comment`
+# alone finds exactly the 3 real 2026-08-06 instances above, plus 2 more pre-existing, unrelated ones —
+# see CONTRADICTION_BASELINE below; scoping to `_preceding_comment + header` instead spuriously flags 9
+# additional object pairs that merely share a file with a differently-targeted, unrelated banner).
+SUPERSEDED_LIVE_CLAIM = re.compile(r"SUPERSEDED LIVE by bigquery/0*(\d+)")
+
+# Pre-existing stacked-claim contradictions, predating this 2026-08-06 hardening and NOT part of the
+# sp_sq_cadence_check defect it was written to catch (found while scoping the check above — same shape,
+# different object, a separate, already-existing issue this fix does not address). BURN-DOWN LIST, same
+# discipline as BASELINE above: reword the STALE banner (the one NOT naming the true canonical file)
+# into a historical note that no longer claims to be "the current single source of truth" for the
+# object — see bigquery/75/111/120's `ops.sp_sq_cadence_check` banners (this same commit) for the
+# pattern to follow — then DELETE the entry here (the stale-baseline guard below will tell you to).
+CONTRADICTION_BASELINE = frozenset({
+    ("VIEW", "analytics", "declared_vs_realized", "26_process_metrics.sql"),
+    ("VIEW", "analytics", "declared_vs_realized", "118_decision_record_audit_followups.sql"),
+})
+
+
+def contradiction_violations():
+    """(sorted new_contradictions, sorted still_baselined, sorted stale_baseline_entries) — same
+    three-way shape as violations() above, but for the SUPERSEDED-LIVE-CLAIM-contradiction rule, kept
+    as an INDEPENDENT pass (not folded into violations() itself, and violations() is unchanged) so it
+    can never be short-circuited by marks_superseded()'s own canonical-pointer check — see the module
+    comment above. Each `new`/`still` entry is (entry, claims, line) where claims is the sorted list of
+    every DISTINCT bigquery/NN number the block claims as "current single source of truth" (len > 1,
+    always, or it wouldn't be here)."""
+    found = definitions()
+    new, still, live_keys = [], [], set()
+    cache = {}
+    for (kind, ds, name), occurrences in found.items():
+        if len({fn for _, fn, _ in occurrences}) < 2:
+            continue
+        canonical = max(n for n, _, _ in occurrences)
+        for number, fn, idx in occurrences:
+            if number == canonical:
+                continue
+            if fn not in cache:
+                cache[fn] = read_text(os.path.join(BIGQUERY_DIR, fn)).splitlines()
+            own_comment = _preceding_comment(cache[fn], idx)
+            claims = sorted({int(n) for n in SUPERSEDED_LIVE_CLAIM.findall(own_comment)})
+            if len(claims) <= 1:
+                continue
+            entry = (kind, ds, name, fn)
+            live_keys.add(entry)
+            (still if entry in CONTRADICTION_BASELINE else new).append((entry, claims, idx + 1))
+    stale = sorted(CONTRADICTION_BASELINE - live_keys)
+    return sorted(new), sorted(still), stale
+
+
 def main():
     new, still, stale = violations()
+    c_new, c_still, c_stale = contradiction_violations()
 
-    print(f"superseded-marker check: {len(new)} new violation(s), "
-          f"{len(still)} baselined, {len(stale)} stale baseline entry/entries.")
+    print(f"superseded-marker check: {len(new) + len(c_new)} new violation(s), "
+          f"{len(still) + len(c_still)} baselined, {len(stale) + len(c_stale)} stale baseline entry/entries.")
 
     if still:
         print("\nBaselined (pre-existing backlog — safe to burn down any time):")
         for (kind, ds, name, fn), canonical_file, line in still:
             print(f"  - {kind} {ds}.{name} in bigquery/{fn}:{line} -> canonical is bigquery/{canonical_file}")
+
+    if c_still:
+        print("\nContradiction-baselined (pre-existing STACKED \"SUPERSEDED LIVE\" claims naming "
+              "different files for the same object — safe to burn down any time; see "
+              "CONTRADICTION_BASELINE in scripts/check_superseded_markers.py):")
+        for (kind, ds, name, fn), claims, line in c_still:
+            named = ", ".join(f"bigquery/{n}" for n in claims)
+            print(f"  - {kind} {ds}.{name} in bigquery/{fn}:{line} claims [{named}] as \"current single "
+                  f"source of truth\"")
 
     if stale:
         print("\nSTALE BASELINE — these entries are now compliant (or no longer multi-defined). Delete "
@@ -236,20 +323,39 @@ def main():
         for kind, ds, name, fn in stale:
             print(f"  - (\"{kind}\", \"{ds}\", \"{name}\", \"{fn}\")")
 
-    if new:
-        print("\nFAIL — a superseded definition does not say so, or points at a file that is ITSELF "
-              "superseded. An operator reading it would think it is canonical and could re-apply it "
-              "live, silently reverting the newer definition (see this script's header for the two "
-              "times that already happened). Add a comment above the CREATE statement naming the "
-              "CURRENT canonical file, e.g.:")
-        print("    -- SUPERSEDED LIVE by bigquery/<NN>_<name>.sql — current single source of truth for")
-        print("    -- this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only.")
-        print("    -- DO NOT re-apply this CREATE statement live in isolation.")
-        for (kind, ds, name, fn), canonical_file, line in new:
-            print(f"  ✗ {kind} {ds}.{name} in bigquery/{fn}:{line} -> must name bigquery/{canonical_file}")
+    if c_stale:
+        print("\nSTALE CONTRADICTION BASELINE — these entries no longer contain a stacked contradictory "
+              "claim (or are no longer multi-defined). Delete them from CONTRADICTION_BASELINE in "
+              "scripts/check_superseded_markers.py so the allowlist can't outlive its subjects:")
+        for kind, ds, name, fn in c_stale:
+            print(f"  - (\"{kind}\", \"{ds}\", \"{name}\", \"{fn}\")")
+
+    if new or c_new:
+        if new:
+            print("\nFAIL — a superseded definition does not say so, or points at a file that is ITSELF "
+                  "superseded. An operator reading it would think it is canonical and could re-apply it "
+                  "live, silently reverting the newer definition (see this script's header for the two "
+                  "times that already happened). Add a comment above the CREATE statement naming the "
+                  "CURRENT canonical file, e.g.:")
+            print("    -- SUPERSEDED LIVE by bigquery/<NN>_<name>.sql — current single source of truth for")
+            print("    -- this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only.")
+            print("    -- DO NOT re-apply this CREATE statement live in isolation.")
+            for (kind, ds, name, fn), canonical_file, line in new:
+                print(f"  ✗ {kind} {ds}.{name} in bigquery/{fn}:{line} -> must name bigquery/{canonical_file}")
+        if c_new:
+            print("\nFAIL — a comment block claims MORE THAN ONE file as the \"current single source of "
+                  "truth\" for the same object (stacked, contradictory SUPERSEDED LIVE banners). At most "
+                  "one file can truly be canonical — reword the STALE claim into a historical note (it "
+                  "no longer IS the current truth, even though it once was) instead of leaving it "
+                  "standing as a second, competing assertion. See bigquery/75_scheduled_query_wrappers."
+                  "sql's ops.sp_sq_cadence_check banners for the pattern.")
+            for (kind, ds, name, fn), claims, line in c_new:
+                named = ", ".join(f"bigquery/{n}" for n in claims)
+                print(f"  ✗ {kind} {ds}.{name} in bigquery/{fn}:{line} names conflicting current-truth "
+                      f"targets: [{named}]")
         return 1
 
-    if stale:
+    if stale or c_stale:
         return 1
 
     print("OK: every superseded bigquery/*.sql definition names the current canonical file "

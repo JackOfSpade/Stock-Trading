@@ -43,6 +43,14 @@
 -- two and fails the build if they disagree. Both were updated to 21:45 in the same commit as this file.
 
 -- ===== state.cadence_watch (supersedes 113_never_completed_watch_fix.sql's view; daily tier) =====
+-- SUPERSEDED LIVE by bigquery/142_cadence_deadline_revert_and_evidence_drift.sql — current single source
+-- of truth for this VIEW. 142 reverts ONLY the deadline literal (TIME '21:45:00' -> TIME '21:00:00'),
+-- correcting this 2026-08-03 W5 process_reliability autotune whose D1 justifying evidence was later shown
+-- to be manufactured by a bigquery/89 backfilled-row artifact (see the header of bigquery/142 for the
+-- full account); the fix in this file (dropping the `monitored` precondition from `needs_attention`) is
+-- carried forward unchanged in 142. Kept here for DR-rebuild apply-in-order reference only. DO NOT
+-- re-apply this CREATE VIEW statement live in isolation — doing so silently re-applies the 21:45 autotune
+-- that ops.process_constant_change_log now records as reverted.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.cadence_watch` AS
 WITH watch AS (
   SELECT
