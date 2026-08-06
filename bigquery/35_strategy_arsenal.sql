@@ -420,6 +420,11 @@ FROM consts c CROSS JOIN counts n;
 -- theater_ok=FALSE (judge_independent defaults NULL/not-TRUE), so `ready` cannot fire on an unscored
 -- review — SL5 calling ops.sp_score_theater() synchronously (Claude_Task_Plan.md SL5) is what clears this
 -- in practice rather than waiting on W5's weekly cadence.
+-- SUPERSEDED LIVE by bigquery/143_adversarial_review_correction_path.sql — that file is the current
+-- single source of truth for state.strategy_adoption_readiness. Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation: latest_verdict
+-- below reads events.adversarial_reviews directly and so has no awareness of superseded_by. Everything
+-- else (the six AND-terms of `ready`, the fail-closed theater_ok default) is unchanged in 143.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_adoption_readiness` AS
 WITH latest_verdict AS (
   SELECT strategy AS strategy_code, verdict, review_id

@@ -113,19 +113,24 @@ END;
 -- dead-man (H2), the scheduled_query_stale beat-age dead-man (H5), and the unconditional
 -- b3_trading_enabled_drift monitor-health-history MERGE (M2)).
 --
--- SUPERSEDED LIVE by bigquery/128_b3_drift_promotion.sql (2026-08-03) — current single
--- source of truth for THIS PROCEDURE ONLY (every other sp_sq_* wrapper in this file is still canonical
--- here). The chain is 75 -> 111 -> 120 -> 128: 111 added the v9 auto-age fixes, 120 bumped the heartbeat
--- marker to 'v10' and included `detail` in the ci_finding alert payload, and 128 (D3 MONITOR-PROMOTION
--- SELF-FLIP) bumps it to 'v11' and promotes b3_trading_enabled_drift WARNING->CRITICAL + raise_msg.
+-- HISTORY (no longer the current-truth claim — see the live banner below): bigquery/128_b3_drift_
+-- promotion.sql (2026-08-03) redefined THIS PROCEDURE ONLY in turn (every other sp_sq_* wrapper in
+-- this file is still canonical here); 128 has since itself been superseded (see below), so it is no
+-- longer the current single source of truth either. The chain is 75 -> 111 -> 120 -> 128 -> 142: 111
+-- added the v9 auto-age fixes, 120 bumped the heartbeat marker to 'v10' and included `detail` in the
+-- ci_finding alert payload, 128 (D3 MONITOR-PROMOTION SELF-FLIP) bumped it to 'v11' and promoted
+-- b3_trading_enabled_drift WARNING->CRITICAL + raise_msg, and 142 (see below) bumps it to 'v12'.
 -- Kept here, unmodified, for
 -- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation —
 -- doing so silently reverts that auto-age fix and every future wrapper version bump again leaves a
 -- permanently-open alert row that only a manual UPDATE ops.alerts can clear.
 -- =====================================================================================================
--- SUPERSEDED LIVE by bigquery/132_queue_driven_silence_watch.sql — current single source of truth
--- for ops.sp_sq_cadence_check. Kept here, unmodified, for DR-rebuild apply-in-order reference
--- only. DO NOT re-apply this CREATE statement live in isolation.
+-- SUPERSEDED LIVE by bigquery/142_cadence_deadline_revert_and_evidence_drift.sql — current single
+-- source of truth for ops.sp_sq_cadence_check (supersedes bigquery/128 above, per the chain noted
+-- there). Intermediate link: bigquery/132_queue_driven_silence_watch.sql added the queue_driven_silent
+-- check; bigquery/142 bumps the heartbeat to v12 and adds the process_constant_evidence_invalidated
+-- WARNING block. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
+-- this CREATE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';
@@ -714,6 +719,11 @@ END;
 -- CALL wrapper — full historical header/rationale comments remain there. SQ_VERSION v2 (bumped
 -- from v1 by this ARCH-1 wrapper migration, 2026-07-16 — no check logic changed).
 -- =====================================================================================================
+-- SUPERSEDED LIVE by bigquery/141_append_only_halt_scope.sql — current single source of truth for
+-- ops.sp_sq_integrity_check (141 scopes the monitor_health_history `clean` expression to
+-- state.append_only_integrity_haltable so a bb21c91-sanctioned adversarial_reviews repair cannot
+-- veto the promotion clock; the WARNING alerting body is unchanged). Kept here, unmodified, for
+-- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_integrity_check`()
 BEGIN
   CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:integrity_check', 'v2', 'integrity_check.sql ran');

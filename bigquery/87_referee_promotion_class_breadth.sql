@@ -27,6 +27,11 @@
 -- threshold, the loop_promotion_log single-shot guard, fail-closed-on-empty — is copied verbatim
 -- from bigquery/84. INERT ON APPLY: referee_rows=0 today, every bar already FALSE.
 
+-- SUPERSEDED LIVE by bigquery/143_adversarial_review_correction_path.sql — that file is the current
+-- single source of truth for state.referee_promotion_readiness. Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation: first_ref
+-- below reads events.adversarial_reviews directly, so it would count a superseded correction target.
+-- Every threshold and all five bars are unchanged in 143.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.referee_promotion_readiness` AS
 WITH first_ref AS (
   -- MIN(event_ts) = the actual INSERTION time of the earliest referee_gemini row, deliberately NOT its

@@ -59,15 +59,19 @@
 -- run, and thereafter ages out automatically. Expected; not a failed apply.
 
 -- =====================================================================================================
--- SUPERSEDED LIVE by bigquery/128_b3_drift_promotion.sql (2026-08-03) — current single source of
--- truth for THIS PROCEDURE ONLY. Do not re-apply this CREATE statement live in isolation; it omits the
--- ci_finding payload detail field (added by 120), still carries b3_trading_enabled_drift at the
--- pre-promotion 'warning' tier with no raise_msg join (promoted by 128), and reports the superseded v9
--- heartbeat marker.
+-- HISTORY (no longer the current-truth claim — see the live banner below): bigquery/128_b3_drift_
+-- promotion.sql (2026-08-03) redefined THIS PROCEDURE ONLY in turn, and has since itself been
+-- superseded (see below), so it is no longer the current single source of truth either. Do not
+-- re-apply this CREATE statement live in isolation; it omits the ci_finding payload detail field
+-- (added by 120), still carries b3_trading_enabled_drift at the pre-promotion 'warning' tier with no
+-- raise_msg join (promoted by 128), and reports the superseded v9 heartbeat marker.
 -- =====================================================================================================
--- SUPERSEDED LIVE by bigquery/132_queue_driven_silence_watch.sql — current single source of truth
--- for ops.sp_sq_cadence_check. Kept here, unmodified, for DR-rebuild apply-in-order reference
--- only. DO NOT re-apply this CREATE statement live in isolation.
+-- SUPERSEDED LIVE by bigquery/142_cadence_deadline_revert_and_evidence_drift.sql — current single
+-- source of truth for ops.sp_sq_cadence_check (supersedes bigquery/128 above, per the note there).
+-- Intermediate link: bigquery/132_queue_driven_silence_watch.sql added the queue_driven_silent check;
+-- bigquery/142 bumps the heartbeat to v12 and adds the process_constant_evidence_invalidated WARNING
+-- block. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
+-- CREATE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';

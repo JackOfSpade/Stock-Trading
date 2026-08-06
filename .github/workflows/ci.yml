@@ -106,6 +106,8 @@ jobs:
         run: python scripts/check_autonomy_consistency.py
       - name: script-version single-source (.gs SCRIPT_VERSION consts ⇄ bigquery/43 MERGE seed)
         run: python scripts/check_script_version_consistency.py
+      - name: scheduled-query version single-source (bigquery/75+supersessions sp_beat_heartbeat literal ⇄ bigquery/63 registry MERGE)
+        run: python scripts/check_sq_version_registry.py
       - name: superseded bigquery/*.sql definitions name the CURRENT canonical file (supersede-only discipline)
         # bigquery/*.sql is apply-in-order + supersede-only, enforced only by hand-written comments —
         # which rotted twice: 23's trading_enabled was re-applied live in isolation (re-latching the
@@ -116,6 +118,17 @@ jobs:
         # own docstring/BASELINE for the current count, not a number pinned here that would go stale
         # again the next time an entry is fixed).
         run: python scripts/check_superseded_markers.py
+      - name: adversarial-review readers go through state.adversarial_reviews_current (superseded_by anti-join)
+        # bigquery/143 gave events.adversarial_reviews an append-only correction path: the corrected row
+        # is INSERTed carrying superseded_by = the OBSOLETE row's event_id, and the bad row stays in the
+        # table for audit. A reader that goes to the base table therefore sees BOTH — silently, with no
+        # error and no alert. The identical convention on events.decision_log has had NO machine check
+        # since bigquery/122, and it already rotted: bigquery/116:571 still carries the INVERTED
+        # `WHERE superseded_by IS NULL` form (which keeps the stale row and drops the correction),
+        # undetected only because superseded_by is populated on 0 of 496 decision_log rows. This blocks
+        # the same rot for adversarial_reviews. Checks CANONICAL definitions only — a raw read in a
+        # superseded, never-re-applied file is DR history, not a finding.
+        run: python scripts/check_superseded_by_discipline.py
       - name: session-config tool coverage (Claude_Task_Plan.md/ops/triggers.json mcp__ refs ⇄ .claude/settings.json allowlist — completeness-critic N-1)
         # An unattended scheduled routine calling an mcp__ tool absent from .claude/settings.json's
         # permissions.allow gets an unanswerable permission prompt and silently stalls that step (no

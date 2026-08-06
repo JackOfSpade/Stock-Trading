@@ -49,6 +49,10 @@
 -- in principle push every genuine call off the end and leave _latest empty. 25 keeps roughly five weeks of
 -- daily calls in scope, so the filter can never starve on any realistic cover-row rate.
 -- =====================================================================================================
+-- SUPERSEDED LIVE by bigquery/144_decision_log_correction_consumers.sql — current single source of truth
+-- for this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
+-- this CREATE statement live in isolation: it reads events.decision_log directly BEFORE its LIMIT 25, so an obsolete row could consume a slot
+-- and, via state.park_allocation_latest, shadow the standing park call.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.park_allocation_recent` AS
 SELECT
   entry_id,

@@ -125,6 +125,10 @@ FROM calls, UNNEST(rejected_notable) AS item;
 -- paragraph). rule_only = the legacy rule would have surfaced it but the AI rejected it as noise;
 -- ai_only = the AI surfaced it as significant even though it missed the legacy bar (frequently a
 -- below_spec_floor context item — see the row's own below_spec_floor column).
+-- SUPERSEDED LIVE by bigquery/144_decision_log_correction_consumers.sql — current single source of truth
+-- for this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
+-- this CREATE statement live in isolation: its LEFT JOIN reads events.decision_log directly, so an obsolete thesis row could win the
+-- "earliest later thesis" QUALIFY and be reported as the next-look verdict.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.research_screen_disagreements` AS
 WITH flagged AS (
   SELECT

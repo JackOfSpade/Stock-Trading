@@ -79,6 +79,14 @@
 -- is that it currently CANNOT distinguish "insert-only MERGE" from "the audit trail was silently
 -- rewritten" — better to just not emit a MERGE job here at all.
 -- ============================================================================
+-- SUPERSEDED LIVE by bigquery/143_adversarial_review_correction_path.sql — that file is the current
+-- single source of truth for ops.sp_score_cross_model_referee. Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation: the attacker
+-- candidate subquery below has no ROW_NUMBER/QUALIFY, and the outer NOT EXISTS guard is evaluated
+-- against the statement's pre-statement snapshot, so two attacker rows sharing one review_id both pass
+-- it and TWO referee_gemini rows land for one review. 143 adds a per-review_id QUALIFY (newest cycle)
+-- and reads state.adversarial_reviews_current. The INSERT-only shape that stopped this procedure
+-- tripping state.append_only_integrity (the 2026-07-20 MERGE->INSERT fix below) is preserved in 143.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_score_cross_model_referee`()
 BEGIN
   INSERT INTO `stock-trading-498512.events.adversarial_reviews`
@@ -139,6 +147,11 @@ END;
 -- construction: a strategy with no referee_gemini row reads referee_verdict='MISSING', so `ready` is
 -- FALSE regardless of the orchestrator's own verdict.
 -- ============================================================================
+-- SUPERSEDED LIVE by bigquery/143_adversarial_review_correction_path.sql — that file is the current
+-- single source of truth for state.strategy_retirement_readiness. Kept here, unmodified, for
+-- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation:
+-- both CTEs below read events.adversarial_reviews directly and so have no awareness of superseded_by.
+-- The review_id pairing (2026-07-11 adversarial self-audit fix) is preserved exactly in 143.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_retirement_readiness` AS
 WITH orch AS (
   SELECT strategy AS strategy_code, verdict AS orch_verdict, review_id,
@@ -190,6 +203,14 @@ WHERE r.current_state = 'RETIREMENT_PROPOSED';
 -- and not made by this file. Until that lands this view returns zero rows for any strategy -- fail-closed
 -- by construction, not by a flag.
 -- ============================================================================
+-- SUPERSEDED LIVE by bigquery/143_adversarial_review_correction_path.sql — that file is the current
+-- single source of truth for state.foundation_change_termination_readiness. Kept here, unmodified,
+-- for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in
+-- isolation: the `referee` CTE below has NO dedup of any kind and is LEFT JOINed on review_id, so a
+-- second referee_gemini row for one review_id fans the view out to multiple rows per strategy_code
+-- with conflicting `ready` values. 143 adds the QUALIFY inside that CTE (it must go inside — a filter
+-- after the join cannot undo a fan-out that already happened) and reads
+-- state.adversarial_reviews_current.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.foundation_change_termination_readiness` AS
 WITH orch AS (
   SELECT strategy AS strategy_code, review_id, verdict AS orch_verdict,

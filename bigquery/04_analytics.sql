@@ -86,21 +86,16 @@ FROM a JOIN o USING (review_id);
 -- as a DECORRELATED join + QUALIFY (same pattern as state.account_nav_7d_ago) -- BigQuery views do
 -- not support a same-row correlated subquery against another table.
 --
--- SUPERSEDED LIVE by bigquery/116_decision_record_analyzability.sql — current single source of truth
--- for this object (bigquery/102_pyramid_aware_lifecycle.sql is an intermediate, also-superseded
--- definition — do not stop there). 116 adds: entry_type now tolerates the 'thesis' synonym (a
--- 2026-07-20..22 logging drift silently hid 14 real rows from every calibration view); the
--- position-campaign join is now guarded to GO-family decisions so a NO-GO can never inherit a
--- position outcome; pairing prefers a real FK (position_campaigns.opening_thesis_ref) over
--- nearest-date; conviction_pct + normalized added. Kept here, unmodified, for DR-rebuild
--- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
---
--- SUPERSEDED AGAIN, LIVE, by bigquery/123_drip_dust_campaign_exclusion.sql (2026-08-02) — 116 above is
--- itself no longer canonical (102 remains an intermediate, also-superseded definition too); 123 is the
--- current single source of truth for this object (the campaign join now also excludes post-close
--- DRIP-dust campaigns via `AND NOT pc.is_dust`, so a GO thesis can never mis-pair to a sub-dollar
--- phantom campaign). See bigquery/123, not 116 or 102. Kept here, unmodified, for DR-rebuild
--- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
+-- SUPERSEDED LIVE by bigquery/144_decision_log_correction_consumers.sql — current single source of
+-- truth for this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
+-- re-apply this CREATE statement live in isolation. FOUR later changes are missing from the definition
+-- below, in order: (a) entry_type now tolerates the 'thesis' synonym (a 2026-07-20..22 logging drift
+-- silently hid 14 real rows from every calibration view); the position-campaign join is guarded to
+-- GO-family decisions so a NO-GO can never inherit a position outcome; pairing prefers a real FK
+-- (position_campaigns.opening_thesis_ref) over nearest-date; conviction_pct + normalized added;
+-- (b) the 2026-08-02 drip-dust exclusion added `AND NOT pc.is_dust`, so a GO thesis can never mis-pair
+-- to a sub-dollar phantom campaign; (c) 144 repoints the `theses` CTE at state.decision_log_current,
+-- so a superseded GO thesis cannot be paired to a campaign twice.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.thesis_outcomes` AS
 WITH theses AS (
   SELECT entry_id, entry_date, strategy, ticker, conviction, sub_pattern, decision, title

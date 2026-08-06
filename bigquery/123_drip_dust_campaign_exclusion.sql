@@ -60,6 +60,10 @@
 -- ============================================================================
 -- (A) analytics.dust_classified_fills -- durable fill-level classification bridge.
 -- ============================================================================
+-- SUPERSEDED LIVE by bigquery/144_decision_log_correction_consumers.sql — current single source of truth
+-- for this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
+-- this CREATE statement live in isolation: its `decisions` CTE reads events.decision_log directly, so a superseded correction target would
+-- reach the priority/dust_id QUALIFY tie-break, which has no defined preference for the correction.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.dust_classified_fills` AS
 WITH decisions AS (
   SELECT entry_id, entry_date, ticker, fields
@@ -238,6 +242,10 @@ GROUP BY strategy, ticker, campaign_seq;
 -- is_dust is non-nullable by construction; on a non-match pc.is_dust is NULL and the LEFT JOIN
 -- handles it correctly (thesis survives, unpaired).
 -- ============================================================================
+-- SUPERSEDED LIVE by bigquery/144_decision_log_correction_consumers.sql — current single source of truth
+-- for this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
+-- this CREATE statement live in isolation: chain 04 -> 102 -> 116 -> 123 -> 144; 144 repoints the `theses` CTE at
+-- state.decision_log_current so a superseded GO thesis cannot be paired to a campaign twice.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.thesis_outcomes` AS
 WITH theses AS (
   SELECT entry_id, entry_date, strategy, ticker, conviction, conviction_pct, sub_pattern, decision, title,

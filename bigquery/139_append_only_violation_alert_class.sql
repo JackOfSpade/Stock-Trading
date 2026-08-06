@@ -29,6 +29,21 @@
 -- idempotent. Does NOT redefine ops.sp_auto_resolve_alerts (bigquery/134 remains current) and does NOT
 -- alter the detector (bigquery/18 remains current). Apply after bigquery/34_alert_lifecycle.sql
 -- (which creates ops.alert_policy).
+--
+-- ===================== NOTE TEXT SUPERSEDED 2026-08-06 (read before trusting the literal below) ====
+-- The `note` literal in this file's INSERT is RETAINED VERBATIM as the original registration record,
+-- but it is NO LONGER what the live ops.alert_policy row says, and its central claim is now FALSE.
+-- bigquery/143_adversarial_review_correction_path.sql added `superseded_by` to
+-- events.adversarial_reviews AND fixed ops.sp_score_cross_model_referee's missing dedup -- the two
+-- facts this note cites as the reason a superseding row is unsafe. It also issues the UPDATE that
+-- rewrote the live row's `note`; because THIS file's INSERT is NOT-EXISTS-guarded on `category`,
+-- re-applying this file is a NO-OP against the existing row and will NOT propagate any edit made here.
+-- bigquery/143 is the current source of truth for this row's `note`.
+-- `latching = TRUE` and `resolve_rule` are UNCHANGED and remain correct: the class is still a manual
+-- adjudication, and no auto-resolve rule exists or should be added. What changed is only how OFTEN it
+-- should fire -- a correct repair is now an INSERT, which is not a watched statement_type, so it
+-- raises nothing. An append_only_violation naming events.adversarial_reviews after 2026-08-06 means
+-- something performed an in-place UPDATE, which is NO LONGER sanctioned and is a real finding.
 
 INSERT INTO `stock-trading-498512.ops.alert_policy` (category, latching, resolve_rule, note)
 SELECT p.category, p.latching, p.resolve_rule, p.note

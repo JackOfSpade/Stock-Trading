@@ -73,12 +73,14 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.routine_manifest import (  # noqa: E402
     heading_to_id, parse_routine_headings, build_triggers_manifest, instruction_text, cadence_routines,
 )
+from lib.sql_files import numbered_sql_files, resolve_canonical, strip_sql_comments  # noqa: E402
 from lib.textio import read_text, load_yaml  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLAN = os.path.join(ROOT, "Claude_Task_Plan.md")
 OWNER_ACTIONS = os.path.join(ROOT, "OWNER_ACTIONS.md")
 CADENCE = os.path.join(ROOT, "ops", "cadence.yaml")
+BIGQUERY_DIR = os.path.join(ROOT, "bigquery")
 CADENCE_SQL = os.path.join(ROOT, "bigquery", "12_cadence_monitor.sql")
 CATALOG_SQL = os.path.join(ROOT, "bigquery", "15_routine_catalog.sql")
 PERIOD_WATCH_SQL = os.path.join(ROOT, "bigquery", "24_cadence_period_watch.sql")
@@ -554,6 +556,15 @@ CALENDAR_CLASSES = ALLOWED_CLASSES - {"queue_driven"}
 SQL_DEADLINE = re.compile(r"DATETIME\(\s*e\.today\s*,\s*TIME\s*'(\d{2}:\d{2})(?::\d{2})?'\s*\)")
 HHMM = re.compile(r"^\d{2}:\d{2}$")
 
+# `CREATE [OR REPLACE] VIEW `stock-trading-498512.state.cadence_watch`` — matched against
+# comment-stripped text (see find_canonical_cadence_watch_file() below) so a header/prose mention can
+# never be mistaken for a live definition, same discipline check_superseded_markers.py's OBJECT_DDL and
+# check_sq_version_registry.py's PROC_DDL already use for this exact class of false-positive.
+CADENCE_WATCH_VIEW_DDL = re.compile(
+    r"CREATE\s+(?:OR\s+REPLACE\s+)?VIEW\s+`stock-trading-498512\.state\.cadence_watch`",
+    re.IGNORECASE,
+)
+
 
 def plan_headings():
     """Ordered routine section headings from Claude_Task_Plan.md (shared parser)."""
@@ -601,6 +612,69 @@ def parse_catalog_sql():
 def parse_deadline_sql():
     """['HH:MM', ...] from the DATETIME(e.today, TIME 'HH:MM:SS') deadline guard in 12_*.sql (state.cadence_watch)."""
     return SQL_DEADLINE.findall(read_text(CADENCE_SQL))
+
+
+def find_canonical_cadence_watch_file():
+    """(number, filename, ambiguous_files) for the highest-numbered bigquery/*.sql file that defines
+    `CREATE OR REPLACE VIEW state.cadence_watch` — the object has been redefined across several
+    superseding files (12 -> 48 -> 113 -> 129 -> 142, and counting), and the highest-numbered occurrence
+    is the one actually deployed live. Resolution goes through scripts/lib/sql_files.py's shared
+    resolve_canonical() (order-independent max() over parsed file numbers, same construction
+    check_superseded_markers.py's violations() and check_sq_version_registry.py's resolve_winners()
+    already use for this exact "which file wins" question — see those scripts' module docstrings for
+    why iteration order does not matter here).
+
+    ambiguous_files is None in the normal case. bigquery/*.sql's NN_ leading number is NOT guaranteed
+    unique (two files already share 114 in this repo today — see resolve_canonical()'s own docstring);
+    if a FUTURE file at a duplicated number also defined `state.cadence_watch`, a bare max() could no
+    longer tell the two apart and would silently validate whichever sorted first. When that happens,
+    `filename` is None and `ambiguous_files` is the sorted list of every colliding filename — the
+    caller MUST treat that as a hard error, never pick one on its own (D6, 2026-08-06 adversarial
+    audit). Dormant on the real tree today: verified neither bigquery/114 file defines this view.
+
+    Returns (None, None, None) if no occurrence is found at all (should never happen on a real
+    checkout — CADENCE_SQL itself always defines one)."""
+    occurrences = []
+    for number, path in numbered_sql_files(BIGQUERY_DIR):
+        if os.path.isdir(path):
+            continue
+        text = strip_sql_comments(read_text(path))
+        if CADENCE_WATCH_VIEW_DDL.search(text):
+            occurrences.append((number, os.path.basename(path)))
+    if not occurrences:
+        return None, None, None
+    winner_number, winner_files = resolve_canonical(occurrences)
+    if len(winner_files) > 1:
+        return winner_number, None, winner_files
+    return winner_number, winner_files[0], None
+
+
+def parse_canonical_deadline_sql():
+    """(['HH:MM', ...], number, filename, ambiguous_files) — the state.cadence_watch deadline-guard
+    literal(s) parsed from the CANONICAL (highest-numbered) bigquery/*.sql file defining that view, NOT
+    the fixed bigquery/12_cadence_monitor.sql parse_deadline_sql() above is pinned to (that original
+    file is itself long superseded — 48 -> 113 -> 129 -> 142 and counting — so a deadline change landed
+    only in a superseding file previously had NO consistency guard tying it back to ops/cadence.yaml at
+    all, the same registry-vs-body split class check_sq_version_registry.py exists to catch for a
+    heartbeat literal, applied here to this view instead).
+
+    Comments are stripped first (scripts/lib/sql_files.strip_sql_comments) before SQL_DEADLINE runs, so
+    a header/prose mention of a TIME literal — e.g. a file's own header narrating a before/after deadline
+    change in prose — can never be mistaken for the live guard clause. This differs from the plain
+    parse_deadline_sql() above, which does not strip comments; that has been harmless in practice only
+    because bigquery/12's header has never happened to contain a matching digit-literal false positive.
+
+    ambiguous_files is None in the normal case; see find_canonical_cadence_watch_file()'s own docstring
+    (D6, 2026-08-06) — when it is NOT None, `fn` is None too and the caller must report the ambiguity
+    rather than parse a (nonexistent, unpickable) single winning file.
+    Returns ([], None, None, None) if no canonical file/definition could be found at all."""
+    number, fn, ambiguous_files = find_canonical_cadence_watch_file()
+    if ambiguous_files is not None:
+        return [], number, None, ambiguous_files
+    if fn is None:
+        return [], number, fn, None
+    text = strip_sql_comments(read_text(os.path.join(BIGQUERY_DIR, fn)))
+    return SQL_DEADLINE.findall(text), number, fn, None
 
 
 def cadence_deadline_yaml():
@@ -860,6 +934,46 @@ def main():
         errors.append(f"cadence_watch deadline DRIFT — ops/cadence.yaml='{want_deadline}' vs "
                       f"bigquery/12_cadence_monitor.sql TIME='{have_deadlines[0]}'. Keep them in sync.")
 
+    # ---- D (extended, 2026-08-06, bigquery/142 revert follow-up): the CANONICAL (highest-numbered)
+    # bigquery/*.sql file CURRENTLY defining state.cadence_watch must ALSO agree with cadence.yaml.
+    # bigquery/12 is itself long superseded (48 -> 113 -> 129 -> 142); the check above only ever compared
+    # against that original, no-longer-deployed body, so a deadline change landed in a superseding file
+    # (129's 21:00->21:45 autotune, then 142's revert back to 21:00) had NO CI guard tying it back to
+    # cadence.yaml at all — the same registry-vs-body split class check_sq_version_registry.py exists to
+    # catch for a heartbeat literal, applied here to this view. ----
+    canon_deadlines, canon_number, canon_fn, canon_ambiguous = parse_canonical_deadline_sql()
+    canon_deadline_ok = True
+    if canon_ambiguous is not None:
+        errors.append(
+            f"AMBIGUOUS canonical file for state.cadence_watch — bigquery/{canon_number} is the "
+            f"winning (highest) leading number, but {len(canon_ambiguous)} DIFFERENT files share it "
+            f"and each defines `CREATE OR REPLACE VIEW state.cadence_watch`: "
+            f"{', '.join('bigquery/' + fn for fn in canon_ambiguous)}. Check D's canonical-file "
+            f"deadline guard cannot determine which is actually deployed — renumber one file so the "
+            f"leading number is unique, or determine which definition is actually deployed and "
+            f"delete/renumber the other.")
+        canon_deadline_ok = False
+    elif canon_fn is None:
+        errors.append("could not find any bigquery/*.sql file defining "
+                      "`CREATE OR REPLACE VIEW state.cadence_watch` at all — check D's canonical-file "
+                      "deadline guard cannot run")
+        canon_deadline_ok = False
+    else:
+        if not canon_deadlines:
+            errors.append(f"bigquery/{canon_fn}: could not parse the DATETIME(e.today, TIME '..') "
+                          f"deadline-guard literal from its state.cadence_watch definition (the "
+                          f"highest-numbered file currently defining it — did the clause change shape?)")
+            canon_deadline_ok = False
+        elif len(set(canon_deadlines)) > 1:
+            errors.append(f"bigquery/{canon_fn}: multiple distinct deadline literals "
+                          f"{sorted(set(canon_deadlines))} in its state.cadence_watch definition — "
+                          f"expected exactly one")
+            canon_deadline_ok = False
+    if deadline_ok and canon_deadline_ok and canon_fn is not None and canon_deadlines[0] != want_deadline:
+        errors.append(f"cadence_watch deadline DRIFT (canonical file) — ops/cadence.yaml="
+                      f"'{want_deadline}' vs bigquery/{canon_fn} (the highest-numbered file currently "
+                      f"defining state.cadence_watch) TIME='{canon_deadlines[0]}'. Keep them in sync.")
+
     # ---- E. period_grace_days: cadence.yaml == bigquery/24_cadence_period_watch.sql ----
     want_grace = cadence_period_grace_yaml()
     have_grace = parse_period_grace_sql()
@@ -1111,10 +1225,12 @@ def main():
         extra += " ops/triggers.json is current."
     if model_of_record:
         extra += f" routine_model {model_of_record} matches all mirror sites."
+    canon_note = (f" and bigquery/{canon_fn} (canonical)" if canon_fn is not None else "")
     print(f"CADENCE CONSISTENCY: OK — {len(cad)} routines; "
           f"{len(want_expected)} calendar-class match state.cadence_expected_today; "
           f"{len(have_catalog)} catalog entries match the plan headings; "
-          f"cadence_watch deadline {want_deadline} matches 12_cadence_monitor.sql.{extra}")
+          f"cadence_watch deadline {want_deadline} matches 12_cadence_monitor.sql (superseded reference)"
+          f"{canon_note}.{extra}")
     return 0
 
 

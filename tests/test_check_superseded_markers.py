@@ -27,6 +27,11 @@ def _tree(tmp_path, files, monkeypatch):
         (d / name).write_text(text, encoding="utf-8")
     monkeypatch.setattr(cs, "BIGQUERY_DIR", str(d))
     monkeypatch.setattr(cs, "BASELINE", frozenset())
+    # CONTRADICTION_BASELINE (D7, 2026-08-06) names real-repo files (bigquery/26, 118) that don't exist
+    # in this synthetic tree — left unpatched, contradiction_violations() would report both as a STALE
+    # baseline entry (no longer multi-defined in THIS tree) and fail cs.main(), same reason BASELINE
+    # itself is reset above.
+    monkeypatch.setattr(cs, "CONTRADICTION_BASELINE", frozenset())
     return d
 
 

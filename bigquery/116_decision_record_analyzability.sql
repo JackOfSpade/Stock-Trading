@@ -249,12 +249,13 @@ GROUP BY strategy, ticker, campaign_seq;
 --      file header (6)) -- substrate for analytics.conviction_pct_calibration below.
 -- Regime-as-of join and was_profitable NULL-until-closed semantics are unchanged.
 --
--- SUPERSEDED LIVE by bigquery/123_drip_dust_campaign_exclusion.sql (2026-08-02) — current single
--- source of truth for this object: the campaign join now also excludes post-close DRIP-dust campaigns
--- via `AND NOT pc.is_dust`, so a GO thesis can never mis-pair to a sub-dollar phantom campaign. Kept
--- here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE
--- statement live in isolation.
 -- ============================================================================
+-- SUPERSEDED LIVE by bigquery/144_decision_log_correction_consumers.sql — current single source of
+-- truth for this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
+-- re-apply this CREATE statement live in isolation. Two later changes are missing from the definition
+-- below: (a) the 2026-08-02 drip-dust exclusion added `AND NOT pc.is_dust` to the campaign join, so a
+-- GO thesis can never mis-pair to a sub-dollar phantom campaign; (b) 144 repoints the `theses` CTE at
+-- state.decision_log_current, so a superseded GO thesis cannot be paired to a campaign twice.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.thesis_outcomes` AS
 WITH theses AS (
   SELECT entry_id, entry_date, strategy, ticker, conviction, conviction_pct, sub_pattern, decision, title,

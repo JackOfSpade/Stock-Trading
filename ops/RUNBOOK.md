@@ -103,21 +103,56 @@ evening *after* D2 year-round:
    freshness check). Enable *Send email on failure* — it RAISEs when a *monitored* routine
    (one that has logged a `completed` run in the last 14 days) was expected today but did not run.
    Self-bootstrapping, so it never false-alarms on routines that don't yet self-log. *(A3)*
-   **Deadline guard (2026-06-25; deadline autotuned 21:00 → 21:45 on 2026-08-03):**
-   `state.cadence_watch.needs_attention` now also requires Denver-time
-   to be past **21:45** (the daily routines' after-close completion deadline), so an *off-schedule /
+   **Deadline guard (2026-06-25; autotuned 21:00 → 21:45 on 2026-08-03, REVERTED back to 21:00 on
+   2026-08-06):** `state.cadence_watch.needs_attention` requires Denver-time
+   to be past **21:00** (the daily routines' after-close completion deadline), so an *off-schedule /
    manual / duplicate* run of this query *before* the routines have run today can no longer raise a
    spurious `missed_run` CRITICAL (the 2026-06-21 12:00 MT + 2026-06-24 09:37 MT morning false positives,
-   exposed once the notification-complete emailer began relaying self-healed alerts). 21:45 MT clears the
-   observed p90 completions (D2a ~21:29, D1 ~21:19, D2 ~21:06) yet still sits before this 05:15 UTC
-   scheduled run in **both** seasons — 05:15 UTC is 23:15 MDT in summer but **22:15 MST in winter**, and
-   the winter figure is the binding ceiling on this constant — so a *genuine* miss still fires critical
-   here year-round. Raised from 21:00 by W5 2026-08-03 under the `process_reliability` self-improvement
-   loop (D1/D2/D3 each held the deadline-threat pattern for three consecutive post-bigquery/89 W5 cycles);
-   evidence, the ceiling analysis, and the expected auto-revert caveat are in
-   `bigquery/129_cadence_watch_deadline_autotune.sql`. Computed in the `America/Denver` named zone
+   exposed once the notification-complete emailer began relaying self-healed alerts). W5's 2026-08-03
+   autotune to 21:45 (`process_reliability` self-improvement loop, on a 3-consecutive-cycle
+   deadline-threat streak) turned out to rest on evidence that was an ARTIFACT of a marker-backfill
+   counting bug in `analytics.routine_health_scorecard`: a backfilled row's `log_ts` is its backfill
+   time (~22:15 MT), not its real completion time, manufacturing a fake late tail. Commit 0b9fd49
+   (2026-08-04, `bigquery/89`) fixed the scorecard to exclude backfilled rows at the reader. Recomputed
+   honestly, the three routines split — the artifact was NOT uniform, and only D1's evidence dissolved:
+   **D1 recomputes to 1006 min-of-day (16:46 MT)**, 254 minutes clear of the +/-90-minute threat band
+   around the 21:00 deadline (minute 1260) and 299 clear of the 21:45 one (minute 1305) — its entire
+   evidence trail was that backfill artifact, at all three justifying cycles. D2's and D3's evidence was
+   genuine and essentially unaffected by the bug — **D2 1266 (21:06 MT), D3 1193 (19:53 MT)** — and both
+   sit INSIDE the band at 21:00 (6 and 67 minutes from it). That is the point: D2 is inside the band at
+   21:45 as well (39 minutes), so the autotune never cleared the one routine that actually had a threat
+   signal, and reverting costs it nothing. D3 is the only routine the loosening genuinely moved out of
+   the band, by 112 minutes, and it was never the routine the change was argued from.
+   *(Two different D2 p90s are both correct and are easy to confuse: **1266** is the recomputed value
+   for the 2026-08-03 observation, pinned at that observation's own `observed_ts` — the right number for
+   auditing the decision; **1245** is the CURRENT live `analytics.routine_health_scorecard` reading,
+   which has no upper time bound and so drifts as new runs land — the right number for "where is D2
+   today". Always say which you mean; a 2026-08-06 review pass mistook one for the other.)* Because `cadence_watch_deadline_local` is one shared constant across
+   D1/D2/D3, not set per routine, all three revert together, owner-approved 2026-08-06. The revert lands
+   in `bigquery/142_cadence_deadline_revert_and_evidence_drift.sql`, which SUPERSEDES
+   `bigquery/129_cadence_watch_deadline_autotune.sql` (now historical-only — do not re-apply it live in
+   isolation) and is the CURRENT canonical definition of `state.cadence_watch`. bigquery/142 also adds
+   `state.process_constant_evidence_drift`, a backward-looking check that re-validates a self-tuning
+   loop's justifying observations against the CURRENT (corrected) metric formula — closing the structural
+   gap that let a since-fixed formula bug justify a live constant change with nothing ever re-checking it
+   against a later correction. 21:00 still sits before this 05:15 UTC scheduled run in **both** seasons —
+   05:15 UTC is 23:15 MDT in summer but **22:15 MST in winter**, and the winter figure is the binding
+   ceiling on this constant — so a *genuine* miss still fires critical here year-round.
+   **OPS0 winter consideration (why 21:45 was never safe to keep, independent of the evidence bug):**
+   OPS0 fires 04:30 UTC and performs a same-night auto-catchup sweep keyed off
+   `state.cadence_watch.needs_attention` at that same run — 22:30 MDT in summer, but **21:30 MST once
+   clocks fall back** (~2026-11-01). A deadline later than 21:30, as 21:45 was, sits AFTER OPS0's winter
+   dispatch: a genuinely missed D1/D3 run would read `needs_attention=FALSE` at that 21:30 MST catchup
+   check (the deadline hasn't passed yet in the view's own terms) and silently lose same-night
+   auto-catchup for the night — even though `cadence_check.sql` would still correctly alarm 45 minutes
+   later at 22:15 MST. This hazard was dormant under MDT (today's DST state) and would only have gone
+   live ~2026-11-01, but it means any FUTURE loosening of this deadline must be checked against **OPS0's
+   winter dispatch time (21:30 MST)**, not just `cadence_check`'s own 22:15 MST scheduled run — the two
+   ceilings are different and OPS0's is the tighter one. Computed in the `America/Denver` named zone
    (DST-safe) and NOT gated on `is_trading_day`, so D3's daily-all miss-detection still works on
-   weekends/holidays. Logic in `bigquery/12_cadence_monitor.sql`; applied live via the MCP 2026-06-25.
+   weekends/holidays. Logic in `bigquery/12_cadence_monitor.sql` (view, kept in sync but superseded for
+   live-apply purposes); current source of truth is
+   `bigquery/142_cadence_deadline_revert_and_evidence_drift.sql`.
 4. The new scheduling UI no longer exposes `maximum_bytes_billed`; don't worry about it — all
    queries scan < 2 MB. Cost is bounded by the budget alert in §2. *(P2-2)*
 
@@ -1028,6 +1063,29 @@ description (`bigquery/01_schema.sql`) carries this exception too.
 **Going forward:** the routine that logs B NO-GOs (**D2**) should emit the canonical tokens directly (see
 that vocabulary block); **W5** conforms any drift in its weekly pass. Anything beyond `sub_pattern`
 stays append-only.
+
+**`events.adversarial_reviews` — a second table with a `superseded_by` path (added 2026-08-06,
+`bigquery/143_adversarial_review_correction_path.sql`).** This section previously described `decision_log`
+as the only table using the new-row-plus-`superseded_by` correction convention; `adversarial_reviews` now
+uses it too, in exactly the same direction — **the correction row names the obsolete row's `event_id`,
+the obsolete row is never touched, and readers exclude the row that is _named_** via
+`state.adversarial_reviews_current`. `WHERE superseded_by IS NULL` is the wrong predicate for either
+table (it keeps the stale row and drops the fix); `bigquery/122` states this in terms, and
+`scripts/check_superseded_by_discipline.py` now blocks in CI any new canonical reader of
+`adversarial_reviews` that goes to the base table instead of the `_current` view.
+
+  This **replaces**, and is not an addition to, the interim rule that stood between 2026-08-05 and
+  2026-08-06: commit `bb21c91` had blessed an in-place `UPDATE` on `adversarial_reviews` as its one
+  sanctioned repair, purely because the table then had no `superseded_by` column and
+  `ops.sp_score_cross_model_referee` would have inserted duplicate referee rows against a superseding
+  row. `bigquery/143` fixed both, so **that UPDATE exception is withdrawn** — an `UPDATE` on this table
+  is now a genuine `append_only_violation` to investigate, not a routine disposition. `sub_pattern`
+  (above) remains the **only** in-place exception anywhere in `events.*`.
+
+  Note the `state.append_only_integrity_haltable` carve-out (`bigquery/141`) that exempts
+  `UPDATE adversarial_reviews` from the halt clock is deliberately **left in place but now redundant** —
+  a correction is an `INSERT`, which the detector does not watch at all. `bigquery/141`'s header carries
+  the retirement condition.
 
 ## 22. `instruction_drift` false alarm from ad-hoc runs reusing a routine id — the 2026-06-22 W5 alert *(monitoring)*
 **Fired 2026-06-22 05:15 UTC** (`scheduled.cadence` / `instruction_drift`, WARNING): *"Trigger drift: routine(s)

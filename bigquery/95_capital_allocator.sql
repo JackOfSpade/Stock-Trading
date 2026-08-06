@@ -57,6 +57,10 @@
 -- (verified live via the readonly BigQuery MCP at authoring time: zero decision_log rows of this
 -- entry_type exist).
 -- ============================================================================
+-- SUPERSEDED LIVE by bigquery/144_decision_log_correction_consumers.sql — current single source of truth
+-- for this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
+-- this CREATE statement live in isolation: its `calls` CTE reads events.decision_log directly, so a superseded capital-allocation call would
+-- be scored twice by W5's CAPITAL-ALLOCATION SCORECARD.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.capital_allocation_calls` AS
 WITH calls AS (
   SELECT
