@@ -11,6 +11,7 @@ surface at a time and assert the run fails with the expected check id (R-A / R-B
 
 No warehouse, no creds — pure offline fixture/parser tests (run in the always-on `test` job).
 """
+import re
 import os
 import shutil
 
@@ -426,21 +427,34 @@ def test_spec_hash_mismatch_on_c_options_math_is_caught(repo_copy):
     assert rc.main() == 1
 
 
+def _first_spec_hash_line(txt):
+    """A's spec_hash line, DERIVED not hardcoded.
+
+    These two tests used to pin A's literal hash. That made them a tripwire on every
+    legitimate spec_hash recompute (they drifted twice on 2026-08-05 alone, during the
+    Rev 43 propagation and again during the CaR-envelope retirement) — a maintenance
+    cost with no detection value, since R-F itself already verifies the hash is correct.
+    What these tests actually need is "the first strategy's spec_hash line, whatever it
+    currently is", so derive it.
+    """
+    m = re.search(r'^    spec_hash: "([a-f0-9]{64})".*$', txt, re.M)
+    assert m, "no spec_hash line found in roster.yaml — fixture assumption genuinely broken"
+    return m.group(0) + "\n", m.group(1)
+
+
 def test_spec_hash_missing_on_spec_locked_strategy_is_caught(repo_copy):
     p = rc.ROSTER
     txt = _read(p)
-    old = '    spec_hash: "611c7668417e87f2b870e7e50df1083b62f43399b7721b4b0d55a04bd628aa75"   # sha256(strategy/03_strategy_a.md || strategy_math/strategy_a.py || strategy_math/common.py), rev 2026-07-28 (Rev 39 thesis-scaled risk budgeting — sizing rule retired)\n'
-    assert old in txt, "fixture assumption about A's spec_hash line shape/value drifted — update this test"
-    _write(p, txt.replace(old, ""))
+    line, _ = _first_spec_hash_line(txt)
+    _write(p, txt.replace(line, ""))
     assert rc.main() == 1
 
 
 def test_spec_hash_wrong_value_is_caught(repo_copy):
     p = rc.ROSTER
     txt = _read(p)
-    old = "611c7668417e87f2b870e7e50df1083b62f43399b7721b4b0d55a04bd628aa75"
-    assert old in txt, "fixture assumption about A's spec_hash value drifted — update this test"
-    _write(p, txt.replace(old, "0" * 64))
+    _, value = _first_spec_hash_line(txt)
+    _write(p, txt.replace(value, "0" * 64))
     assert rc.main() == 1
 
 

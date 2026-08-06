@@ -537,6 +537,33 @@ def test_size_position_rejects_zero_max_loss():
         size_position(0, 1389.37, 0.02)
 
 
+def test_size_position_allows_any_budget_up_to_full_nav():
+    """Owner directive 2026-08-05: both hard CaR envelopes RETIRED — no sizing ceiling.
+
+    size_position() previously required max_pct_nav <= 0.10 (the per-name CaR envelope) and
+    raised ValueError above it. That ceiling is gone. This mirrors
+    tests/test_strategy_math.py::test_position_size_dollars_allows_any_budget_up_to_full_nav
+    for the options half, which the 2026-08-05 change left untested — a reintroduced ceiling
+    would otherwise fail loudly for equities and pass silently for C.
+    """
+    # 50% of 1389.37 = 694.68 -> floor(694.68 / 50.0) = 13 contracts, no defer.
+    contracts, defer = size_position(50.0, 1389.37, 0.50)
+    assert contracts == 13 and defer is False
+    # The whole sub-portfolio is a legal budget: 1389.37 / 50.0 -> 27 contracts.
+    contracts, defer = size_position(50.0, 1389.37, 1.0)
+    assert contracts == 27 and defer is False
+    # And just above the retired 10% ceiling must no longer raise.
+    contracts, defer = size_position(50.0, 1389.37, 0.11)
+    assert contracts == 3 and defer is False
+
+
+def test_size_position_still_rejects_out_of_domain_pct():
+    """The (0, 1] bound is a domain sanity check, NOT a risk envelope — it stays."""
+    for bad in (1.01, 0.0, -0.05):
+        with pytest.raises(ValueError):
+            size_position(50.0, 1389.37, bad)
+
+
 def test_realized_vol_recovers_known_sigma():
     rng = random.Random(42)
     prices = [100.0]

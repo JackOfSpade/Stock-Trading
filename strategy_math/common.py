@@ -33,24 +33,25 @@ def position_size_dollars(sub_portfolio_nav: float, pct: float) -> float:
     net-liquidation — Operating_Protocols.md's "Sizing and analysis on live data"
     tripwire.
 
-    ENVELOPE ENFORCEMENT — necessary but NOT sufficient. This function rejects a
-    SINGLE budget above the 10% per-name ceiling, which is a necessary condition
-    only. It canNOT enforce the envelopes themselves, because both are book-level
-    AGGREGATES this pure function cannot see: two separately-valid 6% tranches in
-    the same name sum to 12% and breach the per-name envelope while passing every
-    individual call here. The caller MUST check the aggregate against the live book
-    (per-name total CaR <=10%, per-strategy deployed CaR <=75%) before staging.
+    NO SIZING CEILING (owner directive 2026-08-05 — both Rev 43 hard CaR envelopes
+    RETIRED). This function previously rejected any `pct` above 0.10, the per-name
+    Capital-at-Risk envelope. That rejection is GONE: the per-name <=10% and
+    per-strategy deployed <=75% envelopes are both retired, and the AI has complete
+    freedom in sizing. The owner's reasoning: this experiment runs no stop-losses, so
+    size IS the risk-management lever, and a ceiling the judgment is trusted to set
+    should not be second-guessed by a constant in a helper function.
+
+    Do NOT reintroduce a ceiling here. The surviving discipline is procedural, not
+    numeric — the seven-factor justification, the mandatory adversarial attack on the
+    SIZE as well as the direction, and the per-strategy kill triggers
+    (Experiment_Parameters.md §Position size). The `0 < pct <= 1` check below is a
+    domain sanity bound (a budget cannot be negative, and cannot exceed the whole
+    sub-portfolio), NOT a risk envelope — keep it.
     """
     if sub_portfolio_nav <= 0:
         raise ValueError(f"sub_portfolio_nav = {sub_portfolio_nav} (must be > 0).")
     if not (0 < pct <= 1):
         raise ValueError(f"pct = {pct} (must be in (0, 1]).")
-    if pct > 0.10:
-        raise ValueError(
-            f"pct = {pct} exceeds the 10% per-name Capital-at-Risk envelope "
-            "(Experiment_Parameters.md rev 18). A single thesis cannot be budgeted "
-            "above the per-name aggregate ceiling."
-        )
     return sub_portfolio_nav * pct
 
 

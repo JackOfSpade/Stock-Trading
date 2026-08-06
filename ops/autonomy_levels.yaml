@@ -57,7 +57,9 @@
 #                    the D2a / strategy_arsenal skeleton (bigquery/37_self_improvement_autonomy.sql). A loop
 #                    still may NOT self-apply until ITS OWN data gate clears; autonomy removes the human
 #                    step, never the evidence bar. What is NOT relaxed: the mechanical kill triggers, the
-#                    $2,000 probe-stake floor, the per-thesis risk-budget discipline + its hard envelopes
+#                    $2,000 probe-stake floor, the per-thesis risk-budget discipline (its hard envelopes
+#                    RETIRED by owner directive 2026-08-05 - sizing is now numerically unconstrained;
+#                    the DISCIPLINE, i.e. the seven-factor justification + adversarial size attack, remains)
 #                    (Rev 43/EP rev 18, 2026-07-28 — the flat 2% figure is retired), and the IBKR
 #                    order-confirm execution tap — all stand.
 #
@@ -450,7 +452,10 @@ cross_cutting_guards:
       meta_monitoring_heartbeat dead-man's switch — the D2a / strategy_arsenal precedent. There is no per-loop
       human-review label to enforce and nothing to exclude from auto-merge; the guard is RETIRED, not merely
       unenforced. What is NOT relaxed: the mechanical kill triggers, the $2,000 probe-stake floor,
-      the per-thesis risk-budget discipline and its hard envelopes (Rev 43/EP rev 18, 2026-07-28 —
+      the per-thesis risk-budget DISCIPLINE, i.e. the seven-factor justification and the mandatory
+      adversarial attack on size (its hard envelopes RETIRED by owner directive 2026-08-05 - EP rev 19;
+      an autonomy loop may not reintroduce a sizing ceiling any more than it could remove one)
+      (Rev 43/EP rev 18, 2026-07-28 —
       the flat 2% figure is retired; envelope VALUES are versioned policy, their EXISTENCE is not),
       and the IBKR order-confirm execution tap all remain fully in force (they are execution/capital gates,
       not review gates).
