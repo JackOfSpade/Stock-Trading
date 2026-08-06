@@ -41,6 +41,20 @@
 -- column"). Left as originally written, the promoted body below would convert that SANCTIONED,
 -- EXPECTED repair into a trading halt the first time it recurred after promotion.
 --
+-- ---------- ADDENDUM 2026-08-06 (later the same day): THE PREMISE ABOVE NO LONGER HOLDS ----------
+-- bigquery/143_adversarial_review_correction_path.sql removed both reasons the in-place UPDATE was
+-- the only option: events.adversarial_reviews now HAS a `superseded_by` column, and
+-- ops.sp_score_cross_model_referee now dedups its attacker candidate set to one row per review_id.
+-- The sanctioned correction is now an APPEND (INSERT a replacement naming the obsolete row's
+-- event_id); an in-place UPDATE on this table is NO LONGER sanctioned.
+-- CONSEQUENCE FOR THIS FILE: the scoped promoted body below stays exactly as written and stays
+-- correct, but its carve-out is now REDUNDANT rather than load-bearing — an INSERT is not a watched
+-- statement_type, so a correct repair never reaches state.append_only_integrity in the first place.
+-- Redundant is fail-safe: the carve-out can only reduce halting, never cause it. See bigquery/141's
+-- own "PREMISE SUPERSEDED" block for the retirement condition (14 consecutive UPDATE-free days plus
+-- the corrected prose live in the generated task_plan/ slices), after which BOTH the carve-out here
+-- and the haltable view can be retired together and this table becomes halt-eligible again.
+--
 -- bigquery/141 (2026-08-06) closes that gap by SCOPING the halt, not by widening the exemption:
 --   * state.append_only_integrity_haltable (new view, bigquery/141) is state.append_only_integrity
 --     MINUS ONLY rows where statement_type='UPDATE' AND target_table='adversarial_reviews'. A

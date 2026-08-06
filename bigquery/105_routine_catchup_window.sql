@@ -200,6 +200,11 @@ ORDER BY routine;
 -- revert the window to the fixed 2-day cutoff and silently reintroduce the missed-catch-up gap this
 -- redefinition exists to close. bigquery/18's copy is kept there, unmodified, for DR-rebuild
 -- apply-in-order reference only (see the SUPERSEDED marker added there pointing at this file).
+-- SUPERSEDED LIVE by bigquery/144_decision_log_correction_consumers.sql — current single source of truth
+-- for this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
+-- this CREATE statement live in isolation: its go_decisions CTE carries `AND superseded_by IS NULL`, which is EXACTLY BACKWARDS -- it keeps
+-- the OBSOLETE row and drops the CORRECTION (see bigquery/122:43). 144 deletes that line and reads
+-- state.decision_log_current instead.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.go_without_order` AS
 WITH d3_last_completed AS (
   -- D3's own last completed ops.run_log run -- the anchor for how far back this view's evidence window

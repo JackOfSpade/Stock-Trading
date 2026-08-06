@@ -1064,6 +1064,29 @@ description (`bigquery/01_schema.sql`) carries this exception too.
 that vocabulary block); **W5** conforms any drift in its weekly pass. Anything beyond `sub_pattern`
 stays append-only.
 
+**`events.adversarial_reviews` — a second table with a `superseded_by` path (added 2026-08-06,
+`bigquery/143_adversarial_review_correction_path.sql`).** This section previously described `decision_log`
+as the only table using the new-row-plus-`superseded_by` correction convention; `adversarial_reviews` now
+uses it too, in exactly the same direction — **the correction row names the obsolete row's `event_id`,
+the obsolete row is never touched, and readers exclude the row that is _named_** via
+`state.adversarial_reviews_current`. `WHERE superseded_by IS NULL` is the wrong predicate for either
+table (it keeps the stale row and drops the fix); `bigquery/122` states this in terms, and
+`scripts/check_superseded_by_discipline.py` now blocks in CI any new canonical reader of
+`adversarial_reviews` that goes to the base table instead of the `_current` view.
+
+  This **replaces**, and is not an addition to, the interim rule that stood between 2026-08-05 and
+  2026-08-06: commit `bb21c91` had blessed an in-place `UPDATE` on `adversarial_reviews` as its one
+  sanctioned repair, purely because the table then had no `superseded_by` column and
+  `ops.sp_score_cross_model_referee` would have inserted duplicate referee rows against a superseding
+  row. `bigquery/143` fixed both, so **that UPDATE exception is withdrawn** — an `UPDATE` on this table
+  is now a genuine `append_only_violation` to investigate, not a routine disposition. `sub_pattern`
+  (above) remains the **only** in-place exception anywhere in `events.*`.
+
+  Note the `state.append_only_integrity_haltable` carve-out (`bigquery/141`) that exempts
+  `UPDATE adversarial_reviews` from the halt clock is deliberately **left in place but now redundant** —
+  a correction is an `INSERT`, which the detector does not watch at all. `bigquery/141`'s header carries
+  the retirement condition.
+
 ## 22. `instruction_drift` false alarm from ad-hoc runs reusing a routine id — the 2026-06-22 W5 alert *(monitoring)*
 **Fired 2026-06-22 05:15 UTC** (`scheduled.cadence` / `instruction_drift`, WARNING): *"Trigger drift: routine(s)
 whose live web-UI trigger differs from the canonical catalog: W5."* **It was a false positive — the scheduled

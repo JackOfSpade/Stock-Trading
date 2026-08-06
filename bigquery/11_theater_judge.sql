@@ -19,6 +19,16 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.analytics.theater_judge` (
 ) OPTIONS(description='Objective adversarial-independence judgement per review (attacker vs orchestrator). Refreshed by ops.sp_score_theater().');
 
 -- ===== ops.sp_score_theater() — judge every not-yet-scored paired review =====
+-- SUPERSEDED LIVE by bigquery/143_adversarial_review_correction_path.sql — that file is the current
+-- single source of truth for ops.sp_score_theater. Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation: the
+-- definition below pairs attacker+orchestrator ON review_id ALONE and guards on review_id alone,
+-- which (a) can never re-score a review revised at a newer cycle_number — MEASURED 2026-08-06, all
+-- five founding pre-mortems were stuck on their 2026-07-29 scoring while the live text had moved to
+-- cycle 8/8/10/6/6 — and (b) fans the self-join out to the full cross product once two cycles exist
+-- (MEASURED: 4 pairs per pre-mortem). bigquery/143 pairs on (review_id, cycle_number), reduces to one
+-- row per review_id, re-scores on a newer cycle, and reads state.adversarial_reviews_current so a
+-- superseded correction target is excluded.
 -- Pairs the attacker + orchestrator rows of each review_id, asks Gemini whether the orchestrator
 -- surfaced INDEPENDENT disagreement (vs merely echoing the attacker = theater), and MERGEs the verdict.
 -- Self-healing + re-run-safe: only scores reviews that have BOTH roles and are not already scored.

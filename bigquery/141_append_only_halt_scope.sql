@@ -27,6 +27,28 @@
 -- 4353777f then afdc096d; 58da7e8f then 94ce1df2; 9c7c0261) -- so the gap was real and
 -- time-bounded, not hypothetical.
 --
+-- ============================ PREMISE SUPERSEDED 2026-08-06 (same day, later) ====================
+-- The paragraph immediately above is now HISTORY, not current fact.
+-- bigquery/143_adversarial_review_correction_path.sql removed BOTH halves of the premise it rests on:
+-- events.adversarial_reviews now HAS a `superseded_by` column, and ops.sp_score_cross_model_referee
+-- now dedups its attacker candidate set, so a superseding row no longer produces duplicate
+-- referee_gemini rows. The sanctioned correction mechanism for this table is therefore an APPEND
+-- (INSERT a replacement row naming the obsolete row's event_id), and an in-place UPDATE is NO LONGER
+-- sanctioned.
+--
+-- THE VIEW BELOW IS DELIBERATELY LEFT EXACTLY AS IT IS. Its carve-out is now REDUNDANT rather than
+-- wrong: an INSERT never enters state.append_only_integrity at all (that detector keys on
+-- UPDATE/DELETE/MERGE/TRUNCATE_TABLE only), so a correct repair is invisible to it with or without
+-- this exclusion. Redundant is also FAIL-SAFE here -- the exclusion can only ever REDUCE halting,
+-- never cause it -- and retiring it would require bumping ops.sp_sq_integrity_check v3->v4 plus the
+-- bigquery/63 registry MERGE, the delicate multi-file sequence this file's own APPLY-ORDER WARNING
+-- below documents.
+-- RETIREMENT CONDITION for a future session: once JOBS_BY_PROJECT shows no UPDATE against
+-- events.adversarial_reviews for 14 consecutive days AND bigquery/143's corrected prose is live in the
+-- generated task_plan/ slices, drop the carve-out and repoint the promotion clock back at the full
+-- state.append_only_integrity -- after which an UPDATE on this table becomes halt-eligible again,
+-- which, post-143, it should be.
+--
 -- ============================ THE FIX: scope the HALT by table, keep the WARNING universal ========
 -- state.append_only_integrity_haltable (new view, this file) is state.append_only_integrity MINUS
 -- ONLY rows where statement_type='UPDATE' AND target_table='adversarial_reviews'. The exclusion is

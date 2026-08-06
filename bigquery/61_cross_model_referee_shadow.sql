@@ -44,6 +44,14 @@
 -- orchestrator that mis-lifts a block on a weak divergence case deploys real capital, exactly the
 -- single-model-fragility this referee exists to cross-check. Documenting the reversibility so a future
 -- audit does not mistake this for scope-creep into a class the design meant to exclude.
+-- SUPERSEDED LIVE by bigquery/143_adversarial_review_correction_path.sql — that file is the current
+-- single source of truth for analytics.referee_concurrence_calibration. Kept here, unmodified, for
+-- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation:
+-- `normalized` below has NO dedup and `paired` self-joins it ON review_id alone, so a second
+-- orchestrator or referee row for one review_id multiplies COUNT(*) n_scored — the literal input to
+-- state.referee_promotion_readiness's sample_floor_met (>=6) and concurrence_met (>=0.80) bars.
+-- 143 adds a per-(review_id, role) QUALIFY inside `normalized` and reads
+-- state.adversarial_reviews_current. The verdict-normalization CASE is byte-identical in 143.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.referee_concurrence_calibration` AS
 WITH normalized AS (
   SELECT

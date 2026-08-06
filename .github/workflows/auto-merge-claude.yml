@@ -379,6 +379,7 @@ jobs:
           run_check python scripts/check_autonomy_consistency.py
           run_check python scripts/check_script_version_consistency.py
           run_check python scripts/check_superseded_markers.py
+          run_check python scripts/check_superseded_by_discipline.py
           run_check python scripts/check_settings_toolcov.py
           run_check bash tests/test_auto_merge_logic.sh
           run_check bash tests/test_resolve_diff_base.sh

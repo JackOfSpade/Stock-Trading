@@ -130,6 +130,10 @@ QUALIFY ROW_NUMBER() OVER (
 
 -- ===== analytics.weekly_activity — last-7-day activity counts for the digest =====
 -- Relative 7-day window (America/Denver), so it stays a view, not a stored table.
+-- SUPERSEDED LIVE by bigquery/144_decision_log_correction_consumers.sql — current single source of truth
+-- for this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
+-- this CREATE statement live in isolation: its go_7d/nogo_7d subqueries read events.decision_log directly and would double-count a GO or
+-- NO-GO corrected inside the trailing 7-day window.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.weekly_activity` AS
 SELECT
   -- DATE(fill_ts, 'America/Denver') — NOT bare DATE(fill_ts) (defaults to UTC): a fill timestamped
@@ -159,6 +163,9 @@ FROM `stock-trading-498512.state.trade_fills_curated`
 WHERE DATE(fill_ts, 'America/Denver') >= DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 7 DAY)
 ORDER BY fill_ts DESC LIMIT 6;
 
+-- SUPERSEDED LIVE by bigquery/144_decision_log_correction_consumers.sql — current single source of truth
+-- for this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
+-- this CREATE statement live in isolation: it reads events.decision_log directly and would list a NO-GO corrected inside the 7-day window twice.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.weekly_nogos` AS
 SELECT ticker, strategy, entry_date
 FROM `stock-trading-498512.events.decision_log`

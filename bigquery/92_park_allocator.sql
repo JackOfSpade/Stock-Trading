@@ -144,13 +144,16 @@ FROM ctrl;
 -- per the task spec: "parsing fields JSON via JSON_VALUE"). Newest-first LIMIT 10, same
 -- ORDER BY ... LIMIT N idiom as bigquery/02_ai_layer.sql's precedent-retrieval view.
 -- ============================================================================
--- SUPERSEDED LIVE by bigquery/135_park_allocation_call_shape.sql (2026-08-04) — that file is the current
--- single source of truth for BOTH views below. It adds an is_call flag (fields.status IS NOT NULL) and
--- raises this view's LIMIT 10 -> 25, and makes park_allocation_latest select the newest CALL-shaped row
--- rather than the newest row of any shape. Reason: D2a logged a park-COVER staging note under this same
--- entry_type on 2026-08-03, and because neither view predicated on row SHAPE, that non-call row (vehicle
--- and status both NULL) shadowed D1's real SWITCH SGOV->VOO call in park_allocation_latest and would have
--- silently dropped a park switch worth 92.5% of NLV. Alert c5044046-53da-4d91-be8d-4002d1882ec0.
+-- SUPERSEDED LIVE by bigquery/144_decision_log_correction_consumers.sql — current single source of
+-- truth for BOTH views below. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply these CREATE statements live in isolation. Two later changes are missing from the
+-- definitions below: (a) the 2026-08-04 call-shape fix added an is_call flag (fields.status IS NOT
+-- NULL), raised this view's LIMIT 10 -> 25, and made park_allocation_latest select the newest
+-- CALL-shaped row rather than the newest row of any shape — D2a logged a park-COVER staging note under
+-- this same entry_type on 2026-08-03 and, because neither view predicated on row SHAPE, that non-call
+-- row (vehicle and status both NULL) shadowed D1's real SWITCH SGOV->VOO call and would have silently
+-- dropped a park switch worth 92.5% of NLV (alert c5044046-53da-4d91-be8d-4002d1882ec0); (b) 144
+-- repoints the source at state.decision_log_current, ahead of the LIMIT.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.park_allocation_recent` AS
 SELECT
   entry_id,
