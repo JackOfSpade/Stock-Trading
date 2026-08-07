@@ -114,6 +114,16 @@ def test_parse_legacy_review_uses_metadata_and_filename_role(tmp_path):
     assert ars.parse_legacy_review(path) == (KEY, BODY)
 
 
+def test_parse_legacy_review_preserves_crlf_bytes_for_exact_hashing(tmp_path):
+    body = BODY.replace("\n", "\r\n")
+    path = tmp_path / "Adversarial_Review_review-A-1_attacker.md"
+    path.write_bytes(body.encode("utf-8"))
+    key, parsed = ars.parse_legacy_review(path)
+    assert key == KEY
+    assert parsed == body
+    assert parsed.encode("utf-8") == path.read_bytes()
+
+
 def test_parse_legacy_orchestrator_uses_filename_id_and_prose_cycle_label_when_id_is_absent(tmp_path):
     body = ("# Adversarial Review — Orchestrator — review-A-1\n\n"
             "- **Review type:** pre-mortem\n"
@@ -150,6 +160,17 @@ def test_audit_file_reports_matching_hash(monkeypatch, tmp_path):
     result = ars.audit_file(path)
     assert result.status == "OK"
     assert result.local_sha256 == SHA == result.warehouse_sha256
+
+
+def test_audit_file_handles_crlf_as_exact_utf8_bytes(monkeypatch, tmp_path):
+    body = BODY.replace("\n", "\r\n")
+    sha = hashlib.sha256(body.encode("utf-8")).hexdigest().upper()
+    path = tmp_path / "Adversarial_Review_review-A-1_attacker.md"
+    path.write_bytes(body.encode("utf-8"))
+    monkeypatch.setattr(ars, "fetch_review", lambda key, project: _row(body=body, sha=sha))
+    result = ars.audit_file(path)
+    assert result.status == "OK"
+    assert result.local_sha256 == sha
 
 
 def test_audit_file_reports_hash_mismatch(monkeypatch, tmp_path):
@@ -239,10 +260,29 @@ def test_google_repair_call_uses_only_typed_parameters_for_body_and_metadata():
     assert warehouse.append_replacement(row, KEY, body, "a" * 64, "queue-event") == "new-event"
     assert body not in captured["sql"]
     assert "@p_body_md" in captured["sql"] and "@p_superseded_by" in captured["sql"]
-    params = {name: value for name, _type, value in captured["parameters"]}
-    assert params["p_body_md"] == body
-    assert params["p_superseded_by"] == "old-event"
-    assert params["p_weaknesses"] == '[{"n":1}]'
+    params = {name: (type_, value) for name, type_, value in captured["parameters"]}
+    assert params["p_body_md"] == ("STRING", body)
+    assert params["p_superseded_by"] == ("STRING", "old-event")
+    # A JSON parameter must receive the Python array/object.  A serialized string would store a
+    # JSON string containing an array instead of preserving the JSON column's original shape.
+    assert params["p_weaknesses"] == ("JSON", [{"n": 1}])
+
+
+def test_google_repair_parses_legacy_json_string_before_binding_json_parameter():
+    warehouse = object.__new__(ars.GoogleBigQueryWarehouse)
+    warehouse.project = "proj-1"
+    warehouse._scalar = lambda name, type_, value: (name, type_, value)
+    captured = {}
+
+    def fake_rows(sql, parameters):
+        captured["parameters"] = parameters
+        return [{"event_id": "new-event"}]
+
+    warehouse._rows = fake_rows
+    row = _full_row(body="short\n", weaknesses='[{"n":1}]')
+    assert warehouse.append_replacement(row, KEY, BODY, "a" * 64, "queue-event") == "new-event"
+    params = {name: (type_, value) for name, type_, value in captured["parameters"]}
+    assert params["p_weaknesses"] == ("JSON", [{"n": 1}])
 
 
 def test_legacy_queue_derivation_uses_latest_transition_when_two_pending_rows_have_distinct_times():
@@ -260,6 +300,26 @@ def test_legacy_queue_derivation_uses_latest_transition_when_two_pending_rows_ha
     assert warehouse.resolve_queue_event_id(_full_row(), KEY) == "newer-pending-transition"
     assert "SELECT MAX(event_ts) FROM candidates" in captured["sql"]
     assert "ORDER BY event_ts DESC" not in captured["sql"]
+
+
+def test_stored_queue_provenance_is_scoped_to_exact_cycle_and_review_time():
+    warehouse = object.__new__(ars.GoogleBigQueryWarehouse)
+    warehouse.project = "proj-1"
+    warehouse._scalar = lambda name, type_, value: (name, type_, value)
+    captured = {}
+
+    def fake_rows(sql, parameters):
+        captured["sql"], captured["parameters"] = sql, parameters
+        return [{"event_id": "stored-pending-transition"}]
+
+    warehouse._rows = fake_rows
+    row = _full_row(queue_event_id="stored-pending-transition")
+    assert warehouse.resolve_queue_event_id(row, KEY) == "stored-pending-transition"
+    assert "event_ts <= @review_event_ts" in captured["sql"]
+    assert "JSON_VALUE(payload, '$.cycle_number')" in captured["sql"]
+    params = {name: value for name, _type, value in captured["parameters"]}
+    assert params["cycle_number"] == KEY.cycle_number
+    assert params["review_event_ts"] == row["event_ts"]
 
 
 def test_legacy_queue_derivation_fails_closed_when_latest_transition_timestamp_ties():
@@ -290,6 +350,43 @@ def test_write_new_file_requires_new_path(tmp_path):
         ars._write_new_file(output, BODY)
 
 
+def test_write_new_file_rejects_retired_root_transcript_name(tmp_path):
+    output = tmp_path / "Adversarial_Review_review-A-1_attacker.md"
+    with pytest.raises(ValueError, match="retired root"):
+        ars._write_new_file(output, BODY, root=tmp_path)
+    assert not output.exists()
+
+
+def test_repair_files_rejects_multi_target_apply_before_any_repair_call(monkeypatch, tmp_path):
+    good = tmp_path / "good.md"
+    bad = tmp_path / "bad.md"
+    calls = []
+
+    def fake_repair(path, warehouse, apply):
+        calls.append((path, apply))
+        return ars.RepairResult(path, KEY, "DRY_RUN", "dry run")
+
+    monkeypatch.setattr(ars, "repair_file", fake_repair)
+    results = ars.repair_files([good, bad], object(), apply=True)
+    assert [result.status for result in results] == ["ERROR", "ERROR"]
+    assert calls == []
+
+
+def test_repair_files_keeps_multi_target_dry_run(monkeypatch, tmp_path):
+    one = tmp_path / "one.md"
+    two = tmp_path / "two.md"
+    calls = []
+
+    def fake_repair(path, warehouse, apply):
+        calls.append((path, apply))
+        return ars.RepairResult(path, KEY, "DRY_RUN", "ok")
+
+    monkeypatch.setattr(ars, "repair_file", fake_repair)
+    results = ars.repair_files([one, two], object(), apply=False)
+    assert [result.status for result in results] == ["DRY_RUN", "DRY_RUN"]
+    assert calls == [(one, False), (two, False)]
+
+
 def test_main_export_defaults_to_stdout_and_uses_exact_key(monkeypatch, capsys):
     captured = {}
 
@@ -310,3 +407,25 @@ def test_main_audit_is_nonzero_on_any_non_ok_result(monkeypatch, capsys, tmp_pat
     assert ars.main(["audit"]) == 1
     out = capsys.readouterr().out
     assert "1 OK, 1 non-OK, 2 total" in out
+
+
+def test_main_audit_accepts_explicit_recovered_legacy_file(monkeypatch, capsys, tmp_path):
+    path = tmp_path / "Adversarial_Review_review-A-1_attacker.md"
+    monkeypatch.setattr(ars, "audit_file", lambda found, project: ars.AuditResult(found, KEY, "OK", "matches"))
+    assert ars.main(["audit", "--file", str(path)]) == 0
+    assert path.name in capsys.readouterr().out
+
+
+def test_main_repair_with_no_retired_files_does_not_construct_bigquery_client(monkeypatch, capsys):
+    monkeypatch.setattr(ars, "tracked_root_review_files", lambda: [])
+    monkeypatch.setattr(ars, "GoogleBigQueryWarehouse", lambda project: pytest.fail("client should not be constructed"))
+    assert ars.main(["repair"]) == 0
+    assert "supply --file" in capsys.readouterr().out
+
+
+def test_main_repair_rejects_multi_file_apply_before_bigquery_client(monkeypatch, capsys, tmp_path):
+    one = tmp_path / "Adversarial_Review_one_attacker.md"
+    two = tmp_path / "Adversarial_Review_two_attacker.md"
+    monkeypatch.setattr(ars, "GoogleBigQueryWarehouse", lambda project: pytest.fail("client should not be constructed"))
+    assert ars.main(["repair", "--apply", "--file", str(one), "--file", str(two)]) == 2
+    assert "exactly one" in capsys.readouterr().err

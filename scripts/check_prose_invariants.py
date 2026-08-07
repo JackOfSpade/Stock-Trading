@@ -2,7 +2,8 @@
 """Fail CI if routine-executed prose re-instructs RETIRED behavior (finding H6, 2026-07-17).
 
 WHY THIS EXISTS. The scheduled Claude routines READ AND ACT ON the prose in Claude_Task_Plan.md,
-Operating_Protocols.md, Watchlist.md, README.md, and AI_Trading_Foundation.md. When a mechanism is
+Operating_Protocols.md, Experiment_Parameters.md, Strategy.md and its generated slices, Watchlist.md,
+README.md, and AI_Trading_Foundation.md. When a mechanism is
 retired (the 2026-06-06 `.md`->BigQuery cutover; the 2026-07-09 calendar-scope narrowing; the D2/D2a
 Step-0 cutover; the SGOV->VOO park cutover), the changelog + the §15 redirect map get updated but a
 stray IMPERATIVE instruction elsewhere in the same file can keep telling a routine to do the retired
@@ -71,10 +72,16 @@ LIST_ITEM = re.compile(r"^\s*(?:[-+*]|\d+[.)])\s+")
 # historical-prose exemption: an active instruction cannot become harmless merely by calling the
 # retired mechanism "legacy" in the same sentence.
 REVIEW_ARTIFACT_GLOB = "Adversarial_Review_*.md"
-REVIEW_STORAGE_PROSE_FILES = ("ops/cadence.yaml", "Claude_Task_Plan.md")
+REVIEW_STORAGE_PROSE_FILES = (
+    "ops/cadence.yaml",
+    "Claude_Task_Plan.md",
+    "Operating_Protocols.md",
+    "Experiment_Parameters.md",
+    "Strategy.md",
+)
 REVIEW_ARTIFACT_FILENAME = r"Adversarial_Review_[^`\s\])]*\.md"
 ACTIVE_REVIEW_FILE_WRITE = re.compile(
-    rf"(?:\b(?:write|writes|writing|append|appends|appending|save|saves|saving)\b[^\n]{{0,160}}"
+    rf"(?:\b(?:write|writes|writing|written|append|appends|appending|save|saves|saving)\b[^\n]{{0,160}}"
     rf"\b(?:to|as|in)\s+`?{REVIEW_ARTIFACT_FILENAME}"
     rf"|\bwrites?\s*:\s*\[[^\n]{{0,240}}{REVIEW_ARTIFACT_FILENAME}"
     rf"|\b(?:create|creates|creating|emit|emits|emitting|generate|generates|generating)\b"
@@ -82,11 +89,29 @@ ACTIVE_REVIEW_FILE_WRITE = re.compile(
     re.IGNORECASE,
 )
 NEGATED_REVIEW_FILE_WRITE = re.compile(
-    rf"\b(?:do\s+not|never|must\s+not|shall\s+not)\b[^\n]{{0,80}}"
-    rf"\b(?:write|append|save|create|emit|generate)\b[^\n]{{0,160}}{REVIEW_ARTIFACT_FILENAME}",
+    rf"(?:\b(?:do\s+not|never|must\s+not|shall\s+not)\b[^\n]{{0,80}}"
+    rf"\b(?:write|append|save|create|emit|generate)\b[^\n]{{0,160}}{REVIEW_ARTIFACT_FILENAME}"
+    rf"|\bcreates?\s+no\b[^\n]{{0,160}}{REVIEW_ARTIFACT_FILENAME})",
     re.IGNORECASE,
 )
 ACTIVE_REVIEW_OUTPUT_PATH = re.compile(r"\b(?:attacker|orchestrator)_output_path\b", re.IGNORECASE)
+NEGATED_REVIEW_OUTPUT_PATH = re.compile(
+    r"\b(?:do\s+not|never|must\s+not|shall\s+not)\b[^\n]{0,120}"
+    r"\b(?:attacker|orchestrator)_output_path\b",
+    re.IGNORECASE,
+)
+ACTIVE_REVIEW_FILE_HANDOFF = re.compile(
+    r"\b(?:attacker(?:['’]s)?\s+(?:output\s+)?file|"
+    r"orchestrator(?:['’-]s)?\s+(?:output\s+)?file|"
+    r"upstream[- ]output\s+file(?:s)?)\b",
+    re.IGNORECASE,
+)
+ACTIVE_RETIRED_REVIEW_QUEUE = re.compile(
+    r"\b(?:queue[- ]driven\s+via|(?:write|writes|writing|append|appends|appending|"
+    r"insert|inserts|inserting)\b[^\n]{0,160}\b(?:to|in))\s+`?"
+    r"Pending_Adversarial_Reviews\.md\b",
+    re.IGNORECASE,
+)
 ACTIVE_REVIEW_FILE_AS_DURABLE_RECORD = re.compile(
     rf"\b(?:durable|canonical|authoritative)\b[^\n]{{0,240}}"
     rf"\b(?:per-review\s+)?(?:output|transcript|markdown)\s+files?\b[^\n]{{0,240}}"
@@ -280,6 +305,22 @@ def root_review_artifacts(root=None):
     )
 
 
+def review_storage_prose_files(root=None):
+    """Return canonical review prose plus every generated task-plan and Strategy.md slice.
+
+    The canonical files are the source of truth, but routines consume their generated slices
+    directly. Scanning both is intentional: a stale generated slice is executable until
+    regeneration, and a newly generated slice is covered without maintaining a second filename list.
+    """
+    root = Path(ROOT if root is None else root)
+    files = list(REVIEW_STORAGE_PROSE_FILES)
+    for derived_dir in ("strategy", "task_plan"):
+        directory = root / derived_dir
+        if directory.is_dir():
+            files.extend(str(path.relative_to(root)) for path in sorted(directory.glob("*.md")))
+    return tuple(dict.fromkeys(files))
+
+
 def check_adversarial_review_storage(errors):
     """Reject retired root transcripts and live prose that depends on them.
 
@@ -293,17 +334,16 @@ def check_adversarial_review_storage(errors):
             "is retired; store the durable body in events.adversarial_reviews and export on demand"
         )
 
-    for rel in REVIEW_STORAGE_PROSE_FILES:
+    for rel in review_storage_prose_files():
         path = os.path.join(ROOT, rel)
         if not os.path.exists(path):
             # Unit fixtures purposefully create only the document needed for their assertion.
             continue
         lines = read_text(path).split("\n")
         visible_lines = without_strikethrough(lines)
-        # Cadence YAML often wraps a long `writes:` list.  Reuse the ordinary soft-wrap matcher so
-        # `writes: [events...]` on one line and the retired filename on the next cannot bypass this
-        # guard.  Findings are keyed by their first physical line to avoid duplicate reports from the
-        # physical-line and joined-line units.
+        # Cadence YAML often wraps a long `writes:` list, and prose can soft-wrap a hand-off. Reuse
+        # the ordinary soft-wrap matcher so either form cannot bypass this guard. Findings are keyed
+        # by their first physical line to avoid duplicate reports from physical and joined-line units.
         reported = set()
         for i, _end_i, line in match_units(visible_lines, wrapped_lines=True):
             if (ACTIVE_REVIEW_FILE_WRITE.search(line)
@@ -315,13 +355,31 @@ def check_adversarial_review_storage(errors):
                         "Adversarial_Review_*.md transcript; write events.adversarial_reviews instead"
                     )
                     reported.add(key)
-            if ACTIVE_REVIEW_OUTPUT_PATH.search(line):
+            if (ACTIVE_REVIEW_OUTPUT_PATH.search(line)
+                    and not NEGATED_REVIEW_OUTPUT_PATH.search(line)):
                 key = ("output_path", i)
                 if key not in reported:
                     errors.append(
                         f"[adversarial_review_storage] {rel}:{i + 1}: active *_output_path hand-off "
                         "depends on a retired local transcript; hand off by review id/cycle/role in "
                         "state.adversarial_reviews_current instead"
+                    )
+                    reported.add(key)
+            if ACTIVE_REVIEW_FILE_HANDOFF.search(line):
+                key = ("file_handoff", i)
+                if key not in reported:
+                    errors.append(
+                        f"[adversarial_review_storage] {rel}:{i + 1}: active local transcript "
+                        "file hand-off depends on a retired Markdown copy; hand off by review "
+                        "id/cycle/role in state.adversarial_reviews_current instead"
+                    )
+                    reported.add(key)
+            if ACTIVE_RETIRED_REVIEW_QUEUE.search(line):
+                key = ("retired_queue", i)
+                if key not in reported:
+                    errors.append(
+                        f"[adversarial_review_storage] {rel}:{i + 1}: active use of retired "
+                        "Pending_Adversarial_Reviews.md; use events.queue_events / state.open_queue instead"
                     )
                     reported.add(key)
             if ACTIVE_REVIEW_FILE_AS_DURABLE_RECORD.search(line):

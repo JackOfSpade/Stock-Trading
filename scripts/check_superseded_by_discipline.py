@@ -81,16 +81,23 @@ GUARDED_TABLES = {
 
 # CHECK 2 — the inverted predicate, which is NEVER correct for either table.
 #
-# `superseded_by IS NULL` selects the rows NOBODY has corrected PLUS the obsolete rows, and DROPS every
-# correction row (whose superseded_by is populated by definition). It is backwards by construction, so
-# unlike the read-position check below this one needs no allowlist: there is no legitimate use.
+# A WHERE/AND/OR predicate on `superseded_by IS NULL` selects the rows NOBODY has corrected PLUS the
+# obsolete rows, and DROPS every correction row (whose superseded_by is populated by definition). It is
+# backwards by construction, so unlike the read-position check below this one needs no allowlist.
+#
+# The predicate introducer is material: stored-procedure control flow legitimately needs `IF
+# p_superseded_by IS NULL THEN` to distinguish a normal append from a correction.  That is not a row
+# filter and must not make this checker red.
 #
 # This is not theoretical. state.go_without_order carried it in its canonical definition
 # (bigquery/105:215) from 2026-07-25 until 2026-08-06, copied forward verbatim from bigquery/18:223
 # during a redefinition that was about something else entirely. It read clean only because no GO
 # decision had yet been corrected inside its 2-to-9-day window. bigquery/122:43 warns against exactly
 # this form in prose; prose did not stop it, so this does.
-INVERTED_PREDICATE = re.compile(r"superseded_by\s+IS\s+NULL", re.IGNORECASE)
+INVERTED_PREDICATE = re.compile(
+    r"\b(?:WHERE|AND|OR)\s+(?:[A-Za-z_][A-Za-z0-9_]*\.)?superseded_by\s+IS\s+NULL\b",
+    re.IGNORECASE,
+)
 
 # ALLOWLIST pseudo-object name for statements that live outside any CREATE (migrations, backfills).
 FILE_LEVEL = "<file-level statements>"
@@ -161,6 +168,10 @@ ALLOWLIST = {
         "Its outer duplicate-guard NOT EXISTS deliberately tests the RAW table: refusing to insert a "
         "second referee_gemini row when ANY referee row exists (superseded or not) is strictly more "
         "conservative than testing the current view, and this procedure must never double-write.",
+    ("146_adversarial_review_writer_serialization.sql", "ops.sp_write_adversarial_review"):
+        "Its correction branch must inspect the exact physical target named by p_superseded_by and "
+        "prove every carried review field matches before appending. The current view intentionally "
+        "hides that target, so it cannot validate correction identity or preserve immutable metadata.",
     # ---- events.decision_log (bigquery/144). Audited 2026-08-06; this population is genuinely
     # HETEROGENEOUS, unlike adversarial_reviews. Forcing these onto the filtered view would break a
     # dead-man's switch and a row-count parity check, so decision_log gets an allowlist rather than

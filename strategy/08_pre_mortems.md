@@ -15,8 +15,8 @@ Per `Experiment_Parameters.md`, a completed pre-mortem is required before any st
 - "sub-step A" / "Sub-step A" → M1a routine (strategy-blind regime scoring)
 - "sub-step B" / "Sub-step B" → M1b routine (strategy-mapping)
 - "Session 1" (in divergence-review context) → M1b output file (already produced; non-adversarial input)
-- "Session 2" / "Attacker (incognito)" → Attacker routine (file-handoff via `Adversarial_Review_<id>_attacker.md`)
-- "Session 3" / "Judge (incognito)" → Orchestrator routine (file-handoff)
+- "Session 2" / "Attacker (incognito)" → Attacker routine (BigQuery transcript keyed by review id, cycle number, and role)
+- "Session 3" / "Judge (incognito)" → Orchestrator routine (reads that exact current attacker row)
 - "Session 4" / "Theater auditor (incognito)" → theater-check flag emitted by the Orchestrator routine; the standalone theater-auditor stage was not preserved in migration scope (orchestrator self-certifies). See migration entry for accepted-risk rationale and the option to add a separate Theater Auditor routine in a future revision if self-certification proves inadequate.
 - "incognito session" (generally) → routine with fresh context and prompt-discipline file-read scoping
 

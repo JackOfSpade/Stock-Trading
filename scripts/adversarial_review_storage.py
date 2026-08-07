@@ -6,8 +6,9 @@ small operational affordances that the former root-level ``Adversarial_Review_*.
 
 * ``export`` retrieves one exact current review (review id, role, and cycle number) to stdout, or to
   an explicitly named new file.
-* ``audit`` compares every tracked *root-level* legacy review file against its exact current BigQuery
-  row using the id/cycle metadata inside the file and its role in the filename.
+* ``audit`` compares every tracked *root-level* legacy review file (or an explicit recovered file)
+  against its exact current BigQuery row using the id/cycle metadata inside the file and its role in
+  the filename.
 * ``repair`` prepares (or, only with ``--apply``, appends) a complete replacement for mismatched
   legacy transcripts through ``ops.sp_write_adversarial_review``.
 
@@ -19,8 +20,10 @@ Examples:
   python scripts/adversarial_review_storage.py export \
       --review-id premortem-A-2026-a3 --role attacker --cycle-number 8
   python scripts/adversarial_review_storage.py audit
+  python scripts/adversarial_review_storage.py audit --file /safe/export/Adversarial_Review_x_attacker.md
   python scripts/adversarial_review_storage.py repair              # read-only plan
-  python scripts/adversarial_review_storage.py repair --apply      # append verified replacements
+  python scripts/adversarial_review_storage.py repair --file /safe/export/Adversarial_Review_x_attacker.md
+  python scripts/adversarial_review_storage.py repair --apply --file /safe/export/Adversarial_Review_x_attacker.md
 """
 import argparse
 from dataclasses import dataclass
@@ -152,11 +155,15 @@ WHERE event_id = @queue_event_id
   AND queue = 'PENDING_REVIEW'
   AND item_key = @review_id
   AND status = @status
+  AND event_ts <= @review_event_ts
+  AND COALESCE(SAFE_CAST(JSON_VALUE(payload, '$.cycle_number') AS INT64), 1) = @cycle_number
 """.strip()
             parameters = [
                 self._scalar("queue_event_id", "STRING", existing),
                 self._scalar("review_id", "STRING", key.review_id),
                 self._scalar("status", "STRING", status),
+                self._scalar("review_event_ts", "TIMESTAMP", row["event_ts"]),
+                self._scalar("cycle_number", "INT64", key.cycle_number),
             ]
         else:
             # Legacy rows predate queue_event_id. Queue state is latest-wins, so select only the
@@ -192,12 +199,17 @@ WHERE event_ts = (SELECT MAX(event_ts) FROM candidates)
         return rows[0]["event_id"]
 
     def append_replacement(self, row, key, body_md, expected_sha256, queue_event_id):
-        """Call migration 145's append-only writer with typed parameters, never SQL literals."""
+        """Call the canonical migration-146 append-only writer with typed parameters, never SQL literals."""
         weaknesses = row["weaknesses"]
         if weaknesses is not None:
             if isinstance(weaknesses, str):
                 weaknesses = json.loads(weaknesses)
-            weaknesses = json.dumps(weaknesses, ensure_ascii=False, separators=(",", ":"))
+            # JSON query parameters take a Python JSON value.  Passing json.dumps(...) here would
+            # bind an object/array as a JSON *string*, silently changing the column's type on repair.
+            try:
+                json.dumps(weaknesses, ensure_ascii=False, separators=(",", ":"))
+            except (TypeError, ValueError) as exc:
+                raise ValueError("weaknesses is not JSON-serializable") from exc
         sql = f"""
 CALL `{self.project}.ops.sp_write_adversarial_review`(
   @p_review_id, @p_review_type, @p_strategy, @p_role, @p_review_date, @p_cycle_number,
@@ -284,7 +296,10 @@ def parse_legacy_review(path):
     match = FILENAME.fullmatch(path.name)
     if not match:
         raise ValueError("filename must be Adversarial_Review_<id>_<attacker|orchestrator>.md")
-    text = path.read_text(encoding="utf-8")
+    # Path.read_text() uses universal-newline translation, which would turn a canonical CRLF body
+    # into LF before its audit hash or repair write.  A decoded valid UTF-8 string round-trips to
+    # precisely these bytes, including CRLF and a UTF-8 BOM.
+    text = path.read_bytes().decode("utf-8")
     fields = {}
     for metadata in METADATA.finditer(text):
         name, value = metadata.group("name"), metadata.group("value")
@@ -392,7 +407,7 @@ def _body_matches_local(row, local_sha256, local_bytes):
 
 
 def _postwrite_matches_local(row, local_sha256, local_bytes):
-    """The stricter migration-145 verification required only for a newly appended replacement."""
+    """The stricter migration-146 verification required only for a newly appended replacement."""
     return (
         _body_matches_local(row, local_sha256, local_bytes)
         and row["content_sha256"] is not None
@@ -449,7 +464,21 @@ def repair_file(path, warehouse, apply=False):
 
 
 def repair_files(paths, warehouse, apply=False):
-    return [repair_file(path, warehouse, apply) for path in paths]
+    """Repair files, permitting append-only apply for exactly one target.
+
+    BigQuery cannot roll back an already committed append, and state can change after a preflight.
+    A multi-file apply could therefore still leave earlier writes committed when a later target
+    fails.  Keep multi-file dry-runs useful, but require one target per ``--apply`` invocation.
+    """
+    paths = list(paths)
+    if not apply:
+        return [repair_file(path, warehouse, apply=False) for path in paths]
+    if len(paths) != 1:
+        return [
+            RepairResult(path, None, "ERROR", "--apply requires exactly one --file target; run a multi-file dry-run first")
+            for path in paths
+        ]
+    return [repair_file(paths[0], warehouse, apply=True)]
 
 
 def _print_audit_result(result):
@@ -468,10 +497,17 @@ def _print_repair_result(result):
         print(f"  replacement_event_id={result.replacement_event_id}")
 
 
-def _write_new_file(path, body):
+def _write_new_file(path, body, root=ROOT):
     path = Path(path)
     if not path.parent.is_dir():
         raise ValueError(f"output directory does not exist: {path.parent}")
+    resolved_path = path.resolve(strict=False)
+    resolved_root = Path(root).resolve(strict=False)
+    if resolved_path.parent == resolved_root and FILENAME.fullmatch(resolved_path.name):
+        raise ValueError(
+            "refusing to recreate a retired root Adversarial_Review_*.md transcript; "
+            "choose an explicit non-root output directory"
+        )
     # Exclusive create is deliberate: an export command must not clobber a user file or a legacy copy.
     with path.open("x", encoding="utf-8", newline="") as handle:
         handle.write(body)
@@ -486,11 +522,13 @@ def main(argv=None):
     export.add_argument("--role", required=True)
     export.add_argument("--cycle-number", required=True, type=int)
     export.add_argument("--output", type=Path, help="new file to create; stdout when omitted")
-    commands.add_parser("audit", help="hash-audit tracked root Adversarial_Review_*.md files")
+    audit = commands.add_parser("audit", help="hash-audit tracked root or explicit legacy review files")
+    audit.add_argument("--file", action="append", type=Path,
+                       help="legacy file to audit (repeatable; use after retirement/recovery)")
     repair = commands.add_parser("repair", help="dry-run or append full-body corrections for legacy transcript mismatches")
     repair.add_argument("--file", action="append", type=Path,
-                        help="legacy file to repair (repeatable; default is every tracked root review file)")
-    repair.add_argument("--apply", action="store_true", help="append replacements; without this flag repair is read-only")
+                        help="legacy file to repair (repeatable for dry-run; default is every tracked root review file)")
+    repair.add_argument("--apply", action="store_true", help="append one replacement; without this flag repair is read-only")
     args = parser.parse_args(argv)
 
     try:
@@ -505,6 +543,12 @@ def main(argv=None):
 
         if args.command == "repair":
             paths = args.file if args.file else tracked_root_review_files()
+            if not paths:
+                print("REPAIR: no tracked root Adversarial_Review_*.md files; supply --file for a recovered legacy transcript")
+                return 0
+            if args.apply and len(paths) != 1:
+                print("ERROR: repair --apply requires exactly one --file target; run a multi-file dry-run first", file=sys.stderr)
+                return 2
             warehouse = GoogleBigQueryWarehouse(args.project)
             results = repair_files(paths, warehouse, args.apply)
             for result in results:
@@ -513,9 +557,10 @@ def main(argv=None):
             print(f"REPAIR: {len(results) - len(failures)} planned/applied/no-op, {len(failures)} error, {len(results)} total")
             return 1 if failures else 0
 
-        results = audit_tracked_files(project=args.project)
+        results = ([audit_file(path, args.project) for path in args.file]
+                   if args.file else audit_tracked_files(project=args.project))
         if not results:
-            print("AUDIT: no tracked root Adversarial_Review_*.md files")
+            print("AUDIT: no tracked root Adversarial_Review_*.md files; supply --file for a recovered legacy transcript")
             return 0
         for result in results:
             _print_audit_result(result)

@@ -125,6 +125,53 @@ def test_active_review_file_write_and_output_path_handoff_fail(tmp_path, monkeyp
     assert "Claude_Task_Plan.md:2: active *_output_path hand-off" in out
 
 
+def test_review_storage_guard_covers_canonical_and_generated_sources(tmp_path, monkeypatch, capsys):
+    rc = _run(tmp_path, monkeypatch,
+              [{"id": "safe", "files": ["Doc.md"], "require_regex": "safe"}],
+              {
+                  "Doc.md": "safe\n",
+                  "Experiment_Parameters.md": (
+                      "queue-driven via Pending_Adversarial_Reviews.md\n"
+                      "The Orchestrator reads the attacker output file.\n"
+                  ),
+                  "Strategy.md": "Written to Adversarial_Review_<id>_attacker.md.\n",
+                  "strategy/02_regime_router.md": (
+                      "The Orchestrator reads the attacker output file.\n"
+                  ),
+                  "task_plan/AR_orc.md": "The Orchestrator reads the attacker file.\n",
+              })
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "Experiment_Parameters.md:1: active use of retired" in out
+    assert "Experiment_Parameters.md:2: active local transcript file hand-off" in out
+    assert "Strategy.md:1: active write" in out
+    assert "strategy/02_regime_router.md:1: active local transcript file hand-off" in out
+    assert "task_plan/AR_orc.md:1: active local transcript file hand-off" in out
+
+
+def test_negated_output_path_reference_is_allowed(tmp_path, monkeypatch, capsys):
+    rc = _run(tmp_path, monkeypatch,
+              [{"id": "safe", "files": ["Doc.md"], "require_regex": "safe"}],
+              {
+                  "Doc.md": "safe\n",
+                  "Experiment_Parameters.md": "Do not set attacker_output_path in the queue payload.\n",
+              })
+    assert rc == 0
+    assert "PROSE INVARIANTS: OK" in capsys.readouterr().out
+
+
+def test_shared_plan_exposes_the_full_positional_review_writer_contract():
+    plan = (Path(__file__).resolve().parents[1] / "Claude_Task_Plan.md").read_text(encoding="utf-8")
+    expected = (
+        "review_id`, `review_type`, `strategy`, `role`, `review_date`, `cycle_number`, "
+        "`verdict`, `theater_check`, `weaknesses`, `artifact_path`, `body_md`, "
+        "`expected_sha256`, `source_commit_sha`, `queue_event_id`, `superseded_by`"
+    )
+    assert "AR transcript writer — positional call contract" in plan
+    assert "CALL ops.sp_write_adversarial_review(" in plan
+    assert expected in plan
+
+
 def test_active_review_file_write_cannot_hide_in_a_wrapped_cadence_list(
         tmp_path, monkeypatch, capsys):
     rc = _run(tmp_path, monkeypatch,

@@ -28,6 +28,10 @@ ALTER TABLE `stock-trading-498512.events.adversarial_reviews`
 ALTER TABLE `stock-trading-498512.events.adversarial_reviews`
   SET OPTIONS(description='Canonical adversarial attacker/orchestrator/referee transcripts. APPEND-ONLY: never UPDATE/DELETE. New AR_att/AR_orc writes use ops.sp_write_adversarial_review, including a caller-computed SHA-256 checked against the exact stored UTF-8 body. Corrections are complete replacement rows whose superseded_by names the obsolete event_id; readers use state.adversarial_reviews_current.');
 
+-- SUPERSEDED LIVE by bigquery/146_adversarial_review_writer_serialization.sql — current single
+-- source of truth for this procedure. Kept here, unmodified, for DR-rebuild apply-in-order reference
+-- only. DO NOT re-apply this CREATE statement live in isolation: it lacks the singleton mutex,
+-- queue-provenance proof, correction metadata lock, referee correction path, and JSON-shape repair.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_write_adversarial_review`(
   p_review_id STRING,
   p_review_type STRING,

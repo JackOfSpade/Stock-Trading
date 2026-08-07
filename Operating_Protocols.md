@@ -304,7 +304,7 @@ older than three hours as the standard dead-run case before considering stale-mu
 
 **Canonical-current text:**
 
-The two drain-to-completion queues — `Pending_Analysis.md` (drained daily by D2) and `Pending_Adversarial_Reviews.md` (drained by the Adversarial Review routines) — are cleared **daily**, not on a retention window. Rationale: unlike the append-only `Decision_Log.md` (never read end-to-end by a routine; pruned weekly by W5), a queue is read **to completion** every day by its drainer, so a completed entry left in place is needlessly re-read each day.
+The two drain-to-completion queues — `PENDING_ANALYSIS` (drained daily by D2) and `PENDING_REVIEW` (drained by the Adversarial Review routines) — are cleared **daily**, not on a retention window. They are represented by latest-state rows in `state.open_queue` over append-only `events.queue_events`; a terminal row drops an item from the live view. Rationale: unlike the append-only decision history, a queue is read **to completion** every day by its drainer, so a completed entry left actionable would be needlessly re-read each day.
 
 Each day **D3 Calendar Hygiene** sweeps every entry at a terminal `status` (`complete`/`superseded`) out of its live queue into the queue's daily archive (`Archived_Analysis.md` / `Archived_Adversarial_Reviews.md`): the full block is appended (tagged with an `archived:` date) and then removed from the live file entirely — **full clear, no pointer line** (this differs from the Decision_Log archive, which leaves a pointer). The live queue retains only actionable entries (`pending`, plus the adversarial queue's in-flight `recommendation-complete` / `attacker-complete`) plus its header/schema preamble.
 
