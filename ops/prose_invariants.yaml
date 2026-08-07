@@ -24,6 +24,8 @@
 #                       "retired"/"there is no <file>" notes legitimately NAME the retired file).
 #   - `exempt_sections`: optional; markdown-heading substrings — a match under a heading containing one
 #                       of these is skipped.
+#   - `ignore_strikethrough`: optional; strips only `~~old prose~~` before `forbid_regex` matching, so
+#                       an active instruction on the same line remains visible to the guard.
 #   - `reason` / `source_of_truth` : printed on failure so the fix is self-evident.
 #
 # The `forbid_regex`es are deliberately tight to the retired IMPERATIVE phrasing (e.g. "in
@@ -32,6 +34,50 @@
 # Portfolio_Ledger.md to update") do not trip it and this file needs almost no exemptions.
 
 invariants:
+  # ---- Experiment Parameters rev 19 retired BOTH hard CaR envelopes (2026-08-05). The most
+  # dangerous recurrence is operative authoring/execution prose that silently reinstates the old
+  # 10%-per-name / 75%-deployed gates.  Historical descriptions are permitted ONLY when they
+  # explicitly say that the old rule is retired/superseded (or display it as struck-through
+  # text); a bare historical quote can otherwise be read as an operative instruction. ----
+  - id: retired_car_envelopes_not_operational
+    # This is deliberately a semantic family rather than an inventory of the last incident's
+    # sentences: CaR + old number + its relevant scope + binding vocabulary, in either order.
+    # It catches normal rephrasings such as "must not exceed 10%" and "deployed CaR capped at
+    # 75 percent" while leaving unrelated percentages alone.
+    files: [Experiment_Parameters.md, AI_Trading_Foundation.md, AI_DECISION_REDESIGN.md, Operating_Protocols.md, Strategy.md, Claude_Task_Plan.md, task_plan/D2.md, task_plan/SL2.md]
+    forbid_regex: '(?:(?=.*\b(?:CaR|Capital at Risk)\b)(?=.*\b(?:10\s*%|10\s+percent\b))(?=.*\b(?:per[- ](?:name|thesis|position)|single[- ]name|same[- ]name|aggregate)\b)(?=.*\b(?:hard\s*(?:CaR\s*)?envelope|cap(?:ped)?|bound(?:ed)?|ceiling|(?:must|may|shall)\s+(?:remain|be|stay|not\s+exceed)|no\s+more\s+than|at\s+most|maximum\s+(?:allowed|CaR|Capital at Risk|per[- ](?:name|thesis|position)|single[- ]name))\b).*|(?=.*\b(?:CaR|Capital at Risk)\b)(?=.*\b(?:75\s*%|75\s+percent\b))(?=.*\b(?:deployed|per[- ]strategy|total\s+(?:deployed\s+)?strategy)\b)(?=.*\b(?:hard\s*(?:CaR\s*)?envelope|cap(?:ped)?|bound(?:ed)?|ceiling|(?:must|may|shall)\s+(?:remain|be|stay|not\s+exceed)|no\s+more\s+than|at\s+most|maximum\s+(?:allowed|CaR|Capital at Risk|per[- ]strategy|deployed))\b).*|\b(?:bounded by (?:the )?current hard envelopes|(?:its|the) current hard envelopes|thesis-scaled CaR budgeting\s*/\s*hard-envelope control|risk envelopes may be re-valued but never removed|per-thesis short CaR is bounded by|C.s size is now an AI-chosen Capital-at-Risk budget under the|first\s+\d+\s+earnings/PDUFA structures are sized at (?:a )?(?:fixed )?\d+\s*% per structure|full-cap activation)\b)'
+    ignorecase: true
+    ignore_strikethrough: true
+    exempt_line_regex: '\b(?:retired|superseded|historical)\b'
+    reason: >
+      Experiment_Parameters.md rev 19 retired the per-name 10% and per-strategy-deployed 75% CaR
+      envelopes. New strategies, adds, and pre-mortem revisions must use the no-ceiling risk-budget
+      discipline: seven-factor recorded justification plus mandatory adversarial attack on size.
+    source_of_truth: Experiment_Parameters.md rev 19 §Position size (2026-08-05 owner directive)
+
+  # Narrative retirement markers above are legitimate, but they must never conceal a new live cap
+  # later on the same physical line.  This narrower present-tense rule deliberately has NO narrative
+  # exemption; only struck-through text is removed before it runs.
+  - id: active_numeric_car_caps_not_operational
+    files: [Experiment_Parameters.md, AI_Trading_Foundation.md, AI_DECISION_REDESIGN.md, Operating_Protocols.md, Strategy.md, Claude_Task_Plan.md, task_plan/D2.md, task_plan/SL2.md]
+    forbid_regex: '(?:\b(?:per[- ](?:name|thesis|position)|single[- ]name|same[- ]name|aggregate)\b[^\n]{0,160}\b(?:CaR|Capital at Risk)\b[^\n]{0,160}\b(?:(?:is|are|must|shall)\s+(?:capped|bounded)|(?:must|shall|may)\s+not\s+exceed|cannot\s+exceed|no\s+more\s+than|at\s+most)\b[^\n]{0,160}\b(?:10\s*%|10\s+percent\b)|\b(?:CaR|Capital at Risk)\b[^\n]{0,160}\b(?:(?:is|are|must|shall)\s+(?:capped|bounded)|(?:must|shall|may)\s+not\s+exceed|cannot\s+exceed|no\s+more\s+than|at\s+most)\b[^\n]{0,160}\b(?:10\s*%|10\s+percent\b)[^\n]{0,160}\b(?:per[- ](?:name|thesis|position)|single[- ]name|same[- ]name|aggregate)\b|\b(?:deployed|per[- ]strategy|total\s+(?:deployed\s+)?strategy)\b[^\n]{0,160}\b(?:CaR|Capital at Risk)\b[^\n]{0,160}\b(?:(?:is|are|must|shall)\s+(?:capped|bounded)|(?:must|shall|may)\s+not\s+exceed|cannot\s+exceed|no\s+more\s+than|at\s+most)\b[^\n]{0,160}\b(?:75\s*%|75\s+percent\b)|\b(?:CaR|Capital at Risk)\b[^\n]{0,160}\b(?:(?:is|are|must|shall)\s+(?:capped|bounded)|(?:must|shall|may)\s+not\s+exceed|cannot\s+exceed|no\s+more\s+than|at\s+most)\b[^\n]{0,160}\b(?:75\s*%|75\s+percent\b)[^\n]{0,160}\b(?:deployed|per[- ]strategy|total\s+(?:deployed\s+)?strategy)\b|\bbounded by (?:the )?hard envelopes\b|\benvelope-based magnitude-only mitigation applies\b|\bsiz(?:e|ing) toward[^\n]{0,120}\b10\s*%[^\n]{0,120}\bper[- ]name envelope\b|\bworst-case[^\n]{0,240}\b10\s*%[^\n]{0,240}\b5x increase\b)'
+    ignorecase: true
+    ignore_strikethrough: true
+    reason: >
+      An explicitly retired historical sentence must not shield a present-tense instruction that
+      reinstates the 10%-per-name or 75%-deployed CaR cap on the same line.
+    source_of_truth: Experiment_Parameters.md rev 19 §Position size (2026-08-05 owner directive)
+
+  - id: no_ceiling_sizing_doctrine_present
+    files: [Experiment_Parameters.md, AI_Trading_Foundation.md, AI_DECISION_REDESIGN.md, Operating_Protocols.md, Strategy.md, Claude_Task_Plan.md, task_plan/D2.md, task_plan/SL2.md]
+    require_regex: 'no numeric ceiling'
+    ignorecase: true
+    reason: >
+      Each canonical sizing/operating document must retain an explicit statement that rev 19 has no
+      numeric sizing ceiling; otherwise a future partial propagation can make the retired envelopes
+      appear current again while CI stays green.
+    source_of_truth: Experiment_Parameters.md rev 19 §Position size (2026-08-05 owner directive)
+
   # ---- Portfolio_Ledger.md is RETIRED (2026-06-06 cutover, §15). No routine writes/caches/edits it;
   # positions/perf/NAV live in state.current_positions / perf.* / analytics.* / state.open_orders. ----
   - id: portfolio_ledger_not_a_write_target

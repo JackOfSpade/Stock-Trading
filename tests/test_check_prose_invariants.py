@@ -8,7 +8,11 @@ and the exempt_line_regex / exempt_sections / nearest_heading branches have lite
 production (the live ops/prose_invariants.yaml uses none of them). These tests exercise every branch
 against tmp_path spec + fixture files (never the real files), and assert the exact printed contract.
 """
+from copy import deepcopy
+from pathlib import Path
+
 import yaml
+import pytest
 
 from conftest import load_module_from_path
 
@@ -27,6 +31,21 @@ def _run(tmp_path, monkeypatch, rules, files):
     monkeypatch.setattr(cpi, "SPEC", str(spec))
     monkeypatch.setattr(cpi, "ROOT", str(tmp_path))
     return cpi.main()
+
+
+def _actual_rules(*ids):
+    """Return copies of named production rules, so regression examples exercise their real regexes."""
+    spec = Path(__file__).resolve().parents[1] / "ops" / "prose_invariants.yaml"
+    rules = {rule["id"]: rule for rule in yaml.safe_load(spec.read_text(encoding="utf-8"))["invariants"]}
+    return [deepcopy(rules[rid]) for rid in ids]
+
+
+def _rev19_clean_files(rules):
+    """A minimally correct document for every target used by the selected Rev-19 rules."""
+    return {
+        rel: "The thesis budget has no numeric ceiling; size needs seven-factor justification.\n"
+        for rule in rules for rel in rule["files"]
+    }
 
 
 # ---- load_spec() / files_for() unit behavior --------------------------------------------------
@@ -233,6 +252,92 @@ def test_real_prose_invariants_spec_passes():
     # ops/prose_invariants.yaml must hold against the committed prose files (no monkeypatch — uses
     # the module's real SPEC/ROOT).
     assert cpi.main() == 0
+
+
+# ---- Rev 19 no-CaR-envelope regression rules ---------------------------------------------------
+
+def test_rev19_rule_covers_each_canonical_and_operational_source():
+    rule, active_numeric, doctrine = _actual_rules(
+        "retired_car_envelopes_not_operational",
+        "active_numeric_car_caps_not_operational",
+        "no_ceiling_sizing_doctrine_present",
+    )
+    expected = {
+        "Experiment_Parameters.md", "AI_Trading_Foundation.md", "AI_DECISION_REDESIGN.md",
+        "Operating_Protocols.md", "Strategy.md", "Claude_Task_Plan.md", "task_plan/D2.md",
+        "task_plan/SL2.md",
+    }
+    assert set(rule["files"]) == expected
+    assert set(active_numeric["files"]) == expected
+    assert set(doctrine["files"]) == expected
+
+
+def test_rev19_actual_rules_fail_when_correct_no_ceiling_text_coexists_with_a_reinstated_cap(
+        tmp_path, monkeypatch):
+    # Presence of the current phrase is insufficient: the alert recurred because a retired constraint
+    # remained operative in a document that otherwise described the new policy correctly.
+    rules = _actual_rules("retired_car_envelopes_not_operational",
+                          "no_ceiling_sizing_doctrine_present")
+    files = _rev19_clean_files(rules)
+    files["Experiment_Parameters.md"] += "Per-name CaR must not exceed 10% of strategy NAV.\n"
+    assert _run(tmp_path, monkeypatch, rules, files) == 1
+
+
+@pytest.mark.parametrize("rel, stale_instruction", [
+    ("AI_Trading_Foundation.md", "A single-name Capital at Risk budget is capped at 10 percent.\n"),
+    ("Operating_Protocols.md", "Total deployed strategy CaR must stay below 75%.\n"),
+    ("Claude_Task_Plan.md", "A new candidate is bounded by the current hard envelopes.\n"),
+])
+def test_rev19_actual_retired_envelope_rule_rejects_normal_rephrasings(
+        tmp_path, monkeypatch, rel, stale_instruction):
+    # Do not regress to an inventory of the last incident's exact sentences.
+    (rule,) = _actual_rules("retired_car_envelopes_not_operational")
+    files = _rev19_clean_files([rule])
+    files[rel] += stale_instruction
+    assert _run(tmp_path, monkeypatch, [rule], files) == 1
+
+
+def test_rev19_actual_retired_envelope_rule_allows_explicitly_retired_historical_text(
+        tmp_path, monkeypatch):
+    (rule,) = _actual_rules("retired_car_envelopes_not_operational")
+    files = _rev19_clean_files([rule])
+    files["Strategy.md"] = "~~Per-name CaR must not exceed 10% hard envelope~~ [RETIRED 2026-08-05].\n"
+    assert _run(tmp_path, monkeypatch, [rule], files) == 0
+
+
+def test_rev19_actual_rule_ignores_only_struck_text_not_a_live_cap_on_the_same_line(
+        tmp_path, monkeypatch):
+    (rule,) = _actual_rules("retired_car_envelopes_not_operational")
+    files = _rev19_clean_files([rule])
+    files["Strategy.md"] = "~~Per-name CaR must not exceed 10% hard envelope~~.\n"
+    assert _run(tmp_path, monkeypatch, [rule], files) == 0
+
+    files["Strategy.md"] = (
+        "~~The old per-name CaR cap was 10%~~. Per-name CaR is capped at 10%.\n"
+    )
+    assert _run(tmp_path, monkeypatch, [rule], files) == 1
+
+
+def test_rev19_active_cap_rule_is_not_bypassed_by_retirement_narrative_on_the_same_line(
+        tmp_path, monkeypatch):
+    (rule,) = _actual_rules("active_numeric_car_caps_not_operational")
+    files = _rev19_clean_files([rule])
+    files["Strategy.md"] = "Former envelope retired. Per-name CaR is capped at 10%.\n"
+    assert _run(tmp_path, monkeypatch, [rule], files) == 1
+
+
+@pytest.mark.parametrize("stale_instruction", [
+    "The former envelopes are retired. New theses remain bounded by the hard envelopes.\n",
+    "Historical policy was retired. Envelope-based magnitude-only mitigation applies to every thesis.\n",
+    "The old rule is superseded. Keep sizing toward the lower end of the 10% per-name envelope.\n",
+    "The envelope is historical. Worst-case loss is 10%, a 5x increase.\n",
+])
+def test_rev19_active_envelope_phrases_are_not_bypassed_by_retirement_words(
+        tmp_path, monkeypatch, stale_instruction):
+    (rule,) = _actual_rules("active_numeric_car_caps_not_operational")
+    files = _rev19_clean_files([rule])
+    files["Strategy.md"] = stale_instruction
+    assert _run(tmp_path, monkeypatch, [rule], files) == 1
 
 
 # ---- fence_mask() / nearest_heading() units (the fix, in isolation) ---------------------------

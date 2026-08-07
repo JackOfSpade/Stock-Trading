@@ -20,6 +20,8 @@ RULE SEMANTICS (ops/prose_invariants.yaml `invariants:` list):
   ignorecase        : optional bool; case-insensitive match.
   exempt_line_regex : optional; a line matching this is SKIPPED for forbid_regex (sanctioned passages —
                       the §15 map, dated changelog lines, explicit "retired"/"there is no <file>" notes).
+  ignore_strikethrough : optional bool; remove only `~~struck-through~~` spans before forbid matching.
+                      This preserves an active instruction elsewhere on the same physical line.
   exempt_sections   : optional list of markdown-heading substrings; a forbid match under a heading
                       containing one of them is skipped.
   reason / source_of_truth : printed on failure so the fix is self-evident.
@@ -50,6 +52,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SPEC = os.path.join(ROOT, "ops", "prose_invariants.yaml")
 
 HEADING = re.compile(r"^#{1,6}\s+(.*\S)")
+STRIKETHROUGH = re.compile(r"~~.*?~~")
 
 
 def load_spec():
@@ -93,6 +96,7 @@ def check_rule(rule, errors):
 
     exempt_line = re.compile(rule["exempt_line_regex"], flags) if rule.get("exempt_line_regex") else None
     exempt_sections = rule.get("exempt_sections") or []
+    ignore_strikethrough = rule.get("ignore_strikethrough", False)
 
     # Each rule matches one PHYSICAL LINE at a time (pat.search(ln) below over read().split("\n")),
     # so `^`/`$` already anchor to the line's ends and a cross-line regex is unsupported by design —
@@ -117,10 +121,11 @@ def check_rule(rule, errors):
         # exempt_sections (nearest_heading) and is computed once per file, lazily.
         in_fence = fence_mask(lines) if exempt_sections else None
         for i, ln in enumerate(lines):
-            m = pat.search(ln)
+            match_line = STRIKETHROUGH.sub("", ln) if ignore_strikethrough else ln
+            m = pat.search(match_line)
             if not m:
                 continue
-            if exempt_line and exempt_line.search(ln):
+            if exempt_line and exempt_line.search(match_line):
                 continue
             if exempt_sections:
                 head = nearest_heading(lines, i, in_fence)
