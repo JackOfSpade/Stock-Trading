@@ -1177,7 +1177,7 @@ do NOT dead-end this in chat (unmonitored): `CALL ops.sp_raise_alert('warning','
 **SEEDING A NEW STRATEGY (block still `[n/a]` — A/C/E on first deployment).** Seed via the **value-weighted daily
 method ONLY**: backfill `events.daily_marks` over the strategy's deployed days and let the engine compute
 `perf.strategy_daily` forward from inception. **Do NOT seed by sequentially chain-linking realized closed-trade
-returns** (`Π (1 + realized_pnl/cost_basis)`) — those trades are CONCURRENT, independently-funded ~2%-of-sleeve
+returns** (`Π (1 + realized_pnl/cost_basis)`) — those trades are CONCURRENT, independently funded sleeve-level
 bets, so chaining them as sequential reinvestment manufactures compounding that never occurred and compounds only
 the winners while open losers enter as a single drag. **That anti-pattern overstated Strategy B's 2026-06-04 seed
 to 1.1099/+11%; the validated GROSS value-weighted figure (the profitability metric) is ≈ 1.0005/+0.05%

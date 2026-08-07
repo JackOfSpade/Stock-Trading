@@ -51,6 +51,17 @@ def repo_copy(tmp_path, monkeypatch):
     shutil.copytree(REAL_STRATEGY_DIR, dst_root / "strategy")
     monkeypatch.setattr(rc, "ROSTER", str(dst_root / "strategy" / "roster.yaml"))
     monkeypatch.setattr(rc, "STRATEGY_DIR", str(dst_root / "strategy"))
+    # R-F's shared locked prose and combined pre-mortem source are distinct module-level paths, not
+    # inferred by the legacy spec_hash_inputs() map. Repoint both so a provenance test mutates only the
+    # copied fixture, never the real working tree.
+    monkeypatch.setattr(rc, "SHARED_LOCKED_OPERATIONAL_PROSE", tuple(
+        str(dst_root / "strategy" / name) for name in (
+            "00_preamble.md",
+            "01_shared_regime_vocabulary.md",
+            "02_regime_router.md",
+            "09_regime_scoring_strategy_blind_monthly.md",
+        )))
+    monkeypatch.setattr(rc, "PRE_MORTEMS", str(dst_root / "strategy" / "08_pre_mortems.md"))
 
     # top-level single files.
     shutil.copy(REAL_PATHS["STRATEGY_MD"], dst_root / "Strategy.md")
@@ -425,6 +436,98 @@ def test_spec_hash_mismatch_on_c_options_math_is_caught(repo_copy):
     txt = _read(p)
     _write(p, txt + "\n# regression: C's math module edited post spec-lock\n")
     assert rc.main() == 1
+
+
+def test_spec_hash_mismatch_on_shared_locked_operational_prose_is_caught(repo_copy):
+    # The shared preamble governs every frozen strategy but is not in any own strategy slice. Its absence
+    # from R-F was a provenance gap: a live doctrine edit could pass without touching any hash input.
+    p = rc.SHARED_LOCKED_OPERATIONAL_PROSE[0]
+    _write(p, _read(p) + "\n<!-- regression: shared locked operational prose changed -->\n")
+    assert rc.main() == 1
+
+
+def test_spec_hash_mismatch_on_shared_regime_router_slice_is_caught(repo_copy):
+    # This shared operative slice is outside every own strategy section, so it needs the same coverage
+    # as the preamble rather than relying on incidental strategy-slice changes.
+    p = next(path for path in rc.SHARED_LOCKED_OPERATIONAL_PROSE
+             if path.endswith("02_regime_router.md"))
+    _write(p, _read(p) + "\n<!-- regression: shared router machinery changed -->\n")
+    assert rc.main() == 1
+
+
+def test_spec_hash_mismatch_on_own_pre_mortem_is_caught(repo_copy):
+    # Append within A's H3-delimited pre-mortem body (before B's next H3). This must invalidate A's
+    # spec_hash even though strategy/03_strategy_a.md and its math module remain byte-identical.
+    p = rc.PRE_MORTEMS
+    txt = _read(p)
+    anchor = "### Pre-mortem: Strategy B"
+    assert anchor in txt
+    _write(p, txt.replace(anchor,
+                          "<!-- regression: A accepted pre-mortem changed -->\n\n" + anchor,
+                          1))
+    assert rc.main() == 1
+
+
+def test_spec_hash_mismatch_on_shared_router_pre_mortem_is_caught(repo_copy):
+    # The router pre-mortem governs every strategy's activation environment and therefore belongs in
+    # every digest, even though it appears before the per-strategy H3 sections.
+    p = rc.PRE_MORTEMS
+    txt = _read(p)
+    anchor = "### Pre-mortem: Strategy A"
+    assert anchor in txt
+    _write(p, txt.replace(anchor,
+                          "<!-- regression: shared router accepted pre-mortem changed -->\n\n" + anchor,
+                          1))
+    assert rc.main() == 1
+
+
+def test_spec_hash_pre_mortem_extraction_is_strategy_scoped_and_heading_based(repo_copy):
+    # Inserting text in B's segment must not perturb A's digest; using headings rather than line ranges
+    # makes this true even though both segments live in one generated file.
+    inputs = rc.spec_hash_inputs()
+    a_before = rc.compute_spec_hash("A", inputs=inputs)
+    b_before = rc.compute_spec_hash("B", inputs=inputs)
+    p = rc.PRE_MORTEMS
+    txt = _read(p)
+    anchor = "### Pre-mortem: Strategy C"
+    assert anchor in txt
+    _write(p, txt.replace(anchor,
+                          "<!-- regression: B pre-mortem insertion -->\n\n" + anchor,
+                          1))
+    assert rc.compute_spec_hash("A", inputs=inputs) == a_before
+    assert rc.compute_spec_hash("B", inputs=inputs) != b_before
+
+
+def test_spec_hash_pre_mortem_extraction_ignores_h3_examples_inside_code_fences(repo_copy):
+    # A fenced Markdown example that looks exactly like A's heading is content in the shared router
+    # pre-mortem, not a duplicate A section and not an early section boundary.
+    a_before = rc.pre_mortem_segment("A")
+    p = rc.PRE_MORTEMS
+    txt = _read(p)
+    anchor = "### Pre-mortem: Strategy A"
+    assert anchor in txt
+    fenced_example = "```markdown\n### Pre-mortem: Strategy A\nexample only\n```\n\n"
+    _write(p, txt.replace(anchor, fenced_example + anchor, 1))
+    assert rc.pre_mortem_segment("A") == a_before
+
+
+def test_spec_hash_malformed_pre_mortem_heading_is_a_clear_r_f_failure(repo_copy, capsys):
+    # A wrong heading depth must not turn into a silent whole-file hash or a traceback.
+    p = rc.PRE_MORTEMS
+    txt = _read(p)
+    old = "### Pre-mortem: Strategy A"
+    assert old in txt
+    _write(p, txt.replace(old, "#### Pre-mortem: Strategy A", 1))
+    assert rc.main() == 1
+    out = capsys.readouterr().out
+    assert "R-F" in out and "malformed required pre-mortem heading" in out
+
+
+def test_spec_hash_missing_pre_mortem_file_is_a_clear_r_f_failure(repo_copy, capsys):
+    os.remove(rc.PRE_MORTEMS)
+    assert rc.main() == 1
+    out = capsys.readouterr().out
+    assert "R-F" in out and "08_pre_mortems.md" in out and "is missing" in out
 
 
 def _first_spec_hash_line(txt):

@@ -20,8 +20,16 @@ RULE SEMANTICS (ops/prose_invariants.yaml `invariants:` list):
   ignorecase        : optional bool; case-insensitive match.
   exempt_line_regex : optional; a line matching this is SKIPPED for forbid_regex (sanctioned passages —
                       the §15 map, dated changelog lines, explicit "retired"/"there is no <file>" notes).
-  ignore_strikethrough : optional bool; remove only `~~struck-through~~` spans before forbid matching.
-                      This preserves an active instruction elsewhere on the same physical line.
+  ignore_strikethrough : optional bool; remove paired `~~struck-through~~` spans before matching.
+                      It applies to BOTH forbid and require rules, preserves line numbers, and supports
+                      valid multi-line Markdown spans.  An active instruction elsewhere on the same
+                      physical line remains visible to the guard.
+  match_paragraph   : optional bool; match consecutive non-blank Markdown lines as one normalized
+                      paragraph. Newlines are replaced with one space and failures report the first
+                      physical line. This closes soft-wrap bypasses while keeping line mode default.
+  match_wrapped_lines : optional bool; after checking physical lines, also check each pair of adjacent
+                      non-blank lines joined by one space. This is the preferred narrow defense against
+                      ordinary Markdown soft wrapping when unrelated clauses may share a long paragraph.
   exempt_sections   : optional list of markdown-heading substrings; a forbid match under a heading
                       containing one of them is skipped.
   reason / source_of_truth : printed on failure so the fix is self-evident.
@@ -52,7 +60,24 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SPEC = os.path.join(ROOT, "ops", "prose_invariants.yaml")
 
 HEADING = re.compile(r"^#{1,6}\s+(.*\S)")
-STRIKETHROUGH = re.compile(r"~~.*?~~")
+LIST_ITEM = re.compile(r"^\s*(?:[-+*]|\d+[.)])\s+")
+
+
+def wrapped_line_boundary(left, right):
+    """Whether two non-blank lines must remain separate match units.
+
+    A soft-wrapped continuation is safe to join, but sibling list items, headings, fenced-code
+    delimiters, blockquotes, and table rows are independent Markdown constructs.  Joining either
+    side of those constructs would synthesize an instruction that readers never see.
+    """
+    left = left.strip()
+    right = right.strip()
+    return (
+        bool(HEADING.match(left) or HEADING.match(right))
+        or bool(LIST_ITEM.match(right))
+        or left.startswith(("```", "~~~", ">", "|"))
+        or right.startswith(("```", "~~~", ">", "|"))
+    )
 
 
 def load_spec():
@@ -81,6 +106,69 @@ def nearest_heading(lines, idx, in_fence=None):
     return ""
 
 
+def without_strikethrough(lines):
+    """Return ``lines`` with paired Markdown ``~~...~~`` spans blanked out.
+
+    Markdown permits a strikethrough span to cross a physical line.  Matching each line with
+    ``re.sub(r"~~.*?~~", ...)`` therefore leaked the middle of a valid multi-line historical quote
+    into a forbid rule, and (worse) let a struck-only required doctrine satisfy a require rule.
+    This scanner removes only *paired* delimiters, preserves every newline/line index, and leaves an
+    unmatched delimiter visible as ordinary text instead of guessing that active prose is historical.
+    Blanking with spaces rather than joining text also prevents two live words separated by a struck
+    span from being accidentally concatenated into a new regex match.
+    """
+    text = "\n".join(lines)
+    visible = list(text)
+    cursor = 0
+    while True:
+        start = text.find("~~", cursor)
+        if start < 0:
+            break
+        end = text.find("~~", start + 2)
+        if end < 0:
+            break
+        for idx in range(start, end + 2):
+            if visible[idx] != "\n":
+                visible[idx] = " "
+        cursor = end + 2
+    return "".join(visible).split("\n")
+
+
+def match_units(lines, paragraph_mode=False, wrapped_lines=False):
+    """Yield ``(start_line_index, end_line_index, text)`` units for regex matching.
+
+    Line mode preserves the checker's original behavior. Paragraph mode joins consecutive non-blank
+    Markdown lines with a single space, so an editor's harmless soft wrap cannot split a retired
+    instruction into two individually-safe lines. The first physical index is retained for diagnostics
+    and heading attribution. Blank lines remain hard boundaries, preventing unrelated sections from
+    being combined into one synthetic match.
+    """
+    if not paragraph_mode:
+        for i, line in enumerate(lines):
+            yield i, i, line
+        if wrapped_lines:
+            for i in range(len(lines) - 1):
+                if (lines[i].strip() and lines[i + 1].strip()
+                        and not wrapped_line_boundary(lines[i], lines[i + 1])):
+                    yield i, i + 1, f"{lines[i].strip()} {lines[i + 1].strip()}"
+        return
+
+    start = None
+    parts = []
+    for i, line in enumerate(lines):
+        if line.strip():
+            if start is None:
+                start = i
+            parts.append(line.strip())
+            continue
+        if start is not None:
+            yield start, i - 1, " ".join(parts)
+            start = None
+            parts = []
+    if start is not None:
+        yield start, len(lines) - 1, " ".join(parts)
+
+
 def check_rule(rule, errors):
     rid = rule.get("id", "<unnamed>")
     has_forbid = "forbid_regex" in rule
@@ -97,10 +185,11 @@ def check_rule(rule, errors):
     exempt_line = re.compile(rule["exempt_line_regex"], flags) if rule.get("exempt_line_regex") else None
     exempt_sections = rule.get("exempt_sections") or []
     ignore_strikethrough = rule.get("ignore_strikethrough", False)
+    paragraph_mode = rule.get("match_paragraph", False)
+    wrapped_lines = rule.get("match_wrapped_lines", False)
 
-    # Each rule matches one PHYSICAL LINE at a time (pat.search(ln) below over read().split("\n")),
-    # so `^`/`$` already anchor to the line's ends and a cross-line regex is unsupported by design —
-    # no re.MULTILINE (it would be inert here and only imply cross-line matching that does not exist).
+    # Line matching remains the default. A rule that opts into match_paragraph normalizes consecutive
+    # non-blank lines first; neither mode uses re.MULTILINE, so ^/$ anchor to the complete match unit.
     pat = re.compile(rule["forbid_regex" if has_forbid else "require_regex"], flags)
 
     for rel in targets:
@@ -109,9 +198,11 @@ def check_rule(rule, errors):
             errors.append(f"[{rid}] {rel}: file not found (rule targets a missing file)")
             continue
         lines = read_text(path).split("\n")
+        match_lines = without_strikethrough(lines) if ignore_strikethrough else lines
+        units = list(match_units(match_lines, paragraph_mode, wrapped_lines))
 
         if has_require:
-            if not any(pat.search(ln) for ln in lines):
+            if not any(pat.search(text) for _, _, text in units):
                 errors.append(f"[{rid}] {rel}: REQUIRED phrasing not found — /{rule['require_regex']}/\n"
                               f"        reason: {(rule.get('reason') or '').strip()}\n"
                               f"        source of truth: {rule.get('source_of_truth', '?')}")
@@ -120,10 +211,14 @@ def check_rule(rule, errors):
         # forbid: report every non-exempt matching line. The fence mask is only needed for
         # exempt_sections (nearest_heading) and is computed once per file, lazily.
         in_fence = fence_mask(lines) if exempt_sections else None
-        for i, ln in enumerate(lines):
-            match_line = STRIKETHROUGH.sub("", ln) if ignore_strikethrough else ln
+        reported_lines = set()
+        for i, end_i, match_line in units:
             m = pat.search(match_line)
             if not m:
+                continue
+            # Physical-line units are yielded first. Do not duplicate the same finding when a later
+            # two-line soft-wrap window overlaps a line already reported on its own.
+            if any(line_i in reported_lines for line_i in range(i, end_i + 1)):
                 continue
             if exempt_line and exempt_line.search(match_line):
                 continue
@@ -136,6 +231,7 @@ def check_rule(rule, errors):
                 f"{m.group(0)!r}\n"
                 f"        reason: {(rule.get('reason') or '').strip()}\n"
                 f"        source of truth: {rule.get('source_of_truth', '?')}")
+            reported_lines.update(range(i, end_i + 1))
 
 
 def main():

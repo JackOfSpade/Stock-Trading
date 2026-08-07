@@ -128,14 +128,19 @@ CHECKS
        SKIPS cleanly, exactly as R-A/R-E skip a missing bigquery/35.
 
   R-F  SPEC-LOCK HASH AGREEMENT (added rev 2026-07-11, Item 28 self-improvement audit; hardened
-       2026-07-11 adversarial self-audit). Each strategy's LOCKED machinery — its strategy/0N_strategy_
-       <code>.md slice plus its corresponding math module(s) (strategy_math/strategy_<code>.py +
-       strategy_math/common.py for A/B/D/E — common.py is shared math EVERY one of those imports, so a
+       2026-07-11 adversarial self-audit; provenance coverage expanded 2026-08-07). Each strategy's
+       LOCKED machinery — the shared locked operational prose (strategy/00_preamble.md,
+       01_shared_regime_vocabulary.md, 02_regime_router.md, and 09_regime_scoring_strategy_blind_monthly.md),
+       the shared heading-delimited Regime router pre-mortem, its own strategy/0N_strategy_<code>.md slice,
+       its own heading-delimited pre-mortem segment in strategy/08_pre_mortems.md, and its corresponding
+       math module(s) (strategy_math/strategy_<code>.py
+       + strategy_math/common.py for A/B/D/E — common.py is shared math EVERY one of those imports, so a
        change there is spec drift too, not invisible just because no single strategy's own file changed;
        c_options_math.py alone for C, which is self-contained) — freezes at SHADOW entry (Experiment_
        Parameters.md immutability doctrine). strategy/roster.yaml's per-strategy `spec_hash` field is a
-       sha256 over exactly those files' bytes (.md then each module in SPEC_HASH_INPUTS order,
-       concatenated); this check recomputes it and FAILs if a SPEC_HASH_INPUTS-covered spec-locked
+       sha256 over those inputs' bytes in that order (the pre-mortem uses only the named strategy's
+       heading-delimited segment, not every strategy's accepted record), concatenated; this check
+       recomputes it and FAILs if a SPEC_HASH_INPUTS-covered spec-locked
        strategy (spec_locked_since is set) either has no spec_hash recorded, or its recorded spec_hash no
        longer matches the current files — meaning locked machinery drifted post-lock via a silent edit
        instead of a terminate-and-restart-as-new. A spec-locked strategy code NOT YET in SPEC_HASH_INPUTS
@@ -165,6 +170,7 @@ except ImportError:
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.textio import read_bytes, read_text, load_yaml  # noqa: E402
+from lib.md_fence import fence_mask  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROSTER = os.path.join(ROOT, "strategy", "roster.yaml")
@@ -189,6 +195,20 @@ DBT_RECONCILE = os.path.join(ROOT, "dbt", "tests", "assert_cash_flows_reconcile.
 DBT_SCHEMA_ACCEPTED_VALUES = os.path.join(ROOT, "dbt", "models", "analytics", "schema.yml")
 STRATEGY_MATH_DIR = os.path.join(ROOT, "strategy_math")
 C_OPTIONS_MATH = os.path.join(ROOT, "c_options_math.py")
+# R-F's shared locked operational prose.  These slices govern every strategy's immutable operating
+# environment but are not in any individual strategy slice. Keep this an explicit ordered tuple rather
+# than globbing strategy/*.md: the document-completion checklist, INDEX, and README are not frozen trading
+# machinery and must not create spurious hash churn.
+SHARED_LOCKED_OPERATIONAL_PROSE = (
+    os.path.join(STRATEGY_DIR, "00_preamble.md"),
+    os.path.join(STRATEGY_DIR, "01_shared_regime_vocabulary.md"),
+    os.path.join(STRATEGY_DIR, "02_regime_router.md"),
+    os.path.join(STRATEGY_DIR, "09_regime_scoring_strategy_blind_monthly.md"),
+)
+# R-F hashes only each strategy's own accepted pre-mortem segment from this generated slice.  A module
+# global (rather than an inline path) keeps it monkeypatchable in the fixture-copy tests, like
+# STRATEGY_DIR / C_OPTIONS_MATH.
+PRE_MORTEMS = os.path.join(STRATEGY_DIR, "08_pre_mortems.md")
 
 
 def _find_slice_by_heading(code):
@@ -209,8 +229,9 @@ def _find_slice_by_heading(code):
 
 def spec_hash_inputs():
     """R-F: strategy code -> (spec .md slice, [corresponding math module(s)]) whose bytes are hashed
-    into roster.yaml's spec_hash. A FUNCTION (not a frozen module-level dict) so it re-reads STRATEGY_DIR
-    / STRATEGY_MATH_DIR / C_OPTIONS_MATH on every call — those three are monkeypatchable module globals
+    into roster.yaml's spec_hash alongside SHARED_LOCKED_OPERATIONAL_PROSE and the code's own
+    heading-delimited pre-mortem segment. A FUNCTION (not a frozen module-level dict) so it re-reads
+    STRATEGY_DIR / STRATEGY_MATH_DIR / C_OPTIONS_MATH on every call — those three are monkeypatchable module globals
     (tests/test_roster_consistency.py's repo_copy fixture points them at a tmp_path copy), exactly like
     every other path this file's checks read; a frozen dict built once at import time from the real ROOT
     would silently ignore that monkeypatching and defeat fixture-based drift tests (BUG FIX, rev
@@ -223,7 +244,12 @@ def spec_hash_inputs():
     strategy_math/ is not scanned by heading, so renaming a math module IS a real drift event, not a
     tolerated renumber.
 
-    C predates strategy_math/ (its math already lived in c_options_math.py at repo root, self-contained,
+    The shared operating slices, shared router pre-mortem, and each strategy's own pre-mortem are
+    deliberately hashed by compute_spec_hash(), rather than copied into this mapping: the first group is
+    common to every covered code and the latter two are heading-delimited byte segments, not standalone
+    files. This avoids the prior provenance hole where an accepted pre-mortem or shared operational
+    machinery could drift without changing any spec_hash. C predates strategy_math/ (its math already
+    lived in c_options_math.py at repo root, self-contained,
     no shared-module dependency); A/B/D/E use the strategy_math/ package added in Item 28 and each
     imports strategy_math/common.py for shared math (OLS/correlation/day-count/sizing) — common.py is
     included in EVERY A/B/D/E hash (but not C's) so a change to that shared module is ALSO caught as spec
@@ -488,13 +514,97 @@ def slicemap_codes():
     return {c.upper() for c in SLICE_FILE_REF.findall(section)}
 
 
+PRE_MORTEM_HEADING = re.compile(r"^###\s+Pre-mortem:\s+(.+?)\s*$")
+H3_HEADING = re.compile(r"^###\s+")
+
+
+class SpecHashInputError(ValueError):
+    """A required R-F input is absent or structurally malformed."""
+
+
+def pre_mortem_section(label):
+    """Return the exact, heading-delimited `label` pre-mortem bytes for R-F.
+
+    A pre-mortem is an H3 section (`### Pre-mortem: <label>`) whose body runs through the next H3 or EOF.
+    Extracting by heading rather than by today's line numbers makes insertion of another segment or
+    ordinary edits to a preceding segment harmless, while still detecting a missing, duplicated,
+    wrongly-levelled, or empty target section as a clear R-F input failure.
+    """
+    if not os.path.exists(PRE_MORTEMS):
+        raise SpecHashInputError(
+            f"shared pre-mortem file {os.path.relpath(PRE_MORTEMS, ROOT)} is missing")
+    try:
+        raw = read_bytes(PRE_MORTEMS)
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise SpecHashInputError(
+            f"shared pre-mortem file {os.path.relpath(PRE_MORTEMS, ROOT)} is not valid UTF-8") from exc
+
+    # Work from raw-decoded text with line endings retained. This preserves the exact on-disk bytes
+    # when the selected segment is encoded again, and fence_mask prevents a `### Pre-mortem: ...`
+    # example inside a Markdown code fence from becoming a structural heading or section boundary.
+    chunks = text.splitlines(keepends=True)
+    lines = [chunk.rstrip("\r\n") for chunk in chunks]
+    in_fence = fence_mask(lines)
+    headings = []
+    h3_offsets = []
+    offset = 0
+    for i, (chunk, line) in enumerate(zip(chunks, lines)):
+        if not in_fence[i]:
+            if H3_HEADING.match(line):
+                h3_offsets.append(offset)
+            match = PRE_MORTEM_HEADING.match(line)
+            if match:
+                headings.append((match.group(1), offset))
+        offset += len(chunk)
+
+    matches = [start for found_label, start in headings if found_label == label]
+    expected = f"### Pre-mortem: {label}"
+    if not matches:
+        # A loose occurrence makes the most common structural rot (wrong heading depth, spelling, or
+        # trailing title text) actionable instead of looking like an unexplained absent pre-mortem.
+        loose = re.search(rf"^#+\s+Pre-mortem:\s+{re.escape(label)}\b.*$", text, re.M)
+        detail = "malformed" if loose else "missing"
+        raise SpecHashInputError(
+            f"{detail} required pre-mortem heading {expected!r} in "
+            f"{os.path.relpath(PRE_MORTEMS, ROOT)}")
+    if len(matches) != 1:
+        raise SpecHashInputError(
+            f"duplicate required pre-mortem heading {expected!r} in "
+            f"{os.path.relpath(PRE_MORTEMS, ROOT)}")
+
+    start = matches[0]
+    end = next((heading_start for heading_start in h3_offsets if heading_start > start), len(text))
+    segment = text[start:end]
+    # A heading followed only by whitespace is not an accepted pre-mortem and must not silently become
+    # a tiny yet valid hash input.
+    body = segment[segment.find("\n") + 1:] if "\n" in segment else ""
+    if not body.strip():
+        raise SpecHashInputError(
+            f"empty required pre-mortem segment {expected!r} in "
+            f"{os.path.relpath(PRE_MORTEMS, ROOT)}")
+    return segment.encode("utf-8")
+
+
+def pre_mortem_segment(code):
+    """Compatibility wrapper for `code`'s own R-F pre-mortem segment."""
+    return pre_mortem_section(f"Strategy {code}")
+
+
 def compute_spec_hash(code, inputs=None):
-    """sha256 over (.md slice bytes || each module's bytes, in spec_hash_inputs() list order) for a
-    spec_hash_inputs()-mapped code (R-F). `inputs` lets a caller pass an already-computed
-    spec_hash_inputs() dict to avoid recomputing it per-code in a loop; defaults to a fresh call."""
+    """sha256 over shared prose || router pre-mortem || own slice || own pre-mortem || modules (R-F).
+
+    `inputs` lets a caller pass an already-computed spec_hash_inputs() dict to avoid recomputing it
+    per-code in a loop; defaults to a fresh call.  pre_mortem_segment() intentionally runs for each code:
+    it provides clear structural errors instead of silently hashing the entire combined document.
+    """
     md_path, module_paths = (inputs or spec_hash_inputs())[code]
     h = hashlib.sha256()
+    for shared_path in SHARED_LOCKED_OPERATIONAL_PROSE:
+        h.update(read_bytes(shared_path))
+    h.update(pre_mortem_section("Regime router"))
     h.update(read_bytes(md_path))
+    h.update(pre_mortem_segment(code))
     for module_path in module_paths:
         h.update(read_bytes(module_path))
     return h.hexdigest()
@@ -812,14 +922,25 @@ def main():
                          f"math) and register the path there to close the gap.")
             continue
         md_path, module_paths = spec_inputs[code]
-        missing = [p for p in [md_path, *module_paths] if not os.path.exists(p)]
+        missing = [p for p in [*SHARED_LOCKED_OPERATIONAL_PROSE, md_path, *module_paths]
+                   if not os.path.exists(p)]
         if missing:
             errors.append(f"R-F: strategy {code!r} is spec_locked_since={s.get('spec_locked_since')} but its "
                           f"spec_hash input(s) {[os.path.relpath(p, ROOT) for p in missing]} are missing")
             continue
-        actual = compute_spec_hash(code, inputs=spec_inputs)
+        try:
+            actual = compute_spec_hash(code, inputs=spec_inputs)
+        except SpecHashInputError as exc:
+            errors.append(f"R-F: strategy {code!r} is spec_locked_since={s.get('spec_locked_since')} but its "
+                          f"{exc}")
+            continue
         declared = s.get("spec_hash")
-        inputs_desc = " + ".join(os.path.relpath(p, ROOT) for p in [md_path, *module_paths])
+        inputs_desc = " + ".join(
+            [*(os.path.relpath(p, ROOT) for p in SHARED_LOCKED_OPERATIONAL_PROSE),
+             f"{os.path.relpath(PRE_MORTEMS, ROOT)}: Pre-mortem Regime router",
+             os.path.relpath(md_path, ROOT),
+             f"{os.path.relpath(PRE_MORTEMS, ROOT)}: Pre-mortem Strategy {code}",
+             *(os.path.relpath(p, ROOT) for p in module_paths)])
         if not declared:
             errors.append(f"R-F: strategy {code!r} is spec_locked_since={s.get('spec_locked_since')} but "
                           f"roster.yaml has no spec_hash — add spec_hash: \"{actual}\"")
@@ -1001,8 +1122,9 @@ def main():
           f"agree across roster.yaml, the bigquery/35 seed, Strategy.md, the strategy/ slices, and the plan "
           f"slice-map; no bare roster literal or fixed /5 divisor in the live derived SQL; the dbt reconcile "
           f"test is count-agnostic; arsenal_rails' SQL constants agree with roster.yaml's rails block; every "
-          f"SPEC_HASH_INPUTS-covered spec-locked strategy's spec_hash agrees with its .md slice + math "
-          f"module(s); dbt schema.yml accepted_values(strategy) tests agree with the roster-active set; "
+          f"SPEC_HASH_INPUTS-covered spec-locked strategy's spec_hash agrees with shared operational prose, "
+          f"the shared router and own pre-mortem segments, its .md slice, and math module(s); dbt "
+          f"schema.yml accepted_values(strategy) tests agree with the roster-active set; "
           f"no stray events.strategy_candidates dataset-name reference; every roster-active strategy "
           f"declares a valid review_cadence; arsenal_regime_coverage's cell tokens equal the strategy/01 "
           f"shared regime vocabulary; every SHADOW/PAPER/PROBE/ADOPTED strategy has >=1 golden-scenario "

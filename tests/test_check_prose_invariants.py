@@ -92,6 +92,44 @@ def test_forbid_regex_no_match_passes(tmp_path, monkeypatch, capsys):
     assert "PROSE INVARIANTS: OK" in capsys.readouterr().out
 
 
+def test_match_paragraph_catches_soft_wrapped_forbid_and_reports_first_line(
+        tmp_path, monkeypatch, capsys):
+    rc = _run(tmp_path, monkeypatch,
+              [{"id": "wrapped", "files": ["Doc.md"], "forbid_regex": r"CaR.*10%",
+                "match_paragraph": True}],
+              {"Doc.md": "safe intro\n\nPer-name CaR must not exceed\n10% of NAV.\n"})
+    assert rc == 1
+    assert "Doc.md:3:" in capsys.readouterr().out
+
+
+def test_match_paragraph_keeps_blank_lines_as_hard_boundaries(tmp_path, monkeypatch):
+    rc = _run(tmp_path, monkeypatch,
+              [{"id": "wrapped", "files": ["Doc.md"], "forbid_regex": r"CaR.*10%",
+                "match_paragraph": True}],
+              {"Doc.md": "Per-name CaR must not exceed\n\n10% of NAV.\n"})
+    assert rc == 0
+
+
+def test_match_wrapped_lines_catches_adjacent_soft_wrap_and_reports_first_line(
+        tmp_path, monkeypatch, capsys):
+    rc = _run(tmp_path, monkeypatch,
+              [{"id": "wrapped", "files": ["Doc.md"], "forbid_regex": r"CaR.*10%",
+                "match_wrapped_lines": True}],
+              {"Doc.md": "Per-name CaR must not exceed\n10% of NAV.\n"})
+    assert rc == 1
+    assert "Doc.md:1:" in capsys.readouterr().out
+
+
+def test_match_wrapped_lines_keeps_blank_and_sibling_bullet_boundaries(tmp_path, monkeypatch):
+    rule = [{"id": "wrapped", "files": ["Doc.md"], "forbid_regex": r"CaR.*10%",
+             "match_wrapped_lines": True}]
+    assert _run(tmp_path, monkeypatch, rule,
+                {"Doc.md": "Per-name CaR must not exceed\n\n10% of NAV.\n"}) == 0
+    # These are distinct list items; joining them would synthesize a prohibited sentence.
+    assert _run(tmp_path, monkeypatch, rule,
+                {"Doc.md": "- CaR is defined in this glossary.\n- 10% is an unrelated example.\n"}) == 0
+
+
 def test_exempt_line_regex_suppresses_a_sanctioned_line(tmp_path, monkeypatch):
     # The line matches forbid_regex but ALSO matches exempt_line_regex (a §15 redirect-map line) -> skip.
     rc = _run(tmp_path, monkeypatch,
@@ -177,6 +215,34 @@ def test_require_regex_is_matched_per_physical_line_not_across_lines(tmp_path, m
     assert rc == 1  # "foo" and "bar" are on separate lines -> no single-line match -> require fails
 
 
+def test_ignore_strikethrough_applies_to_require_rules(tmp_path, monkeypatch):
+    # A retired rendering of a doctrine must not keep its load-bearing require rule green.
+    rule = [{"id": "doctrine", "files": ["Doc.md"], "require_regex": "no numeric ceiling",
+             "ignore_strikethrough": True}]
+    assert _run(tmp_path, monkeypatch, rule, {"Doc.md": "~~no numeric ceiling~~\n"}) == 1
+    assert _run(tmp_path, monkeypatch, rule,
+                {"Doc.md": "~~old words~~; current policy has no numeric ceiling.\n"}) == 0
+
+
+def test_ignore_strikethrough_handles_valid_multiline_spans_and_keeps_live_text(tmp_path, monkeypatch):
+    # The scanner preserves physical line positions while treating a paired, multi-line Markdown
+    # span as historical.  Text after its closing delimiter remains active and is still caught.
+    rule = [{"id": "no_cap", "files": ["Doc.md"], "forbid_regex": "CaR.*10%",
+             "ignore_strikethrough": True}]
+    assert _run(tmp_path, monkeypatch, rule,
+                {"Doc.md": "~~Per-name CaR\nremains capped at 10%~~\n"}) == 0
+    assert _run(tmp_path, monkeypatch, rule,
+                {"Doc.md": "~~old CaR 10%~~; live CaR is capped at 10%\n"}) == 1
+
+
+def test_unmatched_strikethrough_delimiter_is_not_silently_exempted(tmp_path, monkeypatch):
+    # Only a valid *paired* span is historical; treating an unmatched delimiter as a comment could
+    # conceal a live instruction after a typo.
+    rule = [{"id": "no_cap", "files": ["Doc.md"], "forbid_regex": "CaR.*10%",
+             "ignore_strikethrough": True}]
+    assert _run(tmp_path, monkeypatch, rule, {"Doc.md": "~~live CaR is capped at 10%\n"}) == 1
+
+
 # ---- rule-shape validation --------------------------------------------------------------------
 
 def test_rule_with_both_forbid_and_require_errors(tmp_path, monkeypatch, capsys):
@@ -257,9 +323,11 @@ def test_real_prose_invariants_spec_passes():
 # ---- Rev 19 no-CaR-envelope regression rules ---------------------------------------------------
 
 def test_rev19_rule_covers_each_canonical_and_operational_source():
-    rule, active_numeric, doctrine = _actual_rules(
+    rule, active_numeric, direct_numeric, legacy_sizing, doctrine = _actual_rules(
         "retired_car_envelopes_not_operational",
         "active_numeric_car_caps_not_operational",
+        "direct_or_symbolic_car_caps_not_operational",
+        "retired_fixed_two_percent_and_envelope_sizing_not_operational",
         "no_ceiling_sizing_doctrine_present",
     )
     expected = {
@@ -269,7 +337,11 @@ def test_rev19_rule_covers_each_canonical_and_operational_source():
     }
     assert set(rule["files"]) == expected
     assert set(active_numeric["files"]) == expected
+    assert set(direct_numeric["files"]) == expected
     assert set(doctrine["files"]) == expected
+    # D1 is a generated executable slice. Its source is Claude_Task_Plan.md and slice-sync verifies
+    # derivation; scanning it here additionally makes a stale regeneration fail the prose gate.
+    assert set(legacy_sizing["files"]) == expected | {"task_plan/D1.md"}
 
 
 def test_rev19_actual_rules_fail_when_correct_no_ceiling_text_coexists_with_a_reinstated_cap(
@@ -281,6 +353,14 @@ def test_rev19_actual_rules_fail_when_correct_no_ceiling_text_coexists_with_a_re
     files = _rev19_clean_files(rules)
     files["Experiment_Parameters.md"] += "Per-name CaR must not exceed 10% of strategy NAV.\n"
     assert _run(tmp_path, monkeypatch, rules, files) == 1
+
+
+def test_rev19_actual_doctrine_rule_does_not_accept_struck_only_current_policy(
+        tmp_path, monkeypatch):
+    (rule,) = _actual_rules("no_ceiling_sizing_doctrine_present")
+    files = _rev19_clean_files([rule])
+    files["Strategy.md"] = "~~no numeric ceiling~~\n"
+    assert _run(tmp_path, monkeypatch, [rule], files) == 1
 
 
 @pytest.mark.parametrize("rel, stale_instruction", [
@@ -323,6 +403,89 @@ def test_rev19_active_cap_rule_is_not_bypassed_by_retirement_narrative_on_the_sa
     (rule,) = _actual_rules("active_numeric_car_caps_not_operational")
     files = _rev19_clean_files([rule])
     files["Strategy.md"] = "Former envelope retired. Per-name CaR is capped at 10%.\n"
+    assert _run(tmp_path, monkeypatch, [rule], files) == 1
+
+
+@pytest.mark.parametrize("stale_instruction", [
+    "Per-name CaR ≤ 10% of NAV.\n",
+    "Deployed Capital-at-Risk <= 75 percent.\n",
+    "Per-name Capital-at-Risk allocation is 10%.\n",
+    "Per-strategy CaR remains limited to 75%.\n",
+    "Aggregate CaR continues in force at 10%.\n",
+    "The old policy is retired outright; per-name Capital-at-Risk <= 10%.\n",
+    "Current sizing has no numeric ceiling; per-name Capital-at-Risk allocation is 10%.\n",
+    "Current sizing has no numeric ceiling; per-name Capital-at-Risk has a hard 10% envelope.\n",
+    "Per-name CaR <= 10%; current sizing has no numeric ceiling.\n",
+    "Per-name CaR must not exceed\n10% of NAV.\n",
+    "Per-name Capital-at-Risk is capped at 10%.\n",
+    "Per-name Capital-at-Risk is limited to 10%.\n",
+    "Per-name risk budget is capped at 10%.\n",
+    "Per-name CaR is limited to 10%.\n",
+    "CaR <= 10% of strategy NAV per name.\n",
+    "Capital-at-Risk = 10% of strategy NAV per name.\n",
+])
+def test_rev19_direct_and_symbolic_cap_rule_rejects_compact_forms(
+        tmp_path, monkeypatch, stale_instruction):
+    (rule,) = _actual_rules("direct_or_symbolic_car_caps_not_operational")
+    files = _rev19_clean_files([rule])
+    files["Strategy.md"] += stale_instruction
+    assert _run(tmp_path, monkeypatch, [rule], files) == 1
+
+
+def test_rev19_direct_cap_rule_allows_clean_struck_history_but_not_mixed_live_line(
+        tmp_path, monkeypatch):
+    (rule,) = _actual_rules("direct_or_symbolic_car_caps_not_operational")
+    files = _rev19_clean_files([rule])
+    files["Strategy.md"] = "Historical example: ~~Per-name Capital-at-Risk allocation is 10%~~.\n"
+    assert _run(tmp_path, monkeypatch, [rule], files) == 0
+
+    files["Strategy.md"] = (
+        "~~The old Capital-at-Risk allocation was 10%~~; per-name allocation is 10%.\n"
+    )
+    assert _run(tmp_path, monkeypatch, [rule], files) == 1
+
+
+@pytest.mark.parametrize("stale_instruction", [
+    "Current sizing has no numeric ceiling; per-name Capital-at-Risk is capped at 10%.\n",
+    "Current sizing has no numeric ceiling; per-name Capital-at-Risk allocation is 10%.\n",
+    "Current sizing has no numeric ceiling; per-name Capital-at-Risk has a hard 10% envelope.\n",
+    "Budgets are unbounded, but deployed CaR <= 75%.\n",
+    "Per-name CaR <= 10%; current sizing has no numeric ceiling.\n",
+])
+def test_rev19_current_doctrine_cannot_exempt_a_same_line_live_cap(
+        tmp_path, monkeypatch, stale_instruction):
+    (rule,) = _actual_rules("no_ceiling_statement_cannot_hide_live_cap")
+    files = _rev19_clean_files([rule])
+    files["Strategy.md"] = stale_instruction
+    assert _run(tmp_path, monkeypatch, [rule], files) == 1
+
+
+@pytest.mark.parametrize("rel, stale_instruction", [
+    ("Claude_Task_Plan.md", "Open a fresh 2% tranche on the name.\n"),
+    ("Experiment_Parameters.md", "Deploy redistribution at its own 2%-per-trade pace.\n"),
+    ("Experiment_Parameters.md", "Deploy redistribution at its own 2%/trade pace.\n"),
+    ("Experiment_Parameters.md", "Position sizes are 2% of each strategy allocation.\n"),
+    ("Operating_Protocols.md", "Keep PROBE sizing within the standing envelopes.\n"),
+    ("Operating_Protocols.md", "Scale capital, never the 2% risk fraction.\n"),
+    ("Operating_Protocols.md", "$2,000 (so a 2% position is about $40).\n"),
+    ("Strategy.md", "Worst-case long loss is bounded at 2%.\n"),
+    ("Claude_Task_Plan.md", "Craft an executable defined-risk structure at 2% sizing.\n"),
+    ("task_plan/D1.md", "Open a fresh 2% tranche on the name.\n"),
+    ("Claude_Task_Plan.md", "A new 2% tranche is required for every add.\n"),
+    ("Strategy.md", "Each position is 2% of strategy NAV.\n"),
+    ("Operating_Protocols.md", "Maintain a 2 percent per-trade pace.\n"),
+    ("Claude_Task_Plan.md", "Use concurrent, independently-funded ~2%-of-sleeve bets.\n"),
+    ("Claude_Task_Plan.md", "Open a 2% tranche on every add.\n"),
+    ("Strategy.md", "Each position has a fixed 2% allocation.\n"),
+    ("Strategy.md", "Worst-case long loss is capped at 2 percent.\n"),
+    ("Claude_Task_Plan.md", "Craft a defined-risk structure with 2 percent sizing.\n"),
+    ("Operating_Protocols.md", "Maintain a 2 percent risk fraction.\n"),
+])
+def test_rev19_fixed_two_percent_and_generic_envelope_rule_rejects_audited_families(
+        tmp_path, monkeypatch, rel, stale_instruction):
+    (rule,) = _actual_rules("retired_fixed_two_percent_and_envelope_sizing_not_operational")
+    files = _rev19_clean_files([rule])
+    files[rel] += stale_instruction
     assert _run(tmp_path, monkeypatch, [rule], files) == 1
 
 

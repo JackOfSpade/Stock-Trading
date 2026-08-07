@@ -24,8 +24,14 @@
 #                       "retired"/"there is no <file>" notes legitimately NAME the retired file).
 #   - `exempt_sections`: optional; markdown-heading substrings — a match under a heading containing one
 #                       of these is skipped.
-#   - `ignore_strikethrough`: optional; strips only `~~old prose~~` before `forbid_regex` matching, so
-#                       an active instruction on the same line remains visible to the guard.
+#   - `ignore_strikethrough`: optional; strips paired `~~old prose~~` spans before either rule is matched,
+#                       including valid multi-line spans. An active instruction on the same line remains
+#                       visible; a struck-only required doctrine therefore does not satisfy a require rule.
+#   - `match_paragraph`: optional; joins consecutive non-blank Markdown lines with spaces before matching,
+#                       preserving the first physical line for diagnostics. Use it where soft wrapping must
+#                       not split an unsafe instruction across two individually-safe lines.
+#   - `match_wrapped_lines`: optional; checks adjacent non-blank physical-line pairs after ordinary line
+#                       matching. Prefer this narrower mode for soft-wrap safety in very long prose bullets.
 #   - `reason` / `source_of_truth` : printed on failure so the fix is self-evident.
 #
 # The `forbid_regex`es are deliberately tight to the retired IMPERATIVE phrasing (e.g. "in
@@ -36,19 +42,20 @@
 invariants:
   # ---- Experiment Parameters rev 19 retired BOTH hard CaR envelopes (2026-08-05). The most
   # dangerous recurrence is operative authoring/execution prose that silently reinstates the old
-  # 10%-per-name / 75%-deployed gates.  Historical descriptions are permitted ONLY when they
-  # explicitly say that the old rule is retired/superseded (or display it as struck-through
-  # text); a bare historical quote can otherwise be read as an operative instruction. ----
+  # 10%-per-name / 75%-deployed gates. Historical examples must be struck through: narrative words
+  # such as "retired", "superseded", or "historical" never exempt an otherwise live instruction. ----
   - id: retired_car_envelopes_not_operational
     # This is deliberately a semantic family rather than an inventory of the last incident's
     # sentences: CaR + old number + its relevant scope + binding vocabulary, in either order.
     # It catches normal rephrasings such as "must not exceed 10%" and "deployed CaR capped at
     # 75 percent" while leaving unrelated percentages alone.
     files: [Experiment_Parameters.md, AI_Trading_Foundation.md, AI_DECISION_REDESIGN.md, Operating_Protocols.md, Strategy.md, Claude_Task_Plan.md, task_plan/D2.md, task_plan/SL2.md]
-    forbid_regex: '(?:(?=.*\b(?:CaR|Capital at Risk)\b)(?=.*\b(?:10\s*%|10\s+percent\b))(?=.*\b(?:per[- ](?:name|thesis|position)|single[- ]name|same[- ]name|aggregate)\b)(?=.*\b(?:hard\s*(?:CaR\s*)?envelope|cap(?:ped)?|bound(?:ed)?|ceiling|(?:must|may|shall)\s+(?:remain|be|stay|not\s+exceed)|no\s+more\s+than|at\s+most|maximum\s+(?:allowed|CaR|Capital at Risk|per[- ](?:name|thesis|position)|single[- ]name))\b).*|(?=.*\b(?:CaR|Capital at Risk)\b)(?=.*\b(?:75\s*%|75\s+percent\b))(?=.*\b(?:deployed|per[- ]strategy|total\s+(?:deployed\s+)?strategy)\b)(?=.*\b(?:hard\s*(?:CaR\s*)?envelope|cap(?:ped)?|bound(?:ed)?|ceiling|(?:must|may|shall)\s+(?:remain|be|stay|not\s+exceed)|no\s+more\s+than|at\s+most|maximum\s+(?:allowed|CaR|Capital at Risk|per[- ]strategy|deployed))\b).*|\b(?:bounded by (?:the )?current hard envelopes|(?:its|the) current hard envelopes|thesis-scaled CaR budgeting\s*/\s*hard-envelope control|risk envelopes may be re-valued but never removed|per-thesis short CaR is bounded by|C.s size is now an AI-chosen Capital-at-Risk budget under the|first\s+\d+\s+earnings/PDUFA structures are sized at (?:a )?(?:fixed )?\d+\s*% per structure|full-cap activation)\b)'
+    forbid_regex: '^(?:(?=.*\b(?:CaR|Capital at Risk)\b)(?=.*\b(?:10\s*%|10\s+percent\b))(?=.*\b(?:per[- ](?:name|thesis|position)|single[- ]name|same[- ]name|aggregate)\b)(?=.*\b(?:hard\s*(?:CaR\s*)?envelope|cap(?:ped)?|bound(?:ed)?|ceiling|(?:must|may|shall)\s+(?:remain|be|stay|not\s+exceed)|no\s+more\s+than|at\s+most|maximum\s+(?:allowed|CaR|Capital at Risk|per[- ](?:name|thesis|position)|single[- ]name))\b).*|(?=.*\b(?:CaR|Capital at Risk)\b)(?=.*\b(?:75\s*%|75\s+percent\b))(?=.*\b(?:deployed|per[- ]strategy|total\s+(?:deployed\s+)?strategy)\b)(?=.*\b(?:hard\s*(?:CaR\s*)?envelope|cap(?:ped)?|bound(?:ed)?|ceiling|(?:must|may|shall)\s+(?:remain|be|stay|not\s+exceed)|no\s+more\s+than|at\s+most|maximum\s+(?:allowed|CaR|Capital at Risk|per[- ]strategy|deployed))\b).*|.*\b(?:bounded by (?:the )?current hard envelopes|(?:its|the) current hard envelopes|thesis-scaled CaR budgeting\s*/\s*hard-envelope control|risk envelopes may be re-valued but never removed|per-thesis short CaR is bounded by|C.s size is now an AI-chosen Capital-at-Risk budget under the|first\s+\d+\s+earnings/PDUFA structures are sized at (?:a )?(?:fixed )?\d+\s*% per structure|full-cap activation)\b)'
     ignorecase: true
     ignore_strikethrough: true
-    exempt_line_regex: '\b(?:retired|superseded|historical)\b'
+    # Exempt only clauses that state the CURRENT retirement outcome. Bare narrative labels such as
+    # "retired" / "historical" are intentionally insufficient: they were the original bypass.
+    exempt_line_regex: '\b(?:no numeric (?:sizing )?ceiling|unbounded|unconstrained numerically|retired outright|historical only|not current controls?|do not (?:resurrect|reinstate|restore)|removed entirely|no longer exists|no current (?:numeric|magnitude) bound|no version [^.]{0,100} survives|premises are now dead|outer layer no longer exists|bounded only by [^.]{0,100}strategy portfolio)\b'
     reason: >
       Experiment_Parameters.md rev 19 retired the per-name 10% and per-strategy-deployed 75% CaR
       envelopes. New strategies, adds, and pre-mortem revisions must use the no-ceiling risk-budget
@@ -63,15 +70,60 @@ invariants:
     forbid_regex: '(?:\b(?:per[- ](?:name|thesis|position)|single[- ]name|same[- ]name|aggregate)\b[^\n]{0,160}\b(?:CaR|Capital at Risk)\b[^\n]{0,160}\b(?:(?:is|are|must|shall)\s+(?:capped|bounded)|(?:must|shall|may)\s+not\s+exceed|cannot\s+exceed|no\s+more\s+than|at\s+most)\b[^\n]{0,160}\b(?:10\s*%|10\s+percent\b)|\b(?:CaR|Capital at Risk)\b[^\n]{0,160}\b(?:(?:is|are|must|shall)\s+(?:capped|bounded)|(?:must|shall|may)\s+not\s+exceed|cannot\s+exceed|no\s+more\s+than|at\s+most)\b[^\n]{0,160}\b(?:10\s*%|10\s+percent\b)[^\n]{0,160}\b(?:per[- ](?:name|thesis|position)|single[- ]name|same[- ]name|aggregate)\b|\b(?:deployed|per[- ]strategy|total\s+(?:deployed\s+)?strategy)\b[^\n]{0,160}\b(?:CaR|Capital at Risk)\b[^\n]{0,160}\b(?:(?:is|are|must|shall)\s+(?:capped|bounded)|(?:must|shall|may)\s+not\s+exceed|cannot\s+exceed|no\s+more\s+than|at\s+most)\b[^\n]{0,160}\b(?:75\s*%|75\s+percent\b)|\b(?:CaR|Capital at Risk)\b[^\n]{0,160}\b(?:(?:is|are|must|shall)\s+(?:capped|bounded)|(?:must|shall|may)\s+not\s+exceed|cannot\s+exceed|no\s+more\s+than|at\s+most)\b[^\n]{0,160}\b(?:75\s*%|75\s+percent\b)[^\n]{0,160}\b(?:deployed|per[- ]strategy|total\s+(?:deployed\s+)?strategy)\b|\bbounded by (?:the )?hard envelopes\b|\benvelope-based magnitude-only mitigation applies\b|\bsiz(?:e|ing) toward[^\n]{0,120}\b10\s*%[^\n]{0,120}\bper[- ]name envelope\b|\bworst-case[^\n]{0,240}\b10\s*%[^\n]{0,240}\b5x increase\b)'
     ignorecase: true
     ignore_strikethrough: true
+    match_wrapped_lines: true
     reason: >
       An explicitly retired historical sentence must not shield a present-tense instruction that
       reinstates the 10%-per-name or 75%-deployed CaR cap on the same line.
+    source_of_truth: Experiment_Parameters.md rev 19 §Position size (2026-08-05 owner directive)
+
+  # Catch compact/direct statements which do not contain every word used by the broader semantic
+  # rule above: symbolic inequalities, hyphenated Capital-at-Risk, direct allocation assignments,
+  # and "remains/continues in force/limit" variants.  This rule deliberately has no historical-line
+  # exemption: paired strikethrough is the only machine-readable way to preserve old examples.
+  - id: direct_or_symbolic_car_caps_not_operational
+    files: [Experiment_Parameters.md, AI_Trading_Foundation.md, AI_DECISION_REDESIGN.md, Operating_Protocols.md, Strategy.md, Claude_Task_Plan.md, task_plan/D2.md, task_plan/SL2.md]
+    forbid_regex: '(?:\b(?:per[- ](?:name|thesis|position)|single[- ]name|same[- ]name|aggregate)\s+(?:CaR|Capital(?:[- ]at[- ]Risk)|allocation|risk budget)\b.{0,100}?(?:(?:≤|<=|=|:)\s*|(?:is|are)\s+(?:(?:a\s+)?fixed\s+|(?:capped|bounded|limited)\s+(?:at|to|by)\s+|)|(?:remains?|continues?(?:\s+in\s+force)?)\s+(?:capped|bounded|limited)?\s*(?:at|to|by)?\s*|(?:must|shall|may)\s+(?:be\s+)?(?:capped|bounded|limited\s+to|not\s+exceed)\s*|cannot\s+exceed\s*|has\s+(?:a\s+)?hard\s+)(?:10\s*%|10\s+percent\b)(?:\s+envelope\b)?|\b(?:deployed|per[- ]strategy|total\s+(?:deployed\s+)?strategy)\s+(?:CaR|Capital(?:[- ]at[- ]Risk)|allocation|risk budget)\b.{0,100}?(?:(?:≤|<=|=|:)\s*|(?:is|are)\s+(?:(?:a\s+)?fixed\s+|(?:capped|bounded|limited)\s+(?:at|to|by)\s+|)|(?:remains?|continues?(?:\s+in\s+force)?)\s+(?:capped|bounded|limited)?\s*(?:at|to|by)?\s*|(?:must|shall|may)\s+(?:be\s+)?(?:capped|bounded|limited\s+to|not\s+exceed)\s*|cannot\s+exceed\s*|has\s+(?:a\s+)?hard\s+)(?:75\s*%|75\s+percent\b)(?:\s+envelope\b)?|\b(?:CaR|Capital(?:[- ]at[- ]Risk))\b\s*(?:≤|<=|=|:)\s*(?:10\s*%|10\s+percent\b)(?:[^\n]{0,100}\b(?:per[- ](?:name|thesis|position)|single[- ]name|same[- ]name|aggregate)\b)|\b(?:CaR|Capital(?:[- ]at[- ]Risk))\b\s*(?:≤|<=|=|:)\s*(?:75\s*%|75\s+percent\b)(?:[^\n]{0,100}\b(?:deployed|per[- ]strategy|total\s+(?:deployed\s+)?strategy)\b))'
+    ignorecase: true
+    ignore_strikethrough: true
+    match_wrapped_lines: true
+    reason: >
+      Rev 19 retired both numeric CaR envelopes, including compact symbolic and direct-assignment
+      formulations. No narrative retirement marker may turn an active cap into an allowed one.
+    source_of_truth: Experiment_Parameters.md rev 19 §Position size (2026-08-05 owner directive)
+
+  # Rev 18 retired the flat 2% position/tranche rule and rev 19 retired the envelope replacement.
+  # These are the high-signal live instruction families which can reinstate either mechanism without
+  # spelling out "CaR". task_plan/D1.md is scanned because it is the generated executable D1 slice;
+  # Claude_Task_Plan.md remains its source and the task-plan slice-sync check verifies derivation.
+  - id: retired_fixed_two_percent_and_envelope_sizing_not_operational
+    files: [Experiment_Parameters.md, AI_Trading_Foundation.md, AI_DECISION_REDESIGN.md, Operating_Protocols.md, Strategy.md, Claude_Task_Plan.md, task_plan/D1.md, task_plan/D2.md, task_plan/SL2.md]
+    forbid_regex: '(?:\b(?:open|add|use|deploy|allocate)\s+(?:a\s+)?(?:fresh|new|fixed\s+)?~?\s*2\s*(?:%|percent)(?!\w)[- ]?(?:of[- ](?:strategy[- ]NAV|portfolio|sleeve))?\s+tranche\b|\b(?:fresh|new)\s+(?:fixed\s+)?~?\s*2\s*(?:%|percent)(?!\w)[- ]?(?:of[- ](?:strategy[- ]NAV|portfolio|sleeve))?\s+tranche\b|\b2\s*(?:%|percent)(?:[-/]\s*trade|[- ]per[- ]trade)\s+pace\b|\b(?:each\s+)?(?:position|trade)(?:\s+sizes?)?\s+(?:is|are|remains?|continues?(?:\s+in\s+force)?|has|have|carries?)\s+(?:a\s+)?(?:fixed\s+)?~?\s*2\s*(?:%|percent)(?!\w)(?:\s+(?:allocation|of\s+(?:strategy[- ]NAV|portfolio|sleeve)))?|\b~?\s*2\s*(?:%|percent)(?!\w)[- ]of[- ](?:strategy[- ]NAV|portfolio|sleeve)\s+(?:bets?|positions?|tranches?)\b|\b(?:within|under|subject\s+to|bounded\s+by|comply\s+with|respect)\s+(?:the\s+)?(?:standing|current|hard)\s+(?:CaR\s+)?envelopes\b|\bworst[- ]case\s+(?:long\s+)?loss\b[^\n]{0,160}\b(?:is\s+)?(?:bounded|capped|limited)\s+(?:at|to|by)\s+(?:a\s+)?2\s*(?:%|percent)(?!\w)|\b(?:executable\s+)?defined[- ]risk\s+structure\b[^\n]{0,160}\b(?:at|with)\s+2\s*(?:%|percent)(?!\w)\s+sizing\b|\b(?:scale\s+capital\s*,?\s+never|maintain|keep)\s+(?:the\s+|a\s+)?2\s*(?:%|percent)(?!\w)\s+risk\s+fraction\b|\$\s*[\d,]+[^\n]{0,100}\b2\s*(?:%|percent)(?!\w)\s+position\b)'
+    ignorecase: true
+    ignore_strikethrough: true
+    match_wrapped_lines: true
+    reason: >
+      Fixed 2% sizing, add-tranche granularity, and standing hard-envelope sizing were retired.
+      Current sizing is an AI-chosen per-thesis budget with no numeric ceiling, recorded seven-factor
+      justification, and a mandatory adversarial attack on size.
+    source_of_truth: Experiment_Parameters.md rev 19 §Position size (2026-08-05 owner directive)
+
+  # The narrow historical exemptions above are safe only if a current-doctrine statement cannot
+  # conceal a contradictory live cap later on the same line. This rule has no exemptions.
+  - id: no_ceiling_statement_cannot_hide_live_cap
+    files: [Experiment_Parameters.md, AI_Trading_Foundation.md, AI_DECISION_REDESIGN.md, Operating_Protocols.md, Strategy.md, Claude_Task_Plan.md, task_plan/D2.md, task_plan/SL2.md]
+    forbid_regex: '^(?=.*\b(?:no numeric (?:sizing )?ceiling|unbounded|unconstrained numerically)\b).*(?:\b(?:per[- ](?:name|thesis|position)|single[- ]name|same[- ]name|aggregate)\s+(?:CaR|Capital(?:[- ]at[- ]Risk)|allocation|risk budget)\b.{0,100}?(?:(?:≤|<=|=|:)\s*|(?:is|are)\s+(?:(?:a\s+)?(?:fixed\s+)?|(?:capped|bounded|limited)\s+(?:at|to|by)\s+)|has\s+(?:a\s+)?hard\s+)(?:10\s*%|10\s+percent\b)(?:\s+envelope\b)?|\b(?:deployed|per[- ]strategy|total\s+(?:deployed\s+)?strategy)\s+(?:CaR|Capital(?:[- ]at[- ]Risk)|allocation|risk budget)\b.{0,100}?(?:(?:≤|<=|=|:)\s*|(?:is|are)\s+(?:(?:a\s+)?(?:fixed\s+)?|(?:capped|bounded|limited)\s+(?:at|to|by)\s+)|has\s+(?:a\s+)?hard\s+)(?:75\s*%|75\s+percent\b)(?:\s+envelope\b)?)'
+    ignorecase: true
+    ignore_strikethrough: true
+    reason: >
+      A line that states the current no-ceiling doctrine cannot also reinstate a numeric CaR cap.
+      Explicit historical retirement text is allowed; a contradictory live instruction is not.
     source_of_truth: Experiment_Parameters.md rev 19 §Position size (2026-08-05 owner directive)
 
   - id: no_ceiling_sizing_doctrine_present
     files: [Experiment_Parameters.md, AI_Trading_Foundation.md, AI_DECISION_REDESIGN.md, Operating_Protocols.md, Strategy.md, Claude_Task_Plan.md, task_plan/D2.md, task_plan/SL2.md]
     require_regex: 'no numeric ceiling'
     ignorecase: true
+    ignore_strikethrough: true
     reason: >
       Each canonical sizing/operating document must retain an explicit statement that rev 19 has no
       numeric sizing ceiling; otherwise a future partial propagation can make the retired envelopes
