@@ -400,8 +400,17 @@ routines:
     monitor_class: queue_driven           # NOT calendar-predictable -> excluded from cadence_expected_today (like AR)
     catchup_safe: false
     depends_on: []
-    writes: [Strategy.md, strategy/slices, events.queue_events, events.strategy_postmortems,
+    writes: [Strategy.md, strategy/*.md, events.queue_events, events.strategy_postmortems,
              events.strategy_lifecycle, events.decision_log, ops.alerts]
+             # strategy/*.md was `strategy/slices` until 2026-08-06 (OPS0 STEP 4f). No path named
+             # `strategy/slices` has ever existed -- the generated slices are strategy/00_preamble.md
+             # .. strategy/10_document_completion_checklist.md + INDEX.md (scripts/split_strategy.py).
+             # STEP 4f consumes these entries as GIT PATHSPECS, and a pathspec matching nothing is
+             # silently dropped, so SL2's slice output was invisible to the unlanded-run detector and
+             # its evidence rested on Strategy.md alone. MEASURED 2026-08-06: `git log origin/main --
+             # strategy/slices` returns nothing over all 1003 commits, while `-- strategy/*.md` returns
+             # SL2's real landings (3d4b151, 27a8853, ...). No false positive has fired yet only
+             # because SL2 regenerates slices FROM Strategy.md and so always touches both.
     expected_trigger:
       recurrence: custom_cron
       cron_utc: "5 1 * * *"
@@ -422,8 +431,9 @@ routines:
     monitor_class: queue_driven
     catchup_safe: false
     depends_on: [AR_orc]
-    writes: [strategy/roster.yaml, Strategy.md, strategy/slices, Claude_Task_Plan.md, ops.roster_change_log,
+    writes: [strategy/roster.yaml, Strategy.md, strategy/*.md, Claude_Task_Plan.md, ops.roster_change_log,
              events.strategy_lifecycle, events.decision_log, ops.alerts]
+             # strategy/*.md: same dead-pathspec fix as SL2 above (OPS0 STEP 4f, 2026-08-06).
     expected_trigger:
       recurrence: custom_cron
       cron_utc: "25 1 * * *"
