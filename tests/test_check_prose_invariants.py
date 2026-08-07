@@ -92,6 +92,86 @@ def test_forbid_regex_no_match_passes(tmp_path, monkeypatch, capsys):
     assert "PROSE INVARIANTS: OK" in capsys.readouterr().out
 
 
+# ---- adversarial-review transcript storage cutover ---------------------------------------------
+
+def test_root_adversarial_review_transcript_fails_even_when_untracked(tmp_path, monkeypatch, capsys):
+    # This is a filesystem guard, not a `git ls-files` guard: a generated root transcript is already
+    # a split-brain hand-off before someone accidentally stages it.
+    rc = _run(tmp_path, monkeypatch,
+              [{"id": "safe", "files": ["Doc.md"], "require_regex": "safe"}],
+              {"Doc.md": "safe\n", "Adversarial_Review_demo_attacker.md": "duplicate\n"})
+    assert rc == 1
+    assert "tracked or generated root review transcript" in capsys.readouterr().out
+
+
+def test_active_review_file_write_and_output_path_handoff_fail(tmp_path, monkeypatch, capsys):
+    rc = _run(tmp_path, monkeypatch,
+              [{"id": "safe", "files": ["Doc.md"], "require_regex": "safe"}],
+              {
+                  "Doc.md": "safe\n",
+                  "ops/cadence.yaml": (
+                      "writes: [events.adversarial_reviews, "
+                      "Adversarial_Review_*_attacker.md]\n"
+                  ),
+                  "Claude_Task_Plan.md": (
+                      "Write attack to Adversarial_Review_<id>_attacker.md.\n"
+                      "Set attacker_output_path after completion.\n"
+                  ),
+              })
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "ops/cadence.yaml:1: active write" in out
+    assert "Claude_Task_Plan.md:1: active write" in out
+    assert "Claude_Task_Plan.md:2: active *_output_path hand-off" in out
+
+
+def test_active_review_file_write_cannot_hide_in_a_wrapped_cadence_list(
+        tmp_path, monkeypatch, capsys):
+    rc = _run(tmp_path, monkeypatch,
+              [{"id": "safe", "files": ["Doc.md"], "require_regex": "safe"}],
+              {
+                  "Doc.md": "safe\n",
+                  "ops/cadence.yaml": (
+                      "writes: [events.adversarial_reviews, events.decision_log,\n"
+                      "         Adversarial_Review_*_orchestrator.md]\n"
+                  ),
+              })
+    assert rc == 1
+    assert "ops/cadence.yaml:1: active write" in capsys.readouterr().out
+
+
+def test_retired_review_history_and_blinding_reference_remain_allowed(tmp_path, monkeypatch):
+    # The filename alone remains legitimate in a redirect note or an explicit do-not-read rule.
+    rc = _run(tmp_path, monkeypatch,
+              [{"id": "safe", "files": ["Doc.md"], "require_regex": "safe"}],
+              {
+                  "Doc.md": "safe\n",
+                  "ops/cadence.yaml": "writes: [events.adversarial_reviews]\n",
+                  "Claude_Task_Plan.md": (
+                      "`Adversarial_Review_*.md` is retired; do not read it.\n"
+                      "Do not create `Adversarial_Review_<id>_attacker.md`.\n"
+                      "Read the attacker by review id, cycle number, and role from "
+                      "state.adversarial_reviews_current.\n"
+                      "~~Write to Adversarial_Review_<id>_attacker.md.~~\n"
+                  ),
+              })
+    assert rc == 0
+
+
+def test_durable_review_file_claim_fails(tmp_path, monkeypatch, capsys):
+    rc = _run(tmp_path, monkeypatch,
+              [{"id": "safe", "files": ["Doc.md"], "require_regex": "safe"}],
+              {
+                  "Doc.md": "safe\n",
+                  "Claude_Task_Plan.md": (
+                      "The durable record includes per-review output files "
+                      "(Adversarial_Review_<id>_attacker.md).\n"
+                  ),
+              })
+    assert rc == 1
+    assert "described as a durable record" in capsys.readouterr().out
+
+
 def test_match_paragraph_catches_soft_wrapped_forbid_and_reports_first_line(
         tmp_path, monkeypatch, capsys):
     rc = _run(tmp_path, monkeypatch,

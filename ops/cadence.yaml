@@ -358,7 +358,7 @@ routines:
     monitor_class: queue_driven           # NOT calendar-predictable -> excluded from cadence_expected_today
     catchup_safe: false
     depends_on: []
-    writes: [events.adversarial_reviews, Adversarial_Review_*_attacker.md]
+    writes: [events.adversarial_reviews]
     expected_trigger:
       recurrence: custom_cron
       cron_utc: "0 0 * * *"
@@ -371,7 +371,7 @@ routines:
     catchup_safe: false
     depends_on: [AR_att]
     writes: [events.adversarial_reviews, events.regime_events, events.decision_log, calendar:confirm_order,
-             events.strategy_lifecycle, ops.roster_change_log, Adversarial_Review_*_orchestrator.md]
+             events.strategy_lifecycle, ops.roster_change_log]
     expected_trigger:
       recurrence: custom_cron
       cron_utc: "35 0 * * *"

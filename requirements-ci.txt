@@ -13,6 +13,10 @@
 # --- always-on `test` job (offline) ---
 pytest>=8.0,<9.0
 pyyaml>=6.0,<7.0
+# scripts/adversarial_review_storage.py's parameterized append-only repair path. dbt-bigquery also
+# depends on this package, but list it directly because repair is an operator-facing CLI, not a dbt
+# implementation detail.
+google-cloud-bigquery>=3.0,<4.0
 
 # --- advisory `lint` job ---
 ruff>=0.6,<0.13

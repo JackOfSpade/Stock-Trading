@@ -11,6 +11,10 @@ bigquery/out/
 state_snapshots/
 ops/dashboard/index.html
 
+# Retired adversarial-review transcript duplicates. Canonical bodies are in
+# events.adversarial_reviews; use an explicit export if a Markdown copy is needed.
+/Adversarial_Review_*.md
+
 # Python bytecode
 __pycache__/
 *.pyc

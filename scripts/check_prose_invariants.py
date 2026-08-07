@@ -43,6 +43,7 @@ Usage:  python scripts/check_prose_invariants.py        # exit 0 if all invarian
 import os
 import re
 import sys
+from pathlib import Path
 
 try:
     import yaml  # noqa: F401 — kept only for this early, actionable failure message; the actual
@@ -61,6 +62,37 @@ SPEC = os.path.join(ROOT, "ops", "prose_invariants.yaml")
 
 HEADING = re.compile(r"^#{1,6}\s+(.*\S)")
 LIST_ITEM = re.compile(r"^\s*(?:[-+*]|\d+[.)])\s+")
+
+# Review transcripts migrated to BigQuery in the 2026-06-06 cutover.  A transcript at the
+# repository root is therefore neither source nor an approved hand-off medium: it is a duplicate
+# that can drift from events.adversarial_reviews.body_md and needlessly dirties every routine run.
+# Keep this guard here (rather than in the YAML rule set) because it also has to inspect the working
+# tree for generated files, not just committed prose.  `without_strikethrough()` remains the sole
+# historical-prose exemption: an active instruction cannot become harmless merely by calling the
+# retired mechanism "legacy" in the same sentence.
+REVIEW_ARTIFACT_GLOB = "Adversarial_Review_*.md"
+REVIEW_STORAGE_PROSE_FILES = ("ops/cadence.yaml", "Claude_Task_Plan.md")
+REVIEW_ARTIFACT_FILENAME = r"Adversarial_Review_[^`\s\])]*\.md"
+ACTIVE_REVIEW_FILE_WRITE = re.compile(
+    rf"(?:\b(?:write|writes|writing|append|appends|appending|save|saves|saving)\b[^\n]{{0,160}}"
+    rf"\b(?:to|as|in)\s+`?{REVIEW_ARTIFACT_FILENAME}"
+    rf"|\bwrites?\s*:\s*\[[^\n]{{0,240}}{REVIEW_ARTIFACT_FILENAME}"
+    rf"|\b(?:create|creates|creating|emit|emits|emitting|generate|generates|generating)\b"
+    rf"[^\n]{{0,80}}`?{REVIEW_ARTIFACT_FILENAME})",
+    re.IGNORECASE,
+)
+NEGATED_REVIEW_FILE_WRITE = re.compile(
+    rf"\b(?:do\s+not|never|must\s+not|shall\s+not)\b[^\n]{{0,80}}"
+    rf"\b(?:write|append|save|create|emit|generate)\b[^\n]{{0,160}}{REVIEW_ARTIFACT_FILENAME}",
+    re.IGNORECASE,
+)
+ACTIVE_REVIEW_OUTPUT_PATH = re.compile(r"\b(?:attacker|orchestrator)_output_path\b", re.IGNORECASE)
+ACTIVE_REVIEW_FILE_AS_DURABLE_RECORD = re.compile(
+    rf"\b(?:durable|canonical|authoritative)\b[^\n]{{0,240}}"
+    rf"\b(?:per-review\s+)?(?:output|transcript|markdown)\s+files?\b[^\n]{{0,240}}"
+    rf"{REVIEW_ARTIFACT_FILENAME}",
+    re.IGNORECASE,
+)
 
 
 def wrapped_line_boundary(left, right):
@@ -234,6 +266,74 @@ def check_rule(rule, errors):
             reported_lines.update(range(i, end_i + 1))
 
 
+def root_review_artifacts(root=None):
+    """Return root-level review transcript files, whether tracked or merely generated.
+
+    A filesystem check is intentional.  CI's checkout catches committed files; this also catches a
+    locally generated, ignored file before it becomes the next accidental `git add` or a hand-off
+    dependency.  Nested exports are deliberately outside this rule: the durable record is BigQuery
+    and any future export mechanism must choose an explicit non-root destination.
+    """
+    root = ROOT if root is None else root
+    return sorted(
+        path.name for path in Path(root).glob(REVIEW_ARTIFACT_GLOB) if path.is_file()
+    )
+
+
+def check_adversarial_review_storage(errors):
+    """Reject retired root transcripts and live prose that depends on them.
+
+    The scan is deliberately semantic instead of forbidding the bare filename.  Historical redirect
+    prose and strict-blinding instructions may legitimately name `Adversarial_Review_*.md`; active
+    writes, output-path hand-offs, and claims that the file is durable may not.
+    """
+    for name in root_review_artifacts():
+        errors.append(
+            f"[adversarial_review_storage] {name}: tracked or generated root review transcript "
+            "is retired; store the durable body in events.adversarial_reviews and export on demand"
+        )
+
+    for rel in REVIEW_STORAGE_PROSE_FILES:
+        path = os.path.join(ROOT, rel)
+        if not os.path.exists(path):
+            # Unit fixtures purposefully create only the document needed for their assertion.
+            continue
+        lines = read_text(path).split("\n")
+        visible_lines = without_strikethrough(lines)
+        # Cadence YAML often wraps a long `writes:` list.  Reuse the ordinary soft-wrap matcher so
+        # `writes: [events...]` on one line and the retired filename on the next cannot bypass this
+        # guard.  Findings are keyed by their first physical line to avoid duplicate reports from the
+        # physical-line and joined-line units.
+        reported = set()
+        for i, _end_i, line in match_units(visible_lines, wrapped_lines=True):
+            if (ACTIVE_REVIEW_FILE_WRITE.search(line)
+                    and not NEGATED_REVIEW_FILE_WRITE.search(line)):
+                key = ("write", i)
+                if key not in reported:
+                    errors.append(
+                        f"[adversarial_review_storage] {rel}:{i + 1}: active write of a retired "
+                        "Adversarial_Review_*.md transcript; write events.adversarial_reviews instead"
+                    )
+                    reported.add(key)
+            if ACTIVE_REVIEW_OUTPUT_PATH.search(line):
+                key = ("output_path", i)
+                if key not in reported:
+                    errors.append(
+                        f"[adversarial_review_storage] {rel}:{i + 1}: active *_output_path hand-off "
+                        "depends on a retired local transcript; hand off by review id/cycle/role in "
+                        "state.adversarial_reviews_current instead"
+                    )
+                    reported.add(key)
+            if ACTIVE_REVIEW_FILE_AS_DURABLE_RECORD.search(line):
+                key = ("durable", i)
+                if key not in reported:
+                    errors.append(
+                        f"[adversarial_review_storage] {rel}:{i + 1}: retired Markdown transcript "
+                        "is described as a durable record; events.adversarial_reviews is canonical"
+                    )
+                    reported.add(key)
+
+
 def main():
     rules = load_spec()
     if not rules:
@@ -250,6 +350,7 @@ def main():
         else:
             seen_ids.add(rid)
         check_rule(rule, errors)
+    check_adversarial_review_storage(errors)
 
     if errors:
         print("PROSE INVARIANTS: FAIL\n")
