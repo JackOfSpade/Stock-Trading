@@ -56,34 +56,6 @@
  * CHART: Apps Script Charts service PNG, inline via cid (Gmail supports no inline SVG / data-URI
  * images). Falls back to plain HTML bars if the build throws; the send must never fail over a chart.
  *
- * POST-SEND INBOX VERIFICATION (v9, 2026-08-08). alert_emailer.gs v8 (2026-08-07) found that a send
- * SUCCEEDING is not the same thing as a human ever seeing the result: all 50 measured Stock-Trading
- * threads from 2026-07-14 onward — including EVERY weekly delivery — carried labelIds TRASH+SENT and
- * not one carried INBOX, while every existing guard (the heartbeat, the delivery_canary's own
- * delivered+stamped assertion) stayed green throughout, because nothing ever looked at where the
- * message actually landed. alert_emailer.gs closed that gap for ITSELF with a post-send Gmail-search
- * probe (verifyInboxDelivery_) that escalates on a streak of 3 consecutive 2-hourly polls (~6h). This
- * file had no equivalent, even though its own mail is equally affected and was itself one of the
- * threads measured dark. Ported here as verifyWeeklyInboxDelivery_, called right after the send +
- * unread/label housekeeping below — but NOT with alert_emailer's 3-poll streak transplanted verbatim:
- * this script runs once a WEEK, not every 2 hours, so "3 consecutive" here would mean 3 consecutive
- * WEEKS (~3 weeks) of silent darkness before anyone is told — far too slow for exactly the channel
- * this feature exists to safeguard. Escalating on a single miss would be too noisy in the other
- * direction: the post-send probe's "found in:anywhere but not in:inbox" test already rules out a
- * lagging search index, but it cannot tell a genuine systemic Gmail-side misroute apart from the
- * operator having manually archived or deleted that one specific week's report by hand (a one-off
- * action, not a system fault) — and a weekly send gets no same-run retry the way a 2-hourly poll
- * effectively does. Two consecutive weekly sends both missing the Inbox is used instead: strong enough
- * to rule out a one-off manual action, fast enough to surface inside a fortnight rather than a month.
- * See WEEKLY_INBOX_FAIL_ESCALATE_AFTER below for the full reasoning and weeklyInboxEscalationDue_ (a
- * pure, unit-tested function — see test_pure_helpers.js) for the escalation-due decision itself. Raises
- * a DISTINCT category, weekly_report_not_reaching_inbox — not alert_emailer's alert_not_reaching_inbox
- * — so the two sources stay distinguishable in ops.alerts. Deliberately ntfy-only via
- * sp_raise_alert(_once) -> scripts/alert_relay.py, with NO direct-mail twin (emailing a human to tell
- * them their email is not arriving is self-defeating), and raised at 'warning', not 'critical', for the
- * same reason alert_emailer's v6/v8 escalations are: a critical counts toward
- * state.trading_enabled's blocking_criticals and would halt order staging over a mail-routing rule.
- *
  * SETUP (one time) — see ops/weekly_report/README.md. Deploy an update: re-paste this file, run
  * testReport(); no scope change since 2026-07 (bigquery + gmail.modify already granted).
  */
@@ -95,7 +67,7 @@ const SENDER_NAME  = 'Stock-Trading Bot';
 const LABEL_NAME   = 'Trading/Weekly';
 const SEND_HOUR    = 7;
 const SEND_WEEKDAY = ScriptApp.WeekDay.SUNDAY;
-const SCRIPT_VERSION = 'v9';                       // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep
+const SCRIPT_VERSION = 'v8';                       // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep
 const SUBJECT_LABEL = 'Deployed vs Benchmarks';    // Single source for this phrase across buildSubject_, the post-send GmailApp.search() match, and the HTML/plain-text banners below. Edit only here on a rename (2026-07-14 audit finding -- this already drifted once by hand across 4 sites during the 2026-07-13 VOO rename).
 
 // Fixed per-strategy identity colors (CVD-validated) — never reassigned by rank/presence. VOO is a
@@ -148,11 +120,6 @@ function sendWeeklyReport_() {
     }
   } catch (e) { Logger.log('Post-send thread housekeeping (unread/label) skipped: ' + e); }
 
-  // POST-SEND INBOX VERIFICATION (v9, 2026-08-08). sendEmail() returning without throwing proves Gmail
-  // ACCEPTED the message, not that it reached the Inbox. See verifyWeeklyInboxDelivery_ below and the
-  // file header comment for the full reasoning. Best-effort — must never fail the send.
-  verifyWeeklyInboxDelivery_(d);
-
   // Liveness beat — lets cadence_check.sql detect a silently-dead weekly report. Best-effort.
   try {
     BigQuery.Jobs.query({
@@ -179,119 +146,6 @@ function buildSubject_(d) {
   }
   const warn = d.green ? '' : ' · ⚠ check data';
   return `Stock-Trading · ${SUBJECT_LABEL} — ${d.dateLabel} · ${tag}${warn}`;
-}
-
-// ===== POST-SEND INBOX VERIFICATION (v9, 2026-08-08) =====
-// Ports alert_emailer.gs's verifyInboxDelivery_/escalateDeliveryFailure_ pattern into this file — see
-// the file header comment for why sending SUCCEEDING is not the same thing as a human ever seeing the
-// result, and why THIS script needs a different streak/threshold than the 3-consecutive-2-hourly-polls
-// alert_emailer.gs uses. Named with a Weekly-prefix (not verifyInboxDelivery_ / INBOX_FAIL_* /
-// escalateDeliveryFailure_) because this file and alert_emailer.gs share ONE Apps Script project's
-// top-level scope — a same-named function or const in both throws a project-wide SyntaxError on the
-// next paste (the exact reason ALERT_SCRIPT_VERSION/SCRIPT_VERSION are named differently, see that
-// const's own comment). Grepped alert_emailer.gs for every top-level `function `/`const `/`var ` before
-// picking these names; none collide.
-
-// ESCALATION THRESHOLD, weekly cadence. alert_emailer.gs escalates after
-// DELIVERY_FAIL_ESCALATE_AFTER=3 consecutive polls at POLL_HOURS=2 (~6h) — calibrated to land under
-// automation_heartbeat's 8h dead-man bar. There is no equivalent outer bound to tune against here, so
-// the calibration is against THIS script's own cadence instead: it runs once a week, so "3 consecutive"
-// transplanted verbatim would mean ~3 weeks of silence before anyone is told — too slow for a channel
-// that was ALREADY found dark for weeks straight (the 2026-08-07 incident this whole feature responds
-// to). The opposite extreme — escalating on streak=1 — is also wrong: verifyWeeklyInboxDelivery_'s
-// "found in:anywhere but not in:inbox" test already screens out a lagging search index (the ambiguity
-// alert_emailer.gs's own probe comment explains), but it cannot distinguish a genuine Gmail-side
-// misroute rule from the operator having manually archived or deleted that ONE week's specific report
-// by hand — a one-off action, not a systemic fault — and unlike a 2-hourly poll, a weekly send gets no
-// same-run retry to shake out a fluke. Two consecutive weekly misses is the middle ground: strong
-// enough to rule out a single one-off action, fast enough to surface inside a fortnight rather than a
-// month. Once past that, RE-ESCALATE EVERY SUBSEQUENT WEEK (REESCALATE_EVERY=1) rather than throttling
-// further the way alert_emailer.gs spaces its already-frequent 2-hourly streak out to roughly-daily
-// reminders (REESCALATE_EVERY=12) — a weekly send is already a naturally low-frequency channel, so
-// there is nothing left to throttle.
-const WEEKLY_INBOX_FAIL_ESCALATE_AFTER = 2;
-const WEEKLY_INBOX_FAIL_REESCALATE_EVERY = 1;
-
-// Pure escalation-due decision, mirroring alert_emailer.gs's inline
-// `(streak === ESCALATE_AFTER) || (streak > ESCALATE_AFTER && streak % REESCALATE_EVERY === 0)`
-// expression — pulled out into its own named function (alert_emailer.gs leaves its copy inline; that
-// file has no test harness wired to reach it) specifically so the weekly-cadence threshold choice above
-// is unit-testable in test_pure_helpers.js without needing any Apps-Script-service stand-ins. No
-// behavior change from alert_emailer.gs's formula, only different constants passed in.
-function weeklyInboxEscalationDue_(streak, escalateAfter, reescalateEvery) {
-  return (streak === escalateAfter) || (streak > escalateAfter && streak % reescalateEvery === 0);
-}
-
-// Post-send probe: did THIS week's report actually land in the Inbox? Scoped to the exact subject this
-// run just sent (SUBJECT_LABEL + d.dateLabel, the SAME precise match the unread/label housekeeping
-// block above already uses) rather than alert_emailer.gs's generic `subject:Stock-Trading` token —
-// that broader token would also match alert_emailer.gs's own alert digests sent in the same window,
-// conflating two different scripts' delivery under one probe. `in:anywhere` spans Trash and Spam, which
-// GmailApp.search() otherwise excludes by default; `newer_than:1d` matches the day-granularity idiom
-// the housekeeping block above already uses (Gmail's newer_than/older_than accept only d/m/y units —
-// there is no `h` — so this is safe where an `newer_than:1h`-style hour bound would silently unscope).
-// Best-effort throughout: must never fail or delay the send this runs after.
-function verifyWeeklyInboxDelivery_(d) {
-  let anywhere, inbox, trashed, spammed;
-  const base = `from:me subject:"${SUBJECT_LABEL} — ${d.dateLabel}" newer_than:1d`;
-  try {
-    anywhere = GmailApp.search(base + ' in:anywhere', 0, 5).length;
-    if (!anywhere) {
-      // Inconclusive: this week's report isn't indexed yet (or search is degraded). Do NOT touch the
-      // streak — treating a lagging index as a delivery failure is how this check would turn into the
-      // noise that gets it ignored, mirroring alert_emailer.gs's identical guard.
-      Logger.log('weekly inbox probe inconclusive: no indexed report found yet for ' + d.dateLabel);
-      return;
-    }
-    inbox   = GmailApp.search(base + ' in:inbox', 0, 5).length;
-    trashed = GmailApp.search(base + ' in:trash', 0, 5).length;
-    spammed = GmailApp.search(base + ' in:spam', 0, 5).length;
-  } catch (e) {
-    Logger.log('weekly inbox probe skipped (Gmail search failed): ' + e);
-    return; // never let the probe break a send that already succeeded
-  }
-  const props = PropertiesService.getScriptProperties();
-  if (inbox > 0) {
-    try {
-      if (props.getProperty('weekly_inbox_fail_streak')) props.deleteProperty('weekly_inbox_fail_streak');
-    } catch (e) { Logger.log('could not reset weekly_inbox_fail_streak: ' + e); }
-    return;
-  }
-  // Positive misroute observation: indexed, but not in the Inbox.
-  let streak = 0;
-  try {
-    streak = (parseInt(props.getProperty('weekly_inbox_fail_streak'), 10) || 0) + 1;
-    props.setProperty('weekly_inbox_fail_streak', String(streak));
-  } catch (e) {
-    Logger.log('could not track weekly_inbox_fail_streak: ' + e);
-    return; // without a durable streak we cannot tell a blip from an outage; stay quiet rather than spam
-  }
-  const where = trashed ? 'TRASH' : (spammed ? 'SPAM' : 'neither Inbox, Trash nor Spam (archived?)');
-  Logger.log('weekly inbox probe: report landed in %s, not Inbox (streak %s)', where, streak);
-  if (!weeklyInboxEscalationDue_(streak, WEEKLY_INBOX_FAIL_ESCALATE_AFTER, WEEKLY_INBOX_FAIL_REESCALATE_EVERY)) return;
-  // FIXED MESSAGE — no streak, and no `where` either, matching alert_emailer.gs's identical reasoning:
-  // sp_raise_alert_once dedups on exact (category, message) while the prior row is unresolved, so any
-  // varying token defeats the collapse. Both facts still live in the payload.
-  const msg = 'Stock-Trading WEEKLY REPORT IS NOT REACHING THE INBOX: the weekly report is being ' +
-              'accepted by Gmail and then routed away from the Inbox. Sending is healthy, so the ' +
-              'heartbeat and delivery_canary read green regardless — the report channel is silently ' +
-              'DARK. Check Gmail Settings > Filters and Blocked Addresses for a rule matching the ' +
-              'self-send or the sender name, and check Trash for the missed reports. Until it clears, ' +
-              'read analytics.strategy_vs_park_daily / analytics.voo_cumulative directly.';
-  // First escalation collapses onto one row (sp_raise_alert_once); every subsequent weekly miss past
-  // the threshold raises a fresh row (sp_raise_alert) so alert_relay.py's ~35min ntfy-relay window
-  // re-fires each week instead of pinging exactly once ever — same reasoning as alert_emailer.gs's
-  // identical proc choice, see that file's verifyInboxDelivery_ comment for the full explanation.
-  const proc = (streak === WEEKLY_INBOX_FAIL_ESCALATE_AFTER) ? 'sp_raise_alert_once' : 'sp_raise_alert';
-  try {
-    BigQuery.Jobs.query({
-      query: `CALL \`${PROJECT_ID}.ops.${proc}\`('warning','weekly_report',` +
-             `'weekly_report_not_reaching_inbox','${msg.replace(/'/g, '')}',` +
-             `TO_JSON_STRING(STRUCT(${streak} AS consecutive_misroutes, '${where}' AS landed_in, ` +
-             `${trashed} AS trash_hits, ${spammed} AS spam_hits, '${SCRIPT_VERSION}' AS script_version)))`,
-      useLegacySql: false, timeoutMs: 30000
-    }, PROJECT_ID);
-  } catch (e) { Logger.log('weekly inbox-misroute alert raise failed: ' + e); }
 }
 
 // ===== DATA =====
