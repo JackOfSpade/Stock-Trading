@@ -593,7 +593,7 @@ Added 2026-08-05, after **6 of the 10 rows** AR_att wrote on 2026-08-04 were sto
 
 ## OPS1. Morning Connector Liveness Probe — regular routine
 
-Runs pre-market (06:30 MT), ~9.5 hours ahead of the 16:10-17:15 MT daily cadence (owner-approved
+Runs pre-market (06:30 MT), ~9.5 hours ahead of the 16:10-17:15 MT Sun-Thu cadence (owner-approved
 2026-07-19, after an IBKR OAuth expiry was discovered only at D2a's 16:20 MT pre-flight and cascaded
 into a halted evening). Detection-only: probes the connectors this system depends on with one read-only
 call each and surfaces a re-auth need in the morning alert email instead of mid-cascade. This routine
@@ -621,7 +621,7 @@ DENIED there is a known, accepted state (OWNER_ACTIONS.md item W) and must NOT r
 CLASSIFICATION. An AUTH-class failure (401/403/token-expired/"requires re-authorization"/OAuth wording)
 surviving the retry: `CALL ops.sp_raise_alert_once('warning','OPS1','connector_reauth_needed',
 '<Connector> requires re-authorization — re-auth in claude.ai connector settings before today''s 16:10
-MT daily cadence (D1/D2a/D2)', '<JSON: connector, error_verbatim, probed_at>')` — one alert per
+MT Sun-Thu cadence (D1/D2a/D2)', '<JSON: connector, error_verbatim, probed_at>')` — one alert per
 connector; `sp_raise_alert_once` keeps it idempotent. A non-auth failure surviving the retry: record in
 the run_log note only, no alert — the trading routines' own pre-flights already own hard-stop authority
 for those.

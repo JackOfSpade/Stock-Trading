@@ -2,7 +2,21 @@
 
 Every test writes its own cadence.yaml into tmp_path and monkeypatches cs.CADENCE at the module
 level; nothing here reads or writes the real ops/cadence.yaml (the fixture-clobber trap this repo
-has hit twice -- see tests/test_routine_backup.py's header).
+has hit twice -- see tests/test_routine_backup.py's header). write_cadence() ALSO points cs.BACKUP
+at a nonexistent tmp_path file by default (backup_snapshot_errors() no-ops when BACKUP.exists() is
+False), for the same reason: check() unconditionally calls backup_snapshot_errors(), which reads
+cs.BACKUP, and several tests below reuse real fleet routine ids (D1, SL3, OPS2, W1) with synthetic
+cron/time_local values that do NOT always match those ids' live ops/routine_backup.json entries. Before
+this default, those tests silently depended on the real snapshot file's CURRENT content agreeing with
+their synthetic fixture by coincidence -- true only as long as nobody edited ops/routine_backup.json
+for that id. The 2026-08-08 daily-tier Fri/Sat cron migration changed D1/SL3/OPS2's real
+cron_expression (added a day-of-week list) and broke exactly that coincidence, failing
+test_daily_trading_inside_window_passes / test_deadline_is_read_from_cadence_not_hardcoded /
+test_ops2_mdt_time_local_passes with an unrelated "disagrees with the DST-validated cron_utc" error --
+a real bug in the test's isolation, not in the migration. The dedicated backup_snapshot_errors tests
+near the bottom of this file re-monkeypatch cs.BACKUP to their own tmp_path snapshot AFTER calling
+write_cadence(), which overrides this default (last monkeypatch.setattr wins), so their coverage of
+the real backup-divergence behavior is unchanged.
 
 The two REGRESSION tests below are the point of the file. Both encode a defect that actually
 shipped and was found by hand:
@@ -36,6 +50,9 @@ def write_cadence(tmp_path, monkeypatch, routines, deadline="21:00"):
     path = tmp_path / "cadence.yaml"
     path.write_text("\n".join(lines) + "\n")
     monkeypatch.setattr(cs, "CADENCE", path)
+    # Isolate from the real ops/routine_backup.json too -- see the module docstring above.
+    # Individual tests that want to exercise backup_snapshot_errors() re-patch cs.BACKUP afterward.
+    monkeypatch.setattr(cs, "BACKUP", tmp_path / "_no_backup_snapshot_in_this_test.json")
     return path
 
 

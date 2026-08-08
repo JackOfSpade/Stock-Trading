@@ -808,7 +808,7 @@ stall with it (it ran under the same identity).
   `monitor_class: daily_sun_thu` (every Sunday-Thursday calendar day, unconditionally NOT trading-day-gated —
   distinct from making all four `daily_trading` routines run on non-trading days unconditionally, which is what
   the paragraph above evaluated and left owner-gated) and applied it to all 8 calendar-monitored daily routines
-  (D1, D2a, D2, D3, OPS0, OPS1, OPS2, SL3), ahead of a SEPARATE, later step that will retime their crons to stop
+  (D1, D2a, D2, D3, OPS0, OPS1, OPS2, SL3), ahead of a SEPARATE, later step that would retime their crons to stop
   firing Friday/Saturday. This closes the exact classification mismatch diagnosed above (a calendar-firing
   routine invisible to `cadence_watch` on a non-trading day) for all 8, not just D1/SL3, AND does so without ever
   making `cadence_watch` blind on a day these routines are expected to run — see `ops/cadence.yaml`'s own
@@ -819,6 +819,17 @@ stall with it (it ran under the same identity).
   built by hand is fully subsumed by the ordinary readiness read, and — unlike simply leaving it alone — keeping
   it running past the later cron-migration step would have made it emit a false weekly "D1/SL3 missed Saturday"
   reminder forever, since it never distinguished a still-firing-Saturday cron from a deliberately-retired one.
+
+  **CRON MIGRATION LANDED — 2026-08-08 (same day, later pass).** The "SEPARATE, later step" above is done, not
+  pending: the operator flipped all 12 daily-tier live triggers (the 8 above plus the 4 `queue_driven`
+  daily-tier routines AR_att/AR_orc/SL2/SL5, which share the same underlying trigger day-set even though
+  `monitor_class: queue_driven` keeps them out of `state.cadence_watch` regardless) to stop firing
+  Friday/Saturday America/Denver, verified via `next_run_at` reporting Sunday-evening Denver on all 12.
+  `ops/cadence.yaml`'s `cron_utc` for each of the 12 was updated to match (a day-of-week list replacing the
+  previous `*`), `ops/routine_backup.json` re-ingested to match (`scripts/check_cron_dst_safety.py`'s
+  `backup_snapshot_errors()` hard-fails CI on any disagreement between the two), and `Claude_Task_Plan.md`'s
+  remaining literal "fires daily"/"runs daily" prose for these routines corrected to "Sun-Thu." All 12 now fire
+  Sunday through Thursday only.
 
   **CATCH-UP EXECUTOR (OPS2) — added 2026-07-27 (owner directive), the next-level workaround.** Beyond the
   email reminder, the owner opted to AUTO-RUN missed catchup_safe routines rather than manually re-run them.

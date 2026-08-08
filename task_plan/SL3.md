@@ -595,7 +595,7 @@ The Self-Improving Strategy Arsenal (SISA) routines make strategy ADDITION and D
 
 ## SL3. Incubation Monitor & Graduation — regular routine
 
-Runs daily after D2a (fresh marks). The forward-test monitor + graduation evaluator: it advances SHADOW→PAPER itself (light D2a-pattern self-execute) and hands the heavy PAPER→PROBE roster registration to SL5. Touches NO capital and edits NO repo/roster — SHADOW/PAPER are zero-capital, zero-order phases.
+Runs Sun-Thu after D2a (fresh marks). The forward-test monitor + graduation evaluator: it advances SHADOW→PAPER itself (light D2a-pattern self-execute) and hands the heavy PAPER→PROBE roster registration to SL5. Touches NO capital and edits NO repo/roster — SHADOW/PAPER are zero-capital, zero-order phases.
 
 ```
 Read access scope: Daily cadence, BigQuery read + write (incubation analytics + the `events.shadow_positions` signal/sim-fill ledger). Read `perf.strategy_daily`, `events.daily_marks`, `state.strategy_roster` (SHADOW/PAPER members), `events.strategy_lifecycle`, `state.strategy_shadow_readiness`, `state.strategy_paper_readiness`, `analytics.strategy_incubation_perf`, `state.arsenal_rails`, `state.strategy_probe_funding_stalled`, `ops.arsenal_control`, `ops.trading_control`. Read the candidate slice(s) for the strategies in scope for their declared signals. No Strategy.md edit, no order staging.

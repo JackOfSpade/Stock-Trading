@@ -589,7 +589,7 @@ Added 2026-08-05, after **6 of the 10 rows** AR_att wrote on 2026-08-04 were sto
 
 ---
 
-# ADVERSARIAL REVIEWS (queue-driven, fires daily as needed)
+# ADVERSARIAL REVIEWS (queue-driven, fires Sun-Thu as needed)
 
 Structured adversarial reviews — pre-mortem reviews, regime-router divergence reviews, mark-to-market termination reviews, scope-widening adjudications, and any future structured review the experiment design adds — are executed by a small set of generic routines that read entries from the `PENDING_REVIEW` queue (`state.open_queue` / `events.queue_events`) and produce reviews per artifact handoff. Triggering routines (M4, A3, kill-trigger handlers, etc.) enqueue entries (`INSERT INTO events.queue_events`); they never invoke a review prompt directly. (Capital redistribution after a strategy terminates is NOT an adversarial review — it is a **rail-bounded AI capital-allocation call among surviving strategies** (Operating_Protocols.md §16; defaulting to the classic equal split below MEDIUM conviction) handled inline by the termination handler, same-session, no queue, no hold; see Experiment_Parameters.md "Strategy termination and capital redistribution.")
 

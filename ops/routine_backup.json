@@ -3,7 +3,7 @@
     "caveats": "cron_expression may read 'TO_POPULATE' for a routine whose live cron could not yet be confirmed from a trustworthy source (see the initial-bootstrap commit message / session report) -- ingest against a real `list`/`get` response overwrites it. OPS2's instruction deliberately omits the standing addendum every other routine carries (see ADDENDUM / OPS2_NO_ADDENDUM_ID in this module and ops/cadence.yaml's OPS1/OPS2 block) -- this is a documented exception, not drift. The 2 'personal' profile routines target a different repo (JackOfSpade/Image-and-Video-Generation-Pipeline) and are out of the trading fleet's scope -- kept here only because they live on the same claude.ai account and are equally vulnerable to an accidental deletion.",
     "how_to_refresh": "In a session with the RemoteTrigger tool: call `list` (paginated, ~20 at a time -- see ops/trigger_ids.json _meta) and/or `get` on specific trigger ids, save the response body as JSON, then run `python scripts/routine_backup.py ingest <file>`. Re-running ingest on the same or overlapping data is safe and idempotent -- it cleanly overwrites each routine's stored fields (including cron_expression) with the freshly ingested values.",
     "how_to_restore": "`python scripts/routine_backup.py restore <routine_id ...>` (or no args for every routine) prints ready-to-use RemoteTrigger create bodies with freshly generated UUIDs. It refuses past or malformed one-shot schedules rather than emitting API-invalid bodies. Call RemoteTrigger create with each accepted body, then record the returned trig_... id in ops/trigger_ids.json for that routine id (this script cannot call RemoteTrigger itself and never invents live API data).",
-    "last_ingested": "2026-08-01",
+    "last_ingested": "2026-08-08",
     "purpose": "Versioned snapshot of every claude.ai RemoteTrigger routine (schedule + instruction + connectors), profile-based so a diff shows real config changes instead of restating shared boilerplate. Exists so a future accidental trigger deletion (2026-08-01 incident: 13 routines deleted from the web UI, hand-reconstructed from scattered repo prose) is a mechanical `restore`, not a research project.",
     "sl_environment_2026_08_01": "2026-08-01 owner directive: the ENTIRE fleet is normalised to environment 'Full Network Access' (env_01DXtTeywLPpNoXku8rGNEie), autofix_on_pr_create=true and notifications all-off. This retired the separate 'sl' profile SL1-SL5 used to carry (distinct 'Default' environment, autofix=false, push notifications on). That split was preserved by every prior change but its rationale was never written down anywhere -- searched RUNBOOK 39, CLAUDE.md's SISA section, autonomy_levels.yaml and the SISA commit. It was NOT a network restriction: SL5 git-pushes and SL3 completed 19 runs on 'Default'. Two profiles remain: 'fleet' (32 trading routines) and 'personal' (2 non-trading routines targeting a different repo)."
   },
@@ -149,7 +149,7 @@
       "trigger_id": "trig_01WJrA74ehQhzVbbwNS7rX9w"
     },
     "AR_att": {
-      "cron_expression": "0 0 * * *",
+      "cron_expression": "0 0 * * 1,2,3,4,5",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform Adversarial Review Attacker — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
       "name": "Adversarial Review Attacker — regular routine",
@@ -157,7 +157,7 @@
       "trigger_id": "trig_01KQWESvxCXWVGU18K6Cao5G"
     },
     "AR_orc": {
-      "cron_expression": "35 0 * * *",
+      "cron_expression": "35 0 * * 1,2,3,4,5",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform Adversarial Review Orchestrator — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
       "name": "Adversarial Review Orchestrator — regular routine",
@@ -165,7 +165,7 @@
       "trigger_id": "trig_01J2qHCC1ABZdwM2R1UqwDSQ"
     },
     "D1": {
-      "cron_expression": "0 22 * * *",
+      "cron_expression": "0 22 * * 0,1,2,3,4",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform D1. Market Development Scan — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
       "name": "D1. Market Development Scan — deep research",
@@ -173,7 +173,7 @@
       "trigger_id": "trig_016gmftbKkEi7zDqDrA3u97o"
     },
     "D2": {
-      "cron_expression": "15 23 * * *",
+      "cron_expression": "15 23 * * 0,1,2,3,4",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform D2. Daily Action Conversion — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
       "name": "D2. Daily Action Conversion — regular routine",
@@ -181,7 +181,7 @@
       "trigger_id": "trig_014eoNf1qNZZ8Ec5n2s6KxRP"
     },
     "D2a": {
-      "cron_expression": "40 22 * * *",
+      "cron_expression": "40 22 * * 0,1,2,3,4",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform D2a. Broker Reconcile & Snapshot — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
       "name": "D2a. Broker Reconcile & Snapshot — regular routine",
@@ -189,7 +189,7 @@
       "trigger_id": "trig_015kDvXCKiDRd5Z2bXwaRny3"
     },
     "D3": {
-      "cron_expression": "45 0 * * *",
+      "cron_expression": "45 0 * * 1,2,3,4,5",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform D3. Calendar Hygiene — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
       "name": "D3. Calendar Hygiene — regular routine",
@@ -245,7 +245,7 @@
       "trigger_id": "trig_01EVgnRg1F8VcfZfpwTpUzCK"
     },
     "OPS0": {
-      "cron_expression": "30 4 * * *",
+      "cron_expression": "30 4 * * 1,2,3,4,5",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform OPS0. Cadence Watchdog — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
       "name": "OPS0. Cadence Watchdog — regular routine",
@@ -253,7 +253,7 @@
       "trigger_id": "trig_018zZNYXYmgkqbmcfzss1YjU"
     },
     "OPS1": {
-      "cron_expression": "30 12 * * *",
+      "cron_expression": "30 12 * * 0,1,2,3,4",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform OPS1. Morning Connector Liveness Probe — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
       "name": "OPS1. Morning Connector Liveness Probe — regular routine",
@@ -261,7 +261,7 @@
       "trigger_id": "trig_012jxpUDFsrTR5FnSRmnxej4"
     },
     "OPS2": {
-      "cron_expression": "15 4 * * *",
+      "cron_expression": "15 4 * * 1,2,3,4,5",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform OPS2. Catch-up Executor — regular routine.",
       "name": "OPS2. Catch-up Executor — regular routine",
@@ -309,7 +309,7 @@
       "trigger_id": "trig_01FcK8PZ9tw4nceNoH1nJiTb"
     },
     "SL2": {
-      "cron_expression": "5 1 * * *",
+      "cron_expression": "5 1 * * 1,2,3,4,5",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform SL2. Strategy Draft, Revise & Post-mortem — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
       "name": "SL2. Strategy Draft, Revise & Post-mortem — regular routine",
@@ -317,7 +317,7 @@
       "trigger_id": "trig_01VrC8TjY3GRxHUrS16vfHUo"
     },
     "SL3": {
-      "cron_expression": "0 2 * * *",
+      "cron_expression": "0 2 * * 1,2,3,4,5",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform SL3. Incubation Monitor & Graduation — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
       "name": "SL3. Incubation Monitor & Graduation — regular routine",
@@ -333,7 +333,7 @@
       "trigger_id": "trig_01JuMzHVRdom4c2KdWLtnx2v"
     },
     "SL5": {
-      "cron_expression": "25 1 * * *",
+      "cron_expression": "25 1 * * 1,2,3,4,5",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform SL5. Strategy Register & Roster Sync — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
       "name": "SL5. Strategy Register & Roster Sync — regular routine",
