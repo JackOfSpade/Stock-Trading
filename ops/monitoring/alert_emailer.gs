@@ -30,6 +30,16 @@
  *     script now escalates over two channels that do not depend on the failing one — an ops.alerts row
  *     that alert_relay.py pushes to ntfy from GitHub Actions, and a direct Gmail send.
  *
+ * ACCEPTED IS NOT DELIVERED (v8, 2026-08-07). The third and last link in that same chain. v6 covers a
+ * send that THROWS; it cannot cover a send that SUCCEEDS and is then routed away from the Inbox by a
+ * Gmail-side rule, because nothing here looked at where the message landed. Measured 2026-08-07: all
+ * 50 Stock-Trading threads from 2026-07-14 onward — alert digests, CRITICAL cascades, and every weekly
+ * delivery canary — sit in TRASH with no INBOX label, while the heartbeat, notified_ts, the
+ * alert_delivery_failing escalation and the canary all read green, because sending never failed. A
+ * post-send probe now verifies the message actually acquired the INBOX label and escalates a streak
+ * over ntfy only (emailing someone to say their email is not arriving defeats itself). See
+ * verifyInboxDelivery_.
+ *
  * ROSTER-CHANGE NOTICES (v5, 2026-08-04, owner directive "although i let ai dictate when to add/drop
  * strategies, i still want to be notified by email when it does so"): the autonomous SISA loop
  * (SL1-SL5) previously raised its roster-membership events at 'info', which the SEVERITIES filter below
@@ -56,7 +66,7 @@ const ALERT_RECIPIENT  = Session.getActiveUser().getEmail(); // self-email
 const ALERT_SENDER     = 'Stock-Trading Alerts';
 const SEVERITIES       = ['critical', 'warning']; // set to ['critical'] for criticals only
 const POLL_HOURS       = 2;                        // how often to check
-const ALERT_SCRIPT_VERSION = 'v7';                 // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep. Named ALERT_SCRIPT_VERSION (not SCRIPT_VERSION) because this file and weekly_report.gs share ONE Apps Script project's top-level scope -- a same-named const in both would throw a project-wide SyntaxError on the next paste (2026-07-14 audit finding).
+const ALERT_SCRIPT_VERSION = 'v8';                 // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep. Named ALERT_SCRIPT_VERSION (not SCRIPT_VERSION) because this file and weekly_report.gs share ONE Apps Script project's top-level scope -- a same-named const in both would throw a project-wide SyntaxError on the next paste (2026-07-14 audit finding).
 
 // ROSTER-CHANGE NOTICES (owner directive 2026-08-04, bigquery/134_roster_change_notifications.sql).
 // The autonomous SISA loop (SL1-SL5) adds and removes trading strategies with no human approval step --
@@ -219,6 +229,9 @@ function checkAlerts_() {
       try {
         props.setProperty('notified_alert_ids', JSON.stringify(keep));
       } catch (e) { Logger.log('notified_alert_ids property write skipped: ' + e); }
+      // POST-SEND INBOX VERIFICATION (v8, 2026-08-07). sendEmail() returning without throwing proves
+      // Gmail ACCEPTED the message, not that it reached the Inbox. See verifyInboxDelivery_ below.
+      verifyInboxDelivery_();
     } else {
       // Message must name BOTH halves of the query's WHERE clause: LOOKBACK_HOURS no longer describes
       // the full selection, since roster-change notices are exempt from that bound (see the query).
@@ -344,6 +357,139 @@ function escalateDeliveryFailure_(err) {
       'recovers, however long it takes. Other alert classes older than ' + LOOKBACK_LABEL + ' will not be.',
       { name: ALERT_SENDER });
   } catch (e) { Logger.log('escalation email failed (Gmail likely the broken component): ' + e); }
+}
+
+// ===== POST-SEND INBOX VERIFICATION (v8, 2026-08-07) =====
+// Closes the last gap in the "delivery is not the same thing as liveness" chain, found by an audit of
+// the 2026-08-07 daily runs rather than by anything erroring. v6 (escalateDeliveryFailure_) covers the
+// case where SENDING fails: an exception inside checkAlerts_'s try. It cannot cover the case where
+// sending SUCCEEDS and the message is then routed away from the Inbox by a Gmail-side rule, because
+// nothing in this script ever looks at where the message landed.
+//
+// MEASURED 2026-08-07: every one of the last 50 Stock-Trading threads (alert digests AND the weekly
+// report), spanning 2026-07-14 through 2026-08-07, carries labelIds ["TRASH","SENT"] and NOT ONE
+// carries "INBOX". `subject:Stock-Trading in:inbox` returns zero threads; `is:unread` returns zero.
+// That window includes CRITICAL digests (the 2026-08-01 M1a/M1b/M4/M5/SL4/D3 missing_dependency
+// cascade, the 2026-08-03/04 trading_halted rows) and every weekly delivery canary. So the operator's
+// entirely reasonable inference — "no alert email arrived, so nothing was wrong" — was unsound for
+// weeks, and EVERY existing guard read green throughout:
+//   * ops.heartbeat: 15 consecutive 'poll' beats, never 'poll-error'.
+//   * notified_ts: stamped normally (the send genuinely succeeded).
+//   * alert_delivery_failing: never raised, not once, because no exception ever occurred.
+//   * the weekly delivery_canary: asserts the canary row was delivered+STAMPED — and stamping happens
+//     here, in this script, immediately after sendEmail(). It proves the loop ran, not that a human
+//     could see the result. The canary was itself in Trash the whole time.
+// Nothing in this repo trashes the mail (grep: no moveToTrash / moveThreadToTrash anywhere), so the
+// cause is Gmail-side — most likely a filter with a Delete action matching the self-send or the
+// ALERT_SENDER display-name override. That is an account setting only the operator can change; what
+// this script owes them is to NOTICE, over a channel that does not depend on the broken one.
+//
+// PROBE, and why it is three searches and not one. A just-sent message can lag Gmail's search index by
+// seconds, so "not found in:inbox" alone is ambiguous between "misrouted" and "not indexed yet" —
+// exactly the ambiguity that would make this check either noisy or useless. Searching in:anywhere
+// first disambiguates: found-anywhere-but-not-in-inbox is a POSITIVE misroute observation; not found
+// anywhere is inconclusive and deliberately leaves the streak untouched. The unquoted single-token
+// `subject:Stock-Trading` is intentional — every subject this script and weekly_report.gs emit
+// contains that token, and it avoids quoting the ⚠ / ⚗ / — characters that appear in the real
+// subjects. from:me scopes it to our own self-sent mail.
+//
+// ESCALATION reuses the v6 streak idiom (a single indexing-lag miss must not page anyone) but sends
+// over the ntfy channel ONLY: emailing a human to tell them their email is not arriving is a
+// self-defeating design, so there is deliberately no Channel-2 direct-mail twin here. Raised at
+// 'warning', not 'critical', for the same reason v6 is: a critical counts toward
+// state.trading_enabled's blocking_criticals and would HALT ORDER STAGING over a mail-routing rule.
+// NOTE the ntfy relay (scripts/alert_relay.py, */30 GitHub Action) is a clean no-op unless WEBHOOK_URL
+// is set — if it is not, this row still lands in ops.alerts and is visible to any routine's board read.
+const INBOX_FAIL_ESCALATE_AFTER   = 3;   // ~6h at POLL_HOURS=2 — matches DELIVERY_FAIL_ESCALATE_AFTER
+const INBOX_FAIL_REESCALATE_EVERY = 12;  // then roughly daily
+
+// PROBE WINDOW, in seconds, expressed with `after:<unix-epoch-seconds>` and NOT with `newer_than:`.
+// Gmail's newer_than/older_than accept ONLY d/m/y units — there is no `h`. `newer_than:1h` is not a
+// 1-hour filter; it is an unrecognised clause, so the query degrades to an UNSCOPED "any self-sent
+// Stock-Trading message, ever". That would have made this check fire on a perfectly healthy pipeline
+// the moment the operator archived the last alert mail: archived mail has no INBOX label but is still
+// found by the in:anywhere probe, so `anywhere>0 && inbox===0` — a permanent false alarm that punishes
+// a tidy inbox. `after:` takes a real epoch-second timestamp. 10 minutes is generous for Gmail's
+// search-index lag while staying far too short for a human to have archived the message we just sent.
+const INBOX_PROBE_WINDOW_SEC = 600;
+
+function verifyInboxDelivery_() {
+  let anywhere, inbox, trashed, spammed;
+  const base = 'from:me subject:Stock-Trading after:' +
+               (Math.floor(Date.now() / 1000) - INBOX_PROBE_WINDOW_SEC);
+  try {
+    // in:anywhere spans Trash and Spam, which GmailApp.search() otherwise excludes by default.
+    anywhere = GmailApp.search(base + ' in:anywhere', 0, 5).length;
+    if (!anywhere) {
+      // Inconclusive: the message we just sent is not indexed yet (or search is degraded). Do NOT
+      // touch the streak — treating a lagging index as a delivery failure is how this check would
+      // turn into the noise that gets it ignored.
+      Logger.log('inbox probe inconclusive: no indexed Stock-Trading mail in the last hour yet');
+      return;
+    }
+    inbox   = GmailApp.search(base + ' in:inbox', 0, 5).length;
+    trashed = GmailApp.search(base + ' in:trash', 0, 5).length;
+    spammed = GmailApp.search(base + ' in:spam', 0, 5).length;
+  } catch (e) {
+    Logger.log('inbox probe skipped (Gmail search failed): ' + e);
+    return; // never let the probe break a poll that already delivered
+  }
+  if (inbox > 0) {
+    try {
+      const props = PropertiesService.getScriptProperties();
+      if (props.getProperty('inbox_fail_streak')) props.deleteProperty('inbox_fail_streak');
+    } catch (e) { Logger.log('could not reset inbox_fail_streak: ' + e); }
+    return;
+  }
+  // Positive misroute observation: indexed, but not in the Inbox.
+  let streak = 0;
+  try {
+    const props = PropertiesService.getScriptProperties();
+    streak = (parseInt(props.getProperty('inbox_fail_streak'), 10) || 0) + 1;
+    props.setProperty('inbox_fail_streak', String(streak));
+  } catch (e) {
+    Logger.log('could not track inbox_fail_streak: ' + e);
+    return; // without a durable streak we cannot tell a blip from an outage; stay quiet rather than spam
+  }
+  const where = trashed ? 'TRASH' : (spammed ? 'SPAM' : 'neither Inbox, Trash nor Spam (archived?)');
+  Logger.log('inbox probe: sent mail landed in %s, not Inbox (streak %s)', where, streak);
+  const due = (streak === INBOX_FAIL_ESCALATE_AFTER) ||
+              (streak > INBOX_FAIL_ESCALATE_AFTER && streak % INBOX_FAIL_REESCALATE_EVERY === 0);
+  if (!due) return;
+  // FIXED MESSAGE — no streak, and no `where` either. sp_raise_alert_once dedups on exact
+  // (category, message) while the prior row is unresolved, so ANY varying token defeats the collapse.
+  // The streak is obvious; `where` is the subtle one: if the destination flips between escalations
+  // (Trash emptied mid-outage, or mail starts landing in Spam instead) the text changes and a second
+  // row opens. Both facts live in the payload, which is not part of the dedup key.
+  const msg = 'Stock-Trading ALERT EMAIL IS NOT REACHING THE INBOX: alert emails are being accepted by ' +
+              'Gmail and then routed away from the Inbox. Sending is healthy, so no delivery-failure ' +
+              'alert fired and notified_ts was stamped normally - the alert channel is silently DARK. ' +
+              'Check Gmail Settings > Filters and Blocked Addresses for a rule matching the self-send or ' +
+              'the sender name, and check Trash for the missed alerts. Until it clears, read ops.alerts ' +
+              'directly. See the payload for where the mail landed and the consecutive-misroute count.';
+  // Channel: ops.alerts -> scripts/alert_relay.py -> ntfy push, entirely outside Apps Script and Gmail.
+  // No direct-mail twin, by design.
+  //
+  // WHICH PROCEDURE, and why it is not always _once. sp_raise_alert_once is a pure conditional INSERT:
+  // it will not re-raise, re-stamp or bump alert_ts while a matching unresolved row exists. alert_relay.py
+  // only POSTs rows with alert_ts inside its ~35-minute window, so a _once-only design would ping ntfy
+  // EXACTLY ONCE ever — in the ~35min after the first escalation, roughly 6h into an outage — and then
+  // stay silent no matter how long the channel stayed dark, making INBOX_FAIL_REESCALATE_EVERY dead code.
+  // So: the FIRST escalation uses _once (collapse onto one row if something already opened it), and the
+  // periodic reminders use plain sp_raise_alert, whose fresh row is precisely what re-enters the relay
+  // window and re-pings the phone. Roughly one extra row per day of a genuine outage, which is the
+  // intended cost of not going quiet on the one failure that hides every other alert.
+  const proc = (streak === INBOX_FAIL_ESCALATE_AFTER) ? 'sp_raise_alert_once' : 'sp_raise_alert';
+  try {
+    BigQuery.Jobs.query({
+      query: `CALL \`${ALERT_PROJECT_ID}.ops.${proc}\`('warning','alert_emailer',` +
+             `'alert_not_reaching_inbox','${msg.replace(/'/g, '')}',` +
+             `TO_JSON_STRING(STRUCT(${streak} AS consecutive_misroutes, '${where}' AS landed_in, ` +
+             `${trashed} AS trash_hits, ${spammed} AS spam_hits, ` +
+             `'${ALERT_SCRIPT_VERSION}' AS script_version)))`,
+      useLegacySql: false, timeoutMs: 30000
+    }, ALERT_PROJECT_ID);
+  } catch (e) { Logger.log('inbox-misroute alert raise failed: ' + e); }
 }
 
 function beat_(pollOk) {

@@ -83,7 +83,7 @@ FROM routines r
 LEFT JOIN last_completed l ON l.routine = r.routine
 ORDER BY r.routine;
 
--- SUPERSEDED LIVE by bigquery/142_cadence_deadline_revert_and_evidence_drift.sql — current single source
+-- SUPERSEDED LIVE by bigquery/147_run_log_content_quality.sql — current single source
 -- of truth for this PROCEDURE. 142 bumps the heartbeat literal v11 -> v12 and adds ONE new record-only
 -- WARNING block (process_constant_evidence_invalidated) immediately after the scheduled_query_version_
 -- drift block below; every other check in this body is carried forward unchanged. Kept here for
