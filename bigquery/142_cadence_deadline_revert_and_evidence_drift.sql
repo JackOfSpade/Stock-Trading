@@ -356,11 +356,13 @@ FROM agg;
 -- forward intact, since CREATE OR REPLACE PROCEDURE replaces the WHOLE body. A comment-stripped code-line
 -- diff proving only these two changes was produced during construction of this file and is reported
 -- alongside it.
--- SUPERSEDED LIVE by bigquery/147_run_log_content_quality.sql — current single source of truth for
--- ops.sp_sq_cadence_check (supersedes this file, per the chain noted above). 147 bumps the heartbeat
--- to v13, adds the run_log_note_missing record-only check and its auto-age allowlist entry, and is
--- otherwise a verbatim copy of the body below. Kept here, unmodified, for DR-rebuild apply-in-order
--- reference only. DO NOT re-apply this CREATE statement live in isolation.
+-- SUPERSEDED LIVE by bigquery/149_cadence_check_script_version_autoage.sql — current single source of
+-- truth for ops.sp_sq_cadence_check (supersedes this file, per the chain noted above, via the
+-- intermediate bigquery/147). 147 bumps the heartbeat to v13, adds the run_log_note_missing
+-- record-only check and its auto-age allowlist entry; 149 bumps the heartbeat to v14 and adds
+-- script_version_drift to the #14 auto-age category list; both are otherwise a verbatim copy of the
+-- body below. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
+-- this CREATE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';

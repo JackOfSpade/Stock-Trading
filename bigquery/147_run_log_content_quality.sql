@@ -67,6 +67,12 @@ WHERE run_date >= DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 3 DAY)
 -- changes, per the supersede-only convention in bigquery/README.md: the heartbeat version literal
 -- v12 -> v13, 'run_log_note_missing' added to the #14 auto-age allowlist, and the new record-only
 -- IF block appended after the routine_stalled check.
+-- SUPERSEDED LIVE by bigquery/149_cadence_check_script_version_autoage.sql — current single source of
+-- truth for ops.sp_sq_cadence_check (supersedes this file). 149 bumps the heartbeat to v14 and adds
+-- 'script_version_drift' to the #14 auto-age category list, and is otherwise a verbatim copy of the
+-- body below. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
+-- this CREATE statement live in isolation. STAGED AS OF 2026-08-08: bigquery/149 is not yet applied
+-- live — live still runs this v13 body until 149 is applied.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';
