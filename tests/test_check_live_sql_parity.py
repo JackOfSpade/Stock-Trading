@@ -321,6 +321,160 @@ def test_extract_body_procedure_case_expression_bare_end_does_not_truncate_body_
     assert "unrelated later block" not in body
 
 
+# ---- CASE *statement* END CASE mishandled as a NON_BEGIN_END_SUFFIX no-op (2026-08-08 fix) --------
+# The nesting-aware rewrite above (find_procedure_body_end()) tracks CASE as a depth-incrementing
+# opener (needed for the CASE-expression bare-END case just above), but its very first version put
+# "CASE" in NON_BEGIN_END_SUFFIX -- the same "recognize and skip, don't touch depth" bucket as END
+# IF/WHILE/LOOP/FOR. That is correct for IF/WHILE/LOOP/FOR (their openers never increment depth, so
+# their two-word closer is a genuine no-op) but wrong for CASE: CASE's own opener DID increment depth,
+# so a same-treatment `END CASE` left depth permanently one level too high, the procedure's own END
+# was never found at depth 0, and the body bled past it into whatever followed -- reintroducing
+# exactly the class of bug this whole rewrite exists to fix (see module docstring's 2026-08-08 entry
+# and find_procedure_body_end()'s docstring). These tests pin the fix directly (revert the "if
+# nxt_word == CASE" branch in find_procedure_body_end()'s END handling, or put "CASE" back in
+# NON_BEGIN_END_SUFFIX, and every test below fails).
+def test_extract_body_procedure_case_statement_end_case_does_not_bleed_into_following_block():
+    # BigQuery's imperative CASE *statement* form -- `CASE x WHEN ... END CASE;` -- as opposed to the
+    # CASE *expression* form tested above. This is the exact synthetic shape from the CONFIRMED
+    # defect report: without the fix, depth never returns to zero at the procedure's own `END;`, so
+    # find_procedure_body_end() keeps scanning past it, matches the LATER free-standing block's END
+    # instead, and the trailing "unrelated later block" text leaks into the extracted body.
+    txt = (
+        "CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_case_stmt`(x INT64)\n"
+        "BEGIN\n"
+        "  CASE x\n"
+        "    WHEN 1 THEN SELECT 'one';\n"
+        "    WHEN 2 THEN SELECT 'two';\n"
+        "    ELSE SELECT 'other';\n"
+        "  END CASE;\n"
+        "  SELECT 'done';\n"
+        "END;\n"
+        "\n"
+        "BEGIN\n"
+        "SELECT 'unrelated later block';\n"
+        "END;\n"
+    )
+    m = clsp.CREATE_STMT.search(txt)
+    body = clsp.extract_body(txt, m.start(), "PROCEDURE")
+    assert body == (
+        "BEGIN\n"
+        "  CASE x\n"
+        "    WHEN 1 THEN SELECT 'one';\n"
+        "    WHEN 2 THEN SELECT 'two';\n"
+        "    ELSE SELECT 'other';\n"
+        "  END CASE;\n"
+        "  SELECT 'done';\n"
+        "END"
+    )
+    assert "unrelated later block" not in body
+
+
+def test_extract_body_procedure_case_statement_and_case_expression_both_forms_in_one_procedure():
+    # Both CASE forms in the SAME procedure: a CASE *expression* (bare END, inside a SET) and a CASE
+    # *statement* (END CASE) as separate top-level statements in the body. Each closer must decrement
+    # only its own opener's depth -- if either were miscounted the body would either truncate early
+    # (bare END mistaken for the outer BEGIN's own END) or bleed into the trailing block (END CASE
+    # never decrementing).
+    txt = (
+        "CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_case_both`(x INT64)\n"
+        "BEGIN\n"
+        "  DECLARE y STRING;\n"
+        "  SET y = CASE WHEN x > 0 THEN 'pos' ELSE 'neg' END;\n"
+        "  CASE x\n"
+        "    WHEN 1 THEN SELECT 'one';\n"
+        "    ELSE SELECT 'other';\n"
+        "  END CASE;\n"
+        "  SELECT y;\n"
+        "END;\n"
+        "\n"
+        "BEGIN\n"
+        "SELECT 'unrelated later block';\n"
+        "END;\n"
+    )
+    m = clsp.CREATE_STMT.search(txt)
+    body = clsp.extract_body(txt, m.start(), "PROCEDURE")
+    assert body == (
+        "BEGIN\n"
+        "  DECLARE y STRING;\n"
+        "  SET y = CASE WHEN x > 0 THEN 'pos' ELSE 'neg' END;\n"
+        "  CASE x\n"
+        "    WHEN 1 THEN SELECT 'one';\n"
+        "    ELSE SELECT 'other';\n"
+        "  END CASE;\n"
+        "  SELECT y;\n"
+        "END"
+    )
+    assert "unrelated later block" not in body
+
+
+def test_extract_body_procedure_case_statement_nested_inside_if():
+    # A CASE statement nested inside an IF block: two depth-incrementing constructs (IF does NOT
+    # increment depth -- only CASE and BEGIN do -- so this really exercises CASE opening/closing
+    # correctly while a non-depth-affecting IF...END IF wraps it) must not disturb the outer
+    # procedure's own depth accounting.
+    txt = (
+        "CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_case_in_if`(x INT64)\n"
+        "BEGIN\n"
+        "  IF x > 0 THEN\n"
+        "    CASE x\n"
+        "      WHEN 1 THEN SELECT 'one';\n"
+        "      ELSE SELECT 'other';\n"
+        "    END CASE;\n"
+        "  END IF;\n"
+        "  SELECT 'done';\n"
+        "END;\n"
+        "\n"
+        "BEGIN\n"
+        "SELECT 'unrelated later block';\n"
+        "END;\n"
+    )
+    m = clsp.CREATE_STMT.search(txt)
+    body = clsp.extract_body(txt, m.start(), "PROCEDURE")
+    assert body == (
+        "BEGIN\n"
+        "  IF x > 0 THEN\n"
+        "    CASE x\n"
+        "      WHEN 1 THEN SELECT 'one';\n"
+        "      ELSE SELECT 'other';\n"
+        "    END CASE;\n"
+        "  END IF;\n"
+        "  SELECT 'done';\n"
+        "END"
+    )
+    assert "unrelated later block" not in body
+
+
+def test_extract_body_procedure_end_case_immediately_before_trailing_standalone_block():
+    # END CASE as the LAST statement before the procedure's own END (no intervening statement) --
+    # the tightest version of the bleed: if depth is even one level too high at this point, the very
+    # next token scanned is the procedure's own `END;`, which would itself be misread as closing the
+    # inner CASE rather than the outer BEGIN, walking straight into the trailing free-standing block.
+    txt = (
+        "CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_case_last`(x INT64)\n"
+        "BEGIN\n"
+        "  CASE x\n"
+        "    WHEN 1 THEN SELECT 'one';\n"
+        "    ELSE SELECT 'other';\n"
+        "  END CASE;\n"
+        "END;\n"
+        "\n"
+        "BEGIN\n"
+        "SELECT 'unrelated later block';\n"
+        "END;\n"
+    )
+    m = clsp.CREATE_STMT.search(txt)
+    body = clsp.extract_body(txt, m.start(), "PROCEDURE")
+    assert body == (
+        "BEGIN\n"
+        "  CASE x\n"
+        "    WHEN 1 THEN SELECT 'one';\n"
+        "    ELSE SELECT 'other';\n"
+        "  END CASE;\n"
+        "END"
+    )
+    assert "unrelated later block" not in body
+
+
 def test_extract_body_procedure_for_loop_end_for_does_not_confuse_nesting():
     # Mirrors bigquery/17_restore_drill.sql's real shape: a FOR...END FOR loop containing its own
     # nested BEGIN...EXCEPTION...END handler, inside the procedure's outer BEGIN, followed by a

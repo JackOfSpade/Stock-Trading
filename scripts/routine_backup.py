@@ -283,7 +283,15 @@ def normalize_trigger(raw):
         "instruction": content,
         "environment_id": ccr.get("environment_id"),
         "model": sc.get("model"),
-        "allowed_tools": list(sc.get("allowed_tools") or []),
+        # Sorted, matching the mcp_connections precedent two lines below (`conns = sorted(...)`):
+        # canonicalise AT STORAGE TIME so the value written into ops/routine_backup.json is
+        # deterministic w.r.t. whatever order a live `list`/`get` response happens to serialize
+        # session_context in. Before this fix only the COMPARISON in derive_profile() (_tools_eq,
+        # below) was made order-insensitive -- the stored value itself was still `list(...)`
+        # verbatim, so an `overrides["allowed_tools"]` (once one exists) could flip byte-for-byte
+        # between two ingests of the identical live routine, pure diff noise the mcp_connections
+        # precedent was specifically introduced to avoid (2026-08-08).
+        "allowed_tools": sorted(sc.get("allowed_tools") or []),
         "autofix_on_pr_create": sc.get("autofix_on_pr_create"),
         "notifications": _normalize_notifications(raw.get("notifications")),
         "sources": sc.get("sources") or [],
@@ -412,7 +420,17 @@ def _tools_eq(a, b):
     between routines. Comparing as a list (the old `list(a) == list(b)`) treated that harmless order
     difference as a real config change -- a live routine whose allowed_tools order merely differed from
     its profile read as drift and picked up a spurious `overrides["allowed_tools"]` on every ingest
-    (2026-08-08)."""
+    (2026-08-08).
+
+    STILL NEEDED after normalize_trigger() started sorting allowed_tools at storage time (2026-08-08,
+    same audit): sorting only canonicalises the INGESTED side (`normalized["allowed_tools"]`). The `b`
+    side here is a PROFILE's allowed_tools (DEFAULT_PROFILES' `_FLEET_TOOLS`/`_PERSONAL_TOOLS`, or
+    whatever ops/routine_backup.json's 'profiles' hand-authors) -- those are config, never run through
+    normalize_trigger(), and are deliberately left in their hand-written (non-alphabetical) order,
+    confirmed live in ops/routine_backup.json's 'profiles' -- so a plain list compare between a sorted
+    normalized value and an unsorted profile value would still misfire on every ingest. This is the
+    literal 'path that bypasses normalize_trigger': the profile side of every derive_profile()
+    comparison."""
     return _tools_set(a) == _tools_set(b)
 
 
@@ -709,10 +727,17 @@ def restore(routine_ids):
     whose `profile` no longer exists in `profiles` (e.g. a stale snapshot still referencing a retired
     profile) -- that entry is skipped rather than letting `profiles[entry["profile"]]` raise an
     uncaught KeyError, which would otherwise crash this fast-recovery-during-an-incident path with a
-    raw traceback; (B2, 2026-08-01 audit) a matched entry whose schedule is still the
-    CRON_UNCONFIRMED sentinel -- that entry is skipped rather than handed to build_create_body(),
-    which would otherwise emit a create body with a bogus 'TO_POPULATE' cron_expression straight into
-    a live API call; and a past/malformed one-shot timestamp.
+    raw traceback; a matched entry whose EFFECTIVE resolved fields (profile + overrides) are missing/
+    empty recovery data, per _resolved_fields_errors() -- same check() already runs (B3) -- rather than
+    building a create body at all (2026-08-08: _resolve_fields() was changed to .get() every profile
+    field instead of hard-indexing, so a profile missing a required key stopped raising KeyError here
+    and started silently resolving that field to None; without THIS check, restore() had zero errors
+    for that entry and printed a create body with e.g. environment_id=None straight at a live
+    RemoteTrigger call -- a crash traded for silent wrong-restore of a live scheduled routine, strictly
+    worse); (B2, 2026-08-01 audit) a matched entry whose schedule is still the CRON_UNCONFIRMED
+    sentinel -- that entry is skipped rather than handed to build_create_body(), which would otherwise
+    emit a create body with a bogus 'TO_POPULATE' cron_expression straight into a live API call; and a
+    past/malformed one-shot timestamp.
     `has_unrestored_unmatched` is True when routine_ids was empty AND `_unmatched` is
     non-empty (a 'restore all' never silently expands to include unreviewed unmatched triggers -- the
     caller prints a note instead)."""
@@ -731,6 +756,20 @@ def restore(routine_ids):
                     f"skipped rather than crashing (e.g. a stale snapshot still referencing a retired "
                     f"profile); fix the entry's 'profile' field or re-run `ingest` against a fresh "
                     f"RemoteTrigger response before restoring this routine.")
+                continue
+            # check()'s (6) validates the EFFECTIVE resolved fields (profile + overrides) for every
+            # entry via this same helper -- restore() used to only check the profile NAME existed, not
+            # that resolving it actually produced real data. _resolve_fields() started .get()-ing
+            # every profile field instead of hard-indexing (so a hand-edited/corrupted profile missing
+            # a key reports cleanly instead of raising KeyError) -- but that safety net alone means a
+            # missing field now resolves to None instead of crashing, so WITHOUT this check restore()
+            # would build and print a live create body with that field set to None: zero errors, a
+            # silent wrong-restore of a live scheduled routine. Run the same validation check() uses
+            # and skip the entry on failure, matching the profile-not-found guard just above
+            # (2026-08-08).
+            field_errors = _resolved_fields_errors(rid, entry, profiles)
+            if field_errors:
+                errors.extend(field_errors)
                 continue
             if entry.get("cron_expression") == CRON_UNCONFIRMED:
                 errors.append(

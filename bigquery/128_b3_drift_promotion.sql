@@ -51,13 +51,14 @@
 -- clean bar exists: as measured above, the check has zero drift rows today and has been clean for 14
 -- consecutive logged days, so promoting it does not halt anything now.
 
--- SUPERSEDED LIVE by bigquery/149_cadence_check_script_version_autoage.sql — current single
+-- SUPERSEDED LIVE by bigquery/150_cadence_check_autoage_connector_and_revised.sql — current single
 -- source of truth for ops.sp_sq_cadence_check. Intermediate link: bigquery/132_queue_driven_silence_
 -- watch.sql added the queue_driven_silent raise; bigquery/142 bumps the heartbeat to v12 and adds the
 -- process_constant_evidence_invalidated WARNING block; bigquery/147 bumps the heartbeat to v13 and adds
 -- the run_log_note_missing record-only check; bigquery/149 bumps the heartbeat to v14 and adds
--- script_version_drift to the #14 auto-age category list. Kept here, unmodified, for DR-rebuild
--- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
+-- script_version_drift to the #14 auto-age category list; bigquery/150 bumps the heartbeat to v15 and
+-- adds 'connector' + 'strategy_revised' to the #14 auto-age category list. Kept here, unmodified, for
+-- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';

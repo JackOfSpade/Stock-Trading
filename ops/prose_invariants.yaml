@@ -233,21 +233,47 @@ invariants:
   # the line, so a line that named a retirement in one clause and re-instructed a still-live limit-
   # order mechanism in another (unrelated) clause passed the gate silently: the exemption never
   # checked that the retirement language was actually TALKING ABOUT the forbidden term (2026-08-08).
-  # Narrowed to the CaR rules' bounded '[^\n]{0,N}' proximity idiom (see e.g. the CaR-envelope rules
-  # above) so the retirement word must sit within 260 chars of the forbidden term, either order.
-  # 260 is not arbitrary: it is the smallest window that still covers every currently-legitimate
-  # line in Claude_Task_Plan.md / Operating_Protocols.md today (the widest genuine case is
-  # Operating_Protocols.md's 2026-07-20 Revision-history bullet, where "retired" describes the
-  # superseded 0.5%-price-band rule ~244 chars before it goes on to name LIMIT DECISION/RAISE-HOLD-
-  # LOWER-ABANDON as what replaced it — still one continuous changelog sentence, not a different
-  # topic) — a synthetic line with the two clauses genuinely far apart (a different topic's
-  # retirement, then a bare re-instruction) is now correctly caught; see
-  # tests/test_check_prose_invariants.py.
+  # Narrowed same day to the CaR rules' bounded '[^\n]{0,260}' proximity idiom (see e.g. the
+  # CaR-envelope rules above) — but that commit's own comment claimed this makes the gate check
+  # that the retirement language "actually talks about" the forbidden term. It does not, and cannot:
+  # '[^\n]{0,N}' is a raw character count, not a parse of clause/sentence structure, so two UNRELATED
+  # clauses that happen to land within N chars of each other on the same long line still exempt the
+  # line, silently — the very bug class this rule exists to close. Fixed same day, second pass:
+  #
+  # A true same-clause/-sentence split (require the retirement word and the forbidden term inside
+  # one segment after breaking the line on '.', '!', '?', ';', '—') was PROTOTYPED and REJECTED for
+  # this corpus: these prose files are full of literal periods that are not sentence boundaries —
+  # decimal percentages ("0.5%-of-equity"), dotted identifiers ("analytics.fn_order_guard",
+  # "Claude_Task_Plan.md", "bigquery/99_ai_limit_decision_order_guard.sql") — so a naive split
+  # shreds one real sentence into meaningless fragments and false-negatives a genuinely legitimate
+  # line. Concretely: Operating_Protocols.md's 2026-07-20 Revision-history bullet ("retired"
+  # describing the superseded 0.5%-price-band rule, 244 measured chars before the SAME sentence goes
+  # on to name RAISE/HOLD/LOWER/ABANDON and LIMIT DECISION as what replaced it) fails a naive
+  # '.'-delimited split — the "0.5%" and "analytics.fn_order_guard" periods fragment it first — even
+  # though it is unambiguously one legitimate changelog sentence. Excluding ';' from the split set
+  # does not save it either (same test, same failure). A regex sturdy enough to tell a real sentence
+  # boundary from a decimal point or a filename, embedded in a YAML string with no unit test of its
+  # own tokenizer, is exactly the class of confidently-wrong heuristic this file exists to prevent —
+  # so this stays a PROXIMITY check, not a clause/topic check, and the comment says so plainly.
+  #
+  # What DID change: the window is TIGHTENED from 260 to 250 chars. Measured gaps (chars between the
+  # end of the retirement word and the start of the forbidden term, whichever order) across every
+  # currently-legitimate line: Claude_Task_Plan.md:293 gap=12, Operating_Protocols.md:270 gap=14,
+  # Operating_Protocols.md:294 gap=244 (the widest — the changelog sentence above),
+  # Operating_Protocols.md:295 gap=30. 250 keeps a 6-char margin over that widest genuine case (260
+  # kept 16) — smaller than before, but not zero, so a trivial future rewording of that one line
+  # does not itself trip the gate. A synthetic line with the two clauses ~251 chars apart (a
+  # different topic's retirement, then a bare re-instruction — within the OLD 260 window, so it used
+  # to pass silently) is now correctly caught; see
+  # test_market_only_orders_rule_rejects_a_same_line_different_clause_reinstruction in
+  # tests/test_check_prose_invariants.py. The residual gap is real and stays real at any window
+  # size: an unrelated pairing that happens to land within 250 chars on the same line still passes.
+  # That is the honest limit of a same-line proximity check — not a claim that this reads clauses.
   - id: market_only_orders
     files: [Claude_Task_Plan.md, Operating_Protocols.md]
     forbid_regex: '(?:marketable[- ]limit|order_type\s*[=:]\s*.?LIMIT.?|\bLIMIT DECISION\b|RAISE\s*/\s*HOLD\s*/\s*LOWER\s*/\s*ABANDON)'
     ignorecase: true
-    exempt_line_regex: '(?:(?:retired|supersede[sd]?|RETIRES)[^\n]{0,260}(?:marketable[- ]limit|order_type\s*[=:]\s*.?LIMIT.?|\bLIMIT DECISION\b|RAISE\s*/\s*HOLD\s*/\s*LOWER\s*/\s*ABANDON)|(?:marketable[- ]limit|order_type\s*[=:]\s*.?LIMIT.?|\bLIMIT DECISION\b|RAISE\s*/\s*HOLD\s*/\s*LOWER\s*/\s*ABANDON)[^\n]{0,260}(?:retired|supersede[sd]?|RETIRES))'
+    exempt_line_regex: '(?:(?:retired|supersede[sd]?|RETIRES)[^\n]{0,250}(?:marketable[- ]limit|order_type\s*[=:]\s*.?LIMIT.?|\bLIMIT DECISION\b|RAISE\s*/\s*HOLD\s*/\s*LOWER\s*/\s*ABANDON)|(?:marketable[- ]limit|order_type\s*[=:]\s*.?LIMIT.?|\bLIMIT DECISION\b|RAISE\s*/\s*HOLD\s*/\s*LOWER\s*/\s*ABANDON)[^\n]{0,250}(?:retired|supersede[sd]?|RETIRES))'
     reason: >
       Every IBKR order this system generates is MARKET (owner directive 2026-07-21;
       bigquery/100_market_only_order_guard.sql) — there are no limit orders anywhere (entries,

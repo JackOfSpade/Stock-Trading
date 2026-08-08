@@ -302,8 +302,10 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           # ci.yml no longer has a pull_request trigger, so this is normally empty. Keep the positional
-          # argument: resolve_diff_base.sh is shared with golden-scenarios.yml's live PR path, and dropping
-          # it would silently break ci.yml diff-base resolution if its pull_request trigger is restored.
+          # argument: resolve_diff_base.sh is shared with golden-scenarios.yml, whose own pull_request
+          # trigger was ALSO removed (2026-08-08, same cost-audit follow-up -- see that workflow's header
+          # for the duplicate-run evidence). Dropping the argument here would silently break ci.yml
+          # diff-base resolution if either workflow's pull_request trigger is ever restored.
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PUSH_BEFORE: ${{ github.event.before }}
           HEAD_SHA: ${{ github.sha }}
@@ -452,7 +454,9 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           # Normally empty without ci.yml pull_request, but retain this positional shared-helper argument:
-          # golden-scenarios.yml uses its PR branch, and a restored ci.yml PR trigger needs it unchanged.
+          # golden-scenarios.yml's own pull_request trigger was likewise removed (2026-08-08, same
+          # cost-audit follow-up -- see that workflow's header), so a trigger restored on either side
+          # still needs this argument unchanged.
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PUSH_BEFORE: ${{ github.event.before }}
           HEAD_SHA: ${{ github.sha }}

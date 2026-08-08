@@ -49,6 +49,13 @@
 -- immediately after 'scheduled_query_version_drift'. A comment-stripped code-line diff proving only
 -- these two lines differ from bigquery/147's statement was produced during construction of this file
 -- and is reported alongside it. Every other check in the body is carried forward unchanged.
+--
+-- SUPERSEDED LIVE by bigquery/150_cadence_check_autoage_connector_and_revised.sql — current single
+-- source of truth for ops.sp_sq_cadence_check (supersedes this file). 150 bumps the heartbeat to v15
+-- and adds 'connector' + 'strategy_revised' to the #14 auto-age category list (the same
+-- self-healing-warning-with-no-policy-row bug class this file's own script_version_drift fix closed,
+-- two more instances), and is otherwise a verbatim copy of the body below. Kept here, unmodified, for
+-- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN

@@ -173,7 +173,11 @@ def test_normalize_trigger_shape_and_cron_stripped():
         "instruction": f"Read Claude_Task_Plan.md. Perform D1. Test Routine — deep research.{ADDENDUM}",
         "environment_id": "env_FLEET",
         "model": "claude-opus-5",
-        "allowed_tools": list(rb._FLEET_TOOLS),
+        # sorted, not list(rb._FLEET_TOOLS) verbatim -- normalize_trigger() now canonicalises
+        # allowed_tools at storage time (2026-08-08), the same way mcp_connections already is a few
+        # lines below (sorted by name). _FLEET_TOOLS itself is NOT alphabetical, so this pins that the
+        # sort actually happened rather than merely passing the input through unchanged.
+        "allowed_tools": sorted(rb._FLEET_TOOLS),
         "autofix_on_pr_create": True,
         "notifications": {"channel": {"email": False, "push": False, "slack": False}},
         "sources": [{"git_repository": {"url": rb.FLEET_REPO_URL}}],
@@ -198,6 +202,36 @@ def test_normalize_trigger_mcp_connections_sorted_by_name_regardless_of_input_or
     ])
     got = rb.normalize_trigger(raw)["mcp_connections"]
     assert [c["name"] for c in got] == ["Alpha", "Zeta"]
+
+
+def test_normalize_trigger_allowed_tools_sorted_regardless_of_input_order():
+    """allowed_tools must be canonicalised (sorted) AT STORAGE TIME the same way mcp_connections is
+    just above -- comparison alone being order-insensitive (_tools_eq, used by derive_profile) is not
+    enough, because the STORED value (verbatim `list(sc.get("allowed_tools") or [])` before this fix)
+    was still whatever order a live `list`/`get` response happened to serialize, so an
+    `overrides["allowed_tools"]` could read differently byte-for-byte between two ingests of the
+    identical live routine -- exactly the diff noise the mcp_connections precedent already avoids
+    (2026-08-08)."""
+    raw = _raw_trigger(allowed_tools=["RemoteTrigger", "Bash", "Read"])
+    got = rb.normalize_trigger(raw)["allowed_tools"]
+    assert got == ["Bash", "Read", "RemoteTrigger"]
+
+
+def test_ingest_stores_allowed_tools_override_sorted_not_in_api_response_order(tmp_path, monkeypatch):
+    """End-to-end through ingest(): a live routine whose allowed_tools is a genuine override (differs
+    from its profile as a SET, not just an order difference) must land in
+    ops/routine_backup.json['routines'][rid]['overrides']['allowed_tools'] sorted -- the canonical
+    form -- regardless of what order the live API happened to return it in. Before this fix the stored
+    override was verbatim API order, so re-ingesting the same live routine on two different days could
+    write two different byte-for-byte values for an unchanged config (2026-08-08)."""
+    _wire(tmp_path, monkeypatch)
+    infile = _write(tmp_path, "in.json", {"data": [
+        _raw_trigger(allowed_tools=["RemoteTrigger", "Grep", "Bash"])]})  # a genuine subset -- differs
+                                                                            # from TEST_PROFILES' fleet
+                                                                            # allowed_tools as a SET
+    rb.ingest(str(infile))
+    entry = rb.load_backup()["routines"]["D1"]
+    assert entry["overrides"]["allowed_tools"] == ["Bash", "Grep", "RemoteTrigger"]
 
 
 # ---- normalize_trigger: notifications key-filtering (B6) --------------------------------------------
@@ -494,6 +528,28 @@ def test_check_reports_missing_profile_field_instead_of_crashing(tmp_path, monke
     out = capsys.readouterr().out
     assert "ROUTINE BACKUP CHECK: FAIL" in out
     assert "resolved sources is missing/empty" in out
+
+
+def test_restore_rejects_entry_whose_resolved_fields_are_missing_instead_of_emitting_none(
+        tmp_path, monkeypatch):
+    """DEFECT (2026-08-08): restore() used to validate ONLY that a profile NAME existed and that the
+    schedule wasn't CRON_UNCONFIRMED -- it never ran an entry through _resolved_fields_errors() the way
+    check() does (see test_check_reports_missing_profile_field_instead_of_crashing above, same
+    corrupted-profile scenario). Once _resolve_fields() switched to p.get(...) for every profile field
+    (test_resolve_fields_handles_profile_missing_a_field_instead_of_raising_keyerror above), a profile
+    missing a required key stopped raising KeyError and started silently resolving to None instead --
+    so WITHOUT this check, restore(['D1']) below would return ZERO errors and a create body containing
+    'sources': None, ready to hand straight to a live RemoteTrigger create call. That is a silent wrong-
+    restore of a live scheduled routine -- strictly worse than the crash it replaced. restore() must
+    refuse the same broken entry check() already flags, the same way it already refuses a
+    CRON_UNCONFIRMED schedule or an unknown profile name."""
+    doc = _good_backup_doc()
+    del doc["profiles"]["fleet"]["sources"]
+    _wire(tmp_path, monkeypatch, backup_doc=doc)
+    bodies, errors, _ = rb.restore(["D1"])
+    assert bodies == []
+    assert len(errors) == 1
+    assert "D1" in errors[0] and "resolved sources is missing/empty" in errors[0]
 
 
 def test_notifications_roundtrip_as_override_and_reaches_restore_body(tmp_path, monkeypatch):
