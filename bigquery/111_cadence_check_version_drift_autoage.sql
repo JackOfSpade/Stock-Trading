@@ -66,11 +66,13 @@
 -- (added by 120), still carries b3_trading_enabled_drift at the pre-promotion 'warning' tier with no
 -- raise_msg join (promoted by 128), and reports the superseded v9 heartbeat marker.
 -- =====================================================================================================
--- SUPERSEDED LIVE by bigquery/147_run_log_content_quality.sql — current single
+-- SUPERSEDED LIVE by bigquery/149_cadence_check_script_version_autoage.sql — current single
 -- source of truth for ops.sp_sq_cadence_check (supersedes bigquery/128 above, per the note there).
 -- Intermediate link: bigquery/132_queue_driven_silence_watch.sql added the queue_driven_silent check;
 -- bigquery/142 bumps the heartbeat to v12 and adds the process_constant_evidence_invalidated WARNING
--- block. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
+-- block; bigquery/147 bumps the heartbeat to v13 and adds the run_log_note_missing record-only check;
+-- bigquery/149 bumps the heartbeat to v14 and adds script_version_drift to the #14 auto-age category
+-- list. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
 -- CREATE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
