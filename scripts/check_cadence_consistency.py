@@ -60,21 +60,21 @@ import re
 import sys
 
 try:
-    # noqa: F401 — this module's own reads now go through lib.textio.load_yaml() (2026-07-29 textio
+    # this module's own reads now go through lib.textio.load_yaml() (2026-07-29 textio
     # adoption), so `yaml` is no longer referenced directly here, but the import stays for this
     # fail-fast ImportError guard (a clear "pip install pyyaml" message beats textio.py's own bare
     # ImportError traceback).
     import yaml  # noqa: F401
 except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
-    raise SystemExit(2)
+    raise SystemExit(2) from None
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.routine_manifest import (  # noqa: E402
+from lib.routine_manifest import (
     heading_to_id, parse_routine_headings, build_triggers_manifest, instruction_text, cadence_routines,
 )
-from lib.sql_files import numbered_sql_files, resolve_canonical, strip_sql_comments  # noqa: E402
-from lib.textio import read_text, load_yaml  # noqa: E402
+from lib.sql_files import numbered_sql_files, resolve_canonical, strip_sql_comments
+from lib.textio import read_text, load_yaml
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLAN = os.path.join(ROOT, "Claude_Task_Plan.md")
@@ -1178,31 +1178,47 @@ def main():
                     errors.append(f"{rid}: in ops/cadence.yaml but NOT matched by {_rel}'s "
                                   f"routine_re — RUNBOOK §38 marker-write will silently skip this "
                                   f"routine's commits (add it to the routine_re alternation)")
+    else:
+        # Both candidate locations missing is not "nothing to check", it is check H having no signal
+        # at all — the same silent-no-op shape as the substring-gate bug check M had (2026-08-08 audit
+        # finding). Neither file existing at once is implausible today, but a future rename/move of
+        # BOTH without updating this script must not read as a clean CI run.
+        errors.append("could not find the RUNBOOK §38 marker-write routine allowlist source — neither "
+                      f"{os.path.relpath(AUTO_MERGE_DECISION_SH, ROOT)} nor "
+                      f"{os.path.relpath(AUTO_MERGE_YML, ROOT)} exists, so check H validated nothing; "
+                      "restore one of these files or update AUTO_MERGE_DECISION_SH / AUTO_MERGE_YML "
+                      "in this script to match their new location")
 
     # ---- M. EVENING-slot daily SAME-DAY guard copies carry the noon-threshold clause (H1). ----
-    # Gated on the "SAME-DAY DOUBLE-RUN GUARD" sentinel being present at all, so a minimal test fixture
-    # / pre-feature checkout of Claude_Task_Plan.md skips silently — same convention as check L
-    # (parse_inventory_table returns None when the ROUTINE INVENTORY heading is absent).
+    # Used to be gated on the "SAME-DAY DOUBLE-RUN GUARD" sentinel being present at all, on the theory
+    # that this only ever skips a minimal test fixture / pre-feature checkout — but a bare substring
+    # gate fails open on ANY loss of that heading (a rename, a rewrite that drops the sentinel word),
+    # silently disarming the whole check with no CI signal, not just the fixture case it was written
+    # for (2026-08-08 audit finding). The inner loop below already errors loudly, per routine, when
+    # GUARD_QUERY_RE[rid] finds no match — there is no reason total absence of the sentinel should be
+    # quieter than that. Run unconditionally: a plan with zero SAME-DAY DOUBLE-RUN GUARD text now fails
+    # loudly (one error per EVENING_DAILY_GUARD_IDS routine) instead of passing vacuously. Test
+    # fixtures that don't care about check M must now carry valid guard text too (see
+    # tests/test_cadence_consistency.py's _write_check_fixture / _AR_ATT_PLAN).
     plan_txt = open(PLAN, encoding="utf-8").read()
-    if "SAME-DAY DOUBLE-RUN GUARD" in plan_txt:
-        for rid in EVENING_DAILY_GUARD_IDS:
-            matches = list(GUARD_QUERY_RE[rid].finditer(plan_txt))
-            if not matches:
-                errors.append(f"{rid}: could not find its SAME-DAY DOUBLE-RUN GUARD `ops.run_log` "
-                              f"COUNT(*) query in Claude_Task_Plan.md — check M's H1 noon-threshold guard "
-                              f"is DISARMED for this routine (did the guard query change shape?)")
-                continue
-            for m in matches:
-                if not GUARD_NOON_CLAUSE_RE.search(m.group("after")):
-                    errors.append(
-                        f"{rid}: SAME-DAY DOUBLE-RUN GUARD copy is MISSING the noon-threshold clause "
-                        f"(H1) — an EVENING-slot daily routine (slot >= 16:00 MT) must count only "
-                        f"completions in the real evening window: append "
-                        f"`AND DATETIME(log_ts,'America/Denver') >= DATETIME(<today, America/Denver>, "
-                        f"TIME '12:00:00')` to its `status='completed'` COUNT(*) query, so a post-midnight "
-                        f"prior-day run mis-stamped onto today by bigquery/12's midnight-crossing grace "
-                        f"cannot cancel the genuine evening run (see the shared Observability guard's "
-                        f"CYCLE-AWARE VARIANT).")
+    for rid in EVENING_DAILY_GUARD_IDS:
+        matches = list(GUARD_QUERY_RE[rid].finditer(plan_txt))
+        if not matches:
+            errors.append(f"{rid}: could not find its SAME-DAY DOUBLE-RUN GUARD `ops.run_log` "
+                          f"COUNT(*) query in Claude_Task_Plan.md — check M's H1 noon-threshold guard "
+                          f"is DISARMED for this routine (did the guard query change shape?)")
+            continue
+        for m in matches:
+            if not GUARD_NOON_CLAUSE_RE.search(m.group("after")):
+                errors.append(
+                    f"{rid}: SAME-DAY DOUBLE-RUN GUARD copy is MISSING the noon-threshold clause "
+                    f"(H1) — an EVENING-slot daily routine (slot >= 16:00 MT) must count only "
+                    f"completions in the real evening window: append "
+                    f"`AND DATETIME(log_ts,'America/Denver') >= DATETIME(<today, America/Denver>, "
+                    f"TIME '12:00:00')` to its `status='completed'` COUNT(*) query, so a post-midnight "
+                    f"prior-day run mis-stamped onto today by bigquery/12's midnight-crossing grace "
+                    f"cannot cancel the genuine evening run (see the shared Observability guard's "
+                    f"CYCLE-AWARE VARIANT).")
 
     # ---- N. model of record: cadence.yaml routine_model == every mirror site ----
     model_errs, model_of_record = check_model_of_record()

@@ -172,6 +172,19 @@ def _sql_with_region(body_between):
     )
 
 
+# ---- _region_bounds(): the single shared marker-finding helper (2026-08-08 dedup) ------------------
+def test_region_bounds_returns_marker_positions():
+    txt = _sql_with_region("\nBODY\n  ")
+    b, e = gr._region_bounds(txt, "somepath.sql")
+    assert txt[b:b + len(gr.BEGIN_MARKER)] == gr.BEGIN_MARKER
+    assert txt[e:e + len(gr.END_MARKER)] == gr.END_MARKER
+
+
+def test_region_bounds_raises_systemexit_naming_the_path():
+    with pytest.raises(SystemExit, match=r"somepath\.sql: could not find BEGIN/END"):
+        gr._region_bounds("no markers here", "somepath.sql")
+
+
 def test_current_region_returns_exact_text_between_markers(tmp_path):
     p = tmp_path / "x.sql"
     p.write_text(_sql_with_region("\n    STRUCT('D1' AS routine, 'daily_trading' AS schedule)\n  "))

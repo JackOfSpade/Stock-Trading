@@ -37,7 +37,7 @@ def get_display_tz(query_fn, project):
     try:
         rows = query_fn(f"SELECT tz FROM `{project}.state.user_tz`")
         return (rows[0]["tz"] if rows else None) or "America/Denver"
-    except Exception:
+    except Exception:  # noqa: BLE001 - cosmetic only; any failure falls back to America/Denver per this function's docstring
         return "America/Denver"
 
 

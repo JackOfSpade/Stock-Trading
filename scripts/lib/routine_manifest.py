@@ -11,19 +11,31 @@ Consolidated here so there is exactly one implementation both scripts import.
 """
 import re
 
+from lib.md_fence import fence_mask
+
 # A routine section heading ends with its type tag; this excludes preamble/queue-schema headings.
 ROUTINE_SUFFIX = re.compile(r"—\s*(deep research|regular routine)\s*$")
 
 
 def parse_routine_headings(plan_path):
-    """Ordered list of routine section headings from the given Claude_Task_Plan.md path."""
-    out = []
+    """Ordered list of routine section headings from the given Claude_Task_Plan.md path.
+
+    A `## ...` line inside a fenced code block (``` or ~~~ at column 0) is example text, not a real
+    heading -- without fence_mask this function disagreed with scripts/split_task_plan.py's own
+    `split()`, which already fence-masks the identical heading test. split_task_plan.py's docstring
+    claims a slice "can never disagree with the trigger manifest about what a routine heading is"
+    BECAUSE both import this module -- that claim was false until this matched split()'s idiom
+    (2026-08-08 audit finding).
+    """
     with open(plan_path, encoding="utf-8") as f:
-        for ln in f:
-            if ln.startswith("## "):
-                h = ln[3:].strip()
-                if ROUTINE_SUFFIX.search(h):
-                    out.append(h)
+        lines = f.readlines()
+    mask = fence_mask(lines)
+    out = []
+    for ln, in_fence in zip(lines, mask, strict=True):  # fence_mask() returns exactly one entry per input line
+        if not in_fence and ln.startswith("## "):
+            h = ln[3:].strip()
+            if ROUTINE_SUFFIX.search(h):
+                out.append(h)
     return out
 
 

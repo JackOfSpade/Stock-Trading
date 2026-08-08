@@ -85,6 +85,27 @@ DRIFT/comparison logic below this point (canonicalize, normalize_tail, the missi
 branch in main()) is completely untouched by this fix — only HOW a live definition is fetched
 changed, never how it is compared or classified once fetched.
 
+PROCEDURE BODY BLEED PAST ITS OWN END (2026-08-08). NEXT_TOP_LEVEL deliberately excludes BEGIN from
+its boundary keywords (see that regex's own comment) — it has to, since BEGIN is what STARTS a
+PROCEDURE's own body — but that also means nothing stopped extract_body's PROCEDURE branch at a
+procedure's OWN closing END. bigquery/146_adversarial_review_writer_serialization.sql's
+ops.sp_write_adversarial_review procedure body ends at its own `END;` (line 193), and the file then
+runs a completely separate, free-standing one-time `BEGIN ... END` repair script (lines 200-262)
+before the next real top-level statement. The old extraction swallowed that whole second block into
+the procedure's "body" — measured a 209-line body containing 'json_string_target_ids',
+'repair_mutex_rows', and 'JSON type repair', identifiers that exist ONLY in the unrelated repair
+block — producing a permanent false DRIFT against the true, live 147-line (BEGIN..END inclusive)
+definition. Fixed with a real nesting-aware scan, find_procedure_body_end(), that finds the END
+actually matching the procedure's own opening BEGIN — tracking BigQuery scripting's real nesting
+(BEGIN...END, IF...END IF, CASE...END/END CASE, WHILE...END WHILE, LOOP...END LOOP, FOR...END FOR,
+and BEGIN TRANSACTION/COMMIT TRANSACTION, which do NOT nest) rather than naive BEGIN/END word
+counting, which gets at least three of those constructs wrong (see that function's docstring).
+Verified against the real repo tree: of all 212 objects find_final_definitions() extracts, this
+fix changes the body of exactly ONE — ops.sp_write_adversarial_review, 209 → 147 lines, matching
+byte-for-byte the file's actual lines 47-193 — and the total object count is unchanged (see
+tests/test_check_live_sql_parity.py for the full regression coverage, including the CASE-expression-
+bare-END and FOR...END FOR edge cases the fix has to get right without over-correcting).
+
 Usage:  python scripts/check_live_sql_parity.py --project stock-trading-498512
         python scripts/check_live_sql_parity.py --offline   # parser self-check only, no bq calls
         python scripts/check_live_sql_parity.py --project stock-trading-498512 --json-out /tmp/findings.json
@@ -235,6 +256,158 @@ def normalize_tail(body):
     return body
 
 
+def sql_tokens(sql):
+    """Yield (kind, value, start, end) over `sql`: "S" a string literal (kept VERBATIM including its
+    quotes -- content is never scanned for keywords), "W" a run of whitespace (one token per run),
+    "T" a bare word/identifier, "P" a single punctuation character. `--` and `/* */` comments are
+    consumed silently (neither yielded nor scanned) and backtick identifier quoting is dropped (also
+    not yielded).
+
+    Factored out of canonicalize()'s own original inline loop (2026-08-08, PROCEDURE body-boundary
+    fix below) so find_procedure_body_end() can scan a PROCEDURE body's real BEGIN/END/CASE nesting
+    through the SAME string-literal/comment handling canonicalize() already had, instead of a
+    second, independently written scanner that could silently drift from it -- exactly the kind of
+    duplication this repo's other boundary fixes (see NEXT_TOP_LEVEL's comment) have already been
+    bitten by once. canonicalize() below now calls this too; its own extensive test suite
+    (tests/test_check_live_sql_parity.py) is what pins that the refactor changed nothing about its
+    output.
+    """
+    i, n = 0, len(sql)
+    while i < n:
+        c = sql[i]
+        if c in ("'", '"'):
+            start = i
+            quote = c
+            triple = sql[i:i + 3] == quote * 3
+            if triple:
+                j = sql.find(quote * 3, i + 3)
+                j = n if j < 0 else j + 3
+            else:
+                j = i + 1
+                while j < n:
+                    if sql[j] == "\\":
+                        j += 2
+                        continue
+                    if sql[j] == quote:
+                        j += 1
+                        break
+                    if sql[j] == "\n":                       # unterminated — stop at the newline
+                        break
+                    j += 1
+            yield ("S", sql[start:j], start, j)
+            i = j
+            continue
+        if sql.startswith("--", i):
+            j = sql.find("\n", i)
+            i = n if j < 0 else j
+            continue
+        if sql.startswith("/*", i):
+            j = sql.find("*/", i)
+            i = n if j < 0 else j + 2
+            continue
+        if c == "`":                                         # identifier quoting is not semantic
+            i += 1
+            continue
+        if c.isspace():
+            start = i
+            while i < n and sql[i].isspace():
+                i += 1
+            yield ("W", " ", start, i)
+            continue
+        if c.isalnum() or c == "_":
+            start = i
+            j = i
+            while j < n and (sql[j].isalnum() or sql[j] == "_"):
+                j += 1
+            yield ("T", sql[start:j], start, j)
+            i = j
+            continue
+        yield ("P", c, i, i + 1)
+        i += 1
+
+
+# BigQuery scripting keywords that close a construct OTHER than BEGIN...END with their OWN two-word
+# suffix (END IF / END WHILE / END LOOP / END FOR) -- see find_procedure_body_end()'s docstring for
+# why these never need to be tracked as openers at all, only recognized (and ignored) as closers.
+# CASE is handled separately in find_procedure_body_end() itself: unlike these four, a CASE
+# *expression* (the only form this repo uses -- `CASE WHEN ... END`) closes with a BARE END, the
+# same token that closes a BEGIN block, so CASE (not these four) is the one construct that must be
+# tracked as an opener.
+NON_BEGIN_END_SUFFIX = frozenset({"IF", "WHILE", "LOOP", "FOR", "CASE"})
+
+
+def find_procedure_body_end(text, begin_start):
+    """Return the offset (relative to `text`) of the END token that closes the BEGIN...END block
+    opened at text[begin_start:] (which must start with the word BEGIN) -- i.e. the true end of a
+    PROCEDURE's own body -- or None if no matching END is found in `text`.
+
+    BUG THIS FIXES (2026-08-08). extract_body's PROCEDURE branch used to keep the ENTIRE stmt from
+    the procedure's opening BEGIN through NEXT_TOP_LEVEL's boundary (the next top-level CREATE/DML/
+    DDL statement) -- correct ONLY because BEGIN is deliberately excluded from NEXT_TOP_LEVEL's
+    keyword list (it has to be, since BEGIN is what STARTS the procedure's own body). But that means
+    nothing stops extraction at the procedure's OWN closing END either: bigquery/146_adversarial_
+    review_writer_serialization.sql's ops.sp_write_adversarial_review procedure body ends at its own
+    `END;` (line 193), and the file then runs an entirely separate, free-standing `BEGIN ... END`
+    one-time repair script (line 200-262) before the next real top-level statement -- naive
+    extraction swallowed that whole second block into the procedure's "body", producing a 209-line
+    body containing identifiers ('json_string_target_ids', 'repair_mutex_rows') that exist ONLY in
+    the unrelated repair block, and a permanent false DRIFT against the live 145-line definition.
+
+    Naive BEGIN/END word-counting is NOT a fix -- BigQuery scripting nests via BEGIN...END,
+    IF...END IF, CASE...END CASE (bare END for a CASE *expression*, this repo's only form),
+    WHILE...END WHILE, LOOP...END LOOP, FOR...END FOR (bigquery/17_restore_drill.sql, bigquery/
+    75_scheduled_query_wrappers.sql), and BEGIN TRANSACTION/COMMIT TRANSACTION, which do NOT nest
+    (they bracket a transaction, not a block -- 146's own procedure uses BEGIN TRANSACTION inside
+    its body; counting it as an opener would count one extra level nothing legitimately closes).
+    IF/WHILE/LOOP/FOR never need tracking as openers at all: their closer is always the two-word
+    form, self-identifying and never a bare END, so it is simply recognized and ignored (NON_BEGIN_
+    END_SUFFIX) rather than affecting depth. CASE is the one exception -- see the module-level
+    constant's comment.
+
+    Keywords inside string literals and comments are ignored via sql_tokens() (reused, not
+    reinvented -- see that function's docstring). A two-word form (END IF, BEGIN TRANSACTION, ...)
+    is only recognized when NOTHING but whitespace sits between the two words in the full token
+    stream -- not just "the next word encountered" -- so "END;" immediately followed by an unrelated
+    fresh `IF ... THEN` statement (a real shape: bigquery/17_restore_drill.sql's EXCEPTION-handling
+    BEGIN...END closes right before its own next IF) is never misread as "END IF", which would both
+    skip the real END's depth decrement and silently swallow the following IF.
+    """
+    toks = list(sql_tokens(text[begin_start:]))
+    word_positions = [idx for idx, t in enumerate(toks) if t[0] == "T"]
+    depth = 0
+    wi = 0
+    while wi < len(word_positions):
+        idx = word_positions[wi]
+        word = toks[idx][1]
+        nxt_word = None
+        if wi + 1 < len(word_positions):
+            nxt_idx = word_positions[wi + 1]
+            if all(t[0] == "W" for t in toks[idx + 1:nxt_idx]):
+                nxt_word = toks[nxt_idx][1]
+        if word == "BEGIN":
+            if nxt_word == "TRANSACTION":
+                wi += 2
+                continue
+            depth += 1
+            wi += 1
+            continue
+        if word == "CASE":
+            depth += 1
+            wi += 1
+            continue
+        if word == "END":
+            if nxt_word in NON_BEGIN_END_SUFFIX:
+                wi += 2
+                continue
+            depth -= 1
+            if depth == 0:
+                return begin_start + toks[idx][3]
+            wi += 1
+            continue
+        wi += 1
+    return None
+
+
 def extract_body(txt, start, obj_type):
     """Given the file text and the start offset of a CREATE_STMT match, return the object's body:
     the preamble (CREATE ... AS / ... BEGIN) is dropped, keeping only what INFORMATION_SCHEMA's
@@ -256,7 +429,15 @@ def extract_body(txt, start, obj_type):
         m = re.search(r"\bBEGIN\b", stmt)
         if not m:
             return None
-        body = stmt[m.start():]
+        # Fixed 2026-08-08: NEXT_TOP_LEVEL's boundary (the `end` used to build `stmt` above) is not
+        # enough on its own -- it stops at the next top-level statement, but a free-standing
+        # BEGIN...END block (146's one-time JSON-repair script) is not a top-level CREATE/DML/DDL
+        # keyword, so it bled straight into the "body" below. find_procedure_body_end() finds the
+        # true, nesting-aware end of THIS procedure's own BEGIN; fall back to the old (bleeding)
+        # full-stmt slice only if it can't find one at all, which should never happen against
+        # well-formed DDL but keeps this from ever returning nothing instead of returning something.
+        end_m = find_procedure_body_end(stmt, m.start())
+        body = stmt[m.start():end_m] if end_m is not None else stmt[m.start():]
     else:  # VIEW / TABLE FUNCTION
         # The first standalone "AS" (followed by whitespace) after the CREATE header — the AS that
         # starts the SELECT/body. A column-alias "AS" can never appear textually before this header
@@ -322,65 +503,29 @@ def canonicalize(sql):
     passed through VERBATIM — a `--` or extra space INSIDE a literal is content, not formatting, and
     must still count as drift (ops.sp_score_theater's prompt text differing by an em-dash vs hyphen is
     a real finding this must not swallow).
+
+    The tokenizing loop itself now lives in sql_tokens() (factored out 2026-08-08 so find_procedure_
+    body_end() can reuse the exact same string/comment handling for its own, unrelated scan — see
+    that function's docstring); this function only adds its own quote-style normalization on top of
+    the "S" tokens sql_tokens() yields verbatim. Behavior here is unchanged by that refactor — this
+    docstring's own measured false-positive numbers and every test below still hold.
     """
     if not sql:
         return sql
-    toks, i, n = [], 0, len(sql)
-    while i < n:
-        c = sql[i]
-        if c in ("'", '"'):                                  # string literal — verbatim
-            quote = c
-            triple = sql[i:i + 3] == quote * 3
-            if triple:
-                j = sql.find(quote * 3, i + 3)
-                j = n if j < 0 else j + 3
-            else:
-                j = i + 1
-                while j < n:
-                    if sql[j] == "\\":
-                        j += 2
-                        continue
-                    if sql[j] == quote:
-                        j += 1
-                        break
-                    if sql[j] == "\n":                       # unterminated — stop at the newline
-                        break
-                    j += 1
-            lit = sql[i:j]
-            # Normalize quote STYLE only when the content contains neither quote, so re-quoting is
-            # unambiguous and cannot change the literal's value.
-            if not triple and len(lit) >= 2 and lit[0] == lit[-1] and lit[0] in "'\"":
-                inner = lit[1:-1]
-                if '"' not in inner and "'" not in inner:
-                    lit = "'" + inner + "'"
-            toks.append(("S", lit))
-            i = j
+    toks = []
+    for kind, val, _start, _end in sql_tokens(sql):
+        if kind != "S":
+            toks.append((kind, val))
             continue
-        if sql.startswith("--", i):
-            j = sql.find("\n", i)
-            i = n if j < 0 else j
-            continue
-        if sql.startswith("/*", i):
-            j = sql.find("*/", i)
-            i = n if j < 0 else j + 2
-            continue
-        if c == "`":                                         # identifier quoting is not semantic
-            i += 1
-            continue
-        if c.isspace():
-            while i < n and sql[i].isspace():
-                i += 1
-            toks.append(("W", " "))
-            continue
-        if c.isalnum() or c == "_":
-            j = i
-            while j < n and (sql[j].isalnum() or sql[j] == "_"):
-                j += 1
-            toks.append(("T", sql[i:j]))
-            i = j
-            continue
-        toks.append(("P", c))
-        i += 1
+        lit = val                                            # string literal — verbatim
+        triple = len(lit) >= 3 and lit[:3] == lit[0] * 3
+        # Normalize quote STYLE only when the content contains neither quote, so re-quoting is
+        # unambiguous and cannot change the literal's value.
+        if not triple and len(lit) >= 2 and lit[0] == lit[-1] and lit[0] in "'\"":
+            inner = lit[1:-1]
+            if '"' not in inner and "'" not in inner:
+                lit = "'" + inner + "'"
+        toks.append(("S", lit))
 
     # Removing a comment leaves the whitespace on BOTH sides of it as separate runs; merge them, or
     # `wins -- note\n  FROM` canonicalizes to "wins  FROM" (two spaces) and never matches live.
@@ -539,7 +684,7 @@ def fetch_live_definitions(project, final):
                 f"`{project}`.{dataset}.INFORMATION_SCHEMA.VIEWS", project,
                 max_rows=BATCH_MAX_ROWS)
             views_by_dataset[dataset] = parse_views_batch(rows)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - any query failure is cached here and re-raised per-object below (see docstring)
             views_by_dataset[dataset] = e
 
     routines_by_dataset = {}
@@ -551,7 +696,7 @@ def fetch_live_definitions(project, final):
                 f"WHERE routine_type IN ('PROCEDURE', 'TABLE FUNCTION')", project,
                 max_rows=BATCH_MAX_ROWS)
             routines_by_dataset[dataset] = parse_routines_batch(rows)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - any query failure is cached here and re-raised per-object below (see docstring)
             routines_by_dataset[dataset] = e
 
     return views_by_dataset, routines_by_dataset
@@ -682,7 +827,7 @@ def main():
     for (dataset, name), (obj_type, _obj_project, source_file, body) in sorted(final.items()):
         try:
             live_body = resolve_live_definition(views_by_dataset, routines_by_dataset, dataset, name, obj_type)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - a lookup failure (transient/auth/timeout) is inconclusive, not evidence
             # Lookup FAILED (transient/auth/timeout) -- inconclusive, NOT evidence of anything.
             # Keep this branch exactly as it was: a skip, never a finding, never a fail on its own.
             missing_live.append(f"{dataset}.{name} ({source_file}): live lookup failed: {e}")

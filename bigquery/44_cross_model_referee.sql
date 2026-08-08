@@ -79,14 +79,17 @@
 -- is that it currently CANNOT distinguish "insert-only MERGE" from "the audit trail was silently
 -- rewritten" — better to just not emit a MERGE job here at all.
 -- ============================================================================
--- SUPERSEDED LIVE by bigquery/143_adversarial_review_correction_path.sql — that file is the current
--- single source of truth for ops.sp_score_cross_model_referee. Kept here, unmodified, for DR-rebuild
--- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation: the attacker
--- candidate subquery below has no ROW_NUMBER/QUALIFY, and the outer NOT EXISTS guard is evaluated
--- against the statement's pre-statement snapshot, so two attacker rows sharing one review_id both pass
--- it and TWO referee_gemini rows land for one review. 143 adds a per-review_id QUALIFY (newest cycle)
--- and reads state.adversarial_reviews_current. The INSERT-only shape that stopped this procedure
--- tripping state.append_only_integrity (the 2026-07-20 MERGE->INSERT fix below) is preserved in 143.
+-- SUPERSEDED LIVE by bigquery/148_audit_2026_08_08_fixes.sql — that file is the current
+-- single source of truth for ops.sp_score_cross_model_referee (chain: 44 -> 143 -> 148). Kept here,
+-- unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement
+-- live in isolation: the attacker candidate subquery below has no ROW_NUMBER/QUALIFY, and the outer
+-- NOT EXISTS guard is evaluated against the statement's pre-statement snapshot, so two attacker rows
+-- sharing one review_id both pass it and TWO referee_gemini rows land for one review. 143 added a
+-- per-review_id QUALIFY (newest cycle) and reads state.adversarial_reviews_current; 148 in turn added
+-- a cycle_number term to both "already scored" guards so the referee re-evaluates a review after
+-- AR_orc returns REVISION REQUIRED and SL2 re-drafts at a later cycle. The INSERT-only shape that
+-- stopped this procedure tripping state.append_only_integrity (the 2026-07-20 MERGE->INSERT fix
+-- below) is preserved in both 143 and 148.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_score_cross_model_referee`()
 BEGIN
   INSERT INTO `stock-trading-498512.events.adversarial_reviews`

@@ -24,3 +24,32 @@ addopts = "-q"
 # of the safety case).
 line-length = 120
 target-version = "py311"
+
+[tool.ruff.lint]
+# Select bug-catching rules, not style/migration churn. Ruff's default (E4, E7, E9, F) is close to
+# syntax-errors-only and was letting real defects (blind excepts, zip() truncation, mutable-default
+# traps) through unreviewed while 56 `# noqa` suppressions quietly stopped doing anything at all
+# (2026-08-08 lint-gate audit). This set is deliberately narrow:
+#   E4, E7, E9, F  - the default: imports, syntax errors, pyflakes (unused names, undefined names).
+#   B              - flake8-bugbear: real bug classes (blind except, zip() without strict=, mutable
+#                    default args, raise-without-from, loop-variable-in-closure, ...).
+#   C4             - flake8-comprehensions: needless list()/dict() calls, wasteful comprehensions.
+#   PIE            - misc correctness/redundancy (unnecessary pass, reimplemented builtins, ...).
+#   RUF            - ruff-native rules, including RUF100 (unused-noqa) — the rule that catches an
+#                    inert suppression like the 56 above, so this class of drift self-detects again.
+#   BLE            - blind `except Exception`/`except:` — the highest-value rule here, since several
+#                    call sites talk to live BigQuery and a silent catch-all can hide a real failure.
+# Deliberately NOT selected: ARG (366 hits, almost all unused-pytest-fixture noise, not bugs), and
+# PTH/SIM/PERF/RET/UP (pathlib/style/modernization migrations with no behavioural benefit — pure
+# churn on a repo where the owner asked for meaningful change only).
+select = ["E4", "E7", "E9", "F", "B", "C4", "PIE", "RUF", "BLE"]
+
+[tool.ruff.lint.per-file-ignores]
+# c_options_math.py and strategy_math/*.py are spec-locked: their bytes are hashed into
+# strategy/roster.yaml's spec_hash fields, and ANY edit (including a lint fix) fails the blocking
+# CI gate scripts/check_roster_consistency.py until an owner-directed hash recompute. The findings
+# below are cosmetic (unnecessary `pass`, ambiguous-unicode math prose, zip() without strict=,
+# unsorted __slots__) — listed by exact code, not blanket-ignored, so a NEW class of finding in
+# these files still surfaces instead of being silently swallowed.
+"c_options_math.py" = ["PIE790", "RUF002", "RUF005"]
+"strategy_math/*.py" = ["B905", "RUF023"]

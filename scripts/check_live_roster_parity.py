@@ -35,8 +35,9 @@ import subprocess  # noqa: F401 — kept so tests can monkeypatch subprocess.run
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.bq_json import run_bq_query  # noqa: E402
-from lib.textio import load_yaml  # noqa: E402
+from lib.bq_json import run_bq_query
+from lib.textio import load_yaml
+from lib.roster_common import roster_active_codes as _roster_active_codes_for_doc
 
 try:
     # This module's own read now goes through lib.textio.load_yaml() (2026-07-29 textio adoption), so
@@ -45,12 +46,10 @@ try:
     import yaml  # noqa: F401
 except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
-    raise SystemExit(2)
+    raise SystemExit(2) from None
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROSTER = os.path.join(ROOT, "strategy", "roster.yaml")
-# roster_state values meaning is_active — IDENTICAL to check_roster_consistency.py's ACTIVE_STATES_YAML.
-ACTIVE_STATES_YAML = {"probe", "adopted"}
 
 
 def bq(sql, project):
@@ -62,10 +61,13 @@ def bq(sql, project):
 
 
 def roster_active_codes():
-    """strategy/roster.yaml strategies[].code where roster_state in {probe, adopted}."""
-    doc = load_yaml(ROSTER)
-    return {s["code"] for s in doc.get("strategies", []) or []
-            if str(s.get("roster_state", "")).lower() in ACTIVE_STATES_YAML}
+    """strategy/roster.yaml strategies[].code where roster_state in {probe, adopted}. Thin wrapper
+    around lib/roster_common.py's doc-based core (roster-group audit, 2026-08-08 dedup — this
+    function and ACTIVE_STATES_YAML were byte-identical copies of check_roster_consistency.py's,
+    down to a stale KeyError on a roster.yaml entry missing 'code'). Kept as a local no-arg wrapper
+    (rather than importing roster_active_codes directly) so this module's ROSTER path constant stays
+    the thing tests monkeypatch — see tests/test_check_live_roster_parity.py's ROSTER-repoint tests."""
+    return _roster_active_codes_for_doc(load_yaml(ROSTER))
 
 
 def live_active_codes(project):
@@ -87,7 +89,7 @@ def main():
     repo = roster_active_codes()
     try:
         live = live_active_codes(args.project)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - fail closed: a parity check must never report OK on zero real comparison
         # FAIL CLOSED: a safety parity check must never report OK on zero real comparison. The workflow
         # gates this step behind the WIF guard, so reaching here means creds were present but the live
         # read failed — a real problem, not an expected skip.

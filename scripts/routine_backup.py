@@ -44,8 +44,8 @@ import uuid
 from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.routine_manifest import cadence_routines  # noqa: E402
-from lib.textio import load_yaml  # noqa: E402
+from lib.routine_manifest import cadence_routines
+from lib.textio import load_yaml
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BACKUP_PATH = os.path.join(ROOT, "ops", "routine_backup.json")
@@ -401,8 +401,19 @@ def _personal_id(name):
 
 
 # ---- profile derivation -------------------------------------------------------------------------------
+def _tools_set(tools):
+    return set(tools or [])
+
+
 def _tools_eq(a, b):
-    return list(a or []) == list(b or [])
+    """Order-INSENSITIVE, matching the mcp_connections precedent (_conn_uuid_set below / _conns'
+    docstring): allowed_tools comes back from a live `list`/`get` response in whatever order the API
+    happens to serialize session_context in, same as mcp_connections' connector order varies harmlessly
+    between routines. Comparing as a list (the old `list(a) == list(b)`) treated that harmless order
+    difference as a real config change -- a live routine whose allowed_tools order merely differed from
+    its profile read as drift and picked up a spurious `overrides["allowed_tools"]` on every ingest
+    (2026-08-08)."""
+    return _tools_set(a) == _tools_set(b)
 
 
 def _sources_eq(a, b):
@@ -460,6 +471,24 @@ def derive_profile(normalized, profiles):
     return best_name, overrides
 
 
+def _dedup_raw_triggers(raws):
+    """Collapse `raws` to one entry per trigger id, keeping the LAST occurrence -- a directory ingest
+    (_load_raw_triggers) flattens every file's triggers into one list, and the SAME trigger id can
+    legitimately appear in more than one file (e.g. two overlapping RemoteTrigger `list` pages saved
+    separately). Without this, ingest()'s loop below classified each occurrence separately and
+    double-counted the routine across added/updated/unchanged, even though doc["routines"][rid] already
+    ended up holding only the LAST occurrence's data -- plain dict assignment inside that loop is
+    itself last-one-wins (2026-08-08). Keeping the last occurrence here just makes the classification
+    match what the stored data already did. A raw with no id/trigger_id at all (should not happen for a
+    real RemoteTrigger response) has no stable identity to dedup on, so each is kept as its own entry
+    rather than collapsed with unrelated id-less raws."""
+    keyed = {}
+    for i, raw in enumerate(raws):
+        tid = raw.get("id") or raw.get("trigger_id")
+        keyed[tid if tid else ("__no_id__", i)] = raw
+    return list(keyed.values())
+
+
 # ---- ingest -----------------------------------------------------------------------------------------
 def ingest(path):
     """Merge every trigger found at `path` (file or directory; see _iter_raw_triggers/_load_raw_triggers
@@ -473,7 +502,7 @@ def ingest(path):
 
     added, updated, unchanged, unmatched, conflicts = [], [], [], [], []
 
-    for raw in _load_raw_triggers(path):
+    for raw in _dedup_raw_triggers(_load_raw_triggers(path)):
         normalized = normalize_trigger(raw)
 
         # B5 (2026-08-01 audit): trigger_id and instruction disagreeing on the routine id is NOT safe
@@ -599,17 +628,24 @@ def _assemble_create_body(*, name, cron_expression=None, run_once_at=None, enabl
 
 def _resolve_fields(entry, profiles):
     """profile + overrides -> the effective session_context/mcp_connections fields for one
-    ops/routine_backup.json routine entry."""
+    ops/routine_backup.json routine entry.
+
+    All seven fields go through p.get(...) -- six of them used to hard-index (p["sources"] etc.),
+    only `notifications` used .get(). A snapshot profile missing one of the six (hand-edited or a
+    corrupted ingest) raised an uncaught KeyError here and crashed check()/restore() before
+    _resolved_fields_errors() ever got a chance to report it as the "missing/empty" finding it already
+    knows how to describe (2026-08-08). .get() everywhere makes a missing field resolve to None like
+    notifications always did, so the crash becomes a clean, reportable validation failure instead."""
     p = profiles[entry["profile"]]
     ov = entry.get("overrides") or {}
     return {
-        "environment_id": ov.get("environment_id", p["environment_id"]),
-        "model": ov.get("model", p["model"]),
-        "allowed_tools": ov.get("allowed_tools", p["allowed_tools"]),
-        "autofix_on_pr_create": ov.get("autofix_on_pr_create", p["autofix_on_pr_create"]),
+        "environment_id": ov.get("environment_id", p.get("environment_id")),
+        "model": ov.get("model", p.get("model")),
+        "allowed_tools": ov.get("allowed_tools", p.get("allowed_tools")),
+        "autofix_on_pr_create": ov.get("autofix_on_pr_create", p.get("autofix_on_pr_create")),
         "notifications": ov.get("notifications", p.get("notifications")),
-        "sources": ov.get("sources", p["sources"]),
-        "mcp_connections": ov.get("mcp_connections", p["mcp_connections"]),
+        "sources": ov.get("sources", p.get("sources")),
+        "mcp_connections": ov.get("mcp_connections", p.get("mcp_connections")),
     }
 
 

@@ -53,6 +53,26 @@ def test_parse_routine_headings_filters_and_preserves_order(tmp_path):
     ]
 
 
+# ---- parse_routine_headings: a '## ...' line inside a fenced code block is example text, not a real
+# heading -- scripts/split_task_plan.py's split() already fence-masks the identical heading test, so
+# this function disagreeing with it would make split_task_plan.py's own docstring claim ("a slice can
+# never disagree with the trigger manifest about what a routine heading is") false (2026-08-08 fix).
+def test_parse_routine_headings_ignores_fenced_heading_lookalike(tmp_path):
+    plan = tmp_path / "Claude_Task_Plan.md"
+    plan.write_text(
+        "# Title\n"
+        "## D1. First — deep research\nbody\n\n"
+        "```\n"
+        "## D9. Fake, inside a fence — deep research\n"
+        "```\n\n"
+        "## D2. Second — regular routine\nbody\n"
+    )
+    assert parse_routine_headings(str(plan)) == [
+        "D1. First — deep research",
+        "D2. Second — regular routine",
+    ]
+
+
 # ---- instruction_text: the single template shared by build_triggers_manifest, gen_routine_lists.py's
 # gen_15_region (bigquery/15 canonical_instruction), and print_routines.py's display line -------------
 def test_instruction_text_exact_template():

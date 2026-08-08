@@ -158,7 +158,7 @@ import re
 import sys
 
 try:
-    # noqa: F401 — this module's own reads now go through lib.textio.load_yaml() (2026-07-29 textio
+    # this module's own reads now go through lib.textio.load_yaml() (2026-07-29 textio
     # adoption), so `yaml` is no longer referenced directly here, but the import stays for (1) this
     # fail-fast ImportError guard (a clear "pip install pyyaml" message beats textio.py's own bare
     # ImportError traceback) and (2) tests/test_roster_consistency.py's direct rc.yaml.safe_load()/
@@ -166,11 +166,12 @@ try:
     import yaml  # noqa: F401
 except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
-    raise SystemExit(2)
+    raise SystemExit(2) from None
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.textio import read_bytes, read_text, load_yaml  # noqa: E402
-from lib.md_fence import fence_mask  # noqa: E402
+from lib.textio import read_bytes, read_text, load_yaml
+from lib.md_fence import fence_mask
+from lib.roster_common import roster_active_codes
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROSTER = os.path.join(ROOT, "strategy", "roster.yaml")
@@ -282,7 +283,8 @@ def spec_hash_inputs():
 
 LIFECYCLE_STATES = ("CANDIDATE", "QUALIFYING", "AUTHORING", "UNDER_REVIEW", "SHADOW", "PAPER",
                     "PROBE", "ADOPTED", "RETIREMENT_PROPOSED", "TERMINATED", "POST_MORTEM", "REJECTED")
-ACTIVE_STATES_YAML = {"probe", "adopted"}      # roster.yaml roster_state values meaning is_active
+# ACTIVE_STATES_YAML now lives in lib/roster_common.py, shared with check_live_roster_parity.py
+# (roster-group audit, 2026-08-08 dedup) — see that module's docstring.
 ACTIVE_STATES_SQL = {"PROBE", "ADOPTED"}       # seed to_state values meaning is_active
 # R-K: the roster_state values (lowercase, as roster.yaml writes them) that require golden-scenario
 # coverage — every incubating-or-live phase from SHADOW entry onward. SHADOW is the moment the candidate's
@@ -492,9 +494,9 @@ def roster_doc():
     return load_yaml(ROSTER)
 
 
-def roster_active_codes(doc):
-    return {s["code"] for s in doc.get("strategies", []) or []
-            if str(s.get("roster_state", "")).lower() in ACTIVE_STATES_YAML}
+# roster_active_codes() now lives in lib/roster_common.py, imported above (roster-group audit,
+# 2026-08-08 dedup) — see that module's docstring for the s["code"] -> s.get("code") KeyError fix
+# that motivated pulling this out alongside the dedup.
 
 
 def slice_codes():
@@ -549,7 +551,7 @@ def pre_mortem_section(label):
     headings = []
     h3_offsets = []
     offset = 0
-    for i, (chunk, line) in enumerate(zip(chunks, lines)):
+    for i, (chunk, line) in enumerate(zip(chunks, lines, strict=True)):  # lines is a 1:1 comprehension over chunks
         if not in_fence[i]:
             if H3_HEADING.match(line):
                 h3_offsets.append(offset)
@@ -962,6 +964,7 @@ def main():
     # exact value is irrelevant here precisely because the column is not named `strategy`). ----
     if os.path.exists(DBT_SCHEMA_ACCEPTED_VALUES):
         schema_doc = load_yaml(DBT_SCHEMA_ACCEPTED_VALUES)
+        found_blocks = 0        # see the zero-found check below — this is what makes R-G non-vacuous
         for model in schema_doc.get("models", []) or []:
             for col in model.get("columns", []) or []:
                 if col.get("name") != "strategy":
@@ -969,6 +972,7 @@ def main():
                 for test in col.get("tests", []) or []:
                     if not isinstance(test, dict) or "accepted_values" not in test:
                         continue
+                    found_blocks += 1
                     av = test["accepted_values"]
                     if not isinstance(av, dict):
                         # `accepted_values` authored as a bare list/scalar instead of a {values: [...]}
@@ -989,6 +993,19 @@ def main():
                             f"'strategy' accepted_values {sorted(codes)} no longer matches the roster-active "
                             f"set {sorted(roster_codes)} — update this list (or drop the test) alongside "
                             f"the roster change.")
+        # VACUOUS-PASS FIX (roster-group audit, 2026-08-08): the loop above only ever FAILS on a STALE
+        # block — if every accepted_values(strategy) block is instead DELETED outright, `found_blocks`
+        # stays 0, the loop body never executes, and R-G printed clean. That makes deleting the very
+        # tests R-G exists to police the easiest way to silence it — the file still EXISTS (so the
+        # `else` branch below never fires either) with zero qualifying blocks inside. Flag that
+        # zero-found case explicitly instead of trusting an empty loop to mean "nothing to report".
+        if found_blocks == 0:
+            errors.append(
+                "R-G: dbt/models/analytics/schema.yml parsed but contains ZERO accepted_values tests on "
+                "a `strategy` column — either every such test was deleted (silencing the very roster-vs-"
+                "schema drift check R-G exists to police) or the schema shape changed underneath this "
+                "scan. Restore at least one accepted_values(strategy) test (or, if the shape genuinely "
+                "changed, update R-G's column-name scan to match it).")
     else:
         errors.append("R-G: dbt/models/analytics/schema.yml is missing — cannot validate that "
                       "accepted_values(strategy) tests track the roster")

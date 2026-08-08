@@ -65,8 +65,10 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.sql_files import numbered_sql_files, resolve_canonical, strip_sql_comments  # noqa: E402
-from lib.textio import read_text  # noqa: E402
+from lib.sql_files import (
+    OBJECT_DDL, normalize_kind, numbered_sql_files, resolve_canonical, strip_sql_comments,
+)
+from lib.textio import read_text
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BIGQUERY_DIR = os.path.join(ROOT, "bigquery")
@@ -102,15 +104,11 @@ INVERTED_PREDICATE = re.compile(
 # ALLOWLIST pseudo-object name for statements that live outside any CREATE (migrations, backfills).
 FILE_LEVEL = "<file-level statements>"
 
-# Group 1 = object kind (CAPTURING — _definition_segments needs it to know whether a body may
-# legitimately contain DML). Group 2 = dataset, group 3 = name.
-OBJECT_DDL = re.compile(
-    r"CREATE\s+(?:OR\s+REPLACE\s+)?"
-    r"(TABLE\s+FUNCTION|MATERIALIZED\s+VIEW|VIEW|FUNCTION|PROCEDURE|TABLE)\s+"
-    r"(?:IF\s+NOT\s+EXISTS\s+)?"
-    rf"`{re.escape(PROJECT)}\.(\w+)\.(\w+)`",
-    re.IGNORECASE,
-)
+# OBJECT_DDL (group 1 = object kind — _definition_segments needs it to know whether a body may
+# legitimately contain DML; group 2 = dataset, group 3 = name) moved to scripts/lib/sql_files.py
+# 2026-08-08 — it was byte-for-byte the same regex (modulo alternation order, verified behaviorally
+# identical) as check_superseded_markers.py's own copy; see that module's docstring for the dedup
+# rationale.
 
 # Classifying a reference as a READ.
 #
@@ -164,10 +162,13 @@ def _read_positions(body, table_fqn):
 ALLOWLIST = {
     ("143_adversarial_review_correction_path.sql", "state.adversarial_reviews_current"):
         "This view IS the anti-join — it must read the base table to define the filtered set.",
-    ("143_adversarial_review_correction_path.sql", "ops.sp_score_cross_model_referee"):
+    ("148_audit_2026_08_08_fixes.sql", "ops.sp_score_cross_model_referee"):
         "Its outer duplicate-guard NOT EXISTS deliberately tests the RAW table: refusing to insert a "
         "second referee_gemini row when ANY referee row exists (superseded or not) is strictly more "
-        "conservative than testing the current view, and this procedure must never double-write.",
+        "conservative than testing the current view, and this procedure must never double-write. "
+        "Re-pointed from 143_adversarial_review_correction_path.sql (2026-08-08): bigquery/148 is now "
+        "canonical for this procedure, adding a cycle_number term to both 'already scored' guards; the "
+        "outer guard's raw-table read is unchanged and this allowlist reason still applies verbatim.",
     ("146_adversarial_review_writer_serialization.sql", "ops.sp_write_adversarial_review"):
         "Its correction branch must inspect the exact physical target named by p_superseded_by and "
         "prove every carried review field matches before appending. The current view intentionally "
@@ -293,7 +294,7 @@ def _definition_segments(text):
         unowned.append(text)
     for i, m in enumerate(matches):
         end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
-        kind = re.sub(r"\s+", " ", m.group(1)).upper()
+        kind = normalize_kind(m.group(1))
         chunk = text[m.start():end]
         if kind not in ("PROCEDURE", "FUNCTION", "TABLE FUNCTION"):
             # Look for a column-0 standalone statement AFTER this CREATE's own first line.

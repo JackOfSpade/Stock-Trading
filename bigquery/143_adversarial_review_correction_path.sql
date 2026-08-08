@@ -249,6 +249,14 @@ END;
 -- -- so it still cannot trip state.append_only_integrity (bigquery/44's 2026-07-20 fix, preserved).
 -- The Gemini prompt text is byte-identical to bigquery/44's.
 -- ============================================================================
+-- SUPERSEDED LIVE by bigquery/148_audit_2026_08_08_fixes.sql — current single source of truth for
+-- ops.sp_score_cross_model_referee (chain: 44 -> 143 -> 148). 148 added a cycle_number term to both
+-- "already scored" guards, mirroring the idiom this file's sibling ops.sp_score_theater already uses,
+-- so the referee re-evaluates a review after AR_orc returns REVISION REQUIRED and SL2 re-drafts at a
+-- later cycle instead of scoring it once and never again. The outer guard's raw-table read
+-- (events.adversarial_reviews) is preserved unchanged in 148 for the same must-never-double-write
+-- reason stated above. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
+-- re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_score_cross_model_referee`()
 BEGIN
   INSERT INTO `stock-trading-498512.events.adversarial_reviews`

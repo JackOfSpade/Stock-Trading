@@ -321,14 +321,14 @@ def test_iron_condor_max_loss_closed_form():
 
 
 @pytest.mark.parametrize("builder,kwargs", [
-    (long_call, dict(strike=100, days_to_expiration=30, risk_free_rate=0.045, volatility=0.30, contracts=1)),
-    (long_put, dict(strike=100, days_to_expiration=30, risk_free_rate=0.045, volatility=0.30, contracts=1)),
-    (debit_call_spread, dict(long_strike=100, short_strike=105, days_to_expiration=30, risk_free_rate=0.045, volatility_long=0.30, volatility_short=0.28, contracts=1)),
-    (debit_put_spread, dict(long_strike=100, short_strike=95, days_to_expiration=30, risk_free_rate=0.045, volatility_long=0.30, volatility_short=0.28, contracts=1)),
-    (credit_call_spread, dict(short_strike=105, long_strike=110, days_to_expiration=30, risk_free_rate=0.045, volatility_short=0.30, volatility_long=0.30, contracts=1)),
-    (credit_put_spread, dict(short_strike=95, long_strike=90, days_to_expiration=30, risk_free_rate=0.045, volatility_short=0.30, volatility_long=0.30, contracts=1)),
-    (long_call_butterfly, dict(lower_strike=95, middle_strike=100, upper_strike=105, days_to_expiration=30, risk_free_rate=0.045, vol_lower=0.30, vol_middle=0.30, vol_upper=0.30, contracts=1)),
-    (long_put_butterfly, dict(lower_strike=95, middle_strike=100, upper_strike=105, days_to_expiration=30, risk_free_rate=0.045, vol_lower=0.30, vol_middle=0.30, vol_upper=0.30, contracts=1)),
+    (long_call, {"strike": 100, "days_to_expiration": 30, "risk_free_rate": 0.045, "volatility": 0.30, "contracts": 1}),
+    (long_put, {"strike": 100, "days_to_expiration": 30, "risk_free_rate": 0.045, "volatility": 0.30, "contracts": 1}),
+    (debit_call_spread, {"long_strike": 100, "short_strike": 105, "days_to_expiration": 30, "risk_free_rate": 0.045, "volatility_long": 0.30, "volatility_short": 0.28, "contracts": 1}),
+    (debit_put_spread, {"long_strike": 100, "short_strike": 95, "days_to_expiration": 30, "risk_free_rate": 0.045, "volatility_long": 0.30, "volatility_short": 0.28, "contracts": 1}),
+    (credit_call_spread, {"short_strike": 105, "long_strike": 110, "days_to_expiration": 30, "risk_free_rate": 0.045, "volatility_short": 0.30, "volatility_long": 0.30, "contracts": 1}),
+    (credit_put_spread, {"short_strike": 95, "long_strike": 90, "days_to_expiration": 30, "risk_free_rate": 0.045, "volatility_short": 0.30, "volatility_long": 0.30, "contracts": 1}),
+    (long_call_butterfly, {"lower_strike": 95, "middle_strike": 100, "upper_strike": 105, "days_to_expiration": 30, "risk_free_rate": 0.045, "vol_lower": 0.30, "vol_middle": 0.30, "vol_upper": 0.30, "contracts": 1}),
+    (long_put_butterfly, {"lower_strike": 95, "middle_strike": 100, "upper_strike": 105, "days_to_expiration": 30, "risk_free_rate": 0.045, "vol_lower": 0.30, "vol_middle": 0.30, "vol_upper": 0.30, "contracts": 1}),
 ])
 def test_bounded_structures_dual_path_agree(builder, kwargs):
     """Every bounded structure's two independent max-loss paths must agree within $1.
@@ -660,9 +660,9 @@ def test_atm_nearest_leg_volatility_tie_break_is_deterministic():
 
 def test_probability_weighted_payoff_uses_atm_vol_not_legs0_wing_vol():
     wing_vol, atm_vol = 0.60, 0.40
-    shared = dict(long_put_strike=80, short_put_strike=95, short_call_strike=99,
-                  long_call_strike=120, days_to_expiration=30, risk_free_rate=0.045,
-                  contracts=1)
+    shared = {"long_put_strike": 80, "short_put_strike": 95, "short_call_strike": 99,
+                  "long_call_strike": 120, "days_to_expiration": 30, "risk_free_rate": 0.045,
+                  "contracts": 1}
     # Skewed structure: wing legs at 0.60/0.55/0.65, near-the-money short_call at 0.40.
     ic = iron_condor(100, vol_long_put=wing_vol, vol_short_put=0.55,
                       vol_short_call=atm_vol, vol_long_call=0.65, **shared)
@@ -712,7 +712,7 @@ def test_realized_vol_uses_only_trailing_31_closes():
     for _ in range(40):  # 41 closes total, so the last 31 are unaffected by a prefix
         core.append(core[-1] * math.exp(dv * rng.gauss(0, 1)))
     rv_core = realized_volatility_30d(core)
-    rv_prefixed = realized_volatility_30d([1.0, 5000.0, 0.5, 9999.0] + core)
+    rv_prefixed = realized_volatility_30d([1.0, 5000.0, 0.5, 9999.0, *core])
     assert rv_prefixed == pytest.approx(rv_core, abs=1e-12)
 
 

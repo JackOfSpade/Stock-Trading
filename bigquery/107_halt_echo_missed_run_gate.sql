@@ -381,15 +381,17 @@ SELECT
   CURRENT_TIMESTAMP() AS checked_at
 FROM `stock-trading-498512.state.trading_enabled` t, expected e;
 
--- SUPERSEDED LIVE by bigquery/134_roster_change_notifications.sql — current single source of
--- truth for ops.sp_auto_resolve_alerts (chain: 94 -> 97 -> 107 -> 130 -> 134). 130 made Rule 1's
+-- SUPERSEDED LIVE by bigquery/148_audit_2026_08_08_fixes.sql — current single source of
+-- truth for ops.sp_auto_resolve_alerts (chain: 94 -> 97 -> 107 -> 130 -> 134 -> 148). 130 made Rule 1's
 -- dependency match tolerant of the missing_upstream / unsatisfied_deps payload-key aliases and of
 -- the JSON-array encoding; the missing_deps-only expression below can never auto-resolve a
 -- routine-hand-authored missing_dependency alert, which held blocking_criticals non-zero for two
--- days on 2026-08-01..03. 130 is itself now superseded by bigquery/134, which adds Rule 5:
+-- days on 2026-08-01..03. 130 was in turn superseded by bigquery/134, which adds Rule 5:
 -- roster-change notices (six categories) auto-resolve once notified_ts is stamped, i.e. once the
--- operator email has actually been delivered. Kept here, unmodified, for DR-rebuild apply-in-order
--- reference only. DO NOT re-apply this CREATE OR REPLACE PROCEDURE statement live in isolation.
+-- operator email has actually been delivered, and 134 was in turn superseded by bigquery/148, which
+-- fixed Rule 4's staleness echo arm to re-check all four state.system_health components instead of
+-- two. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
+-- CREATE OR REPLACE PROCEDURE statement live in isolation.
 --
 -- ===== ops.sp_auto_resolve_alerts — Rule 4's no_other_criticals made halt-echo-aware for missed_run
 -- too (SUPERSEDES bigquery/97) =====

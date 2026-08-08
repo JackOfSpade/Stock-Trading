@@ -90,6 +90,22 @@ def test_roster_active_codes_no_active_is_empty_set(tmp_path, monkeypatch):
     assert clrp.roster_active_codes() == set()
 
 
+def test_roster_active_codes_missing_code_field_does_not_crash(tmp_path, monkeypatch):
+    # roster-group audit, 2026-08-08: this used to be `s["code"]`, an uncaught KeyError on a
+    # roster.yaml entry missing its 'code' field -- killed the checker before main()'s FAIL-CLOSED
+    # try/except (which only wraps live_active_codes(), not this) ever got a chance to run.
+    roster = tmp_path / "roster.yaml"
+    roster.write_text(
+        "strategies:\n"
+        "  - roster_state: adopted\n"      # no 'code' key at all -- must not raise KeyError
+        "  - code: A\n"
+        "    roster_state: adopted\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(clrp, "ROSTER", str(roster))
+    assert clrp.roster_active_codes() == {"A"}
+
+
 # ---- live_active_codes(): extraction + query target + empty/malformed handling -------------------
 def test_live_active_codes_extracts_codes_and_targets_active_view(monkeypatch):
     captured = {}

@@ -244,6 +244,205 @@ def test_extract_body_retains_procedure_begin_end_wrapper():
     assert body == "BEGIN\n  SELECT x;\nEND"
 
 
+# ---- PROCEDURE body BLEED past its own END (2026-08-08 fix) ---------------------------------------
+# NEXT_TOP_LEVEL deliberately excludes BEGIN from its boundary keywords (it has to -- BEGIN is what
+# STARTS a procedure's own body), so nothing in the old extract_body stopped a PROCEDURE's body at
+# its own closing END either. bigquery/146_adversarial_review_writer_serialization.sql's
+# ops.sp_write_adversarial_review procedure ends its own body at line 193's `END;`, and the file then
+# runs an entirely separate, free-standing `BEGIN ... END` one-time repair script before the next
+# real top-level statement -- naive extraction swallowed that second block whole, producing a
+# 209-line body (true: 147) containing identifiers that exist ONLY in the unrelated repair block, and
+# a permanent false DRIFT against the live definition. find_procedure_body_end() fixes this with a
+# real nesting-aware scan; these tests pin the fix directly (revert extract_body's PROCEDURE branch
+# to `body = stmt[m.start():]` and every test below fails).
+def test_extract_body_procedure_stops_at_own_end_not_a_following_standalone_begin_end_block():
+    # Synthetic shape mirroring bigquery/146 exactly: a nested BEGIN TRANSACTION/COMMIT TRANSACTION
+    # inside the procedure's OWN body (which must NOT open a new nesting level), then a standalone
+    # BEGIN...END block after the procedure's true end (which must NOT bleed into the body).
+    txt = (
+        "CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_foo`(x INT64)\n"
+        "BEGIN\n"
+        "  DECLARE mutex_rows INT64;\n"
+        "  BEGIN TRANSACTION;\n"
+        "  SET mutex_rows = 1;\n"
+        "  COMMIT TRANSACTION;\n"
+        "  SELECT x;\n"
+        "END;\n"
+        "\n"
+        "-- a separate, later, one-time repair script -- NOT part of sp_foo's body\n"
+        "BEGIN\n"
+        "DECLARE json_string_target_ids ARRAY<STRING> DEFAULT [];\n"
+        "SELECT 'JSON type repair';\n"
+        "END;\n"
+    )
+    m = clsp.CREATE_STMT.search(txt)
+    body = clsp.extract_body(txt, m.start(), "PROCEDURE")
+    assert body == (
+        "BEGIN\n"
+        "  DECLARE mutex_rows INT64;\n"
+        "  BEGIN TRANSACTION;\n"
+        "  SET mutex_rows = 1;\n"
+        "  COMMIT TRANSACTION;\n"
+        "  SELECT x;\n"
+        "END"
+    )
+    for leaked in ("json_string_target_ids", "JSON type repair"):
+        assert leaked not in body
+
+
+def test_extract_body_procedure_case_expression_bare_end_does_not_truncate_body_early():
+    # A CASE *expression* (this repo's only form -- `CASE WHEN ... END`) closes with a BARE END, the
+    # same token that closes a BEGIN block. If CASE were not tracked as its own opener, this bare END
+    # would be miscounted as closing the procedure's outer BEGIN one statement early, silently
+    # dropping everything after the CASE from the extracted body (and, since a following standalone
+    # block exists here too, would also fail to exclude it -- the truncation lands in the wrong
+    # place, not just the wrong length).
+    txt = (
+        "CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_case`(x INT64)\n"
+        "BEGIN\n"
+        "  DECLARE y STRING;\n"
+        "  SET y = CASE WHEN x > 0 THEN 'pos' ELSE 'neg' END;\n"
+        "  SELECT y;\n"
+        "END;\n"
+        "\n"
+        "BEGIN\n"
+        "SELECT 'unrelated later block';\n"
+        "END;\n"
+    )
+    m = clsp.CREATE_STMT.search(txt)
+    body = clsp.extract_body(txt, m.start(), "PROCEDURE")
+    assert body == (
+        "BEGIN\n"
+        "  DECLARE y STRING;\n"
+        "  SET y = CASE WHEN x > 0 THEN 'pos' ELSE 'neg' END;\n"
+        "  SELECT y;\n"
+        "END"
+    )
+    assert "unrelated later block" not in body
+
+
+def test_extract_body_procedure_for_loop_end_for_does_not_confuse_nesting():
+    # Mirrors bigquery/17_restore_drill.sql's real shape: a FOR...END FOR loop containing its own
+    # nested BEGIN...EXCEPTION...END handler, inside the procedure's outer BEGIN, followed by a
+    # standalone block that must stay excluded.
+    txt = (
+        "CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_restore`()\n"
+        "BEGIN\n"
+        "  FOR rec IN (SELECT 1 AS n) DO\n"
+        "    BEGIN\n"
+        "      SELECT rec.n;\n"
+        "    EXCEPTION WHEN ERROR THEN\n"
+        "      SELECT @@error.message;\n"
+        "    END;\n"
+        "  END FOR;\n"
+        "  SELECT 'done';\n"
+        "END;\n"
+        "\n"
+        "BEGIN\n"
+        "SELECT 'unrelated later block';\n"
+        "END;\n"
+    )
+    m = clsp.CREATE_STMT.search(txt)
+    body = clsp.extract_body(txt, m.start(), "PROCEDURE")
+    assert body.startswith("BEGIN\n  FOR rec IN")
+    assert body.endswith("SELECT 'done';\nEND")
+    assert "unrelated later block" not in body
+
+
+def test_extract_body_procedure_end_semicolon_immediately_before_a_fresh_if_is_not_end_if():
+    # "END;" immediately followed by an unrelated, fresh "IF ... THEN" statement (a real shape --
+    # bigquery/17_restore_drill.sql's EXCEPTION-handling BEGIN...END closes right before its own
+    # next IF) must NOT be misread as the two-word "END IF" closer: that would both skip the real
+    # END's depth decrement and silently swallow the following IF into whatever comes next.
+    txt = (
+        "CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_foo`(x INT64)\n"
+        "BEGIN\n"
+        "  BEGIN\n"
+        "    SELECT x;\n"
+        "  END;\n"
+        "  IF x > 0 THEN\n"
+        "    SELECT 'positive';\n"
+        "  END IF;\n"
+        "END;\n"
+    )
+    m = clsp.CREATE_STMT.search(txt)
+    body = clsp.extract_body(txt, m.start(), "PROCEDURE")
+    assert body == (
+        "BEGIN\n"
+        "  BEGIN\n"
+        "    SELECT x;\n"
+        "  END;\n"
+        "  IF x > 0 THEN\n"
+        "    SELECT 'positive';\n"
+        "  END IF;\n"
+        "END"
+    )
+
+
+def test_find_procedure_body_end_ignores_keywords_inside_string_literals_and_comments():
+    # A string literal or comment containing the literal text "BEGIN"/"END"/"CASE" must never affect
+    # the nesting depth -- reuses sql_tokens()'s existing string/comment handling (shared with
+    # canonicalize()), not a second, independently-written scanner.
+    txt = (
+        "CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_foo`(x INT64)\n"
+        "BEGIN\n"
+        "  -- a comment mentioning BEGIN and END and CASE that must be ignored\n"
+        "  SELECT 'contains the words BEGIN TRANSACTION and END CASE as plain text';\n"
+        "END;\n"
+    )
+    m = clsp.CREATE_STMT.search(txt)
+    body = clsp.extract_body(txt, m.start(), "PROCEDURE")
+    # The comment/literal text is kept VERBATIM in the extracted body (only ignored for the
+    # keyword-nesting scan itself) -- this test's point is that neither one caused the scan to
+    # miscount depth and truncate/extend the body, not that they were stripped.
+    assert body == (
+        "BEGIN\n"
+        "  -- a comment mentioning BEGIN and END and CASE that must be ignored\n"
+        "  SELECT 'contains the words BEGIN TRANSACTION and END CASE as plain text';\n"
+        "END"
+    )
+
+
+def test_find_procedure_body_end_end_while_and_end_loop_do_not_affect_nesting():
+    # Defensive coverage for the two BigQuery scripting loop forms this repo does not currently use
+    # (WHILE...END WHILE, LOOP...END LOOP) -- same self-identifying-closer treatment as END IF/END
+    # FOR, per find_procedure_body_end()'s docstring.
+    txt = (
+        "CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_foo`(x INT64)\n"
+        "BEGIN\n"
+        "  DECLARE i INT64 DEFAULT 0;\n"
+        "  WHILE i < 3 DO\n"
+        "    SET i = i + 1;\n"
+        "  END WHILE;\n"
+        "  LOOP\n"
+        "    LEAVE;\n"
+        "  END LOOP;\n"
+        "  SELECT i;\n"
+        "END;\n"
+    )
+    m = clsp.CREATE_STMT.search(txt)
+    body = clsp.extract_body(txt, m.start(), "PROCEDURE")
+    assert body.endswith("SELECT i;\nEND")
+    assert body.startswith("BEGIN\n  DECLARE i INT64 DEFAULT 0;\n  WHILE i < 3 DO")
+
+
+def test_real_repo_sp_write_adversarial_review_excludes_leaked_repair_block_identifiers():
+    # Direct lock on the real object behind the HIGH finding (2026-08-08): bigquery/146's procedure
+    # body must never contain identifiers that exist ONLY in the separate, later, free-standing
+    # one-time JSON-repair BEGIN...END block in the same file.
+    final = clsp.find_final_definitions()
+    obj_type, _project, source, body = final[("ops", "sp_write_adversarial_review")]
+    assert obj_type == "PROCEDURE"
+    assert source == "146_adversarial_review_writer_serialization.sql"
+    for leaked in ("json_string_target_ids", "repair_mutex_rows", "JSON type repair"):
+        assert leaked not in body
+    assert body.startswith("BEGIN")
+    assert body.rstrip().endswith("END")
+    # True body is lines 47-193 of the source file (BEGIN through its own matching END, wrapper
+    # included -- see extract_body's PROCEDURE branch) -- 147 lines, not the pre-fix 209.
+    assert len(body.splitlines()) == 147
+
+
 def test_normalize_tail_matches_repo_extraction_despite_live_trailing_comments():
     # A live-style body (INFORMATION_SCHEMA definition retaining a trailing comment/blank line the
     # repo-side next-statement boundary already excludes) must normalize to the same text as the

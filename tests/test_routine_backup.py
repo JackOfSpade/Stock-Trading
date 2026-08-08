@@ -357,14 +357,14 @@ PROFILES = {
 
 
 def _norm(**over):
-    base = dict(
-        trigger_id="t", name="n", cron_expression="c", enabled=True, instruction="i",
-        environment_id="env_FLEET", model="claude-opus-5", allowed_tools=["Bash", "RemoteTrigger"],
-        autofix_on_pr_create=True, notifications={"channel": {"email": False, "push": False, "slack": False}},
-        sources=[{"git_repository": {"url": "https://github.com/Owner/Repo"}}],
-        mcp_connections=[{"connector_uuid": "u-a", "name": "A", "url": "https://a"},
+    base = {
+        "trigger_id": "t", "name": "n", "cron_expression": "c", "enabled": True, "instruction": "i",
+        "environment_id": "env_FLEET", "model": "claude-opus-5", "allowed_tools": ["Bash", "RemoteTrigger"],
+        "autofix_on_pr_create": True, "notifications": {"channel": {"email": False, "push": False, "slack": False}},
+        "sources": [{"git_repository": {"url": "https://github.com/Owner/Repo"}}],
+        "mcp_connections": [{"connector_uuid": "u-a", "name": "A", "url": "https://a"},
                           {"connector_uuid": "u-b", "name": "B", "url": "https://b"}],
-    )
+    }
     base.update(over)
     return base
 
@@ -413,6 +413,24 @@ def test_derive_profile_raises_on_empty_profiles():
         rb.derive_profile(_norm(), {})
 
 
+# ---- derive_profile: allowed_tools compared order-insensitively, matching mcp_connections -------------
+def test_derive_profile_tool_order_never_produces_a_spurious_override():
+    """allowed_tools must be compared the same order-INSENSITIVE way mcp_connections already is (see
+    test_derive_profile_connector_order_never_produces_a_spurious_override above) -- a live routine
+    whose allowed_tools happens to come back from the API in a different order than its profile is not
+    real drift and must not pick up a spurious override (2026-08-08)."""
+    normalized = _norm(allowed_tools=["RemoteTrigger", "Bash"])
+    profile, overrides = rb.derive_profile(normalized, PROFILES)
+    assert profile == "fleet"
+    assert "allowed_tools" not in overrides
+
+
+def test_derive_profile_tool_set_difference_is_an_override():
+    normalized = _norm(allowed_tools=["Bash"])
+    profile, overrides = rb.derive_profile(normalized, PROFILES)
+    assert overrides["allowed_tools"] == ["Bash"]
+
+
 # ---- derive_profile tie-break: deterministic, lowest name wins (B7, mutation gap 1) -------------------
 def _tied_profile(env, src_url):
     return {
@@ -445,6 +463,37 @@ def test_derive_profile_tie_break_is_deterministic_lowest_name_wins():
                        sources=[{"git_repository": {"url": "https://neither"}}], mcp_connections=[])
     profile, _ = rb.derive_profile(normalized, tied_profiles)
     assert profile == "aaa"
+
+
+# ---- _resolve_fields(): a profile missing a field resolves to None, never raises (2026-08-08) --------
+def test_resolve_fields_handles_profile_missing_a_field_instead_of_raising_keyerror():
+    """_resolve_fields() used to hard-index 6 of the 7 profile fields (p["environment_id"], p["model"],
+    p["allowed_tools"], p["autofix_on_pr_create"], p["sources"], p["mcp_connections"]) while only
+    `notifications` used p.get(...) -- that inconsistency was the tell. A snapshot profile missing one
+    of the six (hand-edited or a corrupted ingest) raised an uncaught KeyError here, which crashed
+    check()/restore() before _resolved_fields_errors()'s own 'missing/empty' reporting ever ran. Every
+    field must resolve to None like notifications always did, not raise."""
+    bare_profile = {"model": "claude-opus-5"}  # every other field simply absent, not just falsy
+    entry = {"profile": "bare", "overrides": {}}
+    fields = rb._resolve_fields(entry, {"bare": bare_profile})
+    assert fields["model"] == "claude-opus-5"
+    assert fields["environment_id"] is None
+    assert fields["allowed_tools"] is None
+    assert fields["autofix_on_pr_create"] is None
+    assert fields["sources"] is None
+    assert fields["mcp_connections"] is None
+
+
+def test_check_reports_missing_profile_field_instead_of_crashing(tmp_path, monkeypatch, capsys):
+    """End-to-end through check(): a profile missing a field entirely must surface as a normal FAIL
+    with the existing 'resolved ... is missing/empty' message, not an uncaught exception."""
+    doc = _good_backup_doc()
+    del doc["profiles"]["fleet"]["sources"]
+    _wire(tmp_path, monkeypatch, backup_doc=doc)
+    assert rb.check() == 1
+    out = capsys.readouterr().out
+    assert "ROUTINE BACKUP CHECK: FAIL" in out
+    assert "resolved sources is missing/empty" in out
 
 
 def test_notifications_roundtrip_as_override_and_reaches_restore_body(tmp_path, monkeypatch):
@@ -560,6 +609,37 @@ def test_ingest_accepts_a_directory_of_files(tmp_path, monkeypatch):
         content="Read Claude_Task_Plan.md. Perform OPS2. Catch-up Executor — regular routine.")}))
     result = rb.ingest(str(indir))
     assert sorted(result["added"]) == ["D1", "OPS2"]
+
+
+# ---- ingest(): dedup raw triggers by trigger id before classification (2026-08-08) --------------------
+def test_ingest_directory_with_same_trigger_in_two_files_does_not_double_count(tmp_path, monkeypatch):
+    """The same trigger id can legitimately appear in more than one file of a directory ingest (e.g.
+    overlapping RemoteTrigger `list` pages saved separately). Before the dedup fix, ingest()'s loop
+    classified each occurrence separately, so this routine landed in BOTH 'added' (relative to the
+    empty starting backup) and 'unchanged'/'updated' (relative to the entry the first occurrence had
+    just written) -- double-counted even though doc["routines"]["D1"] only ever ends up holding the
+    LAST occurrence's data (plain dict assignment is itself last-one-wins)."""
+    _wire(tmp_path, monkeypatch)
+    indir = tmp_path / "indir"
+    indir.mkdir()
+    (indir / "a.json").write_text(json.dumps({"data": [_raw_trigger(cron="0 16 * * *")]}))
+    (indir / "b.json").write_text(json.dumps({"data": [_raw_trigger(cron="0 17 * * *")]}))
+    result = rb.ingest(str(indir))
+    assert result["added"] == ["D1"]
+    assert result["updated"] == [] and result["unchanged"] == []
+    # the LAST occurrence (b.json, 17:00) wins, matching this codebase's last-one-wins convention.
+    assert rb.load_backup()["routines"]["D1"]["cron_expression"] == "0 17 * * *"
+
+
+def test_dedup_raw_triggers_keeps_last_occurrence_by_trigger_id():
+    raws = [{"id": "t1", "v": "first"}, {"id": "t2", "v": "other"}, {"id": "t1", "v": "second"}]
+    got = rb._dedup_raw_triggers(raws)
+    assert got == [{"id": "t1", "v": "second"}, {"id": "t2", "v": "other"}]
+
+
+def test_dedup_raw_triggers_leaves_id_less_raws_alone():
+    raws = [{"name": "no id here"}, {"name": "also no id"}]
+    assert rb._dedup_raw_triggers(raws) == raws
 
 
 # ---- ingest(): run_once_at one-shot storage (B1) -------------------------------------------------------
@@ -786,8 +866,8 @@ def test_restore_can_restore_an_unmatched_entry_by_its_trigger_id(tmp_path, monk
 
 
 # ---- _assemble_create_body: exactly one of cron_expression/run_once_at (B1) ---------------------------
-_ASSEMBLE_KWARGS = dict(name="x", enabled=True, instruction="i", environment_id="e", model="m",
-                        allowed_tools=[], autofix_on_pr_create=True, sources=[], mcp_connections=[])
+_ASSEMBLE_KWARGS = {"name": "x", "enabled": True, "instruction": "i", "environment_id": "e", "model": "m",
+                        "allowed_tools": [], "autofix_on_pr_create": True, "sources": [], "mcp_connections": []}
 
 
 def test_assemble_create_body_rejects_both_cron_and_run_once_at():

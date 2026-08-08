@@ -55,9 +55,15 @@
  * password, or API key. It de-dupes via Script Properties so you're emailed ONCE per alert,
  * not every run, and it tells you when previously-open alerts have been resolved.
  *
- * SETUP (one time): same as the weekly report (ops/weekly_report/README.md) — new script.google.com
- * project (or a second file in the same project), add the BigQuery advanced service, set RECIPIENT,
- * run testAlertCheck() once to authorize, then run installAlertTrigger() to schedule it.
+ * SETUP (one time): a second file in the SAME script.google.com project as the weekly report
+ * (ops/weekly_report/README.md) — NOT a separate project. This file has no manifest of its own
+ * (ops/monitoring/ carries no appsscript.json) because it shares weekly_report.gs's one project and
+ * top-level scope, which is exactly why the version const below is named ALERT_SCRIPT_VERSION rather
+ * than SCRIPT_VERSION — see that comment. (Corrected 2026-08-08: this note used to offer "new
+ * script.google.com project" as an equally valid alternative, which contradicted that comment and
+ * does not match the live setup, "Stock-Trading Automation," which holds both files.) Add the
+ * BigQuery advanced service, set RECIPIENT, run testAlertCheck() once to authorize, then run
+ * installAlertTrigger() to schedule it.
  */
 
 // ===== CONFIG =====
@@ -299,8 +305,14 @@ function stampNotified_(ids) {
 //      GitHub Actions every 30 minutes, entirely outside Apps Script and Gmail. That is the channel
 //      that actually gets through. sp_raise_alert_once (not sp_raise_alert) so repeated escalations
 //      collapse onto one open row instead of accumulating.
-//   2. A direct GmailApp.sendEmail with no BigQuery involved — covers the common case where the query
-//      is what is broken and mail is fine.
+//   2. A direct GmailApp.sendEmail with no BigQuery involved — written on the assumption that mail
+//      delivery is the common/working case and the query is usually what's broken. That assumption is
+//      now KNOWN FALSE (see ACCEPTED IS NOT DELIVERED / v8 above, 2026-08-07): every Stock-Trading
+//      thread measured, including this exact escalation class, was landing in TRASH with no INBOX
+//      label, cause still unknown. Left in place regardless — it still fires and the message still
+//      gets sent even when BigQuery is the broken half, and a future fix to the Trash-routing cause
+//      makes it work again with no code change here — but do not read a quiet inbox as proof this
+//      channel got through.
 // Each is independently try/caught: whichever channel is alive still gets the message out.
 //
 // Raised at 'warning', NOT 'critical', deliberately: a critical would count toward

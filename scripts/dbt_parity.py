@@ -130,7 +130,7 @@ def col_expr(col, alias=PARITY_ALIAS):
     directly. Always alias-qualified — see PARITY_ALIAS for why a bare column reference is unsafe."""
     name, dtype = col["column_name"], col["data_type"]
     q = f"{alias}.`{name}`"
-    if dtype == "JSON" or dtype.startswith("ARRAY") or dtype.startswith("STRUCT"):
+    if dtype == "JSON" or dtype.startswith(("ARRAY", "STRUCT")):
         return f"TO_JSON_STRING({q})"
     if dtype == "GEOGRAPHY" or dtype == "INTERVAL" or dtype.startswith("RANGE"):
         return f"SAFE_CAST({q} AS STRING)"
@@ -181,7 +181,7 @@ def live_columns_all():
     )
     try:
         rows = bq(f"{unions} ORDER BY ds, table_name, ordinal_position")
-    except Exception:
+    except Exception:  # noqa: BLE001 - "unusable, fall back to the per-model path" per this function's docstring above
         return None
     out = {}
     for r in rows:
@@ -240,7 +240,7 @@ def check_one_model(dataset, name, compiled, batch_cols):
         # signal live_columns() returns as zero rows, routed to the same fail-closed branch below.
         raw_cols = (batch_cols.get((dataset, name), [])
                     if batch_cols is not None else live_columns(dataset, name))
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - any metadata-lookup failure here is tolerated as a skip, not a drift finding
         return ("skipped", f"{dataset}.{name} (no live object? {e})")
     if not raw_cols:
         # BigQuery's INFORMATION_SCHEMA.COLUMNS does NOT error on a `table_name` filter that
@@ -288,7 +288,7 @@ def check_one_model(dataset, name, compiled, batch_cols):
             f"EXCEPT DISTINCT SELECT {exprs} FROM ({compiled}) AS {PARITY_ALIAS})) AS n_extra"
         )[0]
         n_missing, n_extra = int(row["n_missing"]), int(row["n_extra"])
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - routed below to error (schema-shaped) or skip (transient); see comment
         # A parity-query error AFTER live_columns() succeeded is, for a schema-shaped cause, real
         # drift (not a transient hiccup) — fail closed instead of swallowing it as a skip that
         # lets the drift pass green (2026-07-17 audit). Anything else stays a tolerant skip.
@@ -328,7 +328,7 @@ def main():
                 i = futures[fut]
                 try:
                     results[i] = fut.result()
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 - an unexpected worker failure must fail closed, not abort the batch; see comment
                     # check_one_model catches its own expected failures, so reaching here means an
                     # UNEXPECTED bug. Fail closed as an error (never a tolerant skip) but keep going, so
                     # the report still covers every other model instead of dying on the first surprise.

@@ -3,9 +3,8 @@
 is monkeypatched or exercised via a faked subprocess.run so this suite never touches live infra.
 """
 import subprocess
-import types
 
-from conftest import load_module_from_path
+from conftest import fake_subprocess_run, load_module_from_path
 
 voa = load_module_from_path("verify_owner_actions", "scripts", "verify_owner_actions.py")
 
@@ -151,12 +150,6 @@ done_when: n>0
 """
 
 
-def _fake_run_factory(returncode=0, stdout="", stderr=""):
-    def run(cmd, capture_output=None, text=None, timeout=None):
-        return types.SimpleNamespace(returncode=returncode, stdout=stdout, stderr=stderr)
-    return run
-
-
 # ---- _run() / _bq_scalar(): fail-open on every error mode ----------------------------------
 
 def test_run_missing_binary_is_fail_open_not_raise(monkeypatch):
@@ -178,7 +171,7 @@ def test_run_timeout_is_fail_open_not_raise(monkeypatch):
 
 
 def test_run_nonzero_exit_is_fail_open(monkeypatch):
-    monkeypatch.setattr(voa.subprocess, "run", _fake_run_factory(1, "", "permission denied"))
+    monkeypatch.setattr(voa.subprocess, "run", fake_subprocess_run(1, "", "permission denied"))
     ok, out, reason = voa._run(["bq", "query", "SELECT 1"])
     assert ok is False
     assert "permission denied" in reason
@@ -186,20 +179,20 @@ def test_run_nonzero_exit_is_fail_open(monkeypatch):
 
 def test_bq_scalar_parses_banner_prefixed_json(monkeypatch):
     monkeypatch.setattr(voa.subprocess, "run",
-                        _fake_run_factory(0, 'Welcome to BigQuery!\n[{"n": 3}]'))
+                        fake_subprocess_run(0, 'Welcome to BigQuery!\n[{"n": 3}]'))
     ok, value, reason = voa._bq_scalar("SELECT COUNT(*) n FROM t")
     assert ok is True
     assert value == 3
 
 
 def test_bq_scalar_empty_result_is_fail_open(monkeypatch):
-    monkeypatch.setattr(voa.subprocess, "run", _fake_run_factory(0, "No rows.\n"))
+    monkeypatch.setattr(voa.subprocess, "run", fake_subprocess_run(0, "No rows.\n"))
     ok, value, reason = voa._bq_scalar("SELECT COUNT(*) n FROM t")
     assert ok is False
 
 
 def test_bq_count_accepts_bigquery_stringified_int64(monkeypatch):
-    monkeypatch.setattr(voa.subprocess, "run", _fake_run_factory(0, '[{"n": "12"}]'))
+    monkeypatch.setattr(voa.subprocess, "run", fake_subprocess_run(0, '[{"n": "12"}]'))
     ok, value, reason = voa._bq_count("SELECT COUNT(*) n FROM t")
     assert ok is True
     assert value == 12
@@ -207,7 +200,7 @@ def test_bq_count_accepts_bigquery_stringified_int64(monkeypatch):
 
 
 def test_bq_count_non_integer_is_fail_open(monkeypatch):
-    monkeypatch.setattr(voa.subprocess, "run", _fake_run_factory(0, '[{"n": "not-a-count"}]'))
+    monkeypatch.setattr(voa.subprocess, "run", fake_subprocess_run(0, '[{"n": "not-a-count"}]'))
     ok, value, reason = voa._bq_count("SELECT COUNT(*) n FROM t")
     assert ok is False
     assert value is None
@@ -587,7 +580,7 @@ def test_check_D_repo_view_fallback_when_env_unset(monkeypatch):
 
 # ---- _bq_scalar: a row present but missing the expected column (KeyError arm of the try/except) ----
 def test_bq_scalar_row_missing_column_is_fail_open(monkeypatch):
-    monkeypatch.setattr(voa.subprocess, "run", _fake_run_factory(0, '[{"other": 5}]'))
+    monkeypatch.setattr(voa.subprocess, "run", fake_subprocess_run(0, '[{"other": 5}]'))
     ok, value, reason = voa._bq_scalar("SELECT COUNT(*) n FROM t")
     assert ok is False
     assert value is None
@@ -758,6 +751,88 @@ def test_main_warning_does_not_change_flip_behavior_of_other_items(tmp_path, mon
     assert "WARNING" in out
     assert "PASS (closed just now)] E-webhook:" in out
     assert "[DONE" in doc.read_text()
+
+
+# ---- duplicate ids across two well-formed fences must also be LOUD, not silent (bug found 2026-08-08) --
+#
+# PROBES is keyed by id only, so two well-formed fences that happen to share one `id` (a copy-pasted
+# fence whose `id:` line didn't get updated) silently evaluate BOTH fences against the SAME probe —
+# nothing before this distinguished it from an ordinary single match, so the copy-pasted item could
+# auto-close on a completion condition that was never actually written for it, with no OPEN, no
+# diagnostic, and a normal-looking exit-0 summary.
+
+SAMPLE_DOC_DUPLICATE_ID = """## Some section about item P
+
+- `TOKEN_P` — first item's own bullet.
+
+```verify
+id: DUP
+type: bq
+probe: SELECT 1
+done_when: n>0
+```
+
+## Some other section about item Q
+
+- `TOKEN_Q` — second item that accidentally reused P's id.
+
+```verify
+id: DUP
+type: bq
+probe: SELECT 2
+done_when: n>0
+```
+"""
+
+
+def test_main_warns_for_duplicate_id_naming_every_line(tmp_path, monkeypatch, capsys):
+    doc = tmp_path / "OWNER_ACTIONS.md"
+    doc.write_text(SAMPLE_DOC_DUPLICATE_ID)
+    monkeypatch.setattr(voa, "OWNER_ACTIONS_PATH", str(doc))
+    # Compute the two fence-open line numbers from the sample itself (not hardcoded) so this test
+    # stays correct if the sample doc above is ever reworded.
+    doc_lines = SAMPLE_DOC_DUPLICATE_ID.splitlines()
+    fence_line_numbers = [i + 1 for i, line in enumerate(doc_lines) if line.strip() == "```verify"]
+    assert len(fence_line_numbers) == 2
+    monkeypatch.setitem(voa.PROBES, "DUP", lambda: (False, "still open"))
+    rc = voa.main()
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "WARNING" in out
+    assert "duplicate id 'DUP'" in out
+    for line_no in fence_line_numbers:
+        assert str(line_no) in out
+
+
+def test_main_does_not_warn_for_duplicate_id_when_ids_are_actually_distinct(tmp_path, monkeypatch, capsys):
+    # Sanity check that the new id-count scan doesn't false-positive-warn on two DIFFERENT ids.
+    doc = tmp_path / "OWNER_ACTIONS.md"
+    doc.write_text(SAMPLE_DOC)
+    monkeypatch.setattr(voa, "OWNER_ACTIONS_PATH", str(doc))
+    monkeypatch.setitem(voa.PROBES, "A", lambda: (False, "still open"))
+    monkeypatch.setitem(voa.PROBES, "B", lambda: (False, "still open"))
+    rc = voa.main()
+    assert rc == 0
+    assert "duplicate id" not in capsys.readouterr().out
+
+
+def test_main_duplicate_id_warning_does_not_change_flip_or_probe_behavior(tmp_path, monkeypatch, capsys):
+    # Purely additive (per the fix's own contract): both DUP fences must still be independently
+    # evaluated against the shared probe exactly as before the warning was added — the diagnostic
+    # only ever adds a printed line, it does not dedupe, skip, or otherwise alter the flip/anchor loop.
+    doc = tmp_path / "OWNER_ACTIONS.md"
+    doc.write_text(SAMPLE_DOC_DUPLICATE_ID)
+    monkeypatch.setattr(voa, "OWNER_ACTIONS_PATH", str(doc))
+    monkeypatch.setitem(voa.PROBES, "DUP", lambda: (True, "shared probe passed"))
+    rc = voa.main()
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "WARNING" in out
+    # Both P and Q get auto-closed off the one shared probe — the actual bug the warning flags,
+    # left intact (not fixed) here, since this pass is diagnostic-only per the work item.
+    assert out.count("PASS (closed just now)] DUP: shared probe passed") == 2
+    after = doc.read_text()
+    assert after.count("[DONE") == 2
 
 
 # ---- FIX 1 (2026-07-29, HIGH bug, reproduced live): a malformed fence's lazy DOTALL probe/done_when

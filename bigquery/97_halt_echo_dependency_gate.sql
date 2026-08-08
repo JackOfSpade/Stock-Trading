@@ -252,8 +252,8 @@ SELECT
   CURRENT_TIMESTAMP() AS checked_at
 FROM `stock-trading-498512.state.trading_enabled` t, expected e;
 
--- SUPERSEDED LIVE by bigquery/134_roster_change_notifications.sql — current single source of
--- truth for ops.sp_auto_resolve_alerts (chain: 94 -> 97 -> 107 -> 130 -> 134). Kept here, unmodified, for
+-- SUPERSEDED LIVE by bigquery/148_audit_2026_08_08_fixes.sql — current single source of
+-- truth for ops.sp_auto_resolve_alerts (chain: 94 -> 97 -> 107 -> 130 -> 134 -> 148). Kept here, unmodified, for
 -- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE PROCEDURE
 -- statement live in isolation.
 --

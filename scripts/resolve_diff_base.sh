@@ -50,6 +50,18 @@
 #   PUSH_BEFORE as primary and only falls back to merge-base if PUSH_BEFORE is itself unresolvable
 #   (e.g. force-push, first push to main).
 #
+#   rev 2026-08-08 (bug fix): the main-branch fallback directly above already documents that
+#   merge-base(HEAD, origin/main) degenerates to HEAD on main (see the paragraph right above this
+#   one) -- but it then used that exact known-degenerate expression as ITS OWN fallback for when
+#   PUSH_BEFORE is unresolvable (a force-push to main, or the first push to main). By the time this
+#   runs, the push has already landed, so the fetch pulls an origin/main that already contains
+#   head_sha, merge-base(head_sha, origin/main) collapses to head_sha, base ends up equal to HEAD,
+#   the caller's `git diff base HEAD` is empty, and it concludes "no relevant files changed" --
+#   silently defeating ci.yml's unconditional blocking SQL-validate gate in precisely the cases
+#   this fallback exists to cover. FIX: a merge-base result equal to head_sha is treated as
+#   UNRESOLVED (base=""), so the trailing validity check below prints nothing and each caller falls
+#   through to its own documented fail-open path (validate everything) instead of a false skip.
+#
 #   Also (rev 2026-07-20b, Finding 3): the origin/main fetch is explicit and refspec-independent
 #   (+refs/heads/main:refs/remotes/origin/main) instead of relying on the caller's fetch-depth: 0
 #   wildcard refspec as a side effect — `git fetch origin main` alone only populates FETCH_HEAD
@@ -79,6 +91,13 @@ resolve_diff_base() {
     if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
       git fetch --quiet origin +refs/heads/main:refs/remotes/origin/main 2>/dev/null || true
       base="$(git merge-base "$head_sha" origin/main 2>/dev/null || true)"
+      # rev 2026-08-08: this fallback runs AFTER the push has already landed, so origin/main here
+      # already contains head_sha and merge-base degenerates to head_sha itself -- base=HEAD would
+      # make the caller's diff empty and vacuously skip the blocking gate (see header). Reject that
+      # degenerate result so the validity check below leaves base unresolved instead.
+      if [ "$base" = "$head_sha" ]; then
+        base=""
+      fi
     fi
   else
     git fetch --quiet origin +refs/heads/main:refs/remotes/origin/main 2>/dev/null || true

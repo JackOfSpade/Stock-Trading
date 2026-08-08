@@ -97,13 +97,22 @@ jobs:
         run: |
           set -uo pipefail
           gcloud config set project stock-trading-498512 >/dev/null 2>&1 || true
+          # BUG FIX (2026-08-08, mirrors ci.yml's fail-open glob fix, rev 2026-07-20b Finding 2):
+          # nullglob so a non-matching pattern vanishes instead of staying LITERAL (bash's default) —
+          # without it, an unmatched glob string is filtered out by the `[ -f "$f" ]` check below and the
+          # resulting empty `existing` array used to fall into a "nothing found -> warning + PASS" branch,
+          # which also auto-closed any open finding issue. Unlike ci.yml's push-scoped dry-run gate (where
+          # zero changed SQL files legitimately means nothing to check), THIS sweep exists to validate
+          # EVERY bigquery/*.sql file every week — a zero-file result can only mean a broken checkout or
+          # repo layout, never "clean", so it must fail loud instead of reporting a clean sweep.
+          shopt -s nullglob
           mapfile -t files < <(printf '%s\n' bigquery/*.sql bigquery/scheduled_queries/*.sql)
+          shopt -u nullglob
           existing=()
           for f in "${files[@]}"; do [ -f "$f" ] && existing+=("$f"); done
           if [ "${#existing[@]}" -eq 0 ]; then
-            echo "::warning::no bigquery/*.sql found — checkout or path layout changed?"
-            echo "result=ok" >> "$GITHUB_OUTPUT"
-            exit 0
+            echo "::error::sql-dryrun-sweep found ZERO bigquery/*.sql / bigquery/scheduled_queries/*.sql files to check — broken checkout or repo layout change? This sweep has no legitimate zero-file case (it validates every SQL file every week, not a diff), so it must fail rather than report a clean pass."
+            exit 1
           fi
           echo "Sweeping ${#existing[@]} file(s)…"
           if python scripts/check_sql_dryrun.py "${existing[@]}" | tee /tmp/sweep.txt; then

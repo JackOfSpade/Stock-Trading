@@ -71,22 +71,26 @@ name: Golden Scenarios (prose regression)
 #   step failure), so auto-merge-claude.yml's schema-validate secondary-gate check (below) still sees
 #   exactly the same conclusion it always did.
 
+#   PULL_REQUEST TRIGGER REMOVED (2026-08-08, cost audit follow-up — verified before removing, not just
+#   asserted, same evidence standard ci.yml's own 2026-07-30 removal held itself to): `gh run list
+#   --workflow=golden-scenarios.yml --limit 100` showed 14 pull_request-triggered runs, 11 of which
+#   landed on a SHA that ALSO had a push-triggered run of this same workflow — pure duplicate work: the
+#   schema-validate job's duplicate run is a free, offline re-parse, but the prose-regression job's
+#   duplicate additionally re-spends a live Gemini free-tier API call for no new information (same
+#   scenario, same prose, same expected answer). auto-merge-claude.yml's secondary gate
+#   (scripts/auto_merge_decision.sh's
+#   is_secondary_gate_satisfied, "Golden Scenarios schema-validate gate" below `git merge --ff-only`)
+#   reads the golden-scenarios.yml run by `head_sha` alone, not by triggering event, so a push-triggered
+#   run for a branch's own tip commit already satisfies it before any PR ever exists — the only PRs this
+#   repo opens are auto-merge's own conflict-resolution PRs (`gh pr create --base main --head "$br"`),
+#   whose head SHA by then already has the branch's push-triggered run. `gh api
+#   repos/:owner/:repo/branches/main/protection` still returns HTTP 403 (no GitHub Pro / branch
+#   protection, re-verified 2026-08-08) — auto-merge-claude.yml's gate script is the only merge gate;
+#   nothing else consumes a pull_request-triggered run's status or check-run. ACCEPTED CONSEQUENCE (same
+#   as ci.yml's): a conflict-PR's own "Checks" tab shows no golden-scenarios run of its own beyond the
+#   branch's push run that already satisfied the gate.
 on:
   push:
-    paths:
-      - 'Strategy.md'
-      - 'Operating_Protocols.md'
-      - 'Claude_Task_Plan.md'
-      # ADDED 2026-07-30 (correctness gap, found during the Actions cost audit — NOT a cost change; it
-      # slightly RAISES cost and is worth it): Experiment_Parameters.md governs 6 scenarios in
-      # tests/golden_scenarios/scenarios.yaml (all six KT-* kill-trigger cases). Because it was absent
-      # from these paths lists, an Experiment_Parameters.md-ONLY push triggered this workflow not at all
-      # — so neither the live prose-regression check NOR the always-on offline schema-validate HARD GATE
-      # ever ran for those 6 kill-trigger scenarios on such a change. Every other file a scenario can
-      # declare in governing_files was already listed; this was the one omission.
-      - 'Experiment_Parameters.md'
-      - 'tests/golden_scenarios/**'
-  pull_request:
     paths:
       - 'Strategy.md'
       - 'Operating_Protocols.md'
@@ -165,6 +169,11 @@ jobs:
         if: steps.guard.outputs.skip == 'false'
         env:
           EVENT_NAME: ${{ github.event_name }}
+          # This workflow no longer has a pull_request trigger (removed 2026-08-08, see header), so this
+          # is now always empty. Kept anyway, same reasoning ci.yml's own PR_BASE retention already
+          # documents: resolve_diff_base.sh's positional argument contract is shared between the two
+          # workflows, and dropping it here would silently break resolution if a pull_request trigger is
+          # ever restored on either side.
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PUSH_BEFORE: ${{ github.event.before }}
           HEAD_SHA: ${{ github.sha }}

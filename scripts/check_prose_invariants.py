@@ -52,11 +52,11 @@ try:
     # would raise the SAME missing-dependency error, just as a bare traceback instead of this one.
 except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
-    raise SystemExit(2)
+    raise SystemExit(2) from None
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.md_fence import fence_mask  # noqa: E402
-from lib.textio import load_yaml, read_text  # noqa: E402
+from lib.md_fence import fence_mask
+from lib.textio import load_yaml, read_text
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SPEC = os.path.join(ROOT, "ops", "prose_invariants.yaml")
@@ -101,8 +101,8 @@ NEGATED_REVIEW_OUTPUT_PATH = re.compile(
     re.IGNORECASE,
 )
 ACTIVE_REVIEW_FILE_HANDOFF = re.compile(
-    r"\b(?:attacker(?:['’]s)?\s+(?:output\s+)?file|"
-    r"orchestrator(?:['’-]s)?\s+(?:output\s+)?file|"
+    r"\b(?:attacker(?:['’]s)?\s+(?:output\s+)?file|"  # noqa: RUF001 - matches both straight and curly apostrophes in real prose
+    r"orchestrator(?:['’-]s)?\s+(?:output\s+)?file|"  # noqa: RUF001 - matches both straight and curly apostrophes in real prose
     r"upstream[- ]output\s+file(?:s)?)\b",
     re.IGNORECASE,
 )

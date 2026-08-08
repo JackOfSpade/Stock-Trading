@@ -55,7 +55,17 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-import yaml
+# ops/cadence.yaml's `routines:` key can legitimately be present but valueless (YAML parses a bare
+# `routines:` to None, not []); dict.get's default only fires when the KEY is missing, not when its
+# value is None. lib.routine_manifest.cadence_routines() is the shared, hardened accessor for this --
+# gen_routine_lists.py already had this guard, and a 2026-07-29 pass propagated it to
+# check_cadence_consistency.py's load_cadence()/cadence_duplicate_ids() and print_routines.py's
+# load_cadence(), but this script's own load_cadence() hand-rolled a SEPARATE, still-unguarded
+# extraction (`cad["routines"] if ... else cad`) that pass never reached -- a fifth copy of the same
+# fragile idiom (2026-08-08 audit finding). Import only; scripts/lib/** is owned by another agent.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from lib.routine_manifest import cadence_routines
+from lib.textio import load_yaml
 
 CADENCE = Path("ops/cadence.yaml")
 BACKUP = Path("ops/routine_backup.json")
@@ -137,11 +147,9 @@ def cron_firings(cron: str):
 
 
 def load_cadence():
-    cad = yaml.safe_load(CADENCE.read_text())
-    routines = cad["routines"] if isinstance(cad, dict) and "routines" in cad else cad
-    deadline = "21:00"
-    if isinstance(cad, dict):
-        deadline = cad.get("cadence_watch_deadline_local", deadline)
+    doc = load_yaml(CADENCE)
+    routines = cadence_routines(doc)
+    deadline = doc.get("cadence_watch_deadline_local", "21:00")
     hh, mm = (int(x) for x in str(deadline).split(":"))
     return routines, (hh, mm)
 
@@ -210,9 +218,18 @@ def check() -> int:
             local = inst.astimezone(DENVER)
             per_season.setdefault(bool(local.dst()), []).append(local)
 
-        def render(is_dst: bool) -> str:
+        def render(is_dst: bool, per_season: dict[bool, list[datetime]] = per_season) -> str:
+            # Every DISTINCT local HH:MM the season fires at, not just the first -- a comma-list hour
+            # field (parse_field supports these for ANY cron field, e.g. quarterly's "1,4,7,10" months)
+            # produces more than one daily firing, and showing only got[0] hid the second firing from
+            # the printed table even on a clean run, not just from the check-2 window logic below
+            # (2026-08-08 audit finding, same root cause as that loop's own probe=locals_[0] bug).
+            # per_season is bound as a default arg (not a free closure over the outer loop variable)
+            # so this function can never accidentally read a LATER iteration's dict (B023).
             got = per_season.get(is_dst)
-            return got[0].strftime("%H:%M") if got else "-"
+            if not got:
+                return "-"
+            return ",".join(sorted({t.strftime("%H:%M") for t in got}))
 
         rows.append((rid, cron, render(True), render(False), mclass or "-"))
 
@@ -248,21 +265,28 @@ def check() -> int:
                         break
 
             # ---- 2. local-window integrity (the OPS2 defect) --------------------------------
+            # Checks EVERY firing in the season, not just locals_[0] -- check 1 above already loops
+            # `for local in locals_:` for the same reason. parse_field supports comma lists on ANY
+            # field (already exercised for quarterly months), so e.g. "0 3,22 * * *" fires twice a
+            # day; probing only the first firing left a second firing landing at/after the deadline
+            # invisible and this script exiting 0 -- exactly the shape of the 2026-07-27 OPS2 defect
+            # this checker exists to catch, just on the second firing instead of the first
+            # (2026-08-08 audit finding).
             if mclass == "daily_trading":
-                probe = locals_[0]
-                hm = (probe.hour, probe.minute)
-                if hm <= MARKET_CLOSE_LOCAL:
-                    errors.append(
-                        f"{rid}: cron_utc {cron!r} renders {probe:%H:%M} MT in {season}, at or "
-                        f"before the {MARKET_CLOSE_LOCAL[0]:02d}:{MARKET_CLOSE_LOCAL[1]:02d} MT "
-                        f"market close, but monitor_class=daily_trading runs after the close."
-                    )
-                if hm >= deadline_local:
-                    errors.append(
-                        f"{rid}: cron_utc {cron!r} renders {probe:%H:%M} MT in {season}, at or "
-                        f"after the {deadline_local[0]:02d}:{deadline_local[1]:02d} MT "
-                        f"cadence_watch deadline (this is the 2026-07-27 OPS2 defect)."
-                    )
+                for probe in locals_:
+                    hm = (probe.hour, probe.minute)
+                    if hm <= MARKET_CLOSE_LOCAL:
+                        errors.append(
+                            f"{rid}: cron_utc {cron!r} renders {probe:%H:%M} MT in {season}, at or "
+                            f"before the {MARKET_CLOSE_LOCAL[0]:02d}:{MARKET_CLOSE_LOCAL[1]:02d} MT "
+                            f"market close, but monitor_class=daily_trading runs after the close."
+                        )
+                    if hm >= deadline_local:
+                        errors.append(
+                            f"{rid}: cron_utc {cron!r} renders {probe:%H:%M} MT in {season}, at or "
+                            f"after the {deadline_local[0]:02d}:{deadline_local[1]:02d} MT "
+                            f"cadence_watch deadline (this is the 2026-07-27 OPS2 defect)."
+                        )
 
         # ---- 3. documentation truth ------------------------------------------------------
         tl = et.get("time_local")

@@ -70,7 +70,7 @@ def beat_heartbeat():
              f"VALUES ('dashboard', '{note}')"],
             capture_output=True, text=True, timeout=60,
         )
-    except Exception:
+    except Exception:  # noqa: BLE001 - best-effort heartbeat write; any failure here must not block dashboard generation
         pass
 
 
