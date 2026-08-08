@@ -58,6 +58,15 @@
 -- protection while breaking the circularity — identical reasoning to 34's existing trading_halted
 -- exclusion. Both gates below now exclude category IN ('trading_halted','staleness').
 
+-- SUPERSEDED LIVE by bigquery/153_account_snapshot_gap_watch.sql — current single source of truth for
+-- state.book_drawdown_watch. 153 reproduces this exact view body, byte-for-byte, and adds ONE new
+-- column, peak_window_gap_days INT64 (a COUNT of state.account_snapshot_gap — trading days between the
+-- first and last ops.account_snapshot row that D2a never wrote, so the flow-adjusted peak_gain running
+-- max above cannot have seen them). Observability only: no existing column, threshold, or semantic
+-- changes, and state.trading_enabled's read of breach_hard/breach_soft/snapshot_stale is unaffected.
+-- Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE OR
+-- REPLACE VIEW statement live in isolation.
+--
 -- ===== state.book_drawdown_watch — flow-adjusted, two-tier (SUPERSEDES bigquery/23) =====
 CREATE OR REPLACE VIEW `stock-trading-498512.state.book_drawdown_watch` AS
 WITH snaps AS (

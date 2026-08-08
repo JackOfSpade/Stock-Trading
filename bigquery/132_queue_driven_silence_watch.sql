@@ -83,15 +83,16 @@ FROM routines r
 LEFT JOIN last_completed l ON l.routine = r.routine
 ORDER BY r.routine;
 
--- SUPERSEDED LIVE by bigquery/150_cadence_check_autoage_connector_and_revised.sql — current single
+-- SUPERSEDED LIVE by bigquery/153_account_snapshot_gap_watch.sql — current single
 -- source of truth for this PROCEDURE. 142 bumps the heartbeat literal v11 -> v12 and adds ONE new
 -- record-only WARNING block (process_constant_evidence_invalidated) immediately after the
 -- scheduled_query_version_drift block below; 147 bumps the heartbeat to v13 and adds the
 -- run_log_note_missing record-only check; 149 bumps the heartbeat to v14 and adds script_version_drift
 -- to the #14 auto-age category list; 150 bumps the heartbeat to v15 and adds 'connector' +
--- 'strategy_revised' to the #14 auto-age category list; every other check in this body is carried
--- forward unchanged. Kept here for DR-rebuild apply-in-order reference only. DO NOT re-apply this
--- CREATE PROCEDURE statement live in isolation — doing so silently drops the
+-- 'strategy_revised' to the #14 auto-age category list; 153 bumps the heartbeat to v17 and adds the
+-- account_snapshot_gap record-only WARNING block (+ 'account_snapshot_gap' to the #14 auto-age list);
+-- every other check in this body is carried forward unchanged. Kept here for DR-rebuild apply-in-order
+-- reference only. DO NOT re-apply this CREATE PROCEDURE statement live in isolation — doing so silently drops the
 -- process_constant_evidence_invalidated check and reverts the heartbeat to v11, which
 -- state.scheduled_query_version_drift would then flag against a v15 bigquery/63 registry expectation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()

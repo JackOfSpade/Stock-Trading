@@ -17,15 +17,16 @@
 --      detail text reaches the operator alert email.
 -- No check logic, thresholds, severity, or alert routing is otherwise altered.
 
--- SUPERSEDED LIVE by bigquery/150_cadence_check_autoage_connector_and_revised.sql — current single
+-- SUPERSEDED LIVE by bigquery/153_account_snapshot_gap_watch.sql — current single
 -- source of truth for ops.sp_sq_cadence_check (supersedes bigquery/128 above, per the note there).
 -- Intermediate link: bigquery/132_queue_driven_silence_watch.sql added the queue_driven_silent check;
 -- bigquery/142 bumps the heartbeat to v12 and adds the process_constant_evidence_invalidated WARNING
 -- block; bigquery/147 bumps the heartbeat to v13 and adds the run_log_note_missing record-only check;
 -- bigquery/149 bumps the heartbeat to v14 and adds script_version_drift to the #14 auto-age category
 -- list; bigquery/150 bumps the heartbeat to v15 and adds 'connector' + 'strategy_revised' to the #14
--- auto-age category list. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
--- re-apply this CREATE statement live in isolation.
+-- auto-age category list; bigquery/153 bumps the heartbeat to v17 and adds the account_snapshot_gap
+-- record-only WARNING block (+ 'account_snapshot_gap' to the #14 auto-age list). Kept here, unmodified,
+-- for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';

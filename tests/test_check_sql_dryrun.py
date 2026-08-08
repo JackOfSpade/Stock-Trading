@@ -19,6 +19,7 @@ csd = load_module_from_path("check_sql_dryrun", "scripts", "check_sql_dryrun.py"
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BIGQUERY_133 = os.path.join(ROOT, "bigquery", "133_sl1_research_leads_and_record_corrections.sql")
+BIGQUERY_151 = os.path.join(ROOT, "bigquery", "151_connector_tool_inventory.sql")
 
 
 def test_exit_zero_is_ok():
@@ -220,14 +221,11 @@ def test_correct_insert_select_from_table_is_not_flagged():
 
 def test_insert_values_statement_is_not_flagged():
     # An INSERT ... VALUES statement is a different shape entirely (no SELECT at all) — must never be
-    # misread as a no-FROM violation. There is no dedicated VALUES fast-path in _scan_insert_select
-    # (removed 2026-08-03: proven redundant by mutation testing -- deleting the old
-    # `_VALUES_KEYWORD_RE` shortcut changed zero test outcomes and zero real bigquery/*.sql results,
-    # because the general depth-0 scan already falls through to "not_applicable" for any statement
-    # that never reaches a top-level SELECT before its own terminating ';'). This test now asserts
-    # that GENERAL fallthrough behavior directly: it fails if a future change makes the no-SELECT-seen
-    # path wrongly report a violation instead of "not_applicable" (mutation-proofed 2026-08-03: forcing
-    # that fallback to "violation" makes this exact assertion fail).
+    # misread as a no-FROM violation. Since 2026-08-08, no_from_where_violations() drives its scan from
+    # every top-level `SELECT` keyword in the file (see _scan_select_clause) rather than from
+    # `INSERT INTO`, so a VALUES-only INSERT is trivially skipped: it has no SELECT keyword anywhere,
+    # so it never triggers a scan at all, and the loop over _SELECT_KEYWORD_RE matches simply finds
+    # none for this statement.
     sql = """
     INSERT INTO `stock-trading-498512.ops.run_log` (routine, run_date, status)
     VALUES ('D1', CURRENT_DATE(), 'started');
@@ -295,6 +293,167 @@ def test_bare_doubled_quote_style_note_with_literal_parens_does_not_corrupt_dept
     """
     violations = csd.no_from_where_violations(sql)
     assert len(violations) == 1
+
+
+# ==== 2026-08-08 WIDENING: the shape is not only under INSERT INTO ... SELECT ========================
+#
+# bigquery/151_connector_tool_inventory.sql was rejected at real apply time by the exact
+# "Query without FROM clause cannot have a WHERE clause" error, inside a `CREATE OR REPLACE VIEW ...
+# AS` body's SECOND `UNION ALL` arm — no `INSERT INTO` anywhere in the statement. The old lint keyed
+# off `_INSERT_INTO_RE.finditer()`, so it never even looked at this statement and reported zero
+# violations. no_from_where_violations() now drives its scan from every top-level `SELECT` keyword
+# (`_scan_select_clause`), so it catches the shape in a UNION/INTERSECT/EXCEPT arm, a bare statement, or
+# a CREATE VIEW/CREATE TABLE ... AS body, in addition to the original INSERT INTO ... SELECT case.
+
+BROKEN_UNION_ARM_NO_FROM = """
+CREATE OR REPLACE VIEW `stock-trading-498512.state.connector_tool_inventory_stale` AS
+SELECT connector, last_good_run_date, days_stale, CURRENT_TIMESTAMP() AS checked_at
+FROM per_connector
+WHERE last_good_run_date IS NULL
+   OR days_stale > 2
+UNION ALL
+SELECT
+  'ALL' AS connector, CAST(NULL AS DATE) AS last_good_run_date,
+  CAST(NULL AS INT64) AS days_stale, CURRENT_TIMESTAMP() AS checked_at
+WHERE NOT EXISTS (
+  SELECT 1 FROM `stock-trading-498512.ops.connector_tool_inventory`
+  WHERE enumeration_ok
+    AND run_date >= DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 2 DAY)
+);
+"""
+
+FIXED_UNION_ARM_WITH_FROM_UNNEST = BROKEN_UNION_ARM_NO_FROM.replace(
+    "  CAST(NULL AS INT64) AS days_stale, CURRENT_TIMESTAMP() AS checked_at\nWHERE NOT EXISTS (",
+    "  CAST(NULL AS INT64) AS days_stale, CURRENT_TIMESTAMP() AS checked_at\n"
+    "FROM UNNEST([1])\nWHERE NOT EXISTS (",
+)
+
+BARE_NO_FROM_SELECT_WHERE = "SELECT 'x' AS a WHERE NOT EXISTS (SELECT 1);\n"
+
+
+def test_bigquery_151_union_arm_no_from_shape_is_flagged():
+    # Reproduces the exact escaped bug: the SECOND UNION ALL arm of a CREATE VIEW body has no FROM of
+    # its own before its WHERE NOT EXISTS guard. The FIRST arm (real FROM + WHERE) and the NESTED
+    # `SELECT 1 FROM ... WHERE ...` inside NOT EXISTS(...) are both legal and must not add extra hits.
+    violations = csd.no_from_where_violations(BROKEN_UNION_ARM_NO_FROM)
+    assert len(violations) == 1
+    line_number, excerpt = violations[0]
+    assert BROKEN_UNION_ARM_NO_FROM.splitlines()[line_number - 1].strip().startswith("WHERE NOT EXISTS")
+    assert "WHERE NOT EXISTS" in excerpt
+
+
+def test_bigquery_151_fixed_from_unnest_form_is_not_flagged():
+    # The real fix landed 2026-08-08: `FROM UNNEST([1])` gives the second arm's literal-only row a
+    # one-row source to hang its WHERE off, exactly like `FROM (SELECT 1)` does for the INSERT case.
+    assert "FROM UNNEST([1])" in FIXED_UNION_ARM_WITH_FROM_UNNEST  # sanity: fixture actually differs
+    assert csd.no_from_where_violations(FIXED_UNION_ARM_WITH_FROM_UNNEST) == []
+
+
+def test_bare_no_from_select_where_with_no_insert_at_all_is_flagged():
+    # The module docstring's own minimal repro (no INSERT, no CREATE, just a lone statement): a bare
+    # top-level `SELECT <literal> WHERE ...` with no FROM anywhere. Must be caught even though there is
+    # no INSERT INTO in sight.
+    violations = csd.no_from_where_violations(BARE_NO_FROM_SELECT_WHERE)
+    assert len(violations) == 1
+
+
+def test_real_bigquery_151_file_has_zero_violations():
+    # The FIXED, live file — must stay clean.
+    with open(BIGQUERY_151, encoding="utf-8") as fh:
+        text = fh.read()
+    assert csd.no_from_where_violations(text) == []
+
+
+def test_bigquery_151_reintroduced_bug_is_caught_end_to_end():
+    # MUTATION PROOF: strip the real fix's own "FROM UNNEST([1])" guard line back out of the REAL live
+    # file's text (the explanatory comment sits earlier, right after UNION ALL, not adjacent to this
+    # line, so only the FROM line itself needs removing to reproduce the pre-fix shape) and confirm the
+    # lint flags the regressed UNION ALL arm.
+    with open(BIGQUERY_151, encoding="utf-8") as fh:
+        text = fh.read()
+    # 2 occurrences: the real code line, plus the explanatory comment above it that also spells out
+    # "FROM UNNEST([1])" in prose -- only the CODE line is targeted by the replace below (anchored on
+    # the surrounding CAST(...)/WHERE NOT EXISTS context, which the comment text doesn't share).
+    assert text.count("FROM UNNEST([1])") == 2, "fixture assumption changed -- re-check bigquery/151"
+    mutated = text.replace(
+        "CAST(NULL AS INT64) AS days_stale, CURRENT_TIMESTAMP() AS checked_at\nFROM UNNEST([1])\nWHERE NOT EXISTS (",
+        "CAST(NULL AS INT64) AS days_stale, CURRENT_TIMESTAMP() AS checked_at\nWHERE NOT EXISTS (",
+    )
+    assert mutated.count("FROM UNNEST([1])") == 1, "the CODE line should be gone, only the comment remains"
+    violations = csd.no_from_where_violations(mutated)
+    assert len(violations) == 1
+
+
+# ---- False-positive guards: shapes that must NEVER be flagged (2026-08-08 widening) ----------------
+# The widened scan drives off every top-level SELECT rather than only ones following INSERT INTO, so
+# these pin down that ordinary, fully-legal SQL shapes stay clean under the new, broader trigger.
+
+
+def test_trivial_selects_without_where_are_clean():
+    assert csd.no_from_where_violations("SELECT 1;") == []
+    assert csd.no_from_where_violations("SELECT COUNT(*) FROM t WHERE x = 1;") == []
+
+
+def test_window_and_correlated_subquery_expressions_with_own_where_stay_clean():
+    # A correlated scalar subquery AND a window/analytic function both appear in the SELECT list, each
+    # with their own parens; the outer statement's real FROM/WHERE must still be found correctly.
+    sql = """
+    SELECT
+      a,
+      (SELECT COUNT(*) FROM other WHERE other.a = outer_tbl.a) AS match_count,
+      RANK() OVER (PARTITION BY a ORDER BY b DESC) AS rnk
+    FROM outer_tbl
+    WHERE a IS NOT NULL;
+    """
+    assert csd.no_from_where_violations(sql) == []
+
+
+def test_from_unnest_with_where_is_clean():
+    # FROM UNNEST(...) is a real FROM clause -- legal, must never be flagged.
+    sql = "SELECT x FROM UNNEST([1, 2, 3]) AS x WHERE x > 1;"
+    assert csd.no_from_where_violations(sql) == []
+
+
+def test_exists_scalar_in_select_list_is_clean():
+    # EXISTS (SELECT 1 FROM t WHERE ...) used as an ordinary scalar expression in the SELECT list.
+    sql = """
+    SELECT a, EXISTS(SELECT 1 FROM t WHERE t.id = outer_tbl.a) AS has_match
+    FROM outer_tbl;
+    """
+    assert csd.no_from_where_violations(sql) == []
+
+
+def test_case_when_with_from_and_where_is_clean_and_when_is_never_mistaken_for_where():
+    sql = """
+    SELECT CASE WHEN x = 1 THEN 'a' WHEN x = 2 THEN 'b' ELSE 'c' END AS y
+    FROM t
+    WHERE y = 'a';
+    """
+    assert csd.no_from_where_violations(sql) == []
+
+
+def test_case_when_with_no_from_still_correctly_flags_the_real_where_not_a_when():
+    # A multi-WHEN CASE expression with a genuinely missing FROM: the real top-level WHERE must still
+    # be found (exactly once), proving WHEN tokens are never mistaken for WHERE and never suppress or
+    # duplicate detection of the actual violation.
+    sql = """
+    SELECT CASE WHEN x = 1 THEN 'a' WHEN x = 2 THEN 'b' ELSE 'c' END AS y
+    WHERE NOT EXISTS (SELECT 1 FROM t WHERE t.a = y);
+    """
+    violations = csd.no_from_where_violations(sql)
+    assert len(violations) == 1
+
+
+def test_having_and_qualify_clauses_are_clean():
+    sql = """
+    SELECT a, COUNT(*) AS c
+    FROM t
+    WHERE a IS NOT NULL
+    GROUP BY a
+    HAVING COUNT(*) > 1
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY a ORDER BY c DESC) = 1;
+    """
+    assert csd.no_from_where_violations(sql) == []
 
 
 # ==== _blank_string_literals(): backtick-quoted identifiers (2026-08-03 adversarial self-audit) ====

@@ -168,8 +168,10 @@ SELECT d.strategy, d.deposits,
 FROM dep d LEFT JOIN realized r USING(strategy) LEFT JOIN open_pos o USING(strategy) LEFT JOIN divs dv USING(strategy);
 
 -- ===== analytics.account_reconciliation — redefined to read events.cash_flows =====
--- SUPERSEDED LIVE by bigquery/93_park_accounting.sql — current single source of truth for
--- this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- SUPERSEDED LIVE by bigquery/152_park_residual_sign_fix.sql — current single source of truth for
+-- this object (bigquery/93_park_accounting.sql is an intermediate, also-superseded definition — do
+-- not stop there; it added park_unrealized + residual_after_park with a since-fixed sign error).
+-- Kept here, unmodified, for DR-rebuild apply-in-order reference only.
 -- DO NOT re-apply this CREATE statement live in isolation. bigquery/93 preserves every column
 -- below byte-identical and adds park_unrealized + residual_after_park (PARK_ROUTER_DESIGN.md v2 §9,
 -- the AI Park Allocator's vehicle-aware reconciliation).

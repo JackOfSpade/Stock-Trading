@@ -261,9 +261,10 @@ FROM dep d LEFT JOIN realized r USING(strategy) LEFT JOIN open_pos o USING(strat
 -- hardcoded CAST(9446.86 AS NUMERIC) total_deposits below — was redefined by bigquery/22_cash_flows.sql
 -- (CREATE OR REPLACE) to read events.cash_flows dynamically, and bigquery/22's own definition is now
 -- ITSELF superseded in turn.
--- SUPERSEDED LIVE by bigquery/93_park_accounting.sql — current single source of truth for
--- this object (bigquery/22_cash_flows.sql is an intermediate, also-superseded definition — do not
--- stop there). Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- SUPERSEDED LIVE by bigquery/152_park_residual_sign_fix.sql — current single source of truth for
+-- this object (bigquery/22_cash_flows.sql and bigquery/93_park_accounting.sql are both intermediate,
+-- also-superseded definitions — do not stop at either). Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only.
 -- DO NOT re-apply this CREATE statement live in isolation. This definition is dead at runtime; do NOT
 -- hand-edit the 9446.86 literal here expecting a live effect — record a new flow via an
 -- events.cash_flows INSERT (Operating_Protocols §13.C).

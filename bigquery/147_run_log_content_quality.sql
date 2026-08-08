@@ -67,11 +67,13 @@ WHERE run_date >= DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 3 DAY)
 -- changes, per the supersede-only convention in bigquery/README.md: the heartbeat version literal
 -- v12 -> v13, 'run_log_note_missing' added to the #14 auto-age allowlist, and the new record-only
 -- IF block appended after the routine_stalled check.
--- SUPERSEDED LIVE by bigquery/150_cadence_check_autoage_connector_and_revised.sql — current single
+-- SUPERSEDED LIVE by bigquery/153_account_snapshot_gap_watch.sql — current single
 -- source of truth for ops.sp_sq_cadence_check (supersedes this file, via the intermediate
 -- bigquery/149). 149 bumps the heartbeat to v14 and adds 'script_version_drift' to the #14 auto-age
 -- category list; 150 bumps the heartbeat to v15 and adds 'connector' + 'strategy_revised' to the #14
--- auto-age category list; both are otherwise a verbatim copy of the body below. Kept here, unmodified,
+-- auto-age category list; 153 bumps the heartbeat to v17 and adds the account_snapshot_gap record-only
+-- WARNING block (+ 'account_snapshot_gap' to the #14 auto-age list); all are otherwise a verbatim copy
+-- of the body below. Kept here, unmodified,
 -- for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in
 -- isolation. STAGED AS OF 2026-08-08: neither bigquery/149 nor bigquery/150 is yet applied live —
 -- live still runs this v13 body until one of them is applied.

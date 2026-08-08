@@ -345,6 +345,13 @@ LEFT JOIN `stock-trading-498512.analytics.park_nav_daily` pnd USING (as_of_date)
 -- added there, same commit). Every existing output column (total_deposits, strategy_realized_pnl,
 -- events_side_nav_total, deployed_total, undeployed_total) is preserved byte-identical -- each is the
 -- exact same correlated scalar subquery bigquery/22 uses. Two columns are added. =====
+--
+-- SUPERSEDED LIVE by bigquery/152_park_residual_sign_fix.sql -- current single source of truth for
+-- this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
+-- this CREATE statement live in isolation: residual_after_park below has a SIGN ERROR (subtracts
+-- park_unrealized where the DEVIATION #2 identity two paragraphs above it -- "raw residual ==
+-- -park_unrealized" -- requires it to be ADDED), confirmed live 2026-08-08 (reports -245.54 where the
+-- correct figure is -54.65). bigquery/152's header carries the full derivation and worked proof.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.account_reconciliation` AS
 WITH park_marks AS (
   SELECT ticker, mark_date, close FROM `stock-trading-498512.state.daily_marks_curated`

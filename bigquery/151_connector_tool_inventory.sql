@@ -117,9 +117,16 @@ FROM per_connector
 WHERE last_good_run_date IS NULL
    OR days_stale > 2
 UNION ALL
+-- FROM UNNEST([1]) is load-bearing, NOT redundant: GoogleSQL rejects a SELECT expression-list that
+-- carries a WHERE with no FROM ("Query without FROM clause cannot have a WHERE clause"), so the
+-- literal-only synthetic row needs a one-row source to hang the WHERE off. Do NOT "simplify" this
+-- away — the file was rejected at apply time on 2026-08-08 for exactly that shape, and
+-- scripts/check_sql_dryrun.py's no-FROM-WHERE lint did not catch it because that lint scanned only
+-- INSERT ... SELECT statements, not a CREATE VIEW union arm (both fixed the same day).
 SELECT
   'ALL' AS connector, CAST(NULL AS DATE) AS last_good_run_date,
   CAST(NULL AS INT64) AS days_stale, CURRENT_TIMESTAMP() AS checked_at
+FROM UNNEST([1])
 WHERE NOT EXISTS (
   SELECT 1 FROM `stock-trading-498512.ops.connector_tool_inventory`
   WHERE enumeration_ok
