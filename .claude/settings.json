@@ -15,6 +15,7 @@
   },
   "permissions": {
     "allow": [
+  "mcp__Gmail__list_labels",
   "mcp__Google_Calendar__list_events","mcp__Google_Calendar__create_event",
   "mcp__Google_Calendar__delete_event","mcp__Google_Calendar__update_event",
   "mcp__Google_Calendar__get_event","mcp__Google_Calendar__list_calendars",
@@ -26,15 +27,15 @@
   "mcp__Interactive_Brokers_IBKR__get_order_instructions","mcp__Interactive_Brokers_IBKR__create_order_instruction",
   "mcp__Interactive_Brokers_IBKR__delete_order_instruction",
   "mcp__Interactive_Brokers_IBKR__get_option_data","mcp__Interactive_Brokers_IBKR__get_option_parameters",
-  "mcp__Interactive_Brokers_IBKR__get_combo_identifier",
+  "mcp__Interactive_Brokers_IBKR__get_combo_identifier","mcp__Interactive_Brokers_IBKR__get_pa_performance_all_periods",
   "mcp__Claude_Code_Remote__list_triggers",
   "mcp__Google_Cloud_BigQuery__execute_sql","mcp__Google_Cloud_BigQuery__execute_sql_readonly",
   "mcp__Google_Cloud_BigQuery__list_dataset_ids","mcp__Google_Cloud_BigQuery__list_table_ids",
   "mcp__Google_Cloud_BigQuery__get_dataset_info","mcp__Google_Cloud_BigQuery__get_table_info",
   "mcp__Tavily__tavily_search","mcp__Tavily__tavily_extract","mcp__Tavily__tavily_crawl",
   "mcp__Tavily__tavily_map","mcp__Tavily__tavily_research",
-  "mcp__Hugging_Face__hf_whoami","mcp__Hugging_Face__hf_doc_search","mcp__Hugging_Face__hf_doc_fetch",
-  "mcp__Hugging_Face__hf_hub_query","mcp__Hugging_Face__paper_search","mcp__Hugging_Face__hub_repo_search",
+  "mcp__Hugging_Face__hf_whoami","mcp__Hugging_Face__hf_fs","mcp__Hugging_Face__hf_doc_search","mcp__Hugging_Face__hf_doc_fetch",
+  "mcp__Hugging_Face__hf_hub_query","mcp__Hugging_Face__hub_repo_search",
   "mcp__Hugging_Face__hub_repo_details","mcp__Hugging_Face__space_search","mcp__Hugging_Face__dynamic_space",
       "mcp__FMP__quote","mcp__FMP__chart","mcp__FMP__marketHours","mcp__FMP__economics",
       "mcp__FMP__news","mcp__FMP__secFilings"

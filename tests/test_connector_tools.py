@@ -1,0 +1,384 @@
+"""Guard scripts/check_connector_tools.py's own parsers (2026-08-08, connector-tool manifest gate).
+
+Mirrors the style of tests/test_settings_toolcov.py: feed known-good and deliberately-drifted fixtures
+so a regex/YAML-shape change that makes the checker stop matching is caught by CI instead of silently
+disarming the gate. Every assertion is on main()'s RETURN VALUE, never on stdout as the primary signal
+(capsys checks below are secondary/diagnostic only).
+
+NOTE on the real repo (see test_real_repo_connector_tools_is_consistent at the bottom): as of this
+checker's introduction, the real repo genuinely has some of the drift this checker exists to catch
+(a dead `paper_search` call site, a stale allowlist entry, a couple of manifest/routine-text
+disagreements). That test is left asserting == 0 deliberately -- see its own docstring. Do NOT weaken
+this file's checks to make it pass; fix the underlying files instead (tracked separately).
+"""
+import copy
+import json
+
+import yaml
+
+from conftest import load_module_from_path
+
+cct = load_module_from_path("check_connector_tools", "scripts", "check_connector_tools.py")
+
+
+def _write_fixtures(tmp_path, manifest_doc, task_plan_text, settings_allow):
+    manifest_path = tmp_path / "connector_tools.yaml"
+    manifest_path.write_text(yaml.dump(manifest_doc, sort_keys=False))
+    task_plan = tmp_path / "Claude_Task_Plan.md"
+    task_plan.write_text(task_plan_text)
+    claude_dir = tmp_path / ".claude"
+    claude_dir.mkdir()
+    settings = claude_dir / "settings.json"
+    settings.write_text(json.dumps({"permissions": {"allow": settings_allow}}))
+    return manifest_path, task_plan, settings
+
+
+def _patch(monkeypatch, manifest_path, task_plan, settings):
+    monkeypatch.setattr(cct, "MANIFEST", str(manifest_path))
+    monkeypatch.setattr(cct, "TASK_PLAN", str(task_plan))
+    monkeypatch.setattr(cct, "SETTINGS_JSON", str(settings))
+
+
+def _base_manifest():
+    """A clean, internally-consistent two-connector manifest. Tests deep-copy this and mutate one
+    piece at a time so an unrelated check never trips alongside the one under test."""
+    return {
+        "connectors": [
+            {
+                "name": "FMP",
+                "connector_uuid": "uuid-fmp",
+                "settings_prefix": "mcp__FMP__",
+                "tools": [
+                    {"name": "chart", "use": "required", "prose_ambiguous": True,
+                     "note": "OPS1 liveness probe"},
+                    {"name": "search", "use": "unused", "prose_ambiguous": True},
+                    {"name": "Fundraisers", "use": "unused"},
+                ],
+                "absent": [
+                    {"name": "old_tool", "verified": "2026-01-01", "note": "retired by vendor"},
+                ],
+            },
+            {
+                "name": "Gmail",
+                "connector_uuid": "uuid-gmail",
+                "settings_prefix": "mcp__Gmail__",
+                "tools": [
+                    {"name": "list_labels", "use": "required", "note": "OPS1 probe"},
+                    {"name": "get_message", "use": "unused"},
+                ],
+                "absent": [],
+            },
+        ]
+    }
+
+
+def _base_allow():
+    return ["mcp__FMP__chart", "mcp__Gmail__list_labels"]
+
+
+# ---------------------------------------------------------------------------------------------------
+# Green case
+# ---------------------------------------------------------------------------------------------------
+
+def test_green_manifest_is_consistent(tmp_path, monkeypatch):
+    task_plan = "D1 probes FMP `chart` and Gmail `list_labels` every morning.\n"
+    manifest_path, task_plan_path, settings = _write_fixtures(
+        tmp_path, _base_manifest(), task_plan, _base_allow())
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 0
+
+
+def test_ok_summary_names_counts(tmp_path, monkeypatch, capsys):
+    task_plan = "no tool references here\n"
+    manifest_path, task_plan_path, settings = _write_fixtures(
+        tmp_path, _base_manifest(), task_plan, _base_allow())
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 0
+    out = capsys.readouterr().out
+    assert "CONNECTOR TOOLS: OK" in out
+    assert "2 connectors" in out
+    assert "5 tools" in out
+    assert "2 required" in out
+
+
+# ---------------------------------------------------------------------------------------------------
+# CHECK 1 -- manifest internal validity
+# ---------------------------------------------------------------------------------------------------
+
+def test_check1_missing_required_field_fails(tmp_path, monkeypatch, capsys):
+    doc = copy.deepcopy(_base_manifest())
+    del doc["connectors"][0]["connector_uuid"]
+    manifest_path, task_plan_path, settings = _write_fixtures(tmp_path, doc, "no refs\n", _base_allow())
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 1
+    out = capsys.readouterr().out
+    assert "CHECK1" in out and "connector_uuid" in out
+
+
+def test_check1_invalid_use_value_fails(tmp_path, monkeypatch, capsys):
+    doc = copy.deepcopy(_base_manifest())
+    doc["connectors"][0]["tools"][0]["use"] = "sometimes"
+    manifest_path, task_plan_path, settings = _write_fixtures(tmp_path, doc, "no refs\n", _base_allow())
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 1
+    out = capsys.readouterr().out
+    assert "CHECK1" in out and "invalid `use`" in out
+
+
+def test_check1_duplicate_tool_name_fails(tmp_path, monkeypatch, capsys):
+    doc = copy.deepcopy(_base_manifest())
+    doc["connectors"][0]["tools"].append({"name": "chart", "use": "unused"})
+    manifest_path, task_plan_path, settings = _write_fixtures(tmp_path, doc, "no refs\n", _base_allow())
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 1
+    out = capsys.readouterr().out
+    assert "CHECK1" in out and "2 times" in out
+
+
+def test_check1_tool_in_both_tools_and_absent_fails(tmp_path, monkeypatch, capsys):
+    doc = copy.deepcopy(_base_manifest())
+    doc["connectors"][0]["absent"].append({"name": "chart", "verified": "2026-01-01"})
+    manifest_path, task_plan_path, settings = _write_fixtures(tmp_path, doc, "no refs\n", _base_allow())
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 1
+    out = capsys.readouterr().out
+    assert "CHECK1" in out and "BOTH `tools` and `absent`" in out
+
+
+# ---------------------------------------------------------------------------------------------------
+# CHECK 2 -- required tools must be allowlisted (exact-string match only)
+# ---------------------------------------------------------------------------------------------------
+
+def test_check2_required_tool_missing_from_allowlist_fails(tmp_path, monkeypatch, capsys):
+    manifest_path, task_plan_path, settings = _write_fixtures(
+        tmp_path, _base_manifest(), "no refs\n", ["mcp__FMP__chart"])  # Gmail list_labels omitted
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 1
+    out = capsys.readouterr().out
+    assert "CHECK2" in out and "mcp__Gmail__list_labels" in out
+
+
+def test_check2_wildcard_allow_entry_does_not_cover_required_tool(tmp_path, monkeypatch, capsys):
+    manifest_path, task_plan_path, settings = _write_fixtures(
+        tmp_path, _base_manifest(), "no refs\n", ["mcp__FMP__*", "mcp__Gmail__*"])
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 1
+    out = capsys.readouterr().out
+    assert "exact-string match only" in out
+
+
+# ---------------------------------------------------------------------------------------------------
+# CHECK 3 -- routine text calls only declared tools
+# ---------------------------------------------------------------------------------------------------
+
+def test_check3_bare_name_use_mismatch_fails(tmp_path, monkeypatch, capsys):
+    # `Fundraisers` is declared `use: unused` (not prose_ambiguous) -- calling it bare is a finding.
+    task_plan = "D1 pulls `Fundraisers` data for the screen.\n"
+    manifest_path, task_plan_path, settings = _write_fixtures(
+        tmp_path, _base_manifest(), task_plan, _base_allow())
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 1
+    out = capsys.readouterr().out
+    assert "CHECK3" in out and "Fundraisers" in out and "Claude_Task_Plan.md:1" in out
+
+
+def test_check3_full_token_use_mismatch_fails(tmp_path, monkeypatch, capsys):
+    task_plan = "D1 pulls `mcp__FMP__Fundraisers` data for the screen.\n"
+    manifest_path, task_plan_path, settings = _write_fixtures(
+        tmp_path, _base_manifest(), task_plan, _base_allow())
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 1
+    out = capsys.readouterr().out
+    assert "CHECK3" in out and "mcp__FMP__Fundraisers" in out
+
+
+def test_check3_prose_ambiguous_bare_name_is_skipped(tmp_path, monkeypatch):
+    # `search` is use: unused AND prose_ambiguous: true -- a bare mention must NOT be flagged.
+    task_plan = "Use `search` carefully when reading a document.\n"
+    manifest_path, task_plan_path, settings = _write_fixtures(
+        tmp_path, _base_manifest(), task_plan, _base_allow())
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 0
+
+
+def test_check3_prose_ambiguous_full_form_is_still_checked(tmp_path, monkeypatch, capsys):
+    # Same tool, but in FULL mcp__ form -- prose_ambiguous does NOT exempt the qualified token.
+    task_plan = "Use `mcp__FMP__search` here.\n"
+    manifest_path, task_plan_path, settings = _write_fixtures(
+        tmp_path, _base_manifest(), task_plan, _base_allow())
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 1
+    out = capsys.readouterr().out
+    assert "CHECK3" in out and "mcp__FMP__search" in out
+
+
+def test_check3_ambiguous_across_connectors_is_non_fatal(tmp_path, monkeypatch, capsys):
+    doc = copy.deepcopy(_base_manifest())
+    # Both connectors now declare a tool literally named "probe" -- an unqualified bare mention
+    # cannot be resolved to one connector, so it must be skipped (non-fatal), not hard-failed even
+    # though one of the two declarations is `use: unused`.
+    doc["connectors"][0]["tools"].append({"name": "probe", "use": "unused"})
+    doc["connectors"][1]["tools"].append({"name": "probe", "use": "required"})
+    task_plan = "Run `probe` before anything else.\n"
+    manifest_path, task_plan_path, settings = _write_fixtures(
+        tmp_path, doc, task_plan, _base_allow() + ["mcp__Gmail__probe"])
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 0
+    out = capsys.readouterr().out
+    assert "ambiguous across connectors" in out.lower() or "Ambiguous across connectors" in out
+
+
+# ---------------------------------------------------------------------------------------------------
+# CHECK 4 -- no routine text calls an absent tool (hard failure)
+# ---------------------------------------------------------------------------------------------------
+
+def test_check4_bare_absent_reference_fails(tmp_path, monkeypatch, capsys):
+    task_plan = "The old flow used `old_tool` for this.\n"
+    manifest_path, task_plan_path, settings = _write_fixtures(
+        tmp_path, _base_manifest(), task_plan, _base_allow())
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 1
+    out = capsys.readouterr().out
+    assert "CHECK4" in out and "old_tool" in out and "retired by vendor" in out
+
+
+def test_check4_full_token_absent_reference_fails(tmp_path, monkeypatch, capsys):
+    task_plan = "The old flow used `mcp__FMP__old_tool` for this.\n"
+    manifest_path, task_plan_path, settings = _write_fixtures(
+        tmp_path, _base_manifest(), task_plan, _base_allow())
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 1
+    out = capsys.readouterr().out
+    assert "CHECK4" in out and "mcp__FMP__old_tool" in out
+
+
+# ---------------------------------------------------------------------------------------------------
+# Ignore fence -- CHECKS 3 & 4 skip fenced lines
+# ---------------------------------------------------------------------------------------------------
+
+def test_ignore_fence_suppresses_check3_and_check4(tmp_path, monkeypatch):
+    task_plan = (
+        "<!-- connector-tools-checker: ignore-start -->\n"
+        "Historical note: `old_tool` no longer exists; `Fundraisers` used to be called here too.\n"
+        "<!-- connector-tools-checker: ignore-end -->\n"
+        "Live text after the fence is unaffected.\n"
+    )
+    manifest_path, task_plan_path, settings = _write_fixtures(
+        tmp_path, _base_manifest(), task_plan, _base_allow())
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 0
+
+
+def test_reference_outside_fence_still_fails(tmp_path, monkeypatch):
+    # Sanity check on the fence test above: the SAME reference OUTSIDE the fence must still fail,
+    # proving the green result above came from the fence and not from a broken absent-index lookup.
+    task_plan = "Live text calls `old_tool` directly, no fence anywhere.\n"
+    manifest_path, task_plan_path, settings = _write_fixtures(
+        tmp_path, _base_manifest(), task_plan, _base_allow())
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 1
+
+
+# ---------------------------------------------------------------------------------------------------
+# CHECK 5 -- no stale allowlist entries
+# ---------------------------------------------------------------------------------------------------
+
+def test_check5_unexplained_stale_entry_fails(tmp_path, monkeypatch, capsys):
+    allow = _base_allow() + ["mcp__Gmail__ghost_tool"]  # not in tools, not in absent
+    manifest_path, task_plan_path, settings = _write_fixtures(
+        tmp_path, _base_manifest(), "no refs\n", allow)
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 1
+    out = capsys.readouterr().out
+    assert "CHECK5" in out and "ghost_tool" in out and "not recorded as `absent`" in out
+
+
+def test_check5_stale_entry_explained_by_verified_absent_is_hard_fail(tmp_path, monkeypatch, capsys):
+    allow = _base_allow() + ["mcp__FMP__old_tool"]  # matches the absent record, verified (not unconfirmed)
+    manifest_path, task_plan_path, settings = _write_fixtures(
+        tmp_path, _base_manifest(), "no refs\n", allow)
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 1
+    out = capsys.readouterr().out
+    assert "CHECK5" in out and "mcp__FMP__old_tool" in out and "is stale" in out
+
+
+def test_check5_verified_unconfirmed_is_non_fatal(tmp_path, monkeypatch, capsys):
+    doc = copy.deepcopy(_base_manifest())
+    doc["connectors"][0]["absent"].append(
+        {"name": "maybe_gone_tool", "verified": "unconfirmed", "note": "pending OPS1 confirmation"})
+    allow = _base_allow() + ["mcp__FMP__maybe_gone_tool"]
+    manifest_path, task_plan_path, settings = _write_fixtures(tmp_path, doc, "no refs\n", allow)
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 0
+    out = capsys.readouterr().out
+    assert "maybe_gone_tool" in out and "report-only" in out.lower()
+
+
+def test_check5_entry_with_no_matching_connector_prefix_is_out_of_scope(tmp_path, monkeypatch, capsys):
+    # A connector this manifest simply does not track (e.g. Claude Code's own RemoteTrigger surface)
+    # must not be reported at all -- only entries under a KNOWN manifest connector prefix are checked.
+    allow = _base_allow() + ["mcp__Claude_Code_Remote__list_triggers"]
+    manifest_path, task_plan_path, settings = _write_fixtures(
+        tmp_path, _base_manifest(), "no refs\n", allow)
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 0
+    out = capsys.readouterr().out
+    assert "Claude_Code_Remote" not in out
+
+
+# ---------------------------------------------------------------------------------------------------
+# Fail-closed on missing inputs
+# ---------------------------------------------------------------------------------------------------
+
+def test_missing_manifest_fails_closed(tmp_path, monkeypatch, capsys):
+    _, task_plan_path, settings = _write_fixtures(tmp_path, _base_manifest(), "no refs\n", _base_allow())
+    ghost = tmp_path / "does_not_exist_connector_tools.yaml"
+    _patch(monkeypatch, ghost, task_plan_path, settings)
+    assert cct.main() == 1
+    out = capsys.readouterr().out
+    assert "FAIL" in out and "not found" in out
+
+
+def test_missing_task_plan_fails_closed(tmp_path, monkeypatch, capsys):
+    manifest_path, _, settings = _write_fixtures(tmp_path, _base_manifest(), "no refs\n", _base_allow())
+    ghost = tmp_path / "does_not_exist_Claude_Task_Plan.md"
+    _patch(monkeypatch, manifest_path, ghost, settings)
+    assert cct.main() == 1
+    out = capsys.readouterr().out
+    assert "FAIL" in out and "not found" in out
+
+
+def test_missing_settings_json_fails_closed(tmp_path, monkeypatch, capsys):
+    manifest_path, task_plan_path, _ = _write_fixtures(tmp_path, _base_manifest(), "no refs\n", _base_allow())
+    ghost = tmp_path / "does_not_exist" / "settings.json"
+    _patch(monkeypatch, manifest_path, task_plan_path, ghost)
+    assert cct.main() == 1
+    out = capsys.readouterr().out
+    assert "FAIL" in out and "not found" in out
+
+
+# ---------------------------------------------------------------------------------------------------
+# Real repo
+# ---------------------------------------------------------------------------------------------------
+
+def test_real_repo_connector_tools_is_consistent():
+    """As of this checker's introduction (2026-08-08) the real repo has NOT yet closed every gap this
+    checker is designed to catch -- see the module docstring's WHY THIS EXISTS paragraph. Confirmed by
+    running the checker directly against the committed repo files (no monkeypatching):
+      - CHECK4: Claude_Task_Plan.md still instructs a Hugging Face `paper_search` call (D1 ~line 700,
+        SL1 ~line 2848) and mentions `space_search` outside any exemption, even though
+        ops/connector_tools.yaml records both as `absent` (paper_search verified 2026-07-28;
+        space_search unconfirmed).
+      - CHECK5: .claude/settings.json still allowlists `mcp__Hugging_Face__paper_search`, which the
+        manifest records as verified-absent -- a stale grant.
+      - CHECK3: D2a's Step 0b (~line 1257) actively calls `get_pa_performance_all_periods` (IBKR)
+        while the manifest still declares it `use: unused`; the FMP tier-gating discussion at
+        ~line 1336 mentions `etfAndMutualFunds` without `prose_ambiguous: true`, unlike its sibling
+        tier-gated tokens on the same line.
+    A parallel effort is closing these (this same session already observed .claude/settings.json
+    gain `mcp__Gmail__list_labels` / `mcp__Hugging_Face__hf_fs` mid-run, which is why CHECK2 is
+    already clean). Do NOT weaken check_connector_tools.py to make this assertion pass -- fix the
+    underlying manifest/routine-text/allowlist files instead.
+    """
+    assert cct.main() == 0

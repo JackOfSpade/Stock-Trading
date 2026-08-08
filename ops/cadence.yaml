@@ -248,7 +248,7 @@ routines:
     catchup_safe: true      # a late probe still helps; a missed one is covered next morning
     depends_on: []           # DELIBERATELY independent, same rationale as OPS0 -- a probe that exists
                               # to catch an auth failure early must never itself be blocked by one
-    writes: [ops.alerts]
+    writes: [ops.alerts, ops.connector_tool_inventory]
     expected_trigger:
       recurrence: custom_cron
       cron_utc: "30 12 * * *"
@@ -262,7 +262,11 @@ routines:
       was discovered only at D2a's 16:20 MT pre-flight and cascaded into a halted evening -- see
       ops/RUNBOOK.md §15b). Probes IBKR/Calendar/FMP/Gmail read-only and raises
       connector_reauth_needed on an auth-class failure, hours before the daily cadence needs any of
-      them live. Detection-only -- never refires, stages, or writes repo files.
+      them live. Detection-only -- never refires, stages, or writes repo files. Also (added
+      2026-08-08) diffs the live per-connector tool roster against ops/connector_tools.yaml and
+      raises connector_tool_added / connector_tool_removed -- catching a vendor-added tool (which
+      defaults to "needs approval" and would silently stall an unattended routine) the same morning
+      it appears, not whenever a routine first happens to call it.
   - id: OPS2
     name: Catch-up Executor
     schedule: "after the daily chain, before OPS0's 22:30 sweep"   # runs daily incl. non-trading days

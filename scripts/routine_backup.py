@@ -21,6 +21,20 @@ name, cron, enabled, its own instruction text) plus an `overrides` dict for any 
 differs from its profile (empty/omitted in the overwhelming common case). A `git diff` on this file
 after a real config change reads as a real change, not 200KB of connector-block restatement.
 
+PER-TOOL CONNECTOR POLICY (2026-08-08). A live mcp_connections element actually carries SIX keys, not
+three: besides connector_uuid/name/url, `permitted_tools` (tool names auto-allowed without an approval
+prompt), `tool_policy_overrides` (explicit per-tool policy overrides), and `clear_tool_policy_overrides`
+(a live-only "wipe overrides" instruction) are the actual per-tool permission surface. Before this date
+normalize_trigger() copied only the first three, so a snapshot could not represent per-tool policy at
+all and a restore from it would silently recreate every trigger with that policy absent -- real data
+loss. All six are now copied and carried through the restore path. An empty permitted_tools/
+tool_policy_overrides means "no override recorded, inherit the claude.ai connector's own default" --
+NOT "nothing is permitted"; reading it the second way would be both wrong and dangerous (it would read
+as every connector tool suddenly needing manual approval, when nothing has actually been restricted).
+A snapshot written before this date simply lacks these three keys on each connection; every reader in
+this module defaults their absence to ([], [], False) so the committed ops/routine_backup.json stays
+valid without a re-ingest.
+
 Subcommands (see each function's docstring for the exact contract):
   ingest <file_or_dir.json>   merge a RemoteTrigger list/get response into ops/routine_backup.json
   restore [routine_id ...]    print ready-to-use RemoteTrigger create bodies (all routines if none named)
@@ -255,6 +269,14 @@ def normalize_trigger(raw):
     and session_context.outcomes are never read, so they can never leak into ops/routine_backup.json
     regardless of what a real API response happens to include.
 
+    PER-CONNECTION POLICY FIELDS (2026-08-08): each mcp_connections element also copies
+    permitted_tools, tool_policy_overrides, and clear_tool_policy_overrides -- see the module
+    docstring's 2026-08-08 note for why these three matter (they are the per-tool permission surface;
+    dropping them meant a snapshot could not represent per-tool policy at all, and a restore from it
+    would silently recreate the trigger with that policy absent). Missing/falsy input defaults to
+    `[]` / `[]` / `False` respectively, so a raw payload that predates these fields (or a hand-authored
+    'profiles' connector) still normalizes cleanly.
+
     SCHEDULE (B1, 2026-08-01 audit): a live trigger carries EXACTLY ONE of `cron_expression`
     (recurring) or `run_once_at` (RFC3339 UTC one-shot) -- the two 'personal_*' routines in this
     account are one-shots (empty cron_expression + a real run_once_at). The returned dict always has
@@ -269,7 +291,16 @@ def normalize_trigger(raw):
     if events:
         content = ((events[0].get("data") or {}).get("message") or {}).get("content", "")
     conns = sorted(
-        ({"connector_uuid": c.get("connector_uuid"), "name": c.get("name"), "url": c.get("url")}
+        ({"connector_uuid": c.get("connector_uuid"), "name": c.get("name"), "url": c.get("url"),
+          # Per-tool policy surface (2026-08-08, see module + function docstrings). permitted_tools is
+          # sorted at storage time -- same determinism convention as allowed_tools/mcp_connections
+          # order below (a plain list of tool names, harmless to reorder). tool_policy_overrides'
+          # element shape is NOT documented/guaranteed to be sortable (may be a list of override
+          # objects), so it is preserved in API-return order rather than risk a TypeError or silently
+          # reordering something that could be order-significant.
+          "permitted_tools": sorted(c.get("permitted_tools") or []),
+          "tool_policy_overrides": list(c.get("tool_policy_overrides") or []),
+          "clear_tool_policy_overrides": bool(c.get("clear_tool_policy_overrides"))}
          for c in (raw.get("mcp_connections") or [])),
         key=lambda c: c["name"] or "")
     run_once_at = ((raw.get("run_once_at") or "").strip()) or None
@@ -414,7 +445,7 @@ def _tools_set(tools):
 
 
 def _tools_eq(a, b):
-    """Order-INSENSITIVE, matching the mcp_connections precedent (_conn_uuid_set below / _conns'
+    """Order-INSENSITIVE, matching the mcp_connections precedent (_conn_key_set below / _conns'
     docstring): allowed_tools comes back from a live `list`/`get` response in whatever order the API
     happens to serialize session_context in, same as mcp_connections' connector order varies harmlessly
     between routines. Comparing as a list (the old `list(a) == list(b)`) treated that harmless order
@@ -438,16 +469,46 @@ def _sources_eq(a, b):
     return (a or []) == (b or [])
 
 
-def _conn_uuid_set(conns):
-    return {c.get("connector_uuid") for c in (conns or [])}
+def _hashable_json_list(items):
+    """`items` (a list of JSON-serializable values whose element shape isn't guaranteed, e.g. a
+    connection's tool_policy_overrides) as a hashable tuple usable inside a set -- each element is
+    json.dumps'd with sort_keys=True so two structurally-identical dicts always dump identically
+    regardless of their own key order, and list ORDER is preserved (not sorted): unlike allowed_tools/
+    permitted_tools (flat lists of names, harmless to reorder -- see _tools_eq's docstring), an
+    overrides list's shape isn't documented anywhere this module can check, so it is treated as
+    potentially order-significant rather than assumed to be a set."""
+    return tuple(json.dumps(x, sort_keys=True, default=str) for x in (items or []))
+
+
+def _conn_key(c):
+    """The full comparable identity of one mcp_connection dict (2026-08-08): connector_uuid PLUS the
+    per-tool policy fields (permitted_tools, tool_policy_overrides, clear_tool_policy_overrides) -- see
+    the module docstring's 2026-08-08 note. Two connections with the SAME connector_uuid but DIFFERENT
+    per-tool policy are NOT the same effective config and must not collapse together when
+    derive_profile() decides whether a routine matches a profile's mcp_connections. permitted_tools is
+    compared order-insensitively (a flat list of tool names, same as allowed_tools); every field
+    defaults the same way normalize_trigger() defaults an ingested connection ([] / [] / False), so a
+    profile connector dict written before this field existed (only 3 keys) still compares equal to a
+    live connection whose policy is genuinely empty -- the common case for every routine today."""
+    return (
+        c.get("connector_uuid"),
+        tuple(sorted(c.get("permitted_tools") or [])),
+        _hashable_json_list(c.get("tool_policy_overrides")),
+        bool(c.get("clear_tool_policy_overrides")),
+    )
+
+
+def _conn_key_set(conns):
+    return {_conn_key(c) for c in (conns or [])}
 
 
 def derive_profile(normalized, profiles):
     """(profile_name, overrides) for `normalized` against the candidate `profiles` dict -- the
     best-scoring profile (most matching fields) wins, and every field that still differs from THAT
-    profile is recorded in `overrides`. mcp_connections is compared as an UNORDERED set of
-    connector_uuid (connector order varies harmlessly between live routines -- see _conns' docstring),
-    every other field is compared as-is.
+    profile is recorded in `overrides`. mcp_connections is compared as an UNORDERED set of each
+    connection's full identity -- connector_uuid AND its per-tool policy fields (_conn_key, 2026-08-08;
+    connector ORDER varies harmlessly between live routines -- see _conns' docstring, but the per-tool
+    POLICY of a given connector is real config, not noise), every other field is compared as-is.
 
     TIE-BREAK (B7, 2026-08-01 audit): on an EQUAL score between two or more profiles, the
     lexicographically LOWEST profile name wins, deterministically, regardless of dict iteration
@@ -466,7 +527,7 @@ def derive_profile(normalized, profiles):
             + (normalized.get("notifications") == p.get("notifications"))
             + _tools_eq(normalized["allowed_tools"], p.get("allowed_tools"))
             + _sources_eq(normalized["sources"], p.get("sources"))
-            + (_conn_uuid_set(normalized["mcp_connections"]) == _conn_uuid_set(p.get("mcp_connections")))
+            + (_conn_key_set(normalized["mcp_connections"]) == _conn_key_set(p.get("mcp_connections")))
         )
         if score > best_score or (score == best_score and pname < best_name):
             best_name, best_score = pname, score
@@ -484,7 +545,7 @@ def derive_profile(normalized, profiles):
         overrides["allowed_tools"] = normalized["allowed_tools"]
     if not _sources_eq(normalized["sources"], p.get("sources")):
         overrides["sources"] = normalized["sources"]
-    if _conn_uuid_set(normalized["mcp_connections"]) != _conn_uuid_set(p.get("mcp_connections")):
+    if _conn_key_set(normalized["mcp_connections"]) != _conn_key_set(p.get("mcp_connections")):
         overrides["mcp_connections"] = normalized["mcp_connections"]
     return best_name, overrides
 
@@ -600,13 +661,37 @@ def _fresh_uuid():
     return str(uuid.uuid4()).lower()
 
 
+def _restore_conn(c):
+    """One `mcp_connections` element as it goes into a RemoteTrigger create body (2026-08-08) --
+    connector_uuid/name/url plus the per-tool policy fields, each explicitly defaulted rather than
+    left absent, so a restore never depends on the live API guessing a missing key's meaning.
+
+    SAFETY-CRITICAL: `clear_tool_policy_overrides` must ONLY ever be exactly the value that was backed
+    up for this connection -- sending `true` on a restore would WIPE the live per-tool policy for that
+    connector. When nothing was ever recorded (e.g. `c` came from a hand-authored 'profiles' connector
+    written before this field existed), it defaults to False, NEVER True -- a restore must never clear
+    policy it has no record of. Do not change this default without re-reading that sentence."""
+    return {
+        "connector_uuid": c.get("connector_uuid"),
+        "name": c.get("name"),
+        "url": c.get("url"),
+        "permitted_tools": list(c.get("permitted_tools") or []),
+        "tool_policy_overrides": list(c.get("tool_policy_overrides") or []),
+        "clear_tool_policy_overrides": bool(c.get("clear_tool_policy_overrides")),
+    }
+
+
 def _assemble_create_body(*, name, cron_expression=None, run_once_at=None, enabled, instruction,
                            environment_id, model, allowed_tools, autofix_on_pr_create, sources,
                            mcp_connections, notifications=None):
     """B1 (2026-08-01 audit): a RemoteTrigger create body carries EXACTLY ONE of `cron_expression`
     (recurring) or `run_once_at` (RFC3339 UTC one-shot) -- never both, never neither. Raises ValueError
     rather than silently emitting an invalid/ambiguous body; callers (build_create_body,
-    build_unmatched_create_body) pass through whichever ONE of the two their source data has."""
+    build_unmatched_create_body) pass through whichever ONE of the two their source data has.
+
+    Each mcp_connections element is passed through _restore_conn() (2026-08-08) so the per-tool policy
+    fields are always present and explicitly defaulted in the emitted body -- see _restore_conn's
+    docstring for the clear_tool_policy_overrides safety rule."""
     if bool(cron_expression) == bool(run_once_at):
         raise ValueError(
             "exactly one of cron_expression/run_once_at is required for a RemoteTrigger create body "
@@ -634,7 +719,7 @@ def _assemble_create_body(*, name, cron_expression=None, run_once_at=None, enabl
                 ],
             },
         },
-        "mcp_connections": mcp_connections,
+        "mcp_connections": [_restore_conn(c) for c in (mcp_connections or [])],
         "notifications": notifications if notifications is not None else copy.deepcopy(NOTIFY_SILENT),
     }
     if cron_expression:
@@ -653,7 +738,12 @@ def _resolve_fields(entry, profiles):
     corrupted ingest) raised an uncaught KeyError here and crashed check()/restore() before
     _resolved_fields_errors() ever got a chance to report it as the "missing/empty" finding it already
     knows how to describe (2026-08-08). .get() everywhere makes a missing field resolve to None like
-    notifications always did, so the crash becomes a clean, reportable validation failure instead."""
+    notifications always did, so the crash becomes a clean, reportable validation failure instead.
+
+    `mcp_connections` resolves to whichever whole list of connection dicts wins (override or profile)
+    -- each dict's per-tool policy fields (permitted_tools/tool_policy_overrides/
+    clear_tool_policy_overrides) ride along unchanged; _assemble_create_body()'s _restore_conn() step
+    is what defaults any missing ones before they reach a live create body."""
     p = profiles[entry["profile"]]
     ov = entry.get("overrides") or {}
     return {
@@ -805,7 +895,15 @@ def _resolved_fields_errors(rid, entry, profiles):
     happens to exist. Reproduced live: a payload with session_context: {} ingests into overrides of
     {"model": None, "allowed_tools": [], "environment_id": None, "sources": [], "mcp_connections": []}
     and the OLD check() still printed OK, i.e. it blessed a snapshot whose actual restore data is
-    wiped. Caller guarantees entry['profile'] is a valid key into `profiles` (checked separately)."""
+    wiped. Caller guarantees entry['profile'] is a valid key into `profiles` (checked separately).
+
+    Deliberately does NOT validate permitted_tools/tool_policy_overrides as their own missing/empty
+    check the way mcp_connections itself is checked just below (2026-08-08): those two live INSIDE
+    each mcp_connections element, not as their own top-level resolved field, and an empty list for
+    either is a LEGITIMATE, common value meaning "no override recorded for this connector, inherit the
+    claude.ai connector's own default" -- not "nothing is permitted" (see the module docstring's
+    2026-08-08 note). Flagging `[]` there as missing/empty would be a false positive on every
+    routine in the fleet today, since none currently has recorded per-tool policy."""
     errors = []
     fields = _resolve_fields(entry, profiles)
     if not (isinstance(fields.get("environment_id"), str) and fields["environment_id"]):

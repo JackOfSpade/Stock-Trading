@@ -14,6 +14,16 @@ ops/triggers.json must appear in .claude/settings.json's permissions.allow array
 allowlisted tool nothing references yet -- is not an error; sessions legitimately provision ahead of
 a routine-text change.)
 
+SCOPE NOTE (2026-08-08 -- this scope was previously implied to be broader than it is, both here and in
+ci.yml's step name/comment for this script; corrected, not a logic change). MCP_TOKEN only matches full
+`mcp__Server__tool` tokens -- 8 of them in Claude_Task_Plan.md today. Routine prose overwhelmingly writes
+BARE backticked tool names instead (`` `get_account_summary` ``, `` `list_labels` ``), which this regex
+cannot see at all: Gmail's `list_labels` is called every morning by OPS1 and was invisible to this gate.
+Bare-name coverage -- both "is it allowlisted" and "does the tool still exist" -- is
+scripts/check_connector_tools.py's job (see that script's own docstring and ops/connector_tools.yaml's
+header), not this one's. A green run of THIS script is therefore not, by itself, proof of complete tool
+coverage; it only proves the full-token subset is covered.
+
 Usage:  python scripts/check_settings_toolcov.py    # exit 0 if covered, 1 + diff if not
 """
 import json

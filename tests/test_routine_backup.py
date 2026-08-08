@@ -181,9 +181,14 @@ def test_normalize_trigger_shape_and_cron_stripped():
         "autofix_on_pr_create": True,
         "notifications": {"channel": {"email": False, "push": False, "slack": False}},
         "sources": [{"git_repository": {"url": rb.FLEET_REPO_URL}}],
+        # Each connection now also carries the per-tool policy fields (2026-08-08) -- _raw_trigger()'s
+        # default `connections` fixture already includes them (all empty/False), so this pins that
+        # normalize_trigger() actually copies them through rather than dropping them like the old code.
         "mcp_connections": [
-            {"connector_uuid": "u-fmp", "name": "FMP", "url": "https://fmp/mcp"},
-            {"connector_uuid": "u-gh", "name": "Gmail", "url": "https://gmail/mcp"},
+            {"connector_uuid": "u-fmp", "name": "FMP", "url": "https://fmp/mcp",
+             "permitted_tools": [], "tool_policy_overrides": [], "clear_tool_policy_overrides": False},
+            {"connector_uuid": "u-gh", "name": "Gmail", "url": "https://gmail/mcp",
+             "permitted_tools": [], "tool_policy_overrides": [], "clear_tool_policy_overrides": False},
         ],
     }
 
@@ -202,6 +207,36 @@ def test_normalize_trigger_mcp_connections_sorted_by_name_regardless_of_input_or
     ])
     got = rb.normalize_trigger(raw)["mcp_connections"]
     assert [c["name"] for c in got] == ["Alpha", "Zeta"]
+
+
+# ---- normalize_trigger: per-tool connector policy fields (2026-08-08 data-loss fix) -------------------
+def test_normalize_trigger_copies_per_tool_policy_fields():
+    """The real bug: a LIVE mcp_connections element carries SIX keys (connector_uuid/name/url plus
+    permitted_tools/tool_policy_overrides/clear_tool_policy_overrides), and normalize_trigger() used to
+    silently drop the last three -- the actual per-tool permission surface. permitted_tools is sorted
+    at storage time (matches the allowed_tools/mcp_connections-order precedent); tool_policy_overrides
+    is preserved in API order (its element shape isn't guaranteed sortable)."""
+    raw = _raw_trigger(connections=[
+        {"connector_uuid": "u-ibkr", "name": "IBKR", "url": "https://ibkr",
+         "permitted_tools": ["get_account_positions", "create_order_instruction"],
+         "tool_policy_overrides": [{"tool": "create_order_instruction", "policy": "always_ask"}],
+         "clear_tool_policy_overrides": True},
+    ])
+    got = rb.normalize_trigger(raw)["mcp_connections"][0]
+    assert got["permitted_tools"] == ["create_order_instruction", "get_account_positions"]
+    assert got["tool_policy_overrides"] == [{"tool": "create_order_instruction", "policy": "always_ask"}]
+    assert got["clear_tool_policy_overrides"] is True
+
+
+def test_normalize_trigger_defaults_missing_per_tool_policy_fields():
+    """A connection shaped like the OLD (pre-2026-08-08) 3-key normalize_trigger() output, or a raw API
+    payload that simply omits the fields -- must default to the stable ([], [], False) shape, never
+    raise, and never fabricate a non-empty value."""
+    raw = _raw_trigger(connections=[{"connector_uuid": "u-fmp", "name": "FMP", "url": "https://fmp/mcp"}])
+    got = rb.normalize_trigger(raw)["mcp_connections"][0]
+    assert got["permitted_tools"] == []
+    assert got["tool_policy_overrides"] == []
+    assert got["clear_tool_policy_overrides"] is False
 
 
 def test_normalize_trigger_allowed_tools_sorted_regardless_of_input_order():
@@ -440,6 +475,60 @@ def test_derive_profile_connector_set_difference_is_an_override():
     normalized = _norm(mcp_connections=[{"connector_uuid": "u-c", "name": "C", "url": "https://c"}])
     profile, overrides = rb.derive_profile(normalized, PROFILES)
     assert overrides["mcp_connections"] == [{"connector_uuid": "u-c", "name": "C", "url": "https://c"}]
+
+
+# ---- derive_profile: per-tool connector policy is part of a connection's identity (2026-08-08) --------
+def test_derive_profile_same_connector_uuid_different_policy_is_not_the_same_config():
+    """THE BUG this session fixes: two connections with the identical connector_uuid but DIFFERENT
+    per-tool policy are NOT the same effective config. Before the fix, comparison was an unordered set
+    of connector_uuid ONLY, so a routine whose IBKR connector had a hand-tuned permitted_tools would
+    have silently matched the vanilla 'fleet' profile with ZERO override recorded -- exactly the
+    silent-data-loss scenario this whole change exists to close."""
+    normalized = _norm(mcp_connections=[
+        {"connector_uuid": "u-a", "name": "A", "url": "https://a",
+         "permitted_tools": ["some_tool"], "tool_policy_overrides": [], "clear_tool_policy_overrides": False},
+        {"connector_uuid": "u-b", "name": "B", "url": "https://b",
+         "permitted_tools": [], "tool_policy_overrides": [], "clear_tool_policy_overrides": False},
+    ])
+    profile, overrides = rb.derive_profile(normalized, PROFILES)
+    assert profile == "fleet"
+    assert "mcp_connections" in overrides, (
+        "policy drift on connector 'A' must be recorded as an override, not silently absorbed into "
+        "the profile match")
+    assert overrides["mcp_connections"] == normalized["mcp_connections"]
+
+
+def test_derive_profile_empty_policy_still_matches_a_profile_connector_missing_the_keys_entirely():
+    """Backward compatibility: PROFILES' connectors above (like every real 'profiles' entry in
+    ops/routine_backup.json before 2026-08-08) carry only connector_uuid/name/url, no policy keys at
+    all. A live connection with genuinely empty policy (the real, current state of every fleet
+    connector) must still compare EQUAL to that profile connector -- i.e. absence-defaults-to-empty on
+    the profile side and explicit-empty on the normalized side must resolve to the same identity."""
+    normalized = _norm()  # PROFILES-shaped mcp_connections, no policy keys at all -- exact profile match
+    profile, overrides = rb.derive_profile(normalized, PROFILES)
+    assert profile == "fleet"
+    assert "mcp_connections" not in overrides
+
+
+def test_conn_key_set_treats_permitted_tools_order_insensitively():
+    a = [{"connector_uuid": "u-a", "permitted_tools": ["x", "y"], "tool_policy_overrides": [],
+          "clear_tool_policy_overrides": False}]
+    b = [{"connector_uuid": "u-a", "permitted_tools": ["y", "x"], "tool_policy_overrides": [],
+          "clear_tool_policy_overrides": False}]
+    assert rb._conn_key_set(a) == rb._conn_key_set(b)
+
+
+def test_conn_key_set_treats_tool_policy_overrides_order_as_significant():
+    """Unlike permitted_tools (a flat set of names), tool_policy_overrides' element shape/semantics
+    aren't documented anywhere this module can verify, so order is treated as potentially meaningful --
+    a reordering of the SAME two override objects must not be silently treated as identical."""
+    a = [{"connector_uuid": "u-a", "permitted_tools": [],
+          "tool_policy_overrides": [{"tool": "x", "policy": "ask"}, {"tool": "y", "policy": "allow"}],
+          "clear_tool_policy_overrides": False}]
+    b = [{"connector_uuid": "u-a", "permitted_tools": [],
+          "tool_policy_overrides": [{"tool": "y", "policy": "allow"}, {"tool": "x", "policy": "ask"}],
+          "clear_tool_policy_overrides": False}]
+    assert rb._conn_key_set(a) != rb._conn_key_set(b)
 
 
 def test_derive_profile_raises_on_empty_profiles():
@@ -795,9 +884,15 @@ def test_restore_body_shape_matches_remotetrigger_create_contract(tmp_path, monk
     assert body["name"] == "D1. Test Routine — deep research"
     assert body["enabled"] is True   # not just present -- pin the actual VALUE the fixture carries
     assert body["cron_expression"] == "0 16 * * *"
+    # TEST_PROFILES' 'fleet' mcp_connections (module-level, above) deliberately has only 3 keys per
+    # connection -- the pre-2026-08-08 shape -- to prove _restore_conn() (_assemble_create_body)
+    # explicitly defaults the per-tool policy fields onto a restore body even when the SOURCE data
+    # (here, the profile itself) never carried them, rather than leaving them silently absent.
     assert body["mcp_connections"] == [
-        {"connector_uuid": "u-fmp", "name": "FMP", "url": "https://fmp/mcp"},
-        {"connector_uuid": "u-gh", "name": "Gmail", "url": "https://gmail/mcp"},
+        {"connector_uuid": "u-fmp", "name": "FMP", "url": "https://fmp/mcp",
+         "permitted_tools": [], "tool_policy_overrides": [], "clear_tool_policy_overrides": False},
+        {"connector_uuid": "u-gh", "name": "Gmail", "url": "https://gmail/mcp",
+         "permitted_tools": [], "tool_policy_overrides": [], "clear_tool_policy_overrides": False},
     ]
     assert body["notifications"] == {"channel": {"email": False, "push": False, "slack": False}}
     ccr = body["job_config"]["ccr"]
@@ -825,6 +920,71 @@ def test_restore_body_shape_matches_remotetrigger_create_contract(tmp_path, monk
     for f in ("next_run_at", "last_fired_at", "updated_at", "created_at", "ended_reason",
               "suspension_reason", "api_token_hint", "creator"):
         assert f not in dumped
+
+
+# ---- restore(): per-tool connector policy round-trips through ingest -> restore (2026-08-08) ----------
+def test_restore_carries_real_per_tool_policy_through_from_a_live_ingest(tmp_path, monkeypatch):
+    """End-to-end: a live connection with genuine permitted_tools/tool_policy_overrides must survive
+    ingest() (as an mcp_connections override, since it differs from TEST_PROFILES' 'fleet') and come
+    back out UNCHANGED in the restore body -- this is the actual data the 2026-08-01-style incident
+    needs to reinstate a hand-tuned per-tool policy, not just the connector list."""
+    _wire(tmp_path, monkeypatch)
+    policy_conns = [
+        {"connector_uuid": "u-fmp", "name": "FMP", "url": "https://fmp/mcp",
+         "permitted_tools": ["quote"], "tool_policy_overrides": [], "clear_tool_policy_overrides": False},
+        {"connector_uuid": "u-gh", "name": "Gmail", "url": "https://gmail/mcp",
+         "permitted_tools": [], "tool_policy_overrides": [{"tool": "create_draft", "policy": "always_ask"}],
+         "clear_tool_policy_overrides": False},
+    ]
+    rb.ingest(str(_write(tmp_path, "in.json", {"data": [_raw_trigger(connections=policy_conns)]})))
+    entry = rb.load_backup()["routines"]["D1"]
+    assert entry["overrides"]["mcp_connections"] == policy_conns
+
+    bodies, errors, _ = rb.restore(["D1"])
+    assert errors == []
+    assert bodies[0][1]["mcp_connections"] == policy_conns
+
+
+def test_restore_never_sends_clear_tool_policy_overrides_true_unless_it_was_backed_up_true(
+        tmp_path, monkeypatch):
+    """SAFETY-CRITICAL (2026-08-08): clear_tool_policy_overrides=true on a RemoteTrigger create WIPES
+    the live per-tool policy for that connector. A routine whose backed-up connection never recorded
+    this field (e.g. it came from the hand-authored 'fleet' profile, which has no policy keys at all)
+    must restore with clear_tool_policy_overrides explicitly False -- never absent-and-ambiguous, and
+    absolutely never True by accident."""
+    _wire(tmp_path, monkeypatch)
+    rb.ingest(str(_write(tmp_path, "in.json", {"data": [_raw_trigger()]})))  # matches 'fleet' exactly
+    bodies, errors, _ = rb.restore(["D1"])
+    assert errors == []
+    for conn in bodies[0][1]["mcp_connections"]:
+        assert conn["clear_tool_policy_overrides"] is False
+
+
+def test_restore_preserves_a_backed_up_clear_tool_policy_overrides_true(tmp_path, monkeypatch):
+    """The flip side of the safety rule above: when a live connection genuinely WAS recorded with
+    clear_tool_policy_overrides=true, restore must faithfully reproduce that -- the safety rule is
+    'never fabricate True', not 'always force False'."""
+    _wire(tmp_path, monkeypatch)
+    conns = [{"connector_uuid": "u-fmp", "name": "FMP", "url": "https://fmp/mcp",
+              "permitted_tools": [], "tool_policy_overrides": [], "clear_tool_policy_overrides": True},
+             {"connector_uuid": "u-gh", "name": "Gmail", "url": "https://gmail/mcp",
+              "permitted_tools": [], "tool_policy_overrides": [], "clear_tool_policy_overrides": False}]
+    rb.ingest(str(_write(tmp_path, "in.json", {"data": [_raw_trigger(connections=conns)]})))
+    bodies, errors, _ = rb.restore(["D1"])
+    assert errors == []
+    by_uuid = {c["connector_uuid"]: c for c in bodies[0][1]["mcp_connections"]}
+    assert by_uuid["u-fmp"]["clear_tool_policy_overrides"] is True
+    assert by_uuid["u-gh"]["clear_tool_policy_overrides"] is False
+
+
+def test_restore_conn_defaults_missing_policy_fields_without_raising():
+    """_restore_conn() (the helper _assemble_create_body uses for every mcp_connections element) must
+    default a connection missing the policy keys entirely -- e.g. a hand-authored 'profiles' connector
+    -- to ([], [], False), never raise and never fabricate a non-empty/True value."""
+    out = rb._restore_conn({"connector_uuid": "u-x", "name": "X", "url": "https://x"})
+    assert out == {"connector_uuid": "u-x", "name": "X", "url": "https://x",
+                    "permitted_tools": [], "tool_policy_overrides": [],
+                    "clear_tool_policy_overrides": False}
 
 
 def body_instruction(body):
@@ -1088,6 +1248,24 @@ def test_check_ok_on_a_consistent_backup(tmp_path, monkeypatch, capsys):
     assert rb.check() == 0
     out = capsys.readouterr().out
     assert "ROUTINE BACKUP CHECK: OK" in out
+
+
+def test_check_ok_when_profile_connectors_predate_the_per_tool_policy_fields(tmp_path, monkeypatch, capsys):
+    """Backward compatibility (2026-08-08): _good_backup_doc() above derives from rb.DEFAULT_PROFILES,
+    the REAL production profiles -- pinned here to confirm their mcp_connections entries have exactly
+    the old 3 keys, with no permitted_tools/tool_policy_overrides/clear_tool_policy_overrides at all
+    (the actual shape of the committed ops/routine_backup.json before this fix). check() must still
+    pass cleanly; nothing in the new per-tool-policy comparison/validation code may require those keys
+    to be present."""
+    doc = _good_backup_doc()
+    for p in doc["profiles"].values():
+        for conn in p["mcp_connections"]:
+            assert set(conn) == {"connector_uuid", "name", "url"}, (
+                "this test's premise (profile connectors predate the policy fields) no longer holds -- "
+                "update it if DEFAULT_PROFILES' mcp_connections shape intentionally changed")
+    _wire(tmp_path, monkeypatch, backup_doc=doc)
+    assert rb.check() == 0
+    assert "ROUTINE BACKUP CHECK: OK" in capsys.readouterr().out
 
 
 def test_check_fails_when_backup_file_missing(tmp_path, monkeypatch, capsys):

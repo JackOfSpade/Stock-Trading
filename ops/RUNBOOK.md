@@ -658,13 +658,21 @@ stall with it (it ran under the same identity).
   **Priority context:** this is the 2nd, independent channel; the primary `safety_critical_dml_watch`
   scheduled query (every 6h, email-on-failure ON, live 2026-07-17) is the first line.
 
-- **§15a. Connector tool-permission matrix (added 2026-07-19).** The claude.ai connectors UI exposes
-  per-tool allow/ask/block controls; a tool group's dropdown reads "Always allow" only while EVERY tool
-  in the group is set to allow — if even one differs, the label silently flips to "Custom". **A label
-  flip is therefore not proof anyone changed a needed permission** — check the underlying per-tool
-  matrix, not the group label.
+- **§15a. Connector tool-permission matrix (added 2026-07-19; generalized 2026-08-08).** The claude.ai
+  connectors UI exposes per-tool allow/ask/block controls; a tool group's dropdown reads "Always allow"
+  only while EVERY tool in the group is set to allow — if even one differs, the label silently flips to
+  "Custom". **A label flip is therefore not proof anyone changed a needed permission** — check the
+  underlying per-tool matrix, not the group label.
 
-  **Canonical expected matrix — Google Cloud BigQuery connector:**
+  **Authority: `ops/connector_tools.yaml` (added 2026-08-08).** The per-tool expected state for ALL
+  SEVEN connectors this fleet uses (FMP, Gmail, Google-Calendar, Google-Cloud-BigQuery,
+  Interactive-Brokers-IBKR, Tavily, Hugging-Face — 103 tools total) is now version-controlled in that
+  manifest, each tool marked `required` / `optional` / `unused`. That file is the authority going
+  forward. The BigQuery matrix below is RETAINED as the worked example — it predates the manifest and
+  its incident record is live history — rather than duplicated into all 103 rows here; for any other
+  connector, read `ops/connector_tools.yaml` directly.
+
+  **Canonical expected matrix — Google Cloud BigQuery connector (worked example):**
 
   | Tool | Setting | Why |
   |---|---|---|
@@ -686,13 +694,48 @@ stall with it (it ran under the same identity).
   restored state, not whether the displayed block was ever runtime-enforced (untested, now moot);
   (d) zero operational impact either way.
 
-  **Drift-detection posture.** A harmful flip (`execute_sql` or `execute_sql_readonly` blocked) is
-  already self-detecting — every routine's first action is the BigQuery liveness read, so a block halts
-  the routine at pre-flight and raises the connector alert same-session, identical to an OAuth expiry
-  (§26 precedent). The only invisible drift class is on the two tools nothing depends on — harmless by
-  definition. **Operator guidance:** after any connector re-auth, reconnect, or visible connectors-UI
-  redesign, glance at the per-tool matrix against the table above; restore the two OPTIONAL rows to
-  allow, or accept them blocked — either is fine.
+  **Drift-detection posture (corrected 2026-08-08).** A harmful flip (`execute_sql` or
+  `execute_sql_readonly` blocked) is already self-detecting — every routine's first action is the
+  BigQuery liveness read, so a block halts the routine at pre-flight and raises the connector alert
+  same-session, identical to an OAuth expiry (§26 precedent). This section previously claimed the only
+  invisible drift class was the two BigQuery tools nothing depends on — "harmless by definition." That
+  was always narrower than it read: it reasoned only about a tool being BLOCKED, never about a tool
+  being ADDED. **The larger, previously-undetected class is a vendor ADDING a tool.** A new tool arrives
+  in the claude.ai connectors UI defaulted to "ask" / "needs approval" — not silently blocked, not
+  silently allowed — and is invisible to every existing dead-man switch, because nothing was calling it
+  before, so nothing was failing before. An unattended scheduled routine that happens to call it mid-run
+  hits a permission prompt with nobody there to answer, and stalls with no error message: no exception,
+  no alert, just a session that never completes. Live example: the IBKR connector added `whats_new` in
+  July 2026 — currently `use: unused` in `ops/connector_tools.yaml` (nothing in the fleet calls it),
+  recorded there specifically so it doesn't re-raise as unexplained drift. OPS1 (below) now closes this
+  gap mechanically. **Operator guidance (unchanged):** after any connector re-auth, reconnect, or
+  visible connectors-UI redesign, glance at the per-tool matrix against the table above; restore the two
+  OPTIONAL BigQuery rows to allow, or accept them blocked — either is fine.
+
+  **Operator playbook: `connector_tool_added` / `connector_tool_removed` /
+  `connector_tool_enumeration_failed` (added 2026-08-08).** OPS1 (`Claude_Task_Plan.md`) now diffs the
+  live per-connector tool roster against `ops/connector_tools.yaml` every pre-market morning and raises
+  these on `ops.alerts`:
+  1. Read the alert payload for `connector` and `tool_name`.
+  2. Decide whether the fleet should use the tool.
+  3. If yes, set it to **"Always allow"** for that tool in the claude.ai connectors UI.
+  4. Add it to `ops/connector_tools.yaml` with the right `use:` value. **Adding it to the manifest is
+     what clears the alert** — the self-heal keys on `state.connector_tool_drift` going empty, not on
+     the UI change, which nothing on this side can observe.
+
+  For `connector_tool_removed` with `use: required`, that alert is a **critical**: routine text calls
+  that tool and will now fail. Either restore it in the connectors UI or fix the routine text and the
+  manifest together — do not just delete the manifest row to make the alert go away.
+
+  For `connector_tool_enumeration_failed`, the morning's sweep was incomplete and the day's clean bill
+  of health is void for the named connector(s) — re-run OPS1 or check the connector manually before
+  trusting the absence of other drift alerts that morning.
+
+  **Supporting objects:** `ops.connector_tool_inventory` (append-only per-connector-per-tool observation
+  record, `bigquery/151_connector_tool_inventory.sql`), `state.connector_tool_drift` (added/removed rows
+  needing attention), `state.connector_tool_inventory_stale` (an independent staleness dead-man switch —
+  a self-reported check cannot detect its own omission, so something outside OPS1 must), and the CI gate
+  `scripts/check_connector_tools.py`.
 
 - **§15b. Connector OAuth expiry playbook (added 2026-07-20).** The 2026-07-19 IBKR connector expiry
   (OWNER_ACTIONS.md item V) was the FIRST IBKR occurrence on record — the only prior connector-expiry

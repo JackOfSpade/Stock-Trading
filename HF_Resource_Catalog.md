@@ -5,14 +5,25 @@ Compiled May 2026 (routine count current as of 2026-07-29; catalog content below
 
 Verified May 2026 via direct calls to `paper_search` and `hub_repo_search`. Operational caveat about `space_search` added in §8.
 
+> **2026-08-08 RECONCILIATION NOTE.** The HF tool roster has changed since this catalog's May 2026
+> compile: `paper_search` (verified gone 2026-07-28) and `space_search` (observed absent 2026-08-08) no
+> longer exist — see `ops/connector_tools.yaml`'s `absent` list. `hf_fs` (`cmd="search"`,
+> `args=["hf://papers", "<query>", "--limit", N]`; `cmd="cat"`, `args=["hf://papers/<arxiv_id>/paper.md"]`
+> for detail) is the current paper-index surface and replaces `paper_search` throughout this catalog and
+> in `Claude_Task_Plan.md`. `hub_repo_search` with explicit `author` and `repo_types=["space"]` replaces
+> `space_search` for known-Space lookup — §8.1 already recommended this over `space_search`'s unreliable
+> semantic search even before the tool's removal. Every `paper_search` / `space_search` reference below
+> that reads as a live instruction was corrected on this date to name `hf_fs`; references to verified
+> May-2026 test behavior of the old tools are left as historical record, tense made unambiguous.
+
 ---
 
 ## 0. Executive summary
 
-- HF is **materially valuable** for exactly two things in this experiment: (a) curated ML research literature on LLM failure modes, calibration, prompt injection, financial reasoning, and adversarial debate (paper_search), and (b) a small set of durable benchmarks/leaderboards (FinanceBench, FinanceQA, StockBench, BizFinBench, BBEH, Open LLM Leaderboard archive, FinMTEB) accessible as dataset/space repos.
+- HF is **materially valuable** for exactly two things in this experiment: (a) curated ML research literature on LLM failure modes, calibration, prompt injection, financial reasoning, and adversarial debate (via `hf_fs`), and (b) a small set of durable benchmarks/leaderboards (FinanceBench, FinanceQA, StockBench, BizFinBench, BBEH, Open LLM Leaderboard archive, FinMTEB) accessible as dataset/space repos.
 - HF is **not materially valuable** for: live financial data, real-time news/sentiment, SEC EDGAR access, time-series forecasting, FinBERT-style sentiment scoring of earnings transcripts inside the routines, or anything Anthropic/Claude-specific. For each of these, web_search/Tavily/web_fetch is equal or better.
 - Connector recommendation: **Add HF only to D1 (light-touch, optional) for AI-capability deltas, in addition to the existing A1 and Q3 designations.** Do not add it to Q2, W2, M2, or M3 — the supposed FinBERT advantage there is illusory once you account for Claude's own zero-shot sentiment quality and the staleness of HF's financial models.
-- The PRIMARY HF use is paper_search for Tier 1 disadvantage citations (recency, base-rate neglect, sycophancy, anchoring, sandbagging, alignment faking, lost-in-the-middle, multi-agent debate). For these, HF's curated `hf.co/papers` index plus its summary cards is faster and more on-point than web_search-then-arxiv.
+- The PRIMARY HF use is `hf_fs` for Tier 1 disadvantage citations (recency, base-rate neglect, sycophancy, anchoring, sandbagging, alignment faking, lost-in-the-middle, multi-agent debate). For these, HF's curated `hf.co/papers` index plus its summary cards is faster and more on-point than web_search-then-arxiv.
 
 ---
 
@@ -230,7 +241,7 @@ Two patterns are worth knowing for the experiment:
 
 ### 6.1 HIGH-VALUE HF resources to call out in `Claude_Task_Plan.md`
 
-For routines **A1 (Annual Re-Derivation)** and **Q3 (Quarterly AI Foundation Delta)** — the PRIMARY HF users — explicitly instruct the routine to run `paper_search` on each of the following query batteries and harvest the most recent (last 12 months) hits:
+For routines **A1 (Annual Re-Derivation)** and **Q3 (Quarterly AI Foundation Delta)** — the PRIMARY HF users — explicitly instruct the routine to run `hf_fs` (`cmd="search"`, `args=["hf://papers", "<query>", "--limit", N]`; detail via `cmd="cat"`, `args=["hf://papers/<arxiv_id>/paper.md"]`) on each of the following query batteries and harvest the most recent (last 12 months) hits:
 
 1. Tier 1 architectural failure modes:
    - "LLM cross-session consistency reasoning variance" → expect ReasonBENCH-class hits.
@@ -274,12 +285,12 @@ Specific durable repo IDs and Space URLs to seed prompts with:
 
 Beyond the existing **A1** and **Q3** designations:
 
-- **D1 Market Development Scan — ADD HF (light-touch, optional).** Justification: D1's "AI capability light-touch" line item is currently underspecified. Allow D1 to call `paper_search` *only* under a daily cap (e.g., 1 query) targeted at the previous day's HF Daily Papers (`hf.co/papers` trending) to spot frontier-LLM safety/capability news that should be flagged for the next Q3 rather than acted on directly. **Verdict: MODERATE.** Web_search is sufficient most days; HF adds value about once per month when a major paper drops (StockBench-class).
+- **D1 Market Development Scan — ADD HF (light-touch, optional).** Justification: D1's "AI capability light-touch" line item is currently underspecified. Allow D1 to call `hf_fs` *only* under a daily cap (e.g., 1 query) targeted at the previous day's HF Daily Papers (`hf.co/papers` trending) to spot frontier-LLM safety/capability news that should be flagged for the next Q3 rather than acted on directly. **Verdict: MODERATE.** Web_search is sufficient most days; HF adds value about once per month when a major paper drops (StockBench-class).
 - **Q2 D Long-Horizon Candidates — DO NOT add HF.** Q2 is fundamentals-driven; Claude reading 10-Ks / sell-side notes via web_fetch already exceeds FinBERT-class sentiment. HF adds no capability.
 - **W2 Post-Event Screen — DO NOT add HF.** Same reasoning; Claude's zero-shot summarization of an earnings transcript (web_fetched) is at least equivalent to FinBERT/RoBERTa-financial output, and the routine wants a *narrative reading* anyway, not a 3-class polarity score.
 - **M2 E Pair Divergence Screen — DO NOT add HF.** Pair narratives are generated from news/filings analysis; FinBERT-class scoring would *flatten* the very narrative divergence the routine is looking for. Active anti-recommendation.
 - **M3 D Position Deep-Dive — DO NOT add HF.** Same reasoning as Q2.
-- **Adversarial Review (Attacker) — CONSIDER adding HF as a targeted reference.** Attacker should at A1/Q3 cadence pull WAInjectBench/BrowseSafe taxonomies via paper_search to build attack templates. Within-cadence Attacker runs do not need HF. **Verdict: LOW-MODERATE for in-loop use; HIGH for design-time use during A1/Q3 only.**
+- **Adversarial Review (Attacker) — CONSIDER adding HF as a targeted reference.** Attacker should at A1/Q3 cadence pull WAInjectBench/BrowseSafe taxonomies via `hf_fs` to build attack templates. Within-cadence Attacker runs do not need HF. **Verdict: LOW-MODERATE for in-loop use; HIGH for design-time use during A1/Q3 only.**
 - **W5 Factbase & Analytics Consolidation — DO NOT add HF.** No use case.
 
 ### 6.5 What HF cannot do for this experiment
@@ -292,8 +303,8 @@ Beyond the existing **A1** and **Q3** designations:
 
 ## 7. One-page TL;DR for `Claude_Task_Plan.md`
 
-> Add to A1 and Q3 prompts: "Run paper_search on hf.co for the queries listed in §6.1 of HF_Resource_Catalog.md; for each, record the 3–5 most relevant arXiv IDs published in the last 12 months and integrate as deltas to AI_Trading_Foundation.md §2 (Tier 1) and §5 (Tier 2 benchmarks)."
-> Add to D1 prompt: "Optionally run one paper_search query against `hf.co/papers` daily-papers if any frontier-model safety or capability finding from the prior 24 hours is flagged in the macro scan; capture for next Q3."
+> Add to A1 and Q3 prompts: "Run `hf_fs` (`cmd="search"`, `args=["hf://papers", "<query>", "--limit", N]`) on hf.co for the queries listed in §6.1 of HF_Resource_Catalog.md; for each, record the 3–5 most relevant arXiv IDs published in the last 12 months and integrate as deltas to AI_Trading_Foundation.md §2 (Tier 1) and §5 (Tier 2 benchmarks)."
+> Add to D1 prompt: "Optionally run one `hf_fs` query (`cmd="search"`, `args=["hf://papers", "<query>", "--limit", "5"]`) against `hf.co/papers` daily-papers if any frontier-model safety or capability finding from the prior 24 hours is flagged in the macro scan; capture for next Q3."
 > Do NOT add HF to W2, Q2, M2, M3, or W5. FinBERT-class models offer no advantage over Claude's own reading of the same text.
 > Do NOT depend on any HF Space, Inference API call, or HF dataset for in-loop execution.
 > For Anthropic/Claude specifics use web_search only — HF is silent.
@@ -304,19 +315,19 @@ Beyond the existing **A1** and **Q3** designations:
 
 **These caveats were verified by direct calls to the HF MCP tools during catalog finalization. They reflect actual tool behavior, not the catalog research session's claims.**
 
-### 8.1 `space_search` is unreliable for canonical / popular Spaces
+### 8.1 `space_search` no longer exists — use `hub_repo_search` for known Spaces
 
-Semantic search via `space_search` does NOT reliably surface the most-popular Space matching a given query. Verified failure case: searching `space_search` with `query="open llm leaderboard"` returned 56 results but the canonical `open-llm-leaderboard/open_llm_leaderboard` Space (13,980 likes, the actual target) was NOT in the top 5 results. Top results instead were tangentially-related leaderboards with lower like counts (GIFT-Eval, BAAI Chinese leaderboard, ASR leaderboard).
+**`space_search` NO LONGER EXISTS** (observed absent from the connector's tool roster 2026-08-08, same class as `paper_search` — see the reconciliation note at the top of this file). While it existed, semantic search via `space_search` did NOT reliably surface the most-popular Space matching a given query anyway: verified failure case (May 2026) — searching `space_search` with `query="open llm leaderboard"` returned 56 results but the canonical `open-llm-leaderboard/open_llm_leaderboard` Space (13,980 likes, the actual target) was NOT in the top 5 results. Top results instead were tangentially-related leaderboards with lower like counts (GIFT-Eval, BAAI Chinese leaderboard, ASR leaderboard). So its removal costs nothing routines were actually relying on for known-Space lookup.
 
-**Mitigation pattern for routines that need a known Space:** use `hub_repo_search` with explicit `author=<known-author>` and `repo_types=["space"]` instead. Verified working: `hub_repo_search` with `author="open-llm-leaderboard"`, `repo_types=["space"]` returned the canonical Space as the first result.
+**Pattern for routines that need a known Space:** use `hub_repo_search` with explicit `author=<known-author>` and `repo_types=["space"]`. Verified working (May 2026): `hub_repo_search` with `author="open-llm-leaderboard"`, `repo_types=["space"]` returned the canonical Space as the first result.
 
-**Heuristic:** `space_search` is for *discovery* of unknown Spaces (useful when you don't know what's out there); `hub_repo_search` with explicit author is for *lookup* of known Spaces. Routines that hard-code a target Space should use the latter.
+**Heuristic:** `space_search` was for *discovery* of unknown Spaces (useful when you don't know what's out there) — with it gone, there is no in-connector discovery path for an unknown Space; fall back to `web_search`/Tavily for that case. `hub_repo_search` with explicit author remains the path for *lookup* of a known Space, which is what every routine in this catalog actually needs — none hard-code a target Space that requires discovery.
 
-### 8.2 `paper_search` keyword precision matters
+### 8.2 `paper_search` (retired) keyword precision mattered — its replacement is `hf_fs`
 
-`paper_search` uses semantic search across HF's curated paper hub (which substantially mirrors arXiv with curation). Returns up to ~120 matches per broad query; the `results_limit` parameter caps how many are returned. Setting `concise_only=true` returns 2-sentence abstracts instead of full text — strongly preferred for breadth queries to keep context small.
+**`paper_search` NO LONGER EXISTS** (verified 2026-07-28 — see the reconciliation note at the top of this file). While it existed, `paper_search` used semantic search across HF's curated paper hub (which substantially mirrors arXiv with curation), returning up to ~120 matches per broad query; the `results_limit` parameter capped how many were returned, and `concise_only=true` returned 2-sentence abstracts instead of full text — strongly preferred for breadth queries to keep context small. **Neither `results_limit` nor `concise_only` exist on the replacement tool, `hf_fs`** — do not carry those parameter names forward. `hf_fs` searches the same paper hub via `cmd="search"`, `args=["hf://papers", "<query>", "--limit", N]` (the `--limit` arg is the `results_limit` equivalent); read a specific paper's detail with `cmd="cat"`, `args=["hf://papers/<arxiv_id>/paper.md"]` or `metadata.json` — there is no direct `concise_only` equivalent, so keep queries narrow rather than relying on truncated abstracts.
 
-Verified that the search produces the papers cited in this catalog (ReasonBENCH 2512.07795, BrowseSafe 2511.20597, WAInjectBench 2510.01354, AdvWeb 2410.17401, etc.) and surfaces additional relevant papers the catalog did not seed (BeliefShift 2603.23848, WASP 2504.18575). The search is producing better results than the catalog's seeds — A1/Q3 should not feel constrained to only the seeds; the queries themselves are the load-bearing instruction.
+Verified (May 2026, under the old `paper_search` tool) that the search produced the papers cited in this catalog (ReasonBENCH 2512.07795, BrowseSafe 2511.20597, WAInjectBench 2510.01354, AdvWeb 2410.17401, etc.) and surfaced additional relevant papers the catalog did not seed (BeliefShift 2603.23848, WASP 2504.18575) — evidence the underlying HF paper index is good. The query batteries in §6.1 are the load-bearing instruction, not any tool-specific parameter, and carry over to `hf_fs` unchanged.
 
 ### 8.3 `hub_repo_search` is the structural backbone
 

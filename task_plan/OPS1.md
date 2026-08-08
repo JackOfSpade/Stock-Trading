@@ -22,7 +22,7 @@ Every routine reads and/or writes BigQuery for operational state (positions, reg
 | **D2a** | Broker Reconcile & Snapshot | Daily · regular | live IBKR connector state (positions/balances/trades), `events.daily_marks`, `state.current_positions`, `state.account_latest` | `events.trade_fills`/`events.position_events` reconciliation, `analytics.strategy_nav`, `perf.strategy_daily`, NAV snapshot, `ops.run_log`/`ops.alerts`; STEP 1d adds `events.signal_marks` (11 menu tickers + SPY + `^VIX`, isolated from `daily_marks`) | — |
 | **D3** | Calendar Hygiene | Daily · regular | `state.open_queue`, `state.current_positions`, `events.queue_events`/`events.decision_log`; self-heal reads add `state.ci_findings_open`, `state.ddl_drift_promotion_readiness`/`state.restore_stale_promotion_readiness`/`state.append_only_integrity_promotion_readiness`/`state.b3_promotion_readiness`, `ops/trigger_ids.json` (repo file), `ops/cadence.yaml` `routine_model`, and `AI_Trading_Foundation.md`'s in-use-model field | `events.queue_events` (terminal-entry sweep + `PENDING_REVIEW` prose-regression entries); self-heal writes `bigquery/75_scheduled_query_wrappers.sql` (live procedure re-apply via MCP) + new `bigquery/NN_*.sql` resync/create files, `ops.monitor_promotion_log`, `ops.parity_selfheal_log`, `ops.alerts`, `events.decision_log`, `events.position_events` (the PRE-FILL INVALIDATION RE-CHECK's phantom-close net-out, 2026-08-03); `AI_Trading_Foundation.md` (MODEL-OF-RECORD DOC SYNC, cadence audit 2026-07-29) | — |
 | **OPS0** | Cadence Watchdog | Daily · regular | `state.catchup_refire_readiness`, `ops/trigger_ids.json` (repo file); STEP 4 GIT LANDING SWEEP adds git remote refs (`git fetch`/`merge-base`, external) + optional `gh api` (CI conclusion/PR lookup, external) | `ops.catchup_refire_log`, `events.decision_log` (+ `entry_type='stranded-branch-adoption'`/`'unlanded-completed-run'`, STEP 4d/4f), `ops.alerts` (+ `stranded_branch`, `stranded_branch_adopted`, `unlanded_completed_run`), `ops.routine_commit_markers` (STEP 4d adoption only); STEP 4d may also merge arbitrary NON-excluded repo files from an adopted branch onto OPS0's own branch (`bigquery/*.sql`, `dbt/**` and the spec-locked strategy surfaces are hard-excluded); `RemoteTrigger run(...)` (external call, not a BigQuery write) | — |
-| **OPS1** | Morning Connector Liveness Probe | Daily · regular | — (no state reads beyond the standard `state.trading_day_today` pre-flight; probes IBKR/Calendar/FMP/Gmail live, read-only) | `ops.alerts` (`connector_reauth_needed` raise + self-heal resolve) | — |
+| **OPS1** | Morning Connector Liveness Probe | Daily · regular | — (no state reads beyond the standard `state.trading_day_today` pre-flight; probes IBKR/Calendar/FMP/Gmail live, read-only; TOOL-INVENTORY DRIFT CHECK also reads the repo manifest `ops/connector_tools.yaml` and the live per-connector tool inventory) | `ops.alerts` (`connector_reauth_needed`, `connector_tool_added`, `connector_tool_removed`, `connector_tool_enumeration_failed` — raise + self-heal resolve), `ops.connector_tool_inventory` | — |
 | **OPS2** | Catch-up Executor | Daily · regular | `state.catchup_refire_readiness`, `ops/trigger_ids.json`, `state.market_calendar`, the missed routine's slice `task_plan/<X>.md` | `ops.catchup_refire_log`, `events.decision_log`, `ops.alerts`; + the executed routine's OWN write surfaces (it runs the routine inline) | — |
 | **W1** | Catalyst Calendar (A, C) | Weekly · research | `state.current_regime`, `state.current_positions`, `events.decision_log` | — | Weekly_Catalyst_Calendar.md |
 | **W2** | Post-Event Screen (B) | Weekly · research | `events.decision_log`/`find_precedents()`, `state.current_positions` | `events.decision_log` via `ops.sp_log_decision` (`entry_type='research-screen'`, screen='post-event' — Operating_Protocols.md §19, 2026-07-19) | Weekly_Post_Event_Screen.md |
@@ -632,6 +632,38 @@ is open: `UPDATE ops.alerts SET resolved = TRUE, resolved_ts = CURRENT_TIMESTAMP
 category='connector_reauth_needed' AND <connector match>` — same bespoke in-routine clear pattern as
 D2a's `owner_confirmation_stale`.
 
+<!-- connector-tools-checker: ignore-start -->
+TOOL-INVENTORY DRIFT CHECK (added 2026-08-08). The four PROBES above prove each connector is
+authenticated; they say nothing about the other ~99 tools those connectors expose. When a connector
+vendor ships a NEW tool it arrives as "ask" / "needs approval" in the claude.ai connectors UI, and an
+unattended routine that later calls it gets a permission prompt nobody can answer — the step stalls
+with no error message and no dedicated alert class. This step exists to catch that drift the morning it
+appears instead of the evening a trading routine happens to hit it.
+
+Read the repo manifest `ops/connector_tools.yaml` (the expected inventory: 7 connectors, each with
+`name`, `settings_prefix`, `tools[].name`, `tools[].use` ∈ required/optional/unused, and an `absent`
+list) and enumerate the tools ACTUALLY available in this session, per connector, from the session's own
+tool inventory (the deferred-tool listing the harness provides, and/or targeted `ToolSearch` probes
+scoped per connector). **FAIL CLOSED — THIS IS THE LOAD-BEARING RULE OF THIS STEP.** If the session
+cannot enumerate a connector's tools completely and reliably, it must NOT report that connector clean:
+record `enumeration_ok = FALSE` for that connector and let the alert fire. An enumeration this step
+could not perform is an unknown, never a pass.
+
+Write the observation with `CALL ops.sp_record_connector_tools('OPS1', <today America/Denver>,
+<rows_json>)`, where `rows_json` is a JSON array over the UNION of observed tools and manifest tools —
+one element per (connector, tool) with keys `connector`, `tool_name`, `present`, `in_manifest`,
+`manifest_use`, `enumeration_ok`, `note`. Recording the union (not just the diff) is what makes an
+absence a row rather than an inference. Then `CALL ops.sp_raise_connector_tool_drift('OPS1')`, which
+raises one `connector_tool_added` warning per newly-appeared tool, one `connector_tool_removed` alert per
+vanished manifest tool (critical when its `use` is `required`), `connector_tool_enumeration_failed` on
+an incomplete sweep, and mechanically self-heals any of these once the drift clears.
+
+OPS1 does NOT edit `ops/connector_tools.yaml` and does NOT change any connector permission — it cannot;
+the claude.ai connectors UI is owner-only. The alert names the tool; the operator flips it if wanted and
+adds it to the manifest, and adding it to the manifest is what clears the alert. This step stays
+detection-only and writes no repo files, same as the rest of OPS1.
+<!-- connector-tools-checker: ignore-end -->
+
 RECURRENCE. If the same connector has alerted on OPS1's last 3+ CONSECUTIVE COMPLETED RUNS — count run-over-run
 (e.g. consecutive `ops.run_log` OPS1 completions each carrying a `connector_reauth_needed` alert for that
 connector), not calendar mornings; a gap where OPS1 itself did not run neither breaks nor pads the streak
@@ -640,9 +672,10 @@ to OPS1 itself, see Observability § above) — say so in that day's alert
 message and note that the expiry interval should be recorded per RUNBOOK §15 and a provider-side fix
 considered (e.g., an IBKR support ticket on OAuth session lifetime).
 
-Log `'completed'` with a one-line per-connector status summary (e.g., "IBKR OK, Calendar OK, FMP OK,
-Gmail OK." or "IBKR requires re-auth (alert raised); Calendar/FMP/Gmail OK."); no repo changes, no git
-output.
+Log `'completed'` with a one-line per-connector status summary plus the TOOL-INVENTORY DRIFT CHECK result
+(e.g., "IBKR OK, Calendar OK, FMP OK, Gmail OK. Tool inventory: no drift." or "IBKR requires re-auth
+(alert raised); Calendar/FMP/Gmail OK. Tool inventory: 1 added (warning raised), Tavily
+enumeration_ok=FALSE (alert raised)."); no repo changes, no git output.
 ```
 
 ---

@@ -136,7 +136,22 @@ jobs:
         # the missing entries (was KNOWN-RED at introduction; stale "KNOWN-RED" annotation corrected
         # 2026-07-29 — verified live: "SETTINGS TOOL COVERAGE: OK — 8 referenced mcp__ tool(s) all
         # present"). A future red run here is a REAL regression, not an expected/known state.
+        # SCOPE NOTE (2026-08-08): this gate only ever sees full `mcp__Server__tool` tokens — 8 of them
+        # today. Routine prose overwhelmingly writes bare backticked names instead
+        # (`` `get_account_summary` ``), which this regex cannot see at all; that gap is covered by
+        # scripts/check_connector_tools.py below. A green run here is NOT by itself proof of complete
+        # tool coverage — see that script's module docstring.
         run: python scripts/check_settings_toolcov.py
+      - name: connector tool manifest (ops/connector_tools.yaml ⇄ .claude/settings.json ⇄ routine text — new-tool drift gate)
+        # A connector tool added by the VENDOR (not this repo) arrives in the claude.ai connectors UI
+        # defaulted to "ask" / "needs approval" — not silently blocked, not silently allowed. An
+        # unattended scheduled routine that happens to call that new tool mid-run hits an unanswerable
+        # permission prompt and silently stalls: no error, no alert, just a missed_run the cadence watch
+        # eventually raises hours later with no indication of WHY. This is the bare-name sibling of the
+        # session-config tool coverage gate above (which only sees full mcp__Server__tool tokens); it
+        # also catches routine text calling a tool the vendor has RETIRED (the live paper_search/
+        # space_search bug class — see ops/connector_tools.yaml's header and this script's docstring).
+        run: python scripts/check_connector_tools.py
       - name: auto-merge decision logic (CI-gate + delete-safety fixtures — 2026-07-04 code-quality audit)
         run: bash tests/test_auto_merge_logic.sh
       - name: diff-base resolution (dbt-parity/sql-validate shared precedence chain — 2026-07-26 codebase audit)

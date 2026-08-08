@@ -1,0 +1,437 @@
+# Connector tool-inventory manifest — the version-controlled EXPECTED MCP tool inventory,
+# per connector, for every claude.ai connector this fleet uses.
+#
+# WHY THIS EXISTS. OPS1 (ops/cadence.yaml) probes exactly ONE tool per connector every
+# pre-market morning to prove that connector is authenticated (IBKR/Calendar/FMP/Gmail
+# read-only liveness). That proves the connector session is live and says NOTHING about
+# the other ~99 tools each connector exposes. When a connector VENDOR ships a brand-new
+# tool, it arrives in the claude.ai connectors UI defaulted to "ask" / "needs approval" —
+# not silently blocked, not silently allowed. An unattended scheduled routine that happens
+# to call that new tool mid-run then hits a permission prompt with nobody there to answer
+# it, and the routine silently stalls: no error, no alert, just a session that never
+# completes and a missed_run the cadence watch eventually raises hours later with no
+# indication of WHY. See scripts/check_settings_toolcov.py's header for the sibling
+# problem this solves on the OTHER axis (a tool a routine calls that was never allowlisted
+# at all) and ops/RUNBOOK.md §15a (the per-tool allow/ask/block matrix and its "a label
+# flip is not proof anyone changed a needed permission" warning). This file is the
+# EXPECTED inventory as of the last time a human reconciled it against the live connector.
+# OPS1 diffs the live session's actually-available tool list against this file every
+# morning and raises `connector_tool_added` / `connector_tool_removed` on any diff — the
+# `whats_new` row below (IBKR, added by the vendor July 2026) is the first observed live
+# instance of exactly the drift class this file exists to catch.
+#
+# SINGLE-SOURCE RULE. This file is the BASELINE, not a live mirror. OPS1's per-run
+# observations land append-only in `ops.connector_tool_inventory` (one row per {run_date,
+# connector, tool} observed); drift between the latest observation and this file's
+# declared inventory surfaces on `state.connector_tool_drift`. Critically, the claude.ai
+# connectors UI is the ONLY place the allow/ask/block state can actually be changed — this
+# file RECORDS what should be allowed, it cannot GRANT anything itself. Editing this file
+# never flips a tool's live permission; it only changes what OPS1 expects to see.
+#
+# CI GATE. `scripts/check_connector_tools.py` fails the build if: (a) a tool declared
+# `use: required` here is missing from `.claude/settings.json`'s `permissions.allow`
+# array; (b) routine text (Claude_Task_Plan.md / ops/triggers.json) calls a tool not
+# declared `use: required` here; or (c) routine text calls a tool listed under this
+# file's `absent:` block. This is the sibling gate to
+# scripts/check_settings_toolcov.py's one-direction "every referenced tool must be
+# allowlisted" check — this file additionally pins WHICH tools are allowed to be
+# referenced at all, and records the ones known to be gone.
+#
+# EDIT DISCIPLINE. This file is HAND/ROUTINE-MAINTAINED, NOT GENERATED. When OPS1 raises
+# `connector_tool_added`, the operator decides in the claude.ai connectors UI whether the
+# new tool should be allowed at all; ADDING THE ROW HERE (with the resulting `use:` verdict)
+# IS WHAT CLEARS THE ALERT — OPS1 does not clear its own finding by re-observing, since the
+# baseline is deliberately a human/routine judgment call, not a mechanical mirror of
+# whatever the connector currently exposes.
+#
+# NAMESPACE NOTE (important — read before trusting a green CI gate as proof anything can
+# actually be called). `.claude/settings.json`'s `permissions.allow` array uses the form
+# `mcp__<Server>__<tool>` (e.g. `mcp__Google_Calendar__list_calendars`), matching the
+# `settings_prefix` field below. An INTERACTIVE CLI session's own runtime tool names carry
+# an extra `claude_ai_` infix instead (`mcp__claude_ai_Google_Calendar__list_calendars`) —
+# the two namespaces are NOT the same string. Empirically, the repo allowlist is NOT the
+# binding control for the CLOUD ROUTINE fleet: Gmail has had ZERO entries in
+# `.claude/settings.json`'s allow array the entire time, yet OPS1's `list_labels` liveness
+# probe has succeeded on every run from 2026-07-20 through 2026-08-07 — a routine session
+# is evidently gated by the claude.ai connector's own per-tool allow/ask/block policy, not
+# by this repo's JSON file. Keep `.claude/settings.json` correct anyway (it IS the binding
+# control for INTERACTIVE sessions, and is defence in depth even where it is not binding),
+# but do not read a green `check_connector_tools.py` / `check_settings_toolcov.py` run as
+# proof that a cloud routine can actually call a given tool — only the claude.ai connector
+# UI's per-tool matrix is that proof (RUNBOOK §15a).
+
+connectors:
+  - name: FMP                       # display name used in alerts and run_log notes
+    connector_uuid: f4bd1992-c70e-4b23-b617-271b19976e92
+    settings_prefix: mcp__FMP__     # the .claude/settings.json namespace for this connector
+    tools:
+      - name: ESG
+        use: unused
+        prose_ambiguous: true
+      - name: Fundraisers
+        use: unused
+      - name: analyst
+        use: unused
+        prose_ambiguous: true
+      - name: calendar
+        use: unused
+        prose_ambiguous: true
+      - name: chart
+        use: required
+        prose_ambiguous: true
+        note: OPS1 liveness probe (FMP-PRIMARY ^VIX historical-price-eod-light) + D1/D2a
+      - name: commitmentOfTraders
+        use: unused
+      - name: commodity
+        use: unused
+        prose_ambiguous: true
+      - name: company
+        use: unused
+        prose_ambiguous: true
+      - name: crypto
+        use: unused
+        prose_ambiguous: true
+      - name: directory
+        use: unused
+        prose_ambiguous: true
+        note: >
+          Claude_Task_Plan.md:1336 records this as plan-gated (needs FMP Starter+) on the
+          current FMP tier — enumeration route considered and rejected for EQUITY_BREADTH.
+      - name: discountedCashFlow
+        use: unused
+      - name: earningsTranscript
+        use: unused
+      - name: economics
+        use: required
+        prose_ambiguous: true
+        note: D1/D2a TECHNICAL_SIGNAL ingest (treasury-rates for SUSTAINED_INVERSION); also OPS1-adjacent liveness surface
+      - name: etfAndMutualFunds
+        use: unused
+        note: >
+          Claude_Task_Plan.md:1336 records this as plan-gated (needs FMP Ultimate+) on the
+          current FMP tier — SPY-holdings enumeration route considered and rejected for
+          EQUITY_BREADTH.
+      - name: forex
+        use: unused
+        prose_ambiguous: true
+      - name: form13F
+        use: unused
+        prose_ambiguous: true
+      - name: indexes
+        use: unused
+        prose_ambiguous: true
+        note: >
+          Claude_Task_Plan.md:1336 records this as plan-gated (needs FMP Premium+) on the
+          current FMP tier — S&P breadth-index lookup route considered and rejected for
+          EQUITY_BREADTH.
+      - name: insiderTrades
+        use: unused
+      - name: marketHours
+        use: required
+        note: OPS1-adjacent / D1 pre-flight liveness surface
+      - name: marketPerformance
+        use: unused
+        prose_ambiguous: true
+      - name: news
+        use: required
+        prose_ambiguous: true
+        note: D1 Market Development Scan + external-content extraction discipline (Claude_Task_Plan.md)
+      - name: quote
+        use: required
+        prose_ambiguous: true
+        note: >
+          Claude_Task_Plan.md:1336 records this as plan-gated (needs FMP Premium+) on the
+          current FMP tier — referenced by routine text but currently ACCESS DENIED
+          (OWNER_ACTIONS.md item W, owner declined to restore the tier 2026-07-19). OPS1
+          deliberately does NOT probe this tool for liveness (it would false-fire on the
+          tier gate, not on an auth failure) — `chart` is the probe target instead.
+      - name: search
+        use: unused
+        prose_ambiguous: true
+      - name: secFilings
+        use: required
+        note: external-content extraction discipline source (Claude_Task_Plan.md); D1/W1/Q3 research feeds
+      - name: senate
+        use: unused
+        prose_ambiguous: true
+      - name: statements
+        use: unused
+        prose_ambiguous: true
+      - name: technicalIndicators
+        use: unused
+        prose_ambiguous: true
+        note: >
+          Claude_Task_Plan.md:1336 records this as plan-gated (needs FMP Starter+) on the
+          current FMP tier — enumeration route considered and rejected for EQUITY_BREADTH.
+      - name: tipranks
+        use: unused
+        prose_ambiguous: true
+    absent: []                     # tools formerly present, verified gone
+
+  - name: Gmail
+    connector_uuid: 8118e26a-1613-4cf8-b1cd-9a794b8d357b
+    settings_prefix: mcp__Gmail__
+    tools:
+      - name: apply_sensitive_message_label
+        use: unused
+      - name: apply_sensitive_thread_label
+        use: unused
+      - name: create_draft
+        use: unused
+      - name: create_label
+        use: unused
+      - name: delete_label
+        use: unused
+      - name: get_message
+        use: unused
+      - name: get_thread
+        use: unused
+      - name: label_message
+        use: unused
+      - name: label_thread
+        use: unused
+      - name: list_drafts
+        use: unused
+      - name: list_labels
+        use: required
+        note: >
+          OPS1 liveness probe. `.claude/settings.json` currently has ZERO Gmail entries in
+          `permissions.allow` — this manifest is what makes check_connector_tools.py's CI
+          gate demand one for `list_labels`. Per the NAMESPACE NOTE above, the cloud
+          routine fleet has evidently never depended on the repo allowlist for Gmail (OPS1
+          has probed successfully every run 2026-07-20..2026-08-07 with the allowlist
+          empty the whole time) — add the entry anyway for interactive-session coverage
+          and defence in depth, not because live OPS1 needs it to keep working.
+      - name: search_threads
+        use: unused
+      - name: unlabel_message
+        use: unused
+      - name: unlabel_thread
+        use: unused
+      - name: update_draft
+        use: unused
+      - name: update_label
+        use: unused
+    absent: []
+
+  - name: Google-Calendar
+    connector_uuid: c91ddbb2-ced9-4011-9838-15e5239e83e9
+    settings_prefix: mcp__Google_Calendar__
+    tools:
+      - name: create_event
+        use: required
+        note: staging atomicity rule (Claude_Task_Plan.md:253) — the confirm-order calendar event IS the human-facing delivery mechanism for a non-craftable order
+      - name: delete_event
+        use: optional
+      - name: get_event
+        use: optional
+      - name: list_calendars
+        use: required
+        note: OPS1 probe + D3 Calendar & Queue Hygiene
+      - name: list_events
+        use: required
+        note: shared order-staging pre-flight (duplicate-confirm-event check before create_event)
+      - name: respond_to_event
+        use: optional
+      - name: search_events
+        use: unused
+        note: not in the allowlist
+      - name: suggest_time
+        use: optional
+      - name: update_event
+        use: optional
+    absent: []
+
+  - name: Google-Cloud-BigQuery
+    connector_uuid: 64f9594a-0ed8-4081-883c-df850f1c8fcd
+    settings_prefix: mcp__Google_Cloud_BigQuery__
+    tools:
+      - name: execute_sql
+        use: required
+        note: all routine DML/DDL (RUNBOOK §15a canonical matrix)
+      - name: execute_sql_readonly
+        use: required
+        note: every routine's pre-flight liveness read (RUNBOOK §15a canonical matrix)
+      - name: get_dataset_info
+        use: required
+        note: diagnostics/schema inspection (RUNBOOK §15a canonical matrix)
+      - name: get_table_info
+        use: required
+        note: diagnostics/schema inspection (RUNBOOK §15a canonical matrix)
+      - name: list_dataset_ids
+        use: optional
+        note: "RUNBOOK §15a: OPTIONAL — zero operational dependency, repo-wide verified 2026-07-19"
+      - name: list_table_ids
+        use: optional
+        note: "RUNBOOK §15a: OPTIONAL — zero operational dependency, repo-wide verified 2026-07-19"
+    absent: []
+
+  - name: Interactive-Brokers--IBKR-
+    connector_uuid: d9d4ad11-d734-4c05-8302-9fd84698ef46
+    settings_prefix: mcp__Interactive_Brokers_IBKR__
+    tools:
+      - name: create_alert
+        use: unused
+      - name: create_order_instruction
+        use: required
+        note: order staging — D2/D2a/W4/M4/Q4/A3 conversion routines
+      - name: create_watchlist
+        use: unused
+      - name: delete_alert
+        use: unused
+      - name: delete_order_instruction
+        use: required
+        note: order re-craft / expired-DAY-order replacement (D2a park-sweep backstop)
+      - name: delete_watchlist
+        use: unused
+      - name: edit_watchlist
+        use: unused
+      - name: get_account_balances
+        use: required
+        note: D2a cash-tripwire / broker reconcile
+      - name: get_account_orders
+        use: required
+        note: D3 open-orders reconciliation vs IBKR; go_without_order backstop
+      - name: get_account_positions
+        use: required
+        note: D2a broker reconcile; capital-allocation counterfactual joins
+      - name: get_account_summary
+        use: required
+        note: D2a broker reconcile / TWR engine maintenance
+      - name: get_account_trades
+        use: required
+        note: D2a fills ingest (events.trade_fills)
+      - name: get_alert
+        use: unused
+      - name: get_alerts
+        use: unused
+      - name: get_combo_identifier
+        use: required
+        note: options combo pricing (Strategy C dual-path max-loss)
+      - name: get_company_connections
+        use: unused
+      - name: get_company_themes
+        use: unused
+      - name: get_option_data
+        use: required
+        note: D2 options marks / Strategy C dual-path max-loss
+      - name: get_option_parameters
+        use: required
+        note: D2 options chain resolution
+      - name: get_order_instructions
+        use: required
+        note: D3 order-instruction reconciliation; missed-confirmation detection
+      - name: get_pa_allocation
+        use: unused
+      - name: get_pa_performance_all_periods
+        use: required
+        note: >
+          D2a STEP 0b — ACCOUNT SNAPSHOT (Claude_Task_Plan.md) pulls the LAST element of
+          each period's `cps` array (cumulative TWR fraction at period end) to populate
+          `ops.account_snapshot`'s twr_1d/7d/mtd/ytd/1y columns.
+      - name: get_price_history
+        use: required
+        note: EQUITY_BREADTH / SPY_TREND price leg (Claude_Task_Plan.md:1336 area); D1/W-tier research
+      - name: get_price_snapshot
+        use: required
+        note: OPS1-adjacent live-quote surface; D2/D2a intraday pricing
+      - name: get_theme_details
+        use: unused
+      - name: get_watchlist
+        use: unused
+      - name: get_watchlists
+        use: unused
+      - name: provide_customer_feedback
+        use: unused
+      - name: search_contracts
+        use: required
+        note: contract_id resolution for every order craft + park-menu ticker verification
+      - name: search_futures
+        use: unused
+      - name: search_investment_topics
+        use: unused
+      - name: set_alert_status
+        use: unused
+      - name: update_alert
+        use: unused
+      - name: whats_new
+        use: unused
+        note: >
+          Added by the IBKR MCP server in July 2026 and surfaced in the server's own
+          instructions — the first observed live instance of the new-tool drift class this
+          manifest exists to catch. Left `use: unused` (nothing in this fleet calls it);
+          recorded here specifically so a future OPS1 diff does not re-raise it as
+          unexplained drift.
+    absent: []
+
+  - name: Tavily
+    connector_uuid: 715856f0-b776-4037-b2a3-a0c9531d965f
+    settings_prefix: mcp__Tavily__
+    tools:
+      - name: tavily_crawl
+        use: optional
+      - name: tavily_extract
+        use: required
+        note: Claude_Task_Plan.md:345 — external-content extraction discipline
+      - name: tavily_map
+        use: optional
+      - name: tavily_research
+        use: required
+        note: Claude_Task_Plan.md:345 — external-content extraction discipline
+      - name: tavily_search
+        use: required
+        note: Claude_Task_Plan.md:345 — external-content extraction discipline
+    absent: []
+
+  - name: Hugging-Face
+    connector_uuid: fff8d981-37df-4721-97af-9e0fdf5238e7
+    settings_prefix: mcp__Hugging_Face__
+    tools:
+      - name: dynamic_space
+        use: optional
+      - name: hf_fs
+        use: required
+        note: Q3 and A1 both instruct using it — Claude_Task_Plan.md:2639, :2811, :2815 (replaced the retired paper_search tool)
+      - name: hf_whoami
+        use: optional
+      - name: hub_repo_details
+        use: optional
+      - name: hub_repo_search
+        use: required
+        note: Q3 and A1 open-weights model-card / leaderboard research — Claude_Task_Plan.md:2639, :2815
+    absent:
+      - name: paper_search
+        verified: "2026-07-28"
+        note: >
+          Verified absent per Claude_Task_Plan.md:2639/:2815 ("The paper_search MCP tool
+          NO LONGER EXISTS"). Still allowlisted in .claude/settings.json and still
+          referenced by D1 and SL1's routine text — those call sites are dead and should be
+          updated to hf_fs, but that is a separate cleanup from this manifest.
+      - name: hf_doc_search
+        verified: unconfirmed
+        note: >
+          Allowlisted in .claude/settings.json but NOT observed in the 2026-08-08
+          interactive session's tool inventory. The first live OPS1 tool-inventory run is
+          what will confirm or refute its absence — do NOT treat this row as a confirmed
+          removal.
+      - name: hf_doc_fetch
+        verified: unconfirmed
+        note: >
+          Allowlisted in .claude/settings.json but NOT observed in the 2026-08-08
+          interactive session's tool inventory. The first live OPS1 tool-inventory run is
+          what will confirm or refute its absence — do NOT treat this row as a confirmed
+          removal.
+      - name: hf_hub_query
+        verified: unconfirmed
+        note: >
+          Allowlisted in .claude/settings.json but NOT observed in the 2026-08-08
+          interactive session's tool inventory. The first live OPS1 tool-inventory run is
+          what will confirm or refute its absence — do NOT treat this row as a confirmed
+          removal.
+      - name: space_search
+        verified: unconfirmed
+        note: >
+          Allowlisted in .claude/settings.json but NOT observed in the 2026-08-08
+          interactive session's tool inventory. The first live OPS1 tool-inventory run is
+          what will confirm or refute its absence — do NOT treat this row as a confirmed
+          removal.
