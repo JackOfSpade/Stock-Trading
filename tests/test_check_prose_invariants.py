@@ -666,6 +666,28 @@ def test_market_only_orders_rule_still_exempts_a_genuine_proximate_supersession(
     assert _run(tmp_path, monkeypatch, [rule], files) == 0
 
 
+def test_market_only_orders_rule_rejects_a_same_line_different_clause_reinstruction(tmp_path, monkeypatch):
+    # 2026-08-08, second pass: the 260-char proximity fix above closed the *bare word* bypass but its
+    # own commit comment overclaimed that it checks the retirement language is "actually talking
+    # about" the forbidden term — it only counts characters. This line has TWO unrelated sentences
+    # on one physical line: the first retires an unrelated mechanism (the daily-staging-cap
+    # backstop), the second is a live, unrelated re-instruction to build a LIMIT order. They sit
+    # ~251 chars apart — inside the OLD 260-char window (so the OLD regex wrongly exempted this
+    # line, the exact gap ops/prose_invariants.yaml's comment now documents), but outside the
+    # TIGHTENED 250-char window this fix ships, so it must be CAUGHT. Verified against the actual
+    # production rule (not a hand-rolled copy) so this tracks whatever window is live.
+    (rule,) = _actual_rules("market_only_orders")
+    stale_instruction = (
+        "The legacy pre-2026 daily-staging-cap backstop that used to recompute a liquidity and "
+        "sizing verdict from the payload is retired outright, per the 2026-07-22 pre-trade rail "
+        "strip. Nothing about that unrelated change touches how a routine references an old "
+        "resting order price when it re-crafts a still-open position tomorrow morning before the "
+        "market opens. Craft the order with order_type=LIMIT for tighter fills.\n"
+    )
+    files = {"Claude_Task_Plan.md": stale_instruction, "Operating_Protocols.md": "unrelated text\n"}
+    assert _run(tmp_path, monkeypatch, [rule], files) == 1
+
+
 # ---- fence_mask() / nearest_heading() units (the fix, in isolation) ---------------------------
 
 def test_fence_mask_marks_lines_inside_a_fence():

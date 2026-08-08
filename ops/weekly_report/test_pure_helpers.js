@@ -62,13 +62,18 @@
  *                           AGAIN 2026-08-04 v5: now splits roster notices out of the incident count
  *                           via rosterNew/isRealRosterNotice_ and adds a third subject form
  *                           (roster-only batch, no ⚠/ALERT) between the existing [TEST] and mixed forms)
- *   - htmlAlerts_          (alert_emailer.gs) -- 2026-07-29: copied ONLY to regression-test the
- *                           LOOKBACK_LABEL footer text; call with an EMPTY batch ONLY, see its own
- *                           comment above the copy. NOT re-synced for the v5 roster-section changes
- *                           (out of scope for the empty-batch-only footer regression this copy exists
- *                           to guard; alertSubject_ above is the v5-covered twin)
- *   - plainAlerts_         (alert_emailer.gs) -- same empty-batch-only caveat as htmlAlerts_, and
- *                           likewise not re-synced for v5's roster additions
+ *   - htmlAlerts_          (alert_emailer.gs) -- 2026-07-29: copied to regression-test the
+ *                           LOOKBACK_LABEL footer text. RESYNCED 2026-08-08: had silently drifted onto
+ *                           the pre-v7 AUTO-RESOLVED-only tag logic (real code gained a RESOLVED-vs-
+ *                           AUTO-RESOLVED split in v7, 2026-08-05, keyed on resolved_note) and had never
+ *                           picked up the v5 roster-section split either -- neither was ever exercised
+ *                           because every call here used batch=[], the only shape that avoids needing
+ *                           fmtAlertTs_. Now fully ported, with a deterministic fmtAlertTs_ stand-in
+ *                           (see its own comment) so non-empty batches can be used, plus a version-pin
+ *                           guard test (ALERT_SCRIPT_VERSION_SYNCED_AS_OF) so a future .gs change can't
+ *                           drift this copy again without a red CI job.
+ *   - plainAlerts_         (alert_emailer.gs) -- same 2026-08-08 resync as htmlAlerts_ (tag logic +
+ *                           roster split), same reasons
  *
  * Note: signDollar_, fmtAbsDollars_, edgeWord_, dollarCellHtml_, SGOV_GRAY, and the headline-block
  * comparison logic in fallbackBarsHtml_/buildSubject_ were removed from weekly_report.gs in the
@@ -79,6 +84,19 @@
  */
 'use strict';
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+
+// The ALERT_SCRIPT_VERSION this file's alert_emailer.gs copies (isTest_, ROSTER_NOTICE_CATEGORIES,
+// htmlAlerts_/plainAlerts_ tag + roster logic, etc.) were last hand-verified against. A guard test near
+// the bottom of this file reads the LIVE ALERT_SCRIPT_VERSION const straight out of
+// ops/monitoring/alert_emailer.gs and fails if it has moved past this pin -- closing the exact gap that
+// let the tag logic below go stale from v7 (2026-08-05) through v8 (2026-08-07) with every assertion
+// here still green (see the htmlAlerts_/plainAlerts_ entries above). Mirrors
+// scripts/check_script_version_consistency.py's existing .gs<->bigquery/43 drift gate, applied here to
+// this file's OWN copy-drift instead. Bump this in the SAME commit that re-verifies the copies below
+// against a new ALERT_SCRIPT_VERSION.
+const ALERT_SCRIPT_VERSION_SYNCED_AS_OF = 'v8';
 
 // ===== copied verbatim from weekly_report.gs ================================================
 
@@ -445,26 +463,80 @@ function alertSubject_(fresh, recurringCount) {
             (testCount ? ` (+${testCount} test)` : '');
 }
 
-// htmlAlerts_ / plainAlerts_ are copied ONLY to regression-test the LOOKBACK_LABEL footer text
-// (2026-07-29 fix) — call them with an EMPTY batch ONLY. Both are otherwise impure: their per-row
-// map()/forEach() callback calls fmtAlertTs_(a), which needs Apps-Script globals (Session/BigQuery via
-// getUserTzAlerts_) not present under plain Node. With batch=[], that callback is never invoked, so
-// fmtAlertTs_ never needs to be defined -- JS resolves identifiers inside a function body lazily, at
-// call time, not at parse time. Do NOT call these with a non-empty batch here; it will throw
-// "fmtAlertTs_ is not defined".
+// htmlAlerts_ / plainAlerts_ are copied to regression-test the LOOKBACK_LABEL footer text (2026-07-29
+// fix), the resolved/AUTO-RESOLVED/RESOLVED/TEST tag logic (v7, 2026-08-05), and the roster-vs-incident
+// header split (v5, 2026-08-04). Both are otherwise impure: their per-row map()/forEach() callback
+// calls fmtAlertTs_(a), an Apps-Script global (Session/BigQuery via getUserTzAlerts_) not present under
+// plain Node (see the WHY COPIED note at the top of this file). Until 2026-08-08 every call here used
+// batch=[] specifically to dodge that dependency -- which meant NEITHER the tag logic NOR the roster
+// split was ever exercised, so the tag branches below had silently drifted onto the pre-v7
+// AUTO-RESOLVED-only shape (real code moved on in v7) with nothing to catch it: this file stayed green
+// throughout. Fixed by giving fmtAlertTs_ a deterministic stand-in below so non-empty batches can be
+// used; see that function's own comment for why it isn't a verbatim copy.
 const LOOKBACK_HOURS   = 168;
 const LOOKBACK_LABEL   = (LOOKBACK_HOURS % 24 === 0) ? `${LOOKBACK_HOURS / 24}d` : `${LOOKBACK_HOURS}h`;
 
+// NOT copied verbatim -- the real fmtAlertTs_ (alert_emailer.gs) calls Utilities.formatDate() and reads
+// state.user_tz via a live BigQuery query (getUserTzAlerts_), both Apps-Script-only dependencies this
+// plain-Node file cannot satisfy. Only needs to be a deterministic function of `a` so htmlAlerts_ /
+// plainAlerts_ can be exercised below with a non-empty batch; the actual timestamp format is never
+// asserted on.
+function fmtAlertTs_(a) { return `TS(${a.alert_ts})`; }
+
 function htmlAlerts_(batch, newlyUnnotifiedCount, recurringCount) {
   const allTest = batch.length > 0 && batch.every(isTest_);
-  const rowsHtml = batch.map(a => {
+  const roster = batch.filter(isRealRosterNotice_);
+  const incidents = batch.filter(a => !isRealRosterNotice_(a));
+  // realIncidents excludes canary/fire-drill rows. The HEADER must key on this, not on
+  // incidents.length: a batch of {real roster notice + weekly canary} has incidents.length === 1, which
+  // would print the "⚠ unresolved alerts" header under a subject that correctly reads
+  // "📋 ROSTER CHANGE" — the exact alarming-framing-for-a-healthy-event this lane exists to prevent.
+  // alertSubject_ already filters tests out via isTest_; this keeps the two in agreement.
+  const realIncidents = incidents.filter(a => !isTest_(a));
+  // Payload rendering is the only part of this file that parses routine-authored free-shape JSON, so
+  // it is the only part with a plausible unknown-unknown. It is fenced off because the outer catch in
+  // checkAlerts_ swallows exceptions and beat_() still stamps a fresh beat_ts — meaning a PERSISTENT
+  // throw anywhere in this function would silently stop ALL alert delivery forever while
+  // state.automation_heartbeat (which reads only MAX(beat_ts), never the note) stays green. Degrading
+  // one roster card to message-only is always preferable to blacking out the whole channel.
+  let rosterHtml;
+  try {
+    rosterHtml = roster.map(a => {
+      const detail = rosterDetail_(a).map(kv =>
+        `<tr><td style="font-size:12px;color:#5b6b7a;padding:1px 10px 1px 0;white-space:nowrap;vertical-align:top;">${esc2_(kv[0])}</td>` +
+        `<td style="font-size:12px;color:#1f2d3d;padding:1px 0;">${esc2_(kv[1])}</td></tr>`).join('');
+      return `<tr><td style="padding:0;">
+      <div style="border-left:4px solid #1e7f5c;background-color:#eaf6f0;border-radius:6px;padding:10px 12px;margin:6px 0;">
+        <div style="font-size:13px;font-weight:700;color:#1e7f5c;">ROSTER CHANGE · ${esc2_(a.source)} · ${esc2_(a.category)}</div>
+        <div style="font-size:13px;color:#1f2d3d;margin-top:3px;">${esc2_(a.message)}</div>
+        ${detail ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:7px;">${detail}</table>` : ''}
+        <div style="font-size:11px;color:#8a96a3;margin-top:5px;">${esc2_(fmtAlertTs_(a))}</div>
+      </div></td></tr>`;
+    }).join('');
+  } catch (e) {
+    rosterHtml = roster.map(a => `<tr><td style="padding:0;">
+      <div style="border-left:4px solid #1e7f5c;background-color:#eaf6f0;border-radius:6px;padding:10px 12px;margin:6px 0;">
+        <div style="font-size:13px;font-weight:700;color:#1e7f5c;">ROSTER CHANGE · ${esc2_(a.source)} · ${esc2_(a.category)}</div>
+        <div style="font-size:13px;color:#1f2d3d;margin-top:3px;">${esc2_(a.message)}</div>
+        <div style="font-size:11px;color:#8a96a3;margin-top:5px;">(detail unavailable — payload render failed: ${esc2_(String(e))})</div>
+      </div></td></tr>`).join('');
+  }
+  const rosterSection = roster.length ? `
+      <tr><td style="font-size:14px;font-weight:700;color:#1e7f5c;padding:12px 0 2px;">📋 Autonomous roster change${roster.length > 1 ? 's' : ''} — no action needed</td></tr>
+      ${rosterHtml}
+      <tr><td style="font-size:11px;color:#8a96a3;padding-top:6px;">Strategy add/drop is fully autonomous by design (SISA, owner directive 2026-07-10) — this is a notification, not a request. These notices resolve themselves once delivered, so no <code>UPDATE ops.alerts</code> is needed. Full history: <code>state.strategy_roster</code>, <code>ops.roster_change_log</code>, <code>events.strategy_lifecycle</code>. To pause the whole add/drop loop: INSERT an <code>enabled = FALSE</code> row into <code>ops.arsenal_control</code> — live trading is unaffected.</td></tr>` : '';
+  const rowsHtml = incidents.map(a => {
     const test = isTest_(a);
     const isCrit = a.severity === 'critical';
     const bar = test ? '#2c6e9b' : (isCrit ? '#c0392b' : '#b9770e');
     const bg  = test ? '#eaf2f8' : (isCrit ? '#fcebea' : '#fdf3e3');
     const tag = test
       ? ' · <span style="color:#2c6e9b;font-weight:700;">⚗ TEST — no action needed</span>'
-      : ((String(a.resolved) === 'true') ? ' · <span style="color:#2e7d32;">AUTO-RESOLVED</span>' : '');
+      : ((String(a.resolved) === 'true')
+          ? (String(a.resolved_note || '').startsWith('auto-resolved:')
+              ? ' · <span style="color:#2e7d32;">AUTO-RESOLVED</span>'
+              : ' · <span style="color:#2e7d32;">RESOLVED</span>')
+          : '');
     return `<tr><td style="padding:0;">
       <div style="border-left:4px solid ${bar};background-color:${bg};border-radius:6px;padding:10px 12px;margin:6px 0;">
         <div style="font-size:13px;font-weight:700;color:${bar};">${esc2_(a.severity.toUpperCase())} · ${esc2_(a.source)} · ${esc2_(a.category)}${tag}</div>
@@ -474,25 +546,51 @@ function htmlAlerts_(batch, newlyUnnotifiedCount, recurringCount) {
   }).join('');
   const header = allTest
     ? '⚗ Stock-Trading — alert-delivery self-test (TEST · no action needed)'
-    : '⚠ Stock-Trading — unresolved alerts';
+    : (realIncidents.length === 0 && recurringCount === 0
+        ? `📋 Stock-Trading — autonomous roster change${roster.length > 1 ? 's' : ''}`
+        : '⚠ Stock-Trading — unresolved alerts');
+  // The incident section is suppressed entirely on a roster-only batch, so a healthy autonomous action
+  // never renders under an "unresolved alerts" heading with a resolve-by-hand instruction that does not
+  // apply to it (Rule 5 clears these on delivery).
+  const incidentSection = incidents.length ? `
+      ${rowsHtml}
+      <tr><td style="font-size:11px;color:#8a96a3;padding-top:10px;">This section contains ${incidents.length} alert(s): ${newlyUnnotifiedCount - roster.length} newly un-notified in the last ${LOOKBACK_LABEL} and ${recurringCount} recurring.${roster.length ? ` ${roster.length} roster change(s) follow below and need no action.` : ''} Resolve via <code>UPDATE ops.alerts SET resolved=TRUE WHERE alert_id='...'</code> — always scope by alert_id, never run this unfiltered. This channel complements the [Claude] ATTENTION calendar events.</td></tr>` : '';
   return `<!DOCTYPE html><html><body style="margin:0;padding:18px;background-color:#eef1f5;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:auto;background:#fff;border-radius:12px;padding:18px;">
       <tr><td style="font-size:16px;font-weight:700;color:#0f2747;padding-bottom:8px;">${header}</td></tr>
-      ${rowsHtml}
-      <tr><td style="font-size:11px;color:#8a96a3;padding-top:10px;">This email contains ${batch.length} alert(s): ${newlyUnnotifiedCount} newly un-notified in the last ${LOOKBACK_LABEL} and ${recurringCount} recurring. Resolve via <code>UPDATE ops.alerts SET resolved=TRUE WHERE alert_id='...'</code> — always scope by alert_id, never run this unfiltered. This channel complements the [Claude] ATTENTION calendar events.</td></tr>
+      ${incidentSection}
+      ${rosterSection}
     </table></body></html>`;
 }
 
 function plainAlerts_(batch, newlyUnnotifiedCount, recurringCount) {
   const allTest = batch.length > 0 && batch.every(isTest_);
+  const roster = batch.filter(isRealRosterNotice_);
+  const incidents = batch.filter(a => !isRealRosterNotice_(a));
+  const realIncidents = incidents.filter(a => !isTest_(a));   // see htmlAlerts_ for why the header keys on this
   let s = allTest
     ? `[TEST] Stock-Trading — alert-delivery self-test, no action needed:\n\n`
-    : `Stock-Trading — ${batch.length} alert(s) (${newlyUnnotifiedCount} newly un-notified in the last ${LOOKBACK_LABEL}, ${recurringCount} recurring):\n\n`;
-  batch.forEach(a => {
-    const tag = isTest_(a) ? '[TEST] ' : (String(a.resolved) === 'true' ? '[AUTO-RESOLVED] ' : '');
+    : (realIncidents.length === 0 && recurringCount === 0
+        ? `Stock-Trading — ${roster.length} autonomous roster change(s), no action needed:\n\n`
+        : `Stock-Trading — ${incidents.length} alert(s) (${newlyUnnotifiedCount - roster.length} newly un-notified in the last ${LOOKBACK_LABEL}, ${recurringCount} recurring)${roster.length ? ` + ${roster.length} roster change(s) below` : ''}:\n\n`);
+  incidents.forEach(a => {
+    const tag = isTest_(a) ? '[TEST] '
+      : (String(a.resolved) === 'true'
+          ? (String(a.resolved_note || '').startsWith('auto-resolved:') ? '[AUTO-RESOLVED] ' : '[RESOLVED] ')
+          : '');
     s += `[${a.severity.toUpperCase()}] ${tag}${a.source}/${a.category}: ${a.message}  (${fmtAlertTs_(a)})\n`;
   });
-  s += `\nResolve via UPDATE ops.alerts SET resolved=TRUE WHERE alert_id='...' — always scope by alert_id, never run this unfiltered. Complements the [Claude] ATTENTION calendar events.`;
+  if (incidents.length) {
+    s += `\nResolve via UPDATE ops.alerts SET resolved=TRUE WHERE alert_id='...' — always scope by alert_id, never run this unfiltered. Complements the [Claude] ATTENTION calendar events.\n`;
+  }
+  if (roster.length) {
+    s += `\n=== ROSTER CHANGE${roster.length > 1 ? 'S' : ''} (no action needed) ===\n`;
+    roster.forEach(a => {
+      s += `\n[ROSTER CHANGE] ${a.source}/${a.category}: ${a.message}  (${fmtAlertTs_(a)})\n`;
+      rosterDetail_(a).forEach(kv => { s += `    ${kv[0]}: ${kv[1]}\n`; });
+    });
+    s += `\nStrategy add/drop is fully autonomous by design (SISA, owner directive 2026-07-10) — this is a notification, not a request. These notices resolve themselves once delivered; no UPDATE is needed. Full history: state.strategy_roster, ops.roster_change_log, events.strategy_lifecycle. To pause the whole add/drop loop: INSERT an enabled = FALSE row into ops.arsenal_control — live trading is unaffected.`;
+  }
   return s;
 }
 
@@ -1237,9 +1335,9 @@ t('alertSubject_: 1 real roster notice + 1 canary row (recurringCount=0) -> calm
   // realIncidents.length instead, so a {real roster notice + canary} batch renders the calm roster
   // header, not "⚠ unresolved alerts"). alertSubject_ (the SUBJECT) was always correct; this pins that
   // correctness so a future edit to alertSubject_ can never regress the two back out of agreement.
-  // NOTE: htmlAlerts_/plainAlerts_ themselves build HTML/plain-text BODIES and are not re-tested here
-  // for the v5 body-header fix -- see the file header caveat above their copies; this pure-function
-  // mirror can only exercise the subject side of that fix, not the body.
+  // htmlAlerts_/plainAlerts_ themselves build the HTML/plain-text BODIES; the same body-header split is
+  // now separately pinned below (2026-08-08 resync) once fmtAlertTs_ has a stand-in to exercise a
+  // non-empty batch with -- see the "roster-vs-incident header split" tests near the footer-text block.
   const fresh = [
     { source: 'SL5', category: 'strategy_probe_registered', severity: 'warning',
       payload: '{"strategy_code":"F","from_state":"PAPER","to_state":"PROBE"}' },
@@ -1268,23 +1366,113 @@ t('alertSubject_: 2 real incidents + 3 roster notices (recurringCount=0) -> repo
   assert.ok(subject.includes('+3 roster changes'), `expected "+3 roster changes", got: ${subject}`);
 });
 
-// ---- htmlAlerts_ / plainAlerts_ footer text (2026-07-29 regression fix, empty-batch-only — see the
-//      caveat above the copies) ----
+// ---- htmlAlerts_ / plainAlerts_ footer text (2026-07-29 regression fix) ----
 // A 2026-07 rewrite that split newly-un-notified from recurring counts DROPPED the "in the last
 // <LOOKBACK_LABEL>" window callout entirely from both footers as a side effect (LOOKBACK_LABEL went
 // unused/dead). Confirmed this test fails without the fix: reverting htmlAlerts_'s footer line to the
 // pre-fix `${newlyUnnotifiedCount} newly un-notified and ${recurringCount} recurring.` (no LOOKBACK_LABEL
 // mention at all) makes `.includes('in the last')` false and this assertion throws; restoring the
 // LOOKBACK_LABEL clause makes it pass again. Same check mirrored for plainAlerts_.
+// A real (non-test, non-roster) incident row is used rather than batch=[] (2026-08-08): the v5 rewrite
+// wraps the whole incident section, footer included, in `incidents.length ? ... : ''`, so an empty
+// batch now renders NO footer at all in htmlAlerts_ and this assertion would never even reach the
+// callout text it means to check.
+const FOOTER_TEST_ROW = { source: 'router', category: 'cash_tripwire', severity: 'warning', message: 'm', resolved: 'false', alert_ts: '2026-08-08T00:00:00Z' };
 t('htmlAlerts_ footer restores the "in the last <LOOKBACK_LABEL>" window callout on the newly-un-notified count', () => {
-  const html = htmlAlerts_([], 2, 3);
+  const html = htmlAlerts_([FOOTER_TEST_ROW], 2, 3);
   assert.ok(html.includes(`2 newly un-notified in the last ${LOOKBACK_LABEL} and 3 recurring`),
     `expected the window callout in: ${html}`);
 });
 t('plainAlerts_ footer restores the "in the last <LOOKBACK_LABEL>" window callout on the newly-un-notified count', () => {
-  const plain = plainAlerts_([], 2, 3);
+  const plain = plainAlerts_([FOOTER_TEST_ROW], 2, 3);
   assert.ok(plain.includes(`2 newly un-notified in the last ${LOOKBACK_LABEL}, 3 recurring`),
     `expected the window callout in: ${plain}`);
+});
+
+// ---- htmlAlerts_ / plainAlerts_ resolved/AUTO-RESOLVED/RESOLVED/TEST tag logic (v7, 2026-08-05) ----
+// Ported 2026-08-08 from the pre-v7 shape (String(a.resolved) === 'true' -> always "AUTO-RESOLVED",
+// with no RESOLVED branch at all) that these copies had silently kept since before v7 existed, because
+// batch=[] can never invoke the per-row tag branch. Confirmed each of these fails against that pre-v7
+// shape: it renders every resolved row as AUTO-RESOLVED regardless of resolved_note, so the "RESOLVED,
+// not AUTO-RESOLVED" and "no AUTO-RESOLVED at all" assertions below both throw against it.
+const TAG_TEST_TEST_ROW = { source: 'scheduled.canary', category: 'delivery_canary', severity: 'warning', message: 'm', resolved: 'false', alert_ts: 't' };
+const TAG_TEST_AUTO_RESOLVED_ROW = { source: 'router', category: 'cash_tripwire', severity: 'warning', message: 'm', resolved: 'true', resolved_note: 'auto-resolved: cleared by next run', alert_ts: 't' };
+const TAG_TEST_RESOLVED_ROW = { source: 'router', category: 'cash_tripwire', severity: 'warning', message: 'm', resolved: 'true', resolved_note: 'closed by operator 2026-08-08', alert_ts: 't' };
+const TAG_TEST_OPEN_ROW = { source: 'router', category: 'cash_tripwire', severity: 'critical', message: 'm', resolved: 'false', alert_ts: 't' };
+t('htmlAlerts_ tags a canary/test row TEST', () => {
+  const html = htmlAlerts_([TAG_TEST_TEST_ROW], 1, 0);
+  assert.ok(html.includes('⚗ TEST — no action needed'), `expected the TEST tag in: ${html}`);
+});
+t('htmlAlerts_ tags a resolved_note starting "auto-resolved:" as AUTO-RESOLVED', () => {
+  const html = htmlAlerts_([TAG_TEST_AUTO_RESOLVED_ROW], 1, 0);
+  assert.ok(html.includes('>AUTO-RESOLVED</span>'), `expected the AUTO-RESOLVED tag in: ${html}`);
+});
+t('htmlAlerts_ tags a human-closed row (resolved_note NOT starting "auto-resolved:") as RESOLVED, not AUTO-RESOLVED', () => {
+  const html = htmlAlerts_([TAG_TEST_RESOLVED_ROW], 1, 0);
+  assert.ok(html.includes('>RESOLVED</span>'), `expected the RESOLVED tag in: ${html}`);
+  assert.ok(!html.includes('>AUTO-RESOLVED</span>'), `must not mislabel a hand-closed alert as self-healed: ${html}`);
+});
+t('htmlAlerts_ renders no resolution tag at all for an open (unresolved) incident', () => {
+  const html = htmlAlerts_([TAG_TEST_OPEN_ROW], 1, 0);
+  assert.ok(!html.includes('RESOLVED'), `an open incident must carry no RESOLVED/AUTO-RESOLVED tag: ${html}`);
+  assert.ok(!html.includes('TEST'), `an open incident must carry no TEST tag: ${html}`);
+});
+t('plainAlerts_ tags a canary/test row [TEST]', () => {
+  const plain = plainAlerts_([TAG_TEST_TEST_ROW], 1, 0);
+  assert.ok(plain.includes('[TEST] '), `expected the [TEST] tag in: ${plain}`);
+});
+t('plainAlerts_ tags a resolved_note starting "auto-resolved:" as [AUTO-RESOLVED]', () => {
+  const plain = plainAlerts_([TAG_TEST_AUTO_RESOLVED_ROW], 1, 0);
+  assert.ok(plain.includes('[AUTO-RESOLVED] '), `expected the [AUTO-RESOLVED] tag in: ${plain}`);
+});
+t('plainAlerts_ tags a human-closed row as [RESOLVED], not [AUTO-RESOLVED]', () => {
+  const plain = plainAlerts_([TAG_TEST_RESOLVED_ROW], 1, 0);
+  assert.ok(plain.includes('[RESOLVED] '), `expected the [RESOLVED] tag in: ${plain}`);
+  assert.ok(!plain.includes('[AUTO-RESOLVED] '), `must not mislabel a hand-closed alert as self-healed: ${plain}`);
+});
+t('plainAlerts_ renders no resolution tag at all for an open (unresolved) incident', () => {
+  const plain = plainAlerts_([TAG_TEST_OPEN_ROW], 1, 0);
+  assert.ok(!/\[(AUTO-)?RESOLVED\]/.test(plain), `an open incident must carry no tag: ${plain}`);
+});
+
+// ---- htmlAlerts_ / plainAlerts_ roster-vs-incident header split (v5, 2026-08-04) ----
+// Same batch shape as the alertSubject_ test above ("1 real roster notice + 1 canary row"), now
+// exercised against the BODY rather than just the subject -- closing the gap that test's own comment
+// used to flag ("not re-tested here for the v5 body-header fix").
+t('htmlAlerts_ renders the calm roster header, not "unresolved alerts", for a real-roster-notice + canary batch', () => {
+  const fresh = [
+    { source: 'SL5', category: 'strategy_probe_registered', severity: 'warning', message: 'm',
+      payload: '{"strategy_code":"F","from_state":"PAPER","to_state":"PROBE"}', alert_ts: 't' },
+    { source: 'scheduled.canary', category: 'delivery_canary', severity: 'warning', message: 'm', alert_ts: 't' },
+  ];
+  const html = htmlAlerts_(fresh, 2, 0);
+  assert.ok(html.includes('📋 Stock-Trading — autonomous roster change'), `expected the calm roster header in: ${html}`);
+  assert.ok(!html.includes('unresolved alerts'), `must not print the alarming header for a healthy roster batch: ${html}`);
+});
+t('plainAlerts_ renders the calm roster header, not an alert count, for a roster-only batch (test rows excluded)', () => {
+  const fresh = [
+    { source: 'SL5', category: 'strategy_probe_registered', severity: 'warning', message: 'm',
+      payload: '{"strategy_code":"F","from_state":"PAPER","to_state":"PROBE"}', alert_ts: 't' },
+    { source: 'scheduled.canary', category: 'delivery_canary', severity: 'warning', message: 'm', alert_ts: 't' },
+  ];
+  const plain = plainAlerts_(fresh, 2, 0);
+  assert.ok(plain.startsWith('Stock-Trading — 1 autonomous roster change(s), no action needed'),
+    `expected the calm roster header in: ${plain}`);
+});
+
+// ---- copy-drift guard: this file's alert_emailer.gs copies vs the live ALERT_SCRIPT_VERSION ----
+// Reads the LIVE .gs file (not a copy) so a future version bump there that forgets to re-sync the
+// copies above trips this instead of staying green, same as the 2026-08-08 fix this whole block exists
+// to prevent: the tag logic silently went two versions stale (pre-v7 through v8) with no signal at all.
+t('this file\'s alert_emailer.gs copies are pinned to its current ALERT_SCRIPT_VERSION', () => {
+  const gsPath = path.join(__dirname, '..', 'monitoring', 'alert_emailer.gs');
+  const gsSrc = fs.readFileSync(gsPath, 'utf8');
+  const m = /const\s+ALERT_SCRIPT_VERSION\s*=\s*'([^']+)'/.exec(gsSrc);
+  assert.ok(m, 'could not find ALERT_SCRIPT_VERSION in alert_emailer.gs -- regex may need updating if the declaration shape changed');
+  assert.strictEqual(m[1], ALERT_SCRIPT_VERSION_SYNCED_AS_OF,
+    `alert_emailer.gs is now ${m[1]} but this file's copies were last synced against ` +
+    `${ALERT_SCRIPT_VERSION_SYNCED_AS_OF} -- re-verify htmlAlerts_/plainAlerts_/isTest_/etc. against the ` +
+    `new version and bump ALERT_SCRIPT_VERSION_SYNCED_AS_OF in the same commit`);
 });
 
 console.log(`\n${passed} assertions passed.`);

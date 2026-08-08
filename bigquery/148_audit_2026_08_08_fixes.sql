@@ -55,25 +55,19 @@
 -- exact idiom onto both of sp_score_cross_model_referee's guards, which were dormant only because none
 -- of its four gated review_types had reached a second cycle yet (HIGH).
 --
--- ===== KNOWN FOLLOW-UP OUTSIDE THIS FILE'S SCOPE (documented, not applied here) =====
--- This drafting task was scoped to ONLY this new file -- no edits to bigquery/18, 30, 68, 134, 143, or
--- to scripts/. Two repo-convention gaps this creates, for whoever lands this file next:
---   (a) scripts/check_superseded_markers.py requires every NON-canonical prior definition of an object
---       to carry a "SUPERSEDED LIVE by bigquery/<canonical>" pointer in its own preceding comment/header
---       (see bigquery/142's ops.sp_sq_cadence_check banner pointing at bigquery/147 for the house
---       pattern). Once this file lands, bigquery/18 (state.stalled_runs), bigquery/30
---       (state.staged_without_confirm), bigquery/68 (state.cash_flows_backfill_check), bigquery/134
---       (ops.sp_auto_resolve_alerts) and bigquery/143 (ops.sp_score_cross_model_referee) each need a
---       one-line forward-pointing banner added atop their superseded CREATE statement, naming
---       bigquery/148, or the checker will report new violations for all five.
---   (b) scripts/check_superseded_by_discipline.py's ALLOWLIST has a key
---       ("143_adversarial_review_correction_path.sql", "ops.sp_score_cross_model_referee") explaining
---       why that procedure's outer duplicate-guard is allowed to read the raw events.adversarial_reviews
---       table instead of state.adversarial_reviews_current. Once bigquery/148 is canonical for that
---       object, that key goes stale (wrong filename) and needs to become
---       ("148_audit_2026_08_08_fixes.sql", "ops.sp_score_cross_model_referee") with the same reason --
---       Statement 5 below deliberately preserves the raw-table read on the outer guard, unchanged, for
---       the identical must-never-double-write reason the existing entry states.
+-- ===== FOLLOW-UP CLOSED (2026-08-08, same commit that added this file -- corrected 2026-08-08) =====
+-- An earlier draft of this header left two repo-convention gaps open here ("scoped to only this new
+-- file, no edits to bigquery/18/30/68/134/143 or scripts/"). That claim went stale before it was ever
+-- true: both gaps were in fact closed in the SAME commit (2807555) that introduced this file, not left
+-- for a follow-up landing. Re-verified 2026-08-08 against `git show 2807555` and both checkers:
+--   (a) bigquery/18, 30, 68, 134 and 143 each carry a "SUPERSEDED LIVE by bigquery/148" banner atop
+--       their superseded CREATE statement (same commit). scripts/check_superseded_markers.py exits 0,
+--       0 new violations.
+--   (b) scripts/check_superseded_by_discipline.py's ALLOWLIST key for ops.sp_score_cross_model_referee
+--       was re-pointed in the same commit to ("148_audit_2026_08_08_fixes.sql",
+--       "ops.sp_score_cross_model_referee") with the raw-table-read reason preserved verbatim. That
+--       checker exits 0 with no stale-filename violation.
+-- Nothing outstanding here; do not re-open either item without re-running both checkers first.
 
 -- ===== STATEMENT 1: state.staged_without_confirm (supersedes bigquery/30) =====
 -- Copied verbatim from bigquery/30_confirm_attestation.sql with exactly one change: the case-sensitive

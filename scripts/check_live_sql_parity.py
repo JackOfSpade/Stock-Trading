@@ -106,6 +106,19 @@ byte-for-byte the file's actual lines 47-193 — and the total object count is u
 tests/test_check_live_sql_parity.py for the full regression coverage, including the CASE-expression-
 bare-END and FOR...END FOR edge cases the fix has to get right without over-correcting).
 
+CASE STATEMENT (END CASE) NESTING FIX (2026-08-08, same-day follow-up). The nesting-aware scan above
+first landed with the CASE *statement* form (`CASE x WHEN ... END CASE;`) still mishandled: its
+two-word closer was mistakenly grouped with END IF/WHILE/LOOP/FOR in NON_BEGIN_END_SUFFIX as a
+depth-inert skip, but unlike those four, CASE's opener DOES increment depth — so depth never
+returned to zero and the same body-bleed-past-its-own-END bug this whole section describes was
+reintroduced for that one form. No bigquery/*.sql procedure uses this form today (`grep -r "END
+CASE" bigquery/` is empty, verified), so the 212-objects/one-body-changed count above is unaffected
+by this follow-up fix — it closes a latent trap, not a live false positive. See NON_BEGIN_END_
+SUFFIX's and find_procedure_body_end()'s own comments/docstring, and tests/test_check_live_sql_
+parity.py's "CASE *statement* END CASE mishandled" section, for the fix and its direct regression
+coverage (CASE statement alone, both CASE forms in one procedure, CASE statement nested inside an
+IF, and END CASE immediately preceding a trailing free-standing block).
+
 Usage:  python scripts/check_live_sql_parity.py --project stock-trading-498512
         python scripts/check_live_sql_parity.py --offline   # parser self-check only, no bq calls
         python scripts/check_live_sql_parity.py --project stock-trading-498512 --json-out /tmp/findings.json
@@ -328,12 +341,24 @@ def sql_tokens(sql):
 
 # BigQuery scripting keywords that close a construct OTHER than BEGIN...END with their OWN two-word
 # suffix (END IF / END WHILE / END LOOP / END FOR) -- see find_procedure_body_end()'s docstring for
-# why these never need to be tracked as openers at all, only recognized (and ignored) as closers.
-# CASE is handled separately in find_procedure_body_end() itself: unlike these four, a CASE
-# *expression* (the only form this repo uses -- `CASE WHEN ... END`) closes with a BARE END, the
-# same token that closes a BEGIN block, so CASE (not these four) is the one construct that must be
-# tracked as an opener.
-NON_BEGIN_END_SUFFIX = frozenset({"IF", "WHILE", "LOOP", "FOR", "CASE"})
+# why these never need to be tracked as openers at all, only recognized (and ignored, i.e. a no-op
+# that does NOT touch depth) as closers: their openers (IF/WHILE/LOOP/FOR) never increment depth in
+# the first place, so there is nothing for their two-word closer to decrement.
+#
+# CASE is deliberately NOT a member of this set (bug fixed 2026-08-08 -- see find_procedure_body_
+# end()'s docstring and its own "if word == CASE" branch). CASE is tracked as an opener (unlike
+# IF/WHILE/LOOP/FOR) because BigQuery has TWO CASE forms with two different closers: a CASE
+# *expression* (`CASE WHEN ... END`, used inside a SELECT) closes with a BARE END -- the same token
+# that closes a BEGIN block -- and a CASE *statement* (BigQuery's imperative `CASE x WHEN ... END
+# CASE;`) closes with the two-word `END CASE`. Both closers must DECREMENT the depth CASE's own
+# opener incremented; only IF/WHILE/LOOP/FOR's two-word closers are genuine no-ops. Putting CASE in
+# this frozenset was itself the bug: it made `END CASE` a no-op skip identical to END IF/WHILE/LOOP/
+# FOR, so depth never returned to zero for a procedure using the CASE-statement form and its body
+# bled into whatever followed (exactly the class of bug this whole nesting-aware rewrite exists to
+# fix) -- confirmed live: no bigquery/*.sql procedure uses the CASE-statement form today (`grep -r
+# "END CASE" bigquery/` is empty), so this was latent, not yet tripped, but would have reintroduced
+# the bleed the moment one was written.
+NON_BEGIN_END_SUFFIX = frozenset({"IF", "WHILE", "LOOP", "FOR"})
 
 
 def find_procedure_body_end(text, begin_start):
@@ -353,16 +378,23 @@ def find_procedure_body_end(text, begin_start):
     body containing identifiers ('json_string_target_ids', 'repair_mutex_rows') that exist ONLY in
     the unrelated repair block, and a permanent false DRIFT against the live 145-line definition.
 
-    Naive BEGIN/END word-counting is NOT a fix -- BigQuery scripting nests via BEGIN...END,
-    IF...END IF, CASE...END CASE (bare END for a CASE *expression*, this repo's only form),
-    WHILE...END WHILE, LOOP...END LOOP, FOR...END FOR (bigquery/17_restore_drill.sql, bigquery/
-    75_scheduled_query_wrappers.sql), and BEGIN TRANSACTION/COMMIT TRANSACTION, which do NOT nest
-    (they bracket a transaction, not a block -- 146's own procedure uses BEGIN TRANSACTION inside
-    its body; counting it as an opener would count one extra level nothing legitimately closes).
-    IF/WHILE/LOOP/FOR never need tracking as openers at all: their closer is always the two-word
-    form, self-identifying and never a bare END, so it is simply recognized and ignored (NON_BEGIN_
-    END_SUFFIX) rather than affecting depth. CASE is the one exception -- see the module-level
-    constant's comment.
+    Naive BEGIN/END word-counting is NOT a fix -- BigQuery scripting nests via BEGIN...END, IF...END
+    IF, WHILE...END WHILE, LOOP...END LOOP, FOR...END FOR (bigquery/17_restore_drill.sql, bigquery/
+    75_scheduled_query_wrappers.sql), CASE...END (a CASE *expression*, used inside a SELECT -- this
+    repo's only CASE form today) / CASE...END CASE (a CASE *statement*, BigQuery's imperative form --
+    unused in this repo today but must still be handled correctly), and BEGIN TRANSACTION/COMMIT
+    TRANSACTION, which do NOT nest (they bracket a transaction, not a block -- 146's own procedure
+    uses BEGIN TRANSACTION inside its body; counting it as an opener would count one extra level
+    nothing legitimately closes). IF/WHILE/LOOP/FOR never need tracking as openers at all: their
+    closer is always the two-word form, self-identifying and never a bare END, so it is simply
+    recognized and ignored (NON_BEGIN_END_SUFFIX) rather than affecting depth. CASE IS tracked as an
+    opener -- see the module-level constant's comment -- and BOTH of its closers (bare END for the
+    expression form, `END CASE` for the statement form) must decrement the depth that opener
+    incremented, or the depth introduced by a CASE *statement* never returns to zero and the
+    procedure's own END is missed (bug fixed 2026-08-08: `END CASE` used to be lumped into NON_BEGIN_
+    END_SUFFIX as a no-op skip, the same treatment as END IF/WHILE/LOOP/FOR whose openers never
+    increment depth -- but CASE's opener DOES increment depth, so that no-op left depth permanently
+    one level too high, reintroducing the exact body-bleed class this whole rewrite exists to fix).
 
     Keywords inside string literals and comments are ignored via sql_tokens() (reused, not
     reinvented -- see that function's docstring). A two-word form (END IF, BEGIN TRANSACTION, ...)
@@ -396,6 +428,19 @@ def find_procedure_body_end(text, begin_start):
             wi += 1
             continue
         if word == "END":
+            if nxt_word == "CASE":
+                # END CASE closes the CASE *statement* whose opener incremented depth above (the
+                # "if word == CASE" branch) -- it must decrement here too, consuming BOTH tokens
+                # (wi += 2), unlike the NON_BEGIN_END_SUFFIX branch below which is a genuine no-op.
+                # Getting this wrong (treating END CASE as a same no-op skip) was the 2026-08-08 bug:
+                # depth never returned to zero for a procedure using this form, so its own closing
+                # END was missed and the body bled into whatever followed -- see this function's and
+                # NON_BEGIN_END_SUFFIX's docstrings/comments for the full history.
+                depth -= 1
+                if depth == 0:
+                    return begin_start + toks[nxt_idx][3]
+                wi += 2
+                continue
             if nxt_word in NON_BEGIN_END_SUFFIX:
                 wi += 2
                 continue
