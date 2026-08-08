@@ -51,7 +51,7 @@
 -- clean bar exists: as measured above, the check has zero drift rows today and has been clean for 14
 -- consecutive logged days, so promoting it does not halt anything now.
 
--- SUPERSEDED LIVE by bigquery/142_cadence_deadline_revert_and_evidence_drift.sql — current single
+-- SUPERSEDED LIVE by bigquery/147_run_log_content_quality.sql — current single
 -- source of truth for ops.sp_sq_cadence_check. Intermediate link: bigquery/132_queue_driven_silence_
 -- watch.sql added the queue_driven_silent raise; bigquery/142 bumps the heartbeat to v12 and adds the
 -- process_constant_evidence_invalidated WARNING block. Kept here, unmodified, for DR-rebuild

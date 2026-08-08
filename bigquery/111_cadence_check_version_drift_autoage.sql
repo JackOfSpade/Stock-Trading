@@ -66,7 +66,7 @@
 -- (added by 120), still carries b3_trading_enabled_drift at the pre-promotion 'warning' tier with no
 -- raise_msg join (promoted by 128), and reports the superseded v9 heartbeat marker.
 -- =====================================================================================================
--- SUPERSEDED LIVE by bigquery/142_cadence_deadline_revert_and_evidence_drift.sql — current single
+-- SUPERSEDED LIVE by bigquery/147_run_log_content_quality.sql — current single
 -- source of truth for ops.sp_sq_cadence_check (supersedes bigquery/128 above, per the note there).
 -- Intermediate link: bigquery/132_queue_driven_silence_watch.sql added the queue_driven_silent check;
 -- bigquery/142 bumps the heartbeat to v12 and adds the process_constant_evidence_invalidated WARNING
