@@ -8,6 +8,8 @@ that rots is caught by CI instead of silently disarming the gate.
 
 No warehouse, no creds — pure offline parser tests (run in the always-on `test` job).
 """
+import yaml
+
 from conftest import load_module_from_path
 
 cc = load_module_from_path("check_cadence_consistency", "scripts", "check_cadence_consistency.py")
@@ -284,11 +286,59 @@ def _write_check_fixture(tmp_path):
     return plan, cadence, cadence_sql, catalog_sql
 
 
+def _cadence_ids_from_yaml(cadence_path):
+    """Routine ids read directly out of a fixture cadence.yaml file (NOT via cc.load_cadence(), which
+    requires cc.CADENCE to already be monkeypatched to this exact path -- this helper is called from
+    _patch_fixture_paths() itself while that patching is still happening, so it must not depend on
+    it)."""
+    doc = yaml.safe_load(open(cadence_path, encoding="utf-8")) or {}
+    return [r["id"] for r in (doc.get("routines") or [])]
+
+
+def _write_stalled_runs_fixture(tmp_path, ids, filename="900_test_stalled_runs.sql"):
+    """Writes a canonical-shaped `CREATE OR REPLACE VIEW ...state.stalled_runs` definition into
+    tmp_path/filename, with a `cls` CTE UNNEST([...]) STRUCT list carrying exactly `ids` -- the first
+    entry labelled (`... AS routine, ... AS min_stale_hours`) and every later one positional, matching
+    the real bigquery/148 body's own mixed spelling (check O's CLS_ENTRY_RE must handle both). The
+    chosen leading number (900) and filename never collide with any other fixture file this test module
+    writes into tmp_path elsewhere -- none of those use the `NN_description.sql` two-part naming
+    numbered_sql_files() requires (they are all bare `NN.sql`, e.g. "12.sql"/"59.sql"), so reusing
+    tmp_path itself as STALLED_RUNS_BIGQUERY_DIR (see _patch_fixture_paths) is safe. Returns the
+    written Path."""
+    structs = [
+        (f"STRUCT('{rid}' AS routine, 6 AS min_stale_hours)" if i == 0 else f"STRUCT('{rid}', 6)")
+        for i, rid in enumerate(ids)
+    ]
+    f = tmp_path / filename
+    f.write_text(
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.stalled_runs` AS\n"
+        "WITH cls AS (\n"
+        "  SELECT * FROM UNNEST([\n"
+        "    " + ", ".join(structs) + "\n"
+        "  ])\n"
+        "),\n"
+        "started AS (SELECT 1 AS routine)\n"
+        "SELECT * FROM started;\n"
+    )
+    return f
+
+
 def _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql):
     monkeypatch.setattr(cc, "PLAN", str(plan))
     monkeypatch.setattr(cc, "CADENCE", str(cadence))
     monkeypatch.setattr(cc, "CADENCE_SQL", str(cadence_sql))
     monkeypatch.setattr(cc, "CATALOG_SQL", str(catalog_sql))
+    # check O: point STALLED_RUNS_BIGQUERY_DIR (a constant kept SEPARATE from BIGQUERY_DIR -- see its
+    # own comment in check_cadence_consistency.py) at this SAME tmp_path fixture directory, and drop in
+    # a canonical state.stalled_runs definition whose `cls` CTE lists EXACTLY the routine ids currently
+    # in `cadence` -- so check O stays silently clean by default for every OTHER check's fixture below,
+    # the same way check D-extended's real-repo coincidence keeps cadence_watch_deadline_local clean
+    # today (that check is deliberately left UNPATCHED here, still scanning the real bigquery/
+    # directory -- see STALLED_RUNS_BIGQUERY_DIR's own comment for why). Tests that want to exercise
+    # check O itself overwrite this fixture file (_write_stalled_runs_fixture) or cadence.yaml's
+    # routine set afterwards.
+    monkeypatch.setattr(cc, "STALLED_RUNS_BIGQUERY_DIR", str(tmp_path))
+    _write_stalled_runs_fixture(tmp_path, _cadence_ids_from_yaml(cadence))
     # check N's mirror scan is now resolved at call time (the model_mirror_files()
     # call-time-resolution fix) from CADENCE/OWNER_ACTIONS/PLAN/CATALOG_SQL -- without patching
     # OWNER_ACTIONS too, a fixture test would silently scan the REAL repo's OWNER_ACTIONS.md instead
@@ -1967,3 +2017,172 @@ def test_check_n_exempt_marker_hyphen_continued_filename_does_not_hide_real_drif
     monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
     errs, _ = cc.check_model_of_record()
     assert len(errs) == 1 and "claude-sonnet-5" in errs[0]
+
+
+# ---- check O: state.stalled_runs' `cls` CTE routine list vs ops/cadence.yaml's routine ids, BOTH
+# directions (2026-08-08 audit follow-up to bigquery/148). `state.stalled_runs` is the ONLY thing that
+# ever raises the `routine_stalled` alert, and its `JOIN cls c USING (routine)` INNER join silently
+# drops any routine id absent from the hand-maintained `cls` list before the terminal-row check or
+# elapsed-hours threshold ever run -- exactly what let OPS0/OPS1/OPS2 hang undetected for weeks after
+# being added to ops/cadence.yaml with no matching `cls` edit. Fixture tests reuse _write_check_fixture
+# / _patch_fixture_paths (which now also drops a matching, auto-generated stalled_runs fixture into the
+# SAME tmp_path via _write_stalled_runs_fixture -- see that helper and _patch_fixture_paths's own
+# comment), so check O stays clean by default and these tests only need to introduce ONE deliberate
+# drift each. ----
+def test_check_o_against_real_repo_matches_cadence_yaml():
+    # Direct parser-level assertion against the real repo (complements test_main_against_real_repo_is_
+    # clean's aggregate main()==0 with a targeted check of check O's own parser): the canonical
+    # bigquery/*.sql file's `cls` CTE ids must equal ops/cadence.yaml's routine ids exactly, in both
+    # directions, and resolution must find a real, unambiguous file.
+    cls_ids, number, fn, ambiguous = cc.parse_stalled_runs_cls_ids()
+    assert ambiguous is None
+    assert fn is not None and number is not None
+    assert cls_ids  # non-empty -- exercises the vacuity guard's happy path on the real repo
+    assert set(cls_ids) == set(cc.load_cadence())
+
+
+def test_check_o_cadence_routine_missing_from_cls_is_caught(tmp_path, monkeypatch, capsys):
+    # THE regression test for the actual bug: a routine added to ops/cadence.yaml with no matching edit
+    # to state.stalled_runs' `cls` CTE (the OPS0/OPS1/OPS2 gap) must be caught, not silently pass.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    # _patch_fixture_paths already wrote a stalled_runs fixture matching cadence.yaml's DEFAULT routine
+    # set ({D1}) at patch time. Add W5 to cadence.yaml now, WITHOUT touching that (now-stale) cls
+    # fixture file -- reproducing the real defect exactly: a routine present in cadence.yaml but never
+    # mirrored into `cls`.
+    cadence.write_text(
+        "timezone: America/Denver\n"
+        'cadence_watch_deadline_local: "21:00"\n'
+        "routine_model: claude-opus-5\n"
+        "routines:\n"
+        "  - id: D1\n"
+        "    monitor_class: daily_trading\n"
+        "    catchup_safe: true\n"
+        "  - id: W5\n"
+        "    monitor_class: weekly_sun\n"
+        "    catchup_safe: true\n"
+    )
+    plan.write_text(
+        "## D1. Market Development Scan — deep research\nbody\n"
+        "## W5. Factbase & Analytics Consolidation — regular routine\nbody\n"
+    )
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert ("W5: in ops/cadence.yaml but MISSING from bigquery/900_test_stalled_runs.sql's "
+            "state.stalled_runs `cls` CTE" in out)
+    assert "OPS0/OPS1/OPS2" in out
+    # D1 (still in both cadence.yaml and the stale cls fixture) must NOT be flagged by check O.
+    assert "D1: in ops/cadence.yaml but MISSING from" not in out
+
+
+def test_check_o_cls_extra_routine_not_in_cadence_is_caught(tmp_path, monkeypatch, capsys):
+    # The OTHER direction: a stale `cls` entry for a routine no longer in ops/cadence.yaml (retired or
+    # renamed) must also be caught.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    # Overwrite the auto-generated cls fixture (which exactly matches cadence.yaml's {D1}) with one
+    # carrying an extra id cadence.yaml has never heard of.
+    _write_stalled_runs_fixture(tmp_path, ["D1", "ZZ_RETIRED"])
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert ("ZZ_RETIRED: in bigquery/900_test_stalled_runs.sql's state.stalled_runs `cls` CTE but not "
+            "a routine id in ops/cadence.yaml" in out)
+
+
+def test_check_o_vacuity_guard_canonical_file_not_found_errors(tmp_path, monkeypatch, capsys):
+    # If NO bigquery/*.sql file defines `CREATE OR REPLACE VIEW state.stalled_runs` at all, check O
+    # must ERROR loudly -- never a silent pass (requirement: "a checker that quietly validates nothing
+    # is the exact failure class this repo keeps getting bitten by").
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    empty_dir = tmp_path / "empty_bigquery_dir"
+    empty_dir.mkdir()
+    monkeypatch.setattr(cc, "STALLED_RUNS_BIGQUERY_DIR", str(empty_dir))
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert ("could not find any bigquery/*.sql file defining `CREATE OR REPLACE VIEW "
+            "state.stalled_runs` at all" in out)
+
+
+def test_check_o_vacuity_guard_empty_cls_list_errors(tmp_path, monkeypatch, capsys):
+    # The view IS found, but its `cls` CTE parses to ZERO ids (e.g. a reformat that breaks CLS_CTE_
+    # UNNEST_RE or CLS_ENTRY_RE) -- must ERROR, not silently validate nothing.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    _write_stalled_runs_fixture(tmp_path, [])  # cls CTE present but empty
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert "could not parse any routine id out of state.stalled_runs' `cls` CTE" in out
+    assert "DISARMED" in out
+
+
+# ---- parser-level unit coverage for CLS_CTE_UNNEST_RE / CLS_ENTRY_RE directly (regex-rot guard, same
+#      discipline as the other scrapers' "_matches_known_good" / "_empty_on_reformat_is_caught" pairs
+#      earlier in this file) ----
+def test_parse_stalled_runs_cls_ids_matches_known_good(tmp_path, monkeypatch):
+    f = tmp_path / "900_stalled.sql"
+    f.write_text(
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.stalled_runs` AS\n"
+        "WITH cls AS (\n"
+        "  SELECT * FROM UNNEST([\n"
+        "    STRUCT('D1' AS routine, 6 AS min_stale_hours), STRUCT('W1', 18)\n"
+        "  ])\n"
+        "),\n"
+        "started AS (SELECT 1 AS routine)\n"
+        "SELECT * FROM started;\n"
+    )
+    monkeypatch.setattr(cc, "STALLED_RUNS_BIGQUERY_DIR", str(tmp_path))
+    ids, number, fn, ambiguous = cc.parse_stalled_runs_cls_ids()
+    assert ambiguous is None
+    assert fn == "900_stalled.sql"
+    assert ids == ["D1", "W1"]
+
+
+def test_parse_stalled_runs_cls_ids_strips_comments_so_prose_struct_is_ignored(tmp_path, monkeypatch):
+    # A commented-out or illustrative STRUCT('X', 6) mentioned in the view's own header prose (bigquery/
+    # 148's real header narrates past `cls` entries by name) must never be read as a live entry.
+    f = tmp_path / "900_stalled.sql"
+    f.write_text(
+        "-- e.g. STRUCT('GHOST', 6) is NOT a real entry, just an example in this comment\n"
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.stalled_runs` AS\n"
+        "WITH cls AS (\n"
+        "  SELECT * FROM UNNEST([\n"
+        "    STRUCT('D1' AS routine, 6 AS min_stale_hours)\n"
+        "  ])\n"
+        "),\n"
+        "started AS (SELECT 1 AS routine)\n"
+        "SELECT * FROM started;\n"
+    )
+    monkeypatch.setattr(cc, "STALLED_RUNS_BIGQUERY_DIR", str(tmp_path))
+    ids, _number, _fn, _ambiguous = cc.parse_stalled_runs_cls_ids()
+    assert ids == ["D1"]
+    assert "GHOST" not in ids
+
+
+def test_parse_stalled_runs_cls_ids_returns_none_filename_when_view_absent(tmp_path, monkeypatch):
+    monkeypatch.setattr(cc, "STALLED_RUNS_BIGQUERY_DIR", str(tmp_path))  # empty dir, no .sql files
+    ids, number, fn, ambiguous = cc.parse_stalled_runs_cls_ids()
+    assert ids == [] and fn is None and ambiguous is None
+
+
+def test_parse_stalled_runs_cls_ids_resolves_the_highest_numbered_definition(tmp_path, monkeypatch):
+    # The view has already moved once for real (bigquery/18 -> bigquery/148); the parser must always
+    # resolve to the HIGHEST-numbered file defining it, mirroring find_canonical_cadence_watch_file()'s
+    # own superseded-object resolution (check D).
+    old = tmp_path / "18_old.sql"
+    old.write_text(
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.stalled_runs` AS\n"
+        "WITH cls AS (\n  SELECT * FROM UNNEST([\n    STRUCT('D1' AS routine, 6 AS min_stale_hours)\n"
+        "  ])\n),\nstarted AS (SELECT 1 AS routine)\nSELECT * FROM started;\n"
+    )
+    new = tmp_path / "148_new.sql"
+    new.write_text(
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.stalled_runs` AS\n"
+        "WITH cls AS (\n  SELECT * FROM UNNEST([\n    STRUCT('D1' AS routine, 6 AS min_stale_hours), "
+        "STRUCT('OPS0', 6)\n  ])\n),\nstarted AS (SELECT 1 AS routine)\nSELECT * FROM started;\n"
+    )
+    monkeypatch.setattr(cc, "STALLED_RUNS_BIGQUERY_DIR", str(tmp_path))
+    ids, number, fn, ambiguous = cc.parse_stalled_runs_cls_ids()
+    assert ambiguous is None
+    assert number == 148 and fn == "148_new.sql"
+    assert ids == ["D1", "OPS0"]

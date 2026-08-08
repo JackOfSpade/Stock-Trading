@@ -81,6 +81,16 @@ PLAN = os.path.join(ROOT, "Claude_Task_Plan.md")
 OWNER_ACTIONS = os.path.join(ROOT, "OWNER_ACTIONS.md")
 CADENCE = os.path.join(ROOT, "ops", "cadence.yaml")
 BIGQUERY_DIR = os.path.join(ROOT, "bigquery")
+# Directory scanned for the canonical state.stalled_runs definition (check O) -- a SEPARATE module
+# constant from BIGQUERY_DIR (not merely an alias resolved at call time), even though it starts out
+# pointing at the exact same directory, so tests can monkeypatch check O's search directory in
+# isolation from check D-extended's own BIGQUERY_DIR-based canonical-file scan for state.cadence_watch.
+# That scan already runs, unpatched, against the REAL bigquery/ directory in every existing fixture
+# test (it only stays clean because the real repo's deployed deadline literal happens to equal the
+# fixture's "21:00" -- see find_canonical_cadence_watch_file()'s docstring); redirecting the shared
+# BIGQUERY_DIR constant itself to isolate check O's tests would silently break that unrelated check's
+# coverage in every one of those tests instead.
+STALLED_RUNS_BIGQUERY_DIR = BIGQUERY_DIR
 CADENCE_SQL = os.path.join(ROOT, "bigquery", "12_cadence_monitor.sql")
 CATALOG_SQL = os.path.join(ROOT, "bigquery", "15_routine_catalog.sql")
 PERIOD_WATCH_SQL = os.path.join(ROOT, "bigquery", "24_cadence_period_watch.sql")
@@ -565,6 +575,45 @@ CADENCE_WATCH_VIEW_DDL = re.compile(
     re.IGNORECASE,
 )
 
+# ---- check O (2026-08-08 audit follow-up to bigquery/148): state.stalled_runs is the ONLY thing that
+# ever raises the `routine_stalled` alert -- a routine that logged 'started' but never a terminal row.
+# Its hand-maintained `cls` CTE (an UNNEST([STRUCT(...), ...]) id -> min_stale_hours table) is joined
+# with `JOIN cls c USING (routine)`, an INNER join, so a routine id absent from that list is dropped
+# BEFORE the terminal-row anti-join or the elapsed-hours threshold are ever evaluated: it can hang
+# forever and never be flagged. Not hypothetical -- `cls` was last edited 2026-07-10; OPS0/OPS1/OPS2
+# were added to ops/cadence.yaml on 2026-07-15/07-19/07-27 with no matching `cls` edit, so all three
+# (having already logged 16 'started' rows) were invisible to stall detection until bigquery/148 fixed
+# it on 2026-08-08. Nothing ever compared the two lists, so nothing caught the drift -- this check is
+# that comparison, in BOTH directions: a routine in cadence.yaml but missing from `cls` can never be
+# flagged (the exact OPS0/OPS1/OPS2 gap); an id in `cls` but not in cadence.yaml is a stale entry for a
+# retired/renamed routine.
+#
+# Resolved DYNAMICALLY against whichever bigquery/*.sql file currently defines `CREATE OR REPLACE VIEW
+# state.stalled_runs` (never hardcoded to bigquery/148 -- the view has already moved once, 18 -> 148,
+# and hardcoding the file here would itself be exactly the class of rot this check exists to prevent).
+# Reuses the same numbered_sql_files()/resolve_canonical() machinery and ambiguous-winner contract (D6,
+# 2026-08-06) that find_canonical_cadence_watch_file() above already established for state.cadence_
+# watch, applied to a second, independently-superseded view -- see STALLED_RUNS_BIGQUERY_DIR's own
+# comment (near BIGQUERY_DIR) for why this is a separate directory constant rather than a reuse of
+# BIGQUERY_DIR itself.
+# Matched against comment-stripped text, same discipline as CADENCE_WATCH_VIEW_DDL above.
+STALLED_RUNS_VIEW_DDL = re.compile(
+    r"CREATE\s+(?:OR\s+REPLACE\s+)?VIEW\s+`stock-trading-498512\.state\.stalled_runs`",
+    re.IGNORECASE,
+)
+# Scoped to the `cls` CTE's own UNNEST([...]) bracket -- not a blind whole-file STRUCT( scan -- so a
+# STRUCT(...) belonging to a LATER, unrelated statement in the same multi-statement file (bigquery/148
+# defines several objects) can never leak in. The non-greedy `.*?` stops at the FIRST `])`, which is
+# exactly the array's own close (the STRUCT(...) entries inside contain no `[`/`]` of their own).
+# Comments are stripped by the CALLER (parse_stalled_runs_cls_ids, via lib.sql_files.strip_sql_
+# comments) before this ever runs, so a commented-out or illustrative STRUCT('X', 6) in prose (e.g.
+# this view's own header, which narrates past `cls` entries by name) can never be read as a live entry.
+CLS_CTE_UNNEST_RE = re.compile(
+    r"\bcls\s+AS\s*\(\s*SELECT\s*\*\s*FROM\s*UNNEST\(\s*\[(.*?)\]\s*\)", re.S)
+# Handles BOTH spellings actually present in the real body: the CTE's first entry is labelled
+# (STRUCT('D1' AS routine, 6 AS min_stale_hours)) and every later one is positional (STRUCT('D2a', 6)).
+CLS_ENTRY_RE = re.compile(r"STRUCT\('([A-Za-z0-9_]+)'(?:\s+AS\s+routine)?\s*,")
+
 
 def plan_headings():
     """Ordered routine section headings from Claude_Task_Plan.md (shared parser)."""
@@ -675,6 +724,59 @@ def parse_canonical_deadline_sql():
         return [], number, fn, None
     text = strip_sql_comments(read_text(os.path.join(BIGQUERY_DIR, fn)))
     return SQL_DEADLINE.findall(text), number, fn, None
+
+
+def find_canonical_stalled_runs_file():
+    """(number, filename, ambiguous_files) for the highest-numbered bigquery/*.sql file that defines
+    `CREATE OR REPLACE VIEW state.stalled_runs` (check O) -- the object has been redefined once already
+    (18 -> 148, and counting; bigquery/148's own header says "supersedes bigquery/18"). Mirrors
+    find_canonical_cadence_watch_file() above exactly, including its ambiguous-winner contract (D6,
+    2026-08-06): `ambiguous_files` is None in the normal case; when it is NOT None, `filename` is None
+    too and the caller must report every colliding filename rather than pick one. Scans
+    STALLED_RUNS_BIGQUERY_DIR, not BIGQUERY_DIR directly -- see that constant's own comment for why the
+    two are kept separate.
+
+    Returns (None, None, None) if no occurrence is found at all (should never happen on a real
+    checkout)."""
+    occurrences = []
+    for number, path in numbered_sql_files(STALLED_RUNS_BIGQUERY_DIR):
+        if os.path.isdir(path):
+            continue
+        text = strip_sql_comments(read_text(path))
+        if STALLED_RUNS_VIEW_DDL.search(text):
+            occurrences.append((number, os.path.basename(path)))
+    if not occurrences:
+        return None, None, None
+    winner_number, winner_files = resolve_canonical(occurrences)
+    if len(winner_files) > 1:
+        return winner_number, None, winner_files
+    return winner_number, winner_files[0], None
+
+
+def parse_stalled_runs_cls_ids():
+    """([routine_id, ...], number, filename, ambiguous_files) — the routine ids inside the `cls` CTE's
+    UNNEST([...]) STRUCT list of the CANONICAL (highest-numbered) bigquery/*.sql file currently
+    defining state.stalled_runs (check O). Comments are stripped first (lib.sql_files.strip_sql_
+    comments) so a commented-out or illustrative STRUCT('X', 6) can never be read as a live entry, and
+    the parse is scoped to the `cls` CTE's own UNNEST bracket (CLS_CTE_UNNEST_RE) rather than a blind
+    whole-file STRUCT( scan, so a STRUCT(...) belonging to a later, unrelated statement in the same
+    file can never leak in.
+
+    Returns ([], number, filename, None) — an EMPTY list, never None — if the file was found but the
+    `cls` CTE/UNNEST bracket could not be parsed (regex rot): main() must treat that as a hard error,
+    never a silent skip (a checker that quietly validates nothing is the exact failure class this repo
+    keeps getting bitten by). ambiguous_files mirrors find_canonical_stalled_runs_file()'s contract:
+    non-None means the file itself could not be uniquely resolved, in which case ids is always []."""
+    number, fn, ambiguous_files = find_canonical_stalled_runs_file()
+    if ambiguous_files is not None:
+        return [], number, None, ambiguous_files
+    if fn is None:
+        return [], number, fn, None
+    text = strip_sql_comments(read_text(os.path.join(STALLED_RUNS_BIGQUERY_DIR, fn)))
+    m = CLS_CTE_UNNEST_RE.search(text)
+    if m is None:
+        return [], number, fn, None
+    return CLS_ENTRY_RE.findall(m.group(1)), number, fn, None
 
 
 def cadence_deadline_yaml():
@@ -1224,6 +1326,42 @@ def main():
     model_errs, model_of_record = check_model_of_record()
     errors.extend(model_errs)
 
+    # ---- O. state.stalled_runs' `cls` CTE routine list == ops/cadence.yaml's routine ids, BOTH
+    # directions (see the comment above STALLED_RUNS_VIEW_DDL for the full WHY -- this is the same
+    # class of gap that let OPS0/OPS1/OPS2 hang undetected for weeks until bigquery/148). ----
+    cls_ids, cls_number, cls_fn, cls_ambiguous = parse_stalled_runs_cls_ids()
+    if cls_ambiguous is not None:
+        errors.append(
+            f"AMBIGUOUS canonical file for state.stalled_runs — bigquery/{cls_number} is the "
+            f"winning (highest) leading number, but {len(cls_ambiguous)} DIFFERENT files share it "
+            f"and each defines `CREATE OR REPLACE VIEW state.stalled_runs`: "
+            f"{', '.join('bigquery/' + fn for fn in cls_ambiguous)}. Check O's cls-list drift guard "
+            f"cannot determine which is actually deployed — renumber one file so the leading number "
+            f"is unique, or determine which definition is actually deployed and delete/renumber the "
+            f"other.")
+    elif cls_fn is None:
+        errors.append("could not find any bigquery/*.sql file defining "
+                      "`CREATE OR REPLACE VIEW state.stalled_runs` at all — check O's cls-list drift "
+                      "guard cannot run")
+    elif not cls_ids:
+        errors.append(f"bigquery/{cls_fn}: could not parse any routine id out of state.stalled_runs' "
+                      f"`cls` CTE UNNEST([...]) STRUCT list — check O's cls-list drift guard is "
+                      f"DISARMED (regex rot? e.g. a reformat of the STRUCT(...) rows, or of the "
+                      f"`cls AS (... UNNEST([...]) ...)` shape itself). Restore a parseable `cls` CTE.")
+    else:
+        cls_set, cad_set = set(cls_ids), set(cad)
+        for rid in sorted(cad_set - cls_set):
+            errors.append(f"{rid}: in ops/cadence.yaml but MISSING from bigquery/{cls_fn}'s "
+                          f"state.stalled_runs `cls` CTE — this routine can NEVER be flagged "
+                          f"routine_stalled no matter how long it hangs (the `JOIN cls c USING "
+                          f"(routine)` INNER join drops it before the terminal-row anti-join or "
+                          f"elapsed-hours threshold ever run — this is exactly the OPS0/OPS1/OPS2 "
+                          f"gap bigquery/148 fixed). Add a STRUCT('{rid}', <min_stale_hours>) entry.")
+        for rid in sorted(cls_set - cad_set):
+            errors.append(f"{rid}: in bigquery/{cls_fn}'s state.stalled_runs `cls` CTE but not a "
+                          f"routine id in ops/cadence.yaml — stale entry for a retired/renamed "
+                          f"routine, remove it.")
+
     # ---- report ----
     if errors:
         print("CADENCE CONSISTENCY: FAIL\n")
@@ -1241,6 +1379,8 @@ def main():
         extra += " ops/triggers.json is current."
     if model_of_record:
         extra += f" routine_model {model_of_record} matches all mirror sites."
+    if cls_fn is not None:
+        extra += f" state.stalled_runs cls list (bigquery/{cls_fn}) matches all {len(cad)} routine ids."
     canon_note = (f" and bigquery/{canon_fn} (canonical)" if canon_fn is not None else "")
     print(f"CADENCE CONSISTENCY: OK — {len(cad)} routines; "
           f"{len(want_expected)} calendar-class match state.cadence_expected_today; "
