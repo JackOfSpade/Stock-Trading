@@ -29,18 +29,31 @@
 -- API why, which works headless and is agnostic to the cause (disabled, deleted, platform outage).
 --
 -- ============================ THRESHOLD ============================
--- 6 calendar days since the last status='completed' run. Derived from the routines' OWN history
+-- 9 calendar days since the last status='completed' run (RE-DERIVED 2026-08-08 for the daily-tier
+-- Fri/Sat consolidation onto Sunday, ops/cadence.yaml -- AR_att/AR_orc/SL2/SL5 stay monitor_class:
+-- queue_driven, but their underlying triggers move onto the same Sun-Thu-only cron as the other 8
+-- daily-tier routines). ORIGINAL derivation (2026-08-03), from the routines' OWN history
 -- (ops.run_log, all completed runs, gap distribution between consecutive completed run_dates):
 --   routine  completed_days  p50_gap  p90_gap  max_gap
 --   AR_att   26              1        3        4
 --   AR_orc   21              1        3        5
 --   SL2      18              1        2        3
 --   SL5      14              1        2        3
--- All four carry DAILY crons and run essentially every day; the multi-day gaps are the known
--- 2026-07-18 quota and 2026-07-19 connector outages, not normal quiet. 6 > the worst historical gap
--- (AR_orc, 5), so no healthy period in the recorded history would have tripped it, while a dead
--- trigger surfaces within a week instead of never. Against the actual incident: SL2 last completed
--- 2026-07-30 and SL5 2026-07-29, so they would have fired 2026-08-05 and 2026-08-04.
+-- The old 6 was "one more than the worst observed gap" (AR_orc, 5) under a trigger that fired every
+-- calendar day, so any single-day dry spell always resolved within 1-2 days and a 6-day silence was
+-- unambiguously abnormal. Under Sun-Thu-only firing, a dry spell that used to resolve on a Friday (a
+-- day these triggers still ran) now has to wait until the FOLLOWING Sunday before the trigger checks
+-- the queue again -- e.g. a routine last completing Thursday with nothing due Fri/Sat/Sun/Mon (under
+-- the OLD daily cron, at most a ~4-day quiet stretch) can now legitimately go quiet from Thursday to
+-- the Sunday-after-next before its trigger even RUNS again: Thu -> (no fire Fri/Sat) -> Sun (checks,
+-- nothing due) -> (no fire Fri/Sat) -> Sun (finally due) is a genuine ~10-day gap with the trigger
+-- healthy throughout, pushing the worst-case NORMAL gap to roughly 7 calendar days (the old ~5-day
+-- worst case plus the ~2 extra days Fri/Sat firing used to cover). 9 restores the same "one clear day
+-- of margin over the worst normal case" relationship the original 6 had over its own worst case (5),
+-- rather than leaving the threshold sized for a firing pattern these routines no longer follow.
+-- Against the actual incident this view was built for: SL2 last completed 2026-07-30 and SL5
+-- 2026-07-29, so they would have fired 2026-08-05 and 2026-08-04 either way -- unaffected by this
+-- widening, since both gaps are well under 9.
 --
 -- A never-completed routine (no run_log row at all) is reported silent immediately -- that is the
 -- bigquery/113 never-ran concern, applied to the one class 113 could not reach.
@@ -73,10 +86,10 @@ SELECT
   CURRENT_DATE('America/Denver') AS today,
   l.last_run_date,
   DATE_DIFF(CURRENT_DATE('America/Denver'), l.last_run_date, DAY) AS days_silent,
-  6 AS silence_threshold_days,
+  9 AS silence_threshold_days,
   -- COALESCE -> TRUE so a routine with NO completed run ever is reported silent rather than NULL.
   -- Same fail-LOUD posture as state.freshness: a missing source must alarm, never read as green.
-  COALESCE(DATE_DIFF(CURRENT_DATE('America/Denver'), l.last_run_date, DAY) >= 6, TRUE) AS is_silent,
+  COALESCE(DATE_DIFF(CURRENT_DATE('America/Denver'), l.last_run_date, DAY) >= 9, TRUE) AS is_silent,
   (l.last_run_date IS NULL) AS never_completed,
   CURRENT_TIMESTAMP() AS checked_at
 FROM routines r

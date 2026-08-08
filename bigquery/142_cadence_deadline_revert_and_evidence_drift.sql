@@ -179,7 +179,13 @@ SELECT
   -- that bigquery/89 later excluded (see the header of bigquery/142 for the full account); the evidence
   -- for D2 and D3 was genuine, but cadence_watch_deadline_local is one shared constant across all three
   -- routines, not set per routine, so all three revert together.
-  (e.schedule IN ('daily_trading','daily_all')
+  -- 'daily_sun_thu' ADDED 2026-08-08 (daily-tier Fri/Sat consolidation onto Sunday, ops/cadence.yaml):
+  -- D1/D2a/D2/D3/OPS0/OPS1/OPS2/SL3 moved off daily_trading/daily_all onto this new class. A genuinely
+  -- missed Sun-Thu run MUST still raise a CRITICAL through this same alarm predicate -- omitting the
+  -- new class here would have silently disarmed needs_attention for the entire daily tier the moment
+  -- ops/cadence.yaml's monitor_class fields changed, even though state.cadence_expected_today (12_
+  -- cadence_monitor.sql) already expects these routines correctly under the new class.
+  (e.schedule IN ('daily_trading','daily_all','daily_sun_thu')
    AND NOT e.ran_completed_today
    AND DATETIME(CURRENT_TIMESTAMP(), 'America/Denver') >= DATETIME(e.today, TIME '21:00:00')
   ) AS needs_attention,

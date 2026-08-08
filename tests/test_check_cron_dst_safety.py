@@ -110,10 +110,19 @@ def test_ops2_mdt_time_local_passes(tmp_path, monkeypatch):
     assert cs.check() == 0
 
 
-# ---- local-window integrity (daily_trading) ---------------------------------------------------
+# ---- local-window integrity (evening-slot daily routines) --------------------------------------
+#
+# Check 2 (LOCAL-WINDOW INTEGRITY) became ROUTINE-ID-based, not monitor_class-based, on 2026-08-08
+# (the daily-tier Fri/Sat consolidation folded the former daily_trading cohort -- D1/D2a/D2/SL3, which
+# needs this window -- and the former daily_all cohort -- D3/OPS0/OPS1/OPS2, which does NOT all share
+# one intraday window -- into one shared daily_sun_thu monitor_class). These tests monkeypatch
+# cs.EVENING_WINDOW_ROUTINE_IDS to {"DX"} so the synthetic "DX" id this file otherwise uses
+# (decoupled from any real routine identity, same convention as "MX"/"GUI" elsewhere in this file)
+# still exercises the window logic without hardcoding a real fleet id into the test.
 
 def test_daily_trading_before_market_close_in_mst_is_caught(tmp_path, monkeypatch, capsys):
     # 19:30 UTC -> 13:30 MDT / 12:30 MST. Summer is fine; winter falls before the 14:00 close.
+    monkeypatch.setattr(cs, "EVENING_WINDOW_ROUTINE_IDS", {"DX"})
     write_cadence(tmp_path, monkeypatch, [
         {"id": "DX", "monitor_class": "daily_trading", "cron": "30 19 * * *"},
     ])
@@ -123,6 +132,7 @@ def test_daily_trading_before_market_close_in_mst_is_caught(tmp_path, monkeypatc
 
 def test_daily_trading_past_deadline_is_caught(tmp_path, monkeypatch, capsys):
     # 04:30 UTC -> 22:30 MDT, past the 21:00 MT cadence_watch deadline.
+    monkeypatch.setattr(cs, "EVENING_WINDOW_ROUTINE_IDS", {"DX"})
     write_cadence(tmp_path, monkeypatch, [
         {"id": "DX", "monitor_class": "daily_trading", "cron": "30 4 * * *"},
     ])
@@ -131,6 +141,7 @@ def test_daily_trading_past_deadline_is_caught(tmp_path, monkeypatch, capsys):
 
 
 def test_daily_trading_inside_window_passes(tmp_path, monkeypatch):
+    # D1 is a real EVENING_WINDOW_ROUTINE_IDS member (unaffected by the monkeypatch pattern above).
     write_cadence(tmp_path, monkeypatch, [
         {"id": "D1", "monitor_class": "daily_trading", "cron": "0 22 * * *", "time_local": "16:00"},
     ])
@@ -145,6 +156,7 @@ def test_second_comma_hour_firing_past_deadline_is_caught(tmp_path, monkeypatch,
     # locals_[0]` only ever saw the harmless 02:00 UTC firing -- the second firing's deadline
     # violation was invisible and check() exited 0. Exactly the shape of the 2026-07-27 OPS2 defect
     # this checker exists to catch, on a firing the old code never looked at.
+    monkeypatch.setattr(cs, "EVENING_WINDOW_ROUTINE_IDS", {"DX"})
     write_cadence(tmp_path, monkeypatch, [
         {"id": "DX", "monitor_class": "daily_trading", "cron": "0 2,4 * * *"},
     ])

@@ -28,6 +28,33 @@
 -- `as_of` = the row's own chronological anchor date, not the read-time `today`. OPS0's residual email
 -- and every other consumer of state.catchup_refire_readiness is unaffected — as_of was never displayed
 -- or gated on elsewhere, only newly relied on for ordering by OPS2's STEP 2.
+--
+-- YESTERDAY-TIER WIDENED (2026-08-08, daily-tier Fri/Sat consolidation onto Sunday, ops/cadence.yaml).
+-- yesterday_daily_misses below was sized for a 1-CALENDAR-DAY OPS0 outage: D1/D3/SL3/OPS0 all fired
+-- every calendar day, so `today` and D3's next run were never more than 1 day apart, and literal
+-- `DATE_SUB(today, INTERVAL 1 DAY)` was always the routines' own last EXPECTED firing day too. OPS0
+-- (like D3, D1, SL3) is now itself paused Friday/Saturday (monitor_class: daily_sun_thu,
+-- bigquery/12_cadence_monitor.sql), which GUARANTEES a 2-day gap every week: if OPS0 misses Thursday
+-- evening, D3's own next run is Sunday (D3 also skips Fri/Sat), and on that Sunday literal
+-- `today - 1` = Saturday — a day none of D1/D3/SL3 was EVER expected to fire, so the "actually missed
+-- yesterday" check below would always read FALSE against Saturday, and Thursday's real, unrecovered
+-- miss would become PERMANENTLY invisible to this bridge, forever, every single week. Fixed by
+-- replacing the literal `yday = today - 1` with the most recent Sunday-Thursday calendar day strictly
+-- before `today` (`last_expected_day` below) — the same GENERATE_DATE_ARRAY + DAYOFWEEK NOT IN (6, 7)
+-- construction D3's own OPS0 WATCHDOG-FALLBACK bullet (Claude_Task_Plan.md, ## D3) uses to resolve
+-- OPS0's last expected day, applied here to D1/D3/SL3 instead. On every day OTHER than Sunday this
+-- reduces to the original `today - 1` (Mon-Thu's and Saturday's calendar-yesterday-or-Thursday-anchor
+-- is never itself a Friday/Saturday needing a further skip back), so the fix only changes behavior on
+-- a Sunday (or a Saturday read, pre-cron-migration) read, off the actual skip-day set rather than a
+-- hardcoded day count.
+--
+-- SIMPLIFICATION ALONGSIDE THE FIX: D1/D3/SL3 previously needed DIFFERENT gating here because they
+-- carried different monitor_class values (D1/SL3 were daily_trading — trading-day-gated; D3 was
+-- daily_all — not gated), hence the old per-row `LEFT JOIN state.market_calendar ... AND
+-- mc.is_trading_day` plus the `WHERE (routine_id = 'D3' OR mc.cal_date IS NOT NULL)` special-case. All
+-- three now share monitor_class: daily_sun_thu, which is UNCONDITIONALLY not trading-day-gated (see
+-- bigquery/12's CASE), so that per-routine distinction no longer exists and the trading-day join is
+-- removed entirely — `last_expected_day` is computed identically for all three routines below.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.catchup_refire_readiness` AS
 WITH daily_misses AS (
   SELECT
@@ -43,28 +70,40 @@ period_misses AS (
 ),
 yesterday_daily_misses AS (
   SELECT
-    CONCAT(routine_id, '|', CAST(y.yday AS STRING)) AS miss_key,
-    routine_id AS routine, 'daily' AS tier, y.yday AS as_of
+    CONCAT(routine_id, '|', CAST(y.last_expected_day AS STRING)) AS miss_key,
+    routine_id AS routine, 'daily' AS tier, y.last_expected_day AS as_of
   FROM UNNEST(['D1', 'D3', 'SL3']) AS routine_id
-  CROSS JOIN (SELECT today, DATE_SUB(today, INTERVAL 1 DAY) AS yday
-              FROM `stock-trading-498512.state.trading_day_today`) y
-  -- D1/SL3 are daily_trading (bigquery/12): only expected if yesterday was a trading day; D3 is daily_all
-  LEFT JOIN `stock-trading-498512.state.market_calendar` mc
-    ON mc.cal_date = y.yday AND mc.is_trading_day
+  -- last_expected_day = the most recent Sunday-Thursday calendar day strictly before `today` (2026-08-08
+  -- fix -- see the header note above). BigQuery DAYOFWEEK convention 1=Sunday..7=Saturday, so 6=Friday
+  -- and 7=Saturday are excluded, matching bigquery/12's daily_sun_thu CASE and D3's own OPS0
+  -- WATCHDOG-FALLBACK bullet exactly. The 7-day lookback window is generous padding (the real answer is
+  -- always within 1-3 days back); GROUP BY today collapses state.trading_day_today's single row back
+  -- down to one output row after the UNNEST cross join.
+  CROSS JOIN (
+    SELECT today, MAX(cal_date) AS last_expected_day
+    FROM `stock-trading-498512.state.trading_day_today`,
+         UNNEST(GENERATE_DATE_ARRAY(DATE_SUB(today, INTERVAL 7 DAY), DATE_SUB(today, INTERVAL 1 DAY))) AS cal_date
+    WHERE EXTRACT(DAYOFWEEK FROM cal_date) NOT IN (6, 7)
+    GROUP BY today
+  ) y
+  -- D1/D3/SL3 are all monitor_class: daily_sun_thu as of 2026-08-08 (bigquery/12) -- UNCONDITIONALLY
+  -- not trading-day-gated (unlike the old daily_trading/daily_all split), so no market_calendar /
+  -- is_trading_day join is needed any more; last_expected_day above already IS each routine's correct
+  -- expectation.
   -- suppressed when TODAY's miss row for the same routine is already pending in daily_misses (after
   -- 21:00 MT a routine that missed both days would otherwise emit two rows and get its trigger fired
   -- twice in one OPS0 sweep; the refire produces the new day's output either way, so the today-row
   -- alone suffices) -- LEFT JOIN + IS NULL (not NOT EXISTS against the daily_misses CTE): see
   -- bigquery/59's BUG FIX note (2026-07-17) this file otherwise reproduces byte-for-byte.
   LEFT JOIN daily_misses dm ON dm.routine = routine_id
-  WHERE (routine_id = 'D3' OR mc.cal_date IS NOT NULL)
+  WHERE
     -- monitored guard, same convention as state.cadence_watch (has EVER completed)
-    AND EXISTS (SELECT 1 FROM `stock-trading-498512.ops.run_log` rl
+    EXISTS (SELECT 1 FROM `stock-trading-498512.ops.run_log` rl
                 WHERE rl.routine = routine_id AND rl.status = 'completed')
-    -- actually missed yesterday
+    -- actually missed its last expected day
     AND NOT EXISTS (SELECT 1 FROM `stock-trading-498512.ops.run_log` rl
                     WHERE rl.routine = routine_id AND rl.status = 'completed'
-                      AND rl.run_date = y.yday)
+                      AND rl.run_date = y.last_expected_day)
     -- suppressed once TODAY's run completed (D1/D3/SL3 are non-cumulative; a same-day run supersedes)
     AND NOT EXISTS (SELECT 1 FROM `stock-trading-498512.ops.run_log` rl
                     WHERE rl.routine = routine_id AND rl.status = 'completed'

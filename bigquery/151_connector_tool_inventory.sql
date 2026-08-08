@@ -87,10 +87,16 @@ FROM (
 -- ===== STATEMENT 4: state.connector_tool_inventory_stale =====
 -- Independent dead-man switch: OPS1 could complete while silently skipping the tool-inventory step — a
 -- self-reported check cannot detect its own omission, so something outside OPS1 must. One row per
--- connector (seen in the trailing 30 days) whose newest trustworthy observation is older than 2
+-- connector (seen in the trailing 30 days) whose newest trustworthy observation is older than 4
 -- calendar days (America/Denver), plus a synthetic ALL row when the table has no trustworthy rows at
--- all in the last 2 days (covers the case where nothing has ever enumerated successfully, or every
--- connector went stale at once).
+-- all in the last 4 days (covers the case where nothing has ever enumerated successfully, or every
+-- connector went stale at once). THRESHOLD 2 -> 4 (2026-08-08, daily-tier Fri/Sat consolidation onto
+-- Sunday, ops/cadence.yaml): OPS1 -- the sole writer of this table -- moved to monitor_class:
+-- daily_sun_thu, so its own maximum scheduled gap became Thursday -> Sunday = 3 calendar days
+-- (Fri/Sat skipped by design), which would have consumed the ENTIRE old 2-day tolerance and left zero
+-- margin for a genuinely late-but-healthy Sunday run before this view falsely called it stale. 4
+-- restores one day of slack over that 3-day scheduled gap, the same margin the original 2 gave over
+-- OPS1's old every-calendar-day (1-day max gap) schedule.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.connector_tool_inventory_stale` AS
 WITH recent AS (
   SELECT DISTINCT connector
@@ -115,7 +121,7 @@ per_connector AS (
 SELECT connector, last_good_run_date, days_stale, CURRENT_TIMESTAMP() AS checked_at
 FROM per_connector
 WHERE last_good_run_date IS NULL
-   OR days_stale > 2
+   OR days_stale > 4
 UNION ALL
 -- FROM UNNEST([1]) is load-bearing, NOT redundant: GoogleSQL rejects a SELECT expression-list that
 -- carries a WHERE with no FROM ("Query without FROM clause cannot have a WHERE clause"), so the
@@ -130,7 +136,7 @@ FROM UNNEST([1])
 WHERE NOT EXISTS (
   SELECT 1 FROM `stock-trading-498512.ops.connector_tool_inventory`
   WHERE enumeration_ok
-    AND run_date >= DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 2 DAY)
+    AND run_date >= DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 4 DAY)
 );
 
 -- ===== STATEMENT 5: ops.sp_record_connector_tools =====

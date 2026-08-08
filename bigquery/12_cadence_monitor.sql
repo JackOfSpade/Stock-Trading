@@ -42,8 +42,16 @@
 
 -- ===== state.cadence_expected_today — which routine IDs are due on the current operating day =====
 -- Encodes ops/cadence.yaml's schedules. America/Denver operating day via state.trading_day_today.
---   daily_trading  : every trading day              (D1, D2)
---   daily_all      : every calendar day             (D3 — queue/calendar upkeep incl. non-trading days)
+--   daily_trading  : every trading day              (none as of 2026-08-08 -- D1/D2 moved to daily_sun_thu below)
+--   daily_all      : every calendar day             (none as of 2026-08-08 -- D3 moved to daily_sun_thu below)
+--   daily_sun_thu  : every Sunday-Thursday calendar day, NOT Friday/Saturday, trading day or not
+--                    (D1, D2a, D2, D3, OPS0, OPS1, OPS2, SL3 -- added 2026-08-08 for the daily-tier
+--                    Fri/Sat consolidation onto Sunday; ops/cadence.yaml's DAILY-TIER FRI/SAT
+--                    CONSOLIDATION header note carries the full rationale. Unlike daily_trading, this
+--                    class is NOT gated on is_trading_day -- it is a pure day-of-week predicate, so a
+--                    routine that fires and self-heals on non-trading days (documented in
+--                    ops/cadence.yaml) is correctly expected on every one of its Sun-Thu fire days,
+--                    closing the exact blind spot daily_trading had on non-trading Sundays.)
 --   weekly_sun     : Sundays                         (W1..W5)
 --   monthly_ftd    : first TRADING day of the month  (M1a,M1b,M2,M3,M4,M5)
 --   quarterly_ftd  : first TRADING day of the quarter (Q1..Q4)
@@ -86,14 +94,14 @@ routines AS (
   --   (same rule as AR_att/AR_orc — their firing day is not calendar-derivable).
   SELECT * FROM UNNEST([
 -- BEGIN GENERATED ROUTINE LIST (scripts/gen_routine_lists.py --write; do not hand-edit)
-    STRUCT('D1' AS routine, 'daily_trading' AS schedule),
-    STRUCT('D2a' AS routine, 'daily_trading' AS schedule),
-    STRUCT('D2' AS routine, 'daily_trading' AS schedule),
-    STRUCT('D3' AS routine, 'daily_all' AS schedule),
-    STRUCT('OPS0' AS routine, 'daily_all' AS schedule),
-    STRUCT('OPS1' AS routine, 'daily_all' AS schedule),
-    STRUCT('OPS2' AS routine, 'daily_all' AS schedule),
-    STRUCT('SL3' AS routine, 'daily_trading' AS schedule),
+    STRUCT('D1' AS routine, 'daily_sun_thu' AS schedule),
+    STRUCT('D2a' AS routine, 'daily_sun_thu' AS schedule),
+    STRUCT('D2' AS routine, 'daily_sun_thu' AS schedule),
+    STRUCT('D3' AS routine, 'daily_sun_thu' AS schedule),
+    STRUCT('OPS0' AS routine, 'daily_sun_thu' AS schedule),
+    STRUCT('OPS1' AS routine, 'daily_sun_thu' AS schedule),
+    STRUCT('OPS2' AS routine, 'daily_sun_thu' AS schedule),
+    STRUCT('SL3' AS routine, 'daily_sun_thu' AS schedule),
     STRUCT('W1' AS routine, 'weekly_sun' AS schedule),
     STRUCT('W2' AS routine, 'weekly_sun' AS schedule),
     STRUCT('W3' AS routine, 'weekly_sun' AS schedule),
@@ -122,6 +130,12 @@ FROM routines r, t
 WHERE CASE r.schedule
         WHEN 'daily_trading' THEN t.is_trading_day
         WHEN 'daily_all'     THEN TRUE
+        -- daily_sun_thu (added 2026-08-08, daily-tier Fri/Sat consolidation): t.dow is
+        -- EXTRACT(DAYOFWEEK FROM td.today) above, BigQuery convention 1=Sunday..7=Saturday, so
+        -- 6=Friday and 7=Saturday -- deliberately NOT gated on t.is_trading_day (unlike
+        -- daily_trading above), since these routines fire and self-heal on non-trading days too
+        -- (ops/cadence.yaml's DAILY-TIER FRI/SAT CONSOLIDATION note).
+        WHEN 'daily_sun_thu' THEN t.dow NOT IN (6, 7)
         WHEN 'weekly_sun'    THEN t.dow = 1
         WHEN 'monthly_ftd'   THEN t.is_ftd_month
         WHEN 'quarterly_ftd' THEN t.is_ftd_quarter

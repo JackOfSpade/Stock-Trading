@@ -43,8 +43,10 @@
 -- --check` (CI-gating) fails the build if this region drifts from ops/cadence.yaml.
 --
 -- FALLBACK WINDOW (cadence-default, used only when a routine has NEVER logged a completed run): daily
--- classes (daily_trading/daily_all) -> 1 day; weekly_sun -> 7 days; monthly_ftd -> 31 days; quarterly_ftd
--- -> 92 days; annual_ftd -> 366 days. queue_driven (AR_att/AR_orc/SL2/SL5) is NOT one of the schema's
+-- classes (daily_trading/daily_all) -> 1 day; daily_sun_thu -> 3 days (its own Thu->Sun max scheduled
+-- gap, added 2026-08-08 -- see the `fallback_days` CASE below for the full rationale); weekly_sun ->
+-- 7 days; monthly_ftd -> 31 days; quarterly_ftd -> 92 days; annual_ftd -> 366 days. queue_driven
+-- (AR_att/AR_orc/SL2/SL5) is NOT one of the schema's
 -- named calendar classes -- it is a DELIBERATE, called-out design choice here to give it the same 1-day
 -- fallback as the daily tier, matching its "checked daily, fires only if due" cadence (ops/cadence.yaml:
 -- AR_att/AR_orc/SL2/SL5 all have `schedule: "daily; if ... due<=today"`). This is NOT dictated by any
@@ -75,14 +77,14 @@ WITH routines AS (
   -- incl. the 4 queue_driven ones. Do NOT hand-edit -- see header note above.
   SELECT * FROM UNNEST([
     -- BEGIN GENERATED ROUTINE LIST (scripts/gen_routine_lists.py --write; do not hand-edit)
-    STRUCT('D1' AS routine, 'daily_trading' AS monitor_class),
-    STRUCT('D2a' AS routine, 'daily_trading' AS monitor_class),
-    STRUCT('D2' AS routine, 'daily_trading' AS monitor_class),
-    STRUCT('D3' AS routine, 'daily_all' AS monitor_class),
-    STRUCT('OPS0' AS routine, 'daily_all' AS monitor_class),
-    STRUCT('OPS1' AS routine, 'daily_all' AS monitor_class),
-    STRUCT('OPS2' AS routine, 'daily_all' AS monitor_class),
-    STRUCT('SL3' AS routine, 'daily_trading' AS monitor_class),
+    STRUCT('D1' AS routine, 'daily_sun_thu' AS monitor_class),
+    STRUCT('D2a' AS routine, 'daily_sun_thu' AS monitor_class),
+    STRUCT('D2' AS routine, 'daily_sun_thu' AS monitor_class),
+    STRUCT('D3' AS routine, 'daily_sun_thu' AS monitor_class),
+    STRUCT('OPS0' AS routine, 'daily_sun_thu' AS monitor_class),
+    STRUCT('OPS1' AS routine, 'daily_sun_thu' AS monitor_class),
+    STRUCT('OPS2' AS routine, 'daily_sun_thu' AS monitor_class),
+    STRUCT('SL3' AS routine, 'daily_sun_thu' AS monitor_class),
     STRUCT('AR_att' AS routine, 'queue_driven' AS monitor_class),
     STRUCT('AR_orc' AS routine, 'queue_driven' AS monitor_class),
     STRUCT('SL2' AS routine, 'queue_driven' AS monitor_class),
@@ -131,6 +133,13 @@ joined AS (
     CASE r.monitor_class
       WHEN 'daily_trading' THEN 1
       WHEN 'daily_all'     THEN 1
+      -- daily_sun_thu ADDED 2026-08-08 (daily-tier Fri/Sat consolidation, ops/cadence.yaml): D1/D2a/D2/
+      -- D3/OPS0/OPS1/OPS2/SL3 moved off daily_trading/daily_all onto this class. The maximum SCHEDULED
+      -- gap between two consecutive fire days is Thursday -> Sunday = 3 calendar days (Fri/Sat skipped
+      -- by design), vs. 1 for a true every-day class -- a never-completed routine's fallback window
+      -- must span that gap or a first-ever-run catch-up read would start mid-gap and silently miss the
+      -- Friday/Saturday evidence that never fires under the new schedule anyway, but also miss Thursday's.
+      WHEN 'daily_sun_thu' THEN 3
       WHEN 'weekly_sun'    THEN 7
       WHEN 'monthly_ftd'   THEN 31
       WHEN 'quarterly_ftd' THEN 92

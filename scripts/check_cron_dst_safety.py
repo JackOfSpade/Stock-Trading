@@ -34,8 +34,14 @@ WHAT IT CHECKS, per routine with a concrete `cron_utc`
        quarterly_ftd  -> local day-of-month equals the cron's day-of-month
        annual_ftd     -> local day-of-month AND month equal the cron's
      This is the W1 defect.
-  2. LOCAL-WINDOW INTEGRITY -- a `daily_trading` routine must land strictly after the market close
-     and strictly before `cadence_watch_deadline_local`, in every season. This is the OPS2 defect.
+  2. LOCAL-WINDOW INTEGRITY -- an EVENING-slot daily routine (EVENING_WINDOW_ROUTINE_IDS below) must
+     land strictly after the market close and strictly before `cadence_watch_deadline_local`, in every
+     season. This is the OPS2 defect. Routine-ID-based, NOT monitor_class-based, since 2026-08-08: the
+     daily-tier Fri/Sat consolidation merged the former `daily_trading` cohort (D1/D2a/D2/SL3, which
+     needed this window) and the former `daily_all` cohort (D3/OPS0/OPS1/OPS2, which do NOT all share
+     one intraday window -- OPS1 is a pre-market probe, OPS0/OPS2 deliberately fire AFTER the
+     deadline) into one shared `daily_sun_thu` class, so monitor_class alone can no longer tell the two
+     groups apart.
   3. DOCUMENTATION TRUTH -- `time_local`, when present, must equal the MDT (summer) rendering of
      `cron_utc`. Before 2026-08-01 OPS2's `time_local` was silently the MST reading while every
      other routine's was the MDT reading, so a reader deriving a UTC cron from `time_local` got
@@ -89,6 +95,19 @@ PERIOD_CLASSES = {
     "quarterly_ftd": "same_dom",
     "annual_ftd": "same_dom_and_month",
 }
+
+# Check 2 (LOCAL-WINDOW INTEGRITY): the EVENING-slot daily routines that must land strictly after the
+# market close and strictly before cadence_watch_deadline_local. Routine-ID-based, not monitor_class-
+# based (2026-08-08 daily-tier Fri/Sat consolidation, ops/cadence.yaml) -- these four WERE exactly the
+# monitor_class: daily_trading cohort before that migration folded them, together with D3/OPS0/OPS1/
+# OPS2, into one shared daily_sun_thu class. Kept as an explicit id set rather than re-deriving it from
+# monitor_class (which can no longer make this distinction) so this check's SCOPE stays exactly what it
+# was, byte-for-byte, rather than silently widening to the whole daily_sun_thu cohort (which would
+# wrongly flag OPS1's deliberate pre-market slot and OPS0/OPS2's deliberate after-deadline slots) or
+# silently narrowing to nothing (the regression this fix corrects: mclass == "daily_trading" stopped
+# matching any routine the moment this migration landed, which would have silently disarmed this whole
+# check for D1/D2a/D2/SL3 with no test failure to catch it).
+EVENING_WINDOW_ROUTINE_IDS = {"D1", "D2a", "D2", "SL3"}
 
 
 class CronParseError(ValueError):
@@ -272,14 +291,14 @@ def check() -> int:
             # invisible and this script exiting 0 -- exactly the shape of the 2026-07-27 OPS2 defect
             # this checker exists to catch, just on the second firing instead of the first
             # (2026-08-08 audit finding).
-            if mclass == "daily_trading":
+            if rid in EVENING_WINDOW_ROUTINE_IDS:
                 for probe in locals_:
                     hm = (probe.hour, probe.minute)
                     if hm <= MARKET_CLOSE_LOCAL:
                         errors.append(
                             f"{rid}: cron_utc {cron!r} renders {probe:%H:%M} MT in {season}, at or "
                             f"before the {MARKET_CLOSE_LOCAL[0]:02d}:{MARKET_CLOSE_LOCAL[1]:02d} MT "
-                            f"market close, but monitor_class=daily_trading runs after the close."
+                            f"market close, but {rid} is an evening-slot routine that runs after the close."
                         )
                     if hm >= deadline_local:
                         errors.append(

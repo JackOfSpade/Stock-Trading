@@ -491,7 +491,12 @@ PERIOD_GRACE_WEEKLY = re.compile(r"DATE_ADD\(n\.week_start,\s*INTERVAL (\d+) DAY
 # The four "period" monitor_class values (check J/K's period tier + the ROUTINE INVENTORY cadence-cell
 # mapping, check L). daily_trading/daily_all are the "daily" tier (check K's bigquery/31 side).
 PERIOD_CLASSES = {"weekly_sun", "monthly_ftd", "quarterly_ftd", "annual_ftd"}
-DAILY_CLASSES = {"daily_trading", "daily_all"}
+# daily_sun_thu added 2026-08-08 (daily-tier Fri/Sat consolidation onto Sunday, ops/cadence.yaml):
+# every Sunday-Thursday calendar day, NOT trading-day-gated -- see ops/cadence.yaml's DAILY-TIER
+# FRI/SAT CONSOLIDATION header note. It is a DAILY_CLASSES member (not a PERIOD_CLASSES one) for
+# every purpose DAILY_CLASSES feeds: check K's bigquery/31_catchup_notify.sql daily-tier UNNEST
+# list, and the ALLOWED_CLASSES/CALENDAR_CLASSES vocabulary below.
+DAILY_CLASSES = {"daily_trading", "daily_all", "daily_sun_thu"}
 
 # ---- check M (H1, whole-system deep audit 2026-07-17): the EVENING-slot daily cohort's SAME-DAY
 # DOUBLE-RUN GUARD copies must carry the noon-threshold clause. bigquery/12's midnight-crossing grace
@@ -546,6 +551,13 @@ INVENTORY_ROW = re.compile(r"^\|\s*\*\*([A-Za-z0-9_]+)\*\*\s*\|[^|]*\|([^|]*)\|"
 # First token of the 'Cadence · Type' cell -> the set of monitor_class values it may legitimately mean.
 INVENTORY_CADENCE_TOKEN_MAP = {
     "Daily": DAILY_CLASSES,
+    # "Sun-Thu" added 2026-08-08 (daily-tier Fri/Sat consolidation onto Sunday) -- the distinct,
+    # ASCII-only token for the 8 routines (D1/D2a/D2/D3/OPS0/OPS1/OPS2/SL3) that moved to
+    # monitor_class: daily_sun_thu, so the ROUTINE INVENTORY table can tell a reader "runs
+    # Sunday-Thursday only" apart from "Daily" (still every calendar/trading day) at a glance.
+    # ASCII hyphen deliberately, not an en/em dash -- see ops/cadence.yaml's own MODEL_ID_CORE-
+    # adjacent lesson on ASCII-only tokens elsewhere in this repo's checkers.
+    "Sun-Thu": {"daily_sun_thu"},
     "Weekly": {"weekly_sun"},
     "Monthly": {"monthly_ftd"},
     "Quarterly": {"quarterly_ftd"},
@@ -556,7 +568,7 @@ INVENTORY_CADENCE_TOKEN_MAP = {
 INVENTORY_FOOTNOTE_QUEUE_DRIVEN_IDS = {"AR_att", "AR_orc"}
 
 ALLOWED_CLASSES = {
-    "daily_trading", "daily_all", "weekly_sun",
+    "daily_trading", "daily_all", "daily_sun_thu", "weekly_sun",
     "monthly_ftd", "quarterly_ftd", "annual_ftd", "queue_driven",
 }
 # monitor_class values the calendar view (state.cadence_expected_today) must encode.
