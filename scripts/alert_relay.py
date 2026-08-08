@@ -233,7 +233,7 @@ def main():
             relay_orders()
         else:
             relay_alerts()
-    except Exception as e:  # best-effort: never fail CI on a transient bq/webhook hiccup
+    except Exception as e:  # noqa: BLE001 - best-effort: never fail CI on a transient bq/webhook hiccup
         print(f"relay error (non-fatal): {e}", file=sys.stderr)
         return 0
     return 0

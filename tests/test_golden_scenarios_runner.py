@@ -396,7 +396,7 @@ def test_gemini_ladder_exhaustion_raises(monkeypatch):
     state = {"idx": 0}
     try:
         rg._gemini_call("prompt", "k", ["m1", "m2"], state)
-        assert False, "expected RuntimeError on ladder exhaustion"
+        raise AssertionError("expected RuntimeError on ladder exhaustion")
     except RuntimeError as exc:
         assert "ladder exhausted" in str(exc)
         assert "m1" in str(exc) and "m2" in str(exc)  # per-model diagnostics, not just the last error

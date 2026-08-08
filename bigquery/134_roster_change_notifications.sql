@@ -120,6 +120,13 @@ WHERE NOT EXISTS (
 -- against the live INFORMATION_SCHEMA.ROUTINES text before copying). The ONLY change is the new Rule 5
 -- and its eligible_roster_notice declaration.
 -- =====================================================================================================
+-- SUPERSEDED LIVE by bigquery/148_audit_2026_08_08_fixes.sql — current single source of truth for
+-- ops.sp_auto_resolve_alerts (chain: 94 -> 97 -> 107 -> 130 -> 134 -> 148). 148 fixed Rule 4's
+-- staleness echo arm to re-check all four state.system_health components (marks_fresh, engine_fresh,
+-- embeddings_healthy, position_drift_detected) instead of just the first two. Rules 1, 2, 3, 3b and
+-- Rule 5 below are unchanged and were copied byte-identical into 148. Kept here, unmodified, for
+-- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE PROCEDURE
+-- statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_auto_resolve_alerts`()
 BEGIN
   DECLARE eligible_dep, eligible_run, eligible_stalled, eligible_stale, eligible_refire_blocked ARRAY<STRING>;

@@ -137,6 +137,21 @@ def test_daily_trading_inside_window_passes(tmp_path, monkeypatch):
     assert cs.check() == 0
 
 
+def test_second_comma_hour_firing_past_deadline_is_caught(tmp_path, monkeypatch, capsys):
+    # REGRESSION (2026-08-08): parse_field supports comma lists for ANY cron field (already exercised
+    # for quarterly months, e.g. "1,4,7,10"), so "0 2,4 * * *" fires twice a day -- 02:00 UTC (20:00
+    # MDT / 19:00 MST, inside the window) and 04:00 UTC (22:00 MDT / 21:00 MST, at/past the 21:00
+    # deadline). sorted(hours) always visits the smaller hour first, so the old check's `probe =
+    # locals_[0]` only ever saw the harmless 02:00 UTC firing -- the second firing's deadline
+    # violation was invisible and check() exited 0. Exactly the shape of the 2026-07-27 OPS2 defect
+    # this checker exists to catch, on a firing the old code never looked at.
+    write_cadence(tmp_path, monkeypatch, [
+        {"id": "DX", "monitor_class": "daily_trading", "cron": "0 2,4 * * *"},
+    ])
+    assert cs.check() == 1
+    assert "deadline" in capsys.readouterr().err
+
+
 def test_deadline_is_read_from_cadence_not_hardcoded(tmp_path, monkeypatch):
     # Same cron, stricter declared deadline -> must start failing. Proves the check is wired to
     # cadence_watch_deadline_local rather than a constant that silently ignores the file.
@@ -197,6 +212,20 @@ def test_to_populate_placeholder_is_skipped(tmp_path, monkeypatch):
     write_cadence(tmp_path, monkeypatch, [
         {"id": "NEW", "monitor_class": "weekly_sun", "cron": "TO_POPULATE"},
     ])
+    assert cs.check() == 0
+
+
+def test_bare_routines_key_does_not_crash(tmp_path, monkeypatch):
+    # REGRESSION (2026-08-08): load_cadence() hand-rolled its own `cad["routines"] if ... else cad`
+    # extraction instead of importing lib.routine_manifest.cadence_routines() -- the shared accessor
+    # that already closed this exact trap at check_cadence_consistency.py's load_cadence() /
+    # cadence_duplicate_ids() and print_routines.py's load_cadence() (2026-07-29), but that pass never
+    # reached this script's separate copy. A bare `routines:` key parses to None (YAML), not [], so
+    # the old code returned None for `routines` and check() crashed with `TypeError: 'NoneType' object
+    # is not iterable` on `for r in routines:` instead of reporting an empty, clean cadence file.
+    path = tmp_path / "cadence.yaml"
+    path.write_text('cadence_watch_deadline_local: "21:00"\nroutines:\n')
+    monkeypatch.setattr(cs, "CADENCE", path)
     assert cs.check() == 0
 
 

@@ -26,6 +26,7 @@ Examples:
   python scripts/adversarial_review_storage.py repair --apply --file /safe/export/Adversarial_Review_x_attacker.md
 """
 import argparse
+import concurrent.futures
 from dataclasses import dataclass
 import hashlib
 import json
@@ -36,10 +37,15 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.bq_json import run_bq_query  # noqa: E402
+from lib.bq_json import run_bq_query
 
 
 PROJECT = os.environ.get("BQ_PROJECT", "stock-trading-498512")
+# GoogleBigQueryWarehouse._rows() used to call .result() with no timeout at all, so a stuck
+# BigQuery job — including on the live --apply WRITE path (append_replacement) — hung a repair
+# forever with no operator signal to distinguish "still running" from "wedged" (found 2026-08-08).
+# Overridable like BQ_PROJECT above (env), and per-invocation via `repair --timeout-seconds`.
+DEFAULT_BQ_TIMEOUT_SECONDS = int(os.environ.get("BQ_QUERY_TIMEOUT_SECONDS", "300"))
 ROOT = Path(__file__).resolve().parent.parent
 FILENAME = re.compile(r"^Adversarial_Review_(?P<review_id>.+)_(?P<role>attacker|orchestrator)\.md$")
 # Attacker artifacts use the machine-oriented names; older orchestrator artifacts use title-cased
@@ -108,7 +114,7 @@ def _validate_project(project):
 class GoogleBigQueryWarehouse:
     """Parameterized BigQuery access for repair operations."""
 
-    def __init__(self, project):
+    def __init__(self, project, timeout_seconds=DEFAULT_BQ_TIMEOUT_SECONDS):
         _validate_project(project)
         try:
             from google.cloud import bigquery
@@ -117,10 +123,25 @@ class GoogleBigQueryWarehouse:
         self.project = project
         self.bigquery = bigquery
         self.client = bigquery.Client(project=project)
+        self.timeout_seconds = timeout_seconds
 
     def _rows(self, sql, parameters):
         config = self.bigquery.QueryJobConfig(query_parameters=parameters)
-        return [dict(row.items()) for row in self.client.query(sql, job_config=config).result()]
+        job = self.client.query(sql, job_config=config)
+        try:
+            result = job.result(timeout=self.timeout_seconds)
+        except concurrent.futures.TimeoutError as exc:
+            # .result() with no timeout (the prior behavior) waits forever on a stuck job — on the
+            # live --apply WRITE path (append_replacement) that leaves an operator staring at a
+            # blocked terminal with no way to tell "still running" from "wedged" (2026-08-08). Turn
+            # the client library's bare TimeoutError (nothing but a job id) into the same clean,
+            # actionable-message shape every other client/query failure in this file surfaces (see
+            # repair_file's BLE001-annotated catches below) instead of a raw traceback.
+            raise RuntimeError(
+                f"BigQuery job {job.job_id} did not finish within {self.timeout_seconds}s "
+                "(override with repair --timeout-seconds or the BQ_QUERY_TIMEOUT_SECONDS env var)"
+            ) from exc
+        return [dict(row.items()) for row in result]
 
     def _scalar(self, name, type_, value):
         return self.bigquery.ScalarQueryParameter(name, type_, value)
@@ -354,7 +375,7 @@ def audit_file(path, project=PROJECT):
         row = fetch_review(key, project)
     except LookupError as exc:
         return AuditResult(path, key, "MISSING", str(exc), local_sha256=local_sha256)
-    except Exception as exc:  # A query/auth failure is neither a missing review nor a safe clean audit.
+    except Exception as exc:  # noqa: BLE001 - a query/auth failure is neither a missing review nor a safe clean audit
         return AuditResult(path, key, "ERROR", str(exc), local_sha256=local_sha256)
     warehouse_sha256 = row["body_sha256"].upper()
     if local_sha256 != warehouse_sha256:
@@ -529,6 +550,10 @@ def main(argv=None):
     repair.add_argument("--file", action="append", type=Path,
                         help="legacy file to repair (repeatable for dry-run; default is every tracked root review file)")
     repair.add_argument("--apply", action="store_true", help="append one replacement; without this flag repair is read-only")
+    repair.add_argument("--timeout-seconds", type=int, default=DEFAULT_BQ_TIMEOUT_SECONDS,
+                        help="abort a stuck BigQuery job (query or --apply write) after this many "
+                             "seconds instead of hanging forever (default: %(default)s; also settable "
+                             "via BQ_QUERY_TIMEOUT_SECONDS)")
     args = parser.parse_args(argv)
 
     try:
@@ -549,7 +574,7 @@ def main(argv=None):
             if args.apply and len(paths) != 1:
                 print("ERROR: repair --apply requires exactly one --file target; run a multi-file dry-run first", file=sys.stderr)
                 return 2
-            warehouse = GoogleBigQueryWarehouse(args.project)
+            warehouse = GoogleBigQueryWarehouse(args.project, timeout_seconds=args.timeout_seconds)
             results = repair_files(paths, warehouse, args.apply)
             for result in results:
                 _print_repair_result(result)

@@ -227,12 +227,27 @@ invariants:
   # ABANDON) judgment framework are all retired. Scoped to the two routine-executed prose files;
   # the exempt_line_regex below skips lines that NAME the retired mechanism to explain its
   # retirement (CHANGELOG entries, the ENTRY/EXIT DECISION block's "supersedes the retired ..."
-  # sentence) rather than re-instructing it. ----
+  # sentence) rather than re-instructing it.
+  #
+  # exempt_line_regex used to be a bare '(?:retired|supersede[sd]?|RETIRES)' — a match ANYWHERE on
+  # the line, so a line that named a retirement in one clause and re-instructed a still-live limit-
+  # order mechanism in another (unrelated) clause passed the gate silently: the exemption never
+  # checked that the retirement language was actually TALKING ABOUT the forbidden term (2026-08-08).
+  # Narrowed to the CaR rules' bounded '[^\n]{0,N}' proximity idiom (see e.g. the CaR-envelope rules
+  # above) so the retirement word must sit within 260 chars of the forbidden term, either order.
+  # 260 is not arbitrary: it is the smallest window that still covers every currently-legitimate
+  # line in Claude_Task_Plan.md / Operating_Protocols.md today (the widest genuine case is
+  # Operating_Protocols.md's 2026-07-20 Revision-history bullet, where "retired" describes the
+  # superseded 0.5%-price-band rule ~244 chars before it goes on to name LIMIT DECISION/RAISE-HOLD-
+  # LOWER-ABANDON as what replaced it — still one continuous changelog sentence, not a different
+  # topic) — a synthetic line with the two clauses genuinely far apart (a different topic's
+  # retirement, then a bare re-instruction) is now correctly caught; see
+  # tests/test_check_prose_invariants.py.
   - id: market_only_orders
     files: [Claude_Task_Plan.md, Operating_Protocols.md]
     forbid_regex: '(?:marketable[- ]limit|order_type\s*[=:]\s*.?LIMIT.?|\bLIMIT DECISION\b|RAISE\s*/\s*HOLD\s*/\s*LOWER\s*/\s*ABANDON)'
     ignorecase: true
-    exempt_line_regex: '(?:retired|supersede[sd]?|RETIRES)'
+    exempt_line_regex: '(?:(?:retired|supersede[sd]?|RETIRES)[^\n]{0,260}(?:marketable[- ]limit|order_type\s*[=:]\s*.?LIMIT.?|\bLIMIT DECISION\b|RAISE\s*/\s*HOLD\s*/\s*LOWER\s*/\s*ABANDON)|(?:marketable[- ]limit|order_type\s*[=:]\s*.?LIMIT.?|\bLIMIT DECISION\b|RAISE\s*/\s*HOLD\s*/\s*LOWER\s*/\s*ABANDON)[^\n]{0,260}(?:retired|supersede[sd]?|RETIRES))'
     reason: >
       Every IBKR order this system generates is MARKET (owner directive 2026-07-21;
       bigquery/100_market_only_order_guard.sql) — there are no limit orders anywhere (entries,

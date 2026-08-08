@@ -74,12 +74,14 @@
 -- rejected: routines author payloads from prose, so key drift is the expected steady state, and a
 -- convention note cannot enforce it. Reader-side tolerance is the only version that actually holds.
 
--- SUPERSEDED LIVE by bigquery/134_roster_change_notifications.sql — current single source of truth
--- for ops.sp_auto_resolve_alerts (chain: 94 -> 97 -> 107 -> 130 -> 134). 134 adds Rule 5: the six
+-- SUPERSEDED LIVE by bigquery/148_audit_2026_08_08_fixes.sql — current single source of truth
+-- for ops.sp_auto_resolve_alerts (chain: 94 -> 97 -> 107 -> 130 -> 134 -> 148). 134 adds Rule 5: the six
 -- roster-change notice categories auto-resolve once notified_ts is stamped, i.e. once the operator
 -- email has actually been delivered. Rules 1-4 below are unchanged and were copied byte-identical
--- into 134. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
--- CREATE OR REPLACE PROCEDURE statement live in isolation.
+-- into 134, and 134 was in turn superseded by 148, which fixed Rule 4's staleness echo arm to
+-- re-check all four state.system_health components instead of two. Kept here, unmodified, for
+-- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE PROCEDURE
+-- statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_auto_resolve_alerts`()
 BEGIN
   DECLARE eligible_dep, eligible_run, eligible_stalled, eligible_stale, eligible_refire_blocked ARRAY<STRING>;

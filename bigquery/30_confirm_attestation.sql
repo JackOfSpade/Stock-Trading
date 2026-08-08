@@ -49,6 +49,14 @@ QUALIFY ROW_NUMBER() OVER (PARTITION BY item_key ORDER BY snapshot_ts DESC) = 1;
 -- instruction itself is NOT this view's job — that is owned by D2a's registry reconciliation + D3's
 -- instruction-verify/persist-and-wait re-craft (a DAY instruction expiring nightly is designed, not
 -- drift).
+--
+-- SUPERSEDED LIVE by bigquery/148_audit_2026_08_08_fixes.sql — current single source of truth for
+-- state.staged_without_confirm. 148 wraps the `o.status = 'pending'` filter below in LOWER(), matching
+-- state.open_orders' own filter (bigquery/01_schema.sql), so a row physically written as
+-- 'PENDING'/'Pending' is no longer silently dropped from this view — the case-sensitive version below
+-- defeats D3's confirm_event_gap early-warning for that row with no error and no alert. Kept here,
+-- unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE
+-- VIEW statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.staged_without_confirm` AS
 SELECT
   o.item_key, o.ticker, o.side, o.entry_window_close, o.staged_ts,

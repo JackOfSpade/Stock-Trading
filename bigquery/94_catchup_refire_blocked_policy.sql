@@ -48,15 +48,16 @@ WHERE category = 'staleness'
 -- committed body. The only changes are the DECLARE line (extended with eligible_refire_blocked)
 -- and the new Rule 3b block inserted between Rule 3's UPDATE and Rule 4's no_other_criticals setup.
 --
--- SUPERSEDED (2026-07-26, repointed 2026-08-03): this definition of ops.sp_auto_resolve_alerts is
--- now superseded by bigquery/134_roster_change_notifications.sql — the CURRENT single source of
--- truth. (Chain: 94 -> 97 -> 107 -> 130 -> 134; all intermediates are themselves superseded.) 107
--- reproduced this exact procedure body (Rules 1, 2, 3, 3b and 4) and
+-- SUPERSEDED (2026-07-26, repointed 2026-08-08): this definition of ops.sp_auto_resolve_alerts is
+-- now SUPERSEDED LIVE by bigquery/148_audit_2026_08_08_fixes.sql — the CURRENT single source of
+-- truth. (Chain: 94 -> 97 -> 107 -> 130 -> 134 -> 148; all intermediates are themselves superseded.)
+-- 107 reproduced this exact procedure body (Rules 1, 2, 3, 3b and 4) and
 -- additionally excludes halt-echo missing_dependency AND halt-echo missed_run alerts (pure fallout
--- of a still-open trading halt) from Rule 4's no_other_criticals count. Re-applying the CREATE OR
--- REPLACE PROCEDURE below live in isolation would REGRESS both halt-echo exclusions. Kept here,
--- unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE
--- PROCEDURE statement live in isolation.
+-- of a still-open trading halt) from Rule 4's no_other_criticals count. 148 in turn fixed Rule 4's
+-- staleness echo arm to re-check all four state.system_health components instead of two. Re-applying
+-- the CREATE OR REPLACE PROCEDURE below live in isolation would REGRESS both halt-echo exclusions
+-- AND the staleness echo fix. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE OR REPLACE PROCEDURE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_auto_resolve_alerts`()
 BEGIN
   DECLARE eligible_dep, eligible_run, eligible_stalled, eligible_stale, eligible_refire_blocked ARRAY<STRING>;

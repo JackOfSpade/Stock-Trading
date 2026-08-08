@@ -51,22 +51,18 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.sql_files import numbered_sql_files, strip_sql_comments  # noqa: E402
-from lib.textio import read_text  # noqa: E402
+from lib.sql_files import (
+    OBJECT_DDL, line_offsets, normalize_kind, numbered_sql_files, strip_sql_comments,
+)
+from lib.textio import read_text
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BIGQUERY_DIR = os.path.join(ROOT, "bigquery")
 
-PROJECT = "stock-trading-498512"
-
-# Object kinds whose redefinition can silently change live behaviour if re-applied out of order.
-OBJECT_DDL = re.compile(
-    r"CREATE\s+(?:OR\s+REPLACE\s+)?"
-    r"(VIEW|MATERIALIZED\s+VIEW|TABLE\s+FUNCTION|FUNCTION|PROCEDURE|TABLE)\s+"
-    r"(?:IF\s+NOT\s+EXISTS\s+)?"
-    rf"`{re.escape(PROJECT)}\.(\w+)\.(\w+)`",
-    re.IGNORECASE,
-)
+# OBJECT_DDL (the object kinds whose redefinition can silently change live behaviour if re-applied
+# out of order) moved to scripts/lib/sql_files.py 2026-08-08 — it was byte-for-byte the same regex
+# (modulo alternation order, verified behaviorally identical) as check_superseded_by_discipline.py's
+# own copy; see that module's docstring for the dedup rationale.
 
 # Pre-existing unmarked definitions (2026-07-18). BURN-DOWN LIST, not a permanent exemption: add a
 # proper "SUPERSEDED ... see bigquery/<canonical>" marker above the CREATE, then DELETE the entry here
@@ -109,15 +105,6 @@ def _preceding_comment(lines, idx):
     return "\n".join(reversed(out))
 
 
-def _line_offsets(text):
-    """Cumulative start-of-line character offsets in `text`, for mapping a regex match.start() back
-    to a 0-based line index (matching `text.splitlines()` indexing) via bisect."""
-    offsets = [0]
-    for m in re.finditer("\n", text):
-        offsets.append(m.end())
-    return offsets
-
-
 def definitions():
     """{(kind, dataset, name): [(number, filename, line_index), ...]} across numbered bigquery/*.sql.
 
@@ -147,9 +134,9 @@ def definitions():
         # (newlines untouched), so OBJECT_DDL.finditer() below can no longer match inside one, while
         # `offsets` — built from the UNSTRIPPED text — still maps a match's char offset back to the
         # right line, since stripping never changes the text's length or line breaks.
-        offsets = _line_offsets(text)
+        offsets = line_offsets(text)
         for hit in OBJECT_DDL.finditer(strip_sql_comments(text)):
-            kind = " ".join(hit.group(1).upper().split())
+            kind = normalize_kind(hit.group(1))
             line_idx = bisect.bisect_right(offsets, hit.start()) - 1
             found[(kind, hit.group(2), hit.group(3))].append((number, fn, line_idx))
     return found

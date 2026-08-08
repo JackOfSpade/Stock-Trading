@@ -19,8 +19,10 @@
 #     vacuously skip)
 #   * the zero-SHA-on-ref-creation case that motivated rev 2026-07-20: PUSH_BEFORE is the all-
 #     zeroes SHA (unresolvable) on a brand-new non-main branch -> falls back to merge-base
-#   * push to main whose PUSH_BEFORE is itself unresolvable (e.g. a force-push) -> falls back to
-#     merge-base(HEAD, origin/main) instead of leaving base empty
+#   * push to main whose PUSH_BEFORE is itself unresolvable (e.g. a force-push) -> prints NOTHING,
+#     not merge-base(HEAD, origin/main): by the time this runs the push has already landed, so
+#     origin/main already contains HEAD and that merge-base degenerates to HEAD itself, which would
+#     make the caller's diff empty and vacuously skip a blocking gate (rev 2026-08-08 bug fix)
 #   * nothing resolvable at all (no origin/main, no valid PUSH_BEFORE, non-pull_request) -> prints
 #     NOTHING (empty stdout) — callers each apply their OWN fail-open policy on that, which this
 #     script deliberately does not decide (see its header)
@@ -118,12 +120,18 @@ base="$(resolve_diff_base "push" "" "$main_seed_sha" "$main_after_merge" "main")
 assert_eq "push to main: PUSH_BEFORE wins over merge-base (which would degenerate to HEAD on main)" \
   "$base" "$main_seed_sha"
 
-# ---- 5. push to main whose PUSH_BEFORE is itself unresolvable (e.g. a force-push) -> falls back
-# to merge-base(HEAD, origin/main) instead of leaving base empty ------------------------------
+# ---- 5. push to main whose PUSH_BEFORE is itself unresolvable (e.g. a force-push) -> prints
+# NOTHING, NOT merge-base(HEAD, origin/main) (rev 2026-08-08 bug fix). By this point in the test,
+# main_after_merge (== head_sha here) has ALREADY been pushed to origin/main (step 4 above), so
+# merge-base(head_sha, origin/main) degenerates to head_sha itself -- the exact vacuous self-diff
+# the function's own header warns merge-base collapses to on main. Before the fix this asserted
+# base == main_after_merge, i.e. it encoded the bug: ci.yml's caller would see `git diff HEAD HEAD`
+# (empty), conclude "no relevant files changed", and skip the blocking SQL-validate gate on exactly
+# a force-push or first-push to main. -------------------------------------------------------
 
 base="$(resolve_diff_base "push" "" "$zero_sha" "$main_after_merge" "main")"
-assert_eq "push to main, unresolvable PUSH_BEFORE (force-push): falls back to merge-base" \
-  "$base" "$main_after_merge"
+assert_eq "push to main, unresolvable PUSH_BEFORE (force-push): merge-base degenerates to HEAD, so base is left UNRESOLVED (prints nothing)" \
+  "$base" ""
 
 # ---- 6. fail-open case: nothing resolvable at all (no PUSH_BEFORE, no origin remote at all) ->
 # prints NOTHING; the caller's OWN fail-open policy decides what that means, not this script ---

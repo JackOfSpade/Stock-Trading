@@ -33,6 +33,14 @@ GUARDS (see fence block below + Claude_Task_Plan.md / OWNER_ACTIONS.md OAE-5 pac
     summary. main() now also scans for every bare ```verify opening line and prints a WARNING naming
     the line number for any not covered by a successful FENCE_RE match — still exit 0, still no
     change to flip/anchor behavior, purely an added diagnostic.
+  * Duplicate ids are also LOUD (bug found 2026-08-08): PROBES is keyed by id only, so two
+    well-formed fences sharing one `id` (a copy-pasted fence whose `id:` line didn't get updated)
+    silently share ONE probe between two unrelated items — each fence still resolves its OWN nearby
+    anchor via find_anchor_line_index, but both get evaluated against a probe written for only one
+    of them, so the copy-pasted item can auto-close on a completion condition that has nothing to do
+    with what it actually requires, with no OPEN, no diagnostic. main() now prints a WARNING naming
+    every line number a duplicated id appears at — still exit 0, still no change to which fence(s)
+    get evaluated or how they're anchored, purely an added diagnostic.
 
 Env (all optional — used by the bq/gh probes when present; falls back to OPEN if a probe's
 prerequisite env/binary is unavailable, per fail-open above):
@@ -133,7 +141,7 @@ def _run(cmd):
         return False, "", f"binary not found: {e}"
     except subprocess.TimeoutExpired:
         return False, "", f"timed out after {TIMEOUT}s: {' '.join(cmd)[:120]}"
-    except Exception as e:  # pragma: no cover — defensive, fail-open catch-all
+    except Exception as e:  # noqa: BLE001 - defensive fail-open catch-all (this helper never raises)  # pragma: no cover
         return False, "", f"unexpected error running {' '.join(cmd)[:80]}: {e}"
     if out.returncode != 0:
         return False, out.stdout, (out.stderr.strip() or out.stdout.strip() or f"exit {out.returncode}")
@@ -159,11 +167,11 @@ def _bq_scalar(sql, key="n"):
         return False, None, str(e)
     except FileNotFoundError as e:
         return False, None, f"binary not found: {e}"
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - covers ValueError/JSONDecodeError from parse_bq_json_stdout per this function's docstring
         return False, None, f"could not parse bq result: {e}"
     try:
         return True, rows[0][key], ""
-    except Exception as e:
+    except (IndexError, KeyError) as e:
         return False, None, f"could not parse bq result: {e}"
 
 
@@ -490,6 +498,28 @@ def main():
     # not-yet-processed matches.
     matches = list(FENCE_RE.finditer(text))
 
+    # Loud diagnostic for two well-formed fences sharing the same id (bug found 2026-08-08): PROBES
+    # is keyed by id only, so a copy-pasted fence whose `id:` line didn't get updated silently shares
+    # ONE probe between two unrelated items — each fence still resolves its OWN nearby anchor below,
+    # but both get evaluated against a probe written for only one of them, so the copy-pasted item
+    # can auto-close on a completion condition that has nothing to do with what it actually requires,
+    # with no OPEN, no diagnostic, and a normal-looking exit-0 summary. Purely additive: this only
+    # ever prints a WARNING before the flip/anchor loop runs; it does not change which fence(s) get
+    # evaluated or how they're anchored.
+    ids_by_line = {}
+    for m in matches:
+        line_no = text.count("\n", 0, m.start()) + 1
+        ids_by_line.setdefault(m.group("id").strip(), []).append(line_no)
+    for fence_id, line_numbers in sorted(ids_by_line.items()):
+        if len(line_numbers) > 1:
+            print(
+                f"verify_owner_actions: WARNING — duplicate id {fence_id!r} used by "
+                f"{len(line_numbers)} well-formed ```verify fences, at lines "
+                f"{', '.join(str(n) for n in line_numbers)}: they will ALL be evaluated against the "
+                "SAME registered probe (PROBES is keyed by id only), so this can auto-close an item "
+                "whose own actual requirement was never checked — check for a copy-pasted id."
+            )
+
     # Loud diagnostic for a malformed fence (codebase audit 2026-07-26 — see FENCE_OPEN_RE above):
     # every bare ```verify opening line that FENCE_RE did NOT consume as part of a successful match
     # gets its own warning naming the line number, instead of silently vanishing from the run. This
@@ -536,7 +566,7 @@ def main():
         # documented contract is fail-open / always-exit-0 (2026-07-17 audit).
         try:
             passed, evidence = probe_fn()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - a single raising probe must not abort the pass; module contract is fail-open
             results.append((fence_id, "OPEN", f"probe raised (fail-open): {e}"))
             continue
         if not passed:

@@ -245,14 +245,22 @@ def _write_check_fixture(tmp_path):
     # exercise a DIFFERENT check via this shared fixture aren't incidentally tripped by check L's
     # 2026-07-29 hard-error-on-missing-table change; tests that want to exercise check L itself either
     # overwrite plan.write_text() with their own table (see the check-L section further down) or use
-    # _write_ar_att_fixture's dedicated fixture.
+    # _write_ar_att_fixture's dedicated fixture. Also carries a valid SAME-DAY DOUBLE-RUN GUARD copy
+    # for every EVENING_DAILY_GUARD_IDS routine (check M), for the same reason: check M's "sentinel
+    # absent -> skip silently" gate was removed (2026-08-08 audit finding — see check_cadence_
+    # consistency.py), so a plan carrying none of this text now fails check M loudly, and every caller
+    # of this shared fixture below that isn't testing check M itself needs a clean copy so it isn't
+    # incidentally tripped by an unrelated check (uses _guard_line, defined further down for the
+    # check-M section itself — forward reference is fine, this is only ever called from a test body).
     plan.write_text(
         "## D1. Market Development Scan — deep research\nbody\n\n"
         "# ROUTINE INVENTORY & BIGQUERY RESPONSIBILITIES\n\n"
         "| ID | Routine | Cadence · Type | reads | writes | out |\n"
         "|---|---|---|---|---|---|\n"
         "| **D1** | Market Development Scan | Daily · research | r | w | Daily.md |\n"
-        "\n---\n"
+        "\n---\n\n"
+        "Shared Observability guard SAME-DAY DOUBLE-RUN GUARD (CYCLE-AWARE VARIANT):\n"
+        + _guard_line("D1") + _guard_line("D2") + _guard_line("D3") + _guard_line("SL3")
     )
     cadence = tmp_path / "cadence.yaml"
     cadence.write_text(
@@ -473,6 +481,22 @@ def test_auto_merge_routine_re_missing_a_cadence_id_is_caught_via_decision_sh(tm
     assert cc.main() == 1
     out = capsys.readouterr().out
     assert "D1" in out and "routine_re" in out
+
+
+def test_auto_merge_routine_re_both_locations_missing_is_caught(tmp_path, monkeypatch, capsys):
+    # REGRESSION (2026-08-08): `if allowlist_paths:` had no `else` -- when NEITHER
+    # scripts/auto_merge_decision.sh nor .github/workflows/auto-merge-claude.yml can be found, check H
+    # used to quietly do nothing (zero errors), same silent-no-op shape check M's substring gate had.
+    # _patch_fixture_paths already points AUTO_MERGE_YML at an absent path by default; isolate
+    # AUTO_MERGE_DECISION_SH the same way (mirrors the isolation the "clean" test above needs) so this
+    # fixture has neither location.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    monkeypatch.setattr(cc, "AUTO_MERGE_DECISION_SH", str(tmp_path / "absent_auto_merge_decision.sh"))
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    assert "could not find the RUNBOOK §38 marker-write routine allowlist source" in out
+    assert "check H validated nothing" in out
 
 
 # ---- check J: parse_period_watch_routines_sql — bigquery/24's post-normalization labelled rows ----
@@ -962,6 +986,28 @@ def test_check_m_disarmed_when_guard_query_unparseable_is_caught(tmp_path, monke
     assert cc.main() == 1
     out = capsys.readouterr().out
     assert "D1" in out and "DISARMED" in out
+
+
+def test_check_m_total_absence_of_sentinel_is_caught(tmp_path, monkeypatch, capsys):
+    # REGRESSION (2026-08-08): check M used to be wrapped in `if "SAME-DAY DOUBLE-RUN GUARD" in
+    # plan_txt:`, so a plan carrying NONE of that text (the sentinel renamed, or the whole section
+    # removed) made the check skip silently rather than flag all four EVENING_DAILY_GUARD_IDS routines
+    # as DISARMED. _write_check_fixture's own default plan has no guard text, so the plain, unmodified
+    # fixture already exercises this -- no plan override needed.
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    plan.write_text(
+        "## D1. Market Development Scan — deep research\nbody\n\n"
+        "# ROUTINE INVENTORY & BIGQUERY RESPONSIBILITIES\n\n"
+        "| ID | Routine | Cadence · Type | reads | writes | out |\n"
+        "|---|---|---|---|---|---|\n"
+        "| **D1** | Market Development Scan | Daily · research | r | w | Daily.md |\n"
+        "\n---\n"
+    )  # same as _write_check_fixture's own plan, minus the guard text this test is about
+    assert cc.main() == 1
+    out = capsys.readouterr().out
+    for rid in cc.EVENING_DAILY_GUARD_IDS:
+        assert f"{rid}: could not find its SAME-DAY DOUBLE-RUN GUARD" in out
 
 
 # ---- check N: MODEL OF RECORD mirrors (added 2026-07-28; had ZERO tests -- this section closes that
@@ -1773,7 +1819,11 @@ _AR_ATT_PLAN = (
     "|---|---|---|---|---|---|\n"
     "| **D1** | Market Development Scan | Daily · research | r | w | Daily.md |\n"
     "| **AR_att** | Adversarial Review Attacker | Daily¹ · regular | r | w | out.md |\n"
-    "\n---\n")
+    "\n---\n\n"
+    # check M now runs unconditionally (2026-08-08); D1 is in EVENING_DAILY_GUARD_IDS, so this
+    # fixture needs a valid guard copy too, same as _write_check_fixture's default plan above.
+    "Shared Observability guard SAME-DAY DOUBLE-RUN GUARD (CYCLE-AWARE VARIANT):\n"
+    + _guard_line("D1") + _guard_line("D2") + _guard_line("D3") + _guard_line("SL3"))
 _AR_ATT_CADENCE = (
     "timezone: America/Denver\n"
     'cadence_watch_deadline_local: "21:00"\n'

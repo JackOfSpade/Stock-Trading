@@ -36,7 +36,7 @@ def parse_gs_version(path):
 
 def parse_seed_versions():
     txt = open(REGISTRY_SQL, encoding="utf-8").read()
-    return {name: version for name, version in SEED_ROW.findall(txt)}
+    return dict(SEED_ROW.findall(txt))
 
 
 def main():

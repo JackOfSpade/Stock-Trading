@@ -36,10 +36,10 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.md_fence import fence_mask  # noqa: E402
-from lib.routine_manifest import ROUTINE_SUFFIX, heading_to_id  # noqa: E402
-from lib.slice_writer import check_or_write_slices, slugify  # noqa: E402
-from lib.textio import read_text  # noqa: E402
+from lib.md_fence import fence_mask
+from lib.routine_manifest import ROUTINE_SUFFIX, heading_to_id
+from lib.slice_writer import check_or_write_slices, slugify
+from lib.textio import read_text
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "Claude_Task_Plan.md")

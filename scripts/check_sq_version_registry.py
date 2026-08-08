@@ -54,8 +54,10 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.sql_files import numbered_sql_files, resolve_canonical, strip_sql_comments  # noqa: E402
-from lib.textio import read_text  # noqa: E402
+from lib.sql_files import (
+    line_offsets, numbered_sql_files, resolve_canonical, strip_sql_comments,
+)
+from lib.textio import read_text
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BIGQUERY_DIR = os.path.join(ROOT, "bigquery")
@@ -97,17 +99,9 @@ STRUCT_ROW = re.compile(
 )
 
 
-def _line_offsets(text):
-    """Cumulative start-of-line character offsets in `text`, for mapping a regex match.start() back
-    to a 1-based line number via bisect. Same construction as check_superseded_markers.py's helper of
-    the same name."""
-    offsets = [0]
-    for m in re.finditer("\n", text):
-        offsets.append(m.end())
-    return offsets
-
-
 def _line_no(offsets, pos):
+    """1-based line number for `offsets` (scripts/lib/sql_files.py's line_offsets(), see its
+    docstring) via bisect — the 1-based half of the two conventions that helper supports."""
     return bisect.bisect_right(offsets, pos)
 
 
@@ -131,7 +125,7 @@ def collect_bigquery():
         fn = os.path.basename(path)
         raw = read_text(path)
         stripped = strip_sql_comments(raw)
-        offsets = _line_offsets(raw)
+        offsets = line_offsets(raw)
         offsets_by_file[fn] = offsets
         for m in PROC_DDL.finditer(stripped):
             proc_defs[m.group(1)].append((number, fn, m.start()))
@@ -154,7 +148,7 @@ def parse_registry():
     """
     raw = read_text(REGISTRY_SQL)
     stripped = strip_sql_comments(raw)
-    offsets = _line_offsets(raw)
+    offsets = line_offsets(raw)
     rows = {}
     lines_by_name = collections.defaultdict(list)
     for m in STRUCT_ROW.finditer(stripped):

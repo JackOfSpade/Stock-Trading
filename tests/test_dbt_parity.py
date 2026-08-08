@@ -44,7 +44,7 @@ def test_trading_gate_dbt_ports_mirror_final_107_halt_echo_missed_run_logic():
         ROOT / "dbt" / "models" / "state" / "trading_enabled.sql",
         ROOT / "dbt" / "models" / "state" / "trading_enabled_mechanical.sql",
     ]
-    for model, canonical_cte in zip(models, canonical_ctes[:2]):
+    for model, canonical_cte in zip(models, canonical_ctes[:2], strict=True):  # both are fixed length-2 by construction
         sql = model.read_text()
         code = strip_sql_comments(sql)
         assert _normalized_halt_echo_mr_cte(sql) == " ".join(canonical_cte.split())
@@ -566,7 +566,7 @@ def test_unexpected_worker_exception_fails_closed_without_losing_other_models(mo
     monkeypatch.setattr(dp, "compiled_models",
                         lambda: iter([("state", "boom", "SELECT 1"), ("state", "good", "SELECT 1")]))
     monkeypatch.setattr(dp, "model_source_names", lambda: {("state", "boom"), ("state", "good")})
-    monkeypatch.setattr(dp, "live_columns_all", lambda: {})
+    monkeypatch.setattr(dp, "live_columns_all", dict)
     monkeypatch.setattr(dp, "parity_concurrency", lambda: 2)
     real = dp.check_one_model
 

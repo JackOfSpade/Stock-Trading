@@ -53,12 +53,19 @@ mapfile -t TABLES <<< "$TABLES_RAW"
 # 2026-07-14 audit finding covers.
 [ "${#TABLES[@]}" -gt 0 ] || { echo "no events.* base tables found; aborting"; exit 1; }
 
-# Resolve the snapshot date: newest dt= partition present for the first table, unless DATE is pinned.
+# Resolve the snapshot date: newest dt= partition present, unless DATE is pinned. Walk TABLES in
+# order and stop at the first one that yields a partition -- NOT just TABLES[0] (2026-08-08 fix).
+# TABLES[0] is whatever sorts alphabetically first in events.*, so a newly-added table with no
+# backup written yet, or a one-off gap in that single table, made DATE resolve empty even though
+# every other table had a perfectly good snapshot to restore from.
 if [ -z "${DATE:-}" ]; then
-  DATE="$(gcloud storage ls "$BUCKET/events/${TABLES[0]}/" 2>/dev/null \
-            | sed -n 's#.*/dt=\([0-9-]\{10\}\)/.*#\1#p' | sort -u | tail -1 || true)"
+  for t in "${TABLES[@]}"; do
+    DATE="$(gcloud storage ls "$BUCKET/events/$t/" 2>/dev/null \
+              | sed -n 's#.*/dt=\([0-9-]\{10\}\)/.*#\1#p' | sort -u | tail -1 || true)"
+    [ -n "${DATE:-}" ] && break
+  done
 fi
-[ -n "${DATE:-}" ] || { echo "could not resolve a backup date under $BUCKET/events/${TABLES[0]}/; pass DATE=YYYY-MM-DD"; exit 1; }
+[ -n "${DATE:-}" ] || { echo "could not resolve a backup date under $BUCKET/events/ for any table; pass DATE=YYYY-MM-DD"; exit 1; }
 
 echo "Restore drill: project=$PROJECT  bucket=$BUCKET  dt=$DATE  scratch=$SCRATCH"
 bq --project_id="$PROJECT" mk --force --dataset --location=US "$PROJECT:$SCRATCH" >/dev/null 2>&1 || true

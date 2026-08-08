@@ -41,10 +41,10 @@ try:
     import yaml  # noqa: F401
 except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
-    raise SystemExit(2)
+    raise SystemExit(2) from None
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.textio import read_text, load_yaml  # noqa: E402
+from lib.textio import read_text, load_yaml
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 AUTONOMY = os.path.join(ROOT, "ops", "autonomy_levels.yaml")

@@ -325,7 +325,9 @@ def eff_split_since_entry(day_splits):
 def mv_series(shares, entry_price, closes, day_splits):
     """Interior-day market value per day = shares * eff_split * close (the engine's `mv`)."""
     eff = eff_split_since_entry(day_splits)
-    return [shares * e * c for e, c in zip(eff, closes)]
+    # eff has one entry per day_splits item; closes is the same per-day series (mirrors bigquery/82's
+    # per-day join) — a length mismatch would be a fixture bug, so catch it rather than truncate silently.
+    return [shares * e * c for e, c in zip(eff, closes, strict=True)]
 
 
 def daily_returns(mvs):

@@ -1,5 +1,7 @@
 """Offline tests for the append-only adversarial-review export/audit tool."""
+import concurrent.futures
 import hashlib
+import types
 from copy import deepcopy
 
 import pytest
@@ -333,6 +335,129 @@ def test_legacy_queue_derivation_fails_closed_when_latest_transition_timestamp_t
         warehouse.resolve_queue_event_id(_full_row(), KEY)
 
 
+# ---- _rows() bounded timeout: a stuck BigQuery job must surface a clean error, not hang forever
+# or dump a raw traceback (found 2026-08-08 — no timeout was passed to .result() at all, including
+# on the live --apply WRITE path through append_replacement) ---------------------------------------
+
+class _FakeTimingOutJob:
+    job_id = "job-abc123"
+
+    def __init__(self):
+        self.seen_timeout = "unset"
+
+    def result(self, timeout=None):
+        self.seen_timeout = timeout
+        raise concurrent.futures.TimeoutError()
+
+
+class _FakeQueryClient:
+    def __init__(self, job):
+        self.job = job
+        self.calls = []
+
+    def query(self, sql, job_config=None):
+        self.calls.append((sql, job_config))
+        return self.job
+
+
+def _bare_warehouse(timeout_seconds):
+    warehouse = object.__new__(ars.GoogleBigQueryWarehouse)
+    warehouse.project = "proj-1"
+    # A stub with just enough surface for _rows(): QueryJobConfig only needs to be callable, the
+    # real class isn't exercised by this test.
+    warehouse.bigquery = types.SimpleNamespace(QueryJobConfig=lambda **kw: kw)
+    warehouse.timeout_seconds = timeout_seconds
+    return warehouse
+
+
+def test_rows_passes_configured_timeout_to_result_and_wraps_timeout_error_cleanly():
+    job = _FakeTimingOutJob()
+    warehouse = _bare_warehouse(timeout_seconds=5)
+    warehouse.client = _FakeQueryClient(job)
+    with pytest.raises(RuntimeError, match=r"job-abc123 did not finish within 5s") as excinfo:
+        warehouse._rows("SELECT 1", [])
+    # The bounded value actually reached .result(), not None (which would mean "wait forever" —
+    # the exact prior behavior this fix removes), and the raw concurrent.futures.TimeoutError is
+    # preserved as the chained cause rather than swallowed.
+    assert job.seen_timeout == 5
+    assert isinstance(excinfo.value.__cause__, concurrent.futures.TimeoutError)
+
+
+def test_rows_still_returns_normal_results_when_the_job_finishes_in_time():
+    class FakeRow:
+        def __init__(self, mapping):
+            self._mapping = mapping
+
+        def items(self):
+            return self._mapping.items()
+
+    class FakeJob:
+        job_id = "job-fine"
+
+        def result(self, timeout=None):
+            assert timeout == 5
+            return [FakeRow({"event_id": "e1"})]
+
+    warehouse = _bare_warehouse(timeout_seconds=5)
+    warehouse.client = _FakeQueryClient(FakeJob())
+    assert warehouse._rows("SELECT 1", []) == [{"event_id": "e1"}]
+
+
+def test_google_bigquery_warehouse_defaults_timeout_to_module_constant(monkeypatch):
+    from google.cloud import bigquery as real_bigquery
+
+    class FakeClient:
+        def __init__(self, project=None):
+            self.project = project
+
+    monkeypatch.setattr(real_bigquery, "Client", FakeClient)
+    warehouse = ars.GoogleBigQueryWarehouse("proj-1")
+    assert warehouse.timeout_seconds == ars.DEFAULT_BQ_TIMEOUT_SECONDS
+
+
+def test_google_bigquery_warehouse_accepts_explicit_timeout_override(monkeypatch):
+    from google.cloud import bigquery as real_bigquery
+
+    class FakeClient:
+        def __init__(self, project=None):
+            self.project = project
+
+    monkeypatch.setattr(real_bigquery, "Client", FakeClient)
+    warehouse = ars.GoogleBigQueryWarehouse("proj-1", timeout_seconds=17)
+    assert warehouse.timeout_seconds == 17
+
+
+def test_main_repair_apply_passes_timeout_seconds_flag_to_warehouse(tmp_path, monkeypatch):
+    path = tmp_path / "Adversarial_Review_review-A-1_attacker.md"
+    path.write_text(BODY, encoding="utf-8")
+    captured = {}
+
+    class FakeWarehouse:
+        def __init__(self, project, timeout_seconds=None):
+            captured["project"] = project
+            captured["timeout_seconds"] = timeout_seconds
+
+    monkeypatch.setattr(ars, "GoogleBigQueryWarehouse", FakeWarehouse)
+    monkeypatch.setattr(ars, "repair_files", lambda paths, warehouse, apply: [])
+    assert ars.main(["repair", "--apply", "--file", str(path), "--timeout-seconds", "17"]) == 0
+    assert captured == {"project": ars.PROJECT, "timeout_seconds": 17}
+
+
+def test_main_repair_defaults_timeout_seconds_when_flag_omitted(tmp_path, monkeypatch):
+    path = tmp_path / "Adversarial_Review_review-A-1_attacker.md"
+    path.write_text(BODY, encoding="utf-8")
+    captured = {}
+
+    class FakeWarehouse:
+        def __init__(self, project, timeout_seconds=None):
+            captured["timeout_seconds"] = timeout_seconds
+
+    monkeypatch.setattr(ars, "GoogleBigQueryWarehouse", FakeWarehouse)
+    monkeypatch.setattr(ars, "repair_files", lambda paths, warehouse, apply: [])
+    assert ars.main(["repair", "--file", str(path)]) == 0
+    assert captured["timeout_seconds"] == ars.DEFAULT_BQ_TIMEOUT_SECONDS
+
+
 def test_tracked_root_review_files_filters_nested_entries(monkeypatch, tmp_path):
     class Completed:
         returncode = 0
@@ -417,7 +542,7 @@ def test_main_audit_accepts_explicit_recovered_legacy_file(monkeypatch, capsys, 
 
 
 def test_main_repair_with_no_retired_files_does_not_construct_bigquery_client(monkeypatch, capsys):
-    monkeypatch.setattr(ars, "tracked_root_review_files", lambda: [])
+    monkeypatch.setattr(ars, "tracked_root_review_files", list)
     monkeypatch.setattr(ars, "GoogleBigQueryWarehouse", lambda project: pytest.fail("client should not be constructed"))
     assert ars.main(["repair"]) == 0
     assert "supply --file" in capsys.readouterr().out

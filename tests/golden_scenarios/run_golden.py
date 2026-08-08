@@ -62,7 +62,7 @@ try:
     import yaml
 except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
-    raise SystemExit(2)
+    raise SystemExit(2) from None
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SCENARIOS_PATH = os.path.join(ROOT, "tests", "golden_scenarios", "scenarios.yaml")

@@ -29,11 +29,11 @@ try:
     # would raise the SAME missing-dependency error, just as a bare traceback instead of this one.
 except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
-    raise SystemExit(2)
+    raise SystemExit(2) from None
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.sql_files import numbered_sql_files, strip_sql_comments  # noqa: E402
-from lib.textio import load_yaml, read_text  # noqa: E402
+from lib.sql_files import numbered_sql_files, strip_sql_comments
+from lib.textio import load_yaml, read_text
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BIGQUERY_DIR = os.path.join(ROOT, "bigquery")

@@ -46,24 +46,24 @@ import os
 import sys
 
 try:
-    # noqa: F401 — this module's own read now goes through lib.textio.load_yaml() (2026-07-29 textio
+    # this module's own read now goes through lib.textio.load_yaml() (2026-07-29 textio
     # adoption), so `yaml` is no longer referenced directly here, but the import stays for this
     # fail-fast ImportError guard (a clear "pip install pyyaml" message beats textio.py's own bare
     # ImportError traceback).
     import yaml  # noqa: F401
 except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
-    raise SystemExit(2)
+    raise SystemExit(2) from None
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.routine_manifest import (  # noqa: E402
+from lib.routine_manifest import (
     build_triggers_manifest,
     cadence_routines,
     heading_to_id,
     instruction_text,
     parse_routine_headings,
 )
-from lib.textio import load_yaml  # noqa: E402
+from lib.textio import load_yaml
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLAN = os.path.join(ROOT, "Claude_Task_Plan.md")

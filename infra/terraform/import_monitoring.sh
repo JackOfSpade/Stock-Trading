@@ -24,6 +24,24 @@
 # Then: ./import_monitoring.sh && terraform plan   # expect NO changes (clean adoption).
 set -uo pipefail
 
+# GUARD (2026-08-08): infra/terraform/ is a settled-decision declared-spec-ONLY
+# module — CLAUDE.md's "Settled decisions" section keeps it deliberately
+# unimported/unapplied against live state, because routines mutate the live
+# GCP substrate via the BigQuery MCP + console with no Terraform runtime, and a
+# later `terraform apply` could silently REVERT a live fix on production
+# trading infra. This script's entire purpose is `terraform import` against
+# that same production state, i.e. exactly the adoption CLAUDE.md rejects — so
+# it must never run by accident (a stray `./import_monitoring.sh`, a copy-paste
+# from this file's own header). Require an explicit, informed override.
+if [[ "${I_UNDERSTAND_TERRAFORM_IS_SPEC_ONLY:-0}" != "1" ]]; then
+  echo "REFUSING TO RUN: infra/terraform/ is declared-spec-only (see CLAUDE.md," >&2
+  echo "'Settled decisions' > Terraform / full IaC adoption) — deliberately NOT" >&2
+  echo "imported or applied against live state today. If you have re-confirmed" >&2
+  echo "this with the owner and truly intend to import live resources, re-run:" >&2
+  echo "  I_UNDERSTAND_TERRAFORM_IS_SPEC_ONLY=1 $0" >&2
+  exit 1
+fi
+
 PROJECT_ID="${PROJECT_ID:-stock-trading-498512}"
 CHANNEL_EMAIL="${CHANNEL_EMAIL:-jacksterwu@gmail.com}"
 

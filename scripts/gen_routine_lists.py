@@ -60,20 +60,20 @@ import os
 import sys
 
 try:
-    # noqa: F401 — this module's own reads now go through lib.textio.load_yaml() (2026-07-29 textio
+    # this module's own reads now go through lib.textio.load_yaml() (2026-07-29 textio
     # adoption), so `yaml` is no longer referenced directly here, but the import stays for this
     # fail-fast ImportError guard (a clear "pip install pyyaml" message beats textio.py's own bare
     # ImportError traceback).
     import yaml  # noqa: F401
 except ImportError:
     print("PyYAML required: pip install pyyaml", file=sys.stderr)
-    raise SystemExit(2)
+    raise SystemExit(2) from None
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.routine_manifest import (  # noqa: E402
+from lib.routine_manifest import (
     parse_routine_headings, heading_to_id, instruction_text, cadence_routines,
 )
-from lib.textio import read_text, load_yaml  # noqa: E402
+from lib.textio import read_text, load_yaml
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLAN = os.path.join(ROOT, "Claude_Task_Plan.md")
@@ -180,6 +180,15 @@ def gen_105_region(routines):
 
 
 def _region_bounds(txt, path):
+    """(begin_index, end_index) of the marker positions in `txt`. RAISES SystemExit on missing/out-of-
+    order markers -- the single shared bounds-finder for this module. Before 2026-08-08 this exact
+    `txt.find(BEGIN_MARKER)` / `txt.find(END_MARKER)` / `e < b` check was duplicated verbatim in
+    current_region() below (which returned None on failure instead of raising), so the two paths could
+    silently drift apart if one copy's finding logic were ever tweaked without the other. Unified on
+    the RAISING behavior (the stricter/louder of the two) because write_region() below -- a mutating
+    operation -- must never proceed past a missing region; current_region() (read-only, used by --check
+    to keep reporting every OTHER target's staleness) adapts that into its own None-on-failure contract
+    by catching the SystemExit itself, rather than re-implementing the search."""
     b = txt.find(BEGIN_MARKER)
     e = txt.find(END_MARKER)
     if b == -1 or e == -1 or e < b:
@@ -189,11 +198,12 @@ def _region_bounds(txt, path):
 
 def current_region(path):
     """The exact text currently between the markers (excluding the marker lines themselves), or None
-    if the markers are not present in the file."""
+    if the markers are not present in the file (adapted from _region_bounds' SystemExit -- see that
+    function's docstring)."""
     txt = read_text(path)
-    b = txt.find(BEGIN_MARKER)
-    e = txt.find(END_MARKER)
-    if b == -1 or e == -1 or e < b:
+    try:
+        b, e = _region_bounds(txt, path)
+    except SystemExit:
         return None
     return txt[b + len(BEGIN_MARKER):e]
 

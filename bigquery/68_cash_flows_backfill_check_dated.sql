@@ -21,6 +21,14 @@
 -- Same view name as bigquery/22_cash_flows.sql's CREATE OR REPLACE VIEW (retroactive-redefine
 -- convention, same pattern as bigquery/18/19_stack_review_fixes*.sql) -- this file's body is the
 -- one that should be live after both are applied in order.
+--
+-- SUPERSEDED LIVE by bigquery/148_audit_2026_08_08_fixes.sql — current single source of truth for
+-- state.cash_flows_backfill_check. 148 wraps the `reconciled` column's bare equality in
+-- COALESCE(..., FALSE) so a SUM over zero matching rows (NULL) reads as broken (FALSE) instead of
+-- NULL — the version below silently returns NULL from `reconciled` if the backfill rows were ever
+-- fully deleted, and `WHERE NOT reconciled` drops a NULL row, so the alert never raises in exactly
+-- the total-loss corruption case. Kept here, unmodified, for DR-rebuild apply-in-order reference
+-- only. DO NOT re-apply this CREATE OR REPLACE VIEW statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.cash_flows_backfill_check` AS
 SELECT
   (SELECT ROUND(SUM(amount), 2) FROM `stock-trading-498512.events.cash_flows`

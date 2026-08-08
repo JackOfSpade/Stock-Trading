@@ -230,6 +230,34 @@ def test_unnest_seed_batch_captures_to_state_not_from_state(repo_copy):
     assert rc.main() == 1
 
 
+# ---- roster_active_codes(): a roster.yaml entry missing 'code' must not crash (roster-group audit,
+#      2026-08-08 — was `s["code"]`, an uncaught KeyError that killed the checker before it ever
+#      reached the error-collection/report step this file's other R-checks rely on) ----
+def test_roster_active_codes_missing_code_field_does_not_crash():
+    doc = {"strategies": [
+        {"roster_state": "adopted"},                 # no 'code' key at all -- must not raise KeyError
+        {"code": "", "roster_state": "probe"},        # falsy code -- must not be treated as a real code
+        {"code": "A", "roster_state": "adopted"},
+    ]}
+    assert rc.roster_active_codes(doc) == {"A"}
+
+
+def test_missing_code_field_on_active_entry_is_a_clean_fail_not_a_crash(repo_copy, capsys):
+    # End-to-end: strip strategy D's 'code' key from roster.yaml but leave its roster_state (adopted)
+    # and every other surface (bigquery/35 seed, Strategy.md, slices, plan slice-map) unmodified. D
+    # then silently drops out of roster_codes, so R-A's ordinary set-comparison (not a bespoke message)
+    # catches it as "'D' in <surface> but not roster.yaml" -- a clean FAIL, not an uncaught traceback.
+    p = rc.ROSTER
+    txt = _read(p)
+    old = "  - code: D\n    name:"
+    assert old in txt, "fixture assumption about roster.yaml's D block shape drifted"
+    _write(p, txt.replace(old, "  - name:", 1))
+    assert rc.main() == 1               # must NOT raise KeyError
+    out = capsys.readouterr().out
+    assert "ROSTER CONSISTENCY: FAIL" in out
+    assert "'D'" in out
+
+
 # ---- (b2) missing Strategy.md '## Strategy' section ----
 def test_missing_strategy_md_section_is_caught(repo_copy):
     p = rc.STRATEGY_MD
@@ -257,7 +285,7 @@ def test_unnest_seed_drift_from_roster_yaml_is_caught(repo_copy):
 
 # ---- (b4) a bare ['A'..'E'] literal reintroduced in derived SQL (R-B) ----
 def test_bare_literal_reintroduced_in_derived_sql_is_caught(repo_copy):
-    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("22_cash_flows.sql")][0]
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("22_cash_flows.sql"))
     txt = _read(target)
     txt += "\n-- regression: someone reintroduced a bare roster literal\nSELECT * FROM UNNEST(['A','B','C','D','E']) AS strat;\n"
     _write(target, txt)
@@ -266,7 +294,7 @@ def test_bare_literal_reintroduced_in_derived_sql_is_caught(repo_copy):
 
 # ---- (b5) a '/5' divisor reintroduced in derived SQL (R-B) ----
 def test_fixed_divisor_reintroduced_in_derived_sql_is_caught(repo_copy):
-    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql")][0]
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql"))
     txt = _read(target)
     txt += "\n-- regression: someone hardcoded an equal split again\nSELECT amount / 5 AS per_strategy_amount FROM t;\n"
     _write(target, txt)
@@ -347,7 +375,7 @@ def test_rails_key_missing_entirely_is_caught(repo_copy):
 # ---- (b5b) R-B: a bare literal split across two lines (a SQL formatter line-wrap) must still be
 #      caught — the original line-by-line scan matched neither line (2026-07-14 audit finding).
 def test_bare_literal_split_across_lines_is_caught(repo_copy):
-    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("22_cash_flows.sql")][0]
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("22_cash_flows.sql"))
     txt = _read(target)
     txt += "\nSELECT * FROM UNNEST(['A',\n  'B','C','D','E']) AS strat;\n"
     _write(target, txt)
@@ -356,7 +384,7 @@ def test_bare_literal_split_across_lines_is_caught(repo_copy):
 
 # ---- (b5c) R-B: a fixed divisor split across two lines, "amount" on either side of the wrap ----
 def test_fixed_divisor_split_across_lines_amount_before_wrap_is_caught(repo_copy):
-    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql")][0]
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql"))
     txt = _read(target)
     txt += "\nSELECT amount /\n  5 AS per_strategy_amount FROM t;\n"
     _write(target, txt)
@@ -364,7 +392,7 @@ def test_fixed_divisor_split_across_lines_amount_before_wrap_is_caught(repo_copy
 
 
 def test_fixed_divisor_split_across_lines_amount_after_wrap_is_caught(repo_copy):
-    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql")][0]
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql"))
     txt = _read(target)
     txt += "\nSELECT x /\n  5 AS amount_per_strategy FROM t;\n"
     _write(target, txt)
@@ -609,6 +637,25 @@ def test_schema_yml_accepted_values_drift_is_caught(repo_copy):
     assert rc.main() == 1
 
 
+# ---- R-G vacuous-pass fix: ALL accepted_values(strategy) blocks DELETED (not just made stale) must
+#      still FAIL, not pass vacuously because the inner loop body never ran (roster-group audit,
+#      2026-08-08 — see check_roster_consistency.py's `found_blocks` comment) ----
+def test_schema_yml_all_accepted_values_strategy_blocks_deleted_is_caught(repo_copy, capsys):
+    p = rc.DBT_SCHEMA_ACCEPTED_VALUES
+    txt = _read(p)
+    block = "          - accepted_values:\n              values: ['A', 'B', 'C', 'D', 'E']\n"
+    count = txt.count(block)
+    assert count >= 1, "fixture assumption about schema.yml's accepted_values(strategy) block shape drifted"
+    # Strip every strategy-column accepted_values block but leave the `strategy` columns and their
+    # other tests (not_null/unique) in place — this is "the tests were deleted", not "the file/columns
+    # were deleted", the exact gap the found_blocks counter exists to close.
+    _write(p, txt.replace(block, "", count))
+    assert rc.main() == 1
+    out = capsys.readouterr().out
+    assert "ROSTER CONSISTENCY: FAIL" in out
+    assert "R-G" in out and "ZERO accepted_values tests" in out
+
+
 def test_schema_yml_unrelated_accepted_values_block_is_not_flagged(repo_copy):
     # conviction_features.decision's accepted_values must never be compared against the roster set —
     # R-G only inspects columns literally named `strategy`. Widened 2026-07-30 from ['GO'] to
@@ -684,7 +731,7 @@ def test_missing_roster_yaml_is_a_clean_skip(repo_copy):
 # ---- R-B: the widened bare-literal detector catches double-quoted + single-element roster lists that
 #      the original single-quote/two-element-minimum pattern silently let through (2026-07-17 fix) ----
 def test_bare_literal_double_quoted_is_caught(repo_copy):
-    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("22_cash_flows.sql")][0]
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("22_cash_flows.sql"))
     txt = _read(target)
     # BigQuery accepts double-quoted string literals; a re-hardcoded roster written this way used to
     # evade R-B entirely (BARE_LITERAL was single-quote only).
@@ -693,7 +740,7 @@ def test_bare_literal_double_quoted_is_caught(repo_copy):
 
 
 def test_bare_literal_single_element_is_caught(repo_copy):
-    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql")][0]
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql"))
     txt = _read(target)
     # A subset/special-case hardcode of ONE code (list without a comma) also used to evade the
     # two-element-minimum pattern.
@@ -705,7 +752,7 @@ def test_bare_literal_single_element_is_caught(repo_copy):
 #      continuation line, sqlfluff/dbt default) must still be caught — the own-line-only context
 #      window missed exactly the wrap it claimed to cover (2026-07-17 fix) ----
 def test_leading_operator_divisor_in_derived_sql_is_caught(repo_copy):
-    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql")][0]
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql"))
     txt = _read(target)
     _write(target, txt + "\nSELECT SUM(cf.amount)\n  / 5 AS per_strategy FROM t;\n")
     assert rc.main() == 1
@@ -721,7 +768,7 @@ def test_leading_operator_divisor_in_dbt_reconcile_is_caught(repo_copy):
 # ---- R-B: the "amount"-adjacency SUPPRESSION direction (a `/N` on a line with no money token is
 #      ignored) — R-C had this test but R-B's identical guard did not (2026-07-17 audit) ----
 def test_unrelated_slash_digit_in_derived_sql_without_amount_does_not_fail(repo_copy):
-    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql")][0]
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql"))
     txt = _read(target)
     _write(target, txt + "\n-- see RUNBOOK section 5/6 for the split rationale\n")
     assert rc.main() == 0
@@ -744,7 +791,7 @@ def test_fixed_divisor_near_deposit_token_is_caught(repo_copy):
 #      the fix (_money_alias_names() / _money_nearby()): the alias's OWN origin column is what gets
 #      checked, not just the divisor's immediate text. ----
 def test_fixed_divisor_via_column_alias_in_derived_sql_is_caught(repo_copy):
-    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql")][0]
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql"))
     txt = _read(target)
     _write(target, txt + (
         "\n-- regression: money value reaches the divisor via a column alias, not the bare 'amount' token\n"
@@ -778,7 +825,7 @@ def test_fixed_divisor_via_column_alias_in_dbt_reconcile_is_caught(repo_copy):
 # ---- R-B: a MULTI-HOP alias (renamed twice before reaching the divisor) is no less a restyle than a
 #      single hop, and must still resolve transitively (_money_alias_names()'s fixed-point loop) ----
 def test_fixed_divisor_via_multi_hop_alias_is_caught(repo_copy):
-    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("22_cash_flows.sql")][0]
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("22_cash_flows.sql"))
     txt = _read(target)
     _write(target, txt + (
         "\n-- regression: money value renamed TWICE before the divisor sees it\n"
@@ -800,7 +847,7 @@ def test_fixed_divisor_via_multi_hop_alias_is_caught(repo_copy):
 #      the alias's actual origin column, not merely "some alias exists nearby" (codebase audit
 #      2026-07-26). ----
 def test_unrelated_alias_near_unrelated_divisor_does_not_false_fail(repo_copy):
-    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql")][0]
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql"))
     txt = _read(target)
     _write(target, txt + (
         "\n-- unrelated alias (no money column anywhere in its origin) next to an unrelated divisor\n"
@@ -822,7 +869,7 @@ def test_type_cast_does_not_poison_the_money_alias_set(repo_copy):
     ANY unrelated `/N` sitting near ANY other cast to that same type false-tripped this gate. R-B/R-C is
     CI-BLOCKING, so that direction of failure blocks every merge, not just this check; a defensive CAST
     is idiomatic in this repo's own SQL, so it was one ordinary edit away from firing."""
-    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql")][0]
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql"))
     txt = _read(target)
     _write(target, txt + (
         "\n-- a money column cast to a type, then a totally unrelated divisor near the same type name\n"
@@ -837,7 +884,7 @@ def test_type_cast_does_not_poison_the_money_alias_set(repo_copy):
 def test_type_cast_exclusion_does_not_reopen_the_alias_hole(repo_copy):
     """The other half: excluding type names must not stop a REAL aliased equal-split from being caught,
     including when the same file also contains a type cast (codebase audit 2026-07-26)."""
-    target = [p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql")][0]
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql"))
     txt = _read(target)
     _write(target, txt + (
         "\nSELECT CAST(amount AS NUMERIC) AS amt FROM `stock-trading-498512.events.cash_flows`;\n"

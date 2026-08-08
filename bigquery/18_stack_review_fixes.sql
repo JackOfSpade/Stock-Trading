@@ -264,6 +264,14 @@ AND NOT EXISTS (
 -- trigger-day — the concern that originally limited it to the daily set. Previously a weekly/monthly/
 -- quarterly/annual or AR session that died after start could sit unnoticed for up to a full cadence period
 -- (the only backstop was trigger_attestation's coarse 14/70/200/400-day windows). Warning, record-only.
+--
+-- SUPERSEDED LIVE by bigquery/148_audit_2026_08_08_fixes.sql — current single source of truth for
+-- state.stalled_runs. 148 adds OPS0/OPS1/OPS2 to the `cls` UNNEST table below at the 6-hour tier — this
+-- table was last edited 2026-07-10, before OPS0/OPS1/OPS2 existed (created 2026-07-15/07-19/07-27), so
+-- the `JOIN cls c USING (routine)` below drops those three routines before the stall check ever runs
+-- and a hung OPS0/OPS1/OPS2 can never raise routine_stalled. Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE VIEW statement live in
+-- isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.stalled_runs` AS
 WITH cls AS (
   -- fast tier (~6h): daily, adversarial, and action-conversion routines (same-day work).

@@ -50,11 +50,44 @@ do NOT use it — they already anchor every match to column 0 (`^`, re.MULTILINE
 comment line can never satisfy, so that script has its own, already-correct comment defense and gains
 nothing from switching (see its own module docstring's "KNOWN, ACCEPTED LIMIT" note before changing
 that).
+
+OBJECT_DDL/normalize_kind() and line_offsets() (below) are a THIRD consolidation (2026-08-08).
+check_superseded_markers.py and check_superseded_by_discipline.py had each hand-written their own copy
+of the CREATE-statement object-definition regex and its kind-whitespace-normalization step — both are
+BLOCKING CI gates over the same 234 bigquery/*.sql files, so a drift between the copies would let one
+gate silently stop seeing a class of definition the other still catches. Diffed character-by-character
+before unifying: the two copies had already drifted to a different ALTERNATION ORDER inside the
+capture group (markers.py tried `VIEW` before `MATERIALIZED\\s+VIEW`/`TABLE\\s+FUNCTION`; discipline.py
+tried `TABLE\\s+FUNCTION` first) but this is NOT a behavior difference — regex alternation only diverges
+when a SHORTER alternative that would also match sits before a LONGER one sharing the same prefix at
+the same start position, and the only such pair in this set is TABLE / TABLE\\s+FUNCTION, which both
+copies already ordered TABLE\\s+FUNCTION-before-TABLE. Confirmed with a byte-for-byte stdout diff of
+both gates over the full bigquery/*.sql tree, before and after this consolidation (identical). Separately,
+check_superseded_markers.py's `_line_offsets()` and check_sq_version_registry.py's helper of the same
+name were byte-identical already (only their docstrings differed, describing each caller's own
+0-based-vs-1-based bisect convention) — moved here unchanged.
 """
 import os
 import re
 
 NUMBERED_FILE = re.compile(r"^(\d+)_.*\.sql$")
+
+# Used only to build OBJECT_DDL below. Callers that need this project id for their OWN regexes/messages
+# (e.g. check_superseded_by_discipline.py's WRITE_POSITION-adjacent read-position scan, or any script's
+# error text) keep their own `PROJECT = "stock-trading-498512"` constant — this one is private to this
+# module's own regex construction, not a second public spelling of the same string for callers to pick
+# between.
+_PROJECT = "stock-trading-498512"
+
+# Object kinds whose redefinition can silently change live behaviour if re-applied out of order.
+# Group 1 = kind, group 2 = dataset, group 3 = name.
+OBJECT_DDL = re.compile(
+    r"CREATE\s+(?:OR\s+REPLACE\s+)?"
+    r"(TABLE\s+FUNCTION|MATERIALIZED\s+VIEW|VIEW|FUNCTION|PROCEDURE|TABLE)\s+"
+    r"(?:IF\s+NOT\s+EXISTS\s+)?"
+    rf"`{re.escape(_PROJECT)}\.(\w+)\.(\w+)`",
+    re.IGNORECASE,
+)
 
 
 def numbered_sql_files(bigquery_dir):
@@ -117,8 +150,8 @@ def strip_sql_comments(text):
     """Blank out `--` line comments and `/* ... */` block comments in `text`, replacing every
     stripped character with a space and leaving every newline in place — so the RETURN VALUE has
     the exact same length and line breaks as the input, and any offset/line-number a caller
-    computed against the original text (e.g. check_superseded_markers.py's bisect over
-    _line_offsets()) still lands on the right character after stripping.
+    computed against the original text (e.g. check_superseded_markers.py's bisect over this
+    module's line_offsets()) still lands on the right character after stripping.
 
     String literals ('...', "...", triple-quoted) are copied verbatim and never treated as
     containing a comment: this repo routinely uses a bare `--` as an em-dash inside a quoted
@@ -175,3 +208,35 @@ def strip_sql_comments(text):
         out.append(c)
         i += 1
     return "".join(out)
+
+
+def normalize_kind(raw):
+    """Collapse a captured OBJECT_DDL kind (group 1) to one whitespace-normalized, upper-cased form
+    — "TABLE FUNCTION", never "TABLE  FUNCTION" or "table\\nfunction". OBJECT_DDL's alternatives use
+    `\\s+` between two keywords (TABLE_\\s+FUNCTION, MATERIALIZED\\s+VIEW), so a CREATE statement
+    legally wrapped across lines can capture internal whitespace wider than a single space; the
+    alternation itself never captures LEADING or TRAILING whitespace, so there is nothing to strip
+    there.
+
+    check_superseded_markers.py and check_superseded_by_discipline.py each spelled this differently
+    pre-consolidation (`" ".join(x.upper().split())` vs `re.sub(r"\\s+", " ", x).upper()`) but the two
+    were byte-for-byte equivalent on every input OBJECT_DDL can produce — one spelling now (2026-08-08
+    dedup)."""
+    return " ".join(raw.upper().split())
+
+
+def line_offsets(text):
+    """Cumulative start-of-line character offsets in `text`: offsets[i] is the character position
+    where line i begins (0-based). Pass a regex match's `.start()` to `bisect.bisect_right(offsets,
+    pos)` to get a 1-based line number, or subtract 1 from that for a 0-based line index matching
+    `text.splitlines()` indexing — callers differ on which they want (check_superseded_markers.py
+    uses the 0-based form directly; check_sq_version_registry.py's own `_line_no()` helper wraps the
+    1-based form), so this returns the raw offsets rather than picking one convention for them.
+
+    Moved here 2026-08-08: check_superseded_markers.py and check_sq_version_registry.py each carried
+    their own copy, already byte-identical apart from a docstring difference describing which of the
+    two bisect conventions above their own caller used."""
+    offsets = [0]
+    for m in re.finditer("\n", text):
+        offsets.append(m.end())
+    return offsets

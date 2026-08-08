@@ -630,6 +630,42 @@ def test_rev19_active_envelope_phrases_are_not_bypassed_by_retirement_words(
     assert _run(tmp_path, monkeypatch, [rule], files) == 1
 
 
+# ---- market_only_orders: exempt_line_regex must require proximity, not a bare word match -------
+
+def test_market_only_orders_rule_not_bypassed_by_a_distant_unrelated_retirement(tmp_path, monkeypatch):
+    # 2026-08-08 bug: exempt_line_regex was a bare '(?:retired|supersede[sd]?|RETIRES)' match ANYWHERE
+    # on the line, so a line naming an unrelated retirement in one clause could re-instruct
+    # order_type=LIMIT in a later, disconnected clause and still pass the gate silently. The two
+    # clauses below are ~280 chars apart (see ops/prose_invariants.yaml's comment on the fix) — one
+    # names the retirement of the (unrelated) daily-staging-cap liquidity backstop, the other
+    # re-instructs a live limit order; they are plainly about different things, not one sentence
+    # explaining the forbidden term's own retirement.
+    (rule,) = _actual_rules("market_only_orders")
+    stale_instruction = (
+        "The legacy pre-2026 daily-staging-cap backstop that used to recompute a liquidity and "
+        "sizing verdict from the payload is retired outright, per the 2026-07-22 pre-trade rail "
+        "strip; nothing about that unrelated change touches how a routine should reference an old "
+        "resting order's price when it re-crafts a still-open position tomorrow morning well before "
+        "the market even opens for the day. Craft every entry with order_type=LIMIT for tighter fills.\n"
+    )
+    files = {"Claude_Task_Plan.md": stale_instruction, "Operating_Protocols.md": "unrelated text\n"}
+    assert _run(tmp_path, monkeypatch, [rule], files) == 1
+
+
+def test_market_only_orders_rule_still_exempts_a_genuine_proximate_supersession(tmp_path, monkeypatch):
+    # Companion to the above: the exemption must still fire when the retirement language IS talking
+    # about the forbidden term in the same clause, the way the real prose files' ENTRY/EXIT DECISION
+    # and changelog lines do (ops/prose_invariants.yaml's comment cites the ~244-char real example).
+    (rule,) = _actual_rules("market_only_orders")
+    files = {
+        "Claude_Task_Plan.md": (
+            "ENTRY/EXIT DECISION (market-only) supersedes the retired LIMIT DECISION judgment.\n"
+        ),
+        "Operating_Protocols.md": "unrelated text\n",
+    }
+    assert _run(tmp_path, monkeypatch, [rule], files) == 0
+
+
 # ---- fence_mask() / nearest_heading() units (the fix, in isolation) ---------------------------
 
 def test_fence_mask_marks_lines_inside_a_fence():
