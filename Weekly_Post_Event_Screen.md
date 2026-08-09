@@ -56,7 +56,9 @@ Event attribution and sell-side breadth come from Tavily/web plus the in-system 
 
 **2. A logged D1 magnitude was wrong by sign and by session — a NEW error class.** D1's 2026-08-05 screen logged **INSP at −6.31%**, filed as a `rule_only` disagreement with the note "one source reported +27% on a raised FY outlook. Unresolved source conflict." The IBKR bars resolve it decisively: INSP's event day was **2026-08-04 at +22.83%** (52.22 → 64.14, 4× volume, on an EPS beat *and* a raised FY guide). D1 measured the **8/5 pullback session** (64.14 → 60.09 = −6.16%) as though it were the event day. The "+27%" source it could not reconcile was directionally right.
 
-  **Why this one matters beyond the name.** §19's PRICE BASIS clause (added 2026-08-05, the same day) fixes the price *source* — daily bars, never snapshots. It says nothing about selecting the right *session*. This is a **wrong-session-selection** error, which survives the PRICE BASIS fix completely. It is a distinct failure mode from the snapshot-contamination class that clause was written for, and it is the kind that silently inverts a sign. **INSP itself changes no routing** — it fails the $2B floor at ~$1.74B — so this is a measurement-process finding, not a missed candidate. Recorded here rather than escalated.
+  **Why this one matters beyond the name.** §19's PRICE BASIS clause (added 2026-08-05, the same day) fixes the price *source* — daily bars, never snapshots. It says nothing about selecting the right *session*. This is a **wrong-session-selection** error, which survives the PRICE BASIS fix completely. It is a distinct failure mode from the snapshot-contamination class that clause was written for, and it is the kind that silently inverts a sign. **INSP itself changes no routing** — it fails the $2B floor at ~$1.74B — so this is a measurement-process finding, not a missed candidate.
+
+  **And it is not isolated — the same class appeared twice in this one run.** Re-measuring the carry-forward set found **CCJ** recorded last cycle at +4.30% on 7/31, where IBKR's 7/30→7/31 close-to-close is **−2.10%** and the +4.30% figure matches the **7/29→7/30** session instead (see the carry-forward corrections below). Two independent instances of wrong-session selection in one cycle, in two different routines' outputs, is the argument for treating this as a pattern rather than a one-off. Both instances happened to land on below-floor / below-spec-floor names and changed no routing, which is luck rather than a control. Recorded here rather than escalated; a future self-improvement pass may want to consider whether the event-day selection deserves the same explicit treatment §19 gave the price source.
 
   Related, smaller sign/magnitude corrections this run (published figure → IBKR close-to-close): **BRKR** −18.13% → **−21.79%**; **RRX** −14.3% → **−16.72%**; **TDC** "17–20%" → **−23.73%**; **SEDG** "22.3–28.1%" → **−30.48%**; **WRBY** "~11–12%" (an intraday trough) → **−7.89%**; **ITGR** "+2.5–2.7%" (a premarket print) → **+20.19%**; **SUPN** "+24.9%" → **+3.07%**; **OC** "+7.65%" → **+4.77%**; **UWMC** wire used a $1.84 reference close against IBKR's actual $1.95.
 
@@ -223,24 +225,48 @@ Screened in full last cycle; carried here with updated trajectory through the 20
 
 | Ticker | Event day | Event-day move | Status | Trajectory through 8/7 |
 |---|---|---|---|---|
-| RBLX | 7/31 | −26.85% | 4 days left | FY guidance WITHDRAWN + Q3 bookings −14/−18% YoY; broad one-directional sell-side wave with the most bearish targets at/below spot. PatternN/SP6-negative ratified-at-cluster. Not advanced. |
-| VCYT | 7/31 | −22.52% | **ADJUDICATED** | B NO-GO 2026-08-03 (SP4a + PatternN, 78). |
-| RDDT | 7/31 | −20.99% | **ADJUDICATED** | B NO-GO 2026-08-03 (PatternN, 78) — Google-referral disruption confirmed by GOOGL +6% same tape. |
-| ALHC | 7/31 | −20.20% | **ADJUDICATED** | B NO-GO 2026-08-03 (SP4d, 78). |
-| BTSG | 7/31 | −18.07% | **ADJUDICATED** | B NO-GO 2026-08-03 (SP1 + SP5c lockup, 78). |
-| GDDY | 7/31 | −16.70% | **ADJUDICATED** | B NO-GO 2026-08-03 (SP4b + SP3, 65). |
-| AAPL | 7/31 | −7.36% | **ADJUDICATED** | B NO-GO 2026-08-03 (SP4c + PatternN, 78) — extended further, zero retracement. |
-| COIN | 7/31 | −10.58% | 4 days left | Un-adjudicated. Wide GAAP miss with revenue −18.5% YoY = information. Not advanced on window + information grounds. |
-| WU | 7/31 | −17.30% | 4 days left | FY26 adj EPS cut ~28%, buyback paused — hard quantified deterioration. Cap ~$2.3–2.7B, at the floor, unverified precisely. |
-| MTZ | 7/31 | −18.91% | **CLOSED** | B GO 2026-08-03 → exit staged same session on invalidation criterion 3 (bear-cluster at n=5); filled and CLOSED 2026-08-04. |
-| CARR | 7/28 | −8.90% | **ADJUDICATED** | B NO-GO 2026-08-03 (SP4a + PatternN, 72). **1 day left** — expires 8/10. |
-| LII | 7/29 | −20.97% | **ADJUDICATED** | B NO-GO 2026-08-03 (SP4c, 78). |
-| VRT | 7/29 | −17.26% | **ADJUDICATED** | B NO-GO 2026-08-03 (SP6-negative, 85) — 86–99% of the gap had already retraced. |
-| MKTX | 7/30 | +29.45% | Excluded | Definitive ICE acquisition at $167 cash — deal-arb, hard exclude. |
-| BHC | 7/30 | +28.85% | 3 days left | Extended further. Highly levered specialty pharma where double-digit prints are routine. |
-| AMZN / IESC / AXTI / MPWR / DXCM / NWL / CDNA / REPL / PRM / AMBA / MU / MRNA / CCJ / RIVN | 7/30–7/31 | various | Context | All either held, deal-anchored, cap-floor failures, cohort/sector beta, adjudicated, or attribution-failed last cycle. No change that reopens any of them. |
+All 8/7 closes below are **IBKR regular-session bars, measured this run**; event-day moves are carried forward verbatim from last cycle and not re-derived. `% reverted` = how much of the event-day move has retraced by the 8/7 close (negative = the move EXTENDED further).
 
-**⚠ Carry-forward caveat — stated plainly.** The dedicated carry-forward trajectory agent had not returned by the time this file was written. The rows above are reconstructed from last cycle's verified event-day figures plus this cycle's `events.decision_log` adjudications, both in-system records. **The per-name "% of gap reverted through 8/7" figures were therefore NOT re-measured for this sub-table**, unlike every figure in the fresh-window tables above, all of which are IBKR-verified. Since no carry-forward name is advanced to PART 2 — every one is adjudicated, expired, deal-anchored or inside 1–4 days of window — this gap changes no routing decision. It is disclosed rather than papered over, and re-measurement is not owed unless a future cycle wants to advance one of these names.
+**The names the market held hardest** — these are the ones whose reactions have *not* been retracted, and the contrast is the point of this table:
+
+| Ticker | Event day | Event move | 8/7 close | Cum. since event | % reverted | Status / new information since 2026-08-03 |
+|---|---|---|---|---|---|---|
+| **LII** | 7/29 | −20.97% | 439.77 | −19.18% | **9%** | **ADJUDICATED** (B NO-GO 2026-08-03, SP4c, 78). **No new information found.** Last cycle's #1-ranked candidate is still essentially un-reverted six sessions on — the de-rate has held completely. |
+| **CARR** | 7/28 | −8.90% | 64.01 | −7.67% | **14%** | **ADJUDICATED** (NO-GO, SP4a+PatternN, 72). No new information. Also still un-reverted. **Window expires 8/10 (1 day).** |
+| MTZ | 7/31 | −18.91% | 272.46 | −16.02% | 15% | **CLOSED** — B GO 2026-08-03, exit staged same session on invalidation criterion 3 (bear-cluster, n=5), filled 2026-08-04. |
+| ALNY | 7/30 | −28.31% | 219.20 | −23.52% | 17% | **ADJUDICATED** (NO-GO 2026-07-30). ⚠ **New:** securities-fraud investigation opened 8/4 + H.C. Wainwright PT $485→$455. The market's conviction now has a fresh reason behind it. |
+| RBLX | 7/31 | −26.85% | 37.79 | −22.35% | 17% | Un-adjudicated but not advanced: FY guidance WITHDRAWN + Q3 bookings −14/−18% is decisive information, ratified by a one-directional sell-side wave. ⚠ **New:** EU DSA "Very Large Online Platform" designation expected Aug 2026 — a live incremental overhang. |
+| VCYT | 7/31 | −22.52% | 47.22 | −21.01% | 7% | **ADJUDICATED** (NO-GO, SP4a+PatternN, 78). None found. |
+| ALHC | 7/31 | −20.20% | 14.37 | −22.78% | **−13% (EXTENDED)** | **ADJUDICATED** (NO-GO, SP4d, 78). ⚠ **New:** two securities-fraud investigations opened (8/4, 8/6). |
+| AAPL | 7/31 | −7.36% | 313.33 | −6.03% | 18% | **ADJUDICATED** (NO-GO, SP4c+PatternN, 78). None found. |
+| BTSG | 7/31 | −18.07% | 62.43 | −14.34% | 21% | **ADJUDICATED** (NO-GO, SP1+SP5c, 78). |
+| GDDY | 7/31 | −16.70% | 91.07 | −8.32% | 50% | **ADJUDICATED** (NO-GO, SP4b+SP3, 65). Half the gap now closed. |
+| COIN | 7/31 | −10.58% | 153.60 | −6.10% | 42% | Un-adjudicated; wide GAAP miss with revenue −18.5% YoY = information. ⚠ **New:** a federal judge rejected COIN's bid to block Michigan enforcement against Kalshi prediction-market contracts (**8/7**) — a fresh adverse legal datapoint on a growth bet. |
+| RIVN | 7/31 | −9.57% | 16.00 | −4.93% | 48% | **ADJUDICATED** (NO-GO 2026-07-05). |
+| PSN | 7/29 | −35.00% | 47.55 | −23.34% | 33% | **ADJUDICATED** (NO-GO 2026-07-29). ⚠ **New:** securities-claims investigation opened 8/4. |
+
+**Fully round-tripped or overshot — nothing left to harvest:**
+
+| Ticker | Event day | Event move | 8/7 close | Cum. since event | % reverted | Note |
+|---|---|---|---|---|---|---|
+| **VRT** | 7/29 | −17.26% | 272.40 | **+1.05%** | **106%** | **ADJUDICATED** (NO-GO 2026-08-03, SP6-negative, 85). ⭐ The gap has now fully closed **and gone positive** — the 2026-08-03 NO-GO reasoning ("79% already retraced, residual does not justify a slot," citing the DHR precedent) is **confirmed correct by outcome**. A useful calibration datapoint: the residual-too-thin test worked. |
+| GLW | 7/28 | −12.10% | 165.68 | +15.57% | 229% | Fully reversed and well past the pre-event level. NO-GO 2026-07-28 (SP6-negative) likewise vindicated. |
+| MRNA | 7/31 | −5.35% | 59.17 | +2.16% | 140% | ⚠ **New and material:** the FDA approved Moderna's **mFLUSIVA, the first-ever mRNA flu vaccine**, on 2026-08-06. Last cycle recorded MRNA as an attribution failure ("no catalyst identified in any source"); the subsequent approval explains the round trip. |
+| META | 7/30 | −7.96% | 592.10 | +1.11% | 114% | Fully reverted. |
+| MU | 7/31 | −5.90% | 877.57 | +0.33% | 106% | Memory cohort; fully reverted. |
+| HUM | 7/29 | −5.99% | 385.00 | −0.95% | 84% | Morgan Stanley double-notch upgrade (Underweight→Equal-Weight, PT $249→$370). |
+| SANM | 7/28 | −17.46% | 202.73 | −2.95% | 83% | NO-GO 2026-07-28 (SP6-negative); 83% retraced. |
+| REPL | 7/31 | +127% (see below) | 12.06 | +122.92% | 3% | ⚠ **The SP5 in-window binary the last cycle flagged as unrankable has RESOLVED FAVOURABLY:** FDA granted accelerated approval to Tudriqev (RP1) on 2026-08-07. Still fails the cap floor. |
+
+**⚠ TWO CORRECTIONS TO THE PRIOR CYCLE'S FILE**, surfaced by re-measurement:
+
+1. **CBZ was misclassified as an organic re-rating.** Last cycle recorded CBZ's +17.6% (7/29) as a genuine re-rating on raised guidance. In fact **CBIZ agreed to be acquired by Grant Thornton Advisors at $55.00/sh cash, announced 2026-07-28 — the session before that "event day."** The 8/7 close of $54.50 sits just under the offer, the classic deal-arb pin (go-shop runs to 8/27). CBZ belongs in the **deal-arb exclusion bucket alongside MKTX**, not in the candidate population. Corrected here; carried forward so next cycle does not repeat it.
+2. **CCJ's event date does not match the bars.** Last cycle recorded CCJ at **+4.30% on 7/31**. IBKR's 7/30→7/31 close-to-close is **−2.10%**; the +4.30% figure matches the **7/29→7/30** session instead. This is the *same wrong-session-selection class* as the INSP finding above, now observed twice in one run — which is the argument for treating it as a pattern rather than a one-off. CCJ was below-spec-floor context only, so nothing downstream depended on it.
+   Related, unresolved: **REPL's stated +127%** computes to **+107%** from the last non-halted prior close (7/29 $5.41 → 7/31 $11.20; 7/30 printed zero volume, presumably halted pending the adcom vote). Carried as stated, gap flagged for a future session.
+
+**Other carry-forward names** (AMZN, IESC, AXTI, MPWR, DXCM, NWL, CDNA, PRM, AMBA, MKTX, BHC, MANH, GRMN, GEHC, HURN, FTV, NBIS, PPG, LAD, EXLS, AVTR, LMND, AMKR, CVLT, IQV, SHW, UPS, KO, ITRI, KNSA, LCID, JBLU, INTC, SKHY, INFY, TSM, NVO, MSFT, AMAT) are held positions, deal-anchored, cap-floor or ADR instrument failures, cohort/sector beta, already adjudicated, or have reverted past the point of usefulness. **None is advanced.** Notable new overhangs recorded for the factbase: fresh securities investigations opened on **CVLT** (8/4) and **MANH** (8/5–8/6); **WU** jumped ~11% on 2026-08-04 on a reported private-equity take-private approach just below $10/sh plus a strategic review — which moves WU out of the post-event population and into **deal-anchored** territory for any future cycle.
+
+**Bottom line for this sub-table:** no carry-forward name is advanced to PART 2. Every one is adjudicated, expired, deal-anchored, or has 1–4 days of window remaining — too little to construct and stage a thesis under the DNA. The value here is calibration: **the two most-held names (LII 9%, CARR 14% reverted) were both NO-GO'd anyway, and the name that fully round-tripped (VRT, 106%) was NO-GO'd precisely for having already retraced** — the residual-thinness test made the right call in all three directions.
 
 ### Examined and EXCLUDED (with reason)
 
@@ -344,5 +370,5 @@ First standalone print since the 2026-06-29 spin. ⚠ Ranked last despite the la
 - **Shortlist cap respected:** 15 ranked candidates, the unchanged maximum.
 - **Criterion 5 (no open A position in the same name):** checked — no open A positions exist; the constraint binds nothing, including DDOG.
 - **"NO-GO records are context, not barriers"** applied: DDOG, FIG, NET and PINS all carry prior NO-GOs on *different* events and were re-evaluated on current evidence rather than pre-empted; APP, TEAM and TWLO were re-rejected on precedent because the shape and the mechanism are unchanged, which is a judgment, not a bar.
-- **Honest limitations, stated rather than buried.** (i) The independent population sweep was **not exhaustive** — Q2 season had hundreds of reporters and the FMP earnings-calendar pull returned only ~16 rows for the week; REITs, regional banks/insurers and mid-cap chemicals/packaging are the acknowledged blind spots, and the sweep still surfaced four names the daily screen missed entirely, so more probably remain. (ii) The carry-forward sub-table's reversion figures were **not re-measured this run** — disclosed in place, and it changes no routing. (iii) TTD's market cap is unresolved between ~$6.5B and $8.91B across sources; it clears the floor on either, so it does not affect eligibility. (iv) Analyst-reaction breadth for APP and GME could not be verified and is marked as such rather than asserted.
+- **Honest limitations, stated rather than buried.** (i) The independent population sweep was **not exhaustive** — Q2 season had hundreds of reporters and the FMP earnings-calendar pull returned only ~16 rows for the week; REITs, regional banks/insurers and mid-cap chemicals/packaging are the acknowledged blind spots, and the sweep still surfaced four names the daily screen missed entirely, so more probably remain. (ii) The carry-forward reversion figures WERE re-measured against IBKR bars this run; two unresolved items remain inside it — REPL's stated +127% computes to +107%, and CCJ's stated event date does not match its bars (both flagged in place, neither decision-bearing). (iii) TTD's market cap is unresolved between ~$6.5B and $8.91B across sources; it clears the floor on either, so it does not affect eligibility. (iv) Analyst-reaction breadth for APP and GME could not be verified and is marked as such rather than asserted.
 - **Chat output:** one-line acknowledgment only.
