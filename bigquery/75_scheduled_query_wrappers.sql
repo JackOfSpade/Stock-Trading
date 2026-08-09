@@ -125,14 +125,24 @@ END;
 -- doing so silently reverts that auto-age fix and every future wrapper version bump again leaves a
 -- permanently-open alert row that only a manual UPDATE ops.alerts can clear.
 -- =====================================================================================================
--- SUPERSEDED LIVE by bigquery/150_cadence_check_autoage_connector_and_revised.sql — current single
+-- SUPERSEDED LIVE by bigquery/153_account_snapshot_gap_watch.sql — current single
 -- source of truth for ops.sp_sq_cadence_check (supersedes bigquery/128 above, per the chain noted
 -- there). Intermediate link: bigquery/132_queue_driven_silence_watch.sql added the queue_driven_silent
 -- check; bigquery/142 bumps the heartbeat to v12 and adds the process_constant_evidence_invalidated
 -- WARNING block; bigquery/147 bumps the heartbeat to v13 and adds the run_log_note_missing record-only
 -- check; bigquery/149 bumps the heartbeat to v14 and adds script_version_drift to the #14 auto-age
 -- category list; bigquery/150 bumps the heartbeat to v15 and adds 'connector' + 'strategy_revised' to
--- the #14 auto-age category list. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- the #14 auto-age category list; bigquery/153 bumps the heartbeat to v17 and adds the
+-- account_snapshot_gap record-only WARNING block (+ 'account_snapshot_gap' to the #14 auto-age list).
+-- Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation.
+-- SUPERSEDED (2026-08-09) by bigquery/157_account_snapshot_gap_recoverable.sql (SQ_VERSION v18) --
+-- the current canonical definition of this procedure. 157 retracts a FALSEHOOD carried by every
+-- version from v17 down: the account_snapshot_gap alert message claimed the gap days could never be
+-- backfilled because IBKR exposes no historical-NAV endpoint. It does -- get_pa_performance_all_periods
+-- returns parallel dates[]/nav[] arrays, and D2a Step 0b already calls it but keeps only the last
+-- element. 157 changes exactly three strings (heartbeat v17->v18, that message, one comment) and no
+-- check logic. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
 -- DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN

@@ -347,7 +347,18 @@ jobs:
 
       - name: Install test deps (pinned via constraints — mirrors ci.yml's `checks` job)
         if: steps.merge.outputs.did_merge == 'true'
-        run: pip install --quiet -c requirements-ci.txt pytest pyyaml
+        # google-cloud-bigquery is INSTALLED EXPLICITLY, not inherited. ci.yml's `checks` job runs the
+        # same `pytest -q` but installs dbt-core/dbt-bigquery, so it picks this package up TRANSITIVELY
+        # via dbt-bigquery; this job deliberately never installs dbt (it does not run dbt parse), so it
+        # got no such inheritance and this line silently diverged from what `pytest -q` actually needs.
+        # requirements-ci.txt already lists google-cloud-bigquery under its always-on `test` job section
+        # for exactly this reason. Note `-c` is a CONSTRAINTS file (it pins versions of packages that are
+        # installed, it does not install them), so listing the package here is required, not redundant.
+        # Latent since 2026-08-08 (c349e18): every earlier test in tests/test_adversarial_review_storage.py
+        # bypassed __init__ via object.__new__, so nothing had ever really imported google.cloud.bigquery.
+        # Two new tests for the stuck-BigQuery-job timeout fix call the real constructor, and this step
+        # then failed on 11 consecutive main tips with ModuleNotFoundError: No module named 'google'.
+        run: pip install --quiet -c requirements-ci.txt pytest pyyaml google-cloud-bigquery
 
       - name: Post-merge coverage check (mirrors ci.yml's `checks` job, run against main's ACTUAL merged tip)
         id: postmerge

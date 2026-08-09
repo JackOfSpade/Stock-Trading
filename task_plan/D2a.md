@@ -17,13 +17,13 @@ Every routine reads and/or writes BigQuery for operational state (positions, reg
 
 | ID | Routine | Cadence · Type | BigQuery reads | BigQuery writes | Cadence `.md` output |
 |---|---|---|---|---|---|
-| **D1** | Market Development Scan | Daily · research | `state.daily_briefing`, `state.current_positions`, `perf.kill_flags`/`perf.strategy_daily`, `state.current_regime`, `find_precedents()`; PARK ALLOCATION CALL adds `state.park_signal_daily`, `state.macro_fred_latest` (hy_oas), `state.park_allocation_latest` | `events.decision_log` (dev notes + `entry_type='park-allocation'` every day, surfaced on `state.park_allocation_latest`; + `entry_type='research-screen'` ×2 — single-name-move + sector-move AI-significance screens, Operating_Protocols.md §19, 2026-07-19); inline router review → `events.regime_events`; `events.regime_events` scope `TECHNICAL_INPUT` key `EQUITY_BREADTH_PCT` (EQUITY-BREADTH OBSERVATION, daily, 2026-08-05 — read by D2a STEP 1e); `ops.heartbeat` (`source='loop:park_allocator'`); `state.strategy_candidates` (FRONTIER-LLM CAPABILITY CHECK, `source_routine='D1'`, on a materiality-clearing HF capture) | Daily.md |
-| **D2** | Daily Action Conversion | Daily · regular | `state.daily_briefing`, `state.current_positions`, `events.daily_marks`, `state.entry_staging_allowed`; PARK ALLOCATION CONVERSION adds `state.park_allocation_latest`, `state.park_policy_current`, `state.park_position_current` (2026-07-19 first-leg SELL craft; 2026-07-26 — BOTH legs crafted same session); STRATEGY TERMINATIONS (step 5) adds `state.strategy_probe_funding_gap`, `state.strategy_roster` | `events.position_events`; `events.decision_log` (+embedding) via `ops.sp_log_decision` (incl. `entry_type='capital-allocation'` on a termination, 2026-07-19 — `AI_DECISION_REDESIGN.md` §3 Redesign A); `events.regime_events`; `events.queue_events`; `events.cash_flows` (newcomer floor fill / capital-allocation split); `events.park_policy_changes` (on a BOUND switch); Watchlist.md (fills reconciliation + NAV/TWR engine maintenance moved to **D2a** in the 2026-07-09 cutover — see the D2 §"STEP 0…now run in D2a" note) | — (reads Daily.md) |
-| **D2a** | Broker Reconcile & Snapshot | Daily · regular | live IBKR connector state (positions/balances/trades), `events.daily_marks`, `state.current_positions`, `state.account_latest` | `events.trade_fills`/`events.position_events` reconciliation, `analytics.strategy_nav`, `perf.strategy_daily`, NAV snapshot, `ops.run_log`/`ops.alerts`; STEP 1d adds `events.signal_marks` (11 menu tickers + SPY + `^VIX`, isolated from `daily_marks`) | — |
-| **D3** | Calendar Hygiene | Daily · regular | `state.open_queue`, `state.current_positions`, `events.queue_events`/`events.decision_log`; self-heal reads add `state.ci_findings_open`, `state.ddl_drift_promotion_readiness`/`state.restore_stale_promotion_readiness`/`state.append_only_integrity_promotion_readiness`/`state.b3_promotion_readiness`, `ops/trigger_ids.json` (repo file), `ops/cadence.yaml` `routine_model`, and `AI_Trading_Foundation.md`'s in-use-model field | `events.queue_events` (terminal-entry sweep + `PENDING_REVIEW` prose-regression entries); self-heal writes `bigquery/75_scheduled_query_wrappers.sql` (live procedure re-apply via MCP) + new `bigquery/NN_*.sql` resync/create files, `ops.monitor_promotion_log`, `ops.parity_selfheal_log`, `ops.alerts`, `events.decision_log`, `events.position_events` (the PRE-FILL INVALIDATION RE-CHECK's phantom-close net-out, 2026-08-03); `AI_Trading_Foundation.md` (MODEL-OF-RECORD DOC SYNC, cadence audit 2026-07-29) | — |
-| **OPS0** | Cadence Watchdog | Daily · regular | `state.catchup_refire_readiness`, `ops/trigger_ids.json` (repo file); STEP 4 GIT LANDING SWEEP adds git remote refs (`git fetch`/`merge-base`, external) + optional `gh api` (CI conclusion/PR lookup, external) | `ops.catchup_refire_log`, `events.decision_log` (+ `entry_type='stranded-branch-adoption'`/`'unlanded-completed-run'`, STEP 4d/4f), `ops.alerts` (+ `stranded_branch`, `stranded_branch_adopted`, `unlanded_completed_run`), `ops.routine_commit_markers` (STEP 4d adoption only); STEP 4d may also merge arbitrary NON-excluded repo files from an adopted branch onto OPS0's own branch (`bigquery/*.sql`, `dbt/**` and the spec-locked strategy surfaces are hard-excluded); `RemoteTrigger run(...)` (external call, not a BigQuery write) | — |
-| **OPS1** | Morning Connector Liveness Probe | Daily · regular | — (no state reads beyond the standard `state.trading_day_today` pre-flight; probes IBKR/Calendar/FMP/Gmail live, read-only; TOOL-INVENTORY DRIFT CHECK also reads the repo manifest `ops/connector_tools.yaml` and the live per-connector tool inventory) | `ops.alerts` (`connector_reauth_needed`, `connector_tool_added`, `connector_tool_removed`, `connector_tool_enumeration_failed` — raise + self-heal resolve), `ops.connector_tool_inventory` | — |
-| **OPS2** | Catch-up Executor | Daily · regular | `state.catchup_refire_readiness`, `ops/trigger_ids.json`, `state.market_calendar`, the missed routine's slice `task_plan/<X>.md` | `ops.catchup_refire_log`, `events.decision_log`, `ops.alerts`; + the executed routine's OWN write surfaces (it runs the routine inline) | — |
+| **D1** | Market Development Scan | Sun-Thu · research | `state.daily_briefing`, `state.current_positions`, `perf.kill_flags`/`perf.strategy_daily`, `state.current_regime`, `find_precedents()`; PARK ALLOCATION CALL adds `state.park_signal_daily`, `state.macro_fred_latest` (hy_oas), `state.park_allocation_latest` | `events.decision_log` (dev notes + `entry_type='park-allocation'` every day, surfaced on `state.park_allocation_latest`; + `entry_type='research-screen'` ×2 — single-name-move + sector-move AI-significance screens, Operating_Protocols.md §19, 2026-07-19); inline router review → `events.regime_events`; `events.regime_events` scope `TECHNICAL_INPUT` key `EQUITY_BREADTH_PCT` (EQUITY-BREADTH OBSERVATION, daily, 2026-08-05 — read by D2a STEP 1e); `ops.heartbeat` (`source='loop:park_allocator'`); `state.strategy_candidates` (FRONTIER-LLM CAPABILITY CHECK, `source_routine='D1'`, on a materiality-clearing HF capture) | Daily.md |
+| **D2** | Daily Action Conversion | Sun-Thu · regular | `state.daily_briefing`, `state.current_positions`, `events.daily_marks`, `state.entry_staging_allowed`; PARK ALLOCATION CONVERSION adds `state.park_allocation_latest`, `state.park_policy_current`, `state.park_position_current` (2026-07-19 first-leg SELL craft; 2026-07-26 — BOTH legs crafted same session); STRATEGY TERMINATIONS (step 5) adds `state.strategy_probe_funding_gap`, `state.strategy_roster` | `events.position_events`; `events.decision_log` (+embedding) via `ops.sp_log_decision` (incl. `entry_type='capital-allocation'` on a termination, 2026-07-19 — `AI_DECISION_REDESIGN.md` §3 Redesign A); `events.regime_events`; `events.queue_events`; `events.cash_flows` (newcomer floor fill / capital-allocation split); `events.park_policy_changes` (on a BOUND switch); Watchlist.md (fills reconciliation + NAV/TWR engine maintenance moved to **D2a** in the 2026-07-09 cutover — see the D2 §"STEP 0…now run in D2a" note) | — (reads Daily.md) |
+| **D2a** | Broker Reconcile & Snapshot | Sun-Thu · regular | live IBKR connector state (positions/balances/trades), `events.daily_marks`, `state.current_positions`, `state.account_latest` | `events.trade_fills`/`events.position_events` reconciliation, `analytics.strategy_nav`, `perf.strategy_daily`, NAV snapshot, `ops.run_log`/`ops.alerts`; STEP 1d adds `events.signal_marks` (11 menu tickers + SPY + `^VIX`, isolated from `daily_marks`) | — |
+| **D3** | Calendar Hygiene | Sun-Thu · regular | `state.open_queue`, `state.current_positions`, `events.queue_events`/`events.decision_log`; self-heal reads add `state.ci_findings_open`, `state.ddl_drift_promotion_readiness`/`state.restore_stale_promotion_readiness`/`state.append_only_integrity_promotion_readiness`/`state.b3_promotion_readiness`, `ops/trigger_ids.json` (repo file), `ops/cadence.yaml` `routine_model`, and `AI_Trading_Foundation.md`'s in-use-model field | `events.queue_events` (terminal-entry sweep + `PENDING_REVIEW` prose-regression entries); self-heal writes `bigquery/75_scheduled_query_wrappers.sql` (live procedure re-apply via MCP) + new `bigquery/NN_*.sql` resync/create files, `ops.monitor_promotion_log`, `ops.parity_selfheal_log`, `ops.alerts`, `events.decision_log`, `events.position_events` (the PRE-FILL INVALIDATION RE-CHECK's phantom-close net-out, 2026-08-03); `AI_Trading_Foundation.md` (MODEL-OF-RECORD DOC SYNC, cadence audit 2026-07-29) | — |
+| **OPS0** | Cadence Watchdog | Sun-Thu · regular | `state.catchup_refire_readiness`, `ops/trigger_ids.json` (repo file); STEP 4 GIT LANDING SWEEP adds git remote refs (`git fetch`/`merge-base`, external) + optional `gh api` (CI conclusion/PR lookup, external) | `ops.catchup_refire_log`, `events.decision_log` (+ `entry_type='stranded-branch-adoption'`/`'unlanded-completed-run'`, STEP 4d/4f), `ops.alerts` (+ `stranded_branch`, `stranded_branch_adopted`, `unlanded_completed_run`), `ops.routine_commit_markers` (STEP 4d adoption only); STEP 4d may also merge arbitrary NON-excluded repo files from an adopted branch onto OPS0's own branch (`bigquery/*.sql`, `dbt/**` and the spec-locked strategy surfaces are hard-excluded); `RemoteTrigger run(...)` (external call, not a BigQuery write) | — |
+| **OPS1** | Morning Connector Liveness Probe | Sun-Thu · regular | — (no state reads beyond the standard `state.trading_day_today` pre-flight; probes IBKR/Calendar/FMP/Gmail live, read-only; TOOL-INVENTORY DRIFT CHECK also reads the repo manifest `ops/connector_tools.yaml` and the live per-connector tool inventory) | `ops.alerts` (`connector_reauth_needed`, `connector_tool_added`, `connector_tool_removed`, `connector_tool_enumeration_failed` — raise + self-heal resolve), `ops.connector_tool_inventory` | — |
+| **OPS2** | Catch-up Executor | Sun-Thu · regular | `state.catchup_refire_readiness`, `ops/trigger_ids.json`, `state.market_calendar`, the missed routine's slice `task_plan/<X>.md` | `ops.catchup_refire_log`, `events.decision_log`, `ops.alerts`; + the executed routine's OWN write surfaces (it runs the routine inline) | — |
 | **W1** | Catalyst Calendar (A, C) | Weekly · research | `state.current_regime`, `state.current_positions`, `events.decision_log` | — | Weekly_Catalyst_Calendar.md |
 | **W2** | Post-Event Screen (B) | Weekly · research | `events.decision_log`/`find_precedents()`, `state.current_positions` | `events.decision_log` via `ops.sp_log_decision` (`entry_type='research-screen'`, screen='post-event' — Operating_Protocols.md §19, 2026-07-19) | Weekly_Post_Event_Screen.md |
 | **W3** | Open-Position Deep-Dive (A,B,C,E) | Weekly · research | `state.current_positions`, `state.current_regime`, `events.decision_log` | — | Weekly_Position_Deep_Dive.md |
@@ -46,11 +46,11 @@ Every routine reads and/or writes BigQuery for operational state (positions, reg
 | **A3** | Annual Action Conversion | Annual · regular | A1/A2 `.md`, `state.current_positions` | `events.decision_log`, `events.queue_events`, `state.strategy_candidates`, `events.strategy_research_leads` | updates AI_Trading_Foundation.md + Strategy.md |
 | **SL1** | Strategy Candidate Synthesis & Qualification | Quarterly · research | `state.strategy_candidates`, `events.strategy_research_leads`, final-effective prior SL1 heartbeats, `state.strategy_roster`, `state.arsenal_regime_coverage`, `events.strategy_postmortems`, `state.arsenal_rails`, `ops.arsenal_control` | `state.strategy_candidates`, `events.strategy_research_leads`, `events.strategy_lifecycle`, `events.queue_events` (`PENDING_DRAFT`), `events.decision_log`, `ops.alerts` | — |
 | **SL2** | Strategy Draft, Revise & Post-mortem | Queue-driven · regular | `events.queue_events` (`PENDING_DRAFT`), `state.strategy_candidates`, `state.adversarial_reviews_current`, `strategy/roster.yaml` | `Strategy.md` (candidate namespace), `strategy/` slices, `events.queue_events` (`PENDING_REVIEW`), `events.strategy_postmortems`, `events.strategy_lifecycle`, `events.decision_log`, `ops.alerts` | — |
-| **SL3** | Incubation Monitor & Graduation | Daily · regular | `perf.strategy_daily`, `events.daily_marks`, `state.strategy_roster`, `state.strategy_shadow_readiness`/`_paper_readiness`, `analytics.strategy_incubation_perf`, `ops.arsenal_control`/`ops.trading_control` | `analytics.strategy_incubation_perf`, `events.strategy_lifecycle`, `state.arsenal_regime_coverage`, `events.queue_events`, `events.decision_log`, `ops.alerts` | — |
+| **SL3** | Incubation Monitor & Graduation | Sun-Thu · regular | `perf.strategy_daily`, `events.daily_marks`, `state.strategy_roster`, `state.strategy_shadow_readiness`/`_paper_readiness`, `analytics.strategy_incubation_perf`, `ops.arsenal_control`/`ops.trading_control` | `analytics.strategy_incubation_perf`, `events.strategy_lifecycle`, `state.arsenal_regime_coverage`, `events.queue_events`, `events.decision_log`, `ops.alerts` | — |
 | **SL4** | Discretionary Retirement Proposer | Monthly · regular | `perf.strategy_daily`, `perf.kill_flags`, `analytics.strategy_vs_park`, `state.strategy_roster`, `state.strategy_retirement_candidacy`, `state.arsenal_regime_coverage`, `ops.arsenal_control` | `events.queue_events` (`PENDING_REVIEW`), `events.strategy_lifecycle`, `events.decision_log`, `ops.alerts` | — |
 | **SL5** | Strategy Register & Roster Sync | Queue-driven · regular | `state.strategy_adoption_readiness`, `state.strategy_roster`, `strategy/roster.yaml`, `ops.roster_change_log`, `events.queue_events`, `events.strategy_lifecycle` | `strategy/roster.yaml`, `Strategy.md`, `strategy/` slices, Claude_Task_Plan.md slice-map row, `bigquery/*.sql` live views (MCP), `ops.roster_change_log`, `events.strategy_lifecycle`, `events.decision_log`, `ops.alerts`, git commit/push | — |
 
-¹ Adversarial routines are queue-driven: they fire daily but no-op unless the review queue (`PENDING_REVIEW`) has a due entry. The deep-research routines' `.md` outputs are their cadence working files; the **canonical** state always lives in BigQuery per the columns above.
+¹ Adversarial routines are queue-driven: `monitor_class: queue_driven` (their due-ness is not calendar-predictable, so they stay structurally absent from `state.cadence_expected_today`), and the underlying trigger no-ops unless the review queue (`PENDING_REVIEW`) has a due entry. **Updated 2026-08-08** (daily-tier Fri/Sat consolidation onto Sunday, `ops/cadence.yaml`): that trigger's own cron fires Sunday-Thursday only — same as SL2/SL5 (the other two queue-driven SISA lifecycle routines) and the other 8 daily-tier routines' `daily_sun_thu` monitor_class — not literally every calendar day. The deep-research routines' `.md` outputs are their cadence working files; the **canonical** state always lives in BigQuery per the columns above.
 
 ---
 
@@ -247,7 +247,7 @@ This mechanically clears a small, explicit allowlist of critical/warning alerts 
 
   **Midnight-crossing grace (2026-07-14, RUNBOOK §41) — a second, unrelated tolerance in the same gate.** Separate from the landed-but-unlogged case above: `sp_assert_deps` also accepts an upstream that completed for `<today> MINUS ONE DAY`, but only while Denver wall-clock is still before **noon** of `<today>`. This covers a delayed evening trigger (the platform's cloud trigger infra ran the whole D2-onward evening block 5-7h late on 2026-07-13) whose actual execution slipped past local midnight, so the calling routine's own `<today>` had already rolled to the next calendar day even though the correct (immediately preceding) day's upstream genuinely had completed, just also late — real example: AR_att completed for 07-13 at 23:05 MT, then AR_orc fired at 00:42 MT on 07-14 and would otherwise have raised a false `missing_dependency` checking AR_att against the wrong day. No session-level action needed for this either — it's mechanical inside the gate, same as the §38 self-heal above. It does NOT help when the upstream genuinely didn't complete on either day (a real gap still aborts as before).
 
-- **SAME-DAY DOUBLE-RUN GUARD, generalized (completeness-critic finding N-4, 2026-07-16) — binds every `catchup_safe: true` routine in `ops/cadence.yaml`.** OPS0 (Cadence Watchdog) may catch up and refire a routine that missed its scheduled trigger; its own `ops.catchup_refire_log` only stops OPS0 from refiring the SAME routine twice from OPS0's own side — it does nothing to stop a late-firing ORIGINAL platform trigger from independently double-running a routine OPS0 already refired today (duplicate `events.decision_log`/`events.queue_events` writes; a same-branch git clobber risk via the session-start hard reset). D2's own "SAME-DAY IDEMPOTENCY GUARD" (self-improvement audit 2026-07-15, Architect recommendation #2) was the first instance of this check, built for its specific D2a→D2 chain-call case; this bullet is the SAME pattern generalized to every other `catchup_safe: true` routine so a late-arriving second trigger can never double-run ANY of them, not just D2. **Every routine below this bullet's scope carries a one-line pointer back to this text (in its own Observability preamble, not restated in full) reading: `SELECT COUNT(*) FROM ops.run_log WHERE routine='<ID>' AND run_date=<today, America/Denver> AND status='completed'`; if `>= 1`, output "`<ID>` already completed today (a prior fire — OPS0 catch-up or the routine's own scheduled trigger — already completed; this is the expected redundant re-invocation, not an error)." and END IMMEDIATELY** — **CYCLE-AWARE VARIANT for the EVENING-slot daily cohort (H1, whole-system deep audit 2026-07-17; D1, D2, D2a, D3, SL3 — the daily routines whose triggers fire >= 16:00 MT):** this completion count additionally requires `AND DATETIME(log_ts,'America/Denver') >= DATETIME(<today, America/Denver>, TIME '12:00:00')` so it counts ONLY completions logged in the routine's real evening window. Without it, a prior-day evening run that slipped past local midnight and whose `run_date` was stamped onto *today* by `bigquery/12_cadence_monitor.sql`'s midnight-crossing grace (its `log_ts` lands in the early-AM hours) is miscounted as today's completion and cancels the *genuine* evening run — the exact interaction this variant closes. A true same-evening double-fire is unaffected (both `log_ts` are >= noon, so it is still caught). The pre-noon weekly/monthly/quarterly/annual cohort keeps the PLAIN predicate above (their slots are already before noon, so a midnight-crossing mis-stamp cannot arise). This variant changes only WHICH completions the count includes — the FIRST-position, END-IMMEDIATELY, no-duplicate-log behavior is otherwise identical. **IN-PROGRESS variant (v2, 2026-07-18 adversarial review — closes the refire-vs-still-running race):** in ADDITION to the completed-count, if another session's `'started'` row for `<ID>`/today exists with `log_ts` within the last **3 hours** and no terminal row yet (this check runs FIRST, before this session logs its own start, so any such row is another session's), treat it as an in-flight original — output the same already-covered line and END IMMEDIATELY. This is what stops an OPS0 catch-up refire (or a late duplicate trigger) from double-running a routine that is legitimately mid-DEPENDENCY-WAIT past the 21:00 dead-man deadline: the completed-count alone cannot see a run that hasn't finished. A `'started'` row OLDER than 3h with no terminal row is treated as a dead session (`state.stalled_runs` territory) and does NOT suppress this run. — do NOT redo this run's work (re-read/re-write its output file, re-drain a queue, re-convert an action), do NOT log another `started`/`completed` row (a duplicate log row is harmless but adds no signal). Run this check FIRST, before RUN LOGGING, before the dependency gate, before anything else — same position as D2's original. This does not change the dependency gate, trading-enable gate, or any order-guard check for any routine. (D1/D3/SL3 carry this same check despite also being `catchup_safe: true` and having other, unrelated safeguards of their own — the guard here is orthogonal to those and closes a gap none of them individually cover.)
+- **SAME-DAY DOUBLE-RUN GUARD, generalized (completeness-critic finding N-4, 2026-07-16) — binds every `catchup_safe: true` routine in `ops/cadence.yaml`, PLUS D2 and D2a (rescoped 2026-08-09).** D2 and D2a are both `catchup_safe: false` yet each independently exposed to same-day double-invocation — D2 via D2a's own chain-call, which fires regardless of D2's catch-up eligibility; D2a via a manual re-run or a retry after a partial failure (verified in production: D2a double-completed run_date 2026-07-03, 15:36 + 16:26 MT, and run_date 2026-07-11, 07:26 + 16:27 MT) — and neither exposure is gated by the OPS0/OPS2 catch-up exclusions: that set (D2, D2a, W4, M4, Q4, A3, SL4 — see the REFIREABLE definition above) only stops OPS0/OPS2 from double-REFIRING a routine themselves, not a same-day re-run or chain-call arriving from another source. (The rest of this bullet's scope — the queue-driven AR_att/AR_orc/SL2/SL5, and W4/M4/Q4/A3/SL4 — stays OUT: those either drop out automatically as queue-driven, or their own due-ness is calendar-gated in a way this exposure does not apply to.) OPS0 (Cadence Watchdog) may catch up and refire a routine that missed its scheduled trigger; its own `ops.catchup_refire_log` only stops OPS0 from refiring the SAME routine twice from OPS0's own side — it does nothing to stop a late-firing ORIGINAL platform trigger from independently double-running a routine OPS0 already refired today (duplicate `events.decision_log`/`events.queue_events` writes; a same-branch git clobber risk via the session-start hard reset). D2's own "SAME-DAY IDEMPOTENCY GUARD" (self-improvement audit 2026-07-15, Architect recommendation #2) was the first instance of this check, built for its specific D2a→D2 chain-call case; this bullet is the SAME pattern generalized to every other routine in this bullet's scope so a late-arriving second trigger (or, for D2a, a manual re-run/retry) can never double-run ANY of them, not just D2. **Every routine below this bullet's scope carries a one-line pointer back to this text (in its own Observability preamble, not restated in full) reading: `SELECT COUNT(*) FROM ops.run_log WHERE routine='<ID>' AND run_date=<today, America/Denver> AND status='completed'`; if `>= 1`, output "`<ID>` already completed today (a prior fire — OPS0 catch-up or the routine's own scheduled trigger — already completed; this is the expected redundant re-invocation, not an error)." and END IMMEDIATELY** — **CYCLE-AWARE VARIANT for the EVENING-slot daily cohort (H1, whole-system deep audit 2026-07-17; D1, D2, D2a, D3, SL3 — the daily routines whose triggers fire >= 16:00 MT):** this completion count additionally requires `AND DATETIME(log_ts,'America/Denver') >= DATETIME(<today, America/Denver>, TIME '12:00:00')` so it counts ONLY completions logged in the routine's real evening window. Without it, a prior-day evening run that slipped past local midnight and whose `run_date` was stamped onto *today* by `bigquery/12_cadence_monitor.sql`'s midnight-crossing grace (its `log_ts` lands in the early-AM hours) is miscounted as today's completion and cancels the *genuine* evening run — the exact interaction this variant closes. A true same-evening double-fire is unaffected (both `log_ts` are >= noon, so it is still caught). The pre-noon weekly/monthly/quarterly/annual cohort keeps the PLAIN predicate above (their slots are already before noon, so a midnight-crossing mis-stamp cannot arise). This variant changes only WHICH completions the count includes — the FIRST-position, END-IMMEDIATELY, no-duplicate-log behavior is otherwise identical. **IN-PROGRESS variant (v2, 2026-07-18 adversarial review — closes the refire-vs-still-running race):** in ADDITION to the completed-count, if another session's `'started'` row for `<ID>`/today exists with `log_ts` within the last **3 hours** and no terminal row yet (this check runs FIRST, before this session logs its own start, so any such row is another session's), treat it as an in-flight original — output the same already-covered line and END IMMEDIATELY. This is what stops an OPS0 catch-up refire (or a late duplicate trigger) from double-running a routine that is legitimately mid-DEPENDENCY-WAIT past the 21:00 dead-man deadline: the completed-count alone cannot see a run that hasn't finished. A `'started'` row OLDER than 3h with no terminal row is treated as a dead session (`state.stalled_runs` territory) and does NOT suppress this run. — do NOT redo this run's work (re-read/re-write its output file, re-drain a queue, re-convert an action), do NOT log another `started`/`completed` row (a duplicate log row is harmless but adds no signal). Run this check FIRST, before RUN LOGGING, before the dependency gate, before anything else — same position as D2's original. This does not change the dependency gate, trading-enable gate, or any order-guard check for any routine. (D1/D3/SL3 carry this same check despite also being `catchup_safe: true` and having other, unrelated safeguards of their own — the guard here is orthogonal to those and closes a gap none of them individually cover.)
 
 - **Upstream-output FRESHNESS check (action-conversion routines W4 / M4 / Q4 / A3) — SECOND, file-based gate (added 2026-06-24, RUNBOOK §25 D1).** `sp_assert_deps` keys off `ops.run_log` and so is INERT for the research feeders that have not yet adopted run-logging (only D1/D2/D3/AR are monitored) — meaning W4/M4/Q4/A3 can today convert *absent or stale* research into orders, the exact risk the gate exists to prevent. Use a second freshness signal that is already available: the upstream research file's **first-line period marker** (the "File-write conventions" markers — Weekly `YYYY-WW`, Monthly `YYYY-MM`, Quarterly `YYYY-QN`, Annual `YYYY`). **Before `sp_routine_start`**, for each upstream the routine consumes, read the file's first line and assert its marker equals the **current period** for that cadence (per `state.trading_day_today.today`). On a mismatch or a missing/empty file, treat it as a missing dependency: `CALL ops.sp_raise_alert('critical','<ID>','missing_dependency','<which upstream is stale/absent — marker found vs expected>', '<JSON>')`, log the run `'halted'`, and ABORT — do **not** convert stale research into orders (BigQuery is confirmed live by this point in the run, so `ops.alerts` + `alert_emailer.gs` already deliver this; no calendar event, 2026-07-09). (Be period-aware about the documented retrospective offset: Q1/Q3 and some monthly retrospectives legitimately carry the *prior* period marker — accept the prior period for those, per "File-write conventions". W4 → W1/W2/W3 current `YYYY-WW`; M4 → M1b/M2/M3; Q4 → Q2/Q3; A3 → A1/A2.) This makes the gate bite NOW without waiting for the research routines to adopt run-logging, and additionally catches the "ran but emitted a prior-period file" case a run-log-only check never would. **The DEPENDENCY-WAIT WINDOW above applies here too (owner directive 2026-07-18):** on a marker mismatch / missing file, re-check every ~10 min within the same single ~60-min window before taking the alert+halt path — refresh the upstream file from `origin`'s current tip before each re-read (a late-running upstream delivers its output by push, so the session's original checkout won't see it), and run the same double-run-guard re-check each poll; if the window exhausts, the alert text must say so.
 
@@ -611,6 +611,8 @@ discretionary orders (only the mechanical park sweep/cover) — D2 (below) depen
 output for its own Step 1 onward.
 
 ```
+**SAME-DAY DOUBLE-RUN GUARD (completeness-critic N-4, 2026-07-16 — see the shared Observability section's generalized guard; D2a added to scope 2026-08-09)** — FIRST, before RUN LOGGING below, before anything else: `SELECT COUNT(*) FROM ops.run_log WHERE routine='D2a' AND run_date=<today, America/Denver> AND status='completed' AND DATETIME(log_ts,'America/Denver') >= DATETIME(<today, America/Denver>, TIME '12:00:00')` (noon-threshold clause — D2a is EVENING-slot daily, so count ONLY completions logged in the real evening window; a post-midnight prior-day run mis-stamped onto today by bigquery/12's midnight-crossing grace has an early-AM `log_ts` and is correctly EXCLUDED, so it can't cancel today's genuine evening run — see the shared Observability guard's CYCLE-AWARE VARIANT); if `>= 1`, output "D2a already completed today (a prior fire — a manual re-run or D2a's own scheduled trigger — already completed; this is the expected redundant re-invocation, not an error)." and END IMMEDIATELY — do NOT re-reconcile the broker account, do NOT re-run the cash/park tripwire or sweep/cover, do NOT re-craft the staged-order registry, do NOT log another `started`/`completed` row. **The count is `status='completed'` ONLY — a `'halted'` row never satisfies it, so a first attempt that halted (e.g. 2026-07-11: started 01:50 MT, halted 01:54 MT) does NOT block the legitimate repair re-run that follows once the blocking condition clears (that same day's repair run started 07:25 MT and completed 07:26 MT) — do NOT "tighten" this to also count `'halted'` rows; doing so would strand the repair path this guard must not break.** IN-PROGRESS variant applies here too (see the shared Observability guard's v2, 2026-07-18): if another session's `'started'` row for `D2a`/today exists with `log_ts` within the last 3 hours and no terminal row yet, treat it as an in-flight original and END IMMEDIATELY the same way.
+
 Read access scope: Daily cadence. Read positions/perf/NAV from `state.current_positions` /
 `perf.strategy_daily` / `analytics.strategy_nav` / `analytics.account_reconciliation`. Read
 `Operating_Protocols.md` §11/§13/§14 as relevant. No Strategy.md / Watchlist.md / decision_log access
@@ -896,14 +898,59 @@ Concretely, every run:
   into the events-side state — only cost-basis + strategy allocation are; live marks flow through
   `events.daily_marks` into the TWR engine (below).
 - **Connector-sanity band on net-liquidation.** Compare this session's `get_account_summary` net-liquidation to
-  `state.account_latest.nav` (yesterday's snapshot — D2a runs before its own Step 0b, so today's row does not
-  exist yet: a clean prior-day baseline). **Stale-baseline awareness (owner directive 2026-07-25 CATCH-UP
-  EVIDENCE WINDOW) — when D2a's own gap since its last successful completion spans MORE than 1 trading day**
-  (`state.routine_catchup_window` for routine='D2a', or `days since D2a's own last completed ops.run_log run`
-  on a view-read failure) **this baseline is that many trading days stale, not a true prior-day snapshot** —
-  annotate the actual day-count gap in the alert/decision note below and let the MARKET-MOVE TERM's
-  `expected_ΔNAV` sum the mechanical mark-to-market move across the FULL gap (not a single day) before judging
-  the residual, so a genuine multi-day catch-up doesn't misclassify as connector corruption. If the day-over-day change exceeds **±15%** and is NOT fully explained
+  `state.account_latest.nav` (the prior snapshot — D2a runs before its own Step 0b, so today's row does not
+  exist yet: a clean prior baseline; under the Fri/Sat-skip daily-tier schedule this is not always literally
+  *yesterday's* — see Step 0b below). **Stale-baseline awareness (owner directive 2026-07-25 CATCH-UP
+  EVIDENCE WINDOW) — when D2a has AT LEAST ONE missed trading day since its own last successful completion:**
+  **D2A MISSED-TRADING-DAY COUNT (bug fix, 2026-08-08, corrected same day — the predicate this bullet, the
+  MARKET-MOVE TERM below, and step 1's `daily_marks` missed-day backfill further down this section all now
+  share).** **Anchor on `run_date`, never on a completion timestamp (correction, 2026-08-08 — the version
+  that first landed earlier the same day anchored on `DATE(last_completed_ts, 'America/Denver')` and was
+  wrong).** `ops.run_log.run_date` is the routine's OWN declaration of which trading day it processed —
+  written once, at logging time, and invariant to how long the run took or when it happened to finish.
+  `log_ts` is not: a run that CROSSES LOCAL MIDNIGHT lands `DATE(log_ts, 'America/Denver')` one calendar
+  day AFTER the trading day the run actually covered, silently re-dating a long (or midnight-adjacent) run
+  onto the following day. Confirmed live in `ops.run_log`: D2a's Sunday 2026-08-02 run started 23:56 MT and
+  completed 00:06 MT the next day — `run_date = 2026-08-02` but `DATE(log_ts, 'America/Denver') =
+  2026-08-03`. Simulating both predicates across every historical D2a completion shows this is not merely
+  theoretical: the run that started 2026-08-03 (Monday) computed `missed_trading_days = 0` under the OLD
+  `log_ts`-anchored predicate — silently suppressing the stale-baseline check — vs. the correct `1` under
+  the `run_date`-anchored fix below (every non-midnight-crossing day in the same trace agrees old-vs-new,
+  confirming this is specifically a midnight-crossing bug, not a general miscount).
+  ```sql
+  SELECT COUNT(*) AS missed_trading_days
+  FROM `stock-trading-498512.state.market_calendar` mc
+  WHERE mc.is_trading_day
+    AND mc.cal_date > COALESCE(
+          (SELECT MAX(run_date) FROM `stock-trading-498512.ops.run_log`
+            WHERE routine = 'D2a' AND status = 'completed'),
+          DATE((SELECT cadence_fallback_window_start_ts FROM `stock-trading-498512.state.routine_catchup_window`
+                WHERE routine = 'D2a'), 'America/Denver')
+        )
+    AND mc.cal_date <= (SELECT last_trading_day FROM `stock-trading-498512.state.trading_day_today`)
+  ```
+  **Never-completed guard:** the inner `MAX(run_date)` subquery returns `NULL` exactly when D2a has never
+  logged a `completed` row — the identical condition `state.routine_catchup_window.never_completed` names
+  for this routine (both derive from the same `ops.run_log` `status='completed'` predicate) — so falling
+  through the `COALESCE` to that view's own `cadence_fallback_window_start_ts` (the `daily_sun_thu`
+  cadence-sized fallback, 3 days) on a bare `NULL` is the correct guard, not a coincidence: it reuses the
+  SAME never-completed fallback every other CATCH-UP EVIDENCE WINDOW consumer in this file already falls
+  back to, rather than inventing a second one. D2a has run continuously since inception, so this path is a
+  defensive floor, not a case expected to fire.
+  gated on `missed_trading_days >= 1` (never `> 1`) — on a read failure against `ops.run_log` /
+  `state.market_calendar` / `state.trading_day_today`, fall back to `days since D2a's
+  own last completed ops.run_log run > 0`. **Why a count, not the raw `state.routine_catchup_window.window_days`
+  figure the old wording ("spans MORE than 1 trading day") cited:** that column is CONTINUOUS CALENDAR time
+  (`TIMESTAMP_DIFF(...)/1440.0`, `bigquery/105_routine_catchup_window.sql`), not a trading-day count, and the
+  two now disagree exactly on the case the Fri/Sat schedule change makes routine: a Thursday→Sunday gap is
+  `window_days` ≈ 3.0 (it spans Fri/Sat/Sun) but exactly ONE missed trading day (Friday). Read literally as
+  "more than 1 trading day," the old wording never fired on that single Friday; read against the ~3.0
+  calendar-day figure it always would have — an ambiguity this file can no longer leave standing now that a
+  Thu→Sun gap is the WEEKLY NORMAL CASE, not a rare outage. **When `missed_trading_days >= 1`:** this baseline
+  is that many trading days stale, not a true prior-session snapshot — annotate the actual day-count gap in the
+  alert/decision note below and let the MARKET-MOVE TERM's `expected_ΔNAV` sum the mechanical mark-to-market
+  move across the FULL gap (not a single day) before judging the residual, so a genuine multi-day catch-up — or
+  the now-routine Thu→Sun weekly gap — doesn't misclassify as connector corruption. If the day-over-day change exceeds **±15%** and is NOT fully explained
   by what this session reconciled (a fill's realized P&L, a dividend, a deposit/withdrawal, a confirmed split) —
   **NOR by ordinary mark-to-market movement of the held book** — treat it as a candidate connector-corruption
   signal, but apply the **MARKET-MOVE TERM** below before halting.
@@ -915,7 +962,7 @@ Concretely, every run:
     ITEM-16 safe): `expected_ΔNAV = Σ_held ( shares × (today get_price_snapshot − yesterday events.daily_marks
     close) ) + park_shares × Δ(park-vehicle price) + reconciled_flows`, where `reconciled_flows` is the SAME
     signed fills'-realized-P&L / dividend / deposit-withdrawal / confirmed-split cash the escape list already
-    covers (when D2a's own gap exceeds 1 trading day per the stale-baseline awareness clause above,
+    covers (when `missed_trading_days >= 1` per the D2A MISSED-TRADING-DAY COUNT clause above,
     "yesterday" here is the last `events.daily_marks` close as of D2a's last successful completion, not
     literally the calendar day before today — consistent with the marks backfill below). Then take the
     **RESIDUAL** `|ΔNLV − expected_ΔNAV|` and branch:
@@ -961,7 +1008,7 @@ Concretely, every run:
   options, an undefined max_loss), leave the row `pending` for next session's re-evaluation (the persist-and-wait
   intent is not dropped, but a malformed re-craft is not sent either). If
   `passed = TRUE`: a re-craft simply re-runs the ENTER/EXIT-vs-ABANDON judgment (preamble ENTRY/EXIT DECISION) and,
-  if ENTER (or EXIT/TRIM for an exit row), re-stages a fresh MARKET instruction for the current session (re-pull `get_price_snapshot` for the
+  if ENTER (or EXIT/TRIM for an exit row), **FIRST call `delete_order_instruction(prior_instruction_id)`** — where `prior_instruction_id` is this row's CURRENT `payload.instruction_id`, i.e. the instruction this re-craft is about to supersede — an orphaned prior instruction stays live and tap-confirmable by the operator even after being superseded (`state.open_orders` shows only the LATEST `ORDER_STAGED` row per `item_key`, so the superseded instruction id is never looked at again once the new row is written, and it is not swept by the stale-instruction GC below, which only fires once the order DAY has passed) and would execute an unintended duplicate order if tapped alongside the fresh one — THEN re-stages a fresh MARKET instruction for the current session (re-pull `get_price_snapshot` for the
   live reference price; there is no limit to re-price) — an
   ABANDON sets the row terminal instead of re-crafting (writing its compensating CLOSE FIRST per the PHANTOM-CLOSE RULE at the end of this bullet, if this BUY wrote a staging-time provisional OPEN),
   `create_order_instruction(contract_id, side, quantity, order_type='MARKET', time_in_force='DAY')` (no `limit_price` argument transmitted), write a new `ORDER_STAGED` `pending` row with the updated `payload.instruction_id`,
@@ -1097,13 +1144,49 @@ Persist the account-level NAV/cash/TWR read in Step 0 so the weekly self-email +
 the Apps Script emailer cannot reach IBKR, so D2a is the only writer. Pull `get_pa_performance_all_periods` (LAST
 element of each period's `cps` array = cumulative TWR fraction at period end). `INSERT INTO ops.account_snapshot
 (snapshot_date, nav, total_cash, buying_power, available_funds, gross_position_value, sgov_market_value, twr_1d,
-twr_7d, twr_mtd, twr_ytd, twr_1y)`: today (America/Denver from `state.trading_day_today`); the `get_account_summary`
-fields; the CURRENT park vehicle's market value from `get_account_positions` (contract_id per
-`state.park_policy_current` — SGOV 424099317, VOO 136155102) written into the `sgov_market_value` column
-(column name kept as-is post-2026-07-15 cutover — it holds whichever vehicle is currently parked in, not
-literally SGOV; renaming it is a separate, lower-priority schema cleanup, not required for correctness);
-and the cps-array TWRs. One row per
-`snapshot_date` (latest ingest wins via `state.account_latest`; skip if today's row exists). Wrap best-effort so a
+twr_7d, twr_mtd, twr_ytd, twr_1y, source)`:
+
+- **`snapshot_date` = `state.trading_day_today.last_trading_day`** (bug fix, 2026-08-08 — no longer the literal
+  `today` this bullet used before the daily-tier fleet's Fri/Sat schedule change). On a trading day
+  `last_trading_day` already equals `today` (`bigquery/09_market_calendar.sql`'s `state.trading_day_today`
+  definition self-includes today whenever `is_trading_day`), so this is a single assignment, not an IF branch —
+  it reduces to the old `today` behavior on every day D2a used to run, and only diverges on the days that are
+  new: once D2a stops firing Friday and Saturday, its next run (Sunday) would otherwise stamp a Sunday-dated
+  row while Friday, the actual trading day, got NO row, ever — `ops.account_snapshot` has no loop and no
+  backfill (see `bigquery/153_account_snapshot_gap_watch.sql`'s header for the two already-observed permanent
+  gap days, 2026-07-23/24, this exact failure mode produced) — and `state.account_snapshot_gap` (bigquery/153,
+  live) would then flag that permanent hole EVERY week by design, forever, not just once.
+- the `get_account_summary`
+  fields; the CURRENT park vehicle's market value from `get_account_positions` (contract_id per
+  `state.park_policy_current` — SGOV 424099317, VOO 136155102) written into the `sgov_market_value` column
+  (column name kept as-is post-2026-07-15 cutover — it holds whichever vehicle is currently parked in, not
+  literally SGOV; renaming it is a separate, lower-priority schema cleanup, not required for correctness);
+  and the cps-array TWRs.
+- **`source`** (bug fix, 2026-08-08 — this column already exists, `source STRING DEFAULT 'D2-connector'`,
+  `bigquery/14_weekly_report.sql:107`; NO schema change). Leave it at that default for a genuine same-day read
+  (`snapshot_date = today`). **When `snapshot_date` is back-dated (today is NOT itself a trading day), set
+  `source = 'D2a-connector-carried'` explicitly** — a distinct, greppable token so a later reader of
+  `ops.account_snapshot` (or a session diagnosing a `book_drawdown_watch`/TWR discrepancy) can tell a
+  weekend-carried read apart from a measurement genuinely taken as of that trading day's own close, without
+  cross-referencing `ops.run_log` timestamps to reconstruct which case produced the row.
+- **Two caveats a carried read does NOT paper over — record them, do not treat the row as equivalent to a
+  same-day read:**
+  (i) **The TWR columns measure the wrong window; NAV/cash do not.** `get_pa_performance_all_periods`'s period
+  TWRs are computed relative to the QUERY INSTANT, not the stamped `snapshot_date` — a Sunday read's `twr_1d`
+  is the return over the trailing ~24h ending Sunday (mostly a closed weekend), not the return over Friday's
+  actual trading session a Friday-evening read would have measured. `nav`/`total_cash`/`buying_power`/
+  `available_funds`/`gross_position_value`/`sgov_market_value` carry over CLEANLY (the book does not trade over
+  a weekend it is parked through, so Friday's close IS what a Sunday read sees for those fields) — the TWR
+  columns (`twr_1d`, `twr_7d`, `twr_mtd`, `twr_ytd`, `twr_1y`) do not, and must never be read as if they were
+  measured as of `snapshot_date`'s close.
+  (ii) **Weekend cash movement is possible even though the book does not trade.** Interest accrual or an
+  ex-/pay-date on a held or park vehicle could in principle post between Friday's close and the Sunday read,
+  moving `total_cash`/`available_funds` by a small amount that neither Friday's own numbers nor caveat (i)
+  above would explain — a real, if usually small, source of drift between what a genuine Friday-evening run
+  would have written and what the Sunday carry-forward actually captures.
+- One row per `snapshot_date` (latest ingest wins via `state.account_latest`; **skip if a row for the resolved
+  `snapshot_date` already exists** — the same idempotency as before, now keyed on the possibly back-dated date,
+  not literally today's date). Wrap best-effort so a
 snapshot failure never aborts D2a — it feeds a report, not trading. (`bigquery/14_weekly_report.sql`.)
 
 PER-STRATEGY PERFORMANCE MAINTENANCE (deployed-TWR engine; run after fill reconciliation, daily, while connector
@@ -1119,12 +1202,16 @@ the BigQuery value-weighted daily TOTAL-return TWR (`events.daily_marks` → `an
    include_corporate_actions: true)` and `INSERT INTO events.daily_marks (mark_date, ticker, close, dividend,
    split_ratio, source)`: today's close, any ex-div cash dividend/share, split_ratio (split-adjusted at ingest),
    `source='connector'`. Idempotent on (mark_date, ticker). **Missed-day backfill (owner directive 2026-07-25
-   CATCH-UP EVIDENCE WINDOW — see Observability § above; same call, wider date range):** if D2a's own gap since
-   its last successful completion spans more than 1 trading day (`state.routine_catchup_window` for
-   routine='D2a'), pull `get_price_history` over the full missed-trading-day range (not just today) and
+   CATCH-UP EVIDENCE WINDOW — see Observability § above; same call, wider date range):** if
+   `missed_trading_days >= 1` since D2a's own last successful completion (D2A MISSED-TRADING-DAY COUNT, Step 0
+   connector-sanity band above — the corrected trading-day-count predicate against `state.market_calendar`,
+   not the ambiguous "more than 1 trading day" reading of `state.routine_catchup_window.window_days`'s raw
+   CALENDAR-day figure that used to gate this bullet), pull `get_price_history` over the full missed-trading-day
+   range (not just today) and
    `INSERT` one row per (ticker, missed trading day) exactly as above — idempotent on (mark_date, ticker), so a
    backfill re-run is safe; this closes the gap SL3's own catch-up signal/simulated-fill generation depends on
-   (see SL3). **FMP fallback (2026-06-28 #12):** if `get_price_history`
+   (see SL3), and is what lets a Sunday run recover Friday's marks once the daily-tier fleet stops firing
+   Friday/Saturday. **FMP fallback (2026-06-28 #12):** if `get_price_history`
    returns no bar — or a bar older than `state.trading_day_today.last_trading_day` — fall back to the FMP connector
    (`mcp__FMP__quote` for the close; `mcp__FMP__chart` to confirm the dated bar / ex-div) and INSERT with
    `source='FMP-fallback'` (best-effort; prefer IBKR when present). On a systematic per-name IBKR gap, `CALL
@@ -1152,15 +1239,191 @@ the BigQuery value-weighted daily TOTAL-return TWR (`events.daily_marks` → `an
    fabricate/carry-forward an option premium the way step 1 forward-fills an equity gap (option premiums move too
    fast near expiry for a stale carry-forward to be a safe substitute) — `ops.sp_recompute_engine()` (step 2 below)
    already excludes an unmarked option-day from the TWR chain rather than mis-valuing it.
+   **MISSED-DAY BACKFILL (bug fix, 2026-08-08 — supersedes the "FRIDAY-PREMIUM CLIFF — DOCUMENTED, NOT FIXED"
+   posture this note carried earlier the same day; modelled on step 1's `daily_marks` missed-day backfill
+   above).** The premise above (SPOT-only, no historical form) was correct for `get_option_data`/its FMP
+   fallback but incomplete: `get_price_history` DOES return historical option bars — it only rejects
+   `step="ONE_DAY"`. Verified live against two independent contracts (not a replay of a single probe): SPY
+   SEP 18 '26 775 Call (contract_id 793211359) and, independently, QQQ OCT 16 '26 725 Put (contract_id
+   867926161). Both reject `step="ONE_DAY"` with `{"error":"No historical market data available"}`; both
+   return full dated hourly OHLCV on `step="ONE_HOUR"`, `period="ONE_WEEK"`. Both cross-validate exactly
+   against a same-moment spot read — SPY's last bar closed 13.80 against `get_price_snapshot`'s `last.price`
+   of 13.80; QQQ's last bar closed 25.76 against a snapshot of 25.76 — confirming the hourly path reproduces
+   the connector's own last-traded price, not a model, and both contracts' daily bar grids run 13:30Z-20:00Z
+   each session day (9:30am-4:00pm America/New_York under EDT), confirming the bars are session-aligned.
+   **Trigger**: the same `missed_trading_days >= 1` predicate as step 1's `daily_marks` backfill (D2A
+   MISSED-TRADING-DAY COUNT, Step 0 connector-sanity band above) — not redefined here. **Per open option
+   position** (same `analytics.fn_is_occ_option_symbol`-filtered set as the spot ingest above):
+   `get_price_history(contract_id=<the fill's numeric call_contract_id/put_contract_id>, security_type="OPT",
+   step="ONE_HOUR", period="ONE_WEEK", outside_rth=false, exchange="SMART")` — `ONE_WEEK` comfortably spans
+   the routine Thu->Sun 3-day gap with margin; on a wider gap, widen `period` proportionally, up to
+   `ONE_MONTH` — this account's own option-history retention reaches roughly a month, so an outage longer
+   than that cannot be recovered by this path either. **Deriving the daily close from hourly bars — the part
+   that must be done carefully.** For each missed trading day, take the close of the LAST returned bar whose
+   `time` falls at or before that day's regular-session close — **16:00 America/New_York**. Compute that
+   cutoff FROM the America/New_York wall-clock time at ingest, never a hardcoded UTC hour: 16:00
+   America/New_York is 20:00Z under EDT but 21:00Z under EST, so a hardcoded `20:00Z` cutoff silently admits
+   or drops an hour of bars — and silently shifts the derived close — across every DST changeover. This is
+   the same MARKET-plane discipline `bigquery/20_user_prefs.sql` pins for every other session-close
+   computation in this repo (America/New_York, never a bare UTC offset). **Provenance**:
+   `events.option_marks.source` (`bigquery/40_options_marks.sql`) already exists and needs no schema change —
+   write `source='connector-backfill'` for a row this path produces, a third token distinct from the spot
+   ingest's `'connector'` (same-day IBKR spot) and `'FMP-fallback'` (spot fallback), so a backfilled close is
+   always distinguishable from a same-day live read. **Illiquidity**: a thinly-traded contract can print NO
+   bar at all on a given day; if the response has no bar for a missed date, leave that date UNMARKED — never
+   fabricate, never carry forward the prior close, never model one (extending, not replacing, the "Do NOT
+   fabricate/carry-forward" sentence above) — `ops.sp_recompute_engine()` already excludes an unmarked
+   option-day from the TWR chain rather than mis-valuing it, and that stays the correct fallback here too.
+
+   **The expiry/exit sub-case, investigated honestly rather than assumed fixed.**
+   `analytics.strategy_daily_returns`'s `option_held` CTE (`bigquery/125_dust_excluded_from_twr.sql`)
+   INNER-JOINs `state.option_marks_curated` to `analytics.position_lifecycle` on `(occ_symbol, mark_date)` —
+   a position contributes a day's return ONLY if `option_marks` carries a row for that exact date, and on
+   `mark_date = exit_date` specifically the value used is the position's own recorded `exit_price` (from the
+   closing fill), not that day's `premium_close` — so the backfilled bar's own price does not need to be
+   exactly right on exit day; its only job is to make the join produce a row for that date at all. **What
+   this fixes**: before this rewrite, a Friday exit under the Fri/Sat-skip schedule had NO way to get an
+   `option_marks` row for that date at all (spot-only, dormant Friday) — the terminal day permanently dropped
+   out of the TWR chain with no future row to telescope through, unlike a continuing hold (which just carries
+   a gap forward to the next live mark). The hourly backfill closes this for any contract that printed even
+   one trade on its exit/expiry day: a bar exists, the Sunday catch-up recovers it, `option_marks` gets a row
+   for `mark_date = exit_date`, and the terminal return joins into the chain correctly against the real
+   `exit_price`. **What remained before the EXPIRY-DAY TERMINAL MARK rule below**: a contract that expires
+   WORTHLESS with genuinely ZERO trades on expiry day — the illiquid case above, at the worst possible
+   moment — got no `option_marks` row for that date from any source, spot or historical, because no bar
+   exists to backfill. **That residual is now closed for the common case, not merely narrowed** — see below.
+   **One boundary this session could not test, and which still applies to the hourly path above (NOT to the
+   terminal-mark rule below — see why there)**: `get_price_history` on an OPTION contract was verified live
+   only against two NOT-YET-EXPIRED contracts (SPY Sep '26, QQQ Oct '26) — `get_option_parameters` enumerates
+   only current/future expirations, so an already-expired contract's `contract_id` is not discoverable
+   through this connector surface to test directly. Whether IBKR continues to serve `get_price_history` for
+   an OPTION contract in the ~2-day window immediately after ITS OWN expiration (the Sunday-after-Friday-
+   expiry case Strategy C will actually hit) is therefore unconfirmed, not assumed working, for the hourly
+   MISSED-DAY BACKFILL path specifically — check it in situ the next time Strategy C actually holds an option
+   into expiry rather than trusting this note.
+
+   **EXPIRY-DAY TERMINAL MARK (bug fix, 2026-08-08 — closes the zero-trade-expiry residual above without a
+   market quote at all).** At expiration an option's value is not unknown, it is DEFINITIONAL — a contractual
+   fact, not a market observation, so it needs no bar and (unlike the hourly path above) no historical query
+   against the OPTION contract itself, which sidesteps the untested post-expiry boundary noted just above
+   entirely. **Trigger**: a held option position whose `expiry` — read from its own CARRY-FORWARD source
+   below, not re-derived — falls inside the missed-trading-day range (same D2A MISSED-TRADING-DAY COUNT
+   predicate as the rest of this step, not redefined here). **CARRY-FORWARD, not parsing (correction,
+   2026-08-08 — live schema check found the first version of this note wrong; see MULTIPLIER below).**
+   `events.option_marks` STORES `strike`, `expiry`, `option_right`, AND `multiplier` as genuine per-row
+   columns (`bigquery/40_options_marks.sql`'s `CREATE TABLE`, confirmed against the live table schema),
+   populated from the connector response at the same-day spot ingest above — not defaulted, not assumed.
+   Any position reaching its own expiry day while still open has necessarily been marked on an earlier day
+   (the spot ingest runs every session Strategy C holds it), so `SELECT strike, expiry, option_right,
+   multiplier FROM state.option_marks_curated WHERE occ_symbol = <ticker> ORDER BY mark_date DESC LIMIT 1` is
+   the authoritative source for all four fields this rule needs — read the stored columns; do **not**
+   re-derive them from the OCC ticker string. Why: a value captured from the connector at ingest is MEASURED;
+   a value re-parsed from a symbol string later is a RE-DERIVATION that can silently disagree with it (a
+   padding/format edge case, a non-standard root, a data-entry-adjacent symbol) with nothing to catch the
+   mismatch — carrying the already-measured value forward has no such failure mode. **Determine moneyness**:
+   recover the UNDERLYING's close on the expiry date via the ordinary EQUITY dated-bar path —
+   `get_price_history(contract_id=<underlying's own contract_id>, security_type="STK", step="ONE_DAY",
+   period=<spanning the gap>)`, the exact call step 1's own `daily_marks` missed-day backfill already makes
+   for every held ticker; equities have always supported `step="ONE_DAY"` (only the OPTION contract rejects
+   it, per the discovery this rewrite opened with) — and compare that close to the carried-forward `strike`.
+   **OTM -> write `premium_close = 0`**: the contract expired worthless, which is a contractual fact, not an
+   estimate. **ITM -> write `premium_close = |underlying_close − strike|`** — a PER-SHARE intrinsic value, on
+   the exact same basis every other `premium_close` row already carries (`bigquery/125_dust_excluded_from_twr.sql`'s
+   `option_held` CTE values a position at `contracts × multiplier × premium_close`; the multiplier scaling
+   happens THERE, downstream, using the row's own carried-forward `multiplier` — this rule writes the
+   per-share figure only and needs no multiplier arithmetic of its own) — and cross-check against
+   `events.trade_fills`: if an assignment/exercise fill already reconciled for this position on/near expiry,
+   the FILL's own recorded price is authoritative for `exit_price` (`analytics.position_lifecycle` already
+   sources `exit_price` from the fill independently of `option_marks`); this computed intrinsic value is then
+   only a sanity check against that fill (flag a mismatch beyond a few cents — commission/settlement rounding
+   aside — as an `option_mark_missing`-class warning, not a silent overwrite), or it fills the mark for a day
+   the fill's own settlement record doesn't otherwise cover — never a replacement for a fill that exists.
+   **Provenance**: token `source='expiry-terminal'` — distinct from `'connector-backfill'` (a market
+   observation, hourly-bar-derived) and from `'connector'`/`'FMP-fallback'` (same-day spot reads), since this
+   row is DERIVED-BY-CONTRACT from a carried-forward strike + the underlying's close, not observed from any
+   option quote, and a future reader must be able to tell the three apart at a glance. **The one genuine edge
+   case, stated honestly: pin risk.** When the underlying's close sits AT or extremely near the strike,
+   exercise is discretionary — assignment is not automatic exactly at parity, and the holder's own
+   after-hours exercise decision (or the OCC's automatic-exercise threshold) can go either way — so moneyness
+   at the 4pm close does NOT mechanically determine the outcome the way it does away from the strike. In this
+   narrow band, do NOT compute a terminal mark from moneyness at all: defer to the actual assignment/exercise
+   fill in `events.trade_fills` if one exists; if none exists yet (reconciliation lag), leave the date
+   UNMARKED rather than guess — this is the one sub-case where "definitional, not a model" does not fully
+   hold, and the existing illiquidity/never-fabricate rule still governs it exactly as it governs a genuinely
+   quoteless day. **The one genuinely uncovered case: same-day open-and-expire inside the gap.** A 0DTE
+   structure both OPENED and EXPIRING on a single day that falls inside the missed range (e.g., staged and
+   filled on the skipped Friday itself) has NO prior `events.option_marks` row to carry `strike`/`expiry`/
+   `option_right`/`multiplier` forward from — CARRY-FORWARD above is empty for it, and parsing the OCC ticker
+   is deliberately not built as a fallback here either (see PARSING below). Defer instead to the reconciled
+   fill in `events.trade_fills` for that position (`analytics.position_lifecycle` already sources its
+   `exit_price`/accounting from the fill independently of `option_marks`); if no fill exists there either,
+   leave the date unmarked. Do not parse, do not guess.
+
+   **PARSING — a recognizer exists; no extractor is needed and none should be built (reframed, 2026-08-08).**
+   `analytics.fn_is_occ_option_symbol` (`bigquery/40_options_marks.sql`) recognizes the OCC format via
+   `REGEXP_CONTAINS` — root (1-6 letters, space-padded to 6), 6-digit YYMMDD expiry, C/P, 8-digit strike×1000 —
+   but it is a pure boolean recognizer, never an extractor, and this session confirmed no `REGEXP_EXTRACT`-
+   based OCC parser exists anywhere in this codebase. That remains true, but it is NOT a gap: CARRY-FORWARD
+   above (reading the stored `strike`/`expiry`/`option_right`/`multiplier` columns off the most recent prior
+   `option_marks` row for the same `occ_symbol`) covers every case this rule needs, and the one case
+   CARRY-FORWARD cannot cover (same-day open-and-expire, above) falls back to the reconciled fill, not to
+   parsing. **Do not build a `fn_parse_occ_symbol` UDF for this** — there is no call site left that needs it,
+   and an unused parser would be a maintenance liability: a second, never-exercised source of strike/expiry/
+   right that could silently drift from the stored columns if anyone later wires it in without noticing
+   CARRY-FORWARD already exists.
+
+   **MULTIPLIER — corrected, 2026-08-08: IS stored per row; the prior version of this note was wrong.** This
+   note originally claimed no table stores a genuine per-contract multiplier. That was incorrect for
+   `events.option_marks` specifically: `multiplier` is a real column on every row (`bigquery/40_options_marks.sql`'s
+   `CREATE TABLE`, confirmed against the live table schema), populated from the connector response at the
+   same-day spot ingest above (DEFAULT 100, overridden "unless the contract's actual multiplier differs" per
+   that ingest step's own existing wording) — `bigquery/125_dust_excluded_from_twr.sql`'s `option_held` CTE
+   reads `om.multiplier` directly off `state.option_marks_curated` to scale `mv`, which is the TWR engine's
+   actual multiplier source. **`c_options_math.py`'s `CONTRACT_MULTIPLIER = 100` (line 127) is a separate,
+   STRATEGY-SIDE sizing constant used at entry-thesis construction — it is NOT what the TWR engine values
+   positions with, and this rule does not touch it.** This EXPIRY-DAY TERMINAL MARK rule needs no multiplier
+   of its own at all: it writes `premium_close` as a per-share figure (same basis as every other
+   `premium_close` row), and the row's `multiplier` column is simply carried forward from CARRY-FORWARD
+   above, unread and unmodified by this rule — the downstream `mv` computation in `bigquery/125` is what
+   actually applies it. No inherited-assumption caveat applies here: the figure used is the one already
+   measured and stored on this same contract's own prior marks, not an assumption of any kind.
+
+   **Currently dormant** (unchanged fact from the note this supersedes): Strategy C — the only strategy this
+   branch can ever apply to (`analytics.fn_is_occ_option_symbol`, above) — holds ZERO open positions as of
+   2026-08-08 (verified: `SELECT * FROM state.current_positions WHERE strategy='C' AND status='OPEN'` returns
+   no rows), so this backfill has nothing to ingest today. Unlike the note it supersedes, that is no longer
+   "the cliff cannot bite because nothing is exposed to it" — it is "the mechanism is now built and will run
+   the next time `missed_trading_days >= 1` finds an open Strategy C option position," which the SISA
+   graduation pipeline (or a HYBRID ACTIVATE FOMC-only qualifying event, C's live router path today) could
+   produce at any time.
 1c. **MARK-DISCONTINUITY TRIPWIRE + SPLIT-ADJUST (finding C2, 2026-07-17 split-aware engine — `bigquery/82_split_aware_engine.sql`; watched-set extended to the full park menu 2026-07-19, `bigquery/92_park_allocator.sql`).** After the equity/benchmark (step 1) and option (step 1b) marks are ingested — and BEFORE the engine recompute (step 2), so a bad mark cannot drive a phantom termination — read `state.mark_discontinuity_watch` (the held-position + full 12-ticker park menu (+ SPY) benchmark tickers, sourced from COALESCE(`state.daily_marks_curated`, `state.signal_marks_curated`) so the 9 menu tickers whose closes land only in `signal_marks_curated` are actually watched, not just SGOV/VOO/SPY; it flags a >25% day-over-day `close` move on the latest `mark_date` that is NOT a recorded split (`split_ratio = 1`) and NOT explained by a same-day dividend):
    - **Bad-print / missed-split CRITICAL:** for any row with `is_discontinuity = TRUE` on today's `mark_date` (`= state.trading_day_today.last_trading_day`), `CALL ops.sp_raise_alert('critical','D2a','mark_discontinuity', CONCAT(ticker,' moved ',CAST(ROUND(raw_move*100,1) AS STRING),'% day-over-day (',CAST(prev_close AS STRING),'->',CAST(close AS STRING),') with no recorded split or dividend'), '<JSON: ticker, mark_date, close, prev_close, raw_move, split_ratio, dividend>')`. Being a NON-excluded CRITICAL it forces `state.system_health.all_green = FALSE` (holding `state.trading_enabled` FALSE), which **BLOCKS D2's rigid STRATEGY TERMINATION conversion (step 5) until the mark is adjudicated** — a REAL split gets its `split_ratio` recorded (clearing the flag; the split-aware engine then handles it), a BAD print gets corrected and re-reconciled next run. Do NOT let a -50% phantom drawdown from an unrecorded split auto-terminate a strategy — this tripwire is exactly that guard (the existing LN-domain clamp only fires at -99.99%, ~200x too coarse; see 82's header).
    - **Recorded-split share-sync:** for any held ticker whose latest `state.daily_marks_curated` row carries `split_ratio != 1` (a CORRECTLY-recorded split — NOT flagged above; `analytics.strategy_daily_returns`'s `eff_split_since_entry` already keeps its mv/dividend continuous), write an `events.position_events` row (`event_type='SPLIT_ADJUST'`, the ticker, the `split_ratio`, `mark_date`) — **echoing EVERY other column forward verbatim from the position's current `state.current_positions` row and changing only `shares` (and `cost_basis`/`convergence_target` per the split ratio): this row becomes latest-wins for the `position_key`, so any column left out of it is DESTROYED, including `invalidation_status`** (see "Shared rules referenced across prompts" → "An omitted field is a destroyed field") — so the position's share count is synced to the post-split basis and the audit trail records the corporate action. Idempotent — NOT-EXISTS on (`position_key`/ticker, `event_type='SPLIT_ADJUST'`, `mark_date`) before insert (the `ops.roster_change_log` pattern), since D2a may re-run same-day.
    Inert today (verified 2026-07-17: zero `is_discontinuity` flags across all held+benchmark mark history, latest mark 2026-07-17; no held ticker carries `split_ratio != 1`).
 1d. **PARK-ALLOCATOR SIGNAL INGEST (owner-review design `PARK_ROUTER_DESIGN.md` v2, 2026-07-18 — feeds Operating_Protocols.md §13.F's daily call + the W5 PARK SCORECARD counterfactuals; `bigquery/91_park_signal_layer.sql`).** A separate, ISOLATED ingest branch from step 1 above — writes to **`events.signal_marks`, NEVER `events.daily_marks`** (the spec-frozen TWR-engine / kill-flag / thin-SPY-beta consumers of `daily_marks` must stay untouched, and this new evidence layer must never contaminate them — the design's own grounding note). For each of the 11 REAL menu tickers (SGOV, GOVT, IEF, TLT, LQD, MUB, HYG, PFF, AOR, VOO, VTI — `CASH` has no price series to ingest) plus SPY plus `^VIX`: pull the day's close.
-   - **`^VIX`: FMP `mcp__FMP__quote`/`mcp__FMP__chart` is PRIMARY** — no IBKR series exists for the index (no daily VIX series exists anywhere in this stack today; this ingest is what creates one, isolated).
+   - **`^VIX`: FMP `chart` (`historical-price-eod-light`, `symbol='^VIX'`) is PRIMARY — a DATED-BAR pull, not
+     `mcp__FMP__quote`** (bug fix, 2026-08-08 — `quote` is a SPOT read with no history at all, so it cannot
+     recover a missed day; verified live the same day, `chart`'s `historical-price-eod-light` endpoint returns
+     one row per trading day with its own `date` field, e.g. a query run 2026-08-08 correctly returned dated
+     rows for 2026-08-03 through 2026-08-07 with no 2026-08-08 row, since Saturday has no VIX print). No IBKR
+     series exists for the index under the plain `get_price_history` call every other ticker below uses (no
+     daily VIX series exists anywhere else in this stack today; this ingest is what creates one, isolated).
+     **`mark_date` is the RETURNED BAR's own `date` field, NEVER `state.trading_day_today.today`** — on a
+     Sunday run recovering Friday's close, the bar's `date` is Friday, and that is what `mark_date` must carry;
+     stamping `today` would silently misdate the close as a Sunday reading that never existed.
    - **Every other ticker (menu tickers + SPY): IBKR `get_price_history` is PRIMARY, FMP fallback** (`mcp__FMP__quote`/`mcp__FMP__chart`) — same fallback convention as step 1's `daily_marks` ingest above.
    - `INSERT INTO events.signal_marks (mark_date, ticker, close, dividend, split_ratio, source)` — carry the day's dividend (0 if none) and split ratio (1 if none) from the corporate-actions pull, same convention as step 1's `daily_marks` ingest (total-return fidelity for the W5 counterfactual indices depends on the dividend column; `^VIX` is always dividend=0/split=1). Idempotent on `(mark_date, ticker)` — the curated view's latest-ingest-wins dedup absorbs a re-ingest.
    - **FIRST-INGEST DEEP PULL (self-healing backfill):** if a ticker has ZERO rows in `state.signal_marks_curated` (first-ever ingest, a ticker newly added to the menu, or a prior backfill gap), pull **~1 year of daily history** for it in this step instead of just the day's close, batched ≤200 rows per INSERT. The downstream views (`state.park_rule_shadow`, `analytics.park_counterfactuals`, `state.mark_discontinuity_watch`) recompute retroactively the moment history lands, so coverage self-completes without a manual backfill session.
+   - **MISSED-DAY BACKFILL (bug fix, 2026-08-08 — this ingest previously had no gap-widening at all for a
+     ticker that already has history).** Modeled on step 1's `daily_marks` missed-day backfill above, same
+     corrected predicate (D2A MISSED-TRADING-DAY COUNT, Step 0 connector-sanity band above): if
+     `missed_trading_days >= 1` since D2a's own last successful completion, pull the day's close (per-ticker
+     source above) for EVERY missed trading day in the gap, not just today, and `INSERT` one row per (ticker,
+     missed trading day) exactly as above — idempotent on `(mark_date, ticker)`, so a backfill re-run is safe.
+     This is what lets a Sunday D2a run recover Friday's close for every menu ticker, SPY, and `^VIX` once the
+     daily-tier fleet stops firing Friday/Saturday — without it, only a ticker with literally ZERO history ever
+     backfilled (the FIRST-INGEST DEEP PULL bullet above), and every already-established ticker would carry a
+     permanent, silent, Friday-shaped hole in `events.signal_marks` every single week.
    - Several of these tickers (SGOV, VOO, SPY) are ALSO ingested into `events.daily_marks` by step 1 above, for unrelated reasons (TWR engine, park reconciliation, beta) — this is intentional duplication across two isolated tables, not redundant work to consolidate. Never cross-read `signal_marks` into a TWR/kill-flag computation, and never cross-read `daily_marks` into the park allocator's evidence base — where "evidence base" is the derived-view layer (`state.park_signal_daily` / `park_rule_shadow` / `park_counterfactuals`), i.e. this binds the INGEST PIPELINE, not the reader. A D1 park-call session remains free to consult `events.daily_marks`, or anything else, per D1's floor-not-ceiling evidence list.
    - Best-effort — a connector hiccup here must never abort D2a (this feeds an advisory evidence layer + the W5 scorecard, not the trading-enable gate or any capital decision).
 1e. **TECHNICAL_SIGNAL WRITE — the router's technical half (assigned here 2026-08-03; Operating_Protocols.md §15's write column).** D2a owns this because step 1d already ingests the exact series two of the four keys need, and because `strategy/01_shared_regime_vocabulary.md` requires the technical half of the router to be **mechanically computable with no AI classification** — a threshold computation, not a judgement, so it belongs in the mechanical daily ingest and NOT in D1/D2's discretionary `STRATEGY_ACTIVATION` router-review write. Compute all four vocabulary keys for the last completed session and `INSERT INTO events.regime_events (as_of_date, scope, key, value, numeric_value, rationale, source_review_ref)` with `scope='TECHNICAL_SIGNAL'`, one row per key. Apply the vocabulary's thresholds VERBATIM — they are immutable and this step must never reinterpret them:

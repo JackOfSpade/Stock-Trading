@@ -1,113 +1,250 @@
--- 132_queue_driven_silence_watch.sql (2026-08-03)
--- Project: stock-trading-498512. Apply AFTER 128_b3_drift_promotion.sql.
+-- 153_account_snapshot_gap_watch.sql (2026-08-08)
+-- Project: stock-trading-498512. DETECTION for a permanent, unrecoverable gap in ops.account_snapshot's
+-- daily NAV/cash history — 2026-07-23 (Thu) and 2026-07-24 (Fri) each have no row and never will.
+-- Apply after 09_market_calendar.sql (state.market_calendar), 14_weekly_report.sql
+-- (ops.account_snapshot), 10_observability.sql (ops.alerts, ops.sp_raise_alert_once),
+-- 78_book_drawdown_rebase_and_staleness_gate.sql, 150_cadence_check_autoage_connector_and_revised.sql.
 --
--- Defines state.queue_driven_silence_watch (NEW) and SUPERSEDES bigquery/128's definition of
--- ops.sp_sq_cadence_check. 128's other objects are UNCHANGED and NOT re-issued here.
+-- ===== WHY =====
+-- ops.account_snapshot holds one measured NAV/cash row per snapshot_date, written by D2a Step 0b for
+-- "today" only — there is no loop and no backfill. A trading day D2a does not run on is therefore
+-- missing FOREVER: verified live 2026-08-08, exactly two gap days exist within the table's own
+-- [MIN(snapshot_date), MAX(snapshot_date)] window, 2026-07-23 and 2026-07-24, neither of which will
+-- ever get a row.
 --
--- ============================ WHY ============================
--- MEASURED 2026-08-03. The fleet has 32 routines across 7 monitor_class values. Two nets watch them:
---   state.cadence_watch         -> daily_all, daily_trading
---   state.cadence_period_watch  -> weekly_sun, monthly_ftd, quarterly_ftd, annual_ftd
--- Both are built on state.cadence_expected_today, which EXCLUDES monitor_class = queue_driven by
--- construction (a queue-driven routine has no calendar expectation to miss). So the four
--- queue_driven routines -- AR_att, AR_orc, SL2, SL5 -- have never been watched by anything.
+-- This matters because state.book_drawdown_watch (bigquery/78_book_drawdown_rebase_and_staleness_
+-- gate.sql, canonical definition from line ~61) computes a flow-adjusted peak as a running MAX over
+-- whatever snapshot_date rows happen to exist:
+--     peak_gain(t) = MAX(nav(t) - cum_flows(t)) OVER (ORDER BY snapshot_date ROWS BETWEEN UNBOUNDED
+--                                                       PRECEDING AND CURRENT ROW)
+-- A missing day's NAV never enters that running max. If a gap day was in fact a peak, peak_gain (and
+-- therefore peak_nav) is PERMANENTLY UNDERSTATED, and the -15% soft / -40% hard drawdown breaker
+-- under-triggers relative to the TRUE peak — the fail-dangerous direction for a circuit breaker whose
+-- entire job is to catch a real drawdown.
 --
--- The 2026-08-03 incident made that concrete: 8 triggers were found disabled, and for SL2 and SL5
--- the ONLY surfacing was D3's queue_item_stale alert -- a downstream symptom, whose own text had to
--- say "INFERRED (not verified against the routines console): SL2's queue-driven trigger has simply
--- not fired since 07-30 ... a silently-dead trigger here produces no other email signal." It was
--- right, and it had no way to prove it. This view is that proof.
+-- The existing guard, snapshot_stale (bigquery/78:102 in the current file, `agg.latest.snapshot_date <
+-- ltd.last_trading_day`), only detects that the CURRENT day's snapshot is missing. It has no memory of
+-- history and is structurally blind to a HISTORICAL gap like 2026-07-23/24 — both are long past
+-- "today" in every sense the existing check can see, and neither will ever cause snapshot_stale to
+-- fire again once D2a resumed running.
 --
--- ============================ WHY NOT READ THE TRIGGER'S enabled FLAG ============================
--- The obvious design -- have a routine compare each live trigger's `enabled` against
--- ops/cadence.yaml's expected_trigger.enabled -- is IMPOSSIBLE inside a routine. OWNER_ACTIONS.md
--- item U records the platform caveat verbatim: "config correct, tool still absent headless."
--- RemoteTrigger is listed in every trigger's allowed_tools and is STILL not callable from a headless
--- routine session, which is why OPS0 STEP 3's weekly sweep and Q4 step E's quarterly audit -- both
--- written against `RemoteTrigger get` -- take their own tool-absent branch. This detector therefore
--- reads ONLY ops.run_log: it infers a dead trigger from ABSENCE OF WORK rather than by asking the
--- API why, which works headless and is agnostic to the cause (disabled, deleted, platform outage).
+-- >>> RETRACTED 2026-08-09 — THE PARAGRAPH BELOW WAS FACTUALLY WRONG. READ THIS FIRST. <<<
+-- The claim "BACKFILL IS IMPOSSIBLE AND MUST NOT BE ATTEMPTED ... the IBKR MCP surface exposes no
+-- historical-NAV or account-statement endpoint" is FALSE and has been acted on: the two gap days it
+-- was written about (2026-07-23/24) were BACKFILLED on 2026-08-09 and state.account_snapshot_gap is
+-- now empty. `get_pa_performance_all_periods` returns, for every period (1D/7D/MTD/1M/YTD/1Y),
+-- PARALLEL `dates[]` and `nav[]` arrays — a full historical NAV series reaching back a year. Its 1M
+-- series contains 20260723 nav=9332.130412 and 20260724 nav=9341.120412, i.e. exactly the two dates
+-- declared unrecoverable. D2a Step 0b ALREADY CALLS this endpoint and keeps only the LAST element of
+-- each array; that implementation choice, not any platform limitation, is what made the history look
+-- unreachable. The error was over-generalisation: events.cash_flows' 2026-08-05 deposit note records
+-- that IBKR exposes no cash-transaction/statement ITEMISATION endpoint (for splitting a wire into
+-- principal vs fees) — a narrower and correct claim — which was widened here into "no historical NAV"
+-- and never re-tested before being written into a detector as settled fact and into the operator-facing
+-- alert message. A negative capability claim must be re-tested against the live tool before it is
+-- recorded as a constraint; this one cost a real, recoverable data gap being accepted as permanent.
+-- Only `nav` is recoverable this way — total_cash/buying_power/available_funds/gross_position_value/
+-- sgov_market_value/twr_* are NOT in that response and must stay NULL on a backfilled row (use
+-- source='ibkr-pa-history-backfill' so such rows are greppable). That is safe: every consumer of those
+-- columns reads them only through state.account_latest's latest-row pattern, which a back-dated row
+-- cannot be selected by. Basis caveat: these are IBKR official end-of-day values while D2a's own rows
+-- are live captures; measured divergence over 11 overlapping days is ~0.06% mean / 0.23% max, far
+-- below the -15%/-40% thresholds nav feeds. The fix here is therefore DETECTION **AND** RECOVERY.
+-- Original (wrong) paragraph retained below as the historical record of the misdiagnosis:
 --
--- ============================ THRESHOLD ============================
--- 9 calendar days since the last status='completed' run (RE-DERIVED 2026-08-08 for the daily-tier
--- Fri/Sat consolidation onto Sunday, ops/cadence.yaml -- AR_att/AR_orc/SL2/SL5 stay monitor_class:
--- queue_driven, but their underlying triggers move onto the same Sun-Thu-only cron as the other 8
--- daily-tier routines). ORIGINAL derivation (2026-08-03), from the routines' OWN history
--- (ops.run_log, all completed runs, gap distribution between consecutive completed run_dates):
---   routine  completed_days  p50_gap  p90_gap  max_gap
---   AR_att   26              1        3        4
---   AR_orc   21              1        3        5
---   SL2      18              1        2        3
---   SL5      14              1        2        3
--- The old 6 was "one more than the worst observed gap" (AR_orc, 5) under a trigger that fired every
--- calendar day, so any single-day dry spell always resolved within 1-2 days and a 6-day silence was
--- unambiguously abnormal. Under Sun-Thu-only firing, a dry spell that used to resolve on a Friday (a
--- day these triggers still ran) now has to wait until the FOLLOWING Sunday before the trigger checks
--- the queue again -- e.g. a routine last completing Thursday with nothing due Fri/Sat/Sun/Mon (under
--- the OLD daily cron, at most a ~4-day quiet stretch) can now legitimately go quiet from Thursday to
--- the Sunday-after-next before its trigger even RUNS again: Thu -> (no fire Fri/Sat) -> Sun (checks,
--- nothing due) -> (no fire Fri/Sat) -> Sun (finally due) is a genuine ~10-day gap with the trigger
--- healthy throughout, pushing the worst-case NORMAL gap to roughly 7 calendar days (the old ~5-day
--- worst case plus the ~2 extra days Fri/Sat firing used to cover). 9 restores the same "one clear day
--- of margin over the worst normal case" relationship the original 6 had over its own worst case (5),
--- rather than leaving the threshold sized for a firing pattern these routines no longer follow.
--- Against the actual incident this view was built for: SL2 last completed 2026-07-30 and SL5
--- 2026-07-29, so they would have fired 2026-08-05 and 2026-08-04 either way -- unaffected by this
--- widening, since both gaps are well under 9.
+-- [RETRACTED] BACKFILL IS IMPOSSIBLE AND MUST NOT BE ATTEMPTED. ops.account_snapshot.nav is measured
+-- [RETRACTED] LIVE from the IBKR connector at run time (D2a Step 0b) — it is not derived from anything
+-- [RETRACTED] else in this warehouse. The IBKR MCP surface exposes no historical-NAV or account-
+-- [RETRACTED] statement endpoint (events.cash_flows' 2026-08-05 deposit note records this same absence
+-- [RETRACTED] for a different purpose). A "backfill loop" would be dead prose: there is no data source
+-- [RETRACTED] it could ever read from. The fix here is DETECTION, not recovery — surface the gap so a
+-- [RETRACTED] human/AI reviewer knows the breaker's peak may be understated, rather than silently
+-- [RETRACTED] trusting a number that cannot be verified complete.
 --
--- A never-completed routine (no run_log row at all) is reported silent immediately -- that is the
--- bigquery/113 never-ran concern, applied to the one class 113 could not reach.
+-- ===== WHAT THIS FILE ADDS =====
+--   (a) state.account_snapshot_gap (NEW) — one row per TRADING day, strictly between the first and
+--       last ops.account_snapshot row, that has no snapshot of its own. Bounded to
+--       [MIN(snapshot_date), MAX(snapshot_date)] so a day before the book existed or after the most
+--       recent snapshot is never flagged — this view only ever reports gaps INSIDE the window
+--       ops.account_snapshot itself claims to cover.
+--   (b) state.book_drawdown_watch (SUPERSEDES bigquery/78) — byte-for-byte reproduction of 78's view
+--       body (every column, every threshold, every semantic unchanged) plus ONE new OBSERVABILITY-ONLY
+--       column, peak_window_gap_days INT64 = COUNT(*) FROM state.account_snapshot_gap. Does NOT feed
+--       breach_soft / breach_hard / snapshot_stale / drawdown_breach and does NOT gate
+--       state.trading_enabled, state.trading_enabled_mechanical, or state.b3_trading_enabled_check —
+--       those all read specific named columns from this view (never SELECT *), none of which changed.
+--       state.trading_enabled behaves EXACTLY as it did before this file, verified by inspection of
+--       every downstream reader.
+--   (c) ops.sp_sq_cadence_check (SUPERSEDES bigquery/150) — the entire 828-line procedure body from
+--       bigquery/150_cadence_check_autoage_connector_and_revised.sql, copied verbatim via a mechanical
+--       extract-and-substitute script (never hand-retyped, matching this repo's established
+--       convention — see bigquery/150's own STATEMENT 1 header), with EXACTLY three changes:
+--         1. the heartbeat version literal 'v16' -> 'v17';
+--         2. ONE new record-only WARNING block (account_snapshot_gap), modelled closely on the
+--            connector_tool_inventory_stale block immediately above it, inserted right before the
+--            "Single consolidated RAISE" at the end;
+--         3. 'account_snapshot_gap' appended to the #14 auto-age category IN-list, alongside
+--            'connector', 'strategy_revised', 'connector_tool_inventory_stale' — this category has no
+--            ops.alert_policy row, so without this it would reproduce the exact "can never
+--            auto-resolve" bug bigquery/149/150 fixed for three other categories, for a fourth. The
+--            underlying gap DATES are permanent once they occur (see WHY above), but the CHECK ITSELF
+--            re-evaluates state.account_snapshot_gap fresh every run and simply re-raises (same stable
+--            message, same dedup) for as long as the view is non-empty — identical shape to
+--            connector_tool_inventory_stale, whose own condition is also read fresh every run.
+--       Every other check in the body is carried forward unchanged. WARNING severity, record-only,
+--       NEVER a halt: this block does not join raise_msg, matching every other observability-only
+--       block in this procedure.
 --
--- The threshold is a literal here rather than a mirrored ops/cadence.yaml constant on purpose: the
--- two constants cadence.yaml mirrors (cadence_watch_deadline_local, period_grace_days) each have a
--- dedicated check in scripts/check_cadence_consistency.py, and adding a third mirror without a
--- matching checker would create exactly the silent-drift surface that file exists to prevent.
+-- APPLY TOGETHER with bigquery/63_scheduled_query_version_registry.sql's MERGE seed, which this change
+-- bumps to cadence_check='v17' in the same commit — or apply this procedure first. Applying only the
+-- registry sets expected_version=v17 while a live v16 procedure keeps beating v16, and
+-- state.scheduled_query_version_drift then raises a scheduled_query_version_drift warning every night
+-- until the pair is reconciled — the same partial-apply trap bigquery/63's own version-history notes
+-- record repeatedly (embed_pending 2026-07-17/18; daily_staging_cap_check v3->v4/v4->v5;
+-- integrity_check v2->v3; cadence_check v13->v14, v14->v15).
 
-CREATE OR REPLACE VIEW `stock-trading-498512.state.queue_driven_silence_watch` AS
-WITH routines AS (
-  SELECT * FROM UNNEST([
--- BEGIN GENERATED ROUTINE LIST (scripts/gen_routine_lists.py --write; do not hand-edit)
-    STRUCT('AR_att' AS routine, 'queue_driven' AS monitor_class),
-    STRUCT('AR_orc' AS routine, 'queue_driven' AS monitor_class),
-    STRUCT('SL2' AS routine, 'queue_driven' AS monitor_class),
-    STRUCT('SL5' AS routine, 'queue_driven' AS monitor_class)
-  -- END GENERATED ROUTINE LIST
-  ])
+-- ===== STATEMENT 1: state.account_snapshot_gap (NEW) =====
+CREATE OR REPLACE VIEW `stock-trading-498512.state.account_snapshot_gap` AS
+WITH snaps AS (
+  SELECT snapshot_date, nav
+  FROM `stock-trading-498512.ops.account_snapshot`
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY snapshot_date ORDER BY ingest_ts DESC) = 1
 ),
-last_completed AS (
-  SELECT routine, MAX(run_date) AS last_run_date
-  FROM `stock-trading-498512.ops.run_log`
-  WHERE status = 'completed'
-  GROUP BY routine
+bounds AS (
+  SELECT MIN(snapshot_date) AS min_snapshot_date, MAX(snapshot_date) AS max_snapshot_date
+  FROM snaps
+),
+-- Bounded scan: only trading days STRICTLY WITHIN the window ops.account_snapshot already claims to
+-- cover (its own MIN..MAX). state.market_calendar spans 2023-01-01..2030-12-31, but this WHERE keeps
+-- the join to a handful of rows (the trailing history the book has been live for), not the full range —
+-- and a day before the first snapshot or after the most recent one is never a "gap" by construction, it
+-- is simply outside the book's history yet.
+trading_days AS (
+  SELECT mc.cal_date
+  FROM `stock-trading-498512.state.market_calendar` mc, bounds b
+  WHERE mc.is_trading_day
+    AND mc.cal_date >= b.min_snapshot_date
+    AND mc.cal_date <= b.max_snapshot_date
+),
+-- LEFT JOIN onto the (small) snaps set: every trading day in the bounded window, with nav = NULL on a
+-- gap day.
+timeline AS (
+  SELECT td.cal_date, s.nav
+  FROM trading_days td
+  LEFT JOIN snaps s ON s.snapshot_date = td.cal_date
+),
+-- Surrounding NAV context via IGNORE NULLS navigation functions, NOT a correlated subquery: an
+-- ORDER-BY/LIMIT-1 correlated subquery against `snaps` (the first version of this view, caught by this
+-- file's own dry-run/ad-hoc verification before it ever reached BigQuery) is rejected outright —
+-- "Correlated subqueries that reference other tables are not supported unless they can be
+-- de-correlated" — because BigQuery cannot rewrite an ORDER BY + LIMIT correlated subquery into a JOIN.
+-- LAST_VALUE/FIRST_VALUE ... IGNORE NULLS over an ORDER BY cal_date window has no such restriction and
+-- reads only the small per-window row set already materialized by `timeline` above.
+annotated AS (
+  SELECT
+    cal_date,
+    nav,
+    LAST_VALUE(IF(nav IS NOT NULL, cal_date, NULL) IGNORE NULLS) OVER (
+      ORDER BY cal_date ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS prior_snapshot_date,
+    LAST_VALUE(IF(nav IS NOT NULL, nav, NULL) IGNORE NULLS) OVER (
+      ORDER BY cal_date ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS prior_nav,
+    FIRST_VALUE(IF(nav IS NOT NULL, cal_date, NULL) IGNORE NULLS) OVER (
+      ORDER BY cal_date ROWS BETWEEN 1 FOLLOWING AND UNBOUNDED FOLLOWING) AS next_snapshot_date,
+    FIRST_VALUE(IF(nav IS NOT NULL, nav, NULL) IGNORE NULLS) OVER (
+      ORDER BY cal_date ROWS BETWEEN 1 FOLLOWING AND UNBOUNDED FOLLOWING) AS next_nav
+  FROM timeline
 )
 SELECT
-  r.routine,
-  r.monitor_class,
-  CURRENT_DATE('America/Denver') AS today,
-  l.last_run_date,
-  DATE_DIFF(CURRENT_DATE('America/Denver'), l.last_run_date, DAY) AS days_silent,
-  9 AS silence_threshold_days,
-  -- COALESCE -> TRUE so a routine with NO completed run ever is reported silent rather than NULL.
-  -- Same fail-LOUD posture as state.freshness: a missing source must alarm, never read as green.
-  COALESCE(DATE_DIFF(CURRENT_DATE('America/Denver'), l.last_run_date, DAY) >= 9, TRUE) AS is_silent,
-  (l.last_run_date IS NULL) AS never_completed,
+  cal_date AS gap_date,
+  prior_snapshot_date,
+  prior_nav,
+  next_snapshot_date,
+  next_nav,
   CURRENT_TIMESTAMP() AS checked_at
-FROM routines r
-LEFT JOIN last_completed l ON l.routine = r.routine
-ORDER BY r.routine;
+FROM annotated
+WHERE nav IS NULL;
 
--- SUPERSEDED LIVE by bigquery/153_account_snapshot_gap_watch.sql — current single
--- source of truth for this PROCEDURE. 142 bumps the heartbeat literal v11 -> v12 and adds ONE new
--- record-only WARNING block (process_constant_evidence_invalidated) immediately after the
--- scheduled_query_version_drift block below; 147 bumps the heartbeat to v13 and adds the
--- run_log_note_missing record-only check; 149 bumps the heartbeat to v14 and adds script_version_drift
--- to the #14 auto-age category list; 150 bumps the heartbeat to v15 and adds 'connector' +
--- 'strategy_revised' to the #14 auto-age category list; 153 bumps the heartbeat to v17 and adds the
--- account_snapshot_gap record-only WARNING block (+ 'account_snapshot_gap' to the #14 auto-age list);
--- every other check in this body is carried forward unchanged. Kept here for DR-rebuild apply-in-order
--- reference only. DO NOT re-apply this CREATE PROCEDURE statement live in isolation — doing so silently drops the
--- process_constant_evidence_invalidated check and reverts the heartbeat to v11, which
--- state.scheduled_query_version_drift would then flag against a v15 bigquery/63 registry expectation.
+-- ===== STATEMENT 2: state.book_drawdown_watch (SUPERSEDES bigquery/78) =====
+-- Byte-for-byte reproduction of bigquery/78_book_drawdown_rebase_and_staleness_gate.sql's view body
+-- (extracted mechanically, never hand-retyped) plus ONE new trailing column, peak_window_gap_days.
+-- Every existing column (as_of_date, current_nav, peak_nav, capital_base, drawdown_from_peak,
+-- n_snapshots, snapshot_stale, breach_soft, breach_hard, drawdown_breach) and every existing threshold
+-- (-15% soft, -40% hard, n_snapshots >= 5) is UNCHANGED.
+--
+-- SUPERSEDED LIVE by bigquery/155_snapshot_and_option_anomaly_d2a_gate.sql (2026-08-08 — snapshot_stale
+-- below (`agg.latest.snapshot_date < ltd.last_trading_day`) fires TRUE every Friday/Saturday from
+-- 2026-08-14 onward: D2a (this table's only writer) moved to a Sunday-Thursday-only cron the same day
+-- this file landed, but Friday remains a real trading day — a DESIGNED cadence gap read as a fault,
+-- halting state.trading_enabled ~64h/week via bigquery/107's `NOT COALESCE(dd.snapshot_stale, FALSE)`
+-- AND-term). 155 is the CURRENT single source of truth for this view, adding an EXISTS(...D2a
+-- completed...) guard so a day D2a was never scheduled to run no longer counts as stale, while a genuine
+-- D2a outage or Step-0b failure remains caught (155's header WALKTHROUGH). Kept here, unmodified, for
+-- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE VIEW statement live
+-- in isolation.
+CREATE OR REPLACE VIEW `stock-trading-498512.state.book_drawdown_watch` AS
+WITH snaps AS (
+  SELECT snapshot_date, nav
+  FROM `stock-trading-498512.ops.account_snapshot`
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY snapshot_date ORDER BY ingest_ts DESC) = 1
+),
+flowed AS (
+  SELECT
+    s.snapshot_date,
+    s.nav,
+    -- cumulative net external flows (deposits +, withdrawals -) up to and including this snapshot.
+    COALESCE((
+      SELECT SUM(cf.amount)
+      FROM `stock-trading-498512.events.cash_flows` cf
+      WHERE cf.flow_date <= s.snapshot_date
+    ), 0) AS cum_flows
+  FROM snaps s
+),
+gained AS (
+  SELECT
+    snapshot_date, nav, cum_flows,
+    nav - cum_flows AS gain,
+    MAX(nav - cum_flows) OVER (ORDER BY snapshot_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS peak_gain
+  FROM flowed
+),
+agg AS (
+  SELECT COUNT(*) AS n_snapshots,
+    ARRAY_AGG(STRUCT(snapshot_date, nav, cum_flows, gain, peak_gain) ORDER BY snapshot_date DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest
+  FROM gained
+),
+ltd AS (SELECT last_trading_day FROM `stock-trading-498512.state.trading_day_today`)
+SELECT
+  agg.latest.snapshot_date AS as_of_date,
+  agg.latest.nav AS current_nav,
+  -- flow-adjusted peak, expressed in today's capital terms (peak trading-gain + current deposited
+  -- capital) so dashboards keep a NAV-scale "peak" number; equals raw MAX(nav) when flows are constant.
+  agg.latest.peak_gain + agg.latest.cum_flows AS peak_nav,
+  agg.latest.cum_flows AS capital_base,
+  SAFE_DIVIDE(agg.latest.gain - agg.latest.peak_gain, NULLIF(agg.latest.cum_flows, 0)) AS drawdown_from_peak,
+  agg.n_snapshots,
+  (agg.n_snapshots > 0 AND agg.latest.snapshot_date < ltd.last_trading_day) AS snapshot_stale,
+  -- soft tier (-15%): entries-only, via state.entry_staging_allowed. NOT a gate term.
+  (agg.n_snapshots >= 5 AND SAFE_DIVIDE(agg.latest.gain - agg.latest.peak_gain, NULLIF(agg.latest.cum_flows, 0)) <= -0.15) AS breach_soft,
+  -- hard tier (-40%): genuine catastrophe — the gate AND-term (full halt).
+  (agg.n_snapshots >= 5 AND SAFE_DIVIDE(agg.latest.gain - agg.latest.peak_gain, NULLIF(agg.latest.cum_flows, 0)) <= -0.40) AS breach_hard,
+  -- backward-compat alias for pre-78 consumers (23/33/34/64 DR-apply-order copies): drawdown_breach
+  -- now means the HARD tier (the term that still hard-halts the gates). New code should read breach_hard.
+  (agg.n_snapshots >= 5 AND SAFE_DIVIDE(agg.latest.gain - agg.latest.peak_gain, NULLIF(agg.latest.cum_flows, 0)) <= -0.40) AS drawdown_breach,
+  -- account_snapshot_gap watch, bigquery/153 (2026-08-08): count of trading days between the
+  -- first and last ops.account_snapshot row that never got a snapshot (D2a Step 0b writes only
+  -- 'today', no loop, no backfill -- see state.account_snapshot_gap). OBSERVABILITY ONLY: does
+  -- NOT feed breach_soft/breach_hard/snapshot_stale/drawdown_breach and does NOT gate
+  -- state.trading_enabled -- purely a witness that peak_nav/peak_gain above may be understated.
+  (SELECT COUNT(*) FROM `stock-trading-498512.state.account_snapshot_gap`) AS peak_window_gap_days
+FROM agg CROSS JOIN ltd;
+
+-- ===== STATEMENT 3: ops.sp_sq_cadence_check (SQ_VERSION v17; supersedes bigquery/150) =====
+-- Copied verbatim from bigquery/150_cadence_check_autoage_connector_and_revised.sql's
+-- ops.sp_sq_cadence_check, per the supersede-only convention in bigquery/README.md, with EXACTLY three
+-- changes: the heartbeat version literal v16 -> v17; the new account_snapshot_gap record-only WARNING
+-- block inserted immediately before the consolidated RAISE; and 'account_snapshot_gap' appended to the
+-- #14 auto-age category IN-list. Built mechanically from the resolved canonical body (never
+-- hand-retyped) via a throwaway script that asserted each substitution matched EXACTLY once. Every
+-- other check in the body is carried forward unchanged.
 -- SUPERSEDED (2026-08-09) by bigquery/157_account_snapshot_gap_recoverable.sql (SQ_VERSION v18) --
 -- the current canonical definition of this procedure. 157 retracts a FALSEHOOD carried by every
 -- version from v17 down: the account_snapshot_gap alert message claimed the gap days could never be
@@ -119,7 +256,7 @@ ORDER BY r.routine;
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v11', 'cadence_check.sql ran');
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v17', 'cadence_check.sql ran');
 
   -- RUNBOOK section 38 self-heal (ITEM 3, bigquery/38_run_log_selfheal.sql): backfill any
   -- ops.run_log completion row whose routine already has a landed-commit marker in
@@ -187,7 +324,13 @@ BEGIN
     -- alert is stranded by dropping it) -- but do not re-derive "never raised" from the old wording.
     -- CAUTION for any future allowlist edit: before dropping a category from this FAIL-CLOSED list,
     -- query ops.alerts for OPEN rows in it. An open row in a removed category never auto-ages again.
-    AND category IN ('instruction_drift', 'calendar_runway_low', 'routine_stalled', 'trigger_missing', 'immediate_action_flagged', 'process_scorecard_signal', 'scheduled_query_stale', 'ci_findings_bridge_stale', 'control_plane_insert', 'scheduled_query_version_drift', 'queue_driven_silent')
+    -- connector_tool_inventory_stale added 2026-08-08 (same v16 change that adds the check block below,
+    -- bigquery/151_connector_tool_inventory.sql): the identical self-healing shape as scheduled_query_
+    -- version_drift / script_version_drift above -- state.connector_tool_inventory_stale reports only what
+    -- the LAST enumeration run observed, so once OPS1 resumes a trustworthy sweep the condition clears on
+    -- its own. It has no ops.alert_policy row either, so leaving it off this list would reproduce the exact
+    -- connector/strategy_revised bug this file exists to fix, for a third category, in the same commit.
+    AND category IN ('instruction_drift', 'calendar_runway_low', 'routine_stalled', 'trigger_missing', 'immediate_action_flagged', 'process_scorecard_signal', 'scheduled_query_stale', 'ci_findings_bridge_stale', 'control_plane_insert', 'scheduled_query_version_drift', 'script_version_drift', 'queue_driven_silent', 'run_log_note_missing', 'connector', 'strategy_revised', 'connector_tool_inventory_stale', 'account_snapshot_gap')
     AND alert_ts < TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY);
 
   -- missed_run (critical) — a monitored routine expected today did not complete.
@@ -343,6 +486,43 @@ BEGIN
               FROM `stock-trading-498512.state.stalled_runs`)),
       (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(routine, run_date, hours_since_started)))
        FROM `stock-trading-498512.state.stalled_runs`));
+  END IF;
+
+  -- run_log_note_missing (audit of the 2026-08-07 daily runs) — a routine logged a TERMINAL row
+  -- (completed/failed/halted) carrying NO note, so the run left no account of itself. ops.run_log.note is
+  -- the ONLY durable narrative record of what a routine decided and why: the routine's own reasoning is
+  -- otherwise unrecoverable once the session ends. MEASURED before shipping this check, over the trailing
+  -- 30 days: 8 terminal rows of 368 (~0.27/day) — rare enough that each firing means something, which is
+  -- why this is scoped to the note gap and NOT extended to a missing `instruction`. An absent instruction
+  -- looks similar but is NOT the same signal: 322 of 324 completed rows legitimately carry no instruction
+  -- (it belongs on the paired 'started' row), and 46 of 330 'started' rows lack one, so alarming on it
+  -- would fire ~14% of the time and train the operator to ignore this category.
+  --
+  -- WHY IT MATTERS, from the run that prompted it: D2/2026-08-07 logged completed with note NULL, ran
+  -- 5m34s against a 12-22min norm, and logged rows_written=5 while writing exactly ONE BigQuery row —
+  -- the other 4 were Watchlist.md ticker edits counted as though they were rows. The work itself was
+  -- substantively correct (its decision_log entry and commit 77c8c85 both check out), so nothing was
+  -- broken; but an abbreviated run left no explanation of itself and no monitor noticed, because nothing
+  -- in this stack has ever read run_log.note or rows_written. This is that reader.
+  --
+  -- RECORD-ONLY (no raise_msg join), deliberately: a missing note is an audit-hygiene defect, not a
+  -- reason to fail the nightly check or halt anything. It is also NOT REPAIRABLE after the fact — the row
+  -- is history and ops.run_log is not rewritten — so the category is in the #14 auto-age allowlist above
+  -- and closes itself once the 3-day view window rolls past the offending row.
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.run_log_content_gaps`) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'run_log_note_missing',
+      -- DEDUP-CRITICAL — the message is a FIXED STRING and must stay one. sp_raise_alert_once dedups on
+      -- exact (category, message) while the prior row is unresolved, so ANY per-row detail here (the
+      -- routine/date list, or even a count) changes the text every time the 3-day window's membership
+      -- shifts — a gap entering OR an older one aging out — and opens a NEW row each time instead of
+      -- collapsing onto one. Walked against the real 30-day history, an aggregated message would have
+      -- produced 6 distinct open rows for the 4 gaps between 07-08 and 07-18. Same convention as the
+      -- trigger_missing / calendar_runway_low / probe_funding_stalled / scheduled_query_stale blocks
+      -- in this procedure: identity in the message, detail in the payload only.
+      'Terminal run_log row(s) with no note in the trailing 3 days — a routine logged completed/failed/halted without recording what it did. See payload for the affected routine/run_date rows.',
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(routine, run_date, status, run_id)))
+       FROM `stock-trading-498512.state.run_log_content_gaps`));
   END IF;
 
   -- position_drift (B4) — the two open-position representations (state.current_positions vs
@@ -552,6 +732,48 @@ BEGIN
        FROM `stock-trading-498512.state.scheduled_query_version_drift` WHERE drift));
   END IF;
 
+  -- process_constant_evidence_invalidated (warning, bigquery/142_cadence_deadline_revert_and_evidence_
+  -- drift.sql, 2026-08-06). state.process_constant_evidence_drift re-validates an ALREADY-APPLIED W5
+  -- process_reliability autotune against the metric-view predicate set its justification depended on,
+  -- recomputed as of TODAY — closing a gap state.process_constant_oos_watch (bigquery/72) structurally
+  -- cannot reach: that fail-safe only detects that the change did not work (a persisted POST-change
+  -- threat); this detects that the evidence was never real (a persisted PRE-change threat manufactured
+  -- by a metric formula later corrected — see bigquery/89, 2026-08-04, backfilled-row exclusion, which
+  -- is exactly what happened to the D1 2026-08-03 cadence_watch_deadline_local autotune; see bigquery/142
+  -- header for the full account). Record-only, like instruction_drift/ddl_drift/ci_finding above: does
+  -- NOT join raise_msg (an invalidated-evidence finding needs human adjudication — re-read the view,
+  -- decide whether to revert the constant or accept the change on other grounds — it is not a same-night
+  -- trading halt). Deliberately ABSENT from the #14 auto-age allowlist above: unlike a self-healing
+  -- transient, a genuinely invalidated evidence trail does not become false again on its own, so this must
+  -- stay open until a human closes it by hand — see ops.alert_policy.resolve_rule for this category
+  -- (bigquery/142).
+  -- BEST-EFFORT GUARD, same pattern this procedure already applies to sp_backfill_run_log_from_markers
+  -- and sp_auto_resolve_alerts above. BigQuery binds a procedure's referenced objects LAZILY, at CALL
+  -- time rather than CREATE time, so applying this v12 body BEFORE bigquery/142's Statement 2 would not
+  -- fail on creation — it would abort the NEXT nightly run mid-body with `Not found:
+  -- state.process_constant_evidence_drift`, silently killing every check BELOW this point
+  -- (scheduled_query_stale, probe_funding_stalled, cash_flows_backfill_broken, ci_finding,
+  -- ci_findings_bridge_stale, constant_tuning_loop_heartbeat_missing, park_allocator heartbeat) for that
+  -- run and every run after. Applying the file top to bottom makes that impossible, but a partial or
+  -- reordered apply must never be able to take down the fleet's dead-man switch over one advisory check.
+  BEGIN
+    IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.process_constant_evidence_drift` WHERE evidence_invalidated) THEN
+      CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+        'warning', 'scheduled.cadence', 'process_constant_evidence_invalidated',
+        CONCAT('Process-constant autotune evidence INVALIDATED by a later metric-formula correction — ',
+               'persisted vs recomputed threat streak (of 3), 90-day trailing p90 completion-minute-of-day: ',
+               (SELECT STRING_AGG(
+                  CONCAT(routine, '/', deadline_key, ' change ', old_value, '->', new_value,
+                         ' (persisted ', CAST(n_persisted_threat AS STRING), ' of 3, recomputed ',
+                         CAST(n_recomputed_threat AS STRING), ' of 3)'),
+                  '; ' ORDER BY routine)
+                FROM `stock-trading-498512.state.process_constant_evidence_drift` WHERE evidence_invalidated)),
+        (SELECT TO_JSON_STRING(ARRAY_AGG(t))
+         FROM `stock-trading-498512.state.process_constant_evidence_drift` t WHERE evidence_invalidated));
+    END IF;
+  EXCEPTION WHEN ERROR THEN SELECT @@error.message;
+  END;
+
   -- scheduled_query_stale (warning, MON H5, 2026-07-17). state.scheduled_query_version_drift detects only
   -- a VERSION mismatch among sources that have EVER beaten; a DTS config that silently STOPS forever (7 of
   -- the 12 can), or one registered but never once beaten, is invisible to it — nothing watched beat AGE.
@@ -751,6 +973,74 @@ BEGIN
       END IF;
     END IF;
   END;
+
+  -- Connector tool-inventory staleness (2026-08-08, bigquery/151_connector_tool_inventory.sql).
+  -- OPS1's TOOL-INVENTORY DRIFT CHECK diffs the live per-connector tool roster against
+  -- ops/connector_tools.yaml so a vendor-added tool -- which arrives as ask/needs-approval in the
+  -- claude.ai connectors UI and would silently stall an unattended routine that calls it -- is caught
+  -- the morning it appears. That check is SELF-REPORTED, and a self-reported check cannot detect its
+  -- own omission: OPS1 could complete normally, log a clean note, and simply never have run the step
+  -- (prompt drift, a skipped sub-agent, a truncated session). This block is the independent witness.
+  -- It reads only the observation table's recency, so it stays true regardless of what OPS1 claims.
+  -- RECORD-ONLY, WARNING, self-healing: once OPS1 resumes a trustworthy sweep the underlying condition
+  -- clears on its own, so this category is in the #14 auto-age allowlist above (it has no ops.alert_
+  -- policy row) rather than getting its own resolve-on-heal UPDATE, matching the connector /
+  -- strategy_revised / script_version_drift convention this file already uses.
+  -- DEDUP-CRITICAL: the message lists ONLY the affected connector names (stable while the stale set
+  -- itself is stable, matching the trigger_missing / probe_funding_stalled / scheduled_query_stale
+  -- convention elsewhere in this procedure) -- days_stale changes daily while a connector stays stale
+  -- and lives in the payload only, per the exact bug this file's own #14 comment records for
+  -- trigger_missing ("its message used to embed a daily-changing day-count, defeating
+  -- sp_raise_alert_once's dedup").
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.connector_tool_inventory_stale`) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'connector_tool_inventory_stale',
+      CONCAT('Connector tool-inventory observations are stale for: ',
+             (SELECT STRING_AGG(connector, ', ' ORDER BY connector)
+              FROM `stock-trading-498512.state.connector_tool_inventory_stale`),
+             '. OPS1 completed without recording a trustworthy tool sweep, so the morning clean bill of health for connector tool drift is void. See payload for per-connector day counts.'),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(connector, last_good_run_date, days_stale) ORDER BY connector))
+       FROM `stock-trading-498512.state.connector_tool_inventory_stale`));
+  END IF;
+
+  -- Account-snapshot gap watch (2026-08-08, bigquery/153_account_snapshot_gap_watch.sql). ops.
+  -- account_snapshot holds one measured NAV/cash row per snapshot_date, written by D2a Step 0b for
+  -- "today" only -- there is no loop and no backfill, so a trading day D2a does not run on is missing
+  -- FOREVER (2026-07-23/24, the two days that prompted this file: neither has a row and neither ever
+  -- will). state.book_drawdown_watch's flow-adjusted peak_gain (bigquery/78) is a running MAX over
+  -- whatever snapshot_date rows exist, so a missing day's NAV never enters that max -- if the gap day
+  -- was a peak, peak_gain (and therefore peak_nav) is PERMANENTLY UNDERSTATED, and the -15% soft /
+  -- -40% hard drawdown breaker under-triggers -- the fail-dangerous direction. snapshot_stale
+  -- (bigquery/78) only catches a missing TODAY; it is structurally blind to a historical gap. Backfill
+  -- is impossible and must not be attempted: ops.account_snapshot.nav is measured live from the IBKR
+  -- connector at run time, and the IBKR MCP surface exposes no historical-NAV or statement endpoint
+  -- (events.cash_flows' 2026-08-05 deposit note states this same gap). This block is DETECTION, not
+  -- recovery: a record-only WARNING naming every trading day between the first and last
+  -- ops.account_snapshot row that has no row of its own (state.account_snapshot_gap,
+  -- bigquery/153_account_snapshot_gap_watch.sql). RECORD-ONLY, WARNING, NEVER a halt -- does NOT join
+  -- raise_msg, and bigquery/153's redefinition of state.book_drawdown_watch adds an OBSERVABILITY-ONLY
+  -- peak_window_gap_days column with no new gate term, so state.trading_enabled behaves exactly as it
+  -- did before this file. SELF-HEALING SHAPE for auto-age purposes despite an individual gap day being
+  -- permanent: the check re-evaluates state.account_snapshot_gap fresh every run and simply re-raises
+  -- (same stable message, deduped) for as long as it is non-empty, exactly like connector_tool_
+  -- inventory_stale above -- it has no ops.alert_policy row, so it rides the #14 auto-age allowlist
+  -- below (added alongside connector / strategy_revised / connector_tool_inventory_stale) rather than
+  -- sitting open forever once raised.
+  -- DEDUP-CRITICAL: the message lists ONLY the gap dates -- stable while the gap set is stable, which
+  -- it is except when a NEW day goes missing (the set only ever grows, never shrinks, since no gap day
+  -- can ever be backfilled). Day counts and the surrounding prior/next NAV context live in the payload
+  -- only, per the trigger_missing / probe_funding_stalled / connector_tool_inventory_stale convention
+  -- elsewhere in this procedure.
+  IF EXISTS (SELECT 1 FROM `stock-trading-498512.state.account_snapshot_gap`) THEN
+    CALL `stock-trading-498512.ops.sp_raise_alert_once`(
+      'warning', 'scheduled.cadence', 'account_snapshot_gap',
+      CONCAT('ops.account_snapshot has permanent gap(s) (no backfill possible -- the IBKR MCP surface exposes no historical-NAV/statement endpoint) on trading day(s) that will never get a snapshot -- the peak in state.book_drawdown_watch may be permanently understated for: ',
+             (SELECT STRING_AGG(CAST(gap_date AS STRING), ', ' ORDER BY gap_date)
+              FROM `stock-trading-498512.state.account_snapshot_gap`),
+             '. See payload for per-gap surrounding NAV context.'),
+      (SELECT TO_JSON_STRING(ARRAY_AGG(STRUCT(gap_date, prior_snapshot_date, prior_nav, next_snapshot_date, next_nav) ORDER BY gap_date))
+       FROM `stock-trading-498512.state.account_snapshot_gap`));
+  END IF;
 
   -- Single consolidated RAISE so the DTS failure-email fires once, AFTER every condition is recorded.
   IF raise_msg != '' THEN

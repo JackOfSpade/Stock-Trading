@@ -58,6 +58,18 @@
 -- protection while breaking the circularity — identical reasoning to 34's existing trading_halted
 -- exclusion. Both gates below now exclude category IN ('trading_halted','staleness').
 
+-- SUPERSEDED LIVE by bigquery/155_snapshot_and_option_anomaly_d2a_gate.sql — current single source of
+-- truth for state.book_drawdown_watch (chain: 78 -> 153 -> 155). 153 first reproduced this exact view
+-- body, byte-for-byte, adding ONE new column, peak_window_gap_days INT64 (a COUNT of
+-- state.account_snapshot_gap — trading days between the first and last ops.account_snapshot row that
+-- D2a never wrote, so the flow-adjusted peak_gain running max above cannot have seen them) — that part
+-- is still true and unchanged. 155 then changed the `snapshot_stale` predicate itself: the two-term test
+-- below fires TRUE every Friday/Saturday from 2026-08-14 onward (D2a moved to a Sunday-Thursday-only
+-- cron the same day 153 landed, but Friday stays a real trading day — a DESIGNED cadence gap, not a
+-- fault), so 155 adds an EXISTS(...D2a completed...) guard before treating the gap as stale. Every other
+-- column/threshold is still unaffected. Kept here, unmodified, for DR-rebuild apply-in-order reference
+-- only. DO NOT re-apply this CREATE OR REPLACE VIEW statement live in isolation.
+--
 -- ===== state.book_drawdown_watch — flow-adjusted, two-tier (SUPERSEDES bigquery/23) =====
 CREATE OR REPLACE VIEW `stock-trading-498512.state.book_drawdown_watch` AS
 WITH snaps AS (

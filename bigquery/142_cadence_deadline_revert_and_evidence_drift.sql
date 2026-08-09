@@ -179,7 +179,13 @@ SELECT
   -- that bigquery/89 later excluded (see the header of bigquery/142 for the full account); the evidence
   -- for D2 and D3 was genuine, but cadence_watch_deadline_local is one shared constant across all three
   -- routines, not set per routine, so all three revert together.
-  (e.schedule IN ('daily_trading','daily_all')
+  -- 'daily_sun_thu' ADDED 2026-08-08 (daily-tier Fri/Sat consolidation onto Sunday, ops/cadence.yaml):
+  -- D1/D2a/D2/D3/OPS0/OPS1/OPS2/SL3 moved off daily_trading/daily_all onto this new class. A genuinely
+  -- missed Sun-Thu run MUST still raise a CRITICAL through this same alarm predicate -- omitting the
+  -- new class here would have silently disarmed needs_attention for the entire daily tier the moment
+  -- ops/cadence.yaml's monitor_class fields changed, even though state.cadence_expected_today (12_
+  -- cadence_monitor.sql) already expects these routines correctly under the new class.
+  (e.schedule IN ('daily_trading','daily_all','daily_sun_thu')
    AND NOT e.ran_completed_today
    AND DATETIME(CURRENT_TIMESTAMP(), 'America/Denver') >= DATETIME(e.today, TIME '21:00:00')
   ) AS needs_attention,
@@ -356,14 +362,23 @@ FROM agg;
 -- forward intact, since CREATE OR REPLACE PROCEDURE replaces the WHOLE body. A comment-stripped code-line
 -- diff proving only these two changes was produced during construction of this file and is reported
 -- alongside it.
--- SUPERSEDED LIVE by bigquery/150_cadence_check_autoage_connector_and_revised.sql — current single
+-- SUPERSEDED LIVE by bigquery/153_account_snapshot_gap_watch.sql — current single
 -- source of truth for ops.sp_sq_cadence_check (supersedes this file, per the chain noted above, via
 -- the intermediate bigquery/147). 147 bumps the heartbeat to v13, adds the run_log_note_missing
 -- record-only check and its auto-age allowlist entry; 149 bumps the heartbeat to v14 and adds
 -- script_version_drift to the #14 auto-age category list; 150 bumps the heartbeat to v15 and adds
--- 'connector' + 'strategy_revised' to the #14 auto-age category list; all are otherwise a verbatim
--- copy of the body below. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
--- re-apply this CREATE statement live in isolation.
+-- 'connector' + 'strategy_revised' to the #14 auto-age category list; 153 bumps the heartbeat to v17
+-- and adds the account_snapshot_gap record-only WARNING block (+ 'account_snapshot_gap' to the #14
+-- auto-age list); all are otherwise a verbatim copy of the body below. Kept here, unmodified, for
+-- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
+-- SUPERSEDED (2026-08-09) by bigquery/157_account_snapshot_gap_recoverable.sql (SQ_VERSION v18) --
+-- the current canonical definition of this procedure. 157 retracts a FALSEHOOD carried by every
+-- version from v17 down: the account_snapshot_gap alert message claimed the gap days could never be
+-- backfilled because IBKR exposes no historical-NAV endpoint. It does -- get_pa_performance_all_periods
+-- returns parallel dates[]/nav[] arrays, and D2a Step 0b already calls it but keeps only the last
+-- element. 157 changes exactly three strings (heartbeat v17->v18, that message, one comment) and no
+-- check logic. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';

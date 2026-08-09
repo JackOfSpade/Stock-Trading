@@ -76,6 +76,11 @@ defaults:
 # RUNBOOK §22-class problem). Allowed monitor_class values:
 #   daily_trading  : every trading day               (alarmed in state.cadence_watch)
 #   daily_all      : every calendar day              (alarmed)
+#   daily_sun_thu  : every Sunday-Thursday calendar day, NOT Friday/Saturday (alarmed) — added
+#                    2026-08-08 for the daily-tier Fri/Sat consolidation onto Sunday (see the DAILY
+#                    section's own header note below for the full rationale: it replaces
+#                    daily_trading/daily_all for the 8 calendar-monitored daily routines, and is
+#                    deliberately NOT trading-day-gated, unlike daily_trading).
 #   weekly_sun     : Sundays                          (visible, not alarmed — inferred run-day)
 #   monthly_ftd    : first trading day of the month   (visible, not alarmed)
 #   quarterly_ftd  : first trading day of the quarter (visible, not alarmed)
@@ -113,29 +118,68 @@ routines:
   # last 120 days run 16:04-17:14 MT, roughly two hours past close. scripts/check_cron_dst_safety.py
   # enforces the real window (after 14:00 MT, before the 21:00 MT cadence_watch deadline) for every
   # monitor_class: daily_trading routine in BOTH seasons, so this no longer rests on reading a comment.
+  #
+  # DAILY-TIER FRI/SAT CONSOLIDATION (2026-08-08). D1/D2a/D2/D3/SL3/OPS0/OPS1/OPS2 -- the 8
+  # calendar-monitored daily routines -- moved to `monitor_class: daily_sun_thu` (replacing
+  # daily_trading for D1/D2a/D2/SL3 and daily_all for D3/OPS0/OPS1/OPS2) in a FIRST pass, ahead of a
+  # SEPARATE, later step that would retime their `expected_trigger.cron_utc` to stop firing
+  # Friday/Saturday -- deliberately NOT changed in that first pass (see below for why the order
+  # mattered). Monitoring moved FIRST specifically so the first skipped Friday would NOT raise a
+  # `missed_run` CRITICAL (-> blocking_criticals != 0 -> state.trading_enabled halted): had the
+  # crons moved before the monitor did, `state.cadence_watch` would still have EXPECTED a Friday run
+  # that a routine had deliberately stopped making.
+  #
+  # CRON MIGRATION LANDED (2026-08-08, same day, later pass). The live triggers were flipped first
+  # (owner-verified via `next_run_at` reporting Sunday-evening America/Denver on all 12) and this
+  # file's `cron_utc` values below were then updated to match. All 12 daily-tier routines --
+  # the 8 above plus AR_att/AR_orc/SL2/SL5 (the 4 `queue_driven` daily-tier routines, which share the
+  # same day-set on their underlying trigger even though `monitor_class: queue_driven` keeps them
+  # out of `state.cadence_watch` regardless of which days they fire) -- now carry an explicit
+  # day-of-week list instead of `*` in their `cron_utc`: routines whose UTC firing hour is still the
+  # same Denver calendar day (D1/D2a/D2/OPS1, firing before 00:00 UTC) keep a Sunday-Thursday
+  # (`0,1,2,3,4`) dow list; routines whose UTC firing hour has already rolled into the NEXT calendar
+  # day (AR_att/AR_orc/D3/SL2/SL5/OPS2/OPS0, firing at/after 00:00 UTC) use a Monday-Friday
+  # (`1,2,3,4,5`) dow list instead, so the routine still SERVES Sunday-Thursday Denver. This is the
+  # "SEPARATE, later step" the paragraph above deferred -- it is done, not pending. Do not read the
+  # paragraph above as describing current `cron_utc` state; it documents why the monitor-class move
+  # was staged ahead of this one.
+  #
+  # WHY ONE NEW CLASS, NOT TWO, AND WHY IT DROPS THE TRADING-DAY PREDICATE: `daily_trading` gates on
+  # `is_trading_day`, and Sunday is NOT a trading day -- so D1/D2a/D2/SL3 (today's daily_trading
+  # routines) are structurally INVISIBLE to `state.cadence_expected_today` on Sundays, meaning a
+  # genuine Sunday failure would raise zero alarm. Sunday is about to become the ONLY day these
+  # routines run, so that blind spot must close before the cron migration lands, not after.
+  # `daily_sun_thu` is therefore a pure day-of-week predicate (`t.dow NOT IN (6, 7)`, i.e. every
+  # Sunday-Thursday calendar day) with NO trading-day gate at all -- the same calendar-unconditional
+  # shape `daily_all` already had for D3/OPS0/OPS1/OPS2, just narrowed to 5 of 7 days. Dropping the
+  # trading-day predicate for the four routines that had it is SAFE: these routines already fire and
+  # complete on non-trading days today -- both Friday market holidays in the logging history
+  # (2026-06-19, 2026-07-03) show every scheduled routine completing -- and line ~825 below documents
+  # that they self-detect a non-trading day and do cheap idempotent work, so expecting them on a
+  # non-trading Sunday/Monday/etc. asks nothing they cannot already do.
   - id: D1
     name: Market Development Scan
-    schedule: "after_close trading_day"   # ~16:10 MT
-    monitor_class: daily_trading
+    schedule: "after_close trading_day, Sun-Thu"   # ~16:10 MT
+    monitor_class: daily_sun_thu
     catchup_safe: true
     depends_on: []
     writes: [Daily.md, events.decision_log, events.regime_events, ops.heartbeat, state.strategy_candidates]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: "0 22 * * *"
+      cron_utc: "0 22 * * 0,1,2,3,4"
       time_local: "16:00"
       enabled: true
   - id: D2a
     name: Broker Reconcile & Snapshot
-    schedule: "after_close trading_day, before D2"
-    monitor_class: daily_trading
+    schedule: "after_close trading_day, before D2, Sun-Thu"
+    monitor_class: daily_sun_thu
     catchup_safe: false
     depends_on: []   # deliberately independent of D1 -- the book must reconcile even if D1 failed
     writes: [events.trade_fills, events.position_events, events.daily_marks, perf.strategy_daily,
              ops.account_snapshot, events.signal_marks]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: "40 22 * * *"
+      cron_utc: "40 22 * * 0,1,2,3,4"
       time_local: "16:40"
       enabled: true
     notes: >
@@ -153,8 +197,8 @@ routines:
       BUY side. Its cover test now reads bridge_adjusted_settled_cash, never raw settled_cash.
   - id: D2
     name: Daily Action Conversion
-    schedule: "after D1 trading_day"
-    monitor_class: daily_trading
+    schedule: "after D1 trading_day, Sun-Thu"
+    monitor_class: daily_sun_thu
     catchup_safe: false
     depends_on: [D1, D2a]
     # Watchlist.md added 2026-07-29 (OPS0 STEP 4f): D2 has written it in 20/37 of its commits
@@ -165,14 +209,14 @@ routines:
              events.park_policy_changes, Watchlist.md]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: "15 23 * * *"
+      cron_utc: "15 23 * * 0,1,2,3,4"
       time_local: "17:15"
       enabled: true
     notes: "CUT OVER 2026-07-09 (autonomous, by D2a; ops.d2a_cutover_log). D2 no longer runs Step 0/0b/TWR-maintenance -- those (broker reconcile + cash tripwire + park sweep, ops.account_snapshot, CALL ops.sp_daily_refresh()) now run in D2a, on which D2 now depends. D2 keeps its own freshness-inclusive trading-enable gate (safe now that D2a made marks/engine fresh), but as of 2026-07-27 it READS state.trading_enabled non-fatally at that point and enforces the verdict at each individual order-craft point, instead of calling ops.sp_assert_trading_enabled('D2') and aborting the whole routine on FALSE. The PENDING_ANALYSIS drain and the non-staging conversion work now run regardless; only order crafting and ORDER_STAGED writes are blocked while the gate is FALSE."
   - id: D3
     name: Calendar & Queue Hygiene
-    schedule: "after D2 daily"             # runs daily incl. non-trading days for queue/calendar upkeep
-    monitor_class: daily_all
+    schedule: "after D2, Sun-Thu"           # runs Sun-Thu incl. non-trading days for queue/calendar upkeep
+    monitor_class: daily_sun_thu
     catchup_safe: true
     depends_on: [D2]
     writes: [calendar:confirm_order, events.queue_events, AI_Trading_Foundation.md, bigquery/*.sql]
@@ -192,15 +236,15 @@ routines:
                              # ops/cadence.yaml rather than special-casing here."
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: "45 0 * * *"
+      cron_utc: "45 0 * * 1,2,3,4,5"
       time_local: "18:45"
       enabled: true
   - id: OPS0
     name: Cadence Watchdog
-    schedule: "after D3 daily"             # runs daily incl. non-trading days; deliberately after D3
+    schedule: "after D3, Sun-Thu"           # runs Sun-Thu incl. non-trading days; deliberately after D3
                                             # so a same-evening D3 catch-up-eligible miss (if any) is
                                             # already reflected before OPS0 sweeps
-    monitor_class: daily_all
+    monitor_class: daily_sun_thu
     catchup_safe: false
     depends_on: []          # DELIBERATELY independent -- this routine's job is to unblock others; a
                              # dependency on anything would recreate the exact failure class it exists
@@ -216,7 +260,7 @@ routines:
                              # the spec-locked strategy surfaces are hard-excluded -- see STEP 4d).
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: "30 4 * * *"
+      cron_utc: "30 4 * * 1,2,3,4,5"
       time_local: "22:30"          # fixed 04:30 UTC cron (trig_018zZNYXYmgkqbmcfzss1YjU, created
                                     # 2026-07-17, recreated 2026-08-01) -- NOT the DST-aware native picker, so this is
                                     # 10:30 PM MDT / 9:30 PM MST depending on season, deliberately
@@ -243,19 +287,19 @@ routines:
       state.trading_enabled.
   - id: OPS1
     name: Morning Connector Liveness Probe
-    schedule: "pre-market, ~9.5h before the 16:10-17:15 MT daily cadence"
-    monitor_class: daily_all
+    schedule: "pre-market, ~9.5h before the 16:10-17:15 MT Sun-Thu cadence"
+    monitor_class: daily_sun_thu
     catchup_safe: true      # a late probe still helps; a missed one is covered next morning
     depends_on: []           # DELIBERATELY independent, same rationale as OPS0 -- a probe that exists
                               # to catch an auth failure early must never itself be blocked by one
     writes: [ops.alerts, ops.connector_tool_inventory]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: "30 12 * * *"
+      cron_utc: "30 12 * * 0,1,2,3,4"
       time_local: "06:30"          # fixed 12:30 UTC cron (trig_012jxpUDFsrTR5FnSRmnxej4, recreated
                                     # 2026-08-01) -- NOT the DST-aware native picker, so this drifts to
                                     # 05:30 MST in winter, which is fine -- still hours ahead of the
-                                    # 16:10-17:15 MT daily cadence either way
+                                    # 16:10-17:15 MT Sun-Thu cadence either way
       enabled: true
     notes: >
       Pre-market connector-auth early warning (owner-approved 2026-07-19, after an IBKR OAuth expiry
@@ -269,8 +313,8 @@ routines:
       it appears, not whenever a routine first happens to call it.
   - id: OPS2
     name: Catch-up Executor
-    schedule: "after the daily chain, before OPS0's 22:30 sweep"   # runs daily incl. non-trading days
-    monitor_class: daily_all
+    schedule: "after the daily chain, before OPS0's 22:30 sweep"   # runs Sun-Thu incl. non-trading days
+    monitor_class: daily_sun_thu
     catchup_safe: false      # a catch-up executor must never itself be auto-caught-up (same as OPS0)
     # ops.run_log CANNOT PROVE THIS TRIGGER FIRED (learned the hard way 2026-07-28). OPS2's SAME-DAY
     # DOUBLE-RUN GUARD (task_plan/OPS2.md, the generalized guard bullet) runs FIRST, BEFORE run-logging,
@@ -288,7 +332,7 @@ routines:
     writes: [ops.run_log, ops.catchup_refire_log, events.decision_log, ops.alerts]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: "15 4 * * *"
+      cron_utc: "15 4 * * 1,2,3,4,5"
       time_local: "22:15"          # AFTER the 21:00 MT needs_attention deadline (bigquery/48:56) and
                                     # BEFORE OPS0's 04:30 UTC, in BOTH seasons (22:15 MDT / 21:15 MST)
                                     # -- DST-robust, retimed by owner 2026-07-27 (was `0 3 * * *`, which
@@ -336,15 +380,15 @@ routines:
       ops.catchup_refire_log. No chat question, ever.
   - id: SL3
     name: Incubation Monitor & Graduation
-    schedule: "after D2a trading_day"     # SISA arsenal loop; needs D2a's fresh marks
-    monitor_class: daily_trading
+    schedule: "after D2a trading_day, Sun-Thu"     # SISA arsenal loop; needs D2a's fresh marks
+    monitor_class: daily_sun_thu
     catchup_safe: true
     depends_on: [D2a]
     writes: [analytics.strategy_incubation_perf, events.strategy_lifecycle, state.arsenal_regime_coverage,
              events.queue_events, events.decision_log, ops.alerts, events.shadow_positions]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: "0 2 * * *"
+      cron_utc: "0 2 * * 1,2,3,4,5"
       time_local: "20:00"
       enabled: true
     notes: >
@@ -355,22 +399,22 @@ routines:
       capital itself. Gated by ops.sp_assert_arsenal_enabled('SL3'); FATAL sp_assert_deps(['D2a']). Writes a
       decision_log 'evaluated, no change' meta-heartbeat every firing.
 
-  # ---- ADVERSARIAL REVIEWS (daily, queue-driven; fire only if an entry is due) ----
+  # ---- ADVERSARIAL REVIEWS (Sun-Thu, queue-driven; fire only if an entry is due) ----
   - id: AR_att   # ASCII id standardized 2026-07-01 (RUNBOOK §28); legacy middle-dot ops.run_log rows fold in via instruction_drift's separator-normalized join
     name: Adversarial Review — Attacker
-    schedule: "daily; if events.queue_events PENDING_REVIEW attacker_due<=today"
+    schedule: "Sun-Thu; if events.queue_events PENDING_REVIEW attacker_due<=today"
     monitor_class: queue_driven           # NOT calendar-predictable -> excluded from cadence_expected_today
     catchup_safe: false
     depends_on: []
     writes: [events.adversarial_reviews]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: "0 0 * * *"
+      cron_utc: "0 0 * * 1,2,3,4,5"
       time_local: "18:00"
       enabled: true
   - id: AR_orc
     name: Adversarial Review — Orchestrator
-    schedule: "daily; if a review is attacker-complete and orchestrator_due<=today"
+    schedule: "Sun-Thu; if a review is attacker-complete and orchestrator_due<=today"
     monitor_class: queue_driven
     catchup_safe: false
     depends_on: [AR_att]
@@ -378,7 +422,7 @@ routines:
              events.strategy_lifecycle, ops.roster_change_log]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: "35 0 * * *"
+      cron_utc: "35 0 * * 1,2,3,4,5"
       time_local: "18:35"
       enabled: true
       # 2026-08-04 JITTER RE-SPACING (18:20 -> 18:35). The 2026-08-01 gap was sized against
@@ -400,7 +444,7 @@ routines:
   # ---- STRATEGY ARSENAL — QUEUE-DRIVEN (SISA lifecycle, added 2026-07-10; fire only if a queue entry is due) ----
   - id: SL2
     name: Strategy Draft, Revise & Post-mortem
-    schedule: "daily; if events.queue_events PENDING_DRAFT (strategy-draft/strategy-revise/post-mortem) due<=today"
+    schedule: "Sun-Thu; if events.queue_events PENDING_DRAFT (strategy-draft/strategy-revise/post-mortem) due<=today"
     monitor_class: queue_driven           # NOT calendar-predictable -> excluded from cadence_expected_today (like AR)
     catchup_safe: false
     depends_on: []
@@ -417,7 +461,7 @@ routines:
              # because SL2 regenerates slices FROM Strategy.md and so always touches both.
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: "5 1 * * *"
+      cron_utc: "5 1 * * 1,2,3,4,5"
       time_local: "19:05"
       enabled: true
     notes: >
@@ -431,7 +475,7 @@ routines:
       bigquery/15 + ops/triggers.json + bigquery/18 stalled_runs only (NOT 12/24).
   - id: SL5
     name: Strategy Register & Roster Sync
-    schedule: "daily; if a SUFFICIENT strategy-adoption verdict, an SL3 PAPER->PROBE enqueue, or a TERMINATED transition is due"
+    schedule: "Sun-Thu; if a SUFFICIENT strategy-adoption verdict, an SL3 PAPER->PROBE enqueue, or a TERMINATED transition is due"
     monitor_class: queue_driven
     catchup_safe: false
     depends_on: [AR_orc]
@@ -440,7 +484,7 @@ routines:
              # strategy/*.md: same dead-pathspec fix as SL2 above (OPS0 STEP 4f, 2026-08-06).
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: "25 1 * * *"
+      cron_utc: "25 1 * * 1,2,3,4,5"
       time_local: "19:25"
       enabled: true
     notes: >

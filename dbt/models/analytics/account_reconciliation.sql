@@ -71,13 +71,23 @@ SELECT
   -- park_unrealized = current park market value - park cost basis (both derived from
   -- events.parking_events + marks).
   ROUND(COALESCE(pn.park_mv_now, 0) - COALESCE(pn.park_cost_basis, 0), 2)                 AS park_unrealized,
-  -- residual_after_park = the existing events-vs-live residual (undeployed_total - park MV - cash),
-  -- with park_unrealized explicitly netted out (subtracted).
+  -- residual_after_park = the events-vs-live residual (undeployed_total - park MV - cash), ADJUSTED to
+  -- remove the portion explained by the park's own mark-to-market move. undeployed_total
+  -- (analytics.strategy_nav.available_funds) is a COST-basis figure -- it never reads a current
+  -- price -- while park_mv above is MARKET-basis, so raw == -park_unrealized (modulo ordinary
+  -- reconciliation noise: rounding, in-flight settlement, timing). The park's own MTM is therefore
+  -- CANCELLED by ADDING park_unrealized back, not by subtracting it a second time. See
+  -- bigquery/156_park_residual_sign_fix.sql's header for the full derivation and live worked proof.
+  -- SIGN FIX (bigquery/156, 2026-08-08): the original formula here SUBTRACTED park_unrealized, which
+  -- doubles the park term instead of cancelling it and can never converge to ~0 while the park holds
+  -- any unrealized P&L -- live-verified same-day numbers: -245.54 (old, buggy) vs -54.65 (corrected).
+  -- This dbt port was MISSED by that fix and kept the buggy sign, so the dbt-parity gate went red on
+  -- 2026-08-09 and stranded every branch that touched bigquery/** or dbt/** behind it.
   ROUND(
     (
       (SELECT SUM(available_funds) FROM {{ ref('strategy_nav') }})
       - COALESCE(pn.park_mv_now, 0)
       - COALESCE((SELECT total_cash FROM {{ ref('account_latest') }}), 0)
-    ) - (COALESCE(pn.park_mv_now, 0) - COALESCE(pn.park_cost_basis, 0))
+    ) + (COALESCE(pn.park_mv_now, 0) - COALESCE(pn.park_cost_basis, 0))
   , 2)                                                                                     AS residual_after_park
 FROM park_now pn

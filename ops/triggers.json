@@ -21,19 +21,19 @@
   },
   "D1": {
     "instruction": "Read Claude_Task_Plan.md. Perform D1. Market Development Scan \u2014 deep research.",
-    "monitor_class": "daily_trading"
+    "monitor_class": "daily_sun_thu"
   },
   "D2": {
     "instruction": "Read Claude_Task_Plan.md. Perform D2. Daily Action Conversion \u2014 regular routine.",
-    "monitor_class": "daily_trading"
+    "monitor_class": "daily_sun_thu"
   },
   "D2a": {
     "instruction": "Read Claude_Task_Plan.md. Perform D2a. Broker Reconcile & Snapshot \u2014 regular routine.",
-    "monitor_class": "daily_trading"
+    "monitor_class": "daily_sun_thu"
   },
   "D3": {
     "instruction": "Read Claude_Task_Plan.md. Perform D3. Calendar Hygiene \u2014 regular routine.",
-    "monitor_class": "daily_all"
+    "monitor_class": "daily_sun_thu"
   },
   "M1a": {
     "instruction": "Read Claude_Task_Plan.md. Perform M1a. Strategy-Blind Regime Scoring \u2014 deep research.",
@@ -61,15 +61,15 @@
   },
   "OPS0": {
     "instruction": "Read Claude_Task_Plan.md. Perform OPS0. Cadence Watchdog \u2014 regular routine.",
-    "monitor_class": "daily_all"
+    "monitor_class": "daily_sun_thu"
   },
   "OPS1": {
     "instruction": "Read Claude_Task_Plan.md. Perform OPS1. Morning Connector Liveness Probe \u2014 regular routine.",
-    "monitor_class": "daily_all"
+    "monitor_class": "daily_sun_thu"
   },
   "OPS2": {
     "instruction": "Read Claude_Task_Plan.md. Perform OPS2. Catch-up Executor \u2014 regular routine.",
-    "monitor_class": "daily_all"
+    "monitor_class": "daily_sun_thu"
   },
   "Q1": {
     "instruction": "Read Claude_Task_Plan.md. Perform Q1. Regime Retrospective \u2014 deep research.",
@@ -97,7 +97,7 @@
   },
   "SL3": {
     "instruction": "Read Claude_Task_Plan.md. Perform SL3. Incubation Monitor & Graduation \u2014 regular routine.",
-    "monitor_class": "daily_trading"
+    "monitor_class": "daily_sun_thu"
   },
   "SL4": {
     "instruction": "Read Claude_Task_Plan.md. Perform SL4. Discretionary Retirement Proposer \u2014 regular routine.",

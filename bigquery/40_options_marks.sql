@@ -133,6 +133,19 @@ GROUP BY mark_date, strategy;
 -- branch has NO matching row for it that day (no option_marks_curated entry yet, or the join otherwise
 -- missed it) — the exact case that must NOT silently zero-value or null-corrupt the TWR chain. Self-
 -- bootstrapping: empty until the first option position + a genuinely missing mark co-occur.
+--
+-- SUPERSEDED LIVE by bigquery/155_snapshot_and_option_anomaly_d2a_gate.sql — current single source of
+-- truth for this view (chain: 40 -> 154 -> 155). 154 first re-sourced the `trading_days` CTE below from
+-- state.market_calendar (WHERE is_trading_day) instead of `SELECT DISTINCT mark_date FROM state.daily_
+-- marks_curated` (which is written by D2a on a Sunday-Thursday cadence; a Friday could therefore NEVER
+-- appear as a candidate day and this view could never flag a Friday option-mark gap — structurally
+-- blind to exactly the condition it exists to catch) — that fix still stands. 155 then added a same-day
+-- guard: 154's `cal_date <= CURRENT_DATE('America/Denver')` bound included TODAY unconditionally, so on
+-- any Sun-Thu trading day, before D2a writes today's option marks (~16:40 MT), every open option
+-- position read as a false-positive anomaly from 00:00 MT onward; 155 gates TODAY specifically on an
+-- EXISTS(...D2a completed...) check while leaving every past day (including a genuine Friday gap)
+-- unconditional. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
+-- this CREATE OR REPLACE VIEW statement live in isolation.
 -- ============================================================================
 CREATE OR REPLACE VIEW `stock-trading-498512.state.option_mark_anomalies` AS
 WITH option_positions AS (
