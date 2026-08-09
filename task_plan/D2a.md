@@ -1210,25 +1210,163 @@ the BigQuery value-weighted daily TOTAL-return TWR (`events.daily_marks` → `an
    fabricate/carry-forward an option premium the way step 1 forward-fills an equity gap (option premiums move too
    fast near expiry for a stale carry-forward to be a safe substitute) — `ops.sp_recompute_engine()` (step 2 below)
    already excludes an unmarked option-day from the TWR chain rather than mis-valuing it.
-   **FRIDAY-PREMIUM CLIFF — DOCUMENTED, NOT FIXED (2026-08-08; currently DORMANT, not a live gap).** Unlike
-   step 1's equity/benchmark marks (`get_price_history`, a genuine dated-bar endpoint) and step 1d's `^VIX`
-   workaround (FMP `chart`, also dated-bar), NEITHER `get_option_data` NOR its FMP options-quote fallback has a
-   historical-quote form — both are SPOT reads of the CURRENT premium, with no way to ask either connector "what
-   was this contract's close on a past date." A Friday premium missed because D2a does not run Friday under the
-   new schedule is therefore genuinely UNRECOVERABLE on the Sunday catch-up run — there is no dated-bar source
-   to backfill it from, unlike every other mark this routine ingests. **Do not invent a backfill loop here
-   mirroring step 1's or step 1d's — there is nothing on either connector for it to call.** Currently dormant:
-   Strategy C — the only strategy this branch can ever apply to (`analytics.fn_is_occ_option_symbol`, above) —
-   holds ZERO open positions as of 2026-08-08 (verified: `SELECT * FROM state.current_positions WHERE
-   strategy='C' AND status='OPEN'` returns no rows), so this step has nothing to ingest today and the cliff
-   cannot bite. The engine is already protected, not exposed: the exclusion in the sentence immediately above —
-   `ops.sp_recompute_engine()` dropping an unmarked option-day from the TWR chain rather than mis-valuing it —
-   means a missed Friday premium would degrade to a gap in the chain, never a phantom mark. **Revisit before
-   Strategy C next opens a position:** once C is live again, a Friday entry/hold under the Fri/Sat-skip schedule
-   will produce a genuinely unrecoverable Sunday gap in `events.option_marks`, and whether that is tolerable
-   (rely on the exclusion above) or needs a mitigation (e.g., an intraday premium snapshot taken before Friday's
-   close, if a future session judges it worth building) is an open question this note exists to flag, not
-   answer.
+   **MISSED-DAY BACKFILL (bug fix, 2026-08-08 — supersedes the "FRIDAY-PREMIUM CLIFF — DOCUMENTED, NOT FIXED"
+   posture this note carried earlier the same day; modelled on step 1's `daily_marks` missed-day backfill
+   above).** The premise above (SPOT-only, no historical form) was correct for `get_option_data`/its FMP
+   fallback but incomplete: `get_price_history` DOES return historical option bars — it only rejects
+   `step="ONE_DAY"`. Verified live against two independent contracts (not a replay of a single probe): SPY
+   SEP 18 '26 775 Call (contract_id 793211359) and, independently, QQQ OCT 16 '26 725 Put (contract_id
+   867926161). Both reject `step="ONE_DAY"` with `{"error":"No historical market data available"}`; both
+   return full dated hourly OHLCV on `step="ONE_HOUR"`, `period="ONE_WEEK"`. Both cross-validate exactly
+   against a same-moment spot read — SPY's last bar closed 13.80 against `get_price_snapshot`'s `last.price`
+   of 13.80; QQQ's last bar closed 25.76 against a snapshot of 25.76 — confirming the hourly path reproduces
+   the connector's own last-traded price, not a model, and both contracts' daily bar grids run 13:30Z-20:00Z
+   each session day (9:30am-4:00pm America/New_York under EDT), confirming the bars are session-aligned.
+   **Trigger**: the same `missed_trading_days >= 1` predicate as step 1's `daily_marks` backfill (D2A
+   MISSED-TRADING-DAY COUNT, Step 0 connector-sanity band above) — not redefined here. **Per open option
+   position** (same `analytics.fn_is_occ_option_symbol`-filtered set as the spot ingest above):
+   `get_price_history(contract_id=<the fill's numeric call_contract_id/put_contract_id>, security_type="OPT",
+   step="ONE_HOUR", period="ONE_WEEK", outside_rth=false, exchange="SMART")` — `ONE_WEEK` comfortably spans
+   the routine Thu->Sun 3-day gap with margin; on a wider gap, widen `period` proportionally, up to
+   `ONE_MONTH` — this account's own option-history retention reaches roughly a month, so an outage longer
+   than that cannot be recovered by this path either. **Deriving the daily close from hourly bars — the part
+   that must be done carefully.** For each missed trading day, take the close of the LAST returned bar whose
+   `time` falls at or before that day's regular-session close — **16:00 America/New_York**. Compute that
+   cutoff FROM the America/New_York wall-clock time at ingest, never a hardcoded UTC hour: 16:00
+   America/New_York is 20:00Z under EDT but 21:00Z under EST, so a hardcoded `20:00Z` cutoff silently admits
+   or drops an hour of bars — and silently shifts the derived close — across every DST changeover. This is
+   the same MARKET-plane discipline `bigquery/20_user_prefs.sql` pins for every other session-close
+   computation in this repo (America/New_York, never a bare UTC offset). **Provenance**:
+   `events.option_marks.source` (`bigquery/40_options_marks.sql`) already exists and needs no schema change —
+   write `source='connector-backfill'` for a row this path produces, a third token distinct from the spot
+   ingest's `'connector'` (same-day IBKR spot) and `'FMP-fallback'` (spot fallback), so a backfilled close is
+   always distinguishable from a same-day live read. **Illiquidity**: a thinly-traded contract can print NO
+   bar at all on a given day; if the response has no bar for a missed date, leave that date UNMARKED — never
+   fabricate, never carry forward the prior close, never model one (extending, not replacing, the "Do NOT
+   fabricate/carry-forward" sentence above) — `ops.sp_recompute_engine()` already excludes an unmarked
+   option-day from the TWR chain rather than mis-valuing it, and that stays the correct fallback here too.
+
+   **The expiry/exit sub-case, investigated honestly rather than assumed fixed.**
+   `analytics.strategy_daily_returns`'s `option_held` CTE (`bigquery/125_dust_excluded_from_twr.sql`)
+   INNER-JOINs `state.option_marks_curated` to `analytics.position_lifecycle` on `(occ_symbol, mark_date)` —
+   a position contributes a day's return ONLY if `option_marks` carries a row for that exact date, and on
+   `mark_date = exit_date` specifically the value used is the position's own recorded `exit_price` (from the
+   closing fill), not that day's `premium_close` — so the backfilled bar's own price does not need to be
+   exactly right on exit day; its only job is to make the join produce a row for that date at all. **What
+   this fixes**: before this rewrite, a Friday exit under the Fri/Sat-skip schedule had NO way to get an
+   `option_marks` row for that date at all (spot-only, dormant Friday) — the terminal day permanently dropped
+   out of the TWR chain with no future row to telescope through, unlike a continuing hold (which just carries
+   a gap forward to the next live mark). The hourly backfill closes this for any contract that printed even
+   one trade on its exit/expiry day: a bar exists, the Sunday catch-up recovers it, `option_marks` gets a row
+   for `mark_date = exit_date`, and the terminal return joins into the chain correctly against the real
+   `exit_price`. **What remained before the EXPIRY-DAY TERMINAL MARK rule below**: a contract that expires
+   WORTHLESS with genuinely ZERO trades on expiry day — the illiquid case above, at the worst possible
+   moment — got no `option_marks` row for that date from any source, spot or historical, because no bar
+   exists to backfill. **That residual is now closed for the common case, not merely narrowed** — see below.
+   **One boundary this session could not test, and which still applies to the hourly path above (NOT to the
+   terminal-mark rule below — see why there)**: `get_price_history` on an OPTION contract was verified live
+   only against two NOT-YET-EXPIRED contracts (SPY Sep '26, QQQ Oct '26) — `get_option_parameters` enumerates
+   only current/future expirations, so an already-expired contract's `contract_id` is not discoverable
+   through this connector surface to test directly. Whether IBKR continues to serve `get_price_history` for
+   an OPTION contract in the ~2-day window immediately after ITS OWN expiration (the Sunday-after-Friday-
+   expiry case Strategy C will actually hit) is therefore unconfirmed, not assumed working, for the hourly
+   MISSED-DAY BACKFILL path specifically — check it in situ the next time Strategy C actually holds an option
+   into expiry rather than trusting this note.
+
+   **EXPIRY-DAY TERMINAL MARK (bug fix, 2026-08-08 — closes the zero-trade-expiry residual above without a
+   market quote at all).** At expiration an option's value is not unknown, it is DEFINITIONAL — a contractual
+   fact, not a market observation, so it needs no bar and (unlike the hourly path above) no historical query
+   against the OPTION contract itself, which sidesteps the untested post-expiry boundary noted just above
+   entirely. **Trigger**: a held option position whose `expiry` — read from its own CARRY-FORWARD source
+   below, not re-derived — falls inside the missed-trading-day range (same D2A MISSED-TRADING-DAY COUNT
+   predicate as the rest of this step, not redefined here). **CARRY-FORWARD, not parsing (correction,
+   2026-08-08 — live schema check found the first version of this note wrong; see MULTIPLIER below).**
+   `events.option_marks` STORES `strike`, `expiry`, `option_right`, AND `multiplier` as genuine per-row
+   columns (`bigquery/40_options_marks.sql`'s `CREATE TABLE`, confirmed against the live table schema),
+   populated from the connector response at the same-day spot ingest above — not defaulted, not assumed.
+   Any position reaching its own expiry day while still open has necessarily been marked on an earlier day
+   (the spot ingest runs every session Strategy C holds it), so `SELECT strike, expiry, option_right,
+   multiplier FROM state.option_marks_curated WHERE occ_symbol = <ticker> ORDER BY mark_date DESC LIMIT 1` is
+   the authoritative source for all four fields this rule needs — read the stored columns; do **not**
+   re-derive them from the OCC ticker string. Why: a value captured from the connector at ingest is MEASURED;
+   a value re-parsed from a symbol string later is a RE-DERIVATION that can silently disagree with it (a
+   padding/format edge case, a non-standard root, a data-entry-adjacent symbol) with nothing to catch the
+   mismatch — carrying the already-measured value forward has no such failure mode. **Determine moneyness**:
+   recover the UNDERLYING's close on the expiry date via the ordinary EQUITY dated-bar path —
+   `get_price_history(contract_id=<underlying's own contract_id>, security_type="STK", step="ONE_DAY",
+   period=<spanning the gap>)`, the exact call step 1's own `daily_marks` missed-day backfill already makes
+   for every held ticker; equities have always supported `step="ONE_DAY"` (only the OPTION contract rejects
+   it, per the discovery this rewrite opened with) — and compare that close to the carried-forward `strike`.
+   **OTM -> write `premium_close = 0`**: the contract expired worthless, which is a contractual fact, not an
+   estimate. **ITM -> write `premium_close = |underlying_close − strike|`** — a PER-SHARE intrinsic value, on
+   the exact same basis every other `premium_close` row already carries (`bigquery/125_dust_excluded_from_twr.sql`'s
+   `option_held` CTE values a position at `contracts × multiplier × premium_close`; the multiplier scaling
+   happens THERE, downstream, using the row's own carried-forward `multiplier` — this rule writes the
+   per-share figure only and needs no multiplier arithmetic of its own) — and cross-check against
+   `events.trade_fills`: if an assignment/exercise fill already reconciled for this position on/near expiry,
+   the FILL's own recorded price is authoritative for `exit_price` (`analytics.position_lifecycle` already
+   sources `exit_price` from the fill independently of `option_marks`); this computed intrinsic value is then
+   only a sanity check against that fill (flag a mismatch beyond a few cents — commission/settlement rounding
+   aside — as an `option_mark_missing`-class warning, not a silent overwrite), or it fills the mark for a day
+   the fill's own settlement record doesn't otherwise cover — never a replacement for a fill that exists.
+   **Provenance**: token `source='expiry-terminal'` — distinct from `'connector-backfill'` (a market
+   observation, hourly-bar-derived) and from `'connector'`/`'FMP-fallback'` (same-day spot reads), since this
+   row is DERIVED-BY-CONTRACT from a carried-forward strike + the underlying's close, not observed from any
+   option quote, and a future reader must be able to tell the three apart at a glance. **The one genuine edge
+   case, stated honestly: pin risk.** When the underlying's close sits AT or extremely near the strike,
+   exercise is discretionary — assignment is not automatic exactly at parity, and the holder's own
+   after-hours exercise decision (or the OCC's automatic-exercise threshold) can go either way — so moneyness
+   at the 4pm close does NOT mechanically determine the outcome the way it does away from the strike. In this
+   narrow band, do NOT compute a terminal mark from moneyness at all: defer to the actual assignment/exercise
+   fill in `events.trade_fills` if one exists; if none exists yet (reconciliation lag), leave the date
+   UNMARKED rather than guess — this is the one sub-case where "definitional, not a model" does not fully
+   hold, and the existing illiquidity/never-fabricate rule still governs it exactly as it governs a genuinely
+   quoteless day. **The one genuinely uncovered case: same-day open-and-expire inside the gap.** A 0DTE
+   structure both OPENED and EXPIRING on a single day that falls inside the missed range (e.g., staged and
+   filled on the skipped Friday itself) has NO prior `events.option_marks` row to carry `strike`/`expiry`/
+   `option_right`/`multiplier` forward from — CARRY-FORWARD above is empty for it, and parsing the OCC ticker
+   is deliberately not built as a fallback here either (see PARSING below). Defer instead to the reconciled
+   fill in `events.trade_fills` for that position (`analytics.position_lifecycle` already sources its
+   `exit_price`/accounting from the fill independently of `option_marks`); if no fill exists there either,
+   leave the date unmarked. Do not parse, do not guess.
+
+   **PARSING — a recognizer exists; no extractor is needed and none should be built (reframed, 2026-08-08).**
+   `analytics.fn_is_occ_option_symbol` (`bigquery/40_options_marks.sql`) recognizes the OCC format via
+   `REGEXP_CONTAINS` — root (1-6 letters, space-padded to 6), 6-digit YYMMDD expiry, C/P, 8-digit strike×1000 —
+   but it is a pure boolean recognizer, never an extractor, and this session confirmed no `REGEXP_EXTRACT`-
+   based OCC parser exists anywhere in this codebase. That remains true, but it is NOT a gap: CARRY-FORWARD
+   above (reading the stored `strike`/`expiry`/`option_right`/`multiplier` columns off the most recent prior
+   `option_marks` row for the same `occ_symbol`) covers every case this rule needs, and the one case
+   CARRY-FORWARD cannot cover (same-day open-and-expire, above) falls back to the reconciled fill, not to
+   parsing. **Do not build a `fn_parse_occ_symbol` UDF for this** — there is no call site left that needs it,
+   and an unused parser would be a maintenance liability: a second, never-exercised source of strike/expiry/
+   right that could silently drift from the stored columns if anyone later wires it in without noticing
+   CARRY-FORWARD already exists.
+
+   **MULTIPLIER — corrected, 2026-08-08: IS stored per row; the prior version of this note was wrong.** This
+   note originally claimed no table stores a genuine per-contract multiplier. That was incorrect for
+   `events.option_marks` specifically: `multiplier` is a real column on every row (`bigquery/40_options_marks.sql`'s
+   `CREATE TABLE`, confirmed against the live table schema), populated from the connector response at the
+   same-day spot ingest above (DEFAULT 100, overridden "unless the contract's actual multiplier differs" per
+   that ingest step's own existing wording) — `bigquery/125_dust_excluded_from_twr.sql`'s `option_held` CTE
+   reads `om.multiplier` directly off `state.option_marks_curated` to scale `mv`, which is the TWR engine's
+   actual multiplier source. **`c_options_math.py`'s `CONTRACT_MULTIPLIER = 100` (line 127) is a separate,
+   STRATEGY-SIDE sizing constant used at entry-thesis construction — it is NOT what the TWR engine values
+   positions with, and this rule does not touch it.** This EXPIRY-DAY TERMINAL MARK rule needs no multiplier
+   of its own at all: it writes `premium_close` as a per-share figure (same basis as every other
+   `premium_close` row), and the row's `multiplier` column is simply carried forward from CARRY-FORWARD
+   above, unread and unmodified by this rule — the downstream `mv` computation in `bigquery/125` is what
+   actually applies it. No inherited-assumption caveat applies here: the figure used is the one already
+   measured and stored on this same contract's own prior marks, not an assumption of any kind.
+
+   **Currently dormant** (unchanged fact from the note this supersedes): Strategy C — the only strategy this
+   branch can ever apply to (`analytics.fn_is_occ_option_symbol`, above) — holds ZERO open positions as of
+   2026-08-08 (verified: `SELECT * FROM state.current_positions WHERE strategy='C' AND status='OPEN'` returns
+   no rows), so this backfill has nothing to ingest today. Unlike the note it supersedes, that is no longer
+   "the cliff cannot bite because nothing is exposed to it" — it is "the mechanism is now built and will run
+   the next time `missed_trading_days >= 1` finds an open Strategy C option position," which the SISA
+   graduation pipeline (or a HYBRID ACTIVATE FOMC-only qualifying event, C's live router path today) could
+   produce at any time.
 1c. **MARK-DISCONTINUITY TRIPWIRE + SPLIT-ADJUST (finding C2, 2026-07-17 split-aware engine — `bigquery/82_split_aware_engine.sql`; watched-set extended to the full park menu 2026-07-19, `bigquery/92_park_allocator.sql`).** After the equity/benchmark (step 1) and option (step 1b) marks are ingested — and BEFORE the engine recompute (step 2), so a bad mark cannot drive a phantom termination — read `state.mark_discontinuity_watch` (the held-position + full 12-ticker park menu (+ SPY) benchmark tickers, sourced from COALESCE(`state.daily_marks_curated`, `state.signal_marks_curated`) so the 9 menu tickers whose closes land only in `signal_marks_curated` are actually watched, not just SGOV/VOO/SPY; it flags a >25% day-over-day `close` move on the latest `mark_date` that is NOT a recorded split (`split_ratio = 1`) and NOT explained by a same-day dividend):
    - **Bad-print / missed-split CRITICAL:** for any row with `is_discontinuity = TRUE` on today's `mark_date` (`= state.trading_day_today.last_trading_day`), `CALL ops.sp_raise_alert('critical','D2a','mark_discontinuity', CONCAT(ticker,' moved ',CAST(ROUND(raw_move*100,1) AS STRING),'% day-over-day (',CAST(prev_close AS STRING),'->',CAST(close AS STRING),') with no recorded split or dividend'), '<JSON: ticker, mark_date, close, prev_close, raw_move, split_ratio, dividend>')`. Being a NON-excluded CRITICAL it forces `state.system_health.all_green = FALSE` (holding `state.trading_enabled` FALSE), which **BLOCKS D2's rigid STRATEGY TERMINATION conversion (step 5) until the mark is adjudicated** — a REAL split gets its `split_ratio` recorded (clearing the flag; the split-aware engine then handles it), a BAD print gets corrected and re-reconciled next run. Do NOT let a -50% phantom drawdown from an unrecorded split auto-terminate a strategy — this tripwire is exactly that guard (the existing LN-domain clamp only fires at -99.99%, ~200x too coarse; see 82's header).
    - **Recorded-split share-sync:** for any held ticker whose latest `state.daily_marks_curated` row carries `split_ratio != 1` (a CORRECTLY-recorded split — NOT flagged above; `analytics.strategy_daily_returns`'s `eff_split_since_entry` already keeps its mv/dividend continuous), write an `events.position_events` row (`event_type='SPLIT_ADJUST'`, the ticker, the `split_ratio`, `mark_date`) — **echoing EVERY other column forward verbatim from the position's current `state.current_positions` row and changing only `shares` (and `cost_basis`/`convergence_target` per the split ratio): this row becomes latest-wins for the `position_key`, so any column left out of it is DESTROYED, including `invalidation_status`** (see "Shared rules referenced across prompts" → "An omitted field is a destroyed field") — so the position's share count is synced to the post-split basis and the audit trail records the corporate action. Idempotent — NOT-EXISTS on (`position_key`/ticker, `event_type='SPLIT_ADJUST'`, `mark_date`) before insert (the `ops.roster_change_log` pattern), since D2a may re-run same-day.

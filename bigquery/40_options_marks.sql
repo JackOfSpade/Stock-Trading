@@ -133,6 +133,15 @@ GROUP BY mark_date, strategy;
 -- branch has NO matching row for it that day (no option_marks_curated entry yet, or the join otherwise
 -- missed it) — the exact case that must NOT silently zero-value or null-corrupt the TWR chain. Self-
 -- bootstrapping: empty until the first option position + a genuinely missing mark co-occur.
+--
+-- SUPERSEDED LIVE by bigquery/154_option_mark_anomalies_calendar_fix.sql (2026-08-08 — the
+-- `trading_days` CTE below sourced its calendar from `SELECT DISTINCT mark_date FROM state.daily_marks_
+-- curated`, which is written by D2a on a Sunday-Thursday cadence; a Friday could therefore NEVER appear
+-- as a candidate day and this view could never flag a Friday option-mark gap — structurally blind to
+-- exactly the condition it exists to catch). 154 is the CURRENT single source of truth for this view,
+-- re-sourcing `trading_days` from state.market_calendar (WHERE is_trading_day) instead. Kept here,
+-- unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE VIEW
+-- statement live in isolation.
 -- ============================================================================
 CREATE OR REPLACE VIEW `stock-trading-498512.state.option_mark_anomalies` AS
 WITH option_positions AS (
