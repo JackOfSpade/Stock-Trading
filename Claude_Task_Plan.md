@@ -1063,16 +1063,43 @@ Concretely, every run:
   exist yet: a clean prior baseline; under the Fri/Sat-skip daily-tier schedule this is not always literally
   *yesterday's* — see Step 0b below). **Stale-baseline awareness (owner directive 2026-07-25 CATCH-UP
   EVIDENCE WINDOW) — when D2a has AT LEAST ONE missed trading day since its own last successful completion:**
-  **D2A MISSED-TRADING-DAY COUNT (bug fix, 2026-08-08 — the predicate this bullet, the MARKET-MOVE TERM below,
-  and step 1's `daily_marks` missed-day backfill further down this section all now share).**
+  **D2A MISSED-TRADING-DAY COUNT (bug fix, 2026-08-08, corrected same day — the predicate this bullet, the
+  MARKET-MOVE TERM below, and step 1's `daily_marks` missed-day backfill further down this section all now
+  share).** **Anchor on `run_date`, never on a completion timestamp (correction, 2026-08-08 — the version
+  that first landed earlier the same day anchored on `DATE(last_completed_ts, 'America/Denver')` and was
+  wrong).** `ops.run_log.run_date` is the routine's OWN declaration of which trading day it processed —
+  written once, at logging time, and invariant to how long the run took or when it happened to finish.
+  `log_ts` is not: a run that CROSSES LOCAL MIDNIGHT lands `DATE(log_ts, 'America/Denver')` one calendar
+  day AFTER the trading day the run actually covered, silently re-dating a long (or midnight-adjacent) run
+  onto the following day. Confirmed live in `ops.run_log`: D2a's Sunday 2026-08-02 run started 23:56 MT and
+  completed 00:06 MT the next day — `run_date = 2026-08-02` but `DATE(log_ts, 'America/Denver') =
+  2026-08-03`. Simulating both predicates across every historical D2a completion shows this is not merely
+  theoretical: the run that started 2026-08-03 (Monday) computed `missed_trading_days = 0` under the OLD
+  `log_ts`-anchored predicate — silently suppressing the stale-baseline check — vs. the correct `1` under
+  the `run_date`-anchored fix below (every non-midnight-crossing day in the same trace agrees old-vs-new,
+  confirming this is specifically a midnight-crossing bug, not a general miscount).
   ```sql
   SELECT COUNT(*) AS missed_trading_days
   FROM `stock-trading-498512.state.market_calendar` mc
   WHERE mc.is_trading_day
-    AND mc.cal_date > DATE((SELECT last_completed_ts FROM `stock-trading-498512.state.routine_catchup_window` WHERE routine='D2a'), 'America/Denver')
+    AND mc.cal_date > COALESCE(
+          (SELECT MAX(run_date) FROM `stock-trading-498512.ops.run_log`
+            WHERE routine = 'D2a' AND status = 'completed'),
+          DATE((SELECT cadence_fallback_window_start_ts FROM `stock-trading-498512.state.routine_catchup_window`
+                WHERE routine = 'D2a'), 'America/Denver')
+        )
     AND mc.cal_date <= (SELECT last_trading_day FROM `stock-trading-498512.state.trading_day_today`)
   ```
-  gated on `missed_trading_days >= 1` (never `> 1`) — on a view-read failure, fall back to `days since D2a's
+  **Never-completed guard:** the inner `MAX(run_date)` subquery returns `NULL` exactly when D2a has never
+  logged a `completed` row — the identical condition `state.routine_catchup_window.never_completed` names
+  for this routine (both derive from the same `ops.run_log` `status='completed'` predicate) — so falling
+  through the `COALESCE` to that view's own `cadence_fallback_window_start_ts` (the `daily_sun_thu`
+  cadence-sized fallback, 3 days) on a bare `NULL` is the correct guard, not a coincidence: it reuses the
+  SAME never-completed fallback every other CATCH-UP EVIDENCE WINDOW consumer in this file already falls
+  back to, rather than inventing a second one. D2a has run continuously since inception, so this path is a
+  defensive floor, not a case expected to fire.
+  gated on `missed_trading_days >= 1` (never `> 1`) — on a read failure against `ops.run_log` /
+  `state.market_calendar` / `state.trading_day_today`, fall back to `days since D2a's
   own last completed ops.run_log run > 0`. **Why a count, not the raw `state.routine_catchup_window.window_days`
   figure the old wording ("spans MORE than 1 trading day") cited:** that column is CONTINUOUS CALENDAR time
   (`TIMESTAMP_DIFF(...)/1440.0`, `bigquery/105_routine_catchup_window.sql`), not a trading-day count, and the

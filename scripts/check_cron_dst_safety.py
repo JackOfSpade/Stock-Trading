@@ -41,7 +41,14 @@ WHAT IT CHECKS, per routine with a concrete `cron_utc`
      needed this window) and the former `daily_all` cohort (D3/OPS0/OPS1/OPS2, which do NOT all share
      one intraday window -- OPS1 is a pre-market probe, OPS0/OPS2 deliberately fire AFTER the
      deadline) into one shared `daily_sun_thu` class, so monitor_class alone can no longer tell the two
-     groups apart.
+     groups apart. Re-keying to a bare id literal (EVENING_WINDOW_ROUTINE_IDS) fixed the immediate
+     false-green but reopened the same failure class one level up -- nothing tied that literal back to
+     ops/cadence.yaml, so a FUTURE routine added to daily_sun_thu could again escape unnoticed, just
+     without a monitor_class rename to blame. daily_sun_thu_coverage_errors() closes that: every
+     daily_sun_thu id in ops/cadence.yaml must be named in EITHER EVENING_WINDOW_ROUTINE_IDS OR its
+     explicit complement NON_WINDOW_DAILY_SUN_THU_IDS (the former `daily_all` cohort, with a reason
+     recorded per id) -- an id in neither is UNCLASSIFIED and fails CI loudly instead of silently
+     passing unchecked.
   3. DOCUMENTATION TRUTH -- `time_local`, when present, must equal the MDT (summer) rendering of
      `cron_utc`. Before 2026-08-01 OPS2's `time_local` was silently the MST reading while every
      other routine's was the MDT reading, so a reader deriving a UTC cron from `time_local` got
@@ -108,6 +115,77 @@ PERIOD_CLASSES = {
 # matching any routine the moment this migration landed, which would have silently disarmed this whole
 # check for D1/D2a/D2/SL3 with no test failure to catch it).
 EVENING_WINDOW_ROUTINE_IDS = {"D1", "D2a", "D2", "SL3"}
+
+# The REMAINING daily_sun_thu members, explicitly exempted from check 2 -- the former daily_all
+# cohort -- with the reason recorded per id. Deliberately NOT derived from time_local: D3's own
+# time_local ("18:45") ALSO renders inside the (market_close, deadline) window today, so a pure
+# time-based derivation would silently pull D3 into the window-checked set even though its real
+# constraint is "runs after D2", not "runs in the evening window" -- checked against the current
+# ops/cadence.yaml before choosing this shape (2026-08-08). There is no OTHER field left in
+# ops/cadence.yaml that reconstructs the pre-2026-08-08 daily_trading/daily_all split (both
+# collapsed onto the single daily_sun_thu monitor_class that day), so, like
+# EVENING_WINDOW_ROUTINE_IDS itself, this stays a declared judgment call rather than a derived one --
+# see daily_sun_thu_coverage_errors() below for the mechanism that keeps BOTH sets honest against
+# ops/cadence.yaml going forward, so this pair can no longer drift silently the way the bare
+# `mclass == "daily_trading"` literal did.
+NON_WINDOW_DAILY_SUN_THU_IDS = {
+    "D3",     # runs after D2; not itself close/deadline-bound
+    "OPS0",   # cadence dispatcher -- deliberately fires AFTER the deadline
+    "OPS1",   # pre-market connector probe -- fires hours BEFORE the close
+    "OPS2",   # catch-up executor -- deliberately fires AFTER the deadline
+}
+
+
+def daily_sun_thu_coverage_errors(routines) -> list[str]:
+    """FAIL LOUD if ops/cadence.yaml's actual `monitor_class: daily_sun_thu` membership diverges
+    from the union of EVENING_WINDOW_ROUTINE_IDS and NON_WINDOW_DAILY_SUN_THU_IDS above.
+
+    THIS IS THE SELF-MAINTENANCE GUARD the two hand-kept id sets need. Before this function existed,
+    "absent from EVENING_WINDOW_ROUTINE_IDS" was already the correct, permanent state for D3/OPS0/
+    OPS1/OPS2 -- so a THIRD case, a brand-new daily_sun_thu routine nobody has classified either way
+    yet, was indistinguishable from an intentionally-exempt one by inspecting EVENING_WINDOW_ROUTINE_
+    IDS alone. That is exactly the shape of the regression this checker was re-keyed to fix in the
+    first place: `mclass == "daily_trading"` silently stopped matching anything the day the daily-tier
+    Fri/Sat consolidation merged the classes, with no test failure to catch it. Re-keying check 2 to a
+    bare id literal removed the false green, but introduced a NEW way to go silently stale: nothing
+    compared that literal back to ops/cadence.yaml. This closes that loop by requiring every
+    daily_sun_thu id to be named in EXACTLY ONE of the two sets:
+      * daily_sun_thu in ops/cadence.yaml but in NEITHER set -> UNCLASSIFIED. A routine was added (or
+        re-classified) to the evening-slot cohort and nobody decided whether it needs the window
+        check. This is the case a future `git diff` adding a new post-close daily routine must trip.
+      * named in either set but no longer daily_sun_thu in ops/cadence.yaml (renamed / retired /
+        reclassified) -> STALE. A classification decision nothing keeps current.
+      * named in BOTH sets -> a self-contradiction in this file itself.
+    """
+    actual = {r.get("id") for r in routines if r.get("monitor_class") == "daily_sun_thu"}
+    errs: list[str] = []
+
+    overlap = EVENING_WINDOW_ROUTINE_IDS & NON_WINDOW_DAILY_SUN_THU_IDS
+    if overlap:
+        errs.append(
+            f"scripts/check_cron_dst_safety.py: {sorted(overlap)} appear in BOTH "
+            f"EVENING_WINDOW_ROUTINE_IDS and NON_WINDOW_DAILY_SUN_THU_IDS -- pick one."
+        )
+
+    unclassified = actual - (EVENING_WINDOW_ROUTINE_IDS | NON_WINDOW_DAILY_SUN_THU_IDS)
+    if unclassified:
+        errs.append(
+            f"{sorted(unclassified)}: monitor_class=daily_sun_thu in ops/cadence.yaml but named in "
+            f"neither EVENING_WINDOW_ROUTINE_IDS nor NON_WINDOW_DAILY_SUN_THU_IDS in "
+            f"scripts/check_cron_dst_safety.py. Add it to EVENING_WINDOW_ROUTINE_IDS (if it must run "
+            f"after the close and before the cadence_watch deadline) or to "
+            f"NON_WINDOW_DAILY_SUN_THU_IDS with a reason (if it deliberately does not) before this "
+            f"checker can validate it."
+        )
+
+    stale = (EVENING_WINDOW_ROUTINE_IDS | NON_WINDOW_DAILY_SUN_THU_IDS) - actual
+    if stale:
+        errs.append(
+            f"{sorted(stale)}: named in EVENING_WINDOW_ROUTINE_IDS or NON_WINDOW_DAILY_SUN_THU_IDS "
+            f"in scripts/check_cron_dst_safety.py but no longer monitor_class=daily_sun_thu in "
+            f"ops/cadence.yaml (renamed, retired, or reclassified) -- remove the stale entry."
+        )
+    return errs
 
 
 class CronParseError(ValueError):
@@ -210,6 +288,8 @@ def check() -> int:
     routines, deadline_local = load_cadence()
     errors: list[str] = []
     rows: list[tuple[str, str, str, str, str]] = []
+
+    errors.extend(daily_sun_thu_coverage_errors(routines))
 
     for r in routines:
         rid = r.get("id")

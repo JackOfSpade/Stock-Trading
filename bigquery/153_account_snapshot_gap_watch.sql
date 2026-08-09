@@ -145,6 +145,17 @@ WHERE nav IS NULL;
 -- Every existing column (as_of_date, current_nav, peak_nav, capital_base, drawdown_from_peak,
 -- n_snapshots, snapshot_stale, breach_soft, breach_hard, drawdown_breach) and every existing threshold
 -- (-15% soft, -40% hard, n_snapshots >= 5) is UNCHANGED.
+--
+-- SUPERSEDED LIVE by bigquery/155_snapshot_and_option_anomaly_d2a_gate.sql (2026-08-08 — snapshot_stale
+-- below (`agg.latest.snapshot_date < ltd.last_trading_day`) fires TRUE every Friday/Saturday from
+-- 2026-08-14 onward: D2a (this table's only writer) moved to a Sunday-Thursday-only cron the same day
+-- this file landed, but Friday remains a real trading day — a DESIGNED cadence gap read as a fault,
+-- halting state.trading_enabled ~64h/week via bigquery/107's `NOT COALESCE(dd.snapshot_stale, FALSE)`
+-- AND-term). 155 is the CURRENT single source of truth for this view, adding an EXISTS(...D2a
+-- completed...) guard so a day D2a was never scheduled to run no longer counts as stale, while a genuine
+-- D2a outage or Step-0b failure remains caught (155's header WALKTHROUGH). Kept here, unmodified, for
+-- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE VIEW statement live
+-- in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.book_drawdown_watch` AS
 WITH snaps AS (
   SELECT snapshot_date, nav
