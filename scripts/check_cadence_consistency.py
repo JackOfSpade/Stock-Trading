@@ -502,11 +502,16 @@ DAILY_CLASSES = {"daily_trading", "daily_all", "daily_sun_thu"}
 # DOUBLE-RUN GUARD copies must carry the noon-threshold clause. bigquery/12's midnight-crossing grace
 # can stamp a post-midnight prior-day run onto today's run_date; without counting ONLY completions
 # whose log_ts is in the real evening window, that mis-stamped early-AM completion cancels the genuine
-# evening run. D1/D2/D3/SL3 each carry a per-routine guard copy in Claude_Task_Plan.md (D2a has no
-# per-routine copy — its double-run risk is covered by D2's own guard, not a copy of its own). Each
-# copy's ops.run_log COUNT(*) query must therefore also filter
+# evening run. D1/D2/D2a/D3/SL3 each carry a per-routine guard copy in Claude_Task_Plan.md. D2a's own
+# copy was added when its SAME-DAY DOUBLE-RUN GUARD scope was widened (2026-08-09) — it is
+# `catchup_safe: false`, so the OPS0/OPS2 catch-up exclusions cover the refire vector, but NOT a manual
+# re-run or a retry after partial failure, and D2a has double-completed in production on both
+# 2026-07-03 (07:26 + 16:27 MT) and 2026-07-11 (15:36 + 16:26 MT). (An earlier version of this comment
+# claimed D2a's double-run risk was "covered by D2's own guard" — that was wrong: D2's guard queries
+# `routine='D2'` and structurally cannot see D2a; it protects D2 FROM D2a's chain-call, the opposite
+# direction from D2a's own exposure.) Each copy's ops.run_log COUNT(*) query must therefore also filter
 # `AND DATETIME(log_ts,'America/Denver') >= DATETIME(<today...>, TIME '12:00:00')`.
-EVENING_DAILY_GUARD_IDS = ("D1", "D2", "D3", "SL3")
+EVENING_DAILY_GUARD_IDS = ("D1", "D2", "D2a", "D3", "SL3")
 # The guard query's stable prefix (D2's copy omits the ", America/Denver" qualifier on <today>, so the
 # run_date token is matched loosely), capturing what follows status='completed' up to the closing `.
 GUARD_QUERY_RE = {
@@ -516,6 +521,88 @@ GUARD_QUERY_RE = {
 }
 GUARD_NOON_CLAUSE_RE = re.compile(
     r"AND DATETIME\(log_ts,'America/Denver'\) >= DATETIME\(<today[^>]*>, TIME '12:00:00'\)")
+
+# ---- check M membership cross-check (2026-08-09, mirroring check_cron_dst_safety.py's
+# daily_sun_thu_coverage_errors() pattern — read that function first, it is the template this one
+# follows). EVENING_DAILY_GUARD_IDS above is a hand-maintained tuple that check M's per-id loop
+# iterates directly; nothing ever compared it back to ops/cadence.yaml, so a THIRD evening-slot routine
+# (new, or re-timed into the evening) could silently never be looked at by check M at all — not merely
+# fail a sub-check, but be entirely invisible to it, the same class of gap check_cron_dst_safety.py's
+# daily_sun_thu split had before its own coverage guard.
+#
+# Candidate population is DERIVED FROM ops/cadence.yaml DATA — every routine whose
+# `expected_trigger.time_local` is >= EVENING_SLOT_THRESHOLD ("16:00", the evening slot exposed to
+# bigquery/12's midnight-crossing mis-stamp) — verified against the live file (2026-08-09): D1 16:00,
+# D2a 16:40, D2 17:15, AR_att 18:00, AR_orc 18:35, D3 18:45, SL2 19:05, SL5 19:25, SL3 20:00, OPS2
+# 22:15, OPS0 22:30 (11 routines). The two SIDES below stay HAND-maintained declared judgment calls,
+# exactly like EVENING_WINDOW_ROUTINE_IDS/NON_WINDOW_DAILY_SUN_THU_IDS in check_cron_dst_safety.py —
+# evening_slot_guard_membership_errors() only asserts every evening-slot routine has been CLASSIFIED by
+# a human into one of the two sets, NEVER that the classification matches Claude_Task_Plan.md's actual
+# guard text (that remains check M's own per-id GUARD_QUERY_RE/GUARD_NOON_CLAUSE_RE loop's job).
+#
+# CRITICAL — do NOT derive candidate membership from whether the guard TEXT is present in
+# Claude_Task_Plan.md. Check M's whole job is to assert that text is present and correct; if membership
+# were derived from the text, a routine missing its guard would simply drop OUT of the candidate set
+# and this cross-check would pass vacuously — exactly the fail-open shape this file's checks keep
+# getting bitten by (see check L's history and check M's own former substring gate, both above).
+NOON_CLAUSE_EXEMPT_EVENING_IDS = {
+    "AR_att": "queue-driven dispatch, not a calendar evening slot — explicitly out of the generalized "
+              "SAME-DAY DOUBLE-RUN GUARD bullet's scope (drops out automatically as queue-driven).",
+    "AR_orc": "queue-driven dispatch, not a calendar evening slot — same as AR_att.",
+    "SL2": "queue-driven dispatch, not a calendar evening slot — same as AR_att.",
+    "SL5": "queue-driven dispatch, not a calendar evening slot — same as AR_att.",
+    "OPS0": "cadence dispatcher — deliberately fires AFTER the cadence_watch deadline (22:30 MT), not "
+            "before it; its own SAME-DAY DOUBLE-RUN GUARD copy uses the plain (non-noon) predicate.",
+    "OPS2": "catch-up executor — deliberately fires AFTER the cadence_watch deadline (22:15 MT), not "
+            "before it; its own SAME-DAY DOUBLE-RUN GUARD copy uses the plain (non-noon) predicate, "
+            "and OPS2 is never itself auto-caught-up.",
+}
+EVENING_SLOT_THRESHOLD = "16:00"
+
+
+def evening_slot_guard_membership_errors(cad):
+    """FAIL LOUD if ops/cadence.yaml's actual evening-slot (expected_trigger.time_local >=
+    EVENING_SLOT_THRESHOLD) routine population diverges from the union of EVENING_DAILY_GUARD_IDS and
+    NOON_CLAUSE_EXEMPT_EVENING_IDS — see the comment block above NOON_CLAUSE_EXEMPT_EVENING_IDS for the
+    full rationale. Three hard-error cases, mirroring check_cron_dst_safety.py's daily_sun_thu_coverage_
+    errors(): UNCLASSIFIED (evening-slot in cadence.yaml, in neither set — a new/re-timed routine
+    nobody has decided about), STALE (named in one of the sets but no longer evening-slot in
+    cadence.yaml), and OVERLAP (named in both — a self-contradiction)."""
+    exempt_ids = set(NOON_CLAUSE_EXEMPT_EVENING_IDS)
+    guard_ids = set(EVENING_DAILY_GUARD_IDS)
+    errs = []
+
+    overlap = guard_ids & exempt_ids
+    if overlap:
+        errs.append(
+            f"scripts/check_cadence_consistency.py: {sorted(overlap)} appear in BOTH "
+            f"EVENING_DAILY_GUARD_IDS and NOON_CLAUSE_EXEMPT_EVENING_IDS — pick one.")
+
+    candidates = set()
+    for rid, r in cad.items():
+        tl = (r.get("expected_trigger") or {}).get("time_local")
+        if isinstance(tl, str) and HHMM.match(tl) and tl >= EVENING_SLOT_THRESHOLD:
+            candidates.add(rid)
+
+    unclassified = candidates - (guard_ids | exempt_ids)
+    if unclassified:
+        errs.append(
+            f"{sorted(unclassified)}: expected_trigger.time_local >= {EVENING_SLOT_THRESHOLD!r} in "
+            f"ops/cadence.yaml (an evening-slot routine exposed to bigquery/12's midnight-crossing "
+            f"mis-stamp) but named in NEITHER EVENING_DAILY_GUARD_IDS nor "
+            f"NOON_CLAUSE_EXEMPT_EVENING_IDS in scripts/check_cadence_consistency.py. Add it to "
+            f"EVENING_DAILY_GUARD_IDS (with a per-routine noon-clause SAME-DAY DOUBLE-RUN GUARD copy "
+            f"in Claude_Task_Plan.md) or to NOON_CLAUSE_EXEMPT_EVENING_IDS with a one-line reason "
+            f"before check M can validate it.")
+
+    stale = (guard_ids | exempt_ids) - candidates
+    if stale:
+        errs.append(
+            f"{sorted(stale)}: named in EVENING_DAILY_GUARD_IDS or NOON_CLAUSE_EXEMPT_EVENING_IDS in "
+            f"scripts/check_cadence_consistency.py but no longer expected_trigger.time_local >= "
+            f"{EVENING_SLOT_THRESHOLD!r} in ops/cadence.yaml (renamed, retired, or retimed) — remove "
+            f"the stale entry.")
+    return errs
 
 # ---- check J: bigquery/24's post-normalization STRUCT rows are ALWAYS fully labelled (both
 # `AS routine` and `AS monitor_class`) -- scripts/gen_routine_lists.py emits every row this way.
@@ -1314,6 +1401,13 @@ def main():
     # loudly (one error per EVENING_DAILY_GUARD_IDS routine) instead of passing vacuously. Test
     # fixtures that don't care about check M must now carry valid guard text too (see
     # tests/test_cadence_consistency.py's _write_check_fixture / _AR_ATT_PLAN).
+    #
+    # Membership cross-check FIRST (see evening_slot_guard_membership_errors()'s own docstring): this
+    # only asserts every evening-slot routine has been classified into EVENING_DAILY_GUARD_IDS or
+    # NOON_CLAUSE_EXEMPT_EVENING_IDS by a human — it does NOT touch Claude_Task_Plan.md, so it cannot
+    # itself go vacuous the way a text-derived membership check could.
+    errors.extend(evening_slot_guard_membership_errors(cad))
+
     plan_txt = open(PLAN, encoding="utf-8").read()
     for rid in EVENING_DAILY_GUARD_IDS:
         matches = list(GUARD_QUERY_RE[rid].finditer(plan_txt))

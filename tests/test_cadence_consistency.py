@@ -262,7 +262,8 @@ def _write_check_fixture(tmp_path):
         "| **D1** | Market Development Scan | Daily · research | r | w | Daily.md |\n"
         "\n---\n\n"
         "Shared Observability guard SAME-DAY DOUBLE-RUN GUARD (CYCLE-AWARE VARIANT):\n"
-        + _guard_line("D1") + _guard_line("D2") + _guard_line("D3") + _guard_line("SL3")
+        + _guard_line("D1") + _guard_line("D2") + _guard_line("D2a")
+        + _guard_line("D3") + _guard_line("SL3")
     )
     cadence = tmp_path / "cadence.yaml"
     cadence.write_text(
@@ -356,6 +357,23 @@ def _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, cata
     # _write_check_fixture's plan carries a minimal-but-valid table by default instead.
     monkeypatch.setattr(cc, "CATCHUP_NOTIFY_SQL", str(tmp_path / "absent_31.sql"))
     monkeypatch.setattr(cc, "CATCHUP_AUTOFIRE_SQL", str(tmp_path / "absent_59.sql"))
+    # check M's membership cross-check (evening_slot_guard_membership_errors) compares
+    # EVENING_DAILY_GUARD_IDS/NOON_CLAUSE_EXEMPT_EVENING_IDS -- the REAL 11-routine evening-slot
+    # cohort -- against THIS fixture's `cad`, which normally carries only D1 with no expected_trigger
+    # at all. Left unpatched, every one of this shared fixture's ~40 callers (which exercise checks
+    # A/B/C/G/H/J/K/L/N/O, not this new membership check) would get a spurious STALE error for the 10
+    # real ids the minimal cad never declares. Isolate it here the same way
+    # tests/test_check_cron_dst_safety.py's write_cadence() isolates the analogous
+    # daily_sun_thu_coverage_errors() from its own minimal fixtures (there via resetting the two id
+    # sets to empty) -- here via a no-op override of the check function itself, because
+    # EVENING_DAILY_GUARD_IDS is ALSO what check M's own per-id loop iterates (built into
+    # GUARD_QUERY_RE at import time), so resetting that tuple itself would silently disarm check M's
+    # unrelated, already-passing per-id loop for every one of these ~40 callers too. Tests that want to
+    # exercise the membership check itself call cc.evening_slot_guard_membership_errors(cad) directly
+    # (with cc.EVENING_DAILY_GUARD_IDS / cc.NOON_CLAUSE_EXEMPT_EVENING_IDS monkeypatched to small
+    # synthetic sets and a matching synthetic cad) rather than going through this shared fixture --
+    # see the "check M membership cross-check" tests below.
+    monkeypatch.setattr(cc, "evening_slot_guard_membership_errors", lambda cad: [])
 
 
 def test_stale_triggers_json_is_caught(tmp_path, monkeypatch, capsys):
@@ -992,14 +1010,14 @@ def _guard_line(rid, with_noon=True, broken=False):
     return f"{rid} guard: `routine='{rid}' AND run_date=<today, America/Denver> AND {completed}{noon}`\n"
 
 
-def _plan_with_guards(d1=True, d2=True, d3=True, sl3=True, d1_broken=False):
+def _plan_with_guards(d1=True, d2=True, d2a=True, d3=True, sl3=True, d1_broken=False):
     # Keeps the D1 heading (check C) and adds the SAME-DAY sentinel + one guard query per
-    # EVENING_DAILY_GUARD_IDS routine. D2/D3/SL3 appear only in guard-query BODY text, never as `## `
-    # headings, so they create no phantom routines. Also carries a minimal valid ROUTINE INVENTORY
-    # table for D1 (check L) since these tests wholesale-replace _write_check_fixture's plan text via
-    # plan.write_text() -- without it, check L's 2026-07-29 hard-error-on-missing-table would fail
-    # every test built from this helper, including the happy-path one, for a reason unrelated to what
-    # check M is testing here.
+    # EVENING_DAILY_GUARD_IDS routine. D2/D2a/D3/SL3 appear only in guard-query BODY text, never as
+    # `## ` headings, so they create no phantom routines. Also carries a minimal valid ROUTINE
+    # INVENTORY table for D1 (check L) since these tests wholesale-replace _write_check_fixture's plan
+    # text via plan.write_text() -- without it, check L's 2026-07-29 hard-error-on-missing-table would
+    # fail every test built from this helper, including the happy-path one, for a reason unrelated to
+    # what check M is testing here.
     return ("## D1. Market Development Scan — deep research\nbody\n\n"
             "# ROUTINE INVENTORY & BIGQUERY RESPONSIBILITIES\n\n"
             "| ID | Routine | Cadence · Type | reads | writes | out |\n"
@@ -1009,6 +1027,7 @@ def _plan_with_guards(d1=True, d2=True, d3=True, sl3=True, d1_broken=False):
             "Shared Observability guard SAME-DAY DOUBLE-RUN GUARD (CYCLE-AWARE VARIANT):\n"
             + _guard_line("D1", with_noon=d1, broken=d1_broken)
             + _guard_line("D2", with_noon=d2)
+            + _guard_line("D2a", with_noon=d2a)
             + _guard_line("D3", with_noon=d3)
             + _guard_line("SL3", with_noon=sl3))
 
@@ -1058,6 +1077,85 @@ def test_check_m_total_absence_of_sentinel_is_caught(tmp_path, monkeypatch, caps
     out = capsys.readouterr().out
     for rid in cc.EVENING_DAILY_GUARD_IDS:
         assert f"{rid}: could not find its SAME-DAY DOUBLE-RUN GUARD" in out
+
+
+# ---- check M membership cross-check: evening_slot_guard_membership_errors (2026-08-09) -------------
+# Mirrors tests/test_check_cron_dst_safety.py's daily_sun_thu_coverage_errors() tests: call the pure
+# function directly with EVENING_DAILY_GUARD_IDS / NOON_CLAUSE_EXEMPT_EVENING_IDS monkeypatched to
+# small synthetic sets and a matching synthetic cad, bypassing main() entirely. This is deliberate, not
+# a shortcut: _patch_fixture_paths (above) permanently no-ops evening_slot_guard_membership_errors for
+# every main()-level test in this file (see its own comment for why -- EVENING_DAILY_GUARD_IDS also
+# drives GUARD_QUERY_RE, built at import time, so patching that tuple for a main()-level test would
+# risk a stale-dict KeyError in check M's own unrelated per-id loop), so these direct calls are the
+# ONLY coverage this function gets. Same convention as check_depends_on's own direct-call tests above.
+def _cad_with_time_local(entries):
+    """{id: {"expected_trigger": {"time_local": tl}}} from [(id, tl), ...] -- the minimal cad shape
+    evening_slot_guard_membership_errors() reads (only expected_trigger.time_local matters to it)."""
+    return {rid: {"expected_trigger": {"time_local": tl}} for rid, tl in entries}
+
+
+def test_evening_slot_membership_unclassified_id_is_caught(monkeypatch):
+    monkeypatch.setattr(cc, "EVENING_DAILY_GUARD_IDS", ("DX",))
+    monkeypatch.setattr(cc, "NOON_CLAUSE_EXEMPT_EVENING_IDS", {})
+    # DY is evening-slot (>= 16:00) but classified in neither set -- a new or re-timed routine nobody
+    # has decided about yet.
+    cad = _cad_with_time_local([("DX", "16:00"), ("DY", "19:30")])
+    errs = cc.evening_slot_guard_membership_errors(cad)
+    assert len(errs) == 1
+    assert "['DY']" in errs[0]
+    assert "NEITHER EVENING_DAILY_GUARD_IDS nor NOON_CLAUSE_EXEMPT_EVENING_IDS" in errs[0]
+
+
+def test_evening_slot_membership_stale_id_retimed_is_caught(monkeypatch):
+    # NOON_CLAUSE_EXEMPT_EVENING_IDS still names 'DZ', but ops/cadence.yaml no longer has it as an
+    # evening-slot routine (retimed to a morning slot here; retired/renamed is the other real-world
+    # shape, covered separately below).
+    monkeypatch.setattr(cc, "EVENING_DAILY_GUARD_IDS", ("DX",))
+    monkeypatch.setattr(cc, "NOON_CLAUSE_EXEMPT_EVENING_IDS", {"DZ": "reason"})
+    cad = _cad_with_time_local([("DX", "16:00"), ("DZ", "06:30")])
+    errs = cc.evening_slot_guard_membership_errors(cad)
+    assert len(errs) == 1
+    assert "['DZ']" in errs[0]
+    assert "no longer expected_trigger.time_local" in errs[0]
+
+
+def test_evening_slot_membership_stale_id_removed_from_cadence_is_caught(monkeypatch):
+    # Same STALE case, but 'DZ' was removed from ops/cadence.yaml entirely rather than retimed.
+    monkeypatch.setattr(cc, "EVENING_DAILY_GUARD_IDS", ("DX",))
+    monkeypatch.setattr(cc, "NOON_CLAUSE_EXEMPT_EVENING_IDS", {"DZ": "reason"})
+    cad = _cad_with_time_local([("DX", "16:00")])
+    errs = cc.evening_slot_guard_membership_errors(cad)
+    assert len(errs) == 1
+    assert "['DZ']" in errs[0]
+
+
+def test_evening_slot_membership_overlap_is_caught(monkeypatch):
+    monkeypatch.setattr(cc, "EVENING_DAILY_GUARD_IDS", ("DX",))
+    monkeypatch.setattr(cc, "NOON_CLAUSE_EXEMPT_EVENING_IDS", {"DX": "reason"})
+    cad = _cad_with_time_local([("DX", "16:00")])
+    errs = cc.evening_slot_guard_membership_errors(cad)
+    assert len(errs) == 1
+    assert "['DX']" in errs[0]
+    assert "BOTH EVENING_DAILY_GUARD_IDS and NOON_CLAUSE_EXEMPT_EVENING_IDS" in errs[0]
+
+
+def test_evening_slot_membership_correctly_classified_baseline_is_clean(monkeypatch):
+    monkeypatch.setattr(cc, "EVENING_DAILY_GUARD_IDS", ("DX",))
+    monkeypatch.setattr(cc, "NOON_CLAUSE_EXEMPT_EVENING_IDS", {"DY": "queue-driven, not calendar-clocked"})
+    cad = _cad_with_time_local([
+        ("DX", "16:00"),   # guarded evening-slot routine
+        ("DY", "19:30"),   # exempt evening-slot routine
+        ("DZ", "06:30"),   # a morning-slot routine -- not an evening-slot candidate at all
+    ])
+    assert cc.evening_slot_guard_membership_errors(cad) == []
+
+
+def test_evening_slot_membership_against_real_repo_is_clean():
+    # The real, unmodified ops/cadence.yaml and the real EVENING_DAILY_GUARD_IDS /
+    # NOON_CLAUSE_EXEMPT_EVENING_IDS classification must agree today (verified 2026-08-09: exactly the
+    # 11 evening-slot routines D1/D2a/D2/AR_att/AR_orc/D3/SL2/SL5/SL3/OPS2/OPS0 split 5/6 across the two
+    # sets) -- a regression here would fail this AND check M in main() for every cadence.yaml change.
+    assert cc.evening_slot_guard_membership_errors(cc.load_cadence()) == []
 
 
 # ---- check N: MODEL OF RECORD mirrors (added 2026-07-28; had ZERO tests -- this section closes that
@@ -1873,7 +1971,8 @@ _AR_ATT_PLAN = (
     # check M now runs unconditionally (2026-08-08); D1 is in EVENING_DAILY_GUARD_IDS, so this
     # fixture needs a valid guard copy too, same as _write_check_fixture's default plan above.
     "Shared Observability guard SAME-DAY DOUBLE-RUN GUARD (CYCLE-AWARE VARIANT):\n"
-    + _guard_line("D1") + _guard_line("D2") + _guard_line("D3") + _guard_line("SL3"))
+    + _guard_line("D1") + _guard_line("D2") + _guard_line("D2a")
+    + _guard_line("D3") + _guard_line("SL3"))
 _AR_ATT_CADENCE = (
     "timezone: America/Denver\n"
     'cadence_watch_deadline_local: "21:00"\n'
