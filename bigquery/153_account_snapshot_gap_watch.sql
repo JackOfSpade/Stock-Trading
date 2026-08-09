@@ -28,13 +28,38 @@
 -- "today" in every sense the existing check can see, and neither will ever cause snapshot_stale to
 -- fire again once D2a resumed running.
 --
--- BACKFILL IS IMPOSSIBLE AND MUST NOT BE ATTEMPTED. ops.account_snapshot.nav is measured LIVE from the
--- IBKR connector at run time (D2a Step 0b) — it is not derived from anything else in this warehouse.
--- The IBKR MCP surface exposes no historical-NAV or account-statement endpoint (events.cash_flows'
--- 2026-08-05 deposit note records this same absence for a different purpose). A "backfill loop" would
--- be dead prose: there is no data source it could ever read from. The fix here is DETECTION, not
--- recovery — surface the gap so a human/AI reviewer knows the breaker's peak may be understated,
--- rather than silently trusting a number that cannot be verified complete.
+-- >>> RETRACTED 2026-08-09 — THE PARAGRAPH BELOW WAS FACTUALLY WRONG. READ THIS FIRST. <<<
+-- The claim "BACKFILL IS IMPOSSIBLE AND MUST NOT BE ATTEMPTED ... the IBKR MCP surface exposes no
+-- historical-NAV or account-statement endpoint" is FALSE and has been acted on: the two gap days it
+-- was written about (2026-07-23/24) were BACKFILLED on 2026-08-09 and state.account_snapshot_gap is
+-- now empty. `get_pa_performance_all_periods` returns, for every period (1D/7D/MTD/1M/YTD/1Y),
+-- PARALLEL `dates[]` and `nav[]` arrays — a full historical NAV series reaching back a year. Its 1M
+-- series contains 20260723 nav=9332.130412 and 20260724 nav=9341.120412, i.e. exactly the two dates
+-- declared unrecoverable. D2a Step 0b ALREADY CALLS this endpoint and keeps only the LAST element of
+-- each array; that implementation choice, not any platform limitation, is what made the history look
+-- unreachable. The error was over-generalisation: events.cash_flows' 2026-08-05 deposit note records
+-- that IBKR exposes no cash-transaction/statement ITEMISATION endpoint (for splitting a wire into
+-- principal vs fees) — a narrower and correct claim — which was widened here into "no historical NAV"
+-- and never re-tested before being written into a detector as settled fact and into the operator-facing
+-- alert message. A negative capability claim must be re-tested against the live tool before it is
+-- recorded as a constraint; this one cost a real, recoverable data gap being accepted as permanent.
+-- Only `nav` is recoverable this way — total_cash/buying_power/available_funds/gross_position_value/
+-- sgov_market_value/twr_* are NOT in that response and must stay NULL on a backfilled row (use
+-- source='ibkr-pa-history-backfill' so such rows are greppable). That is safe: every consumer of those
+-- columns reads them only through state.account_latest's latest-row pattern, which a back-dated row
+-- cannot be selected by. Basis caveat: these are IBKR official end-of-day values while D2a's own rows
+-- are live captures; measured divergence over 11 overlapping days is ~0.06% mean / 0.23% max, far
+-- below the -15%/-40% thresholds nav feeds. The fix here is therefore DETECTION **AND** RECOVERY.
+-- Original (wrong) paragraph retained below as the historical record of the misdiagnosis:
+--
+-- [RETRACTED] BACKFILL IS IMPOSSIBLE AND MUST NOT BE ATTEMPTED. ops.account_snapshot.nav is measured
+-- [RETRACTED] LIVE from the IBKR connector at run time (D2a Step 0b) — it is not derived from anything
+-- [RETRACTED] else in this warehouse. The IBKR MCP surface exposes no historical-NAV or account-
+-- [RETRACTED] statement endpoint (events.cash_flows' 2026-08-05 deposit note records this same absence
+-- [RETRACTED] for a different purpose). A "backfill loop" would be dead prose: there is no data source
+-- [RETRACTED] it could ever read from. The fix here is DETECTION, not recovery — surface the gap so a
+-- [RETRACTED] human/AI reviewer knows the breaker's peak may be understated, rather than silently
+-- [RETRACTED] trusting a number that cannot be verified complete.
 --
 -- ===== WHAT THIS FILE ADDS =====
 --   (a) state.account_snapshot_gap (NEW) — one row per TRADING day, strictly between the first and
@@ -220,6 +245,14 @@ FROM agg CROSS JOIN ltd;
 -- #14 auto-age category IN-list. Built mechanically from the resolved canonical body (never
 -- hand-retyped) via a throwaway script that asserted each substitution matched EXACTLY once. Every
 -- other check in the body is carried forward unchanged.
+-- SUPERSEDED (2026-08-09) by bigquery/157_account_snapshot_gap_recoverable.sql (SQ_VERSION v18) --
+-- the current canonical definition of this procedure. 157 retracts a FALSEHOOD carried by every
+-- version from v17 down: the account_snapshot_gap alert message claimed the gap days could never be
+-- backfilled because IBKR exposes no historical-NAV endpoint. It does -- get_pa_performance_all_periods
+-- returns parallel dates[]/nav[] arrays, and D2a Step 0b already calls it but keeps only the last
+-- element. 157 changes exactly three strings (heartbeat v17->v18, that message, one comment) and no
+-- check logic. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';

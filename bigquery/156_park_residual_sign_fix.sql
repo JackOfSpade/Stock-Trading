@@ -1,4 +1,4 @@
--- bigquery/152_park_residual_sign_fix.sql (2026-08-08)
+-- bigquery/156_park_residual_sign_fix.sql (2026-08-08)
 -- Project: stock-trading-498512. Apply after bigquery/93_park_accounting.sql (which itself supersedes
 -- bigquery/22_cash_flows.sql, which supersedes bigquery/04_analytics.sql, for this same object).
 --
@@ -147,7 +147,7 @@ SELECT
   -- events.parking_events + marks, per the approved spec). See DEVIATION #2 at the top of
   -- bigquery/93_park_accounting.sql: live-verified 2026-07-18 at approximately -96.33 (VOO's price had
   -- drifted slightly below its 2026-07-15 acquisition cost); live-verified again 2026-08-08 at +95.45
-  -- (VOO's price has since risen above cost) while writing bigquery/152_park_residual_sign_fix.sql.
+  -- (VOO's price has since risen above cost) while writing bigquery/156_park_residual_sign_fix.sql.
   -- This column's own expression and comment are UNCHANGED from bigquery/93 -- only residual_after_park
   -- below is fixed by that file.
   ROUND(COALESCE(pn.park_mv_now, 0) - COALESCE(pn.park_cost_basis, 0), 2)                         AS park_unrealized,
@@ -157,8 +157,8 @@ SELECT
   -- price -- while park_mv above is MARKET-basis, so raw == -park_unrealized (modulo ordinary
   -- reconciliation noise: rounding, in-flight settlement, timing). The park's own MTM is therefore
   -- CANCELLED by ADDING park_unrealized back, not by subtracting it a second time. See
-  -- bigquery/152_park_residual_sign_fix.sql's header for the full derivation and live worked proof.
-  -- SIGN FIX (bigquery/152, 2026-08-08): bigquery/93_park_accounting.sql's original formula here
+  -- bigquery/156_park_residual_sign_fix.sql's header for the full derivation and live worked proof.
+  -- SIGN FIX (bigquery/156, 2026-08-08): bigquery/93_park_accounting.sql's original formula here
   -- SUBTRACTED park_unrealized, which doubles the park term instead of cancelling it and can never
   -- converge to ~0 while the park holds any unrealized P&L -- live-verified same-day numbers: -245.54
   -- (old, buggy) vs -54.65 (corrected). bigquery/93's own DEVIATION #2 recorded that exact

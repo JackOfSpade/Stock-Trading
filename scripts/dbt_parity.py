@@ -56,7 +56,18 @@ VOLATILE_COLS = {"checked_at"}
 # instead of being swallowed as a benign skip, which let schema drift pass green even in
 # DBT_PARITY=block (2026-07-17 audit). A genuinely transient error (timeout, network, quota) matches
 # none of these and still skips.
-SCHEMA_DRIFT_MARKERS = ("unrecognized name", "set operations", "not groupable",
+# THIRD OCCURRENCE OF THE SAME CLASS (2026-08-09): a missing column does NOT always say "Unrecognized
+# name". When the reference is ALIAS-QUALIFIED against a subquery — which is exactly the shape this
+# module builds (`SELECT <col> FROM (compiled) AS parity_src`) — BigQuery instead says
+# "Name <col> not found inside <alias>". That phrasing matched none of the markers above, so
+# state.book_drawdown_watch (missing peak_window_gap_days, added live by bigquery/153/155) was routed
+# to a tolerant SKIP and counted as a pass. That run only went red because an UNRELATED model
+# (analytics.account_reconciliation) happened to drift the same day; without that coincidence this
+# module would have printed "OK: every compared dbt model matches its live view row-for-row" and
+# exited 0 while a trading-gate-adjacent view went silently unverified. Note the failure mode is
+# per-model and partial: main()'s `checked == 0` guard only catches a TOTAL skip (systemic bq/auth
+# outage), never a single genuinely-broken model among many.
+SCHEMA_DRIFT_MARKERS = ("unrecognized name", "not found inside", "set operations", "not groupable",
                         "no matching signature", "does not have a column", "incompatible types")
 
 # Client-side concurrency for the per-model parity queries (owner-authorized 2026-07-30, Actions cost

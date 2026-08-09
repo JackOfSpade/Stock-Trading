@@ -76,6 +76,14 @@
 -- auto-age category list; bigquery/153 bumps the heartbeat to v17 and adds the account_snapshot_gap
 -- record-only WARNING block (+ 'account_snapshot_gap' to the #14 auto-age list). Kept here, unmodified,
 -- for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
+-- SUPERSEDED (2026-08-09) by bigquery/157_account_snapshot_gap_recoverable.sql (SQ_VERSION v18) --
+-- the current canonical definition of this procedure. 157 retracts a FALSEHOOD carried by every
+-- version from v17 down: the account_snapshot_gap alert message claimed the gap days could never be
+-- backfilled because IBKR exposes no historical-NAV endpoint. It does -- get_pa_performance_all_periods
+-- returns parallel dates[]/nav[] arrays, and D2a Step 0b already calls it but keeps only the last
+-- element. 157 changes exactly three strings (heartbeat v17->v18, that message, one comment) and no
+-- check logic. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';

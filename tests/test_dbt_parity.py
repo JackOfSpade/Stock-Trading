@@ -249,6 +249,31 @@ def test_main_fails_closed_on_does_not_have_a_column_query_error(monkeypatch, ca
     assert "schema-shaped" in out
 
 
+def test_main_fails_closed_on_name_not_found_inside_query_error(monkeypatch, capsys):
+    # 2026-08-09: THIRD occurrence of the marker-wording class (after "incompatible types" in the
+    # 2026-07-17 audit and the C10 sweep above). A missing column does NOT always say "Unrecognized
+    # name": when the reference is ALIAS-QUALIFIED against a subquery — exactly the shape check_one_model
+    # builds, `SELECT <col> FROM (compiled) AS parity_src` — BigQuery says "Name <col> not found inside
+    # <alias>" instead. state.book_drawdown_watch (dbt port missing peak_window_gap_days, added live by
+    # bigquery/153/155) hit this and was routed to a tolerant SKIP that counted as a pass; that CI run
+    # only went red because an UNRELATED model drifted the same day. The error text below is the REAL
+    # one from CI run 31294544565, not a paraphrase.
+    assert "not found inside" in dp.SCHEMA_DRIFT_MARKERS
+    monkeypatch.setattr(dp, "compiled_models",
+                        lambda: iter([("state", "missingcol", "SELECT 1 AS a"), ("state", "good", "SELECT 1 AS a")]))
+    monkeypatch.setattr(dp, "live_columns",
+                        lambda dataset, table: [{"column_name": "a", "data_type": "STRING"}])
+
+    def fake_bq(sql):
+        if "missingcol" in sql:
+            raise RuntimeError("Name peak_window_gap_days not found inside parity_src at [1:320]")
+        return [{"n_missing": 0, "n_extra": 0}]
+    monkeypatch.setattr(dp, "bq", fake_bq)
+    assert dp.main() == 1
+    out = capsys.readouterr().out
+    assert "schema-shaped" in out   # the ERRORS path (fail-closed), not the benign-skip path
+
+
 def test_main_does_not_flag_identical_geography_column_as_drift(monkeypatch):
     # C9 (2026-07-20 audit): before col_expr() serialized GEOGRAPHY, an identical GEOGRAPHY column on
     # both sides would hit "cannot be used in set operations" (a SCHEMA_DRIFT_MARKER) and fail closed
