@@ -7,13 +7,35 @@ name: Stranded-branch check
 # so it is blind to this git↔BigQuery divergence. This sweep flags it within hours and opens
 # a GitHub issue (which notifies the repo owner) instead of it sitting unnoticed for weeks.
 #
-# Delivery is a GitHub issue, NOT ops.alerts, on purpose: writing ops.alerts from CI would
-# require granting the (deliberately read-only, RUNBOOK §6) CI identity BigQuery write. See
-# §20 for the optional ops.alerts upgrade -- now IMPLEMENTED for four other CI guards (not yet
-# this workflow) via the table-scoped ops.ci_findings bridge (bigquery/67_ci_findings_bridge.sql,
-# live-sql-parity.yml / keyless-sa-audit.yml / wif-binding-audit.yml / guard-config-audit.yml,
-# self-improvement audit 2026-07-16 CC-1) -- see that file + Claude_Task_Plan.md's D3
-# CI-FINDINGS ADJUDICATION bullet for the pattern this workflow could adopt if ever extended.
+# DELIVERY: BOTH a GitHub issue AND the ops.ci_findings bridge (bridge added 2026-08-09 -- this
+# workflow was the LAST CI guard still issue-only). It writes workflow='stranded-branch-check',
+# finding_key='stranded_branch', which state.ci_findings_open surfaces and cadence_check's
+# `ci_finding` WARNING then delivers to the monitored alert-email channel. bigquery needs NO change:
+# state.ci_findings_open (bigquery/86, superseding 67) partitions by (workflow, finding_key) with no
+# workflow allowlist, so a new producer is picked up automatically.
+#
+# WHY THIS CHANGED (2026-08-09 incident). The issue-only delivery was a real, measured blind spot,
+# not a theoretical one. On 2026-08-08/09 a single dbt-parity drift turned CI red on EVERY branch
+# touching bigquery/**|dbt/** (auto-merge only drains green branches), so BOTH open branches stranded
+# and main fell behind live. This workflow DETECTED it correctly and filed issue #36 -- but because
+# it was the one guard not wired to the bridge, the ROOT CAUSE was visible only on a channel nobody
+# was watching, while its DOWNSTREAM symptoms (10 live-sql-parity findings, postmerge_coverage) went
+# out by email as usual. The operator triaged the symptoms; the cause sat for a day. Detection was
+# never the gap -- delivery was.
+#
+# The original rationale (writing ops.alerts from CI would need the deliberately read-only CI
+# identity to hold BigQuery write, RUNBOOK §6/§20) still stands and is NOT being reversed here: this
+# does NOT write ops.alerts. It writes the table-scoped ops.ci_findings marker table via the
+# gh-ci-runner@ dataEditor grant applied 2026-07-17 -- the same indirection live-sql-parity.yml /
+# keyless-sa-audit.yml / wif-binding-audit.yml / guard-config-audit.yml already use, and the same
+# reason the bridge exists at all (self-improvement audit 2026-07-16 CC-1). ops.alerts is still
+# written only by BigQuery-side procedures, never by CI.
+#
+# Claude_Task_Plan.md's D3 CI-FINDINGS ADJUDICATION step classifies workflow='stranded-branch-check'
+# as a NO-REPAIR class (like keyless_sa / wif_binding / guard_config / b3-invariants): the condition
+# is git-side, the finding_key is not a <dataset>.<object>, and it must never reach the live-SQL
+# self-heal branches. Adding a producer without adding that classification would leave D3 holding an
+# unclassified row -- the two changes belong in the same commit.
 #
 # Also performs a bounded (max attempt 5, max 1 per Pacific day -- custom quotas reset midnight PT)
 # rerun of quota-class red CI ("QueryUsagePerUserPerDay"/"Custom quota exceeded" in the failed-step
@@ -39,6 +61,7 @@ permissions:
   pull-requests: read
   issues: write
   actions: write   # rerun quota-class red CI, bounded — see 'Bounded next-Pacific-day rerun' step
+  id-token: write  # keyless WIF for the ops.ci_findings bridge write (2026-08-09); no static key
 
 concurrency:
   group: stranded-branch-check
@@ -52,6 +75,27 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+
+      # WIF is OPTIONAL here, unlike in live-sql-parity.yml where it gates the whole check. This
+      # workflow's detection is pure git/gh and needs no GCP credential at all; WIF is only for the
+      # ops.ci_findings bridge write below. So an unset var DEGRADES delivery to issue-only (the
+      # pre-2026-08-09 behaviour) rather than skipping the sweep — never trade detection for delivery.
+      - name: Gate on WIF creds (ops.ci_findings bridge only)
+        id: guard
+        run: |
+          if [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::ops.ci_findings bridge skipped — vars.GCP_WIF_PROVIDER/GCP_WIF_SERVICE_ACCOUNT unset. Detection still runs and still opens a GitHub issue, but a stranded branch will NOT reach the alert-email channel. ops/RUNBOOK.md §6/§20."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: GCP WIF auth + gcloud setup (provides the bq CLI)
+        if: steps.guard.outputs.skip == 'false'
+        uses: ./.github/actions/gcp-wif-auth
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
 
       - name: Detect stranded branches + open conflict PRs
         id: detect
@@ -149,6 +193,59 @@ jobs:
               echo "::notice::rerun-check: run $run_id failure is not quota-class — no rerun (detection-only path stands)"
             fi
           done < /tmp/stranded.txt
+
+      # MUST run BEFORE the issue step below, which ends in `exit 1` — a later step would never run
+      # on the very path that matters. Single step with an internal branch (the live-sql-parity.yml
+      # "Record B3 finding" precedent) so the open and resolved writes cannot drift apart.
+      - name: Record stranded-branch finding (ops.ci_findings bridge)
+        if: steps.guard.outputs.skip == 'false'
+        run: |
+          set -uo pipefail
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          if [ "${{ steps.detect.outputs.problem }}" = "true" ]; then
+            # detail is SHORT and IDENTITY-BEARING: it lands in a JSON payload and an operator email.
+            # Name the branches/PRs, not the full markdown issue body. Note the alert MESSAGE only ever
+            # says "stranded-branch-check/stranded_branch" — a single stable finding_key, so
+            # sp_raise_alert_once dedups to ONE open row while the condition persists, exactly the
+            # "identity in the message, detail in the payload" convention the cadence_check blocks use.
+            # A per-branch finding_key would instead leave a permanently-open row for every branch name
+            # that ever stranded, since branch names are ephemeral and nothing would resolve the old key.
+            # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted markdown
+            # branch-name pattern must stay literal, not shell-expanded (same as the rerun step above).
+            branches=$(sed -nE 's/^- `([^`]+)`.*/\1/p' /tmp/stranded.txt 2>/dev/null | paste -sd',' - || true)
+            prs=$(sed -nE 's/^- (#[0-9]+).*/\1/p' /tmp/conflicts.txt 2>/dev/null | paste -sd',' - || true)
+            detail=""
+            [ -n "$branches" ] && detail="unmerged branch(es): ${branches}"
+            [ -n "$prs" ] && detail="${detail:+${detail}; }open auto-merge conflict PR(s): ${prs}"
+            if [ -s /tmp/gh_pr_list_error.txt ]; then
+              detail="${detail:+${detail}; }could not read conflict PRs (monitoring gap, not necessarily a strand): $(tr '\n' ' ' < /tmp/gh_pr_list_error.txt)"
+            fi
+            [ -n "$detail" ] || detail="stranded-branch check reported a problem but produced no detail lines — see the run log"
+            detail="Routine output may be stranded off main (RUNBOOK §20). ${detail}"
+            detail=$(printf '%s' "$detail" | cut -c1-900)
+
+            # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted BigQuery table
+            # name must not be shell-expanded, and @p_* are BigQuery named parameters, not shell vars.
+            if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false \
+                 --parameter="p_detail:STRING:${detail}" --parameter="p_url:STRING:${run_url}" \
+                 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("stranded-branch-check","stranded_branch","open",@p_detail,@p_url)'; then
+              # DELIBERATELY does NOT exit here, unlike live-sql-parity.yml's B3 open-row write. The
+              # GitHub-issue step below is the pre-existing delivery path and still works; exiting now
+              # would suppress it and make a bridge outage strictly worse than no bridge at all. The job
+              # still goes red — that step ends in `exit 1` on this same branch.
+              echo "::error::Could not record the stranded-branch finding to ops.ci_findings — it will reach the GitHub issue but NOT the alert-email channel. Check gh-ci-runner@'s table-scoped dataEditor grant on ops.ci_findings (RUNBOOK §6)."
+            fi
+          else
+            # Auto-resolve, scoped to THIS producer only. Writes zero rows when nothing is open, so a
+            # healthy sweep costs one no-op query and appends nothing.
+            # shellcheck disable=SC2016 # single-quoted intentionally: see above.
+            if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false \
+                 --parameter="p_url:STRING:${run_url}" \
+                 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) SELECT workflow, finding_key, "resolved", "no stranded branches or conflict PRs this sweep", @p_url FROM `stock-trading-498512.state.ci_findings_open` WHERE workflow = "stranded-branch-check"'; then
+              echo "::warning::Could not auto-resolve the stranded-branch finding in ops.ci_findings; a stale open row may linger until the next clean sweep."
+            fi
+          fi
 
       - name: Open alert issue (dedup) and fail the run
         if: steps.detect.outputs.problem == 'true'
