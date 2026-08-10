@@ -146,6 +146,19 @@ SELECT mark_date AS as_of_date, SAFE_DIVIDE(close + dividend - prev_close, prev_
 FROM s WHERE prev_close IS NOT NULL;
 
 -- ===== perf.strategy_daily: authoritative engine state (rebuilt daily from the views) =====
+-- computed_ts (below) is a WHOLE-TABLE-REBUILD stamp, NOT a per-row computation time, and it MUST
+-- NOT be used as a freshness or provenance signal. ops.sp_recompute_engine's live body
+-- (bigquery/124_dust_excluded_from_closed_trades.sql:95-96) does a full `DELETE FROM ... WHERE TRUE`
+-- + INSERT whose column list omits computed_ts, so every row falls through to the DEFAULT
+-- CURRENT_TIMESTAMP() below on EVERY call -- including D2a's unconditional non-trading-day no-op
+-- (Claude_Task_Plan.md:1613-1616), which still calls ops.sp_daily_refresh() -> this proc even when
+-- there is nothing new to compute. Measured 2026-08-10: all 144 live rows (as_of_date spanning
+-- 2026-04-27..2026-08-07) carry ONE identical computed_ts (2026-08-09 22:48:22 UTC), stamped by that
+-- Sunday's no-op run -- proof this column cannot distinguish "just recomputed" from "recomputed
+-- months ago, unchanged." The real currency signals are as_of_date (the trading day a row DESCRIBES)
+-- and state.freshness.engine_fresh (dbt/models/state/freshness.sql:10, bigquery/10_observability.sql
+-- -- MAX(as_of_date) >= last_trading_day), which is what dbt/models/sources.yml's perf.strategy_daily
+-- source freshness check is keyed on instead of this column (2026-08-10 fix).
 CREATE TABLE IF NOT EXISTS `stock-trading-498512.perf.strategy_daily` (
   as_of_date DATE NOT NULL, strategy STRING NOT NULL,
   deployed_unit_value NUMERIC, peak_unit_value NUMERIC, current_drawdown NUMERIC,

@@ -530,9 +530,33 @@ sources:
           this object (it is too procedural to port as a model: chained EXP(SUM(LN(...)))
           windows + correlated closed-trade subqueries written by the recompute proc).
           Modeled as a SOURCE; perf.kill_flags refs it.
-        loaded_at_field: computed_ts
+        # loaded_at_field points at as_of_date, NOT computed_ts. computed_ts is a WHOLE-TABLE-REBUILD
+        # stamp, not a per-row load time: ops.sp_recompute_engine's INSERT column list omits it
+        # (bigquery/124_dust_excluded_from_closed_trades.sql:95-96), so every row falls through to the
+        # column DEFAULT CURRENT_TIMESTAMP() (bigquery/03_twr_engine.sql:154) on EVERY call, including
+        # D2a's unconditional non-trading-day no-op (Claude_Task_Plan.md:1613-1616). Measured 2026-08-10:
+        # all 144 rows (as_of_date 2026-04-27..2026-08-07) carry ONE identical computed_ts
+        # (2026-08-09 22:48:22 UTC) -- a freshness check keyed on it would report FRESH no matter how
+        # stale the underlying data actually was (a latent fail-open gate, dormant only because no CI
+        # workflow currently runs `dbt source freshness`). as_of_date is the real currency signal -- the
+        # trading day the row DESCRIBES -- and it's exactly what the live dead-man's-switch gate keys on
+        # (state.freshness.engine_fresh: MAX(as_of_date) >= last_trading_day, dbt/models/state/
+        # freshness.sql:10, bigquery/10_observability.sql). Cast to TIMESTAMP because BigQuery source
+        # freshness requires loaded_at_field to be castable to TIMESTAMP and as_of_date is a DATE.
+        loaded_at_field: "CAST(as_of_date AS TIMESTAMP)"
         freshness:
-          warn_after: {count: 4, period: day}
+          # 6 days, not the 4 used for daily_marks above (that field IS a real per-row ingest_ts; this
+          # one only DESCRIBES a trading day). The engine advances only on trading days and the daily
+          # tier is now Sun-Thu (routines skip Fri/Sat, 2026-08-08 consolidation), so a Thu -> Sun
+          # catch-up is a normal ~3-calendar-day as_of_date gap, not staleness -- a plain Fri->Sun
+          # weekend must never warn. Measured historical max legitimate gap (pre-consolidation,
+          # holiday-adjacent: Fri 2026-05-22 -> Tue 2026-05-26 over Memorial Day, and
+          # Thu 2026-07-02 -> Mon 2026-07-06 over July 4th) was 4 calendar days; 6 leaves a day of
+          # margin for check-time-of-day plus a holiday landing inside the new Fri/Sat-skip window,
+          # without loosening into genuine-staleness territory. This is a SECONDARY, currently-dormant
+          # advisory bound regardless -- the primary dead-man's switch is state.freshness.engine_fresh
+          # above, which fires on ANY gap vs last_trading_day, not a multi-day tolerance.
+          warn_after: {count: 6, period: day}
         columns:
           - name: as_of_date
             description: Engine date (partition key). NOT NULL.
@@ -558,3 +582,9 @@ sources:
             description: Closed round-trips through as_of_date (feeds the 30-trade gate).
           - name: gate_n
             description: Closed trades REMAINING to the 30-trade calibration gate.
+          - name: computed_ts
+            description: >
+              WHOLE-TABLE REBUILD stamp (DEFAULT CURRENT_TIMESTAMP(), bigquery/03_twr_engine.sql:154),
+              NOT a per-row load time -- every row gets the same value on every
+              ops.sp_recompute_engine() call, including no-op runs. Do NOT use for freshness or
+              provenance; that's what loaded_at_field above is pointed at as_of_date instead of here.
