@@ -1,8 +1,13 @@
 -- bigquery/157_account_snapshot_gap_recoverable.sql (2026-08-09)
 -- Project: stock-trading-498512. Apply after bigquery/153_account_snapshot_gap_watch.sql.
 --
--- SUPERSEDES ops.sp_sq_cadence_check from bigquery/153 (SQ_VERSION v17 -> v18). This is the current
--- single source of truth for that procedure. bigquery/153's other two statements
+-- SUPERSEDES ops.sp_sq_cadence_check from bigquery/153 (SQ_VERSION v17 -> v18).
+-- SUPERSEDED LIVE (2026-08-10) by bigquery/159_cadence_check_info_severity_autoage.sql
+-- (SQ_VERSION v18 -> v19) -- the current single source of truth for ops.sp_sq_cadence_check. 159
+-- widens the #14 auto-age severity predicate from `= 'warning'` to `IN ('warning','info')`, which is
+-- what finally makes bigquery/150's 'strategy_revised' entry reachable; that entry had been inert
+-- since it landed, because an INFO row can never satisfy a warning-only predicate. Kept here,
+-- unmodified, for DR-rebuild apply-in-order reference only. bigquery/153's other two statements
 -- (state.account_snapshot_gap, state.book_drawdown_watch) are NOT redefined here -- the gap view stays
 -- canonical in 153, and book_drawdown_watch is already superseded by bigquery/155.
 --

@@ -136,8 +136,11 @@ END;
 -- account_snapshot_gap record-only WARNING block (+ 'account_snapshot_gap' to the #14 auto-age list).
 -- Kept here, unmodified, for DR-rebuild apply-in-order reference only.
 -- DO NOT re-apply this CREATE statement live in isolation.
--- SUPERSEDED (2026-08-09) by bigquery/157_account_snapshot_gap_recoverable.sql (SQ_VERSION v18) --
--- the current canonical definition of this procedure. 157 retracts a FALSEHOOD carried by every
+-- SUPERSEDED (2026-08-10) by bigquery/159_cadence_check_info_severity_autoage.sql (SQ_VERSION v19)
+-- -- the current canonical definition of this procedure. 159 widens the #14 auto-age severity
+-- predicate to IN ('warning','info') so bigquery/150's 'strategy_revised' entry is finally
+-- reachable at the severity it is actually raised at. Its immediate predecessor was
+-- bigquery/157_account_snapshot_gap_recoverable.sql (SQ_VERSION v18), which retracts a FALSEHOOD carried by every
 -- version from v17 down: the account_snapshot_gap alert message claimed the gap days could never be
 -- backfilled because IBKR exposes no historical-NAV endpoint. It does -- get_pa_performance_all_periods
 -- returns parallel dates[]/nav[] arrays, and D2a Step 0b already calls it but keeps only the last

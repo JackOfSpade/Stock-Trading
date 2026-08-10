@@ -245,7 +245,9 @@ FROM agg CROSS JOIN ltd;
 -- #14 auto-age category IN-list. Built mechanically from the resolved canonical body (never
 -- hand-retyped) via a throwaway script that asserted each substitution matched EXACTLY once. Every
 -- other check in the body is carried forward unchanged.
--- SUPERSEDED (2026-08-09) by bigquery/157_account_snapshot_gap_recoverable.sql (SQ_VERSION v18) --
+-- SUPERSEDED (2026-08-10) by bigquery/159_cadence_check_info_severity_autoage.sql (SQ_VERSION
+-- v19) -- the current single source of truth for ops.sp_sq_cadence_check. Its predecessor was
+-- bigquery/157_account_snapshot_gap_recoverable.sql (SQ_VERSION v18) --
 -- the current canonical definition of this procedure. 157 retracts a FALSEHOOD carried by every
 -- version from v17 down: the account_snapshot_gap alert message claimed the gap days could never be
 -- backfilled because IBKR exposes no historical-NAV endpoint. It does -- get_pa_performance_all_periods
