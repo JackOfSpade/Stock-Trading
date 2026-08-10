@@ -110,8 +110,8 @@ ORDER BY r.routine;
 -- state.scheduled_query_version_drift would then flag against a v15 bigquery/63 registry expectation.
 -- SUPERSEDED (2026-08-10) by bigquery/159_cadence_check_info_severity_autoage.sql (SQ_VERSION
 -- v19) -- the current single source of truth for ops.sp_sq_cadence_check. Its predecessor was
--- bigquery/157_account_snapshot_gap_recoverable.sql (SQ_VERSION v18) --
--- the current canonical definition of this procedure. 157 retracts a FALSEHOOD carried by every
+-- bigquery/157_account_snapshot_gap_recoverable.sql (SQ_VERSION v18), which is NO LONGER current.
+-- 157 retracts a FALSEHOOD carried by every
 -- version from v17 down: the account_snapshot_gap alert message claimed the gap days could never be
 -- backfilled because IBKR exposes no historical-NAV endpoint. It does -- get_pa_performance_all_periods
 -- returns parallel dates[]/nav[] arrays, and D2a Step 0b already calls it but keeps only the last
