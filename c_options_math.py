@@ -12,13 +12,19 @@ Implements:
   credit spreads, iron condors, butterflies)
 - Breakeven calculation per structure
 - Max-loss closed-form computation per structure
-- Max-loss Monte Carlo verification (dual-path requirement per Strategy.md
-  rev 19 dual-path verification clause; both paths must agree to within $1)
+- Max-loss Monte Carlo verification of the BASE (non-cascade) figure only
+  (dual-path requirement per Strategy.md rev 19 dual-path verification clause;
+  both paths must agree to within $1). Scope narrowed Rev 44, 2026-08-10.
 - Early-assignment cascade max-loss (per rev 20 conventions:
   mark-to-market at assignment instant; 2x implied-move scaled to full
-  structure expiration; multi-expiration variants excluded)
-- Position sizing arithmetic (2% NAV → contract count, with deferral rule
-  if no integer count fits)
+  structure expiration; multi-expiration variants excluded). SINGLE-PATH --
+  regression-tested against golden values, no Monte Carlo counterpart.
+  Callers must combine: total_max_loss = max(closed_form, cascade), and it is
+  that combined figure the options order-guard must receive.
+- Position sizing arithmetic (max_pct_nav → contract count, with deferral rule
+  if no integer count fits). max_pct_nav is the thesis's stated risk budget and
+  is REQUIRED with no default (Rev 39/43, owner directive 2026-07-28 retired
+  the flat 2% rule; docstring corrected Rev 44, 2026-08-10)
 - IV at entry vs trailing-30-day realized volatility comparison
 - Probability-weighted payoff under market-implied risk-neutral distribution
 
@@ -100,10 +106,11 @@ USAGE:
     contracts, defer = size_position(
         max_loss_per_contract=total_max_loss / 1,  # 1-contract reference
         strategy_nav=1389.37,
-        max_pct_nav=0.02,
+        max_pct_nav=0.035,  # the THESIS'S stated risk budget, required, no
+                            # default -- there is no flat cap (Rev 39/43)
     )
     if defer:
-        print("DEFER: no integer contract count fits 2% NAV cap")
+        print("DEFER: no integer contract count fits the stated risk budget")
     else:
         print(f"Sized to {contracts} contracts")
 """
@@ -1454,10 +1461,19 @@ def size_position(
     against the seven-factor list, recorded in the decision-log entry, and
     adversarially attacked on size.
 
-    Strategy C is the one strategy whose Capital at Risk is EXACT rather than
-    assumed: max_loss_per_contract is the dual-path-verified bound inclusive of
-    the early-assignment cascade, so `contracts * max_loss_per_contract` IS the
-    thesis's CaR, not an estimate of it.
+    Strategy C's Capital at Risk is the closest to EXACT of any strategy, but
+    the exactness is not uniform across the figure (Rev 44, 2026-08-10 scope
+    correction per AR_orc review `premortem-C-2026-a3` cycle 11).
+    max_loss_per_contract is expected to be the COMBINED bound
+    `max(max_loss_closed_form, cascade_max_loss)`. Its base component is
+    dual-path verified (closed-form vs Monte Carlo, agreeing within $1); its
+    early-assignment cascade component is SINGLE-PATH -- regression-tested
+    against golden values only, with no independent second implementation and
+    no Monte Carlo counterpart -- and rests on the 2x implied-move adverse-move
+    assumption (Known Limitation 9). So where the cascade term binds,
+    `contracts * max_loss_per_contract` IS the thesis's CaR for its non-cascade
+    component exactly, and for its cascade component only as well as that
+    single-path assumption holds.
 
     Returns (contracts, defer_flag).
     - If defer_flag = True, no integer contract count fits within max_pct_nav.
@@ -1487,7 +1503,8 @@ def size_position(
     # NOT a risk envelope. Do not reintroduce a numeric ceiling here — the surviving
     # discipline is the seven-factor justification plus the mandatory adversarial attack
     # on size, and for C specifically the defined-risk rail (max_loss, incl. the
-    # early-assignment cascade, dual-path verified) which is UNCHANGED by this directive.
+    # early-assignment cascade -- base component dual-path verified, cascade component
+    # single-path; Rev 44, 2026-08-10 scope correction) which is UNCHANGED by this directive.
     if not (0 < max_pct_nav <= 1):
         raise ValueError(
             f"max_pct_nav = {max_pct_nav} (must be in (0, 1])."
