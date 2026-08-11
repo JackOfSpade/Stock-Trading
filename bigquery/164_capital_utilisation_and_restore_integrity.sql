@@ -43,15 +43,30 @@
 -- reachable unattended if it needs no judgment -- so this file precomputes a MECHANICAL one.
 --   -> state.sweep_recipient_weights
 --
--- GAP 3 -- THE RESTORE CAN SILENTLY COME BACK SHORT, AND THAT IS WHAT ACTUALLY BREAKS SURVIVORSHIP.
+-- GAP 3 -- A RE-ENABLED STRATEGY CAN COME BACK UNDER-CAPITALISED, AND NOTHING MEASURED IT.
 -- The sweep is debt-tracked and reversible, which is what makes it acceptable: a disabled strategy is
--- lending, not losing. But bigquery/98's RESTORE pays LEAST(outstanding_debt, donor_capacity), and
--- donor_capacity is the enabled strategies' UNDEPLOYED cash. If the donors have deployed by the time
--- the debtor re-enables, the restore is partial and the shortfall persists on the ledger with nothing
--- watching it. A profitable strategy can therefore be permanently shrunk by a temporary regime
--- disable -- the precise inverse of "reward winners via survivorship". Today the headroom is positive
--- ($18,779.23 donor capacity vs $13,135.49 debt = $5,643.74 spare) ONLY because C and E have not
--- deployed. The moment they do their job, this goes negative.
+-- lending, not losing. bigquery/98's RESTORE pays LEAST(outstanding_debt, donor_capacity), where
+-- donor_capacity is the other enabled strategies' UNDEPLOYED cash -- so if the donors have deployed by
+-- the time the debtor re-enables, that session's restore is PARTIAL.
+--
+-- CORRECTION, 2026-08-11 (this file's first draft got this wrong and the error is recorded here on
+-- purpose): a partial restore is a DELAY, NOT A PERMANENT LOSS. `restore_candidates` in bigquery/98 is
+-- a STANDING CONDITION -- `enabled_set JOIN debt WHERE outstanding_debt > 0` -- with no
+-- state-transition trigger, no cooldown, no once-per-strategy flag and no "already attempted" marker
+-- anywhere in the CTE chain. `outstanding_debt` is a live view over append-only events.cash_flows
+-- (swept_out_total - restored_total), so a partial payment lowers it without zeroing it, and the very
+-- next read re-proposes the residual against whatever donor capacity exists then. The only guard, the
+-- >=$25-or-full-debt floor, defers a sub-$25 tail until capacity covers it in full; it cannot strand
+-- it. So the correct claim is NOT "a profitable strategy can be permanently shrunk" -- it is "a
+-- re-enabled strategy may operate under-capitalised for a stretch, recovering automatically and
+-- mechanically as donor capacity returns, with no human step."
+--
+-- That is a materially smaller problem, and this view is scoped to it accordingly: it measures how
+-- much of a debtor's claim could be honoured RIGHT NOW, so the drag is visible while it lasts rather
+-- than being discovered only when someone asks why a re-enabled strategy is trading small. Today the
+-- headroom is positive ($18,779.23 donor capacity vs $13,135.49 debt = $5,643.74 spare) ONLY because
+-- C and E have not deployed; the moment they do, a re-enabling debtor would be restored in
+-- instalments rather than at once.
 --   -> state.regime_restore_shortfall_risk
 --
 -- WHY NO P&L TERM ANYWHERE IN THIS FILE. Merit-weighting is rejected by §16 for a good reason: at
@@ -226,11 +241,18 @@ SELECT
 FROM scored;
 
 -- ===== 3. state.regime_restore_shortfall_risk =====
--- The one that actually protects survivorship. Per debtor strategy: what bigquery/98's RESTORE would
--- pay if it re-enabled TODAY, versus what it is owed. RESTORE pays
--- LEAST(outstanding_debt, donor_capacity) and the remainder simply persists as unrecovered debt, so a
--- strategy can be permanently shrunk by a temporary disable if the donors deployed in the meantime.
--- Nothing in the system watched for that before this view.
+-- Per debtor strategy: what bigquery/98's RESTORE would pay if that strategy re-enabled TODAY, versus
+-- what it is owed. RESTORE pays LEAST(outstanding_debt, donor_capacity), so when the donors are
+-- deployed the debtor is restored in instalments rather than at once.
+--
+-- READ THE COLUMN NAMES CAREFULLY -- "shortfall" here means THIS SESSION'S shortfall, not a loss.
+-- `shortfall_if_alone` and the `_at_risk` flags describe how much of the claim cannot be honoured on
+-- today's donor capacity. They do NOT mean the money is gone. bigquery/98's restore trigger is a
+-- standing condition (any enabled strategy with outstanding_debt > 0, re-evaluated every read, no
+-- transition gate and no retry guard), so an unpaid residual is automatically re-proposed on later
+-- sessions as donor capacity recovers. The value of watching it is that a debtor operating on a
+-- fraction of its owed capital is otherwise invisible -- it just quietly trades smaller than it
+-- should, and nobody would connect that to a sweep weeks earlier.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.regime_restore_shortfall_risk` AS
 WITH donors AS (
   -- Donor capacity is the capital-ENABLED strategies' undeployed cash -- the same figure bigquery/98's

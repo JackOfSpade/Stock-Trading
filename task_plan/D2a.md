@@ -1168,12 +1168,34 @@ Concretely, every run:
   Empty (the steady state) → no-op, nothing to log. Non-empty:
   - `control_enabled = FALSE` (the `ops.capital_control` kill-switch) → log a one-line `events.decision_log`
     note recording what WOULD have moved, and move nothing.
-  - SWEEP rows (a capital-disabled strategy with `available_funds ≥ $25`): run the §16 AI CAPITAL-ALLOCATION
-    CALL (`trigger='regime_disable'`) over the capital-enabled recipients (equal-share baselines are in the
-    view; [0.5×, 2×] rails; default-EQUAL below MEDIUM), then write the atomic $0-sum `events.cash_flows`
-    double-entry on one flow_date tagged `source='regime_capital_sweep'` (one negative row for the swept
-    strategy, positive rows per recipient) and `CALL ops.sp_log_decision(..., entry_type='capital-allocation',
-    ...)` per §16 Logging.
+  - SWEEP rows (a capital-disabled strategy with `available_funds ≥ $25`): apply the MECHANICAL CAPACITY
+    WEIGHT (`state.sweep_recipient_weights`, `bigquery/164`) — `SELECT strategy_code, sweep_share,
+    equal_share, band_multiplier, capacity_ratio, deployed_days_180 FROM state.sweep_recipient_weights`
+    and set each recipient's amount to `ROUND(swept_amount * sweep_share, 2)`, with the LAST recipient row
+    absorbing the rounding residual so the double-entry is exactly $0-sum (the same penny convention the
+    2026-08-06 sweep used). **Why this replaces the old default-EQUAL read:** §16 permits a [0.5×, 2×]
+    tilt but reaches it only through an AI capital-allocation call at MEDIUM+ conviction, and **D2a
+    carries NO analysis by design** — so every unattended sweep fell back to an equal split, permanently
+    (2026-08-05 and 2026-08-06 both did; the only tilted sweep ever, 2026-07-19, ran in an interactive
+    session on owner instruction). The weight needs no judgment: it is the share of the trailing 180 days
+    each recipient actually held a position, mapped onto §16's band. **No band-fitting pass is needed** —
+    `band_multiplier` is already clamped to `[0.5, 2.0]` in SQL before normalisation, so every
+    `sweep_share / equal_share` ratio is inside the sanctioned band by construction. **It keys on
+    deployment CAPACITY, never on P&L** (§16 rejects merit-weighting a short, noisy sample), and it
+    degenerates to exactly the equal split when recipients are indistinguishable — so it can never be
+    worse than the old behaviour. **Fall back to DEFAULT-EQUAL** (the view's own `equal_share`, or the
+    view's `counterparty_baseline_amount` if `state.sweep_recipient_weights` returns no rows or its
+    `sweep_share` values do not sum to 1.0 ± 0.0001) and say so in the note. Then write the atomic $0-sum
+    `events.cash_flows` double-entry on one flow_date tagged `source='regime_capital_sweep'` (one negative
+    row for the swept strategy, positive rows per recipient) and `CALL ops.sp_log_decision(...,
+    entry_type='capital-allocation', ...)` per §16 Logging, with `fields` JSON carrying
+    `is_default_equal=false`, `conviction='MECHANICAL'`, `conviction_pct=null`,
+    `weight_source='state.sweep_recipient_weights'`, `winner_code`/`runner_up_code` = the highest and
+    second-highest `sweep_share`, a `rationale` quoting each recipient's `capacity_ratio` and
+    `deployed_days_180`, and a `theater_check` stating plainly that no judgment was exercised — this is
+    arithmetic over deployment history, not an AI call. Each recipient's `note` should name its
+    `sweep_share`, `band_multiplier`, `capacity_ratio` and `deployed_days_180`, the source view, and any
+    penny adjustment, matching the house style of the 2026-08-06 rows.
   - RESTORE rows (a debtor strategy back to capital-enabled, per `state.regime_capital_debt`): MECHANICAL, no
     AI call — write the `source='regime_capital_restore'` double-entry using the view's pro-rata donor
     amounts; log a one-line `events.decision_log` note (`trigger='regime_enable'` context).
