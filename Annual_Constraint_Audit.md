@@ -349,7 +349,7 @@ From `Experiment_Parameters.md` and `strategy/00_preamble.md`. These are **not**
 | X-04 | Declared expected trade frequency (`EP:212`) | F | UNRESOLVED | not load-bearing on a kill trigger |
 | X-05 | Two-signal technical+fundamental cross-check (`EP:224–231`) | O | **2.7** (explicit, `EP:231`) | indicator set/template immutable once trading begins |
 | X-06 | Indicator set / fundamental template frozen (`EP:666–667`) | O | none stated | absolute ("immutable once trading begins") |
-| X-07 | No inter-strategy rebalancing (`EP:149`) | O | UNRESOLVED | functionally locked |
+| X-07 | No inter-strategy rebalancing (`EP:159`) | O | UNRESOLVED | functionally locked |
 | X-08 | Capital-allocation split bound [0.5×, 2×] (`EP:130`) | O | none | **explicitly VERSIONED POLICY** (carve-out, `EP:159`) |
 | X-09 | Roster floor N≥2 / ceiling N_max=8 (`EP:199`) | O | none | **versioned policy** (governance rail) |
 | X-10 | Probe-stake floor $2,000 (`EP:136`) | O | none | "adjustable parameter" vs "unchanged" (minor internal tension) |
