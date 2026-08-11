@@ -1048,6 +1048,34 @@ Concretely, every run:
   <JSON: residual, connector evidence>)` + `CALL ops.sp_log_run('D2a', <today>, 'halted', …, error_msg=<message>)`;
   resolve before sizing or staging. (Note: VOO's per-share price is roughly 5-7x SGOV's, so the same ~$1 dollar
   tolerance is a proportionally tighter share-count margin once VOO is the park vehicle — expected, not a bug.)
+- **External withdrawal — TWO-PASS detection, then pro-rata to NAV clamped to idle cash (owner directive 2026-08-10;
+  full procedure Operating_Protocols.md §13.C, machinery `bigquery/161_withdrawal_after_the_fact.sql`).**
+  A withdrawal is NEVER declared in advance and is NEVER committed on the session that first sees it.
+  When the tripwire above attributes an unexplained cash DECREASE to a probable withdrawal (per §13.B
+  cause-finding — no matching trade, no corporate action, and corroborated by
+  `get_pa_performance_all_periods` showing a flow-adjusted TWR near zero across the NAV move):
+  **FIRST PASS —** `INSERT` a row into `events.cash_flow_candidates` (`status='open'`,
+  `direction='WITHDRAWAL'`, signed negative `amount`, `evidence` = balances before/after + the TWR
+  reading) and treat that residual as EXPLAINED-PENDING, so it does NOT trip the `cash_tripwire` hard
+  STOP above and does NOT halt this session. **SECOND PASS (next session) —** re-read the connector.
+  Cash still gone → `CALL ops.sp_record_withdrawal(<positive magnitude>, <flow_date>, <note>,
+  <candidate_key>)`, which is the ONLY sanctioned write path (it allocates pro-rata to
+  `analytics.strategy_nav.nav`, clamps each strategy to its own `available_funds` and redistributes
+  whatever it cannot absorb, writes one `strategy`-tagged row per donor, refuses rather than spilling
+  if it exceeds total idle capacity, zero-weights a sub-floor PROBE newcomer, and is idempotent per
+  `candidate_key`). Cash returned → append `status='retracted'`; it was a settlement
+  hold, which is the Apr 28→May 7 $2,500 precedent caught a pass earlier. **Never hand-write the
+  `events.cash_flows` rows for a withdrawal, and never record one as a bare `strategy` NULL row** —
+  that equal-split debits strategies holding no idle cash and the withdrawal direction has no
+  self-heal (`bigquery/98`'s compensating sweep keys on `available_funds >= 25`, surplus-only).
+- **Strategy idle-balance deficit check (backstop, `bigquery/161`).**
+  `SELECT * FROM state.strategy_funds_deficit` — expect zero rows. Any row means a cash flow was
+  allocated to a strategy that did not hold the money (negative `deposits`) or a strategy is deployed
+  beyond its booked NAV. Raise `CALL ops.sp_raise_alert_once('warning','D2a','strategy_funds_deficit',
+  <one-line message>, <JSON rows>)`. Deliberately a WARNING, not a critical: a critical would enter
+  the `blocking_criticals` term of the halt gate and freeze all order staging including exits, which
+  is disproportionate for a bookkeeping-integrity signal. Non-latching — it auto-resolves when the
+  deficit clears.
 - **Owner-confirmation liveness gate (completeness-critic N-2, 2026-07-16) — the absence model for the
   one sanctioned human touch.** `SELECT * FROM state.owner_confirmation_liveness`
   (`bigquery/76_owner_confirmation_liveness.sql`). If `entries_halted = TRUE` (>=1 `state.open_orders`
