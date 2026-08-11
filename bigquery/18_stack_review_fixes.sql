@@ -66,6 +66,13 @@ ALTER TABLE `stock-trading-498512.ops.alerts` ADD COLUMN IF NOT EXISTS notified_
 -- resolvable warning, not a halt). (3) a Storage-Write-API mutation would not surface as a DML job —
 -- acceptable, the live write path is INSERT-DML via the MCP. (4) JOBS_BY_PROJECT retains ~180 days, so
 -- this detects forward, never retroactively (a tripwire, not a forensic log).
+-- SUPERSEDED LIVE by bigquery/162_append_only_watchlist_cash_flows.sql — current single source of
+-- truth for this object. Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation. 162 adds exactly two names to the
+-- destination_table.table_id allow-list below ('cash_flows', 'cash_flow_candidates') — the money
+-- ledger and its two-phase staging table, which were audit-truth all along but were never watched.
+-- Every other predicate, including the decision_log.sub_pattern sanctioned exception, is unchanged.
+-- The OTHER objects defined in this file are NOT superseded and remain canonical here.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.append_only_integrity` AS
 SELECT
   job_id,
