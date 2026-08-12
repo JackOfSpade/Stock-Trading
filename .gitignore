@@ -23,3 +23,6 @@ __pycache__/
 creds/
 *sa_key*.json
 b14575dd-*
+
+# local CI secrets for act (global pre-push hook) - never commit
+.secrets
