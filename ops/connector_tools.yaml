@@ -37,12 +37,32 @@
 # allowlisted" check — this file additionally pins WHICH tools are allowed to be
 # referenced at all, and records the ones known to be gone.
 #
-# EDIT DISCIPLINE. This file is HAND/ROUTINE-MAINTAINED, NOT GENERATED. When OPS1 raises
-# `connector_tool_added`, the operator decides in the claude.ai connectors UI whether the
-# new tool should be allowed at all; ADDING THE ROW HERE (with the resulting `use:` verdict)
-# IS WHAT CLEARS THE ALERT — OPS1 does not clear its own finding by re-observing, since the
-# baseline is deliberately a human/routine judgment call, not a mechanical mirror of
-# whatever the connector currently exposes.
+# EDIT DISCIPLINE. This file is ROUTINE-MAINTAINED, NOT GENERATED. Revised 2026-08-12 (owner
+# directive: the operator grants every new connector tool "Always allow" regardless of
+# relevance and will not manually edit this file, so a routine does the ADD side of the
+# reconciliation instead of waiting on a human who will never act). When OPS1 raises
+# `connector_tool_added`, OPS1 ITSELF appends the row here, alphabetically among its
+# siblings, with `use: unused` and an auto-add note (Claude_Task_Plan.md's OPS1 section,
+# TOOL-INVENTORY DRIFT CHECK) — that is what clears the alert, mechanically, on OPS1's next
+# run once the merged edit is visible to a fresh observation. `use: unused` is inert: it
+# grants no routine any new capability (CHECK 3/4 in scripts/check_connector_tools.py still
+# block any routine text from calling a non-`required` tool), so auto-adding it does not
+# depend on knowing whether the operator actually flipped the tool in the claude.ai
+# connectors UI — see the NAMESPACE NOTE below on why that flip is unobservable from this
+# side anyway. Promoting a tool from `unused` to `required`/`optional` — i.e. actually wiring
+# a new capability into a routine — stays a deliberate, hand-authored change: edit this file's
+# `use:` value AND the routine prose that will call it together, subject to the same CI gate.
+# `connector_tool_removed` is NOT auto-reconciled: a vanished tool can break routine text that
+# depends on it, which needs a human decision (restore it, or fix the routine + this file
+# together), not a rubber stamp — OPS1 only ever alerts on that category, never edits for it.
+#
+# A tool that reappears out of a connector's `absent:` block: if the matching entry is
+# `verified: unconfirmed`, OPS1 deletes it as part of the same auto-add edit (a name may never
+# sit in both `tools:` and `absent:` for one connector — CHECK1 hard-fails on that). If the entry
+# is instead a DATED/confirmed retirement (e.g. Hugging-Face's `paper_search`), OPS1 does NOT
+# auto-delete it or auto-add that one tool — it leaves the alert open for a human instead, since
+# discarding a confirmed-retirement record permanently disables CHECK4's protection against that
+# tool's name being called again. Full procedure: Claude_Task_Plan.md's OPS1 AUTO-ADD paragraph.
 #
 # NAMESPACE NOTE (important — read before trusting a green CI gate as proof anything can
 # actually be called). `.claude/settings.json`'s `permissions.allow` array uses the form
@@ -202,12 +222,42 @@ connectors:
           has probed successfully every run 2026-07-20..2026-08-07 with the allowlist
           empty the whole time) — add the entry anyway for interactive-session coverage
           and defence in depth, not because live OPS1 needs it to keep working.
+      - name: mark_message_spam
+        use: unused
+        note: >
+          Auto-added 2026-08-12 (owner directive — see this file's EDIT DISCIPLINE header). Part of an
+          8-tool Gmail vendor rollout of a spam/trash lifecycle bundle (mark/unmark-spam and
+          trash/untrash, both message- and thread-scoped), first observed together on OPS1's 2026-08-12
+          run. `use: unused` is the conservative default — nothing in this fleet calls it, same as the
+          IBKR `whats_new` precedent. Promoting it to required/optional + adding routine prose that
+          calls it is a separate, deliberate feature-adoption decision.
+      - name: mark_thread_spam
+        use: unused
+        note: Auto-added 2026-08-12, same Gmail spam/trash rollout as mark_message_spam — see its note.
       - name: search_threads
         use: unused
+      - name: trash_message
+        use: unused
+        note: Auto-added 2026-08-12, same Gmail spam/trash rollout as mark_message_spam — see its note.
+      - name: trash_thread
+        use: unused
+        note: Auto-added 2026-08-12, same Gmail spam/trash rollout as mark_message_spam — see its note.
       - name: unlabel_message
         use: unused
       - name: unlabel_thread
         use: unused
+      - name: unmark_message_spam
+        use: unused
+        note: Auto-added 2026-08-12, same Gmail spam/trash rollout as mark_message_spam — see its note.
+      - name: unmark_thread_spam
+        use: unused
+        note: Auto-added 2026-08-12, same Gmail spam/trash rollout as mark_message_spam — see its note.
+      - name: untrash_message
+        use: unused
+        note: Auto-added 2026-08-12, same Gmail spam/trash rollout as mark_message_spam — see its note.
+      - name: untrash_thread
+        use: unused
+        note: Auto-added 2026-08-12, same Gmail spam/trash rollout as mark_message_spam — see its note.
       - name: update_draft
         use: unused
       - name: update_label

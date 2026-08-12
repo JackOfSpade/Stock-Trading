@@ -713,19 +713,35 @@ stall with it (it ran under the same identity).
   OPTIONAL BigQuery rows to allow, or accept them blocked — either is fine.
 
   **Operator playbook: `connector_tool_added` / `connector_tool_removed` /
-  `connector_tool_enumeration_failed` (added 2026-08-08).** OPS1 (`Claude_Task_Plan.md`) now diffs the
-  live per-connector tool roster against `ops/connector_tools.yaml` every pre-market morning and raises
-  these on `ops.alerts`:
-  1. Read the alert payload for `connector` and `tool_name`.
-  2. Decide whether the fleet should use the tool.
-  3. If yes, set it to **"Always allow"** for that tool in the claude.ai connectors UI.
-  4. Add it to `ops/connector_tools.yaml` with the right `use:` value. **Adding it to the manifest is
-     what clears the alert** — the self-heal keys on `state.connector_tool_drift` going empty, not on
-     the UI change, which nothing on this side can observe.
+  `connector_tool_enumeration_failed` (added 2026-08-08; `connector_tool_added` auto-added
+  2026-08-12).** OPS1 (`Claude_Task_Plan.md`) diffs the live per-connector tool roster against
+  `ops/connector_tools.yaml` every pre-market morning and raises these on `ops.alerts`.
+
+  **`connector_tool_added` is now self-clearing — no operator action required to silence it.** OPS1
+  itself appends the new tool to `ops/connector_tools.yaml` as `use: unused` in the same run it raises
+  the alert (owner directive 2026-08-12: the operator grants every new tool "Always allow" regardless of
+  relevance and will never manually edit this file, so a routine does the reconciliation instead). The
+  alert self-heals mechanically on OPS1's NEXT run, once the merged edit is visible to a fresh
+  observation — same `state.connector_tool_drift`-going-empty self-heal as always, just no longer
+  waiting on a human edit to trigger it. Nothing here grants the tool any operational capability:
+  `use: unused` still blocks any routine from calling it (CI gate `scripts/check_connector_tools.py`
+  CHECK 3/4). The only remaining human step is optional and separate — **if** a future task wants a
+  routine to actually call the new tool, promote it to `required`/`optional` and add the calling routine
+  prose together, by hand, same as any other feature-adoption change.
+
+  **A tool that reappears out of a connector's `absent:` block is a special case** (full procedure:
+  Claude_Task_Plan.md's OPS1 AUTO-ADD paragraph — this is a summary, not the source of truth). If the
+  matching `absent:` entry is `verified: unconfirmed`, OPS1 deletes it as part of the same edit (CHECK1
+  hard-fails if a name sits in both `tools:` and `absent:`). If it's a DATED/confirmed retirement instead,
+  OPS1 does NOT auto-delete it or auto-add that one tool — it leaves the alert open and flags it for a
+  human glance, since silently discarding a confirmed-retirement record permanently disables CHECK4's
+  ability to block a future accidental call to it.
 
   For `connector_tool_removed` with `use: required`, that alert is a **critical**: routine text calls
-  that tool and will now fail. Either restore it in the connectors UI or fix the routine text and the
-  manifest together — do not just delete the manifest row to make the alert go away.
+  that tool and will now fail. This category is deliberately NOT auto-reconciled (a vanished tool can
+  break a routine, which needs a judgment call, not a rubber stamp) — either restore it in the
+  connectors UI or fix the routine text and the manifest together; do not just delete the manifest row
+  to make the alert go away.
 
   For `connector_tool_enumeration_failed`, the morning's sweep was incomplete and the day's clean bill
   of health is void for the named connector(s) — re-run OPS1 or check the connector manually before

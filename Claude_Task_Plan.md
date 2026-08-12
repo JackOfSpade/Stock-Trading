@@ -19,7 +19,7 @@ Every routine reads and/or writes BigQuery for operational state (positions, reg
 | **D2a** | Broker Reconcile & Snapshot | Sun-Thu · regular | live IBKR connector state (positions/balances/trades), `events.daily_marks`, `state.current_positions`, `state.account_latest` | `events.trade_fills`/`events.position_events` reconciliation, `analytics.strategy_nav`, `perf.strategy_daily`, NAV snapshot, `ops.run_log`/`ops.alerts`; STEP 1d adds `events.signal_marks` (11 menu tickers + SPY + `^VIX`, isolated from `daily_marks`) | — |
 | **D3** | Calendar Hygiene | Sun-Thu · regular | `state.open_queue`, `state.current_positions`, `events.queue_events`/`events.decision_log`; self-heal reads add `state.ci_findings_open`, `state.ddl_drift_promotion_readiness`/`state.restore_stale_promotion_readiness`/`state.append_only_integrity_promotion_readiness`/`state.b3_promotion_readiness`, `ops/trigger_ids.json` (repo file), `ops/cadence.yaml` `routine_model`, and `AI_Trading_Foundation.md`'s in-use-model field | `events.queue_events` (terminal-entry sweep + `PENDING_REVIEW` prose-regression entries); self-heal writes `bigquery/75_scheduled_query_wrappers.sql` (live procedure re-apply via MCP) + new `bigquery/NN_*.sql` resync/create files, `ops.monitor_promotion_log`, `ops.parity_selfheal_log`, `ops.alerts`, `events.decision_log`, `events.position_events` (the PRE-FILL INVALIDATION RE-CHECK's phantom-close net-out, 2026-08-03); `AI_Trading_Foundation.md` (MODEL-OF-RECORD DOC SYNC, cadence audit 2026-07-29) | — |
 | **OPS0** | Cadence Watchdog | Sun-Thu · regular | `state.catchup_refire_readiness`, `ops/trigger_ids.json` (repo file); STEP 4 GIT LANDING SWEEP adds git remote refs (`git fetch`/`merge-base`, external) + optional `gh api` (CI conclusion/PR lookup, external) | `ops.catchup_refire_log`, `events.decision_log` (+ `entry_type='stranded-branch-adoption'`/`'unlanded-completed-run'`, STEP 4d/4f), `ops.alerts` (+ `stranded_branch`, `stranded_branch_adopted`, `unlanded_completed_run`), `ops.routine_commit_markers` (STEP 4d adoption only); STEP 4d may also merge arbitrary NON-excluded repo files from an adopted branch onto OPS0's own branch (`bigquery/*.sql`, `dbt/**` and the spec-locked strategy surfaces are hard-excluded); `RemoteTrigger run(...)` (external call, not a BigQuery write) | — |
-| **OPS1** | Morning Connector Liveness Probe | Sun-Thu · regular | — (no state reads beyond the standard `state.trading_day_today` pre-flight; probes IBKR/Calendar/FMP/Gmail live, read-only; TOOL-INVENTORY DRIFT CHECK also reads the repo manifest `ops/connector_tools.yaml` and the live per-connector tool inventory) | `ops.alerts` (`connector_reauth_needed`, `connector_tool_added`, `connector_tool_removed`, `connector_tool_enumeration_failed` — raise + self-heal resolve), `ops.connector_tool_inventory` | — |
+| **OPS1** | Morning Connector Liveness Probe | Sun-Thu · regular | — (no state reads beyond the standard `state.trading_day_today` pre-flight; probes IBKR/Calendar/FMP/Gmail live, read-only; TOOL-INVENTORY DRIFT CHECK also reads the repo manifest `ops/connector_tools.yaml` and the live per-connector tool inventory) | `ops.alerts` (`connector_reauth_needed`, `connector_tool_added`, `connector_tool_removed`, `connector_tool_enumeration_failed` — raise + self-heal resolve), `ops.connector_tool_inventory`; on an `added` drift tool only, also `ops/connector_tools.yaml` (auto-add a `use: unused` row, 2026-08-12 owner directive) + git commit/push | — |
 | **OPS2** | Catch-up Executor | Sun-Thu · regular | `state.catchup_refire_readiness`, `ops/trigger_ids.json`, `state.market_calendar`, the missed routine's slice `task_plan/<X>.md` | `ops.catchup_refire_log`, `events.decision_log`, `ops.alerts`; + the executed routine's OWN write surfaces (it runs the routine inline) | — |
 | **W1** | Catalyst Calendar (A, C) | Weekly · research | `state.current_regime`, `state.current_positions`, `events.decision_log` | — | Weekly_Catalyst_Calendar.md |
 | **W2** | Post-Event Screen (B) | Weekly · research | `events.decision_log`/`find_precedents()`, `state.current_positions` | `events.decision_log` via `ops.sp_log_decision` (`entry_type='research-screen'`, screen='post-event' — Operating_Protocols.md §19, 2026-07-19) | Weekly_Post_Event_Screen.md |
@@ -2040,7 +2040,7 @@ STEP 4 — GIT LANDING SWEEP (landing-hardening 2026-07-29; daily, every run). A
 
 **DETECT ON GIT EVIDENCE, NOT ON MARKERS — live (no longer shadow) as of 2026-07-29.** `ops.routine_commit_markers` is NOT a usable universal signal and must not be the primary test: verification on 2026-07-29 found it has only EVER received rows for three routines (D1, D2, W5) out of the whole fleet. The cause is not WIF (the `GCP_WIF_PROVIDER` / `GCP_WIF_SERVICE_ACCOUNT` repo **variables** are set and the writer is working) — it is that `auto-merge-claude.yml`'s marker step parses the branch tip's commit SUBJECT and requires both a leading routine token AND a full `YYYY-MM-DD`. `D1 Market Development Scan 2026-07-28` matches; `A1 2026: annual foundation re-derivation` does not, so A1/A2/A3 land real commits and get no marker. (**That parser was FIXED on 2026-07-29**: the field extraction moved into `scripts/auto_merge_decision.sh` as `marker_routine_from_subject` / `marker_run_date_from_subject` — pure functions the workflow sources and `tests/test_auto_merge_logic.sh` covers directly — and `run_date` now falls back to the commit's author date rendered in the OPERATING timezone (`TZ=America/Denver git log -1 --date=short-local --format=%ad`) when the subject carries no full ISO date, so a year-only subject is marked correctly. A subject-embedded ISO date still wins, so D1/D2/W5 behaviour is unchanged. **That fallback originally used `--format=%as` and was corrected 2026-08-04:** `%as` renders the commit's OWN recorded offset, and routine containers commit in UTC, so any routine committing after ~18:00 MT was marked with TOMORROW's date — reintroducing exactly the midnight-UTC misattribution the fallback exists to prevent. It produced a phantom `SL2 / 2026-08-04 / completed` row in `ops.run_log` (via the §38 marker self-heal) for a run that never happened, which in turn made SL2 read `days_silent = 0` in `state.queue_driven_silence_watch` — blinding the detector added the day before to catch SL2 going quiet. Markers should therefore become fleet-wide from the next merges onward; until that is OBSERVED across a full cadence cycle, still treat a present marker as corroboration and an absent one as weak evidence — which is why the primary test below remains git evidence, not markers. Note this also means `ops.sp_backfill_run_log_from_markers` — RUNBOOK §38 layer A — has only ever been able to self-heal those same three routines.)
 
-So use the repo's existing git-evidence idiom instead (the same technique the dependency gate's fallback and D3's golden-scenario check already use). **This history-window read is gated by (a)'s HISTORY-DEPTH PRECHECK — if that precheck found the clone shallow and undeepenable this run, skip (f) entirely (already recorded in (a)'s `<note>`); do not run the check below and do not draw an unlanded conclusion from it. Both false `unlanded_completed_run` positives on record (D1 2026-07-22, D1 2026-07-25) and the 2026-08-03 recurrence came from exactly this test reading a truncated history.** For each `'completed'` `ops.run_log` row in the last 7 days: take that routine's repo-file outputs from its `writes:` list in `ops/cadence.yaml` (the entries that are file paths, not `dataset.table` names) and check `git log origin/main --oneline --since=<run_date 00:00 America/Denver> --until=<run_date + 2 days> -- <those paths>`. A commit is evidence the work landed; none is the stranding signature. **EXCLUDE from the check** (absence of a commit is expected, not a strand): any run whose own `<note>` records that it made no repo changes, and every routine whose `writes:` list contains no repo-file path at all — today D2a, OPS1, OPS2, AR_att, AR_orc, SL1, SL3, SL4, M1a and M5. AR_att / AR_orc persist completed review transcripts in BigQuery only, so their completed run is never evidence of a stranded repository output. If a routine's `writes:` list and its actual behaviour disagree, fix `ops/cadence.yaml` rather than special-casing here.
+So use the repo's existing git-evidence idiom instead (the same technique the dependency gate's fallback and D3's golden-scenario check already use). **This history-window read is gated by (a)'s HISTORY-DEPTH PRECHECK — if that precheck found the clone shallow and undeepenable this run, skip (f) entirely (already recorded in (a)'s `<note>`); do not run the check below and do not draw an unlanded conclusion from it. Both false `unlanded_completed_run` positives on record (D1 2026-07-22, D1 2026-07-25) and the 2026-08-03 recurrence came from exactly this test reading a truncated history.** For each `'completed'` `ops.run_log` row in the last 7 days: take that routine's repo-file outputs from its `writes:` list in `ops/cadence.yaml` (the entries that are file paths, not `dataset.table` names) and check `git log origin/main --oneline --since=<run_date 00:00 America/Denver> --until=<run_date + 2 days> -- <those paths>`. A commit is evidence the work landed; none is the stranding signature. **EXCLUDE from the check** (absence of a commit is expected, not a strand): any run whose own `<note>` records that it made no repo changes, and every routine whose `writes:` list contains no repo-file path at all — today D2a, OPS2, AR_att, AR_orc, SL1, SL3, SL4, M1a and M5. (OPS1 was on this list until its 2026-08-12 AUTO-ADD capability gave it a conditional repo-file entry in `ops/cadence.yaml`'s `writes:` — it is now checked like OPS0's own conditional entries, i.e. covered by the note-based exclusion earlier in this sentence on an ordinary no-drift day, and actually checked for a landed commit on an `added`-drift day.) AR_att / AR_orc persist completed review transcripts in BigQuery only, so their completed run is never evidence of a stranded repository output. If a routine's `writes:` list and its actual behaviour disagree, fix `ops/cadence.yaml` rather than special-casing here.
 
 On a genuine hit: `CALL ops.sp_raise_alert_once('warning','OPS0','unlanded_completed_run','<routine> logged completed for <run_date> but no output reached main','<JSON: routine, run_date, checked_paths, marker_present>')` — `warning`, never `critical`, for the same blocking-criticals reason given in (c). Also write ONE `events.decision_log` entry (`entry_type='unlanded-completed-run'`, source `OPS0`) with the full list each run, so the record survives even when nothing alerts. SELF-RESOLVE on the same evidence-based pattern as (e): when a later sweep finds the expected commit did land after all (a late push, or an adoption via (d)), resolve the row with `resolved_note='output later found on main — verified by OPS0 git landing sweep'`.
 
@@ -2059,7 +2059,10 @@ Runs pre-market (06:30 MT), ~9.5 hours ahead of the 16:10-17:15 MT Sun-Thu caden
 2026-07-19, after an IBKR OAuth expiry was discovered only at D2a's 16:20 MT pre-flight and cascaded
 into a halted evening). Detection-only: probes the connectors this system depends on with one read-only
 call each and surfaces a re-auth need in the morning alert email instead of mid-cascade. This routine
-NEVER refires anything, stages nothing, and writes no repo files.
+NEVER refires anything and stages nothing. It writes no repo files EXCEPT the one narrow AUTO-ADD case in
+the TOOL-INVENTORY DRIFT CHECK below (a new-tool manifest row, `added` drift only) — see that section for
+the full scope; every other day, and every other kind of drift, it is still writes-no-repo-files exactly
+as before.
 
 ```
 Read access scope: none beyond the standard connector pre-flight — no Strategy.md, no roster, no
@@ -2120,10 +2123,62 @@ raises one `connector_tool_added` warning per newly-appeared tool, one `connecto
 vanished manifest tool (critical when its `use` is `required`), `connector_tool_enumeration_failed` on
 an incomplete sweep, and mechanically self-heals any of these once the drift clears.
 
-OPS1 does NOT edit `ops/connector_tools.yaml` and does NOT change any connector permission — it cannot;
-the claude.ai connectors UI is owner-only. The alert names the tool; the operator flips it if wanted and
-adds it to the manifest, and adding it to the manifest is what clears the alert. This step stays
-detection-only and writes no repo files, same as the rest of OPS1.
+OPS1 does NOT change any connector permission — it cannot; the claude.ai connectors UI is owner-only,
+and this step never touches it.
+
+AUTO-ADD, `added` drift only (owner directive 2026-08-12 — the operator grants every new tool
+"Always allow" regardless of relevance and will not manually edit this manifest, so a routine must, or
+the alert nags forever). Scope: **only** the `added` case below. `removed` stays fully manual — a
+vanished tool can break routine text calling it, which is a human judgment call, not a rubber stamp; do
+NOT extend this auto-add to `removed` or to `connector_tool_enumeration_failed`.
+
+First, for every `added` drift tool, check that connector's `absent:` block for a same-named entry — a
+tool that was previously recorded absent (e.g. Hugging-Face's
+`hf_doc_search`/`hf_doc_fetch`/`hf_hub_query`/`space_search`) can reappear and re-observe as `added`
+drift exactly like a genuinely new tool, and CHECK1 in `scripts/check_connector_tools.py` hard-fails the
+instant a name appears in both a connector's `tools:` and `absent:` lists. **Branch on that entry's
+`verified` field:**
+- **`verified: unconfirmed`** (not yet proven gone, reappearing is the expected resolution the manifest
+  itself anticipated) — DELETE that `absent:` entry as part of the same edit, then proceed with the
+  append below as normal.
+- **`verified: "<a date>"`** (a dated, confirmed retirement, e.g. Hugging-Face's `paper_search`) — do
+  **NOT** auto-delete it and do **NOT** append a `tools:` row for this one tool. A confirmed-dead tool
+  reappearing is a surprising, higher-stakes event (deleting that record permanently disables CHECK4's
+  ability to block a future accidental call to it, and nothing ever re-creates an `absent:` row since
+  `removed` drift is never auto-reconciled) — leave the `connector_tool_added` alert OPEN for this one
+  tool and add a note to the run_log flagging it by name for a human glance, same as any other
+  OBSERVED-NOT-ACTIONED item. Continue auto-adding every OTHER `added` tool from this run normally; one
+  flagged tool never blocks the rest.
+
+For every tool cleared by the branch above, append one entry to that connector's `tools:` list in
+`ops/connector_tools.yaml` — alphabetically among its existing siblings, matching the file's existing
+convention — with `use: unused` and a note. **The note MUST be written as a YAML block scalar (`note: >`
+or `note: |`, matching this file's own existing multi-line notes, e.g. `list_labels`'s), never a bare
+single-line scalar** — the note text itself contains `` `use: unused` `` (a literal colon+space), and a
+plain unquoted scalar containing `: ` is invalid YAML that `yaml.safe_load()` (what
+`scripts/check_connector_tools.py` and OPS1's own next-run manifest read both use) throws a
+`ScannerError` on — silently wrecking both the CI gate and the very self-heal this step depends on. Note
+text: "Auto-added by OPS1 <today, America/Denver>. Vendor-added tool, first observed in the live
+connector's tool inventory. `use: unused` is the conservative default — nothing in this fleet calls it
+(mirrors the IBKR `whats_new` precedent, July 2026). Promoting it to required/optional and adding routine
+prose that calls it is a separate, deliberate feature-adoption decision this step never makes on its
+own." `use: unused` grants no routine any new capability — `scripts/check_connector_tools.py` CHECK 3/4
+still block any routine text from calling a tool that isn't `required` — so this is safe to do
+unconditionally, regardless of whether the operator has actually flipped the tool to "Always allow" in
+the connectors UI: that flip is unobservable from this side (RUNBOOK §15a NAMESPACE NOTE) and is no
+longer a precondition for silencing the alert.
+
+Before committing, run `python scripts/check_connector_tools.py` and confirm the edit introduced no new
+CHECK1 (manifest internal validity) finding. **If a new CHECK1 finding appears anyway** (e.g. a stale
+unmerged auto-add branch from an earlier run already added the same row) — do NOT commit a manifest that
+fails CI: revert this run's edit to `ops/connector_tools.yaml`, leave the `connector_tool_added` alert(s)
+open, and add a run_log note naming the CHECK1 finding verbatim for a human to resolve; every OTHER
+successfully-added tool this run still commits normally. Otherwise, commit and push per the standard
+session-end procedure (OPERATING MODEL § Branch and state propagation) — this is the one case where OPS1
+has repo output. The alert(s) raised THIS run are not resolved THIS run (the observation rows already
+written this run still carry `in_manifest=false` from before the edit); each self-heals mechanically on
+OPS1's next run once the merged manifest makes that day's fresh observation read `in_manifest=true` — the
+existing self-heal arm in `sp_raise_connector_tool_drift` is unchanged and already keys on exactly this.
 <!-- connector-tools-checker: ignore-end -->
 
 RECURRENCE. If the same connector has alerted on OPS1's last 3+ CONSECUTIVE COMPLETED RUNS — count run-over-run
@@ -2136,8 +2191,10 @@ considered (e.g., an IBKR support ticket on OAuth session lifetime).
 
 Log `'completed'` with a one-line per-connector status summary plus the TOOL-INVENTORY DRIFT CHECK result
 (e.g., "IBKR OK, Calendar OK, FMP OK, Gmail OK. Tool inventory: no drift." or "IBKR requires re-auth
-(alert raised); Calendar/FMP/Gmail OK. Tool inventory: 1 added (warning raised), Tavily
-enumeration_ok=FALSE (alert raised)."); no repo changes, no git output.
+(alert raised); Calendar/FMP/Gmail OK. Tool inventory: 1 added (warning raised, auto-added to
+ops/connector_tools.yaml as use: unused, self-heals next run), Tavily enumeration_ok=FALSE (alert
+raised)."); no repo changes, no git output UNLESS this run auto-added a manifest row for an `added`
+drift tool, in which case commit + push per the standard session-end procedure and say so in the note.
 ```
 
 ---

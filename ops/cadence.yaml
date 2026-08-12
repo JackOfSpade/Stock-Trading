@@ -292,7 +292,11 @@ routines:
     catchup_safe: true      # a late probe still helps; a missed one is covered next morning
     depends_on: []           # DELIBERATELY independent, same rationale as OPS0 -- a probe that exists
                               # to catch an auth failure early must never itself be blocked by one
-    writes: [ops.alerts, ops.connector_tool_inventory]
+    writes: [ops.alerts, ops.connector_tool_inventory, ops/connector_tools.yaml]  # last entry is
+                              # CONDITIONAL (only on an `added` drift day, AUTO-ADD, 2026-08-12) -- same
+                              # shape as OPS0's ops/cadence.yaml / ops/trigger_ids.json entries below,
+                              # covered the same way: a no-drift day's run_log <note> says "no repo
+                              # changes", which OPS0 STEP 4f's own note-based exclusion already skips
     expected_trigger:
       recurrence: custom_cron
       cron_utc: "30 12 * * 0,1,2,3,4"
@@ -306,11 +310,15 @@ routines:
       was discovered only at D2a's 16:20 MT pre-flight and cascaded into a halted evening -- see
       ops/RUNBOOK.md §15b). Probes IBKR/Calendar/FMP/Gmail read-only and raises
       connector_reauth_needed on an auth-class failure, hours before the daily cadence needs any of
-      them live. Detection-only -- never refires, stages, or writes repo files. Also (added
-      2026-08-08) diffs the live per-connector tool roster against ops/connector_tools.yaml and
-      raises connector_tool_added / connector_tool_removed -- catching a vendor-added tool (which
-      defaults to "needs approval" and would silently stall an unattended routine) the same morning
-      it appears, not whenever a routine first happens to call it.
+      them live. Detection-only -- never refires or stages anything, and writes no repo files on an
+      ordinary (no-drift) day. Also (added 2026-08-08) diffs the live per-connector tool roster against
+      ops/connector_tools.yaml and raises connector_tool_added / connector_tool_removed -- catching a
+      vendor-added tool (which defaults to "needs approval" and would silently stall an unattended
+      routine) the same morning it appears, not whenever a routine first happens to call it. AUTO-ADD
+      (2026-08-12): on `connector_tool_added` drift ONLY (never `removed`), OPS1 appends the new tool to
+      ops/connector_tools.yaml itself as use: unused and commits+pushes -- the one case this routine has
+      repo output, see Claude_Task_Plan.md's AUTO-ADD paragraph for the full procedure (absent-list
+      dedup, YAML-safety, CHECK1 fallback).
   - id: OPS2
     name: Catch-up Executor
     schedule: "after the daily chain, before OPS0's 22:30 sweep"   # runs Sun-Thu incl. non-trading days
