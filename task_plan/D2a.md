@@ -1202,38 +1202,44 @@ Concretely, every run:
   - ONE MOVEMENT PER READ: after writing any sweep or restore, re-`SELECT` the pending view before acting
     again (multi-RESTORE stale-snapshot defect, 2026-07-19 adversarial review) — at most one movement's rows
     between reads.
-- CAPITAL DORMANCY SWEEP (owner directive 2026-08-11; canonical rails Operating_Protocols.md §16 CAPITAL
-  DORMANCY SWEEP; schema `bigquery/166_capital_dormancy_sweep.sql`). Runs immediately after REGIME-CAPITAL
-  SYNC above, same Step 0 position. `SELECT * FROM state.capital_dormancy_sync_pending`. Empty (the steady
-  state whenever no capital-enabled strategy is currently dormant) → no-op, nothing to log. Non-empty:
-  - `control_enabled = FALSE` (the `ops.capital_dormancy_control` kill-switch — separate from
+- NOMADIC STRATEGY CAPITAL — SWEEP half (owner directive 2026-08-11, redesigned same day; canonical rails
+  Operating_Protocols.md §16 NOMADIC STRATEGY CAPITAL; schema `bigquery/167_nomadic_capital.sql`, which
+  supersedes `bigquery/166_capital_dormancy_sweep.sql` in full — a strategy declared ≤1 trade/month is
+  classified NOMADIC permanently, not conditionally on recent idleness, and holds no exclusive standing
+  capital at all). Runs immediately after REGIME-CAPITAL SYNC above, same Step 0 position. `SELECT * FROM
+  state.nomadic_capital_sync_pending`. Empty (the steady state whenever no capital-enabled strategy is
+  currently nomadic-with-idle-capital) → no-op, nothing to log. Non-empty:
+  - `control_enabled = FALSE` (the `ops.capital_nomad_control` kill-switch — separate from
     `ops.capital_control` above) → log a one-line `events.decision_log` note recording what WOULD have
     moved, and move nothing.
-  - SWEEP rows only — this view never carries RESTORE rows; RESTORE for this mechanism is on-demand at
-    order-craft time, not a daily standing check (Operating_Protocols.md §16 explains why). Write the
-    atomic $0-sum `events.cash_flows` double-entry on one flow_date tagged `source='capital_dormancy_sweep'`
-    (one negative row for the dormant strategy at `amount`, one positive row per counterparty at its
-    `counterparty_amount`, using the view's own pre-computed weighted split — no separate weighting pass
-    needed here, unlike the regime sweep, since this view already renormalizes `sweep_recipient_weights`
-    over just the eligible recipient subset before computing `counterparty_amount`) and `CALL
-    ops.sp_log_decision(..., entry_type='capital-allocation', ...)` per §16 Logging, with `fields` JSON
-    carrying `trigger='capital_dormancy_sweep'`, `is_default_equal` per whether the view fell back to
-    equal split, `conviction='MECHANICAL'`, `conviction_pct=null`, and a `rationale` naming the dormant
-    strategy's `days_since_deployment` and `trades_trailing_365d` from `state.strategy_capital_dormancy`.
+  - SWEEP rows only — this view never carries a RESTORE/BORROW row; borrowing for this mechanism is
+    on-demand at order-craft time, not a daily standing check (Operating_Protocols.md §16 explains why).
+    Write the atomic $0-sum `events.cash_flows` double-entry on one flow_date tagged
+    `source='nomadic_capital_sweep'` (one negative row for the nomadic strategy at `amount` — the FULL
+    idle balance, no floor withheld — one positive row per counterparty at its `counterparty_amount`,
+    plain pro-rata to each recipient's own `available_funds`, using the view's own pre-computed split)
+    and `CALL ops.sp_log_decision(..., entry_type='capital-allocation', ...)` per §16 Logging, with
+    `fields` JSON carrying `trigger='nomadic_capital_sweep'`, `is_default_equal` per whether the view
+    fell back to equal split (only when every eligible recipient reads exactly $0), `conviction='MECHANICAL'`,
+    `conviction_pct=null`, and a `rationale` naming the swept strategy's declared frequency
+    (`state.strategy_declared_frequency.declared_frequency_text`).
   - ONE MOVEMENT PER READ, same discipline as REGIME-CAPITAL SYNC above.
-  - **RESTORE is NOT executed here.** When a dormant strategy (per `state.strategy_capital_dormancy.is_dormant`)
-    reaches a GO whose seven-factor-justified risk budget exceeds its current `available_funds`, the
-    order-craft step for THAT strategy — before sizing/crafting the order — calls
-    `SELECT * FROM analytics.fn_capital_dormancy_restore_plan(p_strategy => '<code>', p_amount_needed =>
-    <shortfall>)`, writes the resulting $0-sum double-entry tagged `source='capital_dormancy_restore'`
-    (this pulls the strategy's OWN previously-swept capital back, capped at `outstanding_debt` — it is not
-    a source of NEW capital beyond what this strategy has itself been swept), then proceeds to size and
-    craft the order against the now-larger `available_funds`. **Wired 2026-08-11** into the shared
-    "Crafting an order (equity/ETF)" and "Crafting an order (options)" steps (`Claude_Task_Plan.md`,
-    referenced by every order-staging routine including this one) as a DORMANCY-RESTORE CHECK
-    immediately before each step's ORDER-GUARD CHECK — cheap-pre-filtered on
-    `state.strategy_declared_frequency.is_low_frequency_by_design` so the more expensive
-    `state.strategy_capital_dormancy` read only ever runs for a strategy that could plausibly be dormant.
+  - **BORROW is NOT executed here.** When a nomadic strategy reaches a GO whose seven-factor-justified
+    risk budget exceeds its current `available_funds`, the order-craft step for THAT strategy — before
+    sizing/crafting the order — calls `SELECT * FROM analytics.fn_nomadic_capital_restore_plan(p_strategy
+    => '<code>', p_amount_needed => <shortfall>)`, writes the resulting $0-sum double-entry tagged
+    `source='nomadic_capital_restore'`. **Not capped by this strategy's own sweep history** — size is the
+    AI's own seven-factor-justified call (same no-ceiling discipline every strategy's sizing already
+    carries); this mechanism sources it pro-rata from other enabled non-nomadic strategies' capacity, it
+    does not second-guess or cap the amount. Then proceeds to size and craft the order against the
+    now-larger `available_funds`. Wired into the shared "Crafting an order (equity/ETF)" and "Crafting an
+    order (options)" steps (`Claude_Task_Plan.md`, referenced by every order-staging routine including
+    this one) as a NOMADIC-BORROW CHECK immediately before each step's ORDER-GUARD CHECK —
+    cheap-pre-filtered on `state.strategy_declared_frequency.is_low_frequency_by_design` (a static 5-row
+    table) so the check costs nothing extra for A/B/E; this is also why the check needs no
+    `state.strategy_nomadic_status` read at all — that classification is a straight pass-through of the
+    same declared-frequency fact, and reading it via the expensive `state.capital_utilisation_watch`
+    chain instead measured 1M-3.7M+ slot-ms per read live, 2026-08-11.
 
 STEP 0b — ACCOUNT SNAPSHOT (run after Step 0, while connector account data is fresh; one INSERT, best-effort).
 Persist the account-level NAV/cash/TWR read in Step 0 so the weekly self-email + account-NAV history have it —
