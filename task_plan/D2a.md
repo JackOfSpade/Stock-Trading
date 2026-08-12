@@ -1228,9 +1228,12 @@ Concretely, every run:
     <shortfall>)`, writes the resulting $0-sum double-entry tagged `source='capital_dormancy_restore'`
     (this pulls the strategy's OWN previously-swept capital back, capped at `outstanding_debt` — it is not
     a source of NEW capital beyond what this strategy has itself been swept), then proceeds to size and
-    craft the order against the now-larger `available_funds`. **This hook is not yet wired into any
-    strategy's individual order-craft prose as of 2026-08-11** — added here as the SWEEP half only; the
-    RESTORE call-site edit is a follow-up scoped to wherever a dormant strategy's GO is crafted.
+    craft the order against the now-larger `available_funds`. **Wired 2026-08-11** into the shared
+    "Crafting an order (equity/ETF)" and "Crafting an order (options)" steps (`Claude_Task_Plan.md`,
+    referenced by every order-staging routine including this one) as a DORMANCY-RESTORE CHECK
+    immediately before each step's ORDER-GUARD CHECK — cheap-pre-filtered on
+    `state.strategy_declared_frequency.is_low_frequency_by_design` so the more expensive
+    `state.strategy_capital_dormancy` read only ever runs for a strategy that could plausibly be dormant.
 
 STEP 0b — ACCOUNT SNAPSHOT (run after Step 0, while connector account data is fresh; one INSERT, best-effort).
 Persist the account-level NAV/cash/TWR read in Step 0 so the weekly self-email + account-NAV history have it —
