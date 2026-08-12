@@ -362,6 +362,14 @@ AS (
 -- Per bigquery/163's own instruction: "adding a genuinely new movement mechanism means adding it to
 -- that sanctioned set in a successor file, not inventing the value in-session." This is that successor
 -- file for exactly two new values.
+--
+-- SUPERSEDED LIVE by bigquery/167_nomadic_capital.sql — current single source of truth for this
+-- view. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
+-- CREATE statement live in isolation. 167 renames the two values added here
+-- (capital_dormancy_sweep/capital_dormancy_restore) to nomadic_capital_sweep/nomadic_capital_restore
+-- in the sanctioned set below (this file as a whole is superseded by bigquery/167 — see this file's
+-- own header — this marker exists because the checker requires one on this specific CREATE statement
+-- too).
 CREATE OR REPLACE VIEW `stock-trading-498512.state.cash_flow_source_unknown` AS
 SELECT
   event_id, flow_date, flow_type, amount, strategy, source, ingest_ts,

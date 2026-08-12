@@ -77,6 +77,12 @@ ALTER TABLE `stock-trading-498512.events.cash_flows`
   ALTER COLUMN source SET DEFAULT 'unspecified';
 
 -- ===== 2. state.cash_flow_source_unknown =====
+-- SUPERSEDED LIVE by bigquery/167_nomadic_capital.sql — current single source of truth for this
+-- view (bigquery/166_capital_dormancy_sweep.sql is an intermediate, also-superseded definition — do
+-- not stop there; it added capital_dormancy_sweep/capital_dormancy_restore to the sanctioned set
+-- below). Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
+-- CREATE statement live in isolation. 167 swaps those two tags for nomadic_capital_sweep/
+-- nomadic_capital_restore in the sanctioned set.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.cash_flow_source_unknown` AS
 SELECT
   event_id,

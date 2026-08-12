@@ -253,6 +253,14 @@ FROM scored;
 -- sessions as donor capacity recovers. The value of watching it is that a debtor operating on a
 -- fraction of its owed capital is otherwise invisible -- it just quietly trades smaller than it
 -- should, and nobody would connect that to a sweep weeks earlier.
+--
+-- SUPERSEDED LIVE by bigquery/168_nomadic_capital_fixes.sql — current single source of truth for
+-- this view. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
+-- this CREATE statement live in isolation. 168 excludes nomadic strategies from the donors CTE
+-- below (aligned to the same nomadic-exclusive donor set the live restore mechanism now uses) —
+-- this definition's donors CTE still sums ALL capital-enabled strategies' available_funds,
+-- including nomadic ones, against a donor set the live restore mechanism no longer uses (audit
+-- finding 11, HIGH).
 CREATE OR REPLACE VIEW `stock-trading-498512.state.regime_restore_shortfall_risk` AS
 WITH donors AS (
   -- Donor capacity is the capital-ENABLED strategies' undeployed cash -- the same figure bigquery/98's

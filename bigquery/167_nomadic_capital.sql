@@ -110,6 +110,12 @@ FROM ctrl;
 -- this classification keys on; only the consumer changes. =====
 DROP VIEW IF EXISTS `stock-trading-498512.state.strategy_capital_dormancy`;
 
+-- SUPERSEDED LIVE by bigquery/168_nomadic_capital_fixes.sql — current single source of truth for
+-- this view. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
+-- this CREATE statement live in isolation. 168 rebuilds this view directly off strategy_roster +
+-- strategy_nav + position_lifecycle + declared_frequency so a capital-disabled nomadic strategy
+-- (e.g. D) still gets a row instead of silently vanishing, and drops the evaluations_60d anti-join
+-- this definition no longer needed (audit findings 13 + the cost problem).
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_nomadic_status` AS
 SELECT
   w.strategy_code,
@@ -171,6 +177,15 @@ LEFT JOIN restored rs ON rs.strategy = r.strategy_code;
 -- available_funds idiom bigquery/98's own RESTORE already uses), not bigquery/164's capacity weight. =====
 DROP VIEW IF EXISTS `stock-trading-498512.state.capital_dormancy_sync_pending`;
 
+-- SUPERSEDED LIVE by bigquery/168_nomadic_capital_fixes.sql — current single source of truth for
+-- this view. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
+-- this CREATE statement live in isolation. 168 nets sweepable_amount against
+-- state.open_orders.reserved_cash (GREATEST(0, available_funds - reserved_cash), the same
+-- never-sweep-cash-a-pending-buy-needs rule Operating_Protocols.md §13 already applies to the park
+-- sweep) so the sweep can no longer claw back cash a same-session pending BUY still needs (audit
+-- finding 3, HIGH); adds a window-function last-row-absorbs-the-penny rule so
+-- SUM(counterparty_amount) is exactly `amount` by construction; casts counterparty_amount to
+-- NUMERIC; and emits an explicit blocked row when no eligible recipient exists instead of zero rows.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.nomadic_capital_sync_pending`
 AS WITH ctrl AS (
   SELECT enabled AS control_enabled FROM `stock-trading-498512.state.nomadic_capital_control_latest`
@@ -228,6 +243,14 @@ ORDER BY strategy, counterparty_strategy;
 -- pro-rata to each donor's available_funds. =====
 DROP TABLE FUNCTION IF EXISTS `stock-trading-498512.analytics.fn_capital_dormancy_restore_plan`;
 
+-- SUPERSEDED LIVE by bigquery/168_nomadic_capital_fixes.sql — current single source of truth for
+-- this table function. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT
+-- re-apply this CREATE statement live in isolation. 168 fixes plan_total, which this definition
+-- returns as the UNCLAMPED p_amount_needed while pull_amount is the clamped LEAST(p_amount_needed,
+-- total) figure — a caller reading plan_total here would believe a partially-funded borrow was
+-- fully funded (audit finding 5, CRITICAL). 168 makes plan_total the clamped figure and adds
+-- requested_amount + is_fully_funded, and also ports the last-row-absorbs-the-penny rule and NUMERIC
+-- typing from its sibling sweep-view fix.
 CREATE OR REPLACE TABLE FUNCTION `stock-trading-498512.analytics.fn_nomadic_capital_restore_plan`(
   p_strategy STRING, p_amount_needed NUMERIC
 )
@@ -278,6 +301,15 @@ AS (
 -- RESTORE-donor side this same `enabled_set` CTE feeds, since a nomadic strategy's available_funds is
 -- ~$0 under steady state anyway (excluding a ~$0-capacity donor from a SUM of positive capacities
 -- changes nothing). Every other line of bigquery/98's definition is UNCHANGED, copied verbatim. =====
+--
+-- SUPERSEDED LIVE by bigquery/168_nomadic_capital_fixes.sql — current single source of truth for
+-- this view. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
+-- this CREATE statement live in isolation. 168 splits this definition's single nomadic-exclusive
+-- enabled_set into two: a nomadic-EXCLUSIVE set for sweep recipients and restore donors (the actual
+-- intent above), and a nomadic-INCLUSIVE set preserving bigquery/98's original semantics for
+-- restore_candidates — this definition excluded nomadic strategies from restore_candidates too,
+-- which made a nomadic debtor's regime debt permanently unrestorable, silently (audit finding 10,
+-- CRITICAL).
 CREATE OR REPLACE VIEW `stock-trading-498512.state.regime_capital_sync_pending`
 AS WITH ctrl AS (
   SELECT enabled AS control_enabled FROM `stock-trading-498512.state.capital_control_latest`

@@ -114,6 +114,16 @@ LEFT JOIN restored rs ON rs.strategy = r.strategy_code;
 -- RESTORE rows: a re-enabled debtor's outstanding debt, pro-rata across enabled donors' available_funds
 -- (capped at donor capacity; >= $25-or-full-debt floor). D2a executes ONE movement per read
 -- (Operating_Protocols.md §16 — stale-snapshot rule).
+--
+-- SUPERSEDED LIVE by bigquery/168_nomadic_capital_fixes.sql — current single source of truth for
+-- this view (bigquery/167_nomadic_capital.sql is an intermediate, also-superseded definition — do
+-- not stop there; it first added a nomadic-strategy exclusion to the enabled_set CTE below, but
+-- applied it to BOTH the sweep-recipient set AND restore_candidates, which made a nomadic debtor's
+-- regime debt permanently unrestorable — audit finding 10, CRITICAL). Kept here, unmodified, for
+-- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in
+-- isolation. 168 splits enabled_set into a nomadic-EXCLUSIVE set (sweep recipients + restore
+-- donors) and a nomadic-INCLUSIVE set preserving this file's original semantics for
+-- restore_candidates.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.regime_capital_sync_pending`
 AS WITH ctrl AS (
   SELECT enabled AS control_enabled FROM `stock-trading-498512.state.capital_control_latest`

@@ -252,6 +252,15 @@ FROM scored;
 -- The missing backstop: any strategy carrying a NEGATIVE idle balance, from any cause. bigquery/98's
 -- state.regime_capital_sync_pending SWEEP branch watches `available_funds >= 25` (surplus-only) and
 -- is structurally blind to this.
+--
+-- SUPERSEDED LIVE by bigquery/168_nomadic_capital_fixes.sql — current single source of truth for
+-- this view. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
+-- this CREATE statement live in isolation. 168 carves out a narrow nomadic exception: a nomadic
+-- strategy's post-sweep negative deposits (= -(realized + unrealized + dividends) once deployed_mv
+-- is 0) is the normal steady state after any profitable trade, not a misallocation, so deposits<0
+-- alone no longer fires for a nomadic strategy unless nav is ALSO negative (audit finding 1, HIGH).
+-- available_funds<0 still fires for everyone, and deposits<0 still fires for every non-nomadic
+-- strategy.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_funds_deficit` AS
 SELECT
   strategy,
