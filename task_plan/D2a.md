@@ -1058,15 +1058,8 @@ Concretely, every run:
   `direction='WITHDRAWAL'`, signed negative `amount`, `evidence` = balances before/after + the TWR
   reading) and treat that residual as EXPLAINED-PENDING, so it does NOT trip the `cash_tripwire` hard
   STOP above and does NOT halt this session. **SECOND PASS (next session) —** re-read the connector.
-  First, `SELECT candidate_key, observed_date, amount FROM state.cash_flow_candidates_open WHERE
-  direction='WITHDRAWAL'` to retrieve the exact still-open row the first pass wrote — the
-  `<candidate_key>`/`<flow_date>` below MUST be that row's `candidate_key`/`observed_date`, never
-  re-derived from today's date (a mismatched key finds no open row, the idempotency gate in
-  `ops.sp_record_withdrawal` silently RETURNs raising only the low-severity `withdrawal_candidate_not_open`
-  alert, and the withdrawal never books — see Operating_Protocols.md §13.C for why this reads as an
-  expected catch-up refire unless checked).
-  Cash still gone → `CALL ops.sp_record_withdrawal(<positive magnitude>, <that row's observed_date>, <note>,
-  <that row's candidate_key>)`, which is the ONLY sanctioned write path (it allocates pro-rata to
+  Cash still gone → `CALL ops.sp_record_withdrawal(<positive magnitude>, <flow_date>, <note>,
+  <candidate_key>)`, which is the ONLY sanctioned write path (it allocates pro-rata to
   `analytics.strategy_nav.nav`, clamps each strategy to its own `available_funds` and redistributes
   whatever it cannot absorb, writes one `strategy`-tagged row per donor, refuses rather than spilling
   if it exceeds total idle capacity, zero-weights a sub-floor PROBE newcomer, and is idempotent per

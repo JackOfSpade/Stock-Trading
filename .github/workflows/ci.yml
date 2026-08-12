@@ -196,6 +196,31 @@ jobs:
         if: steps.cache-actionlint.outputs.cache-hit != 'true'
         run: |
           bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash) 1.7.12
+      # act-local-CI only. GitHub's ubuntu-latest ships shellcheck preinstalled, but act's
+      # runner image (catthehacker/ubuntu:act-latest, selected by the operator's ~/.actrc)
+      # does not — so both the actionlint step below (which shells out to shellcheck for its
+      # embedded run-block linting) and the standalone shellcheck gate after it died with
+      # exit 127 under the global `act push` pre-push hook. `env.ACT` is set ONLY by act and
+      # is unset on GitHub-hosted runners, so this step is skipped there and CANNOT change
+      # real CI — it exists purely so the local gate lints exactly what the hosted one does
+      # rather than silently degrading to a weaker check.
+      # `== 'true'`, not a bare truthiness test: GitHub expression truthiness
+      # treats ANY non-empty string as true, so a future org/repo variable or
+      # composite action exposing ACT="false" would make a bare `env.ACT` fire
+      # this step on hosted CI. The in-script re-check is a second, independent
+      # guard so that even a misfiring `if:` degrades to a no-op instead of
+      # failing this BLOCKING GATE (auto-merge gates every branch on it) on a
+      # transient apt error.
+      - name: Install shellcheck (act-local CI only — GitHub's runner already has it)
+        if: ${{ env.ACT == 'true' }}
+        run: |
+          set -euo pipefail
+          [ "${ACT:-}" = "true" ] || exit 0
+          if ! command -v shellcheck >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq shellcheck
+          fi
+          shellcheck --version
       - name: actionlint (workflow YAML + embedded run-block bash via shellcheck)
         run: ./actionlint -color
       - name: shellcheck standalone scripts (warning+ blocks)
