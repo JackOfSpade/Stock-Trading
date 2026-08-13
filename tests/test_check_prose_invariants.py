@@ -447,6 +447,50 @@ def test_real_prose_invariants_spec_passes():
     assert cpi.main() == 0
 
 
+def test_d1_event_identity_gate_rule_fails_when_the_earnings_guard_is_removed(tmp_path, monkeypatch):
+    """A calendar date is not proof that a fiscal-quarter report occurred (CRM, 2026-08-12)."""
+    (rule,) = _actual_rules("d1_event_identity_gate_present")
+    assert _run(
+        tmp_path,
+        monkeypatch,
+        [rule],
+        {"Claude_Task_Plan.md": "D1 records scheduled events and assesses held positions.\n"},
+    ) == 1
+
+
+def test_d2a_open_withdrawal_candidate_gate_fails_when_removed(tmp_path, monkeypatch):
+    """A clean current residual must not hide an older open withdrawal candidate."""
+    (rule,) = _actual_rules("d2a_open_withdrawal_candidate_gate_present")
+    assert _run(
+        tmp_path,
+        monkeypatch,
+        [rule],
+        {"Claude_Task_Plan.md": "D2a checks only the current-session cash residual.\n"},
+    ) == 1
+
+
+def test_d2a_snapshot_failure_scope_gate_fails_when_removed(tmp_path, monkeypatch):
+    """Every missing target snapshot defers its craft; a healthy probe only narrows scope."""
+    (rule,) = _actual_rules("d2a_snapshot_failure_scope_gate_present")
+    assert _run(
+        tmp_path,
+        monkeypatch,
+        [rule],
+        {"Claude_Task_Plan.md": "D2a may use an unrelated probe after a target quote error.\n"},
+    ) == 1
+
+
+def test_snapshot_alert_recovery_scope_gate_fails_when_removed(tmp_path, monkeypatch):
+    """A healthy SPY probe cannot clear a different symbol's outage."""
+    (rule,) = _actual_rules("snapshot_alert_recovery_scope_present")
+    assert _run(
+        tmp_path,
+        monkeypatch,
+        [rule],
+        {"Claude_Task_Plan.md": "OPS1 clears every IBKR snapshot alert after SPY succeeds.\n"},
+    ) == 1
+
+
 # ---- Rev 19 no-CaR-envelope regression rules ---------------------------------------------------
 
 def test_rev19_rule_covers_each_canonical_and_operational_source():

@@ -40,6 +40,49 @@
 # Portfolio_Ledger.md to update") do not trip it and this file needs almost no exemptions.
 
 invariants:
+  # ---- D1 must not treat an earnings-calendar schedule or an old issuer release as a current
+  # completed print.  The 2026-08-12 CRM incident showed that this can incorrectly affirmatively
+  # assess immutable invalidation criteria against a fiscal period that has not reported. ----
+  - id: d1_event_identity_gate_present
+    files: [Claude_Task_Plan.md]
+    require_regex: 'EVENT-IDENTITY GATE \(earnings and any event-dependent position/invalidation assessment\)'
+    reason: >
+      D1 may record results or assess event-dependent invalidation criteria only after confirming the
+      issuer/authority primary source shows the event actually occurred in the scan window and identifies
+      its fiscal period. A scheduled calendar date or a historical lookalike print is not such evidence.
+    source_of_truth: Claude_Task_Plan.md D1 DEVELOPMENTS item 2 (2026-08-12 CRM correction)
+
+  # ---- D2a must consume yesterday's inferred cash-flow candidates even when today's incremental
+  # residual is zero. The 2026-08-12 run skipped wd-2026-08-11 and left a false drawdown halt live. ----
+  - id: d2a_open_withdrawal_candidate_gate_present
+    files: [Claude_Task_Plan.md]
+    require_regex: 'OPEN WITHDRAWAL CANDIDATES — mandatory second pass before residual assessment \(2026-08-12'
+    reason: >
+      D2a must list and adjudicate every state.cash_flow_candidates_open row from fresh connector
+      balances before looking for a new current-session residual; otherwise an old withdrawal can
+      remain unbooked indefinitely while the current residual appears clean.
+    source_of_truth: Claude_Task_Plan.md D2a external-withdrawal step (2026-08-12 incident recovery)
+
+  # ---- A target-symbol snapshot failure always defers that craft. An unrelated liquid probe
+  # classifies account-wide versus symbol-specific scope; it can never supply the target's price. ----
+  - id: d2a_snapshot_failure_scope_gate_present
+    files: [Claude_Task_Plan.md]
+    require_regex: 'the sweep/cover is \*\*always deferred\*\*: probe SPY once'
+    reason: >
+      D2a needs an explicit safe disposition for non-transient target errors and for a failed park
+      snapshot followed by a successful independent probe. Both defer the target craft; the probe only
+      determines alert scope and cannot become a substitute quote.
+    source_of_truth: Claude_Task_Plan.md D2a snapshot-surface circuit breaker (2026-08-12 incident)
+
+  - id: snapshot_alert_recovery_scope_present
+    files: [Claude_Task_Plan.md]
+    require_regex: 'Never\*\* select a D2a `scope=''symbol-specific''` alert here'
+    reason: >
+      A successful SPY health probe may clear an account-wide or SPY-probe alert, but cannot prove that
+      a different target symbol recovered. D2a must clear a symbol-specific alert only after a successful
+      fresh snapshot for that actual target.
+    source_of_truth: Claude_Task_Plan.md OPS1 snapshot self-heal (2026-08-12 incident)
+
   # ---- Experiment Parameters rev 19 retired BOTH hard CaR envelopes (2026-08-05). The most
   # dangerous recurrence is operative authoring/execution prose that silently reinstates the old
   # 10%-per-name / 75%-deployed gates. Historical examples must be struck through: narrative words

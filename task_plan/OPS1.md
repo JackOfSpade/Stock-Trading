@@ -629,7 +629,9 @@ probe that exists to catch an auth failure early must never itself be blocked by
 **SAME-DAY DOUBLE-RUN GUARD** (the generalized guard that binds every `catchup_safe: true` routine — added for OPS1 2026-07-27 now that OPS2's inline catch-up can re-invoke it): FIRST, before anything else, `SELECT COUNT(*) FROM ops.run_log WHERE routine='OPS1' AND run_date=<today, America/Denver> AND status='completed'`; if `>= 1`, output "OPS1 already completed today" and END IMMEDIATELY; likewise END if another session's `'started'` OPS1 row for today exists with `log_ts` within the last 3 hours and no terminal row (an in-flight original). OPS1's probes/self-heals are each individually idempotent, but this makes a redundant re-run (its own late trigger, or an OPS2 inline catch-up) a clean no-op instead of a duplicate.
 
 PROBES (read-only, one call each; on a transient-looking failure, one ~60s-spaced retry per the shared
-ladder, then classify what's left): IBKR `get_account_summary`; Google Calendar `list_calendars`; FMP
+ladder, then classify what's left): IBKR `get_account_summary` **and** `get_price_snapshot` for SPY (a
+structurally valid snapshot response is a pass; pre-market empty bid/ask is expected and is NOT a failure);
+Google Calendar `list_calendars`; FMP
 `chart` (historical-price-eod, light) for `^VIX`, last ~5 days — probe the FMP-PRIMARY `^VIX` path
 specifically, do NOT probe a tier-gated endpoint (`quote`, ETF historical chart) — a plan-tier ACCESS
 DENIED there is a known, accepted state (OWNER_ACTIONS.md item W) and must NOT raise anything; Gmail
@@ -639,15 +641,31 @@ CLASSIFICATION. An AUTH-class failure (401/403/token-expired/"requires re-author
 surviving the retry: `CALL ops.sp_raise_alert_once('warning','OPS1','connector_reauth_needed',
 '<Connector> requires re-authorization — re-auth in claude.ai connector settings before today''s 16:10
 MT Sun-Thu cadence (D1/D2a/D2)', '<JSON: connector, error_verbatim, probed_at>')` — one alert per
-connector; `sp_raise_alert_once` keeps it idempotent. A non-auth failure surviving the retry: record in
-the run_log note only, no alert — the trading routines' own pre-flights already own hard-stop authority
-for those.
+connector; `sp_raise_alert_once` keeps it idempotent. A non-auth `get_price_snapshot` failure surviving
+the retry is a distinct, action-relevant partial IBKR outage: `CALL ops.sp_raise_alert_once('warning',
+'OPS1','connector', 'IBKR get_price_snapshot surface unavailable for SPY after retry; account-state and
+history surfaces require independent checks — quote-dependent MARKET crafts will defer while this
+persists', '<JSON: connector="IBKR", surface="get_price_snapshot", probe_symbol="SPY", error_verbatim,
+probed_at>')`. A non-auth failure on every other probe: record in the run_log note only, no alert — the
+trading routines' own pre-flights already own hard-stop authority for those.
 
 SELF-HEAL. On a HEALTHY probe of connector X while an unresolved `connector_reauth_needed` alert for X
 is open: `UPDATE ops.alerts SET resolved = TRUE, resolved_ts = CURRENT_TIMESTAMP(), resolved_note =
 'verified-clear: OPS1 healthy <tool> probe for <Connector> at <ts>' WHERE NOT resolved AND
 category='connector_reauth_needed' AND <connector match>` — same bespoke in-routine clear pattern as
 D2a's `owner_confirmation_stale`.
+
+On a healthy SPY snapshot probe, also read only these unresolved `connector` alerts: (a) `source='OPS1'`
+with payload `connector='IBKR'`, `surface='get_price_snapshot'`, and `probe_symbol='SPY'`; (b) `source='D2a'`
+with that connector/surface and `scope='account-wide'`; or (c) the legacy account-wide incident shape
+`source='D2a'` and `failing_method='get_price_snapshot'` (the 2026-08-12 alert predates the structured
+connector/surface payload contract). **Never** select a D2a `scope='symbol-specific'` alert here: SPY's
+success does not prove VOO or another target recovered; D2a clears that only after a fresh successful
+target-symbol snapshot. For each returned **`alert_id`**, resolve only
+that exact row: `UPDATE ops.alerts SET resolved=TRUE, resolved_ts=CURRENT_TIMESTAMP(),
+resolved_note='verified clear: OPS1 SPY get_price_snapshot probe succeeded at <ts>' WHERE
+alert_id='<that id>' AND NOT resolved`. Do not clear a generic IBKR `connector` alert from an account,
+order, or other market-data surface: the successful proof is narrow and must match the alert payload.
 
 <!-- connector-tools-checker: ignore-start -->
 TOOL-INVENTORY DRIFT CHECK (added 2026-08-08). The four PROBES above prove each connector is

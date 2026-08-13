@@ -126,11 +126,40 @@ OPTIONS(description='HF frontier-LLM capability captures (D1 / Q3).');
 --     DEFAULT CURRENT_TIMESTAMP() on these rows).
 --   * position_events: event_ts is set explicitly in the parser, so event_ts DESC
 --     alone is correct there.
+-- SUPERSEDED LIVE by bigquery/169_position_metadata_carry_forward.sql (2026-08-12). The definition
+-- is kept identical here so a from-scratch rebuild is safe before the apply-order successor runs.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.current_positions` AS
-SELECT * FROM (
-  SELECT * FROM `stock-trading-498512.events.position_events`
-  QUALIFY ROW_NUMBER() OVER (PARTITION BY position_key ORDER BY event_ts DESC) = 1
-) WHERE event_type <> 'CLOSE';
+WITH enriched AS (
+  SELECT
+    p.*,
+    LAST_VALUE(ltcg_date IGNORE NULLS) OVER w AS carried_ltcg_date,
+    LAST_VALUE(
+      CASE
+        WHEN invalidation_status IS NULL OR TO_JSON_STRING(invalidation_status) = 'null' THEN NULL
+        ELSE invalidation_status
+      END IGNORE NULLS
+    ) OVER w AS carried_invalidation_status,
+    ROW_NUMBER() OVER (PARTITION BY position_key ORDER BY event_ts DESC, event_id DESC) AS rn
+  FROM `stock-trading-498512.events.position_events` p
+  WINDOW w AS (
+    PARTITION BY position_key
+    ORDER BY event_ts, event_id
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+  )
+)
+SELECT
+  event_id, event_ts, position_key, event_type, status, strategy, ticker, contract_id,
+  cost_basis, shares,
+  convergence_target,
+  time_exit_date,
+  carried_ltcg_date AS ltcg_date,
+  carried_invalidation_status AS invalidation_status,
+  conviction,
+  model_at_entry,
+  source_thesis_ref,
+  note
+FROM enriched
+WHERE rn = 1 AND event_type <> 'CLOSE';
 
 CREATE OR REPLACE VIEW `stock-trading-498512.state.current_regime` AS
 SELECT * FROM `stock-trading-498512.events.regime_events`

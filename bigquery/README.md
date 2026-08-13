@@ -119,7 +119,7 @@ Cold-query map so you don't have to re-derive names via `INFORMATION_SCHEMA` eac
 | Semantic precedent search | `analytics.find_precedents('<text>')` | table function; `ORDER BY distance LIMIT k` |
 | Decision embeddings | `analytics.decision_embeddings` | (in `analytics`, **not** `events`); `embed_status=''` means OK |
 | Embedding sync health | `state.embedding_health` | one row: `log_rows, embedding_rows, missing_rows, error_rows, is_healthy` |
-| Open positions | `state.current_positions` | latest non-CLOSE position event per `position_key` |
+| Open positions | `state.current_positions` | latest non-CLOSE lifecycle event per `position_key`; invalidation criteria and the LTCG anchor carry forward from the latest populated row |
 | Regime / router state | `state.current_regime` | latest per `scope, key` |
 | Deployed-TWR / kill-gate | `perf.strategy_daily` / `perf.kill_flags` | gross-of-commission TWR; kill flags off the latest row |
 | Each strategy's own return (weekly email, v3) | `analytics.strategy_vs_park_daily` | per strategy-day: `deployed_unit_value` — the strategy's own cumulative return (chart line +, as of the 2026-07-15 redesign, the "Average Return" table's per-strategy avg/month/avg/year). `excess_vs_sgov` is also computed here and still feeds the sanctioned kill/gate metric, but the email no longer reads it. |

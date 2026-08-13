@@ -5,7 +5,7 @@ version: 2
 
 models:
   - name: current_positions
-    description: Latest non-CLOSE position event per position_key.
+    description: Latest non-CLOSE lifecycle event per position_key, with invalidation criteria and the LTCG anchor carried forward across sparse transitions.
     columns:
       - name: position_key
         description: Stable position identity; latest event wins.

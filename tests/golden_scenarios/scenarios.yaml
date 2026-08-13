@@ -564,6 +564,38 @@ scenarios:
       entry_type='loop-promotion', park_allocator immediate-binding redesign, 2026-07-26;
       PARK_ROUTER_DESIGN.md v3 status block). GO.
 
+  - id: PA-05
+    category: park_allocator
+    situation: >
+      D2a observes $52.44 of sweepable settled cash while the current park vehicle is VOO. Its first
+      get_price_snapshot call for VOO errors, and the one retry errors too; an independent SPY snapshot
+      probe also errors. get_account_summary, balances, positions, trades, and get_price_history all
+      succeed. What does D2a do with the cash and the rest of its reconciliation?
+    governing_files: [Operating_Protocols.md, Claude_Task_Plan.md]
+    expected_decision: "NO-GO (defer only the VOO park sweep; raise a snapshot-surface connector warning and continue safe reconciliation/mark work)"
+    rationale: >
+      Operating_Protocols.md §11 classifies two failed liquid probes as an isolated
+      get_price_snapshot-surface outage and prohibits substituting history, prior close, web, or cached
+      data for the live MARKET reference. Claude_Task_Plan.md D2a's SNAPSHOT-SURFACE CIRCUIT BREAKER
+      therefore leaves the $52.44 unsettled for this run, writes no park ORDER_STAGED row, raises the
+      warning with surface/symbol evidence, and retries from fresh data next run. Separately successful
+      account and history surfaces continue, so fill reconciliation, account snapshotting, and dated
+      historical-mark ingestion do not halt. NO-GO.
+
+  - id: PA-06
+    category: park_allocator
+    situation: >
+      D2a needs a VOO park sweep, but VOO get_price_snapshot returns a non-transient symbol error on
+      its first call. The independent SPY snapshot probe succeeds with a valid quote. May D2a use SPY's
+      price or otherwise craft the VOO order?
+    governing_files: [Operating_Protocols.md, Claude_Task_Plan.md]
+    expected_decision: "NO-GO (defer the VOO craft and raise a symbol-specific snapshot warning; SPY only classifies scope)"
+    rationale: >
+      A non-transient target-symbol error is not retried, but it still mandates deferral because no valid
+      VOO snapshot exists. The successful SPY probe proves only that the surface is not account-wide; its
+      price cannot authorize or size a VOO MARKET instruction. Reconciliation and history work continue,
+      and the sweep is reconsidered only after a fresh valid VOO snapshot. NO-GO.
+
   # ---- AI Research-Significance Screen scenarios (RS-*) ----
   # Added 2026-07-19 (Redesign C -- owner reversal of the same-day DEFER verdict; AI_DECISION_REDESIGN.md
   # §3). Every scenario below assumes the item has ALREADY cleared Layer 1's mechanical population rail
