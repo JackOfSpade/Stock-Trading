@@ -469,6 +469,28 @@ def test_d2a_open_withdrawal_candidate_gate_fails_when_removed(tmp_path, monkeyp
     ) == 1
 
 
+def test_d2_exit_staging_write_time_echo_gate_fails_when_removed(tmp_path, monkeypatch):
+    """EXIT_PENDING must be SELECT-derived, not a sparse hand-composed lifecycle replacement."""
+    (rule,) = _actual_rules("d2_exit_staging_write_time_echo_present")
+    assert _run(
+        tmp_path,
+        monkeypatch,
+        [rule],
+        {"Claude_Task_Plan.md": "D2 writes an EXIT_PENDING row after staging an exit.\n"},
+    ) == 1
+
+
+def test_position_metadata_carry_forward_doctrine_fails_when_removed(tmp_path, monkeypatch):
+    """Shared prose must not revert to the pre-169 claim that every live field is latest-only."""
+    (rule,) = _actual_rules("position_metadata_carry_forward_doctrine_present")
+    assert _run(
+        tmp_path,
+        monkeypatch,
+        [rule],
+        {"Claude_Task_Plan.md": "state.current_positions has no carry-forward behavior.\n"},
+    ) == 1
+
+
 def test_d2a_snapshot_failure_scope_gate_fails_when_removed(tmp_path, monkeypatch):
     """Every missing target snapshot defers its craft; a healthy probe only narrows scope."""
     (rule,) = _actual_rules("d2a_snapshot_failure_scope_gate_present")

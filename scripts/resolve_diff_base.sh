@@ -73,6 +73,33 @@
 # Requires the caller's checkout to have used fetch-depth: 0 (both dbt-parity and sql-validate
 # already set this) so origin/main and the merge-base are resolvable at all.
 
+# A fetch is only a best-effort refresh before the callers' documented fail-open behavior. Keep
+# it non-interactive and bounded: an unreachable remote must not hang the entire CI job (or the
+# local `act` pre-push gate) indefinitely. GNU `timeout` is present on both GitHub's Ubuntu runner
+# and the `act` image. If it is unavailable, skip this best-effort refresh and let the existing
+# local ref / caller fail-open logic decide scope; an unbounded fetch is never the fallback.
+_fetch_origin_main() {
+  local timeout_seconds="${DIFF_BASE_FETCH_TIMEOUT_SECONDS:-45}"
+  case "$timeout_seconds" in
+    ''|*[!0-9]*) timeout_seconds=45 ;;
+    *)
+      # Bound digit length before arithmetic so an oversized environment value cannot overflow
+      # the shell integer parser and bypass the 300-second ceiling.
+      if [ "${#timeout_seconds}" -gt 3 ] \
+        || [ "$timeout_seconds" -lt 1 ] \
+        || [ "$timeout_seconds" -gt 300 ]; then
+        timeout_seconds=45
+      fi
+      ;;
+  esac
+  if ! command -v timeout >/dev/null 2>&1; then
+    return 124
+  fi
+  GIT_TERMINAL_PROMPT=0 timeout --signal=TERM --kill-after=5 \
+    "$timeout_seconds" git fetch --quiet origin \
+    +refs/heads/main:refs/remotes/origin/main 2>/dev/null
+}
+
 # resolve_diff_base <EVENT_NAME> <PR_BASE> <PUSH_BEFORE> <HEAD_SHA> <REF_NAME> — prints the
 # resolved base SHA to stdout if (and only if) it resolves to a real commit object; prints
 # NOTHING (empty stdout) otherwise. This function makes NO fail-open/fail-closed policy decision
@@ -89,7 +116,7 @@ resolve_diff_base() {
   elif [ "$ref_name" = "main" ]; then
     base="$push_before"
     if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
-      git fetch --quiet origin +refs/heads/main:refs/remotes/origin/main 2>/dev/null || true
+      _fetch_origin_main || true
       base="$(git merge-base "$head_sha" origin/main 2>/dev/null || true)"
       # rev 2026-08-08: this fallback runs AFTER the push has already landed, so origin/main here
       # already contains head_sha and merge-base degenerates to head_sha itself -- base=HEAD would
@@ -100,7 +127,7 @@ resolve_diff_base() {
       fi
     fi
   else
-    git fetch --quiet origin +refs/heads/main:refs/remotes/origin/main 2>/dev/null || true
+    _fetch_origin_main || true
     base="$(git merge-base "$head_sha" origin/main 2>/dev/null || true)"
     if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
       base="$push_before"

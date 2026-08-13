@@ -26,6 +26,8 @@
 #   * nothing resolvable at all (no origin/main, no valid PUSH_BEFORE, non-pull_request) -> prints
 #     NOTHING (empty stdout) — callers each apply their OWN fail-open policy on that, which this
 #     script deliberately does not decide (see its header)
+#   * on Linux CI, an unresponsive fetch is terminated by the production timeout instead of
+#     hanging the path gate indefinitely
 #
 # Run:  bash tests/test_resolve_diff_base.sh
 set -euo pipefail
@@ -44,6 +46,17 @@ assert_eq() {     # assert_eq <description> <actual> <expected>
     pass_count=$((pass_count + 1))
   else
     echo "FAIL: $desc (expected '$expected', got '$actual')"
+    fail=1
+  fi
+}
+
+assert_lt() {     # assert_lt <description> <actual integer> <exclusive upper bound>
+  local desc="$1" actual="$2" upper="$3"
+  if [ "$actual" -lt "$upper" ]; then
+    echo "PASS: $desc"
+    pass_count=$((pass_count + 1))
+  else
+    echo "FAIL: $desc (expected <$upper, got $actual)"
     fail=1
   fi
 }
@@ -155,6 +168,53 @@ assert_eq "nothing resolvable (no origin remote, no valid PUSH_BEFORE): prints e
 base="$(resolve_diff_base "push" "" "$zero_sha" "$head_sha" "main")"
 assert_eq "push to main, nothing resolvable (no origin remote either): prints empty, not a guess" \
   "$base" ""
+
+# ---- 7. fetch timeout: an unresponsive remote cannot hang CI indefinitely ------------------
+# GNU timeout is guaranteed in the Linux CI/act environments where the production network fetch
+# runs. Without it, the helper skips the best-effort fetch rather than risking an unbounded wait.
+if command -v timeout >/dev/null 2>&1; then
+  FAKE_BIN="$SCRATCH/fake-bin"
+  mkdir -p "$FAKE_BIN"
+  printf '%s\n' '#!/usr/bin/env bash' 'sleep 30' > "$FAKE_BIN/git"
+  chmod +x "$FAKE_BIN/git"
+  started_at="$(date +%s)"
+  PATH="$FAKE_BIN:$PATH" DIFF_BASE_FETCH_TIMEOUT_SECONDS=1 _fetch_origin_main || true
+  elapsed="$(( $(date +%s) - started_at ))"
+  assert_lt "unresponsive origin fetch is terminated by the configured timeout" "$elapsed" 5
+else
+  echo "SKIP: GNU timeout unavailable; bounded-fetch behavior runs in Linux CI/act"
+fi
+
+CAPTURE_BIN="$SCRATCH/capture-bin"
+CAPTURE_FILE="$SCRATCH/timeout-args"
+mkdir -p "$CAPTURE_BIN"
+printf '%s\n' '#!/usr/bin/env bash' 'printf "%s\n" "$*" > "$FETCH_TIMEOUT_CAPTURE"' \
+  'exit 124' > "$CAPTURE_BIN/timeout"
+chmod +x "$CAPTURE_BIN/timeout"
+PATH="$CAPTURE_BIN:$PATH" FETCH_TIMEOUT_CAPTURE="$CAPTURE_FILE" \
+  DIFF_BASE_FETCH_TIMEOUT_SECONDS=0 _fetch_origin_main || true
+captured_args="$(cat "$CAPTURE_FILE")"
+assert_eq "zero timeout is rejected and replaced with the safe default" \
+  "$captured_args" \
+  "--signal=TERM --kill-after=5 45 git fetch --quiet origin +refs/heads/main:refs/remotes/origin/main"
+
+PATH="$CAPTURE_BIN:$PATH" FETCH_TIMEOUT_CAPTURE="$CAPTURE_FILE" \
+  DIFF_BASE_FETCH_TIMEOUT_SECONDS=999999999999999999999999999999999999 \
+  _fetch_origin_main || true
+captured_args="$(cat "$CAPTURE_FILE")"
+assert_eq "oversized numeric timeout cannot overflow validation or bypass the upper bound" \
+  "$captured_args" \
+  "--signal=TERM --kill-after=5 45 git fetch --quiet origin +refs/heads/main:refs/remotes/origin/main"
+
+NO_TIMEOUT_BIN="$SCRATCH/no-timeout-bin"
+mkdir -p "$NO_TIMEOUT_BIN"
+if PATH="$NO_TIMEOUT_BIN" _fetch_origin_main; then
+  no_timeout_status=0
+else
+  no_timeout_status=$?
+fi
+assert_eq "missing timeout skips the best-effort fetch instead of running it unbounded" \
+  "$no_timeout_status" "124"
 
 cd "$ROOT"
 

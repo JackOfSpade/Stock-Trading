@@ -63,6 +63,27 @@ invariants:
       remain unbooked indefinitely while the current residual appears clean.
     source_of_truth: Claude_Task_Plan.md D2a external-withdrawal step (2026-08-12 incident recovery)
 
+  # ---- D2 must derive every EXIT_PENDING lifecycle row from the current full position record.
+  # The state.current_positions carry-forward view protects live D1/M4 consumers, but a sparse raw
+  # EXIT_PENDING event still corrupts the terminal audit record W5 reads. ----
+  - id: d2_exit_staging_write_time_echo_present
+    files: [Claude_Task_Plan.md]
+    require_regex: 'D2 EXIT-STAGING WRITE-TIME ECHO \(2026-08-12, `B:ISRG:2026-07-21` second omission instance\)'
+    reason: >
+      D2 must build every EXIT_PENDING position event by SELECTing the current full position row and
+      changing only lifecycle fields plus the note. The current-position carry-forward view is
+      defense in depth, not a substitute for preserving the raw event history W5 reads.
+    source_of_truth: Claude_Task_Plan.md D2 EXITS TRIGGERED (2026-08-11 ISRG incident)
+
+  - id: position_metadata_carry_forward_doctrine_present
+    files: [Claude_Task_Plan.md]
+    require_regex: 'As defense in depth, `state\.current_positions` now carries only `invalidation_status` and `ltcg_date` forward'
+    reason: >
+      The shared lifecycle doctrine must describe migration 169 accurately: the two protected fields
+      carry forward in the live view, while every writer still owes a complete raw event and every
+      other live field remains latest-row-wins.
+    source_of_truth: bigquery/169_position_metadata_carry_forward.sql (2026-08-12)
+
   # ---- A target-symbol snapshot failure always defers that craft. An unrelated liquid probe
   # classifies account-wide versus symbol-specific scope; it can never supply the target's price. ----
   - id: d2a_snapshot_failure_scope_gate_present
