@@ -51,6 +51,12 @@
 -- Same self-healing/informational shape as every other entry: a still-true condition is simply
 -- re-raised by the next sweep, so nothing can be aged away silently.
 
+-- SUPERSEDED (2026-08-14) by bigquery/172_run_log_unpaired_terminal.sql (SQ_VERSION v19 -> v20) --
+-- the current single source of truth for ops.sp_sq_cadence_check. 172 bumps the cadence_check
+-- wrapper to v20 and adds a run_log_start_row_missing record-only WARNING over the new
+-- state.run_log_unpaired_terminal view (a terminal ops.run_log row with no paired started row), plus
+-- that category in the #14 auto-age allowlist. Kept here, unmodified, for DR-rebuild apply-in-order
+-- reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';

@@ -52,6 +52,20 @@ WHERE instruction IS NOT NULL
 QUALIFY ROW_NUMBER() OVER (PARTITION BY routine ORDER BY log_ts DESC) = 1;
 
 -- Routines call this at start ('started') and end ('completed'/'failed'/'halted').
+--
+-- SUPERSEDED 2026-08-14 — the canonical definition of ops.sp_log_run is now in
+-- bigquery/170_run_log_note_write_time_guard.sql. DO NOT RE-APPLY THE VERSION BELOW.
+-- The body below has no validation at all, so a routine that passes NULL in the 8th (note) argument
+-- on a TERMINAL row is accepted silently and the run leaves no account of itself — which is exactly
+-- what D2a did on 2026-08-13 (alert c26afde4-fdc3-4799-996b-390a42826f4d) and D2 on 2026-08-07.
+-- bigquery/170 keeps this INSERT first and UNCONDITIONAL (it must never withhold a run row — a missing
+-- terminal row escalates into a missed_run CRITICAL and thence into the trading gate) and adds, AFTER
+-- it, a write-time blank-note detector that raises the run_log_note_missing alert immediately and tells
+-- the still-live session how to repair the row via ops.sp_amend_run_note. The only change to the INSERT
+-- itself is that bigquery/170 names run_id in the column list and supplies a pre-generated
+-- GENERATE_UUID() value, instead of letting the column default fire, so the guard can identify the row
+-- it just wrote without a heuristic re-read. Column semantics are otherwise unchanged.
+-- Re-applying this file in isolation would silently drop that guard and restore the silent-NULL path.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_log_run`(
   in_routine STRING, in_run_date DATE, in_status STRING,
   in_session STRING, in_branch STRING, in_rows INT64, in_error STRING, in_note STRING
