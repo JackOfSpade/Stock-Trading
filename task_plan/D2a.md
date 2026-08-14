@@ -635,7 +635,31 @@ needed — this routine does no thesis work.
 RUN LOGGING (every run). At the very START of this routine, `CALL ops.sp_log_run('D2a', <today,
 America/Denver from state.trading_day_today>, 'started', <session_id>, <branch>, NULL, NULL, NULL)`. At
 the END, call it again with `'completed'` (or `'failed'`/`'halted'` + `error_msg`), passing
-`rows_written` = fills + marks ingested.
+`rows_written` = fills + marks ingested **and a real `<note>` in the 8th argument — see the
+OPERATING MODEL preamble's `<note>` IS MANDATORY ON EVERY TERMINAL ROW rule, which binds here in
+full.** The terminal call is
+`CALL ops.sp_log_run('D2a', <today>, 'completed', <session_id>, <branch>, <rows_written>, NULL, <note>)`
+— eight arguments, the last of them the narrative. A no-op day needs the note MORE than a busy one.
+
+**Why this bullet spells the note out (2026-08-14, alert `c26afde4-fdc3-4799-996b-390a42826f4d`).** This
+routine-local bullet previously named only `rows_written` and stopped there, ~580 lines after the
+preamble rule that makes `<note>` mandatory — so the instruction a session actually re-read at the
+moment of logging was silent about the one argument that matters most. On 2026-08-13 D2a executed
+`CALL ops.sp_log_run('D2a', DATE '2026-08-13', 'completed', …, 26, NULL, NULL)`: it typed the SQL
+keyword `NULL` into the note slot and the procedure accepted it silently. The run itself was fine —
+0 fills + 13 daily_marks + 13 signal_marks, the deferred park sweep recovered, NAV snapshot and
+engine recompute all landed — but it left no account of any of that. D2 carried the identical gap in
+its own copy of this bullet; D1 and D3 never had one, and D2+D2a together produced 8 of the 11
+blank-note terminal rows in the trailing 120 days. Fixed on both.
+
+**`rows_written` IS THE NARROW COUNT — `fills + marks ingested`, nothing else.** Not a sum over every
+table this routine touches. Worked example from the 2026-08-10 run's own note, which is canonical:
+`rows_written 26 = 0 fills + 26 marks (13 daily_marks + 13 signal_marks)` — that run ALSO wrote 4
+`events.regime_events` rows and 1 `ops.account_snapshot` row and correctly did not count them. The
+2026-08-12 run instead logged `44` as a 10-table cross-sum (`1+1+1+4+13+13+4+5+1+1`); that was a
+deviation from this spec, not a second permitted convention, and it makes the column
+non-comparable run-to-run wherever it is read. Put the FULL per-table breakdown in `<note>`, where
+the 08-12 run's own accounting belongs and where it costs nothing — never in `rows_written`.
 
 **TRADING-ENABLE GATE — A STAGING GATE, NOT A ROUTINE GATE (self-improvement audit B-1-obs, 2026-07-03; gate-ordering fix 2026-07-07, `bigquery/33_gate_ordering_fix.sql`; ambiguity removed 2026-07-27, `INCIDENT[ref=423ecc02-fdb7-4f47-9445-d8c79d399e8c]`).** Call `ops.sp_auto_resolve_alerts()` (best-effort) FIRST — the 2026-07-17 self-heal, so a stale-but-already-healed self-healing critical (`staleness`/`missing_dependency`/`missed_run`/`routine_stalled`) can no longer trip the gate; its allowlist is fail-closed (capital classes are never touched) so it can only make the gate PASS, never falsely halt. Then read the gate NON-FATALLY: `SELECT trading_enabled, halt_reason FROM state.trading_enabled_mechanical`. If FALSE, `CALL ops.sp_raise_alert_once('critical', 'D2a', 'trading_halted', 'Order staging blocked: trading is HALTED. See payload for the triggering routine and reason.', TO_JSON_STRING(STRUCT('D2a' AS routine, <halt_reason> AS halt_reason)))`, carry the verdict forward as a session fact, and **CONTINUE** — do NOT abort. Deliberately the `_mechanical` gate, NOT `state.trading_enabled` (the D2/W4/M4/Q4/A1/A3 one) — that one also requires `marks_fresh`/`engine_fresh`, which THIS routine's own PER-STRATEGY PERFORMANCE MAINTENANCE step (below) is what makes true each morning; reading the freshness-inclusive gate before that ingest is FALSE on every trading-day run (see `33_gate_ordering_fix.sql`'s header for the full self-diagnosed deadlock this replaced).
 

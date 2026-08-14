@@ -371,8 +371,12 @@ FROM agg;
 -- and adds the account_snapshot_gap record-only WARNING block (+ 'account_snapshot_gap' to the #14
 -- auto-age list); all are otherwise a verbatim copy of the body below. Kept here, unmodified, for
 -- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
--- SUPERSEDED (2026-08-10) by bigquery/159_cadence_check_info_severity_autoage.sql (SQ_VERSION
--- v19) -- the current single source of truth for ops.sp_sq_cadence_check. Its predecessor was
+-- SUPERSEDED (2026-08-14) by bigquery/172_run_log_unpaired_terminal.sql (SQ_VERSION v20) -- the
+-- current single source of truth for ops.sp_sq_cadence_check. 172 bumps the cadence_check wrapper to
+-- v20 and adds a run_log_start_row_missing record-only WARNING over the new
+-- state.run_log_unpaired_terminal view (a terminal ops.run_log row with no paired started row), plus
+-- that category in the #14 auto-age allowlist. Its predecessor was bigquery/159_cadence_check_info_
+-- severity_autoage.sql (SQ_VERSION v19), which is NO LONGER current. Its predecessor in turn was
 -- bigquery/157_account_snapshot_gap_recoverable.sql (SQ_VERSION v18), which is NO LONGER current.
 -- 157 retracts a FALSEHOOD carried by every
 -- version from v17 down: the account_snapshot_gap alert message claimed the gap days could never be

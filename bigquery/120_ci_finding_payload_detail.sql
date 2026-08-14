@@ -27,9 +27,14 @@
 -- auto-age category list; bigquery/153 bumps the heartbeat to v17 and adds the account_snapshot_gap
 -- record-only WARNING block (+ 'account_snapshot_gap' to the #14 auto-age list). Kept here, unmodified,
 -- for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
--- SUPERSEDED (2026-08-10) by bigquery/159_cadence_check_info_severity_autoage.sql (SQ_VERSION
--- v19) -- the current single source of truth for ops.sp_sq_cadence_check. Its predecessor was
--- bigquery/157_account_snapshot_gap_recoverable.sql (SQ_VERSION v18), which is NO LONGER current.
+-- SUPERSEDED (2026-08-14) by bigquery/172_run_log_unpaired_terminal.sql (SQ_VERSION
+-- v20) -- the current single source of truth for ops.sp_sq_cadence_check. 172 bumps the heartbeat to
+-- v20 and adds the run_log_start_row_missing record-only WARNING over the new
+-- state.run_log_unpaired_terminal view (a terminal ops.run_log row carrying no paired 'started' row),
+-- plus that category in the #14 auto-age allowlist. Its immediate predecessor was
+-- bigquery/159_cadence_check_info_severity_autoage.sql (SQ_VERSION v19), which is NO LONGER current,
+-- and 159's own predecessor was
+-- bigquery/157_account_snapshot_gap_recoverable.sql (SQ_VERSION v18), also NO LONGER current.
 -- 157 retracts a FALSEHOOD carried by every
 -- version from v17 down: the account_snapshot_gap alert message claimed the gap days could never be
 -- backfilled because IBKR exposes no historical-NAV endpoint. It does -- get_pa_performance_all_periods

@@ -1,48 +1,57 @@
--- Routine-health scorecard: midnight-safe completion metric + retry/dep-wait telemetry columns
--- (2026-07-18, owner directive TRANSIENT-FAILURE WAIT-AND-RETRY + DEPENDENCY-WAIT WINDOW v2).
--- Project: stock-trading-498512. SUPERSEDES bigquery/27_process_reliability.sql's
--- analytics.routine_health_scorecard definition (kept there, unmodified, for DR-rebuild
--- apply-in-order reference only — see the superseded marker added to that file's header. Do NOT
--- re-apply bigquery/27's CREATE OR REPLACE VIEW live in isolation; this file is now canonical).
+-- 171_scorecard_routine_id_normalization.sql (2026-08-14)
+-- Project: stock-trading-498512. Apply after 170_run_log_note_write_time_guard.sql.
+-- Redefines analytics.routine_health_scorecard (canonical since bigquery/89, which superseded
+-- bigquery/27). No procedure changes, no scheduled-query version bump.
 --
--- Apply after bigquery/88_retry_telemetry.sql. The RETRY COLUMNS join below reads
--- state.retry_telemetry (bigquery/88); BigQuery does not verify a view's referenced objects exist
--- until query time, so applying this file before 88 is live would still succeed at CREATE time, but
--- every query against this view would then fail with "Not found: state.retry_telemetry" until 88 is
--- applied. Apply 88 first, then this file.
+-- ===== WHY =====
+-- Surfaced during the 2026-08-13 D2a run_log_note_missing triage (alert
+-- c26afde4-fdc3-4799-996b-390a42826f4d) and fixed on owner instruction to close every gap the audit
+-- found, not only the one that alerted.
 --
--- PROBLEM (two independent, additive fixes to bigquery/27's scorecard):
---  (a) MIDNIGHT WRAP: p50_/p90_completion_minute_of_day was computed from
---      TIME(log_ts,'America/Denver') minutes-since-midnight-OF-log_ts's-OWN-calendar-day — a routine
---      that legitimately completes at 00:15 the day AFTER its run_date (e.g. after riding out a
---      DEPENDENCY-WAIT window past 21:00 MT) reads as minute 15, indistinguishable from a genuinely
---      on-time 00:15 AM completion, instead of minute 1455. This silently hid exactly the
---      late-completion drift the scorecard exists to surface to W5's PROCESS-RELIABILITY REVIEW.
---  (b) NO RETRY VISIBILITY: bigquery/88_retry_telemetry.sql now parses the RETRY[...]/DEPWAIT[...]/
---      INCIDENT[...] tokens routines append to ops.run_log.note, but nothing rolled that up
---      per-routine for W5 to read alongside the existing completion/failure counts.
+-- ops.run_log holds TWO spellings for two routines: the canonical ASCII AR_att/AR_orc, and a legacy
+-- AR·att/AR·orc using U+00B7 MIDDLE DOT (hex c2b7), written 2026-06-19..2026-07-01 and never since.
+-- Commit 9b0bd18 (2026-07-01, RUNBOOK §28) standardised the ids to ASCII after agents mis-transcribed
+-- the middle dot twice; that fix landed and stuck — no middle-dot row exists in the 44 days since, and
+-- the two join-key consumers that needed to tolerate the legacy rows (state.instruction_drift and
+-- state.routine_catchup_window) were normalised at the time. THIS view was not, and it groups on the
+-- raw column, so AR_att and AR_orc still appear as FOUR rows rather than two while the legacy rows
+-- remain inside its rolling 90-day window (they age out ~2026-09-29):
+--     AR_att  n_log_rows_90d=72   AR·att  n_log_rows_90d=18
+--     AR_orc  n_log_rows_90d=72   AR·orc  n_log_rows_90d=26
 --
--- FIX:
---  (a) Replace the TIME(...)-of-log_ts minutes-of-day with
---      DATETIME_DIFF(DATETIME(log_ts,'America/Denver'), DATETIME(run_date), MINUTE) — minutes
---      elapsed since MIDNIGHT OF THE OPERATING DAY (run_date), not of log_ts's own calendar date.
---      Same units (minutes), same column names (p50_/p90_completion_minute_of_day); a past-midnight
---      completion now correctly reads > 1440 instead of wrapping. Every other column/semantic is kept
---      byte-compatible with bigquery/27.
---  (b) LEFT JOIN a per-routine aggregate of state.retry_telemetry (bigquery/88), adding
---      n_retry_events, n_retries_exhausted, n_dep_waits, n_dep_wait_futile, n_active_refires,
---      total_wait_minutes — all COALESCEd to 0 for a routine with no telemetry rows in the window
---      (the common case today; INERT ON APPLY until routines start emitting tokens).
+-- ===== WHAT THIS IS AND IS NOT =====
+-- It is a correctness defect in the SENSOR: n_log_rows_90d, the completion percentiles and
+-- n_dep_gate_aborts_90d are all understated for AR_att/AR_orc. It is NOT currently mistuning anything,
+-- and that was verified rather than assumed before writing this file. The scorecard's only real
+-- consumer is W5's autonomous process_reliability loop, which acts only where a routine's p90 sits near
+-- a version-controlled deadline; the sole such constant, cadence_watch_deadline_local (21:00 MT), is
+-- scoped to the DAILY routines D1/D2/D3. AR_att/AR_orc are monitor_class queue_driven, excluded from
+-- state.cadence_watch entirely, and carry no deadline for W5 to tune against — so
+-- state.process_reliability_readiness (WHERE deadline_key IS NOT NULL) filters them out however the
+-- rows group. min_n_met does not flip either: the ASCII rows alone already clear the n>=20 floor.
+-- Fixed because a monitoring sensor that miscounts is worth correcting on its own terms.
+--
+-- ===== WHY NOT THE EXISTING NORMALIZATION EXPRESSION =====
+-- state.instruction_drift and state.routine_catchup_window both use REGEXP_REPLACE(routine,
+-- r'[·._-]', ''). That is correct THERE and wrong HERE, and the difference is not stylistic. In both of
+-- those views the stripped form is used only as an internal JOIN/PARTITION key and is never returned:
+-- routine_catchup_window outputs r.routine, instruction_drift outputs COALESCE(c.routine, li.routine).
+-- A key is allowed to be non-canonical. This view's `routine` is an OUTPUT column that W5 writes into
+-- ops.process_reliability_observations.routine, which state.process_reliability_readiness keys on as
+-- (routine, deadline_key) — so strip-all would emit 'ARatt'/'ARorc', ids that match nothing in
+-- ops/cadence.yaml or ops.routine_catalog, and would break that keying to fix a display bug.
+-- REPLACE(routine, '·', '_') instead maps each legacy id onto its own canonical spelling.
+--
+-- BLAST RADIUS, measured across all 37 distinct routine labels in ops.run_log: exactly two labels
+-- change (AR·att -> AR_att, AR·orc -> AR_orc) and the other 35 are byte-identical before and after.
+-- No label contains a middle dot other than those two. The substitution is also applied to the
+-- ops.alerts.source and state.retry_telemetry.routine join keys below; both are verified to contain
+-- ZERO middle-dot rows today, so those two are measured no-ops, applied defensively so a legacy
+-- spelling arriving in either upstream cannot silently reopen the same split.
 
--- SUPERSEDED (2026-08-14) by bigquery/171_scorecard_routine_id_normalization.sql — current single
--- source of truth for analytics.routine_health_scorecard. 171 normalizes the routine id with
--- REPLACE(routine, '·', '_'), so the legacy U+00B7 middle-dot ids AR·att/AR·orc fold onto canonical
--- AR_att/AR_orc instead of appearing as separate rows. Kept here, unmodified, for DR-rebuild
--- apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE VIEW statement live in
--- isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.routine_health_scorecard` AS
 WITH runs AS (
-  SELECT routine, run_date, status, log_ts,
+  SELECT REPLACE(routine, '·', '_') AS routine, run_date, status, log_ts,
     -- MIDNIGHT FIX (bigquery/89): minutes elapsed since midnight of run_date (the operating day),
     -- NOT minutes-of-day of log_ts's own calendar date — see PROBLEM (a) above. A completion that
     -- lands the calendar day after run_date now reads > 1440 instead of wrapping near zero.
@@ -97,17 +106,17 @@ dep_gate_aborts AS (
   -- before sp_routine_end) — it is visible only as an ops.alerts 'missing_dependency' row. Surfaced
   -- here by count so a routine whose upstream is chronically late shows up without a run_log row to
   -- join on.
-  SELECT source AS routine, COUNT(*) AS n_dep_gate_aborts_90d
+  SELECT REPLACE(source, '·', '_') AS routine, COUNT(*) AS n_dep_gate_aborts_90d
   FROM `stock-trading-498512.ops.alerts`
   WHERE category = 'missing_dependency'
     AND alert_ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 90 DAY)
-  GROUP BY source
+  GROUP BY REPLACE(source, '·', '_')
 ),
 retry_agg AS (
   -- Per-routine rollup of state.retry_telemetry (bigquery/88) over the same 90-day token history the
   -- view already carries (retry_telemetry's own window is likewise 90 days, so no re-filtering here).
   SELECT
-    routine,
+    REPLACE(routine, '·', '_') AS routine,
     COUNTIF(token_type = 'RETRY') AS n_retry_events,
     COUNTIF(token_type = 'RETRY' AND outcome = 'exhausted') AS n_retries_exhausted,
     COUNTIF(token_type = 'DEPWAIT') AS n_dep_waits,
@@ -115,7 +124,7 @@ retry_agg AS (
     COUNTIF(token_type = 'DEPWAIT' AND refired IS NOT NULL AND refired != 'none') AS n_active_refires,
     ROUND(SUM(IF(token_type IN ('RETRY', 'DEPWAIT'), waited_s, NULL)) / 60) AS total_wait_minutes
   FROM `stock-trading-498512.state.retry_telemetry`
-  GROUP BY routine
+  GROUP BY REPLACE(routine, '·', '_')
 )
 SELECT
   p.routine,
