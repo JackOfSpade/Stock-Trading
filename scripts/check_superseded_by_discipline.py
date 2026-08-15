@@ -179,10 +179,14 @@ ALLOWLIST = {
     # adversarial_reviews' blanket rule.
     ("144_decision_log_correction_consumers.sql", "state.decision_log_current"):
         "This view IS the anti-join — it must read the base table to define the filtered set.",
-    ("10_observability.sql", "state.freshness"):
+    ("173_freshness_cadence_aware.sql", "state.freshness"):
         "DEAD-MAN'S SWITCH. MAX(entry_date) is a proxy for 'was this table written recently'. A "
         "correction append IS such a write, so a filtered read would report STALE on a day whose only "
-        "write was a correction — turning a safety monitor into a false alarm.",
+        "write was a correction — turning a safety monitor into a false alarm. "
+        "Re-pointed from 10_observability.sql (2026-08-15): bigquery/173 is now canonical for this "
+        "view, adding the cadence-aware marks_due_through/marks_current/engine_current columns for the "
+        "Sun-Thu daily tier. The last_decision_date CTE this entry covers is unchanged and still reads "
+        "the raw table, so the reason above still applies verbatim.",
     ("02_ai_layer.sql", "state.embedding_health"):
         "ROW-COUNT PARITY. Compares decision_log's physical row count 1:1 against "
         "analytics.decision_embeddings. Both sides must count obsolete rows or the parity check "

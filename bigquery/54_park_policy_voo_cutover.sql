@@ -171,13 +171,17 @@ LEFT JOIN `stock-trading-498512.state.park_position` pp ON pp.ticker = cur.vehic
 -- reconciling whichever ticker is the CURRENT park policy (D2 Step 0 / §13.A reads this going
 -- forward instead of the frozen state.sgov_reconciliation below). =====
 --
--- SUPERSEDED LIVE by bigquery/92_park_allocator.sql — current single source of truth for this
--- object. bigquery/92 generalizes this to one row per state.park_position_current ticker (plural
--- when a switch is converging) and marks each against COALESCE(daily_marks_curated,
--- signal_marks_curated), while PRESERVING every column name below (park_ticker,
--- events_park_shares, ..., park_mark_fresh, checked_at) and adding only is_policy_vehicle. Kept
--- here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE
--- statement live in isolation.
+-- HISTORY (no longer the current-truth claim — see the live banner below): bigquery/92_park_allocator.sql
+-- generalizes this to one row per state.park_position_current ticker (plural when a switch is
+-- converging) and marks each against COALESCE(daily_marks_curated, signal_marks_curated), while
+-- PRESERVING every column name below (park_ticker, events_park_shares, ..., park_mark_fresh,
+-- checked_at) and adding only is_policy_vehicle. 92 has since itself been superseded (see below).
+--
+-- SUPERSEDED LIVE by bigquery/173_freshness_cadence_aware.sql — current single source of truth for
+-- this object (supersedes bigquery/92 above in turn). 173 repoints park_mark_fresh from
+-- last_trading_day to marks_due_through, so a Sun-Thu-daily-tier weekend gap no longer reads as
+-- staleness; every other column is unchanged. Kept here, unmodified, for DR-rebuild apply-in-order
+-- reference only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.park_reconciliation` AS
 WITH p AS (SELECT * FROM `stock-trading-498512.state.park_position_current`),
 mark AS (

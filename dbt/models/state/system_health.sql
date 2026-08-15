@@ -25,12 +25,16 @@ WITH alerts_summary AS (
 SELECT
   f.last_trading_day, f.last_mark_date, f.engine_through,
   f.marks_fresh, f.engine_fresh, f.d2_ran_last_trading_day,
+  f.marks_due_through, f.marks_current, f.engine_current,
   eh.is_healthy AS embeddings_healthy,
   a.open_critical_alerts,
   a.open_alerts,
   (SELECT COUNTIF(drawdown_kill OR runaway_review OR m2m_underperf_review) FROM {{ ref('kill_flags') }}) AS firing_kill_flags,
   COALESCE((SELECT LOGICAL_OR(drifted) FROM `stock-trading-498512.state.position_reconciliation`), FALSE) AS position_drift_detected,
-  (f.marks_fresh AND f.engine_fresh AND eh.is_healthy
+  -- CADENCE-AWARE as of 2026-08-15 (bigquery/173): was marks_fresh AND engine_fresh, which read FALSE
+  -- every Friday evening through Sunday's D2a purely because the daily tier is Sun-Thu. all_green is
+  -- display-only now (bigquery/107's trading gates read state.freshness directly, never this column).
+  (f.marks_current AND f.engine_current AND eh.is_healthy
      AND a.open_critical_alerts = 0
      AND NOT COALESCE((SELECT LOGICAL_OR(drifted) FROM `stock-trading-498512.state.position_reconciliation`), FALSE)
   ) AS all_green,

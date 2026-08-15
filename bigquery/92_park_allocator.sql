@@ -439,6 +439,12 @@ SELECT * FROM residual_rows;
 -- (e.g. GOVT/IEF/TLT/LQD/MUB/HYG/PFF/AOR/VTI on first onboarding). Same LEFT-JOIN-driven-FROM-p
 -- zero-row-gap-safe shape as 54's fix — every state.park_position_current row gets exactly one
 -- output row here regardless of whether either marks source has data for it yet.
+--
+-- SUPERSEDED LIVE by bigquery/173_freshness_cadence_aware.sql — current single source of truth for
+-- this object. 173 is identical to this view except park_mark_fresh's basis, repointed from
+-- last_trading_day to marks_due_through so a Sun-Thu-daily-tier weekend gap no longer reads as
+-- staleness. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
+-- this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.park_reconciliation` AS
 WITH p AS (SELECT * FROM `stock-trading-498512.state.park_position_current`),
 dm AS (

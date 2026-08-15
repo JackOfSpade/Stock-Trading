@@ -157,6 +157,23 @@ routines:
   # (2026-06-19, 2026-07-03) show every scheduled routine completing -- and line ~825 below documents
   # that they self-detect a non-trading day and do cheap idempotent work, so expecting them on a
   # non-trading Sunday/Monday/etc. asks nothing they cannot already do.
+  #
+  # INCOMPLETE-EVIDENCE CORRECTION (2026-08-15, bigquery/173_freshness_cadence_aware.sql). The
+  # paragraph above reasons only about whether the routines can RUN on the days they now fire. It
+  # never asks the other question -- what depends on their having run on a day they now SKIP -- and
+  # its supporting evidence cannot reach it: 2026-06-19 and 2026-07-03 were both HOLIDAY Fridays, so
+  # `last_trading_day` rolled back to Thursday and no data gap ever opened. On an ORDINARY Friday it
+  # does. D2a is the only writer of events.daily_marks and perf.strategy_daily, and it now recovers
+  # Friday on its SUNDAY run, so from Friday 22:40 UTC until Sunday evening the marks genuinely do
+  # not cover the last trading day. Every assertion of the form `MAX(<data date>) >= last_trading_day`
+  # therefore reads FALSE for ~48h every week, by construction. Most such detectors WERE hardened in
+  # the same 2026-08-08 pass (bigquery/112/132/151/153/155/157 and bigquery/12/142); `state.freshness`
+  # -- the freshness dead-man's switch itself -- was missed, and fired a critical `staleness` alert
+  # plus two failed daily_freshness_check DTS runs on the first ordinary Friday under this cadence
+  # (2026-08-14; alert 903e505e). Fixed by giving state.freshness a cadence-aware `marks_due_through`
+  # basis. THE REUSABLE LESSON, and the reason this note is here rather than only in bigquery/173:
+  # a cadence change is never cron-only -- enumerate what CONSUMES the routine's output on the days
+  # it stops running, and never accept a holiday-day precedent as evidence about an ordinary one.
   - id: D1
     name: Market Development Scan
     schedule: "after_close trading_day, Sun-Thu"   # ~16:10 MT
