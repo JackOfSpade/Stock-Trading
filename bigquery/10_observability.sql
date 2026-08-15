@@ -118,6 +118,12 @@ BEGIN
 END;
 
 -- ===== state.freshness — marks/engine current vs the last trading day? (P0-2) =====
+--
+-- SUPERSEDED LIVE by bigquery/173_freshness_cadence_aware.sql — current single source of truth for
+-- this object. 173 makes the freshness dead-man cadence-aware for the Sun-Thu daily tier, adding
+-- marks_due_through / marks_current / engine_current columns (every column below is unchanged). Kept
+-- here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE
+-- statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.freshness` AS
 WITH ltd AS (SELECT last_trading_day, is_trading_day, today FROM `stock-trading-498512.state.trading_day_today`),
 m  AS (SELECT MAX(mark_date)   AS v FROM `stock-trading-498512.events.daily_marks`),
@@ -148,6 +154,13 @@ SELECT
 -- later CREATE OR REPLACE VIEW of the same object (which adds position_drift_detected to
 -- all_green) — kept here, in numeric-apply order, for the DR-rebuild/reference sequence.
 -- Kept structurally in sync with that later definition where they overlap.
+--
+-- SUPERSEDED LIVE by bigquery/173_freshness_cadence_aware.sql — current single source of truth for
+-- this object (supersedes bigquery/23's later definition below in turn). 173 makes the freshness
+-- dead-man cadence-aware for the Sun-Thu daily tier, folding state.freshness's new marks_due_through /
+-- marks_current / engine_current columns into all_green in place of marks_fresh/engine_fresh. Kept
+-- here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE
+-- statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.system_health` AS
 WITH alerts_summary AS (
   -- Computed once and reused below (2026-07-04 audit finding: open_critical_alerts and the

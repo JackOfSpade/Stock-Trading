@@ -408,6 +408,12 @@ END;
 -- 10_observability.sql in place) because position_reconciliation is defined in 18_*.sql, which is
 -- applied AFTER 10 in the DR-rebuild order — same "fix in a later file" pattern as 22_cash_flows.sql.
 -- Verified live (2026-07-03): zero drifted rows before this promotion, so it does not flip all_green.
+--
+-- SUPERSEDED LIVE by bigquery/173_freshness_cadence_aware.sql — current single source of truth for
+-- this object. 173 makes the freshness dead-man cadence-aware for the Sun-Thu daily tier, folding
+-- state.freshness's new marks_due_through / marks_current / engine_current columns into all_green in
+-- place of marks_fresh/engine_fresh. Kept here, unmodified, for DR-rebuild apply-in-order reference
+-- only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.system_health` AS
 WITH alerts_summary AS (
   -- Computed once and reused below (2026-07-04 audit finding: open_critical_alerts and the

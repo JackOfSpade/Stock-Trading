@@ -65,6 +65,12 @@ END;
 -- from v2 by MON STALENESS PART-3, 2026-07-17 — source-echo suppression: RAISE predicate narrowed
 -- from all_green to the data-staleness component conjunction only; see the inline note below).
 -- =====================================================================================================
+-- SUPERSEDED LIVE by bigquery/173_freshness_cadence_aware.sql — current single source of truth for
+-- this object. 173 makes the freshness dead-man cadence-aware for the Sun-Thu daily tier: it repoints
+-- this procedure's RAISE predicate onto state.freshness's new marks_due_through / marks_current /
+-- engine_current columns instead of marks_fresh/engine_fresh, so the check no longer false-fires every
+-- Friday evening through Sunday's D2a. Kept here, unmodified, for DR-rebuild apply-in-order reference
+-- only. DO NOT re-apply this CREATE statement live in isolation.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_daily_freshness_check`()
 BEGIN
   CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:daily_freshness_check', 'v3', 'daily_freshness_check.sql ran');
