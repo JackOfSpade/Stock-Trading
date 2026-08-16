@@ -202,6 +202,11 @@ connectors:
         use: unused
       - name: delete_label
         use: unused
+      - name: forward
+        use: unused
+        note: >
+          Auto-added by OPS1 2026-08-16, same Gmail send/reply/forward bundle as
+          send_message — see its note.
       - name: get_message
         use: unused
       - name: get_thread
@@ -234,8 +239,24 @@ connectors:
       - name: mark_thread_spam
         use: unused
         note: Auto-added 2026-08-12, same Gmail spam/trash rollout as mark_message_spam — see its note.
+      - name: reply
+        use: unused
+        note: >
+          Auto-added by OPS1 2026-08-16, same Gmail send/reply/forward bundle as
+          send_message — see its note.
       - name: search_threads
         use: unused
+      - name: send_message
+        use: unused
+        note: >
+          Auto-added by OPS1 2026-08-16. Vendor-added tool, first observed in the live
+          connector's tool inventory — part of a 3-tool Gmail send/reply/forward bundle
+          (forward, reply, send_message) observed together this run, distinct from the
+          2026-08-12 spam/trash rollout. `use: unused` is the conservative default —
+          nothing in this fleet calls it (mirrors the IBKR `whats_new` precedent, July
+          2026). Promoting it to required/optional and adding routine prose that calls
+          it is a separate, deliberate feature-adoption decision this step never makes
+          on its own.
       - name: trash_message
         use: unused
         note: Auto-added 2026-08-12, same Gmail spam/trash rollout as mark_message_spam — see its note.
