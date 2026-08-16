@@ -3446,3 +3446,116 @@ reconciliation, never here), so the CLOSE removes only genuinely-unbacked shares
 fail-closed with `explained_by_pending_buy=FALSE` — the correct response to a genuinely unexplained drift — so this
 fix removes the FALSE permanent halt without weakening detection of a real one. Neither a new scheduled object nor a
 BigQuery write from CI is involved; the CLOSE is written in-band by D2a exactly as its existing fill-time CLOSE rows are.
+
+## 48. The entire Sunday slot fails to fire, and a halt-record commit is auto-backfilled as `completed` — the 2026-08-16 D1/D2a no-fire *(monitoring, new incident class)*
+
+**Observed 2026-08-16 (Sun), D2's evening run (17:27-18:2x MT)**, alert `6473abc3`
+(`missing_dependency`, critical) plus alert `run_log_backfill_masked_halt` (warning). Two
+independent defects surfaced in one run; the second is the durable one and is a NEW incident class.
+
+### Part A — the no-fire (operational, self-recovering)
+
+D2 fired on schedule (23:15 UTC / 17:15 MT) and found **neither of its declared upstreams had produced
+any `ops.run_log` row at all** for 2026-08-16 — not `completed`, not even `started`. D1's slot
+(22:00 UTC / 16:00 MT) had passed by 89 min and D2a's (22:40 UTC / 16:40 MT) by 49 min. Nothing was
+committed to `origin/main` by either, so the §38 marker backfill had nothing to self-heal from and the
+git-evidence fallback (`git log origin/main --since=<today 00:00 MT> -- Daily.md`) came back empty. The
+gate was therefore genuinely correct to abort.
+
+This was not isolated. Of the 13 routines `state.cadence_expected_today` expected on 2026-08-16, only
+**OPS1** and **W5** produced any evidence, and both of those ran inside the morning BigQuery
+connector de-authorization (§26 recurrence) and so landed commits without run-log rows. **W2** logged
+`started` at 12:04 MT — proving the BigQuery grant was already restored by midday — and never wrote a
+terminal row. W1, W3, W4, D1, D2a, D3, OPS0, OPS2 and SL3 left no trace whatsoever. The immediately
+preceding Sunday (2026-08-09) saw all of D1/D2a/D2/D3/OPS0/OPS1/SL3 complete normally, so the
+Sun-Thu cadence itself (`ops/cadence.yaml`, 2026-08-08 consolidation) is not implicated; this looks
+like a platform-side trigger-delivery failure confined to 2026-08-16.
+
+**Why D2 could not repair it.** The DEPENDENCY-WAIT WINDOW's ACTIVE REPAIR branch was unavailable on
+both deps, for two separate reasons, and this is the part worth remembering:
+- **D2a is in the OPS0 scope-guardrail exclusion set** (D2, D2a, W4, M4, Q4, A3, SL4), so it is
+  `REFIREABLE = false` by rule. Neither a blocked downstream *nor OPS0's own 22:30 MT sweep* can
+  recover a missed D2a. Its only recovery is its next scheduled slot — or a human.
+- **D1 is nominally refireable** (`catchup_safe: true`, `trigger_id` present, not excluded, no
+  `ops.catchup_refire_log` row for `D1|2026-08-16`) but **the routine session had no `RemoteTrigger`
+  tool exposed at all**, so the refire was not executable. A session that cannot see `RemoteTrigger`
+  should record that fact rather than reporting the upstream as un-refireable on policy grounds.
+
+Because D2a can never be auto-refired, an OPS0 sweep that recovers D1 still leaves D2 blocked. The
+Friday 2026-08-14 marks/fills gap therefore persisted until D2a's next Monday slot — with
+`state.freshness` reading `last_mark_date = engine_through = 2026-08-13` against
+`last_trading_day = 2026-08-14`, and `state.trading_enabled = FALSE` on
+`marks_fresh/engine_fresh not both TRUE` as the correct downstream consequence.
+
+**Blast radius was nil by luck, not by design:** the earliest due `PENDING_ANALYSIS` item was
+2026-08-27, no exits or entries were pending, and `Daily.md` was still 2026-08-13's already-converted
+file. D2's halt cost nothing. On a day carrying a due thesis or a triggered exit it would have.
+
+### Part B — a halt-record commit auto-backfilled as `completed` (NEW incident class)
+
+**The mechanism.** `ops.sp_assert_deps` calls `ops.sp_backfill_run_log_from_markers()` first and
+unconditionally (§38 self-heal). D2's gate call at 17:27:14 MT ran it, and it inserted a
+`status='completed'` row for **W5 / 2026-08-16** derived from commit `3bd39e1`, whose subject is
+*"W5 2026-08-16: HALT at pre-flight — BigQuery connector de-authorized"*. W5 had deliberately written
+no run-log row precisely so that its watermark would not advance; the backfill advanced it anyway.
+
+Every link in the chain is halt-blind:
+- `scripts/auto_merge_decision.sh` `marker_routine_from_subject()` matches only the leading token
+  against `^(D1|D2a|D2|D3|OPS0|OPS1|OPS2|W[1-5]|M1a|M1b|M[2-5]|Q[1-4]|A[1-3]|SL[1-5]|AR_att|AR_orc)$`.
+  The word "HALT" later in the subject is invisible to it.
+- `bigquery/38_run_log_selfheal.sql` hardcodes the literal `'completed'` in its INSERT and never
+  inspects the marker; its NOT-EXISTS guard checks only for an existing `completed` row, so an
+  existing `halted`/`failed` terminal row would not have suppressed it either.
+- `bigquery/172_run_log_unpaired_terminal.sql` deliberately **excludes** `^(auto-)?backfilled` rows,
+  so the anomaly detector that would otherwise notice a terminal row with no `started` row is
+  designed to skip exactly these.
+
+**Consequence.** `state.routine_catchup_window` derives `window_start_ts` from
+`MAX(log_ts) FROM ops.run_log WHERE status='completed'` (`bigquery/105_routine_catchup_window.sql`),
+with no genuineness filter. W5's window is now pinned to 2026-08-16 instead of its true last
+completion, 2026-08-09. Left uncorrected, the 2026-08-23 W5 run will never re-scan
+`events.decision_log` — or anything derived from it (B-sub-pattern extraction, Watchlist /
+Operating_Protocols mirroring, vocabulary-drift watch, wash-sale review) — for the
+2026-08-09 → 2026-08-16 span. Contrast the 2026-07-19 W5 halt, whose note correctly records
+"watermark for the next W5 remains last completed 2026-07-12, so nothing is lost": that is the
+intended behavior, and it held only because no halt-record commit was made that day.
+
+**The general rule this exposes: a routine's durable halt record and its run-log completion marker are
+the same signal to the marker parser.** The §38 self-heal's premise — "a landed commit means the
+routine did its work" — is false for exactly one commit shape, and it is the shape the plan otherwise
+encourages a halted routine to produce. Any routine that halts, follows the W5 precedent, and commits
+a record whose subject leads with its own routine id will silently mark itself `completed` and advance
+its own watermark.
+
+### Resolution procedure
+
+1. Correct the spurious row so W5's watermark falls back to 2026-08-09 (owner or a reviewed change —
+   D2 deliberately did **not** mutate another routine's run history from its own session):
+   ```sql
+   UPDATE `stock-trading-498512.ops.run_log`
+   SET status = 'halted',
+       error_msg = 'BigQuery connector de-authorized at pre-flight',
+       note = CONCAT(note, ' | CORRECTED 2026-08-__: backfilled as completed from a HALT-record commit; see RUNBOOK §48')
+   WHERE routine = 'W5' AND run_date = DATE '2026-08-16' AND status = 'completed'
+     AND note LIKE 'auto-backfilled from commit marker%';
+   ```
+   Then resolve the `run_log_backfill_masked_halt` warning. Must land before the 2026-08-23 W5 run.
+2. `ops.alerts` `6473abc3` (`missing_dependency`) clears on its own via `ops.sp_auto_resolve_alerts()`
+   once D1 and D2a complete.
+
+### Prevention adopted
+
+- **Immediate, no code change: a halt-record commit subject must NOT lead with the routine's own id.**
+  D2's own 2026-08-16 halt record was committed under a subject beginning with an ordinary English word
+  for exactly this reason, so the marker parser produced no marker and no backfill. This is the cheap
+  half of the fix and it works today.
+- **Recommended, not applied here (needs review — it touches the observability control plane):** make
+  the chain halt-aware at its source. Either have `marker_routine_from_subject()` refuse a subject
+  matching `HALT|HALTED|FAILED|ABORT` , or have `ops.sp_backfill_run_log_from_markers` write
+  `'halted'` rather than `'completed'` when the marker's `commit_subject` carries such a token. The
+  parser-side guard is the better of the two: it stops the bad marker being written at all, rather
+  than correcting its interpretation afterwards.
+- **`state.routine_catchup_window` should arguably not treat a backfilled row as a genuine completion
+  for watermark purposes** — the rows are self-identifying (`note LIKE 'auto-backfilled%'`). Noted as
+  an option, not a recommendation: the backfill exists precisely so a landed-but-unlogged run counts,
+  and excluding those rows wholesale would undo §38's purpose. Only the halt-shaped subset is wrong.
