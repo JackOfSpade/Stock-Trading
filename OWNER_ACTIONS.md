@@ -75,6 +75,64 @@ the repo which model is live" one.
 
 ---
 
+# 2026-08-16 BigQuery connector de-authorized — owner OAuth grant expired (W5 pre-flight, RUNBOOK §26 recurrence)
+
+The Sunday 2026-08-16 W5 (Factbase & Analytics Consolidation) firing found the Google Cloud BigQuery
+MCP connector **not authorized at all** — the session was told the server "requires authentication
+before their tools can be used," and no `execute_sql` / `execute_sql_readonly` tool was exposed to it.
+This is the recurrence of the 2026-06-26 owner-OAuth expiry (`ops/RUNBOOK.md` §26; §15 credential
+table row 1 — an expired consent, not a code bug), and it is the exact failure the §26 "Prevention
+adopted" quarterly re-consent cadence exists to pre-empt. It is being written down here — rather than
+only alerted — because **the alert sink is itself inside the outage**: `ops.alerts` lives in BigQuery,
+so `ops.sp_raise_alert` cannot run and `alert_emailer.gs` has nothing to poll. Per
+`Claude_Task_Plan.md`'s connector pre-flight, a `[Claude] ATTENTION — RE-AUTH BigQuery connector`
+calendar event was created (Sun 2026-08-16 08:00 MT, popup + email at event time) as the only
+first-class channel; this file is its durable, version-controlled counterpart, since the calendar
+event is deletable by D3 hygiene the moment a later pre-flight passes.
+
+## BQ-1. URGENT — Re-consent the Google Cloud BigQuery connector, then let the data catch up
+
+**Action** (`ops/RUNBOOK.md` §26 "Resolution procedure", verbatim shape):
+
+1. **Re-auth the connector (owner, no code change).** Re-consent the Google/BigQuery connector in the
+   Claude connector settings. Verify with any `state.*` read.
+2. **Let the data catch up.** Re-run D2, then D3, for the missed date(s) so ingest completes and
+   `state.system_health.all_green` returns TRUE.
+3. **Resolve the open rows once green** per §26's `UPDATE ops.alerts SET resolved=TRUE, ...` snippet,
+   and re-fire W5 for this cycle.
+
+**What it's for.** Every routine in the fleet binds the same connector pre-flight, and BigQuery is the
+canonical operational substrate (`state.*` / `perf.*` / `analytics.*` / `events.*`) — positions, marks,
+the decision log, the queues, the roster, the calibration views, and the run/alert observability layer
+all live there. While the grant is down: D1 degrades (research-only, IBKR-sourced book, banner in
+`Daily.md`), D2/D3 halt cleanly rather than run on missing state, and the weekly/monthly/quarterly/
+annual/SL/OPS/AR routines have nothing to read or write. The book is running without its state layer.
+
+**What this W5 run did.** HALTED cleanly at pre-flight. No factbase edits, no orders, no writes of any
+kind — every W5 step (`events.decision_log` mirroring, the calibration/reconciliation/wash-sale/process
+scorecard reads, the four constant-tuning loops' heartbeats, the arsenal digest, the theater-judge and
+cross-model-referee passes, the NO-GO counterfactual close-outs, the market-calendar auto-extend) keys
+off a BigQuery read, so running it blind would have meant fabricating mirrored content into
+`B_Sub_Pattern_Taxonomy.md` / `Watchlist.md` / `Operating_Protocols.md`. Auth failures are explicitly
+NON-WAITABLE under the TRANSIENT-FAILURE WAIT-AND-RETRY ladder, so no retry was attempted. **No
+`ops.run_log` row was written for this firing** — run-logging is itself a BigQuery write — so the
+cadence and freshness dead-man's switches will record the miss once the connector returns.
+
+**If skipped.** Nothing is corrupted and nothing trades on stale state — every gate here fails closed.
+But the miss compounds: the fleet stays halted, `state.trading_enabled` will not go green, and each
+further scheduled firing burns its slot writing another calendar event instead of doing work. W5's
+own cycle is recoverable without loss whenever it is re-fired — its "since the last W5 run" watermark
+reads the last SUCCESSFULLY-COMPLETED W5, and a halted run never logs `completed`, so the next good W5
+re-scans and mirrors every `events.decision_log` entry this run never saw. The cost of delay is
+latency, not data.
+
+**Close this item** when a session's own BigQuery pre-flight passes and D2/D3 have completed green;
+delete the `[Claude] ATTENTION — RE-AUTH BigQuery connector` calendar event in the same pass (D3's
+calendar-hygiene walk does this automatically). No `verify` fence is attached — `scripts/verify_owner_actions.py`
+runs only hand-registered per-`id` probes and would read an unregistered id as OPEN forever.
+
+---
+
 # 2026-08-04 SISA roster-change notifications — `alert_emailer.gs` v4 → v5 + `bigquery/43` MERGE (sequenced)
 
 Owner directive 2026-08-04: autonomous strategy roster changes (SISA add/drop, `SL1`/`SL4`/`SL5`/`M4`
