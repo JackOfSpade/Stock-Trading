@@ -380,7 +380,7 @@ def test_gemini_minute_quota_429_gives_up_after_max_retries(monkeypatch):
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
     monkeypatch.setattr(rg.time, "sleep", lambda s: slept.append(s))
     state = {"idx": 0}
-    text, model = rg._gemini_call("prompt", "k", ["m1", "m2"], state)
+    _text, model = rg._gemini_call("prompt", "k", ["m1", "m2"], state)
     assert model == "m2" and state["idx"] == 1
     assert len(slept) == rg.GEMINI_RPM_MAX_RETRIES  # retried the cap, then advanced
 

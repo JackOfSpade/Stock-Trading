@@ -556,6 +556,15 @@ NOON_CLAUSE_EXEMPT_EVENING_IDS = {
     "OPS2": "catch-up executor — deliberately fires AFTER the cadence_watch deadline (22:15 MT), not "
             "before it; its own SAME-DAY DOUBLE-RUN GUARD copy uses the plain (non-noon) predicate, "
             "and OPS2 is never itself auto-caught-up.",
+    "W5": "period-tier (weekly_sun), not daily -- the noon-clause exists to stop a midnight-crossing "
+          "mis-stamped completion from falsely satisfying the IMMEDIATELY NEXT cycle's SAME-DAY "
+          "GUARD (a daily routine's next occurrence is the very next calendar day, exactly where "
+          "such a mis-stamp would land). W5's next occurrence is the FOLLOWING SUNDAY, 7 days "
+          "later -- a stray Monday-dated completion from a delayed Sunday 23:00 fire crossing local "
+          "midnight can never match next Sunday's `run_date=<that Sunday>` guard query, so the "
+          "collision the noon-clause prevents is structurally impossible for a weekly-cadence "
+          "routine. RETIMED 2026-08-17 from 04:00 to 23:00 MDT (ops/cadence.yaml) -- the first "
+          "period-tier routine to cross the 16:00 evening-slot threshold.",
 }
 EVENING_SLOT_THRESHOLD = "16:00"
 

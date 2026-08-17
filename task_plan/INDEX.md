@@ -13,9 +13,9 @@ Read-optimized slices of the canonical `Claude_Task_Plan.md`. Each `<ID>.md` is 
 | OPS1 | OPS1. Morning Connector Liveness Probe — regular routine | `OPS1.md` |
 | OPS2 | OPS2. Catch-up Executor — regular routine | `OPS2.md` |
 | W1 | W1. Catalyst Calendar (Strategies A and C) — deep research | `W1.md` |
-| W2 | W2. Post-Event Screen (Strategy B) — deep research | `W2.md` |
+| W2 | W2. Post-Event Enrichment (Strategy B) — deep research | `W2.md` |
 | W3 | W3. Open-Position Deep-Dive (Strategies A, B, C, E) — deep research | `W3.md` |
-| W4 | W4. Weekly Action Conversion — regular routine | `W4.md` |
+| W4 | W4. Weekly Research Handoff — regular routine | `W4.md` |
 | W5 | W5. Factbase & Analytics Consolidation — regular routine | `W5.md` |
 | M1a | M1a. Strategy-Blind Regime Scoring — deep research | `M1a.md` |
 | M1b | M1b. Strategy Mapping and Activation Calls — regular routine | `M1b.md` |

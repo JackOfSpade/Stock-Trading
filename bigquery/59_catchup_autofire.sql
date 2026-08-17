@@ -19,7 +19,7 @@
 -- SCOPE, deliberately narrow (safety-conscious first version, matches bigquery/31's own catchup-safe
 -- discipline exactly): OPS0 only ever re-fires the DAILY tier (D1/D3/SL3, via state.catchup_available)
 -- and the PERIOD tier defined below (weekly/monthly/quarterly/annual routines that carry no live-order-
--- crafting or intraday-price dependency). It NEVER re-fires D2/D2a (daily) or W4/M4/Q4/A3/SL4 (period,
+-- crafting or intraday-price dependency). It NEVER re-fires D2/D2a (daily) or M4/Q4/A3/SL4 (period,
 -- excluded below) — those keep their existing human-visible missed_run/period_missed alert only, exactly
 -- as bigquery/31 already excludes D2/D2a from state.catchup_available for the identical reason ("harmless
 -- to execute late, but does not recover the value a same-day run would have had — a late run isn't
@@ -43,8 +43,8 @@ OPTIONS(description='Idempotency + audit trail for OPS0 Cadence Watchdog auto-re
 
 -- ===== state.period_catchup_available — the PERIOD-tier sibling of state.catchup_available =====
 -- Built off state.cadence_period_watch.period_missed the same way bigquery/31 builds off
--- state.cadence_watch.needs_attention. catchup_safe_period_routines excludes every ACTION-CONVERSION
--- routine (W4, M4, Q4, A3) and the discretionary-retirement scanner SL4 (monthly, capital-adjacent
+-- state.cadence_watch.needs_attention. catchup_safe_period_routines excludes the remaining ACTION-CONVERSION
+-- routines (M4, Q4, A3) and the discretionary-retirement scanner SL4 (monthly, capital-adjacent
 -- proposal path) for the identical D2/D2a rationale bigquery/31 already documents — a hand-maintained
 -- list, deliberately NOT derived from monitor_class (which classifies by schedule SHAPE, not by
 -- order-crafting/capital-adjacency). Update it if a period routine's scope changes.
@@ -70,7 +70,7 @@ OPTIONS(description='Idempotency + audit trail for OPS0 Cadence Watchdog auto-re
 CREATE OR REPLACE VIEW `stock-trading-498512.state.period_catchup_available` AS
 WITH catchup_safe_period_routines AS (
   SELECT routine FROM UNNEST([
-    'W1', 'W2', 'W3', 'W5',                    -- weekly research/consolidation (W4 excluded — action-conversion)
+    'W1', 'W2', 'W3', 'W4', 'W5',              -- weekly research/enrichment/handoff/consolidation
     'M1a', 'M1b', 'M2', 'M3', 'M5',             -- monthly research/consolidation (M4 excluded — action-conversion)
     'Q1', 'Q2', 'Q3', 'SL1',                    -- quarterly research/consolidation (Q4 excluded — action-conversion)
     'A1', 'A2'                                  -- annual research (A3 excluded — action-conversion)

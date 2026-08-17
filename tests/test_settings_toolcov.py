@@ -55,7 +55,7 @@ def test_all_referenced_tools_covered_is_green(tmp_path, monkeypatch):
 def test_missing_required_source_fails_closed(tmp_path, monkeypatch, capsys):
     # #15 (2026-07-17 audit): a required SOURCES file that stops resolving (renamed/moved doc, drifted
     # path constant) must FAIL the gate, not silently shrink the scanned set to 0 refs and print OK.
-    task_plan, triggers, settings = _write_fixtures(
+    _task_plan, triggers, settings = _write_fixtures(
         tmp_path, "calls `mcp__FMP__quote`\n", "{}", ["mcp__FMP__quote"],
     )
     ghost = tmp_path / "does_not_exist_Claude_Task_Plan.md"

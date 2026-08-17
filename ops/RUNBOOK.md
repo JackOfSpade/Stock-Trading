@@ -852,9 +852,9 @@ stall with it (it ran under the same identity).
   Since `RemoteTrigger run` is uncallable headless, OPS2 — a new routine on its OWN ~21:15 MT cron — does NOT
   fire the missed routine's trigger; it EXECUTES that routine's slice INLINE in its own session (the cron
   launch is what works; no in-session `RemoteTrigger` call is needed). Scope: the NON-order-crafting
-  catchup_safe set (D1, OPS1, SL3, and the W/M/Q/A/SL research routines), executed at full model fidelity on
+  catchup_safe set (D1, OPS1, SL3, W4's idempotent queue handoff, and the W/M/Q/A/SL research routines), executed at full model fidelity on
   OPS2's own branch. Deliberately EXCLUDED from inline execution: (a) the order-crafting/capital-adjacent
-  routines D2/D2a/W4/M4/Q4/A3/SL4 (never auto-refired, by design), and (b) any routine whose slice calls
+  routines D2/D2a/M4/Q4/A3/SL4 (never auto-refired, by design), and (b) any routine whose slice calls
   `create_order_instruction` — notably **D3**, which is catchup_safe yet crafts orders (persist-and-wait
   re-craft), so OPS2 DEFERS it to OPS0's email rather than run it half-way (OPS2 never inline-executes an
   order-crafting routine; per-connector read-only tool-scoping isn't offered by the claude.ai GUI, so full IBKR
@@ -3242,9 +3242,10 @@ between SL3's own last completion and today (oldest first), each day keyed off `
 — dependent on D2a's own marks backfill above. **OPS1** got a naming-clarification only: its
 3-consecutive-completed-runs recurrence streak is explicitly NOT widened by this protocol (a gap where
 OPS1 itself did not run neither breaks nor pads the streak) — called out so a future edit doesn't
-misapply evidence-window widening to a streak-counting rule. **W2** widened its post-event significance
-screen's lookback past the normal 10-trading-day floor when the gap since W2's own last completion exceeds
-10 trading days (screen-only; Strategy B's frozen 10-trading-day entry window is untouched). **W3** and
+misapply evidence-window widening to a streak-counting rule. **W2** no longer widens or owns a retrospective
+post-event significance screen: it enriches D1-recorded candidates since W2's completion watermark, while
+D1's daily dynamic scan owns coverage of missed trading days. Strategy B's frozen 10-trading-day entry window
+is untouched. **W3** and
 **M3** each now cover the full span back through every missed weekly/monthly cycle, oldest first, stating
 the actual span covered (e.g. "covering 2026-W25–W27") instead of silently treating only the
 immediately-prior period. **M1a** and **Q3** cover each missed month/quarter as its own labeled

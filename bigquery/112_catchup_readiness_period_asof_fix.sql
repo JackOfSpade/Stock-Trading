@@ -15,7 +15,7 @@
 -- emitted `today AS as_of` — the CURRENT run's date — for every period-tier row, discarding the
 -- `period_start` column `state.period_catchup_available` already carries (and which the row's own
 -- `miss_key` already encodes via `CONCAT(routine, '|', CAST(period_start AS STRING))`). Every
--- outstanding period-tier miss (W1/W2/W3/W5, M1a/M1b/M2/M3/M5, Q1/Q2/Q3/SL1, A1/A2) therefore ties on
+-- outstanding period-tier miss (W1/W2/W3/W4/W5, M1a/M1b/M2/M3/M5, Q1/Q2/Q3/SL1, A1/A2) therefore ties on
 -- an identical as_of within one query execution regardless of how stale each one's true period_start
 -- actually is — so on a day with more than OPS2's N=4 cap of outstanding period-tier misses, `ORDER BY
 -- as_of ASC` cannot distinguish a genuinely ancient miss (e.g. A1, period_start months ago) from a

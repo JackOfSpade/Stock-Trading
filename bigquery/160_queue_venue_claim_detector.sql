@@ -11,9 +11,10 @@
 --     run. No such instruction exists anywhere in M3's or M4's prompt body.
 --   * item_key 'criteria-coverage-GOOGL-D-20260809' (enqueued by D2 2026-08-05): payload
 --     '"owning_routine":"W3","escalation_routine":"Q3","analysis_type":"criteria-coverage-review"'.
--- Both items were queue='PENDING_ANALYSIS'. W1/W2/W3/W5 contain ZERO references to
--- queue_events/open_queue anywhere in this repo -- they cannot drain anything -- and D2 is the SOLE
--- drainer of PENDING_ANALYSIS, stated in Claude_Task_Plan.md at multiple sites (lines 62, 112, 116,
+-- Both items were queue='PENDING_ANALYSIS'. W2 reads queue history only to deduplicate its D1-originated
+-- enrichment intake, and W4 idempotently writes PENDING_ANALYSIS handoffs; neither drains the queue.
+-- W1/W3/W5 have no queue handling. D2 is the SOLE drainer of PENDING_ANALYSIS, stated in
+-- Claude_Task_Plan.md at multiple sites (lines 62, 112, 116,
 -- 295/297 as of 2026-08-10: "D2 (Daily Action Conversion) is the daily drainer... reads state.open_queue
 -- (queue PENDING_ANALYSIS) and processes every entry with status: pending and due_date <= today").
 -- (This comment previously cited "283-285, 455" -- 283-285 was correct only pre-2026-08-10, before a

@@ -112,7 +112,7 @@
     "monitor_class": "weekly_sun"
   },
   "W2": {
-    "instruction": "Read Claude_Task_Plan.md. Perform W2. Post-Event Screen (Strategy B) \u2014 deep research.",
+    "instruction": "Read Claude_Task_Plan.md. Perform W2. Post-Event Enrichment (Strategy B) \u2014 deep research.",
     "monitor_class": "weekly_sun"
   },
   "W3": {
@@ -120,7 +120,7 @@
     "monitor_class": "weekly_sun"
   },
   "W4": {
-    "instruction": "Read Claude_Task_Plan.md. Perform W4. Weekly Action Conversion \u2014 regular routine.",
+    "instruction": "Read Claude_Task_Plan.md. Perform W4. Weekly Research Handoff \u2014 regular routine.",
     "monitor_class": "weekly_sun"
   },
   "W5": {

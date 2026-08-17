@@ -141,7 +141,7 @@ def test_duplicate_registry_row_is_flagged(tmp_path, monkeypatch, capsys):
         {"75_wrappers.sql": _proc("cadence_check", "v1")},
         [_registry_row("cadence_check", "v1"), _registry_row("cadence_check", "v1")],
     )
-    registry, registry_errors = sq.parse_registry()
+    _registry, registry_errors = sq.parse_registry()
     assert len(registry_errors) == 1
     assert "duplicate registry row for sq_name='cadence_check'" in registry_errors[0]
     assert sq.main() == 1

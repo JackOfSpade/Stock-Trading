@@ -260,7 +260,7 @@ def _wire_fixture(tmp_path, monkeypatch, *, plan_headings=True, extra_routine=""
 
 
 def test_main_write_then_check_is_a_clean_round_trip(tmp_path, monkeypatch, capsys):
-    f12, f15, f24, f105, f114, _f132 = _wire_fixture(tmp_path, monkeypatch)
+    f12, f15, f24, f105, _f114, _f132 = _wire_fixture(tmp_path, monkeypatch)
 
     monkeypatch.setattr(sys, "argv", ["gen_routine_lists.py", "--write"])
     assert gr.main() == 0

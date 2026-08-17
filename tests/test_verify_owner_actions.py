@@ -156,7 +156,7 @@ def test_run_missing_binary_is_fail_open_not_raise(monkeypatch):
     def _boom(cmd, capture_output=None, text=None, timeout=None):
         raise FileNotFoundError("no such file: bq")
     monkeypatch.setattr(voa.subprocess, "run", _boom)
-    ok, out, reason = voa._run(["bq", "query", "SELECT 1"])
+    ok, _out, reason = voa._run(["bq", "query", "SELECT 1"])
     assert ok is False
     assert "not found" in reason
 
@@ -165,14 +165,14 @@ def test_run_timeout_is_fail_open_not_raise(monkeypatch):
     def _boom(cmd, capture_output=None, text=None, timeout=None):
         raise subprocess.TimeoutExpired(cmd=cmd, timeout=timeout)
     monkeypatch.setattr(voa.subprocess, "run", _boom)
-    ok, out, reason = voa._run(["bq", "query", "SELECT 1"])
+    ok, _out, reason = voa._run(["bq", "query", "SELECT 1"])
     assert ok is False
     assert "timed out" in reason
 
 
 def test_run_nonzero_exit_is_fail_open(monkeypatch):
     monkeypatch.setattr(voa.subprocess, "run", fake_subprocess_run(1, "", "permission denied"))
-    ok, out, reason = voa._run(["bq", "query", "SELECT 1"])
+    ok, _out, reason = voa._run(["bq", "query", "SELECT 1"])
     assert ok is False
     assert "permission denied" in reason
 
@@ -180,14 +180,14 @@ def test_run_nonzero_exit_is_fail_open(monkeypatch):
 def test_bq_scalar_parses_banner_prefixed_json(monkeypatch):
     monkeypatch.setattr(voa.subprocess, "run",
                         fake_subprocess_run(0, 'Welcome to BigQuery!\n[{"n": 3}]'))
-    ok, value, reason = voa._bq_scalar("SELECT COUNT(*) n FROM t")
+    ok, value, _reason = voa._bq_scalar("SELECT COUNT(*) n FROM t")
     assert ok is True
     assert value == 3
 
 
 def test_bq_scalar_empty_result_is_fail_open(monkeypatch):
     monkeypatch.setattr(voa.subprocess, "run", fake_subprocess_run(0, "No rows.\n"))
-    ok, value, reason = voa._bq_scalar("SELECT COUNT(*) n FROM t")
+    ok, _value, _reason = voa._bq_scalar("SELECT COUNT(*) n FROM t")
     assert ok is False
 
 
@@ -221,19 +221,19 @@ def test_check_D_fails_open_when_gh_unavailable(monkeypatch):
     monkeypatch.delenv("GITHUB_REPOSITORY", raising=False)
     monkeypatch.setattr(voa.subprocess, "run",
                         lambda *a, **k: (_ for _ in ()).throw(FileNotFoundError("no gh")))
-    passed, evidence = voa.check_D()
+    passed, _evidence = voa.check_D()
     assert passed is False
 
 
 def test_check_E_webhook_true(monkeypatch):
     monkeypatch.setenv("HAS_ALERT_WEBHOOK_URL", "true")
-    passed, evidence = voa.check_E_webhook()
+    passed, _evidence = voa.check_E_webhook()
     assert passed is True
 
 
 def test_check_E_webhook_false_when_unset(monkeypatch):
     monkeypatch.delenv("HAS_ALERT_WEBHOOK_URL", raising=False)
-    passed, evidence = voa.check_E_webhook()
+    passed, _evidence = voa.check_E_webhook()
     assert passed is False
 
 
@@ -261,7 +261,7 @@ def test_check_sq_dml_watch_accepts_bq_count_string(monkeypatch):
 def test_check_F_quota_fails_open_on_git_error(monkeypatch):
     monkeypatch.setattr(voa.subprocess, "run",
                         lambda *a, **k: (_ for _ in ()).throw(FileNotFoundError("no git")))
-    passed, evidence = voa.check_F_quota()
+    passed, _evidence = voa.check_F_quota()
     assert passed is False
 
 
@@ -573,7 +573,7 @@ def test_check_D_repo_view_fallback_when_env_unset(monkeypatch):
             return True, "owner/repo\n", ""
         return True, "active\n", ""
     monkeypatch.setattr(voa, "_run", fake_run)
-    passed, evidence = voa.check_D()
+    passed, _evidence = voa.check_D()
     assert passed is True
     assert len(calls) == 2  # gh repo view (fallback), then the workflows api call
 
@@ -597,7 +597,7 @@ def test_check_E_anthropic_true_via_gemini_key(monkeypatch):
 
 def test_check_E_anthropic_false_when_unset(monkeypatch):
     monkeypatch.delenv("HAS_GEMINI_API_KEY", raising=False)
-    passed, evidence = voa.check_E_anthropic()
+    passed, _evidence = voa.check_E_anthropic()
     assert passed is False
 
 

@@ -109,7 +109,7 @@ def test_split_ignores_hash_headings_inside_a_fenced_code_block():
         "## Real Section B\n"
         "body b\n"
     )
-    preamble, sections = ss.split(text)
+    _preamble, sections = ss.split(text)
     assert [t for t, _ in sections] == ["Real Section A", "Real Section B"]
     # Section A keeps its entire body — the fenced block AND the text after it.
     assert "## looks like a heading but is inside a fence" in sections[0][1]
