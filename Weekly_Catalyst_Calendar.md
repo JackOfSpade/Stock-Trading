@@ -1,10 +1,12 @@
-2026-W33
+2026-W34
 
 # Weekly Catalyst Calendar — Strategies A and C
 
 Run date **2026-08-16** (Sunday — the `weekly_sun` slot; ISO week **2026-W33** per `state.trading_day_today.today`, which reads `2026-08-16` while the container clock reads 2026-08-17 UTC). Windows measured from the run date: **Strategy A = 6 months (2026-08-16 → 2027-02-16); Strategy C = 45 days (2026-08-16 → 2026-09-30).** The upcoming trading week begins Monday **2026-08-17**, inside this same ISO week — stated in prose deliberately, because the marker is the ISO week of *today*, never the upcoming trading Monday's.
 
-**The marker advances 2026-W32 → 2026-W33, and that is the ordinary case.** The prior W1 file was written Sunday 2026-08-09, the last day of ISO week 2026-W32; today is Sunday 2026-08-16, the last day of 2026-W33. Seven days, one full weekly cycle, no catch-up. W2/W3 stamp 2026-W33 this cycle as well, so W4's upstream-freshness gate (which computes "current period" as the plain ISO week of today) matches.
+**Marker correction, applied post-write (2026-08-17).** This session's commit did not land until 00:01 MT Monday 2026-08-17 — after the Sunday→Monday ISO-week rollover — so per `scripts/check_cadence_marker.py`'s PERIOD check (which anchors the expected marker on the write/commit time, not the run-date reasoning above) the file's first-line marker is stamped `2026-W34`, one ISO week ahead of the run-date narrative in this section. The run date, regime context, and every window in this file remain anchored to 2026-08-16 as originally written; only the marker label changed, and per this repo's own precedent (`Claude_Task_Plan.md`'s M1b mis-stamp discussion) a marker/content offset like this does not mean the content is stale.
+
+**The marker advances 2026-W32 → 2026-W34 this cycle (not → 2026-W33 as originally reasoned above).** The prior W1 file was written Sunday 2026-08-09, the last day of ISO week 2026-W32. W2's own session crossed the same Sunday→Monday rollover and independently landed on `2026-W34` for this cycle (`W2 Post-Event Screen 2026-W34 (2026-08-17)`, merged 2026-08-17) — so the claim that "W2/W3 stamp 2026-W33 this cycle as well" does not hold; W2 stamped `2026-W34`, and W3 had not yet run this cycle as of this write. W4's upstream-freshness gate treats a marker mismatch as a corroborating, non-fatal signal rather than authoritative proof (`Claude_Task_Plan.md`, "WHY THE MARKER CANNOT BE THE PROOF ON ITS OWN"), so this divergence does not block W4.
 
 **Catch-up window.** `state.routine_catchup_window` for W1: `window_start_ts` = 2026-08-09, `never_completed = false`, `window_days = 7.86`. Below the weekly 1.5× threshold (10.5 days), so **no `CATCHUP[]` token** is owed and no missed-period sub-section is needed. The evidence window below is **2026-08-09 → 2026-08-16**.
 
