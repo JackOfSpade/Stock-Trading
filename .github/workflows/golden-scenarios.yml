@@ -229,6 +229,15 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SCENARIO_IDS: ${{ steps.scope.outputs.scenario_ids }}
+          # 2026-08-17 observability: run_golden.py's --live path now prints one line per network attempt,
+          # per group, and a final run summary (see the OBSERVABILITY comment above GEMINI_MODEL_LADDER in
+          # that script — added after CI run 32043614925 evaluated only 11/33 scenarios with no visibility
+          # into where the time went). PYTHONUNBUFFERED disables Python's stdout/stderr buffering so that
+          # trail is actually flushed and visible in the live log (and preserved) even if the job hits its
+          # timeout-minutes backstop above and gets killed mid-run, instead of sitting in an unflushed
+          # buffer that never reaches the log. Belt-and-suspenders with the script's own flush=True on
+          # every print in the live path.
+          PYTHONUNBUFFERED: "1"
         run: |
           set -uo pipefail
           scenario_args=()
