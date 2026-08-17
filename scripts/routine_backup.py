@@ -76,6 +76,17 @@ ADDENDUM = ("\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your
             "(Opus 5) for design/analysis/orchestration work only.")
 OPS2_NO_ADDENDUM_ID = "OPS2"
 
+# The operator's standing scope-completion directive (owner directive, 2026-08-17), appended verbatim
+# to EVERY live routine trigger's instruction -- INCLUDING OPS2. Unlike ADDENDUM above, this carries no
+# OPS2 exception: it governs when a routine may stop and give its final response (keep working until
+# every issue found during the run is resolved, and fix out-of-scope issues on best judgment rather than
+# handing them back), not which model does the grunt work, so OPS2's inline-hosting job is not in
+# tension with it. check()'s check (2) appends this after ADDENDUM (or directly after the core
+# instruction for OPS2) when computing the expected instruction text.
+SCOPE_ADDENDUM = ("\n\nDo not give final response until you have solved ALL issues during your run. "
+                   "For new issues found outside of the scope of this prompt, go with your best "
+                   "recommendation and fix.")
+
 # Sentinel stored as cron_expression when no trustworthy source could confirm it (an empty/missing
 # cron_expression on ingest, or a bootstrap entry seeded without one). ingest() always reports every
 # routine currently carrying this value so it is never silently mistaken for a real schedule.
@@ -177,9 +188,10 @@ def _empty_backup_doc():
                 "cron_expression may read 'TO_POPULATE' for a routine whose live cron could not yet "
                 "be confirmed from a trustworthy source (see the initial-bootstrap commit message / "
                 "session report) -- ingest against a real `list`/`get` response overwrites it. "
-                "OPS2's instruction deliberately omits the standing addendum every other routine "
-                "carries (see ADDENDUM / OPS2_NO_ADDENDUM_ID in this module and ops/cadence.yaml's "
-                "OPS1/OPS2 block) -- this is a documented exception, not drift. The 2 'personal' "
+                "OPS2's instruction deliberately omits ONLY the Sonnet-delegation ADDENDUM every other "
+                "routine carries (see ADDENDUM / OPS2_NO_ADDENDUM_ID in this module and ops/cadence.yaml's "
+                "OPS1/OPS2 block) -- this is a documented exception, not drift. OPS2 DOES carry "
+                "SCOPE_ADDENDUM (2026-08-17), which has no OPS2 exception. The 2 'personal' "
                 "profile routines target a different repo (JackOfSpade/Image-and-Video-Generation-"
                 "Pipeline) and are out of the trading fleet's scope -- kept here only because they "
                 "live on the same claude.ai account and are equally vulnerable to an accidental "
@@ -943,8 +955,9 @@ def _schedule_errors(rid, entry):
 # ---- check ------------------------------------------------------------------------------------------
 def check():
     """Validate ops/routine_backup.json with NO network: (1) valid JSON, every ops/cadence.yaml
-    routine has an entry; (2) each entry's instruction == ops/triggers.json's instruction + ADDENDUM,
-    except OPS2 (no addendum, per the documented exception); (3) each entry's trigger_id matches
+    routine has an entry; (2) each entry's instruction == ops/triggers.json's instruction + ADDENDUM
+    (except OPS2, no ADDENDUM per the documented exception) + SCOPE_ADDENDUM (always, no exception);
+    (3) each entry's trigger_id matches
     ops/trigger_ids.json; (4) every referenced profile exists (checked for EVERY entry, not just
     cadence-known ones); (5) every entry has exactly one of cron_expression/run_once_at (B1), with a
     parseable timezone-qualified one-shot timestamp; (6) every entry's EFFECTIVE resolved fields
@@ -995,7 +1008,7 @@ def check():
             errors.append(f"{rid}: cron_expression is still {CRON_UNCONFIRMED} -- fleet recovery is "
                           "incomplete and restore will refuse it")
 
-    # (2) instruction == triggers.json instruction (+ ADDENDUM, except OPS2)
+    # (2) instruction == triggers.json instruction (+ ADDENDUM, except OPS2) (+ SCOPE_ADDENDUM, always)
     for rid in cad_ids:
         entry = routines.get(rid)
         if entry is None:
@@ -1005,10 +1018,12 @@ def check():
             errors.append(f"{rid}: no matching entry in ops/triggers.json to check instruction against")
             continue
         want = want_core if rid == OPS2_NO_ADDENDUM_ID else want_core + ADDENDUM
+        want += SCOPE_ADDENDUM
         have = entry.get("instruction")
         if have != want:
             errors.append(f"{rid}: instruction drift vs ops/triggers.json"
-                          f"{' (OPS2 must carry NO addendum)' if rid == OPS2_NO_ADDENDUM_ID else ' + ADDENDUM'}\n"
+                          f"{' (OPS2 must carry NO addendum)' if rid == OPS2_NO_ADDENDUM_ID else ' + ADDENDUM'}"
+                          f" + SCOPE_ADDENDUM\n"
                           f"     want: {want!r}\n"
                           f"     have: {have!r}")
 

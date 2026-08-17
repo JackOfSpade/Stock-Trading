@@ -22,6 +22,7 @@ rb = load_module_from_path("routine_backup", "scripts", "routine_backup.py")
 
 
 ADDENDUM = rb.ADDENDUM
+SCOPE_ADDENDUM = rb.SCOPE_ADDENDUM
 
 
 # ---- fixtures --------------------------------------------------------------------------------------
@@ -1231,12 +1232,13 @@ def _good_backup_doc():
                 "trigger_id": "trig_D1AAAA", "name": "D1. Test Routine — deep research",
                 "cron_expression": "0 16 * * *", "enabled": True, "profile": "fleet",
                 "instruction": ("Read Claude_Task_Plan.md. Perform D1. Test Routine — deep research."
-                                + ADDENDUM),
+                                + ADDENDUM + SCOPE_ADDENDUM),
             },
             "OPS2": {
                 "trigger_id": "trig_OPS2AAAA", "name": "OPS2. Catch-up Executor — regular routine",
                 "cron_expression": "0 4 * * *", "enabled": True, "profile": "fleet",
-                "instruction": "Read Claude_Task_Plan.md. Perform OPS2. Catch-up Executor — regular routine.",
+                "instruction": ("Read Claude_Task_Plan.md. Perform OPS2. Catch-up Executor — regular "
+                                "routine." + SCOPE_ADDENDUM),
             },
         },
         "_unmatched": {},
@@ -1315,6 +1317,25 @@ def test_check_fails_when_ops2_incorrectly_carries_the_addendum(tmp_path, monkey
     out = capsys.readouterr().out
     assert "OPS2: instruction drift" in out
     assert "NO addendum" in out
+
+
+def test_check_fails_when_a_normal_routine_is_missing_its_scope_addendum(tmp_path, monkeypatch, capsys):
+    doc = _good_backup_doc()
+    doc["routines"]["D1"]["instruction"] = ("Read Claude_Task_Plan.md. Perform D1. Test Routine — "
+                                             "deep research." + ADDENDUM)
+    _wire(tmp_path, monkeypatch, backup_doc=doc)
+    assert rb.check() == 1
+    assert "D1: instruction drift" in capsys.readouterr().out
+
+
+def test_check_fails_when_ops2_is_missing_its_scope_addendum(tmp_path, monkeypatch, capsys):
+    """SCOPE_ADDENDUM carries no OPS2 exception (unlike ADDENDUM) -- OPS2 must have it."""
+    doc = _good_backup_doc()
+    doc["routines"]["OPS2"]["instruction"] = (
+        "Read Claude_Task_Plan.md. Perform OPS2. Catch-up Executor — regular routine.")
+    _wire(tmp_path, monkeypatch, backup_doc=doc)
+    assert rb.check() == 1
+    assert "OPS2: instruction drift" in capsys.readouterr().out
 
 
 def test_check_fails_on_trigger_id_mismatch(tmp_path, monkeypatch, capsys):
