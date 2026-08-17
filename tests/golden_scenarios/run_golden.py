@@ -152,6 +152,16 @@ CATEGORY_TOKENS = {
 # flush=True so a killed/timed-out job still leaves a readable trail (this file also relies on the
 # workflow's PYTHONUNBUFFERED=1 — see golden-scenarios.yml's `prose-regression` job — for the same reason
 # when stdout/stderr aren't already line-buffered under CI's non-tty runner).
+#
+# EXTENDED 2026-08-17, same day (RPM-retry retune, CI run 32060180247 — this initial telemetry is what
+# made that run's 2021s-of-2998s-asleep-in-RPM-retry finding measurable at all; see the comment above
+# GEMINI_RPM_MAX_RETRIES for the full narrative and the resulting 5->2 retune): the final summary line now
+# also reports how many RPM-retry sleeps honoured a server-supplied RetryInfo.retryDelay vs. fell back to
+# the flat GEMINI_RPM_RETRY_DELAY_S default (state['sleep_rpm_retry_server_n'] / ['..._default_n'], set in
+# _try_model's RPM branch via _has_retry_delay()), and the total count of ladder-rung switches
+# (state['ladder_switches'], incremented in _gemini_call's dispatch loop every time it moves off a rung
+# without succeeding on it) — so a future run's summary line can show directly whether the retune is
+# landing (more, earlier switches) instead of that only being inferable from the sleep-second totals.
 GEMINI_MODEL_LADDER = [
     m.strip() for m in os.environ.get(
         "GEMINI_MODEL_LADDER",
@@ -164,11 +174,32 @@ GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{mode
 # first live run (2026-07-17): the runner fires 23 scenarios back-to-back, tripped the 5-requests-per-
 # MINUTE limit at scenario 7, and, because every 429 was treated as "this model is done", it burned the
 # entire ladder in ~60 seconds and produced zero results for 17 of 23 scenarios.
-#   * per-MINUTE (RPM) — TRANSIENT. Wait out the API's suggested RetryInfo.retryDelay and retry the SAME
-#     model. Rate-rejected requests do not consume the daily quota.
+#   * per-MINUTE (RPM) — TRANSIENT. Wait out the API's suggested RetryInfo.retryDelay (via _retry_delay_s()
+#     in _try_model's RPM branch below, NOT a flat GEMINI_RPM_RETRY_DELAY_S wait — matches the ladder-
+#     rewind cooldown's own RetryInfo honoring further down) and retry the SAME model. Rate-rejected
+#     requests do not consume the daily quota.
 #   * per-DAY (RPD)    — persistent for the rest of the day. Advance the ladder AND mark the model dead
 #     (state["dead"], sticky for the rest of the run) — waiting is futile.
-GEMINI_RPM_MAX_RETRIES = int(os.environ.get("GEMINI_RPM_MAX_RETRIES", "5"))
+#
+# RETUNED 2026-08-17 (CI run 32060180247 — measurable only because of the OBSERVABILITY telemetry added
+# earlier the same day, see the comment block above GEMINI_MODEL_LADDER): a --live run evaluated just 23 of
+# 33 scenarios before GEMINI_RUN_BUDGET_S stopped it, and its own new summary line showed 2021.0s of the
+# 2998.8s budget spent (67%) asleep in RPM-retry backoff alone — vs. 479.5s pacing + 329.0s rewind cooldown
+# (attempts=91, tokens_sent~=24.6M including every retry). At the old GEMINI_RPM_MAX_RETRIES=5, ONE rung
+# alone could burn up to 5*20=100s of sleep before the ladder ever tried a DIFFERENT model, and with all 3
+# ladder rungs RPM-exhausted on the same call — the exact "every still-live rung stayed RPM-exhausted
+# through N rewind(s)" failure this run hit on group 5/7 (KT-01, KT-04) — that is up to 300s spent before
+# the first rewind even fires. Moving to the NEXT rung costs NO sleep at all and is strictly more likely to
+# succeed than re-hitting the SAME rate-limited rung again, because each model carries its OWN per-model
+# quota (see the ladder-membership comment above GEMINI_MODEL_LADDER) — RPM exhaustion on rung N says
+# nothing about rung N+1's remaining capacity this minute. The ladder already supplies BREADTH (3 rungs)
+# and the rewind loop already supplies DEPTH (GEMINI_LADDER_REWINDS=6 full passes); spending most of a
+# call's retry budget re-sleeping on ONE rung before ever trying a different model was the single largest
+# source of the wasted wall-clock measured above, so this drops from 5 to 2 retries per rung: enough to
+# ride out a per-minute window that is about to roll over, without sitting through three more of the same
+# wait when a fresh, differently-quota'd rung is sitting right there. Still fully env-overridable for a
+# future re-tuning pass against fresh measurements.
+GEMINI_RPM_MAX_RETRIES = int(os.environ.get("GEMINI_RPM_MAX_RETRIES", "2"))
 GEMINI_RPM_RETRY_DELAY_S = float(os.environ.get("GEMINI_RPM_RETRY_DELAY_S", "20"))
 
 # CORRECTED 2026-08-17 (this was still broken, just delayed): once GEMINI_RPM_MAX_RETRIES was spent on a
@@ -526,10 +557,25 @@ def _is_daily_quota_429(body):
     return "perday" in low or "per day" in low
 
 
+_RETRY_DELAY_RE = re.compile(r'"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"')
+
+
 def _retry_delay_s(body, default):
     """Pull RetryInfo.retryDelay (e.g. "retryDelay": "38s") out of a 429 body; fall back to `default`."""
-    m = re.search(r'"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"', body or "")
+    m = _RETRY_DELAY_RE.search(body or "")
     return float(m.group(1)) if m else default
+
+
+def _has_retry_delay(body):
+    """True when `body` carries a server-supplied RetryInfo.retryDelay that _retry_delay_s() would honor —
+    same regex (_RETRY_DELAY_RE), split out only so the RPM-retry telemetry counters (2026-08-17 retune,
+    CI run 32060180247, item 4: "how many of the RPM sleeps used a server-supplied retryDelay versus the
+    default") can classify a sleep without re-deriving _retry_delay_s()'s own server-vs-fallback
+    distinction from its numeric return value. Deliberately NOT `delay == default` at the call site: a
+    server-supplied retryDelay could legitimately equal GEMINI_RPM_RETRY_DELAY_S's own numeric value by
+    coincidence, which a bare value comparison would misclassify as "used the default" when it was
+    actually server-supplied."""
+    return _RETRY_DELAY_RE.search(body or "") is not None
 
 
 class _GeminiRunBudgetExhausted(RuntimeError):
@@ -703,6 +749,13 @@ def _gemini_call(prompt, api_key, ladder, state):
                     if rpm_retries < GEMINI_RPM_MAX_RETRIES:
                         rpm_retries += 1
                         delay = _retry_delay_s(body, GEMINI_RPM_RETRY_DELAY_S)
+                        # 2026-08-17 telemetry (retune item 4, CI run 32060180247): classify this sleep as
+                        # server-supplied vs. flat-default so the run summary shows whether the ladder is
+                        # mostly waiting out real API guidance or a guessed constant — see
+                        # _has_retry_delay()'s docstring for why this can't be inferred from `delay` alone.
+                        _delay_key = "sleep_rpm_retry_server_n" if _has_retry_delay(body) else \
+                            "sleep_rpm_retry_default_n"
+                        state[_delay_key] = state.get(_delay_key, 0) + 1
                         _check_run_budget(state, extra_s=delay)
                         time.sleep(delay)
                         state["sleep_rpm_retry_s"] = state.get("sleep_rpm_retry_s", 0.0) + delay
@@ -763,6 +816,12 @@ def _gemini_call(prompt, api_key, ladder, state):
                 return text, model
             if not transient:
                 state["dead"].add(model)
+            # 2026-08-17 telemetry (retune item 4, CI run 32060180247): count every time the loop moves off
+            # a rung without succeeding on it — i.e. GEMINI_RPM_MAX_RETRIES was cut from 5 to 2 specifically
+            # to make this happen SOONER/more often instead of re-sleeping on the same rung (see the
+            # comment above GEMINI_RPM_MAX_RETRIES for the full rationale). This is how a later run's
+            # summary shows whether that retune is actually landing, independent of the 429/sleep counts.
+            state["ladder_switches"] = state.get("ladder_switches", 0) + 1
 
         if set(ladder) <= state["dead"]:
             # Every rung is now permanently dead — genuinely exhausted, not merely rate-limited.
@@ -1499,8 +1558,18 @@ def run_live(scenarios, scenario_ids=None):
         f"429s(rpm={_counter('total_429_rpm')}, daily={_counter('total_429_daily')}) "
         f"tokens_sent~={_counter('total_tokens_sent')} (includes every retry) sleep(pacing="
         f"{_counter('sleep_pacing_s', 0.0):.1f}s, rpm_retry={_counter('sleep_rpm_retry_s', 0.0):.1f}s, "
-        f"rewind={_counter('sleep_rewind_s', 0.0):.1f}s) — see the OBSERVABILITY comment above "
-        f"GEMINI_MODEL_LADDER for why this line exists (CI run 32043614925, 2026-08-17).",
+        f"rewind={_counter('sleep_rewind_s', 0.0):.1f}s) "
+        # 2026-08-17 retune telemetry (CI run 32060180247, item 4): of the RPM sleeps above, how many
+        # honoured a server-supplied RetryInfo.retryDelay vs. fell back to the flat GEMINI_RPM_RETRY_DELAY_S
+        # default (see _has_retry_delay()), and how many times the ladder moved off a rung without
+        # succeeding on it (state['ladder_switches'], incremented in _gemini_call's dispatch loop) — this is
+        # how the NEXT run gets judged against the GEMINI_RPM_MAX_RETRIES 5->2 retune's own stated goal
+        # (switch rungs sooner instead of re-sleeping on one), not just eyeballed from wall_clock alone.
+        f"rpm_retry_delay(server={_counter('sleep_rpm_retry_server_n')}, "
+        f"default={_counter('sleep_rpm_retry_default_n')}) ladder_switches={_counter('ladder_switches')} "
+        f"— see the OBSERVABILITY comment above GEMINI_MODEL_LADDER for why this line exists (CI run "
+        f"32043614925, 2026-08-17), and the comment above GEMINI_RPM_MAX_RETRIES for the RPM-retry retune "
+        f"(CI run 32060180247, 2026-08-17).",
         file=sys.stderr, flush=True,
     )
     return results
