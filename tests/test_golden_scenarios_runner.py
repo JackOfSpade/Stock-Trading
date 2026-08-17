@@ -1037,18 +1037,40 @@ def test_group_scenarios_for_batching_real_scenarios_yaml_covers_every_id_exactl
     # Ground-truthed against the REAL scenarios.yaml (not a synthetic fixture), matching this file's own
     # convention (e.g. test_scenarios_for_changed_selects_exactly_the_strategy_md_scenarios below) of
     # catching a regression in the real coverage, not just the grouping logic against toy data.
+    #
+    # SUPERSEDES the phase-1 pre-mapping pin (2026-08-17, this task): with zero scenarios declaring
+    # governing_sections, every member of a shared governing_files SET produced byte-identical (whole-file)
+    # governing text, so the OLD frozenset(governing_files) key and the NEW hash-of-assembled-text key
+    # (_governing_text_group_key()) partitioned scenarios.yaml identically — 7 groups, `len(groups) <= 8`.
+    # Phase 2 (this pass) adds a REAL, per-scenario governing_sections mapping to all 33 scenarios, and two
+    # scenarios that still share a governing_files SET frequently scope it to DIFFERENT headings now (e.g.
+    # KT-05/KT-06 both scope Experiment_Parameters.md to "### Success threshold" + "### Evaluation gate and
+    # termination structure", while KT-07 — same file — scopes to "### Kill criteria (per-strategy)" alone),
+    # so the text-identity key legitimately produces MANY MORE, smaller groups. Measured 2026-08-17 against
+    # the real, now-mapped file: 20 groups (up from 7) — group COUNT is the one exact-number pin worth
+    # keeping here (a structural fact about the grouping algorithm, not a byte total that drifts with daily
+    # prose edits to Strategy.md/Operating_Protocols.md/Claude_Task_Plan.md).
     scenarios = rg.load_scenarios()
     groups = rg.group_scenarios_for_batching(scenarios)
     all_ids = [sc["id"] for g in groups for sc in g]
     assert sorted(all_ids) == sorted(sc["id"] for sc in scenarios)  # union == every id, no loss
     assert len(all_ids) == len(set(all_ids))  # no duplicates across groups
-    # Measured 7 groups against the real fixture as of 2026-08-17 (33 scenarios, 5 distinct governing_files
-    # sets, two of which split under the default max_group=8) — must stay well under 33 for batching to be
-    # worth anything, and every group must be governing-files-uniform (the whole point of grouping).
-    assert len(groups) <= 8
+    assert len(groups) == 20
+
+    # Every group must be governing-TEXT-uniform — the new grouping key's actual contract
+    # (_governing_text_group_key()'s own docstring: "two scenarios must land in the same group ONLY when
+    # they would receive byte-identical governing text"). Computed independently here via
+    # _read_governing_text() (the exact function the real prompt build uses), not by trusting the grouping
+    # function's own internal hash, so this test can't share a bug with the code it's checking. This is
+    # strictly STRONGER than the old governing-files-SET-uniformity check it replaces (same file set no
+    # longer implies same text once two members scope it to different sections).
+    cache = {}
     for g in groups:
-        keys = {frozenset(sc.get("governing_files") or []) for sc in g}
-        assert len(keys) == 1
+        texts = {
+            rg._read_governing_text(sc.get("governing_files") or [], cache, sc.get("governing_sections"))
+            for sc in g
+        }
+        assert len(texts) == 1, [sc["id"] for sc in g]
 
 
 def test_build_batch_prompt_contains_governing_text_once_and_per_situation_blocks():
@@ -1160,17 +1182,35 @@ def test_referenced_scenario_ids_resolution_is_one_level_only():
 
 
 def test_build_batch_prompt_kt02_gets_kt01_context_and_kt01_is_not_judged():
-    # THE fix's real target: KT-02's real batch group (group_scenarios_for_batching() puts it with
-    # KT-05/KT-06/KT-07, per KT-02's governing_files being just {Experiment_Parameters.md}) does NOT
-    # include KT-01 (KT-01's governing_files additionally names Claude_Task_Plan.md, so it groups with
-    # KT-04 instead) -- so before this fix, KT-01's facts were never shown to the model judging KT-02 at
-    # all. Ground-truthed against the real scenarios.yaml, not a synthetic fixture.
+    # THE fix's real target: prove cross-reference resolution puts KT-01's facts in front of the model
+    # judging KT-02, and that KT-01 itself is never treated as one of the ids being judged. Originally
+    # ground-truthed (2026-08-17, phase 1 of the SECTION SCOPING work) against KT-02's real 4-scenario batch
+    # group under the OLD (pre-mapping) governing_files-SET grouping key: KT-02/KT-05/KT-06/KT-07 all shared
+    # {Experiment_Parameters.md} as their sole governing_files set and grouped together, none of which
+    # included KT-01 (KT-01's own governing_files additionally names Claude_Task_Plan.md, so it grouped with
+    # KT-04 instead) — so, pre-fix, KT-01's facts were never shown to the model judging KT-02 at all.
+    #
+    # SUPERSEDES that grouping assumption (2026-08-17, phase 2 — this task's own real governing_sections
+    # mapping): the grouping KEY itself changed from a plain governing_files SET to a hash of the ASSEMBLED
+    # (possibly scoped) governing TEXT (_governing_text_group_key()), and KT-02's own governing_sections now
+    # scopes Experiment_Parameters.md to a 2-heading combo ("### Kill criteria (per-strategy)" + "###
+    # Evaluation gate and termination structure") that NO OTHER real scenario shares — KT-05/KT-06 share a
+    # DIFFERENT 2-heading combo ("### Success threshold" + "### Evaluation gate...") and KT-07 scopes to
+    # just "### Kill criteria (per-strategy)" alone — so KT-02's real group is now a group of ONE, not four
+    # (see test_group_scenarios_for_batching_real_scenarios_yaml_twenty_groups_kt02_alone below for the
+    # dedicated pin on that fact). The property THIS test exists to prove is completely independent of the
+    # group's SIZE: a size-1 "group" is exactly as legal an input to build_batch_prompt() as any other
+    # (called directly here, matching this test's own pre-existing convention of not going through
+    # run_live()'s separate size-1 bypass), and KT-01 was never going to be a group-mate of KT-02 either way
+    # (their governing_files sets differ regardless of section scoping) — so the reference-resolution gap
+    # this test protects is exactly as real today as it was under the old grouping. Ground-truthed against
+    # the real scenarios.yaml, not a synthetic fixture.
     scenarios = rg.load_scenarios()
     id_to_scenario = {sc["id"]: sc for sc in scenarios}
     groups = rg.group_scenarios_for_batching(scenarios)
     kt02_group = next(g for g in groups if any(sc["id"] == "KT-02" for sc in g))
     judged_ids = [sc["id"] for sc in kt02_group]
-    assert judged_ids == ["KT-02", "KT-05", "KT-06", "KT-07"]  # measured real grouping, 2026-08-17
+    assert judged_ids == ["KT-02"]  # measured real grouping, 2026-08-17 post-section-scoping-mapping
     assert "KT-01" not in judged_ids  # the lone gap batching cannot close by itself
 
     prompt = rg.build_batch_prompt(kt02_group, "[GOVERNING TEXT ELIDED]", id_to_scenario)
@@ -1991,3 +2031,491 @@ def test_main_live_scenario_unknown_id_prints_warning(monkeypatch, capsys):
     assert rg.main() == 0
     err = capsys.readouterr().err
     assert "::warning::--scenario id(s) not found in scenarios.yaml: ['nonexistent-id']" in err
+
+
+# ---- SECTION SCOPING (2026-08-17, this task) — CI run 32069773377: batching alone still hit 94% rejected
+# (429s(rpm=83)/88 attempts) at 480,044 tokens/min against a ~250K/min free-tier budget, and the single
+# largest prompt (294,554 tokens) could never succeed regardless of retries — the binding constraint is
+# TOKENS-per-minute, and the only remaining lever is sending LESS TEXT per request. governing_sections (an
+# OPTIONAL per-scenario map of governing_files entry -> [heading anchor, ...]) scopes a governing file down
+# to just the section(s) that decide a given scenario instead of sending it whole. Every test group below
+# uses small synthetic fixtures (tmp_path + monkeypatch(rg, "ROOT", ...), matching this file's own existing
+# convention for group_scenarios_for_batching()'s byte-size-ordering tests) rather than the real governing
+# files, so these tests stay correct regardless of what heading structure Strategy.md/Claude_Task_Plan.md
+# etc. happen to have on a given day — and, per this task's constraint, NO governing_sections mapping is
+# added to the real scenarios.yaml here at all (a separate pass owns deriving that mapping); the "no-op"
+# tests at the end of this section prove that the real, unmodified scenarios.yaml is completely unaffected.
+
+
+_LEVELS_MD = (
+    "# Root\n"
+    "intro\n"
+    "## Section A\n"
+    "### Sub A1\n"
+    "content a1\n"
+    "#### Deep A1a\n"
+    "deep content\n"
+    "### Sub A2\n"
+    "content a2\n"
+    "## Section B\n"
+    "content b\n"
+)
+# Line-numbered reference (0-based, text.splitlines()):
+#  0 "# Root"            5 "#### Deep A1a"    9  "### Sub A2"
+#  1 "intro"              6 "deep content"    10 "content a2"
+#  2 "## Section A"       7 "content a1"? ---  11 "## Section B"
+#  3 "### Sub A1"                              12 "content b"
+#  4 "content a1"
+# (see test bodies below for the exact slice assertions this backs)
+
+_SPACED_MD = (
+    "# Title\n"
+    "intro line\n"
+    "## Alpha\n"
+    "alpha body 1\n"
+    "alpha body 2\n"
+    "## Beta\n"
+    "beta body\n"
+    "## Gamma\n"
+    "gamma body 1\n"
+    "gamma body 2\n"
+)
+
+
+def test_document_headings_parses_level_and_raw_line():
+    headings = rg._document_headings(_LEVELS_MD)
+    assert [(h["level"], h["raw"]) for h in headings] == [
+        (1, "# Root"), (2, "## Section A"), (3, "### Sub A1"), (4, "#### Deep A1a"),
+        (3, "### Sub A2"), (2, "## Section B"),
+    ]
+
+
+def test_document_headings_skips_hash_lines_inside_fenced_code_blocks():
+    # A '#'-led line inside a ``` fence (e.g. a bash comment in a code sample) must NOT be mis-parsed as a
+    # markdown heading — verified 2026-08-17 that none of today's four real governing files happen to
+    # contain this, but a routine/SQL/shell snippet added later easily could, and a false-positive heading
+    # there would silently corrupt a real anchor's slice boundaries with no error from validate_offline().
+    fence_md = "\n".join([
+        "# Title", "## Real Section", "```", "# not a heading, a bash comment", "```", "## Another Real Section",
+    ])
+    headings = rg._document_headings(fence_md)
+    assert [h["raw"] for h in headings] == ["# Title", "## Real Section", "## Another Real Section"]
+
+
+def test_anchor_heading_indices_exact_unique_and_zero_and_ambiguous():
+    headings = rg._document_headings(_LEVELS_MD)
+    assert rg._anchor_heading_indices(headings, "## Section A") == [1]
+    assert rg._anchor_heading_indices(headings, "## Does Not Exist") == []
+    dup_md = "## Dup\nx\n## Dup\ny\n"
+    dup_headings = rg._document_headings(dup_md)
+    assert rg._anchor_heading_indices(dup_headings, "## Dup") == [0, 1]  # ambiguous: matches 2 headings
+
+
+def test_slice_heading_same_or_shallower_stop_rule_and_nested_inclusion():
+    # '### Sub A1' must stop at the next heading of the SAME or SHALLOWER level ('### Sub A2'), but a
+    # DEEPER heading in between ('#### Deep A1a') stays INSIDE the slice as a nested subsection.
+    lines = _LEVELS_MD.splitlines()
+    headings = rg._document_headings(_LEVELS_MD)
+    idx = next(i for i, h in enumerate(headings) if h["raw"] == "### Sub A1")
+    start, end = rg._slice_heading(lines, headings, idx)
+    text = "\n".join(lines[start:end])
+    assert "### Sub A1" in text and "#### Deep A1a" in text and "deep content" in text
+    assert "### Sub A2" not in text and "content a2" not in text
+
+
+def test_slice_heading_last_section_runs_to_eof():
+    lines = _SPACED_MD.splitlines()
+    headings = rg._document_headings(_SPACED_MD)
+    idx = next(i for i, h in enumerate(headings) if h["raw"] == "## Gamma")
+    start, end = rg._slice_heading(lines, headings, idx)
+    assert end == len(lines)  # no following heading at all -> runs to EOF
+    text = "\n".join(lines[start:end])
+    assert "gamma body 1" in text and "gamma body 2" in text
+
+
+def test_ancestor_breadcrumb_chain_outermost_first():
+    headings = rg._document_headings(_LEVELS_MD)
+    idx = next(i for i, h in enumerate(headings) if h["raw"] == "### Sub A1")
+    assert rg._ancestor_breadcrumb(headings, idx) == ["# Root", "## Section A"]
+
+
+def test_ancestor_breadcrumb_empty_for_a_top_level_heading():
+    headings = rg._document_headings(_LEVELS_MD)
+    idx = next(i for i, h in enumerate(headings) if h["raw"] == "# Root")
+    assert rg._ancestor_breadcrumb(headings, idx) == []
+
+
+def test_extract_sections_exact_slice_with_breadcrumb_prefix():
+    excerpt, n_blocks, n_anchors = rg.extract_sections(_SPACED_MD, ["## Alpha"])
+    assert n_blocks == 1 and n_anchors == 1
+    assert excerpt.startswith("[context: # Title]\n## Alpha")
+    assert "alpha body 1" in excerpt and "alpha body 2" in excerpt
+    assert "## Beta" not in excerpt and "beta body" not in excerpt
+
+
+def test_extract_sections_document_order_regardless_of_anchor_list_order():
+    # Anchors given in REVERSE document order ('## Gamma' before '## Alpha') must still be EMITTED in
+    # document order (Alpha's text before Gamma's), and the un-selected middle section ('## Beta') must be
+    # excluded entirely. Alpha's range and Gamma's range are not adjacent (Beta's range sits between them),
+    # so this also proves non-adjacent/non-overlapping selections stay as separate blocks.
+    excerpt, n_blocks, n_anchors = rg.extract_sections(_SPACED_MD, ["## Gamma", "## Alpha"])
+    assert n_blocks == 2 and n_anchors == 2
+    assert excerpt.find("## Alpha") < excerpt.find("## Gamma")
+    assert "## Beta" not in excerpt and "beta body" not in excerpt
+
+
+def test_extract_sections_merges_adjacent_slices():
+    # '### Sub A1' (ends exactly where '### Sub A2' begins — no gap) must merge into ONE block, not two.
+    excerpt, n_blocks, n_anchors = rg.extract_sections(_LEVELS_MD, ["### Sub A1", "### Sub A2"])
+    assert n_anchors == 2
+    assert n_blocks == 1  # merged: adjacent, no gap between them
+    assert "content a1" in excerpt and "content a2" in excerpt
+    assert "## Section B" not in excerpt
+
+
+def test_extract_sections_merges_overlapping_containment():
+    # '## Section A' already contains '### Sub A2' entirely within its own slice (overlap via containment)
+    # -- must merge into ONE block, and the merged block's breadcrumb is the OUTER (containing) heading's
+    # own breadcrumb, since that is where the reader actually enters the merged excerpt.
+    excerpt, n_blocks, n_anchors = rg.extract_sections(_LEVELS_MD, ["### Sub A2", "## Section A"])
+    assert n_anchors == 2
+    assert n_blocks == 1
+    assert excerpt.startswith("[context: # Root]\n## Section A")
+    assert "content a2" in excerpt
+
+
+def test_extract_sections_deduplicates_a_repeated_anchor():
+    excerpt, n_blocks, n_anchors = rg.extract_sections(_SPACED_MD, ["## Alpha", "## Alpha"])
+    assert n_anchors == 1 and n_blocks == 1
+    assert excerpt.count("## Alpha") == 1
+
+
+def test_extract_sections_skips_a_zero_or_ambiguous_match_anchor_defensively():
+    # Defensive-only path (validate_offline() is the real hard gate for this) — must not raise, and an
+    # unresolved anchor simply contributes nothing to the excerpt (n_anchors still counts it among the
+    # DECLARED distinct anchors, so a "1 of 2" label stays visibly informative rather than silently
+    # collapsing to "1 of 1" and hiding that one anchor never resolved).
+    excerpt, n_blocks, n_anchors = rg.extract_sections(_SPACED_MD, ["## Does Not Exist", "## Alpha"])
+    assert n_anchors == 2
+    assert n_blocks == 1
+    assert "## Alpha" in excerpt
+
+
+def test_render_scoped_block_label_and_instruction_text():
+    block = rg.render_scoped_block("shared.md", _SPACED_MD, ["## Alpha", "## Gamma"])
+    assert block.startswith("----- shared.md (excerpt: 2 of 2 section(s) — SCOPED, not the full file) -----")
+    assert "SCOPED EXCERPT" in block
+    assert "say so explicitly instead of assuming an absent rule does not exist" in block
+    assert "## Alpha" in block and "## Gamma" in block and "## Beta" not in block
+
+
+# ---- _read_governing_text() scoping wiring + the escape hatch ----
+
+
+def test_read_governing_text_scopes_only_the_file_named_in_governing_sections(tmp_path, monkeypatch):
+    monkeypatch.setattr(rg, "ROOT", str(tmp_path))
+    (tmp_path / "scoped.md").write_text(_SPACED_MD)
+    (tmp_path / "whole.md").write_text("whole file content, sent in full\n")
+    file_cache = {}
+    text = rg._read_governing_text(
+        ["scoped.md", "whole.md"], file_cache, {"scoped.md": ["## Alpha"]},
+    )
+    assert "SCOPED, not the full file" in text
+    assert "## Beta" not in text and "beta body" not in text  # scoped.md's un-selected section is gone
+    assert "----- whole.md -----\nwhole file content, sent in full" in text  # whole.md unaffected, sent WHOLE
+
+
+def test_golden_section_scope_env_var_restores_full_file_text(tmp_path, monkeypatch):
+    # GOLDEN_SECTION_SCOPE=0 escape hatch: governing_sections is ignored entirely, every file sent whole —
+    # needed for an A/B validation run comparing scoped vs unscoped verdicts (task spec requirement).
+    monkeypatch.setattr(rg, "ROOT", str(tmp_path))
+    (tmp_path / "scoped.md").write_text(_SPACED_MD)
+    monkeypatch.setenv("GOLDEN_SECTION_SCOPE", "0")
+    file_cache = {}
+    text = rg._read_governing_text(["scoped.md"], file_cache, {"scoped.md": ["## Alpha"]})
+    assert text == f"----- scoped.md -----\n{_SPACED_MD}"
+    assert "beta body" in text and "gamma body 1" in text  # whole file, despite governing_sections
+
+
+def test_read_governing_text_no_sections_matches_pre_2026_08_17_format(tmp_path, monkeypatch):
+    # THE no-op proof at the _read_governing_text() level: a scenario/call with no governing_sections at
+    # all must produce EXACTLY the same '----- <path> -----\n<text>' blocks, joined by '\n\n', that this
+    # function produced before section scoping existed — hand-reconstructed here from first principles
+    # (not by calling a "reference" implementation) so this test can't share a bug with the code under test.
+    monkeypatch.setattr(rg, "ROOT", str(tmp_path))
+    (tmp_path / "a.md").write_text("A content\nline2\n")
+    (tmp_path / "b.md").write_text("B content\n")
+    a_text = (tmp_path / "a.md").read_text()
+    b_text = (tmp_path / "b.md").read_text()
+    expected = "\n\n".join([f"----- a.md -----\n{a_text}", f"----- b.md -----\n{b_text}"])
+
+    assert rg._read_governing_text(["a.md", "b.md"], {}) == expected                    # omitted entirely
+    assert rg._read_governing_text(["a.md", "b.md"], {}, None) == expected              # explicit None
+    assert rg._read_governing_text(["a.md", "b.md"], {}, {}) == expected                # empty dict
+
+
+# ---- validate_offline() governing_sections checks — the HARD CI gate (task's load-bearing requirement) ----
+
+
+def _sc_with_sections(gov_files, gov_sections):
+    sc = copy.deepcopy(VALID)
+    sc["governing_files"] = gov_files
+    sc["governing_sections"] = gov_sections
+    return sc
+
+
+def test_validate_offline_governing_sections_zero_match_anchor_caught(tmp_path, monkeypatch):
+    monkeypatch.setattr(rg, "ROOT", str(tmp_path))
+    (tmp_path / "Strategy.md").write_text(_SPACED_MD)
+    sc = _sc_with_sections(["Strategy.md"], {"Strategy.md": ["## Nonexistent Heading"]})
+    errs = rg.validate_offline([sc])
+    assert any(
+        "anchor" in e and "## Nonexistent Heading" in e and "does not match any heading line" in e
+        for e in errs
+    ), errs
+
+
+def test_validate_offline_governing_sections_ambiguous_anchor_caught(tmp_path, monkeypatch):
+    monkeypatch.setattr(rg, "ROOT", str(tmp_path))
+    (tmp_path / "Strategy.md").write_text("## Dup\nx\n## Dup\ny\n")
+    sc = _sc_with_sections(["Strategy.md"], {"Strategy.md": ["## Dup"]})
+    errs = rg.validate_offline([sc])
+    assert any(
+        "## Dup" in e and "matches 2 heading lines" in e and "ambiguous" in e for e in errs
+    ), errs
+
+
+def test_validate_offline_governing_sections_empty_anchor_list_caught(tmp_path, monkeypatch):
+    monkeypatch.setattr(rg, "ROOT", str(tmp_path))
+    (tmp_path / "Strategy.md").write_text(_SPACED_MD)
+    sc = _sc_with_sections(["Strategy.md"], {"Strategy.md": []})
+    errs = rg.validate_offline([sc])
+    assert any(
+        "non-empty list" in e and "silently sending the whole file" in e for e in errs
+    ), errs
+
+
+def test_validate_offline_governing_sections_file_key_not_in_governing_files_caught(tmp_path, monkeypatch):
+    monkeypatch.setattr(rg, "ROOT", str(tmp_path))
+    (tmp_path / "Strategy.md").write_text(_SPACED_MD)
+    (tmp_path / "Other.md").write_text(_SPACED_MD)
+    sc = _sc_with_sections(["Strategy.md"], {"Other.md": ["## Alpha"]})
+    errs = rg.validate_offline([sc])
+    assert any(
+        "governing_sections key 'Other.md' is not in this scenario's governing_files" in e for e in errs
+    ), errs
+
+
+def test_validate_offline_governing_sections_clean_entry_passes_with_no_errors(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(rg, "ROOT", str(tmp_path))
+    (tmp_path / "Strategy.md").write_text(_SPACED_MD)
+    sc = _sc_with_sections(["Strategy.md"], {"Strategy.md": ["## Alpha"]})
+    errs = rg.validate_offline([sc])
+    assert errs == []
+    out = capsys.readouterr().out
+    assert "governing_sections" in out and "Strategy.md" in out and "excerpt" in out
+
+
+def test_validate_offline_real_scenarios_yaml_governing_sections_all_declared_and_valid():
+    # INVERTS the phase-1 placeholder this supersedes (test_validate_offline_real_scenarios_yaml_has_no_
+    # governing_sections_declared, 2026-08-17): that test's own comment said "a later pass owns adding the
+    # mapping" — phase 2 (this pass) is that later pass, and it adds a REAL governing_sections mapping to
+    # every one of the 33 real scenarios. Asserting the bare inverse ("some scenario now has
+    # governing_sections") would be a much weaker test than what's actually available to pin:
+    # validate_offline() is documented as the load-bearing HARD CI GATE for this feature (every anchor must
+    # match EXACTLY ONE heading, every file key must be a real governing_files member — see that function's
+    # own governing_sections comment block), so assert that contract directly against the real, now-mapped
+    # file, and re-derive the same two checks independently here (not by calling validate_offline() a
+    # second time) so this test can't share a bug with the code it's checking.
+    scenarios = rg.load_scenarios()
+    declared = [sc for sc in scenarios if sc.get("governing_sections")]
+    assert declared, "expected the real scenarios.yaml to declare governing_sections after the mapping pass"
+    assert len(declared) == len(scenarios)  # every one of the 33 scenarios opted in
+    assert rg.validate_offline(scenarios) == []  # the hard gate: zero errors on the real mapped file
+
+    file_text_cache = {}
+    checked_anchor_pairs = 0
+    for sc in scenarios:
+        gov_files = set(sc.get("governing_files") or [])
+        for gf, anchors in sc["governing_sections"].items():
+            assert gf in gov_files, f"{sc['id']}: governing_sections key {gf!r} not in governing_files"
+            if gf not in file_text_cache:
+                with open(os.path.join(rg.ROOT, gf), encoding="utf-8") as fh:
+                    file_text_cache[gf] = fh.read()
+            headings = rg._document_headings(file_text_cache[gf])
+            for a in anchors:
+                n_matches = len(rg._anchor_heading_indices(headings, a))
+                assert n_matches == 1, f"{sc['id']}/{gf}: anchor {a!r} matched {n_matches} headings, want 1"
+                checked_anchor_pairs += 1
+    assert checked_anchor_pairs > 0
+
+
+# ---- group_scenarios_for_batching() key: identity of the ASSEMBLED governing text, not the file set ----
+
+
+def test_group_key_splits_scenarios_sharing_a_file_but_different_sections(tmp_path, monkeypatch):
+    monkeypatch.setattr(rg, "ROOT", str(tmp_path))
+    (tmp_path / "shared.md").write_text(_SPACED_MD)
+    scs = [
+        {"id": "A", "governing_files": ["shared.md"], "governing_sections": {"shared.md": ["## Alpha"]}},
+        {"id": "B", "governing_files": ["shared.md"], "governing_sections": {"shared.md": ["## Beta"]}},
+        {"id": "C", "governing_files": ["shared.md"]},  # whole file — a THIRD distinct text
+    ]
+    groups = rg.group_scenarios_for_batching(scs, max_group=8)
+    ids_per_group = [[sc["id"] for sc in g] for g in groups]
+    assert len(groups) == 3  # each wants genuinely different text -> none may be merged
+    assert ["A"] in ids_per_group and ["B"] in ids_per_group and ["C"] in ids_per_group
+
+
+def test_group_key_merges_scenarios_with_identical_section_selection(tmp_path, monkeypatch):
+    monkeypatch.setattr(rg, "ROOT", str(tmp_path))
+    (tmp_path / "shared.md").write_text(_SPACED_MD)
+    scs = [
+        {"id": "A", "governing_files": ["shared.md"], "governing_sections": {"shared.md": ["## Alpha"]}},
+        {"id": "B", "governing_files": ["shared.md"], "governing_sections": {"shared.md": ["## Alpha"]}},
+    ]
+    groups = rg.group_scenarios_for_batching(scs, max_group=8)
+    assert len(groups) == 1
+    assert [sc["id"] for sc in groups[0]] == ["A", "B"]
+
+
+def test_group_key_golden_section_scope_disabled_restores_old_merged_grouping(tmp_path, monkeypatch):
+    # With scoping disabled, A and B both send shared.md WHOLE (identical text again), so they must
+    # re-merge into the SAME group they would have formed pre-2026-08-17 (the OLD frozenset-of-
+    # governing_files key never distinguished them either).
+    monkeypatch.setattr(rg, "ROOT", str(tmp_path))
+    (tmp_path / "shared.md").write_text(_SPACED_MD)
+    monkeypatch.setenv("GOLDEN_SECTION_SCOPE", "0")
+    scs = [
+        {"id": "A", "governing_files": ["shared.md"], "governing_sections": {"shared.md": ["## Alpha"]}},
+        {"id": "B", "governing_files": ["shared.md"], "governing_sections": {"shared.md": ["## Beta"]}},
+    ]
+    groups = rg.group_scenarios_for_batching(scs, max_group=8)
+    assert len(groups) == 1
+    assert [sc["id"] for sc in groups[0]] == ["A", "B"]
+
+
+def test_group_key_order_independent_governing_files_list_still_merges(tmp_path, monkeypatch):
+    # Two scenarios naming the SAME file set in a DIFFERENT declared order, neither using
+    # governing_sections, must still merge into one group — the sorted()-before-hashing behavior inside
+    # _governing_text_group_key() exists specifically to preserve this (matches the OLD frozenset key,
+    # which was already order-independent).
+    monkeypatch.setattr(rg, "ROOT", str(tmp_path))
+    (tmp_path / "x.md").write_text("X\n")
+    (tmp_path / "y.md").write_text("Y\n")
+    scs = [
+        {"id": "A", "governing_files": ["x.md", "y.md"]},
+        {"id": "B", "governing_files": ["y.md", "x.md"]},
+    ]
+    groups = rg.group_scenarios_for_batching(scs, max_group=8)
+    assert len(groups) == 1
+    assert [sc["id"] for sc in groups[0]] == ["A", "B"]
+
+
+# ---- run_live() governing-bytes telemetry (task spec requirement) ----
+
+
+def test_run_live_summary_reports_governing_bytes_scoped_vs_unscoped(monkeypatch, capsys):
+    monkeypatch.setattr(rg, "_select_live_caller", _fake_caller_returning("DECISION: GO\nRATIONALE: x"))
+    rg.run_live([_sc("T-BYTES", "GO")])
+    err = capsys.readouterr().err
+    assert "governing_bytes(scoped=" in err and "unscoped=" in err and "saved=" in err
+    assert "governing_tokens~=" in err  # per-group token estimate in the group "done" debug line
+
+
+def test_run_live_governing_bytes_equal_when_no_scoping_declared(monkeypatch, capsys):
+    # No governing_sections anywhere in this run -> scoped bytes == unscoped bytes (0% saved), never a
+    # distorted/impossible number.
+    monkeypatch.setattr(rg, "_select_live_caller", _fake_caller_returning("DECISION: GO\nRATIONALE: x"))
+    rg.run_live([_sc("T-NOSCOPE", "GO")])
+    err = capsys.readouterr().err
+    import re as _re
+    m = _re.search(r"governing_bytes\(scoped=(\d+), unscoped=(\d+), saved=([\d.]+)%\)", err)
+    assert m is not None, err
+    assert m.group(1) == m.group(2)  # scoped == unscoped
+    assert float(m.group(3)) == 0.0
+
+
+# ---- SECTION-SCOPING-LIVE PROOF (2026-08-17, phase 2 of this task). SUPERSEDES the phase-1 "NO-OP PROOF"
+# section these two tests replace: phase 1 landed the mechanism with zero governing_sections mappings in
+# scenarios.yaml, so the only thing worth pinning was "the real file is completely unaffected." Phase 2
+# (this pass) adds a real, per-scenario governing_sections mapping to all 33 scenarios, so it is no longer a
+# no-op — these pin the two real, load-bearing consequences instead: (1) group_scenarios_for_batching()'s
+# own group count/shape against the real, now-mapped file, and (2) the GOLDEN_SECTION_SCOPE=0 escape
+# hatch's real ON-vs-OFF contract. Both via structural properties (counts, ratios, subset/labeling checks)
+# that survive routine daily prose edits to Strategy.md/Operating_Protocols.md/Claude_Task_Plan.md, never an
+# exact byte total. ----
+
+
+def test_group_scenarios_for_batching_real_scenarios_yaml_twenty_groups_kt02_alone():
+    # A concrete, nameable instance of the new TEXT-identity grouping key actually biting (not just a
+    # changed count). KT-02 pre-mapping shared a governing_files SET with KT-05/KT-06/KT-07 (all four name
+    # only Experiment_Parameters.md) and grouped with them as one 4-scenario batch (see the ORIGINAL,
+    # pre-2026-08-17-phase-2 form of test_build_batch_prompt_kt02_gets_kt01_context_and_kt01_is_not_judged
+    # above). Post-mapping, KT-02's own governing_sections scopes Experiment_Parameters.md to a 2-heading
+    # combo ("### Kill criteria (per-strategy)" + "### Evaluation gate and termination structure") that NO
+    # OTHER real scenario shares — KT-05/KT-06 share a DIFFERENT 2-heading combo ("### Success threshold" +
+    # "### Evaluation gate...") and KT-07 scopes to "### Kill criteria (per-strategy)" alone — so KT-02 is
+    # now, correctly, a GROUP OF ONE while KT-05/KT-06 still pair up and KT-07 is its own singleton.
+    scenarios = rg.load_scenarios()
+    assert any(sc.get("governing_sections") for sc in scenarios)  # phase 2 landed (see the placeholder this supersedes)
+    groups = rg.group_scenarios_for_batching(scenarios)
+    assert len(groups) == 20  # measured 2026-08-17 against the real, now-mapped file (was 7 pre-mapping)
+    all_ids = [sc["id"] for g in groups for sc in g]
+    assert sorted(all_ids) == sorted(sc["id"] for sc in scenarios)  # union == every id, no loss
+
+    def _group_ids_for(sid):
+        return [sc["id"] for sc in next(g for g in groups if any(sc["id"] == sid for sc in g))]
+
+    assert _group_ids_for("KT-02") == ["KT-02"]
+    assert _group_ids_for("KT-05") == ["KT-05", "KT-06"]   # still pair — identical section combo
+    assert _group_ids_for("KT-07") == ["KT-07"]             # its own, third distinct combo
+
+
+def test_golden_section_scope_escape_hatch_real_scenarios_yaml_on_vs_off(monkeypatch):
+    # SUPERSEDES the phase-1 byte-identical no-op pin this replaces: that test proved GOLDEN_SECTION_SCOPE=0
+    # was a complete no-op against the real file because NO scenario declared governing_sections yet. Phase
+    # 2 (this pass) adds a real mapping to all 33 scenarios, so ON and OFF now render genuinely DIFFERENT
+    # prompts — the escape hatch's real contract (module docstring's SECTION SCOPING comment /
+    # _read_governing_text()'s own docstring) is that OFF sends every governing_files entry WHOLE (ignoring
+    # governing_sections entirely) while ON sends only the scoped excerpt, so ON must always be a strict,
+    # materially smaller subset of OFF's content — never merely different, never larger.
+    #
+    # Uses PA-01/PA-02/PA-03/PA-04 — the real LARGEST scoped group (measured 2026-08-17: 172,769 scoped
+    # bytes) — as the concrete pin, holding the group's own governing_files/governing_sections fixed and
+    # toggling ONLY the GOLDEN_SECTION_SCOPE env var (rather than re-grouping under scope=0, which would
+    # itself change which scenarios share a group — see PA-05/PA-06/RS-01/RS-02's own governing_files
+    # overlap with PA-01..04 once scoping stops distinguishing them) so this test isolates the escape
+    # hatch's own effect from group_scenarios_for_batching()'s.
+    scenarios = rg.load_scenarios()
+    groups = rg.group_scenarios_for_batching(scenarios)  # default env: scoping ON
+    pa_group = next(g for g in groups if any(sc["id"] == "PA-01" for sc in g))
+    assert [sc["id"] for sc in pa_group] == ["PA-01", "PA-02", "PA-03", "PA-04"]  # real largest scoped group
+    gov_files = pa_group[0].get("governing_files") or []
+    gov_sections = pa_group[0].get("governing_sections")
+
+    scoped_text = rg._read_governing_text(gov_files, {}, gov_sections)         # scope ON (default env)
+    monkeypatch.setenv("GOLDEN_SECTION_SCOPE", "0")
+    unscoped_text = rg._read_governing_text(gov_files, {}, gov_sections)       # same inputs, scope OFF
+
+    # Concrete real-data pin (2026-08-17): ~172,769 scoped vs. ~1,178,286 unscoped, a ~6.8x ratio — assert
+    # the RATIO (>= 5x), never the exact byte counts, since the governing files are edited by autonomous
+    # routines daily and would drift a byte-exact pin within days.
+    scoped_bytes = len(scoped_text.encode("utf-8"))
+    unscoped_bytes = len(unscoped_text.encode("utf-8"))
+    assert unscoped_bytes >= scoped_bytes * 5
+
+    # OFF must equal sending every governing_files entry whole — byte-identical to governing_sections=None.
+    assert unscoped_text == rg._read_governing_text(gov_files, {}, None)
+
+    # ON is explicitly labeled a scoped excerpt; OFF is never labeled that way.
+    assert "SCOPED, not the full file" in scoped_text
+    assert "SCOPED, not the full file" not in unscoped_text
+
+    # Strict-subset proof: OFF contains each governing file's RAW content verbatim (it sent the whole
+    # file); ON never contains a whole raw file verbatim (every entry here is excerpted).
+    for gf in gov_files:
+        with open(os.path.join(rg.ROOT, gf), encoding="utf-8") as fh:
+            full_text = fh.read()
+        assert full_text in unscoped_text
+        assert full_text not in scoped_text
