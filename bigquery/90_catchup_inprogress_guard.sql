@@ -65,7 +65,7 @@ WHERE w.needs_attention
 CREATE OR REPLACE VIEW `stock-trading-498512.state.period_catchup_available` AS
 WITH catchup_safe_period_routines AS (
   SELECT routine FROM UNNEST([
-    'W1', 'W2', 'W3', 'W5',                    -- weekly research/consolidation (W4 excluded — action-conversion)
+    'W1', 'W2', 'W3', 'W4', 'W5',              -- weekly research/enrichment/handoff/consolidation
     'M1a', 'M1b', 'M2', 'M3', 'M5',             -- monthly research/consolidation (M4 excluded — action-conversion)
     'Q1', 'Q2', 'Q3', 'SL1',                    -- quarterly research/consolidation (Q4 excluded — action-conversion)
     'A1', 'A2'                                  -- annual research (A3 excluded — action-conversion)

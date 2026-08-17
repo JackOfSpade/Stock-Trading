@@ -5,7 +5,7 @@
 --
 -- WHY THIS EXISTS: every existing safety signal (state.system_health.all_green, perf.kill_flags,
 -- state.position_reconciliation) is a health READOUT — nothing in the order-staging path (D2/D3/
--- W4/M4/Q4/A1/A3) is REQUIRED to read it before crafting an order, and nothing automatically halts
+-- M4/Q4/A1/A3) is REQUIRED to read it before crafting an order, and nothing automatically halts
 -- staging on an anomaly. This file makes "halt all trading" a fact a routine mechanically obeys
 -- (ops.sp_assert_trading_enabled, called FATAL before staging — same pattern as
 -- ops.sp_assert_deps, 12_cadence_monitor.sql), plus a deterministic pre-craft risk envelope
@@ -138,7 +138,7 @@ SELECT
 FROM ctrl, health, dd;
 
 -- ===== ops.sp_assert_trading_enabled — FATAL pre-stage gate (mirrors ops.sp_assert_deps) =====
--- CALL this BEFORE crafting any order (D2/D3/W4/M4/Q4/A1/A3 staging steps). Raises + records a
+-- CALL this BEFORE crafting any order (D2/D3/M4/Q4/A1/A3 staging steps). Raises + records a
 -- critical alert and ABORTS the routine when trading is halted; a self-healed halt (all_green
 -- returns TRUE, drawdown clears) makes this pass again automatically on the next call — the
 -- ASYMMETRY (manual review before clearing an AUTO halt) is an operator-procedure discipline, not
@@ -162,7 +162,7 @@ BEGIN
   IF NOT v_enabled THEN
     -- Message kept STABLE, not folding in in_routine or v_reason (2026-07-04 audit finding, cross-
     -- cutting): v_reason embeds a daily-changing drawdown % and in_routine differs per caller
-    -- (D2/D2a/W4/M4/Q4/A3) — either one varying the `message` text defeats sp_raise_alert_once's
+    -- (D2/D2a/M4/Q4/A3) — either one varying the `message` text defeats sp_raise_alert_once's
     -- exact-match (category, message) dedup, so a SUSTAINED halt on this single highest-stakes gate
     -- would accumulate a fresh unresolved critical alert per day/routine instead of deduping to one,
     -- with no auto-resolve path. The dynamic detail still reaches the operator via the payload (and
@@ -179,7 +179,7 @@ END;
 
 -- ===== analytics.fn_order_guard — deterministic pre-craft risk envelope =====
 -- Table function: SELECT * FROM analytics.fn_order_guard(strategy, side, qty, limit_price, last_price,
--- is_sgov) BEFORE every create_order_instruction call (D2/D3/W4/M4/Q4/A1/A3 staging steps). If
+-- is_sgov) BEFORE every create_order_instruction call (D2/D3/M4/Q4/A1/A3 staging steps). If
 -- passed=FALSE, do NOT craft the order — raise ops.sp_raise_alert_once('critical', <routine>,
 -- 'order_guard_block', <reasons>) and skip. Thresholds are POLICY INVARIANTS derived from the 2%
 -- sizing sleeve and a %-off-last fat-finger band — NOT fitted to the closed-trade sample — so they

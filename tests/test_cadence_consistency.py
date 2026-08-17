@@ -2231,7 +2231,7 @@ def test_parse_stalled_runs_cls_ids_matches_known_good(tmp_path, monkeypatch):
         "SELECT * FROM started;\n"
     )
     monkeypatch.setattr(cc, "STALLED_RUNS_BIGQUERY_DIR", str(tmp_path))
-    ids, number, fn, ambiguous = cc.parse_stalled_runs_cls_ids()
+    ids, _number, fn, ambiguous = cc.parse_stalled_runs_cls_ids()
     assert ambiguous is None
     assert fn == "900_stalled.sql"
     assert ids == ["D1", "W1"]
@@ -2260,7 +2260,7 @@ def test_parse_stalled_runs_cls_ids_strips_comments_so_prose_struct_is_ignored(t
 
 def test_parse_stalled_runs_cls_ids_returns_none_filename_when_view_absent(tmp_path, monkeypatch):
     monkeypatch.setattr(cc, "STALLED_RUNS_BIGQUERY_DIR", str(tmp_path))  # empty dir, no .sql files
-    ids, number, fn, ambiguous = cc.parse_stalled_runs_cls_ids()
+    ids, _number, fn, ambiguous = cc.parse_stalled_runs_cls_ids()
     assert ids == [] and fn is None and ambiguous is None
 
 

@@ -221,7 +221,7 @@ def test_check3_ambiguous_across_connectors_is_non_fatal(tmp_path, monkeypatch, 
     doc["connectors"][1]["tools"].append({"name": "probe", "use": "required"})
     task_plan = "Run `probe` before anything else.\n"
     manifest_path, task_plan_path, settings = _write_fixtures(
-        tmp_path, doc, task_plan, _base_allow() + ["mcp__Gmail__probe"])
+        tmp_path, doc, task_plan, [*_base_allow(), "mcp__Gmail__probe"])
     _patch(monkeypatch, manifest_path, task_plan_path, settings)
     assert cct.main() == 0
     out = capsys.readouterr().out
@@ -284,7 +284,7 @@ def test_reference_outside_fence_still_fails(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------------------------------
 
 def test_check5_unexplained_stale_entry_fails(tmp_path, monkeypatch, capsys):
-    allow = _base_allow() + ["mcp__Gmail__ghost_tool"]  # not in tools, not in absent
+    allow = [*_base_allow(), "mcp__Gmail__ghost_tool"]  # not in tools, not in absent
     manifest_path, task_plan_path, settings = _write_fixtures(
         tmp_path, _base_manifest(), "no refs\n", allow)
     _patch(monkeypatch, manifest_path, task_plan_path, settings)
@@ -294,7 +294,7 @@ def test_check5_unexplained_stale_entry_fails(tmp_path, monkeypatch, capsys):
 
 
 def test_check5_stale_entry_explained_by_verified_absent_is_hard_fail(tmp_path, monkeypatch, capsys):
-    allow = _base_allow() + ["mcp__FMP__old_tool"]  # matches the absent record, verified (not unconfirmed)
+    allow = [*_base_allow(), "mcp__FMP__old_tool"]  # matches the absent record, verified (not unconfirmed)
     manifest_path, task_plan_path, settings = _write_fixtures(
         tmp_path, _base_manifest(), "no refs\n", allow)
     _patch(monkeypatch, manifest_path, task_plan_path, settings)
@@ -307,7 +307,7 @@ def test_check5_verified_unconfirmed_is_non_fatal(tmp_path, monkeypatch, capsys)
     doc = copy.deepcopy(_base_manifest())
     doc["connectors"][0]["absent"].append(
         {"name": "maybe_gone_tool", "verified": "unconfirmed", "note": "pending OPS1 confirmation"})
-    allow = _base_allow() + ["mcp__FMP__maybe_gone_tool"]
+    allow = [*_base_allow(), "mcp__FMP__maybe_gone_tool"]
     manifest_path, task_plan_path, settings = _write_fixtures(tmp_path, doc, "no refs\n", allow)
     _patch(monkeypatch, manifest_path, task_plan_path, settings)
     assert cct.main() == 0
@@ -318,7 +318,7 @@ def test_check5_verified_unconfirmed_is_non_fatal(tmp_path, monkeypatch, capsys)
 def test_check5_entry_with_no_matching_connector_prefix_is_out_of_scope(tmp_path, monkeypatch, capsys):
     # A connector this manifest simply does not track (e.g. Claude Code's own RemoteTrigger surface)
     # must not be reported at all -- only entries under a KNOWN manifest connector prefix are checked.
-    allow = _base_allow() + ["mcp__Claude_Code_Remote__list_triggers"]
+    allow = [*_base_allow(), "mcp__Claude_Code_Remote__list_triggers"]
     manifest_path, task_plan_path, settings = _write_fixtures(
         tmp_path, _base_manifest(), "no refs\n", allow)
     _patch(monkeypatch, manifest_path, task_plan_path, settings)

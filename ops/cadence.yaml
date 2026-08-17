@@ -94,8 +94,8 @@ defaults:
 # and bigquery/59_catchup_autofire.sql's hand-maintained catchup-safe UNNEST lists byte-for-byte in set
 # terms: `true` means a late/catch-up run of this routine reproduces exactly what a same-day run would
 # have produced (no live-order-crafting / intraday-price dependency) — D1/D3/SL3 (daily tier) and
-# W1/W2/W3/W5, M1a/M1b/M2/M3/M5, Q1/Q2/Q3/SL1, A1/A2 (period tier). `false` means the routine crafts
-# orders off live intraday quotes or is otherwise capital-adjacent — D2/D2a, W4/M4/Q4/A3/SL4 (the
+# W1/W2/W3/W4/W5, M1a/M1b/M2/M3/M5, Q1/Q2/Q3/SL1, A1/A2 (period tier). `false` means the routine crafts
+# orders off live intraday quotes or is otherwise capital-adjacent — D2/D2a, M4/Q4/A3/SL4 (the
 # action-conversion + discretionary-retirement routines), SL2/SL5 (queue-driven SISA authoring/roster
 # routines — never calendar-predictable so never catchup-eligible either way), AR_att/AR_orc
 # (queue-driven adversarial reviews), and OPS0 (the auto-refire dispatcher itself — re-firing the
@@ -288,7 +288,7 @@ routines:
       state.catchup_refire_readiness (bigquery/59_catchup_autofire.sql) and calls
       RemoteTrigger run(<trigger_id>) for every catchup-safe daily/period miss not yet auto-attempted
       today -- the daily D1/D3/SL3 tier plus the period-tier research/consolidation routines
-      (W1/W2/W3/W5, M1a/M1b/M2/M3/M5, Q1/Q2/Q3/SL1, A1/A2). NEVER re-fires D2/D2a/W4/M4/Q4/A3/SL4 (the
+      (W1/W2/W3/W4/W5, M1a/M1b/M2/M3/M5, Q1/Q2/Q3/SL1, A1/A2). NEVER re-fires D2/D2a/M4/Q4/A3/SL4 (the
       order-crafting / capital-adjacent routines) -- those keep their existing human-visible
       missed_run/period_missed alert only. Idempotent via ops.catchup_refire_log (one attempt per
       miss_key, ever). No chat question, ever. STEP 4 (landing-hardening 2026-07-29) adds a daily GIT
@@ -392,10 +392,10 @@ routines:
     notes: >
       Catch-up EXECUTOR (added 2026-07-27, owner directive -- the headless-RemoteTrigger workaround,
       ops/RUNBOOK.md §15b). Reads state.catchup_refire_readiness + the non-trading-day D1/SL3 set and, for
-      each catchup_safe miss (D1/SL3/OPS1 daily plus W1/W2/W3/W5, M1a/M1b/M2/M3/M5, Q1/Q2/Q3/SL1, A1/A2
+      each catchup_safe miss (D1/SL3/OPS1 daily plus W1/W2/W3/W4/W5, M1a/M1b/M2/M3/M5, Q1/Q2/Q3/SL1, A1/A2
       period), EXECUTES that routine's slice INLINE in its own session (idempotency + 3h in-flight guards),
       logging as that routine so cadence clears the miss -- so the operator no longer manually re-runs it.
-      NEVER executes D2/D2a/W4/M4/Q4/A3/SL4 (order-crafting/capital-adjacent, statically excluded) or D3
+      NEVER executes D2/D2a/M4/Q4/A3/SL4 (order-crafting/capital-adjacent, statically excluded) or D3
       (catchup_safe yet order-crafting -- caught by the runtime ORDER-CRAFT SLICE-SCAN over D3's OWN slice
       section, deferred to OPS0's email like the static exclusions). Carries FULL connector access
       including IBKR (per-connector read-only scoping isn't offered by the claude.ai GUI, owner-accepted
@@ -540,7 +540,7 @@ routines:
       time_local: "01:30"
       enabled: true
   - id: W2
-    name: Post-Event Screen (B)
+    name: Post-Event Enrichment
     schedule: "weekly Sun"
     monitor_class: weekly_sun
     catchup_safe: true
@@ -562,14 +562,14 @@ routines:
       time_local: "03:00"
       enabled: true
   - id: W4
-    name: Weekly Action Conversion
+    name: Weekly Research Handoff
     schedule: "weekly Sun after W1,W2,W3"
     monitor_class: weekly_sun
-    catchup_safe: false
+    catchup_safe: true       # queue-only, idempotent handoff; no live quotes or order crafting
     depends_on: [W1, W2, W3]
     # Watchlist.md added 2026-07-29 (OPS0 STEP 4f), same reason as D2 above: written in 9/11 of W4's
     # commits (4/5 post-cutover) while undeclared, so STEP 4f could not see a stranded W4.
-    writes: [events.queue_events, events.decision_log, calendar:confirm_order, Watchlist.md]
+    writes: [events.queue_events, events.decision_log, Watchlist.md]
     expected_trigger:
       recurrence: custom_cron
       cron_utc: "30 9 * * 0"
@@ -577,7 +577,7 @@ routines:
       enabled: true
   - id: W5
     name: Factbase & Analytics Consolidation
-    schedule: "weekly Sun after W4"
+    schedule: "weekly Sun after W4, late"
     monitor_class: weekly_sun
     catchup_safe: true
     depends_on: [W4]
@@ -585,8 +585,19 @@ routines:
              ops/autonomy_levels.yaml]
     expected_trigger:
       recurrence: custom_cron
-      cron_utc: "0 10 * * 0"
-      time_local: "04:00"
+      # RETIMED 2026-08-17 (weekend timing optimization): was `0 10 * * 0` (04:00 MDT, right after
+      # W4). Moved to fire late Sunday instead -- AFTER D2a's Sunday ~16:40 MT run (which recovers
+      # Friday's marks under the 2026-08-08 Sun-Thu daily-tier consolidation, since D2a no longer
+      # runs Friday/Saturday) and AFTER the rest of the Sunday daily chain (ends OPS0 22:30 MDT) --
+      # so W5's trend/analytics consolidation reflects Friday's recovered marks and the full day's
+      # activity instead of running before any of it exists. W1-W4 deliberately stay in their
+      # early-Sunday slots unchanged: W4 still needs to land early so its handoff is ready in time
+      # for Sunday's D2 run. `0 5 * * 1` is Monday 05:00 UTC, which is Sunday in America/Denver in
+      # BOTH DST seasons (05:00 - 6h = 23:00 Sun MDT; 05:00 - 7h = 22:00 Sun MST) -- verified by
+      # scripts/check_cron_dst_safety.py's weekday_sunday rule, which checks the LOCAL rendering,
+      # not the cron's own day-of-week literal.
+      cron_utc: "0 5 * * 1"
+      time_local: "23:00"
       enabled: true
     notes: "Good home for CALL ops.sp_score_theater() (P3-2 independence judge) + embedding health check."
 
@@ -868,26 +879,21 @@ routines:
 # It also enforces that `time_local` is the MDT rendering for EVERY routine -- the old OPS2
 # split-convention trap (its time_local was the MST reading) is fixed, not just documented.
 #
-# DAILY (the platform's native Daily/Weekdays picker IS genuinely DST-aware — shows "MDT"/"MST") —
-# UNCHANGED 2026-07-12: no exact collisions found here, and gaps are deliberately telemetry-tuned
-# (see D2/D2a note below), so widening to 1hr would only push SL3 into the new W1 Sunday slot:
-#   D1 4:00 PM MT · D2a 4:40 PM MT · D2 5:15 PM MT (widened from 4:30 PM 2026-07-10 — D2a's real
-#     completion time varies 6-17+ min in ops.run_log; the old 10-min gap was too thin) · D3 6:45 PM MT ·
-#     SL3 8:00 PM MT · AR_att 6:00 PM MT · AR_orc 6:20 PM MT · SL2 7:05 PM MT · SL5 7:25 PM MT ·
-#     OPS0 10:30 PM MDT / 9:30 PM MST (04:30 UTC FIXED cron, not the native DST-aware picker — resilience
-#     audit 2026-07-16, RES-1/OAE-1 merge; deliberately inside the 21:00-24:00 Denver daily-miss
-#     visibility window year-round, bigquery/48_cadence_monitor_unbounded.sql:52-59, and clear of the
-#     05:15 UTC cadence_check scheduled-query snapshot) — pending owner creation, see OWNER_ACTIONS.md §A
+# CURRENT DAILY/WEEKLY SLOTS — fixed-UTC custom crons, with `time_local` rendered in MDT. The routine
+# entries above are the source of truth; the following is a compact collision/ordering record, not a
+# second schedule. Every daily-tier routine serves Sunday–Thursday only. Under MST each fixed-UTC slot
+# renders one hour earlier locally; `scripts/check_cron_dst_safety.py` enforces the relevant windows.
 #
-# WEEKLY (native Weekly picker, DST-aware) — RE-SPACED 2026-07-12, now a full 1hr apart (was 30 min;
-# see incident note above). W1 unchanged, W2-W5 moved:
-#   W1 12:00 AM MT Sun · W2 1:00 AM MT Sun (was 12:30 AM) · W3 2:00 AM MT Sun (was 1:00 AM) ·
-#   W4 3:00 AM MT Sun (was 1:30 AM) · W5 4:00 AM MT Sun (was 2:00 AM)
-#   D1/D2a/D2/SL3 intentionally still fire on weekends/holidays (recurrence type "Daily", not
-#   "Weekdays") — confirmed via real weekend runs (2026-06-20/21, 2026-07-04/05) that they self-detect
-#   the non-trading day and complete cheap, safe, idempotent work (D1 catches weekend geopolitical
-#   news relevant to Monday's open; D2/D2a run harmless broker/cash reconciliation). Do NOT switch
-#   these to "Weekdays" — that would remove working, valuable behavior, not fix a bug.
+# Daily (MDT rendering): OPS1 06:30 · D1 16:00 · D2a 16:40 · D2 17:15 · AR_att 18:00 · AR_orc 18:35 ·
+# D3 18:45 · SL2 19:05 · SL5 19:25 · SL3 20:00 · OPS2 22:15 · OPS0 22:30. The post-close gaps are
+# runtime-derived; OPS2/OPS0 remain in the intended daily-miss visibility window in both DST seasons.
+#
+# Weekly Sunday (MDT rendering): W1 01:30 · W2 02:00 · W3 03:00 · W4 03:30 (early chain -- W4 must
+# land in time to feed Sunday's D2 run) · W5 23:00 (RETIMED 2026-08-17 from 04:00 -- late Sunday, on
+# purpose: runs after D2a's ~16:40 Friday-mark recovery and the full Sunday daily chain, which ends at
+# OPS0 22:30, so W5's trend/analytics reporting includes Friday's recovered marks instead of preceding
+# them). The W1–W4 offsets preserve the Sunday boundary and observed predecessor-duration gaps in both
+# DST seasons.
 #
 # MONTHLY/QUARTERLY/ANNUAL (forced onto raw "Custom" cron — confirmed 2026-07-10 the platform's
 # recurrence-type options are ONLY Once/Hourly/Daily/Weekdays/Weekly/Custom, no month-of-year option

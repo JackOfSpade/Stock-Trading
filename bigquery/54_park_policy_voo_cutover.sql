@@ -247,7 +247,7 @@ FROM p LEFT JOIN mark ON TRUE;
 -- BEHAVIOR-PRESERVING TODAY: state.park_policy_current resolves to 'SGOV' until the owner's VOO row
 -- lands, so every p_is_park=TRUE call gets EXACTLY the same 0.2% band + 1.10x-NAV backstop it gets
 -- today. Only the PARAMETER NAME changes (p_is_sgov -> p_is_park) -- arity/position are UNCHANGED,
--- so every existing positional call site (Claude_Task_Plan.md's D2/D2a/D3/W4/M4/Q4/A1/A3 order-guard
+-- so every existing positional call site (Claude_Task_Plan.md's D2/D2a/D3/M4/Q4/A1/A3 order-guard
 -- steps, dbt/tests/assert_fn_order_guard_fire_drill.sql, ops.sp_fire_drill_order_guard) keeps working
 -- with no edit required for correctness (prose references to "is_sgov" are updated for accuracy in
 -- the same commit as a courtesy, not because the call shape changed).

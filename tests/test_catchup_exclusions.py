@@ -5,7 +5,7 @@ catchup_safe in ops/cadence.yaml and present in state.catchup_refire_readiness
 (bigquery/59_catchup_autofire.sql / bigquery/90_catchup_inprogress_guard.sql). That is a strictly
 higher-consequence action than OPS0's older "fire the trigger and let a human confirm" recovery: OPS2
 runs the routine's OWN steps end to end with no human in the loop for that specific catch-up. The
-order-crafting/capital-adjacent routines (D2, D2a, W4, M4, Q4, A3, SL4) are deliberately EXCLUDED from
+order-crafting/capital-adjacent routines (D2, D2a, M4, Q4, A3, SL4) are deliberately EXCLUDED from
 catchup_safe for exactly this reason (see bigquery/59's and bigquery/90's own comments), so an
 accidental catchup_safe: true flip on any of them — or a stray reappearance in one of the hand-kept
 UNNEST allowlists those two files carry — would make that routine auto-refireable (OPS0) and
@@ -32,9 +32,11 @@ D1_SLICE = REPO_ROOT / "task_plan" / "D1.md"
 _ORDER_CRAFT_STRINGS = ("create_order_instruction", "delete_order_instruction")
 
 # The order-crafting / capital-adjacent routines that must NEVER be catchup_safe (bigquery/59's and
-# bigquery/90's own header comments: D2/D2a "daily", W4/M4/Q4/A3 "action-conversion", SL4 "discretionary-
-# retirement proposal capital-adjacent enough to warrant the existing human-visible alert only").
-ORDER_CRAFT_ROUTINE_IDS = ("D2", "D2a", "W4", "M4", "Q4", "A3", "SL4")
+# bigquery/90's own header comments: D2/D2a "daily", M4/Q4/A3 "action-conversion", SL4 "discretionary-
+# retirement proposal capital-adjacent enough to warrant the existing human-visible alert only"). W4 was
+# intentionally removed in the daily/weekly ownership redesign: it now writes idempotent queue handoffs
+# only, so a late catch-up reproduces its same-day result safely.
+ORDER_CRAFT_ROUTINE_IDS = ("D2", "D2a", "M4", "Q4", "A3", "SL4")
 
 _LINE_COMMENT = re.compile(r"--[^\n]*")
 _UNNEST_BRACKET = re.compile(r"UNNEST\(\[(.*?)\]\)", re.S)
@@ -114,13 +116,13 @@ def _own_body(slice_path):
 def test_order_crafting_routines_stay_catchup_excluded():
     """OPS2 adversarial review 2026-07-27.
 
-    D2/D2a/W4/M4/Q4/A3/SL4 craft orders or move capital and must never become catch-up-eligible:
+    D2/D2a/M4/Q4/A3/SL4 craft orders or move capital and must never become catch-up-eligible:
     OPS0 auto-REFIRES a catchup_safe miss's trigger, and OPS2 goes further and auto-EXECUTES it
     inline, with no human gate either way. Pins two independent surfaces:
 
-    1. ops/cadence.yaml's declared `catchup_safe` boolean for each of these 7 ids is False (the
+    1. ops/cadence.yaml's declared `catchup_safe` boolean for each of these 6 ids is False (the
        source of truth scripts/check_cadence_consistency.py's check K reads).
-    2. None of the 7 ids appear inside the hand-kept catchup_safe UNNEST([...]) allowlists in
+    2. None of the 6 ids appear inside the hand-kept catchup_safe UNNEST([...]) allowlists in
        bigquery/59_catchup_autofire.sql or bigquery/90_catchup_inprogress_guard.sql (the latter
        reproduces bigquery/59's — and bigquery/31's — lists inertly for query purposes, per its own
        module docstring, but a stray edit there would still feed a live BigQuery view OPS2 reads).
@@ -152,6 +154,25 @@ def test_order_crafting_routines_stay_catchup_excluded():
         )
 
 
+def test_queue_only_w4_stays_catchup_safe():
+    """W4 no longer crafts/stages orders, so its idempotent handoff is safe to recover.
+
+    This is the complement to the capital-adjacent exclusion above.  W4's queue-only
+    redesign deliberately made it recoverable by OPS0/OPS2; a stale copy of the old
+    never-refire list would otherwise turn a harmless missed research handoff into a
+    week-long manual alert.  Pin both the manifest declaration and the two live SQL
+    readiness allowlists.
+    """
+    doc = yaml.safe_load(CADENCE_YAML.read_text(encoding="utf-8")) or {}
+    routines = {r["id"]: r for r in cadence_routines(doc)}
+    assert routines["W4"].get("catchup_safe") is True
+    for path in (CATCHUP_AUTOFIRE_SQL, CATCHUP_INPROGRESS_GUARD_SQL):
+        assert "W4" in _all_unnest_ids(path), (
+            f"{path.name}: queue-only W4 is missing from the catchup-safe allowlist; "
+            "keep the manifest and both readiness surfaces aligned."
+        )
+
+
 def test_ops2_retains_order_craft_slice_scan():
     """OPS2 adversarial review 2026-07-27.
 
@@ -162,7 +183,7 @@ def test_ops2_retains_order_craft_slice_scan():
     the (hand-maintained, comment-driven) exclusion lists in bigquery/59/90 alone. D3 is the concrete
     case this guard exists for — D3 IS catchup_safe (daily miss recovery is safe and valuable) yet
     ALSO crafts orders (its persist-and-wait DAY re-craft), so it is the one routine that would
-    otherwise slip past the SCOPE GUARDRAIL (item 1, which only excludes D2/D2a/W4/M4/Q4/A3/SL4) and
+    otherwise slip past the SCOPE GUARDRAIL (item 1, which only excludes D2/D2a/M4/Q4/A3/SL4) and
     get inline-executed by a read-only session.
 
     Asserts both halves of the guard are still present in Claude_Task_Plan.md's OPS2 section (the
@@ -246,7 +267,7 @@ def test_scope_guardrail_prose_matches_exclusion_set():
     one):
 
     * ANCHOR ON THE GUARDRAIL'S NAME, NOT ON THE IDS. Matching the literal string
-      "D2, D2a, W4, M4, Q4, A3, SL4" would make the test pass whenever the prose drifted — the pattern
+      "D2, D2a, M4, Q4, A3, SL4" would make the test pass whenever the prose drifted — the pattern
       would simply stop matching, and an occurrence-count assertion is the only thing standing between
       that and a silent pass. Anchoring on /scope[- ]guardrail/i and extracting whatever id run follows
       inverts that: drift changes the extracted SET, which is compared, rather than the match count.
