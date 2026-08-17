@@ -249,6 +249,44 @@ assert_eq "run_date: no date anywhere yields empty (caller then skips the row)" 
 assert_eq "run_date: a date glued inside another token is skipped, real date still found" \
   "$(marker_run_date_from_subject 'D2 rebalance v42026-07-15 sync 2026-07-28' '2026-01-01')" "2026-07-28"
 
+# ---- RUNBOOK §38 marker WRITE guards: phantom-completion classes (2026-08-17, W5) ----------------
+# Regression guard for two commit classes that parsed to a valid routine+date but were NOT routine
+# output, so ops.sp_backfill_run_log_from_markers minted a 'completed' ops.run_log row for a run that
+# never happened. Measured harm (W5, 2026-08-17): W5 read completed on both 2026-08-16 and 2026-08-17,
+# blinding its cadence dead-man's switch AND collapsing state.routine_catchup_window from 8.3d to 0.07d.
+
+# (A) authorship — only routine sessions author routine output commits
+assert_true "author: routine container identity is accepted" \
+  marker_author_is_routine 'noreply@anthropic.com'
+assert_false "author: operator GitHub web-UI commit is NOT a routine output commit" \
+  marker_author_is_routine '3615459+JackOfSpade@users.noreply.github.com'
+assert_false "author: operator local commit is NOT a routine output commit" \
+  marker_author_is_routine 'jack@mac.home'
+assert_false "author: auto-merge bot is NOT a routine output commit" \
+  marker_author_is_routine 'actions@github.com'
+assert_false "author: empty author yields no marker" \
+  marker_author_is_routine ''
+# the near-miss that motivates suffix-matching rather than an exact-address pin
+assert_true "author: a future harness identity on the same domain still counts as routine" \
+  marker_author_is_routine 'claude-routine@anthropic.com'
+
+# (B) halt/abort subjects — a routine documenting its OWN failure must not be marked completed
+assert_true "no-completion: the live 2026-08-16 W5 halt commit is rejected" \
+  marker_subject_declares_no_completion 'W5 2026-08-16: HALT at pre-flight — BigQuery connector de-authorized'
+assert_true "no-completion: lowercase halted is rejected" \
+  marker_subject_declares_no_completion 'D2 2026-08-16: halted on a stale freshness gate'
+assert_true "no-completion: abort vocabulary is rejected" \
+  marker_subject_declares_no_completion 'AR_orc 2026-08-16: aborted, dependency gate unsatisfied'
+# ordinary output subjects must survive — the guard is narrow by design
+assert_false "no-completion: an ordinary daily output subject is unaffected" \
+  marker_subject_declares_no_completion 'D1 Market Development Scan 2026-07-28'
+assert_false "no-completion: a real W5 output subject is unaffected" \
+  marker_subject_declares_no_completion 'W5 2026-08-03: factbase consolidation, 16 sub-pattern instances'
+assert_false "no-completion: substring 'halt' inside a longer word does not trip the guard" \
+  marker_subject_declares_no_completion 'D1 Market Development Scan 2026-08-17 — asphalt makers rally'
+assert_false "no-completion: empty subject is not a halt declaration" \
+  marker_subject_declares_no_completion ''
+
 echo
 if [ "$fail" -ne 0 ]; then
   echo "auto_merge_decision tests: FAILED"

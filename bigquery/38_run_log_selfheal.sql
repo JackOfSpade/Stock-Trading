@@ -57,6 +57,12 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.ops.routine_commit_markers` (
 OPTIONS(description='Durable marker that a routine real-output commit landed on origin/main, written independently of whether that routine ever wrote its own ops.run_log completion row (RUNBOOK §38 self-heal, ITEM 3). CI (auto-merge-claude.yml) is the intended writer, keyed off the merged commit subject. A row here for (routine, run_date) is git-verifiable evidence the routine actually produced output that day, even if ops.run_log never got a completed row for it.');
 
 -- ===== state.run_log_selfheal_candidates — marker present, completed run_log row absent =====
+-- SUPERSEDED 2026-08-17 by bigquery/175_selfheal_candidate_completion_guard.sql — do NOT re-apply this
+-- definition. 175 keeps everything below and adds one term: a marker whose commit subject DECLARES the
+-- run a non-completion ("... HALT at pre-flight ...") is no longer a backfill candidate. Re-applying
+-- this file in isolation would silently restore the phantom-completion path that blinded W5's cadence
+-- dead-man's switch and collapsed its catch-up evidence window on 2026-08-16/17. The table and the
+-- procedure in THIS file remain canonical; only the view moved.
 -- Fail-closed by construction: routine/run_date/git_commit are NOT NULL on the marker table, so an
 -- incomplete/garbled marker row simply cannot be written in the first place (no NULL-match false
 -- positive risk here), and the NOT EXISTS below only ever narrows the candidate set, never widens it —

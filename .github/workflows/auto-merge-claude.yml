@@ -246,9 +246,19 @@ jobs:
               # SL2 read days_silent=0 in state.queue_driven_silence_watch, blinding the detector added
               # the day before precisely to catch SL2 going quiet. --date=short-local renders in $TZ.
               commit_date="$(TZ=America/Denver git log -1 --date=short-local --format=%ad "$sha" 2>/dev/null || true)"
+              author_email="$(git log -1 --format=%ae "$sha" 2>/dev/null || true)"
               routine="$(marker_routine_from_subject "$subject")"
               run_date="$(marker_run_date_from_subject "$subject" "$commit_date")"
-              if [ -n "$routine" ] && [ -n "$run_date" ]; then
+              # WAS THIS A ROUTINE **OUTPUT** COMMIT AT ALL? (2026-08-17, W5) The two extractors above
+              # answer "which routine/date does this subject name", never "did a routine run produce
+              # this commit". Two classes slipped through and minted phantom 'completed' run_log rows:
+              # a routine's own HALT commit (subject names the routine and the day, body says nothing
+              # was written), and an operator commit whose subject merely STARTS with a routine token.
+              # Both are guarded in scripts/auto_merge_decision.sh — see the block above those two
+              # functions for the measured harm and the fail-toward-no-marker rationale.
+              if [ -n "$routine" ] && [ -n "$run_date" ] \
+                 && marker_author_is_routine "$author_email" \
+                 && ! marker_subject_declares_no_completion "$subject"; then
                 # shellcheck disable=SC2016 # single-quoted intentionally: @p_routine etc. are BigQuery
                 # named-parameter placeholders bound via --parameter=, not shell variables to expand.
                 bq query --project_id=stock-trading-498512 --use_legacy_sql=false --nouse_cache \
@@ -258,6 +268,12 @@ jobs:
                   --parameter="p_commit_subject:STRING:${subject}" \
                   'INSERT INTO `stock-trading-498512.ops.routine_commit_markers` (routine, run_date, git_commit, commit_subject, source) VALUES (@p_routine, @p_run_date, @p_git_commit, @p_commit_subject, "auto-merge-claude.yml")' \
                   || echo "::warning::routine_commit_markers insert failed for $sha ($routine $run_date) -- section 38 self-heal will not see this run; nothing else is affected."
+              elif [ -n "$routine" ] && [ -n "$run_date" ]; then
+                # Suppression is ANNOUNCED, never silent: this branch means the subject named a real
+                # routine + date but one of the two 2026-08-17 guards rejected it. Printing it keeps a
+                # future over-broad guard debuggable from the merge log alone -- the failure mode being
+                # avoided is a marker quietly never written and nobody knowing why.
+                echo "::notice::routine_commit_markers row SUPPRESSED for $sha ($routine $run_date) -- not a routine output commit (author='$author_email', subject='$subject'). This is the 2026-08-17 phantom-completion guard; §38 self-heal will not treat this commit as a completed run."
               fi
             done
           fi

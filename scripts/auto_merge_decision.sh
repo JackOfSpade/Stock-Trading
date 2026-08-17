@@ -163,3 +163,59 @@ marker_run_date_from_subject() {
     printf '%s\n' "${2:-}"
   fi
 }
+
+# ---- Marker WRITE guards (added 2026-08-17, W5) --------------------------------------------------
+# WHY: a ops.routine_commit_markers row asserts "this routine's OUTPUT commit landed on main", and
+# ops.sp_backfill_run_log_from_markers turns that assertion into a 'completed' ops.run_log row. The two
+# functions above decide WHICH routine/date a subject names; neither can tell whether the commit was
+# produced BY a routine run at all. Two commit classes therefore minted phantom completions:
+#
+#   (A) A routine's own HALT commit. When a routine correctly follows the connector-pre-flight halt
+#       branch it commits a record of the halt — e.g. "W5 2026-08-16: HALT at pre-flight — BigQuery
+#       connector de-authorized", a commit whose own body states "HALTED W5 cleanly. No factbase edits,
+#       no writes." That subject parses to routine=W5, run_date=2026-08-16 and was marked as output.
+#       The perverse result: the better a routine documents its own failure, the more certainly it is
+#       recorded as having succeeded.
+#   (B) A NON-routine commit whose subject merely begins with a routine token. The operator's
+#       "W5 weekend timing optimization, plus routine-scope CI guard and cadence cleanup" (author
+#       3615459+JackOfSpade@users.noreply.github.com, 2026-08-17) is a commit ABOUT W5, not BY W5; with
+#       no date in the subject the run_date fallback attributed it to the commit's own day.
+#
+# MEASURED HARM (2026-08-17, W5): those two rows made W5 read as completed on both 08-16 and 08-17, so
+# the cadence dead-man's switch saw ran_completed_this_period=TRUE and could never raise period_missed
+# or reach OPS0 auto-refire readiness (OPS0 logged exactly this diagnosis on 2026-08-16), AND
+# state.routine_catchup_window collapsed W5's evidence reach from 8.3 days to 0.07 — the catch-up
+# protocol that exists to cover missed periods was disarmed by the very rows recording the miss. Two
+# W5 cycles were lost with nothing alarming; W4 had to flag it in prose.
+#
+# THIS IS A RECURRING FAMILY, NOT A ONE-OFF: the workflow's own inline comment records the same
+# phantom-completion outcome on 2026-08-04, when an SL2 commit's UTC-rendered fallback date blinded
+# state.queue_driven_silence_watch. That fix corrected the DATE limb; these two guards close the
+# "was this a routine output commit at all?" limb.
+#
+# BIAS: both guards fail toward NOT writing a marker. That asymmetry is deliberate — a MISSING marker
+# degrades to the pre-existing loud path (sp_assert_deps raises missing_dependency and the gate's
+# git-evidence fallback still applies), whereas a FALSE marker silently blinds dead-man's switches.
+# A noisy miss is recoverable; a silent false completion is what cost two cycles here.
+
+# marker_author_is_routine <author_email> — true when a commit was authored by a routine session.
+# Routine containers commit as `Claude <noreply@anthropic.com>`; VERIFIED against every routine commit
+# in the 2026-07/08 window. Operator commits (GitHub web UI `…@users.noreply.github.com`, local
+# `jack@mac.home`) and the auto-merge bot are all outside this domain — the same authorship split
+# CLAUDE.md's stop-hook note already documents. Suffix-matched rather than pinned to the exact address
+# so a harness identity change degrades to "still recognised" rather than "every marker suppressed".
+marker_author_is_routine() {
+  case "${1:-}" in
+    *"@anthropic.com") return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# marker_subject_declares_no_completion <subject> — true when a commit subject AFFIRMATIVELY states the
+# run did not complete, so no marker should be written no matter how well-formed the id/date are.
+# Deliberately narrow: it matches only the halt/abort vocabulary the halt-commit convention actually
+# uses, as whole words, so an ordinary output subject cannot trip it. It is a BACKSTOP, never the
+# authoritative completion signal — that remains the routine's own ops.sp_routine_end write.
+marker_subject_declares_no_completion() {
+  printf '%s' "${1:-}" | grep -qiE '\b(halt|halts|halted|halting|abort|aborts|aborted|aborting)\b'
+}
