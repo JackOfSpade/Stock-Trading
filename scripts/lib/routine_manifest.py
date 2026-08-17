@@ -99,13 +99,28 @@ def instruction_text(heading):
 def build_triggers_manifest(headings, cad):
     """The canonical {id: {monitor_class, instruction}} map — the same shape
     print_routines.py --write emits to ops/triggers.json and
-    check_cadence_consistency.py's check F verifies against."""
-    return {
-        rid: {
-            "monitor_class": cad.get(rid, {}).get("monitor_class"),
-            "instruction": instruction_text(h),
-        }
-        for h in headings
-        for rid in [heading_to_id(h)]
-        if rid in cad
-    }
+    check_cadence_consistency.py's check F verifies against.
+
+    PER-ROUTINE INSTRUCTION NOTE (owner directive, 2026-08-17). A cadence.yaml routine row may carry an
+    optional `instruction_note` string; when non-empty it is appended to instruction_text()'s output,
+    separated by exactly one blank line ("\n\n"). This lives HERE rather than inside instruction_text()
+    itself because instruction_text(heading) has two other callers that must keep emitting the bare
+    legacy string: check_cadence_consistency.py's check B compares it against bigquery/15's
+    canonical_instruction (a description-catalog concern, unrelated to a live trigger's operator-facing
+    note) and print_routines.py prints it per-heading with no `cad` row in scope. Today the only routine
+    with a note is OPS2 -- its live trigger deliberately omits the standing Sonnet-delegation addendum
+    (ops/cadence.yaml's OPS2 block), and since claude.ai's routine-review UI cannot see this repo's
+    comments, the justification is now carried INLINE in the instruction itself so a manual review does
+    not keep re-flagging the omission as a defect."""
+    manifest = {}
+    for h in headings:
+        rid = heading_to_id(h)
+        if rid not in cad:
+            continue
+        row = cad.get(rid, {})
+        instr = instruction_text(h)
+        note = row.get("instruction_note")
+        if note:
+            instr = f"{instr}\n\n{note}"
+        manifest[rid] = {"monitor_class": row.get("monitor_class"), "instruction": instr}
+    return manifest

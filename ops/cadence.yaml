@@ -394,10 +394,47 @@ routines:
                                     # tension with OPS2's hosting job -- the omission above is scoped to
                                     # the Sonnet-delegation paragraph only (scripts/routine_backup.py's
                                     # ADDENDUM/SCOPE_ADDENDUM split).
+                                    # JUSTIFICATION NOW CARRIED INLINE (owner directive, 2026-08-17). The
+                                    # omission above is no longer recorded ONLY here: OPS2's live trigger
+                                    # instruction itself now opens with a NOTE paragraph stating that the
+                                    # Sonnet-delegation paragraph is deliberately absent and why (hosting
+                                    # requirement (a), NO MODEL DOWNGRADE). Reason: the operator reviews
+                                    # routines in the claude.ai UI, where this file is not visible, so a
+                                    # hand comparison against OPS0 kept re-surfacing the gap as a suspected
+                                    # defect -- exactly as the paragraph above predicted it would. Putting
+                                    # the rationale at the point of comparison ends that loop. It costs
+                                    # nothing at run time (it is inert prose) and ops/triggers.json's OPS2
+                                    # `instruction` carries the same text so routine_backup.py check's
+                                    # core+ADDENDUM+SCOPE_ADDENDUM comparison still matches exactly.
+                                    # SINGLE SOURCE OF TRUTH: this routine's `instruction_note` field
+                                    # below (alongside `notes`), NOT a second hand-authored copy inside
+                                    # ops/triggers.json. scripts/lib/routine_manifest.py's
+                                    # build_triggers_manifest() appends it, separated by exactly "\n\n",
+                                    # to the generic instruction_text() template when generating
+                                    # ops/triggers.json -- so `python scripts/print_routines.py --write`
+                                    # regenerates the file FROM this field. ops/triggers.json itself must
+                                    # never be hand-edited (scripts/check_cadence_consistency.py check F
+                                    # fails the build if it drifts from that generator). If you edit the
+                                    # NOTE: edit `instruction_note` here, edit the live claude.ai trigger
+                                    # to match (the live trigger config lives only on claude.ai and
+                                    # cannot be pushed from the repo), then regenerate ops/triggers.json
+                                    # with the command above.
                                     # NOTE state.instruction_drift cannot see this either way: it compares
                                     # the FIRST LINE ONLY (REGEXP_EXTRACT(instruction, r'^[^\n]*'), by
                                     # design, so the addendum's wording never trips drift), so the addendum
                                     # is unmonitored for EVERY routine -- this comment is the only record.
+                                    # OPS2's first line is UNCHANGED by the inline NOTE, so neither
+                                    # instruction_drift nor state.routine_last_instruction's
+                                    # LIKE 'Read Claude_Task_Plan.md. Perform %' filter is affected.
+    # The verbatim paragraph appended to the generated instruction (see build_triggers_manifest() /
+    # the SINGLE SOURCE OF TRUTH note above) -- this is the ONLY routine with an instruction_note today.
+    instruction_note: >-
+      NOTE — OPS2 deliberately does NOT carry the standing Sonnet-delegation paragraph that every other
+      routine has ("Spawn Sonnet 5 model sub-agents to do the grunt work..."). That omission is
+      intentional and owner-confirmed (2026-07-28): OPS2 hosts missed routines INLINE and must execute
+      their judgment-heavy steps at full claude-opus-5 fidelity (task_plan/OPS2.md hosting requirement
+      (a), NO MODEL DOWNGRADE), which a blanket instruction to push grunt work onto Sonnet sub-agents
+      would contradict. Do not "fix" this difference.
     notes: >
       Catch-up EXECUTOR (added 2026-07-27, owner directive -- the headless-RemoteTrigger workaround,
       ops/RUNBOOK.md §15b). Reads state.catchup_refire_readiness + the non-trading-day D1/SL3 set and, for
