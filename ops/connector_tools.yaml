@@ -456,20 +456,53 @@ connectors:
   - name: Tavily
     connector_uuid: 715856f0-b776-4037-b2a3-a0c9531d965f
     settings_prefix: mcp__Tavily__
+    # CREDIT COSTS are recorded per tool below because this connector is the one metered,
+    # pay-as-you-go external surface the fleet has, and this file is where a session reading the
+    # allowlist will look. Rates verified against docs.tavily.com/documentation/api-credits on
+    # 2026-08-17; PAYG was $0.008/credit with 1,000 free credits/month resetting on the 1st.
+    # The binding usage discipline is Claude_Task_Plan.md's shared rule "Metered external calls:
+    # cheapest ADEQUATE source, explicit parameters, reported spend" (referenced BY NAME, not by
+    # line number -- the previous notes here pointed at Claude_Task_Plan.md:345, which had already
+    # drifted to :357 by the time anyone re-read it).
     tools:
       - name: tavily_crawl
         use: optional
+        note: >-
+          COST: map leg + extract leg (docs example, 10 pages basic = 3 credits; advanced = 5).
+          Named by NO routine step today. Allowlisted, so an unattended run can fire it with no
+          prompt -- requires an explicit `limit` and a stated reason a targeted extract would not do.
       - name: tavily_extract
         use: required
-        note: Claude_Task_Plan.md:345 — external-content extraction discipline
+        note: >-
+          COST: 1 credit per 5 successful URLs basic, 2 per 5 advanced (prorated per URL, max 20
+          per call; failures never charged). Dedupe URLs before extracting -- that is the real
+          saving. Batching is NOT a credit saving (prorated), only rate-limit headroom.
+          Claude_Task_Plan.md — external-content extraction discipline.
       - name: tavily_map
         use: optional
+        note: >-
+          COST: 1 credit per 10 pages, 2 per 10 with `instructions`. Named by NO routine step
+          today; same allowlist caveat as tavily_crawl.
       - name: tavily_research
         use: required
-        note: Claude_Task_Plan.md:345 — external-content extraction discipline
+        note: >-
+          COST: 4-110 credits (model=mini) / 15-250 (model=pro). Allowlisted and UNGATED by owner
+          directive 2026-08-17 -- do not delist it and do not add an approval step. Measured usage
+          is immaterial (Aug 2026: 16 credits, 0.4% of the bill), so this is a tail risk to record,
+          not a cost to engineer around. Best FIT for an open-ended question whose sub-queries
+          cannot be enumerated; a poor fit for a market cap or filing date, which one search
+          answers faster. Claude_Task_Plan.md — external-content extraction discipline.
       - name: tavily_search
         use: required
-        note: Claude_Task_Plan.md:345 — external-content extraction discipline
+        note: >-
+          COST: 1 credit basic, 2 advanced -- and 97.6% of the account bill (Aug 2026: 3,661 of
+          3,751 credits), so this tool IS the spend. auto_parameters=true is ENDORSED (owner
+          directive 2026-08-17): the session picks depth per task, paying 2 credits when that is
+          the better answer. max_results / topic / time_range / include_answer /
+          chunks_per_source / include_domains are FREE -- turn them UP; widening one search beats
+          issuing a second. include_usage=true should be ON for every call (free, and it returns
+          real consumption for ops.web_calls.credits_reported).
+          Claude_Task_Plan.md — external-content extraction discipline.
     absent: []
 
   - name: Hugging-Face
