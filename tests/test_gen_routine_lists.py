@@ -70,7 +70,7 @@ def test_gen_15_region_emits_all_routines_with_derived_instruction():
                   "AR_att": "Adversarial Review Attacker — regular routine"}
     got = gr.gen_15_region(routines, head_by_id)
     assert got == (
-        "  STRUCT('D1' AS routine, 'Read Claude_Task_Plan.md. Perform D1. Market Development Scan — deep research.' AS canonical_instruction),\n"
+        "  STRUCT('D1' AS routine, 'Read Claude_Task_Plan.md. Perform D1 — deep research.' AS canonical_instruction),\n"
         "  STRUCT('AR_att' AS routine, 'Read Claude_Task_Plan.md. Perform Adversarial Review Attacker — regular routine.' AS canonical_instruction)"
     )
     # 2-space indent (matches bigquery/15's block, shallower than 12/24), queue_driven routines INCLUDED.
@@ -97,11 +97,15 @@ def test_gen_15_region_escapes_apostrophe_in_heading():
     # Apostrophe SUPPORT (coordinated with check B's un-escape): the heading's ' is escaped to '' in
     # the single-quoted SQL literal, producing VALID BigQuery SQL (BigQuery stores the un-escaped
     # value). check B un-escapes '' -> ' when parsing the row back so want_catalog (raw heading) matches.
-    got = gr.gen_15_region([{"id": "D9"}], {"D9": "D9. O'Brien Momentum Screen — regular routine"})
-    assert got == ("  STRUCT('D9' AS routine, 'Read Claude_Task_Plan.md. Perform D9. O''Brien "
-                   "Momentum Screen — regular routine.' AS canonical_instruction)")
+    # GENERIC FORM (2026-08-17): a CODED heading's description (where an apostrophe would live) is now
+    # dropped from the instruction entirely, so a coded id no longer exercises this path. Use an
+    # UNCODED heading (no "<id>. " prefix, same shape as AR_att/AR_orc) instead -- the one remaining
+    # case where a heading's full text, apostrophe included, still reaches the generated SQL.
+    got = gr.gen_15_region([{"id": "AR_att"}], {"AR_att": "O'Brien Review Attacker — regular routine"})
+    assert got == ("  STRUCT('AR_att' AS routine, 'Read Claude_Task_Plan.md. Perform O''Brien "
+                   "Review Attacker — regular routine.' AS canonical_instruction)")
     # Mirror of check B: un-escaping the instruction recovers the raw text want_catalog derives.
-    assert "Perform D9. O''Brien Momentum Screen" in got
+    assert "Perform O''Brien Review Attacker" in got
     assert got.replace("''", "'").count("O'Brien") == 1
 
 
@@ -271,7 +275,7 @@ def test_main_write_then_check_is_a_clean_round_trip(tmp_path, monkeypatch, caps
     assert "STRUCT('D1' AS routine, 'daily_trading' AS schedule)" in f12.read_text()
     assert "STRUCT('W1' AS routine, 'weekly_sun' AS schedule)" in f12.read_text()
     assert "D1" not in f24.read_text() and "STRUCT('W1' AS routine, 'weekly_sun' AS monitor_class)" in f24.read_text()
-    assert "Perform D1. Market Development Scan — deep research." in f15.read_text()
+    assert "Perform D1 — deep research." in f15.read_text()
     assert "STRUCT('D1' AS routine, 'daily_trading' AS monitor_class)" in f105.read_text()
     assert "STRUCT('W1' AS routine, 'weekly_sun' AS monitor_class)" in f105.read_text()
 
@@ -312,15 +316,20 @@ def test_main_write_check_round_trips_with_an_apostrophe_heading(tmp_path, monke
     # Apostrophe SUPPORT end to end: --write emits ESCAPED, valid SQL for a heading with an apostrophe,
     # and --check round-trips clean against it. (check B's paired '' -> ' un-escape lives in the
     # non-owned check_cadence_consistency.py — see partC-report.md for that half of the change.)
-    _f12, f15, _f24, _f105, _f114, _f132 = _wire_fixture(tmp_path, monkeypatch)
-    plan = tmp_path / "Claude_Task_Plan.md"      # rewrite so D1's heading carries an apostrophe
+    # GENERIC FORM (2026-08-17): a CODED heading's description (where an apostrophe would live) is now
+    # dropped from the instruction, so this needs an UNCODED heading (no "<id>. " prefix, same shape as
+    # AR_att/AR_orc) to keep exercising the escape/round-trip path at all.
+    _f12, f15, _f24, _f105, _f114, _f132 = _wire_fixture(
+        tmp_path, monkeypatch, extra_routine="  - id: AR_att\n    monitor_class: queue_driven\n")
+    plan = tmp_path / "Claude_Task_Plan.md"      # add an uncoded heading carrying an apostrophe
     plan.write_text(
-        "## D1. O'Brien Screen — deep research\nbody\n\n"
-        "## W1. Catalyst Calendar (Strategies A and C) — deep research\nbody\n"
+        "## D1. Market Development Scan — deep research\nbody\n\n"
+        "## W1. Catalyst Calendar (Strategies A and C) — deep research\nbody\n\n"
+        "## O'Brien Review Attacker — regular routine\nbody\n"
     )
     monkeypatch.setattr(sys, "argv", ["gen_routine_lists.py", "--write"])
     assert gr.main() == 0
-    assert "Perform D1. O''Brien Screen — deep research." in f15.read_text()   # escaped in the SQL literal
+    assert "Perform O''Brien Review Attacker — regular routine." in f15.read_text()   # escaped in the SQL literal
     monkeypatch.setattr(sys, "argv", ["gen_routine_lists.py", "--check"])
     assert gr.main() == 0                                                       # self-consistent round-trip
 

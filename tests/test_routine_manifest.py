@@ -79,8 +79,19 @@ def test_instruction_text_exact_template():
     # Pin the literal template string byte-for-byte: ops/triggers.json's `instruction`, bigquery/15's
     # `canonical_instruction`, and print_routines.py's printed line all must render identically to this
     # (2026-07-20 audit finding: the same f-string was independently re-literalized in 3 places).
+    # GENERIC FORM (2026-08-17): a coded heading's description clause is dropped -- only the id + type
+    # tag remain, so a description-only rename (the W2/W4 case that motivated this) never needs a live
+    # RemoteTrigger push again for the instruction half.
     assert instruction_text("D1. Market Development Scan — deep research") == (
-        "Read Claude_Task_Plan.md. Perform D1. Market Development Scan — deep research."
+        "Read Claude_Task_Plan.md. Perform D1 — deep research."
+    )
+
+
+def test_instruction_text_uncoded_heading_keeps_full_text():
+    # AR_att/AR_orc have no "<id>. " prefix in their heading -- the heading itself IS the only
+    # identifying text, so it is kept verbatim (not generified).
+    assert instruction_text("Adversarial Review Attacker — regular routine") == (
+        "Read Claude_Task_Plan.md. Perform Adversarial Review Attacker — regular routine."
     )
 
 
@@ -110,7 +121,7 @@ def test_build_triggers_manifest_shape_and_cadence_filter():
     cad = {"D1": {"monitor_class": "daily_trading"}}   # ZZ absent -> excluded (matches "if rid in cad")
     assert build_triggers_manifest(headings, cad) == {
         "D1": {"monitor_class": "daily_trading",
-               "instruction": "Read Claude_Task_Plan.md. Perform D1. First — deep research."},
+               "instruction": "Read Claude_Task_Plan.md. Perform D1 — deep research."},
     }
 
 
@@ -118,7 +129,7 @@ def test_build_triggers_manifest_monitor_class_none_when_missing_in_cad_row():
     # rid present in cad but the row has no monitor_class -> instruction still emitted, class None.
     got = build_triggers_manifest(["D1. First — deep research"], {"D1": {}})
     assert got == {"D1": {"monitor_class": None,
-                          "instruction": "Read Claude_Task_Plan.md. Perform D1. First — deep research."}}
+                          "instruction": "Read Claude_Task_Plan.md. Perform D1 — deep research."}}
 
 
 def test_build_triggers_manifest_duplicate_id_resolves_last_heading_wins():
@@ -127,10 +138,13 @@ def test_build_triggers_manifest_duplicate_id_resolves_last_heading_wins():
     # headings for one id), check_cadence passes an already-deduped list. Convergence depends on this
     # dict-comprehension "last write wins" resolution — pin it so an interface-preserving refactor
     # can't quietly change which heading survives for a colliding id (2026-07-17 parallel-refactor audit).
-    headings = ["D1. Alpha — deep research", "D1. Bravo — deep research"]
+    # Both headings generify to the identical instruction (Alpha/Bravo is the dropped description), so
+    # this now pins "last write wins" via the underlying dict resolution rather than a visible text diff
+    # -- the type tag is varied instead so the two candidate outputs are still distinguishable.
+    headings = ["D1. Alpha — deep research", "D1. Bravo — regular routine"]
     cad = {"D1": {"monitor_class": "daily_trading"}}
     got = build_triggers_manifest(headings, cad)
     assert got == {
         "D1": {"monitor_class": "daily_trading",
-               "instruction": "Read Claude_Task_Plan.md. Perform D1. Bravo — deep research."},
+               "instruction": "Read Claude_Task_Plan.md. Perform D1 — regular routine."},
     }

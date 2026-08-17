@@ -98,9 +98,11 @@ CATEGORY_TOKENS = {
 # The advisory live run uses Gemini's FREE tier exclusively (owner directive 2026-07-17 — no paid
 # Anthropic fallback). It is enabled whenever GEMINI_API_KEY is set, and skips cleanly otherwise. The
 # Gemini path uses the stdlib (urllib) REST endpoint, so it adds NO pip dependency to CI. The ladder
-# below is tried best-quality-first; a model is abandoned (permanently, for the rest of the run) only on
-# a per-DAY quota exhaustion or a hard error — NOT on a per-minute rate limit (see the RPM constants
-# below). "Thinking" is left ON (default/dynamic) — this is an accuracy check whose whole job is catching
+# below is tried best-quality-first; a model is abandoned PERMANENTLY (added to the run-level
+# state["dead"] set, skipped by every later scenario too) only on a per-DAY quota exhaustion or a hard
+# error — NOT on a per-minute rate limit (see the RPM constants below, and the ladder-rewind doctrine
+# comment further down for how a purely-transient exhaustion is handled instead). "Thinking" is left ON
+# (default/dynamic) — this is an accuracy check whose whole job is catching
 # subtle decision flips, so the model should reason; the adaptive maxOutputTokens budget below (which
 # auto-escalates on truncation) keeps that reasoning from crowding out the DECISION line.
 #
@@ -128,9 +130,50 @@ GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{mode
 # entire ladder in ~60 seconds and produced zero results for 17 of 23 scenarios.
 #   * per-MINUTE (RPM) — TRANSIENT. Wait out the API's suggested RetryInfo.retryDelay and retry the SAME
 #     model. Rate-rejected requests do not consume the daily quota.
-#   * per-DAY (RPD)    — persistent for the rest of the day. Advance the ladder (sticky) — waiting is futile.
+#   * per-DAY (RPD)    — persistent for the rest of the day. Advance the ladder AND mark the model dead
+#     (state["dead"], sticky for the rest of the run) — waiting is futile.
 GEMINI_RPM_MAX_RETRIES = int(os.environ.get("GEMINI_RPM_MAX_RETRIES", "5"))
 GEMINI_RPM_RETRY_DELAY_S = float(os.environ.get("GEMINI_RPM_RETRY_DELAY_S", "20"))
+
+# CORRECTED 2026-08-17 (this was still broken, just delayed): once GEMINI_RPM_MAX_RETRIES was spent on a
+# model, the OLD code advanced the same sticky `state["idx"]` cursor a hard/permanent failure uses,
+# permanently burying a model that was merely rate-limited for the CURRENT minute. On a scenario batch
+# fired back-to-back, all three ladder rungs can RPM-out on scenario 1 before the first per-minute window
+# resets — that stamped the cursor past the end of the ladder, and every later scenario hit the "ladder
+# already exhausted earlier this run" short-circuit with ZERO attempts (live CI run 32039658866: 33
+# scenarios scoped, 1 attempted, 32 short-circuited). Fixed by splitting the single sticky cursor into
+# two independent mechanisms:
+#   * state["dead"] — a set of model ids abandoned for a HARD reason (HTTP 401/403/404/400/5xx, any
+#     per-DAY 429, a URLError/TimeoutError/ValueError, an empty/safety-blocked response, or still-
+#     truncating at GEMINI_MAX_OUTPUT_TOKENS_CEIL). Sticky for the whole run, exactly like the old `idx`
+#     cursor was — this preserves today's correct behavior for genuinely persistent failures.
+#   * RPM-only exhaustion is NEVER added to state["dead"]. It only skips the model for the REST OF THE
+#     CURRENT _gemini_call — the next scenario's call tries it again fresh, since a per-minute window
+#     resets in well under the time between two scenarios.
+#   * LADDER REWIND: if every still-live (not-yet-dead) rung gets RPM-exhausted within ONE call — the
+#     pathology above — sleep the cooldown (honouring the failing request's own RetryInfo.retryDelay when
+#     one was present, else GEMINI_LADDER_REWIND_COOLDOWN_S) and retry the whole still-live ladder from
+#     the top, bounded by GEMINI_LADDER_REWINDS rewinds before finally raising. A rung already in
+#     state["dead"] is never retried by a rewind (a hard failure is still permanent). A rewinds-exhausted
+#     raise for ONE scenario does NOT touch state["dead"] and does NOT stop the run — owner directive
+#     2026-08-17 ("i can wait, just make sure it dont fail ... it can wait and auto retry and eventually
+#     complete"): no single scenario's outcome may prevent LATER scenarios from attempting their own call;
+#     the only thing that legitimately stops the whole run early is genuine whole-ladder PERMANENT death
+#     (every rung in state["dead"]) or the run wall-clock budget below — waiting cannot fix either of
+#     those, so both exit promptly instead of burning rewinds/budget on a lost cause.
+#   * PACING: GEMINI_MIN_CALL_INTERVAL_S paces consecutive requests (measured from the actual last
+#     request, not a flat per-call sleep) to stay under the ~5 RPM free-tier ceiling in the first place,
+#     so tripping RPM at all — and needing a rewind — becomes the exception rather than the norm.
+#   * RUN BUDGET: GEMINI_RUN_BUDGET_S is a hard wall-clock ceiling on the WHOLE --live run (tracked from
+#     the first call, in _select_live_caller's state), independent of the workflow's own job-level
+#     `timeout-minutes` backstop (golden-scenarios.yml) — this one degrades gracefully (stop calling,
+#     report what was actually evaluated) instead of the job just getting killed mid-request. Checked
+#     before every call AND before every sleep ("never start a sleep that would overrun it"): a run that
+#     is out of budget stops immediately rather than burning the remainder on one more wait.
+GEMINI_LADDER_REWINDS = int(os.environ.get("GEMINI_LADDER_REWINDS", "6"))
+GEMINI_LADDER_REWIND_COOLDOWN_S = float(os.environ.get("GEMINI_LADDER_REWIND_COOLDOWN_S", "65"))
+GEMINI_MIN_CALL_INTERVAL_S = float(os.environ.get("GEMINI_MIN_CALL_INTERVAL_S", "13"))
+GEMINI_RUN_BUDGET_S = float(os.environ.get("GEMINI_RUN_BUDGET_S", "3000"))
 
 # Adaptive output-token budget. Thinking is ON (for accuracy), and thinking tokens are drawn from the
 # same maxOutputTokens budget — so a hard scenario can occasionally reason past the budget and get
@@ -400,23 +443,96 @@ def _retry_delay_s(body, default):
     return float(m.group(1)) if m else default
 
 
+class _GeminiRunBudgetExhausted(RuntimeError):
+    """Raised (by _check_run_budget, via _gemini_call) once GEMINI_RUN_BUDGET_S has been spent for this
+    run, or would be spent by a sleep about to start. Caught by run_live() as a whole-RUN STOP signal
+    (owner directive 2026-08-17: "i can wait ... if it fails, it can wait and auto retry and eventually
+    complete" — but a 6-hour-default CI job cannot wait forever): report every not-yet-evaluated scenario
+    as SKIPPED with this reason and stop attempting further calls, rather than letting each one
+    independently re-discover the same exhausted budget."""
+
+
+class _GeminiLadderPermanentlyDead(RuntimeError):
+    """Raised when every ladder model is in state['dead'] — a genuine, waiting-cannot-fix exhaustion
+    (every rung failed for a HARD reason: auth/not-found/bad-request, a per-DAY quota, a transport error,
+    or persistent empty/truncated output — see _gemini_call's docstring). Caught by run_live() as the
+    other whole-run STOP signal: no later scenario in this run will ever succeed against this ladder
+    either, so exit promptly (never spending a rewind on a lost cause) instead of letting every remaining
+    scenario burn a redundant attempt rediscovering the same dead ladder."""
+
+
+def _check_run_budget(state, extra_s=0.0):
+    """Raise _GeminiRunBudgetExhausted if GEMINI_RUN_BUDGET_S has already been spent for this run, or
+    would be spent by sleeping/calling `extra_s` more seconds — "never start a sleep that would overrun
+    the budget" (owner directive 2026-08-17). A no-op when `state` has no 'run_start_ts' — e.g. a
+    low-level _gemini_call unit test that hand-builds a minimal state dict without going through
+    _select_live_caller — since the run-budget feature only applies once a real run is tracking elapsed
+    wall-clock time."""
+    start = state.get("run_start_ts")
+    if start is None:
+        return
+    elapsed = time.monotonic() - start
+    if elapsed + extra_s >= GEMINI_RUN_BUDGET_S:
+        raise _GeminiRunBudgetExhausted(
+            f"Gemini run wall-clock budget (GEMINI_RUN_BUDGET_S={GEMINI_RUN_BUDGET_S:.0f}s) exhausted "
+            f"after {elapsed:.0f}s elapsed — stopping further live attempts this run."
+        )
+
+
+def _pace(state):
+    """Sleep just long enough (never more) that this request starts at least GEMINI_MIN_CALL_INTERVAL_S
+    after the ACTUAL previous request — measured via time.monotonic() on state['last_call_ts'], never a
+    flat per-call sleep — so consecutive scenarios stay under Gemini's free-tier ~5 RPM ceiling instead of
+    tripping it and needing a ladder rewind. A no-op on the very first request of a run (state has no
+    'last_call_ts' yet). Checks the run budget (via _check_run_budget) before actually starting the sleep,
+    per the "never start a sleep that would overrun the budget" rule."""
+    now = time.monotonic()
+    last = state.get("last_call_ts")
+    if last is not None:
+        remaining = GEMINI_MIN_CALL_INTERVAL_S - (now - last)
+        if remaining > 0:
+            _check_run_budget(state, extra_s=remaining)
+            time.sleep(remaining)
+            now = time.monotonic()
+    state["last_call_ts"] = now
+
+
 def _gemini_call(prompt, api_key, ladder, state):
     """POST one prompt to Gemini via the stdlib (no SDK dependency) and return (reply_text, model_id).
 
-    TWO nested fallbacks:
+    THREE nested fallbacks:
       * Per model — ADAPTIVE OUTPUT BUDGET. Thinking is ON and draws from maxOutputTokens, so a hard
         scenario can truncate (finishReason=MAX_TOKENS) before emitting the DECISION line. On that, the
         budget DOUBLES (GEMINI_MAX_OUTPUT_TOKENS_START → … → _CEIL) and the SAME model is retried, until
         it produces an answer or the ceiling is reached.
-      * Across models — LADDER. On a quota/auth/transport error, a safety-blocked/otherwise-empty reply,
-        or still-truncating at the ceiling, it advances state['idx'] to the next ladder model (STICKY for
-        the rest of the run — a model that is quota-exhausted or too small stays skipped for later
-        scenarios too). Raises RuntimeError only when the whole ladder is exhausted."""
+      * Across models — LADDER, split by WHY a model was abandoned (2026-08-17 fix — see the doctrine
+        comment above GEMINI_LADDER_REWINDS for the pathology this closes). A HARD failure (auth/
+        not-found/bad-request, a per-DAY 429, a transport error, or persistent empty/truncated output)
+        adds the model to state['dead'] — PERMANENT for the rest of the run. An RPM-only exhaustion
+        (retries spent, still 429/minute) is NEVER added to state['dead'] — it only drops out of THIS
+        call's remaining attempts; the next scenario's call tries it again fresh.
+      * Across whole passes — REWIND. If every still-live (not dead) rung in the ladder was abandoned for
+        an RPM-only reason within this one call, sleep a cooldown (honouring the last RPM 429's own
+        RetryInfo.retryDelay when present, else GEMINI_LADDER_REWIND_COOLDOWN_S) and retry the whole
+        still-live ladder from the top, bounded by GEMINI_LADDER_REWINDS. Exhausting the rewind budget is
+        a PER-SCENARIO failure only (a plain RuntimeError; state['dead'] is untouched) — it does not stop
+        the run, and the next scenario's call gets a fresh attempt at every still-live model (owner
+        directive 2026-08-17: no single scenario's outcome may prevent a later one from attempting its
+        own call).
+
+    Raises _GeminiLadderPermanentlyDead when every ladder model is in state['dead'] (waiting cannot help
+    — exits immediately, without spending a rewind), or _GeminiRunBudgetExhausted when GEMINI_RUN_BUDGET_S
+    has been spent (checked before every network call and before every sleep). Both are whole-RUN stop
+    signals that run_live() catches specially to skip every remaining scenario rather than retrying each
+    in vain; a plain RuntimeError (rewinds exhausted for just this one scenario) is an ordinary
+    per-scenario failure that does NOT stop the run."""
     import json as _json
     import urllib.error
     import urllib.request
 
     def _post(model, max_tokens):
+        _check_run_budget(state)   # never START a fresh network call once the run budget is already spent
+        _pace(state)
         body = _json.dumps({
             "contents": [{"parts": [{"text": prompt}]}],
             # No thinkingConfig → each model's default/dynamic thinking stays ON (accuracy).
@@ -438,16 +554,22 @@ def _gemini_call(prompt, api_key, ladder, state):
 
     def _try_model(model):
         """Try ONE model, escalating maxOutputTokens on MAX_TOKENS truncation up to the ceiling. Returns
-        the answer text on success, or None (setting nonlocal last_err) if this model should be skipped.
+        (text, transient):
+          * (text, False) on success.
+          * (None, True) if abandoned ONLY because RPM retries were spent — transient; the caller must
+            NOT add this model to state['dead'].
+          * (None, False) if abandoned for any HARD reason — permanent; the caller adds it to
+            state['dead'].
 
         The starting budget is the run-level HIGH-WATER MARK (state['budget']), not always _START: once
         any scenario in this run had to escalate, every later scenario/model starts at that discovered
-        budget instead of re-truncating its way back up from _START each time (the 23 scenarios have the
+        budget instead of re-truncating its way back up from _START each time (the scenarios share the
         same prompt shape, so if one needs a bigger budget they all do — this spends the per-model daily
         request quota once per run, not once per scenario). It never ratchets DOWN within a run; a bigger
         cap costs nothing per request (the model still emits only the short answer), and every ladder
         model accepts up to the ceiling, so carrying the mark across models is safe. state is fresh per
         run (created in _select_live_caller), so a new CI run re-starts at _START."""
+        nonlocal last_rpm_body
         budget = state["budget"]
         rpm_retries = 0
         while True:
@@ -456,23 +578,26 @@ def _gemini_call(prompt, api_key, ladder, state):
             except urllib.error.HTTPError as exc:
                 body = exc.read().decode("utf-8", "replace")
                 # A per-MINUTE 429 is transient: sleep out the API's suggested retryDelay and retry the
-                # SAME model. Only a per-DAY 429 (or any other HTTP error) abandons the model.
+                # SAME model. Only a per-DAY 429 (or any other HTTP error) is a hard/permanent failure.
                 if exc.code == 429 and not _is_daily_quota_429(body):
+                    last_rpm_body = body   # remembered for the rewind cooldown's own RetryInfo, below
                     if rpm_retries < GEMINI_RPM_MAX_RETRIES:
                         rpm_retries += 1
-                        time.sleep(_retry_delay_s(body, GEMINI_RPM_RETRY_DELAY_S))
+                        delay = _retry_delay_s(body, GEMINI_RPM_RETRY_DELAY_S)
+                        _check_run_budget(state, extra_s=delay)
+                        time.sleep(delay)
                         continue
                     errors.append(f"{model}: rate-limited (429/min) after {rpm_retries} retries")
-                    return None
+                    return None, True
                 # 429/day = daily quota gone; 404 = model not served to this key; 400 = e.g. budget above
-                # this model's max; 5xx = transient-but-unretried. All => abandon model, advance ladder.
+                # this model's max; 5xx = transient-but-unretried. All => hard/permanent, dead the model.
                 errors.append(f"{model}: HTTP {exc.code} {body[:200]}")
-                return None
+                return None, False
             except (urllib.error.URLError, TimeoutError, ValueError) as exc:
                 errors.append(f"{model}: {exc}")
-                return None
+                return None, False
             if text.strip():
-                return text
+                return text, False
             # Empty answer. If it was a MAX_TOKENS truncation and we have headroom, DOUBLE the budget and
             # retry the SAME model — the reasoning ran past the budget before reaching the DECISION line.
             if finish == "MAX_TOKENS" and budget < GEMINI_MAX_OUTPUT_TOKENS_CEIL:
@@ -480,26 +605,58 @@ def _gemini_call(prompt, api_key, ladder, state):
                 state["budget"] = budget   # high-water mark: later scenarios/models start here, not _START
                 continue
             # Empty for another reason (safety block, unexpected finishReason) or still truncating at the
-            # ceiling — give up on this model and advance the ladder.
+            # ceiling — hard/permanent, give up on this model for the rest of the run.
             errors.append(f"{model}: empty response (finishReason={finish or '?'}, maxOutputTokens={budget})")
-            return None
+            return None, False
 
     state.setdefault("budget", GEMINI_MAX_OUTPUT_TOKENS_START)  # run-level output-budget high-water mark
-    # Accumulate EVERY model's failure (not just the last), so a total-ladder-exhaustion error names what
-    # each model actually returned — the difference between "all 404 (bad model ids/key)", "all 429
-    # (quota)", and "mixed" is the whole diagnosis.
+    state.setdefault("dead", set())  # model ids abandoned for a HARD reason — sticky for the whole run
+    # Accumulate EVERY model's failure THIS CALL (not just the last), so a total-exhaustion error names
+    # what each live model actually returned — the difference between "all 404 (bad model ids/key)", "all
+    # 429 (quota)", and "mixed" is the whole diagnosis.
     errors = []
-    if state["idx"] >= len(ladder):
-        # An earlier scenario in this run already walked the whole ladder (bad key / total quota-out).
-        raise RuntimeError("Gemini model ladder already exhausted earlier this run (see the first scenario's error)")
-    while state["idx"] < len(ladder):
-        model = ladder[state["idx"]]
-        text = _try_model(model)
-        if text is not None:
-            return text, model
-        state["idx"] += 1
+    last_rpm_body = None  # most recent per-minute 429 body seen this call, for the rewind cooldown below
 
-    raise RuntimeError("Gemini model ladder exhausted — " + " | ".join(errors))
+    if set(ladder) <= state["dead"]:
+        # An earlier scenario in this run already walked the whole ladder to permanent death (bad key,
+        # every model auth/quota/not-found). Waiting cannot fix this — exit immediately, no rewind spent.
+        raise _GeminiLadderPermanentlyDead(
+            "Gemini model ladder already exhausted earlier this run (see the first scenario's error)"
+        )
+    _check_run_budget(state)
+
+    rewinds_used = 0
+    while True:
+        for model in ladder:
+            if model in state["dead"]:
+                continue
+            text, transient = _try_model(model)
+            if text is not None:
+                return text, model
+            if not transient:
+                state["dead"].add(model)
+
+        if set(ladder) <= state["dead"]:
+            # Every rung is now permanently dead — genuinely exhausted, not merely rate-limited.
+            raise _GeminiLadderPermanentlyDead("Gemini model ladder exhausted — " + " | ".join(errors))
+
+        # Every still-live rung failed for an RPM-only (transient) reason this pass — none was added to
+        # state['dead']. Rewind the whole still-live ladder from the top after a cooldown, bounded by
+        # GEMINI_LADDER_REWINDS. A rewinds-exhausted raise below is a per-SCENARIO bound only: it does NOT
+        # touch state['dead'] and does NOT stop the run.
+        if rewinds_used >= GEMINI_LADDER_REWINDS:
+            raise RuntimeError(
+                f"Gemini model ladder exhausted for this scenario — every still-live rung stayed "
+                f"RPM-exhausted through {GEMINI_LADDER_REWINDS} rewind(s); will retry fresh next scenario "
+                "— " + " | ".join(errors)
+            )
+        rewinds_used += 1
+        cooldown = (
+            _retry_delay_s(last_rpm_body, GEMINI_LADDER_REWIND_COOLDOWN_S)
+            if last_rpm_body else GEMINI_LADDER_REWIND_COOLDOWN_S
+        )
+        _check_run_budget(state, extra_s=cooldown)
+        time.sleep(cooldown)
 
 
 def _select_live_caller():
@@ -509,9 +666,22 @@ def _select_live_caller():
     gemini_key = os.environ.get("GEMINI_API_KEY")
     if gemini_key:
         ladder = GEMINI_MODEL_LADDER
-        # Shared across all scenarios in this run: idx = ladder position (sticky), budget = output-token
-        # high-water mark (sticky, never resets down within a run). Fresh dict per run => fresh start.
-        state = {"idx": 0, "budget": GEMINI_MAX_OUTPUT_TOKENS_START}
+        # Shared across all scenarios in this run:
+        #   dead         = model ids PERMANENTLY abandoned for a HARD reason (sticky). 2026-08-17 fix —
+        #                  replaces the old single sticky `idx` cursor, which incorrectly treated an
+        #                  RPM-only exhaustion as equally permanent (see the doctrine comment above
+        #                  GEMINI_LADDER_REWINDS).
+        #   budget       = adaptive maxOutputTokens high-water mark (sticky, never resets down within a run).
+        #   run_start_ts = wall-clock anchor (time.monotonic()) for the GEMINI_RUN_BUDGET_S hard ceiling.
+        #   last_call_ts = wall-clock of the previous actual request, for GEMINI_MIN_CALL_INTERVAL_S pacing
+        #                  (absent until the first call; _pace() treats that as "no wait needed yet").
+        # Fresh dict per run => fresh start: a new CI run/process re-starts at _START, empty dead set, and
+        # a full run budget.
+        state = {
+            "dead": set(),
+            "budget": GEMINI_MAX_OUTPUT_TOKENS_START,
+            "run_start_ts": time.monotonic(),
+        }
         print(f"::notice::golden live run — provider=Gemini (free tier); model ladder: {', '.join(ladder)}",
               file=sys.stderr)
 
@@ -530,17 +700,27 @@ def _select_live_caller():
 def run_live(scenarios, scenario_ids=None):
     """Call the live Gemini model ladder per scenario and diff its decision vs. the pinned
     expected_decision. Enabled by GEMINI_API_KEY (the sole provider; owner directive 2026-07-17).
-    Advisory only — never returns a failing process exit code by itself; the caller decides."""
+    Advisory only — never returns a failing process exit code by itself; the caller decides.
+
+    STOPS EARLY (owner directive 2026-08-17) on either whole-run signal _gemini_call can raise —
+    _GeminiRunBudgetExhausted (GEMINI_RUN_BUDGET_S spent) or _GeminiLadderPermanentlyDead (every ladder
+    model in state['dead'], a genuine waiting-cannot-help exhaustion) — recording the triggering scenario
+    AND every scenario after it as match='SKIPPED' with the reason, instead of letting each remaining
+    scenario independently re-attempt and re-discover the same terminal condition ("never a silent
+    nothing" — a partial result reported honestly, not silence). Any OTHER exception — including a plain
+    per-scenario RuntimeError from a bounded ladder-rewind exhaustion, see _gemini_call's docstring — is
+    an ordinary per-scenario failure (match=None) and does NOT stop the loop: no single scenario's outcome
+    may prevent a later one from attempting its own call."""
     call_model = _select_live_caller()
     if call_model is None:
         return []
     results = []
     file_cache = {}
 
-    for sc in scenarios:
+    target = [sc for sc in scenarios if not scenario_ids or sc.get("id") in scenario_ids]
+
+    for i, sc in enumerate(target):
         sid = sc.get("id")
-        if scenario_ids and sid not in scenario_ids:
-            continue
 
         # 2026-07-29 bug hunt: this governing_files read used to sit OUTSIDE the try/except below, so one
         # scenario with a missing/unreadable governing_file raised an uncaught OSError straight out of
@@ -561,6 +741,17 @@ def run_live(scenarios, scenario_ids=None):
                 allowed_decisions=_allowed_decisions_for(sc),
             )
             reply, model_used = call_model(prompt)
+        except (_GeminiRunBudgetExhausted, _GeminiLadderPermanentlyDead) as exc:
+            remaining = target[i:]
+            print(
+                f"::warning::{sid}: {exc} — stopping further live attempts this run "
+                f"({len(remaining)} scenario(s), including this one, not evaluated).",
+                file=sys.stderr,
+            )
+            for rem in remaining:
+                results.append({"id": rem.get("id"), "expected": rem.get("expected_decision"),
+                                 "actual": None, "match": "SKIPPED", "reply": str(exc), "model": None})
+            break
         except Exception as exc:  # noqa: BLE001 — advisory path, any failure is reported, not raised
             print(f"::warning::{sid}: model call failed — {exc}", file=sys.stderr)
             results.append({"id": sid, "expected": sc.get("expected_decision"), "actual": None,
@@ -669,9 +860,11 @@ def main():
     n_match = sum(1 for r in results if r["match"] is True)
     n_flip = sum(1 for r in results if r["match"] is False)
     n_unparseable = sum(1 for r in results if r["match"] == "UNPARSEABLE")
+    n_skipped = sum(1 for r in results if r["match"] == "SKIPPED")
     n_err = sum(1 for r in results if r["match"] is None)
+    n_evaluated = len(results) - n_skipped
     print(f"\nLive results: {n_match} match, {n_flip} flip(s), {n_unparseable} unparseable, "
-          f"{n_err} error(s) out of {len(results)}.")
+          f"{n_err} error(s), {n_skipped} skipped ({n_evaluated} evaluated) out of {len(results)}.")
     for r in results:
         if r["match"] is True:
             status = "MATCH"
@@ -679,11 +872,26 @@ def main():
             status = "FLIP"
         elif r["match"] == "UNPARSEABLE":
             status = "UNPARSEABLE"
+        elif r["match"] == "SKIPPED":
+            status = "SKIPPED"
         else:
             status = "ERROR"
         print(f"  [{status}] {r['id']}: expected={r['expected']!r} actual={r['actual']!r}")
 
-    # Advisory only — see module docstring. A flip or an error is reported (already emitted as
+    # NEVER A SILENT NOTHING (owner directive 2026-08-17): always state how many scenarios were evaluated
+    # vs. skipped, and why, as a GitHub Actions annotation — the only surface a human actually reads for
+    # this advisory job. A partial result reported honestly is the required behavior; zero results with no
+    # explanation is the exact bug this fix closes (live CI run 32039658866: 33 scoped, 1 attempted, 32
+    # silently short-circuited with no indication why).
+    if n_skipped:
+        skip_reasons = sorted({r["reply"] for r in results if r["match"] == "SKIPPED"})
+        print(f"::warning::golden live run: {n_skipped} scenario(s) SKIPPED (not attempted), "
+              f"{n_evaluated} evaluated out of {len(results)}. Skip reason(s): {'; '.join(skip_reasons)}")
+    else:
+        print(f"::notice::golden live run: all {n_evaluated} scenario(s) considered were evaluated "
+              f"(0 skipped).")
+
+    # Advisory only — see module docstring. A flip, error, or skip is reported (already emitted as
     # ::warning:: above) but never fails the process; the workflow's continue-on-error is the other
     # half of that contract for when this runs in CI.
     return 0

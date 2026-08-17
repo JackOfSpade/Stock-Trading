@@ -16,6 +16,11 @@ from lib.md_fence import fence_mask
 # A routine section heading ends with its type tag; this excludes preamble/queue-schema headings.
 ROUTINE_SUFFIX = re.compile(r"—\s*(deep research|regular routine)\s*$")
 
+# The leading "<id>. " a coded routine heading (e.g. "W1. Catalyst Calendar ... — deep research")
+# starts with. AR_att/AR_orc have no such prefix (heading_to_id resolves them via substring match
+# instead) -- see instruction_text()'s use of this below.
+HEADING_ID_PREFIX = re.compile(r"^([A-Za-z0-9]+)\.\s")
+
 
 def parse_routine_headings(plan_path):
     """Ordered list of routine section headings from the given Claude_Task_Plan.md path.
@@ -55,7 +60,7 @@ def cadence_routines(doc):
 
 def heading_to_id(h):
     """Map a heading to its ops/cadence.yaml id."""
-    m = re.match(r"([A-Za-z0-9]+)\.\s", h)   # "D1. ...", "M1a. ...", "Q4. ..."
+    m = HEADING_ID_PREFIX.match(h)   # "D1. ...", "M1a. ...", "Q4. ..."
     if m:
         return m.group(1)
     if "Attacker" in h:
@@ -70,7 +75,24 @@ def instruction_text(heading):
     single source for a template that is otherwise the load-bearing contract for ops/triggers.json's
     `instruction` field, bigquery/15's `canonical_instruction` column, and print_routines.py's
     display, all of which MUST agree byte-for-byte (2026-07-20 audit finding: this exact f-string was
-    independently re-literalized in 3 places with no test cross-checking them)."""
+    independently re-literalized in 3 places with no test cross-checking them).
+
+    GENERIC FORM (2026-08-17, Tavily-efficiency-session follow-up): a coded heading's DESCRIPTION
+    clause is the part that changes on a scope/ownership redesign (e.g. W2's "Post-Event Screen" ->
+    "Post-Event Enrichment" the same day this was written) -- every rename previously had to be
+    pushed by hand to the live claude.ai RemoteTrigger object (no CI/script can reach that API), and
+    the W2/W4 rename landed in this repo's generated artifacts without ever reaching the live
+    triggers until caught and fixed manually. The instruction only needs the routine ID (to find the
+    right `## <id>.` section) and its type tag (deep research vs regular routine); the description is
+    for the human-facing `name` field only (see ops/routine_backup.json's per-routine `name`, updated
+    separately, NOT by this generator). Dropping the description here means a future rename never
+    needs a live trigger push for the INSTRUCTION half again -- only `name` still does. AR_att/
+    AR_orc have no coded id prefix, so their heading itself IS the necessary identifying text and is
+    kept verbatim (the HEADING_ID_PREFIX match fails for them, falling through below)."""
+    prefix = HEADING_ID_PREFIX.match(heading)
+    suffix = ROUTINE_SUFFIX.search(heading)
+    if prefix and suffix:
+        return f"Read Claude_Task_Plan.md. Perform {prefix.group(1)} — {suffix.group(1)}."
     return f"Read Claude_Task_Plan.md. Perform {heading}."
 
 

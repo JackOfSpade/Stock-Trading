@@ -184,9 +184,9 @@ def test_main_write_generates_expected_triggers_manifest(tmp_path, monkeypatch, 
     written = json.loads(triggers.read_text())
     assert written == {
         "D1": {"monitor_class": "daily_trading",
-               "instruction": "Read Claude_Task_Plan.md. Perform D1. Market Development Scan — deep research."},
+               "instruction": "Read Claude_Task_Plan.md. Perform D1 — deep research."},
         "D2": {"monitor_class": "daily_trading",
-               "instruction": "Read Claude_Task_Plan.md. Perform D2. Daily Action Conversion — regular routine."},
+               "instruction": "Read Claude_Task_Plan.md. Perform D2 — regular routine."},
     }
     assert "Wrote" in capsys.readouterr().out
 

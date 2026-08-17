@@ -202,9 +202,9 @@ def test_generate_triggers_manifest_matches_known_good_shape():
     }
     assert cc.generate_triggers_manifest(head_by_id, cad) == {
         "D1": {"monitor_class": "daily_trading",
-               "instruction": "Read Claude_Task_Plan.md. Perform D1. Market Development Scan — deep research."},
+               "instruction": "Read Claude_Task_Plan.md. Perform D1 — deep research."},
         "W1": {"monitor_class": "weekly_sun",
-               "instruction": "Read Claude_Task_Plan.md. Perform W1. Catalyst Calendar (A, C) — deep research."},
+               "instruction": "Read Claude_Task_Plan.md. Perform W1 — deep research."},
     }
 
 
@@ -282,7 +282,7 @@ def _write_check_fixture(tmp_path):
     )
     catalog_sql = tmp_path / "15.sql"
     catalog_sql.write_text(
-        "STRUCT('D1' AS routine, 'Read Claude_Task_Plan.md. Perform D1. Market Development Scan — deep research.' AS canonical_instruction)\n"
+        "STRUCT('D1' AS routine, 'Read Claude_Task_Plan.md. Perform D1 — deep research.' AS canonical_instruction)\n"
     )
     return plan, cadence, cadence_sql, catalog_sql
 
@@ -1981,7 +1981,7 @@ _AR_ATT_CADENCE = (
     "  - id: D1\n    monitor_class: daily_trading\n    catchup_safe: true\n"
     "  - id: AR_att\n    monitor_class: queue_driven\n    catchup_safe: false\n")
 _AR_ATT_SQL15 = (
-    "STRUCT('D1' AS routine, 'Read Claude_Task_Plan.md. Perform D1. Market Development Scan — deep research.' AS canonical_instruction),\n"
+    "STRUCT('D1' AS routine, 'Read Claude_Task_Plan.md. Perform D1 — deep research.' AS canonical_instruction),\n"
     "STRUCT('AR_att', 'Read Claude_Task_Plan.md. Perform Adversarial Review Attacker — regular routine.')\n")
 
 

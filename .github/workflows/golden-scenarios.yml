@@ -136,6 +136,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: schema-validate
     continue-on-error: true   # advisory; a decision flip must never block a merge — see header above
+    # HARD BACKSTOP (2026-08-17): this job sets no other timeout, so it inherited GitHub's 6-hour default
+    # — a bug in run_golden.py's own retry/rewind/pacing loop (GEMINI_LADDER_REWINDS,
+    # GEMINI_LADDER_REWIND_COOLDOWN_S, GEMINI_RUN_BUDGET_S) could in principle burn hours of billable CI,
+    # which CLAUDE.md's cost-discipline note explicitly forbids. run_golden.py already self-limits via
+    # GEMINI_RUN_BUDGET_S (default 3000s/50min, degrades gracefully — stops calling, reports partial
+    # results); this is the belt-and-suspenders job-level cutoff for when the Python-level budget itself
+    # somehow fails to fire. Comfortably above the 50-minute Python budget so the graceful path always
+    # wins first in the normal case.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
         with:

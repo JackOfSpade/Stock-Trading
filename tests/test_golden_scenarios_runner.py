@@ -18,6 +18,8 @@ import sys
 import urllib.error
 import urllib.request
 
+import pytest
+
 from conftest import load_module_from_path
 
 rg = load_module_from_path("run_golden", "tests", "golden_scenarios", "run_golden.py")
@@ -26,6 +28,20 @@ VALID = {
     "id": "ZZ-01", "category": "kill_trigger", "situation": "x",
     "governing_files": ["Strategy.md"], "expected_decision": "CONTINUE", "rationale": "x",
 }
+
+
+@pytest.fixture(autouse=True)
+def _no_pacing_by_default(monkeypatch):
+    """_gemini_call's per-_post pacing (_pace, GEMINI_MIN_CALL_INTERVAL_S) is orthogonal to nearly every
+    test in this file, but would otherwise interfere with them: _pace() measures elapsed time via the REAL
+    time.monotonic() (most tests don't mock it), while time.sleep IS mocked to a no-op everywhere else in
+    this file -- so back-to-back retries within a single test execute in a few microseconds of wall-clock
+    time, _pace() sees "almost no time elapsed", and injects its own extra ~GEMINI_MIN_CALL_INTERVAL_S
+    sleep call on top of whatever the test is actually trying to count (RPM retries, rewind cooldowns,
+    etc). Zero the interval by default so pacing is a true no-op unless a test explicitly opts back in --
+    this IS the documented contract ("the pacing interval must be overridable to ~0 in tests so nothing
+    actually sleeps"). The dedicated test_pace_* tests below re-enable a real interval value themselves."""
+    monkeypatch.setattr(rg, "GEMINI_MIN_CALL_INTERVAL_S", 0.0)
 
 
 def test_real_scenarios_yaml_passes_offline_validation():
@@ -318,6 +334,10 @@ _QUOTA_DAY_BODY = (b'{"error":{"code":429,"status":"RESOURCE_EXHAUSTED","message
 _QUOTA_MIN_BODY = (b'{"error":{"code":429,"status":"RESOURCE_EXHAUSTED","message":"Quota exceeded for '
                    b'metric GenerateRequestsPerMinutePerProjectPerModel","details":[{"@type":'
                    b'"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"7s"}]}}')
+# Same per-MINUTE metric but with NO RetryInfo.retryDelay in the body — exercises the "falls back to the
+# flat constant" half of _retry_delay_s()'s contract (2026-08-17 rewind-cooldown honoring test below).
+_QUOTA_MIN_BODY_NO_DELAY = (b'{"error":{"code":429,"status":"RESOURCE_EXHAUSTED","message":"Quota exceeded '
+                             b'for metric GenerateRequestsPerMinutePerProjectPerModel"}}')
 
 
 def test_daily_vs_minute_quota_classification():
@@ -328,7 +348,8 @@ def test_daily_vs_minute_quota_classification():
 
 
 def test_gemini_ladder_advances_on_daily_quota_429(monkeypatch):
-    # A per-DAY 429 is persistent: the pointer must advance and the SECOND model's reply is returned.
+    # A per-DAY 429 is persistent: the pointer must advance and the SECOND model's reply is returned, and
+    # the day-exhausted model must be added to the permanent-death set.
     ladder = ["model-a", "model-b", "model-c"]
 
     def fake_urlopen(req, timeout=180):
@@ -338,11 +359,11 @@ def test_gemini_ladder_advances_on_daily_quota_429(monkeypatch):
 
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
     monkeypatch.setattr(rg.time, "sleep", lambda s: None)  # must not be needed, but never really sleep
-    state = {"idx": 0}
+    state = {}
     text, model = rg._gemini_call("prompt", "k", ladder, state)
     assert "DECISION: GO" in text
     assert model == "model-b"
-    assert state["idx"] == 1  # advanced past the day-exhausted model, and stuck there
+    assert state["dead"] == {"model-a"}  # permanently dead; model-b/model-c untouched
 
 
 def test_gemini_minute_quota_429_retries_same_model(monkeypatch):
@@ -359,17 +380,20 @@ def test_gemini_minute_quota_429_retries_same_model(monkeypatch):
 
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
     monkeypatch.setattr(rg.time, "sleep", lambda s: slept.append(s))
-    state = {"idx": 0}
+    state = {}
     text, model = rg._gemini_call("prompt", "k", ["m1", "m2"], state)
     assert "NO-GO" in text
-    assert model == "m1"          # stayed on the SAME (best) model
-    assert state["idx"] == 0      # ladder rung NOT burned
-    assert slept == [7.0]         # honoured the API's suggested retryDelay
+    assert model == "m1"                # stayed on the SAME (best) model
+    assert state["dead"] == set()       # ladder rung NOT burned, nothing permanently dead
+    assert slept == [7.0]               # honoured the API's suggested retryDelay
 
 
 def test_gemini_minute_quota_429_gives_up_after_max_retries(monkeypatch):
-    # Bounded: a model stuck at a per-minute limit is eventually abandoned (ladder advances) rather than
-    # retrying forever.
+    # Bounded: a model stuck at a per-minute limit is eventually abandoned FOR THIS CALL (ladder advances
+    # within the call) rather than retrying forever — but 2026-08-17 fix: this must NOT be permanent. An
+    # RPM-only exhaustion is a completely different failure class from a hard/day-quota one and must not
+    # end up sticky like the old single `idx` cursor made it (that was the exact bug: live CI run
+    # 32039658866 burned every rung on scenario 1's RPM limit and 32 of 33 scenarios never got attempted).
     slept = []
 
     def fake_urlopen(req, timeout=180):
@@ -379,41 +403,46 @@ def test_gemini_minute_quota_429_gives_up_after_max_retries(monkeypatch):
 
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
     monkeypatch.setattr(rg.time, "sleep", lambda s: slept.append(s))
-    state = {"idx": 0}
+    state = {}
     _text, model = rg._gemini_call("prompt", "k", ["m1", "m2"], state)
-    assert model == "m2" and state["idx"] == 1
-    assert len(slept) == rg.GEMINI_RPM_MAX_RETRIES  # retried the cap, then advanced
+    assert model == "m2"
+    assert state["dead"] == set()   # RPM-only exhaustion must NEVER land in the permanent-death set
+    assert len(slept) == rg.GEMINI_RPM_MAX_RETRIES  # retried the cap, then moved on for this call only
 
 
 def test_gemini_ladder_exhaustion_raises(monkeypatch):
-    # Every model day-quota-exhausted -> RuntimeError (never a silent blank that would score as a flip),
-    # and the message names EVERY model's failure, not just the last one.
+    # Every model day-quota-exhausted -> _GeminiLadderPermanentlyDead (never a silent blank that would
+    # score as a flip), and the message names EVERY model's failure, not just the last one. This IS the
+    # genuinely-permanent case, so both models must land in state['dead'].
     def fake_urlopen(req, timeout=180):
         raise _fake_http_error(req.full_url, 429, _QUOTA_DAY_BODY)
 
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
     monkeypatch.setattr(rg.time, "sleep", lambda s: None)
-    state = {"idx": 0}
+    state = {}
     try:
         rg._gemini_call("prompt", "k", ["m1", "m2"], state)
-        raise AssertionError("expected RuntimeError on ladder exhaustion")
-    except RuntimeError as exc:
+        raise AssertionError("expected an exception on ladder exhaustion")
+    except rg._GeminiLadderPermanentlyDead as exc:
         assert "ladder exhausted" in str(exc)
         assert "m1" in str(exc) and "m2" in str(exc)  # per-model diagnostics, not just the last error
+        assert state["dead"] == {"m1", "m2"}
 
 
 def test_gemini_empty_response_advances(monkeypatch):
-    # A blank/blocked candidate that is NOT a MAX_TOKENS truncation (e.g. a safety block) must advance
-    # the ladder, not be scored as an empty decision and not trigger a budget escalation.
+    # A blank/blocked candidate that is NOT a MAX_TOKENS truncation (e.g. a safety block) is a HARD
+    # failure — must advance the ladder AND land in state['dead'], not be scored as an empty decision and
+    # not trigger a budget escalation.
     def fake_urlopen(req, timeout=180):
         if "m1:" in req.full_url:
             return _FakeResp({"candidates": [{"content": {"parts": [{"text": "   "}]}, "finishReason": "SAFETY"}]})
         return _FakeResp({"candidates": [{"content": {"parts": [{"text": "DECISION: NO-GO\nRATIONALE: y"}]}}]})
 
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
-    state = {"idx": 0}
+    state = {}
     text, model = rg._gemini_call("prompt", "k", ["m1", "m2"], state)
     assert "NO-GO" in text and model == "m2"
+    assert state["dead"] == {"m1"}
 
 
 def _budget_of(req):
@@ -434,16 +463,17 @@ def test_gemini_escalates_output_budget_on_truncation(monkeypatch):
                                           "finishReason": "STOP"}]})
 
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
-    state = {"idx": 0}
+    state = {}
     text, model = rg._gemini_call("prompt", "k", ["only-model"], state)
     assert "DECISION: GO" in text
-    assert model == "only-model" and state["idx"] == 0          # stayed on the same model
+    assert model == "only-model" and state["dead"] == set()     # stayed on the same model, never dead
     assert seen == [rg.GEMINI_MAX_OUTPUT_TOKENS_START, rg.GEMINI_MAX_OUTPUT_TOKENS_START * 2]  # doubled
 
 
 def test_gemini_budget_escalation_is_bounded_then_advances(monkeypatch):
     # A model that truncates at EVERY budget must escalate only up to the ceiling (never unboundedly),
-    # then advance the ladder to the next model.
+    # then advance the ladder to the next model — still-truncating-at-ceiling is a HARD failure, so m1
+    # must land in state['dead'].
     seen_m1 = []
 
     def fake_urlopen(req, timeout=180):
@@ -454,9 +484,9 @@ def test_gemini_budget_escalation_is_bounded_then_advances(monkeypatch):
                                           "finishReason": "STOP"}]})
 
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
-    state = {"idx": 0}
+    state = {}
     text, model = rg._gemini_call("prompt", "k", ["m1", "m2"], state)
-    assert "TERMINATE" in text and model == "m2" and state["idx"] == 1
+    assert "TERMINATE" in text and model == "m2" and state["dead"] == {"m1"}
     # m1 escalated START, 2*START, ... , capped at CEIL (last value equals the ceiling; strictly increasing)
     assert seen_m1[0] == rg.GEMINI_MAX_OUTPUT_TOKENS_START
     assert seen_m1[-1] == rg.GEMINI_MAX_OUTPUT_TOKENS_CEIL
@@ -478,12 +508,273 @@ def test_gemini_budget_high_water_mark_persists_across_scenarios(monkeypatch):
                                           "finishReason": "STOP"}]})
 
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
-    state = {"idx": 0}  # no explicit budget => _gemini_call seeds it to _START via setdefault
+    state = {}  # no explicit budget/dead => _gemini_call seeds them via setdefault
     rg._gemini_call("scenario-1", "k", ["m"], state)     # truncates at _START, escalates to 2*_START
     assert state["budget"] == rg.GEMINI_MAX_OUTPUT_TOKENS_START * 2
     seen.clear()
     rg._gemini_call("scenario-2", "k", ["m"], state)     # must reuse the mark: ONE call, no re-truncation
     assert seen == [rg.GEMINI_MAX_OUTPUT_TOKENS_START * 2]
+
+
+# ---- 2026-08-17 fix: RPM-only exhaustion is NOT sticky across scenarios; hard failures ARE; the whole
+# ladder rewinds (bounded) on an all-transient exhaustion within one call; requests are paced; and the
+# whole run is bounded by a wall-clock budget that degrades to a reported partial result rather than
+# hanging or silently producing nothing. See the doctrine comment above GEMINI_LADDER_REWINDS in
+# run_golden.py for the full narrative (live CI run 32039658866: 33 scenarios scoped, 1 attempted, 32
+# silently short-circuited).
+
+
+def test_gemini_rpm_exhausted_model_is_retried_by_a_later_scenario(monkeypatch):
+    # THE core regression test: m1 RPM-exhausts on scenario 1 (m2 picks up the slack); scenario 2's call
+    # — sharing the same run `state` — must try m1 again FRESH, proving RPM-only exhaustion is not sticky.
+    calls_m1 = {"n": 0}
+
+    def fake_urlopen(req, timeout=180):
+        if "m1:" in req.full_url:
+            calls_m1["n"] += 1
+            raise _fake_http_error(req.full_url, 429, _QUOTA_MIN_BODY)
+        return _FakeResp({"candidates": [{"content": {"parts": [{"text": "DECISION: GO\nRATIONALE: x"}]}}]})
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(rg.time, "sleep", lambda s: None)
+    state = {}
+    ladder = ["m1", "m2"]
+
+    _text1, model1 = rg._gemini_call("scenario-1", "k", ladder, state)
+    assert model1 == "m2"
+    assert "m1" not in state["dead"]          # RPM-only -- must NOT be permanently dead
+    n_after_first = calls_m1["n"]
+    assert n_after_first == rg.GEMINI_RPM_MAX_RETRIES + 1   # 1 initial attempt + the retries
+
+    _text2, model2 = rg._gemini_call("scenario-2", "k", ladder, state)
+    assert model2 == "m2"
+    assert calls_m1["n"] > n_after_first      # m1 was attempted again (fresh) on scenario 2
+
+
+def test_gemini_hard_failure_is_permanently_dead_across_scenarios(monkeypatch):
+    # The other half of the same fix: a genuinely HARD failure (404 here) must stay dead for scenario 2 —
+    # never re-attempted, unlike the RPM case above.
+    seen_urls = []
+
+    def fake_urlopen(req, timeout=180):
+        seen_urls.append(req.full_url)
+        if "m1:" in req.full_url:
+            raise _fake_http_error(req.full_url, 404, b'{"error":{"message":"model not found"}}')
+        return _FakeResp({"candidates": [{"content": {"parts": [{"text": "DECISION: GO\nRATIONALE: x"}]}}]})
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(rg.time, "sleep", lambda s: None)
+    state = {}
+    ladder = ["m1", "m2"]
+
+    _text1, model1 = rg._gemini_call("scenario-1", "k", ladder, state)
+    assert model1 == "m2"
+    assert state["dead"] == {"m1"}
+
+    seen_urls.clear()
+    _text2, model2 = rg._gemini_call("scenario-2", "k", ladder, state)
+    assert model2 == "m2"
+    assert not any("m1:" in u for u in seen_urls)   # m1 never even attempted -- permanently dead
+
+
+def test_rewind_exhaustion_on_one_scenario_does_not_block_the_next(monkeypatch):
+    # Per-scenario independence (owner directive 2026-08-17): even a scenario that exhausts ALL of its
+    # ladder rewinds (a per-SCENARIO RuntimeError, not a whole-run stop signal) must leave state['dead']
+    # untouched, so the very next scenario gets a completely fresh attempt.
+    monkeypatch.setattr(rg, "GEMINI_LADDER_REWINDS", 1)
+    state = {}
+
+    def always_rpm_429(req, timeout=180):
+        raise _fake_http_error(req.full_url, 429, _QUOTA_MIN_BODY)
+
+    monkeypatch.setattr(urllib.request, "urlopen", always_rpm_429)
+    monkeypatch.setattr(rg.time, "sleep", lambda s: None)
+
+    try:
+        rg._gemini_call("scenario-1", "k", ["m1"], state)
+        raise AssertionError("expected a plain RuntimeError (rewinds exhausted)")
+    except rg._GeminiLadderPermanentlyDead as exc:
+        raise AssertionError(
+            "an all-RPM exhaustion must NOT raise the whole-run permanent-death signal"
+        ) from exc
+    except RuntimeError:
+        pass
+    assert state["dead"] == set()   # nothing permanently dead
+
+    def now_succeeds(req, timeout=180):
+        return _FakeResp({"candidates": [{"content": {"parts": [{"text": "DECISION: GO\nRATIONALE: x"}]}}]})
+
+    monkeypatch.setattr(urllib.request, "urlopen", now_succeeds)
+    text, model = rg._gemini_call("scenario-2", "k", ["m1"], state)  # fresh attempt, succeeds immediately
+    assert "DECISION: GO" in text and model == "m1"
+
+
+def test_gemini_ladder_rewind_bounded_then_raises(monkeypatch):
+    # Every rung RPM-exhausts on EVERY pass (never succeeds) -- the ladder must rewind exactly
+    # GEMINI_LADDER_REWINDS times (bounded — this IS the fix: unbounded waiting would never finish) then
+    # raise a per-SCENARIO RuntimeError, never the whole-run _GeminiLadderPermanentlyDead signal (these
+    # are all transient RPM failures; nothing may go into state['dead']).
+    monkeypatch.setattr(rg, "GEMINI_LADDER_REWINDS", 2)
+    ladder = ["m1", "m2"]
+
+    def fake_urlopen(req, timeout=180):
+        raise _fake_http_error(req.full_url, 429, _QUOTA_MIN_BODY)
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    slept = []
+    monkeypatch.setattr(rg.time, "sleep", lambda s: slept.append(s))
+    state = {}
+
+    try:
+        rg._gemini_call("prompt", "k", ladder, state)
+        raise AssertionError("expected RuntimeError")
+    except rg._GeminiLadderPermanentlyDead as exc:
+        raise AssertionError("RPM-only exhaustion must not raise the permanent/whole-run signal") from exc
+    except RuntimeError as exc:
+        assert state["dead"] == set()
+        assert "2 rewind" in str(exc)
+
+    # 3 passes (initial + 2 rewinds) x 2 models x GEMINI_RPM_MAX_RETRIES RPM-retry sleeps, plus one
+    # cooldown sleep after each of the first 2 passes (none after the final, raising pass).
+    expected_sleeps = 3 * len(ladder) * rg.GEMINI_RPM_MAX_RETRIES + 2
+    assert len(slept) == expected_sleeps
+
+
+def test_gemini_ladder_rewinds_default_is_six():
+    # Owner amendment 2026-08-17 ("i can wait ... it can wait and auto retry and eventually complete")
+    # raised the default from 2 to 6 rewinds.
+    assert rg.GEMINI_LADDER_REWINDS == 6
+
+
+def test_ladder_rewind_cooldown_honors_retry_delay_from_body(monkeypatch):
+    # The rewind cooldown must use the failing request's own RetryInfo.retryDelay (7.0, from
+    # _QUOTA_MIN_BODY) when present, NOT the flat GEMINI_LADDER_REWIND_COOLDOWN_S constant.
+    monkeypatch.setattr(rg, "GEMINI_LADDER_REWINDS", 2)
+    monkeypatch.setattr(rg, "GEMINI_LADDER_REWIND_COOLDOWN_S", 999.0)  # obviously wrong if this is used
+    ladder = ["m1", "m2"]
+    threshold = len(ladder) * (rg.GEMINI_RPM_MAX_RETRIES + 1)  # calls needed to RPM-exhaust pass 1 fully
+    calls = {"n": 0}
+
+    def fake_urlopen(req, timeout=180):
+        calls["n"] += 1
+        if calls["n"] <= threshold:
+            raise _fake_http_error(req.full_url, 429, _QUOTA_MIN_BODY)
+        return _FakeResp({"candidates": [{"content": {"parts": [{"text": "DECISION: GO\nRATIONALE: x"}]}}]})
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    slept = []
+    monkeypatch.setattr(rg.time, "sleep", lambda s: slept.append(s))
+    state = {}
+
+    text, model = rg._gemini_call("prompt", "k", ladder, state)
+    assert "DECISION: GO" in text and model == "m1"   # rewound to the top; m1 succeeds fresh
+    assert 999.0 not in slept                          # the flat constant was never used
+    assert 7.0 in slept                                 # the body's own retryDelay was honoured
+
+
+def test_ladder_rewind_cooldown_falls_back_to_constant_without_retry_info(monkeypatch):
+    # When the 429 body carries NO RetryInfo, the rewind cooldown must fall back to the flat
+    # GEMINI_LADDER_REWIND_COOLDOWN_S constant (same fallback _retry_delay_s already does for RPM retries).
+    monkeypatch.setattr(rg, "GEMINI_LADDER_REWINDS", 1)
+    monkeypatch.setattr(rg, "GEMINI_LADDER_REWIND_COOLDOWN_S", 42.0)
+    ladder = ["only-model"]
+    threshold = rg.GEMINI_RPM_MAX_RETRIES + 1
+    calls = {"n": 0}
+
+    def fake_urlopen(req, timeout=180):
+        calls["n"] += 1
+        if calls["n"] <= threshold:
+            raise _fake_http_error(req.full_url, 429, _QUOTA_MIN_BODY_NO_DELAY)
+        return _FakeResp({"candidates": [{"content": {"parts": [{"text": "DECISION: GO\nRATIONALE: x"}]}}]})
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    slept = []
+    monkeypatch.setattr(rg.time, "sleep", lambda s: slept.append(s))
+    state = {}
+
+    text, model = rg._gemini_call("prompt", "k", ladder, state)
+    assert "DECISION: GO" in text and model == "only-model"
+    assert 42.0 in slept   # fell back to the flat constant (body had no RetryInfo)
+
+
+def test_pace_sleeps_only_the_remaining_interval(monkeypatch):
+    # Pacing must be measured from the ACTUAL last request, never a flat sleep: only 5s elapsed since the
+    # last call, interval is 13s, so it must sleep exactly the shortfall (8s), not the full interval.
+    # Explicitly re-enables a real interval (the module-wide autouse fixture zeroes it by default).
+    monkeypatch.setattr(rg, "GEMINI_MIN_CALL_INTERVAL_S", 13.0)
+    monkeypatch.setattr(rg.time, "monotonic", lambda: 105.0)
+    slept = []
+    monkeypatch.setattr(rg.time, "sleep", lambda s: slept.append(s))
+    state = {"last_call_ts": 100.0}
+    rg._pace(state)
+    assert slept == [8.0]
+    assert state["last_call_ts"] == 105.0
+
+
+def test_pace_does_not_sleep_when_interval_already_elapsed(monkeypatch):
+    monkeypatch.setattr(rg, "GEMINI_MIN_CALL_INTERVAL_S", 13.0)
+    monkeypatch.setattr(rg.time, "monotonic", lambda: 200.0)
+    slept = []
+    monkeypatch.setattr(rg.time, "sleep", lambda s: slept.append(s))
+    state = {"last_call_ts": 100.0}  # 100s elapsed, well past the 13s interval
+    rg._pace(state)
+    assert slept == []
+    assert state["last_call_ts"] == 200.0
+
+
+def test_pace_is_a_noop_on_the_first_call_of_a_run(monkeypatch):
+    monkeypatch.setattr(rg, "GEMINI_MIN_CALL_INTERVAL_S", 13.0)
+    monkeypatch.setattr(rg.time, "monotonic", lambda: 50.0)
+    slept = []
+    monkeypatch.setattr(rg.time, "sleep", lambda s: slept.append(s))
+    state = {}   # no last_call_ts yet
+    rg._pace(state)
+    assert slept == []
+    assert state["last_call_ts"] == 50.0
+
+
+def test_check_run_budget_noop_without_run_start_ts():
+    rg._check_run_budget({})  # no run_start_ts key -> no-op, must not raise
+
+
+def test_check_run_budget_raises_when_spent(monkeypatch):
+    monkeypatch.setattr(rg, "GEMINI_RUN_BUDGET_S", 100.0)
+    monkeypatch.setattr(rg.time, "monotonic", lambda: 250.0)
+    rg._check_run_budget({"run_start_ts": 200.0})   # 50s elapsed < 100s budget -> must not raise
+    try:
+        rg._check_run_budget({"run_start_ts": 100.0})   # 150s elapsed >= 100s budget -> raises
+        raise AssertionError("expected _GeminiRunBudgetExhausted")
+    except rg._GeminiRunBudgetExhausted:
+        pass
+
+
+def test_check_run_budget_never_starts_a_sleep_that_would_overrun(monkeypatch):
+    # "Check the budget before sleeping too — never start a sleep that would overrun it."
+    monkeypatch.setattr(rg, "GEMINI_RUN_BUDGET_S", 100.0)
+    monkeypatch.setattr(rg.time, "monotonic", lambda: 195.0)
+    state = {"run_start_ts": 100.0}   # 95s elapsed, 5s of budget left
+    rg._check_run_budget(state, extra_s=4.0)   # 95+4=99 < 100 -> fine, no raise
+    try:
+        rg._check_run_budget(state, extra_s=10.0)   # 95+10=105 >= 100 -> would overrun -> raise BEFORE sleeping
+        raise AssertionError("expected _GeminiRunBudgetExhausted")
+    except rg._GeminiRunBudgetExhausted:
+        pass
+
+
+def test_gemini_call_raises_budget_exhausted_before_any_network_call(monkeypatch):
+    # Once the run budget is already spent, _gemini_call must not even attempt a request.
+    def fake_urlopen(req, timeout=180):
+        raise AssertionError("must not attempt a network call once the run budget is already spent")
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(rg, "GEMINI_RUN_BUDGET_S", 100.0)
+    monkeypatch.setattr(rg.time, "monotonic", lambda: 500.0)
+    state = {"run_start_ts": 0.0}
+    try:
+        rg._gemini_call("prompt", "k", ["m1"], state)
+        raise AssertionError("expected _GeminiRunBudgetExhausted")
+    except rg._GeminiRunBudgetExhausted:
+        pass
 
 
 # ---- run_live() end-to-end grading (the core of --live mode) — all network-free ----
@@ -611,6 +902,61 @@ def test_run_live_bare_token_without_decision_prefix_uses_the_reply_fallback(mon
     monkeypatch.setattr(rg, "_select_live_caller", _fake_caller_returning("GO"))
     r = rg.run_live([_sc("T-BARE", "GO")])[0]
     assert r["match"] is True and r["actual"] == "GO"
+
+
+# ---- 2026-08-17: run_live() stops early on a whole-run signal (_GeminiRunBudgetExhausted /
+# _GeminiLadderPermanentlyDead) and reports every remaining scenario as SKIPPED with a reason -- "never a
+# silent nothing." An ordinary per-scenario RuntimeError (already covered above by
+# test_run_live_records_an_error_class_when_the_model_call_raises) must NOT trigger this — only the two
+# specific whole-run signal classes do.
+
+
+def test_run_live_stops_and_skips_remaining_scenarios_on_run_budget_exhaustion(monkeypatch, capsys):
+    exc = rg._GeminiRunBudgetExhausted(
+        "Gemini run wall-clock budget (GEMINI_RUN_BUDGET_S=3000s) exhausted after 3001s elapsed — "
+        "stopping further live attempts this run."
+    )
+    monkeypatch.setattr(rg, "_select_live_caller",
+                         _fake_caller_returning("DECISION: GO\nRATIONALE: ok", exc))
+    scs = [_sc("T-A", "GO"), _sc("T-B", "GO"), _sc("T-C", "GO")]
+
+    results = rg.run_live(scs)
+
+    assert [r["id"] for r in results] == ["T-A", "T-B", "T-C"]
+    a, b, c = results
+    assert a["match"] is True and a["actual"] == "GO"
+    # T-B triggered the exhaustion; T-C was never even attempted (only 2 replies were queued above, so if
+    # run_live tried to call_model for T-C too this test would fail with an IndexError first).
+    assert b["match"] == "SKIPPED" and "budget" in b["reply"].lower()
+    assert c["match"] == "SKIPPED" and c["actual"] is None and c["model"] is None
+    assert c["reply"] == b["reply"]   # same reason propagated to every skipped scenario
+    err = capsys.readouterr().err
+    assert "T-B" in err and "stopping further live attempts" in err
+
+
+def test_run_live_stops_and_skips_remaining_scenarios_on_ladder_permanently_dead(monkeypatch, capsys):
+    exc = rg._GeminiLadderPermanentlyDead("Gemini model ladder exhausted — m1: HTTP 404 | m2: HTTP 404")
+    monkeypatch.setattr(rg, "_select_live_caller", _fake_caller_returning(exc))
+    scs = [_sc("T-ONLY", "GO"), _sc("T-NEVER-ATTEMPTED", "GO")]
+
+    results = rg.run_live(scs)
+
+    assert [r["id"] for r in results] == ["T-ONLY", "T-NEVER-ATTEMPTED"]
+    assert all(r["match"] == "SKIPPED" for r in results)
+    assert all("ladder exhausted" in r["reply"] for r in results)
+
+
+def test_run_live_a_plain_runtime_error_does_not_trigger_the_skip_path(monkeypatch, capsys):
+    # A per-scenario RuntimeError (e.g. rewinds exhausted for just this one scenario) is NOT one of the
+    # two whole-run stop signals -- it must fall through to the ordinary error class and let the loop
+    # continue trying later scenarios normally (both replies below get consumed).
+    monkeypatch.setattr(
+        rg, "_select_live_caller",
+        _fake_caller_returning(RuntimeError("ladder exhausted for this scenario — rewinds spent"),
+                                "DECISION: GO\nRATIONALE: ok"),
+    )
+    results = rg.run_live([_sc("T-A", "GO"), _sc("T-B", "GO")])
+    assert [r["match"] for r in results] == [None, True]   # T-A errored, T-B still attempted and matched
 
 
 # ---- scenarios_for_changed_files() — CI cost-scoping selection function (2026-07-30). golden-scenarios.
@@ -763,25 +1109,44 @@ def test_main_live_returns_0_when_no_provider_configured(monkeypatch):
 
 
 def test_main_live_prints_summary_counts_and_per_row_labels(monkeypatch, capsys):
-    # Drive the aggregation/print path at run_golden.py:502-508 directly, bypassing run_live()'s own
-    # internals (already covered by the test_run_live_* tests above) — main() must count and label a
-    # mixed match/flip/error results list correctly, since this print IS what a human triaging a live
-    # CI run actually reads (module docstring: advisory, continue-on-error).
+    # Drive the aggregation/print path directly, bypassing run_live()'s own internals (already covered by
+    # the test_run_live_* tests above) — main() must count and label a mixed match/flip/error/unparseable/
+    # skipped results list correctly, since this print IS what a human triaging a live CI run actually
+    # reads (module docstring: advisory, continue-on-error). Includes a SKIPPED row (2026-08-17 — "never a
+    # silent nothing": a partial result must be reported, with a reason, never silently dropped).
     monkeypatch.setattr(sys, "argv", ["run_golden.py", "--live"])
     mixed_results = [
         {"id": "A", "expected": "GO", "actual": "GO", "match": True, "reply": "r", "model": "m"},
         {"id": "B", "expected": "GO", "actual": "NO-GO", "match": False, "reply": "r", "model": "m"},
         {"id": "C", "expected": "GO", "actual": None, "match": None, "reply": "boom", "model": None},
         {"id": "D", "expected": "GO", "actual": "SCREEN", "match": "UNPARSEABLE", "reply": "r", "model": "m"},
+        {"id": "E", "expected": "GO", "actual": None, "match": "SKIPPED", "reply": "run budget exhausted",
+         "model": None},
     ]
     monkeypatch.setattr(rg, "run_live", lambda scenarios, scenario_ids=None: mixed_results)
     assert rg.main() == 0
     out = capsys.readouterr().out
-    assert "Live results: 1 match, 1 flip(s), 1 unparseable, 1 error(s) out of 4." in out
+    assert "Live results: 1 match, 1 flip(s), 1 unparseable, 1 error(s), 1 skipped (4 evaluated) out of 5." in out
     assert "[MATCH] A: expected='GO' actual='GO'" in out
     assert "[FLIP] B: expected='GO' actual='NO-GO'" in out
     assert "[ERROR] C: expected='GO' actual=None" in out
     assert "[UNPARSEABLE] D: expected='GO' actual='SCREEN'" in out
+    assert "[SKIPPED] E: expected='GO' actual=None" in out
+    assert "::warning::golden live run: 1 scenario(s) SKIPPED" in out
+    assert "run budget exhausted" in out
+
+
+def test_main_live_prints_notice_when_nothing_skipped(monkeypatch, capsys):
+    # The complementary "never a silent nothing" case: when NOTHING was skipped, still emit an explicit
+    # ::notice:: saying so (not just silence) — a human triaging the run should never have to infer full
+    # coverage from the absence of a warning.
+    monkeypatch.setattr(sys, "argv", ["run_golden.py", "--live"])
+    results = [{"id": "A", "expected": "GO", "actual": "GO", "match": True, "reply": "r", "model": "m"}]
+    monkeypatch.setattr(rg, "run_live", lambda scenarios, scenario_ids=None: results)
+    assert rg.main() == 0
+    out = capsys.readouterr().out
+    assert "::notice::golden live run: all 1 scenario(s) considered were evaluated (0 skipped)." in out
+    assert "::warning::golden live run:" not in out
 
 
 def test_main_live_scenario_unknown_id_prints_warning(monkeypatch, capsys):
