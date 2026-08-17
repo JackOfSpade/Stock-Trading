@@ -351,6 +351,24 @@ def test_daily_vs_minute_quota_classification():
     assert rg._retry_delay_s("{}", 99) == 99                        # falls back when absent
 
 
+def test_has_retry_delay_matches_retry_delay_s_presence(monkeypatch):
+    # 2026-08-17 retune telemetry (item 4): _has_retry_delay() must agree with _retry_delay_s() about
+    # WHETHER a body carries a server-supplied RetryInfo — it is split out only to classify a sleep as
+    # server-supplied vs. default without re-deriving that from _retry_delay_s()'s numeric return value
+    # (see _has_retry_delay's own docstring for why a bare `delay == default` comparison would be wrong).
+    assert rg._has_retry_delay(_QUOTA_MIN_BODY.decode()) is True
+    assert rg._has_retry_delay(_QUOTA_MIN_BODY_NO_DELAY.decode()) is False
+    assert rg._has_retry_delay("{}") is False
+    assert rg._has_retry_delay(None) is False
+    # Even when a server-supplied value happens to equal the flat default numerically, it must still be
+    # classified as server-supplied — the exact misclassification _has_retry_delay's docstring warns against.
+    coincidental = _QUOTA_MIN_BODY_NO_DELAY.decode().replace(
+        "}}", ',"details":[{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"20s"}]}}'
+    )
+    assert rg._retry_delay_s(coincidental, rg.GEMINI_RPM_RETRY_DELAY_S) == rg.GEMINI_RPM_RETRY_DELAY_S
+    assert rg._has_retry_delay(coincidental) is True
+
+
 def test_gemini_ladder_advances_on_daily_quota_429(monkeypatch):
     # A per-DAY 429 is persistent: the pointer must advance and the SECOND model's reply is returned, and
     # the day-exhausted model must be added to the permanent-death set.
@@ -412,6 +430,132 @@ def test_gemini_minute_quota_429_gives_up_after_max_retries(monkeypatch):
     assert model == "m2"
     assert state["dead"] == set()   # RPM-only exhaustion must NEVER land in the permanent-death set
     assert len(slept) == rg.GEMINI_RPM_MAX_RETRIES  # retried the cap, then moved on for this call only
+
+
+def test_gemini_rpm_max_retries_default_is_two():
+    # 2026-08-17 retune (CI run 32060180247): dropped from 5 to 2 -- moving to the NEXT ladder rung is free
+    # and each model has its own quota, so spending 5 sequential sleeps re-hitting the SAME rate-limited
+    # rung before ever trying a different model was the single largest source of wasted wall-clock measured
+    # on that run (2021s of a 2998.8s budget). Pin the literal default the same way
+    # test_gemini_ladder_rewinds_default_is_six pins GEMINI_LADDER_REWINDS, so a regression back to 5 (or
+    # any other silent change) is caught here rather than only showing up as a slow live run.
+    assert rg.GEMINI_RPM_MAX_RETRIES == 2
+
+
+def test_gemini_rpm_retry_falls_back_to_default_delay_without_retry_info(monkeypatch):
+    # The plain RPM-retry sleep (NOT the ladder-rewind cooldown, which already has its own dedicated
+    # fallback test) must fall back to the flat GEMINI_RPM_RETRY_DELAY_S constant when the 429 body carries
+    # no RetryInfo at all -- the other half of _retry_delay_s()'s contract, exercised here against
+    # _try_model's own RPM branch specifically.
+    slept = []
+
+    def fake_urlopen(req, timeout=180):
+        if "m1:" in req.full_url:
+            raise _fake_http_error(req.full_url, 429, _QUOTA_MIN_BODY_NO_DELAY)
+        return _FakeResp({"candidates": [{"content": {"parts": [{"text": "DECISION: GO\nRATIONALE: z"}]}}]})
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(rg.time, "sleep", lambda s: slept.append(s))
+    state = {}
+    _text, model = rg._gemini_call("prompt", "k", ["m1", "m2"], state)
+    assert model == "m2"
+    assert slept == [rg.GEMINI_RPM_RETRY_DELAY_S] * rg.GEMINI_RPM_MAX_RETRIES
+    assert state.get("sleep_rpm_retry_default_n") == rg.GEMINI_RPM_MAX_RETRIES
+    assert state.get("sleep_rpm_retry_server_n") is None
+
+
+def test_gemini_rpm_retry_telemetry_classifies_server_vs_default_delay(monkeypatch):
+    # 2026-08-17 retune telemetry (item 4): the run summary must be able to show how many RPM sleeps used a
+    # server-supplied retryDelay vs. the flat default. Drive ONE 429 of each flavor (GEMINI_RPM_MAX_RETRIES
+    # is 2, so both fit under the cap) and check both counters land correctly, independent of each other.
+    calls = {"n": 0}
+
+    def fake_urlopen(req, timeout=180):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise _fake_http_error(req.full_url, 429, _QUOTA_MIN_BODY)          # has RetryInfo (7s)
+        if calls["n"] == 2:
+            raise _fake_http_error(req.full_url, 429, _QUOTA_MIN_BODY_NO_DELAY)  # no RetryInfo
+        return _FakeResp({"candidates": [{"content": {"parts": [{"text": "DECISION: GO\nRATIONALE: z"}]}}]})
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    slept = []
+    monkeypatch.setattr(rg.time, "sleep", lambda s: slept.append(s))
+    state = {}
+    text, model = rg._gemini_call("prompt", "k", ["m1"], state)
+    assert "DECISION: GO" in text and model == "m1"
+    assert slept == [7.0, rg.GEMINI_RPM_RETRY_DELAY_S]
+    assert state.get("sleep_rpm_retry_server_n") == 1
+    assert state.get("sleep_rpm_retry_default_n") == 1
+
+
+def test_gemini_daily_quota_429_no_retries_before_permanent_death(monkeypatch):
+    # Daily-quota 429s must NOT blur into the RPM retry loop (this is the previously-fixed bug the module
+    # docstring/CLAUDE.md warn against re-introducing): the rung dies on the FIRST occurrence, with zero
+    # retries and zero sleep -- a fundamentally different path from the per-minute case's up-to-
+    # GEMINI_RPM_MAX_RETRIES retry loop, which the 2026-08-17 retune (5->2) only touches for RPM.
+    calls_m1 = {"n": 0}
+
+    def fake_urlopen(req, timeout=180):
+        if "m1:" in req.full_url:
+            calls_m1["n"] += 1
+            raise _fake_http_error(req.full_url, 429, _QUOTA_DAY_BODY)
+        return _FakeResp({"candidates": [{"content": {"parts": [{"text": "DECISION: GO\nRATIONALE: x"}]}}]})
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    slept = []
+    monkeypatch.setattr(rg.time, "sleep", lambda s: slept.append(s))
+    state = {}
+    text, model = rg._gemini_call("prompt", "k", ["m1", "m2"], state)
+    assert model == "m2" and state["dead"] == {"m1"}
+    assert calls_m1["n"] == 1   # exactly one attempt -- no retries for a daily-quota (permanent) failure
+    assert slept == []          # no RPM-retry sleep at all
+
+
+def test_gemini_ladder_switch_counter_counts_rpm_and_hard_abandonment(monkeypatch):
+    # 2026-08-17 retune telemetry (item 4): state['ladder_switches'] counts every time the dispatch loop
+    # moves off a rung without succeeding on it -- both an RPM-exhausted rung (m1 here) and a hard-failed
+    # one (m2) count, since both cases hand off to the NEXT rung; this is the counter the retune's own
+    # stated goal (switch sooner, not resleep) is judged against in the run summary.
+    def fake_urlopen(req, timeout=180):
+        if "m1:" in req.full_url:
+            raise _fake_http_error(req.full_url, 429, _QUOTA_MIN_BODY_NO_DELAY)   # RPM-only, transient
+        if "m2:" in req.full_url:
+            raise _fake_http_error(req.full_url, 404, b'{"error":{"message":"not found"}}')  # hard failure
+        return _FakeResp({"candidates": [{"content": {"parts": [{"text": "DECISION: GO\nRATIONALE: x"}]}}]})
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(rg.time, "sleep", lambda s: None)
+    state = {}
+    text, model = rg._gemini_call("prompt", "k", ["m1", "m2", "m3"], state)
+    assert "DECISION: GO" in text and model == "m3"
+    assert state["ladder_switches"] == 2   # abandoned m1 (RPM) then m2 (hard) before succeeding on m3
+
+
+def test_gemini_rpm_retry_sleep_checks_budget_before_sleeping(monkeypatch):
+    # "Never start a sleep that would overrun the budget" (owner directive 2026-08-17) applies to the RPM
+    # retry sleep too, not just _pace()/the rewind cooldown (already covered elsewhere). Give the run a
+    # near-exhausted budget and a 429 whose OWN RetryInfo.retryDelay is huge: the RPM-retry path must raise
+    # _GeminiRunBudgetExhausted instead of ever calling time.sleep for that delay.
+    huge_delay_body = (b'{"error":{"code":429,"status":"RESOURCE_EXHAUSTED","message":"Quota exceeded for '
+                        b'metric GenerateRequestsPerMinutePerProjectPerModel","details":[{"@type":'
+                        b'"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"9999s"}]}}')
+
+    def fake_urlopen(req, timeout=180):
+        raise _fake_http_error(req.full_url, 429, huge_delay_body)
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(rg.time, "monotonic", lambda: 1000.0)
+    slept = []
+    monkeypatch.setattr(rg.time, "sleep", lambda s: slept.append(s))
+    monkeypatch.setattr(rg, "GEMINI_RUN_BUDGET_S", 60.0)
+    state = {"run_start_ts": 941.0}   # 59s elapsed of a 60s budget: room for the pre-call check, not the sleep
+    try:
+        rg._gemini_call("prompt", "k", ["m1"], state)
+        raise AssertionError("expected _GeminiRunBudgetExhausted")
+    except rg._GeminiRunBudgetExhausted:
+        pass
+    assert slept == []   # never actually slept the 9999s RPM delay
 
 
 def test_gemini_ladder_exhaustion_raises(monkeypatch):
@@ -1529,6 +1673,27 @@ def test_run_live_golden_batch_disabled_does_not_call_group_scenarios_for_batchi
     monkeypatch.setattr(rg, "_select_live_caller", _fake_caller_returning("DECISION: GO\nRATIONALE: x"))
     results = rg.run_live([_sc("T-A", "GO")])
     assert results[0]["match"] is True
+
+
+def test_run_live_summary_line_reports_rpm_delay_and_ladder_switch_telemetry(monkeypatch, capsys):
+    # 2026-08-17 retune telemetry (item 4, CI run 32060180247): the run summary must show how many RPM
+    # sleeps used a server-supplied retryDelay vs. the flat default, and the total ladder-rung-switch count
+    # -- not just the pre-existing wall_clock/attempts/429s/tokens/sleep breakdown. Drive run_live() with a
+    # fake caller whose .state already carries these counters (as a real _gemini_call run would leave them
+    # via _try_model's RPM branch / _gemini_call's dispatch loop) and assert the printed ::notice:: summary
+    # line actually surfaces them, proving run_live() reads these keys, not just that they exist somewhere.
+    def call_model(prompt):
+        return "DECISION: GO\nRATIONALE: x", "fake-model-1"
+    call_model.state = {
+        "total_attempts": 4, "total_429_rpm": 3, "total_429_daily": 0, "total_tokens_sent": 1234,
+        "sleep_pacing_s": 1.0, "sleep_rpm_retry_s": 27.0, "sleep_rewind_s": 0.0,
+        "sleep_rpm_retry_server_n": 2, "sleep_rpm_retry_default_n": 1, "ladder_switches": 3,
+    }
+    monkeypatch.setattr(rg, "_select_live_caller", lambda: call_model)
+    rg.run_live([_sc("T-SUMMARY", "GO")])
+    err = capsys.readouterr().err
+    assert "rpm_retry_delay(server=2, default=1)" in err
+    assert "ladder_switches=3" in err
 
 
 # ---- build_queue_insert_sql() — the advisory (never-executed) events.queue_events INSERT text printed on
