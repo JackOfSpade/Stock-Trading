@@ -385,6 +385,15 @@ routines:
                                     # work onto Sonnet sub-agents. Do NOT "fix" this by adding the addendum
                                     # to OPS2 -- a hand comparison against OPS0 will keep surfacing it as a
                                     # difference, and it is the intended one.
+                                    # SECOND ADDENDUM, NO EXCEPTION (owner directive, 2026-08-17): every
+                                    # routine INCLUDING OPS2 also carries a standing THIRD paragraph ("Do
+                                    # not give final response until you have solved ALL issues during your
+                                    # run. For new issues found outside of the scope of this prompt, go
+                                    # with your best recommendation and fix."). This one governs when a
+                                    # routine may stop, not which model does the work, so it is not in
+                                    # tension with OPS2's hosting job -- the omission above is scoped to
+                                    # the Sonnet-delegation paragraph only (scripts/routine_backup.py's
+                                    # ADDENDUM/SCOPE_ADDENDUM split).
                                     # NOTE state.instruction_drift cannot see this either way: it compares
                                     # the FIRST LINE ONLY (REGEXP_EXTRACT(instruction, r'^[^\n]*'), by
                                     # design, so the addendum's wording never trips drift), so the addendum
