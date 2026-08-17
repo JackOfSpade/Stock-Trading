@@ -132,8 +132,15 @@ def main():
 
     if "--write" in sys.argv:
         manifest = build_triggers_manifest(headings, cad)
+        # ensure_ascii=False (2026-08-17 fix): json.dump's default (True) \u-escapes every em dash in
+        # every instruction, so re-running --write on an UNCHANGED cadence.yaml/plan turned all 32
+        # entries into diff noise against the already-committed file (which carries literal UTF-8 em
+        # dashes) -- discovered while regenerating for the new OPS2 instruction_note field and verifying
+        # "only OPS2 changed" via a before/after diff, which this drift defeated even though the parsed
+        # JSON (what check_cadence_consistency.py's check F actually compares) was byte-for-byte
+        # unaffected. Matches the checked-in file's existing convention.
         with open(TRIGGERS_JSON, "w", encoding="utf-8") as f:
-            json.dump(manifest, f, indent=2, sort_keys=True)
+            json.dump(manifest, f, indent=2, sort_keys=True, ensure_ascii=False)
             f.write("\n")
         print(f"\nWrote {TRIGGERS_JSON} ({len(manifest)} routines).")
 
