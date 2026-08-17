@@ -387,7 +387,7 @@ loops:
       legitimately rare (terminations: zero so far) would be pure false-positive noise, not a real gap.
     added: "2026-07-19"
 
-  - id: research_screener            # AI research-significance screens: the D1/W2/M2 funnel screens'
+  - id: research_screener            # AI research-significance screens: the D1/M2 funnel screens'
                                       # significance judgment (which surfaced moves/pairs are worth
                                       # research attention), converted from fixed numeric bars
                                       # (AI_DECISION_REDESIGN.md §3 Redesign C; canonical rails
@@ -420,17 +420,17 @@ loops:
       n/a — authorized AT its ceiling (active_auto) by the owner's 2026-07-19 in-session reversal of the
       same-day DEFER verdict (see stage comment for the exact provenance). The compensating control
       replacing a shadow burn-in is the rail bundle in Operating_Protocols.md §19: mechanical Layer-1
-      population nets (D1 single-name >=2% / D1 sector >=1% / W2 >=3% / M2 corr >=0.3) with the 3-item
+      population nets (D1 single-name >=2% / D1 sector >=1% / M2 corr >=0.3) with the 3-item
       escape-valve cap; the spec-floor rail (B's frozen >=5% event-day criterion and E's frozen corr >=0.5
       criterion stay hard, spec-derived entry gates — below_spec_floor items are context/SL1 evidence only,
       never entry candidates); unchanged result-count caps; the legacy fixed bars computed mechanically in
-      every call as a RECORD-ONLY benchmark (agreement/disagreement ledger); and W5's weekly RESEARCH-SCREEN
+      every screen call as a RECORD-ONLY benchmark (agreement/disagreement ledger); and W5's weekly RESEARCH-SCREEN
       SCORECARD (read-only, never gates a screen) whose rule_only-then-GO check makes the old defer-revisit
       trigger ("screens rejecting winners") a standing measured check. NO kill-switch table (unlike
       ops.arsenal_control — ops.park_control was itself retired 2026-07-26 by bigquery/108_park_allocator_
       immediate_binding.sql, PARK v3 immediate-binding redesign; owner: "human would never do this
       manually. remove this feature."): screens move no capital; the owner reverts by directive.
-      NO dedicated cadence heartbeat: this loop fires only inline within D1/W2/M2, which already carry
+      NO dedicated cadence heartbeat: this loop fires only inline within D1/M2, which already carry
       their own run_log/cadence dead-man coverage — declared in scripts/check_autonomy_consistency.py's
       HEARTBEAT_SELF_MONITORED_LOOPS (the one sanctioned carve-out place), same posture as capital_allocator.
     added: "2026-07-19"

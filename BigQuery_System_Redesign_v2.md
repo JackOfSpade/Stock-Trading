@@ -30,7 +30,9 @@ and redesign the workflow if there's a better way*:
 > **⚠️ DOC-vs-REALITY RECONCILIATION (2026-06-19).** This design doc describes the *intended* system
 > and names several objects that were **NEVER BUILT** — the deployed ground truth is `bigquery/01–13_*.sql`
 > (apply those in order). Treat the following as DESIGN-ONLY / not deployed unless and until built:
-> - `ops.sp_weekly_refresh()` — **not built** (noted in §13 too). W5 does embedding catch-up + calibration review by hand.
+> - `ops.sp_weekly_refresh()` — **not built** (noted in §13 too). W5 performs calibration/trend
+>   reporting by hand; decision-embedding repair is owned by the atomic `ops.sp_log_decision()`
+>   write path and D2a's daily `ops.sp_daily_refresh()`.
 > - `analytics.conviction_model` + `analytics.conviction_model_gbt` — **not built** (correctly gated: single-class until ≥30 closed GO trades). The cold-start substrate that *is* live is `analytics.conviction_features` + `analytics.calibration_summary`.
 > - `analytics.attribution` (CONTRIBUTION_ANALYSIS), `analytics.anomaly_flags` (ML.DETECT_ANOMALIES), `analytics.screen_A..E` — **not built**.
 > - A `VECTOR INDEX` on `decision_embeddings` — **intentionally not built** (BigQuery needs ≥5k rows; brute-force over ~250 rows is instant — see `bigquery/02_ai_layer.sql`).
@@ -154,7 +156,7 @@ From the routine digest, work cleaves cleanly:
 - **Mechanical → server-side SQL (no agent tokens):** D1's exit-trigger sweep and kill-trigger
   sweep; *all* of D2 Step 0 (trade_id reconciliation, cash/SGOV §13 drift tripwire, the deployed-TWR
   chain-link arithmetic); D3's queue-archive + calendar hygiene flags; the universe-screening filters
-  inside W1/W2/W3/M2/Q2 (mcap/ADV/≥5%-move/252-day-corr); M4 §H's 30-trade-gate + M2M arithmetic.
+  inside W1/W3/M2/Q2 and D1's daily move screen (mcap/ADV/252-day-corr); M4 §H's 30-trade-gate + M2M arithmetic.
 - **Judgment → stays the agent:** the open-universe market scan and event interpretation (D1
   categories 1–5), every GO/NO-GO/exit/termination *decision*, M1a regime scoring, the deep-research
   narrative syntheses (W3/M3/Q1/Q2/Q3), and the adversarial Attacker/Orchestrator reasoning.
@@ -164,8 +166,9 @@ From the routine digest, work cleaves cleanly:
 
 ### 2.2 The Daily Briefing — one SELECT replaces three expensive reads
 
-A server-side procedure (`ops.sp_daily_refresh`, §13) materializes `state.daily_briefing` before the
-agent wakes. D1/D2 open with a single small `SELECT * FROM state.daily_briefing` instead of loading
+A server-side procedure (`ops.sp_daily_refresh`, §13) refreshes the SQL-derived state before the
+agent wakes; `state.daily_briefing` itself is a live view. D1/D2 open with a single small
+`SELECT * FROM state.daily_briefing` instead of loading
 `Portfolio_Ledger.md` (820 lines) + cross-checking the connector + scanning `Decision_Log.md`
 (14.5k lines). The briefing carries, per run:
 
@@ -192,19 +195,21 @@ attribution + TWR + analytics layer downstream of it. D2 Step 0 still *writes* t
 - **D1** — reads `state.daily_briefing` (sweeps already computed) → spends tokens only on the
   open-universe scan + judgment thesis-invalidation/opportunity checks → `INSERT`s any
   `[HF Frontier-LLM Capture]` and candidate rows. No whole-file loads.
-- **D2** — Step 0 becomes: `CALL ops.sp_daily_refresh()` (ingest new fills via Storage Write API /
-  `INSERT`, refresh state) then read the briefing's reconciliation delta + `HARD_STOP` flag. Step 1
-  drains `state.open_queue` due items (judgment) and, **before logging any GO, calls the conviction
-  gate (§2.5)**. Writes are `INSERT`s into `events.*`; no in-place ledger edits to merge-conflict.
+- **D2a** — after ingesting the broker-derived marks, calls `ops.sp_daily_refresh()` to refresh
+  derived state and repair any deferred embeddings. D2 then reads the briefing's reconciliation delta
+  + `HARD_STOP` flag, drains `state.open_queue` due items (judgment), and **before logging any GO,
+  calls the conviction gate (§2.5)**. Writes are `INSERT`s into `events.*`; no in-place ledger edits
+  to merge-conflict.
 - **D3** — reads `state.open_queue` + `state.calendar_actions` (server-computed terminal-entry and
   stale-order flags) and acts on them; the manual sweep disappears.
 
 ### 2.4 Redesigned weekly / monthly / quarterly
 
 Each deep-research routine keeps its judgment core but is *fed* a server-built candidate set: the hard
-screening filters run as scheduled queries into `analytics.screen_*` tables (A/C catalysts, B
-post-event ≥5% movers in-window, D/Q2 eligibility, E pairs with 252-day corr ≥0.5). The agent ranks
-and writes the narrative; it no longer reconstructs the universe by hand. M4 §H reads
+screening filters run as scheduled queries into `analytics.screen_*` tables (A/C catalysts, D/Q2
+eligibility, E pairs with 252-day corr ≥0.5). D1 owns the daily B move screen; W2 consumes D1 records
+for post-event enrichment rather than reconstructing a B post-event population. The agent ranks and writes
+the narrative; it no longer reconstructs the universe by hand. M4 §H reads
 `perf.gate_status` instead of doing haircut arithmetic. Monthly/quarterly rollups become materialized
 views (always current). M1a regime *scoring* stays agent judgment (and stays strategy-blind — see the
 blinding note in §6).
@@ -406,9 +411,10 @@ FROM analytics.thesis_outcomes WHERE was_profitable IS NOT NULL
 GROUP BY strategy, sub_pattern, conviction;
 ```
 
-Retrained by the weekly refresh procedure as outcomes accrue. `BOOSTED_TREE_CLASSIFIER` (P2, Vertex¢)
-is trained alongside as the GBM comparison the foundation prefers for tabular reasoning; both feed the
-conviction gate (§2.5). **Edge-decay monitors** (hit rate across consecutive 10-trade windows, D's
+The unbuilt weekly-refresh design would retrain this as outcomes accrue. In the deployed system, W5
+reports calibration/trends only; it neither trains this model nor repairs embeddings. A
+`BOOSTED_TREE_CLASSIFIER` (P2, Vertex¢) remains the planned GBM comparison the foundation prefers for
+tabular reasoning. **Edge-decay monitors** (hit rate across consecutive 10-trade windows, D's
 24-month alpha-vs-SPY-synthetic with CI gating, E's entry-percentile↔P&L rank correlation) become
 windowed queries over `thesis_outcomes`.
 
@@ -567,15 +573,17 @@ Schemas extend v1's with the *actual* fields found in the data digest. Highlight
   2026-06-07 substrate-hardening; `ops.INFORMATION_SCHEMA.ROUTINES` had been empty). The built version
   is scoped to the **SQL-only** daily steps: `CALL ops.sp_recompute_engine()` (wholesale recompute of
   `perf.strategy_daily` → `kill_flags`) + `CALL ops.sp_embed_pending()` (incremental decision embedding).
-  Fills ingestion stays **agent-side** in D2 Step 0 (it needs the IBKR connector, unreachable from pure
-  SQL); `state.daily_briefing` is a view (always live, no refresh); the anomaly scan is not yet built.
-  Invoked by D2 Step 0 after marks ingest (`CALL ops.sp_daily_refresh()`); can also be a daily
+  Fills ingestion stays **agent-side** in D2a Step 0 (it needs the IBKR connector, unreachable from
+  pure SQL); `state.daily_briefing` is a view (always live, no refresh); the anomaly scan is not yet
+  built. Invoked by D2a after marks ingest (`CALL ops.sp_daily_refresh()`); can also be a daily
   **scheduled query** (see `bigquery/README.md` → Scheduled query). Decisions are written via the
-  atomic `ops.sp_log_decision()` (append + embed in one call), so embeddings rarely have a backlog.
+  atomic `ops.sp_log_decision()` (append + embed in one call); D2a's daily refresh is the sole
+  routine-level repair owner for any deferred embedding.
 - **`ops.sp_weekly_refresh()`:** NOT YET BUILT — retrain `conviction_model` (auto-activates at ≥30
   closed trades; currently ~6/30) + rebuild `calibration_map`, refresh the `screen_*` candidate sets,
-  rebuild theater-independence + attribution. Scheduled weekly. (W5 currently does the embedding
-  catch-up + calibration review by hand via `state.embedding_health` / `ops.sp_embed_pending`.)
+  rebuild theater-independence + attribution. W5 performs the current weekly calibration/trend report
+  and factbase governance only; it does not call `ops.sp_embed_pending()` or provide an embedding-repair
+  fallback.
 - **Materialized views** refresh themselves for the monthly/quarterly rollups.
 - **Snapshots + Parquet export** (audit/DR): daily table snapshots + weekly `EXPORT DATA AS PARQUET`
   to the existing **Hugging Face dataset** (git-versioned, 100 GB free → no GCS bucket to provision).
@@ -617,7 +625,8 @@ Schemas extend v1's with the *actual* fields found in the data digest. Highlight
    `sp_daily_refresh` → validate TWR vs connector.
 3. **Me (MCP):** embeddings + vector index + conviction model + calibration map + attribution +
    forecast + anomaly + theater-independence.
-4. **You (console):** schedule `sp_daily_refresh` / `sp_weekly_refresh`; build the Looker dashboard.
+4. **You (console):** ensure the daily `sp_daily_refresh` path is scheduled/invoked by D2a; do not
+   schedule the unbuilt `sp_weekly_refresh`. Build the Looker dashboard.
 5. **Parallel-run → cutover →** edit the protocol docs to the BigQuery procedures.
 
 ---

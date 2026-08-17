@@ -44,7 +44,7 @@ runs on, each of which exists *because* it is not judgment:
 | Termination capital redistribution (D2 §5 / AR_orc): equal-split residual | FIFO newcomer floor, then equal split among survivors — "no review, no hold" | **DONE — Redesign A** (implemented 2026-07-19; `Operating_Protocols.md` §16, `Claude_Task_Plan.md` D2 §5/AR_orc, `bigquery/95_capital_allocator.sql`) |
 | Deposit allocation residual (§13.C) | FIFO newcomer floor, then equal split | **DONE — Redesign A** (same call; `Operating_Protocols.md` §13.C) |
 | Future strategies' internal machinery | SL2 authors numeric-trigger specs by default | **DONE — Redesign B** (implemented 2026-07-19; Claude_Task_Plan.md SL1 STEP 2 + SL2 (A) 1b, Experiment_Parameters.md authoring note) |
-| Research-funnel significance thresholds (W2 ≥5% move; M2 corr ≥0.5 pairing; + D1's single-name ≥5% / sector ≥2% screens, found on inventory) | Fixed numeric screens | **DONE — Redesign C** (initially owner-DEFERRED 2026-07-19, REVERSED same day by direct in-session owner directive; implemented 2026-07-19 — `Operating_Protocols.md` §19, `Claude_Task_Plan.md` D1/W2/M2/W4/W5, `bigquery/96_research_screener.sql`; the old revisit trigger is now W5's standing rule_only-then-GO check) |
+| Research-funnel significance thresholds (D1's single-name ≥5% / sector ≥2% screens and M2 corr ≥0.5 pairing) | Fixed numeric screens | **DONE — Redesign C** (initially owner-DEFERRED 2026-07-19, REVERSED same day by direct in-session owner directive; implemented 2026-07-19 — `Operating_Protocols.md` §19, `Claude_Task_Plan.md` D1/M2/W4/W5, `bigquery/96_research_screener.sql`; W2 consumes D1 records for post-event enrichment, and the old revisit trigger is now W5's standing rule_only-then-GO check) |
 
 ### KEEP mechanical — with the specific reason
 
@@ -179,8 +179,8 @@ directive: "Yes, implement it." The original defer reasoning stays visible below
 it was sound as far as it went, and the implementation answers each point rather than
 ignoring it.
 
-**What the original text proposed.** W2's "≥5% close-to-close move," M2's "correlation
-≥0.5" pairing bar, and similar *significance* thresholds encode market judgment and could
+**What the original text proposed.** A retrospective W2 "≥5% close-to-close move," M2's "correlation
+≥0.5" pairing bar, and similar *significance* thresholds encoded market judgment and could
 become per-session AI calls ("is this move significant for this name's vol regime?") with
 the liquidity/capacity floors (mkt-cap/ADV) kept as rails. Deferred because: the funnel
 feeds AI judgment two steps later anyway (thesis construction, GO/NO-GO), the thresholds
@@ -203,26 +203,30 @@ was found and converted: D1's sector-move ≥2% bar (no frozen constraint).
 `research_screener`, built directly `active_auto` per the capital_allocator staging
 rationale — a screen moves research attention, never capital):
 - **Two-layer structure.** Layer 1 = mechanical population rails, explicitly cost bounds
-  and never significance claims (D1 single-name ≥2%, D1 sector ≥1%, W2 ≥3% over the
-  unchanged 10-day window, M2 corr ≥0.3 band; +3-item sub-net escape valve). Layer 2 =
+  and never significance claims (D1 single-name ≥2%, D1 sector ≥1%, M2 corr ≥0.3 band;
+  +3-item sub-net escape valve). Layer 2 =
   the AI significance judgment as the sole decider of what advances, with per-item
   conviction on the house ladder. This answers the defer's research-cost point: the
-  enumeration stays bounded by the nets and the unchanged result-count caps (W2 ≤15,
-  M2 ≤10), while the *judgment* is no longer a number.
+  enumeration stays bounded by the nets and the unchanged M2 ≤10 result-count cap, while
+  the *judgment* is no longer a number. W2 now consumes D1 records and caps only its
+  post-event-enrichment work; it does not generate a screen population.
 - **Spec-floor rail.** B/E candidacy still mechanically requires the frozen criteria;
   AI-significant sub-floor items are recorded `below_spec_floor` as context/SL1 ideation
   evidence (judgment-native new-strategy material per Redesign B), never entry candidates.
-- **Record-only legacy benchmark.** Every call computes the old fixed bars mechanically
+- **Record-only legacy benchmark.** Every screen call computes the old fixed bars mechanically
   (`legacy_rule_pass`) — the park_rule_shadow precedent — producing a standing
   agreement/disagreement ledger (`both`/`ai_only`/`rule_only`) instead of a shadow phase.
-- **Read surface + evaluation.** `entry_type='research-screen'` decision_log rows →
+- **Read surface + evaluation.** Current D1/M2 `entry_type='research-screen'` decision_log rows (plus
+  retained historical legacy W2 screen rows) →
   `state.research_screen_calls` + `analytics.research_screen_disagreements`
   (`bigquery/96_research_screener.sql`); W5's RESEARCH-SCREEN SCORECARD (record-only)
   reports the ledger weekly and flags any `rule_only` rejection that later reached a GO
   thesis — the old defer-revisit trigger ("screens rejecting winners"), converted from a
-  passive hope into a standing measured check.
+  passive hope into a standing measured check. W2's distinct `entry_type='post-event-enrichment'`
+  provenance decision is not parsed as a screen call, while historical legacy W2 screen rows remain
+  scoreable.
 Surface: `Operating_Protocols.md` §19 (canonical), `Claude_Task_Plan.md` D1 items 3/4 +
-routing / W2 PART 1-2 / M2 PART 1 / W4 HARD CHECK rewording / W5 scorecard bullet + table
+routing / W2 D1-record enrichment / M2 PART 1 / W4 HARD CHECK rewording / W5 scorecard bullet + table
 rows, `bigquery/96_research_screener.sql` + README index, `ops/autonomy_levels.yaml`
 loop entry + `check_autonomy_consistency.py` heartbeat carve-out, `Watchlist.md`
 rewordings, golden scenarios RS-01..04. Zero edits to frozen specs or Strategy.md.
@@ -245,7 +249,7 @@ rewordings, golden scenarios RS-01..04. Zero edits to frozen specs or Strategy.m
   2026-07-19 (Chrome-relay verdict), reversed later that day by direct in-session owner
   directive ("Yes, implement it") after the owner asked for and read a plain-language
   explanation. Surfaces: `Operating_Protocols.md` §19 (canonical rails),
-  `Claude_Task_Plan.md` D1/W2/M2/W4/W5, `bigquery/96_research_screener.sql`
+  `Claude_Task_Plan.md` D1/M2/W2-enrichment/W4/W5, `bigquery/96_research_screener.sql`
   (`state.research_screen_calls`, `analytics.research_screen_disagreements`), loop
   `research_screener` (`active_auto`) in `ops/autonomy_levels.yaml` +
   `check_autonomy_consistency.py` carve-out, `Watchlist.md` rewordings, golden scenarios

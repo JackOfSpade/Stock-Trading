@@ -58,9 +58,10 @@ AS (
 );
 
 
--- state.research_screen_calls: same parser as bigquery/96, but final-effective. A correction must
--- retain entry_type='research-screen' for this view to see its corrected payload; the anti-join
--- removes the named stale target before either array is expanded.
+-- state.research_screen_calls: same parser as bigquery/96, but final-effective. It retains historical
+-- W2 `research-screen` rows; new W2 post-event-enrichment provenance has a distinct entry_type and is not
+-- a screen call here. A correction must retain entry_type='research-screen' for this view to see its
+-- corrected payload; the anti-join removes the named stale target before either array is expanded.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.research_screen_calls` AS
 WITH calls AS (
   SELECT

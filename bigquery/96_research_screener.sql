@@ -1,13 +1,15 @@
 -- bigquery/96_research_screener.sql — AI Research-Significance Screen: the read/audit views over the
 -- rail-bounded AI significance judgment that replaces the fixed close-to-close/correlation bars in
--- D1's single-name and sector move screens, W2's post-event price-move screen, and M2's PART 1
--- correlation-pair population screen. Project: stock-trading-498512.
+-- D1's single-name and sector move screens and M2's PART 1 correlation-pair population screen. Historical
+-- W2 post-event `research-screen` rows remain queryable; new W2 post-event-enrichment provenance uses a
+-- distinct entry_type and therefore is not parsed. Project: stock-trading-498512.
 --
 -- Spec: AI_DECISION_REDESIGN.md §3 Redesign C (owner verdict 2026-07-19 — initially DEFERRED, THEN
 -- REVERSED the same day by direct in-session directive "Yes, implement it" after the owner asked for
 -- and read a plain-language explanation of the redesign) — implements the two-layer screen structure
 -- (mechanical population rail + AI significance judgment) described in Operating_Protocols.md §19 and
--- wired inline in Claude_Task_Plan.md's D1 DEVELOPMENTS/OPPORTUNITY CHECK, W2 PART 1, and M2 PART 1.
+-- wired inline in Claude_Task_Plan.md's D1 DEVELOPMENTS/OPPORTUNITY CHECK and M2 PART 1. W2 consumes
+-- D1 records for enrichment; it does not make a research-significance screen call.
 -- Every converted-screen call is logged as an events.decision_log row (entry_type='research-screen')
 -- carrying a `fields` JSON payload; this file's ONLY objects are read views over that payload — no new
 -- table, no new procedure, and NOTHING here decides significance for real: the AI judgment happens
@@ -22,8 +24,8 @@
 -- fields JSON schema written by CALL ops.sp_log_decision(..., entry_type='research-screen', ...)
 -- (Operating_Protocols.md §19 logging contract — document verbatim in both places):
 --   {
---     "routine": "D1"|"W2"|"M2",
---     "screen": "single-name-move"|"sector-move"|"post-event"|"pair-divergence",
+--     "routine": "D1"|"M2",
+--     "screen": "single-name-move"|"sector-move"|"pair-divergence",
 --     "population_rail": "<the Layer-1 net applied, e.g. 'move>=2% mktcap>=2B'>",
 --     "surfaced_count": <int — Layer-1 population size>,
 --     "legacy_rule": "move>=5%"|"sector>=2%"|"corr>=0.5",
@@ -39,13 +41,13 @@
 -- a fields key — same "exactly one payload is authoritative, never split redundantly across native
 -- columns and JSON" discipline bigquery/95_capital_allocator.sql's header states for its own `rationale`.
 -- `legacy_rule_pass` is computed MECHANICALLY in-session (metric vs. the old fixed bar) — the old rule
--- runs RECORD-ONLY inside every call as benchmark, the `park_rule_shadow` precedent (§13.F / §19),
+-- runs RECORD-ONLY inside every screen call as benchmark, the `park_rule_shadow` precedent (§13.F / §19),
 -- never the decider. agreement counts: both = passed with legacy_rule_pass; ai_only = passed without;
 -- rule_only = rejected_notable with legacy_rule_pass.
 --
 -- Zero-row-safe by construction: entry_type='research-screen' has never been written as of this file's
 -- authoring — loop `research_screener` is registered directly `active_auto` in ops/autonomy_levels.yaml
--- (per §19's Loop paragraph) but its first D1/W2/M2 call has not yet fired — so `state.research_screen_
+-- (per §19's Loop paragraph) but its first D1/M2 call has not yet fired — so `state.research_screen_
 -- calls` and `analytics.research_screen_disagreements` are EXPECTED to read back empty today. That is
 -- the correct, not-broken state; do not treat an empty read as a bug (verified live via the readonly
 -- BigQuery MCP at authoring time: zero decision_log rows of this entry_type exist). A call with empty
@@ -65,7 +67,8 @@
 -- surfaced_count/legacy_rule/agreement_*/rationale) are carried on every item row so a consumer never
 -- has to re-join back to events.decision_log for them.
 -- SUPERSEDED LIVE by bigquery/122_decision_correction_append_only.sql — current single source of truth
--- for this object. It preserves this parser and filters targets named by append-only correction rows.
+-- for this object. It preserves this parser (including historical W2 screen rows) and filters targets named
+-- by append-only correction rows. New W2 post-event-enrichment rows have another entry_type and are excluded.
 -- Kept here, unmodified, for DR-rebuild apply-in-order reference only. Do not re-apply in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.research_screen_calls` AS
 WITH calls AS (

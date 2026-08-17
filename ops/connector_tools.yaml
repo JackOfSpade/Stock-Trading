@@ -363,7 +363,7 @@ connectors:
         use: unused
       - name: create_order_instruction
         use: required
-        note: order staging — D2/D2a/W4/M4/Q4/A3 conversion routines
+        note: order staging — D2/D2a/M4/Q4/A3 conversion routines
       - name: create_watchlist
         use: unused
       - name: delete_alert

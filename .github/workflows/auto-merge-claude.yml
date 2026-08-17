@@ -385,6 +385,7 @@ jobs:
           run_check python scripts/split_task_plan.py --check
           run_check python scripts/check_cadence_consistency.py
           run_check python scripts/check_prose_invariants.py
+          run_check python scripts/check_routine_scope.py
           run_check python scripts/gen_routine_lists.py --check
           run_check python scripts/check_roster_consistency.py
           run_check python scripts/check_autonomy_consistency.py

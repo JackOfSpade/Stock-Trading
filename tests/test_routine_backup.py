@@ -473,7 +473,7 @@ def test_derive_profile_connector_order_never_produces_a_spurious_override():
 
 def test_derive_profile_connector_set_difference_is_an_override():
     normalized = _norm(mcp_connections=[{"connector_uuid": "u-c", "name": "C", "url": "https://c"}])
-    profile, overrides = rb.derive_profile(normalized, PROFILES)
+    _profile, overrides = rb.derive_profile(normalized, PROFILES)
     assert overrides["mcp_connections"] == [{"connector_uuid": "u-c", "name": "C", "url": "https://c"}]
 
 
@@ -550,7 +550,7 @@ def test_derive_profile_tool_order_never_produces_a_spurious_override():
 
 def test_derive_profile_tool_set_difference_is_an_override():
     normalized = _norm(allowed_tools=["Bash"])
-    profile, overrides = rb.derive_profile(normalized, PROFILES)
+    _profile, overrides = rb.derive_profile(normalized, PROFILES)
     assert overrides["allowed_tools"] == ["Bash"]
 
 
@@ -1057,7 +1057,7 @@ def test_restore_explicit_ids_never_sets_unrestored_unmatched_note(tmp_path, mon
     ]})
     rb.ingest(str(infile))
     assert rb.load_backup()["_unmatched"]   # sanity: _unmatched is genuinely non-empty here
-    bodies, errors, note_unmatched = rb.restore(["D1"])
+    _bodies, errors, note_unmatched = rb.restore(["D1"])
     assert errors == []
     assert note_unmatched is False
 
@@ -1269,7 +1269,7 @@ def test_check_ok_when_profile_connectors_predate_the_per_tool_policy_fields(tmp
 
 
 def test_check_fails_when_backup_file_missing(tmp_path, monkeypatch, capsys):
-    cadence, triggers, trigger_ids, backup = _wire(tmp_path, monkeypatch, backup_doc=None)
+    _cadence, _triggers, _trigger_ids, backup = _wire(tmp_path, monkeypatch, backup_doc=None)
     assert not backup.exists()
     assert rb.check() == 1
     assert "does not exist" in capsys.readouterr().out

@@ -63,7 +63,7 @@ BEGIN
   IF NOT v_enabled THEN
     -- Message kept STABLE, not folding in in_routine or v_reason (2026-07-04 audit finding, cross-
     -- cutting): v_reason embeds a daily-changing drawdown % and in_routine differs per caller
-    -- (D2/D2a/W4/M4/Q4/A3) — either one varying the `message` text defeats sp_raise_alert_once's
+    -- (D2/D2a/M4/Q4/A3) — either one varying the `message` text defeats sp_raise_alert_once's
     -- exact-match (category, message) dedup, so a SUSTAINED halt on this single highest-stakes gate
     -- would accumulate a fresh unresolved critical alert per day/routine instead of deduping to one,
     -- with no auto-resolve path. The dynamic detail still reaches the operator via the payload (and
