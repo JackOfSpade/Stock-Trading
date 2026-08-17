@@ -128,7 +128,7 @@
       "cron_expression": "0 17 1 1 *",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform A1 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "A1. AI Foundation Annual Full Re-Derivation — deep research",
+      "name": "A1 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_01GhUQNuRvefpziCGz44NaKz"
     },
@@ -136,7 +136,7 @@
       "cron_expression": "15 20 1 1 *",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform A2 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "A2. Per-Strategy Constraint Audit — deep research",
+      "name": "A2 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_01FagAoazkE4GsxF5EaC3cPy"
     },
@@ -144,7 +144,7 @@
       "cron_expression": "0 21 1 1 *",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform A3 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "A3. Annual Action Conversion — regular routine",
+      "name": "A3 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_01WJrA74ehQhzVbbwNS7rX9w"
     },
@@ -168,7 +168,7 @@
       "cron_expression": "0 22 * * 0,1,2,3,4",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform D1 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "D1. Market Development Scan — deep research",
+      "name": "D1 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_016gmftbKkEi7zDqDrA3u97o"
     },
@@ -176,7 +176,7 @@
       "cron_expression": "15 23 * * 0,1,2,3,4",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform D2 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "D2. Daily Action Conversion — regular routine",
+      "name": "D2 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_014eoNf1qNZZ8Ec5n2s6KxRP"
     },
@@ -184,7 +184,7 @@
       "cron_expression": "40 22 * * 0,1,2,3,4",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform D2a — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "D2a. Broker Reconcile & Snapshot — regular routine",
+      "name": "D2a — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_015kDvXCKiDRd5Z2bXwaRny3"
     },
@@ -192,7 +192,7 @@
       "cron_expression": "45 0 * * 1,2,3,4,5",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform D3 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "D3. Calendar Hygiene — regular routine",
+      "name": "D3 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_01B9Dw1E8DqucUVWTmafstcR"
     },
@@ -200,7 +200,7 @@
       "cron_expression": "0 11 1 * *",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform M1a — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "M1a. Strategy-Blind Regime Scoring — deep research",
+      "name": "M1a — deep research",
       "profile": "fleet",
       "trigger_id": "trig_01Jfx7KZRACgSUSQBnwSz7wC"
     },
@@ -208,7 +208,7 @@
       "cron_expression": "0 12 1 * *",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform M1b — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "M1b. Strategy Mapping and Activation Calls — regular routine",
+      "name": "M1b — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_01SWhTsnjXMCfcbm9YxC2tWt"
     },
@@ -216,7 +216,7 @@
       "cron_expression": "0 13 1 * *",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform M2 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "M2. E Pair Divergence Screen — deep research",
+      "name": "M2 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_01NBdVcixbddnv3kv8ZPpfM3"
     },
@@ -224,7 +224,7 @@
       "cron_expression": "0 14 1 * *",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform M3 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "M3. D Position Deep-Dive — deep research",
+      "name": "M3 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_019FRQHZV9e7cmtHEc6yoeqG"
     },
@@ -232,7 +232,7 @@
       "cron_expression": "0 15 1 * *",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform M4 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "M4. Monthly Action Conversion — regular routine",
+      "name": "M4 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_015YrWDDNLYZN1wzmG38MT5Y"
     },
@@ -240,7 +240,7 @@
       "cron_expression": "0 16 1 * *",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform M5 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "M5. Deployed-TWR & Macro Forecast — regular routine",
+      "name": "M5 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_01EVgnRg1F8VcfZfpwTpUzCK"
     },
@@ -248,7 +248,7 @@
       "cron_expression": "30 4 * * 1,2,3,4,5",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform OPS0 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "OPS0. Cadence Watchdog — regular routine",
+      "name": "OPS0 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_018zZNYXYmgkqbmcfzss1YjU"
     },
@@ -256,7 +256,7 @@
       "cron_expression": "30 12 * * 0,1,2,3,4",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform OPS1 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "OPS1. Morning Connector Liveness Probe — regular routine",
+      "name": "OPS1 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_012jxpUDFsrTR5FnSRmnxej4"
     },
@@ -264,7 +264,7 @@
       "cron_expression": "15 4 * * 1,2,3,4,5",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform OPS2 — regular routine.",
-      "name": "OPS2. Catch-up Executor — regular routine",
+      "name": "OPS2 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_01YSwsMubckdarNX9Z8yb4eX"
     },
@@ -272,7 +272,7 @@
       "cron_expression": "0 17 2 1,4,7,10 *",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform Q1 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "Q1. Regime Retrospective — deep research",
+      "name": "Q1 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_01Nx9NSc325swQTYdLrAZqCB"
     },
@@ -280,7 +280,7 @@
       "cron_expression": "0 18 2 1,4,7,10 *",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform Q2 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "Q2. D Long-Horizon Candidates — deep research",
+      "name": "Q2 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_013Mn9xxPut54ZbsjwivK5Eo"
     },
@@ -288,7 +288,7 @@
       "cron_expression": "0 19 2 1,4,7,10 *",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform Q3 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "Q3. AI Foundation Quarterly Delta — deep research",
+      "name": "Q3 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_01BKd6KmcriLTR2u1hhebtrt"
     },
@@ -296,7 +296,7 @@
       "cron_expression": "0 20 2 1,4,7,10 *",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform Q4 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "Q4. Quarterly Action Conversion — regular routine",
+      "name": "Q4 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_01JMweJiKsWc3CWD8C7kK6qG"
     },
@@ -304,7 +304,7 @@
       "cron_expression": "0 21 2 1,4,7,10 *",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform SL1 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "SL1. Strategy Candidate Synthesis & Qualification — deep research",
+      "name": "SL1 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_01FcK8PZ9tw4nceNoH1nJiTb"
     },
@@ -312,7 +312,7 @@
       "cron_expression": "5 1 * * 1,2,3,4,5",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform SL2 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "SL2. Strategy Draft, Revise & Post-mortem — regular routine",
+      "name": "SL2 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_01VrC8TjY3GRxHUrS16vfHUo"
     },
@@ -320,7 +320,7 @@
       "cron_expression": "0 2 * * 1,2,3,4,5",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform SL3 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "SL3. Incubation Monitor & Graduation — regular routine",
+      "name": "SL3 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_01U1oHM1KfLY5ManmAnda3gg"
     },
@@ -328,7 +328,7 @@
       "cron_expression": "30 16 1 * *",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform SL4 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "SL4. Discretionary Retirement Proposer — regular routine",
+      "name": "SL4 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_01JuMzHVRdom4c2KdWLtnx2v"
     },
@@ -336,7 +336,7 @@
       "cron_expression": "25 1 * * 1,2,3,4,5",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform SL5 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "SL5. Strategy Register & Roster Sync — regular routine",
+      "name": "SL5 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_019WdiFqtyjRh5uatMXQe789"
     },
@@ -344,7 +344,7 @@
       "cron_expression": "30 7 * * 0",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform W1 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "W1. Catalyst Calendar (Strategies A and C) — deep research",
+      "name": "W1 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_01HDRhBsGHS4pQFJuz1cranP"
     },
@@ -352,7 +352,7 @@
       "cron_expression": "0 8 * * 0",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform W2 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "W2. Post-Event Enrichment (Strategy B) — deep research",
+      "name": "W2 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_01MXjDUrfVnHtpPoFBDirScG"
     },
@@ -360,7 +360,7 @@
       "cron_expression": "0 9 * * 0",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform W3 — deep research.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "W3. Open-Position Deep-Dive (Strategies A, B, C, E) — deep research",
+      "name": "W3 — deep research",
       "profile": "fleet",
       "trigger_id": "trig_018nnRWbq5JJsrnxavdpJ26B"
     },
@@ -368,7 +368,7 @@
       "cron_expression": "30 9 * * 0",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform W4 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "W4. Weekly Research Handoff — regular routine",
+      "name": "W4 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_01CVuxETpeuAKZ3rS5gWESDf"
     },
@@ -376,7 +376,7 @@
       "cron_expression": "0 5 * * 1",
       "enabled": true,
       "instruction": "Read Claude_Task_Plan.md. Perform W5 — regular routine.\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your processing (Opus 5) for design/analysis/orchestration work only.",
-      "name": "W5. Factbase & Analytics Consolidation — regular routine",
+      "name": "W5 — regular routine",
       "profile": "fleet",
       "trigger_id": "trig_014vYVaPVpHqjkQWKEsaXBdr"
     },
