@@ -14,6 +14,7 @@ import copy
 import io
 import json as _json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -279,7 +280,10 @@ def test_allowed_decisions_scoped_by_category():
 
 def test_eval_prompt_renders_scoped_tokens():
     # The pinned template must actually consume {allowed_decisions} and exclude out-of-category tokens.
-    p = rg.EVAL_PROMPT_TEMPLATE.format(governing_files_text="G", situation="S",
+    # reference_context_block="" (2026-08-17: EVAL_PROMPT_TEMPLATE gained this placeholder for cross-
+    # scenario reference resolution, see build_single_prompt()) reproduces the template's pre-2026-08-17
+    # rendering exactly -- see test_build_single_prompt_reference_context_block_empty_reproduces_prior_text.
+    p = rg.EVAL_PROMPT_TEMPLATE.format(governing_files_text="G", situation="S", reference_context_block="",
                                        allowed_decisions=rg._allowed_decisions_for({"category": "strategy_b_entry"}))
     assert "DECISION: <one of GO | NO-GO>" in p
     assert "DO-NOT-ACTIVATE" not in p and "TERMINATE" not in p
@@ -777,6 +781,403 @@ def test_gemini_call_raises_budget_exhausted_before_any_network_call(monkeypatch
         pass
 
 
+# ---- BATCHING (2026-08-17) — group_scenarios_for_batching() / build_batch_prompt() / parse_batch_reply()
+# — all pure, network-free functions. Added alongside run_live()'s size-1-group bypass (see that
+# function's docstring): a lone scenario never goes through build_batch_prompt/parse_batch_reply at all,
+# so these unit tests carry MORE of this feature's real coverage than run_live()'s own end-to-end tests do
+# — a batched (2+ scenario) call only happens in run_live() when two+ real scenarios genuinely share a
+# governing_files set, which the run_live()-level tests below exercise, but the parsing edge cases
+# (markdown wrapping, partial replies, duplicates, malformed input) are covered thoroughly HERE instead.
+
+
+def test_group_scenarios_for_batching_groups_by_shared_governing_files_set():
+    # Two scenarios naming the identical governing_files SET land in one group (frozenset — order within
+    # the list doesn't matter for grouping); a scenario with a different set gets its own.
+    scs = [
+        {"id": "A", "governing_files": ["X.md"]},
+        {"id": "B", "governing_files": ["Y.md"]},
+        {"id": "C", "governing_files": ["X.md"]},
+    ]
+    groups = rg.group_scenarios_for_batching(scs, max_group=8)
+    ids_per_group = [[sc["id"] for sc in g] for g in groups]
+    assert ["A", "C"] in ids_per_group
+    assert ["B"] in ids_per_group
+    assert len(groups) == 2
+
+
+def test_group_scenarios_for_batching_preserves_relative_order_within_a_group():
+    scs = [
+        {"id": "A", "governing_files": ["X.md"]},
+        {"id": "B", "governing_files": ["X.md"]},
+        {"id": "C", "governing_files": ["X.md"]},
+    ]
+    groups = rg.group_scenarios_for_batching(scs, max_group=8)
+    assert len(groups) == 1
+    assert [sc["id"] for sc in groups[0]] == ["A", "B", "C"]  # scenarios.yaml order, not reshuffled
+
+
+def test_group_scenarios_for_batching_splits_oversized_group_preserving_order():
+    scs = [{"id": f"S{i}", "governing_files": ["X.md"]} for i in range(10)]
+    groups = rg.group_scenarios_for_batching(scs, max_group=4)
+    assert [len(g) for g in groups] == [4, 4, 2]
+    flat = [sc["id"] for g in groups for sc in g]
+    assert flat == [f"S{i}" for i in range(10)]  # order preserved ACROSS chunk boundaries too
+
+
+def test_group_scenarios_for_batching_group_of_one_is_legal():
+    scs = [{"id": "SOLO", "governing_files": ["X.md"]}]
+    groups = rg.group_scenarios_for_batching(scs, max_group=8)
+    assert groups == [[scs[0]]]
+
+
+def test_group_scenarios_for_batching_orders_groups_by_ascending_governing_file_bytes(tmp_path, monkeypatch):
+    # Cheapest group first, so a run-budget cutoff loses the fewest scenarios (module docstring's BATCHING
+    # comment). Uses two REAL files of KNOWN, deliberately different sizes under tmp_path (with ROOT
+    # monkeypatched to it) rather than the real repo's Strategy.md/Operating_Protocols.md, so this test
+    # can't be broken by those files' sizes drifting over time.
+    monkeypatch.setattr(rg, "ROOT", str(tmp_path))
+    (tmp_path / "big.md").write_text("x" * 1000)
+    (tmp_path / "small.md").write_text("x" * 10)
+    scs = [
+        {"id": "BIG", "governing_files": ["big.md"]},
+        {"id": "SMALL", "governing_files": ["small.md"]},
+    ]
+    groups = rg.group_scenarios_for_batching(scs, max_group=8)
+    assert [sc["id"] for sc in groups[0]] == ["SMALL"]
+    assert [sc["id"] for sc in groups[1]] == ["BIG"]
+
+
+def test_group_scenarios_for_batching_ties_broken_by_first_scenario_yaml_position(tmp_path, monkeypatch):
+    monkeypatch.setattr(rg, "ROOT", str(tmp_path))
+    (tmp_path / "a.md").write_text("same size")
+    (tmp_path / "b.md").write_text("same size")
+    scs = [
+        {"id": "FIRST-NAMES-B", "governing_files": ["b.md"]},
+        {"id": "SECOND-NAMES-A", "governing_files": ["a.md"]},
+    ]
+    groups = rg.group_scenarios_for_batching(scs, max_group=8)
+    # Same byte size (tie) -> earlier scenarios.yaml POSITION wins, not alphabetical filename order (b.md
+    # sorts after a.md, but FIRST-NAMES-B's group is still first because it appeared first in `scs`).
+    assert [sc["id"] for sc in groups[0]] == ["FIRST-NAMES-B"]
+    assert [sc["id"] for sc in groups[1]] == ["SECOND-NAMES-A"]
+
+
+def test_group_scenarios_for_batching_missing_governing_file_costs_zero_not_raises():
+    scs = [{"id": "GHOST", "governing_files": ["Does_Not_Exist_Anywhere_2026_08_17.md"]}]
+    groups = rg.group_scenarios_for_batching(scs, max_group=8)  # must not raise despite the missing file
+    assert [sc["id"] for sc in groups[0]] == ["GHOST"]
+
+
+def test_group_scenarios_for_batching_max_group_arg_overrides_env(monkeypatch):
+    monkeypatch.setenv("GOLDEN_BATCH_MAX", "999")  # must be ignored -- explicit max_group=3 wins
+    scs = [{"id": f"S{i}", "governing_files": ["X.md"]} for i in range(7)]
+    groups = rg.group_scenarios_for_batching(scs, max_group=3)
+    assert [len(g) for g in groups] == [3, 3, 1]
+
+
+def test_group_scenarios_for_batching_reads_max_group_from_env_when_arg_omitted(monkeypatch):
+    monkeypatch.setenv("GOLDEN_BATCH_MAX", "3")
+    scs = [{"id": f"S{i}", "governing_files": ["X.md"]} for i in range(7)]
+    groups = rg.group_scenarios_for_batching(scs)  # max_group=None -> reads GOLDEN_BATCH_MAX
+    assert [len(g) for g in groups] == [3, 3, 1]
+
+
+def test_group_scenarios_for_batching_default_max_group_is_eight(monkeypatch):
+    monkeypatch.delenv("GOLDEN_BATCH_MAX", raising=False)
+    scs = [{"id": f"S{i}", "governing_files": ["X.md"]} for i in range(9)]
+    groups = rg.group_scenarios_for_batching(scs)
+    assert [len(g) for g in groups] == [8, 1]
+
+
+def test_group_scenarios_for_batching_real_scenarios_yaml_covers_every_id_exactly_once():
+    # Ground-truthed against the REAL scenarios.yaml (not a synthetic fixture), matching this file's own
+    # convention (e.g. test_scenarios_for_changed_selects_exactly_the_strategy_md_scenarios below) of
+    # catching a regression in the real coverage, not just the grouping logic against toy data.
+    scenarios = rg.load_scenarios()
+    groups = rg.group_scenarios_for_batching(scenarios)
+    all_ids = [sc["id"] for g in groups for sc in g]
+    assert sorted(all_ids) == sorted(sc["id"] for sc in scenarios)  # union == every id, no loss
+    assert len(all_ids) == len(set(all_ids))  # no duplicates across groups
+    # Measured 7 groups against the real fixture as of 2026-08-17 (33 scenarios, 5 distinct governing_files
+    # sets, two of which split under the default max_group=8) — must stay well under 33 for batching to be
+    # worth anything, and every group must be governing-files-uniform (the whole point of grouping).
+    assert len(groups) <= 8
+    for g in groups:
+        keys = {frozenset(sc.get("governing_files") or []) for sc in g}
+        assert len(keys) == 1
+
+
+def test_build_batch_prompt_contains_governing_text_once_and_per_situation_blocks():
+    group = [
+        {"id": "A", "category": "kill_trigger", "situation": "Situation A text"},
+        {"id": "B", "category": "strategy_b_entry", "situation": "Situation B text"},
+    ]
+    prompt = rg.build_batch_prompt(group, "GOVERNING TEXT HERE")
+    assert prompt.count("GOVERNING TEXT HERE") == 1  # sent ONCE, not once per situation -- the whole point
+    assert "[A]" in prompt and "[B]" in prompt
+    assert "Situation A text" in prompt and "Situation B text" in prompt
+    assert "CONTINUE | TERMINATE" in prompt  # A's category-scoped vocabulary (kill_trigger)
+    assert "GO | NO-GO" in prompt            # B's category-scoped vocabulary (strategy_b_entry)
+    assert "DO-NOT-ACTIVATE" not in prompt   # neither situation's category, so it must not be offered
+    assert "DECISION[<id>]:" in prompt
+    assert "INDEPENDENTLY" in prompt.upper()
+    assert "do not let" in prompt.lower() and "influence" in prompt.lower()
+
+
+def test_build_batch_prompt_n_reflects_group_size():
+    group = [{"id": "A", "situation": "s"}, {"id": "B", "situation": "s"}, {"id": "C", "situation": "s"}]
+    prompt = rg.build_batch_prompt(group, "G")
+    assert "evaluating 3 pinned regression scenarios" in prompt
+    assert "exactly 3 lines" in prompt
+    assert "[A]" in prompt and "[B]" in prompt and "[C]" in prompt
+
+
+def test_build_batch_prompt_does_not_mutate_eval_prompt_template():
+    # build_batch_prompt() must use its OWN template (BATCH_EVAL_PROMPT_TEMPLATE), never mutate or read
+    # through EVAL_PROMPT_TEMPLATE -- the single-scenario/GOLDEN_BATCH=0/zero-parsed-fallback paths still
+    # rely on EVAL_PROMPT_TEMPLATE being untouched (see test_eval_prompt_renders_scoped_tokens above).
+    before = rg.EVAL_PROMPT_TEMPLATE
+    rg.build_batch_prompt([{"id": "A", "situation": "s"}], "G")
+    assert rg.EVAL_PROMPT_TEMPLATE == before
+    assert rg.BATCH_EVAL_PROMPT_TEMPLATE is not rg.EVAL_PROMPT_TEMPLATE
+
+
+# ---- CROSS-SCENARIO REFERENCE RESOLUTION (2026-08-17) — referenced_scenario_ids() / build_batch_prompt()'s
+# / build_single_prompt()'s new id_to_scenario wiring. Closes the measured gap: scenarios.yaml's `situation`
+# prose sometimes names a SIBLING scenario by id ("Same facts as KT-01 except...") instead of restating its
+# facts, and the harness never resolved it -- the referenced scenario's situation was simply never shown to
+# the model judging the one that names it. Measured against the real 33-scenario file: 8 such cross-
+# references exist (RR-02->RR-01, RR-03->RR-02, RR-04->RR-02, RR-04->RR-03, RR-06->RR-05, RR-08->RR-07,
+# KT-02->KT-01, KT-06->KT-05); the SAME-DAY batching work (group_scenarios_for_batching()) accidentally
+# resolves 7 of the 8 as a side effect (both scenarios of a pair land in the same batch group, so the
+# referent's situation is already present as another judged situation) -- EXCEPT KT-02->KT-01, because
+# KT-02's governing_files is {Experiment_Parameters.md} while KT-01's is {Experiment_Parameters.md,
+# Claude_Task_Plan.md}, a different set that group_scenarios_for_batching() can never merge KT-02 into.
+def test_referenced_scenario_ids_finds_a_reference():
+    # KT-02's real situation ("Same facts as KT-01 except...") must resolve to ["KT-01"] against the real
+    # scenarios.yaml id set -- this is the exact case that was previously invisible to the model.
+    scenarios = rg.load_scenarios()
+    id_to_scenario = {sc["id"]: sc for sc in scenarios}
+    assert rg.referenced_scenario_ids(id_to_scenario["KT-02"], set(id_to_scenario)) == ["KT-01"]
+
+
+def test_referenced_scenario_ids_ignores_self_reference():
+    # A scenario's own id appearing in its own situation text (e.g. a title/label echo) must never be
+    # returned as one of ITS OWN references -- "resolving" a scenario against itself is meaningless.
+    sc = {"id": "ZZ-01", "situation": "ZZ-01 is the baseline case; compare it against ZZ-02."}
+    assert rg.referenced_scenario_ids(sc, {"ZZ-01", "ZZ-02"}) == ["ZZ-02"]
+
+
+def test_referenced_scenario_ids_ignores_unknown_ids():
+    # A shape-alike substring that is NOT a real/known scenario id (a retired id, a typo, or just
+    # something that happens to look like "XX-99") must not be treated as a resolvable reference --
+    # only candidates present in `known_ids` count.
+    sc = {"id": "ZZ-01", "situation": "See ZZ-99 for the unrelated legacy case (id no longer exists)."}
+    assert rg.referenced_scenario_ids(sc, {"ZZ-01"}) == []
+
+
+def test_referenced_scenario_ids_dedupes_and_preserves_order():
+    # Mirrors RR-04's real prose shape ("Same regime as RR-02/RR-03...") -- multiple ids in one sentence,
+    # first-appearance order, and a repeat of the same id must not produce a duplicate entry.
+    sc = {"id": "ZZ-01", "situation": "Same as ZZ-03/ZZ-02. Compare again to ZZ-03 for confirmation."}
+    assert rg.referenced_scenario_ids(sc, {"ZZ-01", "ZZ-02", "ZZ-03"}) == ["ZZ-03", "ZZ-02"]
+
+
+def test_referenced_scenario_ids_real_rr04_matches_measured_pair():
+    # Ground-truthed against the real file: RR-04 references BOTH RR-02 and RR-03 (2 of the 8 measured
+    # cross-references), in the order they appear in its own situation text ("Same regime as RR-02/RR-03").
+    scenarios = rg.load_scenarios()
+    id_to_scenario = {sc["id"]: sc for sc in scenarios}
+    assert rg.referenced_scenario_ids(id_to_scenario["RR-04"], set(id_to_scenario)) == ["RR-02", "RR-03"]
+
+
+def test_referenced_scenario_ids_shape_is_inferred_not_hardcoded():
+    # The id SHAPE regex is derived from `known_ids` itself (_infer_id_shape()), not a hardcoded
+    # "[A-Z]{2}-\\d{2}" literal -- a known_ids set using a DIFFERENT shape (3 letters, 3 digits) must still
+    # resolve a same-shape reference, and must NOT match a 2-letter/2-digit id that isn't in that set.
+    sc = {"id": "ABC-001", "situation": "Same facts as ABC-002, plus KT-01 is not a real id in this set."}
+    assert rg.referenced_scenario_ids(sc, {"ABC-001", "ABC-002"}) == ["ABC-002"]
+
+
+def test_referenced_scenario_ids_resolution_is_one_level_only():
+    # 2026-08-17 deliberate bound (see referenced_scenario_ids()'s docstring): a reference chain
+    # (XY-01 -> XY-02 -> XY-03) resolves only ONE level from the judged scenario. Judging XY-01 must show
+    # XY-02's own facts (the direct reference) but must NOT show XY-03's facts (XY-02's OWN reference is
+    # never expanded) -- unbounded recursion would make prompt size depend on chain depth instead of
+    # judged-scenario count, undoing the point of the same-day batching token-reduction work.
+    sc_a = {"id": "XY-01", "category": "kill_trigger", "situation": "See XY-02 for the baseline case."}
+    sc_b = {"id": "XY-02", "category": "kill_trigger",
+            "situation": "XY-02's own body text. See XY-03 for the ORIGINAL baseline."}
+    sc_c = {"id": "XY-03", "category": "kill_trigger", "situation": "XY-03's own body text."}
+    id_to_scenario = {"XY-01": sc_a, "XY-02": sc_b, "XY-03": sc_c}
+    prompt = rg.build_single_prompt(sc_a, "GOV", id_to_scenario)
+    assert "XY-02's own body text" in prompt      # one level: XY-01 -> XY-02 resolved
+    assert "XY-03's own body text" not in prompt  # NOT two levels: XY-02's own reference is not expanded
+
+
+def test_build_batch_prompt_kt02_gets_kt01_context_and_kt01_is_not_judged():
+    # THE fix's real target: KT-02's real batch group (group_scenarios_for_batching() puts it with
+    # KT-05/KT-06/KT-07, per KT-02's governing_files being just {Experiment_Parameters.md}) does NOT
+    # include KT-01 (KT-01's governing_files additionally names Claude_Task_Plan.md, so it groups with
+    # KT-04 instead) -- so before this fix, KT-01's facts were never shown to the model judging KT-02 at
+    # all. Ground-truthed against the real scenarios.yaml, not a synthetic fixture.
+    scenarios = rg.load_scenarios()
+    id_to_scenario = {sc["id"]: sc for sc in scenarios}
+    groups = rg.group_scenarios_for_batching(scenarios)
+    kt02_group = next(g for g in groups if any(sc["id"] == "KT-02" for sc in g))
+    judged_ids = [sc["id"] for sc in kt02_group]
+    assert judged_ids == ["KT-02", "KT-05", "KT-06", "KT-07"]  # measured real grouping, 2026-08-17
+    assert "KT-01" not in judged_ids  # the lone gap batching cannot close by itself
+
+    prompt = rg.build_batch_prompt(kt02_group, "[GOVERNING TEXT ELIDED]", id_to_scenario)
+    # KT-01's own situation text (its 52%-drawdown facts) is present in KT-02's prompt...
+    assert "52% peak-to-trough drawdown" in prompt
+    assert "REFERENCED CONTEXT [KT-01]" in prompt
+    # ...but KT-01 is unambiguously marked as non-judged: it is NOT one of the ids parse_batch_reply()
+    # would be asked to extract for this call, and the block says so explicitly.
+    assert "[KT-01]" not in prompt.split("=== SITUATIONS")[1].split("For EACH situation")[0].replace(
+        "REFERENCED CONTEXT [KT-01]", "")  # no stray "[KT-01]" inside the actual SITUATIONS block
+    assert "do NOT judge, do NOT answer" in prompt
+    assert "do NOT emit a DECISION line for it" in prompt
+    ids_for_parsing = [sc.get("id") for sc in kt02_group]
+    assert "KT-01" not in ids_for_parsing  # what parse_batch_reply() is actually called with (see run_live)
+
+
+def test_build_batch_prompt_referent_already_judged_in_group_emits_no_duplicate_context():
+    # KT-06 -> KT-05 is the OTHER kind of case (7 of the 8 measured cross-references): both land in the
+    # SAME real batch group (KT-02/KT-05/KT-06/KT-07), so KT-05's situation is already present as one of
+    # the judged SITUATIONS -- a second, redundant REFERENCED CONTEXT copy of KT-05 must NOT be emitted.
+    scenarios = rg.load_scenarios()
+    id_to_scenario = {sc["id"]: sc for sc in scenarios}
+    group = [id_to_scenario["KT-05"], id_to_scenario["KT-06"]]
+    prompt = rg.build_batch_prompt(group, "GOV", id_to_scenario)
+    assert "REFERENCED CONTEXT" not in prompt  # KT-06's only reference (KT-05) is already a judged member
+    # KT-05's facts appear exactly once -- as its own judged SITUATION block, not duplicated anywhere else.
+    assert prompt.count("A strategy closes its 30th trade today") == 1
+
+
+def test_build_batch_prompt_mixed_group_still_suppresses_the_already_judged_referent():
+    # A group containing BOTH kinds of reference at once (KT-02's real group has KT-02->KT-01 [external]
+    # AND KT-06->KT-05 [internal]) must add exactly ONE context block (KT-01) and zero for KT-05.
+    scenarios = rg.load_scenarios()
+    id_to_scenario = {sc["id"]: sc for sc in scenarios}
+    groups = rg.group_scenarios_for_batching(scenarios)
+    kt02_group = next(g for g in groups if any(sc["id"] == "KT-02" for sc in g))
+    prompt = rg.build_batch_prompt(kt02_group, "GOV", id_to_scenario)
+    # Exactly one context block for KT-01: its "--- REFERENCED CONTEXT [KT-01] ---" open delimiter and
+    # "--- END REFERENCED CONTEXT [KT-01] ---" close delimiter each contain the substring "REFERENCED
+    # CONTEXT [KT-01]" once, so ONE rendered block counts as 2 -- a duplicate block would count as 4.
+    assert prompt.count("REFERENCED CONTEXT [KT-01]") == 2
+    assert "REFERENCED CONTEXT [KT-05]" not in prompt
+
+
+def test_build_batch_prompt_no_references_yields_byte_identical_pre_2026_08_17_output():
+    # A group with no cross-references at all (id_to_scenario omitted, the default) must render EXACTLY
+    # what build_batch_prompt() produced before this fix -- reference_context_block="" reproduces the
+    # original template's blank-line spacing byte-for-byte (see the comment above BATCH_EVAL_PROMPT_
+    # TEMPLATE).
+    group = [{"id": "A", "category": "kill_trigger", "situation": "s"}]
+    with_default = rg.build_batch_prompt(group, "G")
+    explicit_empty = rg.BATCH_EVAL_PROMPT_TEMPLATE.format(
+        n=1, governing_files_text="G", reference_context_block="",
+        ids_list="[A]", situations_block="--- SITUATION [A] ---\ns\nAllowed decisions for [A]: CONTINUE | TERMINATE",
+    )
+    assert with_default == explicit_empty
+
+
+def test_build_single_prompt_resolves_a_reference():
+    # The single-scenario EVAL_PROMPT_TEMPLATE path (GOLDEN_BATCH=0 / a size-1 group / a batch-group
+    # zero-parsed fallback) gets the SAME reference resolution as build_batch_prompt() -- ground-truthed
+    # here against the real KT-02/KT-01 pair, called directly rather than only reachable via a size-1
+    # group in the real file (KT-02 is never actually a size-1 group -- see the batch-level test above --
+    # so this proves build_single_prompt() itself is correct independent of today's real grouping).
+    scenarios = rg.load_scenarios()
+    id_to_scenario = {sc["id"]: sc for sc in scenarios}
+    prompt = rg.build_single_prompt(id_to_scenario["KT-02"], "[GOVERNING TEXT ELIDED]", id_to_scenario)
+    assert "52% peak-to-trough drawdown" in prompt
+    assert "REFERENCED CONTEXT [KT-01]" in prompt
+    assert "do NOT emit a DECISION line for it" in prompt
+
+
+def test_build_single_prompt_reference_context_block_empty_reproduces_prior_text():
+    # id_to_scenario omitted (the default) must disable resolution entirely and render byte-identical to
+    # EVAL_PROMPT_TEMPLATE's pre-2026-08-17 text (reference_context_block="").
+    sc = {"id": "A", "category": "kill_trigger", "situation": "s"}
+    with_default = rg.build_single_prompt(sc, "G")
+    explicit_empty = rg.EVAL_PROMPT_TEMPLATE.format(
+        governing_files_text="G", situation="s", reference_context_block="",
+        allowed_decisions=rg._allowed_decisions_for(sc),
+    )
+    assert with_default == explicit_empty
+
+
+def test_run_live_batch_group_ignores_a_decision_line_for_a_referenced_but_unjudged_id(monkeypatch, capsys):
+    # End-to-end proof (through run_live() itself, not just the prompt builders) that a referenced-but-
+    # not-judged id can never be mistaken for a judged one: a reply containing an EXTRA
+    # "DECISION[KT-01]: ..." line (the referenced-context id) must not create a KT-01 result or otherwise
+    # disturb the 4 real judged ids' own scoring -- parse_batch_reply(reply, ids) only ever looks for the
+    # ids it was given.
+    scenarios = rg.load_scenarios()
+    groups = rg.group_scenarios_for_batching(scenarios)
+    kt02_group = next(g for g in groups if any(sc["id"] == "KT-02" for sc in g))
+    judged_ids = [sc["id"] for sc in kt02_group]
+    reply = _batch_reply(*[(sid, "CONTINUE") for sid in judged_ids]) + "\nDECISION[KT-01]: TERMINATE"
+    monkeypatch.setattr(rg, "_select_live_caller", _fake_caller_returning(reply))
+    results = rg.run_live(scenarios, scenario_ids=judged_ids)
+    result_ids = [r["id"] for r in results]
+    assert result_ids == judged_ids  # exactly the 4 judged scenarios, KT-01 never appears
+    assert "KT-01" not in result_ids
+
+
+def test_parse_batch_reply_well_formed():
+    reply = "RATIONALE[A]: because\nDECISION[A]: GO\nRATIONALE[B]: because2\nDECISION[B]: NO-GO"
+    assert rg.parse_batch_reply(reply, ["A", "B"]) == {"A": "GO", "B": "NO-GO"}
+
+
+def test_parse_batch_reply_missing_one_id():
+    reply = "DECISION[A]: GO"
+    assert rg.parse_batch_reply(reply, ["A", "B"]) == {"A": "GO", "B": None}
+
+
+def test_parse_batch_reply_markdown_bold_around_marker():
+    reply = "**DECISION[A]:** GO\n**DECISION[B]:** NO-GO"
+    assert rg.parse_batch_reply(reply, ["A", "B"]) == {"A": "GO", "B": "NO-GO"}
+
+
+def test_parse_batch_reply_backticks_around_marker():
+    reply = "`DECISION[A]:` GO"
+    assert rg.parse_batch_reply(reply, ["A"]) == {"A": "GO"}
+
+
+def test_parse_batch_reply_duplicated_id_last_occurrence_wins():
+    reply = "DECISION[A]: GO\nDECISION[A]: NO-GO"
+    assert rg.parse_batch_reply(reply, ["A"]) == {"A": "NO-GO"}
+
+
+def test_parse_batch_reply_case_insensitive_keyword_but_case_sensitive_id():
+    # 'decision'/'Decision' must match the keyword; a lowercase 'a' id must NOT match the real id 'A'.
+    reply = "decision[A]: GO\nDecision[a]: NO-GO"
+    assert rg.parse_batch_reply(reply, ["A"]) == {"A": "GO"}
+
+
+def test_parse_batch_reply_tolerates_whitespace_around_id_and_colon():
+    reply = "DECISION[ A ] :   GO  "
+    assert rg.parse_batch_reply(reply, ["A"]) == {"A": "GO"}
+
+
+def test_parse_batch_reply_every_requested_id_gets_a_key_even_with_zero_matches():
+    result = rg.parse_batch_reply("nothing useful here, no markers at all", ["X", "Y", "Z"])
+    assert set(result.keys()) == {"X", "Y", "Z"}
+    assert all(v is None for v in result.values())
+
+
+def test_parse_batch_reply_never_raises_on_malformed_input():
+    assert rg.parse_batch_reply(None, ["A", "B"]) == {"A": None, "B": None}
+    assert rg.parse_batch_reply("", ["A"]) == {"A": None}
+    assert rg.parse_batch_reply("DECISION[UNKNOWN-ID]: GO", ["A"]) == {"A": None}  # id not in `ids`
+    assert rg.parse_batch_reply(12345, ["A"]) == {"A": None}  # non-string reply -- must degrade, not raise
+
+
 # ---- run_live() end-to-end grading (the core of --live mode) — all network-free ----
 # run_live composes already-tested helpers, but its OWN logic had zero direct coverage: the DECISION-line
 # scan (must find a non-first, case-insensitive line), the split/reply.strip() fallback, match-vs-flip
@@ -807,6 +1208,17 @@ def _fake_caller_returning(*replies):
             return item, "fake-model-1"
         return call_model
     return select
+
+
+def _batch_reply(*pairs, rationale="ok"):
+    """Build a batch-formatted ('DECISION[<id>]: <decision>') reply string for driving
+    _fake_caller_returning() against the BATCHED (group size 2+) call path — see build_batch_prompt()'s/
+    parse_batch_reply()'s own docstrings in run_golden.py. `pairs` is (id, decision) tuples."""
+    lines = []
+    for sid, decision in pairs:
+        lines.append(f"RATIONALE[{sid}]: {rationale}")
+        lines.append(f"DECISION[{sid}]: {decision}")
+    return "\n".join(lines)
 
 
 def test_run_live_scores_a_match_and_prints_no_flip_or_queue_insert(monkeypatch, capsys):
@@ -912,29 +1324,71 @@ def test_run_live_bare_token_without_decision_prefix_uses_the_reply_fallback(mon
 
 
 def test_run_live_stops_and_skips_remaining_scenarios_on_run_budget_exhaustion(monkeypatch, capsys):
+    # BATCHING-AWARE (2026-08-17): T-A/T-B/T-C all share governing_files=["Strategy.md"] (the default in
+    # _sc()), so under default-ON batching group_scenarios_for_batching() collapses them into ONE group
+    # and ONE call_model() call — that is the new correct behavior for scenarios that genuinely share a
+    # governing_files set (owner directive: fix the test to assert the batched semantics, do not add
+    # synthetic per-scenario differences just to dodge grouping). If THAT one shared call raises the
+    # run-budget-exhaustion signal, none of the three scenarios it was answering for has been evaluated
+    # yet, so ALL THREE become SKIPPED together with the same reason — not "the first one matched, the
+    # rest skipped" (that was the old, PRE-batching, one-call-per-scenario assertion). This still proves
+    # the core "never a silent nothing" property (owner directive 2026-08-17): every scenario the
+    # exhausted call was covering gets an honest SKIPPED result with a reason, none silently dropped.
     exc = rg._GeminiRunBudgetExhausted(
         "Gemini run wall-clock budget (GEMINI_RUN_BUDGET_S=3000s) exhausted after 3001s elapsed — "
         "stopping further live attempts this run."
     )
-    monkeypatch.setattr(rg, "_select_live_caller",
-                         _fake_caller_returning("DECISION: GO\nRATIONALE: ok", exc))
+    # Only ONE reply queued: the whole group shares ONE call, so if run_live tried to call_model a second
+    # time (e.g. a regression that stopped batching them), this would fail with an IndexError instead of
+    # silently passing.
+    monkeypatch.setattr(rg, "_select_live_caller", _fake_caller_returning(exc))
     scs = [_sc("T-A", "GO"), _sc("T-B", "GO"), _sc("T-C", "GO")]
 
     results = rg.run_live(scs)
 
     assert [r["id"] for r in results] == ["T-A", "T-B", "T-C"]
-    a, b, c = results
-    assert a["match"] is True and a["actual"] == "GO"
-    # T-B triggered the exhaustion; T-C was never even attempted (only 2 replies were queued above, so if
-    # run_live tried to call_model for T-C too this test would fail with an IndexError first).
-    assert b["match"] == "SKIPPED" and "budget" in b["reply"].lower()
-    assert c["match"] == "SKIPPED" and c["actual"] is None and c["model"] is None
-    assert c["reply"] == b["reply"]   # same reason propagated to every skipped scenario
+    assert all(r["match"] == "SKIPPED" for r in results)
+    assert all(r["actual"] is None and r["model"] is None for r in results)
+    assert all("budget" in (r["reply"] or "").lower() for r in results)
+    assert len({r["reply"] for r in results}) == 1   # same reason propagated to every skipped scenario
+    err = capsys.readouterr().err
+    assert "T-A" in err and "T-B" in err and "T-C" in err and "stopping further live attempts" in err
+
+
+def test_run_live_earlier_groups_real_results_survive_a_later_groups_terminal_signal(monkeypatch, capsys):
+    # The deeper property the pre-batching test above used to cover at scenario granularity — an already-
+    # evaluated result must survive a LATER terminal-signal — still holds, just at GROUP granularity now.
+    # Forces a deterministic 2-group split via monkeypatched group_scenarios_for_batching() (rather than
+    # relying on Strategy.md's/Operating_Protocols.md's real relative byte sizes, which could drift) so
+    # T-EARLY's group is guaranteed to be attempted, and complete, before T-A/T-B's group's call raises.
+    monkeypatch.setattr(
+        rg, "group_scenarios_for_batching",
+        lambda scenarios, max_group=None: [scenarios[:1], scenarios[1:]],
+    )
+    exc = rg._GeminiLadderPermanentlyDead("Gemini model ladder exhausted — m1: HTTP 404 | m2: HTTP 404")
+    monkeypatch.setattr(rg, "_select_live_caller",
+                         _fake_caller_returning("DECISION: GO\nRATIONALE: ok", exc))
+    scs = [_sc("T-EARLY", "GO"), _sc("T-A", "GO"), _sc("T-B", "GO")]
+
+    results = rg.run_live(scs)
+
+    assert [r["id"] for r in results] == ["T-EARLY", "T-A", "T-B"]
+    early, a, b = results
+    # T-EARLY's group (size 1) completed via the plain single-scenario path BEFORE the second group's
+    # shared call raised -- its REAL result must survive, not be overwritten as SKIPPED.
+    assert early["match"] is True and early["actual"] == "GO"
+    assert a["match"] == "SKIPPED" and b["match"] == "SKIPPED"
+    assert "ladder exhausted" in a["reply"] and a["reply"] == b["reply"]
     err = capsys.readouterr().err
     assert "T-B" in err and "stopping further live attempts" in err
 
 
 def test_run_live_stops_and_skips_remaining_scenarios_on_ladder_permanently_dead(monkeypatch, capsys):
+    # BATCHING-AWARE (2026-08-17): T-ONLY/T-NEVER-ATTEMPTED share governing_files=["Strategy.md"], so they
+    # batch into ONE group/call. The shared call raising a whole-run stop signal means NEITHER scenario it
+    # was answering for has been evaluated -- both become SKIPPED together (same outcome the pre-batching
+    # version of this test asserted, but now because it's one call answering for both, not because the
+    # first scenario's own call happened to be the one that raised).
     exc = rg._GeminiLadderPermanentlyDead("Gemini model ladder exhausted — m1: HTTP 404 | m2: HTTP 404")
     monkeypatch.setattr(rg, "_select_live_caller", _fake_caller_returning(exc))
     scs = [_sc("T-ONLY", "GO"), _sc("T-NEVER-ATTEMPTED", "GO")]
@@ -947,16 +1401,231 @@ def test_run_live_stops_and_skips_remaining_scenarios_on_ladder_permanently_dead
 
 
 def test_run_live_a_plain_runtime_error_does_not_trigger_the_skip_path(monkeypatch, capsys):
-    # A per-scenario RuntimeError (e.g. rewinds exhausted for just this one scenario) is NOT one of the
-    # two whole-run stop signals -- it must fall through to the ordinary error class and let the loop
-    # continue trying later scenarios normally (both replies below get consumed).
+    # BATCHING-AWARE (2026-08-17): T-A/T-B share governing_files=["Strategy.md"] and collapse into ONE
+    # batched call. A plain RuntimeError (e.g. rewinds exhausted for just this call) is NOT one of the two
+    # whole-run stop signals, so it must not stop the run -- but because ONE shared call was answering for
+    # BOTH T-A and T-B, its failure legitimately fails them TOGETHER (there is no way to attribute a
+    # whole-call failure to only one of the scenarios it was batching for; see run_live()'s own docstring
+    # on why this is the correct, not merely tolerated, consequence of batching). T-C is a separate
+    # scenario placed in its OWN group (forced via monkeypatched grouping, so this doesn't depend on
+    # Strategy.md's real byte size) and is what proves the deeper original intent survives at GROUP
+    # granularity: no single group's failure may prevent a LATER, independent group from attempting its
+    # own call.
+    monkeypatch.setattr(
+        rg, "group_scenarios_for_batching",
+        lambda scenarios, max_group=None: [scenarios[:2], scenarios[2:]],
+    )
     monkeypatch.setattr(
         rg, "_select_live_caller",
         _fake_caller_returning(RuntimeError("ladder exhausted for this scenario — rewinds spent"),
                                 "DECISION: GO\nRATIONALE: ok"),
     )
+    results = rg.run_live([_sc("T-A", "GO"), _sc("T-B", "GO"), _sc("T-C", "GO")])
+    assert [r["id"] for r in results] == ["T-A", "T-B", "T-C"]
+    # T-A/T-B's shared call errored (both None, together); T-C's own, later, independent group was still
+    # attempted normally and matched.
+    assert [r["match"] for r in results] == [None, None, True]
+    err = capsys.readouterr().err
+    assert "model call failed" in err
+
+
+# ---- run_live() BATCHED (group size 2+) integration — 2026-08-17. T-A/T-B below deliberately share
+# governing_files=["Strategy.md"] (the default in _sc()) so group_scenarios_for_batching() puts them in
+# ONE group and run_live() drives them through _run_batch_group() (build_batch_prompt/parse_batch_reply),
+# not the single-scenario/size-1-bypass path exercised by the tests above. Only ONE reply is queued in the
+# success-path tests below: if a regression stopped batching real same-governing-files scenarios together,
+# run_live() would try to call_model() a second time and fail with an IndexError (queue underflow),
+# exactly like this file's existing single-scenario tests already rely on.
+
+
+def test_run_live_batch_group_scores_each_scenario_independently(monkeypatch, capsys):
+    monkeypatch.setattr(rg, "_select_live_caller",
+                         _fake_caller_returning(_batch_reply(("T-MATCH", "GO"), ("T-FLIP", "NO-GO"))))
+    results = rg.run_live([_sc("T-MATCH", "GO"), _sc("T-FLIP", "GO")])
+    assert results[0]["match"] is True and results[0]["actual"] == "GO" and results[0]["model"] == "fake-model-1"
+    assert results[1]["match"] is False and results[1]["actual"] == "NO-GO"
+    out = capsys.readouterr().out
+    assert "T-FLIP decision flip" in out and "T-MATCH decision flip" not in out
+    assert "INSERT INTO" in out and "T-FLIP" in out
+
+
+def test_run_live_batch_group_partial_parse_does_not_poison_group_mates(monkeypatch, capsys):
+    # The batch reply has T-A's DECISION[...] line but is entirely missing T-B's -- T-B becomes ITS OWN
+    # match=None parse failure while T-A (which DID parse) is still scored normally. Spec requirement: a
+    # per-id parse failure "must NOT poison its group-mates."
+    monkeypatch.setattr(rg, "_select_live_caller", _fake_caller_returning(_batch_reply(("T-A", "GO"))))
     results = rg.run_live([_sc("T-A", "GO"), _sc("T-B", "GO")])
-    assert [r["match"] for r in results] == [None, True]   # T-A errored, T-B still attempted and matched
+    assert results[0]["match"] is True and results[0]["actual"] == "GO"
+    assert results[1]["match"] is None and results[1]["actual"] is None
+    err = capsys.readouterr().err
+    assert "T-B" in err and "no DECISION[T-B]:" in err
+
+
+def test_run_live_batch_group_zero_parsed_falls_back_to_individual_calls(monkeypatch, capsys):
+    # The batch reply comes back in the OLD single-scenario ("DECISION: ...", no bracketed id) format --
+    # parse_batch_reply() extracts ZERO ids, so _run_batch_group() must fall back to one INDIVIDUAL call
+    # per scenario via the plain EVAL_PROMPT_TEMPLATE path (_run_one_scenario_live), consuming one reply
+    # per scenario from here on (3 replies queued total: the unusable batch attempt + one per scenario).
+    monkeypatch.setattr(
+        rg, "_select_live_caller",
+        _fake_caller_returning(
+            "DECISION: GO\nRATIONALE: unusable batch reply",  # the batch attempt itself (unparseable)
+            "DECISION: GO\nRATIONALE: x",                      # T-A's individual fallback call
+            "DECISION: NO-GO\nRATIONALE: y",                   # T-B's individual fallback call
+        ),
+    )
+    results = rg.run_live([_sc("T-A", "GO"), _sc("T-B", "GO")])
+    assert [r["match"] for r in results] == [True, False]
+    assert results[1]["actual"] == "NO-GO"
+    err = capsys.readouterr().err
+    assert "batch reply had zero parseable" in err and "falling back to 2 individual" in err
+
+
+def test_run_live_batch_group_shared_unreadable_governing_file_degrades_to_per_scenario_failures(monkeypatch):
+    # Two scenarios sharing a BAD (nonexistent) governing_files value collapse into ONE batch group; the
+    # shared governing-file read fails ONCE for the whole group (there's only one shared file to read), so
+    # it must degrade to a match=None result for EACH scenario -- not an uncaught OSError that aborts the
+    # whole run, and not one combined failure record instead of one per scenario.
+    bad_a = _sc("T-BADSHARE-A", "GO")
+    bad_a["governing_files"] = ["Strategy_Does_Not_Exist_2026_08_17.md"]
+    bad_b = _sc("T-BADSHARE-B", "GO")
+    bad_b["governing_files"] = ["Strategy_Does_Not_Exist_2026_08_17.md"]
+    # Zero replies queued: the governing_files read fails BEFORE call_model() is ever reached, so if a
+    # regression called it anyway this would fail with an IndexError (queue underflow), not silently pass.
+    monkeypatch.setattr(rg, "_select_live_caller", _fake_caller_returning())
+
+    results = rg.run_live([bad_a, bad_b])
+
+    assert [r["id"] for r in results] == ["T-BADSHARE-A", "T-BADSHARE-B"]
+    assert all(r["match"] is None for r in results)
+    assert all(r["model"] is None for r in results)
+
+
+def test_run_live_golden_batch_disabled_restores_one_call_per_scenario(monkeypatch):
+    # GOLDEN_BATCH=0 must restore EXACTLY today's one-call-per-scenario behavior: T-A/T-B share
+    # governing_files=["Strategy.md"] (would normally batch into ONE group/call) but with the escape hatch
+    # set, each scenario gets its OWN call and OWN old-style ("DECISION: ...") reply -- two replies queued,
+    # one per scenario, not one shared batch-formatted reply.
+    monkeypatch.setenv("GOLDEN_BATCH", "0")
+    monkeypatch.setattr(
+        rg, "_select_live_caller",
+        _fake_caller_returning("DECISION: GO\nRATIONALE: x", "DECISION: NO-GO\nRATIONALE: y"),
+    )
+    results = rg.run_live([_sc("T-A", "GO"), _sc("T-B", "GO")])
+    assert [r["id"] for r in results] == ["T-A", "T-B"]
+    assert results[0]["match"] is True and results[1]["match"] is False
+
+
+def test_run_live_golden_batch_disabled_does_not_call_group_scenarios_for_batching(monkeypatch):
+    # Belt-and-suspenders: with the escape hatch on, run_live() must not even CALL the batching/reordering
+    # function (not just "call it and ignore the result") -- proves GOLDEN_BATCH=0 is a real bypass, not a
+    # no-op wrapper around the same grouping.
+    monkeypatch.setenv("GOLDEN_BATCH", "0")
+
+    def _must_not_be_called(scenarios, max_group=None):
+        raise AssertionError("group_scenarios_for_batching() must not be called when GOLDEN_BATCH=0")
+
+    monkeypatch.setattr(rg, "group_scenarios_for_batching", _must_not_be_called)
+    monkeypatch.setattr(rg, "_select_live_caller", _fake_caller_returning("DECISION: GO\nRATIONALE: x"))
+    results = rg.run_live([_sc("T-A", "GO")])
+    assert results[0]["match"] is True
+
+
+# ---- build_queue_insert_sql() — the advisory (never-executed) events.queue_events INSERT text printed on
+# a decision flip (2026-08-17 fix). The OLD QUEUE_INSERT_TEMPLATE.format(..., expected=..., actual=...!r)
+# used Python's repr(), which is invalid JSON and can corrupt the surrounding SQL string literal the
+# moment a value contains a space + parens -- the NORMAL case per scenarios.yaml's own schema
+# ("TOKEN (free-text qualifier)"), e.g. KT-04's "CONTINUE (routes to review, not direct terminate)". The
+# existing flip test above (test_run_live_flags_a_flip_and_prints_the_advisory_queue_insert) only checked
+# substring presence ("INSERT INTO" in out), which is why this was never caught before.
+
+
+def _sql_string_literals(sql):
+    """Minimal single-quoted-SQL-string scanner (backslash-escape aware: \\' and \\\\; skips `--` line
+    comments, since QUEUE_INSERT_TEMPLATE's own header comments legitimately contain apostrophes, e.g.
+    "review_type='prose-regression'" and "that function's docstring" — real BigQuery doesn't tokenize
+    comment text as string literals either), used only to prove build_queue_insert_sql()'s output doesn't
+    prematurely close a REAL (non-comment) string literal. Raises if a literal is left unterminated --
+    which is exactly what the OLD repr()-based template could do."""
+    out = []
+    i, n = 0, len(sql)
+    while i < n:
+        if sql[i:i + 2] == "--":
+            nl = sql.find("\n", i)
+            i = n if nl == -1 else nl + 1
+            continue
+        if sql[i] == "'":
+            j = i + 1
+            buf = []
+            closed = False
+            while j < n:
+                if sql[j] == "\\" and j + 1 < n:
+                    buf.append(sql[j + 1])
+                    j += 2
+                    continue
+                if sql[j] == "'":
+                    closed = True
+                    break
+                buf.append(sql[j])
+                j += 1
+            if not closed:
+                raise AssertionError(f"unterminated SQL string literal starting at offset {i}: {sql!r}")
+            out.append("".join(buf))
+            i = j + 1
+        else:
+            i += 1
+    return out
+
+
+def test_build_queue_insert_sql_string_literals_are_well_formed_and_json_round_trips():
+    expected = "CONTINUE (routes to review, not direct terminate)"
+    actual = "NO-GO (doesn't clear the floor)"  # embedded apostrophe, space, AND parens
+    sql = rg.build_queue_insert_sql("KT-04", expected, actual, ["Strategy.md"])
+
+    literals = _sql_string_literals(sql)  # raises if the output is not well-formed SQL string syntax
+    assert "PENDING_REVIEW" in literals
+    assert "prose-regression" in literals
+    assert "pending" in literals
+    assert "KT-04" in literals
+    note = next(s for s in literals if s.startswith("golden-scenario decision flip"))
+    assert expected in note and actual in note
+
+    payload_text = next(s for s in literals if s.startswith("{"))
+    payload = _json.loads(payload_text)  # the actual coordinator ask: this must round-trip through json.loads()
+    assert payload == {
+        "review_type": "prose-regression", "scenario_id": "KT-04",
+        "expected": expected, "actual": actual, "governing_files": ["Strategy.md"],
+    }
+
+
+def test_build_queue_insert_sql_plain_values_unchanged():
+    # Sanity check against the boring/common case (no special characters) — must still produce the exact
+    # same shape as before the fix.
+    sql = rg.build_queue_insert_sql("ZZ-01", "GO", "NO-GO", ["Strategy.md"])
+    literals = _sql_string_literals(sql)
+    payload = _json.loads(next(s for s in literals if s.startswith("{")))
+    assert payload["expected"] == "GO" and payload["actual"] == "NO-GO"
+
+
+def test_sql_single_quote_escape_uses_backslash_form_not_doubled():
+    # This repo has a recorded convention that '' (doubled) escaping FAILS in its BigQuery contexts
+    # (feedback_bigquery_file_conventions) -- must be the backslash form.
+    assert rg._sql_single_quote_escape("doesn't") == "doesn\\'t"
+    assert rg._sql_single_quote_escape("plain text") == "plain text"
+    assert "''" not in rg._sql_single_quote_escape("it's a 'test'")
+
+
+def test_sql_single_quote_escape_escapes_backslash_first_so_json_escapes_round_trip():
+    # json.dumps() output can itself contain backslash-escapes (e.g. \" for an embedded double-quote in a
+    # string value). Those must survive SQL-unescaping intact, which requires doubling the backslash BEFORE
+    # escaping any quote -- doing it in the other order would corrupt an existing \" into something else.
+    raw_json = _json.dumps({"x": 'say "hi"'})  # contains a literal backslash-quote sequence
+    escaped = rg._sql_single_quote_escape(raw_json)
+    # Simulate BigQuery's own SQL-string unescaping (\\ -> \, \' -> ') and confirm the original JSON text
+    # comes back out byte-for-byte.
+    unescaped = re.sub(r"\\(.)", r"\1", escaped)
+    assert unescaped == raw_json
+    assert _json.loads(unescaped) == {"x": 'say "hi"'}
 
 
 # ---- scenarios_for_changed_files() — CI cost-scoping selection function (2026-07-30). golden-scenarios.

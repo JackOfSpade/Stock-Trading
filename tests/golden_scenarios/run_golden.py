@@ -22,23 +22,40 @@ TWO MODES, matching the two-job split in .github/workflows/golden-scenarios.yml:
 
   --live (NETWORK; calls a model; ADVISORY ONLY — see the workflow header for why this never hard-
       blocks a merge)
-      For each scenario, reads the CURRENT text of its governing_files, sends the pinned
-      EVAL_PROMPT_TEMPLATE below to a live model, parses a DECISION: line from the reply, and diffs
-      it against expected_decision's leading token. PROVIDER: Gemini's FREE tier (GEMINI_API_KEY), the
-      sole provider — walks GEMINI_MODEL_LADDER, degrading model on per-model daily-quota exhaustion;
-      stdlib REST, no SDK dependency; thinking left ON for accuracy. Prints a pass/fail table and, for the first
-      leading-token mismatch on a NON-EMPTY governing_files reread, prints a GitHub Actions
-      `::warning::` annotation plus the events.queue_events INSERT this script itself has no BigQuery
-      write credentials to execute (CI stays read-only by design). WIRED FOR REAL (self-improvement
-      audit 2026-07-15, CONFIRMED GAP golden-scenarios-prose-regression-unwired): D3 (Claude_Task_
-      Plan.md's "GOLDEN-SCENARIO PROSE-REGRESSION CHECK" step) has full repo+BigQuery write access and
-      runs daily — it performs the SAME governing-files-changed-since-last-check + re-evaluate logic
-      independently (D3 IS the model, no separate API call), and actually files the queue entry
-      (review_type='prose-regression', now a recognized AR review_type — see the Adversarial Reviews
-      section) on a real mismatch. This CI job remains a secondary, push-time signal only. Requires
-      GEMINI_API_KEY (free tier). Always exits 0 (advisory) unless the offline schema gate itself fails first,
-      or setup fails outright (missing API key/library), which is reported but still does not fail the
-      *build* — the workflow's continue-on-error covers that.
+      For each GROUP of scenarios that share an identical governing_files set (BATCHING, added
+      2026-08-17 — see the "BATCHING" comment block above group_scenarios_for_batching() below for the
+      full measured-cost narrative), reads the CURRENT text of the group's governing_files ONCE, sends
+      one pinned prompt (BATCH_EVAL_PROMPT_TEMPLATE for a group of 2+, or the original single-scenario
+      EVAL_PROMPT_TEMPLATE for a lone scenario / a group of 1) to a live model, parses a DECISION line
+      per scenario from the reply, and diffs each against its own expected_decision's leading token.
+      PROVIDER: Gemini's FREE tier (GEMINI_API_KEY), the sole provider — walks GEMINI_MODEL_LADDER,
+      degrading model on per-model daily-quota exhaustion; stdlib REST, no SDK dependency; thinking left
+      ON for accuracy. Prints a pass/fail table and, for the first leading-token mismatch on a NON-EMPTY
+      governing_files reread, prints a GitHub Actions `::warning::` annotation plus the
+      events.queue_events INSERT this script itself has no BigQuery write credentials to execute (CI
+      stays read-only by design). WIRED FOR REAL (self-improvement audit 2026-07-15, CONFIRMED GAP
+      golden-scenarios-prose-regression-unwired): D3 (Claude_Task_Plan.md's "GOLDEN-SCENARIO
+      PROSE-REGRESSION CHECK" step) has full repo+BigQuery write access and runs daily — it performs the
+      SAME governing-files-changed-since-last-check + re-evaluate logic independently (D3 IS the model,
+      no separate API call), and actually files the queue entry (review_type='prose-regression', now a
+      recognized AR review_type — see the Adversarial Reviews section) on a real mismatch. This CI job
+      remains a secondary, push-time signal only. Requires GEMINI_API_KEY (free tier). Always exits 0
+      (advisory) unless the offline schema gate itself fails first, or setup fails outright (missing API
+      key/library), which is reported but still does not fail the *build* — the workflow's
+      continue-on-error covers that.
+
+      BATCHING (2026-08-17 — GOLDEN_BATCH, default ON; GOLDEN_BATCH=0 is the escape hatch back to
+      today's exact one-call-per-scenario behavior): CI run 32043614925 measured 33 scenarios needing
+      24.1MB / ~6.02M tokens of governing-file text if evaluated one-scenario-per-call (mean ~182k
+      tok/scenario — Claude_Task_Plan.md alone is ~946KB/236k tok, re-sent whole on every one of the 16+
+      scenarios it governs), and the job evaluated only 11 of 33 in 2987s (~271s/scenario) before its run
+      budget stopped it — most of that time and nearly all of those tokens were the SAME governing text
+      re-sent over and over for scenarios that share a governing_files set. group_scenarios_for_batching()
+      groups scenarios by that shared set (33 scenarios -> ~7 groups against the real scenarios.yaml) so
+      the shared text is sent ONCE per group instead of once per scenario. See run_live()'s own doc
+      comment for exactly how a group is dispatched, and the OBSERVABILITY comment above
+      GEMINI_MODEL_LADDER below for the per-attempt/per-group logging added alongside batching so a run
+      like 32043614925 is diagnosable instead of just "11 of 33, no idea where the time went."
 
 Usage:
   python tests/golden_scenarios/run_golden.py --offline
@@ -53,6 +70,7 @@ Usage:
       under tests/golden_scenarios/ itself, both select EVERY scenario id).
 """
 import argparse
+import json
 import os
 import re
 import sys
@@ -116,6 +134,24 @@ CATEGORY_TOKENS = {
 #                             exhaust their small daily quotas; 23 scenarios > 20 RPD, so this WILL be
 #                             reached on a full run)
 # Override the whole ladder with the GEMINI_MODEL_LADDER env var (comma-separated).
+#
+# ---- OBSERVABILITY (2026-08-17) ----
+# CI run 32043614925 (2026-08-17) evaluated only 11 of 33 scenarios in 2987s before the run budget
+# stopped it, and the ONLY visible artifact was that one number — no per-attempt log, no indication of
+# how many 429s were hit, of which kind, how many seconds were spent sleeping vs. actually calling the
+# model, or how many tokens had been sent. A run that degrades gracefully (GEMINI_RUN_BUDGET_S) but is
+# completely opaque about WHY it degraded is barely better than a hang. Every _post() attempt (including
+# every RPM retry and every ladder rewind — the SAME prompt re-sent, so these dominate total token spend)
+# now prints one `::debug::` line to stderr with: model, a monotonic run-wide attempt number, an approx
+# input-token count (len(prompt)//4), the HTTP status (or ERR for a transport-level failure), elapsed
+# seconds for that one attempt, and a classification of ok / rpm-429 / daily-quota-429 / hard-failure.
+# run_live() prints one more line per GROUP as it finishes (ids, elapsed, attempts used), and one final
+# run-level summary line (wall-clock, total attempts, 429s by kind, total tokens sent INCLUDING every
+# retry, and seconds spent sleeping split by pacing / RPM-retry / rewind-cooldown). All of it stays on
+# stderr, like the existing `::notice::`/`::warning::` annotations, and all prints in the live path pass
+# flush=True so a killed/timed-out job still leaves a readable trail (this file also relies on the
+# workflow's PYTHONUNBUFFERED=1 — see golden-scenarios.yml's `prose-regression` job — for the same reason
+# when stdout/stderr aren't already line-buffered under CI's non-tty runner).
 GEMINI_MODEL_LADDER = [
     m.strip() for m in os.environ.get(
         "GEMINI_MODEL_LADDER",
@@ -193,6 +229,10 @@ GEMINI_MAX_OUTPUT_TOKENS_CEIL = int(os.environ.get("GEMINI_MAX_OUTPUT_TOKENS_CEI
 # (CATEGORY_TOKENS) — e.g. a strategy-entry scenario offers just "GO | NO-GO", not all six. This stops a
 # spurious "flip" where the model picks a correct-sentiment but wrong-vocabulary token (a strategy-entry
 # scenario answered "DO-NOT-ACTIVATE" instead of "NO-GO"); an uncategorized scenario falls back to all six.
+# {reference_context_block} (added 2026-08-17, see referenced_scenario_ids()/build_single_prompt() below)
+# is "" when this scenario's situation references no sibling scenario, which reproduces this template's
+# exact pre-2026-08-17 text byte-for-byte (the blank line between GOVERNING FILES and SCENARIO already
+# existed) — see build_single_prompt()'s own docstring for what it contains when non-empty.
 EVAL_PROMPT_TEMPLATE = """You are evaluating ONE pinned regression scenario against this trading \
 system's CURRENT governing prose. Read the governing-file excerpts below exactly as given below — do \
 not rely on any outside/remembered knowledge of a prior revision of these files. Apply the rules \
@@ -201,7 +241,7 @@ would, with no added judgment beyond what the cited rule requires.
 
 === GOVERNING FILES (verbatim, current repo state) ===
 {governing_files_text}
-
+{reference_context_block}
 === SCENARIO ===
 {situation}
 
@@ -212,6 +252,8 @@ RATIONALE: <one sentence citing the specific rule/section/threshold you applied>
 
 QUEUE_INSERT_TEMPLATE = """-- SPEC ONLY — never executed by this script (no BigQuery write credentials in CI; a routine with
 -- write access may choose to file this for real). review_type='prose-regression' per ITEM 20.
+-- {{scenario_id}}/{{note}}/{{payload_json}} below are ALREADY SQL-escaped by build_queue_insert_sql() —
+-- do not .format() this template directly with raw values (see that function's docstring, 2026-08-17 fix).
 INSERT INTO `stock-trading-498512.events.queue_events`
   (queue, item_key, item_type, status, note, payload)
 VALUES (
@@ -219,9 +261,56 @@ VALUES (
   '{scenario_id}',
   'prose-regression',
   'pending',
-  'golden-scenario decision flip: {scenario_id} expected {expected!r} got {actual!r}',
-  JSON '{{"review_type": "prose-regression", "scenario_id": "{scenario_id}", "expected": {expected!r}, "actual": {actual!r}, "governing_files": {governing_files!r}}}'
+  '{note}',
+  JSON '{payload_json}'
 );"""
+
+
+def _sql_single_quote_escape(s):
+    """Escape `s` for embedding inside a SQL single-quoted string literal, BigQuery's backslash form
+    (\\' ), NOT the doubled '' form — this repo has a recorded convention (feedback_bigquery_file_
+    conventions) that '' escaping FAILS in this project's BigQuery contexts. Backslashes are escaped
+    FIRST (\\ -> \\\\) so an existing literal backslash in `s` — e.g. one already produced by
+    json.dumps() to escape an embedded double-quote inside a JSON string value — round-trips intact
+    once BigQuery un-escapes the SQL literal, instead of being misread as introducing a new escape."""
+    return s.replace("\\", "\\\\").replace("'", "\\'")
+
+
+def build_queue_insert_sql(scenario_id, expected, actual, governing_files):
+    """Build the advisory (never-executed — see QUEUE_INSERT_TEMPLATE's own header / module docstring)
+    events.queue_events INSERT text printed on a decision flip.
+
+    FIXED 2026-08-17 (audit finding): the old version formatted `expected`/`actual`/`governing_files`
+    straight into QUEUE_INSERT_TEMPLATE with Python's `!r` (repr), which is broken on the NORMAL case —
+    scenarios.yaml's own schema documents expected_decision as "TOKEN (free-text qualifier)", e.g. KT-04's
+    "CONTINUE (routes to review, not direct terminate)" — because repr() output is PYTHON syntax, not SQL
+    or JSON: a value containing a literal `'` prematurely closes the surrounding SQL string, and a Python
+    list's repr (used for `governing_files`) is not valid JSON at all (JSON requires double-quoted keys/
+    strings). Concretely, the old code printed things like
+        JSON '{"review_type": "prose-regression", ..., "expected": 'CONTINUE (routes to review, not
+        direct terminate)', ...}'
+    which is invalid on BOTH axes: the bare `'CONTINUE ...'` inside the JSON '...' literal is not
+    JSON syntax, and if `expected`/`actual` had contained an actual apostrophe the SQL string itself would
+    have been corrupted (early close). This function fixes both: the JSON payload is built with
+    json.dumps() (always well-formed JSON), then the WHOLE resulting JSON text — and the separately-built
+    `note` text — are each SQL-escaped exactly once (_sql_single_quote_escape) before being embedded in
+    their own `'...'` SQL literals. Still print-only / never executed (unchanged, deliberate — see the
+    module docstring's --live section and CLAUDE.md's "golden-scenarios.yml" non-issue note); this fix is
+    about the printed text being genuinely valid SQL+JSON if a routine with write access ever runs it, not
+    about wiring up an execution path here."""
+    payload_json = json.dumps({
+        "review_type": "prose-regression",
+        "scenario_id": scenario_id,
+        "expected": expected,
+        "actual": actual,
+        "governing_files": governing_files,
+    })
+    note = f"golden-scenario decision flip: {scenario_id} expected {expected!r} got {actual!r}"
+    return QUEUE_INSERT_TEMPLATE.format(
+        scenario_id=_sql_single_quote_escape(scenario_id),
+        note=_sql_single_quote_escape(note),
+        payload_json=_sql_single_quote_escape(payload_json),
+    )
 
 
 def load_scenarios(path=SCENARIOS_PATH):
@@ -485,7 +574,10 @@ def _pace(state):
     flat per-call sleep — so consecutive scenarios stay under Gemini's free-tier ~5 RPM ceiling instead of
     tripping it and needing a ladder rewind. A no-op on the very first request of a run (state has no
     'last_call_ts' yet). Checks the run budget (via _check_run_budget) before actually starting the sleep,
-    per the "never start a sleep that would overrun the budget" rule."""
+    per the "never start a sleep that would overrun the budget" rule. Accumulates the actual sleep duration
+    into state['sleep_pacing_s'] (2026-08-17 observability — see the OBSERVABILITY comment above
+    GEMINI_MODEL_LADDER) so a run's end-of-run summary can separate "time spent pacing under the RPM
+    ceiling" from RPM-retry and rewind-cooldown sleep, which used to be indistinguishable from the outside."""
     now = time.monotonic()
     last = state.get("last_call_ts")
     if last is not None:
@@ -493,6 +585,7 @@ def _pace(state):
         if remaining > 0:
             _check_run_budget(state, extra_s=remaining)
             time.sleep(remaining)
+            state["sleep_pacing_s"] = state.get("sleep_pacing_s", 0.0) + remaining
             now = time.monotonic()
     state["last_call_ts"] = now
 
@@ -533,6 +626,12 @@ def _gemini_call(prompt, api_key, ladder, state):
     def _post(model, max_tokens):
         _check_run_budget(state)   # never START a fresh network call once the run budget is already spent
         _pace(state)
+        # 2026-08-17 observability: count/log ONLY past this point — a call that never gets here (budget
+        # already spent, above) never touched the network and must not inflate "total attempts" with a
+        # phantom one. This is also what makes state['total_attempts'] the correct "attempt number" for
+        # the per-attempt debug line below: it always corresponds to an actual urlopen() about to happen.
+        state["total_attempts"] = state.get("total_attempts", 0) + 1
+        state["total_tokens_sent"] = state.get("total_tokens_sent", 0) + len(prompt) // 4
         body = _json.dumps({
             "contents": [{"parts": [{"text": prompt}]}],
             # No thinkingConfig → each model's default/dynamic thinking stays ON (accuracy).
@@ -543,6 +642,7 @@ def _gemini_call(prompt, api_key, ladder, state):
             data=body, headers={"Content-Type": "application/json"}, method="POST",
         )
         with urllib.request.urlopen(req, timeout=180) as resp:
+            status = getattr(resp, "status", 200)
             data = _json.load(resp)
         cand = (data.get("candidates") or [{}])[0]
         parts = cand.get("content", {}).get("parts", []) or []
@@ -550,7 +650,20 @@ def _gemini_call(prompt, api_key, ladder, state):
         # keep only the real answer text so the DECISION line parser never sees reasoning text.
         text = "".join(p.get("text", "") for p in parts
                        if isinstance(p, dict) and not p.get("thought"))
-        return text, cand.get("finishReason", "")
+        return text, cand.get("finishReason", ""), status
+
+    def _log_attempt(model, prompt_tokens_est, status, elapsed_s, cls):
+        """One ::debug:: line per network attempt (2026-08-17 observability — see the comment above
+        GEMINI_MODEL_LADDER). `status` is the HTTP status code on success/HTTPError, or the literal string
+        "ERR" for a transport-level failure (URLError/TimeoutError/ValueError) that never got a status
+        line at all. Uses state['total_attempts'] (already incremented by _post — see its own comment on
+        why counting happens there, not here) as the attempt number, so this line's number always matches
+        the run-level "total attempts" figure in run_live()'s end-of-run summary."""
+        print(
+            f"::debug::golden live attempt #{state.get('total_attempts', 0)} model={model} "
+            f"tokens~={prompt_tokens_est} status={status} elapsed={elapsed_s:.1f}s class={cls}",
+            file=sys.stderr, flush=True,
+        )
 
     def _try_model(model):
         """Try ONE model, escalating maxOutputTokens on MAX_TOKENS truncation up to the ceiling. Returns
@@ -572,30 +685,45 @@ def _gemini_call(prompt, api_key, ladder, state):
         nonlocal last_rpm_body
         budget = state["budget"]
         rpm_retries = 0
+        prompt_tokens_est = len(prompt) // 4
         while True:
+            attempt_t0 = time.monotonic()
             try:
-                text, finish = _post(model, budget)
+                text, finish, status = _post(model, budget)
             except urllib.error.HTTPError as exc:
+                elapsed = time.monotonic() - attempt_t0
                 body = exc.read().decode("utf-8", "replace")
                 # A per-MINUTE 429 is transient: sleep out the API's suggested retryDelay and retry the
                 # SAME model. Only a per-DAY 429 (or any other HTTP error) is a hard/permanent failure.
                 if exc.code == 429 and not _is_daily_quota_429(body):
+                    cls = "rpm-429"
+                    state["total_429_rpm"] = state.get("total_429_rpm", 0) + 1
+                    _log_attempt(model, prompt_tokens_est, exc.code, elapsed, cls)
                     last_rpm_body = body   # remembered for the rewind cooldown's own RetryInfo, below
                     if rpm_retries < GEMINI_RPM_MAX_RETRIES:
                         rpm_retries += 1
                         delay = _retry_delay_s(body, GEMINI_RPM_RETRY_DELAY_S)
                         _check_run_budget(state, extra_s=delay)
                         time.sleep(delay)
+                        state["sleep_rpm_retry_s"] = state.get("sleep_rpm_retry_s", 0.0) + delay
                         continue
                     errors.append(f"{model}: rate-limited (429/min) after {rpm_retries} retries")
                     return None, True
                 # 429/day = daily quota gone; 404 = model not served to this key; 400 = e.g. budget above
                 # this model's max; 5xx = transient-but-unretried. All => hard/permanent, dead the model.
+                cls = "daily-quota-429" if exc.code == 429 else "hard-failure"
+                if exc.code == 429:
+                    state["total_429_daily"] = state.get("total_429_daily", 0) + 1
+                _log_attempt(model, prompt_tokens_est, exc.code, elapsed, cls)
                 errors.append(f"{model}: HTTP {exc.code} {body[:200]}")
                 return None, False
             except (urllib.error.URLError, TimeoutError, ValueError) as exc:
+                elapsed = time.monotonic() - attempt_t0
+                _log_attempt(model, prompt_tokens_est, "ERR", elapsed, "hard-failure")
                 errors.append(f"{model}: {exc}")
                 return None, False
+            elapsed = time.monotonic() - attempt_t0
+            _log_attempt(model, prompt_tokens_est, status, elapsed, "ok")
             if text.strip():
                 return text, False
             # Empty answer. If it was a MAX_TOKENS truncation and we have headroom, DOUBLE the budget and
@@ -657,6 +785,7 @@ def _gemini_call(prompt, api_key, ladder, state):
         )
         _check_run_budget(state, extra_s=cooldown)
         time.sleep(cooldown)
+        state["sleep_rewind_s"] = state.get("sleep_rewind_s", 0.0) + cooldown   # 2026-08-17 observability
 
 
 def _select_live_caller():
@@ -683,120 +812,697 @@ def _select_live_caller():
             "run_start_ts": time.monotonic(),
         }
         print(f"::notice::golden live run — provider=Gemini (free tier); model ladder: {', '.join(ladder)}",
-              file=sys.stderr)
+              file=sys.stderr, flush=True)
 
         def call_model(prompt):
             return _gemini_call(prompt, gemini_key, ladder, state)
+        # Expose the shared run-state dict on the callable itself (2026-08-17 observability) so run_live()
+        # can read the attempt/token/429/sleep counters _gemini_call accumulates in it, without widening
+        # _select_live_caller()'s own return contract (still a plain callable-or-None — tests monkeypatch
+        # this function directly with a fake caller that has no .state, so run_live() must getattr() this
+        # with a default rather than assume it is always present).
+        call_model.state = state
         return call_model
 
     print(
         "::notice::GEMINI_API_KEY not set — live golden-scenario run skipped (opt-in). Offline schema "
         "validation is unaffected.",
-        file=sys.stderr,
+        file=sys.stderr, flush=True,
     )
     return None
 
 
-def run_live(scenarios, scenario_ids=None):
-    """Call the live Gemini model ladder per scenario and diff its decision vs. the pinned
-    expected_decision. Enabled by GEMINI_API_KEY (the sole provider; owner directive 2026-07-17).
-    Advisory only — never returns a failing process exit code by itself; the caller decides.
+# ---- BATCHING (2026-08-17) ----
+# Measured problem (module docstring's --live section has the full narrative): CI run 32043614925 needed
+# 24.1MB / ~6.02M tokens of governing-file text to evaluate 33 scenarios one-call-per-scenario, and got
+# through only 11 of them in 2987s before the run budget stopped it. Most of that text was DUPLICATE: many
+# scenarios share an IDENTICAL governing_files set (e.g. 16 of 33 are governed by Strategy.md alone) and
+# each was re-sending that same multi-hundred-KB-to-megabyte text in its own call. group_scenarios_for_
+# batching() groups scenarios by that shared set; run_live() sends the shared text ONCE per group via
+# build_batch_prompt()/parse_batch_reply() instead of once per scenario — 33 scenarios collapse to ~7
+# calls against the real scenarios.yaml. GOLDEN_BATCH=0 is the escape hatch back to today's exact
+# one-call-per-scenario behavior (see run_live()'s own docstring for exactly how a group gets dispatched,
+# including the deliberate size-1 bypass that does NOT go through this batch machinery at all).
+GOLDEN_BATCH_MAX_DEFAULT = 8
 
-    STOPS EARLY (owner directive 2026-08-17) on either whole-run signal _gemini_call can raise —
-    _GeminiRunBudgetExhausted (GEMINI_RUN_BUDGET_S spent) or _GeminiLadderPermanentlyDead (every ladder
-    model in state['dead'], a genuine waiting-cannot-help exhaustion) — recording the triggering scenario
-    AND every scenario after it as match='SKIPPED' with the reason, instead of letting each remaining
-    scenario independently re-attempt and re-discover the same terminal condition ("never a silent
-    nothing" — a partial result reported honestly, not silence). Any OTHER exception — including a plain
-    per-scenario RuntimeError from a bounded ladder-rewind exhaustion, see _gemini_call's docstring — is
-    an ordinary per-scenario failure (match=None) and does NOT stop the loop: no single scenario's outcome
-    may prevent a later one from attempting its own call."""
+
+def group_scenarios_for_batching(scenarios, max_group=None):
+    """Group `scenarios` (a list of scenario dicts, in scenarios.yaml order) by the SET of their
+    governing_files (frozenset — order-independent, so two scenarios naming the same files in a different
+    order still land in the same group), for run_live()'s batching. Returns a list of groups (each a list
+    of scenario dicts); a group of size 1 is legal (a scenario whose governing_files set is unique in this
+    run) and is exactly as valid an input to the caller as any other size.
+
+    CONTRACT:
+      * Order WITHIN a group matches scenarios.yaml's own relative order (never reshuffled) — two
+        scenarios A before B in `scenarios` that land in the same group stay A-before-B in that group.
+      * A group larger than `max_group` (default from the GOLDEN_BATCH_MAX env var, else
+        GOLDEN_BATCH_MAX_DEFAULT=8) is split into consecutive chunks of at most `max_group`, preserving
+        the same relative order across chunks (chunk N's scenarios are all before chunk N+1's, in
+        scenarios.yaml order) — this bounds a single call's situation count (and therefore its reply
+        length/parse surface) regardless of how large one governing_files set's real membership grows.
+      * The returned GROUPS (not the scenarios within a group) are ordered by ASCENDING total on-disk byte
+        size of their (deduplicated, since it's a set) governing_files — cheapest group first. This is
+        deliberate, not incidental: GEMINI_RUN_BUDGET_S/the job timeout can stop a run mid-way (see
+        _GeminiRunBudgetExhausted), and finishing the cheap, fast groups before the run risks running out
+        of budget on an expensive one gets strictly more scenarios evaluated per second of budget spent
+        than processing in scenarios.yaml's arbitrary declaration order would. Ties (including the
+        genuinely-common case of two groups whose byte size is identical, or a governing_file that no
+        longer exists on disk and contributes 0 either way) are broken by each group's/chunk's OWN first
+        scenario's position in `scenarios` — deterministic, not hash-order-dependent (a plain
+        frozenset-keyed dict's iteration order is insertion order in Python, which itself already follows
+        `scenarios`, but the explicit tie-break makes that a documented contract, not an accident of
+        implementation).
+
+    A governing_file that no longer exists on disk (validate_offline()'s job to catch, not this function's)
+    contributes 0 bytes to its group's cost rather than raising — this function must stay usable for
+    ordering purposes even against a scenarios list that hasn't passed the offline schema gate yet."""
+    if max_group is None:
+        max_group = int(os.environ.get("GOLDEN_BATCH_MAX", str(GOLDEN_BATCH_MAX_DEFAULT)))
+
+    buckets = {}       # frozenset(governing_files) -> [(original_index, scenario), ...]
+    bucket_order = []  # first-seen key order (== scenarios.yaml order of first appearance)
+    for i, sc in enumerate(scenarios):
+        key = frozenset(sc.get("governing_files") or [])
+        if key not in buckets:
+            buckets[key] = []
+            bucket_order.append(key)
+        buckets[key].append((i, sc))
+
+    # Split any oversized bucket into consecutive max_group-sized chunks, preserving order both within a
+    # chunk and across a bucket's own chunks (range() walks the bucket's own already-order-preserved list
+    # front-to-back).
+    chunks = []  # (key, [scenario, ...], first_original_index) — one entry per returned group
+    for key in bucket_order:
+        entries = buckets[key]
+        for start in range(0, len(entries), max_group):
+            piece = entries[start:start + max_group]
+            chunks.append((key, [sc for _, sc in piece], piece[0][0]))
+
+    # Cheapest-group-first ordering. size_cache means a governing_files SET's byte size is computed once
+    # even when that set was split into several chunks above (they all share the same key/cost).
+    size_cache = {}
+
+    def _key_bytes(key):
+        if key not in size_cache:
+            total = 0
+            for gf in key:
+                try:
+                    total += os.path.getsize(os.path.join(ROOT, gf))
+                except OSError:
+                    pass  # missing file: validate_offline()'s problem, not this ordering function's
+            size_cache[key] = total
+        return size_cache[key]
+
+    chunks.sort(key=lambda c: (_key_bytes(c[0]), c[2]))
+    return [chunk_scenarios for _, chunk_scenarios, _ in chunks]
+
+
+# Batch eval prompt — same judging task, same decision vocabulary, same "read the prose fresh, apply it
+# mechanically, no outside knowledge" instructions as EVAL_PROMPT_TEMPLATE above (that template is left
+# untouched; the single-scenario/GOLDEN_BATCH=0/zero-parsed-fallback paths still use it directly), just
+# restructured to grade N independent situations against ONE shared governing-files block. The "judge each
+# situation INDEPENDENTLY" instruction below exists because a model reasoning through several situations
+# in one continuous response could otherwise let an early answer anchor/bias a later one — something that
+# structurally cannot happen when each situation gets its own isolated call.
+# {reference_context_block} (added 2026-08-17, see referenced_scenario_ids()/build_batch_prompt() below)
+# is "" when no situation in this group references a sibling scenario outside the group — reproducing
+# this template's exact pre-2026-08-17 text byte-for-byte (the blank line between GOVERNING FILES and
+# SITUATIONS already existed).
+BATCH_EVAL_PROMPT_TEMPLATE = """You are evaluating {n} pinned regression scenarios against this trading \
+system's CURRENT governing prose, in a single batched call ({n} situations that share an IDENTICAL \
+governing_files set — the excerpt below is sent once for all of them, not once each; see the BATCHING \
+comment above group_scenarios_for_batching() in this script for why). Read the governing-file excerpts \
+below exactly as given — do not rely on any outside/remembered knowledge of a prior revision of these \
+files. Apply the rules mechanically and literally, exactly as an autonomous routine session executing \
+Claude_Task_Plan.md would, with no added judgment beyond what the cited rule requires.
+
+=== GOVERNING FILES (verbatim, current repo state) ===
+{governing_files_text}
+{reference_context_block}
+=== SITUATIONS ({n} total: {ids_list}) ===
+Judge EACH situation below INDEPENDENTLY against the governing files above. Every situation is its own \
+self-contained evaluation: do not let your answer to one situation influence, anchor, or bias your answer \
+to any other situation below, even where two situations look similar or seem related to each other.
+
+{situations_block}
+
+For EACH situation above, reason it through against the governing files, citing the specific rule/section/\
+threshold that decides it, then answer it using ITS OWN bracketed id exactly as given above, in the form:
+RATIONALE[<id>]: <one sentence citing the specific rule/section/threshold you applied>
+DECISION[<id>]: <one of that situation's own allowed decisions, listed with it above>
+
+Your reply MUST end with exactly {n} lines — one DECISION[<id>]: line per situation id listed above, no \
+fewer, no more, and no other lines mixed in among them — in exactly this form:
+DECISION[<id>]: <decision>
+"""
+
+
+# ---- CROSS-SCENARIO REFERENCE RESOLUTION (2026-08-17) ----
+# Measured defect: scenarios.yaml's `situation` prose sometimes refers to a SIBLING scenario by id instead
+# of restating its facts (e.g. KT-02: "Same facts as KT-01 except the peak-to-trough drawdown is 46% rather
+# than 52%.") and the harness never resolved that reference — the referenced scenario's situation text was
+# simply never shown to the model judging the one that names it. Measured against the real 33-scenario
+# file: 8 such cross-references exist (RR-02->RR-01, RR-03->RR-02, RR-04->RR-02, RR-04->RR-03,
+# RR-06->RR-05, RR-08->RR-07, KT-02->KT-01, KT-06->KT-05). The batching work above (group_scenarios_for_
+# batching()) accidentally resolves 7 of the 8 as a side effect: whenever both scenarios in a pair land in
+# the same batch group, the referent's situation is already IN the prompt as one of the OTHER situations
+# being judged. Exactly one pair never lands in the same group no matter how batching is tuned: KT-02's
+# governing_files is {Experiment_Parameters.md} but KT-01's is {Experiment_Parameters.md,
+# Claude_Task_Plan.md} — different sets, so group_scenarios_for_batching()'s frozenset-keyed grouping can
+# never put them together. Fixed generally here (NOT by hand-patching KT-02's prose in scenarios.yaml,
+# which would just paper over the harness gap for this one pair and leave the general defect unfixed for
+# the next scenario that references a sibling with a different governing_files set) via
+# referenced_scenario_ids() below, wired into BOTH prompt builders (build_batch_prompt / build_single_prompt).
+_ID_SHAPE_RE = re.compile(r"^([A-Z]+)-(\d+)$")
+
+
+def _infer_id_shape(known_ids):
+    """Derive the (letters-quantifier, digits-quantifier) regex pieces for this scenario file's id SHAPE
+    from the ACTUAL ids in `known_ids`, instead of hardcoding "two uppercase letters, hyphen, two digits"
+    as a fixed literal that would silently stop matching every id the day a category needs a 3-letter or
+    3-digit id. Every id in the real scenarios.yaml as of 2026-08-17 (RR-*/KT-*/SB-*/SA-*/SD-*/SE-*/PA-*/
+    RS-*) happens to be exactly 2 letters + 2 digits, but that is a fact ABOUT the file's current contents,
+    not something referenced_scenario_ids() should bake in as a constant. Falls back to that same 2/2
+    shape only when `known_ids` contains no id matching the general LETTERS-HYPHEN-DIGITS shape at all
+    (e.g. an empty known_ids, or a caller's non-conforming synthetic ids like "T-MATCH")."""
+    letter_lens, digit_lens = set(), set()
+    for sid in known_ids or ():
+        m = _ID_SHAPE_RE.match(sid or "")
+        if m:
+            letter_lens.add(len(m.group(1)))
+            digit_lens.add(len(m.group(2)))
+    if not letter_lens or not digit_lens:
+        return "{2}", "{2}"
+    l_lo, l_hi = min(letter_lens), max(letter_lens)
+    d_lo, d_hi = min(digit_lens), max(digit_lens)
+    l_q = f"{{{l_lo}}}" if l_lo == l_hi else f"{{{l_lo},{l_hi}}}"
+    d_q = f"{{{d_lo}}}" if d_lo == d_hi else f"{{{d_lo},{d_hi}}}"
+    return l_q, d_q
+
+
+def referenced_scenario_ids(scenario, known_ids):
+    """Scan `scenario`'s own `situation` text for OTHER scenario ids it references by name (e.g. KT-02's
+    "Same facts as KT-01 except..."), returning them as a list in FIRST-APPEARANCE order with no
+    duplicates. Pure / side-effect-free — no file I/O, no network — so it is plain-unit-testable and cheap
+    enough to call from both prompt builders below on every scenario, every run.
+
+    `known_ids` scopes what counts as a real, resolvable reference (typically every id in the CURRENT
+    scenarios.yaml, but a caller may pass a narrower set — e.g. a test fixture): a candidate substring is
+    returned only when it (a) matches this file's id SHAPE (letters-hyphen-digits, INFERRED from
+    `known_ids` itself via _infer_id_shape() — not hardcoded), (b) is a member of `known_ids`, and (c) is
+    not `scenario`'s OWN id. Condition (b) is what stops a coincidental shape-alike substring (or a
+    genuinely retired/renamed id) from being treated as a resolvable reference; condition (c) stops a
+    scenario's own id appearing in its own prose (rare, but not meaningless-to-guard) from being
+    "resolved" against itself.
+
+    ONE LEVEL ONLY (2026-08-17, deliberate): this function is applied to a JUDGED scenario's own situation
+    text — the callers below (_reference_context_ids_for) never re-apply it to a REFERENT's situation text,
+    i.e. a chain (A references B, B references C) surfaces B's facts when judging A but NOT C's. Expanding
+    transitively would make one judged scenario's prompt size depend on how deep a reference chain happens
+    to run, undoing the point of the same-day batching work (a measured 77.3% token reduction) for exactly
+    the scenarios that need a reference resolved at all. Bounding at one level keeps prompt growth
+    proportional to the judged-scenario COUNT, not to reference-chain depth — see
+    test_referenced_scenario_ids_resolution_is_one_level_only, and no scenario in the real file currently
+    references a scenario that itself references a third, so this bound costs nothing today."""
+    sid = scenario.get("id")
+    text = scenario.get("situation") or ""
+    known = set(known_ids or ())
+    l_q, d_q = _infer_id_shape(known)
+    pattern = re.compile(rf"\b[A-Z]{l_q}-\d{d_q}\b")
+    seen = []
+    for m in pattern.finditer(text):
+        candidate = m.group(0)
+        if candidate == sid or candidate not in known or candidate in seen:
+            continue
+        seen.append(candidate)
+    return seen
+
+
+# Shared by both prompt builders (build_batch_prompt / build_single_prompt) below. States, in terms a live
+# model reliably follows, exactly the three things a REFERENCED-CONTEXT block must convey (spec, 2026-08-17):
+# these facts exist ONLY to resolve an id another situation named, they are NOT to be answered, and no
+# DECISION line may be emitted for an id that appears only here — plus the block's own visual separation
+# ("===" header distinct from "=== SITUATIONS ==="/"=== SCENARIO ===", "---" per-id sub-delimiters) so a
+# referenced id can never be mistaken for a judged one.
+REFERENCE_CONTEXT_HEADER = (
+    "=== REFERENCED CONTEXT (background facts only — do NOT judge, do NOT answer) ===\n"
+    "One or more of the situation(s) above/below refers to another scenario BY ID (e.g. \"Same facts as "
+    "KT-01 except...\"). The block(s) below are that OTHER scenario's own situation text, shown ONLY so "
+    "the reference resolves to real facts instead of an id whose meaning you were never given. Each block "
+    "below is NOT one of the situations you are being asked to judge in this call: do not reason about it "
+    "as a fresh case to decide, and do NOT emit a DECISION line for it — no DECISION[<id>] (or bare "
+    "DECISION:) line may name an id that appears ONLY in this REFERENCED CONTEXT section. Only the "
+    "situation(s) shown under SITUATIONS / SCENARIO are being judged in this call."
+)
+
+
+def _reference_context_ids_for(scenarios_list, judged_ids, known_ids):
+    """Deduped, first-appearance-ordered list of ids referenced (referenced_scenario_ids(), ONE LEVEL ONLY
+    — see that function's docstring) by ANY scenario in `scenarios_list`, excluding any id already in
+    `judged_ids`. A referent that is ITSELF one of the situations already being judged in this same call
+    (e.g. KT-06 -> KT-05 when both are members of the same batch group) needs no separate context block —
+    its situation is already present as one of the judged situations, and emitting a second copy would be
+    a pure duplicate for zero benefit."""
+    seen = []
+    for sc in scenarios_list:
+        for rid in referenced_scenario_ids(sc, known_ids):
+            if rid in judged_ids or rid in seen:
+                continue
+            seen.append(rid)
+    return seen
+
+
+def _render_reference_context_block(ref_ids, id_to_scenario):
+    """Render the REFERENCED-CONTEXT block for `ref_ids` (ids not already judged in this call — see
+    _reference_context_ids_for), looking up each referent's situation text in `id_to_scenario` (id -> full
+    scenario dict). Returns "" (renders as nothing — both EVAL_PROMPT_TEMPLATE and BATCH_EVAL_PROMPT_
+    TEMPLATE already have their own blank-line spacing around {reference_context_block} for this case) when
+    `ref_ids` is empty or none of them resolve to a known scenario dict.
+
+    Deliberately includes ONLY the referent's `situation` text, never its governing_files: pulling in a
+    referent's governing files would re-grow exactly the duplicate-text cost the 2026-08-17 batching work
+    was built to eliminate (a referent's governing_files are frequently NOT already part of the judged
+    group's own shared set — e.g. KT-01 additionally names Claude_Task_Plan.md, which KT-02's own group
+    does not read at all)."""
+    blocks = []
+    for rid in ref_ids:
+        ref_sc = id_to_scenario.get(rid)
+        if ref_sc is None:
+            continue
+        blocks.append(
+            f"--- REFERENCED CONTEXT [{rid}] (background only — NOT a situation to judge) ---\n"
+            f"{(ref_sc.get('situation') or '').strip()}\n"
+            f"--- END REFERENCED CONTEXT [{rid}] ---"
+        )
+    if not blocks:
+        return ""
+    return "\n" + "\n\n".join([REFERENCE_CONTEXT_HEADER, *blocks]) + "\n"
+
+
+def build_batch_prompt(group, gov_text, id_to_scenario=None):
+    """Build ONE prompt evaluating every scenario in `group` (a list of scenario dicts that all share the
+    identical governing_files set — see group_scenarios_for_batching()) against `gov_text`, the ALREADY-
+    ASSEMBLED verbatim governing-files text (the caller reads/caches the files, exactly as run_live() did
+    per-scenario before batching — see _read_governing_text()); this function performs no file I/O of its
+    own. Reuses _allowed_decisions_for() per scenario so each situation still only offers ITS OWN
+    category's decision vocabulary — the same anti-vocabulary-flip scoping EVAL_PROMPT_TEMPLATE's
+    single-scenario path already relies on (2026-07-26), just repeated once per situation instead of once
+    per call.
+
+    id_to_scenario (2026-08-17, optional; id -> full scenario dict, typically every id in scenarios.yaml —
+    NOT just this group) resolves cross-scenario references (referenced_scenario_ids()): any sibling id a
+    situation in `group` names that is NOT itself a member of `group` gets a REFERENCED-CONTEXT block (see
+    _render_reference_context_block()) appended after the governing-files section. Omitting id_to_scenario
+    (the default) disables resolution entirely — known_ids is then empty, so referenced_scenario_ids()
+    finds nothing to resolve — which reproduces this function's exact pre-2026-08-17 output for any caller
+    that doesn't have/need the full scenario set handy (e.g. this file's own pre-existing unit tests)."""
+    ids = [sc.get("id") for sc in group]
+    judged_ids = set(ids)
+    known_ids = set(id_to_scenario) if id_to_scenario else set()
+    ref_ids = _reference_context_ids_for(group, judged_ids, known_ids)
+    reference_context_block = _render_reference_context_block(ref_ids, id_to_scenario or {})
+    situations = []
+    for sc in group:
+        sid = sc.get("id")
+        situations.append(
+            f"--- SITUATION [{sid}] ---\n"
+            f"{(sc.get('situation') or '').strip()}\n"
+            f"Allowed decisions for [{sid}]: {_allowed_decisions_for(sc)}"
+        )
+    return BATCH_EVAL_PROMPT_TEMPLATE.format(
+        n=len(group),
+        governing_files_text=gov_text,
+        reference_context_block=reference_context_block,
+        ids_list=", ".join(f"[{i}]" for i in ids),
+        situations_block="\n\n".join(situations),
+    )
+
+
+# Tolerant DECISION[<id>]: <decision> line matcher for parse_batch_reply(). Case-insensitive on the
+# DECISION keyword; tolerates markdown emphasis/backticks wrapped around the marker (e.g.
+# "**DECISION[KT-04]:**", "`DECISION[KT-04]:`") and stray whitespace around the id/colon, since a live
+# model's exact markdown habits are not something this repo controls. The id itself is captured verbatim
+# and compared CASE-SENSITIVELY against the caller's real ids in parse_batch_reply() — a model that
+# mangled/invented the id must not fuzzy-match onto a real one.
+_BATCH_DECISION_RE = re.compile(
+    r"[*_`\s]*DECISION[*_`\s]*\[\s*(?P<id>[^\]]*?)\s*\][*_`\s]*:\s*(?P<decision>.*)",
+    re.IGNORECASE,
+)
+
+
+def parse_batch_reply(reply, ids):
+    """Parse a build_batch_prompt() reply into {id: decision_text_or_None}, with exactly one key for
+    EVERY id in `ids` — never a partial dict. An id whose own "DECISION[<id>]:" line never appeared in the
+    reply still gets an entry (value None) rather than being silently absent, so run_live() can score it
+    as its own per-scenario parse failure without that poisoning its group-mates (spec requirement: a
+    partial parse must not sink the whole group — see run_live()'s docstring).
+
+    Tolerant of markdown wrapping/whitespace around the marker (_BATCH_DECISION_RE); the id itself must
+    match one of `ids` EXACTLY (case-sensitive) once stripped. When the same id's DECISION line appears
+    more than once in the reply, the LAST occurrence wins (simple last-write-wins, not an error) — a model
+    that restates its answer, or an accidental duplicate block, should not make an otherwise-clean reply
+    look ambiguous.
+
+    NEVER RAISES: any unexpected input (a None/non-string reply, an empty `ids`, a regex surprise on
+    adversarial text) degrades to the all-None dict, because a malformed batch reply must become a
+    per-scenario/per-group parse failure that run_live() can act on, not an uncaught exception that would
+    abort evaluation of every OTHER group in the run too."""
+    result = dict.fromkeys(ids)
+    try:
+        if not reply:
+            return result
+        id_set = set(ids)
+        for line in reply.splitlines():
+            m = _BATCH_DECISION_RE.search(line)
+            if not m:
+                continue
+            found_id = (m.group("id") or "").strip()
+            if found_id not in id_set:
+                continue
+            decision = (m.group("decision") or "").strip().strip("*_` \t")
+            result[found_id] = decision
+    except Exception:  # noqa: BLE001 — malformed input degrades to all-None, never raises (see docstring)
+        return dict.fromkeys(ids)
+    return result
+
+
+def _read_governing_text(governing_files, file_cache):
+    """Assemble the verbatim '----- <path> -----\\n<text>' block for `governing_files` (a list of
+    repo-relative paths), reading each file at most once per RUN via `file_cache` (a plain dict the caller
+    owns and shares across every scenario/group run_live() processes in one run) rather than once per
+    scenario. This cache still pays off even across DIFFERENT groups: a file like Claude_Task_Plan.md can
+    appear in more than one group's governing_files set (e.g. paired with Operating_Protocols.md in one
+    group and with Experiment_Parameters.md in another), so caching saves a re-READ even where batching
+    itself can't save a re-SEND (each group still sends its own, different, combined text).
+
+    Left OUTSIDE any try/except BY DESIGN (2026-07-29 comment, preserved through the 2026-08-17 batching
+    refactor): the CALLER is responsible for wrapping this in its own try/except so one scenario's/group's
+    missing governing_file degrades only that scenario/group, not the whole run — see run_live()."""
+    parts = []
+    for gf in governing_files:
+        if gf not in file_cache:
+            with open(os.path.join(ROOT, gf), encoding="utf-8") as fh:
+                file_cache[gf] = fh.read()
+        parts.append(f"----- {gf} -----\n{file_cache[gf]}")
+    return "\n\n".join(parts)
+
+
+def _extract_decision_line(reply):
+    """Pull the free-text decision out of a single-scenario reply's 'DECISION: ...' line (first such line,
+    matched case-insensitively, may appear after preamble text), falling back to the whole stripped reply
+    when no ':'-delimited DECISION line is present at all (the model answered with just a bare token, e.g.
+    'GO'). Unchanged from run_live()'s pre-batching inline logic — pulled out only so the single-scenario
+    path and the batch path's per-id extraction (parse_batch_reply) sit side by side without duplicating
+    this scan."""
+    actual_line = next((ln for ln in reply.splitlines() if ln.strip().upper().startswith("DECISION:")), "")
+    return actual_line.split(":", 1)[1].strip() if ":" in actual_line else reply.strip()
+
+
+def _score_decision(sc, actual_decision, reply_for_record, model_used):
+    """Score an already-extracted `actual_decision` string against `sc`'s expected_decision, returning a
+    result dict in run_live()'s standard shape ({id, expected, actual, match, reply, model}) and printing
+    the flip/unparseable annotations exactly as before the 2026-08-17 batching refactor. `reply_for_record`
+    is whatever should be stored in the result's 'reply' field for diagnosis — the single-scenario reply
+    text, or the shared multi-scenario batch reply for a scenario that was scored as part of a group.
+    Shared by BOTH the single-scenario path (which first extracts a DECISION: line via
+    _extract_decision_line) and the batch path (which gets its per-id decision text straight from
+    parse_batch_reply()) so match/UNPARSEABLE grading can never drift between the two call shapes — this
+    is the exact grading logic run_live() used inline before batching, unchanged in behavior."""
+    sid = sc.get("id")
+    expected_tok = _leading_token(sc.get("expected_decision"))
+    actual_tok = _leading_token(actual_decision)
+
+    if actual_tok is None:
+        # The model replied (no exception) but the answer didn't start with ANY recognized
+        # DECISION_LEAD_TOKENS token -- it ignored the "<one of ...>" instruction and invented its own
+        # word. That's a format-following failure, not a decision disagreement: there is no real
+        # expected-vs-actual call to adjudicate, so it must not be blended into the FLIP bucket below
+        # (which proposes a prose-regression review) or silently miscounted as one.
+        match = "UNPARSEABLE"
+    else:
+        match = expected_tok is not None and expected_tok == actual_tok
+
+    result = {"id": sid, "expected": sc.get("expected_decision"), "actual": actual_decision,
+              "match": match, "reply": reply_for_record, "model": model_used}
+
+    if match is False:
+        print(
+            f"::warning file=tests/golden_scenarios/scenarios.yaml::{sid} decision flip — "
+            f"expected '{sc.get('expected_decision')}' got '{actual_decision}'. "
+            f"Governing files: {sc.get('governing_files')}.",
+            flush=True,
+        )
+        print(build_queue_insert_sql(sid, sc.get("expected_decision"), actual_decision,
+                                      sc.get("governing_files")), flush=True)
+    elif match == "UNPARSEABLE":
+        print(
+            f"::warning::{sid}: model reply had no recognized decision token — got '{actual_decision}'. "
+            f"Not filed as a decision flip (no expected-vs-actual call to adjudicate); no "
+            f"queue_events INSERT emitted.",
+            flush=True,
+        )
+    return result
+
+
+def build_single_prompt(scenario, gov_text, id_to_scenario=None):
+    """Build the single-scenario EVAL_PROMPT_TEMPLATE prompt for ONE `scenario` — the GOLDEN_BATCH=0 /
+    size-1-group / batch-zero-parsed-fallback path's prompt builder, factored out of _run_one_scenario_
+    live() (2026-08-17, alongside referenced_scenario_ids()) so it is directly unit-testable exactly like
+    build_batch_prompt() is, instead of only reachable through _run_one_scenario_live()'s file I/O + live
+    call_model() side effects.
+
+    Wires the SAME cross-scenario reference resolution as build_batch_prompt() (see that function's
+    docstring and _render_reference_context_block()) into EVAL_PROMPT_TEMPLATE's {reference_context_block}
+    placeholder: id_to_scenario (optional; id -> full scenario dict, typically every id in scenarios.yaml)
+    is where a referenced sibling's situation text is looked up. Omitting it (the default) disables
+    resolution entirely, reproducing this path's exact pre-2026-08-17 output."""
+    sid = scenario.get("id")
+    known_ids = set(id_to_scenario) if id_to_scenario else set()
+    ref_ids = _reference_context_ids_for([scenario], {sid}, known_ids)
+    reference_context_block = _render_reference_context_block(ref_ids, id_to_scenario or {})
+    return EVAL_PROMPT_TEMPLATE.format(
+        governing_files_text=gov_text,
+        situation=(scenario.get("situation") or "").strip(),
+        allowed_decisions=_allowed_decisions_for(scenario),
+        reference_context_block=reference_context_block,
+    )
+
+
+def _run_one_scenario_live(sc, call_model, file_cache, id_to_scenario):
+    """Evaluate exactly ONE scenario via the plain (non-batched) EVAL_PROMPT_TEMPLATE path (build_single_
+    prompt(), which resolves any cross-scenario reference in `sc`'s own situation text against
+    `id_to_scenario` — see that function and referenced_scenario_ids()) and return its result dict
+    (run_live()'s standard shape). Raises whatever call_model() raises, OR an OSError from reading a
+    governing_file — both left uncaught here BY DESIGN, exactly like _read_governing_text(): the
+    governing_files read must stay inside the CALLER's try/except (2026-07-29 comment) so a read failure
+    degrades only the scenario/group attempting it.
+
+    This is run_live()'s pre-batching per-scenario code path, factored out unchanged (2026-08-17) so THREE
+    different callers share it instead of three copies that could quietly drift apart:
+      * GOLDEN_BATCH=0 (the escape hatch back to today's exact behavior),
+      * a lone scenario's own size-1 group (see run_live()'s docstring for why size 1 bypasses batching
+        entirely rather than going through build_batch_prompt/parse_batch_reply for a single situation),
+      * a batch group's zero-parsed fallback (_run_batch_group, below)."""
+    gov_text = _read_governing_text(sc.get("governing_files") or [], file_cache)
+    prompt = build_single_prompt(sc, gov_text, id_to_scenario)
+    reply, model_used = call_model(prompt)
+    return _score_decision(sc, _extract_decision_line(reply), reply, model_used)
+
+
+def _run_batch_group(group, call_model, file_cache, results, gi, n_groups, id_to_scenario):
+    """Attempt ONE call_model() call for `group` (2+ scenarios sharing a governing_files set) via
+    build_batch_prompt()/parse_batch_reply(), APPENDING each scenario's result dict to `results` as it is
+    produced rather than returning a list — so that if a whole-run terminal signal
+    (_GeminiRunBudgetExhausted / _GeminiLadderPermanentlyDead) is raised PARTWAY through the zero-parse
+    fallback below, group-mates already scored before that point keep their REAL result instead of being
+    overwritten as SKIPPED by run_live()'s handler (which tells "already evaluated" from "not yet" by
+    checking which ids are already present in `results`).
+
+    Falls back to individual per-scenario calls (_run_one_scenario_live) for the WHOLE group ONLY when
+    parse_batch_reply() extracts ZERO ids from the batch reply (the reply was entirely unusable for this
+    group — wrong format, empty, the model ignored the per-id instruction entirely). A PARTIAL parse (some
+    ids present, others missing) is instead handled per-id below — a missing id becomes THAT scenario's
+    own match=None failure without affecting a group-mate whose id DID parse (spec requirement: "must NOT
+    poison its group-mates"). Each fallback sub-call is itself wrapped so one scenario's ordinary failure
+    there doesn't lose its already-fallback-evaluated group-mates either, mirroring the "no single
+    scenario's outcome may prevent a later one" doctrine (owner directive 2026-08-17) at group-fallback
+    granularity.
+
+    Raises exactly what call_model() (or a governing_files read) itself raises — including the two
+    whole-run stop signals — so run_live()'s outer try/except handles a batch call identically to a single
+    one; this function does not catch a whole-run stop signal internally.
+
+    `id_to_scenario` (2026-08-17; id -> full scenario dict, typically every id in scenarios.yaml) is
+    threaded straight through to build_batch_prompt() (for the group's own cross-scenario reference
+    resolution) and to each _run_one_scenario_live() fallback call below (so a reference doesn't silently
+    stop resolving just because the group's batch reply happened to be unparseable)."""
+    ids = [sc.get("id") for sc in group]
+    gov_text = _read_governing_text(group[0].get("governing_files") or [], file_cache)
+    prompt = build_batch_prompt(group, gov_text, id_to_scenario)
+    reply, model_used = call_model(prompt)
+    parsed = parse_batch_reply(reply, ids)
+
+    if all(v is None for v in parsed.values()):
+        print(
+            f"::warning::golden live group {gi + 1}/{n_groups} ({', '.join(ids)}): batch reply had zero "
+            f"parseable DECISION[<id>]: line(s) — falling back to {len(group)} individual per-scenario "
+            f"call(s) for this group.",
+            file=sys.stderr, flush=True,
+        )
+        for sc in group:
+            try:
+                results.append(_run_one_scenario_live(sc, call_model, file_cache, id_to_scenario))
+            except (_GeminiRunBudgetExhausted, _GeminiLadderPermanentlyDead):
+                raise  # whole-run stop signal -- propagate untouched, run_live() handles it
+            except Exception as exc:  # noqa: BLE001 — one fallback sub-call must not sink its group-mates
+                print(f"::warning::{sc.get('id')}: model call failed (batch-fallback) — {exc}",
+                      file=sys.stderr, flush=True)
+                results.append({"id": sc.get("id"), "expected": sc.get("expected_decision"), "actual": None,
+                                 "match": None, "reply": str(exc), "model": None})
+        return
+
+    for sc in group:
+        sid = sc.get("id")
+        actual_decision = parsed.get(sid)
+        if actual_decision is None:
+            print(
+                f"::warning::{sid}: batch reply (group {gi + 1}/{n_groups}) had no DECISION[{sid}]: line "
+                f"— scored as this scenario's own parse failure, not a decision flip (its group-mates "
+                f"parsed fine).",
+                file=sys.stderr, flush=True,
+            )
+            results.append({"id": sid, "expected": sc.get("expected_decision"), "actual": None,
+                             "match": None, "reply": reply, "model": model_used})
+            continue
+        results.append(_score_decision(sc, actual_decision, reply, model_used))
+
+
+def run_live(scenarios, scenario_ids=None):
+    """Call the live Gemini model ladder, GROUPED by shared governing_files (BATCHING, 2026-08-17 — see
+    the comment above group_scenarios_for_batching()), and diff each scenario's decision vs. its pinned
+    expected_decision. Enabled by GEMINI_API_KEY (the sole provider; owner directive 2026-07-17). Advisory
+    only — never returns a failing process exit code by itself; the caller decides.
+
+    DISPATCH PER GROUP:
+      * A group of size 1 BYPASSES the batch machinery entirely and goes straight to
+        _run_one_scenario_live() (EVAL_PROMPT_TEMPLATE, unchanged from pre-batching) — there is nothing to
+        batch for a single situation, so this is byte-identical to today's behavior, strictly simpler than
+        building/parsing a one-situation batch prompt, and carries zero batch-reply parse risk for zero
+        benefit. GOLDEN_BATCH=0 (env, default unset => batching ON) makes EVERY group size 1 in
+        scenarios.yaml order (no byte-size reordering either) — the full escape hatch back to today's
+        exact per-scenario call sequence.
+      * A group of size 2+ goes through _run_batch_group() (one call_model() call via
+        build_batch_prompt()/parse_batch_reply(), with a per-scenario-call fallback if the reply parses
+        zero ids — see that function's docstring).
+
+    STOPS EARLY (owner directive 2026-08-17, preserved unchanged by batching) on either whole-run signal
+    _gemini_call can raise — _GeminiRunBudgetExhausted (GEMINI_RUN_BUDGET_S spent) or
+    _GeminiLadderPermanentlyDead (every ladder model in state['dead']) — recording every NOT-YET-evaluated
+    scenario as match='SKIPPED' with the reason ("never a silent nothing"). "Not-yet-evaluated" is
+    determined by id membership in `results`, not by group boundaries: a group whose fallback sub-loop
+    partially completed before the signal fired keeps its already-scored members' REAL results, only the
+    rest (starting with whichever scenario's call actually raised, plus every scenario in every later
+    group) become SKIPPED. A terminal signal raised on a MULTI-scenario group's initial (non-fallback)
+    batch call has no partial completion to preserve — the whole group is "not yet evaluated" together,
+    since one shared call answering for N scenarios cannot fail for only some of them.
+
+    Any OTHER exception is a per-GROUP failure that does NOT stop the loop: every scenario in that group
+    gets match=None (a plain per-scenario RuntimeError, or a governing_files read failure, raised by a
+    single shared call answering for a whole batch group necessarily fails that whole group together — see
+    the module's BATCHING comment for why this is the correct, not merely tolerated, consequence of
+    batching multiple scenarios onto one call). No single group's failure may prevent a LATER group from
+    attempting its own call.
+
+    CROSS-SCENARIO REFERENCES (2026-08-17, see the comment above referenced_scenario_ids()): `id_to_
+    scenario` is built here from the FULL `scenarios` list (every id in scenarios.yaml), not just `target`
+    — a --scenario-filtered run can still resolve a reference to a sibling that isn't itself being
+    evaluated this run — and threaded into both dispatch branches below so a referenced sibling's facts
+    reach the model regardless of which path (size-1 / batched / GOLDEN_BATCH=0) a given scenario takes."""
     call_model = _select_live_caller()
     if call_model is None:
         return []
     results = []
     file_cache = {}
+    id_to_scenario = {sc.get("id"): sc for sc in scenarios if isinstance(sc, dict) and sc.get("id")}
 
     target = [sc for sc in scenarios if not scenario_ids or sc.get("id") in scenario_ids]
 
-    for i, sc in enumerate(target):
-        sid = sc.get("id")
+    batching_enabled = os.environ.get("GOLDEN_BATCH", "1") != "0"
+    if batching_enabled:
+        groups = group_scenarios_for_batching(target)
+    else:
+        # GOLDEN_BATCH=0 escape hatch: one group per scenario, scenarios.yaml order preserved (no
+        # byte-size reordering) — restores today's exact one-call-per-scenario call sequence.
+        groups = [[sc] for sc in target]
 
-        # 2026-07-29 bug hunt: this governing_files read used to sit OUTSIDE the try/except below, so one
-        # scenario with a missing/unreadable governing_file raised an uncaught OSError straight out of
-        # run_live() — aborting the ENTIRE batch (every later scenario silently never evaluated) instead
-        # of degrading just that one scenario, unlike every other per-scenario failure this loop already
-        # handles (a bad model call, a malformed reply, etc.). Folded into the same try/except so a read
-        # failure is reported and scored exactly like a model-call failure.
+    run_t0 = time.monotonic()
+    state_ref = getattr(call_model, "state", None)  # None for a test's fake caller — see _select_live_caller
+
+    def _counter(key, default=0):
+        return (state_ref or {}).get(key, default)
+
+    for gi, group in enumerate(groups):
+        group_ids = [sc.get("id") for sc in group]
+        group_t0 = time.monotonic()
+        attempts_before = _counter("total_attempts")
         try:
-            gov_text_parts = []
-            for gf in sc.get("governing_files", []):
-                if gf not in file_cache:
-                    with open(os.path.join(ROOT, gf), encoding="utf-8") as fh:
-                        file_cache[gf] = fh.read()
-                gov_text_parts.append(f"----- {gf} -----\n{file_cache[gf]}")
-            prompt = EVAL_PROMPT_TEMPLATE.format(
-                governing_files_text="\n\n".join(gov_text_parts),
-                situation=sc.get("situation", "").strip(),
-                allowed_decisions=_allowed_decisions_for(sc),
-            )
-            reply, model_used = call_model(prompt)
+            if len(group) == 1:
+                results.append(_run_one_scenario_live(group[0], call_model, file_cache, id_to_scenario))
+            else:
+                _run_batch_group(group, call_model, file_cache, results, gi, len(groups), id_to_scenario)
         except (_GeminiRunBudgetExhausted, _GeminiLadderPermanentlyDead) as exc:
-            remaining = target[i:]
-            print(
-                f"::warning::{sid}: {exc} — stopping further live attempts this run "
-                f"({len(remaining)} scenario(s), including this one, not evaluated).",
-                file=sys.stderr,
-            )
+            already_ids = {r["id"] for r in results}
+            remaining = [sc for grp in groups[gi:] for sc in grp if sc.get("id") not in already_ids]
+            if len(group) == 1:
+                sid = group[0].get("id")
+                print(
+                    f"::warning::{sid}: {exc} — stopping further live attempts this run "
+                    f"({len(remaining)} scenario(s), including this one, not evaluated).",
+                    file=sys.stderr, flush=True,
+                )
+            else:
+                print(
+                    f"::warning::group {gi + 1}/{len(groups)} ({', '.join(group_ids)}): {exc} — stopping "
+                    f"further live attempts this run ({len(remaining)} scenario(s), not evaluated).",
+                    file=sys.stderr, flush=True,
+                )
             for rem in remaining:
                 results.append({"id": rem.get("id"), "expected": rem.get("expected_decision"),
                                  "actual": None, "match": "SKIPPED", "reply": str(exc), "model": None})
             break
-        except Exception as exc:  # noqa: BLE001 — advisory path, any failure is reported, not raised
-            print(f"::warning::{sid}: model call failed — {exc}", file=sys.stderr)
-            results.append({"id": sid, "expected": sc.get("expected_decision"), "actual": None,
-                             "match": None, "reply": str(exc), "model": None})
-            continue
-
-        actual_line = next((ln for ln in reply.splitlines() if ln.strip().upper().startswith("DECISION:")), "")
-        actual_decision = actual_line.split(":", 1)[1].strip() if ":" in actual_line else reply.strip()
-        expected_tok = _leading_token(sc.get("expected_decision"))
-        actual_tok = _leading_token(actual_decision)
-
-        if actual_tok is None:
-            # The model replied (no exception) but the answer didn't start with ANY recognized
-            # DECISION_LEAD_TOKENS token -- it ignored the "<one of ...>" instruction and invented its
-            # own word. That's a format-following failure, not a decision disagreement: there is no real
-            # expected-vs-actual call to adjudicate, so it must not be blended into the FLIP bucket below
-            # (which proposes a prose-regression review) or silently miscounted as one.
-            match = "UNPARSEABLE"
-        else:
-            match = expected_tok is not None and expected_tok == actual_tok
-
-        results.append({
-            "id": sid, "expected": sc.get("expected_decision"), "actual": actual_decision,
-            "match": match, "reply": reply, "model": model_used,
-        })
-
-        if match is False:
+        except Exception as exc:  # noqa: BLE001 — advisory path; a group failure must not stop the loop
+            already_ids = {r["id"] for r in results}
+            for sc in group:
+                if sc.get("id") in already_ids:
+                    continue
+                if len(group) == 1:
+                    print(f"::warning::{sc.get('id')}: model call failed — {exc}",
+                          file=sys.stderr, flush=True)
+                else:
+                    print(f"::warning::{sc.get('id')} (group {gi + 1}/{len(groups)}): model call failed "
+                          f"— {exc}", file=sys.stderr, flush=True)
+                results.append({"id": sc.get("id"), "expected": sc.get("expected_decision"), "actual": None,
+                                 "match": None, "reply": str(exc), "model": None})
+        finally:
+            group_elapsed = time.monotonic() - group_t0
+            attempts_used = _counter("total_attempts") - attempts_before
             print(
-                f"::warning file=tests/golden_scenarios/scenarios.yaml::{sid} decision flip — "
-                f"expected '{sc.get('expected_decision')}' got '{actual_decision}'. "
-                f"Governing files: {sc.get('governing_files')}."
-            )
-            print(QUEUE_INSERT_TEMPLATE.format(
-                scenario_id=sid,
-                expected=sc.get("expected_decision"),
-                actual=actual_decision,
-                governing_files=sc.get("governing_files"),
-            ))
-        elif match == "UNPARSEABLE":
-            print(
-                f"::warning::{sid}: model reply had no recognized decision token — got '{actual_decision}'. "
-                f"Not filed as a decision flip (no expected-vs-actual call to adjudicate); no "
-                f"queue_events INSERT emitted."
+                f"::debug::golden live group {gi + 1}/{len(groups)} done — ids={group_ids} "
+                f"elapsed={group_elapsed:.1f}s attempts={attempts_used}",
+                file=sys.stderr, flush=True,
             )
 
+    run_elapsed = time.monotonic() - run_t0
+    print(
+        f"::notice::golden live run summary — wall_clock={run_elapsed:.1f}s attempts={_counter('total_attempts')} "
+        f"429s(rpm={_counter('total_429_rpm')}, daily={_counter('total_429_daily')}) "
+        f"tokens_sent~={_counter('total_tokens_sent')} (includes every retry) sleep(pacing="
+        f"{_counter('sleep_pacing_s', 0.0):.1f}s, rpm_retry={_counter('sleep_rpm_retry_s', 0.0):.1f}s, "
+        f"rewind={_counter('sleep_rewind_s', 0.0):.1f}s) — see the OBSERVABILITY comment above "
+        f"GEMINI_MODEL_LADDER for why this line exists (CI run 32043614925, 2026-08-17).",
+        file=sys.stderr, flush=True,
+    )
     return results
 
 
@@ -846,15 +1552,17 @@ def main():
 
     _provider = "Gemini free tier" if os.environ.get("GEMINI_API_KEY") else "none configured (set GEMINI_API_KEY)"
     print(f"\nLive mode — provider={_provider}, {len(scenarios)} scenario(s) "
-          f"(filter: {args.scenario_ids or 'all'})")
+          f"(filter: {args.scenario_ids or 'all'})", flush=True)
     if args.scenario_ids:
         known_ids = {sc.get("id") for sc in scenarios}
         unknown = [sid for sid in args.scenario_ids if sid not in known_ids]
         if unknown:
-            print(f"::warning::--scenario id(s) not found in scenarios.yaml: {unknown}", file=sys.stderr)
+            print(f"::warning::--scenario id(s) not found in scenarios.yaml: {unknown}",
+                  file=sys.stderr, flush=True)
     results = run_live(scenarios, scenario_ids=args.scenario_ids)
     if not results:
-        print("Live run produced no results (skipped — see notice/warning above). Advisory: exit 0.")
+        print("Live run produced no results (skipped — see notice/warning above). Advisory: exit 0.",
+              flush=True)
         return 0
 
     n_match = sum(1 for r in results if r["match"] is True)
@@ -864,7 +1572,8 @@ def main():
     n_err = sum(1 for r in results if r["match"] is None)
     n_evaluated = len(results) - n_skipped
     print(f"\nLive results: {n_match} match, {n_flip} flip(s), {n_unparseable} unparseable, "
-          f"{n_err} error(s), {n_skipped} skipped ({n_evaluated} evaluated) out of {len(results)}.")
+          f"{n_err} error(s), {n_skipped} skipped ({n_evaluated} evaluated) out of {len(results)}.",
+          flush=True)
     for r in results:
         if r["match"] is True:
             status = "MATCH"
@@ -876,7 +1585,7 @@ def main():
             status = "SKIPPED"
         else:
             status = "ERROR"
-        print(f"  [{status}] {r['id']}: expected={r['expected']!r} actual={r['actual']!r}")
+        print(f"  [{status}] {r['id']}: expected={r['expected']!r} actual={r['actual']!r}", flush=True)
 
     # NEVER A SILENT NOTHING (owner directive 2026-08-17): always state how many scenarios were evaluated
     # vs. skipped, and why, as a GitHub Actions annotation — the only surface a human actually reads for
@@ -886,10 +1595,11 @@ def main():
     if n_skipped:
         skip_reasons = sorted({r["reply"] for r in results if r["match"] == "SKIPPED"})
         print(f"::warning::golden live run: {n_skipped} scenario(s) SKIPPED (not attempted), "
-              f"{n_evaluated} evaluated out of {len(results)}. Skip reason(s): {'; '.join(skip_reasons)}")
+              f"{n_evaluated} evaluated out of {len(results)}. Skip reason(s): {'; '.join(skip_reasons)}",
+              flush=True)
     else:
         print(f"::notice::golden live run: all {n_evaluated} scenario(s) considered were evaluated "
-              f"(0 skipped).")
+              f"(0 skipped).", flush=True)
 
     # Advisory only — see module docstring. A flip, error, or skip is reported (already emitted as
     # ::warning:: above) but never fails the process; the workflow's continue-on-error is the other
