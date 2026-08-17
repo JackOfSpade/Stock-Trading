@@ -38,7 +38,7 @@
   "mcp__Hugging_Face__hf_hub_query","mcp__Hugging_Face__hub_repo_search",
   "mcp__Hugging_Face__hub_repo_details","mcp__Hugging_Face__space_search","mcp__Hugging_Face__dynamic_space",
       "mcp__FMP__quote","mcp__FMP__chart","mcp__FMP__marketHours","mcp__FMP__economics",
-      "mcp__FMP__news","mcp__FMP__secFilings"
+      "mcp__FMP__news","mcp__FMP__secFilings","mcp__FMP__calendar"
     ]
   }
 }

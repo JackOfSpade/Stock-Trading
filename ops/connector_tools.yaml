@@ -94,8 +94,15 @@ connectors:
         use: unused
         prose_ambiguous: true
       - name: calendar
-        use: unused
+        use: required
         prose_ambiguous: true
+        note: >-
+          W2 SHARED POPULATION PULL (Claude_Task_Plan.md §W2) — the orchestrator's single
+          pre-fan-out `earnings-calendar` pull that the discovery sub-agents consume instead
+          of each querying FMP themselves (added 2026-08-17 after the W2 2026-W34 free-tier
+          exhaustion; see the shared "One shared pull, not N independent ones" rule). Flipped
+          unused→required in that commit: it is now a named call site, so it must be allowlisted
+          or an unattended W2 stalls on a permission prompt at the top of the run.
       - name: chart
         use: required
         prose_ambiguous: true
@@ -160,11 +167,22 @@ connectors:
         use: required
         prose_ambiguous: true
         note: >
-          Claude_Task_Plan.md:1336 records this as plan-gated (needs FMP Premium+) on the
-          current FMP tier — referenced by routine text but currently ACCESS DENIED
-          (OWNER_ACTIONS.md item W, owner declined to restore the tier 2026-07-19). OPS1
-          deliberately does NOT probe this tool for liveness (it would false-fire on the
-          tier gate, not on an auth failure) — `chart` is the probe target instead.
+          `required` per this manifest's semantics — named by full token in routine text
+          (5 sites: D2a `^VIX`/`daily_marks`, W5 shadow marks), so it MUST stay allowlisted
+          or an unattended run stalls on a permission prompt. That is NOT a claim it is
+          load-bearing: every one of those sites has IBKR as PRIMARY with this tool as a
+          best-effort FALLBACK (rewired 2026-07-19, OWNER_ACTIONS.md item W, when the owner
+          declined the tier purchase).
+          PARTIAL AVAILABILITY, not blanket denial (note corrected 2026-08-17 — this entry
+          previously read "currently ACCESS DENIED", which overstated it and contradicted
+          Claude_Task_Plan.md's own W5 text). Since FMP's 2026-07-19 free-tier re-scoping
+          this tool RESOLVES for FMP's free-list symbols (~87 big-caps + 9 indexes) and is
+          symbol-blocked for everything else; the deeper history/ETF endpoints remain
+          plan-gated at Premium+. The `daily_marks` ETF-mark fallback that ran through here
+          stays DEAD — an accepted loss, since it only mattered when IBKR itself was down on
+          a marking day and a missed mark self-heals on the next healthy run.
+          OPS1 deliberately does NOT probe this tool for liveness (it would false-fire on the
+          tier/symbol gate rather than on an auth failure) — `chart` is the probe target.
       - name: search
         use: unused
         prose_ambiguous: true
