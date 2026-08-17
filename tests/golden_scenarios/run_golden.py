@@ -57,6 +57,23 @@ TWO MODES, matching the two-job split in .github/workflows/golden-scenarios.yml:
       GEMINI_MODEL_LADDER below for the per-attempt/per-group logging added alongside batching so a run
       like 32043614925 is diagnosable instead of just "11 of 33, no idea where the time went."
 
+      SECTION SCOPING (2026-08-17, follow-up to the above — GOLDEN_SECTION_SCOPE, default ON;
+      GOLDEN_SECTION_SCOPE=0 sends every governing_files entry whole, for an A/B run against the scoped
+      verdicts): batching alone was not enough. CI run 32069773377 (AFTER batching landed) still only
+      evaluated 23 of 33 scenarios, with 429s(rpm=83) out of 88 attempts — 94% REJECTED — at just 1.78
+      requests/min but 480,044 tokens/min: the binding constraint is TOKENS-per-minute, not requests, and
+      the single largest prompt was 294,554 tokens — 118% of an entire minute's free-tier budget, so it
+      could never succeed no matter how long the runner waited (a retry re-sends the whole prompt, which is
+      how 1.37M tokens of real content became 23.7M on the wire). A scenario's `governing_sections` (per-
+      scenario, optional; see the SECTION SCOPING comment above _read_governing_text() below for the exact
+      schema and extraction rules) scopes any governing_files entry down to just the heading section(s) that
+      actually decide it, instead of the whole file — the only remaining lever once batching had already
+      collapsed the PER-SCENARIO duplication. validate_offline() is the hard gate for this (a mis-declared
+      anchor fails the BUILD, never silently starves the judge); group_scenarios_for_batching()'s key
+      changed from a plain governing_files SET to a hash of the ASSEMBLED (possibly scoped) governing TEXT,
+      so two scenarios sharing a file but scoping it to different sections never get merged into one call
+      that would otherwise silently show them the wrong excerpt.
+
 Usage:
   python tests/golden_scenarios/run_golden.py --offline
   python tests/golden_scenarios/run_golden.py --live [--scenario ID ...]   # needs GEMINI_API_KEY
@@ -70,6 +87,7 @@ Usage:
       under tests/golden_scenarios/ itself, both select EVERY scenario id).
 """
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -399,7 +417,23 @@ def scenarios_for_changed_files(scenarios, changed_files):
     result is the entire cost saving: the caller skips the live (billed) run altogether in that case.
 
     Pure and side-effect-free (no network, no file I/O beyond what `scenarios` already embeds) so it is
-    plain-unit-testable without a real git repo or a live model."""
+    plain-unit-testable without a real git repo or a live model.
+
+    DELIBERATELY STAYS FILE-LEVEL, not section-level (2026-08-17 SECTION SCOPING addendum): this function
+    intersects `changed_files` against a scenario's `governing_files` list ONLY — it does NOT consult
+    governing_sections to ask "did the change actually land inside the anchored heading(s)?" A change
+    anywhere in a governing file still re-runs every scenario that file governs, even one whose
+    governing_sections only reads a small slice of it. This is the mirror image of section scoping's own
+    asymmetry: OVER-TRIGGER (re-run on any change to the file, even outside the scoped section) but
+    UNDER-SEND (only the scoped section's text actually reaches the model once triggered). Narrowing this
+    function to sections would risk the opposite failure mode from an unrelated diff slipping through
+    unnoticed: a change to some OTHER heading in the same file could still be a genuine prose regression for
+    a scenario currently scoped to a different heading (e.g. a renumbered/renamed anchor upstream, a
+    cross-reference between sections, a changed shared definition), and staying blind to that would convert
+    an advisory-but-real signal into a false negative. Re-evaluating a scenario whose actual excerpt didn't
+    change is comparatively cheap (one skipped/negative live call); silently NOT re-evaluating a scenario
+    whose excerpt DID change is the failure this cost-scoping function exists to never produce (see the
+    fail-open rules above) — so this stays over-triggering, under-sending is section scoping's job alone."""
     if not changed_files:
         return sorted(sc.get("id") for sc in scenarios if isinstance(sc, dict) and sc.get("id"))
     changed = set(changed_files)
@@ -416,7 +450,20 @@ def scenarios_for_changed_files(scenarios, changed_files):
 
 def validate_offline(scenarios):
     """Pure schema + file-existence validation. No network, no model call. Returns a list of error
-    strings (empty list = pass). This is the function the CI hard gate depends on."""
+    strings (empty list = pass). This is the function the CI hard gate depends on.
+
+    Also validates each scenario's OPTIONAL governing_sections mapping (2026-08-17 SECTION SCOPING — see
+    the comment above _read_governing_text() below for the full "why"): every file key must be one of this
+    scenario's own governing_files, every anchor must match EXACTLY ONE heading line in that file (zero or
+    2+ matches is an error), and an empty anchor list is rejected explicitly. This is a load-bearing part of
+    the hard gate, not a cosmetic addition — a mis-declared anchor would otherwise silently starve the live
+    judge of the one rule it needed, with the offline gate staying green throughout. As a side effect (not
+    an error, not reflected in the returned list), a clean governing_sections entry also PRINTS a one-line
+    excerpt-size-vs-full-file-size report to stdout, so a suspiciously tiny excerpt is visible in CI output
+    without anyone having to go look for it — see that print's own comment further down. A scenario with no
+    governing_sections key at all triggers none of this (no new errors, no new prints), which is what keeps
+    this function's behavior against today's real scenarios.yaml (no scenario uses the feature yet) exactly
+    what it was before this feature existed."""
     errors = []
     seen_ids = set()
     for i, sc in enumerate(scenarios):
@@ -464,6 +511,103 @@ def validate_offline(scenarios):
                     errors.append(f"{label}: governing_file '{gf}' does not exist at {full}")
         elif gov is not None:
             errors.append(f"{label}: governing_files must be a list, got {type(gov).__name__}")
+
+        # governing_sections (2026-08-17 SECTION SCOPING — see the comment above _read_governing_text() for
+        # the full "why" narrative, CI run 32069773377): OPTIONAL per-scenario map of governing_files entry
+        # -> [heading anchor, ...]. This IS the load-bearing validation the task spec calls for — a
+        # mis-declared anchor must fail the BUILD, not silently starve the judge of the rule it actually
+        # needed while the offline gate stays green. A scenario with no governing_sections key at all skips
+        # this block entirely (gov_sections is None) and is completely unaffected, which is what keeps
+        # today's real scenarios.yaml (no scenario uses this feature yet) passing with zero new errors and
+        # zero new report lines.
+        gov_sections = sc.get("governing_sections")
+        if gov_sections is not None:
+            if not isinstance(gov_sections, dict):
+                errors.append(
+                    f"{label}: governing_sections must be a mapping of governing_files entry -> "
+                    f"[heading anchor, ...], got {type(gov_sections).__name__}"
+                )
+            else:
+                gov_file_set = set(gov) if isinstance(gov, list) else set()
+                for gf, anchors in gov_sections.items():
+                    # Every governing_sections key MUST also be one of this scenario's own governing_files —
+                    # a section-scoping entry for a file the scenario doesn't even read is meaningless and
+                    # almost certainly a stale/typo'd key left over from an edit.
+                    if gf not in gov_file_set:
+                        errors.append(
+                            f"{label}: governing_sections key '{gf}' is not in this scenario's "
+                            f"governing_files ({gov!r}) — a scoping entry for a file the scenario doesn't "
+                            f"read is meaningless, likely a stale/typo'd key"
+                        )
+                        continue
+                    # An empty anchor list is REJECTED outright rather than silently falling back to "send
+                    # the whole file" (spec requirement: "say so explicitly rather than silently sending the
+                    # whole file") — the author's intent is ambiguous (did they mean to scope this file and
+                    # forget the anchors, or not scope it at all?), and staying silent here would be exactly
+                    # the kind of mis-declaration this validation exists to catch.
+                    if not isinstance(anchors, list) or not anchors:
+                        errors.append(
+                            f"{label}: governing_sections['{gf}'] must be a non-empty list of heading "
+                            f"anchors — an empty/missing list is rejected explicitly rather than silently "
+                            f"sending the whole file; omit the '{gf}' key entirely to send it whole"
+                        )
+                        continue
+                    full_path = os.path.join(ROOT, gf)
+                    if not os.path.isfile(full_path):
+                        continue  # already reported as a missing governing_file by the gov-files loop above
+                    try:
+                        with open(full_path, encoding="utf-8") as fh:
+                            file_text = fh.read()
+                    except OSError as exc:
+                        errors.append(
+                            f"{label}: could not read '{gf}' to validate governing_sections anchors: {exc}"
+                        )
+                        continue
+                    headings = _document_headings(file_text)
+                    anchors_ok = True
+                    checked_keys = set()
+                    for a in anchors:
+                        if not isinstance(a, str) or not a.strip():
+                            errors.append(
+                                f"{label}: governing_sections['{gf}'] has a non-string/empty anchor entry "
+                                f"{a!r}"
+                            )
+                            anchors_ok = False
+                            continue
+                        key = a.rstrip()
+                        if key in checked_keys:
+                            continue  # de-duplicated anchor — already validated once, don't double-report
+                        checked_keys.add(key)
+                        n_matches = len(_anchor_heading_indices(headings, a))
+                        if n_matches == 0:
+                            errors.append(
+                                f"{label}: governing_sections['{gf}'] anchor {a!r} does not match any "
+                                f"heading line in {gf} — likely stale (the heading was renamed/removed) or "
+                                f"a typo"
+                            )
+                            anchors_ok = False
+                        elif n_matches > 1:
+                            errors.append(
+                                f"{label}: governing_sections['{gf}'] anchor {a!r} matches {n_matches} "
+                                f"heading lines in {gf} — ambiguous (the slice it selects is undefined); "
+                                f"anchors must match EXACTLY ONE heading"
+                            )
+                            anchors_ok = False
+                    # Per-scenario excerpt-size-vs-full-file report (spec requirement: "so a suspiciously
+                    # tiny excerpt is visible in CI output"). Only printed once every anchor for this file
+                    # validated cleanly — a broken anchor set has no well-defined excerpt to report on, and
+                    # its own error(s) above are already the actionable CI output for that case.
+                    if anchors_ok:
+                        excerpt_text, n_blocks, n_anchors = extract_sections(file_text, anchors)
+                        full_bytes = len(file_text.encode("utf-8"))
+                        excerpt_bytes = len(excerpt_text.encode("utf-8"))
+                        pct = (100.0 * excerpt_bytes / full_bytes) if full_bytes else 0.0
+                        print(
+                            f"  [governing_sections] {label} / {gf}: excerpt {excerpt_bytes:,} bytes of "
+                            f"{full_bytes:,} full-file bytes ({pct:.1f}%), {n_blocks} of {n_anchors} "
+                            f"section(s) — {'SUSPICIOUSLY TINY, double-check the anchors' if pct < 1.0 and full_bytes else 'ok'}",
+                            flush=True,
+                        )
 
         decision = sc.get("expected_decision")
         if isinstance(decision, str) and decision.strip():
@@ -905,12 +1049,47 @@ def _select_live_caller():
 GOLDEN_BATCH_MAX_DEFAULT = 8
 
 
+def _governing_text_group_key(sc, text_cache):
+    """The batching group key: a stable hash of `sc`'s ASSEMBLED GOVERNING TEXT — i.e. exactly what
+    _read_governing_text(sc's governing_files, ..., sc's governing_sections) would produce — rather than the
+    OLD frozenset(governing_files) key. This is the load-bearing change SECTION SCOPING requires of batching
+    (task spec): two scenarios must land in the same group ONLY when they would receive byte-identical
+    governing text, so a scenario that scopes Claude_Task_Plan.md down to '## OPS2.' must NOT be batched
+    with one that scopes it down to '### PARK ROUTER' or sends it whole — merging them would mean ONE shared
+    call answers for scenarios that were actually shown DIFFERENT text, silently poisoning whichever one's
+    excerpt didn't match what was really sent.
+
+    `governing_files` is sorted() before assembly (not used in `sc`'s own declared order) purely so this
+    key's IDENTITY doesn't depend on two scenarios happening to list an identical file SET in a different
+    YAML order — the OLD frozenset key never distinguished that ordering either, and the real prompt build
+    (_run_one_scenario_live / _run_batch_group, elsewhere in this file) still uses each scenario's/group's
+    own declared order, unaffected by this sort. A scenario with no governing_sections at all (or under the
+    GOLDEN_SECTION_SCOPE=0 escape hatch) therefore hashes on exactly the same text the pre-2026-08-17
+    frozenset key partitioned on — see test_group_key_order_independent_governing_files_list_still_merges
+    and test_group_scenarios_for_batching_real_scenarios_yaml_still_seven_groups_no_op — which is
+    what keeps today's 7-group result a true no-op when no scenario declares governing_sections.
+
+    A missing/unreadable governing_file raises inside _read_governing_text() (that function's OWN documented
+    contract: the read failure is the CALLER's problem, not its own) — caught here and degraded to a stable,
+    deterministic fallback key so THIS function keeps its pre-existing "usable even pre-offline-gate, never
+    raises" contract (test_group_scenarios_for_batching_missing_governing_file_costs_zero_not_raises): a real
+    missing file is validate_offline()'s job to reject, not this ordering function's."""
+    try:
+        gov_files = sorted(sc.get("governing_files") or [])
+        gov_sections = sc.get("governing_sections") if _section_scope_enabled() else None
+        text = _read_governing_text(gov_files, text_cache, gov_sections)
+        return hashlib.sha256(text.encode("utf-8")).hexdigest()
+    except OSError:
+        return "MISSING:" + repr(sorted(sc.get("governing_files") or []))
+
+
 def group_scenarios_for_batching(scenarios, max_group=None):
-    """Group `scenarios` (a list of scenario dicts, in scenarios.yaml order) by the SET of their
-    governing_files (frozenset — order-independent, so two scenarios naming the same files in a different
-    order still land in the same group), for run_live()'s batching. Returns a list of groups (each a list
-    of scenario dicts); a group of size 1 is legal (a scenario whose governing_files set is unique in this
-    run) and is exactly as valid an input to the caller as any other size.
+    """Group `scenarios` (a list of scenario dicts, in scenarios.yaml order) by the identity of their
+    ASSEMBLED GOVERNING TEXT (_governing_text_group_key() — 2026-08-17, changed from the plain
+    frozenset(governing_files) set-identity to accommodate per-scenario section scoping, see that function's
+    own docstring for why), for run_live()'s batching. Returns a list of groups (each a list of scenario
+    dicts); a group of size 1 is legal (a scenario whose assembled text is unique in this run) and is exactly
+    as valid an input to the caller as any other size.
 
     CONTRACT:
       * Order WITHIN a group matches scenarios.yaml's own relative order (never reshuffled) — two
@@ -919,7 +1098,7 @@ def group_scenarios_for_batching(scenarios, max_group=None):
         GOLDEN_BATCH_MAX_DEFAULT=8) is split into consecutive chunks of at most `max_group`, preserving
         the same relative order across chunks (chunk N's scenarios are all before chunk N+1's, in
         scenarios.yaml order) — this bounds a single call's situation count (and therefore its reply
-        length/parse surface) regardless of how large one governing_files set's real membership grows.
+        length/parse surface) regardless of how large one governing text's real membership grows.
       * The returned GROUPS (not the scenarios within a group) are ordered by ASCENDING total on-disk byte
         size of their (deduplicated, since it's a set) governing_files — cheapest group first. This is
         deliberate, not incidental: GEMINI_RUN_BUDGET_S/the job timeout can stop a run mid-way (see
@@ -928,10 +1107,14 @@ def group_scenarios_for_batching(scenarios, max_group=None):
         than processing in scenarios.yaml's arbitrary declaration order would. Ties (including the
         genuinely-common case of two groups whose byte size is identical, or a governing_file that no
         longer exists on disk and contributes 0 either way) are broken by each group's/chunk's OWN first
-        scenario's position in `scenarios` — deterministic, not hash-order-dependent (a plain
-        frozenset-keyed dict's iteration order is insertion order in Python, which itself already follows
-        `scenarios`, but the explicit tie-break makes that a documented contract, not an accident of
-        implementation).
+        scenario's position in `scenarios` — deterministic, not hash-order-dependent.
+        NOTE (2026-08-17, unchanged by the section-scoping key switch above): this cost estimate is still
+        the FULL on-disk size of every governing_file in the group's first-seen scenario, not its (possibly
+        much smaller) scoped excerpt size — deliberately left as-is so a run whose scenarios don't use
+        governing_sections at all orders its groups byte-for-byte identically to before this feature landed
+        (see the no-op tests). A truly excerpt-aware cost estimate is a real future improvement, not this
+        task's job — see run_live()'s own governing-bytes telemetry (added alongside this) for the actual
+        scoped-vs-unscoped bytes sent, which IS excerpt-aware, just not fed back into this ordering.
 
     A governing_file that no longer exists on disk (validate_offline()'s job to catch, not this function's)
     contributes 0 bytes to its group's cost rather than raising — this function must stay usable for
@@ -939,13 +1122,18 @@ def group_scenarios_for_batching(scenarios, max_group=None):
     if max_group is None:
         max_group = int(os.environ.get("GOLDEN_BATCH_MAX", str(GOLDEN_BATCH_MAX_DEFAULT)))
 
-    buckets = {}       # frozenset(governing_files) -> [(original_index, scenario), ...]
-    bucket_order = []  # first-seen key order (== scenarios.yaml order of first appearance)
+    text_cache = {}     # per-call file-read cache feeding _governing_text_group_key()'s hashing only
+    buckets = {}        # text_hash -> [(original_index, scenario), ...]
+    bucket_order = []   # first-seen key order (== scenarios.yaml order of first appearance)
+    bucket_files = {}   # text_hash -> frozenset(governing_files) of the FIRST scenario seen with that hash,
+                         # used only by _key_bytes() below (unchanged cost-ordering formula/behavior — see
+                         # this function's own docstring NOTE on why that estimate stays full-file-based)
     for i, sc in enumerate(scenarios):
-        key = frozenset(sc.get("governing_files") or [])
+        key = _governing_text_group_key(sc, text_cache)
         if key not in buckets:
             buckets[key] = []
             bucket_order.append(key)
+            bucket_files[key] = frozenset(sc.get("governing_files") or [])
         buckets[key].append((i, sc))
 
     # Split any oversized bucket into consecutive max_group-sized chunks, preserving order both within a
@@ -965,7 +1153,7 @@ def group_scenarios_for_batching(scenarios, max_group=None):
     def _key_bytes(key):
         if key not in size_cache:
             total = 0
-            for gf in key:
+            for gf in bucket_files[key]:
                 try:
                     total += os.path.getsize(os.path.join(ROOT, gf))
                 except OSError:
@@ -1246,7 +1434,204 @@ def parse_batch_reply(reply, ids):
     return result
 
 
-def _read_governing_text(governing_files, file_cache):
+# ---- SECTION SCOPING (2026-08-17, follow-up to the same-day BATCHING work above) ----
+# Measured problem (live CI run 32069773377): batching alone collapsed 33 scenarios to ~7 calls, but 23 of
+# 33 scenarios still evaluated and the run hit 429s(rpm=83) out of 88 attempts — 94% REJECTED — at only
+# 1.78 requests/min. The binding constraint is TOKENS-per-minute, not requests: the run measured 480,044
+# tokens/min against a free-tier budget of roughly 250K/min, and the single largest prompt (the group
+# carrying Claude_Task_Plan.md, governing 16+ scenarios) was 294,554 tokens on its OWN — 118% of an entire
+# minute's budget, so that one request could never succeed however long the runner waited or however many
+# times it retried (a retry re-sends the SAME full prompt, which is how 1.37M tokens of real content became
+# 23.7M on the wire). Batching already fixed "the same text sent once per SCENARIO"; this fixes "the same
+# FILE sent in full when a scenario only needs one rule out of it" — most governing files are large because
+# they cover every routine/strategy/threshold in the system, but any ONE golden scenario is usually decided
+# by a couple of headings, not the whole document.
+#
+# governing_sections (OPTIONAL, per-scenario field in scenarios.yaml — see the task spec's schema comment
+# for the exact shape) maps a governing_files entry to a list of markdown heading-line anchors; only THOSE
+# headings' sections are sent for that file, everything else in it is omitted. A governing_files entry with
+# NO matching key in governing_sections is sent WHOLE, exactly as today — and a scenario with no
+# governing_sections key AT ALL is completely unaffected: every code path below falls through to the plain
+# whole-file block this function has always produced (see the "no-op" tests alongside this feature's other
+# tests in test_golden_scenarios_runner.py, and _read_governing_text()'s own docstring below).
+#
+# validate_offline() (the HARD CI gate, extended alongside this) is what makes a mis-declared anchor fail
+# the BUILD instead of silently starving the judge of the rule it actually needed — see that function's own
+# governing_sections block for the full validation contract (unique-match requirement, empty-list rejection,
+# file-key-must-be-in-governing_files, and the per-scenario excerpt-vs-full-file size report).
+GOLDEN_SECTION_SCOPE = os.environ.get("GOLDEN_SECTION_SCOPE", "1")
+
+
+def _section_scope_enabled():
+    """GOLDEN_SECTION_SCOPE=0 is the escape hatch back to sending every governing_files entry WHOLE,
+    ignoring any scenario's governing_sections entirely — needed for an A/B validation run comparing
+    scoped-excerpt verdicts against full-file verdicts on the exact same scenario set. Read live (not
+    cached at import time) so a test/CI step can flip it via monkeypatch/env without a process restart,
+    matching this file's existing GOLDEN_BATCH=0 pattern (see run_live())."""
+    return os.environ.get("GOLDEN_SECTION_SCOPE", GOLDEN_SECTION_SCOPE) != "0"
+
+
+# ATX heading LINE: 1-6 '#' at the very start of the line, then required whitespace, then non-whitespace
+# content. Deliberately NOT matched inside a fenced code block (tracked by _document_headings() below) —
+# none of today's four governing files happen to contain a '#'-led line inside a ``` fence (verified
+# 2026-08-17), but a routine/SQL/shell snippet added later easily could (e.g. a bash '# comment'), and a
+# heading-shaped false positive there would silently corrupt an excerpt's slice boundaries with no error
+# from validate_offline() (the anchor itself would still uniquely match — just the WRONG line).
+_HEADING_LINE_RE = re.compile(r'^#{1,6}[ \t]+\S')
+_FENCE_LINE_RE = re.compile(r'^\s*(`{3,}|~{3,})')
+
+
+def _document_headings(text):
+    """Every ATX markdown heading LINE in `text` (outside a fenced code block), in document order.
+    Returns a list of dicts: {"line_no": int (0-based, into text.splitlines()), "level": int (1-6, the
+    number of leading '#'), "raw": str (the full heading line, no trailing newline)}.
+
+    Fence tracking is intentionally simple (toggle on ANY ``` or ~~~ fence-open/-close line, not fussy
+    about matching the opening marker's exact character/length) — good enough to skip a '#'-led line
+    inside a code sample without needing a full markdown parser for a heading-anchor feature."""
+    headings = []
+    in_fence = False
+    for i, line in enumerate(text.splitlines()):
+        if _FENCE_LINE_RE.match(line):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        m = _HEADING_LINE_RE.match(line)
+        if m:
+            headings.append({"line_no": i, "level": len(line) - len(line.lstrip("#")), "raw": line})
+    return headings
+
+
+def _anchor_heading_indices(headings, anchor):
+    """Indices into `headings` (_document_headings()'s return shape) whose raw heading line matches
+    `anchor` exactly, after an .rstrip() on both sides (so incidental trailing whitespace in the YAML
+    anchor string or the file's own line doesn't cause a spurious non-match). Shared by validate_offline()'s
+    zero-match/ambiguous-match checks and extract_sections()'s own anchor resolution so the two can never
+    disagree about what "matches" means — exactly the same reason _token_boundary_match() is shared between
+    the offline gate and the --live grader elsewhere in this file."""
+    key = (anchor or "").rstrip()
+    return [i for i, h in enumerate(headings) if h["raw"].rstrip() == key]
+
+
+def _slice_heading(lines, headings, idx):
+    """The [start, end) 0-based line range (into `lines`) for headings[idx]'s own section: from its own
+    heading line through the line before the next heading in `headings` (document order — the very next
+    entry, not a re-scan of the whole list) whose level is <= this heading's level ('##' ends at the next
+    '##' or '#', but a deeper '###'/'####' in between stays INSIDE this slice as a nested subsection).
+    `end` is len(lines) (EOF) when no such heading follows — the last matched section in a file runs to the
+    end of the document, per spec."""
+    h = headings[idx]
+    end = len(lines)
+    for later in headings[idx + 1:]:
+        if later["level"] <= h["level"]:
+            end = later["line_no"]
+            break
+    return h["line_no"], end
+
+
+def _ancestor_breadcrumb(headings, idx):
+    """The chain of enclosing SHALLOWER headings above headings[idx], outermost first, as their own raw
+    heading lines (e.g. ["# Claude Task Plan", "## Routines"]) — so a model reading an isolated excerpt
+    knows where in the document it sits, not just what the excerpt itself says. Walks BACKWARD from idx,
+    taking the nearest heading whose level is strictly less than the running level (the immediate parent),
+    then tightening the running level to THAT heading's level before continuing further back (the next hop
+    up is the parent's own parent, not just any earlier shallow heading) — a standard breadcrumb-trail walk,
+    stopping once a top-level (level 1) heading is collected or the start of the document is reached."""
+    chain = []
+    level = headings[idx]["level"]
+    for h in reversed(headings[:idx]):
+        if h["level"] < level:
+            chain.append(h["raw"])
+            level = h["level"]
+            if level <= 1:
+                break
+    chain.reverse()
+    return chain
+
+
+def extract_sections(full_text, anchors):
+    """Extract and assemble the scoped excerpt of `full_text` selected by `anchors` (a list of heading-line
+    strings — see the governing_sections schema in the SECTION SCOPING comment above). Returns
+    (excerpt_text, n_blocks, n_anchors):
+      * excerpt_text — the assembled excerpt: matched sections in DOCUMENT order (regardless of the order
+        `anchors` lists them in), each prefixed with its own ancestor breadcrumb (_ancestor_breadcrumb()),
+        overlapping-or-adjacent slices MERGED into one contiguous block rather than emitted twice.
+      * n_blocks     — the number of merged blocks actually emitted (< n_anchors when two+ anchors' own
+        slices turned out to overlap or touch and were merged into one).
+      * n_anchors    — the number of DISTINCT (de-duplicated) anchors in `anchors` that resolved to exactly
+        one heading — the denominator render_scoped_block() below reports in its "K of N sections" label.
+
+    CALLER CONTRACT: validate_offline() is the hard gate that guarantees every anchor reaching this function
+    in a real CI run matches exactly one heading. This function stays DEFENSIVE anyway (an anchor matching
+    zero or 2+ headings is silently skipped, never raises) so it stays safe to call from inside
+    validate_offline() itself — to compute the size report — even while that same anchor's own zero/
+    ambiguous-match error is still being assembled by the caller, and so a caller never sees an excerpt
+    silently include text twice for an unresolved anchor."""
+    headings = _document_headings(full_text)
+    lines = full_text.splitlines()
+
+    seen_keys = []
+    idxs = []
+    for a in anchors or []:
+        if not isinstance(a, str):
+            continue
+        key = a.rstrip()
+        if key in seen_keys:
+            continue
+        seen_keys.append(key)
+        matches = _anchor_heading_indices(headings, a)
+        if len(matches) == 1:
+            idxs.append(matches[0])
+
+    idxs = sorted(set(idxs))  # heading indices are already document-order; sort+dedup is belt-and-suspenders
+
+    ranges = []
+    for idx in idxs:
+        s, e = _slice_heading(lines, headings, idx)
+        ranges.append([s, e, idx])
+
+    # Merge overlapping-or-ADJACENT ranges (s <= previous end, not s < previous end — a slice that starts
+    # exactly where the previous one ends, i.e. the two are back-to-back with no gap, still counts as
+    # "adjacent" per spec and must merge into one block, not two consecutive ones with a redundant seam).
+    merged = []
+    for s, e, idx in ranges:
+        if merged and s <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], e)
+        else:
+            merged.append([s, e, idx])
+
+    blocks = []
+    for s, e, idx in merged:
+        breadcrumb = _ancestor_breadcrumb(headings, idx)
+        block_text = "\n".join(lines[s:e])
+        if breadcrumb:
+            blocks.append(f"[context: {' / '.join(breadcrumb)}]\n{block_text}")
+        else:
+            blocks.append(block_text)
+
+    return "\n\n".join(blocks), len(merged), len(seen_keys)
+
+
+def render_scoped_block(gf, full_text, anchors):
+    """The '----- <path> (excerpt: ...) -----\\n<excerpt>' block _read_governing_text() emits for a
+    governing_files entry that has a governing_sections mapping — the scoped-excerpt sibling of that
+    function's own plain '----- <path> -----\\n<full text>' block for an unscoped file. Labels the block
+    unambiguously as a PARTIAL view (spec requirement: "state plainly that it is a scoped excerpt of a
+    larger file") and instructs the judge not to infer that an absent rule doesn't exist merely because this
+    excerpt doesn't contain it — the model has no other way to know whether a decisive rule was cut, so it
+    must be told to say so rather than guess."""
+    excerpt_text, n_blocks, n_anchors = extract_sections(full_text, anchors)
+    return (
+        f"----- {gf} (excerpt: {n_blocks} of {n_anchors} section(s) — SCOPED, not the full file) -----\n"
+        f"[This is a SCOPED EXCERPT of {gf}, not the file in full — sections outside the ones shown below "
+        f"are omitted. If the rule you need to decide this scenario is not present in this excerpt, say so "
+        f"explicitly instead of assuming an absent rule does not exist.]\n"
+        f"{excerpt_text}"
+    )
+
+
+def _read_governing_text(governing_files, file_cache, governing_sections=None):
     """Assemble the verbatim '----- <path> -----\\n<text>' block for `governing_files` (a list of
     repo-relative paths), reading each file at most once per RUN via `file_cache` (a plain dict the caller
     owns and shares across every scenario/group run_live() processes in one run) rather than once per
@@ -1255,16 +1640,38 @@ def _read_governing_text(governing_files, file_cache):
     group and with Experiment_Parameters.md in another), so caching saves a re-READ even where batching
     itself can't save a re-SEND (each group still sends its own, different, combined text).
 
-    Left OUTSIDE any try/except BY DESIGN (2026-07-29 comment, preserved through the 2026-08-17 batching
-    refactor): the CALLER is responsible for wrapping this in its own try/except so one scenario's/group's
-    missing governing_file degrades only that scenario/group, not the whole run — see run_live()."""
+    `governing_sections` (2026-08-17, optional — a scenario's own governing_sections mapping, or None) scopes
+    ANY file key present in it to render_scoped_block()'s excerpt instead of the whole file — see the
+    SECTION SCOPING comment above. A file NOT named in `governing_sections` (including every file when
+    `governing_sections` is None/empty, or when the GOLDEN_SECTION_SCOPE=0 escape hatch is set) is sent
+    WHOLE via the exact same '----- {gf} -----\\n{text}' block this function produced before this feature
+    existed — this is the entire no-op guarantee: a scenario that never opts into governing_sections drives
+    this function down a code path byte-for-byte identical to its pre-2026-08-17 form."""
+    scope_on = governing_sections and _section_scope_enabled()
     parts = []
     for gf in governing_files:
         if gf not in file_cache:
             with open(os.path.join(ROOT, gf), encoding="utf-8") as fh:
                 file_cache[gf] = fh.read()
-        parts.append(f"----- {gf} -----\n{file_cache[gf]}")
+        full_text = file_cache[gf]
+        anchors = governing_sections.get(gf) if scope_on else None
+        if anchors:
+            parts.append(render_scoped_block(gf, full_text, anchors))
+        else:
+            parts.append(f"----- {gf} -----\n{full_text}")
     return "\n\n".join(parts)
+
+
+def _governing_bytes_scoped_vs_unscoped(governing_files, governing_sections, file_cache):
+    """Return (scoped_bytes, unscoped_bytes): the UTF-8 byte length of the text _read_governing_text()
+    actually assembles for `governing_files`/`governing_sections` (what gets SENT, honoring
+    GOLDEN_SECTION_SCOPE) vs. the byte length of the SAME governing_files sent WHOLE (governing_sections
+    ignored) — the run-summary "what did scoping save" comparison (task spec telemetry requirement). Uses
+    the SAME `file_cache` as the real prompt build, so this costs no extra disk I/O beyond what the run was
+    already doing — only the (cheap, in-memory) excerpt assembly runs twice."""
+    scoped_text = _read_governing_text(governing_files, file_cache, governing_sections)
+    unscoped_text = _read_governing_text(governing_files, file_cache, None)
+    return len(scoped_text.encode("utf-8")), len(unscoped_text.encode("utf-8"))
 
 
 def _extract_decision_line(reply):
@@ -1362,8 +1769,12 @@ def _run_one_scenario_live(sc, call_model, file_cache, id_to_scenario):
       * GOLDEN_BATCH=0 (the escape hatch back to today's exact behavior),
       * a lone scenario's own size-1 group (see run_live()'s docstring for why size 1 bypasses batching
         entirely rather than going through build_batch_prompt/parse_batch_reply for a single situation),
-      * a batch group's zero-parsed fallback (_run_batch_group, below)."""
-    gov_text = _read_governing_text(sc.get("governing_files") or [], file_cache)
+      * a batch group's zero-parsed fallback (_run_batch_group, below).
+
+    Threads `sc`'s own governing_sections (2026-08-17 SECTION SCOPING) into _read_governing_text() so this
+    path gets the identical scoped/whole-file split as the batched path below — see that function's own
+    docstring and the SECTION SCOPING comment above it."""
+    gov_text = _read_governing_text(sc.get("governing_files") or [], file_cache, sc.get("governing_sections"))
     prompt = build_single_prompt(sc, gov_text, id_to_scenario)
     reply, model_used = call_model(prompt)
     return _score_decision(sc, _extract_decision_line(reply), reply, model_used)
@@ -1397,7 +1808,13 @@ def _run_batch_group(group, call_model, file_cache, results, gi, n_groups, id_to
     resolution) and to each _run_one_scenario_live() fallback call below (so a reference doesn't silently
     stop resolving just because the group's batch reply happened to be unparseable)."""
     ids = [sc.get("id") for sc in group]
-    gov_text = _read_governing_text(group[0].get("governing_files") or [], file_cache)
+    # SECTION SCOPING (2026-08-17): group[0]'s own governing_sections is safe to use for the WHOLE group
+    # here — group_scenarios_for_batching() now groups by the hash of the ASSEMBLED governing text itself
+    # (_governing_text_group_key()), so every member of `group` is guaranteed to want byte-identical text,
+    # exactly the same guarantee the pre-2026-08-17 shared-frozenset-of-governing_files grouping gave for
+    # whole-file sends.
+    gov_text = _read_governing_text(group[0].get("governing_files") or [], file_cache,
+                                     group[0].get("governing_sections"))
     prompt = build_batch_prompt(group, gov_text, id_to_scenario)
     reply, model_used = call_model(prompt)
     parsed = parse_batch_reply(reply, ids)
@@ -1497,6 +1914,13 @@ def run_live(scenarios, scenario_ids=None):
 
     run_t0 = time.monotonic()
     state_ref = getattr(call_model, "state", None)  # None for a test's fake caller — see _select_live_caller
+    # SECTION SCOPING telemetry (2026-08-17, task spec requirement): total governing bytes actually SENT
+    # (honoring any scenario's governing_sections + GOLDEN_SECTION_SCOPE) vs. what the UNSCOPED equivalent
+    # (every governing_files entry sent whole) would have cost — see _governing_bytes_scoped_vs_unscoped().
+    # Both stay 0 for a run where no scenario declares governing_sections (scoped == unscoped in that case,
+    # so this simply reports "0% saved," never a distorted number — see the no-op tests).
+    total_scoped_bytes = 0
+    total_unscoped_bytes = 0
 
     def _counter(key, default=0):
         return (state_ref or {}).get(key, default)
@@ -1505,6 +1929,21 @@ def run_live(scenarios, scenario_ids=None):
         group_ids = [sc.get("id") for sc in group]
         group_t0 = time.monotonic()
         attempts_before = _counter("total_attempts")
+        # Governing-bytes telemetry for THIS group — computed unconditionally (independent of whether the
+        # call below succeeds/fails/skips) since it is a pure function of scenario data + on-disk files, not
+        # of the live call's outcome. Wrapped defensively: a missing governing_file will legitimately fail
+        # the real call moments later anyway (and get reported there), so a telemetry-only read failure here
+        # must not itself raise or print a second, redundant warning.
+        group_token_est = None
+        try:
+            group_scoped_b, group_unscoped_b = _governing_bytes_scoped_vs_unscoped(
+                group[0].get("governing_files") or [], group[0].get("governing_sections"), file_cache,
+            )
+            total_scoped_bytes += group_scoped_b
+            total_unscoped_bytes += group_unscoped_b
+            group_token_est = group_scoped_b // 4  # same rough chars/4 heuristic _gemini_call uses elsewhere
+        except OSError:
+            pass
         try:
             if len(group) == 1:
                 results.append(_run_one_scenario_live(group[0], call_model, file_cache, id_to_scenario))
@@ -1548,11 +1987,18 @@ def run_live(scenarios, scenario_ids=None):
             attempts_used = _counter("total_attempts") - attempts_before
             print(
                 f"::debug::golden live group {gi + 1}/{len(groups)} done — ids={group_ids} "
-                f"elapsed={group_elapsed:.1f}s attempts={attempts_used}",
+                f"elapsed={group_elapsed:.1f}s attempts={attempts_used} "
+                f"governing_tokens~={group_token_est}",
                 file=sys.stderr, flush=True,
             )
 
     run_elapsed = time.monotonic() - run_t0
+    # SECTION SCOPING telemetry (2026-08-17): what scoping actually saved this run, vs. the unscoped
+    # equivalent — see the accumulator comment above the per-group loop. Guarded against a zero-file run
+    # (total_unscoped_bytes == 0, e.g. `scenarios` was empty) so this never divides by zero.
+    bytes_saved_pct = (
+        100.0 * (1 - total_scoped_bytes / total_unscoped_bytes) if total_unscoped_bytes else 0.0
+    )
     print(
         f"::notice::golden live run summary — wall_clock={run_elapsed:.1f}s attempts={_counter('total_attempts')} "
         f"429s(rpm={_counter('total_429_rpm')}, daily={_counter('total_429_daily')}) "
@@ -1569,7 +2015,12 @@ def run_live(scenarios, scenario_ids=None):
         f"default={_counter('sleep_rpm_retry_default_n')}) ladder_switches={_counter('ladder_switches')} "
         f"— see the OBSERVABILITY comment above GEMINI_MODEL_LADDER for why this line exists (CI run "
         f"32043614925, 2026-08-17), and the comment above GEMINI_RPM_MAX_RETRIES for the RPM-retry retune "
-        f"(CI run 32060180247, 2026-08-17).",
+        f"(CI run 32060180247, 2026-08-17). "
+        # SECTION SCOPING (2026-08-17, CI run 32069773377 — 94% of requests 429'd at 480,044 tokens/min, a
+        # TOKENS-per-minute ceiling batching alone couldn't fix): governing bytes actually sent this run vs.
+        # what sending every governing_files entry WHOLE (no scoping) would have cost.
+        f"governing_bytes(scoped={total_scoped_bytes}, unscoped={total_unscoped_bytes}, "
+        f"saved={bytes_saved_pct:.1f}%)",
         file=sys.stderr, flush=True,
     )
     return results
