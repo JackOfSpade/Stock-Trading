@@ -42,6 +42,14 @@
 -- raise_msg: like run_log_note_missing, this is an audit-hygiene defect, not a reason to fail the
 -- nightly check or halt anything. An open CRITICAL feeds state.trading_enabled's blocking_criticals
 -- (bigquery/107) and would turn a bookkeeping gap into a trading halt.
+--
+-- SUPERSEDED LIVE by bigquery/177_backfill_note_regex_survives_correction.sql — current single
+-- source of truth for state.run_log_unpaired_terminal. 177 hardens the exclusion regex (below) to
+-- also match a later human correction of a backfilled row's note, which can legitimately prepend
+-- text ahead of the "auto-backfilled..." token this view's REGEXP_CONTAINS anchors on — see 177's
+-- header for the false-alarm this caused (W5/2026-08-16, run_id c27d3408). The CREATE OR REPLACE
+-- VIEW statement immediately below is kept here, unmodified, for DR-rebuild apply-in-order
+-- reference only. DO NOT re-apply it live in isolation.
 
 CREATE OR REPLACE VIEW `stock-trading-498512.state.run_log_unpaired_terminal` AS
 WITH terminal AS (

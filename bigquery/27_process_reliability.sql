@@ -20,12 +20,17 @@
 -- midnight-wrap bug in the completion-minute-of-day metric below and adds retry/dependency-wait
 -- telemetry columns; the CREATE OR REPLACE VIEW statement immediately below is kept here,
 -- unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply it live in isolation.
--- SUPERSEDED AGAIN (2026-08-14): bigquery/89 above has itself been superseded — the current
--- canonical definition of analytics.routine_health_scorecard is now bigquery/171_scorecard_routine_
+-- SUPERSEDED AGAIN (2026-08-14): bigquery/89 above has itself been superseded — the
+-- canonical definition of analytics.routine_health_scorecard was then bigquery/171_scorecard_routine_
 -- id_normalization.sql, which normalizes the routine id with REPLACE(routine, '·', '_') so the
 -- legacy U+00B7 middle-dot ids AR·att/AR·orc fold onto canonical AR_att/AR_orc instead of appearing
--- as separate rows. The CREATE OR REPLACE VIEW statement immediately below remains kept here,
--- unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply it live in isolation.
+-- as separate rows.
+-- SUPERSEDED YET AGAIN (2026-08-18): bigquery/171 above has itself been superseded — the current
+-- canonical definition of analytics.routine_health_scorecard is now bigquery/177_backfill_note_
+-- regex_survives_correction.sql, which hardens the is_backfilled note-regex to survive a later
+-- correction to a backfilled row's note (see that file's header). The CREATE OR REPLACE VIEW
+-- statement immediately below remains kept here, unmodified, for DR-rebuild apply-in-order
+-- reference only. DO NOT re-apply it live in isolation.
 
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.routine_health_scorecard` AS
 WITH runs AS (

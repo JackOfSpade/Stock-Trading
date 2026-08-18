@@ -659,9 +659,19 @@ Read access scope: Daily cadence. Read positions/perf/NAV from `state.current_po
 `Operating_Protocols.md` §11/§13/§14 as relevant. No Strategy.md / Watchlist.md / decision_log access
 needed — this routine does no thesis work.
 
-RUN LOGGING (every run). At the very START of this routine, `CALL ops.sp_log_run('D2a', <today,
-America/Denver from state.trading_day_today>, 'started', <session_id>, <branch>, NULL, NULL, NULL)`. At
-the END, call it again with `'completed'` (or `'failed'`/`'halted'` + `error_msg`), passing
+RUN LOGGING (every run). At the very START of this routine, `CALL ops.sp_routine_start('D2a', <today,
+America/Denver from state.trading_day_today>, <session_id>, <branch>, '<verbatim trigger instruction>')`
+— NOT `sp_log_run` directly (fixed 2026-08-18, investigating a stale `instruction_drift` alert:
+`sp_log_run`'s signature has no `instruction` parameter, so a `started` row logged through it landed with
+`instruction` permanently NULL — verified 3 consecutive D2a starts, 2026-08-13/16/17, all NULL. Because
+`instruction` lives ONLY on the `started` row, that silently blinded `state.routine_last_instruction` /
+`state.instruction_drift` for D2a specifically: unlike a low-cadence routine that just needs one more fire
+to refresh its sample, D2a fires DAILY yet could never surface a genuine live-trigger drift no matter how
+long one persisted, because every single day's sample kept landing NULL. `bigquery/12_cadence_monitor.sql`
+already documents `sp_routine_start` as the canonical START call for exactly this reason — this bullet had
+simply never adopted it, unlike D2's own sessions, which had been calling `sp_routine_start` in practice
+despite an identically-stale bullet below). At the END, call `sp_log_run` again with `'completed'` (or
+`'failed'`/`'halted'` + `error_msg`), passing
 `rows_written` = fills + marks ingested **and a real `<note>` in the 8th argument — see the
 OPERATING MODEL preamble's `<note>` IS MANDATORY ON EVERY TERMINAL ROW rule, which binds here in
 full.** The terminal call is
