@@ -24,15 +24,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _normalized_halt_echo_mr_cte(sql):
-    """The 107 CTE has no dbt refs, so its executable text should mirror byte-for-byte."""
+    """The 176 CTE has no dbt refs, so its executable text should mirror byte-for-byte."""
     code = strip_sql_comments(sql)
     match = re.search(r"halt_echo_mr\s+AS\s*\((.*?)\n\),\s*\nal\s+AS", code, re.DOTALL)
     assert match, "halt_echo_mr CTE missing"
     return " ".join(match.group(1).split())
 
 
-def test_trading_gate_dbt_ports_mirror_final_107_halt_echo_missed_run_logic():
-    canonical = (ROOT / "bigquery" / "107_halt_echo_missed_run_gate.sql").read_text()
+def test_trading_gate_dbt_ports_mirror_final_176_halt_echo_missed_run_logic():
+    canonical = (ROOT / "bigquery" / "176_decouple_embedding_health_from_trading_gate.sql").read_text()
     canonical_ctes = re.findall(
         r"halt_echo_mr\s+AS\s*\((.*?)\n\),\s*\nal\s+AS",
         strip_sql_comments(canonical),
@@ -50,7 +50,7 @@ def test_trading_gate_dbt_ports_mirror_final_107_halt_echo_missed_run_logic():
         assert _normalized_halt_echo_mr_cte(sql) == " ".join(canonical_cte.split())
         assert "AND alert_id NOT IN (SELECT alert_id FROM halt_echo_mr)" in code
         assert "halt-echo dependency+missed_run gate echoes" in code
-        assert "bigquery/107_halt_echo_missed_run_gate.sql" in sql
+        assert "bigquery/176_decouple_embedding_health_from_trading_gate.sql" in sql
 
 
 # ---- bq(): thin delegation to lib/bq_json.run_bq_query -- pins THIS caller's fixed max_rows=100000 -

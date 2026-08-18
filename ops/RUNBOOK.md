@@ -3560,3 +3560,59 @@ its own watermark.
   for watermark purposes** — the rows are self-identifying (`note LIKE 'auto-backfilled%'`). Noted as
   an option, not a recommendation: the backfill exists precisely so a landed-but-unlogged run counts,
   and excluding those rows wholesale would undo §38's purpose. Only the halt-shaped subset is wrong.
+
+## 49. `"Cadence scheduler absent >25h"` fires with a valid heartbeat sample already inside the window — the 2026-08-17 false alarm *(monitoring, false-alarm-shaped)*
+
+**Symptom.** Cloud Monitoring policy *"Cadence scheduler absent >25h"* (condition *"No cadence-check
+run in 25h"*) fired at **2026-08-18 01:22 UTC** on metric `logging.googleapis.com/user/cadence_scheduled_run`,
+grouped on `__missing__` — the operator forwarded the alert email to an interactive session the same
+evening ("investigate and fix if needed").
+
+**It was a FALSE alarm — the dead-man's switch was healthy, and unlike the §19 precedent, a valid
+heartbeat sample already existed well inside the 25h lookback window at evaluation time.** Verified
+live:
+- The `cadence-check-daily` scheduled query (config_id `6a44a3d9-0000-2837-8b7b-883d24f5c8b8`) ran and
+  succeeded at **2026-08-17 05:15:07 UTC** (`region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT`, `state=DONE`,
+  no `error_result`) — only **~20h 7m** before the alert fired, not the ~25h an absence would require.
+- Its heartbeat log line landed correctly at 05:17:30 UTC (`Summary: succeeded 1 jobs, failed 0 jobs.`),
+  matching the live metric filter exactly:
+  ```
+  resource.type="bigquery_dts_config"
+  resource.labels.config_id="6a44a3d9-0000-2837-8b7b-883d24f5c8b8"
+  jsonPayload.message=~"^Summary: succeeded"
+  ```
+  (`gcloud logging metrics describe cadence_scheduled_run` — this is already the §19 terminal-agnostic
+  fix, correctly configured; no metric drift here, unlike §19's cause.)
+- Cloud Monitoring's own time-series API confirms a `DELTA` sample of value `1` recorded for exactly
+  that run (`monitoring.googleapis.com/v3/.../timeSeries`, point `2026-08-17T05:17:28Z`–`05:18:28Z`).
+- The alert policy itself matches spec: `absent_over_time(logging_googleapis_com:user_cadence_scheduled_run[25h])`,
+  `duration=0s`, `evaluationInterval=30s`, unchanged since its 2026-06-21 creation (no recent
+  metric/policy recreate that could explain a backfill gap).
+- `state.system_health.all_green = TRUE`, `state.embedding_health.is_healthy = TRUE`, zero open
+  criticals, all checked within the hour. No routine or trading impact of any kind.
+
+**Root cause — likely a Cloud Monitoring evaluation-side quirk, not a scheduler or metric-filter
+defect.** This is a genuinely different mechanism from §19 (which was caused by a success-only filter
+missing an entire cutover window with zero samples). Here the filter is correct, terminal-agnostic, and
+a real sample landed with ~5h of margin before the window would have legitimately gone empty — yet the
+policy evaluated `absent_over_time` as true anyway. The most plausible explanation is a transient
+ingestion/evaluation-side lag specific to log-based `DELTA` metrics under Cloud Monitoring's PromQL
+backend; this was not fully root-caused at the GCP-internals level, since the observable evidence
+(scheduler ran on time, metric has the correct sample) already fully classifies the incident as a false
+alarm under this file's own §19 triage rule ("Runs present -> the metric drifted (fix the metric)... No
+runs -> the scheduler is genuinely down") — runs were present AND the metric had the correct sample, so
+neither branch applies and no infra change was made.
+
+**Action taken: none to metric/policy/scheduler — all three verified correct.** No `terraform`/Console
+change needed; `infra/terraform/monitoring.tf`'s `cadence` entry in `local.scheduler_absence_monitors`
+already documents this alert as lower-severity than freshness/backup (`state.freshness` independently
+catches data staleness). If this alert recurs with the same signature (a valid heartbeat sample already
+inside the 25h window at fire time), re-run this file's verification steps first before assuming
+scheduler death — do not skip straight to a Console/Terraform metric-filter change, since the 2026-08-17
+instance proved the filter was never the problem.
+
+**Lesson.** Not every recurrence of an `absent_over_time` alert is the §19 root cause (an
+un-versioned, success-only, identity-cutover-sensitive filter). The class is now two distinct
+mechanisms with the same symptom and the same triage starting point (check `JOBS_BY_PROJECT` for the
+real run, check the log-metric filter, check the time-series API for the actual sample) — verify all
+three independently rather than pattern-matching the symptom to the first documented cause.

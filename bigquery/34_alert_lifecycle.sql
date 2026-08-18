@@ -309,14 +309,15 @@ END;
 -- SUPERSEDED LIVE by bigquery/47_trading_enabled_resync.sql (2026-07-14), 47 in turn by
 -- bigquery/78_book_drawdown_rebase_and_staleness_gate.sql (2026-07-17, verified against the
 -- deployed view 2026-07-18), 78 in turn by bigquery/97_halt_echo_dependency_gate.sql
--- (2026-07-19, halt-echo missing_dependency exclusion), and 97 in turn by
--- bigquery/107_halt_echo_missed_run_gate.sql (2026-07-26, halt-echo missed_run exclusion) — 107 is
--- the CURRENT single source of truth for this gate. This definition was silently clobbered live on
--- 2026-07-11 when 23_trading_control.sql was re-applied in isolation to add the snapshot_stale term
--- (ITEM 16), reverting this view to the pre-fix self-latching formula for 3+ days. Kept here,
--- unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE
--- VIEW statement live in isolation — see 107's header (not 47's/78's/97's — all three are
--- themselves superseded).
+-- (2026-07-19, halt-echo missing_dependency exclusion), 97 in turn by
+-- bigquery/107_halt_echo_missed_run_gate.sql (2026-07-26, halt-echo missed_run exclusion), and 107 in
+-- turn superseded LIVE (2026-08-17) by bigquery/176_decouple_embedding_health_from_trading_gate.sql —
+-- 176 is the CURRENT single source of truth for this gate. This definition was silently clobbered
+-- live on 2026-07-11 when 23_trading_control.sql was re-applied in isolation to add the
+-- snapshot_stale term (ITEM 16), reverting this view to the pre-fix self-latching formula for 3+
+-- days. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
+-- CREATE OR REPLACE VIEW statement live in isolation — see 176's header (not 47's/78's/97's/107's —
+-- all four are themselves superseded).
 CREATE OR REPLACE VIEW `stock-trading-498512.state.trading_enabled` AS
 WITH ctrl AS (
   SELECT ARRAY_AGG(STRUCT(halt_all, reason, mode) ORDER BY control_ts DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest
@@ -362,14 +363,17 @@ FROM ctrl, f, eh, al, pr, dd;
 --
 -- SUPERSEDED LIVE by bigquery/78_book_drawdown_rebase_and_staleness_gate.sql (2026-07-17, verified
 -- against the deployed view 2026-07-18), 78 in turn by bigquery/97_halt_echo_dependency_gate.sql
--- (2026-07-19), and 97 in turn by bigquery/107_halt_echo_missed_run_gate.sql (2026-07-26), which is
--- the CURRENT single source of truth for this view (78/97 are themselves superseded). Kept here,
+-- (2026-07-19), 97 in turn by bigquery/107_halt_echo_missed_run_gate.sql (2026-07-26), and 107 in
+-- turn by bigquery/176_decouple_embedding_health_from_trading_gate.sql (2026-08-17), which is
+-- the CURRENT single source of truth for this view (78/97/107 are themselves superseded). Kept here,
 -- unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE
 -- VIEW statement live in isolation: it would revert 78's two changes — the drawdown AND-term back
 -- from `breach_hard` (-40% catastrophe) to the -15% soft tier, and blocking_criticals back to
--- counting 'staleness' gate-echoes — plus 97's halt-echo missing_dependency exclusion and 107's
--- halt-echo missed_run exclusion, re-latching the gate.
--- Marker added 2026-07-18; chain extended to 97 on 2026-07-19, to 107 on 2026-07-26.
+-- counting 'staleness' gate-echoes — plus 97's halt-echo missing_dependency exclusion, 107's
+-- halt-echo missed_run exclusion, and 176's removal of the embeddings_healthy term, re-latching the
+-- gate.
+-- Marker added 2026-07-18; chain extended to 97 on 2026-07-19, to 107 on 2026-07-26, to 176 on
+-- 2026-08-17.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.trading_enabled_mechanical` AS
 WITH ctrl AS (
   SELECT ARRAY_AGG(STRUCT(halt_all, reason, mode) ORDER BY control_ts DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest

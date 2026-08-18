@@ -147,14 +147,18 @@ FROM bdw, ocl;
 -- Changes vs 47: (1) drawdown AND-term is now breach_hard (-40% catastrophe) not the -15% soft tier;
 -- (2) blocking_criticals excludes category IN ('trading_halted','staleness') (was trading_halted only).
 --
--- SUPERSEDED (2026-07-26): this definition of state.trading_enabled is now superseded by
+-- SUPERSEDED (2026-07-26): this definition of state.trading_enabled was superseded by
 -- bigquery/107_halt_echo_missed_run_gate.sql (97 in turn superseded — both are themselves
 -- superseded), which reproduces this exact body and additionally excludes halt-echo
 -- missing_dependency AND halt-echo missed_run alerts (pure fallout of a still-open trading halt)
--- from blocking_criticals. Re-applying the CREATE OR REPLACE VIEW below live in isolation would
--- REGRESS both halt-echo exclusions (re-arming the 2026-07-19 W5-on-halted-W4 deadlock AND the
--- 2026-07-25/26 D2/D3 missed_run deadlock). Kept here, unmodified, for DR-rebuild apply-in-order
--- reference only. DO NOT re-apply this CREATE OR REPLACE VIEW statement live in isolation.
+-- from blocking_criticals. 107 was in turn superseded LIVE (2026-08-17) by
+-- bigquery/176_decouple_embedding_health_from_trading_gate.sql, which is the CURRENT single source of
+-- truth for this view (drops the eh.is_healthy term from the gate formula; embedding_health remains
+-- visible, non-blocking, via state.system_health). Re-applying the CREATE OR REPLACE VIEW below live
+-- in isolation would REGRESS both halt-echo exclusions (re-arming the 2026-07-19 W5-on-halted-W4
+-- deadlock AND the 2026-07-25/26 D2/D3 missed_run deadlock) and reintroduce the embedding_health term
+-- 176 deliberately removed. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO
+-- NOT re-apply this CREATE OR REPLACE VIEW statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.trading_enabled` AS
 WITH ctrl AS (
   SELECT ARRAY_AGG(STRUCT(halt_all, reason, mode) ORDER BY control_ts DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest
@@ -200,12 +204,16 @@ FROM ctrl, f, eh, al, pr, dd;
 -- Same two changes as state.trading_enabled (breach_hard; exclude trading_halted+staleness). Still
 -- deliberately excludes marks_fresh/engine_fresh (D2a's own same-run-circular term, per 33's header).
 --
--- SUPERSEDED (2026-07-26): this definition of state.trading_enabled_mechanical is now superseded by
+-- SUPERSEDED (2026-07-26): this definition of state.trading_enabled_mechanical was superseded by
 -- bigquery/107_halt_echo_missed_run_gate.sql (97 in turn superseded — both are themselves
 -- superseded), which reproduces this exact body and additionally excludes halt-echo
 -- missing_dependency AND halt-echo missed_run alerts (pure fallout of a still-open trading halt)
--- from blocking_criticals. Re-applying the CREATE OR REPLACE VIEW below live in isolation would
--- REGRESS both halt-echo exclusions. Kept here, unmodified, for DR-rebuild apply-in-order
+-- from blocking_criticals. 107 was in turn superseded LIVE (2026-08-17) by
+-- bigquery/176_decouple_embedding_health_from_trading_gate.sql, which is the CURRENT single source of
+-- truth for this view (drops the embeddings_healthy term from the gate formula; embedding_health
+-- remains visible, non-blocking, via state.system_health). Re-applying the CREATE OR REPLACE VIEW
+-- below live in isolation would REGRESS both halt-echo exclusions and reintroduce the
+-- embeddings_healthy term 176 deliberately removed. Kept here, unmodified, for DR-rebuild
 -- reference only. DO NOT re-apply this CREATE OR REPLACE VIEW statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.trading_enabled_mechanical` AS
 WITH ctrl AS (
@@ -246,12 +254,15 @@ FROM ctrl, health, al, dd;
 -- The live formula self-check must track the gate it mirrors, or it false-fires drift. Updated to the
 -- new blocking-criticals exclusion (trading_halted+staleness) and breach_hard drawdown term.
 --
--- SUPERSEDED (2026-07-26): this definition of state.b3_trading_enabled_check is now superseded by
+-- SUPERSEDED (2026-07-26): this definition of state.b3_trading_enabled_check was superseded by
 -- bigquery/107_halt_echo_missed_run_gate.sql (97 in turn superseded — both are themselves
 -- superseded), which reproduces this exact body and additionally carries the halt-echo
 -- missing_dependency AND halt-echo missed_run exclusions in its blocking-criticals recomputation.
--- Re-applying the CREATE OR REPLACE VIEW below live in isolation would REGRESS both halt-echo
--- exclusions and false-fire drift against the 107-based state.trading_enabled. Kept here,
+-- 107 was in turn superseded LIVE (2026-08-17) by
+-- bigquery/176_decouple_embedding_health_from_trading_gate.sql, which is the CURRENT single source of
+-- truth for this view (its `expected` CTE drops eh to keep tracking state.trading_enabled's new
+-- formula). Re-applying the CREATE OR REPLACE VIEW below live in isolation would REGRESS both
+-- halt-echo exclusions and false-fire drift against the 176-based state.trading_enabled. Kept here,
 -- unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE
 -- VIEW statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.b3_trading_enabled_check` AS
