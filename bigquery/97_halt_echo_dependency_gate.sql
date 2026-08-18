@@ -47,12 +47,15 @@
 --        until the halt is cleared or Denver midnight passes. Backstopped by the ~23:15 MT cadence
 --        watchdog's missed_run, which is not suppressed by this exclusion.
 --
--- SUPERSEDED LIVE by bigquery/107_halt_echo_missed_run_gate.sql — current single source of truth
--- for state.trading_enabled, state.trading_enabled_mechanical, state.b3_trading_enabled_check, and
--- ops.sp_auto_resolve_alerts (107 added a parallel halt_echo_mr exclusion for missed_run alerts,
--- since Limitation (ii) above proved insufficient in practice — 2026-07-25/26 incident). Kept here,
--- unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this file's CREATE
--- statements live in isolation.
+-- SUPERSEDED LIVE by bigquery/107_halt_echo_missed_run_gate.sql (107 added a parallel halt_echo_mr
+-- exclusion for missed_run alerts, since Limitation (ii) above proved insufficient in practice —
+-- 2026-07-25/26 incident), which was in turn superseded LIVE (2026-08-17) by
+-- bigquery/176_decouple_embedding_health_from_trading_gate.sql for state.trading_enabled,
+-- state.trading_enabled_mechanical and state.b3_trading_enabled_check — 176 is the CURRENT single
+-- source of truth for those three views (107 is itself superseded for them; 107 remains on its own
+-- separate chain only for ops.sp_auto_resolve_alerts — see this file's own SUPERSEDED LIVE banner
+-- below, pointing to bigquery/148). Kept here, unmodified, for DR-rebuild apply-in-order reference
+-- only. DO NOT re-apply this file's CREATE statements live in isolation.
 
 -- ===== state.trading_enabled — REDEFINED (SUPERSEDES bigquery/78) =====
 -- Sole change vs 78: blocking_criticals additionally excludes halt-echo missing_dependency alerts

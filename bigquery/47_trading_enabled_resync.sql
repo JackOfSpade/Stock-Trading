@@ -2,9 +2,10 @@
 -- This file's `CREATE OR REPLACE VIEW state.trading_enabled` is NO LONGER CANONICAL.
 -- bigquery/78_book_drawdown_rebase_and_staleness_gate.sql SUPERSEDED it (2026-07-17; confirmed
 -- against the deployed view 2026-07-18: live matched 78, not this file), 78 was in turn
--- superseded by bigquery/97_halt_echo_dependency_gate.sql (2026-07-19), and 97 was in turn
--- superseded by bigquery/107_halt_echo_missed_run_gate.sql (2026-07-26) — 107 is the current single
--- source of truth for this gate (78/97 are themselves superseded).
+-- superseded by bigquery/97_halt_echo_dependency_gate.sql (2026-07-19), 97 was in turn
+-- superseded by bigquery/107_halt_echo_missed_run_gate.sql (2026-07-26), and 107 was in turn
+-- superseded LIVE (2026-08-17) by bigquery/176_decouple_embedding_health_from_trading_gate.sql — 176
+-- is the current single source of truth for this gate (78/97/107 are themselves superseded).
 --
 -- Re-applying THIS file would REGRESS the live gate on BOTH of 78's changes (and on 97's
 -- halt-echo missing_dependency exclusion, and on 107's halt-echo missed_run exclusion):

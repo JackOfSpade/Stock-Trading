@@ -7,6 +7,16 @@
 -- a NEW numbered file that supersedes THIS one — never re-apply an earlier file's CREATE OR REPLACE
 -- for these objects in isolation.
 --
+-- SUPERSEDED LIVE (2026-08-17) by bigquery/176_decouple_embedding_health_from_trading_gate.sql for
+-- state.trading_enabled, state.trading_enabled_mechanical and state.b3_trading_enabled_check — 176 is
+-- the CURRENT single source of truth for those three views (drops the eh.is_healthy/
+-- embeddings_healthy term from the gate formula; embedding_health remains visible, non-blocking, via
+-- state.system_health). This file's own ops.sp_auto_resolve_alerts definition is unaffected by that
+-- change and remains on its own separate supersession chain (see the SUPERSEDED LIVE banner above its
+-- CREATE PROCEDURE statement below, pointing to bigquery/148). Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this file's three view CREATE OR REPLACE statements
+-- live in isolation.
+--
 -- ============================ WHY (the 2026-07-25/26 deadlock) ============================
 -- A compound platform-trigger outage (07-23/24) caused D1/D2/D2a/D3/OPS0/OPS1/SL3 to miss their
 -- scheduled runs. state.cadence_watch correctly raised a critical 'missed_run' alert naming all 7

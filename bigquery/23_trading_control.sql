@@ -104,13 +104,14 @@ FROM agg CROSS JOIN ltd;
 -- SUPERSEDED LIVE by bigquery/47_trading_enabled_resync.sql (2026-07-14), 47 in turn by
 -- bigquery/78_book_drawdown_rebase_and_staleness_gate.sql (2026-07-17, verified against the
 -- deployed view 2026-07-18), 78 in turn by bigquery/97_halt_echo_dependency_gate.sql
--- (2026-07-19, halt-echo missing_dependency exclusion), and 97 in turn by
--- bigquery/107_halt_echo_missed_run_gate.sql (2026-07-26, halt-echo missed_run exclusion) — 107 is
+-- (2026-07-19, halt-echo missing_dependency exclusion), 97 in turn by
+-- bigquery/107_halt_echo_missed_run_gate.sql (2026-07-26, halt-echo missed_run exclusion), and 107 in
+-- turn by bigquery/176_decouple_embedding_health_from_trading_gate.sql (2026-08-17) — 176 is
 -- the CURRENT single source of truth for this gate. Kept here, unmodified, for DR-rebuild
 -- apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE VIEW statement live in
 -- isolation — doing so on 2026-07-11 (commit e82cc96, adding the snapshot_stale term below) silently
 -- clobbered 34_alert_lifecycle.sql's already-deployed trading_halted exclusion fix and reintroduced
--- a self-latching gate for 3+ days before it was caught. See 107 (not 47/78/97 — all three are
+-- a self-latching gate for 3+ days before it was caught. See 176 (not 47/78/97/107 — all four are
 -- themselves superseded).
 CREATE OR REPLACE VIEW `stock-trading-498512.state.trading_enabled` AS
 WITH ctrl AS (
