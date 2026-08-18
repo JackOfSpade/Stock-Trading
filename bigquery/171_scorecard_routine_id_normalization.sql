@@ -48,6 +48,13 @@
 -- ops.alerts.source and state.retry_telemetry.routine join keys below; both are verified to contain
 -- ZERO middle-dot rows today, so those two are measured no-ops, applied defensively so a legacy
 -- spelling arriving in either upstream cannot silently reopen the same split.
+--
+-- SUPERSEDED LIVE by bigquery/177_backfill_note_regex_survives_correction.sql — current single
+-- source of truth for analytics.routine_health_scorecard. 177 hardens the is_backfilled note-regex
+-- (below) to also match a later human correction of a backfilled row's note, which can legitimately
+-- prepend text ahead of the "auto-backfilled..." token this view's REGEXP_CONTAINS anchors on. The
+-- CREATE OR REPLACE VIEW statement immediately below is kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply it live in isolation.
 
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.routine_health_scorecard` AS
 WITH runs AS (

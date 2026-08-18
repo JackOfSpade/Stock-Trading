@@ -34,12 +34,14 @@
 --      total_wait_minutes — all COALESCEd to 0 for a routine with no telemetry rows in the window
 --      (the common case today; INERT ON APPLY until routines start emitting tokens).
 
--- SUPERSEDED (2026-08-14) by bigquery/171_scorecard_routine_id_normalization.sql — current single
--- source of truth for analytics.routine_health_scorecard. 171 normalizes the routine id with
--- REPLACE(routine, '·', '_'), so the legacy U+00B7 middle-dot ids AR·att/AR·orc fold onto canonical
--- AR_att/AR_orc instead of appearing as separate rows. Kept here, unmodified, for DR-rebuild
--- apply-in-order reference only. DO NOT re-apply this CREATE OR REPLACE VIEW statement live in
--- isolation.
+-- SUPERSEDED (2026-08-14) by bigquery/171_scorecard_routine_id_normalization.sql, which normalizes
+-- the routine id with REPLACE(routine, '·', '_') so the legacy U+00B7 middle-dot ids AR·att/AR·orc
+-- fold onto canonical AR_att/AR_orc instead of appearing as separate rows. 171 has itself since been
+-- superseded — SUPERSEDED AGAIN (2026-08-18) by bigquery/177_backfill_note_regex_survives_
+-- correction.sql — current single source of truth for analytics.routine_health_scorecard. 177
+-- hardens the is_backfilled note-regex to survive a later correction to a backfilled row's note.
+-- Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply this
+-- CREATE OR REPLACE VIEW statement live in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.routine_health_scorecard` AS
 WITH runs AS (
   SELECT routine, run_date, status, log_ts,
