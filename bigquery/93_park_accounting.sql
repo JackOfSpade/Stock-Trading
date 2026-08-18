@@ -91,6 +91,15 @@
 -- or formula choice to make today's numbers look reconciled.
 
 -- ===== analytics.park_nav_daily -- the park's own daily-chained NAV/TWR, vehicle-generalized =====
+-- SUPERSEDED LIVE by bigquery/179_park_twr_fill_anchored.sql (2026-08-18): this definition marks a
+-- vehicle switch at the CLOSE, but every park order fills at the OPEN (MARKET/DAY, 13:30:0X UTC), so
+-- each of the three switch days in park history mis-attributes a full session's return to the OUTGOING
+-- vehicle -- understating the AI by 0.490pp / 0.784pp / 1.391pp on 07-15 / 07-27 / 08-04 and inverting
+-- two of the three legs of W5's PARK SCORECARD verdict. The `shares_prev` comment below cites
+-- 03_twr_engine.sql as the "House TWR convention" for treating a same-day trade as a pure flow; that
+-- citation is BACKWARDS -- 03_twr_engine.sql lines 100-110 anchor BOTH boundary days at the fill price
+-- ("Fill-price boundaries matter: BURL was bought 303.00 but CLOSED 323.83 on entry day"). bigquery/179
+-- brings the park onto that house convention. Do not edit this view body; it is DR-rebuild reference.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.park_nav_daily` AS
 WITH held_tickers AS (
   SELECT DISTINCT ticker
@@ -244,6 +253,14 @@ LEFT JOIN policy_asof pa ON pa.as_of_date = a.as_of_date;
 
 -- ===== analytics.park_counterfactuals -- SGOV / VOO / v1-rule-shadow / AI, same axis, four chained
 -- total-return indices (PARK_ROUTER_DESIGN.md §9's three-way evaluation benchmark) =====
+-- SUPERSEDED LIVE by bigquery/179_park_twr_fill_anchored.sql (2026-08-18), for two reasons: (1)
+-- ai_index inherits analytics.park_nav_daily's switch-day marking bias (see that view's note above);
+-- (2) `rule_leg` below joins `prs.mark_date = a.as_of_date`, paying the v1 rule shadow day d's own
+-- close-to-close return for a classification state.park_rule_shadow derives from day d's OWN closing
+-- signals -- an acausal look-ahead the AI's real decide-after-close / execute-next-open switches can
+-- never have. bigquery/179 lags the shadow's vehicle by one axis position (measured effect on the
+-- published level at 2026-08-17: rule_index -0.827% -> +0.303%). sgov_leg/voo_leg are correct as-is
+-- and are carried over byte-identical. Do not edit this view body; it is DR-rebuild reference.
 CREATE OR REPLACE VIEW `stock-trading-498512.analytics.park_counterfactuals` AS
 WITH axis AS (
   -- Reuses analytics.park_nav_daily's own date list verbatim -- guarantees the "same date axis" the

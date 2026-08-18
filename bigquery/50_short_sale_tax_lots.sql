@@ -186,6 +186,14 @@ FROM open_remainder_short;
 -- replacement-purchase pool. Column names generalized (close_trade_id/close_side rather than
 -- sell_trade_id) — verified via repo-wide grep that nothing consumes this view yet, so there is no
 -- backward-compatibility constraint from the rename.
+--
+-- SUPERSEDED LIVE by bigquery/178_park_wash_sale_exposure.sql (2026-08-18) — extends the
+-- loss-realizing and replacement-candidate populations here to also cover park (VOO / future
+-- menu-ticker) round trips sourced from events.parking_events (previously invisible: park fills
+-- never enter events.trade_fills, only this file's strategy-sourced state.trade_fills_curated). The
+-- short-sale logic in THIS file (losing_covers / candidate_sells / own_basis_for_buy) is unchanged
+-- and remains the correct reference for that behavior — park never shorts. analytics.tax_lots above
+-- is also unchanged and remains canonical here at bigquery/50.
 -- ============================================================================
 CREATE OR REPLACE VIEW `stock-trading-498512.state.wash_sale_exposure` AS
 WITH losing_sells AS (

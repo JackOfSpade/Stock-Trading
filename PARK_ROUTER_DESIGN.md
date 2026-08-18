@@ -282,9 +282,30 @@ wash-sale-monitoring bullets remain OPERATIVE, unchanged.]**
 - **Foundation-change amendment**: §A checklist runs once per menu ticker at onboarding;
   menu-internal switches thereafter need only their decision-log row; only menu *changes*
   re-trigger the full checklist.
-- **Wash sales**: monitored via the extended wash-sale watch; the AI is told the lot
-  situation in its briefing and may choose VTI over VOO after a recent VOO loss-sale —
-  a judgment call in v2, not a hardcoded substitution.
+- **Wash sales**: **CORRECTED (2026-08-18, interactive-session probe) — this bullet was
+  FALSE from onboarding (2026-07-19) through 2026-08-17.** `state.wash_sale_exposure`
+  (`bigquery/41_tax_lots.sql`/`50_short_sale_tax_lots.sql`) is built from
+  `state.trade_fills_curated` → `events.trade_fills`, which holds ONLY strategy-tagged
+  fills; every park fill lands in `events.parking_events` instead, a separate table with
+  no `realized_pnl`/lot-basis concept — so park round trips (the 2026-07-27 VOO exit /
+  2026-08-04 re-entry included) were structurally invisible to "the extended wash-sale
+  watch," and W5's weekly `wash-sale-review` log entries reported zero park exposure every
+  cycle regardless of the real underlying loss (`events.decision_log`, verified). Nor is
+  the AI actually told any lot situation in its PARK ALLOCATION CALL briefing —
+  `Claude_Task_Plan.md`'s evidence-gathering list for that call has never enumerated
+  `state.wash_sale_exposure` or any park lot table (the evidence-floor discipline means the
+  AI *could* look it up unprompted, but nothing surfaces it, and no session is known to
+  have). Mitigating: IBKR's own 1099-B computes wash sales at broker/CUSIP level across the
+  whole account regardless of what this repo tracks, so the owner's actual tax liability
+  was never at risk — only this repo's advance-visibility reporting was blind.
+  `bigquery/178_park_wash_sale_exposure.sql` extends `state.wash_sale_exposure` (same
+  output shape, no reader change needed) to cover park round trips via a new
+  `analytics.park_tax_lots` FIFO view over `events.parking_events` — written this session,
+  **not yet applied live** (operator applies via the BigQuery MCP/console per this repo's
+  standard practice). The "AI is told the lot situation" / "may choose VTI over VOO"
+  judgment-call framing remains v2's INTENDED design, not its current implementation —
+  wiring `state.wash_sale_exposure` into the PARK ALLOCATION CALL's evidence list, if
+  wanted, is a separate, not-yet-done change to `Claude_Task_Plan.md`.
 - **Alerts**: `park_router` warning categories (stale evidence HOLD, budget breach,
   concurrence miss), existing critical tripwire categories for reconciliation breaks.
   Emailer needs zero changes.
