@@ -1,8 +1,11 @@
 -- Parallel-run dbt port of state.trading_enabled_mechanical. CANONICAL SOURCE is
--- bigquery/107_halt_echo_missed_run_gate.sql (which SUPERSEDES 97, 78, 34 and 33)
--- until owner cutover; 2026-07-19: 97's halt-echo missing_dependency exclusion (halt_echo_md)
--- added; 2026-07-26: 107's halt-echo missed_run exclusion (halt_echo_mr) added. Keep all
--- halt_reason strings in lockstep with 107 when either side changes.
+-- bigquery/176_decouple_embedding_health_from_trading_gate.sql (which SUPERSEDES 107's definition of
+-- this object; 107 itself SUPERSEDES 97, 78, 34 and 33) until owner cutover; 2026-07-19: 97's
+-- halt-echo missing_dependency exclusion (halt_echo_md) added; 2026-07-26: 107's halt-echo missed_run
+-- exclusion (halt_echo_mr) added; 2026-08-17: 176 removed the embeddings_healthy term (owner decision
+-- — see trading_enabled.sql's header for the full rationale; events.decision_log
+-- f74c31be-9dbc-4af0-92b6-931d9ab21e3c). Keep all halt_reason strings in lockstep with 176 when
+-- either side changes.
 -- Added 2026-07-14 (audit finding, HIGH severity) as a port of bigquery/34 — this D2a-scoped
 -- safety gate had ZERO dbt mirror despite its live sibling
 -- state.trading_enabled having full coverage since 2026-07-04, so scripts/dbt_parity.py could never
@@ -14,7 +17,7 @@ WITH ctrl AS (
   FROM {{ source('ops', 'trading_control') }}
 ),
 health AS (
-  SELECT embeddings_healthy, position_drift_detected
+  SELECT position_drift_detected
   FROM {{ ref('system_health') }}
 ),
 halt_echo_md AS (
@@ -78,15 +81,12 @@ al AS (
 dd AS (SELECT breach_hard, drawdown_from_peak FROM {{ ref('book_drawdown_watch') }})
 SELECT
   NOT COALESCE(ctrl.latest.halt_all, FALSE)
-  AND COALESCE(health.embeddings_healthy, FALSE)
   AND al.blocking_criticals = 0
   AND NOT COALESCE(health.position_drift_detected, TRUE)
   AND NOT COALESCE(dd.breach_hard, FALSE) AS trading_enabled,
   CASE
     WHEN COALESCE(ctrl.latest.halt_all, FALSE) THEN
       FORMAT('halt_all (mode=%s): %s', COALESCE(ctrl.latest.mode, '?'), COALESCE(ctrl.latest.reason, 'no reason logged'))
-    WHEN NOT COALESCE(health.embeddings_healthy, FALSE) THEN
-      'state.system_health.embeddings_healthy = FALSE'
     WHEN al.blocking_criticals != 0 THEN
       FORMAT('%d open critical alert(s) (excluding trading_halted/staleness/halt-echo dependency+missed_run gate echoes) — see ops.alerts', al.blocking_criticals)
     WHEN COALESCE(health.position_drift_detected, TRUE) THEN
