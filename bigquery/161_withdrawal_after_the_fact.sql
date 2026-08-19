@@ -253,9 +253,11 @@ FROM scored;
 -- state.regime_capital_sync_pending SWEEP branch watches `available_funds >= 25` (surplus-only) and
 -- is structurally blind to this.
 --
--- SUPERSEDED LIVE by bigquery/168_nomadic_capital_fixes.sql — current single source of truth for
--- this view. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
--- this CREATE statement live in isolation. 168 carves out a narrow nomadic exception: a nomadic
+-- SUPERSEDED LIVE by bigquery/181_funds_deficit_exempt_any_fully_swept_strategy.sql — current single
+-- source of truth for this view (the chain is 161 -> 168 -> 181; this marker names the CURRENT
+-- canonical file, not the intermediate one, which is what tests/test_check_superseded_markers.py
+-- enforces). Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
+-- this CREATE statement live in isolation. 168 carved out a narrow nomadic exception: a nomadic
 -- strategy's post-sweep negative deposits (= -(realized + unrealized + dividends) once deployed_mv
 -- is 0) is the normal steady state after any profitable trade, not a misallocation, so deposits<0
 -- alone no longer fires for a nomadic strategy unless nav is ALSO negative (audit finding 1, HIGH).

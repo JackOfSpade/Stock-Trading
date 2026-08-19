@@ -1,7 +1,11 @@
--- Parallel-run dbt port of bigquery/93_park_accounting.sql:analytics.park_counterfactuals —
--- canonical source is that file until owner cutover. SGOV / VOO / v1-rule-shadow / AI, same date
--- axis, four chained total-return indices — PARK_ROUTER_DESIGN.md v2 §9's three-way evaluation
--- benchmark for the AI Park Allocator.
+-- Parallel-run dbt port of bigquery/179_park_twr_fill_anchored.sql:analytics.park_counterfactuals —
+-- canonical source is that file until owner cutover (supersedes the prior dbt port of
+-- bigquery/93_park_accounting.sql). SGOV / VOO / v1-rule-shadow / AI, same date axis, four chained
+-- total-return indices — PARK_ROUTER_DESIGN.md v2 §9's three-way evaluation benchmark for the AI
+-- Park Allocator. rule_index's vehicle is now LAGGED one axis position (bigquery/179's DEFECT 2 fix)
+-- so the shadow is causal — decide on day d-1's close, earn day d's return — matching the AI's own
+-- decide-after-close / execute-next-open cadence, instead of being paid for a same-day decision it
+-- could not have made in time.
 --
 -- state.park_rule_shadow (bigquery/92_park_allocator.sql) and state.signal_marks_curated
 -- (bigquery/91_park_signal_layer.sql) are declared as state_external sources (dbt does not yet own
@@ -72,15 +76,27 @@ rule_ticker_returns AS (
       LAG(close) OVER (PARTITION BY ticker ORDER BY mark_date)) AS r
   FROM rule_marks_curated
 ),
+
+-- The prior AXIS date (not calendar date) for each day — so a Monday's return is governed by the
+-- preceding Friday's classification, with no weekend hole and no assumption of contiguous dates.
+axis_prev AS (
+  SELECT as_of_date,
+    LAG(as_of_date) OVER (ORDER BY as_of_date) AS prev_as_of_date
+  FROM axis
+),
 rule_leg AS (
-  -- state.park_rule_shadow's date column is `mark_date` (bigquery/92), joined here on that name
-  -- explicitly rather than assumed.
-  SELECT a.as_of_date,
+  -- state.park_rule_shadow's date column is `mark_date` (bigquery/92), not `as_of_date`. LAGGED
+  -- join (bigquery/179's DEFECT 2 fix): day d-1's rule_vehicle governs day d's return, because
+  -- park_rule_shadow classifies from day d-1's OWN closing signals and could not have been acted on
+  -- before day d opened. The prior body (bigquery/93) joined prs.mark_date = a.as_of_date, paying the
+  -- shadow for a same-day decision — an acausal advantage the AI's real, lagged switches never get.
+  SELECT ap.as_of_date,
     COALESCE(GREATEST(rtr.r, -0.9999), 0) AS r_rule
-  FROM axis a
-  LEFT JOIN {{ source('state_external', 'park_rule_shadow') }} prs ON prs.mark_date = a.as_of_date
+  FROM axis_prev ap
+  LEFT JOIN {{ source('state_external', 'park_rule_shadow') }} prs
+    ON prs.mark_date = ap.prev_as_of_date
   LEFT JOIN rule_ticker_returns rtr
-    ON rtr.ticker = prs.rule_vehicle AND rtr.as_of_date = a.as_of_date
+    ON rtr.ticker = prs.rule_vehicle AND rtr.as_of_date = ap.as_of_date
 ),
 rule_cum AS (
   SELECT as_of_date, EXP(SUM(LN(1 + r_rule)) OVER (ORDER BY as_of_date)) - 1 AS rule_index
@@ -91,7 +107,8 @@ SELECT
   sc.sgov_index,
   vc.voo_index,
   rc.rule_index,
-  -- ai_index = park_nav_daily.twr_index joined by date, per the approved spec.
+  -- ai_index = park_nav_daily.twr_index joined by date, per the approved spec — now fill-anchored
+  -- (bigquery/179's DEFECT 1 fix), so it is measured on the same footing as the benchmarks.
   pnd.twr_index AS ai_index
 FROM axis a
 LEFT JOIN sgov_cum sc USING (as_of_date)

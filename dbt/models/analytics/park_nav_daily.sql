@@ -1,6 +1,11 @@
--- Parallel-run dbt port of bigquery/93_park_accounting.sql:analytics.park_nav_daily — canonical
--- source is that file until owner cutover. The park's own daily-chained NAV/TWR, vehicle-
--- generalized across the 12-ticker AI Park Allocator menu (PARK_ROUTER_DESIGN.md v2 §9).
+-- Parallel-run dbt port of bigquery/179_park_twr_fill_anchored.sql:analytics.park_nav_daily —
+-- canonical source is that file until owner cutover (supersedes the prior dbt port of
+-- bigquery/93_park_accounting.sql). Fill-anchored boundary pricing (house TWR convention,
+-- bigquery/03_twr_engine.sql lines ~100-110): each day's traded shares price off their ACTUAL fill
+-- (park orders are MARKET/DAY, filled at the OPEN), not the close, so a switch day no longer credits
+-- the outgoing vehicle with a return it didn't sit through, nor denies the incoming vehicle the
+-- return it did earn intraday. The park's own daily-chained NAV/TWR, vehicle-generalized across the
+-- 12-ticker AI Park Allocator menu (PARK_ROUTER_DESIGN.md v2 §9).
 --
 -- close/dividend for each ever-held park ticker prefer {{ ref('daily_marks_curated') }} over the
 -- new signal_marks_curated view (SGOV/VOO/SPY already live in daily_marks_curated; the other menu
@@ -40,6 +45,25 @@ axis AS (
   WHERE mark_date >= DATE '2026-04-17'
 ),
 
+-- Per-ticker, per-day traded legs at their ACTUAL fill prices. Share-weighted average price per
+-- (ticker, day, direction) — a day with several partials (the 08-04 re-entry had five) collapses to
+-- one wavg, which is exactly the price the book transacted at in aggregate. RECON_ADJUST is excluded
+-- from both directions (bookkeeping correction, no real price — see bigquery/179's file header); it
+-- still moves shares via park_events_daily below, it just contributes no return and no capital at
+-- risk.
+traded_legs AS (
+  SELECT ticker, action_date,
+    SUM(IF(action = 'SELL', shares, 0))                                   AS shares_sold,
+    SAFE_DIVIDE(SUM(IF(action = 'SELL', shares * price, 0)),
+                NULLIF(SUM(IF(action = 'SELL', shares, 0)), 0))           AS sell_price,
+    SUM(IF(action IN ('BUY', 'DIVIDEND_REINVEST'), shares, 0))            AS shares_bought,
+    SAFE_DIVIDE(SUM(IF(action IN ('BUY', 'DIVIDEND_REINVEST'), shares * price, 0)),
+                NULLIF(SUM(IF(action IN ('BUY', 'DIVIDEND_REINVEST'), shares, 0)), 0)) AS buy_price
+  FROM {{ source('events', 'parking_events') }}
+  WHERE ticker IS NOT NULL AND shares IS NOT NULL AND price IS NOT NULL
+  GROUP BY ticker, action_date
+),
+
 -- Signed per-ticker share delta per (ticker, action_date) — BUY/DIVIDEND_REINVEST/RECON_ADJUST(+),
 -- SELL(-), the same CASE as state.park_position (bigquery/54), grouped by day so a switch's same-day
 -- SELL-old + BUY-new legs net correctly before the running total.
@@ -71,8 +95,7 @@ shares_asof AS (
   QUALIFY ROW_NUMBER() OVER (PARTITION BY a.as_of_date, c.ticker ORDER BY c.action_date DESC) = 1
 ),
 
--- Shares held GOING INTO each axis date (i.e., as of the PRIOR axis date) — house TWR convention
--- (bigquery/03_twr_engine.sql): a same-day trade is a flow, not a return event.
+-- Shares held GOING INTO each axis date (i.e., as of the PRIOR axis date).
 shares_prev AS (
   SELECT as_of_date, ticker,
     COALESCE(LAG(shares_cum) OVER (PARTITION BY ticker ORDER BY as_of_date), 0) AS shares_prev
@@ -81,9 +104,11 @@ shares_prev AS (
 
 -- Per-ticker daily TOTAL return (close + dividend vs prior close), LAG'd over THAT TICKER's own
 -- native mark_date sequence (not the union axis) — same convention as voo_daily_return.sql /
--- sgov_daily_return.sql, so a gap in one ticker's marks never corrupts another ticker's return.
+-- sgov_daily_return.sql, so a gap in one ticker's marks never corrupts another ticker's return. Used
+-- for shares carried through the whole session; the traded legs below price off their own fills
+-- instead.
 ticker_returns AS (
-  SELECT ticker, mark_date AS as_of_date,
+  SELECT ticker, mark_date AS as_of_date, close, dividend,
     LAG(close) OVER (PARTITION BY ticker ORDER BY mark_date) AS prev_close,
     SAFE_DIVIDE(
       close + dividend - LAG(close) OVER (PARTITION BY ticker ORDER BY mark_date),
@@ -102,19 +127,55 @@ mv AS (
   GROUP BY sa.as_of_date
 ),
 
--- Value-weighted daily return across every ticker held going into the day — the same
--- "capital-weighted, compounded" combination rule deployed_book_vs_benchmarks.sql uses for its book
--- leg. GREATEST(...,-0.9999) floors a single-ticker return before it enters the weighted sum.
-daily_ret AS (
-  SELECT sp.as_of_date,
-    SAFE_DIVIDE(
-      SUM(COALESCE(sp.shares_prev, 0) * COALESCE(tr.prev_close, 0)
-          * COALESCE(GREATEST(tr.r, -0.9999), 0)),
-      NULLIF(SUM(COALESCE(sp.shares_prev, 0) * COALESCE(tr.prev_close, 0)), 0)
-    ) AS daily_return
+-- Dollar P&L and capital-at-risk per (day, ticker), decomposed into three legs:
+--   carried  : shares held from the prior close and NOT sold today -> full close-to-close total return
+--   sold     : shares disposed at the open -> prior close -> actual sell fill only
+--   bought   : shares acquired at the open -> actual buy fill -> today's close
+-- Dividends attach to the carried leg only. A share bought ON an ex-date does not receive that
+-- distribution (the price has already adjusted), and a share sold at the open of an ex-date is an
+-- immaterial edge case never yet realised in park history — so both traded legs price on price alone.
+leg_pnl AS (
+  SELECT
+    sp.as_of_date, sp.ticker,
+    GREATEST(sp.shares_prev - COALESCE(tl.shares_sold, 0), 0)             AS shares_carried,
+    COALESCE(tl.shares_sold, 0)                                            AS shares_sold,
+    COALESCE(tl.shares_bought, 0)                                          AS shares_bought,
+    tr.prev_close, tr.close, tr.dividend, tl.sell_price, tl.buy_price,
+    -- carried leg
+    GREATEST(sp.shares_prev - COALESCE(tl.shares_sold, 0), 0)
+      * COALESCE(tr.close + tr.dividend - tr.prev_close, 0)                AS pnl_carried,
+    -- sold leg (prior close -> fill). Needs BOTH a fill price and a prior close to be meaningful.
+    IF(tl.sell_price IS NOT NULL AND tr.prev_close IS NOT NULL,
+       COALESCE(tl.shares_sold, 0) * (tl.sell_price - tr.prev_close), 0)   AS pnl_sold,
+    -- bought leg (fill -> close)
+    IF(tl.buy_price IS NOT NULL AND tr.close IS NOT NULL,
+       COALESCE(tl.shares_bought, 0) * (tr.close - tl.buy_price), 0)       AS pnl_bought,
+    -- capital carried into the day at its prior close
+    sp.shares_prev * COALESCE(tr.prev_close, 0)                            AS cap_bod,
+    -- notional actually transacted today, used to separate internal rotation from external inflow
+    COALESCE(tl.shares_sold, 0) * COALESCE(tl.sell_price, 0)               AS sold_notional,
+    COALESCE(tl.shares_bought, 0) * COALESCE(tl.buy_price, 0)              AS bought_notional
   FROM shares_prev sp
   LEFT JOIN ticker_returns tr ON tr.ticker = sp.ticker AND tr.as_of_date = sp.as_of_date
-  GROUP BY sp.as_of_date
+  LEFT JOIN traded_legs   tl ON tl.ticker = sp.ticker AND tl.action_date = sp.as_of_date
+),
+
+-- Roll up to the park. The return BASE is the park's beginning-of-day value plus any capital that
+-- genuinely entered from OUTSIDE the park today (a deposit- or dividend-funded sweep), weighted 1.0
+-- because it was deployed at the open. Capital that merely ROTATED between vehicles inside the park
+-- (a switch: today's buys funded by today's sells) must NOT be added — counting it would double the
+-- base and halve the day's return. LEAST(buys, sells) is that internal rotation; only the excess of
+-- buys over sells is a true external inflow.
+daily_ret AS (
+  SELECT
+    as_of_date,
+    SAFE_DIVIDE(
+      SUM(pnl_carried + pnl_sold + pnl_bought),
+      NULLIF(SUM(cap_bod)
+             + GREATEST(SUM(bought_notional) - SUM(sold_notional), 0), 0)
+    ) AS daily_return
+  FROM leg_pnl
+  GROUP BY as_of_date
 ),
 
 -- Policy vehicle in effect AS OF each axis date — thresholds on effective_date (not event_ts): the

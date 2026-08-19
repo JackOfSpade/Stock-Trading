@@ -84,9 +84,16 @@ SELECT
   ROUND(n.deployed_mv, 2)     AS deployed_mv,
   COALESCE(f.is_low_frequency_by_design, FALSE) AS is_nomadic,
   CASE
-    WHEN ROUND(n.deposits, 2) < 0 AND COALESCE(f.is_low_frequency_by_design, FALSE)
+    -- Both deposits<0 branches ALSO require nav<0 (added 2026-08-18, interactive audit). Without it a
+    -- row admitted by the FIRST WHERE arm (available_funds<0, i.e. over-deployed) that happens to carry
+    -- deposits<0 and nav>=0 -- a fully-swept strategy later funded into a position -- was labelled
+    -- 'negative deposits AND negative NAV ... genuine misallocation' while its NAV was non-negative.
+    -- That is the same false label this file exists to remove, one WHERE-arm over: the CASE has to
+    -- mirror the arm that admitted the row, or it asserts a fact the row does not carry. The ELSE now
+    -- correctly and exclusively describes the available_funds<0 arm.
+    WHEN ROUND(n.deposits, 2) < 0 AND ROUND(n.nav, 2) < 0 AND COALESCE(f.is_low_frequency_by_design, FALSE)
       THEN 'NOMADIC strategy with negative deposits AND negative NAV - this is NOT the benign swept-out-own-P&L case (which is expected and exempted); investigate as a genuine misallocation'
-    WHEN ROUND(n.deposits, 2) < 0
+    WHEN ROUND(n.deposits, 2) < 0 AND ROUND(n.nav, 2) < 0
       THEN 'negative deposits AND negative NAV - the negative deposit base is NOT covered by this strategy own accumulated gains, so it is not the benign fully-swept case; investigate as a genuine misallocation'
     ELSE 'deployed market value exceeds this strategy booked NAV'
   END AS likely_cause

@@ -54,10 +54,34 @@
 -- SCOPE — deliberately the HALT class only. A commit subject can self-declare that its run did not
 -- complete; it cannot declare its own authorship, because ops.routine_commit_markers has no author
 -- column. Adding one was considered and REJECTED as disproportionate: the write-side guard already
--- blocks class (B) going forward, the two existing class-(B)/(A) marker rows are deleted by this
--- file's companion DML, and a schema change plus a CI change plus a backfill would buy retroactive
--- coverage of a set that is, after the delete, empty. If a future audit finds class (B) recurring
--- through a path that bypasses CI, add the column then — with evidence, not ahead of it.
+-- blocks class (B) going forward, this view's own regex permanently suppresses class (A), and a
+-- schema change plus a CI change plus a backfill would buy retroactive coverage of a set that is
+-- already fully covered by those two guards. If a future audit finds class (B) recurring through a
+-- path that bypasses CI, add the column then — with evidence, not ahead of it.
+--
+-- CORRECTION 2026-08-18 (interactive audit). The paragraph above previously read "the two existing
+-- class-(B)/(A) marker rows are deleted by this file's companion DML ... a set that is, after the
+-- delete, empty." That was never true of what actually ran. ONE row was deleted — the class-(B)
+-- operator commit ("W5 weekend timing optimization…", 60f338e), confirmed absent from live
+-- ops.routine_commit_markers. The class-(A) row (W5/2026-08-16, commit 3bd39e13, subject "W5
+-- 2026-08-16: HALT at pre-flight — BigQuery connector de-authorized") is STILL LIVE, and W5's own
+-- 2026-08-17 run note says so in its own count ("2 DELETEs: 1 phantom run_log row, 1 bad commit
+-- marker" — one marker, not two). The header claim is corrected rather than the row deleted: the
+-- marker is a truthful record that that commit landed, and this view's regex already filters it out
+-- of candidacy permanently, so deleting it would mutate live data purely to make a comment accurate.
+-- The load-bearing justification for rejecting an author column is the two guards, not an empty set.
+--
+-- KNOWN, ACCEPTED FALSE POSITIVE of the halt regex, recorded so a future audit does not re-derive it
+-- as a defect: ops.routine_commit_markers also holds W4/2026-08-03, subject "W4 2026-W32: Weekly
+-- Action Conversion — MTZ exit confirmed but halted; 6 theses queued". That "halted" describes a
+-- TRADING order, not the run — W4 completed normally and already carries a genuine started→completed
+-- run_log pair, so the suppression costs nothing. It is nonetheless a true instance of the regex
+-- matching run-completion vocabulary in a non-run-status sentence. NOT tightened, deliberately:
+-- scripts/auto_merge_decision.sh's BIAS paragraph settles this trade-off explicitly — both guards
+-- fail toward NOT writing/backfilling, because a missing marker degrades to the loud path
+-- (missing_dependency + the gate's git-evidence fallback) while a false marker silently blinds a
+-- dead-man's switch, which is what cost two W5 cycles. A narrower regex would trade a recoverable
+-- noisy miss for a chance at the silent failure this whole file exists to prevent.
 --
 -- BIAS: this guard fails toward NOT backfilling. That asymmetry is deliberate and matches the
 -- write-side guard's. A MISSING backfill degrades to the pre-existing loud path — ops.sp_assert_deps

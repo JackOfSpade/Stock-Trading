@@ -498,7 +498,7 @@ FROM donors CROSS JOIN newcomer LEFT JOIN debt ON TRUE;
 
 -- ===== FIX 9. state.strategy_funds_deficit — narrow nomadic carve-out on the deposits<0 arm.
 -- SUPERSEDES bigquery/161_withdrawal_after_the_fact.sql's definition of this view.
--- SUPERSEDED (2026-08-18) by bigquery/180_funds_deficit_exempt_any_fully_swept_strategy.sql — do NOT
+-- SUPERSEDED (2026-08-18) by bigquery/181_funds_deficit_exempt_any_fully_swept_strategy.sql — do NOT
 --   apply this definition. The carve-out below is correct in substance but keyed on the wrong thing:
 --   it gates on the strategy being NOMADIC, whereas what makes the row benign is the arithmetic fact
 --   that nav >= 0. The REGIME-CAPITAL sweep (bigquery/98) reaches the identical state when a
