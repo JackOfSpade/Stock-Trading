@@ -18,6 +18,44 @@
 
 timezone: America/Denver
 
+# BRANCH OF RECORD — what a routine does when the harness assigns NO branch (OPS0, 2026-08-18).
+#
+# MEASURED, not anecdotal: over ops.run_log `started` rows 2026-08-05..2026-08-18, 72 of 151
+# sessions (47.7%) began on a DETACHED HEAD with no harness-assigned `claude/*` branch — on ALL 11
+# operating days in the window, across 10 distinct routines (AR_att, AR_orc, D2, D2a, OPS0, OPS1,
+# OPS2, SL2, SL3, SL5). It is the fleet's NORMAL condition, not an incident.
+#
+# NOTHING HAS BEEN LOST TO IT, and the reason is worth stating so nobody "hardens" the wrong layer:
+# Claude_Task_Plan.md §Branch and state propagation already fails CLOSED here. A session must push
+# its assigned branch explicitly and confirm it with `git ls-remote` before logging `'completed'`;
+# a detached HEAD has nothing to push, so the verification cannot silently pass. Zero `failed`/
+# `halted` rows in the window are attributable to this (the four terminal rows are two BigQuery
+# de-auths and two dependency gates). Do NOT raise this as an alert class: no capital, no output and
+# no gate is at risk, the operator cannot fix harness branch assignment from the console, and a
+# nightly email for a standing platform condition is exactly the alarm fatigue the plan warns about.
+#
+# THE ONE REAL COST is observability: those 72 rows carry 49 DISTINCT spellings of the `branch`
+# field — `detached-HEAD@<sha>`, `detached@main(<sha>)`, `HEAD-detached-<sha>`, `detached-main`,
+# `detached-HEAD@<sha> (no harness branch assigned)` — because every session independently improvised
+# one. `ops.run_log.branch` is therefore unusable as a machine-readable field for ~half the fleet.
+#
+# CONVENTION (follow it; this is the whole point of the block):
+#   1. If `git branch --show-current` is EMPTY, create and stay on `claude/<routine-id-lowercased>-<run_date>`
+#      — e.g. `claude/ops0-2026-08-18` — where <run_date> is the America/Denver `state.trading_day_today.today`
+#      this run logs, NOT the container's UTC `date`. Push THAT branch; auto-merge drains `claude/*`
+#      by prefix, so a self-created branch lands exactly like a harness-assigned one.
+#   2. Record `ops.run_log.branch` as that branch NAME, not as a "detached" string. The fact that the
+#      harness assigned nothing belongs in the run's `<note>`, where prose belongs.
+#   3. Produced no repo output? Then per CLAUDE.md push discipline do NOT push an output-free branch
+#      (~13 billable CI minutes per run). Log `branch` as the name you would have used and say so in
+#      the `<note>`; there is nothing to strand.
+#
+# Prior record: SL2 2026-08-11 first flagged this in its run_log `<note>` and routed it to a
+# self-improvement audit. Nothing consumes run_log prose, so it recurred ~70 more times unaddressed —
+# which is why the convention is written HERE, in a file every routine already reads, instead of in
+# another note. If a future session wants the durable fix one level down, it is a harness/trigger
+# branch-assignment question for the owner, not a routine-side change.
+
 # MODEL OF RECORD for the remote-routine fleet (owner directive 2026-07-28).
 #
 # THE OWNER PICKS THE MODEL; ROUTINES DO NOT INFER IT. Every remote routine runs on the SAME model —
