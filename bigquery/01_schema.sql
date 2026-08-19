@@ -79,7 +79,13 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.events.queue_events` (
   payload JSON, note STRING,
   PRIMARY KEY (event_id) NOT ENFORCED
 ) PARTITION BY DATE(event_ts) CLUSTER BY queue, status
-OPTIONS(description='Queue status-transition events → state.open_queue. Lanes: WATCHLIST, PENDING_ANALYSIS, PENDING_REVIEW, and ORDER_STAGED (the durable persist-and-wait registry → state.open_orders; statuses pending|filled|expired|abandoned).');
+-- Lane list refreshed 2026-08-18 (SL5): PENDING_DRAFT (SL1→SL2 strategy authoring) was already live
+-- and undocumented here, and PENDING_ROSTER is added by the same change that pins the SL3→SL5
+-- probe-register handoff (bigquery/180_probe_register_queue_lane.sql). This description is
+-- documentation only — the table is CREATE TABLE IF NOT EXISTS, so re-applying this file never
+-- rewrites the live description; state.queue_venue_claim_unwired's allowed_map (bigquery/180) is the
+-- machine-readable lane→drainer map, and state.open_queue_detail deliberately has NO lane whitelist.
+OPTIONS(description='Queue status-transition events → state.open_queue. Lanes: WATCHLIST, PENDING_ANALYSIS, PENDING_REVIEW, PENDING_DRAFT (SL1→SL2 strategy authoring), PENDING_ROSTER (SL3→SL5 roster mutations, currently item_type=probe-register), and ORDER_STAGED (the durable persist-and-wait registry → state.open_orders; statuses pending|filled|expired|abandoned).');
 
 CREATE TABLE IF NOT EXISTS `stock-trading-498512.events.adversarial_reviews` (
   event_id STRING DEFAULT GENERATE_UUID(),

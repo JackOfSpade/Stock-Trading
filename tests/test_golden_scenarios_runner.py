@@ -934,6 +934,55 @@ def test_gemini_call_raises_budget_exhausted_before_any_network_call(monkeypatch
 # (markdown wrapping, partial replies, duplicates, malformed input) are covered thoroughly HERE instead.
 
 
+def test_excerpt_size_verdict_flags_a_heading_only_capture():
+    # THE failure this advisory exists to catch: an anchor that matches a heading whose body is empty
+    # (or a stub/pointer paragraph), so the excerpt is little more than the heading line + breadcrumb.
+    # ~120 bytes is what that actually looks like.
+    verdict = rg._excerpt_size_verdict(120, 231_960)
+    assert "SUSPICIOUSLY TINY" in verdict
+
+
+def test_excerpt_size_verdict_does_not_flag_a_short_but_complete_rule_in_a_large_file():
+    # REGRESSION GUARD for the 2026-08-18 basis change (SL5 diligence sweep). Under the old
+    # `pct < 1.0` basis both of these — the repo's only two live instances — were flagged, and each
+    # cost a routine session a full re-investigation before being cleared as a non-defect:
+    #   SB-04 / Operating_Protocols.md  1,690 B of 231,960 B (0.7%) — section captured IN FULL
+    #   RS-03 / Claude_Task_Plan.md     4,916 B of 973,929 B (0.5%) — section captured IN FULL
+    assert rg._excerpt_size_verdict(1_690, 231_960) == "ok"
+    assert rg._excerpt_size_verdict(4_916, 973_929) == "ok"
+
+
+def test_excerpt_size_verdict_is_independent_of_the_governing_file_size():
+    # The whole point of the absolute basis: the same excerpt gets the same verdict whether it sits in a
+    # small file or a huge one. A percentage basis cannot express that.
+    assert rg._excerpt_size_verdict(2_000, 5_000) == rg._excerpt_size_verdict(2_000, 900_000) == "ok"
+    tiny_small_file = rg._excerpt_size_verdict(100, 5_000)
+    tiny_big_file = rg._excerpt_size_verdict(100, 900_000)
+    assert tiny_small_file == tiny_big_file
+    assert "SUSPICIOUSLY TINY" in tiny_small_file
+
+
+def test_excerpt_size_verdict_boundary_is_min_excerpt_bytes():
+    assert rg._excerpt_size_verdict(rg.MIN_EXCERPT_BYTES, 100_000) == "ok"
+    assert "SUSPICIOUSLY TINY" in rg._excerpt_size_verdict(rg.MIN_EXCERPT_BYTES - 1, 100_000)
+
+
+def test_excerpt_size_verdict_empty_governing_file_is_ok_not_tiny():
+    # full_bytes == 0 means there is no excerpt to be suspicious of; a missing/unreadable governing file
+    # is already a HARD error from the governing_files loop, so the advisory must not double-report it
+    # (and must not divide by zero).
+    assert rg._excerpt_size_verdict(0, 0) == "ok"
+
+
+def test_real_scenarios_yaml_has_no_suspiciously_tiny_excerpt():
+    # End-to-end over the REAL scenarios.yaml: --offline must be advisory-clean, so a genuinely
+    # mis-anchored fixture stands out instead of being lost among known-false-positive noise.
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        assert rg.validate_offline(rg.load_scenarios()) == []
+    assert "SUSPICIOUSLY TINY" not in buf.getvalue()
+
+
 def test_group_scenarios_for_batching_groups_by_shared_governing_files_set():
     # Two scenarios naming the identical governing_files SET land in one group (frozenset — order within
     # the list doesn't matter for grouping); a scenario with a different set gets its own.
