@@ -370,7 +370,10 @@ routines:
                                     # rather than merely described.
       enabled: true                # LIVE 2026-07-27: owner created OPS2 (recreated 2026-08-01 after
                                     # an accidental deletion; live id trig_01YSwsMubckdarNX9Z8yb4eX)
-                                    # (cron 15 4 * * * = ~21:15 MT, retimed 2026-07-27 for DST-robustness;
+                                    # (cron 15 4 * * * = 22:15 MDT / 21:15 MST, retimed 2026-07-27 for
+                                    # DST-robustness -- this comment itself read "~21:15 MT" until
+                                    # 2026-08-18, contradicting the time_local field 11 lines above that
+                                    # the 2026-08-01 normalization had already corrected;
                                     # model claude-opus-5); trig_id recorded in ops/trigger_ids.json.
                                     #
                                     # STANDING ADDENDUM DELIBERATELY OMITTED (owner-confirmed 2026-07-28).

@@ -849,7 +849,7 @@ stall with it (it ran under the same identity).
 
   **CATCH-UP EXECUTOR (OPS2) — added 2026-07-27 (owner directive), the next-level workaround.** Beyond the
   email reminder, the owner opted to AUTO-RUN missed catchup_safe routines rather than manually re-run them.
-  Since `RemoteTrigger run` is uncallable headless, OPS2 — a new routine on its OWN ~21:15 MT cron — does NOT
+  Since `RemoteTrigger run` is uncallable headless, OPS2 — a new routine on its OWN 22:15 MT cron — does NOT
   fire the missed routine's trigger; it EXECUTES that routine's slice INLINE in its own session (the cron
   launch is what works; no in-session `RemoteTrigger` call is needed). Scope: the NON-order-crafting
   catchup_safe set (D1, OPS1, SL3, W4's idempotent queue handoff, and the W/M/Q/A/SL research routines), executed at full model fidelity on
@@ -866,8 +866,14 @@ stall with it (it ran under the same identity).
   **LIVE since 2026-07-27** (`ops/cadence.yaml` OPS2 `enabled: true`; trig_id recorded in
   `ops/trigger_ids.json`) — full IBKR access accepted (a READ-only connector grant is not offered by the
   claude.ai GUI; see the guardrail language two sentences above), cron retimed the same day to
-  `15 4 * * *` (~21:15 MT, DST-robust; the original `0 3 * * *` fell to 20:00 MST in winter, before the
-  21:00 MT deadline) — see OWNER_ACTIONS.md for the go-live/retime record. Recorded here so the deferred item points at the RIGHT fix (cadence
+  `15 4 * * *` (04:15 UTC = **22:15 MDT / 21:15 MST**, DST-robust; the original `0 3 * * *` fell to 20:00 MST
+  in winter, before the 21:00 MT deadline) — see OWNER_ACTIONS.md for the go-live/retime record. **Quote the
+  MDT rendering (22:15), not the MST one (21:15)** — this line and the OPS2 slice both read "~21:15 MT" until
+  2026-08-18, which cost five consecutive OPS2 sessions a phantom "timing drift" re-diagnosis of a trigger that
+  was firing exactly on schedule; the same MST-vs-MDT split is the trap `scripts/check_cron_dst_safety.py` now
+  enforces for `cadence.yaml`'s `time_local`, and it cannot see prose. The real residual issue the correct
+  figure exposes — only 15 min of headroom before OPS0's 22:30 sweep against STEP 2's N=4 inline executions —
+  is tracked as OWNER_ACTIONS.md **OPS2-headroom**, not as a trigger fault. Recorded here so the deferred item points at the RIGHT fix (cadence
   classification for the 7-day-a-week chained routines), not the misdiagnosed one (widening the readiness view
   for halted-vs-missing).
 

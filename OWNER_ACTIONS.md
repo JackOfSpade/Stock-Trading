@@ -75,6 +75,45 @@ the repo which model is live" one.
 
 ---
 
+# 2026-08-18 OPS2 catch-up headroom — 15 min before OPS0's sweep vs N=4 inline executions
+
+## OPS2-headroom. RETIME OPS2 (or OPS0) so the catch-up executor can finish before the watchdog sweeps — `[OPEN]`
+
+**Not urgent, and nothing is broken today** — it has never fired, because every night since OPS2 went live has
+had an empty miss feed. It bites the first real period-tier miss night.
+
+**The numbers.** OPS2 fires at 04:15 UTC (22:15 MDT); OPS0 sweeps at 04:30 UTC (22:30 MDT). That is **15
+minutes** of headroom. OPS2's STEP 2 authorises up to **N=4** missed routines executed inline, and single
+routines empirically take **17–29 minutes** each (`ops.run_log` 2026-08-17/18: W3 17m, SL5 20m, W5 25m, D1 29m).
+So OPS2 will still be mid-execution when OPS0 sweeps, on any night it has real work.
+
+**Why the overlap isn't already handled.** `bigquery/90`'s `in_flight` CTE — the guard that hides an in-progress
+routine from the refire feed — joins on `f.run_date = w.today`. A period-tier routine hosted by OPS2 logs its
+`started` row under `<as_of>` = `period_start` (hosting requirement (c)), not today, so the join cannot match it.
+And OPS2 deliberately does not write its `ops.catchup_refire_log` suppression row until STEP 2.6 has *verified*
+completion (writing it earlier would durably suppress a genuine miss if the execution died). Net effect: OPS0
+emails you an actionable **"blocked — re-run these manually"** alert naming routines OPS2 is at that moment
+successfully catching up. That inverts the stated invariant ("OPS0 emails only the residual") and asks you to
+hand-run work already in flight.
+
+**Why it went unnoticed:** the OPS2 spec claimed a ~21:15 MT fire (the MST rendering of the same cron) until
+2026-08-18. At the 75-minute gap that figure implied, the overlap would have been rare.
+
+**Fix (owner-only — a routines-console change; Claude cannot alter a live trigger's cron):** move **OPS2 earlier**
+to `45 3 * * 1,2,3,4,5` (03:45 UTC = 21:45 MDT / 20:45 MST) — ✱ but note the MST leg lands *before* the 21:00 MT
+`needs_attention` deadline, re-creating the winter blindness the 2026-07-27 retime fixed, so prefer a **native
+daily recurrence at 21:45 MT** (DST-aware, keeps both constraints in both seasons). Alternatively move **OPS0
+later** to ~23:15 MT, which costs nothing operationally (its email is read the next morning) and is the simpler
+one-field change. Then update `ops/cadence.yaml`'s `time_local` for whichever routine moved — **in MDT**, per the
+correction under OPS2-retime below.
+
+**Claude-side alternative, deliberately NOT taken:** widening `bigquery/90`'s `in_flight` join to also match the
+hosted routine's `as_of`. That is a live-SQL change to a view the entire catch-up path depends on, and a routine
+fire with no misses to test against is the wrong place to make it unilaterally (same reasoning as the 2026-08-17
+AR_orc embedding-gate finding). Worth doing in a W5 consolidation cycle if you would rather not move a trigger.
+
+---
+
 # 2026-08-16 BigQuery connector de-authorized — owner OAuth grant expired (W5 pre-flight, RUNBOOK §26 recurrence)
 
 The Sunday 2026-08-16 W5 (Factbase & Analytics Consolidation) firing found the Google Cloud BigQuery
@@ -365,7 +404,14 @@ winter OPS2 run would be blind to same-day D1/D3/SL3/OPS1 misses (they'd fall to
 must sit AFTER 21:00 MT and BEFORE OPS0's 04:30 UTC in BOTH seasons. **Fix (RemoteTrigger update / GUI, owner-only):**
 either set OPS2 to a **native daily recurrence at 21:15 MT** (DST-aware — cleanest), or change the cron to
 **`15 4 * * *`** (04:15 UTC = 22:15 MDT / 21:15 MST — after the deadline, before OPS0, both seasons). Then update
-`ops/cadence.yaml` OPS2 `time_local` to `21:15`. Not urgent (correct until DST ends), but do it before ~Nov 1.
+`ops/cadence.yaml` OPS2 `time_local` to ~~`21:15`~~ **`22:15`**. Not urgent (correct until DST ends), but do it before ~Nov 1.
+
+> **Correction 2026-08-18 (OPS2).** The struck-through instruction above was the ORIGIN of the MST/MDT
+> `time_local` trap: it told the owner to record the **MST** rendering while every other routine's
+> `time_local` is **MDT**. `cadence.yaml` was normalized on 2026-08-01 and the convention is now CI-enforced
+> (`scripts/check_cron_dst_safety.py` — `tests/test_check_cron_dst_safety.py` pins this exact OPS2 case), but
+> the wrong instruction survived here and would have re-introduced the trap if replayed. The retime itself was
+> and remains correct; only the recording convention was wrong.
 
 ---
 
