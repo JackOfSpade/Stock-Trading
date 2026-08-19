@@ -4,6 +4,23 @@
 -- No existing object is touched, no procedure body changed, and nothing here gates anything --
 -- there is no threshold, no alert, and no cap in this file by design.
 --
+-- APPLY STATUS: APPLIED LIVE 2026-08-17 15:13 UTC (ops.web_calls), 15:13:48 / 15:13:57 (the two views).
+-- 8bd7d13's commit message said "NOT YET APPLIED LIVE"; that was true when written and is now stale --
+-- the apply happened ~5h later and was never written back anywhere, which is why a 2026-08-19 review
+-- re-derived it from the commit message and started from the wrong premise. Verified 2026-08-19 against
+-- INFORMATION_SCHEMA.TABLES in both datasets. Do NOT re-apply expecting to create anything: the table is
+-- CREATE TABLE IF NOT EXISTS (a no-op re-run is harmless but proves nothing), and re-running the two
+-- CREATE OR REPLACE VIEWs is only correct if this file is still the newest definition of them.
+--
+-- WHAT IS ACTUALLY BROKEN IS ADOPTION, NOT THE DDL (measured 2026-08-19). ops.web_calls held 54 rows,
+-- every one stamped run_date = 2026-08-17 (the day it was created) and written by only D1 and W3.
+-- D1 ran again on 2026-08-18, fetched a published breadth figure and cited external URLs, and logged
+-- ZERO rows here; no other routine has ever logged one. The fix is NOT in this file -- it is that the
+-- shared rule's part (d) obligation now lives at the run-logging template in Claude_Task_Plan.md
+-- (Observability -> "Run logging (every run)"), where a session actually reads it at session end,
+-- instead of only in the shared-rules section ~450 lines away. state.web_spend_month.has_unreported_runs
+-- is the column that makes this gap visible; it is TRUE for essentially the whole fleet right now.
+--
 -- ===== WHY =====
 -- The owner asked on 2026-08-17 whether the fleet uses its metered Tavily requests EFFICIENTLY,
 -- and defined efficiency precisely: paying for capability is fine, "not pulling the same info
@@ -30,6 +47,27 @@
 -- this file exists for, is the two questions that actually drive a fix:
 --   (1) WHICH ROUTINE is spending it, and
 --   (2) WHAT was fetched -- so a repeat fetch of the same target is detectable at all.
+--
+-- ===== THE $100 TAVILY SPEND CAP IS A DELIBERATE TRIGGER, NOT A FAILURE MODE TO PREVENT =====
+-- Owner decision 2026-08-17, recorded here because this file is the durable artifact a future session
+-- opens when it asks "what is this telemetry for?", and it must not read the series as a budget alarm.
+-- The $100/month cap (= 12,500 pay-as-you-go credits) is LEFT IN PLACE ON PURPOSE: reaching it is the
+-- SIGNAL to move to a monthly Tavily tier, which is cheaper at that volume. PAYG costs
+-- (credits - 1000) * $0.008, so it equals Bootstrap's flat $100/15,000 at ~13,500 credits/month --
+-- the cap and the switch-point are essentially the same number, which is exactly what makes the cap a
+-- good trigger. Below ~13,500 credits PAYG is cheaper, so switching EARLY costs money.
+-- A future session must NOT raise the cap reflexively, treat reaching it as an incident, or "fix" it by
+-- switching plans early. The early warning is already wired on Tavily's side (an 80% email usage alert,
+-- enabled and verified 2026-08-17, firing around 11,000 credits while PAYG is still the cheaper option):
+-- the correct response to that email is to PROJECT month-end usage and switch only if the projection
+-- clears ~13,500. Verified 2026-08-19 against tavily.com/pricing: a "Project" tier exists at $30/month
+-- for 4,000 credits, BETWEEN free and Bootstrap -- and it does NOT move the switch-point, because PAYG's
+-- 1,000 free credits make PAYG strictly cheaper than Project at every volume ($24 vs $30 at exactly
+-- 4,000 credits). Do not "discover" Project later and switch to it; the number to switch on is ~13,500.
+-- What must NOT happen is reaching the cap UNNOTICED -- Tavily then hard-stops with HTTP 432
+-- ("This request exceeds your plan's set usage limit"), erroring mid-run, which is the same degradation
+-- that cost the 2026-08-17 sweep its COHR detection when FMP's 250/day cap blew. The 80% email plus
+-- state.web_spend_month are the two things preventing that; the cap itself is working as designed.
 --
 -- ===== WHY A TABLE AND NOT A run_log.note TOKEN =====
 -- The first draft of this file parsed a WEB[provider=..;tool=..;n=..;credits=..] token out of
