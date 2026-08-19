@@ -77,7 +77,34 @@ the repo which model is live" one.
 
 # 2026-08-18 OPS2 catch-up headroom — 15 min before OPS0's sweep vs N=4 inline executions
 
-## OPS2-headroom. RETIME OPS2 (or OPS0) so the catch-up executor can finish before the watchdog sweeps — `[OPEN]`
+## OPS2-headroom. RETIME OPS2 (or OPS0) so the catch-up executor can finish before the watchdog sweeps — `[OPTIONAL — the false-alert half was fixed in-repo 2026-08-19; what remains is throughput, not correctness]`
+
+**STATUS CHANGE 2026-08-19 (interactive triage of the `catchup_executor_headroom` alert).** The part of this
+item that made it *actionable* — OPS0 emailing you a "re-run these manually" alert for routines OPS2 was at that
+moment successfully catching up — **is fixed and needs nothing from you.** The "why the overlap isn't already
+handled" paragraph below turned out to rest on a **contradiction inside OPS2's own spec**, not on a real property
+of the system: STEP 2 item 5's governing clause says to honour "X's own … run-logging", and every routine's
+generated slice hardcodes `sp_routine_start('<ID>', <today, America/Denver>, …)`, yet sub-bullet (c) said X logs
+under `<as_of>`. Only the second reading breaks `bigquery/90`'s join. Both halves are now closed:
+- **(c) and STEP 2.6 now pin `run_date = <today>` explicitly** and state that `<as_of>`/`period_start` belongs to
+  `ops.catchup_refire_log.miss_key` only. That alone restores the guard. It also closes a *worse* latent bug the
+  same ambiguity carried: under the `<as_of>` reading, STEP 2.6's own completion check would have looked for a
+  row that isn't there and routed a **successful** catch-up to the failure branch — losing the
+  `ops.catchup_refire_log` row and the `catchup_caught_up` alert, and re-exposing the routine to being refired
+  after it had already run. (The miss itself would still have cleared: `ran_completed_this_period` is a range
+  test, `rl.run_date >= period_start AND rl.run_date <= today`, so any in-period completion satisfies it.)
+- **`bigquery/184` widens both catch-up views' `in_flight` join to match on routine alone**, so the guard no
+  longer depends on that prose being transcribed correctly. Pure widening — the 3h-fresh latest-row-wins
+  `'started'` test is unchanged, so nothing that was excluded before stops being excluded, and a dead session
+  still stops suppressing catch-up after 3h. (This is the "Claude-side alternative" the original item declined
+  to take from a routine fire; taken here from an interactive session at the owner's direction, which is the
+  venue that entry was reserving it for.)
+
+**What is still true, and why this stays open as OPTIONAL:** 15 minutes is still less than one routine's runtime,
+so on a night with several misses OPS0 will still sweep before OPS2 has worked through N=4. That now produces an
+*incomplete* email rather than a *wrong* one — OPS0 names the misses OPS2 hasn't reached yet, which is precisely
+its designed "emails the residual" role. Retiming buys throughput and a tidier first-real-miss night; it no
+longer prevents a false alert. Do it whenever convenient, or not at all.
 
 **Not urgent, and nothing is broken today** — it has never fired, because every night since OPS2 went live has
 had an empty miss feed. It bites the first real period-tier miss night.
@@ -87,7 +114,9 @@ minutes** of headroom. OPS2's STEP 2 authorises up to **N=4** missed routines ex
 routines empirically take **17–29 minutes** each (`ops.run_log` 2026-08-17/18: W3 17m, SL5 20m, W5 25m, D1 29m).
 So OPS2 will still be mid-execution when OPS0 sweeps, on any night it has real work.
 
-**Why the overlap isn't already handled.** `bigquery/90`'s `in_flight` CTE — the guard that hides an in-progress
+**Why the overlap isn't already handled — ⚠ SUPERSEDED, see the STATUS CHANGE box above; this paragraph
+describes the pre-2026-08-19 state and is kept only as the record of what was diagnosed.**
+`bigquery/90`'s `in_flight` CTE — the guard that hides an in-progress
 routine from the refire feed — joins on `f.run_date = w.today`. A period-tier routine hosted by OPS2 logs its
 `started` row under `<as_of>` = `period_start` (hosting requirement (c)), not today, so the join cannot match it.
 And OPS2 deliberately does not write its `ops.catchup_refire_log` suppression row until STEP 2.6 has *verified*
@@ -107,10 +136,13 @@ later** to ~23:15 MT, which costs nothing operationally (its email is read the n
 one-field change. Then update `ops/cadence.yaml`'s `time_local` for whichever routine moved — **in MDT**, per the
 correction under OPS2-retime below.
 
-**Claude-side alternative, deliberately NOT taken:** widening `bigquery/90`'s `in_flight` join to also match the
-hosted routine's `as_of`. That is a live-SQL change to a view the entire catch-up path depends on, and a routine
-fire with no misses to test against is the wrong place to make it unilaterally (same reasoning as the 2026-08-17
-AR_orc embedding-gate finding). Worth doing in a W5 consolidation cycle if you would rather not move a trigger.
+**Claude-side alternative, deliberately NOT taken *by the routine fire that raised this* — SINCE TAKEN, 2026-08-19:**
+widening `bigquery/90`'s `in_flight` join. The original reasoning stands for a routine fire (a live-SQL change to
+a view the entire catch-up path depends on, made unilaterally with no misses to test against, same as the
+2026-08-17 AR_orc embedding-gate finding). It was made instead from an interactive session under an explicit
+owner "investigate and fix" instruction — see `bigquery/184_inflight_guard_hosted_runs.sql` and the STATUS CHANGE
+at the top of this item. `ops.alert_policy`'s `catchup_executor_headroom` row already named this exact remedy as
+a sanctioned resolution path ("the `bigquery/90` in_flight join widened to match a hosted routine `as_of`").
 
 ---
 

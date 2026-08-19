@@ -63,15 +63,21 @@ def test_gen_12_region_empty_when_no_calendar_routines():
 
 
 # ---- gen_15_region: ALL routines, instruction derived from the plan heading ----------------------
+# Every call below passes prior= and today= explicitly (never the defaults) so these tests are
+# deterministic and never read the real bigquery/15 file or the real clock (parse_catalog_since()'s
+# and datetime.date.today()'s own defaults are exercised separately, in
+# test_gen_15_region_defaults_read_the_real_file_and_clock_when_not_passed below).
 def test_gen_15_region_emits_all_routines_with_derived_instruction():
     routines = [{"id": "D1", "monitor_class": "daily_trading"},
                 {"id": "AR_att", "monitor_class": "queue_driven"}]
     head_by_id = {"D1": "D1. Market Development Scan — deep research",
                   "AR_att": "Adversarial Review Attacker — regular routine"}
-    got = gr.gen_15_region(routines, head_by_id)
+    got = gr.gen_15_region(routines, head_by_id, prior={}, today="2026-08-19")
     assert got == (
-        "  STRUCT('D1' AS routine, 'Read Claude_Task_Plan.md. Perform D1 — deep research.' AS canonical_instruction),\n"
-        "  STRUCT('AR_att' AS routine, 'Read Claude_Task_Plan.md. Perform Adversarial Review Attacker — regular routine.' AS canonical_instruction)"
+        "  STRUCT('D1' AS routine, 'Read Claude_Task_Plan.md. Perform D1 — deep research.' AS canonical_instruction, "
+        "DATE '2026-08-19' AS canonical_since),\n"
+        "  STRUCT('AR_att' AS routine, 'Read Claude_Task_Plan.md. Perform Adversarial Review Attacker — regular routine.' "
+        "AS canonical_instruction, DATE '2026-08-19' AS canonical_since)"
     )
     # 2-space indent (matches bigquery/15's block, shallower than 12/24), queue_driven routines INCLUDED.
     assert got.splitlines()[0].startswith("  STRUCT(")
@@ -79,9 +85,103 @@ def test_gen_15_region_emits_all_routines_with_derived_instruction():
 
 def test_gen_15_region_empty_instruction_when_heading_missing():
     # A routine with no matching plan heading yet gets an empty instruction string — check B/C flag
-    # that loudly rather than the generator guessing.
-    got = gr.gen_15_region([{"id": "GHOST", "monitor_class": "daily_trading"}], {})
-    assert got == "  STRUCT('GHOST' AS routine, '' AS canonical_instruction)"
+    # that loudly rather than the generator guessing. Absent from `prior` too, so canonical_since seeds
+    # to `today` (covered more directly by test_gen_15_region_seeds_canonical_since_when_absent_from_prior).
+    got = gr.gen_15_region([{"id": "GHOST", "monitor_class": "daily_trading"}], {}, prior={}, today="2026-08-19")
+    assert got == "  STRUCT('GHOST' AS routine, '' AS canonical_instruction, DATE '2026-08-19' AS canonical_since)"
+
+
+# ---- gen_15_region: canonical_since preserve-vs-restamp contract (bigquery/183, 2026-08-19) -------
+def test_gen_15_region_preserves_canonical_since_when_instruction_unchanged():
+    # STABILITY CONTRACT: a routine whose derived instruction matches what `prior` already has keeps
+    # its OLD canonical_since date verbatim, even though `today` is a later date — this is what makes
+    # a --check run on any later day regenerate a byte-identical region (see gen_15_region's docstring).
+    routines = [{"id": "D1", "monitor_class": "daily_trading"}]
+    head_by_id = {"D1": "D1. Market Development Scan — deep research"}
+    instr = "Read Claude_Task_Plan.md. Perform D1 — deep research."
+    got = gr.gen_15_region(routines, head_by_id, prior={"D1": (instr, "2026-08-17")}, today="2026-08-19")
+    assert got == (
+        "  STRUCT('D1' AS routine, 'Read Claude_Task_Plan.md. Perform D1 — deep research.' "
+        "AS canonical_instruction, DATE '2026-08-17' AS canonical_since)"
+    )
+
+
+def test_gen_15_region_restamps_canonical_since_when_instruction_changes():
+    # The complementary half: when the derived instruction differs from what `prior` held for that
+    # routine (a real heading/type-tag change), canonical_since is re-stamped to `today` -- the one
+    # case a --check run must flag as stale until --write catches it up.
+    routines = [{"id": "D1", "monitor_class": "daily_trading"}]
+    head_by_id = {"D1": "D1. Market Development Scan — regular routine"}    # type tag changed
+    old_instr = "Read Claude_Task_Plan.md. Perform D1 — deep research."
+    got = gr.gen_15_region(routines, head_by_id, prior={"D1": (old_instr, "2026-08-17")}, today="2026-08-19")
+    assert got == (
+        "  STRUCT('D1' AS routine, 'Read Claude_Task_Plan.md. Perform D1 — regular routine.' "
+        "AS canonical_instruction, DATE '2026-08-19' AS canonical_since)"
+    )
+
+
+def test_gen_15_region_seeds_canonical_since_when_absent_from_prior():
+    # A routine with no entry in `prior` at all (brand new, or `prior={}`) seeds to `today` regardless
+    # of its derived instruction -- there is no earlier date to preserve.
+    routines = [{"id": "NEWROUTINE", "monitor_class": "daily_trading"}]
+    head_by_id = {"NEWROUTINE": "NEWROUTINE. Brand New Thing — regular routine"}
+    got = gr.gen_15_region(routines, head_by_id, prior={}, today="2026-08-19")
+    assert got == (
+        "  STRUCT('NEWROUTINE' AS routine, 'Read Claude_Task_Plan.md. Perform NEWROUTINE — regular routine.' "
+        "AS canonical_instruction, DATE '2026-08-19' AS canonical_since)"
+    )
+
+
+def test_gen_15_region_defaults_read_the_real_file_and_clock_when_not_passed(monkeypatch):
+    # `prior` defaults to parse_catalog_since() (the REAL bigquery/15 file) and `today` defaults to
+    # datetime.date.today().isoformat() -- both replaced here with deterministic stand-ins (rather
+    # than mutating the real stdlib datetime module, which every other test in the process shares) so
+    # this test proves the DEFAULT wiring itself, not just the explicit-args path every other test in
+    # this section uses.
+    monkeypatch.setattr(gr, "parse_catalog_since", lambda: {"D1": (
+        "Read Claude_Task_Plan.md. Perform D1 — deep research.", "2026-01-01")})
+
+    class _FixedToday:
+        @staticmethod
+        def isoformat():
+            return "2026-08-19"
+
+    class _FixedDateClass:
+        @staticmethod
+        def today():
+            return _FixedToday()
+
+    class _FixedDatetimeModule:
+        date = _FixedDateClass
+
+    monkeypatch.setattr(gr, "datetime", _FixedDatetimeModule)
+
+    routines = [{"id": "D1", "monitor_class": "daily_trading"}]
+    head_by_id = {"D1": "D1. Market Development Scan — deep research"}
+    got = gr.gen_15_region(routines, head_by_id)
+    # Unchanged instruction -> the DEFAULT-sourced prior's date (2026-01-01) is preserved, proving
+    # both defaults were actually consulted rather than silently falling back to something else.
+    assert "DATE '2026-01-01' AS canonical_since" in got
+
+
+# ---- parse_catalog_since(): the paired reader for gen_15_region's `prior` argument -----------------
+def test_parse_catalog_since_round_trips_gen_15_region_output(tmp_path):
+    # parse_catalog_since() must recover exactly what gen_15_region() emitted, INCLUDING an
+    # apostrophe-bearing instruction (escaped ' -> '' in the SQL literal, un-escaped back on read) --
+    # the same round-trip contract CATALOG_ROW_RE/_sql_str's docstrings both call out by name.
+    routines = [{"id": "D1", "monitor_class": "daily_trading"},
+                {"id": "AR_att", "monitor_class": "queue_driven"}]
+    head_by_id = {"D1": "D1. Market Development Scan — deep research",
+                  "AR_att": "O'Brien Review Attacker — regular routine"}
+    body = gr.gen_15_region(routines, head_by_id, prior={}, today="2026-08-19")
+    sql = gr.BEGIN_MARKER + gr.wanted_region(body) + gr.END_MARKER
+    p = tmp_path / "15.sql"
+    p.write_text(sql)
+    got = gr.parse_catalog_since(str(p))
+    assert got == {
+        "D1": ("Read Claude_Task_Plan.md. Perform D1 — deep research.", "2026-08-19"),
+        "AR_att": ("Read Claude_Task_Plan.md. Perform O'Brien Review Attacker — regular routine.", "2026-08-19"),
+    }
 
 
 def test_sql_str_escapes_single_quotes_and_mirrors_check_b_unescape():
@@ -101,9 +201,11 @@ def test_gen_15_region_escapes_apostrophe_in_heading():
     # dropped from the instruction entirely, so a coded id no longer exercises this path. Use an
     # UNCODED heading (no "<id>. " prefix, same shape as AR_att/AR_orc) instead -- the one remaining
     # case where a heading's full text, apostrophe included, still reaches the generated SQL.
-    got = gr.gen_15_region([{"id": "AR_att"}], {"AR_att": "O'Brien Review Attacker — regular routine"})
+    got = gr.gen_15_region([{"id": "AR_att"}], {"AR_att": "O'Brien Review Attacker — regular routine"},
+                            prior={}, today="2026-08-19")
     assert got == ("  STRUCT('AR_att' AS routine, 'Read Claude_Task_Plan.md. Perform O''Brien "
-                   "Review Attacker — regular routine.' AS canonical_instruction)")
+                   "Review Attacker — regular routine.' AS canonical_instruction, "
+                   "DATE '2026-08-19' AS canonical_since)")
     # Mirror of check B: un-escaping the instruction recovers the raw text want_catalog derives.
     assert "Perform O''Brien Review Attacker" in got
     assert got.replace("''", "'").count("O'Brien") == 1

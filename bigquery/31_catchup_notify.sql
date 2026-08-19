@@ -24,13 +24,18 @@
 -- build if this UNNEST list drifts from `{routine : catchup_safe AND monitor_class in (daily_trading,
 -- daily_all)}`. Update BOTH this list and ops/cadence.yaml's catchup_safe field together.
 
--- SUPERSEDED (2026-07-18): state.catchup_available is now defined canonically in
--- bigquery/90_catchup_inprogress_guard.sql, which reproduces this exact view (including the
--- catchup_safe_routines UNNEST list above -- still the copy scripts/check_cadence_consistency.py's
--- check K actually parses; leave it here unchanged) and additionally excludes a routine that is
--- in-flight (a fresh 'started' ops.run_log row with no terminal row yet). Apply bigquery/90 -- do
--- NOT re-apply the CREATE OR REPLACE VIEW below live in isolation. Kept here, unmodified, for
--- DR-rebuild apply-in-order reference only.
+-- SUPERSEDED (2026-07-18; pointer updated 2026-08-19): state.catchup_available is now defined
+-- canonically in bigquery/184_inflight_guard_hosted_runs.sql (bigquery/90_catchup_inprogress_guard.sql
+-- superseded this view first; bigquery/184 in turn supersedes bigquery/90 for this object, so this
+-- pointer now names the current canonical file rather than that intermediate one). It still reproduces
+-- this exact view, including the catchup_safe_routines UNNEST list above -- still the copy
+-- scripts/check_cadence_consistency.py's check K actually parses; leave it here unchanged. bigquery/184
+-- drops `AND f.run_date = w.today` from the in_flight LEFT JOIN and reduces in_flight to `SELECT
+-- DISTINCT routine`, so a routine hosted inline by OPS2 (which may log its 'started' row under
+-- period_start rather than today) is still recognised as in flight -- a pure widening; the 3h-fresh
+-- latest-row-wins 'started' definition is unchanged. Apply bigquery/184 -- do NOT re-apply the CREATE
+-- OR REPLACE VIEW below live in isolation. Kept here, unmodified, for DR-rebuild apply-in-order
+-- reference only.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.catchup_available` AS
 WITH catchup_safe_routines AS (
   -- SL3 (rev 2026-07-10 — Strategy Arsenal autonomy conversion, owner directive): the daily incubation

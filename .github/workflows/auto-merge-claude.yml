@@ -28,8 +28,12 @@ permissions:
   pull-requests: write
   actions: write            # read: the CI-gate check reads workflow runs via the Actions API.
                             # write (2026-07-15, self-improvement audit — CONFIRMED GAP
-                            # red-ci-merge-conflict-no-remediation): the one-shot retry below calls
-                            # `gh run rerun --failed`, which needs write.
+                            # red-ci-merge-conflict-no-remediation): the one-shot CI retry below
+                            # calls `gh run rerun --failed`, which needs write. Also covers the
+                            # 2026-08-19 stuck-secondary-gate one-shot `gh workflow run
+                            # golden-scenarios.yml --ref <branch>` (workflow_dispatch also needs
+                            # actions: write; see the Golden Scenarios gate block for why this is a
+                            # dispatch, not a `gh run rerun`, of the stuck run).
   id-token: write           # RUNBOOK §38 self-heal (ITEM 3): required for google-github-actions/auth
                             # (keyless WIF) so this job can write ops.routine_commit_markers rows.
                             # No-op (job still runs fine) if GCP_WIF_PROVIDER/GCP_WIF_SERVICE_ACCOUNT
@@ -174,6 +178,58 @@ jobs:
               2>/dev/null || echo "")"
             gs_conclusion="$(ci_conclusion_from_json "$gs_runs_json")"
             if ! is_secondary_gate_satisfied "$gs_conclusion"; then
+              # ONE-SHOT STUCK-RUN REMEDIATION (2026-08-19). ci_conclusion_from_json falls back to
+              # `.status` when `.conclusion` is null, so a golden-scenarios run GitHub never
+              # dispatches to a runner (status stays "queued" forever — a rare Actions-platform
+              # glitch) reads as "queued" here and blocks this branch PERMANENTLY, since nothing
+              # else in the repo ever moves a run out of "queued". OBSERVED TWICE, both stuck for
+              # hours/days with zero remediation: run 32215104789 (branch claude/sl3-2026-08-18,
+              # created 2026-08-19T04:15:35Z) and a run from fix/alert-triage-2026-08-04 (created
+              # 2026-08-06T16:39:13Z, still queued 13 days later).
+              #
+              # THE REMEDIATION IS workflow_dispatch ON THE BRANCH, NOT `gh run rerun` OF THE STUCK
+              # RUN — MEASURED LIVE against run 32215104789, 2026-08-19: `gh run rerun 32215104789`
+              # -> "cannot be rerun; This workflow is already running" (exit 1; GitHub refuses to
+              # rerun a non-terminal run, and a never-dispatched "queued" run never reaches one, so
+              # this call can NEVER succeed for this failure mode). `gh run cancel 32215104789` ->
+              # "HTTP 500: Failed to cancel workflow run" (exit 1; these zombie runs cannot even be
+              # cancelled, so cancel-then-rerun is not a usable fallback either). `gh workflow run
+              # golden-scenarios.yml --ref claude/sl3-2026-08-18` -> SUCCEEDED, creating a fresh run
+              # (32272701107, event=workflow_dispatch) against the SAME head_sha as the stuck run —
+              # golden-scenarios.yml already declares `workflow_dispatch:` in its `on:` block, so no
+              # workflow change was needed there. This is sufficient even though the zombie run
+              # itself is never touched: the query just above is `...runs?head_sha=$sha&per_page=1`
+              # — per_page=1 returns the MOST RECENT run for that SHA, so once the dispatched run
+              # completes, ci_conclusion_from_json reads ITS conclusion, not the zombie's; the
+              # zombie can stay "queued" forever with zero further effect on the gate.
+              # golden-scenarios.yml's `concurrency: group: golden-scenarios-${{ github.ref }}`
+              # (cancel-in-progress: true) is scoped per-branch, so this dispatch cannot collide
+              # with a run on any other branch.
+              #
+              # should_redispatch_stuck_secondary_gate (scripts/auto_merge_decision.sh, sourced
+              # above) bounds this to firing at most ONCE per stuck run — run_attempt=="1" (a
+              # second sweep sees the freshly-dispatched run, not this same stuck run, as
+              # golden-scenarios.yml's now-most-recent run for the SHA) — and only once queued for
+              # over 60 minutes (golden-scenarios.yml normally finishes in 2-6 minutes), so it
+              # cannot fire against a run merely still queueing normally, nor against one that IS
+              # executing (conclusion must be exactly "queued", never "in_progress"). This is a
+              # REPAIR ATTEMPT, not a gate weakening: is_secondary_gate_satisfied above still blocks
+              # the merge this run either way. The dispatch is best-effort and fail-soft — a failed
+              # request falls through unchanged to the `continue` below, leaving the existing
+              # stranded-branch-check.yml alert path as the backstop exactly as today.
+              gs_run_id="$(ci_run_id_from_json "$gs_runs_json")"
+              gs_run_attempt="$(ci_run_attempt_from_json "$gs_runs_json")"
+              gs_created_at="$(ci_run_created_at_from_json "$gs_runs_json")"
+              gs_now_epoch="$(date -u +%s)"
+              if should_redispatch_stuck_secondary_gate "$gs_conclusion" "$gs_run_attempt" "$gs_created_at" "$gs_now_epoch" \
+                 && [ -n "$gs_run_id" ]; then
+                gs_created_epoch="$(iso8601_to_epoch_utc "$gs_created_at" 2>/dev/null || echo "")"
+                gs_age_min="?"
+                [ -n "$gs_created_epoch" ] && gs_age_min=$(( (gs_now_epoch - gs_created_epoch) / 60 ))
+                echo "::notice::$br — Golden Scenarios run $gs_run_id for ${sha:0:7} has been 'queued' for ~${gs_age_min}m with no runner ever dispatched (attempt 1); dispatching a fresh golden-scenarios.yml run for the same head SHA before treating it as stranded (gh run rerun cannot work on a non-terminal run — see comment above)."
+                gh workflow run golden-scenarios.yml --ref "$br" 2>/dev/null \
+                  || echo "::warning::Could not dispatch a fresh Golden Scenarios run for $br (stuck run $gs_run_id) — falls through to the existing stranded-branch-check.yml alert if it stays queued."
+              fi
               echo "::notice::Skipping $br — Golden Scenarios schema-validate for ${sha:0:7} is '$gs_conclusion', not success/none. It merges once that run completes green (or is re-triggered)."
               continue
             fi

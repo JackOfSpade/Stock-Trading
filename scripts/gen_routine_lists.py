@@ -56,7 +56,9 @@ Markers (exactly one BEGIN/END pair per file, wrapping ONLY the STRUCT rows -- t
   -- END GENERATED ROUTINE LIST
 """
 import argparse
+import datetime
 import os
+import re
 import sys
 
 try:
@@ -126,7 +128,27 @@ def gen_12_region(routines):
     return "\n".join(lines)
 
 
-def gen_15_region(routines, head_by_id):
+CATALOG_ROW_RE = re.compile(
+    r"STRUCT\('([^']+)' AS routine, '((?:[^']|'')*)' AS canonical_instruction, "
+    r"DATE '(\d{4}-\d{2}-\d{2})' AS canonical_since\)")
+
+# Fleet-wide seed date for canonical_since: 2026-08-17, commit 29f6547 ("routine-instruction format
+# decoupling"), which dropped every routine's descriptive TITLE from the canonical instruction so the
+# remote trigger references only the stable routine ID. Any routine whose stored date is still this
+# value has not had its instruction text changed since that migration.
+CANONICAL_SINCE_SEED = "2026-08-17"
+
+
+def parse_catalog_since(path=None):
+    """{routine: (canonical_instruction, canonical_since)} parsed back out of the CURRENT
+    bigquery/15 generated region. Used only to PRESERVE an existing canonical_since across a
+    regeneration whose instruction text for that routine did not change (see gen_15_region)."""
+    txt = read_text(path or ROUTINE_CATALOG_SQL)
+    return {rid: (instr.replace("''", "'"), since)
+            for rid, instr, since in CATALOG_ROW_RE.findall(txt)}
+
+
+def gen_15_region(routines, head_by_id, prior=None, today=None):
     """ops.routine_catalog rows: ALL routines, cadence.yaml order, instruction text derived from the
     matching plan heading exactly as check_cadence_consistency.py's check B derives want_catalog, so
     the generated output stays byte-compatible with that check. A routine with no plan heading yet
@@ -138,18 +160,40 @@ def gen_15_region(routines, head_by_id):
     which un-escapes ''->' when it parses the row back so its want_catalog (raw heading text) matches.
     The two derivations are byte-identical and MUST move together: changing the escaping here without
     the paired check B un-escape (or vice-versa) desyncs them. Byte-identical on the current tree --
-    no routine heading contains an apostrophe today, so this only changes output once one does."""
+    no routine heading contains an apostrophe today, so this only changes output once one does.
+    (check B's regex stops at the instruction literal's closing quote and does not require the STRUCT
+    to end there, so the third field below is invisible to it -- deliberately, so this column can move
+    without touching that check.)
+
+    canonical_since (added 2026-08-19) is the DATE this routine's canonical_instruction last CHANGED.
+    state.instruction_drift (bigquery/183) needs it because its "live" side is not a live read of the
+    web-UI trigger at all -- it is the text the routine TRANSCRIBED THE LAST TIME IT RAN
+    (state.routine_last_instruction <- ops.run_log.instruction). A sample logged BEFORE the canonical
+    text changed is therefore not evidence about the live trigger in either direction, and reporting it
+    as `drifted` asserts a fact the view cannot observe. See bigquery/183's header for the incident.
+
+    STABILITY CONTRACT (why --check does not thrash): the date is PRESERVED verbatim whenever this
+    routine's derived instruction equals the one already stored in the file, and only re-stamped to
+    `today` when the text actually changes. So a --check run on any later day regenerates a
+    byte-identical region and passes; the one run that changes a heading stamps that day's date and
+    CI then requires --write, exactly as it already does for the text itself. A routine absent from
+    the current file (brand new) seeds to today."""
+    prior = parse_catalog_since() if prior is None else prior
+    today = today or datetime.date.today().isoformat()
     lines = []
     n = len(routines)
     for i, r in enumerate(routines):
         rid = r["id"]
         heading = head_by_id.get(rid)
         instr = instruction_text(heading) if heading else ""
+        prior_instr, prior_since = prior.get(rid, (None, None))
+        since = prior_since if (prior_since and prior_instr == instr) else today
         comma = "," if i < n - 1 else ""
         # rid is a constrained \w+ id (never quoted), so only the free-text instruction needs escaping
         # -- and check B un-escapes only the instruction capture, so escaping only it keeps the two
         # derivations matched.
-        lines.append(f"  STRUCT('{rid}' AS routine, '{_sql_str(instr)}' AS canonical_instruction){comma}")
+        lines.append(f"  STRUCT('{rid}' AS routine, '{_sql_str(instr)}' AS canonical_instruction, "
+                     f"DATE '{since}' AS canonical_since){comma}")
     return "\n".join(lines)
 
 

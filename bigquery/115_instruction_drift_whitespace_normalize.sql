@@ -46,6 +46,16 @@
 -- ops.routine_catalog TABLE + its generated STRUCT rows are UNCHANGED and remain canonical there —
 -- this file does not touch them).
 
+-- SUPERSEDED (2026-08-19): state.instruction_drift (this is the only object this file defines) is now
+-- defined canonically in bigquery/183_instruction_drift_stale_sample.sql, which adds a canonical_since
+-- staleness gate so a run_log sample logged no later than ops.routine_catalog.canonical_since (the
+-- date the routine's canonical instruction last changed) no longer sets `drifted` -- it sets the new
+-- `drift_unproven` column instead, since a sample predating the canonical text carries no evidence
+-- about the live trigger either way. The whitespace-normalized-PREFIX text-match predicate fixed here
+-- on 2026-07-29 is unchanged by bigquery/183. Apply bigquery/183 -- do NOT re-apply the CREATE OR
+-- REPLACE VIEW below live in isolation. Kept here, unmodified, for DR-rebuild apply-in-order
+-- reference only.
+
 CREATE OR REPLACE VIEW `stock-trading-498512.state.instruction_drift` AS
 WITH li AS (
   SELECT routine, instruction, run_date

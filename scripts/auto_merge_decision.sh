@@ -97,6 +97,21 @@ ci_run_attempt_from_json() {
   fi
 }
 
+# ci_run_created_at_from_json <json> — the created_at ISO-8601 timestamp of the most recent run
+# (GitHub's dispatch-time field, e.g. "2026-08-19T04:15:35Z"), or "" if none/unparseable/missing.
+# Companion to ci_run_id_from_json / ci_run_attempt_from_json (same jq-guard shape); feeds
+# should_redispatch_stuck_secondary_gate's age computation below (2026-08-19, stuck-secondary-gate
+# self-heal).
+ci_run_created_at_from_json() {
+  local out
+  if [ -n "$1" ] \
+     && out="$(printf '%s' "$1" | jq -r 'if (.workflow_runs | type) != "array" then "" else (.workflow_runs[0] as $r | if $r == null then "" else ($r.created_at // "") end) end' 2>/dev/null)"; then
+    printf '%s\n' "$out"
+  else
+    printf '\n'
+  fi
+}
+
 # should_retry_failed_ci <conclusion> <run_attempt> — true (exit 0) only for a GENUINE terminal
 # failure ("failure", never "in_progress"/"none"/"error"/"cancelled"/etc.) on its FIRST attempt
 # (run_attempt == "1"). Bounds this to exactly ONE automatic retry ever per run: GitHub increments
@@ -106,6 +121,91 @@ ci_run_attempt_from_json() {
 # stranded-branch-check.yml alert path unchanged; this never touches branch content.
 should_retry_failed_ci() {
   [ "$1" = "failure" ] && [ "$2" = "1" ]
+}
+
+# ---- Stuck secondary-gate one-shot re-dispatch (2026-08-19) -----------------------------------
+# WHY: is_secondary_gate_satisfied correctly blocks the merge on a matched-but-non-success
+# golden-scenarios run (queued/in_progress/failure/error all fail it). But ci_conclusion_from_json
+# falls back to `.status` when `.conclusion` is null, so a run GitHub never dispatches to a runner
+# (status stays "queued" forever — a rare Actions-platform glitch, not a code failure) reads as
+# "queued" and blocks the branch PERMANENTLY: nothing in the repo ever moves a run out of "queued",
+# so is_secondary_gate_satisfied never flips true and the branch is stranded with no remediation.
+# should_retry_failed_ci (above) cannot cover this: nothing failed (there is no terminal "failure"),
+# and "queued" is non-terminal.
+#
+# OBSERVED TWICE, both unresolved as of this writing: run 32215104789 (branch
+# claude/sl3-2026-08-18, created_at 2026-08-19T04:15:35Z) — still "queued" ~17h later, and the
+# reason ops.ci_findings currently carries an open stranded_branch row; and a run from
+# fix/alert-triage-2026-08-04 (created_at 2026-08-06T16:39:13Z) — still "queued" 13 days later
+# (branch since deleted). Every OTHER golden-scenarios run in both windows completed in 2-6
+# minutes, so this is a rare platform glitch that never self-resolves, not ordinary queue latency.
+#
+# THE REMEDIATION IS workflow_dispatch, NOT `gh run rerun` — MEASURED LIVE against the stuck run
+# above, 2026-08-19, before landing this (an earlier version of this self-heal called `gh run
+# rerun` and would have been permanently inert):
+#   * `gh run rerun 32215104789` -> "run 32215104789 cannot be rerun; This workflow is already
+#     running" (exit 1). GitHub refuses to rerun a run that is not in a terminal state, and a
+#     never-dispatched "queued" run never reaches one — this call can NEVER succeed for this
+#     failure mode, so a self-heal built on it would always hit its own fallback and do nothing.
+#   * `gh run cancel 32215104789` -> "HTTP 500: Failed to cancel workflow run" (exit 1). These
+#     zombie runs cannot even be cancelled, so cancel-then-rerun is not a usable fallback either.
+#   * `gh workflow run golden-scenarios.yml --ref claude/sl3-2026-08-18` -> SUCCEEDED, creating a
+#     brand-new run (32272701107, event=workflow_dispatch) against the SAME head_sha as the stuck
+#     run (golden-scenarios.yml already declares `workflow_dispatch:` in its `on:` block, so it
+#     needs no workflow change to accept this).
+# WHY A FRESH DISPATCH IS SUFFICIENT even though the zombie run itself is never touched: the
+# workflow's own CI-gate query is `.../golden-scenarios.yml/runs?head_sha=$sha&per_page=1` —
+# per_page=1 returns the MOST RECENT run for that SHA. Once the dispatched run completes,
+# ci_conclusion_from_json reads ITS conclusion, not the zombie's; the zombie can stay "queued"
+# forever with zero effect on the gate. golden-scenarios.yml's `concurrency: group:
+# golden-scenarios-${{ github.ref }}` (`cancel-in-progress: true`) is scoped per-branch, so this
+# dispatch cannot collide with a run on any other branch.
+#
+# should_redispatch_stuck_secondary_gate mirrors should_retry_failed_ci's shape (a pure,
+# self-limiting predicate the workflow gates a remediation call on) but with a different trigger
+# AND a different remediation action, true (exit 0) ONLY when ALL hold:
+#   * conclusion is EXACTLY "queued" — deliberately NOT "in_progress": a run actually executing on
+#     a runner is not stuck, and dispatching a duplicate would race a real in-flight run.
+#   * run_attempt is "1" — the same GitHub-incremented idempotency counter should_retry_failed_ci
+#     relies on. Note this counter belongs to the STUCK run being observed, not to the dispatched
+#     one (workflow_dispatch always starts its own new run at attempt 1) — it still bounds this to
+#     firing at most ONCE per stuck run, because a second sweep sees the newly-dispatched run (not
+#     this same stuck run) as golden-scenarios.yml's now-most-recent run for the SHA.
+#   * the run's age (now_epoch - created_at_iso) exceeds STUCK_SECONDARY_GATE_THRESHOLD_SECONDS (60
+#     minutes) — comfortably above the measured 2-6 minute normal completion time, so this can never
+#     race a run that is merely still queueing normally or the workflow's own concurrency group.
+# This is a REPAIR ATTEMPT, not a gate weakening: is_secondary_gate_satisfied still blocks the
+# merge itself, unchanged, on this and every subsequent run until the dispatched run actually
+# completes green.
+#
+# Pure string/arith function — no gh/network/clock calls inside. now_epoch is supplied by the
+# caller (production: `date -u +%s` in the workflow step, the same idiom stranded-branch-check.yml
+# already uses for its own age computation; tests: a literal/computed epoch), so
+# tests/test_auto_merge_logic.sh exercises this deterministically. created_at_iso is converted via
+# iso8601_to_epoch_utc below, which invokes the `date` binary only to PARSE the given timestamp
+# string — it never reads the actual wall clock, so it adds no non-determinism.
+STUCK_SECONDARY_GATE_THRESHOLD_SECONDS=3600
+
+# iso8601_to_epoch_utc <iso8601> — GitHub's workflow-run `created_at` is always UTC, fixed-format,
+# no fractional seconds (e.g. "2026-08-19T04:15:35Z"). Tries GNU `date -d` first (production runs
+# on ubuntu-latest); falls back to BSD `date -j -f` (this repo's local test runs on macOS) — both
+# parse the identical string to the identical epoch second (verified 2026-08-19). Prints nothing
+# and returns non-zero on unparseable/empty input.
+iso8601_to_epoch_utc() {
+  [ -n "${1:-}" ] || return 1
+  date -u -d "$1" +%s 2>/dev/null || date -j -u -f '%Y-%m-%dT%H:%M:%SZ' "$1" +%s 2>/dev/null
+}
+
+should_redispatch_stuck_secondary_gate() {
+  local conclusion="${1:-}" run_attempt="${2:-}" created_at_iso="${3:-}" now_epoch="${4:-}"
+  local created_epoch age
+  [ "$conclusion" = "queued" ] || return 1
+  [ "$run_attempt" = "1" ] || return 1
+  case "$now_epoch" in ''|*[!0-9]*) return 1 ;; esac
+  created_epoch="$(iso8601_to_epoch_utc "$created_at_iso")" || return 1
+  case "$created_epoch" in ''|*[!0-9]*) return 1 ;; esac
+  age=$(( now_epoch - created_epoch ))
+  [ "$age" -gt "$STUCK_SECONDARY_GATE_THRESHOLD_SECONDS" ]
 }
 
 # ---- RUNBOOK §38 commit-marker field extraction (extracted + FIXED 2026-07-29) ----------------

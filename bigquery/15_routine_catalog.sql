@@ -12,8 +12,27 @@
 -- `python scripts/print_routines.py` (the canonical_instruction is "Read Claude_Task_Plan.md.
 -- Perform <heading>." verbatim) and re-apply. A mismatch here vs the live trigger is the alarm.
 
+-- canonical_since (added 2026-08-19, bigquery/183): the DATE this row's canonical_instruction last
+-- CHANGED. It exists because state.instruction_drift's "live" side is NOT a live read of the web-UI
+-- trigger — it is the text the routine transcribed the LAST TIME IT RAN. A sample logged BEFORE the
+-- canonical text changed is not evidence about the live trigger in either direction, so bigquery/183
+-- uses this date to separate "the live trigger really differs" from "we have no sample newer than the
+-- change". SEEDED FLEET-WIDE to 2026-08-17 — commit 29f6547 ("routine-instruction format decoupling")
+-- re-derived this whole generated region, dropping every routine's descriptive TITLE so the remote
+-- trigger references only the stable routine ID. That seed is EXACT for 30 of the 32 rows: a per-row
+-- diff of the commit (git show 29f6547^:bigquery/15_routine_catalog.sql vs git show 29f6547:...)
+-- shows every row except AR_att and AR_orc genuinely changed text that day — including the D/OPS/SL3/
+-- W3-W5 rows, which lost titles like "D1. Market Development Scan" exactly as the rest did. Only
+-- AR_att/AR_orc are byte-identical before and after (their headings carry no "<ID>. " prefix, so
+-- instruction_text() always emitted the full heading verbatim and the decoupling was a no-op for
+-- them); for those two the true last-change date is earlier and 2026-08-17 is an over-estimate. That
+-- error is in the SAFE direction and currently inert — a later canonical_since can only ever WITHHOLD
+-- a drift verdict on a sample older than it, never MASK a drift on a sample newer than it, and both
+-- AR routines log daily-to-weekly so their samples always postdate the floor. It self-refines from
+-- here regardless: gen_routine_lists.py re-stamps a row only when its own text changes and otherwise
+-- preserves the stored date verbatim.
 CREATE OR REPLACE TABLE `stock-trading-498512.ops.routine_catalog` AS
-SELECT routine, canonical_instruction
+SELECT routine, canonical_instruction, canonical_since
 FROM UNNEST([
 -- Routine notes relocated here (ABOVE the generated region) by the ARCH-3 Item 30b normalization
 -- (2026-07-16, scripts/gen_routine_lists.py --write) -- the generator does not preserve inline
@@ -41,38 +60,38 @@ FROM UNNEST([
 -- re-run `python scripts/gen_routine_lists.py --write`. CI step `gen_routine_lists.py --check` verifies
 -- this region is byte-current.
 -- BEGIN GENERATED ROUTINE LIST (scripts/gen_routine_lists.py --write; do not hand-edit)
-  STRUCT('D1' AS routine, 'Read Claude_Task_Plan.md. Perform D1 — deep research.' AS canonical_instruction),
-  STRUCT('D2a' AS routine, 'Read Claude_Task_Plan.md. Perform D2a — regular routine.' AS canonical_instruction),
-  STRUCT('D2' AS routine, 'Read Claude_Task_Plan.md. Perform D2 — regular routine.' AS canonical_instruction),
-  STRUCT('D3' AS routine, 'Read Claude_Task_Plan.md. Perform D3 — regular routine.' AS canonical_instruction),
-  STRUCT('OPS0' AS routine, 'Read Claude_Task_Plan.md. Perform OPS0 — regular routine.' AS canonical_instruction),
-  STRUCT('OPS1' AS routine, 'Read Claude_Task_Plan.md. Perform OPS1 — regular routine.' AS canonical_instruction),
-  STRUCT('OPS2' AS routine, 'Read Claude_Task_Plan.md. Perform OPS2 — regular routine.' AS canonical_instruction),
-  STRUCT('SL3' AS routine, 'Read Claude_Task_Plan.md. Perform SL3 — regular routine.' AS canonical_instruction),
-  STRUCT('AR_att' AS routine, 'Read Claude_Task_Plan.md. Perform Adversarial Review Attacker — regular routine.' AS canonical_instruction),
-  STRUCT('AR_orc' AS routine, 'Read Claude_Task_Plan.md. Perform Adversarial Review Orchestrator — regular routine.' AS canonical_instruction),
-  STRUCT('SL2' AS routine, 'Read Claude_Task_Plan.md. Perform SL2 — regular routine.' AS canonical_instruction),
-  STRUCT('SL5' AS routine, 'Read Claude_Task_Plan.md. Perform SL5 — regular routine.' AS canonical_instruction),
-  STRUCT('W1' AS routine, 'Read Claude_Task_Plan.md. Perform W1 — deep research.' AS canonical_instruction),
-  STRUCT('W2' AS routine, 'Read Claude_Task_Plan.md. Perform W2 — deep research.' AS canonical_instruction),
-  STRUCT('W3' AS routine, 'Read Claude_Task_Plan.md. Perform W3 — deep research.' AS canonical_instruction),
-  STRUCT('W4' AS routine, 'Read Claude_Task_Plan.md. Perform W4 — regular routine.' AS canonical_instruction),
-  STRUCT('W5' AS routine, 'Read Claude_Task_Plan.md. Perform W5 — regular routine.' AS canonical_instruction),
-  STRUCT('M1a' AS routine, 'Read Claude_Task_Plan.md. Perform M1a — deep research.' AS canonical_instruction),
-  STRUCT('M1b' AS routine, 'Read Claude_Task_Plan.md. Perform M1b — regular routine.' AS canonical_instruction),
-  STRUCT('M2' AS routine, 'Read Claude_Task_Plan.md. Perform M2 — deep research.' AS canonical_instruction),
-  STRUCT('M3' AS routine, 'Read Claude_Task_Plan.md. Perform M3 — deep research.' AS canonical_instruction),
-  STRUCT('M4' AS routine, 'Read Claude_Task_Plan.md. Perform M4 — regular routine.' AS canonical_instruction),
-  STRUCT('M5' AS routine, 'Read Claude_Task_Plan.md. Perform M5 — regular routine.' AS canonical_instruction),
-  STRUCT('SL4' AS routine, 'Read Claude_Task_Plan.md. Perform SL4 — regular routine.' AS canonical_instruction),
-  STRUCT('Q1' AS routine, 'Read Claude_Task_Plan.md. Perform Q1 — deep research.' AS canonical_instruction),
-  STRUCT('Q2' AS routine, 'Read Claude_Task_Plan.md. Perform Q2 — deep research.' AS canonical_instruction),
-  STRUCT('Q3' AS routine, 'Read Claude_Task_Plan.md. Perform Q3 — deep research.' AS canonical_instruction),
-  STRUCT('Q4' AS routine, 'Read Claude_Task_Plan.md. Perform Q4 — regular routine.' AS canonical_instruction),
-  STRUCT('SL1' AS routine, 'Read Claude_Task_Plan.md. Perform SL1 — deep research.' AS canonical_instruction),
-  STRUCT('A1' AS routine, 'Read Claude_Task_Plan.md. Perform A1 — deep research.' AS canonical_instruction),
-  STRUCT('A2' AS routine, 'Read Claude_Task_Plan.md. Perform A2 — deep research.' AS canonical_instruction),
-  STRUCT('A3' AS routine, 'Read Claude_Task_Plan.md. Perform A3 — regular routine.' AS canonical_instruction)
+  STRUCT('D1' AS routine, 'Read Claude_Task_Plan.md. Perform D1 — deep research.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('D2a' AS routine, 'Read Claude_Task_Plan.md. Perform D2a — regular routine.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('D2' AS routine, 'Read Claude_Task_Plan.md. Perform D2 — regular routine.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('D3' AS routine, 'Read Claude_Task_Plan.md. Perform D3 — regular routine.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('OPS0' AS routine, 'Read Claude_Task_Plan.md. Perform OPS0 — regular routine.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('OPS1' AS routine, 'Read Claude_Task_Plan.md. Perform OPS1 — regular routine.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('OPS2' AS routine, 'Read Claude_Task_Plan.md. Perform OPS2 — regular routine.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('SL3' AS routine, 'Read Claude_Task_Plan.md. Perform SL3 — regular routine.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('AR_att' AS routine, 'Read Claude_Task_Plan.md. Perform Adversarial Review Attacker — regular routine.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('AR_orc' AS routine, 'Read Claude_Task_Plan.md. Perform Adversarial Review Orchestrator — regular routine.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('SL2' AS routine, 'Read Claude_Task_Plan.md. Perform SL2 — regular routine.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('SL5' AS routine, 'Read Claude_Task_Plan.md. Perform SL5 — regular routine.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('W1' AS routine, 'Read Claude_Task_Plan.md. Perform W1 — deep research.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('W2' AS routine, 'Read Claude_Task_Plan.md. Perform W2 — deep research.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('W3' AS routine, 'Read Claude_Task_Plan.md. Perform W3 — deep research.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('W4' AS routine, 'Read Claude_Task_Plan.md. Perform W4 — regular routine.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('W5' AS routine, 'Read Claude_Task_Plan.md. Perform W5 — regular routine.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('M1a' AS routine, 'Read Claude_Task_Plan.md. Perform M1a — deep research.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('M1b' AS routine, 'Read Claude_Task_Plan.md. Perform M1b — regular routine.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('M2' AS routine, 'Read Claude_Task_Plan.md. Perform M2 — deep research.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('M3' AS routine, 'Read Claude_Task_Plan.md. Perform M3 — deep research.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('M4' AS routine, 'Read Claude_Task_Plan.md. Perform M4 — regular routine.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('M5' AS routine, 'Read Claude_Task_Plan.md. Perform M5 — regular routine.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('SL4' AS routine, 'Read Claude_Task_Plan.md. Perform SL4 — regular routine.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('Q1' AS routine, 'Read Claude_Task_Plan.md. Perform Q1 — deep research.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('Q2' AS routine, 'Read Claude_Task_Plan.md. Perform Q2 — deep research.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('Q3' AS routine, 'Read Claude_Task_Plan.md. Perform Q3 — deep research.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('Q4' AS routine, 'Read Claude_Task_Plan.md. Perform Q4 — regular routine.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('SL1' AS routine, 'Read Claude_Task_Plan.md. Perform SL1 — deep research.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('A1' AS routine, 'Read Claude_Task_Plan.md. Perform A1 — deep research.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('A2' AS routine, 'Read Claude_Task_Plan.md. Perform A2 — deep research.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since),
+  STRUCT('A3' AS routine, 'Read Claude_Task_Plan.md. Perform A3 — regular routine.' AS canonical_instruction, DATE '2026-08-17' AS canonical_since)
   -- END GENERATED ROUTINE LIST
 ]);
 

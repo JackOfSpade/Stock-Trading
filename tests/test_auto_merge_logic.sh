@@ -208,6 +208,67 @@ assert_false "API error: should_retry_failed_ci must NOT retry" \
 assert_false "missing run_attempt (empty string): should_retry_failed_ci must NOT retry" \
   should_retry_failed_ci "failure" ""
 
+# ---- ci_run_created_at_from_json / should_redispatch_stuck_secondary_gate: the stuck-secondary-gate
+# one-shot re-dispatch (2026-08-19). OBSERVED TWICE, both stuck permanently: run 32215104789
+# (branch claude/sl3-2026-08-18, created_at 2026-08-19T04:15:35Z, still "queued" ~17h later — the
+# open ops.ci_findings stranded_branch row as of this writing) and a run from
+# fix/alert-triage-2026-08-04 (created_at 2026-08-06T16:39:13Z, still "queued" 13 days later;
+# branch since deleted). Every OTHER golden-scenarios run in both windows completed in 2-6 minutes.
+# should_retry_failed_ci (above) cannot cover this: nothing failed, and "queued" is non-terminal.
+# The remediation the predicate below gates is a fresh `gh workflow run golden-scenarios.yml --ref
+# <branch>` dispatch, NOT a `gh run rerun` of the stuck run itself — MEASURED live against run
+# 32215104789 (2026-08-19): `gh run rerun` fails ("cannot be rerun; This workflow is already
+# running", exit 1) and `gh run cancel` also fails (HTTP 500) on a never-dispatched "queued" run,
+# but `gh workflow run --ref` succeeds and creates a new run (32272701107) against the same
+# head_sha — sufficient because the workflow's own CI-gate query is per_page=1 (most-recent-run-
+# for-this-SHA), so the new run's conclusion is what gets read once it completes; the zombie run's
+# perpetual "queued" status becomes irrelevant. See scripts/auto_merge_decision.sh's comment above
+# should_redispatch_stuck_secondary_gate for the full detail. --------------------------------------
+
+created_at="$(ci_run_created_at_from_json '{"workflow_runs":[{"id":32215104789,"conclusion":null,"status":"queued","run_attempt":1,"created_at":"2026-08-19T04:15:35Z"}]}')"
+assert_eq "created_at parses from a real run" "$created_at" "2026-08-19T04:15:35Z"
+
+created_at="$(ci_run_created_at_from_json '{"workflow_runs":[]}')"
+assert_eq "no matching run: created_at is empty" "$created_at" ""
+
+created_at="$(ci_run_created_at_from_json '')"
+assert_eq "gh api failure: created_at is empty (fail closed, no redispatch attempted)" "$created_at" ""
+
+# Error-shaped body (no workflow_runs array, e.g. gh api's stdout on an HTTP error) — mirrors the
+# equivalent ci_run_id_from_json / ci_run_attempt_from_json coverage above; each parser carries its
+# own copy of the (.workflow_runs|type)!="array" guard.
+created_at="$(ci_run_created_at_from_json '{"message":"Not Found"}')"
+assert_eq "error-shaped JSON (missing workflow_runs): created_at is empty, not a bogus timestamp" "$created_at" ""
+
+# Fixed, deterministic clock for the age predicate — NOT `date` with no arguments, so this test
+# never flakes on wall-clock timing or on which machine/timezone runs it. NOW_EPOCH's UTC rendering
+# is 2026-08-19T12:00:00Z; STUCK_CREATED_AT is 61 minutes earlier (over the 60-minute threshold),
+# FRESH_CREATED_AT is 5 minutes earlier (under it — ordinary queue latency, must NOT fire).
+NOW_EPOCH=1787140800
+STUCK_CREATED_AT="2026-08-19T10:59:00Z"   # 61 minutes before NOW_EPOCH (3660s > 3600s threshold)
+FRESH_CREATED_AT="2026-08-19T11:55:00Z"   # 5 minutes before NOW_EPOCH (300s, well under threshold)
+
+assert_true "queued 61+ min on attempt 1: should_redispatch_stuck_secondary_gate fires" \
+  should_redispatch_stuck_secondary_gate "queued" "1" "$STUCK_CREATED_AT" "$NOW_EPOCH"
+
+assert_false "in_progress (a run actually executing is not stuck): should_redispatch_stuck_secondary_gate must NOT fire" \
+  should_redispatch_stuck_secondary_gate "in_progress" "1" "$STUCK_CREATED_AT" "$NOW_EPOCH"
+
+assert_false "queued but already retried once (attempt 2): should_redispatch_stuck_secondary_gate must NOT fire again" \
+  should_redispatch_stuck_secondary_gate "queued" "2" "$STUCK_CREATED_AT" "$NOW_EPOCH"
+
+assert_false "queued only 5 minutes (normal queue latency, golden-scenarios usually finishes in 2-6 min): should_redispatch_stuck_secondary_gate must NOT fire" \
+  should_redispatch_stuck_secondary_gate "queued" "1" "$FRESH_CREATED_AT" "$NOW_EPOCH"
+
+assert_false "success conclusion: should_redispatch_stuck_secondary_gate must NOT fire (nothing to repair)" \
+  should_redispatch_stuck_secondary_gate "success" "1" "$STUCK_CREATED_AT" "$NOW_EPOCH"
+assert_false "failure conclusion: should_redispatch_stuck_secondary_gate must NOT fire (that is should_retry_failed_ci's job, not this predicate's — different workflow, different retry)" \
+  should_redispatch_stuck_secondary_gate "failure" "1" "$STUCK_CREATED_AT" "$NOW_EPOCH"
+assert_false "'none' conclusion (no matching run at all): should_redispatch_stuck_secondary_gate must NOT fire" \
+  should_redispatch_stuck_secondary_gate "none" "1" "$STUCK_CREATED_AT" "$NOW_EPOCH"
+assert_false "'error' conclusion (gh api call itself failed): should_redispatch_stuck_secondary_gate must NOT fire" \
+  should_redispatch_stuck_secondary_gate "error" "1" "$STUCK_CREATED_AT" "$NOW_EPOCH"
+
 # ---- RUNBOOK §38 marker fields: routine + run_date extraction (2026-07-29) -----------------
 # Regression guard for the fleet-wide marker hole: requiring a full YYYY-MM-DD *in the subject*
 # meant only D1/D2/W5 ever produced ops.routine_commit_markers rows, which silently limited

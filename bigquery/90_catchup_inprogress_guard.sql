@@ -37,6 +37,14 @@
 -- copies are inert duplicates for query purposes only, never read by that check).
 
 -- ===== state.catchup_available (supersedes bigquery/31) =====
+-- SUPERSEDED (2026-08-19): state.catchup_available (this view only -- state.period_catchup_available
+-- below has its own separate marker) is now defined canonically in
+-- bigquery/184_inflight_guard_hosted_runs.sql, which drops `AND f.run_date = w.today` from the
+-- in_flight LEFT JOIN and reduces in_flight to `SELECT DISTINCT routine`, so a routine hosted inline
+-- by OPS2 (which may log its 'started' row under period_start rather than today) is still recognised
+-- as in flight -- a pure widening; the 3h-fresh latest-row-wins 'started' definition is unchanged.
+-- Apply bigquery/184 -- do NOT re-apply the CREATE OR REPLACE VIEW below live in isolation. Kept
+-- here, unmodified, for DR-rebuild apply-in-order reference only.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.catchup_available` AS
 WITH catchup_safe_routines AS (
   SELECT routine FROM UNNEST(['D1', 'D3', 'OPS1', 'SL3']) AS routine
@@ -62,6 +70,14 @@ WHERE w.needs_attention
   AND f.routine IS NULL;
 
 -- ===== state.period_catchup_available (supersedes bigquery/59) =====
+-- SUPERSEDED (2026-08-19): state.period_catchup_available (this view only -- state.catchup_available
+-- above has its own separate marker) is now defined canonically in
+-- bigquery/184_inflight_guard_hosted_runs.sql, which drops `AND f.run_date = w.today` from the
+-- in_flight LEFT JOIN and reduces in_flight to `SELECT DISTINCT routine`, so a routine hosted inline
+-- by OPS2 (which may log its 'started' row under period_start rather than today) is still recognised
+-- as in flight -- a pure widening; the 3h-fresh latest-row-wins 'started' definition is unchanged.
+-- Apply bigquery/184 -- do NOT re-apply the CREATE OR REPLACE VIEW below live in isolation. Kept
+-- here, unmodified, for DR-rebuild apply-in-order reference only.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.period_catchup_available` AS
 WITH catchup_safe_period_routines AS (
   SELECT routine FROM UNNEST([
