@@ -498,6 +498,15 @@ FROM donors CROSS JOIN newcomer LEFT JOIN debt ON TRUE;
 
 -- ===== FIX 9. state.strategy_funds_deficit — narrow nomadic carve-out on the deposits<0 arm.
 -- SUPERSEDES bigquery/161_withdrawal_after_the_fact.sql's definition of this view.
+-- SUPERSEDED (2026-08-18) by bigquery/180_funds_deficit_exempt_any_fully_swept_strategy.sql — do NOT
+--   apply this definition. The carve-out below is correct in substance but keyed on the wrong thing:
+--   it gates on the strategy being NOMADIC, whereas what makes the row benign is the arithmetic fact
+--   that nav >= 0. The REGIME-CAPITAL sweep (bigquery/98) reaches the identical state when a
+--   capital-disabled strategy's last position closes — which happened live to Strategy B on
+--   2026-08-18 (MSCI invalidation exit, full 47.35 swept, nav to exactly 0, deposits to -18.22),
+--   producing precisely the false positive, and precisely the "future session "fixes" it with a
+--   corrective cash_flow entry" hazard, that this FIX 9 note names below. bigquery/180 drops the
+--   nomadic conjunct and keys the exemption on ROUND(nav,2) < 0 for all strategies.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_funds_deficit` AS
 SELECT
   n.strategy,

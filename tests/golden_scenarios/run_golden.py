@@ -460,10 +460,12 @@ def validate_offline(scenarios):
     judge of the one rule it needed, with the offline gate staying green throughout. As a side effect (not
     an error, not reflected in the returned list), a clean governing_sections entry also PRINTS a one-line
     excerpt-size-vs-full-file-size report to stdout, so a suspiciously tiny excerpt is visible in CI output
-    without anyone having to go look for it — see that print's own comment further down. A scenario with no
-    governing_sections key at all triggers none of this (no new errors, no new prints), which is what keeps
-    this function's behavior against today's real scenarios.yaml (no scenario uses the feature yet) exactly
-    what it was before this feature existed."""
+    without anyone having to go look for it — see that print's own comment further down, and
+    MIN_EXCERPT_BYTES for why "tiny" is measured in absolute bytes rather than as a share of the governing
+    file. A scenario with no governing_sections key at all triggers none of this (no new errors, no new
+    prints), so this function's behavior on such a scenario is exactly what it was before the feature
+    existed. (The original wording here said "no scenario uses the feature yet" — stale as of 2026-08-18:
+    scenarios.yaml now declares governing_sections widely, and the per-scenario report is routine output.)"""
     errors = []
     seen_ids = set()
     for i, sc in enumerate(scenarios):
@@ -597,6 +599,8 @@ def validate_offline(scenarios):
                     # tiny excerpt is visible in CI output"). Only printed once every anchor for this file
                     # validated cleanly — a broken anchor set has no well-defined excerpt to report on, and
                     # its own error(s) above are already the actionable CI output for that case.
+                    # The percentage is reported for context but does NOT decide the advisory — that is an
+                    # absolute byte floor; see MIN_EXCERPT_BYTES / _excerpt_size_verdict() for why.
                     if anchors_ok:
                         excerpt_text, n_blocks, n_anchors = extract_sections(file_text, anchors)
                         full_bytes = len(file_text.encode("utf-8"))
@@ -605,7 +609,7 @@ def validate_offline(scenarios):
                         print(
                             f"  [governing_sections] {label} / {gf}: excerpt {excerpt_bytes:,} bytes of "
                             f"{full_bytes:,} full-file bytes ({pct:.1f}%), {n_blocks} of {n_anchors} "
-                            f"section(s) — {'SUSPICIOUSLY TINY, double-check the anchors' if pct < 1.0 and full_bytes else 'ok'}",
+                            f"section(s) — {_excerpt_size_verdict(excerpt_bytes, full_bytes)}",
                             flush=True,
                         )
 
@@ -1479,6 +1483,50 @@ def _section_scope_enabled():
 # from validate_offline() (the anchor itself would still uniquely match — just the WRONG line).
 _HEADING_LINE_RE = re.compile(r'^#{1,6}[ \t]+\S')
 _FENCE_LINE_RE = re.compile(r'^\s*(`{3,}|~{3,})')
+
+# Floor for the "SUSPICIOUSLY TINY" advisory on the per-scenario excerpt-size report (see
+# validate_offline()'s governing_sections block). ABSOLUTE bytes, deliberately NOT a percentage of the
+# governing file.
+#
+# WHY THE BASIS CHANGED (2026-08-18, SL5 diligence sweep). The advisory originally fired on
+# `pct < 1.0` — the excerpt as a share of the WHOLE file. That basis is structurally wrong here: the
+# denominator is a property of the governing DOCUMENT, not of the anchor, so a short-but-COMPLETE rule
+# anchored inside a large reference file trips it no matter how correct the anchor is. Both of the
+# repo's live instances were exactly that false positive, and each cost a routine session a full
+# re-investigation before being cleared as a non-defect:
+#   * RS-03 / Claude_Task_Plan.md — 4,916-byte excerpt of a 973,929-byte file (0.5%); the anchored
+#     '## M2. E Pair Divergence Screen' section measures 4,866 bytes on disk, i.e. captured IN FULL
+#     (verified SL5 2026-08-17).
+#   * SB-04 / Operating_Protocols.md — 1,690-byte excerpt of a 231,960-byte file (0.7%); the anchored
+#     '## 3. NO-GO Records Are Context, Not Barriers' section is a self-contained 15-line clause and is
+#     likewise captured IN FULL, breadcrumb included (verified SL5 2026-08-18).
+# The defect the advisory actually exists to catch is an anchor that resolves to (almost) NOTHING — a
+# heading whose body is empty, or a stub/pointer paragraph standing in for the real rule. That failure
+# is absolute-sized: such a capture is a heading line plus a breadcrumb, ~60-150 bytes. An absolute
+# floor detects it directly and cannot be defeated or triggered by the size of the surrounding file.
+#
+# CALIBRATION: across today's 33 scenarios the smallest genuine excerpt is SB-04's 1,690 bytes, so 600
+# sits ~2.8x below the real floor while staying ~4x above a heading-only capture. The percentage is
+# still PRINTED (it is useful context for a reader eyeballing scope); it is simply no longer what
+# decides the advisory.
+MIN_EXCERPT_BYTES = int(os.environ.get("GOLDEN_MIN_EXCERPT_BYTES", "600"))
+
+
+def _excerpt_size_verdict(excerpt_bytes, full_bytes):
+    """Advisory verdict string for the per-scenario excerpt-size report. Returns 'ok', or the
+    SUSPICIOUSLY TINY warning when the excerpt is small in ABSOLUTE terms (see MIN_EXCERPT_BYTES for
+    why the basis is bytes rather than a share of the governing file).
+
+    An empty governing file (full_bytes == 0) yields 'ok': there is no excerpt to be suspicious of, and
+    a missing/unreadable file is already reported as a hard error by the governing_files loop."""
+    if not full_bytes:
+        return "ok"
+    if excerpt_bytes < MIN_EXCERPT_BYTES:
+        return (
+            f"SUSPICIOUSLY TINY (< {MIN_EXCERPT_BYTES:,} bytes), double-check the anchors — an anchor "
+            f"that resolves to little more than its own heading is starving the judge of the rule"
+        )
+    return "ok"
 
 
 def _document_headings(text):
