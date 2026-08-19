@@ -32,6 +32,20 @@
 # CHANGE in the flip set (a previously-matching scenario newly flipping, or these two flipping in a NEW
 # direction). D3's prose-regression re-check runs on Claude (not Gemini) and adjudicates authoritatively.
 #
+# KNOWN TWO-PART-QUESTION AMBIGUITY — RS-02 (2026-08-18, D3 prose-regression re-check). RS-02's
+# `situation` asks TWO things with opposite-signed answers: what the D1 single-name screen DISPOSITION is
+# (surfaced), and whether the name may be routed as a Strategy B ENTRY CANDIDATE (it may not — §19's
+# spec-floor rail, -3.4% against B's frozen >=5% Entry criterion 1). Only the first is what the single
+# DECISION token grades, and `expected_decision` states this outright: "GO (surfaced below_spec_floor=true
+# ... NOT routed as a B entry candidate)". A weaker evaluator can anchor on the SECOND half and answer
+# NO-GO. Observed 2026-08-18: a Sonnet-class re-evaluation of RS-02 returned NO-GO citing exactly the
+# never-routed clause, while Operating_Protocols.md §19 — the only prose that governs this answer — was
+# byte-identical to its state at the prior D3 completion, so a prose regression was impossible by
+# construction. TRIAGE: same shape as the KT-04/KT-07 note above — an RS-02 NO-GO is an evaluator artifact,
+# NOT a regression. Neither the situation nor the expected_decision was edited to appease it: changing a
+# graded field to suit an evaluator is precisely what would let a real regression hide. D3-on-Claude
+# adjudicates RS-02's screen disposition as GO.
+#
 # SCHEMA (validated offline, no network, by run_golden.py --offline — the CI HARD GATE):
 #   id                 — short stable identifier, unique across this file (e.g. RR-01, KT-05, SB-02).
 #   situation          — self-contained prose description of the facts a routine session would be given.
