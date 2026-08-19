@@ -1,0 +1,228 @@
+name: Gemini key health
+
+# Detects a DEAD GEMINI_API_KEY within a day instead of within "whenever somebody next pushes prose".
+#
+# WHY THIS EXISTS (2026-08-19). The key is consumed by exactly one thing: golden-scenarios.yml's
+# advisory `prose-regression` job. That job is `continue-on-error: true`, fires only on pushes
+# touching four specific files, and emits print-only `::warning::` annotations with no persistence.
+# So when the key died it died SILENTLY: measured from the run logs, it worked through 2026-08-12
+# (HTTP 429s -- proof authentication succeeded), returned HTTP 401 from 2026-08-13 02:30 UTC, stayed
+# 401 through 2026-08-17 14:26 UTC, and was working again by 14:36 UTC that day. Four days dead, no
+# alert, and the fix was an out-of-band rotation nobody wrote down. Detection was never the hard
+# part -- nothing was watching.
+#
+# WHY NOT owner-actions-verify.yml, the other workflow already wired to this secret: its probes are
+# one-shot "is this owner action DONE" checks that flip an OWNER_ACTIONS.md heading to [DONE] and
+# NEVER auto-reopen. A liveness check with those semantics would stop monitoring the first time it
+# passed, which is the opposite of the requirement. And per CLAUDE.md's "Known non-issues", a second
+# write/alerting path must NOT be bolted onto golden-scenarios.yml.
+#
+# DELIVERY: BOTH the ops.ci_findings bridge AND a GitHub issue, the same two-channel shape
+# stranded-branch-check.yml uses. It writes workflow='gemini-key-health', finding_key=
+# 'gemini_key_dead'; state.ci_findings_open (bigquery/86) partitions by (workflow, finding_key) with
+# no workflow allowlist, so this producer is picked up with NO BigQuery change, and cadence_check's
+# `ci_finding` WARNING delivers it to the monitored alert-email channel. Claude_Task_Plan.md's D3
+# CI-FINDINGS ADJUDICATION step classifies this workflow as an owner-remediation NO-REPAIR class in
+# the same change set -- adding a producer without that classification would leave D3 holding an
+# unclassified row.
+#
+# WHAT IT CANNOT DO, stated so nobody mistakes it for full coverage: it proves the key is ALIVE
+# TODAY. It cannot prove the key is an AI Studio *auth* key (`AQ.`) rather than a legacy *Standard*
+# key (`AIza`), and Google rejects Standard keys outright from September 2026
+# (ai.google.dev/gemini-api/docs/api-key). A doomed-but-currently-working key probes 200 here. That
+# migration is OWNER_ACTIONS.md item G-authkey and needs a human who can see the key's prefix.
+#
+# SCHEDULE + trigger scope: daily, and deliberately NO `push` trigger. Nothing here needs to run per
+# commit, auto-merge gates only on "CI" and "Golden Scenarios (prose regression)" workflow_run
+# completions, and CLAUDE.md's push-cost discipline says not to add per-push jobs that buy nothing.
+
+on:
+  schedule:
+    - cron: '40 8 * * *'   # daily 08:40 UTC -- clear of dashboard (05:20), offsite-backup (06:00),
+                            # live-sql-parity (07:10) and owner-actions-verify (Sun 08:20)
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+  id-token: write   # keyless WIF for the ops.ci_findings bridge write; no static key
+
+concurrency:
+  group: gemini-key-health
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      # FAIL-OPEN on an absent secret. "No key configured" is a different condition from "the
+      # configured key is rejected", and only the second is this workflow's business. Reporting the
+      # first as a dead key would fire a false alarm on any fork or on a deliberate de-configuration.
+      - name: Gate on GEMINI_API_KEY being present
+        id: haskey
+        env:
+          HAVE_KEY: ${{ secrets.GEMINI_API_KEY != '' }}
+        run: |
+          set -uo pipefail
+          if [ "$HAVE_KEY" = "true" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::GEMINI_API_KEY is not set — nothing to probe. This is a no-op run, not a failure."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # WIF is OPTIONAL, exactly as in stranded-branch-check.yml: the probe itself needs no GCP
+      # credential, so an unset var degrades DELIVERY to issue-only rather than skipping DETECTION.
+      - name: Gate on WIF creds (ops.ci_findings bridge only)
+        id: guard
+        if: steps.haskey.outputs.present == 'true'
+        run: |
+          set -uo pipefail
+          if [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::ops.ci_findings bridge skipped — vars.GCP_WIF_PROVIDER/GCP_WIF_SERVICE_ACCOUNT unset. The probe still runs and still opens a GitHub issue, but a dead key will NOT reach the alert-email channel. ops/RUNBOOK.md §6."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: GCP WIF auth + gcloud setup (provides the bq CLI)
+        if: steps.haskey.outputs.present == 'true' && steps.guard.outputs.skip == 'false'
+        uses: ./.github/actions/gcp-wif-auth
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
+
+      # THE PROBE. GET /v1beta/models is a METADATA list, not a generation call: it consumes no
+      # generation tokens and no model quota, so this costs nothing per day. The key travels in the
+      # x-goog-api-key HEADER, never in the query string, so it cannot leak into a logged URL.
+      #
+      # THE 429 CASE IS THE WHOLE REASON THIS CLASSIFIES RATHER THAN JUST CHECKING FOR 200: a
+      # rate-limited response is PROOF the credential authenticated. Treating 429 as dead would have
+      # fired a false alarm on every day of the 2026-08-12 rate-limit storm, when the key was fine.
+      # Anything that is neither clearly-alive nor clearly-dead (network failure, 5xx, curl timeout)
+      # is INCONCLUSIVE and reports nothing -- a monitor that cries wolf on a flaky runner gets
+      # ignored, and being silent for one day is strictly better than that.
+      - name: Probe key liveness against generativelanguage.googleapis.com
+        id: probe
+        if: steps.haskey.outputs.present == 'true'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          set -uo pipefail
+          probe_once() {
+            curl -sS -o /dev/null -w '%{http_code}' --max-time 30 \
+              -H "x-goog-api-key: ${GEMINI_API_KEY}" \
+              'https://generativelanguage.googleapis.com/v1beta/models' 2>/dev/null || echo "000"
+          }
+          code=$(probe_once)
+          # One retry, ONLY for the inconclusive class -- never to "get a better answer" out of a
+          # clear 401. A single transient network blip must not read as a dead key.
+          case "$code" in
+            200|429|401|403) ;;
+            *) sleep 10; code=$(probe_once) ;;
+          esac
+          echo "http_code=$code" >> "$GITHUB_OUTPUT"
+
+          case "$code" in
+            200)
+              echo "state=alive" >> "$GITHUB_OUTPUT"
+              echo "::notice::Gemini key OK (HTTP 200 from models.list)." ;;
+            429)
+              echo "state=alive" >> "$GITHUB_OUTPUT"
+              echo "::notice::Gemini key OK (HTTP 429 — rate-limited, which proves the credential authenticated)." ;;
+            401|403)
+              echo "state=dead" >> "$GITHUB_OUTPUT"
+              echo "::error::Gemini key REJECTED (HTTP $code). golden-scenarios.yml's live job is blind until this is rotated." ;;
+            *)
+              echo "state=inconclusive" >> "$GITHUB_OUTPUT"
+              echo "::warning::Gemini key probe inconclusive (HTTP $code after one retry) — reporting nothing. Not treated as a dead key." ;;
+          esac
+
+      - name: Record to ops.ci_findings (open on dead, resolve on alive)
+        if: steps.haskey.outputs.present == 'true' && steps.guard.outputs.skip == 'false' && steps.probe.outputs.state != 'inconclusive'
+        run: |
+          set -uo pipefail
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if [ "${{ steps.probe.outputs.state }}" = "dead" ]; then
+            detail="GEMINI_API_KEY rejected with HTTP ${{ steps.probe.outputs.http_code }} by generativelanguage.googleapis.com models.list. golden-scenarios.yml's advisory live job cannot run until it is rotated. Rotate per OWNER_ACTIONS.md item G-authkey (create an AI Studio AUTH key, then gh secret set GEMINI_API_KEY). If the current key is a legacy Standard (AIza) key this is expected -- Google rejects those from September 2026."
+            # shellcheck disable=SC2016 # single-quoted intentionally: the backtick-quoted BigQuery
+            # table name must not be shell-expanded, and @p_* are BigQuery named parameters.
+            if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false \
+                 --parameter="p_detail:STRING:${detail}" --parameter="p_url:STRING:${run_url}" \
+                 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) VALUES ("gemini-key-health","gemini_key_dead","open",@p_detail,@p_url)'; then
+              # Does NOT exit: the GitHub-issue step below is an independent delivery path and
+              # suppressing it would make a bridge outage worse than no bridge. The run still goes
+              # red via that step's `exit 1`.
+              echo "::error::Could not record the dead-key finding to ops.ci_findings — it will reach the GitHub issue but NOT the alert-email channel. Check gh-ci-runner@'s table-scoped dataEditor grant on ops.ci_findings (RUNBOOK §6)."
+            fi
+          else
+            # Auto-resolve, scoped to THIS producer only. Writes zero rows when nothing is open, so a
+            # healthy day costs one no-op query and appends nothing.
+            # shellcheck disable=SC2016 # single-quoted intentionally: see above.
+            if ! bq query --project_id=stock-trading-498512 --use_legacy_sql=false \
+                 --parameter="p_url:STRING:${run_url}" \
+                 'INSERT INTO `stock-trading-498512.ops.ci_findings` (workflow, finding_key, status, detail, run_url) SELECT workflow, finding_key, "resolved", "Gemini key authenticated on this probe", @p_url FROM `stock-trading-498512.state.ci_findings_open` WHERE workflow = "gemini-key-health"'; then
+              echo "::warning::Could not auto-resolve the gemini-key-health finding in ops.ci_findings; a stale open row may linger until the next clean probe."
+            fi
+          fi
+
+      # Close on recovery, for the same reason stranded-branch-check.yml added its close step on
+      # 2026-08-19: the open step below dedups by title prefix and EDITS an existing open issue
+      # rather than creating one, and an edit does not notify the way a create does. Leaving a stale
+      # issue open therefore makes every future incident silent. NOT gated on steps.guard -- closing
+      # an issue needs only GH_TOKEN, so a WIF outage must not strand the issue open.
+      - name: Close the dead-key issue on a healthy probe
+        if: steps.haskey.outputs.present == 'true' && steps.probe.outputs.state == 'alive'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
+            --jq '[.[] | select(.title|startswith("⚠️ GEMINI_API_KEY rejected"))][0].number // empty' \
+            2>/dev/null || echo "")
+          if [ -z "$existing" ]; then
+            echo "No open dead-key issue to close — nothing to do."
+          else
+            gh issue close "$existing" --repo "$GITHUB_REPOSITORY" \
+              --comment "Closed automatically: the key authenticated on this probe (HTTP ${{ steps.probe.outputs.http_code }}), so the condition this issue reports is no longer true. Probe run: ${run_url}. The matching ops.ci_findings row was resolved by the same run. A future rejection opens a NEW issue, so closing here is what keeps that notification loud. NOTE: this does not mean the key is an auth key — see OWNER_ACTIONS.md item G-authkey for the September 2026 Standard-key cutoff." \
+              && echo "Closed stale dead-key issue #$existing." \
+              || echo "::warning::Could not close dead-key issue #$existing (transient gh failure?) — it stays open and the NEXT incident will edit it rather than opening a fresh, notifying issue. Close it by hand if this repeats."
+          fi
+
+      - name: Open alert issue (dedup) and fail the run
+        if: steps.haskey.outputs.present == 'true' && steps.probe.outputs.state == 'dead'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          title="⚠️ GEMINI_API_KEY rejected (HTTP ${{ steps.probe.outputs.http_code }}) — golden-scenarios live job is blind"
+          {
+            echo "\`generativelanguage.googleapis.com\` \`models.list\` returned **HTTP ${{ steps.probe.outputs.http_code }}** for the configured \`GEMINI_API_KEY\`."
+            echo
+            echo "**Impact.** \`golden-scenarios.yml\`'s advisory \`prose-regression\` job is the only consumer. It is \`continue-on-error\`, so it will keep reporting SUCCESS while every scenario errors — the prose-regression signal is simply gone until this is fixed."
+            echo
+            echo "**Fix (OWNER_ACTIONS.md item \`G-authkey\`).** Create a new key in Google AI Studio — new keys are **auth keys** (\`AQ.\` prefix), not legacy **Standard** keys (\`AIza\`) — then \`gh secret set GEMINI_API_KEY -R \$GITHUB_REPOSITORY\` (omit the value; it prompts securely)."
+            echo
+            echo "**If the current key is a Standard \`AIza\` key, this is expected, not a surprise:** Google rejects Standard keys from **September 2026**, with uneven enforcement since 2026-06-19 (\`API_KEY_SERVICE_BLOCKED\`). This is the same failure that took the key down 2026-08-13 → 2026-08-17."
+            echo
+            echo "Probe run: ${run_url}"
+          } > /tmp/body.md
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
+            --jq '[.[] | select(.title|startswith("⚠️ GEMINI_API_KEY rejected"))][0].number // empty' \
+            2>/dev/null || echo "")
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --repo "$GITHUB_REPOSITORY" --body-file /tmp/body.md \
+              && echo "Updated existing dead-key issue #$existing." \
+              || echo "::warning::Could not update dead-key issue #$existing."
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body-file /tmp/body.md \
+              && echo "Opened dead-key issue." \
+              || echo "::warning::Could not open a dead-key issue."
+          fi
+          exit 1
