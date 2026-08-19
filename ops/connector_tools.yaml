@@ -526,34 +526,66 @@ connectors:
         verified: "2026-07-28"
         note: >
           Verified absent per Claude_Task_Plan.md:2639/:2815 ("The paper_search MCP tool
-          NO LONGER EXISTS"). Still allowlisted in .claude/settings.json and still
-          referenced by D1 and SL1's routine text — those call sites are dead and should be
-          updated to hf_fs, but that is a separate cleanup from this manifest.
+          NO LONGER EXISTS"). Replaced by hf_fs (`cmd="search"` over `hf://papers`) — see
+          HF_Resource_Catalog.md §8.2 for the parameter-mapping caveat (neither
+          `results_limit` nor `concise_only` carry over). STALE-CLAIM CORRECTION, OPS1
+          2026-08-19: this note previously read "Still allowlisted in .claude/settings.json
+          and still referenced by D1 and SL1's routine text — those call sites are dead and
+          should be updated to hf_fs, but that is a separate cleanup from this manifest."
+          Both halves are now false and were sending future sessions after a cleanup that
+          no longer exists. `mcp__Hugging_Face__paper_search` is NOT in
+          `.claude/settings.json` (zero occurrences), and no D1 or SL1 routine text
+          references the name — the only surviving mentions repo-wide are
+          HF_Resource_Catalog.md, task_plan/Q3.md and task_plan/A1.md, every one of which
+          declares the tool retired and points at hf_fs. The dated-retirement handling is
+          unchanged: this row stays, CHECK4 keeps blocking the name, and OPS1's AUTO-ADD
+          branch must NOT auto-delete it or auto-add a `tools:` row if it ever reappears.
       - name: hf_doc_search
-        verified: unconfirmed
+        verified: "2026-08-19"
         note: >
-          Allowlisted in .claude/settings.json but NOT observed in the 2026-08-08
-          interactive session's tool inventory. The first live OPS1 tool-inventory run is
-          what will confirm or refute its absence — do NOT treat this row as a confirmed
-          removal.
+          CONFIRMED ABSENT by OPS1 2026-08-19 — promoted from the former
+          `verified: unconfirmed`, whose note said "The first live OPS1 tool-inventory run
+          is what will confirm or refute its absence". That run was 2026-08-09, ten days
+          before this edit, and nothing in the fleet ever dated the field, so
+          scripts/check_connector_tools.py CHECK5 emitted a report-only finding on every CI
+          run with no path to resolution. EVIDENCE — eight consecutive live OPS1
+          enumerations of this connector (2026-08-09, -10, -11, -12, -13, -17, -18, -19),
+          every one with `enumeration_ok = TRUE`, and this tool observed present on NONE of
+          them: the five runs that recorded absent-block tools as explicit union rows all
+          carry `present = FALSE` in ops.connector_tool_inventory, and the three that
+          recorded only the live roster never surfaced it. Corroborated the same morning by
+          a Hugging-Face-scoped tool-inventory probe returning exactly the five live tools.
+          REPLACEMENT SURFACE — the vendor consolidated documentation search into hf_fs
+          (`cmd="search"` over the `hf://docs` scope), which is present and `use: required`.
+          Nothing in the fleet calls this name (HF_Resource_Catalog.md §8.4 had already
+          recorded it as not load-bearing). Its stale `.claude/settings.json` allowlist
+          token was removed in the same commit, mirroring the paper_search precedent.
       - name: hf_doc_fetch
-        verified: unconfirmed
+        verified: "2026-08-19"
         note: >
-          Allowlisted in .claude/settings.json but NOT observed in the 2026-08-08
-          interactive session's tool inventory. The first live OPS1 tool-inventory run is
-          what will confirm or refute its absence — do NOT treat this row as a confirmed
-          removal.
+          CONFIRMED ABSENT by OPS1 2026-08-19, same eight-run evidence set and same
+          promotion rationale as hf_doc_search — see its note. Replacement surface is hf_fs
+          (`cmd="cat"` / `cmd="attach"` against an `hf://docs` URI). Allowlist token removed
+          from .claude/settings.json in the same commit.
       - name: hf_hub_query
-        verified: unconfirmed
+        verified: "2026-08-19"
         note: >
-          Allowlisted in .claude/settings.json but NOT observed in the 2026-08-08
-          interactive session's tool inventory. The first live OPS1 tool-inventory run is
-          what will confirm or refute its absence — do NOT treat this row as a confirmed
-          removal.
+          CONFIRMED ABSENT by OPS1 2026-08-19, same eight-run evidence set and same
+          promotion rationale as hf_doc_search — see its note. Replacement surface is
+          hub_repo_search / hub_repo_details, both present; HF_Resource_Catalog.md §8.4 had
+          already recorded this tool as overlapping hub_repo_search and not load-bearing.
+          Allowlist token removed from .claude/settings.json in the same commit.
       - name: space_search
-        verified: unconfirmed
+        verified: "2026-08-19"
         note: >
-          Allowlisted in .claude/settings.json but NOT observed in the 2026-08-08
-          interactive session's tool inventory. The first live OPS1 tool-inventory run is
-          what will confirm or refute its absence — do NOT treat this row as a confirmed
-          removal.
+          CONFIRMED ABSENT by OPS1 2026-08-19, same eight-run evidence set and same
+          promotion rationale as hf_doc_search — see its note. This row was ALREADY the odd
+          one out: HF_Resource_Catalog.md §8.1, task_plan/Q3.md and task_plan/A1.md have all
+          read "space_search NO LONGER EXISTS (observed absent 2026-08-08)" since
+          2026-08-08, so the docs treated the removal as settled while this manifest still
+          said `unconfirmed` — the dating removes that disagreement. Replacement surface is
+          hub_repo_search with explicit `author` and `repo_types=["space"]` for known-Space
+          lookup (§8.1 recommended it over space_search's semantic search even while the
+          tool existed); there is no in-connector discovery path for an UNKNOWN Space — fall
+          back to Tavily / web search. Allowlist token removed from .claude/settings.json in
+          the same commit.
