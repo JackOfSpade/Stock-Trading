@@ -247,6 +247,53 @@ jobs:
             fi
           fi
 
+      # THE ISSUE HALF OF DELIVERY MUST CLOSE ITSELF TOO (added 2026-08-19). This workflow delivers
+      # BOTH ways -- ops.ci_findings AND a GitHub issue -- but until now only the ci_findings half
+      # auto-resolved (the step above). The issue was opened on a problem and then never closed by
+      # anything, so it outlived the condition indefinitely: issue #41 (opened 2026-08-19T13:17Z for
+      # claude/sl3-2026-08-18) was still open after that branch merged as e039dd1 and
+      # `git branch -r --no-merged origin/main` had gone empty.
+      #
+      # WHY THAT IS A DELIVERY DEFECT, not just untidiness: the open step below dedups by title
+      # prefix and, when it finds an existing open issue, calls `gh issue edit` instead of
+      # `gh issue create`. An edit does not notify the way a new issue does. So the FIRST stranded
+      # branch opens a loud issue, and every subsequent incident silently amends that same stale
+      # issue -- the channel degrades to quiet after one use, and the quieter it gets the longer a
+      # genuine strand sits unseen. Closing on a clean sweep restores the create-path (and its
+      # notification) for the next real incident.
+      #
+      # Mutually exclusive with the open step below (problem == 'false' vs 'true'), so ordering
+      # against its `exit 1` does not matter. Fail-soft throughout: a transient gh failure must never
+      # turn a HEALTHY sweep red, which would itself become a false stranded-branch signal.
+      #
+      # NOT gated on steps.guard (the WIF-credentials gate) ON PURPOSE — that guard is scoped to the
+      # ops.ci_findings bridge, as its own name says. Closing an issue needs only GH_TOKEN, which is
+      # always present, so coupling the two would mean a WIF outage silently left the issue open
+      # forever even though closing it was perfectly possible. The `detect` step always runs, and if
+      # it were ever skipped its output is empty and this condition is simply false.
+      - name: Close the stranded-branch issue on a clean sweep
+        if: steps.detect.outputs.problem == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          # Same title-prefix selector the open step dedups on, so the two can never disagree about
+          # which issue represents this condition.
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
+            --jq '[.[] | select(.title|startswith("⚠️ Stranded routine branch"))][0].number // empty' \
+            2>/dev/null || echo "")
+
+          if [ -z "$existing" ]; then
+            echo "No open stranded-branch issue to close — nothing to do."
+          else
+            gh issue close "$existing" --repo "$GITHUB_REPOSITORY" \
+              --comment "Closed automatically: this sweep found no stranded branches and no open auto-merge conflict PRs, so the condition this issue reports is no longer true. Sweep run: ${run_url}. The matching ops.ci_findings row was resolved by the same sweep. A future strand opens a NEW issue (this workflow dedups on open issues only), so closing here is what keeps that notification loud." \
+              && echo "Closed stale stranded-branch issue #$existing." \
+              || echo "::warning::Could not close stranded-branch issue #$existing (transient gh failure?) — it stays open and the NEXT incident will edit it rather than opening a fresh, notifying issue. Close it by hand if this repeats."
+          fi
+
       - name: Open alert issue (dedup) and fail the run
         if: steps.detect.outputs.problem == 'true'
         env:
