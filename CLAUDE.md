@@ -59,6 +59,22 @@
   (re-provisioned fresh each session), so it can't be permanently changed from this
   repo. Just ignore the message when it appears.
 
+- **Duplicate numeric prefixes in `bigquery/` (`114_*` x2, `185_*` x2).** Two routines landing SQL on the
+  same evening each pick "the next number" independently and collide — `185_append_only_integrity_promotion_flip.sql`
+  (D3, 01:09Z) and `185_sl2_notice_alert_lifecycle.sql` (SL2, 01:21Z) on 2026-08-19; `114_period_aware_dependency_gate.sql`
+  and `114_selfheal_log_created_outcome.sql` on 2026-07-28/29. **Verified harmless 2026-08-19 (OPS2): in BOTH pairs the
+  two files touch DISJOINT objects** (one creates a procedure, the sibling is DML/INSERT-only), so the apply-in-order
+  DR-rebuild record replays to the same end state in either order — and lexical sort makes that order deterministic
+  anyway. The 114 pair has coexisted ~3 weeks with no incident.
+
+  **Action: none — and specifically do NOT renumber a landed `bigquery/*.sql` file to "fix" this.** The filenames are
+  cited by number throughout `Claude_Task_Plan.md`, the RUNBOOK and the slices, and are load-bearing for superseded
+  markers and `scripts/check_live_sql_parity.py`; renaming one to tidy a prefix breaks those references for a purely
+  cosmetic gain. Do NOT add a CI check that fails on duplicate prefixes either, unless you first renumber the two
+  existing pairs — it would turn `main` red on landed, working history. A shared prefix is TOLERATED; only a genuine
+  same-OBJECT collision (two files creating or altering the SAME object where replay order changes the result) is a
+  defect worth acting on, and neither existing pair is one. Check object overlap before concluding otherwise.
+
 - **`golden-scenarios.yml`'s CI-side `events.queue_events` INSERT is deliberately never executed
   by that workflow** (verified 2026-07-16 against a critic finding that re-raised this as a gap —
   "N-5" in that pass's findings doc — before checking whether it was already closed; it was).
