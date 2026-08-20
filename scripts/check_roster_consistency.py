@@ -302,6 +302,11 @@ def spec_hash_inputs():
         out[code] = (md_path, module_paths)
     return out
 
+# The declared to_state vocabulary. NOTE (2026-08-19, SL5 diligence sweep): AUTHORING and POST_MORTEM
+# are in the vocabulary but are never written as a to_state by any routine, deliberately and with no
+# consumer anywhere — see the full rationale on events.strategy_lifecycle.to_state in
+# bigquery/35_strategy_arsenal.sql. Keep them listed (they are legitimate from_state / prose values);
+# do not read their absence from events.strategy_lifecycle as drift.
 LIFECYCLE_STATES = ("CANDIDATE", "QUALIFYING", "AUTHORING", "UNDER_REVIEW", "SHADOW", "PAPER",
                     "PROBE", "ADOPTED", "RETIREMENT_PROPOSED", "TERMINATED", "POST_MORTEM", "REJECTED")
 # ACTIVE_STATES_YAML now lives in lib/roster_common.py, shared with check_live_roster_parity.py
