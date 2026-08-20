@@ -274,7 +274,18 @@ routines:
     monitor_class: daily_sun_thu
     catchup_safe: true
     depends_on: [D2]
-    writes: [calendar:confirm_order, events.queue_events, AI_Trading_Foundation.md, bigquery/*.sql]
+    writes: [calendar:confirm_order, events.queue_events, AI_Trading_Foundation.md, bigquery/*.sql,
+             tests/golden_scenarios/scenarios.yaml]
+                             # tests/golden_scenarios/scenarios.yaml added 2026-08-19 by OPS0 STEP 4(f),
+                             # same defect class as the bigquery/*.sql addition below. D3's GOLDEN-SCENARIO
+                             # PROSE-REGRESSION CHECK step owns that fixture file and lands commits to it
+                             # directly. MEASURED 2026-08-19: D3/2026-08-18 logged completed and landed
+                             # 89d8125 ("record the RS-02 two-part-question ambiguity in the golden
+                             # fixtures"), which touches tests/golden_scenarios/scenarios.yaml and NOTHING
+                             # else -- so the declared-path check returned no commit for a run that had
+                             # demonstrably landed (89d8125 is an ancestor of origin/main and carries an
+                             # ops.routine_commit_markers row). The run's note did not say "no repo
+                             # changes" either, so the note-based exclusion would not have covered it.
                              # bigquery/*.sql added 2026-08-04 by OPS0 STEP 4(f): D3's self-heal branches
                              # routinely land repo commits under bigquery/ (75_scheduled_query_wrappers.sql
                              # re-apply + new NN_*.sql resync/create files -- see the routine-inventory D3
@@ -560,8 +571,27 @@ routines:
     monitor_class: queue_driven           # NOT calendar-predictable -> excluded from cadence_expected_today (like AR)
     catchup_safe: false
     depends_on: []
-    writes: [Strategy.md, strategy/*.md, events.queue_events, events.strategy_postmortems,
+    writes: [Strategy.md, strategy/*.md, task_plan/SL2.md, events.queue_events,
+             events.strategy_postmortems,
              events.strategy_lifecycle, events.decision_log, ops.alerts]
+             # task_plan/SL2.md added 2026-08-19 (OPS0 STEP 4f), same defect class as the 2026-08-06
+             # strategy/slices fix below and the D3 bigquery/*.sql fix above. MEASURED 2026-08-19: on
+             # a NO-OP queue day SL2's real durable output is a spec-hardening edit to its OWN section
+             # of Claude_Task_Plan.md plus the regenerated task_plan/SL2.md slice -- NOT Strategy.md.
+             # SL2/2026-08-18 landed 4c7217c (Claude_Task_Plan.md + task_plan/SL2.md only) and
+             # SL2/2026-08-19 landed 46244f5 (Claude_Task_Plan.md + task_plan/SL2.md +
+             # bigquery/185_sl2_notice_alert_lifecycle.sql). Both are ancestors of origin/main with an
+             # ops.routine_commit_markers row, yet `git log -- Strategy.md strategy/*.md` returns
+             # NOTHING for either -- so a strict mechanical STEP 4(f) run would have raised a FALSE
+             # unlanded_completed_run on both. Neither run's note said "no repo changes" (both DID
+             # commit), so the note-based exclusion could not have saved it either.
+             # WHY task_plan/SL2.md and NOT Claude_Task_Plan.md or bigquery/*.sql: STEP 4(f) consumes
+             # these as git pathspecs matched against ANY commit in the window, from any routine, so a
+             # fleet-shared path makes the detector VACUOUS for this routine (nearly every routine
+             # touches Claude_Task_Plan.md; many touch bigquery/*.sql). task_plan/SL2.md is the
+             # SL2-exclusive generated mirror -- the REGENERATE-SLICES-IN-THE-SAME-COMMIT rule means
+             # every SL2 edit to its own plan section necessarily also touches it -- so it covers both
+             # commits above with no masking. Adding the broad globs was considered and DECLINED.
              # strategy/*.md was `strategy/slices` until 2026-08-06 (OPS0 STEP 4f). No path named
              # `strategy/slices` has ever existed -- the generated slices are strategy/00_preamble.md
              # .. strategy/10_document_completion_checklist.md + INDEX.md (scripts/split_strategy.py).
