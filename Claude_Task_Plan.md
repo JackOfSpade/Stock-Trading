@@ -1521,9 +1521,21 @@ twr_7d, twr_mtd, twr_ytd, twr_1y, source)`:
   literally SGOV; renaming it is a separate, lower-priority schema cleanup, not required for correctness);
   and the cps-array TWRs.
 - **`source`** (bug fix, 2026-08-08 — this column already exists, `source STRING DEFAULT 'D2-connector'`,
-  `bigquery/14_weekly_report.sql:107`; NO schema change). Leave it at that default for a genuine same-day read
-  (`snapshot_date = today`). **When `snapshot_date` is back-dated (today is NOT itself a trading day), set
-  `source = 'D2a-connector-carried'` explicitly** — a distinct, greppable token so a later reader of
+  `bigquery/14_weekly_report.sql:107`; NO schema change). **Write `source = 'D2a-connector'` EXPLICITLY for a
+  genuine same-day read (`snapshot_date = today`) — do NOT fall through to the column DEFAULT (wording
+  corrected 2026-08-20, D2a; the prior text here said "leave it at that default" and that instruction has
+  been wrong since the D2/D2a cutover).** MEASURED on the live table that day: `ops.account_snapshot` holds
+  25 `'D2a-connector'` rows spanning 2026-07-03 → 2026-08-19 (every row for the last ~7 weeks, and the only
+  value in current use), against 18 legacy `'D2-connector'` rows ending 2026-08-06 and 7 bare `'connector'`
+  rows ending 2026-08-05. So the DEFAULT this bullet used to point at is BOTH stale — `'D2-connector'` names
+  D2, which has not written this table since the 2026-07-09 cutover made D2a its sole writer — and contrary
+  to what 25 consecutive sessions actually did. A future session following the old wording literally would
+  have silently reintroduced the pre-cutover token and broken the run of rows, for no benefit: the
+  carried-vs-same-day distinction this field exists to carry is served by the `-carried` suffix below, not by
+  which of the two same-day tokens is used. Naming the writer correctly also keeps the same-day and carried
+  tokens on one `D2a-` prefix, so a single `LIKE 'D2a-connector%'` matches every row this routine has written.
+  **When `snapshot_date` is back-dated (today is NOT itself a trading day), set
+  `source = 'D2a-connector-carried'` instead** — a distinct, greppable token so a later reader of
   `ops.account_snapshot` (or a session diagnosing a `book_drawdown_watch`/TWR discrepancy) can tell a
   weekend-carried read apart from a measurement genuinely taken as of that trading day's own close, without
   cross-referencing `ops.run_log` timestamps to reconstruct which case produced the row.
