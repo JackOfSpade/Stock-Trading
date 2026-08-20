@@ -156,6 +156,16 @@ jobs:
         # also catches routine text calling a tool the vendor has RETIRED (the live paper_search/
         # space_search bug class — see ops/connector_tools.yaml's header and this script's docstring).
         run: python scripts/check_connector_tools.py
+      - name: OPS0 adopt-gate coverage (Claude_Task_Plan.md precondition 5 ⇄ this job's own blocking steps)
+        # OPS0's STEP 4d ADOPT path merges a stranded branch onto main with no human in the loop,
+        # gated on precondition 5 running this job's steps LOCALLY inside the routine container
+        # (which cannot invoke the Actions runner). That step list is hand-copied prose, and it had
+        # silently drifted six scripts behind this very job (ops0_adopt_gate_drift, verified
+        # 2026-08-20) — OPS0 could have adopted a branch that broke any of the six after running a
+        # gate strictly WEAKER than this job. Parses this job's own steps and fails if any blocking
+        # one's script/test target is missing from precondition 5's paragraph — see the script's
+        # docstring for exactly what counts as "blocking" and what is deliberately excluded.
+        run: python scripts/check_adopt_gate_coverage.py
       - name: auto-merge decision logic (CI-gate + delete-safety fixtures — 2026-07-04 code-quality audit)
         run: bash tests/test_auto_merge_logic.sh
       - name: diff-base resolution (dbt-parity/sql-validate shared precedence chain — 2026-07-26 codebase audit)
