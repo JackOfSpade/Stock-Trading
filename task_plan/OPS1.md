@@ -22,7 +22,7 @@ Every routine reads and/or writes BigQuery for operational state (positions, reg
 | **D2a** | Broker Reconcile & Snapshot | Sun-Thu · regular | live IBKR connector state (positions/balances/trades), `events.daily_marks`, `state.current_positions`, `state.account_latest` | `events.trade_fills`/`events.position_events` reconciliation, `analytics.strategy_nav`, `perf.strategy_daily`, NAV snapshot, `ops.run_log`/`ops.alerts`; STEP 1d adds `events.signal_marks` (11 menu tickers + SPY + `^VIX`, isolated from `daily_marks`) | — |
 | **D3** | Calendar Hygiene | Sun-Thu · regular | `state.open_queue`, `state.current_positions`, `events.queue_events`/`events.decision_log`; self-heal reads add `state.ci_findings_open`, `state.ddl_drift_promotion_readiness`/`state.restore_stale_promotion_readiness`/`state.append_only_integrity_promotion_readiness`/`state.b3_promotion_readiness`, `ops/trigger_ids.json` (repo file), `ops/cadence.yaml` `routine_model`, and `AI_Trading_Foundation.md`'s in-use-model field | `events.queue_events` (terminal-entry sweep + `PENDING_REVIEW` prose-regression entries); self-heal writes `bigquery/75_scheduled_query_wrappers.sql` (live procedure re-apply via MCP) + new `bigquery/NN_*.sql` resync/create files, `ops.monitor_promotion_log`, `ops.parity_selfheal_log`, `ops.alerts`, `events.decision_log`, `events.position_events` (the PRE-FILL INVALIDATION RE-CHECK's phantom-close net-out, 2026-08-03); `AI_Trading_Foundation.md` (MODEL-OF-RECORD DOC SYNC, cadence audit 2026-07-29) | — |
 | **OPS0** | Cadence Watchdog | Sun-Thu · regular | `state.catchup_refire_readiness`, `ops/trigger_ids.json` (repo file); STEP 4 GIT LANDING SWEEP adds git remote refs (`git fetch`/`merge-base`, external) + optional `gh api` (CI conclusion/PR lookup, external) | `ops.catchup_refire_log`, `events.decision_log` (+ `entry_type='stranded-branch-adoption'`/`'unlanded-completed-run'`, STEP 4d/4f), `ops.alerts` (+ `stranded_branch`, `stranded_branch_adopted`, `unlanded_completed_run`), `ops.routine_commit_markers` (STEP 4d adoption only); STEP 4d may also merge arbitrary NON-excluded repo files from an adopted branch onto OPS0's own branch (`bigquery/*.sql`, `dbt/**` and the spec-locked strategy surfaces are hard-excluded); `RemoteTrigger run(...)` (external call, not a BigQuery write) | — |
-| **OPS1** | Morning Connector Liveness Probe | Sun-Thu · regular | — (no state reads beyond the standard `state.trading_day_today` pre-flight; probes IBKR/Calendar/FMP/Gmail live, read-only; TOOL-INVENTORY DRIFT CHECK also reads the repo manifest `ops/connector_tools.yaml` and the live per-connector tool inventory) | `ops.alerts` (`connector_reauth_needed`, `connector_tool_added`, `connector_tool_removed`, `connector_tool_enumeration_failed` — raise + self-heal resolve), `ops.connector_tool_inventory`; on an `added` drift tool only, also `ops/connector_tools.yaml` (auto-add a `use: unused` row, 2026-08-12 owner directive) + git commit/push | — |
+| **OPS1** | Morning Connector Liveness Probe | Sun-Thu · regular | — (no state reads beyond the standard `state.trading_day_today` pre-flight; probes IBKR/Calendar/FMP/Gmail live, read-only; TOOL-INVENTORY DRIFT CHECK also reads the repo manifest `ops/connector_tools.yaml` and the live per-connector tool inventory) | `ops.alerts` (`connector_reauth_needed`, `connector_tool_added`, `connector_tool_removed`, `connector_tool_enumeration_failed` — raise + self-heal resolve), `ops.connector_tool_inventory`; `ops.web_calls` (exactly one row every run — the FMP `^VIX` probe is a metered call against FMP's 250/day free cap, 2026-08-20); on an `added` drift tool only, also `ops/connector_tools.yaml` (auto-add a `use: unused` row, 2026-08-12 owner directive) + git commit/push | — |
 | **OPS2** | Catch-up Executor | Sun-Thu · regular | `state.catchup_refire_readiness`, `ops/trigger_ids.json`, `state.market_calendar`, the missed routine's slice `task_plan/<X>.md` | `ops.catchup_refire_log`, `events.decision_log`, `ops.alerts`; + the executed routine's OWN write surfaces (it runs the routine inline) | — |
 | **W1** | Catalyst Calendar (A, C) | Weekly · research | `state.current_regime`, `state.current_positions`, `events.decision_log` (reuse newly announced catalysts from D1; forward-calendar research remains W1-owned) | — | Weekly_Catalyst_Calendar.md |
 | **W2** | Post-Event Enrichment (B) | Weekly · research | D1 `research-screen` / candidate records, `events.decision_log`/`find_precedents()`, `state.current_positions` | `events.decision_log` via `ops.sp_log_decision` (`entry_type='post-event-enrichment'`, carrying D1 provenance/ranking only — no duplicate market-wide screen) | Weekly_Post_Event_Screen.md |
@@ -807,6 +807,25 @@ Log `'completed'` with a one-line per-connector status summary plus the TOOL-INV
 ops/connector_tools.yaml as use: unused, self-heals next run), Tavily enumeration_ok=FALSE (alert
 raised)."); no repo changes, no git output UNLESS this run auto-added a manifest row for an `added`
 drift tool, in which case commit + push per the standard session-end procedure and say so in the note.
+
+**THE FMP `^VIX` PROBE IS A METERED CALL — OPS1 ALWAYS OWES EXACTLY ONE `ops.web_calls` ROW PER RUN
+(added 2026-08-20, OPS1).** The shared run-logging template's `ops.web_calls` sub-paragraph binds every
+routine that touches FMP, and this routine touches it every single morning: the PROBES step's `^VIX`
+EOD-chart call spends one of FMP's **250 free requests per day, account-wide** — the same cap whose
+exhaustion cost the 2026-08-17 sweep its COHR detection. So write one row immediately before the
+terminal `sp_routine_end` call, inside the same best-effort wrapper: `provider='fmp'`, `tool='chart'`,
+`target=` the `^VIX` EOD-chart request (endpoint + symbol + date range), `depth=NULL`, `credits=1`,
+`credits_reported=FALSE` (FMP reports no usage figure, so this is a rate-card ESTIMATE by construction
+— per the State-provenance rule, say so when quoting it). **Log the row even when the probe FAILED** —
+a rejected or errored request still consumed the day's allowance; only a call that never issued at all
+is omitted, and then say so in the `<note>`. Count a retry as its own row (a second attempt is a second
+request). **Why this is restated here rather than left to the shared template:** OPS1 is the one routine
+whose metered-call count is a fixed, known CONSTANT, which makes it the fleet's cleanest control on the
+telemetry itself — an OPS1 `run_date` missing from `ops.web_calls` is unambiguous evidence the row was
+SKIPPED, never evidence of a quiet day, so it is the one routine where the "made no metered call" and
+"made calls and forgot" ambiguity that `state.web_spend_month.has_unreported_runs` exists to flag can be
+resolved outright. Measured 2026-08-20: `ops.web_calls` held zero OPS1 rows for any date, while every
+OPS1 run since the table was created had made this probe.
 ```
 
 ---
