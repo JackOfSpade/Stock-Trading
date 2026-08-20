@@ -43,6 +43,25 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.events.strategy_lifecycle` (
   from_state STRING,
   -- to_state domain: CANDIDATE|QUALIFYING|AUTHORING|UNDER_REVIEW|SHADOW|PAPER|PROBE|ADOPTED|
   --                  RETIREMENT_PROPOSED|TERMINATED|POST_MORTEM|REJECTED
+  -- TWO OF THOSE TWELVE ARE NEVER WRITTEN AS to_state, DELIBERATELY (audited 2026-08-19, SL5 diligence
+  -- sweep; recorded so a future audit does not re-open it as an unreachable-link defect):
+  --   * AUTHORING — a WORK PHASE (SL2's drafting steps 1-4), not a recorded state. Claude_Task_Plan.md
+  --     SL2 STEP 5 collapses it into ONE row written as from_state='AUTHORING', to_state='UNDER_REVIEW',
+  --     so state.strategy_roster.current_state goes QUALIFYING -> UNDER_REVIEW and can never read
+  --     'AUTHORING'. Note the from_state on that row therefore does NOT chain to the prior row's
+  --     to_state ('QUALIFYING'); that is accepted -- from_state is provenance narrative, nothing joins
+  --     on it, and no check validates lifecycle chaining (state.append_only_integrity polices
+  --     UPDATE/DELETE on append-only tables, not state adjacency).
+  --   * POST_MORTEM — Operating_Protocols.md's state-machine list names it as following TERMINATED, but
+  --     the post-mortem ARTIFACT lands in events.strategy_postmortems (below) and no routine writes a
+  --     lifecycle row for it. A terminated strategy's current_state stays 'TERMINATED', which is the
+  --     correct terminal reading; retired_date is a MAX(IF(to_state='TERMINATED', ...)) aggregate and
+  --     is unaffected either way.
+  -- Both are consumer-free: repo-wide, the only non-prose references are scripts/
+  -- check_roster_consistency.py's LIFECYCLE_STATES vocabulary tuple and one ops/cadence.yaml comment --
+  -- zero views, zero gates, zero dbt tests. DO NOT "fix" this by adding writes: it would multiply
+  -- machinery for states nothing reads, and a POST_MORTEM row would additionally move current_state off
+  -- the correct 'TERMINATED' terminal reading. If a real consumer is ever built, wire the write THEN.
   to_state STRING NOT NULL,
   driver_routine STRING,               -- SL1..SL5 / D1 / Q1 / Q3 / A1 / backfill
   review_id STRING,                    -- events.adversarial_reviews.review_id for review-gated transitions
