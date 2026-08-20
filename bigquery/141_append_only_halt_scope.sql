@@ -140,6 +140,20 @@ WHERE NOT (statement_type = 'UPDATE' AND target_table = 'adversarial_reviews');
 -- NEW single source of truth for ops.sp_sq_integrity_check; SUPERSEDES that ONE procedure in
 -- bigquery/75_scheduled_query_wrappers.sql (75's other 12 ops.sp_sq_* wrappers are untouched and
 -- stay canonical there; 75 carries a matching SUPERSEDED LIVE marker above its own v2 definition).
+--
+-- ---------------------------------------------------------------------------
+-- SUPERSEDED LIVE (2026-08-19) by bigquery/185_append_only_integrity_promotion_flip.sql — that file
+-- is now the current single source of truth for ops.sp_sq_integrity_check (SQ_VERSION v4). The chain
+-- is 75 (v2) -> 141 (v3) -> 185 (v4). 185 is D3's MONITOR-PROMOTION SELF-FLIP: it keeps this v3
+-- body's heartbeat/MERGE shape verbatim (bumping only the version literal) and replaces the single
+-- WARNING block below with the promoted CRITICAL+RAISE block over state.append_only_integrity_haltable
+-- plus a non-halting WARNING companion over the mutually exclusive sanctioned-repair complement —
+-- exactly the body bigquery/57's header spec prescribes. Kept here, unmodified, for DR-rebuild
+-- apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation: it would
+-- silently DEMOTE the monitor back to record-only WARNING and remove the trading halt the promotion
+-- exists to arm. The OTHER object this file defines (state.append_only_integrity_haltable, above) is
+-- untouched by 185 and stays canonical here.
+-- ---------------------------------------------------------------------------
 -- ============================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_integrity_check`()
 BEGIN
