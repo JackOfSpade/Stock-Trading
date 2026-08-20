@@ -1,110 +1,67 @@
--- 172_run_log_unpaired_terminal.sql (2026-08-14)
--- Project: stock-trading-498512. Apply after 171_scorecard_routine_id_normalization.sql.
+-- ops.sp_sq_cadence_check SQ_VERSION v21: add `monitor_promoted` to the #14 auto-age allowlist.
+-- Project: stock-trading-498512. Written 2026-08-19 by the D3 run that had just RAISED one of these
+-- alerts and discovered, in the act, that nothing in the system could ever close it.
 --
--- APPLY TOGETHER with bigquery/63_scheduled_query_version_registry.sql's MERGE seed, which this change
--- bumps to cadence_check='v20' in the same commit — or apply THIS procedure FIRST. Applying only the
--- registry sets expected_version=v20 while a live v19 procedure keeps beating v19, and
--- state.scheduled_query_version_drift then raises a scheduled_query_version_drift warning every night
--- until the pair is reconciled. That partial-apply has bitten this project repeatedly (embed_pending
--- 2026-07-17/18; daily_staging_cap_check v4->v5; integrity_check v3 2026-08-06; bigquery/157 deployed
--- without re-running the MERGE, alert f614015c) — see bigquery/63's own version-history notes.
+-- WHY. `monitor_promoted` is D3's info-severity COMPLETED-ACTION RECORD for a MONITOR-PROMOTION
+-- SELF-FLIP ("check X promoted WARNING->CRITICAL after N consecutive clean cycles -- repo updated AND
+-- live procedure re-applied in-session; no owner action required"). It is structurally incapable of
+-- ever resolving itself, for exactly the two reasons bigquery/150 and bigquery/159 already worked
+-- through for `strategy_revised`:
+--   * at info severity it is filtered out of BOTH alert_emailer.gs's and scripts/alert_relay.py's
+--     notification queries before ever reaching `notified_ts`, so ops.sp_auto_resolve_alerts' Rule 5
+--     on-delivery resolve path never sees the row at all; and
+--   * it has NO ops.alert_policy row, so no resolve_rule governs it either.
+-- The live table shows the cost was already being paid, by hand, three times over: every prior
+-- `monitor_promoted` row -- ddl_drift/restore_stale 2026-07-12, ddl_drift 2026-07-26,
+-- b3_trading_enabled_drift 2026-08-03 -- was closed manually in a LATER interactive triage session,
+-- days after the change it announced had already completed. The 2026-08-19 append_only_integrity
+-- promotion (bigquery/185) made a fourth, which is what surfaced this.
 --
--- ===== WHY =====
--- Found while auditing bigquery/147's detector during the 2026-08-13 D2a run_log_note_missing triage
--- (alert c26afde4-fdc3-4799-996b-390a42826f4d), and fixed on owner instruction to close every gap the
--- audit surfaced rather than only the one that alerted.
+-- WHY THIS CATEGORY IS SAFER TO AGE OUT THAN ANY OTHER ENTRY ON THE LIST. Every other allowlisted
+-- category is SELF-HEALING: the row can be aged away only because a still-true condition is simply
+-- re-raised on the next cycle, so the allowlist relies on the re-raise as its safety net.
+-- `monitor_promoted` does not even need that net. A promotion is idempotent by construction --
+-- `ops.monitor_promotion_log` gains a row, which flips the readiness view's `not_already_promoted` to
+-- FALSE permanently -- so there is no underlying condition that could still be true, nothing to
+-- re-raise, and nothing an aged-out row could hide. The row is a receipt for work already finished.
+-- The durable records of the promotion are `ops.monitor_promotion_log` and `events.decision_log`
+-- (`entry_type='monitor-promotion'`), both permanent and both queryable; `ops.alerts` carries only the
+-- announcement, and an announcement that cannot be dismissed trains the operator to ignore the board.
 --
--- ops.run_log records a run as TWO rows — a 'started' row written by ops.sp_routine_start and a
--- terminal row written by ops.sp_log_run. There is no key joining them: run_id is a per-INSERT
--- GENERATE_UUID(), so the pair exists only as (routine, run_date). One direction of that pairing was
--- already monitored — state.stalled_runs catches a 'started' row that never got a terminal row, and
--- raises routine_stalled. The OTHER direction was covered by nothing: a terminal row whose 'started'
--- row was never written passed every monitor silently.
+-- FAIL-CLOSED ALLOWLIST, WIDENED BY EXACTLY ONE STRING. This changes the category list only. It does
+-- not touch the severity predicate (`severity IN ('warning','info')`, set by bigquery/159 -- CRITICAL
+-- stays excluded because an open critical sets state.trading_enabled=FALSE, bigquery/107), the 7-day
+-- age bar, or any check, threshold, message or raise site in the procedure. Per the CAUTION note
+-- already inside the allowlist comment, adding a category can only ever let rows close; it can never
+-- strand one.
 --
--- That gap is not cosmetic. The `instruction` column lives on the 'started' row and nowhere else, so a
--- run with no start row contributes no sample to state.routine_last_instruction — which means
--- state.instruction_drift, the detector that catches a hand-edited or truncated web-UI trigger (the
--- unversioned browser-only SPOF that RUNBOOK §15/§22/§30 exist to police), is blind for that routine
--- on that day. state.stalled_runs is likewise structurally unable to see the run at all.
+-- SUPERSESSION. This file is the NEW single source of truth for ops.sp_sq_cadence_check, SUPERSEDING
+-- bigquery/172_run_log_unpaired_terminal.sql (v20). The chain is
+-- 75 -> 111 -> 120 -> 128 -> 132 -> 142 -> 147 -> 149 -> 150 -> 153 -> 157 -> 159 -> 172 -> 186, and
+-- every superseded copy's marker is repointed here in this same commit or
+-- scripts/check_superseded_markers.py fails the build. bigquery/172's OTHER object
+-- (state.run_log_unpaired_terminal) is untouched and stays canonical there.
 --
--- ===== SCOPE, AND WHY IT IS THIS NARROW =====
--- MEASURED over the trailing 120 days before shipping, which is what set the exclusion list:
---   * raw predicate, no exclusions ........................ 12 rows (would fire ~0.10/day)
---   * excluding FIRE_DRILL% / SELFHEAL_RUN_LOG ............ (those 30 rows were never eligible)
---   * excluding §38 commit-marker backfills ............... 2 rows (fires ~0.017/day)
--- The 2 survivors are SL2 and D3, both 'halted', both on 2026-07-18 — a real signal on a real day.
--- Every one of the 9 apparent D1 cases in the raw count was a §38 backfill row, where a missing
--- 'started' row is the mechanism's PREMISE rather than a defect. Shipping the raw predicate would have
--- been ~85% false positives, and this file's own v13 note is explicit that a check firing often enough
--- to be ignored is worse than no check.
+-- HOW THE BODY WAS PRODUCED: programmatic exact-string replacement against bigquery/172's v20 body,
+-- not retyped -- EXACTLY TWO replacements, the heartbeat literal 'v20' -> 'v21' and the allowlist
+-- line plus its justification comment. Same discipline as bigquery/128, 157, 159 and 185.
 --
--- Deliberately NOT extended to rows_written, and deliberately NOT promoted above 'warning' or joined to
--- raise_msg: like run_log_note_missing, this is an audit-hygiene defect, not a reason to fail the
--- nightly check or halt anything. An open CRITICAL feeds state.trading_enabled's blocking_criticals
--- (bigquery/107) and would turn a bookkeeping gap into a trading halt.
+-- APPLY ORDER: after bigquery/172. Apply this procedure TOGETHER WITH the bigquery/63 registry bump to
+-- v21, or the procedure FIRST -- applying only the registry row sets expected_version='v21' while a
+-- live v20 procedure keeps beating 'v20', raising a nightly scheduled_query_version_drift warning
+-- until the pair is reconciled. (That category IS on the allowlist above, so it would eventually age
+-- out on its own after 7 days -- but it would email every night until then, which is the whole point
+-- of not doing it.) APPLIED LIVE in the same D3 session that wrote this file, via the BigQuery MCP,
+-- and verified against INFORMATION_SCHEMA.ROUTINES.
 --
--- SUPERSEDED LIVE by bigquery/177_backfill_note_regex_survives_correction.sql — current single
--- source of truth for state.run_log_unpaired_terminal. 177 hardens the exclusion regex (below) to
--- also match a later human correction of a backfilled row's note, which can legitimately prepend
--- text ahead of the "auto-backfilled..." token this view's REGEXP_CONTAINS anchors on — see 177's
--- header for the false-alarm this caused (W5/2026-08-16, run_id c27d3408). The CREATE OR REPLACE
--- VIEW statement immediately below is kept here, unmodified, for DR-rebuild apply-in-order
--- reference only. DO NOT re-apply it live in isolation.
+-- The console body for this scheduled query is the frozen one-line `CALL ops.sp_sq_cadence_check()`
+-- wrapper (bigquery/README.md ARCH-1), so there is no owner re-paste step. Idempotent
+-- (CREATE OR REPLACE PROCEDURE); safe to re-run.
 
-CREATE OR REPLACE VIEW `stock-trading-498512.state.run_log_unpaired_terminal` AS
-WITH terminal AS (
-  SELECT routine, run_date, status, log_ts, run_id
-  FROM `stock-trading-498512.ops.run_log`
-  WHERE run_date >= DATE_SUB(CURRENT_DATE('America/Denver'), INTERVAL 3 DAY)
-    AND status IN ('completed', 'failed', 'halted')
-    -- These call ops.sp_log_run directly and never call ops.sp_routine_start: they are procedures
-    -- recording that they fired, not sessions that have a start. 30 such rows in the trailing 120d.
-    AND routine NOT LIKE 'FIRE_DRILL%'
-    AND routine <> 'SELFHEAL_RUN_LOG'
-    -- ops.sp_backfill_run_log_from_markers (RUNBOOK §38) reconstructs a COMPLETED row from a git commit
-    -- marker for a run that logged nothing at all, so an absent 'started' row is that mechanism working
-    -- as designed. Anchored on the same '^(auto-)?backfilled' prefix bigquery/89 uses to exclude these
-    -- rows from the completion percentiles — if either prefix changes, change both in the same commit.
-    AND NOT REGEXP_CONTAINS(COALESCE(note, ''), r'(?i)^(auto-)?backfilled')
-)
-SELECT
-  t.routine,
-  t.run_date,
-  t.status,
-  t.log_ts,
-  t.run_id,
-  CURRENT_TIMESTAMP() AS checked_at
-FROM terminal t
-WHERE NOT EXISTS (
-  SELECT 1
-  FROM `stock-trading-498512.ops.run_log` s
-  WHERE s.status = 'started'
-    AND s.run_date = t.run_date
-    -- Separator-normalised, matching state.instruction_drift and state.routine_catchup_window, so the
-    -- legacy middle-dot ids (AR·att/AR·orc, written 2026-06-19..2026-07-01) pair against their ASCII
-    -- form instead of against nothing. EXACT run_date match, no ±1-day grace: both real 2026-07-18
-    -- firings DO have a 'started' row on the previous day, so a one-day tolerance would suppress every
-    -- true positive this detector has ever had and leave it vacuous for daily routines.
-    AND REGEXP_REPLACE(s.routine, r'[·._-]', '') = REGEXP_REPLACE(t.routine, r'[·._-]', ''));
-
--- ============================================================================
--- SUPERSEDED (2026-08-19) by bigquery/186_monitor_promoted_autoage.sql (SQ_VERSION v21) -- the
--- CURRENT single source of truth for ops.sp_sq_cadence_check. 186 makes exactly two string
--- replacements against the v20 body below: the heartbeat literal, and the #14 auto-age allowlist,
--- which gains 'monitor_promoted' -- D3's info-severity completed-action record for a monitor tier
--- promotion, which is filtered out of both notification relays before reaching notified_ts AND has
--- no ops.alert_policy row, so no automated path could ever close one (all three prior rows were
--- closed by hand in later triage sessions). No check, threshold, message or raise site changed. The
--- full chain is 75 -> 111 -> 120 -> 128 -> 132 -> 142 -> 147 -> 149 -> 150 -> 153 -> 157 -> 159 ->
--- 172 -> 186. Kept here, unmodified, for DR-rebuild apply-in-order reference only. DO NOT re-apply
--- this CREATE statement live in isolation -- it would silently drop 'monitor_promoted' back out of
--- the allowlist. This file's OTHER object (state.run_log_unpaired_terminal, above) is untouched by
--- 186; note it is separately superseded by bigquery/177 -- see that file's header.
--- ============================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_cadence_check`()
 BEGIN
   DECLARE raise_msg STRING DEFAULT '';
-  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v20', 'cadence_check.sql ran');
+  CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:cadence_check', 'v21', 'cadence_check.sql ran');
 
   -- RUNBOOK section 38 self-heal (ITEM 3, bigquery/38_run_log_selfheal.sql): backfill any
   -- ops.run_log completion row whose routine already has a landed-commit marker in
@@ -178,7 +135,23 @@ BEGIN
     -- the LAST enumeration run observed, so once OPS1 resumes a trustworthy sweep the condition clears on
     -- its own. It has no ops.alert_policy row either, so leaving it off this list would reproduce the exact
     -- connector/strategy_revised bug this file exists to fix, for a third category, in the same commit.
-    AND category IN ('instruction_drift', 'calendar_runway_low', 'routine_stalled', 'trigger_missing', 'immediate_action_flagged', 'process_scorecard_signal', 'scheduled_query_stale', 'ci_findings_bridge_stale', 'control_plane_insert', 'scheduled_query_version_drift', 'script_version_drift', 'queue_driven_silent', 'run_log_note_missing', 'run_log_start_row_missing', 'connector', 'strategy_revised', 'connector_tool_inventory_stale', 'account_snapshot_gap', 'trigger_drift_corrected')
+    -- monitor_promoted added 2026-08-19 (bigquery/186, by the D3 run that had just raised one) -- the SAME
+    -- structural bug as strategy_revised, which bigquery/150 added and bigquery/159 finally made effective.
+    -- It is an info-severity COMPLETED-ACTION RECORD ("check X promoted WARNING->CRITICAL, no owner action
+    -- required"), so at info severity it is filtered out of both alert_emailer.gs's and scripts/
+    -- alert_relay.py's notification queries before ever reaching notified_ts, and Rule 5's on-delivery
+    -- resolve path never sees it. It also has no ops.alert_policy row. Between those two facts NO automated
+    -- mechanism could ever close one, and the live table proves the cost was already being paid by hand:
+    -- all three prior rows (ddl_drift 2026-07-12, park_allocator/ddl_drift 2026-07-26, b3_trading_enabled_
+    -- drift 2026-08-03) were each closed manually in a later interactive triage session, days after the
+    -- change they announced had completed. SAFER TO AGE OUT THAN ANY OTHER ENTRY ON THIS LIST: a promotion
+    -- is idempotent by construction (ops.monitor_promotion_log makes the readiness view's
+    -- not_already_promoted FALSE forever after), so unlike every self-healing class above there is no
+    -- underlying condition that could still be true and no re-raise to rely on -- the row is a receipt for
+    -- something already done, and aging it can hide nothing. The promotion itself stays permanently
+    -- queryable in ops.monitor_promotion_log and events.decision_log (entry_type='monitor-promotion'),
+    -- which are the durable records; ops.alerts is only the announcement.
+    AND category IN ('instruction_drift', 'calendar_runway_low', 'routine_stalled', 'trigger_missing', 'immediate_action_flagged', 'process_scorecard_signal', 'scheduled_query_stale', 'ci_findings_bridge_stale', 'control_plane_insert', 'scheduled_query_version_drift', 'script_version_drift', 'queue_driven_silent', 'run_log_note_missing', 'run_log_start_row_missing', 'connector', 'strategy_revised', 'connector_tool_inventory_stale', 'account_snapshot_gap', 'trigger_drift_corrected', 'monitor_promoted')
     AND alert_ts < TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY);
 
   -- missed_run (critical) — a monitored routine expected today did not complete.
