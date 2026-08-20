@@ -1,0 +1,236 @@
+# Handoff-contract completeness spec for scripts/check_handoff_contracts.py.
+#
+# WHY THIS FILE EXISTS. Six instances of ONE defect class were found by ad-hoc sweeps in three days
+# (2026-08-18/19), none by CI: a cross-routine handoff (a queue lane, or a required BigQuery column)
+# whose producer/consumer prose never pinned a concrete value, so two sessions with no shared memory
+# each had to invent one -- or never named it at all. Claude_Task_Plan.md's own D3 VENUE-CLAIM
+# HONORING CHECK states the operating principle: "A prose rule restated repeatedly is evidently not
+# self-enforcing on its own; a mechanical check is." This file is the machine-checked source for that
+# mechanism's two checks (CHECK A: queue drain-close completeness; CHECK B: required-column naming).
+#
+# EVERY ENTRY BELOW CARRIES A `why` (or `procedure`+`why`) SO A FUTURE READER KNOWS WHAT IT DEFENDS --
+# matching this repo's other allowlist-style specs (ops/prose_invariants.yaml, ops/connector_tools.yaml).
+#
+# ============================================================================================
+# CHECK A -- queue_lanes: drainer routine(s) must state their own terminal-status close.
+# ============================================================================================
+# Ground truth: the `allowed_map` inside bigquery/180_probe_register_queue_lane.sql
+# (state.queue_venue_claim_unwired) -- scripts/check_handoff_contracts.py asserts this section's
+# queue->drainers map stays byte-identical (as a set) to that SQL file's allowed_map, so this YAML
+# cannot silently drift from the live venue-claim truth. `drainers` is a LIST because PENDING_REVIEW
+# has two legitimate venues (AR_att, AR_orc) even though only one of them (AR_orc) performs the
+# TERMINAL close in the current design -- CHECK A therefore only requires that AT LEAST ONE listed
+# drainer's own section states the close (see the script docstring for why "all of them must" would
+# be wrong here).
+queue_lanes:
+  - queue: PENDING_ANALYSIS
+    terminal_status: complete
+    drainers: [D2]
+    why: >
+      D1 defers a thesis whose required data is not yet available (a Day-0 close not in, a Strategy C
+      pre-catalyst window) to this lane; D2 STEP 1 is the sole drain, applying the entry's
+      conservative_default and closing the item once the analysis runs on/after due_date.
+
+  - queue: PENDING_REVIEW
+    terminal_status: complete
+    drainers: [AR_att, AR_orc]
+    why: >
+      The adversarial-review queue. AR_att advances an item pending -> attacker-complete (an
+      INTERMEDIATE status, never this lane's terminal one) and AR_orc performs the actual terminal
+      close at its own Step 5 ("insert a queue_events row ... with status = complete"). Both routines
+      are listed because both are legitimate venues per bigquery/180's allowed_map, but the close
+      itself lives only in AR_orc's section today.
+
+  - queue: PENDING_DRAFT
+    terminal_status: complete
+    drainers: [SL2]
+    why: >
+      SL1 -> SL2 strategy authoring/revision/post-mortem lane. SL2's "CLOSE THE DRAINED PENDING_DRAFT
+      ITEM" bullet (pinned 2026-08-19) is the fix for defect instance 5 in the founding incident set --
+      until then the 'complete' literal appeared only as a description of the producer contract, never
+      as an instruction any of SL2's three routes (A/B/C) actually executed.
+
+  - queue: PENDING_ROSTER
+    terminal_status: complete
+    drainers: [SL5]
+    why: >
+      SL3 -> SL5 PAPER->PROBE graduation handoff. SL5 branch (2)'s "CLOSE THE DRAINED PENDING_ROSTER
+      ITEM" bullet (pinned 2026-08-19) is the fix for defect instance 2 in the founding incident set --
+      the arsenal's first real-capital registration would otherwise have left the item open forever,
+      relying only on the change_key idempotency guard as an accidental backstop.
+
+# Queues that exist in events.queue_events but are DELIBERATELY not drain-to-completion handoffs --
+# recorded explicitly (never silently omitted) per bigquery/180's own allowed_map comment: "A queue
+# absent from this UNNEST ... is treated as 'no legitimate venue claim is possible on this lane at
+# all'". These two are absent from allowed_map by design, not by oversight.
+excluded_queues:
+  - queue: WATCHLIST
+    why: >
+      A standing candidate list D1/D2/W-routines read and revise in place; items are not enqueued
+      with a due_date and drained to a terminal status the way PENDING_* lanes are. There is no
+      "close" for a watchlist entry -- it is superseded or removed, not completed.
+
+  - queue: ORDER_STAGED
+    why: >
+      The persist-and-wait staged-order registry (Operating_Protocols.md §11). Its status vocabulary
+      is pending|filled|expired|abandoned, not a single "complete" -- a resting order is re-crafted
+      fresh each session until one of those FOUR terminal states resolves it, so there is no one
+      terminal-status literal for this check's co-located CLOSE-INSTRUCTION pattern to require.
+      state.open_queue_detail deliberately carries no lane whitelist here either.
+
+# ============================================================================================
+# CHECK B -- required_column_naming: every NOT NULL/no-DEFAULT column of a genuine routine WRITE
+# target must be named somewhere in Claude_Task_Plan.md, unless the table is procedure_wrapped.
+# ============================================================================================
+# SCOPE METHODOLOGY (read before editing `write_targets`). bigquery/*.sql's CREATE TABLE statements
+# say nothing about WHO writes a table -- unlike CHECK A's queue lanes, there is no independent
+# machine-readable "write target" source to diff this list against, so `write_targets` is a curated
+# enumeration, derived from (a) the ROUTINE INVENTORY table at the top of Claude_Task_Plan.md (its
+# per-routine "BigQuery writes" column) and (b) a literal INSERT/UPDATE instruction confirmed by
+# reading each routine's own section. A table is EXCLUDED from `write_targets` (and left uncounted
+# by this check entirely -- it is not a false-pass, it is a scope decision, and every excluded table
+# with at least one NOT NULL/no-default column is named below with its reason) when it is:
+#   - written only through a stored procedure supplying the required columns from literal SP
+#     arguments -> `procedure_wrapped` below, never silently skipped;
+#   - a pure external-data ingestion/reconciliation MIRROR (broker fills, connector marks, FRED
+#     prints, calendar holidays) -- the routine relays whatever the external source reports rather
+#     than composing a business-rule literal against the schema, which is not the defect class this
+#     check exists to catch (all six founding instances were ENUM/KEY/ID-CONVENTION literals a
+#     session had to invent, never a mirrored external value);
+#   - an internal locking primitive (a mutex table) managed by a stored procedure's own MERGE logic,
+#     never a literal INSERT a routine composes in prose;
+#   - written only by infra outside the routine fleet (a shell/Python maintenance script, the CI
+#     service account, or a bigquery/*.sql schema-time migration INSERT) -- confirmed by an explicit,
+#     zero-hit grep of the table name against Claude_Task_Plan.md, or a routine step that explicitly
+#     says NOT to write it (e.g. D3's ops.ci_findings adjudication: "Do NOT write the ops.ci_findings
+#     resolved row yourself");
+#   - an owner-only control-plane toggle (verified: no INSERT/UPDATE instruction against it appears
+#     anywhere in Claude_Task_Plan.md; CLAUDE.md's settled-decisions section independently confirms
+#     ops.arsenal_control is owner-only).
+# A table with an EMPTY NOT-NULL/no-default column list (e.g. events.macro_series,
+# ops.monitor_promotion_log, ops.d2a_cutover_log) is not listed anywhere below -- there is nothing
+# for this check to assert about it either way.
+required_column_naming:
+  write_targets:
+    - table: events.cash_flow_candidates
+      why: "D2a's withdrawal-detection FIRST PASS composes this row directly (status/direction/amount literals)."
+    - table: events.cash_flows
+      why: "D2/D2a/AR_orc double-entry capital movements (newcomer floor fill, termination redistribution, nomadic/regime capital sweeps) -- all direct INSERTs, never SP-wrapped."
+    - table: events.macro_fred
+      why: "M1a appends the monthly FRED-derived regime metrics it curates."
+    - table: events.nogo_shadow
+      why: "W5's NO-GO shadow-tracking log/close-out bullets (STEP a/b) are literal INSERT/UPDATEs."
+    - table: events.park_policy_changes
+      why: "D2 writes this row on a park-vehicle BOUND switch."
+    - table: events.playbook_updates
+      why: "W5's STRATEGY-PLAYBOOK REVIEW bullet does a literal INSERT INTO events.playbook_updates on a theater-judge-cleared delta."
+    - table: events.position_events
+      why: "D2/D2a/D3 open/close/adjust position lifecycle rows -- the core trading-state ledger."
+    - table: events.premortem_flag_outcomes
+      why: "SL2 route (C) SCORE PRE-MORTEM FLAGS step writes one outcome row per flag at termination."
+    - table: events.premortem_flags
+      why: "SL2 route (A) step 2b registers each pre-mortem's Tier 1/2/3 flags for later scoring."
+    - table: events.queue_events
+      why: "The core cross-routine handoff substrate -- also CHECK A's own subject table."
+    - table: events.regime_events
+      why: "D1/D2/M1a/M4/W4/AR_orc router-activation and technical-input writes."
+    - table: events.shadow_positions
+      why: "SL3 records each SHADOW/PAPER would-be signal or simulated fill here."
+    - table: events.strategy_lifecycle
+      why: "SL1/SL3/SL4/SL5/AR_orc/D2 write every roster state transition here -- the SISA lifecycle spine."
+    - table: events.strategy_postmortems
+      why: "SL2 route (C) authors the post-mortem record on a TERMINATED transition."
+    - table: events.strategy_research_leads
+      why: "SL1 STEP 2 and A3's arsenal-handoff bullet write research leads here (the WRITE CONTRACT pinned 2026-08-19, defect instance 6)."
+    - table: ops.account_snapshot
+      why: "D2a's account-snapshot bullet composes this row directly (INSERT INTO ops.account_snapshot)."
+    - table: ops.catchup_refire_log
+      why: "OPS0/OPS2 write a miss_key/routine/tier row per catch-up decision."
+    - table: ops.confirm_event_snapshot
+      why: "D3's CONFIRM-EVENT ATTESTATION bullet composes this row directly with an explicit column list."
+    - table: ops.connector_tool_inventory
+      why: "OPS1's TOOL-INVENTORY DRIFT CHECK writes one row per probed connector tool."
+    - table: ops.exec_rule_change_log
+      why: "W5's EXECUTION-QUALITY REVIEW bullet writes apply/revert rows keyed by change_key."
+    - table: ops.heartbeat
+      why: "Every constant-tuning loop bullet in W5 (and D1's park-allocator loop) does a direct INSERT INTO ops.heartbeat (source, note) -- never SP-wrapped."
+    - table: ops.loop_promotion_log
+      why: "W5's cross-model-referee and research-quality-feedback PROMOTION CHECK bullets write this on a stage promotion."
+    - table: ops.parity_selfheal_log
+      why: "D3's CI-FINDINGS ADJUDICATION self-heal path writes one row per healed object."
+    - table: ops.process_constant_change_log
+      why: "W5's PROCESS-RELIABILITY REVIEW bullet writes apply/revert rows keyed by change_key."
+    - table: ops.process_reliability_observations
+      why: "W5's PROCESS-RELIABILITY REVIEW bullet appends one observation row per routine every cycle."
+    - table: ops.research_quality_observations
+      why: "W5's RESEARCH-QUALITY FEEDBACK bullet appends one row per (strategy, sub_pattern) cell."
+    - table: ops.roster_change_log
+      why: "SL3/SL4/SL5/AR_orc write the idempotency marker for every roster-membership/state transition."
+    - table: ops.routine_commit_markers
+      why: "OPS0 STEP 4d writes this on a stranded-branch adoption."
+    - table: ops.trading_control
+      why: "D2a composes literal INSERT INTO ops.trading_control (halt_all, mode, reason, set_by) rows to set/clear the entries-halted state."
+    - table: ops.user_prefs
+      why: "D3's DISPLAY-TIMEZONE DETECTION bullet composes a literal INSERT INTO ops.user_prefs (pref_key, pref_value, source) row on a timezone difference."
+    - table: ops.web_calls
+      why: "The shared 'Metered external calls' rule part (d) binds every routine touching Tavily/web_search/web_fetch/FMP to a literal batched INSERT."
+
+  # Tables written EXCLUSIVELY through a stored procedure that supplies every required column from a
+  # literal SP argument -- the routine never composes these columns as free text against the schema,
+  # so requiring their names to appear verbatim in Claude_Task_Plan.md would not defend against the
+  # defect class this check exists for. ONE ENTRY PER TABLE, never a blanket skip.
+  procedure_wrapped:
+    - table: ops.run_log
+      procedure: "sp_routine_start / sp_log_run"
+      why: "Every routine/run_date/status value is a positional literal argument to these two procedures (bigquery/10_observability.sql, bigquery/12_cadence_monitor.sql, bigquery/170); the routine never hand-composes an INSERT against ops.run_log."
+    - table: ops.alerts
+      procedure: "sp_raise_alert / sp_raise_alert_once"
+      why: "severity/source/message are always passed as literal CALL arguments (bigquery/10_observability.sql); no routine text ever writes a bare INSERT INTO ops.alerts."
+    - table: events.decision_log
+      procedure: sp_log_decision
+      why: "entry_date/entry_type are supplied as CALL ops.sp_log_decision(...) arguments throughout the plan (bigquery/08_ops_procedures.sql, bigquery/116); the procedure derives entry_date and takes entry_type as a literal parameter."
+    - table: events.adversarial_reviews
+      procedure: sp_write_adversarial_review
+      why: "review_id is a literal argument threaded through CALL ops.sp_write_adversarial_review(...) (bigquery/145/146); AR_att/AR_orc's prose explicitly forbids any other write path to this table."
+
+  # Tables that DO carry at least one NOT NULL/no-default column but are deliberately OUT OF SCOPE
+  # for this check -- named explicitly (never silently dropped) per the SCOPE METHODOLOGY note above.
+  excluded_tables:
+    - table: events.daily_marks
+      why: "Connector/FMP price-mark ingestion mirror (D2a) -- relays external quotes, composes no business-rule literal."
+    - table: events.hf_capability_captures
+      why: "No writer anywhere in Claude_Task_Plan.md -- D1's FRONTIER-LLM CAPABILITY CHECK writes findings to events.decision_log (tag [HF Frontier-LLM Capture]) instead; the table is read-only for Q3/A1 today."
+    - table: events.market_holidays
+      why: "Calendar-ingestion table; zero mentions in Claude_Task_Plan.md (populated outside the routine fleet)."
+    - table: events.option_marks
+      why: "Connector options-mark ingestion mirror, same class as events.daily_marks."
+    - table: events.parking_events
+      why: "D2/D2a fill-reconciliation mirror ('sweep/cover/DRIP fills are recorded to events.parking_events') -- passive-voice reconciliation of broker fills, not a routine-composed literal, and not named in any routine's BigQuery-writes inventory entry."
+    - table: events.signal_marks
+      why: "Connector signal-mark ingestion mirror (D2a STEP 1d: VIX + menu tickers), same class as events.daily_marks."
+    - table: events.trade_fills
+      why: "D2a broker-fill reconciliation mirror -- trade_id is whatever IBKR reports, never a routine-composed literal."
+    - table: ops.adversarial_review_write_mutex
+      why: "Internal locking primitive managed entirely inside sp_write_adversarial_review's own MERGE logic (bigquery/146); no routine prose ever composes a literal INSERT against it."
+    - table: ops.alert_policy
+      why: "Rows are registered by bigquery/*.sql schema-time migration INSERTs (e.g. bigquery/180's handoff_contract_unpinned registration), never by a routine at runtime."
+    - table: ops.arsenal_control
+      why: "Owner-only kill-switch (CLAUDE.md settled decision, SISA autonomy note) -- routines only READ it via ops.sp_assert_arsenal_enabled; zero INSERT/UPDATE instruction against it anywhere in Claude_Task_Plan.md."
+    - table: ops.backup_log
+      why: "Written by the infra script scripts/backup_events.sh, not a Claude routine; zero mentions in Claude_Task_Plan.md."
+    - table: ops.capital_control
+      why: "Owner/infra control-plane toggle; zero INSERT/UPDATE instruction against it in Claude_Task_Plan.md (routines only read it to gate the D2a sweep/restore substep)."
+    - table: ops.capital_dormancy_control
+      why: "Same class as ops.capital_control -- owner/infra toggle, no routine-composed write."
+    - table: ops.capital_nomad_control
+      why: "Same class as ops.capital_control -- owner/infra toggle, no routine-composed write."
+    - table: ops.ci_findings
+      why: "Written only by the CI service account bridge (bigquery/67_ci_findings_bridge.sql); D3's CI-FINDINGS ADJUDICATION step is explicitly told 'Do NOT write the ops.ci_findings resolved row yourself -- the next daily parity run confirms and closes it.'"
+    - table: ops.drill_log
+      why: "Written by the infra script scripts/restore_drill.sh, not a Claude routine; zero mentions in Claude_Task_Plan.md."
+    - table: ops.monitor_health_history
+      why: "Populated by the monitor-promotion self-heal MERGE machinery (bigquery/45/57/79), not a literal routine-composed INSERT in Claude_Task_Plan.md."
+    - table: ops.order_stage_mutex
+      why: "Internal locking primitive (bigquery/126_dust_operational_hardening.sql), same class as ops.adversarial_review_write_mutex."
+    - table: ops.park_control
+      why: "Owner/infra control-plane toggle, same class as ops.capital_control."
