@@ -745,11 +745,15 @@ END;
 -- CALL wrapper — full historical header/rationale comments remain there. SQ_VERSION v2 (bumped
 -- from v1 by this ARCH-1 wrapper migration, 2026-07-16 — no check logic changed).
 -- =====================================================================================================
--- SUPERSEDED LIVE by bigquery/141_append_only_halt_scope.sql — current single source of truth for
--- ops.sp_sq_integrity_check (141 scopes the monitor_health_history `clean` expression to
+-- SUPERSEDED LIVE by bigquery/185_append_only_integrity_promotion_flip.sql — current single source
+-- of truth for ops.sp_sq_integrity_check (SQ_VERSION v4). The chain is 75 (v2) -> 141 (v3) -> 185
+-- (v4): 141 scoped the monitor_health_history `clean` expression to
 -- state.append_only_integrity_haltable so a bb21c91-sanctioned adversarial_reviews repair cannot
--- veto the promotion clock; the WARNING alerting body is unchanged). Kept here, unmodified, for
--- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation.
+-- veto the promotion clock; 185 then performed D3's MONITOR-PROMOTION SELF-FLIP, replacing this v2
+-- body's single WARNING block with the promoted CRITICAL+RAISE block over the haltable view plus a
+-- non-halting WARNING companion over the sanctioned-repair complement. Kept here, unmodified, for
+-- DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in isolation —
+-- doing so would silently DEMOTE the monitor back to record-only WARNING and remove its trading halt.
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_integrity_check`()
 BEGIN
   CALL `stock-trading-498512.ops.sp_beat_heartbeat`('sq:integrity_check', 'v2', 'integrity_check.sql ran');
