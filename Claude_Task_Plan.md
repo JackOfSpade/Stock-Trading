@@ -1848,6 +1848,30 @@ cron) — this directly targets the class of incident behind the 2026-07-12 W2/W
 by a dependency gate. Best-effort, never blocks D2a's own `'completed'` log: look up `D2` in
 `ops/trigger_ids.json` (repo file); if an entry exists, `CALL RemoteTrigger run(<that trigger_id>)`. If
 no entry exists yet (trigger not yet recorded), skip silently — D2's own cron is unaffected either way.
+
+> **STATUS — THIS LINK HAS NEVER ONCE FIRED, AND THE BRANCH THAT ACTUALLY OBTAINS WAS NOT WRITTEN DOWN
+> (measured 2026-08-20, D2a).** `RemoteTrigger` is **not exposed as a tool in a D2a routine session** —
+> not "not yet recorded", which is the only skip branch the paragraph above describes. The `D2` entry in
+> `ops/trigger_ids.json` **does** exist (`trig_014eoNf1qNZZ8Ec5n2s6KxRP`, `verified_via: api`), so a
+> session follows the "if an entry exists" arm, reaches for a tool that is not there, and then has to
+> invent its own wording for a case the spec does not cover. MEASURED in `ops.run_log`: **every** D2a
+> completion from 2026-08-09 through 2026-08-19 recorded the chain-call as not performed, under eight
+> *different* improvised phrasings ("skipped best-effort", "NOT PERFORMED", "NOT FIRED", "NOT MADE",
+> "SKIPPED — …"); the 2026-08-11 note already named this exact root cause ("no RemoteTrigger tool is
+> exposed in this session") and it was never carried back into this paragraph. **So: attempt the lookup
+> and the call as written, and when `RemoteTrigger` is unavailable, record it in `<note>` with the fixed
+> token `CHAINCALL[pair=D2a->D2;outcome=tool_unavailable]` and move on.** One agreed token instead of
+> eight prose variants makes the condition greppable and makes the day it starts working visible.
+>
+> **This costs nothing today and is not an incident — do NOT "repair" it by arming some other trigger
+> path** (a GitHub Actions dispatch, a scheduled query, a second cron). D2's own cron is what has been
+> running D2 all along and it is punctual: across 2026-08-10..2026-08-19 D2 started 17:18–17:28 MT on
+> every ordinary day, ~25 minutes after D2a's completion. The latency the pilot was meant to remove is
+> therefore ~25 minutes on a healthy day, which is not worth standing up a new autonomous fire path for.
+> **Consequence for the PILOT gate below: the two-week clean-run observation has NOT been satisfied and
+> its clock has NOT started** — zero fires is not two weeks of clean fires. Do not read the absence of
+> double-fire incidents as evidence the pattern is proven.
+
 **D2 itself carries the idempotency guard** (its own "SAME-DAY IDEMPOTENCY GUARD" step, first line of
 its routine body) — a redundant second fire from D2's own cron later the same day is a safe, expected
 no-op, not a double-conversion risk. This is a PILOT on this ONE chain link only (D2a→D2) — do NOT
