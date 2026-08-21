@@ -811,6 +811,16 @@ END;
 -- events.strategy_lifecycle change state by INSERT (append-only), which the UPDATE/DELETE/MERGE/TRUNCATE
 -- filter could not see; the mutation-class watch is unchanged, and a single consolidated RAISE at the end
 -- now folds in the two new CRITICAL conditions. See the inline INSERT block below).
+--
+-- SUPERSEDED LIVE by bigquery/194_control_plane_insert_zero_row_suppression.sql — current single
+-- source of truth for ops.sp_sq_safety_critical_dml_watch (SQ_VERSION v5). The chain is 75 (v2 -> v3
+-- -> v4) -> 194 (v5): 194 narrows the WARNING control_plane_insert lane to INSERT jobs that actually
+-- wrote a row (dml_statistics.inserted_row_count, fail-loud on a NULL statistic), because a guarded
+-- idempotent INSERT that matches nothing completes as a DONE INSERT job while mutating nothing — two
+-- of the three jobs in live alert 675c4542 (2026-08-21) were exactly that. The mutation-class watch,
+-- both CRITICAL conditions, the v4 per-target-table watermark and the 4-table scope are unchanged.
+-- Kept here, unmodified, for DR-rebuild apply-in-order reference only.
+-- DO NOT re-apply this CREATE statement live in isolation.
 -- =====================================================================================================
 CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_sq_safety_critical_dml_watch`()
 BEGIN
