@@ -81,7 +81,10 @@
 # ALLOCATION CALL + D2's PARK ALLOCATION CONVERSION step), and the AI Research-Significance Screen's
 # two-layer conversion (RS-*, added 2026-07-19 per Redesign C, owner reversal of the same-day DEFER —
 # Operating_Protocols.md §19 / Claude_Task_Plan.md's D1/W2/M2 research-screen calls).
-# 31 cases total (brief calls for 12-20).
+# 33 cases total (brief calls for 12-20). COUNT CORRECTED 2026-08-20 (D3): this line read "31" and had
+# been stale since the four RS-* scenarios landed 2026-07-19 — the id numbering has gaps (no RR-10,
+# KT-03, SB-03), so the count is not derivable from the ids and a reader has no way to notice the drift.
+# No CI check asserts this number; keep it in sync by hand when adding or removing a scenario.
 #
 # VOCABULARY NOTE ON PA-* (park-allocator scenarios). run_golden.py's offline hard gate only recognizes
 # expected_decision leading tokens GO | NO-GO | CONTINUE | TERMINATE | ACTIVATE | DO-NOT-ACTIVATE
