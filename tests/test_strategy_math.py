@@ -250,15 +250,15 @@ def test_d_post_entry_bucket_pairs():
 def test_d_beta_adjusted_alpha_well_posed_case():
     # Perturbed series so sxx != 0 and residuals are genuinely small (not exactly zero)
     spy = [0.02 + 0.001 * (i % 3) for i in range(24)]
-    d = [(-0.03) + 1.0 * s for s in spy]  # alpha ~ -3pp exactly, beta ~ 1, tiny noise
+    d = [(-0.03) + 1.0 * s for s in spy]  # monthly intercept ~ -3pp (cumulative ~ -72pp), beta ~ 1, tiny noise
     result = strategy_d.beta_adjusted_alpha_test(d, spy)
     assert result.regression.alpha == pytest.approx(-0.03, abs=1e-6)
-    assert result.fires is True  # alpha <= -3pp AND upper CI ~ alpha (near-zero SE) <= 0
+    assert result.fires is True  # cumulative alpha <= -3pp AND upper CI ~ alpha (near-zero SE) <= 0
 
 
 def test_d_beta_adjusted_alpha_does_not_fire_on_positive_alpha():
     spy = [0.02 + 0.001 * (i % 3) for i in range(24)]
-    d = [0.01 + 1.0 * s for s in spy]  # alpha ~ +1pp -> should not fire
+    d = [0.01 + 1.0 * s for s in spy]  # monthly intercept ~ +1pp (cumulative ~ +24pp) -> should not fire
     result = strategy_d.beta_adjusted_alpha_test(d, spy)
     assert result.fires is False
 
@@ -275,7 +275,7 @@ def test_d_beta_adjusted_alpha_ci_gate_blocks_a_noisy_point_estimate():
     spy = [0.01 * i - 0.1 for i in range(n)]
     d = [-0.05 + 1.0 * spy[i] + (0.20 if i % 2 == 0 else -0.20) for i in range(n)]
     result = strategy_d.beta_adjusted_alpha_test(d, spy)
-    assert result.regression.alpha <= strategy_d.BETA_ADJUSTED_ALPHA_FIRE_THRESHOLD, (
+    assert result.cumulative_alpha <= strategy_d.BETA_ADJUSTED_ALPHA_FIRE_THRESHOLD, (
         "test fixture assumption broken: point estimate must cross -3pp for this test to be meaningful"
     )
     assert result.upper_ci_95 > 0, (
@@ -293,6 +293,52 @@ def test_d_beta_adjusted_alpha_upper_ci_uses_z_multiplier():
     expected = result.regression.alpha + strategy_d.ALPHA_TEST_Z_95 * result.regression.alpha_se
     assert result.upper_ci_95 == pytest.approx(expected)
     assert strategy_d.ALPHA_TEST_Z_95 == pytest.approx(1.645)
+
+
+def _alpha_series_near_cumulative(nominal_cumulative_alpha):
+    """24 monthly (D, SPY) return pairs built to carry roughly `nominal_cumulative_alpha`
+    of 24-month alpha with a small-but-nonzero residual SE. The alternating +/-2bp
+    perturbation keeps alpha_se genuinely nonzero (so the CI gate is really evaluated)
+    while staying far enough inside 0pp that condition (b) is satisfied and condition (a)
+    is the only thing that can decide `fires`; it also shifts the realized cumulative alpha
+    about -5bp off the nominal, so callers assert against the realized value.
+    """
+    spy = [0.01 + 0.004 * ((i % 5) - 2) for i in range(24)]
+    monthly = nominal_cumulative_alpha / 24
+    d = [monthly + s + (0.0002 if i % 2 else -0.0002) for i, s in enumerate(spy)]
+    return d, spy
+
+
+def test_d_beta_adjusted_alpha_point_estimate_is_on_the_cumulative_24_month_scale():
+    # Regression guard: -3pp is stated by the spec as the CUMULATIVE 24-month alpha differential
+    # ("(iv) the alpha differential (Jensen's alpha equivalent at 24 months) is the alpha-test
+    # metric"; "(a) alpha point estimate <= -3pp cumulative over 24 months"), NOT the per-month OLS
+    # intercept. Comparing the intercept against -0.03 made condition (a) ~24x too strict, so the
+    # flag stayed silent on a genuinely decayed strategy (fail-open on a kill/edge-decay trigger) --
+    # it would have needed a cumulative shortfall near -72pp to fire. The three tests above cannot
+    # catch that: their fixtures sit so far past -3pp on BOTH scales that either reading gives the
+    # same verdict. This one sits between the two scales, where only the correct reading fires.
+    d, spy = _alpha_series_near_cumulative(-0.03)
+    result = strategy_d.beta_adjusted_alpha_test(d, spy)
+    assert result.cumulative_alpha == pytest.approx(result.regression.alpha * 24)
+    assert result.cumulative_alpha == pytest.approx(-0.0305, abs=1e-4), (
+        "test fixture assumption broken: cumulative alpha must sit just past -3pp"
+    )
+    assert result.regression.alpha > strategy_d.BETA_ADJUSTED_ALPHA_FIRE_THRESHOLD, (
+        "test fixture assumption broken: the per-month intercept must NOT itself cross -3pp, or this "
+        "test cannot distinguish the cumulative reading from the monthly one"
+    )
+    assert result.upper_ci_95 <= strategy_d.BETA_ADJUSTED_ALPHA_CI_UPPER_BOUND, (
+        "test fixture assumption broken: condition (b) must be satisfied so condition (a) alone decides"
+    )
+    assert result.fires is True
+
+    # Complement: same shape, cumulative alpha about a third of the threshold -> condition (a) unmet.
+    d, spy = _alpha_series_near_cumulative(-0.01)
+    result = strategy_d.beta_adjusted_alpha_test(d, spy)
+    assert result.cumulative_alpha == pytest.approx(-0.0105, abs=1e-4)
+    assert result.upper_ci_95 <= strategy_d.BETA_ADJUSTED_ALPHA_CI_UPPER_BOUND
+    assert result.fires is False
 
 
 def test_d_metric_structural_change_boundary():

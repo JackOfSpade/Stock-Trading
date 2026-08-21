@@ -25,7 +25,7 @@ ENTRY_CORRELATION_BUCKET_THRESHOLD = 0.6
 POST_ENTRY_CORRELATION_THRESHOLD = 0.7  # rev 28 post-entry monitoring, tighter margin
 
 # Mark-to-market underperformance trigger — rev 28/30 beta-adjusted, CI-gated
-BETA_ADJUSTED_ALPHA_FIRE_THRESHOLD = -0.03  # "-3pp" point estimate
+BETA_ADJUSTED_ALPHA_FIRE_THRESHOLD = -0.03  # "-3pp cumulative over 24 months" point estimate
 BETA_ADJUSTED_ALPHA_CI_UPPER_BOUND = 0.0  # "95% upper CI bound on alpha <= 0pp"
 ALPHA_TEST_Z_95 = 1.645  # one-sided 95% z (upper-bound test, not two-sided 1.96)
 
@@ -115,12 +115,21 @@ def post_entry_bucket_pairs(
 
 
 class AlphaTestResult:
-    """Result of the rev-30 CI-gated beta-adjusted-alpha edge-decay test."""
+    """Result of the rev-30 CI-gated beta-adjusted-alpha edge-decay test.
 
-    __slots__ = ("regression", "upper_ci_95", "fires")
+    `regression.alpha` is the OLS intercept on MONTHLY returns (mean alpha per month);
+    `cumulative_alpha` is the spec's own alpha-test METRIC — "the alpha differential
+    (Jensen's alpha equivalent at 24 months)" — i.e. the quantity the -3pp threshold is
+    stated against. Both are carried so a reporting caller quotes the spec's scale rather
+    than re-deriving it.
+    """
 
-    def __init__(self, regression: RegressionResult, upper_ci_95: float, fires: bool):
+    __slots__ = ("regression", "cumulative_alpha", "upper_ci_95", "fires")
+
+    def __init__(self, regression: RegressionResult, cumulative_alpha: float,
+                 upper_ci_95: float, fires: bool):
         self.regression = regression
+        self.cumulative_alpha = cumulative_alpha
         self.upper_ci_95 = upper_ci_95
         self.fires = fires
 
@@ -138,15 +147,33 @@ def beta_adjusted_alpha_test(
     error and the 95% upper CI bound; alpha-test fires only when alpha point estimate
     <= -3pp AND 95% upper CI bound on alpha <= 0pp."
 
+    The metric that -3pp is stated against is the CUMULATIVE 24-month differential, not
+    the per-month intercept — Strategy.md's §D Edge-decay indicators bullet (= the
+    Strategy D segment of strategy/08_pre_mortems.md, rev 5) spells the same computation
+    out at full length: "(iii) compare cumulative deployed TWR to cumulative synthetic;
+    (iv) the alpha differential (Jensen's alpha equivalent at 24 months) is the
+    alpha-test metric", with the threshold "(a) alpha point estimate <= -3pp cumulative
+    over 24 months". The same section's SE figure is on that scale too ("SE +/-4.5pp
+    (typical beta_hat noise of +/-0.2 SE x cumulative SPY return ~0.22)").
+
     Both series must be the SAME trailing window (24 months of MONTHLY returns per the
     spec — the caller is responsible for windowing; this function does the regression
     + CI-gate arithmetic only, mirroring exactly how ols_regression separates the
     windowing decision from the math).
     """
     reg = ols_regression(y=d_monthly_returns, x=spy_monthly_returns)
+    # "cumulative deployed TWR minus cumulative synthetic" IS n x the intercept under the
+    # spec's arithmetic aggregation: OLS residuals sum to zero, so
+    # sum(TWR) - beta_hat*sum(SPY) == n*alpha exactly. Condition (a) is therefore tested
+    # against this, the spec's own 24-month-scale metric.
+    cumulative_alpha = reg.alpha * reg.n
+    # Condition (b) is the SIGN test "95% upper CI bound on alpha <= 0pp", which is
+    # invariant under the positive-n rescale — so the bound stays on the regression's own
+    # per-month scale, where alpha and alpha_se are directly comparable.
     upper_ci_95 = reg.alpha + ALPHA_TEST_Z_95 * reg.alpha_se
-    fires = reg.alpha <= BETA_ADJUSTED_ALPHA_FIRE_THRESHOLD and upper_ci_95 <= BETA_ADJUSTED_ALPHA_CI_UPPER_BOUND
-    return AlphaTestResult(regression=reg, upper_ci_95=upper_ci_95, fires=fires)
+    fires = cumulative_alpha <= BETA_ADJUSTED_ALPHA_FIRE_THRESHOLD and upper_ci_95 <= BETA_ADJUSTED_ALPHA_CI_UPPER_BOUND
+    return AlphaTestResult(
+        regression=reg, cumulative_alpha=cumulative_alpha, upper_ci_95=upper_ci_95, fires=fires)
 
 
 def metric_structural_change_invalidated(consecutive_non_conforming_quarters: int) -> bool:

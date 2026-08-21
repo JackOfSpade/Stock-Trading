@@ -76,16 +76,23 @@ ADDENDUM = ("\n\nSpawn Sonnet 5 model sub-agents to do the grunt work. Save your
             "(Opus 5) for design/analysis/orchestration work only.")
 OPS2_NO_ADDENDUM_ID = "OPS2"
 
-# The operator's standing scope-completion directive (owner directive, 2026-08-17), appended verbatim
-# to EVERY live routine trigger's instruction -- INCLUDING OPS2. Unlike ADDENDUM above, this carries no
-# OPS2 exception: it governs when a routine may stop and give its final response (keep working until
-# every issue found during the run is resolved, and fix out-of-scope issues on best judgment rather than
-# handing them back), not which model does the grunt work, so OPS2's inline-hosting job is not in
-# tension with it. check()'s check (2) appends this after ADDENDUM (or directly after the core
-# instruction for OPS2) when computing the expected instruction text.
-SCOPE_ADDENDUM = ("\n\nDo not give final response until you have solved ALL issues during your run. "
-                   "For new issues found outside of the scope of this prompt, go with your best "
-                   "recommendation and fix.")
+# The operator's standing scope-completion directive, appended verbatim to EVERY live routine
+# trigger's instruction -- INCLUDING OPS2. Unlike ADDENDUM above, this carries no OPS2 exception: it
+# governs when a routine may stop and give its final response, not which model does the grunt work,
+# so OPS2's inline-hosting job is not in tension with it. check()'s check (2) appends this after
+# ADDENDUM (or directly after the core instruction for OPS2) when computing the expected instruction
+# text.
+# NARROWED (owner directive 2026-08-21, superseding the 2026-08-17 form): the original wording also
+# ordered out-of-scope issues fixed on best judgment in-session, and measurably turned no-op runs into
+# spec-hardening sessions (routine-prefixed commits ~2.6/day -> ~9.2/day across the 2026-08-17
+# boundary; SL5 median session 2.6 min -> 16-24 min). The current form keeps the in-scope completion
+# bar and routes out-of-scope findings to a recorded handoff (queue/alert row) instead of an inline
+# fix. The 2 personal_* triggers still carry the 2026-08-17 wording by design -- they are outside the
+# fleet's cost/scope discipline and check (2) does not compute expected text for them.
+SCOPE_ADDENDUM = ("\n\nDo not give final response until you have resolved every issue within this "
+                   "run's own scope. Do NOT fix issues outside this run's scope: record each one "
+                   "instead — an events.queue_events row or an ops.alerts info row naming the owning "
+                   "routine or surface — and move on.")
 
 # Sentinel stored as cron_expression when no trustworthy source could confirm it (an empty/missing
 # cron_expression on ingest, or a bootstrap entry seeded without one). ingest() always reports every

@@ -82,9 +82,10 @@
   by that workflow** (verified 2026-07-16 against a critic finding that re-raised this as a gap —
   "N-5" in that pass's findings doc — before checking whether it was already closed; it was).
   `run_golden.py --live`'s `QUEUE_INSERT_TEMPLATE` and its `::warning::` on a decision flip are a
-  push-time, print-only, ADVISORY signal by design (the job has no BigQuery credentials at all, no
-  WIF identity — a claim to the contrary in a future audit is factually wrong against the current
-  workflow file). The REAL landing surface already exists elsewhere and is fully wired: D3's
+  CI-side, print-only, ADVISORY signal by design (per-push until 2026-08-21; daily via
+  golden-prose-daily.yml since — an owner-directed cost/quality change, the posture unchanged). The
+  job has no BigQuery credentials at all, no WIF identity — a claim to the contrary in a future audit
+  is factually wrong against the current workflow files (golden-scenarios.yml + golden-prose-daily.yml). The REAL landing surface already exists elsewhere and is fully wired: D3's
   **GOLDEN-SCENARIO PROSE-REGRESSION CHECK** step (`Claude_Task_Plan.md`, self-improvement audit
   2026-07-15) independently re-evaluates any scenario whose `governing_files` changed since D3's
   last run and, on a genuine flip, performs the real `INSERT INTO events.queue_events`

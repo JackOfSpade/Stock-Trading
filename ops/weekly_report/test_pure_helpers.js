@@ -98,7 +98,7 @@ const path = require('path');
 // scripts/check_script_version_consistency.py's existing .gs<->bigquery/43 drift gate, applied here to
 // this file's OWN copy-drift instead. Bump this in the SAME commit that re-verifies the copies below
 // against a new ALERT_SCRIPT_VERSION.
-const ALERT_SCRIPT_VERSION_SYNCED_AS_OF = 'v8';
+const ALERT_SCRIPT_VERSION_SYNCED_AS_OF = 'v9';
 
 // The same pin for the OTHER source file: the weekly_report.gs SCRIPT_VERSION this file's 19
 // weekly_report.gs copies were last hand-verified against, checked by its own guard test near the bottom.
@@ -106,7 +106,7 @@ const ALERT_SCRIPT_VERSION_SYNCED_AS_OF = 'v8';
 // the same way -- buildSubject_ hardcoded SUBJECT_LABEL's value instead of interpolating the const, so a
 // rename in the .gs would have left the buildSubject_ assertions below asserting the OLD phrase, green.
 // Bump this in the SAME commit that re-verifies those copies against a new SCRIPT_VERSION.
-const SCRIPT_VERSION_SYNCED_AS_OF = 'v8';
+const SCRIPT_VERSION_SYNCED_AS_OF = 'v9';
 
 // ===== copied verbatim from weekly_report.gs ================================================
 

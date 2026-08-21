@@ -72,7 +72,7 @@ const ALERT_RECIPIENT  = Session.getActiveUser().getEmail(); // self-email
 const ALERT_SENDER     = 'Stock-Trading Alerts';
 const SEVERITIES       = ['critical', 'warning']; // set to ['critical'] for criticals only
 const POLL_HOURS       = 2;                        // how often to check
-const ALERT_SCRIPT_VERSION = 'v8';                 // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep. Named ALERT_SCRIPT_VERSION (not SCRIPT_VERSION) because this file and weekly_report.gs share ONE Apps Script project's top-level scope -- a same-named const in both would throw a project-wide SyntaxError on the next paste (2026-07-14 audit finding).
+const ALERT_SCRIPT_VERSION = 'v9';                 // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep. Named ALERT_SCRIPT_VERSION (not SCRIPT_VERSION) because this file and weekly_report.gs share ONE Apps Script project's top-level scope -- a same-named const in both would throw a project-wide SyntaxError on the next paste (2026-07-14 audit finding).
 
 // ROSTER-CHANGE NOTICES (owner directive 2026-08-04, bigquery/134_roster_change_notifications.sql).
 // The autonomous SISA loop (SL1-SL5) adds and removes trading strategies with no human approval step --
@@ -225,9 +225,27 @@ function checkAlerts_() {
       // the pre-Set-dedup query result -- where the others used fresh.length). Compute it once here and
       // thread the SAME number to every consumer so it cannot diverge again.
       const recurringCount = combined.length - fresh.length;
-      const subject = alertSubject_(fresh, recurringCount);
-      GmailApp.sendEmail(ALERT_RECIPIENT, subject, plainAlerts_(combined, fresh.length, recurringCount),
-        { htmlBody: htmlAlerts_(combined, fresh.length, recurringCount), name: ALERT_SENDER });
+      // PAYLOAD-RENDER FENCE (v9). htmlAlerts_ fences its own roster-card rendering, but alertSubject_
+      // and plainAlerts_ render the same routine-authored payload UNFENCED and are evaluated FIRST
+      // (JS argument order), so one malformed payload row could still black out the entire channel —
+      // permanently, for a roster-category row exempt from the lookback bound. Fence here, at the one
+      // place that gates delivery, rather than triplicating try/catch inside the renderers (those are
+      // copied verbatim into test_pure_helpers.js and must not drift): on any render throw, degrade to
+      // a payload-free rendering. A degraded email is always preferable to no email — the same
+      // rationale htmlAlerts_'s inner fence already states.
+      let subject, plainBody, htmlBody;
+      try {
+        subject = alertSubject_(fresh, recurringCount);
+        plainBody = plainAlerts_(combined, fresh.length, recurringCount);
+        htmlBody = htmlAlerts_(combined, fresh.length, recurringCount);
+      } catch (e) {
+        Logger.log('payload render failed, falling back to message-only rendering: ' + e);
+        subject = '⚠ Stock-Trading ALERT — ' + combined.length + ' alert(s) (payload render failed)';
+        plainBody = combined.map(a => `[${a.severity}] ${a.source} / ${a.category}: ${a.message}`).join('\n\n');
+        htmlBody = null;
+      }
+      GmailApp.sendEmail(ALERT_RECIPIENT, subject, plainBody,
+        htmlBody ? { htmlBody: htmlBody, name: ALERT_SENDER } : { name: ALERT_SENDER });
       Logger.log('Emailed %s new alerts (%s recurring termination-close)', combined.length, recurringCount);
       stampNotified_(fresh.map(r => r.alert_id)); // recurring termination_close_staged rows NEVER stamped
       // Bounded de-dup guard for ids we just emailed (in case the notified_ts stamp failed).
@@ -300,11 +318,13 @@ function stampNotified_(ids) {
 //     the dashboard is green, and zero alerts reach the operator. Indefinitely. NOT covered before v6.
 //
 // So escalate on a streak, over two channels that do NOT depend on the thing that is broken:
-//   1. ops.alerts via sp_raise_alert_once — this row cannot be emailed by the very emailer that is
-//      failing, but scripts/alert_relay.py relays critical+warning to the ntfy.sh push topic from
-//      GitHub Actions every 30 minutes, entirely outside Apps Script and Gmail. That is the channel
-//      that actually gets through. sp_raise_alert_once (not sp_raise_alert) so repeated escalations
-//      collapse onto one open row instead of accumulating.
+//   1. ops.alerts — this row cannot be emailed by the very emailer that is failing, but
+//      scripts/alert_relay.py relays critical+warning to the ntfy.sh push topic from GitHub Actions,
+//      entirely outside Apps Script and Gmail. That is the channel that actually gets through. The
+//      FIRST escalation uses sp_raise_alert_once with a FIXED message (collapses onto one open row);
+//      the periodic DELIVERY_FAIL_REESCALATE_EVERY reminders use plain sp_raise_alert so a fresh row
+//      re-enters the relay window and re-pings — the same first-collapses/reminders-re-raise split
+//      verifyInboxDelivery_ documents at its own proc selection below.
 //   2. A direct GmailApp.sendEmail with no BigQuery involved — written on the assumption that mail
 //      delivery is the common/working case and the query is usually what's broken. That assumption is
 //      now KNOWN FALSE (see ACCEPTED IS NOT DELIVERED / v8 above, 2026-08-07): every Stock-Trading
@@ -346,13 +366,29 @@ function escalateDeliveryFailure_(err) {
   const msg = 'Stock-Trading ALERT DELIVERY IS FAILING: ' + streak + ' consecutive polls (~' + hours +
               'h) ended in an error, so NO alert emails are being sent. The heartbeat may still look ' +
               'green — it only proves the script ran, not that anything was delivered.';
+  // FIXED MESSAGE for the SQL channel — no streak, no hours. sp_raise_alert_once dedups on exact
+  // (category, message) while the prior row is unresolved, so the varying counters in `msg` above
+  // defeated the collapse entirely: every re-escalation of ONE outage opened a NEW unresolved row
+  // ("3 consecutive polls (~6h)", "12 consecutive polls (~24h)", ...). The counters live in the
+  // payload, which is not part of the dedup key; the varying text stays useful in the direct email
+  // below, where nothing dedups on it. Same rule verifyInboxDelivery_'s fixed message documents.
+  const sqlMsg = 'Stock-Trading ALERT DELIVERY IS FAILING: consecutive polls ended in an error, so NO ' +
+              'alert emails are being sent. The heartbeat may still look green — it only proves the ' +
+              'script ran, not that anything was delivered. See the payload for the consecutive-failure ' +
+              'count and approximate duration.';
+  // WHICH PROCEDURE — same split, and same reason, as verifyInboxDelivery_ below: _once for the FIRST
+  // escalation (collapse onto one open row), plain sp_raise_alert for the periodic reminders, whose
+  // fresh alert_ts is what re-enters alert_relay.py's relay window and re-pings the phone. A _once-only
+  // design with a fixed message would ping ntfy exactly once per outage and make
+  // DELIVERY_FAIL_REESCALATE_EVERY dead code.
+  const proc = (streak === DELIVERY_FAIL_ESCALATE_AFTER) ? 'sp_raise_alert_once' : 'sp_raise_alert';
   // Channel 1: ops.alerts -> alert_relay.py -> ntfy push (independent of Apps Script and Gmail).
   // The error text is NOT interpolated into SQL — it is arbitrary text from an exception and would be a
   // quoting/injection hazard. It goes in the email body instead; the payload carries structured facts.
   try {
     BigQuery.Jobs.query({
-      query: `CALL \`${ALERT_PROJECT_ID}.ops.sp_raise_alert_once\`('warning','alert_emailer',` +
-             `'alert_delivery_failing','${msg.replace(/'/g, '')}',` +
+      query: `CALL \`${ALERT_PROJECT_ID}.ops.${proc}\`('warning','alert_emailer',` +
+             `'alert_delivery_failing','${sqlMsg.replace(/'/g, '')}',` +
              `TO_JSON_STRING(STRUCT(${streak} AS consecutive_failures, ${hours} AS approx_hours, ` +
              `'${ALERT_SCRIPT_VERSION}' AS script_version)))`,
       useLegacySql: false, timeoutMs: 30000
@@ -436,7 +472,8 @@ function verifyInboxDelivery_() {
       // Inconclusive: the message we just sent is not indexed yet (or search is degraded). Do NOT
       // touch the streak — treating a lagging index as a delivery failure is how this check would
       // turn into the noise that gets it ignored.
-      Logger.log('inbox probe inconclusive: no indexed Stock-Trading mail in the last hour yet');
+      Logger.log('inbox probe inconclusive: no indexed Stock-Trading mail in the last %s min yet',
+                 INBOX_PROBE_WINDOW_SEC / 60);
       return;
     }
     inbox   = GmailApp.search(base + ' in:inbox', 0, 5).length;

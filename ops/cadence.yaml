@@ -463,15 +463,19 @@ routines:
                                     # work onto Sonnet sub-agents. Do NOT "fix" this by adding the addendum
                                     # to OPS2 -- a hand comparison against OPS0 will keep surfacing it as a
                                     # difference, and it is the intended one.
-                                    # SECOND ADDENDUM, NO EXCEPTION (owner directive, 2026-08-17): every
-                                    # routine INCLUDING OPS2 also carries a standing THIRD paragraph ("Do
-                                    # not give final response until you have solved ALL issues during your
-                                    # run. For new issues found outside of the scope of this prompt, go
-                                    # with your best recommendation and fix."). This one governs when a
-                                    # routine may stop, not which model does the work, so it is not in
-                                    # tension with OPS2's hosting job -- the omission above is scoped to
-                                    # the Sonnet-delegation paragraph only (scripts/routine_backup.py's
-                                    # ADDENDUM/SCOPE_ADDENDUM split).
+                                    # SECOND ADDENDUM, NO EXCEPTION (owner directive 2026-08-17; wording
+                                    # NARROWED by owner directive 2026-08-21): every routine INCLUDING
+                                    # OPS2 also carries a standing THIRD paragraph ("Do not give final
+                                    # response until you have resolved every issue within this run's own
+                                    # scope. Do NOT fix issues outside this run's scope: record each one
+                                    # instead ... and move on." -- scripts/routine_backup.py's
+                                    # SCOPE_ADDENDUM is the verbatim source; the 2026-08-17 form's
+                                    # fix-out-of-scope-issues clause measurably turned no-op runs into
+                                    # spec-hardening sessions, see that constant's comment). This one
+                                    # governs when a routine may stop, not which model does the work, so
+                                    # it is not in tension with OPS2's hosting job -- the omission above
+                                    # is scoped to the Sonnet-delegation paragraph only
+                                    # (scripts/routine_backup.py's ADDENDUM/SCOPE_ADDENDUM split).
                                     # JUSTIFICATION NOW CARRIED INLINE (owner directive, 2026-08-17). The
                                     # omission above is no longer recorded ONLY here: OPS2's live trigger
                                     # instruction itself now opens with a NOTE paragraph stating that the

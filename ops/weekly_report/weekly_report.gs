@@ -67,12 +67,17 @@ const SENDER_NAME  = 'Stock-Trading Bot';
 const LABEL_NAME   = 'Trading/Weekly';
 const SEND_HOUR    = 7;
 const SEND_WEEKDAY = ScriptApp.WeekDay.SUNDAY;
-const SCRIPT_VERSION = 'v8';                       // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep
+const SCRIPT_VERSION = 'v9';                       // bump on every functional change to this file; read by state.script_version_drift (bigquery/43_script_version_registry.sql) -- keep bigquery/43's MERGE seed in lockstep
 const SUBJECT_LABEL = 'Deployed vs Benchmarks';    // Single source for this phrase across buildSubject_, the post-send GmailApp.search() match, and the HTML/plain-text banners below. Edit only here on a rename (2026-07-14 audit finding -- this already drifted once by hand across 4 sites during the 2026-07-13 VOO rename).
 
 // Fixed per-strategy identity colors (CVD-validated) — never reassigned by rank/presence. VOO is a
-// distinct steel blue-gray chosen to not collide with Strategy B's blue.
-const CHART_COLORS = { A: '#1baf7a', B: '#2a78d6', C: '#4a3aa7', D: '#eb6834', E: '#e87ba4' };
+// distinct steel blue-gray chosen to not collide with Strategy B's blue. Complete to the SISA roster
+// ceiling (strategy/roster.yaml n_max=8), not just today's members: the autonomous lifecycle can
+// adopt F/G/H with no human step, and two strategies sharing the fallback gray would render as
+// mutually indistinguishable lines in the chart, legend and table chip. F/G/H hues chosen to stay
+// CVD-distinguishable from A–E, from each other, and from VOO_COLOR.
+const CHART_COLORS = { A: '#1baf7a', B: '#2a78d6', C: '#4a3aa7', D: '#eb6834', E: '#e87ba4',
+                       F: '#8a6d1f', G: '#00868b', H: '#8b2f6b' };
 const VOO_COLOR = '#5f7d95';
 
 // Trading days per period — the denominator basis for the per-period average return (month=21,
@@ -208,7 +213,7 @@ function gatherData_() {
   const asOfDate = vooSeries.length ? vooSeries[vooSeries.length - 1].as_of_date : null;
   const firstDate = vooSeries.length ? vooSeries[0].as_of_date : null;
 
-  // One row per strategy, always all five, fixed A→E order.
+  // One row per roster strategy, in code order (A→E today; up to n_max=8 under SISA).
   const rows = scorecard.map(s => {
     const pts = dailyByStrategy[s.strategy] || [];
     const deployed = pts.length > 0;
