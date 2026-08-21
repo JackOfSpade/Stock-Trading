@@ -3,12 +3,15 @@
 ## Operating notes
 
 - **Batch pushes within a session — every push costs CI minutes.** This repo is private,
-  so GitHub Actions bills per job-minute, and `ci.yml` runs 6 jobs on EVERY push with no
-  branch/path filter at the workflow level (deliberate — auto-merge's gate looks up the CI
+  so GitHub Actions bills per job-minute (ceil per job), and `ci.yml` runs on EVERY push with
+  no branch/path filter at the workflow level (deliberate — auto-merge's gate looks up the CI
   run for a branch's exact tip SHA, so a push with no CI run would never merge). A 2026-07-20
-  cost audit measured ~13 billable minutes per CI run, ~76% of the month's Actions bill, and
-  found one long interactive session that pushed 61 times to a single branch (~23% of July's
-  CI minutes) by pushing after each small edit.
+  cost audit measured ~13 billable minutes per CI run under the then-6-job layout, ~76% of that
+  month's Actions bill, and found one long interactive session that pushed 61 times to a single
+  branch (~23% of July's CI minutes) by pushing after each small edit. Since the 2026-07-30 job
+  consolidation `ci.yml` is 2 jobs and a routine push bills ~4 minutes (measured 2026-08-21 from
+  the Actions jobs API: `checks` ~148 s → 3 min + `warehouse-validation` ~26 s → 1 min, runs
+  32448847866 / 32437747452) — cheaper, but the batching discipline below is unchanged.
 
   **Practice:** in an interactive session, accumulate related edits and push ONCE per
   completed, reviewable unit of work — the same discipline the scheduled routine fleet

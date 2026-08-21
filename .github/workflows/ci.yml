@@ -55,6 +55,11 @@ jobs:
     # measured ~1.913 min/run saving (~687 min/month at ~13.1 runs/day). `dbt-parity` and `sql-validate`
     # below are UNTOUCHED by this change: they are credentialed (WIF) and gate-critical, out of scope.
     #
+    # Those per-run minute figures describe the PRE-consolidation four-job layout and are history, not
+    # the cost of a run today. CURRENT MEASURED BASELINE (2026-08-21, runs 32448847866 / 32437747452):
+    # this workflow bills ~4 minutes per push across 2 jobs — this job ~148 s (3 billed min) plus
+    # warehouse-validation ~26 s (1 billed min), under GitHub's ceil(seconds/60)-per-JOB billing.
+    #
     # BLOCKING STATUS IS UNCHANGED PER STEP (only the container changed): every step below blocks the
     # run exactly as it did in its old standalone job, EXCEPT the two `ruff` steps at the end (formerly
     # the whole `lint` job, which was job-level `continue-on-error: true`) — those stay advisory via
@@ -68,7 +73,54 @@ jobs:
           # checkout that base is unresolvable and the period half of the check silently degrades
           # to shape-only — the same fail-open shape the dbt-parity/sql-validate path gates were
           # fixed for on 2026-07-20 (CLAUDE.md), so it is set explicitly rather than left to default.
+          # The change-scope step below shares that requirement (resolve_diff_base.sh needs
+          # origin/main and the merge-base to be resolvable at all).
           fetch-depth: 0
+      - name: Change scope (which optional step groups this push needs)
+        id: scope
+        # Path gate for the OPTIONAL step groups only. Everything that can regress from a change
+        # ANYWHERE in the tree — the module self-test, pytest, every consistency checker, the bash
+        # and node suites, and the workflow_run name-sync check — stays unconditional below; only
+        # the three groups whose inputs are structurally confined to a path set are gated:
+        #   dbt_needed  — dbt parse/coverage read bigquery/** + dbt/** (plus the pinned constraint file)
+        #   lint_needed — actionlint/shellcheck read .github/**, *.sh, and the act config
+        #   py_needed   — ruff reads *.py (plus its own config/constraint sources)
+        # FAIL OPEN, matching the two warehouse-validation path gates: an unresolvable diff base
+        # (new branch, force-push, unrelated histories) leaves all three 'true', so a push whose
+        # scope cannot be determined runs everything rather than silently skipping a real check.
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          # ci.yml has no pull_request trigger, so this is normally empty — the positional argument
+          # is retained for the same reason the warehouse-validation guard steps retain it (the
+          # helper is shared, and either side's trigger could be restored).
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -uo pipefail
+          # shellcheck source=../../scripts/resolve_diff_base.sh
+          source scripts/resolve_diff_base.sh
+          dbt_needed=true
+          lint_needed=true
+          py_needed=true
+          changed=""
+          base="$(resolve_diff_base "$EVENT_NAME" "$PR_BASE" "$PUSH_BEFORE" "$HEAD_SHA" "$REF_NAME")"
+          # A `git diff` that ERRORS must fail open too, so the scoping only happens when the diff
+          # itself succeeded — an empty diff from a successful call legitimately means "nothing to do".
+          # Herestrings, not pipes: `printf ... | grep -q` can report SIGPIPE under `pipefail` when
+          # grep exits early on a match, which would invert the result of a matching pattern.
+          if [ -n "$base" ] && changed="$(git diff --name-only "$base" "$HEAD_SHA")"; then
+            grep -qE '^(bigquery/|dbt/|requirements-ci\.txt$)' <<<"$changed" || dbt_needed=false
+            grep -qE '(^\.github/|\.sh$|^\.actrc$)' <<<"$changed" || lint_needed=false
+            grep -qE '(\.py$|^pyproject\.toml$|^requirements-ci\.txt$)' <<<"$changed" || py_needed=false
+          fi
+          {
+            echo "dbt_needed=$dbt_needed"
+            echo "lint_needed=$lint_needed"
+            echo "py_needed=$py_needed"
+          } >> "$GITHUB_OUTPUT"
+          echo "::notice::CI change scope — dbt:$dbt_needed lint:$lint_needed ruff:$py_needed (diff base: ${base:-unresolved — all optional groups run})"
       - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
@@ -76,10 +128,18 @@ jobs:
           cache-dependency-path: requirements-ci.txt
       - name: Install test + dbt deps (pinned via constraints — RUNBOOK §25 C3)
         # pyyaml up front so the new parser tests can import check_cadence_consistency (which imports yaml)
-        # during pytest, not only in the later cadence step. dbt-core/dbt-bigquery unioned in here too —
-        # this one install now covers both the former `test` job's deps AND the former `dbt` job's deps
-        # (the former `dbt` job's own separate install step is gone; nothing else needs it re-installed).
-        run: pip install --quiet -c requirements-ci.txt pytest pyyaml dbt-core dbt-bigquery
+        # during pytest, not only in the later cadence step. google-cloud-bigquery is NOT optional here and
+        # must NOT be folded into the path-gated dbt install: tests/test_adversarial_review_storage.py
+        # imports google.cloud.bigquery, so `pytest -q` needs it on EVERY push. It would otherwise arrive
+        # only transitively via dbt-bigquery, which the sibling step below installs on SOME pushes —
+        # requirements-ci.txt names it directly for exactly this reason, and so does this line. The dbt
+        # half of this step's name is the path-gated sibling step directly below.
+        run: pip install --quiet -c requirements-ci.txt pytest pyyaml google-cloud-bigquery
+      - name: Install dbt for parse (pinned via constraints — RUNBOOK §25 C3)
+        # Only the `dbt deps + parse` / `dbt view coverage` steps below consume these, and both are
+        # gated on the same output — installing dbt on a docs- or code-only push buys nothing.
+        if: steps.scope.outputs.dbt_needed == 'true'
+        run: pip install --quiet -c requirements-ci.txt dbt-core dbt-bigquery
       - name: Module self-test (asserts, no deps)
         run: python c_options_math.py
       - name: pytest regression suite (options-math + drift-defense parsers — RUNBOOK §25 C2)
@@ -140,8 +200,9 @@ jobs:
         # the missing entries (was KNOWN-RED at introduction; stale "KNOWN-RED" annotation corrected
         # 2026-07-29 — verified live: "SETTINGS TOOL COVERAGE: OK — 8 referenced mcp__ tool(s) all
         # present"). A future red run here is a REAL regression, not an expected/known state.
-        # SCOPE NOTE (2026-08-08): this gate only ever sees full `mcp__Server__tool` tokens — 8 of them
-        # today. Routine prose overwhelmingly writes bare backticked names instead
+        # SCOPE NOTE (2026-08-08): this gate only ever sees full `mcp__Server__tool` tokens — a small
+        # subset of the plan's tool references (the count drifts as prose changes; the script prints
+        # it each run). Routine prose overwhelmingly writes bare backticked names instead
         # (`` `get_account_summary` ``), which this regex cannot see at all; that gap is covered by
         # scripts/check_connector_tools.py below. A green run here is NOT by itself proof of complete
         # tool coverage — see that script's module docstring.
@@ -200,14 +261,23 @@ jobs:
       #   - shellcheck (the runner's version, unpinned) is floored at `-S warning`, so only warnings/errors
       #     block; the scripts pass clean today, this just stops a future shellcheck release's new *style/info*
       #     nit from wedging the gate.
+      #
+      # PATH-GATED (`lint_needed`, see the change-scope step): actionlint reads .github/** only, and the
+      # standalone shellcheck pass reads *.sh only, so a push touching neither cannot change either
+      # verdict. Both remain BLOCKING whenever they run — an `if:` narrows WHEN a gate applies, it does
+      # not downgrade it to advisory, and the scope step fails open. The `workflow_run` name-sync check
+      # after them is deliberately NOT gated: it is sub-second and reads three workflow files plus the
+      # merge-trigger array, so leaving it unconditional costs nothing and keeps the merge-gate coupling
+      # checked on every single push.
       - name: Cache actionlint binary (pinned v1.7.12)
         id: cache-actionlint
+        if: steps.scope.outputs.lint_needed == 'true'
         uses: actions/cache@v6
         with:
           path: actionlint
           key: actionlint-v1.7.12-${{ runner.os }}
       - name: Install actionlint (pinned v1.7.12)
-        if: steps.cache-actionlint.outputs.cache-hit != 'true'
+        if: steps.scope.outputs.lint_needed == 'true' && steps.cache-actionlint.outputs.cache-hit != 'true'
         run: |
           bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash) 1.7.12
       # act-local-CI only. GitHub's ubuntu-latest ships shellcheck preinstalled, but act's
@@ -226,7 +296,7 @@ jobs:
       # failing this BLOCKING GATE (auto-merge gates every branch on it) on a
       # transient apt error.
       - name: Install shellcheck (act-local CI only — GitHub's runner already has it)
-        if: ${{ env.ACT == 'true' }}
+        if: ${{ env.ACT == 'true' && steps.scope.outputs.lint_needed == 'true' }}
         run: |
           set -euo pipefail
           [ "${ACT:-}" = "true" ] || exit 0
@@ -236,8 +306,10 @@ jobs:
           fi
           shellcheck --version
       - name: actionlint (workflow YAML + embedded run-block bash via shellcheck)
+        if: steps.scope.outputs.lint_needed == 'true'
         run: ./actionlint -color
       - name: shellcheck standalone scripts (warning+ blocks)
+        if: steps.scope.outputs.lint_needed == 'true'
         run: |
           set -euo pipefail
           # BUG FIX (2026-07-20 code-review, C23): nullglob so a non-matching pattern vanishes instead of
@@ -283,9 +355,14 @@ jobs:
 
       # Validates the dbt/ modeling layer's structure + that every ref()/source() and test resolves,
       # WITHOUT a warehouse (parse does not connect). The full `dbt build` against BigQuery is gated on
-      # WIF creds — see ops/RUNBOOK.md §14. Always runs; offline; no secrets needed. (dbt-core/dbt-bigquery
-      # are already installed by the union install step above — no separate install here anymore.)
+      # WIF creds — see ops/RUNBOOK.md §14. Offline; no secrets needed. PATH-GATED (`dbt_needed`, see the
+      # change-scope step) on the same bigquery/** + dbt/** path set the warehouse-validation job's parity
+      # guard uses, plus requirements-ci.txt (which pins the dbt versions parse itself runs under): what
+      # `dbt parse` reads is confined to those paths, so a push touching none of them cannot change its
+      # verdict. Still BLOCKING when it runs, and the scope step fails open. dbt-core/dbt-bigquery come
+      # from the path-gated install step above, not from the always-run one.
       - name: Write a CI profile (no creds — parse does not connect)
+        if: steps.scope.outputs.dbt_needed == 'true'
         # dbt/profiles.ci.yml is the single checked-in source for this profile (2026-07-04 code-quality
         # audit — this job and the dbt-parity equivalent step previously each wrote the same content via
         # an inline heredoc, byte-for-byte duplicated with no single source of truth).
@@ -293,17 +370,23 @@ jobs:
           mkdir -p ~/.dbt
           cp dbt/profiles.ci.yml ~/.dbt/profiles.yml
       - name: dbt deps + parse
+        if: steps.scope.outputs.dbt_needed == 'true'
         working-directory: dbt
         run: |
           dbt deps
           dbt parse
       - name: dbt view coverage (advisory — 2026-07-14 audit finding)
+        if: steps.scope.outputs.dbt_needed == 'true'
         # scripts/dbt_parity.py only proves parity for views that already have a dbt model/source;
         # this prints which live state/analytics/perf views have neither, so drift in coverage
         # itself (not just row-level logic) is visible. No baseline/allowlist yet, so it prints the
         # full known backlog every run — advisory (|| true), does not block CI/auto-merge.
         run: python scripts/check_dbt_view_coverage.py || true
+      # PATH-GATED (`py_needed`, see the change-scope step): ruff reads *.py plus its own pyproject.toml
+      # configuration, so a push touching neither cannot change its output. These two steps were already
+      # advisory; the gate only stops paying for a pip install and a lint pass that had nothing to say.
       - name: Install ruff (advisory — informational lint, never blocks; RUNBOOK §25 C3)
+        if: steps.scope.outputs.py_needed == 'true'
         # continue-on-error: true added as belt-and-braces (2026-07-30 cost consolidation): this step used
         # to live in its own job-level `continue-on-error: true` JOB (`lint`), so nothing it did could ever
         # fail the CI run. Now that it is a step inside the otherwise-BLOCKING consolidated job, a
@@ -312,6 +395,7 @@ jobs:
         continue-on-error: true
         run: pip install --quiet -c requirements-ci.txt ruff
       - name: ruff check (informational)
+        if: steps.scope.outputs.py_needed == 'true'
         # Same belt-and-braces reasoning as the install step above, PLUS the pre-existing `|| true` on the
         # ruff invocation itself — two independent reasons this step can never fail the job.
         continue-on-error: true

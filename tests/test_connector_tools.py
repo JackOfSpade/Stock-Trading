@@ -5,11 +5,13 @@ so a regex/YAML-shape change that makes the checker stop matching is caught by C
 disarming the gate. Every assertion is on main()'s RETURN VALUE, never on stdout as the primary signal
 (capsys checks below are secondary/diagnostic only).
 
-NOTE on the real repo (see test_real_repo_connector_tools_is_consistent at the bottom): as of this
-checker's introduction, the real repo genuinely has some of the drift this checker exists to catch
-(a dead `paper_search` call site, a stale allowlist entry, a couple of manifest/routine-text
-disagreements). That test is left asserting == 0 deliberately -- see its own docstring. Do NOT weaken
-this file's checks to make it pass; fix the underlying files instead (tracked separately).
+HISTORICAL NOTE on the real repo (see test_real_repo_connector_tools_is_consistent at the bottom): at
+this checker's introduction (2026-08-08) the real repo still carried some of the drift this checker
+exists to catch (a dead `paper_search` call site, a stale allowlist entry, a couple of manifest/
+routine-text disagreements), and that test asserted == 0 against a then-failing repo deliberately --
+see its own docstring for the enumerated gaps. All of them have since been closed: the checker now
+exits 0 against the committed files and that test is a standing green regression lock. Do NOT weaken
+this file's checks to keep it green; fix the underlying files instead.
 """
 import copy
 import json
@@ -363,22 +365,24 @@ def test_missing_settings_json_fails_closed(tmp_path, monkeypatch, capsys):
 # ---------------------------------------------------------------------------------------------------
 
 def test_real_repo_connector_tools_is_consistent():
-    """As of this checker's introduction (2026-08-08) the real repo has NOT yet closed every gap this
-    checker is designed to catch -- see the module docstring's WHY THIS EXISTS paragraph. Confirmed by
-    running the checker directly against the committed repo files (no monkeypatching):
-      - CHECK4: Claude_Task_Plan.md still instructs a Hugging Face `paper_search` call (D1 ~line 700,
-        SL1 ~line 2848) and mentions `space_search` outside any exemption, even though
-        ops/connector_tools.yaml records both as `absent` (paper_search verified 2026-07-28;
+    """The checker must exit 0 against the committed repo files (no monkeypatching).
+
+    HISTORY: at this checker's introduction (2026-08-08) the real repo had NOT yet closed every gap the
+    checker is designed to catch, and this assertion was written red-on-purpose against these three:
+      - CHECK4: Claude_Task_Plan.md instructed a Hugging Face `paper_search` call (D1 ~line 700,
+        SL1 ~line 2848) and mentioned `space_search` outside any exemption, even though
+        ops/connector_tools.yaml recorded both as `absent` (paper_search verified 2026-07-28;
         space_search unconfirmed).
-      - CHECK5: .claude/settings.json still allowlists `mcp__Hugging_Face__paper_search`, which the
-        manifest records as verified-absent -- a stale grant.
-      - CHECK3: D2a's Step 0b (~line 1257) actively calls `get_pa_performance_all_periods` (IBKR)
-        while the manifest still declares it `use: unused`; the FMP tier-gating discussion at
-        ~line 1336 mentions `etfAndMutualFunds` without `prose_ambiguous: true`, unlike its sibling
+      - CHECK5: .claude/settings.json still allowlisted `mcp__Hugging_Face__paper_search`, which the
+        manifest recorded as verified-absent -- a stale grant.
+      - CHECK3: D2a's Step 0b (~line 1257) actively called `get_pa_performance_all_periods` (IBKR)
+        while the manifest still declared it `use: unused`; the FMP tier-gating discussion at
+        ~line 1336 mentioned `etfAndMutualFunds` without `prose_ambiguous: true`, unlike its sibling
         tier-gated tokens on the same line.
-    A parallel effort is closing these (this same session already observed .claude/settings.json
-    gain `mcp__Gmail__list_labels` / `mcp__Hugging_Face__hf_fs` mid-run, which is why CHECK2 is
-    already clean). Do NOT weaken check_connector_tools.py to make this assertion pass -- fix the
-    underlying manifest/routine-text/allowlist files instead.
+    All three have since been closed (the remaining paper_search/space_search mentions in
+    Claude_Task_Plan.md are retirement prose the checker passes over; the manifest now records
+    `use: required`; the stale allowlist entry is gone), so this is now a standing GREEN lock rather
+    than a known-failing aspiration. Do NOT weaken check_connector_tools.py to keep this assertion
+    passing -- fix the underlying manifest/routine-text/allowlist files instead.
     """
     assert cct.main() == 0

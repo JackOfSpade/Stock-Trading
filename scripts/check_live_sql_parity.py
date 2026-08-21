@@ -131,7 +131,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.bq_json import run_bq_query
-from lib.sql_files import sql_file_paths
+from lib.sql_files import normalize_kind, sql_file_paths
+from lib.textio import read_text
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BIGQUERY_DIR = os.path.join(ROOT, "bigquery")
@@ -139,9 +140,16 @@ BIGQUERY_DIR = os.path.join(ROOT, "bigquery")
 # A genuine top-level statement starts at column 0 (^, re.MULTILINE) — an indented occurrence
 # (e.g. bigquery/17_restore_drill.sql's "CREATE OR REPLACE TABLE ..." embedded inside a FORMAT()
 # string literal passed to EXECUTE IMMEDIATE) must NOT match.
+# Case-insensitive like every sibling SQL parser in scripts/ (lib/sql_files.py's OBJECT_DDL,
+# check_dbt_view_coverage.py, check_sq_version_registry.py, ...): a lowercase `create or replace
+# view` would otherwise never enter the expected set at all, and main()'s only zero-guard is a TOTAL
+# wipeout (`checked == 0`), so that object would be silently unverified forever — a fail-open in the
+# one gate that proves live BigQuery matches the repo. Group 1 is therefore NOT safe to compare
+# against a literal kind: normalize_kind() it first (find_final_definitions does), since `TABLE\s+
+# FUNCTION` can also capture a legally line-wrapped "TABLE\n  FUNCTION".
 CREATE_STMT = re.compile(
-    r"^CREATE\s+OR\s+REPLACE\s+(VIEW|PROCEDURE|TABLE FUNCTION)\s+`([\w-]+)\.(\w+)\.(\w+)`",
-    re.MULTILINE,
+    r"^CREATE\s+OR\s+REPLACE\s+(VIEW|PROCEDURE|TABLE\s+FUNCTION)\s+`([\w-]+)\.(\w+)\.(\w+)`",
+    re.IGNORECASE | re.MULTILINE,
 )
 
 # Boundary for extract_body: the NEXT top-level (column-0) statement ends the current object's body.
@@ -175,7 +183,7 @@ NEXT_TOP_LEVEL = re.compile(
     r"(?:MATERIALIZED\s+VIEW|TABLE\s+FUNCTION|VIEW|PROCEDURE|TABLE|FUNCTION|MODEL|SCHEMA)"
     r"|INSERT|MERGE|UPDATE|DELETE|TRUNCATE|DROP|ALTER|GRANT|REVOKE|CALL|EXPORT|ASSERT"
     r")\b",
-    re.MULTILINE,
+    re.IGNORECASE | re.MULTILINE,
 )
 
 # A DROP that removes an object from find_final_definitions()'s expected set (2026-07-28 DROP-
@@ -232,7 +240,7 @@ DROP_STMT = re.compile(
     r"^DROP\s+(MATERIALIZED\s+VIEW|TABLE\s+FUNCTION|VIEW|TABLE|PROCEDURE|FUNCTION)\s+"
     r"(?:IF\s+EXISTS\s+)?"
     r"`?([\w-]+)`?\.`?(\w+)`?\.`?(\w+)`?",
-    re.MULTILINE,
+    re.IGNORECASE | re.MULTILINE,
 )
 
 
@@ -410,12 +418,16 @@ def find_procedure_body_end(text, begin_start):
     wi = 0
     while wi < len(word_positions):
         idx = word_positions[wi]
-        word = toks[idx][1]
+        # Upper-cased before every comparison below: BigQuery keywords are case-insensitive, and a
+        # lowercase `case ... END` inside a body would otherwise decrement depth with no matching
+        # increment and end the body early — a false DRIFT of the exact class the END-CASE handling
+        # below exists to prevent.
+        word = toks[idx][1].upper()
         nxt_word = None
         if wi + 1 < len(word_positions):
             nxt_idx = word_positions[wi + 1]
             if all(t[0] == "W" for t in toks[idx + 1:nxt_idx]):
-                nxt_word = toks[nxt_idx][1]
+                nxt_word = toks[nxt_idx][1].upper()
         if word == "BEGIN":
             if nxt_word == "TRANSACTION":
                 wi += 2
@@ -471,7 +483,7 @@ def extract_body(txt, start, obj_type):
         # m.end()), or every procedure would spuriously DRIFT against a live body that has the
         # wrapper the repo side stripped. This was the ~24-procedure false-positive class behind
         # issue #10.
-        m = re.search(r"\bBEGIN\b", stmt)
+        m = re.search(r"\bBEGIN\b", stmt, re.IGNORECASE)
         if not m:
             return None
         # Fixed 2026-08-08: NEXT_TOP_LEVEL's boundary (the `end` used to build `stmt` above) is not
@@ -491,7 +503,7 @@ def extract_body(txt, start, obj_type):
         # first `AS\s*\n`, which on an inline `AS SELECT` header skipped to a later `col AS\n`
         # column alias and sliced off the front of the SELECT; removing that branch is byte-
         # identical across all live objects and closes that latent trap (2026-07-17 audit).
-        m = re.search(r"\bAS\b(?=\s)", stmt)
+        m = re.search(r"\bAS\b(?=\s)", stmt, re.IGNORECASE)
         if not m:
             return None
         body = stmt[m.end():]
@@ -620,13 +632,20 @@ def find_final_definitions():
     """
     final = {}
     for path in numbered_sql_files():
-        txt = open(path, encoding="utf-8").read()
+        txt = read_text(path)
         events = [(m.start(), "CREATE", m) for m in CREATE_STMT.finditer(txt)]
         events += [(m.start(), "DROP", m) for m in DROP_STMT.finditer(txt)]
         events.sort(key=lambda e: e[0])
         for _start, kind, m in events:
             if kind == "CREATE":
                 obj_type, project, dataset, name = m.groups()
+                # CREATE_STMT matches case-insensitively and allows a line-wrapped
+                # "TABLE\n  FUNCTION", so group 1 is not directly comparable to the literal kinds
+                # extract_body() and ROUTINE_KINDS test against — collapse it to the canonical
+                # "TABLE FUNCTION"/"PROCEDURE"/"VIEW" spelling first, or a lowercase `procedure`
+                # would be silently routed down the VIEW path and looked up in
+                # INFORMATION_SCHEMA.VIEWS instead of .ROUTINES.
+                obj_type = normalize_kind(obj_type)
                 body = extract_body(txt, m.start(), obj_type)
                 if body is None:
                     continue

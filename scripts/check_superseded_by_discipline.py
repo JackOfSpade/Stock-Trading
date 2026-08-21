@@ -65,6 +65,11 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# find_procedure_body_end() is imported from its home in check_live_sql_parity.py rather than moved
+# into lib/: it is directly regression-tested there (CASE-expression / END CASE / FOR...END FOR edge
+# cases) and _definition_segments() below needs exactly that scanner to know where a PROCEDURE's own
+# body ends.
+from check_live_sql_parity import find_procedure_body_end
 from lib.sql_files import (
     OBJECT_DDL, normalize_kind, numbered_sql_files, resolve_canonical, strip_sql_comments,
 )
@@ -260,6 +265,12 @@ STANDALONE_STMT = re.compile(
     re.IGNORECASE | re.MULTILINE,
 )
 
+# The BEGIN that opens a PROCEDURE's own body — the starting point handed to
+# find_procedure_body_end(). Not column-0 anchored: a procedure's opening BEGIN is written at column 0
+# in this repo today but need not be, and the first BEGIN after a CREATE PROCEDURE header is its body
+# opener wherever it sits. Mirrors check_live_sql_parity.extract_body()'s own `\bBEGIN\b` search.
+PROCEDURE_BEGIN = re.compile(r"\bBEGIN\b", re.IGNORECASE)
+
 
 def _definition_segments(text):
     """([(dataset, name, body)], [unowned_chunk]) for `text`.
@@ -282,9 +293,15 @@ def _definition_segments(text):
 
     So: a VIEW/TABLE segment ends at the first column-0 standalone statement after its CREATE, and
     everything from there to the next CREATE is returned as UNOWNED, scanned separately, and must earn
-    its own ALLOWLIST entry. PROCEDURE/FUNCTION segments are NOT truncated — their bodies legitimately
-    contain DML between BEGIN and END (always indented in this repo, so column-0 anchoring already
-    protects them, but the kind check makes it explicit rather than incidental).
+    its own ALLOWLIST entry. A PROCEDURE/FUNCTION segment cannot use that rule — its body legitimately
+    contains DML between BEGIN and END (always indented in this repo, so column-0 anchoring would not
+    fire anyway) — so it ends at the procedure's OWN closing END instead, found with
+    check_live_sql_parity.find_procedure_body_end()'s nesting-aware scan, and whatever follows that END
+    is unowned. Ending it at the next CREATE instead would fold a trailing free-standing statement
+    into the procedure's body, where it would inherit the PROCEDURE's ALLOWLIST reason — the same
+    "rides on someone else's reason by text position" bug, one construct over. A
+    body with no BEGIN at all (a scalar/table FUNCTION, e.g. bigquery/122's analytics.find_precedents)
+    keeps the untruncated segment, so this can never lose coverage.
 
     Text before the first CREATE is unowned too (file header, preamble ALTERs) — previously skipped
     entirely, now scanned.
@@ -300,7 +317,13 @@ def _definition_segments(text):
         end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
         kind = normalize_kind(m.group(1))
         chunk = text[m.start():end]
-        if kind not in ("PROCEDURE", "FUNCTION", "TABLE FUNCTION"):
+        if kind in ("PROCEDURE", "FUNCTION", "TABLE FUNCTION"):
+            begin = PROCEDURE_BEGIN.search(chunk)
+            body_end = find_procedure_body_end(chunk, begin.start()) if begin else None
+            if body_end is not None:
+                unowned.append(chunk[body_end:])
+                chunk = chunk[:body_end]
+        else:
             # Look for a column-0 standalone statement AFTER this CREATE's own first line.
             after_create = chunk[m.end() - m.start():]
             cut = STANDALONE_STMT.search(after_create)
@@ -313,14 +336,12 @@ def _definition_segments(text):
 
 
 def main():
-    stripped_by_path = {}
     occurrences = {}  # "ds.name" -> [(number, filename, body)]
 
     unowned_by_file = {}  # filename -> concatenated text belonging to no object definition
 
     for number, path in numbered_sql_files(BIGQUERY_DIR):
         text = strip_sql_comments(read_text(path))
-        stripped_by_path[path] = text
         segments, unowned = _definition_segments(text)
         for dataset, name, body in segments:
             occurrences.setdefault(f"{dataset}.{name}", []).append(

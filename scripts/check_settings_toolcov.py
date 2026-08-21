@@ -16,9 +16,10 @@ a routine-text change.)
 
 SCOPE NOTE (2026-08-08 -- this scope was previously implied to be broader than it is, both here and in
 ci.yml's step name/comment for this script; corrected, not a logic change). MCP_TOKEN only matches full
-`mcp__Server__tool` tokens -- 8 of them in Claude_Task_Plan.md today. Routine prose overwhelmingly writes
-BARE backticked tool names instead (`` `get_account_summary` ``, `` `list_labels` ``), which this regex
-cannot see at all: Gmail's `list_labels` is called every morning by OPS1 and was invisible to this gate.
+`mcp__Server__tool` tokens -- a small subset of the tool references in Claude_Task_Plan.md. Routine prose
+overwhelmingly writes BARE backticked tool names instead (`` `get_account_summary` ``, `` `list_labels` ``),
+which this regex cannot see at all: Gmail's `list_labels` is called every morning by OPS1 and was
+invisible to this gate.
 Bare-name coverage -- both "is it allowlisted" and "does the tool still exist" -- is
 scripts/check_connector_tools.py's job (see that script's own docstring and ops/connector_tools.yaml's
 header), not this one's. A green run of THIS script is therefore not, by itself, proof of complete tool
@@ -70,7 +71,10 @@ def load_allowlist():
     # Keep only entries that are exact MCP tool tokens. `isinstance(a, str)` guards a malformed
     # non-string entry (e.g. a dict) so this gate reports cleanly instead of crashing with a
     # TypeError; the fullmatch filter drops non-tool permission strings (e.g. Bash(...)) and any
-    # server-level / wildcard grant (see the docstring — those are intentionally NOT coverage).
+    # `mcp__Server__*` WILDCARD grant. A bare server-level `mcp__Server` entry is shape-
+    # indistinguishable from a tool token and is kept by this filter, but it can never satisfy a
+    # referenced `mcp__Server__tool` because coverage is an exact-string membership test — so the
+    # strictness the docstring above describes holds either way.
     return {a for a in allow if isinstance(a, str) and MCP_TOKEN.fullmatch(a)}
 
 

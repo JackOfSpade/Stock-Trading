@@ -34,25 +34,22 @@ strict-bare-closer-plus-flat-flag combination. Before touching the toggle logic 
 """
 import pathlib
 
-from lib.md_fence import FENCE, fence_mask
+from lib.md_fence import fence_mask
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 TASK_PLAN_PATH = REPO_ROOT / "Claude_Task_Plan.md"
-
-
-# ---- FENCE: the ``` / ~~~ column-0 marker regex -------------------------------------------------
-def test_fence_regex_matches_backtick_and_tilde_markers_at_column_zero():
-    assert FENCE.match("```")
-    assert FENCE.match("```python")
-    assert FENCE.match("~~~")
-    assert not FENCE.match("  ```")   # not at column 0
-    assert not FENCE.match("text ``` mid-line")
 
 
 # ---- fence_mask(): per-line inside/outside classification ---------------------------------------
 def test_fence_mask_marks_lines_inside_a_fence():
     lines = ["## Heading", "```", "# fake", "```", "after"]
     assert fence_mask(lines) == [False, True, True, False, False]
+
+
+def test_fence_mask_ignores_markers_that_are_not_at_column_zero():
+    # Only a column-0 marker opens or closes: an indented ``` and a mid-line one are ordinary text.
+    lines = ["  ```", "text ``` mid-line", "plain"]
+    assert fence_mask(lines) == [False, False, False]
 
 
 def test_fence_mask_supports_tilde_fences():
@@ -63,6 +60,15 @@ def test_fence_mask_supports_tilde_fences():
 def test_fence_mask_unterminated_fence_stays_open_to_end_of_file():
     lines = ["before", "```", "inside 1", "inside 2"]
     assert fence_mask(lines) == [False, True, True, True]
+
+
+def test_fence_mask_crlf_terminated_lines_classify_like_lf():
+    # A CRLF checkout (no `* text=auto` in .gitattributes, so core.autocrlf=true materializes one)
+    # must not turn the trailing \r into an info string — that would make every bare closer OPEN a
+    # fence, so nothing after the first marker would ever be classified outside one.
+    lines = ["## Heading\r\n", "```\r\n", "# fake\r\n", "```\r\n", "after\r\n"]
+    assert fence_mask(lines) == [False, True, True, False, False]
+    assert fence_mask(["```yaml\r\n", "x\r\n", "```\r\n", "after\r\n"]) == [True, True, False, False]
 
 
 def test_fence_mask_empty_lines_list_returns_empty_list():

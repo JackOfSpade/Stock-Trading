@@ -43,7 +43,11 @@ def slug(title: str) -> str:
     # (e.g. "Strategy C: ..." -> strategy_c). Unanchored, a title merely MENTIONING "Strategy A:"
     # mid-line (e.g. "Notes on Strategy A: results") would match and silently truncate everything
     # after it. Byte-identical for every current heading (all real ones begin with the phrase).
-    s = re.sub(r"^strategy ([a-e]):.*", r"strategy_\1", s)
+    # Any single letter, not just the A-E roster of today: the SISA lifecycle adopts strategies
+    # autonomously up to roster.yaml's n_max, and a code past E must still slug to `strategy_<x>`
+    # so check_roster_consistency.py's SLICE_FILE_REF (`\d+_strategy_([a-z]{1,3})\.md`) can resolve
+    # the generated slice filename back to a roster code.
+    s = re.sub(r"^strategy ([a-z]):.*", r"strategy_\1", s)
     return slugify(s)
 
 

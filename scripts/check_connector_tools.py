@@ -3,7 +3,8 @@
 
 WHY THIS EXISTS (2026-08-08). scripts/check_settings_toolcov.py's own docstring is now explicit
 (see this session's docstring fix) that its coverage is deliberately limited to full `mcp__Server__tool`
-tokens in routine text -- 8 of them in Claude_Task_Plan.md today. Routine prose overwhelmingly writes
+tokens in routine text -- a small subset of the plan's tool references (the count drifts as prose
+changes; that script prints it each run). Routine prose overwhelmingly writes
 BARE backticked names instead (`` `get_account_summary` ``, `` `list_labels` ``), which that checker
 cannot see at all: Gmail's `list_labels` is called every morning by OPS1 and was invisible to any CI
 gate before this file existed. Two separate failure modes follow from that blind spot:

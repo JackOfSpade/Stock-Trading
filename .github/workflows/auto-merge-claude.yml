@@ -50,18 +50,75 @@ jobs:
   merge:
     runs-on: ubuntu-latest
     steps:
+      # ---- DUPLICATE-DRAIN EARLY EXIT (2026-08-21 Actions cost audit) --------------------------------
+      # Golden Scenarios frequently completes while the CI run on the SAME commit is still going (it is a
+      # short schema gate; CI is minutes of pytest + checkers). Its completion wakes this workflow, but
+      # that drain can never merge the branch it woke for — the CI gate below reads a still-running CI run
+      # and skips it — and CI's own completion then fires a SECOND, full drain moments later. The first
+      # drain is therefore pure duplicate cost (~183 Actions-min/mo measured).
+      #
+      # NO BRANCH CAN BE LOST BY SKIPPING: the drain below is repo-wide (it sweeps EVERY un-merged remote
+      # branch, not just the one whose run completed), so the imminent CI-completion drain does strictly
+      # everything this run would have done, on a strictly newer view of the world.
+      #
+      # LIVENESS BIAS — this check may only ever skip on a POSITIVE, freshly-confirmed "CI is still
+      # running on this exact SHA" answer. Every other outcome (any other triggering workflow,
+      # workflow_dispatch, no CI run for the SHA, a terminal CI run, an API/HTTP/jq/date failure, an
+      # unparseable timestamp) falls through to a full drain: a skipped drain that should have run can
+      # strand a branch until some unrelated push happens, while a redundant drain only costs a minute.
+      # The 15-minute freshness bound exists for the same reason — a CI run that has been queued/running
+      # longer than that may be stuck (see the stuck-secondary-gate remediation below for a live example
+      # of a run that never completed at all), and no completion event may ever arrive to drain for it.
+      - name: Duplicate-drain early exit (Golden Scenarios completion while this SHA's CI is still live)
+        id: dupdrain
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TRIGGER_NAME: ${{ github.event.workflow_run.name }}
+          TRIGGER_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -uo pipefail
+          skip=false
+          if [ "${TRIGGER_NAME:-}" = "Golden Scenarios (prose regression)" ] && [ -n "${TRIGGER_SHA:-}" ]; then
+            runs_json="$(curl -sS \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "${GITHUB_API_URL:-https://api.github.com}/repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$TRIGGER_SHA&per_page=1" \
+              2>/dev/null || echo "")"
+            ci_status="$(printf '%s' "$runs_json" | jq -r '.workflow_runs[0].status // empty' 2>/dev/null || echo "")"
+            ci_created="$(printf '%s' "$runs_json" | jq -r '.workflow_runs[0].created_at // empty' 2>/dev/null || echo "")"
+            ci_created_epoch="$(date -u -d "$ci_created" +%s 2>/dev/null || echo "")"
+            now_epoch="$(date -u +%s)"
+            if { [ "$ci_status" = "queued" ] || [ "$ci_status" = "in_progress" ]; } && [ -n "$ci_created_epoch" ]; then
+              age=$(( now_epoch - ci_created_epoch ))
+              # age < 0 means clock skew between the runner and the API timestamp -- treat as unparseable
+              # and drain, per the liveness bias above.
+              if [ "$age" -ge 0 ] && [ "$age" -lt 900 ]; then
+                skip=true
+                echo "::notice::Skipping this drain -- it was triggered by Golden Scenarios for ${TRIGGER_SHA:0:7}, whose CI run is still '$ci_status' after $(( age / 60 ))m. That CI run's own completion fires a fresh, repo-wide drain; this one could only be a no-op for that branch."
+              fi
+            fi
+          fi
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+
+      # Every step below is gated on the early exit above. The post-merge coverage block further down
+      # needs no such gate of its own: it already keys off the did_merge / result outputs of the merge
+      # and postmerge steps, both of which are empty (never 'true'/'fail') when those steps are skipped.
       - uses: actions/checkout@v7
+        if: steps.dupdrain.outputs.skip != 'true'
         with:
           ref: main
           fetch-depth: 0
 
       - name: Configure git
+        if: steps.dupdrain.outputs.skip != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Gate on WIF (RUNBOOK §38 commit markers)
         id: wif_guard
+        if: steps.dupdrain.outputs.skip != 'true'
         run: |
           if [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ]; then
             echo "skip=false" >> "$GITHUB_OUTPUT"
@@ -84,7 +141,7 @@ jobs:
         # its own `|| echo "::warning"` at the bottom of the merge step, so it degrades gracefully too)
         # while the merge itself proceeds unaffected.
         continue-on-error: true
-        if: steps.wif_guard.outputs.skip == 'false'
+        if: steps.dupdrain.outputs.skip != 'true' && steps.wif_guard.outputs.skip == 'false'
         uses: ./.github/actions/gcp-wif-auth
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
@@ -92,6 +149,7 @@ jobs:
 
       - name: Merge all CI-green branches into main
         id: merge
+        if: steps.dupdrain.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           WIF_CONFIGURED: ${{ steps.wif_guard.outputs.skip == 'false' }}
@@ -114,10 +172,17 @@ jobs:
           git checkout -B main origin/main
 
           # Every remote branch is a candidate EXCEPT main itself (nothing to merge
-          # main into) and the origin/HEAD symbolic ref (not a real branch).
+          # main into) and the origin/HEAD symbolic ref (not a real branch). NOTE the
+          # bare `origin` alternative in the pattern: git renders refs/remotes/origin/HEAD
+          # as the SHORT name `origin` (not `origin/HEAD`), so an `^origin/(main|HEAD)$`
+          # pattern alone never matches it — it would flow through as br='origin', land in
+          # merged_branches via the is_ancestor_of fast path (defeating the "nothing to
+          # merge" early exit below) and then fail `git fetch origin "origin"`. Dormant
+          # until refs/remotes/origin/HEAD exists locally, which git >= 2.49 creates on
+          # fetch by default (remote.<name>.followRemoteHEAD=create).
           merged_branches=""
           declare -a marker_shas=()   # RUNBOOK §38 self-heal (ITEM 3): tip SHA of every branch actually merged below
-          for ref in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin/ | grep -v -E '^origin/(main|HEAD)$' || true); do
+          for ref in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin/ | grep -v -E '^origin(/(main|HEAD))?$' || true); do
             br="${ref#origin/}"
 
             # Already contained in main (e.g. a prior run merged it): just clean up.
@@ -372,9 +437,15 @@ jobs:
       # WIF/GCP credentials this job should not widen. The remaining checks — pytest, the local
       # consistency checkers, the bash/node helper tests — are the cheap, credential-free ones AND the
       # only class with literal zero coverage on main's merged tip today. So:
-      # pytest + the local consistency checkers + the node pure-helper test, mirrored 1:1 from ci.yml's
-      # `test` job (same install line, same checker list, same commands) — nothing invented, nothing
-      # added beyond what that job already runs.
+      # pytest + the local consistency checkers + the node pure-helper test, mirrored from ci.yml's
+      # `checks` job (same install line, same commands, same order) — nothing invented, nothing added
+      # beyond what that job already runs. Scope it precisely: this carries EVERY blocking script/test
+      # target of that job — in that job's own order — with ONE deliberate omission,
+      # scripts/check_cadence_marker.py, which scopes itself to a PUSH DIFF via merge-base(HEAD,
+      # origin/main) and so has an empty diff, nothing to check, when run against main's own tip. That
+      # job's other blocking steps (the actionlint/shellcheck pair, the dbt profile/deps/parse trio) are
+      # not mirrored: each needs a network install this block deliberately does not pay for, and the dbt
+      # ones fall under the same "not what a merge commit's cross-file coupling breaks" reasoning above.
       #
       # PLACEMENT AND GATING. Steps live at the END of THIS job (not a new job — a new job pays its own
       # runner-startup floor for a check whose real cost is ~31s of test time) and AFTER the existing
@@ -437,7 +508,10 @@ jobs:
         if: steps.merge.outputs.did_merge == 'true'
         # The working tree right now IS main's new pushed tip (the merge step above checked out and
         # merged in place, then pushed — no re-checkout needed). Every command below is copy-identical
-        # to ci.yml's `checks` job (the consolidated job, 2026-07-30); see it for the per-check rationale comments. `run_check` records
+        # to ci.yml's `checks` job (the consolidated job, 2026-07-30), and the list covers that job's
+        # blocking script/test targets in its own order except the push-diff-scoped
+        # check_cadence_marker.py (see the header block above for that and for the lint/dbt steps that
+        # are likewise not mirrored); see ci.yml for the per-check rationale comments. `run_check` records
         # a failure and keeps going instead of stopping at the first red check, so one run surfaces every
         # broken class at once instead of only the first (matching this file's existing preference for a
         # single fail-loud verdict over a partial, order-dependent one).
@@ -459,12 +533,18 @@ jobs:
           run_check python scripts/check_prose_invariants.py
           run_check python scripts/check_routine_scope.py
           run_check python scripts/gen_routine_lists.py --check
+          run_check python scripts/routine_backup.py check
+          run_check python scripts/check_cron_dst_safety.py
           run_check python scripts/check_roster_consistency.py
           run_check python scripts/check_autonomy_consistency.py
+          run_check python scripts/check_handoff_contracts.py
           run_check python scripts/check_script_version_consistency.py
+          run_check python scripts/check_sq_version_registry.py
           run_check python scripts/check_superseded_markers.py
           run_check python scripts/check_superseded_by_discipline.py
           run_check python scripts/check_settings_toolcov.py
+          run_check python scripts/check_connector_tools.py
+          run_check python scripts/check_adopt_gate_coverage.py
           run_check bash tests/test_auto_merge_logic.sh
           run_check bash tests/test_resolve_diff_base.sh
           run_check bash tests/test_notify_webhook.sh

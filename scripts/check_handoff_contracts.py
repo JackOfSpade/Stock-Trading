@@ -214,18 +214,11 @@ def parse_allowed_map(path):
     m = re.search(r"allowed_map\s+AS\s*\(", text, re.IGNORECASE)
     if not m:
         return None
-    depth = 0
-    i = m.end() - 1
-    start = i
-    while i < len(text):
-        if text[i] == "(":
-            depth += 1
-        elif text[i] == ")":
-            depth -= 1
-            if depth == 0:
-                break
-        i += 1
-    block = text[start:i]
+    open_idx = m.end() - 1
+    close_idx = _find_matching_paren(text, open_idx)
+    if close_idx == -1:
+        return None
+    block = text[open_idx:close_idx]
     out = {}
     for qm in ALLOWED_MAP_STRUCT.finditer(block):
         queue = qm.group(1)
@@ -333,13 +326,47 @@ COLNAME_RE = re.compile(r"^([a-zA-Z_][a-zA-Z0-9_]*)\b")
 TABLE_CONSTRAINT_PREFIXES = ("PRIMARY KEY", "FOREIGN KEY", "CONSTRAINT", "CHECK")
 
 
+def _skip_literal(text, i):
+    """Index just past the SQL string literal starting at text[i] (which must be `'` or `"`).
+
+    Handles triple-quoted literals, backslash escapes, and an unterminated single-line literal
+    (which ends at the newline) -- the same literal grammar lib.sql_files.strip_sql_comments walks,
+    because both consume the same bigquery/*.sql text. The structural scanners below MUST use this:
+    strip_sql_comments deliberately copies literals through verbatim, so an OPTIONS(description=
+    "...") free-text carrying `>`, `(` or `)` would otherwise be counted as nesting and silently
+    swallow every column after it.
+    """
+    quote = text[i]
+    n = len(text)
+    triple = text[i:i + 3] == quote * 3
+    end = quote * 3 if triple else quote
+    j = i + (3 if triple else 1)
+    while j < n:
+        if not triple and text[j] == "\\":
+            j += 2
+            continue
+        if text[j:j + len(end)] == end:
+            return j + len(end)
+        if not triple and text[j] == "\n":
+            return j
+        j += 1
+    return n
+
+
 def _find_matching_paren(text, open_idx):
+    """Index of the `)` matching the `(` at open_idx, or -1 if it is never closed. String literals
+    are skipped whole (see _skip_literal)."""
     depth = 0
     i = open_idx
-    while i < len(text):
-        if text[i] == "(":
+    n = len(text)
+    while i < n:
+        c = text[i]
+        if c in ("'", '"'):
+            i = _skip_literal(text, i)
+            continue
+        if c == "(":
             depth += 1
-        elif text[i] == ")":
+        elif c == ")":
             depth -= 1
             if depth == 0:
                 return i
@@ -349,10 +376,19 @@ def _find_matching_paren(text, open_idx):
 
 def _split_top_level_commas(s):
     """Split `s` on commas at depth 0, treating (), [], and <> (ARRAY<...>/STRUCT<...> generics,
-    which may themselves contain a top-level comma, e.g. STRUCT<a INT64, b STRING>) as nesting."""
+    which may themselves contain a top-level comma, e.g. STRUCT<a INT64, b STRING>) as nesting.
+    String literals are copied through verbatim and never contribute depth or split points (see
+    _skip_literal)."""
     depth = 0
     parts, cur = [], []
-    for c in s:
+    i, n = 0, len(s)
+    while i < n:
+        c = s[i]
+        if c in ("'", '"'):
+            j = _skip_literal(s, i)
+            cur.append(s[i:j])
+            i = j
+            continue
         if c in "([<":
             depth += 1
         elif c in ")]>":
@@ -362,6 +398,7 @@ def _split_top_level_commas(s):
             cur = []
         else:
             cur.append(c)
+        i += 1
     parts.append("".join(cur))
     return parts
 

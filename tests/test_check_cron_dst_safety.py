@@ -182,7 +182,7 @@ def test_daily_trading_inside_window_passes(tmp_path, monkeypatch):
     # monitor_class is daily_sun_thu (not the legacy "daily_trading" other tests in this section
     # use) so daily_sun_thu_coverage_errors() sees D1 correctly classified rather than stale.
     write_cadence(tmp_path, monkeypatch, [
-        {"id": "D1", "monitor_class": "daily_sun_thu", "cron": "0 22 * * *", "time_local": "16:00"},
+        {"id": "D1", "monitor_class": "daily_sun_thu", "cron": "0 22 * * 0,1,2,3,4", "time_local": "16:00"},
     ])
     monkeypatch.setattr(cs, "EVENING_WINDOW_ROUTINE_IDS", {"D1"})
     assert cs.check() == 0
@@ -298,7 +298,7 @@ def test_deadline_is_read_from_cadence_not_hardcoded(tmp_path, monkeypatch):
     # write_cadence() resets EVENING_WINDOW_ROUTINE_IDS on EVERY call, so "SL3" must be re-patched
     # in after each one, not just once up front. monitor_class is daily_sun_thu (SL3's real class)
     # so daily_sun_thu_coverage_errors() sees it correctly classified rather than stale.
-    routine = [{"id": "SL3", "monitor_class": "daily_sun_thu", "cron": "0 2 * * *"}]
+    routine = [{"id": "SL3", "monitor_class": "daily_sun_thu", "cron": "0 2 * * 1,2,3,4,5"}]
     write_cadence(tmp_path, monkeypatch, routine, deadline="21:00")
     monkeypatch.setattr(cs, "EVENING_WINDOW_ROUTINE_IDS", {"SL3"})
     assert cs.check() == 0            # 20:00 MDT / 19:00 MST, both clear

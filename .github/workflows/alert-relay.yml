@@ -45,6 +45,9 @@ on:
 
 permissions:
   contents: read
+  actions: read   # read THIS workflow's own run history to size the alerts lookback window (see the
+                  # "Size the alerts lookback window" step) — without it that API call 403s and the
+                  # step falls back to its fixed window
   id-token: write   # Workload Identity Federation (no downloadable key)
   issues: write   # 2026-07-18 audit — durable record of a relay failure (esp. a dead-webhook heartbeat,
                   # which by definition cannot self-report through the channel that just failed)
@@ -59,7 +62,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Self-check — on.schedule crons stay in sync with the mode-dispatch step
-        # The 4 cron literals in `on.schedule` above are re-typed as string comparisons in the "Pick
+        # The cron literals in `on.schedule` above are re-typed as string comparisons in the "Pick
         # mode from the trigger" step below — GitHub Actions `on:` triggers are static YAML (no
         # expressions allowed), so that duplication can't be removed outright. Nothing else kept the
         # two lists in sync, so a cron edited in one place and not the other could silently misroute a
@@ -77,11 +80,26 @@ jobs:
           #    OWN source text a few lines below (which contains the substring "cron: '" too).
           mapfile -t schedule_crons < <(grep -oP "^\s*-\s*cron:\s*'\K[^']+" "$FILE")
           echo "on.schedule crons: ${schedule_crons[*]}"
+          # mapfile's OWN exit status is what `set -e` sees, never the process substitution's, so a
+          # zero-line extraction (grep built without PCRE; a rewrite of the cron literals to
+          # double-quoted YAML) is invisible here. Both arrays empty makes every check below pass
+          # vacuously, which is worse than no check at all — fail loud instead (same rule as ci.yml's
+          # zero-.sh-files guard and sql-dryrun-sweep.yml's zero-file guard).
+          if [ "${#schedule_crons[@]}" -eq 0 ]; then
+            echo "::error::cron self-check extracted ZERO on.schedule cron literals from $FILE — the extraction pattern no longer matches this file's YAML, so this guard verified nothing. Fix the pattern rather than letting it pass vacuously."
+            exit 1
+          fi
 
           # 2. Every cron literal the mode-dispatch step actually compares github.event.schedule
           #    against.
           mapfile -t dispatch_crons < <(grep -oP 'github\.event\.schedule \}\}"\s*=\s*"\K[^"]+' "$FILE")
           echo "mode-dispatch compared crons: ${dispatch_crons[*]}"
+          # Same mapfile masking as above: a zero here is only caught indirectly (Check B would see
+          # every scheduled cron as unhandled), so say what actually broke.
+          if [ "${#dispatch_crons[@]}" -eq 0 ]; then
+            echo "::error::cron self-check extracted ZERO mode-dispatch cron comparisons from $FILE — the extraction pattern no longer matches the mode-dispatch step. Fix the pattern rather than letting it report a drifted-looking result."
+            exit 1
+          fi
 
           # Check A: every compared cron must be a real on.schedule cron. An orphaned/stale comparison
           # means on.schedule changed (or a typo crept in) and the dispatch step's case wasn't updated
@@ -150,6 +168,39 @@ jobs:
           else
             echo "mode=${MODE_INPUT:-alerts}" >> "$GITHUB_OUTPUT"
           fi
+      - name: Size the alerts lookback window from the last successful run
+        id: window
+        if: steps.guard.outputs.skip == 'false'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          # GitHub does NOT deliver a `*/30` schedule every 30 minutes. Measured 2026-08-21 over this
+          # workflow's own run history: consecutive deliveries a median 52.6 min and a max 89.5 min
+          # apart. A window fixed at the nominal cron interval therefore drops every alert raised
+          # more than that interval before a late run — silently, because the relay is stateless and
+          # has no cursor that could notice a skipped row. So size the window off the ACTUAL elapsed
+          # time since the last successful run instead of off the nominal cron.
+          # Best-effort BY CONSTRUCTION: no `set -e`, and continue-on-error, so an API/parse failure
+          # degrades to a fixed generous window (> the measured max gap) rather than blocking
+          # delivery; the Relay step below re-applies the same fallback if this step wrote no output.
+          # Caveat this cannot see: the daily orders and weekly heartbeat runs count as successes
+          # here although they relay no alerts, so for the alerts run following one of them the
+          # computed window is a floor, not proof of gapless coverage.
+          window=100
+          last_ts="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/alert-relay.yml/runs?status=success&per_page=1" --jq '.workflow_runs[0].created_at // empty' 2>/dev/null || true)"
+          last_epoch="$(date -u -d "$last_ts" +%s 2>/dev/null || true)"
+          if [ -n "$last_ts" ] && [[ "$last_epoch" =~ ^[0-9]+$ ]]; then
+            gap=$(( ( $(date -u +%s) - last_epoch ) / 60 ))
+            if [ "$gap" -ge 0 ]; then
+              window=$(( gap + 10 ))
+              [ "$window" -lt 35 ] && window=35
+              [ "$window" -gt 1440 ] && window=1440
+            fi
+          fi
+          echo "last successful run: ${last_ts:-<none found>} — RELAY_WINDOW_MIN=$window"
+          echo "window_min=$window" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-python@v7
         if: steps.guard.outputs.skip == 'false'
         with:
@@ -166,6 +217,10 @@ jobs:
         env:
           WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
           RELAY_MODE: ${{ steps.mode.outputs.mode }}
+          # Empty (window step errored before writing its output) falls back to the same generous
+          # fixed window that step uses; an unset/empty value would make alert_relay.py's
+          # int(RELAY_WINDOW_MIN) raise at import and take the whole relay down.
+          RELAY_WINDOW_MIN: ${{ steps.window.outputs.window_min || '100' }}
         run: python scripts/alert_relay.py
 
       # 2026-07-18 audit — durable failure record (the exact treatment 5 sibling guards already got:

@@ -121,7 +121,7 @@ CITATION_RE = re.compile(
 def load_stages():
     """{loop id: current stage} from ops/autonomy_levels.yaml."""
     doc = load_yaml(AUTONOMY)
-    return {loop["id"]: loop.get("stage") for loop in doc.get("loops", []) if "id" in loop}
+    return {loop["id"]: loop.get("stage") for loop in (doc.get("loops") or []) if "id" in loop}
 
 
 def find_citations(path):
@@ -271,8 +271,8 @@ def main():
     # this one file (see lib/textio.py's docstring, point 2). load_yaml() already returns {} for an absent
     # OR empty document, so both copies collapse to one call.
     _doc = load_yaml(AUTONOMY)
-    errors.extend(check_stage_ceiling_invariant(_doc.get("loops", [])))
-    for lid in duplicate_loop_ids(_doc.get("loops", [])):
+    errors.extend(check_stage_ceiling_invariant(_doc.get("loops") or []))
+    for lid in duplicate_loop_ids(_doc.get("loops") or []):
         errors.append(f"ops/autonomy_levels.yaml: loop '{lid}' id is duplicated in the loops list — "
                       f"each loop id must appear exactly once")
 

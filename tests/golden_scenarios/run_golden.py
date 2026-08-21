@@ -1401,6 +1401,12 @@ _BATCH_DECISION_RE = re.compile(
     re.IGNORECASE,
 )
 
+# The single-scenario equivalent of _BATCH_DECISION_RE, for _extract_decision_line(): same markdown/
+# whitespace tolerance around the marker, no per-scenario id (a single-scenario prompt asks for a bare
+# "DECISION: <token>"). Used with .match() on an already-stripped line — ANCHORED, never .search() — so a
+# mid-sentence "...the DECISION: ..." inside prose cannot hijack the line the way a batch-style scan would.
+_SINGLE_DECISION_RE = re.compile(r"^[*_`\s]*DECISION[*_`\s]*:\s*(?P<decision>.*)", re.IGNORECASE)
+
 
 def parse_batch_reply(reply, ids):
     """Parse a build_batch_prompt() reply into {id: decision_text_or_None}, with exactly one key for
@@ -1726,11 +1732,16 @@ def _extract_decision_line(reply):
     """Pull the free-text decision out of a single-scenario reply's 'DECISION: ...' line (first such line,
     matched case-insensitively, may appear after preamble text), falling back to the whole stripped reply
     when no ':'-delimited DECISION line is present at all (the model answered with just a bare token, e.g.
-    'GO'). Unchanged from run_live()'s pre-batching inline logic — pulled out only so the single-scenario
-    path and the batch path's per-id extraction (parse_batch_reply) sit side by side without duplicating
-    this scan."""
-    actual_line = next((ln for ln in reply.splitlines() if ln.strip().upper().startswith("DECISION:")), "")
-    return actual_line.split(":", 1)[1].strip() if ":" in actual_line else reply.strip()
+    'GO'). Pulled out of run_live()'s pre-batching inline logic so the single-scenario path and the batch
+    path's per-id extraction (parse_batch_reply) sit side by side without duplicating this scan — and, like
+    that path, tolerant of markdown wrapping around the marker and around the decision token itself
+    (**DECISION:** GO / `DECISION:` GO / DECISION: **GO**), which a plain "startswith('DECISION:')" scan
+    graded as a false UNPARSEABLE. Every non-markdown reply extracts byte-identically to that older scan."""
+    for line in reply.splitlines():
+        m = _SINGLE_DECISION_RE.match(line.strip())
+        if m:
+            return (m.group("decision") or "").strip().strip("*_` \t")
+    return reply.strip()
 
 
 def _score_decision(sc, actual_decision, reply_for_record, model_used):

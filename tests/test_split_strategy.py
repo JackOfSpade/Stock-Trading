@@ -20,12 +20,16 @@ def test_slug_plain_heading():
 
 
 def test_slug_strategy_letter_heading_drops_everything_after_the_letter():
-    # The "Strategy C: ..." rewrite rule (slug()'s first re.sub) fires for letters a-e and discards
-    # everything after "Strategy <letter>:", regardless of how long/varied the rest of the title is.
+    # The "Strategy C: ..." rewrite rule (slug()'s first re.sub) fires for any single letter and
+    # discards everything after "Strategy <letter>:", regardless of how long/varied the rest of the
+    # title is.
     assert ss.slug("Strategy C: Momentum Breakout (High Vol)") == "strategy_c"
     assert ss.slug("Strategy A: X") == "strategy_a"
-    # Outside the [a-e] class the special rule does not match -> falls through to generic slugify.
-    assert ss.slug("Strategy F: Something") == "strategy_f_something"
+    # A code past today's A-E roster (SISA can adopt up to roster.yaml's n_max autonomously) must
+    # collapse the same way, so the slice filename stays resolvable to a roster code.
+    assert ss.slug("Strategy F: Something") == "strategy_f"
+    # A multi-letter word where the code goes is not a code -> generic slugify.
+    assert ss.slug("Strategy Overview: Something") == "strategy_overview_something"
 
 
 def test_slug_collisions_produce_identical_strings():

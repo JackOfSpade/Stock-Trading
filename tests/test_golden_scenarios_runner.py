@@ -507,6 +507,7 @@ def test_gemini_daily_quota_429_no_retries_before_permanent_death(monkeypatch):
     monkeypatch.setattr(rg.time, "sleep", lambda s: slept.append(s))
     state = {}
     text, model = rg._gemini_call("prompt", "k", ["m1", "m2"], state)
+    assert "DECISION: GO" in text
     assert model == "m2" and state["dead"] == {"m1"}
     assert calls_m1["n"] == 1   # exactly one attempt -- no retries for a daily-quota (permanent) failure
     assert slept == []          # no RPM-retry sleep at all
@@ -1887,7 +1888,7 @@ def test_sql_single_quote_escape_escapes_backslash_first_so_json_escapes_round_t
 # governing file actually changed (measured ~2,251 billable CI min/month — the single largest line item
 # in the repo's Actions bill). This function maps a push's changed files to just the scenario ids they
 # govern, so the workflow's `--live` step can pass a `--scenario` filter (or skip the whole step when the
-# result is empty) instead of always evaluating all 31. FAIL-OPEN ("select every scenario") on an
+# result is empty) instead of always evaluating all 31 (the count at the time; 33 today). FAIL-OPEN ("select every scenario") on an
 # unscoped/unknown input is the entire correctness contract here — a false NARROW selection could hide a
 # real prose regression from the (already advisory-only) live check; see HARD CONSTRAINT 3 in the task
 # that produced this and scripts/resolve_diff_base.sh's identical fail-open posture for the diff-base
@@ -1899,7 +1900,7 @@ def test_scenarios_for_changed_selects_exactly_the_strategy_md_scenarios():
     # regression in the real coverage, not just in the selection logic against toy data.
     scenarios = rg.load_scenarios()
     strategy_scenario_ids = {sc["id"] for sc in scenarios if "Strategy.md" in (sc.get("governing_files") or [])}
-    assert len(strategy_scenario_ids) == 17  # scenarios.yaml's own header: Strategy.md governs 17/31
+    assert len(strategy_scenario_ids) == 17  # 17 of the 33 scenarios in scenarios.yaml, measured
     assert set(rg.scenarios_for_changed_files(scenarios, ["Strategy.md"])) == strategy_scenario_ids
 
 

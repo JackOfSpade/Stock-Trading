@@ -99,7 +99,7 @@ jobs:
       # dbt-parity exists to police — so the dbt test stays the single definition and just runs on the
       # right cadence.
       - name: Install dbt + profile (for the B3 live-data invariant suite)
-        if: steps.guard.outputs.skip == 'false'
+        if: always() && steps.guard.outputs.skip == 'false'
         # Same pinned constraints file and same checked-in CI profile ci.yml's dbt jobs use, so this cannot
         # drift to a different dbt version than dbt-parity compiles with. profiles.ci.yml authenticates via
         # oauth/ADC, which the gcp-wif-auth step above already established.
@@ -109,7 +109,7 @@ jobs:
           cp dbt/profiles.ci.yml ~/.dbt/profiles.yml
       - name: B3 invariants vs live data (dbt test)
         id: b3
-        if: steps.guard.outputs.skip == 'false'
+        if: always() && steps.guard.outputs.skip == 'false'
         working-directory: dbt
         # READ-ONLY: generate_schema_name pins refs to the bare live datasets and store_failures is off, so
         # the tests only SELECT against existing live objects — no dbt build, nothing materialized. This is

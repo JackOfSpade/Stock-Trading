@@ -350,9 +350,13 @@ def test_e_correlation_breakdown():
     y_perfect = [2.0, 4.0, 6.0, 8.0, 10.0]
     assert strategy_e.correlation_breakdown(x, y_perfect) is False  # corr=1.0, not < 0.3
     y_uncorrelated = [5.0, 1.0, 4.0, 2.0, 3.0]
-    # weak/negative correlation should trip the < 0.3 breakdown
+    # weak/negative correlation should trip the < 0.3 breakdown. Assert the OUTCOME plus the constant
+    # itself rather than recomputing the implementation's own `corr < THRESHOLD` expression, which would
+    # stay green for any threshold above -0.3 and so pin nothing.
     corr = common.pearson_correlation(x, y_uncorrelated)
-    assert strategy_e.correlation_breakdown(x, y_uncorrelated) == (corr < 0.3)
+    assert corr < 0.3  # fixture assumption
+    assert strategy_e.correlation_breakdown(x, y_uncorrelated) is True
+    assert strategy_e.CORRELATION_BREAKDOWN_THRESHOLD == pytest.approx(0.3)
 
 
 def test_e_hedge_ratio():

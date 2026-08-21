@@ -53,7 +53,7 @@ except ImportError:
     raise SystemExit(2) from None
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.textio import load_yaml, read_text  # noqa: E402
+from lib.textio import load_yaml, read_text
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CI_YML = os.path.join(ROOT, ".github", "workflows", "ci.yml")
@@ -85,7 +85,7 @@ def load_checks_job_steps(path=None):
     try:
         return doc["jobs"]["checks"]["steps"]
     except KeyError as e:
-        raise SystemExit(f"{path or CI_YML}: no jobs.checks.steps found -- workflow restructured? ({e})")
+        raise SystemExit(f"{path or CI_YML}: no jobs.checks.steps found -- workflow restructured? ({e})") from e
 
 
 def _act_local_only(step):

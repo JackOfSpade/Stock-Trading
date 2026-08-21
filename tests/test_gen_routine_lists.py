@@ -134,10 +134,10 @@ def test_gen_15_region_seeds_canonical_since_when_absent_from_prior():
 
 def test_gen_15_region_defaults_read_the_real_file_and_clock_when_not_passed(monkeypatch):
     # `prior` defaults to parse_catalog_since() (the REAL bigquery/15 file) and `today` defaults to
-    # datetime.date.today().isoformat() -- both replaced here with deterministic stand-ins (rather
-    # than mutating the real stdlib datetime module, which every other test in the process shares) so
-    # this test proves the DEFAULT wiring itself, not just the explicit-args path every other test in
-    # this section uses.
+    # datetime.datetime.now(OPERATING_TZ).date().isoformat() -- both replaced here with deterministic
+    # stand-ins (rather than mutating the real stdlib datetime module, which every other test in the
+    # process shares) so this test proves the DEFAULT wiring itself, not just the explicit-args path
+    # every other test in this section uses.
     monkeypatch.setattr(gr, "parse_catalog_since", lambda: {"D1": (
         "Read Claude_Task_Plan.md. Perform D1 — deep research.", "2026-01-01")})
 
@@ -146,13 +146,20 @@ def test_gen_15_region_defaults_read_the_real_file_and_clock_when_not_passed(mon
         def isoformat():
             return "2026-08-19"
 
-    class _FixedDateClass:
+    class _FixedNow:
         @staticmethod
-        def today():
+        def date():
             return _FixedToday()
 
+    class _FixedDatetimeClass:
+        @staticmethod
+        def now(tz=None):
+            # The default clock must be read in the pinned OPERATING plane, never naive local.
+            assert tz is gr.OPERATING_TZ
+            return _FixedNow()
+
     class _FixedDatetimeModule:
-        date = _FixedDateClass
+        datetime = _FixedDatetimeClass
 
     monkeypatch.setattr(gr, "datetime", _FixedDatetimeModule)
 

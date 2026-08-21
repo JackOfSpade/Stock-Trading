@@ -44,7 +44,7 @@ def test_fmt_ts_bogus_timezone_falls_back_gracefully():
 # The module docstring's DE-DUP paragraph now claims (correctly) at-least-once delivery with a
 # bounded duplicate window, and explicitly warns that WINDOW_MIN must stay >= the alerts cron
 # interval — shrinking it to match the cron exactly would reopen the "late run leaves a permanent
-# hole" failure mode the 5-minute margin exists to prevent. This test converts that prose claim
+# hole" failure mode the margin exists to prevent. This test converts that prose claim
 # into a checked invariant: it reads the REAL cron from .github/workflows/alert-relay.yml (the
 # fast `*/30 * * * *` alerts schedule — read-only, this file does not own the workflow) so a future
 # edit to either the cron or WINDOW_MIN that violates the margin fails loudly here instead of
@@ -66,8 +66,11 @@ def test_window_min_covers_cron_interval_with_margin():
     cron_interval = _alerts_cron_interval_minutes()
     assert cron_interval == 30, "documented/assumed alerts cron interval changed — re-check the margin"
     # >= is the bare minimum (no coverage gap on an on-time run); WINDOW_MIN=35 keeps a 5-minute
-    # margin on top for scheduler lateness. Either regressing WINDOW_MIN below the cron interval, or
-    # widening the cron interval past WINDOW_MIN, reopens the missed-alert hole this test guards.
+    # margin on top of that. Real scheduler lateness is much larger than 5 minutes, which is why the
+    # workflow overrides RELAY_WINDOW_MIN per run from the actual gap since its last successful run —
+    # this module default is the floor for an override-less (local/manual) invocation. Either
+    # regressing WINDOW_MIN below the cron interval, or widening the cron interval past WINDOW_MIN,
+    # reopens the missed-alert hole this test guards.
     assert ar.WINDOW_MIN >= cron_interval
 
 

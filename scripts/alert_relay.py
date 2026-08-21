@@ -11,21 +11,25 @@ for a dead emailer). This relay is the FAST, BEST-EFFORT channel.
 
 DE-DUP is stateless and is AT-LEAST-ONCE, not "at most once" (codebase audit 2026-07-26 —
 correcting a prior version of this paragraph that claimed the latter). alerts mode posts every
-ops.alerts row raised in the last RELAY_WINDOW_MIN minutes; the cron below is `*/30`, while
-WINDOW_MIN defaults to 35, so two consecutive ON-TIME runs' windows overlap by
-(WINDOW_MIN - cron_interval) = 5 minutes today, and a stateless relay with no notified_ts write
-has no way to exclude a row it already posted in the prior run's window. An alert raised in that
-5-minute slice is POSTed twice — a bounded, known duplicate, not a bug to "fix" by tightening
-WINDOW_MIN to 30. The margin is deliberate: GitHub Actions scheduled runs are routinely late by
-several minutes (queueing, runner cold-start), and a window sized to exactly the cron interval
-means any late run leaves a permanent hole — an alert raised in the gap between where the last
-run's window ended and the late run's actual (delayed) start is never posted at all, on a channel
-whose whole job is fast, best-effort delivery of things like drawdown-kill and missed-run alerts.
-For THIS channel a duplicate ping is a nuisance; a silently missed critical alert is a safety
-failure, so the tradeoff is not close. The reliable, de-duped channel is the ~2h alert_emailer
-(RUNBOOK §25 A1) — that is where "exactly once" is guaranteed, by a real notified_ts cursor this
-module deliberately does not carry. If a future audit re-flags "WINDOW_MIN=35 > cron interval=30,
-tighten it to 30": that is this same false claim recurring — don't. See
+ops.alerts row raised in the last RELAY_WINDOW_MIN minutes, and a stateless relay with no
+notified_ts write has no way to exclude a row it already posted in the prior run's window, so any
+row falling in the overlap between two consecutive runs' windows is POSTed twice — a bounded,
+known duplicate, not a bug to "fix" by tightening the window down to the cron interval. The window
+must stay WIDER than the real spacing between runs, which is NOT the nominal cron: GitHub delivers
+this workflow's `*/30` schedule with a measured median gap of 52.6 min and a max of 89.5 min
+(sampled over the workflow's own run history, 2026-08-21). A window narrower than the actual gap
+leaves a permanent hole — an alert raised between where the last run's window ended and the late
+run's actual (delayed) start is never posted at all, on a channel whose whole job is fast,
+best-effort delivery of things like drawdown-kill and missed-run alerts. So the workflow does not
+rely on this module's default: .github/workflows/alert-relay.yml computes RELAY_WINDOW_MIN per run
+from the ACTUAL elapsed time since its own last successful run (+10 min margin, clamped to
+[35, 1440]; a fixed 100 if that lookup fails), and the 35 here is only the floor for a run with no
+env override (local/manual invocation). For THIS channel a duplicate ping is a nuisance; a
+silently missed critical alert is a safety failure, so the tradeoff is not close. The reliable,
+de-duped channel is the ~2h alert_emailer (RUNBOOK §25 A1) — that is where "exactly once" is
+guaranteed, by a real notified_ts cursor this module deliberately does not carry. If a future
+audit re-flags "WINDOW_MIN=35 > cron interval=30, tighten it to 30": that is this same false
+claim recurring — don't. See
 test_window_min_covers_cron_interval_with_margin in tests/test_alert_relay.py, which pins
 WINDOW_MIN >= the alerts cron interval as an invariant.
 
@@ -70,10 +74,12 @@ from lib import tz_render
 
 PROJECT = os.environ.get("BQ_PROJECT", "stock-trading-498512")
 MODE = os.environ.get("RELAY_MODE", "alerts")
-# Deliberately > the alerts cron interval (*/30 in .github/workflows/alert-relay.yml) — the 5-minute
-# margin absorbs scheduler lateness at the cost of a bounded duplicate POST, not a value to "tighten
-# down to 30" (codebase audit 2026-07-26 — see the module docstring's DE-DUP paragraph for the full
-# reasoning, and test_window_min_covers_cron_interval_with_margin for the pinned invariant).
+# Deliberately > the alerts cron interval (*/30 in .github/workflows/alert-relay.yml), never a value
+# to "tighten down to 30" (codebase audit 2026-07-26). This 35 is the FLOOR, used only when nothing
+# sets RELAY_WINDOW_MIN: the workflow itself passes a window sized from the real gap since its last
+# successful run, because GitHub's actual delivery spacing runs far wider than the nominal cron (see
+# the module docstring's DE-DUP paragraph, and test_window_min_covers_cron_interval_with_margin for
+# the pinned invariant).
 WINDOW_MIN = int(os.environ.get("RELAY_WINDOW_MIN", "35"))
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "").strip()
 

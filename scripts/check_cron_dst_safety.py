@@ -29,6 +29,7 @@ WHAT IT CHECKS, per routine with a concrete `cron_utc`
 -----------------------------------------------------
   1. DAY/PERIOD INTEGRITY -- the local calendar day the cron lands on must still satisfy the
      routine's monitor_class in every season the cron actually fires in:
+       daily_sun_thu  -> local weekday is Sunday..Thursday (the DAILY-TIER FRI/SAT CONSOLIDATION)
        weekly_sun     -> local weekday is Sunday
        monthly_ftd    -> local day-of-month equals the cron's day-of-month
        quarterly_ftd  -> local day-of-month equals the cron's day-of-month
@@ -98,6 +99,7 @@ MARKET_CLOSE_LOCAL = (14, 0)
 # monitor_class -> how the local calendar day must line up with the cron's own day fields.
 PERIOD_CLASSES = {
     "weekly_sun": "weekday_sunday",
+    "daily_sun_thu": "weekday_sun_thu",
     "monthly_ftd": "same_dom",
     "quarterly_ftd": "same_dom",
     "annual_ftd": "same_dom_and_month",
@@ -311,6 +313,12 @@ def check() -> int:
 
         cron_dom = cron.split()[2]
         cron_mon = cron.split()[3]
+        # Reuse parse_field rather than string-comparing the raw field: a zero-padded but perfectly
+        # valid field ("01") is accepted by parse_field and by cron_firings, so an ad-hoc
+        # `str(local.day) in cron_dom.split(",")` would report a bogus period-shift violation on a
+        # schedule that is actually correct. cron_firings above has already proven both fields parse.
+        dom_vals = parse_field(cron_dom, 1, 31, "day-of-month")
+        mon_vals = parse_field(cron_mon, 1, 12, "month")
         mclass = r.get("monitor_class")
         per_season: dict[bool, list[datetime]] = {}
         for inst in firings:
@@ -346,8 +354,17 @@ def check() -> int:
                         f"non-Sunday run_date falls outside its own period window."
                     )
                     break
+                if rule == "weekday_sun_thu" and local.isoweekday() not in (7, 1, 2, 3, 4):
+                    errors.append(
+                        f"{rid}: cron_utc {cron!r} lands on {local:%A} {local:%Y-%m-%d %H:%M} "
+                        f"local in {season}, but monitor_class={mclass} requires Sunday-Thursday "
+                        f"(ops/cadence.yaml's DAILY-TIER FRI/SAT CONSOLIDATION). bigquery/12 derives "
+                        f"state.cadence_expected_today for this class in America/Denver, so a Fri/Sat "
+                        f"local run_date is outside the routine's own window."
+                    )
+                    break
                 if rule in ("same_dom", "same_dom_and_month") and cron_dom != "*":
-                    if str(local.day) not in cron_dom.split(","):
+                    if local.day not in dom_vals:
                         errors.append(
                             f"{rid}: cron_utc {cron!r} lands on local day-of-month {local.day} "
                             f"({local:%Y-%m-%d %H:%M}) in {season}, but the cron says "
@@ -355,7 +372,7 @@ def check() -> int:
                         )
                         break
                 if rule == "same_dom_and_month" and cron_mon != "*":
-                    if str(local.month) not in cron_mon.split(","):
+                    if local.month not in mon_vals:
                         errors.append(
                             f"{rid}: cron_utc {cron!r} lands in local month {local.month} "
                             f"({local:%Y-%m-%d %H:%M}) in {season}, but the cron says "

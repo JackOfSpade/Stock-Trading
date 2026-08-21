@@ -60,6 +60,7 @@ import datetime
 import os
 import re
 import sys
+from zoneinfo import ZoneInfo
 
 try:
     # this module's own reads now go through lib.textio.load_yaml() (2026-07-29 textio
@@ -86,6 +87,10 @@ ROUTINE_CATALOG_SQL = os.path.join(ROOT, "bigquery", "15_routine_catalog.sql")
 PERIOD_WATCH_SQL = os.path.join(ROOT, "bigquery", "24_cadence_period_watch.sql")
 ROUTINE_CATCHUP_SQL = os.path.join(ROOT, "bigquery", "105_routine_catchup_window.sql")
 DEP_GATE_SQL = os.path.join(ROOT, "bigquery", "114_period_aware_dependency_gate.sql")
+
+# The pinned OPERATING timezone. Deliberately hardcoded, not looked up — see CLAUDE.md
+# "Making the OPERATING timezone plane dynamic" (settled: never dynamic).
+OPERATING_TZ = ZoneInfo("America/Denver")
 
 BEGIN_MARKER = "-- BEGIN GENERATED ROUTINE LIST (scripts/gen_routine_lists.py --write; do not hand-edit)"
 END_MARKER = "-- END GENERATED ROUTINE LIST"
@@ -177,9 +182,13 @@ def gen_15_region(routines, head_by_id, prior=None, today=None):
     `today` when the text actually changes. So a --check run on any later day regenerates a
     byte-identical region and passes; the one run that changes a heading stamps that day's date and
     CI then requires --write, exactly as it already does for the text itself. A routine absent from
-    the current file (brand new) seeds to today."""
+    the current file (brand new) seeds to today.
+
+    `today` is the OPERATING-plane (America/Denver) date, not the container's ~UTC date: bigquery/183
+    compares canonical_since against ops.run_log.run_date, which is keyed in that plane, and the
+    repo-writing routines all fire 18:45-22:30 MT -- i.e. the next UTC calendar day."""
     prior = parse_catalog_since() if prior is None else prior
-    today = today or datetime.date.today().isoformat()
+    today = today or datetime.datetime.now(OPERATING_TZ).date().isoformat()
     lines = []
     n = len(routines)
     for i, r in enumerate(routines):

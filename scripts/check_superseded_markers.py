@@ -52,7 +52,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.sql_files import (
-    OBJECT_DDL, line_offsets, normalize_kind, numbered_sql_files, strip_sql_comments,
+    OBJECT_DDL, line_offsets, normalize_kind, numbered_sql_files, resolve_canonical,
+    strip_sql_comments,
 )
 from lib.textio import read_text
 
@@ -111,9 +112,10 @@ def definitions():
     Iterates via scripts/lib/sql_files.py's numbered_sql_files() — the shared NN-prefix parser this
     script's own NUMBERED_FILE regex was consolidated into (codebase audit 2026-07-26). NOTE this is
     a pure dedup, not a bug fix here: violations() below determines each object's canonical file via
-    max(n for n, _, _ in occurrences), which is order-independent, so the lexical-vs-numeric mismatch
-    that made check_dbt_view_coverage.py's found.add()/discard() apply CREATE/DROP out of order can't
-    happen to this script's max()-based logic regardless of what order definitions() visits files in."""
+    resolve_canonical(), a max() over the parsed numbers, which is order-independent, so the lexical-
+    vs-numeric mismatch that made check_dbt_view_coverage.py's found.add()/discard() apply CREATE/DROP
+    out of order can't happen to this script's logic regardless of what order definitions() visits
+    files in."""
     found = collections.defaultdict(list)
     for number, path in numbered_sql_files(BIGQUERY_DIR):
         if os.path.isdir(path):
@@ -165,6 +167,28 @@ def marks_superseded(text, canonical_number):
     )
 
 
+def canonical_ambiguities():
+    """[(kind, ds, name, winner_number, tied_filenames), ...] — objects whose canonical file cannot be
+    resolved because TWO DIFFERENT files share the highest number defining them.
+
+    bigquery/'s NN_ prefix is not required to be unique (two live pairs share one today), so the
+    highest number alone does not always name a single file. When it does not, BOTH tied definitions
+    look canonical to the checks below and NEITHER is required to carry a SUPERSEDED marker — a
+    silent green in a blocking gate. lib/sql_files.py's resolve_canonical() returns the full tied set
+    precisely so callers can fail loud here instead of indexing [0]; violations() and
+    contradiction_violations() skip these objects and this reports them.
+
+    A SHARED PREFIX ALONE IS NOT A FINDING — only a shared prefix that collides on the SAME object is
+    (see CLAUDE.md's "duplicate numeric prefixes" note): objects touched by just one of the tied files
+    resolve normally and never appear here."""
+    out = []
+    for (kind, ds, name), occurrences in definitions().items():
+        winner_number, winner_filenames = resolve_canonical(occurrences)
+        if len(winner_filenames) > 1:
+            out.append((kind, ds, name, winner_number, winner_filenames))
+    return sorted(out)
+
+
 def violations():
     """(sorted new_violations, sorted still_baselined, sorted stale_baseline_entries)."""
     cache, found = {}, definitions()
@@ -173,7 +197,9 @@ def violations():
     for (kind, ds, name), occurrences in found.items():
         if len({fn for _, fn, _ in occurrences}) < 2:
             continue
-        canonical = max(n for n, _, _ in occurrences)
+        canonical, canonical_filenames = resolve_canonical(occurrences)
+        if len(canonical_filenames) > 1:
+            continue        # unresolvable — canonical_ambiguities() reports it and main() fails
         for number, fn, idx in occurrences:
             if number == canonical:
                 continue
@@ -265,7 +291,9 @@ def contradiction_violations():
     for (kind, ds, name), occurrences in found.items():
         if len({fn for _, fn, _ in occurrences}) < 2:
             continue
-        canonical = max(n for n, _, _ in occurrences)
+        canonical, canonical_filenames = resolve_canonical(occurrences)
+        if len(canonical_filenames) > 1:
+            continue        # unresolvable — canonical_ambiguities() reports it and main() fails
         for number, fn, idx in occurrences:
             if number == canonical:
                 continue
@@ -283,6 +311,18 @@ def contradiction_violations():
 
 
 def main():
+    ambiguous = canonical_ambiguities()
+    if ambiguous:
+        print("superseded-marker check: AMBIGUOUS canonical resolution\n")
+        for kind, ds, name, number, filenames in ambiguous:
+            print(f"  ! {kind} {ds}.{name}: file number {number} maps to multiple filenames "
+                  f"({', '.join(filenames)}) — cannot resolve a canonical definition")
+        print("\nFAIL — two files sharing one NN prefix define the SAME object, so neither can be "
+              "shown to be the canonical one and neither is asked for a SUPERSEDED marker. Land the "
+              "NEWER definition at its own, distinct file number: a shared prefix is fine only while "
+              "the two files that share it touch DISJOINT objects.")
+        return 1
+
     new, still, stale = violations()
     c_new, c_still, c_stale = contradiction_violations()
 

@@ -31,7 +31,6 @@ Usage:  python scripts/check_live_roster_parity.py [--project stock-trading-4985
 """
 import argparse
 import os
-import subprocess  # noqa: F401 — kept so tests can monkeypatch subprocess.run/TimeoutExpired at the module level
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

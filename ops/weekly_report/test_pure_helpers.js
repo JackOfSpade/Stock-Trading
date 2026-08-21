@@ -34,6 +34,8 @@
  *   - niceYRange_          (weekly_report.gs)
  *   - altTextFor_          (weekly_report.gs) -- 2026-07-29: was zero-coverage
  *   - buildHealthReasons_  (weekly_report.gs)
+ *   - SUBJECT_LABEL        (weekly_report.gs) -- the subject phrase buildSubject_ interpolates; guard-tested
+ *                           below against the live .gs const
  *   - buildSubject_        (weekly_report.gs)
  *   - esc_                 (weekly_report.gs)
  *   - VOO_COLOR            (weekly_report.gs)
@@ -97,6 +99,14 @@ const path = require('path');
 // this file's OWN copy-drift instead. Bump this in the SAME commit that re-verifies the copies below
 // against a new ALERT_SCRIPT_VERSION.
 const ALERT_SCRIPT_VERSION_SYNCED_AS_OF = 'v8';
+
+// The same pin for the OTHER source file: the weekly_report.gs SCRIPT_VERSION this file's 19
+// weekly_report.gs copies were last hand-verified against, checked by its own guard test near the bottom.
+// That half of the copies carried no version pin at all while the alert_emailer.gs half did, and it drifted
+// the same way -- buildSubject_ hardcoded SUBJECT_LABEL's value instead of interpolating the const, so a
+// rename in the .gs would have left the buildSubject_ assertions below asserting the OLD phrase, green.
+// Bump this in the SAME commit that re-verifies those copies against a new SCRIPT_VERSION.
+const SCRIPT_VERSION_SYNCED_AS_OF = 'v8';
 
 // ===== copied verbatim from weekly_report.gs ================================================
 
@@ -294,6 +304,10 @@ function buildHealthReasons_(health, marksFresh, engineFresh, firingKillFlags, k
   return reasons;
 }
 
+// weekly_report.gs's CONFIG-block single source for this phrase, copied so the buildSubject_ copy below
+// stays verbatim rather than becoming a 5th hand-synced site for it.
+const SUBJECT_LABEL = 'Deployed vs Benchmarks';
+
 function buildSubject_(d) {
   const deployed = d.rows.filter(r => r.deployed);
   let tag;
@@ -308,7 +322,7 @@ function buildSubject_(d) {
     }
   }
   const warn = d.green ? '' : ' · ⚠ check data';
-  return `Stock-Trading · Deployed vs Benchmarks — ${d.dateLabel} · ${tag}${warn}`;
+  return `Stock-Trading · ${SUBJECT_LABEL} — ${d.dateLabel} · ${tag}${warn}`;
 }
 
 // ===== copied verbatim from ops/monitoring/alert_emailer.gs ==================================
@@ -1473,6 +1487,31 @@ t('this file\'s alert_emailer.gs copies are pinned to its current ALERT_SCRIPT_V
     `alert_emailer.gs is now ${m[1]} but this file's copies were last synced against ` +
     `${ALERT_SCRIPT_VERSION_SYNCED_AS_OF} -- re-verify htmlAlerts_/plainAlerts_/isTest_/etc. against the ` +
     `new version and bump ALERT_SCRIPT_VERSION_SYNCED_AS_OF in the same commit`);
+});
+
+// ---- copy-drift guard: this file's weekly_report.gs copies vs the live SCRIPT_VERSION / SUBJECT_LABEL ----
+// Same shape and same reason as the alert_emailer.gs guard above, for the larger half of this file's copies
+// -- which had the identical exposure with no pin watching it, and had already realized it: buildSubject_
+// hardcoded the subject phrase instead of interpolating SUBJECT_LABEL, so a rename of that const would have
+// left the nine buildSubject_ assertions above asserting the OLD phrase and passing.
+t('this file\'s weekly_report.gs copies are pinned to its current SCRIPT_VERSION', () => {
+  const gsPath = path.join(__dirname, 'weekly_report.gs');
+  const gsSrc = fs.readFileSync(gsPath, 'utf8');
+  const m = /const\s+SCRIPT_VERSION\s*=\s*'([^']+)'/.exec(gsSrc);
+  assert.ok(m, 'could not find SCRIPT_VERSION in weekly_report.gs -- regex may need updating if the declaration shape changed');
+  assert.strictEqual(m[1], SCRIPT_VERSION_SYNCED_AS_OF,
+    `weekly_report.gs is now ${m[1]} but this file's copies were last synced against ` +
+    `${SCRIPT_VERSION_SYNCED_AS_OF} -- re-verify buildSubject_/fallbackBarsHtml_/pctCellHtml_/etc. against ` +
+    `the new version and bump SCRIPT_VERSION_SYNCED_AS_OF in the same commit`);
+});
+t('this file\'s SUBJECT_LABEL copy matches the live weekly_report.gs const', () => {
+  const gsPath = path.join(__dirname, 'weekly_report.gs');
+  const gsSrc = fs.readFileSync(gsPath, 'utf8');
+  const m = /const\s+SUBJECT_LABEL\s*=\s*'([^']+)'/.exec(gsSrc);
+  assert.ok(m, 'could not find SUBJECT_LABEL in weekly_report.gs -- regex may need updating if the declaration shape changed');
+  assert.strictEqual(m[1], SUBJECT_LABEL,
+    `weekly_report.gs now uses the subject phrase "${m[1]}" -- update SUBJECT_LABEL here and the ` +
+    `buildSubject_ expectations above, which would otherwise keep asserting the old phrase`);
 });
 
 console.log(`\n${passed} assertions passed.`);

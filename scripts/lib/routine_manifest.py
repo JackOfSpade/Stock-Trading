@@ -12,6 +12,7 @@ Consolidated here so there is exactly one implementation both scripts import.
 import re
 
 from lib.md_fence import fence_mask
+from lib.textio import read_text
 
 # A routine section heading ends with its type tag; this excludes preamble/queue-schema headings.
 ROUTINE_SUFFIX = re.compile(r"—\s*(deep research|regular routine)\s*$")
@@ -30,10 +31,12 @@ def parse_routine_headings(plan_path):
     `split()`, which already fence-masks the identical heading test. split_task_plan.py's docstring
     claims a slice "can never disagree with the trigger manifest about what a routine heading is"
     BECAUSE both import this module -- that claim was false until this matched split()'s idiom
-    (2026-08-08 audit finding).
+    (2026-08-08 audit finding). The line split must stay `splitlines(keepends=True)` for the same
+    reason: readlines() breaks on \\n only, so any of the Unicode line separators splitlines() also
+    honours (\\x0b, \\x0c, \\x85, U+2028, ...) would shift this function's lines out of alignment
+    with split()'s.
     """
-    with open(plan_path, encoding="utf-8") as f:
-        lines = f.readlines()
+    lines = read_text(plan_path).splitlines(keepends=True)
     mask = fence_mask(lines)
     out = []
     for ln, in_fence in zip(lines, mask, strict=True):  # fence_mask() returns exactly one entry per input line

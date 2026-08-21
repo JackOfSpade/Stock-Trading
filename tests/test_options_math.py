@@ -703,6 +703,60 @@ def test_breakeven_points_long_call_and_debit_spread():
     assert bes2[0] == pytest.approx(100 + dcs.net_debit() / CONTRACT_MULTIPLIER, abs=0.05)
 
 
+# breakeven_points() is a SINGLE-PATH computation (grid scan + bisection) with no dual-path backstop —
+# unlike max loss, nothing independently recomputes it at runtime, so these cases ARE the check. Each
+# expectation is the closed-form breakeven derived from the structure's own net_debit() (negative =
+# credit received), not a hardcoded float, so the cases stay valid if a fixture vol ever moves. abs=0.05
+# matches the sibling test above and is ~5x the scan's grid cell (max(strike, S0) * 3 / 30000).
+# len() is asserted too: a regression that drops or duplicates a root must fail, not just a misplaced one.
+@pytest.mark.parametrize("build,expected", [
+    # Iron condor — the only permitted structure with TWO breakevens: short put - credit, short call + credit.
+    (lambda: iron_condor(100, long_put_strike=90, short_put_strike=95, short_call_strike=105,
+                         long_call_strike=110, days_to_expiration=30, risk_free_rate=0.045,
+                         vol_long_put=0.30, vol_short_put=0.30, vol_short_call=0.30, vol_long_call=0.30,
+                         contracts=1),
+     lambda s: [95 + s.net_debit() / CONTRACT_MULTIPLIER, 105 - s.net_debit() / CONTRACT_MULTIPLIER]),
+    # Butterflies — two breakevens, wings inward by the net debit paid.
+    (lambda: long_call_butterfly(100, lower_strike=95, middle_strike=100, upper_strike=105,
+                                 days_to_expiration=30, risk_free_rate=0.045,
+                                 vol_lower=0.30, vol_middle=0.30, vol_upper=0.30, contracts=1),
+     lambda s: [95 + s.net_debit() / CONTRACT_MULTIPLIER, 105 - s.net_debit() / CONTRACT_MULTIPLIER]),
+    (lambda: long_put_butterfly(100, lower_strike=95, middle_strike=100, upper_strike=105,
+                                days_to_expiration=30, risk_free_rate=0.045,
+                                vol_lower=0.30, vol_middle=0.30, vol_upper=0.30, contracts=1),
+     lambda s: [95 + s.net_debit() / CONTRACT_MULTIPLIER, 105 - s.net_debit() / CONTRACT_MULTIPLIER]),
+    # Credit spreads — one breakeven, at the SHORT strike offset by the credit (net_debit is negative here).
+    (lambda: credit_put_spread(100, short_strike=95, long_strike=90, days_to_expiration=30,
+                               risk_free_rate=0.045, volatility_short=0.30, volatility_long=0.30,
+                               contracts=1),
+     lambda s: [95 + s.net_debit() / CONTRACT_MULTIPLIER]),
+    (lambda: credit_call_spread(100, short_strike=105, long_strike=110, days_to_expiration=30,
+                                risk_free_rate=0.045, volatility_short=0.30, volatility_long=0.30,
+                                contracts=1),
+     lambda s: [105 - s.net_debit() / CONTRACT_MULTIPLIER]),
+    # Net-long-put structures — one breakeven BELOW the long strike (the sibling test above covers only
+    # net-long-CALL structures, whose root sits above).
+    (lambda: debit_put_spread(100, long_strike=100, short_strike=95, days_to_expiration=30,
+                              risk_free_rate=0.045, volatility_long=0.30, volatility_short=0.28,
+                              contracts=1),
+     lambda s: [100 - s.net_debit() / CONTRACT_MULTIPLIER]),
+    (lambda: long_put(100, strike=100, days_to_expiration=30, risk_free_rate=0.045,
+                      volatility=0.30, contracts=1),
+     lambda s: [100 - s.net_debit() / CONTRACT_MULTIPLIER]),
+    # Naked short put — same Structure shape as test_naked_short_put_captures_s0_worst_case.
+    (lambda: Structure(legs=[OptionLeg(option=ATMOption(100, 95, 30, 0.045, 0.30, 'put'), quantity=-1)],
+                       name='Naked short put', structure_type='naked_put'),
+     lambda s: [95 + s.net_debit() / CONTRACT_MULTIPLIER]),
+])
+def test_breakeven_points_matches_closed_form_across_structures(build, expected):
+    struct = build()
+    bes = struct.breakeven_points()
+    want = expected(struct)
+    assert len(bes) == len(want)
+    for got, exp in zip(bes, want, strict=True):
+        assert got == pytest.approx(exp, abs=0.05)
+
+
 def test_realized_vol_uses_only_trailing_31_closes():
     # Only the last 31 prices (30 returns) may influence the result; prepending
     # wildly different older closes must not change it. Guards the [-31:] slice.

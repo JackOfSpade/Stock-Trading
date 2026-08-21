@@ -388,10 +388,14 @@ def _trigger_id_match(tid, trigger_ids_doc):
 
 
 def _instruction_match(instruction, triggers_doc):
-    """rid whose ops/triggers.json core instruction equals this trigger's core instruction, or None."""
+    """rid whose ops/triggers.json core instruction equals this trigger's core instruction, or None.
+
+    BOTH sides are core-stripped: ops/triggers.json's own text also carries the addendum for any
+    routine with a cadence.yaml `instruction_note` (OPS2 today), so comparing the live core against
+    the FULL stored text could never match those routines at all."""
     core = _core_instruction(instruction)
     for rid, entry in triggers_doc.items():
-        if entry.get("instruction") == core:
+        if _core_instruction(entry.get("instruction")) == core:
             return rid
     return None
 
@@ -616,8 +620,15 @@ def ingest(path):
         if rid is None:
             # Genuinely unidentifiable (same repo as the fleet, but no trigger_id or instruction match)
             # -- record it rather than dropping it silently, per the ingest contract.
-            doc["_unmatched"][normalized["trigger_id"]] = normalized
-            unmatched.append(normalized["trigger_id"])
+            # An id-less raw (which _dedup_raw_triggers deliberately preserves) would otherwise be
+            # stored under a None key, and write_backup's json.dump(sort_keys=True) then raises a
+            # TypeError comparing None to the other str keys, losing the whole ingest. The synthetic
+            # key mirrors _dedup_raw_triggers' own "__no_id__" convention and is readable in restore()'s
+            # operator-facing messages, which echo _unmatched keys verbatim as the id to type.
+            key = (normalized["trigger_id"]
+                   or f"__no_id__:{_core_instruction(normalized['instruction'])[:60]}")
+            doc["_unmatched"][key] = normalized
+            unmatched.append(key)
             continue
 
         # B4 (2026-08-01 audit): this trigger_id is now matchable, so any stale `_unmatched` copy of it

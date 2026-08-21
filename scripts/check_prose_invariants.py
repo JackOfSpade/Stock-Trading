@@ -321,6 +321,17 @@ def review_storage_prose_files(root=None):
     return tuple(dict.fromkeys(files))
 
 
+def _claim_unit(reported, kind, i, end_i):
+    """True the FIRST time `kind` is claimed for a match unit spanning physical lines [i, end_i],
+    recording the WHOLE span so a later overlapping soft-wrap window cannot re-report the same
+    finding at a different (earlier) line number. Same range-based dedup as check_rule()."""
+    unit = range(i, end_i + 1)
+    if any((kind, line_i) in reported for line_i in unit):
+        return False
+    reported.update((kind, line_i) for line_i in unit)
+    return True
+
+
 def check_adversarial_review_storage(errors):
     """Reject retired root transcripts and live prose that depends on them.
 
@@ -343,53 +354,41 @@ def check_adversarial_review_storage(errors):
         visible_lines = without_strikethrough(lines)
         # Cadence YAML often wraps a long `writes:` list, and prose can soft-wrap a hand-off. Reuse
         # the ordinary soft-wrap matcher so either form cannot bypass this guard. Findings are keyed
-        # by their first physical line to avoid duplicate reports from physical and joined-line units.
+        # by every physical line of the unit that raised them, so a two-line soft-wrap window
+        # overlapping an already-reported physical line cannot re-report it at the earlier line.
         reported = set()
-        for i, _end_i, line in match_units(visible_lines, wrapped_lines=True):
+        for i, end_i, line in match_units(visible_lines, wrapped_lines=True):
             if (ACTIVE_REVIEW_FILE_WRITE.search(line)
-                    and not NEGATED_REVIEW_FILE_WRITE.search(line)):
-                key = ("write", i)
-                if key not in reported:
-                    errors.append(
-                        f"[adversarial_review_storage] {rel}:{i + 1}: active write of a retired "
-                        "Adversarial_Review_*.md transcript; write events.adversarial_reviews instead"
-                    )
-                    reported.add(key)
+                    and not NEGATED_REVIEW_FILE_WRITE.search(line)
+                    and _claim_unit(reported, "write", i, end_i)):
+                errors.append(
+                    f"[adversarial_review_storage] {rel}:{i + 1}: active write of a retired "
+                    "Adversarial_Review_*.md transcript; write events.adversarial_reviews instead"
+                )
             if (ACTIVE_REVIEW_OUTPUT_PATH.search(line)
-                    and not NEGATED_REVIEW_OUTPUT_PATH.search(line)):
-                key = ("output_path", i)
-                if key not in reported:
-                    errors.append(
-                        f"[adversarial_review_storage] {rel}:{i + 1}: active *_output_path hand-off "
-                        "depends on a retired local transcript; hand off by review id/cycle/role in "
-                        "state.adversarial_reviews_current instead"
-                    )
-                    reported.add(key)
-            if ACTIVE_REVIEW_FILE_HANDOFF.search(line):
-                key = ("file_handoff", i)
-                if key not in reported:
-                    errors.append(
-                        f"[adversarial_review_storage] {rel}:{i + 1}: active local transcript "
-                        "file hand-off depends on a retired Markdown copy; hand off by review "
-                        "id/cycle/role in state.adversarial_reviews_current instead"
-                    )
-                    reported.add(key)
-            if ACTIVE_RETIRED_REVIEW_QUEUE.search(line):
-                key = ("retired_queue", i)
-                if key not in reported:
-                    errors.append(
-                        f"[adversarial_review_storage] {rel}:{i + 1}: active use of retired "
-                        "Pending_Adversarial_Reviews.md; use events.queue_events / state.open_queue instead"
-                    )
-                    reported.add(key)
-            if ACTIVE_REVIEW_FILE_AS_DURABLE_RECORD.search(line):
-                key = ("durable", i)
-                if key not in reported:
-                    errors.append(
-                        f"[adversarial_review_storage] {rel}:{i + 1}: retired Markdown transcript "
-                        "is described as a durable record; events.adversarial_reviews is canonical"
-                    )
-                    reported.add(key)
+                    and not NEGATED_REVIEW_OUTPUT_PATH.search(line)
+                    and _claim_unit(reported, "output_path", i, end_i)):
+                errors.append(
+                    f"[adversarial_review_storage] {rel}:{i + 1}: active *_output_path hand-off "
+                    "depends on a retired local transcript; hand off by review id/cycle/role in "
+                    "state.adversarial_reviews_current instead"
+                )
+            if ACTIVE_REVIEW_FILE_HANDOFF.search(line) and _claim_unit(reported, "file_handoff", i, end_i):
+                errors.append(
+                    f"[adversarial_review_storage] {rel}:{i + 1}: active local transcript "
+                    "file hand-off depends on a retired Markdown copy; hand off by review "
+                    "id/cycle/role in state.adversarial_reviews_current instead"
+                )
+            if ACTIVE_RETIRED_REVIEW_QUEUE.search(line) and _claim_unit(reported, "retired_queue", i, end_i):
+                errors.append(
+                    f"[adversarial_review_storage] {rel}:{i + 1}: active use of retired "
+                    "Pending_Adversarial_Reviews.md; use events.queue_events / state.open_queue instead"
+                )
+            if ACTIVE_REVIEW_FILE_AS_DURABLE_RECORD.search(line) and _claim_unit(reported, "durable", i, end_i):
+                errors.append(
+                    f"[adversarial_review_storage] {rel}:{i + 1}: retired Markdown transcript "
+                    "is described as a durable record; events.adversarial_reviews is canonical"
+                )
 
 
 def main():

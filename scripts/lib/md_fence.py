@@ -8,11 +8,12 @@ place instead of three (2026-07-18 audit finding, cluster "dedup-sweep").
 """
 import re
 
-FENCE = re.compile(r"^(```|~~~)")
-
-# Same markers, but capturing the FULL run length and the info string, which the depth-stack in
-# fence_mask() needs in order to tell an opener from a closer (codebase audit 2026-07-26).
-FENCE_LINE = re.compile(r"^(`{3,}|~{3,})[ \t]*(.*?)[ \t]*$")
+# Column-0 ``` / ~~~ markers, capturing the FULL run length and the info string, which the
+# depth-stack in fence_mask() needs in order to tell an opener from a closer (codebase audit
+# 2026-07-26). \r belongs in the trailing class, not in the info-string capture: on CRLF input a
+# captured "\r" is a truthy info string, so every bare closer would open a fence instead of
+# closing one and no fence would ever close.
+FENCE_LINE = re.compile(r"^(`{3,}|~{3,})[ \t]*(.*?)[ \t\r]*$")
 
 
 def fence_mask(lines):
