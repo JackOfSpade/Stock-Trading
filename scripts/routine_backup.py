@@ -82,17 +82,31 @@ OPS2_NO_ADDENDUM_ID = "OPS2"
 # so OPS2's inline-hosting job is not in tension with it. check()'s check (2) appends this after
 # ADDENDUM (or directly after the core instruction for OPS2) when computing the expected instruction
 # text.
-# NARROWED (owner directive 2026-08-21, superseding the 2026-08-17 form): the original wording also
-# ordered out-of-scope issues fixed on best judgment in-session, and measurably turned no-op runs into
-# spec-hardening sessions (routine-prefixed commits ~2.6/day -> ~9.2/day across the 2026-08-17
-# boundary; SL5 median session 2.6 min -> 16-24 min). The current form keeps the in-scope completion
-# bar and routes out-of-scope findings to a recorded handoff (queue/alert row) instead of an inline
-# fix. The 2 personal_* triggers still carry the 2026-08-17 wording by design -- they are outside the
+# BOUNDED (owner directive 2026-08-21, superseding the 2026-08-17 form). The 2026-08-17 wording
+# ordered EVERY out-of-scope issue fixed on best judgment in-session, and measurably turned no-op runs
+# into spec-hardening sessions: nine commits on main since 2026-08-17 carry the literal shape
+# "<no-op on the core job>; <unrelated hardening>" (e.g. "SL5 2026-08-18: no-op on the roster; pin the
+# SL3->SL5 probe-register handoff contract"), and fleet median session length went 8.5 min -> 15.4 min
+# (measured from ops.run_log started/terminal pairs, 2026-07-20..08-21 split at 08-17).
+# The current form keeps the fix-it authority where it is cheap and high-value -- an out-of-scope issue
+# that BLOCKS this run, or a one-line correction -- and routes everything else to a recorded handoff.
+# That preserves the self-improvement flywheel (OPS0's 2026-08-20 unlanded-run detector fix, 8d63a2b,
+# is the kind of catch worth keeping) while ending the multi-hour excursions.
+# An INTERMEDIATE, STRICTER form (no out-of-scope fixes at all) was staged earlier the same day and
+# reached 6 live triggers -- OPS0, OPS1, OPS2, M1a, SL3, SL5 -- before the owner stopped the rollout in
+# favour of this bounded version. Those 6 and the remaining 26 are all superseded by the text below.
+# The 2 personal_* triggers still carry the 2026-08-17 wording by design -- they are outside the
 # fleet's cost/scope discipline and check (2) does not compute expected text for them.
+# LIVE ROLLOUT IS MANUAL, NOT SELF-HEALING (verified 2026-08-21): ops.routine_catalog's
+# canonical_instruction is the CORE one-liner only (53-57 chars, no addendum), and
+# state.instruction_drift compares with STARTS_WITH, so ANY trailing addendum -- old, new, or absent --
+# is invisible to it and OPS0 STEP 3 never self-corrects it. Changing this constant does NOT change
+# live trigger text; the claude.ai trigger prompts must be edited by hand.
 SCOPE_ADDENDUM = ("\n\nDo not give final response until you have resolved every issue within this "
-                   "run's own scope. Do NOT fix issues outside this run's scope: record each one "
-                   "instead — an events.queue_events row or an ops.alerts info row naming the owning "
-                   "routine or surface — and move on.")
+                   "run's own scope. For an issue OUTSIDE this run's scope: fix it only if it BLOCKS "
+                   "this run's own job or the fix is a one-line correction; otherwise record it — an "
+                   "events.queue_events row or an ops.alerts info row naming the owning routine or "
+                   "surface — and move on.")
 
 # Sentinel stored as cron_expression when no trustworthy source could confirm it (an empty/missing
 # cron_expression on ingest, or a bootstrap entry seeded without one). ingest() always reports every

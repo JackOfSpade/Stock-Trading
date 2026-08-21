@@ -464,14 +464,16 @@ routines:
                                     # to OPS2 -- a hand comparison against OPS0 will keep surfacing it as a
                                     # difference, and it is the intended one.
                                     # SECOND ADDENDUM, NO EXCEPTION (owner directive 2026-08-17; wording
-                                    # NARROWED by owner directive 2026-08-21): every routine INCLUDING
+                                    # BOUNDED by owner directive 2026-08-21): every routine INCLUDING
                                     # OPS2 also carries a standing THIRD paragraph ("Do not give final
                                     # response until you have resolved every issue within this run's own
-                                    # scope. Do NOT fix issues outside this run's scope: record each one
-                                    # instead ... and move on." -- scripts/routine_backup.py's
-                                    # SCOPE_ADDENDUM is the verbatim source; the 2026-08-17 form's
-                                    # fix-out-of-scope-issues clause measurably turned no-op runs into
-                                    # spec-hardening sessions, see that constant's comment). This one
+                                    # scope. For an issue OUTSIDE this run's scope: fix it only if it
+                                    # BLOCKS this run's own job or the fix is a one-line correction;
+                                    # otherwise record it ... and move on." --
+                                    # scripts/routine_backup.py's SCOPE_ADDENDUM is the verbatim source;
+                                    # the 2026-08-17 form's unbounded fix-out-of-scope clause measurably
+                                    # turned no-op runs into spec-hardening sessions, see that
+                                    # constant's comment). This one
                                     # governs when a routine may stop, not which model does the work, so
                                     # it is not in tension with OPS2's hosting job -- the omission above
                                     # is scoped to the Sonnet-delegation paragraph only
