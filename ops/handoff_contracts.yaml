@@ -192,6 +192,12 @@ required_column_naming:
     - table: events.adversarial_reviews
       procedure: sp_write_adversarial_review
       why: "review_id is a literal argument threaded through CALL ops.sp_write_adversarial_review(...) (bigquery/145/146); AR_att/AR_orc's prose explicitly forbids any other write path to this table."
+    - table: ops.trigger_observations
+      procedure: sp_record_trigger_observation
+      why: "routine and observed_by are required positional arguments to CALL ops.sp_record_trigger_observation(...) (bigquery/195), and the procedure RAISEs on a NULL/blank observed_by rather than writing an unattributable row; Q4 step E / OPS0 STEP 3 call it after every RemoteTrigger get and never hand-compose an INSERT."
+    - table: ops.trigger_change_intents
+      procedure: sp_declare_trigger_change_intent
+      why: "routine, actor and field are required positional arguments to CALL ops.sp_declare_trigger_change_intent(...) (bigquery/195), and the procedure RAISEs when any is missing; the sweep declares intent through it before every RemoteTrigger update, so an undeclared write is a missing CALL rather than a malformed INSERT."
 
   # Tables that DO carry at least one NOT NULL/no-default column but are deliberately OUT OF SCOPE
   # for this check -- named explicitly (never silently dropped) per the SCOPE METHODOLOGY note above.
