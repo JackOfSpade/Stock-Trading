@@ -43,8 +43,10 @@
 --   Do NOT "fix" this by moving the INSERT into bigquery/35: that would put a non-roster-active row
 -- into the file whose sole documented purpose is the R-A active-set comparison.
 --
--- Depends on bigquery/35 (events.strategy_lifecycle DDL + state.strategy_roster), bigquery/34
--- (ops.alert_policy fail-closed allowlist), bigquery/10 (ops.sp_raise_alert_once).
+-- Depends on bigquery/35 (events.strategy_lifecycle DDL + state.strategy_roster) and bigquery/34
+-- (ops.alert_policy fail-closed allowlist). NOT on bigquery/10: this file registers the
+-- lifecycle_provenance_gap category but never raises it -- D3's QUEUE HYGIENE step is the only caller
+-- of ops.sp_raise_alert_once for this class, so 190 applies cleanly regardless of bigquery/10's state.
 -- Creates one VIEW; both INSERTs are NOT-EXISTS-guarded. Idempotent; safe to re-run.
 
 -- ============================================================================
@@ -77,8 +79,12 @@ SELECT TIMESTAMP '2026-08-03 22:11:04+00', code, CAST(NULL AS STRING), 'CANDIDAT
   '''PROVENANCE REPAIR (2026-08-21, bigquery/190): reconstructed creation row for candidate H. SL1 STEP 2 pins a CANDIDATE lifecycle row (to_state=CANDIDATE, driver_routine=SL1) on every candidate emission and SL1 wrote one for both F and G on 2026-07-28, but its 2026-08-03 run wrote H's CANDIDATE->REJECTED transition (event_id 2927f80f-9890-4da9-a4ae-84c4a821ba18, 22:11:05.030884Z) with no row recording H entering candidacy. Backdated ~1s before that REJECTED row so H's current_state stays REJECTED and so this row does not tie with it. Reconstruction, not a recovered fact: the true emission instant was never recorded, hence driver_routine=repair-2026-08-21 rather than SL1. H remains REJECTED with its original 90-day archetype cooldown intact; this row adds provenance only and reopens nothing.'''
 FROM UNNEST(['H']) AS code   -- supplies the FROM the NOT-EXISTS guard needs; founding-seed idiom
 WHERE NOT EXISTS (
+  -- CORRELATED on `code`, not on a repeated 'H' literal (adversarial review, 2026-08-21). The array
+  -- has one element today, so both spellings behave identically -- but this INSERT advertises itself
+  -- as the founding-seed idiom, which invites reuse, and a second code added to the UNNEST above
+  -- with a hardcoded guard would silently key every row's guard off 'H' and re-insert forever.
   SELECT 1 FROM `stock-trading-498512.events.strategy_lifecycle`
-  WHERE strategy_code = 'H' AND to_state = 'CANDIDATE');
+  WHERE strategy_code = code AND to_state = 'CANDIDATE');
 
 -- ============================================================================
 -- 2. DETECTOR -- state.strategy_lifecycle_provenance
@@ -101,20 +107,35 @@ WITH ranked AS (
     strategy_code, event_id, event_ts, from_state, to_state, driver_routine,
     ROW_NUMBER()  OVER (PARTITION BY strategy_code ORDER BY event_ts ASC, event_id ASC) AS rn_earliest,
     COUNT(*)      OVER (PARTITION BY strategy_code, event_ts)                           AS n_at_this_ts,
-    MAX(event_ts) OVER (PARTITION BY strategy_code)                                     AS latest_ts
+    MAX(event_ts) OVER (PARTITION BY strategy_code)                                     AS latest_ts,
+    -- The creation row is definitionally the one with NO prior state. Counting them per code is what
+    -- makes CLASS 1 DETECTION independent of row order -- see the note on CLASS 1 below.
+    COUNTIF(from_state IS NULL) OVER (PARTITION BY strategy_code)                       AS n_creation_rows
   FROM `stock-trading-498512.events.strategy_lifecycle`
 ),
 findings AS (
-  -- CLASS 1 -- the code's earliest row already declares a from_state, so the log never records the
-  -- code entering the state it claims to be leaving. H's defect, repaired above.
+  -- CLASS 1 -- the code has NO creation row at all: every row it owns declares a prior state, so the
+  -- log never records the code entering the lifecycle. H's defect, repaired above.
+  --
+  -- DETECTION IS ON THE AGGREGATE (n_creation_rows = 0), NOT on "the earliest row has a from_state"
+  -- (adversarial review, 2026-08-21). The earlier formulation tested rn_earliest = 1, whose ORDER BY
+  -- falls back to `event_id ASC` on an event_ts tie -- the exact mirror of the `event_id DESC` UUID
+  -- coin-flip this file documents for CLASS 2 and state.strategy_roster. F and G each have two rows
+  -- tied to the microsecond, so under that formulation CLASS 1 was correct on them only because their
+  -- UUIDs happened to sort the right way; the other draw would have reported missing_creation_row for
+  -- a code whose creation row demonstrably exists. Counting NULL from_state rows per code cannot tie,
+  -- so the detection is now order-independent by construction. `rn_earliest = 1` is retained ONLY to
+  -- pick one witness row per offending code for the message -- cosmetic, and it cannot affect whether
+  -- the finding fires.
   SELECT 'missing_creation_row' AS finding_class,
          strategy_code, event_id, event_ts, from_state, to_state, driver_routine,
-         CONCAT('events.strategy_lifecycle: earliest row for strategy ', strategy_code,
-                ' declares from_state=', IFNULL(from_state, 'NULL'),
-                ' but no row records ', strategy_code, ' entering that state',
-                ' -- the creation row was never written') AS message
+         CONCAT('events.strategy_lifecycle: strategy ', strategy_code,
+                ' has no creation row -- its earliest row declares from_state=',
+                IFNULL(from_state, 'NULL'),
+                ' and no row anywhere records ', strategy_code,
+                ' entering the lifecycle from no prior state') AS message
   FROM ranked
-  WHERE rn_earliest = 1 AND from_state IS NOT NULL
+  WHERE rn_earliest = 1 AND n_creation_rows = 0
 
   UNION ALL
 
