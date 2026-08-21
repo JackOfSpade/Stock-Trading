@@ -46,6 +46,20 @@
 
 ## Known non-issues — do NOT re-investigate
 
+- **An unexplained `updated_at` bump on a claude.ai routine trigger.** The RemoteTrigger/routines API
+  exposes `updated_at` but has **no actor/author field**, so an out-of-band trigger edit can be DATED
+  but never ATTRIBUTED. Observed 2026-08-21: a browser session read the fleet, saw all 32 triggers
+  updated in a 09:57–10:10 UTC window ~20s apart, and correctly could not tell whether that was the
+  operator, another session, or something scheduled (it was an earlier browser session's own queue
+  driver, doing an authorized rollout).
+
+  **Action: do NOT go hunting for an audit trail — there is none to find, and none can be built from
+  this API.** A bump on its own is evidence of neither intrusion nor safety. The question that CAN be
+  answered is whether the live instruction still matches canonical, and that is already covered:
+  Q4 step E clause (b) / OPS0 STEP 3 diff every live trigger against `ops/routine_backup.json`'s FULL
+  instruction (core + the standing operator paragraphs, CI-validated by `scripts/routine_backup.py`
+  `check` (2)) and self-correct any divergence, whoever caused it. Check that diff, not the timestamp.
+
 - **Stop-hook "Unverified commits" warning** (`~/.claude/stop-hook-git-check.sh`).
   It flags any commit on the branch whose committer email isn't
   `noreply@anthropic.com`. That includes:
