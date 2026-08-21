@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Fail CI if a cross-routine handoff contract is unpinned: an OMITTED queue drain-close, or a
-NOT NULL/no-default BigQuery column a routine writes but Claude_Task_Plan.md never names.
+"""Fail CI if a cross-routine handoff contract is unpinned: an OMITTED queue drain-close, a
+NOT NULL/no-default BigQuery column a routine writes but Claude_Task_Plan.md never names, or a
+ROW-mediated handoff whose consumer pins no concrete discovery predicate.
 
 WHY THIS EXISTS. Six instances of ONE defect class were found by ad-hoc sweeps in three days
 (2026-08-18/19), none by CI:
@@ -92,6 +93,31 @@ ingestion mirrors, internal SP-managed mutexes, or written only by infra/CI outs
 are named under `excluded_tables` with a reason, never silently dropped.
 
 Usage:  python scripts/check_handoff_contracts.py    # exit 0 if consistent, 1 + violations if not
+CHECK C -- ROW-MEDIATED HANDOFF DISCOVERY PREDICATES (ops/handoff_contracts.yaml `row_handoffs`).
+Added 2026-08-20 after a SEVENTH instance of the class, and the first one neither existing check
+could see. SL5 branch (3) TERMINATED-deregister -- the one roster-mutation branch that REMOVES a
+strategy and releases its capital -- named its input ("a TERMINATED events.strategy_lifecycle row")
+and pinned no query for it, while SL5's own dispatch paragraph requires all three of its inputs be
+read and found empty before declaring a no-op. CHECK A could not see it (nothing travels through
+events.queue_events on this path) and CHECK B passed throughout, because CHECK B asserts only that a
+NOT NULL column's NAME appears SOMEWHERE in the ~1MB plan -- `to_state` and `strategy_code` appear
+dozens of times for unrelated reasons. A name-presence check cannot distinguish "the consumer has a
+runnable query" from "the consumer has a sentence."
+  C1 (consumer): the consumer routine's OWN section must contain a real discovery query -- some
+     SELECT followed within QUERY_WINDOW_CHARS by both the table and the discovery-value literal.
+     Proximity rather than fenced-block parsing on purpose: Claude_Task_Plan.md NESTS fences (each
+     routine instruction is itself a ``` block and a pinned query is a ``` block inside it), so a
+     non-greedy fence regex closes on the inner opener and splits the very query it is seeking.
+  C2 (producers): every producer routine's OWN section must name each `pinned_columns` entry, so the
+     row the consumer discovers carries the fields its predicate reads. This is what catches the
+     other half of the same defect: `from_state` is NULLABLE with no default, SL5 derives the
+     branch's idempotency key as CONCAT(strategy_code, ':', from_state, '->TERMINATED'), and
+     BigQuery's CONCAT returns NULL if ANY argument is NULL -- so an unpinned from_state both
+     defeats the NOT EXISTS anti-join (rediscovering the same termination every cycle forever) and
+     violates ops.roster_change_log.change_key STRING NOT NULL.
+Verified against history at authoring time: CHECK C fails on the pre-fix plan (2 errors) AND on the
+commit that pinned only the consumer side (1 error), passing only once both producers pin too.
+
 """
 import os
 import re
@@ -487,6 +513,87 @@ def check_b(spec, task_plan_text, errors):
     return checked
 
 
+
+# ============================================================================================
+# CHECK C -- row-mediated handoff discovery predicates
+# ============================================================================================
+
+SELECT_TOKEN = re.compile(r"\bSELECT\b", re.IGNORECASE)
+
+# How far past a SELECT the table + discovery value must appear for the three to count as ONE
+# query. Sized to a generous single statement: SL5 branch (3)'s pinned predicate is ~430 chars.
+# Proximity, NOT fenced-block parsing: Claude_Task_Plan.md nests fences (each routine's whole
+# instruction is itself a ``` block, and a pinned query is a ``` block INSIDE it), so a
+# non-greedy fence regex closes on the inner opener and silently splits the query it is looking for.
+QUERY_WINDOW_CHARS = 800
+
+
+def has_discovery_query(body, table, discovery_value):
+    """True iff some SELECT is followed, within QUERY_WINDOW_CHARS, by both the table and the
+    discovery value as a literal. The table matches on its bare name (a real query writes it
+    fully qualified: `stock-trading-498512.events.strategy_lifecycle`)."""
+    bare = table.split(".")[-1]
+    tbl = re.compile(r"\b" + re.escape(bare) + r"\b")
+    v = re.escape(discovery_value)
+    val = re.compile(rf"""(?:['"`]{v}['"`])|(?:=\s*['"`]?{v}\b)""")
+    for m in SELECT_TOKEN.finditer(body):
+        window = body[m.start():m.start() + QUERY_WINDOW_CHARS]
+        if tbl.search(window) and val.search(window):
+            return True
+    return False
+
+
+def check_c(spec, bodies, errors):
+    entries = spec.get("row_handoffs") or []
+    checked = 0
+    for e in entries:
+        table = e.get("table")
+        value = e.get("discovery_value")
+        consumer = e.get("consumer")
+        producers = e.get("producers") or []
+        pinned = e.get("pinned_columns") or []
+        why = (e.get("why") or "").strip()
+        if not (table and value and consumer and producers and pinned):
+            errors.append(
+                f"CHECK C: row_handoffs entry {e!r} is missing "
+                f"table/discovery_value/consumer/producers/pinned_columns")
+            continue
+        if not why:
+            errors.append(f"CHECK C: row_handoffs entry for {table!r} is missing a `why`")
+
+        # C1 -- the consumer must hold a runnable discovery predicate, not a prose mention.
+        cbody = bodies.get(consumer)
+        if cbody is None:
+            errors.append(
+                f"CHECK C: consumer {consumer!r} for {table!r} is NOT a routine section in "
+                f"Claude_Task_Plan.md")
+        elif not has_discovery_query(cbody, table, value):
+            errors.append(
+                f"CHECK C: consumer {consumer!r} {e.get('consumer_branch') or ''} names {table!r} as an "
+                f"input but its section has NO discovery query -- no SELECT is followed within "
+                f"{QUERY_WINDOW_CHARS} chars by both {table.split('.')[-1]!r} and the {value!r} literal. "
+                f"A prose mention is not a "
+                f"predicate: pin the query verbatim so the implementing session cannot invent one.")
+
+        # C2 -- every producer must pin the fields that predicate reads.
+        for rid in producers:
+            pbody = bodies.get(rid)
+            if pbody is None:
+                errors.append(
+                    f"CHECK C: producer {rid!r} for {table!r} is NOT a routine section in "
+                    f"Claude_Task_Plan.md")
+                continue
+            missing = [c for c in pinned if not re.search(r"\b" + re.escape(c) + r"\b", pbody)]
+            if missing:
+                errors.append(
+                    f"CHECK C: producer {rid!r} writes {table!r} but its section never names "
+                    f"{missing} -- the consumer {consumer!r} reads {pinned} off that row, so an "
+                    f"unnamed field is left to the writing session to omit (a nullable column then "
+                    f"lands NULL and silently breaks the consumer's key derivation).")
+        checked += 1
+    return checked
+
+
 # ============================================================================================
 
 
@@ -505,6 +612,7 @@ def main():
     errors = []
     lanes_checked = check_a(spec, bodies, errors)
     tables_checked = check_b(spec, task_plan_text, errors)
+    rows_checked = check_c(spec, bodies, errors)
 
     if errors:
         print("HANDOFF CONTRACTS: FAIL\n")
@@ -517,7 +625,8 @@ def main():
     print(
         f"HANDOFF CONTRACTS: OK -- CHECK A: {lanes_checked} queue lane(s) drain-close-verified "
         f"({n_excluded_queues} excluded with reason); CHECK B: {tables_checked} write-target "
-        f"table(s) column-name-verified ({n_procedure_wrapped} procedure-wrapped exemptions)."
+        f"table(s) column-name-verified ({n_procedure_wrapped} procedure-wrapped exemptions); "
+        f"CHECK C: {rows_checked} row-mediated handoff(s) discovery-predicate-verified."
     )
     return 0
 

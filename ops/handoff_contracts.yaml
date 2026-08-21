@@ -234,3 +234,44 @@ required_column_naming:
       why: "Internal locking primitive (bigquery/126_dust_operational_hardening.sql), same class as ops.adversarial_review_write_mutex."
     - table: ops.park_control
       why: "Owner/infra control-plane toggle, same class as ops.capital_control."
+
+# ============================================================================================
+# CHECK C -- row_handoffs: a handoff carried by a ROW IN A TABLE, not by a queue lane.
+# ============================================================================================
+# WHY THIS SECTION EXISTS (added 2026-08-20, alert triage of the SL5 `handoff_contract_unpinned`
+# notice). CHECK A only sees handoffs that travel through events.queue_events, and CHECK B only
+# asserts that a NOT NULL column's NAME appears SOMEWHERE in the ~1MB plan. Neither can see the
+# defect that fired on 2026-08-20: SL5 branch (3) TERMINATED-deregister -- the one roster-mutation
+# branch that REMOVES a strategy and releases its capital -- named its input ("a TERMINATED
+# events.strategy_lifecycle row") but pinned NO concrete discovery predicate, while SL5's own
+# dispatch paragraph requires all three of its inputs be read and found empty before declaring a
+# no-op. events.strategy_lifecycle is already a CHECK B write_target, and CHECK B passed throughout
+# precisely because `to_state`/`strategy_code` appear dozens of times in the plan for unrelated
+# reasons -- a name-presence check cannot distinguish "the consumer has a runnable query" from
+# "the consumer has a sentence." That is a THIRD defect shape, and this section is its guard.
+#
+# CHECK C asserts two things per entry:
+#   C1 (consumer): the consumer routine's OWN section contains a real discovery QUERY -- a fenced
+#      code block (or a single line) co-locating SELECT + the table + the discovery value literal.
+#      A prose mention of the table is NOT enough; that is exactly what branch (3) had.
+#   C2 (producers): every producer routine's OWN section names each `pinned_columns` entry, so the
+#      row the consumer discovers is guaranteed to carry the fields the consumer's predicate reads.
+row_handoffs:
+  - table: events.strategy_lifecycle
+    discovery_column: to_state
+    discovery_value: TERMINATED
+    producers: [D2, AR_orc]
+    consumer: SL5
+    consumer_branch: "(3) TERMINATED deregister"
+    pinned_columns: [from_state, to_state, driver_routine]
+    why: >
+      D2 item 5 (drawdown / foundation-change / m2m kill) and AR_orc (m2m-termination TERMINATE, and
+      the strategy-retirement RETIRE path it routes into D2's handler) both write the TERMINATED
+      events.strategy_lifecycle row; SL5 branch (3) is its sole consumer and must discover it, run
+      the reverse ROSTER FANOUT and release the strategy's capital. `from_state` is in
+      pinned_columns because it is NULLABLE with no default and SL5 derives the branch's idempotency
+      key as CONCAT(strategy_code, ':', from_state, '->TERMINATED') -- BigQuery's CONCAT returns NULL
+      if any argument is NULL, so an unpinned from_state both defeats the NOT EXISTS anti-join
+      (re-discovering the same termination every cycle forever) and violates
+      ops.roster_change_log.change_key STRING NOT NULL. Until 2026-08-20 the consumer pinned no
+      predicate at all and NEITHER producer named from_state.
