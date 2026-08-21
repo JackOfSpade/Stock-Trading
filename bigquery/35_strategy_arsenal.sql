@@ -51,7 +51,13 @@ CREATE TABLE IF NOT EXISTS `stock-trading-498512.events.strategy_lifecycle` (
   --     'AUTHORING'. Note the from_state on that row therefore does NOT chain to the prior row's
   --     to_state ('QUALIFYING'); that is accepted -- from_state is provenance narrative, nothing joins
   --     on it, and no check validates lifecycle chaining (state.append_only_integrity polices
-  --     UPDATE/DELETE on append-only tables, not state adjacency).
+  --     UPDATE/DELETE on append-only tables, not state adjacency). NARROWED 2026-08-21: one provenance
+  --     invariant IS now checked -- state.strategy_lifecycle_provenance
+  --     (bigquery/190_strategy_lifecycle_provenance_repair.sql) flags a code whose EARLIEST row already
+  --     declares a from_state, and rows tying at a code's latest event_ts. It deliberately anchors on
+  --     the earliest row only, so the sanctioned AUTHORING shape described just above is structurally
+  --     exempt and stays exempt. Do NOT generalise it into a full adjacency check: that would flag the
+  --     AUTHORING shape forever, which is exactly why the general form was rejected here.
   --   * POST_MORTEM — Operating_Protocols.md's state-machine list names it as following TERMINATED, but
   --     the post-mortem ARTIFACT lands in events.strategy_postmortems (below) and no routine writes a
   --     lifecycle row for it. A terminated strategy's current_state stays 'TERMINATED', which is the
