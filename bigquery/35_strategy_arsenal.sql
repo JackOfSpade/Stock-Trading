@@ -550,6 +550,15 @@ WHERE r.current_state = 'SHADOW';
 -- counts as a failure, not a skip — fail-closed) — a sustained-positive requirement, matching the
 -- Wilson-interval small-sample discipline this codebase already applies elsewhere (analytics.
 -- calibration_shrunk) instead of trusting a single lucky reading at the highest-stakes PAPER->PROBE gate.
+-- SUPERSEDED LIVE by bigquery/189_paper_stuck_completeness.sql (2026-08-20) — the CURRENT single
+-- source of truth for this view. `stuck` below is `paper_days >= 400 AND NOT trades_met`, covering
+-- only ONE of the three CANDIDATE-side gate terms `ready` requires, so a PAPER candidate that traded
+-- plenty but ran persistently negative excess-vs-SGOV (or never demonstrated 2-cell regime coverage)
+-- was ready=FALSE and stuck=FALSE forever — un-graduatable AND un-cullable, squatting a k_incubate
+-- slot with nothing to alert on. 189 widens it to `NOT (trades_met AND excess_met AND regime_met)`
+-- and adds `stuck_reason`, deliberately keeping the arsenal-state terms out. Kept here, unmodified,
+-- for DR-rebuild apply-in-order reference only. DO NOT re-apply this CREATE statement live in
+-- isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.strategy_paper_readiness` AS
 WITH agg AS (
   SELECT strategy_code,
