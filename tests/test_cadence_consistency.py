@@ -2065,6 +2065,62 @@ def test_check_n_defect_b_glued_digit_tooling_prefix_also_flagged(tmp_path, monk
             f"{token!r} should still be SUBTRACTED (genuine tooling extension, non-regression): {errs}")
 
 
+# QUALITY PASS 2026-08-22 — DEFECT B's third case. Both branches of
+# _tooling_prefix_hides_version() only inspected the first one or two characters after the prefix, so
+# a token that continues with a LETTER and only THEN carries a version suffix was silently subtracted
+# as ordinary tooling: 'claude-codex-5' starts with 'claude-code' in plain Python because 'codex'
+# extends 'code' with no separator. Verified end to end pre-fix: routine_model 'claude-opus-5' plus an
+# OWNER_ACTIONS.md line "All remote routines now run claude-codex-5 for grunt work" returned ZERO
+# errors — a genuinely drifted model id passing CI clean, the exact false-clean check N exists to
+# prevent. The letter-continuation itself must STAY subtracted ('claude-codebase' above), so the
+# signal is "the whole token ends in a version", not "it continues with a letter".
+_LETTER_THEN_VERSION_TOOLING_TOKENS = [
+    "claude-codex-5", "claude-clinical-5", "claude-desktopia-1", "claude-agent-sdkx-3",
+]
+
+
+def test_check_n_letter_continuation_with_a_version_suffix_is_flagged(tmp_path, monkeypatch):
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)  # routine_model: claude-opus-5
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    owner_actions = tmp_path / "OWNER_ACTIONS.md"
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(owner_actions))
+    for token in _LETTER_THEN_VERSION_TOOLING_TOKENS:
+        owner_actions.write_text(f"All remote routines now run {token} for grunt work.\n")
+        errs, _ = cc.check_model_of_record()
+        assert len(errs) == 1 and token in errs[0], (
+            f"{token!r} should be FLAGGED (letter continuation, but the token ends in a version): {errs}")
+
+
+def test_check_n_letter_continuation_with_a_version_suffix_helper_directly():
+    for token in _LETTER_THEN_VERSION_TOOLING_TOKENS:
+        assert not cc._is_subtracted_non_assertion(token), (
+            f"{token!r} should NOT be subtracted (ends in a version suffix)")
+    # Non-regression: the plain letter continuation, with no version tail, stays subtracted.
+    assert cc._is_subtracted_non_assertion("claude-codebase")
+
+
+def test_routine_model_may_share_a_tooling_prefix_when_it_is_version_shaped(tmp_path, monkeypatch):
+    """The mirrored half of the same fix. check_model_of_record() rejected any routine_model matching
+    `startswith(NOT_A_MODEL_PREFIXES)`, which also rejected a legitimate id that merely shares a
+    tooling prefix's characters. The rejection now asks the precise question its own error message
+    describes -- would the mirror scanner SUBTRACT this id as tooling, making the check vacuous? --
+    so 'claude-codex-5' is accepted while 'claude-code-action' is still refused."""
+    plan, cadence, cadence_sql, catalog_sql = _write_check_fixture(tmp_path)
+    _patch_fixture_paths(monkeypatch, tmp_path, plan, cadence, cadence_sql, catalog_sql)
+    monkeypatch.setattr(cc, "OWNER_ACTIONS", str(tmp_path / "missing_owner_actions.md"))
+    cadence.write_text(cadence.read_text().replace(
+        "routine_model: claude-opus-5", "routine_model: claude-codex-5"))
+    errs, model = cc.check_model_of_record()
+    assert model == "claude-codex-5"
+    assert not any("names CLI/SDK tooling" in e for e in errs), errs
+
+    # ...while a genuine tooling name is still refused, so the check can't be made vacuous.
+    cadence.write_text(cadence.read_text().replace(
+        "routine_model: claude-codex-5", "routine_model: claude-code-action"))
+    errs, _model = cc.check_model_of_record()
+    assert any("names CLI/SDK tooling" in e for e in errs), errs
+
+
 def test_check_n_defect_b_glued_digit_helper_directly():
     # Same table, asserted straight against the helper functions this fix actually changed -- pins the
     # unit-level contract independently of check_model_of_record()'s line-scanning plumbing.

@@ -276,11 +276,26 @@ def _block_real_bq_gcloud_calls(monkeypatch):
             f"see this fixture's docstring)."
         )
 
-    def guarded_run(cmd, *args, **kwargs):
+    def guarded_run(*popenargs, **kwargs):
+        # Matches subprocess.run's REAL signature -- `run(*popenargs, ...)` in CPython, documented
+        # as `run(args, ...)` -- rather than a hand-written `run(cmd, *args, **kwargs)` positional
+        # (quality pass 2026-08-22). With a required positional `cmd`, the perfectly valid
+        # documented keyword form `subprocess.run(args=[...])` did not reach the guard at all: it
+        # raised `TypeError: guarded_run() missing 1 required positional argument: 'cmd'`, an
+        # unrelated, misleading error instead of either a clean pass-through or the intended
+        # pytest.fail. subprocess.check_output(args=[...]) inherited the same crash, since CPython's
+        # check_output calls the module-level run(*popenargs, **kwargs) this fixture patches.
+        #
+        # This is the same class of bug guarded_popen_init below was already hardened against by
+        # binding the real signature (see "THE OFF-BY-ONE" in the module docstring); guarded_run was
+        # the one entry point that never got the same treatment. It failed SAFE (a loud crash, not a
+        # leak through to real bq/gcloud), and no call site in the repo uses the keyword form today,
+        # so it was latent -- but it left the guard blind to part of its own calling surface.
+        cmd = popenargs[0] if popenargs else kwargs.get("args", ())
         prog_name = _blocked_program_in(cmd, kwargs.get("shell", False))
         if prog_name:
             _fail(prog_name, cmd, "subprocess.run(...)")
-        return _REAL_SUBPROCESS_RUN(cmd, *args, **kwargs)
+        return _REAL_SUBPROCESS_RUN(*popenargs, **kwargs)
 
     def guarded_popen_init(self, *args, **kwargs):
         # Bind against the REAL Popen.__init__ signature (captured at import time, from the real

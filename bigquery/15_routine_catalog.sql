@@ -169,8 +169,15 @@ FROM UNNEST([
 -- This does NOT touch unknown_routine (a routine absent from the catalog still flags regardless of its
 -- instruction text) and does NOT weaken the type-suffix check RUNBOOK §22 explicitly protects (the
 -- ` — deep research.` / ` — regular routine.` tag is INSIDE the first line, still compared verbatim).
--- SUPERSEDED LIVE by bigquery/115_instruction_drift_whitespace_normalize.sql (2026-07-29) — current
--- single source of truth for this VIEW. 115 replaces the first-line-only equality below with a
+-- SUPERSEDED LIVE by bigquery/183_instruction_drift_stale_sample.sql (2026-08-19) — current
+-- single source of truth for this VIEW. Supersession here is TWO HOPS: the 2026-07-29
+-- whitespace-normalize revision (file 115) first replaced the first-line-only equality below, and
+-- 183 then added the stale-sample guard on top of it. This banner named 115 as "current" until the
+-- 2026-08-22 quality pass — a dead-end pointer that would have sent a DR operator to a file which
+-- is itself no longer canonical. That intermediate file is named in prose above rather than as a
+-- `bigquery/NN_...` path token deliberately: a second file-shaped pointer inside this comment block
+-- reads to scripts/check_superseded_markers.py as a competing "current single source of truth"
+-- claim and re-fails the gate. The normalization it introduced is a
 -- WHITESPACE-NORMALIZED PREFIX match: this check reads ops.run_log.instruction (what the routine
 -- transcribed), not the live trigger, so a session that copied its trigger with the newlines collapsed
 -- to a space produced a single-line instruction and false-fired `trigger_drift` against a CORRECT

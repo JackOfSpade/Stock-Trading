@@ -348,6 +348,45 @@ def test_match_routine_id_none_when_neither_matches():
     assert rb.match_routine_id(normalized, {}, {}) is None
 
 
+def test_match_routine_id_falls_back_to_instruction_for_a_multi_paragraph_canonical():
+    """REGRESSION (quality pass 2026-08-22) -- the OPS2 shape, which is REAL and lives in
+    ops/triggers.json today: the canonical instruction is itself TWO paragraphs (the 2026-08-17
+    inline "NOTE -- OPS2 deliberately does NOT carry the standing Sonnet-delegation paragraph").
+
+    _instruction_match() used to reduce only the LIVE side to its first-paragraph core and compare
+    that against the RAW stored string, so a multi-paragraph canonical could never match. The
+    fallback exists for exactly one scenario -- a deleted-and-recreated trigger whose new
+    trigger_id is not yet in ops/trigger_ids.json -- so for OPS2 that recreated trigger was filed
+    under `_unmatched`, excluded from a restore-all, and check() stayed green off the stale entry.
+
+    Note the fixture instruction here is deliberately multi-paragraph. Every other fixture in this
+    file uses a single-paragraph OPS2 instruction, which is what let the bug live: the asymmetry is
+    invisible unless the STORED side has a second paragraph."""
+    canonical = ("Read Claude_Task_Plan.md. Perform OPS2. Catch-up Executor — regular routine.\n\n"
+                 "NOTE — OPS2 deliberately does NOT carry the standing Sonnet-delegation paragraph "
+                 "that every other routine has. That omission is intentional and owner-confirmed.")
+    triggers_doc = {"OPS2": {"instruction": canonical}}
+    # The live trigger: canonical + SCOPE_ADDENDUM (OPS2 carries no ADDENDUM), recreated so its
+    # trigger_id is unknown -- the only path on which the instruction fallback is ever consulted.
+    normalized = rb.normalize_trigger(
+        _raw_trigger(tid="trig_BRAND_NEW_AFTER_DELETION", content=canonical + rb.SCOPE_ADDENDUM))
+    assert rb._instruction_match(normalized["instruction"], triggers_doc) == "OPS2"
+    assert rb.match_routine_id(normalized, {}, triggers_doc) == "OPS2"
+
+
+def test_instruction_match_ignores_a_meta_block_and_an_empty_instruction():
+    """_trigger_id_match() skips `_meta`; _instruction_match() must too, now that it reduces the
+    STORED side to a core as well. ops/triggers.json has no `_meta` today but ops/trigger_ids.json
+    does, so the shape is one key away. Without the guards, a `_meta` block (no "instruction" key ->
+    core "") would match any trigger whose own instruction is empty, filing it under "_meta"."""
+    triggers_doc = {"_meta": {"purpose": "test fixture"},
+                    "D1": {"instruction": "Read Claude_Task_Plan.md. Perform D1. Test Routine — deep research."}}
+    assert rb._instruction_match("", triggers_doc) is None
+    assert rb._instruction_match(None, triggers_doc) is None
+    assert rb._instruction_match("Read Claude_Task_Plan.md. Perform D1. Test Routine — deep research.",
+                                 triggers_doc) == "D1"
+
+
 # ---- match_routine_id priority + match_conflict (B5, mutation gap 3) ---------------------------------
 def test_match_routine_id_trigger_id_wins_over_conflicting_instruction_match():
     """Priority is deliberate and must never flip: trigger_id is the ground truth once recorded.
@@ -852,6 +891,68 @@ def test_ingest_records_conflict_and_leaves_existing_entries_untouched(tmp_path,
     assert "OPS2" not in doc["routines"]
 
 
+# ---- ingest(): two DISTINCT live triggers resolving to one routine id -----------------------------------
+@pytest.mark.parametrize("order", [("trig_D1AAAA", "trig_RECREATED"), ("trig_RECREATED", "trig_D1AAAA")])
+def test_ingest_records_a_duplicate_live_trigger_instead_of_silently_dropping_one(
+        tmp_path, monkeypatch, order):
+    """REGRESSION (quality pass 2026-08-22). Two DISTINCT trigger_ids can resolve to the SAME
+    routine id: trig_D1AAAA matches D1 by trigger_id (_wire's trigger_ids.json), while a recreated
+    trigger carrying D1's canonical instruction matches D1 by the instruction fallback. That is the
+    real duplicate-live-trigger state -- a routine recreated without deleting the old trigger --
+    which B4's own comment in ingest() warns a `restore` can produce.
+
+    Neither existing guard caught it: _dedup_raw_triggers() only collapses repeats of the SAME
+    trigger_id, and match_conflict() compares the two match SOURCES for a single trigger, not two
+    triggers claiming one routine. So the second raw simply overwrote the first's stored entry and
+    exactly one of the two LIVE triggers was recorded nowhere at all -- not in `routines`, not in
+    `_unmatched`, not in `conflicts` -- breaking ingest()'s own "record it rather than dropping it
+    silently" contract and leaving the live duplicate invisible to the backup. Which one survived
+    depended on API serialization order, and the summary double-counted the routine in BOTH `added`
+    and `updated`.
+
+    Parameterized over both orders because the pre-fix outcome was order-dependent: whichever raw
+    came last won, so a test pinning only one order would have missed half the defect."""
+    _wire(tmp_path, monkeypatch)
+    first, second = order
+    raws = [_raw_trigger(tid=first), _raw_trigger(tid=second)]   # same name => same instruction
+    result = rb.ingest(str(_write(tmp_path, "in.json", {"data": raws})))
+
+    assert result["conflicts"] == [
+        {"trigger_id": second, "duplicate_of_routine": "D1", "kept_trigger_id": first}]
+    # The routine is claimed exactly once -- never counted in both added and updated.
+    assert result["added"] == ["D1"]
+    assert result["updated"] == []
+    doc = rb.load_backup()
+    assert doc["routines"]["D1"]["trigger_id"] == first, "the first-filed entry must be kept intact"
+    # And the loser is not silently swallowed: it is named in the conflict record above.
+    assert second not in doc["_unmatched"]
+
+
+def test_main_ingest_reports_a_duplicate_live_trigger_nonzero(tmp_path, monkeypatch, capsys):
+    """The duplicate conflict must reach the operator through the same non-zero CLI path B5 uses --
+    cmd_ingest hard-indexed the B5-only keys, so a differently-shaped conflict record would have
+    raised KeyError while printing instead of reporting."""
+    _wire(tmp_path, monkeypatch)
+    raws = [_raw_trigger(tid="trig_D1AAAA"), _raw_trigger(tid="trig_RECREATED")]
+    infile = _write(tmp_path, "in.json", {"data": raws})
+    monkeypatch.setattr("sys.argv", ["routine_backup.py", "ingest", str(infile)])
+    assert rb.main() == 1
+    out = capsys.readouterr().out
+    assert "CONFLICT" in out and "DUPLICATE live trigger" in out
+    assert "trig_RECREATED" in out and "trig_D1AAAA" in out
+
+
+def test_ingest_same_trigger_id_twice_is_still_deduped_not_a_conflict(tmp_path, monkeypatch):
+    """Guard against the new check over-firing: the SAME trigger_id appearing twice in one payload
+    (e.g. a merged directory of overlapping list responses) is _dedup_raw_triggers()'s job and is
+    last-one-wins by design -- it must NOT be reported as a duplicate-live-trigger conflict."""
+    _wire(tmp_path, monkeypatch)
+    raws = [_raw_trigger(tid="trig_D1AAAA"), _raw_trigger(tid="trig_D1AAAA")]
+    result = rb.ingest(str(_write(tmp_path, "in.json", {"data": raws})))
+    assert result["conflicts"] == []
+    assert result["added"] == ["D1"]
+
+
 # ---- ingest/restore: enabled=False must survive end to end (mutation gap 2) -----------------------------
 def test_build_create_body_preserves_a_disabled_routine(tmp_path, monkeypatch):
     """Two REAL routines are deliberately paused (enabled=False) -- a restore must never re-enable
@@ -915,7 +1016,16 @@ def test_restore_body_shape_matches_remotetrigger_create_contract(tmp_path, monk
         "content": f"Read Claude_Task_Plan.md. Perform D1. Test Routine — deep research.{ADDENDUM}",
         "role": "user",
     }
-    assert data["message"] == {"content": body_instruction(body), "role": "user"}
+    # The instruction in the create body must come from the SNAPSHOT's stored entry, not be
+    # re-derived from ops/triggers.json at restore time -- the whole point of the backup is that it
+    # can rebuild a routine when the live trigger (and anything derived from it) is gone.
+    #
+    # This line previously read `assert data["message"] == {"content": body_instruction(body),
+    # "role": "user"}`, which was TAUTOLOGICAL: body_instruction() just re-reads
+    # body[...]["message"]["content"] out of the very object being asserted, so it compared
+    # data["message"] against a dict rebuilt from its own content and could not fail independently
+    # of the literal assert immediately above it (quality pass 2026-08-22).
+    assert body_instruction(body) == rb.load_backup()["routines"]["D1"]["instruction"]
     # no volatile fields anywhere in the body
     dumped = json.dumps(body)
     for f in ("next_run_at", "last_fired_at", "updated_at", "created_at", "ended_reason",
@@ -1080,6 +1190,95 @@ def test_restore_can_restore_an_unmatched_entry_by_its_trigger_id(tmp_path, monk
     assert errors == []
     assert bodies[0][0] == "trig_MYSTERY"
     assert bodies[0][1]["name"] == "Mystery"
+
+
+def _corrupt_schedule_doc(tmp_path, monkeypatch, d1_schedule):
+    """A backup doc where D1 carries `d1_schedule` (a dict of schedule keys) and D2 is healthy.
+    Used to prove one corrupt entry never takes the healthy sibling down with it."""
+    _wire(tmp_path, monkeypatch)
+    rb.ingest(str(_write(tmp_path, "in.json", {"data": [_raw_trigger()]})))
+    doc = json.loads((tmp_path / "routine_backup.json").read_text())
+    d1 = doc["routines"]["D1"]
+    d2 = copy.deepcopy(d1)
+    d2["name"] = "D2 healthy"
+    doc["routines"]["D2"] = d2
+    d1.pop("cron_expression", None)
+    d1.pop("run_once_at", None)
+    d1.update(d1_schedule)
+    (tmp_path / "routine_backup.json").write_text(json.dumps(doc))
+    return doc
+
+
+@pytest.mark.parametrize("schedule,expected_phrase", [
+    ({"cron_expression": "0 16 * * *", "run_once_at": "2099-01-01T00:00:00Z"}, "BOTH"),
+    ({}, "NEITHER"),
+])
+def test_restore_reports_a_corrupt_schedule_shape_instead_of_crashing_the_whole_run(
+        tmp_path, monkeypatch, schedule, expected_phrase):
+    """REGRESSION (quality pass 2026-08-22). check() validates the B1 schedule SHAPE on every entry
+    via _schedule_errors(); restore() did not. An entry with BOTH cron_expression and run_once_at
+    (or NEITHER) therefore passed every guard restore() does run and reached the ValueError inside
+    _assemble_create_body -- an UNCAUGHT exception out of restore(), aborting the entire run.
+
+    That is the worst possible failure mode for this function: it is the fast-recovery path used
+    during an incident (the 2026-08-01 routine-deletion event this module exists for), so a single
+    corrupt entry in the snapshot took down the restore of every HEALTHY routine alongside it and
+    handed the operator a raw traceback instead of a create body. Every sibling guard in restore()
+    (missing profile, empty resolved fields, CRON_UNCONFIRMED, past one-shot) exists precisely to
+    degrade one bad entry into one error message; this one was missing."""
+    _corrupt_schedule_doc(tmp_path, monkeypatch, schedule)
+    bodies, errors, _ = rb.restore([])          # restore-all: must not raise
+    assert [rid for rid, _ in bodies] == ["D2"], "the healthy sibling must still be restorable"
+    assert len(errors) == 1
+    assert "D1" in errors[0] and expected_phrase in errors[0]
+
+
+def test_restore_rejects_an_unmatched_entry_with_a_corrupt_schedule_shape(tmp_path, monkeypatch):
+    """The `_unmatched` branch got no schedule-shape guard either, and its entries are the least
+    trustworthy in the file -- an unidentified live trigger stored verbatim, and the one part of
+    the snapshot an operator is invited to hand-edit. check() never inspects `_unmatched` at all,
+    so nothing upstream would catch it first."""
+    _wire(tmp_path, monkeypatch)
+    rb.ingest(str(_write(tmp_path, "in.json", {"data": [
+        _raw_trigger(tid="trig_MYSTERY", name="Mystery", content="totally unrelated")]})))
+    doc = json.loads((tmp_path / "routine_backup.json").read_text())
+    doc["_unmatched"]["trig_MYSTERY"]["run_once_at"] = "2099-01-01T00:00:00Z"   # now BOTH
+    (tmp_path / "routine_backup.json").write_text(json.dumps(doc))
+    bodies, errors, _ = rb.restore(["trig_MYSTERY"])
+    assert bodies == []
+    assert len(errors) == 1 and "BOTH" in errors[0]
+
+
+def test_restore_rejects_an_unmatched_entry_whose_recovery_data_was_wiped(tmp_path, monkeypatch):
+    """B3 for the `_unmatched` branch (quality pass 2026-08-22). A payload with
+    `session_context: {}` -- a shape reproduced against the LIVE account per this module's
+    docstring -- normalizes to environment_id=None, model=None, allowed_tools=[]. The `routines`
+    branch has refused that since 2026-08-08; the `_unmatched` branch restored it SILENTLY, with
+    zero errors, printing a create body carrying `"environment_id": null` ready to hand to a live
+    RemoteTrigger create call. That is the exact 'crash traded for silent wrong-restore' the
+    routines-branch guard was added to prevent."""
+    _wire(tmp_path, monkeypatch)
+    raw = _raw_trigger(tid="trig_WIPED", name="Wiped", content="totally unrelated")
+    raw["job_config"]["ccr"]["session_context"] = {}
+    raw["job_config"]["ccr"].pop("environment_id", None)
+    raw["mcp_connections"] = []
+    rb.ingest(str(_write(tmp_path, "in.json", {"data": [raw]})))
+    bodies, errors, _ = rb.restore(["trig_WIPED"])
+    assert bodies == [], "a wiped unmatched entry must never produce a create body"
+    assert any("environment_id" in e for e in errors)
+    assert any("model" in e for e in errors)
+
+
+def test_restore_still_accepts_a_healthy_unmatched_entry(tmp_path, monkeypatch):
+    """The guards above must not become a false positive on the normal path. normalize_trigger()
+    always supplies a `notifications` default (NOTIFY_SILENT), so a live trigger that carried no
+    notifications block still restores cleanly."""
+    _wire(tmp_path, monkeypatch)
+    rb.ingest(str(_write(tmp_path, "in.json", {"data": [
+        _raw_trigger(tid="trig_MYSTERY", name="Mystery", content="totally unrelated")]})))
+    bodies, errors, _ = rb.restore(["trig_MYSTERY"])
+    assert errors == []
+    assert bodies[0][0] == "trig_MYSTERY" and bodies[0][1]["name"] == "Mystery"
 
 
 # ---- _assemble_create_body: exactly one of cron_expression/run_once_at (B1) ---------------------------

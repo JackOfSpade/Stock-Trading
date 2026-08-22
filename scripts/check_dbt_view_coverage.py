@@ -99,10 +99,27 @@ def live_views():
         # class of bug and shares the same fix: strip comments (scripts/lib/sql_files.py) before
         # matching, consolidated so a future fix to one caller can't be forgotten in the other.
         txt = strip_sql_comments(read_text(path))
-        for dataset, name in VIEW_DDL.findall(txt):
-            found.add((dataset, name))
-        for dataset, name in DROP_VIEW_DDL.findall(txt):
-            found.discard((dataset, name))
+        # CREATE and DROP are applied in TEXTUAL ORDER WITHIN EACH FILE (quality pass 2026-08-22).
+        # This used to run two separate whole-file loops — every CREATE first, then every DROP —
+        # so a DROP always won over a CREATE in the same file no matter which came later in the
+        # text. A view DROPped and then re-CREATEd further down one file (real apply-in-order
+        # semantics leave it LIVE) was therefore reported as not live, silently vanishing from both
+        # the counted-live total and the uncovered list, since a set-difference against a set it was
+        # never added to cannot flag it either way.
+        #
+        # check_live_sql_parity.py's find_final_definitions() already merges the two event kinds by
+        # match position for exactly this reason and has a regression test for it
+        # (test_drop_then_create_same_file_leaves_object_expected); this sibling scanner never
+        # adopted the fix. Latent on today's tree — no file both creates and drops the same view —
+        # and this script is advisory-only, but the divergence between two scanners that must agree
+        # about what is live is the kind that goes unnoticed until it matters.
+        events = [(m.start(), True, m.group(1), m.group(2)) for m in VIEW_DDL.finditer(txt)]
+        events += [(m.start(), False, m.group(1), m.group(2)) for m in DROP_VIEW_DDL.finditer(txt)]
+        for _pos, is_create, dataset, name in sorted(events, key=lambda e: e[0]):
+            if is_create:
+                found.add((dataset, name))
+            else:
+                found.discard((dataset, name))
     return found
 
 

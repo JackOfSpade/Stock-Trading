@@ -93,6 +93,7 @@ except ImportError:
     raise SystemExit(2) from None
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib.mcp_tokens import MCP_TOKEN
 from lib.textio import load_yaml, read_text
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -106,11 +107,20 @@ USE_VALUES = frozenset({"required", "optional", "unused"})
 # else inside the backticks (no parens, no spaces), so an ordinary prose backtick-quoted phrase does not
 # accidentally match.
 BARE_NAME = re.compile(r"`([A-Za-z_][A-Za-z0-9_]*)`")
-# A full mcp__<Server>__<tool> token, backtick-wrapped or bare in running text -- same shape as
-# check_settings_toolcov.py's MCP_TOKEN, deliberately not backtick-anchored to match that precedent.
-MCP_TOKEN = re.compile(r"mcp__[A-Za-z0-9_]+")
-# An allow-list entry that is itself an exact mcp__ tool token (excludes Bash(...) and similar).
-MCP_ALLOW_TOKEN = re.compile(r"^mcp__[A-Za-z0-9_]+$")
+# MCP_TOKEN (a full mcp__<Server>__<tool> token, backtick-wrapped or bare in running text) is now
+# imported from lib/mcp_tokens.py above -- it used to be a byte-identical private copy of
+# check_settings_toolcov.py's, with a comment naming the coupling but nothing enforcing it
+# (quality pass 2026-08-22).
+#
+# MCP_ALLOW_TOKEN -- "an allow-list entry that is itself an exact mcp__ tool token (excludes
+# Bash(...) and similar)" -- is gone with it: `re.compile(r"^mcp__[A-Za-z0-9_]+$").match(x)` is
+# just `MCP_TOKEN.fullmatch(x)` spelled as a THIRD copy of the same shape, and
+# check_settings_toolcov.py's load_allowlist() already expressed the identical test as
+# `MCP_TOKEN.fullmatch(a)`. Verified equivalent on the live .claude/settings.json (48 entries, zero
+# disagreements, no entry carrying trailing whitespace); the only inputs on which `^...$` + match
+# and fullmatch can differ are strings with a trailing newline, which the two gates previously
+# classified DIFFERENTLY -- so unifying here removes a real, if narrow, disagreement rather than
+# introducing one.
 
 IGNORE_START = "<!-- connector-tools-checker: ignore-start -->"
 IGNORE_END = "<!-- connector-tools-checker: ignore-end -->"
@@ -302,12 +312,31 @@ def check_task_plan_calls(connectors, findings, ambiguous_notes):
     seen_absent = set()
 
     for lineno, name in bare_refs:
-        # CHECK 4 first: an absent-tool bare reference is a hard finding regardless of CHECK 3.
+        # CHECK 4 first: an absent-tool bare reference is a hard finding regardless of CHECK 3 --
+        # UNLESS the same bare name is also LIVE-declared by a DIFFERENT connector (quality pass
+        # 2026-08-22). A bare name that is retired in one connector and alive in another is exactly
+        # the cross-connector ambiguity CHECK 3 below already handles as a non-fatal note; CHECK 4
+        # had no such guard and hard-failed CI on it, so a routine legitimately calling the LIVE
+        # connector's tool would be reported as "references RETIRED tool" and forced into a bogus
+        # rewrite. Dormant on today's manifest (verified: 114 declared names, 5 absent names, zero
+        # overlap), but OPS1's AUTO-ADD branch adds new connector tools BY BARE NAME, so the first
+        # generic-sounding name a vendor ships that collides with an already-retired name from
+        # another vendor lands on it. Reported rather than skipped, so the ambiguity still reaches
+        # a human -- it is not safe to silently assume the live connector was the intended one.
+        live_elsewhere = {c for c, _t in declared_by_name.get(name, [])}
         for cname, arecord in absent_by_name.get(name, []):
             key = (lineno, name, cname)
             if key in seen_absent:
                 continue
             seen_absent.add(key)
+            others = sorted(live_elsewhere - {cname})
+            if others:
+                ambiguous_notes.append(
+                    f"{rel}:{lineno}: bare name `{name}` is retired in {cname} but still declared "
+                    f"by {', '.join(others)} -- CHECK4 skipped, non-fatal; disambiguate the routine "
+                    f"text with the full mcp__<connector>__{name} form if it means {cname}'s."
+                )
+                continue
             findings.append(_absent_finding(rel, lineno, name, cname, arecord))
 
         # CHECK 3
@@ -374,7 +403,7 @@ def check5_stale_allowlist(connectors, allow_set, findings, report_only_notes):
                 absent_full[f"{prefix}{a['name']}"] = (cname, a["name"], a)
 
     for entry in sorted(allow_set):
-        if not MCP_ALLOW_TOKEN.match(entry):
+        if not MCP_TOKEN.fullmatch(entry):   # exact mcp__ token only -- skips Bash(...) and similar
             continue
         if entry in declared_full:
             continue  # current -- not stale

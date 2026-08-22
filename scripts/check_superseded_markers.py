@@ -208,8 +208,30 @@ def violations():
                 lines = read_text(os.path.join(BIGQUERY_DIR, fn)).splitlines()
                 cache[fn] = (lines, _header_block(lines))
             lines, header = cache[fn]
-            context = _preceding_comment(lines, idx) + "\n" + header
-            if marks_superseded(context, canonical):
+            # Evaluate the two comment blocks INDEPENDENTLY, never as one concatenated blob
+            # (quality pass 2026-08-22). marks_superseded() only asks whether the word "supersed"
+            # appears somewhere in its text AND a pointer to file N appears somewhere in that same
+            # text -- it has no notion of the two belonging to the same sentence. Concatenating the
+            # preceding comment with the whole file header therefore let a "supersed" word in ONE
+            # block pair with an unrelated numeric file pointer in the OTHER and jointly satisfy the
+            # marker check.
+            #
+            # That silently hid a real dead-end pointer, the exact bug class this script exists to
+            # catch: bigquery/15_routine_catalog.sql's state.instruction_drift comment claimed
+            # supersession by file 115, but 115 was itself superseded by 183 on 2026-08-19. The
+            # merged blob passed only because bigquery/15's HEADER separately mentions "bigquery/183"
+            # in an unrelated sentence about which file added the canonical_since column. Verified:
+            # marks_superseded(preceding, 183) and marks_superseded(header, 183) are each False
+            # while marks_superseded(preceding + header, 183) was True.
+            #
+            # Splitting preserves the intended behavior in both directions -- a marker living wholly
+            # in the top-of-file banner still counts (test_top_of_file_banner_counts_not_just_the_
+            # line_above), and so does one living wholly in the preceding comment -- it only stops
+            # the two from being cross-bred. Measured across the whole bigquery/ tree: exactly ONE
+            # object's verdict changes (the real 15/instruction_drift defect above), zero new false
+            # positives.
+            preceding = _preceding_comment(lines, idx)
+            if marks_superseded(preceding, canonical) or marks_superseded(header, canonical):
                 continue
             # Only STILL-VIOLATING entries count as "live" for the stale-baseline diff below: a
             # baselined entry that has since been marked must show up as stale so it gets deleted,
@@ -220,9 +242,13 @@ def violations():
             # block actively points at some OTHER superseded occurrence of the same object (a
             # stale/dead-end pointer, or a canonical-file "SUPERSEDES <old>" read in the old file's
             # direction) is the exact 47-style trap in this script's header and is never exempt.
+            # Same independent-block evaluation as above: a "supersed" word in one block must not
+            # be paired with a stale file pointer that happens to live in the other, or an object
+            # would be reported as actively pointing somewhere it never pointed.
             other_numbers = {n for n, _, _ in occurrences}
             stale_pointer = any(
-                n not in (number, canonical) and marks_superseded(context, n)
+                n not in (number, canonical)
+                and (marks_superseded(preceding, n) or marks_superseded(header, n))
                 for n in other_numbers
             )
             is_exempt = entry in BASELINE and not stale_pointer

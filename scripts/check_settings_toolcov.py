@@ -29,14 +29,19 @@ Usage:  python scripts/check_settings_toolcov.py    # exit 0 if covered, 1 + dif
 """
 import json
 import os
-import re
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Shared with scripts/check_connector_tools.py -- the two gates sit on opposite sides of the same
+# "what is an mcp__ tool token" question and must never disagree. See lib/mcp_tokens.py for why the
+# two byte-identical private copies this replaced were a drift hazard (quality pass 2026-08-22).
+# Re-exported under this module's own name so `stc.MCP_TOKEN` keeps working for callers and tests.
+from lib.mcp_tokens import MCP_TOKEN
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TASK_PLAN = os.path.join(ROOT, "Claude_Task_Plan.md")
 TRIGGERS_JSON = os.path.join(ROOT, "ops", "triggers.json")
 SETTINGS_JSON = os.path.join(ROOT, ".claude", "settings.json")
-
-MCP_TOKEN = re.compile(r"mcp__[A-Za-z0-9_]+")
 
 # Sources scanned for mcp__ tool references. Add future routine-text-bearing files here.
 SOURCES = (TASK_PLAN, TRIGGERS_JSON)

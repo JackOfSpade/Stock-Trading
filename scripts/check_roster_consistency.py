@@ -466,8 +466,36 @@ def _money_alias_names(txt, markers):
     check_roster_consistency.py's own `python scripts/check_roster_consistency.py` run) that this adds
     zero aliases (and therefore zero behavior change) on the actual DERIVED_LIVE_SQL / DBT_RECONCILE
     files, which alias no money column today."""
-    known = {marker.lower() for marker in markers}
+    marker_set = {marker.lower() for marker in markers}
+    resolved = set()          # lowercased alias names resolved so far (matched EXACTLY)
     aliases = set()
+
+    def _is_money(name):
+        """Whether `name` is money-flavored: it CONTAINS one of the original markers (substring —
+        the same semantics _money_nearby() uses for markers), or it exactly equals an
+        already-resolved alias.
+
+        THE SUBSTRING HALF IS THE FIX (quality pass 2026-08-22). This used to test
+        `source.lower() in known` — EXACT equality against the markers — while its own partner
+        _money_nearby() has always matched markers by SUBSTRING (`marker in ctx`). The two halves
+        of one guard therefore disagreed about what counts as money-flavored, and the alias path
+        was the strictly weaker one: a real money column whose name merely CONTAINS a marker rather
+        than being exactly that word evaded detection the moment it was aliased. Reproduced:
+        `SELECT total_deposits AS td FROM cash_flows` then `SUM(td) / 5` resolved ZERO aliases and
+        R-C did not flag the hardcoded roster-size equal split — reopening the exact
+        fixed-divisor-via-aliased-money-column fail-open hole this function was written to close.
+
+        Not hypothetical: this repo already ships columns of exactly that shape —
+        bigquery/22_cash_flows.sql's `total_deposits`, and `strategy_nav_deposits_total` in
+        dbt/tests/assert_cash_flows_reconcile.sql — so one ordinary CTE restyle lifting either
+        above a divisor would have passed this CI-BLOCKING gate clean.
+
+        The alias half stays EXACT on purpose: a short resolved alias (`raw`) must not
+        substring-match an unrelated longer identifier, which is the same reason _money_nearby()
+        matches aliases with \\b word boundaries rather than as bare substrings."""
+        n = name.lower()
+        return any(m in n for m in marker_set) or n in resolved
+
     # Drop type-cast matches: `CAST(cf.amount AS NUMERIC)` has the same `<x> AS <y>` shape as a column
     # alias, and crediting the TYPE KEYWORD as a money alias would false-trip this CI-BLOCKING gate on any
     # unrelated divisor elsewhere in the file that happens to sit near another cast to the same type
@@ -477,10 +505,12 @@ def _money_alias_names(txt, markers):
     while changed:
         changed = False
         for source, alias in bindings:
-            if alias.lower() in known:
+            # Already money-flavored by its own name (or already resolved) -> nothing to add; the
+            # marker substring check in _money_nearby() covers it directly.
+            if _is_money(alias):
                 continue
-            if source.lower() in known:
-                known.add(alias.lower())
+            if _is_money(source):
+                resolved.add(alias.lower())
                 aliases.add(alias)
                 changed = True
     return aliases

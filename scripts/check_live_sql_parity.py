@@ -483,8 +483,21 @@ def extract_body(txt, start, obj_type):
         # m.end()), or every procedure would spuriously DRIFT against a live body that has the
         # wrapper the repo side stripped. This was the ~24-procedure false-positive class behind
         # issue #10.
-        m = re.search(r"\bBEGIN\b", stmt, re.IGNORECASE)
-        if not m:
+        # Located through sql_tokens(), NOT a raw regex over the statement text (quality pass
+        # 2026-08-22). `re.search(r"\bBEGIN\b", stmt)` scanned un-tokenized text, so a header
+        # COMMENT or string literal containing the word before the real body keyword won the match
+        # and the comment's text became part of the compared body forever -- a permanent, un-fixable
+        # false DRIFT for that object no matter how often it was re-applied. Reproduced: a procedure
+        # whose header comment reads "-- Runs once at the BEGIN of the trading day" yielded the body
+        # "BEGIN of the trading day...\nBEGIN\n  SELECT x;\nEND". Every other body-boundary rule in
+        # this file (find_procedure_body_end's nesting scan, canonicalize's tokenizer,
+        # NEXT_TOP_LEVEL/CREATE_STMT's anchoring) was already hardened against exactly this
+        # keyword-inside-a-comment trap; these two locators were the ones missed.
+        begin_at = next(
+            (tstart for kind, val, tstart, _tend in sql_tokens(stmt)
+             if kind == "T" and val.upper() == "BEGIN"),
+            None)
+        if begin_at is None:
             return None
         # Fixed 2026-08-08: NEXT_TOP_LEVEL's boundary (the `end` used to build `stmt` above) is not
         # enough on its own -- it stops at the next top-level statement, but a free-standing
@@ -493,8 +506,8 @@ def extract_body(txt, start, obj_type):
         # true, nesting-aware end of THIS procedure's own BEGIN; fall back to the old (bleeding)
         # full-stmt slice only if it can't find one at all, which should never happen against
         # well-formed DDL but keeps this from ever returning nothing instead of returning something.
-        end_m = find_procedure_body_end(stmt, m.start())
-        body = stmt[m.start():end_m] if end_m is not None else stmt[m.start():]
+        end_m = find_procedure_body_end(stmt, begin_at)
+        body = stmt[begin_at:end_m] if end_m is not None else stmt[begin_at:]
     else:  # VIEW / TABLE FUNCTION
         # The first standalone "AS" (followed by whitespace) after the CREATE header — the AS that
         # starts the SELECT/body. A column-alias "AS" can never appear textually before this header
@@ -503,10 +516,19 @@ def extract_body(txt, start, obj_type):
         # first `AS\s*\n`, which on an inline `AS SELECT` header skipped to a later `col AS\n`
         # column alias and sliced off the front of the SELECT; removing that branch is byte-
         # identical across all live objects and closes that latent trap (2026-07-17 audit).
-        m = re.search(r"\bAS\b(?=\s)", stmt, re.IGNORECASE)
-        if not m:
+        # Same tokenizer-based location as the PROCEDURE branch above (quality pass 2026-08-22):
+        # a header comment or literal containing the word "AS" before the real body AS used to win
+        # this match and prepend the comment's text to the body forever. The `(?=\s)` condition is
+        # preserved as "the next token is whitespace", which is what sql_tokens()'s "W" kind means.
+        toks = list(sql_tokens(stmt))
+        as_end = next(
+            (tend for idx, (kind, val, _tstart, tend) in enumerate(toks)
+             if kind == "T" and val.upper() == "AS"
+             and idx + 1 < len(toks) and toks[idx + 1][0] == "W"),
+            None)
+        if as_end is None:
             return None
-        body = stmt[m.end():]
+        body = stmt[as_end:]
 
     body = normalize_tail(body)
     if obj_type == "TABLE FUNCTION":

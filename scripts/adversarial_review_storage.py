@@ -461,9 +461,18 @@ def repair_file(path, warehouse, apply=False):
             current["event_id"],
         )
 
+    # THE APPEND AND THE POST-WRITE RE-READ GET SEPARATE try BLOCKS (quality pass 2026-08-22).
+    # They used to share one, so a failure of the RE-READ — after append_replacement had already
+    # durably committed the new row server-side — was reported as an undifferentiated ERROR
+    # carrying only the PRE-write (now obsolete) event_id, with `replacement_event_id` silently
+    # dropped even though it was sitting in scope. On the one code path that talks to live
+    # BigQuery during a delicate manual `--apply` recovery, that told the operator nothing about a
+    # write that actually landed. (Retrying is safe — the NOOP self-heal branch below makes it
+    # idempotent — so this was a misreport, not data loss, but a misreport at exactly the wrong
+    # moment.) Splitting the blocks also keeps the idempotent-race handling where it belongs: that
+    # branch is only meaningful when the APPEND itself was rejected.
     try:
         replacement_event_id = warehouse.append_replacement(current, key, local_body, local_sha256, queue_event_id)
-        current = _fetch_one_current_full(warehouse, key)
     except Exception as exc:  # noqa: BLE001 - re-read below handles only the idempotent-race success case
         # A competing repair can make the procedure reject our obsolete event. Re-read once: a now-
         # matching current row is a successful idempotent outcome, anything else remains an error.
@@ -474,6 +483,16 @@ def repair_file(path, warehouse, apply=False):
         except Exception:  # noqa: BLE001 - retain the original procedure failure as the useful error
             pass
         return RepairResult(path, key, "ERROR", str(exc), current["event_id"])
+
+    try:
+        current = _fetch_one_current_full(warehouse, key)
+    except Exception as exc:  # noqa: BLE001 - the write LANDED; report it rather than losing the id
+        return RepairResult(
+            path, key, "ERROR",
+            f"append_replacement SUCCEEDED but the post-write re-read failed, so this run could not "
+            f"verify it: {exc}. The replacement event_id is reported below — re-running the repair is "
+            f"safe and idempotent.",
+            current["event_id"], replacement_event_id)
     if current["event_id"] != replacement_event_id:
         return RepairResult(path, key, "ERROR", "post-write current row is not the procedure-returned replacement",
                             current["event_id"], replacement_event_id)

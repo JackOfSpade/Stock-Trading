@@ -483,7 +483,22 @@ jobs:
           relevant=true
           base="$(resolve_diff_base "$EVENT_NAME" "$PR_BASE" "$PUSH_BEFORE" "$HEAD_SHA" "$REF_NAME")"
           if [ -n "$base" ]; then
-            if git diff --name-only "$base" "$HEAD_SHA" | grep -qE '^(bigquery/|dbt/)'; then
+            # Herestring, NOT a pipe (quality pass 2026-08-22) — this is the same SIGPIPE-under-
+            # pipefail hazard this file's own header warns about at the "Change scope" step, which
+            # already captures-then-greps for exactly this reason; this second, independent copy of
+            # the path gate ~300 lines later was never updated to match.
+            #
+            # `git diff --name-only ... | grep -qE ...` runs under `set -uo pipefail` above. grep -q
+            # exits the instant it finds its first match, closing the read end of the pipe while
+            # git may still be writing; on a diff larger than the ~64KB pipe buffer git then dies of
+            # SIGPIPE with status 141, and pipefail makes 141 the status of the whole pipeline. The
+            # `if` therefore takes the FALSE branch and sets relevant=false — silently SKIPPING the
+            # dbt-parity check (even under DBT_PARITY=block) on a push that genuinely did touch
+            # bigquery/** or dbt/**, which is the one thing this gate exists to catch. Reproduced:
+            # a generator emitting a matching first line followed by 200k non-matching lines prints
+            # "NOT MATCHED exit=141".
+            changed="$(git diff --name-only "$base" "$HEAD_SHA")"
+            if grep -qE '^(bigquery/|dbt/)' <<<"$changed"; then
               relevant=true
             else
               relevant=false

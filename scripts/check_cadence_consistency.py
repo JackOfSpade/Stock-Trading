@@ -402,11 +402,29 @@ def _tooling_prefix_hides_version(token, prefix):
     onto the prefix with no separator ('claude-code5') fell through both branches and was silently
     subtracted as ordinary tooling — confirmed live: 'claude-code5' (and 'claude-code58', 'claude-cli9',
     'claude-desktop3', 'claude-agent-sdk7') returned zero errors. A leading digit is exactly as strong a
-    version-shaped signal as a separator-prefixed one, so it must also stay FLAGGED."""
+    version-shaped signal as a separator-prefixed one, so it must also stay FLAGGED.
+
+    DEFECT B, THIRD CASE (quality pass 2026-08-22): both branches above only inspect the FIRST one or
+    two characters after the prefix, so a token that continues with a LETTER and only then carries a
+    version suffix -- 'claude-codex-5' (prefix 'claude-code', rest 'x-5'), 'claude-clinical-5'
+    (prefix 'claude-cli', rest 'nical-5'), 'claude-desktopia-1' -- was silently subtracted as
+    ordinary tooling. Reproduced end to end: with routine_model 'claude-opus-5' and OWNER_ACTIONS.md
+    reading "All remote routines now run claude-codex-5 for grunt work", check_model_of_record()
+    returned ZERO errors on a genuinely drifted model id.
+
+    The letter-continuation itself must stay subtracted -- 'claude-codebase' is a real tooling
+    extension and is pinned as such by _GLUED_DIGIT_GENUINE_TOOLING_EXTENSION_TOKENS -- so the
+    signal is not "does it continue with a letter" but "does the WHOLE token end in a version".
+    Anything ending '-<digits>' or '.<digits>' is version-shaped and stays FLAGGED; every existing
+    subtracted case ('claude-code', 'claude-codebase', 'claude-code-action',
+    'claude-code-settings.json', 'claude-agent-sdk-python', 'claude-desktop.app') ends in a letter
+    and is unaffected."""
     rest = token[len(prefix):]
     if not rest:
         return False
     if rest[0].isdigit():
+        return True
+    if re.search(r"[-.]\d+$", rest):
         return True
     return rest[0] in "-." and len(rest) >= 2 and rest[1].isdigit()
 
@@ -453,7 +471,11 @@ def check_model_of_record():
                 f"'claude-opus-5' (got {model!r} — it ends with {model[-1]!r}, a trailing "
                 f"non-alphanumeric character the mirror scanner's word-boundary match can never "
                 f"include, so this value could never be found in full by MODEL_ID_RE)"], None
-    if model.startswith(NOT_A_MODEL_PREFIXES):
+    # Reject the model id only if the mirror scanner would SUBTRACT it as a tooling mention -- that
+    # is exactly the vacuity condition the message below describes. Previously a bare
+    # startswith(NOT_A_MODEL_PREFIXES), which also rejected a legitimate version-shaped id that
+    # merely shares a tooling prefix's characters, e.g. 'claude-codex-5' (quality pass 2026-08-22).
+    if _is_subtracted_non_assertion(model):
         return [f"ops/cadence.yaml: routine_model must be a bare Claude model id like "
                 f"'claude-opus-5' (got {model!r} — this names CLI/SDK tooling, never a model; every "
                 f"mirror-site token that starts with it would be subtracted as tooling too, making "

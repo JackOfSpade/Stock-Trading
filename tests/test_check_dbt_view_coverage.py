@@ -29,6 +29,31 @@ def test_live_views_matches_datasets_dedupes_and_skips_non_sql(tmp_path, monkeyp
     assert cov.live_views() == {("state", "foo"), ("analytics", "bar")}
 
 
+def test_live_views_applies_create_and_drop_in_textual_order_within_a_file(tmp_path, monkeypatch):
+    """REGRESSION (quality pass 2026-08-22). live_views() ran two separate whole-file loops — every
+    CREATE first, then every DROP — so a DROP always beat a CREATE in the same file regardless of
+    which was textually later. Real bigquery apply-in-order semantics leave a view that is DROPped
+    and then re-CREATEd further down the same file LIVE.
+
+    Both directions are pinned here because the two-loop shape got one of them right by accident:
+    create-then-drop happened to produce the correct answer, so a test covering only that case
+    would have passed against the broken code. check_live_sql_parity.py's find_final_definitions()
+    has merged these events by match position for exactly this reason (see
+    test_drop_then_create_same_file_leaves_object_expected); this sibling scanner had not."""
+    bq = tmp_path / "bigquery"
+    bq.mkdir()
+    (bq / "01_a.sql").write_text(
+        "DROP VIEW IF EXISTS `stock-trading-498512.state.recreated`;\n"
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.recreated` AS SELECT 2;\n"
+    )
+    (bq / "02_b.sql").write_text(
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.retired` AS SELECT 1;\n"
+        "DROP VIEW IF EXISTS `stock-trading-498512.state.retired`;\n"
+    )
+    monkeypatch.setattr(cov, "BIGQUERY_DIR", str(bq))
+    assert cov.live_views() == {("state", "recreated")}
+
+
 def test_live_views_ignores_non_view_ddl(tmp_path, monkeypatch):
     bq = tmp_path / "bigquery"
     bq.mkdir()

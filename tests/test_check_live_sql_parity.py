@@ -227,6 +227,43 @@ def test_extract_body_strips_view_preamble_and_trailing_semicolon():
     assert body == "SELECT 1 AS x\nFROM bar"
 
 
+def test_extract_body_ignores_a_body_keyword_inside_a_header_comment():
+    """REGRESSION (quality pass 2026-08-22). Both body-start locators were raw regexes over
+    un-tokenized statement text -- `\\bBEGIN\\b` for PROCEDURE, `\\bAS\\b(?=\\s)` for VIEW/TABLE
+    FUNCTION -- so a header COMMENT (or string literal) containing that word before the real body
+    keyword won the match and the comment's own text was spliced onto the front of the extracted
+    body. Because the live INFORMATION_SCHEMA definition never contains that comment, the object
+    then reported a PERMANENT, un-fixable DRIFT that re-applying could not clear.
+
+    Every other body-boundary rule in this module (find_procedure_body_end's nesting scan,
+    canonicalize's tokenizer, NEXT_TOP_LEVEL/CREATE_STMT's anchoring) had already been hardened
+    against this keyword-inside-a-comment class; these two locators were the ones missed. Both now
+    locate the keyword through sql_tokens(), which consumes comments and string literals.
+
+    Latent when fixed -- no procedure header in bigquery/*.sql contains a comment before its BEGIN
+    today, and the locator change was verified byte-identical across all 427 CREATE statements in
+    the tree -- so this test is the only thing standing between that and a silent regression."""
+    proc = (
+        "CREATE OR REPLACE PROCEDURE `stock-trading-498512.ops.sp_foo`(x INT64)\n"
+        "-- Runs once at the BEGIN of the trading day to reset counters.\n"
+        "BEGIN\n"
+        "  SELECT x;\n"
+        "END;\n"
+    )
+    m = clsp.CREATE_STMT.search(proc)
+    assert clsp.extract_body(proc, m.start(), "PROCEDURE") == "BEGIN\n  SELECT x;\nEND"
+
+    view = (
+        "CREATE OR REPLACE VIEW `stock-trading-498512.state.foo`\n"
+        "-- Documented AS per the spec in RUNBOOK section 4\n"
+        "AS\n"
+        "SELECT 1 AS x\n"
+        "FROM bar;\n"
+    )
+    m = clsp.CREATE_STMT.search(view)
+    assert clsp.extract_body(view, m.start(), "VIEW") == "SELECT 1 AS x\nFROM bar"
+
+
 def test_extract_body_retains_procedure_begin_end_wrapper():
     # Fixed 2026-07-16 (live-sql-parity self-heal audit, RES-3 step 0a): live
     # INFORMATION_SCHEMA.ROUTINES.routine_definition for a PROCEDURE INCLUDES the outer

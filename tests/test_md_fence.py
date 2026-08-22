@@ -34,10 +34,33 @@ strict-bare-closer-plus-flat-flag combination. Before touching the toggle logic 
 """
 import pathlib
 
-from lib.md_fence import fence_mask
+from lib.md_fence import FENCE_LINE, fence_mask
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 TASK_PLAN_PATH = REPO_ROOT / "Claude_Task_Plan.md"
+
+
+# ---- FENCE_LINE: the ``` / ~~~ column-0 marker regex fence_mask() actually uses -----------------
+def test_fence_line_regex_matches_backtick_and_tilde_markers_at_column_zero():
+    """Marker-shape coverage. This used to pin a second, weaker `FENCE` regex (`^(```|~~~)`) that
+    no production code path ever imported; it was deleted in the 2026-08-22 quality pass and this
+    test repointed at FENCE_LINE, the regex fence_mask() really parses with, so the assertions now
+    guard the live parser instead of a dead sibling."""
+    assert FENCE_LINE.match("```")
+    assert FENCE_LINE.match("```python")
+    assert FENCE_LINE.match("~~~")
+    assert not FENCE_LINE.match("  ```")   # not at column 0
+    assert not FENCE_LINE.match("text ``` mid-line")
+    assert not FENCE_LINE.match("``")      # a run of two is not a fence
+
+
+def test_fence_line_regex_captures_run_length_and_info_string():
+    """The two groups the depth stack depends on: the FULL delimiter run, and the info string
+    (empty for a bare closer). `FENCE`'s inability to capture either is why it could not have been
+    used by fence_mask() in the first place."""
+    assert FENCE_LINE.match("````").groups() == ("````", "")
+    assert FENCE_LINE.match("```yaml").groups() == ("```", "yaml")
+    assert FENCE_LINE.match("```  yaml  ").groups() == ("```", "yaml")   # info string is stripped
 
 
 # ---- fence_mask(): per-line inside/outside classification ---------------------------------------
@@ -130,6 +153,31 @@ def test_fence_mask_short_bare_marker_cannot_close_a_longer_fence():
     (codebase audit 2026-07-26)."""
     lines = ["````", "```", "x", "````", "after"]
     assert fence_mask(lines) == [True, True, True, False, False]
+
+
+def test_fence_mask_shorter_info_string_marker_inside_a_longer_fence_is_content():
+    """QUALITY PASS 2026-08-22 — regression pin. The nesting rule used to test only the delimiter
+    CHARACTER, so a ```yaml line inside an open ```` fence pushed a phantom inner frame. The real
+    ```` closer then popped only that phantom, leaving the outer ('`', 4) fence open forever and
+    reporting every subsequent line — including real routine headings — as fence-internal.
+
+    This is the LEGAL CommonMark way to show a ```yaml opener inside a documentation block (that is
+    the entire point of opening with a longer run), so it is a shape a future doc edit can
+    introduce at any time. Dormant when fixed — no repo .md used a 4+ run yet — which is precisely
+    why it needed a test rather than a note: the failure is silent and total."""
+    lines = ["````", "```yaml", "a: 1", "````", "## Real Heading", "after"]
+    #          T      T (content, NOT a nested open)  T   F (pops the outer)  F        F
+    assert fence_mask(lines) == [True, True, True, False, False, False]
+
+
+def test_fence_mask_longer_info_string_marker_inside_a_shorter_fence_is_content():
+    """The mirror of the case above, and the reason the fix tests `length ==` rather than `>=`.
+    With a ``` fence open, a ````yaml line must be content: pushing it would create a ('`', 4)
+    frame that the outer fence's own bare ``` closer can never pop (3 < 4), stranding the mask
+    open to EOF exactly as in the shorter-marker case. A `>=` rule fixes only the other direction
+    and leaves this one broken."""
+    lines = ["```", "````yaml", "a: 1", "```", "## Real Heading", "after"]
+    assert fence_mask(lines) == [True, True, True, False, False, False]
 
 
 def test_fence_mask_info_string_with_the_other_delimiter_is_content():

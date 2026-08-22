@@ -42,7 +42,15 @@ jobs:
       - name: Gate on opt-in + WIF
         id: guard
         run: |
-          if [ -n "${{ secrets.OFFSITE_BACKUP_GCS }}" ] \
+          # Read the secret from the job's own env.DEST (declared above) rather than splicing a
+          # secrets expression into the shell script text — the GitHub Actions script-injection
+          # anti-pattern, and the only remaining instance of it in this repo (quality pass
+          # 2026-08-22). Every sibling guard already does it this way: alert-relay.yml's
+          # WEBHOOK_URL, guard-config-audit.yml's ALERT_WEBHOOK_URL, gemini-key-health.yml's
+          # GEMINI_API_KEY, owner-actions-verify.yml's HAS_* flags — and this very file's later
+          # "Mirror" step for ALERT_WEBHOOK_URL. Identical behavior, no expression substituted into
+          # a quoted shell string.
+          if [ -n "$DEST" ] \
              && [ -n "${{ vars.GCP_WIF_PROVIDER }}" ] \
              && [ -n "${{ vars.GCP_WIF_SERVICE_ACCOUNT }}" ]; then
             echo "skip=false" >> "$GITHUB_OUTPUT"

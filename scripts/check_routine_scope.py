@@ -68,6 +68,13 @@ def _has_any(text: str, patterns: tuple[str, ...]) -> bool:
     return any(re.search(pattern, text, re.IGNORECASE) for pattern in patterns)
 
 
+# A negation governs the rest of its clause, but a CONTRASTIVE conjunction ends that scope: in
+# "W4 does not skip validation, but calls create_order_instruction", the "but" starts a new,
+# affirmative clause that the earlier "does not" does not reach (quality pass 2026-08-22).
+_CONTRAST = re.compile(r"\b(?:but|however|instead|whereas|although|though|yet)\b", re.IGNORECASE)
+_NEGATED = re.compile(r"\b(?:do(?:es)?\s+not|must\s+not|never|without)\b", re.IGNORECASE)
+
+
 def _has_active_match(text: str, patterns: tuple[str, ...]) -> bool:
     """Whether a forbidden action appears outside an explicit prohibition.
 
@@ -75,12 +82,30 @@ def _has_active_match(text: str, patterns: tuple[str, ...]) -> bool:
     sentence as a violation would force authors to omit the boundary entirely.
     Scope the negation to the same physical line so a distant historical "never"
     cannot hide a later active instruction.
+
+    WITHIN the line, the negation's scope ends at the last CONTRASTIVE conjunction before the
+    match (quality pass 2026-08-22).  Scoping to the whole line prefix was too generous: any
+    unrelated earlier negation on the same physical line silently masked a real violation later in
+    it.  Verified: a W4 section reading "W4 does not skip validation, but calls
+    create_order_instruction directly for a fast-track exit" produced NO error, even though the
+    literal forbidden action is present and active — the exact anti-pattern the W4 _check_absent
+    rule exists to catch.
+
+    Splitting on every comma/semicolon instead was measured and REJECTED: it breaks the coordinated
+    list, which is the plan's normal way of writing a prohibition.  W5 really says "…but do not
+    diagnose a live discrepancy, raise an operational drift alert, or attempt a repair", where one
+    "do not" governs all three items; comma-scoping cut the governing "do not" off the second and
+    third and turned a correct safety sentence into a CI failure on live main.  A contrastive
+    conjunction is the thing that actually ends a negation's reach, so that is what is split on.
     """
-    negated = re.compile(r"\b(?:do(?:es)?\s+not|must\s+not|never|without)\b", re.IGNORECASE)
     for pattern in patterns:
         for match in re.finditer(pattern, text, re.IGNORECASE):
             line_start = text.rfind("\n", 0, match.start()) + 1
-            if not negated.search(text[line_start:match.start()]):
+            prefix = text[line_start:match.start()]
+            contrasts = [c.end() for c in _CONTRAST.finditer(prefix)]
+            if contrasts:
+                prefix = prefix[contrasts[-1]:]
+            if not _NEGATED.search(prefix):
                 return True
     return False
 
@@ -179,10 +204,20 @@ def check(text: str) -> list[str]:
         sections, "W5", "trend-only account/analytics interpretation",
         (r"trend",), errors,
     )
+    # The third pattern's trailing alternation is DOMAIN-QUALIFIED: a bare `drift` matched any
+    # drift at all, including W5's own legitimate `sp_raise_alert('info','W5','decision_vocab_drift'
+    # ...)` — decision-vocabulary drift is knowledge/analytics work, which is precisely W5's job,
+    # not the "live account repair" this rule forbids. That over-match was inert only because
+    # _has_active_match() used to let an unrelated negation earlier on the same physical line mask
+    # it; tightening the negation scope (quality pass 2026-08-22) exposed it as a CI failure on
+    # live main. `account` and `reconciliation` are unchanged, so any real account-repair
+    # instruction — which names one of those — is still caught; only bare `drift` is narrowed to
+    # the account senses the rule was written for.
     _check_absent(
         sections, "W5", "embedding catch-up or live account repair",
         (r"sp_embed_pending", r"get_account_(?:summary|positions|balances|orders|trades)",
-         r"(?:repair|resolve|raise.{0,100}alert).{0,100}(?:account|reconciliation|drift)"), errors,
+         r"(?:repair|resolve|raise.{0,100}alert).{0,100}"
+         r"(?:account|reconciliation|(?:broker|nav|position|operational)\s+drift)"), errors,
     )
     return errors
 

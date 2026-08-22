@@ -77,8 +77,20 @@ for t in "${TABLES[@]}"; do
   if ! bq --project_id="$PROJECT" load --source_format=PARQUET --replace "$SCRATCH.$t" "$uri" >/dev/null 2>&1; then
     printf '%-26s %12s %12s   %s\n' "$t" "-" "-" "LOAD FAILED ($uri)"; rc=1; continue
   fi
-  restored="$(bqq "SELECT COUNT(*) FROM \`$PROJECT.$SCRATCH.$t\`")"
-  live="$(bqq "SELECT COUNT(*) FROM \`$PROJECT.events.$t\`")"
+  # Guarded exactly like the `bq load` above (quality pass 2026-08-22). These were bare command
+  # substitutions, so under `set -euo pipefail` a single transient BigQuery error (a
+  # rateLimitExceeded, a token refresh blip) on either COUNT aborted the WHOLE drill: no STATUS row
+  # for this table, no PASS/FAIL summary, every remaining table unchecked, and — because the script
+  # died before its cleanup — the scratch dataset left behind in the project. Reproduced with a
+  # stubbed `bq` that fails only the first COUNT: the run printed the header row, then the raw bq
+  # error, and exited 1 with `$PROJECT:events_restore_drill` still present. A flaky COUNT now
+  # behaves like a flaky load: reported in the table, counted in rc, non-fatal to the rest of the run.
+  if ! restored="$(bqq "SELECT COUNT(*) FROM \`$PROJECT.$SCRATCH.$t\`")"; then
+    printf '%-26s %12s %12s   %s\n' "$t" "-" "-" "QUERY FAILED (restored count)"; rc=1; continue
+  fi
+  if ! live="$(bqq "SELECT COUNT(*) FROM \`$PROJECT.events.$t\`")"; then
+    printf '%-26s %12s %12s   %s\n' "$t" "$restored" "-" "QUERY FAILED (live count)"; rc=1; continue
+  fi
   status="ok"
   # append-only tables grow, so restored (a past snapshot) must never EXCEED live; and must be non-empty
   # UNLESS the live table is itself empty (a genuinely-empty table restoring to 0 is fine).

@@ -822,6 +822,68 @@ def test_fixed_divisor_via_column_alias_in_dbt_reconcile_is_caught(repo_copy):
     assert rc.main() == 1
 
 
+# ---- R-B/R-C: the money column's name only has to CONTAIN a marker, not equal it ----
+#      QUALITY PASS 2026-08-22. _money_alias_names() tested `source.lower() in known` — EXACT
+#      equality against the markers — while its own partner _money_nearby() has always matched
+#      markers by SUBSTRING (`marker in ctx`). The two halves of one guard disagreed, and the alias
+#      path was the weaker one: a real money column whose name merely CONTAINS a marker evaded
+#      detection the moment it was aliased, reopening the very fail-open hole above.
+#
+#      `total_deposits` is not a hypothetical name — bigquery/22_cash_flows.sql ships it today, and
+#      dbt/tests/assert_cash_flows_reconcile.sql references `strategy_nav_deposits_total`. Every
+#      pre-existing alias fixture in this file uses the literal word `amount`, which is exactly why
+#      the gap had zero coverage.
+def test_fixed_divisor_via_substring_named_money_column_alias_is_caught_in_derived_sql(repo_copy):
+    # R-B's marker set is ("amount",), so the money column here CONTAINS 'amount' without being it.
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("22_cash_flows.sql"))
+    txt = _read(target)
+    _write(target, txt + (
+        "\n-- regression: the money column CONTAINS 'amount' rather than being exactly 'amount'\n"
+        "WITH renamed AS (\n"
+        "  SELECT cf.deposit_amount AS td FROM cash_flows cf\n"
+        ")\n"
+        "SELECT SUM(td)\n"
+        "  / 5 AS equal_split\n"
+        "FROM renamed;\n"
+    ))
+    assert rc.main() == 1
+
+
+def test_fixed_divisor_via_substring_named_money_column_alias_is_caught_in_dbt_reconcile(repo_copy):
+    # R-C's marker set is ("amount", "cash_flow", "deposit"); `total_deposits` contains 'deposit'
+    # and is a column name this repo really ships (bigquery/22_cash_flows.sql).
+    p = rc.DBT_RECONCILE
+    txt = _read(p)
+    _write(p, txt + (
+        "\n-- regression: the money column CONTAINS 'deposit' rather than being exactly 'deposit'\n"
+        "WITH renamed AS (\n"
+        "  SELECT total_deposits AS td FROM cash_flows\n"
+        ")\n"
+        "SELECT SUM(td)\n"
+        "  / 5 AS expected_share\n"
+        "FROM renamed;\n"
+    ))
+    assert rc.main() == 1
+
+
+def test_substring_marker_alias_resolution_does_not_credit_an_unrelated_column(repo_copy):
+    """The widened matching must not start crediting non-money columns. `strategy_count` contains
+    no money marker as a substring either, so aliasing it resolves nothing and the divisor beside
+    it stays unflagged — the same false-positive guard the exact-match version already had."""
+    target = next(p for p in rc.DERIVED_LIVE_SQL if p.endswith("26_process_metrics.sql"))
+    txt = _read(target)
+    _write(target, txt + (
+        "\n-- an alias bound to an UNRELATED (non-money) column must not be treated as money\n"
+        "WITH renamed AS (\n"
+        "  SELECT strategy_count AS n FROM active\n"
+        ")\n"
+        "SELECT SUM(n)\n"
+        "  / 5 AS not_a_money_split\n"
+        "FROM renamed;\n"
+    ))
+    assert rc.main() == 0
+
+
 # ---- R-B: a MULTI-HOP alias (renamed twice before reaching the divisor) is no less a restyle than a
 #      single hop, and must still resolve transitively (_money_alias_names()'s fixed-point loop) ----
 def test_fixed_divisor_via_multi_hop_alias_is_caught(repo_copy):

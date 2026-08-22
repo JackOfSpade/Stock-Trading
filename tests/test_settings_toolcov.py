@@ -38,6 +38,30 @@ def test_mcp_token_regex_matches_known_shapes():
     assert stc.MCP_TOKEN.findall(line) == ["mcp__Interactive_Brokers_IBKR__get_option_data"]
 
 
+def test_mcp_token_is_the_same_object_the_connector_gate_uses():
+    """The two BLOCKING gates that both decide "what is an mcp__ tool token" must share ONE
+    definition (quality pass 2026-08-22). check_settings_toolcov.py decides which mcp__ references
+    in Claude_Task_Plan.md / ops/triggers.json MUST be allowlisted; check_connector_tools.py decides
+    which allowlist entries count as covering a declared connector tool. They previously each
+    carried a byte-identical private `MCP_TOKEN = re.compile(r"mcp__[A-Za-z0-9_]+")` -- plus a
+    third copy of the shape as check_connector_tools.py's `MCP_ALLOW_TOKEN` -- with only a code
+    comment naming the coupling.
+
+    Identity (`is`), not equality: two separately-compiled patterns with the same source would
+    compare equal on `.pattern` and let the duplication quietly return. If the token shape ever has
+    to widen (a connector server name containing a hyphen is the obvious candidate -- today's
+    `[A-Za-z0-9_]+` cannot match one), fixing one copy alone silently desynchronizes the pair: one
+    gate stops requiring a newly-shaped tool to be allowlisted while the other stops recognizing an
+    already-allowlisted entry of that shape as coverage."""
+    cct = load_module_from_path("check_connector_tools", "scripts", "check_connector_tools.py")
+    from lib.mcp_tokens import MCP_TOKEN as shared
+
+    assert stc.MCP_TOKEN is shared
+    assert cct.MCP_TOKEN is shared
+    # And the retired MCP_ALLOW_TOKEN third copy has not crept back.
+    assert not hasattr(cct, "MCP_ALLOW_TOKEN")
+
+
 def test_all_referenced_tools_covered_is_green(tmp_path, monkeypatch):
     task_plan, triggers, settings = _write_fixtures(
         tmp_path,

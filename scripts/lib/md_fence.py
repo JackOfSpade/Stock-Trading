@@ -13,6 +13,13 @@ import re
 # 2026-07-26). \r belongs in the trailing class, not in the info-string capture: on CRLF input a
 # captured "\r" is a truthy info string, so every bare closer would open a fence instead of
 # closing one and no fence would ever close.
+#
+# This is the ONLY fence-marker regex in this module. A second, weaker one (`FENCE`, `^(```|~~~)`,
+# no run-length and no info-string capture) sat beside it with no production consumer at all --
+# every importer (split_task_plan.py, split_strategy.py, routine_manifest.py, check_routine_scope.py,
+# check_prose_invariants.py, check_roster_consistency.py) imports fence_mask only. Keeping two
+# near-identical marker regexes side by side invited a future fence fix into the dead one, leaving
+# the live parser (which uses THIS regex) untouched behind a green test.
 FENCE_LINE = re.compile(r"^(`{3,}|~{3,})[ \t]*(.*?)[ \t\r]*$")
 
 
@@ -53,11 +60,27 @@ def fence_mask(lines):
     that were misclassified — and leaves every heading count identical, so the splitters' byte-for-
     byte `--check` guarantees are unaffected.
 
-    One deliberate divergence remains: an info-string line while a same-character fence is open
-    (the ```yaml-inside-``` case) PUSHES instead of being read as content. Strict CommonMark would
-    call it content; the corpus means it as a nested block, and treating it as one is what keeps
-    the heading counts right. It is scoped as narrowly as possible — a DIFFERENT delimiter
-    character with an info string is still ordinary content, per the first rule above."""
+    One deliberate divergence remains: an info-string line while a same-character, EQUAL-LENGTH
+    fence is open (the ```yaml-inside-``` case) PUSHES instead of being read as content. Strict
+    CommonMark would call it content; the corpus means it as a nested block, and treating it as one
+    is what keeps the heading counts right. It is scoped as narrowly as possible — a DIFFERENT
+    delimiter character with an info string is still ordinary content (per the first rule above),
+    and so is a DIFFERENT-LENGTH run.
+
+    THE EQUAL-LENGTH CONDITION IS LOAD-BEARING (quality pass 2026-08-22). It previously read
+    `stack[-1][0] == char` with no length test, which let an info-string marker of ANY length nest
+    under an open same-character fence — and that silently broke the mask in both directions, each
+    time by swallowing every heading to EOF:
+      * ```` open, then ```yaml (shorter): the inner frame is pushed, the real ```` closer pops
+        only that phantom inner frame, and the outer ('`', 4) stays open forever. This is exactly
+        the LEGAL CommonMark way to display a ```yaml opener inside a documentation block, so the
+        first doc to use it would have lost every subsequent routine heading.
+      * ``` open, then ````yaml (longer): the pushed ('`', 4) frame can never be popped by the
+        outer's own bare ``` closer (3 < 4), with the same swallow-to-EOF result.
+    Requiring equal length collapses both to ordinary content, matching a strict parser, while the
+    corpus's equal-length nesting (3 == 3) still pushes. Verified byte-identical: 0 mask diffs
+    across all 101 markdown files in the repo, and Claude_Task_Plan.md's heading counts unchanged
+    at 52 `## ` / 11 `# `. Both regressions are pinned by tests in tests/test_md_fence.py."""
     mask = [False] * len(lines)
     stack = []                                      # (delimiter char, run length) per open fence
     for i, ln in enumerate(lines):
@@ -67,8 +90,11 @@ def fence_mask(lines):
             char, length = run[0], len(run)
             if info:
                 # Carries an info string -> can only OPEN. Nest it only under the SAME delimiter
-                # character; a ~~~lang line inside an open ``` block is content, not a new block.
-                if not stack or stack[-1][0] == char:
+                # character AND an equal run length; a ~~~lang line inside an open ``` block is
+                # content, not a new block, and so is a run of a different length (see the
+                # docstring's EQUAL-LENGTH paragraph — either mismatch strands the outer fence
+                # open to EOF and swallows every heading after it).
+                if not stack or (stack[-1][0] == char and length == stack[-1][1]):
                     stack.append((char, length))
             elif stack and stack[-1][0] == char and length >= stack[-1][1]:
                 stack.pop()                         # valid closer: same char, long enough, bare

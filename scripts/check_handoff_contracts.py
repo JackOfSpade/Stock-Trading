@@ -565,14 +565,29 @@ SELECT_TOKEN = re.compile(r"\bSELECT\b", re.IGNORECASE)
 QUERY_WINDOW_CHARS = 800
 
 
-def has_discovery_query(body, table, discovery_value):
-    """True iff some SELECT is followed, within QUERY_WINDOW_CHARS, by both the table and the
-    discovery value as a literal. The table matches on its bare name (a real query writes it
-    fully qualified: `stock-trading-498512.events.strategy_lifecycle`)."""
+def has_discovery_query(body, table, discovery_column, discovery_value):
+    """True iff some SELECT is followed, within QUERY_WINDOW_CHARS, by both the table and a
+    predicate binding `discovery_column` to `discovery_value`. The table matches on its bare name
+    (a real query writes it fully qualified: `stock-trading-498512.events.strategy_lifecycle`).
+
+    THE VALUE MUST BE BOUND TO THE NAMED COLUMN (quality pass 2026-08-22). This previously accepted
+    the discovery value next to ANY `=`, or simply quote-delimited anywhere in the window, and never
+    read the `discovery_column` field that ops/handoff_contracts.yaml has always carried for exactly
+    this purpose. So a predicate written against the WRONG column satisfied the check: taking SL5's
+    real, correct `WHERE l.to_state = 'TERMINATED'` and mutating only that clause to the
+    semantically-backwards `WHERE l.from_state = 'TERMINATED'` -- finding rows transitioning FROM
+    Terminated rather than TO it -- still returned True. CHECK C was built (2026-08-20) to close the
+    gap where a consumer names an input but pins no runnable predicate; this left its sibling open,
+    where the consumer pins a predicate that does not mean what the contract says it means.
+
+    `(?:\\w+\\.)?` tolerates a table alias, so the real query's `l.to_state` matches verbatim; `IN`
+    and an optional opening paren are accepted so an `IN ('TERMINATED', ...)` set-membership form is
+    not forced into a rewrite."""
     bare = table.split(".")[-1]
     tbl = re.compile(r"\b" + re.escape(bare) + r"\b")
-    v = re.escape(discovery_value)
-    val = re.compile(rf"""(?:['"`]{v}['"`])|(?:=\s*['"`]?{v}\b)""")
+    val = re.compile(
+        rf"""\b(?:\w+\.)?{re.escape(discovery_column)}\s*(?:=|IN)\s*\(?\s*['"`]?{re.escape(discovery_value)}\b""",
+        re.IGNORECASE)
     for m in SELECT_TOKEN.finditer(body):
         window = body[m.start():m.start() + QUERY_WINDOW_CHARS]
         if tbl.search(window) and val.search(window):
@@ -586,14 +601,20 @@ def check_c(spec, bodies, errors):
     for e in entries:
         table = e.get("table")
         value = e.get("discovery_value")
+        # `discovery_column` is REQUIRED (quality pass 2026-08-22). The field was always present in
+        # ops/handoff_contracts.yaml and documented the column the consumer's predicate must filter
+        # on, but nothing read it — so the predicate could be written against the wrong column and
+        # still satisfy CHECK C. Requiring it here means a future entry cannot quietly opt out of
+        # the tightened check by omitting the field.
+        column = e.get("discovery_column")
         consumer = e.get("consumer")
         producers = e.get("producers") or []
         pinned = e.get("pinned_columns") or []
         why = (e.get("why") or "").strip()
-        if not (table and value and consumer and producers and pinned):
+        if not (table and value and column and consumer and producers and pinned):
             errors.append(
                 f"CHECK C: row_handoffs entry {e!r} is missing "
-                f"table/discovery_value/consumer/producers/pinned_columns")
+                f"table/discovery_column/discovery_value/consumer/producers/pinned_columns")
             continue
         if not why:
             errors.append(f"CHECK C: row_handoffs entry for {table!r} is missing a `why`")
@@ -604,13 +625,14 @@ def check_c(spec, bodies, errors):
             errors.append(
                 f"CHECK C: consumer {consumer!r} for {table!r} is NOT a routine section in "
                 f"Claude_Task_Plan.md")
-        elif not has_discovery_query(cbody, table, value):
+        elif not has_discovery_query(cbody, table, column, value):
             errors.append(
                 f"CHECK C: consumer {consumer!r} {e.get('consumer_branch') or ''} names {table!r} as an "
                 f"input but its section has NO discovery query -- no SELECT is followed within "
-                f"{QUERY_WINDOW_CHARS} chars by both {table.split('.')[-1]!r} and the {value!r} literal. "
-                f"A prose mention is not a "
-                f"predicate: pin the query verbatim so the implementing session cannot invent one.")
+                f"{QUERY_WINDOW_CHARS} chars by both {table.split('.')[-1]!r} and a predicate binding "
+                f"{column!r} to the {value!r} literal. A prose mention is not a predicate, and a "
+                f"predicate on a DIFFERENT column is not this contract: pin the query verbatim so the "
+                f"implementing session cannot invent one.")
 
         # C2 -- every producer must pin the fields that predicate reads.
         for rid in producers:

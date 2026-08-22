@@ -140,7 +140,18 @@ def resolve_canonical(occurrences):
     the (common, legitimate) case where the collision never touches a tracked object. Callers MUST
     check `len(winner_filenames) > 1` themselves and report an explicit ambiguity error naming every
     colliding filename — never index [0] unconditionally.
+
+    `occurrences` is MATERIALIZED first (quality pass 2026-08-22) because this function scans it
+    TWICE — once for max(), once for the tied set — and the docstring above advertises it as an
+    "iterable of tuples". Handed a generator, the max() pass exhausted it and the set comprehension
+    then saw nothing, returning an EMPTY winner_filenames: the `len(winner_filenames) > 1`
+    ambiguity branch every caller relies on could never fire, and the caller's follow-on
+    `winner_filenames[0]` raised IndexError — a crash that pre-empts the fail-clean error
+    collection these gates are built around. Every caller today (check_cadence_consistency.py:803
+    and :858, check_sq_version_registry.py:197, check_superseded_by_discipline.py:362) passes a
+    list, so this was latent; the one-line list() makes the documented contract actually true.
     """
+    occurrences = list(occurrences)
     winner_number = max(n for n, _fn, *_ in occurrences)
     winner_filenames = sorted({fn for n, fn, *_ in occurrences if n == winner_number})
     return winner_number, winner_filenames

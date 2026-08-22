@@ -244,6 +244,45 @@ def test_check4_bare_absent_reference_fails(tmp_path, monkeypatch, capsys):
     assert "CHECK4" in out and "old_tool" in out and "retired by vendor" in out
 
 
+def test_check4_bare_name_live_in_another_connector_is_non_fatal(tmp_path, monkeypatch, capsys):
+    """REGRESSION (quality pass 2026-08-22). A bare name that is RETIRED in one connector but still
+    LIVE-declared by a DIFFERENT one is the same cross-connector ambiguity CHECK 3 already handles
+    as a non-fatal note -- CHECK 4 had no such guard and hard-failed CI on it. A routine
+    legitimately calling Gmail's live `old_tool` was reported as "references RETIRED tool" (FMP's),
+    forcing a bogus routine-text rewrite over a name FMP retired.
+
+    Dormant on the real manifest (verified: 114 declared names, 5 absent names, zero overlap), but
+    OPS1's AUTO-ADD branch adds new connector tools BY BARE NAME, so the first generic-sounding
+    name a vendor ships that collides with another vendor's retired name lands on it.
+
+    Reported, not silently skipped: the ambiguity still reaches a human as a non-fatal note,
+    because it is not safe to just assume the live connector was the intended one."""
+    manifest = copy.deepcopy(_base_manifest())
+    # Gmail now declares a LIVE `old_tool`; FMP still lists it as absent.
+    manifest["connectors"][1]["tools"].append({"name": "old_tool", "use": "required"})
+    task_plan = "D1 calls Gmail's `old_tool` for this.\n"
+    manifest_path, task_plan_path, settings = _write_fixtures(
+        tmp_path, manifest, task_plan, [*_base_allow(), "mcp__Gmail__old_tool"])
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 0, "a name live in another connector must not be a hard CHECK4 failure"
+    out = capsys.readouterr().out
+    assert "old_tool" in out and "non-fatal" in out
+    assert "CHECK4:" not in out
+
+
+def test_check4_still_fails_when_the_name_is_retired_everywhere(tmp_path, monkeypatch, capsys):
+    """The guard must not weaken the gate: with no live declaration of the name anywhere, a
+    retired-tool reference is still a hard CHECK4 failure. (This is the same assertion as
+    test_check4_bare_absent_reference_fails, pinned again right beside the new exemption so a
+    future widening of that exemption cannot quietly swallow the base case.)"""
+    task_plan = "The old flow used `old_tool` for this.\n"
+    manifest_path, task_plan_path, settings = _write_fixtures(
+        tmp_path, _base_manifest(), task_plan, _base_allow())
+    _patch(monkeypatch, manifest_path, task_plan_path, settings)
+    assert cct.main() == 1
+    assert "CHECK4" in capsys.readouterr().out
+
+
 def test_check4_full_token_absent_reference_fails(tmp_path, monkeypatch, capsys):
     task_plan = "The old flow used `mcp__FMP__old_tool` for this.\n"
     manifest_path, task_plan_path, settings = _write_fixtures(

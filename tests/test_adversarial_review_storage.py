@@ -230,6 +230,48 @@ def test_repair_apply_preserves_procedure_metadata_and_verifies_new_fields(tmp_p
     assert warehouse.current["body_bytes"] == len(BODY.encode("utf-8"))
 
 
+def test_repair_apply_reports_the_replacement_id_when_only_the_post_write_reread_fails(tmp_path):
+    """REGRESSION (quality pass 2026-08-22). append_replacement() and the post-write
+    _fetch_one_current_full() used to share ONE try block, so a transient failure of the RE-READ --
+    after the append had already durably committed the new row server-side -- fell into the
+    append-failure handler. That handler returns `current["event_id"]`, which is still the PRE-write
+    row (the reassignment never completed), so the tool reported the OBSOLETE id and silently
+    dropped `replacement_event_id` even though it was in scope.
+
+    On the one code path that talks to live BigQuery during a delicate manual `--apply` recovery,
+    that told the operator nothing about a write that actually landed. Retrying is safe (the NOOP
+    self-heal branch makes it idempotent), so this was a misreport rather than data loss -- but a
+    misreport at exactly the wrong moment."""
+    path = tmp_path / "Adversarial_Review_review-A-1_attacker.md"
+    path.write_text(BODY, encoding="utf-8")
+
+    class RereadFailsWarehouse(FakeRepairWarehouse):
+        """Commits the append normally, then fails every subsequent read."""
+
+        def __init__(self, *a, **kw):
+            super().__init__(*a, **kw)
+            self._appended = False
+
+        def fetch_current_full(self, key):
+            if self._appended:
+                raise RuntimeError("transient network error on fetch")
+            return super().fetch_current_full(key)
+
+        def append_replacement(self, *a, **kw):
+            out = super().append_replacement(*a, **kw)
+            self._appended = True
+            return out
+
+    warehouse = RereadFailsWarehouse(_full_row(body="short summary\n"))
+    result = ars.repair_file(path, warehouse, apply=True)
+
+    assert result.status == "ERROR"
+    # The write LANDED — its id must reach the operator, not be discarded.
+    assert result.replacement_event_id == "new-event"
+    assert warehouse.current["event_id"] == "new-event"
+    assert "SUCCEEDED" in result.detail and "transient network error on fetch" in result.detail
+
+
 def test_repair_apply_fails_if_procedure_readback_lacks_new_integrity_metadata(tmp_path):
     path = tmp_path / "Adversarial_Review_review-A-1_attacker.md"
     path.write_text(BODY, encoding="utf-8")

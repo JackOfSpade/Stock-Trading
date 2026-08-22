@@ -265,3 +265,55 @@ def test_main_returns_1_on_a_new_violation(tmp_path, monkeypatch):
     _tree(tmp_path, {"10_old.sql": "-- header\n" + DDL, "20_new.sql": "-- canonical\n" + DDL},
           monkeypatch)
     assert cs.main() == 1
+
+
+# ---- the marker must be satisfied WITHIN one comment block, never across two ---------------------
+def test_supersed_word_in_one_block_cannot_pair_with_a_pointer_in_the_other(tmp_path, monkeypatch):
+    """REGRESSION (quality pass 2026-08-22). marks_superseded() only asks whether "supersed" appears
+    somewhere in its text AND a pointer to file N appears somewhere in that same text; it has no
+    notion of the two belonging to one claim. violations() used to hand it
+    `_preceding_comment + header` as a single blob, so the word from ONE block could pair with an
+    unrelated numeric file pointer in the OTHER and jointly satisfy the check.
+
+    Here 30_old.sql's preceding comment carries a STALE, dead-end pointer (to 20, which is not
+    canonical) and its header mentions `bigquery/40` only in an unrelated provenance sentence with
+    no supersession claim attached. Neither block marks this definition as superseded by 40, so it
+    must be reported.
+
+    This is the real shape that was hiding in the tree: bigquery/15_routine_catalog.sql's
+    state.instruction_drift pointed at file 115 (itself superseded by 183) while its header
+    mentioned "bigquery/183" in a sentence about which file added the canonical_since column."""
+    # The intervening `SELECT 1;` is what makes the top-of-file header and the CREATE's own
+    # preceding comment two DISTINCT blocks (same shape as the banner fixture above); without it
+    # _header_block() and _preceding_comment() return the very same text and there is nothing to
+    # cross-breed.
+    _tree(tmp_path, {
+        "20_mid.sql": "-- SUPERSEDED by bigquery/40_new.sql\n" + DDL,
+        "30_old.sql": (
+            "-- Header: the canonical_since column was added by bigquery/40 — unrelated provenance,\n"
+            "-- nothing to do with which file now owns this VIEW.\n"
+            "\n"
+            "SELECT 1;\n"
+            "\n"
+            "-- SUPERSEDED LIVE by bigquery/20_mid.sql — current single source of truth.\n"
+            + DDL),
+        "40_new.sql": "-- canonical\n" + DDL,
+    }, monkeypatch)
+    new, _still, _stale = cs.violations()
+    assert [entry[0][3] for entry in new] == ["30_old.sql"]
+
+
+def test_a_marker_wholly_inside_the_preceding_comment_still_counts(tmp_path, monkeypatch):
+    """The other half of the contract: splitting the blocks must not stop a correct marker that
+    lives entirely in the preceding comment from satisfying the check (the top-of-file-banner case
+    is already pinned by test_top_of_file_banner_counts_not_just_the_line_above)."""
+    _tree(tmp_path, {
+        "10_old.sql": ("-- unrelated header sentence, no marker here\n"
+                       "\n"
+                       "SELECT 1;\n"
+                       "\n"
+                       "-- SUPERSEDED LIVE by bigquery/20_new.sql — current single source of truth.\n"
+                       + DDL),
+        "20_new.sql": "-- canonical\n" + DDL,
+    }, monkeypatch)
+    assert cs.violations()[0] == []

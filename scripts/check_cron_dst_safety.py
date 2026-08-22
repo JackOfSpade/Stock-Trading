@@ -410,11 +410,20 @@ def check() -> int:
             summer = per_season.get(True)
             winter = per_season.get(False)
             ref, ref_season = (summer, "MDT") if summer else (winter, "MST")
-            want = ref[0].strftime("%H:%M")
-            if tl != want:
+            # EVERY firing in the reference season is an acceptable rendering, not just ref[0] --
+            # the same fix check 2 above received on 2026-08-08, applied here (quality pass
+            # 2026-08-22). parse_field supports comma lists on any field, so "0 2,4 * * *" fires
+            # twice daily and renders as BOTH 20:00 and 22:00 MDT; this check compared time_local
+            # against the first firing only and rejected a correctly-documented 22:00 with
+            # "...which renders 20:00 MDT" -- while the table this same script prints listed
+            # "20:00,22:00" one line below. No live routine combines a comma-listed hour with a
+            # time_local today, so it was latent, exactly like the check-2 case before it.
+            wants = [t.strftime("%H:%M") for t in ref]
+            if tl not in wants:
+                rendered = ", ".join(dict.fromkeys(wants))
                 errors.append(
                     f"{rid}: time_local {tl!r} does not match cron_utc {cron!r}, which renders "
-                    f"{want} {ref_season}. time_local documents the {ref_season} rendering for "
+                    f"{rendered} {ref_season}. time_local documents the {ref_season} rendering for "
                     f"every routine — a second convention is the 2026-07 OPS2 trap, where a "
                     f"reader deriving UTC from time_local got the routine an hour early."
                 )

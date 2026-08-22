@@ -218,3 +218,29 @@ def test_unrelated_program_still_works_through_every_entry_point():
 
     assert os.spawnv(os.P_WAIT, true_path, ["true"]) == 0
     assert os.spawnve(os.P_WAIT, true_path, ["true"], os.environ.copy()) == 0
+
+
+# ---- subprocess.run's documented `args=` KEYWORD form (quality pass 2026-08-22) -----------------
+def test_run_keyword_args_form_is_guarded_not_a_typeerror():
+    """`subprocess.run(args=[...])` is valid, documented Python -- CPython's real signature is
+    `run(*popenargs, ...)`, so `args` binds by keyword. conftest's guarded_run was hand-written as
+    `guarded_run(cmd, *args, **kwargs)` with `cmd` REQUIRED and POSITIONAL, so this form never
+    reached the guard at all: it raised `TypeError: guarded_run() missing 1 required positional
+    argument: 'cmd'` -- an unrelated, misleading error rather than a pass-through or the intended
+    pytest.fail.
+
+    guarded_popen_init was already hardened against exactly this class by binding the real Popen
+    signature (see "THE OFF-BY-ONE" in conftest.py's module docstring); guarded_run was the one
+    entry point that never got the same treatment. It failed SAFE -- a loud crash, never a silent
+    leak to the real CLI -- but it left the guard blind to part of its own calling surface."""
+    assert subprocess.run(args=["echo", "hi"], capture_output=True, text=True).stdout.strip() == "hi"
+    # check_output routes through the module-level run(*popenargs, **kwargs) this fixture patches.
+    assert subprocess.check_output(args=["echo", "ok"], text=True).strip() == "ok"
+
+
+def test_run_keyword_args_form_still_blocks_a_real_bq_call():
+    """...and covering the keyword form must not weaken what gets blocked: a `bq` invocation passed
+    via `args=` is caught exactly like the positional form."""
+    with pytest.raises(BaseException) as excinfo:
+        subprocess.run(args=["bq", "query", "SELECT 1"], capture_output=True)
+    assert "live `bq` CLI" in str(excinfo.value)

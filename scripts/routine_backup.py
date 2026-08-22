@@ -413,10 +413,28 @@ def _instruction_match(instruction, triggers_doc):
 
     BOTH sides are core-stripped: ops/triggers.json's own text also carries the addendum for any
     routine with a cadence.yaml `instruction_note` (OPS2 today), so comparing the live core against
-    the FULL stored text could never match those routines at all."""
+    the FULL stored text could never match those routines at all. That mattered because this
+    instruction fallback exists for precisely one scenario -- a trigger that was DELETED and
+    RECREATED, so its new trigger_id is absent from ops/trigger_ids.json and _trigger_id_match()
+    returns None (the 2026-08-01 incident this whole module was written for). While the comparison
+    was asymmetric, the fallback returned None for OPS2 too, so ingest() filed a recreated OPS2
+    trigger under `_unmatched` as "genuinely unidentifiable", a restore-all silently excluded it,
+    and check() stayed GREEN off the stale entry; match_conflict() was equally blind.
+
+    `_meta` IS SKIPPED AND AN EMPTY CORE NEVER MATCHES (quality pass 2026-08-22), mirroring
+    _trigger_id_match(). Reducing the STORED side to a core makes a missing/empty `instruction`
+    collapse to "" -- so without these two guards a future `_meta` block in ops/triggers.json
+    (ops/trigger_ids.json already has one) would become a catch-all that swallows any trigger whose
+    own instruction is empty, filing it under "_meta". Verified against the live ops/triggers.json:
+    all 32 routines resolve correctly with and without ADDENDUM/SCOPE_ADDENDUM appended, and all 32
+    cores are DISTINCT, so reducing the stored side cannot introduce an ambiguous match."""
     core = _core_instruction(instruction)
+    if not core:
+        return None
     for rid, entry in triggers_doc.items():
-        if _core_instruction(entry.get("instruction")) == core:
+        if rid == "_meta":
+            continue
+        if _core_instruction((entry or {}).get("instruction")) == core:
             return rid
     return None
 
@@ -617,6 +635,10 @@ def ingest(path):
     triggers_doc = _load_json(TRIGGERS_PATH) if os.path.exists(TRIGGERS_PATH) else {}
 
     added, updated, unchanged, unmatched, conflicts = [], [], [], [], []
+    # routine id -> the trigger_id that already claimed it THIS run (quality pass 2026-08-22).
+    # _dedup_raw_triggers() collapses repeats of the SAME trigger_id; this catches the different
+    # problem of two DISTINCT live triggers resolving to one routine id. See the guard below.
+    claimed_by = {}
 
     for raw in _dedup_raw_triggers(_load_raw_triggers(path)):
         normalized = normalize_trigger(raw)
@@ -651,6 +673,32 @@ def ingest(path):
             doc["_unmatched"][key] = normalized
             unmatched.append(key)
             continue
+
+        # DUPLICATE LIVE TRIGGER (quality pass 2026-08-22). Two DISTINCT trigger_ids in one ingest
+        # can resolve to the SAME routine id -- the state that exists when a routine was recreated
+        # without deleting the old trigger, which B4's own comment just below warns a `restore` can
+        # produce. Neither existing guard catches it: _dedup_raw_triggers() only collapses repeats
+        # of the same trigger_id, and match_conflict() compares the two match SOURCES for a single
+        # trigger, not two triggers claiming one routine.
+        #
+        # Without this guard the second raw simply overwrote the first's stored entry, so exactly
+        # one of the two live triggers was recorded NOWHERE -- not in `routines`, not in
+        # `_unmatched`, not in `conflicts` -- silently breaking this function's own "record it
+        # rather than dropping it silently" contract, and leaving the live duplicate invisible to
+        # the backup. Which one survived depended on API serialization order, and the summary
+        # double-counted the routine (it appeared in BOTH `added` and `updated`).
+        #
+        # Resolution mirrors B5: record it loudly, keep the FIRST-filed entry, and let cmd_ingest's
+        # existing non-zero exit surface it, rather than silently picking a side.
+        claimant = claimed_by.get(rid)
+        if claimant is not None and claimant != normalized["trigger_id"]:
+            conflicts.append({
+                "trigger_id": normalized["trigger_id"],
+                "duplicate_of_routine": rid,
+                "kept_trigger_id": claimant,
+            })
+            continue
+        claimed_by[rid] = normalized["trigger_id"]
 
         # B4 (2026-08-01 audit): this trigger_id is now matchable, so any stale `_unmatched` copy of it
         # (from an earlier ingest, before e.g. ops/trigger_ids.json was fixed) must not linger --
@@ -905,6 +953,18 @@ def restore(routine_ids):
             if field_errors:
                 errors.extend(field_errors)
                 continue
+            # B1 schedule SHAPE (quality pass 2026-08-22). check() runs _schedule_errors on every
+            # entry; restore() did not, so an entry carrying BOTH cron_expression and run_once_at
+            # (or NEITHER) sailed past every guard above and hit the ValueError inside
+            # _assemble_create_body -- an UNCAUGHT exception out of restore(), which aborts the
+            # whole run. Reproduced: a restore-all over {D1: both keys, D2: healthy} raised and
+            # returned nothing at all, so the healthy D2 body was lost too and the operator got a
+            # raw traceback on the fast-recovery-during-an-incident path. Every sibling guard here
+            # exists to degrade one corrupt entry into one error message; this one was missing.
+            sched_errors = _schedule_errors(rid, entry)
+            if sched_errors:
+                errors.extend(sched_errors)
+                continue
             if entry.get("cron_expression") == CRON_UNCONFIRMED:
                 errors.append(
                     f"{rid}: cron_expression is still {CRON_UNCONFIRMED} -- ingest a real value "
@@ -922,6 +982,24 @@ def restore(routine_ids):
                 errors.append(
                     f"{rid}: cron_expression is still {CRON_UNCONFIRMED} -- skipped rather than "
                     f"emitting an invalid create body.")
+                continue
+            # The _unmatched branch gets the same two guards as the routines branch above (quality
+            # pass 2026-08-22). It previously had NEITHER, even though its entries are the LEAST
+            # trustworthy in the file: an `_unmatched` entry is a live trigger this tool could not
+            # identify, stored verbatim, and it is the one part of the snapshot an operator is
+            # invited to hand-edit. Without the schedule-shape guard a both/neither entry crashed
+            # the whole restore exactly as above; without the field guard a B3-class payload
+            # (session_context: {} -- a shape reproduced live per this module's docstring) restored
+            # SILENTLY, printing a create body with environment_id/model null and empty
+            # allowed_tools straight at a live RemoteTrigger call. check() never inspects
+            # `_unmatched` either, so nothing upstream would have caught it first.
+            sched_errors = _schedule_errors(rid, normalized)
+            if sched_errors:
+                errors.extend(sched_errors)
+                continue
+            field_errors = _verbatim_fields_errors(rid, normalized)
+            if field_errors:
+                errors.extend(field_errors)
                 continue
             one_shot_error = _one_shot_restore_error(rid, normalized)
             if one_shot_error:
@@ -948,8 +1026,29 @@ def _resolved_fields_errors(rid, entry, profiles):
     claude.ai connector's own default" -- not "nothing is permitted" (see the module docstring's
     2026-08-08 note). Flagging `[]` there as missing/empty would be a false positive on every
     routine in the fleet today, since none currently has recorded per-tool policy."""
+    return _fields_errors(rid, _resolve_fields(entry, profiles), entry)
+
+
+def _verbatim_fields_errors(rid, normalized):
+    """The same recovery-data validation as _resolved_fields_errors(), for an `_unmatched` entry
+    (quality pass 2026-08-22). An `_unmatched` entry has no profile to resolve against -- ingest()
+    stores the live trigger's seven fields verbatim, and build_unmatched_create_body() feeds those
+    same keys straight into _assemble_create_body -- so the entry IS its own resolved-fields dict
+    and can be validated directly."""
+    return _fields_errors(rid, normalized, normalized)
+
+
+def _fields_errors(rid, fields, entry):
+    """Shared body of the B3 recovery-data validation: given an already-resolved `fields` dict (a
+    profile+overrides resolution for a `routines` entry, or the verbatim entry itself for an
+    `_unmatched` one), report every field that is missing/empty. `entry` supplies `name`, which is
+    stored on the entry rather than resolved through a profile in either case.
+
+    Split out of _resolved_fields_errors() so the `_unmatched` restore path could reuse it without
+    duplicating six near-identical isinstance checks that must stay in lockstep -- the two paths
+    build the SAME create body through the SAME assembler, so they must agree on what counts as
+    real recovery data."""
     errors = []
-    fields = _resolve_fields(entry, profiles)
     if not (isinstance(fields.get("environment_id"), str) and fields["environment_id"]):
         errors.append(f"{rid}: resolved environment_id is missing/empty ({fields.get('environment_id')!r})")
     if not (isinstance(fields.get("model"), str) and fields["model"]):
@@ -1098,11 +1197,18 @@ def cmd_ingest(args):
         print("  UNMATCHED trigger_id(s), recorded under _unmatched for manual review: "
               + ", ".join(result["unmatched"]))
     if result.get("conflicts"):
-        print("  CONFLICT(S) -- trigger_id and instruction resolved to DIFFERENT routine ids; "
-              "entry left untouched (fix ops/trigger_ids.json / ops/triggers.json, then re-ingest):")
+        print("  CONFLICT(S) -- entry left untouched (fix the live triggers / ops/trigger_ids.json "
+              "/ ops/triggers.json, then re-ingest):")
         for c in result["conflicts"]:
-            print(f"    trigger_id={c['trigger_id']}: trigger_id says '{c['trigger_id_routine']}', "
-                  f"instruction says '{c['instruction_routine']}'")
+            if "duplicate_of_routine" in c:
+                # Two distinct LIVE triggers resolved to one routine id (quality pass 2026-08-22).
+                print(f"    trigger_id={c['trigger_id']}: DUPLICATE live trigger for routine "
+                      f"'{c['duplicate_of_routine']}' -- kept '{c['kept_trigger_id']}'. Two triggers "
+                      f"are scheduled for this routine; delete the stale one in the claude.ai UI, "
+                      f"confirm ops/trigger_ids.json names the survivor, then re-ingest.")
+            else:
+                print(f"    trigger_id={c['trigger_id']}: trigger_id says '{c['trigger_id_routine']}', "
+                      f"instruction says '{c['instruction_routine']}'")
     if result["unconfirmed_cron"]:
         print(f"  cron still {CRON_UNCONFIRMED} for: " + ", ".join(result["unconfirmed_cron"]))
     return 1 if result.get("conflicts") else 0

@@ -19,6 +19,7 @@ from lib.sql_files import (
     line_offsets,
     normalize_kind,
     numbered_sql_files,
+    resolve_canonical,
     sql_file_paths,
     strip_sql_comments,
 )
@@ -186,6 +187,50 @@ def test_object_ddl_matches_every_kind_with_correct_groups():
         assert m is not None, ddl
         assert normalize_kind(m.group(1)) == kind, ddl
         assert (m.group(2), m.group(3)) == (dataset, "thing")
+
+
+# ---- resolve_canonical(): the D6 duplicate-number ambiguity contract ---------------------------
+# Three BLOCKING gates (check_cadence_consistency.py, check_sq_version_registry.py,
+# check_superseded_by_discipline.py) resolve "which bigquery/*.sql file is canonical for this
+# object" through this one function and then branch on `len(winner_filenames) > 1` to fail loud on
+# an ambiguous duplicate NN prefix. It had NO direct coverage until the 2026-08-22 quality pass —
+# only transitive exercise through the three callers' own fixtures, none of which construct a tie.
+def test_resolve_canonical_returns_the_highest_number_and_its_single_file():
+    occs = [(90, "090_a.sql"), (114, "114_b.sql"), (35, "035_c.sql")]
+    assert resolve_canonical(occs) == (114, ["114_b.sql"])
+
+
+def test_resolve_canonical_returns_every_file_tied_at_the_winning_number():
+    """The D6 contract: a duplicate NN prefix on a TRACKED object must surface ALL colliding
+    filenames so the caller can report an explicit ambiguity error, never silently pick one."""
+    occs = [(114, "114_selfheal.sql"), (114, "114_period_gate.sql"), (90, "090_older.sql")]
+    assert resolve_canonical(occs) == (114, ["114_period_gate.sql", "114_selfheal.sql"])
+
+
+def test_resolve_canonical_dedupes_repeated_filenames_at_the_winning_number():
+    # Several matches inside ONE file (the common case: a file mentioning the same object twice)
+    # is not an ambiguity — it must collapse to a single filename, or every caller's
+    # `len(winner_files) > 1` check would fire a false ambiguity error.
+    occs = [(114, "114_b.sql", 10), (114, "114_b.sql", 400), (90, "090_a.sql", 5)]
+    assert resolve_canonical(occs) == (114, ["114_b.sql"])
+
+
+def test_resolve_canonical_ignores_trailing_tuple_elements():
+    # Callers pass (number, filename, match_position); the extra element is absorbed by `*_`.
+    assert resolve_canonical([(7, "007_x.sql", 123, "extra")]) == (7, ["007_x.sql"])
+
+
+def test_resolve_canonical_accepts_a_generator_without_losing_the_tied_set():
+    """REGRESSION (quality pass 2026-08-22). The docstring advertises `occurrences` as "an iterable
+    of tuples", but the body scanned it TWICE — max(), then the tied-set comprehension. A generator
+    was exhausted by the first pass, so winner_filenames came back EMPTY: the ambiguity branch
+    could never fire and the caller's follow-on `winner_filenames[0]` raised IndexError, crashing
+    out of the fail-clean error-collection path these gates depend on. Every caller passes a list
+    today, so the defect was latent — this pins the documented contract so it stays true."""
+    occs = [(114, "114_b.sql"), (114, "114_a.sql"), (90, "090_c.sql")]
+    from_list = resolve_canonical(occs)
+    from_generator = resolve_canonical(o for o in occs)
+    assert from_generator == from_list == (114, ["114_a.sql", "114_b.sql"])
 
 
 def test_object_ddl_table_function_is_not_shadowed_by_the_shorter_table_alternative():

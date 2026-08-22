@@ -421,3 +421,45 @@ def test_real_cadence_file_passes():
     # The live ops/cadence.yaml must satisfy its own contract. Read-only: no monkeypatch, so this
     # exercises the real CADENCE path exactly as CI runs it.
     assert cs.check() == 0
+
+
+# ---- check 3 (documentation truth) accepts ANY firing of a multi-firing cron --------------------
+def test_time_local_may_document_the_second_firing_of_a_multi_firing_cron(tmp_path, monkeypatch):
+    """REGRESSION (quality pass 2026-08-22). `0 22,23 * * 0,1,2,3,4` fires twice daily and renders as BOTH
+    16:00 and 17:00 MDT -- the table this script prints says exactly that. Check 3 compared
+    time_local against ref[0] only, so it rejected a correctly-documented "17:00" with the message
+    "...which renders 16:00 MDT", contradicting its own output one line below.
+
+    This is the identical `probe = locals_[0]` bug class that check 2 (local-window integrity) was
+    explicitly fixed for on 2026-08-08; the fix was never applied to check 3. Latent today -- no
+    live routine combines a comma-listed hour field with a time_local -- but parse_field supports
+    comma lists on any field, so the first routine that needs a second daily firing hits it."""
+    write_cadence(tmp_path, monkeypatch, [
+        {"id": "DX", "monitor_class": "daily_sun_thu", "cron": "0 22,23 * * 0,1,2,3,4",
+         "time_local": "17:00"},
+    ])
+    monkeypatch.setattr(cs, "NON_WINDOW_DAILY_SUN_THU_IDS", {"DX"})
+    assert cs.check() == 0
+
+
+def test_time_local_may_also_document_the_first_firing_of_a_multi_firing_cron(tmp_path, monkeypatch):
+    """The other firing of the same cron stays valid too -- the fix widens the accepted set, it
+    does not move it."""
+    write_cadence(tmp_path, monkeypatch, [
+        {"id": "DX", "monitor_class": "daily_sun_thu", "cron": "0 22,23 * * 0,1,2,3,4",
+         "time_local": "16:00"},
+    ])
+    monkeypatch.setattr(cs, "NON_WINDOW_DAILY_SUN_THU_IDS", {"DX"})
+    assert cs.check() == 0
+
+
+def test_time_local_matching_no_firing_of_a_multi_firing_cron_is_still_caught(tmp_path, monkeypatch, capsys):
+    """...and the gate is not weakened: a time_local matching NEITHER firing still fails, and the
+    error now names every valid rendering instead of only the first."""
+    write_cadence(tmp_path, monkeypatch, [
+        {"id": "DX", "monitor_class": "daily_sun_thu", "cron": "0 22,23 * * 0,1,2,3,4",
+         "time_local": "18:00"},
+    ])
+    monkeypatch.setattr(cs, "NON_WINDOW_DAILY_SUN_THU_IDS", {"DX"})
+    assert cs.check() == 1
+    assert "16:00, 17:00 MDT" in capsys.readouterr().err

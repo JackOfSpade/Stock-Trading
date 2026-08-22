@@ -118,3 +118,57 @@ def test_w5_rejects_embedding_and_live_account_repair():
 def test_w1_must_reuse_daily_catalysts():
     errors = crs.check(_plan({"W1": "W1 builds a future catalyst calendar.\n"}))
     assert any("W1: missing ownership boundary — reuse of D1-originated catalysts" in e for e in errors)
+
+
+# ---- negation scoping: a contrastive conjunction ends a prohibition's reach --------------------
+def test_negation_does_not_mask_a_later_contrasting_clause_on_the_same_line():
+    """REGRESSION (quality pass 2026-08-22). _has_active_match() scoped its negation search to the
+    WHOLE physical line prefix, so ANY unrelated earlier negation on that line silently masked a
+    real, active forbidden action later in it.
+
+    Here 'does not skip validation' has nothing to do with the 'but calls create_order_instruction'
+    clause that follows, yet it suppressed the W4 forbidden-overlap error entirely — the exact
+    anti-pattern that rule exists to catch (a future edit quietly restoring a second order-staging
+    path). The negation's scope now ends at the contrastive conjunction."""
+    errors = crs.check(_plan({
+        "W4": ("W4 does not skip validation, but calls create_order_instruction directly for a "
+               "fast-track exit. Route weekly findings to D2 via idempotent PENDING_ANALYSIS "
+               "queue items.\n"),
+    }))
+    assert any("W4: forbidden overlap reappeared — direct weekly exit crafting" in e for e in errors)
+
+
+def test_negation_still_governs_a_coordinated_list_across_commas():
+    """The other half of the contract, and the reason commas are NOT treated as scope-enders. The
+    plan's normal way of writing a prohibition is one negation governing a comma-separated list —
+    W5 really says '...but do not diagnose a live discrepancy, raise an operational drift alert, or
+    attempt a repair'. Scoping the negation to the nearest comma was measured and rejected: it cut
+    the governing 'do not' off the later items and failed live main on a correct safety sentence."""
+    plan = _plan({
+        "W5": ("W5 summarizes reconciliation history for trend context, but does not diagnose a "
+               "live discrepancy, raise an operational drift alert, or attempt a repair.\n"),
+    })
+    assert crs.check(plan) == []
+
+
+def test_w5_permits_its_own_decision_vocab_drift_alert():
+    """The W5 forbid pattern's trailing alternation is domain-qualified. A bare `drift` matched any
+    drift at all, including W5's own legitimate decision-vocabulary alert — knowledge/analytics
+    work, which is W5's actual job, not the 'live account repair' the rule forbids. That over-match
+    was inert only because the loose negation scope above happened to mask it; tightening the
+    negation exposed it as a CI failure on live main."""
+    plan = _plan({
+        "W5": ("W5 reports trends. Instead of updating rows, call "
+               "ops.sp_raise_alert('info','W5','decision_vocab_drift', ...) so the drift is "
+               "recorded for review.\n"),
+    })
+    assert crs.check(plan) == []
+
+
+def test_w5_still_rejects_an_active_operational_drift_alert():
+    """...and the tightening must not weaken the gate: an account-domain drift alert raised
+    ACTIVELY (no governing negation) is still a forbidden overlap."""
+    errors = crs.check(_plan({
+        "W5": "W5 reports a trend, then raises an operational drift alert for the reconciliation.\n"
+    }))
+    assert any("W5: forbidden overlap reappeared — embedding catch-up" in e for e in errors)

@@ -360,7 +360,17 @@ def _heading_label(line):
         return None
     rest = rest[len("## "):]
     rest = re.sub(r"^\[[^\]]*\]\s*", "", rest)  # strip a leading "[DONE ...]"/"[DECIDED ...]" marker
-    m = re.match(r"([A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)?)\.", rest)
+    # The hyphen segment repeats (`*`, not `?`) — quality pass 2026-08-22. With `?` the label could
+    # carry at most ONE hyphen, so a heading spelling out a multi-hyphen id in full parsed as None:
+    # `## sq-dml-watch. ...` (a live registered id in this very file) returned None while
+    # `## WR-2. ...` parsed fine. That silently DEFEATS the sibling mis-anchor guard rather than
+    # tripping it, because find_anchor_line_index() treats a None label as "convention not followed,
+    # skip the cross-check" — so a fence for `sq-dml-watch` sitting under a DIFFERENT, unrelated
+    # spelled-out sibling heading resolved to that wrong heading instead of failing closed. That is
+    # exactly the E-anthropic mis-anchor class the 2026-07-20 fix was built to close, just for ids
+    # with two or more hyphens. Numbered sub-item headings (`## 2. Register ...`) still return None,
+    # unchanged — they never start with a letter.
+    m = re.match(r"([A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*)\.", rest)
     return m.group(1).lower() if m else None
 
 
