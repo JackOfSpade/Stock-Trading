@@ -327,6 +327,30 @@ sources:
           - name: strategy
             description: NULL = equal-split across active strategies (standing methodology); non-NULL only for an operator-stated allocation.
 
+      # ---- Added 2026-08-22 (dbt view-coverage burn-down) ----------------------------------
+      # Base TABLEs / remote-model outputs / a scalar UDF -- none is a pure SELECT, so dbt
+      # cannot own any of them. Declared here only so the state.*/analytics.* VIEWS that read
+      # them can be ported as models and gain row-level parity protection.
+      - name: cash_flow_candidates
+        description: >
+          Detected-but-unconfirmed deposits/withdrawals awaiting classification. Defined in bigquery/161_withdrawal_after_the_fact.sql.
+      - name: nogo_shadow
+        description: >
+          Shadow-tracked NO-GO decisions used to compute the counterfactual of not trading them. Defined in bigquery/28_nogo_shadow.sql.
+      - name: playbook_updates
+        description: >
+          Append-only playbook revision log; state.active_playbook projects the current one. Defined in bigquery/37_self_improvement_autonomy.sql.
+      - name: premortem_flag_outcomes
+        description: >
+          Realised outcomes for a pre-mortem flag; analytics.adversarial_flag_hit joins the two. Defined in bigquery/42_adversarial_flag_hit.sql.
+      - name: premortem_flags
+        description: >
+          Adversarial pre-mortem flags raised against a strategy or thesis. Defined in bigquery/42_adversarial_flag_hit.sql.
+      - name: strategy_lifecycle
+        description: >
+          Append-only SISA strategy state transitions (SHADOW/PAPER/PROBE/ADOPTED/TERMINATED). The strategy_*_readiness gates and SL5's TERMINATED deregister branch read it. Defined in bigquery/35_strategy_arsenal.sql.
+
+
   - name: ops
     project: stock-trading-498512
     dataset: ops
@@ -386,6 +410,92 @@ sources:
               - not_null
           - name: mode
             description: "'manual' (operator-set) or 'auto' (a monitor/breaker set it)."
+
+      # ---- Control-plane tables added 2026-08-22 (dbt view-coverage burn-down) ----------------
+      # Every entry below is a PROCEDURE- or routine-MAINTAINED TABLE, never a pure SELECT, so
+      # dbt cannot own it (see this block's description and dbt/README.md). They are declared
+      # here only so the state.*/analytics.* views that READ them can be ported as models —
+      # without these, ~20 gate-adjacent readiness views were unportable and therefore had zero
+      # row-level parity protection. dbt still creates and maintains NOTHING in ops.
+      - name: alerts
+        description: >
+          Alert control plane written by ops.sp_raise_alert*. The monitored email channel and several state.* watch views read it. Defined in bigquery/10_observability.sql.
+      - name: arsenal_control
+        description: >
+          Owner kill-switch for the autonomous Strategy Arsenal lifecycle (SISA). state.arsenal_enabled projects the latest row. Defined in bigquery/35_strategy_arsenal.sql.
+      - name: backup_log
+        description: >
+          One row per offsite/table backup run. state.backup_health and ops_backup_health read it. Defined in bigquery/16_automation_health.sql.
+      - name: capital_control
+        description: >
+          Regime-capital enablement control rows; state.capital_control_latest projects the latest. Defined in bigquery/98_regime_capital_enablement.sql.
+      - name: capital_nomad_control
+        description: >
+          Nomadic-capital control rows; state.nomadic_capital_control_latest projects the latest. Defined in bigquery/167_nomadic_capital.sql.
+      - name: catchup_refire_log
+        description: >
+          One row per catch-up refire attempt. state.catchup_refire_readiness/failures read it. Defined in bigquery/59_catchup_autofire.sql.
+      - name: ci_findings
+        description: >
+          CI-written findings bridge (the CI->BigQuery delivery path). state.ci_findings_open surfaces the open set. Defined in bigquery/67_ci_findings_bridge.sql.
+      - name: confirm_event_snapshot
+        description: >
+          Owner order-confirmation attestations. state.confirm_event_latest / staged_without_confirm read it. Defined in bigquery/30_confirm_attestation.sql.
+      - name: connector_tool_inventory
+        description: >
+          OPS1's live MCP connector tool inventory captures. state.connector_tool_* views read it. Defined in bigquery/151_connector_tool_inventory.sql.
+      - name: d2a_cutover_log
+        description: >
+          D2a cutover attempt log; state.d2a_cutover_readiness gates on it. Defined in bigquery/32_d2a_cutover_readiness.sql.
+      - name: drill_log
+        description: >
+          Restore-drill outcomes (scripts/restore_drill.sh). state.restore_health reads it. Defined in bigquery/17_restore_drill.sql.
+      - name: exec_rule_change_log
+        description: >
+          Execution-rule change provenance; state.exec_rule_oos_watch reads it. Defined in bigquery/37_self_improvement_autonomy.sql.
+      - name: heartbeat
+        description: >
+          Dashboard/automation heartbeat rows (ops.sp_beat_heartbeat). state.automation_heartbeat reads it. Defined in bigquery/16_automation_health.sql.
+      - name: loop_promotion_log
+        description: >
+          Self-improvement loop promotion decisions; the *_promotion_readiness views gate on it. Defined in bigquery/84_referee_promotion.sql.
+      - name: monitor_health_history
+        description: >
+          Per-monitor health history feeding the monitor promotion-readiness gates. Defined in bigquery/45_monitor_promotion.sql.
+      - name: monitor_promotion_log
+        description: >
+          Monitor promotion decisions; the *_promotion_readiness views read it. Defined in bigquery/45_monitor_promotion.sql.
+      - name: process_constant_change_log
+        description: >
+          Process-constant tuning provenance; state.process_constant_oos_watch reads it. Defined in bigquery/37_self_improvement_autonomy.sql.
+      - name: process_reliability_observations
+        description: >
+          Process-reliability observations feeding state.process_reliability_readiness. Defined in bigquery/37_self_improvement_autonomy.sql.
+      - name: research_quality_observations
+        description: >
+          Research-quality observations feeding state.research_quality_promotion_readiness. Defined in bigquery/71_research_quality_promotion.sql.
+      - name: roster_change_log
+        description: >
+          Every SISA roster add/remove/state transition. The strategy_*_readiness gates read it for cooldowns and anti-churn rails. Defined in bigquery/35_strategy_arsenal.sql.
+      - name: routine_catalog
+        description: >
+          CANONICAL instruction per routine, rebuilt wholesale by a CREATE OR REPLACE TABLE ... AS in that file. state.instruction_drift compares live run_log instructions against it. Defined in bigquery/15_routine_catalog.sql.
+      - name: routine_commit_markers
+        description: >
+          Landed-commit markers per routine run; the run_log self-heal candidates view reads them. Defined in bigquery/38_run_log_selfheal.sql.
+      - name: trigger_change_intents
+        description: >
+          Declared intent for a routine-trigger edit (the actor column the vendor API does not provide). Defined in bigquery/195_trigger_change_attribution.sql.
+      - name: trigger_observations
+        description: >
+          Observed routine-trigger configuration snapshots. Defined in bigquery/195_trigger_change_attribution.sql.
+      - name: user_prefs
+        description: >
+          Owner display preferences; state.user_tz projects the DISPLAY timezone plane. Defined in bigquery/20_user_prefs.sql.
+      - name: web_calls
+        description: >
+          Metered web-call telemetry; state.web_spend_month / web_duplicate_targets read it. Defined in bigquery/174_web_call_telemetry.sql.
+
 
   - name: state_external
     project: stock-trading-498512
@@ -482,6 +592,30 @@ sources:
               The v1 rule table's classified vehicle for this date, or NULL if any of the seven core
               signals it consults ("no data, no claim") was unavailable that day.
 
+      # ---- Added 2026-08-22 (dbt view-coverage burn-down) ----------------------------------
+      # Base TABLEs / remote-model outputs / a scalar UDF -- none is a pure SELECT, so dbt
+      # cannot own any of them. Declared here only so the state.*/analytics.* VIEWS that read
+      # them can be ported as models and gain row-level parity protection.
+      - name: calibration_param_registry
+        description: >
+          Registry of tunable calibration parameters and their current values. Defined in bigquery/37_self_improvement_autonomy.sql.
+      - name: expected_scheduled_query_versions
+        description: >
+          Expected scheduled-query body versions; state.scheduled_query_version_drift compares live against it. Defined in bigquery/63_scheduled_query_version_registry.sql.
+      - name: expected_script_versions
+        description: >
+          Expected .gs SCRIPT_VERSION constants; state.script_version_drift compares live against it. Defined in bigquery/43_script_version_registry.sql.
+      - name: param_change_provenance
+        description: >
+          Why/when each calibration parameter changed — the OOS-degradation gate reads it. Defined in bigquery/37_self_improvement_autonomy.sql.
+      - name: strategy_candidates
+        description: >
+          SISA candidate strategies awaiting SHADOW/PAPER entry. Defined in bigquery/35_strategy_arsenal.sql.
+      - name: strategy_declared_frequency
+        description: >
+          Declared trade frequency per strategy — the dormancy sweep's expected-cadence input. Defined in bigquery/166_capital_dormancy_sweep.sql.
+
+
   - name: analytics_external
     project: stock-trading-498512
     dataset: analytics
@@ -517,6 +651,30 @@ sources:
             description: Routine code.
           - name: min_n_met
             description: TRUE once n_log_rows_90d >= 20 — the loop's own minimum-observation floor.
+
+      # ---- Added 2026-08-22 (dbt view-coverage burn-down) ----------------------------------
+      # Base TABLEs / remote-model outputs / a scalar UDF -- none is a pure SELECT, so dbt
+      # cannot own any of them. Declared here only so the state.*/analytics.* VIEWS that read
+      # them can be ported as models and gain row-level parity protection.
+      - name: decision_embeddings
+        description: >
+          ML.GENERATE_EMBEDDING output over the decision log. Remote-model backed. Defined in bigquery/02_ai_layer.sql.
+      - name: deployed_twr_forecast
+        description: >
+          AI.FORECAST-produced TWR forecast vintages. Remote-model output, not a pure SELECT. Defined in bigquery/06_forecast.sql.
+      - name: fn_is_occ_option_symbol
+        description: >
+          Scalar UDF (CREATE OR REPLACE FUNCTION), not a table or view. Declared so models that CALL it resolve; dbt references it fully qualified and never builds it. Defined in bigquery/40_options_marks.sql.
+      - name: review_embeddings
+        description: >
+          ML.GENERATE_EMBEDDING output over adversarial reviews. Remote-model backed. Defined in bigquery/04_analytics.sql.
+      - name: strategy_incubation_perf
+        description: >
+          Per-strategy incubation performance rollup feeding the SHADOW/PAPER readiness gates. Defined in bigquery/35_strategy_arsenal.sql.
+      - name: theater_judge
+        description: >
+          AI-graded 'theater' judgements (ops.sp_score_theater / remote model). Not a pure SELECT. Defined in bigquery/11_theater_judge.sql.
+
 
   - name: perf
     project: stock-trading-498512

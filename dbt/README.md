@@ -56,6 +56,55 @@ These are declared as **sources** in `models/sources.yml` (read, never built by 
 - `analytics.theater_judge`, `theater_check_calibration` (`11`), the `02` AI layer, the
   `06` `AI.FORECAST` views — all AI/remote-model-backed.
 
+### 2026-08-22 — gate-critical readiness views ported (view-coverage burn-down)
+
+`scripts/check_dbt_view_coverage.py` had reported a growing backlog for weeks: 70 of 113 live
+state/analytics/perf views uncovered at its introduction (2026-07-14), **143 of 195 by 2026-08-22**.
+That backlog is a *cutover-readiness* gap, not a production-safety one — `check_live_sql_parity.py`
+already compares every one of those 195 views against live daily — but the **autonomous Strategy
+Arsenal lifecycle's own gates** were sitting in it, so the readiness/kill decisions that adopt,
+retire and halt strategies had no dbt port at all.
+
+**40 models added**, chosen as the gate-critical set plus the transitive dependencies they need to
+compile: every `*_readiness` view, `arsenal_enabled` / `arsenal_rails` / `arsenal_regime_coverage`,
+`entry_staging_allowed`, `b3_trading_enabled_check`, and the `append_only_integrity*` family.
+
+Every one was generated MECHANICALLY from the canonical view body (the only edit is
+`ref()`/`source()` substitution) and proved token-identical to it by
+**`scripts/verify_dbt_port.py`** — an offline `dbt compile` + normalized-token comparison. Run that
+script when porting anything else here; it proves the same property `dbt_parity.py` does, without
+credentials and without a live query per model.
+
+**Scope was deliberately bounded by CI cost, not by what is portable.** All 143 remaining views were
+ported and verified in the same pass, then all but these 40 were dropped: `dbt_parity.py` issues one
+live BigQuery job per MODEL (43 models measured at 226 s; batching was tested and rejected — see that
+file), and the path gate fires it on every push touching `bigquery/**` or `dbt/**` — 109 such pushes
+in the preceding 30 days. Porting all 143 measured out at roughly **+1,400 billable minutes/month**;
+this 40-model slice costs about **+436**. SOURCES are free — `dbt_parity.py` only queries models — so
+declaring an object in `sources.yml` never adds runtime.
+
+To continue the burn-down, port in dependency order, verify with `scripts/verify_dbt_port.py`, and
+weigh each batch against that per-model parity cost (raising the repo var `DBT_PARITY_CONCURRENCY`
+buys speed but raises the DTS rate-quota risk that caused the 2026-06-29 CI incident).
+
+### Sources added 2026-08-22 (so the views above could be ported)
+
+44 objects were declared in `models/sources.yml` — **none is a pure SELECT, so dbt cannot own any of
+them**; they are declared only so the views that READ them can be modeled:
+
+- **26 `ops.*` control-plane tables** — `roster_change_log`, `monitor_promotion_log`,
+  `monitor_health_history`, `loop_promotion_log`, `arsenal_control`, `alerts`, `heartbeat`, … All
+  procedure- or routine-maintained. dbt still creates and maintains **nothing** in `ops`.
+- **6 `events.*` base tables** — `strategy_lifecycle`, `premortem_flags`, `premortem_flag_outcomes`,
+  `nogo_shadow`, `playbook_updates`, `cash_flow_candidates`.
+- **6 `state.*` tables** — `strategy_candidates`, `calibration_param_registry`,
+  `param_change_provenance`, `strategy_declared_frequency`, `expected_script_versions`,
+  `expected_scheduled_query_versions`.
+- **6 `analytics.*` objects** — `deployed_twr_forecast` (AI.FORECAST output),
+  `strategy_incubation_perf`, `theater_judge`, `review_embeddings`, `decision_embeddings` (all
+  remote-model backed), and `fn_is_occ_option_symbol`, a scalar **UDF** — dbt has no `ref()` for a
+  function, so models that call it reference it fully qualified, exactly as the canonical SQL does.
+
 ### One controlled exception inside a ported model
 
 `state.system_health` aggregates `ops.alerts` inline (two `COUNTIF` subqueries) exactly as
