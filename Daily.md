@@ -434,6 +434,75 @@ Re-run **D2a for 2026-08-23 first**, then D2. D2a is in the OPS0/OPS2 scope-guar
 
 ---
 
+### APPENDED BY THE D2 SLOT — 2026-08-23 ~17:15 MT — **D2 HALTED, NOT DEGRADED**
+
+*Written by the D2 routine. Same rationale as the D2a subsection above: this file is the day's shared outage record, and D2 is the last daily routine to fire into the outage.*
+
+**Pre-flight.** The BigQuery MCP server's tools were not exposed to this session at all — the harness withheld the entire surface pending re-authorization — so the sanctioned liveness read (`SELECT * FROM state.trading_day_today`) and the DIAGNOSE-BY-PROBE probe pair were **unexecutable rather than merely failing**, exactly as in the D2a slot. Auth class ⇒ **non-waitable**; the TRANSIENT-FAILURE retry ladder was correctly not entered and no wait budget was spent. **IBKR live** (`get_account_summary` exercised: NLV 15972.15, gross_position_value 15972.05, total_cash −0.20, available_funds 11962.72, dividends 0.30) and **Calendar live** (`search_events` exercised).
+
+**Positive corroboration of the de-auth, beyond "the tools are absent" (new this slot).** `~/.claude/.credentials.json` carries an `mcpOAuth` entry for `Google-Cloud-BigQuery` whose **`accessToken` is an empty string and which holds no refresh token**. This distinguishes a genuine credential loss from a transient harness tooling gap, and it means the fix is a **full owner re-authorization, not a token refresh**.
+
+**No alternate path exists from this container — checked rather than assumed.** No `bq` / `gcloud` CLI; `google-cloud-bigquery` and `google-auth` are not installed (`ModuleNotFoundError: No module named 'google'`); no service-account key, no `GOOGLE_APPLICATION_CREDENTIALS`, no ADC, no `~/.config/gcloud`; the GCE metadata endpoint returns 403. Every in-repo script that touches BigQuery either shells out to the absent `bq` CLI (`scripts/lib/bq_json.py` consumers) or lazily imports the absent client library (`scripts/adversarial_review_storage.py`). CI's only path is **keyless WIF bound to a GitHub Actions OIDC token** (`.github/actions/gcp-wif-auth`), which a routine session's container cannot obtain, and no long-lived key exists anywhere in the repo to bypass it. Network egress to `bigquery.googleapis.com` is open (discovery doc returns 200) but useless without credential material.
+
+#### TWO INDEPENDENT, INDIVIDUALLY SUFFICIENT REASONS TO HALT — re-auth ALONE does not unblock D2
+
+1. **BigQuery unreachable** → `Claude_Task_Plan.md` Observability, "BigQuery unreachable": *"D2/D3 require canonical state → HALT cleanly ... craft no orders."* D1's DEGRADED-MODE branch is explicitly research-only and does not extend to D2.
+2. **D2's own FATAL dependency gate would abort even with BigQuery fully restored.** `CALL ops.sp_assert_deps('D2', ['D1','D2a'], 2026-08-23)` requires both upstreams to have logged `completed` for today. **D2a wrote no `ops.run_log` row at all** (it halted), and its halt-record commit `0f15df5` correctly opens with the token `Halt`, which `marker_routine_from_subject()`'s allowlist regex does not match — so the §38 marker self-heal mints **no** D2a row either. The gate therefore fails on D2a on the merits. (Contrast D1: commit `088fcf7` leads with `D1`, so the backfill *will* mint a spurious `completed` row for it — the RUNBOOK §48 defect D2a already recorded, and it is D2's own `sp_assert_deps` call that triggers it. It does not rescue the gate, because D2a remains unsatisfied.)
+
+**Consequence for recovery: the replay order in the D2a checklist above is confirmed at the gate level, not merely by convention.** Re-authorizing BigQuery and firing D2 would still abort on `missing_dependency`. The order is **re-auth → replay D2a for 2026-08-23 → then D2.**
+
+#### NEW: THE OUTAGE ONSET IS BOUNDED TO A ~3-HOUR WINDOW
+
+Neither the D1 nor the D2a record dates the onset. It is recoverable from today's own commit history:
+
+- **OPS1 — commit `603c92f`, 2026-08-23 12:53 UTC (06:53 MT): BigQuery LIVE.** Its dual-source connector enumeration counted **`Google-Cloud-BigQuery` 6** tools (surface fully exposed), and the run raised a `connector_tool_added` warning and wrote its observation rows — both BigQuery writes.
+- **Alert triage — commit `56989bf`, 2026-08-23 19:11 UTC (13:11 MT): BigQuery LIVE.** That session resolved three `ops.alerts` rows on the board with measured notes and landed `bigquery/196` — again, live writes.
+- **D1 pre-flight — ~2026-08-23 22:15 UTC (16:15 MT): BigQuery DEAD** ("requires re-authorization (token expired)" on every call, including bare `SELECT 1`).
+
+**Onset window: 2026-08-23 19:11–22:15 UTC (13:11–16:15 MT).** Useful to RUNBOOK §26 recurrence analysis, which so far records only that the grant "expired" without bounding when.
+
+#### WHAT THE HALT COST — MEASURED FROM TODAY'S `Daily.md`, NOT ASSUMED
+
+**The D1 prose/`d1_actions` corruption cross-check PASSES.** Run independently against today's snapshot (the one gate in D2's flow that needs no BigQuery): **7 prose bullets vs 7 block entries, and per category** — exits 0/0, new entry candidates 0/0, add candidates 0/0, watchlist 7/7, router reviews 0/0. The block is present, fenced, parseable and in the post-2026-07 format. **So D2 would not have aborted on the corruption gate; today's file is trustworthy and directly replayable, and the recovery session need not re-run this check.** (The CATCH-UP CHECK's backfilled-snapshot arm was not exercised — `state.routine_catchup_window` is unreadable — but `Daily.md` on disk is today's and the prior D1 was 2026-08-20, already converted.)
+
+Against that verified action set, the conversion workload D2 owed today was:
+
+| D2 step | Owed today | Status |
+|---|---|---|
+| 1. EXITS TRIGGERED | **0** — mechanical triggers ZERO, no invalidation criterion breached on any of the 13 open D tranches | nothing lost |
+| 2. NEW ENTRY CANDIDATES | **0 routed** (5 recorded index-only; B router DO-NOT-ACTIVATE, B NAV 0.00) | nothing lost |
+| 2a. ADD CANDIDATES | **0** — 13 evaluated, 0 flagged, 0 declined at the hard gate | nothing lost |
+| 3. WATCHLIST UPDATES | **7** — 5 adds (BTDR, BJ, TSLA, QBTS, DNN) + 2 annotations (MRNA, EL), all Strategy B, all index-only | **DEFERRED — see below** |
+| 4. ROUTER REVIEWS | **0** — default-NO holds, no inter-monthly review recommended | nothing lost |
+| 5. STRATEGY TERMINATIONS | **0** — kill-trigger sweep clean on D and B; drawdown and runaway both false | nothing lost |
+| 6. PARK ALLOCATION CONVERSION | **no-op regardless** — see below | nothing lost |
+| STEP 1. PENDING_ANALYSIS drain | queue unreadable; **no item evidenced as due on/before today** — see below | probably nil, must be re-checked live |
+
+**Item 6 — park conversion was a no-op on its own rails, outage or not.** D1's call is `status=BOUND`, `vehicle=VOO`, `direction=keep`. The live park leg is already VOO (D2a measured 21.8139 sh @ 703.71), and the last vehicle cutover recorded in `bigquery/` is the 2026-07-15 SGOV→VOO one (`54`/`55`), with no later `park_policy_changes` write. That is a **bound KEEP**, which the routine defines as *"also do nothing; there is no switch to execute."* No `events.park_policy_changes` INSERT, no first-leg SELL, no paired BUY leg. (`state.park_policy_current` itself was unreadable, so this rests on the live holding plus the repo's cutover history rather than on the view — stated so the replay re-reads the view rather than inheriting the inference.)
+
+**Item 3 — why the 7 watchlist edits were NOT applied unilaterally, which is a correctness reason and not merely "the routine halted."** Watchlist edits are otherwise among the cheapest things D2 does, and the trading-enable gate explicitly never blocks them. But **all 7 are Strategy-B identities**, and item 2's **Strategy-B event identity guard** requires querying open *and* terminal `events.queue_events` history plus `events.decision_log` for the exact four-part identity (`thesis-construction` + `strategy='B'` + ticker + `qualifying_event_date`) **before creating or acting on one**. That query is precisely **DEFERRED ITEM 8 above**, which D1 itself marks *"OWED, not merely deferred ... the check must be run before any of the five is ever converted."* Writing them into `Watchlist.md` now would be converting them with their dedupe check unrun — the one thing that item forbids. They are fully specified in the `d1_actions` block above and replay verbatim once the check can run; nothing needs re-deriving.
+
+**STEP 1 — the `PENDING_ANALYSIS` drain is the only step whose cost cannot be read off `Daily.md`, and D2 is its SOLE drainer** (`ops/handoff_contracts.yaml`: `drainers: [D2]`). The queue lives only in `events.queue_events` and could not be read. It is nonetheless bounded tightly by the on-disk record, because the *last clean D2 run* left a dated statement about it:
+
+- **D2's own run on 2026-08-18 (commit `a25c9003`) records: "No PENDING_ANALYSIS items due today."** That is the strongest single datum available — a direct observation of the live queue by this very routine, five days ago.
+- **The window that statement leaves open is 2026-08-19 → 2026-08-23, and the visible history covers it.** Every routine that fired in it and could have enqueued into this lane recorded a no-op: **W4** (`6feb31e`, today 09:51 UTC) states *"Zero PENDING_ANALYSIS enqueues and zero `events.queue_events` rows"*; **W2** (`8b53d6a`) confirms C's only item is already pending and explicitly must not be re-enqueued; today's **D1** routed no thesis and enqueued nothing (it could not write at all); **D2a** halted. The SL2/SL3/AR_orc/D3 `due_date` traffic in this window is all in the `PENDING_DRAFT` / `PENDING_ROSTER` / `PENDING_REVIEW` lanes, which D2 does not drain.
+- **Every dated `PENDING_ANALYSIS` item findable on disk falls after today:** `recheck-CRM-criteria-D-20260827` (**due 2026-08-27** — re-assessing all five `D:CRM:2026-07-09` invalidation criteria ahead of Salesforce's FQ2 FY27 print on 2026-08-26 AMC; this is the item `ops/RUNBOOK.md` §48's "earliest due 2026-08-27" reading refers to), `thesis-FOMC-C-20260908` (**2026-09-08**), `rescreen-LLY-D-20260914` (**2026-09-14**), `rescreen-NKE-D-20260925` (**2026-09-25**).
+- **The one item with a past due_date, `research-deferral-GEV-D-20260809`, is resolved by the same 08-18 datum.** `Watchlist.md`'s prose describes it as open and was never corrected, so the file alone is ambiguous — but an item due 2026-08-09 and still open would necessarily have been *due* on 2026-08-18, and D2 recorded none due that day. Taking this routine's own run record at face value, it drained on or before 2026-08-18. (Its conservative default was a PROCESS exit of the GEV position; no such exit appears anywhere, which is consistent with a normal resolution rather than a lapse.)
+
+**Conclusion: no `PENDING_ANALYSIS` item is due on or before 2026-08-23, so D2's drain cost today is almost certainly nil** — the same finding as the 2026-08-16 halt. **This is a bound from evidence, not a substitute for the check:** the checkout is a **shallow clone** with no commits reachable before 2026-08-18 04:45 UTC, and an item enqueued straight into BigQuery leaves no file trace at all. **The replay must still run STEP 1 against the live queue rather than inheriting this conclusion.** It is recorded because a due item rotting past its window unexamined is the one D2-specific loss this outage could cause, and it is worth knowing that it very probably did not.
+
+**Nothing was written.** No `ops.run_log` row for D2 (not even `started`), no order crafted, no `events.*` row, no `ops.alerts` row, no `Watchlist.md` edit, no calendar event of its own.
+
+#### D2 cannot be auto-refired either
+
+`ops/cadence.yaml` declares **D2 `catchup_safe: false`** — capital-adjacent, and in the same OPS0/OPS2 scope-guardrail exclusion set as D2a (`bigquery/59`). **Neither OPS0's 22:30 MT sweep nor OPS2 will recover this run.** Its only recovery is a human or its next scheduled slot, and the nightly `cadence_check` (05:15 UTC) will raise a `missed_run` critical for D2 alongside D2a's; both are TRUE positives and resolve per §26 once the replays are green.
+
+#### Calendar
+
+**No duplicate event.** D1's existing `[Claude] ATTENTION — RE-AUTH BigQuery connector` event was amended in place with this slot's escalation, per the Observability **INCIDENT INHERITANCE** rule (one incident, one alert thread; escalate only on material information — here the onset bound, the second independent halt reason, and the drain-lane blast radius).
+
+---
+
 ## PROCESS NOTES
 
 **1. THE PARALLEL-BATCH SHIFT DEFECT RECURRED, EXACTLY AS THE 2026-08-20 FILE PREDICTED — and the operational rule it wrote caught it.** That file recorded a 30-way parallel `get_price_history` batch returning internally shifted results and established the rule: *do not issue wide parallel batches; keep batches small, match every response by `contract_id`, and spot-verify any figure a decision turns on.* This run, a **25-symbol parallel batch silently dropped the BABA call and shifted every subsequent result by one position.** The sub-agent caught it by cross-checking against independently sourced closes and re-fetched every affected ticker individually or in small batches before computing anything. **This is now a reproducible defect across two consecutive sessions and two different agents, not an anomaly.** Independently of that, the orchestrating session pulled the decision-critical bars itself in batches of ≤2 — VOO, ISRG, BJ, SRE, EIX, FUTU, BTDR — and the tape agent's figures were confirmed exactly where they overlapped (VOO 701.01 → 703.71; ISRG 374.48 → 378.81).
