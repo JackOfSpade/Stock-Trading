@@ -501,6 +501,12 @@ Against that verified action set, the conversion workload D2 owed today was:
 
 **No duplicate event.** D1's existing `[Claude] ATTENTION — RE-AUTH BigQuery connector` event was amended in place with this slot's escalation, per the Observability **INCIDENT INHERITANCE** rule (one incident, one alert thread; escalate only on material information — here the onset bound, the second independent halt reason, and the drain-lane blast radius).
 
+**DEFECT FOUND IN THE OUTAGE CHANNEL ITSELF — recorded here because it cannot be alerted on, and because it bit this very run.** The first D2 append was **silently truncated by the Calendar API mid-sentence**, at roughly 8,192 characters of `description`. Nothing in the write result or the tool response indicated truncation; it was caught only because this session read the event back afterwards and compared. The lost text was the second half of the halt reasoning plus the *entire* measured-cost and no-auto-refire sections — i.e. the most actionable content in the append. It was recovered by re-writing a compressed block that fits, with the full detail left here instead.
+
+**Why this matters beyond today:** `Claude_Task_Plan.md` designates this event as *"the ONLY first-class channel"* precisely when `ops.alerts` is unreachable, and INCIDENT INHERITANCE concentrates every routine's escalation into **one** description. Three routines appended to this event today and the cap was reached on the third. A fourth (D3, OPS0, or a next-day session) appending naively will silently lose its content — and during a BigQuery outage there is, by construction, no alerting path that would reveal the loss.
+
+**Owning surface: `Claude_Task_Plan.md` § Observability → connector pre-flight → "BigQuery unreachable" branch, and § Calendar MCP usage.** Recorded rather than fixed from a halted run: this is a plan-text change with fleet-wide reach, not D2's to make unilaterally mid-incident. The concrete recommendation for that revision is **(a)** state the cap, **(b)** require an appending routine to keep its calendar block to a short pointer — status, the single most actionable line, and the commit/file carrying the detail — with the full record in the day's `Daily.md` outage section as done here, and **(c)** require a read-back verification after any append, since the write itself reports success either way. A queue/alert row could not be written for this; it lands in the next clean session's lap via this file.
+
 ---
 
 ## PROCESS NOTES
