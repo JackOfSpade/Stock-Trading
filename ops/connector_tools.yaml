@@ -301,6 +301,21 @@ connectors:
         use: unused
       - name: update_label
         use: unused
+      - name: update_message_labels
+        use: unused
+        note: >
+          Auto-added by OPS1 2026-08-23. Vendor-added tool, first observed in the live
+          connector's tool inventory — an UpdateMessageLabels RPC (messageId /
+          addLabelIds / removeLabelIds), distinct from the already-listed `update_label`,
+          which edits a label's own name and colour rather than which labels a message
+          carries. Both were confirmed to exist simultaneously by exact-name lookup, so
+          this is a genuine vendor addition, not a rename of `update_label`. Arrived
+          alone, not as part of a bundle like the 2026-08-12 spam/trash rollout or the
+          2026-08-16 send/reply/forward bundle. `use: unused` is the conservative default
+          — nothing in this fleet calls it (mirrors the IBKR `whats_new` precedent, July
+          2026). Promoting it to required/optional and adding routine prose that calls it
+          is a separate, deliberate feature-adoption decision this step never makes on its
+          own.
     absent: []
 
   - name: Google-Calendar
