@@ -75,6 +75,60 @@ the repo which model is live" one.
 
 ---
 
+# 2026-08-23 FMP earnings-calendar horizon — owner decision, not a bug (W1 catalyst calendar)
+
+## FMP-earn-horizon. NORMAL — Strategy A's 6-month catalyst calendar can only source CONFIRMED earnings dates ~13 weeks out on the current FMP tier — decide whether to raise the tier or accept the gap — `[NORMAL — owner decision pending; no default action, existing per-name fallback already covers the gap]`
+
+**What was measured (2026-08-23, direct probes against the live FMP connector on this plan tier —
+record this so W1 stops rediscovering it and raising a fresh alert every weekly cycle).** FMP's
+`calendar` tool's `earnings-calendar` route is a FORWARD-ONLY ROLLING WINDOW: a
+2026-11-20..2026-12-05 probe returned exactly ONE row (BABA, 2026-11-24) and a
+2027-01-15..2027-02-15 probe returned ZERO rows, so the horizon ends around 2026-11-24 — roughly
+13 weeks out from today. The BACKWARD end is not merely empty but explicitly REFUSED: a
+2026-01-26..2026-01-30 (historical) probe returned "ACCESS DENIED ... requires a higher plan" — so
+the fallback of deriving next year's dates from last year's actuals is NOT available on this tier
+either. The per-symbol form, `calendar/earnings-company`, also returns ACCESS DENIED (confirmed on
+MSCI) — there is no per-name calendar workaround on FMP itself. (The adjacent dividend and
+statements surfaces were probed the same session and are recorded in full in
+`ops/connector_tools.yaml`'s `calendar` entry: `dividends-calendar`, the date-range form, WORKS and
+is now the sanctioned fallback for `state.price_level_criterion_drift`; `dividends-company` and
+`statements/income-statement` are both ACCESS DENIED; `statements/financial-reports-dates` works
+but returns no dates.)
+
+**Why this is an owner decision, not a bug.** W1's Strategy A catalyst calendar is specified with a
+6-MONTH window (`Claude_Task_Plan.md:2469`), but a bulk, confirmed FMP pull can only reach ~13
+weeks of it. INFERRED from those two figures: roughly Dec 2026 / Jan 2027 / Feb 2027 — about 42% of
+the 6-month window — is reachable only via the already-sanctioned WebSearch→Tavily fallback chain,
+per-name and metered against the Tavily credit budget, rather than from one bulk calendar pull.
+That is strictly worse throughput, not a correctness gap: names in the uncovered tail still get a
+catalyst date, just at the ESTIMATED/(E) provenance tier and one Tavily/IR lookup at a time instead
+of one shared FMP call for the whole universe.
+
+**Precedent.** Item **W** above (2026-07-19) already put this exact question to the owner for the
+adjacent ETF/quote gap, and the owner DECLINED the FMP upgrade — the system was rewired to source
+from IBKR as PRIMARY instead of paying for the tier. This item is the earnings-calendar analog of
+that same choice: either (a) raise the FMP plan tier — note the probes above establish only where
+the CURRENT tier's `earnings-calendar` window ends, not whether any paid tier widens it, so that
+would need confirming with FMP before paying — or (b) accept the reduced confirmed-earnings horizon
+as a standing constraint and keep filling the tail per-name via Tavily/IR pages at ESTIMATED/(E)
+provenance, which is what W1 already does today whenever a name's date isn't in the bulk pull.
+
+**If skipped:** no capital is at risk and nothing halts — W1's per-name Tavily fallback already
+covers the uncovered tail today, just at higher per-name cost than a bulk pull would give. The only
+downside of leaving this open is throughput/cost, the same class of tradeoff as `OPS2-headroom`
+above.
+
+```verify
+id: FMP-earn-horizon
+type: fmp
+probe: an FMP `earnings-calendar` call for a window beyond ~13 weeks out (e.g. 2027-01-15..2027-02-15) — currently returns ZERO rows
+done_when: standing decision — either (a) raise the FMP plan tier and re-probe to confirm the
+  rolling window widened, or (b) accept the reduced confirmed-earnings horizon as-is; either
+  choice closes this item, matching item W's precedent
+```
+
+---
+
 # 2026-08-19 `GEMINI_API_KEY` — migrate to an **auth key** before Google's September 2026 Standard-key cutoff
 
 ## G-authkey. Replace the golden-scenarios Gemini key with an AI Studio **auth key** (`AQ.…`) — `[URGENT — hard vendor deadline in September 2026]`

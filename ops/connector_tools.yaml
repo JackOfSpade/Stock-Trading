@@ -103,6 +103,25 @@ connectors:
           exhaustion; see the shared "One shared pull, not N independent ones" rule). Flipped
           unused→required in that commit: it is now a named call site, so it must be allowlisted
           or an unattended W2 stalls on a permission prompt at the top of the run.
+          STANDING CONSTRAINT (MEASURED 2026-08-23, direct probes against this FMP tier —
+          record it here so W1 stops rediscovering it and raising a fresh alert every weekly
+          cycle). `earnings-calendar` is a FORWARD-ONLY ROLLING WINDOW: a
+          2026-11-20..2026-12-05 probe returned exactly ONE row (BABA, 2026-11-24) and a
+          2027-01-15..2027-02-15 probe returned ZERO rows, so the horizon ends around
+          2026-11-24 — roughly 13 weeks out. The BACKWARD end is not merely empty but
+          explicitly REFUSED: a 2026-01-26..2026-01-30 (historical) probe returned "ACCESS
+          DENIED ... requires a higher plan" — which means the "derive next year's earnings
+          dates from last year's actuals" fallback is NOT available on this tier either. The
+          per-symbol forms are also denied: `calendar/earnings-company` returns ACCESS DENIED
+          (confirmed on MSCI), and `calendar/dividends-company` returns ACCESS DENIED too. The
+          one usable dividend surface is the DATE-RANGE form: `calendar/dividends-calendar`
+          WORKS on this tier — a 2026-08-10..2026-08-18 probe returned 7 rows with ex-date,
+          record date, payment date, declaration date and amount — and is the fallback for
+          `state.price_level_criterion_drift` (bigquery/197) when `events.daily_marks` does
+          not cover a criterion's reference date. On statements, `statements/income-statement`
+          with `period=quarter` returns ACCESS DENIED, and `statements/financial-reports-dates`
+          WORKS but returns only `fiscalYear`+`period` with NO dates, so it cannot supply
+          report dates.
       - name: chart
         use: required
         prose_ambiguous: true
@@ -122,8 +141,9 @@ connectors:
         use: unused
         prose_ambiguous: true
         note: >
-          Claude_Task_Plan.md:1336 records this as plan-gated (needs FMP Starter+) on the
-          current FMP tier — enumeration route considered and rejected for EQUITY_BREADTH.
+          Claude_Task_Plan.md:1818 ("every enumeration route is plan-gated") records this as
+          plan-gated (needs FMP Starter+) on the current FMP tier — enumeration route
+          considered and rejected for EQUITY_BREADTH.
       - name: discountedCashFlow
         use: unused
       - name: earningsTranscript
@@ -135,9 +155,9 @@ connectors:
       - name: etfAndMutualFunds
         use: unused
         note: >
-          Claude_Task_Plan.md:1336 records this as plan-gated (needs FMP Ultimate+) on the
-          current FMP tier — SPY-holdings enumeration route considered and rejected for
-          EQUITY_BREADTH.
+          Claude_Task_Plan.md:1818 ("every enumeration route is plan-gated") records this as
+          plan-gated (needs FMP Ultimate+) on the current FMP tier — SPY-holdings
+          enumeration route considered and rejected for EQUITY_BREADTH.
       - name: forex
         use: unused
         prose_ambiguous: true
@@ -148,9 +168,9 @@ connectors:
         use: unused
         prose_ambiguous: true
         note: >
-          Claude_Task_Plan.md:1336 records this as plan-gated (needs FMP Premium+) on the
-          current FMP tier — S&P breadth-index lookup route considered and rejected for
-          EQUITY_BREADTH.
+          Claude_Task_Plan.md:1818 ("every enumeration route is plan-gated") records this as
+          plan-gated (needs FMP Premium+) on the current FMP tier — S&P breadth-index
+          lookup route considered and rejected for EQUITY_BREADTH.
       - name: insiderTrades
         use: unused
       - name: marketHours
@@ -199,8 +219,9 @@ connectors:
         use: unused
         prose_ambiguous: true
         note: >
-          Claude_Task_Plan.md:1336 records this as plan-gated (needs FMP Starter+) on the
-          current FMP tier — enumeration route considered and rejected for EQUITY_BREADTH.
+          Claude_Task_Plan.md:1818 ("every enumeration route is plan-gated") records this as
+          plan-gated (needs FMP Starter+) on the current FMP tier — enumeration route
+          considered and rejected for EQUITY_BREADTH.
       - name: tipranks
         use: unused
         prose_ambiguous: true
@@ -435,7 +456,7 @@ connectors:
           `ops.account_snapshot`'s twr_1d/7d/mtd/ytd/1y columns.
       - name: get_price_history
         use: required
-        note: EQUITY_BREADTH / SPY_TREND price leg (Claude_Task_Plan.md:1336 area); D1/W-tier research
+        note: EQUITY_BREADTH / SPY_TREND price leg (Claude_Task_Plan.md:1808 ("**`SPY_TREND`** — from `state.signal_marks_curated` SPY closes"), D2a TECHNICAL_SIGNAL block; corrected 2026-08-23 from a stale ":1336 area" anchor that now lands in the unrelated strategy idle-balance-deficit passage); D1/W-tier research
       - name: get_price_snapshot
         use: required
         note: OPS1-adjacent live-quote surface; D2/D2a intraday pricing

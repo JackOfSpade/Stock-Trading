@@ -616,6 +616,78 @@ sources:
           Declared trade frequency per strategy — the dormancy sweep's expected-cadence input. Defined in bigquery/166_capital_dormancy_sweep.sql.
 
 
+      # ---- 2026-08-23 alert-triage observability detectors (bigquery/196, bigquery/197) ----
+      # Declared out of dbt scope, NOT deferred. These three are ROUTINE-FACING DETECTORS: the
+      # Claude_Task_Plan.md rules that consume them tell a routine to SELECT from the live object by
+      # name at decision time, so their value is that they are queryable in the warehouse the routines
+      # already read. They sit outside the dbt analytics lineage entirely -- nothing dbt builds refs
+      # them -- and porting them would create a parallel definition of an operational guard for no
+      # cutover benefit, which is the same judgment RUNBOOK 14 already made about giving dbt ownership
+      # of the views. check_live_sql_parity.py covers them against live daily, as it does every other
+      # bigquery/*.sql object.
+      - name: cadence_expected_history
+        description: >
+          Retrospective twin of state.cadence_expected_today (bigquery/196): was routine R EXPECTED on
+          past date D, and did it log anything. Same monitor_class predicates, evaluated per calendar
+          date over a trailing 90 days instead of only for CURRENT_DATE. Read directly by routines per
+          the RUN-LOG GAP INTERPRETATION rule for SINGLE-ROUTINE miss claims.
+        columns:
+          - name: run_date
+            description: Operating day (America/Denver) the expectation is evaluated for.
+          - name: routine
+            description: Routine id; full roster incl. the 4 queue_driven ids (which are never expected).
+          - name: expected
+            description: TRUE when this routine's monitor_class schedules it on this date.
+          - name: in_service
+            description: TRUE once the routine has logged its first ever completed run on/before this date.
+          - name: rows_logged
+            description: ops.run_log rows of ANY status for (routine, run_date).
+      - name: fleet_blackout_days
+        description: >
+          Fleet-wide outage detector (bigquery/196). ZERO ROWS = no blackout in the trailing 90 days.
+          A date qualifies only when >=1 in-service routine was expected and NOT ONE of the EXPECTED
+          routines logged a row. Aggregated per DATE and carries no `routine` column, so it cannot and
+          must not be used to answer a single-routine question -- use cadence_expected_history for that.
+        columns:
+          - name: run_date
+            description: The blackout date (today is excluded; it is still in progress).
+          - name: expected_routines
+            description: Count of in-service routines scheduled that date.
+          - name: rows_logged_by_expected
+            description: Rows logged by those expected routines; 0 for every row this view returns.
+          - name: rows_logged_by_others
+            description: >
+              Diagnostic only, never in the HAVING: what queue-driven / not-expected routines logged.
+              Non-zero alongside a blackout row means the scheduler was alive but the expected cohort
+              did not run -- a different fault than a total platform outage.
+      - name: price_level_criterion_drift
+        description: >
+          Dividend drift on immutable price-LEVEL exit tests (bigquery/197). For each open position it
+          surfaces price_level vs dividend_adjusted_level so D1/D2 net the ex-dividend out before
+          reading a literal criterion fire as thesis deterioration (the 2026-08-18 B:MSCI exit). It
+          NEVER edits a criterion -- invalidation_status is immutable; only the reading is adjusted.
+        columns:
+          - name: position_key
+            description: Open position the criterion belongs to.
+          - name: criterion_source
+            description: >
+              Either invalidation_status (prose criteria) or convergence_target (structured NUMERIC).
+          - name: actionable_price_level
+            description: >
+              The column to filter on: is_exit_criterion AND NOT likely_fundamental_context -- a
+              genuine, dividend-exposed price test rather than an EPS/margin figure that merely looks
+              like one, or a non-criterion key such as not_exit_triggering.
+          - name: dividend_adjusted_level
+            description: price_level minus dividends with ex-dates in (reference_date, today].
+          - name: marks_cover_reference
+            description: >
+              FALSE means events.daily_marks does not reach back to reference_date, so the dividend
+              total is an INCOMPLETE lower bound -- corroborate against FMP dividends-calendar.
+          - name: reference_date_declared
+            description: >
+              FALSE means the criterion never recorded price_level_ref_date and entry_date was used as
+              a lower-bound proxy.
+
   - name: analytics_external
     project: stock-trading-498512
     dataset: analytics
