@@ -1384,3 +1384,27 @@ Both belong to plan prose in `Claude_Task_Plan.md`, which is outside OPS0's `wri
 **What this run deliberately did not touch:** W5's own 2026-08-23 catch-up (grace window still open) and the D1 audit-trail gap flagged above — neither is OPS2's to fix; the former is not yet due, the latter is a different routine's row.
 
 **Branch `claude/ops2-catchup-2026-08-23` pushed and verified on `origin` before `ops.run_log` was logged `completed`**, per the verified-push gate.
+
+---
+
+### APPENDED BY THE AR_att CATCH-UP REPLAY — 2026-08-24 (interactive session) — **AR_att COMPLETED for run_date=2026-08-23**
+
+*Written by an interactive session running AR_att's own queue scan for the slot that halted 2026-08-23 ~18:10 MT before any BigQuery write (halt record, "APPENDED BY THE AR_att SLOT" section above; zero `ops.run_log` rows of any status existed for AR_att/2026-08-23 prior to this session). BigQuery MCP was still unavailable in-session; all reads/writes went through `bq query` direct against `stock-trading-498512`.*
+
+**Result: `ops.run_log` now carries a real `completed` row for `AR_att` / `run_date = 2026-08-23`** (session `interactive-ar-att-catchup-2026-08-24`, branch `claude/ar-att-catchup-2026-08-23`).
+
+**Preamble best-effort calls:** `ops.sp_auto_resolve_alerts()` — 0 rows affected. `ops.sp_embed_pending()` — 0 rows affected. **Connector pre-flight:** BigQuery live (`state.trading_day_today` read cleanly, `today=2026-08-24`); AR_att needs no IBKR/Calendar pre-flight — it is not in `Claude_Task_Plan.md`'s D1/D2 IBKR list nor its D2/D3/W4/M4/Q4/A1/A3/AR_orc Calendar list.
+
+**STEP 0 — STRANDED-TRANSCRIPT RECONCILIATION, run first as the replay checklist required.** The exact join (`state.open_queue_detail` pending rows JOIN `state.adversarial_reviews_current` attacker rows on `queue_event_id`) returned **0 rows**. No 2026-08-16-class deadlock exists; there was nothing to hash-verify or advance.
+
+**QUEUE SCAN for `attacker_due_date <= 2026-08-24 AND status = pending`: 0 matching rows.** `state.open_queue_detail` for `queue = PENDING_REVIEW` holds exactly 3 rows: `premortem-C-2026-a3` (cycle 15, `status = attacker-complete`, `orchestrator_due_date = 2026-08-21`) and `premortem-E-2026-a3` (cycle 11, `status = attacker-complete`, `orchestrator_due_date = 2026-08-21`) — both already attacked and hash-verified by AR_att's own 2026-08-20 fire (`ops.run_log` AR_att/2026-08-20 `completed`, session `a5fff62e-...`), well before this outage began, so nothing was lost by the halt — and `web-call-coverage-gap-no-horizon-floor` (`item_type = ops-defect`, `status = OPEN`, due 2026-08-25, `owning_routine = OPS0` per its own payload) — not a review-type item, out of AR_att's scope, not touched. `events.queue_events` history for `PENDING_REVIEW` re-checked back through 2026-08-14: no `pending` row has appeared for either pre-mortem since the 2026-08-20 re-enqueue. The CATCH-UP EVIDENCE WINDOW (`state.routine_catchup_window`: `last_completed_ts = 2026-08-21 00:33:13`, `window_days = 3.65`, exceeding the 1.5x daily-cadence telemetry bar) is therefore fully covered by this scan. No injection-attempt indicators found in any read source.
+
+**Per the routine's own chat-output rule** — STEP 0 reconciled nothing AND no due entry exists — this is a genuine no-op cycle: *"No adversarial reviews due for attacker today."* Nothing was written to `events.adversarial_reviews`; no `queue_events` transition was inserted. **`rows_written = 0`.** `CATCHUP[window_days=3.65]`.
+
+**Downstream context (not this routine's action, recorded for the next slot):** the two open `artifact_version_drift` warnings (`a8992f43` premortem-E, `8eb5f355` premortem-C) remain open — they clear only at AR_orc's Step 5 grading of these already-`attacker-complete` rows, which needs a completed AR_orc replay, not any further AR_att work. `state.queue_driven_silence_watch` confirms AR_att/AR_orc both at `days_silent = 4`, `is_silent = FALSE` (threshold 9) — no dead-man exposure from this gap.
+
+`check_prose_invariants.py` / `check_routine_scope.py`: run before commit, see below.
+
+**What this run deliberately did not touch:** the two `artifact_version_drift` alerts and the AR_orc replay itself — both are AR_orc's slot, not AR_att's.
+
+**Branch `claude/ar-att-catchup-2026-08-23` pushed and verified on `origin` before `ops.run_log` was logged `completed`**, per the verified-push gate.
