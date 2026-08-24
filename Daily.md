@@ -1354,3 +1354,33 @@ Both belong to plan prose in `Claude_Task_Plan.md`, which is outside OPS0's `wri
 **What this run deliberately did not touch:** OPS2's own 2026-08-23 catch-up remains separately owed and is the next slot in the chain.
 
 **Branch `claude/ops0-catchup-2026-08-23` pushed and verified on `origin` before `ops.run_log` was logged `completed`**, per the verified-push gate.
+
+---
+
+### APPENDED BY THE OPS2 CATCH-UP REPLAY — 2026-08-24 (interactive session) — **OPS2 COMPLETED for run_date=2026-08-23**
+
+*Written by an interactive session running OPS2's own STEP 0-3 for the slot that halted 2026-08-23 before any BigQuery write (halt record, commit `b9c0b75`; that slot logged nothing in any status). BigQuery MCP was still unavailable in-session; all reads/writes went through `bq query` direct against `stock-trading-498512`.*
+
+**Result: `ops.run_log` now carries a real `completed` row for `OPS2` / `run_date = 2026-08-23`** (session `interactive-ops2-catchup-2026-08-24`, branch `claude/ops2-catchup-2026-08-23`).
+
+**STEP 0 — marker self-heal.** `CALL ops.sp_backfill_run_log_from_markers()`: 0 candidates, 0 rows backfilled — `state.run_log_selfheal_candidates` was already empty going in.
+
+**STEP 1 — READINESS READ, verified genuine rather than assumed.** `state.catchup_refire_readiness` returned **0 rows**. Checked this four independent ways rather than trusting the one view: (a) `state.catchup_available` (daily tier) and `state.period_catchup_available` (period tier) each independently queried 0 rows; (b) `state.cadence_watch` shows `needs_attention=FALSE` for all 8 `daily_sun_thu` routines as of today (2026-08-24) — too early in the day for a new miss; (c) `state.cadence_period_watch` shows 19/20 period-tier routines `ran_completed_this_period=TRUE`, `period_missed=FALSE` for all 20 — the one not-yet-completed is **W5**, whose `grace_deadline` (2026-08-24T21:00:00Z) had not yet passed at read time (~09:15 UTC), so it is correctly *late within grace*, not yet a catchup-safe miss — W5 remains the next slot in the chain, not this run's to take; (d) the yesterday-tier bridge CTE (`bigquery/112`) confirms D1/D3/SL3 each have a `completed` row for `last_expected_day=2026-08-23` (this session's own earlier replays), so none qualifies as "actually missed."
+
+**STEP 0's own rationale held exactly as this file predicted it should.** D1/D2a/D2/D3/SL3/OPS0 were all genuinely landed by the time this slot ran (five as clean interactive replays with fresh `started`/`completed` pairs; D1 via the auto-backfilled marker from `088fcf7`, corroborated by real `events.decision_log` writes under `source_session='catchup-replay-20260824'` — park-allocation, two research-screens, add-candidate sweep, all dated 2026-08-23), so STEP 0 correctly found nothing to heal and STEP 1 correctly found nothing to re-fire. No routine was inline-re-executed.
+
+**STEP 2 — nothing to iterate.** Feed was empty: no SCOPE-GUARDRAIL check, no order-craft slice-scan, no connector-check branch, no `ops.catchup_refire_log` row owed.
+
+**Connector pre-flight, OPS2's own full set:** BigQuery live (`state.trading_day_today` read cleanly); IBKR live (`get_account_summary`, `net_liquidation` 15936.66); Calendar live (`list_events` on the primary calendar). FMP/Gmail not exercised — STEP 2 never reached, so no hosted routine needed them.
+
+**Alert `28e026c8` (`missed_run`, critical — the alert this whole catch-up sequence exists to close) — explicitly re-checked, not assumed.** Confirmed `resolved=FALSE` immediately before this slot's own `sp_routine_end`. After logging OPS2 `completed`, called `CALL ops.sp_auto_resolve_alerts()` directly (best-effort call, not gated on anything) and re-read the row: **`resolved=TRUE`, `resolved_ts=2026-08-24 09:20:11 UTC`**, cleared by Rule 2 (`eligible_run` — "named routine(s) since completed"), which fired now because OPS2's own `completed` row was the last of the six named routines (D2, D2a, D3, OPS0, OPS2, SL3) missing from `ops.run_log`. Verified directly against the alert row, not inferred from the procedure's affected-rows count.
+
+**A gap found outside OPS2's own scope, flagged rather than fixed here.** D1's `ops.run_log` row for 2026-08-23 is still the auto-backfilled `completed` marker minted at 05:15 UTC from commit `088fcf7`'s DEGRADED-MODE subject (the exact phantom-completion class this file's OPS2 halt record predicted and named `THE SHARPEST FINDING`), not a fresh `started`/`completed` pair from a dedicated replay session. Its `note` field carries an appended block (`source_session='catchup-replay-20260824'`) claiming the ten deferred writes were landed, and `events.decision_log` corroborates real rows under that session id (park-allocation, two research-screens — one self-corrected in a follow-up row, add-candidate sweep — all dated 2026-08-23). **But no git commit documents that D1 replay** (unlike D2a/D2/D3/SL3/OPS0, each of which produced a commit and a Daily.md section), and the halt record's own prescribed remediation SQL (retarget `status` to `'halted'` with a `RUNBOOK §48 class (C)` `error_msg`) was never applied — the row still self-reports `status='completed'` via the original backfill rather than through a verified terminal write. Mechanically this does not affect anything tonight: `state.catchup_refire_readiness` treats `status='completed'` as sufficient regardless of provenance, so D1 is correctly excluded from every miss feed either way, and alert `28e026c8` did not depend on D1 (D1 was never one of the six named routines). But the audit trail for D1/2026-08-23 is thinner than for its five siblings, and a future session auditing that night's recovery should read the `note` field, not the bare `status`, before taking D1's row at face value.
+
+**`rows_written = 0`** — one `events.decision_log` heartbeat (`ops-heartbeat`) is the only durable write this slot owed; no fills, no marks, no `ops.catchup_refire_log` row (STEP 1 was empty throughout).
+
+`check_prose_invariants.py` / `check_routine_scope.py` / `check_cadence_marker.py`: run before commit, see below.
+
+**What this run deliberately did not touch:** W5's own 2026-08-23 catch-up (grace window still open) and the D1 audit-trail gap flagged above — neither is OPS2's to fix; the former is not yet due, the latter is a different routine's row.
+
+**Branch `claude/ops2-catchup-2026-08-23` pushed and verified on `origin` before `ops.run_log` was logged `completed`**, per the verified-push gate.
