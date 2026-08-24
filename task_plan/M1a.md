@@ -734,6 +734,8 @@ If fallback_suppression = false: score the 5 regime condition axes per Strategy.
 Followed by a 2–3 sentence integrative summary of the regime in strategy-blind terms (e.g., "decelerating growth + hawkish policy + neutral risk sentiment, no acute shock") — do not name strategies.
 
 CHAT OUTPUT: one-line acknowledgment naming both files written. If fallback_suppression = true, additionally state "FALLBACK SUPPRESSION ACTIVE — M1b will not produce strategy mappings this month."
+
+**`ops.web_calls` OBLIGATION (added 2026-08-24, fleet-wide alert-triage closure)** — M1a's own metered surface is narrow but real: the OUTPUT 1 macro-indicators ingest calls `mcp__FMP__economics` (`treasury-rates` + `economics-indicators`, including the date-pinned `treasury_10y`/`treasury_2y` reads under the five-metrics rule above), and the `hy_oas` pull (plus the optional `yield_curve_10y2y` cross-check) against `fred.stlouisfed.org` routes through Tavily extract rather than a direct fetch, per the 403 note above. Before the terminal `sp_routine_end` call, write the batched `ops.web_calls` INSERT per the shared Run-logging template (§Observability, ~line 204-227) covering every FMP `economics` call and every Tavily extract call this run actually made — including a `fallback_suppression=true` month, where the macro ingest still runs even though axis scoring is skipped. This is restated here, as at OPS1 (~line 2380-2397), because measured fleet compliance with the shared template's `ops.web_calls` clause stays low when the obligation is left only in the distant Observability section.
 ```
 
 ---
