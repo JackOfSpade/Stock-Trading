@@ -1302,3 +1302,25 @@ Both belong to plan prose in `Claude_Task_Plan.md`, which is outside OPS0's `wri
 **What this run deliberately did not touch:** OPS0, OPS2 and SL3's own 2026-08-23 catch-ups remain separately owed (SL3 is in-scope for this session's authorization but is a distinct routine, run separately); OPS0/OPS2 catch-ups are out of scope for this session's authorization entirely.
 
 **Branch `claude/d3-catchup-2026-08-23` pushed and verified on `origin` before `ops.run_log` was logged `completed`**, per the verified-push gate.
+
+---
+
+### APPENDED BY THE SL3 CATCH-UP REPLAY — 2026-08-24 (interactive session) — **SL3 COMPLETED for run_date=2026-08-23**
+
+*Written by an interactive session running the SL3-slot replay checklist above end-to-end, per the same session-scoped owner authorization as the D2a/D2/D3 replays above (asked explicitly in-session whether to run the D2a/D2/D3/SL3 2026-08-23 catch-up replays with full autonomy; owner chose full autonomy for that named, bounded set — not a standing policy). BigQuery MCP was still unavailable in-session; all reads/writes went through `bq query` direct against `stock-trading-498512`.*
+
+**Result: `ops.run_log` now carries a real `completed` row for `SL3` / `run_date = 2026-08-23`** (session `interactive-sl3-catchup-2026-08-24`, branch `claude/sl3-catchup-2026-08-23`). `ops.sp_assert_arsenal_enabled('SL3')` PASSED (`ops.arsenal_control` unchanged since 2026-07-10, `enabled=TRUE`). `ops.sp_assert_deps('SL3', ['D2a'], 2026-08-23)` PASSED — D2a's real `completed` row exists (this session's own prior D2a catch-up replay, `280c61d`).
+
+**§48 phantom-signature check (replay checklist item 5) — did NOT trigger.** `ops.run_log` held zero SL3 rows for `run_date=2026-08-23` in any status prior to this session, confirmed directly — no `status='completed'` row to correct to `'halted'` was needed, and STEP 1's catch-up range below did not come back empty.
+
+**STEP 1 catch-up scope.** `state.routine_catchup_window` for SL3: `last_completed_ts = 2026-08-21 05:49:44` (SL3's real last completion, `run_date=2026-08-20`), `window_days=3.11` — exceeds the 1.5x daily-cadence telemetry threshold, so `CATCHUP[window_days=3.11]` is recorded. The catch-up loop's scope is the trading days between that completion and today's (`run_date=2026-08-23`, Sunday) `last_trading_day` carrying a `state.daily_marks_curated` row — exactly **one day, Friday 2026-08-21** (12 curated marks rows, confirmed live and non-empty).
+
+**Zero SHADOW/PAPER members — verified live, not inherited from this file's own closed-form argument.** `state.strategy_roster` holds exactly 8 rows: A/B/C/D/E all `current_state=ADOPTED`, `is_incubating=FALSE` (the founding batch, seeded 2026-04-23 before the arsenal machinery existed, never SHADOW/PAPER); F/G/H all `current_state=REJECTED`. `state.strategy_shadow_readiness` and `state.strategy_paper_readiness` both independently return 0 rows live. So STEP 1's SHADOW/PAPER bullets had no candidate to evaluate for 2026-08-21, and STEP 2–4 (readiness, self-execute, cull) are no-ops by construction: 0 signals, 0 simulated fills, 0 SHADOW→PAPER transitions, 0 PAPER→PROBE enqueues, 0 culls. `events.shadow_positions` and `analytics.strategy_incubation_perf` both confirmed at 0 rows; `ops.roster_change_log` confirmed at 0 rows, unchanged.
+
+**STEP 5.** `state.arsenal_regime_coverage` read (it is a VIEW — "recompute" is satisfied by reading it): all 9 regime cells `is_gap=TRUE`, 0 covered. Regime cell for the backfilled day, from D2a's own STEP 1e TECHNICAL_SIGNAL ingest: `SPY_TREND=UP` / `VIX_REGIME=NORMAL` → `UP/NORMAL`. `state.strategy_probe_funding_stalled` read: 0 rows, no alert owed. Wrote the daily `arsenal-heartbeat` `events.decision_log` entry (`entry_type='arsenal-heartbeat'`, `title LIKE 'SL3 %'` per the pinned attribution-key convention) — the sole write this run.
+
+**`rows_written = 1`** (the heartbeat `events.decision_log` row only — no other write was owed on an empty incubation population). `check_prose_invariants.py`: OK. `check_routine_scope.py`: OK. `check_cadence_marker.py`: OK. `check_live_roster_parity.py`: OK, live `state.active_strategy_codes` == `strategy/roster.yaml` roster-active set `['A','B','C','D','E']` — BigQuery is reachable this session, so this closes the gap the halted session could only argue closed-form (no live SHADOW/PAPER member could exist; now directly confirmed).
+
+**What this run deliberately did not touch:** OPS0 and OPS2 catch-ups remain separately owed and are out of this session's authorization scope. No repo/roster edit — SL3 touches no capital and edits no repo/roster by design.
+
+**Branch `claude/sl3-catchup-2026-08-23` pushed and verified on `origin` before `ops.run_log` was logged `completed`**, per the verified-push gate.
