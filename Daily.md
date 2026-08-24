@@ -313,31 +313,31 @@ Three further reasons reinforce the decline, none of which is the primary one: t
   ticker: MU
   strategy: B
   qualifying_event_date: 2026-08-24
-  source_research_screen_id: <single-name-move research-screen entry_id, D1 2026-08-24>
+  source_research_screen_id: 09d2bf26-5b1b-49bc-929c-aaa6d99c4be8
   detail: Add to Strategy-B new-entry index; -5.8286% close-to-close (966.78 -> 910.43, IBKR RTH daily bars) on the 2026-08-24 CXMT/Apple memory-sourcing report plus Samsung guidance; clears B Entry criterion 1 frozen >=5% floor; index row only, B is DO-NOT-ACTIVATE and capital-disabled, no thesis handoff created
 - action: watchlist
   ticker: SNDK
   strategy: B
   qualifying_event_date: 2026-08-24
-  source_research_screen_id: <single-name-move research-screen entry_id, D1 2026-08-24>
+  source_research_screen_id: 09d2bf26-5b1b-49bc-929c-aaa6d99c4be8
   detail: Add to Strategy-B new-entry index; -6.4508% close-to-close (1596.08 -> 1493.12, IBKR RTH daily bars) on the same 2026-08-24 CXMT/Samsung catalyst; clears the >=5% floor; index row only, no thesis handoff created
 - action: watchlist
   ticker: STX
   strategy: B
   qualifying_event_date: 2026-08-24
-  source_research_screen_id: <single-name-move research-screen entry_id, D1 2026-08-24>
+  source_research_screen_id: 09d2bf26-5b1b-49bc-929c-aaa6d99c4be8
   detail: Add to Strategy-B new-entry index; -6.5118% close-to-close (850.00 -> 794.65, IBKR RTH daily bars) on the same 2026-08-24 cluster with a partly technical overlay; clears the >=5% floor; index row only, no thesis handoff created
 - action: watchlist
   ticker: WDC
   strategy: B
   qualifying_event_date: 2026-08-24
-  source_research_screen_id: <single-name-move research-screen entry_id, D1 2026-08-24>
+  source_research_screen_id: 09d2bf26-5b1b-49bc-929c-aaa6d99c4be8
   detail: Add to Strategy-B new-entry index; -5.2368% close-to-close (459.44 -> 435.38, IBKR RTH daily bars) on the same 2026-08-24 CXMT/Samsung catalyst; clears the >=5% floor; index row only, no thesis handoff created
 - action: watchlist
   ticker: AAOI
   strategy: B
   qualifying_event_date: 2026-08-21
-  source_research_screen_id: <single-name-move research-screen entry_id, D1 2026-08-24>
+  source_research_screen_id: 09d2bf26-5b1b-49bc-929c-aaa6d99c4be8
   detail: Add to Strategy-B new-entry index; -13.7720% close-to-close (124.82 -> 107.63, IBKR RTH daily bars) on the 2026-08-21 8-K for a $600M ATM equity offering, 2026-08-24 being the reaction session; event date governs per the ANCHOR PIN; clears the >=5% floor; index row only, no thesis handoff created
 - action: watchlist
   ticker: TSLA
@@ -361,4 +361,6 @@ Three further reasons reinforce the decline, none of which is the primary one: t
 
 **5. The `ops.web_calls` coverage gap on the board is not this run's.** OPS0 raised eleven `web_call_coverage_gap` warnings at 03:04 MT today, including one naming D1 — all of which refer to the **2026-08-23** degraded run whose per-call telemetry was correctly judged unreconstructable. **A `PENDING_REVIEW` queue item (`web-call-coverage-gap-no-horizon-floor`, due 2026-08-25) already exists to adjudicate the category**, which is absent from `ops.alert_policy` and therefore latching. **No action taken here beyond noting it: the owning surface is OPS0, and this run does log its own `ops.web_calls` rows.** Separately and per the State-provenance rule: `state.web_spend_month` shows `has_unreported_runs = TRUE` for **every** routine, so **any spend figure drawn from it today is a FLOOR, not a total** — D1's own August Tavily line reads 146 calls / 209.4 credits, but covers only **3 of 18** runs.
 
-**6. Frontier-LLM capability check: SILENT, correctly.** One `hf_fs` paper-search query was run (`"LLM cross-session consistency reasoning variance"`, the Monday cross-session-consistency battery from `HF_Resource_Catalog.md` §6.1, which §2 maps to disadvantage 2.24). Five hits returned; **the most recent is dated 2026-05-11**, over three months outside the ~72-hour window. **No in-window paper, therefore no analysis, no `events.decision_log` capture and no `state.strategy_candidates` row.** Noted for the record because a silent step and a skipped step are indistinguishable otherwise.
+**6. A `body_md` apostrophe-doubling defect was introduced, CAUGHT BY VERIFICATION, and corrected append-only — the mechanics are worth recording because the failure is silent.** The first two `research-screen` rows written this run were composed with `''` inside a **triple-quoted** GoogleSQL literal. In a single-quoted literal that sequence is a parse error and fails loudly (it did, on the third write, which is what prompted the check); **inside a triple-quoted literal it is not an escape at all and silently stores two apostrophe characters.** A post-write `SELECT ARRAY_LENGTH(REGEXP_EXTRACT_ALL(body_md, r"''"))` found **11 doubled apostrophes in the single-name-move row and 8 in the sector-move row.** Both were replaced by complete append-only rows carrying tag `correction` and `in_superseded_by` pointing at the original; **no figure, conviction, agreement count, ticker or `fields` value differs between the superseded and replacement rows — the defect was purely textual.** The originals were left untouched; `events.decision_log` was never UPDATEd, DELETEd or MERGEd. **Live entry ids: single-name-move `09d2bf26-5b1b-49bc-929c-aaa6d99c4be8` (supersedes `4d30f5d9`), sector-move `7a2b38a1-fdf6-4f96-ae47-1a23c3281c00` (supersedes `eac69f4a`), add-candidate-review `8e55fb21-168b-48cb-b419-b6ff4ada0f7a`, park-allocation `21ec91c2-7041-4166-99e3-1786c00713f4`.** All four current rows re-verified clean: the only `''` sequences remaining are three deliberate ones (an empty-string SQL literal being quoted, and two references to this defect itself). **The generalisable lesson: the single-quoted case fails loudly and the triple-quoted case does not, so the shared rule's ban on doubling is not belt-and-braces — for the literal form these routines actually use, verification is the only thing standing between the defect and the permanent record.**
+
+**7. Frontier-LLM capability check: SILENT, correctly.** One `hf_fs` paper-search query was run (`"LLM cross-session consistency reasoning variance"`, the Monday cross-session-consistency battery from `HF_Resource_Catalog.md` §6.1, which §2 maps to disadvantage 2.24). Five hits returned; **the most recent is dated 2026-05-11**, over three months outside the ~72-hour window. **No in-window paper, therefore no analysis, no `events.decision_log` capture and no `state.strategy_candidates` row.** Noted for the record because a silent step and a skipped step are indistinguishable otherwise.
