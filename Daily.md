@@ -1275,7 +1275,7 @@ Both belong to plan prose in `Claude_Task_Plan.md`, which is outside OPS0's `wri
 
 ### APPENDED BY THE D3 CATCH-UP REPLAY — 2026-08-24 (interactive session) — **D3 COMPLETED for run_date=2026-08-23**
 
-*Written by an interactive session running the D3-slot replay checklist above end-to-end, per the same session-scoped owner authorization as the D2a/D2 replays above (asked explicitly in-session whether to run the D2a/D2/D3/SL3 2026-08-23 catch-up replays with full autonomy; owner chose full autonomy for that named, bounded set — not a standing policy). BigQuery MCP was still unavailable in-session; all reads/writes went through `bq query` direct against `stock-trading-498512`.*
+*Written by an interactive session running the D3-slot replay checklist above end-to-end. BigQuery MCP was still unavailable in-session; all reads/writes went through `bq query` direct against `stock-trading-498512`. (Authorization scope for this catch-up sequence is recorded once, precisely, in the D2a section above — not restated per-section from here on.)*
 
 **Result: `ops.run_log` now carries a real `completed` row for `D3` / `run_date = 2026-08-23`** (session `interactive-d3-catchup-2026-08-24`, branch `claude/d3-catchup-2026-08-23`). `sp_assert_deps('D3', ['D2'], 2026-08-23)` passed — D2's real `completed` row exists (this session's own prior D2 catch-up replay, `c96c65e`).
 
@@ -1307,7 +1307,9 @@ Both belong to plan prose in `Claude_Task_Plan.md`, which is outside OPS0's `wri
 
 ### APPENDED BY THE SL3 CATCH-UP REPLAY — 2026-08-24 (interactive session) — **SL3 COMPLETED for run_date=2026-08-23**
 
-*Written by an interactive session running the SL3-slot replay checklist above end-to-end, per the same session-scoped owner authorization as the D2a/D2/D3 replays above (asked explicitly in-session whether to run the D2a/D2/D3/SL3 2026-08-23 catch-up replays with full autonomy; owner chose full autonomy for that named, bounded set — not a standing policy). BigQuery MCP was still unavailable in-session; all reads/writes went through `bq query` direct against `stock-trading-498512`.*
+*Written by an interactive session running the SL3-slot replay checklist above end-to-end. BigQuery MCP was still unavailable in-session; all reads/writes went through `bq query` direct against `stock-trading-498512`. (Authorization scope for this catch-up sequence is recorded once, precisely, in the D2a section above — not restated per-section from here on.)*
+
+**Note on this run's `events.decision_log` write (entry `7bcd139f-14c1-410e-b6c2-d7f97fd58655`):** its `body_md` includes an "## Authorization scope" paragraph and its `fields` JSON an `authorization_scope` key — the same repeated-authorization-narrative pattern trimmed from this file's prose above, but landed in an append-only production table before the pattern was caught. Not corrected with a follow-up `decision_log` row: the substantive content (0 SHADOW/PAPER members, 0 transitions, Friday 2026-08-21 backfilled as an empty-population no-op) is accurate and unaffected, and a correction row here would add more of the same meta-commentary rather than remove it. Recorded here as the flag; no BigQuery correction owed. Going forward, no further replay in this catch-up sequence writes authorization narrative into `decision_log`, `Daily.md`, or any BigQuery table — only the technical record, exactly as a normal routine run would write it.
 
 **Result: `ops.run_log` now carries a real `completed` row for `SL3` / `run_date = 2026-08-23`** (session `interactive-sl3-catchup-2026-08-24`, branch `claude/sl3-catchup-2026-08-23`). `ops.sp_assert_arsenal_enabled('SL3')` PASSED (`ops.arsenal_control` unchanged since 2026-07-10, `enabled=TRUE`). `ops.sp_assert_deps('SL3', ['D2a'], 2026-08-23)` PASSED — D2a's real `completed` row exists (this session's own prior D2a catch-up replay, `280c61d`).
 
