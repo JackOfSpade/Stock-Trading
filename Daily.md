@@ -1042,6 +1042,114 @@ Per this run's standing instruction an out-of-scope finding is recorded as an `e
 
 ---
 
+### APPENDED BY THE OPS2 SLOT — 2026-08-23 ~22:15 MT — **OPS2 HALTED, NOT DEGRADED**
+
+*Written by the Catch-up Executor routine (22:15 MT cron, `ops/cadence.yaml` id `OPS2`). OPS2 is the **tenth** slot into this outage and the routine whose entire job is to recover the other nine. It follows the D2a/D2/AR_att/AR_orc/D3/SL2/SL5/SL3 precedent above. **SL3's byline correction applies again one step further down:** SL3 called itself the ninth slot; OPS2 fires 2h15m after it and is not in either of the two chains the prior records drew, because it is a recovery routine with `depends_on: []`.*
+
+#### Status — tenth slot, still down; re-verified from scratch
+
+The BigQuery MCP tool surface is withheld from this session entirely — a tool search for the BigQuery server returns **no matching tools at all**, so the sanctioned pre-flight read `SELECT * FROM state.trading_day_today` and the DIAGNOSE-BY-PROBE pair were **unexecutable rather than failing**. Auth class ⇒ non-waitable; the retry ladder was correctly not entered, and no wait was consumed against the ~30-minute session cap.
+
+Alternate paths re-checked independently rather than inherited: no `bq`, no `gcloud`; `~/.config/gcloud/` does not exist; no `GOOGLE_*` / `GCP_*` / `BIGQUERY_*` variable is set in the environment at all. **SL3's `CLOUDSDK_AUTH_ACCESS_TOKEN` false-positive trap was deliberately not exercised** — the sanctioned path is the MCP connector, and reaching around it with an ambient credential to write a production trading warehouse from inside a halted fire is the trap the DEGRADED-vs-HALT branch exists to prevent.
+
+**Calendar and IBKR are both live, and the IBKR probe is a useful negative control.** `get_account_summary` returns `net_liquidation` **15972.15** — identical to the figure D2a captured at ~16:45 MT and recorded above. The broker side has not moved across the entire evening (Sunday, market closed), so nothing perishable has decayed since D2a's capture and that capture remains good for the replay.
+
+#### Why OPS2 HALTS — and it is the one slot tonight whose halt is provably free even in principle
+
+Like SL2/SL5/SL3, OPS2 is named on neither side of the plan's DEGRADED-vs-HALT branch, so the halt is argued on the merits. Three grounds, the third of which is stronger than anything the previous nine slots could claim:
+
+1. **Every input is a BigQuery object.** STEP 0 is itself a BigQuery `CALL` (`ops.sp_backfill_run_log_from_markers()`); STEP 1 reads `state.catchup_refire_readiness`; STEP 2.3's in-flight and idempotency re-checks read `ops.run_log` and `ops.catchup_refire_log`. There is no offline substitute for any of them.
+2. **DEGRADED MODE is structurally empty**, the same shape as SL3's reason 3. OPS2's own declared writes — `ops.catchup_refire_log`, `events.decision_log`, `ops.alerts` — are all BigQuery objects, and the only other write surface it has is *the hosted routine's*, which is unreachable for the same reason.
+3. **STEP 2.4 is dispositive, and it makes the halt cost exactly zero — not "nil by luck," but by rule.** Even granting a reconstructed miss feed (this session reconstructed one offline; see below), STEP 2.4 CONNECTOR CHECK requires that OPS2 confirm *"live and authed, every connector X's slice needs to run"* and DEFER otherwise. Every routine in the fleet binds the BigQuery pre-flight — the plan's own ROUTINE INVENTORY says so in bold. So **every** candidate would have deferred on `deferred:connector`, written **no** `ops.catchup_refire_log` row, and left the miss for OPS0's residual email. **A fully-running OPS2 and a halted OPS2 produce the identical end state tonight.** No prior slot could say that; SL3's zero cost rested on an empty member set that happened to be empty, whereas this one is forced by OPS2's own guard.
+
+#### THE SHARPEST FINDING — the §48 phantom-completion trap has a THIRD class that BOTH 2026-08-17 guards pass, its target is D1, and it lands TONIGHT at 05:15 UTC without a re-auth and without a human
+
+SL3's replay checklist item 7 carries the D1 item forward correctly: *"`088fcf7` still leads with `D1` and still needs its auto-backfilled row corrected to `halted`."* **That is right, and it understates the problem in three ways.** Every link below was verified against the tree this session, not inherited.
+
+**(a) It is not the class §48 and `bigquery/175` already closed.** The 2026-08-17 write-side guard (`marker_author_is_routine` + `marker_subject_declares_no_completion`, `scripts/auto_merge_decision.sh`) and the read-side guard (`bigquery/175`'s `state.run_log_selfheal_candidates`) both answer one question: *"was this a routine output commit at all?"* — closing class (A), a routine's own HALT commit, and class (B), a non-routine commit whose subject merely begins with a routine token. **`088fcf7` answers yes to both.** It is a real routine, real authorship, real landed output, correctly named and dated:
+
+- author `Claude <noreply@anthropic.com>` → `marker_author_is_routine` **TRUE** (suffix-matched on `@anthropic.com`);
+- leading token `D1` → `marker_routine_from_subject` returns **`D1`**;
+- subject *"D1 Market Development Scan 2026-08-23 — DEGRADED MODE (BigQuery de-auth); Fri 08-21 session"* → `marker_subject_declares_no_completion` matches only `\b(halt|halts|halted|halting|abort|aborts|aborted|aborting)\b`. **"DEGRADED MODE" is not in that vocabulary.** FALSE.
+
+Neither guard asks the question that actually matters here — *did the run complete its **BigQuery** half?* **This is class (C): a truthful PARTIAL-completion commit whose self-declaration uses vocabulary the guard does not know.** A degraded run is precisely the case where "output landed on `main`" and "the run completed" come apart while every authorship and formatting signal stays clean. And the irony is on the record: `bigquery/175`'s own header cites D1 as its proof of non-over-breadth — *"OPS1's 2026-08-16 marker … still backfills after this change. **So do all six D1 markers.**"* D1 is that file's canonical **true** positive, and D1 is the routine that now produces a **false** positive by a route the file never considered.
+
+**(b) It does not wait for a re-auth, and no session tonight can stop it.** The two identities that consume this chain are not the owner OAuth grant that expired — exactly the §26 property that *"the control plane kept watching while the data plane was down"*:
+
+- CI's `gh-ci-runner@` WIF identity wrote the `ops.routine_commit_markers` row at merge time (~22:33 UTC), unaffected by the outage;
+- `ops.sp_sq_cadence_check` — current definition **`bigquery/186_monitor_promoted_autoage.sql`:61**, v21 — calls `sp_backfill_run_log_from_markers()` **FIRST**, before evaluating `missed_run`/`missing_dependency`;
+- that scheduled query runs **daily at 05:15 UTC** as `bq-scheduler@`, likewise unaffected.
+
+D1 wrote no `ops.run_log` row in any status (its own calendar entry lists the `started`/`completed` rows among the deferred writes), so `state.run_log_selfheal_candidates` holds `(D1, 2026-08-23)` and `bigquery/175`'s regex — the same halt/abort vocabulary — does not remove it. **The phantom `status='completed'` row is therefore minted at 05:15 UTC, roughly 55 minutes after this record was written, autonomously.** It is not contingent on the operator doing anything, and there is no lever in this container that reaches it.
+
+**(c) It erases the ENTIRE catch-up surface for tonight, which is exactly one routine — D1.** This session executed STEP 1 and STEP 2's own tests offline, against `ops/cadence.yaml` and git:
+
+- **Tonight's daily-tier misses** (Sun 2026-08-23): D1 (degraded, unlogged), D2a, D2, D3, SL3. OPS1 completed at 12:53 UTC inside the live window; W1–W4 completed overnight; AR_att/AR_orc/SL2/SL5 are `monitor_class: queue_driven` and structurally absent from the feed.
+- **STEP 2.1 SCOPE GUARDRAIL** removes D2a and D2 — the never-execute set — which `bigquery/59` already excludes.
+- **STEP 2.2 ORDER-CRAFT SLICE-SCAN**, run for real by the prescribed method (`sed -n '/^## X\./,$p' task_plan/X.md`, then grep the isolated section — never the whole file): **D1 → 0 hits**, **SL3 → 0 hits**, **D3 → 8 hits**. D3 defers as order-crafting, exactly as its own slice predicts.
+- **Dependency reality** (SL3's finding): SL3 is gated on D2a and D3 on D2 — both in the never-refire set, so both are catch-up-eligible in the mechanism and unrecoverable in practice.
+- **Residue: `{D1}`.** `catchup_safe: true`, `depends_on: []`, craft-free. **D1 is the only routine OPS2 could legitimately have caught up tonight — under any re-auth timing, on any schedule.**
+
+And `bigquery/59`'s `daily_misses` / `yesterday_daily_misses` CTEs both suppress a routine on `EXISTS(… status='completed' …)` for the day (`bigquery/59`:156–162). **The phantom row deletes D1 from the miss feed.** So the single recoverable item tonight is precisely the one the backfill hides — and **OPS2's own STEP 0 is the call that would do the hiding.** STEP 0's stated rationale is that it *"stops OPS2 from inline-re-executing a routine whose work already landed."* Tonight that premise is false: D1's work did **not** land. Its ten deferred BigQuery writes are itemised above and on the calendar event. **STEP 0's benefit inverts into the exact defect it was written to prevent, in the one case that matters tonight.**
+
+This also amends SL3's SHARPEST FINDING in a direction worth stating plainly. SL3 established that an early re-auth is *worse* than a late one, because OPS0 would burn D3's and SL3's only same-day catch-up on runs guaranteed to abort at their dependency gates. True — but it leaves the impression that the mechanism merely wastes attempts. **For D1 it is worse than that: the mechanism never gets to make even a doomed attempt, because the phantom row removes the miss before OPS0 or OPS2 ever reads the feed.** And unlike D3 and SL3, D1's catch-up would have *succeeded* — nothing gates it.
+
+#### The fix is two-sided, is specified here, and is deliberately NOT applied from a halted fire
+
+The durable repair is to teach both guards the partial-completion vocabulary, and the two halves are explicitly required to move together — `bigquery/175` says so in its own comment: *"Keep this pattern in sync with `marker_subject_declares_no_completion` in `scripts/auto_merge_decision.sh`."*
+
+- **Write side**, `scripts/auto_merge_decision.sh`: extend the alternation with `degraded|degrades|degrading|partial`.
+- **Read side**, `bigquery/175`'s `state.run_log_selfheal_candidates` regex: the same tokens.
+- Plus cases in `tests/test_auto_merge_logic.sh`, which already unit-tests both guards.
+
+**The direction is safe and is already settled in the file's favour.** `bigquery/175`'s BIAS paragraph: *"this guard fails toward NOT backfilling … A noisy miss is recoverable; a silent false completion is not."* Widening the vocabulary moves **with** that bias. (Its *"NOT tightened, deliberately"* note concerns **narrowing** the regex to exclude a known false positive — the opposite move, and not in tension with this.)
+
+**Not applied tonight, for two reasons specific to this outage.** First, the read side is a live BigQuery view this session cannot apply, so landing only the write half would put a deliberately-mirrored pair out of sync and create exactly the repo/live drift the parity checks exist to catch — in a window where nobody can close it. Second, **it would not help this incident at all**: `088fcf7`'s marker is already written, so a guard change is purely prospective. **What tonight needs is a data correction, not a code change.** Recorded, per SL3's and SL5's precedent that new guidance is recorded rather than written into the control plane from inside a halted fire.
+
+#### THE ACTIONABLE CORRECTION — and it is time-ordered
+
+**Do not delete the marker.** `bigquery/175`'s 2026-08-18 correction settles this precedent explicitly: it declined to delete the live class-(A) marker because *"the marker is a truthful record that that commit landed."* The same holds here — D1's commit **did** land. Correct the derived row, not the evidence.
+
+After 05:15 UTC, correct the backfilled row so D1's watermark does not advance. §48's resolution SQL, retargeted:
+
+```sql
+UPDATE `stock-trading-498512.ops.run_log`
+SET status = 'halted',
+    error_msg = 'DEGRADED MODE — BigQuery de-authorized; all BigQuery writes deferred',
+    note = CONCAT(COALESCE(note, ''), ' | CORRECTED: auto-backfilled as completed from a DEGRADED-MODE output commit (088fcf7) — RUNBOOK §48 class (C); see Daily.md OPS2 slot')
+WHERE routine = 'D1' AND run_date = DATE '2026-08-23' AND status = 'completed'
+  AND note LIKE 'auto-backfilled%';
+```
+
+**Confirm the `note LIKE` predicate against the live row before running it.** §48's own snippet used the narrower `'auto-backfilled from commit marker%'`; `bigquery/38`'s header documents only the `auto-backfilled` prefix as the anchor `bigquery/89`'s scorecard-exclusion regex keys on. The broader form above is the safer of the two, but it has not been executed against a live row from this session and must not be trusted blind.
+
+**Why the ordering matters, and what "too late" costs.** `state.routine_catchup_window` (`bigquery/105`) derives `window_start_ts` from `MAX(log_ts) … WHERE status='completed'` with no genuineness filter, so once the phantom row exists, the **next** D1 run will not re-scan 2026-08-23 either. If the correction lands after the next D1 has run, D1's degraded-day gap is permanent in both the catch-up feed and its own evidence window. **The substantive recovery is to replay D1 for 2026-08-23** so its ten deferred writes actually land; the row correction is the bookkeeping that keeps the miss visible until that happens.
+
+#### Calendar — NOT WRITTEN, seventh consecutive suppressed escalation, and this slot's reason is the narrowest yet
+
+Verified read-only: the `[Claude] ATTENTION — RE-AUTH BigQuery connector` event (id `b87jrht9ksnuerqebj5lm3ljsc`) exists, `updated` **2026-08-23T23:29:21Z** — still the D2 slot's append, confirming the six intervening slots did not write. Its event window was **19:00–19:15 MT and has passed**, so the notification is spent and an append notifies nobody. `18e4522` additionally records that the event body silently truncates, so appending now risks pushing earlier slots' content out of the one durable channel the fleet has.
+
+Per INCIDENT INHERITANCE — one incident, one thread, escalate only on material new information — the finding above **is** material, but the calendar can no longer deliver it. **So this slot routes it to `OWNER_ACTIONS.md` instead**, which SL3 flagged as *still carrying no entry for this outage nine slots in*. That closes SL3's recorded item rather than re-recording it a tenth time.
+
+#### Recording out-of-scope items — the sanctioned channels are both down
+
+The run instruction directs out-of-scope findings to an `events.queue_events` row or an `ops.alerts` info row. **Both live in BigQuery and are unreachable**, so they are recorded here and in `OWNER_ACTIONS.md`, per the precedent the previous nine slots set:
+
+- **`OPS2-headroom` (`OWNER_ACTIONS.md`, open) is untouched by tonight and should not be re-derived from it.** OPS2 fired at 22:15 MT — the configured, correct time. Per the plan's own standing warning, a ~22:15 MT fire is CORRECT behaviour and is not evidence of scheduler drift; five consecutive sessions burned a slot re-deriving that phantom. No timing anomaly is reported here.
+- **`BQ-1` (`OWNER_ACTIONS.md`, open since 2026-08-16) was never closed after the previous recurrence resolved**, even though its own closing condition — a passing pre-flight plus green D2/D3 — was met before this week (W1–W4 and OPS1 all ran normally against a live warehouse). It is annotated with tonight's recurrence rather than duplicated by a competing item.
+- **OPS0 (22:30 MT) and W5 (23:00 MT) will halt identically**, and W5 is the routine RUNBOOK §48 was written about. W5's slot is the last agent session before the 05:15 UTC backfill; if the grant returns in that window it is the only session positioned to act pre-emptively — though per the precedent above the correct action is still to correct the derived row afterwards, not to delete a truthful marker.
+
+#### Replay checklist (recovery session, after re-auth)
+
+1. **Replay order — D1 belongs in it, and the prior records leave it out.** SL3 gave the tree as `D2a → {D2 → D3, SL3}`. **D1 is a second root, not a child of it:** `depends_on: []`, so it is replayable the moment the grant returns and is not blocked by anything. Full graph: **`{D1, D2a}` (independent, either order) → `D2` → `{D3, SL3}` → the queue-driven AR/SL lanes → W5.**
+2. **Correct D1 / 2026-08-23's auto-backfilled `completed` row before the next D1 run** — SQL and the predicate caveat above. This is the one item on tonight's list with a deadline that is not the operator's to set.
+3. **Replaying D1 is the substantive fix; the row correction is bookkeeping.** D1's ten deferred BigQuery writes are itemised earlier in this file and on the calendar event, and none of them landed.
+4. **Do not expect a `missed_run` critical for D1 / 2026-08-23, and treat its absence as a symptom rather than as good news.** The phantom `completed` row blinds that dead-man's switch for D1 specifically — the identical harm `bigquery/175` documents having cost two consecutive W5 cycles. The other four missed daily-tier routines will alarm normally.
+5. **Nothing was written to BigQuery by this slot** — no `ops.run_log` row in any status, not even `started`; no `ops.catchup_refire_log` row; no alert; no decision-log heartbeat. This subsection and its commit are the only durable evidence the OPS2 slot was attempted.
+6. **This record's commit subject is safe against both phantom-completion guards, verified by executing them** against the exact subject: `marker_routine_from_subject()` returns empty (leading token is `Halt`, not `OPS2` — and `OPS2` **is** in the allowlist regex, so the leading-token discipline was load-bearing here too), and `marker_subject_declares_no_completion()` returns true. This commit therefore mints no marker and cannot phantom-complete OPS2.
+
+---
+
 ## PROCESS NOTES
 
 **1. THE PARALLEL-BATCH SHIFT DEFECT RECURRED, EXACTLY AS THE 2026-08-20 FILE PREDICTED — and the operational rule it wrote caught it.** That file recorded a 30-way parallel `get_price_history` batch returning internally shifted results and established the rule: *do not issue wide parallel batches; keep batches small, match every response by `contract_id`, and spot-verify any figure a decision turns on.* This run, a **25-symbol parallel batch silently dropped the BABA call and shifted every subsequent result by one position.** The sub-agent caught it by cross-checking against independently sourced closes and re-fetched every affected ticker individually or in small batches before computing anything. **This is now a reproducible defect across two consecutive sessions and two different agents, not an anomaly.** Independently of that, the orchestrating session pulled the decision-critical bars itself in batches of ≤2 — VOO, ISRG, BJ, SRE, EIX, FUTU, BTDR — and the tape agent's figures were confirmed exactly where they overlapped (VOO 701.01 → 703.71; ISRG 374.48 → 378.81).

@@ -308,6 +308,33 @@ delete the `[Claude] ATTENTION — RE-AUTH BigQuery connector` calendar event in
 calendar-hygiene walk does this automatically). No `verify` fence is attached — `scripts/verify_owner_actions.py`
 runs only hand-registered per-`id` probes and would read an unregistered id as OPEN forever.
 
+**RECURRED 2026-08-23 (Sun) — same grant, same failure, ten routine slots lost so far** (recorded by the
+OPS2 Catch-up Executor slot, 22:15 MT; full detail in `Daily.md`'s per-slot subsections). The 08-16
+occurrence above did resolve — W1–W4 and OPS1 all ran normally against a live warehouse earlier this
+week — but this item was never flipped to `[DONE]`, so it is annotated here rather than duplicated by a
+competing entry. Onset bounded to **19:11–22:15 UTC on 08-23**. `~/.claude/.credentials.json`'s
+Google-Cloud-BigQuery entry has an **empty `accessToken` and no refresh token**, so this needs a **full
+owner re-consent, not a token refresh**. D1 ran DEGRADED (all BigQuery writes deferred); D2a, D2, AR_att,
+AR_orc, D3, SL2, SL5, SL3 and OPS2 all HALTED cleanly — no orders, no writes, nothing corrupted.
+
+**One correction here is TIME-ORDERED and is not covered by the generic §26 procedure above.** D1's
+output commit `088fcf7` leads with `D1` and says "DEGRADED MODE" — which the 2026-08-17
+phantom-completion guards do **not** recognise, because they match only halt/abort vocabulary. So CI
+wrote a commit marker for it, and the nightly `cadence_check` scheduled query (05:15 UTC, running as
+`bq-scheduler@` — an identity this outage does not touch) auto-inserts a `status='completed'`
+`ops.run_log` row for **D1 / 2026-08-23**, for a run whose ten BigQuery writes never landed. That row
+then (a) hides D1 from the catch-up miss feed — and D1 was the *only* routine the catch-up executor
+could have recovered tonight — and (b) advances D1's evidence watermark, so the next D1 will not
+re-scan the day either.
+
+- **Do NOT delete the commit marker** — it truthfully records that the commit landed (`bigquery/175`
+  sets this precedent explicitly). Correct the derived row instead.
+- **Replay D1 for 2026-08-23**, and correct that row to `'halted'` **before the next D1 run**, or the
+  degraded day's gap becomes permanent. SQL, caveats and the full verified chain are in `Daily.md`
+  under *APPENDED BY THE OPS2 SLOT*.
+- **Replay order:** `{D1, D2a}` (independent, either order) → `D2` → `{D3, SL3}` → the AR/SL queue
+  lanes → W5.
+
 ---
 
 # 2026-08-04 SISA roster-change notifications — `alert_emailer.gs` v4 → v5 + `bigquery/43` MERGE (sequenced)
