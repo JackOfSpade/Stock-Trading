@@ -335,6 +335,44 @@ re-scan the day either.
 - **Replay order:** `{D1, D2a}` (independent, either order) → `D2` → `{D3, SL3}` → the AR/SL queue
   lanes → W5.
 
+**THE NOTIFICATION CHANNEL HAD GONE SILENT — re-armed by the OPS0 Cadence Watchdog slot, 22:30 MT
+(eleventh and final slot of the day).** Measured, not assumed: the original calendar event
+`b87jrht9ksnuerqebj5lm3ljsc` is a **one-off TIMED event running 19:00–19:15 on 2026-08-23**, so by the
+OPS0 slot it was already in the past — **its reminder is spent and a timed event cannot re-notify.** It
+was also last updated at **23:29:21 UTC by the D2 slot**; the seven slots after D2 could append nothing
+because the description sits at the **~8,192-char Calendar cap** (the silent-truncation defect in commit
+`18e4522`). With `ops.alerts` → `alert_emailer.gs` inside the outage, **the owner had no live channel of
+any kind going into Monday** — a listing of 08-23 → 08-26 returned exactly one event, the spent one.
+
+- **A new event now exists:** `[Claude] ATTENTION — RE-AUTH BigQuery connector (day 2, still down)`,
+  id **`a93uld20fv0osieq2e4jch8usc`**, **2026-08-24 08:00–08:15 `America/Toronto`**, with explicit
+  **email + popup reminders at 0 min** (the calendar default is popup-only, which is what went unseen).
+  Kept short and verified un-truncated on read-back. **Not recurring** — Monday's OPS1 liveness probe
+  re-arms day 3 under the same rule, which avoids leaving a nag that outlives the outage.
+- **Close-out now has TWO events to delete,** not one: `b87jrht9ksnuerqebj5lm3ljsc` **and**
+  `a93uld20fv0osieq2e4jch8usc`.
+
+**The OPS0 slot's own losses, and the one that does NOT self-heal.** STEP 4's git landing sweep ran in
+full (it needs no credentials) on complete, un-truncated history — **1,212 commits, zero stranded
+`claude/*` branches, zero adoptions, worktree untouched** — so no routine output from tonight is stuck
+unmerged. STEP 1/2/5 halted but **recover on their own**: no `ops.catchup_refire_log` row was written, so
+no `miss_key` was suppressed and every genuine miss stays visible to the next sweep. **The exception is
+STEP 3, the weekly trigger-config sweep, which was DUE (08-23 is a Sunday in the operating plane) and did
+not run** — blocked independently by the absent `RemoteTrigger` tool *and* by BigQuery. That **stretches
+the fleet's only all-routine trigger audit from a 7-day to a ≥14-day window** (next Sunday slot
+2026-08-30) for `schedule` and `allowed_tools` drift specifically; `instruction` and `enabled` drift keep
+their independent nightly coverage. Running it by hand still needs the owner-gated `RemoteTrigger`
+`allowed_tools` fix (2026-07-19 item), which is independent of this outage.
+
+**Two OPS0 spec defects found and recorded but NOT fixed** — both live in `Claude_Task_Plan.md` prose,
+outside OPS0's `writes:` list, and the sanctioned routing sinks (`events.queue_events`, `ops.alerts`) are
+themselves down. Full detail in `Daily.md` under *APPENDED BY THE OPS0 SLOT*; route to a self-improvement
+audit / W5: **(1)** STEP 4(b)'s "`gh` NOT confirmed present in the routine container" hedge is now a
+**measured absence** (`command -v gh` → not found). **(2)** STEP 2's documented workaround for the
+headless-RemoteTrigger platform gap raises its actionable "please re-run X" reminder via
+`ops.sp_raise_alert_once` — **a BigQuery write**, so during a BigQuery outage OPS0 has no channel at all
+in which to request a manual re-run. The fallback for one outage routes through the other.
+
 ---
 
 # 2026-08-04 SISA roster-change notifications — `alert_emailer.gs` v4 → v5 + `bigquery/43` MERGE (sequenced)

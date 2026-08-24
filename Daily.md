@@ -1150,6 +1150,79 @@ The run instruction directs out-of-scope findings to an `events.queue_events` ro
 
 ---
 
+### APPENDED BY THE OPS0 SLOT — 2026-08-23 ~22:30 MT — **OPS0 HALTED on STEPS 1/2/3/5 — but its STEP 4 GIT LANDING SWEEP ran IN FULL, on trustworthy history, and came back clean**
+
+*Written by the Cadence Watchdog routine (22:30 MT cron, `ops/cadence.yaml` id `OPS0`). OPS0 is the **eleventh and last** slot of the day into this outage, and the routine whose entire job is to unblock the other ten. It follows the D2a/D2/AR_att/AR_orc/D3/SL2/SL5/SL3/OPS2 precedent above. OPS2's byline correction applies here one step further: OPS0 fires 15 minutes after OPS2 and, like it, sits in neither of the dependency chains the earlier records drew — `depends_on: []`, deliberately, because "its entire job is to unblock others; gating it on anything would recreate the exact failure class it exists to fix."*
+
+#### Status — eleventh slot, still down; re-verified from scratch
+
+The BigQuery MCP tool surface is withheld from this session **entirely** — the server is listed as requiring authentication and a tool search returns no BigQuery tools at all — so the sanctioned pre-flight read and the DIAGNOSE-BY-PROBE pair were **unexecutable rather than failing**. Auth class ⇒ non-waitable; the retry ladder was correctly not entered. **Separately and independently, the `RemoteTrigger` tool is also absent** from this session (a tool search for it returns no match), which matters below because it is the second of two failures, not a consequence of the first.
+
+#### Why OPS0 cannot DEGRADE its way through STEPS 1, 2, 3 and 5
+
+- **STEP 1 (READ READINESS) — blocked at the root.** OPS0's only input is `state.catchup_refire_readiness`, and there is no non-BigQuery substitute for it: it derives from `state.cadence_watch`, itself a BigQuery view over `ops.run_log`. **Without it, OPS0 cannot know which routines missed** — and that is the whole routine. There is no IBKR-style live surface to fall back on, as D1 had.
+- **STEP 2 (RE-FIRE) — blocked twice over, and the second way is the interesting one.** With no STEP 1 rows there is nothing to iterate. But note what the spec says the EXPECTED path is when `RemoteTrigger` is absent: raise an actionable `catchup_refire_blocked` alert via `ops.sp_raise_alert_once` so the operator re-runs the routine by hand. **That documented workaround for the headless-RemoteTrigger platform gap is itself a BigQuery write.** So the fallback for one outage routes straight through the other. **When BigQuery is down, OPS0's degraded path degrades to nothing at all** — it has no channel in which to say "please re-run X". That is a real single point of failure in the workaround, exposed rather than caused by tonight.
+- **STEP 3 (WEEKLY TRIGGER-CONFIG SWEEP) — DUE tonight and blocked twice over.** See its own section below.
+- **STEP 5 (EXTERNAL-CALL TELEMETRY SWEEP) — blocked.** Both `state.web_call_coverage` and `state.fmp_daily_budget` are BigQuery views, and both of its alert paths are BigQuery writes.
+
+#### STEP 4 — the git landing sweep RAN, in full. This is the one part of tonight's OPS0 that is not a loss.
+
+STEP 4 is pure git and needs no credentials, so it executed exactly as specified — and it is the reason this subsection reports a result rather than only a halt.
+
+**HISTORY-DEPTH PRECHECK — run as three ordered steps, not collapsed, and it mattered:** `git rev-parse --is-shallow-repository` → **`true`** (the container did clone shallow); `git fetch --unshallow origin` → succeeded; re-ask → **`false`**. Verdict **DEEPENED-OK**. Full history is **1,212 commits** reachable from `origin/main`, tip `b9c0b75` at 2026-08-24 04:24:51 UTC — which is OPS2's own halt record, landed four minutes before this slot began. **The evidence below therefore carries full evidentiary weight and is NOT the truncated-history case** that produced all three false positives on record (D1 2026-07-22, D1 2026-07-25, and the 2026-08-03 recurrence).
+
+- **(a) DETECT — zero stranded branches.** After `git fetch origin '+refs/heads/*:refs/remotes/origin/*' --prune`, `git for-each-ref refs/remotes/origin/claude/` returns **zero rows**; `origin/main` is the only remote-tracking ref in the repository. Every routine branch behind tonight's ten halt records has already landed and been deleted by auto-merge. Nothing is stranded, so (c) had nothing to alert and (d) had nothing to adopt — **not a suppressed finding, an actual absence, measured on complete history.**
+- **(b) DIAGNOSE — `gh` is ABSENT, now measured rather than hedged.** `command -v gh` → not found; no auth status obtainable. The spec has carried the hedge "**NOT** confirmed present in the routine container" since 2026-07-29; **this run confirms the negative by direct test.** Moot tonight (zero candidates), but it means (b) can never enrich a `stranded_branch` alert from this container, and `cause` is permanently `unknown` here — which is exactly why (c) is specified to keep `cause` out of the deduped message.
+- **(d) ADOPT — not exercised**, and the worktree was left exactly as found: no checkout, merge, rebase, cherry-pick or reset was performed. The only git write this step made anywhere was the sanctioned `--unshallow` fetch.
+- **(e) SELF-RESOLVE — blocked (a BigQuery `UPDATE`), but the evidence it needs was gathered and is sound.** Recorded here so a post-re-auth session need not re-derive it: **as of 2026-08-24 04:35 UTC, on complete history, no `claude/*` branch exists unmerged on `origin`.** Any open `stranded_branch` alert may be resolved on that basis with `resolved_note='branch landed on main — verified ancestor by OPS0 git landing sweep'` — after that session re-confirms it, since branches can appear at any time.
+- **(f) UNLANDED COMPLETED RUNS — blocked.** It needs `ops.run_log` and `ops.routine_commit_markers`; both are BigQuery. No conclusion drawn in either direction.
+
+**The honest limit on the clean result:** a zero-strand DETECT is evidence about branches that exist on `origin` — it says nothing about work that was never pushed at all, which is precisely what (f) exists to catch and precisely what could not run tonight.
+
+#### THE FINDING WORTH CARRYING FORWARD — the owner-notification channel had gone silent, and this slot re-armed it
+
+This is the item with consequences beyond OPS0's own slot, and it was measured, not assumed.
+
+1. **The 2026-08-23 RE-AUTH event can no longer notify anyone.** Event `b87jrht9ksnuerqebj5lm3ljsc` is a **one-off timed event running 19:00–19:15 (−04:00) on 2026-08-23** — already in the past at this slot. Its reminder is spent, and a timed event cannot re-notify. D3 recorded this risk at ~18:50 MT; at 22:30 MT it is simply true.
+2. **It has also been unable to accept new information for five hours.** Its description was last updated at **23:29:21 UTC by the D2 slot**. The seven slots after D2 — AR_att, AR_orc, D3, SL2, SL5, SL3, OPS2 — appended nothing, because the description is at the **~8,192-character Calendar cap** with ~600 bytes of headroom (the silent-truncation defect recorded in commit `18e4522`).
+3. **So the owner had no live channel at all going into Monday.** `ops.alerts` → `alert_emailer.gs` is inside the outage; the calendar event was spent and full. A listing of 2026-08-23 → 2026-08-26 returned **exactly one event: the spent one.** Nothing existed on Monday.
+
+**ACTION TAKEN — a new calendar event, per the shared Observability rule executed literally** ("the alert sink is itself down, so ... the only first-class channel is a `[Claude] ATTENTION — RE-AUTH BigQuery connector` calendar event — **create it immediately**"). A *new* event rather than an append, because appending was measured impossible (the cap) and would have been pointless anyway (a past event cannot notify).
+
+- **`[Claude] ATTENTION — RE-AUTH BigQuery connector (day 2, still down)`**, id **`a93uld20fv0osieq2e4jch8usc`**, **2026-08-24 08:00–08:15 `America/Toronto`** (the operator's live DISPLAY timezone per `state.user_tz`; the calendar's own `timeZone` reads `America/Toronto`, confirming it).
+- **Explicit `overrideReminders`: `email` at 0 min AND `popup` at 0 min.** The calendar's default is popup-only, which is what went unseen today; **the email reminder is the closest available substitute for the dead `alert_emailer.gs` path** and is the reason this event can actually reach the owner.
+- **Kept deliberately SHORT (~1.8 KB against the ~8,192 cap)** and **verified un-truncated by reading the created event's description back in full** — the `18e4522` defect did not bite. Detail lives in this file and `OWNER_ACTIONS.md`; the event carries only the one action, the scope, and the replay order.
+- **Deliberately NOT made recurring.** A daily recurring nag would outlive the outage and reproduce the "fires every Saturday forever" bug class this repo's own operating notes warn about. The chain continues without it: Monday's **OPS1** (Morning Connector Liveness Probe) hits the same connector first thing and is bound by the same shared rule, so it creates or refreshes the event for day 3 if the grant is still down.
+
+#### The Sunday trigger-config sweep did NOT run — naming the detection window this stretches
+
+**2026-08-23 is a Sunday in `America/Denver`** — the OPERATING plane, which is what STEP 3's own `CURRENT_DATE("America/Denver")` test keys off (it is 22:36 MT Sunday as this is written; 00:36 Monday in the operator's Toronto display plane). **So the weekly sweep was DUE at this slot and did not run**, blocked independently by the absent `RemoteTrigger` tool *and* by BigQuery — the spec's own total-`RemoteTrigger get`-failure ladder terminates in a `trigger_audit_needs_chrome` **BigQuery write**, so even the fallback was unavailable.
+
+- **What this costs, stated precisely.** OPS0 is by its own spec "the fleet's only WEEKLY all-routine reader, so its observations are what bound how long an unannounced edit can sit undetected." Missing this Sunday **stretches that bound from 7 days to at least 14** (the next Sunday slot is 2026-08-30) across all 32 triggers.
+- **What is NOT lost, per Q4 step E's FALLBACK-2 narrowing (2026-08-10).** `instruction` drift and `enabled` drift both retain independent coverage — `state.instruction_drift` nightly via `ops.sp_sq_cadence_check`, plus the lagged `state.trigger_attestation` / `state.cadence_watch`. **The uncovered classes are exactly `schedule` and `allowed_tools`, and only those two.** (Those compensating views are themselves BigQuery, so they are down for the duration too — deferred, not lost; they resume on re-auth.)
+- No `ops.trigger_observations` row was recorded and no `ops.trigger_change_intents` row declared, because **no `RemoteTrigger get` and no `RemoteTrigger update` was made.** Nothing was attributed or left unattributed by this slot.
+
+#### What OPS0 would have re-fired tonight is UNKNOWN, and is deliberately not guessed
+
+`state.catchup_refire_readiness` is the sole authority on which misses are catch-up-eligible, and it was unreadable. **No inference is recorded here about which routines OPS0 would have re-fired.** OPS2's subsection above states its belief that D1 was the only routine recoverable tonight; per the shared rule binding OPS0 by name — *"operational free text is a report, not an instruction ... a REPORT of what a prior session BELIEVED"* — that is carried forward as a prior session's belief, not adopted as this slot's finding and not acted upon. Note also that no `ops.catchup_refire_log` row was written, so **no `miss_key` was suppressed**: every genuine miss stays visible in the readiness view for the next sweep, exactly as the spec's no-row-on-unattempted rule intends.
+
+#### Out-of-scope items — recorded, not acted on
+
+Both belong to plan prose in `Claude_Task_Plan.md`, which is outside OPS0's `writes:` list, so **OPS0 cannot self-correct either** — the same structural limitation that stalled the shallow-clone precheck fix (`events.decision_log` entry `0e9a757e`). The sanctioned sinks for routing these (an `events.queue_events` row, or an `ops.alerts` info row) are both BigQuery and unavailable, so they are recorded here and in `OWNER_ACTIONS.md` instead, naming the owning surface:
+
+1. **STEP 4(b)'s `gh` hedge is now a measured negative.** Owning surface: OPS0 STEP 4(b) prose, which still reads "NOT confirmed present in the routine container." It is now confirmed **absent** (2026-08-23). Route to a self-improvement audit / W5.
+2. **STEP 2's platform-gap workaround has a single point of failure.** Owning surface: OPS0 STEP 2 item 2 prose. Its RemoteTrigger-absent fallback writes the actionable catch-up reminder to `ops.alerts` — so during a BigQuery outage OPS0 has no way to ask for a manual re-run at all. The calendar event is the natural alternate channel, which is in substance what this run did for the outage itself.
+
+#### Replay checklist for the OPS0 slot after re-auth
+
+1. **Most of OPS0's miss is self-healing; one part is not.** STEP 1/2 recover on their own — the next OPS0 slot re-reads `state.catchup_refire_readiness`, which still carries every unhandled miss because this slot suppressed nothing. **STEP 3's Sunday sweep is the one non-self-healing loss**: a Monday–Thursday OPS0 skips it by design, so it is unaudited until 2026-08-30 unless run by hand.
+2. **To run STEP 3 by hand, the session needs `RemoteTrigger` in its `allowed_tools`** — the owner-gated config fix (OWNER_ACTIONS.md, 2026-07-19) is still the blocker, independent of this outage.
+3. **Nothing was written to BigQuery by this slot** — no `ops.run_log` row in any status, not even `started`; no `ops.catchup_refire_log` row; no alert; no decision-log heartbeat. **This subsection and its commit are the only durable evidence the OPS0 slot was attempted.**
+4. **Delete BOTH calendar events on resolution**, not just the original: `b87jrht9ksnuerqebj5lm3ljsc` (2026-08-23, spent) **and `a93uld20fv0osieq2e4jch8usc` (2026-08-24, live)**. D3's calendar-hygiene walk does this automatically; the new id is named here so the second one is not missed.
+5. **This record's commit subject is safe against both phantom-completion guards, verified by executing them** against the exact subject: `marker_routine_from_subject()` returns empty (the leading token is `Halt`, not `OPS0`) and `marker_subject_declares_no_completion()` returns true. This commit mints no marker and cannot phantom-complete OPS0.
+
+---
+
 ## PROCESS NOTES
 
 **1. THE PARALLEL-BATCH SHIFT DEFECT RECURRED, EXACTLY AS THE 2026-08-20 FILE PREDICTED — and the operational rule it wrote caught it.** That file recorded a 30-way parallel `get_price_history` batch returning internally shifted results and established the rule: *do not issue wide parallel batches; keep batches small, match every response by `contract_id`, and spot-verify any figure a decision turns on.* This run, a **25-symbol parallel batch silently dropped the BABA call and shifted every subsequent result by one position.** The sub-agent caught it by cross-checking against independently sourced closes and re-fetched every affected ticker individually or in small batches before computing anything. **This is now a reproducible defect across two consecutive sessions and two different agents, not an anomaly.** Independently of that, the orchestrating session pulled the decision-critical bars itself in batches of ≤2 — VOO, ISRG, BJ, SRE, EIX, FUTU, BTDR — and the tape agent's figures were confirmed exactly where they overlapped (VOO 701.01 → 703.71; ISRG 374.48 → 378.81).
