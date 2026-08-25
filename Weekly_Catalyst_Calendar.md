@@ -32,7 +32,7 @@ Read from `state.current_regime`, `events.regime_events` and `analytics.strategy
 
 ### The finding that shapes both shortlists: A's technical gate is open, and the only thing holding A shut is re-scored on 2026-09-01
 
-Strategy A's router condition is **SPY Trend = UP AND Equity Breadth = HEALTHY**. **Both legs read TRUE right now**, and have for weeks. A sits at DO-NOT-ACTIVATE **entirely because of the `Strategy.md:123` reconciliation override** — `growth_momentum = decelerating` AND `policy_stance = hawkish` forces a raw ACTIVATE back to DNA — which is what `div-A-202607-1` meant in calling the DNA "architecturally over-determined."
+Strategy A's router condition is **SPY Trend = UP AND Equity Breadth = HEALTHY**. **Both legs read TRUE right now**, and have for weeks. A sits at DO-NOT-ACTIVATE **entirely because of `Strategy.md`'s M1a/M1b reconciliation-rule override** — `growth_momentum = decelerating` AND `policy_stance = hawkish` forces a raw ACTIVATE back to DNA — which is what `div-A-202607-1` meant in calling the DNA "architecturally over-determined."
 
 Both override preconditions are axes **M1a re-scores on the first of each month**. **M1a fires 2026-09-01 11:00 UTC, M1b 12:00 UTC** (`ops/cadence.yaml`). A call that diverges from the technical read routes through an AR_att/AR_orc divergence review before it binds, which for the 2026-08 cycle took four days. **Earliest realistic A activation is ~2026-09-01 to ~2026-09-05.**
 
@@ -374,7 +374,7 @@ Every IV/HV ratio in this section is a **live IBKR measurement taken this run**,
 
 W4 reads this section verbatim.
 
-**CRITICAL ROUTER GATE: C = HYBRID ACTIVATE (FOMC-only)**, resolved 2026-08-05, unchanged and not pending. **Only candidate #1 is router-eligible.** Candidates #2–16 are router-PARKED and carried as divergence context only — **W4 must NOT enqueue thesis-construction on a parked row.** Widening C's scope is reserved to a separate scope-widening adjudication whose conditions (`Strategy.md:1239-1245`) are nowhere near met.
+**CRITICAL ROUTER GATE: C = HYBRID ACTIVATE (FOMC-only)**, resolved 2026-08-05, unchanged and not pending. **Only candidate #1 is router-eligible.** Candidates #2–16 are router-PARKED and carried as divergence context only — **W4 must NOT enqueue thesis-construction on a parked row.** Widening C's scope is reserved to a separate scope-widening adjudication whose conditions (`Strategy.md`'s Strategy C scope-widening adjudication conditions — cited by name, not line, per this repo's citation-drift fix) are nowhere near met.
 
 > ### ⚠️ THE FOMC THESIS IS ALREADY ENQUEUED. W4 MUST NOT ENQUEUE IT AGAIN.
 >

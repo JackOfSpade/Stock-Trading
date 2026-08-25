@@ -1713,6 +1713,8 @@ incident in `ops.run_log`.
 CHAT OUTPUT: one-line acknowledgment of reconciliation (fills captured, cash tripwire status, sweep/
 cover crafted or not, engine recompute status). If nothing to report: "Reconciliation complete, no
 action needed."
+
+**`ops.web_calls` OBLIGATION (added 2026-08-24, fleet-wide alert-triage closure)** — D2a's own metered surfaces are FMP fallback/primary calls, not Tavily/HF: `mcp__FMP__quote`/`mcp__FMP__chart` as the FALLBACK when the daily_marks ingest misses an IBKR bar (`source='FMP-fallback'`), `mcp__FMP__chart` (`historical-price-eod-light`) as the PRIMARY source for `^VIX` (never `mcp__FMP__quote`, which has no history), an FMP options fallback behind `get_option_data` for premium marks, and the `mcp__FMP__economics` `treasury-rates` pull (pinned `from_date`/`to_date`) that SUSTAINED_INVERSION reads EVERY run — that last one is pulled daily by design, so most days owe at least one row even when IBKR covers every mark and no fallback fires. Before the terminal `sp_routine_end` call, write the batched `ops.web_calls` INSERT per the shared Run-logging template (§Observability, ~line 204-227) covering every FMP call this run actually made.
 ```
 
 ---
