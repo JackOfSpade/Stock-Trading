@@ -148,6 +148,15 @@ connectors:
         use: unused
       - name: earningsTranscript
         use: unused
+        note: >
+          Plan-gated (needs FMP Ultimate+) on the current FMP tier — verified 2026-08-24 by a
+          live call returning "ACCESS DENIED: requires the Ultimate or Enterprise plan", and
+          independently recorded by M3 on 2026-08-03 (Monthly_D_Position_Deep_Dive.md:83,
+          which found `earningsTranscript`/`statements`/`analyst` all access-denied). Transcript
+          CONTENT remains reachable via Tavily search/extract, which is what M2/M3 routine text
+          now points at. Do NOT promote this to `use: required` or add `prose_ambiguous: true`
+          to re-admit the token into routine text unless the FMP subscription is actually
+          upgraded — the routines cannot call it.
       - name: economics
         use: required
         prose_ambiguous: true
