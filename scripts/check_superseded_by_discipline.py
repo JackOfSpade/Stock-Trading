@@ -165,8 +165,14 @@ def _read_positions(body, table_fqn):
 # table. Every entry needs a reason. Checked for ROT in both directions: an entry that no longer reads
 # the raw table (or is no longer canonical) FAILS, so this list cannot quietly outlive its subjects.
 ALLOWLIST = {
-    ("143_adversarial_review_correction_path.sql", "state.adversarial_reviews_current"):
-        "This view IS the anti-join — it must read the base table to define the filtered set.",
+    ("198_adversarial_reviews_current_column_refresh.sql", "state.adversarial_reviews_current"):
+        "This view IS the anti-join — it must read the base table to define the filtered set. "
+        "Re-pointed from 143_adversarial_review_correction_path.sql (2026-08-25): bigquery/198 is now "
+        "canonical for this view. 198 re-applies 143's DDL byte-for-byte, for a reason invisible in the "
+        "text — BigQuery expands `SELECT *` at view-CREATION time and freezes the column list, so "
+        "bigquery/145's later ALTER TABLE ADD COLUMN on events.adversarial_reviews never propagated and "
+        "the view served 14 of the base table's 19 columns until 2026-08-25. The raw-table read this "
+        "entry covers is unchanged and the reason above still applies verbatim.",
     ("148_audit_2026_08_08_fixes.sql", "ops.sp_score_cross_model_referee"):
         "Its outer duplicate-guard NOT EXISTS deliberately tests the RAW table: refusing to insert a "
         "second referee_gemini row when ANY referee row exists (superseded or not) is strictly more "

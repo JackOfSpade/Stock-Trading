@@ -1607,8 +1607,11 @@ the BigQuery value-weighted daily TOTAL-return TWR (`events.daily_marks` → `an
      recover a missed day; verified live the same day, `chart`'s `historical-price-eod-light` endpoint returns
      one row per trading day with its own `date` field, e.g. a query run 2026-08-08 correctly returned dated
      rows for 2026-08-03 through 2026-08-07 with no 2026-08-08 row, since Saturday has no VIX print). No IBKR
-     series exists for the index under the plain `get_price_history` call every other ticker below uses (no
-     daily VIX series exists anywhere else in this stack today; this ingest is what creates one, isolated).
+     series exists for the index under the plain `get_price_history` call every other ticker below uses
+     (no daily VIX series exists under a PLAIN `get_price_history` call; IBKR DOES return one for
+     `contract_id=13455763` with `security_type='IND'`, `exchange='CBOE'`, `step='ONE_DAY'`, which D1's
+     PARK ALLOCATION CALL now names as its PRIMARY VIX source — corrected there 2026-08-24. This ingest
+     predates that discovery and remains the isolated evidence layer for the full menu).
      **`mark_date` is the RETURNED BAR's own `date` field, NEVER `state.trading_day_today.today`** — on a
      Sunday run recovering Friday's close, the bar's `date` is Friday, and that is what `mark_date` must carry;
      stamping `today` would silently misdate the close as a Sunday reading that never existed.

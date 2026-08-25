@@ -122,6 +122,19 @@ ALTER TABLE `stock-trading-498512.events.adversarial_reviews`
 -- (2) state.adversarial_reviews_current -- THE canonical non-superseded row set. Every row-reading
 -- consumer below reads this instead of the base table, so the anti-join predicate is written once.
 -- NOT IN is safe here: the subquery filters superseded_by IS NOT NULL, so it can never yield a NULL.
+--
+-- SUPERSEDED LIVE by bigquery/198_adversarial_reviews_current_column_refresh.sql -- current single
+-- source of truth for this object. Kept here, unmodified, for DR-rebuild apply-in-order reference
+-- only. DO NOT re-apply this CREATE statement live in isolation.
+--
+-- WHY 198 EXISTS, since the text there is byte-identical to the text here: BigQuery expands
+-- `SELECT *` at VIEW-CREATION TIME and freezes the column list. bigquery/145 later ran
+-- ALTER TABLE ... ADD COLUMN on events.adversarial_reviews (content_sha256, body_bytes,
+-- queue_event_id, source_commit_sha, schema_version) and this view was never re-created, so it
+-- served 14 of the base table's 19 columns until 2026-08-25. Re-applying THIS copy during a DR
+-- rebuild, in isolation and out of order, would restore that frozen 14-column schema; 198 must
+-- run after 145. See 198's header for the measured blast radius (AR_att STEP 0 joins on
+-- queue_event_id, one of the five missing columns).
 -- ============================================================================
 CREATE OR REPLACE VIEW `stock-trading-498512.state.adversarial_reviews_current` AS
 SELECT *
