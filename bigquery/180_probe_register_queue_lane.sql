@@ -54,6 +54,11 @@
 --
 -- Apply after bigquery/160_queue_venue_claim_detector.sql. Defines exactly one view; creates,
 -- redefines or drops nothing else.
+--
+-- SUPERSEDED LIVE by bigquery/199_queue_venue_claim_unwired_case_insensitive.sql (2026-08-25) — that file is the
+-- current canonical definition of state.queue_venue_claim_unwired; it normalizes the candidate status filter
+-- to UPPER(status) NOT IN ('COMPLETE','SUPERSEDED','DROPPED','FILLED','EXPIRED','ABANDONED') while keeping
+-- this file's PENDING_ROSTER -> ['SL5'] allowed_map addition. Do NOT re-apply this file's view in isolation.
 -- ============================================================================================
 
 CREATE OR REPLACE VIEW `stock-trading-498512.state.queue_venue_claim_unwired` AS

@@ -141,7 +141,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SPEC_PATH = os.path.join(ROOT, "ops", "handoff_contracts.yaml")
 TASK_PLAN_PATH = os.path.join(ROOT, "Claude_Task_Plan.md")
 BIGQUERY_DIR = os.path.join(ROOT, "bigquery")
-ALLOWED_MAP_SOURCE = os.path.join(BIGQUERY_DIR, "180_probe_register_queue_lane.sql")
+ALLOWED_MAP_SOURCE = os.path.join(BIGQUERY_DIR, "199_queue_venue_claim_unwired_case_insensitive.sql")
 PROJECT = "stock-trading-498512"
 
 # ============================================================================================

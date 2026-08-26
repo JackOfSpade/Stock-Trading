@@ -181,12 +181,10 @@
 -- bigquery/34_alert_lifecycle.sql (ops.alert_policy). Defines exactly one view and adds exactly one
 -- ops.alert_policy row; no other object is created, redefined, or dropped.
 
--- SUPERSEDED LIVE by bigquery/180_probe_register_queue_lane.sql (2026-08-18) — that file is the
--- current canonical definition of state.queue_venue_claim_unwired; it adds the PENDING_ROSTER ->
--- ['SL5'] lane to allowed_map (the SL3 -> SL5 probe-register handoff) and is otherwise byte-identical
--- to the body below. Do NOT re-apply this file's view in isolation: doing so silently reverts that
--- lane, and a lane missing from allowed_map is treated as "no legitimate venue claim is possible
--- here", so the first correct resolving_venue='SL5' probe-register row would be flagged as unwired.
+-- SUPERSEDED LIVE by bigquery/199_queue_venue_claim_unwired_case_insensitive.sql (2026-08-25) — that file is the
+-- current canonical definition of state.queue_venue_claim_unwired; it normalizes the candidate status filter
+-- to UPPER(status) NOT IN ('COMPLETE','SUPERSEDED','DROPPED','FILLED','EXPIRED','ABANDONED') and preserves
+-- bigquery/180's PENDING_ROSTER -> ['SL5'] lane in allowed_map. Do NOT re-apply this file's view in isolation.
 -- The ops.alert_policy INSERT further down in THIS file remains canonical and is not superseded.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.queue_venue_claim_unwired` AS
 WITH latest AS (
