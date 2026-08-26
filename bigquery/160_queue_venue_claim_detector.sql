@@ -181,13 +181,18 @@
 -- bigquery/34_alert_lifecycle.sql (ops.alert_policy). Defines exactly one view and adds exactly one
 -- ops.alert_policy row; no other object is created, redefined, or dropped.
 
--- SUPERSEDED LIVE by bigquery/180_probe_register_queue_lane.sql (2026-08-18) — that file is the
--- current canonical definition of state.queue_venue_claim_unwired; it adds the PENDING_ROSTER ->
--- ['SL5'] lane to allowed_map (the SL3 -> SL5 probe-register handoff) and is otherwise byte-identical
--- to the body below. Do NOT re-apply this file's view in isolation: doing so silently reverts that
--- lane, and a lane missing from allowed_map is treated as "no legitimate venue claim is possible
--- here", so the first correct resolving_venue='SL5' probe-register row would be flagged as unwired.
--- The ops.alert_policy INSERT further down in THIS file remains canonical and is not superseded.
+-- SUPERSEDED LIVE by bigquery/199_queue_venue_claim_status_normalisation.sql (2026-08-25) — that
+-- file is the CURRENT canonical definition of state.queue_venue_claim_unwired. Chain: this file ->
+-- bigquery/180_probe_register_queue_lane.sql (2026-08-18, adds the PENDING_ROSTER -> ['SL5'] lane to
+-- allowed_map for the SL3 -> SL5 probe-register handoff) -> bigquery/199 (2026-08-25, replaces the
+-- `candidates` CTE's case-sensitive `status = 'pending'` filter with open_queue_detail's
+-- case-normalized terminal-status exclusion). Do NOT re-apply this file's view in isolation: doing so
+-- reverts BOTH changes at once — it silently drops the PENDING_ROSTER lane (a lane missing from
+-- allowed_map is treated as "no legitimate venue claim is possible here", so the first correct
+-- resolving_venue='SL5' probe-register row would be flagged as unwired), AND it re-blinds the
+-- detector to every non-`pending` non-terminal status token, which is the condition bigquery/199
+-- exists to end. The ops.alert_policy INSERT further down in THIS file remains canonical and is not
+-- superseded.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.queue_venue_claim_unwired` AS
 WITH latest AS (
   -- Latest status per (queue, item_key), same idiom as state.open_queue_detail
