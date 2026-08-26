@@ -54,6 +54,15 @@
 --
 -- Apply after bigquery/160_queue_venue_claim_detector.sql. Defines exactly one view; creates,
 -- redefines or drops nothing else.
+--
+-- SUPERSEDED LIVE by bigquery/199_queue_venue_claim_status_normalisation.sql (2026-08-25, D3) —
+-- that file is the CURRENT canonical definition of state.queue_venue_claim_unwired. It carries the
+-- PENDING_ROSTER -> ['SL5'] lane added below forward unchanged, and replaces the `candidates` CTE's
+-- case-sensitive `WHERE l.status = 'pending'` with state.open_queue_detail's case-normalized
+-- terminal-status exclusion. Do NOT re-apply this file's view in isolation: the pending-only
+-- predicate below was measured blind to three live PENDING_REVIEW rows carrying the non-vocabulary
+-- status token 'OPEN', each with a genuinely unwired venue claim, so restoring it re-blinds the
+-- detector to every non-`pending` non-terminal token. See bigquery/199's header for the measurement.
 -- ============================================================================================
 
 CREATE OR REPLACE VIEW `stock-trading-498512.state.queue_venue_claim_unwired` AS
