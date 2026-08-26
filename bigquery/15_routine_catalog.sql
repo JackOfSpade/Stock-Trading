@@ -169,7 +169,7 @@ FROM UNNEST([
 -- This does NOT touch unknown_routine (a routine absent from the catalog still flags regardless of its
 -- instruction text) and does NOT weaken the type-suffix check RUNBOOK §22 explicitly protects (the
 -- ` — deep research.` / ` — regular routine.` tag is INSIDE the first line, still compared verbatim).
--- SUPERSEDED LIVE by bigquery/183_instruction_drift_stale_sample.sql (2026-08-19) — current
+-- SUPERSEDED LIVE by bigquery/201_instruction_drift_dash_normalize.sql (2026-08-26) — current
 -- single source of truth for this VIEW. Supersession here is TWO HOPS: the 2026-07-29
 -- whitespace-normalize revision (file 115) first replaced the first-line-only equality below, and
 -- 183 then added the stale-sample guard on top of it. This banner named 115 as "current" until the

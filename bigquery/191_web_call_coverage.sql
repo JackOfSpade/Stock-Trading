@@ -24,6 +24,11 @@
 --
 -- RECORD-ONLY: no cap, no gate, nothing blocks on this view. Additive — new object, supersedes
 -- nothing, no existing definition replaced.
+--
+-- SUPERSEDED LIVE by bigquery/200_web_call_coverage_obligation_floor.sql (2026-08-26) — that file is
+-- the CURRENT canonical definition of state.web_call_coverage; it floors run_date at the 2026-08-17
+-- telemetry obligation date so pre-obligation runs (SL1, M1a, M2, M3) are not flagged as gaps.
+-- Do NOT re-apply this file's view in isolation.
 CREATE OR REPLACE VIEW `stock-trading-498512.state.web_call_coverage` AS
 WITH runs AS (
   SELECT routine, run_date
