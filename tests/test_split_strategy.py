@@ -240,3 +240,74 @@ def test_main_non_check_warns_about_orphan_but_returns_0(tmp_path, monkeypatch, 
     (outdir / "99_stale.md").write_text("stale leftover")
     assert ss.main([]) == 0
     assert "WARNING: orphaned slice file(s)" in capsys.readouterr().out
+
+
+# ---- build(): '[CANDIDATE]' sections generate no slice and consume no number ---------------------
+# Regression lock for the SL5 2026-08-25 diligence-sweep fix. SL5 branch (1) SHADOW-register must
+# add a '## Strategy <code> [CANDIDATE]' section to Strategy.md AND must not run the repo-view
+# fanout. Before the fix those two instructions contradicted each other: the bare heading made every
+# on-disk slice stale and orphaned the tail, so `split_strategy.py --check` -- a blocking ci.yml step
+# -- failed on the arsenal's first-ever SHADOW registration, on a branch the ended session could
+# never repair (auto-merge is fail-closed and retries a tip SHA exactly once). check_roster_
+# consistency.py's headings_in() has always excluded '[CANDIDATE]'; this generator had not.
+
+def _candidate_fixture(candidate_block: str) -> str:
+    return (
+        "# Title\n\nPreamble.\n\n"
+        "## Alpha Section\n"
+        "content alpha\n\n"
+        + candidate_block +
+        "## Omega Section\n"
+        "content omega\n"
+    )
+
+
+def _build_from(tmp_path, monkeypatch, text):
+    src = tmp_path / "Strategy.md"
+    src.write_text(text)
+    monkeypatch.setattr(ss, "SRC", str(src))
+    monkeypatch.setattr(ss, "OUTDIR", str(tmp_path / "strategy"))
+    return ss.build()
+
+
+def test_build_candidate_section_generates_no_slice_and_shifts_no_number(tmp_path, monkeypatch):
+    """A CANDIDATE section is a byte-for-byte no-op on the generated tree."""
+    without = _build_from(tmp_path, monkeypatch, _candidate_fixture(""))
+    with_cand = _build_from(
+        tmp_path, monkeypatch,
+        _candidate_fixture("## Strategy F [CANDIDATE]: Overnight gap fade\ncandidate body\n\n"),
+    )
+    # No slice for the candidate...
+    assert not any("strategy_f" in name for name in with_cand)
+    # ...and the tail keeps its numbering, so no existing slice goes stale.
+    assert set(with_cand) == set(without) == {
+        "00_preamble.md", "01_alpha_section.md", "02_omega_section.md", "INDEX.md"}
+    assert with_cand == without, "a CANDIDATE section must not change any generated file"
+
+
+def test_build_candidate_section_is_excluded_from_index(tmp_path, monkeypatch):
+    files = _build_from(
+        tmp_path, monkeypatch,
+        _candidate_fixture("## Strategy F [CANDIDATE]: Overnight gap fade\ncandidate body\n\n"),
+    )
+    assert "CANDIDATE" not in files["INDEX.md"]
+    assert "candidate body" not in "".join(files.values())
+
+
+def test_build_candidate_marker_is_case_insensitive(tmp_path, monkeypatch):
+    """headings_in() compares on .upper(); this filter must agree, or the pair drifts again."""
+    files = _build_from(
+        tmp_path, monkeypatch,
+        _candidate_fixture("## Strategy F [candidate]: Overnight gap fade\ncandidate body\n\n"),
+    )
+    assert set(files) == {"00_preamble.md", "01_alpha_section.md", "02_omega_section.md", "INDEX.md"}
+
+
+def test_build_promoted_candidate_does_generate_a_slice(tmp_path, monkeypatch):
+    """Branch (2) PROBE-register renames the heading first; THEN the slice appears."""
+    files = _build_from(
+        tmp_path, monkeypatch,
+        _candidate_fixture("## Strategy F: Overnight gap fade\npromoted body\n\n"),
+    )
+    assert "02_strategy_f.md" in files
+    assert "promoted body" in files["02_strategy_f.md"]

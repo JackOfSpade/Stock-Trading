@@ -77,6 +77,35 @@ def split(text: str):
 def build():
     text = read_text(SRC)
     preamble, sections = split(text)
+    # A '## Strategy <code> [CANDIDATE]' section generates NO slice AND does not consume a slice
+    # number (added 2026-08-25, SL5 diligence sweep). This mirrors check_roster_consistency.py's
+    # headings_in(), which has always excluded '[CANDIDATE]' from the roster-active heading set --
+    # this generator was the half of that pair that never learned the rule.
+    #
+    # WHY IT IS LOAD-BEARING, not tidying: SL5 branch (1) SHADOW-register is REQUIRED to add the
+    # '## Strategy <code> [CANDIDATE]' section (its golden fixtures name Strategy.md as the file the
+    # newcomer's rules live in at that stage) and is equally REQUIRED not to run the repo-view fanout
+    # ("No repo-view fanout yet (still candidate-namespace, zero capital)"). Without this filter those
+    # two instructions contradict each other: the new '## ' heading alone makes every on-disk slice
+    # stale and orphans the tail, so `split_strategy.py --check` -- a blocking, no-continue-on-error
+    # step of ci.yml -- fails on the arsenal's first-ever SHADOW registration. Auto-merge is
+    # fail-closed and retries a tip SHA exactly once, so the registering session, which has ended,
+    # could never fix its own stranded branch. Measured 2026-08-25 by simulating the branch-(1)
+    # commit in a scratch copy: `STALE slices (run scripts/split_strategy.py): 08_strategy_f_candidate
+    # ....md, 09_pre_mortems.md, ... INDEX.md` plus three ORPHANED files, and the failure is
+    # placement-independent (appending the section at end-of-file still trips it).
+    #
+    # Skipping the number too (rather than generating nothing at a consumed index) is what keeps the
+    # rest of the tail byte-identical, so a CANDIDATE section is a genuine no-op on the generated
+    # tree. That also keeps R-F's SHARED_LOCKED_OPERATIONAL_PROSE -- which still hardcodes
+    # '09_regime_scoring_strategy_blind_monthly.md' BY NUMBER -- from breaking when a candidate is
+    # authored above that section, the second failure the same measurement surfaced.
+    #
+    # The candidate's slice is created later, by branch (2) PROBE-register, which first renames the
+    # heading to plain '## Strategy <code>' and then runs this script -- exactly as branch (2)'s
+    # "split_strategy.py first creates it" already promises. Provably a no-op on today's tree:
+    # Strategy.md carries zero '[CANDIDATE]' headings, so --check stays green on this commit.
+    sections = [(t, b) for t, b in sections if "[CANDIDATE]" not in t.upper()]
     files = {"00_preamble.md": HEADER + preamble}
     index = ["# Strategy.md — generated section index\n",
              "\nThese are read-optimized slices of the canonical `Strategy.md` "
