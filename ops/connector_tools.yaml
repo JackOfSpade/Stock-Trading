@@ -125,7 +125,14 @@ connectors:
       - name: chart
         use: required
         prose_ambiguous: true
-        note: OPS1 liveness probe (FMP-PRIMARY ^VIX historical-price-eod-light) + D1/D2a
+        note: >-
+          OPS1 liveness probe (FMP-PRIMARY ^VIX historical-price-eod-light) + D1/D2a. Chosen as the
+          probe target precisely because `^VIX` is on free's allow-list, so a failure here means an
+          AUTH problem rather than the tier gate. SYMBOL-ALLOW-LIST GATED for equities, deterministically
+          per symbol and NOT quota-shaped: on 2026-08-26 `historical-price-eod-light` returned a clean
+          five-bar series for AAPL and returned "ACCESS DENIED: A parameter you passed to this tool
+          (\"chart\") requires a higher plan" for ANF in the same session. Also plan-gated for INDEX
+          symbols other than the allow-listed ones (D1 EQUITY-BREADTH OBSERVATION records this).
       - name: commitmentOfTraders
         use: unused
       - name: commodity
@@ -134,6 +141,18 @@ connectors:
       - name: company
         use: unused
         prose_ambiguous: true
+        note: >-
+          SYMBOL-ALLOW-LIST GATED, NOT QUOTA-SHAPED — the distinction a 2026-08-26 D1 alert got backwards,
+          and it changes the remedy (pacing/retry cannot help; a different symbol or a different source
+          can). `market-cap` returned AAPL cleanly on 2026-08-26 (marketCap 4,603,751,738,200) and
+          returned "ACCESS DENIED: A parameter you passed to this tool (\"company\") requires a higher
+          plan" for ANF in the same session — deterministic and reproducible, not intermittent. That
+          parameter-level string always means THE SYMBOL is outside free's ~87-name allow-list, never
+          that the tool is down. `batch-market-cap` additionally DROPS denied symbols at HTTP 200 with no
+          marker, so a batch response can look complete and be short. For a symbol the allow-list denies,
+          the market-cap rail runs through Operating_Protocols.md §11 MARKET CAP BASIS instead —
+          `secFilings` is NOT allow-list-gated (verified 2026-08-26: `sec-company-full-profile` returned
+          for ANF, a symbol this tool denies).
       - name: crypto
         use: unused
         prose_ambiguous: true
@@ -141,7 +160,8 @@ connectors:
         use: unused
         prose_ambiguous: true
         note: >
-          Claude_Task_Plan.md:1818 ("every enumeration route is plan-gated") records this as
+          Claude_Task_Plan.md §D2a step 1e, the EQUITY_BREADTH bullet "ENUMERATION IS THE
+          BLOCKER" ("every enumeration route is plan-gated") records this as
           plan-gated (needs FMP Starter+) on the current FMP tier — enumeration route
           considered and rejected for EQUITY_BREADTH.
       - name: discountedCashFlow
@@ -164,7 +184,8 @@ connectors:
       - name: etfAndMutualFunds
         use: unused
         note: >
-          Claude_Task_Plan.md:1818 ("every enumeration route is plan-gated") records this as
+          Claude_Task_Plan.md §D2a step 1e, the EQUITY_BREADTH bullet "ENUMERATION IS THE
+          BLOCKER" ("every enumeration route is plan-gated") records this as
           plan-gated (needs FMP Ultimate+) on the current FMP tier — SPY-holdings
           enumeration route considered and rejected for EQUITY_BREADTH.
       - name: forex
@@ -177,7 +198,8 @@ connectors:
         use: unused
         prose_ambiguous: true
         note: >
-          Claude_Task_Plan.md:1818 ("every enumeration route is plan-gated") records this as
+          Claude_Task_Plan.md §D2a step 1e, the EQUITY_BREADTH bullet "ENUMERATION IS THE
+          BLOCKER" ("every enumeration route is plan-gated") records this as
           plan-gated (needs FMP Premium+) on the current FMP tier — S&P breadth-index
           lookup route considered and rejected for EQUITY_BREADTH.
       - name: insiderTrades
@@ -186,12 +208,41 @@ connectors:
         use: required
         note: OPS1-adjacent / D1 pre-flight liveness surface
       - name: marketPerformance
-        use: unused
+        use: required
         prose_ambiguous: true
+        note: >-
+          OPEN ON THE FREE TIER — one of the few FMP surfaces that is (re-verified live 2026-08-26).
+          `biggest-gainers`, `biggest-losers` and `most-active` all returned full 50-row payloads with
+          symbol/price/change/changesPercentage/exchange while `quote/batch-quote`, `news` and `search`
+          were denied in the same session. TWO DIFFERENT SHAPES, and the difference matters:
+          `biggest-gainers`/`biggest-losers` are ranked BY PERCENT MOVE and bottom out around +11.5% /
+          -12.0% (measured 2026-08-26; +16.80% / -13.81% on 2026-08-19) — a tail-risk radar dominated by
+          micro-caps, SPAC rights and leveraged ETFs. `most-active` is ranked BY VOLUME, so it carries
+          ordinary large-cap moves the percent-ranked lists never reach: on 2026-08-26 it held
+          SNAP -8.53%, IREN -6.23%, SMR -5.40%, MARA -5.16%, PLUG -4.41%, BSX -3.39%, SMCI -2.78%,
+          NKE -2.25%. STILL NOT AN ENUMERATION ROUTE — that finding stands (see the D2a EQUITY_BREADTH
+          bullet cited above): 50 rows, no `limit`/paging, no market-cap field, and a COHR-class name can
+          still be missed. It is a cheap PARTIAL discovery net for D1's single-name-move screen when the
+          per-symbol endpoints are symbol-gated, nothing more. FLIPPED unused->required 2026-08-26: D1's
+          single-name-move screen now names the token at its DISCOVERY leg, so it is a real call site and
+          must stay allowlisted (`mcp__FMP__marketPerformance` added to `.claude/settings.json` in the
+          same change) or an unattended D1 stalls on a permission prompt. `required` here means "must be
+          allowlisted", NOT "load-bearing" — the screen degrades to a stated coverage gap without it. Filters are ACCEPTED AND IGNORED
+          here — `biggest-losers` with `exchange='NYSE'` returned NASDAQ and AMEX rows (2026-08-19) — so
+          reconcile every response against what you asked for.
       - name: news
         use: required
         prose_ambiguous: true
-        note: D1 Market Development Scan + external-content extraction discipline (Claude_Task_Plan.md)
+        note: >-
+          D1 Market Development Scan + external-content extraction discipline (Claude_Task_Plan.md).
+          TOOL-LEVEL ACCESS DENIED ON THIS TIER — and unlike `quote`, this one is a genuine WHOLE-TOOL
+          gate with no working corner: `general-news` returned "ACCESS DENIED: This tool (\"news\")
+          requires the Starter, Premium, Ultimate, or Enterprise plan" (measured 2026-08-24,
+          re-measured 2026-08-26). Stays `use: required` because routine text names the token and CHECK2
+          must keep it allowlisted — an unattended run that hits an un-allowlisted token stalls on a
+          permission prompt, which is worse than a clean ACCESS DENIED. Route every news-shaped need to
+          WebSearch/Tavily; do not write routine text that depends on this returning data, and do not
+          re-alert its absence — it is a standing vendor limit, not a regression.
       - name: quote
         use: required
         prose_ambiguous: true
@@ -212,9 +263,26 @@ connectors:
           a marking day and a missed mark self-heals on the next healthy run.
           OPS1 deliberately does NOT probe this tool for liveness (it would false-fire on the
           tier/symbol gate rather than on an auth failure) — `chart` is the probe target.
+          THE BATCH ENDPOINTS DENY WITH TOOL-LEVEL WORDING — the trap that cost D1 a screen on
+          2026-08-26. `quote/batch-quote` returns "ACCESS DENIED: This tool (\"quote\") requires the
+          Premium, Ultimate, or Enterprise plan" — the whole-tool string — while single-symbol
+          `quote/quote` on an allow-listed symbol keeps working in the SAME session (measured minutes
+          apart: batch-quote on MSFT/NVDA/AVGO/ORCL denied; quote on AAPL returned 313.45 with
+          previousClose 309.90 and marketCap). That error also instructs "Do not retry this tool or
+          attempt sibling tools that require the same plan in this session" — scoped to the ENDPOINT
+          and its same-tier siblings, NOT a licence to stand the tool down for the run. A batch denial
+          NEVER establishes a tool-wide outage: re-test the canary (`quote` on AAPL) before recording
+          one. See Claude_Task_Plan.md's shared FMP TIER MATRIX rule, "FOURTH MECHANISM".
       - name: search
         use: unused
         prose_ambiguous: true
+        note: >-
+          TOOL-LEVEL ACCESS DENIED ON THIS TIER (measured 2026-08-26): `search-company-screener` with
+          marketCapMoreThan / exchange / isActivelyTrading returned "ACCESS DENIED: This tool
+          (\"search\") requires the Starter, Premium, Ultimate, or Enterprise plan". This is the
+          endpoint that would otherwise enumerate a market-cap-filtered universe directly, so its denial
+          is the specific reason D1's >=$2B population cannot be produced from FMP — recorded here rather
+          than re-derived each time. Matches the tier matrix's "search-company-screener -> Starter+".
       - name: secFilings
         use: required
         note: external-content extraction discipline source (Claude_Task_Plan.md); D1/W1/Q3 research feeds
@@ -228,7 +296,8 @@ connectors:
         use: unused
         prose_ambiguous: true
         note: >
-          Claude_Task_Plan.md:1818 ("every enumeration route is plan-gated") records this as
+          Claude_Task_Plan.md §D2a step 1e, the EQUITY_BREADTH bullet "ENUMERATION IS THE
+          BLOCKER" ("every enumeration route is plan-gated") records this as
           plan-gated (needs FMP Starter+) on the current FMP tier — enumeration route
           considered and rejected for EQUITY_BREADTH.
       - name: tipranks
