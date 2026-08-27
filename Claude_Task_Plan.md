@@ -2311,7 +2311,24 @@ Write the observation with `CALL ops.sp_record_connector_tools('OPS1', <today Am
 <rows_json>)`, where `rows_json` is a JSON array over the UNION of observed tools and manifest tools —
 one element per (connector, tool) with keys `connector`, `tool_name`, `present`, `in_manifest`,
 `manifest_use`, `enumeration_ok`, `note`. Recording the union (not just the diff) is what makes an
-absence a row rather than an inference. Then `CALL ops.sp_raise_connector_tool_drift('OPS1')`, which
+absence a row rather than an inference.
+
+**THE UNION INCLUDES EACH CONNECTOR'S `absent:` ENTRIES — pinned 2026-08-27, OPS1.** "The UNION of
+observed tools and manifest tools" reads two ways, and the fleet took both: OPS1 wrote 120 / 120 / 115 /
+121 / 116 rows on 2026-08-23 / 24 / 25 / 26 / 27, where the ±5 is entirely Hugging-Face's five-entry
+`absent:` block being included on three of those runs and dropped on two — a write surface whose record
+shape changed day to day with no rule to appeal to. **Include it.** An `absent:` entry names a tool the
+manifest has already CONCLUDED is gone, so dropping it is precisely the "inference from a missing row"
+that `bigquery/151_connector_tool_inventory.sql`'s STATEMENT 1 comment forbids, and it silently retires
+the only per-run evidence that a DATED retirement (e.g. `paper_search`, `verified: 2026-07-28`) has not
+quietly reappeared. Encode each such entry `present` = whatever was actually observed (normally FALSE),
+`in_manifest = FALSE`, `manifest_use = NULL`. That pair is drift-NEUTRAL under `state.connector_tool_drift`
+— its `added` arm needs `present AND NOT in_manifest` and its `removed` arm needs `in_manifest AND NOT
+present`, so an absent-and-still-absent tool matches neither and raises nothing — while a REAPPEARANCE
+flips `present` to TRUE and correctly surfaces as `added` drift, which is exactly the branch the AUTO-ADD
+rule below already anticipates. Do **not** set `in_manifest = TRUE` for an `absent:` entry: it is not in
+that connector's `tools:` list, and that encoding would leave the absence of a false `removed` alert
+resting on `manifest_use` happening to stay NULL. Then `CALL ops.sp_raise_connector_tool_drift('OPS1')`, which
 raises one `connector_tool_added` warning per newly-appeared tool, one `connector_tool_removed` alert per
 vanished manifest tool (critical when its `use` is `required`), `connector_tool_enumeration_failed` on
 an incomplete sweep, and mechanically self-heals any of these once the drift clears.
